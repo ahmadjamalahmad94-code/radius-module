@@ -72,12 +72,22 @@ def _can_manage_distributors() -> bool:
     )
 
 
+def _sees_all() -> bool:
+    """المالك/الشريك أو دور «مدير عام» (كل الصلاحيات غير المالكيّة) يرى ويدير كل
+    الموزّعين؛ غيره موزّعيه فقط، ودخول الموزّع لا يتّسع أبدًا."""
+    if is_super_admin():
+        return True
+    from ..services.distributor_scope import sees_all_distributors
+    return sees_all_distributors(current_admin_id(), tenant_id=_tid())
+
+
 def _owner_admin_id() -> int | None:
     """المالك المُسنَد للموزّع عند الإنشاء/التعديل.
 
     محدود → نفسه دائمًا (مقفل، يَتجاهل أيّ admin_id مُرسَل بالنموذج).
-    سوبر  → القيمة المختارة من النموذج (مدير بعينه) أو None (بلا مالك)."""
-    if not is_super_admin():
+    سوبر/«مدير عام» → القيمة المختارة من النموذج (مدير بعينه) أو None (بلا مالك؛
+    في التعديل None = يبقى المالك الحاليّ)."""
+    if not _sees_all():
         return current_admin_id()
     raw = (request.form.get("admin_id") or "").strip()
     if not raw:
@@ -90,8 +100,8 @@ def _owner_admin_id() -> int | None:
 
 def _assert_distributor_access(distributor: dict) -> None:
     """يَمنع المدير المحدود من لمس موزّعٍ لا يَتبع له (مِلكية admin_id).
-    السوبر يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
-    if is_super_admin():
+    السوبر/«مدير عام» يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
+    if _sees_all():
         return
     me = current_admin_id()
     owner = int(distributor.get("admin_id") or 0)
@@ -100,8 +110,8 @@ def _assert_distributor_access(distributor: dict) -> None:
 
 
 def _managers_for_form() -> list:
-    """قائمة المدراء لاختيار مالك الموزّع — للسوبر فقط. المحدود يَرى نفسه."""
-    if is_super_admin():
+    """قائمة المدراء لاختيار مالك الموزّع — للسوبر/«مدير عام». المحدود يَرى نفسه."""
+    if _sees_all():
         return admins_repo.list_admins()
     me = current_admin_id()
     return [a for a in admins_repo.list_admins() if a.id == me]
@@ -178,8 +188,8 @@ def _form_payload() -> dict:
 
 def distributors_list():
     status = (request.args.get("status") or "").strip() or None
-    # عزل المِلكية: المدير المحدود يَرى موزّعيه فقط؛ السوبر يَرى الكل.
-    scope_admin = None if is_super_admin() else current_admin_id()
+    # عزل المِلكية: المدير المحدود يَرى موزّعيه فقط؛ السوبر/«مدير عام» يَرى الكل.
+    scope_admin = None if _sees_all() else current_admin_id()
     items = _svc().list_distributors(
         tenant_id=_tid(), status=status, admin_id=scope_admin, limit=500
     )
@@ -189,7 +199,7 @@ def distributors_list():
         status=status or "",
         # ?new=1 يفتح الصندوق العائم «إضافة موزع» تلقائيًا (رابط /distributors/new القديم)
         open_new_modal=(request.args.get("new") == "1"),
-        is_super=is_super_admin(),
+        is_super=_sees_all(),
         can_manage_distributors=_can_manage_distributors(),
         managers=_managers_for_form(),
         current_manager_id=current_admin_id(),
@@ -219,7 +229,7 @@ def distributors_create():
             "radius/distributors_form.html",
             form=request.form,
             is_new=True,
-            is_super=is_super_admin(),
+            is_super=_sees_all(),
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400
@@ -277,7 +287,7 @@ def distributors_edit(distributor_id: int):
         form=_distributor_form_values(distributor),
         distributor=distributor,
         is_new=False,
-        is_super=is_super_admin(),
+        is_super=_sees_all(),
         managers=_managers_for_form(),
         current_manager_id=current_admin_id(),
     )
@@ -304,7 +314,7 @@ def distributors_update(distributor_id: int):
             form=request.form,
             distributor={"id": distributor_id},
             is_new=False,
-            is_super=is_super_admin(),
+            is_super=_sees_all(),
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400

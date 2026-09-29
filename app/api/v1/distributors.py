@@ -23,6 +23,42 @@ def _svc():
     return get_operations_service()
 
 
+def _viewer_id() -> int:
+    from ..access_control import admin_id
+    return int(admin_id() or 0)
+
+
+def _sees_all() -> bool:
+    """Web parity (routes/distributors ``_sees_all``): an unbound credential,
+    the owner / co-owner, or the «مدير عام» role see and manage ALL
+    distributors; any other manager only the ones he owns; a distributor login
+    never widens."""
+    aid = _viewer_id()
+    if aid <= 0:
+        return True
+    from ...radius.services.distributor_scope import sees_all_distributors
+    return sees_all_distributors(aid, tenant_id=_tid())
+
+
+def _out_of_scope(distributor_id: int, *, allow_self: bool = False):
+    """403 ``out_of_scope`` unless the caller may reach this distributor (404
+    stays the service's). ``allow_self`` lets a distributor LOGIN read its own
+    record (summary / batches) — never act on it."""
+    if _sees_all():
+        return None
+    from ...radius.db.repos import operations_repo
+    dist = operations_repo.get_distributor(_tid(), int(distributor_id))
+    if dist is None:
+        return None
+    me = _viewer_id()
+    if int(dist.get("admin_id") or 0) == me:
+        return None
+    if allow_self and int(dist.get("login_admin_id") or 0) == me:
+        return None
+    return fail("forbidden", "هذا الموزّع ليس ضمن نطاقك (موزّع مديرٍ آخر).",
+                status=403, details={"reason": "out_of_scope"})
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/distributors", "distributors_list",
                     require_api_token(distributors_list), methods=["GET"])
@@ -60,6 +96,8 @@ def distributors_list():
         rows = _svc().list_distributors(
             tenant_id=_tid(),
             status=(request.args.get("status") or "").strip() or None,
+            # عزل المِلكية (مطابق للويب): غير «مدير عام»/المالك يرى موزّعيه فقط.
+            admin_id=None if _sees_all() else _viewer_id(),
             limit=limit + 1,
             offset=offset,
         )
@@ -100,6 +138,10 @@ def distributors_create():
     body, err = json_object()
     if err:
         return err
+    if not _sees_all():
+        # الويب: المدير المحدود مالكُ موزّعه دائمًا (لا يُنشئه باسم مديرٍ آخر).
+        body = dict(body)
+        body["admin_id"] = _viewer_id()
     try:
         saved = _svc().create_distributor(
             tenant_id=_tid(), actor=_actor(), data=body
@@ -112,6 +154,9 @@ def distributors_create():
 
 
 def distributors_summary(distributor_id: int):
+    denied = _out_of_scope(distributor_id, allow_self=True)
+    if denied is not None:
+        return denied
     try:
         summary = _svc().distributor_summary(
             tenant_id=_tid(), distributor_id=distributor_id
@@ -122,6 +167,9 @@ def distributors_summary(distributor_id: int):
 
 
 def distributors_batches(distributor_id: int):
+    denied = _out_of_scope(distributor_id, allow_self=True)
+    if denied is not None:
+        return denied
     try:
         limit, offset = _page_args()
         items = _svc().list_distributor_batches(
@@ -136,6 +184,9 @@ def distributors_batches(distributor_id: int):
 
 
 def distributors_assign_batch(distributor_id: int):
+    denied = _out_of_scope(distributor_id)
+    if denied is not None:
+        return denied
     body, err = json_object()
     if err:
         return err
@@ -169,6 +220,9 @@ def distributors_assign_batch(distributor_id: int):
 
 
 def distributors_settle(distributor_id: int):
+    denied = _out_of_scope(distributor_id)
+    if denied is not None:
+        return denied
     body, err = json_object()
     if err:
         return err

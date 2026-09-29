@@ -128,9 +128,18 @@ def admins_create():
     from ..auth.owner import OwnerGuardError, assert_role_within_actor
     want_super = bool(request.form.get("is_super_user"))
     want_co = bool(request.form.get("is_co_owner"))
-    role_id = int(request.form.get("role_id") or 0) or None
+    try:
+        role_id = int(request.form.get("role_id") or 0) or None
+    except (TypeError, ValueError):
+        role_id = -1
     if want_super:
         role_id = _super_role_id()
+    # دورٌ مجهول يُرفَض (422) — لا يُنشأ مديرٌ بدورٍ معلَّق. بلا دور = الأقلّ
+    # صلاحيةً (services.admins.create_admin)، أبدًا لا «مدير عام».
+    if role_id is not None and (role_id <= 0 or admins_repo.get_role(int(role_id)) is None):
+        flash("الدور المحدد غير موجود — اختر دورًا للمدير.", "error")
+        return render_template("radius/admins_form.html",
+            admin=None, roles=svc.list_roles(), is_new=True), 422
     try:
         if (want_super or want_co) and not _can_grant_owner():
             raise OwnerGuardError(
@@ -387,10 +396,18 @@ def _role_grants_context(role_id: int) -> dict:
         for k, lbl in _mg.SCOPE_FLAG_REGISTRY.items()
         if k not in _mg.ROLE_RBAC_SCOPE_FLAGS
     ]
+    # تقسيم الأفعال المُشتقّة من المفاتيح («حسب المفتاح/مسموح/ممنوع») — مثل
+    # «تأكيد الإيداع نعم / السحب لا» لكل مدراء الدور. دور «مدير عام» = كل
+    # الصلاحيات غير المالكيّة فلا تقسيم عليه (أساسه مركَّب).
+    role = admins_repo.get_role(role_id)
+    role_super = bool(admins_repo.role_is_super(role))
     return {
         "action_catalog": _mg.role_action_catalog(blob),
         "scope_flags": scope_flags,
         "section_catalog": _mg.role_section_catalog(blob),
+        "derived_catalog": ([] if role_super else _mg.role_derived_catalog(
+            blob, getattr(role, "permissions", ()) or ())),
+        "role_is_super": role_super,
     }
 
 
@@ -466,6 +483,10 @@ def roles_grants_save(role_id: int):
     from ..services import manager_grants as _mg
     try:
         blob = _mg.parse_grants_form(request.form)
+        # «حسب المفتاح / مسموح / ممنوع» للأفعال المُشتقّة (tri_<key>) — غير
+        # المُرسَل يحتفظ بقيمته القائمة (نموذج قديم لا يمسح التقسيم).
+        blob = _mg.apply_role_derived_form(
+            blob, request.form, existing=admins_repo.get_role_granular(role_id))
         admins_repo.set_role_granular(role_id, blob)
         flash(f"تم حفظ أساس صلاحيات الدور «{r.display_name or r.name}» — "
               f"يَرثه كلّ مدير بهذا الدور ✓", "success")

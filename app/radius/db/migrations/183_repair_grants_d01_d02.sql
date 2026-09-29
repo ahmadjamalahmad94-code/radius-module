@@ -12,6 +12,13 @@
 --   شيئًا إلّا إعادة وراثة الدور)، ثم نحذف صفوف السياسة الافتراضيّة كليًّا التي
 --   أنشأتها القراءات (لا أعلام ولا منح ولا حدود ولا ائتمان).
 --   ملاحظة تشغيليّة: من أطفأ عمدًا علَمًا يمنحه الدور لمديرٍ بعينه يعيد حفظه مرّة.
+--
+-- (متابعة المالك — «حسب الدور/مسموح/ممنوع»): لا نمسّ قيم أفعال الجلسات/الاتصالات/
+--   المتجر (session.* و comms.* و store.*_approve و storeuser.*) المخزّنة. كانت لها
+--   مربّعاتٌ حقيقيّة قبل هذه الموجة، فقيمتها قرارٌ متعمَّد من المالك (مثل «تأكيد
+--   الإيداع نعم / السحب لا» أو «ممنوع» لمديرٍ يمنحه دوره) — تعرضها الصفحة الآن
+--   «مسموح/ممنوع» وتحكم فوق مفتاح الدور. ما يُزال هنا: الأفعال المُشتقّة التي لم
+--   يكن لها مربّعٌ أصلًا (False فاسدة من D01) + أعلام False المجمّدة (D02).
 
 UPDATE manager_distributor_policies
    SET action_grants_json = json_remove(action_grants_json, '$._actions."subscriber.create"')
@@ -102,96 +109,6 @@ UPDATE roles
    SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."subscriber.send_credentials"')
  WHERE json_valid(granular_grants_json)
    AND json_type(granular_grants_json, '$.action_grants._actions."subscriber.send_credentials"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."comms.sms"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."comms.sms"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."comms.sms"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."comms.sms"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."comms.whatsapp"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."comms.whatsapp"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."comms.whatsapp"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."comms.whatsapp"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."comms.templates"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."comms.templates"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."comms.templates"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."comms.templates"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.edit"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.edit"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.edit"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.edit"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.lock_mac"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.lock_mac"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.lock_mac"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.lock_mac"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.lock_ip"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.lock_ip"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.lock_ip"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.lock_ip"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.disconnect"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.disconnect"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.disconnect"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.disconnect"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.force_close"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.force_close"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.force_close"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.force_close"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.reconcile"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.reconcile"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.reconcile"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.reconcile"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."session.temp_speed"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."session.temp_speed"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."session.temp_speed"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."session.temp_speed"') IS NOT NULL;
 
 UPDATE manager_distributor_policies
    SET action_grants_json = json_remove(action_grants_json, '$._actions."cards.generate"')
@@ -291,60 +208,6 @@ UPDATE roles
    SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."data.export"')
  WHERE json_valid(granular_grants_json)
    AND json_type(granular_grants_json, '$.action_grants._actions."data.export"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."store.deposit_approve"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."store.deposit_approve"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."store.deposit_approve"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."store.deposit_approve"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."store.withdraw_approve"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."store.withdraw_approve"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."store.withdraw_approve"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."store.withdraw_approve"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."storeuser.create"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."storeuser.create"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."storeuser.create"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."storeuser.create"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."storeuser.edit"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."storeuser.edit"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."storeuser.edit"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."storeuser.edit"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."storeuser.password"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."storeuser.password"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."storeuser.password"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."storeuser.password"') IS NOT NULL;
-
-UPDATE manager_distributor_policies
-   SET action_grants_json = json_remove(action_grants_json, '$._actions."storeuser.delete"')
- WHERE entity_type = 'manager' AND json_valid(action_grants_json)
-   AND json_type(action_grants_json, '$._actions."storeuser.delete"') IS NOT NULL;
-UPDATE roles
-   SET granular_grants_json = json_remove(granular_grants_json, '$.action_grants._actions."storeuser.delete"')
- WHERE json_valid(granular_grants_json)
-   AND json_type(granular_grants_json, '$.action_grants._actions."storeuser.delete"') IS NOT NULL;
 
 UPDATE manager_distributor_policies
    SET permissions_json = json_remove(permissions_json, '$.can_create_batch')

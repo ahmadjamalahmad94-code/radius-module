@@ -510,10 +510,11 @@ def create_admin(*, username: str, password: str, full_name: str = "",
     if get_by_username(username):
         raise ValueError(f"admin {username!r} already exists")
     if role_id is None:
-        # افتراضٌ برمجيّ قديم (بذر/اختبارات). مداخل المستخدم (API /admins، نموذج
-        # الويب، المدير الفرعيّ) تُمرّر دورًا صريحًا — least_privileged_role_id().
-        r = get_role_by_name(ROLE_SUPER_ADMIN)
-        role_id = r.id if r else None
+        # مديرٌ بلا دورٍ صريح = **الأقلّ صلاحيةً** (viewer) — أبدًا لا «مدير عام».
+        # كان الافتراض super_admin (= كل الصلاحيات غير المالكيّة بعد fix wave 2)
+        # فأيّ مسارٍ ينسى الدور يُنشئ مديرًا بكامل القوّة. من أراد «مدير عام»
+        # يُمرّر دوره صراحةً (البذر/المالك الأوّل/API is_super_admin).
+        role_id = least_privileged_role_id()
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute("""
@@ -827,8 +828,11 @@ def upsert_license_admin_user(
     if scheme != "werkzeug" or not _looks_like_werkzeug_hash(password_hash):
         raise ValueError("unsupported password_hash_scheme")
     role_name = _role_name_for_customer_role(role_key)
-    role = get_role_by_name(role_name) or get_role_by_name(ROLE_SUPER_ADMIN)
     is_owner = str(role_key or "").strip().lower() == "owner"
+    # دورٌ مفقود محلّيًّا: المالك → «مدير عام»، وغيره → الأقلّ صلاحيةً (لا
+    # «مدير عام» ضمنيّ لحساب «دعم/فوترة» من لوحة الترخيص).
+    role = get_role_by_name(role_name) or get_role_by_name(
+        ROLE_SUPER_ADMIN if is_owner else ROLE_VIEWER)
     now = now_iso()
     existing = _get_by_external_subject(subject) or get_by_username(username, include_deleted=True)
     with transaction() as conn:

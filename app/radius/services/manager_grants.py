@@ -1112,7 +1112,10 @@ def parse_grants_form(form) -> dict[str, Any]:
 
 def set_action_override(admin_id: int, action_key: str, value: Optional[bool], *, tenant_id: int = 1) -> None:
     """يَضبط تجاوز فعلٍ يَحرسه RBAC (True/False)، أو يَحذفه (None=للافتراض)."""
-    ag = dict(_grants_row(admin_id, tenant_id).get("action_grants") or {})
+    # يُكتب فوق صفّ المدير **الخام** — لا فوق النسخة المدموجة بأساس الدور
+    # (كانت تنسخ منح الدور إلى صفّ المدير فتتجمّد وراثته، أو تمسح تجاوزاته
+    # حين تنتهي منوحاته المؤقّتة).
+    ag = dict(own_grants(admin_id, tenant_id=tenant_id).get("action_grants") or {})
     flat = dict(ag.get("_actions") or {})
     if value is None:
         flat.pop(action_key, None)
@@ -1294,6 +1297,37 @@ def _merge_grants(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
         "field_grants": fg,
         "limits": _d(over.get("limits")),   # الحدود فرديّة دائمًا — لا وراثة
     }
+
+
+def own_grants(admin_id: Optional[int], *, tenant_id: int = 1) -> dict[str, Any]:
+    """تجاوزات المدير الفرديّة **كما خُزِّنت** (بلا دمج أساس الدور وبلا إلغاء
+    الانتهاء) — مصدر الكتابة ومصدر حالة «حسب الدور/مسموح/ممنوع» في الصفحة."""
+    out = {"section_access": {}, "action_grants": {}, "field_grants": {},
+           "flags": {}, "limits": {}}
+    if not admin_id:
+        return out
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            """
+            SELECT section_access_json, action_grants_json, field_grants_json,
+                   permissions_json, limits_json
+            FROM manager_distributor_policies
+            WHERE tenant_id=? AND entity_type='manager' AND entity_id=?
+            """,
+            (int(tenant_id or 1), int(admin_id)),
+        ).fetchone()
+    except Exception:  # noqa: BLE001
+        return out
+    if row:
+        out = {
+            "section_access": _load(row["section_access_json"]),
+            "action_grants": _load(row["action_grants_json"]),
+            "field_grants": _load(row["field_grants_json"]),
+            "flags": _load(row["permissions_json"]),
+            "limits": _load(row["limits_json"]),
+        }
+    return out
 
 
 def _grants_row(admin_id: Optional[int], tenant_id: int) -> dict[str, Any]:
@@ -1645,7 +1679,7 @@ def set_field_grants(
     admin_id: int, entity: str, fields: Optional[Iterable[str]], *, tenant_id: int = 1
 ) -> None:
     """يَضبط الحقول المسموحة لكيان. ``fields=None`` يُطفئ التحكّم (يَحذف المفتاح)."""
-    current = dict(_grants_row(admin_id, tenant_id).get("field_grants") or {})
+    current = dict(own_grants(admin_id, tenant_id=tenant_id).get("field_grants") or {})
     if fields is None:
         current.pop(entity, None)
     else:
@@ -1659,7 +1693,7 @@ def set_action_grants(
     admin_id: int, entity: str, actions: Optional[dict[str, bool]], *, tenant_id: int = 1
 ) -> None:
     """يَضبط بوّابات create/edit/delete لكيان. ``actions=None`` يُطفئ التحكّم."""
-    current = dict(_grants_row(admin_id, tenant_id).get("action_grants") or {})
+    current = dict(own_grants(admin_id, tenant_id=tenant_id).get("action_grants") or {})
     if actions is None:
         current.pop(entity, None)
     else:
@@ -1667,6 +1701,320 @@ def set_action_grants(
     _ensure_policy_row(int(admin_id), tenant_id)
     _write_column(int(admin_id), tenant_id, "action_grants_json", current)
     _invalidate_cache()
+
+
+
+# ═══ «حسب الدور / مسموح / ممنوع» — تجاوزٌ فرديّ ثلاثيّ لكل فعلٍ وعلَم ═════════
+# (fix wave 2 — متابعة المالك) بعد توحيد الأفعال المُشتقّة مع مفاتيح الدور صار
+# مفتاح store.review يمنح «تأكيد الإيداع» و«تأكيد السحب» معًا، و online.disconnect
+# يمنح «قطع الجلسة» و«الإغلاق الإجباريّ» معًا — دون طريقٍ في الصفحة لقول «إيداع
+# نعم / سحب لا» لمديرٍ واحد. هنا يُعرَض كل فعلٍ وعلَم بثلاث حالات:
+#   • «حسب الدور»  (الافتراض) = لا تجاوز مخزَّن — يرث ما يمنحه دوره الآن.
+#   • «مسموح»      = تجاوزٌ صريح True.
+#   • «ممنوع»      = تجاوزٌ صريح False — يَمنع هذا الفعل وحده ولو منحه الدور.
+# التخزين sparse: «حسب الدور» يحذف التجاوز؛ فحفظ الصفحة بلا تغيير لا يغيّر شيئًا
+# (D01/D02). الفعل المُشتقّ من مفتاح RBAC سقفُه المفتاح: «مسموح» يُعيد فعلًا
+# أطفأه «أساس الدور» لكنه لا يتخطّى مفتاحًا لا يملكه الدور (مسارات الفعل نفسها
+# محروسةٌ بالمفتاح في الويب والـAPI) — فيُعطَّل خياره في الصفحة مع السبب.
+TRI_INHERIT, TRI_ALLOW, TRI_DENY = "inherit", "allow", "deny"
+TRI_STATES = (TRI_INHERIT, TRI_ALLOW, TRI_DENY)
+TRI_PREFIX = "tri_"
+_TRI_WORD = {True: "مسموح", False: "ممنوع"}
+VISIBILITY_GROUP = "_visibility"
+
+
+def tri_input_name(key: str) -> str:
+    return TRI_PREFIX + key
+
+
+def tri_rows() -> list[dict[str, Any]]:
+    """كل صفّ قابل للتجاوز الفرديّ: الأفعال (كل ACTION_REGISTRY المعروض) ثم أعلام
+    نطاق الرؤية. ``store`` = أين يُخزَّن التجاوز:
+      ("action", key)       → action_grants._actions[key]
+      ("flag", flag)        → permissions_json[flag]
+      ("entity", ent, op)   → action_grants[ent][op]"""
+    rows: list[dict[str, Any]] = []
+    for key, spec in ACTION_REGISTRY.items():
+        if not spec.get("endpoints") and not spec.get("flag") and not spec.get("virtual"):
+            continue
+        rbac = spec.get("rbac_perm")
+        if rbac:
+            store: tuple = ("action", key)
+        elif spec.get("flag"):
+            store = ("flag", spec["flag"])
+        elif spec.get("entity_edit"):
+            store = ("entity", spec["entity_edit"], spec.get("entity_op", "edit"))
+        else:
+            store = ("action", key)
+        rows.append({"key": key, "label": spec["label"], "section": spec["section"],
+                     "store": store, "rbac": rbac})
+    for flag, label in SCOPE_FLAG_REGISTRY.items():
+        rows.append({"key": flag, "label": label, "section": VISIBILITY_GROUP,
+                     "store": ("flag", flag), "rbac": None})
+    return rows
+
+
+def _tri_get(blob: dict[str, Any], store: tuple) -> Optional[bool]:
+    """قيمة التجاوز المخزَّنة في blob (صفّ مدير خام أو أساس دور) أو None."""
+    ag = blob.get("action_grants") if isinstance(blob.get("action_grants"), dict) else {}
+    if store[0] == "flag":
+        flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
+        v = flags.get(store[1])
+    elif store[0] == "action":
+        acts = ag.get("_actions") if isinstance(ag.get("_actions"), dict) else {}
+        v = acts.get(store[1])
+    else:
+        ent = ag.get(store[1]) if isinstance(ag.get(store[1]), dict) else {}
+        v = ent.get(store[2])
+    return None if v is None else bool(v)
+
+
+def tri_state_of(value: Optional[bool]) -> str:
+    return TRI_INHERIT if value is None else (TRI_ALLOW if value else TRI_DENY)
+
+
+def tri_value_of(state: Any) -> tuple[bool, Optional[bool]]:
+    """(صالح؟, القيمة) لحالةٍ مُرسَلة: inherit→None، allow→True، deny→False."""
+    s = str(state or "").strip().lower()
+    if s not in TRI_STATES:
+        return False, None
+    return True, (None if s == TRI_INHERIT else s == TRI_ALLOW)
+
+
+def _tri_role_value(admin_id: Optional[int], row: dict[str, Any], rg: dict[str, Any],
+                    tenant_id: int) -> tuple[bool, str]:
+    """ما يمنحه **الدور** لهذا الصفّ لو لا تجاوز (القيمة، سببٌ عربيّ مختصر)."""
+    store = row["store"]
+    if row.get("rbac"):
+        if not _rbac_any(row["rbac"], _admin_rbac_perms(admin_id, tenant_id)):
+            return False, "ينقص الدور المفتاح " + rbac_perm_label(row["key"])
+        if _tri_get(rg, ("action", row["key"])) is False:
+            return False, "مُطفأ في أساس الدور"
+        return True, ""
+    v = _tri_get(rg, store)
+    if v is not None:
+        return v, ""
+    if store[0] == "flag":
+        from .manager_distributor_ops import DEFAULT_PERMISSIONS
+        return bool(DEFAULT_PERMISSIONS.get(store[1], False)), ""
+    if store[0] == "entity":
+        return False, ""
+    return bool(ACTION_REGISTRY.get(row["key"], {}).get("default", True)), ""
+
+
+def _tri_effective(admin_id: Optional[int], row: dict[str, Any], tenant_id: int) -> bool:
+    if row["section"] == VISIBILITY_GROUP:
+        return bool((_grants_row(admin_id, tenant_id).get("flags") or {}).get(row["store"][1]))
+    return bool(action_permitted(admin_id, row["key"], tenant_id=tenant_id))
+
+
+def tristate_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[str, Any]]:
+    """مصفوفة «حسب الدور/مسموح/ممنوع» لصفحة المدير — مجموعة «نطاق الرؤية» ثم
+    الأقسام. كل صفّ: الحالة المخزَّنة، قيمة الدور الحاليّة (تُعرَض بجانبه)،
+    القرار الفعليّ، وهل «مسموح» معطَّل (فعلٌ مُشتقّ ومفتاحه غير ممنوح للدور)."""
+    _invalidate_cache()
+    own = own_grants(admin_id, tenant_id=tenant_id)
+    rg = _role_grants_for_admin(admin_id, tenant_id)
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in tri_rows():
+        stored = _tri_get(own, row["store"])
+        role_val, role_why = _tri_role_value(admin_id, row, rg, tenant_id)
+        key_missing = bool(row.get("rbac")) and not _rbac_any(
+            row["rbac"], _admin_rbac_perms(admin_id, tenant_id))
+        groups.setdefault(row["section"], []).append({
+            "key": row["key"],
+            "input": tri_input_name(row["key"]),
+            "label": row["label"],
+            "state": tri_state_of(stored),
+            "role_value": role_val,
+            "role_label": _TRI_WORD[role_val] + (f" — {role_why}" if role_why else ""),
+            "effective": _tri_effective(admin_id, row, tenant_id),
+            "derived": bool(row.get("rbac")),
+            "rbac_label": rbac_perm_label(row["key"]) if row.get("rbac") else "",
+            # «مسموح» لا يتخطّى مفتاح الدور: يُعطَّل ما لم يكن مخزَّنًا أصلًا (فيبقى
+            # ظاهرًا مع التحذير ويمكن تغييره).
+            "allow_disabled": key_missing and stored is not True,
+            "allow_ineffective": key_missing and stored is True,
+        })
+    out: list[dict[str, Any]] = []
+    if VISIBILITY_GROUP in groups:
+        out.append({"section": VISIBILITY_GROUP, "label": "نطاق الرؤية والحماية الماليّة",
+                    "icon": "eye", "rows": groups[VISIBILITY_GROUP]})
+    for sec, spec in MANAGER_SECTION_REGISTRY.items():
+        if sec in groups:
+            out.append({"section": sec, "label": spec.get("label", sec),
+                        "icon": spec.get("icon", "folder"), "rows": groups[sec]})
+    return out
+
+
+def _tri_actor_has(actor_id: int, row: dict[str, Any], tenant_id: int) -> bool:
+    try:
+        return _tri_effective(int(actor_id), row, tenant_id)
+    except Exception:  # noqa: BLE001 — لا منح على خطأ
+        return False
+
+
+def save_manager_overrides(admin_id: int, form, *, tenant_id: int = 1,
+                           actor_id: Optional[int] = None,
+                           actor_owner: bool = True) -> dict[str, Any]:
+    """يحفظ تجاوزات المدير الفرديّة من نموذج صفحته (الأعلام + الأفعال + بوّابات
+    الكيانات). لكل صفّ: ``tri_<key>`` إن أُرسِل (inherit/allow/deny)، وإلّا
+    **عقد المربّعات القديم** كما كان (عملاء/اختبارات قديمة): العلَم/الفعل
+    المُرسَل مؤشَّرًا يُقارن بأساس الدور ويُخزَّن المخالف فقط؛ الأفعال المُشتقّة
+    بلا حقل ثلاثيّ لا تُمسّ، وبوّابات الكيانات القديمة (action_edit_<entity>)
+    يعالجها المستدعي (``legacy_entities``).
+
+    يكتب action_grants_json مباشرةً ويُرجع ``{"flags", "refused", "legacy_entities"}``
+    حيث flags = أعلام المدير الـsparse الجديدة (يكتبها المستدعي عبر set_policy)
+    و refused = تسميات «مسموح» التي رُفضت لأنّ الفاعل (غير المالك) لا يملكها."""
+    yes = {"1", "on", "true", "yes"}
+    aid = int(admin_id)
+    own = own_grants(aid, tenant_id=tenant_id)
+    rg = _role_grants_for_admin(aid, tenant_id)
+    old_flags = dict(own.get("flags") or {})
+    ag = {k: (dict(v) if isinstance(v, dict) else v)
+          for k, v in (own.get("action_grants") or {}).items()}
+    acts = dict(ag.get("_actions") or {}) if isinstance(ag.get("_actions"), dict) else {}
+    editable = set(editable_flag_keys())
+    # أعلام can_* القابلة للتحرير فقط (D01: أعلام الأفعال المُشتقّة لا تُخزَّن)،
+    # والمدير يبدأ من تجاوزاته الصريحة القائمة.
+    flags: dict[str, bool] = {k: bool(v) for k, v in old_flags.items() if k in editable}
+    refused: list[str] = []
+    legacy_entities: set[str] = set()
+    for row in tri_rows():
+        store = row["store"]
+        field = tri_input_name(row["key"])
+        if field in form:
+            ok, val = tri_value_of(form.get(field))
+            if not ok:
+                continue
+        else:
+            # ── عقد المربّعات القديم ──
+            if row.get("rbac"):
+                continue                    # مُشتقّ بلا حقل ثلاثيّ: لا يُمسّ (D01)
+            if store[0] == "flag":
+                if store[1] not in editable:
+                    continue
+                desired = form.get(store[1]) in yes
+                role_val = _tri_get(rg, store)
+                if role_val is None:
+                    from .manager_distributor_ops import DEFAULT_PERMISSIONS
+                    role_val = bool(DEFAULT_PERMISSIONS.get(store[1], False))
+                val = None if desired == role_val else desired
+            elif store[0] == "entity":
+                legacy_entities.add(store[1])
+                continue                    # يعالجه المستدعي (action_edit_<entity>)
+            else:
+                checked = form.get(f"action_{row['key']}") in yes
+                val = None if checked == role_baseline_action(
+                    aid, row["key"], tenant_id=tenant_id) else checked
+        # سقف الفاعل: غير المالك لا يمنح «مسموح» صريحًا لما لا يملكه هو.
+        if val is True and not actor_owner and actor_id \
+                and _tri_get(own, store) is not True \
+                and not _tri_actor_has(int(actor_id), row, tenant_id):
+            refused.append(row["label"])
+            continue
+        if store[0] == "flag":
+            if val is None:
+                flags.pop(store[1], None)
+            else:
+                flags[store[1]] = bool(val)
+        elif store[0] == "action":
+            if val is None:
+                acts.pop(store[1], None)
+            else:
+                acts[store[1]] = bool(val)
+            if row["key"] == "batch.edit":
+                # الحقل الثلاثيّ يملك «تعديل الحزمة» الآن — تُزال منحة الكيان
+                # القديمة (التي كانت تسمح دون المفتاح) كي لا يبقى مصدران.
+                ent = ag.get("batch") if isinstance(ag.get("batch"), dict) else None
+                if ent is not None:
+                    ent.pop("edit", None)
+                    if ent:
+                        ag["batch"] = ent
+                    else:
+                        ag.pop("batch", None)
+        else:
+            ent = dict(ag.get(store[1]) or {}) if isinstance(ag.get(store[1]), dict) else {}
+            if val is None:
+                ent.pop(store[2], None)
+            else:
+                ent[store[2]] = bool(val)
+            if ent:
+                ag[store[1]] = ent
+            else:
+                ag.pop(store[1], None)
+    if acts:
+        ag["_actions"] = acts
+    else:
+        ag.pop("_actions", None)
+    _ensure_policy_row(aid, tenant_id)
+    _write_column(aid, tenant_id, "action_grants_json", ag)
+    _invalidate_cache()
+    return {"flags": flags, "refused": refused, "legacy_entities": legacy_entities}
+
+
+def role_derived_catalog(blob: dict[str, Any], role_perms) -> list[dict[str, Any]]:
+    """تقسيم الأفعال المُشتقّة على **أساس الدور**: لكل فعلٍ مفتاحُه في مصفوفة
+    الصلاحيات أعلاه، وهنا «حسب المفتاح» (الافتراض) / «مسموح» / «ممنوع» — مثل
+    «تأكيد الإيداع نعم / تأكيد السحب لا» لكل مدراء الدور. «مسموح» لا يتخطّى
+    المفتاح (يُعطَّل حين لا يملكه الدور)."""
+    blob = blob or {}
+    perms = set(role_perms or ())
+    by_section: dict[str, list[dict[str, Any]]] = {}
+    for row in tri_rows():
+        if not row.get("rbac"):
+            continue
+        stored = _tri_get(blob, ("action", row["key"]))
+        has_key = _rbac_any(row["rbac"], perms)
+        by_section.setdefault(row["section"], []).append({
+            "key": row["key"], "input": tri_input_name(row["key"]),
+            "label": row["label"], "state": tri_state_of(stored),
+            "rbac_label": rbac_perm_label(row["key"]), "has_key": has_key,
+            "key_label": "ممنوح" if has_key else "غير ممنوح",
+            "allow_disabled": (not has_key) and stored is not True,
+            "effective": bool(has_key and stored is not False),
+        })
+    out: list[dict[str, Any]] = []
+    for sec, spec in MANAGER_SECTION_REGISTRY.items():
+        if sec in by_section:
+            out.append({"section": sec, "label": spec.get("label", sec),
+                        "icon": spec.get("icon", "folder"), "rows": by_section[sec]})
+    return out
+
+
+def apply_role_derived_form(blob: dict[str, Any], form,
+                            existing: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """يضيف تقسيم الأفعال المُشتقّة إلى أساس دور مبنيّ من النموذج: ``tri_<key>``
+    المُرسَل يحكم (inherit يحذف)؛ غير المُرسَل يحتفظ بقيمة الأساس القائم (نموذج
+    قديم لا يمسح تقسيمًا ضبطه المالك)."""
+    existing = existing or {}
+    ag = dict(blob.get("action_grants") or {})
+    acts = dict(ag.get("_actions") or {})
+    for row in tri_rows():
+        if not row.get("rbac"):
+            continue
+        field = tri_input_name(row["key"])
+        if field in form:
+            ok, val = tri_value_of(form.get(field))
+            if not ok:
+                continue
+        else:
+            val = _tri_get(existing, ("action", row["key"]))
+        if val is None:
+            acts.pop(row["key"], None)
+        else:
+            acts[row["key"]] = bool(val)
+    if acts:
+        ag["_actions"] = acts
+    else:
+        ag.pop("_actions", None)
+    out = dict(blob)
+    if ag:
+        out["action_grants"] = ag
+    else:
+        out.pop("action_grants", None)
+    return out
 
 
 __all__ = [
@@ -1695,4 +2043,7 @@ __all__ = [
     "rbac_perm_label", "FLAG_DERIVED_ACTION", "super_role_grants",
     "ROLE_RBAC_SCOPE_FLAGS",
     "parent_admin_id", "can_create_sub_managers", "parent_has_grant", "clamp_delegation",
+    "own_grants", "TRI_INHERIT", "TRI_ALLOW", "TRI_DENY", "TRI_STATES", "tri_rows",
+    "tri_input_name", "tri_state_of", "tri_value_of", "tristate_catalog",
+    "save_manager_overrides", "role_derived_catalog", "apply_role_derived_form",
 ]

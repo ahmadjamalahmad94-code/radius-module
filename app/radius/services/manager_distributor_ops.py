@@ -422,8 +422,16 @@ class ManagerDistributorOpsService:
         effective = {**DEFAULT_PERMISSIONS, **role_flags, **(mgr_raw or {})}
         return bool(effective.get(permission))
 
-    def list_scope(self, *, entity_type: str) -> list[dict[str, Any]]:
+    def list_scope(self, *, entity_type: str,
+                   owner_admin_id: int | None = None) -> list[dict[str, Any]]:
+        """``owner_admin_id`` (موزّعون فقط): عزل المِلكية — موزّعو ذلك المدير."""
         etype = self._entity_type(entity_type)
+        if etype == "distributor" and owner_admin_id is not None:
+            rows = db().execute(
+                "SELECT id, COALESCE(display_name, name, '') AS username, COALESCE(display_name, name, '') AS full_name, status FROM distributors WHERE tenant_id=? AND admin_id=? ORDER BY id DESC LIMIT 500",
+                (self.tenant_id, int(owner_admin_id)),
+            ).fetchall()
+            return [row_to_dict(row) for row in rows]
         if etype == "manager":
             rows = db().execute(
                 "SELECT id, username, full_name, CASE WHEN enabled=1 THEN 'active' ELSE 'disabled' END AS status FROM admins ORDER BY id DESC LIMIT 500"

@@ -39,16 +39,34 @@ def _service() -> ManagerDistributorOpsService:
     return ManagerDistributorOpsService(tenant_id=_tid())
 
 
+def _distributor_owner_filter():
+    """None = كل الموزّعين (المالك/الشريك/«مدير عام»)، وإلّا معرّف المدير نفسه."""
+    if session.get("is_super_admin"):
+        return None
+    from ..services.distributor_scope import list_owner_filter
+    return list_owner_filter(int(session.get("admin_id") or 0), tenant_id=_tid())
+
+
 def business_operators():
     service = _service()
     return render_template(
         "radius/business_operators.html",
         managers=service.list_scope(entity_type="manager"),
-        distributors=service.list_scope(entity_type="distributor"),
+        distributors=service.list_scope(entity_type="distributor",
+                                        owner_admin_id=_distributor_owner_filter()),
     )
 
 
 def business_operator_profile(entity_type: str, entity_id: int):
+    if entity_type == "distributor":
+        # عزل المِلكية: ملفّ موزّعٍ لا يتبع المدير (وليس «مدير عام») = 403.
+        _owner = _distributor_owner_filter()
+        if _owner is not None:
+            from flask import abort
+            from ..db.repos import operations_repo
+            _d = operations_repo.get_distributor(_tid(), int(entity_id))
+            if _d is not None and int(_d.get("admin_id") or 0) != int(_owner):
+                abort(403)
     try:
         profile = _service().profile(entity_type=entity_type, entity_id=entity_id)
     except ManagerDistributorError:
@@ -58,6 +76,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
     section_states = ()
     field_catalog = []
     action_catalog = []
+    tri_catalog = []
     limits_catalog = []
     if entity_type == "manager":
         from ..services import manager_grants as _mg
@@ -65,6 +84,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         section_states = _mg.SECTION_STATES
         field_catalog = _build_field_catalog(int(entity_id))
         action_catalog = _mg.action_catalog(int(entity_id), tenant_id=_tid())
+        tri_catalog = _mg.tristate_catalog(int(entity_id), tenant_id=_tid())
         limits_catalog = _mg.limits_catalog(int(entity_id), tenant_id=_tid())
     presets = []
     rate_catalog = []
@@ -96,6 +116,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
         section_states=section_states,
         field_catalog=field_catalog,
         action_catalog=action_catalog,
+        tri_catalog=tri_catalog,
         limits_catalog=limits_catalog,
         presets=presets,
         rate_catalog=rate_catalog,
@@ -150,7 +171,21 @@ def _build_field_catalog(manager_id: int) -> list[dict]:
     return out
 
 
+def _policy_actor_guard(entity_id: int) -> tuple[int, bool]:
+    """(الفاعل، هل بمقام المالك). غير المالك لا يعدّل صلاحيات نفسه ولا حساب
+    مالكٍ/شريك — ترفع OwnerGuardError برسالة عربيّة."""
+    from ..auth.owner import OwnerGuardError, assert_can_modify_admin, is_owner_like
+    actor = int(session.get("admin_id") or 0)
+    actor_owner = bool(session.get("is_super_admin")) or (bool(actor) and is_owner_like(actor))
+    if not actor_owner:
+        if not actor or actor == int(entity_id):
+            raise OwnerGuardError("لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك.")
+        assert_can_modify_admin(actor, int(entity_id))
+    return actor, actor_owner
+
+
 def business_operator_policy(entity_type: str, entity_id: int):
+    from ..auth.owner import OwnerGuardError
     try:
         _yes = {"1", "on", "true", "yes"}
         _flag_keys = (
@@ -161,22 +196,20 @@ def business_operator_policy(entity_type: str, entity_id: int):
             "can_create_sub_managers", "can_see_balance", "can_see_profit",
             "can_import_batches",
         )
-        # وراثة الدور: خزّن العلَم الفرديّ **فقط عند مخالفته أساس الدور** — فيَبقى
-        # الموروث حيًّا، ولا يُجمّد فتحُ/حفظُ ملفّ المدير وراثتَه. التوزيع لا دور له.
+        # القيم الرقميّة تُتحقَّق أوّلًا — فلا يُحفَظ نصف النموذج ثم يُرفَض.
+        profit_share = strict_float(request.form.get("profit_share_percent") or 0)
+        saved = None
         if entity_type == "manager":
             from ..services import manager_grants as _mg
-            from ..services.manager_distributor_ops import DEFAULT_PERMISSIONS as _DP
-            role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=_tid())
-            permissions = {}
-            # D01: الأعلام التي لها مربّعٌ في الصفحة فقط — أعلام الأفعال المُشتقّة
-            # من RBAC (إنشاء/تفعيل/سلفة/توليد/استيراد) لا مربّع لها، فغيابها ليس
-            # «مُطفأ» ولا يُخزَّن.
-            _editable = set(_mg.editable_flag_keys())
-            for key in (k for k in _flag_keys if k in _editable):
-                desired = request.form.get(key) in _yes
-                baseline = bool(role_flags.get(key, _DP.get(key, False)))
-                if desired != baseline:
-                    permissions[key] = desired
+            actor, actor_owner = _policy_actor_guard(int(entity_id))
+            # «حسب الدور / مسموح / ممنوع» لكل فعلٍ وعلَم (tri_<key>): يُخزَّن
+            # التجاوز الصريح فقط («حسب الدور» يحذفه) — فيَبقى الموروث حيًّا ولا
+            # يغيّر حفظُ الصفحة بلا تعديل أيَّ صلاحية (D01/D02). النماذج القديمة
+            # (مربّعات can_*/action_*) تُفهَم كما كانت.
+            saved = _mg.save_manager_overrides(
+                int(entity_id), request.form, tenant_id=_tid(),
+                actor_id=actor, actor_owner=actor_owner)
+            permissions = saved["flags"]
         else:
             permissions = {key: request.form.get(key) in _yes for key in _flag_keys}
         def _nonneg_int(name):
@@ -208,7 +241,7 @@ def business_operator_policy(entity_type: str, entity_id: int):
             entity_id=entity_id,
             permissions=permissions,
             limits=limits,
-            profit_share_percent=strict_float(request.form.get("profit_share_percent") or 0),
+            profit_share_percent=profit_share,
             credit_limit=request.form.get("credit_limit") or "0",
             require_approval_above=request.form.get("require_approval_above") or "0",
         )
@@ -242,9 +275,15 @@ def business_operator_policy(entity_type: str, entity_id: int):
                     _mg.set_field_grants(int(entity_id), entity, granted, tenant_id=_tid())
                 else:
                     _mg.set_field_grants(int(entity_id), entity, None, tenant_id=_tid())
-            # بوّابة فعل «تعديل» للكيانات المالكيّة (offer/batch) — opt-in.
-            # ``action_edit_<entity>`` مؤشَّر = يُسمح للمدير بتعديلها.
+            # بوّابة «تعديل/إضافة» الكيانات المالكيّة (offer/batch) صارت صفوفًا
+            # ثلاثيّة في مصفوفة الأفعال. العقد القديم (مربّع action_edit_<entity>)
+            # يُطبَّق فقط حين لا يُرسَل الحقل الثلاثيّ لذلك الكيان.
+            legacy = set(saved.get("legacy_entities") or ()) if saved else set()
+            if _mg.tri_input_name("batch.edit") not in request.form:
+                legacy.add("batch")
             for entity in _EDIT_ACTION_ENTITIES:
+                if entity not in legacy:
+                    continue
                 ops = {}
                 if request.form.get(f"action_edit_{entity}") in _yes:
                     ops["edit"] = True
@@ -254,18 +293,6 @@ def business_operator_policy(entity_type: str, entity_id: int):
                     ops["create"] = True
                 _mg.set_action_grants(
                     int(entity_id), entity, ops or None, tenant_id=_tid())
-            # الأفعال بلا علَم (يَحرسها RBAC أو افتراضها OFF مثل أفعال المتجر):
-            # نُخزّن التجاوز الصريح فقط عندما يُخالف الافتراض (يُبقي الصفّ نظيفًا)،
-            # ويَدعم الاتجاهين: تفعيل فعلٍ افتراضه OFF، أو إطفاء فعلٍ افتراضه ON.
-            # D01: rbac_action_keys() يستثني الأفعال المُشتقّة من RBAC (لا مربّع لها).
-            for akey in _mg.rbac_action_keys():
-                checked = request.form.get(f"action_{akey}") in _yes
-                # المقارنة بأساس **الدور الموروث** لا بافتراض السجلّ: نُخزّن
-                # التجاوز فقط عند مخالفته الدور، فتَبقى الوراثة حيّة.
-                baseline = _mg.role_baseline_action(int(entity_id), akey, tenant_id=_tid())
-                _mg.set_action_override(
-                    int(entity_id), akey,
-                    None if checked == baseline else checked, tenant_id=_tid())
             # D05: المنح الدقيقة تُقرأ حيّةً كل طلب؛ ونزيد ختم الصلاحيات كي تُعاد
             # قراءة ما في الجلسة أيضًا فورًا.
             try:
@@ -274,6 +301,11 @@ def business_operator_policy(entity_type: str, entity_id: int):
             except Exception:  # noqa: BLE001
                 pass
         flash("تم تحديث صلاحيات وحدود المشغل.", "success")
+        if saved and saved.get("refused"):
+            flash("لم يُمنَح «مسموح» لما لا تملكه أنت: " + "، ".join(saved["refused"][:8]),
+                  "warning")
+    except OwnerGuardError as exc:
+        flash(str(exc), "error")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile", entity_type=entity_type, entity_id=entity_id))
@@ -364,6 +396,26 @@ def sub_manager_create():
     _child_role = getattr(_parent_row, "role_id", None)
     if _child_role is None or (_actor_is_super() and _role_src == _actor_id()):
         _child_role = admins_repo.least_privileged_role_id()
+    # دور «مدير عام» لا يُورَّث ضمنيًّا: منحه مقصورٌ على المالك/الشريك، والمدير
+    # الفرعيّ بلا دورٍ مختار يبدأ بالأقلّ صلاحيةً ثم يُفوَّض له.
+    elif admins_repo.role_is_super(admins_repo.get_role(int(_child_role))):
+        _child_role = admins_repo.least_privileged_role_id()
+    # دورٌ مختار صراحةً (اختياريّ): موجود، ليس «مدير عام» لغير المالك، وضمن
+    # صلاحيات المُنشئ (لا تصعيد).
+    _raw_role = (request.form.get("role_id") or "").strip()
+    if _raw_role:
+        from ..auth.owner import OwnerGuardError, assert_role_within_actor
+        _picked = admins_repo.get_role(int(_raw_role)) if _raw_role.isdigit() else None
+        try:
+            if _picked is None:
+                raise OwnerGuardError("الدور المحدد غير موجود.")
+            if admins_repo.role_is_super(_picked) and not _actor_is_super():
+                raise OwnerGuardError("منح دور «مدير عام» مقصورٌ على المالك أو الشريك.")
+            assert_role_within_actor(_actor_id(), tuple(_picked.permissions or ()))
+        except OwnerGuardError as exc:
+            flash(str(exc), "error")
+            return redirect(request.referrer or url_for("radius.business_operators"))
+        _child_role = int(_picked.id)
     try:
         child = admins_repo.create_admin(
             username=username, password=password,

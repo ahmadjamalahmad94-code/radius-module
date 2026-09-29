@@ -210,6 +210,8 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 .rg-open input:checked ~ span{background:#dcfce7;border-color:#16a34a;color:#15803d}
 .rg-locked input:checked ~ span{background:#fef3c7;border-color:#d97706;color:#b45309}
 .rg-hidden input:checked ~ span{background:#fee2e2;border-color:#dc2626;color:#b91c1c}
+.rg-inherit input:checked ~ span{background:#e0f2fe;border-color:#0284c7;color:#075985}
+.rg-sec-opt input:disabled ~ span{opacity:.45;cursor:not-allowed}
 /* فاصل بصريّ سخيّ بين كتلة «الدور» وكتلة «أساس الأفعال والرؤية» */
 .role-grants-wrap{margin-top:var(--hub-gap-lg,26px)}
 .role-grants-sep{display:flex;align-items:center;gap:12px;margin:8px 0 20px;color:var(--hub-text-mute)}
@@ -421,6 +423,46 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       </details>
       {% endfor %}
     {% endcall %}
+
+    {% if derived_catalog %}
+    {% call hub.section("تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات", icon="code-branch") %}
+      <p class="rg-note hub-text-mute">
+        {{ _('بعض المفاتيح في مصفوفة الصلاحيات أعلاه تمنح أكثر من فعل (مثل store.review: تأكيد الإيداع + تأكيد السحب، و online.disconnect: قطع الجلسة + الإغلاق الإجباريّ). «حسب المفتاح» = يتبع المفتاح • «ممنوع» يُطفئ هذا الفعل وحده لكل مدراء الدور • «مسموح» لا يتخطّى مفتاحًا غير ممنوح. ويمكن تجاوز أيّ صفّ لمديرٍ بعينه من صفحته.') }}
+      </p>
+      {% for grp in derived_catalog %}
+      <details class="rg-group" data-testid="role-derived-{{ grp.section }}" open>
+        <summary><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</summary>
+        <div class="rg-sec-list">
+          {% for r in grp.rows %}
+          <div class="rg-sec-row" data-testid="role-tri-row-{{ r.key }}">
+            <span class="rg-sec-label">{{ _(r.label) }}
+              <small class="hub-text-mute" style="font-weight:700">({{ _('المفتاح') }} <code>{{ r.rbac_label }}</code>: {{ _(r.key_label) }})</small>
+            </span>
+            <div class="rg-sec-states" role="radiogroup" aria-label="{{ _(r.label) }}">
+              <label class="rg-sec-opt rg-inherit">
+                <input type="radio" name="{{ r.input }}" value="inherit" {% if r.state == 'inherit' %}checked{% endif %}>
+                <span><i class="fa-solid fa-key"></i> {{ _('حسب المفتاح') }}</span>
+              </label>
+              <label class="rg-sec-opt rg-open">
+                <input type="radio" name="{{ r.input }}" value="allow" {% if r.state == 'allow' %}checked{% endif %} {% if r.allow_disabled %}disabled{% endif %}>
+                <span><i class="fa-solid fa-check"></i> {{ _('مسموح') }}</span>
+              </label>
+              <label class="rg-sec-opt rg-hidden">
+                <input type="radio" name="{{ r.input }}" value="deny" {% if r.state == 'deny' %}checked{% endif %}>
+                <span><i class="fa-solid fa-ban"></i> {{ _('ممنوع') }}</span>
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endfor %}
+    {% endcall %}
+    {% elif role_is_super %}
+    {% call hub.section("تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات", icon="code-branch") %}
+      <p class="rg-note hub-text-mute">{{ _('دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك — لا تقسيم على الدور؛ اضبط «ممنوع» لمديرٍ بعينه من صفحته.') }}</p>
+    {% endcall %}
+    {% endif %}
 
     {% if section_catalog %}
     {% call hub.section("وصول الأقسام", icon="table-columns") %}
