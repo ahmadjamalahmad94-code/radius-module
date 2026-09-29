@@ -42,8 +42,11 @@ def app(monkeypatch, tmp_path):
 def _mgr(username="m1") -> int:
     from app.radius.db.repos import admins_repo
 
+    # explicit «مدير عام» role: create_admin() without a role is now the
+    # least-privileged role (never super_admin).
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", is_super_admin=False,
+                                   role_id=admins_repo.get_role_by_name("super_admin").id)
     return int(adm.id)
 
 

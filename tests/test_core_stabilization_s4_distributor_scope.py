@@ -14,6 +14,8 @@ def test_distributor_token_sees_only_assigned_batches(client):
         password="pw123456",
         full_name="Scoped Distributor",
         enabled=True,
+        # even a «مدير عام» role stays scoped when the account IS a distributor
+        role_id=admins_repo.get_role_by_name("super_admin").id,
     )
     record, plain = api_tokens_repo.create_token(
         tenant_id=1,

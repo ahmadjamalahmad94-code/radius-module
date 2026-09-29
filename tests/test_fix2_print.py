@@ -123,7 +123,8 @@ def _web_login(client, username=None) -> str:
     u = username or f"f2p_{uuid4().hex[:10]}"
     try:
         admins_repo.create_admin(username=u, password="f2p-pass", full_name="F2",
-                                 is_super_admin=True)
+                                 is_super_admin=True,
+                                 role_id=admins_repo.get_role_by_name("super_admin").id)
     except Exception:  # noqa: BLE001 — already there (second login)
         pass
     res = client.post("/admin/radius/login", data={"username": u, "password": "f2p-pass"})

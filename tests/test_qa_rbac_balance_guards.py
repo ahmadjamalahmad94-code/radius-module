@@ -49,6 +49,9 @@ def client(app):
 def _mk(*, is_super=False, role=None):
     from app.radius.db.repos import admins_repo
     rid = None
+    # the «super admin» fixture means the super_admin role explicitly —
+    # create_admin() without a role is now the least-privileged role.
+    role = role or ("super_admin" if is_super else None)
     if role:
         r = admins_repo.get_role_by_name(role)
         rid = r.id if r else None

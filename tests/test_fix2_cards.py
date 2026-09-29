@@ -45,7 +45,8 @@ def app(monkeypatch, tmp_path):
         tenants_repo.ensure_default_tenant()
         admins_repo.ensure_default_roles()
         admins_repo.create_admin(username="owner_root", password="x12345678",
-                                 full_name="Owner", is_super_admin=True)
+                                 full_name="Owner", is_super_admin=True,
+                                 role_id=admins_repo.get_role_by_name("super_admin").id)
     _PLAN.clear()
     return flask_app
 
