@@ -85,6 +85,8 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_unlock_mac), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/reset-usage", "cards_reset_usage",
                     require_api_token(cards_reset_usage), methods=["POST"])
+    bp.add_url_rule("/cards/<int:card_id>/adjust-time", "cards_adjust_time",
+                    require_api_token(cards_adjust_time), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/disconnect", "cards_disconnect",
                     require_api_token(cards_disconnect), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/delete-permanent", "cards_delete_permanent",
@@ -1115,6 +1117,66 @@ def cards_reset_usage(card_id: int):
     except RadiusError as e:
         return _radius_error_response(e)
     return ok(_updated_card_payload(card.username, action="reset_usage"))
+
+
+_ADJUST_UNITS = {"minutes": 60, "hours": 3600, "days": 86400}
+#: سقف تعديلٍ واحد = 3650 يومًا (نفس سقف تمديد المشترك في fix2).
+_ADJUST_MAX_SECONDS = 3650 * 86400
+
+
+def cards_adjust_time(card_id: int):
+    """«إضافة/خصم وقت» للبطاقة — نفس `CardsService.adjust_card_time` التي
+    يستعملها الويب، فتصل المنحة إلى المُصادِق (النافذة/Session-Timeout/ميزانية
+    المتصلين) لا إلى رقم الفاحص وحده.
+
+    الجسم: ``{"amount": 30, "unit": "minutes|hours|days", "op": "add|subtract"}``
+    أو ``{"delta_seconds": -1800}``. خصمٌ أكبر من المتبقّي يُنهي البطاقة
+    (``exhausted: true``) — لا يجعلها «بلا حدّ».
+    """
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    body = _body()
+    if "delta_seconds" in body:
+        try:
+            delta = _field_int(body, "delta_seconds", 0, "مقدار التعديل بالثواني")
+        except RadiusValidationError as e:
+            return _radius_error_response(e)
+    else:
+        unit = str(body.get("unit") or "").strip().lower()
+        op = str(body.get("op") or "add").strip().lower()
+        if unit not in _ADJUST_UNITS or op not in ("add", "subtract"):
+            return fail("validation_error",
+                        "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم).",
+                        status=422)
+        try:
+            amount = _field_int(body, "amount", 0, "المدّة")
+        except RadiusValidationError as e:
+            return _radius_error_response(e)
+        if amount <= 0:
+            return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
+        delta = amount * _ADJUST_UNITS[unit] * (-1 if op == "subtract" else 1)
+    if not delta:
+        return fail("validation_error", "لا يوجد تعديل لتطبيقه.", status=422)
+    if abs(delta) > _ADJUST_MAX_SECONDS:
+        return fail("validation_error",
+                    "المدّة تتجاوز الحدّ المسموح (3650 يومًا).", status=422)
+    from ...radius.services.cards import get_cards_service
+    try:
+        result = get_cards_service().adjust_card_time(
+            actor=_actor(), card_id=card_id, delta_seconds=delta,
+            username=card.username)
+    except RadiusError as e:
+        return _radius_error_response(e)
+    payload = _updated_card_payload(card.username, action="adjust_time")
+    payload["adjustment"] = {
+        "delta_seconds": delta,
+        "remaining_seconds": int(result.get("remaining_seconds") or 0),
+        "exhausted": bool(result.get("exhausted")),
+        "extra_seconds": int(result.get("extra_seconds_new") or 0),
+        "expire_at": result.get("expire_at_new"),
+    }
+    return ok(payload)
 
 
 def cards_disconnect(card_id: int):

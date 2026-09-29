@@ -1243,6 +1243,52 @@ def _card_batch_window_seconds(tenant_id, batch_id) -> int:
     return _card_window_seconds(row) if row else 0
 
 
+def _card_session_window_seconds(tenant_id, batch_id, username) -> int:
+    """نافذة أوّل دخول **مع منحة المشغّل** على هذه البطاقة.
+
+    fix2 (R13-H1): «إضافة/خصم وقت» يُكتب في `cards.extra_seconds`، وكانت
+    النافذة تُقرأ من الحزمة وحدها ⇒ المنحة رقمٌ في الفاحص لا يصل إلى
+    الراوتر. ``-1`` = استنفدها خصمٌ (منتهية، لا «بلا حدّ»).
+    """
+    base = _card_batch_window_seconds(tenant_id, batch_id)
+    if base <= 0 or not username:
+        return base
+    try:
+        row = db().execute(
+            "SELECT COALESCE(c.extra_seconds, 0) AS extra_seconds, "
+            "       b.count_by_seconds, b.count_from_first_connect "
+            "  FROM cards c LEFT JOIN card_batches b "
+            "    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id "
+            " WHERE c.tenant_id = ? AND c.username = ?",
+            (int(tenant_id), username)).fetchone()
+    except Exception:  # noqa: BLE001
+        return base
+    if not row:
+        return base
+    return _add_card_extra(base, row, row["extra_seconds"])
+
+
+def _add_card_extra(base: int, batch_row, extra_seconds) -> int:
+    """نافذةٌ (‏`_card_window_seconds`) + منحة المشغّل.
+
+    * لا نافذة (0) → 0 كما هو.
+    * نمط «بالثانية»: النافذة هنا سقفٌ تقويميّ (صلاحيّة بعد أوّل دخول)،
+      والمنحةُ تذهب لرصيد الاستخدام (‏card_batch_flags) لا إليه.
+    * وإلّا: الأساس + المنحة، و``-1`` إن استنفدها خصمٌ (منتهية).
+    """
+    if base <= 0:
+        return base
+    try:
+        by_seconds = bool(batch_row["count_by_seconds"]) and not bool(
+            batch_row["count_from_first_connect"])
+    except (KeyError, IndexError, TypeError):
+        by_seconds = False
+    if by_seconds:
+        return base
+    total = base + int(extra_seconds or 0)
+    return total if total > 0 else -1
+
+
 def _card_window_seconds(batch_row) -> int:
     """MT112 — نافذة البطاقة بالثواني كما كتبها المشغّل على الحزمة.
 
@@ -1428,13 +1474,19 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                 _b = conn.execute("""
                     SELECT b.time_value, b.time_unit,
                            b.validity_after_first_login_days,
-                           b.count_by_seconds, b.count_from_first_connect
+                           b.count_by_seconds, b.count_from_first_connect,
+                           COALESCE(c.extra_seconds, 0) AS extra_seconds
                       FROM cards c
                       JOIN card_batches b
                         ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
                      WHERE c.tenant_id = ? AND c.username = ?
                 """, (req.tenant_id, req.username)).fetchone()
+                # fix2 (R13-H1): النافذة تشمل «إضافة/خصم وقت» الممنوحة قبل أوّل
+                # دخول — كانت تُقرأ من الحزمة وحدها فتُهمَل المنحة كلّها.
                 seconds = _card_window_seconds(_b) if _b else 0
+                seconds = _add_card_extra(seconds, _b, _b["extra_seconds"]) if _b else 0
+                if seconds < 0:
+                    seconds = 0     # مستنفَدة: expire_at مختومٌ سلفًا بالخصم
                 if seconds > 0:
                     # من بدايةِ العدّ الصادقة لا من «الآن» — وإلّا عاد ⑤
                     # من الباب الآخر: ختمٌ قديمٌ ونافذةٌ تبدأ اليوم.
@@ -1663,7 +1715,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             # المقيسة: بطاقةُ ١٠ دقائق قُرئت ٦٣ دقيقةً في جلسةٍ واحدة، وأخرى
             # ٢٧٥ دقيقة. والمدّةُ ليست مجهولة: هي مكتوبةٌ على الحزمة سلفًا
             # (`time_value/time_unit`) فنقرؤها ولا ننتظر الختم.
-            window = _card_batch_window_seconds(sub.tenant_id, sub.card_batch_id)
+            window = _card_session_window_seconds(sub.tenant_id, sub.card_batch_id,
+                                                  sub.username)
+            if window < 0:
+                # استنفدها خصمُ المشغّل — لا جلسةَ مفتوحة (دفاعٌ ثانٍ؛ المُصادِق
+                # يرفضها قبل هذا عبر _check_card_time_budget).
+                window = 1
             if window > 0:
                 timeout = window if not timeout else min(timeout, window)
         if timeout > 0:

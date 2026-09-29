@@ -2174,7 +2174,14 @@ class CardsService:
         coa_result = None
         try:
             push_coa = getattr(self._adapter, "push_session_timeout", None)
-            if callable(push_coa) and username:
+            if result.get("exhausted") and username:
+                # fix2 (R13-H1): خصمٌ استنفد وقت البطاقة ⇒ تُقطع جلستها الآن.
+                # ‏Session-Timeout=0 يعني عند الراوتر «بلا حدّ» — لا نرسله أبدًا.
+                try:
+                    self._adapter.disconnect(username)
+                except Exception:  # noqa: BLE001 — لا جلسة حيّة: لا بأس
+                    pass
+            elif callable(push_coa) and username and result["remaining_seconds"] > 0:
                 coa_result = push_coa(
                     username=username,
                     session_timeout=result["remaining_seconds"],
@@ -2195,6 +2202,7 @@ class CardsService:
                 "expire_at_old":      result["expire_at_old"],
                 "expire_at_new":      result["expire_at_new"],
                 "remaining_seconds":  result["remaining_seconds"],
+                "exhausted":          bool(result.get("exhausted")),
                 "coa_pushed":         bool(coa_result and getattr(coa_result, "ok", False)),
             },
         )

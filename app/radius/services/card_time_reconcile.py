@@ -127,6 +127,7 @@ def _candidate_rows(conn: sqlite3.Connection, tenant_id: int, *,
         SELECT c.id AS card_id, c.username AS username, c.batch_id AS batch_id,
                c.expire_at AS card_expire_at, c.first_used_at AS first_used_at,
                c.revoked AS revoked, c.used AS used,
+               COALESCE(c.extra_seconds, 0) AS extra_seconds,
                b.count_from_first_connect AS b_cffc,
                b.count_by_seconds AS b_cbs,
                b.validity_after_first_login_days AS b_vafld,
@@ -215,6 +216,15 @@ def plan_reconcile(conn: sqlite3.Connection, tenant_id: int, *,
             base.reason = "no_budget"
             plan.decisions.append(base)
             continue
+        # fix2: «إضافة/خصم وقت» جزءٌ من النافذة. بدونه يرى المُصالِح خصمًا
+        # مقصودًا «نافذةً قصيرة» فيُعيد للبطاقة ما خُصم منها.
+        _extra = int(r["extra_seconds"] or 0)
+        if card_accounting.is_exhausted(budget, _extra):
+            base.reason = "exhausted_by_deduction"
+            plan.decisions.append(base)
+            continue
+        budget = card_accounting.budget_with_extra(budget, _extra)
+        base.budget_seconds = budget
         first_conn = _first_connection(conn, tenant_id, r["username"],
                                        r["first_used_at"])
         if first_conn is None:
