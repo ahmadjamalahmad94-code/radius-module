@@ -55,6 +55,24 @@ def _guard(web_endpoint: str):
     return c, None
 
 
+# Reading loans: the web shows them on «دفعات وسلف المستفيد» (users.loans) and in
+# the finance center «الديون والسلف» (reports.finance). A manager with neither
+# (e.g. only users.payments) listed ALL loans of the tenant through the API.
+_LOAN_READ_PERMS = ("users.loans", "reports.finance")
+
+
+def _read_guard():
+    """Identity + read permission for GET /loans and /loans/<id> → error or None."""
+    from .subscriber_actions import _FORBIDDEN_AR, _identity
+    ident, err = _identity()
+    if err is not None:
+        return err
+    if ident.caller.is_super or any(p in ident.perms for p in _LOAN_READ_PERMS):
+        return None
+    return fail("forbidden", _FORBIDDEN_AR, status=403,
+                details={"permission": " | ".join(_LOAN_READ_PERMS)})
+
+
 def _error(e: RadiusError):
     if isinstance(e, sa.SpendBlocked):
         return fail("spend_blocked", e.message, status=403)
@@ -69,6 +87,9 @@ def _error(e: RadiusError):
 
 
 def loans_list():
+    denied = _read_guard()
+    if denied is not None:
+        return denied
     try:
         limit, offset = page_args(default=100, maximum=500)
         raw_sid = (request.args.get("subscriber_id") or "").strip()
@@ -139,6 +160,9 @@ def loans_create():
 
 
 def loans_get(loan_id: int):
+    denied = _read_guard()
+    if denied is not None:
+        return denied
     try:
         loan = service_from_context().get_loan(loan_id)
     except RadiusError as e:

@@ -256,6 +256,21 @@ class Subscriber360Service:
                                             subscriber_id=subscriber_id)
         financial["open_loan_amount"] = _open["outstanding"]
         financial["open_loans_count"] = _open["open_count"]
+        # 🔴 محفظة المشترك الفعليّة = subscribers.balance (هنا يُخصم «مدفوع» ويُسجَّل
+        # «دين»). كان 360 يقرأ جدول wallets (محافظ المدراء/business-os) فيعرض
+        # «الرصيد 0» و«دين مفتوح 0» لمشتركٍ رصيده −8,045.26 — تمديدات الدين لا
+        # تُنشئ سلفة، فدينها لا يظهر إلّا من الرصيد السالب.
+        from ..core.numbers import round_money
+        balance = round_money(float(subscriber.get("balance") or 0))
+        balance_debt = round_money(max(-balance, 0.0))
+        business = round_money(float(financial["wallet_balance"] or 0))
+        financial["business_wallet_balance"] = business
+        financial["subscriber_balance"] = balance
+        # الرصيد المعروض = رصيد المشترك (subscribers.balance) + أيّ محفظة
+        # business-os يملكها (نادرة؛ بوّابة المشترك) — فلا يُخفي أحدُهما الآخر.
+        financial["wallet_balance"] = round_money(balance + business)
+        financial["balance_debt"] = balance_debt
+        financial["open_debt_total"] = round_money(balance_debt + float(_open["outstanding"] or 0))
 
         return {
             "subscriber": subscriber,
@@ -264,7 +279,10 @@ class Subscriber360Service:
                 "status": subscriber.get("status"),
                 "service_type": subscriber.get("service_type"),
                 "wallet_balance": financial["wallet_balance"],
-                "open_debt": financial["open_loan_amount"],
+                # كل ما على المشترك: دين الرصيد السالب + متبقّي السلف المفتوحة.
+                "open_debt": financial["open_debt_total"],
+                "open_loans_outstanding": financial["open_loan_amount"],
+                "balance_debt": financial["balance_debt"],
                 "session_count": len(sessions),
             },
             "financial": financial,

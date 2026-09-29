@@ -19,7 +19,9 @@ from typing import Any, Optional
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
-from ...radius.core.numbers import MONEY_MAX, finite_int, money_float
+from ...radius.core.numbers import (
+    MONEY_MAX, check_expiry, check_extend_minutes, finite_int, money_float, round_money,
+)
 from ...radius.services import subscriber_actions as sa
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
@@ -28,7 +30,10 @@ from .idempotency import idempotent
 
 # Money-moving actions: an Idempotency-Key / client_request_id replays the
 # first result instead of charging twice (double tap / retry after timeout).
-_IDEMPOTENT = {"extend", "quota/topup", "payment", "balance", "loan"}
+# quota/reset-daily and change-plan charge the wallet too (paid/debt): the same
+# key twice used to double-charge the daily reset.
+_IDEMPOTENT = {"extend", "quota/topup", "quota/reset-daily", "change-plan",
+               "payment", "balance", "loan"}
 
 # action key (app menu / permissions flag) → the web endpoint whose guard decides.
 WEB_ENDPOINT: dict[str, str] = {
@@ -54,28 +59,10 @@ _MAX_FREE_LOAN_HOURS_DEFAULT = 72
 _PAYMENT_METHODS = ("cash", "bank", "manual")
 _CHARGE_MODES = ("free", "paid", "debt")
 
-# Service validation messages are English (the web flashes them as-is); the app
-# gets them in Arabic. Unknown messages pass through unchanged.
-_SERVICE_MSG_AR = {
-    "amount must be > 0": "المبلغ يجب أن يكون أكبر من صفر.",
-    "minutes > 0 required": "المدّة يجب أن تكون أكبر من صفر.",
-    "expire_at required": "تاريخ الانتهاء مطلوب.",
-    "unknown extend charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown quota charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown reset charge mode": "طريقة الاستعادة غير معروفة.",
-    "quota_mb must be > 0": "حجم الكوتة يجب أن يكون أكبر من صفر.",
-    "unknown quota target": "نوع الكوتة غير معروف.",
-    "plan_id required": "اختر العرض الجديد.",
-    "unknown plan change policy": "طريقة تغيير العرض غير معروفة.",
-    "selected plan is not cheaper": "العرض المختار ليس أرخص من الحالي.",
-    "selected plan is not more expensive": "العرض المختار ليس أغلى من الحالي.",
-    "plan price and duration are required for this option":
-        "هذا الخيار يتطلّب سعرًا ومدّة للعرضين.",
-    "unsupported message channel": "قناة الإرسال غير مدعومة.",
-    "message required": "نص الرسالة مطلوب.",
-    "subscriber mobile is empty": "لا يوجد رقم جوال لهذا المشترك.",
-    "subscriber id required": "المشترك غير صالح.",
-}
+# Service messages are Arabic at the source now; the ONE shared translation layer
+# (core/messages_ar) also serves the web flashes, so web and app show the same text.
+from ...radius.core.messages_ar import SERVICE_MSG_AR as _SERVICE_MSG_AR  # noqa: E402
+from ...radius.core.messages_ar import translate_service_message  # noqa: E402
 
 
 def register(bp: Blueprint) -> None:
@@ -114,11 +101,14 @@ def _identity() -> tuple[Optional[_Identity], Any]:
     """Resolve the admin behind the token exactly like the web login does
     (owner flag via ``_resolve_is_super``, role permissions via the admins
     service). Cached on ``g`` for the request."""
-    cached = getattr(g, "_sa_identity", None)
-    if cached is not None:
-        return cached, None
     tid = int(getattr(g, "tenant_id", 1) or 1)
     aid = int(getattr(g, "admin_id", 0) or 0)
+    # The cache is bound to the token behind THIS request (an app context that
+    # outlives one request — tests, CLI — must not reuse another token's rights).
+    cache_key = (tid, aid, getattr(g, "api_token_id", None))
+    cached = getattr(g, "_sa_identity", None)
+    if cached is not None and getattr(g, "_sa_identity_key", None) == cache_key:
+        return cached, None
     if aid <= 0:
         ident = _Identity(sa.ActionCaller(
             tenant_id=tid, admin_id=None, is_super=True,
@@ -141,6 +131,7 @@ def _identity() -> tuple[Optional[_Identity], Any]:
             tenant_id=tid, admin_id=aid, is_super=_resolve_is_super(admin),
             actor=admin.full_name or admin.username), perms)
     g._sa_identity = ident
+    g._sa_identity_key = cache_key
     return ident, None
 
 
@@ -254,7 +245,7 @@ def _truthy(value) -> bool:
 
 
 def _svc_error(e: RadiusError):
-    msg = _SERVICE_MSG_AR.get(e.message, e.message)
+    msg = translate_service_message(e.message)
     if isinstance(e, sa.SpendBlocked):
         return fail("spend_blocked", msg, status=403)
     if isinstance(e, RadiusNotFound):
@@ -425,7 +416,12 @@ def actions_context(username: str):
         "effective_price": float(basis["price"]),
         "price_is_custom": bool(basis["custom"]),
         "balance": balance,
-        "debt": round(max(-balance, 0.0), 2),
+        # max(-0.0, 0.0) is -0.0 → "debt": -0.0 for every zero balance.
+        "debt": round_money(max(-balance, 0.0)),
+        # Everything the subscriber owes: negative-balance debt (debt extends,
+        # plan-change debt, …) + the outstanding of the open loans.
+        "open_debt_total": round_money(max(-balance, 0.0)
+                                       + sum(ln["amount"] for ln in loans)),
         "open_loans": loans,
         "quota": {
             "has_quota": bool(daily_quota_mb > 0 or cap_mb > 0),
@@ -477,8 +473,16 @@ def action_extend(username: str):
             price_minutes = minutes
         amount_sent = body.get("amount") not in (None, "")
         amount = _num(body.get("amount"), field="amount", default=0.0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError: 0001-01-01T00:00+03:00 / 9999-12-31T23:59-05:00 were 500.
         return _invalid("قيمة المدّة أو تاريخ الانتهاء أو المبلغ غير صحيحة.")
+    try:
+        # Owner caps: one extend adds at most 1 year; no expiry after 2100.
+        if expire_at is not None:
+            check_expiry(expire_at)
+        check_extend_minutes(price_minutes)
+    except RadiusValidationError as e:
+        return _invalid(e.message)
     if charge_mode == "free":
         amount = 0.0
     elif amount_sent and amount <= 0:

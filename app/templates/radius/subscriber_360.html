@@ -47,6 +47,8 @@
   {{ hub.kpi("رصيد المحفظة", financial.wallet_balance|money, icon="wallet", variant="blue") }}
   {{ hub.kpi("إجمالي المدفوع", financial.total_paid|money, icon="cash-register", variant="green") }}
   {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
+  {# الدين المفتوح = دين الرصيد السالب (تمديد/كوتة على الدين، فرق تغيير العرض) + متبقّي السلف. #}
+  {{ hub.kpi("دين مفتوح", (financial.open_debt_total or 0)|money, icon="file-invoice-dollar", variant=("red" if (financial.open_debt_total or 0) > 0 else "grey")) }}
   {% else %}
   {{ hub.kpi("الماليّات", "محجوب", icon="lock", variant="grey") }}
   {% endif %}

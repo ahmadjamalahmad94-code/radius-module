@@ -154,7 +154,8 @@
         <tr>
           <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.duration_minutes|dur_days }}</td>
-          <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
+          {# المفتوحة: المتبقّي بعد التسويات الجزئيّة (والأصليّة بجانبه). #}
+          <td class="mono">{% if loan.status == 'open' and loan.outstanding is defined %}<strong>{{ loan.outstanding|money }}</strong>{% if loan.outstanding != loan.amount %} <span class="hub-text-mute small">{{ _('من') }} {{ loan.amount|money }}</span>{% endif %}{% else %}<strong>{{ loan.amount|money }}</strong>{% endif %}</td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
             {% elif loan.status == 'voided' %}{{ hub.pill("مُسامَحة", variant="grey") }}
@@ -167,7 +168,8 @@
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
-              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:100px">
+              {# يُملأ بالمتبقّي لا بالأصل (كان «3.33» يتجاوز المتبقّي 1.66 فيُرفض). #}
+              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is defined else loan.amount) }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
             </form>
@@ -253,10 +255,10 @@
         <div class="ff-loans">
           <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة ({{ open_loans|length }}) — اختر لكل واحدة:</div>
           {% for ln in open_loans %}
-          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.amount or 0 }}">
+          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ (ln.outstanding if ln.outstanding is defined else ln.amount) or 0 }}">
             <div class="ff-loan-info">
               <span class="ff-chip ff-chip--days"><i class="fa-solid fa-calendar-day"></i> {{ ln.duration_minutes|dur_days }}</span>
-              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> القيمة {{ (ln.amount or 0)|money }}</span>
+              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> المتبقّي {{ ((ln.outstanding if ln.outstanding is defined else ln.amount) or 0)|money }}</span>
             </div>
             <div class="ff-loan-acts">
               <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>{{ _('خصم') }}</span></label>
@@ -362,7 +364,8 @@
       id:parseInt(r.dataset.loanId,10), amount:parseFloat(r.dataset.loanAmount||"0"),
       action:(r.querySelector("input[type=radio]:checked")||{}).value||"defer",
     }));
-    const settled = rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0), Math.max(amount,0));
     // دين الرصيد السالب: نخصص له جزءًا من الدفعة بعد السلف وبحد قيمة الدين.
     const settleBalEl = payModal.querySelector("[data-ff-settle-balance]");
     const settleBal = (settleBalEl && settleBalEl.checked) ? Math.min(Math.max(amount-settled,0), DEBT_DUE) : 0;
@@ -386,6 +389,13 @@
   payModal?.querySelectorAll("[data-ff-loan-row] input[type=radio]").forEach(r=> r.addEventListener("change", payCoverage));
   payModal?.querySelector("[data-ff-settle-balance]")?.addEventListener("change", payCoverage);
 
+  function hrPriceOfMinutes(price, minutes, planMin){
+    const cents = Math.round((Number(price)||0)*100), m = Math.floor(Number(minutes)||0), base = Math.floor(Number(planMin)||0);
+    if(cents<=0 || m<=0 || base<=0) return 0;
+    const n = cents*m; let q = Math.floor(n/base); const r = n - q*base;
+    if(2*r >= base) q += 1;
+    return q/100;
+  }
   // ── loan: free/debt + auto-price from days ──
   const loanModal = root.querySelector("[data-ff-modal='loan']");
   function loanSync(){
@@ -395,7 +405,8 @@
     loanModal.querySelector("[data-ff-loan-pfd]").value = debt ? "1" : "0";
     const days = Math.max(0, parseInt(loanModal.querySelector("[data-ff-loan-days]")?.value || "0", 10));
     const minutes = days*1440;
-    const amount = (debt && EFF_PRICE>0 && PLAN_MIN>0 && minutes>0) ? Math.round(EFF_PRICE*(minutes/PLAN_MIN)*100)/100 : 0;
+    // نفس دالّة سعر الخادم (قروش × دقائق ÷ أساس، نصف للأعلى بحسابٍ صحيح).
+    const amount = debt ? hrPriceOfMinutes(EFF_PRICE, minutes, PLAN_MIN) : 0;
     const amtEl = loanModal.querySelector("[data-ff-loan-amount]"); if(amtEl) amtEl.value = amount?amount.toFixed(2):"0";
     const hint = loanModal.querySelector("[data-ff-loan-hint]");
     if(hint){

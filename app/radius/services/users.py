@@ -11,6 +11,10 @@ from ..core.constants import (
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
 from ..core.errors import RadiusConflict, RadiusValidationError
+from ..core.numbers import (
+    action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
+    finite_float, round_money,
+)
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..db.connection import after_commit, atomic, in_transaction
@@ -24,6 +28,19 @@ def _currency(value) -> str:
     """عملة قيدٍ على محفظة المشترك: رمزٌ مدعوم، والفارغ = عملة النظام."""
     from .accounting import normalize_currency
     return normalize_currency(value)
+
+
+def _charge_amount(charge_mode: str, amount) -> float:
+    """مبلغ «مدفوع/دين» مُقرَّبًا لقرشين **قبل** الفحص — 0.004 كان يمرّ «> 0»
+    ثم يُسجَّل قيد دين 0.00 ويمنح ساعة مجّانًا — وبسقف العمليّة الواحدة
+    (كان «أضف وقت» في الويب يقبل دينًا بقيمة 1e11). المجّانيّ يمرّ كما هو."""
+    if charge_mode not in {"paid", "debt"}:
+        return amount
+    value = round_money(finite_float(amount, field="amount"))
+    if value <= 0:
+        raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
+    action_amount(value, field="amount")
+    return value
 
 
 def _require_paid_balance(sub, amount, charge_mode: str) -> None:
@@ -280,7 +297,7 @@ class UsersService:
     def change_plan(self, *, actor: str, username: str, plan_id: int,
                     policy: str) -> dict:
         if plan_id <= 0:
-            raise RadiusValidationError("plan_id required")
+            raise RadiusValidationError("اختر العرض الجديد.")
         allowed = {
             "lower_compensate",
             "lower_keep_expiry",
@@ -290,7 +307,7 @@ class UsersService:
             "neutral_keep_expiry",
         }
         if policy not in allowed:
-            raise RadiusValidationError("unknown plan change policy")
+            raise RadiusValidationError("طريقة تغيير العرض غير معروفة.")
 
         sub = self._adapter.get_account(username)
         old_plan = None
@@ -304,9 +321,9 @@ class UsersService:
         old_price = float(getattr(old_plan, "price", 0) or 0)
         new_price = float(getattr(new_plan, "price", 0) or 0)
         if policy.startswith("lower_") and old_price and new_price >= old_price:
-            raise RadiusValidationError("selected plan is not cheaper")
+            raise RadiusValidationError("العرض المختار ليس أرخص من الحالي.")
         if policy.startswith("higher_") and old_price and new_price <= old_price:
-            raise RadiusValidationError("selected plan is not more expensive")
+            raise RadiusValidationError("العرض المختار ليس أغلى من الحالي.")
 
         now = datetime.utcnow()
         remaining = _remaining_minutes(sub.expire_at, now)
@@ -318,7 +335,7 @@ class UsersService:
             old_rate = _minute_rate(old_plan)
             new_rate = _minute_rate(new_plan)
             if remaining > 0 and (old_rate <= 0 or new_rate <= 0):
-                raise RadiusValidationError("plan price and duration are required for this option")
+                raise RadiusValidationError("هذا الخيار يتطلّب سعرًا ومدّة للعرضين.")
             if policy == "lower_compensate" and remaining > 0:
                 adjusted = max(remaining, int(round((remaining * old_rate) / new_rate)))
                 new_expire_at = now + timedelta(minutes=adjusted)
@@ -393,15 +410,15 @@ class UsersService:
         # الإشعارات (comms_providers.HTTP_CHANNELS)؛ أي قيمة أخرى مرفوضة.
         ch = (channel or "sms").strip().lower()
         if ch not in {"sms", "whatsapp"}:
-            raise RadiusValidationError("unsupported message channel")
+            raise RadiusValidationError("قناة الإرسال غير مدعومة.")
         body = (message or "").strip()
         if not body:
-            raise RadiusValidationError("message required")
+            raise RadiusValidationError("نص الرسالة مطلوب.")
         sub = self._adapter.get_account(username)
         if not sub.id:
-            raise RadiusValidationError("subscriber id required")
+            raise RadiusValidationError("المشترك غير صالح.")
         if not (sub.mobile or "").strip():
-            raise RadiusValidationError("subscriber mobile is empty")
+            raise RadiusValidationError("لا يوجد رقم جوال لهذا المشترك.")
 
         # تعويض {username} بالاسم الفعلي — مفيد في الإرسال الجماعي حيث
         # تُرسل نفس الرسالة لعدة مشتركين (الواجهة تُبقي المتغيّر كما هو).
@@ -440,9 +457,8 @@ class UsersService:
         """
         currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown reset charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الاستعادة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
 
         sub = self._adapter.get_account(username)
         _require_paid_balance(sub, amount, charge_mode)
@@ -506,13 +522,12 @@ class UsersService:
                   notes: str = "") -> Subscriber:
         currency = _currency(currency)
         if quota_mb <= 0:
-            raise RadiusValidationError("quota_mb must be > 0")
+            raise RadiusValidationError("حجم الكوتة يجب أن يكون أكبر من صفر.")
         if quota_target not in {"combined", "download", "upload"}:
-            raise RadiusValidationError("unknown quota target")
+            raise RadiusValidationError("نوع الكوتة غير معروف.")
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown quota charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
 
         sub = self._adapter.get_account(username)
         # 🔴 الإضافة **تُضاف إلى السقف الساري** لا تحلّ محلّه. كان المسار يجمع
@@ -614,8 +629,10 @@ class UsersService:
                          currency: str = "", notes: str = "",
                          settled_deduction: float = 0.0) -> Subscriber:
         currency = _currency(currency)
+        amount = round_money(finite_float(amount, field="amount"))
         if amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
+        action_amount(amount, field="amount")
         # Net wallet credit = cash received − the part used to settle open loans.
         # Loans the operator chose to «خصم» are cleared separately (their own
         # settlement ledger), so ONLY the remainder lands in the wallet — the
@@ -669,7 +686,7 @@ class UsersService:
 
     @atomic
     def apply_payment_to_balance(self, *, actor: str, username: str,
-                                 amount: float) -> float:
+                                 amount: float, payment_id: int | None = None) -> float:
         """يسوي جزءًا من دفعة نقدية مع رصيد سالب مسجل كدين.
 
         يرفع الرصيد باتجاه الصفر دون تجاوزه، ويسجل قيد `debt_settlement`
@@ -697,6 +714,8 @@ class UsersService:
             metadata={
                 "previous_balance": previous,
                 "new_balance": float(saved.balance or 0),
+                # إلغاء الدفعة يعكس هذا التسديد (يعود الدين إلى الرصيد).
+                "payment_id": int(payment_id) if payment_id else None,
             },
         )
         self._audit.record(
@@ -708,6 +727,11 @@ class UsersService:
         )
         return settle
 
+    # 🔴 تعطيل/تفعيل = قراءةُ الصفّ ثم كتابتُه كلّه (upsert). خارج معاملةٍ كانت
+    # القراءة تسبق قفل الكتابة، فيكتب التعطيلُ نسخةً قديمة فوق تمديدٍ متزامن
+    # (1 من 170 جولة فقدت ساعة ودينًا — الرصيد ≠ الدفتر). @atomic = BEGIN
+    # IMMEDIATE قبل القراءة كبقيّة الإجراءات؛ الطرد/الإشعار بعد COMMIT.
+    @atomic
     def disable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
         self._adapter.upsert_account(replace(u, status=STATUS_DISABLED))
@@ -719,6 +743,7 @@ class UsersService:
         _reconcile_policy(u.tenant_id, usernames=[username],
                           reason="subscriber_disable")
 
+    @atomic
     def enable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
         self._adapter.upsert_account(replace(u, status=STATUS_ENABLED))
@@ -742,12 +767,13 @@ class UsersService:
                     charge_mode: str = "free", amount: float = 0.0,
                     currency: str = "", notes: str = "") -> Subscriber:
         if minutes <= 0:
-            raise RadiusValidationError("minutes > 0 required")
+            raise RadiusValidationError("المدّة يجب أن تكون أكبر من صفر.")
+        # قرار المالك: أقصى تمديد في العمليّة الواحدة سنة (التكرار مسموح).
+        check_extend_minutes(minutes)
         currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown extend charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
         u = self._adapter.get_account(username)
         _require_paid_balance(u, amount, charge_mode)
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
@@ -764,7 +790,8 @@ class UsersService:
         #   • منتهٍ  → يُمدَّد من **الآن** فينال المدّة كاملةً فعلًا.
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
-        new_exp = _anchor + timedelta(minutes=minutes)
+        # فائضٌ/ما بعد 2100 ⇒ 422 (كان 9999-12-31 + دقيقة ⇒ 500).
+        new_exp = add_minutes_capped(_anchor, minutes)
         new_balance = float(u.balance or 0)
         if charge_mode in {"paid", "debt"}:
             # paid pays from the prepaid balance, debt goes on credit — both
@@ -799,17 +826,20 @@ class UsersService:
         نفسَه سواءٌ أُضيفت مدّةٌ أم عُيّن تاريخ؛ وقد يكون سالبًا عند التقصير.
         """
         if not isinstance(expire_at, datetime):
-            raise RadiusValidationError("expire_at required")
+            raise RadiusValidationError("تاريخ الانتهاء مطلوب.")
+        check_expiry(expire_at)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown extend charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
         currency = _currency(currency)
         u = self._adapter.get_account(username)
         _require_paid_balance(u, amount, charge_mode)
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
         minutes = int(round((expire_at - _anchor).total_seconds() / 60))
+        # قفزة التعيين تخضع لسقف السنة نفسه (new_expiry − max(now, expiry) ≤ 365 يومًا).
+        if minutes > 0:
+            check_extend_minutes(minutes)
         return self._commit_expiry(
             actor=actor, u=u, new_exp=expire_at, charge_mode=charge_mode,
             amount=amount, currency=currency, notes=notes,

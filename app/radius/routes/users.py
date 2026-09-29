@@ -15,6 +15,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
 from ..core.errors import RadiusError
+from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..services.accounting import service_from_context
@@ -23,6 +24,8 @@ from ..services.users import get_users_service
 from ..services import subscriber_actions as _sa
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
+from ..core.numbers import check_expiry, check_extend_minutes
+from ..services.accounting import calculate_proportional_amount
 
 
 # ════════════════════════════════════════════════════════════════
@@ -1151,7 +1154,7 @@ def users_create():
         validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
@@ -1180,7 +1183,7 @@ def users_create():
         )
     except RadiusError as e:
         flash(
-            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {e.message}",
+            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {error_message_ar(e)}",
             "warning",
         )
     if not created_rules and (request.form.get("sr_starts_at_time") or "").strip():
@@ -1208,7 +1211,7 @@ def users_create():
             )
         except RadiusError as e:
             flash(
-                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {e.message}",
+                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {error_message_ar(e)}",
                 "warning",
             )
 
@@ -1821,7 +1824,7 @@ def users_update(username: str):
             )
             flash("تم تنفيذ إجراء قواعد السرعة لهذا المشترك.", "success")
         except RadiusError as e:
-            flash(e.message, "error")
+            flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_edit", username=username))
 
     # ── اسم الدخول قابل للتعديل الآن (مفتاح مصادقة RADIUS) ──────────────
@@ -1845,7 +1848,7 @@ def users_update(username: str):
                     actor=_actor(), old_username=username,
                     new_username=posted_username)
             except RadiusError as e:
-                flash(e.message, "error")
+                flash(error_message_ar(e), "error")
                 return redirect(url_for("radius.users_edit", username=username))
             # بقيّة الحفظ تستهدف الاسم الجديد.
             flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
@@ -1880,7 +1883,7 @@ def users_update(username: str):
                               previous=(before.password if before is not None else None))
         get_users_service().update(actor=_actor(), sub=dto)
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
@@ -1902,7 +1905,7 @@ def users_delete(username: str):
         get_users_service().delete(actor=_actor(), username=username)
         flash("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1968,7 +1971,7 @@ def users_toggle(username: str):
             get_users_service().enable(actor=_actor(), username=username)
             flash("تم التفعيل.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2046,12 +2049,33 @@ def _form_expire_at():
     return dt
 
 
+def _extend_refused(message: str):
+    """رفضُ «إضافة وقت» بلا أيّ أثر: 422 JSON لطلبات fetch (مثل الـAPI)، وإلّا
+    وميض خطأ عربيّ ورجوع للقائمة."""
+    if request.headers.get("X-Requested-With") == "fetch" \
+            or "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": False, "error": message}), 422
+    flash(message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
 def users_extend(username: str):
+    # 🔴 كانت المدّة 0/الفارغة/التاريخ الممسوح تُضيف دقيقة بصمت (الواجهة
+    # ترسل max(1, …) والتاريخ الفارغ يسقط إلى وضع المدّة). الآن تُرفض مثل الـAPI.
+    if "expire_at" in request.form and not (request.form.get("expire_at") or "").strip():
+        return _extend_refused("تاريخ الانتهاء مطلوب.")
     try:
         # وضعان في نموذجٍ واحد: «أضِف مدّة» و«عيِّن تاريخ الانتهاء». وجودُ
         # `expire_at` هو الفاصل — فلا يُقرأ `minutes` أصلًا في وضع التعيين.
         _exp = _form_expire_at()
-        m = 0 if _exp is not None else int(request.form.get("minutes"))
+        m = 0
+        if _exp is None:
+            _raw_m = (request.form.get("minutes") or "").strip()
+            if not _raw_m:
+                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
+            m = int(_raw_m)
+            if m <= 0:
+                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
         # Spend gate (paid/debt) + extend_time/set_expiry — the SAME helper the
@@ -2071,10 +2095,12 @@ def users_extend(username: str):
             flash(f"تم تعيين انتهاء الحساب: {to_local(_exp)} ({mode_label}).", "success")
         else:
             flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
-    except (TypeError, ValueError):
-        flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
     except RadiusError as e:
-        flash(e.message, "error")
+        # قبل ValueError: أخطاء السقوف (سنة/2100/100,000) ترث الاثنين —
+        # رسالتها العربيّة الدقيقة لا الرسالة العامّة.
+        return _extend_refused(error_message_ar(e))
+    except (TypeError, ValueError, OverflowError):
+        return _extend_refused("قيمة المدّة أو تاريخ الانتهاء غير صحيحة")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2099,7 +2125,14 @@ def users_extend_bulk():
             minutes = int(request.form.get("minutes"))
             if minutes <= 0:
                 raise ValueError
-    except (TypeError, ValueError):
+            # سقف المالك: أقصى تمديد في المرّة الواحدة سنة (لكلّ مشترك).
+            check_extend_minutes(minutes)
+        else:
+            check_expiry(expire_at)
+    except RadiusError as e:
+        flash(error_message_ar(e), "error")
+        return redirect(url_for("radius.users_list"))
+    except (TypeError, ValueError, OverflowError):
         flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
         return redirect(url_for("radius.users_list"))
 
@@ -2128,7 +2161,10 @@ def users_extend_bulk():
                     _anchor = max(_u.expire_at, _now) if _u.expire_at else _now
                     _billable = max(0, int(round((expire_at - _anchor).total_seconds() / 60)))
                 if price > 0 and plan_min > 0:
-                    amount = round(price * (_billable / plan_min), 2)
+                    # دالّة السعر الوحيدة (نصف للأعلى) — كان round() يعطي 0.62
+                    # هنا و0.63 في النافذة الفرديّة لنفس الـ3 ساعات.
+                    amount = calculate_proportional_amount(
+                        minutes=_billable, plan_price=price, base_minutes=plan_min)
             if expire_at is not None:
                 svc.set_expiry(
                     actor=actor, username=name, expire_at=expire_at,
@@ -2143,8 +2179,9 @@ def users_extend_bulk():
                 currency=currency, notes=notes,
             )
             done += 1
-        except RadiusError:
-            failed.append(name)
+        except RadiusError as e:
+            # السبب بجانب الاسم (رصيد لا يكفي/سعر صفر/سقف السنة…) — كان الاسم وحده.
+            failed.append(f"{name} ({error_message_ar(e)})")
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
@@ -2184,7 +2221,7 @@ def users_change_plan(username: str):
     except (TypeError, ValueError):
         flash("اختيار العرض غير صحيح.", "error")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2200,7 +2237,7 @@ def users_send_sms(username: str):
         label = "واتساب" if channel == "whatsapp" else "SMS"
         flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2287,7 +2324,7 @@ def users_quota_reset_daily(username: str):
     except (TypeError, ValueError):
         flash("قيمة المبلغ غير صحيحة.", "error")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2355,7 +2392,7 @@ def users_quota_topup(username: str):
     except (TypeError, ValueError):
         flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2427,7 +2464,7 @@ def users_balance_add(username: str):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
         return redirect(url_for("radius.users_list"))
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_list"))
     saved = _res["subscriber"]
     settled_done = _res["settled_done"]

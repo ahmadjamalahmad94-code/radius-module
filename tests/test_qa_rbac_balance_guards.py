@@ -194,7 +194,8 @@ def test_loan_is_bounded_credit_with_ledger(app):
         AccountingService, _max_loan_minutes, _max_debt_loan_minutes)
     # caps are real and bounded (not unlimited)
     assert _max_loan_minutes() == 72 * 60
-    assert _max_debt_loan_minutes() == 366 * 24 * 60
+    # owner rule (fix wave 2): one operation adds at most one year → 365 days
+    assert _max_debt_loan_minutes() == 365 * 24 * 60
 
     # seed demo data to get a real subscriber to lend to
     from app.radius import seed

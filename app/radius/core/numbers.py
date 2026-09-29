@@ -17,12 +17,28 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from .errors import RadiusValidationError
 
 # سقفٌ عاقل لأيّ مبلغ واحد (يكفي أكبر العملات المحليّة ويمنع 1e308).
 MONEY_MAX = 1_000_000_000.0
+
+# ── سقوف العمليّة الواحدة (موجة الإصلاح 2 + قرار المالك 2026-09-29) ──
+# • مبلغ دفعة/تمديد/سلفة/رصيد/كوتة/حركة موزّع واحدة ≤ 100,000 بعملة النظام.
+# • **أقصى تمديد في المرّة الواحدة سنة (365 يومًا)**: new_expiry − max(now,
+#   current_expiry) ≤ 365 يومًا — للتمديد بمدّة، ولقفزة تعيين التاريخ، ولدقائق
+#   الدفعة المحوَّلة وقتًا، ولوقت السلفة، وللتمديد الجماعيّ. التكرار مسموح.
+# • أيّ انتهاءٍ محسوب بعد سنة 2100 ⇒ 422. كان 1e6 يُنتج سنة 3200/3669 و5e6–1e9
+#   يُسقط الخادم بـ500 «date value out of range».
+ACTION_AMOUNT_MAX = 100_000.0
+EXTEND_MAX_DAYS = 365
+EXTEND_MAX_MINUTES = EXTEND_MAX_DAYS * 1440
+EXTEND_TOO_LONG_AR = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر."
+EXPIRY_LIMIT = datetime(2101, 1, 1)
+EXPIRY_TOO_FAR_AR = "المدة الناتجة تتجاوز الحدّ المسموح."
 
 _FIELD_AR = {
     "amount": "المبلغ",
@@ -37,6 +53,8 @@ _FIELD_AR = {
     "days": "الأيام",
     "loan_settled_total": "مجموع تسوية السلف",
     "balance_settled_total": "مجموع تسوية الدين",
+    "duration_minutes": "المدّة بالدقائق",
+    "plan_id": "العرض",
 }
 
 _MISSING = object()
@@ -118,9 +136,55 @@ def finite_int(value: Any, *, field: str, min: Optional[int] = None,
 
 
 def round_money(value: Any) -> float:
-    """تقريب المال لخانتين عند الكتابة (يزيل ضجيج ‎-42.89999999999999 و‎-0.0)."""
-    out = round(float(value or 0), 2)
+    """تقريب المال لخانتين عند الكتابة (يزيل ضجيج ‎-42.89999999999999 و‎-0.0).
+
+    قاعدةٌ واحدة في كلّ مكان: **نصف للأعلى** على القيمة العشريّة كما تُكتب
+    (``repr``). كان ``round()`` الثنائيّ يعطي 0.625 → 0.62 و376.905 → 376.90
+    بينما يعطي الويب والتطبيق 0.63 — فاختلف السعر بين المسارات."""
+    f = float(value or 0)
+    if not math.isfinite(f):
+        return f
+    out = float(Decimal(repr(f)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
     return 0.0 if out == 0 else out
+
+
+def money_cents(value: Any) -> int:
+    """المبلغ بالقروش (عددٌ صحيح) بعد ``round_money``."""
+    return int((Decimal(repr(round_money(value))) * 100).to_integral_value())
+
+
+def action_amount(value: Any, *, field: str = "amount") -> Any:
+    """422 لمبلغ عمليّةٍ واحدة فوق ``ACTION_AMOUNT_MAX`` (دفعة/تمديد/سلفة/رصيد…)."""
+    if value is not None and float(value) > ACTION_AMOUNT_MAX + 1e-9:
+        raise NonFiniteNumber(
+            f"قيمة «{field_label(field)}» تتجاوز الحدّ الأقصى للعملية الواحدة "
+            f"({_fmt(ACTION_AMOUNT_MAX)}).", details={"field": field})
+    return value
+
+
+def check_expiry(dt: Optional[datetime]) -> Optional[datetime]:
+    """422 «المدة الناتجة تتجاوز الحدّ المسموح» لانتهاءٍ محسوب بعد سنة 2100."""
+    if dt is not None and dt >= EXPIRY_LIMIT:
+        raise NonFiniteNumber(EXPIRY_TOO_FAR_AR, details={"field": "expire_at"})
+    return dt
+
+
+def add_minutes_capped(base: datetime, minutes: int) -> datetime:
+    """``base + minutes`` مع حارس السقف: الفائض (OverflowError = 500 سابقًا) وما
+    بعد سنة 2100 ⇒ 422 بالرسالة نفسها."""
+    try:
+        out = base + timedelta(minutes=int(minutes))
+    except (OverflowError, ValueError):
+        raise NonFiniteNumber(EXPIRY_TOO_FAR_AR, details={"field": "expire_at"}) from None
+    return check_expiry(out)
+
+
+def check_extend_minutes(minutes: int) -> int:
+    """422 «أقصى تمديد في المرة الواحدة سنة…» لإضافةٍ فوق 365 يومًا في عمليّة
+    واحدة (كان 999,999 يومًا يُقبل من الويب). التكرار مسموح."""
+    if int(minutes) > EXTEND_MAX_MINUTES:
+        raise NonFiniteNumber(EXTEND_TOO_LONG_AR, details={"field": "minutes"})
+    return int(minutes)
 
 
 def json_safe(obj: Any) -> Any:
@@ -157,6 +221,9 @@ def _fmt(v: float) -> str:
 
 
 __all__ = [
-    "MONEY_MAX", "NonFiniteNumber", "field_label", "finite_float", "finite_int",
-    "json_dumps_safe", "json_safe", "money_float", "round_money", "strict_float",
+    "ACTION_AMOUNT_MAX", "EXPIRY_LIMIT", "EXPIRY_TOO_FAR_AR", "EXTEND_MAX_DAYS",
+    "EXTEND_MAX_MINUTES", "EXTEND_TOO_LONG_AR", "MONEY_MAX", "NonFiniteNumber", "action_amount",
+    "add_minutes_capped", "check_expiry", "check_extend_minutes", "field_label",
+    "finite_float", "finite_int", "json_dumps_safe", "json_safe", "money_cents",
+    "money_float", "round_money", "strict_float",
 ]

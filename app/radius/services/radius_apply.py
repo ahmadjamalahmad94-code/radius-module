@@ -13,6 +13,7 @@ from ..core.constants import (
     AUDIT_ACTION_UPDATE, STATUS_DISABLED, STATUS_ENABLED, STATUS_SUSPENDED,
 )
 from ..core.errors import RadiusValidationError
+from ..core.numbers import add_minutes_capped, check_extend_minutes
 from ..db.helpers import dt_to_iso
 from ..integration.factory import get_radius_adapter
 from .audit import get_audit_service
@@ -35,9 +36,11 @@ def apply_activation_minutes(
     rule (a payment on a never-activated account without expiry activates it
     for the purchased period — the API/app «create then pay» flow)."""
     if not username:
-        raise RadiusValidationError("username required for RADIUS apply")
+        raise RadiusValidationError("اسم المستخدم مطلوب.")
     if minutes <= 0:
-        raise RadiusValidationError("minutes must be > 0 for RADIUS apply")
+        raise RadiusValidationError("المدّة يجب أن تكون أكبر من صفر.")
+    # قرار المالك: أقصى إضافة في العمليّة الواحدة سنة (دفعة → دقائق، سلفة…).
+    check_extend_minutes(minutes)
 
     adapter = get_radius_adapter()
     account = adapter.get_account(username)
@@ -61,7 +64,8 @@ def apply_activation_minutes(
             "message": "المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته.",
         }
     base = current_expire if current_expire and current_expire > now else now
-    new_expire = base + timedelta(minutes=minutes)
+    # فائضٌ/ما بعد 2100 ⇒ 422 (كان OverflowError ⇒ 500 «date value out of range»).
+    new_expire = add_minutes_capped(base, minutes)
     action_id = f"radius-apply-{uuid4().hex[:12]}"
     result = {
         "applied_to_radius": False,
@@ -112,10 +116,14 @@ def apply_activation_minutes(
 
 
 def revoke_activation_minutes(*, username: str, minutes: int, actor: str,
-                              source: str) -> dict:
+                              source: str, restore_unlimited: bool = False) -> dict:
     """عكسُ ``apply_activation_minutes`` عند إلغاء دفعة: يطرح المدّة المضافة
     **بالضبط** من نهاية الاشتراك، ولا ينزل بها عن «الآن» (لا نهايةَ في الماضي
-    ولا مساس بما قبل الدفعة إن كان قد انقضى أصلًا). غير المحدود لا يُمسّ."""
+    ولا مساس بما قبل الدفعة إن كان قد انقضى أصلًا). غير المحدود لا يُمسّ.
+
+    ``restore_unlimited``: الحساب كان **غير محدود** (بلا تاريخ انتهاء) قبل
+    الدفعة، فالدفعة فرضت عليه نهاية؛ إلغاؤها يعيده غير محدود — كان يُضبط
+    انتهاؤه «الآن» فيُرفض دخوله («انتهت صلاحية الاشتراك»)."""
     if not username or int(minutes or 0) <= 0:
         return {"status": "skipped", "minutes": 0}
     adapter = get_radius_adapter()
@@ -123,6 +131,20 @@ def revoke_activation_minutes(*, username: str, minutes: int, actor: str,
     current_expire = account.expire_at
     if current_expire is None:
         return {"status": "skipped", "minutes": 0, "reason": "unlimited_subscriber"}
+    if restore_unlimited:
+        adapter.upsert_account(replace(account, expire_at=None))
+        try:
+            get_audit_service().record(
+                actor=actor, action=AUDIT_ACTION_UPDATE, target_type="subscriber",
+                target_id=username,
+                payload={"source": source, "minutes": -int(minutes),
+                         "old_expire_at": dt_to_iso(current_expire),
+                         "new_expire_at": None, "restored_unlimited": True},
+            )
+        except Exception:  # noqa: BLE001 — التدقيق لا يُلغي الاسترجاع
+            pass
+        return {"status": "restored_unlimited", "minutes": int(minutes),
+                "old_expire_at": dt_to_iso(current_expire), "new_expire_at": None}
     now = datetime.utcnow()
     new_expire = max(current_expire - timedelta(minutes=int(minutes)), now)
     if new_expire >= current_expire:

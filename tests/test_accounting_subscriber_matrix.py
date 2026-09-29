@@ -111,7 +111,8 @@ SCENARIOS = [
     ("insufficient_small", 2.0, 5.0, -3.0),
     ("insufficient_from_zero", 0.0, 5.0, -5.0),
     ("from_negative", -10.0, 5.0, -15.0),
-    ("very_large", 1_000_000.0, 999_999.0, 1.0),
+    # one operation is capped at 100,000 (fix wave 2) — the largest allowed charge
+    ("very_large", 1_000_000.0, 99_999.0, 900_001.0),
     ("tiny_fraction", 1.0, 0.01, 0.99),
     ("two_decimals", 50.25, 12.75, 37.50),
 ]
