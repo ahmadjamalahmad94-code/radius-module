@@ -108,8 +108,8 @@ def test_save_grant_persists(app):
     _super(c)
     res = c.post(f"/admin/radius/roles/{role.id}/grants",
                  data={"_csrf_token": "tk",
-                       "can_view_all_subscribers": "1",
-                       "action_storeuser.create": "1",
+                       "can_manage_distributors": "1",
+                       "action_bulk.ops": "1",
                        "section_cards": "hidden"},
                  follow_redirects=False)
     assert res.status_code in {302, 303}
@@ -117,10 +117,12 @@ def test_save_grant_persists(app):
         from app.radius.db.repos import admins_repo
         from app.radius.services import manager_grants as mg
         blob = admins_repo.get_role_granular(role.id)
-        assert blob.get("flags", {}).get("can_view_all_subscribers") is True
+        # fix wave 2: «رؤية كل المشتركين» and the store actions are RBAC keys in
+        # the role matrix now (D09/D15) — the grants blob keeps the rest.
+        assert blob.get("flags", {}).get("can_manage_distributors") is True
         assert blob.get("section_access", {}).get("cards") == "hidden"
         # A manager with this role inherits the saved grant.
-        assert mg.action_permitted(admin_id, "storeuser.create", tenant_id=1) is True
+        assert mg.action_permitted(admin_id, "bulk.ops", tenant_id=1) is True
 
 
 def test_old_grants_url_redirects_to_merged(app):
