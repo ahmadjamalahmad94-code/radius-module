@@ -181,7 +181,7 @@ def in_daily_window(start: str, end: str, now: datetime) -> bool:
 
 
 def is_block_in_effect(block: dict, now: Optional[datetime] = None, *,
-                       tz_offset_hours: float = 0.0) -> bool:
+                       tz_offset_hours: float = 0.0, tz=None) -> bool:
     """هل الحظر ساري المفعول الآن؟ يطبّق نمط المدّة. لا يلمس DB.
 
     ``now`` بتوقيت UTC. ``until`` يُقارن بـUTC (نُخزّن expires_at بـUTC دائمًا:
@@ -203,19 +203,25 @@ def is_block_in_effect(block: dict, now: Optional[datetime] = None, *,
             return True
         return now < exp
     if mode == "daily_window":
-        local = now + timedelta(hours=tz_offset_hours)
+        if tz is not None:
+            # منطقة اللوحة (zoneinfo) — غزة ‎+2 شتاءً/‎+3 صيفًا، لا إزاحة ثابتة.
+            from datetime import timezone as _utc_tz
+            local = now.replace(tzinfo=_utc_tz.utc).astimezone(tz).replace(tzinfo=None)
+        else:
+            local = now + timedelta(hours=tz_offset_hours)
         return in_daily_window(block.get("window_start") or "",
                                block.get("window_end") or "", local)
     return True  # نمط غير معروف → ساري (آمن للحظر)
 
 
 def tz_offset_hours(tenant_id: int) -> float:
-    """إزاحة توقيت المستأجر بالساعات (billing.timezone_offset) — للنوافذ
-    اليومية الحائطية. الافتراضي 0 (UTC) إن لم يُضبط."""
-    from ..db.repos import tenants_repo
+    """إزاحة منطقة اللوحة **الآن** بالساعات (billing.timezone عبر zoneinfo —
+    غزة 2 شتاءً و3 صيفًا). كانت تقرأ billing.timezone_offset الثابت (افتراضه
+    0 هنا!) فتنزاح نوافذ الحظر اليوميّة ساعةً في الشتاء أو ثلاثًا بلا ضبط."""
+    from ..core.system_config import effective_timezone
     try:
-        return float(str(tenants_repo.get_setting(tenant_id, "billing.timezone_offset", "0")).strip() or 0)
-    except (TypeError, ValueError):
+        return effective_timezone(tenant_id)["utc_offset_minutes"] / 60.0
+    except Exception:  # noqa: BLE001
         return 0.0
 
 
@@ -274,10 +280,11 @@ def find_active_block(tenant_id: int, ctx: AuthContext, *,
     ``repo.deactivate_expired``. محصّن: أي خطأ يُرجع None (لا نكسر الـauth)."""
     now = now or datetime.utcnow()
     try:
-        offset = tz_offset_hours(tenant_id)
+        from ..core.system_config import tenant_tzinfo
+        tz = tenant_tzinfo(tenant_id)
         for block in repo.list_blocks(tenant_id, active_only=True):
             if block_matches(block, ctx) and is_block_in_effect(
-                    block, now, tz_offset_hours=offset):
+                    block, now, tz=tz):
                 return block
     except Exception:  # noqa: BLE001 — never break auth on the block layer
         _LOG.warning("access_control: find_active_block failed for %s",
@@ -413,7 +420,10 @@ def create_block_from_input(
         # المُدخَل من <input datetime-local> توقيت محلّي حائطي — نحوّله إلى
         # UTC (بطرح إزاحة المستأجر) ونُخزّنه موحّدًا (isoformat + Z) كي يطابق
         # الحظر التلقائي ومقارنة is_block_in_effect (التي تعمل بـUTC).
-        expires_at = (parsed - timedelta(hours=tz_offset_hours(tenant_id))).isoformat() + "Z"
+        # zoneinfo: الإزاحة الصحيحة **لتاريخ الانتهاء نفسه** (صيفيّ/شتويّ).
+        from ..core.system_config import from_local
+        utc = from_local(parsed, tenant_id)  # parse_dt يعيد ساذجًا دائمًا
+        expires_at = (utc or parsed).isoformat() + "Z"
     else:
         window_start = window_end = expires_at = ""  # permanent: لا حقول مدّة
 

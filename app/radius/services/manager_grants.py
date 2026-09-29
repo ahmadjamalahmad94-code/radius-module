@@ -1135,7 +1135,8 @@ def _grants_are_expired(raw: Any) -> bool:
     try:
         if len(s) == 10:  # YYYY-MM-DD → ينتهي بنهاية ذلك اليوم
             d = date.fromisoformat(s)
-            return date.today() > d
+            from ..core.system_config import local_today
+            return local_today() > d  # نهاية اليوم **المحلّيّ** للّوحة
         dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.utcnow()
         return now > dt

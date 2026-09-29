@@ -27,10 +27,10 @@ CURRENCY_NAMES = {
 
 _DEFAULTS = {
     "billing.currency": "ILS",
-    # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo). The
-    # owner is Levantine (UTC+3); Asia/Damascus is the default — see FLAG in the
-    # PR notes; both Asia/Damascus and Asia/Amman are permanent UTC+3 today.
-    "billing.timezone": "Asia/Damascus",
+    # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo).
+    # قرار المالك 2026-09-29: فلسطين — Asia/Gaza (والخليل Asia/Hebron بنفس
+    # القواعد): ‎+2 شتاءً و‎+3 صيفًا. لا إزاحة ثابتة أبدًا؛ zoneinfo يحسب الصيفيّ.
+    "billing.timezone": "Asia/Gaza",
     # Legacy fixed hour offset — kept as a fallback for environments without the
     # IANA database, and for any zone not in the picker. The IANA name wins.
     "billing.timezone_offset": "3",
@@ -39,6 +39,48 @@ _DEFAULTS = {
     "branding.logo_url": "",
     "branding.primary_color": "#2BAACC",
 }
+
+
+# قائمة العملات في صفحة الإعدادات — الشيكل أولًا (الافتراضيّ).
+CURRENCY_CHOICES = [
+    ("ILS", "شيكل ₪"), ("USD", "دولار أمريكي $"), ("JOD", "دينار أردني"),
+    ("EGP", "جنيه مصري"), ("IQD", "دينار عراقي"), ("SAR", "ريال سعودي"),
+    ("AED", "درهم إماراتي"), ("EUR", "يورو €"), ("TRY", "ليرة تركية"),
+]
+
+# قائمة المناطق الزمنية (IANA) — فلسطين أولًا. لا نكتب إزاحةً ثابتة في التسمية
+# لمنطقةٍ لها توقيتٌ صيفيّ: الإزاحة الحاليّة تُعرض حيّةً بجانب المعاينة.
+PANEL_TIMEZONES = [
+    ("Asia/Gaza", "غزة (فلسطين)"),
+    ("Asia/Hebron", "الخليل (فلسطين)"),
+    ("Asia/Amman", "عمّان (الأردن)"),
+    ("Asia/Damascus", "دمشق (سوريا)"),
+    ("Asia/Beirut", "بيروت (لبنان)"),
+    ("Africa/Cairo", "القاهرة (مصر)"),
+    ("Asia/Baghdad", "بغداد (العراق)"),
+    ("Asia/Riyadh", "الرياض (السعودية)"),
+    ("Asia/Dubai", "دبي (الإمارات)"),
+    ("Asia/Tehran", "طهران (إيران)"),
+    ("Europe/Istanbul", "إسطنبول (تركيا)"),
+    ("UTC", "التوقيت العالمي UTC"),
+]
+PANEL_TIMEZONE_LABELS = dict(PANEL_TIMEZONES)
+
+
+def is_valid_timezone(name: str) -> bool:
+    """اسم IANA تعرفه zoneinfo (أو UTC)."""
+    name = (name or "").strip()
+    if not name:
+        return False
+    if name.upper() == "UTC":
+        return True
+    if ZoneInfo is None:
+        return False
+    try:
+        ZoneInfo(name)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _tid() -> int:
@@ -58,8 +100,9 @@ def _get(key: str) -> str:
 def system_config() -> dict[str, Any]:
     currency = (_get("billing.currency") or "ILS").upper()
     try:
-        tz_offset = float(_get("billing.timezone_offset") or 3)
-    except (TypeError, ValueError):
+        # الإزاحة الحاليّة للمنطقة (صيفيّ/شتويّ) — لا الاحتياط الثابت.
+        tz_offset = effective_timezone()["utc_offset_minutes"] / 60.0
+    except Exception:  # noqa: BLE001
         tz_offset = 3.0
     return {
         "currency": currency,
@@ -74,6 +117,36 @@ def system_config() -> dict[str, Any]:
     }
 
 
+def effective_timezone(tenant_id: int | None = None,
+                       at: datetime | None = None) -> dict[str, Any]:
+    """المنطقة الزمنية **الفعليّة** للوحة + إزاحتها الآن عن UTC بالدقائق.
+
+    ``timezone``: اسم IANA صالح دائمًا — المضبوط إن عرفته zoneinfo، وإلّا
+    (اسم تالف/قاعدة غائبة) المكافئ الثابت للإزاحة الاحتياطيّة ``Etc/GMT-3``
+    (إشارة IANA معكوسة) أو ``UTC``. ``utc_offset_minutes`` تتغيّر مع الصيفيّ
+    (غزة: 120 شتاءً، 180 صيفًا). ``at`` لحظة UTC (افتراضًا الآن)."""
+    name, off = _tz_settings(tenant_id)
+    tz = _resolve_tzinfo(name, off)
+    when = at or datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    local = when.astimezone(tz)
+    delta = local.utcoffset() or timedelta(0)
+    minutes = int(delta.total_seconds() // 60)
+    if is_valid_timezone(name):
+        eff = "UTC" if name.strip().upper() == "UTC" else name.strip()
+    elif minutes % 60 == 0 and minutes:
+        eff = f"Etc/GMT{-minutes // 60:+d}"
+    else:
+        eff = "UTC"
+    return {
+        "timezone": eff,
+        "timezone_label": PANEL_TIMEZONE_LABELS.get(eff, eff),
+        "utc_offset_minutes": minutes,
+        "local_time": local.strftime("%Y-%m-%d %H:%M"),
+    }
+
+
 def effective_system_settings() -> dict[str, Any]:
     """The EFFECTIVE system money/time settings for API clients (the app).
 
@@ -82,12 +155,21 @@ def effective_system_settings() -> dict[str, Any]:
     one currency while the server writes another (stress 2026-09-28: the
     settings API said JOD while every payment was recorded in ILS)."""
     cfg = system_config()
+    tz = effective_timezone()
     return {
         "currency": cfg["currency"],
         "currency_symbol": cfg["currency_symbol"],
         "currency_name": cfg["currency_name"],
-        "tz_name": cfg["tz_name"],
-        "tz_offset": cfg["tz_offset"],
+        # المنطقة الفعليّة (اسم IANA) — التطبيق يعرض/يختار الأوقات بها.
+        "timezone": tz["timezone"],
+        "timezone_label": tz["timezone_label"],
+        # الإزاحة **الحاليّة** بالدقائق (غزة 120 شتاءً / 180 صيفًا).
+        "utc_offset_minutes": tz["utc_offset_minutes"],
+        "local_time": tz["local_time"],
+        # حقلان قديمان للتوافق: الاسم كما هو، والإزاحة الحاليّة بالساعات
+        # (لم تعد إزاحة الاحتياط الثابتة — كانت +3 حتى في شتاء غزة).
+        "tz_name": tz["timezone"],
+        "tz_offset": tz["utc_offset_minutes"] / 60.0,
     }
 
 

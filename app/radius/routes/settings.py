@@ -84,9 +84,9 @@ _SETTINGS_KEYS = [
     ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", _SYS_DEFAULTS["billing.currency"]),
     # المنطقة الزمنية الأساسية (IANA) — تُحسب عليها كل الأوقات المعروضة في
     # اللوحة وتقييم جداول السرعة، وهي آمنة تجاه التوقيت الصيفي (DST) عبر
-    # zoneinfo. الافتراضي Asia/Damascus (+3). يبقى billing.timezone_offset
-    # احتياطًا حين تتعذّر قاعدة المناطق أو لمنطقة خارج القائمة.
-    ("billing.timezone",        "المنطقة الزمنية (IANA)", "Asia/Damascus"),
+    # zoneinfo. الافتراضي Asia/Gaza (فلسطين: ‎+2 شتاءً/‎+3 صيفًا — قرار المالك).
+    # يبقى billing.timezone_offset احتياطًا حين تتعذّر قاعدة المناطق فقط.
+    ("billing.timezone",        "المنطقة الزمنية (IANA)", _SYS_DEFAULTS["billing.timezone"]),
     ("billing.timezone_offset", "فارق توقيت النظام بالساعات (احتياطي إذا تعذّرت المنطقة)", "3"),
     ("billing.tax_pct",         "ضريبة %",              "0"),
     ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),
@@ -272,6 +272,19 @@ def settings_page():
                 # ── سلوك حدّ الأجهزة (منفصل كروت/مشتركين) ──
                 #   *.mode  → قيمة محصورة reject/replace.
                 #   *.count → عدد صحيح ≥ 1 (خطأ → 1).
+                # ── المنطقة الزمنية: اسم IANA صالح فقط (اسمٌ تالف كان يُسقط
+                #    كل الأوقات إلى الإزاحة الثابتة الاحتياطيّة بصمت). ──
+                if key == "billing.timezone":
+                    from ..core.system_config import is_valid_timezone
+                    val = val or _SYS_DEFAULTS["billing.timezone"]
+                    if not is_valid_timezone(val):
+                        flash("المنطقة الزمنية غير معروفة — اختر من القائمة (مثل غزة Asia/Gaza).", "error")
+                        return redirect(url_for("radius.settings_page"))
+                if key == "billing.currency":
+                    val = (val or _SYS_DEFAULTS["billing.currency"]).upper()
+                    if not val.isalpha() or not (2 <= len(val) <= 5):
+                        flash("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل).", "error")
+                        return redirect(url_for("radius.settings_page"))
                 if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
                     val = val.strip().lower()
                     if val not in ("reject", "replace"):
@@ -310,7 +323,16 @@ def settings_page():
     custom_count = sum(
         1 for r in visible if (r["value"] or "") != (r["default"] or ""))
     from ..services.store_key import get_store_key
+    from ..core.system_config import (CURRENCY_CHOICES, PANEL_TIMEZONES,
+                                      effective_timezone)
+    try:
+        tz_now = effective_timezone(tenant_id)
+    except Exception:  # noqa: BLE001 — المعاينة لا تُسقط الصفحة
+        tz_now = None
     return render_template("radius/settings_page.html", items=rows,
                            store_key=get_store_key(tenant_id),
                            visible_count=visible_count,
-                           custom_count=custom_count)
+                           custom_count=custom_count,
+                           currency_choices=CURRENCY_CHOICES,
+                           panel_timezones=PANEL_TIMEZONES,
+                           tz_now=tz_now)

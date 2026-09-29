@@ -171,7 +171,9 @@ def is_allowed(schedule, when: Optional[datetime] = None) -> bool:
     windows = sched.get("windows") or []
     if not windows:
         return True
-    when = when or datetime.now()
+    if when is None:  # ساعة اللوحة (zoneinfo) لا ساعة الحاوية
+        from .system_config import local_now
+        when = local_now().replace(tzinfo=None)
     code = _PY_WEEKDAY_TO_CODE[when.weekday()]
     t = when.time().replace(second=0, microsecond=0)
     return any(_window_allows(w, code, t) for w in windows)

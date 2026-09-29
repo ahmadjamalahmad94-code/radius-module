@@ -897,7 +897,8 @@ def rep_subscriber_consumption():
     metric = (request.args.get("metric") or "total").strip().lower()
     if metric not in _USAGE_METRICS:
         metric = "total"
-    date_from, date_to, preset = _resolve_usage_range(request.args, _dt.date.today())
+    from ..core.system_config import local_today
+    date_from, date_to, preset = _resolve_usage_range(request.args, local_today())
     f = {"q": q, "date_from": date_from, "date_to": date_to}
 
     # تطبيع عمود radacct قبل المقارنة كي تَصِحّ الحدود «مسافة» لصيغتَي
@@ -996,8 +997,9 @@ def _recent_week_options(count: int = 26) -> list[tuple[str, str]]:
     """آخر N أسبوعًا ISO كقائمة (القيمة «2026-W39»، والعرض بأرقامٍ لاتينيّة مع
     مداه «22/09 – 28/09»). بديل input[type=week] الذي يرسمه متصفّحٌ عربيّ
     بأرقامٍ هنديّة مهما كانت لغة الصفحة (طلب «شبكة المحترف»)."""
-    from datetime import date, timedelta
-    today = date.today()
+    from datetime import timedelta
+    from ..core.system_config import local_today
+    today = local_today()  # يوم اللوحة (غزة) لا يوم الحاوية
     monday = today - timedelta(days=today.weekday())
     out = []
     for i in range(count):
@@ -1011,8 +1013,8 @@ def _recent_week_options(count: int = 26) -> list[tuple[str, str]]:
 
 def _recent_month_options(count: int = 24) -> list[tuple[str, str]]:
     """آخر N شهرًا «2026-09» — بديل input[type=month] (نفس سبب الأسبوع)."""
-    from datetime import date
-    today = date.today()
+    from ..core.system_config import local_today
+    today = local_today()
     y, m = today.year, today.month
     out = []
     for _ in range(count):

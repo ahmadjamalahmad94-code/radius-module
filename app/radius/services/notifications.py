@@ -190,7 +190,8 @@ def license_days_badge(expires_at, *, today: Optional[_dt.date] = None) -> dict:
     expiry = _parse_date(expires_at)
     if expiry is None:
         return {"days_left": None}
-    ref = today or _dt.date.today()
+    from ..core.system_config import local_today
+    ref = today or local_today()
     days_left = (expiry - ref).days
     if days_left >= 20:
         color, pulse = "green", False
@@ -247,7 +248,8 @@ def surface_license_countdown(tenant_id: int = 1,
     if expiry is None:
         return {"fired": False, "reason": "no_expiry"}
 
-    ref = today or _dt.date.today()
+    from ..core.system_config import local_today
+    ref = today or local_today()
     days_left = (expiry - ref).days
     band = _band_for(days_left)
     if band is None:

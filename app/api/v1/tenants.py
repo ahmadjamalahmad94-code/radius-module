@@ -90,7 +90,7 @@ def _tenant_from_body(body: dict) -> Tenant:
         phone=str(body.get("phone") or "").strip(),
         currency=str(body.get("currency") or default_currency()).strip(),
         locale=str(body.get("locale") or "ar").strip(),
-        timezone=str(body.get("timezone") or "Asia/Amman").strip(),
+        timezone=str(body.get("timezone") or "Asia/Gaza").strip(),
         logo_url=str(body.get("logo_url") or "").strip(),
         primary_color=str(body.get("primary_color") or "#2BAACC").strip(),
         status=status,

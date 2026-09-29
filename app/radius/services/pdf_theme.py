@@ -216,7 +216,8 @@ class _PageChrome:
         self.subtitle = subtitle
         self.brand_mark = brand_mark
         self.footer_note = footer_note
-        self.generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+        from ..core.system_config import local_now
+        self.generated_at = local_now().strftime("%Y-%m-%d %H:%M")
 
     def __call__(self, canvas, doc):
         canvas.saveState()

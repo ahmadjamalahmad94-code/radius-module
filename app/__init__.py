@@ -961,11 +961,12 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.system_config import (
                 CURRENCY_NAMES, CURRENCY_SYMBOLS, _DEFAULTS,
             )
-            cur = (_DEFAULTS.get("billing.currency") or "JOD").upper()
+            cur = (_DEFAULTS.get("billing.currency") or "ILS").upper()
             return {"cfg": {"currency": cur,
                             "currency_symbol": CURRENCY_SYMBOLS.get(cur, cur),
                             "currency_name": CURRENCY_NAMES.get(cur, cur),
-                            "tz_offset": 3.0, "system_name": "HobeRadius", "country": "",
+                            "tz_offset": 3.0, "tz_name": _DEFAULTS.get("billing.timezone", "Asia/Gaza"),
+                            "system_name": "HobeRadius", "country": "",
                             "logo_url": "", "primary_color": "#2BAACC"}}
 
     from app.radius.core.system_config import (
