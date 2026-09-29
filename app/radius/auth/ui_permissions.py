@@ -40,6 +40,15 @@ _NAV_PERM: dict[str, str] = {
     # ── المشتركون ──
     "subscribers_overview": "users.view",
     "subscribers_list": "users.view",
+    # «/users» is the SAME list under another endpoint name — it was
+    # reachable by a dashboard-only viewer (re-test R08 NEW-1). Same for the
+    # subscriber detail pages and the full-list export.
+    "users_list": "users.view",
+    "users_export": "users.view",
+    "users_profile": "users.view",
+    "users_360": "users.view",
+    "subscriber_360": "users.view",
+    "users_edit": "users.view",
     "users_new": "users.create",
     "subscriber_groups_list": "users.view",
     "subscriber_fields": "users.view",

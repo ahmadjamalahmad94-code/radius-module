@@ -991,11 +991,11 @@
            Drives the smart-activation coverage hint so "كم يوم يغطي المبلغ"
            is computed against what this subscriber actually pays. #}
         {% set _eff_price = u.custom_price if (u.custom_price and u.custom_price > 0) else (p.price if p else 0) %}
-        {% set _expire_ts = (u.expire_at.timestamp()|int) if u.expire_at else 0 %}
-        {% set _last_login_ts = (u.last_login_at.timestamp()|int) if u.last_login_at else 0 %}
-        {% set _last_seen_ts = (u.last_seen_at.timestamp()|int) if u.last_seen_at else 0 %}
-        {% set _first_login_ts = (u.first_login_at.timestamp()|int) if u.first_login_at else 0 %}
-        {% set _created_ts = (u.created_at.timestamp()|int) if u.created_at else 0 %}
+        {% set _expire_ts = (u.expire_at|epoch) if u.expire_at else 0 %}
+        {% set _last_login_ts = (u.last_login_at|epoch) if u.last_login_at else 0 %}
+        {% set _last_seen_ts = (u.last_seen_at|epoch) if u.last_seen_at else 0 %}
+        {% set _first_login_ts = (u.first_login_at|epoch) if u.first_login_at else 0 %}
+        {% set _created_ts = (u.created_at|epoch) if u.created_at else 0 %}
         {# acctinputoctets = رفع، acctoutputoctets = تنزيل — RFC 2866.
            والمصدرُ `usage_bytes` المجموعُ من radacct: أعمدةُ
            `subscribers.used_bytes_*` لا يكتبها أحدٌ لمشتركٍ حقيقيّ
@@ -1169,7 +1169,7 @@
             {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}
           </td>
           {%- set _lr = last_renewal.get(u.username) if last_renewal else None -%}
-          <td data-col="last_renewal" data-sort-value="{{ (_lr.timestamp()|int) if _lr else 0 }}" class="mono small">
+          <td data-col="last_renewal" data-sort-value="{{ (_lr|epoch) if _lr else 0 }}" class="mono small">
             {{ _lr.strftime('%Y-%m-%d') if _lr else '—' }}
           </td>
           <td data-col="actions">
@@ -1895,7 +1895,7 @@
 <div class="usq-modal" data-users-bulk-modal hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="ubulk-title" style="width:min(560px,100%)">
     <div class="usq-head">
-      <h3 id="ubulk-title">{{ _('تأكيد حذف المشتركين المحددين') }}</h3>
+      <h3 id="ubulk-title">{{ _('تأكيد أرشفة المشتركين المحددين') }}</h3>
       <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-users-bulk-cancel aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -1918,7 +1918,8 @@
     <div class="usq-foot">
       <button class="hub-btn hub-btn--ghost" type="button" data-users-bulk-cancel>{{ _('إلغاء') }}</button>
       <button class="hub-btn hub-btn--danger" type="button" data-users-bulk-confirm disabled>
-        <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائي للتحديد') }}
+        {# كان «حذف نهائي» والإجراء أرشفةٌ قابلة للاسترجاع (re-test R01 N13). #}
+        <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المحدَّدين (نقل للسلّة)') }}
       </button>
     </div>
   </div>
@@ -3094,20 +3095,16 @@
   if (q && q.value) applyFilter();   // أظهر زر المسح إن وُجد بحث محفوظ من الخادم
 
   /* ── تصدير CSV / Excel / PDF ──
-     نصدّر كل الصفوف (لا الصفحة الحالية فقط) مع احترام البحث الفوري،
-     ونستثني عمودَي التحديد والإجراءات من الملف. */
-  if (table.tHead) {
-    Array.from(table.tHead.rows[0].cells).forEach(th => {
-      const k = th.dataset.col;
-      if (k === "chk" || k === "actions") th.setAttribute("data-uds-noexport", "");
-    });
-  }
-  const exportRows = () => rows().filter(r => !r.hasAttribute("data-live-hidden"));
+     كل المطابقين لفلاتر الصفحة (البحث/الحالة/العرض/المجموعة…) من الخادم —
+     كان التصدير يأخذ صفوف الصفحة المعروضة فقط (10 من 704، re-test R12 N9). */
   document.querySelectorAll("[data-users-export]").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (!window.hubTableExport) return;
-      window.hubTableExport(table, {{ _("قائمة المشتركين")|tojson }},
-        btn.getAttribute("data-users-export"), { rows: exportRows() });
+      const params = new URLSearchParams(window.location.search);
+      ["page", "page_size"].forEach(k => params.delete(k));
+      const live = q && q.value ? q.value.trim() : "";
+      if (live) params.set("q", live);
+      params.set("fmt", btn.getAttribute("data-users-export") || "csv");
+      window.open({{ url_for('radius.users_export')|tojson }} + "?" + params.toString(), "_blank");
     });
   });
 

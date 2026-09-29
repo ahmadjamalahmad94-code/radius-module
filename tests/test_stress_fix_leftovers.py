@@ -282,7 +282,7 @@ def test_web_create_refuses_short_password_and_legacy_edit_still_saves(client):
             "status": "enabled", "user_type": "subscriber"}
     res = client.post("/admin/radius/users",
                       data=dict(form, username="webshort", password="ab"))
-    assert res.status_code == 400
+    assert res.status_code == 422  # fix wave 2: web validation = 422 like the API
     assert _get("webshort") is None
     # a migrated account with a 3-char password can still be edited as is …
     legacy = _sub(plan_id=pid, password="abc")
@@ -293,7 +293,7 @@ def test_web_create_refuses_short_password_and_legacy_edit_still_saves(client):
     # … but a CHANGED password must be ≥ 4
     res = client.post(f"/admin/radius/users/{legacy.username}",
                       data=dict(form, password="xy", full_name="Renamed"))
-    assert res.status_code == 400
+    assert res.status_code == 422
     assert _get(legacy.username).password == "abc"
 
 

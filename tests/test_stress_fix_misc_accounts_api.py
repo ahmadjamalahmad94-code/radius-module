@@ -80,7 +80,8 @@ def test_web_create_rejects_bad_username(app):
         sess["_csrf_token"] = "a-csrf"
     res = web.post("/admin/radius/users", data={
         "username": "bad name/x", "password": "p1234", "_csrf_token": "a-csrf"})
-    assert res.status_code == 400
+    # fix wave 2: web validation errors are 422, the same status as the API
+    assert res.status_code == 422
     assert "اسم الدخول يسمح" in res.get_data(as_text=True)
     from app.radius.db.connection import db
     with app.app_context():

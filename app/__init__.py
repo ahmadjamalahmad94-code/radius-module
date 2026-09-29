@@ -974,6 +974,20 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.filters["money"] = _fmt_money
     app.jinja_env.filters["dt_local"] = _to_local
     app.jinja_env.filters["date_local"] = _to_local_date
+
+    def _epoch(value) -> int:
+        """UTC epoch seconds of a stored (naive UTC) datetime — 0 when absent or
+        unrepresentable. ``dt.timestamp()`` raised OSError for a year-0001
+        expiry and took the whole subscribers list down (re-test R01 N4)."""
+        if not value or not hasattr(value, "timetuple"):
+            return 0
+        try:
+            import calendar
+            tt = value.utctimetuple() if getattr(value, "tzinfo", None) else value.timetuple()
+            return int(calendar.timegm(tt))
+        except Exception:  # noqa: BLE001
+            return 0
+    app.jinja_env.filters["epoch"] = _epoch
     # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations
     # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
     app.jinja_env.filters["dur_days"] = _dur_days
