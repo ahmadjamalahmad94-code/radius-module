@@ -1122,7 +1122,11 @@
             </div>
             {# قيمةُ المنتقي لحظة فتح الصفحة: منتقٍ لم يُلمس لا يُعيد تجديدًا جرى
                بعد فتحها (يقارنه _form_dto)، ويحفظ ثواني النهاية. #}
-            {% if not is_new %}<input type="hidden" name="expire_orig" value="{{ ('%04d-%02d-%02d %s'|format(_ey, _em, _ed, _et)) if (_ey and _em and _ed) else '' }}">{% endif %}
+            {% if not is_new %}<input type="hidden" name="expire_orig" value="{{ ('%04d-%02d-%02d %s'|format(_ey, _em, _ed, _et)) if (_ey and _em and _ed) else '' }}">
+            {# F03-N2: حالة «بدون انتهاء» لحظة فتح الصفحة — مربّعٌ لم يُلمس لا يمسح تجديدًا جرى بعدها. #}
+            <input type="hidden" name="no_expiry_orig" value="{{ request.form.get('no_expiry_orig', '') if request.method == 'POST' else ('1' if not sub.expire_at else '') }}">
+            {# F03-N1: لقطة قيَم الحقول لحظة فتح الصفحة — يُكتب فقط ما غيّره المشغّل. #}
+            <input type="hidden" name="_form_orig" value="{{ form_orig if form_orig is defined and form_orig else request.form.get('_form_orig', '') }}">{% endif %}
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.') }}{% endif %}
