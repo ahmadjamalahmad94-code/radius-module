@@ -84,7 +84,7 @@
     'loans': 'كل صف = حالة سلفة (مفتوحة/مسددة/معدومة…)',
     'activations': 'كل صف = مستخدم فعّل وقتًا عبر الدفع',
     'card_sales': 'كل صف = حزمة بطاقات بيعت منها بطاقات',
-    'profit_loss': 'صف واحد يلخّص كامل دفتر القيود',
+    'profit_loss': 'صف واحد: المحصَّل مقابل المصروفات',
     'distributor_debts': 'كل صف = موزع نشِط وأرصدته',
   } %}
   {% set _total_hint = {
@@ -339,7 +339,8 @@
         'outstanding': 'المتبقي', 'paid': 'المدفوع', 'discount_amount': 'الخصم',
       } %}
       {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid', 'discount_amount',
-                           'credits', 'debits', 'net', 'avg_amount', 'debt_balance', 'credit_limit'] %}
+                           'credits', 'debits', 'net', 'avg_amount', 'debt_balance', 'credit_limit',
+                           'payments', 'card_sales', 'expenses'] %}
       {# الأعمدة وتسمياتها العربيّة من الخدمة (نفسها في الـAPI ``columns`` والتصدير) —
          لا مفاتيح خامّة (transactions/avg_amount/credits…) في رأس الجدول. #}
       {% set columns = (report_columns|map(attribute='key')|list) if report_columns else (report_items[0].keys()|list) %}
@@ -380,7 +381,7 @@
         'loans': 'كل صف حالة سلف: «الحالة» (مفتوحة/مسددة/معدومة…) • «العدد» = عدد السلف بتلك الحالة • «الإجمالي» = مجموع مبالغها • «الدقائق» = مجموع دقائق الاستخدام الممنوحة بها.',
         'activations': '«المستخدم/رقم المستفيد» = صاحب التفعيل • «عدد التفعيلات» = كم مرة فعّل عبر دفعة مرحَّلة • «الدقائق المكتسبة» = صافي الدقائق بعد خصم الإلغاءات.',
         'card_sales': '«رقم الحزمة» = حزمة البطاقات المصدر • «العدد» = عدد البطاقات المبيعة منها (دفعات مرحَّلة) • «الإجمالي» = مجموع قيمتها.',
-        'profit_loss': 'صف ملخّص واحد لكل الدفتر: «الإيرادات (دائن)» مجموع القيود الدائنة • «المصروفات (مدين)» مجموع المدينة • «الصافي» = الفرق بينهما • «عدد القيود» = كل قيود الدفتر • «المصدر» = جدول القيود.',
+        'profit_loss': 'صف ملخّص واحد: «الإيرادات» = الدفعات المحصَّلة فعلًا (بعد خصم الإلغاء) + مبيعات الكروت • «المصروفات» = مصروفات الشركة المسجّلة • «الصافي» = الفرق بينهما. حركات محفظة المشترك (ديون تغيير العرض/التمديد، السلف، شراء الكوتة أو الوقت من الرصيد، إيداع الرصيد) لا تُحسب إيرادًا ولا مصروفًا.',
         'distributor_debts': 'كل صف موزع نشِط: «رصيد الدين» = ما عليه للشركة • «الرصيد» = رصيده المتاح • «سقف الائتمان» = الحد المسموح به للدين.',
       } %}
       <div class="hub-text-soft" style="padding:10px 16px;border-top:1px solid var(--hub-border-soft);font-size:12px;line-height:1.9">
@@ -534,6 +535,7 @@
     activation_count:{{ _("عدد التفعيلات")|tojson }}, earned_minutes:{{ _("الدقائق المكتسبة")|tojson }},
     batch_id:{{ _("رقم الحزمة")|tojson }}, credits:{{ _("الإيرادات (دائن)")|tojson }}, debits:{{ _("المصروفات (مدين)")|tojson }},
     net:{{ _("الصافي")|tojson }}, entries:{{ _("عدد القيود")|tojson }}, source:{{ _("المصدر")|tojson }},
+    payments:{{ _("دفعات محصَّلة (صافي الإلغاء)")|tojson }}, card_sales:{{ _("مبيعات الكروت")|tojson }}, expenses:{{ _("مصروفات الشركة")|tojson }},
     distributor_id:{{ _("رقم الموزع")|tojson }}, name:{{ _("اسم الموزع")|tojson }}, display_name:{{ _("الاسم المعروض")|tojson }},
     debt_balance:{{ _("رصيد الدين")|tojson }}, credit_limit:{{ _("سقف الائتمان")|tojson }},
   };
@@ -541,7 +543,7 @@
   Object.assign(COL_LABELS, {{ (report_col_labels or {})|tojson }});
   const VALUE_LABELS = {{ (report_value_labels or {})|tojson }};
   const HIDDEN_COLS = new Set(['mixed_currency']);
-  const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit','outstanding','avg_amount']);
+  const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit','outstanding','avg_amount','payments','card_sales','expenses']);
   const fmtMoney = (v) => Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 
   root.querySelectorAll("[data-snap-view]").forEach(btn => btn.addEventListener("click", async () => {

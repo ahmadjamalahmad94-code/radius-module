@@ -448,11 +448,11 @@ def finance_ledger_void():
             reason=_field("reason"),
         )
         flash(f"تم إنشاء قيد عكسي للقيد #{entry['reversal_of_entry_id']}.", "success")
-    except ValueError:
-        flash("معرّف القيد غير صحيح.", "error")
     except RadiusError as e:
         # 409 «معكوس مسبقًا» / 422 «لا يُعكس قيدٌ عكسيّ» / 404 — رسالة المشغّل.
         flash(error_message_ar(e), "error")
+    except ValueError:
+        flash("معرّف القيد غير صحيح.", "error")
     return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 

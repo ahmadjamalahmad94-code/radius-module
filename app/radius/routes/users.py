@@ -2456,10 +2456,12 @@ def users_change_plan(username: str):
             flash(f"تم تغيير العرض وإنقاص {_fmt_minutes_ar(abs(delta))}.", "warning")
         else:
             flash("تم تغيير العرض للمشترك.", "success")
+    except RadiusError as e:
+        # قبل ValueError: أخطاء السقوف (NonFiniteNumber) ترث ValueError أيضًا
+        # فكانت تُعرض «اختيار العرض غير صحيح» بدل سببها (سنة/2100/100,000).
+        flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
         flash("اختيار العرض غير صحيح.", "error")
-    except RadiusError as e:
-        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2559,10 +2561,10 @@ def users_quota_reset_daily(username: str):
                   f"الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
         else:
             flash("تمت استعادة الكوتة اليومية للمشترك (مجانية).", "success")
-    except (TypeError, ValueError):
-        flash("قيمة المبلغ غير صحيحة.", "error")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
+    except (TypeError, ValueError):
+        flash("قيمة المبلغ غير صحيحة.", "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2589,6 +2591,8 @@ def users_quota_reset_daily_bulk():
     actor = _actor()
     done = 0
     failed: list[str] = []
+    skipped: list[str] = []
+    from ..services.users import NothingToReset
     for name in usernames:
         try:
             svc.reset_daily_quota(
@@ -2596,6 +2600,8 @@ def users_quota_reset_daily_bulk():
                 amount=amount, currency=currency, notes=notes,
             )
             done += 1
+        except NothingToReset:
+            skipped.append(name)   # بلا سقفٍ يوميّ — لا استعادة ولا مبلغ
         except RadiusError:
             failed.append(name)
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
@@ -2604,6 +2610,10 @@ def users_quota_reset_daily_bulk():
     mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
     if done:
         flash(f"تمت استعادة الكوتة اليومية ({mode_label}) لـ {done} مشترك.", "success")
+    if skipped:
+        preview = "، ".join(skipped[:10]) + ("…" if len(skipped) > 10 else "")
+        flash(f"تُخطّي {len(skipped)} مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ "
+              f"(لم يُحصَّل منهم شيء): {preview}", "info")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
         flash(f"تعذّرت الاستعادة لـ {len(failed)} مشترك: {preview}", "warning")
@@ -2627,10 +2637,10 @@ def users_quota_topup(username: str):
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
         flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
-    except (TypeError, ValueError):
-        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
+    except (TypeError, ValueError):
+        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2698,11 +2708,11 @@ def users_balance_add(username: str):
             notes=(request.form.get("notes") or "").strip(),
             loan_actions=_parse_loan_actions(),
         )
-    except (TypeError, ValueError):
-        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
-        return redirect(url_for("radius.users_list"))
     except RadiusError as e:
         flash(error_message_ar(e), "error")
+        return redirect(url_for("radius.users_list"))
+    except (TypeError, ValueError):
+        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
         return redirect(url_for("radius.users_list"))
     saved = _res["subscriber"]
     settled_done = _res["settled_done"]

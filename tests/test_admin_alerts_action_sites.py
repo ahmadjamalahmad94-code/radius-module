@@ -114,20 +114,20 @@ class TestUsersServiceTriggers:
         # لا يُطلِق سلفة في النمط المجانيّ.
         assert not _only(cap, "loan_granted")
 
-    def test_extend_time_debt_fires_loan_granted(self, app_ctx, monkeypatch):
+    def test_extend_time_debt_fires_time_added_not_loan(self, app_ctx, monkeypatch):
+        # fix3 (F07): a debt EXTEND is not a time loan — it raised «سلفة وقت».
         _make_subscriber("u_debt")
         cap = _spy(monkeypatch)
         from app.radius.services.users import get_users_service
         get_users_service().extend_time(actor="المدير", username="u_debt",
                                         minutes=600, charge_mode="debt",
                                         amount=15.0, currency="ILS")
-        loans = _only(cap, "loan_granted")
-        assert len(loans) == 1
-        ctx, _ = loans[0]
+        hits = _only(cap, "time_added")
+        assert len(hits) == 1
+        ctx, _ = hits[0]
         assert ctx["username"] == "u_debt"
-        assert "دين" in ctx["status"]
-        assert "15.00" in ctx["amount"]
-        assert not _only(cap, "time_added")
+        assert "الدين" in ctx["kind"] and "15.00" in ctx["kind"]
+        assert not _only(cap, "loan_granted")
 
     def test_add_cash_balance_fires_credit_added(self, app_ctx, monkeypatch):
         _make_subscriber("u_credit")

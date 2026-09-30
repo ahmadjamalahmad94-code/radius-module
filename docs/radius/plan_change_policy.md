@@ -47,6 +47,18 @@ The following requests are refused with a 422 in Arabic (a 404 where noted):
 - The subscriber's **current** plan.
 - A **disabled** plan.
 - An **archived** plan (404).
+- **Owner caps (fix wave 3, F04 M1 / F08 H2) — refused, never clamped:**
+  - `lower_compensate` whose computed extra time is more than **one year**
+    (525,600 minutes) → 422 «أقصى تمديد في المرة الواحدة سنة — …» with the
+    computed compensation and the hint to use «تغيير العرض بدون تعويض» and
+    extend by hand in steps. Clamping was rejected on purpose: it would drop
+    part of what the subscriber is owed without anyone noticing.
+  - Any resulting expiry at or after **2101-01-01** → 422 «المدة الناتجة
+    تتجاوز الحدّ المسموح.».
+  - `higher_debt` whose debt is above **100,000** (the single-operation money
+    cap) → 422, with the hint to use «إنقاص الأيام» or keep the expiry.
+  - Nothing is written when a cap refuses (same transaction). Web and API use
+    the same service, so the web flash and the API 422 carry the same text.
 
 If the current plan is archived, its price still decides the direction.
 

@@ -455,6 +455,10 @@ def actions_context(username: str):
             "period_topup_mb": int((qs or {}).get("topup_mb") or 0),
             "daily": (qs or {}).get("daily"),
             "monthly": (qs or {}).get("monthly"),
+            # fix3 (F04 N-L1): «استعادة الكوتة اليوميّة» only means something with
+            # a daily quota or a daily time cap — the server refuses it (422)
+            # otherwise, so the app hides the action when this is false.
+            "daily_reset_available": _daily_reset_available(sub),
         },
         "online_sessions": _open_sessions(tid, sub.username),
         "channels": channels,
@@ -607,6 +611,11 @@ def action_quota_topup(username: str):
         },
         "balance": float(saved.balance or 0),
     })
+
+
+def _daily_reset_available(sub) -> bool:
+    from ...radius.services.users import daily_reset_applicable
+    return bool(daily_reset_applicable(sub))
 
 
 def action_quota_reset(username: str):

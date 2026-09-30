@@ -85,7 +85,7 @@ ALERTS: list[AlertSpec] = [
     AlertSpec(
         "loan_granted", "subscribers", "سلفة وقت",
         "يُرسل عند منح سلفة وقت — من البوابة (customer_portals.submit_loan_request) "
-        "أو من الإدارة (accounting.create_loan، وكذلك users.extend_time بنمط «دين»).",
+        "أو من الإدارة (accounting.create_loan).",
         "💳 <b>سلفة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المدة: {duration}\n"
@@ -99,8 +99,8 @@ ALERTS: list[AlertSpec] = [
     ),
     AlertSpec(
         "time_added", "subscribers", "إضافة/تمديد وقت",
-        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بنمط "
-        "«مجاني» أو «مدفوع»؛ نمط «دين» يُرسَل كسلفة).",
+        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بأيّ نمط: "
+        "«مجاني» أو «مدفوع» أو «على الدين» — النوع والمبلغ في «النوع»).",
         "⏱️ <b>إضافة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الوقت المضاف: {duration}\n"

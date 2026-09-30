@@ -231,6 +231,34 @@ def check_extend_minutes(minutes: int) -> int:
     return int(minutes)
 
 
+# ── ⏸ سؤالٌ مُعلَّق للمالك (F03): هل تسري قاعدة «سنة في المرة» على **الإنشاء**؟ ──
+# اليوم: إنشاء مشتركٍ بانتهاء 2090 مقبول (الحدّ 2000–2100 فقط). جاهزٌ ومُطفأ:
+# التفعيل = ``CREATE_EXPIRY_ONE_YEAR_RULE = True`` (أو متغيّر البيئة
+# ``HOBERADIUS_CREATE_EXPIRY_ONE_YEAR=1``) — نقطةٌ واحدة يستدعيها
+# ``UsersService.create`` (ويب + API + تطبيق). لا شيء آخر يتغيّر.
+CREATE_EXPIRY_ONE_YEAR_RULE = False
+CREATE_TOO_LONG_AR = ("أقصى مدّة عند إنشاء المشترك سنة من الآن — أنشئه بسنة ثم "
+                      "مدّد إن احتجت أكثر.")
+
+
+def create_expiry_rule_enabled() -> bool:
+    import os
+    env = (os.environ.get("HOBERADIUS_CREATE_EXPIRY_ONE_YEAR") or "").strip().lower()
+    return bool(CREATE_EXPIRY_ONE_YEAR_RULE or env in {"1", "true", "yes", "on"})
+
+
+def check_create_expiry(expire_at: Optional[datetime],
+                        now: Optional[datetime] = None) -> Optional[datetime]:
+    """(مُطفأ افتراضًا) 422 لانتهاءٍ عند الإنشاء أبعد من سنة من الآن (+دقيقة سماح
+    لزمن الطلب). بلا تاريخ (NULL) لا يُفحص."""
+    if expire_at is None or not create_expiry_rule_enabled():
+        return expire_at
+    limit = (now or datetime.utcnow()) + timedelta(days=EXTEND_MAX_DAYS, minutes=1)
+    if expire_at > limit:
+        raise NonFiniteNumber(CREATE_TOO_LONG_AR, details={"field": "expire_at"})
+    return expire_at
+
+
 def json_safe(obj: Any) -> Any:
     """نسخة من ``obj`` تستبدل كل float غير منتهٍ بـ ``None`` (JSON صالح)."""
     if isinstance(obj, float):
@@ -267,7 +295,8 @@ def _fmt(v: float) -> str:
 __all__ = [
     "ACTION_AMOUNT_MAX", "EXPIRY_LIMIT", "EXPIRY_TOO_FAR_AR", "EXTEND_MAX_DAYS",
     "EXTEND_MAX_MINUTES", "EXTEND_TOO_LONG_AR", "MONEY_MAX", "NonFiniteNumber", "action_amount",
-    "add_minutes_capped", "check_expiry", "check_extend_minutes", "field_label",
+    "add_minutes_capped", "check_create_expiry", "check_expiry", "check_extend_minutes",
+    "create_expiry_rule_enabled", "field_label",
     "finite_float", "finite_int", "json_dumps_safe", "json_safe", "money_cents",
     "money_float", "normalize_number_text", "normalize_numeric_text", "round_money",
     "strict_float",

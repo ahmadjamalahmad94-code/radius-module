@@ -14,7 +14,7 @@ from typing import Any
 from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.numbers import (
     EXTEND_MAX_DAYS, EXTEND_MAX_MINUTES, EXTEND_TOO_LONG_AR, MONEY_MAX,
-    NonFiniteNumber, action_amount, field_label, round_money,
+    NonFiniteNumber, action_amount, field_label, normalize_number_text, round_money,
 )
 from ..core.system_config import default_currency
 from ..db.connection import after_commit, atomic
@@ -67,7 +67,9 @@ def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
         raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا.",
                               details={"field": field})
     try:
-        out = float(value)
+        # «٣٫٢٥» / «١٬٠٠٠» — the shared parser (F03 N6: the loans centre and
+        # settle refused the Arabic decimal the rest of the API accepts).
+        out = float(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
         raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا.",
                               details={"field": field}) from None
@@ -87,7 +89,7 @@ def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
         raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون عددًا صحيحًا.",
                               details={"field": field})
     try:
-        out = int(value)
+        out = int(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
         raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون عددًا صحيحًا.",
                               details={"field": field}) from None
@@ -935,6 +937,18 @@ class AccountingService:
             duration_minutes += _to_int(hours, field="hours", minimum=0) * 60
         if days not in (None, ""):
             duration_minutes += _to_int(days, field="days", minimum=0) * 24 * 60
+        # F03 N11: an explicit ``duration_minutes`` is explicit time too — with an
+        # amount it was ignored and the length derived from the price (60 min +
+        # 5 ₪ became a 1-day loan). Given together with days/hours it must agree.
+        raw_minutes = body.get("duration_minutes")
+        if raw_minutes not in (None, "") and _to_int(raw_minutes, field="duration_minutes",
+                                                   minimum=0) > 0:
+            explicit = _to_int(raw_minutes, field="duration_minutes", minimum=1)
+            if duration_minutes and duration_minutes != explicit:
+                raise RadiusValidationError(
+                    "حدّد مدّة السلفة مرّةً واحدة: الأيام/الساعات أو «duration_minutes» "
+                    "(القيمتان المُرسَلتان مختلفتان).")
+            duration_minutes = explicit
         # Operator-picks-DAYS flow: when the modal prices the loan from its
         # duration (price_from_days), derive the loan VALUE from the subscriber's
         # effective price (offer/custom), rounded to 2 decimals (operator choice).
@@ -1218,7 +1232,8 @@ class AccountingService:
         "loans": ("status", "count", "total", "outstanding", "duration_minutes"),
         "activations": ("username", "subscriber_id", "activation_count", "earned_minutes"),
         "card_sales": ("batch_id", "count", "total"),
-        "profit_loss": ("credits", "debits", "net", "entries", "source"),
+        "profit_loss": ("credits", "debits", "net", "payments", "card_sales", "expenses",
+                        "entries", "source"),
         "distributor_debts": ("distributor_id", "name", "display_name", "debt_balance",
                               "balance", "credit_limit"),
     }
@@ -1314,6 +1329,9 @@ class AccountingService:
         "batch_id": "رقم الحزمة",
         "credits": "الإيرادات (دائن)",
         "debits": "المصروفات (مدين)",
+        "payments": "دفعات محصَّلة (صافي الإلغاء)",
+        "card_sales": "مبيعات الكروت",
+        "expenses": "مصروفات الشركة",
         "net": "الصافي",
         "entries": "عدد القيود",
         "source": "المصدر",

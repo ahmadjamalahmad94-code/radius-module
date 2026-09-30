@@ -150,12 +150,15 @@ def quota_reset_daily(gid: int):
     usernames = subscriber_groups_repo.list_member_usernames(_tid(), gid)
     if not usernames:
         return ok({"group_id": gid, "reset": 0, "failed": 0})
-    reset = failed = 0
+    reset = failed = skipped = 0
     svc = get_users_service()
+    from ...radius.services.users import NothingToReset
     for username in usernames:
         try:
             svc.reset_daily_quota(actor=_actor(), username=username)
             reset += 1
+        except NothingToReset:
+            skipped += 1   # no daily quota / daily time cap — nothing to restore
         except RadiusError:
             failed += 1
-    return ok({"group_id": gid, "reset": reset, "failed": failed})
+    return ok({"group_id": gid, "reset": reset, "failed": failed, "skipped": skipped})
