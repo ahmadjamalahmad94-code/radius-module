@@ -106,6 +106,9 @@ def notifications_center():
         "radius/notifications_center.html",
         items=items,
         unread_count=notifications_repo.unread_count(tid),
+        # الإجماليّ الحقيقيّ — القائمة تعرض أحدث 200 فقط (F04 N-L3).
+        total_count=notifications_repo.total_count(tid),
+        list_limit=200,
         unread_only=unread_only,
         provider_messages=provider_messages_repo.list_for(tid, limit=20),
         push=notif_svc.push_status(tid),

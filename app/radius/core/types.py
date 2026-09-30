@@ -127,7 +127,7 @@ class AccessPlan:
     project: str = ""
     description: str = ""
     enabled: bool = True
-    priority: int = 100
+    priority: int = 5                          # 1–10، الأصغر أعلى (plans_repo.normalize_priority)
     color: str = "#2BAACC"
     # ── RM-H3: AdvRadius extension fields (migration 012) ──
     # سرعة متقدمة + CIR + bursts
