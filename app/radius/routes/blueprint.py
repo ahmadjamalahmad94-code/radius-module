@@ -1327,6 +1327,22 @@ def _rbac_denial_status_impl(name: str, method: str, *, is_super: bool, perms,
     if not is_super and is_section_blocked(name):
         return _deny(403, reason="section_blocked")
 
+    # fix3 integration (webui open item): pages behind the legacy
+    # ``mt_permissions.requires_perm`` layer (mikrotik.* keys — smart alerts,
+    # hotspot errors, audit log, MikroTik tools…) are decided HERE too, so the
+    # guard, every UI gate built on it (can_submit / can_open / gate_html) and
+    # the API ``web:`` mappings refuse exactly what the decorator refuses:
+    # hidden ⇔ refused, shown ⇔ allowed. Owner / co-owner bypass (as the
+    # decorator's own owner rule).
+    if not is_super:
+        from ..services import mt_permissions as _mtp
+        _need = _mtp.endpoint_required_perms(name)
+        if _need:
+            _held = _mtp.held_from_keys(perms)
+            _missing = [p for p in _need if p not in _held]
+            if _missing:
+                return _deny(403, reason="permission", permission=",".join(_missing))
+
     # fix3 (F02 L3 / F07 H2): a distributor LOGIN reads its OWN distributor
     # page (web detail, API summary/batches) — never another's, never writes.
     if (not is_super and name == "distributors_detail"

@@ -145,10 +145,9 @@ def violations(app, html: str, page_path: str, *, admin, perms):
         code = rbac_denial_status(name, method, is_super=False, perms=list(perms),
                                   admin_id=admin.id, tenant_id=1,
                                   record_activity=False)
-        # NOTE: pages behind the legacy mikrotik.* decorator
-        # (mt_permissions.requires_perm) are a separate permission layer, not
-        # part of the RBAC guard — reconciling it belongs to the permission
-        # stream; only the header alerts bell is gated on it (can_open_mt).
+        # Pages behind the legacy mikrotik.* decorator
+        # (mt_permissions.requires_perm) are decided by the guard too since the
+        # fix3 integration, so this one check covers both layers.
         if code is not None:
             bad.append(f"{page_path}: {kind} {method} {url} → {name} ({code})")
             continue

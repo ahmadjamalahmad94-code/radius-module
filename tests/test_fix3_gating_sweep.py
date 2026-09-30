@@ -200,3 +200,98 @@ def test_entity_links_keep_their_text_when_unlinked(world):
         assert st == 200
         assert u in re.sub(r"<[^>]+>", " ", html)
         assert f"/admin/radius/users/{u}/edit" not in html
+
+
+# ─────────── fix3 integration: the legacy mikrotik.* layer ───────────
+# Pages behind ``mt_permissions.requires_perm`` (smart alerts, hotspot errors,
+# audit log, MikroTik tools…) used to be a separate permission layer: the
+# sidebar showed «التنبيهات الذكيّة» / «رسائل أخطاء الهوتسبوت» to a manager the
+# decorator then refused (403). The guard now applies the decorator's keys too,
+# and the sidebar's nav_can asks the same question: hidden ⇔ refused.
+
+_LEGACY_LINKS = (("mt_alerts_index", "/admin/radius/alerts"),
+                 ("hotspot_errors_page", "/admin/radius/hotspot-errors"))
+
+
+def _legacy_endpoints(app):
+    return {ep.split(".", 1)[1]: fn._hr_required_perms
+            for ep, fn in app.view_functions.items()
+            if ep.startswith("radius.") and getattr(fn, "_hr_required_perms", None)}
+
+
+@pytest.mark.parametrize("perms", [
+    ("dashboard.view", "nas.view"),
+    ("dashboard.view", "nas.view", "mikrotik.view"),
+    ("dashboard.view", "nas.view", "mikrotik.diagnostics"),
+    ("dashboard.view", "nas.view", "mikrotik.admin"),
+    ("dashboard.view", "settings.view", "mikrotik.audit.view"),
+])
+def test_legacy_layer_guard_never_allows_what_the_decorator_refuses(world, perms):
+    """For EVERY requires_perm endpoint: the guard (and so can_submit, can_open,
+    gate_html, the API ``web:`` specs) allows it only when the decorator does."""
+    app, _ = world
+    from app.radius.routes.blueprint import rbac_denial_status
+    from app.radius.services import mt_permissions as M
+    with app.app_context():
+        legacy = _legacy_endpoints(app)
+        assert len(legacy) >= 20, sorted(legacy)
+        mgr = H.role_admin(perms)
+        from app.radius.db.repos import admins_repo
+        eff = list(admins_repo.admin_permissions(admins_repo.get_admin(mgr.id)))
+        bad = []
+        with app.test_request_context("/admin/radius/"):
+            from flask import session
+            session.update({"admin_id": mgr.id, "tenant_id": 1, "permissions": eff,
+                            "is_super_admin": False})
+            for ep, need in sorted(legacy.items()):
+                rule = next(r for r in app.url_map.iter_rules() if r.endpoint == "radius." + ep)
+                method = "GET" if "GET" in rule.methods else "POST"
+                guard_ok = rbac_denial_status(ep, method, is_super=False, perms=eff,
+                                              admin_id=mgr.id, tenant_id=1,
+                                              record_activity=False) is None
+                deco_ok = M.require_perms(*need)[0]
+                if guard_ok and not deco_ok:
+                    bad.append(f"{ep} ({method}) needs {need}")
+        assert not bad, bad
+
+
+@pytest.mark.parametrize("perms", [
+    ("dashboard.view", "nas.view", "mikrotik.view"),
+    ("dashboard.view", "nas.view", "mikrotik.diagnostics"),
+    ("dashboard.view", "nas.view", "mikrotik.admin"),
+])
+def test_sweep_with_legacy_mikrotik_keys(world, perms):
+    """The full page sweep for managers who DO hold legacy mikrotik.* keys:
+    every visible control (sidebar included) leads to an allowed endpoint."""
+    app, pages = world
+    with app.app_context():
+        bad = _sweep(app, pages, perms)
+    assert not bad, chr(10).join(sorted(set(bad))[:60])
+
+
+def test_sidebar_legacy_links_hidden_iff_refused(world):
+    app, _ = world
+    with app.app_context():
+        # nas.view only: the sidebar used to link both pages; the click was a 403
+        mgr = H.role_admin(("dashboard.view", "nas.view"))
+        c = app.test_client()
+        H.login_session(c, mgr.id)
+        html = c.get("/admin/radius/devices").get_data(as_text=True)
+        for ep, path in _LEGACY_LINKS:
+            assert f'href="{path}"' not in html, ep
+            assert c.get(path).status_code == 403, ep
+        # with the legacy keys: shown AND allowed
+        mgr = H.role_admin(("dashboard.view", "nas.view", "mikrotik.view",
+                            "mikrotik.diagnostics"))
+        c = app.test_client()
+        H.login_session(c, mgr.id)
+        html = c.get("/admin/radius/devices").get_data(as_text=True)
+        for ep, path in _LEGACY_LINKS:
+            assert f'href="{path}"' in html, ep
+            assert c.get(path).status_code == 200, ep
+        # the owner: always both
+        c = app.test_client()
+        H.login_session(c, H.owner_id())
+        html = c.get("/admin/radius/devices").get_data(as_text=True)
+        for ep, path in _LEGACY_LINKS:
+            assert f'href="{path}"' in html and c.get(path).status_code == 200, ep

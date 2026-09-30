@@ -257,6 +257,29 @@ def require_perms(*perms: str) -> tuple[bool, str]:
     return True, ""
 
 
+def held_from_keys(keys) -> frozenset[str]:
+    """The MikroTik-domain keys held by a role key list (RBAC ``perms``):
+    the allowlisted ones plus what ``mikrotik.admin`` implies — the same
+    expansion as :func:`admin_permissions`, for callers that already hold
+    the admin's key list (the panel guard, the API guard)."""
+    held = {p for p in (keys or ()) if p in ALL_PERMISSIONS}
+    if PERM_ADMIN in held:
+        held.update(_IMPLIED_BY_ADMIN)
+    return frozenset(held)
+
+
+def endpoint_required_perms(endpoint: str) -> tuple[str, ...]:
+    """The ``requires_perm`` keys of a panel endpoint (``radius.x`` or ``x``),
+    read from the decorated view (``_hr_required_perms``) — () when none."""
+    try:
+        from flask import current_app
+        name = endpoint if "." in endpoint else "radius." + endpoint
+        return tuple(getattr(current_app.view_functions.get(name),
+                             "_hr_required_perms", ()) or ())
+    except Exception:  # noqa: BLE001 — outside an app context
+        return ()
+
+
 # ─── Route decorator ──────────────────────────────────────────
 
 
@@ -321,6 +344,7 @@ def requires_perm(*perms: str):
 
 
 __all__ = [
+    "held_from_keys", "endpoint_required_perms",
     "PERM_VIEW", "PERM_DIAGNOSTICS", "PERM_MANAGE",
     "PERM_PROGRAM", "PERM_DEPLOY_LOGIN", "PERM_ROLLBACK",
     "PERM_BACKUP", "PERM_RESTORE",

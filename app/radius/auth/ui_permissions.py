@@ -411,5 +411,23 @@ def perm_for_endpoint(endpoint: str) -> str | None:
     return hit
 
 
-__all__ = ["can", "ui_unauth_mode", "perm_for_endpoint",
+def legacy_perm_ok(endpoint: str) -> bool:
+    """Sidebar twin of the guard's legacy-layer check (fix3 integration): an
+    endpoint decorated with ``mt_permissions.requires_perm`` is shown only when
+    the session admin holds its mikrotik.* keys (owner / co-owner: always) —
+    the decorator would otherwise answer the click with a 403."""
+    try:
+        from flask import session
+        if session.get("is_super_admin"):
+            return True
+        from ..services import mt_permissions as _mtp
+        need = _mtp.endpoint_required_perms(endpoint)
+        if not need:
+            return True
+        return bool(_mtp.require_perms(*need)[0])
+    except Exception:  # noqa: BLE001 — never break the sidebar
+        return True
+
+
+__all__ = ["can", "legacy_perm_ok", "ui_unauth_mode", "perm_for_endpoint",
            "UNAUTH_UI_SETTING_KEY", "UNAUTH_UI_DEFAULT"]

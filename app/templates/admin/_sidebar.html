@@ -47,7 +47,8 @@
 {%- macro nav_can(endpoint, perm=None) -%}
 {#- Text-returning helper (Jinja macros can't return booleans):
     emits "1" when the item is permitted. Use: nav_can(ep)|trim. -#}
-{%- if not _rbac_ui -%}1{%- elif can(perm if perm is not none else perm_for_endpoint(endpoint)) -%}1{%- endif -%}
+{%- if not _rbac_ui -%}1{%- elif can(perm if perm is not none else perm_for_endpoint(endpoint))
+        and (legacy_perm_ok is not defined or legacy_perm_ok(endpoint)) -%}1{%- endif -%}
 {%- endmacro -%}
 
 {%- macro frozen_row(label, sub=False, icon=None) -%}

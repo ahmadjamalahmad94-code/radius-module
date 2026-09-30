@@ -724,6 +724,7 @@ def _install_stubs(app: Flask) -> None:
         # آمن — can() يُرجِع True للسوبر دائمًا (يفحص session['is_super_admin']).
         return {
             "can": _uip.can,
+            "legacy_perm_ok": _uip.legacy_perm_ok,
             "ui_unauth_mode": _uip.ui_unauth_mode,
             "perm_for_endpoint": _uip.perm_for_endpoint,
         }
