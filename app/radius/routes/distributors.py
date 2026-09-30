@@ -105,8 +105,14 @@ def _assert_distributor_access(distributor: dict) -> None:
         return
     me = current_admin_id()
     owner = int(distributor.get("admin_id") or 0)
-    if not me or owner != int(me):
-        abort(403)
+    if me and owner == int(me):
+        return
+    # fix3 (F02 L3): the distributor LOGIN may READ its own record (GET only;
+    # every write keeps requiring the owning manager / reports.finance).
+    if (me and request.method in ("GET", "HEAD")
+            and int(distributor.get("login_admin_id") or 0) == int(me)):
+        return
+    abort(403)
 
 
 def _managers_for_form() -> list:

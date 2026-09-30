@@ -71,6 +71,8 @@
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الحالة') }}</label>
         {{ toggle_switch(name="enabled", checked=((not admin) or admin.enabled), value="1", id="ad-en") }}
+        {# fix3 (F01 F15): marks that the form carried the toggle (unchecked = off) #}
+        <input type="hidden" name="enabled_present" value="1">
       </div>
     </div>
   {% endcall %}

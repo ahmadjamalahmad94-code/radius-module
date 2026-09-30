@@ -683,7 +683,6 @@ _PERM_GUARDED: dict[str, str] = {
     "cards_generate_progress_start": "cards.generate",
     "cards_revoke": "cards.revoke",
     # سلة المحذوفات: الاستعادة تخص البطاقات المحذوفة
-    "recycle_bin_restore": "cards.restore",
     # بطاقات الشحن وحزم الطباعة
     "cards_recharge_new": "cards.recharge",
     "cards_recharge_batch_delete": "cards.recharge",
@@ -719,9 +718,10 @@ _PERM_GUARDED: dict[str, str] = {
     "manager_approval_reject": "admins.policy",
 
     # ═══ التقارير (routes/reports.py + accounting.py) ═══
-    "reports_home": "reports.view", "reports_financial": "reports.view",
-    "reports_cards": "reports.view", "reports_distributors": "reports.view",
-    "reports_archive": "reports.view", "reports_archive_create": "reports.view",
+    # fix3 (F08 H3): money reports need reports.finance, not just reports.view.
+    "reports_home": "reports.view", "reports_financial": "reports.finance",
+    "reports_cards": "reports.view", "reports_distributors": "reports.finance",
+    "reports_archive": "reports.finance", "reports_archive_create": "reports.finance",
     "rep_sessions": "reports.view", "rep_failed_logins": "reports.view",
     "rep_subscriber_consumption": "reports.view",
     "rep_login_status": "reports.view", "rep_login_states": "reports.view",
@@ -734,8 +734,8 @@ _PERM_GUARDED: dict[str, str] = {
     "rep_manager_events": "reports.view", "rep_manager_login_status": "reports.view",
     "rep_user_events": "reports.view", "rep_speed_failures": "reports.view",
     "rep_mikrotik_actions": "reports.view",
-    "rep_used_cards": "reports.view", "rep_balance_movements": "reports.view",
-    "rep_cash_transactions": "reports.view",
+    "rep_used_cards": "reports.view", "rep_balance_movements": "reports.finance",
+    "rep_cash_transactions": "reports.finance",
     # دفتر القيود والتقارير المالية — مفتاح مالي مستقل
     "finance_ledger": "reports.finance",
     "finance_reports": "reports.finance",
@@ -1136,9 +1136,11 @@ _PERM_GUARDED: dict[str, str] = {
     "system_settings_page": "settings.edit",
     # قناة واتساب — مفتاح قسم الاتصالات (مثل communications_*) فوق بوّابة
     # الفعل comms.whatsapp (مطفأة افتراضًا، يَمنحها المالك لكل مدير).
-    "whatsapp_settings": "users.send_message",
-    "whatsapp_test": "users.send_message",
-    "whatsapp_cloud_test": "users.send_message",
+    # fix3 (D15 / F01 F2): ONE key — settings.edit (the comms.whatsapp gate is
+    # derived from it too); it needed settings.edit AND users.send_message.
+    "whatsapp_settings": "settings.edit",
+    "whatsapp_test": "settings.edit",
+    "whatsapp_cloud_test": "settings.edit",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
@@ -1203,6 +1205,7 @@ _GUARD_ALLOWLIST: dict[str, str] = {
     # ── حارسٌ داخل المعالِج (منحة كيان/فعل لا مفتاح دور) ──
     "cards_checker": "GET view open by design; POST guarded by cards.verify",
     "cards_checker_v2": "GET view open by design; actions post to cards_checker",
+    "recycle_bin_restore": "in-handler (fix3 F01 F4): per entity type — cards.restore for card batches, users.create subscribers, plans.create plans, nas.create NAS, owner-only admins/roles; scope applies",
     "cards_batches_import": "in-handler: owner or can_import_batches grant",
     "cards_batches_import_preview": "in-handler: owner or can_import_batches grant",
     "cards_offers": "lists only the offers the owner shared with this manager",
@@ -1252,6 +1255,25 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
     return code
 
 
+def _is_own_distributor_record(admin_id, tenant_id) -> bool:
+    """Is ``view_args['distributor_id']`` the distributor whose login is
+    ``admin_id`` (``distributors.login_admin_id``)?"""
+    try:
+        from flask import has_request_context
+        if not admin_id or not has_request_context():
+            return False
+        did = (request.view_args or {}).get("distributor_id")
+        if did is None:
+            return False
+        from ..db.repos import operations_repo
+        from flask import session as _s
+        tid = int(tenant_id or getattr(g, "tenant_id", None) or _s.get("tenant_id") or 1)
+        dist = operations_repo.get_distributor(tid, int(did))
+        return bool(dist) and int(dist.get("login_admin_id") or 0) == int(admin_id)
+    except Exception:  # noqa: BLE001 — no exemption on error
+        return False
+
+
 def _deny(code: int, *, permission: str = "", reason: str = "") -> int:
     """يسجّل سبب الرفض (D24) ويُرجع الرمز."""
     try:
@@ -1282,12 +1304,14 @@ def denial_message() -> str:
     perm = info.get("permission") or ""
     base = _DENIAL_REASON_AR.get(reason, "")
     if reason in ("action", "permission") and perm:
+        # fix3 (D24 / F01 F23): the Arabic name of the key(s), never the raw
+        # key (it stays in the JSON ``permission`` field for tools).
         try:
-            from ..services.permission_labels import permission_label
-            label = permission_label(perm)
+            from ..services.permission_labels import rbac_keys_label
+            label = rbac_keys_label(perm)
         except Exception:  # noqa: BLE001
             label = perm
-        return f"{base}: {label} ({perm})." if label and label != perm else f"{base}: {perm}."
+        return f"{base}: «{label}»."
     return base
 
 
@@ -1302,6 +1326,13 @@ def _rbac_denial_status_impl(name: str, method: str, *, is_super: bool, perms,
     #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
     if not is_super and is_section_blocked(name):
         return _deny(403, reason="section_blocked")
+
+    # fix3 (F02 L3 / F07 H2): a distributor LOGIN reads its OWN distributor
+    # page (web detail, API summary/batches) — never another's, never writes.
+    if (not is_super and name == "distributors_detail"
+            and method in ("GET", "HEAD", "OPTIONS")
+            and _is_own_distributor_record(admin_id, tenant_id)):
+        return None
 
     # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
     # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
@@ -1574,6 +1605,28 @@ def _subscriber_scope_denied(name: str) -> bool:
         if va.get("subscriber_id") and "/subscribers/<int:subscriber_id>" in rule:
             return not _scope.subscriber_accessible(aid, subscriber_id=int(va["subscriber_id"]),
                                                    tenant_id=tid)
+        # fix3 (F01 F10): a card batch by direct URL (cards/print/recharge/pricing).
+        if va.get("batch_id") and ("/cards/" in rule or "/card-pricing/" in rule):
+            from ..services.card_batch_scope import batch_accessible
+            return not batch_accessible(int(va["batch_id"]), aid, tenant_id=tid)
+        # fix3 (F02 H3): online/session actions carry the subscriber in the FORM
+        # (username / session id), not the URL — same predicate as the API.
+        if request.method == "POST" and name.startswith(("online_", "sessions_")):
+            names = [u.strip() for u in request.form.getlist("username") if u and u.strip()]
+            if not names:
+                names = _online_form_usernames(tid)
+            if names:
+                return len(_scope.filter_accessible(names, aid, tenant_id=tid)) != len(names)
+        # fix3 (F02 M3): a subscriber picked from a picker (tickets/services/
+        # billing/bandwidth schedules…) — never another manager's subscriber.
+        if request.method == "POST":
+            sid = (request.form.get("subscriber_id") or "").strip()
+            if sid.isdigit():
+                return not _scope.subscriber_accessible(aid, subscriber_id=int(sid),
+                                                       tenant_id=tid)
+            su = (request.form.get("subscriber_username") or "").strip()
+            if su:
+                return not _scope.subscriber_accessible(aid, username=su, tenant_id=tid)
         if request.method == "POST" and name.startswith("users_") and "usernames" in request.form:
             raw = request.form.getlist("usernames")
             if len(raw) == 1 and "," in raw[0]:
@@ -1583,6 +1636,29 @@ def _subscriber_scope_denied(name: str) -> bool:
     except Exception:  # noqa: BLE001
         return False
     return False
+
+
+def _online_form_usernames(tenant_id: int) -> list[str]:
+    """Subscribers named by an online action that posts only session ids
+    (``session_id`` / ``acctsessionid`` / ``radacctid``) — resolved in radacct."""
+    from ..db.connection import db
+    names: list[str] = []
+    for sid in request.form.getlist("session_id") + request.form.getlist("acctsessionid"):
+        sid = (sid or "").strip()
+        if sid:
+            row = db().execute(
+                "SELECT username FROM radacct WHERE tenant_id = ? AND acctsessionid = ? "
+                "ORDER BY radacctid DESC LIMIT 1", (int(tenant_id), sid)).fetchone()
+            if row and row["username"]:
+                names.append(str(row["username"]))
+    for rid in request.form.getlist("radacctid"):
+        if (rid or "").strip().isdigit():
+            row = db().execute(
+                "SELECT username FROM radacct WHERE tenant_id = ? AND radacctid = ?",
+                (int(tenant_id), int(rid))).fetchone()
+            if row and row["username"]:
+                names.append(str(row["username"]))
+    return names
 
 
 def _wants_json_response() -> bool:

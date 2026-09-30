@@ -92,13 +92,46 @@ def _table_to_entity(table: str) -> str:
     return table
 
 
+def _viewer() -> tuple[bool, list, object]:
+    """(owner-like?, permissions, admin id) of the session admin."""
+    return (bool(session.get("is_super_admin")), list(session.get("permissions") or []),
+            session.get("admin_id"))
+
+
+def _scope_clause(table: str) -> tuple[str, list]:
+    """fix3 (F01 F4): a manager lists only HIS archived subscribers / batches."""
+    is_owner, _perms, aid = _viewer()
+    if is_owner or not aid:
+        return "", []
+    if table == "subscribers":
+        from ..services.subscriber_scope import scope_admin_id, owner_scope_clause
+        scope = scope_admin_id(int(aid), tenant_id=_tid())
+        return owner_scope_clause(scope, tenant_id=_tid()) if scope is not None else ("", [])
+    if table == "card_batches":
+        from ..services.card_batch_scope import batch_scope_admin_id, batch_scope_clause
+        scope = batch_scope_admin_id(int(aid), tenant_id=_tid())
+        if scope is None:
+            return "", []
+        clause, vals = batch_scope_clause(scope, alias="card_batches")
+        return " AND " + clause, vals
+    return "", []
+
+
+def _visible_entities() -> list[str]:
+    from ..services.recycle_restore_policy import table_visible
+    is_owner, perms, _aid = _viewer()
+    return [e for e, t in _ENTITY_TABLES.items()
+            if table_visible(t, is_owner=is_owner, perms=perms)]
+
+
 def _deleted_rows(table: str, *, limit: int = 250) -> list[dict]:
     tenant_tables = {"subscribers", "access_plans", "nas_devices", "card_batches"}
     if table in tenant_tables:
+        clause, cvals = _scope_clause(table)
         rows = db().execute(
-            f"SELECT * FROM {table} WHERE tenant_id = ? AND deleted_at IS NOT NULL "
-            "ORDER BY deleted_at DESC LIMIT ?",
-            (_tid(), limit),
+            f"SELECT * FROM {table} WHERE tenant_id = ? AND deleted_at IS NOT NULL"
+            + clause + " ORDER BY deleted_at DESC LIMIT ?",
+            (_tid(), *cvals, limit),
         ).fetchall()
     elif table == "roles":
         rows = db().execute(
@@ -144,20 +177,22 @@ def _restore(entity_type: str, entity_id: int) -> bool:
 
 def recycle_bin():
     selected = (request.args.get("entity_type") or "").strip()
-    entities = [selected] if selected in _ENTITY_TABLES else list(_ENTITY_TABLES)
+    # fix3 (F01 F4): only the entity types this admin may restore, scoped.
+    visible = _visible_entities()
+    entities = [selected] if selected in visible else visible
     items: list[dict] = []
     for entity in entities:
         items.extend(_deleted_rows(_ENTITY_TABLES[entity]))
     items.sort(key=lambda item: item.get("deleted_at") or "", reverse=True)
     counts = {
         entity: len(_deleted_rows(table, limit=1000))
-        for entity, table in _ENTITY_TABLES.items()
+        for entity, table in _ENTITY_TABLES.items() if entity in visible
     }
     return render_template(
         "radius/recycle_bin.html",
         items=items,
         selected=selected,
-        entity_labels=_ENTITY_LABELS,
+        entity_labels={e: l for e, l in _ENTITY_LABELS.items() if e in visible},
         counts=counts,
     )
 
@@ -166,6 +201,18 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     if entity_type not in _ENTITY_TABLES:
         flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
         return redirect(url_for("radius.recycle_bin"))
+    # fix3 (F01 F4): each entity type needs its own key (cards.restore is for
+    # card batches only), admins/roles are owner-only, and the scope applies.
+    from ..services.recycle_restore_policy import restore_denial
+    is_owner, perms, aid = _viewer()
+    denied = restore_denial(_ENTITY_TABLES[entity_type], entity_id, admin_id=aid,
+                            is_owner=is_owner, perms=perms, tenant_id=_tid())
+    if denied is not None:
+        from flask import abort
+        from .blueprint import _deny
+        _deny(403, reason=denied["reason"] if denied["reason"] != "unsupported" else "permission",
+              permission=denied["permission"])
+        abort(403)
     if _restore(entity_type, entity_id):
         flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
     else:

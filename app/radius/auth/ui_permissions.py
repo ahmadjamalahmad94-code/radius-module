@@ -44,7 +44,9 @@ _NAV_PERM: dict[str, str] = {
     # reachable by a dashboard-only viewer (re-test R08 NEW-1). Same for the
     # subscriber detail pages and the full-list export.
     "users_list": "users.view",
-    "users_export": "users.view",
+    "users_export": "users.export",   # fix3 (F01 F11): the export key, not users.view
+    # fix3 (F01 F5): on-demand password (+ «رؤية كلمة مرور المشترك» in-handler)
+    "users_password": "users.view",
     "users_profile": "users.view",
     "users_360": "users.view",
     "subscriber_360": "users.view",

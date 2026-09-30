@@ -173,7 +173,8 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
             "communications", "communications_send", "communications_templates",
             "communications_campaigns", "whatsapp",
             "users_send_sms", "users_send_sms_bulk",
-            "whatsapp_settings", "whatsapp_test", "whatsapp_cloud_test",
+            # fix3 (D15): WhatsApp SETTINGS are gated by settings.edit alone —
+            # an empty «communications» section no longer hides them.
         ),
     },
     "store": {
@@ -363,7 +364,7 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     # ── تصدير البيانات (المرحلة C) — مسارات GET، لذا نُحرسها على القراءة أيضًا
     # (gate_get). افتراض OFF: المدير غير المُصرَّح لا يُصدِّر CSV/Excel/PDF. ──
     "data.export": {"label": "تصدير البيانات (CSV/Excel/PDF)", "section": "reports",
-        "endpoints": ("export_table", "cards_batches_export_csv",
+        "endpoints": ("export_table", "users_export", "cards_batches_export_csv",
                       "cards_batches_export_pdf", "cards_batches_export_xlsx",
                       "finance_reports_export_csv", "finance_reports_export_xlsx",
                       "finance_reports_export_pdf"),
@@ -527,7 +528,9 @@ BULK_ENDPOINTS: frozenset = frozenset({
     "users_bulk_delete", "users_toggle_bulk", "users_extend_bulk",
     "users_send_sms_bulk", "users_quota_topup_bulk", "users_quota_reset_daily_bulk",
     "users_balance_add_bulk", "users_payment_create_bulk", "users_loan_create_bulk",
-    "cards_batches_bulk",
+    # fix3 (D15 / F01 F14): cards_batches_bulk is NOT here — batch operations
+    # ARE the «cards.batch_ops» key (its own action gate); a hidden per-manager
+    # bulk.ops grant made the key unusable. Purge stays owner-only in-handler.
 })
 
 

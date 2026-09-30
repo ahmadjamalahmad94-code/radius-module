@@ -209,7 +209,10 @@ def admins_update(admin_id: int):
     if request.form.get("role_id"):
         try: changes["role_id"] = int(request.form["role_id"])
         except (TypeError, ValueError): pass
-    changes["enabled"] = bool(request.form.get("enabled"))
+    # fix3 (F01 F15): only a form that carried the toggle changes «enabled» —
+    # a crafted POST without it silently disabled the target admin.
+    if "enabled" in request.form or request.form.get("enabled_present"):
+        changes["enabled"] = bool(request.form.get("enabled"))
     password = (request.form.get("password") or "").strip()
     # تطبيق profile fields عبر repo مباشرة لتجنب تقييد الـ service
     profile_keys = ("phone","profile_notes","avatar_url","tags")
@@ -308,6 +311,9 @@ def roles_list():
 
 def roles_update(role_id: int):
     """legacy: permissions-only update."""
+    refused = _reject_unknown_permissions(url_for("radius.roles_list"))
+    if refused is not None:
+        return refused
     svc = get_admins_service()
     chosen = tuple(request.form.getlist("permissions"))
     try:
@@ -357,11 +363,34 @@ def roles_new():
         groups=_permission_groups(perms))
 
 
+def _unknown_permission_keys() -> list[str]:
+    """fix3 (F02 M2): keys the role form posted that are not real permissions."""
+    from ..core.constants import ALL_PERMISSIONS
+    known = set(ALL_PERMISSIONS)
+    return sorted({p for p in request.form.getlist("permissions") if p not in known})
+
+
+def _reject_unknown_permissions(back_url: str):
+    """422 in Arabic (like POST /api/v1/roles) — nothing is stored."""
+    bad = _unknown_permission_keys()
+    if not bad:
+        return None
+    from .status_notice import status_notice
+    return status_notice(
+        422, "لم يُحفَظ الدور",
+        "صلاحيات غير معروفة: " + "، ".join(bad) + " — لم يُحفَظ شيء.",
+        back_url=back_url, back_label="رجوع إلى الدور", code="unknown_permission",
+        unknown=bad)
+
+
 def roles_create():
     name = (request.form.get("name") or "").strip()
     if not name:
         flash("اسم الدور مطلوب.", "error")
         return redirect(url_for("radius.roles_new"))
+    refused = _reject_unknown_permissions(url_for("radius.roles_new"))
+    if refused is not None:
+        return refused
     try:
         from ..auth.owner import assert_role_within_actor
         assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
@@ -427,6 +456,9 @@ def roles_edit(role_id: int):
 def roles_save(role_id: int):
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
+    refused = _reject_unknown_permissions(url_for("radius.roles_edit", role_id=role_id))
+    if refused is not None:
+        return refused
     try:
         from ..auth.owner import assert_role_within_actor
         assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
@@ -453,9 +485,14 @@ def roles_delete(role_id: int):
     # D22: دورٌ مُسنَد لمدراء لا يُحذف بصمت (كانوا يفقدون كل صلاحياتهم).
     in_use = admins_repo.role_usage_count(role_id)
     if in_use:
-        flash(f"لا يمكن حذف الدور «{r.display_name or r.name}»: مُسنَد إلى {in_use} مدير. "
-              f"انقلهم إلى دورٍ آخر أوّلًا.", "error")
-        return redirect(url_for("radius.roles_list")), 409
+        # F02 L2 / D22: a real Arabic 409 page/JSON — not «Redirecting…».
+        from .status_notice import status_notice
+        return status_notice(
+            409, "لا يمكن حذف الدور",
+            f"لا يمكن حذف الدور «{r.display_name or r.name}»: مُسنَد إلى {in_use} مدير. "
+            "انقلهم إلى دورٍ آخر أوّلًا.",
+            back_url=url_for("radius.roles_list"), back_label="قائمة الأدوار",
+            code="role_in_use", admins_count=int(in_use))
     try:
         admins_repo.delete_role(role_id)
         flash(f"تمت أرشفة الدور «{r.name}» ✓", "success")
