@@ -22,12 +22,9 @@
 
 {# ── مُنسِّقات محلية للمدة والحجم (تطابق users_profile.html، بلا اعتماد خلفي) ── #}
 {% macro fmt_dur(secs) -%}
-  {%- set s = secs|int -%}
-  {#- Latin unit letters + LTR isolate (bidi W2 flip). See core/duration_fmt.py -#}
-  {%- if s >= 86400 -%}<bdi dir="ltr">{{ (s // 86400) }}d {{ ((s % 86400) // 3600) }}h</bdi>
-  {%- elif s >= 3600 -%}<bdi dir="ltr">{{ (s // 3600) }}h {{ ((s % 3600) // 60) }}m</bdi>
-  {%- elif s >= 60 -%}<bdi dir="ltr">{{ (s // 60) }}m {{ (s % 60) }}s</bdi>
-  {%- else -%}<bdi dir="ltr">{{ s }}s</bdi>{%- endif -%}
+  {#- fix3: Arabic WORDS like /online («1 ساعة و5 دقائق»); a digit next to an
+      Arabic word never bidi-flips. See core/duration_fmt.fmt_duration_ar -#}
+  {{- (secs or 0)|int|dur_ar_s -}}
 {%- endmacro %}
 
 {% macro fmt_bytes_raw(bytes) -%}

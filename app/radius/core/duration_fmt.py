@@ -120,6 +120,20 @@ def fmt_compact_ar(seconds) -> str:
     return fmt_remaining_ar(s)
 
 
+def fmt_duration_ar(seconds) -> str:
+    """Session/usage duration in Arabic words for reports and profiles (fix3
+    integration: rep_sessions / users_profile / portal_subscriber now match
+    /online). Same words as :func:`fmt_compact_ar` from one minute up; a short
+    session keeps its seconds («45 ثانية») instead of «0 دقيقة»; 0 → «0 دقيقة»."""
+    s = max(0, int(seconds or 0))
+    if s <= 0:
+        return "0 دقيقة"
+    if s < 60:
+        w = _ar_plural(s, "ثانية", "ثانيتان", "ثوانٍ", "ثانية")
+        return w if s == 2 else f"{s} {w}"
+    return fmt_compact_ar(s)
+
+
 def fmt_base_time_ar(seconds) -> tuple[str, bool]:
     """Human-friendly Arabic label for a card's BASE (total) time budget.
 

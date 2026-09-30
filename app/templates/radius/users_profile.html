@@ -620,12 +620,9 @@
 {%- endmacro %}
 
 {% macro fmt_dur(secs) -%}
-  {%- set s = secs|int -%}
-  {#- Latin unit letters + LTR isolate (bidi W2 flip). See core/duration_fmt.py -#}
-  {%- if s >= 86400 -%}<bdi dir="ltr">{{ (s // 86400) }}d {{ ((s % 86400) // 3600) }}h</bdi>
-  {%- elif s >= 3600 -%}<bdi dir="ltr">{{ (s // 3600) }}h {{ ((s % 3600) // 60) }}m</bdi>
-  {%- elif s >= 60 -%}<bdi dir="ltr">{{ (s // 60) }}m</bdi>
-  {%- else -%}<bdi dir="ltr">{{ s }}s</bdi>{%- endif -%}
+  {#- fix3: Arabic WORDS like /online («1 ساعة و5 دقائق»); a digit next to an
+      Arabic word never bidi-flips. See core/duration_fmt.fmt_duration_ar -#}
+  {{- (secs or 0)|int|dur_ar_s -}}
 {%- endmacro %}
 
 {% macro dt_split(value) -%}
@@ -701,14 +698,14 @@
       {# زر X الأحمر — إلغاء فوري عبر الخدمة المشتركة (CoA استرجاع حيّ) #}
       {% set _sa = subscriber_actions() if subscriber_actions is defined else {} %}
       {% if _sa.get('temp_speed_cancel', True) %}
-      <form method="post"
+      {% if can_submit('radius.users_temp_speed_cancel', 'POST') %}<form method="post"
             action="{{ url_for('radius.users_temp_speed_cancel', username=sub.username) }}"
             style="display:contents"
             onsubmit="return confirm('إلغاء السرعة المؤقتة الآن وإرجاع السرعة الطبيعية؟');">
         <button type="submit" class="ts-cancel" title="{{ _('إلغاء السرعة المؤقتة الآن') }}">
           <i class="fa-solid fa-xmark"></i>
         </button>
-      </form>
+      </form>{% endif %}
       {% endif %}
     </div>
     {% endif %}
@@ -1151,7 +1148,7 @@
     <div class="cc-section-head">
       <span class="cc-section-head-icon"><i class="fa-solid fa-stethoscope"></i></span>
       <span class="cc-section-head-title">تشخيص الانقطاع — من أين المشكلة؟</span>
-      <a class="cc-section-head-link" href="{{ url_for('radius.rep_sessions', username=sub.username) }}">تقرير الجلسات</a>
+      {% if can_submit('radius.rep_sessions', 'GET') %}<a class="cc-section-head-link" href="{{ url_for('radius.rep_sessions', username=sub.username) }}">{% endif %}تقرير الجلسات{% if can_submit('radius.rep_sessions', 'GET') %}</a>{% endif %}
     </div>
     <div class="cc-section-body">
       {{ dxp.panel(diagnosis,
@@ -1313,7 +1310,7 @@
 <div class="p360-pane" data-pane="cards">
   {% if used_cards %}
     {% call hub.section("الكروت المُستخدَمة", icon="id-card",
-                        meta=(used_cards|length)|string + " كرت", flush=True) %}
+                        meta=(used_cards|length)|ar_count('kart'), flush=True) %}
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>

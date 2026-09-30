@@ -1193,6 +1193,13 @@ def _install_stubs(app: Flask) -> None:
             h, m = s // 3600, (s % 3600) // 60
             return f"{h} ساعة و{m} دقيقة" if h else f"{m} دقيقة"
     app.jinja_env.filters["dur_ar"] = _dur_ar
+    # Reports / profile / portal: the same words, but a sub-minute session keeps
+    # its seconds («45 ثانية») — fix3 integration.
+    try:
+        from app.radius.core.duration_fmt import fmt_duration_ar as _dur_ar_s
+    except Exception:  # noqa: BLE001
+        _dur_ar_s = _dur_ar
+    app.jinja_env.filters["dur_ar_s"] = _dur_ar_s
 
     def _epoch(value) -> int:
         """UTC epoch seconds of a stored (naive UTC) datetime — 0 when absent or
