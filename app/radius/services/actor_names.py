@@ -1,9 +1,10 @@
 """اسم عرضٍ مقروء لحقل «الفاعل» الخام (F08-L).
 
 الفاعل المخزَّن قد يكون:
-* ``api-token:N`` — طلب من التطبيق/الربط بمفتاح API. مفاتيح دخول التطبيق
-  (اسمها ``login:<username>:…``) تُعرَض «تطبيق — <اسم المدير>» (المدير الذي
-  أنشأ المفتاح، created_by)، وبقيّة المفاتيح «مفتاح: <اسم المفتاح>».
+* ``api-token:N`` — طلب من التطبيق/الربط بمفتاح API. **أيّ** مفتاحٍ معروفٍ
+  منشئه (created_by، أو ``login:<username>:…`` لمفتاح دخول التطبيق) يُعرَض
+  «تطبيق — <اسم المدير>» (قاعدة موحّدة: الويب، الـAPI ``*_name``، الإشعارات،
+  السجلّ). مفتاحٌ بلا منشئ معروف ⇒ «مفتاح: <اسم المفتاح>» ثمّ «مفتاح ربط #N».
 * رقم مدير (``12``) → اسمه الكامل.
 * ``system`` / ``system:<job>`` → «النظام» / «النظام: <المهمّة>».
 * ``ui`` → «عملية واجهة (تلقائي)».
@@ -70,9 +71,12 @@ def _token_label(token_id: str) -> str:
             parts = name.split(":")
             who = parts[1] if len(parts) > 1 else ""
         return f"تطبيق — {who}" if who else "تطبيق"
+    if who:
+        # fix3 integration: مفتاح ربطٍ أنشأه مدير ⇒ اسم المدير (لا اسم المفتاح).
+        return f"تطبيق — {who}"
     if name:
         return f"مفتاح: {name}"
-    return f"تطبيق — {who}" if who else f"مفتاح ربط #{token_id}"
+    return f"مفتاح ربط #{token_id}"
 
 
 def actor_display(actor: Any) -> str:
@@ -132,4 +136,57 @@ def humanize_actor_refs(text: Any) -> str:
         return s
 
 
-__all__ = ["actor_display", "humanize_actor_refs"]
+# ── API: اسم العرض بجانب الفاعل الخام (fix3 integration) ─────────────────────
+# كلّ ردّ ``ok()`` في /api يمرّ هنا: لكلّ مفتاح فاعلٍ خام (actor/created_by/…)
+# يُضاف ``<المفتاح>_name`` بالاسم المقروء (القيمة الخام تبقى كما هي — التطبيق
+# قد يرشّح بها)، والنصوص الحرّة (title/body/notes…) التي تحمل «api-token:N»
+# تُستبدل بـ«تطبيق — <المدير>». الحلّ مخزَّن لكل طلب فلا يتكرّر الاستعلام.
+API_ACTOR_KEYS = frozenset({
+    "actor", "created_by", "performed_by", "updated_by", "deleted_by",
+    "approved_by", "requested_by", "settled_by", "voided_by", "reversed_by",
+    "archived_by", "restored_by", "revoked_by",
+})
+API_TEXT_KEYS = frozenset({
+    "title", "body", "message", "description", "note", "notes", "summary",
+    "text", "detail", "details_text", "label", "actor_label",
+})
+_MAX_DEPTH = 8
+
+
+def _actor_like(v: Any) -> bool:
+    if isinstance(v, bool) or v is None:
+        return False
+    if isinstance(v, int):
+        return v > 0
+    return isinstance(v, str) and bool(v.strip())
+
+
+def enrich_api_payload(data: Any, _depth: int = 0) -> Any:
+    """يُضيف ``actor_name`` (و``created_by_name``…) في مكانه ويعيد ``data``.
+    لا يرفع أبدًا."""
+    if _depth > _MAX_DEPTH:
+        return data
+    try:
+        if isinstance(data, dict):
+            for k in list(data.keys()):
+                v = data[k]
+                if isinstance(v, (dict, list)):
+                    enrich_api_payload(v, _depth + 1)
+                elif k in API_ACTOR_KEYS and _actor_like(v):
+                    nk = f"{k}_name"
+                    if nk not in data:
+                        data[nk] = actor_display(v)
+                elif (k in API_TEXT_KEYS and isinstance(v, str)
+                        and "api-token" in v):
+                    data[k] = humanize_actor_refs(v)
+        elif isinstance(data, list):
+            for item in data:
+                if isinstance(item, (dict, list)):
+                    enrich_api_payload(item, _depth + 1)
+    except Exception:  # noqa: BLE001 — العرض لا يكسر الردّ
+        pass
+    return data
+
+
+__all__ = ["API_ACTOR_KEYS", "API_TEXT_KEYS", "actor_display",
+           "enrich_api_payload", "humanize_actor_refs"]

@@ -23,8 +23,20 @@ def _meta() -> dict:
     }
 
 
+def _enrich(data: Any) -> Any:
+    """fix3: ``actor_name``/``created_by_name``… بجانب كلّ فاعلٍ خام، و«api-token:N»
+    في النصوص الحرّة ⇒ «تطبيق — <المدير>» (``services.actor_names``)."""
+    if not isinstance(data, (dict, list)):
+        return data
+    try:
+        from ..radius.services.actor_names import enrich_api_payload
+        return enrich_api_payload(data)
+    except Exception:  # noqa: BLE001
+        return data
+
+
 def ok(data: Any = None, *, status: int = 200, extra_meta: Optional[dict] = None):
-    body = {"ok": True, "data": data if data is not None else {}, "meta": _meta()}
+    body = {"ok": True, "data": _enrich(data) if data is not None else {}, "meta": _meta()}
     if extra_meta:
         body["meta"].update(extra_meta)
     return jsonify(body), status
