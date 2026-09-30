@@ -376,7 +376,9 @@
         if (show) { r.classList.toggle("uds-rowalt", vis % 2 === 1); vis++; }
       });
       meta.textContent = total + " صف";
-      info.textContent = total ? (start + 1) + "–" + end + " من " + total : "0";
+      // U+2066/U+2069 (LRI/PDI): بدونهما ينعكس المدى الرقميّ داخل سياق RTL
+      // فيصير «25–1» بدل «1–25» (بلاغ D9).
+      info.textContent = total ? "⁦" + (start + 1) + "–" + end + "⁩" + " من " + total : "0";
 
       nav.innerHTML = "";
       // RTL: «previous» points right (chevron-right), «next» points left.

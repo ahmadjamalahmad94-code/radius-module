@@ -482,7 +482,7 @@
               <div><dt>{{ _('المدير') }}</dt><dd>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '—' }}</dd></div>
               <div><dt>{{ _('الموزع') }}</dt><dd>{{ b.distributor_display_name or b.distributor_name or '—' }}</dd></div>
               <div><dt>{{ _('الأسعار') }}</dt><dd class="batch-price-pair"><span>بيع {{ money(unit_price) }}</span><small>جملة {{ money(b.price_bulk or 0) }}</small></dd></div>
-              <div><dt>{{ _('تاريخ الإنشاء') }}</dt><dd>{{ b.created_at|dt_local if b.created_at else '—' }}</dd></div>
+              <div><dt>{{ _('تاريخ الإنشاء') }}</dt><dd><bdi dir="ltr">{{ b.created_at|dt_local if b.created_at else '—' }}</bdi></dd></div>
             </dl>
 
             <footer class="batch-card__actions">

@@ -1349,6 +1349,7 @@ body:has(.cc-hero) .page-head{display:none !important}
   align-items:center;justify-content:center;
   z-index:200;
   padding:16px;
+  overflow-y:auto;
   opacity:0;
   transition:opacity .18s ease;
 }
@@ -1363,6 +1364,7 @@ body:has(.cc-hero) .page-head{display:none !important}
   box-shadow:0 20px 50px rgba(15,23,42,.25);
   padding:22px 22px 18px;
   width:100%;max-width:440px;
+  max-height:90vh;overflow-y:auto;
   transform:translateY(8px) scale(.985);
   transition:transform .2s ease;
   border:1px solid #E5E0F5;

@@ -1628,7 +1628,9 @@ def _describe_subscriber_changes(old, new) -> str:
             ("السرعة", _speed(old), _speed(new)),
             ("الكوتا", _quota(old), _quota(new)),
         ]
-        parts = [f"{label}: {o} → {n}" for (label, o, n) in fields if o != n]
+        # ⁦…⁩ (LRI/PDI U+2066/U+2069): بدونهما ينعكس اتجاه السهم داخل سياق RTL
+        # فيصير «120 ₪ ← 1 ₪» بدل «1 ₪ → 120 ₪» (بلاغ D9).
+        parts = [f"{label}: ⁦{o} → {n}⁩" for (label, o, n) in fields if o != n]
 
         # كلمة المرور — لا تُطبَع أبدًا، يُذكَر فقط أنها تغيّرت.
         op = getattr(old, "password", "") or ""

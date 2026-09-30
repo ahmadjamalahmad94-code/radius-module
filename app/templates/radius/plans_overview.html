@@ -118,7 +118,7 @@
     {'label': 'المفعَّلة',              'value': enabled_plans or 0,      'icon': 'circle-check', 'variant': 'green',
      'sub': ((total_plans or 0) - (enabled_plans or 0))|string + ' معطَّلة'},
     {'label': 'متوسط السعر',           'value': (avg_price or 0)|money,  'icon': 'coins',        'variant': 'amber',
-     'sub': (min_price or 0)|money + ' → ' + (max_price or 0)|money},
+     'sub': '⁦' + (min_price or 0)|money + ' → ' + (max_price or 0)|money + '⁩'},
     {'label': 'المشتركون الموزَّعون',  'value': assigned_subs or 0,      'icon': 'users',        'variant': 'blue'},
     {'label': 'تقدير الإيراد',         'value': (revenue_estimate or 0)|money, 'icon': 'sack-dollar', 'variant': 'green',
      'sub': 'مشتركون مفعَّلون × سعر باقتهم'},

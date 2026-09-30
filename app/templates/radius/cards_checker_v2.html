@@ -1037,7 +1037,7 @@
                         body:'سيتم تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong> ' +
                              'وعدّاد البطاقة يبدأ من جديد عند أول اتصال.',
                         confirmText:'إعادة الضبط',
-                        onConfirm: function(){ ccBtn.closest('form').submit(); }
+                        onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon cyan"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
@@ -1207,7 +1207,7 @@
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-prompt-down]').value = String(down);
                           f.querySelector('[data-cc-prompt-up]').value   = String(up);
-                          f.submit();
+                          window.hbGuardedSubmit(f);
                         }
                       });">
                 <span class="cc-action-icon teal"><i class="fa-solid fa-gauge-high"></i></span>
@@ -1228,7 +1228,7 @@
                         body:'سيتم إعادة تفعيل البطاقة <strong>{{ card.username }}</strong> ' +
                              'واستعادة الوقت المتبقي الذي تم تجميده عند التعطيل.',
                         confirmText:'تفعيل',
-                        onConfirm: function(){ ccBtn.closest('form').submit(); }
+                        onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon green"><i class="fa-solid fa-circle-check"></i></span>
                 <div class="cc-action-body">
@@ -1254,7 +1254,7 @@
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-disable-reason]').value = reason || '';
-                          f.submit();
+                          window.hbGuardedSubmit(f);
                         }
                       });">
                 <span class="cc-action-icon blue"><i class="fa-solid fa-pause"></i></span>
@@ -1286,7 +1286,7 @@
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
-                          f.submit();
+                          window.hbGuardedSubmit(f);
                         }
                       });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
@@ -1392,7 +1392,7 @@
                         icon:'warn', title:'إعادة ضبط الاستخدام',
                         body:'تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong>.',
                         confirmText:'إعادة الضبط',
-                        onConfirm: function(){ ccBtn.closest('form').submit(); }
+                        onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
@@ -1465,7 +1465,7 @@
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
-                          f.submit();
+                          window.hbGuardedSubmit(f);
                         }
                       });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
@@ -1536,7 +1536,7 @@
         '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-cancel" data-close>' +
           esc(cancelText || {{ _('إلغاء')|tojson }}) + '</button>' +
         '<button type="button" class="cc-gmodal-btn cc-gmodal-btn-confirm' +
-          (danger ? ' danger' : '') + '" data-confirm>' +
+          (danger ? ' danger' : '') + '" data-cc-confirm>' +
           '<i class="fa-solid fa-check"></i> ' + esc(confirmText || {{ _('حسناً')|tojson }}) +
         '</button></div>';
     }
@@ -1544,7 +1544,7 @@
       box.querySelectorAll('[data-close]').forEach(function(b){
         b.addEventListener('click', hide);
       });
-      var cb = box.querySelector('[data-confirm]');
+      var cb = box.querySelector('[data-cc-confirm]');
       if (!cb) return;
       cb.addEventListener('click', function(){
         var v = validate ? validate() : true;
@@ -2068,7 +2068,7 @@
       aFld.value = String(amt);
       uFld.value = uEl.getAttribute('data-cc-unit-value');
       oFld.value = opEl.getAttribute('data-cc-op-value');
-      f.submit();
+      window.hbGuardedSubmit(f);
     });
   })();
 
@@ -2168,7 +2168,7 @@
             if (!f) return;
             var fld = f.querySelector('[data-cc-disc-field]');
             if (fld) fld.value = idsCsv;
-            f.submit();
+            window.hbGuardedSubmit(f);
           },
         });
       });
@@ -2207,7 +2207,7 @@
             if (!f) return;
             var fld = f.querySelector('[data-cc-newpw-field]');
             if (fld) fld.value = pw || '';
-            f.submit();
+            window.hbGuardedSubmit(f);
           },
         });
       });
@@ -2259,7 +2259,7 @@
           var f = btn.closest('form');
           if (!f) return;
           f.querySelector('[data-cc-prompt-field]').value = mac;
-          f.submit();
+          window.hbGuardedSubmit(f);
         },
       });
     });
@@ -2314,7 +2314,7 @@
               var f = document.getElementById('cc-edit-lock-mac-form');
               if (!f) return;
               f.querySelector('[data-cc-edit-mac-field]').value = macCsv;
-              f.submit();
+              window.hbGuardedSubmit(f);
             },
           });
         },
@@ -2332,7 +2332,7 @@
         btn3.innerHTML = '<i class="fa-solid fa-lock-open"></i> ' + {{ _('فك القفل تماماً')|tojson }};
         btn3.addEventListener('click', function(){
           var f = document.getElementById('cc-unlock-mac-form');
-          if (f) f.submit();
+          if (f) window.hbGuardedSubmit(f);
         });
         // Insert as the LAST item so the visual order in RTL is:
         // [cancel] [unlock] [edit primary]. Cancel stays leftmost,
