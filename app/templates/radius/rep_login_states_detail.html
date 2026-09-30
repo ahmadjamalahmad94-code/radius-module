@@ -155,7 +155,7 @@
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
             <span class="rep-sub">{{ _dl[11:16] }}</span>
           </td>
-          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td><strong><bdi>{{ r.username if (r.username and (r.username|lower) not in ('unknown','none','null','-')) else _('غير معروف') }}</bdi></strong></td>
           <td>
             {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
             {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}

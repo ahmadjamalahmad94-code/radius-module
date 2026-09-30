@@ -1,4 +1,6 @@
-{% extends "radius/layout.html" %}
+{# F08-L (F01-F20): كان يمدّ "radius/layout.html" غير الموجود → 500
+   TemplateNotFound حتى للمالك. التخطيط الموحّد للوحة هو admin/_admin_layout. #}
+{% extends "admin/_admin_layout.html" %}
 {% block title %}تقارير الخدمات — VPN & WireGuard{% endblock %}
 {% block page_title %}تقارير الخدمات{% endblock %}
 {% block page_subtitle %}حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV{% endblock %}
@@ -43,6 +45,10 @@
 {% endblock %}
 
 {% block content %}
+<div class="hub-page-head" style="margin-bottom:14px">
+  <h1 class="hub-page-title" style="margin:0 0 4px">تقارير الخدمات</h1>
+  <p class="hub-text-mute" style="margin:0">حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV</p>
+</div>
 
 {# ── فلاتر مشتركة ── #}
 <form method="get" class="filter-bar">

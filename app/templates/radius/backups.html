@@ -187,14 +187,17 @@
       <i class="fa-solid fa-bolt"></i> {{ _('نسخة احتياطية الآن') }}
     </button>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      {# F08-L: الأرشيف الكامل ثقيل (كل السجلّات) — تأكيد بالمودال الموحّد قبل التشغيل #}
       <button type="button" class="bkx-btn ghost" data-bk-runall
               data-url="{{ url_for('radius.backups_run_all', mode='full') }}"
+              data-confirm="{{ _('تشغيل أرشيف كامل الآن؟ يشمل كل السجلّات والمحاسبة فيكون أكبر حجمًا وأبطأ وقد يُثقل الخادم دقائق.') }}"
               title="{{ _('أرشيف كامل يشمل السجلّات والمحاسبة — أكبر حجمًا') }}">
         <i class="fa-solid fa-box-archive"></i> {{ _('أرشيف كامل (مع السجلّات)') }}
       </button>
       <form method="post" action="{{ url_for('radius.backups_prune_logs') }}" style="display:inline">
         {{ csrf_token_input() }}
         <button type="submit" class="bkx-btn ghost"
+                data-confirm="{{ _('حذف السجلّات القديمة (محاسبة/أحداث/تدقيق) الآن؟ لا يمكن التراجع عن الحذف.') }}"
                 title="{{ _('حذف السجلّات القديمة (محاسبة/أحداث/تدقيق) واسترجاع مساحة قاعدة البيانات') }}">
           <i class="fa-solid fa-broom"></i> {{ _('تنظيف السجلّات الآن') }}
         </button>
@@ -443,6 +446,12 @@
       hints:[{key:'local',label:{{ _('نسخة محلية')|tojson }}},{key:'panel',label:{{ _('لوحة التراخيص')|tojson }}},{key:'drive',label:{{ _('جوجل درايف')|tojson }}}],
       successText:{{ _('تمّت عملية النسخ.')|tojson }}, reloadOnDone:true}); return; }
     if(e.target.closest('[data-bk-prog-close]')){ overlay.classList.remove('is-open'); }
+  });
+  /* F08-L: Esc يغلق نافذة التقدّم بعد انتهاء العمليّة (كزرّ «تم»). */
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && overlay.classList.contains('is-open') && overlay.classList.contains('is-done')){
+      overlay.classList.remove('is-open');
+    }
   });
 })();
 </script>

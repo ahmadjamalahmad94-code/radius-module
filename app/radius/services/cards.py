@@ -1,5 +1,6 @@
 """CardsService — توليد الكروت + ربطها بـ adapter كحسابات."""
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import json
 import math
@@ -766,7 +767,7 @@ class CardsService:
             progress=_sync_progress)
         if sync_failed:
             progress("syncing", synced, len(cards),
-                     f"⚠️ {sync_failed} بطاقة بلا حساب مصادقة — أعد المزامنة "
+                     f"⚠️ {ar_count(sync_failed, 'card')} بلا حساب مصادقة — أعد المزامنة "
                      "من صفحة الحزمة قبل بيعها")
         self._audit.record(
             actor=actor, action=AUDIT_ACTION_BATCH_GENERATE,

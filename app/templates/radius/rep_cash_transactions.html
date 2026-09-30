@@ -124,7 +124,7 @@
               {% if r.discount_reason %}title="سبب الخصم: {{ r.discount_reason }}"{% endif %}>
             {% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}
           </td>
-          <td><bdi>{{ r.created_by or '—' }}</bdi></td>
+          <td title="{{ r.created_by or '' }}"><bdi>{{ r.created_by|actor_name if r.created_by else '—' }}</bdi></td>
           <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
         </tr>
         {% endfor %}

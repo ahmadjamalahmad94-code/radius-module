@@ -66,7 +66,7 @@
   <select class="hub-input" name="manager" title="{{ _('المدير') }}">
     <option value="">{{ _('كل المدراء') }}</option>
     {% for m in managers or [] %}
-    <option value="{{ m }}" {{ 'selected' if filters and filters.manager == m }}>{{ m }}</option>
+    <option value="{{ m }}" {{ 'selected' if filters and filters.manager == m }}>{{ m|actor_name }}</option>
     {% endfor %}
   </select>
   {# فلتر الصفحة — «أي صفحة فات» #}
@@ -131,7 +131,6 @@
           {# الصفحة التي فتحها المدير — التسمية العربيّة + endpoint الخام كسطر فرعيّ #}
           <td title="{{ r.endpoint or '' }}">
             <span class="rep-primary">{{ r.page_label or '—' }}</span>
-            {% if r.endpoint %}<span class="rep-sub mono" style="direction:ltr">{{ r.endpoint }}</span>{% endif %}
           </td>
           {# الفعل: شارة ملوّنة حسب عائلة الإجراء (لون هادئ ثابت لكل نوع) #}
           <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=r.action_variant, dot=False) }}</td>
@@ -139,7 +138,6 @@
              الطريقة والرمز التقنيّ (GET·200) يَنزلان لسطر ثانويّ خافت + tooltip. #}
           <td title="{{ _('الرمز التقنيّ') }}: {{ r.outcome_tech or '—' }}">
             {{ hub.pill(r.outcome_label, variant=r.outcome_variant, dot=True) }}
-            {% if r.outcome_tech %}<span class="rep-sub mono" style="direction:ltr;opacity:.55">{{ r.outcome_tech }}</span>{% endif %}
           </td>
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
@@ -159,4 +157,7 @@
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{# F08-L: ترقيم خادميّ — ما بعد أوّل دفعة من النتائج #}
+{% from "_partials/list_pager.html" import list_pager with context %}
+{{ list_pager(filters.pager if filters else None) }}
 {% endblock %}

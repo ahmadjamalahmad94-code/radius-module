@@ -147,7 +147,7 @@
               {% if r.router_ip %}<span class="rep-router-ip">{{ r.router_ip }}</span>{% endif %}
             {% else %}—{% endif %}
           </td>
-          <td><strong><bdi>{{ r.subject or '—' }}</bdi></strong></td>
+          <td><strong><bdi>{{ (r.subject if (r.subject|lower) not in ('unknown','none','null','-') else _('غير معروف')) if r.subject else '—' }}</bdi></strong></td>
           <td>{{ hub.pill(r.action_label or 'غير محدد', variant=_typevar, dot=False) }}</td>
           <td class="small" title="{{ r.detail or '' }}"
               style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">

@@ -156,11 +156,11 @@
     <div class="ou-grid">
       <div class="ou-field">
         <label>{{ _("طول اسم المستخدم") }}</label>
-        <input class="hub-input" type="number" name="username_length" min="3" max="32" value="{{ form.get('username_length') or 8 }}">
+        <input class="hub-input" type="number" name="username_length" min="3" max="{{ hr_limits.card_username_len_max }}" value="{{ form.get('username_length') or 8 }}">
       </div>
       <div class="ou-field">
         <label>{{ _("طول كلمة المرور") }}</label>
-        <input class="hub-input" type="number" name="password_length" min="1" max="32" value="{{ form.get('password_length') or 6 }}">
+        <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="{{ form.get('password_length') or 6 }}">
       </div>
       <div class="ou-field">
         <label>{{ _("نوع الكود") }}</label>

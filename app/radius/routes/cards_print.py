@@ -13,6 +13,7 @@ URL tree:
   GET  /cards/print/<batch_id>         → cards inside a batch + print modal
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (
     Blueprint, abort, flash, g, jsonify, make_response, redirect,
@@ -255,7 +256,7 @@ def cards_print_new():
     skipped = result["skipped_count"]
     skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
     flash(
-        f"تم استيراد {result['inserted_count']} بطاقة طباعة "
+        f"تم استيراد {ar_count(result['inserted_count'], 'card')} طباعة "
         f"داخل الحزمة «{batch.package_name or batch.batch_code}».{skipped_label}",
         "success",
     )

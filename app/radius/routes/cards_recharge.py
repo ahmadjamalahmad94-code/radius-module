@@ -13,6 +13,7 @@ URL tree:
   POST /cards/recharge/<batch_id>/delete  → soft-delete a batch
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (
     Blueprint, abort, flash, g, make_response, redirect,
@@ -124,7 +125,7 @@ def cards_recharge_new():
 
     batch = result["batch"]
     flash(
-        f"تم توليد {result['inserted_count']} بطاقة شحن "
+        f"تم توليد {ar_count(result['inserted_count'], 'card')} شحن "
         f"بإجمالي {result['total_value']:.2f} داخل «{batch.package_name}».",
         "success",
     )

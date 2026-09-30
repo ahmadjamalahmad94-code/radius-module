@@ -609,6 +609,11 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
             row["actor_label"] = login_names[_actor_raw]
             # الاسم التسجيليّ الخام كسطرٍ ثانويّ خافت (لا يَتصدّر ولا يَتذبذب).
             row["actor_login"] = _actor_raw
+        elif _actor_raw.startswith("api-token") or _actor_raw.lower() == "unknown":
+            # F08-L: مفتاح جلسة التطبيق («api-token:78» واسمه login:<user>:…)
+            # → «تطبيق — <المدير>»؛ و«unknown» → «غير معروف».
+            from ..services.actor_names import actor_display
+            row["actor_label"] = actor_display(_actor_raw)
         else:
             row["actor_label"] = _display_actor(_actor_raw, token_names)
         row["action_label"] = _display_action(str(row.get("action") or ""))
@@ -1203,10 +1208,23 @@ def _audit_rows(base_where: str, base_params: list, f: dict, *,
     total = db().execute(
         f"SELECT COUNT(*) AS c FROM audit_log WHERE {where_sql}", params
     ).fetchone()["c"]
+    # F08-L: ترقيم خادميّ — كانت الصفحة تقف عند أوّل ``limit`` صفّ (500) بلا
+    # سبيلٍ لما بعدها. ``pn`` رقم الصفحة (لا «page»: rep_manager_events تستعمله
+    # فلترًا للصفحة المزارة). النتيجة في f["pager"] للقالب (_partials/list_pager).
+    pages = max(1, -(-int(total or 0) // max(1, int(limit))))
+    try:
+        pn = int(request.args.get("pn") or 1)
+    except (TypeError, ValueError):
+        pn = 1
+    pn = min(max(1, pn), pages)
+    offset = (pn - 1) * int(limit)
     rows = [dict(r) for r in db().execute(
-        f"SELECT * FROM audit_log WHERE {where_sql} ORDER BY id DESC LIMIT ?",
-        params + [limit],
+        f"SELECT * FROM audit_log WHERE {where_sql} ORDER BY id DESC LIMIT ? OFFSET ?",
+        params + [limit, offset],
     ).fetchall()]
+    f["pager"] = {"page": pn, "pages": pages, "per_page": int(limit),
+                  "total": int(total or 0),
+                  "start": (offset + 1) if rows else 0, "end": offset + len(rows)}
     return _decorate_audit_rows(rows), total
 
 

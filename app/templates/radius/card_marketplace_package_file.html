@@ -69,7 +69,7 @@
 {% elif _low_stock %}
 <p class="cm-note cm-note--warn">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining }} بطاقة فقط من أصل {{ stock_total }}.</span>
+  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining|ar_count('card') }} فقط من أصل {{ stock_total }}.</span>
 </p>
 {% endif %}
 

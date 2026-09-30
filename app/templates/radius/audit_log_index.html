@@ -123,7 +123,7 @@
           <td class="mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ts %}{{ _ts[:10] }} <span style="color:var(--hub-text-mute)">{{ _ts[11:16] }}</span>{% else %}—{% endif %}
           </td>
-          <td><strong><bdi>{{ r.actor or 'غير محدد' }}</bdi></strong></td>
+          <td title="{{ r.actor or '' }}"><strong><bdi>{{ r.actor|actor_name if r.actor else 'غير محدد' }}</bdi></strong></td>
           {# الإجراء معرّب من المسار — الكود الفني الخام يبقى في title للمراجعة #}
           <td><span class="audit-action" title="{{ r.action or '' }}">{{ r.action_label }}</span></td>
           {# الهدف معرّب «مشترك (user1034)» — النوع والمعرّف الخام في title #}

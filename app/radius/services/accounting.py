@@ -949,14 +949,24 @@ class AccountingService:
         """القيمة التي ستُسجَّل لسلفةٍ بهذا الجسم (لبوّابات المدير/الاعتماد)."""
         return self._loan_amount_and_minutes(body)[0]
 
+    def _loan_range(self, date_from, date_to):
+        """(lower, upper, exclusive) من يوم اللوحة المحلّيّ أو None — يرفع
+        ReportDateError (رسالة عربيّة) لتاريخ غير صالح/نطاق مقلوب."""
+        if not (str(date_from or "").strip() or str(date_to or "").strip()):
+            return None
+        from .report_dates import local_bounds
+        return local_bounds(date_from, date_to, self.tenant_id)
+
     def list_loans(self, *, status: str = "", subscriber_id: int | None = None,
-                   limit: int = 100, offset: int = 0) -> list[dict]:
+                   limit: int = 100, offset: int = 0,
+                   date_from: str = "", date_to: str = "") -> list[dict]:
         return accounting_repo.list_loans(
             self.tenant_id,
             status=status,
             subscriber_id=subscriber_id,
             limit=limit,
             offset=offset,
+            created_range=self._loan_range(date_from, date_to),
         )
 
     def get_loan(self, loan_id: int) -> dict:
@@ -965,9 +975,11 @@ class AccountingService:
             raise RadiusNotFound("السلفة غير موجودة.")
         return loan
 
-    def loan_totals(self, *, status: str = "", subscriber_id: int | None = None) -> dict:
+    def loan_totals(self, *, status: str = "", subscriber_id: int | None = None,
+                    date_from: str = "", date_to: str = "") -> dict:
         return accounting_repo.loan_totals(self.tenant_id, status=status,
-                                           subscriber_id=subscriber_id)
+                                           subscriber_id=subscriber_id,
+                                           created_range=self._loan_range(date_from, date_to))
 
     @atomic
     def settle_loan(self, loan_id: int, body: dict, *, actor: str,

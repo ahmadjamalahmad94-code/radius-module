@@ -110,7 +110,7 @@
               {{ archive.summary.finance.revenue|money }}
             {%- else -%}—{%- endif -%}
           </td>
-          <td class="small">{{ archive.created_by or '—' }}</td>
+          <td class="small">{{ archive.created_by|actor_name if archive.created_by else '—' }}</td>
           <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ archive.created_at|dt_local }}</td>
         </tr>
         {% endfor %}

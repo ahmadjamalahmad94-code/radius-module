@@ -113,7 +113,7 @@
         } %}
         <span class="npc-cs-meta" style="margin-inline-start:auto;">
           <span class="mono tnum" style="direction:ltr">{{ cs.created_at|dt_local }}</span>
-          {{ _('· بواسطة') }} <strong>{{ cs.created_by or '—' }}</strong>
+          {{ _('· بواسطة') }} <strong>{{ cs.created_by|actor_name if cs.created_by else '—' }}</strong>
           {{ _('· وضع:') }} <strong>{{ _mode_ar.get(cs.execution_mode, cs.execution_mode or '—') }}</strong>
         </span>
       </div>

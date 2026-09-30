@@ -4,7 +4,7 @@
 {% block title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ cards.total or 0 }} كرت · {{ cards.batches or 0 }} دفعة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (cards.total or 0)|ar_count('kart') }} · {{ (cards.batches or 0)|ar_count('دفعة', 'دفعات', 'دفعةً') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

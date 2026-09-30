@@ -101,4 +101,7 @@
   icon="message"
 ) }}
 {% endif %}
+{# F08-L: ترقيم خادميّ — ما بعد أوّل دفعة من النتائج #}
+{% from "_partials/list_pager.html" import list_pager with context %}
+{{ list_pager(filters.pager if filters else None) }}
 {% endblock %}

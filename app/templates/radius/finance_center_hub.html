@@ -229,6 +229,9 @@
     <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>{{ _('مسددة') }}</option>
     <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>{{ _('ملغاة') }}</option>
   </select>
+  {# F03-N9: نطاق تاريخ إنشاء السلفة (يوم اللوحة المحلّيّ) #}
+  <label class="fc-date-lbl">{{ _('من') }} <input class="hub-input" type="date" name="date_from" value="{{ loan_from or '' }}" aria-label="{{ _('من تاريخ') }}"></label>
+  <label class="fc-date-lbl">{{ _('إلى') }} <input class="hub-input" type="date" name="date_to" value="{{ loan_to or '' }}" aria-label="{{ _('إلى تاريخ') }}"></label>
   {{ hub.btn("تطبيق الفلتر", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 {% else %}

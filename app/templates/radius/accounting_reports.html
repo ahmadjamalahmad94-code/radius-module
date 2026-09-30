@@ -72,7 +72,7 @@
             <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
             <td>{{ snap.source }}</td>
             <td class="mono small">{{ (snap.result or {}).get('count', 0) }}</td>
-            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="small">{{ snap.created_by|actor_name if snap.created_by else "—" }}</td>
             <td class="mono small">{{ snap.created_at|dt_local }}</td>
           </tr>
           {% endfor %}

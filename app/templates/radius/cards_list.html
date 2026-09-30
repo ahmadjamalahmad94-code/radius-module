@@ -82,7 +82,8 @@
   <select class="hub-select" name="batch_id" aria-label="{{ _('فلتر الدفعة') }}">
     <option value="">{{ _('كل الدفعات') }}</option>
     {% for bid, b in batches.items() %}
-      <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>{{ b.batch_code or bid }}</option>
+      {% set _nm = b.package_name or b.service_name or b.plan_name %}
+      <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or bid }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="per_page" aria-label="{{ _('عدد النتائج بالصفحة') }}">
@@ -111,7 +112,7 @@
   note="الترقيم يبقى على الخادم: استخدم منتقي «النتائج بالصفحة» وأزرار التنقل أسفل الجدول."
 )) %}
 {% if items %}
-{% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة — صفحة " + page|string + " من " + pages_count|string, flush=True) %}
+{% call hub.section("الكروت", icon="table-list", meta=(total|ar_count('card')) ~ " — صفحة " + page|string + " من " + pages_count|string, flush=True) %}
   {# ترقيم الصفحات يبقى على الخادم (per_page ≤ 100). data-uds-page-size=100
      = سقف per_page حتى لا يقسم مُرقِّم uds صفحة الخادم — نستفيد من الفرز
      واختيار الأعمدة دون تعارض بين المُرقِّمين. #}

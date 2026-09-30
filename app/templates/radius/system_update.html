@@ -303,7 +303,7 @@
               <td>{{ e.event }}{% if e.state %} · {{ e.state }}{% endif %}</td>
               <td class="mono">{{ e.from_version or '—' }}</td>
               <td class="mono">{{ e.to_version or '—' }}</td>
-              <td>{{ e.actor or '—' }}</td>
+              <td>{{ e.actor|actor_name if e.actor else '—' }}</td>
               <td class="mono small">{{ e.created_at|dt_local }}</td>
             </tr>
             {% endfor %}

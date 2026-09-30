@@ -434,7 +434,7 @@
               {%- elif _total is not none -%}<strong>{{ _total|money }}</strong>{%- else -%}—{%- endif -%}
             </td>
             <td class="small">{{ _note or '—' }}</td>
-            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="small">{{ snap.created_by|actor_name if snap.created_by else "—" }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ snap.created_at|dt_local }}</td>
             <td>
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-snap-view="{{ snap.id }}"

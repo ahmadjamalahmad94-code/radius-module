@@ -61,7 +61,7 @@
     {% if card_svgs %}
       <p class="pt-fragment-note">
         <i class="fa-solid fa-circle-info"></i>
-        أول {{ card_svgs|length }} بطاقة من الحزمة كمعاينة فعلية، مرسومة بنفس المحرّك الذي يولّد PDF.
+        أول {{ card_svgs|length|ar_count('card') }} من الحزمة كمعاينة فعلية، مرسومة بنفس المحرّك الذي يولّد PDF.
         كلمات المرور تظهر فقط داخل PDF التصدير.
       </p>
     {% endif %}

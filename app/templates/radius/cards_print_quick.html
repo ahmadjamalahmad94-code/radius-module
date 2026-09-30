@@ -160,10 +160,10 @@
           <select data-qk-batch>
             <option value="">{{ _('— اختر الحزمة —') }}</option>
             {% for b in batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>{% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
             {% endfor %}
             {% for b in print_only_batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
             {% endfor %}
           </select>
         </label>

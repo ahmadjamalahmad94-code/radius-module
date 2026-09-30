@@ -1313,7 +1313,7 @@
 <div class="p360-pane" data-pane="cards">
   {% if used_cards %}
     {% call hub.section("الكروت المُستخدَمة", icon="id-card",
-                        meta=(used_cards|length)|string + " كرت", flush=True) %}
+                        meta=(used_cards|length)|ar_count('kart'), flush=True) %}
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>

@@ -19,10 +19,10 @@
       {% for p in pending %}
         <tr data-testid="approval-row-{{ p.id }}">
           <td class="num mono">{{ p.id }}</td>
-          <td class="mono">#{{ p.admin_id }}</td>
-          <td>{{ p.action_key }}</td>
+          <td title="#{{ p.admin_id }}"><bdi>{{ p.admin_label }}</bdi></td>
+          <td title="{{ p.action_key }}">{{ p.action_label }}</td>
           <td>{{ p.summary }}</td>
-          <td class="num">{{ (p.amount_minor / 100.0)|round(2) }}</td>
+          <td class="num"><bdi>{{ p.amount|money(p.currency) }}</bdi></td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>
           <td style="display:flex;gap:8px">
             <form method="post" action="{{ url_for('radius.manager_approval_approve', approval_id=p.id) }}">

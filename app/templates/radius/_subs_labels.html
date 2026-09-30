@@ -110,7 +110,7 @@
 {#- اسم منفِّذ/مالك: اسم حقيقي إن وُجد، وإلّا «النظام» — لا يظهر «admin #id» أبدًا -#}
 {%- macro who(name) -%}
 {%- set s = (name|string|trim) -%}
-{%- if (not s) or s|lower in ['system','none','null','—','#'] -%}{{ _('النظام') }}{%- else -%}{{ s }}{%- endif -%}
+{%- if (not s) or s|lower in ['system','none','null','—','#'] -%}{{ _('النظام') }}{%- else -%}{{ s|actor_name }}{%- endif -%}
 {%- endmacro -%}
 
 {#- يعرض نصًّا عربيًّا مع إبقاء القيمة الخام في title (للبحث/التتبّع) -#}

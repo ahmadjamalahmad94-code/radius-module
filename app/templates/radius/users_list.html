@@ -588,6 +588,9 @@
   }
   .usrch-clear:hover{ background:#fee2e2; color:#991b1b; }
   .usrch-dates{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .usrch-hint{ flex-basis:100%; font-size:12px; font-weight:700; color:#6d28d9;
+    background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:6px 10px; }
+  .usrch-hint[hidden]{ display:none; }
   .usrch-dates[hidden]{ display:none; }
   .usrch-date-label{
     display:inline-flex; align-items:center; gap:6px;
@@ -711,6 +714,12 @@
             title="{{ _('مسح البحث') }}" aria-label="{{ _('مسح البحث') }}" hidden>
       <i class="fa-solid fa-xmark"></i>
     </button>
+  </div>
+  {# F08-L: الفلترة الفوريّة تشمل صفوف الصفحة المحمّلة فقط — نقول ذلك صراحةً
+     بدل «لا نتائج» مضلّلة، وEnter يرسل البحث للخادم (كل المشتركين). #}
+  <div class="usrch-hint" data-users-search-hint role="status" hidden>
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    {{ _('البحث الفوري يشمل هذه الصفحة فقط — اضغط Enter للبحث في كل المشتركين') }}
   </div>
   <div class="usrch-dates" data-users-date-range hidden>
     <label class="usrch-date-label">{{ _('من') }}
@@ -2250,11 +2259,19 @@
     if (field) field.value = actions.length ? JSON.stringify(actions) : "";
     const cov = modal.querySelector("[data-usq-coverage]");
     if (cov) {
-      if (amount > 0 && price > 0) {
+      // F08-L: المبلغ يشتري أكثر من سنة → قاعدة المالك (أقصى تمديد في المرّة سنة)
+      // بدل «≈ 428571 يوم» — الخادم سيرفضه بنفس النصّ.
+      const _overCap = price > 0 && planMin > 0 && (timeAmount / price) * planMin > {{ hr_limits.extend_max_days }} * 1440;
+      if (amount > 0 && price > 0 && _overCap) {
+        cov.textContent = {{ hr_limits.extend_too_long|tojson }} + " " + {{ _("(المبلغ يغطّي أكثر من سنة — قسّمه على أكثر من دفعة).")|tojson }};
+        cov.classList.add("is-over-cap");
+      } else if (amount > 0 && price > 0) {
+        cov.classList.remove("is-over-cap");
         let msg = `${ {{ _("يُطبَّق على الحساب ويُمدِّد الانتهاء بـ ≈")|tojson }} } ${cover || arDuration(0)}.`;
         if (settled > 0) msg = `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ والباقي")|tojson }} } ${fmtMoney(timeAmount, cur)} → ${msg}`;
         cov.textContent = msg;
       } else {
+        cov.classList.remove("is-over-cap");
         cov.textContent = {{ _("أدخل المبلغ لعرض المدّة التي يُضيفها للحساب.")|tojson }};
       }
     }
@@ -3078,6 +3095,10 @@
   const dateWrap  = document.querySelector("[data-users-date-range]");
   const dateFrom  = document.querySelector("[data-users-date-from]");
   const dateTo    = document.querySelector("[data-users-date-to]");
+  const liveHint  = document.querySelector("[data-users-search-hint]");
+  /* ما طبّقه الخادم فعلًا (q في الرابط) — الفلترة الفوريّة لما يختلف عنه
+     تخصّ الصفحة المحمّلة فقط، فنُظهر «اضغط Enter…». */
+  const serverQ   = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase();
 
   const cellText = (r, col) => {
     const td = r.querySelector('[data-col="' + col + '"]');
@@ -3108,6 +3129,7 @@
       r.style.display = hit ? "" : "none";
     });
     if (clearBtn) clearBtn.hidden = !(q && q.value);
+    if (liveHint) liveHint.hidden = !(scope !== "created" && needle && needle !== serverQ);
   };
 
   if (q) {

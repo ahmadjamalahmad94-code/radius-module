@@ -2,6 +2,7 @@
 Settings — إعدادات النظام لكل tenant (key/value).
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import uuid
 from pathlib import Path
@@ -313,7 +314,7 @@ def settings_page():
             audit_repo.record(tenant_id=tenant_id, actor=actor, action="settings_update",
                               target_type="settings", target_id=",".join(changed.keys()),
                               payload={"changed": list(changed.keys())})
-            flash(f"تم حفظ {len(changed)} إعدادًا.", "success")
+            flash(f"تم حفظ {ar_count(len(changed), 'setting')}.", "success")
         else:
             flash("لا تغييرات.", "info")
         return redirect(url_for("radius.settings_page"))

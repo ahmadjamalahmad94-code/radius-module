@@ -13,7 +13,7 @@
 {% block title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total_cards }} بطاقة طباعة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total_cards|ar_count('card') }} طباعة</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -77,7 +77,7 @@
   {% set range_lo = (page - 1) * per_page + 1 %}
   {% set range_hi = [page * per_page, total_cards] | min %}
 
-  {% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة", flush=True) %}
+  {% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards|ar_count('card'), flush=True) %}
 
     {# Toolbar — row range + per-page selector #}
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--hub-border)">

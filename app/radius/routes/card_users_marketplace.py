@@ -1,5 +1,6 @@
 """Card users and card marketplace web routes."""
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 from ..core.system_config import default_currency
 
 from typing import Any
@@ -554,7 +555,7 @@ def card_marketplace_inventory_upload(package_id: int):
             if not rows:
                 raise CardMarketplaceError("لم يتم استخراج أي بطاقات من الملف.")
             res = _service().add_inventory_stock(package_id=package_id, cards=rows, actor=_actor())
-            flash(f"تم استيراد {res['added']} بطاقة إلى مخزون الباقة.", "success")
+            flash(f"تم استيراد {ar_count(res['added'], 'card')} إلى مخزون الباقة.", "success")
         else:
             count = int(request.form.get("count") or 0)
             if count <= 0:
@@ -563,7 +564,7 @@ def card_marketplace_inventory_upload(package_id: int):
                 package_id=package_id, count=count, actor=_actor(),
                 password_length=int(request.form.get("password_length") or 8),
             )
-            flash(f"تم توليد {res['added']} بطاقة في مخزون الباقة.", "success")
+            flash(f"تم توليد {ar_count(res['added'], 'card')} في مخزون الباقة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     # عند تنفيذ الإجراء من صفحة ملف العرض نعود إليها، وإلا نعود للسوق.

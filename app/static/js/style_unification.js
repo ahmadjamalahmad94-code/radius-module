@@ -30,6 +30,15 @@
 
   var UDS = window.UDS = window.UDS || {};
 
+  /* F08-L: جمعٌ عربيّ للأعداد — مرآة JS لـ app/radius/core/ar_text.ar_count
+     (نفس القاعدة: 1/0/100+ مفرد، 3–10 جمع، 11–99 مفرد منصوب، 2 جمع). */
+  UDS.arCount = function (n, one, few, many) {
+    var k = Math.abs(parseInt(n, 10) || 0), r = k % 100, w = one;
+    if (k === 2 || (r >= 3 && r <= 10)) w = few || one;
+    else if (r >= 11 && r <= 99) w = many || one;
+    return String(n) + " " + w;
+  };
+
   /* ── Toast ─────────────────────────────────────────────────────────── */
   function ensureToast() {
     var el = document.getElementById("udsToast");

@@ -311,7 +311,7 @@
       {{ hub.btn("حفظ كسياسة معاينة", icon="floppy-disk", variant="ghost", type="submit",
                  attrs='name="save_policy" value="1" data-spc-submit="save"') }}
       {{ hub.btn("تطبيق فعليّ الآن", icon="bolt", variant="primary", type="submit",
-                 attrs='name="apply" value="1" data-spc-submit="apply" onclick="return confirm(\'تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟\');"') }}
+                 attrs='name="apply" value="1" data-spc-submit="apply" data-confirm="تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟"') }}
     </div>
   {% endcall %}
 </form>

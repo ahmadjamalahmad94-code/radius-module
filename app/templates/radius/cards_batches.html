@@ -479,7 +479,7 @@
             </div>
 
             <dl class="batch-card__meta">
-              <div><dt>{{ _('المدير') }}</dt><dd>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</dd></div>
+              <div><dt>{{ _('المدير') }}</dt><dd>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '—' }}</dd></div>
               <div><dt>{{ _('الموزع') }}</dt><dd>{{ b.distributor_display_name or b.distributor_name or '—' }}</dd></div>
               <div><dt>{{ _('الأسعار') }}</dt><dd class="batch-price-pair"><span>بيع {{ money(unit_price) }}</span><small>جملة {{ money(b.price_bulk or 0) }}</small></dd></div>
               <div><dt>{{ _('تاريخ الإنشاء') }}</dt><dd>{{ b.created_at|dt_local if b.created_at else '—' }}</dd></div>
@@ -529,16 +529,15 @@
                   <input type="hidden" name="batch_ids" value="{{ b.id }}">
                   <input type="hidden" name="bulk_action" value="archive">
                   <input type="hidden" name="reason" value="{{ _('أرشفة من مركز الحزم') }}">
-                  <button class="batch-action" type="submit"><i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}</button>
+                  <button class="batch-action" type="submit" data-confirm="{{ _('نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.') }}"><i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}</button>
                 </form>
               {% endif %}
               {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-              <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}"
-                    onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
+              <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                 <input type="hidden" name="return_to" value="{{ request.full_path }}">
                 <input type="hidden" name="batch_ids" value="{{ b.id }}">
                 <input type="hidden" name="bulk_action" value="purge">
-                <button class="batch-action batch-action--danger" type="submit"><i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}</button>
+                <button class="batch-action batch-action--danger" type="submit" data-confirm="{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}"><i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}</button>
               </form>
             </footer>
           </article>
@@ -696,11 +695,11 @@
                 <td data-column-key="accounting" data-sort-value="{{ accounting_label(b) }}">{{ accounting_label(b) }}</td>
                 <td data-column-key="quota_exhaust" data-sort-value="{{ quota_exhaust_label(b.on_quota_exhaust) }}">{{ quota_exhaust_label(b.on_quota_exhaust) }}</td>
                 <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>بيع {{ money(unit_price) }}</strong><span class="bops-muted">جملة {{ money(b.price_bulk or 0) }}</span></td>
-                <td data-column-key="manager" data-sort-value="{{ b.manager_display_name or b.created_by or b.manager_id or '' }}">
+                <td data-column-key="manager" data-sort-value="{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '' }}">
                   {% if is_super and b.manager_id %}
                     <a class="hr-entity-link" href="{{ url_for('radius.admins_edit', admin_id=b.manager_id) }}"
-                       title="{{ _('ملف المدير') }}"><strong>{{ b.manager_display_name or b.created_by or b.manager_id }}</strong></a>
-                  {% else %}<strong>{{ b.manager_display_name or b.created_by or b.manager_id or '—' }}</strong>{% endif %}
+                       title="{{ _('ملف المدير') }}"><strong>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') }}</strong></a>
+                  {% else %}<strong>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '—' }}</strong>{% endif %}
                 </td>
                 <td data-column-key="distributor" data-sort-value="{{ b.distributor_display_name or b.distributor_name or '' }}">
                   {% if is_super and b.distributor_id %}
@@ -755,18 +754,17 @@
                           <input type="hidden" name="batch_ids" value="{{ b.id }}">
                           <input type="hidden" name="bulk_action" value="archive">
                           <input type="hidden" name="reason" value="{{ _('أرشفة من جدول الحزم') }}">
-                          <button class="bops-menu__item" type="submit">
+                          <button class="bops-menu__item" type="submit" data-confirm="{{ _('نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.') }}">
                             <i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}
                           </button>
                         </form>
                       {% endif %}
                       {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}"
-                            onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
+                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                         <input type="hidden" name="return_to" value="{{ request.full_path }}">
                         <input type="hidden" name="batch_ids" value="{{ b.id }}">
                         <input type="hidden" name="bulk_action" value="purge">
-                        <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit">
+                        <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit" data-confirm="{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}">
                           <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}
                         </button>
                       </form>
@@ -940,11 +938,11 @@
       <div class="quick-batch-grid quick-batch-grid--four">
         <label>
           <span>{{ _('طول اسم المستخدم') }}</span>
-          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="8" data-qun-length>
+          <input class="hub-input" type="number" name="username_length" min="4" max="{{ hr_limits.card_username_len_max }}" value="8" data-qun-length>
         </label>
         <label>
           <span>{{ _('طول كلمة المرور') }}</span>
-          <input class="hub-input" type="number" name="password_length" min="1" max="20" value="6">
+          <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="6">
         </label>
         {# MT88 — نمط توليد كلمة المرور كان في الوضع المتقدّم وحده، فكلّ حزمةٍ
            تُنشأ من هنا تسقط على الافتراضيّ «متوسط» بلا أن يُسأل المشغّل. نفس

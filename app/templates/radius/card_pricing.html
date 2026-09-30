@@ -195,7 +195,7 @@
           <span class="hub-action-icon hub-action-icon--brand"><i class="fa-solid fa-file-invoice-dollar"></i></span>
           <div class="hub-action-body">
             <div class="hub-action-title">{{ item.package_name or item.batch_code or ("حزمة #" ~ item.batch_id) }}</div>
-            <div class="hub-action-sub">{{ item.manager_name }} - {{ num(item.count) }} كرت · {{ money_text(item.wholesale_total) }}</div>
+            <div class="hub-action-sub">{{ item.manager_name }} - {{ item.count|ar_count('kart') }} · {{ money_text(item.wholesale_total) }}</div>
           </div>
         </a>
       {% endfor %}

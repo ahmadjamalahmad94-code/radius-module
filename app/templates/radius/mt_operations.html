@@ -506,6 +506,14 @@
   }
 </style>
 
+{% else %}
+  {{ hub.empty("لا توجد راوترات بعد.",
+               sub="ابدأ بالمعالج لإضافة أول راوتر — يتولّد كل شيء تلقائيًّا.",
+               icon="server") }}
+{% endif %}
+
+{# F08-L: سكربت إجراءات الأسطول (تفريغ الطوارئ/إعادة تخصيص العناوين) خارج
+   شرط «يوجد راوترات» — أزرار الهيرو تظهر دائمًا، فكانت بلا أثر حين لا راوتر. #}
 <script>
 /* Fleet maintenance actions, migrated from setup_wizard_fleet.js so
    the operator gets them on /mt/operations alongside the live router
@@ -551,7 +559,9 @@
   const reclaimBtn = document.querySelector("[data-mt-reclaim-expired]");
   if (reclaimBtn) {
     reclaimBtn.addEventListener("click", async () => {
-      if (!window.confirm({{ _("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")|tojson }})) return;
+      /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
+      const _msg = {{ _("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")|tojson }};
+      if (!(await (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _msg}) : Promise.resolve(window.confirm(_msg))))) return;
       const originalHtml = reclaimBtn.innerHTML;
       reclaimBtn.disabled = true;
       reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنظيف...")|tojson }};
@@ -667,6 +677,13 @@
   if (emergencyBtn)    emergencyBtn.addEventListener("click", openEmergencyModal);
   if (emergencyClose)  emergencyClose.addEventListener("click", closeEmergencyModal);
   if (emergencyCancel) emergencyCancel.addEventListener("click", closeEmergencyModal);
+  /* F08-L: Esc والنقر على الخلفيّة يغلقان النافذة (كبقيّة نوافذ اللوحة). */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && emergencyModal && !emergencyModal.hidden) closeEmergencyModal();
+  });
+  if (emergencyModal) emergencyModal.addEventListener("click", (e) => {
+    if (e.target === emergencyModal) closeEmergencyModal();
+  });
   if (emergencyInput && emergencyExecute) {
     emergencyInput.addEventListener("input", () => {
       emergencyExecute.disabled = emergencyInput.value.trim() !== CONFIRM_PHRASE;
@@ -712,11 +729,5 @@
   }
 })();
 </script>
-
-{% else %}
-  {{ hub.empty("لا توجد راوترات بعد.",
-               sub="ابدأ بالمعالج لإضافة أول راوتر — يتولّد كل شيء تلقائيًّا.",
-               icon="server") }}
-{% endif %}
 
 {% endblock %}

@@ -131,6 +131,16 @@ def finance_center_hub():
         loan_status = ""
 
     tenant_id = _tid()
+    # F03-N9: فلتر تاريخ إنشاء السلف (يوم اللوحة المحلّيّ) — كان غائبًا.
+    loan_from = (request.args.get("date_from") or "").strip()
+    loan_to = (request.args.get("date_to") or "").strip()
+    try:
+        loans = svc.loans(tenant_id=tenant_id, status=loan_status,
+                          date_from=loan_from, date_to=loan_to)
+    except Exception as exc:  # ReportDateError → رسالة عربيّة وعرض بلا فلترة تاريخ
+        flash(f"{getattr(exc, 'message', exc)} عُرضت السلف بلا فلترة تاريخ.", "warning")
+        loan_from = loan_to = ""
+        loans = svc.loans(tenant_id=tenant_id, status=loan_status)
     # حدّ مرتفع: تُحمَّل كل المحافظ (مئات) دفعةً واحدة حتى يعمل البحث الحيّ
     # في المتصفح على القائمة كاملة لا على أول 150 فقط. العدّاد في شريط
     # المؤشرات يأتي من COUNT(*) الحقيقي في dashboard() لا من طول هذه القائمة.
@@ -152,8 +162,10 @@ def finance_center_hub():
         tx_by_wallet=tx_by_wallet,
         revenue=svc.revenue(tenant_id=tenant_id),
         debts=svc.debts(tenant_id=tenant_id),
-        loans=svc.loans(tenant_id=tenant_id, status=loan_status),
+        loans=loans,
         loan_status=loan_status,
+        loan_from=loan_from,
+        loan_to=loan_to,
         can_wallet_credit=_can_wallet_credit(),
         can_wallet_debit=_can_wallet_debit(),
     )

@@ -101,13 +101,8 @@
 
   updateBulkBar();
 
-  document.querySelectorAll("[data-batch-archive-form]").forEach(function (form) {
-    form.addEventListener("submit", function (event) {
-      if (!window.confirm("سيتم نقل الحزمة إلى الأرشيف بدون حذف البطاقات. هل تريد المتابعة؟")) {
-        event.preventDefault();
-      }
-    });
-  });
+  /* F08-L: تأكيد «نقل للسلّة» صار عبر مودال التأكيد الموحّد (data-confirm على
+     زرّ الإرسال في القالب) — لا confirm() المتصفّح الأصليّ. */
 
   var quickModal = root.parentElement ? root.parentElement.querySelector("[data-quick-batch-modal]") : document.querySelector("[data-quick-batch-modal]");
   var quickOpeners = Array.prototype.slice.call(document.querySelectorAll("[data-quick-batch-open]"));
@@ -399,7 +394,7 @@
   function openModal(batch) {
     if (batchIdInput) batchIdInput.value = batch.id || "";
     if (batchSummary) {
-      batchSummary.textContent = (batch.name || "حزمة بطاقات") + " · " + (batch.code || "بدون كود") + " · " + (batch.total || "0") + " بطاقة";
+      batchSummary.textContent = (batch.name || "حزمة بطاقات") + " · " + (batch.code || "بدون كود") + " · " + ((window.UDS && UDS.arCount) ? UDS.arCount(batch.total || 0, "بطاقة", "بطاقات", "بطاقةً") : ((batch.total || "0") + " بطاقة"));
     }
     resetProgress();
     closeGallery();
