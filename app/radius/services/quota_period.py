@@ -287,7 +287,182 @@ def has_window_caps(caps: dict) -> bool:
     return any(v for w in caps.values() for v in w.values())
 
 
-def usage(sub, now: Optional[datetime] = None, state: Optional[dict] = None) -> dict:
+# ─────────────── sessions crossing a day/month boundary (F04 H1) ───────────────
+#
+# radacct holds ONE row per session with its running totals (acctinputoctets /
+# acctoutputoctets — FreeRADIUS already folds Acct-*-Gigawords into them, and so
+# does the HTTP accounting path). A session that started before local midnight
+# (or the 1st of the month) and is still up — or stopped after it — used to be
+# left out of the window entirely. For each such session we keep a baseline =
+# its bytes AT the window start:
+#   • every read (minute sweep, authorize, interim, status) refreshes the
+#     session's last snapshot (snap_at = its acctupdatetime / stoptime);
+#   • on the first read that sees the session updated AFTER the boundary, the
+#     baseline is fixed once per window key by linear interpolation between the
+#     last snapshot at/before the boundary and the current reading (no earlier
+#     snapshot ⇒ the session start, at 0 bytes). The traffic of the interim
+#     interval that contains the boundary is split in proportion to time;
+#     everything the session carried before the last pre-boundary interim is
+#     yesterday's / last month's.
+#   • window usage = sessions that started inside the window + Σ max(0,
+#     current − baseline) of the straddling ones.
+
+_MARKS = "quota_session_marks"
+_MARK_RETENTION_DAYS = 40
+_LAST_PRUNE: Optional[datetime] = None
+
+
+def _parse_space(ts: str) -> Optional[datetime]:
+    try:
+        return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return None
+
+
+def _interpolate(pre_t: datetime, pre_v: tuple[int, int], cur_t: datetime,
+                 cur_v: tuple[int, int], at: datetime) -> tuple[int, int]:
+    """Bytes at ``at`` between two readings (clamped to [0, current])."""
+    span = (cur_t - pre_t).total_seconds()
+    out = []
+    for p, c in zip(pre_v, cur_v):
+        if span <= 0:
+            v = p
+        else:
+            frac = min(1.0, max(0.0, (at - pre_t).total_seconds() / span))
+            v = p + (c - p) * frac
+        out.append(int(round(min(max(v, 0), max(c, 0)))))
+    return out[0], out[1]
+
+
+def _straddle_usage(tenant_id: int, username: str, bounds: dict) -> dict:
+    """{daily|monthly: (رفع، تنزيل)} — ما زاد منذ بداية اليوم/الشهر المحلّيّ في
+    الجلسات التي بدأت قبل الحدّ (مفتوحةً أو أُغلقت بعده). يحدّث لقطات كلّ
+    الجلسات المفتوحة ليكون خطّ أساس الحدّ التالي دقيقًا. محصّن الكتابة."""
+    from ..db.connection import db
+    tid = int(tenant_id or 1)
+    n_start = "replace(replace(acctstarttime, 'T', ' '), 'Z', '')"
+    n_stop = "replace(replace(acctstoptime, 'T', ' '), 'Z', '')"
+    rows = db().execute(
+        "SELECT radacctid, acctstarttime, acctupdatetime, acctstoptime, "
+        "       COALESCE(acctinputoctets, 0) AS i, COALESCE(acctoutputoctets, 0) AS o "
+        "  FROM radacct WHERE tenant_id = :t AND username = :u AND ("
+        "       acctstoptime IS NULL OR acctstoptime = '' "
+        f"      OR ({n_stop} > :m AND {n_start} < :d))",
+        {"t": tid, "u": username, "m": bounds["month_start"],
+         "d": bounds["day_start"]}).fetchall()
+    out = {"daily": [0, 0], "monthly": [0, 0]}
+    if not rows:
+        return {k: tuple(v) for k, v in out.items()}
+    ids = [int(r["radacctid"]) for r in rows]
+    marks: dict[int, dict] = {}
+    try:
+        for i in range(0, len(ids), 400):
+            chunk = ids[i:i + 400]
+            for m in db().execute(
+                    f"SELECT * FROM {_MARKS} WHERE tenant_id = ? AND radacctid IN "
+                    f"({','.join('?' * len(chunk))})", (tid, *chunk)).fetchall():
+                marks[int(m["radacctid"])] = dict(m)
+    except Exception:  # noqa: BLE001 — جدولٌ غائب (نسخة قديمة) ⇒ بلا لقطات سابقة
+        marks = {}
+    windows = (("daily", "day", bounds["day_start"], bounds["day_key"]),
+               ("monthly", "month", bounds["month_start"], bounds["month_key"]))
+    writes: list[tuple[int, dict]] = []
+    for r in rows:
+        rid = int(r["radacctid"])
+        start = _norm(r["acctstarttime"])
+        stop = _norm(r["acctstoptime"])
+        upd = stop or _norm(r["acctupdatetime"]) or start
+        if upd < start:
+            upd = start
+        cur = (max(0, int(r["i"] or 0)), max(0, int(r["o"] or 0)))
+        mark = marks.get(rid) or {}
+        snap_at = _norm(mark.get("snap_at"))
+        fields: dict = {}
+        for window, prefix, ws, key in windows:
+            if not start or start >= ws:
+                continue                      # started inside: counted by the aggregate
+            if upd <= ws:
+                continue                      # everything known so far is pre-window
+            if mark.get(f"{prefix}_key") == key:
+                base = (int(mark.get(f"{prefix}_base_in") or 0),
+                        int(mark.get(f"{prefix}_base_out") or 0))
+            else:
+                if snap_at and start <= snap_at <= ws:
+                    pre_t, pre_v = snap_at, (int(mark.get("snap_in") or 0),
+                                             int(mark.get("snap_out") or 0))
+                else:
+                    pre_t, pre_v = start, (0, 0)
+                t0, t1, tw = _parse_space(pre_t), _parse_space(upd), _parse_space(ws)
+                base = (_interpolate(t0, pre_v, t1, cur, tw) if t0 and t1 and tw
+                        else pre_v)
+                fields.update({f"{prefix}_key": key, f"{prefix}_base_in": base[0],
+                               f"{prefix}_base_out": base[1]})
+            out[window][0] += max(0, cur[0] - base[0])
+            out[window][1] += max(0, cur[1] - base[1])
+        if upd and upd > snap_at:
+            fields.update({"snap_at": upd, "snap_in": cur[0], "snap_out": cur[1]})
+        if fields:
+            writes.append((rid, fields))
+    if writes:
+        _save_marks(tid, username, writes)
+    return {k: tuple(v) for k, v in out.items()}
+
+
+def _save_marks(tenant_id: int, username: str, writes: list[tuple[int, dict]]) -> None:
+    """UPSERT اللقطات/خطوط الأساس — محصّن: فشل الكتابة (قفل/جدول غائب) لا
+    يكسر القراءة؛ يُعاد الحساب في القراءة التالية."""
+    from ..db.connection import db
+    now = _space(datetime.utcnow())
+    try:
+        for rid, fields in writes:
+            f = dict(fields)
+            f["username"] = username
+            f["updated_at"] = now
+            cols = ", ".join(f)
+            sets = ", ".join(f"{k} = excluded.{k}" for k in f)
+            db().execute(
+                f"INSERT INTO {_MARKS} (tenant_id, radacctid, {cols}) "
+                f"VALUES (?, ?, {', '.join('?' * len(f))}) "
+                f"ON CONFLICT(tenant_id, radacctid) DO UPDATE SET {sets}",
+                (int(tenant_id), int(rid), *f.values()))
+    except Exception:  # noqa: BLE001
+        _LOG.warning("quota_period: saving session marks failed for %r", username,
+                     exc_info=True)
+
+
+def note_pre_interim(tenant_id: int, row: Optional[dict]) -> None:
+    """قبل أن يستبدل Interim-Update (مسار HTTP) عدّادات جلسةٍ مفتوحة: إن كانت
+    قراءتها الحاليّة من قبل بداية اليوم المحلّيّ فهي آخر لقطةٍ قبل الحدّ —
+    تُحفظ ليكون خطّ أساس اليوم/الشهر دقيقًا حتى بلا كنسة. محصّن."""
+    if not row:
+        return
+    try:
+        bounds = _local_bounds(int(tenant_id or 1))
+        start = _norm(row.get("acctstarttime"))
+        upd = _norm(row.get("acctupdatetime")) or start
+        if not start or not upd or upd > bounds["day_start"] or start >= bounds["day_start"]:
+            return
+        _save_marks(int(tenant_id or 1), str(row.get("username") or ""), [(
+            int(row["radacctid"]),
+            {"snap_at": upd, "snap_in": max(0, int(row.get("acctinputoctets") or 0)),
+             "snap_out": max(0, int(row.get("acctoutputoctets") or 0))})])
+    except Exception:  # noqa: BLE001
+        _LOG.debug("quota_period: pre-interim snapshot skipped", exc_info=True)
+
+
+def prune_session_marks(days: int = _MARK_RETENTION_DAYS) -> int:
+    """حذف لقطاتٍ لم تُلمس منذ ``days`` يومًا (جلساتٌ أُغلقت منذ زمن)."""
+    from ..db.connection import db
+    cutoff = _space(datetime.utcnow() - timedelta(days=int(days)))
+    try:
+        return int(db().execute(f"DELETE FROM {_MARKS} WHERE updated_at < ?",
+                                (cutoff,)).rowcount or 0)
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def usage(sub, now: Optional[datetime] = None, state: Optional[dict] = None,
+          *, windows: bool = True) -> dict:
     """الاستهلاك بالبايت {period|daily|monthly: (رفع، تنزيل)} من radacct.
 
     • period: منذ بداية الفترة (إن وُجدت) وإلّا منذ الأزل (السلوك السابق).
@@ -295,7 +470,11 @@ def usage(sub, now: Optional[datetime] = None, state: Optional[dict] = None) -> 
     • monthly: منذ بداية الشهر المحلّيّ، أو منذ بداية الفترة إن بدأت هذا الشهر.
     خطّ الأساس = مجموع كلّ الصفوف لحظة الحدث؛ الاستهلاك بعده = ما بدأ بعده
     (بعد ثانية الحدث تمامًا) + max(0, ما بدأ حتّى ثانيته الآن − خطّ الأساس) —
-    نموّ الجلسات المفتوحة وما بدأ في الثانية نفسها يُلتقط بالفرق."""
+    نموّ الجلسات المفتوحة وما بدأ في الثانية نفسها يُلتقط بالفرق.
+
+    اليوم/الشهر بحدود التقويم المحلّيّ: الجلسات التي بدأت داخل النافذة + ما
+    زاد في الجلسات العابرة لحدّها منذ بدايتها (``_straddle_usage``).
+    ``windows=False`` (سقف الفترة وحده) يتخطّى حساب الجلسات العابرة."""
     from ..db.connection import db
     tid = int(getattr(sub, "tenant_id", 1) or 1)
     sid = getattr(sub, "id", None)
@@ -329,20 +508,32 @@ def usage(sub, now: Optional[datetime] = None, state: Optional[dict] = None) -> 
         period = _since(g("p_in"), g("p_out"), st.get("period_base_in"), st.get("period_base_out"))
     else:
         period = (g("a_in"), g("a_out"))
-    if r and r >= bounds["day_start"]:
+    day_by_reset = bool(r and r >= bounds["day_start"])
+    month_by_period = bool(p and p >= bounds["month_start"])
+    # 🔴 F04 H1: جلسةٌ بدأت قبل منتصف الليل/أوّل الشهر وما زالت (أو أُغلقت بعده)
+    # كانت خارج اليوم/الشهر كلّيًّا ⇒ PPPoE متّصلٌ أيّامًا = كوتة يوميّة بلا حدّ.
+    # الآن: ما زاد في تلك الجلسات منذ بداية النافذة (خطّ أساسٍ لكلّ جلسة).
+    straddle = {"daily": (0, 0), "monthly": (0, 0)}
+    if windows and not (day_by_reset and month_by_period):
+        try:
+            straddle = _straddle_usage(tid, str(sub.username), bounds)
+        except Exception:  # noqa: BLE001 — القراءة لا تكسر المصادقة
+            _LOG.warning("quota_period: straddling-session usage failed for %r",
+                         getattr(sub, "username", "?"), exc_info=True)
+    if day_by_reset:
         daily = _since(g("r_in"), g("r_out"), st.get("daily_base_in"), st.get("daily_base_out"))
     else:
-        daily = (g("d_in"), g("d_out"))
-    if p and p >= bounds["month_start"]:
+        daily = (g("d_in") + straddle["daily"][0], g("d_out") + straddle["daily"][1])
+    if month_by_period:
         monthly = period
     else:
-        monthly = (g("m_in"), g("m_out"))
+        monthly = (g("m_in") + straddle["monthly"][0], g("m_out") + straddle["monthly"][1])
     return {"period": period, "daily": daily, "monthly": monthly}
 
 
 def period_used_bytes(sub) -> int:
     """استهلاك الفترة الحاليّة (رفع + تنزيل) — يرمي عند فشل القراءة."""
-    u = usage(sub)["period"]
+    u = usage(sub, windows=False)["period"]
     return int(u[0]) + int(u[1])
 
 
@@ -476,6 +667,11 @@ def enforce_live_quota(tenant_id: Optional[int] = None) -> dict:
     FreeRADIUS يكتب radacct مباشرةً في الإنتاج فلا يمرّ Interim بخطّاف
     ``enforce_after_interim``. تُشغَّل من عامل «نافذة الجدولة» كلّ دقيقة."""
     stats = {"checked": 0, "exhausted": 0}
+    global _LAST_PRUNE
+    if tenant_id is None and (_LAST_PRUNE is None
+                              or datetime.utcnow() - _LAST_PRUNE > timedelta(hours=6)):
+        _LAST_PRUNE = datetime.utcnow()
+        prune_session_marks()
     try:
         from .policy_reconciler import _live_rows, _resolve
         from .schedule_window import _active_tenant_ids
@@ -516,4 +712,5 @@ __all__ = [
     "record_window_topup", "plan_window_caps", "window_caps", "has_window_caps",
     "usage", "period_used_bytes", "window_exhaustion", "quota_status",
     "is_renewal", "on_time_added", "enforce_after_interim", "enforce_live_quota",
+    "note_pre_interim", "prune_session_marks",
 ]
