@@ -873,7 +873,7 @@
       <div class="ops-module-head">
         <div>
           <h2>{{ _('إجمالي مبيعات اليوم') }}</h2>
-          <p>{{ _('البطاقات التي بيعت اليوم (أوّل دخول) ومبيعات اليوم لكلّ عملة — بتوقيت اللوحة المحلّيّ.') }}</p>
+          <p>{{ _('البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-cash-register"></i></span>
       </div>
@@ -881,8 +881,8 @@
         <div class="ops-primary-number"><strong data-sales-today-cards>{{ "{:,}".format((sales_today.cards_count or 0)|int) }}</strong><span>{{ _('بطاقة') }}</span>{% if sales_today.money_visible %}<span aria-hidden="true"> · </span><strong data-sales-today-total>{{ (sales_today.by_currency or [])|money_multi('total', 0) }}</strong>{% endif %}</div>
         {% if sales_today.money_visible %}
         <div class="ops-metrics">
-          <div class="ops-metric"><span>{{ _('قيمة البطاقات') }}</span><strong>{{ ((sales_today.cards_value or {}).by_currency or [])|money_multi('total', 0) }}</strong></div>
-          <div class="ops-metric"><span>{{ _('دفعات المشتركين') }}</span><strong>{{ ((sales_today.payments or {}).by_currency or [])|money_multi('total', 0) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('عدد البطاقات المباعة') }}</span><strong>{{ "{:,}".format((sales_today.cards_count or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('قيمة البطاقات') }}</span><strong>{{ (sales_today.by_currency or [])|money_multi('total', 0) }}</strong></div>
         </div>
         {% endif %}
       </div>

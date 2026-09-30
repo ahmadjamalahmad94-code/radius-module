@@ -520,7 +520,8 @@ def get_sales_today(tenant_id: Optional[int] = None, *,
       ``transactions`` و``by_currency`` نفسهما.
     * ``cards_value`` — قيمة بطاقات اليوم بسعر بطاقة حزمتها وعملة باقتها
       (البطاقات المطبوعة لا تُقيَّد دفعةً في الدفتر، فبدونها تكون البطاقة «0 ₪»).
-    * ``by_currency`` = ``payments`` + ``cards_value`` لكلّ عملة — رقم البطاقة.
+    * ``by_currency`` = قيمة بطاقات اليوم لكلّ عملة — رقم البطاقة (قرار المالك:
+      مبيعات البطاقات وسعرها فقط، لا دفعات المشتركين). ``payments`` مرجعٌ منفصل.
 
     بلا «التقارير المالية» (``reports.finance``) يُرسَل ``cards_count`` فقط
     و``money_visible: false`` (لا مبالغ). بلا مفتاح البطاقات ولا المالية ⇒ 0."""
@@ -575,15 +576,15 @@ def get_sales_today(tenant_id: Optional[int] = None, *,
                "transactions": int(c.get("transactions") or 0)}
               for c in (row.get("by_currency") or [])]
     from ..core.numbers import round_money
-    total_by: dict[str, float] = {}
-    for c in pay_by:
-        total_by[c["currency"]] = total_by.get(c["currency"], 0.0) + c["total"]
+    # قرار المالك 2026-09-30: بطاقة «مبيعات اليوم» = مبيعات البطاقات وسعرها فقط
+    # (لا دفعات المشتركين النقديّة). ``payments`` يبقى مرجعًا منفصلًا للاطلاع،
+    # لكنّ ``by_currency`` — رقم البطاقة — هو قيمة بطاقات اليوم وحدها.
     for c in cards_by.values():
         c["total"] = round_money(c["total"])
-        total_by[c["currency"]] = total_by.get(c["currency"], 0.0) + c["total"]
     from ..core.system_config import default_currency
     system = (default_currency() or "").strip().upper()
-    by_currency = [{"currency": cur, "total": round_money(v)} for cur, v in total_by.items()]
+    by_currency = [{"currency": c["currency"], "total": c["total"]}
+                   for c in cards_by.values()]
     by_currency.sort(key=lambda c: (c["currency"] != system, -abs(c["total"])))
     out.update({
         "payments": {"transactions": int(row.get("transactions") or 0),

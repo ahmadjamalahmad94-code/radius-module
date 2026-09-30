@@ -218,6 +218,21 @@ def _is_super_role(admin) -> bool:
         return False
 
 
+def _mikrotik_access_allowed(admin) -> bool:
+    """False only when the owner explicitly set «mikrotik.access» to «ممنوع»
+    for this admin (or its role). Default and «حسب الدور» ⇒ True, so the
+    behaviour is unchanged unless the owner turns it off."""
+    aid = getattr(admin, "id", None)
+    if not aid:
+        return True
+    try:
+        from . import manager_grants as _mg
+        tid = int(getattr(admin, "tenant_id", 0) or 0) or 1
+        return bool(_mg.action_permitted(int(aid), "mikrotik.access", tenant_id=tid))
+    except Exception:  # noqa: BLE001 — never break auth; default allow
+        return True
+
+
 def admin_permissions(admin) -> frozenset[str]:
     """Resolve the full set of MikroTik permissions for `admin`.
 
@@ -230,6 +245,11 @@ def admin_permissions(admin) -> frozenset[str]:
         return frozenset()
     if _is_primary_owner(admin):
         return frozenset(ALL_PERMISSIONS)
+    # قرار المالك 2026-09-30: مفتاح «mikrotik.access» يتيح منع الوصول لصفحات
+    # مايكروتيك عن مدير/دور (تجاوز «ممنوع») مع بقائها مفتوحة افتراضًا. المالك
+    # الأساسيّ فوق هذا (عاد قبل هذا السطر).
+    if not _mikrotik_access_allowed(admin):
+        return frozenset()
     if _is_super_role(admin):
         # fix3 integration: «مدير عام» = every permission that is not
         # owner-only — but the mikrotik.* keys are not in the RBAC catalogue,
