@@ -801,7 +801,10 @@ def test_loans_read_needs_a_loans_or_finance_permission(client):
     nol = _token_for(client, _manager(("dashboard.view", "users.view", "users.payments")))
     _err(client.get("/api/v1/loans", headers=nol), 403, "forbidden")
     _err(client.get(f"/api/v1/loans/{loan['id']}", headers=nol), 403, "forbidden")
-    ok_hdr = _token_for(client, _manager(("users.view", "users.loans")))
+    # fix3: the subscriber belongs to nobody — reading its loan needs the
+    # «عرض كل المشتركين» scope (loans are scoped like every money list).
+    ok_hdr = _token_for(client, _manager(("users.view", "users.loans",
+                                          "scope.view_all_subscribers")))
     assert _data(client.get("/api/v1/loans", headers=ok_hdr))["count"] >= 1
     _data(client.get(f"/api/v1/loans/{loan['id']}", headers=ok_hdr))
 

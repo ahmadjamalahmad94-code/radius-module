@@ -25,6 +25,14 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+def _picker_subscribers(*, limit: int = 500):
+    """fix3 (F02 M3): subscriber pickers list only the admin's own subscribers
+    (same predicate as the subscribers list) — never another manager's."""
+    from ..services.subscriber_scope import current_scope_admin_id
+    return subscribers_repo.list_subscribers(
+        _tid(), limit=limit, owner_admin_id=current_scope_admin_id(tenant_id=_tid()))
+
+
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
@@ -353,7 +361,7 @@ def inv_new():
 
 def inv_create():
     sub_id = _i("subscriber_id")
-    sub = next((s for s in subscribers_repo.list_subscribers(_tid(), limit=10_000)
+    sub = next((s for s in _picker_subscribers(limit=10_000)
                 if s.id == sub_id), None)
     if not sub:
         flash("اختر مشتركًا صحيحًا", "error")
@@ -402,7 +410,7 @@ def tk_list():
     status = request.args.get("status") or None
     items = tickets_repo.list_tickets(_tid(), status=status, limit=500)
     # المشتركون مطلوبون لنموذج «تذكرة جديدة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template(
         "radius/tickets_list.html", items=items, status=status, subs=subs,
         # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /tickets/new يبقى حيًّا)
@@ -492,7 +500,7 @@ def tk_status(tid: int):
 def svc_list():
     items = services_repo.list_all(_tid(), limit=500)
     # المشتركون مطلوبون لنموذج «إضافة معدّة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template(
         "radius/services_list.html", items=items, subs=subs,
         # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /services/new يبقى حيًّا)
@@ -531,7 +539,7 @@ def svc_create():
 def svc_edit(sid: int):
     it = services_repo.get(_tid(), sid)
     if not it: abort(404)
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template("radius/services_form.html", item=it, subs=subs, is_new=False)
 
 

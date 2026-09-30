@@ -73,7 +73,9 @@ def sgrp_view(gid: int):
     members = share_groups_repo.list_members(gid)
     # subscribers غير الأعضاء (لإضافتهم)
     member_ids = {m["id"] for m in members}
-    all_subs = subscribers_repo.list_subscribers(_tid(), limit=1000)
+    from ..services.subscriber_scope import current_scope_admin_id
+    all_subs = subscribers_repo.list_subscribers(   # fix3: scoped picker
+        _tid(), limit=1000, owner_admin_id=current_scope_admin_id(tenant_id=_tid()))
     candidates = [s for s in all_subs if s.id not in member_ids]
     return render_template("radius/sgrp_view.html",
                             grp=g_data, members=members, candidates=candidates)

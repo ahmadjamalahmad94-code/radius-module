@@ -258,6 +258,12 @@ class EventService:
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM business_events WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        # fix3 (F02 H2): request scope (owner / view-all → every event).
+        from .subscriber_scope import entity_scope_sql
+        esc, esv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                    actor_id_col="actor_id", tenant_id=int(tenant_id))
+        sql += esc
+        params += esv
         if category:
             sql += " AND category=?"
             params.append(category)
@@ -385,9 +391,17 @@ class LedgerService:
         entry_type: str = "",
         reference_type: str = "",
         limit: int = 100,
+        scoped: bool = False,
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM ledger_entries WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        if scoped:
+            # fix3: the request admin's subscriber scope (read views only).
+            from .subscriber_scope import entity_scope_sql
+            lsc, lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                        actor_id_col="actor_id", tenant_id=int(tenant_id))
+            sql += lsc
+            params += lsv
         if entry_type:
             sql += " AND entry_type=?"
             params.append(entry_type)
@@ -465,9 +479,16 @@ class WalletService:
         owner_type: str = "",
         status: str = "",
         limit: int = 100,
+        scoped: bool = False,
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM wallets WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        if scoped:
+            # fix3: the request admin's subscriber scope (read views only).
+            from .subscriber_scope import entity_scope_sql
+            wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=int(tenant_id))
+            sql += wsc
+            params += wsv
         if owner_type:
             sql += " AND owner_type=?"
             params.append(owner_type)

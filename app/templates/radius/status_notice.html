@@ -1,0 +1,22 @@
+{# fix3 — صفحة إشعار عامّة داخل هيكل اللوحة لحالات 404/409 (لا صفحة werkzeug
+   خام ولا «Redirecting…»): عنوان + رسالة عربيّة + رابط رجوع. #}
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ notice_title }}{% endblock %}
+{% block page_title %}{{ notice_title }}{% endblock %}
+
+{% block content %}
+<section dir="rtl" role="alert" data-testid="status-notice" data-status="{{ notice_status }}"
+         style="max-width:680px;margin:48px auto;padding:24px;text-align:center;
+                border:1px solid var(--hub-line,#e5e7eb);border-radius:16px;
+                background:var(--hub-surface,#fff)">
+  <h1 style="margin:0 0 12px;font-size:clamp(22px,4.5vw,32px);font-weight:800">{{ notice_title }}</h1>
+  <p data-testid="status-notice-message" style="margin:0 0 20px;font-size:17px;line-height:1.7">{{ notice_message }}</p>
+  {% if back_url %}
+  <a href="{{ back_url }}" style="display:inline-block;padding:12px 24px;border-radius:999px;
+            background:var(--hub-brand,#6B5AED);color:#fff;font-weight:700;text-decoration:none">
+    {{ back_label or _('رجوع') }}
+  </a>
+  {% endif %}
+</section>
+{% endblock %}

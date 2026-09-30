@@ -350,9 +350,13 @@ def _batch_operation_filters() -> dict:
         "manager": (request.args.get("manager") or "").strip()[:80],
         "distributor_id": _arg_int("distributor_id"),
     }
-    dist = current_distributor()
-    if dist:
-        filters["distributor_id"] = int(dist["id"])
+    # fix3 (F01 F10): «رؤية كل حِزم البطاقات» — the SAME predicate as the web
+    # list and the direct URLs (a distributor login: its own/assigned batches).
+    from ...radius.services.card_batch_scope import batch_scope_admin_id
+    from ..access_control import is_owner_level
+    if not is_owner_level():
+        filters["owner_admin_id"] = batch_scope_admin_id(int(getattr(g, "admin_id", 0) or 0) or None,
+                                                         tenant_id=_tid())
     return filters
 
 

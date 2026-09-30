@@ -93,6 +93,30 @@ def _grants_summary(admin, tenant_id: int) -> dict:
             can_view_all_subscribers(admin.id, tenant_id=tenant_id))
     except Exception:  # noqa: BLE001 — never break login/me over the summary
         pass
+    # fix3 (F02 L1): per-field grants so the app renders locked inputs read-only
+    # and never posts them. entity → {controlled, editable[], locked[],
+    # locked_attrs[]}; ``controlled: false`` = every field editable.
+    fields: dict = {}
+    try:
+        from ..radius.services import manager_grants as _mg
+        for entity, defs in _mg.FIELD_REGISTRY.items():
+            granted = None if owner else _mg.field_grants(admin.id, entity, tenant_id=tenant_id)
+            keys = [d["key"] for d in defs]
+            if granted is None:
+                fields[entity] = {"controlled": False, "editable": keys, "locked": [],
+                                  "locked_attrs": []}
+            else:
+                locked = [k for k in keys if k not in granted]
+                fields[entity] = {
+                    "controlled": True,
+                    "editable": [k for k in keys if k in granted],
+                    "locked": locked,
+                    "locked_attrs": sorted({a for d in defs if d["key"] in locked
+                                            for a in d["attrs"]}),
+                }
+    except Exception:  # noqa: BLE001
+        fields = {}
+    out["fields"] = fields
     # «الأدوات»: tool key → may this admin run it (the API guard's own decision;
     # set-speeds / test-auth / maintenance / general adjustments are owner-only).
     try:

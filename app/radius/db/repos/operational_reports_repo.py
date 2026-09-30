@@ -116,6 +116,22 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         where, params = range_sql(column, lower, upper, upper_excl)
         return "".join(f" AND {w}" for w in where), params
 
+    # fix3 (F02 H2): the request admin's subscriber scope — the ONE predicate
+    # (services/subscriber_scope) shared with the web report pages.
+    from ...services.subscriber_scope import (audit_scope_sql, current_scope_admin_id,
+                                              owner_scope_clause, scope_sql)
+    _scope_id = current_scope_admin_id(tenant_id=int(tenant_id))
+
+    def _s(column: str, by: str = "username") -> tuple[str, list[Any]]:
+        if _scope_id is None:
+            return "", []
+        return scope_sql(column, by=by, scope=int(_scope_id), tenant_id=int(tenant_id),
+                         use_request=False)
+
+    _audit_scope = (("", []) if _scope_id is None else
+                    audit_scope_sql(scope=int(_scope_id), tenant_id=int(tenant_id),
+                                    use_request=False))
+
     if slug == "sessions":
         sql = """
             SELECT radacctid, acctsessionid, acctuniqueid, username, nasipaddress,
@@ -128,6 +144,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE tenant_id = ?
         """
         vals: list[Any] = [tenant_id]
+        _sc, _sv = _s("username")
+        sql += _sc
+        vals.extend(_sv)
         if query:
             sql += " AND (username LIKE ? OR acctsessionid LIKE ? OR callingstationid LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -144,6 +163,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE tenant_id = ? AND reply != 'Access-Accept'
         """
         vals = [tenant_id]
+        _sc, _sv = _s("username")
+        sql += _sc
+        vals.extend(_sv)
         if query:
             sql += " AND (username LIKE ? OR reply LIKE ? OR nas LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -164,6 +186,10 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE tenant_id = ? AND deleted_at IS NULL
         """
         vals = [tenant_id]
+        if _scope_id is not None:
+            _oc, _ov = owner_scope_clause(int(_scope_id), tenant_id=int(tenant_id))
+            sql += _oc
+            vals.extend(_ov)
         if query:
             sql += " AND username LIKE ?"
             vals.append(f"%{query}%")
@@ -178,6 +204,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE tenant_id = ? AND callingstationid != ''
         """
         vals = [tenant_id]
+        _sc, _sv = _s("username")
+        sql += _sc
+        vals.extend(_sv)
         if query:
             sql += " AND (username LIKE ? OR callingstationid LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%"])
@@ -199,6 +228,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
             rng=_rng("created_at"),
+            scope=_audit_scope,
         ))
     elif slug == "api-messages":
         items = _sanitize_audit(_audit_rows(
@@ -208,6 +238,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
             rng=_rng("created_at"),
+            scope=_audit_scope,
         ))
     elif slug == "coa-failures":
         sql = """
@@ -220,6 +251,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
               AND status IN ('failed','retrying')
         """
         vals = [tenant_id]
+        _sc, _sv = _s("entity_key")
+        sql += _sc
+        vals.extend(_sv)
         if query:
             sql += " AND (entity_key LIKE ? OR kind LIKE ? OR last_error LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -237,6 +271,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
             rng=_rng("created_at"),
+            scope=_audit_scope,
         ))
     elif slug == "manager-login-status":
         sql = """
@@ -248,6 +283,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE COALESCE(a.deleted_at, '') = ''
         """
         vals = []
+        if _scope_id is not None:
+            sql += " AND a.id = ?"     # a scoped manager: his own row only
+            vals.append(int(_scope_id))
         if query:
             sql += " AND (a.username LIKE ? OR a.full_name LIKE ? OR a.email LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -262,6 +300,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
             rng=_rng("created_at"),
+            scope=_audit_scope,
         ))
     if slug == "speed-failures":
         items = _sanitize_audit(_audit_rows(
@@ -273,6 +312,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             offset=offset,
             q_cols=("actor", "action", "target_id", "error_message"),
             rng=_rng("created_at"),
+            scope=_audit_scope,
         ))
     elif slug == "used-cards":
         sql = """
@@ -283,6 +323,10 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE c.tenant_id = ? AND c.used = 1
         """
         vals = [tenant_id]
+        from ...services.card_batch_scope import batch_scope_sql
+        _bc, _bv = batch_scope_sql(column="c.batch_id", tenant_id=int(tenant_id))
+        sql += _bc
+        vals.extend(_bv)
         if query:
             sql += " AND (c.username LIKE ? OR c.used_by_mac LIKE ? OR p.name LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -294,7 +338,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         items = _rows(sql, vals)
     elif slug == "balance-movements":
         items = _balance_movements(tenant_id, query=query, limit=limit, offset=offset,
-                                   rng=_rng)
+                                   rng=_rng, scope=_scope_id)
     elif slug == "cash-transactions":
         sql = """
             SELECT id, created_at, username, amount, currency, method, status,
@@ -304,6 +348,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             WHERE tenant_id = ?
         """
         vals = [tenant_id]
+        _sc, _sv = _s("subscriber_id", by="id")
+        sql += _sc
+        vals.extend(_sv)
         if query:
             sql += " AND (username LIKE ? OR created_by LIKE ? OR method LIKE ? OR status LIKE ?)"
             vals.extend([f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"])
@@ -329,7 +376,8 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
 def _audit_rows(tenant_id: int, predicate: str, *, query: str,
                 limit: int, offset: int,
                 q_cols: tuple[str, ...] = ("actor", "action", "target_id"),
-                rng: tuple[str, list[Any]] = ("", [])) -> list[dict]:
+                rng: tuple[str, list[Any]] = ("", []),
+                scope: tuple[str, list[Any]] = ("", [])) -> list[dict]:
     sql = f"""
         SELECT id, actor, action, target_type, target_id, payload_json,
                ip_address, user_agent, result_status, error_message, created_at
@@ -342,6 +390,8 @@ def _audit_rows(tenant_id: int, predicate: str, *, query: str,
         vals.extend([f"%{query}%"] * len(q_cols))
     sql += rng[0]
     vals.extend(rng[1])
+    sql += scope[0]
+    vals.extend(scope[1])
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals.extend([limit, offset])
     return _rows(sql, vals)
@@ -356,7 +406,7 @@ _MOVEMENT_LABELS = {
 }
 
 def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int,
-                       rng=None) -> list[dict]:
+                       rng=None, scope=None) -> list[dict]:
     """حركات الرصيد من دفترين (عامّ + موزّعين) مدموجةً ومرتّبةً زمنيًّا.
 
     الترقيم يُطبَّق على **الناتج المدموج** لا على كلّ استعلام وحده: نجلب
@@ -373,6 +423,13 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int,
         WHERE tenant_id = ?
     """
     general_vals: list[Any] = [tenant_id]
+    if scope is not None:
+        # fix3: his subscribers' movements + his own manager-wallet rows.
+        from ...services.subscriber_scope import scope_sql
+        _sc, _sv = scope_sql("subscriber_id", by="id", scope=int(scope),
+                             tenant_id=int(tenant_id), use_request=False)
+        general_sql += " AND (" + _sc[len(" AND "):] + " OR admin_id = ?)"
+        general_vals.extend([*_sv, int(scope)])
     if query:
         general_sql += (
             " AND (username LIKE ? OR operator LIKE ? OR entry_type LIKE ? "
@@ -397,6 +454,9 @@ def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int,
         WHERE dl.tenant_id = ?
     """
     distributor_vals: list[Any] = [tenant_id]
+    if scope is not None:
+        distributor_sql += " AND (d.admin_id = ? OR d.login_admin_id = ?)"
+        distributor_vals.extend([int(scope), int(scope)])
     if query:
         distributor_sql += " AND (d.name LIKE ? OR dl.entry_type LIKE ?)"
         distributor_vals.extend([f"%{query}%"] * 2)

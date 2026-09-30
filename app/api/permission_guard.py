@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Union
 
-from flask import request
+from flask import g, request
 
 from .responses import fail
 
@@ -258,7 +258,9 @@ API_PERMISSIONS: dict[str, Spec] = {
     # archiving admins/roles/NAS/plans/subscribers from one generic endpoint
     # is an owner-level operation (the web archives each from its own page).
     "v1.recycle_bin_archive": SUPER,
-    "v1.recycle_bin_restore": "web:recycle_bin_restore",
+    # fix3 (F01 F4): any of the per-type restore keys reaches the handler,
+    # which decides per entity type (recycle_restore_policy) + scope.
+    "v1.recycle_bin_restore": "cards.restore|users.create|plans.create|nas.create",
 
     # ── lifecycle / retention ──
     "v1.lifecycle_policies": {"GET": "web:lifecycle_settings",
@@ -298,7 +300,9 @@ API_PERMISSIONS: dict[str, Spec] = {
                      "payments", "loans", "card_sales", "profit_loss",
                      "distributor_debts")
         for suffix in ("", "_export_csv", "_export_xlsx", "_export_pdf")]),
-    **_same("web:reports_home", *[
+    # fix3 (F08 H3): activations are money (web: /finance/accounting under
+    # reports.finance) — reports.view alone no longer reads them.
+    **_same("web:finance_reports", *[
         f"reports_activations{suffix}"
         for suffix in ("", "_export_csv", "_export_xlsx", "_export_pdf")]),
     "v1.reports_login_states_overview": "web:rep_login_states",
@@ -748,6 +752,10 @@ def api_permission_denial():
     if is_owner_like(admin):
         return None
     method = _method()
+    try:
+        g._rbac_denial = None
+    except Exception:  # noqa: BLE001
+        pass
     code = decide(name, method, admin, tenant_id=tenant_id())
     if code is None:
         return None
@@ -758,8 +766,28 @@ def api_permission_denial():
     if code == 429:
         return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
                     status=429, details=details)
-    return fail("forbidden", _DENIED_AR if spec else _UNMAPPED_AR,
-                status=403, details=details)
+    # fix3 (D24 / F01 F23): say WHY — a locked/hidden section, the missing
+    # action or key — in Arabic (the key itself stays in details.permission).
+    message = _DENIED_AR if spec else _UNMAPPED_AR
+    try:
+        from ..radius.routes.blueprint import denial_message
+        info = getattr(g, "_rbac_denial", None) or {}
+        if info.get("reason"):
+            details["reason"] = info["reason"]
+            if info.get("permission"):
+                details["permission"] = info["permission"]
+            message = denial_message() or message
+        elif isinstance(spec, str) and spec and not spec.startswith(("web:", "mt:", "grant:"))                 and spec != SUPER:
+            from ..radius.services.permission_labels import rbac_keys_label
+            details["reason"] = "permission"
+            details["permission"] = spec
+            message = f"تنقصك الصلاحية: {rbac_keys_label(spec)}."
+        elif spec == SUPER:
+            details["reason"] = "owner_only"
+            message = "هذا الإجراء مقصور على المالك أو الشريك."
+    except Exception:  # noqa: BLE001 — the generic text stays
+        pass
+    return fail("forbidden", message, status=403, details=details)
 
 
 __all__ = ["API_PERMISSIONS", "API_AUTH_ONLY", "API_PUBLIC", "SUPER", "decide",

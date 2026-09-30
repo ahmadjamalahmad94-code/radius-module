@@ -1102,22 +1102,12 @@ def _batch_form_data(batch) -> dict:
 
 
 def _card_batch_scope_admin_id():
-    """معرّف المدير الذي تُقصَر عليه قائمة الحِزم، أو None لرؤية الكل.
-
-    None حين يكون المُستخدِم سوبر/مالك أو يَملك «عرض كل حزم البطاقات»
-    (can_view_all_card_batches). خلاف ذلك = معرّفه، فتُقصَر القائمة على
-    حِزمه ∪ حِزم موزّعيه (عزل خادميّ في cards_repo)."""
+    """معرّف المدير الذي تُقصَر عليه قائمة الحِزم، أو None لرؤية الكل —
+    المسند الواحد ``services/card_batch_scope`` (ويب + API + عناوين مباشرة)."""
     if is_super_admin():
         return None
-    me = current_admin_id()
-    if not me:
-        return None
-    from ..services.manager_distributor_ops import ManagerDistributorOpsService
-    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
-        entity_type="manager", entity_id=int(me), permission="can_view_all_card_batches"
-    ):
-        return None
-    return int(me)
+    from ..services.card_batch_scope import batch_scope_admin_id
+    return batch_scope_admin_id(current_admin_id(), tenant_id=_tid()) if current_admin_id() else None
 
 
 def _can_generate_batches() -> bool:
@@ -1566,6 +1556,8 @@ def cards_batches_export_csv():
 def _batch_export_rows() -> list[dict]:
     svc = get_cards_service()
     filters = _batch_filters_from_request()
+    # fix3 (F01 F10): the export = the (scoped) list, never every batch.
+    filters["owner_admin_id"] = _card_batch_scope_admin_id()
     return svc.list_batch_operations(**filters, limit=5000, offset=0)
 
 
@@ -2466,6 +2458,7 @@ def cards_list():
     return render_template(
         "radius/cards_list.html",
         items=items, plans=plans, batches=batches,
+        can_see_card_passwords=_can_see_card_passwords(),
         used=used, revoked=revoked, status=status, batch_id=batch_id, q=q,
         status_counts=status_counts,
         page=page, per_page=per_page, total=total,

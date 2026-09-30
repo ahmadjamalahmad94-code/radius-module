@@ -110,6 +110,40 @@ def _humanize(raw: str) -> str:
     return body.replace("_", " ").strip() or raw
 
 
+_RBAC_LABELS_CACHE: dict = {}
+
+
+def rbac_key_label(key: str | None) -> str:
+    """fix3 (D24): Arabic name of an RBAC key (``users.extend`` → «تجديد وتمديد
+    الاشتراك») — the role editor's own labels (radius/_perm_labels.html), so the
+    403 names the permission exactly as the owner ticked it. Falls back to
+    :func:`permission_label` (flags) — never the raw key when a label exists."""
+    raw = (key or "").strip()
+    if not raw:
+        return "صلاحية"
+    labels = _RBAC_LABELS_CACHE.get("labels")
+    if labels is None:
+        labels = {}
+        try:
+            from flask import current_app
+            mod = current_app.jinja_env.get_template("radius/_perm_labels.html").module
+            labels = dict(getattr(mod, "PERM_LABELS", {}) or {})
+        except Exception:  # noqa: BLE001 — outside an app: flag labels only
+            labels = {}
+        if labels:
+            _RBAC_LABELS_CACHE["labels"] = labels
+    if raw in labels and str(labels[raw]).strip():
+        return str(labels[raw])
+    return permission_label(raw)
+
+
+def rbac_keys_label(spec: str | None) -> str:
+    """``a|b`` / «a أو b» → Arabic labels joined by «أو»."""
+    import re as _re
+    parts = [p.strip() for p in _re.split(r"\||\s+أو\s+", str(spec or "")) if p.strip()]
+    return " أو ".join(rbac_key_label(p) for p in parts) or "صلاحية"
+
+
 def permission_label(key: str | None) -> str:
     """مفتاح صلاحية بالعربية: خريطة دقيقة ← مُركِّب ← تأنيس. لا يُعيد فراغًا
     ولا مفتاح `can_*` خام."""

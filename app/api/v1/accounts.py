@@ -31,9 +31,7 @@ from ...radius.services.license_admin_capacity import (
     capacity_error_response,
 )
 from ..access_control import (
-    current_distributor,
     deny_out_of_scope,
-    distributor_batch_ids,
     require_web_permission,
     subscriber_in_scope,
     token_bypasses_rbac,
@@ -293,6 +291,15 @@ def _serialize(sub: Subscriber) -> dict:
             d["metadata"] = {}
     # Convert allowed_days tuple → list for JSON friendliness (Plan only — kept
     # here so the helper covers both DTOs if reused).
+    # fix3 (F01 F5 / F18): the same visibility rules as the web — the PPPoE
+    # password needs «رؤية كلمة مرور المشترك», the balance «رؤية الرصيد».
+    from ...radius.services.sensitive_visibility import (
+        MASK, can_view_balance, can_view_subscriber_passwords)
+    if d.get("pppoe_password") and not can_view_subscriber_passwords(tenant_id=_tid()):
+        d["pppoe_password"] = MASK
+    if not can_view_balance(tenant_id=_tid()):
+        d["balance"] = None
+        d["balance_hidden"] = True
     return d
 
 
@@ -437,15 +444,11 @@ def accounts_list():
                     "قيمة expiring_within_days بين 1 و 365.", status=422)
     filters = dict(status=status, plan_id=plan_id, search=search,
                    user_type=user_type, expiring_within_days=expiring_days)
-    if current_distributor():
-        # distributor token: only subscribers of its assigned card batches —
-        # filtered in SQL (username IN …) so total/has_more stay exact.
-        filters["usernames_in"] = _distributor_usernames()
-    else:
-        # D09: a manager without «عرض كل المشتركين» lists his own subscribers
-        # (+ his distributors') — the same scope as the web list, in SQL.
-        from ..access_control import subscriber_scope_admin_id
-        filters["owner_admin_id"] = subscriber_scope_admin_id()
+    # D09 + fix3: a manager without «عرض كل المشتركين» lists his own subscribers
+    # (+ his distributors'); a distributor login its assigned batches ∪ what it
+    # created — ONE predicate in SQL (same as the web list), so total is exact.
+    from ..access_control import subscriber_scope_admin_id
+    filters["owner_admin_id"] = subscriber_scope_admin_id()
     items = _svc().list(limit=limit, offset=offset, **filters)
     total = _svc().count(**filters)
     return ok({
@@ -458,21 +461,6 @@ def accounts_list():
         "per_page": limit,
         "has_more": offset + len(items) < total,
     })
-
-
-def _distributor_usernames() -> list[str]:
-    """Usernames of the live subscribers on the calling distributor's
-    assigned card batches (the same scope ``subscriber_in_scope`` checks)."""
-    allowed = sorted(distributor_batch_ids())
-    if not allowed:
-        return []
-    from ...radius.db.connection import db
-    rows = db().execute(
-        "SELECT username FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL "
-        "AND card_batch_id IN (%s)" % ",".join("?" for _ in allowed),
-        [_tid(), *allowed],
-    ).fetchall()
-    return [r["username"] for r in rows]
 
 
 def accounts_create():
@@ -628,6 +616,13 @@ def accounts_patch(username: str):
     # It was a silent no-op (200, old expiry kept — R10 N3). A MISSING key
     # keeps the stored expiry.
     clear_expiry = "expire_at" in body and body["expire_at"] in (None, "")
+    if "balance" in body and body["balance"] in (None, ""):
+        # fix3: GET hides the balance (null) without «رؤية الرصيد» — a client
+        # that echoes the object back means «unchanged», never «set to 0».
+        body = {k: v for k, v in body.items() if k not in ("balance", "balance_hidden")}
+    from ...radius.services.sensitive_visibility import MASK as _PW_MASK
+    if body.get("pppoe_password") == _PW_MASK:
+        body = {k: v for k, v in body.items() if k != "pppoe_password"}   # masked echo
     try:
         new_sub = _apply_body(sub, body)
     except RadiusValidationError as e:
@@ -797,7 +792,28 @@ def accounts_360(username: str):
         payload = Subscriber360Service(tenant_id=_tid()).get_by_username(username)
     except KeyError:
         return fail("not_found", "الحساب غير موجود.", status=404)
-    return ok(_safe_360_payload(payload))
+    safe = _safe_360_payload(payload)
+    from ...radius.services.sensitive_visibility import can_view_balance
+    if not can_view_balance(tenant_id=_tid()):
+        safe = _hide_balance(safe)      # fix3 (F01 F18): «رؤية الرصيد» off
+    return ok(safe)
+
+
+_BALANCE_KEYS = {"balance", "wallet_balance", "current_balance", "balance_before",
+                 "balance_after"}
+
+
+def _hide_balance(value):
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            out[key] = None if str(key).lower() in _BALANCE_KEYS else _hide_balance(item)
+        if "balance" in value:
+            out["balance_hidden"] = True
+        return out
+    if isinstance(value, list):
+        return [_hide_balance(item) for item in value]
+    return value
 
 
 _SENSITIVE_360_KEYS = {

@@ -47,6 +47,10 @@ OWNER_ONLY: dict[str, str] = {
 # منطقٌ لا جدول: الحارس يقبل صاحب المفتاح بدل «المالك فقط». مع حماية التصعيد في
 # المسارات نفسها (لا يُسند دورًا يفوق صلاحياته، ولا يمسّ حسابات المالك/الشركاء).
 SUPER_DELEGABLE: dict[str, str] = {
+    # fix3 (F02 M1 / F01 F15): the web FORMS follow the same keys as their
+    # saves — «مدير عام» (and any admins.create/edit holder) can open them.
+    "admins_new": "admins.create",
+    "admins_edit": "admins.edit",
     "admins_create": "admins.create",
     "admins_update": "admins.edit",
     "admins_delete": "admins.delete",

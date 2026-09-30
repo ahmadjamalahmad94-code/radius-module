@@ -23,7 +23,16 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+# fix3 (F08 H3): money slugs need reports.finance (web parity), not reports.view.
+_MONEY_SLUGS = frozenset({"balance-movements", "cash-transactions"})
+
+
 def operational_report(slug: str):
+    if (slug or "").strip().lower() in _MONEY_SLUGS:
+        from ..access_control import require_web_permission
+        denied = require_web_permission("rep_cash_transactions", "GET")
+        if denied is not None:
+            return denied
     query = (request.args.get("q") or request.args.get("query") or "").strip()
     if len(query) > 120:
         return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from flask import Blueprint, render_template, request, session
 
+from ..services.subscriber_scope import current_scope_admin_id
+
 from ..db.repos import invoices_repo, plans_repo, subscribers_repo, vouchers_repo
 
 _BASE = "/finance/billing"
@@ -53,5 +55,8 @@ def billing_hub():
         # modal's picker (hbsel search filters client-side). The previous
         # limit=500 silently dropped half the base with ~1000 subscribers,
         # so the picker looked incomplete — raise the cap to cover it.
-        subs=subscribers_repo.list_subscribers(tid, limit=2000),
+        # fix3 (F02 M3): the picker lists only the admin's own subscribers.
+        subs=subscribers_repo.list_subscribers(
+            tid, limit=2000,
+            owner_admin_id=current_scope_admin_id(tenant_id=tid)),
     )

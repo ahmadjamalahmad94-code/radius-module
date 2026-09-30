@@ -608,9 +608,23 @@ def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None,
                 link = url
         except Exception:  # noqa: BLE001
             link = ""
+        # fix3 (F01 F9): the bell is per-admin — record WHO the event is about
+        # (subscriber → owner scope), its group and the acting admin.
+        sub_name = ""
+        if spec.group in ("subscribers", "finance"):
+            sub_name = str((context or {}).get("username") or "").strip()
+            if sub_name in ("—", "-"):
+                sub_name = ""
+        try:
+            from .subscriber_scope import request_admin_id
+            actor_id = request_admin_id()
+        except Exception:  # noqa: BLE001
+            actor_id = None
         _notif.notify(
             int(tenant_id), type=ntype, severity=severity,
             title=spec.label, body=body, link=link,
+            subscriber_username=sub_name, audience=spec.group,
+            actor_admin_id=actor_id,
             source="local", source_ref=f"alert:{spec.key}", push=push,
             # MT90 — مفتاح الحدث نفسه هو مفتاح صوته. صفحة الأصوات مُشتقّة من
             # هذا السجلّ، فكلّ تنبيهٍ يُضاف هنا يظهر هناك بلا خطوةٍ إضافيّة.

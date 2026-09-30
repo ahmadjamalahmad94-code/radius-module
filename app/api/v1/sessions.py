@@ -279,9 +279,13 @@ def sessions_online():
     except Exception:  # noqa: BLE001
         pass
 
-    from ..access_control import current_distributor
-    scoped = bool(current_distributor())
-    rows = [asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)]
+    # fix3 (F02 H2): every scoped manager (not only a distributor login) sees
+    # only his own subscribers' live sessions — one set lookup, no per-row query.
+    from ..access_control import subscriber_scope_admin_id
+    from ...radius.services.subscriber_scope import filter_rows as _scope_rows
+    scoped = False
+    rows = _scope_rows([asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)],
+                       key="username", tenant_id=_tid(), scope=subscriber_scope_admin_id())
     accounts = _lookup_accounts(r.get("username") for r in rows)
     mobiles: dict = {}
     if query:

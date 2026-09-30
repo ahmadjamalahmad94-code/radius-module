@@ -150,14 +150,28 @@ def _owner_scope_sql(owner_admin_id: int) -> tuple[str, list]:
     """نطاق مِلكية المدير على المشتركين: مشتركوه المباشرون (manager_id) ∪
     مشتركو موزّعيه (عبر سلسلة المِلكية: subscribers.card_batch_id →
     card_batches.distributor_id → distributors.admin_id). يُستخدَم لقَصْر
-    القائمة والعدّادات خادميًّا حين تكون «عرض كل المشتركين» مُطفأة."""
+    القائمة والعدّادات خادميًّا حين تكون «عرض كل المشتركين» مُطفأة.
+
+    fix3 (F02 H1 / F07 H2): المسند الواحد لكل مسار (ويب + API) — يشمل أيضًا
+      * مشتركين أنشأهم «دخول موزّع» يملكه هذا المدير (manager_id = login_admin_id)،
+      * حسابات بطاقات حِزمه هو (card_batches.manager_id)،
+      * وإن كان الحساب نفسه دخولَ موزّع: الحِزم المُسنَدة إليه (assignments)."""
     clause = (
-        " AND (manager_id = ? OR card_batch_id IN ("
+        " AND (manager_id = ?"
+        " OR manager_id IN (SELECT dl.login_admin_id FROM distributors dl"
+        " WHERE dl.admin_id = ? AND dl.login_admin_id IS NOT NULL)"
+        " OR card_batch_id IN (SELECT cbm.id FROM card_batches cbm WHERE cbm.manager_id = ?)"
+        " OR card_batch_id IN ("
         "SELECT cb.id FROM card_batches cb "
         "JOIN distributors d ON d.tenant_id = cb.tenant_id AND d.id = cb.distributor_id "
-        "WHERE d.admin_id = ?))"
+        "WHERE d.admin_id = ?)"
+        " OR card_batch_id IN ("
+        "SELECT ca.batch_id FROM card_batch_assignments ca "
+        "JOIN distributors da ON da.tenant_id = ca.tenant_id AND da.id = ca.distributor_id "
+        "WHERE ca.status = 'assigned' AND da.status = 'active' AND da.login_admin_id = ?))"
     )
-    return clause, [int(owner_admin_id), int(owner_admin_id)]
+    o = int(owner_admin_id)
+    return clause, [o, o, o, o, o]
 
 
 def subscriber_in_owner_scope(tenant_id: int, *, subscriber_id: int,

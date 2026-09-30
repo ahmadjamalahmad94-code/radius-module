@@ -21,6 +21,13 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _viewer():
+    """fix3 (F01 F9 / F08 M2): the session admin's notification viewer —
+    None for the owner / co-owner (everything, tenant-wide read state)."""
+    from ..services.notifications import current_viewer
+    return current_viewer(_tid())
+
+
 def _ar_unit(n: int, one: str, two: str, few: str, many: str) -> str:
     """Arabic count phrasing (1 / 2 / 3-10 / 11+)."""
     if n == 1:
@@ -94,7 +101,9 @@ def notifications_center():
         return redirect(url_for("radius.auth_login"))
     tid = _tid()
     unread_only = (request.args.get("filter") == "unread")
-    items = notifications_repo.list_for(tid, unread_only=unread_only, limit=200)
+    viewer = _viewer()
+    items = notifications_repo.list_for(tid, unread_only=unread_only, limit=200,
+                                        viewer=viewer)
     # Enrich each row with a friendly relative time + a localized absolute
     # tooltip so the template never has to print the raw ISO timestamp.
     _now = datetime.now(timezone.utc)
@@ -105,9 +114,9 @@ def notifications_center():
     return render_template(
         "radius/notifications_center.html",
         items=items,
-        unread_count=notifications_repo.unread_count(tid),
-        # الإجماليّ الحقيقيّ — القائمة تعرض أحدث 200 فقط (F04 N-L3).
-        total_count=notifications_repo.total_count(tid),
+        unread_count=notifications_repo.unread_count(tid, viewer=viewer),
+        # الإجماليّ الحقيقيّ لما يراه المدير — القائمة تعرض أحدث 200 فقط (F04 N-L3).
+        total_count=notifications_repo.total_count(tid, viewer=viewer),
         list_limit=200,
         unread_only=unread_only,
         provider_messages=provider_messages_repo.list_for(tid, limit=20),
@@ -143,11 +152,13 @@ def notifications_poll():
     if not current_admin():
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     tid = _tid()
-    # التنبيهات الذكية المفتوحة (جرس «مركز التنبيهات»).
+    # التنبيهات الذكية المفتوحة (جرس «مركز التنبيهات») — تنبيهات الراوترات/
+    # النظام: لمن يملك nas.view فقط (fix3 F01 F13، نفس قرار الشريط العلويّ).
     alerts_count, alerts_items = 0, []
     try:
         from ..db.repos import alerts_repo
-        rows = alerts_repo.list_open(tid, limit=50)
+        from ..services.notifications import can_see_router_alerts
+        rows = alerts_repo.list_open(tid, limit=50) if can_see_router_alerts() else []
         alerts_count = len(rows)
         alerts_items = [{
             "id": int(r["id"]),
@@ -160,7 +171,8 @@ def notifications_poll():
     notif_count, notif_items = 0, []
     try:
         from ..services import notifications as notif_svc
-        notif_count = int(notif_svc.unread_count(tid))
+        _v = _viewer()
+        notif_count = int(notif_svc.unread_count(tid, viewer=_v))
         notif_items = [{
             "id": n.get("id"),
             "title": n.get("title") or "",
@@ -171,7 +183,7 @@ def notifications_poll():
             # بلا مفتاح يسقط على صوت النوع ثمّ العامّ ثمّ النغمة.
             "event": n.get("event_key") or "",
             "type": n.get("type") or "",
-        } for n in notif_svc.recent_for_bell(tid, limit=6)]
+        } for n in notif_svc.recent_for_bell(tid, limit=6, viewer=_v)]
     except Exception:  # noqa: BLE001
         notif_count, notif_items = 0, []
     return jsonify({
@@ -217,8 +229,12 @@ def notification_open(notif_id: int):
     if not current_admin():
         return redirect(url_for("radius.auth_login"))
     tid = _tid()
-    notif = notifications_repo.get(tid, notif_id)
-    notifications_repo.mark_read(tid, notif_id)
+    viewer = _viewer()
+    notif = notifications_repo.get(tid, notif_id, viewer=viewer)
+    if notif is None:
+        # not his (another manager's subscriber) — nothing is marked.
+        return redirect(url_for("radius.notifications_center"))
+    notifications_repo.mark_read(tid, notif_id, viewer=viewer)
     target = (notif or {}).get("link") or url_for("radius.notifications_center")
     # روابطنا داخلية نسبية فقط — لا نُحوّل لأي مضيف خارجي.
     if not str(target).startswith("/"):
@@ -229,7 +245,10 @@ def notification_open(notif_id: int):
 def notification_read(notif_id: int):
     if not current_admin():
         return redirect(url_for("radius.auth_login"))
-    notifications_repo.mark_read(_tid(), notif_id)
+    if not notifications_repo.mark_read(_tid(), notif_id, viewer=_viewer()) \
+            and notifications_repo.get(_tid(), notif_id, viewer=_viewer()) is None:
+        flash("الإشعار غير موجود.", "error")
+        return redirect(url_for("radius.notifications_center"))
     flash("تم تعليم الإشعار كمقروء.", "success")
     return redirect(request.referrer or url_for("radius.notifications_center"))
 
@@ -237,7 +256,8 @@ def notification_read(notif_id: int):
 def notifications_read_all():
     if not current_admin():
         return redirect(url_for("radius.auth_login"))
-    n = notifications_repo.mark_all_read(_tid())
+    # F08 M2: only the notifications THIS admin can see, for him alone.
+    n = notifications_repo.mark_all_read(_tid(), viewer=_viewer())
     flash(f"تم تعليم {n} إشعارًا كمقروء." if n else "لا إشعارات غير مقروءة.",
           "success" if n else "info")
     return redirect(request.referrer or url_for("radius.notifications_center"))

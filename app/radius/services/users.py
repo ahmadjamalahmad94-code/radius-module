@@ -185,7 +185,16 @@ class UsersService:
         return self._adapter.get_account(username)
 
     @atomic  # the «name free?» check and the insert under ONE write lock
-    def create(self, *, actor: str, sub: Subscriber) -> Subscriber:
+    def create(self, *, actor: str, sub: Subscriber,
+               creator_admin_id: Optional[int] = None) -> Subscriber:
+        # F02 H1 / F07 H1: every create path (web, API/app, import) stamps the
+        # creating non-owner admin as «المدير المسؤول» — he never loses sight of
+        # what he just created. ``creator_admin_id`` None = the request's admin.
+        from .subscriber_scope import creator_manager_id
+        _mid = creator_manager_id(sub.manager_id, creator_admin_id=creator_admin_id,
+                                  tenant_id=getattr(sub, "tenant_id", 1) or 1)
+        if _mid != sub.manager_id:
+            sub = replace(sub, manager_id=_mid)
         _validate(sub)
         # نفس قاعدة إعادة التسمية: اسم الدخول مفتاح RADIUS — الإنشاء كان يقبل
         # مسافات/عربيًّا/إيموجي/«/» (والأخير يجعل الحساب غير قابل للوصول عبر
@@ -248,6 +257,11 @@ class UsersService:
             existing = self._adapter.get_account(sub.username)
         except Exception:  # noqa: BLE001 — lookup failure must not break update
             existing = None
+        if base is not None and existing is None:
+            # F01 F3: the caller edited a row that is gone now (archived or
+            # renamed meanwhile) — an edit never re-creates / un-deletes it.
+            raise RadiusConflict(
+                "المشترك حُذف أو أُعيدت تسميته بعد فتح النموذج — لم يُحفَظ شيء.")
         changed: Optional[set] = None
         if base is not None and existing is not None:
             changed = _changed_fields(base, sub)

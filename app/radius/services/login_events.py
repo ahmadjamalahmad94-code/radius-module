@@ -435,7 +435,28 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
             if rc not in _PW_REASON_CODES:
                 r["attempted_password"] = ""
                 r["pw_status"] = "none"
-    return rows
+    return _scoped_rows(tenant_id, rows)
+
+
+def _scoped_rows(tenant_id: int, rows: list[dict]) -> list[dict]:
+    """fix3 (F02 H2): a manager without «عرض كل المشتركين» sees the logins of
+    HIS subscribers/cards and his own panel logins — not the network's."""
+    from .subscriber_scope import (accessible_usernames, admin_actor_labels,
+                                   current_scope_admin_id)
+    scope = current_scope_admin_id(tenant_id=int(tenant_id))
+    if scope is None:
+        return rows
+    mine = set(admin_actor_labels(int(scope)))
+    allowed = accessible_usernames(int(scope), tenant_id=int(tenant_id))
+    out = []
+    for r in rows:
+        name = str(r.get("username") or "")
+        if r.get("actor_type") == "admin":
+            if name in mine:
+                out.append(r)
+        elif name in allowed:
+            out.append(r)
+    return out
 
 
 def _today_prefix() -> str:

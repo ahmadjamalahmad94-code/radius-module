@@ -176,6 +176,9 @@ class DashboardReportsService:
         return created
 
     def list_archives(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        if self._scope_id() is not None:
+            # frozen NETWORK-wide snapshots — never shown to a scoped manager.
+            return []
         rows = db().execute(
             """
             SELECT * FROM report_archive_snapshots
@@ -230,10 +233,29 @@ class DashboardReportsService:
         ).fetchone()
         return self._archive_row(row_to_dict(row)) if row else {}
 
+    # ── fix3 (F02 H2 / F01 F8 / F08 H3): the request admin's scope ──────────
+    def _scope_id(self):
+        """None = sees everything; else the manager whose data is shown."""
+        from .subscriber_scope import current_scope_admin_id
+        return current_scope_admin_id(tenant_id=self.tenant_id)
+
+    def _table_scope(self, table: str) -> tuple[str, list[Any]]:
+        if table == "subscribers":
+            scope = self._scope_id()
+            if scope is None:
+                return "", []
+            from .subscriber_scope import owner_scope_clause
+            return owner_scope_clause(int(scope), tenant_id=self.tenant_id)
+        if table == "cards":
+            from .card_batch_scope import batch_scope_sql
+            return batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
+        return "", []
+
     def _count(self, table: str, where: str = "1=1", params: tuple[Any, ...] = ()) -> int:
+        sc, sv = self._table_scope(table)
         row = db().execute(
-            f"SELECT COUNT(*) AS c FROM {table} WHERE tenant_id=? AND {where}",
-            (self.tenant_id, *params),
+            f"SELECT COUNT(*) AS c FROM {table} WHERE tenant_id=? AND {where}" + sc,
+            (self.tenant_id, *params, *sv),
         ).fetchone()
         return int(row["c"] or 0)
 
@@ -243,7 +265,8 @@ class DashboardReportsService:
         try:
             from ..db.repos import subscribers_repo
             return int(subscribers_repo.count_subscribers(
-                self.tenant_id, user_type="subscriber", status=status))
+                self.tenant_id, user_type="subscriber", status=status,
+                owner_admin_id=self._scope_id()))
         except Exception:  # noqa: BLE001
             return 0
 
@@ -323,14 +346,24 @@ class DashboardReportsService:
         return self._count("subscribers", "deleted_at IS NULL AND balance < 0")
 
     def _subscriber_debt_amount(self) -> float:
+        sc, sv = self._table_scope("subscribers")
         row = db().execute(
-            "SELECT COALESCE(SUM(ABS(balance)),0) AS total FROM subscribers WHERE tenant_id=? AND deleted_at IS NULL AND balance < 0",
-            (self.tenant_id,),
+            "SELECT COALESCE(SUM(ABS(balance)),0) AS total FROM subscribers WHERE tenant_id=? AND deleted_at IS NULL AND balance < 0" + sc,
+            (self.tenant_id, *sv),
         ).fetchone()
         return round(float(row["total"] or 0), 2)
 
     def _online_count(self) -> int:
         # المصدر نفسه للوحة والـAPI: جلسات مشتركين/كروت حقيقيّين فقط.
+        scope = self._scope_id()
+        if scope is not None:
+            from .subscriber_scope import scope_sql
+            sc, sv = scope_sql("username", scope=int(scope), tenant_id=self.tenant_id,
+                               use_request=False)
+            row = db().execute(
+                "SELECT COUNT(DISTINCT username) AS c FROM radacct WHERE tenant_id=? "
+                "AND acctstoptime IS NULL" + sc, (self.tenant_id, *sv)).fetchone()
+            return int(row["c"] or 0)
         from .dashboard_metrics import get_online_count
         return int(get_online_count(self.tenant_id))
 
@@ -344,48 +377,64 @@ class DashboardReportsService:
         )
 
     def _connected_cards(self) -> int:
+        from .card_batch_scope import batch_scope_sql
+        bsc, bsv = batch_scope_sql(column="c.batch_id", tenant_id=self.tenant_id)
         row = db().execute(
             """
             SELECT COUNT(DISTINCT c.id) AS c
             FROM cards c
             JOIN radacct a ON a.tenant_id=c.tenant_id AND a.username=c.username AND a.acctstoptime IS NULL
             WHERE c.tenant_id=? AND c.used=1 AND c.revoked=0
-            """,
-            (self.tenant_id,),
+            """ + bsc,
+            (self.tenant_id, *bsv),
         ).fetchone()
         return int(row["c"] or 0)
 
     def _cards_sold_for_period(self, period: str) -> int:
+        from .card_batch_scope import batch_scope_sql
+        bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
         row = db().execute(
             """
             SELECT COUNT(*) AS c FROM cards
             WHERE tenant_id=? AND used=1 AND first_used_at IS NOT NULL
               AND substr(first_used_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
+            """ + bsc,
+            (self.tenant_id, len(period), period, *bsv),
         ).fetchone()
         return int(row["c"] or 0)
 
+    def _distributor_scope(self, column: str) -> tuple[str, list[Any]]:
+        scope = self._scope_id()
+        if scope is None:
+            return "", []
+        return (f" AND {column} IN (SELECT id FROM distributors WHERE admin_id = ? "
+                "OR login_admin_id = ?)", [int(scope), int(scope)])
+
     def _profit_share_total(self, beneficiary_type: str) -> float:
+        dsc, dsv = self._distributor_scope("beneficiary_id")
         row = db().execute(
             """
             SELECT COALESCE(SUM(share_amount_minor),0) AS total
             FROM profit_shares
             WHERE tenant_id=? AND beneficiary_type=? AND status IN ('posted','pending')
-            """,
-            (self.tenant_id, beneficiary_type),
+            """ + dsc,
+            (self.tenant_id, beneficiary_type, *dsv),
         ).fetchone()
         return _money(row["total"])
 
     def _alerts(self) -> list[dict[str, Any]]:
+        from .subscriber_scope import entity_scope_sql
+        esc, esv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                    actor_id_col="actor_id", tenant_id=self.tenant_id)
         rows = db().execute(
             """
             SELECT severity, event_key, message, created_at
             FROM business_events
             WHERE tenant_id=? AND severity IN ('warning','error','critical')
+            """ + esc + """
             ORDER BY id DESC LIMIT 10
             """,
-            (self.tenant_id,),
+            (self.tenant_id, *esv),
         ).fetchall()
         return [row_to_dict(row) for row in rows]
 
@@ -418,10 +467,11 @@ class DashboardReportsService:
                    COALESCE(SUM(share_amount_minor),0) AS share_total_minor
             FROM profit_shares
             WHERE tenant_id=? AND beneficiary_type='distributor'
+            """ + self._distributor_scope("beneficiary_id")[0] + """
             GROUP BY beneficiary_id
             ORDER BY share_total_minor DESC
             """,
-            (self.tenant_id,),
+            (self.tenant_id, *self._distributor_scope("beneficiary_id")[1]),
         ).fetchall()
         return [
             {

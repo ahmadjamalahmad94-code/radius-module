@@ -26,6 +26,13 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", 1))
 
 
+def _viewer():
+    """fix3 (F01 F9 / F08 M2): the notifications the token's admin may see and
+    his own read state — None (tenant-wide) for owner-level / unbound tokens."""
+    from ...radius.services.notifications import current_viewer
+    return current_viewer(_tid())
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/notifications", "notifications_list",
                     require_api_token(list_notifications), methods=["GET"])
@@ -69,14 +76,15 @@ def list_notifications():
         before_id = _clamp(raw_before, 1, 2**62, None)
         if before_id is None:
             return fail("validation_error", "قيمة before_id يجب أن تكون رقمًا صحيحًا.", status=422)
+    viewer = _viewer()
     rows = notifications_repo.list_for(
         tid, unread_only=unread_only, limit=limit + 1, offset=offset,
-        before_id=before_id)
+        before_id=before_id, viewer=viewer)
     has_more = len(rows) > limit
     items = rows[:limit]
     return ok({
         "items": items,
-        "unread_count": notifications_repo.unread_count(tid),
+        "unread_count": notifications_repo.unread_count(tid, viewer=viewer),
         "limit": limit,
         "offset": offset,
         "before_id": before_id,
@@ -87,12 +95,12 @@ def list_notifications():
 
 def get_unread_count():
     """GET /notifications/unread-count — cheap poll for the bell badge."""
-    return ok({"unread_count": notifications_repo.unread_count(_tid())})
+    return ok({"unread_count": notifications_repo.unread_count(_tid(), viewer=_viewer())})
 
 
 def get_notification(notif_id: int):
     """GET /notifications/<id> — single notification."""
-    notif = notifications_repo.get(_tid(), int(notif_id))
+    notif = notifications_repo.get(_tid(), int(notif_id), viewer=_viewer())
     if not notif:
         return fail("not_found", "الإشعار غير موجود.", status=404)
     return ok(notif)
@@ -101,17 +109,22 @@ def get_notification(notif_id: int):
 def mark_read(notif_id: int):
     """POST /notifications/<id>/read — mark one read (idempotent)."""
     tid = _tid()
-    if not notifications_repo.get(tid, int(notif_id)):
+    viewer = _viewer()
+    if not notifications_repo.get(tid, int(notif_id), viewer=viewer):
         return fail("not_found", "الإشعار غير موجود.", status=404)
-    notifications_repo.mark_read(tid, int(notif_id))
-    return ok({"id": int(notif_id), "unread_count": notifications_repo.unread_count(tid)})
+    notifications_repo.mark_read(tid, int(notif_id), viewer=viewer)
+    return ok({"id": int(notif_id),
+               "unread_count": notifications_repo.unread_count(tid, viewer=viewer)})
 
 
 def mark_all_read():
     """POST /notifications/read-all — mark every unread notification read."""
     tid = _tid()
-    count = notifications_repo.mark_all_read(tid)
-    return ok({"marked": count, "unread_count": notifications_repo.unread_count(tid)})
+    viewer = _viewer()
+    # F08 M2: a limited manager marks only what HE sees, for himself.
+    count = notifications_repo.mark_all_read(tid, viewer=viewer)
+    return ok({"marked": count,
+               "unread_count": notifications_repo.unread_count(tid, viewer=viewer)})
 
 
 __all__ = ["register"]
