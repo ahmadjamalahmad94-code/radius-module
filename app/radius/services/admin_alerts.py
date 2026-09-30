@@ -707,6 +707,14 @@ def render(key: str, context: dict | None = None) -> str:
     if not spec:
         return ""
     ctx = _SafeDict({k: ("" if v is None else v) for k, v in (context or {}).items()})
+    # F08-L: الفاعل الخام («api-token:78») → «تطبيق — <المدير>» في كلّ القنوات
+    # (الجرس/الدفع/تلجرام) — لا رمز داخليّ في نصّ يقرؤه المالك.
+    if ctx.get("actor"):
+        try:
+            from .actor_names import actor_display
+            ctx["actor"] = actor_display(ctx["actor"])
+        except Exception:  # noqa: BLE001 — التنسيق لا يكسر الإرسال أبدًا
+            pass
     try:
         body = spec.template.format_map(ctx)
     except Exception:  # noqa: BLE001 — قالب لا يكسر الإرسال أبدًا

@@ -95,10 +95,10 @@
     {{ _('تلجرام غير مُفعّل — لن يصلك إشعار فوري على جوالك عند انقطاع أو عودة جهاز. '
           'تظهر التنبيهات حاليًا في مركز الإشعارات (الجرس) فقط.') }}
   </span>
-  <a class="hub-btn hub-btn--primary hub-btn--sm"
+  {% if can_submit('radius.admin_alerts_page', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm"
      href="{{ url_for('radius.admin_alerts_page') if endpoint_exists('radius.admin_alerts_page') else '#' }}">
     <i class="fa-solid fa-bell"></i> {{ _('فعّل تنبيهات تلجرام') }}
-  </a>
+  </a>{% endif %}
 </div>
 {% endif %}
 

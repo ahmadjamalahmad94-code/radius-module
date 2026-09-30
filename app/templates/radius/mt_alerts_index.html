@@ -101,12 +101,12 @@
           <tr data-mt-alert-row="{{ a.id }}">
             {# عنوان التنبيه نفسه رابط لصفحة التفاصيل — وليس زر «التفاصيل» فقط #}
             <td>
-              <a href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+              {% if can_submit('radius.mt_alerts_detail', 'GET') %}<a href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
                  style="text-decoration:none"
                  onmouseover="this.firstElementChild.style.textDecoration='underline'"
-                 onmouseout="this.firstElementChild.style.textDecoration='none'">
+                 onmouseout="this.firstElementChild.style.textDecoration='none'">{% endif %}
                 <strong style="color:var(--hub-text)">{{ a.title_ar }}</strong>
-              </a>
+              {% if can_submit('radius.mt_alerts_detail', 'GET') %}</a>{% endif %}
             </td>
             <td>
               {% if a.severity == 'critical' %}
@@ -123,11 +123,11 @@
             <td class="mono small">{{ a.rule }}</td>
             <td class="mono small">{{ a.last_seen|dt_local }}</td>
             <td>
-              <a class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('التفاصيل') }}"
+              {% if can_submit('radius.mt_alerts_detail', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('التفاصيل') }}"
                  href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
                  data-mt-alert-detail="{{ a.id }}">
                 <i class="fa-solid fa-eye"></i> {{ _('التفاصيل') }}
-              </a>
+              </a>{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -148,7 +148,7 @@
 {# ───────────── floating: smart-alerts settings ───────────── #}
 <div class="sa-modal" data-sa-modal hidden>
   <div class="sa-backdrop" data-sa-close></div>
-  <form class="sa-dialog" method="post" action="{{ url_for('radius.mt_alerts_settings_save') }}" role="dialog" aria-modal="true">
+  <form class="sa-dialog" method="post" action="{{ url_for('radius.mt_alerts_settings_save') }}" role="dialog" aria-modal="true">{% if not can_submit('radius.mt_alerts_settings_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <div class="sa-head">
       <h3><i class="fa-solid fa-gear"></i> {{ _('إعدادات التنبيهات الذكية') }}</h3>
       <button type="button" class="sa-x" data-sa-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -157,9 +157,9 @@
       <div class="sa-note">
         <i class="fa-solid fa-circle-info"></i>
         {{ _('الكشف يعتمد على دفع الراوتر لمقاييسه كل دقيقتين.') }}
-        <a href="{{ url_for('radius.mt_metrics_setup') }}">{{ _('إعداد عميل المقاييس على الراوتر ←') }}</a>
+        {% if can_submit('radius.mt_metrics_setup', 'GET') %}<a href="{{ url_for('radius.mt_metrics_setup') }}">{% endif %}{{ _('إعداد عميل المقاييس على الراوتر ←') }}{% if can_submit('radius.mt_metrics_setup', 'GET') %}</a>{% endif %}
         &nbsp;·&nbsp;
-        <a href="{{ url_for('radius.mt_loop_setup') }}">{{ _('تتبّع اللوب (الحلقات) ←') }}</a>
+        {% if can_submit('radius.mt_loop_setup', 'GET') %}<a href="{{ url_for('radius.mt_loop_setup') }}">{% endif %}{{ _('تتبّع اللوب (الحلقات) ←') }}{% if can_submit('radius.mt_loop_setup', 'GET') %}</a>{% endif %}
       </div>
 
       <div class="sa-card">
@@ -230,7 +230,7 @@
       <button type="button" class="hub-btn hub-btn--ghost" data-sa-close>{{ _('إغلاق') }}</button>
       <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
     </div>
-  </form>
+  {% if not can_submit('radius.mt_alerts_settings_save') %}</fieldset>{% endif %}</form>
 </div>
 
 <style>

@@ -23,7 +23,7 @@
   "مركز التقارير",
   subtitle="بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية، وأرشيف لقطات ثابتة لا تُعاد كتابتها.",
   icon="chart-line",
-  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> '|safe ~ _("الأرشيف") ~ '</a>'|safe)|safe,
+  actions_html=_report_jump ~ (('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> '|safe ~ _("الأرشيف") ~ '</a>'|safe if can_submit('radius.reports_archive', 'GET') else ''))|safe,
   kpis=[
     {'label': 'المشتركون', 'value': summary.subscribers.total,  'icon': 'users',   'variant': 'blue'},
     {'label': 'المتصلون الآن', 'value': summary.subscribers.online, 'icon': 'wifi',    'variant': 'green'},
@@ -42,7 +42,7 @@
   {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
   {# زر مسح الفترة — يظهر فقط عند وجود فلتر فعّال، توحيدًا مع صفحة التقرير التفصيلي #}
   {% if summary.filters.date_from or summary.filters.date_to %}
-    {{ hub.btn("مسح الفترة", href=url_for('radius.reports_home'), icon="rotate-left", variant="ghost", size="sm") }}
+    {% if can_submit('radius.reports_home', 'GET') %}{{ hub.btn("مسح الفترة", href=url_for('radius.reports_home'), icon="rotate-left", variant="ghost", size="sm") }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="اختيار فترة يعيد حساب الإيرادات والمؤشرات للفترة المحددة فقط — بلا أي تعديل على التاريخ المالي المخزّن."><i class="fa-solid fa-info"></i></span>
@@ -84,10 +84,10 @@
                          icon="users", href=summary.drilldowns.subscribers_total, variant="brand") }}
       {{ hub.action_card("المتصلون الآن", sub="الجلسات النشطة لحظة بلحظة",
                          icon="wifi", href=summary.drilldowns.online_users, variant="green") }}
-      {{ hub.action_card("حالة دخول المشتركين", sub="آخر دخول وآخر ظهور لكل مشترك",
-                         icon="right-to-bracket", href=url_for('radius.rep_login_status'), variant="blue") }}
-      {{ hub.action_card("أحداث المشتركين", sub="سجل عمليات التعديل والتمديد",
-                         icon="clock-rotate-left", href=url_for('radius.rep_user_events'), variant="grey") }}
+      {% if can_submit('radius.rep_login_status', 'GET') %}{{ hub.action_card("حالة دخول المشتركين", sub="آخر دخول وآخر ظهور لكل مشترك",
+                         icon="right-to-bracket", href=url_for('radius.rep_login_status'), variant="blue") }}{% endif %}
+      {% if can_submit('radius.rep_user_events', 'GET') %}{{ hub.action_card("أحداث المشتركين", sub="سجل عمليات التعديل والتمديد",
+                         icon="clock-rotate-left", href=url_for('radius.rep_user_events'), variant="grey") }}{% endif %}
     </div>
   {% endcall %}
   {% endif %}
@@ -105,11 +105,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>{{ _('المشتركون النشطون') }}</td><td class="num mono">{{ summary.subscribers.active }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_active }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
-          <tr><td>{{ _('المشتركون المعطلون') }}</td><td class="num mono">{{ summary.subscribers.disabled }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_disabled }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
-          <tr><td>{{ _('المستخدمون المتصلون') }}</td><td class="num mono">{{ summary.subscribers.online }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.online_users }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
-          <tr><td>{{ _('البطاقات غير المستخدمة') }}</td><td class="num mono">{{ summary.cards.unused }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.cards_unused }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
-          <tr><td>{{ _('التقارير المالية') }}</td><td class="num mono">{{ summary.finance.revenue_year }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.financial_reports }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
+          <tr><td>{{ _('المشتركون النشطون') }}</td><td class="num mono">{{ summary.subscribers.active }}</td><td>{% if can_open(summary.drilldowns.subscribers_active) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_active }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a>{% endif %}</td></tr>
+          <tr><td>{{ _('المشتركون المعطلون') }}</td><td class="num mono">{{ summary.subscribers.disabled }}</td><td>{% if can_open(summary.drilldowns.subscribers_disabled) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_disabled }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a>{% endif %}</td></tr>
+          <tr><td>{{ _('المستخدمون المتصلون') }}</td><td class="num mono">{{ summary.subscribers.online }}</td><td>{% if can_open(summary.drilldowns.online_users) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.online_users }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a>{% endif %}</td></tr>
+          <tr><td>{{ _('البطاقات غير المستخدمة') }}</td><td class="num mono">{{ summary.cards.unused }}</td><td>{% if can_open(summary.drilldowns.cards_unused) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.cards_unused }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a>{% endif %}</td></tr>
+          <tr><td>{{ _('التقارير المالية') }}</td><td class="num mono">{{ summary.finance.revenue_year }}</td><td>{% if can_open(summary.drilldowns.financial_reports) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.financial_reports }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a>{% endif %}</td></tr>
         </tbody>
       </table>
     </div>

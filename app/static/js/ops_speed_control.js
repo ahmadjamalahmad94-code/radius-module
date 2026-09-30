@@ -319,7 +319,9 @@
   });
   bindClick("[data-action='save']", function () { save(false); });
   bindClick("[data-action='apply']", function () {
-    if (window.confirm("تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟")) save(true);
+    var _amsg = "تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟";
+    /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
+    (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _amsg}) : Promise.resolve(window.confirm(_amsg))).then(function (yes) { if (yes) save(true); });
   });
 
   function bindClick(sel, fn) {

@@ -32,23 +32,23 @@
 @media (prefers-reduced-motion:reduce){.nnav-live-dot{animation:none}}
 </style>
 <nav class="nnav" data-testid="network-ops-nav">
-  <a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة الراوترات') }}</a>
-  <a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}"><i class="fa-solid fa-diagram-project"></i> {{ _('خريطة الشبكة') }}</a>
-  <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مركز المشاكل') }}</a>
-  <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}</a>
-  <a class="{{ 'is-active' if _sstp }}" href="{{ url_for('radius.mt_sstp_users') }}"><i class="fa-solid fa-key"></i> {{ _('حسابات نفق SSTP/PPTP') }}</a>
-  <a class="{{ 'is-active' if _wg }}" href="{{ url_for('radius.mt_wg_peers') }}"><i class="fa-solid fa-shield-halved"></i> {{ _('اتصالات WireGuard') }}</a>
+  {% if can_submit('radius.mt_operations', 'GET') %}<a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}">{% endif %}<i class="fa-solid fa-sliders"></i> {{ _('إدارة الراوترات') }}{% if can_submit('radius.mt_operations', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.mt_topology', 'GET') %}<a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}">{% endif %}<i class="fa-solid fa-diagram-project"></i> {{ _('خريطة الشبكة') }}{% if can_submit('radius.mt_topology', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.mt_problems_index', 'GET') %}<a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}">{% endif %}<i class="fa-solid fa-triangle-exclamation"></i> {{ _('مركز المشاكل') }}{% if can_submit('radius.mt_problems_index', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.diagnostics', 'GET') %}<a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}">{% endif %}<i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}{% if can_submit('radius.diagnostics', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.mt_sstp_users', 'GET') %}<a class="{{ 'is-active' if _sstp }}" href="{{ url_for('radius.mt_sstp_users') }}">{% endif %}<i class="fa-solid fa-key"></i> {{ _('حسابات نفق SSTP/PPTP') }}{% if can_submit('radius.mt_sstp_users', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.mt_wg_peers', 'GET') %}<a class="{{ 'is-active' if _wg }}" href="{{ url_for('radius.mt_wg_peers') }}">{% endif %}<i class="fa-solid fa-shield-halved"></i> {{ _('اتصالات WireGuard') }}{% if can_submit('radius.mt_wg_peers', 'GET') %}</a>{% endif %}
   {% if is_super_admin %}
   {% set _remote_active = mt_active_remote_count() if mt_active_remote_count is defined else 0 %}
-  <a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"
+  {% if can_submit('radius.mt_remote_sessions', 'GET') %}<a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"
      data-mt-remote-active="{{ _remote_active }}"
-     {% if _remote_active %}title="{{ _('جلسة وصول بعيد مفتوحة الآن') }}: {{ _remote_active }}"{% endif %}>
+     {% if _remote_active %}title="{{ _('جلسة وصول بعيد مفتوحة الآن') }}: {{ _remote_active }}"{% endif %}>{% endif %}
     <i class="fa-solid fa-network-wired"></i> {{ _('الوصول البعيد') }}
     {% if _remote_active %}<span class="nnav-live"><span class="nnav-live-dot" aria-hidden="true"></span><span class="nnav-live-badge" data-mt-remote-badge>{{ _remote_active }}</span></span>{% endif %}
-  </a>{% endif %}
+  {% if can_submit('radius.mt_remote_sessions', 'GET') %}</a>{% endif %}{% endif %}
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
      المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في
      blueprint.py). لإعادته: أزل التعليق عن السطر التالي. #}
-  {# <a class="nnav-ghost" href="{{ url_for('radius.setup_wizard_page') }}" title="عرض الإعداد الهندسي وأدوات الاسترجاع"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _("الإعداد الهندسي") }}</a> #}
+  {# {% if can_submit('radius.setup_wizard_page', 'GET') %}<a class="nnav-ghost" href="{{ url_for('radius.setup_wizard_page') }}" title="عرض الإعداد الهندسي وأدوات الاسترجاع"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _("الإعداد الهندسي") }}</a>{% endif %} #}
 </nav>

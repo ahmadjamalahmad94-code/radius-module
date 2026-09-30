@@ -354,6 +354,11 @@ def apply_temp_speed(
     # «0 = غير محدود» على أي اتجاه (يطابق المرجع): MikroTik يعامل 0 كـ unlimited
     # في الـ simple queue. أي قيمة موجبة أقل من الحد الأدنى تُرفض (أقل من 64k
     # يساوي عمليًا قطع الخدمة). قيمة سالبة تُرفض أيضًا عبر الشرط نفسه.
+    # F08-L: 0/0 = «بلا تقييد» في الاتجاهين — سرعةٌ مؤقتة بلا سرعة لا معنى لها
+    # (كانت تُفعَّل علَمًا بلا سرعة ولا نهاية). ويب/API/تطبيق عبر هذه الخدمة.
+    if down_kbps <= 0 and up_kbps <= 0:
+        raise ValueError("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                         "فلا تُفعَّل بها سرعة مؤقتة.")
     if (down_kbps and down_kbps < _MIN_KBPS) or (up_kbps and up_kbps < _MIN_KBPS):
         raise ValueError(f"السرعة يجب أن تكون 0 (غير محدود) أو {_MIN_KBPS} كيلوبت فأكثر")
     if down_kbps > _MAX_KBPS or up_kbps > _MAX_KBPS:

@@ -21,9 +21,9 @@
 
 {# ───── Unified hero: title + subtitle + save/deliveries actions ───── #}
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.wh_deliveries') }}">
+  {% if can_submit('radius.wh_deliveries', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.wh_deliveries') }}">
     <i class="fa-solid fa-list-check"></i> {{ _('سجل الإرسال') }}
-  </a>
+  </a>{% endif %}
   <button class="hub-btn hub-btn--primary" type="submit" form="wh-settings-form">
     <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
   </button>
@@ -90,7 +90,7 @@
   </div>
 
   {# ───── Settings form ───── #}
-  <form method="post" id="wh-settings-form" class="hr-form-card">
+  <form method="post" id="wh-settings-form" class="hr-form-card">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {% call hub.section("إعدادات الربط", icon="sliders") %}
 
@@ -142,13 +142,13 @@
         <button type="submit" class="hub-btn hub-btn--primary">
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
         </button>
-        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}">
+        {% if can_submit('radius.wh_deliveries', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}">
           <i class="fa-solid fa-list-check"></i> {{ _('فتح سجل الإرسال') }}
-        </a>
+        </a>{% endif %}
       </div>
 
     {% endcall %}
-  </form>
+  {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
   {# ───── Events that get sent ───── #}
   {% call hub.section("ماذا يُرسَل؟", icon="paper-plane") %}

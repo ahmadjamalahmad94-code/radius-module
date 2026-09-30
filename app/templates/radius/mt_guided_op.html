@@ -121,13 +121,13 @@
           <div style="font-weight:600;font-size:14px">{{ s.label_ar }}</div>
           <div class="hub-text-mute" style="font-size:13px;margin-top:2px">{{ s.detail_ar }}</div>
           {% if s.href %}
-          <a class="hub-btn hub-btn--secondary hub-btn--sm"
+          {% if can_open(s.href) %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
              href="{{ s.href }}"
              data-mt-guided-step-link
              style="margin-top:8px">
             <i class="fa-solid fa-arrow-up-right-from-square"></i>
             {{ _('افتح') }}
-          </a>
+          </a>{% endif %}
           {% endif %}
         </div>
       </li>
@@ -143,12 +143,12 @@
         مشكلة موضّحة أعلاه.
       </p>
       {% else %}
-      <a class="hub-btn hub-btn--primary"
+      {% if can_open(checklist.apply_href) %}<a class="hub-btn hub-btn--primary"
          href="{{ checklist.apply_href }}"
          data-mt-guided-proceed>
         <i class="fa-solid fa-circle-play"></i>
         {{ _('متابعة إلى تنفيذ العملية') }}
-      </a>
+      </a>{% endif %}
       {% endif %}
     </div>
 

@@ -78,7 +78,7 @@
             <td class="mono">{{ s.started_at.strftime('%Y-%m-%d %H:%M') if s.started_at else "—" }}</td>
             <td class="mono">↑ {{ s.bytes_in }} / ↓ {{ s.bytes_out }}</td>
             <td>
-              <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+              {% if can_submit('radius.online_disconnect', 'POST') %}<form method="post" action="{{ url_for('radius.online_disconnect') }}"
                     onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
                     style="display:inline">
                 <input type="hidden" name="username" value="{{ s.username }}">
@@ -88,7 +88,7 @@
                                padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600">
                   <i class="fa-solid fa-plug-circle-xmark"></i> قطع
                 </button>
-              </form>
+              </form>{% endif %}
             </td>
           </tr>
           {% endfor %}

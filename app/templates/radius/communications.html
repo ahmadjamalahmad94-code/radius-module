@@ -80,8 +80,8 @@
   subtitle="نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.",
   icon="satellite-dish",
   actions_html=(
-    '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe
-    ~ '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة سريعة") ~ '</a>'|safe
+    ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else '')
+    ~ ('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة سريعة") ~ '</a>'|safe if can_submit('radius.communications_send', 'GET') else '')
   ),
   kpis=[
     {'label': 'القدرات المفعّلة', 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': 'مفعّلة الآن'},
@@ -113,7 +113,7 @@
 
   {# ════════ QUICK-SEND (one-tap) ════════ #}
   {% call hub.section("إرسال رسالة سريعة", icon="bolt") %}
-    <form class="oc-send" method="post" action="{{ url_for('radius.communications_send') }}" data-testid="oc-quicksend">
+    {% if can_submit('radius.communications_send', 'POST') %}<form class="oc-send" method="post" action="{{ url_for('radius.communications_send') }}" data-testid="oc-quicksend">
       {{ csrf_token_input() }}
       <input type="hidden" name="target" value="subscriber">
       <input type="hidden" name="send_now" value="1">
@@ -142,49 +142,49 @@
       <div class="oc-send-foot">
         <button type="submit" class="oc-send-btn"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال الآن') }}</button>
         <span class="oc-send-note">{{ _('تذهب للمعاينة ثم الإرسال. لإرسال موجّه لشريحة محدّدة استخدم') }}
-          <a href="{{ url_for('radius.communications_send') }}">{{ _('صفحة الإرسال الكاملة') }}</a>.</span>
+          {% if can_submit('radius.communications_send', 'GET') %}<a href="{{ url_for('radius.communications_send') }}">{% endif %}{{ _('صفحة الإرسال الكاملة') }}{% if can_submit('radius.communications_send', 'GET') %}</a>{% endif %}.</span>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ════════ BIG QUICK-ACTION TILES ════════ #}
   {% call hub.section("إجراءات سريعة", icon="bolt", meta="كل قسم بكبسة زر") %}
     <div class="oc-actions" data-testid="oc-actions">
-      <a class="oc-act" href="{{ url_for('radius.communications_channels') }}">
+      {% if can_submit('radius.communications_channels', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_channels') }}">{% endif %}
         <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('قنوات الإرسال') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_bot') }}">
+      {% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_bot', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_bot') }}">{% endif %}
         <span class="oc-act-ic green"><i class="fa-solid fa-robot"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('بوت واتساب') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('ردود ذاتية على المشتركين: الرصيد، الباقة، معلومات الحساب.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_notifications') }}">
+      {% if can_submit('radius.communications_bot', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_notifications', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_notifications') }}">{% endif %}
         <span class="oc-act-ic amber"><i class="fa-solid fa-bell"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('الإشعارات الحدثية') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_templates') }}">
+      {% if can_submit('radius.communications_notifications', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_templates', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_templates') }}">{% endif %}
         <span class="oc-act-ic blue"><i class="fa-solid fa-file-lines"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('القوالب') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('قوالب رسائل جاهزة بمتغيّرات تُملأ تلقائيًا عند الإرسال.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_send') }}">
+      {% if can_submit('radius.communications_templates', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_send', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_send') }}">{% endif %}
         <span class="oc-act-ic"><i class="fa-solid fa-paper-plane"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('إرسال رسالة') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('إرسال موجّه لشريحة من المشتركين مع معاينة قبل الإرسال.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_deliveries') }}">
+      {% if can_submit('radius.communications_send', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_deliveries', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_deliveries') }}">{% endif %}
         <span class="oc-act-ic slate"><i class="fa-solid fa-truck-fast"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('سجل الإرسال') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.') }}</div></div>
-      </a>
-      <a class="oc-act" href="{{ url_for('radius.communications_guide') }}">
+      {% if can_submit('radius.communications_deliveries', 'GET') %}</a>{% endif %}
+      {% if can_submit('radius.communications_guide', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_guide') }}">{% endif %}
         <span class="oc-act-ic green"><i class="fa-solid fa-book-open"></i></span>
         <div class="oc-act-b"><div class="ttl">{{ _('دليل وشروحات') }} <i class="fa-solid fa-arrow-left arr"></i></div>
           <div class="hint">{{ _('شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.') }}</div></div>
-      </a>
+      {% if can_submit('radius.communications_guide', 'GET') %}</a>{% endif %}
     </div>
   {% endcall %}
 

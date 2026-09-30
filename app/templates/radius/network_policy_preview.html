@@ -600,15 +600,15 @@
 {%- else %}{% set _blast_ar = 'حرج' %}{% set _blast_variant = 'red' %}{% endif -%}
 
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary"
+  {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع للقائمة') }}
-  </a>
-  <a class="hub-btn hub-btn--secondary"
+  </a>{% endif %}
+  {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=policy.id) }}">
     <i class="fa-regular fa-pen-to-square"></i> {{ _('تحرير السياسة') }}
-  </a>
-  <form method="POST"
+  </a>{% endif %}
+  {% if can_submit('radius.npc_', 'POST') %}<form method="POST"
         action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}"
         style="display:inline;">
     {{ csrf_token_input() | safe }}
@@ -616,7 +616,7 @@
       {% if not plan.can_apply %}disabled{% endif %}>
       <i class="fa-solid fa-arrows-rotate"></i> {{ _('توليد المعاينة وحفظها') }}
     </button>
-  </form>
+  </form>{% endif %}
 {% endset %}
 
 {{ hub.megahero(
@@ -802,13 +802,13 @@
         </code>
       </span>
 
-      <a class="hub-btn hub-btn--secondary"
+      {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
          href="{{ url_for('radius.npc_' ~ service.key ~ '_changes', policy_id=policy.id) }}"
          style="margin-inline-start:auto;"
          data-test="npc-changes-link">
         <i class="fa-regular fa-rectangle-list"></i>
         {{ _('سجل التغييرات') }}
-      </a>
+      </a>{% endif %}
     </div>
 
     {% if rdy.actor_has_apply_perm %}
@@ -823,7 +823,7 @@
                    padding:14px 16px;
                    background:#fafbfd;
                    border:1px solid #EEEDF3;
-                   border-radius:10px;">
+                   border-radius:10px;">{% if not can_submit('radius.npc_') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
         {{ csrf_token_input() | safe }}
 
         <strong style="font-size:13.5px; color:#1F2937;">
@@ -904,7 +904,7 @@
             {{ _('عالج الموانع أعلاه قبل التنفيذ.') }}
           </p>
         {% endif %}
-      </form>
+      {% if not can_submit('radius.npc_') %}</fieldset>{% endif %}</form>
     {% else %}
       {# No apply permission — show the locked execution state. #}
       <div style="margin-top:14px;
@@ -974,15 +974,15 @@
                       color:#0F172A;
                       word-break:break-all;">
             {% if ep.url.startswith('http') %}
-              <a href="{{ ep.url }}" target="_blank"
+              {% if can_open(ep.url) %}<a href="{{ ep.url }}" target="_blank"
                  rel="noopener noreferrer"
                  style="color:#1D4ED8;
-                        text-decoration:none;">
+                        text-decoration:none;">{% endif %}
                 {{ ep.url }}
                 <i class="fa-solid fa-arrow-up-right-from-square"
                    style="font-size:11px;
                           color:#9ca3af;"></i>
-              </a>
+              {% if can_open(ep.url) %}</a>{% endif %}
             {% else %}
               {{ ep.url }}
             {% endif %}
@@ -1042,15 +1042,15 @@
                       color:#1E3A8A;
                       word-break:break-all;">
             {% if ep.url.startswith('http') %}
-              <a href="{{ ep.url }}" target="_blank"
+              {% if can_open(ep.url) %}<a href="{{ ep.url }}" target="_blank"
                  rel="noopener noreferrer"
                  style="color:#3730A3;
-                        text-decoration:none;">
+                        text-decoration:none;">{% endif %}
                 {{ ep.url }}
                 <i class="fa-solid fa-arrow-up-right-from-square"
                    style="font-size:11px;
                           color:#9ca3af;"></i>
-              </a>
+              {% if can_open(ep.url) %}</a>{% endif %}
             {% else %}
               {{ ep.url }}
             {% endif %}
@@ -1579,12 +1579,12 @@
               <i class="fa-regular fa-clipboard"></i>
               {{ _('نسخ') }}
             </button>
-            <a class="hub-btn hub-btn--secondary"
+            {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
                href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
                download>
               <i class="fa-solid fa-download"></i>
               .rsc
-            </a>
+            </a>{% endif %}
           </span>
         </div>
         <pre class="npc-script-pre" id="npc-forward"

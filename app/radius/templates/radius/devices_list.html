@@ -44,11 +44,11 @@
         <h3 class="d-card-title" style="margin:0">قائمة الأجهزة</h3>
         <span class="d-card-meta">{{ items|length }} جهاز</span>
       </div>
-      <a href="{{ url_for('radius.devices_new') }}"
+      {% if can_submit('radius.devices_new', 'GET') %}<a href="{{ url_for('radius.devices_new') }}"
          style="background:var(--d-gold);color:var(--d-black);font-weight:700;
-                padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12.5px">
+                padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12.5px">{% endif %}
         <i class="fa-solid fa-plus"></i> إضافة جهاز
-      </a>
+      {% if can_submit('radius.devices_new', 'GET') %}</a>{% endif %}
     </div>
 
     <div class="d-card-body" style="padding:0">
@@ -86,11 +86,11 @@
             </td>
             <td>
               <div style="display:flex;gap:6px;align-items:center">
-                <a href="{{ url_for('radius.devices_edit', nas_id=d.id) }}"
-                   class="vendor-badge" style="text-decoration:none;background:#e7f0fd;color:#1c52a8">
+                {% if can_submit('radius.devices_edit', 'GET') %}<a href="{{ url_for('radius.devices_edit', nas_id=d.id) }}"
+                   class="vendor-badge" style="text-decoration:none;background:#e7f0fd;color:#1c52a8">{% endif %}
                   <i class="fa-solid fa-pen"></i> تعديل
-                </a>
-                <form method="post"
+                {% if can_submit('radius.devices_edit', 'GET') %}</a>{% endif %}
+                {% if can_submit('radius.devices_delete', 'POST') %}<form method="post"
                       action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
                       onsubmit="return confirm('حذف الجهاز «{{ d.name|e }}»؟');"
                       style="display:inline">
@@ -98,7 +98,7 @@
                           style="background:#fde2e2;color:#b91c1c;border:none;cursor:pointer">
                     <i class="fa-solid fa-trash"></i> حذف
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

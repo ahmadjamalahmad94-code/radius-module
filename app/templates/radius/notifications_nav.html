@@ -23,15 +23,15 @@
   <a class="{{ 'is-active' if _na == 'center' }}" href="{{ url_for('radius.notifications_center') }}"><i class="fa-solid fa-bell"></i> {{ _('مركز الإشعارات') }}</a>
   {% endif %}
   {% if endpoint_exists is not defined or endpoint_exists('radius.integrations_hub') %}
-  <a class="{{ 'is-active' if _na == 'channels' }}" href="{{ url_for('radius.integrations_hub') }}"><i class="fa-solid fa-plug-circle-bolt"></i> {{ _('التكاملات والقنوات') }}</a>
+  {% if can_submit('radius.integrations_hub', 'GET') %}<a class="{{ 'is-active' if _na == 'channels' }}" href="{{ url_for('radius.integrations_hub') }}">{% endif %}<i class="fa-solid fa-plug-circle-bolt"></i> {{ _('التكاملات والقنوات') }}{% if can_submit('radius.integrations_hub', 'GET') %}</a>{% endif %}
   {% endif %}
   {% if endpoint_exists is not defined or endpoint_exists('radius.admin_notifications') %}
-  <a class="{{ 'is-active' if _na == 'admin' }}" href="{{ url_for('radius.admin_notifications') }}"><i class="fa-solid fa-user-shield"></i> {{ _('إشعارات الإدارة') }}</a>
+  {% if can_submit('radius.admin_notifications', 'GET') %}<a class="{{ 'is-active' if _na == 'admin' }}" href="{{ url_for('radius.admin_notifications') }}">{% endif %}<i class="fa-solid fa-user-shield"></i> {{ _('إشعارات الإدارة') }}{% if can_submit('radius.admin_notifications', 'GET') %}</a>{% endif %}
   {% endif %}
   {% if endpoint_exists is not defined or endpoint_exists('radius.subscriber_notifications') %}
-  <a class="{{ 'is-active' if _na == 'subscriber' }}" href="{{ url_for('radius.subscriber_notifications') }}"><i class="fa-solid fa-users"></i> {{ _('إشعارات المشتركين') }}</a>
+  {% if can_submit('radius.subscriber_notifications', 'GET') %}<a class="{{ 'is-active' if _na == 'subscriber' }}" href="{{ url_for('radius.subscriber_notifications') }}">{% endif %}<i class="fa-solid fa-users"></i> {{ _('إشعارات المشتركين') }}{% if can_submit('radius.subscriber_notifications', 'GET') %}</a>{% endif %}
   {% endif %}
   {% if endpoint_exists is not defined or endpoint_exists('radius.mt_alerts_index') %}
-  <a class="{{ 'is-active' if _na == 'smart' }}" href="{{ url_for('radius.mt_alerts_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('التنبيهات الذكية') }}</a>
+  {% if can_submit('radius.mt_alerts_index', 'GET') %}<a class="{{ 'is-active' if _na == 'smart' }}" href="{{ url_for('radius.mt_alerts_index') }}">{% endif %}<i class="fa-solid fa-triangle-exclamation"></i> {{ _('التنبيهات الذكية') }}{% if can_submit('radius.mt_alerts_index', 'GET') %}</a>{% endif %}
   {% endif %}
 </nav>

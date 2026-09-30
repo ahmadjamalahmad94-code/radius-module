@@ -99,7 +99,7 @@
 {% set is_edit = tpl and tpl.id %}
 <form method="post" id="qkForm"
       action="{{ url_for('radius.print_templates_update', template_id=tpl.id) if is_edit else url_for('radius.print_templates_create') }}"
-      enctype="multipart/form-data">
+      enctype="multipart/form-data">{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
   <input type="hidden" name="return_to" value="quick">
   <input type="hidden" name="quick_export" value="0" data-qk-export-flag>
@@ -161,10 +161,10 @@
           <select data-qk-batch>
             <option value="">{{ _('— اختر الحزمة —') }}</option>
             {% for b in batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>{% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
             {% endfor %}
             {% for b in print_only_batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
             {% endfor %}
           </select>
         </label>
@@ -333,13 +333,13 @@
         <button type="submit" class="qk-btn qk-btn--save">
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
         </button>
-        <a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
+        {% if can_submit('radius.print_templates', 'GET') %}<a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
           <i class="fa-solid fa-sliders"></i> {{ _('المصمم المتقدم') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
   </div>
-</form>
+{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
 
 <script>
 (function(){

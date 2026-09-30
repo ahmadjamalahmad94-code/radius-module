@@ -75,10 +75,10 @@
 
 {# ───── Megahero: العنوان + الإجراءات + شريط المؤشّرات ───── #}
 {% set wg_hero_actions %}
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_sstp_users') }}">
-    <i class="fa-solid fa-key"></i> {{ _("حسابات SSTP/PPTP") }}</a>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">
-    <i class="fa-solid fa-sliders"></i> {{ _("إدارة الراوترات") }}</a>
+  {% if can_submit('radius.mt_sstp_users', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_sstp_users') }}">
+    <i class="fa-solid fa-key"></i> {{ _("حسابات SSTP/PPTP") }}</a>{% endif %}
+  {% if can_submit('radius.mt_operations', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">
+    <i class="fa-solid fa-sliders"></i> {{ _("إدارة الراوترات") }}</a>{% endif %}
 {% endset %}
 {{ hub.megahero(
    _('اتصالات WireGuard'),
@@ -177,7 +177,7 @@
           <tr data-wg-row="{{ p.id }}">
             {# الراوتر — اسمه رابط لصفحة التفاصيل + شارة معطّل #}
             <td>
-              <a href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}" class="wg-router-name">{{ p.name }}</a>
+              {% if can_submit('radius.mt_wg_details', 'GET') %}<a href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}" class="wg-router-name">{% endif %}{{ p.name }}{% if can_submit('radius.mt_wg_details', 'GET') %}</a>{% endif %}
               {% if not p.enabled %}<br>{{ hub.pill(_('معطّل'), variant='amber', dot=False) }}{% endif %}
             </td>
             {# عنوان النفق / AllowedIPs #}
@@ -213,7 +213,7 @@
             <td data-uds-nosort>
               <div class="wg-row-actions">
                 {# توليد المفاتيح (نظير إعادة تعيين كلمة المرور — كشف مرّة عبر السكربت) #}
-                <form method="post" action="{{ url_for('radius.mt_wg_peer_regenerate') }}" style="margin:0">
+                {% if can_submit('radius.mt_wg_peer_regenerate', 'POST') %}<form method="post" action="{{ url_for('radius.mt_wg_peer_regenerate') }}" style="margin:0">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="nas_id" value="{{ p.id }}">
                   <button class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" type="submit"
@@ -221,26 +221,26 @@
                           {% if not server.configured %}disabled aria-disabled="true"{% endif %}
                           data-confirm="{{ _('توليد مفاتيح WireGuard جديدة للراوتر %(r)s؟ سينقطع النفق حتى تنسخ السكربت الجديد إلى الراوتر، ويُعرض المفتاح الخاصّ مرّة واحدة.', r=p.name) }}">
                     <i class="fa-solid fa-rotate"></i></button>
-                </form>
+                </form>{% endif %}
                 {# تفاصيل الاتصال (الصفحة المخصّصة — نظير صفحة SSTP) #}
-                <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                {% if can_submit('radius.mt_wg_details', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
                    href="{{ url_for('radius.mt_wg_details', nas_id=p.id) }}"
                    title="{{ _('تفاصيل اتصال WireGuard') }}">
-                  <i class="fa-solid fa-sliders"></i></a>
+                  <i class="fa-solid fa-sliders"></i></a>{% endif %}
                 {# عرض الإعدادات/السكربت #}
-                <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                {% if can_submit('radius.mt_setup_script', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
                    href="{{ url_for('radius.mt_setup_script', nas_id=p.id) }}"
                    title="{{ _('عرض سكربت الإعداد (يكشف المفتاح الخاصّ مرّة بعد التوليد)') }}">
-                  <i class="fa-solid fa-file-code"></i></a>
+                  <i class="fa-solid fa-file-code"></i></a>{% endif %}
                 {# إزالة peer من الخادم (نظير «حذف») #}
-                <form method="post" action="{{ url_for('radius.mt_wg_peer_remove') }}" style="margin:0">
+                {% if can_submit('radius.mt_wg_peer_remove', 'POST') %}<form method="post" action="{{ url_for('radius.mt_wg_peer_remove') }}" style="margin:0">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="nas_id" value="{{ p.id }}">
                   <button class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" type="submit"
                           title="{{ _('إزالة peer من الخادم') }}"
                           data-confirm="{{ _('إزالة peer الراوتر %(r)s من الخادم؟ يتوقّف نفقه حتى إعادة التوليد (يبقى الراوتر في القائمة).', r=p.name) }}">
                     <i class="fa-solid fa-trash"></i></button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

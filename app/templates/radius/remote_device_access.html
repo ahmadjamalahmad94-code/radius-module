@@ -7,10 +7,10 @@
 {% block page_title %}{{ _("فتح") }} «{{ device.name }}» {{ _("عن بُعد") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       style="color:#6D28D9;text-decoration:none">
+    {% if can_submit('radius.network_devices_list', 'GET') %}<a href="{{ url_for('radius.network_devices_list') }}"
+       style="color:#6D28D9;text-decoration:none">{% endif %}
       <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
-    </a>
+    {% if can_submit('radius.network_devices_list', 'GET') %}</a>{% endif %}
   </span>
 {% endblock %}
 
@@ -246,7 +246,7 @@
 {% if device.ip_address %}
 
 {# ── Open form ── #}
-<form method="post"
+{% if can_submit('radius.remote_device_access_open', 'POST') %}<form method="post"
       action="{{ url_for('radius.remote_device_access_open', device_id=device.id) }}"
       class="hr-form-card"
       style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px">
@@ -291,7 +291,7 @@
       <i class="fa-solid fa-key"></i> {{ _('افتح الجلسة') }}
     </button>
   </div>
-</form>
+</form>{% endif %}
 
 {% endif %}
 
@@ -357,10 +357,10 @@
         </td>
         <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.created_at|dt_local if s.created_at else '—' }}</td>
         <td style="font-size:12px;color:#64748B;direction:ltr;text-align:start">{{ s.expires_at|dt_local if s.expires_at else '—' }}</td>
-        <td style="font-size:12px;color:#475569">{{ s.requested_by or '—' }}</td>
+        <td style="font-size:12px;color:#475569">{{ s.requested_by|actor_name if s.requested_by else '—' }}</td>
         <td>
           {% if s.status == 'active' %}
-          <form method="post"
+          {% if can_submit('radius.remote_device_access_close', 'POST') %}<form method="post"
                 action="{{ url_for('radius.remote_device_access_close', device_id=device.id, session_id=s.id) }}"
                 onsubmit="return confirm('إغلاق الجلسة الآن؟');"
                 style="margin:0">
@@ -369,7 +369,7 @@
                     style="padding:4px 10px;font-size:11.5px">
               <i class="fa-solid fa-xmark"></i> {{ _('إغلاق الآن') }}
             </button>
-          </form>
+          </form>{% endif %}
           {% else %}
           <span style="color:#94A3B8;font-size:11.5px">—</span>
           {% endif %}

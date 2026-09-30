@@ -734,10 +734,10 @@
     <div class="ops-actions">
       {# D03: نفس فحص السايدبار (manager_nav_hidden) — لا زرّ يفتح نموذجًا يُرفَض #}
       {% if not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
-      <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>
+      {% if can_submit('radius.users_new', 'GET') %}<a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>{% endif %}
       {% endif %}
-      <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>
-      <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>
+      {% if can_submit('radius.cards_generate', 'GET') %}<a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>{% endif %}
+      {% if can_submit('radius.setup_wizard_v3_page', 'GET') %}<a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>{% endif %}
     </div>
   </section>
 
@@ -761,7 +761,7 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> {{ _('إدارة المشتركين') }}</a>
+        {% if can_submit('radius.users_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> {{ _('إدارة المشتركين') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ sub_pct }}%"></span></div>
       </div>
     </article>
@@ -786,7 +786,7 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> {{ _('حزم البطاقات') }}</a>
+        {% if can_submit('radius.cards_batches', 'GET') %}<a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> {{ _('حزم البطاقات') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ printed_pct }}%"></span></div>
       </div>
     </article>
@@ -811,8 +811,8 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> {{ _('حزم البيع') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> {{ _('المستخدمون') }}</a>
+        {% if can_submit('radius.card_marketplace', 'GET') %}<a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> {{ _('حزم البيع') }}</a>{% endif %}
+        {% if can_submit('radius.card_users_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> {{ _('المستخدمون') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ electronic_pct }}%"></span></div>
       </div>
     </article>
@@ -835,7 +835,7 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> {{ _('الأجهزة') }}</a>
+        {% if can_submit('radius.devices_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> {{ _('الأجهزة') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ nas_pct }}%"></span></div>
       </div>
     </article>
@@ -858,8 +858,8 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>
+        {% if can_submit('radius.plans_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>{% endif %}
+        {% if can_submit('radius.plans_new', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>{% endif %}
       </div>
     </article>
     {% endif %}
@@ -881,8 +881,8 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> {{ _('المالية') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>
+        {% if can_submit('radius.business_finance', 'GET') %}<a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> {{ _('المالية') }}</a>{% endif %}
+        {% if can_submit('radius.reports_home', 'GET') %}<a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>{% endif %}
       </div>
     </article>
     {% endif %}
@@ -928,12 +928,14 @@
         {%- set _ep = alert.link_endpoint if (alert.link_endpoint and endpoint_exists(alert.link_endpoint)) else
                       ('radius.mt_alerts_index' if endpoint_exists('radius.mt_alerts_index') else none) -%}
         {%- set _link_args = alert.link_args if (alert.link_args and alert.link_endpoint == _ep) else {} -%}
-        <a class="ops-alert ops-alert--link" href="{{ url_for(_ep, **_link_args) if _ep else '#' }}"
+        {#- F01-F2: تنبيهٌ وجهته مرفوضة لهذا المدير يبقى ظاهرًا بلا رابط (لا 403). -#}
+        {%- set _alert_ok = _ep and can_submit(_ep, 'GET') -%}
+        <{{ 'a' if _alert_ok else 'div' }} class="ops-alert{{ ' ops-alert--link' if _alert_ok }}"{% if _alert_ok %} href="{{ url_for(_ep, **_link_args) }}"{% endif %}
            style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
           <i class="fa-solid {{ 'fa-circle-exclamation' if alert.level == 'danger' else ('fa-triangle-exclamation' if alert.level == 'warn' else 'fa-circle-info') }}"></i>
           <span>{{ alert.message }}</span>
-          <i class="fa-solid fa-chevron-left ops-alert-go" aria-hidden="true"></i>
-        </a>
+          {% if _alert_ok %}<i class="fa-solid fa-chevron-left ops-alert-go" aria-hidden="true"></i>{% endif %}
+        </{{ 'a' if _alert_ok else 'div' }}>
       {% else %}
         <div class="ops-alert" style="--tone:#16a34a;--tone-soft:#f0fdf4">
           <i class="fa-solid fa-circle-check"></i>

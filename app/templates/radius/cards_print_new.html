@@ -449,7 +449,7 @@
 {% endset %}
 {% call hub.worklayout(aside_html=_pc_help) %}
 
-<form method="post" action="{{ url_for('radius.cards_print_new') }}">
+<form method="post" action="{{ url_for('radius.cards_print_new') }}">{% if not can_submit('radius.cards_print_new') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() | safe }}
 
   {# ── 1. Package metadata ── #}
@@ -575,11 +575,11 @@
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9">
       {{ hub.btn("احفظ دفعة الطباعة", icon="file-import", type="submit", variant="primary") }}
-      {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_print_list'), variant="secondary") }}
+      {% if can_submit('radius.cards_print_list', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_print_list'), variant="secondary") }}{% endif %}
     </div>
   {% endcall %}
 
-</form>
+{% if not can_submit('radius.cards_print_new') %}</fieldset>{% endif %}</form>
 
 {% endcall %}{# /worklayout #}
 

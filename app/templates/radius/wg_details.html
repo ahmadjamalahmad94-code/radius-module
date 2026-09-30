@@ -91,23 +91,23 @@
     </div>
 
     <div class="wgd-cardbtns">
-      <form method="post" action="{{ url_for('radius.mt_wg_peer_regenerate') }}" style="margin:0">
+      {% if can_submit('radius.mt_wg_peer_regenerate', 'POST') %}<form method="post" action="{{ url_for('radius.mt_wg_peer_regenerate') }}" style="margin:0">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <input type="hidden" name="nas_id" value="{{ peer.id }}">
         <button class="hub-btn hub-btn--primary" type="submit"
                 {% if not server.configured %}disabled aria-disabled="true"{% endif %}
                 data-confirm="{{ _('توليد مفاتيح WireGuard جديدة للراوتر %(r)s؟ سينقطع النفق حتى تنسخ السكربت الجديد إلى الراوتر، ويُعرض المفتاح الخاصّ مرّة واحدة.', r=peer.name) }}">
           <i class="fa-solid fa-rotate"></i> {{ _('توليد مفاتيح جديدة') }}</button>
-      </form>
-      <a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
-        <i class="fa-solid fa-file-code"></i> {{ _('سكربت الإعداد') }}</a>
-      <form method="post" action="{{ url_for('radius.mt_wg_peer_remove') }}" style="margin:0">
+      </form>{% endif %}
+      {% if can_open(script_url) %}<a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
+        <i class="fa-solid fa-file-code"></i> {{ _('سكربت الإعداد') }}</a>{% endif %}
+      {% if can_submit('radius.mt_wg_peer_remove', 'POST') %}<form method="post" action="{{ url_for('radius.mt_wg_peer_remove') }}" style="margin:0">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <input type="hidden" name="nas_id" value="{{ peer.id }}">
         <button class="hub-btn hub-btn--danger" type="submit"
                 data-confirm="{{ _('إزالة peer الراوتر %(r)s من الخادم؟ يتوقّف نفقه حتى إعادة التوليد (يبقى الراوتر في القائمة).', r=peer.name) }}">
           <i class="fa-solid fa-trash"></i> {{ _('إزالة peer') }}</button>
-      </form>
+      </form>{% endif %}
     </div>
   {% endcall %}
 
@@ -200,15 +200,15 @@
         <button type="button" class="hub-btn hub-btn--secondary" data-remote-copy
                 data-remote-endpoint="{{ remote.session.endpoint }}">
           <i class="fa-solid fa-copy"></i> {{ _('نسخ العنوان') }}</button>
-        <form method="post" style="margin:0"
+        {% if can_submit('radius.mt_remote_close', 'POST') %}<form method="post" style="margin:0"
               action="{{ url_for('radius.mt_remote_close', nas_id=peer.id, session_id=remote.session.id) }}">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
           <button class="hub-btn hub-btn--danger" type="submit"
                   data-confirm="{{ _('إغلاق جلسة الوصول البعيد الآن؟') }}">
             <i class="fa-solid fa-xmark"></i> {{ _('إغلاق الآن') }}</button>
-        </form>
-        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
-          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+        </form>{% endif %}
+        {% if can_submit('radius.mt_remote_sessions', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
+          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>{% endif %}
       </div>
     {% else %}
       <p class="hub-text-mute" style="font-size:12.5px;line-height:1.7;margin-top:0">
@@ -217,8 +217,8 @@
       <div class="wgd-cardbtns" style="margin-top:12px">
         <button type="button" class="hub-btn hub-btn--primary" data-uds-modal-open="winbox-open-modal">
           <i class="fa-solid fa-network-wired"></i> {{ _('فتح WinBox') }}</button>
-        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
-          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>
+        {% if can_submit('radius.mt_remote_sessions', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_remote_sessions') }}">
+          <i class="fa-solid fa-list"></i> {{ _('كل الجلسات') }}</a>{% endif %}
       </div>
     {% endif %}
     </div>
@@ -259,8 +259,8 @@
       {{ _('معاينة — المفتاح الخاصّ ظاهر كعنصر نائب لأنّه لا يُخزَّن. السكربت الكامل بالمفتاح الحقيقيّ في «سكربت الإعداد» بعد التوليد.') }}</p>
     {% else %}
     <div class="wgd-cardbtns">
-      <a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
-        <i class="fa-solid fa-file-code"></i> {{ _('فتح سكربت الإعداد الكامل') }}</a>
+      {% if can_open(script_url) %}<a class="hub-btn hub-btn--secondary" href="{{ script_url }}">
+        <i class="fa-solid fa-file-code"></i> {{ _('فتح سكربت الإعداد الكامل') }}</a>{% endif %}
     </div>
     {% endif %}
   {% endcall %}
@@ -270,7 +270,7 @@
 {# ════════ النافذة العائمة — فتح WinBox ════════ #}
 {% if remote and remote.enabled and not remote.session %}
 {% call hub.modal('winbox-open-modal', _('فتح WinBox عن بُعد'), icon='network-wired') %}
-  <form method="post" action="{{ url_for('radius.mt_remote_winbox_open', nas_id=peer.id) }}" data-remote-open-form>
+  {% if can_submit('radius.mt_remote_winbox_open', 'POST') %}<form method="post" action="{{ url_for('radius.mt_remote_winbox_open', nas_id=peer.id) }}" data-remote-open-form>
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <p class="wgd-modal-hint" style="margin-top:0">{{ _('يُفتح منفذ على عنوان اللوحة العام يُمرَّر عبر نفق WireGuard إلى WinBox الراوتر (8291)، ويُغلق تلقائيًّا بعد') }}
       {{ remote.ttl_min }} {{ _('دقيقة ما لم تختر الوضع الدائم.') }}</p>
@@ -319,7 +319,7 @@
       <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
       <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-network-wired"></i> {{ _('فتح WinBox') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 {% endif %}
 

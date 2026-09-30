@@ -154,11 +154,19 @@
         .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
         .replace(/[\u066B,]/g, ".").replace(/[\u066C\s]/g, "");
     }
+    // F08-L: لا parseFloat متسامح — «12abc» كانت تُرسَل 12 و«1e9» مليارًا بصمت.
+    // قيمة غير رقميّة تُعلَّم خطأً برسالة ويُمنع الإرسال (setCustomValidity).
+    const NUM_RE = /^-?(\d+(\.\d*)?|\.\d+)$/;
     function sync(){
-      const v = parseFloat(latin(valInp.value));
+      const raw = latin(valInp.value);
+      const ok = raw === "" || NUM_RE.test(raw);
+      const v = ok ? parseFloat(raw) : NaN;
       const u = unitSel.value;
       const base = isFinite(v) ? Math.round(v * ratios[u]) : 0;
       hidden.value = String(base);
+      const msg = ok ? "" : "أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».";
+      try { valInp.setCustomValidity(msg); } catch (_) {}
+      if (ok) valInp.removeAttribute("aria-invalid"); else valInp.setAttribute("aria-invalid", "true");
     }
     function changeUnit(){
       // The number the operator SEES stays; only its unit changes («1» then

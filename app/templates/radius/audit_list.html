@@ -37,7 +37,7 @@
         {% for r in items %}
           <tr>
             <td class="num mono">{{ r.id }}</td>
-            <td><strong>{{ r.actor }}</strong></td>
+            <td title="{{ r.actor }}"><strong>{{ r.actor|actor_name }}</strong></td>
             <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action_label or 'عملية' }}</span></td>
             <td>{{ r.target_label or 'هدف' }}</td>
             <td class="mono">{{ r.target_id or '—' }}</td>

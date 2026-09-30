@@ -102,14 +102,14 @@
 {% include "radius/_finance_nav.html" %}
 
 {% call hub.section("إنشاء محفظة", icon="circle-plus") %}
-  <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
+  {% if can_submit('radius.business_finance_wallets_create', 'POST') %}<form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     {# تلميح معرّب لقيم owner_type: القيمة المُرسَلة تبقى company افتراضيًا، والتلميح بالعربية للمستخدم #}
     {{ hub.field("نوع المالك", "owner_type", "company", hint="الشركة / مدير / موزع / مشترك / مستخدم بطاقات") }}
     {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغا لمحفظة الشركة") }}
     {{ hub.field("العملة", "currency", cfg.currency) }}
     {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
-  </form>
+  </form>{% endif %}
 {% endcall %}
 
 {% call hub.section("قائمة المحافظ", icon="wallet", flush=True) %}
@@ -144,7 +144,7 @@
           <td>
             {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
                الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
-            <form method="post" class="fw-act"
+            {% if can_submit('radius.business_finance_wallet_credit', 'POST') %}<form method="post" class="fw-act"
                   action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
                   data-fw-act
                   data-credit-url="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
@@ -161,7 +161,7 @@
               </span>
               <button class="hub-btn hub-btn--secondary" type="submit"
                       {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>{{ _('تنفيذ') }}</button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
       {% endfor %}

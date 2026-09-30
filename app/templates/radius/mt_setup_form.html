@@ -154,7 +154,7 @@
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form method="POST" action="{{ url_for('radius.mt_setup_create') }}"
-      class="mt-setup-form-v2" data-mt-setup-form>
+      class="mt-setup-form-v2" data-mt-setup-form>{% if not can_submit('radius.mt_setup_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() | safe }}
 
   {# ── القسم 1: هوية الراوتر ── #}
@@ -268,12 +268,12 @@
 
   {# ── شريط الإجراءات ── #}
   <div class="mt-setup-actions" style="justify-content:flex-end;padding:4px 2px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.mt_operations', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد + إنشاء') }}
     </button>
   </div>
-</form>
+{% if not can_submit('radius.mt_setup_create') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 <script>

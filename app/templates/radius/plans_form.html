@@ -290,13 +290,13 @@
 {# «نسخ هذا العرض» — نسخة كاملة المواصفات باسم «— نسخة» ثم يفتح تعديلها فورًا.
    نموذج مستقلّ سابقٌ للنموذج الرئيسي (ليس متداخلًا)؛ CSRF يُحقن خادميًّا. #}
 <div class="pl-clone-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px">
-  <form method="post" action="{{ url_for('radius.plans_clone', plan_id=plan.id) }}"
+  {% if can_submit('radius.plans_clone', 'POST') %}<form method="post" action="{{ url_for('radius.plans_clone', plan_id=plan.id) }}"
         style="margin:0"
         onsubmit="return confirm('{{ _('إنشاء نسخة من هذه الباقة لتعديلها؟') }}');">
     <button type="submit" class="hub-btn hub-btn--secondary">
       <i class="fa-solid fa-clone"></i> {{ _('نسخ هذه الباقة') }}
     </button>
-  </form>
+  </form>{% endif %}
   <span class="hub-text-mute" style="font-size:12.5px">
     {{ _('ينشئ باقةً جديدة بنفس كل المواصفات باسم «— نسخة» يمكنك تعديلها فورًا دون المساس بالأصل.') }}
   </span>
@@ -324,7 +324,7 @@
 
   {# ───── Form ──────────────────────────────── #}
   <form method="post"
-        action="{{ url_for('radius.plans_update', plan_id=plan.id) if not is_new else url_for('radius.plans_create') }}">
+        action="{{ url_for('radius.plans_update', plan_id=plan.id) if not is_new else url_for('radius.plans_create') }}">{% if not can_submit(('radius.plans_update' if not is_new else 'radius.plans_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {# 1. General #}
     <section class="pl-section pl-section--gen" id="pl-general">
@@ -931,12 +931,12 @@
     {% endif %}
 
     <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">{{ _('إلغاء') }}</a>
+      {% if can_submit('radius.plans_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">{{ _('إلغاء') }}</a>{% endif %}
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ العرض" if is_new else "حفظ التعديلات" }}
       </button>
     </div>
-  </form>
+  {% if not can_submit(('radius.plans_update' if not is_new else 'radius.plans_create')) %}</fieldset>{% endif %}</form>
 </div>{# /.pl-layout #}
 </div>{# /.pl-form #}
 

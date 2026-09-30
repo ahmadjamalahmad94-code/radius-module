@@ -259,7 +259,7 @@
           <td>
             <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
               <span class="pl-color-dot" style="background:{{ p.color or '#6B5AED' }}"></span>
-              <a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}">{{ p.name }}</a>
+              {% if can_submit('radius.plans_edit', 'GET') %}<a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}">{% endif %}{{ p.name }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}
             </div>
           </td>
           <td class="mono small">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
@@ -318,23 +318,23 @@
                       data-svc-scope="plan:{{ p.id }}">
                 <i class="fa-solid fa-arrow-up-right-dots"></i>
               </button>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+              {% if can_submit('radius.plans_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
-              </a>
+              </a>{% endif %}
               {# نسخ العرض: ينشئ نسخة بكل المواصفات ثم يفتح تعديلها (CSRF يُحقن خادميًّا) #}
-              <form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
+              {% if can_submit('radius.plans_clone', 'POST') %}<form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
                     onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
                 <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('نسخ الباقة') }}">
                   <i class="fa-solid fa-clone"></i>
                 </button>
-              </form>
-              <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
+              </form>{% endif %}
+              {% if can_submit('radius.plans_delete', 'POST') %}<form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                     onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
                 <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
-              </form>
+              </form>{% endif %}
             </div>
           </td>
         </tr>

@@ -165,13 +165,13 @@
       المزوّدون الحقيقيون يؤكدون الدفع بإشعار خادم-لخادم (webhook) موقَّع. هذا الزر يحاكي وصول
       الإشعار لجلسة منتظرة (بانتظار الرمز أو قيد الإنشاء) ويعلّمها مدفوعة — بلا رمز تحقق.
     </p>
-    <form class="pl-webhook-form" method="post" action="{{ url_for('radius.payments_lab_webhook') }}">
+    {% if can_submit('radius.payments_lab_webhook', 'POST') %}<form class="pl-webhook-form" method="post" action="{{ url_for('radius.payments_lab_webhook') }}">
       {# توكن CSRF: نموذج POST يفشل بخطأ 400 في before_request بدونه #}
       {{ csrf_token_input() | safe }}
       <input type="text" name="reference" placeholder="{{ _('مرجع الجلسة — مثال: CHK-1A2B3C4D5E') }}" required
              aria-label="{{ _('مرجع جلسة الدفع') }}" class="pl-mono">
       {{ hub.btn("محاكاة webhook", icon="bolt", variant="secondary", type="submit", size="sm") }}
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ═══ اعتمادات المزوّدين الحقيقيين — معطّلة حتى توقيع الاتفاقيات ═══ #}

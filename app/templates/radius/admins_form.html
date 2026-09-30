@@ -41,7 +41,7 @@
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form id="ad-form" method="post"
-      action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">
+      action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">{% if not can_submit(('radius.admins_update' if not is_new else 'radius.admins_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية والدور ─────────────────────── #}
   {% call hub.section("الهوية والدور", icon="user-shield") %}
@@ -197,9 +197,9 @@
   {% endif %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
-    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.admins_list')) }}
+    {% if can_submit('radius.admins_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.admins_list')) }}{% endif %}
     {{ hub.btn(("إنشاء المدير" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit(('radius.admins_update' if not is_new else 'radius.admins_create')) %}</fieldset>{% endif %}</form>
 {% endcall %}
 {% endblock %}

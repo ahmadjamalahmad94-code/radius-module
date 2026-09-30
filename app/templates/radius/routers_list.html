@@ -49,7 +49,7 @@
   icon="network-wired",
   actions_html=(
     '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.routers_setup') ~ '"><i class="fa-solid fa-tower-broadcast"></i> '|safe ~ _("إعداد تلقائيّ") ~ '</a> '|safe
-    ~ '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe),
+    ~ ('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe if can_submit('radius.routers_enroll', 'GET') else '')),
   kpis=[
     {'label':'الإجمالي','value':counts.total or 0,'icon':'network-wired','variant':'brand'},
     {'label':'متصل','value':counts.online or 0,'icon':'wifi','variant':'green'},
@@ -71,7 +71,7 @@
 
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 14px">
   {% for key, lbl in [('','الكل'),('unassigned','غير مربوط'),('active','مُسجَّل'),('pending','بانتظار التسجيل')] %}
-    <a class="rtr-chip {{ 'on' if status==key else '' }}" href="{{ url_for('radius.routers_list', status=key, q=q) }}">{{ _(lbl) }}</a>
+    {% if can_submit('radius.routers_list', 'GET') %}<a class="rtr-chip {{ 'on' if status==key else '' }}" href="{{ url_for('radius.routers_list', status=key, q=q) }}">{{ _(lbl) }}</a>{% endif %}
   {% endfor %}
 </div>
 
@@ -101,7 +101,7 @@
           <td class="rtr-mono">{{ it.wan_ip or '—' }}</td>
           <td class="rtr-mono">{{ it.software_version or '—' }}</td>
           <td class="rtr-mono">{{ it.last_inform_at[:16] if it.last_inform_at else '—' }}</td>
-          <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_detail', device_id=it.id) }}">{{ _('التفاصيل') }} <i class="fa-solid fa-chevron-left" style="font-size:9px"></i></a></td>
+          <td>{% if can_submit('radius.routers_detail', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_detail', device_id=it.id) }}">{{ _('التفاصيل') }} <i class="fa-solid fa-chevron-left" style="font-size:9px"></i></a>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

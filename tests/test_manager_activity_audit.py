@@ -376,7 +376,9 @@ def test_outcome_badges_render_colored_arabic(app):
     # the raw method+status is demoted to a muted subtitle (opacity), never the
     # primary — and the bare number is not shown as a standalone pill.
     assert "POST · 302" in body
-    assert "opacity:.55" in body
+    # fix wave 3 (F08-L): the technical code lives in the tooltip only — no
+    # visible «GET · 200» sub-line any more.
+    assert ">POST · 302<" not in body and "الرمز التقنيّ: POST · 302" in body
     # owner's rejected wording is gone
     assert "بلا تأثير" not in body
 

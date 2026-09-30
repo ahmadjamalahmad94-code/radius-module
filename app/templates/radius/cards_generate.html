@@ -348,7 +348,7 @@
       data-card-generate-form autocomplete="off"
       data-confirm-generate
       data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
-      data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
+      data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">{% if not can_submit('radius.cards_generate') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {# مفتاح الطلب: إعادة إرسال النموذج نفسه (تحديث/رجوع/نقرة مزدوجة) تُعيد الحزمة
      المنشأة سابقًا بدل حزمةٍ ثانية مطابقة. #}
   <input type="hidden" name="request_key" value="{{ form.get('request_key') or request_key or '' }}">
@@ -462,8 +462,8 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
-          <input class="hub-input" type="number" name="username_length" min="4" max="{{ username_length_max|default(32) }}" value="{{ form.get('username_length') or 8 }}" data-un-length>
-          <div class="help">{{ _('الطول الكلّيّ لاسم المستخدم') }} (4–{{ username_length_max|default(32) }}) {{ _('شاملًا البادئة واللاحقة؛ الباقي أرقامٌ عشوائيّة.') }}</div></div>
+          <input class="hub-input" type="number" name="username_length" min="4" max="{{ hr_limits.card_username_len_max }}" value="{{ form.get('username_length') or 8 }}" data-un-length>
+          <div class="help">{{ _('الطول الكلّيّ لاسم المستخدم (4–%(max)s) شاملًا البادئة واللاحقة؛ الباقي أرقامٌ عشوائيّة.', max=hr_limits.card_username_len_max) }}</div></div>
         {# 🔴 مفتاحُ قسم كلمة المرور — قرارُ هذه الحزمةِ وحدَها في الاتّجاهين.
            شبكاتٌ تبيع «رقمًا فقط» ورقمُ البطاقة هو السرّ، وأخرى تبيع برقمٍ
            وكلمة. فالمفتاحُ هنا يحكم: إن عُطِّل القسمُ **لا تُولَّد كلماتٌ
@@ -481,7 +481,7 @@
           {# MT78 — الحدّ الأدنى ١ بطلب مالك الريديوس: كروتٌ قديمة كثيرة
              بكلمة مرورٍ من رقمٍ أو رقمين، والترحيل يجب أن يُطابقها. القيد
              كان في الواجهة فقط (لا حدَّ خادميًّا) فكان يمنع طلبًا مشروعًا. #}
-          <input class="hub-input" type="number" name="password_length" min="1" max="20" value="{{ form.get('password_length') or 6 }}">
+          <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="{{ form.get('password_length') or 6 }}">
           <div class="help">{{ _('عدد خانات كلمة المرور المولَّدة (1–20). خانةٌ أو خانتان أسهل على الزبون لكنّها أضعف — اخترها بوعي.') }}</div></div>
         <div class="cg-field" data-pw-field><label>{{ _('نمط توليد كلمة المرور') }}</label>
           {# الافتراضُ «أرقام فقط» (طلب «شبكة المحترف»): البطاقاتُ الرقميّة أسهلُ
@@ -656,12 +656,12 @@
   </section>
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.cards_batches', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد الآن') }}
     </button>
   </div>
-</form>
+{% if not can_submit('radius.cards_generate') %}</fieldset>{% endif %}</form>
 {% endcall %}{# /.worklayout #}
 </div>{# /.cg-form #}
 {% endif %}{# /manager_mode #}

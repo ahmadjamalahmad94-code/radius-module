@@ -528,7 +528,42 @@ def sub_manager_delegate(child_id: int):
 def manager_approvals_page():
     from ..services import manager_approvals as _ap
     return render_template("radius/manager_approvals.html",
-                           pending=_ap.list_pending(tenant_id=_tid()))
+                           pending=_decorate_approvals(_ap.list_pending(tenant_id=_tid())))
+
+
+def _decorate_approvals(rows: list) -> list:
+    """F03-N8: قيَم عربيّة مقروءة بدل الخام — اسم المدير (لا «#2»)، تسمية الفعل
+    (لا «subscriber.loan»)، والمبلغ بعملته (لا «150.0»)."""
+    import json as _json
+    from ..services import manager_grants as _mg
+    ids = {int(r.get("admin_id") or 0) for r in rows if r.get("admin_id")}
+    names: dict = {}
+    if ids:
+        try:
+            from ..db.connection import db as _db
+            qs = ",".join("?" for _ in ids)
+            for a in _db().execute(
+                    f"SELECT id, full_name, username FROM admins WHERE id IN ({qs})",
+                    list(ids)).fetchall():
+                names[int(a["id"])] = a["full_name"] or a["username"] or ""
+        except Exception:  # noqa: BLE001 — العرض لا يكسر الصفحة
+            names = {}
+    out = []
+    for r in rows:
+        d = dict(r)
+        aid = int(d.get("admin_id") or 0)
+        d["admin_label"] = names.get(aid) or (f"مدير محذوف (#{aid})" if aid else "—")
+        key = str(d.get("action_key") or "")
+        d["action_label"] = (_mg.ACTION_REGISTRY.get(key) or {}).get("label") or key or "—"
+        try:
+            payload = _json.loads(d.get("payload_json") or "{}") or {}
+        except (TypeError, ValueError):
+            payload = {}
+        d["currency"] = str(payload.get("currency") or "").upper() or None
+        d["amount"] = (int(d.get("amount_minor") or 0)) / 100.0
+        d["target_username"] = str(payload.get("username") or "")
+        out.append(d)
+    return out
 
 
 def manager_approval_approve(approval_id: int):

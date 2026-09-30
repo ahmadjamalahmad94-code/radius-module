@@ -13,10 +13,10 @@
         {{ _('تم نقل متابعة الراوترات، حالات الربط، وإجراءات الصيانة إلى صفحة إدارة الراوترات حتى تكون كل عمليات الشبكة في مكان واحد واضح.') }}
       </p>
     </div>
-    <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.mt_operations') }}">
+    {% if can_submit('radius.mt_operations', 'GET') %}<a class="hub-btn hub-btn--primary" href="{{ url_for('radius.mt_operations') }}">
       <i class="fa-solid fa-network-wired"></i>
       {{ _('فتح إدارة الراوترات') }}
-    </a>
+    </a>{% endif %}
   </div>
 
   <div class="hub-kpi-grid">

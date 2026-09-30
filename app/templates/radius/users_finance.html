@@ -165,7 +165,7 @@
           <td class="small">{{ loan.reason or '—' }}</td>
           <td>
             {% if loan.status == 'open' %}
-            <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
+            {% if can_submit('radius.users_loan_settle', 'POST') %}<form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
@@ -173,7 +173,7 @@
               <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is not none else (loan.amount or 0)) }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
-            </form>
+            </form>{% endif %}
             {% else %}<span class="hub-text-mute small">—</span>{% endif %}
           </td>
         </tr>
@@ -226,7 +226,9 @@
 <div class="uds-modal" id="ff-payment" data-uds-modal data-ff-modal="payment" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('تسجيل دفعة نقدية') }}">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">{% if not can_submit('radius.users_payment_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
+      {# N10: الصفحة تُعيد التحميل بعد النجاح — الخادم يحفظ رسالة النجاح flash لتظهر بعده #}
+      <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
       <div class="uds-modal-head"><h3><i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
@@ -286,14 +288,15 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_payment_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
 {# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
 <div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('منح سلفة') }}">
-    <form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+    {% if can_submit('radius.users_loan_create', 'POST') %}<form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+      <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
       <div class="uds-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
@@ -332,7 +335,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('منح') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
@@ -376,14 +379,19 @@
     const field = payModal.querySelector("[data-ff-actions]"); if(field) field.value = acts.length?JSON.stringify(acts):"";
     const cov = payModal.querySelector("[data-ff-pay-coverage]");
     if(cov){
-      if(amount>0 && EFF_PRICE>0){
+      // F08-L: أكثر من سنة → قاعدة المالك بدل «≈ 428571 يوم» (الخادم يرفض بنفس النصّ).
+      if(amount>0 && EFF_PRICE>0 && days > {{ hr_limits.extend_max_days }}){
+        cov.textContent = {{ hr_limits.extend_too_long|tojson }} + " " + {{ _("(المبلغ يغطّي أكثر من سنة — قسّمه على أكثر من دفعة).")|tojson }};
+        cov.classList.add("is-over-cap");
+      } else if(amount>0 && EFF_PRICE>0){
+        cov.classList.remove("is-over-cap");
         const parts = [];
         if(settled>0) parts.push(`${ {{ _("خصم")|tojson }} } ${money(settled)} ${ {{ _("لتسوية سلف")|tojson }} }`);
         if(settleBal>0) parts.push(`${ {{ _("سداد دين")|tojson }} } ${money(settleBal)}`);
         let msg = `${ {{ _("إجمالي ما سيُضاف ≈")|tojson }} } ${arDays(days)}.`;
         if(parts.length) msg = `${parts.join({{ _(" و")|tojson }})}${ {{ _("؛ والباقي")|tojson }} } ${money(timeAmount)} → ${msg}`;
         cov.textContent = msg;
-      } else cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }};
+      } else { cov.classList.remove("is-over-cap"); cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }}; }
     }
   }
   payModal?.querySelector("[data-ff-pay-amount]")?.addEventListener("input", payCoverage);

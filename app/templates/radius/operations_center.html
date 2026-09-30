@@ -39,7 +39,7 @@
   "مركز العمليات",
   subtitle="شاشة متابعة سريعة: من متصل الآن، وحالة أجهزة الشبكة والمصادقة — كل ما هنا للعرض الآمن، بلا أي تنفيذ مباشر.",
   icon="gauge-high",
-  actions_html='<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> '|safe ~ _("مركز التحكم بالسرعة") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> '|safe ~ _("مركز التحكم بالسرعة") ~ '</a>'|safe if can_submit('radius.operations_speed_control', 'GET') else ''),
   kpis=[
     {'label': 'المستخدمون المتصلون', 'value': snapshot.online_users, 'icon': 'wifi', 'variant': 'green'},
     {'label': 'أجهزة الشبكة', 'value': snapshot.nas_health.total, 'icon': 'server', 'variant': 'blue'},
@@ -73,7 +73,7 @@
         تشاهد كم مشتركًا سيتأثر وما السرعة الجديدة، ثم تحفظها كمسودة جاهزة.
         <span class="hub-hint" tabindex="0" data-hint="السياسة المحفوظة تبقى معاينة فقط (dry-run): لا يُرسل أي أمر مباشر إلى RADIUS أو CoA، وتسجَّل الحركة في سجل الأحداث للمراجعة."><i class="fa-solid fa-info"></i></span>
       </p>
-      {{ hub.btn("فتح مركز التحكم بالسرعة", href=url_for('radius.operations_speed_control'), icon="arrow-left", variant="secondary") }}
+      {% if can_submit('radius.operations_speed_control', 'GET') %}{{ hub.btn("فتح مركز التحكم بالسرعة", href=url_for('radius.operations_speed_control'), icon="arrow-left", variant="secondary") }}{% endif %}
     </div>
     <div class="ops-tiles">
       {{ hub.tile("أوضاع جاهزة", "5", icon="wand-magic-sparkles", sub="طبيعي · ضغط · ليل · طوارئ · حماية المهم") }}

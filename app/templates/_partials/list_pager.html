@@ -1,0 +1,27 @@
+{# ═══════════════════════════════════════════════════════════════════
+   F08-L: مُرقِّم خادميّ موحّد لقوائم التقارير (كانت تقف عند أوّل 500 صفّ).
+   الاستخدام: {% from "_partials/list_pager.html" import list_pager with context %}
+              {{ list_pager(filters.pager) }}
+   pager = {page, pages, total, start, end}. الروابط تحفظ كلّ فلاتر الرابط
+   الحاليّ وتغيّر رقم الصفحة (param، افتراضه pn) فقط.
+   ═══════════════════════════════════════════════════════════════════ #}
+{% macro _pager_link(base_args, param, p, label, active=False) -%}
+  {%- set _q = dict(base_args) -%}{%- set _upd = _q.update({param: p}) -%}
+  <a class="uds-pager-btn{{ ' is-active' if active }}" href="{{ request.path }}?{{ _q|urlencode }}"{{ ' aria-current="page"'|safe if active }}>{{ label }}</a>
+{%- endmacro %}
+{% macro list_pager(pager, param='pn') -%}
+{%- if pager and pager.pages and pager.pages > 1 -%}
+{%- set _args = request.args.to_dict() -%}
+<nav class="uds-table-pager hr-list-pager" data-testid="list-pager" aria-label="{{ _('صفحات النتائج') }}">
+  <div class="uds-pager-info">{{ pager.start }}–{{ pager.end }} {{ _('من') }} {{ pager.total }}</div>
+  <div class="uds-pager-nav">
+    {%- if pager.page > 1 %}{{ _pager_link(_args, param, pager.page - 1, '<i class="fa-solid fa-chevron-right"></i>'|safe) }}{% endif -%}
+    {%- set _s = [1, pager.page - 2]|max -%}{%- set _e = [pager.pages, pager.page + 2]|min -%}
+    {%- if _s > 1 %}{{ _pager_link(_args, param, 1, 1) }}{% if _s > 2 %}<span class="uds-pager-dots">…</span>{% endif %}{% endif -%}
+    {%- for p in range(_s, _e + 1) %}{{ _pager_link(_args, param, p, p, p == pager.page) }}{% endfor -%}
+    {%- if _e < pager.pages %}{% if _e < pager.pages - 1 %}<span class="uds-pager-dots">…</span>{% endif %}{{ _pager_link(_args, param, pager.pages, pager.pages) }}{% endif -%}
+    {%- if pager.page < pager.pages %}{{ _pager_link(_args, param, pager.page + 1, '<i class="fa-solid fa-chevron-left"></i>'|safe) }}{% endif -%}
+  </div>
+</nav>
+{%- endif -%}
+{%- endmacro %}

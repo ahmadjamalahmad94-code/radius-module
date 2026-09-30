@@ -29,7 +29,7 @@
   <p class="card-intro">{{ _('الصق توكن البوت ومعرّف المحادثة/القناة، فعّل الإشعارات، ثم اضغط «اختبار الاتصال».') }}
     {% if bot.has_token %}<br><span class="hub-text-mute">{{ _('التوكن الحالي محفوظ مشفّرًا') }}: <code>{{ bot.token_masked }}</code> — {{ _('اتركه فارغًا للإبقاء عليه.') }}</span>{% endif %}
   </p>
-  <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}">
+  <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}">{% if not can_submit('radius.admin_alerts_save_bot') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
       <div class="field" style="flex:1;min-width:260px">
@@ -56,7 +56,7 @@
         <i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}
       </button>
     </div>
-  </form>
+  {% if not can_submit('radius.admin_alerts_save_bot') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {# ═══════════ جرد التنبيهات ═══════════ #}

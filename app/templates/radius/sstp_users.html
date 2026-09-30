@@ -133,7 +133,7 @@
             <td data-uds-nosort>
               <div class="sstp-row-actions">
                 {# تفعيل/تعطيل #}
-                <form method="post" action="{{ url_for('radius.mt_sstp_user_toggle') }}" style="margin:0">
+                {% if can_submit('radius.mt_sstp_user_toggle', 'POST') %}<form method="post" action="{{ url_for('radius.mt_sstp_user_toggle') }}" style="margin:0">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="username" value="{{ a.username }}">
                   <input type="hidden" name="enabled" value="{{ '0' if not st.disabled else '1' }}">
@@ -143,7 +143,7 @@
                     {% if st.disabled %}<i class="fa-solid fa-play" style="color:var(--hub-green,#16a34a)"></i>
                     {% else %}<i class="fa-solid fa-pause"></i>{% endif %}
                   </button>
-                </form>
+                </form>{% endif %}
                 {# إعادة تعيين كلمة المرور — نافذة عائمة #}
                 <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
                         data-uds-modal-open="sstp-reset-modal"
@@ -158,20 +158,20 @@
                   <i class="fa-solid fa-clock"></i></button>
                 {# تفاصيل (الصفحة المخصّصة) #}
                 {% if a.nas_id %}
-                <a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
+                {% if can_submit('radius.mt_sstp_credentials', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm"
                    href="{{ url_for('radius.mt_sstp_credentials', nas_id=a.nas_id) }}"
                    title="{{ _('تفاصيل النفق') }}">
-                  <i class="fa-solid fa-sliders"></i></a>
+                  <i class="fa-solid fa-sliders"></i></a>{% endif %}
                 {% endif %}
                 {# حذف #}
-                <form method="post" action="{{ url_for('radius.mt_sstp_user_delete') }}" style="margin:0">
+                {% if can_submit('radius.mt_sstp_user_delete', 'POST') %}<form method="post" action="{{ url_for('radius.mt_sstp_user_delete') }}" style="margin:0">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="username" value="{{ a.username }}">
                   <button class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" type="submit"
                           title="{{ _('حذف') }}"
                           data-confirm="{{ _('حذف حساب النفق %(u)s نهائيًّا؟ لا يمكن التراجع، وسيتوقّف نفق الراوتر فورًا.', u=a.username) }}">
                     <i class="fa-solid fa-trash"></i></button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>
@@ -191,7 +191,7 @@
     <i class="fa-solid fa-server"></i>
     <span>{{ _('الحساب:') }} <code data-sstp-target-user>—</code></span>
   </div>
-  <form method="post" action="{{ url_for('radius.mt_sstp_user_reset') }}">
+  {% if can_submit('radius.mt_sstp_user_reset', 'POST') %}<form method="post" action="{{ url_for('radius.mt_sstp_user_reset') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="username" value="" data-sstp-username>
     <label class="sstp-modal-field">
@@ -204,7 +204,7 @@
       <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
       <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-key"></i> {{ _('تعيين كلمة المرور') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 
 {% call hub.modal('sstp-expiry-modal', _('ضبط صلاحية الحساب'), icon='clock') %}
@@ -212,7 +212,7 @@
     <i class="fa-solid fa-server"></i>
     <span>{{ _('الحساب:') }} <code data-sstp-target-user>—</code></span>
   </div>
-  <form method="post" action="{{ url_for('radius.mt_sstp_user_expiry') }}">
+  {% if can_submit('radius.mt_sstp_user_expiry', 'POST') %}<form method="post" action="{{ url_for('radius.mt_sstp_user_expiry') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="username" value="" data-sstp-username>
     <label class="sstp-modal-field">
@@ -224,7 +224,7 @@
       <button type="button" class="hub-btn hub-btn--secondary" data-uds-modal-close>{{ _('إلغاء') }}</button>
       <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-clock"></i> {{ _('حفظ الصلاحية') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 
 <script>

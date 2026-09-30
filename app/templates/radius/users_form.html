@@ -882,7 +882,7 @@
 
   {# ───── The form itself ──────────────────────────────── #}
   <form method="post" id="uf-form"
-        action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
+        action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">{% if not can_submit('radius.users_create' if is_new else 'radius.users_update') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {# ── 1. Account ─────────────────────────────────────── #}
     {# Per SERVICES_COOKBOOK §16 redesign:
@@ -1049,8 +1049,8 @@
               </select>
               <div class="help">
                 {{ _('تُدار من') }}
-                <a href="{{ url_for('radius.subscriber_groups_list') }}"
-                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">{{ _('مجموعات المشتركين') }}</a>.
+                {% if can_submit('radius.subscriber_groups_list', 'GET') %}<a href="{{ url_for('radius.subscriber_groups_list') }}"
+                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">{% endif %}{{ _('مجموعات المشتركين') }}{% if can_submit('radius.subscriber_groups_list', 'GET') %}</a>{% endif %}.
               </div>
             </div>
           </div>
@@ -1122,7 +1122,11 @@
             </div>
             {# قيمةُ المنتقي لحظة فتح الصفحة: منتقٍ لم يُلمس لا يُعيد تجديدًا جرى
                بعد فتحها (يقارنه _form_dto)، ويحفظ ثواني النهاية. #}
-            {% if not is_new %}<input type="hidden" name="expire_orig" value="{{ ('%04d-%02d-%02d %s'|format(_ey, _em, _ed, _et)) if (_ey and _em and _ed) else '' }}">{% endif %}
+            {% if not is_new %}<input type="hidden" name="expire_orig" value="{{ ('%04d-%02d-%02d %s'|format(_ey, _em, _ed, _et)) if (_ey and _em and _ed) else '' }}">
+            {# F03-N2: حالة «بدون انتهاء» لحظة فتح الصفحة — مربّعٌ لم يُلمس لا يمسح تجديدًا جرى بعدها. #}
+            <input type="hidden" name="no_expiry_orig" value="{{ request.form.get('no_expiry_orig', '') if request.method == 'POST' else ('1' if not sub.expire_at else '') }}">
+            {# F03-N1: لقطة قيَم الحقول لحظة فتح الصفحة — يُكتب فقط ما غيّره المشغّل. #}
+            <input type="hidden" name="_form_orig" value="{{ form_orig if form_orig is defined and form_orig else request.form.get('_form_orig', '') }}">{% endif %}
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.') }}{% endif %}
@@ -1917,12 +1921,12 @@
 
     {# ── Action bar ───────────────────────────────────── #}
     <div class="uf-actions">
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">{{ _('إلغاء') }}</a>
+      {% if can_submit('radius.users_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">{{ _('إلغاء') }}</a>{% endif %}
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ المشترك" if is_new else "حفظ التعديلات" }}
       </button>
     </div>
-  </form>
+  {% if not can_submit('radius.users_create' if is_new else 'radius.users_update') %}</fieldset>{% endif %}</form>
 </div>
 
 <script>

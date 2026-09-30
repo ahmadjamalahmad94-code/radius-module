@@ -209,10 +209,10 @@
             </div>
           </td>
           <td>
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الباقة') }}"
+            {% if can_submit('radius.plans_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الباقة') }}"
                href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">
               <i class="fa-solid fa-pen"></i>
-            </a>
+            </a>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -234,7 +234,7 @@
       <div class="po-recent-row">
         <span class="po-recent-dot" style="background:{{ r.color or '#6B5AED' }}"></span>
         <span class="po-recent-name">
-          <a href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">{{ r.name }}</a>
+          {% if can_submit('radius.plans_edit', 'GET') %}<a href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">{% endif %}{{ r.name }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}
         </span>
         {{ hub.pill(TYPE_AR.get(r.plan_type, r.plan_type or '—'), variant="brand", dot=False) }}
         {% if r.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
@@ -262,7 +262,7 @@
     <div class="uds-help-note" style="margin-top:12px">
       <i class="fa-solid fa-circle-info"></i>
       <span>{{ _('لديك') }} <bdi dir="ltr">{{ unused_plans }}</bdi> {{ _('باقة بلا أي مشترك — راجعها من') }}
-        <a href="{{ url_for('radius.plans_list') }}" style="font-weight:800">{{ _('قائمة العروض') }}</a>
+        {% if can_submit('radius.plans_list', 'GET') %}<a href="{{ url_for('radius.plans_list') }}" style="font-weight:800">{% endif %}{{ _('قائمة العروض') }}{% if can_submit('radius.plans_list', 'GET') %}</a>{% endif %}
         {{ _('وفكّر بأرشفة غير المستخدَم منها.') }}</span>
     </div>
     {% endif %}

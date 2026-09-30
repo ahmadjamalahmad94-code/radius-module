@@ -268,11 +268,18 @@ class FinanceCenterService:
     def revenue(self, *, tenant_id: int = 1, limit: int = 200) -> list[dict[str, Any]]:
         return revenue_items(int(tenant_id), limit=limit)
 
-    def loans(self, *, tenant_id: int = 1, status: str = "", limit: int = 200) -> list[dict[str, Any]]:
+    def loans(self, *, tenant_id: int = 1, status: str = "", limit: int = 200,
+              date_from: str = "", date_to: str = "") -> list[dict[str, Any]]:
         if not _table_exists("loan_entries"):
             return []
+        # F03-N9: نطاق تاريخ الإنشاء بيوم اللوحة المحلّيّ (ReportDateError لقيمة خاطئة).
+        rng = None
+        if str(date_from or "").strip() or str(date_to or "").strip():
+            from .report_dates import local_bounds
+            rng = local_bounds(date_from, date_to, int(tenant_id))
         # صفّ السلفة + settled_amount + outstanding (المتبقّي بعد التسوية الجزئيّة).
-        return accounting_repo.list_loans(int(tenant_id), status=status, limit=int(limit))
+        return accounting_repo.list_loans(int(tenant_id), status=status, limit=int(limit),
+                                          created_range=rng)
 
     def debts(self, *, tenant_id: int = 1, limit: int = 300) -> dict[str, Any]:
         """Money owed to the operator, derived from existing records.

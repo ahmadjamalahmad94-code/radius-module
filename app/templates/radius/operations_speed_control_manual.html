@@ -56,20 +56,20 @@
 ) }}
 {# تبويب الانتقال بين الصفحتين الشقيقتين #}
 <nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="{{ _('صفحات التحكم بالسرعة') }}">
-  <a href="{{ url_for('radius.operations_speed_control') }}">
+  {% if can_submit('radius.operations_speed_control', 'GET') %}<a href="{{ url_for('radius.operations_speed_control') }}">{% endif %}
     <i class="fa-solid fa-calendar-check"></i> {{ _('التحكم المجدول') }}
-  </a>
-  <a class="is-active" href="{{ url_for('radius.operations_speed_control_manual') }}" aria-current="page">
+  {% if can_submit('radius.operations_speed_control', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.operations_speed_control_manual', 'GET') %}<a class="is-active" href="{{ url_for('radius.operations_speed_control_manual') }}" aria-current="page">{% endif %}
     <i class="fa-solid fa-sliders"></i> {{ _('التحكم اليدوي') }}
-  </a>
+  {% if can_submit('radius.operations_speed_control_manual', 'GET') %}</a>{% endif %}
 </nav>
 </section>{# /hub-hero-shell #}
 
 {# زر رجوع سريع إلى قائمة ملفات السرعة (Bandwidth) — هذه الصفحة تتبع قسم «التحكم بالسرعة» #}
 <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
+  {% if can_submit('radius.bw_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
     <i class="fa-solid fa-arrow-right"></i> {{ _('العودة إلى ملفات السرعة') }}
-  </a>
+  </a>{% endif %}
 </div>
 
 {# ═══════ الجداول الزمنية للسرعة (CRUD موصول بنفس backend صفحة bandwidth-schedules) ═══════
@@ -377,7 +377,7 @@
 
   {# ── النموذج المخفي للإرسال: نفس عقد الخادم تمامًا (يملؤه السكربت ثم يرسله).
      بدون action → يُرسَل إلى هذا المسار نفسه الذي يقبل POST بنفس المنطق المشترك. ── #}
-  <form method="post" class="spdx-hidden-form" data-testid="speed-manual-form" data-save-form hidden>
+  <form method="post" class="spdx-hidden-form" data-testid="speed-manual-form" data-save-form hidden>{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="policy_key" value="">
     <input type="hidden" name="title" value="">
@@ -387,7 +387,7 @@
     <input type="hidden" name="settings_json" value="">
     <input type="hidden" name="save_policy" value="1">
     <input type="hidden" name="apply" value="">
-  </form>
+  {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 </section>{# /spdx #}
 </div>{# /opsx-redesign #}

@@ -958,7 +958,130 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001
                 return []
 
+        def _can_submit(endpoint: str, method: str = "POST") -> bool:
+            """F01-F2: الزرّ/الرابط/النموذج يُعرَض فقط إن كان طلبه (endpoint +
+            method) سيَقبله الخادم لهذا المدير — **نفس قرار** حارس اللوحة
+            (routes/blueprint.rbac_denial_status: أعلام القسم، الأقسام الدقيقة،
+            بوّابة الفعل، bulk.ops، مفتاح الكتابة/المالك، مفتاح العرض). لا يفتح
+            نموذجٌ لا يُحفَظ، ولا زرّ يقود إلى 403. السوبر دائمًا نعم؛ فحصٌ بلا
+            تسجيل حركة (record_activity=False)؛ مُخزَّن لكل طلب. fail-open عند
+            خطأ داخليّ (الخادم يبقى الحَكَم)."""
+            if _is_super():
+                return True
+            # جلسةٌ بلا مفتاح «permissions» ليست جلسة دخول حقيقيّة (كلّ دخول يكتبه
+            # ولو فارغًا) — لا قرار RBAC ممكن: fail-open كبقيّة طبقة العرض.
+            try:
+                if "permissions" not in _sess:
+                    return True
+            except Exception:  # noqa: BLE001
+                return True
+            name = (endpoint or "").split(".", 1)[1] if (endpoint or "").startswith("radius.") else (endpoint or "")
+            meth = (method or "POST").upper()
+            try:
+                from flask import g as _g
+                cache = getattr(_g, "_can_submit_cache", None)
+                if cache is None:
+                    cache = {}
+                    _g._can_submit_cache = cache
+            except Exception:  # noqa: BLE001
+                cache = {}
+            key = (name, meth)
+            if key in cache:
+                return cache[key]
+            # نموذجٌ يرسل POST إلى عنوانٍ اسمه لصفحة GET (مثل /users → users_list)
+            # يصل فعليًّا إلى endpoint آخر على نفس المسار (users_create) — نحكم عليه.
+            try:
+                _rules = app.url_map._rules_by_endpoint.get("radius." + name) or []
+                if _rules and not any(meth in (r.methods or ()) for r in _rules):
+                    for _r in app.url_map.iter_rules():
+                        if _r.rule == _rules[0].rule and meth in (_r.methods or ()) \
+                                and _r.endpoint.startswith("radius."):
+                            name = _r.endpoint.split(".", 1)[1]
+                            break
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                from flask import g as _g
+                from app.radius.routes.blueprint import rbac_denial_status
+                _saved = getattr(_g, "_rbac_denial", None)
+                try:
+                    res = rbac_denial_status(
+                        name, meth, is_super=False,
+                        perms=_sess.get("permissions") or [],
+                        admin_id=_sess.get("admin_id"),
+                        tenant_id=int(_sess.get("tenant_id") or 1),
+                        record_activity=False) is None
+                finally:
+                    # لا نطمس سبب رفضٍ حقيقيّ تعرضه صفحة 403 نفسها.
+                    _g._rbac_denial = _saved
+            except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
+                res = True
+            # رابط «جديد/تعديل» يفتح نموذجًا: يُعرَض فقط إن كان حفظه مقبولًا أيضًا
+            # (bw_new يفتح بـplans.create وحفظه bw_create يطلب plans.edit).
+            if res and meth == "GET":
+                pair = (name[:-4] + "_create" if name.endswith("_new")
+                        else name[:-5] + "_update" if name.endswith("_edit") else "")
+                if pair and ("radius." + pair) in app.view_functions:
+                    cache[key] = res     # guard against a self-cycle
+                    res = _can_submit(pair, "POST")
+            cache[key] = res
+            return res
+
+        def _can_any(*endpoints: str) -> bool:
+            return any(_can_submit(e) for e in endpoints)
+
+        def _can_open_mt(endpoint: str) -> bool:
+            """صفحات طبقة mikrotik.* القديمة (مزخرف mt_permissions.requires_perm):
+            حارس اللوحة + نفس فحص المزخرف. تُستعمل حيث يَظهر رابطها لكلّ مدير
+            (جرس تنبيهات الراوترات في الشريط العلويّ — F01-F13)."""
+            if not _can_submit(endpoint, "GET"):
+                return False
+            if _is_super():
+                return True
+            try:
+                name = endpoint if endpoint.startswith("radius.") else "radius." + endpoint
+                _need = getattr(app.view_functions.get(name), "_hr_required_perms", None)
+                if _need:
+                    from app.radius.services.mt_permissions import require_perms
+                    return bool(require_perms(*_need)[0])
+            except Exception:  # noqa: BLE001 — fail-open
+                pass
+            return True
+
+        def _can_open(url, method: str = "GET") -> bool:
+            """رابطٌ عنوانه بيانات (تنبيه/إشعار/بطاقة لوحة): يُحلّ العنوان إلى
+            endpoint ثم نفس قرار الحارس. عنوان خارجيّ/غير معروف ⇒ نعم."""
+            if _is_super() or not url:
+                return True
+            try:
+                from urllib.parse import urlsplit
+                parts = urlsplit(str(url))
+                if parts.netloc or not parts.path.startswith("/admin/radius/"):
+                    return True
+                ep, _args = app.url_map.bind("localhost").match(parts.path, method=method)
+            except Exception:  # noqa: BLE001
+                return True
+            return _can_submit(ep, method)
+
+        def _can_post_here() -> bool:
+            """نموذجٌ يُرسَل إلى عنوان الصفحة نفسها (بلا action): قرار الحارس على
+            الـendpoint الذي يستقبل POST لهذا العنوان."""
+            if _is_super():
+                return True
+            try:
+                from flask import request as _rq
+                adapter = app.url_map.bind_to_environ(_rq.environ)
+                ep, _args = adapter.match(method="POST")
+            except Exception:  # noqa: BLE001 — لا مسار POST هنا: لا شيء نحجبه
+                return True
+            return _can_submit(ep, "POST")
+
         return {
+            "can_submit": _can_submit,
+            "can_submit_any": _can_any,
+            "can_post_here": _can_post_here,
+            "can_open": _can_open,
+            "can_open_mt": _can_open_mt,
             "manager_locked_fields": _manager_locked_fields,
             "subscriber_actions": _sub_actions,
             "manager_nav_hidden": _manager_nav_hidden,
@@ -968,6 +1091,40 @@ def _install_stubs(app: Flask) -> None:
             "manager_action_allowed": _manager_action_allowed,
             "manager_can_see": _manager_can_see,
         }
+
+    # F01-F2: the gating helpers are ALSO Jinja globals, so macros imported
+    # without context (_partials/hub.html btn/action_card…) can gate their own
+    # href. They only read the request-bound session/g proxies at call time.
+    _gating = _inject_manager_grants()
+    for _gk in ("can_submit", "can_submit_any", "can_post_here", "can_open"):
+        app.jinja_env.globals.setdefault(_gk, _gating[_gk])
+
+    import re as _re_gate
+    _GATE_A = _re_gate.compile(r'<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>(.*?)</a>', _re_gate.S | _re_gate.I)
+    _GATE_FORM = _re_gate.compile(r'<form\b([^>]*?)\baction="([^"]*)"([^>]*)>(.*?)</form>',
+                                  _re_gate.S | _re_gate.I)
+
+    def _gate_html(html):
+        """F01-F2: HTML built as a string (hero actions_html, modal footers):
+        a link/form whose target the guard would refuse is dropped — the same
+        decision as can_open(). Owner/super: unchanged."""
+        from markupsafe import Markup
+        s = str(html or "")
+        if not s or ("href=" not in s and "action=" not in s):
+            return html
+        can_open = _gating["can_open"]
+
+        def _form(m):
+            meth = "POST" if _re_gate.search(r'method\s*=\s*"post"', m.group(1) + m.group(3), _re_gate.I) else "GET"
+            return m.group(0) if can_open(m.group(2), meth) else ""
+
+        def _a(m):
+            return m.group(0) if can_open(m.group(2)) else ""
+        s = _GATE_FORM.sub(_form, s)
+        s = _GATE_A.sub(_a, s)
+        return Markup(s)
+
+    app.jinja_env.filters.setdefault("gate_html", _gate_html)
 
     # Provider gate template helpers — provider_endpoint_blocked /
     # provider_service_disabled. Used by the sidebar macro to silently hide
@@ -1104,6 +1261,55 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault("permission_label", _perm_label)
     app.jinja_env.filters.setdefault("permission_label", _perm_label)
 
+    # F08-L: جمعٌ عربيّ صحيح للأعداد («3 بطاقات»، «11 إعدادًا») — مصدر واحد.
+    from .radius.core.ar_text import ar_count as _ar_count
+    app.jinja_env.filters.setdefault("ar_count", _ar_count)
+    app.jinja_env.globals.setdefault("ar_count", _ar_count)
+    # F08-L: فاعل خام («api-token:72»، «unknown») → اسم عرض مقروء.
+    from .radius.services.actor_names import (
+        actor_display as _actor_display, humanize_actor_refs as _actor_refs)
+    app.jinja_env.filters.setdefault("actor_name", _actor_display)
+    app.jinja_env.filters.setdefault("actor_refs", _actor_refs)
+    # حدود المالك المعروضة في الواجهة — مصدرها الخادم نفسه، لا أرقام مكرّرة في
+    # القوالب. كائنٌ واحد (دمج fix3-webui + fix3-moneyquota):
+    #   • ``hr_limits.extend_max_days`` / ``.extend_too_long`` — «الحدود» الحيّة
+    #     (core.limits، تُقرأ كلّ طلب)؛ ``.card_username_len_max`` /
+    #     ``.card_password_len_max`` — ثوابت مولّد البطاقات؛
+    #   • ``hr_limits()`` — لقطة ``limits.snapshot()`` كاملة (max_extend_minutes…).
+    #   • أيّ اسمٍ آخر في اللقطة متاحٌ كخاصّيّة (``hr_limits.max_loan_amount``).
+    from .radius.services.cards import (
+        PASSWORD_LENGTH_MAX as _pw_max, USERNAME_LENGTH_MAX as _un_max)
+
+    class _HrLimits:
+        _static = {"card_username_len_max": _un_max, "card_password_len_max": _pw_max}
+
+        def __call__(self, tenant_id=None):
+            from .radius.core import limits as _lim
+            return _lim.snapshot(tenant_id)
+
+        def __getattr__(self, name):
+            if name.startswith("_"):
+                raise AttributeError(name)
+            if name in self._static:
+                return self._static[name]
+            from .radius.core import limits as _lim
+            if name == "extend_max_days":
+                return _lim.max_extend_days()
+            if name == "extend_too_long":
+                return _lim.extend_too_long_msg()
+            snap = _lim.snapshot()
+            if name in snap:
+                return snap[name]
+            raise AttributeError(name)
+
+        def __getitem__(self, name):
+            try:
+                return getattr(self, name)
+            except AttributeError:
+                raise KeyError(name) from None
+
+    app.jinja_env.globals["hr_limits"] = _HrLimits()
+
     # رقم الراوتر المعروض «#N» = ترتيبه بين راوترات المستأجر الحيّة، لا
     # المعرّف الداخليّ (AUTOINCREMENT لا يُعاد — تجارب محذوفة كانت تجعل
     # الراوتر الوحيد يظهر «#39»). المعرّف الداخليّ يبقى في الروابط (مفتاح
@@ -1111,10 +1317,7 @@ def _install_stubs(app: Flask) -> None:
     from .radius.db.repos.nas_repo import display_ordinal as _router_no
     app.jinja_env.globals.setdefault("router_no", _router_no)
 
-    # «الحدود» — سقوف العمليّة الواحدة المضبوطة لهذا الخادم (core.limits):
-    # القوالب تعرض/تتحقّق بالقيمة نفسها التي يفرضها الخادم.
-    from .radius.core.limits import snapshot as _hr_limits
-    app.jinja_env.globals.setdefault("hr_limits", _hr_limits)
+    # «الحدود» — ``hr_limits`` (أعلاه) يعرض سقوف core.limits الحيّة للقوالب.
 
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
@@ -1158,17 +1361,52 @@ def _install_stubs(app: Flask) -> None:
             csrf_token()  # يولّد ويحفظ في session
             return redirect(request.referrer or "/admin/radius/login")
         if sent != expected:
-            # Return JSON for AJAX/JSON requests so fetch().then(r.json()) works
-            # and the UI shows a readable message instead of swallowing the error.
-            if request.is_json or request.headers.get("X-CSRFToken") is not None:
-                from flask import jsonify as _jsonify
-                return _jsonify({
-                    "ok": False,
-                    "status": "csrf_error",
-                    "message_ar": "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.",
-                }), 400
-            return ("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى", 400)
+            return _csrf_failure_response()
         return None
+
+    def _csrf_failure_response():
+        """F08-L: فشل رمز الحماية — JSON عربيّ لطلبات AJAX (fetch/XHR بأيّ
+        جسم)، وصفحة عربيّة منسّقة للتصفّح تحفظ ما كُتب (كانت نصًّا خامًا)."""
+        from flask import request, jsonify as _jsonify, render_template as _rt
+        msg = "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى."
+        accept = request.headers.get("Accept") or ""
+        wants_json = (
+            request.is_json
+            or request.headers.get("X-CSRFToken") is not None
+            or (request.headers.get("X-Requested-With") or "").lower() == "xmlhttprequest"
+            or ("application/json" in accept and "text/html" not in accept)
+        )
+        if wants_json:
+            return _jsonify({
+                "ok": False,
+                "status": "csrf_error",
+                "error": msg,
+                "message": msg,
+                "message_ar": msg,
+            }), 400
+        try:
+            fields = {
+                k: request.form.getlist(k) for k in request.form.keys()
+                if k != "_csrf_token" and "password" not in k.lower()
+                and "secret" not in k.lower()}
+        except Exception:  # noqa: BLE001
+            fields = {}
+        back = request.referrer or ""
+        try:
+            from urllib.parse import urlparse
+            _u = urlparse(back)
+            # رجوعٌ داخل الموقع فقط (لا رابط خارجيّ من ترويسة Referer).
+            back = (_u.path + ("?" + _u.query if _u.query else "")) if (
+                not _u.netloc or _u.netloc == request.host) else ""
+        except Exception:  # noqa: BLE001
+            back = ""
+        try:
+            return _rt("radius/csrf_error.html", fields=fields,
+                       back_url=back), 400
+        except Exception:  # noqa: BLE001 — never 500 over a CSRF refusal
+            return ('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
+                    "<h1>انتهت صلاحية الصفحة</h1><p>" + msg + "</p></html>",
+                    400, {"Content-Type": "text/html; charset=utf-8"})
 
     # حقن _csrf_token في كل <form method="post"> تلقائيًا
     import re

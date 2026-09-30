@@ -69,22 +69,22 @@
 {# ───── مداخل البوابات: بطاقتا دخول فقط — بلا أي أقسام إضافية ───── #}
 {% call hub.section("مداخل البوابات", icon="door-open") %}
   <div class="hub-grid hub-grid--2">
-    {{ hub.action_card(
+    {% if can_submit('radius.portal_subscriber_login', 'GET') %}{{ hub.action_card(
       "بوابة المشترك",
       sub="تسجيل دخول المشترك لعرض الاشتراك والاستخدام والطلبات والمدفوعات.",
       icon="user",
       href=url_for('radius.portal_subscriber_login'),
       variant="brand",
       attrs='target="_blank" rel="noopener" data-testid="portal-subscriber-entry"'
-    ) }}
-    {{ hub.action_card(
+    ) }}{% endif %}
+    {% if can_submit('radius.portal_card_login', 'GET') %}{{ hub.action_card(
       "بوابة مستخدم البطاقة",
       sub="تسجيل دخول صاحب البطاقة إلى واجهة الشراء الذاتية الموجودة.",
       icon="id-card",
       href=url_for('radius.portal_card_login'),
       variant="blue",
       attrs='target="_blank" rel="noopener" data-testid="portal-card-entry"'
-    ) }}
+    ) }}{% endif %}
   </div>
   {# سطر مساعدة مختصر تحت البطاقات — يثبّت أيضًا نص العقد المطلوب #}
   <div class="cpa-help hub-text-soft">

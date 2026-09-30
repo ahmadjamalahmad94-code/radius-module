@@ -201,6 +201,8 @@
     }
 
     var size = parseInt(wrap.getAttribute("data-uds-page-size") || "10", 10);
+    // F05-H1 (شقيق): قيمة غير صالحة لا تُخفي كل الصفوف (بداية NaN).
+    if (!(size > 0) || !isFinite(size)) size = 10;
     var sizes = SIZES.slice();
     if (sizes.indexOf(size) < 0) { sizes.push(size); sizes.sort(function (a, b) { return a - b; }); }
     var state = { page: 1, size: size, sortCol: -1, sortDir: 1, hidden: {} };
@@ -361,7 +363,9 @@
       var pool = state.filter ? rows.filter(function (r) { return state.filter(r); }) : rows;
       rows.forEach(function (r) { r.style.display = "none"; });
       var total = pool.length;
+      if (!(state.size > 0) || !isFinite(state.size)) state.size = Math.max(1, total);
       var pages = Math.max(1, Math.ceil(total / state.size));
+      if (!(state.page >= 1)) state.page = 1;
       if (state.page > pages) state.page = pages;
       var start = (state.page - 1) * state.size;
       var end = Math.min(start + state.size, total);

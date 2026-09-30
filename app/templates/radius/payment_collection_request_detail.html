@@ -47,7 +47,7 @@
   "دفعة " ~ item.reference_code,
   subtitle="تفاصيل طلب التحصيل ومراجعة إثبات الدفع — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
   icon="receipt",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("كل الطلبات") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("كل الطلبات") ~ '</a>'|safe if can_submit('radius.payment_collection_requests', 'GET') else ''),
   kpis=[
     {'label': 'المبلغ', 'value': item.amount|money, 'icon': 'money-bill-wave', 'variant': 'green'},
     {'label': 'الحالة', 'value': status_labels.get(item.status, item.status), 'icon': 'circle-info', 'variant': 'brand'},
@@ -122,7 +122,7 @@
     {{ _('القبول يعلّم الدفع كمدفوع ويرحّل قيدًا واحدًا قابلًا للتكرار الآمن. تفعيل الخدمة لا ينفذ في هذه المرحلة.') }}
   </p>
   <div class="hub-grid-2">
-    <form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" class="pcd-form-stack">
+    {% if can_submit('radius.payment_collection_approve_web', 'POST') %}<form method="post" action="{{ url_for('radius.payment_collection_approve_web', request_id=item.id) }}" class="pcd-form-stack">
       {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
       <div>
         <label>{{ _('ملاحظة المراجعة') }}</label>
@@ -136,8 +136,8 @@
       {% else %}
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('قبول الدفع اليدوي') }}</button>
       {% endif %}
-    </form>
-    <form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" class="pcd-form-stack">
+    </form>{% endif %}
+    {% if can_submit('radius.payment_collection_reject_web', 'POST') %}<form method="post" action="{{ url_for('radius.payment_collection_reject_web', request_id=item.id) }}" class="pcd-form-stack">
       {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
       <div>
         <label>{{ _('ملاحظة الرفض') }}</label>
@@ -151,7 +151,7 @@
       {% else %}
       <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض الإثبات') }}</button>
       {% endif %}
-    </form>
+    </form>{% endif %}
   </div>
 {% endcall %}
 {% endif %}
@@ -162,7 +162,7 @@
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
       {{ _('هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي خدمة المصادقة أو فصل الجلسات أو الراوتر.') }}
     </p>
-    <form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="margin:0">
+    {% if can_submit('radius.payment_collection_apply_service_web', 'POST') %}<form method="post" action="{{ url_for('radius.payment_collection_apply_service_web', request_id=item.id) }}" style="margin:0">
       {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
       {% if frozen %}
       {# مجمّد: تطبيق الخدمة معطّل حتى ربط بوابة دفع #}
@@ -173,7 +173,7 @@
       {% else %}
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> {{ _('تسجيل تطبيق الخدمة') }}</button>
       {% endif %}
-    </form>
+    </form>{% endif %}
   </div>
   {% if apply_attempts %}
   {# جدول موحّد uds-table: فرز + ترقيم + اختيار أعمدة + تصدير CSV/XLSX/PDF #}

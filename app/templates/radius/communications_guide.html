@@ -244,7 +244,7 @@
               <button class="gd-mock-btn"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ إعدادات القناة') }}</button>
             </div>
           </div>
-          <a class="gd-go" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة قنوات الإرسال') }}</a>
+          {% if can_submit('radius.communications_channels', 'GET') %}<a class="gd-go" href="{{ url_for('radius.communications_channels') }}">{% endif %}<i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}
         </div>
       </div>
 
@@ -268,7 +268,7 @@
           <h4><i class="fa-solid fa-robot" style="color:#16a34a"></i> {{ _('فعّل البوت من صفحة «بوت واتساب»') }}</h4>
           <p>{{ _('افتح صفحة') }} <strong>{{ _('بوت واتساب') }}</strong> وحرّك مفتاح «تفعيل الرد التلقائي» إلى وضع التشغيل. الإعدادات الافتراضية جاهزة،
             لذا يبدأ البوت بالعمل فور التفعيل.</p>
-          <a class="gd-go" href="{{ url_for('radius.communications_bot') }}"><i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة بوت واتساب') }}</a>
+          {% if can_submit('radius.communications_bot', 'GET') %}<a class="gd-go" href="{{ url_for('radius.communications_bot') }}">{% endif %}<i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة بوت واتساب') }}{% if can_submit('radius.communications_bot', 'GET') %}</a>{% endif %}
         </div>
       </div>
 
@@ -458,8 +458,8 @@
               <button class="gd-mock-btn tg"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}</button>
             </div>
           </div>
-          <a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">
-            <i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة تنبيهات تلجرام') }}</a>
+          {% if can_submit('radius.network_telegram_settings', 'GET') %}<a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{% endif %}
+            <i class="fa-solid fa-arrow-left"></i> {{ _('افتح صفحة تنبيهات تلجرام') }}{% if can_submit('radius.network_telegram_settings', 'GET') %}</a>{% endif %}
         </div>
       </div>
 
@@ -519,7 +519,7 @@
             </div>
             <div class="gd-flow-note">{{ _('يعتمد ذلك على بوت أنشأته أنت، وتنبيهات تفعّلها من «الإشعارات الحدثية» أو من صفحة كل جهاز.') }}</div>
           </div>
-          <a class="gd-go" href="{{ url_for('radius.communications_notifications') }}" style="margin-top:13px"><i class="fa-solid fa-arrow-left"></i> {{ _('اضبط الأحداث من «الإشعارات الحدثية»') }}</a>
+          {% if can_submit('radius.communications_notifications', 'GET') %}<a class="gd-go" href="{{ url_for('radius.communications_notifications') }}" style="margin-top:13px">{% endif %}<i class="fa-solid fa-arrow-left"></i> {{ _('اضبط الأحداث من «الإشعارات الحدثية»') }}{% if can_submit('radius.communications_notifications', 'GET') %}</a>{% endif %}
         </div>
 
       </div>

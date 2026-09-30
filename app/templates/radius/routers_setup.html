@@ -27,7 +27,7 @@
 {% endblock %}
 
 {% block content %}
-<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_list') }}" style="margin-bottom:12px"><i class="fa-solid fa-chevron-right" style="font-size:9px"></i> {{ _('كل الراوترات') }}</a>
+{% if can_submit('radius.routers_list', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.routers_list') }}" style="margin-bottom:12px"><i class="fa-solid fa-chevron-right" style="font-size:9px"></i> {{ _('كل الراوترات') }}</a>{% endif %}
 
 <div style="margin:0 2px 14px">
   {% if nbi_ok %}<span class="rtr-nbi ok"><i class="fa-solid fa-plug-circle-check"></i> {{ _('GenieACS متصل') }}</span>
@@ -63,14 +63,14 @@
 
 {% call hub.section("الربط المسبق بالسيريال", icon="link", meta=(bindings|length)|string) %}
   <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('سجّل الرقم التسلسليّ لراوتر واسمَ الدخول المقابل؛ فور اتصال الراوتر يُربَط بالمشترك تلقائيًّا دون أي خطوة يدويّة.') }}</p>
-  <form method="POST" action="{{ url_for('radius.routers_serial_binding_add') }}" class="sb-form" style="margin:0 0 16px">
+  {% if can_submit('radius.routers_serial_binding_add', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_serial_binding_add') }}" class="sb-form" style="margin:0 0 16px">
     {{ csrf_token_input() | safe }}
     <div class="fld"><label>{{ _('الرقم التسلسليّ') }} *</label><input class="hub-input sb-mono" name="serial_number" required placeholder="ABC123456789"></div>
     <div class="fld"><label>{{ _('اسم الدخول (PPPoE)') }}</label><input class="hub-input sb-mono" name="radius_username" placeholder="ahmad-home"></div>
     <div class="fld"><label>{{ _('رقم المشترك') }}</label><input class="hub-input" name="subscriber_id" inputmode="numeric" placeholder="—"></div>
     <div class="fld"><label>{{ _('ملاحظة') }}</label><input class="hub-input" name="note" placeholder="—"></div>
     <div class="fld">{{ hub.btn("حفظ الربط", icon="plus", variant="primary", type="submit", size="sm") }}</div>
-  </form>
+  </form>{% endif %}
   {% if bindings %}
   <div class="hub-table-wrap"><table class="hub-table">
     <thead><tr><th>{{ _('الرقم التسلسليّ') }}</th><th>{{ _('اسم الدخول') }}</th><th>{{ _('رقم المشترك') }}</th><th>{{ _('ملاحظة') }}</th><th data-uds-nosort></th></tr></thead>
@@ -82,11 +82,11 @@
         <td>{{ b.subscriber_id or '—' }}</td>
         <td>{{ b.note or '—' }}</td>
         <td>
-          <form method="POST" action="{{ url_for('radius.routers_serial_binding_delete', binding_id=b.id) }}"
+          {% if can_submit('radius.routers_serial_binding_delete', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_serial_binding_delete', binding_id=b.id) }}"
                 onsubmit="return confirm('{{ _('حذف هذا الربط المسبق؟') }}');" style="display:inline">
             {{ csrf_token_input() | safe }}
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" style="color:#b91c1c"><i class="fa-solid fa-trash"></i></button>
-          </form>
+          </form>{% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -99,15 +99,15 @@
 
 {% call hub.section("تنبيهات الفصل والإنترنت", icon="bell") %}
   <p style="color:#475569;font-size:13.5px;margin:0 0 12px">{{ _('يصلك تنبيه عند فصل راوتر مشترك عن ACS، وتنبيه منفصل حين يكون الراوتر متصلًا لكن بلا إنترنت (WAN/PPP مفصول)، وعند العودة في الحالتين.') }}</p>
-  <form method="POST" action="{{ url_for('radius.routers_alert_settings') }}" class="sb-form" style="margin:0 0 12px;max-width:420px">
+  {% if can_submit('radius.routers_alert_settings', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_alert_settings') }}" class="sb-form" style="margin:0 0 12px;max-width:420px">
     {{ csrf_token_input() | safe }}
     <div class="fld"><label>{{ _('يُعتبر الراوتر مفصولًا بعد (دقائق بلا Inform)') }}</label>
       <input class="hub-input" name="offline_after_minutes" inputmode="numeric" value="{{ offline_minutes }}"></div>
     <div class="fld">{{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit", size="sm") }}</div>
-  </form>
+  </form>{% endif %}
   <p style="font-size:12.5px;color:#64748b;margin:0">
     <i class="fa-solid fa-sliders"></i> {{ _('قنوات التنبيه (تلجرام/دفع الجوال/الجرس) تُدار مركزيًّا من') }}
-    <a href="{{ url_for('radius.admin_alerts_page') }}">{{ _('الإعدادات ← تنبيهات تلجرام') }}</a>
+    {% if can_submit('radius.admin_alerts_page', 'GET') %}<a href="{{ url_for('radius.admin_alerts_page') }}">{% endif %}{{ _('الإعدادات ← تنبيهات تلجرام') }}{% if can_submit('radius.admin_alerts_page', 'GET') %}</a>{% endif %}
     {{ _('ضمن مجموعة «راوترات المشتركين (TR-069)».') }}
   </p>
 {% endcall %}

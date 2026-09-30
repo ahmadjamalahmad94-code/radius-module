@@ -71,6 +71,7 @@
     return '';
   }
   /*</hr-num-clean>*/
+  var NUM_BAD_MSG = 'أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».';
   window.hrLatinDigits = toLatin;
   window.hrNumClean = numClean;
   window.hrNumSeps = numSeps;
@@ -173,14 +174,32 @@
       if (t.setCustomValidity) t.setCustomValidity('');
       return;
     }
-    if (isDecimalText(t)) { setCleaned(t, numSeps); return; }
+    if (isDecimalText(t)) { setCleaned(t, numSeps); markNum(t); return; }
     if (!t || !t.hasAttribute || !t.hasAttribute('data-hr-num')) return;
-    setCleaned(t, numClean);
-    if (t.setCustomValidity) t.setCustomValidity('');
+    // F08-L: لا نحذف محارف غريبة بصمت — «1e9» كانت تصير «19» (دفعة 19 ₪ بدل
+    // رفض). نطبّع الأرقام العربيّة والفواصل فقط، وأيّ محرف آخر يُعلَّم خطأً
+    // برسالة ظاهرة ويُرفض الإرسال (numCheck).
+    setCleaned(t, numSeps);
+    markNum(t);
   }, true);
+  function markNum(t) {
+    var bad = /[^\d.\-]/.test(t.value || '');
+    var msg = bad ? NUM_BAD_MSG : '';
+    if (t.setCustomValidity) t.setCustomValidity(msg);
+    if (bad) { t.setAttribute('aria-invalid', 'true'); t.classList.add('hr-num-invalid'); t.title = msg; }
+    else if (t.getAttribute('aria-invalid') === 'true') {
+      t.removeAttribute('aria-invalid'); t.classList.remove('hr-num-invalid');
+      if (t.title === NUM_BAD_MSG) t.removeAttribute('title');
+    }
+  }
   // وقتٌ مكتوب «930» أو «9:30» ⇒ «09:30» عند مغادرة الحقل (كما يقبله type=time).
   document.addEventListener('change', function (e) {
     var t = e.target;
+    // F08-L: حقل رقميّ فيه محرف غير رقميّ — نُظهر الرسالة عند مغادرته (لا صمت).
+    if (t && t.hasAttribute && (t.hasAttribute('data-hr-num') || isDecimalText(t)) && t.getAttribute('aria-invalid') === 'true') {
+      try { t.reportValidity(); } catch (_) {}
+      return;
+    }
     if (!t || !t.getAttribute || t.getAttribute('data-hr-fmt') !== 'time') return;
     var m = /^(\d{1,2}):?(\d{2})$/.exec(String(t.value || '').trim());
     if (m && +m[1] < 24 && +m[2] < 60) t.value = (m[1].length < 2 ? '0' : '') + m[1] + ':' + m[2];
@@ -191,9 +210,10 @@
     var nums = f.querySelectorAll('[data-hr-num],[data-hr-fmt]');
     for (var i = 0; i < nums.length; i++) {
       if (nums[i].disabled) continue;
-      // قيمة لصقها JS أو الإكمال التلقائيّ دون حدث input: نطبّعها قبل الإرسال.
+      // قيمة لصقها JS أو الإكمال التلقائيّ دون حدث input: نطبّع أرقامها وفواصلها
+      // فقط قبل الإرسال — لا حذف (F08-L: «1e9» تُرفض برسالة لا تصير «19»).
       if (nums[i].hasAttribute('data-hr-num')) {
-        var cv = numClean(nums[i].value || '');
+        var cv = numSeps(nums[i].value || '');
         if (cv !== nums[i].value) nums[i].value = cv;
       }
       var m = nums[i].hasAttribute('data-hr-fmt') ? fmtMsg(nums[i]) : numMsg(nums[i]);

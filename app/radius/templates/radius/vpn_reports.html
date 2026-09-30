@@ -1,4 +1,6 @@
-{% extends "radius/layout.html" %}
+{# F08-L (F01-F20): كان يمدّ "radius/layout.html" غير الموجود → 500
+   TemplateNotFound حتى للمالك. التخطيط الموحّد للوحة هو admin/_admin_layout. #}
+{% extends "admin/_admin_layout.html" %}
 {% block title %}تقارير الخدمات — VPN & WireGuard{% endblock %}
 {% block page_title %}تقارير الخدمات{% endblock %}
 {% block page_subtitle %}حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV{% endblock %}
@@ -43,6 +45,10 @@
 {% endblock %}
 
 {% block content %}
+<div class="hub-page-head" style="margin-bottom:14px">
+  <h1 class="hub-page-title" style="margin:0 0 4px">تقارير الخدمات</h1>
+  <p class="hub-text-mute" style="margin:0">حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV</p>
+</div>
 
 {# ── فلاتر مشتركة ── #}
 <form method="get" class="filter-bar">
@@ -80,9 +86,9 @@
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
     <i class="fa-solid fa-filter"></i> تطبيق
   </button>
-  <a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
+  {% if can_submit('radius.vpn_service_reports', 'GET') %}<a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
     <i class="fa-solid fa-rotate"></i> إعادة تعيين
-  </a>
+  </a>{% endif %}
 </form>
 
 {# ── تبويبات ── #}
@@ -118,10 +124,10 @@
         منتهي
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_accounts', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if not vpn_accounts %}
@@ -194,10 +200,10 @@
         تجاوز الكوتا
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_wg_peers', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if wg_svc %}
@@ -295,10 +301,10 @@
         سجل
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_audit', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if not audit_log %}

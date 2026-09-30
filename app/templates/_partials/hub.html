@@ -30,7 +30,7 @@
       {%- if subtitle %}<div class="hub-hero-sub">{{ subtitle }}</div>{% endif -%}
     </div>
     {%- if actions_html -%}
-      <div class="hub-hero-actions">{{ actions_html|safe }}</div>
+      <div class="hub-hero-actions">{{ actions_html|safe|gate_html }}</div>
     {%- endif -%}
   </div>
 </div>
@@ -59,6 +59,8 @@
    view (e.g. subscribers KPI → its own status/online filter). Backward
    compatible — omit it and the card renders as a plain <div>. #}
 {% macro kpi(label, value, icon="chart-line", variant="brand", sub="", href="") -%}
+{#- F01-F2: a KPI whose target the manager can't open stays visible, unlinked. -#}
+{%- set href = href if (href and (can_open is not defined or can_open(href))) else "" -%}
 {%- set _tag = 'a' if href else 'div' -%}
 <{{ _tag }} class="hub-kpi hub-kpi--{{ variant }}{% if href %} hub-kpi--link{% endif %}"
    {%- if href %} href="{{ href }}"{% endif %}>
@@ -83,11 +85,13 @@
 
 {# ── Action button ───────────────────────────────────────────── #}
 {% macro btn(label, href="", variant="primary", icon="", size="", type="button", attrs="") -%}
-{%- if href -%}
-<a class="hub-btn hub-btn--{{ variant }}{% if size %} hub-btn--{{ size }}{% endif %}"
+{#- F01-F2: a link button to a page the manager can't open is not rendered. -#}
+{%- if href and can_open is defined and not can_open(href) -%}
+{%- elif href -%}
+{% if can_open(href) %}<a class="hub-btn hub-btn--{{ variant }}{% if size %} hub-btn--{{ size }}{% endif %}"
    href="{{ href }}" {{ attrs|safe }}>
   {%- if icon %}<i class="fa-solid fa-{{ icon }}"></i>{% endif -%} {{ label }}
-</a>
+</a>{% endif %}
 {%- else -%}
 <button class="hub-btn hub-btn--{{ variant }}{% if size %} hub-btn--{{ size }}{% endif %}"
    type="{{ type }}" {{ attrs|safe }}>
@@ -100,15 +104,16 @@
 {# ── Action card (clickable tile) ─────────────────────────────── #}
 {% macro action_card(title, sub="", icon="circle", href="", variant="brand", disabled=False, attrs="") -%}
 {%- set _cls = "hub-action" -%}
-{%- if href -%}
-<a class="{{ _cls }}" href="{{ href }}"
-   {%- if disabled %} aria-disabled="true" tabindex="-1"{% endif %} {{ attrs|safe }}>
+{%- if href and can_open is defined and not can_open(href) -%}
+{%- elif href -%}
+{% if can_open(href) %}<a class="{{ _cls }}" href="{{ href }}"
+   {%- if disabled %} aria-disabled="true" tabindex="-1"{% endif %} {{ attrs|safe }}>{% endif %}
   <span class="hub-action-icon hub-action-icon--{{ variant }}"><i class="fa-solid fa-{{ icon }}"></i></span>
   <div class="hub-action-body">
     <div class="hub-action-title">{{ title }}</div>
     {%- if sub %}<div class="hub-action-sub">{{ sub }}</div>{% endif -%}
   </div>
-</a>
+{% if can_open(href) %}</a>{% endif %}
 {%- else -%}
 <button type="button" class="{{ _cls }}"
    {% if disabled %}disabled{% endif %} {{ attrs|safe }}>
@@ -214,7 +219,7 @@
         {%- if subtitle %}<div class="uds-hero-sub">{{ subtitle }}</div>{% endif -%}
       </div>
     </div>
-    {%- if actions_html %}<div class="uds-hero-actions">{{ actions_html|safe }}</div>{% endif -%}
+    {%- if actions_html %}<div class="uds-hero-actions">{{ actions_html|safe|gate_html }}</div>{% endif -%}
   </div>
   {%- if kpis %}
   <div class="uds-hero-kpis">
@@ -341,7 +346,7 @@
               data-uds-modal-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="uds-modal-body">{{ caller() }}</div>
-    {%- if footer_html %}<div class="uds-modal-foot">{{ footer_html|safe }}</div>{% endif %}
+    {%- if footer_html %}<div class="uds-modal-foot">{{ footer_html|safe|gate_html }}</div>{% endif %}
   </div>
 </div>
 {%- endmacro %}

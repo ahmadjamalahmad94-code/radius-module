@@ -619,7 +619,9 @@ def test_d17_list_buttons_follow_actions_context(app):
         html = c.get("/admin/radius/users").get_data(as_text=True)
         assert mine.username in html
         form_tag = re.search(r'<form[^>]*action="/admin/radius/users/%s/delete"[^>]*>' % mine.username, html)
-        assert form_tag and "data-perm-denied" in form_tag.group(0)
+        # fix wave 3 (F01-F2): a form the guard refuses is no longer rendered at
+        # all (it used to be rendered hidden with data-perm-denied).
+        assert form_tag is None or "data-perm-denied" in form_tag.group(0)
         ctx = c.get(f"/api/v1/accounts/{mine.username}/actions-context", headers=_bearer(mgr.id))
         assert ctx.get_json()["data"]["permissions"]["delete"] is False
 

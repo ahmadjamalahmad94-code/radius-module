@@ -77,24 +77,24 @@
             <td class="num mono">{{ hub.pill(b.priority|string, variant="brand", dot=False) }}</td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+                {% if can_submit('radius.bw_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.bw_edit', bw_id=b.id) }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
+                </a>{% endif %}
                 {# «تطبيق على الجلسات»: دفع سرعة هذا الملفّ حيًّا (CoA) لمشتركي الخطط المرتبطة #}
-                <form method="post" action="{{ url_for('radius.bw_apply', bw_id=b.id) }}" style="display:inline">
+                {% if can_submit('radius.bw_apply', 'POST') %}<form method="post" action="{{ url_for('radius.bw_apply', bw_id=b.id) }}" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm"
                           title="{{ _('تطبيق على الجلسات النشطة') }}"
                           data-confirm="{{ _('تطبيق سرعة الملفّ «%(name)s» على الجلسات النشطة الآن عبر CoA؟', name=b.name) }}">
                     <i class="fa-solid fa-bolt"></i> {{ _('تطبيق') }}
                   </button>
-                </form>
-                <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}" style="display:inline">
+                </form>{% endif %}
+                {% if can_submit('radius.bw_delete', 'POST') %}<form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}"
                           data-confirm="{{ _('حذف ملفّ السرعة «%(name)s»؟', name=b.name) }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

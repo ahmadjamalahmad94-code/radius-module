@@ -181,15 +181,15 @@
         {% endif %}
       </div>
       <div class="rl-actions">
-        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
+        {% if can_submit('radius.roles_edit', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
           <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
-        </a>
+        </a>{% endif %}
         {% if r.is_system %}
         <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
                 title="{{ _('دور نظام محمي — لا يمكن أرشفته') }}">
           <i class="fa-solid fa-lock"></i> {{ _('محمي') }}
         </button>
-        {% else %}
+        {% elif can_submit('radius.roles_delete') %}
         <button type="button" class="hub-btn hub-btn--danger hub-btn--sm"
                 data-role-archive
                 data-role-name="{{ (r.display_name or r.name)|e }}"
@@ -216,9 +216,11 @@
    الكتلة تُصيَّر بمحرّك القالب فتصل الأزرار HTML حقيقيًّا. #}
 {% set _role_arch_foot %}
   <button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _("إلغاء") }}</button>
-  <form method="post" data-role-archive-form style="display:inline;margin:0">
+  {% if can_submit('radius.roles_delete') %}
+  <form method="post" data-role-archive-form data-action-endpoint="radius.roles_delete" style="display:inline;margin:0">
     <button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> {{ _("أرشفة الدور") }}</button>
   </form>
+  {% endif %}
 {% endset %}
 {% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
    footer_html=_role_arch_foot) %}

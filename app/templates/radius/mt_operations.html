@@ -198,9 +198,9 @@
         </td>
         <td class="num">{{ item.display_num }}</td>
         <td>
-          <a href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
+          {% if can_submit('radius.mt_dashboard', 'GET') %}<a href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">{% endif %}
             <strong>{{ item.name }}</strong>
-          </a>
+          {% if can_submit('radius.mt_dashboard', 'GET') %}</a>{% endif %}
           {% if item.provisioned_at %}
             <span class="hub-pill hub-pill--brand mt-mini-pill"
                   title="{{ _('أُضيف وجُهّز عبر المعالج آليًّا') }}">
@@ -296,11 +296,11 @@
         </td>
         <td class="mt-actions-cell">
           {# الإجراء الأساسي — يفتح مركز خدمات الراوتر الموحّد. #}
-          <a class="hub-btn hub-btn--sm hub-btn--primary"
+          {% if can_submit('radius.mt_dashboard', 'GET') %}<a class="hub-btn hub-btn--sm hub-btn--primary"
              href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}"
              title="{{ _('فتح صفحة الراوتر — خدمات + مراقبة + أدوات') }}">
             <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدمات') }}
-          </a>
+          </a>{% endif %}
           {% if item.is_provisioning and item.wizard_run_id %}
           {# يظهر فقط أثناء تجهيز غير مكتمل — يعيد المشغّل للمعالج. #}
           <a class="hub-btn hub-btn--sm hub-btn--amber"
@@ -314,17 +314,17 @@
              أدوات الخدمات (اللوحة/برمجة/خدمات المنافذ/النسخ/السكربت) لأنها
              صارت داخل تبويب «خدماتي» بلوحة الراوتر، فلا داعي لتكرارها هنا. #}
           <span class="mt-iconrow">
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('مصمّم صفحة الدخول') }}"
+            {% if can_submit('radius.mt_login_designer', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('مصمّم صفحة الدخول') }}"
                href="{{ url_for('radius.mt_login_designer', nas_id=item.id) }}"
                data-mt-row-link="login-designer">
               <i class="fa-solid fa-palette"></i>
-            </a>
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل بيانات الراوتر') }}"
+            </a>{% endif %}
+            {% if can_submit('radius.devices_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل بيانات الراوتر') }}"
                href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
               <i class="fa-solid fa-pen-to-square"></i>
-            </a>
+            </a>{% endif %}
             {# O3: تفعيل/تعطيل صف واحد — نموذج مضمّن صغير مع CSRF. #}
-            <form method="POST"
+            {% if can_submit('radius.devices_toggle', 'POST') %}<form method="POST"
                   action="{{ url_for('radius.devices_toggle', nas_id=item.id) }}"
                   style="display:inline">
               {{ csrf_token_input() | safe }}
@@ -342,7 +342,7 @@
                 <i class="fa-solid fa-circle-check"></i>
               </button>
               {% endif %}
-            </form>
+            </form>{% endif %}
             {% if item.registry_id and item.lifecycle_state == 'failed' %}
             {# محاولات التجهيز الفاشلة يمكن أرشفتها لتحرير العنوان. #}
             <button type="button" class="hub-btn hub-btn--danger hub-btn--icon"
@@ -367,7 +367,7 @@
    `id="mt-bulk-form"` تُشير إليه مربعات الاختيار عبر `form=` لأن
    المربعات تجلس خارج النموذج (داخل الجدول). الأزرار تبدأ معطّلة
    وتُفعّل عند أول اختيار. #}
-<form id="mt-bulk-form"
+{% if can_submit('radius.devices_bulk_toggle', 'POST') %}<form id="mt-bulk-form"
       method="POST" action="{{ url_for('radius.devices_bulk_toggle') }}"
       class="mt-bulk-bar" data-mt-bulk-form>
   {{ csrf_token_input() | safe }}
@@ -387,7 +387,7 @@
           title="{{ _('إلغاء اختيار كل الصفوف') }}">
     <i class="fa-solid fa-xmark"></i> {{ _('إلغاء الاختيار') }}
   </button>
-</form>
+</form>{% endif %}
 
 <script src="{{ url_for('static', filename='js/mt_operations.js') }}" defer></script>
 <style>
@@ -506,6 +506,14 @@
   }
 </style>
 
+{% else %}
+  {{ hub.empty("لا توجد راوترات بعد.",
+               sub="ابدأ بالمعالج لإضافة أول راوتر — يتولّد كل شيء تلقائيًّا.",
+               icon="server") }}
+{% endif %}
+
+{# F08-L: سكربت إجراءات الأسطول (تفريغ الطوارئ/إعادة تخصيص العناوين) خارج
+   شرط «يوجد راوترات» — أزرار الهيرو تظهر دائمًا، فكانت بلا أثر حين لا راوتر. #}
 <script>
 /* Fleet maintenance actions, migrated from setup_wizard_fleet.js so
    the operator gets them on /mt/operations alongside the live router
@@ -551,7 +559,9 @@
   const reclaimBtn = document.querySelector("[data-mt-reclaim-expired]");
   if (reclaimBtn) {
     reclaimBtn.addEventListener("click", async () => {
-      if (!window.confirm({{ _("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")|tojson }})) return;
+      /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
+      const _msg = {{ _("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")|tojson }};
+      if (!(await (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _msg}) : Promise.resolve(window.confirm(_msg))))) return;
       const originalHtml = reclaimBtn.innerHTML;
       reclaimBtn.disabled = true;
       reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + {{ _("جارٍ التنظيف...")|tojson }};
@@ -667,6 +677,13 @@
   if (emergencyBtn)    emergencyBtn.addEventListener("click", openEmergencyModal);
   if (emergencyClose)  emergencyClose.addEventListener("click", closeEmergencyModal);
   if (emergencyCancel) emergencyCancel.addEventListener("click", closeEmergencyModal);
+  /* F08-L: Esc والنقر على الخلفيّة يغلقان النافذة (كبقيّة نوافذ اللوحة). */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && emergencyModal && !emergencyModal.hidden) closeEmergencyModal();
+  });
+  if (emergencyModal) emergencyModal.addEventListener("click", (e) => {
+    if (e.target === emergencyModal) closeEmergencyModal();
+  });
   if (emergencyInput && emergencyExecute) {
     emergencyInput.addEventListener("input", () => {
       emergencyExecute.disabled = emergencyInput.value.trim() !== CONFIRM_PHRASE;
@@ -712,11 +729,5 @@
   }
 })();
 </script>
-
-{% else %}
-  {{ hub.empty("لا توجد راوترات بعد.",
-               sub="ابدأ بالمعالج لإضافة أول راوتر — يتولّد كل شيء تلقائيًّا.",
-               icon="server") }}
-{% endif %}
 
 {% endblock %}

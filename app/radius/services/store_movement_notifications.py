@@ -26,6 +26,7 @@ the SMS body to the buyer's own number — never into the delivery log, WhatsApp
 Telegram, or the audit payload (a redacted audit row records only the outcome).
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import logging
 from types import SimpleNamespace
@@ -111,7 +112,7 @@ def build_cards_sms_body(cards: list[dict[str, Any]]) -> str:
     lines = [f"بطاقاتك ({len(clean)}):"]
     lines += [f"{c['username']} / {c['password']}" for c in listed]
     if len(clean) > _MAX_LISTED_CARDS:
-        lines.append(f"و{len(clean) - _MAX_LISTED_CARDS} بطاقة أخرى في حسابك.")
+        lines.append(f"و{ar_count(len(clean) - _MAX_LISTED_CARDS, 'card')} أخرى في حسابك.")
     return "\n".join(lines)
 
 

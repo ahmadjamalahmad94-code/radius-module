@@ -68,23 +68,23 @@
   <span class="hub-text-mute" style="font-size:12.5px;font-weight:700;white-space:nowrap">
     <i class="fa-solid fa-filter"></i> {{ _('تصفية حسب النوع') }}
   </span>
-  <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'secondary' }} hub-btn--sm"
+  {% if can_submit('radius.recycle_bin', 'GET') %}<a class="hub-btn hub-btn--{{ 'primary' if not selected else 'secondary' }} hub-btn--sm"
      href="{{ url_for('radius.recycle_bin') }}">
     <i class="fa-solid fa-layer-group"></i> {{ _('الكل') }}
     <span class="rb-chip-count"
           style="background:{{ 'rgba(255,255,255,.18)' if not selected else 'var(--hub-bg-soft)' }}">
       <bdi dir="ltr">{{ _total }}</bdi>
     </span>
-  </a>
+  </a>{% endif %}
   {% for entity, label in entity_labels.items() %}
-    <a class="hub-btn hub-btn--{{ 'primary' if selected == entity else 'secondary' }} hub-btn--sm"
+    {% if can_submit('radius.recycle_bin', 'GET') %}<a class="hub-btn hub-btn--{{ 'primary' if selected == entity else 'secondary' }} hub-btn--sm"
        href="{{ url_for('radius.recycle_bin', entity_type=entity) }}">
       {{ label }}
       <span class="rb-chip-count"
             style="background:{{ 'rgba(255,255,255,.18)' if selected == entity else 'var(--hub-bg-soft)' }}">
         <bdi dir="ltr">{{ counts.get(entity, 0) }}</bdi>
       </span>
-    </a>
+    </a>{% endif %}
   {% endfor %}
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
@@ -170,14 +170,14 @@
             {% endif %}
             {# حذف نهائيّ (بلا رجعة) — حزم البطاقات فقط، للحالات كالتسريب/السرقة #}
             {% if item.entity_type == 'card_batches' %}
-            <form method="post" style="display:inline;margin:0 0 0 6px"
+            {% if can_submit('radius.recycle_bin_purge', 'POST') %}<form method="post" style="display:inline;margin:0 0 0 6px"
                   action="{{ url_for('radius.recycle_bin_purge', entity_type=item.entity_type, entity_id=item.id) }}"
                   onsubmit="return confirm('{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}');">
               <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm"
                       title="{{ _('يمحو الحزمة وبطاقاتها نهائيًّا — لا يمكن التراجع') }}">
                 <i class="fa-solid fa-trash"></i> {{ _('حذف نهائيّ') }}
               </button>
-            </form>
+            </form>{% endif %}
             {% endif %}
           </td>
         </tr>

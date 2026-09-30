@@ -152,7 +152,7 @@
     var name = (el.package_name && el.package_name.value || "").trim();
     var len = (el.username_length && el.username_length.value) || "";
     var pre = (el.username_prefix && el.username_prefix.value || "").trim();
-    var lines = ["توليد " + count + " بطاقة" + (plan ? " على الباقة «" + plan + "»" : "") + "؟"];
+    var lines = ["توليد " + ((window.UDS && UDS.arCount) ? UDS.arCount(count, "بطاقة", "بطاقات", "بطاقةً") : (count + " بطاقة")) + (plan ? " على الباقة «" + plan + "»" : "") + "؟"];
     if (name) lines.push("اسم الحزمة: " + name);
     if (len) lines.push("طول اسم الدخول: " + len + (pre ? " · البادئة: " + pre : ""));
     return lines.join("\n");

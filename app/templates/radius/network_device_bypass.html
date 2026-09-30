@@ -23,12 +23,12 @@
 
 {# ───── Merged hero: title + subtitle + icon + device-state KPIs + actions ───── #}
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
+  {% if can_submit('radius.network_devices_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
-  </a>
-  <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}">
+  </a>{% endif %}
+  {% if can_submit('radius.network_devices_edit', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}">
     <i class="fa-solid fa-pen"></i> {{ _('تعديل الجهاز') }}
-  </a>
+  </a>{% endif %}
 {% endset %}
 {{ hub.megahero(
   "تجهيز «" ~ device.name ~ "» للإدارة",
@@ -74,8 +74,8 @@
       <i class="fa-solid fa-triangle-exclamation"></i>
       <span>
         {{ _('لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين.') }}
-        <a href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}"
-           class="ndb-warn-link">{{ _('أضفها الآن →') }}</a>
+        {% if can_submit('radius.network_devices_edit', 'GET') %}<a href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}"
+           class="ndb-warn-link">{% endif %}{{ _('أضفها الآن →') }}{% if can_submit('radius.network_devices_edit', 'GET') %}</a>{% endif %}
       </span>
     </div>
     {% endif %}
@@ -86,7 +86,7 @@
   {# ── Apply form ── #}
   <form method="post"
         action="{{ url_for('radius.network_device_bypass_apply', device_id=device.id) }}"
-        class="hr-form-card">
+        class="hr-form-card">{% if not can_submit('radius.network_device_bypass_apply') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     {{ csrf_token_input() | safe }}
 
     {% call hub.section("خيارات التجهيز", icon="gear") %}
@@ -146,13 +146,13 @@
         <button type="submit" class="hub-btn hub-btn--primary">
           <i class="fa-solid fa-play"></i> {{ _('طبّق على الراوتر') }}
         </button>
-        <a href="{{ url_for('radius.network_devices_list') }}"
+        {% if can_submit('radius.network_devices_list', 'GET') %}<a href="{{ url_for('radius.network_devices_list') }}"
            class="hub-btn hub-btn--ghost">
           {{ _('إلغاء') }}
-        </a>
+        </a>{% endif %}
       </div>
     {% endcall %}
-  </form>
+  {% if not can_submit('radius.network_device_bypass_apply') %}</fieldset>{% endif %}</form>
 
   {# ── Cleanup section ── #}
   {% call hub.section("إزالة التجهيز", icon="eraser") %}
@@ -161,14 +161,14 @@
       <code class="ndb-mono" dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> —
       آمن، لا يلمس أي إعدادات وضعتها يدويًا.
     </p>
-    <form method="post"
+    {% if can_submit('radius.network_device_bypass_remove', 'POST') %}<form method="post"
           action="{{ url_for('radius.network_device_bypass_remove', device_id=device.id) }}"
           onsubmit="return confirm('تأكيد إزالة التجهيز من الراوتر؟');">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--danger">
         <i class="fa-solid fa-trash"></i> {{ _('إزالة من الراوتر') }}
       </button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {% endif %}

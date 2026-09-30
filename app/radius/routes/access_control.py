@@ -7,6 +7,7 @@
 الإنفاذ في policy_engine عبر services/access_control.
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (Blueprint, flash, g, redirect, render_template, request,
                    session, url_for)
@@ -184,7 +185,7 @@ def access_control_save_settings():
         audit_repo.record(tenant_id=tid, actor=actor, action="access_control_settings",
                           target_type="settings", target_id=",".join(changed),
                           payload={"changed": changed})
-        flash(f"تم حفظ {len(changed)} إعدادًا.", "success")
+        flash(f"تم حفظ {ar_count(len(changed), 'setting')}.", "success")
     else:
         # No effect — tell the activity interceptor to tag this «بلا تأثير»
         # (owner wants no-effect attempts distinguishable, not just recorded).

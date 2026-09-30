@@ -624,7 +624,8 @@ def get_loan(tenant_id: int, loan_id: int) -> Optional[dict]:
 
 
 def _loans_where(tenant_id: int, *, status: str = "",
-                 subscriber_id: int | None = None) -> tuple[str, list[Any]]:
+                 subscriber_id: int | None = None,
+                 created_range: tuple | None = None) -> tuple[str, list[Any]]:
     sc, sv = _rscope(tenant_id, "subscriber_id")
     sql = " WHERE tenant_id = ?" + sc
     vals: list[Any] = [tenant_id, *sv]
@@ -634,12 +635,23 @@ def _loans_where(tenant_id: int, *, status: str = "",
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
+    if created_range:
+        # F03-N9 / A04-F11: نطاق تاريخ الإنشاء (حدود UTC من report_dates.local_bounds
+        # — يوم اللوحة المحلّيّ) — كان date_from/date_to يُتجاهَلان فتعود كل السلف.
+        from ...services.report_dates import range_sql
+        lower, upper, upper_exclusive = created_range
+        rw, rp = range_sql("created_at", lower, upper, upper_exclusive)
+        for w in rw:
+            sql += " AND " + w
+        vals.extend(rp)
     return sql, vals
 
 
 def list_loans(tenant_id: int, *, status: str = "", subscriber_id: int | None = None,
-               limit: int = 100, offset: int = 0) -> list[dict]:
-    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id)
+               limit: int = 100, offset: int = 0,
+               created_range: tuple | None = None) -> list[dict]:
+    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id,
+                               created_range=created_range)
     sql = (f"SELECT *, {_LOAN_SETTLED_SQL} AS settled_amount FROM loan_entries"
            + where + " ORDER BY id DESC LIMIT ? OFFSET ?")
     vals.extend([limit, offset])
@@ -647,10 +659,12 @@ def list_loans(tenant_id: int, *, status: str = "", subscriber_id: int | None = 
 
 
 def loan_totals(tenant_id: int, *, status: str = "",
-                subscriber_id: int | None = None) -> dict:
+                subscriber_id: int | None = None,
+                created_range: tuple | None = None) -> dict:
     """إجماليّات **كل** السلف المطابقة للفلتر (لا الصفحة المعروضة فقط) —
     العدد والقيمة والمتبقّي المفتوح — محسوبةً في SQL."""
-    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id)
+    where, vals = _loans_where(tenant_id, status=status, subscriber_id=subscriber_id,
+                               created_range=created_range)
     row = db().execute(
         "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total, "
         f"COALESCE(SUM(CASE WHEN status = 'open' THEN MAX(amount - {_LOAN_SETTLED_SQL}, 0) "

@@ -313,6 +313,9 @@ def requires_perm(*perms: str):
                     403,
                     {"Content-Type": "text/html; charset=utf-8"},
                 )
+        # F01-F2: the UI gating helper (can_submit) reads this to hide links
+        # to a page this decorator would refuse — same decision, no copy.
+        wrapper._hr_required_perms = tuple(perms)
         return wrapper
     return deco
 

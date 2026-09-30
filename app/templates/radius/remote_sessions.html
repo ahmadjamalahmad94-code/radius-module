@@ -86,13 +86,13 @@
               {% else %}<strong class="mono" data-rs-countdown="{{ s.seconds_left }}">—</strong>{% endif %}
             </td>
             <td>
-              <form method="post" style="margin:0"
+              {% if can_submit('radius.mt_remote_close', 'POST') %}<form method="post" style="margin:0"
                     action="{{ url_for('radius.mt_remote_close', nas_id=s.router_id, session_id=s.id) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                 <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                         data-confirm="{{ _('إغلاق جلسة %(r)s الآن؟', r=s.router_name) }}">
                   <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
-              </form>
+              </form>{% endif %}
             </td>
           </tr>
           {% endfor %}

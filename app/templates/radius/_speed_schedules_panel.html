@@ -7,7 +7,7 @@
    السياق المطلوب من المسار (operations_center._schedule_context):
      schedules, sched_plans, sched_subscribers, sched_batches,
      plan_names, subscriber_names, batch_names, live_apply_enabled
-   حاقن الـ CSRF التلقائي يضيف الرمز لكل <form method="post"> — لا حاجة ليدويّ.
+   حاقن الـ CSRF التلقائي يضيف الرمز لكل <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %} — لا حاجة ليدويّ.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
@@ -175,23 +175,23 @@
                 <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
               </button>
               {# تطبيق حيّ الآن: live=1 — الخدمة تَحرسه خلف علم البيئة فلا يَمسّ الراوتر بدونه #}
-              <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
+              {% if can_submit('radius.bandwidth_schedules_apply', 'POST') %}<form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
                 <input type="hidden" name="return_to" value="{{ request.path }}">
                 <input type="hidden" name="live" value="1">
                 <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
                         {% if not live_apply_enabled %}data-confirm="{{ _('التطبيق الحيّ مُعطَّل على هذه النسخة. سيُنفَّذ فحص جاهزية فقط دون تغيير على الشبكة. متابعة؟') }}"{% endif %}>
                   <i class="fa-solid fa-bolt"></i> {{ _('تطبيق الآن') }}
                 </button>
-              </form>
+              {% if not can_post_here() %}</fieldset>{% endif %}</form>{% endif %}
               {% endif %}
               {% if can is not defined or can('plans.delete') %}
-              <form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
+              {% if can_submit('radius.bandwidth_schedules_delete', 'POST') %}<form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
                 <input type="hidden" name="return_to" value="{{ request.path }}">
                 <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                         data-confirm="{{ _('حذف جدول «%(name)s»؟ لا يمكن التراجع.', name=item.get('name')) }}">
                   <i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}
                 </button>
-              </form>
+              </form>{% endif %}
               {% endif %}
               {% if can is defined and not can('plans.edit') and not can('plans.delete') %}
               <span class="hub-text-mute small">{{ _('عرض فقط') }}</span>
@@ -213,7 +213,7 @@
 {# ───────────── نافذة الإنشاء ───────────── #}
 <div class="ssp-modal" data-ssp-modal="schedule-create" hidden>
  <div class="ssp-dialog" role="dialog" aria-modal="true" aria-labelledby="ssp-create-title">
-  <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
+  <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">{% if not can_submit('radius.bandwidth_schedules_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="return_to" value="{{ request.path }}">
     <div class="ssp-head">
       <h3 id="ssp-create-title"><i class="fa-solid fa-plus"></i> {{ _('إضافة جدول زمني للسرعة') }}</h3>
@@ -296,7 +296,7 @@
       <button class="hub-btn hub-btn--ghost" type="button" data-ssp-close>{{ _('إغلاق') }}</button>
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الجدول') }}</button>
     </div>
-  </form>
+  {% if not can_submit('radius.bandwidth_schedules_create') %}</fieldset>{% endif %}</form>
  </div>
 </div>
 
@@ -304,7 +304,7 @@
 {% for item in schedules %}
 <div class="ssp-modal" data-ssp-modal="schedule-edit-{{ item.get('id') }}" hidden>
  <div class="ssp-dialog" role="dialog" aria-modal="true" aria-labelledby="ssp-edit-title-{{ item.get('id') }}">
-  <form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">
+  {% if can_submit('radius.bandwidth_schedules_update', 'POST') %}<form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">
     <input type="hidden" name="return_to" value="{{ request.path }}">
     <div class="ssp-head">
       <h3 id="ssp-edit-title-{{ item.get('id') }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل جدول السرعة') }}</h3>
@@ -340,7 +340,7 @@
       <button class="hub-btn hub-btn--ghost" type="button" data-ssp-close>{{ _('إغلاق') }}</button>
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديل') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
  </div>
 </div>
 {% endfor %}

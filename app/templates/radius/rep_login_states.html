@@ -73,8 +73,8 @@
 <div class="ls-grid" data-testid="login-states-cards">
   {% for kind, m in kinds.items() %}
   {% set c = overview[kind] %}
-  <a class="ls-card ls-card--{{ kind }}" href="{{ url_for('radius.rep_login_states', actor=kind) }}"
-     data-testid="login-states-card-{{ kind }}">
+  {% if can_submit('radius.rep_login_states', 'GET') %}<a class="ls-card ls-card--{{ kind }}" href="{{ url_for('radius.rep_login_states', actor=kind) }}"
+     data-testid="login-states-card-{{ kind }}">{% endif %}
     <div class="ls-card-head">
       <span class="ls-card-ic"><i class="fa-solid fa-{{ m.icon }}"></i></span>
       <span class="ls-card-title">{{ m.title }}</span>
@@ -87,7 +87,7 @@
       <div class="ls-mini"><b>{{ c.today }}</b><span>{{ _('اليوم') }}</span></div>
     </div>
     <span class="ls-card-go">{{ _('فتح السجل المفصّل') }} <i class="fa-solid fa-arrow-left"></i></span>
-  </a>
+  {% if can_submit('radius.rep_login_states', 'GET') %}</a>{% endif %}
   {% endfor %}
 </div>
 

@@ -116,7 +116,7 @@
   </div>
 </div>
 
-<form method="post" id="df-form">
+<form method="post" id="df-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {% for g in groups %}
   <section class="df-group" data-df-group>
     <div class="df-group-head">
@@ -151,7 +151,7 @@
       <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
     </button>
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 <script>
 (function(){
   // «إظهار/إخفاء الكل» داخل القسم الواحد — راحةٌ لمن يريد قسمًا كاملًا،

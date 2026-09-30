@@ -33,12 +33,12 @@
 <div class="hub-note hub-note--amber" style="margin-bottom:14px">
   <i class="fa-solid fa-triangle-exclamation"></i>
   {{ _('لا قناة مُهيّأة بعد — اضبط بوت تيليجرام أو مزوّد واتساب/SMS من') }}
-  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>،
+  {% if can_submit('radius.integrations_hub', 'GET') %}<a href="{{ url_for('radius.integrations_hub') }}">{% endif %}<b>{{ _('التكاملات والقنوات') }}</b>{% if can_submit('radius.integrations_hub', 'GET') %}</a>{% endif %}،
   {{ _('وليربط المشترك تيليجرامه من بوابته.') }}
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>
+<form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>{% if not can_submit('radius.subscriber_notifications') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
   {% for grp in groups %}
   {% set _grp_icon = {'subscribers':'users','billing':'wallet','store':'store'}.get(grp.key, 'wallet') %}
@@ -100,7 +100,7 @@
       القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.
     </span>
   </div>
-</form>
+{% if not can_submit('radius.subscriber_notifications') %}</fieldset>{% endif %}</form>
 
 <div data-sn-toast class="sn-toast" hidden></div>
 <script>

@@ -184,7 +184,7 @@
   "الإشعارات الحدثية",
   subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
   icon="bolt",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
     {'label': 'إجمالي الأحداث', 'value': rules|length,                'icon': 'bell',       'variant': 'brand'},
     {'label': 'مفعَّلة',        'value': _enabled,                    'icon': 'toggle-on',  'variant': 'green', 'sub': 'حدث مُفعّل'},
@@ -212,7 +212,7 @@
   note="القنوات تُضبط من «قنوات الإرسال»، وتلجرام من «إعدادات تلجرام». للشرح المصوّر افتح «دليل وشروحات»."
 )) %}
 
-<form method="post" action="{{ url_for('radius.communications_notifications') }}" class="cnf">
+<form method="post" action="{{ url_for('radius.communications_notifications') }}" class="cnf">{% if not can_submit('radius.communications_notifications') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
 
   {% call hub.section("كيف تعمل؟", icon="circle-info", flush=False) %}
@@ -222,10 +222,10 @@
         فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت
         (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة.
         قنوات الرسائل القصيرة وواتساب تُضبط من
-        <a href="{{ url_for('radius.communications_channels') }}">{{ _('قنوات الإرسال') }}</a>،
+        {% if can_submit('radius.communications_channels', 'GET') %}<a href="{{ url_for('radius.communications_channels') }}">{% endif %}{{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}،
         وقناة تلجرام من
-        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{{ _('إعدادات تلجرام') }}</a>،
-        وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">{{ _('افتح الدليل') }}</a>.
+        {% if can_submit('radius.network_telegram_settings', 'GET') %}<a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{% endif %}{{ _('إعدادات تلجرام') }}{% if can_submit('radius.network_telegram_settings', 'GET') %}</a>{% endif %}،
+        وللشرح المصوّر {% if can_submit('radius.communications_guide', 'GET') %}<a href="{{ url_for('radius.communications_guide') }}">{% endif %}{{ _('افتح الدليل') }}{% if can_submit('radius.communications_guide', 'GET') %}</a>{% endif %}.
       </div>
     </div>
   {% endcall %}
@@ -299,7 +299,7 @@
     <span class="hint">{{ _('يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.') }}</span>
   </div>
   {% endcall %}
-</form>
+{% if not can_submit('radius.communications_notifications') %}</fieldset>{% endif %}</form>
 
 {% endcall %}
 

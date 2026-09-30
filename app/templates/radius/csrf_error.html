@@ -1,0 +1,55 @@
+{# F08-L: صفحة فشل رمز الحماية (CSRF) — كانت نصًّا خامًا بلا تنسيق. مستقلّة
+   عن هيكل اللوحة عمدًا: تُعرَض لأيّ POST (لوحة/بوّابة) قبل أيّ حارس، وقد تكون
+   الجلسة غير مكتملة. نحفظ ما كتبه المستخدم (عدا كلمات المرور) ونعيده للنموذج
+   ممتلئًا — نفس آليّة صفحة 403 (admin/_admin_layout.html تستعيده). #}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>انتهت صلاحية الصفحة</title>
+  <style>
+    :root{ color-scheme: light; }
+    body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+          background:#f6f5fb; color:#1f2a37; font-family:"Cairo", "Segoe UI", Tahoma, sans-serif; }
+    .csrf{ box-sizing:border-box; width:min(560px, 100% - 32px); background:#fff; border:1px solid #e4e1f5;
+           border-radius:18px; padding:32px 24px; text-align:center; box-shadow:0 12px 30px rgba(20,20,60,.08); }
+    .csrf-ico{ width:64px; height:64px; margin:0 auto 14px; border-radius:50%; display:flex; align-items:center;
+               justify-content:center; background:#fef3c7; color:#b45309; font-size:30px; font-weight:900; }
+    h1{ margin:0 0 10px; font-size:clamp(20px, 4.5vw, 26px); font-weight:800; }
+    p{ margin:0 0 8px; line-height:1.8; color:#475569; }
+    .csrf-acts{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:18px; }
+    .csrf-btn{ display:inline-flex; align-items:center; gap:8px; padding:11px 22px; border-radius:999px; border:0;
+               background:#6b5aed; color:#fff; font:inherit; font-weight:700; text-decoration:none; cursor:pointer; }
+    .csrf-btn.alt{ background:#eef2ff; color:#3730a3; }
+  </style>
+</head>
+<body>
+  <main class="csrf" data-testid="csrf-error">
+    <div class="csrf-ico" aria-hidden="true">!</div>
+    <h1>انتهت صلاحية الصفحة</h1>
+    <p>لم يُحفَظ شيء: رمز الحماية في هذه الصفحة قديم (فُتحت الصفحة منذ وقت طويل أو من جلسة أخرى).</p>
+    <p>ارجع إلى النموذج — ستجد ما كتبته كما هو — ثم حدّث الصفحة وأعد الحفظ.</p>
+    <script type="application/json" id="hr-refused-fields">{{ fields | tojson }}</script>
+    <div class="csrf-acts">
+      <button type="button" class="csrf-btn" data-hr-back-to-form data-testid="csrf-back-to-form">العودة إلى النموذج — بياناتك محفوظة</button>
+      <a class="csrf-btn alt" href="{{ back_url or '/admin/radius/' }}">تحديث الصفحة</a>
+    </div>
+  </main>
+  <script>
+  (function () {
+    var btn = document.querySelector('[data-hr-back-to-form]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var fields = {};
+      try { fields = JSON.parse(document.getElementById('hr-refused-fields').textContent || '{}') || {}; } catch (e) { fields = {}; }
+      var path = '';
+      try { path = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) { path = ''; }
+      try { sessionStorage.setItem('hr_refused_form', JSON.stringify({ path: path, fields: fields })); } catch (e) {}
+      if (path && history.length <= 1) { location.href = path; return; }
+      history.back();
+    });
+  })();
+  </script>
+</body>
+</html>

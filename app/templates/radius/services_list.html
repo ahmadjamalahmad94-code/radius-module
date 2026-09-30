@@ -129,19 +129,19 @@
           <td class="mono small"><bdi dir="ltr">{{ s.given_at|date_local if s.given_at else '—' }}</bdi></td>
           <td>
             <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+              {% if can_submit('radius.svc_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.svc_edit', sid=s.id) }}">
                 <i class="fa-solid fa-pen"></i>
-              </a>
+              </a>{% endif %}
               {# الحذف نهائي — التأكيد عبر صندوق عائم منبثق (لا confirm متصفح)،
                  نفس عقد POST القائم: الزر يفتح النافذة والإرسال يتم من نموذجها. #}
-              <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
+              {% if can_submit('radius.svc_delete', 'POST') %}<form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
                     data-svc-delete-form data-svc-name="{{ s.name|e }}" style="display:inline">
                 <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}"
                         data-svc-delete-open>
                   <i class="fa-solid fa-trash"></i>
                 </button>
-              </form>
+              </form>{% endif %}
             </div>
           </td>
         </tr>
@@ -168,7 +168,7 @@
 <div class="fcw-modal" data-fcw-modal="service-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-service-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.svc_create') }}">
+    <form method="post" action="{{ url_for('radius.svc_create') }}">{% if not can_submit('radius.svc_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-service-create-title"><i class="fa-solid fa-toolbox"></i> {{ _('إضافة معدّة') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -254,7 +254,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ المعدّة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.svc_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 

@@ -35,7 +35,7 @@
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
-<form method="post"
+{% if can_submit(('radius.sgrp_update' if not is_new else 'radius.sgrp_create'), 'POST') %}<form method="post"
       action="{{ url_for('radius.sgrp_update', gid=item.id) if not is_new else url_for('radius.sgrp_create') }}">
 
   {% call hub.section("المعطيات", icon="sliders") %}
@@ -79,8 +79,8 @@
 
   <div class="hub-flex-row" style="margin-top:16px">
     {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.sgrp_list')) }}
+    {% if can_submit('radius.sgrp_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.sgrp_list')) }}{% endif %}
   </div>
-</form>
+</form>{% endif %}
 {% endcall %}
 {% endblock %}

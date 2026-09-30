@@ -223,7 +223,11 @@ def test_js_regex_port_maps_arabic_separators():
 def test_js_wiring_uses_the_cleaners():
     src = _read(LATIN_JS)
     # number fields: cleaner with caret kept; decimal text fields: separators only
-    assert "setCleaned(t, numClean)" in src
+    # F08-L (fix wave 3): a number field no longer strips unknown characters
+    # («1e9» became «19»): separators/digits are normalised, anything else is
+    # marked invalid with a message (markNum) and refused on submit.
+    assert "setCleaned(t, numClean)" not in src
+    assert "markNum(t)" in src and "NUM_BAD_MSG" in src
     assert "setCleaned(t, numSeps)" in src and "isDecimalText(t)" in src
     assert "inputmode') === 'decimal'" in src and "ui-value" in src
     # submit-time validation goes through the shared checker (min/max/step)

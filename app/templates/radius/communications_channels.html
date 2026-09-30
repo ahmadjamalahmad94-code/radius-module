@@ -106,7 +106,7 @@
   "قنوات الإرسال",
   subtitle="اربط رابط مزوّدك وفعّل القناة ليتحول الإرسال من الطابور إلى إرسال فعلي.",
   icon="tower-broadcast",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
     {'label': 'حالة الرسائل القصيرة', 'value': ('مفعّلة' if _sms and _sms.enabled else 'متوقفة'),
      'icon': 'comment-sms', 'variant': ('green' if _sms and _sms.enabled else 'grey'),
@@ -156,7 +156,7 @@
         <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
       </div>
 
-      <form method="post" action="{{ url_for('radius.communications_channels') }}" class="hub-form">
+      {% if can_submit('radius.communications_channels', 'POST') %}<form method="post" action="{{ url_for('radius.communications_channels') }}" class="hub-form">
         {{ csrf_token_input() }}
         <input type="hidden" name="channel" value="{{ ch }}">
 
@@ -216,7 +216,7 @@
         <div class="cch-actions">
           <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ إعدادات القناة') }}</button>
         </div>
-      </form>
+      </form>{% endif %}
 
       {# ── أداة «إرسال اختبار»: تستخدم الإعدادات المحفوظة وتعرض نتيجة المزوّد.
            الفجوة عمّا قبلها (النموذج) من gap المغلِّف .cch-card — لا margin مباشر. #}

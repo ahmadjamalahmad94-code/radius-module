@@ -46,16 +46,16 @@
           {%- if a.icon %}<i class="fa-{{ a.icon_pack or 'solid' }} fa-{{ a.icon }}" aria-hidden="true"></i>{% endif -%}
         {%- endset -%}
         {%- if a.href -%}
-          <a class="hub-btn hub-btn--{{ variant }}" href="{{ a.href }}">{{ icon_html|safe }}{{ a.label }}</a>
+          {% if can_open(a.href) %}<a class="hub-btn hub-btn--{{ variant }}" href="{{ a.href }}">{{ icon_html|safe }}{{ a.label }}</a>{% endif %}
         {%- else -%}
           <button type="button" class="hub-btn hub-btn--{{ variant }}"
                   {% if a.onclick %}onclick="{{ a.onclick }}"{% endif %}>{{ icon_html|safe }}{{ a.label }}</button>
         {%- endif -%}
       {%- endfor -%}
       {%- if back_href -%}
-        <a class="hub-header-icon-btn" href="{{ back_href }}" aria-label="{{ _('رجوع') }}">
+        {% if can_open(back_href) %}<a class="hub-header-icon-btn" href="{{ back_href }}" aria-label="{{ _('رجوع') }}">
           <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-        </a>
+        </a>{% endif %}
       {%- endif -%}
     </div>
   {%- else -%}

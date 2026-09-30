@@ -189,10 +189,10 @@
     <span class="usage-ctl-label"><i class="fa-regular fa-calendar"></i> {{ _('الفترة') }}</span>
     <div class="usage-tabs sm">
       {% for pk, plabel in _presets %}
-      <a class="usage-tab{% if preset == pk %} is-active{% endif %}" data-usage-preset="{{ pk }}"
+      {% if can_submit('radius.rep_subscriber_consumption', 'GET') %}<a class="usage-tab{% if preset == pk %} is-active{% endif %}" data-usage-preset="{{ pk }}"
          href="{{ url_for('radius.rep_subscriber_consumption', preset=pk, type=utype, metric=metric,
                           date_from=(_cf if pk=='custom' else none), date_to=(_ct if pk=='custom' else none),
-                          q=_cq, limit=limit) }}">{{ plabel }}</a>
+                          q=_cq, limit=limit) }}">{{ plabel }}</a>{% endif %}
       {% endfor %}
     </div>
     <span class="usage-period-sep" aria-hidden="true"></span>
@@ -227,11 +227,11 @@
     <span class="usage-ctl-label"><i class="fa-solid fa-arrow-down-up-across-line"></i> {{ _('المقياس') }}</span>
     <div class="usage-tabs sm">
       {% for mk, mlabel, micon in _metrics %}
-      <a class="usage-tab{% if metric == mk %} is-active{% endif %}" data-usage-metric="{{ mk }}"
+      {% if can_submit('radius.rep_subscriber_consumption', 'GET') %}<a class="usage-tab{% if metric == mk %} is-active{% endif %}" data-usage-metric="{{ mk }}"
          href="{{ url_for('radius.rep_subscriber_consumption', metric=mk, type=utype, preset=preset,
                           spec_day=_csd, spec_week=_csw, spec_month=_csm,
                           date_from=_cf, date_to=_ct, q=_cq, limit=limit) }}">
-        <i class="fa-solid fa-{{ micon }}"></i> {{ mlabel }}</a>
+        <i class="fa-solid fa-{{ micon }}"></i> {{ mlabel }}</a>{% endif %}
       {% endfor %}
     </div>
   </div>
@@ -241,13 +241,13 @@
     <span class="usage-ctl-label"><i class="fa-solid fa-layer-group"></i> {{ _('النوع') }}</span>
     <div class="usage-tabs" data-testid="usage-type-tabs">
       {% for tk, tlabel, ticon in _tabs %}
-      <a class="usage-tab{% if utype == tk %} is-active{% endif %}" data-usage-tab="{{ tk }}"
+      {% if can_submit('radius.rep_subscriber_consumption', 'GET') %}<a class="usage-tab{% if utype == tk %} is-active{% endif %}" data-usage-tab="{{ tk }}"
          href="{{ url_for('radius.rep_subscriber_consumption', type=tk, metric=metric, preset=preset,
                           spec_day=_csd, spec_week=_csw, spec_month=_csm,
                           date_from=_cf, date_to=_ct, q=_cq, limit=limit) }}">
         <i class="fa-solid fa-{{ ticon }}"></i> {{ tlabel }}
         <span class="usage-tab-count">{{ counts[tk] }}</span>
-      </a>
+      </a>{% endif %}
       {% endfor %}
     </div>
   </div>

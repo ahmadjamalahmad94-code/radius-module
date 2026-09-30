@@ -378,7 +378,7 @@
     "مصمّم صفحة الدخول — " ~ nas.name,
     subtitle="اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.",
     icon="palette",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>'|safe,
+    actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>'|safe if can_submit('radius.mt_dashboard', 'GET') else ''),
     kpis=[
       {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
       {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
@@ -412,7 +412,7 @@
   {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}
   <form method="post"
         action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
-        data-mt-designer-form>
+        data-mt-designer-form>{% if not can_submit('radius.mt_login_designer_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {# ───── ① التصاميم — معرض موحّد بتبويبات أنواع المنشآت ─────
        دَمجٌ لمعرضَي «معرض التصاميم» و«قوالب جاهزة حسب نوع منشأتك» في مكان
@@ -912,10 +912,10 @@
                    id="mtld-preset-name"
                    placeholder="{{ _('اسم القالب المحفوظ — مثل: تصميم رمضان') }}"
                    maxlength="40">
-            <button type="submit" class="hub-btn hub-btn--secondary"
+            {% if can_submit('radius.mt_login_designer_preset_save', 'POST') %}<button type="submit" class="hub-btn hub-btn--secondary"
                     formaction="{{ url_for('radius.mt_login_designer_preset_save', nas_id=nas.id) }}">
               <i class="fa-solid fa-bookmark"></i> {{ _('حفظ كقالب باسم') }}
-            </button>
+            </button>{% endif %}
           </div>
           <div class="mtld-field-help">
             يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في
@@ -1036,10 +1036,10 @@
              formaction لمسار download.zip — تُرسل كل القيم الحالية
              على الشاشة (POST، نفس حلّ المعاينة لحدود طول الطلب)
              ويعيد الخادم ملف ZIP مرفقًا فلا تغادر الصفحة. #}
-          <button type="submit" class="hub-btn hub-btn--secondary"
+          {% if can_submit('radius.mt_login_designer_download_zip', 'POST') %}<button type="submit" class="hub-btn hub-btn--secondary"
                   formaction="{{ url_for('radius.mt_login_designer_download_zip', nas_id=nas.id) }}">
             <i class="fa-solid fa-file-zipper"></i> {{ _('تحميل الحزمة (ZIP)') }}
-          </button>
+          </button>{% endif %}
           <span class="mtld-save-note">
             الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر.
             تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم)
@@ -1075,7 +1075,7 @@
         {% endcall %}
       </aside>
     </div>
-  </form>
+  {% if not can_submit('radius.mt_login_designer_save') %}</fieldset>{% endif %}</form>
 
   {# ════ أصول مستضافة (فيديو سبلاش/إعلان + خط العلامة) — خُطوة متقدّمة ════
      نُقلت إلى هنا (أسفل مسار العمل) كي يبقى التسلسل العلويّ نظيفًا:
@@ -1088,22 +1088,22 @@
       إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.
     </p>
     <div class="mtld-asset-grid">
-      <form method="post" enctype="multipart/form-data"
+      {% if can_submit('radius.mt_login_designer_asset_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="video">
         <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
         <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
         <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
-      </form>
-      <form method="post" enctype="multipart/form-data"
+      </form>{% endif %}
+      {% if can_submit('radius.mt_login_designer_asset_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="font">
         <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
         <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
         <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
-      </form>
+      </form>{% endif %}
     </div>
     {% if router_assets %}
     <table class="mtld-asset-table">
@@ -1115,10 +1115,10 @@
           <td dir="ltr">{{ a.filename }}</td>
           <td>{{ (a.size_bytes // 1024) }} ك.ب</td>
           <td>
-            <form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
+            {% if can_submit('radius.mt_login_designer_asset_delete', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
               <input type="hidden" name="asset_id" value="{{ a.id }}">
               <button type="submit" class="hub-btn hub-btn--ghost mtld-asset-del"><i class="fa-solid fa-trash"></i></button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -1148,22 +1148,22 @@
             · آخر تحديث {{ p.updated_at|dt_local }}
           </span>
         </div>
-        <form method="post" action="{{ url_for('radius.mt_login_designer_preset_apply', nas_id=nas.id) }}">
+        {% if can_submit('radius.mt_login_designer_preset_apply', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_preset_apply', nas_id=nas.id) }}">
           <input type="hidden" name="preset_id" value="{{ p.id }}">
           <button type="submit" class="hub-btn hub-btn--secondary">
             <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('تطبيق') }}
           </button>
-        </form>
+        </form>{% endif %}
         {# حذف القالب المحفوظ — إجراء مدمّر يفتح نافذة ccModal العائمة
            (لا confirm) ثم يُرسل النموذج عند التأكيد. #}
-        <form method="post" action="{{ url_for('radius.mt_login_designer_preset_delete', nas_id=nas.id) }}">
+        {% if can_submit('radius.mt_login_designer_preset_delete', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_preset_delete', nas_id=nas.id) }}">
           <input type="hidden" name="preset_id" value="{{ p.id }}">
           <button type="button" class="hub-btn hub-btn--secondary"
                   title="{{ _('حذف القالب المحفوظ') }}" aria-label="حذف القالب المحفوظ «{{ p.name }}»"
                   data-mtld-preset-del data-mtld-preset-name="{{ p.name }}">
             <i class="fa-solid fa-trash"></i>
           </button>
-        </form>
+        </form>{% endif %}
       </div>
       {% endfor %}
     </div>
@@ -1179,7 +1179,7 @@
       بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.
       <span class="hub-hint" tabindex="0" data-hint="يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم &lt;/body&gt;، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص {{ '{{TENANT_NAME}}' }} وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي."><i class="fa-solid fa-info"></i></span>
     </p>
-    <form method="post" enctype="multipart/form-data"
+    {% if can_submit('radius.mt_login_designer_custom_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
           action="{{ url_for('radius.mt_login_designer_custom_upload', nas_id=nas.id) }}"
           class="mtld-custom-form">
       <label class="mtld-custom-name-label">
@@ -1210,7 +1210,7 @@
       <button type="submit" class="hub-btn hub-btn--primary mtld-custom-submit">
         <i class="fa-solid fa-cloud-arrow-up"></i> {{ _('رفع للتصاميم') }}
       </button>
-    </form>
+    </form>{% endif %}
     <div class="mtld-field-help mtld-field-help--gap">
       شروط القبول: وجود placeholders ميكروتك الإجبارية
       (<code dir="ltr">$(link-login-only)</code>{{ _('،') }}
@@ -1225,17 +1225,17 @@
 
   {# نموذج حذف التصميم الخاص — خارج نموذج الحفظ الكبير؛ أزرار الحذف
      في بطاقات المعرض ترتبط به عبر سمة form= وترسل custom_id. #}
-  <form method="post" id="mtld-custom-del-form"
+  {% if can_submit('radius.mt_login_designer_custom_delete', 'POST') %}<form method="post" id="mtld-custom-del-form"
         action="{{ url_for('radius.mt_login_designer_custom_delete', nas_id=nas.id) }}">
     {# custom_id يُملأ من زر الحذف عند تأكيد نافذة ccModal العائمة #}
     <input type="hidden" name="custom_id" value="" data-mtld-custom-del-id>
-  </form>
+  </form>{% endif %}
 
   {# ════ شريط النشر: نموذج مستقل حتى لا يتشارك الحفظ والنشر زر إرسال واحدًا ════ #}
   <form method="post"
         action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
         data-mt-designer-deploy-form
-        data-mt-deploy-stream-url="{{ url_for('radius.mt_login_designer_deploy_stream', nas_id=nas.id) }}">
+        data-mt-deploy-stream-url="{{ url_for('radius.mt_login_designer_deploy_stream', nas_id=nas.id) }}">{% if not can_submit('radius.mt_login_designer_deploy') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     {% call hub.section("النشر على الراوتر", icon="cloud-arrow-up") %}
       <div class="mtld-deploy">
         <div class="mtld-deploy-text">
@@ -1383,7 +1383,7 @@
         </p>
       </details>
     {% endcall %}
-  </form>
+  {% if not can_submit('radius.mt_login_designer_deploy') %}</fieldset>{% endif %}</form>
 
 </section>
 

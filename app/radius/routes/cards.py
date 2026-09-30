@@ -4,6 +4,7 @@ RM-H4: extended generate form with full AdvRadius batch options +
 metadata JSON for future fields.
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import csv
 import io
@@ -327,7 +328,7 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
                        "href": url_for("radius.cards_batches"),
                        "hint": "افتح حزم البطاقات لتوليد أو استيراد كروت جديدة"})
     elif 0 < available <= 10:
-        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {available} كرت فقط.",
+        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {ar_count(available, 'kart')} فقط.",
                        "href": url_for("radius.cards_batches"),
                        "hint": "راجع الحزم وولّد كروتًا إضافية قبل النفاد"})
     for package in printed_stock_packages:
@@ -342,11 +343,11 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
             })
             break
     if expired:
-        alerts.append({"level": "red", "text": f"{expired} كرت منتهي يحتاج مراجعة.",
+        alerts.append({"level": "red", "text": f"كروت منتهية تحتاج مراجعة: {expired}.",
                        "href": url_for("radius.cards_list", status="expired"),
                        "hint": "اعرض الكروت المنتهية لمراجعتها أو أرشفتها"})
     if revoked:
-        alerts.append({"level": "grey", "text": f"{revoked} كرت محظور ضمن المخزون.",
+        alerts.append({"level": "grey", "text": f"كروت محظورة ضمن المخزون: {revoked}.",
                        "href": url_for("radius.cards_list", status="revoked"),
                        "hint": "اعرض الكروت المحظورة"})
     if not alerts:
@@ -1292,7 +1293,7 @@ def cards_batches_import():
     sync_failed = int(result.get("radius_sync_failed_count") or 0)
     if sync_failed:
         flash(
-            f"⚠️ الحزمة محفوظة، لكن {sync_failed} بطاقة لم تُنشأ لها حسابات "
+            f"⚠️ الحزمة محفوظة، لكن {ar_count(sync_failed, 'card')} لم تُنشأ لها حسابات "
             "مصادقة (ازدحام على قاعدة البيانات). أعد المزامنة من صفحة الحزمة "
             "قبل بيعها — لا تُعِد الاستيراد.",
             "warning",
@@ -1313,7 +1314,7 @@ def cards_batches_import():
     if _parts:
         flash("المتخطّى: " + " · ".join(_parts), "warning")
     flash(
-        f"تم استيراد {result['inserted_count']} بطاقة صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
+        f"تم استيراد {ar_count(result['inserted_count'], 'card')} صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
         "success",
     )
     return redirect(url_for("radius.cards_batches", q=batch.batch_code, status="all"))
@@ -1474,7 +1475,7 @@ def cards_batches_bulk():
                     changed += 1
                     removed_cards += int(summary.get("cards", 0) or 0)
             flash(
-                f"تمّ الحذف النهائيّ لـ{changed} حزمة و{removed_cards} بطاقة — بلا رجعة.",
+                f"تمّ الحذف النهائيّ لـ{ar_count(changed, 'batch')} و{ar_count(removed_cards, 'card')} — بلا رجعة.",
                 "warning",
             )
         elif action == "refresh":
@@ -2094,13 +2095,15 @@ def cards_generate():
             batch, cards = get_cards_service().generate_batch(
                 actor=_actor(), plan_id=plan_id, count=count, **opts,
             )
-            flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
+            flash(f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}.", "success")
             _apply_pending_batch_speed_rule(batch, request.form)
             return redirect(_batch_summary_url(batch))
+        except RadiusError as e:
+            # RadiusError first: NonFiniteNumber («الحدود») is also a ValueError
+            # and must show its own Arabic reason, not «قيم غير صحيحة: …».
+            flash(e.message, "error")
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
-        except RadiusError as e:
-            flash(e.message, "error")
     # ── المدير الفرعيّ: عارض العروض بدل النموذج الكامل ──
     # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
     # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
@@ -2239,7 +2242,7 @@ def cards_generate_progress_start():
                     generated=len(cards),
                     batch_id=batch.id,
                     batch_code=batch.batch_code,
-                    message=f"تم إنشاء {len(cards)} بطاقة بدون تكرار.",
+                    message=f"تم إنشاء {ar_count(len(cards), 'card')} بدون تكرار.",
                     redirect_url=redirect_template.replace(
                         "__BATCH_CODE__",
                         _url_quote(str(batch.batch_code or batch.id))),
@@ -2337,8 +2340,8 @@ def cards_batch_edit(batch_id: int):
             if _re and (_re.get("pending") or _re.get("started")):
                 flash(
                     f"تم حفظ التعديلات، وسَرَت المدّة الجديدة على "
-                    f"{_re.get('pending', 0)} بطاقة لم تبدأ بعد و"
-                    f"{_re.get('started', 0)} بطاقة بدأت "
+                    f"{ar_count(_re.get('pending', 0), 'card')} لم تبدأ بعد و"
+                    f"{ar_count(_re.get('started', 0), 'card')} بدأت "
                     "(أُعيد حسابها من أوّل دخولها).",
                     "success",
                 )
@@ -2346,7 +2349,7 @@ def cards_batch_edit(batch_id: int):
                 #    بهذا الحفظ. المشغّل يحتاج الرقمَ الآن لا من شكاوى زبائنه.
                 if _re.get("expired_now"):
                     flash(
-                        f"⚠️ انتهت فورًا {_re['expired_now']} بطاقةً بدأت "
+                        f"⚠️ انتهت فورًا {ar_count(_re['expired_now'], 'card')} بدأت "
                         "سابقًا: نافذتُها الجديدة محسوبةٌ من أوّل دخولها وقد "
                         "مضت. راجعها قبل أن يتّصل أصحابُها.",
                         "warning",
@@ -2354,10 +2357,12 @@ def cards_batch_edit(batch_id: int):
             else:
                 flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
+        except RadiusError as e:
+            # RadiusError first: NonFiniteNumber («الحدود») is also a ValueError
+            # and must show its own Arabic reason, not «قيم غير صحيحة: …».
+            flash(e.message, "error")
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
-        except RadiusError as e:
-            flash(e.message, "error")
     plans = list(get_plans_service().list(limit=500))
     form = request.form if request.method == "POST" else _batch_form_data(batch)
     return render_template(
@@ -2958,7 +2963,7 @@ def cards_batch_cards_actions(batch_id: int):
         "change_password": "تغيير كلمة المرور",
     }
     if changed:
-        flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+        flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {ar_count(changed, 'kart')}.", "success")
         if action == "change_password":
             if len(new_passwords) == 1:
                 _u, _p = new_passwords[0]
@@ -2971,7 +2976,7 @@ def cards_batch_cards_actions(batch_id: int):
                     "warning",
                 )
     if skipped:
-        flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
+        flash(f"تم تجاهل {ar_count(skipped, 'kart')} خارج هذه الحزمة.", "warning")
     if errors:
         flash("لم تكتمل بعض الكروت: " + " | ".join(errors[:3]), "error")
     return redirect(return_to)
@@ -3618,13 +3623,13 @@ def cards_offer_use(offer_id: int):
                 from ..services.business_os_finance import minor_to_money
                 margin = int(offer.get("margin_minor") or 0) * count
                 flash(
-                    f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة. "
+                    f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}. "
                     f"خُصم {minor_to_money(int(charge['charged_minor']))} جملةً "
                     f"(هامش متوقّع {minor_to_money(margin)}).",
                     "success",
                 )
             else:
-                flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
+                flash(f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}.", "success")
             return redirect(_batch_summary_url(batch))
         except CardOfferBalanceError as e:
             flash(str(e), "error")

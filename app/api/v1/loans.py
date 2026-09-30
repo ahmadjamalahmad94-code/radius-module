@@ -15,6 +15,7 @@ from ...radius.core.errors import (
 )
 from ...radius.services import subscriber_actions as sa
 from ...radius.services.accounting import service_from_context
+from ...radius.services.report_dates import ReportDateError
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -105,9 +106,16 @@ def loans_list():
         subscriber_id=subscriber_id,
     ):
         return deny_out_of_scope()
+    # F03-N9: نطاق تاريخ الإنشاء (يوم اللوحة المحلّيّ) — كان يُتجاهَل بصمت.
+    date_from = (request.args.get("date_from") or request.args.get("from") or "").strip()
+    date_to = (request.args.get("date_to") or request.args.get("to") or "").strip()
     svc = service_from_context()
-    items = svc.list_loans(status=status, subscriber_id=subscriber_id,
-                           limit=limit, offset=offset)
+    try:
+        items = svc.list_loans(status=status, subscriber_id=subscriber_id,
+                               limit=limit, offset=offset,
+                               date_from=date_from, date_to=date_to)
+    except ReportDateError as exc:
+        return fail("validation_error", exc.message, status=422)
     scoped = bool(current_distributor() and not subscriber_id)
     if scoped:
         items = [item for item in items if subscriber_in_scope(
@@ -118,7 +126,8 @@ def loans_list():
     if not scoped:
         # Totals of EVERY matching loan (not just this page) — the loans center
         # summed only the first 100 rows on the phone.
-        totals = svc.loan_totals(status=status, subscriber_id=subscriber_id)
+        totals = svc.loan_totals(status=status, subscriber_id=subscriber_id,
+                                 date_from=date_from, date_to=date_to)
         payload["totals"] = totals
         payload["total_count"] = totals["count"]
         payload["has_more"] = offset + len(items) < totals["count"]

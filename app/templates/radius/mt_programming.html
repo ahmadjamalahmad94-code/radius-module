@@ -70,7 +70,7 @@
         icon=('plug' if _kind == 'pppoe' else 'network-wired')) %}
     <form class="hub-form" method="post"
           action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
-          data-mt-program-form>
+          data-mt-program-form>{% if not can_submit('radius.mt_program_plan') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="kind" value="{{ _kind }}">
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
@@ -168,7 +168,7 @@
           {{ _('توليد السكربت') }}
         </button>
       </div>
-    </form>
+    {% if not can_submit('radius.mt_program_plan') %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {% if backup_warning_ar is defined and backup_warning_ar %}
@@ -177,11 +177,11 @@
          style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:13px">
       <i class="fa-solid fa-floppy-disk"></i>
       <span>{{ backup_warning_ar }}</span>
-      <a href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
+      {% if can_submit('radius.mt_backups_list', 'GET') %}<a href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
          class="hub-btn hub-btn--secondary hub-btn--sm"
          data-mt-program-backup-link>
         <i class="fa-solid fa-arrow-right"></i> {{ _('اذهب لصفحة النسخ') }}
-      </a>
+      </a>{% endif %}
     </div>
   {% endcall %}
   {% endif %}
@@ -256,7 +256,7 @@
       <pre class="mt-logs-output" data-mt-program-script
            style="background:#0f172a;color:#e2e8f0;padding:14px;border-radius:var(--hub-r-md);overflow:auto;font-size:12.5px;line-height:1.6;margin:0 0 16px">{{ plan.script }}</pre>
 
-      <form method="post"
+      {% if can_submit('radius.mt_program_apply', 'POST') %}<form method="post"
             action="{{ url_for('radius.mt_program_apply', nas_id=nas.id) }}"
             data-mt-program-apply-form
             style="display:flex;flex-direction:column;gap:12px">
@@ -285,7 +285,7 @@
             {{ _('تطبيق على الراوتر') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
     </div>
   {% endcall %}
   {% endif %}
@@ -298,7 +298,7 @@
         الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء
         من نقطة نظيفة.
       </p>
-      <form method="post"
+      {% if can_submit('radius.mt_program_unprogram', 'POST') %}<form method="post"
             action="{{ url_for('radius.mt_program_unprogram', nas_id=nas.id) }}"
             data-mt-program-unprogram-form
             style="display:flex;flex-direction:column;gap:12px">
@@ -317,7 +317,7 @@
             {{ _('تراجع وإزالة') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
     </div>
   {% endcall %}
 

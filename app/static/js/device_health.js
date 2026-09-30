@@ -838,10 +838,14 @@
 
     if (btn.hasAttribute("data-dh-delete")) {
       var info = rowData(btn);
-      if (!window.confirm("حذف الجهاز «" + (info.d.name || "") + "»؟")) return;
-      request(api("/" + info.d.id + "/delete"), "POST").then(function (res) {
-        if (res.data && res.data.ok) { info.row.remove(); toast("حُذف الجهاز.", "success"); applyFilters(); }
-        else toast((res.data && res.data.error) || "تعذّر الحذف", "error");
+      var _dmsg = "حذف الجهاز «" + (info.d.name || "") + "»؟";
+      /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
+      (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _dmsg}) : Promise.resolve(window.confirm(_dmsg))).then(function (yes) {
+        if (!yes) return;
+        request(api("/" + info.d.id + "/delete"), "POST").then(function (res) {
+          if (res.data && res.data.ok) { info.row.remove(); toast("حُذف الجهاز.", "success"); applyFilters(); }
+          else toast((res.data && res.data.error) || "تعذّر الحذف", "error");
+        });
       });
       return;
     }

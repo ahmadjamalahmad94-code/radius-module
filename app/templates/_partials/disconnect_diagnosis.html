@@ -63,7 +63,7 @@
   <p class="dx-note">
     مبنيّ على آخر <strong>{{ dx.total }}</strong> جلسة مُنهاة · المصدر: «سبب الإنهاء»
     (Acct-Terminate-Cause) في radacct.{% if sessions_url %}
-    للتفاصيل صفًّا صفًّا: <a href="{{ sessions_url }}">تقرير الجلسات لهذا المشترك</a>.{% endif %}
+    للتفاصيل صفًّا صفًّا: {% if can_open(sessions_url) %}<a href="{{ sessions_url }}">{% endif %}تقرير الجلسات لهذا المشترك{% if can_open(sessions_url) %}</a>{% endif %}.{% endif %}
   </p>
 {% endif %}
 

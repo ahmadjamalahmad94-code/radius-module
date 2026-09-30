@@ -89,8 +89,8 @@
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
-               href=url_for('radius.rep_balance_movements')) }}
+    {% if can_submit('radius.rep_balance_movements', 'GET') %}{{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               href=url_for('radius.rep_balance_movements')) }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="السجل يدمج حركات الرصيد العامة (مشتركين/مدراء) مع حركات رصيد الموزّعين، مرتّبة من الأحدث. البحث يطابق الطرف أو المنفّذ أو نوع الحركة، ويُعرض حتى 500 حركة."><i class="fa-solid fa-info"></i></span>
@@ -111,13 +111,13 @@
   <span style="flex:1;min-width:220px;font-size:12.5px;color:#334155;line-height:1.7">
     <b style="color:#9a3412">{{ _('يحتوي السجل على حركات تجريبيّة (demo-seed).') }}</b>
     {{ _('هذه بيانات بذر تجريبيّة يمكن حذفها بأمان دون المساس بالحركات الحقيقيّة.') }}</span>
-  <a href="{{ url_for('radius.demo_cleanup_page') }}"
+  {% if can_submit('radius.demo_cleanup_page', 'GET') %}<a href="{{ url_for('radius.demo_cleanup_page') }}"
      style="flex:none;display:inline-flex;align-items:center;gap:7px;text-decoration:none;
      background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font-weight:900;
-     font-size:12.5px;border-radius:11px;padding:9px 16px">
+     font-size:12.5px;border-radius:11px;padding:9px 16px">{% endif %}
     <i class="fa-solid fa-broom"></i> {{ _('تنظيف البيانات التجريبيّة') }}
     <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.2);font-size:9.5px"><i class="fa-solid fa-crown" style="font-size:8px"></i> {{ _('المالك') }}</span>
-  </a>
+  {% if can_submit('radius.demo_cleanup_page', 'GET') %}</a>{% endif %}
 </div>
 {% endif %}
 

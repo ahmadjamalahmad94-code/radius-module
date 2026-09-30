@@ -260,7 +260,7 @@
 
     {% if not checkout %}
     {# ═══════════ الخطوتان 1 + 2: اختيار العنصر ثم وسيلة الدفع ═══════════ #}
-    <form class="card" method="post" action="{{ url_for('radius.pay_demo_start') }}">
+    {% if can_submit('radius.pay_demo_start', 'POST') %}<form class="card" method="post" action="{{ url_for('radius.pay_demo_start') }}">
       <h2><i class="fa-solid fa-cart-shopping"></i> {{ _('ماذا تريد أن تدفع؟') }}</h2>
       <p class="lead">{{ _('اختر العنصر، ثم وسيلة الدفع، وأدخل رقم محفظتك.') }}</p>
 
@@ -307,7 +307,7 @@
       <button class="pay-btn" type="submit">
         <i class="fa-solid fa-lock"></i> {{ _('متابعة الدفع الآمن') }}
       </button>
-    </form>
+    </form>{% endif %}
 
     {% elif checkout.status in ('pending', 'otp_sent') %}
     {# ═══════════ الخطوة 3: رمز التحقق OTP ═══════════ #}
@@ -328,7 +328,7 @@
         <span class="amt">{{ checkout.amount_display }} {{ checkout.currency }}</span>
       </div>
 
-      <form method="post" action="{{ url_for('radius.pay_demo_otp') }}" id="otp-form">
+      {% if can_submit('radius.pay_demo_otp', 'POST') %}<form method="post" action="{{ url_for('radius.pay_demo_otp') }}" id="otp-form">
         <input type="hidden" name="checkout_id" value="{{ checkout.id }}">
         <div class="otp-boxes" id="otp-boxes" role="group" aria-label="{{ _('رمز التحقق المكوّن من ستة أرقام') }}">
           {% for i in range(1, 7) %}
@@ -354,10 +354,10 @@
         <button class="pay-btn" type="submit" id="otp-submit">
           <i class="fa-solid fa-circle-check"></i> {{ _('تأكيد الدفع') }}
         </button>
-      </form>
-      <form method="post" action="{{ url_for('radius.pay_demo_resend') }}" id="resend-form">
+      </form>{% endif %}
+      {% if can_submit('radius.pay_demo_resend', 'POST') %}<form method="post" action="{{ url_for('radius.pay_demo_resend') }}" id="resend-form">
         <input type="hidden" name="checkout_id" value="{{ checkout.id }}">
-      </form>
+      </form>{% endif %}
     </div>
 
     <script>
@@ -465,9 +465,9 @@
           سيتم ترحيل الدفعة تلقائيًا إلى سجل المشترك ودفتر القيود فور تأكيد البوابة.</span>
         </div>
 
-        <a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}">
+        {% if can_submit('radius.pay_demo', 'GET') %}<a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}">
           <i class="fa-solid fa-rotate-left"></i> {{ _('تجربة عملية دفع جديدة') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
 
@@ -484,9 +484,9 @@
         <h3 style="color:var(--bad)">{{ _('فشلت عملية الدفع') }}</h3>
         <div class="sub">{{ _('تجاوزت عدد محاولات رمز التحقق المسموح بها. لا تقلق — لا خصم في الوضع التجريبي.') }}</div>
         {% endif %}
-        <a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}" style="margin-top:8px">
+        {% if can_submit('radius.pay_demo', 'GET') %}<a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}" style="margin-top:8px">
           <i class="fa-solid fa-rotate-left"></i> {{ _('البدء من جديد') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
     {% endif %}

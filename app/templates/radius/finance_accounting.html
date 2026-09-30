@@ -285,7 +285,7 @@
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ entry.created_at|dt_local }}</td>
             <td>
               {% if entry.entry_type not in ['void','reversal','correction'] %}
-              <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              {% if can_submit('radius.finance_ledger_void', 'POST') %}<form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                 <input type="hidden" name="entry_id" value="{{ entry.id }}">
                 <input class="hub-input" name="reason" placeholder="{{ _('سبب التصحيح') }}" required style="font-size:12px;padding:5px 8px;min-width:110px">
@@ -293,7 +293,7 @@
                   style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
                   <i class="fa-solid fa-rotate-left"></i>
                 </button>
-              </form>
+              </form>{% endif %}
               {% else %}<span class="hub-text-mute small">{{ _('قيد تصحيحي') }}</span>{% endif %}
             </td>
           </tr>
@@ -315,9 +315,9 @@
   {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + " صف") if report_items else "", flush=True) %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;
                 padding:10px 16px;border-bottom:1px solid var(--hub-border-soft)">
-      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
-      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_xlsx', type=report_type) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
-      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_pdf', type=report_type) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+      {% if can_submit('radius.finance_reports_export_csv', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>{% endif %}
+      {% if can_submit('radius.finance_reports_export_xlsx', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_xlsx', type=report_type) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>{% endif %}
+      {% if can_submit('radius.finance_reports_export_pdf', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_pdf', type=report_type) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>{% endif %}
       <span style="flex:1"></span>
       {# الزر يفتح نافذة عائمة لتحديد الفترة من/إلى وملاحظة اختيارية —
          بدل الحفظ الأعمى للتقرير كاملًا (طلب المستخدم: «شو استفدت من اللقطة؟») #}
@@ -435,7 +435,7 @@
               {%- elif _total is not none -%}<strong>{{ _total|money }}</strong>{%- else -%}—{%- endif -%}
             </td>
             <td class="small">{{ _note or '—' }}</td>
-            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="small">{{ snap.created_by|actor_name if snap.created_by else "—" }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ snap.created_at|dt_local }}</td>
             <td>
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-snap-view="{{ snap.id }}"
@@ -454,8 +454,8 @@
 {# ───────────── صندوق عائم: حفظ لقطة ثابتة بنطاق من/إلى ───────────── #}
 <div class="fcw-modal" data-fcw-modal="snapshot-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-snapshot-title">
-    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post"> فقط. #}
-    <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %} فقط. #}
+    {% if can_submit('radius.finance_reports_snapshot', 'POST') %}<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="report_type" value="{{ report_type }}">
       <div class="fcw-head">
@@ -490,7 +490,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> {{ _('حفظ اللقطة') }}</button>
       </div>
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>{% endif %}
   </div>
 </div>
 

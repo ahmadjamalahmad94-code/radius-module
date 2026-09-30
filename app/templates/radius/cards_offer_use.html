@@ -65,7 +65,7 @@
   }
 </style>
 
-<form class="ou-wrap" method="post" action="{{ url_for('radius.cards_offer_use', offer_id=offer.id) }}" data-offer-use>
+<form class="ou-wrap" method="post" action="{{ url_for('radius.cards_offer_use', offer_id=offer.id) }}" data-offer-use>{% if not can_submit('radius.cards_offer_use') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
   {# ── 1. Locked offer summary ─────────────────────────────────── #}
@@ -156,11 +156,11 @@
     <div class="ou-grid">
       <div class="ou-field">
         <label>{{ _("طول اسم المستخدم") }}</label>
-        <input class="hub-input" type="number" name="username_length" min="3" max="32" value="{{ form.get('username_length') or 8 }}">
+        <input class="hub-input" type="number" name="username_length" min="3" max="{{ hr_limits.card_username_len_max }}" value="{{ form.get('username_length') or 8 }}">
       </div>
       <div class="ou-field">
         <label>{{ _("طول كلمة المرور") }}</label>
-        <input class="hub-input" type="number" name="password_length" min="1" max="32" value="{{ form.get('password_length') or 6 }}">
+        <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="{{ form.get('password_length') or 6 }}">
       </div>
       <div class="ou-field">
         <label>{{ _("نوع الكود") }}</label>
@@ -225,8 +225,8 @@
 
   {# ── Footer actions ──────────────────────────────────────────── #}
   <div class="ou-foot">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_offers') }}"><i class="fa-solid fa-arrow-right"></i> {{ _("رجوع") }}</a>
+    {% if can_submit('radius.cards_offers', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_offers') }}"><i class="fa-solid fa-arrow-right"></i> {{ _("رجوع") }}</a>{% endif %}
     <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد الحزمة") }}</button>
   </div>
-</form>
+{% if not can_submit('radius.cards_offer_use') %}</fieldset>{% endif %}</form>
 {% endblock %}

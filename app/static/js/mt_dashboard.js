@@ -2151,7 +2151,9 @@
     // Inline confirm — no modal needed for read+kick. Keeps the row
     // visible the whole time.
     const label = user || id;
-    if (!window.confirm(`قطع اتصال «${label}»؟`)) return;
+    /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
+    const _kmsg = `قطع اتصال «${label}»؟`;
+    if (!(await (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _kmsg}) : Promise.resolve(window.confirm(_kmsg))))) return;
     btn.disabled = true;
     tr.style.opacity = "0.5";
     const origHtml = btn.innerHTML;

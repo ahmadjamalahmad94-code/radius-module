@@ -400,6 +400,96 @@ _WEB_FORM_UNMANAGED = (
 )
 
 
+# ── F03-N1/N2: «احفظ ما غيّره المشغّل فقط» ─────────────────────────────────
+# صفحة تعديلٍ تُركت مفتوحة كانت تُعيد كلّ حقلٍ تغيّر بعد فتحها (الباقة بعد تغيير
+# مدفوع، السعر المخصّص، الجوال، الحالة — فيُعاد تفعيل مشتركٍ عُطّل…) لأنّ كلّ
+# قيمةٍ مُرسَلة تختلف عن الصفّ **لحظة الحفظ** كانت تُعَدّ تغييرًا. الآن تحمل الصفحة
+# لقطةَ قيَم الحقول لحظة فتحها (_form_orig) — حقلٌ مُرسَلٌ بقيمته المحمَّلة نفسها
+# لم يلمسه المشغّل فتبقى قيمته **الحاليّة** في القاعدة. (التاريخ: expire_orig،
+# و«بدون انتهاء»: no_expiry_orig.)
+_FORM_ORIG_SKIP = frozenset({
+    # fix3 integration: pppoe_password is a secret like password — a digest
+    # only (scope F01 F5 hides it from admins without «رؤية كلمة مرور المشترك»;
+    # the plain snapshot would have leaked it through the hidden field).
+    "id", "tenant_id", "username", "password", "pppoe_password", "metadata",
+    "expire_at", "user_type",
+    "working_days", "updated_by", "updated_at", "deleted_at", "deleted_by",
+    "delete_reason",
+}) | frozenset(_WEB_FORM_UNMANAGED)
+
+
+def _orig_norm(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return str(int(f)) if f == int(f) else repr(round(f, 6))
+    if isinstance(v, datetime):
+        return v.isoformat()
+    return str(v).strip()
+
+
+def _orig_same(a: str, b: str) -> bool:
+    return a == b or {a, b} <= {"", "0"}
+
+
+def _pw_digest(pw) -> str:
+    import hashlib
+    return hashlib.sha256(("hr-form-orig|" + str(pw or "")).encode("utf-8")).hexdigest()[:32]
+
+
+def form_orig_snapshot(sub: Subscriber) -> str:
+    """لقطة JSON لقيَم النموذج لحظة فتح صفحة التعديل (حقل مخفيّ _form_orig).
+    كلمة المرور بصمةٌ فقط (لا تُكشَف في الـDOM)."""
+    from dataclasses import fields as _fields
+    snap = {f.name: _orig_norm(getattr(sub, f.name, None))
+            for f in _fields(sub) if f.name not in _FORM_ORIG_SKIP}
+    flat = _grouped_to_flat(_parse_metadata(getattr(sub, "metadata", None)))
+    meta = {mf: _orig_norm(flat.get(mf)) for mf in _META_FIELDS}
+    return json.dumps({"f": snap, "m": meta, "pw": _pw_digest(sub.password),
+                       "ppw": _pw_digest(getattr(sub, "pppoe_password", None))},
+                      ensure_ascii=False, separators=(",", ":"))
+
+
+def _posted_form_orig() -> dict | None:
+    raw = (request.form.get("_form_orig") or "").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _keep_untouched_fields(dto: Subscriber, before: Subscriber | None) -> Subscriber:
+    """حقلٌ أُرسل بقيمته المحمَّلة (لم يلمسه المشغّل) ⇒ قيمة القاعدة **الآن**."""
+    orig = _posted_form_orig()
+    if before is None or not orig:
+        return dto
+    from dataclasses import replace as _replace
+    snap = orig.get("f") or {}
+    keep = {}
+    for name, was in snap.items():
+        if name in _FORM_ORIG_SKIP or not hasattr(dto, name) or not hasattr(before, name):
+            continue
+        if _orig_same(_orig_norm(getattr(dto, name)), str(was)):
+            keep[name] = getattr(before, name)
+    if "connection_schedule" in keep:
+        keep["working_days"] = before.working_days
+    # كلمة المرور: نفس الكلمة المحمَّلة ⇒ لم تُغيَّر (تغييرٌ عبر الـAPI بعد فتح
+    # الصفحة يبقى). فارغة ⇒ الخدمة تُبقي المخزَّنة أصلًا.
+    if dto.password and orig.get("pw") and _pw_digest(dto.password) == orig.get("pw"):
+        keep["password"] = before.password
+    _ppw = getattr(dto, "pppoe_password", None)
+    if (_ppw and orig.get("ppw") and hasattr(before, "pppoe_password")
+            and _pw_digest(_ppw) == orig.get("ppw")):
+        keep["pppoe_password"] = before.pppoe_password
+    return _replace(dto, **keep) if keep else dto
+
+
 def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) -> Subscriber:
     """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata).
 
@@ -439,8 +529,13 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
 
     # metadata: نجمع الحقول المسطّحة من الـ form ثم نُجمّعها
     flat_meta = {}
+    # F03-N1: حقلٌ وصفيّ لم يلمسه المشغّل (نفس قيمته لحظة فتح الصفحة) لا يُكتب —
+    # فتبقى قيمته الحاليّة في القاعدة (دمجٌ مع base_meta أدناه).
+    _orig_meta = ((_posted_form_orig() or {}).get("m") or {}) if existing is not None else {}
     for mf in _META_FIELDS:
         v = _s(mf)
+        if mf in _orig_meta and _orig_same(_orig_norm(v), str(_orig_meta.get(mf))):
+            continue
         if v:
             flat_meta[mf] = v
 
@@ -1229,6 +1324,24 @@ def _existing_temp_duration(before) -> int:
         return 0
 
 
+TEMP_SPEED_ZERO_MSG = ("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                      "فلا تُفعَّل بها سرعة مؤقتة.")
+
+
+def _check_temp_speed_form() -> None:
+    """F08-L: «سرعة مؤقتة» مفعّلة بـ0/0 كانت تُحفَظ (علَم بلا سرعة ولا نهاية).
+    تُرفض قبل أيّ حفظ برسالة عربيّة — نفس قاعدة الخدمة المشتركة."""
+    if request.form.get("temporary_speed", "") not in ("1", "on", "true", "yes"):
+        return
+    def _i(n):
+        try:
+            return int(float(request.form.get(n) or 0))
+        except (TypeError, ValueError):
+            return 0
+    if _i("temporary_download_speed_kbps") <= 0 and _i("temporary_upload_speed_kbps") <= 0:
+        raise RadiusValidationError(TEMP_SPEED_ZERO_MSG)
+
+
 def _delegate_temp_speed(username: str, before) -> None:
     """Route the profile form's temp-speed intent through the SHARED service
     (services/temp_speed.py) — the exact same apply/cancel the «المتصلون الآن»
@@ -1379,6 +1492,7 @@ def users_create():
         if not dto.password and not dto.login_without_password:
             raise RadiusValidationError("كلمة المرور مطلوبة (4 أحرف على الأقل).")
         validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
+        _check_temp_speed_form()
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
         flash(error_message_ar(e), "error")
@@ -1936,6 +2050,7 @@ def users_edit(username: str):
         sub_view["pppoe_password"] = ""
     return render_template("radius/users_form.html",
         sub=sub_view,
+        form_orig=form_orig_snapshot(sub),
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
@@ -2212,6 +2327,8 @@ def users_update(username: str):
         # service is not a change (the audit showed it as one — R01 N12).
         if (dto.service_type or "").lower() == (before.service_type or "").lower():
             dto = replace(dto, service_type=before.service_type)
+        # F03-N1: ما لم يلمسه المشغّل منذ فتح الصفحة يبقى على قيمته الحاليّة.
+        dto = _keep_untouched_fields(dto, before)
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
     # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
     # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
@@ -2233,11 +2350,16 @@ def users_update(username: str):
             pass
     if before is not None and before.expire_at is None and clear_expiry:
         clear_expiry = False   # already «بدون انتهاء» — nothing to clear
+    # F03-N2: «بدون انتهاء» كان مُعلَّمًا لحظة فتح الصفحة ولم يلمسه المشغّل ⇒
+    # ليس طلبَ مسح — تجديدٌ جرى بعد فتح الصفحة يبقى (كان يُعاد «بلا انتهاء»).
+    if clear_expiry and request.form.get("no_expiry_orig") == "1":
+        clear_expiry = False
     try:
         from ..services.users import validate_new_password
         # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
         validate_new_password(dto.password,
                               previous=(before.password if before is not None else None))
+        _check_temp_speed_form()
         # base=before → only what the operator changed is written, under the
         # write lock (a renewal/top-up that landed meanwhile is kept — R01 N1).
         get_users_service().update(actor=_actor(), sub=dto, base=before,

@@ -48,7 +48,7 @@
    subtitle=_('كل مفتاح هنا يُقرأ أولًا من قاعدة البيانات (هذه الواجهة)، فإن لم يُضبط فمن متغيّر البيئة، فالافتراضي. الأسرار تُخزَّن مشفّرة وتُعرض مُقنّعة.'),
    icon="sliders", kpis=_kpis) }}
 
-<form method="post" action="{{ url_for('radius.system_settings_page') }}">
+{% if can_submit('radius.system_settings_page', 'POST') %}<form method="post" action="{{ url_for('radius.system_settings_page') }}">
   {% for g in groups %}
   {% call hub.section(g.title, icon=g.icon) %}
     <div class="es-grid">
@@ -107,7 +107,7 @@
     {{ hub.btn(_('حفظ إعدادات النظام'), icon="floppy-disk", variant="primary", type="submit") }}
     <span class="es-help" style="align-self:center">{{ _('التغييرات تُحفظ في قاعدة البيانات وتتجاوز متغيّرات البيئة فورًا (عدا ما يتطلب إعادة تشغيل).') }}</span>
   </div>
-</form>
+</form>{% endif %}
 
 {# ترقية القوائم المنسدلة (hbsel) #}
 <script src="{{ url_for('static', filename='js/hub_select.js') }}"></script>
