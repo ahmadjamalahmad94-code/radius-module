@@ -241,8 +241,10 @@ def nas_get(nas_id: int):
 
 
 def nas_patch(nas_id: int):
-    body = _json_body()
-    if body is None:
+    # f06-L11: جسمٌ `null` أو JSON تالف أو فارغ كان يُقرأ {} ⇒ 200 بلا شيء.
+    # التعديل يتطلّب كائن JSON صريحًا (ولو `{}`).
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
         return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     svc = _svc()
     try:

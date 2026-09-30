@@ -785,11 +785,14 @@
       request(api("/" + pid + "/test-ping"), "POST").then(function (res) {
         btn.disabled = false; btn.innerHTML = pico;
         var d = res.data || {};
-        if (d.ok) {
+        if (d.status) {
+          // f06-L10: `ok` = the device answered; a probe that ran but found it
+          // down/unreachable still reports its real status (persisted server-side).
           updateRowStatus(prow, d.status, d.latency_ms);  // live row update, no reload
           var lab = (STATUS_META[d.status] || {}).label || d.status;
           var lat = d.latency_ms != null ? (d.latency_ms + " ms") : "—";
-          toast("النتيجة: " + lab + " · " + lat, d.status === "up" ? "success" : "info");
+          var msg = "النتيجة: " + lab + " · " + lat + (d.ok || !d.error ? "" : " — " + d.error);
+          toast(msg, d.ok ? "success" : (d.status === "unavailable" ? "error" : "info"));
         } else {
           updateRowStatus(prow, pinfo.d.status, pinfo.d.last_latency_ms);  // restore
           toast(d.error || "تعذّر الفحص", "error");

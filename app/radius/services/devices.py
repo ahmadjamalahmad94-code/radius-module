@@ -178,11 +178,21 @@ def normalize_nas_address(raw) -> str:
         raise RadiusValidationError("عنوان الراوتر مطلوب.")
     if len(addr) > 253:
         raise RadiusValidationError("عنوان الراوتر طويل جدًا.")
+    if "%" in addr:
+        # f06-H2: «fe80::1%eth0» — ip_address() يقبل معرّف النطاق (zone id)
+        # لكنّ FreeRADIUS يرفضه («Invalid address») فيتعطّل الرديوس لكلّ
+        # الراوترات عند إعادة التشغيل التالية.
+        raise RadiusValidationError(
+            "عنوان IPv6 بمعرّف نطاق (مثل ‎%eth0) غير مدعوم في الرديوس — "
+            "أدخل العنوان بلا «%…» (عنوان IPv4 أو IPv6 عاديّ).")
     try:
         ip = ipaddress.ip_address(addr)
     except ValueError:
         ip = None
     if ip is not None:
+        if ip.is_unspecified or ip.is_multicast:
+            raise RadiusValidationError(
+                f"العنوان {addr[:64]} ليس عنوان جهازٍ صالحًا للراوتر.")
         # «::ffff:192.0.2.1» IS 192.0.2.1 — store the IPv4 form so the
         # duplicate-address check (and the FreeRADIUS client key) sees it.
         mapped = getattr(ip, "ipv4_mapped", None)
@@ -203,11 +213,50 @@ def normalize_nas_address(raw) -> str:
 
 
 def _is_ip_literal(value: str) -> bool:
+    """An address FreeRADIUS can load as ``ipaddr`` (f06-H2: a scoped IPv6
+    «fe80::1%eth0» is NOT one, although ``ip_address()`` accepts it)."""
+    from .setup_wizard_v3_radius_server_provisioning import radiusd_ip_literal
+    return radiusd_ip_literal(value) is not None
+
+
+def check_restorable_nas(tenant_id: int, nas_id: int) -> None:
+    """f06-H1/H2 — may this archived router come back?
+
+    Restoring used to bring back its address even when a live router had
+    re-used it meanwhile ⇒ two live rows on one IP, and enabling either one
+    silently swapped the FreeRADIUS secret. Now: 409 when the address (or its
+    tunnel IP) belongs to another live router, 422 when the stored address is
+    something radiusd cannot parse. (A taken NAME is not fatal: the restored
+    row is renamed «… (مستعاد N)» and comes back disabled.)"""
+    from ..db.connection import db
+    row = db().execute(
+        "SELECT address, COALESCE(vpn_peer_address,'') AS vpa, "
+        "       COALESCE(management_remote_address,'') AS mra "
+        "  FROM nas_devices WHERE tenant_id = ? AND id = ? "
+        "   AND deleted_at IS NOT NULL AND deleted_at != ''",
+        (int(tenant_id), int(nas_id))).fetchone()
+    if not row:
+        return
     try:
-        ipaddress.ip_address(str(value or "").strip())
-        return True
-    except ValueError:
-        return False
+        address = normalize_nas_address(row["address"])
+    except RadiusValidationError as exc:
+        raise RadiusValidationError(
+            f"لا يمكن استعادة الراوتر: {exc.message} عدّل العنوان بعد إضافته من جديد.",
+            details={"field": "address", "code": "nas_address_invalid"}) from None
+    for addr in (address, str(row["mra"]).strip(), str(row["vpa"]).strip()):
+        if not addr:
+            continue
+        owner = find_address_owner(addr, exclude_id=nas_id)
+        if owner is None:
+            continue
+        same_tenant = int(owner["tenant_id"]) == int(tenant_id)
+        who = f" «{owner['name']}»" if same_tenant and owner["name"] else " آخر"
+        raise RadiusConflict(
+            f"لا يمكن استعادة الراوتر: العنوان {addr} مستخدم الآن لراوتر{who} — "
+            "راوتران بعنوانٍ واحد يعطّلان الرديوس. احذف ذلك الراوتر أو غيّر "
+            "عنوانه أولًا، ثم أعد المحاولة.",
+            details={"field": "address", "code": "nas_address_conflict",
+                     "existing_nas_id": owner["id"] if same_tenant else None})
 
 
 def _tunnel_source_ip(nas_id) -> str:
@@ -352,9 +401,13 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
                 getattr(device, field), label=label, minimum=lo, maximum=hi)
 
     address = device.address
-    if changed("address"):
-        address = normalize_nas_address(device.address)
-        changes["address"] = address
+    # f06-H1: the owner check re-runs on EVERY save of an enabled router — not
+    # only when the address is in the PATCH. `{"enabled": true}` on a restored
+    # row used to put two enabled rows on one IP and flip the RADIUS secret.
+    if changed("address") or bool(device.enabled):
+        if changed("address"):
+            address = normalize_nas_address(device.address)
+            changes["address"] = address
         owner = find_address_owner(address, exclude_id=device.id)
         if owner is not None:
             same_tenant = int(owner["tenant_id"]) == int(device.tenant_id or 0) or (

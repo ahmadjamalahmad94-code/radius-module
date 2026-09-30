@@ -76,6 +76,11 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
             raise RadiusValidationError("أدخل عدد الدقائق المراد إضافتها (أكبر من صفر).")
         if mins > MAX_EXTEND_MINUTES:
             raise RadiusValidationError("عدد الدقائق أكبر من الحدّ المعقول (10 سنوات).")
+        # f06-L9: قاعدة المالك «أقصى تمديد في المرة الواحدة سنة» تُطبَّق على
+        # الطلب كلّه قبل المعاينة — كانت المعاينة تقول «سينجح» لـ600000 دقيقة
+        # ثم يرفضها التنفيذ الحقيقيّ لكلّ مستخدم.
+        from ..core.numbers import check_extend_minutes
+        check_extend_minutes(mins)
         params["minutes"] = mins
     if act == "reset_password":
         pw = "" if new_password is None else str(new_password)
@@ -131,9 +136,15 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
             anchor = max(cur, now) if cur else now  # same anchor as extend_time
             # ISO-8601 UTC with «Z» like every other API timestamp (re-test
             # R07 N8); the web preview converts it to the panel's local time.
+            from ..core.numbers import EXPIRY_LIMIT, EXPIRY_TOO_FAR_AR
             from ..core.strict_input import iso_utc_z
+            new_exp = anchor + timedelta(minutes=params["minutes"])
             item["old_expire_at"] = iso_utc_z(cur) if cur else None
-            item["new_expire_at"] = iso_utc_z(anchor + timedelta(minutes=params["minutes"]))
+            if new_exp >= EXPIRY_LIMIT:
+                # نفس رفض التنفيذ الحقيقيّ (سنة 2100) — لا «سينجح» كاذبة.
+                item.update(ok=False, status="refused", error=EXPIRY_TOO_FAR_AR)
+            else:
+                item["new_expire_at"] = iso_utc_z(new_exp)
         items.append(item)
     ok_count = sum(1 for i in items if i["ok"])
     return {

@@ -551,6 +551,35 @@ def _run_all(calls):
 # operator got «لا جلسة نشطة» for a session the online list was showing.
 CODE_ROUTER_NOT_CONFIGURED = "router_not_configured"
 
+# f06-L3: وصفٌ عربيّ لرموز نتيجة CoA — كانت رسائل الويب تُضمِّن الرمز الخام
+# («… لم يؤكّد تطبيق CoA (router_not_configured)»).
+_CODE_AR = {
+    CODE_ROUTER_NOT_CONFIGURED: "راوتر الجلسة معطّل أو بلا كلمة سرّ RADIUS",
+    "timeout": "لم يردّ الراوتر (انتهت المهلة)",
+    "socket_error": "تعذّر الإرسال إلى الراوتر",
+    "malformed": "ردّ غير صالح من الراوتر",
+    "no_active_session": "لا جلسة نشطة",
+    "empty_rate": "لا سرعة صالحة للإرسال",
+    "empty_timeout": "لا مهلة صالحة للإرسال",
+    "exception": "خطأ داخليّ أثناء الإرسال",
+    "no_coa": "لم يُرسَل أمر CoA",
+    "CoA-ACK": "أكّد الراوتر التطبيق",
+    "Disconnect-ACK": "أكّد الراوتر الفصل",
+    "CoA-NAK": "رفض الراوتر الأمر (CoA-NAK)",
+    "Disconnect-NAK": "رفض الراوتر الفصل (Disconnect-NAK)",
+}
+
+
+def coa_code_ar(code: str) -> str:
+    """Arabic description of a CoA result ``code_name`` (unknown → a generic
+    Arabic phrase, never the raw token)."""
+    c = str(code or "").strip()
+    if c in _CODE_AR:
+        return _CODE_AR[c]
+    if c.startswith("unknown-code-"):
+        return "ردّ غير معروف من الراوتر"
+    return "تعذّر تأكيد التطبيق على الراوتر"
+
 
 def _unsignalable_open_session(tenant_id: int, username: str,
                                session_ids: list[str] | None = None) -> CoaResult | None:

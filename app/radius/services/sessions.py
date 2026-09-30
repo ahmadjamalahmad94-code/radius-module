@@ -84,6 +84,27 @@ class OnlineSessionsService:
         return None, ""
 
 
+def _mac_compact(value) -> str:
+    """«AA-BB-CC-06-00-05» / «aa:bb:cc:06:00:05» / «aabb.cc06.0005» → «aabbcc060005»."""
+    import re
+    return re.sub(r"[\s:\-.]", "", str(value or "")).lower()
+
+
+def mac_query_matches(query: str, mac) -> bool:
+    """f06-L4: search by MAC in ANY common notation. The stored MAC uses
+    colons, so a dashed query («AA-BB-CC-06-00-05», as Windows prints it)
+    found nothing on the API, the web and the app. Compares the separator-free
+    hex of both sides; only for a query that IS a MAC fragment (≥4 hex digits
+    with or without separators), so it never widens ordinary text searches."""
+    import re
+    q = _mac_compact(query)
+    if len(q) < 4 or not re.fullmatch(r"[0-9a-f]+", q):
+        return False
+    if not re.fullmatch(r"[0-9a-fA-F:\-.\s]+", str(query or "").strip()):
+        return False
+    return q in _mac_compact(mac)
+
+
 def mobiles_by_username(tenant_id: int, usernames) -> dict[str, str]:
     """username → subscriber mobile, for the «connected now» search (web
     /online and /api/v1/sessions/online search the same fields: username,

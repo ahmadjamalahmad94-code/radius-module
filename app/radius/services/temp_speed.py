@@ -312,11 +312,12 @@ def parse_duration_minutes(*, duration_minutes: Any = None, duration: Any = None
     dur = 0
     if duration is not None and not (isinstance(duration, str) and not duration.strip()):
         dur = int(min(_number(duration, "المدة", integer=True), 10**7))
+    # f06-L3: رسائل عربيّة بالكامل (كانت «minutes أو hours أو days»).
     if unit is not None and not isinstance(unit, str):
-        raise ValueError("وحدة المدة يجب أن تكون minutes أو hours أو days.")
+        raise ValueError("وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام.")
     mult = _UNIT_MINUTES.get(str(unit or "minutes").strip().lower())
     if mult is None:
-        raise ValueError("وحدة المدة غير معروفة — المسموح: minutes أو hours أو days.")
+        raise ValueError("وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام.")
     return dur * mult
 
 

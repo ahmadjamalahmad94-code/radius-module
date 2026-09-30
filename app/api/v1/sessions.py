@@ -129,6 +129,10 @@ def _matches_query(item: dict, query: str, mobiles: dict | None = None) -> bool:
     q = query.lower()
     if mobiles and q in str(mobiles.get(item.get("username") or "", "")).lower():
         return True
+    # f06-L4: a MAC in any notation (dashes/colons/dots) — same helper as the web.
+    from ...radius.services.sessions import mac_query_matches
+    if mac_query_matches(query, item.get("mac_address")):
+        return True
     # Same fields as the web /online search (+ session id / type / state).
     return any(
         q in str(item.get(key) or "").lower()

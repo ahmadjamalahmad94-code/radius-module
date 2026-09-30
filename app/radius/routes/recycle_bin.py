@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+from ..core.errors import RadiusError
 from ..db.connection import db
 from ..db.helpers import row_to_dict
 from ..db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
@@ -166,8 +167,18 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     if entity_type not in _ENTITY_TABLES:
         flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
         return redirect(url_for("radius.recycle_bin"))
-    if _restore(entity_type, entity_id):
-        flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
+    try:
+        restored = _restore(entity_type, entity_id)
+    except RadiusError as exc:
+        # f06-H1/H2: عنوان الراوتر صار لراوترٍ حيٍّ آخر، أو لا يقرؤه الرديوس.
+        flash(exc.message, "error")
+        return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
+    if restored:
+        if entity_type == "nas":
+            flash("تمت استعادة الراوتر معطّلًا — راجع عنوانه وكلمة سرّ الرديوس "
+                  "ثم فعّله من صفحة الأجهزة.", "success")
+        else:
+            flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
     else:
         flash("تعذرت الاستعادة: العنصر غير موجود أو لم يعد مؤرشفًا.", "error")
     return redirect(url_for("radius.recycle_bin", entity_type=entity_type))

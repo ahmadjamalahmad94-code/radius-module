@@ -325,6 +325,14 @@ class AccountingEventsService:
         )
         # فحص الكوتة عند كلّ Interim (إجماليّة/شهريّة/يوميّة/بالاتجاه): من نفدت
         # كوتته يُفصل الآن لا عند إعادة المصادقة. محصّن — لا يُفشل المحاسبة.
+        if not cur.rowcount:
+            # f06-L8: Interim بلا Start (ضاع الـStart) ⇒ نفتح الجلسة كما يفعل
+            # مسار FreeRADIUS (بداية = الآن − مدّة الجلسة، مع الـIP). ورودُ
+            # Interim متأخّر بعد Stop لا يُعيد فتح جلسةٍ مغلقة.
+            prior = self._last_session_row(event)
+            if prior is not None:
+                return {"status": "already_stopped", "session": dict(prior)}
+            return self._insert_missing_start(event, closed=False)
         if cur.rowcount and event.get("username"):
             try:
                 from .quota_period import enforce_after_interim
@@ -332,6 +340,57 @@ class AccountingEventsService:
             except Exception:  # noqa: BLE001
                 pass
         return {"status": "updated" if cur.rowcount else "not_found", "session": self._open_session(event)}
+
+    def _last_session_row(self, event: dict[str, Any]):
+        return db().execute(
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctsessionid = ? "
+            "AND nasipaddress = ? ORDER BY radacctid DESC LIMIT 1",
+            (event["tenant_id"], event["acct_session_id"], event["nas_ip_address"]),
+        ).fetchone()
+
+    def _insert_missing_start(self, event: dict[str, Any], *, closed: bool) -> dict[str, Any]:
+        """f06-L8 — صفّ جلسةٍ لم يصل Start لها: كان Stop/Interim بلا Start
+        يُرجع ``not_found`` بـ200 فيضيع الاستهلاك ولا يُعيد العميل المحاولة.
+        البداية = الآن − Acct-Session-Time (نفس مسار FreeRADIUS)."""
+        now_dt = datetime.utcnow()
+        secs = max(0, _int(event.get("session_time"), 0))
+        try:
+            start = (now_dt - timedelta(seconds=secs)).isoformat() + "Z"
+        except OverflowError:
+            start = now_dt.isoformat() + "Z"
+        now = now_dt.isoformat() + "Z"
+        cur = db().execute(
+            """
+            INSERT INTO radacct (
+              tenant_id, acctsessionid, acctuniqueid, username, nasipaddress,
+              acctstarttime, acctupdatetime, acctstoptime, callingstationid,
+              framedipaddress, acctinputoctets, acctoutputoctets, acctsessiontime,
+              acctterminatecause
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event["tenant_id"],
+                event["acct_session_id"],
+                event["acct_unique_session_id"],
+                event["username"],
+                event["nas_ip_address"],
+                start,
+                now,
+                now if closed else None,
+                event["calling_station_id"],
+                event["framed_ip_address"],
+                event["input_octets"],
+                event["output_octets"],
+                event["session_time"],
+                (event.get("terminate_cause") or "User-Request") if closed else "",
+            ),
+        )
+        row = db().execute("SELECT * FROM radacct WHERE radacctid = ?",
+                           (cur.lastrowid,)).fetchone()
+        return {"status": "stopped" if closed else "started",
+                "inserted_without_start": True,
+                "session": dict(row) if row else None}
 
     def _stop(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()
@@ -383,6 +442,13 @@ class AccountingEventsService:
                 rebalance_device_split(event["tenant_id"], event["username"])
             except Exception:  # noqa: BLE001
                 pass
+        if not cur.rowcount:
+            # f06-L8: Stop بلا Start ⇒ صفٌّ مغلق بالاستهلاك (كما يفعل مسار
+            # FreeRADIUS)؛ Stop مُعاد لجلسةٍ أُغلقت ⇒ لا تكرار.
+            prior = self._last_session_row(event)
+            if prior is not None:
+                return {"status": "already_stopped", "session": dict(prior)}
+            return self._insert_missing_start(event, closed=True)
         return {
             "status": "stopped" if cur.rowcount else "not_found",
             "session": self.session_detail(tenant_id=event["tenant_id"], session_id=event["acct_session_id"]),

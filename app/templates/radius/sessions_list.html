@@ -437,12 +437,9 @@
 {% macro fmt_duration(started_at, now) -%}
   {%- if started_at -%}
     {%- set sec = ((now - started_at).total_seconds() if now and started_at else 0)|int -%}
-    {#- Latin unit letters + LTR isolate: Arabic single-letter units flip
-        next to Latin digits in RTL (bidi W2). See core/duration_fmt.py. -#}
-    {%- if sec >= 86400 -%}<bdi dir="ltr">{{ sec // 86400 }}d {{ (sec % 86400) // 3600 }}h</bdi>
-    {%- elif sec >= 3600 -%}<bdi dir="ltr">{{ sec // 3600 }}h {{ (sec % 3600) // 60 }}m</bdi>
-    {%- else -%}<bdi dir="ltr">{{ (sec // 60) or 1 }}m</bdi>
-    {%- endif -%}
+    {#- f06-L3: Arabic WORDS (a digit next to an Arabic word never bidi-flips —
+        only single-letter units did); «5m»/«1h 5m» were English. -#}
+    {{- ([sec, 60]|max)|dur_ar -}}
   {%- else -%}—
   {%- endif -%}
 {%- endmacro %}
@@ -724,7 +721,10 @@
 {% call hub.section("الجلسات", icon="table-list",
                     meta=online_total|string + " صف", flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="50" data-page-sizes="10,25,50,100,200,500,all" data-persist-key="online-sessions">
+    {# f06-L1: الصفحة مرقّمة خادميًّا (عدد الصفوف في الصفحة + صفحة N/M) — مُرقِّمٌ ثانٍ
+       في المتصفّح فوق صفوف الصفحة كان يقول «1–50 من 100» و602 متّصلًا. لا مُرقِّم
+       عميلٍ حين يرقّم الخادم. #}
+    <table class="hub-table hr-data-table"{% if total_pages is not defined %} data-paginated="1" data-page-size="50" data-page-sizes="10,25,50,100,200,500,all"{% endif %} data-persist-key="online-sessions">
       <thead>
         <tr>
           <th class="online-select-cell" data-col="select">
@@ -898,7 +898,7 @@
             {%- if _dt and (_dt.total_sec or _du) -%}
               <span class="du-pill du-{{ _dt.bucket or 'neutral' }}"
                     {%- if not _dt.total_sec %} title="{{ _('بلا حدّ زمنيّ') }}"{% endif %}>
-                <bdi dir="ltr" class="du-cell">{{ _dt.used_txt }} / {{ _dt.total_txt or '∞' }}</bdi>
+                <bdi class="du-cell-ar">{{ _dt.used_ar or _dt.used_txt }} / {{ _dt.total_ar or _dt.total_txt or _('بلا حدّ') }}</bdi>
               </span>
             {%- else -%}—{%- endif -%}
           </td>
@@ -1107,6 +1107,8 @@
       <select name="duration_unit" class="hub-select ts-unit" data-temp-unit>
         <option value="minutes" selected>{{ _('دقائق') }}</option>
         <option value="hours">{{ _('ساعات') }}</option>
+        {# f06-L2: «أيام» كما في الـAPI والتطبيق (يومٌ واحد = 1440 دقيقة، والحدّ يوم). #}
+        <option value="days">{{ _('أيام') }}</option>
       </select>
     </div>
     <div class="ts-err" data-temp-err hidden>{{ _('هذه القيمة يجب ان تكون اكبر من 0') }}</div>
