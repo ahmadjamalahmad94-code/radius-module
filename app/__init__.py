@@ -582,8 +582,10 @@ def _install_stubs(app: Flask) -> None:
             from flask import g as _g
             from app.radius.core.tenant import DEFAULT_TENANT_ID
             from app.radius.db.repos import alerts_repo
+            from app.radius.services.notifications import can_see_router_alerts
             tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
-            rows = alerts_repo.list_open(tid, limit=50)
+            # fix3 (F01 F13): router/system alerts only for nas.view holders.
+            rows = alerts_repo.list_open(tid, limit=50) if can_see_router_alerts() else []
             items = [{
                 "id": int(r["id"]),
                 "title": r.get("title_ar") or "",
@@ -606,9 +608,12 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.tenant import DEFAULT_TENANT_ID
             from app.radius.services import notifications as _notif
             tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            # fix3 (F01 F9 / F08 M2): only what THIS admin may see, his reads.
+            viewer = _notif.current_viewer(tid)
             return {
-                "count": _notif.unread_count(tid),
-                "items": _notif.recent_for_bell(tid, limit=max(1, int(limit))),
+                "count": _notif.unread_count(tid, viewer=viewer),
+                "items": _notif.recent_for_bell(tid, limit=max(1, int(limit)),
+                                                viewer=viewer),
             }
         except Exception:  # noqa: BLE001 — جرس الإشعارات لا يكسر أي صفحة أبدًا
             return {"count": 0, "items": []}
