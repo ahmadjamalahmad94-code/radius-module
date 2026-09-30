@@ -80,8 +80,10 @@ def test_8443_block_is_ssl_with_selfsigned_cert():
     assert "listen 8443 ssl;" in tls
     assert "ssl_certificate     /etc/nginx/tls/selfsigned.crt;" in tls
     assert "ssl_certificate_key /etc/nginx/tls/selfsigned.key;" in tls
-    # reuses the same upstream as :80 (does not redefine it → no fork)
-    assert "proxy_pass http://hoberadius_app;" in tls
+    # same app target as :80 — the re-resolved variable upstream (fix3), never
+    # a static upstream (a recreated hoberadius container must not 502)
+    assert "proxy_pass $hr_app;" in tls
+    assert "resolver 127.0.0.11 valid=10s" in tls
     # no upstream DECLARATION (a comment mentioning it is fine)
     import re as _re
     assert not _re.search(r"^\s*upstream\s+\w+\s*\{", tls, _re.M)

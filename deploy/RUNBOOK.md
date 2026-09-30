@@ -383,8 +383,31 @@ sudo bash deploy/deploy.sh logs
 | webhooks لا تصل | `/admin/radius/webhooks/deliveries` | افحص target_url، آخر error excerpt |
 | Disk full بسرعة | `du -sh /opt/hoberadius/*` | راجع logs/ → `docker system prune -af` |
 | Login redirect loop | امسح cookies للـ domain | جلسة قديمة من قبل تغيير SECRET |
-| 502 Bad Gateway | `docker compose logs nginx` | تأكد app يستجيب على 8000 |
+| 502 Bad Gateway | `docker compose logs nginx` | تأكد app يستجيب على 8000 (انظر «nginx وإعادة الحلّ» أدناه) |
 | DB locked | تتم محاكاتها تلقائيًا (busy_timeout=30s) | لو استمرّت: `docker compose restart app` |
+
+### nginx وإعادة حلّ عنوان التطبيق (fix3، حادثة 502 على client20)
+
+- **السبب القديم:** `upstream hoberadius_app { server hoberadius:8000; }` كان يُحَلّ
+  **مرّة واحدة** عند إقلاع nginx. إعادة إنشاء حاوية hoberadius (بناء/`up -d`)
+  تعطيها IP جديدًا، فيبقى nginx يوجّه إلى القديم ⇒ 502 حتى يُعاد تشغيل nginx.
+- **الآن** (`deploy/nginx.conf`، `deploy/nginx-tls-8443.conf`،
+  `deploy/nginx.tls.conf.example`): كلّ `server` يحمل
+  `resolver 127.0.0.11 valid=10s ipv6=off;` (DNS دوكر المضمَّن) و
+  `set $hr_app http://hoberadius:8000;` وكلّ `proxy_pass $hr_app;` — فيُعاد حلّ
+  الاسم أثناء الطلبات كلّ 10 ثوانٍ، ويُقلع nginx حتى لو كانت hoberadius متوقّفة.
+  كلّ المواقع والرؤوس والحدود والمهلات كما هي. (منفذ 8001 لا يمرّ عبر nginx —
+  FreeRADIUS يصله مباشرة على 127.0.0.1:8001.)
+- **بعد النشر الأوّل لهذا التغيير** يلزم إعادة إنشاء nginx مرّة واحدة
+  (`docker compose -f deploy/docker-compose.yml up -d --force-recreate nginx`) —
+  المُحدِّث يفعلها تلقائيًّا حين يتغيّر `deploy/nginx.conf`. بعدها لا حاجة لإعادة
+  تشغيل nginx عند إعادة بناء hoberadius (يبقى إجراءً احتياطيًّا آمنًا).
+- **فحص سريع:** `docker compose exec nginx nginx -t` ثمّ
+  `docker compose up -d --force-recreate hoberadius` ثمّ
+  `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/admin/radius/_health`
+  ⇒ 200 خلال ≤10 ثوانٍ دون لمس nginx.
+- الثمن: لا `keepalive` للاتّصالات مع التطبيق (يتطلّب كتلة upstream) — أثرٌ مهمَل
+  داخل شبكة دوكر.
 
 ---
 

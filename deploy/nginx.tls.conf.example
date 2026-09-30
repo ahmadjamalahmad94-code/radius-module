@@ -12,11 +12,6 @@
 # الـ placeholder <DOMAIN> لازم يُستبدَل قبل النشر — وإلا nginx لن يُحمّل
 # الشهادة (هذا بالضبط ما حدث على VPS قبل هذا الـ commit).
 
-upstream hoberadius_app {
-    server hoberadius:8000;
-    keepalive 32;
-}
-
 # HTTP → HTTPS + ACME challenge
 server {
     listen 80;
@@ -36,6 +31,17 @@ server {
     listen 443 ssl;
     http2 on;
     server_name <DOMAIN>;
+
+    # ── Upstream re-resolve (fix3 integration, the client20 502 incident) ──
+    # `proxy_pass` to a VARIABLE makes nginx resolve `hoberadius` through
+    # Docker's embedded DNS (127.0.0.11) at request time, re-checking every
+    # 10 s. A static `upstream { server hoberadius:8000; }` was resolved ONCE at
+    # nginx start: recreating the hoberadius container gave it a new IP and
+    # nginx kept proxying to the dead one (502) until nginx itself restarted.
+    # It also means nginx starts even while hoberadius is still down.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+    set $hr_app http://hoberadius:8000;
 
     ssl_certificate     /etc/letsencrypt/live/<DOMAIN>/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/<DOMAIN>/privkey.pem;
@@ -58,13 +64,13 @@ server {
     gzip_min_length 1024;
 
     location /static/ {
-        proxy_pass http://hoberadius_app;
+        proxy_pass $hr_app;
         proxy_cache_valid 200 1h;
         expires 1h;
     }
 
     location = /admin/radius/_health {
-        proxy_pass http://hoberadius_app;
+        proxy_pass $hr_app;
         access_log off;
     }
 
@@ -78,7 +84,7 @@ server {
     location /admin/radius/migrate/ {
         client_max_body_size 1024m;
         proxy_request_buffering off;
-        proxy_pass http://hoberadius_app;
+        proxy_pass $hr_app;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
@@ -98,7 +104,7 @@ server {
         limit_conn hr_api_conn_ip 256;
         limit_conn hr_api_conn_all 512;
         error_page 503 = @hr_api_overloaded;
-        proxy_pass http://hoberadius_app;
+        proxy_pass $hr_app;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
@@ -116,7 +122,7 @@ server {
     }
 
     location / {
-        proxy_pass http://hoberadius_app;
+        proxy_pass $hr_app;
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
