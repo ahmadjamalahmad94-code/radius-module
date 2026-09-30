@@ -68,7 +68,9 @@ def tick_once() -> dict:
             "0", "false", "no", "off"):
         try:
             from app.radius.services import quota_period
-            stats["quota_exhausted"] = quota_period.enforce_live_quota().get("exhausted", 0)
+            q = quota_period.enforce_live_quota()
+            stats["quota_exhausted"] = q.get("exhausted", 0)
+            stats["quota_checked"] = q.get("checked", 0)
         except Exception:  # noqa: BLE001
             _LOG.exception("quota sweep tick failed")
     return stats
@@ -80,7 +82,10 @@ def _run_loop(*, interval_sec: int) -> None:
         stats = tick_once()
         beat(_NAME, info={"interval_sec": interval_sec,
                           "last_out_of_window": stats.get("out_of_window", 0),
-                          "last_disconnected": stats.get("disconnected", 0)})
+                          "last_disconnected": stats.get("disconnected", 0),
+                          # F04 N-L7: the quota sweep shares this tick — show it.
+                          "last_quota_checked": stats.get("quota_checked", 0),
+                          "last_quota_exhausted": stats.get("quota_exhausted", 0)})
         time.sleep(interval_sec)
 
 

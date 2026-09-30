@@ -63,7 +63,7 @@ def _rich_plan():
         loan_enabled=True, max_loan_minutes=60,
         allowed_days=("mon", "tue", "wed"),
         allowed_hours_from="08:00", allowed_hours_to="23:00",
-        price=9.5, currency="JOD", priority=17, color="#FF8800",
+        price=9.5, currency="JOD", priority=7, color="#FF8800",
         description="عرض اختبار غنيّ", enabled=True,
         metadata='{"subscription": {"send_alerts": "1"}}',
     )

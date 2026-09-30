@@ -32,6 +32,14 @@ def _int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _octets(payload: dict[str, Any], direction: str) -> int:
+    """``Acct-{In,Out}put-Octets`` + ``Acct-…-Gigawords`` × 2^32 (0 if absent)."""
+    cap = direction.capitalize()
+    octets = _int(payload.get(f"{direction}_octets") or payload.get(f"Acct-{cap}-Octets"))
+    giga = _int(payload.get(f"{direction}_gigawords") or payload.get(f"Acct-{cap}-Gigawords"))
+    return max(0, octets) + max(0, giga) * 4294967296
+
+
 class AccountingEventsService:
     def ingest(self, *, tenant_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         event = self.normalize(tenant_id=tenant_id, payload=payload)
@@ -77,8 +85,11 @@ class AccountingEventsService:
             "nas_ip_address": nas_ip,
             "calling_station_id": str(payload.get("calling_station_id") or payload.get("Calling-Station-Id") or ""),
             "framed_ip_address": str(payload.get("framed_ip_address") or payload.get("Framed-IP-Address") or ""),
-            "input_octets": _int(payload.get("input_octets") or payload.get("Acct-Input-Octets")),
-            "output_octets": _int(payload.get("output_octets") or payload.get("Acct-Output-Octets")),
+            # RFC 2869 Acct-*-Gigawords: the 32-bit octet counters wrap every
+            # 4 GiB and the overflow count arrives separately. Fold it in (like
+            # the FreeRADIUS sql queries do) — a 5 GB session was stored as ~0.7 GB.
+            "input_octets": _octets(payload, "input"),
+            "output_octets": _octets(payload, "output"),
             "session_time": _int(payload.get("session_time") or payload.get("Acct-Session-Time")),
             # NAS-supplied Acct-Terminate-Cause (RFC 2866) — the REAL reason a
             # session ended (Session-Timeout for card/sub time-budget expiry,
@@ -300,8 +311,26 @@ class AccountingEventsService:
                 pass
             return {"kicked": 0, "error": str(exc)}
 
+    def _note_quota_baseline(self, event: dict[str, Any]) -> None:
+        """The first Interim/Stop after local midnight / the 1st overwrites the
+        last pre-boundary reading — keep it as the daily/monthly quota
+        baseline of this session (quota_period, F04 H1). Fail-safe."""
+        try:
+            from .quota_period import note_pre_interim
+            prev = db().execute(
+                "SELECT radacctid, username, acctstarttime, acctupdatetime, "
+                "acctinputoctets, acctoutputoctets FROM radacct "
+                "WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ? "
+                "AND acctstoptime IS NULL ORDER BY radacctid DESC LIMIT 1",
+                (event["tenant_id"], event["acct_session_id"],
+                 event["nas_ip_address"])).fetchone()
+            note_pre_interim(event["tenant_id"], dict(prev) if prev else None)
+        except Exception:  # noqa: BLE001
+            pass
+
     def _interim(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()
+        self._note_quota_baseline(event)
         cur = db().execute(
             """
             UPDATE radacct
@@ -335,6 +364,7 @@ class AccountingEventsService:
 
     def _stop(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()
+        self._note_quota_baseline(event)
         cur = db().execute(
             """
             UPDATE radacct

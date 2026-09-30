@@ -403,6 +403,14 @@ class CardUsersMarketplaceService:
             raise CardMarketplaceError("مستخدم الكروت غير موجود.")
         return _row(row)
 
+    def _check_price_cap(self, price_minor: int) -> None:
+        """«الحدود» — سعر باقة المتجر ≤ «أقصى مبلغ لباقي المدخلات الماليّة»."""
+        from ..core import limits
+        msg = limits.amount_error(price_minor / 100.0, "generic", label="سعر الباقة",
+                                  tenant_id=self.tenant_id)
+        if msg:
+            raise CardMarketplaceError(msg)
+
     def create_package(
         self,
         *,
@@ -432,6 +440,7 @@ class CardUsersMarketplaceService:
         # السالب فقط مرفوض.
         if price_minor < 0:
             raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
+        self._check_price_cap(price_minor)
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
         meta = dict(metadata or {})
@@ -504,6 +513,7 @@ class CardUsersMarketplaceService:
         # صفر مسموح: باقة سوق مجّانيّة. السالب فقط مرفوض.
         if price_minor < 0:
             raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
+        self._check_price_cap(price_minor)
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
 
@@ -858,6 +868,12 @@ class CardUsersMarketplaceService:
         return _row(row)
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
+        # «الحدود» — باقي المدخلات الماليّة (الافتراض 100,000؛ كان 1e12 يُقبل).
+        from ..core import limits
+        _msg = limits.amount_error(amount, "generic", label="مبلغ الشحن",
+                                   tenant_id=self.tenant_id)
+        if _msg:
+            raise CardMarketplaceError(_msg)
         wallet = self._wallet_for_card_user(card_user_id)
         credit = self.wallets.credit(
             tenant_id=self.tenant_id,

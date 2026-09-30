@@ -79,7 +79,7 @@
   actions_html=_actions,
   kpis=[
     {'label':_('غير المقروء'),'value':unread_count,'icon':'envelope','variant':'brand'},
-    {'label':_('إجمالي الإشعارات'),'value':items|length,'icon':'bell','variant':'blue'},
+    {'label':_('إجمالي الإشعارات'),'value':(total_count if total_count is defined else items|length),'icon':'bell','variant':'blue'},
   ]
 ) %}{% endcall %}
 
@@ -90,6 +90,12 @@
     <a class="nc-tab{% if unread_only %} is-active{% endif %}"
        href="{{ url_for('radius.notifications_center', filter='unread') }}">{{ _('غير المقروء') }}</a>
   </span>
+  {% if total_count is defined and not unread_only and total_count > items|length %}
+  <span class="hub-text-mute small" data-nc-shown-of style="font-weight:700">
+    {{ _('يُعرض أحدث') }} {{ items|length }} {{ _('من') }} {{ total_count }} —
+    <a href="{{ url_for('radius.notifications_timeline') }}">{{ _('السجلّ الزمنيّ الكامل') }}</a>
+  </span>
+  {% endif %}
 </div>
 
 {# ── دفع الجوال (مركزيّ) + إشعار تجريبي ── #}

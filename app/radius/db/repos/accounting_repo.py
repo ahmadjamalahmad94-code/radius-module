@@ -1297,49 +1297,71 @@ def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
 
 
 def profit_loss_summary(tenant_id: int) -> list[dict]:
-    # 🔴 القيد العكسيّ يُخزَّن بمبلغٍ سالب **و**اتجاهٍ مقلوب (إلغاء دفعة X =
-    # ‎-X مدين). جمعُه في جهة اتجاهه يطرح سالبًا من المدين ⇒ الإلغاء يُحسب
-    # ربحًا مرّتين. الصحيح: العكسيّ يُجمع في جهة **القيد الأصليّ** (عكس اتجاهه)
-    # بمبلغه السالب، فيُصفّر أصله.
-    side = ("CASE WHEN reversal_of_entry_id IS NOT NULL "
-            "THEN (CASE direction WHEN 'debit' THEN 'credit' ELSE 'debit' END) "
-            "ELSE direction END")
-    row = db().execute(
-        f"""
-        SELECT
-            COALESCE(SUM(CASE WHEN {side} = 'credit' THEN amount ELSE 0 END), 0) AS credits,
-            COALESCE(SUM(CASE WHEN {side} = 'debit' THEN amount ELSE 0 END), 0) AS debits,
-            COUNT(*) AS entries
-        FROM accounting_ledger_entries
-        WHERE tenant_id = ?
-        """,
-        (tenant_id,),
-    ).fetchone()
-    credits = float(row["credits"] or 0)
-    debits = float(row["debits"] or 0)
-    # لكلّ عملة سطرها — لا سعر صرف، فجمع ILS+USD في «صافٍ» واحد مضلِّل.
-    cur_sql = _CURRENCY_SQL.format(col="currency")
-    split = db().execute(
-        f"""
-        SELECT {cur_sql} AS currency,
-            COALESCE(SUM(CASE WHEN {side} = 'credit' THEN amount ELSE 0 END), 0) AS credits,
-            COALESCE(SUM(CASE WHEN {side} = 'debit' THEN amount ELSE 0 END), 0) AS debits,
-            COUNT(*) AS entries
-        FROM accounting_ledger_entries
-        WHERE tenant_id = ?
-        GROUP BY {cur_sql}
-        """,
-        (tenant_id,),
-    ).fetchall()
-    by_cur = _merge_by_currency(split, ("credits", "debits", "entries"))
-    for c in by_cur:
-        c["net"] = round(c["credits"] - c["debits"], 2)
+    """«ربح / خسارة» — ما دخل فعلًا وما خرج فعلًا (موجة الإصلاح 3، F04 M3).
+
+    🔴 كان يجمع **كلّ** قيود دفتر المشترك: دين تغيير العرض (407,969 ₪ في
+    العرض التجريبيّ) والسلف وشراء الكوتة من المحفظة كانت «مصروفات»، وإيداع
+    الرصيد «إيراد» ⇒ صافٍ ‎−406,887 ₪ بينما المحصَّل 1,086.50. هذه كلّها حركات
+    **محفظة المشترك** (ما يدين به/ما أودعه) لا دخلٌ ولا صرف للشبكة.
+
+    • الإيرادات (credits) = الدفعات المحصَّلة فعلًا (صافي إلغائها — نفس
+      ``revenue_summary``) + مبيعات الكروت المُرحَّلة (المحصَّل).
+    • المصروفات (debits) = مصروفات الشركة المسجَّلة («دفتر المصروفات»).
+    • لا يدخلها: الديون (تغيير العرض/تمديد على الدين/استعادة كوتة)، السلف
+      وتسوياتها، شراء الكوتة/الوقت من المحفظة، إيداع/تعديل الرصيد، الشطب.
+    المبالغ مقرّبة لخانتين (كان 41238.00999999998). لكلّ عملة سطرها؛
+    المصروفات بعملة النظام (دفترها بلا عمود عملة)."""
+    rev = revenue_summary(tenant_id)
+    system = default_currency()
+    expenses = 0.0
+    expense_count = 0
+    try:
+        row = db().execute(
+            "SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS n "
+            "FROM company_expenses WHERE tenant_id = ?", (tenant_id,)).fetchone()
+        expenses = float(row["total"] or 0)
+        expense_count = int(row["n"] or 0)
+    except Exception:  # noqa: BLE001 — جدول غائب في قاعدة قديمة
+        pass
+    by: dict[str, dict] = {}
+    for c in rev["by_currency"]:
+        by[c["currency"]] = {"currency": c["currency"], "payments": c["payments"],
+                             "card_sales": c["records_collected"], "expenses": 0.0,
+                             "entries": int(c["transactions"]) + int(c["records"])}
+    if expenses or expense_count:
+        slot = by.setdefault(system, {"currency": system, "payments": 0.0,
+                                      "card_sales": 0.0, "expenses": 0.0, "entries": 0})
+        slot["expenses"] += expenses
+        slot["entries"] += expense_count
+    by_cur = []
+    for slot in by.values():
+        credits = round_money(slot["payments"] + slot["card_sales"])
+        debits = round_money(slot["expenses"])
+        by_cur.append({
+            "currency": slot["currency"],
+            "credits": credits,
+            "debits": debits,
+            "net": round_money(credits - debits),
+            "entries": int(slot["entries"]),
+            "payments": round_money(slot["payments"]),
+            "card_sales": round_money(slot["card_sales"]),
+            "expenses": debits,
+        })
+    by_cur.sort(key=lambda c: (c["currency"] != system, -abs(c["credits"])))
+
+    def _total(key: str) -> float:
+        return round_money(sum(float(c[key]) for c in by_cur))
+
+    credits, debits = _total("credits"), _total("debits")
     return [{
         "credits": credits,
         "debits": debits,
-        "net": credits - debits,
-        "entries": int(row["entries"] or 0),
+        "net": round_money(credits - debits),
+        "entries": sum(int(c["entries"]) for c in by_cur),
         "source": "accounting_ledger_entries",
+        "payments": _total("payments"),
+        "card_sales": _total("card_sales"),
+        "expenses": debits,
         "by_currency": by_cur,
         "mixed_currency": len(by_cur) > 1,
     }]

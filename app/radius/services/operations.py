@@ -1165,9 +1165,10 @@ class OperationsService:
                            actor: str, data: dict) -> dict:
         distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         amount = _float_field(data, "amount", minimum=0.01)
-        # سقف العمليّة الواحدة (100,000) — كانت تسوية بمليار تُقبل (R12 N14).
+        # سقف العمليّة الواحدة («الحدود»: أقصى إضافة رصيد/دفعة للموزّع، الافتراض
+        # 100,000) — كانت تسوية بمليار تُقبل (R12 N14).
         from ..core.numbers import action_amount
-        action_amount(amount, field="amount")
+        action_amount(amount, field="amount", kind="distributor")
         for _k in ("direction", "entry_type", "currency", "notes", "related_type"):
             if data.get(_k) is not None and not isinstance(data.get(_k), str):
                 raise RadiusValidationError("قيم التسوية النصّيّة غير صحيحة.")

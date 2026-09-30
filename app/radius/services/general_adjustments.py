@@ -19,11 +19,13 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ..core import limits
 
 ACTIONS = ("disable", "enable", "extend", "reset_password")
 MAX_USERNAMES = 500
-# 10 years: anything above is a typo and would overflow the expiry date.
-MAX_EXTEND_MINUTES = 10 * 365 * 24 * 60
+# One extend ≤ «أقصى عدد أيام تفعيل/تمديد» (settings «الحدود», default 1 year —
+# same cap as extend_time) — was 10 years here, so the preview promised what the
+# real run refused. Read per request: limits.max_extend_minutes().
 
 _ACTION_LABELS = {
     "disable": "تعطيل",
@@ -74,8 +76,11 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
             raise RadiusValidationError("عدد الدقائق يجب أن يكون رقمًا صحيحًا.") from None
         if mins <= 0:
             raise RadiusValidationError("أدخل عدد الدقائق المراد إضافتها (أكبر من صفر).")
-        if mins > MAX_EXTEND_MINUTES:
-            raise RadiusValidationError("عدد الدقائق أكبر من الحدّ المعقول (10 سنوات).")
+        if mins > limits.max_extend_minutes():
+            # F03 N4: the owner's per-operation rule, up front (422) — the
+            # preview listed +416 days as «ok» and the real run then failed
+            # every user one by one.
+            raise RadiusValidationError(limits.extend_too_long_msg())
         params["minutes"] = mins
     if act == "reset_password":
         pw = "" if new_password is None else str(new_password)
@@ -133,7 +138,13 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
             # R07 N8); the web preview converts it to the panel's local time.
             from ..core.strict_input import iso_utc_z
             item["old_expire_at"] = iso_utc_z(cur) if cur else None
-            item["new_expire_at"] = iso_utc_z(anchor + timedelta(minutes=params["minutes"]))
+            new_exp = anchor + timedelta(minutes=params["minutes"])
+            if new_exp >= limits.expiry_limit():
+                # same expiry cap as the real run (extend_time → add_minutes_capped)
+                item.update({"ok": False, "status": "refused",
+                             "error": limits.expiry_too_far_msg()})
+            else:
+                item["new_expire_at"] = iso_utc_z(new_exp)
         items.append(item)
     ok_count = sum(1 for i in items if i["ok"])
     return {
@@ -142,6 +153,7 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
         "action_label": _ACTION_LABELS[act],
         "targets": [i["username"] for i in items if i["ok"]],
         "not_found": [i["username"] for i in items if i["status"] == "not_found"],
+        "refused": [i["username"] for i in items if i["status"] == "refused"],
         "would_succeed": ok_count,
         "would_fail": len(items) - ok_count,
         "success": 0,

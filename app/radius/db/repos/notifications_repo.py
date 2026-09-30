@@ -109,6 +109,15 @@ def recent(tenant_id: int, limit: int = 6) -> list[dict]:
     return list_for(tenant_id, limit=max(1, int(limit)))
 
 
+def total_count(tenant_id: int) -> int:
+    """كلّ إشعارات المستأجر (بطاقة «إجمالي الإشعارات» — كانت طول القائمة المعروضة
+    المحدودة بـ 200 فتقف عند 200 مع 404 إشعارًا فعليًّا)."""
+    row = db().execute(
+        "SELECT COUNT(*) AS c FROM panel_notifications WHERE tenant_id=?",
+        (tenant_id,)).fetchone()
+    return int(row["c"] if row else 0)
+
+
 def unread_count(tenant_id: int) -> int:
     row = db().execute(
         "SELECT COUNT(*) AS c FROM panel_notifications WHERE tenant_id=? AND read_at=''",

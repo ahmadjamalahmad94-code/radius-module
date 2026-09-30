@@ -253,8 +253,12 @@ def get_recent_batches(*, limit: int = 5, tenant_id: Optional[int] = None) -> li
 # ────────────────────────────────────────────────────────────────
 def get_plan_counts(tenant_id: Optional[int] = None) -> dict:
     t = tenant_id if tenant_id is not None else _tid()
-    total    = _scalar("SELECT COUNT(*) FROM access_plans WHERE tenant_id=?", (t,))
-    enabled  = _scalar("SELECT COUNT(*) FROM access_plans WHERE tenant_id=? AND enabled=1", (t,))
+    # المؤرشفة (deleted_at) خارج العدّ — كانت «39 عرض» بينما صفحة العروض والـAPI
+    # 37 (F04 N-L6). نفس شرط /profiles و«العروض».
+    total    = _scalar("SELECT COUNT(*) FROM access_plans WHERE tenant_id=? "
+                       "AND deleted_at IS NULL", (t,))
+    enabled  = _scalar("SELECT COUNT(*) FROM access_plans WHERE tenant_id=? AND enabled=1 "
+                       "AND deleted_at IS NULL", (t,))
     return {
         "total":    total,
         "enabled":  enabled,

@@ -252,7 +252,7 @@ _INT_FIELD_MAX = {
     "vlan_id": 4094,
     "concurrent_sessions": 10_000,
     "allowed_devices_count": 10_000,
-    "priority": 1_000,
+    "priority": 10,
     "session_timeout_sec": 10 * 365 * 86400,
     "idle_timeout_sec": 10 * 365 * 86400,
 }
@@ -299,6 +299,11 @@ def _normalize(plan: AccessPlan) -> AccessPlan:
         v = getattr(plan, f, 0)
         if isinstance(v, float) and v == 0 and str(v).startswith("-"):
             changes[f] = 0.0
+    # الأولويّة: 0/فارغ/100 = الافتراضات القديمة (الـAPI والتطبيق) ⇒ 5. غير ذلك
+    # خارج 1–10 يرفضه ``_validate`` (F04 N-L10).
+    from ..db.repos.plans_repo import PRIORITY_DEFAULT, _LEGACY_PRIORITY_DEFAULTS
+    if int(getattr(plan, "priority", 0) or 0) in _LEGACY_PRIORITY_DEFAULTS:
+        changes["priority"] = PRIORITY_DEFAULT
     return replace(plan, **changes) if changes else plan
 
 
@@ -329,6 +334,12 @@ def _validate(plan: AccessPlan) -> None:
         if value > cap:
             raise RadiusValidationError(
                 f"قيمة «{label}» أكبر من المسموح (الحدّ {cap:,}).".replace(",", "٬"))
+    from ..db.repos.plans_repo import PRIORITY_MAX, PRIORITY_MIN
+    if not PRIORITY_MIN <= int(getattr(plan, "priority", 0) or 0) <= PRIORITY_MAX:
+        # مقياسٌ واحد للويب والـAPI والتطبيق (F04 N-L10).
+        raise RadiusValidationError(
+            f"«الأولويّة» رقمٌ من {PRIORITY_MIN} إلى {PRIORITY_MAX} "
+            f"({PRIORITY_MIN} = الأعلى في القوائم والمتجر).")
     color = str(getattr(plan, "color", "") or "").strip()
     if color and not _COLOR_RE.match(color):
         # كان «<script>…» يُخزَّن ويُحقن في style="background:…".

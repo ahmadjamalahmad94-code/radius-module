@@ -36,6 +36,38 @@ _LOG = logging.getLogger(__name__)
 # سقف أمان لكل استدعاء — يمنع عاصفة PoD على حفظٍ يمسّ آلاف الجلسات.
 _MAX_SESSIONS_PER_RUN = 500
 
+# F04 N-L7: كنسة الكوتة تعمل كلّ دقيقة؛ PoD لا يصل (راوتر لا يردّ) كان يكتب
+# سطر تدقيق «disconnect/failed» + WARNING **كلّ دقيقة** لكلّ مخالف ما دامت الجلسة
+# حيّة (8 أسطر في 3 دقائق على client20). نفس الفشل لنفس الجلسة وللسبب نفسه
+# يُسجَّل مرّةً في الساعة؛ النجاح أو سببٌ مختلف أو جلسةٌ أخرى يُسجَّل فورًا.
+# (الكنسة تعمل في عمليّة العامل الواحدة، فالذاكرة المحلّيّة تكفي.)
+_FAILED_LOG_EVERY_S = 3600
+_failed_logged: dict = {}
+_failed_lock = threading.Lock()
+
+
+def _should_log_failure(tenant_id: int, session_id: str, why: str) -> bool:
+    import time
+    key = (int(tenant_id), str(session_id or ""), str(why or ""))
+    now = time.monotonic()
+    with _failed_lock:
+        last = _failed_logged.get(key)
+        if last is not None and now - last < _FAILED_LOG_EVERY_S:
+            return False
+        _failed_logged[key] = now
+        if len(_failed_logged) > 5000:   # تقليم: أقدم من النافذة
+            for k in [k for k, t in _failed_logged.items()
+                      if now - t >= _FAILED_LOG_EVERY_S]:
+                _failed_logged.pop(k, None)
+    return True
+
+
+def _forget_failure(tenant_id: int, session_id: str) -> None:
+    with _failed_lock:
+        for k in [k for k in _failed_logged
+                  if k[0] == int(tenant_id) and k[1] == str(session_id or "")]:
+            _failed_logged.pop(k, None)
+
 
 # ── جمع الجلسات النشطة في النطاق ─────────────────────────────────────
 
@@ -245,6 +277,14 @@ def _run(tenant_id: int, *, usernames=None, plan_id=None, batch_id=None,
             ok = bool(getattr(outcome, "ok", False))
         except Exception:  # noqa: BLE001 — NAS غير قابل للوصول/خطأ شبكة
             ok = False
+        if ok:
+            _forget_failure(int(tenant_id), sid)
+        elif not _should_log_failure(int(tenant_id), sid, str(why)):
+            # نفس الفشل سُجّل خلال الساعة الأخيرة — لا سطر تدقيق ولا WARNING جديدان.
+            stats["failed"] += 1
+            _LOG.debug("policy_reconciler[%s]: PoD still failing for %r session=%s "
+                       "(already logged)", reason, username, sid)
+            continue
         # Surface the automated eviction in the unified MikroTik-actions feed
         # WITH its reason (the compliance `why`: quota/expired/disabled/
         # device-limit/schedule/mac…), router, and real result. Fail-safe.

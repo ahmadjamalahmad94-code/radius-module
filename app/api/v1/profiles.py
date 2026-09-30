@@ -203,6 +203,18 @@ def _apply_body(plan: AccessPlan, body: dict) -> AccessPlan:
     for k in _INT_FIELDS:
         if k in body:
             changes[k] = _coerce_int(k, body[k])
+    # priority: 1–10 like the web (F04 N-L10). 0/null and 100 — the old API /
+    # app defaults — mean «not chosen» ⇒ 5 (plans._normalize); anything else
+    # outside 1–10 is a 422 from plans._validate.
+    if int(changes.get("data_value") or 0) > 0 and int(changes.get("data_value") or 0) != int(
+            getattr(plan, "data_value", 0) or 0):
+        # F04 N-L11: data_value/data_unit were stored and never enforced nor shown
+        # (has_quota false) — a «2 GB» plan was unlimited. Refused, not guessed:
+        # the enforced caps are quota_total_mb / quota_daily_mb / quota_monthly_mb
+        # (+ per-direction). An unchanged stored value (old rows) passes.
+        raise RadiusValidationError(
+            "حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» "
+            "للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb).")
     for k in _FLOAT_FIELDS:
         if k in body:
             changes[k] = _coerce_float(k, body[k])

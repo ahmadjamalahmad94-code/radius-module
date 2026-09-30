@@ -14,6 +14,26 @@ from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
 PLAN_NAME_MAX = 100
 
 
+# ── أولويّة العرض: مقياسٌ واحد 1–10 (الأصغر أعلى)، الافتراض 5 — للويب والـAPI
+# والتطبيق (F04 N-L10). كان الـAPI يفترض 100 ويقبل حتى 1000 والويب يقصّ إلى
+# 1–10 عند الحفظ فيعيد كتابة أولويّة عرضٍ أُنشئ من الـAPI بصمت. قيمٌ قديمة:
+# 0/فارغ/100 (افتراضات قديمة) ⇒ 5، وما فوق 10 ⇒ 10 (هجرة 190 + القراءة).
+PRIORITY_MIN = 1
+PRIORITY_MAX = 10
+PRIORITY_DEFAULT = 5
+_LEGACY_PRIORITY_DEFAULTS = (0, 100)
+
+
+def normalize_priority(value) -> int:
+    try:
+        v = int(value or 0)
+    except (TypeError, ValueError):
+        return PRIORITY_DEFAULT
+    if v in _LEGACY_PRIORITY_DEFAULTS:
+        return PRIORITY_DEFAULT
+    return max(PRIORITY_MIN, min(PRIORITY_MAX, v))
+
+
 def _g(row: Any, key: str, default):
     """Safe getter for sqlite3.Row — fallback for older DB snapshots."""
     try:
@@ -91,7 +111,7 @@ def _row(r) -> AccessPlan:
         price=r["price"] or 0.0, currency=r["currency"] or default_currency(),
         plan_tier=r["plan_tier"] or "Personal", prepaid=bool(r["prepaid"]),
         project=r["project"] or "", description=r["description"] or "",
-        enabled=bool(r["enabled"]), priority=r["priority"] or 100,
+        enabled=bool(r["enabled"]), priority=normalize_priority(r["priority"]),
         color=r["color"] or "#2BAACC",
         # RM-H3 fields — safe defaults for rows from before migration 012
         speed_control_enabled=bool(_g(r,"speed_control_enabled",0)),

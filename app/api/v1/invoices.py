@@ -111,6 +111,10 @@ def create_invoice():
     username = str(body.get("username") or "").strip()
     if subscriber_id <= 0 or amount < 0 or not username:
         return fail("validation_error", "اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة.", status=422)
+    from ...radius.core import limits
+    _msg = limits.amount_error(amount, "generic", label="قيمة الفاتورة")
+    if _msg:   # «الحدود» — باقي المدخلات الماليّة
+        return fail("validation_error", _msg, status=422)
     try:
         plan_id = int(body["plan_id"]) if body.get("plan_id") not in (None, "") else None
         router_id = int(body["router_id"]) if body.get("router_id") not in (None, "") else None

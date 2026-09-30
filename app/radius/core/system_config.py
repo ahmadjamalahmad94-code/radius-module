@@ -5,6 +5,7 @@ control panel). Exposed to all templates as `cfg`, plus the `money` and
 """
 from __future__ import annotations
 
+import functools
 from datetime import date, datetime, timedelta, timezone, tzinfo
 from typing import Any
 
@@ -213,7 +214,22 @@ def effective_system_settings() -> dict[str, Any]:
         "tz_offset": tz["utc_offset_minutes"] / 60.0,
         # «expired» | «unlimited» — ما يعنيه إنشاء مشتركٍ بلا expire_at.
         "create_without_expiry": create_without_expiry_mode(),
+        # F03 N7: القاعدة الواحدة لتحويل وقتٍ محلّيّ مكتوب إلى UTC (الويب يطبّقها
+        # في from_local؛ التطبيق يطبّقها بجدول التحوّلات أدناه — لا بإزاحة الآن).
+        "local_time_rule": dict(LOCAL_TIME_RULE),
+        "tz_transitions": tz_transitions(),
+        # «الحدود» — سقوف العمليّة الواحدة لهذا الخادم (core.limits): التطبيق
+        # يتحقّق بالأرقام نفسها التي يفرضها الخادم.
+        "limits": _limits_snapshot(),
     }
+
+
+def _limits_snapshot() -> dict[str, Any]:
+    try:
+        from .limits import snapshot
+        return snapshot()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def default_currency() -> str:
@@ -373,6 +389,73 @@ def to_local_date(value: Any) -> str:
     return to_local(value, fmt="%Y-%m-%d")
 
 
+# ── تحويل الوقت المحلّيّ ⇒ UTC: قاعدةٌ واحدة للويب والـAPI والتطبيق (F03 N7) ──
+# ليلة انتهاء التوقيت الصيفيّ (غزة 2026-10-24: 02:00+03 ⇒ 01:00+02) تتكرّر
+# الساعة 01:00–01:59؛ الويب كان يضع «01:30» عند 22:30Z والتطبيق عند 23:30Z
+# (ساعةٌ فرق). القاعدة: **الظهور الأوّل** (fold=0 — إزاحة ما قبل التحوّل:
+# 01:30 ⇒ 22:30Z). وليلة بدء الصيفيّ (ساعةٌ لا وجود لها) تُقرأ بإزاحة ما قبل
+# التحوّل فتقع بعد القفزة (00:30 غير الموجودة ⇒ 01:30 الصيفيّة). التطبيق يطبّق
+# القاعدة بجدول ``tz_transitions`` (لحظات التحوّل وإزاحتا قبل/بعد).
+LOCAL_TIME_RULE = {
+    "ambiguous": "earlier",
+    "nonexistent": "shift_forward",
+    "description_ar": ("وقتٌ محلّيّ يتكرّر (ليلة انتهاء التوقيت الصيفيّ) يُحتسب بظهوره "
+                       "الأوّل — بإزاحة ما قبل التحوّل؛ ووقتٌ غير موجود (ليلة بدء "
+                       "الصيفيّ) يُقرأ بإزاحة ما قبل التحوّل فيقع بعد القفزة."),
+}
+
+
+def tz_transitions(tenant_id: int | None = None, *, at: datetime | None = None,
+                   months_back: int = 12, months_ahead: int = 24) -> list[dict]:
+    """تحوّلات إزاحة منطقة اللوحة حول ``at`` (افتراضًا الآن): ``[{"at": UTC ISO Z،
+    "offset_before_minutes"، "offset_after_minutes"}]``. محصّن: [] عند الخطأ."""
+    try:
+        name, off = _tz_settings(tenant_id)
+        when = (at or datetime.now(timezone.utc))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return [dict(t) for t in _tz_transitions_cached(
+            name, float(off), when.year, when.month, int(months_back), int(months_ahead))]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+@functools.lru_cache(maxsize=32)
+def _tz_transitions_cached(name: str, off: float, year: int, month: int,
+                           months_back: int, months_ahead: int) -> tuple:
+    tz = _resolve_tzinfo(name, off)
+    start_idx = year * 12 + (month - 1) - months_back
+    end_idx = year * 12 + (month - 1) + months_ahead
+    t = datetime(start_idx // 12, start_idx % 12 + 1, 1, tzinfo=timezone.utc)
+    end = datetime(end_idx // 12, end_idx % 12 + 1, 1, tzinfo=timezone.utc)
+    step = timedelta(hours=6)
+
+    def _off(x: datetime) -> int:
+        return int((x.astimezone(tz).utcoffset() or timedelta(0)).total_seconds() // 60)
+
+    out = []
+    prev = _off(t)
+    while t < end:
+        nxt = t + step
+        cur = _off(nxt)
+        if cur != prev:
+            lo, hi = t, nxt                      # offset(lo) == prev, offset(hi) == cur
+            while hi - lo > timedelta(minutes=1):
+                mid = lo + (hi - lo) / 2
+                mid = mid.replace(second=0, microsecond=0)
+                if mid <= lo:
+                    mid = lo + timedelta(minutes=1)
+                if _off(mid) == prev:
+                    lo = mid
+                else:
+                    hi = mid
+            out.append({"at": hi.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "offset_before_minutes": prev, "offset_after_minutes": cur})
+            prev = cur
+        t = nxt
+    return tuple(out)
+
+
 def from_local(value: Any, tenant_id: int | None = None,
                default_time: str = "") -> datetime | None:
     """Inverse of :func:`to_local` — a local wall-clock string -> naive UTC.
@@ -400,7 +483,8 @@ def from_local(value: Any, tenant_id: int | None = None,
     if dt.tzinfo is not None:  # already anchored -> just normalise to UTC
         return dt.astimezone(timezone.utc).replace(tzinfo=None)
     try:
-        return dt.replace(tzinfo=tenant_tzinfo(tenant_id)).astimezone(
+        # fold=0 صراحةً: الظهور الأوّل للساعة المكرّرة (LOCAL_TIME_RULE).
+        return dt.replace(tzinfo=tenant_tzinfo(tenant_id), fold=0).astimezone(
             timezone.utc).replace(tzinfo=None)
     except Exception:  # noqa: BLE001 — a broken zone must not lose the date
         return dt

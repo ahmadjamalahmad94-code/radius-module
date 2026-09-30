@@ -1093,6 +1093,11 @@ def _install_stubs(app: Flask) -> None:
     from .radius.db.repos.nas_repo import display_ordinal as _router_no
     app.jinja_env.globals.setdefault("router_no", _router_no)
 
+    # «الحدود» — سقوف العمليّة الواحدة المضبوطة لهذا الخادم (core.limits):
+    # القوالب تعرض/تتحقّق بالقيمة نفسها التي يفرضها الخادم.
+    from .radius.core.limits import snapshot as _hr_limits
+    app.jinja_env.globals.setdefault("hr_limits", _hr_limits)
+
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
         "/admin/radius/login",   # login بوّابة بحد ذاتها + cookie قد لا يكون موجودًا

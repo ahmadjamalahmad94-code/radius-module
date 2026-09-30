@@ -330,7 +330,7 @@ def test_live_sweep_finds_exhausted_sessions(client, _no_pod):
 
 def test_web_quota_forms_always_use_the_system_currency(client):
     csrf = _web_login(client)
-    g1 = _plan(quota_total_mb=1024)
+    g1 = _plan(quota_total_mb=1024, max_daily_minutes=1440)   # fix3: reset needs a daily cap
     s = _sub(plan_id=g1, balance=20)
     client.post(f"/admin/radius/users/{s.username}/quota/topup", data={
         "_csrf_token": csrf, "quota_mb": "10", "charge_mode": "paid", "amount": "1",

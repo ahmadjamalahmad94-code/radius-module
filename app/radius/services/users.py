@@ -12,6 +12,7 @@ from ..core.constants import (
 )
 from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.numbers import (
+    NonFiniteNumber,
     action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
     finite_float, round_money,
 )
@@ -39,7 +40,8 @@ def _charge_amount(charge_mode: str, amount) -> float:
     value = round_money(finite_float(amount, field="amount"))
     if value <= 0:
         raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
-    action_amount(value, field="amount")
+    # «الحدود»: مبلغ تمديد/كوتة/استعادة = دفعةٌ من المشترك (أقصى دفعة نقدية).
+    action_amount(value, field="amount", kind="payment")
     return value
 
 
@@ -202,6 +204,10 @@ class UsersService:
             raise RadiusConflict(ARCHIVED_NAME_MSG)
         from .subscriber_validation import validate_subscriber_fields
         validate_subscriber_fields(sub)
+        # ⏸ سؤال المالك (F03): «سنة في المرة» عند الإنشاء — مُطفأ حتى يقرّر
+        # (core.numbers.CREATE_EXPIRY_ONE_YEAR_RULE). لا أثر وهو مُطفأ.
+        from ..core.numbers import check_create_expiry
+        check_create_expiry(getattr(sub, "expire_at", None))
         saved = self._adapter.upsert_account(sub)
         if abs(float(saved.balance or 0)) >= 0.005:
             # an opening balance is money too — same ledger row as an edit.
@@ -482,10 +488,31 @@ class UsersService:
                 minute_delta = max(0, adjusted) - remaining
             elif policy == "higher_debt":
                 debt_amount = round(max((new_rate - old_rate) * remaining, 0), 2)
+            # 🔴 F04 M1 / F08 H2 — سقوف المالك تسري على تغيير العرض أيضًا (قرارٌ
+            # موثَّق: **رفض 422 لا قصّ** — القصّ يُسقط من حقّ المشترك بصمت):
+            #   • التعويض وقتٌ يُضاف ⇒ ≤ سنة في العمليّة الواحدة (120 ₪ ⇒ 0.01 ₪
+            #     كان يعطي 518 مليون دقيقة وانتهاءً سنة 3012)؛
+            #   • الانتهاء الناتج ≤ 2100؛
+            #   • دين فرق السعر مبلغٌ لا يُحوَّل وقتًا ⇒ ≤ 100,000.
+            from ..core import limits
+            if minute_delta > limits.max_extend_minutes():
+                raise NonFiniteNumber(
+                    f"{limits.extend_too_long_msg()} — التعويض المحسوب لهذا التغيير "
+                    f"{_fmt_minutes_ar(minute_delta)}. اختر «تغيير العرض بدون تعويض» "
+                    "ثم مدّد يدويًّا على دفعات، أو اختر عرضًا أقرب سعرًا.",
+                    details={"field": "policy", "minute_delta": minute_delta})
+            _debt_cap = limits.money_cap("payment")
+            if debt_amount > _debt_cap + 1e-9:
+                raise NonFiniteNumber(
+                    f"دين فرق السعر المحسوب ({debt_amount:.2f}) يتجاوز الحدّ الأقصى "
+                    f"للعملية الواحدة ({limits.fmt_amount(_debt_cap)}). اختر «إنقاص الأيام» "
+                    "أو «بدون دين/تعويض».",
+                    details={"field": "policy", "debt_amount": debt_amount})
             if minute_delta:
                 # إزاحةٌ بالفارق فقط: ثواني النهاية الأصليّة تبقى (كان يُعاد بناؤها
                 # من «الآن + المتبقّي بالدقائق» فتضيع حتى 59 ثانية حتى بفارقٍ صفريّ).
-                new_expire_at = sub.expire_at + timedelta(minutes=minute_delta)
+                # add_minutes_capped: ما بعد 2100 (أو الفائض) ⇒ 422 لا 500.
+                new_expire_at = add_minutes_capped(sub.expire_at, minute_delta)
                 if new_expire_at < now:
                     new_expire_at = now
         debt_amount = debt_amount + 0.0
@@ -610,6 +637,10 @@ class UsersService:
         amount = _charge_amount(charge_mode, amount)
 
         sub = self._adapter.get_account(username)
+        # F04 N-L1: لا كوتة يوميّة ولا حدّ وقتٍ يوميّ ⇒ لا شيء يُستعاد — كان يُحصِّل
+        # المبلغ (رصيد −5) على عرضٍ بلا أيّ سقف يوميّ. يُرفض في كلّ الأنماط.
+        if not daily_reset_applicable(sub):
+            raise NothingToReset(NOTHING_TO_RESET_AR)
         _require_paid_balance(sub, amount, charge_mode)
         changes = {
             "used_seconds": 0,
@@ -825,7 +856,7 @@ class UsersService:
         amount = round_money(finite_float(amount, field="amount"))
         if amount <= 0:
             raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
-        action_amount(amount, field="amount")
+        action_amount(amount, field="amount", kind="balance")   # «أقصى إضافة رصيد»
         # Net wallet credit = cash received − the part used to settle open loans.
         # Loans the operator chose to «خصم» are cleared separately (their own
         # settlement ledger), so ONLY the remainder lands in the wallet — the
@@ -1089,23 +1120,19 @@ class UsersService:
                                     "amount": float(amount) if charge_mode in {"paid", "debt"} else 0},
                            before={"expiry": _old_exp},
                            after={"expiry": _new_exp})
-        # تنبيه إدارة — «دين» = سلفة وقت؛ غيره = إضافة/تمديد وقت.
-        if charge_mode == "debt":
-            _notify_alert(saved.tenant_id, "loan_granted", {
-                "username": username,
-                "duration": duration_label,
-                "amount": _fmt_money_ar(amount, currency),
-                "status": "مُسجّلة (دين)", "actor": actor,
-                "reason": (notes or ledger_note),
-            }, dedup_key=f"loan_ext:{username}:{minutes}")
-        else:
-            _notify_alert(saved.tenant_id, "time_added", {
-                "username": username,
-                "duration": duration_label,
-                "new_expiry": _fmt_dt_local(new_exp),
-                "kind": ("مدفوع" if charge_mode == "paid" else "مجاني"),
-                "actor": actor,
-            }, dedup_key=f"time_added:{username}:{minutes}")
+        # تنبيه إدارة — «إضافة/تمديد وقت» لكلّ الأنماط. 🔴 التمديد على الدين كان
+        # يُطلق «سلفة وقت» (F07): ليس سلفة (لا قيد سلفة ولا تسوية لها) بل تمديدٌ
+        # بدينٍ على الرصيد — النوع والمبلغ في «النوع».
+        _kind = {"paid": "مدفوع", "debt": "على الدين"}.get(charge_mode, "مجاني")
+        if charge_mode in {"paid", "debt"}:
+            _kind += " — " + _fmt_money_ar(amount, currency)
+        _notify_alert(saved.tenant_id, "time_added", {
+            "username": username,
+            "duration": duration_label,
+            "new_expiry": _fmt_dt_local(new_exp),
+            "kind": _kind,
+            "actor": actor,
+        }, dedup_key=f"time_added:{username}:{minutes}")
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:
@@ -1283,6 +1310,33 @@ def _remaining_minutes(expire_at, now: datetime) -> int:
     if not expire_at:
         return 0
     return max(0, int((expire_at - now).total_seconds() // 60))
+
+
+NOTHING_TO_RESET_AR = ("لا توجد لهذا المشترك كوتة يوميّة ولا حدّ وقتٍ يوميّ — لا شيء "
+                       "لاستعادته (ولا يُحصَّل أيّ مبلغ).")
+
+
+class NothingToReset(RadiusValidationError):
+    """«استعادة الكوتة اليوميّة» على مشتركٍ بلا سقفٍ يوميّ (422)."""
+
+
+def daily_reset_applicable(sub) -> bool:
+    """هل لـ«استعادة الكوتة اليوميّة» معنى؟ — كوتة يوميّة في العرض (إجماليّة أو
+    باتجاه) أو حدّ وقت اتصالٍ يوميّ (العرض أو تجاوز المشترك). محصّن: خطأ
+    القراءة ⇒ True (السلوك السابق، لا نمنع استعادةً مشروعة)."""
+    try:
+        plan = None
+        if getattr(sub, "plan_id", None):
+            from ..db.repos import plans_repo
+            plan = plans_repo.get_plan(int(getattr(sub, "tenant_id", 1) or 1),
+                                       int(sub.plan_id), include_deleted=True)
+        from . import quota_period
+        if any(quota_period.plan_window_caps(plan)["daily"].values()):
+            return True
+        from .policy_engine import _effective_time_caps
+        return _effective_time_caps(sub, plan)[1] > 0
+    except Exception:  # noqa: BLE001
+        return True
 
 
 def _record_plan_change_debt(*, actor: str, subscriber: Subscriber,

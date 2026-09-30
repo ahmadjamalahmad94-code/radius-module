@@ -688,12 +688,21 @@ def daily_used_seconds_bulk(tenant_id: int, usernames,
         from .device_limit import acct_norm_sql, to_space_ts, _parse_acct_dt
         since = since_iso or _local_day_start_utc(int(tenant_id))
         nrm = acct_norm_sql("acctstarttime")
+        nrm_stop = acct_norm_sql("acctstoptime")
         ph = ",".join("?" * len(names))
+        since_sp = to_space_ts(since)
+        # 🔴 F04 H1 (الشقيق الزمنيّ): جلسةٌ بدأت قبل منتصف الليل وما زالت
+        # مفتوحة (أو أُغلقت بعده) كانت خارج «اليوم» كلّيًّا — PPPoE متّصلٌ
+        # أيّامًا بلا حدٍّ يوميّ. الآن تُحسب **حصّتها بعد بداية اليوم** فقط
+        # (الفترة تُقصّ عند ``since``).
         rows = db().execute(
             f"SELECT username, acctstarttime, "
             f"       COALESCE(acctsessiontime,0) AS dur FROM radacct "
-            f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ?",
-            (int(tenant_id), *names, to_space_ts(since))).fetchall()
+            f"WHERE tenant_id=? AND username IN ({ph}) AND ({nrm} >= ? "
+            f"   OR acctstoptime IS NULL OR acctstoptime = '' OR {nrm_stop} > ?)",
+            (int(tenant_id), *names, since_sp, since_sp)).fetchall()
+        since_dt = _parse_acct_dt(since_sp)
+        since_ep = int(timegm(since_dt.timetuple())) if since_dt else None
         by_user: dict = {}
         for r in rows:
             dur = int(r["dur"] or 0)
@@ -703,7 +712,12 @@ def daily_used_seconds_bulk(tenant_id: int, usernames,
             if dt is None:
                 continue
             start = int(timegm(dt.timetuple()))   # naive UTC → epoch (consistent)
-            by_user.setdefault(str(r["username"]), []).append((start, start + dur))
+            end = start + dur
+            if since_ep is not None:
+                if end <= since_ep:
+                    continue                      # ended before the day started
+                start = max(start, since_ep)      # only today's share of a straddler
+            by_user.setdefault(str(r["username"]), []).append((start, end))
         # قيِّد بالمنقضي منذ منتصف الليل المحلّي — لا يَظهر «4س» بينما لم يَمضِ
         # من اليوم إلا دقائق (جلسة عابرة لمنتصف الليل).
         cap = _elapsed_since(since)
