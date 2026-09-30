@@ -1338,8 +1338,7 @@ def _rbac_denial_status_impl(name: str, method: str, *, is_super: bool, perms,
         from ..services import mt_permissions as _mtp
         _need = _mtp.endpoint_required_perms(name)
         if _need:
-            _held = _mtp.held_from_keys(perms)
-            _missing = [p for p in _need if p not in _held]
+            _missing = _mtp.admin_id_missing(admin_id, _need)
             if _missing:
                 return _deny(403, reason="permission", permission=",".join(_missing))
 

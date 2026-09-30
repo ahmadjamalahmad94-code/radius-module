@@ -295,3 +295,29 @@ def test_sidebar_legacy_links_hidden_iff_refused(world):
         html = c.get("/admin/radius/devices").get_data(as_text=True)
         for ep, path in _LEGACY_LINKS:
             assert f'href="{path}"' in html and c.get(path).status_code == 200, ep
+
+
+def test_super_role_opens_the_legacy_pages_it_is_shown(world):
+    """«مدير عام» (super_admin role, not an owner) = every non-owner permission.
+    The mikrotik.* keys are outside the RBAC catalogue, so the decorator used
+    to 403 it on every legacy page while the sidebar/dashboard showed the
+    links. It now holds the mikrotik.admin set: shown AND allowed; the opt-in
+    apply keys stay explicit."""
+    app, _ = world
+    from app.radius.services import mt_permissions as M
+    with app.app_context():
+        from app.radius.db.repos import admins_repo
+        role = admins_repo.get_role_by_name("super_admin")
+        a = admins_repo.create_admin(username="sup_" + H.uuid4().hex[:6], password=H.PW,
+                                     full_name="مدير عام", is_super_admin=False,
+                                     role_id=role.id)
+        assert not admins_repo.admin_is_owner(a)
+        held = M.admin_permissions(admins_repo.get_admin(a.id))
+        assert {"mikrotik.view", "mikrotik.diagnostics", "mikrotik.audit.view"} <= held
+        assert "npc.remote_access.apply" not in held and "site_exit.apply" not in held
+        c = app.test_client()
+        H.login_session(c, a.id)
+        html = c.get("/admin/radius/devices").get_data(as_text=True)
+    for ep, path in _LEGACY_LINKS:
+        assert f'href="{path}"' in html, ep
+        assert c.get(path).status_code == 200, ep
