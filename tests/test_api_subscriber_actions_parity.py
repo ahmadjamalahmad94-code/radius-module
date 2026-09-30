@@ -408,6 +408,8 @@ def test_quota_topup_reset_and_parity(client):
     # without any quota refuses a top-up (see test_stress_fix_money).
     from app.radius.db.connection import db
     db().execute("UPDATE access_plans SET quota_total_mb = 1024 WHERE id = ?", (pid,))
+    # fix3 (F04 N-L1): reset-daily needs a daily cap — 1440 min/day never binds.
+    db().execute("UPDATE access_plans SET max_daily_minutes = 1440 WHERE id = ?", (pid,))
     a, b = _pair(plan_id=pid, balance=20)
     client.post(f"/admin/radius/users/{a.username}/quota/topup", data={
         "_csrf_token": csrf, "quota_mb": "500", "quota_target": "combined",

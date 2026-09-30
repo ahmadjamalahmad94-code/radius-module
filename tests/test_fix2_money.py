@@ -653,6 +653,8 @@ def test_distributor_settle_idempotency_web(client):
 
 def test_quota_reset_daily_is_idempotent(client):
     pid = _plan()
+    # fix3 (F04 N-L1): reset-daily needs a daily cap — 1440 min/day never binds.
+    _db().execute("UPDATE access_plans SET max_daily_minutes=1440 WHERE id=?", (pid,))
     s = _sub(plan_id=pid, balance=10)
     hdr = dict(AUTH, **{"Idempotency-Key": "qr-" + uuid4().hex})
     for _ in range(2):

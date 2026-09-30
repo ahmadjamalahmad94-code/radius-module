@@ -385,7 +385,7 @@ def test_priority_migration_normalises_existing_rows(app):
     pid_b = _plan(priority=250)
     pid_c = _plan(priority=3)
     sql = (Path(__file__).resolve().parent.parent / "app" / "radius" / "db" / "migrations"
-           / "186_access_plans_priority_scale.sql").read_text(encoding="utf-8")
+           / "190_access_plans_priority_scale.sql").read_text(encoding="utf-8")
     _db().executescript(sql)
     got = {r["id"]: r["priority"] for r in _db().execute(
         "SELECT id, priority FROM access_plans WHERE id IN (?,?,?)",

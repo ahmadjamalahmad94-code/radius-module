@@ -347,7 +347,8 @@ def _straddle_usage(tenant_id: int, username: str, bounds: dict) -> dict:
         "       COALESCE(acctinputoctets, 0) AS i, COALESCE(acctoutputoctets, 0) AS o "
         "  FROM radacct WHERE tenant_id = :t AND username = :u AND ("
         "       acctstoptime IS NULL OR acctstoptime = '' "
-        f"      OR ({n_stop} > :m AND {n_start} < :d))",
+        f"      OR ({n_start} < :d AND {n_stop} > :d) "
+        f"      OR ({n_start} < :m AND {n_stop} > :m))",
         {"t": tid, "u": username, "m": bounds["month_start"],
          "d": bounds["day_start"]}).fetchall()
     out = {"daily": [0, 0], "monthly": [0, 0]}
@@ -399,7 +400,8 @@ def _straddle_usage(tenant_id: int, username: str, bounds: dict) -> dict:
                                f"{prefix}_base_out": base[1]})
             out[window][0] += max(0, cur[0] - base[0])
             out[window][1] += max(0, cur[1] - base[1])
-        if upd and upd > snap_at:
+        if not stop and upd and upd > snap_at:
+            # لقطةٌ للجلسات المفتوحة فقط (المغلقة لا تتغيّر بعد اليوم).
             fields.update({"snap_at": upd, "snap_in": cur[0], "snap_out": cur[1]})
         if fields:
             writes.append((rid, fields))

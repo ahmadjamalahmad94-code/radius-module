@@ -164,6 +164,10 @@ class TestUsersServiceTriggers:
 
     def test_reset_daily_quota_fires_quota_restored(self, app_ctx, monkeypatch):
         _make_subscriber("u_restore")
+        # fix3 (F04 N-L1): a reset needs a daily cap (here a daily time limit).
+        from app.radius.db.connection import db
+        db().execute("UPDATE subscribers SET daily_connection_time_min=1440 "
+                     "WHERE username='u_restore'")
         cap = _spy(monkeypatch)
         from app.radius.services.users import get_users_service
         get_users_service().reset_daily_quota(actor="المدير", username="u_restore")
