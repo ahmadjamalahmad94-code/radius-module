@@ -90,7 +90,9 @@ def test_bulk_purge_needs_the_owner_not_just_batch_ops(app):
 
 def test_batch_cards_page_hides_passwords_without_view_passwords(app):
     _seed(app)
-    c, _ = _login(app, ("dashboard.view", "cards.view"))
+    # fix3 (F01 F10): batch 911 belongs to nobody — the viewer needs
+    # «رؤية كل حِزم البطاقات» to open it at all (else 403 out_of_scope).
+    c, _ = _login(app, ("dashboard.view", "cards.view", "scope.view_all_cards"))
     body = c.get("/admin/radius/cards/batches/911/cards").get_data(as_text=True)
     assert "c911" in body and "topsecret9" not in body
     csv = c.get("/admin/radius/cards/batches/911/cards/export.csv").get_data(as_text=True)
@@ -99,7 +101,8 @@ def test_batch_cards_page_hides_passwords_without_view_passwords(app):
 
 def test_batch_cards_page_shows_passwords_to_view_passwords_holder(app):
     _seed(app)
-    c, _ = _login(app, ("dashboard.view", "cards.view", "scope.view_passwords"))
+    c, _ = _login(app, ("dashboard.view", "cards.view", "scope.view_passwords",
+                        "scope.view_all_cards"))
     body = c.get("/admin/radius/cards/batches/911/cards").get_data(as_text=True)
     assert "topsecret9" in body
 

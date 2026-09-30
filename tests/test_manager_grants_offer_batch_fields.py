@@ -80,6 +80,12 @@ def _offer(plan_id: int):
     )
 
 
+def _own(bid: int, mgr: int) -> None:
+    """fix3 (F01 F10): the manager edits HIS batch (card-batch scope)."""
+    db().execute("UPDATE card_batches SET manager_id=? WHERE id=?", (mgr, bid))
+    db().commit()
+
+
 def _batch(plan_id: int, *, count: int = 4):
     from app.radius.services.cards import get_cards_service
 
@@ -202,7 +208,7 @@ def test_batch_edit_denied_without_action_grant(app):
 def test_batch_edit_granted_name_only(app):
     with app.app_context():
         mgr = _sub_admin("m_b_ok"); p1 = _plan("P1"); p2 = _plan("P2")
-        b = _batch(p1); bid = b.id
+        b = _batch(p1); bid = b.id; _own(bid, mgr)
         _grant_edit(mgr, "batch"); _grant_fields(mgr, "batch", ["name"])
     with app.test_client() as client:
         _login(client, admin_id=mgr, is_super=False)
@@ -221,7 +227,7 @@ def test_batch_edit_granted_name_only(app):
 def test_batch_edit_granted_price_changes_price(app):
     with app.app_context():
         mgr = _sub_admin("m_b_price"); p1 = _plan("P1")
-        b = _batch(p1); bid = b.id
+        b = _batch(p1); bid = b.id; _own(bid, mgr)
         _grant_edit(mgr, "batch"); _grant_fields(mgr, "batch", ["price"])
     with app.test_client() as client:
         _login(client, admin_id=mgr, is_super=False)
