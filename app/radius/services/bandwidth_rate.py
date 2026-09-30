@@ -17,9 +17,12 @@ are untouched. The full cascade in the live path stays:
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from ..core import units
+
+_LOG = logging.getLogger(__name__)
 
 # Accept either the unit CODE (units.SPEED_UNITS first col, e.g. "kbps"/"Mbps")
 # or the LABEL stored by the profile form ("Kbps"/"Mbps") — case-insensitive.
@@ -30,7 +33,19 @@ for _code, _label, _ratio in units.SPEED_UNITS:
 
 
 def _speed_to_kbps(value, unit) -> int:
-    code = _SPEED_UNIT_TO_CODE.get((unit or "kbps").strip().lower(), "kbps")
+    # 🔴 وحدةٌ مجهولةٌ تسقط إلى kbps، فـ«M» بدل «Mbps» تُخرج 100k مكان 102400k —
+    #    **أقلُّ ألفَ مرّة، بصمتٍ تامّ**. نموذجُ الويب يُقيّد الوحدات، لكن
+    #    الترحيلَ والاستيرادَ وSQL المباشر لا شيءَ يحرسها (وهي المسارات التي
+    #    كتبت بيانات عملاءَ سابقين). لا نُغيّرُ السقوطَ — كسرُ ردِّ RADIUS أسوأ —
+    #    لكن لا يجوز أن يمرَّ صامتًا. راجع [[migrate-plan-speed-fidelity]].
+    _raw = (unit or "kbps").strip()
+    code = _SPEED_UNIT_TO_CODE.get(_raw.lower(), "")
+    if not code:
+        code = "kbps"
+        _LOG.warning(
+            "bandwidth_rate: وحدةُ سرعةٍ مجهولة %r — سقوطٌ إلى kbps (القيمة %r). "
+            "الوحداتُ المعروفة: %s. صحّحِ الصفَّ في bandwidth_profiles.",
+            _raw, value, sorted(set(_SPEED_UNIT_TO_CODE.values())))
     try:
         return int(units.to_base(value or 0, code, "speed"))
     except Exception:  # noqa: BLE001 — never break a RADIUS reply on a bad unit
