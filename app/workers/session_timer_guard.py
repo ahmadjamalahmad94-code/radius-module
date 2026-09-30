@@ -19,25 +19,27 @@ _NAME = "session_timer_guard"
 _started = False
 _started_lock = threading.Lock()
 
-#: كلّ عشر دقائق — الجلساتُ تتجدّد ببطءٍ نسبيًّا، وفحصٌ أكثفُ يُثقل
-#: واجهةَ الراوتر بلا فائدة.
-_DEFAULT_INTERVAL_SEC = 600.0
+#: 🆕 السقفُ الأقصى بين الفحوص (لا فترةٌ ثابتة). العاملُ ينام **تكيّفيًّا**
+#: حتى أقربِ لحظةِ انتهاءٍ فيَطرد المتأثّرَ في وقته بالضبط (جدولةٌ دقيقة)،
+#: ولا يتجاوز هذا السقفَ كي يلتقطَ تغييراتِ الباقات/المجموعات خلال ≤20 ثانية.
+_DEFAULT_INTERVAL_SEC = 20.0
 
 
 def _interval() -> float:
+    """السقفُ الأقصى بين الفحوص (ثوانٍ) — لا فترةٌ ثابتة (النومُ تكيّفيّ)."""
     from app.radius.core import env_settings
     try:
         v = float(str(env_settings.env(
             "HOBERADIUS_SESSION_TIMER_GUARD_SEC",
             str(_DEFAULT_INTERVAL_SEC))).strip() or _DEFAULT_INTERVAL_SEC)
-        return max(60.0, v)
+        return max(5.0, v)
     except Exception:  # noqa: BLE001
         return _DEFAULT_INTERVAL_SEC
 
 
 def _run_loop(*, interval_sec: float) -> None:
     from app.radius.services import session_timer_guard as g
-    _LOG.info("session_timer_guard started — interval=%.0fs · enforce=%s",
+    _LOG.info("session_timer_guard started — نومٌ تكيّفيّ · السقف=%.0fs · enforce=%s",
               interval_sec, g.enforce_enabled())
     while True:
         rep = {}
@@ -69,8 +71,18 @@ def _run_loop(*, interval_sec: float) -> None:
             "over": rep.get("over", 0),
             "expired": rep.get("expired", 0),
             "kicked": rep.get("kicked", 0),
+            "next_secs": rep.get("next_secs"),
         })
-        time.sleep(interval_sec)
+        # ── نومٌ تكيّفيّ: حتى أقربِ انتهاءٍ بالضبط (+ثانيةُ هامش) دون تجاوزِ
+        #    السقف. فمشتركٌ ينتهي بعد 47 ثانية ⇒ نستيقظ عند الـ48 ونطرده فورًا،
+        #    ولا انتظارَ دورةٍ كاملة. وغيابُ انتهاءٍ قريب ⇒ ننام السقفَ لالتقاطِ
+        #    تغييراتِ الباقات/المجموعات. ──
+        nxt = rep.get("next_secs")
+        if nxt is None:
+            sleep_for = interval_sec
+        else:
+            sleep_for = min(float(nxt) + 1.0, interval_sec)
+        time.sleep(max(3.0, sleep_for))
 
 
 def start_session_timer_guard(*, interval_sec: float | None = None) -> None:

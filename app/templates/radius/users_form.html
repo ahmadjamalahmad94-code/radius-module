@@ -1107,12 +1107,47 @@
               {# ساعةُ الانتهاء — كانت مفروضةً 23:59:59 دائمًا، فلا سبيل لأن
                  ينتهي اشتراكٌ ظهرًا أو عند إغلاق المحل. فارغةٌ = آخرُ اللحظة
                  كما كانت، فلا يتغيّر شيءٌ لمن لا يعبأ بالساعة. #}
+              {# منتقي الساعة بقائمتين (نظام ٢٤): ساعة ٠٠–٢٣ + دقيقة ٠٠–٥٩ —
+                 أدقُّ وأسرعُ من عدّاد <input type=time> على الجوّال. الحقل
+                 المُرسَل يبقى expire_time=HH:MM فلا يتغيّر الخادم. #}
               <label class="uf-expiry-time">
                 <span>{{ _('ساعة الانتهاء') }}</span>
-                <input type="time" class="hub-input" name="expire_time" step="60"
-                       value="{{ _et }}" {% if _lock %}disabled{% endif %}>
+                <div class="uf-hm" dir="ltr">
+                  <select class="hub-input uf-hh" aria-label="{{ _('الساعة') }}" {% if _lock %}disabled{% endif %}>
+                    <option value="">--</option>
+                    {% for h in range(24) %}<option value="{{ '%02d'|format(h) }}">{{ '%02d'|format(h) }}</option>{% endfor %}
+                  </select>
+                  <span class="uf-hm-sep">:</span>
+                  <select class="hub-input uf-mm" aria-label="{{ _('الدقيقة') }}" {% if _lock %}disabled{% endif %}>
+                    <option value="">--</option>
+                    {% for m in range(60) %}<option value="{{ '%02d'|format(m) }}">{{ '%02d'|format(m) }}</option>{% endfor %}
+                  </select>
+                </div>
+                <input type="hidden" name="expire_time" value="{{ _et }}">
               </label>
             </div>
+            <script>
+            /* يربط قائمتَي الساعة/الدقيقة بحقلِ expire_time المخفيّ. القيمة
+               المبدئيّة من _et (HH:MM). فراغُ أيّهما = ساعةٌ فارغة (آخرُ اللحظة). */
+            (function () {
+              var wrap = document.currentScript.previousElementSibling;
+              if (!wrap) return;
+              var hh = wrap.querySelector('.uf-hh');
+              var mm = wrap.querySelector('.uf-mm');
+              var hid = wrap.querySelector('input[name="expire_time"]');
+              if (!hh || !mm || !hid) return;
+              var init = (hid.value || '').split(':');
+              if (init.length === 2) {
+                hh.value = ('0' + parseInt(init[0], 10)).slice(-2);
+                mm.value = ('0' + parseInt(init[1], 10)).slice(-2);
+              }
+              function sync() {
+                hid.value = (hh.value && mm.value) ? (hh.value + ':' + mm.value) : '';
+              }
+              hh.addEventListener('change', sync);
+              mm.addEventListener('change', sync);
+            })();
+            </script>
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه فارغًا للإبقاء على التاريخ الحالي.') }}{% endif %}
@@ -1124,6 +1159,9 @@
           .uf-expiry-time{display:flex;flex-direction:column;gap:6px;flex:0 0 150px}
           .uf-expiry-time>span{font-size:12.5px;font-weight:700;color:#64748b}
           .uf-expiry-time input{width:100%;box-sizing:border-box}
+          .uf-hm{display:flex;align-items:center;gap:6px}
+          .uf-hm select{flex:1 1 0;min-width:0;text-align:center;font-variant-numeric:tabular-nums}
+          .uf-hm-sep{font-weight:800;color:#64748b}
           .hbcal{position:relative}
           .hbcal-trigger{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid #e2e0f0;border-radius:12px;background:#fff;font:inherit;font-size:14px;color:#1e293b;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:right}
           .hbcal-trigger:hover:not(:disabled){border-color:var(--hub-brand,#7c3aed)}
