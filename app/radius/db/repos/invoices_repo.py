@@ -38,8 +38,11 @@ def _next_invoice_number(tenant_id: int) -> str:
 def list_all(tenant_id: int, *, status: Optional[str] = None,
              subscriber_id: Optional[int] = None,
              limit: int = 200, offset: int = 0) -> list[Invoice]:
-    sql = "SELECT * FROM invoices WHERE tenant_id = ?"
-    vals: list = [tenant_id]
+    # fix3 (F02 H2): the request admin's subscriber scope (owner: all).
+    from ...services.subscriber_scope import scope_sql
+    _sc, _sv = scope_sql("subscriber_id", by="id", tenant_id=int(tenant_id))
+    sql = "SELECT * FROM invoices WHERE tenant_id = ?" + _sc
+    vals: list = [tenant_id, *_sv]
     if status:
         sql += " AND status = ?"; vals.append(status)
     if subscriber_id is not None:
@@ -85,10 +88,12 @@ def update_status(tenant_id: int, iid: int, status: str, *, note: str = "") -> N
 
 
 def stats(tenant_id: int) -> dict:
+    from ...services.subscriber_scope import scope_sql
+    _sc, _sv = scope_sql("subscriber_id", by="id", tenant_id=int(tenant_id))
     cur = db().execute("""
         SELECT status, COUNT(*) AS c, COALESCE(SUM(amount), 0) AS total
-        FROM invoices WHERE tenant_id = ? GROUP BY status
-    """, (tenant_id,))
+        FROM invoices WHERE tenant_id = ?""" + _sc + """ GROUP BY status
+    """, (tenant_id, *_sv))
     out = {"total": 0.0, "paid": 0.0, "pending": 0.0, "count": 0}
     for r in cur.fetchall():
         out[r["status"]] = r["total"] or 0

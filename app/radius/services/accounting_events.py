@@ -91,50 +91,54 @@ class AccountingEventsService:
             "status_type": status,
         }
 
+    # fix3 (F02 H2 / F07 M3): ``scope`` = the manager's owner-scope admin id
+    # (None = every row) — the one subscriber predicate (subscriber_scope).
+    @staticmethod
+    def _scope(scope, tenant_id) -> tuple[str, list]:
+        if scope is None:
+            return "", []
+        from .subscriber_scope import scope_sql
+        return scope_sql("username", scope=int(scope), tenant_id=int(tenant_id),
+                         use_request=False)
+
     def list_online(self, *, tenant_id: int, limit: int = 100,
-                    offset: int = 0) -> list[dict[str, Any]]:
+                    offset: int = 0, scope=None) -> list[dict[str, Any]]:
+        sc, sv = self._scope(scope, tenant_id)
         rows = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ? AND acctstoptime IS NULL
-            ORDER BY radacctid DESC
-            LIMIT ? OFFSET ?
-            """,
-            (int(tenant_id), max(1, min(int(limit or 100), 1000)),
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctstoptime IS NULL" + sc
+            + " ORDER BY radacctid DESC LIMIT ? OFFSET ?",
+            (int(tenant_id), *sv, max(1, min(int(limit or 100), 1000)),
              max(0, int(offset or 0))),
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def count_online(self, *, tenant_id: int) -> int:
+    def count_online(self, *, tenant_id: int, scope=None) -> int:
         """Every open radacct row of the tenant (the `total` of /accounting/online)."""
+        sc, sv = self._scope(scope, tenant_id)
         row = db().execute(
             "SELECT COUNT(*) AS n FROM radacct "
-            "WHERE tenant_id = ? AND acctstoptime IS NULL",
-            (int(tenant_id),),
+            "WHERE tenant_id = ? AND acctstoptime IS NULL" + sc,
+            (int(tenant_id), *sv),
         ).fetchone()
         return int(row["n"] or 0) if row else 0
 
-    def session_detail(self, *, tenant_id: int, session_id: str) -> dict[str, Any] | None:
+    def session_detail(self, *, tenant_id: int, session_id: str,
+                       scope=None) -> dict[str, Any] | None:
+        sc, sv = self._scope(scope, tenant_id)
         row = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ? AND acctsessionid = ?
-            ORDER BY radacctid DESC
-            LIMIT 1
-            """,
-            (int(tenant_id), str(session_id)),
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctsessionid = ?" + sc
+            + " ORDER BY radacctid DESC LIMIT 1",
+            (int(tenant_id), str(session_id), *sv),
         ).fetchone()
         return dict(row) if row else None
 
-    def list_history(self, *, tenant_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    def list_history(self, *, tenant_id: int, limit: int = 100,
+                     scope=None) -> list[dict[str, Any]]:
+        sc, sv = self._scope(scope, tenant_id)
         rows = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ?
-            ORDER BY radacctid DESC
-            LIMIT ?
-            """,
-            (int(tenant_id), max(1, min(int(limit or 100), 500))),
+            "SELECT * FROM radacct WHERE tenant_id = ?" + sc
+            + " ORDER BY radacctid DESC LIMIT ?",
+            (int(tenant_id), *sv, max(1, min(int(limit or 100), 500))),
         ).fetchall()
         return [dict(row) for row in rows]
 

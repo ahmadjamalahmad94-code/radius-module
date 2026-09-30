@@ -109,6 +109,7 @@ def wallets_list():
         owner_type=(request.args.get("owner_type") or "").strip(),
         status=(request.args.get("status") or "").strip(),
         limit=_limit(),
+        scoped=True,  # fix3: subscriber scope of the token admin
     )
     return ok({"items": items, "count": len(items)})
 
@@ -190,6 +191,7 @@ def ledger_list():
         entry_type=(request.args.get("entry_type") or "").strip(),
         reference_type=(request.args.get("reference_type") or "").strip(),
         limit=_limit(),
+        scoped=True,  # fix3: subscriber scope of the token admin
     )
     return ok({"items": items, "count": len(items)})
 
@@ -362,18 +364,27 @@ def price_snapshots_capture():
 
 def business_summary():
     tenant_id = _tid()
+    # fix3 (F02 H2): the token admin's subscriber scope on every figure.
+    from ...radius.services.subscriber_scope import current_scope_admin_id, entity_scope_sql
+    wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=tenant_id)
+    lsc, lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                actor_id_col="actor_id", tenant_id=tenant_id)
+    scoped = current_scope_admin_id(tenant_id=tenant_id) is not None
     row = db().execute(
-        """
-        SELECT
-          (SELECT COUNT(*) FROM wallets WHERE tenant_id=?) AS wallets,
-          (SELECT COALESCE(SUM(balance_minor), 0) FROM wallets WHERE tenant_id=?) AS wallet_balance_minor,
-          (SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?) AS ledger_entries,
-          (SELECT COALESCE(SUM(amount_minor), 0) FROM ledger_entries WHERE tenant_id=? AND voided_at IS NULL) AS ledger_total_minor,
-          (SELECT COUNT(*) FROM business_events WHERE tenant_id=?) AS events,
-          (SELECT COUNT(*) FROM price_snapshots WHERE tenant_id=?) AS price_snapshots,
-          (SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?) AS revenue_records
-        """,
-        (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+        "SELECT"
+        " (SELECT COUNT(*) FROM wallets WHERE tenant_id=?" + wsc + ") AS wallets,"
+        " (SELECT COALESCE(SUM(balance_minor), 0) FROM wallets WHERE tenant_id=?" + wsc
+        + ") AS wallet_balance_minor,"
+        " (SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?" + lsc + ") AS ledger_entries,"
+        " (SELECT COALESCE(SUM(amount_minor), 0) FROM ledger_entries WHERE tenant_id=?"
+        " AND voided_at IS NULL" + lsc + ") AS ledger_total_minor,"
+        " (SELECT COUNT(*) FROM business_events WHERE tenant_id=?" + lsc + ") AS events,"
+        " (SELECT COUNT(*) FROM price_snapshots WHERE tenant_id=?" + (" AND 0" if scoped else "")
+        + ") AS price_snapshots,"
+        " (SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?" + (" AND 0" if scoped else "")
+        + ") AS revenue_records",
+        (tenant_id, *wsv, tenant_id, *wsv, tenant_id, *lsv, tenant_id, *lsv,
+         tenant_id, *lsv, tenant_id, tenant_id),
     ).fetchone()
     data = dict(row or {})
     data["wallet_balance"] = minor_to_money(data.pop("wallet_balance_minor", 0))

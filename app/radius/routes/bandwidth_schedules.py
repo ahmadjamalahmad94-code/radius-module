@@ -124,11 +124,20 @@ def _plans() -> list:
 
 
 def _subscribers() -> list:
-    return list(get_users_service().list(user_type="subscriber", limit=500))
+    # fix3 (F02 M3): only the admin's own subscribers in the picker.
+    from ..services.subscriber_scope import current_scope_admin_id
+    return list(get_users_service().list(
+        user_type="subscriber", limit=500,
+        owner_admin_id=current_scope_admin_id(tenant_id=_tid())))
 
 
 def _batches() -> list:
-    return list(get_cards_service().list_batches(limit=500))
+    # fix3 (F01 F10): only the batches the admin may see.
+    from ..services.card_batch_scope import batch_accessible, batch_scope_admin_id
+    items = list(get_cards_service().list_batches(limit=500))
+    if batch_scope_admin_id(None, tenant_id=_tid()) is None:
+        return items
+    return [b for b in items if batch_accessible(getattr(b, "id", None), tenant_id=_tid())]
 
 
 def bandwidth_schedules():

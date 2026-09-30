@@ -296,6 +296,10 @@ def online_list():
     except RadiusError as e:
         items = []
         error = e.message
+    # fix3 (F02 H2): a manager without «عرض كل المشتركين» sees only the live
+    # sessions of his own subscribers (one predicate with the API).
+    from ..services.subscriber_scope import filter_rows as _scope_rows
+    items = _scope_rows(items, key="username", tenant_id=_tid())
 
     # فلترة الحالة الحيّة: لا نَعرض جلسات على راوتر غير قابل للوصول (لا يمكن
     # التحقّق → لا بيانات). نُطبّق الفلترة فقط حين يوجد سجلّ liveness (المُستطلِع

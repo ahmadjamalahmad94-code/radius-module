@@ -58,6 +58,21 @@ def _range_sql(column: str, utc_from: str = "", utc_to: str = "") -> tuple[str, 
     return sql, vals
 
 
+def _rscope(tenant_id: int, column: str = "l.subscriber_id", by: str = "id") -> tuple[str, list]:
+    """fix3 (F02 H2 / F01 F7 / F08 H3): the REQUEST admin's subscriber scope on a
+    subscriber-linked column — ``("", [])`` for the owner / co-owner / «عرض كل
+    المشتركين» / unbound credentials / background jobs. One predicate
+    (``services/subscriber_scope``) for every money list and report, web + API."""
+    from ...services.subscriber_scope import scope_sql
+    return scope_sql(column, by=by, tenant_id=int(tenant_id))
+
+
+def _rscope_on() -> bool:
+    """Is the request admin scoped (not seeing every subscriber)?"""
+    from ...services.subscriber_scope import current_scope_admin_id
+    return current_scope_admin_id() is not None
+
+
 def _merge_by_currency(rows, sum_keys: tuple[str, ...]) -> list[dict]:
     """صفوفٌ مجمّعة بعملة (قد تتكرّر العملة الفارغة/الصغيرة) → قائمة by_currency
     مرتّبة: عملة النظام أوّلًا ثمّ الأكبر."""
@@ -234,8 +249,9 @@ def _emit_ledger_event(conn, *, tenant_id: int, entry_id: int, entry_type: str,
 def list_ledger_entries(tenant_id: int, *, entry_type: str = "",
                         subscriber_id: int | None = None, limit: int = 100,
                         offset: int = 0) -> list[dict]:
-    sql = "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ?"
-    vals: list[Any] = [tenant_id]
+    sc, sv = _rscope(tenant_id, "subscriber_id")
+    sql = "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ?" + sc
+    vals: list[Any] = [tenant_id, *sv]
     if entry_type:
         sql += " AND entry_type = ?"
         vals.append(entry_type)
@@ -522,8 +538,9 @@ def void_payment(*, tenant_id: int, payment: dict, actor: str,
 def list_payments(tenant_id: int, *, subscriber_id: int | None = None,
                   distributor_id: int | None = None,
                   limit: int = 100, offset: int = 0) -> list[dict]:
-    sql = "SELECT * FROM payment_transactions WHERE tenant_id = ?"
-    vals: list[Any] = [tenant_id]
+    sc, sv = _rscope(tenant_id, "subscriber_id")
+    sql = "SELECT * FROM payment_transactions WHERE tenant_id = ?" + sc
+    vals: list[Any] = [tenant_id, *sv]
     if subscriber_id:
         sql += " AND subscriber_id = ?"
         vals.append(subscriber_id)
@@ -608,8 +625,9 @@ def get_loan(tenant_id: int, loan_id: int) -> Optional[dict]:
 
 def _loans_where(tenant_id: int, *, status: str = "",
                  subscriber_id: int | None = None) -> tuple[str, list[Any]]:
-    sql = " WHERE tenant_id = ?"
-    vals: list[Any] = [tenant_id]
+    sc, sv = _rscope(tenant_id, "subscriber_id")
+    sql = " WHERE tenant_id = ?" + sc
+    vals: list[Any] = [tenant_id, *sv]
     if status:
         sql += " AND status = ?"
         vals.append(status)
@@ -882,12 +900,13 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
         expr = f"substr({local}, 1, 10)"
     # العدد/المتوسّط على الدفعات الفعليّة فقط (المُلغاة وقيد إلغائها خارج العدّ)؛
     # المجموع صافٍ كما كان. ``by_currency`` لكلّ فترة — لا جمع ILS+USD في رقم.
+    sc, sv = _rscope(tenant_id)
     frm = f"""
         FROM accounting_ledger_entries l
         LEFT JOIN accounting_ledger_entries orig
           ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
         WHERE l.tenant_id = ?
-          AND {_PAYMENT_ROWS_SQL}
+          AND {_PAYMENT_ROWS_SQL}{sc}
     """
     counted = f"CASE WHEN {_COUNTED_PAYMENT_SQL} THEN 1 ELSE 0 END"
     rows = db().execute(
@@ -902,7 +921,7 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
         ORDER BY period DESC
         LIMIT 60
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     cur_sql = _CURRENCY_SQL.format(col="l.currency")
     split: dict[str, list] = {}
@@ -914,7 +933,7 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
         {frm}
         GROUP BY {expr}, {cur_sql}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall():
         split.setdefault(r["period"], []).append(r)
     out = []
@@ -935,12 +954,13 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
                               limit: int | None = None, offset: int = 0) -> list[dict]:
     """دفعات المستفيدين — **كل** الدافعين (كان مقصوصًا على 200 بصمت).
     ``limit``/``offset`` اختياريّان للترقيم؛ بدونهما يُعاد الكلّ."""
+    sc, sv = _rscope(tenant_id)
     frm = f"""
         FROM accounting_ledger_entries l
         LEFT JOIN accounting_ledger_entries orig
           ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
         WHERE l.tenant_id = ?
-          AND {_PAYMENT_ROWS_SQL}
+          AND {_PAYMENT_ROWS_SQL}{sc}
     """
     counted = f"CASE WHEN {_COUNTED_PAYMENT_SQL} THEN 1 ELSE 0 END"
     # «العدد» = الدفعات الفعليّة (الدفعة المُلغاة وقيد إلغائها لا يُعدّان).
@@ -950,7 +970,7 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
                MAX(l.created_at) AS last_entry_at
         {frm}
     """
-    vals: list[Any] = [tenant_id]
+    vals: list[Any] = [tenant_id, *sv]
     if subscriber_id:
         sql += " AND l.subscriber_id = ?"
         vals.append(subscriber_id)
@@ -967,7 +987,7 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
     if not rows:
         return rows
     split: dict[tuple, list] = {}
-    split_vals = [tenant_id] + ([subscriber_id] if subscriber_id else [])
+    split_vals = [tenant_id, *sv] + ([subscriber_id] if subscriber_id else [])
     for r in db().execute(split_sql, split_vals).fetchall():
         split.setdefault((r["subscriber_id"], r["username"]), []).append(r)
     for item in rows:
@@ -984,6 +1004,7 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
     ``entries`` = الدفعات الفعليّة (بلا المُلغاة وقيود إلغائها) — كانت دفعةٌ
     وإلغاؤها قيدين؛ ``ledger_rows`` = كلّ صفوف الدفتر الداخلة في المجموع."""
     counted = f"CASE WHEN {_COUNTED_PAYMENT_SQL} THEN 1 ELSE 0 END"
+    sc, sv = _rscope(tenant_id)
     row = db().execute(
         f"""
         SELECT COUNT(DISTINCT l.username) AS payers, COALESCE(SUM({counted}), 0) AS entries,
@@ -996,9 +1017,9 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
           AND (
             (l.entry_type = 'payment' AND l.status = 'posted')
             OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
-          )
+          ){sc}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchone()
     # Per-currency split (no FX rate — one number per currency, a10 F8).
     by_currency = [
@@ -1015,11 +1036,11 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
               AND (
                 (l.entry_type = 'payment' AND l.status = 'posted')
                 OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
-              )
+              ){sc}
             GROUP BY UPPER(COALESCE(l.currency, ''))
             ORDER BY total DESC
             """,
-            (tenant_id,),
+            (tenant_id, *sv),
         ).fetchall()
     ]
     return {"payers": int(row["payers"] or 0), "entries": int(row["entries"] or 0),
@@ -1042,6 +1063,7 @@ def payment_revenue_items(tenant_id: int, *, limit: int = 200,
                           offset: int = 0) -> list[dict]:
     """دفعات المشتركين بشكل «سجلّ إيراد» — المصدر نفسه لتقارير المبيعات
     (قيود الدفتر ``payment``)، مع حالة «voided» للدفعة المعكوسة."""
+    sc, sv = _rscope(tenant_id)
     rows = db().execute(
         """
         SELECT l.id, l.source_id, l.amount, l.currency, l.username, l.subscriber_id,
@@ -1052,9 +1074,10 @@ def payment_revenue_items(tenant_id: int, *, limit: int = 200,
                     THEN 'voided' ELSE 'posted' END AS status
         FROM accounting_ledger_entries l
         WHERE l.tenant_id = ? AND l.entry_type = 'payment' AND l.status = 'posted'
+        """ + sc + """
         ORDER BY l.id DESC LIMIT ? OFFSET ?
         """,
-        (tenant_id, int(limit), max(int(offset or 0), 0)),
+        (tenant_id, *sv, int(limit), max(int(offset or 0), 0)),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1062,25 +1085,26 @@ def payment_revenue_items(tenant_id: int, *, limit: int = 200,
 def loan_report(tenant_id: int) -> list[dict]:
     outstanding = (f"COALESCE(SUM(CASE WHEN status = 'open' "
                    f"THEN MAX(amount - {_LOAN_SETTLED_SQL}, 0) ELSE 0 END), 0)")
+    sc, sv = _rscope(tenant_id, "subscriber_id")
     rows = db().execute(
         f"""
         SELECT status, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total,
                {outstanding} AS outstanding,
                COALESCE(SUM(duration_minutes), 0) AS duration_minutes
         FROM loan_entries
-        WHERE tenant_id = ?
+        WHERE tenant_id = ?{sc}
         GROUP BY status
         ORDER BY status
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     split: dict[str, list] = {}
     cur_sql = _CURRENCY_SQL.format(col="currency")
     for r in db().execute(
         f"SELECT status, {cur_sql} AS currency, COALESCE(SUM(amount), 0) AS total, "
-        f"{outstanding} AS outstanding FROM loan_entries WHERE tenant_id = ? "
+        f"{outstanding} AS outstanding FROM loan_entries WHERE tenant_id = ?{sc} "
         f"GROUP BY status, {cur_sql}",
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall():
         split.setdefault(r["status"], []).append(r)
     out = []
@@ -1097,6 +1121,7 @@ def activation_report(tenant_id: int) -> list[dict]:
     # «عدد التفعيلات» = الدفعات الفعليّة فقط: الدفعة المُلغاة وقيد إلغائها لا
     # يُعدّان (كانا تفعيلين)؛ صافي الدقائق يبقى كما هو (+م ثمّ −م).
     counted = _COUNTED_PAYMENT_SQL
+    sc, sv = _rscope(tenant_id)
     rows = db().execute(
         f"""
         SELECT
@@ -1110,9 +1135,9 @@ def activation_report(tenant_id: int) -> list[dict]:
           AND (
             (l.entry_type = 'payment' AND l.status = 'posted')
             OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
-          )
+          ){sc}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     totals: dict[str, dict] = {}
     for row in rows:
@@ -1156,6 +1181,7 @@ def loans_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
     الديون/outstanding so the two read as distinct buckets (operator decision).
     """
     expr = _grain_expr("created_at", grain)
+    sc, sv = _rscope(tenant_id, "subscriber_id")
     rows = db().execute(
         f"""
         SELECT {expr} AS period,
@@ -1164,12 +1190,12 @@ def loans_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
                COALESCE(SUM(duration_minutes), 0) AS minutes,
                COALESCE(SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END), 0) AS still_open
         FROM loan_entries
-        WHERE tenant_id = ?
+        WHERE tenant_id = ?{sc}
         GROUP BY period
         ORDER BY period DESC
         LIMIT 24
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1181,6 +1207,7 @@ def activation_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
     parsing ledger metadata). Returns count + amount collected + minutes granted.
     """
     expr = _grain_expr("created_at", grain)
+    sc, sv = _rscope(tenant_id, "subscriber_id")
     rows = db().execute(
         f"""
         SELECT {expr} AS period,
@@ -1190,12 +1217,12 @@ def activation_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
         FROM payment_transactions
         WHERE tenant_id = ?
           AND status = 'posted'
-          AND earned_minutes > 0
+          AND earned_minutes > 0{sc}
         GROUP BY period
         ORDER BY period DESC
         LIMIT 24
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1207,6 +1234,7 @@ def data_usage_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
     bytes → GB. This is consumption; quota *allocation* is point-in-time.
     """
     expr = _grain_expr("day", grain)
+    sc, sv = _rscope(tenant_id, "subscriber_id")
     rows = db().execute(
         f"""
         SELECT {expr} AS period,
@@ -1214,12 +1242,12 @@ def data_usage_summary(tenant_id: int, *, grain: str = "monthly") -> list[dict]:
                COALESCE(SUM(bytes_out), 0) AS bytes_out,
                COALESCE(SUM(sessions_count), 0) AS sessions
         FROM bandwidth_usage_daily
-        WHERE tenant_id = ?
+        WHERE tenant_id = ?{sc}
         GROUP BY period
         ORDER BY period DESC
         LIMIT 24
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1233,15 +1261,17 @@ def outstanding_summary(tenant_id: int) -> dict:
       • negative balances — subscribers whose balance < 0 (in deficit)
     The credit side (positive balances) is returned for context.
     """
+    sc, sv = _rscope(tenant_id, "subscriber_id")
+    ssc, ssv = _rscope(tenant_id, "id")
     loans = db().execute(
         f"""
         SELECT COALESCE(SUM(MAX(amount - {_LOAN_SETTLED_SQL}, 0)), 0) AS total,
                COUNT(*) AS count,
                COALESCE(SUM(duration_minutes), 0) AS minutes
         FROM loan_entries
-        WHERE tenant_id = ? AND status = 'open'
+        WHERE tenant_id = ? AND status = 'open'{sc}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchone()
     bal = db().execute(
         """
@@ -1250,9 +1280,9 @@ def outstanding_summary(tenant_id: int) -> dict:
                COALESCE(SUM(CASE WHEN balance > 0 THEN balance ELSE 0 END), 0) AS credit,
                COALESCE(SUM(CASE WHEN balance > 0 THEN 1 ELSE 0 END), 0) AS credit_count
         FROM subscribers
-        WHERE tenant_id = ? AND deleted_at IS NULL
+        WHERE tenant_id = ? AND deleted_at IS NULL""" + ssc + """
         """,
-        (tenant_id,),
+        (tenant_id, *ssv),
     ).fetchone()
     open_loans_total = float((loans and loans["total"]) or 0.0)
     owed = float((bal and bal["owed"]) or 0.0)
@@ -1272,6 +1302,7 @@ def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
     """Per-subscriber drill-down rows for the overview — biggest open-loan
     holders + deepest negative balances, each deep-linking to Finance.
     """
+    ssc, ssv = _rscope(tenant_id, "s.id")
     rows = db().execute(
         f"""
         SELECT s.id AS subscriber_id, s.username, s.full_name, s.balance,
@@ -1286,12 +1317,12 @@ def top_debtors(tenant_id: int, *, limit: int = 8) -> list[dict]:
             WHERE tenant_id = ? AND status = 'open'
             GROUP BY subscriber_id
         ) l ON l.subscriber_id = s.id
-        WHERE s.tenant_id = ? AND s.deleted_at IS NULL
+        WHERE s.tenant_id = ? AND s.deleted_at IS NULL{ssc}
           AND (s.balance < 0 OR COALESCE(l.open_total, 0) > 0)
         ORDER BY (COALESCE(l.open_total, 0) + CASE WHEN s.balance < 0 THEN -s.balance ELSE 0 END) DESC
         LIMIT ?
         """,
-        (tenant_id, tenant_id, int(limit)),
+        (tenant_id, tenant_id, *ssv, int(limit)),
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -1304,6 +1335,7 @@ def profit_loss_summary(tenant_id: int) -> list[dict]:
     side = ("CASE WHEN reversal_of_entry_id IS NOT NULL "
             "THEN (CASE direction WHEN 'debit' THEN 'credit' ELSE 'debit' END) "
             "ELSE direction END")
+    sc, sv = _rscope(tenant_id, "subscriber_id")
     row = db().execute(
         f"""
         SELECT
@@ -1311,9 +1343,9 @@ def profit_loss_summary(tenant_id: int) -> list[dict]:
             COALESCE(SUM(CASE WHEN {side} = 'debit' THEN amount ELSE 0 END), 0) AS debits,
             COUNT(*) AS entries
         FROM accounting_ledger_entries
-        WHERE tenant_id = ?
+        WHERE tenant_id = ?{sc}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchone()
     credits = float(row["credits"] or 0)
     debits = float(row["debits"] or 0)
@@ -1326,10 +1358,10 @@ def profit_loss_summary(tenant_id: int) -> list[dict]:
             COALESCE(SUM(CASE WHEN {side} = 'debit' THEN amount ELSE 0 END), 0) AS debits,
             COUNT(*) AS entries
         FROM accounting_ledger_entries
-        WHERE tenant_id = ?
+        WHERE tenant_id = ?{sc}
         GROUP BY {cur_sql}
         """,
-        (tenant_id,),
+        (tenant_id, *sv),
     ).fetchall()
     by_cur = _merge_by_currency(split, ("credits", "debits", "entries"))
     for c in by_cur:
@@ -1360,6 +1392,8 @@ def revenue_summary(tenant_id: int, *, utc_from: str = "", utc_to: str = "") -> 
     ``mixed_currency``)."""
     counted = f"CASE WHEN {_COUNTED_PAYMENT_SQL} THEN 1 ELSE 0 END"
     rng, rvals = _range_sql("l.created_at", utc_from, utc_to)
+    sc, sv = _rscope(tenant_id)
+    rng, rvals = rng + sc, [*rvals, *sv]
     cur_sql = _CURRENCY_SQL.format(col="l.currency")
     pay_rows = db().execute(
         f"""
@@ -1375,6 +1409,10 @@ def revenue_summary(tenant_id: int, *, utc_from: str = "", utc_to: str = "") -> 
     ).fetchall()
     rec_rows: list = []
     try:
+        if _rscope_on():
+            # card-store revenue records carry no subscriber: a scoped manager
+            # sees only his own subscribers' payments (fix3).
+            raise LookupError("scoped")
         rrng, rrvals = _range_sql("created_at", utc_from, utc_to)
         rec_rows = db().execute(
             f"""
@@ -1434,31 +1472,37 @@ def revenue_summary(tenant_id: int, *, utc_from: str = "", utc_to: str = "") -> 
 
 
 def card_sales_report(tenant_id: int) -> list[dict]:
+    from ...services.card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(column="CAST(source_id AS INTEGER)", tenant_id=int(tenant_id))
     rows = db().execute(
         """
         SELECT source_id AS batch_id, COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total
         FROM accounting_ledger_entries
         WHERE tenant_id = ? AND entry_type = 'payment'
-          AND source_type = 'card_sale' AND status = 'posted'
+          AND source_type = 'card_sale' AND status = 'posted'""" + bsc + """
         GROUP BY source_id
         ORDER BY total DESC
         LIMIT 200
         """,
-        (tenant_id,),
+        (tenant_id, *bsv),
     ).fetchall()
     return [dict(r) for r in rows]
 
 
 def distributor_debts_report(tenant_id: int) -> list[dict]:
+    from ...services.subscriber_scope import current_scope_admin_id
+    scope = current_scope_admin_id(tenant_id=int(tenant_id))
+    dsc, dsv = ("", []) if scope is None else (
+        " AND (admin_id = ? OR login_admin_id = ?)", [int(scope), int(scope)])
     rows = db().execute(
         """
         SELECT id AS distributor_id, name, display_name, debt_balance, balance, credit_limit
         FROM distributors
-        WHERE tenant_id = ? AND status = 'active'
+        WHERE tenant_id = ? AND status = 'active'""" + dsc + """
         ORDER BY debt_balance DESC, name
         LIMIT 200
         """,
-        (tenant_id,),
+        (tenant_id, *dsv),
     ).fetchall()
     return [dict(r) for r in rows]
 

@@ -50,10 +50,55 @@ def dashboard_view():
             "printed": {"batches": 0, "total": 0, "available": 0, "connected": 0, "sold_today": 0},
             "electronic": {"batches": 0, "total": 0, "available": 0, "connected": 0, "sold_today": 0},
         }
+    snap, executive, card_dashboard, access = _gate_dashboard(
+        snap, metrics, executive, card_dashboard)
     return render_template(
         "radius/dashboard.html",
         snap=snap,
         metrics=metrics,
         executive=executive,
         card_dashboard=card_dashboard,
+        dash_access=access,
     )
+
+
+def _gate_dashboard(snap, metrics, executive, card_dashboard):
+    """fix3 (F01 F8 / F02 H2): the legacy KPI snapshot is tenant-wide and the
+    template falls back to it when a (scoped) metric is 0 — for anyone but the
+    owner it is rebuilt from the scoped, key-gated ``metrics``; money needs
+    ``reports.finance``; the card stock needs ``cards.view``."""
+    from dataclasses import replace
+    access = (metrics or {}).get("access") or {}
+    if not access or all(access.values()):
+        return snap, executive, card_dashboard, access or {}
+    subs = metrics.get("subscribers") or {}
+    cards = metrics.get("cards") or {}
+    nas = metrics.get("nas") or {}
+    plans = metrics.get("plans") or {}
+    fin = (executive or {}).get("finance") or {}
+    money = bool(access.get("finance"))
+    try:
+        snap = replace(
+            snap,
+            total_subscribers=int(subs.get("total") or 0),
+            enabled_subscribers=int(subs.get("active") or 0),
+            expired_subscribers=int(subs.get("expired") or 0),
+            online_now=int(subs.get("online") or 0),
+            total_cards=int(cards.get("total") or 0),
+            used_cards=int(cards.get("used") or 0),
+            nas_total=int(nas.get("total") or 0),
+            nas_online=int(nas.get("enabled") or 0),
+            plans_total=int(plans.get("total") or 0),
+            admins_total=0, bytes_today_in=0, bytes_today_out=0,
+            revenue_today=float(fin.get("revenue_today") or 0) if money else 0.0,
+            revenue_month=float(fin.get("revenue_month") or 0) if money else 0.0,
+            recent_actions=(), top_plans=())
+    except Exception:  # noqa: BLE001 — never leak the tenant snapshot
+        snap = None
+    if not money and isinstance(executive, dict):
+        executive = dict(executive)
+        executive["finance"] = {"hidden": True}
+    if not access.get("cards"):
+        empty = {"batches": 0, "total": 0, "available": 0, "connected": 0, "sold_today": 0}
+        card_dashboard = {"printed": dict(empty), "electronic": dict(empty)}
+    return snap, executive, card_dashboard, access

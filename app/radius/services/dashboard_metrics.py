@@ -57,11 +57,14 @@ def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
     """
     from ..db.repos import subscribers_repo
     t = tenant_id if tenant_id is not None else _tid()
+    # fix3 (F02 H2 / F01 F8): the request admin's subscriber scope.
+    from .subscriber_scope import current_scope_admin_id
+    _scope = current_scope_admin_id(tenant_id=t)
 
     def _n(**kw) -> int:
         try:
             return int(subscribers_repo.count_subscribers(
-                t, user_type="subscriber", **kw))
+                t, user_type="subscriber", owner_admin_id=_scope, **kw))
         except Exception:  # noqa: BLE001 — لا نكسر اللوحة
             return 0
 
@@ -88,6 +91,16 @@ def get_online_count(tenant_id: Optional[int] = None) -> int:
     الراوترات القابلة للوصول فقط — فارغ عند الانقطاع. يَرتدّ تلقائيًّا إلى عدّ
     radacct المفتوح حين لا سجلّ liveness (المُستطلِع متوقّف/راوتر بلا API)."""
     t = tenant_id if tenant_id is not None else _tid()
+    # fix3: a scoped manager counts only HIS subscribers'/cards' open sessions.
+    from .subscriber_scope import current_scope_admin_id, scope_sql
+    _scope = current_scope_admin_id(tenant_id=t)
+    if _scope is not None:
+        try:
+            sc, sv = scope_sql("username", scope=int(_scope), tenant_id=t, use_request=False)
+            return int(_scalar("SELECT COUNT(DISTINCT username) FROM radacct "
+                               "WHERE tenant_id=? AND acctstoptime IS NULL" + sc, (t, *sv)))
+        except Exception:  # noqa: BLE001
+            return 0
     # real_only: جلسات أسماءٍ موجودة كمشترك أو كرت فقط (لا T-<MAC>/«مؤقت»/اسم
     # مجهول) — الرقم نفسه في لوحة الويب والـAPI وشارة /online.
     try:
@@ -185,15 +198,21 @@ def card_batch_dashboard_summary(tenant_id: int) -> dict:
           AND {filter_clause}
     """
 
+    # fix3 (F01 F10 / F07 M2): «رؤية كل حِزم البطاقات» — the request admin's
+    # card-batch scope on the stock figures too (one predicate).
+    from .card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(alias="b", tenant_id=int(tenant_id))
+
     def one(kind: str) -> dict:
         filter_clause = (_ELECTRONIC_BATCH_FILTER if kind == "electronic"
                          else f"NOT ({_ELECTRONIC_BATCH_FILTER})")
+        filter_clause = "(" + filter_clause + ")" + bsc
         try:
             row = db().execute(common.format(filter_clause=filter_clause),
-                               (tenant_id, tenant_id, tenant_id)).fetchone()
+                               (tenant_id, tenant_id, tenant_id, *bsv)).fetchone()
             sold_today = db().execute(
                 sold_today_sql.format(filter_clause=filter_clause),
-                (tenant_id,),
+                (tenant_id, *bsv),
             ).fetchone()
         except Exception:
             return {"batches": 0, "total": 0, "used": 0, "available": 0,
@@ -237,12 +256,15 @@ def get_card_counts(tenant_id: Optional[int] = None) -> dict:
 def get_recent_batches(*, limit: int = 5, tenant_id: Optional[int] = None) -> list[dict]:
     """آخر N حزمة — فقط ما يحتاجه القالب."""
     t = tenant_id if tenant_id is not None else _tid()
+    # fix3 (F07 M2): «آخر الحزم» — only the batches this admin may see.
+    from .card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(alias="card_batches", tenant_id=int(t))
     try:
         rows = db().execute(
             "SELECT id, batch_code, package_name, count, generated, used, created_at "
-            "FROM card_batches WHERE tenant_id=? AND COALESCE(deleted_at, '') = '' "
-            "ORDER BY id DESC LIMIT ?",
-            (t, limit)).fetchall()
+            "FROM card_batches WHERE tenant_id=? AND COALESCE(deleted_at, '') = ''" + bsc
+            + " ORDER BY id DESC LIMIT ?",
+            (t, *bsv, limit)).fetchall()
         return [dict(r) for r in rows]
     except Exception:
         return []
@@ -437,9 +459,42 @@ def build_alerts(*, subs: dict, cards: dict, plans: dict,
 # ────────────────────────────────────────────────────────────────
 # 8. واجهة موحَّدة — يُستدعى من route
 # ────────────────────────────────────────────────────────────────
+def dashboard_access() -> dict:
+    """fix3 (F01 F8): which dashboard sections the request admin may see —
+    the same keys as their pages (owner / co-owner / unbound credential: all).
+    ``system`` (server hostname / OS / resources) stays owner-only."""
+    full = {"subscribers": True, "cards": True, "network": True, "plans": True,
+            "finance": True, "system": True}
+    try:
+        from .subscriber_scope import request_admin_id
+        aid = request_admin_id()
+        if not aid:
+            return full
+        from ..auth.owner import is_owner_like
+        if is_owner_like(int(aid)):
+            return full
+        from ..db.repos import admins_repo
+        admin = admins_repo.get_admin(int(aid))
+        perms = set(admins_repo.admin_permissions(admin)) if admin is not None else set()
+    except Exception:  # noqa: BLE001 — fail-closed
+        perms = set()
+    return {
+        "subscribers": "users.view" in perms,
+        "cards": "cards.view" in perms,
+        "network": "nas.view" in perms,
+        "plans": "plans.view" in perms,
+        "finance": "reports.finance" in perms,
+        "system": False,
+    }
+
+
 def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
-    """يجمع كل المؤشرات في dict واحد للـ template. لا يرفع أبدًا."""
+    """يجمع كل المؤشرات في dict واحد للـ template. لا يرفع أبدًا.
+
+    fix3 (F02 H2 / F01 F8 / F07 M2): scoped to the request admin (his
+    subscribers / batches) and gated per section key (``access``)."""
     t = tenant_id if tenant_id is not None else _tid()
+    access = dashboard_access()
     try: subs = get_subscriber_counts(t)
     except Exception: subs = {}
     # online من radacct — مستقل عن status
@@ -458,6 +513,32 @@ def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
     except Exception: system = {}
     alerts = build_alerts(subs=subs, cards=cards, plans=plans,
                             nas=nas, system=system)
+
+    def _alert_section(a: dict) -> str:
+        ep = str(a.get("link_endpoint") or "")
+        if ep.endswith(("users_list", "users_new")):
+            return "subscribers"
+        if "cards" in ep:
+            return "cards"
+        if "plans" in ep:
+            return "plans"
+        if "devices" in ep or "nas" in ep:
+            return "network"
+        return "system"      # settings / server resources / no link
+    alerts = [a for a in alerts if access.get(_alert_section(a))]
+    if not access["system"]:
+        system = {}
+    if not access["subscribers"]:
+        subs = {k: 0 for k in ("total", "active", "expired", "suspended", "disabled",
+                               "banned", "expiring_soon", "other", "online")}
+    if not access["cards"]:
+        cards = {k: 0 for k in ("total", "used", "available", "batches", "connected")}
+        cards.update({"printed": {}, "electronic": {}})
+        recent_batches = []
+    if not access["plans"]:
+        plans = {"total": 0, "enabled": 0, "disabled": 0}
+    if not access["network"]:
+        nas = {}
     return {
         "subscribers":    subs,
         "cards":          cards,
@@ -466,4 +547,5 @@ def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
         "nas":            nas,
         "system":         system,
         "alerts":         alerts,
+        "access":         access,
     }

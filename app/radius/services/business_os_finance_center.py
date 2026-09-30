@@ -157,7 +157,9 @@ def revenue_items(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[
             "collected": amount,
             "source_display": ("دفعة مشترك — " + username) if username else "دفعة مشترك",
         })
-    if _table_exists("revenue_records"):
+    # fix3 (F02 H2): card-store revenue records carry no subscriber — a manager
+    # without «عرض كل المشتركين» sees only his own subscribers' payments.
+    if _table_exists("revenue_records") and not accounting_repo._rscope_on():
         rows = db().execute(
             "SELECT * FROM revenue_records WHERE tenant_id=? ORDER BY id DESC LIMIT ?",
             (tid, window),
@@ -184,18 +186,29 @@ class FinanceCenterService:
 
     def dashboard(self, *, tenant_id: int = 1) -> dict[str, Any]:
         tenant = int(tenant_id)
-        wallet_count = int(_scalar("SELECT COUNT(*) FROM wallets WHERE tenant_id=?", (tenant,)) or 0)
-        ledger_count = int(_scalar("SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?", (tenant,)) or 0)
-        revenue_count = int(_scalar("SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?", (tenant,)) or 0)
-        loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=?", (tenant,)) or 0) if _table_exists("loan_entries") else 0
-        open_loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=? AND status='open'", (tenant,)) or 0) if _table_exists("loan_entries") else 0
+        # fix3 (F02 H2 / F08 H3): the SAME subscriber scope as every list — a
+        # manager without «عرض كل المشتركين» sees his own numbers, not the network's.
+        from .subscriber_scope import entity_scope_sql
+        wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=tenant)
+        lsc, lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                    actor_id_col="actor_id", tenant_id=tenant)
+        scoped = accounting_repo._rscope_on()
+        lnsc, lnsv = accounting_repo._rscope(tenant, "subscriber_id")
+        wallet_count = int(_scalar("SELECT COUNT(*) FROM wallets WHERE tenant_id=?" + wsc,
+                                   (tenant, *wsv)) or 0)
+        ledger_count = int(_scalar("SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?" + lsc,
+                                   (tenant, *lsv)) or 0)
+        revenue_count = 0 if scoped else int(_scalar("SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?", (tenant,)) or 0)
+        loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=?" + lnsc, (tenant, *lnsv)) or 0) if _table_exists("loan_entries") else 0
+        open_loan_count = int(_scalar("SELECT COUNT(*) FROM loan_entries WHERE tenant_id=? AND status='open'" + lnsc, (tenant, *lnsv)) or 0) if _table_exists("loan_entries") else 0
         # الإيراد/الربح/التحصيل من المصدر نفسه لـ/api/v1/finance/revenue وتقرير
         # «دفعات المستفيدين»: دفعات الدفتر (صافية من الإلغاء) + سجلّات الكروت.
         # كانت تقرأ revenue_records وحده (الدفعات لا تكتب فيه) ⇒ «0 ₪» دائمًا.
         rev = accounting_repo.revenue_summary(tenant)
+        psc, psv = accounting_repo._rscope(tenant, "subscriber_id")
         payment_rows = int(_scalar(
             "SELECT COUNT(*) FROM accounting_ledger_entries WHERE tenant_id=? "
-            "AND entry_type='payment' AND status='posted'", (tenant,)) or 0)
+            "AND entry_type='payment' AND status='posted'" + psc, (tenant, *psv)) or 0)
         # الديون/السلف المفتوحة = **المتبقّي** (القيمة − التسويات المُرحَّلة)، لا
         # القيمة الأصليّة — التسوية الجزئيّة تُبقي السلفة مفتوحة بباقيها.
         loans_t = (accounting_repo.loan_totals(tenant, status="open")
@@ -203,16 +216,18 @@ class FinanceCenterService:
                    {"outstanding": 0.0, "total_amount": 0.0, "by_currency": [], "mixed_currency": False})
         return {
             "wallet_count": wallet_count,
-            "wallet_balance": _minor_sum("wallets", "balance_minor", params=(tenant,)),
+            "wallet_balance": _minor_sum("wallets", "balance_minor", "tenant_id=?" + wsc,
+                                         (tenant, *wsv)),
             "ledger_entries": ledger_count,
-            "ledger_total": _minor_sum("ledger_entries", "amount_minor", "tenant_id=? AND voided_at IS NULL", (tenant,)),
+            "ledger_total": _minor_sum("ledger_entries", "amount_minor",
+                                       "tenant_id=? AND voided_at IS NULL" + lsc, (tenant, *lsv)),
             "total_revenue": f"{rev['revenue']:.2f}",
             "total_collections": f"{rev['payments']:.2f}",
             "total_debts": f"{float(loans_t['outstanding'] or 0):.2f}",
             "total_loans": f"{float(loans_t['outstanding'] or 0):.2f}",
             "total_loans_original": f"{float(loans_t['total_amount'] or 0):.2f}",
             "total_profit": f"{rev['profit']:.2f}",
-            "distributor_shares": _minor_sum("profit_shares", "share_amount_minor", "tenant_id=? AND beneficiary_type='distributor'", (tenant,)),
+            "distributor_shares": ("0.00" if scoped else _minor_sum("profit_shares", "share_amount_minor", "tenant_id=? AND beneficiary_type='distributor'", (tenant,))),
             "revenue_records": payment_rows + revenue_count,
             "payment_transactions": int(rev["transactions"]),
             "loan_count": loan_count,
@@ -225,13 +240,30 @@ class FinanceCenterService:
         }
 
     def wallets(self, *, tenant_id: int = 1, limit: int = 100) -> list[dict[str, Any]]:
-        return WalletService().list_wallets(tenant_id=tenant_id, limit=limit)
+        from .subscriber_scope import entity_scope_sql
+        wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=int(tenant_id))
+        if not wsc:
+            return WalletService().list_wallets(tenant_id=tenant_id, limit=limit)
+        # fix3: a scoped manager — his subscribers' / his own / his distributors'.
+        rows = db().execute("SELECT * FROM wallets WHERE tenant_id=?" + wsc
+                            + " ORDER BY id DESC LIMIT ?",
+                            (int(tenant_id), *wsv, int(limit))).fetchall()
+        from .business_os_finance import _row as _wallet_row
+        return [_wallet_row(r) for r in rows]
 
     def wallet_transactions(self, *, tenant_id: int = 1, wallet_id: int, limit: int = 25) -> list[dict[str, Any]]:
         return WalletService().list_transactions(tenant_id=tenant_id, wallet_id=wallet_id, limit=limit)
 
     def ledger(self, *, tenant_id: int = 1, entry_type: str = "", limit: int = 200) -> list[dict[str, Any]]:
-        return LedgerService().list_entries(tenant_id=tenant_id, entry_type=entry_type, limit=limit)
+        from .subscriber_scope import entity_scope_sql
+        lsc, _lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                     actor_id_col="actor_id", tenant_id=int(tenant_id))
+        if not lsc:
+            return LedgerService().list_entries(tenant_id=tenant_id, entry_type=entry_type,
+                                                limit=limit)
+        # fix3: scoped manager — the rows of his subscribers / himself only.
+        return LedgerService().list_entries(tenant_id=tenant_id, entry_type=entry_type,
+                                            limit=limit, scoped=True)
 
     def revenue(self, *, tenant_id: int = 1, limit: int = 200) -> list[dict[str, Any]]:
         return revenue_items(int(tenant_id), limit=limit)

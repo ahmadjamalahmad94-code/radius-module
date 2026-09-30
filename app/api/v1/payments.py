@@ -118,6 +118,17 @@ def payments_list():
     try:
         limit, offset = page_args(default=100, maximum=500)
         subscriber_id = request.args.get("subscriber_id")
+        username = (request.args.get("username") or "").strip()
+        if username and not subscriber_id:
+            # F01 F7: ``?username=`` was silently ignored → every payment of
+            # the tenant came back. Resolve it (unknown name → empty list).
+            from ...radius.db.connection import db as _db
+            _row = _db().execute(
+                "SELECT id FROM subscribers WHERE tenant_id = ? AND username = ?",
+                (int(getattr(g, "tenant_id", 1)), username)).fetchone()
+            if _row is None:
+                return ok({"items": [], "count": 0})
+            subscriber_id = str(_row["id"])
         dist = current_distributor()
         if subscriber_id and not subscriber_in_scope(subscriber_id=int(subscriber_id)):
             return deny_out_of_scope()

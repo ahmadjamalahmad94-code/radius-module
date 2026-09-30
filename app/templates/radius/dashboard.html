@@ -685,6 +685,8 @@
 {% set printed_cards = card_dashboard.printed if card_dashboard and card_dashboard.printed else {} %}
 {% set electronic_cards = card_dashboard.electronic if card_dashboard and card_dashboard.electronic else {} %}
 {% set alerts = metrics.alerts or [] %}
+{# fix3 (F01 F8): sections by key (owner: all) — dashboard_metrics.dashboard_access #}
+{% set _da = dash_access if (dash_access is defined and dash_access) else {"subscribers": true, "cards": true, "network": true, "plans": true, "finance": true, "system": true} %}
 {% set sub_total = (subs.total or snap.total_subscribers or 0)|int %}
 {% set sub_online = (subs.online or snap.online_now or 0)|int %}
 {% set sub_active = (subs.active or snap.enabled_subscribers or 0)|int %}
@@ -740,6 +742,7 @@
   </section>
 
   <section class="ops-modules" aria-label="{{ _('ملخص أقسام الراديوس') }}">
+    {% if _da.subscribers %}
     <article class="ops-module" style="--tone:#2563eb;--soft-tone:#eff6ff;--glow:rgba(37,99,235,.10)">
       <div class="ops-module-head">
         <div>
@@ -762,7 +765,9 @@
         <div class="ops-mini-bar"><span style="width:{{ sub_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.cards %}
     <article class="ops-module" style="--tone:#7c3aed;--soft-tone:#f3e8ff;--glow:rgba(124,58,237,.11)">
       <div class="ops-module-head">
         <div>
@@ -785,7 +790,9 @@
         <div class="ops-mini-bar"><span style="width:{{ printed_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.cards %}
     <article class="ops-module" style="--tone:#14b8a6;--soft-tone:#ecfeff;--glow:rgba(20,184,166,.12)">
       <div class="ops-module-head">
         <div>
@@ -809,7 +816,9 @@
         <div class="ops-mini-bar"><span style="width:{{ electronic_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.network %}
     <article class="ops-module" style="--tone:#0891b2;--soft-tone:#ecfeff;--glow:rgba(8,145,178,.12)">
       <div class="ops-module-head">
         <div>
@@ -830,7 +839,9 @@
         <div class="ops-mini-bar"><span style="width:{{ nas_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.plans %}
     <article class="ops-module" style="--tone:#f59e0b;--soft-tone:#fffbeb;--glow:rgba(245,158,11,.14)">
       <div class="ops-module-head">
         <div>
@@ -851,7 +862,9 @@
         <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.finance %}
     <article class="ops-module" style="--tone:#fb923c;--soft-tone:#fff7ed;--glow:rgba(251,146,60,.14)">
       <div class="ops-module-head">
         <div>
@@ -872,9 +885,11 @@
         <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>
       </div>
     </article>
+    {% endif %}
   </section>
 
   <section class="ops-secondary">
+    {% if _da.cards %}
     <article class="ops-list-card">
       <div class="ops-list-head">
         <h3>{{ _('آخر الحزم') }}</h3>
@@ -900,6 +915,7 @@
         </div>
       {% endfor %}
     </article>
+    {% endif %}
 
     <article class="ops-list-card">
       <div class="ops-list-head">
@@ -926,6 +942,7 @@
       {% endfor %}
     </article>
   </section>
+  {% if _da.system %}
   <section class="ops-vps-grid" aria-label="{{ _('ملخص خادم الربط') }}">
     <article class="ops-vps-card ops-vps--brand">
       <div class="ops-vps-head">
@@ -1064,6 +1081,7 @@
       </div>
     </article>
   </section>
+  {% endif %}
 
 </div>
 {% endblock %}

@@ -250,6 +250,11 @@ class EventsRiskCenterService:
     ) -> tuple[str, list[Any]]:
         sql = " WHERE tenant_id=?"
         params: list[Any] = [self.tenant_id]
+        # fix3 (F02 H2): a manager without «عرض كل المشتركين» sees only the
+        # events of his subscribers / his distributors / himself.
+        esc, esv = self._scope_sql()
+        sql += esc
+        params += esv
         for column, value in (
             ("category", category),
             ("severity", severity),
@@ -278,6 +283,11 @@ class EventsRiskCenterService:
             sql += f" AND datetime(created_at) {op} datetime(?)"
             params.append(upper)
         return sql, params
+
+    def _scope_sql(self) -> tuple[str, list[Any]]:
+        from .subscriber_scope import entity_scope_sql
+        return entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                actor_id_col="actor_id", tenant_id=self.tenant_id)
 
     def count_events(self, **filters: Any) -> int:
         where, params = self._events_where(**filters)
@@ -316,9 +326,10 @@ class EventsRiskCenterService:
         return [self._event_row(row, name_map=name_map) for row in raw_rows]
 
     def get_event(self, event_id: int) -> dict[str, Any]:
+        esc, esv = self._scope_sql()
         row = db().execute(
-            "SELECT * FROM business_events WHERE tenant_id=? AND id=?",
-            (self.tenant_id, int(event_id)),
+            "SELECT * FROM business_events WHERE tenant_id=? AND id=?" + esc,
+            (self.tenant_id, int(event_id), *esv),
         ).fetchone()
         if not row:
             raise EventsRiskError("event not found")
@@ -470,17 +481,18 @@ class EventsRiskCenterService:
         return {"findings": findings, "flags_created": len(flags), "flags": flags}
 
     def dashboard(self) -> dict[str, Any]:
+        esc, esv = self._scope_sql()
         event_count = db().execute(
-            "SELECT COUNT(*) AS c FROM business_events WHERE tenant_id=?",
-            (self.tenant_id,),
+            "SELECT COUNT(*) AS c FROM business_events WHERE tenant_id=?" + esc,
+            (self.tenant_id, *esv),
         ).fetchone()["c"]
         open_flags = db().execute(
             "SELECT COUNT(*) AS c FROM fraud_flags WHERE tenant_id=? AND status='open'",
             (self.tenant_id,),
         ).fetchone()["c"]
         critical = db().execute(
-            "SELECT COUNT(*) AS c FROM business_events WHERE tenant_id=? AND severity='critical'",
-            (self.tenant_id,),
+            "SELECT COUNT(*) AS c FROM business_events WHERE tenant_id=? AND severity='critical'"
+            + esc, (self.tenant_id, *esv),
         ).fetchone()["c"]
         return {"events": int(event_count or 0), "open_flags": int(open_flags or 0), "critical_events": int(critical or 0)}
 

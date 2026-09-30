@@ -87,7 +87,27 @@ def _pick(rows: list[dict], selected: str | None) -> dict:
     return rows[0]  # rows are DESC → [0] is the latest bucket
 
 
+def _owner_clause(tenant_id: int, alias: str = "") -> tuple[str, list]:
+    """fix3 (F01 F7): the session admin's subscriber scope on ``subscribers``."""
+    from ..services.subscriber_scope import current_scope_admin_id, owner_scope_clause
+    scope = current_scope_admin_id(tenant_id=tenant_id)
+    if scope is None:
+        return "", []
+    clause, vals = owner_scope_clause(int(scope), tenant_id=tenant_id)
+    if alias:
+        clause = (clause.replace("(manager_id", f"({alias}.manager_id")
+                  .replace(" OR manager_id", f" OR {alias}.manager_id")
+                  .replace(" OR card_batch_id", f" OR {alias}.card_batch_id"))
+    return clause, vals
+
+
+def _money_visible() -> bool:
+    """Money on this page needs ``reports.finance`` (F01 F7), not users.view."""
+    return bool(session.get("is_super_admin")) or         "reports.finance" in set(session.get("permissions") or ())
+
+
 def _subscriber_census(tenant_id: int) -> dict:
+    oc, ov = _owner_clause(tenant_id)
     row = db().execute(
         """
         SELECT COUNT(*) AS total,
@@ -105,13 +125,15 @@ def _subscriber_census(tenant_id: int) -> dict:
                COALESCE(SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END), 0) AS suspended
         FROM subscribers
         WHERE tenant_id = ? AND deleted_at IS NULL
-        """,
-        (tenant_id,),
+        """ + oc,
+        (tenant_id, *ov),
     ).fetchone()
+    from ..services.subscriber_scope import scope_sql
+    sc, sv = scope_sql("username", tenant_id=tenant_id)
     online = db().execute(
         "SELECT COUNT(DISTINCT username) AS c FROM radacct "
-        "WHERE tenant_id = ? AND acctstoptime IS NULL",
-        (tenant_id,),
+        "WHERE tenant_id = ? AND acctstoptime IS NULL" + sc,
+        (tenant_id, *sv),
     ).fetchone()
     return {
         "total": int((row and row["total"]) or 0),
@@ -127,6 +149,7 @@ def _quota_allocation(tenant_id: int) -> list[dict]:
     """الكوتة — point-in-time allocated quota per active plan (operator chose
     quota = allocation, GB = consumption). per-plan allocated GB = quota × subs.
     """
+    oc, ov = _owner_clause(tenant_id, alias="s")
     rows = db().execute(
         """
         SELECT p.id, p.name,
@@ -136,13 +159,14 @@ def _quota_allocation(tenant_id: int) -> list[dict]:
         FROM access_plans p
         LEFT JOIN subscribers s
           ON s.plan_id = p.id AND s.tenant_id = p.tenant_id AND s.deleted_at IS NULL
+        """ + oc + """
         WHERE p.tenant_id = ? AND p.deleted_at IS NULL
         GROUP BY p.id
         HAVING subs > 0
         ORDER BY subs DESC
         LIMIT 12
         """,
-        (tenant_id,),
+        (*ov, tenant_id),
     ).fetchall()
     plans = []
     total_alloc = 0.0
@@ -207,7 +231,15 @@ def _subscribers_overview_snapshot(tenant_id: int, period: str) -> dict:
                 period_options.append(p)
     period_options.sort(reverse=True)
 
+    if not _money_visible():
+        # F01 F7: a users.view manager sees the census/quota, not the money.
+        sales_sel, loan_sel, act_sel = {}, {}, {}
+        sales_bars = loan_bars = act_bars = []
+        sales_max = loan_max = act_max = 0.0
+        outstanding = {k: 0 for k in outstanding}
+        debtors = []
     return {
+        "money_visible": _money_visible(),
         "period": period,
         "grain": grain,
         "selected_label": selected_label,

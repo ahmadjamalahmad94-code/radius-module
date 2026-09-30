@@ -48,6 +48,12 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", 1))
 
 
+def _scope():
+    """fix3 (F02 H2 / F07 M3): the token admin's subscriber scope (None = all)."""
+    from ..access_control import subscriber_scope_admin_id
+    return subscriber_scope_admin_id()
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/accounting", "accounting_list",
                     require_api_token(accounting_list), methods=["GET"])
@@ -76,9 +82,18 @@ def accounting_list():
     except ValueError:
         return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
     username = request.args.get("username")
+    scope = _scope()
+    if username and scope is not None:
+        from ..access_control import deny_out_of_scope, subscriber_in_scope
+        if not subscriber_in_scope(username=username):
+            return deny_out_of_scope()
     from ...radius.integration.factory import get_radius_adapter
     items = get_radius_adapter().list_accounting(
         username=username, limit=limit, offset=offset)
+    if scope is not None:
+        # «آخر جلسات المحاسبة»: only his own subscribers' sessions (F07 M3).
+        from ...radius.services.subscriber_scope import filter_rows
+        items = filter_rows(items, key="username", tenant_id=_tid(), scope=scope)
     out = []
     for a in items:
         d = asdict(a)
@@ -124,8 +139,9 @@ def accounting_online():
     if limit < 1 or limit > 1000 or offset < 0:
         return fail("validation_error", "limit بين 1 و1000، و offset لا يكون سالبًا.", status=422)
     svc = AccountingEventsService()
-    total = svc.count_online(tenant_id=_tid())
-    items = svc.list_online(tenant_id=_tid(), limit=limit, offset=offset)
+    scope = _scope()
+    total = svc.count_online(tenant_id=_tid(), scope=scope)
+    items = svc.list_online(tenant_id=_tid(), limit=limit, offset=offset, scope=scope)
     items = [_ts_row(r) for r in items]
     return ok({
         "items": items,
@@ -144,7 +160,8 @@ def accounting_sessions_history():
         limit = min(max(int(request.args.get("limit") or 100), 1), 500)
     except ValueError:
         return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
-    items = AccountingEventsService().list_history(tenant_id=_tid(), limit=limit)
+    items = AccountingEventsService().list_history(tenant_id=_tid(), limit=limit,
+                                                   scope=_scope())
     items = [_ts_row(r) for r in items]
     return ok({"items": items, "count": len(items)})
 
@@ -152,7 +169,8 @@ def accounting_sessions_history():
 def accounting_session_detail(session_id: str):
     from ...radius.services.accounting_events import AccountingEventsService
 
-    item = AccountingEventsService().session_detail(tenant_id=_tid(), session_id=session_id)
+    item = AccountingEventsService().session_detail(tenant_id=_tid(), session_id=session_id,
+                                                    scope=_scope())
     if not item:
         return fail("not_found", "جلسة المحاسبة غير موجودة.", status=404)
     return ok({"item": _ts_row(item)})
@@ -170,6 +188,10 @@ def accounting_usage_tenant():
 
 def accounting_usage_subscriber(username: str):
     from ...radius.services.usage_counters import UsageCountersService
+    from ..access_control import deny_out_of_scope, subscriber_in_scope
+
+    if not subscriber_in_scope(username=username):
+        return deny_out_of_scope()
 
     return ok(
         UsageCountersService().subscriber_summary(
@@ -199,6 +221,9 @@ def accounting_quota_check():
     username = str(body.get("username") or "").strip()
     if not username:
         return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
+    from ..access_control import deny_out_of_scope, subscriber_in_scope
+    if not subscriber_in_scope(username=username):
+        return deny_out_of_scope()
     try:
         limit_bytes = int(body.get("limit_bytes") or 0)
     except (TypeError, ValueError):
