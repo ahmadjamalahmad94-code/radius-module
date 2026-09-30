@@ -184,7 +184,7 @@
         {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
         {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
       </span>
-      <span>{{ _('الوقت:') }} <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
+      <span>{{ _('الوقت:') }} <span class="hub-text-mono"><bdi dir="ltr">{{ device.last_check_at }}</bdi></span></span>
     </div>
     <div class="hub-field-hint" style="margin-top:8px">
       {{ _('يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.') }}

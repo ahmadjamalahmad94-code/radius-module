@@ -129,8 +129,8 @@
             <td>{% if s.unrestricted %}<span class="hub-text-mute">{{ _('من أي مكان') }}</span>
                 {% else %}<span class="mono">{{ s.source_ip }}</span>{% endif %}</td>
             <td>{{ s.opened_by }}</td>
-            <td class="hub-text-mute small">{{ s.opened_at }}</td>
-            <td class="hub-text-mute small">{{ s.closed_at or '—' }}</td>
+            <td class="hub-text-mute small"><bdi dir="ltr">{{ s.opened_at }}</bdi></td>
+            <td class="hub-text-mute small"><bdi dir="ltr">{{ s.closed_at or '—' }}</bdi></td>
             <td>
               {% if s.status == 'active' %}{{ hub.pill(_('نشطة'), variant='green') }}
               {% elif s.status == 'expired' %}{{ hub.pill(_('انتهت'), variant='amber') }}

@@ -1179,8 +1179,23 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.filters["money"] = _fmt_money
     # مبلغ لكل عملة («5,683.89 ₪ · 426.31 USD») لإجماليّات by_currency.
     app.jinja_env.filters["money_multi"] = _fmt_money_multi
-    app.jinja_env.filters["dt_local"] = _to_local
-    app.jinja_env.filters["date_local"] = _to_local_date
+
+    # D9 (bidi): كل تاريخ/وقت يمرّ عبر dt_local/date_local يُعزَل بـ
+    # U+2066 LRI … U+2069 PDI كي لا ينعكس داخل سياق RTL (تقارير الماليّة/
+    # الأحداث/التذاكر/الموزّعين وأي صفحة تستخدم هذين الفلترين — مصدر واحد
+    # بدل تعديل ~190 موضعًا يدويًّا). "—" (لا قيمة) لا تُعزَل.
+    _LRI, _PDI = "⁦", "⁩"
+
+    def _dt_local_isolated(value, *args, **kwargs):
+        s = _to_local(value, *args, **kwargs)
+        return f"{_LRI}{s}{_PDI}" if s and s != "—" else s
+
+    def _date_local_isolated(value, *args, **kwargs):
+        s = _to_local_date(value, *args, **kwargs)
+        return f"{_LRI}{s}{_PDI}" if s and s != "—" else s
+
+    app.jinja_env.filters["dt_local"] = _dt_local_isolated
+    app.jinja_env.filters["date_local"] = _date_local_isolated
     # f06-L3: مدّة بكلماتٍ عربيّة («1 ساعة و5 دقائق») بدل «1h 5m» في الويب.
     # Imported defensively (see fmt_base_time_ar below): a formatter import
     # failure must never brick create_app().

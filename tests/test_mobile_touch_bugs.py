@@ -146,8 +146,18 @@ def test_d4_hint_closes_on_second_tap(widget_page):
 # ───────────────────────── real-app harness (D1, D5, D7) ──────────────────
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def app():
+    # Function-scoped (NOT module-scoped): each parametrized device run of
+    # test_d1/d5/d7 must get its own fresh app/db. A module-scoped app was
+    # shared across the Pixel 7 AND iPhone 13 runs of the SAME test, so the
+    # second run inserted the exact seed data (e.g. a plan named «عرض أ» in
+    # test_d7, or the same card username in test_d1) into an already-seeded
+    # database and hit a UNIQUE constraint before the page even loaded —
+    # surfacing as a `Locator.tap` timeout waiting for an element that never
+    # rendered because the seeding raised first. This was a test-harness bug,
+    # not a product bug (verified: each test passes cleanly against its own
+    # device when run in isolation).
     a = H.make_app()
     with a.app_context():
         yield a
@@ -185,13 +195,16 @@ def test_d1_double_tap_time_apply_only_applies_once(app, mobile_page):
     pg = mobile_page
     pg.proxy.login("owner_root")
     pg.goto(H.BASE + f"/admin/radius/cards/checker?query={username}")
-    pg.wait_for_load_state("domcontentloaded")
+    pg.wait_for_load_state("networkidle")
 
     posts = []
     pg.on("request", lambda req: posts.append(req)
           if (req.method == "POST" and "/cards/checker" in req.url) else None)
 
-    pg.locator('[data-cc-op="set-time"]').tap()
+    set_time_btn = pg.locator('[data-cc-op="set-time"]')
+    set_time_btn.wait_for(state="visible", timeout=15000)
+    set_time_btn.scroll_into_view_if_needed()
+    set_time_btn.tap()
     amount = pg.locator("#cc-time-amount-input")
     amount.click()
     amount.fill("")
@@ -222,9 +235,12 @@ def test_d5_speed_apply_asks_for_confirmation_exactly_once(app, mobile_page):
     pg = mobile_page
     pg.proxy.login("owner_root")
     pg.goto(H.BASE + f"/admin/radius/cards/checker?query={username}")
-    pg.wait_for_load_state("domcontentloaded")
+    pg.wait_for_load_state("networkidle")
 
-    pg.locator('[data-cc-op="set-speed"]').tap()
+    set_speed_btn = pg.locator('[data-cc-op="set-speed"]')
+    set_speed_btn.wait_for(state="visible", timeout=15000)
+    set_speed_btn.scroll_into_view_if_needed()
+    set_speed_btn.tap()
     pg.locator("[data-down]").fill("2048")
     pg.locator("[data-up]").fill("1024")
     # المودال المُوحَّد العامّ (data-confirm) يجب ألّا يُفتح أبدًا هنا.
@@ -250,10 +266,12 @@ def test_d7_plan_picker_reset_dispatches_change_event(app, mobile_page):
     pg = mobile_page
     pg.proxy.login("owner_root")
     pg.goto(H.BASE + "/admin/radius/subscribers")
-    pg.wait_for_load_state("domcontentloaded")
+    pg.wait_for_load_state("networkidle")
 
     def open_plan_modal(username):
         row = pg.locator(f'tr[data-username="{username}"]')
+        row.wait_for(state="visible", timeout=15000)
+        row.scroll_into_view_if_needed()
         row.locator("[data-urow-trigger]").nth(1).tap()  # «إجراءات إدارية»
         row.locator('[data-urow-open="plan"]').tap()
 

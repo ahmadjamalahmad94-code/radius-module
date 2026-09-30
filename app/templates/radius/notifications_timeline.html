@@ -109,7 +109,7 @@
                     {% if it.imminent %}{{ _('عند أقرب فحص') }}
                     {% elif it.fire_in_days == 1 %}{{ _('غدًا') }}
                     {% else %}{{ _('خلال') }} {{ it.fire_in_days }} {{ _('يوم') }}{% endif %}
-                    <span class="sub">{{ it.fire_date }}</span>
+                    <span class="sub"><bdi dir="ltr">{{ it.fire_date }}</bdi></span>
                   </span>
                 </td>
                 <td>

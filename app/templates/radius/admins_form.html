@@ -89,7 +89,7 @@
       {% if not is_new and admin and admin.last_login_at %}
       <div class="hub-field">
         <label class="hub-field-label">{{ _('آخر دخول') }}</label>
-        <input class="hub-input" type="text" readonly value="{{ admin.last_login_at }}"
+        <input class="hub-input" type="text" readonly dir="ltr" value="{{ admin.last_login_at }}"
                style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed">
       </div>
       <div class="hub-field">

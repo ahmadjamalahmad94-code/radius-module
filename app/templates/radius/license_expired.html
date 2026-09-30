@@ -36,10 +36,10 @@
     <li><b>{{ _('حالة العقد') }}:</b> <code>{{ decision.last_status }}</code></li>
     {% endif %}
     {% if decision.expires_at %}
-    <li><b>{{ _('انتهاء العقد') }}:</b> <span class="mono small">{{ decision.expires_at }}</span></li>
+    <li><b>{{ _('انتهاء العقد') }}:</b> <span class="mono small"><bdi dir="ltr">{{ decision.expires_at }}</bdi></span></li>
     {% endif %}
     {% if decision.grace_until %}
-    <li><b>{{ _('نهاية السماحية من المزوّد') }}:</b> <span class="mono small">{{ decision.grace_until }}</span></li>
+    <li><b>{{ _('نهاية السماحية من المزوّد') }}:</b> <span class="mono small"><bdi dir="ltr">{{ decision.grace_until }}</bdi></span></li>
     {% endif %}
     {% if _is_sync %}
     <li><b>{{ _('تأخّر التزامن') }}:</b> {{ decision.stale_days }} {{ _('يوم') }} ({{ _('السماحية المحلّية') }} {{ _('انتهت') }})</li>
