@@ -275,6 +275,13 @@ def register(bp: Blueprint) -> None:
                     require_api_token(profiles_patch), methods=["PATCH"])
     bp.add_url_rule("/profiles/<int:profile_id>", "profiles_delete",
                     require_api_token(profiles_delete), methods=["DELETE"])
+    # fix3 integration: a lightweight picker list for the create forms — readable
+    # with plans.view OR the permission of the form that needs it (users.create /
+    # cards.generate), so a manager without «عرض الباقات» can still pick a plan.
+    bp.add_url_rule("/plans/options", "plans_options",
+                    require_api_token(plans_options), methods=["GET"])
+    bp.add_url_rule("/profiles/options", "profiles_options",
+                    require_api_token(plans_options), methods=["GET"])
 
 
 def _svc():
@@ -292,6 +299,37 @@ def profiles_list():
         return fail("validation_error", e.message, status=422)
     items = _svc().list(limit=limit, offset=offset)
     return ok({"items": [_serialize(p) for p in items], "count": len(items)})
+
+
+def plan_option(plan: AccessPlan, system_currency: str) -> dict:
+    """One picker row: only what a create form needs (no speeds/quotas/metadata)."""
+    from ...radius.services.users import plan_period_minutes
+    return {
+        "id": plan.id,
+        "name": plan.name,
+        "price": float(plan.price or 0),
+        "currency": (plan.currency or "").strip().upper() or system_currency,
+        "duration_minutes": int(plan.duration_minutes or 0),
+        "duration_value": int(plan.duration_value or 0),
+        "duration_unit": plan.duration_unit or "",
+        "validity_days": int(plan.validity_days or 0),
+        "period_minutes": int(plan_period_minutes(plan)),
+        "plan_type": plan.plan_type or "",
+    }
+
+
+def plans_options():
+    """``GET /api/v1/plans/options`` (alias ``/profiles/options``) — active plans
+    (enabled, not archived) as ``{id, name, price, currency, duration…}``.
+
+    Guard: ``plans.view`` OR ``users.create`` OR ``cards.generate`` (the same web
+    decisions as the plans page / create form / generate form)."""
+    from ...radius.core.system_config import default_currency
+    system_currency = (default_currency() or "").strip().upper()
+    items = [plan_option(p, system_currency) for p in _svc().list(limit=1000)
+             if getattr(p, "enabled", True) and getattr(p, "deleted_at", None) is None]
+    items.sort(key=lambda r: (str(r["name"] or "").lower(), r["id"] or 0))
+    return ok({"items": items, "count": len(items), "currency": system_currency})
 
 
 def profiles_get(profile_id: int):

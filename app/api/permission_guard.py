@@ -31,6 +31,9 @@ Spec grammar (a value of ``API_PERMISSIONS``; a dict maps HTTP method → spec):
                           the ``requires_perm`` decorator of the web page.
   ``"grant:<flag>"``    → per-manager grant of ``ManagerDistributorOpsService``
                           (e.g. ``can_import_batches``), like the web handler.
+  ``"anyweb:<ep>@<M>|<ep>@<M>…"`` → allowed when ANY of the listed web
+                          endpoints (with that method) would be allowed —
+                          e.g. a picker list needed by several forms.
 
 ``tests/test_api_permission_guard.py`` fails when an authenticated API
 endpoint is neither mapped nor allow-listed.
@@ -97,6 +100,11 @@ API_PUBLIC: frozenset[str] = frozenset({
     "v1.store_chat_poll", "v1.store_chat_post", "v1.store_chat_unread",
     "v1.internal_auth", "v1.internal_postauth", "v1.internal_diag",
 })
+
+
+#: The plan picker: the plans page, the subscriber create form or the card
+#: generate form — whichever the admin may use.
+PLAN_OPTIONS_SPEC = "anyweb:plans_list@GET|users_create@POST|cards_generate@POST"
 
 
 def _npc(prefix: str, key: str, children: tuple[str, ...]) -> dict[str, Spec]:
@@ -365,6 +373,9 @@ API_PERMISSIONS: dict[str, Spec] = {
 
     # ── plans (RADIUS profiles) ──
     "v1.profiles_list": "web:plans_list",
+    # fix3 integration: the create forms' plan picker (lite list).
+    "v1.plans_options": PLAN_OPTIONS_SPEC,
+    "v1.profiles_options": PLAN_OPTIONS_SPEC,
     "v1.profiles_get": "web:plans_list",
     "v1.profiles_create": "web:plans_create",
     "v1.profiles_patch": "web:plans_update",
@@ -661,6 +672,16 @@ def decide(name: str, method: str, admin, *, tenant_id: int) -> Optional[int]:
         return rbac_denial_status(spec[4:], method, is_super=False,
                                   perms=perms, admin_id=int(admin.id),
                                   tenant_id=tenant_id, record_activity=False)
+    if spec.startswith("anyweb:"):
+        from ..radius.routes.blueprint import rbac_denial_status
+        for part in spec[7:].split("|"):
+            ep, _, m = part.partition("@")
+            if ep and rbac_denial_status(ep, (m or method).upper(), is_super=False,
+                                         perms=perms, admin_id=int(admin.id),
+                                         tenant_id=tenant_id,
+                                         record_activity=False) is None:
+                return None
+        return 403
     if spec.startswith("mt:"):
         from ..radius.services import mt_permissions
         return None if mt_permissions.has(admin, spec[3:]) else 403
@@ -777,7 +798,7 @@ def api_permission_denial():
             if info.get("permission"):
                 details["permission"] = info["permission"]
             message = denial_message() or message
-        elif isinstance(spec, str) and spec and not spec.startswith(("web:", "mt:", "grant:"))                 and spec != SUPER:
+        elif isinstance(spec, str) and spec and not spec.startswith(("web:", "mt:", "grant:", "anyweb:"))                 and spec != SUPER:
             from ..radius.services.permission_labels import rbac_keys_label
             details["reason"] = "permission"
             details["permission"] = spec
