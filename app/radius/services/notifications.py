@@ -186,7 +186,9 @@ def viewer_for(admin_id: Optional[int], *, tenant_id: int = 1) -> Optional[dict]
 
 def current_viewer(tenant_id: int = 1) -> Optional[dict]:
     """``viewer_for`` the admin behind the current request (web or API)."""
-    from .subscriber_scope import request_admin_id
+    from .subscriber_scope import request_admin_id, request_is_owner_session
+    if request_is_owner_session():
+        return None
     try:
         return viewer_for(request_admin_id(), tenant_id=tenant_id)
     except Exception:  # noqa: BLE001 — fail-closed: a manager with no rights

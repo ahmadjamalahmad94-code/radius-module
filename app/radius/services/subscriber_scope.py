@@ -38,6 +38,19 @@ def _current_admin_id() -> Optional[int]:
 request_admin_id = _current_admin_id
 
 
+def request_is_owner_session() -> bool:
+    """A WEB request whose session is owner-level (``session['is_super_admin']``
+    — set at login by ``_resolve_is_super``: owner / co-owner). The panel guard
+    already bypasses on it; every scope helper must agree with the guard."""
+    try:
+        from flask import g, has_request_context, session
+        if not has_request_context() or getattr(g, "_api_authed", False):
+            return False
+        return bool(session.get("is_super_admin"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def is_distributor_login(admin_id: Optional[int], *, tenant_id: int = 1) -> bool:
     """هل هذا الحساب هو نفسه موزّع (``distributors.login_admin_id``)؟"""
     if not admin_id:
@@ -71,6 +84,8 @@ def can_view_all_subscribers(admin_id: Optional[int], *, tenant_id: int = 1) -> 
 def scope_admin_id(admin_id: Optional[int] = None, *, tenant_id: int = 1) -> Optional[int]:
     """معرّف المدير الذي يُقصَر عليه النطاق، أو None = يرى الكل.
     ``admin_id=None`` = المدير الحاليّ في الجلسة (None بلا جلسة = الكل، كما كان)."""
+    if admin_id is None and request_is_owner_session():
+        return None
     aid = admin_id if admin_id is not None else _current_admin_id()
     if not aid:
         return None
@@ -215,8 +230,16 @@ def creator_manager_id(requested: Optional[int], *, creator_admin_id: Optional[i
     فيراه هو، ويراه مديره المالك عبر سلسلة الموزّعين (``_owner_scope_sql``).
     مديرٌ يرى الكل (مثل «مدير عام») يجوز أن يُسند لمدير آخر صراحةً.
     بلا مُنشئ معروف (مالك/اعتماد رئيسيّ/عمليّة نظام) ⇒ القيمة المطلوبة كما هي."""
+    if creator_admin_id is None and request_is_owner_session():
+        return requested
     aid = creator_admin_id if creator_admin_id is not None else _current_admin_id()
     if not aid:
+        return requested
+    try:
+        from ..db.repos import admins_repo
+        if admins_repo.get_admin(int(aid)) is None:
+            return requested            # unknown creator id — never stamp a ghost
+    except Exception:  # noqa: BLE001
         return requested
     from ..auth.owner import is_owner_like
     if is_owner_like(int(aid)):

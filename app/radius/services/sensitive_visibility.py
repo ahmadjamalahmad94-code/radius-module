@@ -20,7 +20,9 @@ MASK = "••••••"
 def _resolve(admin_id: Optional[int]) -> Optional[int]:
     if admin_id is not None:
         return int(admin_id) or None
-    from .subscriber_scope import request_admin_id
+    from .subscriber_scope import request_admin_id, request_is_owner_session
+    if request_is_owner_session():
+        return None
     return request_admin_id()
 
 

@@ -466,7 +466,9 @@ def dashboard_access() -> dict:
     full = {"subscribers": True, "cards": True, "network": True, "plans": True,
             "finance": True, "system": True}
     try:
-        from .subscriber_scope import request_admin_id
+        from .subscriber_scope import request_admin_id, request_is_owner_session
+        if request_is_owner_session():
+            return full
         aid = request_admin_id()
         if not aid:
             return full

@@ -38,7 +38,9 @@ def can_view_all_card_batches(admin_id: Optional[int], *, tenant_id: int = 1) ->
 def batch_scope_admin_id(admin_id: Optional[int] = None, *, tenant_id: int = 1) -> Optional[int]:
     """None = يرى كل الحِزم؛ وإلّا معرّف المدير. ``admin_id=None`` = مدير الطلب."""
     if admin_id is None:
-        from .subscriber_scope import request_admin_id
+        from .subscriber_scope import request_admin_id, request_is_owner_session
+        if request_is_owner_session():
+            return None
         admin_id = request_admin_id()
     if not admin_id:
         return None
