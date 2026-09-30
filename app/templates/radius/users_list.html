@@ -1126,7 +1126,7 @@
             {%- if _dt and (_dt.total_sec or _du) -%}
               <span class="du-pill du-{{ _dt.bucket or 'neutral' }}"
                     {%- if not _dt.total_sec %} title="{{ _('بلا حدّ زمنيّ') }}"{% endif %}>
-                <bdi class="du-cell-ar">{{ _dt.used_ar or _dt.used_txt }} / {{ _dt.total_ar or _dt.total_txt or _('بلا حدّ') }}</bdi>
+                <bdi class="du-cell-ar">{{ _dt.used_ar or _dt.used_txt }} / {{ _dt.total_ar or _dt.total_txt or '∞' }}</bdi>
               </span>
             {%- else -%}—{%- endif -%}
           </td>

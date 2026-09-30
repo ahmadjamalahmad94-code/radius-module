@@ -126,10 +126,10 @@ def test_daily_cells_are_ltr_isolated():
     for tpl in ("app/templates/radius/users_list.html",
                 "app/templates/radius/sessions_list.html"):
         html = (root / tpl).read_text(encoding="utf-8")
-        # الخليّة نفسها dir=ltr + القيمة داخل bdi dir=ltr
-        assert 'data-col="daily_used"' in html and 'dir="ltr"' in html
-        assert 'bdi dir="ltr" class="du-cell' in html, f"{tpl}: du-cell غير معزول LTR"
-        # isolate وحده لا يكفي (قاعدة W2: رقم بعد حرف عربيّ → رقم عربيّ يَنقلب)؛
-        # نَفرض الترتيب المنطقيّ بـ isolate-override.
-        assert "unicode-bidi:isolate-override" in html.replace(" ", ""), \
-            f"{tpl}: du-cell يجب أن يَفرض LTR بـ isolate-override"
+        # fix3 (F06-L3): the cell shows Arabic WORDS («1 ساعة و5 دقائق / 3
+        # ساعات») — a digit next to an Arabic word never flips (only the old
+        # single-letter units did), so it is an RTL isolate (.du-cell-ar), not
+        # a forced-LTR override (which would reverse the words).
+        assert 'data-col="daily_used"' in html
+        assert '<bdi class="du-cell-ar">' in html, f"{tpl}: du-cell-ar غير معزول"
+        assert "used_ar" in html and "total_ar" in html
