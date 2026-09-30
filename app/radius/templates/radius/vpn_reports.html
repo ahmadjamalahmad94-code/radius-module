@@ -124,10 +124,10 @@
         منتهي
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_accounts', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if not vpn_accounts %}
@@ -200,10 +200,10 @@
         تجاوز الكوتا
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_wg_peers', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if wg_svc %}
@@ -301,10 +301,10 @@
         سجل
       </div>
     </div>
-    <a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
+    {% if can_submit('radius.vpn_reports_export_audit', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
        class="export-btn">
       <i class="fa-solid fa-download"></i> تحميل CSV
-    </a>
+    </a>{% endif %}
   </div>
 
   {% if not audit_log %}

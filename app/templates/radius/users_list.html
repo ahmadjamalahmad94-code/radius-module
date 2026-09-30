@@ -1225,9 +1225,9 @@
                 <i class="fa-solid fa-sliders"></i> {{ _('إدارية') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
               <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات إدارية') }}">
-                <a class="urow-item"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} href="{{ url_for('radius.users_edit', username=u.username) }}">
+                {% if can_submit('radius.users_edit', 'GET') %}<a class="urow-item"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} href="{{ url_for('radius.users_edit', username=u.username) }}">
                   <i class="fa-solid fa-pen"></i> {{ _('تعديل المشترك') }}
-                </a>
+                </a>{% endif %}
                 {% if can_submit('radius.users_finance', 'GET') %}<a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
                   <i class="fa-solid fa-wallet"></i> {{ _('الدفعات والسلف') }}
                 </a>{% endif %}

@@ -91,16 +91,16 @@
       </div>
     </div>
     <div class="so-hero-toggle" role="tablist" aria-label="{{ _('نوع الفترة') }}">
-      <a class="so-seg{% if period == 'monthly' %} is-active{% endif %}"
+      {% if can_submit('radius.subscribers_overview', 'GET') %}<a class="so-seg{% if period == 'monthly' %} is-active{% endif %}"
          href="{{ url_for('radius.subscribers_overview', period='monthly') }}"
          role="tab" aria-selected="{{ 'true' if period == 'monthly' else 'false' }}">
         <i class="fa-solid fa-calendar-days"></i> {{ _('شهري') }}
-      </a>
-      <a class="so-seg{% if period == 'yearly' %} is-active{% endif %}"
+      </a>{% endif %}
+      {% if can_submit('radius.subscribers_overview', 'GET') %}<a class="so-seg{% if period == 'yearly' %} is-active{% endif %}"
          href="{{ url_for('radius.subscribers_overview', period='yearly') }}"
          role="tab" aria-selected="{{ 'true' if period == 'yearly' else 'false' }}">
         <i class="fa-solid fa-calendar"></i> {{ _('سنوي') }}
-      </a>
+      </a>{% endif %}
     </div>
   </div>
 

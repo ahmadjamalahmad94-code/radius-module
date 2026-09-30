@@ -97,12 +97,12 @@
 </style>
 <nav class="mta-tabs" data-testid="mt-actions-tabs" aria-label="{{ _('أقسام إجراءات المايكروتيك') }}">
   {% for s in sections %}
-  <a class="mta-tab mta-tab--{{ s.key }}{% if s.key == active %} is-active{% endif %}"
+  {% if can_submit('radius.rep_mikrotik_actions', 'GET') %}<a class="mta-tab mta-tab--{{ s.key }}{% if s.key == active %} is-active{% endif %}"
      href="{{ url_for('radius.rep_mikrotik_actions', section=s.key, **_base) }}"
      data-testid="mt-actions-tab-{{ s.key }}"
      {% if s.key == active %}aria-current="page"{% endif %}>
     <i class="fa-solid fa-{{ s.icon }}"></i>{{ s.label }}
-  </a>
+  </a>{% endif %}
   {% endfor %}
 </nav>
 

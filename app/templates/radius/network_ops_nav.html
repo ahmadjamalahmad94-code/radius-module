@@ -40,12 +40,12 @@
   {% if can_submit('radius.mt_wg_peers', 'GET') %}<a class="{{ 'is-active' if _wg }}" href="{{ url_for('radius.mt_wg_peers') }}">{% endif %}<i class="fa-solid fa-shield-halved"></i> {{ _('اتصالات WireGuard') }}{% if can_submit('radius.mt_wg_peers', 'GET') %}</a>{% endif %}
   {% if is_super_admin %}
   {% set _remote_active = mt_active_remote_count() if mt_active_remote_count is defined else 0 %}
-  <a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"
+  {% if can_submit('radius.mt_remote_sessions', 'GET') %}<a class="{{ 'is-active' if _remote }}" href="{{ url_for('radius.mt_remote_sessions') }}"
      data-mt-remote-active="{{ _remote_active }}"
-     {% if _remote_active %}title="{{ _('جلسة وصول بعيد مفتوحة الآن') }}: {{ _remote_active }}"{% endif %}>
+     {% if _remote_active %}title="{{ _('جلسة وصول بعيد مفتوحة الآن') }}: {{ _remote_active }}"{% endif %}>{% endif %}
     <i class="fa-solid fa-network-wired"></i> {{ _('الوصول البعيد') }}
     {% if _remote_active %}<span class="nnav-live"><span class="nnav-live-dot" aria-hidden="true"></span><span class="nnav-live-badge" data-mt-remote-badge>{{ _remote_active }}</span></span>{% endif %}
-  </a>{% endif %}
+  {% if can_submit('radius.mt_remote_sessions', 'GET') %}</a>{% endif %}{% endif %}
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
      المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في

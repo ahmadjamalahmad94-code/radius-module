@@ -799,9 +799,9 @@
                 كي يبقى التباين مقبولًا مهما كان اللون. -#}
             {%- set _pc = (plan_colors|default({})).get(s.plan_id) if s.plan_id else None -%}
             {%- if s.plan_name and s.plan_id -%}
-              <a class="hr-entity-link hr-plan-chip"
+              {% if can_submit('radius.plans_edit', 'GET') %}<a class="hr-entity-link hr-plan-chip"
                  {% if _pc %}style="--plan-color: {{ _pc }}"{% endif %}
-                 href="{{ url_for('radius.plans_edit', plan_id=s.plan_id) }}">{{ s.plan_name }}</a>
+                 href="{{ url_for('radius.plans_edit', plan_id=s.plan_id) }}">{% endif %}{{ s.plan_name }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}
             {%- else -%}{{ s.plan_name or '—' }}{%- endif -%}
           </td>
           <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>

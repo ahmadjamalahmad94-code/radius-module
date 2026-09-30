@@ -31,11 +31,11 @@
 {% macro npc_tabs(active_slug, services) %}
 <nav class="npc-tabs" aria-label="{{ _('فرعيّات سياسات الشبكة') }}">
   {% for s in services %}
-    <a class="npc-tab{% if s.url_slug == active_slug %} is-active{% endif %}"
+    {% if can_submit('radius.npc_', 'GET') %}<a class="npc-tab{% if s.url_slug == active_slug %} is-active{% endif %}"
        href="{{ url_for('radius.npc_' ~ s.key ~ '_list') }}">
       <span class="npc-tab-ic"><i class="fa-solid fa-{{ s.icon }}"></i></span>
       <span>{{ s.label_ar }}</span>
-    </a>
+    </a>{% endif %}
   {% endfor %}
 </nav>
 {% endmacro %}

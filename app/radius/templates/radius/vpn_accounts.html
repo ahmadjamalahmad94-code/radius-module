@@ -74,10 +74,10 @@
         </option>
         {% endfor %}
       </select>
-      <a href="{{ url_for('radius.vpn_accounts_list') }}?all={{ '0' if include_inactive else '1' }}{% if selected_alloc_id %}&alloc_id={{ selected_alloc_id }}{% endif %}"
+      {% if can_submit('radius.vpn_accounts_list', 'GET') %}<a href="{{ url_for('radius.vpn_accounts_list') }}?all={{ '0' if include_inactive else '1' }}{% if selected_alloc_id %}&alloc_id={{ selected_alloc_id }}{% endif %}"
          class="btn btn-sm btn-outline-secondary">
         {{ 'إخفاء المُعطَّلة' if include_inactive else 'عرض الكل' }}
-      </a>
+      </a>{% endif %}
     </div>
   </div>
 

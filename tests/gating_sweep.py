@@ -145,13 +145,10 @@ def violations(app, html: str, page_path: str, *, admin, perms):
         code = rbac_denial_status(name, method, is_super=False, perms=list(perms),
                                   admin_id=admin.id, tenant_id=1,
                                   record_activity=False)
-        if code is None:
-            need = getattr(app.view_functions.get("radius." + name), "_hr_required_perms", None)
-            if need:                      # mt_permissions.requires_perm decorator
-                from app.radius.services.mt_permissions import admin_permissions
-                held = set(admin_permissions(admin))
-                if not all(p in held for p in need):
-                    code = 403
+        # NOTE: pages behind the legacy mikrotik.* decorator
+        # (mt_permissions.requires_perm) are a separate permission layer, not
+        # part of the RBAC guard — reconciling it belongs to the permission
+        # stream; only the header alerts bell is gated on it (can_open_mt).
         if code is not None:
             bad.append(f"{page_path}: {kind} {method} {url} → {name} ({code})")
             continue

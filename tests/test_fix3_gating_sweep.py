@@ -62,6 +62,9 @@ def _sweep(app, pages, perms):
     from app.radius.db.repos import admins_repo
     from app.radius.routes.blueprint import rbac_denial_status
     mgr = H.role_admin(perms)
+    # a subscriber of his own, so row-level controls (row menus, entity links)
+    # are rendered and swept too
+    H.subscriber(None, manager_id=mgr.id)
     eff = list(admins_repo.admin_permissions(admins_repo.get_admin(mgr.id)))
     c = app.test_client()
     H.login_session(c, mgr.id)

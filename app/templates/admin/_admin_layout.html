@@ -299,7 +299,7 @@
        صفحة تفاصيله مباشرة، والعدّاد حقيقي من قاعدة البيانات بدل الرقم الثابت. #}
     {# F01-F13: تنبيهات الراوترات/النظام لمن يفتح مركزها فقط (نفس قرار الحارس) —
        كانت تظهر لمن لا يملك nas.view وكلّ روابطها 403. #}
-    {% set _bell_ok = can_submit is not defined or (can_submit('radius.mt_alerts_index', 'GET') and (not endpoint_exists('radius.mt_alerts_detail') or can_submit('radius.mt_alerts_detail', 'GET'))) %}
+    {% set _bell_ok = can_open_mt is not defined or (can_open_mt('radius.mt_alerts_index') and (not endpoint_exists('radius.mt_alerts_detail') or can_open_mt('radius.mt_alerts_detail'))) %}
     {% if _bell_ok %}
     {% set _bell = topbar_alerts(6) if topbar_alerts is defined else {'count': 0, 'items': []} %}
     {% set _alerts_url = url_for('radius.mt_alerts_index') if endpoint_exists('radius.mt_alerts_index') else '#' %}
