@@ -390,18 +390,32 @@ class DashboardReportsService:
         ).fetchone()
         return int(row["c"] or 0)
 
-    def _cards_sold_for_period(self, period: str) -> int:
+    def cards_sold_by_batch(self, period: str) -> list[dict[str, Any]]:
+        """«مباعة» = بطاقةٌ دخلت أوّل مرّة داخل الفترة **المحلّيّة** (يوم/شهر/سنة
+        المشغّل، Asia/Gaza بتوقيتها الصيفيّ) — ``[{batch_id, count}]``.
+
+        fix3 integration: كانت ``substr(first_used_at,1,10) = اليوم`` تقارن يوم
+        UTC بيومٍ محلّيّ (بطاقة 01:30 بتوقيت غزّة تُحسب لأمس). مصدرٌ واحد لتقرير
+        الكروت («مبيعات اليوم/الشهر/السنة») ولبطاقة «إجمالي مبيعات اليوم».
+        مقصورٌ على حِزم المدير (``card_batch_scope``)."""
         from .card_batch_scope import batch_scope_sql
+        from .report_dates import range_sql
+        grain = {4: "yearly", 7: "monthly"}.get(len(period or ""), "daily")
+        lower, upper = local_period_utc_range(grain, period, self.tenant_id)
+        rw, rp = range_sql("first_used_at", lower, upper, True)
         bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
-        row = db().execute(
-            """
-            SELECT COUNT(*) AS c FROM cards
-            WHERE tenant_id=? AND used=1 AND first_used_at IS NOT NULL
-              AND substr(first_used_at,1,?)=?
-            """ + bsc,
-            (self.tenant_id, len(period), period, *bsv),
-        ).fetchone()
-        return int(row["c"] or 0)
+        rows = db().execute(
+            "SELECT batch_id, COUNT(*) AS c FROM cards "
+            "WHERE tenant_id=? AND used=1 AND first_used_at IS NOT NULL "
+            "AND first_used_at != ''"
+            + "".join(" AND " + w for w in rw) + bsc
+            + " GROUP BY batch_id",
+            (self.tenant_id, *rp, *bsv),
+        ).fetchall()
+        return [{"batch_id": r["batch_id"], "count": int(r["c"] or 0)} for r in rows]
+
+    def _cards_sold_for_period(self, period: str) -> int:
+        return sum(r["count"] for r in self.cards_sold_by_batch(period))
 
     def _distributor_scope(self, column: str) -> tuple[str, list[Any]]:
         scope = self._scope_id()

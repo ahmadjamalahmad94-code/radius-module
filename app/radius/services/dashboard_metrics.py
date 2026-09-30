@@ -169,7 +169,9 @@ def card_batch_dashboard_summary(tenant_id: int) -> dict:
             COALESCE(SUM(CASE
                 WHEN COALESCE(c.deleted_at, '') = ''
                  AND c.used=1
-                 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = date('now')
+                 AND COALESCE(c.first_used_at, '') != ''
+                 AND datetime(c.first_used_at) >= datetime(?)
+                 AND datetime(c.first_used_at) < datetime(?)
                 THEN 1 ELSE 0 END), 0) AS used_today,
             COALESCE(SUM(CASE
                 WHEN pc.card_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS sold_total
@@ -193,7 +195,8 @@ def card_batch_dashboard_summary(tenant_id: int) -> dict:
           ON b.tenant_id=c.tenant_id AND b.id=c.batch_id
         WHERE p.tenant_id=?
           AND p.status='completed'
-          AND SUBSTR(COALESCE(p.created_at, ''), 1, 10) = date('now')
+          AND datetime(p.created_at) >= datetime(?)
+          AND datetime(p.created_at) < datetime(?)
           AND COALESCE(b.deleted_at, '') = ''
           AND {filter_clause}
     """
@@ -202,6 +205,14 @@ def card_batch_dashboard_summary(tenant_id: int) -> dict:
     # card-batch scope on the stock figures too (one predicate).
     from .card_batch_scope import batch_scope_sql
     bsc, bsv = batch_scope_sql(alias="b", tenant_id=int(tenant_id))
+    # «مباع اليوم» = يوم اللوحة المحلّيّ (Asia/Gaza) لا يوم UTC (كان
+    # date('now') يعدّ بطاقة 01:30 بتوقيت غزّة لأمس) — fix3 integration.
+    try:
+        from ..core.system_config import local_period_utc_range, local_today
+        day_lo, day_hi = local_period_utc_range(
+            "daily", local_today(int(tenant_id)).isoformat(), int(tenant_id))
+    except Exception:  # noqa: BLE001
+        day_lo, day_hi = "9999-01-01 00:00:00", "9999-01-01 00:00:00"
 
     def one(kind: str) -> dict:
         filter_clause = (_ELECTRONIC_BATCH_FILTER if kind == "electronic"
@@ -209,10 +220,11 @@ def card_batch_dashboard_summary(tenant_id: int) -> dict:
         filter_clause = "(" + filter_clause + ")" + bsc
         try:
             row = db().execute(common.format(filter_clause=filter_clause),
-                               (tenant_id, tenant_id, tenant_id, *bsv)).fetchone()
+                               (tenant_id, tenant_id, day_lo, day_hi, tenant_id,
+                                *bsv)).fetchone()
             sold_today = db().execute(
                 sold_today_sql.format(filter_clause=filter_clause),
-                (tenant_id, *bsv),
+                (tenant_id, day_lo, day_hi, *bsv),
             ).fetchone()
         except Exception:
             return {"batches": 0, "total": 0, "used": 0, "available": 0,
@@ -494,6 +506,98 @@ def dashboard_access() -> dict:
     }
 
 
+def get_sales_today(tenant_id: Optional[int] = None, *,
+                    access: Optional[dict] = None) -> dict:
+    """«إجمالي مبيعات اليوم» (طلب المالك 2026-09-30) — مثال «100 بطاقة · 200 شيكل».
+
+    «اليوم» = يوم اللوحة المحلّيّ (Asia/Gaza بتوقيتها الصيفيّ، ``local_today``)،
+    والكلّ مقصورٌ على المدير (مشتركوه وحِزمه — نفس محمول التقارير):
+
+    * ``cards_count`` — البطاقات المباعة اليوم = دخلت أوّل مرّة اليوم؛ المصدر
+      نفسه لـ«مبيعات اليوم» في تقرير الكروت (``cards_sold_by_batch``).
+    * ``payments`` — دفعات المشتركين اليوم = **سطر اليوم في «تقرير المبيعات
+      اليوميّة»** (``accounting_repo.sales_summary(grain='daily')``) حرفيًّا:
+      ``transactions`` و``by_currency`` نفسهما.
+    * ``cards_value`` — قيمة بطاقات اليوم بسعر بطاقة حزمتها وعملة باقتها
+      (البطاقات المطبوعة لا تُقيَّد دفعةً في الدفتر، فبدونها تكون البطاقة «0 ₪»).
+    * ``by_currency`` = ``payments`` + ``cards_value`` لكلّ عملة — رقم البطاقة.
+
+    بلا «التقارير المالية» (``reports.finance``) يُرسَل ``cards_count`` فقط
+    و``money_visible: false`` (لا مبالغ). بلا مفتاح البطاقات ولا المالية ⇒ 0."""
+    t = tenant_id if tenant_id is not None else _tid()
+    access = access if access is not None else dashboard_access()
+    from ..core.system_config import local_today
+    today = local_today(t).isoformat()
+    money = bool(access.get("finance"))
+    out: dict = {"date": today, "cards_count": 0, "money_visible": money}
+    if not (access.get("cards") or money):
+        return out
+    try:
+        from .dashboard_reports import DashboardReportsService
+        sold = DashboardReportsService(tenant_id=t).cards_sold_by_batch(today)
+    except Exception:  # noqa: BLE001 — لا تكسر اللوحة
+        sold = []
+    out["cards_count"] = sum(int(r["count"]) for r in sold)
+    if not money:
+        return out
+    # ── قيمة البطاقات: سعر بطاقة الحزمة × عددها، بعملة باقة الحزمة ──
+    from .card_batch_price import batch_currency
+    cards_by: dict[str, dict] = {}
+    ids = [int(r["batch_id"]) for r in sold if r.get("batch_id")]
+    batches: dict[int, dict] = {}
+    if ids:
+        try:
+            marks = ",".join("?" for _ in ids)
+            for b in db().execute(
+                    f"SELECT id, plan_id, price_per_card FROM card_batches "
+                    f"WHERE tenant_id=? AND id IN ({marks})", (t, *ids)).fetchall():
+                batches[int(b["id"])] = dict(b)
+        except Exception:  # noqa: BLE001
+            batches = {}
+    for r in sold:
+        b = batches.get(int(r.get("batch_id") or 0)) or {}
+        cur = (batch_currency(t, b.get("plan_id")) or "").strip().upper()
+        slot = cards_by.setdefault(cur, {"currency": cur, "count": 0, "total": 0.0})
+        slot["count"] += int(r["count"])
+        try:
+            price = float(b.get("price_per_card") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        slot["total"] += max(price, 0.0) * int(r["count"])
+    # ── دفعات اليوم: سطر اليوم من «تقرير المبيعات اليوميّة» نفسه ──
+    try:
+        from ..db.repos import accounting_repo
+        rows = accounting_repo.sales_summary(t, grain="daily")
+    except Exception:  # noqa: BLE001
+        rows = []
+    row = next((r for r in rows if str(r.get("period")) == today), None) or {}
+    pay_by = [{"currency": str(c["currency"]).upper(), "total": round(float(c["total"] or 0), 2),
+               "transactions": int(c.get("transactions") or 0)}
+              for c in (row.get("by_currency") or [])]
+    from ..core.numbers import round_money
+    total_by: dict[str, float] = {}
+    for c in pay_by:
+        total_by[c["currency"]] = total_by.get(c["currency"], 0.0) + c["total"]
+    for c in cards_by.values():
+        c["total"] = round_money(c["total"])
+        total_by[c["currency"]] = total_by.get(c["currency"], 0.0) + c["total"]
+    from ..core.system_config import default_currency
+    system = (default_currency() or "").strip().upper()
+    by_currency = [{"currency": cur, "total": round_money(v)} for cur, v in total_by.items()]
+    by_currency.sort(key=lambda c: (c["currency"] != system, -abs(c["total"])))
+    out.update({
+        "payments": {"transactions": int(row.get("transactions") or 0),
+                     "total": round(float(row.get("total") or 0), 2),
+                     "by_currency": pay_by},
+        "cards_value": {"by_currency": sorted(cards_by.values(),
+                                              key=lambda c: (c["currency"] != system,
+                                                             -abs(c["total"])))},
+        "by_currency": by_currency,
+        "currency": system,
+    })
+    return out
+
+
 def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
     """يجمع كل المؤشرات في dict واحد للـ template. لا يرفع أبدًا.
 
@@ -545,7 +649,10 @@ def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
         plans = {"total": 0, "enabled": 0, "disabled": 0}
     if not access["network"]:
         nas = {}
+    try: sales_today = get_sales_today(t, access=access)
+    except Exception: sales_today = {"cards_count": 0, "money_visible": False}
     return {
+        "sales_today":    sales_today,
         "subscribers":    subs,
         "cards":          cards,
         "recent_batches": recent_batches,

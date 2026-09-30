@@ -685,6 +685,7 @@
 {% set printed_cards = card_dashboard.printed if card_dashboard and card_dashboard.printed else {} %}
 {% set electronic_cards = card_dashboard.electronic if card_dashboard and card_dashboard.electronic else {} %}
 {% set alerts = metrics.alerts or [] %}
+{% set sales_today = metrics.sales_today or {} %}
 {# fix3 (F01 F8): sections by key (owner: all) — dashboard_metrics.dashboard_access #}
 {% set _da = dash_access if (dash_access is defined and dash_access) else {"subscribers": true, "cards": true, "network": true, "plans": true, "finance": true, "system": true} %}
 {% set sub_total = (subs.total or snap.total_subscribers or 0)|int %}
@@ -860,6 +861,33 @@
       <div class="ops-module-foot">
         {% if can_submit('radius.plans_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>{% endif %}
         {% if can_submit('radius.plans_new', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>{% endif %}
+      </div>
+    </article>
+    {% endif %}
+
+    {# «إجمالي مبيعات اليوم» (طلب المالك): بطاقات اليوم + مبيعاته لكلّ عملة —
+       يوم اللوحة المحلّيّ، مقصورٌ على المدير، والمبلغ يحتاج reports.finance.
+       المصدر: dashboard_metrics.get_sales_today (نفس /api/v1/dashboard.sales_today). #}
+    {% if _da.cards or _da.finance %}
+    <article class="ops-module" data-sales-today style="--tone:#16a34a;--soft-tone:#f0fdf4;--glow:rgba(22,163,74,.12)">
+      <div class="ops-module-head">
+        <div>
+          <h2>{{ _('إجمالي مبيعات اليوم') }}</h2>
+          <p>{{ _('البطاقات التي بيعت اليوم (أوّل دخول) ومبيعات اليوم لكلّ عملة — بتوقيت اللوحة المحلّيّ.') }}</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-cash-register"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong data-sales-today-cards>{{ "{:,}".format((sales_today.cards_count or 0)|int) }}</strong><span>{{ _('بطاقة') }}</span>{% if sales_today.money_visible %}<span aria-hidden="true"> · </span><strong data-sales-today-total>{{ (sales_today.by_currency or [])|money_multi('total', 0) }}</strong>{% endif %}</div>
+        {% if sales_today.money_visible %}
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>{{ _('قيمة البطاقات') }}</span><strong>{{ ((sales_today.cards_value or {}).by_currency or [])|money_multi('total', 0) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('دفعات المشتركين') }}</span><strong>{{ ((sales_today.payments or {}).by_currency or [])|money_multi('total', 0) }}</strong></div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="ops-module-foot">
+        {% if sales_today.money_visible and can_open(url_for('radius.finance_reports', type='daily')) %}<a class="ops-link" href="{{ url_for('radius.finance_reports', type='daily') }}"><i class="fa-solid fa-chart-column"></i> {{ _('تقرير المبيعات اليوميّة') }}</a>{% endif %}
       </div>
     </article>
     {% endif %}
