@@ -414,3 +414,18 @@ def test_loans_date_filter_web_and_api(app, owner):
     assert [i["username"] for i in r.get_json()["data"]["items"]].count(u) == 1
     r = api.get("/api/v1/loans?date_from=bad", headers={"Authorization": "Bearer " + plain})
     assert r.status_code == 422
+
+
+# ───────────────────────── F01-F13 header alerts ─────────────────────────
+
+def test_router_alerts_bell_only_for_who_can_open_the_alerts_centre(app):
+    mgr = H.role_admin(("dashboard.view", "users.view"))
+    c = app.test_client()
+    H.login_session(c, mgr.id)
+    html = _html(c.get("/admin/radius/account"))
+    assert 'id="bell-toggle"' not in html
+    assert 'href="/admin/radius/settings"' not in html          # the gear too
+    owner = app.test_client()
+    H.login_session(owner, H.owner_id())
+    html = _html(owner.get("/admin/radius/account"))
+    assert 'id="bell-toggle"' in html and 'href="/admin/radius/settings"' in html

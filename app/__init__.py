@@ -963,6 +963,13 @@ def _install_stubs(app: Flask) -> None:
             خطأ داخليّ (الخادم يبقى الحَكَم)."""
             if _is_super():
                 return True
+            # جلسةٌ بلا مفتاح «permissions» ليست جلسة دخول حقيقيّة (كلّ دخول يكتبه
+            # ولو فارغًا) — لا قرار RBAC ممكن: fail-open كبقيّة طبقة العرض.
+            try:
+                if "permissions" not in _sess:
+                    return True
+            except Exception:  # noqa: BLE001
+                return True
             name = (endpoint or "").split(".", 1)[1] if (endpoint or "").startswith("radius.") else (endpoint or "")
             meth = (method or "POST").upper()
             try:
@@ -1004,6 +1011,17 @@ def _install_stubs(app: Flask) -> None:
                     _g._rbac_denial = _saved
             except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
                 res = True
+            # مسارٌ محروس بمزخرف mt_permissions.requires_perm (مثل مركز التنبيهات):
+            # نفس فحص المزخرف.
+            if res:
+                try:
+                    _vf = app.view_functions.get("radius." + name)
+                    _need = getattr(_vf, "_hr_required_perms", None)
+                    if _need:
+                        from app.radius.services.mt_permissions import require_perms
+                        res = bool(require_perms(*_need)[0])
+                except Exception:  # noqa: BLE001 — fail-open
+                    pass
             # رابط «جديد/تعديل» يفتح نموذجًا: يُعرَض فقط إن كان حفظه مقبولًا أيضًا
             # (bw_new يفتح بـplans.create وحفظه bw_create يطلب plans.edit).
             if res and meth == "GET":

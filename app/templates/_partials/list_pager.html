@@ -6,7 +6,7 @@
    الحاليّ وتغيّر رقم الصفحة (param، افتراضه pn) فقط.
    ═══════════════════════════════════════════════════════════════════ #}
 {% macro _pager_link(base_args, param, p, label, active=False) -%}
-  {%- set _q = dict(base_args) -%}{%- set _ = _q.update({param: p}) -%}
+  {%- set _q = dict(base_args) -%}{%- set _upd = _q.update({param: p}) -%}
   <a class="uds-pager-btn{{ ' is-active' if active }}" href="{{ request.path }}?{{ _q|urlencode }}"{{ ' aria-current="page"'|safe if active }}>{{ label }}</a>
 {%- endmacro %}
 {% macro list_pager(pager, param='pn') -%}
