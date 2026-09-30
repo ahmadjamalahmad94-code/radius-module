@@ -90,23 +90,30 @@
   <input type="hidden" name="card_id" value="{{ card.id }}">
 {%- endmacro %}
 
+{# F08-M1: الحالة من card.status (نفس قيمة الـAPI: revoked/expired/active/available
+   — تشمل «منتهية بخصم كامل الوقت») وبنفس تسميات جدول بطاقات الحزمة
+   (routes/cards._card_status_meta): موقوف · منتهي · متصل · مستخدم · متاح.
+   كانت تتجاهل status فتُظهر البطاقة المستنفدة «جاهزة» والموقوفة «ملغاة». #}
 {% macro status_inline(card) -%}
-  {%- if card.revoked -%}
-    <span class="cc-pill cc-pill-red"><span class="dot"></span>{{ _('ملغاة') }}</span>
+  {%- set _st = (card.status or '')|lower -%}
+  {%- if card.revoked or _st == 'revoked' -%}
+    <span class="cc-pill cc-pill-red" data-cc-status="revoked"><span class="dot"></span>{{ _('موقوف') }}</span>
   {%- elif card.disabled_reason -%}
-    <span class="cc-pill cc-pill-yellow"><span class="dot"></span>{{ _('معطّلة') }}</span>
+    <span class="cc-pill cc-pill-yellow" data-cc-status="disabled"><span class="dot"></span>{{ _('معطّلة') }}</span>
+  {%- elif _st == 'expired' -%}
+    <span class="cc-pill cc-pill-red" data-cc-status="expired"><span class="dot"></span>{{ _('منتهي') }}</span>
   {%- elif card.active_session -%}
-    <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشطة الآن') }}</span>
-  {%- elif card.used -%}
-    <span class="cc-pill cc-pill-blue"><span class="dot"></span>{{ _('استُعملت') }}</span>
+    <span class="cc-pill cc-pill-green" data-cc-status="online"><span class="dot"></span>{{ _('متصل') }}</span>
+  {%- elif card.used or _st == 'active' -%}
+    <span class="cc-pill cc-pill-blue" data-cc-status="used"><span class="dot"></span>{{ _('مستخدم') }}</span>
   {%- else -%}
-    <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('جاهزة') }}</span>
+    <span class="cc-pill cc-pill-grey" data-cc-status="ready"><span class="dot"></span>{{ _('متاح') }}</span>
   {%- endif -%}
 {%- endmacro %}
 
 {% macro hero_status(card) -%}
   {%- if card.revoked or card.disabled_reason -%}
-    <span class="cc-card-status warn"><span class="dot"></span>{{ 'ملغاة' if card.revoked else 'معطّلة' }}</span>
+    <span class="cc-card-status warn"><span class="dot"></span>{{ _('موقوف') if card.revoked else _('معطّلة') }}</span>
   {%- elif card.active_session -%}
     <span class="cc-card-status"><span class="dot"></span>{{ _('نشطة الآن') }}</span>
   {%- else -%}
@@ -1009,7 +1016,7 @@
                       type="button"
                       {% if not ops.can_disconnect %}data-cc-inert="{{ _('لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع.') }}"{% endif %}
                       data-cc-op="disconnect"
-                      data-cc-active-sessions="{{ _active_sessions | tojson }}">
+                      data-cc-active-sessions="{{ _active_sessions | tojson|forceescape }}">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('قطع الجلسة') }}</div>
@@ -1111,9 +1118,9 @@
 
             <button class="cc-action" type="button"
                     data-cc-op="manage-lock-mac"
-                    data-cc-locked-macs="{{ _locked_macs_clean | tojson }}"
-                    data-cc-recent-macs="{{ _picker_macs | tojson }}"
-                    data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
+                    data-cc-locked-macs="{{ _locked_macs_clean | tojson|forceescape }}"
+                    data-cc-recent-macs="{{ _picker_macs | tojson|forceescape }}"
+                    data-cc-recent-macs-meta="{{ _mac_meta | tojson|forceescape }}">
               <span class="cc-action-icon purple"><i class="fa-solid fa-lock-open"></i></span>
               <div class="cc-action-body">
                 <div class="cc-action-title">{{ _('إدارة قفل MAC') }}</div>
@@ -1150,8 +1157,8 @@
               <button class="cc-action" type="button"
                       data-cc-op="lock-mac"
                       data-cc-current-mac="{{ card.mac_address or '' }}"
-                      data-cc-recent-macs="{{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson }}"
-                      data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
+                      data-cc-recent-macs="{{ ((s.macs or []) | map(attribute='mac') | select | list) | tojson|forceescape }}"
+                      data-cc-recent-macs-meta="{{ _mac_meta | tojson|forceescape }}">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('قفل MAC') }}</div>
@@ -1429,7 +1436,7 @@
               <button class="cc-action cc-action-soft-red" type="button"
                       {% if not ops.can_disconnect %}data-cc-inert="لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع."{% endif %}
                       data-cc-op="disconnect"
-                      data-cc-active-sessions="{{ _active_sessions | tojson }}">
+                      data-cc-active-sessions="{{ _active_sessions | tojson|forceescape }}">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('فصل الجلسة') }}</div>

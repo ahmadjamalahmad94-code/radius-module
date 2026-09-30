@@ -24,7 +24,11 @@
     var page = 1;
 
     // حجم الصفحة الفعليّ بالأرقام (all → كل الصفوف).
-    function pageSizeNum() { return size === ALL ? Math.max(1, rows.length) : size; }
+    // F05-H1 (شقيق): حجمٌ غير صالح (NaN/سالب/∞ من تخزين قديم) = كل الصفوف،
+    // لا بدايةَ NaN تُخفي الجدول كلّه.
+    function pageSizeNum() {
+      return (size === ALL || !(size > 0) || !isFinite(size)) ? Math.max(1, rows.length) : size;
+    }
     function sizeLabel(s) { return s === ALL ? "الكل" : String(s); }
 
     var tbody = table.tBodies[0];

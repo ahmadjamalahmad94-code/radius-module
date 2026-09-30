@@ -953,7 +953,54 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001
                 return []
 
+        def _can_submit(endpoint: str, method: str = "POST") -> bool:
+            """F01-F2: الزرّ/الرابط/النموذج يُعرَض فقط إن كان طلبه (endpoint +
+            method) سيَقبله الخادم لهذا المدير — **نفس قرار** حارس اللوحة
+            (routes/blueprint.rbac_denial_status: أعلام القسم، الأقسام الدقيقة،
+            بوّابة الفعل، bulk.ops، مفتاح الكتابة/المالك، مفتاح العرض). لا يفتح
+            نموذجٌ لا يُحفَظ، ولا زرّ يقود إلى 403. السوبر دائمًا نعم؛ فحصٌ بلا
+            تسجيل حركة (record_activity=False)؛ مُخزَّن لكل طلب. fail-open عند
+            خطأ داخليّ (الخادم يبقى الحَكَم)."""
+            if _is_super():
+                return True
+            name = (endpoint or "").split(".", 1)[1] if (endpoint or "").startswith("radius.") else (endpoint or "")
+            meth = (method or "POST").upper()
+            try:
+                from flask import g as _g
+                cache = getattr(_g, "_can_submit_cache", None)
+                if cache is None:
+                    cache = {}
+                    _g._can_submit_cache = cache
+            except Exception:  # noqa: BLE001
+                cache = {}
+            key = (name, meth)
+            if key in cache:
+                return cache[key]
+            try:
+                from flask import g as _g
+                from app.radius.routes.blueprint import rbac_denial_status
+                _saved = getattr(_g, "_rbac_denial", None)
+                try:
+                    res = rbac_denial_status(
+                        name, meth, is_super=False,
+                        perms=_sess.get("permissions") or [],
+                        admin_id=_sess.get("admin_id"),
+                        tenant_id=int(_sess.get("tenant_id") or 1),
+                        record_activity=False) is None
+                finally:
+                    # لا نطمس سبب رفضٍ حقيقيّ تعرضه صفحة 403 نفسها.
+                    _g._rbac_denial = _saved
+            except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
+                res = True
+            cache[key] = res
+            return res
+
+        def _can_any(*endpoints: str) -> bool:
+            return any(_can_submit(e) for e in endpoints)
+
         return {
+            "can_submit": _can_submit,
+            "can_submit_any": _can_any,
             "manager_locked_fields": _manager_locked_fields,
             "subscriber_actions": _sub_actions,
             "manager_nav_hidden": _manager_nav_hidden,
@@ -1086,6 +1133,28 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault("permission_label", _perm_label)
     app.jinja_env.filters.setdefault("permission_label", _perm_label)
 
+    # F08-L: جمعٌ عربيّ صحيح للأعداد («3 بطاقات»، «11 إعدادًا») — مصدر واحد.
+    from .radius.core.ar_text import ar_count as _ar_count
+    app.jinja_env.filters.setdefault("ar_count", _ar_count)
+    app.jinja_env.globals.setdefault("ar_count", _ar_count)
+    # F08-L: فاعل خام («api-token:72»، «unknown») → اسم عرض مقروء.
+    from .radius.services.actor_names import (
+        actor_display as _actor_display, humanize_actor_refs as _actor_refs)
+    app.jinja_env.filters.setdefault("actor_name", _actor_display)
+    app.jinja_env.filters.setdefault("actor_refs", _actor_refs)
+    # حدود المالك المعروضة في الواجهة (مصدرها ثوابت الخادم نفسها — لا أرقام
+    # مكرّرة في القوالب: سقف التمديد، أطوال البطاقات).
+    from .radius.core.numbers import (
+        EXTEND_MAX_DAYS as _ext_days, EXTEND_TOO_LONG_AR as _ext_msg)
+    from .radius.services.cards import (
+        PASSWORD_LENGTH_MAX as _pw_max, USERNAME_LENGTH_MAX as _un_max)
+    app.jinja_env.globals.setdefault("hr_limits", {
+        "extend_max_days": _ext_days,
+        "extend_too_long": _ext_msg,
+        "card_username_len_max": _un_max,
+        "card_password_len_max": _pw_max,
+    })
+
     # رقم الراوتر المعروض «#N» = ترتيبه بين راوترات المستأجر الحيّة، لا
     # المعرّف الداخليّ (AUTOINCREMENT لا يُعاد — تجارب محذوفة كانت تجعل
     # الراوتر الوحيد يظهر «#39»). المعرّف الداخليّ يبقى في الروابط (مفتاح
@@ -1135,17 +1204,52 @@ def _install_stubs(app: Flask) -> None:
             csrf_token()  # يولّد ويحفظ في session
             return redirect(request.referrer or "/admin/radius/login")
         if sent != expected:
-            # Return JSON for AJAX/JSON requests so fetch().then(r.json()) works
-            # and the UI shows a readable message instead of swallowing the error.
-            if request.is_json or request.headers.get("X-CSRFToken") is not None:
-                from flask import jsonify as _jsonify
-                return _jsonify({
-                    "ok": False,
-                    "status": "csrf_error",
-                    "message_ar": "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.",
-                }), 400
-            return ("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى", 400)
+            return _csrf_failure_response()
         return None
+
+    def _csrf_failure_response():
+        """F08-L: فشل رمز الحماية — JSON عربيّ لطلبات AJAX (fetch/XHR بأيّ
+        جسم)، وصفحة عربيّة منسّقة للتصفّح تحفظ ما كُتب (كانت نصًّا خامًا)."""
+        from flask import request, jsonify as _jsonify, render_template as _rt
+        msg = "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى."
+        accept = request.headers.get("Accept") or ""
+        wants_json = (
+            request.is_json
+            or request.headers.get("X-CSRFToken") is not None
+            or (request.headers.get("X-Requested-With") or "").lower() == "xmlhttprequest"
+            or ("application/json" in accept and "text/html" not in accept)
+        )
+        if wants_json:
+            return _jsonify({
+                "ok": False,
+                "status": "csrf_error",
+                "error": msg,
+                "message": msg,
+                "message_ar": msg,
+            }), 400
+        try:
+            fields = {
+                k: request.form.getlist(k) for k in request.form.keys()
+                if k != "_csrf_token" and "password" not in k.lower()
+                and "secret" not in k.lower()}
+        except Exception:  # noqa: BLE001
+            fields = {}
+        back = request.referrer or ""
+        try:
+            from urllib.parse import urlparse
+            _u = urlparse(back)
+            # رجوعٌ داخل الموقع فقط (لا رابط خارجيّ من ترويسة Referer).
+            back = (_u.path + ("?" + _u.query if _u.query else "")) if (
+                not _u.netloc or _u.netloc == request.host) else ""
+        except Exception:  # noqa: BLE001
+            back = ""
+        try:
+            return _rt("radius/csrf_error.html", fields=fields,
+                       back_url=back), 400
+        except Exception:  # noqa: BLE001 — never 500 over a CSRF refusal
+            return ('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
+                    "<h1>انتهت صلاحية الصفحة</h1><p>" + msg + "</p></html>",
+                    400, {"Content-Type": "text/html; charset=utf-8"})
 
     # حقن _csrf_token في كل <form method="post"> تلقائيًا
     import re

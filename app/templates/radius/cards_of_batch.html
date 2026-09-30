@@ -21,7 +21,7 @@
 {% block title %}{{ _("كروت الحزمة") }} {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}{{ _("كروت الحزمة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ summary.total if summary else 0 }} كرت</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (summary.total if summary else 0)|ar_count('kart') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -513,7 +513,7 @@
       ],
       note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
     )) %}
-    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|string ~ " كرت", flush=True) %}
+    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|ar_count('kart'), flush=True) %}
       <div style="padding:14px 16px 0">
         {# fix2 (R05-N3): بحثٌ وترقيمٌ خادميّان — الصفحة تُصيّر صفحةً واحدة فقط
            (كانت تُصيّر كلّ البطاقات: 10,000 كرت = 52MB في 253ث). #}
@@ -813,7 +813,10 @@
   const pagerInfo = page.querySelector('[data-pager-info]');
   const pagerNav = page.querySelector('[data-pager-nav]');
   /* fix2: الترقيم صار خادميًّا — الصفحة تحمل صفوفها فقط، فلا تقسيم هنا. */
-  const view = { page: 1, size: pageSizeSel ? parseInt(pageSizeSel.value, 10) || 25 : Infinity };
+  /* F05-H1: بلا مُحدِّد حجمٍ محلّيّ (الترقيم خادميّ) لا تقسيم إطلاقًا — size=0
+     يعني «كل صفوف الصفحة». كانت Infinity فصار البدء 0×∞ = NaN وكل الصفوف
+     display:none (جدول فارغ، تحديد الكل/الإجراءات/CSV بلا صفوف). */
+  const view = { page: 1, size: pageSizeSel ? (parseInt(pageSizeSel.value, 10) || 25) : 0 };
   page.querySelectorAll('[data-auto-submit]').forEach(sel => {
     sel.addEventListener('change', () => sel.form && sel.form.submit());
   });
@@ -886,10 +889,13 @@
   function applyView() {
     const matched = matchedRows();
     const total = matched.length;
-    const pages = Math.max(1, Math.ceil(total / view.size));
+    /* حجمٌ غير صالح (0/NaN/∞) = كل الصفوف المطابقة في صفحة واحدة. */
+    const size = (Number.isFinite(view.size) && view.size > 0) ? view.size : Math.max(1, total);
+    const pages = Math.max(1, Math.ceil(total / size));
+    if (!(view.page >= 1)) view.page = 1;
     if (view.page > pages) view.page = pages;
-    const start = (view.page - 1) * view.size;
-    const end = Math.min(start + view.size, total);
+    const start = (view.page - 1) * size;
+    const end = Math.min(start + size, total);
     let idx = 0;
     rows().forEach(row => {
       if (row.dataset.bcMatch === '0') { row.style.display = 'none'; return; }

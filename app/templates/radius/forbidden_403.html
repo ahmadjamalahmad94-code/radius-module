@@ -162,12 +162,33 @@
   {% if refused_fields %}
   {# D04: نموذجٌ رُفض حفظه — نحفظ ما كتبه المدير ونعيده للنموذج ممتلئًا
      (الاستعادة في admin/_admin_layout.html، كلمات المرور لا تُحفظ). #}
+  {# F01-F1: الحقول تُحمَل في كتلة JSON مستقلّة — كانت `tojson` داخل onclick
+     مزدوج الاقتباس فتُغلق السمة عند أوّل «"» ويصير المعالج خطأً نحويًّا
+     (الزرّ لا يفعل شيئًا وتضيع البيانات). tojson يهرّب < > & ' فلا تخرج القيم
+     من كتلة السكربت. #}
+  <script type="application/json" id="hr-refused-fields">{{ refused_fields | tojson }}</script>
   <div class="f403-actions">
-    <button type="button" class="f403-btn" data-testid="forbidden-back-to-form"
-            onclick="try{sessionStorage.setItem('hr_refused_form', JSON.stringify({path: (document.referrer ? new URL(document.referrer).pathname : ''), fields: {{ refused_fields | tojson }} }));}catch(e){} history.back();">
+    <button type="button" class="f403-btn" data-testid="forbidden-back-to-form" data-hr-back-to-form>
       {{ _('العودة إلى النموذج — بياناتك محفوظة') }}
     </button>
   </div>
+  <script>
+  (function () {
+    var btn = document.querySelector('[data-hr-back-to-form]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var fields = {};
+      try { fields = JSON.parse(document.getElementById('hr-refused-fields').textContent || '{}') || {}; } catch (e) { fields = {}; }
+      var path = '';
+      try { path = document.referrer ? new URL(document.referrer).pathname : ''; } catch (e) { path = ''; }
+      try {
+        sessionStorage.setItem('hr_refused_form', JSON.stringify({ path: path, fields: fields }));
+      } catch (e) { /* تخزين الجلسة غير متاح — نعود على الأقلّ */ }
+      if (path && history.length <= 1) { location.href = path; return; }
+      history.back();
+    });
+  })();
+  </script>
   {% endif %}
 
   <div class="f403-actions">

@@ -39,10 +39,14 @@
     cursor: pointer; user-select: none;
     transition: all var(--hub-anim-fast) var(--hub-ease);
     min-height: 40px; box-sizing: border-box;
+    position: relative;   /* F08-M3: يحتوي الإدخال المخفيّ المطلق */
   }
   .tsw:hover{ border-color: var(--hub-brand-line); }
-  .tsw input{
-    /* keep accessible but invisible — focus styles travel via track */
+  .tsw input,
+  .tsw input[type="checkbox"]{
+    /* keep accessible but invisible — focus styles travel via track.
+       F08-M3: [type] raises specificity above page rules such as
+       `.hub-form-grid input{width:100%}` that stretched it page-wide. */
     position: absolute; width: 1px; height: 1px;
     opacity: 0; pointer-events: none;
   }
