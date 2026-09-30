@@ -218,7 +218,18 @@ def effective_system_settings() -> dict[str, Any]:
         # في from_local؛ التطبيق يطبّقها بجدول التحوّلات أدناه — لا بإزاحة الآن).
         "local_time_rule": dict(LOCAL_TIME_RULE),
         "tz_transitions": tz_transitions(),
+        # «الحدود» — سقوف العمليّة الواحدة لهذا الخادم (core.limits): التطبيق
+        # يتحقّق بالأرقام نفسها التي يفرضها الخادم.
+        "limits": _limits_snapshot(),
     }
+
+
+def _limits_snapshot() -> dict[str, Any]:
+    try:
+        from .limits import snapshot
+        return snapshot()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def default_currency() -> str:

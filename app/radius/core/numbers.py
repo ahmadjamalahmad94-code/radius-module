@@ -34,6 +34,10 @@ MONEY_MAX = 1_000_000_000.0
 #   الدفعة المحوَّلة وقتًا، ولوقت السلفة، وللتمديد الجماعيّ. التكرار مسموح.
 # • أيّ انتهاءٍ محسوب بعد سنة 2100 ⇒ 422. كان 1e6 يُنتج سنة 3200/3669 و5e6–1e9
 #   يُسقط الخادم بـ500 «date value out of range».
+# ⚙ منذ موجة الإصلاح 3 (قرار المالك 2026-09-30) هذه **افتراضات** فقط — السقوف
+# الفعّالة تُقرأ من إعدادات «الحدود» لكلّ خادم عبر ``core.limits`` (action_amount /
+# check_extend_minutes / check_expiry / add_minutes_capped / check_create_expiry
+# أدناه تستعملها). لا تستعمل الثوابت مباشرةً في مسارٍ جديد.
 ACTION_AMOUNT_MAX = 100_000.0
 EXTEND_MAX_DAYS = 365
 EXTEND_MAX_MINUTES = EXTEND_MAX_DAYS * 1440
@@ -197,65 +201,76 @@ def money_cents(value: Any) -> int:
     return int((Decimal(repr(round_money(value))) * 100).to_integral_value())
 
 
-def action_amount(value: Any, *, field: str = "amount") -> Any:
-    """422 لمبلغ عمليّةٍ واحدة فوق ``ACTION_AMOUNT_MAX`` (دفعة/تمديد/سلفة/رصيد…)."""
-    if value is not None and float(value) > ACTION_AMOUNT_MAX + 1e-9:
-        raise NonFiniteNumber(
-            f"قيمة «{field_label(field)}» تتجاوز الحدّ الأقصى للعملية الواحدة "
-            f"({_fmt(ACTION_AMOUNT_MAX)}).", details={"field": field})
+def action_amount(value: Any, *, field: str = "amount", kind: str = "generic") -> Any:
+    """422 لمبلغ عمليّةٍ واحدة فوق سقف نوعه في «الحدود» (``core.limits``):
+    payment / balance / distributor / loan / generic — الرسالة تذكر القيمة."""
+    if value is None:
+        return value
+    from . import limits
+    msg = limits.amount_error(value, kind, label=field_label(field))
+    if msg:
+        raise NonFiniteNumber(msg, details={"field": field, "kind": kind})
     return value
 
 
 def check_expiry(dt: Optional[datetime]) -> Optional[datetime]:
-    """422 «المدة الناتجة تتجاوز الحدّ المسموح» لانتهاءٍ محسوب بعد سنة 2100."""
-    if dt is not None and dt >= EXPIRY_LIMIT:
-        raise NonFiniteNumber(EXPIRY_TOO_FAR_AR, details={"field": "expire_at"})
+    """422 «المدة الناتجة تتجاوز الحدّ المسموح» لانتهاءٍ بعد نهاية السنة المضبوطة
+    في «الحدود» (الافتراض والحدّ التقنيّ 2100)."""
+    if dt is None:
+        return dt
+    from . import limits
+    if dt >= limits.expiry_limit():
+        raise NonFiniteNumber(limits.expiry_too_far_msg(), details={"field": "expire_at"})
     return dt
 
 
 def add_minutes_capped(base: datetime, minutes: int) -> datetime:
     """``base + minutes`` مع حارس السقف: الفائض (OverflowError = 500 سابقًا) وما
-    بعد سنة 2100 ⇒ 422 بالرسالة نفسها."""
+    بعد السنة المضبوطة ⇒ 422 بالرسالة نفسها."""
     try:
         out = base + timedelta(minutes=int(minutes))
     except (OverflowError, ValueError):
-        raise NonFiniteNumber(EXPIRY_TOO_FAR_AR, details={"field": "expire_at"}) from None
+        from . import limits
+        raise NonFiniteNumber(limits.expiry_too_far_msg(),
+                              details={"field": "expire_at"}) from None
     return check_expiry(out)
 
 
 def check_extend_minutes(minutes: int) -> int:
-    """422 «أقصى تمديد في المرة الواحدة سنة…» لإضافةٍ فوق 365 يومًا في عمليّة
-    واحدة (كان 999,999 يومًا يُقبل من الويب). التكرار مسموح."""
-    if int(minutes) > EXTEND_MAX_MINUTES:
-        raise NonFiniteNumber(EXTEND_TOO_LONG_AR, details={"field": "minutes"})
+    """422 «أقصى تمديد في المرة الواحدة …» لإضافةٍ فوق «أقصى عدد أيام تفعيل/تمديد»
+    المضبوط (الافتراض 365 ⇒ «سنة»). التكرار مسموح."""
+    from . import limits
+    if int(minutes) > limits.max_extend_minutes():
+        raise NonFiniteNumber(limits.extend_too_long_msg(), details={"field": "minutes"})
     return int(minutes)
 
 
-# ── ⏸ سؤالٌ مُعلَّق للمالك (F03): هل تسري قاعدة «سنة في المرة» على **الإنشاء**؟ ──
-# اليوم: إنشاء مشتركٍ بانتهاء 2090 مقبول (الحدّ 2000–2100 فقط). جاهزٌ ومُطفأ:
-# التفعيل = ``CREATE_EXPIRY_ONE_YEAR_RULE = True`` (أو متغيّر البيئة
-# ``HOBERADIUS_CREATE_EXPIRY_ONE_YEAR=1``) — نقطةٌ واحدة يستدعيها
-# ``UsersService.create`` (ويب + API + تطبيق). لا شيء آخر يتغيّر.
-CREATE_EXPIRY_ONE_YEAR_RULE = False
-CREATE_TOO_LONG_AR = ("أقصى مدّة عند إنشاء المشترك سنة من الآن — أنشئه بسنة ثم "
-                      "مدّد إن احتجت أكثر.")
+# ── قرار المالك (2026-09-30): قاعدة «أقصى أيام في المرة» تسري على **الإنشاء** ──
+# انتهاء مشتركٍ جديد ≤ الآن + «أقصى عدد أيام تفعيل/تمديد» (الافتراض سنة). نقطةٌ
+# واحدة يستدعيها ``UsersService.create`` (الويب، الـAPI/التطبيق، إنشاء المدير).
+# معالج الترحيل واستيراد مايكروتيك لا يمرّان بها (ينسخان حساباتٍ قائمة كما هي).
+# مفتاح الطوارئ فقط: ``HOBERADIUS_CREATE_EXPIRY_ONE_YEAR=0`` يعطّلها.
+CREATE_EXPIRY_ONE_YEAR_RULE = True
 
 
 def create_expiry_rule_enabled() -> bool:
     import os
     env = (os.environ.get("HOBERADIUS_CREATE_EXPIRY_ONE_YEAR") or "").strip().lower()
+    if env in {"0", "false", "no", "off"}:
+        return False
     return bool(CREATE_EXPIRY_ONE_YEAR_RULE or env in {"1", "true", "yes", "on"})
 
 
 def check_create_expiry(expire_at: Optional[datetime],
                         now: Optional[datetime] = None) -> Optional[datetime]:
-    """(مُطفأ افتراضًا) 422 لانتهاءٍ عند الإنشاء أبعد من سنة من الآن (+دقيقة سماح
+    """422 لانتهاءٍ عند الإنشاء أبعد من «أقصى أيام في المرة» من الآن (+دقيقة سماح
     لزمن الطلب). بلا تاريخ (NULL) لا يُفحص."""
     if expire_at is None or not create_expiry_rule_enabled():
         return expire_at
-    limit = (now or datetime.utcnow()) + timedelta(days=EXTEND_MAX_DAYS, minutes=1)
+    from . import limits
+    limit = (now or datetime.utcnow()) + timedelta(days=limits.max_extend_days(), minutes=1)
     if expire_at > limit:
-        raise NonFiniteNumber(CREATE_TOO_LONG_AR, details={"field": "expire_at"})
+        raise NonFiniteNumber(limits.create_too_long_msg(), details={"field": "expire_at"})
     return expire_at
 
 

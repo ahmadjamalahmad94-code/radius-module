@@ -12,7 +12,7 @@ from ..core.constants import (
 )
 from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
 from ..core.numbers import (
-    ACTION_AMOUNT_MAX, EXTEND_MAX_MINUTES, EXTEND_TOO_LONG_AR, NonFiniteNumber,
+    NonFiniteNumber,
     action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
     finite_float, round_money,
 )
@@ -40,7 +40,8 @@ def _charge_amount(charge_mode: str, amount) -> float:
     value = round_money(finite_float(amount, field="amount"))
     if value <= 0:
         raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
-    action_amount(value, field="amount")
+    # «الحدود»: مبلغ تمديد/كوتة/استعادة = دفعةٌ من المشترك (أقصى دفعة نقدية).
+    action_amount(value, field="amount", kind="payment")
     return value
 
 
@@ -493,16 +494,18 @@ class UsersService:
             #     كان يعطي 518 مليون دقيقة وانتهاءً سنة 3012)؛
             #   • الانتهاء الناتج ≤ 2100؛
             #   • دين فرق السعر مبلغٌ لا يُحوَّل وقتًا ⇒ ≤ 100,000.
-            if minute_delta > EXTEND_MAX_MINUTES:
+            from ..core import limits
+            if minute_delta > limits.max_extend_minutes():
                 raise NonFiniteNumber(
-                    f"{EXTEND_TOO_LONG_AR} — التعويض المحسوب لهذا التغيير "
+                    f"{limits.extend_too_long_msg()} — التعويض المحسوب لهذا التغيير "
                     f"{_fmt_minutes_ar(minute_delta)}. اختر «تغيير العرض بدون تعويض» "
                     "ثم مدّد يدويًّا على دفعات، أو اختر عرضًا أقرب سعرًا.",
                     details={"field": "policy", "minute_delta": minute_delta})
-            if debt_amount > ACTION_AMOUNT_MAX + 1e-9:
+            _debt_cap = limits.money_cap("payment")
+            if debt_amount > _debt_cap + 1e-9:
                 raise NonFiniteNumber(
                     f"دين فرق السعر المحسوب ({debt_amount:.2f}) يتجاوز الحدّ الأقصى "
-                    f"للعملية الواحدة ({int(ACTION_AMOUNT_MAX)}). اختر «إنقاص الأيام» "
+                    f"للعملية الواحدة ({limits.fmt_amount(_debt_cap)}). اختر «إنقاص الأيام» "
                     "أو «بدون دين/تعويض».",
                     details={"field": "policy", "debt_amount": debt_amount})
             if minute_delta:
@@ -853,7 +856,7 @@ class UsersService:
         amount = round_money(finite_float(amount, field="amount"))
         if amount <= 0:
             raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
-        action_amount(amount, field="amount")
+        action_amount(amount, field="amount", kind="balance")   # «أقصى إضافة رصيد»
         # Net wallet credit = cash received − the part used to settle open loans.
         # Loans the operator chose to «خصم» are cleared separately (their own
         # settlement ledger), so ONLY the remainder lands in the wallet — the

@@ -238,6 +238,11 @@ def vch_generate():
         if count <= 0 or amount <= 0:
             flash("العدد والمبلغ مطلوبان وأكبر من صفر", "error")
             return redirect(url_for("radius.vch_generate"))
+        from ..core import limits
+        _msg = limits.amount_error(amount, "generic", label="قيمة القسيمة")
+        if _msg:   # «الحدود» — نفس سقف /api/v1/vouchers
+            flash(_msg, "error")
+            return redirect(url_for("radius.vch_generate"))
         plan_id = request.form.get("plan_id")
         expire = _date("expire_at")
         # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
@@ -352,6 +357,11 @@ def inv_create():
                 if s.id == sub_id), None)
     if not sub:
         flash("اختر مشتركًا صحيحًا", "error")
+        return redirect(url_for("radius.inv_new"))
+    from ..core import limits
+    _msg = limits.amount_error(_f("amount"), "generic", label="قيمة الفاتورة")
+    if _msg:   # «الحدود» — نفس سقف /api/v1/invoices
+        flash(_msg, "error")
         return redirect(url_for("radius.inv_new"))
     plan = None
     plan_id_str = request.form.get("plan_id")

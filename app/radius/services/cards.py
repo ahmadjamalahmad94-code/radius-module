@@ -218,6 +218,14 @@ def _batch_window_seconds(batch) -> int:
 CARDS_MAX_PER_BATCH_KEY = "cards.max_per_batch"
 
 
+def hard_max_cards_per_batch(tenant_id: int) -> int:
+    """السقف الأعلى لعدد البطاقات في الحزمة — إعداد «الحدود»
+    ``limits.max_cards_per_batch`` (الافتراض 10,000 = ``CARDS_HARD_MAX_PER_BATCH``،
+    الحدّ التقنيّ 100,000). فوقه يسري ``cards.max_per_batch`` (0 = بلا حدّ)."""
+    from ..core import limits
+    return int(limits.max_cards_per_batch(tenant_id))
+
+
 def max_cards_per_batch(tenant_id: int) -> int:
     """سقف عدد البطاقات في الدفعة الواحدة — **0 = بلا حدّ** (الافتراض).
 
@@ -506,9 +514,10 @@ class CardsService:
         progress("validating", 0, count, "فحص الإعدادات ومنع التكرار")
         if count <= 0:
             raise RadiusValidationError("عدد البطاقات يجب أن يكون 1 فأكثر.")
-        if count > CARDS_HARD_MAX_PER_BATCH:
+        _hard = hard_max_cards_per_batch(self._store_tenant_id())
+        if count > _hard:
             raise RadiusValidationError(
-                f"الحدّ الأقصى للدفعة الواحدة {CARDS_HARD_MAX_PER_BATCH} بطاقة — "
+                f"الحدّ الأقصى للدفعة الواحدة {_hard} بطاقة — "
                 "قسّم الكمّية على أكثر من دفعة."
             )
         _cap = max_cards_per_batch(self._store_tenant_id())
@@ -2261,6 +2270,11 @@ class CardsService:
         if delta_seconds == 0:
             raise RadiusValidationError("لا يوجد تعديل لتطبيقه")
         tenant_id = self._store_tenant_id()
+        # «الحدود» (قرار المالك): إضافة وقتٍ للبطاقة ≤ «أقصى عدد أيام تفعيل/تمديد
+        # في العملية الواحدة» — نفس سقف المشترك، للويب والـAPI والجماعيّ.
+        from ..core import limits
+        if delta_seconds > limits.max_extend_days(tenant_id) * 86400:
+            raise RadiusValidationError(limits.extend_too_long_msg(tenant_id))
         # 🔑 منحةٌ على الميزانية لا تعديلٌ لـ`expire_at`.
         #
         # كان يُعدَّل `expire_at`، فيَرفض متى كان فارغًا («تأكّد أنّها مفعّلة»)

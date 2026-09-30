@@ -469,18 +469,20 @@ def test_one_dst_rule_for_ambiguous_local_times(client):
     assert isinstance(system["tz_transitions"], list) and system["tz_transitions"]
 
 
-def test_create_one_year_rule_is_switched_off_but_ready(client, monkeypatch):
+def test_create_one_year_rule_is_on(client, monkeypatch):
+    """Owner decision 2026-09-30: the per-operation rule also binds CREATE
+    (2090 was accepted). Emergency switch-off: HOBERADIUS_CREATE_EXPIRY_ONE_YEAR=0.
+    The configurable variants are pinned in test_fix3_limits.py."""
     body = lambda: {"username": "c3_" + uuid4().hex[:8], "password": "secret1",  # noqa: E731
                     "plan_id": _plan(), "expire_at": "2090-01-01T00:00:00Z"}
-    _data(client.post("/api/v1/accounts", headers=AUTH, json=body()), 201)
-    import app.radius.core.numbers as numbers
-    monkeypatch.setattr(numbers, "CREATE_EXPIRY_ONE_YEAR_RULE", True)
     err = _err(client.post("/api/v1/accounts", headers=AUTH, json=body()))
     assert "عند إنشاء المشترك سنة" in err["message"]
     ok_body = body()
     ok_body["expire_at"] = (datetime.utcnow() + timedelta(days=300)).strftime(
         "%Y-%m-%dT%H:%M:%SZ")
     _data(client.post("/api/v1/accounts", headers=AUTH, json=ok_body), 201)
+    monkeypatch.setenv("HOBERADIUS_CREATE_EXPIRY_ONE_YEAR", "0")
+    _data(client.post("/api/v1/accounts", headers=AUTH, json=body()), 201)
 
 
 def test_web_money_forms_show_the_cap_reason_not_a_generic_error(client):

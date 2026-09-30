@@ -676,10 +676,11 @@ def cards_generate():
         return fail("validation_error", "plan_id مطلوب", status=422)
     if count <= 0:
         return fail("validation_error", "عدد الكروت يجب أن يكون 1 فأكثر.", status=422)
-    from app.radius.services.cards import CARDS_HARD_MAX_PER_BATCH
-    if count > CARDS_HARD_MAX_PER_BATCH:
+    from app.radius.services.cards import hard_max_cards_per_batch
+    _hard = hard_max_cards_per_batch(_tid())
+    if count > _hard:
         return fail("validation_error",
-                    f"الحدّ الأقصى للدفعة الواحدة {CARDS_HARD_MAX_PER_BATCH} بطاقة — "
+                    f"الحدّ الأقصى للدفعة الواحدة {_hard} بطاقة — "
                     "قسّم الكمّية على أكثر من دفعة.", status=422)
     # نفس سقف اللوحة: إعداد الجهة cards.max_per_batch (0 = بلا حدّ).
     from app.radius.services.cards import max_cards_per_batch
@@ -1176,8 +1177,8 @@ def cards_reset_usage(card_id: int):
 
 
 _ADJUST_UNITS = {"minutes": 60, "hours": 3600, "days": 86400}
-#: سقف تعديلٍ واحد = 3650 يومًا (نفس سقف تمديد المشترك في fix2).
-_ADJUST_MAX_SECONDS = 3650 * 86400
+#: سقف تعديلٍ واحد: «الحدود» — أقصى عدد أيام تفعيل/تمديد (الافتراض 365).
+#: (الإضافة يفرضها أيضًا CardsService.adjust_card_time للويب والجماعيّ.)
 
 
 def cards_adjust_time(card_id: int):
@@ -1214,9 +1215,9 @@ def cards_adjust_time(card_id: int):
         delta = amount * _ADJUST_UNITS[unit] * (-1 if op == "subtract" else 1)
     if not delta:
         return fail("validation_error", "لا يوجد تعديل لتطبيقه.", status=422)
-    if abs(delta) > _ADJUST_MAX_SECONDS:
-        return fail("validation_error",
-                    "المدّة تتجاوز الحدّ المسموح (3650 يومًا).", status=422)
+    from ...radius.core import limits
+    if abs(delta) > limits.max_extend_days() * 86400:
+        return fail("validation_error", limits.extend_too_long_msg(), status=422)
     from ...radius.services.cards import get_cards_service
     try:
         result = get_cards_service().adjust_card_time(

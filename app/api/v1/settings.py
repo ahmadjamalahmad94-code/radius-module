@@ -97,6 +97,14 @@ def settings_patch():
                 return fail("validation_error",
                             "القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء).",
                             status=422, details={"field": skey})
+        if skey.startswith("limits."):
+            # «الحدود» — نفس تحقّق صفحة الإعدادات (core.limits.validate_setting).
+            from ...radius.core import limits as _limits
+            try:
+                sval = _limits.validate_setting(skey, value)
+            except ValueError as exc:
+                return fail("validation_error", str(exc), status=422,
+                            details={"field": skey})
         if skey == "billing.currency":
             sval = sval.upper()
             if sval and (not sval.isalpha() or not (2 <= len(sval) <= 5)):

@@ -43,8 +43,9 @@
       </div>
       <div class="hub-field" id="row-minutes" style="display:{{ 'grid' if _act == 'extend' else 'none' }}">
         <label class="hub-field-label">{{ _('عدد الدقائق') }}</label>
-        <input class="hub-input" type="number" name="minutes" min="1" max="525600" value="{{ form.minutes if form and form.minutes else 60 }}">
-        <div class="hub-text-mute small">{{ _('حتى سنة واحدة (525600 دقيقة) في المرة — كرّر التمديد إن احتجت أكثر.') }}</div>
+        {% set _lim = hr_limits() %}
+        <input class="hub-input" type="number" name="minutes" min="1" max="{{ _lim.max_extend_minutes }}" value="{{ form.minutes if form and form.minutes else 60 }}">
+        <div class="hub-text-mute small">{{ _('الحدّ في المرة الواحدة:') }} {{ _lim.max_extend_days }} {{ _('يومًا') }} ({{ _lim.max_extend_minutes }} {{ _('دقيقة') }}) — {{ _('كرّر التمديد إن احتجت أكثر.') }}</div>
       </div>
       <div class="hub-field" id="row-password" style="display:{{ 'grid' if _act == 'reset_password' else 'none' }}">
         <label class="hub-field-label">{{ _('كلمة المرور الجديدة') }}</label>

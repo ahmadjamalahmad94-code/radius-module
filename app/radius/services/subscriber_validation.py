@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 from ..core.errors import RadiusValidationError
+from ..core import limits
 from ..core.numbers import EXPIRY_LIMIT, EXTEND_MAX_DAYS, EXTEND_TOO_LONG_AR
 
 # Arabic-Indic (U+0660..) and Extended/Persian (U+06F0..) digits → Latin.
@@ -42,11 +43,15 @@ EXPIRY_RANGE_MSG = "تاريخ الانتهاء يجب أن يكون بين عا
 EXPIRY_JUMP_MSG = EXTEND_TOO_LONG_AR
 
 
+# (الثوابت أعلاه افتراضات؛ الفعّال من «الحدود»: آخر سنة و«أقصى أيام في المرة».)
+
+
 def validate_expiry_range(expire_at: Optional[datetime]) -> None:
     if expire_at is None:
         return
-    if not (EXPIRY_MIN <= expire_at <= EXPIRY_MAX):
-        raise RadiusValidationError(EXPIRY_RANGE_MSG)
+    year = limits.max_expiry_year()
+    if not (EXPIRY_MIN <= expire_at < limits.expiry_limit()):
+        raise RadiusValidationError(f"تاريخ الانتهاء يجب أن يكون بين عامي 2000 و {year}.")
 
 
 def validate_expiry_jump(current: Optional[datetime], new: Optional[datetime], *,
@@ -58,8 +63,8 @@ def validate_expiry_jump(current: Optional[datetime], new: Optional[datetime], *
     validate_expiry_range(new)
     now = now or datetime.utcnow()
     anchor = max(now, current) if current is not None else now
-    if new - anchor > MAX_EXPIRY_JUMP:
-        raise RadiusValidationError(EXPIRY_JUMP_MSG)
+    if new - anchor > timedelta(days=limits.max_extend_days()):
+        raise RadiusValidationError(limits.extend_too_long_msg())
 
 
 # ── per-field rules ───────────────────────────────────────────────────

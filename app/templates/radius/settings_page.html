@@ -324,6 +324,7 @@
   <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">7</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="limits"><i class="fa-solid fa-scale-balanced"></i> {{ _('الحدود') }} <span class="st-count">{{ (limit_rows|length) if limit_rows is defined else 0 }}</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   {# تبويب «الرسائل والتنبيهات» (Webhook المفرد) أُزيل — وُحِّد الويبهوك في
      صفحة «الربط الخارجي» /admin/radius/webhooks (اشتراكات + سجلّ + HMAC). #}
@@ -783,6 +784,42 @@
    مُرسِل الأحداث (webhooks/dispatcher.py) يقرأ المفتاحين المفردين
    webhook.target_url / webhook.secret أصلًا — وتُرحَّل أي قيمة مضبوطة
    سابقًا إلى اشتراك عبر migration 134_webhook_settings_to_subscription. #}
+
+{# ─────────────────── تبويب: الحدود (قرار المالك 2026-09-30) ─────────────────── #}
+{# سقوف العمليّة الواحدة لهذا الخادم — المصدر والتحقّق core/limits.py، ويقرؤها
+   الويب والـAPI والتطبيق والمسارات الجماعيّة من هنا. تسري فور الحفظ. #}
+<div class="st-panel" data-st-panel="limits">
+  <section class="st-section st-section--finance" data-st-limits>
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+      <span class="st-section-title">{{ _('الحدود — سقوف العملية الواحدة') }}</span>
+      <span class="st-section-meta">{{ _('تسري فورًا على الويب والتطبيق وواجهة API والعمليات الجماعية') }}</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        {% for lim in (limit_rows if limit_rows is defined else []) %}
+        <div class="st-field" data-st-limit="{{ lim.key }}">
+          <label class="st-field-label" for="lim-{{ loop.index }}">{{ _(lim.label) }}
+            <span class="hub-hint" tabindex="0" data-hint="{{ _(lim.help) }}"><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" id="lim-{{ loop.index }}" type="number" dir="ltr"
+                 name="{{ lim.key }}" value="{{ lim.value }}" min="{{ '1' if lim.kind != 'money' else '0.01' }}"
+                 max="{{ lim.tech_max }}" step="{{ 'any' if lim.kind == 'money' else '1' }}" required>
+          {% if lim.allow_unlimited %}
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+            {{ toggle_switch(name=lim.unlimited_key, checked=lim.unlimited, value="1", id="lim-u-" ~ loop.index) }}
+            <input type="hidden" name="{{ lim.unlimited_key }}" value="0">
+            <span class="hub-text-mute small">{{ _('بلا حدّ') }} — {{ _('يبقى الحدّ التقنيّ') }} <bdi dir="ltr">{{ lim.tech_max }}</bdi></span>
+          </div>
+          {% endif %}
+          <div class="help">{{ _(lim.help) }} {{ _('الافتراضيّ:') }} <bdi dir="ltr">{{ lim.default }}</bdi>.</div>
+          <bdi class="st-key">{{ lim.key }}</bdi>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
 
 {# ─────────────────── تبويب: متقدم ─────────────────── #}
 <div class="st-panel" data-st-panel="advanced">
