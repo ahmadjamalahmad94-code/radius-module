@@ -920,6 +920,19 @@ class UsersService:
                 "new_balance": _fmt_money_ar(saved.balance, currency),
                 "actor": actor,
             }, dedup_key=f"credit:{username}:{credit}")
+        # إشعار المشترك نفسه بشحن رصيده («إضافة شحن» — مُطفأ افتراضيًّا).
+        if credit > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                notify_event(
+                    "recharge_added",
+                    tenant_id=saved.tenant_id,
+                    subscriber=find_subscriber(saved.tenant_id, username=username),
+                    context={"amount": _fmt_money_ar(credit, currency),
+                             "balance": _fmt_money_ar(saved.balance, currency)},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل عمليّة الشحن أبدًا
+                pass
         return saved
 
     @atomic
@@ -1147,6 +1160,19 @@ class UsersService:
             "kind": _kind,
             "actor": actor,
         }, dedup_key=f"time_added:{username}:{minutes}")
+        # إشعار المشترك بخصم رصيده مقابل الوقت («سحب رصيد» — مُطفأ افتراضيًّا).
+        if charge_mode in {"paid", "debt"} and amount > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                notify_event(
+                    "balance_withdraw",
+                    tenant_id=saved.tenant_id,
+                    subscriber=find_subscriber(saved.tenant_id, username=username),
+                    context={"amount": _fmt_money_ar(amount, currency),
+                             "balance": _fmt_money_ar(saved.balance, currency)},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل العمليّة أبدًا
+                pass
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:

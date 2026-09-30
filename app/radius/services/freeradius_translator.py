@@ -16,9 +16,19 @@ radcheck / radreply / radgroupcheck / radgroupreply / radusergroup.
 - Port-Limit: عدد الجلسات المتزامنة المسموحة.
 - Acct-Interim-Interval: كم ثانية بين كل acct update من NAS.
 - Reply-Message: نص يُعرض للمستخدم.
+- MS-Primary-DNS-Server / MS-Secondary-DNS-Server: DNS لـ PPPoE/PPP.
+- Mikrotik-Equalize-Rate: موازنة الحمل download/upload/download-upload.
+- Mikrotik-Firewall-Chain: chain مرشّح MikroTik.
+- Mikrotik-Address-List: قائمة عناوين MikroTik.
+- Framed-Route: مسار IP مُضاف للجلسة.
+- Mikrotik-Group: مجموعة المستخدم في MikroTik.
+- Mikrotik-Winbox-Group: مجموعة Winbox.
+- Mikrotik-Queue-Type: أولوية الـ queue.
+- Framed-Pool: مجمّع عناوين IP.
 """
 from __future__ import annotations
 
+import json as _json
 import logging
 import threading
 from datetime import datetime
@@ -124,6 +134,57 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
             rate = f"{int(sub.upload_speed_kbps)}k/{int(sub.download_speed_kbps)}k"
             user_reply.append(("Mikrotik-Rate-Limit", "=", rate))
 
+    # ── PART 1A: DNS (PPPoE/PPP only) ──
+    if sub.service_type and sub.service_type.lower() in ("pppoe", "ppp"):
+        if sub.primary_dns_ppp:
+            user_reply.append(("MS-Primary-DNS-Server", ":=", sub.primary_dns_ppp))
+        if sub.secondary_dns_ppp:
+            user_reply.append(("MS-Secondary-DNS-Server", ":=", sub.secondary_dns_ppp))
+
+    # ── PART 1B: Equal-share (موازنة الحمل) ──
+    if sub.equal_share_download and sub.equal_share_upload:
+        user_reply.append(("Mikrotik-Equalize-Rate", "=", "download-upload"))
+    elif sub.equal_share_download:
+        user_reply.append(("Mikrotik-Equalize-Rate", "=", "download"))
+    elif sub.equal_share_upload:
+        user_reply.append(("Mikrotik-Equalize-Rate", "=", "upload"))
+
+    # ── PART 1C: Subscriber metadata attrs ──
+    _meta = _json.loads(sub.metadata or "{}")
+    _mt   = _meta.get("mikrotik", {})
+    _rad  = _meta.get("radius", {})
+
+    if _mt.get("mikrotik_filter_chain"):
+        user_reply.append(("Mikrotik-Firewall-Chain", "=", str(_mt["mikrotik_filter_chain"])))
+    if _mt.get("mikrotik_address_list"):
+        user_reply.append(("Mikrotik-Address-List", "=", str(_mt["mikrotik_address_list"])))
+    if _mt.get("mikrotik_framed_route"):
+        user_reply.append(("Framed-Route", "=", str(_mt["mikrotik_framed_route"])))
+    if _mt.get("mikrotik_user_group"):
+        user_reply.append(("Mikrotik-Group", "=", str(_mt["mikrotik_user_group"])))
+    if _mt.get("mikrotik_winbox_group"):
+        user_reply.append(("Mikrotik-Winbox-Group", "=", str(_mt["mikrotik_winbox_group"])))
+    if _mt.get("mikrotik_queue_priority"):
+        user_reply.append(("Mikrotik-Queue-Type", "=", str(_mt["mikrotik_queue_priority"])))
+    if _rad.get("framed_pool"):
+        user_reply.append(("Framed-Pool", ":=", str(_rad["framed_pool"])))
+
+    # ppp_attributes_extra: one "Attr-Name op value" per line
+    for _line in str(_rad.get("ppp_attributes_extra") or "").splitlines():
+        _parts = _line.strip().split(None, 2)
+        if len(_parts) == 3:
+            user_reply.append((_parts[0], _parts[1], _parts[2]))
+
+    # acct_interim_interval_sec override (per-user wins over plan-level group reply)
+    _aii = _rad.get("acct_interim_interval_sec")
+    if _aii:
+        try:
+            _aii_int = int(_aii)
+            if _aii_int > 0:
+                user_reply.append(("Acct-Interim-Interval", ":=", str(_aii_int)))
+        except (TypeError, ValueError):
+            pass
+
     freeradius_repo.replace_user_reply(tid, username, user_reply)
 
     # ─ radusergroup (link to plan) ─
@@ -160,12 +221,11 @@ def sync_plan(plan: AccessPlan) -> None:
     reply: list[tuple[str, str, str]] = []
 
     # السرعة (MikroTik vendor-specific) — صيغة "up/down k" أو "up/down k <burst...>"
-    # تُحلّ عبر bandwidth_rate.plan_rate_limit: لو الخطّة تُشير لملفّ سرعة
-    # (bandwidth_id) موجود فالملفّ هو المصدر (إنفاذ Finding-1 → option A)، وإلّا
-    # حقول الخطّة. الخطط بلا ملفّ تبقى كما هي.
-    from .bandwidth_rate import plan_rate_limit
-    rate = plan_rate_limit(plan)
-    if rate:
+    if plan.speed_down_kbps or plan.speed_up_kbps:
+        if plan.burst_raw:
+            rate = plan.burst_raw
+        else:
+            rate = f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
         reply.append(("Mikrotik-Rate-Limit", "=", rate))
 
     # Session timeout (ثواني)
@@ -188,11 +248,34 @@ def sync_plan(plan: AccessPlan) -> None:
     if plan.address_pool:
         reply.append(("Mikrotik-Address-List", "=", plan.address_pool))
 
-    # Interim-Update كل 60 ثانية افتراضيًا (للحصول على acct بيانات حيّة)
-    reply.append(("Acct-Interim-Interval", ":=", "60"))
+    # Interim-Update interval — استخدم plan.acct_interim_interval لو موجود، 60 fallback.
+    # ملاحظة: الـ per-user override في radreply (sync_subscriber) يكسب دائمًا على هذه القيمة.
+    _plan_aii = getattr(plan, "acct_interim_interval", None)
+    if _plan_aii and int(_plan_aii) > 0:
+        reply.append(("Acct-Interim-Interval", ":=", str(int(_plan_aii))))
+    else:
+        reply.append(("Acct-Interim-Interval", ":=", "60"))
 
     # رسالة ترحيب صغيرة (تظهر في سجل FreeRADIUS، بعض NAS تعرضها)
     reply.append(("Reply-Message", "=", f"Plan: {plan.name}"))
+
+    # ── PART 2: Plan metadata attrs ──
+    _pmeta = _json.loads(plan.metadata or "{}")
+    _pmt   = _pmeta.get("mikrotik", {})
+
+    if _pmt.get("mikrotik_filter_chain_name"):
+        reply.append(("Mikrotik-Firewall-Chain", "=", str(_pmt["mikrotik_filter_chain_name"])))
+    # mikrotik_address_list only if address_pool is not already set (avoid duplicate)
+    if _pmt.get("mikrotik_address_list") and not plan.address_pool:
+        reply.append(("Mikrotik-Address-List", "=", str(_pmt["mikrotik_address_list"])))
+    if _pmt.get("mikrotik_user_group"):
+        reply.append(("Mikrotik-Group", "=", str(_pmt["mikrotik_user_group"])))
+    if _pmt.get("mikrotik_queue_priority_simple_queue"):
+        reply.append(("Mikrotik-Queue-Type", "=", str(_pmt["mikrotik_queue_priority_simple_queue"])))
+
+    # Plan framed_pool (direct field)
+    if getattr(plan, "framed_pool", None):
+        reply.append(("Framed-Pool", ":=", plan.framed_pool))
 
     freeradius_repo.replace_group_reply(tid, group, reply)
     # check للـ group: فارغة الآن — كل القرارات تتم بالـ user check أو policy engine
