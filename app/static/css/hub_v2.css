@@ -1610,3 +1610,23 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
   filter: brightness(.97);
   box-shadow: 0 0 0 2px var(--hub-brand-soft, #f5f3ff);
 }
+
+/* ── D10: منطقة لمسٍ لا تقلّ عن 40×40px للأزرار الأيقونيّة الصغيرة ─────
+   على الجوّال تلمس الإصبع، لا مؤشّر الفأرة الدقيق؛ زرٌّ 24-30px يرفع
+   احتمال لمس الزرّ المجاور الخطر (حذف/تعطيل) بالخطأ. الحشوة الإضافيّة
+   لا تُغيّر الحجم البصريّ الظاهر إن كانت الأيقونة أصغر من الصندوق. ── */
+@media (pointer: coarse){
+  .hub-btn--sm,.hub-btn--icon,.uf-pw-toggle,.co-sales-picker,.uds-pager button,.hr-table-scroll input[type="checkbox"]{
+    min-width:40px;min-height:40px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+}
+
+/* ── D11: خطوطُ حقولٍ أصغر من 16px تجعل Safari/iOS يُكبّر الصفحة تلقائيًّا
+   عند التركيز (ولا يُعيدها)، فينزاح التخطيط. على الشاشات الصغيرة فقط
+   نرفع خط الإدخال إلى 16px تحديدًا لمنع هذا التكبير. ───────────────── */
+@media (max-width: 640px){
+  .hub-input,.hub-select,.hub-textarea,select.hub-input,input.hub-input,textarea.hub-textarea{
+    font-size:16px;
+  }
+}

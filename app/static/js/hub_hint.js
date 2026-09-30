@@ -12,6 +12,9 @@
 
   var pop = null;     // البطاقة الحالية
   var owner = null;   // الأيقونة صاحبة البطاقة
+  var COARSE = !!(window.matchMedia &&
+                  window.matchMedia("(pointer: coarse)").matches);
+  var SHOWN_AT = 0;   // وقت آخر إظهار — يمنع click اللمس من إغلاق ما فتحه focusin فورًا
 
   function hide() {
     if (pop && pop.parentNode) pop.parentNode.removeChild(pop);
@@ -25,6 +28,7 @@
     var text = icon.getAttribute("data-hint") || icon.getAttribute("title") || "";
     if (!text.trim()) return;
     owner = icon;
+    SHOWN_AT = Date.now();
     pop = document.createElement("div");
     pop.className = "hub-hint-pop";
     pop.setAttribute("role", "tooltip");
@@ -73,7 +77,16 @@
   document.addEventListener("click", function (e) {
     var icon = iconOf(e.target);
     if (icon) {
-      if (owner === icon) hide(); else show(icon);
+      // على اللمس: touchstart→touchend يولّدان mouseover ثم focusin (يُظهر)
+      // ثم click على نفس اللمسة — فتبديلٌ فوريٌّ هنا كان يُخفيها في نفس
+      // اللحظة فلا يرى المستخدم شيئًا. على اللمس نُبقيها ظاهرة بعد أوّل
+      // نقرة، وتُغلق بنقرة أخرى خارجها أو نقرة ثانية على نفس الأيقونة.
+      if (owner === icon) {
+        if (COARSE && Date.now() - SHOWN_AT < 400) return;
+        hide();
+      } else {
+        show(icon);
+      }
     } else if (owner) {
       hide();
     }

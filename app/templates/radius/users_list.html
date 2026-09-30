@@ -2030,7 +2030,10 @@
     }
     page.querySelectorAll("[data-usq-current='username']").forEach((el) => { el.textContent = data.username || "—"; });
     page.querySelectorAll("[data-usq-current='plan']").forEach((el) => { el.textContent = data.planName || "—"; });
-    page.querySelectorAll("[data-usq-current='expire']").forEach((el) => { el.textContent = data.expire || "—"; });
+    page.querySelectorAll("[data-usq-current='expire']").forEach((el) => {
+      // ⁦…⁩ (LRI/PDI): بدونهما ينعكس ترتيب التاريخ/الوقت داخل سياق RTL (بلاغ D9)
+      el.textContent = data.expire ? "⁦" + data.expire + "⁩" : "—";
+    });
     page.querySelectorAll("[data-usq-current='price']").forEach((el) => {
       const price = parseFloat(data.planPrice || "0");
       el.textContent = price > 0 ? fmtMoney(price, data.planCurrency) : "—";
@@ -2449,7 +2452,13 @@
     const at = modal.querySelector("[data-usq-exact-at]");
     if (at) {
       at.disabled = mode !== "exact";
-      if (mode === "exact" && !at.value) at.value = defaultExactValue();
+      if (mode === "exact" && !at.value) {
+        at.value = defaultExactValue();
+        // بدون هذا الحدث تبقى لوحة hub_date تعرض «اختر التاريخ والوقت»
+        // بينما القيمة الفعليّة محدَّدة سلفًا — فيحفظ المستخدم تاريخًا لم
+        // يره قط. أطلق change كي يعرض التسمية القيمة الحقيقيّة فورًا.
+        at.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     }
     updateMinutes();
     syncExtendAmount();
@@ -2487,7 +2496,12 @@
     Array.from(select.options).forEach((opt) => {
       opt.disabled = !!opt.value && opt.value === row.dataset.planId;
     });
-    if (select.options[select.selectedIndex]?.disabled) select.value = "";
+    if (select.options[select.selectedIndex]?.disabled) {
+      select.value = "";
+      // بدون هذا الحدث تبقى تسمية hub_select القديمة ظاهرة (تعرض عرضًا لم
+      // يعد مختارًا فعليًا)، فيظنّ المستخدم أنّ شيئًا مختار ويضغط حفظ.
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     const selected = select.options[select.selectedIndex];
     // 🔴 الاتجاه بسعر الدقيقة لا بالسعر الإجماليّ: 70/30 يومًا → 5/يوم كان
     // «أرخص» فيُعرض «تعويض» ثم لا يحدث شيء (الخادم يحسب بالدقيقة).
@@ -2652,6 +2666,7 @@
   });
 
   // ── Per-row two-menu dropdowns (تفعيل / إدارية) ────────────
+  let rowPopOpenedAt = 0;
   function closeRowPops() {
     page.querySelectorAll("[data-urow-pop]").forEach((pop) => { pop.hidden = true; });
     page.querySelectorAll("[data-urow-trigger][aria-expanded='true']")
@@ -2683,6 +2698,7 @@
       pop.style.top = `${top}px`;
       pop.style.visibility = "";
       trigger.setAttribute("aria-expanded", "true");
+      rowPopOpenedAt = Date.now();
     });
   });
   // Per-row modal openers: set this row as the active context, then open.
@@ -2741,7 +2757,16 @@
   });
 
   document.addEventListener("click", closeRowPops);
-  window.addEventListener("resize", closeRowPops);
+  // انطواء شريط عنوان الجوّال أو ظهور لوحة المفاتيح يُطلقان resize لم
+  // يطلبه المستخدم — تجاهل تغيّر الارتفاع فقط، أغلق عند تغيّر العرض
+  // الفعلي (نفس إصلاح hub_select.js/hub_date.js).
+  let rowPopLastW = window.innerWidth;
+  window.addEventListener("resize", () => {
+    const w = window.innerWidth;
+    if (w === rowPopLastW) return;
+    rowPopLastW = w;
+    closeRowPops();
+  });
   page.querySelector(".hr-table-scroll")?.addEventListener("scroll", closeRowPops);
 
   page.querySelectorAll("[data-usq-close]").forEach((button) => {
@@ -2756,6 +2781,14 @@
     if (event.key === "Escape") { closeModals(); closeBulkModal(); }
   });
   page.querySelector("[data-usq-plan-select]")?.addEventListener("change", updatePlanPolicy);
+  // رسالة تحقّق عربيّة بدل «Please select an item in the list.» الإنجليزيّة
+  // الأصليّة — تظهر إذا حاول المستخدم الحفظ والحقل ما يزال فارغًا.
+  page.querySelector("[data-usq-plan-select]")?.addEventListener("invalid", (event) => {
+    event.target.setCustomValidity({{ _("الرجاء اختيار عرض من القائمة.")|tojson }});
+  });
+  page.querySelector("[data-usq-plan-select]")?.addEventListener("change", (event) => {
+    event.target.setCustomValidity("");
+  });
   page.querySelectorAll("[data-usq-dur-value], [data-usq-dur-unit]").forEach((input) => {
     const ev = input.tagName === "SELECT" ? "change" : "input";
     input.addEventListener(ev, () => { updateMinutes(); syncExtendAmount(); });

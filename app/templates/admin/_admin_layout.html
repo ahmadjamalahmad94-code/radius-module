@@ -653,6 +653,9 @@
 <script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
 {# قائمة إجراءات سريعة بزرّ الفأرة الأيمن على صفوف الجداول (tr[data-rowctx]) #}
 <script src="{{ url_for('static', filename='js/row_context_menu.js') }}"></script>
+{# حارس النقر المزدوج على نماذج الإجراء (إضافة وقت، تطبيق فاحص البطاقات…) —
+   عامّ لكل نماذج الموقع، مُحمَّل مبكرًا قبل أيّ سكربت صفحة يعتمد عليه. #}
+<script src="{{ url_for('static', filename='js/submit_guard.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_guide_collapse.js') }}"></script>
 {# القوائم المنسدلة الحديثة الموحّدة — يلفّ كل select.hub-select تلقائيًا #}
