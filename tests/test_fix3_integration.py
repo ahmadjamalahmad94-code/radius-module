@@ -544,7 +544,8 @@ def test_sales_today_counts_the_local_gaza_day(app):
     assert st["money_visible"] is True
     assert st["cards_value"]["by_currency"] == [{"currency": "ILS", "count": 2, "total": 4.0}]
     assert st["payments"]["by_currency"] == [{"currency": "ILS", "total": 5.0, "transactions": 1}]
-    assert st["by_currency"] == [{"currency": "ILS", "total": 9.0}]
+    # owner decision: the tile total is CARD SALES ONLY (2×2.0), not payments
+    assert st["by_currency"] == [{"currency": "ILS", "total": 4.0}]
 
 
 def test_sales_today_payments_equal_the_daily_sales_report(app):
@@ -569,7 +570,8 @@ def test_sales_today_payments_equal_the_daily_sales_report(app):
     assert st["payments"]["transactions"] == row["transactions"]
     assert {(c_["currency"], c_["total"]) for c_ in st["payments"]["by_currency"]} == \
         {(c_["currency"], c_["total"]) for c_ in row["by_currency"]}
-    assert {c_["currency"] for c_ in st["by_currency"]} == {"ILS", "USD"}
+    # by_currency is card sales only; this test made no cards, so it is empty
+    assert st["by_currency"] == []
 
 
 def test_sales_today_is_scoped_per_manager(app):
@@ -678,3 +680,48 @@ def test_web_dashboard_shows_the_sales_tile(app):
 def _owner_id_ctx(app):
     with app.app_context():
         return _owner_id()
+
+
+# ═════════════════ owner decision: mikrotik.access toggle ═════════════════
+
+def _super_admin():
+    """A «مدير عام» admin (super_admin role)."""
+    from app.radius.db.repos import admins_repo
+    from app.radius.core.constants import ROLE_SUPER_ADMIN
+    role = admins_repo.get_role_by_name(ROLE_SUPER_ADMIN)
+    if role is None:
+        role = admins_repo.create_role(name=ROLE_SUPER_ADMIN, display_name="مدير عام",
+                                       permissions=())
+    return admins_repo.create_admin(username=_u("sa_"), password=PW,
+                                    full_name="عام", is_super_admin=False, role_id=role.id)
+
+
+def test_mikrotik_access_default_on_for_super_role(app):
+    with app.app_context():
+        from app.radius.services import mt_permissions as mtp
+        sa = _super_admin()
+        assert mtp.has(sa, mtp.PERM_ADMIN) is True
+
+
+def test_owner_can_revoke_mikrotik_access_from_super_manager(app):
+    with app.app_context():
+        from app.radius.services import mt_permissions as mtp
+        from app.radius.services import manager_grants as mg
+        sa = _super_admin()
+        assert mtp.has(sa, mtp.PERM_ADMIN) is True
+        mg.set_action_override(int(sa.id), "mikrotik.access", False, tenant_id=1)
+        assert mtp.admin_permissions(sa) == frozenset()
+        assert mtp.has(sa, mtp.PERM_ADMIN) is False
+        # back to «حسب الدور» → allowed again
+        mg.set_action_override(int(sa.id), "mikrotik.access", None, tenant_id=1)
+        assert mtp.has(sa, mtp.PERM_ADMIN) is True
+
+
+def test_primary_owner_keeps_mikrotik_even_if_revoked(app):
+    with app.app_context():
+        from app.radius.services import mt_permissions as mtp
+        from app.radius.services import manager_grants as mg
+        from app.radius.db.repos import admins_repo
+        owner = admins_repo.get_admin(_owner_id())
+        mg.set_action_override(int(owner.id), "mikrotik.access", False, tenant_id=1)
+        assert mtp.has(owner, mtp.PERM_ADMIN) is True   # owner is never gated

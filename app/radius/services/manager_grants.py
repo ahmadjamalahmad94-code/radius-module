@@ -304,6 +304,12 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "default": False},
     "comms.templates": {"label": "تعديل قوالب الإشعارات", "section": "communications",
         "endpoints": ("communications_templates",), "default": False},
+    # ── مايكروتيك: صفحات إدارة الراوتر (تنبيهات ذكية، تدقيق، نسخ احتياطي،
+    #    مصمّم الدخول، أدوات mt). «مدير عام» يفتحها افتراضًا؛ هذا المفتاح
+    #    يتيح للمالك منعها عن مدير بعينه («ممنوع») أو عن الدور. الحرّاس
+    #    القديمة (mt_permissions.requires_perm) تبقى فوقه. default=True.
+    "mikrotik.access": {"label": "الوصول لصفحات مايكروتيك", "section": "sessions",
+        "endpoints": (), "default": True},
     # ── الجلسات / المتصلون («وسّع المجال»: كل فعلٍ من شاشة المتصلين بصلاحيته) ──
     # نُقِلت أفعال online_* من قسم المشتركين إلى قسم «الجلسات» المستقلّ. افتراضها
     # OFF (مقيّد) — المالك يَمنح كل فعلٍ بحدة. حُرّاس RBAC القائمة تَبقى فوقها.
