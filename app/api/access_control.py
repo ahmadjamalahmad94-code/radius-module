@@ -211,12 +211,14 @@ def distributor_batch_ids() -> set[int]:
 
 
 def batch_in_scope(batch_id: int) -> bool:
-    dist = current_distributor()
-    if not dist:
+    """fix3 (F01 F10): «رؤية كل حِزم البطاقات» — the same predicate as the web
+    (``services/card_batch_scope``): owner-level / view-all → any batch; else
+    the manager's own ∪ his distributors' (a distributor login: its own).
+    Used to scope only distributor logins, so every manager read every batch."""
+    if is_owner_level():
         return True
-    from ..radius.db.repos import operations_repo
-    return operations_repo.batch_assigned_to_distributor(
-        tenant_id(), batch_id, int(dist["id"]))
+    from ..radius.services.card_batch_scope import batch_accessible
+    return batch_accessible(batch_id, admin_id(), tenant_id=tenant_id())
 
 
 def subscriber_in_scope(username: str = "", subscriber_id: int | None = None) -> bool:
@@ -225,24 +227,18 @@ def subscriber_in_scope(username: str = "", subscriber_id: int | None = None) ->
     the manager's distributors ∪ (a distributor login) its assigned batches."""
     if is_full_access():
         return True
-    dist = current_distributor()
-    if dist:
-        from ..radius.db.repos import operations_repo
-        return operations_repo.subscriber_in_distributor_scope(
-            tenant_id(),
-            int(dist["id"]),
-            username=username,
-            subscriber_id=subscriber_id,
-        )
+    # fix3: a distributor login uses the SAME predicate (its assigned batches ∪
+    # the subscribers it created itself) — it used to see only batch rows, so
+    # a subscriber it had just created vanished (F07 H1).
     from ..radius.services.subscriber_scope import subscriber_accessible
     return subscriber_accessible(admin_id(), username=username,
                                  subscriber_id=subscriber_id, tenant_id=tenant_id())
 
 
 def subscriber_scope_admin_id() -> int | None:
-    """Owner-scope for list queries (None = sees all). Distributor logins are
-    scoped separately by their assigned batches."""
-    if is_full_access() or current_distributor():
+    """Owner-scope for list queries (None = sees all). Distributor logins go
+    through the same predicate (their assigned batches ∪ their own)."""
+    if is_full_access():
         return None
     from ..radius.services.subscriber_scope import scope_admin_id
     return scope_admin_id(admin_id(), tenant_id=tenant_id())

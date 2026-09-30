@@ -228,11 +228,11 @@ def _batch_operations_conditions(*, status: str = "", q: str = "",
     # عزل مِلكية المدير على الحِزم: حِزمه المباشرة (manager_id) ∪ حِزم موزّعيه
     # (distributor_id ضمن موزّعيه). يُطبَّق خادميًّا حين «عرض كل حزم البطاقات» مُطفأة.
     if owner_admin_id is not None:
-        where.append(
-            "(b.manager_id = ? OR b.distributor_id IN ("
-            "SELECT id FROM distributors WHERE tenant_id = b.tenant_id AND admin_id = ?))"
-        )
-        vals.extend([int(owner_admin_id), int(owner_admin_id)])
+        # fix3: one predicate with the API / direct URLs (services/card_batch_scope).
+        from ...services.card_batch_scope import batch_scope_clause
+        _bc, _bv = batch_scope_clause(int(owner_admin_id), alias="b")
+        where.append(_bc)
+        vals.extend(_bv)
 
     status = (status or "").strip().lower()
     if status in {"deleted", "archived"}:
@@ -2194,7 +2194,8 @@ def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
 def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
                          revoked: Optional[bool],
                          search: Optional[str],
-                         status: Optional[str] = None) -> tuple[str, list]:
+                         status: Optional[str] = None,
+                         tenant_id: int = 1) -> tuple[str, list]:
     """يبني WHERE + values المشتركة بين list_cards و count_cards.
     R10.4: استُخرج إلى دالة مستقلة لمنع الفرع بين عداد و قائمة.
     إعادة تصميم صفحة الكروت: أُضيف `status` كفلتر حالة موحّد
@@ -2226,6 +2227,12 @@ def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
             # LIKE على username — مفهرس بـ tenant_id ضمنيًا، و LIKE
             # على text قصير سريع حتى بدون فهرس مخصّص.
             where.append("username LIKE ?"); vals.append(f"%{s}%")
+    # fix3 (F01 F10): «رؤية كل حِزم البطاقات» — the request admin's card-batch
+    # scope on every card list/count (web «كل الكروت» + API).
+    from ...services.card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=int(tenant_id))
+    if bsc:
+        where.append(bsc[len(" AND "):]); vals.extend(bsv)
     return " AND ".join(where), vals
 
 
@@ -2236,7 +2243,7 @@ def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
     """R10.4: أضفنا search (LIKE على username) + limit/offset للـ pagination."""
     where, vals = _build_cards_filter(
         batch_id=batch_id, used=used, revoked=revoked, search=search,
-        status=status)
+        status=status, tenant_id=tenant_id)
     sql = f"SELECT * FROM cards WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?"
     cur = db().execute(sql, [tenant_id, *vals, limit, offset])
     return [_card_row(r) for r in cur.fetchall()]
@@ -2248,7 +2255,7 @@ def count_cards(tenant_id: int, *, batch_id: Optional[int] = None,
     """R10.4: عدّ الكروت بنفس فلاتر list_cards (للـ pagination في الـ UI)."""
     where, vals = _build_cards_filter(
         batch_id=batch_id, used=used, revoked=revoked, search=search,
-        status=status)
+        status=status, tenant_id=tenant_id)
     row = db().execute(
         f"SELECT COUNT(*) AS c FROM cards WHERE {where}",
         [tenant_id, *vals]).fetchone()
@@ -2262,7 +2269,7 @@ def cards_status_counts(tenant_id: int, *, batch_id: Optional[int] = None,
     المشغّل توزيع الحالات كاملًا مهما كان الفلتر المختار).
     التعريفات مطابقة لشروط `status` في `_build_cards_filter`."""
     where, vals = _build_cards_filter(
-        batch_id=batch_id, used=None, revoked=None, search=search)
+        batch_id=batch_id, used=None, revoked=None, search=search, tenant_id=tenant_id)
     row = db().execute(
         f"""
         SELECT
