@@ -1336,7 +1336,7 @@ def _make_download_view(svc: _ServiceDef):
             f"npc-{svc.url_slug}-{policy['slug']}-preview.rsc"
         )
         return Response(
-            forward, mimetype="text/plain; charset=utf-8",
+            forward, mimetype="text/plain",
             headers={
                 "Content-Disposition":
                     f"attachment; filename=\"{fname}\"",

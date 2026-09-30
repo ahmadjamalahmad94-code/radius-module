@@ -369,8 +369,18 @@ def list_batch_operations(
     """
     params = [*_batch_operations_base_params(tenant_id), tenant_id, *vals, limit, offset]
     rows = [row_to_dict(row) for row in db().execute(sql, params).fetchall()]
+    _default_cur = None
     for item in rows:
         item["operational_status"] = _operation_status_from_row(item)
+        # f05-L6: عملة سعر البطاقة في كل عنصر (كانت في تفاصيل الحزمة فقط):
+        # عملة باقة الحزمة، وإلّا عملة لوحة التحكم.
+        cur = str(item.get("plan_currency") or "").strip()
+        if not cur:
+            if _default_cur is None:
+                from ...core.system_config import default_currency
+                _default_cur = default_currency() or "ILS"
+            cur = _default_cur
+        item["currency"] = cur
     return rows
 
 
@@ -511,7 +521,13 @@ def _build_batch_code(tenant_id: int, conn: Optional[sqlite3.Connection] = None)
     outside the write lock let two parallel generates pick the same code and
     one died with a raw 500 on ``idx_batch_unique``."""
     conn = conn or db()
-    day = datetime.utcnow().strftime("%Y%m%d")
+    # f05 (r05 N13): يوم الرمز = يوم لوحة التحكم المحلّيّ (Asia/Gaza افتراضًا،
+    # بالتوقيت الصيفيّ) لا يوم UTC — حزمةٌ وُلّدت 01:21 محلّيًّا كانت B-<أمس>.
+    try:
+        from ...core.system_config import local_today
+        day = local_today(int(tenant_id)).strftime("%Y%m%d")
+    except Exception:  # noqa: BLE001 — لا يكسر التوليد أبدًا
+        day = datetime.utcnow().strftime("%Y%m%d")
     prefix = f"B-{day}-"
     base = 0
     for r in conn.execute(
@@ -667,6 +683,8 @@ def create_batch(b: CardBatch) -> CardBatch:
 
 
 IDEMPOTENCY_KEY_FIELD = "idempotency_key"
+#: f05 (r05 N7): بصمة جسم الطلب الأوّل — المفتاح نفسه بجسمٍ مختلف ⇒ 422.
+IDEMPOTENCY_FP_FIELD = "idempotency_fp"
 
 
 def find_batch_by_idempotency_key(conn: sqlite3.Connection, tenant_id: int,
@@ -688,6 +706,28 @@ def find_batch_by_idempotency_key(conn: sqlite3.Connection, tenant_id: int,
         (tenant_id, key),
     ).fetchone()
     return int(row["id"]) if row else None
+
+
+def _check_idempotency_fingerprint(conn: sqlite3.Connection, tenant_id: int,
+                                   batch_id: int, new_metadata) -> None:
+    """المفتاح نفسه، وجسمٌ مختلف عن الطلب الأوّل ⇒ ``IdempotencyKeyReused``.
+    حزمٌ قديمة بلا بصمة تُعاد كما كانت (لا نعرف جسمها)."""
+    import json
+    try:
+        new_fp = (json.loads(new_metadata or "{}") or {}).get(IDEMPOTENCY_FP_FIELD)
+    except (TypeError, ValueError, AttributeError):
+        new_fp = None
+    if not new_fp:
+        return
+    row = conn.execute(
+        "SELECT CASE WHEN json_valid(metadata) "
+        "            THEN json_extract(metadata, '$.idempotency_fp') END AS fp "
+        "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+        (tenant_id, batch_id)).fetchone()
+    old_fp = row["fp"] if row else None
+    if old_fp and old_fp != new_fp:
+        from ...services.idempotency import IdempotencyKeyReused
+        raise IdempotencyKeyReused()
 
 
 def create_batch_with_cards(
@@ -717,6 +757,8 @@ def create_batch_with_cards(
     tenant_id = int(b.tenant_id)
     with write_transaction() as conn:
         replay_id = find_batch_by_idempotency_key(conn, tenant_id, idempotency_key)
+        if replay_id is not None:
+            _check_idempotency_fingerprint(conn, tenant_id, replay_id, b.metadata)
         if replay_id is None:
             code = _build_batch_code(tenant_id, conn)
             batch_id = _insert_batch_row(conn, b, code)
@@ -894,6 +936,21 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
         return cur.rowcount > 0
 
 
+def card_is_archived(tenant_id: int, card_id: int) -> bool:
+    """البطاقة محذوفة ناعمًا، أو حزمتُها مؤرشفة (في السلّة)."""
+    row = db().execute(
+        """
+        SELECT COALESCE(c.deleted_at, '') AS card_deleted,
+               COALESCE(b.deleted_at, '') AS batch_deleted
+          FROM cards c
+          LEFT JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+         WHERE c.tenant_id = ? AND c.id = ?
+        """,
+        (int(tenant_id), int(card_id)),
+    ).fetchone()
+    return bool(row and (row["card_deleted"] or row["batch_deleted"]))
+
+
 def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
     with transaction() as conn:
         cur = conn.execute("""
@@ -1050,7 +1107,15 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
         "retention_expires_at": dt_to_iso(batch.retention_expires_at),
         "created_at": dt_to_iso(batch.created_at),
         "expires_at": dt_to_iso(batch.expire_at),
+        # f05-L6: السعر وعملته في الملخّص كما في تفاصيل الحزمة.
+        "price_per_card": float(batch.price_per_card or 0),
+        "currency": _batch_currency_of(tenant_id, batch.plan_id),
     }
+
+
+def _batch_currency_of(tenant_id: int, plan_id) -> str:
+    from ...services.card_batch_price import batch_currency
+    return batch_currency(tenant_id, plan_id)
 
 
 _CHARSETS = {
@@ -1857,6 +1922,20 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
                 # نهايتها — نفسُ قرار المالك أعلاه في الميزانية.
                 anchor = max(old_end, now) if delta_seconds > 0 else old_end
                 new_expire = anchor + timedelta(seconds=delta_seconds)
+
+        # f05-M2: «لا انتهاء بعد سنة 2100» — على النهاية المختومة، أو على
+        # النهاية التي سيختمها أوّل دخولٍ الآن (بطاقة لم تبدأ). كان 8 منحٍ
+        # بـ3650 يومًا تختم 2106 عند أوّل دخول. الاستثناء يُرجِع المعاملة.
+        if not exhausted and delta_seconds > 0:
+            from ...core.numbers import (EXPIRY_TOO_FAR_AR, NonFiniteNumber,
+                                         check_expiry)
+            try:
+                potential = (new_expire if new_expire is not None else
+                             now + timedelta(seconds=max(0, base_budget + new_extra)))
+            except (OverflowError, ValueError):
+                raise NonFiniteNumber(EXPIRY_TOO_FAR_AR,
+                                      details={"field": "expire_at"}) from None
+            check_expiry(potential)
 
         if clear_expire:
             conn.execute(

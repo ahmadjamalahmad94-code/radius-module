@@ -21,6 +21,19 @@ MAX_KEY = 200
 MISMATCH_AR = "مفتاح التكرار استُخدم لطلب مختلف."
 TOO_LONG_AR = f"مفتاح التكرار طويل جدًا (الحدّ {MAX_KEY} حرفًا)."
 
+from ..core.errors import RadiusValidationError
+
+
+class IdempotencyKeyReused(RadiusValidationError):
+    """f05 (r05 N7): المفتاح نفسه لطلب توليدٍ بجسمٍ مختلف ⇒ 422 كمسار المال
+    (كان يُعيد حزمة الـ5000 بطاقة لطلب ``count:10`` بصمت)."""
+
+    code = "idempotency_key_reused"
+
+    def __init__(self, message: str = MISMATCH_AR, **kw):
+        super().__init__(message, **kw)
+
+
 CLAIMED = "claimed"
 REPLAY = "replay"
 IN_PROGRESS = "in_progress"

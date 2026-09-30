@@ -165,7 +165,6 @@ def _serialize_batch(b) -> dict:
 def _batch_currency(b) -> str:
     """عملة الحزمة = عملة باقتها (العملة تُخزَّن لكلّ صفّ)، وإلّا عملة النظام.
     تُخزَّن مؤقّتًا لكلّ طلب كي لا تُقرأ الباقة لكلّ حزمةٍ في القائمة."""
-    from ...radius.core.system_config import default_currency
     cache = getattr(g, "_f2_plan_currency", None)
     if cache is None:
         cache = {}
@@ -175,16 +174,8 @@ def _batch_currency(b) -> str:
             pass
     pid = int(getattr(b, "plan_id", 0) or 0)
     if pid not in cache:
-        cur = ""
-        try:
-            from ...radius.db.connection import db as _db
-            row = _db().execute(
-                "SELECT currency FROM access_plans WHERE tenant_id = ? AND id = ?",
-                (int(getattr(b, "tenant_id", 0) or _tid()), pid)).fetchone()
-            cur = str((row["currency"] if row else "") or "").strip()
-        except Exception:  # noqa: BLE001
-            cur = ""
-        cache[pid] = cur or (default_currency() or "ILS")
+        from ...radius.services.card_batch_price import batch_currency
+        cache[pid] = batch_currency(int(getattr(b, "tenant_id", 0) or _tid()), pid)
     return cache[pid]
 
 
@@ -196,7 +187,11 @@ def _serialize_card(c) -> dict:
         "username": c.username,
         "password": c.password,
         "used": c.used,
-        "revoked": c.revoked,
+        # f05 (r05 N10): بطاقة حزمةٍ مؤرشفة (حذفٌ ناعم متتالٍ من الحزمة) لا
+        # تعمل — لا نقول عنها «revoked:false». الحقل الخام يبقى في
+        # `archived` كي يميّز التطبيق «مؤرشفة» عن «موقوفة».
+        "revoked": bool(c.revoked) or bool(getattr(c, "deleted_at", None)),
+        "archived": bool(getattr(c, "deleted_at", None)),
         "expire_at": c.expire_at.isoformat() + "Z" if c.expire_at else None,
         "first_used_at": c.first_used_at.isoformat() + "Z" if c.first_used_at else None,
         "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
@@ -583,6 +578,15 @@ def _idempotency_key(body: dict) -> str:
     return str(raw).strip()[:128]
 
 
+def _generate_fingerprint(body: dict) -> str:
+    """بصمة جسم طلب التوليد بلا حقول المفتاح نفسه — تُحفظ مع الحزمة كي يُكشف
+    المفتاح المُعاد لطلبٍ مختلف (422) بدل إعادة حزمةٍ أخرى بصمت."""
+    from ...radius.services.idempotency import fingerprint
+    clean = {k: v for k, v in body.items()
+             if k not in {"idempotency_key", "request_key", "client_request_id"}}
+    return fingerprint("POST", "/cards/generate", clean)
+
+
 def _username_length_or_auto(body: dict) -> int:
     """طول اسم المستخدم (الاسم كاملًا).
 
@@ -699,10 +703,14 @@ def cards_generate():
         svc = get_cards_service()
         batch, cards = svc.generate_batch(
             actor=_actor(), plan_id=int(plan_id), count=count,
-            idempotency_key=_idempotency_key(body), **kwargs,
+            idempotency_key=_idempotency_key(body),
+            idempotency_fingerprint=_generate_fingerprint(body), **kwargs,
         )
     except RadiusValidationError as e:
-        return fail("validation_error", e.message, status=422)
+        # f05 (r05 N7): نفس رمز مسار المال لإعادة مفتاحٍ بجسمٍ مختلف.
+        code = ("idempotency_key_reused" if e.code == "idempotency_key_reused"
+                else "validation_error")
+        return fail(code, e.message, status=422)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusError as e:
@@ -974,7 +982,7 @@ def cards_batches_export_csv():
     payload = "\ufeff" + out.getvalue()
     return Response(
         payload,
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
     )
 
@@ -1176,8 +1184,6 @@ def cards_reset_usage(card_id: int):
 
 
 _ADJUST_UNITS = {"minutes": 60, "hours": 3600, "days": 86400}
-#: سقف تعديلٍ واحد = 3650 يومًا (نفس سقف تمديد المشترك في fix2).
-_ADJUST_MAX_SECONDS = 3650 * 86400
 
 
 def cards_adjust_time(card_id: int):
@@ -1214,9 +1220,8 @@ def cards_adjust_time(card_id: int):
         delta = amount * _ADJUST_UNITS[unit] * (-1 if op == "subtract" else 1)
     if not delta:
         return fail("validation_error", "لا يوجد تعديل لتطبيقه.", status=422)
-    if abs(delta) > _ADJUST_MAX_SECONDS:
-        return fail("validation_error",
-                    "المدّة تتجاوز الحدّ المسموح (3650 يومًا).", status=422)
+    # f05-M2: سقف «سنة في العمليّة الواحدة» + 2100 — الحارس المشترك نفسه
+    # الذي يستعمله الويب (CardsService.adjust_card_time → numbers).
     from ...radius.services.cards import get_cards_service
     try:
         result = get_cards_service().adjust_card_time(

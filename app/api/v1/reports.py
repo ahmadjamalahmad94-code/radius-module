@@ -112,7 +112,7 @@ def _report_csv_view(report_type: str, slug: str):
             return fail("validation_error", e.message, status=422)
         return Response(
             csv_text,
-            mimetype="text/csv; charset=utf-8",
+            mimetype="text/csv",
             headers={
                 "Content-Disposition": f'attachment; filename="hoberadius-{slug.replace("/", "-")}.csv"',
             },

@@ -27,6 +27,12 @@ from ..auth import require_api_token
 from ..responses import fail, ok
 
 
+
+def _ar_err(exc) -> str:
+    """f05-M5: Arabic text for the user — English/Python leftovers → Arabic."""
+    from ...radius.services.card_users_marketplace import arabic_error_message
+    return arabic_error_message(exc)
+
 def _tid() -> int:
     return int(getattr(g, "tenant_id", 1))
 
@@ -135,7 +141,7 @@ def deposit_confirm(req_id: int):
                             confirmed_amount=(raw or None),
                             note=_field("note", ""))
     except (StoreDepositError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"request_id": int(req_id), "status": "confirmed"})
 
 
@@ -143,7 +149,7 @@ def deposit_reject(req_id: int):
     try:
         _deposits().reject(int(req_id), actor=_actor(), note=_field("note", ""))
     except (StoreDepositError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"request_id": int(req_id), "status": "rejected"})
 
 
@@ -153,7 +159,7 @@ def withdrawal_confirm(req_id: int):
     try:
         _withdrawals().confirm(int(req_id), actor=_actor(), note=_field("note", ""))
     except (StoreWithdrawalError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"request_id": int(req_id), "status": "confirmed"})
 
 
@@ -161,7 +167,7 @@ def withdrawal_reject(req_id: int):
     try:
         _withdrawals().reject(int(req_id), actor=_actor(), note=_field("note", ""))
     except (StoreWithdrawalError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"request_id": int(req_id), "status": "rejected"})
 
 
@@ -193,7 +199,7 @@ def pm_create():
             active=_field("active", None) if _has("active") else None,
         )
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"payment_method": m}, status=201)
 
 
@@ -215,7 +221,7 @@ def pm_update(method_id: int):
     try:
         m = _deposits().update_payment_method(int(method_id), **fields)
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"payment_method": m})
 
 
@@ -223,7 +229,7 @@ def pm_delete(method_id: int):
     try:
         _deposits().delete_payment_method(int(method_id))
     except (StoreDepositError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"deleted": True, "method_id": int(method_id)})
 
 
@@ -237,7 +243,7 @@ def chat_thread(card_user_id: int):
         thread = chat.thread_for_admin(card_user_id=int(card_user_id))
         chat.mark_read(card_user_id=int(card_user_id), reader="admin")
     except StoreChatError as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     meta = chat.get_thread_meta(card_user_id=int(card_user_id))
     return ok({"thread": thread, "status": meta.get("status") or "open", "meta": meta})
 
@@ -250,7 +256,7 @@ def chat_post(card_user_id: int):
             card_user_id=int(card_user_id), sender="admin",
             body=_field("body", ""), image_path=image_path, admin_actor=_actor())
     except (StoreChatError, StoreUploadError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"message": msg}, status=201)
 
 
@@ -261,5 +267,5 @@ def chat_status(card_user_id: int):
         new = _chat().set_status(card_user_id=int(card_user_id), status=status,
                                  actor=_actor())
     except (StoreChatError, ValueError) as exc:
-        return fail("store_error", str(exc), status=422)
+        return fail("store_error", _ar_err(exc), status=422)
     return ok({"card_user_id": int(card_user_id), "status": new})

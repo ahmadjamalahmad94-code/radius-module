@@ -121,7 +121,7 @@ def _csv_response(filename: str, headers: list[str], rows) -> Response:
                     for i, h in enumerate(headers)])
     return Response(
         "﻿" + buf.getvalue(),           # BOM للتوافق مع Excel/Arabic
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename={filename}",
             "Cache-Control": "no-store",
@@ -287,7 +287,7 @@ def export_vpn_accounts_csv():
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     return Response(
         "﻿" + buf.getvalue(),
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=vpn-accounts-{ts}.csv",
             "Cache-Control": "no-store",
@@ -311,7 +311,7 @@ def export_wg_peers_csv():
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     return Response(
         "﻿" + buf.getvalue(),
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=wg-peers-{ts}.csv",
             "Cache-Control": "no-store",
@@ -334,7 +334,7 @@ def export_audit_log_csv():
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
     return Response(
         "﻿" + buf.getvalue(),
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=audit-log-{ts}.csv",
             "Cache-Control": "no-store",

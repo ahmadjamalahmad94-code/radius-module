@@ -8,7 +8,8 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from ..db.connection import db
 from ..db.helpers import json_load, now_iso, row_to_dict
-from ..services.card_users_marketplace import CardMarketplaceError, CardUsersMarketplaceService
+from ..services.card_users_marketplace import (CardMarketplaceError, CardUsersMarketplaceService,
+                                               arabic_error_message, int_input)
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
@@ -321,6 +322,12 @@ def card_users_create():
     الإنشاء إن أُدخل مبلغ موجب. ثم نعود إلى القائمة محدّثة برسالة عربية."""
     service = _service()
     try:
+        # f05-M5: الرصيد الابتدائي يُفحص قبل إنشاء الحساب (سقف 100,000 ورقمٌ
+        # صالح) — لا حسابٌ يُنشأ ثم يفشل شحنه، ولا «abc» يصير صفرًا بصمت.
+        _raw_open = (request.form.get("initial_balance") or "").strip()
+        if _raw_open:
+            from ..services.card_users_marketplace import market_money_minor
+            market_money_minor(_raw_open, label="الرصيد الابتدائي", allow_zero=True)
         card_user = service.register_card_user(
             display_name=request.form.get("display_name") or "",
             mobile=request.form.get("mobile") or "",
@@ -344,7 +351,7 @@ def card_users_create():
                 "success",
             )
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_users_list"))
 
 
@@ -352,7 +359,7 @@ def card_user_360(card_user_id: int):
     try:
         payload = _service().card_user_360(card_user_id)
     except CardMarketplaceError as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
         return redirect(url_for("radius.card_users_list"))
     return render_template(
         "radius/card_user_360.html",
@@ -370,7 +377,7 @@ def card_user_recharge(card_user_id: int):
         )
         flash("تم شحن محفظة مستخدم الكروت.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
 
 
@@ -382,7 +389,7 @@ def card_user_password(card_user_id: int):
         )
         flash("تم تحديث كلمة مرور بوابة مستخدم البطاقة.", "success")
     except CardMarketplaceError as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
 
 
@@ -396,7 +403,7 @@ def card_user_delete(card_user_id: int):
         flash(f"تم حذف «{user.get('display_name') or '—'}» — يمكن استعادته لاحقًا.",
               "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_users_list"))
 
 
@@ -408,7 +415,7 @@ def card_user_restore(card_user_id: int):
         )
         flash(f"تمت استعادة «{user.get('display_name') or '—'}».", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_users_list"))
 
 
@@ -416,14 +423,14 @@ def card_user_purchase(card_user_id: int):
     try:
         purchase = _service().purchase_package(
             card_user_id=card_user_id,
-            package_id=int(request.form.get("package_id") or 0),
+            package_id=int_input(request.form.get("package_id"), label="الباقة"),
             actor=_actor(),
         )
         _ref = purchase.get("cred_username") or f"#{purchase.get('id')}"
         flash(f"تمت العملية ({_ref}) وخصم المحفظة — للمشتري اتصاله الخاص "
               f"(اسم مستخدم وكلمة مرور).", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_user_360", card_user_id=card_user_id))
 
 
@@ -454,11 +461,14 @@ def card_marketplace_package_create():
     try:
         _service().create_package(
             name=request.form.get("name") or "",
-            plan_id=int(request.form.get("plan_id") or 0),
+            plan_id=int_input(request.form.get("plan_id"), label="العرض"),
             price=request.form.get("price") or "0",
-            duration_minutes=int(request.form.get("duration_minutes") or 0),
-            speed_down_kbps=int(request.form.get("speed_down_kbps") or 0),
-            speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
+            duration_minutes=int_input(request.form.get("duration_minutes"),
+                                       label="المدّة بالدقائق", maximum=525600),
+            speed_down_kbps=int_input(request.form.get("speed_down_kbps"),
+                                      label="سرعة التنزيل", maximum=10_000_000),
+            speed_up_kbps=int_input(request.form.get("speed_up_kbps"),
+                                    label="سرعة الرفع", maximum=10_000_000),
             card_color=request.form.get("card_color") or "#14b8a6",
             sale_mode=request.form.get("sale_mode") or "",
             # store card credential format (owner-controlled shape + length);
@@ -474,7 +484,7 @@ def card_marketplace_package_create():
         )
         flash("تم إنشاء العرض الجديد، وسيظهر للزبائن للشراء.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
 
 
@@ -486,11 +496,14 @@ def card_marketplace_package_update(package_id: int):
         _service().update_package(
             package_id,
             name=request.form.get("name") or "",
-            plan_id=int(request.form.get("plan_id") or 0),
+            plan_id=int_input(request.form.get("plan_id"), label="العرض"),
             price=request.form.get("price") or "0",
-            duration_minutes=int(request.form.get("duration_minutes") or 0),
-            speed_down_kbps=int(request.form.get("speed_down_kbps") or 0),
-            speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
+            duration_minutes=int_input(request.form.get("duration_minutes"),
+                                       label="المدّة بالدقائق", maximum=525600),
+            speed_down_kbps=int_input(request.form.get("speed_down_kbps"),
+                                      label="سرعة التنزيل", maximum=10_000_000),
+            speed_up_kbps=int_input(request.form.get("speed_up_kbps"),
+                                    label="سرعة الرفع", maximum=10_000_000),
             card_color=request.form.get("card_color") or None,
             sale_mode=request.form.get("sale_mode") or "",
             # status «الحالة» — فعّال vs موقوف; absent ⇒ keep current.
@@ -498,7 +511,7 @@ def card_marketplace_package_update(package_id: int):
         )
         flash("تم حفظ تعديلات العرض.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
 
 
@@ -511,7 +524,7 @@ def card_marketplace_package_delete(package_id: int):
         flash(f"تم حذف العرض «{res.get('name') or ''}». "
               "الكروت المُصدَرة سابقًا تبقى صالحة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
 
 
@@ -521,7 +534,7 @@ def card_marketplace_default_mode():
         _service().set_default_sale_mode(request.form.get("sale_mode") or "instant")
         flash("تم حفظ نمط البيع الافتراضي للقسم.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
 
 
@@ -531,7 +544,7 @@ def card_marketplace_package_mode(package_id: int):
         _service().set_package_sale_mode(package_id, request.form.get("sale_mode") or "instant")
         flash("تم تحديث نمط بيع الباقة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
 
 
@@ -565,7 +578,7 @@ def card_marketplace_inventory_upload(package_id: int):
             )
             flash(f"تم توليد {res['added']} بطاقة في مخزون الباقة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
     # عند تنفيذ الإجراء من صفحة ملف العرض نعود إليها، وإلا نعود للسوق.
     if (request.form.get("return_to") or "") == "file":
         return redirect(url_for("radius.card_marketplace_package_file", package_id=package_id))
@@ -593,6 +606,6 @@ def card_marketplace_package_file(package_id: int):
         # بحالتها الدقيقة والمشتري إن بيعت (رؤية المستخدم المعتمدة).
         data["offer_cards"] = _service().offer_cards(package_id, page=cards_page, per_page=20)
     except CardMarketplaceError as exc:
-        flash(str(exc), "error")
+        flash(arabic_error_message(exc), "error")
         return redirect(url_for("radius.card_marketplace"))
     return render_template("radius/card_marketplace_package_file.html", **data)

@@ -46,6 +46,7 @@
   .qk-grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
+  .qk-field[hidden]{display:none}
   .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;
       border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff;color:#0f172a;
       transition:border-color .15s,box-shadow .15s}
@@ -160,10 +161,10 @@
           <select data-qk-batch>
             <option value="">{{ _('— اختر الحزمة —') }}</option>
             {% for b in batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
             {% endfor %}
             {% for b in print_only_batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
             {% endfor %}
           </select>
         </label>
@@ -189,7 +190,12 @@
             <input type="number" name="password_font_size" min="0" max="36" step="0.5" value="{{ fl.password_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
           </label>
           <label class="qk-check"><input type="checkbox" name="show_qr" value="1" data-qk-qr {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
-          <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          <label class="qk-check"><input type="checkbox" name="show_price" value="1" data-qk-show-price {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          {# f05-M4: نصّ السعر المطبوع — يُملأ من سعر الحزمة وعملتها («2 ILS») عند
+             تفعيل «إظهار السعر» كما في التطبيق؛ يمكن تعديله. فارغ = لا يُطبع سعر. #}
+          <label class="qk-field" data-qk-price-wrap {% if not fl.show_price %}hidden{% endif %}>{{ _('نصّ السعر') }}
+            <input name="price_text" maxlength="60" value="{{ fl.price_text or '' }}" data-qk-price placeholder="{{ _('مثال: 5 ILS') }}">
+          </label>
           <p class="qk-note" data-qk-nopw-note hidden style="grid-column:1/-1;margin:0">
             <i class="fa-solid fa-circle-info"></i> {{ _('هذه الحزمة بلا كلمة مرور — تُطبع البطاقات باسم المستخدم فقط.') }}</p>
           {# رابط دخول الهوت سبوت: بدونه يحمل الـQR اسم المستخدم نصًّا فقط.
@@ -560,9 +566,30 @@
   const noPwNote = document.querySelector('[data-qk-nopw-note]');
   function syncBatchMirror(){ batchMirror.value = batchSel.value || ''; }
   function syncNoPw(){ if(noPwNote) noPwNote.hidden = !batchNoPw(); }
-  batchSel.addEventListener('change', () => { syncBatchMirror(); syncNoPw(); refreshPreview(); });
+  // f05-M4: «إظهار السعر» ⇒ نصّ السعر من الحزمة المختارة (ما لم يكتبه المشغّل).
+  const showPrice = document.querySelector('[data-qk-show-price]');
+  const priceInput = document.querySelector('[data-qk-price]');
+  const priceWrap = document.querySelector('[data-qk-price-wrap]');
+  let autoPrice = '';
+  function batchPrice(){
+    const opt = batchSel.selectedOptions && batchSel.selectedOptions[0];
+    return (opt && opt.getAttribute('data-price')) || '';
+  }
+  function syncPrice(){
+    if(!showPrice || !priceInput) return;
+    if(priceWrap) priceWrap.hidden = !showPrice.checked;
+    if(!showPrice.checked) return;
+    const cur = (priceInput.value || '').trim();
+    if(!cur || cur === autoPrice){
+      autoPrice = batchPrice();
+      priceInput.value = autoPrice;
+    }
+  }
+  if(showPrice) showPrice.addEventListener('change', () => { syncPrice(); refreshPreview(); });
+  batchSel.addEventListener('change', () => { syncBatchMirror(); syncNoPw(); syncPrice(); refreshPreview(); });
   syncBatchMirror();
   syncNoPw();
+  syncPrice();
   refreshPreview();
   tplSwitch.addEventListener('change', () => {
     const q = new URLSearchParams();

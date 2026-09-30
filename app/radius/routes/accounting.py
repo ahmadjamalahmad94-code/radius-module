@@ -507,7 +507,7 @@ def finance_reports_export_csv():
         return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
     return Response(
         csv_text,
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="hoberadius-{report_type}.csv"',
         },

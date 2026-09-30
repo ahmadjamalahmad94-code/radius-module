@@ -93,10 +93,8 @@ def _business_error_message(exc: Exception) -> str:
     raw = str(exc)
     if raw in _ERROR_TRANSLATIONS:
         return _ERROR_TRANSLATIONS[raw]
-    if raw.endswith(" must be positive"):
-        field = raw.removesuffix(" must be positive")
-        return f"قيمة {field} يجب أن تكون أكبر من صفر."
-    return raw
+    from ...radius.services.business_os_finance import arabic_business_error
+    return arabic_business_error(raw)
 
 
 def _validation_error(exc: Exception):

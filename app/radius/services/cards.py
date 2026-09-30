@@ -493,6 +493,7 @@ class CardsService:
         metadata: str = "{}",
         progress_callback=None,
         idempotency_key: str = "",
+        idempotency_fingerprint: str = "",
     ) -> tuple[CardBatch, list[Card]]:
         def progress(phase: str, current: int = 0, total: int | None = None, message: str = "") -> None:
             if progress_callback:
@@ -533,6 +534,16 @@ class CardsService:
         if (time_value <= 0 and validity_after_first_login_days <= 0
                 and int(getattr(plan, "duration_minutes", 0) or 0) > 0):
             time_value, time_unit = _minutes_to_value_unit(int(plan.duration_minutes))
+            duration_mode = "time_unit"
+        elif (time_value <= 0 and validity_after_first_login_days <= 0
+                and count_from_first_connect
+                and int(getattr(plan, "validity_days", 0) or 0) > 0):
+            # f05 (a06 #8 / r05 LOW-8) — عرضٌ بـ«صلاحية أيام» فقط: كانت تُختم
+            # `expire_at = التوليد + 30 يومًا` (تموت البطاقة في الدرج) بينما
+            # يقول الفاحص «من أوّل اتّصال، متبقٍّ 30 يومًا» — قولان متناقضان.
+            # قاعدة المالك (MT112): الوقت لا ينقص إلّا بعد أوّل دخول ⇒ تُورَث
+            # الصلاحيةُ نافذةً للحزمة كمدّة العرض تمامًا، فيتّفق الفاحص والختم.
+            time_value, time_unit = int(plan.validity_days), "days"
             duration_mode = "time_unit"
         # ── #20: two duration modes, driven purely by count_from_first_connect ──
         #
@@ -653,6 +664,8 @@ class CardsService:
             if not isinstance(_meta, dict):
                 _meta = {}
             _meta[cards_repo.IDEMPOTENCY_KEY_FIELD] = idempotency_key
+            if idempotency_fingerprint:
+                _meta[cards_repo.IDEMPOTENCY_FP_FIELD] = str(idempotency_fingerprint)[:128]
             metadata = json.dumps(_meta, ensure_ascii=False)
 
         tenant_id = self._store_tenant_id()
@@ -1886,6 +1899,12 @@ class CardsService:
         and how many seconds were restored (0 if the card was never
         frozen, e.g. disabled before migration 025)."""
         tenant_id = self._store_tenant_id()
+        # f05 (r05 N10): بطاقةٌ في حزمةٍ مؤرشفة (أو محذوفة بنفسها) لا تُفعَّل —
+        # كان «تفعيل» يُرجع 200 ويعيد حساب المصادقة `enabled` والحزمة في السلّة.
+        if cards_repo.card_is_archived(tenant_id, card_id):
+            from ..core.errors import RadiusConflict
+            raise RadiusConflict(
+                "هذه البطاقة ضمن حزمة مؤرشفة (في سلّة المحذوفات) — استعد الحزمة أولًا ثم فعّلها.")
         result = cards_repo.thaw_card_time(tenant_id, card_id)
         if result is None:
             raise RadiusValidationError("تعذر تفعيل البطاقة")
@@ -2260,6 +2279,10 @@ class CardsService:
         """
         if delta_seconds == 0:
             raise RadiusValidationError("لا يوجد تعديل لتطبيقه")
+        # f05-M2: سقف المالك — سنة في العمليّة الواحدة (ويب/API/جماعيّ معًا)،
+        # وسنة 2100 تُفحص داخل grant_card_time على النهاية الناتجة.
+        from ..core.numbers import check_time_delta_seconds
+        delta_seconds = check_time_delta_seconds(delta_seconds)
         tenant_id = self._store_tenant_id()
         # 🔑 منحةٌ على الميزانية لا تعديلٌ لـ`expire_at`.
         #

@@ -3241,7 +3241,7 @@ def setup_wizard_v3_serve_script(short_code: str):
     return Response(
         rec["script_body"],
         status=200,
-        mimetype="text/plain; charset=utf-8",
+        mimetype="text/plain",
     )
 
 

@@ -1115,7 +1115,7 @@ def users_export():
                         mimetype=("application/vnd.openxmlformats-officedocument"
                                   ".spreadsheetml.sheet"),
                         headers={"Content-Disposition": _filename(title, "xlsx")})
-    return Response(_build_csv(columns, rows), mimetype="text/csv; charset=utf-8",
+    return Response(_build_csv(columns, rows), mimetype="text/csv",
                     headers={"Content-Disposition": _filename(title, "csv")})
 
 
