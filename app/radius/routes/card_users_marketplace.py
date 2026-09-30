@@ -592,6 +592,16 @@ def card_marketplace_package_file(package_id: int):
         # جدول بطاقات العرض الكامل — كل بطاقة مولّدة/مرفوعة داخل العرض
         # بحالتها الدقيقة والمشتري إن بيعت (رؤية المستخدم المعتمدة).
         data["offer_cards"] = _service().offer_cards(package_id, page=cards_page, per_page=20)
+        # fix3 (F01 F5): card passwords only for the card-password rule.
+        from ..services.sensitive_visibility import can_view_card_passwords, mask_passwords
+        _vis = bool(session.get("is_super_admin")) or can_view_card_passwords(
+            session.get("admin_id"), perms=session.get("permissions") or ())
+        if not _vis:
+            if isinstance(data.get("items"), list):
+                data["items"] = mask_passwords(data["items"], visible=False)
+            oc = data.get("offer_cards")
+            if isinstance(oc, dict) and isinstance(oc.get("items"), list):
+                data["offer_cards"] = dict(oc, items=mask_passwords(oc["items"], visible=False))
     except CardMarketplaceError as exc:
         flash(str(exc), "error")
         return redirect(url_for("radius.card_marketplace"))

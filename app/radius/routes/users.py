@@ -213,6 +213,9 @@ def register_users_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule("/users/<username>/edit", "users_edit", users_edit, methods=["GET"])
+    # fix3 (F01 F5): the list fetches a password on demand (never embedded).
+    bp.add_url_rule("/users/<username>/password", "users_password", users_password,
+                    methods=["GET"])
     bp.add_url_rule("/users/<username>", "users_update", users_update, methods=["POST"])
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
     bp.add_url_rule("/users/bulk-delete", "users_bulk_delete", users_bulk_delete, methods=["POST"])
@@ -1002,6 +1005,7 @@ def users_list():
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
         group_id=group_id, subscriber_groups=subscriber_groups,
+        can_view_passwords=_can_view_passwords(),
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         attention=attention, online_only=online_only,
@@ -1020,6 +1024,33 @@ def users_list():
         total_rows=int(total_rows), total_pages=total_pages,
         all_capped=all_capped, all_render_cap=_ALL_RENDER_CAP,
         sort=sort, sort_dir=sdir)
+
+
+def _can_view_passwords() -> bool:
+    """«رؤية كلمة مرور المشترك» for the session admin (one helper, web + API)."""
+    if session.get("is_super_admin"):
+        return True
+    from ..services.sensitive_visibility import can_view_subscriber_passwords
+    return can_view_subscriber_passwords(session.get("admin_id"),
+                                         perms=session.get("permissions") or (),
+                                         tenant_id=_tid())
+
+
+def users_password(username: str):
+    """GET /users/<username>/password — JSON ``{ok, password}`` for the list's
+    reveal/copy buttons. ``users.view`` + scope (guard) + «رؤية كلمة مرور
+    المشترك» here; every refusal is an Arabic 403, nothing is leaked."""
+    from flask import jsonify
+    if not _can_view_passwords():
+        return jsonify({"ok": False, "error": "لا تملك صلاحية «رؤية كلمة مرور المشترك».",
+                        "permission": "scope.view_passwords"}), 403
+    try:
+        sub = get_users_service().get(username)
+    except RadiusError:
+        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
+    resp = jsonify({"ok": True, "password": sub.password or ""})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 _EXPORT_STATUS_AR = {
@@ -1090,7 +1121,12 @@ def users_export():
     items = items[:_EXPORT_MAX_ROWS]
     plans = {p.id: p.name for p in get_plans_service().list(limit=500)}
     now = _dt.utcnow()
-    columns = ["اسم المستخدم", "الاسم", "الجوال", "العرض", "الحالة", "الرصيد",
+    # fix3 (F01 F18): the balance column only with «رؤية الرصيد».
+    from ..services.sensitive_visibility import can_view_balance
+    show_balance = bool(session.get("is_super_admin")) or can_view_balance(
+        session.get("admin_id"), tenant_id=_tid())
+    columns = ["اسم المستخدم", "الاسم", "الجوال", "العرض", "الحالة",
+               *(["الرصيد"] if show_balance else []),
                "تاريخ الانتهاء", "تاريخ الإضافة", "ملاحظات"]
     rows = []
     for u in items:
@@ -1101,7 +1137,7 @@ def users_export():
             u.username, u.full_name or "", u.mobile or "",
             plans.get(u.plan_id, "") if u.plan_id else "",
             _EXPORT_STATUS_AR.get(st, st),
-            f"{float(u.balance or 0):.2f}",
+            *([f"{float(u.balance or 0):.2f}"] if show_balance else []),
             to_local(u.expire_at, fmt="%Y-%m-%d %H:%M") if u.expire_at else "بدون انتهاء",
             to_local(u.created_at, fmt="%Y-%m-%d") if u.created_at else "",
             u.remark or "",
@@ -1712,6 +1748,12 @@ def users_profile(username: str):
             (tid, sub_obj.id),
         ).fetchall()
         used_cards = [dict(r) for r in used_cards]
+        # fix3 (F01 F5): card passwords follow the card-password rule.
+        from ..services.sensitive_visibility import can_view_card_passwords, mask_passwords
+        used_cards = mask_passwords(used_cards, visible=bool(session.get("is_super_admin"))
+                                    or can_view_card_passwords(
+                                        session.get("admin_id"),
+                                        perms=session.get("permissions") or ()))
     except Exception:
         used_cards = []
 
@@ -1889,10 +1931,9 @@ def users_edit(username: str):
     # — projection خادميّ: نُفرِّغ القيمة قبل بلوغ القالب فلا تَظهر في الـDOM.
     # حفظ نموذج بكلمة مرور فارغة يُبقي القائمة (users.py service يَحفظها)، فلا
     # يُمحى السرّ. السوبر/المالك يَرى دائمًا.
-    if not session.get("is_super_admin"):
-        from ..services import manager_grants as _mg
-        if not _mg.can_see(session.get("admin_id"), "can_see_password", tenant_id=_tid()):
-            sub_view["password"] = ""
+    if not _can_view_passwords():
+        sub_view["password"] = ""
+        sub_view["pppoe_password"] = ""
     return render_template("radius/users_form.html",
         sub=sub_view,
         plans=plans, statuses=ACCOUNT_STATUSES,
@@ -2022,6 +2063,82 @@ def _sync_subscriber_rules(tenant_id: int, actor, form, username: str) -> None:
             continue
 
 
+def _missing_subscriber_on_save(username: str):
+    """F01 F3 — the edit form was saved for a subscriber that is not live:
+    archived meanwhile (stale form) → 409; never existed / renamed → 404.
+    Nothing is written either way."""
+    from ..db.repos import subscribers_repo
+    from .status_notice import status_notice
+    archived = None
+    try:
+        archived = subscribers_repo.get_subscriber(_tid(), username, include_deleted=True)
+    except Exception:  # noqa: BLE001
+        archived = None
+    back = url_for("radius.users_list")
+    if archived is not None and getattr(archived, "deleted_at", None):
+        return status_notice(
+            409, "لم يُحفَظ التعديل",
+            f"المشترك «{username}» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — "
+            "لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.",
+            back_url=back, back_label="قائمة المشتركين", code="stale_deleted")
+    renamed_to = None
+    try:
+        from ..db.connection import db as _db
+        import json as _json
+        rows = _db().execute(
+            "SELECT target_id, before_json FROM audit_log WHERE tenant_id = ? "
+            "AND target_type = 'user' AND before_json LIKE '%login_username%' "
+            "AND before_json LIKE ? ORDER BY id DESC LIMIT 20",
+            (_tid(), "%" + username + "%")).fetchall()
+        for row in rows:
+            try:
+                if (_json.loads(row["before_json"] or "{}") or {}).get("login_username") == username:
+                    renamed_to = row["target_id"]
+                    break
+            except (TypeError, ValueError):
+                continue
+    except Exception:  # noqa: BLE001
+        renamed_to = None
+    if renamed_to:
+        return status_notice(
+            409, "لم يُحفَظ التعديل",
+            f"أُعيدت تسمية المشترك «{username}» إلى «{renamed_to}» بعد فتح نموذج التعديل — "
+            "لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.",
+            back_url=url_for("radius.users_edit", username=renamed_to),
+            back_label="فتح النموذج الحاليّ", code="stale_renamed")
+    return status_notice(
+        404, "المشترك غير موجود",
+        f"لا يوجد مشترك باسم «{username}» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. "
+        "لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).",
+        back_url=back, back_label="قائمة المشتركين", code="not_found")
+
+
+def _as_really_submitted(dto, before, clear_expiry: bool):
+    """fix3 (F02 L4): what the operator ACTUALLY changed, for the «locked field
+    not saved» warning — the form always re-posts an empty password (= keep)
+    and the loaded expiry (minute precision); those are not changes."""
+    from dataclasses import replace
+    if before is None:
+        return dto
+    changes = {}
+    if not (dto.password or "").strip():
+        changes["password"] = before.password
+    if not (getattr(dto, "pppoe_password", None) or "") and getattr(before, "pppoe_password", None):
+        changes["pppoe_password"] = before.pppoe_password
+    exp, old = dto.expire_at, before.expire_at
+    if not clear_expiry:
+        if exp is None:
+            changes["expire_at"] = old
+        elif old is not None:
+            try:
+                from ..core.timeparse import to_naive_utc
+                if abs((to_naive_utc(exp) - to_naive_utc(old)).total_seconds()) < 60:
+                    changes["expire_at"] = old
+            except Exception:  # noqa: BLE001
+                pass
+    return replace(dto, **changes) if changes else dto
+
+
 def users_update(username: str):
     if request.form.get("_speed_rule_action"):
         try:
@@ -2069,12 +2186,22 @@ def users_update(username: str):
     before = None
     try:
         before = get_users_service().get(username)
-    except Exception:  # noqa: BLE001 — fall back to create-style temp handling
+    except Exception:  # noqa: BLE001
         before = None
+    if before is None:
+        # F01 F3: the edit save was an UPSERT — a name that doesn't exist was
+        # CREATED (users.edit bypassed users.create), and a stale form re-opened
+        # after a delete/rename resurrected or duplicated the subscriber.
+        return _missing_subscriber_on_save(username)
     dto = _form_dto(existing=before)
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
+    # fix3 (F01 F5): the edit form hides the PPPoE password from an admin
+    # without «رؤية كلمة مرور المشترك» — its blank field must not wipe it.
+    if (not (request.form.get("pppoe_password") or "").strip()
+            and not _can_view_passwords()):
+        dto = replace(dto, pppoe_password=getattr(before, "pppoe_password", None))
     # الحقول التي لا يديرها النموذج (الرصيد، الاستهلاك، أوّل دخول…) تُحفَظ كما هي:
     # «Subscriber(...)» في _form_dto يعطيها الافتراضي (0/فارغ) فكان «حفظ التعديلات»
     # بلا أي تغيير يُصفّر الرصيد (إعادة اختبار R02: −888.61 ⇐ 0.00 بلا قيد).
@@ -2092,7 +2219,7 @@ def users_update(username: str):
     _locked_dropped: list[str] = []
     if before is not None and not session.get("is_super_admin"):
         from ..services import manager_grants as _mg
-        _submitted = dto
+        _submitted = _as_really_submitted(dto, before, clear_expiry)
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
         # D20: لا «تم التحديث» صامتًا فوق حقلٍ مقفول أُعيد لقيمته.

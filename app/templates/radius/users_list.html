@@ -13,6 +13,8 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 
 {% extends "admin/_admin_layout.html" %}
+{# fix3 (F01 F12): username link target decided once (the guard's own answer) #}
+{% set _user_link_edit = not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_edit')) %}
 {% import "_partials/hub.html" as hub %}
 {% import "radius/_subs_labels.html" as L %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
@@ -744,9 +746,12 @@
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة (أيقونات فقط): CSV محلي، Excel/PDF عبر
      /admin/radius/export/table — كلها عبر window.hubTableExport #}
+  {# fix3 (F01 F11): التصدير بمفتاح users.export (نفس قرار الحارس) #}
+  {% if not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_export')) %}
   {{ hub.btn("", icon="file-csv",   variant="secondary", size="sm", attrs='data-users-export="csv"  title="CSV"   aria-label="CSV"') }}
   {{ hub.btn("", icon="file-excel", variant="secondary", size="sm", attrs='data-users-export="xlsx" title="Excel" aria-label="Excel"') }}
   {{ hub.btn("", icon="file-pdf",   variant="secondary", size="sm", attrs='data-users-export="pdf"  title="PDF"   aria-label="PDF"') }}
+  {% endif %}
   {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm", attrs='data-users-print') }}
 </form>
 
@@ -1047,15 +1052,28 @@
              استخدامها بعد الحذف فتتضخّم (57 ألفًا لـ1590 مشتركًا). #}
           <td data-col="id"       data-sort-value="{{ loop.index }}" class="num mono">{{ loop.index }}</td>
           <td data-col="user"     data-sort-value="{{ u.username }}">
+            {# fix3 (F01 F12): the link opens a page the admin CAN open —
+               the edit form with users.edit, else the read-only profile. #}
+            {% if _user_link_edit %}
             <a href="{{ url_for('radius.users_edit', username=u.username) }}"
                class="hr-entity-link"
                title="{{ _('تعديل المشترك') }}">{{ u.username }}</a>
+            {% else %}
+            <a href="{{ url_for('radius.users_profile', username=u.username) }}"
+               class="hr-entity-link"
+               title="{{ _('ملف المشترك') }}">{{ u.username }}</a>
+            {% endif %}
           </td>
           {# Password cell — masked by default; eye reveals, copy hands it to the operator
              without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
              page is admin-only, so this is intentional (matches the edit form behavior). #}
-          <td data-col="password" class="hr-pw-cell" data-hr-pw="{{ u.password|e }}" style="white-space:nowrap">
-            {% if u.password %}
+          {# fix3 (F01 F5): the plain password is NEVER embedded in the page —
+             it is fetched on demand from a permission-checked endpoint, and the
+             buttons exist only for «رؤية كلمة مرور المشترك». #}
+          <td data-col="password" class="hr-pw-cell"
+              data-hr-pw-url="{{ url_for('radius.users_password', username=u.username) if can_view_passwords else '' }}"
+              style="white-space:nowrap">
+            {% if u.password and can_view_passwords %}
               <span class="hr-pw-text mono" data-hr-pw-text>••••••••</span>
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
                       data-hr-pw-toggle aria-label="{{ _('إظهار/إخفاء') }}" title="{{ _('إظهار/إخفاء') }}"
@@ -2999,22 +3017,38 @@
   });
 
   // ── Password column: reveal-eye + copy-to-clipboard ──────────
-  // The masked text node holds the dots; data-hr-pw on the <td>
-  // carries the real password (the page is admin-only and the DB
-  // already stores plaintext for RADIUS PAP/CHAP).
+  // fix3 (F01 F5): the password is not in the page. It is fetched on demand
+  // from users_password (permission + scope checked server-side) and kept in
+  // memory only for this cell.
+  const pwCache = new WeakMap();
+  async function fetchPw(cell) {
+    if (pwCache.has(cell)) return pwCache.get(cell);
+    const url = cell.dataset.hrPwUrl || "";
+    if (!url) return "";
+    try {
+      const res = await fetch(url, {headers: {"Accept": "application/json",
+                                              "X-Requested-With": "fetch"},
+                                    credentials: "same-origin"});
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j || !j.ok) return "";
+      pwCache.set(cell, String(j.password || ""));
+      return pwCache.get(cell);
+    } catch (e) { return ""; }
+  }
   document.querySelectorAll("[data-hr-pw-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const cell = btn.closest(".hr-pw-cell");
       if (!cell) return;
       const txt = cell.querySelector("[data-hr-pw-text]");
       const icon = btn.querySelector("i");
-      const pw = cell.dataset.hrPw || "";
       const revealed = txt.dataset.revealed === "1";
       if (revealed) {
         txt.textContent = "••••••••";
         txt.dataset.revealed = "0";
         if (icon) { icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); }
       } else {
+        const pw = await fetchPw(cell);
+        if (!pw) return;
         txt.textContent = pw;
         txt.dataset.revealed = "1";
         if (icon) { icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); }
@@ -3022,10 +3056,10 @@
     });
   });
   document.querySelectorAll("[data-hr-pw-copy]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const cell = btn.closest(".hr-pw-cell");
       if (!cell) return;
-      const pw = cell.dataset.hrPw || "";
+      const pw = await fetchPw(cell);
       if (!pw) return;
       const icon = btn.querySelector("i");
       const flash = (ok) => {

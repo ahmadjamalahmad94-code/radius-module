@@ -140,7 +140,8 @@
           <td class="mono"><strong><bdi dir="ltr">{{ c.username }}</bdi></strong></td>
           <td class="small">
             <span class="cl-pw">
-              <span class="mono"><bdi dir="ltr">{{ c.password }}</bdi></span>
+              {# fix3 (F01 F5): masked without the card-password rule #}
+              <span class="mono"><bdi dir="ltr">{{ c.password if (can_see_card_passwords is not defined or can_see_card_passwords) else "••••••" }}</bdi></span>
             </span>
           </td>
           <td>

@@ -51,6 +51,12 @@ from ...radius.core.messages_ar import SERVICE_MSG_AR as _SERVICE_MSG_AR  # noqa
 from ...radius.core.messages_ar import translate_service_message  # noqa: E402
 
 
+def _balance_visible() -> bool:
+    """«رؤية الرصيد» of the token's admin (services/sensitive_visibility)."""
+    from ...radius.services.sensitive_visibility import can_view_balance
+    return can_view_balance()
+
+
 def register(bp: Blueprint) -> None:
     rules = (
         ("actions-context", "GET", "accounts_actions_context", actions_context),
@@ -433,7 +439,9 @@ def actions_context(username: str):
         } if plan else None),
         "effective_price": float(basis["price"]),
         "price_is_custom": bool(basis["custom"]),
-        "balance": balance,
+        # fix3 (F01 F18): hidden when «رؤية الرصيد» is off (the debt stays —
+        # it is the amount the payment/extend dialogs collect).
+        "balance": balance if _balance_visible() else None,
         # max(-0.0, 0.0) is -0.0 → "debt": -0.0 for every zero balance.
         "debt": round_money(max(-balance, 0.0)),
         # Everything the subscriber owes: negative-balance debt (debt extends,
