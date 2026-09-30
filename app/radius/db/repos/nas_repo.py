@@ -157,6 +157,11 @@ def archive_nas(tenant_id: int, nas_id: int, *, actor: str = "",
 
 
 def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
+    # f06-H1/H2: عنوانٌ صار لراوترٍ حيٍّ آخر ⇒ RadiusConflict (409)، وعنوانٌ لا
+    # يقرؤه الرديوس (IPv6 بمعرّف نطاق) ⇒ RadiusValidationError (422). لا
+    # راوتران حيّان على عنوانٍ واحد أبدًا.
+    from ...services.devices import check_restorable_nas
+    check_restorable_nas(tenant_id, nas_id)
     with transaction() as conn:
         # A deleted router's name is free for reuse (migration 178). If a live
         # router took it meanwhile, the restored row gets a suffixed name

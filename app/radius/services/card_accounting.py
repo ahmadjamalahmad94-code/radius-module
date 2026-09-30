@@ -186,7 +186,21 @@ def first_connect_expiry(
     b = _int(budget)
     if b <= 0:
         return None
-    return first_connection_at + timedelta(seconds=b)
+    return clamp_expiry(first_connection_at, b)
+
+
+def clamp_expiry(start: datetime, seconds: int) -> datetime:
+    """``start + seconds`` لكن لا بعد سنة 2100 (قرار المالك) ولا فائض.
+
+    f05-M2: بياناتٌ قديمة (منحٌ متراكمة قبل السقف) كانت تختم 2106 عند أوّل
+    دخول؛ الختمُ الآليّ لا يرفض الدخول بل يقصّ على آخر لحظةٍ مسموحة."""
+    from ..core import limits      # «الحدود»: max_expiry_year (الافتراض 2100)
+    last = limits.expiry_limit() - timedelta(seconds=1)
+    try:
+        out = start + timedelta(seconds=int(seconds))
+    except (OverflowError, ValueError):
+        return last
+    return min(out, last)
 
 
 def _int(value) -> int:
@@ -206,4 +220,5 @@ __all__ = [
     "is_exhausted",
     "remaining_seconds",
     "first_connect_expiry",
+    "clamp_expiry",
 ]

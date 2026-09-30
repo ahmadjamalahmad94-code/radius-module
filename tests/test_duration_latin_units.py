@@ -72,11 +72,18 @@ class TestTemplateMacrosLatinAndIsolated:
         return text[idx:end]
 
     def test_sessions_list_duration_macro(self):
+        """fix3 (F06-L3): «المتصلون الآن» shows Arabic WORDS («10 دقائق»), not
+        «10m». A digit next to an Arabic word never bidi-flips (only the old
+        single-letter units did), so the macro uses the shared `dur_ar`
+        filter and still carries no single-letter Arabic unit."""
         region = self._macro_region(
             "app/templates/radius/sessions_list.html", "{% macro fmt_duration(")
-        assert 'bdi dir="ltr"' in region
+        assert "|dur_ar" in region
         for ch in _ARABIC_UNITS:
-            assert ch not in region, "Arabic unit still in fmt_duration"
+            assert ch not in region, "Arabic unit letter in fmt_duration"
+        from app.radius.core.duration_fmt import fmt_compact_ar
+        assert fmt_compact_ar(600) == "10 دقائق"
+        assert fmt_compact_ar(3900) == "1 ساعة و5 دقائق"
 
     def test_portal_and_report_macros(self):
         for rel, needle in (

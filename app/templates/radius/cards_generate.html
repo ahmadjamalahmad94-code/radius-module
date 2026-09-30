@@ -462,8 +462,8 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>{{ _('طول اسم المستخدم') }}</label>
-          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}" data-un-length>
-          <div class="help">{{ _('الطول الكلّيّ لاسم المستخدم (4–16) شاملًا البادئة واللاحقة؛ الباقي أرقامٌ عشوائيّة.') }}</div></div>
+          <input class="hub-input" type="number" name="username_length" min="4" max="{{ username_length_max|default(32) }}" value="{{ form.get('username_length') or 8 }}" data-un-length>
+          <div class="help">{{ _('الطول الكلّيّ لاسم المستخدم') }} (4–{{ username_length_max|default(32) }}) {{ _('شاملًا البادئة واللاحقة؛ الباقي أرقامٌ عشوائيّة.') }}</div></div>
         {# 🔴 مفتاحُ قسم كلمة المرور — قرارُ هذه الحزمةِ وحدَها في الاتّجاهين.
            شبكاتٌ تبيع «رقمًا فقط» ورقمُ البطاقة هو السرّ، وأخرى تبيع برقمٍ
            وكلمة. فالمفتاحُ هنا يحكم: إن عُطِّل القسمُ **لا تُولَّد كلماتٌ
@@ -795,7 +795,11 @@
       var bn = (unIbn && unIbn.checked) ? nextBn : '';
       var total = parseInt(unLen.value, 10);
       if (!isFinite(total) || total <= 0) total = 8;
-      var genLen = Math.max(1, total - pre.length - bn.length - suf.length);
+      /* f05-L3: نفس قاعدة الخادم (_check_username_length_fits): الأجزاء
+         الثابتة يجب أن تترك خانةً عشوائيّة واحدة على الأقلّ، وإلّا يُرفض
+         التوليد — فلا نَعِد باسمٍ أطول من المطلوب يرفضه الخادم. */
+      var fixed = pre.length + bn.length + suf.length;
+      var genLen = Math.max(0, total - fixed);
       var gen = '';
       while (gen.length < genLen) gen += '1234567890';
       pvPre.textContent = pre;
@@ -806,8 +810,14 @@
       if (pvGenLen) pvGenLen.textContent = String(genLen);
       var cnt = parseInt((document.getElementById('cg-count') || {}).value, 10) || 0;
       var msg = '';
-      if (pre.length + bn.length + suf.length >= total) {
-        msg = {{ _('البادئة ورقم الحزمة واللاحقة تملأ الطول المطلوب، فبقي رقمٌ عشوائيّ واحد فقط. زِد «طول اسم المستخدم» ليبقى للجزء المولَّد خانات كافية.')|tojson }};
+      if (fixed >= total) {
+        var parts = [{{ _('البادئة')|tojson }} + ' ' + pre.length];
+        if (bn) parts.push({{ _('رقم الحزمة')|tojson }} + ' ' + bn.length);
+        parts.push({{ _('اللاحقة')|tojson }} + ' ' + suf.length);
+        msg = {{ _('طول اسم المستخدم المختار {total} محارف لا يتّسع: الأجزاء الثابتة ({parts} = {fixed}) لا تترك خانةً للأرقام العشوائيّة. اجعل الطول {need} على الأقلّ (والحدّ {max})، أو قصّر البادئة/اللاحقة.')|tojson }}
+          .replace('{total}', String(total)).replace('{parts}', parts.join(' + '))
+          .replace('{fixed}', String(fixed)).replace('{need}', String(fixed + 1))
+          .replace('{max}', String(parseInt(unLen.getAttribute('max'), 10) || 32));
       } else if (genLen < 10 && cnt > Math.pow(10, genLen)) {
         msg = {{ _('خانات الجزء المولَّد لا تكفي لعدد البطاقات المطلوب دون تكرار. زِد «طول اسم المستخدم».')|tojson }};
       }

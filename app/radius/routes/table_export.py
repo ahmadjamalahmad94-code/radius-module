@@ -210,7 +210,7 @@ def export_table():
     payload = _build_csv(columns, rows)
     return Response(
         payload,
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition": _filename(title, "csv")},
     )
 

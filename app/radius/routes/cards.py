@@ -693,6 +693,11 @@ def _cards_sales_snapshot(tenant_id: int) -> dict:
     }
 
 
+def _coa_code_ar(code: str) -> str:
+    from ..integration.radius_coa import coa_code_ar
+    return coa_code_ar(code)
+
+
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
@@ -1553,7 +1558,7 @@ def cards_batches_export_csv():
     payload = "\ufeff" + out.getvalue()
     return Response(
         payload,
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
     )
 
@@ -1808,7 +1813,7 @@ def _handle_card_operation():
                         elif getattr(coa, "code_name", "") == "no_active_session":
                             coa_note = " — لا جلسة نشطة الآن، سيُطبَّق في الجلسة التالية."
                         else:
-                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({getattr(coa,'code_name','?')})."
+                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({_coa_code_ar(getattr(coa,'code_name',''))})."
                     if result.get("exhausted"):
                         # fix2: خصمٌ أكبر من وقت البطاقة يُنهيها — لا «بلا حدّ».
                         flash(
@@ -1853,7 +1858,7 @@ def _handle_card_operation():
                         elif getattr(coa, "code_name", "") == "no_active_session":
                             coa_note = " — لا جلسة نشطة، سيُطبَّق في الجلسة التالية."
                         else:
-                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({getattr(coa,'code_name','?')})."
+                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({_coa_code_ar(getattr(coa,'code_name',''))})."
                     if down == 0 and up == 0:
                         flash(
                             f"تم إلغاء تخصيص السرعة على البطاقة — ترجع لسرعة الحزمة.{coa_note}",
@@ -2128,6 +2133,7 @@ def cards_generate():
             form=request.form,
             lwp_default=_network_cards_passwordless_default(),
             max_per_batch=max_cards_per_batch(_tid()),
+            username_length_max=_username_length_max(),
         )
 
     plans = list(get_plans_service().list(limit=500))
@@ -2154,7 +2160,15 @@ def cards_generate():
             help_text="أضف قاعدة سرعة مبدئية تنحفظ على الحزمة فور إنشائها وتطبّق على بطاقاتها.",
         ),
         next_batch_id=_next_batch_id_estimate(),
+        username_length_max=_username_length_max(),
     )
+
+
+def _username_length_max() -> int:
+    """f05-L3: حدّ طول الاسم في نموذج الويب = حدّ الخادم نفسه (كانت الخانة
+    max=16 ورسالة الخادم «والحدّ 32»)."""
+    from ..services.cards import USERNAME_LENGTH_MAX
+    return int(USERNAME_LENGTH_MAX)
 
 
 def _next_batch_id_estimate() -> int:
@@ -3187,7 +3201,7 @@ def cards_of_batch_export_csv(batch_id: int):
     # BOM كي تفتحه Excel العربيّة بترميزٍ صحيح (نفس نمط تصدير الحزم).
     return Response(
         "﻿" + out.getvalue(),
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition":
                  _content_disposition(_batch_export_filename(batch, 'csv', cols, scope))},
     )

@@ -60,6 +60,37 @@ def money_to_minor(amount: Any) -> int:
     return int(dec * 100)
 
 
+# f05-M5: ترجمةٌ واحدة لرسائل Business OS الإنجليزيّة (كانت في business_os API
+# وحده، فتسرّبت «amount must be numeric» عبر محفظة مستخدم الكروت).
+BUSINESS_ERROR_AR = {
+    "amount must be numeric": "المبلغ يجب أن يكون رقمًا صحيحًا.",
+    "unknown event category": "تصنيف الحدث غير معروف.",
+    "unknown event severity": "درجة الحدث غير معروفة.",
+    "event_key is required": "مفتاح الحدث مطلوب.",
+    "unknown ledger entry_type": "نوع قيد الدفتر غير معروف.",
+    "debit_account is required": "حساب المدين مطلوب.",
+    "credit_account is required": "حساب الدائن مطلوب.",
+    "unknown wallet owner_type": "نوع صاحب المحفظة غير معروف.",
+    "owner_id is required for this wallet owner_type": "معرّف صاحب المحفظة مطلوب لهذا النوع.",
+    "unsupported wallet transaction": "حركة المحفظة غير مدعومة.",
+    "wallet not found": "المحفظة غير موجودة.",
+    "wallet balance cannot go negative": "رصيد المحفظة لا يمكن أن يصبح سالبًا.",
+    "reference_type is required": "نوع المرجع مطلوب.",
+    "prices cannot be negative": "الأسعار لا يمكن أن تكون سالبة.",
+}
+
+
+def arabic_business_error(raw: str) -> str:
+    """رسالة Business OS الإنجليزيّة ⇒ عربيّة (غير المعروفة تعود كما هي)."""
+    raw = str(raw or "")
+    if raw in BUSINESS_ERROR_AR:
+        return BUSINESS_ERROR_AR[raw]
+    if raw.endswith(" must be positive"):
+        field = raw.removesuffix(" must be positive")
+        return f"قيمة {field} يجب أن تكون أكبر من صفر."
+    return raw
+
+
 def minor_to_money(value: Any) -> str:
     return str((Decimal(int(value or 0)) / Decimal(100)).quantize(_CENTS))
 

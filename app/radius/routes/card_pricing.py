@@ -9,7 +9,7 @@ from flask import Blueprint, flash, jsonify, redirect, render_template, request,
 from ..db.connection import db
 from ..db.helpers import row_to_dict
 from ..services.business_os_finance import minor_to_money
-from ..services.card_pricing import CardPricingError, CardPricingService
+from ..services.card_pricing import CardPricingError, CardPricingService, arabic_pricing_error
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
 
 
@@ -203,7 +203,7 @@ def card_pricing_update_package(package_id: int):
         )
         flash("تم تحديث أسعار الباقة.", "success")
     except (CardPricingError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_pricing_error(exc), "error")
     return redirect(url_for("radius.card_pricing"))
 
 
@@ -214,9 +214,15 @@ def card_pricing_create_batch():
         ManagerCreditError,
     )
 
-    package_id = int(request.form.get("package_id") or 0)
-    count = int(request.form.get("count") or 0)
-    manager_id = int(request.form.get("responsible_manager_id") or 0)
+    # f05-M5: «abc» كان يُسقط الصفحة بـ500 (int() خارج أيّ try).
+    from ..services.card_users_marketplace import CardMarketplaceError, int_input
+    try:
+        package_id = int_input(request.form.get("package_id"), label="الباقة")
+        count = int_input(request.form.get("count"), label="عدد البطاقات", maximum=10000)
+        manager_id = int_input(request.form.get("responsible_manager_id"), label="المدير")
+    except CardMarketplaceError as exc:
+        flash(arabic_pricing_error(exc), "error")
+        return redirect(url_for("radius.card_pricing"))
     actor_is_super = is_super_admin()
     allow_super_debt = str(request.form.get("confirm_manager_debt") or "").strip() in ("1", "true", "on", "yes")
     try:
@@ -260,10 +266,10 @@ def card_pricing_create_batch():
             },
         )
     except ManagerCreditError as exc:
-        flash(str(exc), "error")
+        flash(arabic_pricing_error(exc), "error")
         return redirect(url_for("radius.card_pricing"))
     except (CardPricingError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(arabic_pricing_error(exc), "error")
         return redirect(url_for("radius.card_pricing"))
 
 

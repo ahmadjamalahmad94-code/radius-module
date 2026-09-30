@@ -137,8 +137,8 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
             # ISO-8601 UTC with «Z» like every other API timestamp (re-test
             # R07 N8); the web preview converts it to the panel's local time.
             from ..core.strict_input import iso_utc_z
-            item["old_expire_at"] = iso_utc_z(cur) if cur else None
             new_exp = anchor + timedelta(minutes=params["minutes"])
+            item["old_expire_at"] = iso_utc_z(cur) if cur else None
             if new_exp >= limits.expiry_limit():
                 # same expiry cap as the real run (extend_time → add_minutes_capped)
                 item.update({"ok": False, "status": "refused",

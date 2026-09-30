@@ -31,7 +31,7 @@ import datetime as _dt
 import logging
 from typing import Any, Mapping, Optional
 
-from ..core.duration_fmt import fmt_compact
+from ..core.duration_fmt import fmt_compact, fmt_compact_ar
 
 _LOG = logging.getLogger(__name__)
 
@@ -67,6 +67,9 @@ def _cell(used_sec: int, total_sec: Optional[int]) -> dict:
         "total_sec": total,
         "used_txt": fmt_compact(used),
         "total_txt": fmt_compact(total) if total else "",
+        # f06-L3: عرض الويب بكلماتٍ عربيّة (الحقول اللاتينيّة أعلاه عقدُ الـAPI).
+        "used_ar": fmt_compact_ar(used),
+        "total_ar": fmt_compact_ar(total) if total else "",
         "bucket": thirds_bucket(used, total),
     }
 

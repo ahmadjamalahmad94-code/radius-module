@@ -3445,12 +3445,17 @@ def _keep_qr_clear_of_credentials(elements: list[dict], cw: float, ch: float, *,
     while s >= floor - 1e-6:
         valid = [c for c in candidates(s) if not hits(c[0], c[1], s, pill_boxes)]
         if valid:
-            best = min(valid, key=lambda c: cost(c, s))
-            if area(best[0], best[1], s, heading_boxes) <= 0.05 * s * s:
-                chosen = (best, s)
+            # f05-L1: نختار **بين المواضع الخالية من العناوين** أوّلًا. كان
+            # الأرخص كلفةً يُفحص وحده؛ فإن غطّى العنوان رُفض الحجمُ كلّه وصغر
+            # الرمز حتى الحدّ ثم عاد الاحتياط إلى أوّل موضعٍ فوق «HobeRadius»
+            # و«بطاقة إنترنت» — مع أنّ نصف الكرت الأيسر خالٍ.
+            clear = [c for c in valid
+                     if area(c[0], c[1], s, heading_boxes) <= 0.05 * s * s]
+            if clear:
+                chosen = (min(clear, key=lambda c: cost(c, s)), s)
                 break
             if fallback is None:
-                fallback = (best, s)
+                fallback = (min(valid, key=lambda c: cost(c, s)), s)
         s *= 0.92
     chosen = chosen or fallback
     requested = {"x": x0, "y": y0, "size": s0}
@@ -3695,6 +3700,12 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
     # إبقاء الحبة داخل الكانفس بعد التوسّع.
     x = max(0.0, min(x, cw - width))
     y = max(0.0, min(y, ch - height))
+    if width > natural_w + 1e-6:
+        # f05-L2: حبّةٌ وسّعها خطٌّ كبير (36pt) كانت تلتصق بحافّة الكرت
+        # (x+w = 85.6 mm) فيُقصّ إطارها عند القصّ. هامشٌ ≈2% من العرض.
+        edge = cw * 0.02
+        width = min(width, cw - 2 * edge)
+        x = max(edge, min(x, cw - width - edge))
     return {
         "kind": "pill",
         "id": id,

@@ -636,6 +636,34 @@ def _layout_only_flag_change(data: dict) -> bool:
         "is_default" in data["layout"]
 
 
+def _apply_batch_price_fallback(tenant_id: int, template: dict, batch,
+                                overrides: dict) -> None:
+    """f05-M4: «إظهار السعر» مفعّل ولا نصّ سعرٍ (لا في الطلب ولا في القالب)
+    ⇒ نطبع سعر بطاقة الحزمة + عملتها («2 ILS») — كما يفعل التطبيق. كان
+    الويب يطبع لا شيء لأنّه بلا حقل نصّ سعر وسعرُ الحزمة غير مستعمل.
+    نصٌّ كتبه المشغّل (طلب/قالب) يبقى هو الحاكم."""
+    if batch is None or str(overrides.get("price_text") or "").strip():
+        return
+    layout = template.get("layout_json") if isinstance(template, dict) else None
+    if isinstance(layout, str):
+        import json
+        try:
+            layout = json.loads(layout)
+        except (TypeError, ValueError):
+            layout = {}
+    if not isinstance(layout, dict):
+        layout = {}
+    from .card_renderer import _boolish
+    if not _boolish(layout.get("show_price"), False):
+        return
+    if str(layout.get("price_text") or "").strip():
+        return
+    from .card_batch_price import batch_price_label
+    label = batch_price_label(tenant_id, batch)
+    if label:
+        overrides["price_text"] = label
+
+
 def _reject_archived_batch(batch) -> None:
     """Printing dead cards of a batch in the recycle bin is refused (409)."""
     if batch is not None and getattr(batch, "deleted_at", None):
@@ -1957,6 +1985,7 @@ class OperationsService:
                 for c in raw_cards
             ]
             export_type = "batch_pdf"
+            _apply_batch_price_fallback(tenant_id, template, batch, overrides)
         else:
             cards = sample_payload.get("cards") if isinstance(sample_payload.get("cards"), list) else []
             if not cards:
@@ -2244,6 +2273,7 @@ class OperationsService:
             if not batch:
                 raise RadiusNotFound("حزمة الكروت غير موجودة.")
             no_pw = bool(getattr(batch, "login_without_password", False))
+            _apply_batch_price_fallback(tenant_id, template, batch, overrides)
             for c in cards_repo.list_cards(tenant_id, batch_id=batch_id,
                                            used=None, revoked=None,
                                            limit=wanted, offset=0):

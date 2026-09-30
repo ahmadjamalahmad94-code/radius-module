@@ -9,6 +9,7 @@ from typing import Callable
 
 from flask import Blueprint, g, request
 
+from ...radius.core.errors import RadiusConflict, RadiusValidationError
 from ...radius.db.connection import db
 from ...radius.db.helpers import row_to_dict
 from ...radius.db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
@@ -226,7 +227,13 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
-    changed = _restore_handler(table)(entity_id)
+    try:
+        changed = _restore_handler(table)(entity_id)
+    except RadiusConflict as e:
+        # f06-H1: restoring a router whose address a live router now uses.
+        return fail((e.details or {}).get("code") or "conflict", e.message, status=409)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     if not changed:
         return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)
     return ok({"entity_type": table, "id": entity_id, "restored": True})

@@ -20,6 +20,7 @@ ONLINE_SCAN_CAP = 50_000          # same safety cap as GET /api/v1/sessions/onli
 ONLINE_PAGE_SIZE = 100
 ONLINE_PAGE_SIZES = (100, 200, 500, 1000)
 from ..integration.factory import get_radius_adapter
+from ..integration.radius_coa import coa_code_ar
 from ..services.sessions import get_online_sessions_service
 
 
@@ -434,7 +435,9 @@ def online_list():
                     getattr(it, "nas_address", ""),
                 )
             )
-            return search_q in hay
+            return search_q in hay or mac_query_matches(
+                search_q, getattr(it, "mac_address", ""))
+        from ..services.sessions import mac_query_matches
         items = [it for it in items if _q_match(it)]
 
     # ── the page cut: counters describe the WHOLE filtered result ──
@@ -864,8 +867,9 @@ def _apply_temp_speed_request(force_mode: str | None):
                       f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.",
                       "info")
             else:
+                from ..integration.radius_coa import coa_code_ar
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username}، "
-                      f"لكن تعذّر الفصل ({code}) — تحقّق من اتصال الراوتر.",
+                      f"لكن تعذّر الفصل ({coa_code_ar(code)}) — تحقّق من اتصال الراوتر.",
                       "warning")
         else:
             # live_coa (default) — a live rate change with NO disconnect.
@@ -882,9 +886,10 @@ def _apply_temp_speed_request(force_mode: str | None):
             else:
                 # CoA reached the router but was not confirmed. We do NOT
                 # disconnect automatically — offer the manual force button.
+                from ..integration.radius_coa import coa_code_ar
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
                       f"{ends_local}، لكن الراوتر لم يؤكّد تطبيق CoA "
-                      f"({code}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
+                      f"({coa_code_ar(code)}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
                       f"زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: "
                       f"المنفذ 3799 والـ secret).", "warning")
     except RadiusError as e:
@@ -1006,12 +1011,12 @@ def online_coa_set_ip():
     if out.ok:
         flash(
             f"تم تغيير IP لـ {username} إلى {new_ip} على المايكروتيك/السيرفر "
-            f"{out.nas_ip} — {out.code_name}.",
+            f"{out.nas_ip} — {coa_code_ar(out.code_name)}.",
             "success",
         )
     else:
         flash(
-            f"فشل تغيير IP لـ {username}: {out.code_name}"
+            f"فشل تغيير IP لـ {username}: {coa_code_ar(out.code_name)}"
             + (f" — {out.reply_message}" if out.reply_message else "")
             + (f" ({out.detail})" if out.detail else ""),
             "error",
@@ -1029,7 +1034,7 @@ def online_coa_set_speed():
         rx = int((request.form.get("rx_kbps") or "0").strip())
         tx = int((request.form.get("tx_kbps") or "0").strip())
     except (TypeError, ValueError):
-        flash("rx_kbps و tx_kbps يجب أن تكون أرقامًا", "error")
+        flash("سرعة التنزيل والرفع يجب أن تكونا أرقامًا صحيحة.", "error")
         return _return_to_online()
     if not username:
         flash("اسم المستخدم مطلوب", "error")
@@ -1052,12 +1057,12 @@ def online_coa_set_speed():
     if out.ok:
         flash(
             f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "
-            f"— {out.code_name}.",
+            f"— {coa_code_ar(out.code_name)}.",
             "success",
         )
     else:
         flash(
-            f"فشل تطبيق السرعة على {username}: {out.code_name}"
+            f"فشل تطبيق السرعة على {username}: {coa_code_ar(out.code_name)}"
             + (f" — {out.reply_message}" if out.reply_message else ""),
             "error",
         )

@@ -274,6 +274,26 @@ def check_create_expiry(expire_at: Optional[datetime],
     return expire_at
 
 
+# خصمٌ من وقت بطاقة: لا معنى لـ«سنة» فيه (خصمٌ أكبر من المتبقّي يُنهيها)، لكن
+# رقمًا فلكيًّا يُفيض timedelta (500) — سقفٌ عاقل برسالةٍ عربيّة.
+DEDUCT_MAX_SECONDS = 3650 * 86400
+DEDUCT_TOO_LONG_AR = "مقدار الخصم يتجاوز الحدّ المسموح (3650 يومًا)."
+
+
+def check_time_delta_seconds(seconds: int) -> int:
+    """f05-M2 — حارسٌ واحد لكل «إضافة/خصم وقت» بالثواني (بطاقة: ويب/API/جماعيّ).
+
+    الإضافة فوق «أقصى عدد أيام تفعيل/تمديد» (``core.limits``، الافتراض سنة) ⇒
+    422 بنفس رسالة تمديد المشترك؛ الخصم فوق 3650 يومًا ⇒ 422."""
+    from . import limits
+    s = int(seconds)
+    if s > limits.max_extend_minutes() * 60:      # «الحدود» (fix3-moneyquota)
+        raise NonFiniteNumber(limits.extend_too_long_msg(), details={"field": "minutes"})
+    if -s > DEDUCT_MAX_SECONDS:
+        raise NonFiniteNumber(DEDUCT_TOO_LONG_AR, details={"field": "minutes"})
+    return s
+
+
 def json_safe(obj: Any) -> Any:
     """نسخة من ``obj`` تستبدل كل float غير منتهٍ بـ ``None`` (JSON صالح)."""
     if isinstance(obj, float):
@@ -311,7 +331,7 @@ __all__ = [
     "ACTION_AMOUNT_MAX", "EXPIRY_LIMIT", "EXPIRY_TOO_FAR_AR", "EXTEND_MAX_DAYS",
     "EXTEND_MAX_MINUTES", "EXTEND_TOO_LONG_AR", "MONEY_MAX", "NonFiniteNumber", "action_amount",
     "add_minutes_capped", "check_create_expiry", "check_expiry", "check_extend_minutes",
-    "create_expiry_rule_enabled", "field_label",
+    "check_time_delta_seconds", "create_expiry_rule_enabled", "field_label",
     "finite_float", "finite_int", "json_dumps_safe", "json_safe", "money_cents",
     "money_float", "normalize_number_text", "normalize_numeric_text", "round_money",
     "strict_float",

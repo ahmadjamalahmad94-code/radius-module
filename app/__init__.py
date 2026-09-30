@@ -1018,6 +1018,19 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.filters["money_multi"] = _fmt_money_multi
     app.jinja_env.filters["dt_local"] = _to_local
     app.jinja_env.filters["date_local"] = _to_local_date
+    # f06-L3: مدّة بكلماتٍ عربيّة («1 ساعة و5 دقائق») بدل «1h 5m» في الويب.
+    # Imported defensively (see fmt_base_time_ar below): a formatter import
+    # failure must never brick create_app().
+    try:
+        from app.radius.core.duration_fmt import fmt_compact_ar as _dur_ar
+    except Exception:  # noqa: BLE001
+        app.logger.exception("fmt_compact_ar import failed; using degraded fallback")
+
+        def _dur_ar(seconds):
+            s = max(0, int(seconds or 0))
+            h, m = s // 3600, (s % 3600) // 60
+            return f"{h} ساعة و{m} دقيقة" if h else f"{m} دقيقة"
+    app.jinja_env.filters["dur_ar"] = _dur_ar
 
     def _epoch(value) -> int:
         """UTC epoch seconds of a stored (naive UTC) datetime — 0 when absent or

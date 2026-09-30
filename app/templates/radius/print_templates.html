@@ -864,7 +864,7 @@
            تأتي من _effective_field_layout في المسار، فتبدأ الحقول معبأة
            بالمكان الحقيقي بدل الصفر (0 كان يعني «الافتراضي» فقط). #}
         {% set eff = effective_fields or {} %}
-        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">
+        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-editing="{{ '1' if edit_template_id else '0' }}" data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">
           {% if form_error %}
             <div class="pr-file-error" role="alert">{{ form_error }}</div>
           {% endif %}
@@ -1564,8 +1564,12 @@
     svgMount.classList.toggle('is-horizontal', !isVertical);
     svgMount.dataset.renderEngine = engine;
   }
-  function syncRenderEngine(){
+  function syncRenderEngine(opts){
     if(!form) return;
+    // f05-M3: عند فتح قالبٍ محفوظ للتعديل، نصوصه المحفوظة هي الحقيقة — كان
+    // التحميل يستبدل «HobeRadius» بـ«هوب راديوس» فيغيّره حفظٌ بلا أيّ تعديل.
+    // الافتراضيّات اللغويّة تُطبَّق فقط حين يبدّل المشغّل المحرّك بنفسه.
+    const keepTexts = !!(opts && opts.keepTexts);
     const engineInput = form.querySelector('[name="render_engine"]');
     const engineKey = (engineInput && engineInput.value) || 'ar_horizontal';
     const profile = renderEngines[engineKey] || renderEngines.ar_horizontal;
@@ -1574,7 +1578,9 @@
       const field = form.querySelector(`[name="${name}"]`);
       if(field) field.value = value;
     });
-    applyLanguageDefaults(profile.credential_label_language === 'arabic' ? 'arabic' : 'english');
+    if(!keepTexts){
+      applyLanguageDefaults(profile.credential_label_language === 'arabic' ? 'arabic' : 'english');
+    }
     syncPreviewOrientation();
   }
 
@@ -2207,7 +2213,7 @@
     resetAutoFieldsToEngineDefaults();
     scheduleFetch();
   }));
-  syncRenderEngine();
+  syncRenderEngine({keepTexts: !!(form && form.dataset.editing === '1')});
   setDesignSource(form && form.background_style && form.background_style.value === 'image' ? 'image' : 'preset');
   // «خلفية من صورة» داخل تصميم النظام: data-preset-bg على النموذج يُظهر
   // منتقي الصورة/شريط الشفافية في وضع النظام (المعاينة تتحدث عبر change

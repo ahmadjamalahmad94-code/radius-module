@@ -244,7 +244,9 @@ def test_online_cards_tab_renders_thirds_pill(app):
         "/admin/radius/online?type=card").get_data(as_text=True)
     assert "3172911" in body
     assert "du-green" in _pill_for(body, "3172911")
-    assert "1h / 3h" in body
+    # fix3 (F06-L3): Arabic words on the web («1 ساعة / 3 ساعات»), not «1h / 3h»;
+    # the Latin tokens stay in used_txt/total_txt for the API/app.
+    assert "1 ساعة / 3 ساعات" in body
 
 
 def test_online_subscribers_tab_renders_neutral_for_uncapped(app):

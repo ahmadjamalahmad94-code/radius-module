@@ -129,10 +129,20 @@ def _int(name: str, default: int = 0) -> int:
 
 
 def _float(name: str, default: float = 0) -> float:
-    try:
-        return strict_float(request.form.get(name) or default)
-    except (TypeError, ValueError):
+    """حقل رقميّ من نموذج التصميم (ويب + التطبيق عبر ``_quick_form_payload``).
+
+    f05-L8: نصٌّ غير رقميّ («abc» في حجم الخطّ) كان يُبتلع صامتًا إلى
+    الافتراض فيُحفظ القالب 201؛ الآن 422 عربيّ كبقيّة حدود التصميم. الفارغ
+    يبقى «تلقائي» (الافتراض)."""
+    raw = request.form.get(name)
+    if raw is None or not str(raw).strip():
         return default
+    try:
+        return strict_float(raw)
+    except (TypeError, ValueError):
+        from ..services.operations import _label_ar
+        raise RadiusValidationError(
+            f"قيمة {_label_ar(name)} يجب أن تكون رقمية.") from None
 
 
 # علامة بصرية محايدة تُستخدم بدل سلاسل وهمية مثل «SAMPLE» / «CARD1234»

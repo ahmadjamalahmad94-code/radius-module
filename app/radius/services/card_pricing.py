@@ -19,6 +19,29 @@ from .business_os_finance import (
 )
 
 
+# f05-M5: عرض رسائل الخدمة (الإنجليزيّة، عقدُ الاختبارات) بالعربيّة في الواجهة.
+_PRICING_ERROR_AR = {
+    "retail price must be positive": "سعر التجزئة يجب أن يكون أكبر من صفر.",
+    "min price cannot exceed retail": "أدنى سعر لا يمكن أن يتجاوز سعر التجزئة.",
+    "max discount cannot exceed retail": "أقصى خصم لا يمكن أن يتجاوز سعر التجزئة.",
+    "package not found": "الباقة غير موجودة.",
+    "count must be positive": "عدد البطاقات يجب أن يكون أكبر من صفر.",
+    "manager is not allowed for this package": "هذا المدير غير مسموح له بهذه الباقة.",
+    "batch not found": "الدفعة غير موجودة.",
+}
+
+
+def arabic_pricing_error(exc: BaseException) -> str:
+    raw = str(exc or "").strip()
+    if raw in _PRICING_ERROR_AR:
+        return _PRICING_ERROR_AR[raw]
+    if raw.startswith("manager wallet has insufficient balance"):
+        tail = raw.split("—", 1)[1].strip() if "—" in raw else ""
+        return "رصيد محفظة المدير غير كافٍ" + (f" — {tail}" if tail else ".")
+    from .card_users_marketplace import arabic_error_message
+    return arabic_error_message(exc)
+
+
 class CardPricingError(ValueError):
     """Raised for safe pricing/costing validation errors."""
 
@@ -57,6 +80,14 @@ class CardPricingService:
         allowed_distributor_ids: list[int] | None = None,
     ) -> dict[str, Any]:
         package = self.get_package(package_id)
+        # f05-M5: كل سعرٍ رقمٌ منتهٍ ≤ 100,000 (سقف العمليّة) برسالةٍ عربيّة.
+        from .card_users_marketplace import CardMarketplaceError, market_money_minor
+        try:
+            for _label, _val in (("سعر التجزئة", retail_price), ("سعر الجملة", wholesale_price),
+                                 ("أدنى سعر", min_price or 0), ("أقصى خصم", max_discount or 0)):
+                market_money_minor(_val, label=_label, allow_zero=True)
+        except CardMarketplaceError as exc:
+            raise CardPricingError(str(exc)) from None
         retail = money_to_minor(retail_price)
         wholesale = money_to_minor(wholesale_price)
         min_minor = money_to_minor(min_price or 0)

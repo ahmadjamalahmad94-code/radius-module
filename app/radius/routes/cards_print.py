@@ -120,6 +120,22 @@ def cards_print_quick():
         selected_batch = int(request.args.get("batch_id") or 0)
     except (TypeError, ValueError):
         selected_batch = 0
+    # f05-M4: نصّ سعر كل حزمة («2 ILS») — يملأ حقل «نصّ السعر» حين يُفعَّل
+    # «إظهار السعر» (نفس قاعدة التطبيق؛ والتصدير يسقط عليه خادميًّا أيضًا).
+    from ..core.system_config import default_currency
+    from ..services.card_batch_price import price_label
+    _cur_default = default_currency() or "ILS"
+    batch_prices: dict[int, str] = {}
+    for _b in [*batches, *print_only]:
+        try:
+            _cur = str(_b.get("plan_currency") or "").strip()
+            if not _cur and _b.get("plan_id"):
+                from ..services.card_batch_price import batch_currency
+                _cur = batch_currency(_tid(), _b.get("plan_id"))
+            batch_prices[int(_b.get("id") or 0)] = price_label(
+                _b.get("price_per_card"), _cur or _cur_default)
+        except Exception:  # noqa: BLE001 — نصّ السعر اختياريّ للعرض
+            continue
     # رابط دخول الهوت سبوت للـQR: إن لم يحمله القالب المختار نقترح آخر رابط
     # ضُبط على أي قالب لهذه الجهة — فيُكتب مرّة واحدة لا مع كل قالب جديد.
     qr_login_url = str(fl.get("hotspot_login_url") or "").strip()
@@ -138,6 +154,7 @@ def cards_print_quick():
         qr_login_url=qr_login_url,
         batches=batches,
         print_only_batches=print_only,
+        batch_prices=batch_prices,
         selected_batch=selected_batch,
         lps=get_last_print_settings(),
         auto_export=(request.args.get("auto_export") == "1"),
