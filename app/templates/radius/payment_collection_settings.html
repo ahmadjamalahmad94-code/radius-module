@@ -32,7 +32,7 @@
   ويبقى التطبيق التلقائي معاينة بدون تنفيذ حتى يكتمل مسار تفعيل الخدمة.
 </div>
 
-<form method="post">
+<form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {# توكن CSRF لحماية النموذج عند الإرسال POST #}
   {{ csrf_token_input() | safe }}
   {% call hub.section("إعدادات المزوّد والمحفظة", icon="gear") %}
@@ -123,7 +123,7 @@
 
   <div class="hub-flex-row" style="gap:8px;margin-top:var(--hub-gap-section)">
     <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_requests') }}"><i class="fa-solid fa-list"></i> {{ _('الطلبات') }}</a>
+    {% if can_submit('radius.payment_collection_requests', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.payment_collection_requests') }}"><i class="fa-solid fa-list"></i> {{ _('الطلبات') }}</a>{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 {% endblock %}

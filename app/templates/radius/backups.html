@@ -194,14 +194,14 @@
               title="{{ _('أرشيف كامل يشمل السجلّات والمحاسبة — أكبر حجمًا') }}">
         <i class="fa-solid fa-box-archive"></i> {{ _('أرشيف كامل (مع السجلّات)') }}
       </button>
-      <form method="post" action="{{ url_for('radius.backups_prune_logs') }}" style="display:inline">
+      {% if can_submit('radius.backups_prune_logs', 'POST') %}<form method="post" action="{{ url_for('radius.backups_prune_logs') }}" style="display:inline">
         {{ csrf_token_input() }}
         <button type="submit" class="bkx-btn ghost"
                 data-confirm="{{ _('حذف السجلّات القديمة (محاسبة/أحداث/تدقيق) الآن؟ لا يمكن التراجع عن الحذف.') }}"
                 title="{{ _('حذف السجلّات القديمة (محاسبة/أحداث/تدقيق) واسترجاع مساحة قاعدة البيانات') }}">
           <i class="fa-solid fa-broom"></i> {{ _('تنظيف السجلّات الآن') }}
         </button>
-      </form>
+      </form>{% endif %}
     </div>
     <p style="margin:8px 0 0;font-size:11px;opacity:.7;line-height:1.6">
       {{ _('«نسخة احتياطية» تحفظ بيانات العمل الأساسية فقط (مشتركون، بطاقات، محافظ، إعدادات) فتكون صغيرة الحجم. «أرشيف كامل» يضيف سجلّات المحاسبة والأحداث والتدقيق.') }}
@@ -238,7 +238,7 @@
                   </div>
                   <div class="bkx-acts">
                     <button type="button" class="bkx-act" title="{{ _('عرض المحتوى') }}" data-bk-content data-name="{{ f.name }}" data-target="bk-sum-{{ loop.index0 }}"><i class="fa-solid fa-list-ul"></i></button>
-                    <a class="bkx-act" title="{{ _('تنزيل') }}" href="{{ url_for('radius.backups_download', name=f.name) }}"><i class="fa-solid fa-download"></i></a>
+                    {% if can_submit('radius.backups_download', 'GET') %}<a class="bkx-act" title="{{ _('تنزيل') }}" href="{{ url_for('radius.backups_download', name=f.name) }}">{% endif %}<i class="fa-solid fa-download"></i>{% if can_submit('radius.backups_download', 'GET') %}</a>{% endif %}
                     {% if restore_enabled %}<button type="button" class="bkx-act" title="{{ _('استعادة') }}" data-bk-restore data-name="{{ f.name }}"><i class="fa-solid fa-rotate-left"></i></button>{% endif %}
                     <button type="button" class="bkx-act danger" title="{{ _('حذف') }}" data-bk-delete data-name="{{ f.name }}"><i class="fa-solid fa-trash-can"></i></button>
                   </div>
@@ -272,11 +272,11 @@
               {# توحيد تنسيق وقت آخر رفع مع بقية الطوابع الزمنية في الصفحة #}
               <div class="row"><span class="k">{{ _('آخر رفع') }}</span><span class="v ltr">{{ fmt_dt(gdrive.last_upload_at) if gdrive.last_upload_at else '—' }}</span></div>
             </div>
-            <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">{{ _('إدارة الربط من بوابة العميل ↗') }}</a>
+            {% if can_submit('radius.license_file_portal_sso', 'GET') %}<a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">{% endif %}{{ _('إدارة الربط من بوابة العميل ↗') }}{% if can_submit('radius.license_file_portal_sso', 'GET') %}</a>{% endif %}
           {% else %}
             <div class="bkx-note info"><i class="fa-solid fa-circle-info"></i><div>{{ _('جوجل درايف غير مفعل حاليًا؛ اربطه من بوابة العميل عندما تريد رفع النسخ خارج السيرفر.') }}</div></div>
             <p class="bkx-soft">{{ _('اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة') }} <span class="mono">drive.file</span>).</p>
-            <a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> {{ _('ربط جوجل درايف') }}</a>
+            {% if can_submit('radius.license_file_portal_sso', 'GET') %}<a class="bkx-btn primary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-brands fa-google-drive"></i> {{ _('ربط جوجل درايف') }}</a>{% endif %}
           {% endif %}
         </div>
       </div>
@@ -286,7 +286,7 @@
         <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-clock"></i></span><h2>{{ _('الجدولة التلقائية') }}</h2>
           <span class="meta">{{ '● مفعّلة' if backup_schedule.enabled else 'متوقفة' }}</span></div>
         <div class="bkx-card-b">
-          <form method="post" action="{{ url_for('radius.backups_schedule') }}" style="margin:0">
+          {% if can_submit('radius.backups_schedule', 'POST') %}<form method="post" action="{{ url_for('radius.backups_schedule') }}" style="margin:0">
             {{ csrf_token_input() }}
             <label class="bkx-switch"><input type="checkbox" name="enabled" value="1" {{ 'checked' if backup_schedule.enabled else '' }}> {{ _('تفعيل النسخ التلقائي') }}</label>
             <select name="interval" class="bkx-input" style="margin-bottom:11px">
@@ -297,7 +297,7 @@
             </select>
             <button type="submit" class="bkx-btn primary" style="width:100%;justify-content:center"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الجدولة') }}</button>
             {% if backup_schedule.last_run %}<p class="bkx-soft" style="margin:10px 0 0;font-size:11.5px">آخر تشغيل مجدول: {{ fmt_dt(backup_schedule.last_run) }}</p>{% endif %}
-          </form>
+          </form>{% endif %}
         </div>
       </div>
 
@@ -305,7 +305,7 @@
       <div class="bkx-card">
         <div class="bkx-card-h"><span class="ic"><i class="fa-solid fa-upload"></i></span><h2>{{ _('رفع نسخة من جهازك') }}</h2></div>
         <div class="bkx-card-b">
-          <form method="post" action="{{ url_for('radius.backups_upload_computer') }}" enctype="multipart/form-data" style="margin:0">
+          {% if can_submit('radius.backups_upload_computer', 'POST') %}<form method="post" action="{{ url_for('radius.backups_upload_computer') }}" enctype="multipart/form-data" style="margin:0">
             {{ csrf_token_input() }}
             <label style="display:block;margin-bottom:11px;cursor:pointer">
               <input type="file" name="backup_file" accept=".sqlite3,.gz,.sqlite3.gz" required hidden
@@ -316,7 +316,7 @@
               <span class="bkx-fn" style="display:block;font-size:11.5px;color:#64748b;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all"></span>
             </label>
             <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-upload"></i> {{ _('رفع الملف (.sqlite3 / .sqlite3.gz)') }}</button>
-          </form>
+          </form>{% endif %}
         </div>
       </div>
 
@@ -331,12 +331,12 @@
           {% if not panel_backup.enabled %}
             <div class="bkx-note info" style="margin:12px 0 0"><i class="fa-solid fa-circle-info"></i>
               <div>{{ _('رفع النسخ إلى لوحة التراخيص خدمة مدفوعة غير مفعّلة.') }}</div></div>
-            <form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:10px 0 0">
+            {% if can_submit('radius.license_file_service_request', 'POST') %}<form method="post" action="{{ url_for('radius.license_file_service_request') }}" style="margin:10px 0 0">
               {{ csrf_token_input() }}
               <input type="hidden" name="service_key" value="backups">
               <input type="hidden" name="service_name" value="{{ _('النسخ الاحتياطي السحابي') }}">
               <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-paper-plane"></i> {{ _('طلب تفعيل النسخ على اللوحة') }}</button>
-            </form>
+            </form>{% endif %}
           {% endif %}
         </div>
       </div>
@@ -528,7 +528,7 @@
 {# ── Delete confirm modal (always available) ── #}
 <div class="bk-modal" id="bk-del-modal" role="dialog" aria-modal="true">
   <div class="bk-dialog">
-    <form method="post" action="{{ url_for('radius.backups_delete') }}">
+    {% if can_submit('radius.backups_delete', 'POST') %}<form method="post" action="{{ url_for('radius.backups_delete') }}">
       <div class="bk-dlg-head">
         <span class="bk-dlg-ico"><i class="fa-solid fa-trash-can"></i></span>
         <div class="bk-dlg-title">{{ _('تأكيد حذف النسخة') }}</div>
@@ -546,7 +546,7 @@
           <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائي') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 <script>
@@ -583,7 +583,7 @@
 {% if restore_enabled %}
 <div class="bk-modal" id="bk-modal" role="dialog" aria-modal="true">
   <div class="bk-dialog">
-    <form method="post" action="{{ url_for('radius.backups_restore') }}">
+    {% if can_submit('radius.backups_restore', 'POST') %}<form method="post" action="{{ url_for('radius.backups_restore') }}">
       <div class="bk-dlg-head">
         <span class="bk-dlg-ico"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <div class="bk-dlg-title">{{ _('تأكيد استعادة النسخة') }}</div>
@@ -605,7 +605,7 @@
           <i class="fa-solid fa-rotate-left"></i> {{ _('تنفيذ الاستعادة') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 <script>

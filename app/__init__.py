@@ -976,6 +976,18 @@ def _install_stubs(app: Flask) -> None:
             key = (name, meth)
             if key in cache:
                 return cache[key]
+            # نموذجٌ يرسل POST إلى عنوانٍ اسمه لصفحة GET (مثل /users → users_list)
+            # يصل فعليًّا إلى endpoint آخر على نفس المسار (users_create) — نحكم عليه.
+            try:
+                _rules = app.url_map._rules_by_endpoint.get("radius." + name) or []
+                if _rules and not any(meth in (r.methods or ()) for r in _rules):
+                    for _r in app.url_map.iter_rules():
+                        if _r.rule == _rules[0].rule and meth in (_r.methods or ()) \
+                                and _r.endpoint.startswith("radius."):
+                            name = _r.endpoint.split(".", 1)[1]
+                            break
+            except Exception:  # noqa: BLE001
+                pass
             try:
                 from flask import g as _g
                 from app.radius.routes.blueprint import rbac_denial_status
@@ -992,15 +1004,53 @@ def _install_stubs(app: Flask) -> None:
                     _g._rbac_denial = _saved
             except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
                 res = True
+            # رابط «جديد/تعديل» يفتح نموذجًا: يُعرَض فقط إن كان حفظه مقبولًا أيضًا
+            # (bw_new يفتح بـplans.create وحفظه bw_create يطلب plans.edit).
+            if res and meth == "GET":
+                pair = (name[:-4] + "_create" if name.endswith("_new")
+                        else name[:-5] + "_update" if name.endswith("_edit") else "")
+                if pair and ("radius." + pair) in app.view_functions:
+                    cache[key] = res     # guard against a self-cycle
+                    res = _can_submit(pair, "POST")
             cache[key] = res
             return res
 
         def _can_any(*endpoints: str) -> bool:
             return any(_can_submit(e) for e in endpoints)
 
+        def _can_open(url, method: str = "GET") -> bool:
+            """رابطٌ عنوانه بيانات (تنبيه/إشعار/بطاقة لوحة): يُحلّ العنوان إلى
+            endpoint ثم نفس قرار الحارس. عنوان خارجيّ/غير معروف ⇒ نعم."""
+            if _is_super() or not url:
+                return True
+            try:
+                from urllib.parse import urlsplit
+                parts = urlsplit(str(url))
+                if parts.netloc or not parts.path.startswith("/admin/radius/"):
+                    return True
+                ep, _args = app.url_map.bind("localhost").match(parts.path, method=method)
+            except Exception:  # noqa: BLE001
+                return True
+            return _can_submit(ep, method)
+
+        def _can_post_here() -> bool:
+            """نموذجٌ يُرسَل إلى عنوان الصفحة نفسها (بلا action): قرار الحارس على
+            الـendpoint الذي يستقبل POST لهذا العنوان."""
+            if _is_super():
+                return True
+            try:
+                from flask import request as _rq
+                adapter = app.url_map.bind_to_environ(_rq.environ)
+                ep, _args = adapter.match(method="POST")
+            except Exception:  # noqa: BLE001 — لا مسار POST هنا: لا شيء نحجبه
+                return True
+            return _can_submit(ep, "POST")
+
         return {
             "can_submit": _can_submit,
             "can_submit_any": _can_any,
+            "can_post_here": _can_post_here,
+            "can_open": _can_open,
             "manager_locked_fields": _manager_locked_fields,
             "subscriber_actions": _sub_actions,
             "manager_nav_hidden": _manager_nav_hidden,
@@ -1010,6 +1060,40 @@ def _install_stubs(app: Flask) -> None:
             "manager_action_allowed": _manager_action_allowed,
             "manager_can_see": _manager_can_see,
         }
+
+    # F01-F2: the gating helpers are ALSO Jinja globals, so macros imported
+    # without context (_partials/hub.html btn/action_card…) can gate their own
+    # href. They only read the request-bound session/g proxies at call time.
+    _gating = _inject_manager_grants()
+    for _gk in ("can_submit", "can_submit_any", "can_post_here", "can_open"):
+        app.jinja_env.globals.setdefault(_gk, _gating[_gk])
+
+    import re as _re_gate
+    _GATE_A = _re_gate.compile(r'<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>(.*?)</a>', _re_gate.S | _re_gate.I)
+    _GATE_FORM = _re_gate.compile(r'<form\b([^>]*?)\baction="([^"]*)"([^>]*)>(.*?)</form>',
+                                  _re_gate.S | _re_gate.I)
+
+    def _gate_html(html):
+        """F01-F2: HTML built as a string (hero actions_html, modal footers):
+        a link/form whose target the guard would refuse is dropped — the same
+        decision as can_open(). Owner/super: unchanged."""
+        from markupsafe import Markup
+        s = str(html or "")
+        if not s or ("href=" not in s and "action=" not in s):
+            return html
+        can_open = _gating["can_open"]
+
+        def _form(m):
+            meth = "POST" if _re_gate.search(r'method\s*=\s*"post"', m.group(1) + m.group(3), _re_gate.I) else "GET"
+            return m.group(0) if can_open(m.group(2), meth) else ""
+
+        def _a(m):
+            return m.group(0) if can_open(m.group(2)) else ""
+        s = _GATE_FORM.sub(_form, s)
+        s = _GATE_A.sub(_a, s)
+        return Markup(s)
+
+    app.jinja_env.filters.setdefault("gate_html", _gate_html)
 
     # Provider gate template helpers — provider_endpoint_blocked /
     # provider_service_disabled. Used by the sidebar macro to silently hide

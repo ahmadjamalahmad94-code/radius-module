@@ -41,7 +41,7 @@
       {%- if link_muted or not link_href -%}
         <span class="hub-section-head-link is-muted">{{ link_text }}</span>
       {%- else -%}
-        <a class="hub-section-head-link" href="{{ link_href }}">{{ link_text }}</a>
+        {% if can_open(link_href) %}<a class="hub-section-head-link" href="{{ link_href }}">{% endif %}{{ link_text }}{% if can_open(link_href) %}</a>{% endif %}
       {%- endif -%}
     {%- endif -%}
   </header>

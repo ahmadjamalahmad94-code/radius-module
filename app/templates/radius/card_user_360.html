@@ -153,9 +153,9 @@
   <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="u360-password">
     <i class="fa-solid fa-key"></i> {{ _('كلمة مرور البوابة') }}
   </button>
-  <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_users_list') }}">
+  {% if can_submit('radius.card_users_list', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_users_list') }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('القائمة') }}
-  </a>
+  </a>{% endif %}
 {% endset %}
 {% call hub.megahero(
   user.display_name or _('مستخدم بدون اسم'),
@@ -226,7 +226,7 @@
   {% call hub.section(_("شراء بطاقة من السوق"), icon="store",
                      meta=(packages|length|string ~ " " ~ _("عرض متاح")) if packages else "") %}
     {% if packages %}
-    <form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}"
+    {% if can_submit('radius.card_user_purchase', 'POST') %}<form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}"
           id="u360-purchase-form" data-testid="card-user-purchase-form">
       {{ csrf_token_input() | safe }}
       <input type="hidden" name="package_id" id="u360-pack-id" value="">
@@ -273,7 +273,7 @@
           {{ _('شراء البطاقة') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
     {% else %}
       {{ hub.empty(_("لا توجد عروض متاحة"),
                    sub=_("أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء."),
@@ -557,7 +557,7 @@
    Forms keep their exact action / field names — only the chrome moved. #}
 <div class="fcw-modal" data-fcw-modal="u360-recharge" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="u360-recharge-title">
-    <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
+    {% if can_submit('radius.card_user_recharge', 'POST') %}<form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
       {{ csrf_token_input() | safe }}
       <div class="fcw-head">
         <h3 id="u360-recharge-title"><i class="fa-solid fa-wallet"></i> {{ _('شحن المحفظة يدوياً') }}</h3>
@@ -577,13 +577,13 @@
           <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ _('شحن') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
 <div class="fcw-modal" data-fcw-modal="u360-password" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="u360-password-title">
-    <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
+    {% if can_submit('radius.card_user_password', 'POST') %}<form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
       {{ csrf_token_input() | safe }}
       <div class="fcw-head">
         <h3 id="u360-password-title"><i class="fa-solid fa-key"></i> {{ _('تعيين كلمة مرور البوابة') }}</h3>
@@ -603,7 +603,7 @@
           <i class="fa-solid fa-rotate" aria-hidden="true"></i> {{ _('حفظ') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

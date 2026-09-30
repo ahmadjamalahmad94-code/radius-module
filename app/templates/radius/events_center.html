@@ -45,12 +45,12 @@
    مع وصف موجز لكل قسم — مكمّلة لشريط التبويبات أعلاه. ───── #}
 {% call hub.section("أقسام المركز", icon="compass", meta="المخاطر · الأمان · التحقيقات") %}
   <div class="hub-actions" data-testid="events-sections">
-    {{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة",
-                       icon="shield-halved", href=url_for('radius.events_risk'), variant="amber") }}
-    {{ hub.action_card("الأمان", sub="أحداث فئة الأمان + إشارات الاحتيال المفتوحة",
-                       icon="lock", href=url_for('radius.events_security'), variant="red") }}
-    {{ hub.action_card("التحقيقات", sub="فتح ومتابعة تحقيقات على الكيانات المشبوهة",
-                       icon="magnifying-glass-chart", href=url_for('radius.events_investigations'), variant="brand") }}
+    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة",
+                       icon="shield-halved", href=url_for('radius.events_risk'), variant="amber") }}{% endif %}
+    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card("الأمان", sub="أحداث فئة الأمان + إشارات الاحتيال المفتوحة",
+                       icon="lock", href=url_for('radius.events_security'), variant="red") }}{% endif %}
+    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card("التحقيقات", sub="فتح ومتابعة تحقيقات على الكيانات المشبوهة",
+                       icon="magnifying-glass-chart", href=url_for('radius.events_investigations'), variant="brand") }}{% endif %}
   </div>
 {% endcall %}
 
@@ -83,7 +83,7 @@
         <tbody>
           {% for event in events %}
             <tr>
-              <td class="num"><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
+              <td class="num">{% if can_submit('radius.events_detail', 'GET') %}<a href="{{ url_for('radius.events_detail', event_id=event.id) }}">{% endif %}#{{ event.id }}{% if can_submit('radius.events_detail', 'GET') %}</a>{% endif %}</td>
               <td title="{{ event.category or '' }}">{{ event.category_label or '—' }}</td>
               <td>
                 {%- if event.severity == 'critical' -%}{{ hub.pill("حرِج", variant="red") }}
@@ -108,8 +108,8 @@
       <div class="hub-actions" data-testid="events-pager" style="justify-content:space-between;padding:10px 14px">
         <span class="small">{{ _('عرض') }} {{ offset + 1 }}–{{ offset + events|length }} {{ _('من') }} {{ total }}</span>
         <span>
-          {% if prev_url %}<a class="hub-btn" href="{{ prev_url }}" data-testid="events-prev">{{ _('السابق') }}</a>{% endif %}
-          {% if next_url %}<a class="hub-btn" href="{{ next_url }}" data-testid="events-next">{{ _('التالي') }}</a>{% endif %}
+          {% if prev_url %}{% if can_open(prev_url) %}<a class="hub-btn" href="{{ prev_url }}" data-testid="events-prev">{{ _('السابق') }}</a>{% endif %}{% endif %}
+          {% if next_url %}{% if can_open(next_url) %}<a class="hub-btn" href="{{ next_url }}" data-testid="events-next">{{ _('التالي') }}</a>{% endif %}{% endif %}
         </span>
       </div>
     {% endif %}

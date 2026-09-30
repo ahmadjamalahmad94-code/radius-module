@@ -202,7 +202,7 @@
 
   {# ════════ (ب) أنواع الرسائل المسموح بها — جدول موحّد uds ════════ #}
   {% call hub.section("أنواع الرسائل المسموح بها", icon="sliders", meta="مفاتيح محلية تتحكم بما يُرسل للمشتركين") %}
-    <form method="post" action="{{ url_for('radius.whatsapp_settings') }}" class="hub-form" data-testid="wa-settings-form">
+    <form method="post" action="{{ url_for('radius.whatsapp_settings') }}" class="hub-form" data-testid="wa-settings-form">{% if not can_submit('radius.whatsapp_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {{ csrf_token_input() | safe }}
 
       <div class="hub-note hub-note--info">
@@ -243,12 +243,12 @@
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}</button>
         <span class="hub-field-hint">{{ _('الافتراضي: كل الأنواع متوقفة حتى تفعّلها يدويًا.') }}</span>
       </div>
-    </form>
+    {% if not can_submit('radius.whatsapp_settings') %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ════════ (ج) رسالة اختبار — تمر عبر جسر لوحة التراخيص فقط ════════ #}
   {% call hub.section("رسالة اختبار", icon="paper-plane", meta="تُرسل عبر لوحة التراخيص للتأكد من الربط") %}
-    <form method="post" action="{{ url_for('radius.whatsapp_test') }}" class="hub-form" data-testid="wa-test-form">
+    {% if can_submit('radius.whatsapp_test', 'POST') %}<form method="post" action="{{ url_for('radius.whatsapp_test') }}" class="hub-form" data-testid="wa-test-form">
       {{ csrf_token_input() | safe }}
 
       <div class="hub-field" style="max-width:360px">
@@ -262,13 +262,13 @@
       <div class="hub-form-actions" style="margin-top:16px;flex-wrap:wrap">
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-brands fa-whatsapp"></i> {{ _('إرسال اختبار') }}</button>
         {# اختبار ثانٍ عبر بيانات الربط السحابي المُدارة في اللوحة — نفس النموذج بوجهة مختلفة #}
-        <button type="submit" class="hub-btn hub-btn--secondary" formaction="{{ url_for('radius.whatsapp_cloud_test') }}"
+        {% if can_submit('radius.whatsapp_cloud_test', 'POST') %}<button type="submit" class="hub-btn hub-btn--secondary" formaction="{{ url_for('radius.whatsapp_cloud_test') }}"
                 title="{{ _('عبر بيانات الربط السحابي المُدارة في لوحة التراخيص') }}">
           <i class="fa-solid fa-cloud"></i> {{ _('إرسال اختبار عبر الربط السحابي') }}
-        </button>
+        </button>{% endif %}
         <span class="hub-field-hint">{{ _('لا يتم إرسال أي رسالة من هذا النظام مباشرة — كل شيء يمر عبر لوحة التراخيص.') }}</span>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ════════ (د) إدارة الربط من بوابة لوحة التراخيص ════════ #}
@@ -277,8 +277,8 @@
       <div class="hub-empty" data-testid="wa-portal-link" style="text-align:initial">
         <div class="hub-empty-msg">{{ _('الربط الرسمي للحساب واعتماد القوالب يتمّان في بوابة لوحة التراخيص') }}</div>
         <div class="hub-empty-sub" style="margin-bottom:14px">{{ _('من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى تلقائيًا.') }}</div>
-        <a class="hub-btn hub-btn--secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener" data-testid="wa-manage-link">
-          <i class="fa-solid fa-up-right-from-square"></i> {{ _('إدارة ربط واتساب') }}</a>
+        {% if can_open(panel_portal_url) %}<a class="hub-btn hub-btn--secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener" data-testid="wa-manage-link">
+          <i class="fa-solid fa-up-right-from-square"></i> {{ _('إدارة ربط واتساب') }}</a>{% endif %}
       </div>
     {% endcall %}
   {% endif %}

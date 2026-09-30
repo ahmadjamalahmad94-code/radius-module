@@ -15,10 +15,10 @@
 {% block page_title %}{{ _("مسح الشبكة") }}{% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       style="color:#6D28D9;text-decoration:none">
+    {% if can_submit('radius.network_devices_list', 'GET') %}<a href="{{ url_for('radius.network_devices_list') }}"
+       style="color:#6D28D9;text-decoration:none">{% endif %}
       <i class="fa-solid fa-arrow-right"></i> {{ _('تابع أجهزة الشبكة') }}
-    </a>
+    {% if can_submit('radius.network_devices_list', 'GET') %}</a>{% endif %}
   </span>
 {% endblock %}
 
@@ -126,7 +126,7 @@
             </td>
             <td>
               {% if row.ip not in known_ips %}
-              <form method="post" action="{{ url_for('radius.network_ip_scan_add') }}"
+              {% if can_submit('radius.network_ip_scan_add', 'POST') %}<form method="post" action="{{ url_for('radius.network_ip_scan_add') }}"
                     style="margin:0">
                 {{ csrf_token_input() | safe }}
                 <input type="hidden" name="router_id" value="{{ selected_router_id }}">
@@ -137,7 +137,7 @@
                         title="{{ _('أضف هذا الجهاز إلى السجلّ مع تفعيل المراقبة') }}">
                   <i class="fa-solid fa-plus"></i> {{ _('أضف للمتابعة') }}
                 </button>
-              </form>
+              </form>{% endif %}
               {% else %}
               <span class="hub-text-mute">—</span>
               {% endif %}

@@ -560,7 +560,7 @@
     "غرفة عمليات تصميم وتصدير البطاقات",
     subtitle="صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.",
     icon="wand-magic-sparkles",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> '|safe ~ _("الإحصائيات") ~ '</a>'|safe,
+    actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> '|safe ~ _("الإحصائيات") ~ '</a>'|safe if can_submit('radius.print_templates_stats', 'GET') else ''),
     kpis=_hero_kpis
   ) }}
 
@@ -706,7 +706,7 @@
             <a class="hub-btn" data-export-sample-link href="#" title="{{ _('اختر قالبًا') }}">
               <i class="fa-solid fa-file-pdf"></i> {{ _('PDF عينة') }}
             </a>
-            <form method="POST"
+            {% if can_submit('radius.print_templates_cleanup_fixtures', 'POST') %}<form method="POST"
                   action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
                   onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
                   style="margin:0">
@@ -714,7 +714,7 @@
                       title="{{ _('يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.') }}">
                 <i class="fa-solid fa-broom"></i> {{ _('تنظيف القوالب المؤقتة') }}
               </button>
-            </form>
+            </form>{% endif %}
           </div>
           <div class="pr-export-progress" data-export-progress>
             <strong data-progress-title>{{ _('جاهز للتصدير') }}</strong>
@@ -796,13 +796,13 @@
                   <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer">
                     <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                   </a>
-                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
+                  {% if can_submit('radius.print_templates_export_pdf', 'GET') %}<a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
                     <i class="fa-solid fa-file-pdf"></i> {{ _('عينة') }}
-                  </a>
-                  <form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
+                  </a>{% endif %}
+                  {% if can_submit('radius.print_templates_delete', 'POST') %}<form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
                     <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
-                  </form>
+                  </form>{% endif %}
                 </span>
               </article>
             {% else %}
@@ -873,7 +873,7 @@
            تأتي من _effective_field_layout في المسار، فتبدأ الحقول معبأة
            بالمكان الحقيقي بدل الصفر (0 كان يعني «الافتراضي» فقط). #}
         {% set eff = effective_fields or {} %}
-        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">
+        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">{% if not can_submit(('radius.print_templates_update' if edit_template_id else 'radius.print_templates_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
           {% if form_error %}
             <div class="pr-file-error" role="alert">{{ form_error }}</div>
           {% endif %}
@@ -1322,7 +1322,7 @@
           </div>
 
           <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'تحديث القالب' if edit_template_id else 'حفظ القالب' }}</button>
-        </form>
+        {% if not can_submit(('radius.print_templates_update' if edit_template_id else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
       </div>
     </section>
 
@@ -1385,9 +1385,9 @@
      (radius.print_templates_stats). داخل غرفة التصميم يبقى الوصول
      للقوالب عبر نافذة الاختيار بالمصغرات + روابط «تعديل». #}
   <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
-    <a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
+    {% if can_submit('radius.print_templates_stats', 'GET') %}<a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
       <i class="fa-solid fa-chart-column"></i> {{ _('القوالب المحفوظة وسجل التصدير — صفحة الإحصائيات') }}
-    </a>
+    </a>{% endif %}
   </div>
   </div>{# /.pr-roompanel[design] #}
 </div>

@@ -152,8 +152,8 @@
               <div class="audit-summary" title="{{ r.details_label }}"
                    data-audit-details><bdi>{{ r.details_label }}</bdi></div>
             {% endif %}
-            {{ hub.btn("التفاصيل", href=url_for('radius.audit_log_detail', audit_id=r.id),
-                       variant="ghost", icon="eye", size="sm") }}
+            {% if can_submit('radius.audit_log_detail', 'GET') %}{{ hub.btn("التفاصيل", href=url_for('radius.audit_log_detail', audit_id=r.id),
+                       variant="ghost", icon="eye", size="sm") }}{% endif %}
           </td>
         </tr>
         {% endfor %}

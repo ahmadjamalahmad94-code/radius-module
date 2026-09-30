@@ -33,14 +33,14 @@
 
 {# ───── Merged hero: title + subtitle + back-nav actions + KPI counts ───── #}
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary"
+  {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع للمعاينة') }}
-  </a>
-  <a class="hub-btn hub-btn--secondary"
+  </a>{% endif %}
+  {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list_scoped', nas_id=policy.router_id) }}">
     <i class="fa-solid fa-router"></i> {{ _('قائمة سياسات الراوتر') }}
-  </a>
+  </a>{% endif %}
 {% endset %}
 {{ hub.megahero(
   "سجل التغييرات",
@@ -150,7 +150,7 @@
       {% endif %}
 
       {% if cs.rollback_eligible and can_rollback %}
-        <form method="POST"
+        {% if can_submit('radius.npc_', 'POST') %}<form method="POST"
               action="{{ url_for('radius.npc_' ~ service.key ~ '_rollback', policy_id=policy.id, change_set_id=cs.id) }}"
               style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"
               data-test="npc-cs-rollback-form"
@@ -165,7 +165,7 @@
           <span class="hub-text-mute" style="font-size:12px;">
             {{ _('(يطابق فقط القواعد التي يحمل تعليقها') }} <code>HOBE_NPC_…</code>)
           </span>
-        </form>
+        </form>{% endif %}
       {% endif %}
     {% endcall %}
   {% endfor %}

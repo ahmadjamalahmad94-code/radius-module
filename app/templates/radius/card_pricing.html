@@ -133,10 +133,10 @@
               <td class="num" dir="ltr" style="font-variant-numeric:tabular-nums"><strong>{{ money(batch.margin, batch.currency) }}</strong></td>
               <td>
                 <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                  <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل أسعار الحزمة') }}"
+                  {% if can_submit('radius.cards_batch_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل أسعار الحزمة') }}"
                      href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
                     <i class="fa-solid fa-pen"></i>
-                  </a>
+                  </a>{% endif %}
                 </div>
               </td>
             </tr>
@@ -156,7 +156,7 @@
   {# ─── Cost a batch (financial costing) — form kept EXACTLY ─── #}
   {% call hub.section("تحميل تكلفة حزمة", icon="file-invoice-dollar",
        meta="يخصم الجملة من محفظة المدير ويثبت لقطة السعر") %}
-    <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="cp-cost-form" data-testid="costed-batch-form">
+    {% if can_submit('radius.card_pricing_create_batch', 'POST') %}<form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="cp-cost-form" data-testid="costed-batch-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الباقة') }}</label>
@@ -182,7 +182,7 @@
         <i class="fa-solid fa-file-invoice-dollar"></i>
         {{ _('تسجيل تكلفة الحزمة') }}
       </button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ─── Recent cost records ─── #}
@@ -191,13 +191,13 @@
     {% if costed_batches %}
     <div class="cp-record-list">
       {% for item in costed_batches %}
-        <a class="hub-action" href="{{ url_for('radius.card_pricing_batch_detail', batch_id=item.batch_id) }}">
+        {% if can_submit('radius.card_pricing_batch_detail', 'GET') %}<a class="hub-action" href="{{ url_for('radius.card_pricing_batch_detail', batch_id=item.batch_id) }}">
           <span class="hub-action-icon hub-action-icon--brand"><i class="fa-solid fa-file-invoice-dollar"></i></span>
           <div class="hub-action-body">
             <div class="hub-action-title">{{ item.package_name or item.batch_code or ("حزمة #" ~ item.batch_id) }}</div>
             <div class="hub-action-sub">{{ item.manager_name }} - {{ item.count|ar_count('kart') }} · {{ money_text(item.wholesale_total) }}</div>
           </div>
-        </a>
+        </a>{% endif %}
       {% endfor %}
     </div>
     {% else %}
@@ -299,14 +299,14 @@
     </div>
     <div class="cfm-foot">
       <button type="button" class="hub-btn hub-btn--ghost" onclick="document.getElementById('mgrDebtModal').remove()">{{ _('إلغاء') }}</button>
-      <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" style="margin:0">
+      {% if can_submit('radius.card_pricing_create_batch', 'POST') %}<form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" style="margin:0">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <input type="hidden" name="package_id" value="{{ confirm_manager_debt.package_id }}">
         <input type="hidden" name="responsible_manager_id" value="{{ confirm_manager_debt.responsible_manager_id }}">
         <input type="hidden" name="count" value="{{ confirm_manager_debt.count }}">
         <input type="hidden" name="confirm_manager_debt" value="1">
         <button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-check"></i> {{ _('متابعة وتسجيلها كدين') }}</button>
-      </form>
+      </form>{% endif %}
     </div>
   </div>
 </div>

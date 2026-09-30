@@ -882,7 +882,7 @@
 
   {# ───── The form itself ──────────────────────────────── #}
   <form method="post" id="uf-form"
-        action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">
+        action="{{ url_for('radius.users_update', username=sub.username) if not is_new else url_for('radius.users_create') }}">{% if not can_submit('radius.users_create' if is_new else 'radius.users_update') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {# ── 1. Account ─────────────────────────────────────── #}
     {# Per SERVICES_COOKBOOK §16 redesign:
@@ -1049,8 +1049,8 @@
               </select>
               <div class="help">
                 {{ _('تُدار من') }}
-                <a href="{{ url_for('radius.subscriber_groups_list') }}"
-                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">{{ _('مجموعات المشتركين') }}</a>.
+                {% if can_submit('radius.subscriber_groups_list', 'GET') %}<a href="{{ url_for('radius.subscriber_groups_list') }}"
+                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">{% endif %}{{ _('مجموعات المشتركين') }}{% if can_submit('radius.subscriber_groups_list', 'GET') %}</a>{% endif %}.
               </div>
             </div>
           </div>
@@ -1921,12 +1921,12 @@
 
     {# ── Action bar ───────────────────────────────────── #}
     <div class="uf-actions">
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">{{ _('إلغاء') }}</a>
+      {% if can_submit('radius.users_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">{{ _('إلغاء') }}</a>{% endif %}
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ المشترك" if is_new else "حفظ التعديلات" }}
       </button>
     </div>
-  </form>
+  {% if not can_submit('radius.users_create' if is_new else 'radius.users_update') %}</fieldset>{% endif %}</form>
 </div>
 
 <script>

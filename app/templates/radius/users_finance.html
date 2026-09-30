@@ -165,7 +165,7 @@
           <td class="small">{{ loan.reason or '—' }}</td>
           <td>
             {% if loan.status == 'open' %}
-            <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
+            {% if can_submit('radius.users_loan_settle', 'POST') %}<form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
@@ -173,7 +173,7 @@
               <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is not none else (loan.amount or 0)) }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
-            </form>
+            </form>{% endif %}
             {% else %}<span class="hub-text-mute small">—</span>{% endif %}
           </td>
         </tr>
@@ -226,7 +226,7 @@
 <div class="uds-modal" id="ff-payment" data-uds-modal data-ff-modal="payment" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('تسجيل دفعة نقدية') }}">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">{% if not can_submit('radius.users_payment_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {# N10: الصفحة تُعيد التحميل بعد النجاح — الخادم يحفظ رسالة النجاح flash لتظهر بعده #}
       <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
@@ -288,14 +288,14 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_payment_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
 {# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
 <div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('منح سلفة') }}">
-    <form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+    {% if can_submit('radius.users_loan_create', 'POST') %}<form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
       <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
@@ -335,7 +335,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('منح') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

@@ -42,7 +42,7 @@
     <label>{{ _('إلى') }} <input class="hub-input" type="date" name="date_to" value="{{ s.date_to }}"></label>
     <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}</button>
     {% if not s.is_today %}
-    <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.connected_stats', mode=s.mode) }}">{{ _('اليوم') }}</a>
+    {% if can_submit('radius.connected_stats', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.connected_stats', mode=s.mode) }}">{{ _('اليوم') }}</a>{% endif %}
     {% endif %}
   </form>
   <div class="cs-scope">

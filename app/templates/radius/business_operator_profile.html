@@ -86,7 +86,7 @@
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("المشغلون") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("المشغلون") ~ '</a>'|safe if can_submit('radius.business_operators', 'GET') else ''),
   kpis=[
     {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
     {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
@@ -110,7 +110,7 @@
 
 <div class="hub-grid-1-1">
   {% call hub.section("شحن المحفظة", icon="wallet") %}
-    <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
+    {% if can_submit('radius.business_operator_recharge', 'POST') %}<form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label class="op-field"><span>{{ _('المبلغ') }}</span>
         <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
@@ -124,7 +124,7 @@
         </select>
       </label>
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wallet"></i> {{ _('شحن') }}</button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {% if profile.entity_type == 'manager' %}
@@ -135,7 +135,7 @@
       </div>
       {# تطبيق قالب #}
       {% if presets %}
-      <form method="post" action="{{ url_for('radius.business_operator_apply_preset', entity_id=profile.entity_id) }}"
+      {% if can_submit('radius.business_operator_apply_preset', 'POST') %}<form method="post" action="{{ url_for('radius.business_operator_apply_preset', entity_id=profile.entity_id) }}"
             class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="apply-preset-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <label class="op-field" style="flex:1 1 220px"><span>{{ _('طبّق قالبًا') }}</span>
@@ -144,10 +144,10 @@
           </select>
         </label>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('تطبيق') }}</button>
-      </form>
+      </form>{% endif %}
       {% endif %}
       {# حفظ الحالية كقالب #}
-      <form method="post" action="{{ url_for('radius.manager_presets_create') }}"
+      {% if can_submit('radius.manager_presets_create', 'POST') %}<form method="post" action="{{ url_for('radius.manager_presets_create') }}"
             class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="save-preset-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <input type="hidden" name="source_manager_id" value="{{ profile.entity_id }}">
@@ -155,17 +155,17 @@
           <input class="hub-input" name="name" placeholder="{{ _('اسم القالب') }}" required data-testid="preset-name">
         </label>
         <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كقالب') }}</button>
-      </form>
+      </form>{% endif %}
       {% if presets %}
       <div class="op-field"><span>{{ _('القوالب المحفوظة') }}</span>
         <div class="sec-matrix">
           {% for p in presets %}
           <div class="sec-row" data-testid="preset-row-{{ p.id }}">
             <span class="sec-row__label"><i class="fa-solid fa-clone"></i> {{ p.name }}</span>
-            <form method="post" action="{{ url_for('radius.manager_presets_delete', preset_id=p.id) }}" style="margin-inline-start:auto">
+            {% if can_submit('radius.manager_presets_delete', 'POST') %}<form method="post" action="{{ url_for('radius.manager_presets_delete', preset_id=p.id) }}" style="margin-inline-start:auto">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
-            </form>
+            </form>{% endif %}
           </div>
           {% endfor %}
         </div>
@@ -182,8 +182,8 @@
       <i class="fa-solid fa-people-roof" style="color:#0284c7;font-size:16px"></i>
       <span style="font-weight:700;font-size:12.5px;line-height:1.8;flex:1;min-width:200px">
         {{ _('الأفعال والرؤية موروثة من الدور') }}
-        «<a href="{{ url_for('radius.roles_edit', role_id=mgr_role.id, _anchor='role-grants') }}"
-            style="font-weight:800;color:#0369a1">{{ mgr_role.display_name or mgr_role.name }}</a>».
+        «{% if can_submit('radius.roles_edit', 'GET') %}<a href="{{ url_for('radius.roles_edit', role_id=mgr_role.id, _anchor='role-grants') }}"
+            style="font-weight:800;color:#0369a1">{% endif %}{{ mgr_role.display_name or mgr_role.name }}{% if can_submit('radius.roles_edit', 'GET') %}</a>{% endif %}».
         {{ _('عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا المدير فقط.') }}
       </span>
       <button type="submit" form="op-reset-grants-form" class="hub-btn hub-btn--ghost hub-btn--sm"
@@ -192,11 +192,11 @@
         <i class="fa-solid fa-rotate-left"></i> {{ _('تصفير التجاوزات') }}
       </button>
     </div>
-    <form id="op-reset-grants-form" method="post"
+    {% if can_submit('radius.business_operator_reset_grants', 'POST') %}<form id="op-reset-grants-form" method="post"
           action="{{ url_for('radius.business_operator_reset_grants', entity_id=profile.entity_id) }}"
-          style="display:none">{{ csrf_token_input() | safe if csrf_token_input is defined else '' }}</form>
+          style="display:none">{{ csrf_token_input() | safe if csrf_token_input is defined else '' }}</form>{% endif %}
     {% endif %}
-    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
+    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">{% if not can_submit('radius.business_operator_policy') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       {# ───── الصلاحيات الدقيقة: «حسب الدور / مسموح / ممنوع» لكل فعلٍ وعلَم ─────
          «حسب الدور» (الافتراض) لا يُخزِّن شيئًا فيرث المدير ما يمنحه دوره الآن؛
@@ -405,7 +405,7 @@
         {{ toggle_switch(name="loan_wallet_deducted", checked=profile.limits.loan_wallet_deducted, value="1") }}
       </div>
       <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ السياسة') }}</button>
-    </form>
+    {% if not can_submit('radius.business_operator_policy') %}</fieldset>{% endif %}</form>
   {% endcall %}
 </div>
 

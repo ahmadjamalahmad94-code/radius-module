@@ -64,11 +64,11 @@
         <span class="hcode-callout-ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <span>
           {{ _('الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح الترخيص وسر الربط من') }}
-          <a href="{{ url_for('radius.license_file') }}">{{ _('صفحة ترخيص النظام') }}</a>.
+          {% if can_submit('radius.license_file', 'GET') %}<a href="{{ url_for('radius.license_file') }}">{% endif %}{{ _('صفحة ترخيص النظام') }}{% if can_submit('radius.license_file', 'GET') %}</a>{% endif %}.
         </span>
       </div>
     {% else %}
-      <form method="post" action="{{ url_for('radius.tunnels_request') }}" class="hub-form-grid">
+      {% if can_submit('radius.tunnels_request', 'POST') %}<form method="post" action="{{ url_for('radius.tunnels_request') }}" class="hub-form-grid">
         {{ csrf_token_input() }}
         <div class="hub-field">
           <label>{{ _('نوع النفق') }}</label>
@@ -90,15 +90,15 @@
         <div class="full" style="display:flex; gap:8px; flex-wrap:wrap;">
           {{ hub.btn("طلب النفق", variant="primary", icon="paper-plane", type="submit") }}
         </div>
-      </form>
+      </form>{% endif %}
     {% endif %}
   {% endcall %}
 
   {% call hub.section("الأنفاق الحالية", icon="list", meta=(tunnels|length ~ ' نفق') if tunnels else '') %}
-    <form method="post" action="{{ url_for('radius.tunnels_sync') }}" style="margin:0 0 12px;">
+    {% if can_submit('radius.tunnels_sync', 'POST') %}<form method="post" action="{{ url_for('radius.tunnels_sync') }}" style="margin:0 0 12px;">
       {{ csrf_token_input() }}
       {{ hub.btn("مزامنة الآن", variant="ghost", icon="rotate", type="submit", attrs=("disabled" if not bridge_ready else "")) }}
-    </form>
+    </form>{% endif %}
     {% if tunnels %}
       <div class="hub-table-wrap">
         <table class="hub-table">

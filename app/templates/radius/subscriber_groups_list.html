@@ -183,9 +183,9 @@
         <input type="search" class="hub-input sg-search-input" data-sg-search-input
                placeholder="{{ _('ابحث باسم أو وصف المجموعة…') }}" autocomplete="off" hidden>
       </div>
-      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.subscriber_groups_new') }}">
+      {% if can_submit('radius.subscriber_groups_new', 'GET') %}<a class="hub-btn hub-btn--primary" href="{{ url_for('radius.subscriber_groups_new') }}">
         <i class="fa-solid fa-plus"></i> {{ _('إضافة مجموعة') }}
-      </a>
+      </a>{% endif %}
     </div>
   </div>
 
@@ -228,7 +228,7 @@
           {% for g in items %}
           <tr data-sg-name="{{ ((g.name or '') ~ ' ' ~ (g.description or ''))|lower }}">
             <td class="sg-name">
-              <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{{ g.name }}</a>
+              {% if can_submit('radius.subscriber_groups_edit', 'GET') %}<a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{% endif %}{{ g.name }}{% if can_submit('radius.subscriber_groups_edit', 'GET') %}</a>{% endif %}
               <small>{{ g.description or 'بدون وصف' }}</small>
             </td>
             <td>
@@ -284,46 +284,46 @@
             <td class="small mono">{{ g.last_activity_at|dt_local }}</td>
             <td>
               <div class="sg-actions">
-                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                {% if can_submit('radius.users_list', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.users_list', group_id=g.id) }}"
                    title="{{ _('عرض أعضاء المجموعة') }}">
                   <i class="fa-solid fa-users"></i> {{ _('الأعضاء') }}
-                </a>
-                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                </a>{% endif %}
+                {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.online_list', group_id=g.id) }}"
                    title="{{ _('عرض المتصلين من المجموعة') }}">
                   <i class="fa-solid fa-wifi"></i> {{ _('المتصلون') }}
-                </a>
-                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                </a>{% endif %}
+                {% if can_submit('radius.subscriber_groups_edit', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}"
                    title="{{ _('إدارة السرعة والخدمات') }}">
                   <i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}
-                </a>
-                <form method="post"
+                </a>{% endif %}
+                {% if can_submit('radius.subscriber_groups_quota_reset_daily', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_quota_reset_daily', gid=g.id) }}"
                       onsubmit="return confirm('استعادة الكوتة اليومية لكل أعضاء مجموعة «{{ g.name|e }}»؟');">
                   <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('استعادة الكوتة اليومية') }}">
                     <i class="fa-solid fa-rotate-left"></i>
                   </button>
-                </form>
-                <form method="post"
+                </form>{% endif %}
+                {% if can_submit('radius.subscriber_groups_disconnect_online', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_disconnect_online', gid=g.id) }}"
                       onsubmit="return confirm('فصل كل الجلسات المتصلة لمجموعة «{{ g.name|e }}»؟');">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('فصل المتصلين') }}">
                     <i class="fa-solid fa-scissors"></i>
                   </button>
-                </form>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+                </form>{% endif %}
+                {% if can_submit('radius.subscriber_groups_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
-                <form method="post"
+                </a>{% endif %}
+                {% if can_submit('radius.subscriber_groups_delete', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_delete', gid=g.id) }}"
                       onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها ولن يتم حذفهم.');">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

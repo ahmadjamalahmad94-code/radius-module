@@ -152,7 +152,7 @@
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ') }}<b>{{ _('ليس حظرًا أمنيًا') }}</b>{{ _(' — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب.') }}</span>
   </p>
-  <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="sus-form">
+  {% if can_submit('radius.access_control_add_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="sus-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="ac-grid">
       <div class="hub-field">
@@ -199,7 +199,7 @@
     <div class="ac-actions">
       {{ hub.btn("تعليق الوصول", variant="primary", icon="clock", type="submit") }}
     </div>
-  </form>
+  </form>{% endif %}
 
   {% if suspensions %}
   <div class="hub-table-wrap" style="margin-top:18px">
@@ -222,12 +222,12 @@
           <td>{{ hub.pill('فعّال', variant='amber') if b.active else hub.pill('مرفوع', variant='green') }}</td>
           <td>
             {% if b.active %}
-            <form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
+            {% if can_submit('radius.access_control_clear_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع التعليق عن هذا النطاق؟">
                 <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
               </button>
-            </form>
+            </form>{% endif %}
             {% else %}<span class="hub-text-mute" style="font-size:12px">—</span>{% endif %}
           </td>
         </tr>
@@ -245,7 +245,7 @@
    ════════════════════════════════════════════════════════════════════ #}
 <a id="sec-block"></a>
 {% call hub.section("إعدادات الحظر الأمني", icon="shield-halved", meta="الطبقة B · MAC عشوائي + fail2ban") %}
-  <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">
+  <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">{% if not can_submit('radius.access_control_save_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
     {% call hub.fieldset("منع عناوين MAC العشوائية (الخصوصية)", icon="user-secret") %}
@@ -316,11 +316,11 @@
     <div class="ac-actions">
       {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
     </div>
-  </form>
+  {% if not can_submit('radius.access_control_save_settings') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {% call hub.section("حظر IP / MAC يدويًا", icon="ban", meta="إدخال يدويّ لعنوان واحد") %}
-  <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="blk-form">
+  {% if can_submit('radius.access_control_add_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="blk-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="ac-grid">
       <div class="hub-field">
@@ -364,7 +364,7 @@
     <div class="ac-actions">
       {{ hub.btn("حظر", variant="primary", icon="ban", type="submit") }}
     </div>
-  </form>
+  </form>{% endif %}
 
   {% if blocks %}
   <div class="hub-table-wrap" style="margin-top:18px">
@@ -388,12 +388,12 @@
           <td>{{ hub.pill('فعّال', variant='red') if b.active else hub.pill('مرفوع', variant='green') }}</td>
           <td>
             {% if b.active %}
-            <form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
+            {% if can_submit('radius.access_control_clear_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع هذا الحظر؟">
                 <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
               </button>
-            </form>
+            </form>{% endif %}
             {% else %}<span class="hub-text-mute" style="font-size:12px">—</span>{% endif %}
           </td>
         </tr>
@@ -422,7 +422,7 @@
     <b>{{ _('Manual') }}</b> {{ _('قائمة سماح يدوية، الافتراضي رفض (مكتب/مبنى مغلق).') }}</span>
   </p>
 
-  <form method="post" action="{{ url_for('radius.access_control_allow_mode_upsert') }}" id="am-form">
+  <form method="post" action="{{ url_for('radius.access_control_allow_mode_upsert') }}" id="am-form">{% if not can_submit('radius.access_control_allow_mode_upsert') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="ac-grid">
       <div class="hub-field">
@@ -479,7 +479,7 @@
     <div class="ac-actions">
       {{ hub.btn("حفظ السياسة", variant="primary", icon="floppy-disk", type="submit") }}
     </div>
-  </form>
+  {% if not can_submit('radius.access_control_allow_mode_upsert') %}</fieldset>{% endif %}</form>
 
   {% if am_policies %}
   <div class="hub-table-wrap" style="margin-top:18px">
@@ -512,7 +512,7 @@
           </td>
           <td class="small">{{ p.note or '—' }}</td>
           <td>
-            <form method="post"
+            {% if can_submit('radius.access_control_allow_mode_toggle_policy', 'POST') %}<form method="post"
                   action="{{ url_for('radius.access_control_allow_mode_toggle_policy', policy_id=p.id) }}"
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -520,8 +520,8 @@
                 <i class="fa-solid fa-{{ 'pause' if p.active else 'play' }}"></i>
                 {{ _('تعليق') if p.active else _('تفعيل') }}
               </button>
-            </form>
-            <form method="post"
+            </form>{% endif %}
+            {% if can_submit('radius.access_control_allow_mode_delete_policy', 'POST') %}<form method="post"
                   action="{{ url_for('radius.access_control_allow_mode_delete_policy', policy_id=p.id) }}"
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -529,7 +529,7 @@
                       data-confirm="حذف السياسة وكل أجهزتها؟">
                 <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
               </button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
         {% if p.mode in ('manual', 'tofu') %}
@@ -542,7 +542,7 @@
                 {% if p.mode == 'tofu' %} — {{ _('TOFU: تُضاف تلقائيًّا عند أوّل دخول') }}{% endif %}
               </summary>
               <div style="padding-top:6px">
-                <form method="post" action="{{ url_for('radius.access_control_allow_mode_add_device') }}"
+                {% if can_submit('radius.access_control_allow_mode_add_device', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_allow_mode_add_device') }}"
                       class="ac-devform">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <input type="hidden" name="policy_id" value="{{ p.id }}">
@@ -559,7 +559,7 @@
                     <input class="hub-input" type="text" name="label" maxlength="120" placeholder="{{ _('مثل: جهاز كاشير #1') }}">
                   </div>
                   {{ hub.btn("إضافة جهاز", variant="secondary", icon="plus", type="submit", size="sm") }}
-                </form>
+                </form>{% endif %}
                 {% if p.devices %}
                 <div class="hub-table-wrap">
                 <table class="hub-table" style="width:auto">
@@ -583,7 +583,7 @@
                         {% else %}—{% endif %}
                       </td>
                       <td>
-                        <form method="post"
+                        {% if can_submit('radius.access_control_allow_mode_delete_device', 'POST') %}<form method="post"
                               action="{{ url_for('radius.access_control_allow_mode_delete_device', device_id=d.id) }}"
                               style="display:inline;margin:0">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -591,7 +591,7 @@
                                   data-confirm="حذف هذا الجهاز من القائمة؟">
                             <i class="fa-solid fa-trash"></i>
                           </button>
-                        </form>
+                        </form>{% endif %}
                       </td>
                     </tr>
                     {% endfor %}

@@ -195,7 +195,7 @@
     <h2>{{ _('مخرجات السكربت / التشخيص') }}</h2>
     <div class="sw-inline-actions">
       <button class="hub-btn" type="button" data-sw-action="copy-script">{{ _('نسخ آخر سكربت') }}</button>
-      <a class="hub-btn" href="{{ url_for('radius.setup_wizard_page') }}">{{ _('فتح صفحة نظيفة') }}</a>
+      {% if can_submit('radius.setup_wizard_page', 'GET') %}<a class="hub-btn" href="{{ url_for('radius.setup_wizard_page') }}">{{ _('فتح صفحة نظيفة') }}</a>{% endif %}
     </div>
     <pre class="sw-script" data-sw-script-preview>{{ _('-- لا يوجد سكربت بعد --') }}</pre>
     <pre class="sw-output" data-sw-output-preview>{{ _('-- لا توجد نتائج بعد --') }}</pre>

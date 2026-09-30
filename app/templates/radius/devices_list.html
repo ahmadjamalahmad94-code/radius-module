@@ -127,26 +127,26 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
+                {% if can_submit('radius.devices_test', 'POST') %}<form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('فحص اتصال جهاز الشبكة') }}">
                     <i class="fa-solid fa-bolt"></i>
                   </button>
-                </form>
+                </form>{% endif %}
                 <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon"
                         title="{{ _('استيراد المشتركين من الراوتر') }}"
                         data-mt-import="{{ d.id }}" data-mt-name="{{ d.name|e }}">
                   <i class="fa-solid fa-file-import"></i>
                 </button>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+                {% if can_submit('radius.devices_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
-                <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
+                </a>{% endif %}
+                {% if can_submit('radius.devices_delete', 'POST') %}<form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
                       onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

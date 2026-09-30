@@ -66,7 +66,7 @@
             </ul>
           </details>
 
-          <form method="post" action="{{ url_for('radius.sections_admin_save') }}"
+          {% if can_submit('radius.sections_admin_save', 'POST') %}<form method="post" action="{{ url_for('radius.sections_admin_save') }}"
                 style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" data-testid="section-form-{{ s.name }}">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
             <input type="hidden" name="section" value="{{ s.name }}">
@@ -86,10 +86,10 @@
 
             <span style="flex:1"></span>
             {{ hub.btn("حفظ", icon="check", variant="primary", type="submit", size="sm") }}
-          </form>
+          </form>{% endif %}
 
           {% if is_dirty %}
-          <form method="post" action="{{ url_for('radius.sections_admin_reset') }}" style="margin-top:-4px"
+          {% if can_submit('radius.sections_admin_reset', 'POST') %}<form method="post" action="{{ url_for('radius.sections_admin_reset') }}" style="margin-top:-4px"
                 data-testid="section-reset-{{ s.name }}">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
             <input type="hidden" name="section" value="{{ s.name }}">
@@ -97,7 +97,7 @@
                     data-confirm="إعادة هذا القسم إلى علاماته الافتراضية؟">
               <i class="fa-solid fa-arrows-rotate"></i> {{ _("إرجاع إلى الافتراضي") }}
             </button>
-          </form>
+          </form>{% endif %}
           {% endif %}
         </article>
       {% else %}

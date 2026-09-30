@@ -335,7 +335,7 @@
 {# ═══════════════ نموذج واحد يضم كل التبويبات (الإخفاء بصري فقط — كل
    الحقول تُرسَل مع الحفظ، والمسار يحفظ المتغيّر منها فقط) ═══════════════ #}
 {# enctype ضروري لرفع ملف الشعار مع بقية الحقول في نفس الحفظ #}
-<form method="post" id="settings-form" enctype="multipart/form-data">
+<form method="post" id="settings-form" enctype="multipart/form-data">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
 {# ─────────────────── تبويب: هوية النظام ─────────────────── #}
 <div class="st-panel is-active" data-st-panel="identity">
@@ -823,11 +823,11 @@
           </label>
           <div class="st-suffix">
             <input class="hub-input" type="text" value="{{ store_key or '— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —' }}" dir="ltr" readonly onclick="this.select()">
-            <button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
+            {% if can_submit('radius.settings_rotate_store_key', 'POST') %}<button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
                     formaction="{{ url_for('radius.settings_rotate_store_key') }}" formmethod="post" formnovalidate
                     data-confirm="توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟">
               <i class="fa-solid fa-rotate"></i> {{ _('توليد مفتاح جديد') }}
-            </button>
+            </button>{% endif %}
           </div>
           <div class="help">{{ _('يحمي واجهة المتجر من الاستدعاء الخارجي.') }} <b>{{ _('تدوير المفتاح يتطلب إعادة نشر store.html') }}</b> {{ _('من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.') }}</div>
           <bdi class="st-key">network.store_api_key</bdi>
@@ -861,7 +861,7 @@
   {{ hub.btn("إلغاء والعودة", variant="ghost", href=url_for('radius.dashboard')) }}
 </div>
 
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 <script>
 (() => {

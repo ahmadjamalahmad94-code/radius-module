@@ -79,20 +79,20 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:6px">
-                <a class="hub-btn hub-btn--primary hub-btn--sm"
+                {% if can_submit('radius.sgrp_view', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm"
                    href="{{ url_for('radius.sgrp_view', gid=g.id) }}" title="{{ _('الأعضاء') }}">
                   <i class="fa-solid fa-users"></i>
-                </a>
-                <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                </a>{% endif %}
+                {% if can_submit('radius.sgrp_edit', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.sgrp_edit', gid=g.id) }}" title="{{ _('تعديل') }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
-                <form method="post" action="{{ url_for('radius.sgrp_delete', gid=g.id) }}"
+                </a>{% endif %}
+                {% if can_submit('radius.sgrp_delete', 'POST') %}<form method="post" action="{{ url_for('radius.sgrp_delete', gid=g.id) }}"
                       onsubmit="return confirm('حذف؟')" style="display:inline;margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

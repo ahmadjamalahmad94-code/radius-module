@@ -25,14 +25,14 @@
           <td class="num"><bdi>{{ p.amount|money(p.currency) }}</bdi></td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>
           <td style="display:flex;gap:8px">
-            <form method="post" action="{{ url_for('radius.manager_approval_approve', approval_id=p.id) }}">
+            {% if can_submit('radius.manager_approval_approve', 'POST') %}<form method="post" action="{{ url_for('radius.manager_approval_approve', approval_id=p.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit" data-testid="approve-{{ p.id }}"><i class="fa-solid fa-check"></i> {{ _('اعتماد') }}</button>
-            </form>
-            <form method="post" action="{{ url_for('radius.manager_approval_reject', approval_id=p.id) }}">
+            </form>{% endif %}
+            {% if can_submit('radius.manager_approval_reject', 'POST') %}<form method="post" action="{{ url_for('radius.manager_approval_reject', approval_id=p.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit" data-testid="reject-{{ p.id }}"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
       {% endfor %}

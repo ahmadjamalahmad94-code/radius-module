@@ -217,7 +217,7 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis,
   search_action=url_for('radius.finance_center_hub')
 ) %}
@@ -239,16 +239,16 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis
 ) }}
 {% endif %}
 
 <nav class="fc-tabs" aria-label="{{ _('تبويبات المركز المالي') }}">
-  <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</a>
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</a>{% endif %}
 </nav>
 </section>{# /hub-hero-shell #}
 
@@ -343,7 +343,7 @@
           <td>
             {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
                الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
-            <form method="post" class="fc-wallet-form fcw-act"
+            {% if can_submit('radius.business_finance_wallet_credit', 'POST') %}<form method="post" class="fc-wallet-form fcw-act"
                   action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
                   data-fcw-act
                   data-credit-url="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
@@ -360,7 +360,7 @@
               </span>
               <button class="hub-btn hub-btn--secondary" type="submit"
                       {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>{{ _('تنفيذ') }}</button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
       {% endfor %}
@@ -416,7 +416,7 @@
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-wallet-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">،
        وبدونه يرفض الخادم الطلب بـ 400 (طلب غير صحيح). #}
-    <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
+    {% if can_submit('radius.business_finance_wallets_create', 'POST') %}<form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div class="fcw-head">
         <h3 id="fcw-wallet-create-title"><i class="fa-solid fa-circle-plus"></i> {{ _('إنشاء محفظة') }}</h3>
@@ -453,7 +453,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إنشاء محفظة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

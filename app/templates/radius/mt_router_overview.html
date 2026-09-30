@@ -248,8 +248,8 @@
           {{ hub.pill("فشل", variant="red") }}
           <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_failed_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_failed_at }}</span>
-          · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
-               data-mt-overview-last-failed-link>{{ _('تفاصيل') }}</a>
+          · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
+               data-mt-overview-last-failed-link>{% endif %}{{ _('تفاصيل') }}{% if can_submit('radius.audit_log_detail', 'GET') %}</a>{% endif %}
         </li>
         {% endif %}
         {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
@@ -257,8 +257,8 @@
           {{ hub.pill("حسّاسة", variant="amber") }}
           <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_danger_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_danger_at }}</span>
-          · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
-               data-mt-overview-last-danger-link>{{ _('تفاصيل') }}</a>
+          · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
+               data-mt-overview-last-danger-link>{% endif %}{{ _('تفاصيل') }}{% if can_submit('radius.audit_log_detail', 'GET') %}</a>{% endif %}
         </li>
         {% endif %}
       </ul>
@@ -268,21 +268,21 @@
     {# ── Bottom links bar — full dashboards and centers ── #}
     {% call hub.section("روابط مرتبطة", icon="link") %}
       <div class="hub-actions">
-        {{ hub.action_card("لوحة الراوتر", sub="ملخص وتبويبات", icon="gauge-high",
+        {% if can_submit('radius.mt_dashboard', 'GET') %}{{ hub.action_card("لوحة الراوتر", sub="ملخص وتبويبات", icon="gauge-high",
             href=url_for('radius.mt_dashboard', nas_id=ov.nas_id),
-            variant="brand", attrs='data-mt-overview-link="dashboard"') }}
-        {{ hub.action_card("سجلّ النشاط", sub="مقروء بشريًا", icon="timeline",
+            variant="brand", attrs='data-mt-overview-link="dashboard"') }}{% endif %}
+        {% if can_submit('radius.mt_audit_timeline', 'GET') %}{{ hub.action_card("سجلّ النشاط", sub="مقروء بشريًا", icon="timeline",
             href=url_for('radius.mt_audit_timeline', nas_id=ov.nas_id),
-            variant="brand", attrs='data-mt-overview-link="timeline"') }}
-        {{ hub.action_card("سجل عمليات الراوتر", sub="سجل تفصيلي", icon="clipboard-list",
+            variant="brand", attrs='data-mt-overview-link="timeline"') }}{% endif %}
+        {% if can_submit('radius.audit_log_index', 'GET') %}{{ hub.action_card("سجل عمليات الراوتر", sub="سجل تفصيلي", icon="clipboard-list",
             href=url_for('radius.audit_log_index') ~ '?router_id=' ~ ov.nas_id,
-            variant="brand", attrs='data-mt-overview-link="audit"') }}
-        {{ hub.action_card("تنبيهات الراوتر", sub="مفلتر", icon="triangle-exclamation",
+            variant="brand", attrs='data-mt-overview-link="audit"') }}{% endif %}
+        {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.action_card("تنبيهات الراوتر", sub="مفلتر", icon="triangle-exclamation",
             href=url_for('radius.mt_alerts_index') ~ '?router_id=' ~ ov.nas_id,
-            variant="amber", attrs='data-mt-overview-link="alerts"') }}
-        {{ hub.action_card("النسخ الاحتياطية", sub="حفظ + فحص", icon="floppy-disk",
+            variant="amber", attrs='data-mt-overview-link="alerts"') }}{% endif %}
+        {% if can_submit('radius.mt_backups_list', 'GET') %}{{ hub.action_card("النسخ الاحتياطية", sub="حفظ + فحص", icon="floppy-disk",
             href=url_for('radius.mt_backups_list', nas_id=ov.nas_id),
-            variant="brand", attrs='data-mt-overview-link="backups"') }}
+            variant="brand", attrs='data-mt-overview-link="backups"') }}{% endif %}
       </div>
     {% endcall %}
 

@@ -62,12 +62,12 @@
 {% block content %}
 {% set notif_active = 'center' %}{% include "radius/notifications_nav.html" %}
 {% set _actions %}
-  <form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
+  {% if can_submit('radius.notifications_read_all', 'POST') %}<form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
     {{ csrf_token_input()|safe }}
     {# تأكيد قبل الإرسال (نافذة التأكيد الموحّدة data-confirm): العمليّة لكلّ الشبكة ولا تُتراجَع #}
     {{ hub.btn(_('تعليم الكل كمقروء'), icon="check-double", variant="secondary", type="submit", size="sm",
                attrs=('data-confirm="'|safe ~ _('تعليم كلّ الإشعارات كمقروءة؟ يسري على كلّ إشعارات الشبكة ولكلّ المدراء، ولا يمكن التراجع عنه.') ~ '"'|safe)) }}
-  </form>
+  </form>{% endif %}
   {{ hub.btn(_('تواصل مع المزوّد'), icon="headset", variant="primary", size="sm",
              attrs='data-uds-modal-open="nc-contact"') }}
 {% endset %}
@@ -103,12 +103,12 @@
       <span class="nc-badge" style="background:#fef3c7;color:#92400e;font-size:11.5px">
         <i class="fa-solid fa-triangle-exclamation"></i> {{ _('ربط لوحة التراخيص غير مُهيّأ') }}</span>
     {% endif %}
-    <form method="post" action="{{ url_for('radius.notifications_test_push') }}"
+    {% if can_submit('radius.notifications_test_push', 'POST') %}<form method="post" action="{{ url_for('radius.notifications_test_push') }}"
           style="margin-inline-start:auto">
       {{ csrf_token_input()|safe }}
       {{ hub.btn(_('أرسل إشعار تجريبي'), icon="paper-plane",
                  variant="secondary", type="submit", size="sm") }}
-    </form>
+    </form>{% endif %}
   </div>
   <div class="nc-text" style="margin-top:10px;line-height:1.9;
        background:#f0f7ff;border:1px solid #cfe2ff;border-radius:10px;padding:10px 12px">
@@ -189,7 +189,7 @@
   </button>
 {% endset %}
 {% call hub.modal("nc-contact", _('تواصل مع مزوّد الخدمة'), icon="headset", footer_html=_contact_foot) %}
-  <form id="nc-contact-form" method="post" action="{{ url_for('radius.notifications_contact') }}">
+  {% if can_submit('radius.notifications_contact', 'POST') %}<form id="nc-contact-form" method="post" action="{{ url_for('radius.notifications_contact') }}">
     {{ csrf_token_input()|safe }}
     <div class="hub-field">
       <label class="hub-field-label">{{ _('الموضوع') }}<span class="req">*</span></label>
@@ -218,7 +218,7 @@
       <textarea class="hub-input" name="body" rows="4"
                 placeholder="{{ _('اشرح طلبك أو شكواك بالتفصيل...') }}"></textarea>
     </div>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 
 {# مركز الإشعارات يحمّل نظام المودال الموحّد بنفسه (uds-modal ليس عالميًّا). #}

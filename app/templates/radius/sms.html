@@ -144,7 +144,7 @@
 
   {# ════════ (ب) بيانات الربط ════════ #}
   {% call hub.section("بيانات الربط", icon="key", meta="مفتاح API أو اسم مستخدم/كلمة مرور + اسم المرسِل") %}
-    <form method="post" action="{{ url_for('radius.sms_save') }}" class="hub-form" data-testid="sms-save-form">
+    <form method="post" action="{{ url_for('radius.sms_save') }}" class="hub-form" data-testid="sms-save-form">{% if not can_submit('radius.sms_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {{ csrf_token_input() | safe }}
 
       <div class="hub-note hub-note--info">
@@ -209,23 +209,23 @@
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ بيانات الربط') }}</button>
         <span class="hub-field-hint">{{ _('بياناتك محفوظة مشفّرة في هذا النظام فقط.') }}</span>
       </div>
-    </form>
+    {% if not can_submit('radius.sms_save') %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ════════ (ج) فحص الرصيد ════════ #}
   {% call hub.section("فحص الرصيد", icon="wallet", meta="رصيدك الحالي لدى TweetSMS") %}
-    <form method="post" action="{{ url_for('radius.sms_balance') }}" class="hub-form" data-testid="sms-balance-form">
+    {% if can_submit('radius.sms_balance', 'POST') %}<form method="post" action="{{ url_for('radius.sms_balance') }}" class="hub-form" data-testid="sms-balance-form">
       {{ csrf_token_input() | safe }}
       <div class="hub-form-actions">
         <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-gauge"></i> {{ _('فحص الرصيد') }}</button>
         <span class="hub-field-hint">{{ _('يستعلم عن رصيدك مباشرةً من TweetSMS باستخدام بيانات الدخول المحفوظة.') }}</span>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ════════ (د) رسالة اختبار ════════ #}
   {% call hub.section("رسالة اختبار", icon="paper-plane", meta="أرسل رسالة تجربة للتأكد من الربط") %}
-    <form method="post" action="{{ url_for('radius.sms_test') }}" class="hub-form" data-testid="sms-test-form">
+    {% if can_submit('radius.sms_test', 'POST') %}<form method="post" action="{{ url_for('radius.sms_test') }}" class="hub-form" data-testid="sms-test-form">
       {{ csrf_token_input() | safe }}
       <div class="hub-note hub-note--info" style="margin-bottom:14px">
         <i class="fa-solid fa-coins"></i>
@@ -248,7 +248,7 @@
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تجربة') }}</button>
         <span class="hub-field-hint">{{ _('تُرسَل رسالة واحدة فعليًا وتُخصم من رصيدك لدى TweetSMS.') }}</span>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
 {% endcall %}

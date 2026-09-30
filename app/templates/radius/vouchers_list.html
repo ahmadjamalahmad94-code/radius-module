@@ -82,12 +82,12 @@
           <td class="mono small">{{ v.generated_by or '—' }}</td>
           <td>
             {% if v.status == 'active' %}
-            <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
+            {% if can_submit('radius.vch_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
                   onsubmit="return confirm('إلغاء الكوبون {{ v.code|e }}؟');" style="display:inline">
               <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
-            </form>
+            </form>{% endif %}
             {% endif %}
           </td>
         </tr>

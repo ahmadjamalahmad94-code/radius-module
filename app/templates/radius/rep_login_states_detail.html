@@ -63,13 +63,13 @@
 .ls-pw-note i{margin-top:2px}
 </style>
 <nav class="ls-tabs" data-testid="login-states-tabs">
-  <a href="{{ url_for('radius.rep_login_states') }}">
+  {% if can_submit('radius.rep_login_states', 'GET') %}<a href="{{ url_for('radius.rep_login_states') }}">{% endif %}
     <i class="fa-solid fa-arrow-right"></i> {{ _('كل الأقسام') }}
-  </a>
+  {% if can_submit('radius.rep_login_states', 'GET') %}</a>{% endif %}
   {% for k, m in kinds.items() %}
-  <a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for('radius.rep_login_states', actor=k) }}">
+  {% if can_submit('radius.rep_login_states', 'GET') %}<a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for('radius.rep_login_states', actor=k) }}">{% endif %}
     <i class="fa-solid fa-{{ m.icon }}"></i> {{ m.title }}
-  </a>
+  {% if can_submit('radius.rep_login_states', 'GET') %}</a>{% endif %}
   {% endfor %}
 </nav>
 

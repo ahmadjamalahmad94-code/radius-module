@@ -477,20 +477,20 @@
         <i class="fa-solid fa-circle-notch fa-spin" style="font-size:11px"></i>
         <span data-online-router-status-text>{{ _('جارٍ فحص حالة الراوترات…') }}</span>
       </span>
-      <a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
+      {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
         <i class="fa-solid fa-users"></i> {{ _('المشتركون') }}
-      </a>
-      <a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
+      </a>{% endif %}
+      {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
         <i class="fa-solid fa-id-card"></i> {{ _('الكروت') }}
-      </a>
+      </a>{% endif %}
       {# مصالحة فوريّة: تُغلق الجلسات اليتيمة (الزومبي) فيتطابق العدّاد مع الحيّ #}
-      <form method="post" action="{{ url_for('radius.online_reconcile') }}" style="display:inline">
+      {% if can_submit('radius.online_reconcile', 'POST') %}<form method="post" action="{{ url_for('radius.online_reconcile') }}" style="display:inline">
         <input type="hidden" name="next" value="{{ request.full_path }}">
         <button type="submit" class="hub-btn hub-btn--ghost"
                 title="{{ _('إغلاق الجلسات اليتيمة التي لم يصلها Acct-Stop ومطابقة العدّاد مع الجلسات الحيّة') }}">
           <i class="fa-solid fa-broom"></i> {{ _('مصالحة الجلسات الآن') }}
         </button>
-      </form>
+      </form>{% endif %}
     </div>
   </div>
 
@@ -650,39 +650,39 @@
   <span class="ol-selcount" data-online-selected-count>
     <i class="fa-solid fa-check-double"></i> {{ _('المحدد:') }} <span data-count>0</span>
   </span>
-  <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
+  {% if can_submit('radius.online_disconnect', 'POST') %}<form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
     </button>
-  </form>
+  </form>{% endif %}
   <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="profile" href="#">
     <i class="fa-solid fa-gauge-high"></i> {{ _('عرض 360°') }}
   </a>
-  <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
+  {% if can_submit('radius.online_lock_mac', 'POST') %}<form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-lock"></i> {{ _('إغلاق بالماك') }}
     </button>
-  </form>
-  <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
+  </form>{% endif %}
+  {% if can_submit('radius.online_lock_ip', 'POST') %}<form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-lock"></i> {{ _('تثبيت IP') }}
     </button>
-  </form>
+  </form>{% endif %}
   <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
     <i class="fa-solid fa-pen-to-square"></i> {{ _('تعديل') }}
   </a>
-  <form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
+  {% if can_submit('radius.users_send_sms', 'POST') %}<form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
     <input type="hidden" name="message" value="">
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}
     </button>
-  </form>
+  </form>{% endif %}
   <div class="online-col-menu" data-column-menu>
     <button class="hub-btn hub-btn--secondary" type="button" data-column-toggle>
       <i class="fa-solid fa-table-columns"></i> {{ _('عرض/إخفاء الأعمدة') }}
@@ -781,15 +781,15 @@
              التعديل كما كان الاسم يربط سابقًا. #}
           <td data-col="name">
             {% if s.full_name %}
-            <a class="hr-entity-link" href="{{ _edit_url }}"
-               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}"><strong>{{ s.full_name }}</strong></a>
+            {% if can_open(_edit_url) %}<a class="hr-entity-link" href="{{ _edit_url }}"
+               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}">{% endif %}<strong>{{ s.full_name }}</strong>{% if can_open(_edit_url) %}</a>{% endif %}
             {% else %}
             <span class="hub-text-mute">—</span>
             {% endif %}
           </td>
           <td data-col="login">
-            <a class="hr-entity-link mono" href="{{ _edit_url }}"
-               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}">{{ s.username }}</a>
+            {% if can_open(_edit_url) %}<a class="hr-entity-link mono" href="{{ _edit_url }}"
+               title="{{ _('تعديل الكرت') if _is_card else _('تعديل المشترك') }}">{% endif %}{{ s.username }}{% if can_open(_edit_url) %}</a>{% endif %}
           </td>
           <td data-col="plan">
             {#- اسم العرض رابط لصفحته («من أي مكان أضغط أنتقل») — فقط حين
@@ -919,13 +919,13 @@
           <td data-col="port" class="mono small">{{ _called or s.nas_port_id or s.nas_port_type or '—' }}</td>
           <td data-col="actions">
             <div class="online-mini-actions">
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="{{ _('عرض 360°') }}">
+              {% if can_open(_profile_url) %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="{{ _('عرض 360°') }}">
                 <i class="fa-solid fa-gauge-high"></i>
-              </a>
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="{{ _('تعديل') }}">
+              </a>{% endif %}
+              {% if can_open(_edit_url) %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="{{ _('تعديل') }}">
                 <i class="fa-solid fa-pen-to-square"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+              </a>{% endif %}
+              {% if can_submit('radius.online_disconnect', 'POST') %}<form method="post" action="{{ url_for('radius.online_disconnect') }}"
                     style="display:inline">
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <input type="hidden" name="username" value="{{ s.username }}">
@@ -934,12 +934,12 @@
                         data-confirm="قطع جلسة «{{ s.username|e }}»؟">
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
-              </form>
+              </form>{% endif %}
               {# «إغلاق إجباري» — إغلاق محاسبيّ في الراديوس (acctstoptime عبر المسار
                  القانوني) يُزيل الجلسة من العدّاد حين يتعذّر الفصل الحيّ (الراوتر
                  منقطع). يُبرَز كهربائيًّا حين يكون راوتر الجلسة معروف الانقطاع. #}
               {% set _reachable = reach_by_ip.get((s.nas_address or '')|string) if reach_by_ip else None %}
-              <form method="post" action="{{ url_for('radius.online_force_close') }}"
+              {% if can_submit('radius.online_force_close', 'POST') %}<form method="post" action="{{ url_for('radius.online_force_close') }}"
                     style="display:inline">
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <input type="hidden" name="username" value="{{ s.username }}">
@@ -950,7 +950,7 @@
                         data-confirm="إغلاق إجباري لجلسة «{{ s.username|e }}»؟ يُزيلها من العدّاد دون إرسال أمر فصل للراوتر.">
                   <i class="fa-solid fa-broom"></i>
                 </button>
-              </form>
+              </form>{% endif %}
               {% if _reachable is false %}
               <span style="color:#b45309;font-size:10px;font-weight:700;white-space:nowrap">
                 <i class="fa-solid fa-triangle-exclamation"></i> {{ _('الراوتر غير متصل') }}
@@ -1003,17 +1003,17 @@
   <nav class="hub-flex-row" data-online-page-size style="justify-content:center;gap:6px;padding:8px 12px 0;font-size:12.5px">
     <span class="hub-text-mute">{{ _('عدد الصفوف في الصفحة:') }}</span>
     {% for _n in page_sizes %}
-      {% if _n == per_page %}<strong>{{ _n }}</strong>{% else %}<a href="{{ url_for('radius.online_list', **dict(_args, per_page=_n, page=1)) }}">{{ _n }}</a>{% endif %}
+      {% if _n == per_page %}<strong>{{ _n }}</strong>{% else %}{% if can_submit('radius.online_list', 'GET') %}<a href="{{ url_for('radius.online_list', **dict(_args, per_page=_n, page=1)) }}">{% endif %}{{ _n }}{% if can_submit('radius.online_list', 'GET') %}</a>{% endif %}{% endif %}
     {% endfor %}
   </nav>
   {% endif %}
   <nav class="hub-flex-row" data-online-pager style="justify-content:center;gap:10px;padding:12px">
     {% if page > 1 %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page - 1)) }}">{{ _('السابق') }}</a>
+      {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page - 1)) }}">{{ _('السابق') }}</a>{% endif %}
     {% endif %}
     <span data-online-page-label>{{ _('صفحة') }} {{ page }} / {{ total_pages }} · {{ online_total }} {{ _('جلسة') }}</span>
     {% if page < total_pages %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page + 1)) }}">{{ _('التالي') }}</a>
+      {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.online_list', **dict(_args, page=page + 1)) }}">{{ _('التالي') }}</a>{% endif %}
     {% endif %}
   </nav>
   {% endif %}
@@ -1044,7 +1044,7 @@
   <div class="online-temp-modal-backdrop" data-temp-close></div>
   {# رمز CSRF يُحقن تلقائيًا في كل نموذج POST عبر after_request — لا حاجة لإدراجه يدويًا #}
   <form class="online-temp-modal-card" method="post"
-        action="{{ url_for('radius.online_temp_speed') }}" data-temp-form>
+        action="{{ url_for('radius.online_temp_speed') }}" data-temp-form>{% if not can_submit('radius.online_temp_speed') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="next" value="{{ request.full_path }}">
     <input type="hidden" name="username" value="" data-temp-username>
     <input type="hidden" name="session_id" value="" data-temp-session>
@@ -1063,10 +1063,10 @@
       <span class="ts-remain-lbl"><i class="fa-solid fa-clock"></i> {{ _('باقٍ') }}</span>
       <span class="ts-remain-val"
             data-temp-remain-val data-temp-expires-at="0" data-temp-remaining="0">--:--</span>
-      <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+      {% if can_submit('radius.online_temp_speed_cancel', 'POST') %}<button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
               class="ts-remain-x" data-temp-cancel title="{{ _('إلغاء السرعة المؤقتة الآن') }}">
         <i class="fa-solid fa-xmark"></i>
-      </button>
+      </button>{% endif %}
     </div>
 
     {# المفتاح الرئيسي ON/OFF (أزرق عند التفعيل) — يفعّل/يعطّل الحقول #}
@@ -1118,14 +1118,14 @@
     {# خيار احتياطيّ يدويّ (لا يُستدعى تلقائيًا): يُطبّق السرعة بفصل الجلسة
        وإعادة الاتصال — للراوترات التي لا تُطبّق تغيير السرعة عبر CoA. يظهر
        دائمًا كخيار ثانويّ؛ تُرشِد إليه رسالة الفشل عند تعذّر تأكيد CoA. #}
-    <button type="submit" data-temp-apply
+    {% if can_submit('radius.online_temp_speed_reauth', 'POST') %}<button type="submit" data-temp-apply
             formaction="{{ url_for('radius.online_temp_speed_reauth') }}"
             class="hub-btn hub-btn--secondary"
             style="width:100%;margin-top:8px;"
             title="{{ _('استخدمه فقط إذا لم تتغيّر السرعة عبر CoA — سيُفصل المستخدم لحظةً ثم يعود بالسرعة الجديدة') }}">
       <i class="fa-solid fa-rotate"></i> {{ _('تطبيق بالفصل وإعادة الاتصال') }}
-    </button>
-  </form>
+    </button>{% endif %}
+  {% if not can_submit('radius.online_temp_speed') %}</fieldset>{% endif %}</form>
 </div>
 
 </div>
@@ -1579,7 +1579,7 @@
 
 {# (a) — Set-IP modal — item #17 (تغيير IP المواقع) #}
 <div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="{{ _("تغيير IP الجلسة الداخلية") }}">
-  <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_ip') }}">
+  {% if can_submit('radius.online_coa_set_ip', 'POST') %}<form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_ip') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     <input type="hidden" name="username" data-coa-username>
@@ -1622,12 +1622,12 @@
       </button>
       <button type="button" class="hub-btn hub-btn--secondary" data-coa-close>{{ _('إلغاء') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
 </div>
 
 {# (b) — Set-speed modal #}
 <div class="coa-modal" id="coa-setspeed-modal" role="dialog" aria-modal="true" aria-label="{{ _("تطبيق سرعة حيّة") }}">
-  <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_speed') }}">
+  {% if can_submit('radius.online_coa_set_speed', 'POST') %}<form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_speed') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     <input type="hidden" name="username" data-coa-username>
@@ -1663,7 +1663,7 @@
       </button>
       <button type="button" class="hub-btn hub-btn--secondary" data-coa-close>{{ _('إلغاء') }}</button>
     </div>
-  </form>
+  </form>{% endif %}
 </div>
 
 <script>

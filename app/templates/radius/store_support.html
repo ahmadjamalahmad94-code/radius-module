@@ -259,22 +259,22 @@
               <td style="direction:ltr">{{ money(d.amount_claimed, d.currency) }}</td>
               <td>
                 {% if d.receipt_image_url %}
-                  <a class="ssp-thumb ssp-att" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener"><img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض الوصل') }}</span></a>
+                  {% if can_open(d.receipt_image_url) %}<a class="ssp-thumb ssp-att" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener">{% endif %}<img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض الوصل') }}</span>{% if can_open(d.receipt_image_url) %}</a>{% endif %}
                 {% else %}<small style="color:var(--muted)">{{ _('لا وصل') }}</small>{% endif %}
               </td>
               <td><small>{{ date_label(d.created_at) }}</small></td>
               <td>
                 <div class="ssp-actions">
-                  <form method="post" action="{{ url_for('radius.store_support_deposit_confirm', req_id=d.id) }}">
+                  {% if can_submit('radius.store_support_deposit_confirm', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_deposit_confirm', req_id=d.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
                     <input type="number" step="0.01" min="0" name="confirmed_amount" placeholder="{{ _('اعتماد مبلغ مختلف') }}" title="{{ _('اتركه فارغًا لاعتماد المبلغ المدّعى') }}">
                     <button class="market-btn market-btn--ok market-btn--sm" type="submit"><i class="fa-solid fa-check"></i> {{ _('تأكيد') }}</button>
-                  </form>
-                  <form method="post" action="{{ url_for('radius.store_support_deposit_reject', req_id=d.id) }}">
+                  </form>{% endif %}
+                  {% if can_submit('radius.store_support_deposit_reject', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_deposit_reject', req_id=d.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
                     <input type="text" name="note" placeholder="{{ _('سبب الرفض') }}">
                     <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
-                  </form>
+                  </form>{% endif %}
                 </div>
               </td>
             </tr>
@@ -341,16 +341,16 @@
               <td><small>{{ date_label(w.created_at) }}</small></td>
               <td>
                 <div class="ssp-actions">
-                  <form method="post" action="{{ url_for('radius.store_support_withdrawal_confirm', req_id=w.id) }}">
+                  {% if can_submit('radius.store_support_withdrawal_confirm', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_withdrawal_confirm', req_id=w.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
                     <input type="text" name="note" placeholder="{{ _('ملاحظة (اختياري)') }}">
                     <button class="market-btn market-btn--ok market-btn--sm" type="submit"><i class="fa-solid fa-check"></i> {{ _('تأكيد وخصم') }}</button>
-                  </form>
-                  <form method="post" action="{{ url_for('radius.store_support_withdrawal_reject', req_id=w.id) }}">
+                  </form>{% endif %}
+                  {% if can_submit('radius.store_support_withdrawal_reject', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_withdrawal_reject', req_id=w.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
                     <input type="text" name="note" placeholder="{{ _('سبب الرفض') }}">
                     <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
-                  </form>
+                  </form>{% endif %}
                 </div>
               </td>
             </tr>
@@ -425,7 +425,7 @@
               <span><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }}: {% if _ot and _ot.display_name %}{{ _ot.display_name }}{% elif _ot and _ot.mobile %}<bdi dir="ltr">{{ _ot.mobile }}</bdi>{% else %}{{ _('زبون غير مُسمّى') }}{% endif %}</span>
               {# زرّ حالة المحادثة — «وضع كمُعالَجة» يُسكِت تذكير «بانتظار ردّ»
                  حتى دون ردّ نصّي؛ ورسالة زبون جديدة تُعيد فتحها تلقائيًا. #}
-              <form method="post" action="{{ url_for('radius.store_support_chat_status', card_user_id=open_chat_id) }}" style="margin:0">
+              {% if can_submit('radius.store_support_chat_status', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_chat_status', card_user_id=open_chat_id) }}" style="margin:0">
                 <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
                 {% if open_thread_status == 'resolved' %}
                   <input type="hidden" name="status" value="open">
@@ -434,20 +434,20 @@
                   <input type="hidden" name="status" value="resolved">
                   <button type="submit" class="market-btn market-btn--sm market-btn--ok" title="{{ _('وضع المحادثة كمُعالَجة — يوقف تذكير الانتظار') }}"><i class="fa-solid fa-check"></i> {{ _('وضع كمُعالَجة') }}</button>
                 {% endif %}
-              </form>
+              </form>{% endif %}
             </div>
             <div class="ssp-msgs">
               {% for m in open_thread['items'] %}
               <div class="ssp-msg {{ 'from-admin' if m.sender == 'admin' else 'from-customer' }}">
                 {% if m.body %}{{ m.body }}{% endif %}
-                {% if m.image_url %}<a class="ssp-att" href="{{ m.image_url }}" target="_blank" rel="noopener"><img src="{{ m.image_url }}" alt="{{ _('مرفق') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض المرفق') }}</span></a>{% endif %}
+                {% if m.image_url %}{% if can_open(m.image_url) %}<a class="ssp-att" href="{{ m.image_url }}" target="_blank" rel="noopener">{% endif %}<img src="{{ m.image_url }}" alt="{{ _('مرفق') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض المرفق') }}</span>{% if can_open(m.image_url) %}</a>{% endif %}{% endif %}
                 <span class="m-meta">{{ (m.admin_actor if m.sender == 'admin' else _('الزبون')) }} · {{ date_label(m.created_at) }}</span>
               </div>
               {% else %}
               <div class="ssp-conv-empty">{{ _('لا رسائل في هذه المحادثة بعد.') }}</div>
               {% endfor %}
             </div>
-            <form class="ssp-reply" method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_chat_post', card_user_id=open_chat_id) }}">
+            {% if can_submit('radius.store_support_chat_post', 'POST') %}<form class="ssp-reply" method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_chat_post', card_user_id=open_chat_id) }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
               <textarea name="body" placeholder="{{ _('اكتب ردًّا...') }}"></textarea>
               <label class="market-btn market-btn--sm" title="{{ _('إرفاق صورة') }}" style="cursor:pointer">
@@ -455,7 +455,7 @@
                 <input type="file" name="image" accept="image/*" style="display:none">
               </label>
               <button class="market-btn market-btn--primary market-btn--sm" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال') }}</button>
-            </form>
+            </form>{% endif %}
           {% else %}
             <div class="ssp-conv-empty"><div><i class="fa-solid fa-comments" style="font-size:30px;opacity:.4"></i><br>{{ _('اختر محادثة من القائمة لعرضها.') }}</div></div>
           {% endif %}
@@ -487,11 +487,11 @@
             {% if m.account_number %}<span>{{ _('رقم الحساب') }}: <b dir="ltr">{{ m.account_number }}</b></span>{% endif %}
             {% if m.instructions %}<span style="color:var(--muted)">{{ m.instructions }}</span>{% endif %}
           </div>
-          {% if m.qr_image_url %}<a class="ssp-thumb" href="{{ m.qr_image_url }}" target="_blank" rel="noopener"><img src="{{ m.qr_image_url }}" alt="QR"></a>{% endif %}
+          {% if m.qr_image_url %}{% if can_open(m.qr_image_url) %}<a class="ssp-thumb" href="{{ m.qr_image_url }}" target="_blank" rel="noopener">{% endif %}<img src="{{ m.qr_image_url }}" alt="QR">{% if can_open(m.qr_image_url) %}</a>{% endif %}{% endif %}
           {# تعديل كامل للقناة (طيّ/فرد) — CRUD حقيقي من نفس البطاقة #}
           <details class="pm-edit">
             <summary><i class="fa-solid fa-pen"></i> {{ _('تعديل القناة') }}</summary>
-            <form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
+            {% if can_submit('radius.store_support_payment_method_update', 'POST') %}<form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
               <label class="market-field">
                 <span>{{ _('نوع القناة') }}</span>
@@ -531,19 +531,19 @@
               <div class="full" style="display:flex;justify-content:flex-end">
                 <button class="market-btn market-btn--primary market-btn--sm" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}</button>
               </div>
-            </form>
+            </form>{% endif %}
           </details>
           <div class="ssp-actions" style="justify-content:flex-start">
-            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
+            {% if can_submit('radius.store_support_payment_method_update', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
               <input type="hidden" name="active" value="{{ 0 if m.active else 1 }}">
               <button class="market-btn market-btn--sm" type="submit"><i class="fa-solid fa-power-off"></i> {{ _('تعطيل') if m.active else _('تفعيل') }}</button>
-            </form>
-            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}" data-ssp-confirm="{{ _('حذف قناة الاستلام هذه؟ لن تظهر للزبائن بعد الآن.') }}">
+            </form>{% endif %}
+            {% if can_submit('radius.store_support_payment_method_update', 'POST') %}<form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}" data-ssp-confirm="{{ _('حذف قناة الاستلام هذه؟ لن تظهر للزبائن بعد الآن.') }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
               <input type="hidden" name="action" value="delete">
               <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
-            </form>
+            </form>{% endif %}
           </div>
         </article>
         {% else %}
@@ -556,7 +556,7 @@
       <header class="market-panel-head">
         <div><h2><i class="fa-solid fa-plus"></i> {{ _('إضافة قناة استلام') }}</h2></div>
       </header>
-      <form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_create') }}">
+      {% if can_submit('radius.store_support_payment_method_create', 'POST') %}<form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_create') }}">
         <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
         <div class="pm-create-grid">
           <label class="market-field">
@@ -610,7 +610,7 @@
             <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة القناة') }}</button>
           </div>
         </div>
-      </form>
+      </form>{% endif %}
     </section>
   </div>
 

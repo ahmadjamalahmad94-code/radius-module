@@ -14,14 +14,14 @@
 .cnav a i{font-size:12px}
 </style>
 <nav class="cnav" data-testid="communications-nav">
-  <a class="{{ 'is-active' if _a == 'dashboard' }}" href="{{ url_for('radius.communications') }}"><i class="fa-solid fa-satellite-dish"></i> {{ _('غرفة العمليات') }}</a>
-  <a class="{{ 'is-active' if _a == 'channels' }}" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-tower-broadcast"></i> {{ _('قنوات الإرسال') }}</a>
-  <a class="{{ 'is-active' if _a == 'bot' }}" href="{{ url_for('radius.communications_bot') }}"><i class="fa-brands fa-whatsapp"></i> {{ _('بوت واتساب') }}</a>
-  <a class="{{ 'is-active' if _a == 'notifications' }}" href="{{ url_for('radius.communications_notifications') }}"><i class="fa-solid fa-bell"></i> {{ _('الإشعارات الحدثية') }}</a>
-  <a class="{{ 'is-active' if _a == 'templates' }}" href="{{ url_for('radius.communications_templates') }}"><i class="fa-solid fa-file-lines"></i> {{ _('القوالب') }}</a>
-  <a class="{{ 'is-active' if _a == 'send' }}" href="{{ url_for('radius.communications_send') }}"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}</a>
-  <a class="{{ 'is-active' if _a == 'campaigns' }}" href="{{ url_for('radius.communications_campaigns') }}"><i class="fa-solid fa-bullhorn"></i> {{ _('الحملات') }}</a>
-  <a class="{{ 'is-active' if _a == 'audience' }}" href="{{ url_for('radius.communications_audience') }}"><i class="fa-solid fa-users"></i> {{ _('الجمهور') }}</a>
-  <a class="{{ 'is-active' if _a == 'deliveries' }}" href="{{ url_for('radius.communications_deliveries') }}"><i class="fa-solid fa-truck-fast"></i> {{ _('سجل الإرسال') }}</a>
-  <a class="{{ 'is-active' if _a == 'guide' }}" href="{{ url_for('radius.communications_guide') }}"><i class="fa-solid fa-book-open"></i> {{ _('دليل وشروحات') }}</a>
+  {% if can_submit('radius.communications', 'GET') %}<a class="{{ 'is-active' if _a == 'dashboard' }}" href="{{ url_for('radius.communications') }}">{% endif %}<i class="fa-solid fa-satellite-dish"></i> {{ _('غرفة العمليات') }}{% if can_submit('radius.communications', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_channels', 'GET') %}<a class="{{ 'is-active' if _a == 'channels' }}" href="{{ url_for('radius.communications_channels') }}">{% endif %}<i class="fa-solid fa-tower-broadcast"></i> {{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_bot', 'GET') %}<a class="{{ 'is-active' if _a == 'bot' }}" href="{{ url_for('radius.communications_bot') }}">{% endif %}<i class="fa-brands fa-whatsapp"></i> {{ _('بوت واتساب') }}{% if can_submit('radius.communications_bot', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_notifications', 'GET') %}<a class="{{ 'is-active' if _a == 'notifications' }}" href="{{ url_for('radius.communications_notifications') }}">{% endif %}<i class="fa-solid fa-bell"></i> {{ _('الإشعارات الحدثية') }}{% if can_submit('radius.communications_notifications', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_templates', 'GET') %}<a class="{{ 'is-active' if _a == 'templates' }}" href="{{ url_for('radius.communications_templates') }}">{% endif %}<i class="fa-solid fa-file-lines"></i> {{ _('القوالب') }}{% if can_submit('radius.communications_templates', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_send', 'GET') %}<a class="{{ 'is-active' if _a == 'send' }}" href="{{ url_for('radius.communications_send') }}">{% endif %}<i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}{% if can_submit('radius.communications_send', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_campaigns', 'GET') %}<a class="{{ 'is-active' if _a == 'campaigns' }}" href="{{ url_for('radius.communications_campaigns') }}">{% endif %}<i class="fa-solid fa-bullhorn"></i> {{ _('الحملات') }}{% if can_submit('radius.communications_campaigns', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_audience', 'GET') %}<a class="{{ 'is-active' if _a == 'audience' }}" href="{{ url_for('radius.communications_audience') }}">{% endif %}<i class="fa-solid fa-users"></i> {{ _('الجمهور') }}{% if can_submit('radius.communications_audience', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_deliveries', 'GET') %}<a class="{{ 'is-active' if _a == 'deliveries' }}" href="{{ url_for('radius.communications_deliveries') }}">{% endif %}<i class="fa-solid fa-truck-fast"></i> {{ _('سجل الإرسال') }}{% if can_submit('radius.communications_deliveries', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.communications_guide', 'GET') %}<a class="{{ 'is-active' if _a == 'guide' }}" href="{{ url_for('radius.communications_guide') }}">{% endif %}<i class="fa-solid fa-book-open"></i> {{ _('دليل وشروحات') }}{% if can_submit('radius.communications_guide', 'GET') %}</a>{% endif %}
 </nav>

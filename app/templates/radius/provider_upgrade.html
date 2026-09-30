@@ -38,19 +38,19 @@
   </ol>
   <div class="hub-actions">
     {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
-      {{ hub.btn(_('ترخيص النظام'),
+      {% if can_submit('radius.license_file', 'GET') %}{{ hub.btn(_('ترخيص النظام'),
                   href=url_for('radius.license_file'),
-                  variant='primary', icon='id-card') }}
+                  variant='primary', icon='id-card') }}{% endif %}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
-      {{ hub.btn(_('جسر الإدارة (مزامنة الآن)'),
+      {% if can_submit('radius.admin_bridge', 'GET') %}{{ hub.btn(_('جسر الإدارة (مزامنة الآن)'),
                   href=url_for('radius.admin_bridge'),
-                  variant='secondary', icon='link') }}
+                  variant='secondary', icon='link') }}{% endif %}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
-      {{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
+      {% if can_submit('radius.provider_grants_status_page', 'GET') %}{{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
                   href=url_for('radius.provider_grants_status_page'),
-                  variant='secondary', icon='clipboard-list') }}
+                  variant='secondary', icon='clipboard-list') }}{% endif %}
     {% endif %}
     {{ hub.btn(_('العودة للوحة'),
                 href=url_for('radius.dashboard'),

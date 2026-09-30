@@ -170,7 +170,7 @@
 <div class="fcw-modal" data-fcw-modal="apx-{{ a.id }}" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-apx-{{ a.id }}-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.admin_pricing_save', admin_id=a.id) }}">
+    <form method="post" action="{{ url_for('radius.admin_pricing_save', admin_id=a.id) }}">{% if not can_submit('radius.admin_pricing_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-apx-{{ a.id }}-title">
           <i class="fa-solid fa-tags"></i>
@@ -234,7 +234,7 @@
           <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الأسعار') }}</button>
         </div>
       </div>
-    </form>
+    {% if not can_submit('radius.admin_pricing_save') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
@@ -242,7 +242,7 @@
    تحوي نموذج POST فعليًّا (method=post لحقن CSRF). #}
 <div class="fcw-modal" data-fcw-modal="apxr-{{ a.id }}" hidden>
   <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-apxr-{{ a.id }}-title">
-    <form method="post" action="{{ url_for('radius.admin_pricing_reset', admin_id=a.id) }}">
+    {% if can_submit('radius.admin_pricing_reset', 'POST') %}<form method="post" action="{{ url_for('radius.admin_pricing_reset', admin_id=a.id) }}">
       <div class="fcw-head">
         <h3 id="fcw-apxr-{{ a.id }}-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> {{ _('استعادة الأسعار الافتراضية') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -259,7 +259,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('تأكيد الاستعادة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 {% endfor %}
@@ -267,7 +267,7 @@
 {# ───────────── صندوق عائم: تأكيد «استعادة الكل» ───────────── #}
 <div class="fcw-modal" data-fcw-modal="reset-all" hidden>
   <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-reset-all-title">
-    <form method="post" action="{{ url_for('radius.admin_pricing_reset_all') }}">
+    {% if can_submit('radius.admin_pricing_reset_all', 'POST') %}<form method="post" action="{{ url_for('radius.admin_pricing_reset_all') }}">
       <div class="fcw-head">
         <h3 id="fcw-reset-all-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> {{ _('استعادة الكل') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -284,7 +284,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('نعم، استعد الكل') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

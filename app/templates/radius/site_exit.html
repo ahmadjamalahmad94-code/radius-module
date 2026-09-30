@@ -202,9 +202,9 @@
     <header class="mt-card-head">
       <h3><i class="fa-solid fa-server"></i> {{ _('الراوتر') }}</h3>
       <span class="mt-card-meta">
-        <a href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
+        {% if can_submit('radius.mt_router_overview', 'GET') %}<a href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">{% endif %}
           <i class="fa-solid fa-clipboard-check"></i> {{ _('نظرة عامة') }}
-        </a>
+        {% if can_submit('radius.mt_router_overview', 'GET') %}</a>{% endif %}
       </span>
     </header>
     <div class="mt-card-body">
@@ -310,7 +310,7 @@
         </button>
       </form>
       {% else %}
-      <form method="post"
+      {% if can_submit('radius.site_exit_policy_create', 'POST') %}<form method="post"
             action="{{ url_for('radius.site_exit_policy_create', nas_id=nas.id) }}"
             data-mt-site-exit-policy-form>
         <div class="vx2-policy-form-grid">
@@ -345,7 +345,7 @@
             <i class="fa-solid fa-plus"></i> {{ _('إنشاء السياسة') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
       {% endif %}
     </div>
   </section>
@@ -366,7 +366,7 @@
                   border-radius:6px;margin-bottom:10px;font-size:13px">
         <strong style="margin-inline-end:6px">{{ _('قوائم جاهزة:') }}</strong>
         {% for preset in presets %}
-        <form method="post" style="display:inline"
+        {% if can_submit('radius.site_exit_load_preset', 'POST') %}<form method="post" style="display:inline"
               action="{{ url_for('radius.site_exit_load_preset',
                                  nas_id=nas.id, policy_id=policy.id) }}">
           <input type="hidden" name="preset_key" value="{{ preset.key }}">
@@ -376,12 +376,12 @@
             <i class="fa-solid fa-list"></i>
             {{ preset.label_ar }}
           </button>
-        </form>
+        </form>{% endif %}
         {% endfor %}
       </div>
       {% endif %}
 
-      <form method="post" data-mt-site-exit-import-form
+      {% if can_submit('radius.site_exit_import', 'POST') %}<form method="post" data-mt-site-exit-import-form
             action="{{ url_for('radius.site_exit_import',
                                nas_id=nas.id, policy_id=policy.id) }}">
         <p class="vx2-empty" style="font-size:12.5px">
@@ -399,7 +399,7 @@
             <i class="fa-solid fa-magnifying-glass"></i> {{ _('تحليل') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
 
       {% if import_result %}
       <div data-mt-site-exit-import-summary
@@ -439,7 +439,7 @@
         {% endif %}
 
         {# ── 5) Group review + persist form ── #}
-        <form method="post"
+        {% if can_submit('radius.site_exit_targets_save', 'POST') %}<form method="post"
               action="{{ url_for('radius.site_exit_targets_save',
                                  nas_id=nas.id, policy_id=policy.id) }}"
               data-mt-site-exit-groups-form
@@ -484,7 +484,7 @@
               <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الأهداف المختارة') }}
             </button>
           </div>
-        </form>
+        </form>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -501,7 +501,7 @@
       {% endif %}
     </header>
     <div class="mt-card-body">
-      <form method="post"
+      {% if can_submit('radius.site_exit_preview', 'POST') %}<form method="post"
             action="{{ url_for('radius.site_exit_preview',
                                nas_id=nas.id, policy_id=policy.id) }}"
             data-mt-site-exit-preview-form
@@ -518,7 +518,7 @@
             <i class="fa-solid fa-bolt"></i> {{ _('توليد معاينة') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
 
       {% if preview_plan %}
         {% if preview_plan.blocking_errors %}
@@ -598,7 +598,7 @@
       <form method="post"
             action="{{ url_for('radius.site_exit_apply',
                                nas_id=nas.id, policy_id=policy.id) }}"
-            data-mt-site-exit-apply-form>
+            data-mt-site-exit-apply-form>{% if not can_submit('radius.site_exit_apply') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
         <p style="margin-top:0;color:#cc1f1f;font-weight:600">
           <i class="fa-solid fa-triangle-exclamation"></i>
@@ -683,7 +683,7 @@
             {{ _('سيُسجَّل في سجل العمليات + سجل النشر.') }}
           </span>
         </div>
-      </form>
+      {% if not can_submit('radius.site_exit_apply') %}</fieldset>{% endif %}</form>
       {% endif %}
     </div>
   </section>

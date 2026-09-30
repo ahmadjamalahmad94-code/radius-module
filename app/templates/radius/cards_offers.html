@@ -169,7 +169,7 @@
       </div>
     </div>
     <div class="co-panel__body">
-    <form method="post" action="{{ url_for('radius.cards_offer_create') }}" data-offer-create>
+    <form method="post" action="{{ url_for('radius.cards_offer_create') }}" data-offer-create>{% if not can_submit('radius.cards_offer_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
       <fieldset class="co-fieldset">
@@ -287,7 +287,7 @@
       <div class="co-actions">
         <button type="submit" class="hub-btn hub-btn--primary" {{ 'disabled' if not plans else '' }}><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ العرض") }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.cards_offer_create') %}</fieldset>{% endif %}</form>
     </div>
   </section>
   {% else %}
@@ -365,22 +365,22 @@
             <td>
               <div class="co-row-tools">
                 {% if o.active or is_super %}
-                <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.cards_offer_use', offer_id=o.id) }}">
+                {% if can_submit('radius.cards_offer_use', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.cards_offer_use', offer_id=o.id) }}">
                   <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _("توليد حزمة") }}
-                </a>
+                </a>{% endif %}
                 {% endif %}
                 {% if is_super %}
-                <form method="post" action="{{ url_for('radius.cards_offer_toggle', offer_id=o.id) }}" style="display:inline">
+                {% if can_submit('radius.cards_offer_toggle', 'POST') %}<form method="post" action="{{ url_for('radius.cards_offer_toggle', offer_id=o.id) }}" style="display:inline">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm">{{ _("تعطيل") if o.active else _("تفعيل") }}</button>
-                </form>
+                </form>{% endif %}
                 {% endif %}
               </div>
               {% if is_super %}
               <details class="co-edit">
                 <summary>{{ _("تعديل + مشاركة") }}</summary>
                 <div class="co-edit-card">
-                <form method="post" action="{{ url_for('radius.cards_offer_edit', offer_id=o.id) }}">
+                {% if can_submit('radius.cards_offer_edit', 'POST') %}<form method="post" action="{{ url_for('radius.cards_offer_edit', offer_id=o.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <div class="co-grid">
                     <div class="co-field"><label>{{ _("الاسم") }}</label><input type="text" name="name" value="{{ o.name }}"></div>
@@ -406,10 +406,10 @@
                     <div class="co-field"><label><input type="checkbox" name="equal_share_upload" value="1" {{ 'checked' if o.equal_share_upload else '' }}> {{ _("تقسيم الرفع على الأجهزة") }}</label></div>
                   </div>
                   <div class="co-actions"><button type="submit" class="hub-btn hub-btn--primary hub-btn--sm">{{ _("حفظ التعديل") }}</button></div>
-                </form>
+                </form>{% endif %}
                 </div>
                 <div class="co-edit-card">
-                <form method="post" action="{{ url_for('radius.cards_offer_visibility', offer_id=o.id) }}">
+                {% if can_submit('radius.cards_offer_visibility', 'POST') %}<form method="post" action="{{ url_for('radius.cards_offer_visibility', offer_id=o.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <label style="font-size:.83rem;font-weight:700;display:block;margin-bottom:8px">{{ _("المشاركة") }}</label>
                   <div class="co-managers">
@@ -418,7 +418,7 @@
                     {% endfor %}
                   </div>
                   <div class="co-actions"><button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm">{{ _("تحديث المشاركة") }}</button></div>
-                </form>
+                </form>{% endif %}
                 </div>
               </details>
               {% endif %}

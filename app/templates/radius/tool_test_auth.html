@@ -43,7 +43,7 @@
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
-<form method="post" id="test-auth-form" class="hub-form">
+<form method="post" id="test-auth-form" class="hub-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("بيانات طلب الدخول", icon="user-shield") %}
     <div class="hub-form-row">
@@ -78,10 +78,10 @@
 
   <div class="hub-flex-row" style="margin-top:16px">
     {{ hub.btn("أرسِل الطلب", icon="paper-plane", variant="primary", type="submit") }}
-    {{ hub.btn("سجل القرارات", icon="rss", variant="secondary",
-                href=url_for('radius.tool_radius_log')) }}
+    {% if can_submit('radius.tool_radius_log', 'GET') %}{{ hub.btn("سجل القرارات", icon="rss", variant="secondary",
+                href=url_for('radius.tool_radius_log')) }}{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {% if result %}
 <div style="margin-top:18px">

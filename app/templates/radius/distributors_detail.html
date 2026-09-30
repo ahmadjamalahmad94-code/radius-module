@@ -154,7 +154,7 @@
 
   {% call hub.section("ربط حزمة كروت", icon="link") %}
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">{{ _('بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع.') }}</p>
-    <form class="dd-form" method="post"
+    {% if can_submit('radius.distributors_assign_batch', 'POST') %}<form class="dd-form" method="post"
           action="{{ url_for('radius.distributors_assign_batch', distributor_id=distributor.id) }}">
       <div>
         <label>{{ _('الحزمة') }}</label>
@@ -173,12 +173,12 @@
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-link"></i> {{ _('ربط الحزمة') }}
       </button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {% call hub.section("تسوية مالية يدوية", icon="receipt") %}
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">{{ _('تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.') }}</p>
-    <form class="dd-form" method="post"
+    {% if can_submit('radius.distributors_settle', 'POST') %}<form class="dd-form" method="post"
           action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">
       {# مفتاح تكرار لكلّ عرض: نقرتان على «تسجيل الحركة» = حركة واحدة. #}
       <input type="hidden" name="client_request_id" value="{{ idem_nonce or '' }}">
@@ -216,7 +216,7 @@
       <button class="hub-btn hub-btn--secondary" type="submit">
         <i class="fa-solid fa-receipt"></i> {{ _('تسجيل الحركة') }}
       </button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
 {% endcall %}

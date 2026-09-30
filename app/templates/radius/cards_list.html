@@ -152,10 +152,10 @@
           </td>
           <td class="mono small">
             {% if c.batch_id %}
-            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
-               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
+            {% if can_submit('radius.cards_of_batch', 'GET') %}<a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
+               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">{% endif %}
               <bdi dir="ltr">{{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}</bdi>
-            </a>
+            {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td>
@@ -170,12 +170,12 @@
           <td class="mono small"><bdi dir="ltr">{{ c.expire_at|date_local if c.expire_at else '—' }}</bdi></td>
           <td>
             {% if not c.revoked %}
-            <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
+            {% if can_submit('radius.cards_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
                   onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
               <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء البطاقة') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
-            </form>
+            </form>{% endif %}
             {% endif %}
           </td>
         </tr>
@@ -194,7 +194,7 @@
         <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
       {% else %}
         {% set qs = preserve.copy() %}{% set _x = qs.update({'page': p}) %}
-        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
+        {% if can_submit('radius.cards_list', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>{% endif %}
       {% endif %}
     {%- endmacro %}
     {{ page_link(1,           '«', disabled=(page == 1)) }}

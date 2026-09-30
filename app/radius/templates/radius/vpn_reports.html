@@ -86,9 +86,9 @@
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
     <i class="fa-solid fa-filter"></i> تطبيق
   </button>
-  <a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
+  {% if can_submit('radius.vpn_service_reports', 'GET') %}<a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
     <i class="fa-solid fa-rotate"></i> إعادة تعيين
-  </a>
+  </a>{% endif %}
 </form>
 
 {# ── تبويبات ── #}

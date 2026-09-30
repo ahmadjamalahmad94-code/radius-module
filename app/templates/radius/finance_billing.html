@@ -258,7 +258,7 @@
 
 {# Invoice modal — posts to the unchanged inv_create endpoint #}
 <dialog class="fb-modal" data-modal="invoice">
-  <form method="post" action="{{ url_for('radius.inv_create') }}">
+  {% if can_submit('radius.inv_create', 'POST') %}<form method="post" action="{{ url_for('radius.inv_create') }}">
     <div class="fb-modal-head"><h3><i class="fa-solid fa-file-invoice"></i> {{ _('فاتورة جديدة') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -302,12 +302,12 @@
       </div>
     </div>
     <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('إصدار الفاتورة') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 {# Voucher modal — posts to the unchanged vch_generate endpoint #}
 <dialog class="fb-modal" data-modal="voucher">
-  <form method="post" action="{{ url_for('radius.vch_generate') }}">
+  {% if can_submit('radius.vch_generate', 'POST') %}<form method="post" action="{{ url_for('radius.vch_generate') }}">
     <div class="fb-modal-head"><h3><i class="fa-solid fa-ticket"></i> {{ _('توليد كوبونات') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -330,13 +330,13 @@
       </div>
     </div>
     <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('توليد') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 {# Redeem modal — صرف كوبون لمشترك: يرسل إلى radius.vch_redeem الذي يتحقق
    من الكود (موجود/نشط/غير منتهٍ) ويعلّمه مستخدمًا ويضيف قيمته لرصيد المشترك. #}
 <dialog class="fb-modal" data-modal="voucherRedeem">
-  <form method="post" action="{{ url_for('radius.vch_redeem') }}">
+  {% if can_submit('radius.vch_redeem', 'POST') %}<form method="post" action="{{ url_for('radius.vch_redeem') }}">
     <div class="fb-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -360,7 +360,7 @@
       </div>
     </div>
     <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('صرف الكوبون') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 <script>

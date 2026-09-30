@@ -812,10 +812,10 @@
                 {# الحزمة هي وحدة الشراء التي يتتبّعها المشغّل — والسعر يُشتقّ
                    منها، فمن حقّه أن يقفز إليها من الصفّ مباشرةً. #}
                 {% if sale.batch_id %}
-                  <a href="{{ url_for('radius.cards_of_batch', batch_id=sale.batch_id) }}"
-                     class="entity-link" title="{{ _('عرض بطاقات هذه الحزمة') }}">
+                  {% if can_submit('radius.cards_of_batch', 'GET') %}<a href="{{ url_for('radius.cards_of_batch', batch_id=sale.batch_id) }}"
+                     class="entity-link" title="{{ _('عرض بطاقات هذه الحزمة') }}">{% endif %}
                     {{ sale.batch_name or sale.batch_code or ('#' ~ sale.batch_id) }}
-                  </a>
+                  {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                 {% else %}
                   {{ sale.batch_name or sale.batch_code or "—" }}
                 {% endif %}

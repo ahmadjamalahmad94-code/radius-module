@@ -29,9 +29,9 @@
     {{ _('لم تصل بعد أي لقطة capacity contract من لوحة التراخيص. حتى يتم أول تزامن ناجح، كل الخدمات معاملة كمسموحة (fail-open). إذا كنت تظنّ أن النظام يجب أن يكون مربوطًا، راجع جسر التكامل وصفحة «ترخيص النظام».') }}
   </p>
   <div class="hub-actions">
-    {{ hub.btn(_('صفحة ترخيص النظام'),
+    {% if can_submit('radius.license_file', 'GET') %}{{ hub.btn(_('صفحة ترخيص النظام'),
                 href=url_for('radius.license_file') if endpoint_exists('radius.license_file') else '#',
-                variant='secondary', icon='id-card') }}
+                variant='secondary', icon='id-card') }}{% endif %}
   </div>
 {% endcall %}
 {% else %}

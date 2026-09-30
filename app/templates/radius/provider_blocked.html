@@ -38,9 +38,9 @@
     <li>{{ _('بإمكانك مراجعة حالة كل المنح الحالية من صفحة «حالة منح المزوّد» في إدارة النظام.') }}</li>
   </ul>
   <div class="hub-actions">
-    {{ hub.btn(_('حالة منح المزوّد'),
+    {% if can_submit('radius.provider_grants_status_page', 'GET') %}{{ hub.btn(_('حالة منح المزوّد'),
                 href=url_for('radius.provider_grants_status_page'),
-                variant='secondary', icon='clipboard-list') }}
+                variant='secondary', icon='clipboard-list') }}{% endif %}
     {{ hub.btn(_('العودة للوحة'),
                 href=url_for('radius.dashboard'),
                 variant='primary', icon='house') }}

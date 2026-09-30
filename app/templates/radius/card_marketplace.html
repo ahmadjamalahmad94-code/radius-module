@@ -670,10 +670,10 @@
           {{ _('إنشاء عرض جديد') }}
         </button>
         {% endif %}
-        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.store_support') }}">
+        {% if can_submit('radius.store_support', 'GET') %}<a class="market-btn market-btn--ghost" href="{{ url_for('radius.store_support') }}">
           <i class="fa-solid fa-headset"></i>
           {{ _('دعم وطلبات الشحن/السحب') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
     <div class="market-metrics">
@@ -694,7 +694,7 @@
   {% if can is not defined or can('store.package_add') %}
   <div class="fcw-modal" data-market-create-modal hidden>
   <div class="fcw-dialog mkc-dialog" id="market-package-create" role="dialog" aria-modal="true" aria-labelledby="market-create-title">
-    <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" data-market-package-form novalidate>
+    <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" data-market-package-form novalidate>{% if not can_submit('radius.card_marketplace_package_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
         <h3 id="market-create-title"><i class="fa-solid fa-store" style="color:var(--violet)"></i> {{ _('إنشاء عرض جديد') }}</h3>
@@ -851,7 +851,7 @@
         <button class="market-btn" type="button" data-market-create-close>{{ _('إلغاء') }}</button>
         <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إنشاء العرض') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.card_marketplace_package_create') %}</fieldset>{% endif %}</form>
   </div>
   </div>
   {% endif %}
@@ -868,14 +868,14 @@
         <p>{{ _('هذه الباقات تظهر للزبون في بوابته للشراء. اختر النظام لعرض عروضه فقط.') }}</p>
       </div>
       {# ── محدّد النمط الافتراضي للعروض الجديدة — نُقل هنا مدمجًا من القسم المحذوف ── #}
-      <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}" class="market-headtools">
+      {% if can_submit('radius.card_marketplace_default_mode', 'POST') %}<form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}" class="market-headtools">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <span class="market-pill" style="background:#eef2ff;color:#4338ca;border-color:#e0e7ff">{{ _('النمط الافتراضي للعروض الجديدة') }}</span>
         <select name="sale_mode" onchange="this.form.submit()" aria-label="{{ _('النمط الافتراضي للعروض الجديدة') }}">
           <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>{{ _('توليد فوري') }}</option>
           <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>{{ _('مخزون') }}</option>
         </select>
-      </form>
+      </form>{% endif %}
     </header>
     {# ── شريط النظام: مفتاح مقسّم بارز يقسم العروض إلى نظام واحد ظاهر في كل مرة ── #}
     <div class="market-systembar">
@@ -929,33 +929,33 @@
             </div>
           {% endif %}
           {# ── الإجراء الأساسي الواحد للبطاقة: فتح صفحة العرض ── #}
-          <a class="market-btn market-btn--primary" style="margin-top:10px" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
+          {% if can_submit('radius.card_marketplace_package_file', 'GET') %}<a class="market-btn market-btn--primary" style="margin-top:10px" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
             <i class="fa-solid fa-folder-open"></i> {{ _('فتح العرض') }}
-          </a>
+          </a>{% endif %}
           {# ── بقية الإجراءات (تغيير النمط + تعبئة المخزون) في تفاصيل تُفتح عند الطلب ── #}
           <details class="market-card-opts">
             <summary><i class="fa-solid fa-sliders"></i> {{ _('خيارات العرض') }} <i class="fa-solid fa-chevron-down market-chevron"></i></summary>
             <div class="market-card-opts-body">
-              <form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" class="market-opt-row" style="margin:0">
+              {% if can_submit('radius.card_marketplace_package_mode', 'POST') %}<form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" class="market-opt-row" style="margin:0">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                 <select name="sale_mode" onchange="this.form.submit()" aria-label="{{ _('نمط بيع العرض') }}">
                   <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>{{ _('توليد فوري') }}</option>
                   <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>{{ _('مخزون') }}</option>
                 </select>
-              </form>
+              </form>{% endif %}
               {# «تعديل العرض» — owner-level edit of the safe fields (store.package_add). #}
               {% if can is not defined or can('store.package_add') %}
               <div class="market-opt-row">
                 <button type="button" class="market-btn" data-fcw-open="edit-{{ package.id }}">
                   <i class="fa-solid fa-pen"></i> {{ _('تعديل العرض') }}
                 </button>
-                <form method="post" action="{{ url_for('radius.card_marketplace_package_delete', package_id=package.id) }}" style="margin:0;flex:1">
+                {% if can_submit('radius.card_marketplace_package_delete', 'POST') %}<form method="post" action="{{ url_for('radius.card_marketplace_package_delete', package_id=package.id) }}" style="margin:0;flex:1">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                   <button type="submit" class="market-btn market-btn--danger" style="width:100%"
                           data-confirm="{{ _('حذف هذا العرض من السوق؟ الكروت المُصدَرة سابقًا تبقى صالحة، ويمكنك إعادة إنشاء عرض بنفس الاسم لاحقًا.') }}">
                     <i class="fa-solid fa-trash"></i> {{ _('حذف العرض') }}
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
               {% endif %}
               {% if _mode == 'inventory' %}
@@ -983,7 +983,7 @@
   {% for package in packages if (package.sale_mode or 'instant') == 'inventory' %}
   <div class="fcw-modal" data-fcw-modal="stock-upload-{{ package.id }}" hidden>
     <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-upload-{{ package.id }}-title">
-      <form method="post" enctype="multipart/form-data"
+      {% if can_submit('radius.card_marketplace_inventory_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="fcw-head">
@@ -1008,12 +1008,12 @@
           <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
           <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> {{ _('إضافة للمخزون') }}</button>
         </div>
-      </form>
+      </form>{% endif %}
     </div>
   </div>
   <div class="fcw-modal" data-fcw-modal="stock-generate-{{ package.id }}" hidden>
     <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-generate-{{ package.id }}-title">
-      <form method="post" action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
+      {% if can_submit('radius.card_marketplace_inventory_upload', 'POST') %}<form method="post" action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="fcw-head">
           <h3 id="fcw-stock-generate-{{ package.id }}-title"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة — {{ package.name }}</h3>
@@ -1034,7 +1034,7 @@
           <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
           <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد وإضافة') }}</button>
         </div>
-      </form>
+      </form>{% endif %}
     </div>
   </div>
   {% endfor %}
@@ -1048,7 +1048,7 @@
   {% for package in packages %}
   <div class="fcw-modal" data-fcw-modal="edit-{{ package.id }}" hidden>
   <div class="fcw-dialog mkc-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-title-{{ package.id }}">
-    <form method="post" action="{{ url_for('radius.card_marketplace_package_update', package_id=package.id) }}" novalidate>
+    <form method="post" action="{{ url_for('radius.card_marketplace_package_update', package_id=package.id) }}" novalidate>{% if not can_submit('radius.card_marketplace_package_update') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
         <h3 id="edit-title-{{ package.id }}"><i class="fa-solid fa-pen" style="color:var(--violet)"></i> {{ _('تعديل العرض') }} — {{ package.name }}</h3>
@@ -1119,7 +1119,7 @@
         <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.card_marketplace_package_update') %}</fieldset>{% endif %}</form>
   </div>
   </div>
   {% endfor %}
@@ -1173,8 +1173,8 @@
             <div class="market-progress-bar"><span style="width:{{ progress_width }}%"></span></div>
           </div>
           <div class="market-card-foot">
-            <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}"><i class="fa-solid fa-eye"></i> {{ _('عرض الكروت') }}</a>
-            <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل') }}</a>
+            {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}"><i class="fa-solid fa-eye"></i> {{ _('عرض الكروت') }}</a>{% endif %}
+            {% if can_submit('radius.cards_batch_edit', 'GET') %}<a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل') }}</a>{% endif %}
           </div>
         </article>
       {% else %}
@@ -1225,11 +1225,11 @@
     {% if recent_purchases and recent_purchases.pages > 1 %}
     <nav style="display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px">
       {% if recent_purchases.page > 1 %}
-        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">{{ _('السابق') }}</a>
+        {% if can_submit('radius.card_marketplace', 'GET') %}<a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">{{ _('السابق') }}</a>{% endif %}
       {% endif %}
       <span class="market-pill">{{ recent_purchases.page }} / {{ recent_purchases.pages }}</span>
       {% if recent_purchases.page < recent_purchases.pages %}
-        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">{{ _('التالي') }}</a>
+        {% if can_submit('radius.card_marketplace', 'GET') %}<a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">{{ _('التالي') }}</a>{% endif %}
       {% endif %}
     </nav>
     {% endif %}

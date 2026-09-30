@@ -16,7 +16,7 @@
 .dpnav a i{font-size:12px}
 </style>
 <nav class="dpnav" data-testid="data-protection-nav">
-  <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
-  <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلة المحذوفات') }}</a>
-  <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('الأرشفة التلقائية') }}</a>
+  {% if can_submit('radius.backups', 'GET') %}<a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}">{% endif %}<i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}{% if can_submit('radius.backups', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.recycle_bin', 'GET') %}<a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}">{% endif %}<i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلة المحذوفات') }}{% if can_submit('radius.recycle_bin', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.lifecycle_settings', 'GET') %}<a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}">{% endif %}<i class="fa-solid fa-clock-rotate-left"></i> {{ _('الأرشفة التلقائية') }}{% if can_submit('radius.lifecycle_settings', 'GET') %}</a>{% endif %}
 </nav>

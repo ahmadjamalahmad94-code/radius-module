@@ -99,21 +99,21 @@
 ) }}
 {# تبويب الانتقال بين الصفحتين الشقيقتين: المجدول (هنا) واليدوي #}
 <nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="{{ _('صفحات التحكم بالسرعة') }}">
-  <a class="is-active" href="{{ url_for('radius.operations_speed_control') }}" aria-current="page">
+  {% if can_submit('radius.operations_speed_control', 'GET') %}<a class="is-active" href="{{ url_for('radius.operations_speed_control') }}" aria-current="page">{% endif %}
     <i class="fa-solid fa-calendar-check"></i> {{ _('التحكم المجدول') }}
-  </a>
-  <a href="{{ url_for('radius.operations_speed_control_manual') }}" data-testid="speed-control-link-manual">
+  {% if can_submit('radius.operations_speed_control', 'GET') %}</a>{% endif %}
+  {% if can_submit('radius.operations_speed_control_manual', 'GET') %}<a href="{{ url_for('radius.operations_speed_control_manual') }}" data-testid="speed-control-link-manual">{% endif %}
     <i class="fa-solid fa-sliders"></i> {{ _('التحكم اليدوي') }}
-  </a>
+  {% if can_submit('radius.operations_speed_control_manual', 'GET') %}</a>{% endif %}
 </nav>
 </section>{# /hub-hero-shell #}
 
 {# هذه الصفحة تتبع قسم «التحكم بالسرعة» في الشريط الجانبي — لا شريط تبويب العمليات هنا.
    زر رجوع سريع إلى قائمة ملفات السرعة (Bandwidth). #}
 <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
+  {% if can_submit('radius.bw_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
     <i class="fa-solid fa-arrow-right"></i> {{ _('العودة إلى ملفات السرعة') }}
-  </a>
+  </a>{% endif %}
 </div>
 
 {# ═══════ الجداول الزمنية للسرعة (CRUD موصول بنفس backend صفحة bandwidth-schedules) ═══════
@@ -125,7 +125,7 @@
    أسماء الحقول مطابقة تمامًا لعقد الخادم:
    preset / multiplier / profile_ids / settings_json / save_policy / policy_key / title #}
 <form method="post" class="spc-form" data-spc data-testid="speed-control-form"
-      data-spc-active='{{ {"preset": (active_speed.preset if active_speed else "normal"), "pct": (active_speed.pct if active_speed else 100), "overrides": (active_speed.overrides if active_speed else {}), "profile_ids": (active_speed.profile_ids if active_speed else [])}|tojson }}'>
+      data-spc-active='{{ {"preset": (active_speed.preset if active_speed else "normal"), "pct": (active_speed.pct if active_speed else 100), "overrides": (active_speed.overrides if active_speed else {}), "profile_ids": (active_speed.profile_ids if active_speed else [])}|tojson }}'>{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
   {# profile_ids و settings_json تُملآن عبر السكربت قبل الإرسال؛ فارغتان = كل الباقات #}
   <input type="hidden" name="profile_ids" value="" data-spc-profile-ids>
@@ -314,7 +314,7 @@
                  attrs='name="apply" value="1" data-spc-submit="apply" data-confirm="تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟"') }}
     </div>
   {% endcall %}
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {# ───── نتيجة المعاينة من الخادم (بعد ضغط «معاينة الأثر») ───── #}
 {% if preview %}

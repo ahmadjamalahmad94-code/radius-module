@@ -125,19 +125,19 @@
             <span class="mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums">
               <i class="fa-solid fa-clock hub-text-mute"></i> {{ e.created_at|dt_local }}
             </span>
-            <a href="{{ url_for('radius.audit_log_detail', audit_id=e.audit_id) }}"
+            {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=e.audit_id) }}"
                class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-raw="{{ e.audit_id }}">
               <i class="fa-solid fa-magnifying-glass"></i>
               {{ _('تفاصيل الراو') }}
-            </a>
+            </a>{% endif %}
             {% if e.related_job_id %}
-            <a href="{{ url_for('radius.jobs_show', job_id=e.related_job_id) }}"
+            {% if can_submit('radius.jobs_show', 'GET') %}<a href="{{ url_for('radius.jobs_show', job_id=e.related_job_id) }}"
                class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-job="{{ e.related_job_id }}">
               <i class="fa-solid fa-list-check"></i>
               مهمة #{{ e.related_job_id }}
-            </a>
+            </a>{% endif %}
             {% endif %}
           </div>
         </div>

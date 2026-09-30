@@ -40,13 +40,13 @@
                    ~ ('?router_id=' ~ scoped_to_nas.id if scoped_to_nas else '') %}
 {% set _actions %}
   {% if scoped_to_nas %}
-    <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_dashboard', nas_id=scoped_to_nas.id) }}">
+    {% if can_submit('radius.mt_dashboard', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_dashboard', nas_id=scoped_to_nas.id) }}">
       <i class="fa-solid fa-arrow-right"></i> {{ _('لوحة الراوتر') }}
-    </a>
+    </a>{% endif %}
   {% endif %}
-  <a class="hub-btn hub-btn--primary" href="{{ _new_href }}">
+  {% if can_open(_new_href) %}<a class="hub-btn hub-btn--primary" href="{{ _new_href }}">
     <i class="fa-solid fa-plus"></i> {{ _('سياسة جديدة') }}
-  </a>
+  </a>{% endif %}
 {% endset %}
 
 {{ hub.megahero(
@@ -132,29 +132,29 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('معاينة') }}"
+                {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('معاينة') }}"
                    href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=p.id) }}">
                   <i class="fa-solid fa-eye"></i> {{ _('معاينة') }}
-                </a>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تحرير') }}"
+                </a>{% endif %}
+                {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تحرير') }}"
                    href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=p.id) }}">
                   <i class="fa-regular fa-pen-to-square"></i>
-                </a>
-                <form class="npc-inline-form" method="POST"
+                </a>{% endif %}
+                {% if can_submit('radius.npc_', 'POST') %}<form class="npc-inline-form" method="POST"
                       action="{{ url_for('radius.npc_' ~ service.key ~ '_duplicate', policy_id=p.id) }}">
                   {{ csrf_token_input() | safe }}
                   <button class="hub-btn hub-btn--ghost hub-btn--icon" type="submit" title="{{ _('إنشاء نسخة') }}">
                     <i class="fa-regular fa-copy"></i>
                   </button>
-                </form>
-                <form class="npc-inline-form" method="POST"
+                </form>{% endif %}
+                {% if can_submit('radius.npc_', 'POST') %}<form class="npc-inline-form" method="POST"
                       action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
                       onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
                   {{ csrf_token_input() | safe }}
                   <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit" title="{{ _('حذف') }}">
                     <i class="fa-regular fa-trash-can"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>

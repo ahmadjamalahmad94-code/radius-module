@@ -11,7 +11,7 @@
   icon="layer-group"
 ) }}
 
-<form method="post">
+<form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("قائمة المستخدمين", icon="users") %}
     <div class="hub-field">
@@ -58,9 +58,9 @@
     </button>
     {{ hub.btn("نفّذ", icon="bolt", variant="primary", type="submit",
                 attrs='onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"') }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}
+    {% if can_submit('radius.users_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {% if preview %}
 <div style="height:14px"></div>

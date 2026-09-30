@@ -292,9 +292,9 @@
         <i class="fa-solid fa-plus"></i> {{ _('حزمة جديدة') }}
       </button>
       {% if can_import %}
-      <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">
+      {% if can_submit('radius.cards_batches_import', 'GET') %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">
         <i class="fa-solid fa-file-import"></i> {{ _('استيراد من ملف') }}
-      </a>
+      </a>{% endif %}
       {% endif %}
       <div class="view-toggle view-toggle--hero" role="group" aria-label="{{ _('طريقة العرض') }}">
         <button type="button" data-view-toggle="table" aria-pressed="false">
@@ -386,13 +386,13 @@
       <i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}
     </button>
     <div class="batches-bulk-exports" aria-label="{{ _('تصدير الحزم') }}">
-      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_xlsx }}" title="{{ _('تحميل Excel') }}" aria-label="{{ _('تحميل Excel') }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
-      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export }}" title="{{ _('تحميل CSV') }}" aria-label="{{ _('تحميل CSV') }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
-      <a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_pdf }}" title="{{ _('تحميل PDF') }}" aria-label="{{ _('تحميل PDF') }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+      {% if can_open(current_export_xlsx) %}<a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_xlsx }}" title="{{ _('تحميل Excel') }}" aria-label="{{ _('تحميل Excel') }}"><i class="fa-solid fa-file-excel"></i> Excel</a>{% endif %}
+      {% if can_open(current_export) %}<a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export }}" title="{{ _('تحميل CSV') }}" aria-label="{{ _('تحميل CSV') }}"><i class="fa-solid fa-file-csv"></i> CSV</a>{% endif %}
+      {% if can_open(current_export_pdf) %}<a class="batch-btn batch-btn--soft batch-btn--icon-only" href="{{ current_export_pdf }}" title="{{ _('تحميل PDF') }}" aria-label="{{ _('تحميل PDF') }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>{% endif %}
     </div>
   </form>
 
-  <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" class="batches-bulk-bar" data-bulk-bar>
+  {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" class="batches-bulk-bar" data-bulk-bar>
     <input type="hidden" name="return_to" value="{{ request.full_path }}">
     <div data-bulk-selected-inputs></div>
     <strong><span data-bulk-count>0</span> {{ _('محددة') }}</strong>
@@ -406,7 +406,7 @@
     <button class="batch-btn batch-btn--primary" type="submit" disabled data-bulk-submit>
       <i class="fa-solid fa-check"></i> {{ _('تنفيذ') }}
     </button>
-  </form>
+  </form>{% endif %}
   </div>
 
   <section class="batches-cards-view" data-cards-view>
@@ -439,8 +439,8 @@
               </label>
               <div>
                 <div class="batch-card__title-row">
-                  <h2><a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                         title="{{ _('عرض بطاقات الحزمة') }}">{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}</a></h2>
+                  <h2>{% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
+                         title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}</h2>
                   {% if is_featured %}<span class="batch-featured">{{ _('مميزة') }}</span>{% endif %}
                 </div>
                 <p class="batch-card__code">
@@ -486,13 +486,13 @@
             </dl>
 
             <footer class="batch-card__actions">
-              <a class="batch-action batch-action--primary" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+              {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="batch-action batch-action--primary" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
                 <i class="fa-solid fa-eye"></i> {{ _('عرض') }}
-              </a>
+              </a>{% endif %}
               {% if is_super %}
-              <a class="batch-action" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
+              {% if can_submit('radius.cards_batch_edit', 'GET') %}<a class="batch-action" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
                 <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
-              </a>
+              </a>{% endif %}
               {% endif %}
               {# MT86 — «طباعة» تفتح «منشئ كروت PDF» بشاشةٍ واحدة (الوضع البسيط
                  المطلوب 2026-07-27) والحزمة مُنتقاةٌ مسبقًا. الصفحة كانت موجودة
@@ -517,28 +517,28 @@
                 <i class="fa-solid fa-file-export"></i> {{ _('تصدير') }}
               </button>
               {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
-                <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
+                {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                   <input type="hidden" name="return_to" value="{{ request.full_path }}">
                   <input type="hidden" name="batch_ids" value="{{ b.id }}">
                   <input type="hidden" name="bulk_action" value="restore">
                   <button class="batch-action" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('تفعيل') }}</button>
-                </form>
+                </form>{% endif %}
               {% else %}
-                <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
+                {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
                   <input type="hidden" name="return_to" value="{{ request.full_path }}">
                   <input type="hidden" name="batch_ids" value="{{ b.id }}">
                   <input type="hidden" name="bulk_action" value="archive">
                   <input type="hidden" name="reason" value="{{ _('أرشفة من مركز الحزم') }}">
                   <button class="batch-action" type="submit" data-confirm="{{ _('نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.') }}"><i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}</button>
-                </form>
+                </form>{% endif %}
               {% endif %}
               {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-              <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
+              {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                 <input type="hidden" name="return_to" value="{{ request.full_path }}">
                 <input type="hidden" name="batch_ids" value="{{ b.id }}">
                 <input type="hidden" name="bulk_action" value="purge">
                 <button class="batch-action batch-action--danger" type="submit" data-confirm="{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}"><i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}</button>
-              </form>
+              </form>{% endif %}
             </footer>
           </article>
         {% endfor %}
@@ -568,7 +568,7 @@
               <span class="uds-pager-btn is-active">{{ label|safe }}</span>
             {% else %}
               {% set qs = base_args_cards.copy() %}{% set _x = qs.update({'page': p}) %}
-              <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
+              {% if can_submit('radius.cards_batches', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>{% endif %}
             {% endif %}
           {%- endmacro %}
           {{ card_pglink(page - 1, '<i class="fa-solid fa-chevron-right"></i>', disabled=(page == 1)) }}
@@ -589,7 +589,7 @@
         <p>{{ _('أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.') }}</p>
         <div>
           <button class="batch-btn batch-btn--primary" type="button" data-quick-batch-open>{{ _('إنشاء حزمة جديدة') }}</button>
-          {% if can_import %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">{{ _('استيراد من ملف') }}</a>{% endif %}
+          {% if can_import %}{% if can_submit('radius.cards_batches_import', 'GET') %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_batches_import') }}">{{ _('استيراد من ملف') }}</a>{% endif %}{% endif %}
         </div>
       </div>
     {% endif %}
@@ -658,11 +658,11 @@
                 <td class="mono" data-column-key="id" data-sort-value="{{ b.id }}">#{{ b.id }}</td>
                 <td data-column-key="batch" data-sort-value="{{ (b.batch_code or '') ~ ' ' ~ (b.package_name or b.service_name or '') }}">
                   <div class="bops-main-cell">
-                    <a class="mono bops-code" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+                    {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="mono bops-code" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">{% endif %}
                       <bdi>{{ b.batch_code }}</bdi>
-                    </a>
-                    <a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                       title="{{ _('عرض بطاقات الحزمة') }}">{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</a>
+                    {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
+                    {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
+                       title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                   </div>
                 </td>
                 <td data-column-key="plan" data-sort-value="{{ b.device_count or 1 }}">
@@ -697,14 +697,14 @@
                 <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>بيع {{ money(unit_price) }}</strong><span class="bops-muted">جملة {{ money(b.price_bulk or 0) }}</span></td>
                 <td data-column-key="manager" data-sort-value="{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '' }}">
                   {% if is_super and b.manager_id %}
-                    <a class="hr-entity-link" href="{{ url_for('radius.admins_edit', admin_id=b.manager_id) }}"
-                       title="{{ _('ملف المدير') }}"><strong>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') }}</strong></a>
+                    {% if can_submit('radius.admins_edit', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.admins_edit', admin_id=b.manager_id) }}"
+                       title="{{ _('ملف المدير') }}">{% endif %}<strong>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') }}</strong>{% if can_submit('radius.admins_edit', 'GET') %}</a>{% endif %}
                   {% else %}<strong>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '—' }}</strong>{% endif %}
                 </td>
                 <td data-column-key="distributor" data-sort-value="{{ b.distributor_display_name or b.distributor_name or '' }}">
                   {% if is_super and b.distributor_id %}
-                    <a class="hr-entity-link" href="{{ url_for('radius.distributors_detail', distributor_id=b.distributor_id) }}"
-                       title="{{ _('صفحة الموزّع') }}"><strong>{{ b.distributor_display_name or b.distributor_name }}</strong></a>
+                    {% if can_submit('radius.distributors_detail', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.distributors_detail', distributor_id=b.distributor_id) }}"
+                       title="{{ _('صفحة الموزّع') }}">{% endif %}<strong>{{ b.distributor_display_name or b.distributor_name }}</strong>{% if can_submit('radius.distributors_detail', 'GET') %}</a>{% endif %}
                   {% else %}<strong>{{ b.distributor_display_name or b.distributor_name or '—' }}</strong>{% endif %}
                 </td>
                 <td data-column-key="status" data-sort-value="{{ st or '' }}">
@@ -722,13 +722,13 @@
                             title="{{ _('إجراءات الحزمة') }}"
                             aria-label="{{ _('إجراءات الحزمة') }}"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     <div class="bops-menu__list" data-bops-list hidden>
-                      <a class="bops-menu__item" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
+                      {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="bops-menu__item" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
                         <i class="fa-solid fa-eye"></i> {{ _('عرض البطاقات') }}
-                      </a>
+                      </a>{% endif %}
                       {% if is_super %}
-                      <a class="bops-menu__item" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
+                      {% if can_submit('radius.cards_batch_edit', 'GET') %}<a class="bops-menu__item" href="{{ url_for('radius.cards_batch_edit', batch_id=b.id) }}">
                         <i class="fa-solid fa-pen"></i> {{ _('تعديل الحزمة') }}
-                      </a>
+                      </a>{% endif %}
                       {% endif %}
                       <button type="button" class="bops-menu__item"
                               data-quickfloat-open data-batch-id="{{ b.id }}">
@@ -740,16 +740,16 @@
                         <i class="fa-solid fa-file-export"></i> {{ _('تصدير') }}
                       </button>
                       {% if (b.operational_status or '') in ['deleted','cancelled','canceled','revoked'] %}
-                        <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
+                        {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-restore-form>
                           <input type="hidden" name="return_to" value="{{ request.full_path }}">
                           <input type="hidden" name="batch_ids" value="{{ b.id }}">
                           <input type="hidden" name="bulk_action" value="restore">
                           <button class="bops-menu__item" type="submit">
                             <i class="fa-solid fa-rotate-left"></i> {{ _('تفعيل الحزمة') }}
                           </button>
-                        </form>
+                        </form>{% endif %}
                       {% else %}
-                        <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
+                        {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}" data-batch-archive-form>
                           <input type="hidden" name="return_to" value="{{ request.full_path }}">
                           <input type="hidden" name="batch_ids" value="{{ b.id }}">
                           <input type="hidden" name="bulk_action" value="archive">
@@ -757,17 +757,17 @@
                           <button class="bops-menu__item" type="submit" data-confirm="{{ _('نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.') }}">
                             <i class="fa-solid fa-box-archive"></i> {{ _('نقل للسلّة') }}
                           </button>
-                        </form>
+                        </form>{% endif %}
                       {% endif %}
                       {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-                      <form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
+                      {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                         <input type="hidden" name="return_to" value="{{ request.full_path }}">
                         <input type="hidden" name="batch_ids" value="{{ b.id }}">
                         <input type="hidden" name="bulk_action" value="purge">
                         <button class="bops-menu__item bops-menu__item--danger bops-delete-btn" type="submit" data-confirm="{{ _('حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟') }}">
                           <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائيّ') }}
                         </button>
-                      </form>
+                      </form>{% endif %}
                     </div>
                   </div>
                 </td>
@@ -806,7 +806,7 @@
                 <span class="uds-pager-btn is-active">{{ label|safe }}</span>
               {% else %}
                 {% set qs = base_args.copy() %}{% set _x = qs.update({'page': p}) %}
-                <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
+                {% if can_submit('radius.cards_batches', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>{% endif %}
               {% endif %}
             {%- endmacro %}
             {# RTL: «السابق» سهم لليمين و«التالي» سهم لليسار — نفس مُرقِّم uds #}
@@ -844,7 +844,7 @@
     <form method="post" action="{{ url_for('radius.cards_generate') }}" class="quick-batch-form"
           data-card-generate-form
           data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
-          data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">
+          data-progress-status-url="{{ url_for('radius.cards_generate_progress_status', job_id='__JOB_ID__') }}">{% if not can_submit('radius.cards_generate') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="random_generation_enabled" value="1">
       <input type="hidden" name="count_from_first_connect" value="1" data-quick-count-from-first>
       <input type="hidden" name="count_by_seconds" value="" data-quick-count-by-seconds>
@@ -995,14 +995,14 @@
         </label>
       </div>
       <footer class="quick-batch-modal__actions">
-        <a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_generate') }}">
+        {% if can_submit('radius.cards_generate', 'GET') %}<a class="batch-btn batch-btn--soft" href="{{ url_for('radius.cards_generate') }}">
           <i class="fa-solid fa-sliders"></i> {{ _('متقدم') }}
-        </a>
+        </a>{% endif %}
         <button class="batch-btn batch-btn--primary" type="submit">
           <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء الآن') }}
         </button>
       </footer>
-    </form>
+    {% if not can_submit('radius.cards_generate') %}</fieldset>{% endif %}</form>
   </section>
 </div>
 

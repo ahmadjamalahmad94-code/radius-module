@@ -348,13 +348,13 @@
 
 {# ───── Unified mega-hero: title + subtitle + sync actions + KPI strip ── #}
 {% set hero_actions %}
-  <form method="post" action="{{ url_for('radius.license_file_sync') }}" style="margin:0;display:flex;flex-wrap:wrap;gap:8px">
+  {% if can_submit('radius.license_file_sync', 'POST') %}<form method="post" action="{{ url_for('radius.license_file_sync') }}" style="margin:0;display:flex;flex-wrap:wrap;gap:8px">
     {{ csrf_token_input() }}
     <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit"><i class="fa-solid fa-arrows-rotate"></i> {{ _('مزامنة الكل') }}</button>
     <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit"><i class="fa-solid fa-file-contract"></i> {{ _('عقد التشغيل') }}</button>
     <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit"><i class="fa-solid fa-users-gear"></i> {{ _('الهوية') }}</button>
-  </form>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('افتح بوابة العميل') }}</a>
+  </form>{% endif %}
+  {% if can_submit('radius.license_file_portal_sso', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('افتح بوابة العميل') }}</a>{% endif %}
 {% endset %}
 {{ hub.megahero(
   "ترخيص النظام",
@@ -416,7 +416,7 @@
       {{ _("افتح صفحة العميل في لوحة التراخيص، انسخ") }} <strong>{{ _('مفتاح الترخيص') }}</strong> فقط، والصقه هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل.
       الرابط الأمامي مقفول حتى لا يتغيّر بالغلط.
     </p>
-    <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
+    {% if can_submit('radius.license_file_config', 'POST') %}<form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
       {{ csrf_token_input() }}
       {# ── الحقلان الأساسيّان فقط: الرابط + مفتاح الترخيص ──────── #}
       <div class="hub-field full">
@@ -463,7 +463,7 @@
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ بيانات الربط') }}
         </button>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {# ───── Connection settings (key/value detail list) ───────
@@ -622,13 +622,13 @@
                 <i class="fa-solid fa-circle-info"></i> {{ _('المزيد') }}
               </button>
               {% if not _on %}
-                <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
+                {% if can_submit('radius.license_file_service_request', 'POST') %}<form method="post" action="{{ url_for('radius.license_file_service_request') }}">
                   {{ csrf_token_input() }}
                   <input type="hidden" name="service_name" value="{{ _name }}">
                   <button type="submit" class="lf-svc-btn is-req">
                     <i class="fa-solid fa-paper-plane"></i> {{ _('طلب تفعيل') }}
                   </button>
-                </form>
+                </form>{% endif %}
               {% endif %}
             </div>
           </div>
@@ -681,11 +681,11 @@
                     <i class="fa-solid fa-circle-info"></i> {{ _('المزيد') }}
                   </button>
                   {% if not _on %}
-                    <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
+                    {% if can_submit('radius.license_file_service_request', 'POST') %}<form method="post" action="{{ url_for('radius.license_file_service_request') }}">
                       {{ csrf_token_input() }}
                       <input type="hidden" name="service_name" value="{{ _name }}">
                       <button type="submit" class="lf-svc-btn is-req"><i class="fa-solid fa-paper-plane"></i> {{ _('طلب تفعيل') }}</button>
-                    </form>
+                    </form>{% endif %}
                   {% endif %}
                 </div>
               </div>

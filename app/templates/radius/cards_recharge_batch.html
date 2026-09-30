@@ -184,7 +184,7 @@
         {%- elif active -%}
           <span class="is-active" aria-current="page">{{ label }}</span>
         {%- else -%}
-          <a href="{{ url_for('radius.cards_recharge_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
+          {% if can_submit('radius.cards_recharge_batch', 'GET') %}<a href="{{ url_for('radius.cards_recharge_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{% endif %}{{ label }}{% if can_submit('radius.cards_recharge_batch', 'GET') %}</a>{% endif %}
         {%- endif -%}
       {%- endmacro %}
 

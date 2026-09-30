@@ -7,7 +7,7 @@
   <i class="fa-solid fa-chevron-left"></i>
   <span>RADIUS</span>
   <i class="fa-solid fa-chevron-left"></i>
-  <a href="{{ url_for('radius.devices_list') }}">أجهزة الشبكة</a>
+  {% if can_submit('radius.devices_list', 'GET') %}<a href="{{ url_for('radius.devices_list') }}">{% endif %}أجهزة الشبكة{% if can_submit('radius.devices_list', 'GET') %}</a>{% endif %}
   <i class="fa-solid fa-chevron-left"></i>
   <span>{{ title_ar }}</span>
 {% endblock %}
@@ -41,7 +41,7 @@
     </div>
     <div class="d-card-body">
 
-      <form class="nas-form"
+      {% if can_submit(('radius.devices_update' if not is_new else 'radius.devices_create'), 'POST') %}<form class="nas-form"
             method="post"
             action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
         {# _csrf_token يُحقَن تلقائيًا بواسطة after_request في HobeHub. #}
@@ -99,9 +99,9 @@
             <i class="fa-solid fa-floppy-disk"></i>
             {{ "حفظ" if is_new else "تحديث" }}
           </button>
-          <a class="btn-secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>
+          {% if can_submit('radius.devices_list', 'GET') %}<a class="btn-secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>{% endif %}
         </div>
-      </form>
+      </form>{% endif %}
 
     </div>
   </div>

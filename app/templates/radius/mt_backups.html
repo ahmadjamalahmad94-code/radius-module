@@ -128,7 +128,7 @@
         <span>{{ restore_disabled_reason }}</span>
       </div>
 
-      <form method="post"
+      {% if can_submit('radius.mt_backups_restore_plan', 'POST') %}<form method="post"
             enctype="multipart/form-data"
             action="{{ url_for('radius.mt_backups_restore_plan', nas_id=nas.id) }}"
             class="mt-program-apply-form"
@@ -152,7 +152,7 @@
             <i class="fa-solid fa-bolt"></i> {{ _('تطبيق الاستعادة (مقفل)') }}
           </button>
         </div>
-      </form>
+      </form>{% endif %}
 
       {% if restore_error %}
       <div class="uds-modal-warn uds-modal-warn--red" role="alert" style="margin-top:14px">

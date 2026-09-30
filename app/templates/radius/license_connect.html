@@ -53,7 +53,7 @@
     {{ _('تَحتاج بَعدَ تفعيل الترخيص من لوحة المزوّد إلى أمرين فقط لنقل العقد إلى هذه النسخة: رابط لوحة المزوّد + مفتاح الترخيص الخاص بك. يَجلبهما النظام مَرّة، يَحفظهما، ويَفتح اللوحة فورًا.') }}
   </p>
 
-  <form method="post" action="{{ url_for('radius.license_connect_link') }}" id="connect-form">
+  {% if can_submit('radius.license_connect_link', 'POST') %}<form method="post" action="{{ url_for('radius.license_connect_link') }}" id="connect-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
     <div class="field">
@@ -92,15 +92,15 @@
         {{ _('ربط وتفعيل الآن') }}
       </button>
       {% if state.has_config %}
-      <button class="hub-btn hub-btn--secondary"
+      {% if can_submit('radius.license_connect_sync_now', 'POST') %}<button class="hub-btn hub-btn--secondary"
               formaction="{{ url_for('radius.license_connect_sync_now') }}"
               formmethod="post" type="submit">
         <i class="fa-solid fa-rotate"></i>
         {{ _('مزامنة الآن (بدون تعديل)') }}
-      </button>
+      </button>{% endif %}
       {% endif %}
     </div>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 
 {# ════════════════════════════════════════════════════════════════════
@@ -134,14 +134,14 @@
 
   <div class="hub-actions" style="margin-top:10px">
     {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
-      {{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
+      {% if can_submit('radius.provider_grants_status_page', 'GET') %}{{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
                   href=url_for('radius.provider_grants_status_page'),
-                  variant='secondary', icon='clipboard-list') }}
+                  variant='secondary', icon='clipboard-list') }}{% endif %}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
-      {{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
+      {% if can_submit('radius.license_file', 'GET') %}{{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
                   href=url_for('radius.license_file'),
-                  variant='secondary', icon='gear') }}
+                  variant='secondary', icon='gear') }}{% endif %}
     {% endif %}
   </div>
 {% endcall %}
@@ -157,7 +157,7 @@
     <i class="fa-solid fa-triangle-exclamation"></i>
     {{ _('لا يؤثّر على عقد المزوّد نفسه (الذي تَبيعه أنت) — يَمسح فقط النسخة المحلّية من العقد. عند الربط مرّة أخرى تَستعيد كل المنح والسقوف.') }}
   </p>
-  <form method="post" action="{{ url_for('radius.license_connect_reset') }}"
+  {% if can_submit('radius.license_connect_reset', 'POST') %}<form method="post" action="{{ url_for('radius.license_connect_reset') }}"
         style="margin-top:10px">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <button class="hub-btn hub-btn--danger" type="submit"
@@ -165,6 +165,6 @@
       <i class="fa-solid fa-link-slash"></i>
       {{ _('فكّ الربط الآن') }}
     </button>
-  </form>
+  </form>{% endif %}
 {% endcall %}
 {% endblock %}

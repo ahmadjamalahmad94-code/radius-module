@@ -130,12 +130,12 @@
 
   {# ── Premium hero with at-a-glance KPI strip + «التحقّق الآن» ── #}
   {% set _hero_actions %}
-    <form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
+    {% if can_submit('radius.system_update_check', 'POST') %}<form method="post" action="{{ url_for('radius.system_update_check') }}" style="display:inline">
       {{ csrf_token_input() }}
       <button class="hub-btn hub-btn--secondary" type="submit">
         <i class="fa-solid fa-rotate"></i> {{ _('التحقّق الآن') }}
       </button>
-    </form>
+    </form>{% endif %}
   {% endset %}
   {{ hub.megahero(
       _('تحديث النظام'),

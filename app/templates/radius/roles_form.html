@@ -285,7 +285,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 
 {# عقد الحفظ كما هو: roles_create عند الإنشاء، roles_save عند التعديل #}
 <form method="post" id="role-form"
-      action="{{ url_for('radius.roles_create') if is_new else url_for('radius.roles_save', role_id=role.id) }}">
+      action="{{ url_for('radius.roles_create') if is_new else url_for('radius.roles_save', role_id=role.id) }}">{% if not can_submit(('radius.roles_create' if is_new else 'radius.roles_save')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ───── قسم الهوية: الاسم الداخلي / الظاهر / اللون / الوصف ───── #}
   {% call hub.section("هوية الدور", icon="id-card") %}
@@ -370,10 +370,10 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 
   {# أزرار الحفظ السفلية — نفس الإجراء، تكرار مريح أسفل النموذج الطويل #}
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
-    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.roles_list')) }}
+    {% if can_submit('radius.roles_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.roles_list')) }}{% endif %}
     {{ hub.btn(("إنشاء الدور" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit(('radius.roles_create' if is_new else 'radius.roles_save')) %}</fieldset>{% endif %}</form>
 
 {% if role and not is_new %}
 {# ════════════════════════════════════════════════════════════════════
@@ -388,7 +388,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
   </div>
 
   <form method="post" id="role-grants-form"
-        action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">
+        action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">{% if not can_submit('radius.roles_grants_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     {{ csrf_token_input() | safe }}
 
     {% call hub.section("نطاق الرؤية والإشراف", icon="eye") %}
@@ -496,7 +496,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
       {{ hub.btn("حفظ أساس الدور", icon="floppy-disk", variant="primary", type="submit") }}
     </div>
-  </form>
+  {% if not can_submit('radius.roles_grants_save') %}</fieldset>{% endif %}</form>
 </div>
 {% endif %}
 

@@ -60,7 +60,7 @@
 
 {# ───── النموذج — نفس المسارين ونفس أسماء الحقول القائمة ───── #}
 <form method="post" id="svc-form"
-      action="{{ url_for('radius.svc_update', sid=item.id) if not is_new else url_for('radius.svc_create') }}">
+      action="{{ url_for('radius.svc_update', sid=item.id) if not is_new else url_for('radius.svc_create') }}">{% if not can_submit(('radius.svc_update' if not is_new else 'radius.svc_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("هوية المعدّة", icon="microchip") %}
     <div class="hub-form-row">
@@ -158,8 +158,8 @@
 
   <div class="hub-flex-row" style="margin-top:16px">
     {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.svc_list')) }}
+    {% if can_submit('radius.svc_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.svc_list')) }}{% endif %}
   </div>
-</form>
+{% if not can_submit(('radius.svc_update' if not is_new else 'radius.svc_create')) %}</fieldset>{% endif %}</form>
 
 {% endblock %}

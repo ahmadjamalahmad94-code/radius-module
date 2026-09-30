@@ -71,8 +71,8 @@
          placeholder="{{ _('اسم الراوتر أو العنوان') }}" data-mt-topology-search>
   {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm",
              attrs='data-mt-topology-submit') }}
-  {{ hub.btn("إعادة ضبط", href=url_for('radius.mt_topology'), icon="rotate-left",
-             variant="secondary", size="sm", attrs='data-mt-topology-clear') }}
+  {% if can_submit('radius.mt_topology', 'GET') %}{{ hub.btn("إعادة ضبط", href=url_for('radius.mt_topology'), icon="rotate-left",
+             variant="secondary", size="sm", attrs='data-mt-topology-clear') }}{% endif %}
 {% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}

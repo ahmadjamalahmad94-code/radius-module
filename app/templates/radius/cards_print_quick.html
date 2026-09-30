@@ -98,7 +98,7 @@
 {% set is_edit = tpl and tpl.id %}
 <form method="post" id="qkForm"
       action="{{ url_for('radius.print_templates_update', template_id=tpl.id) if is_edit else url_for('radius.print_templates_create') }}"
-      enctype="multipart/form-data">
+      enctype="multipart/form-data">{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
   <input type="hidden" name="return_to" value="quick">
   <input type="hidden" name="quick_export" value="0" data-qk-export-flag>
@@ -327,13 +327,13 @@
         <button type="submit" class="qk-btn qk-btn--save">
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
         </button>
-        <a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
+        {% if can_submit('radius.print_templates', 'GET') %}<a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
           <i class="fa-solid fa-sliders"></i> {{ _('المصمم المتقدم') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
   </div>
-</form>
+{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
 
 <script>
 (function(){

@@ -107,7 +107,7 @@
 
 <div class="rc-form">
 {% call hub.worklayout(aside_html=help_aside) %}
-<form method="post" action="{{ url_for('radius.cards_recharge_new') }}">
+<form method="post" action="{{ url_for('radius.cards_recharge_new') }}">{% if not can_submit('radius.cards_recharge_new') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() | safe }}
 
   {% call hub.section("بيانات الحزمة", icon="box-archive") %}
@@ -177,12 +177,12 @@
   {% endcall %}
 
   <div class="rc-actions">
-    {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}
+    {% if can_submit('radius.cards_recharge_list', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}{% endif %}
     <button type="submit" class="hub-btn hub-btn--primary">
       <i class="fa-solid fa-bolt" aria-hidden="true"></i> {{ _('ولّد البطاقات') }}
     </button>
   </div>
-</form>
+{% if not can_submit('radius.cards_recharge_new') %}</fieldset>{% endif %}</form>
 {% endcall %}{# /.worklayout #}
 </div>{# /.rc-form #}
 

@@ -11,9 +11,9 @@
   <a class="hub-tab{% if active == 'wallets' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='wallets') }}">
     <i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}
   </a>
-  <a class="hub-tab" href="{{ url_for('radius.accounting_hub') }}">
+  {% if can_submit('radius.accounting_hub', 'GET') %}<a class="hub-tab" href="{{ url_for('radius.accounting_hub') }}">
     <i class="fa-solid fa-book"></i> {{ _('القيود') }}
-  </a>
+  </a>{% endif %}
   <a class="hub-tab{% if active == 'invoices' %} is-active{% endif %}" href="{{ url_for('radius.inv_list') }}">
     <i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الفواتير') }}
   </a>

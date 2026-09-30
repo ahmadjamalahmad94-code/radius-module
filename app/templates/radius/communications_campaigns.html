@@ -44,7 +44,7 @@
 
   {# ════════ CAMPAIGN DRY-RUN FORM ════════ #}
   {% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
-    <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
+    <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('مفتاح الحملة') }} <input name="campaign_key" required placeholder="renewal-may"></label>
       <label>{{ _('العنوان') }} <input name="title" required></label>
@@ -92,7 +92,7 @@
           <i class="fa-solid fa-clipboard-check"></i> {{ _('تجهيز المعاينة') }}
         </button>
       </div>
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ════════ DRY-RUN RESULT ════════ #}

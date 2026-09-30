@@ -104,8 +104,8 @@
             <td class="num mono"><strong style="color:var(--hub-text)">#{{ u.id }}</strong></td>
             <td>
               {% if u.display_name %}
-                <a class="hr-entity-link" href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}"
-                   title="{{ _('فتح ملف المستخدم') }}"><strong>{{ u.display_name }}</strong></a>
+                {% if can_submit('radius.card_user_360', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}"
+                   title="{{ _('فتح ملف المستخدم') }}">{% endif %}<strong>{{ u.display_name }}</strong>{% if can_submit('radius.card_user_360', 'GET') %}</a>{% endif %}
               {% else %}<strong style="color:var(--hub-text)">—</strong>{% endif %}
             </td>
             <td class="mono small" style="direction:ltr;text-align:start">{{ u.mobile or '—' }}</td>
@@ -119,13 +119,13 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('فتح') }}"
+                {% if can_submit('radius.card_user_360', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('فتح') }}"
                    href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                </a>
+                </a>{% endif %}
                 {% if can('store.user_delete') %}
                   {% if st == 'active' %}
-                  <form method="post" style="display:inline"
+                  {% if can_submit('radius.card_user_delete', 'POST') %}<form method="post" style="display:inline"
                         action="{{ url_for('radius.card_user_delete', card_user_id=u.id) }}"
                         onsubmit="return confirm('{{ _('حذف') }} «{{ u.display_name|e }}»؟ {{ _('يمكن استعادته لاحقًا.') }}');">
                     {{ csrf_token_input() | safe }}
@@ -133,16 +133,16 @@
                             title="{{ _('حذف') }}" style="color:#dc2626">
                       <i class="fa-solid fa-trash-can"></i>
                     </button>
-                  </form>
+                  </form>{% endif %}
                   {% else %}
-                  <form method="post" style="display:inline"
+                  {% if can_submit('radius.card_user_restore', 'POST') %}<form method="post" style="display:inline"
                         action="{{ url_for('radius.card_user_restore', card_user_id=u.id) }}">
                     {{ csrf_token_input() | safe }}
                     <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon"
                             title="{{ _('استعادة') }}" style="color:#059669">
                       <i class="fa-solid fa-rotate-left"></i>
                     </button>
-                  </form>
+                  </form>{% endif %}
                   {% endif %}
                 {% endif %}
               </div>
@@ -159,7 +159,7 @@
 {# ───── Add-beneficiary modal — floating fcw popup ───── #}
 <div class="fcw-modal" data-fcw-modal="cuAddModal" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="cuAddTitle">
-    <form id="cuAddForm" method="post" action="{{ url_for('radius.card_users_create') }}">
+    {% if can_submit('radius.card_users_create', 'POST') %}<form id="cuAddForm" method="post" action="{{ url_for('radius.card_users_create') }}">
       {{ csrf_token_input() | safe }}
       <div class="fcw-head">
         <h3 id="cuAddTitle"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة مستفيد جديد') }}</h3>
@@ -198,7 +198,7 @@
         <button type="button" class="hub-btn hub-btn--ghost" data-fcw-close>{{ _('إلغاء') }}</button>
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-user-plus"></i> {{ _('إنشاء الحساب + المحفظة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

@@ -41,7 +41,7 @@
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form id="nd-form" method="post"
-      action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
+      action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">{% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية والشبكة ─────────────────────── #}
   {% call hub.section("الهوية والشبكة", icon="network-wired") %}
@@ -193,9 +193,9 @@
   {% endif %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
-    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}
+    {% if can_submit('radius.devices_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}{% endif %}
     {{ hub.btn(("حفظ الجهاز" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}</fieldset>{% endif %}</form>
 {% endcall %}
 {% endblock %}

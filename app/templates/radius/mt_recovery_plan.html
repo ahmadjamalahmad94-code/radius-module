@@ -97,11 +97,11 @@
         {'label': 'السبب',        'value': plan.nearest_backup.reason,             'mono': True},
       ]) }}
       <div class="hub-flex-row" style="margin-top:14px">
-        <a class="hub-btn hub-btn--secondary hub-btn--sm"
+        {% if can_submit('radius.mt_backups_list', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
            href="{{ url_for('radius.mt_backups_list', nas_id=plan.router_id) }}"
            data-mt-recovery-backup-link>
           <i class="fa-solid fa-arrow-right"></i> {{ _('صفحة النسخ') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
   {% endcall %}
@@ -113,11 +113,11 @@
     <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap"
          data-mt-recovery-related-job>
       <span class="hub-text-mute">المهمة #{{ plan.related_job.id }}</span>
-      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+      {% if can_submit('radius.jobs_show', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
          data-mt-recovery-job-link>
         <i class="fa-solid fa-magnifying-glass"></i> {{ _('تفاصيل') }}
-      </a>
+      </a>{% endif %}
     </div>
   {% endcall %}
   {% endif %}
@@ -125,15 +125,15 @@
   {# ── Footer actions ── #}
   {% call hub.section("روابط ذات صلة", icon="link") %}
     <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
-      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+      {% if can_submit('radius.audit_log_detail', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">
         <i class="fa-solid fa-clipboard-list"></i> {{ _('عرض سجل العملية التفصيلي') }}
-      </a>
+      </a>{% endif %}
       {% if plan.router_id %}
-      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+      {% if can_submit('radius.mt_router_overview', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.mt_router_overview', nas_id=plan.router_id) }}">
         <i class="fa-solid fa-clipboard-check"></i> {{ _('نظرة عامة على الراوتر') }}
-      </a>
+      </a>{% endif %}
       {% endif %}
     </div>
   {% endcall %}

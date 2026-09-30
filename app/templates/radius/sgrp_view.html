@@ -48,14 +48,14 @@
               <td>{{ m.full_name or '—' }}</td>
               <td><span class="hub-pill hub-pill--grey">{{ m.status }}</span></td>
               <td>
-                <form method="post"
+                {% if can_submit('radius.sgrp_remove_member', 'POST') %}<form method="post"
                       action="{{ url_for('radius.sgrp_remove_member', gid=grp.id, sid=m.id) }}"
                       onsubmit="return confirm('إزالة من المجموعة؟')"
                       style="display:inline;margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm">
                     <i class="fa-solid fa-user-minus"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </td>
             </tr>
           {% endfor %}
@@ -68,7 +68,7 @@
   {% endcall %}
 
   {% call hub.section("إضافة عضو", icon="user-plus") %}
-    <form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
+    {% if can_submit('radius.sgrp_add_member', 'POST') %}<form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المشترك') }}</label>
         <select class="hub-select" name="subscriber_id" required>
@@ -81,15 +81,15 @@
       <div style="margin-top:12px">
         {{ hub.btn("أضف", icon="user-plus", variant="primary", size="sm", type="submit") }}
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
 </div>
 
 <div class="hub-flex-row" style="margin-top:16px">
-  {{ hub.btn("تعديل المجموعة", icon="pen", variant="secondary",
-              href=url_for('radius.sgrp_edit', gid=grp.id)) }}
-  {{ hub.btn("العودة للقائمة", icon="arrow-right-long", variant="ghost",
-              href=url_for('radius.sgrp_list')) }}
+  {% if can_submit('radius.sgrp_edit', 'GET') %}{{ hub.btn("تعديل المجموعة", icon="pen", variant="secondary",
+              href=url_for('radius.sgrp_edit', gid=grp.id)) }}{% endif %}
+  {% if can_submit('radius.sgrp_list', 'GET') %}{{ hub.btn("العودة للقائمة", icon="arrow-right-long", variant="ghost",
+              href=url_for('radius.sgrp_list')) }}{% endif %}
 </div>
 {% endblock %}

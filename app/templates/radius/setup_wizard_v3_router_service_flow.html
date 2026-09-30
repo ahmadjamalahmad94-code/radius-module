@@ -292,11 +292,11 @@ li[data-status="pending"] .swsvf-verify-icon{
      the same context they came from. The #tab-my-services hash
      is picked up by mt_dashboard.js on load. Operator:
      «خليه يرجع ع صفحة الخدمات». #}
-  <a class="swsvf-back"
-     href="{{ url_for('radius.mt_dashboard', nas_id=router_id, _anchor='tab-my-services') }}">
+  {% if can_submit('radius.mt_dashboard', 'GET') %}<a class="swsvf-back"
+     href="{{ url_for('radius.mt_dashboard', nas_id=router_id, _anchor='tab-my-services') }}">{% endif %}
     <i class="fa-solid fa-arrow-right"></i>
     <span>{{ _('العودة إلى خدماتي') }}</span>
-  </a>
+  {% if can_submit('radius.mt_dashboard', 'GET') %}</a>{% endif %}
 
   {# ─── Service header ─── #}
   {{ hub.hero(
@@ -352,11 +352,11 @@ li[data-status="pending"] .swsvf-verify-icon{
         <span style="color:var(--swsvf-mute);font-size:12px">
           {{ _('لا يوجد نموذج تهيئة متاح لهذه الخدمة على هذا الراوتر.') }}
         </span>
-        <a class="swsvf-btn swsvf-btn-primary"
+        {% if can_submit('radius.mt_dashboard', 'GET') %}<a class="swsvf-btn swsvf-btn-primary"
            href="{{ url_for('radius.mt_dashboard', nas_id=router.id) }}">
           {{ _('العودة إلى الخدمات') }}
           <i class="fa-solid fa-arrow-left"></i>
-        </a>
+        </a>{% endif %}
       {% endif %}
     </div>
   </section>

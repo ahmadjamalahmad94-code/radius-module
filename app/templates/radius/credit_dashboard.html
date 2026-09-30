@@ -147,7 +147,7 @@
   "شحن الرصيد",
   subtitle="نظرة المالك الكاملة على محافظ المدراء والموزّعين وديونهم وسلفهم — اشحن أيّ مشغّل مباشرةً، ويُسدَّد دينه أولًا تلقائيًّا.",
   icon="wallet",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-user-tie"></i> '|safe ~ _("ملفات المشغّلين") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-user-tie"></i> '|safe ~ _("ملفات المشغّلين") ~ '</a>'|safe if can_submit('radius.business_operators', 'GET') else ''),
   kpis=[
     {'label': 'إجمالي الأرصدة',      'value': d.grand_totals.balance|money, 'icon': 'sack-dollar',     'variant': 'green'},
     {'label': 'إجمالي الديون المستحقة','value': d.grand_totals.debt|money,   'icon': 'file-invoice-dollar','variant': 'red'},
