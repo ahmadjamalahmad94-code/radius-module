@@ -96,7 +96,7 @@
       <tbody>
         {% for r in items %}
         <tr class="{{ 'is-fail' if r.status in ('void', 'failed') else '' }}">
-          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          {% set _dl = r.created_at|dt_local_raw if r.created_at else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>

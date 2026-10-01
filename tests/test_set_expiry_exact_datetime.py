@@ -260,7 +260,8 @@ def test_price_in_exact_mode_uses_the_same_formula_as_the_server(list_html):
 
 def test_row_expiry_is_local_not_raw_utc(list_html):
     """🔴 `data-expire` كان UTC خامًا — عليه يُبنى العرضُ وحسابُ السعر معًا."""
-    assert "data-expire=\"{{ u.expire_at|dt_local(" in list_html
+    # «_raw»: قيمةٌ يقرؤها الـJS بـnew Date — المعزولةُ بـLRI/PDI تُعطي Invalid Date (r6ui)
+    assert "data-expire=\"{{ u.expire_at|dt_local_raw(" in list_html
     assert "data-expire=\"{{ u.expire_at.strftime" not in list_html
 
 
@@ -272,7 +273,8 @@ def test_subscriber_form_has_an_hour_field(form_html):
 
 def test_form_shows_the_stored_expiry_in_local_time(form_html):
     """الأجزاءُ المعروضة تُقرأ بساعة المشغّل لا بـUTC."""
-    assert "dt_local('%Y|%m|%d|%H:%M')" in form_html
+    # «_raw»: تُفكَّك بـsplit('|') ثمّ |int — محرفُ العزل كان يجعل السنةَ 0 (r6ui)
+    assert "dt_local_raw('%Y|%m|%d|%H:%M')" in form_html
     assert "sub.expire_at.day" not in form_html
 
 

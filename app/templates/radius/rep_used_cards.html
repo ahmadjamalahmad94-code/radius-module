@@ -84,7 +84,7 @@
           <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
           <td><strong><bdi>{{ r.username }}</bdi></strong></td>
           <td>{{ r.plan_name or (('باقة #' ~ r.plan_id) if r.plan_id else '—') }}</td>
-          {% set _fu = r.first_used_at|dt_local if r.first_used_at else '' %}
+          {% set _fu = r.first_used_at|dt_local_raw if r.first_used_at else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _fu[:10] or '—' }}</span>

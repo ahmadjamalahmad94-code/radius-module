@@ -1068,7 +1068,7 @@
                يكتبه إلى UTC عبر `from_local` في `_form_dto` — رحلةٌ مغلقة. #}
             {# `to_local` يردّ «—» أو النصَّ الخام إن تعذّر التحويل؛ فلا نفكّكه
                إلّا إذا جاء بأربعة أجزاء فعلًا — تاريخٌ مشوّشٌ لا يُسقط الصفحة. #}
-            {% set _eraw = (sub.expire_at|dt_local('%Y|%m|%d|%H:%M')) if sub.expire_at else '' %}
+            {% set _eraw = (sub.expire_at|dt_local_raw('%Y|%m|%d|%H:%M')) if sub.expire_at else '' %}
             {% set _eparts = _eraw.split('|') if _eraw.count('|') == 3 else [] %}
             {% set _ey = (_eparts[0]|int) if _eparts else 0 %}
             {% set _em = (_eparts[1]|int) if _eparts else 0 %}

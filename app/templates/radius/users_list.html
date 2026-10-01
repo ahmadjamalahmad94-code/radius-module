@@ -1051,7 +1051,7 @@
           data-plan-rate="{{ ((p.price or 0) / _plan_minutes) if (p and (p.price or 0) > 0) else 0 }}"
           {# 🔴 كان `strftime` خامًا على UTC، فيقول «ينتهي 21:00» لمن نهايتُه
              منتصفُ الليل عنده — وعليه كان يُبنى حسابُ السعر أيضًا. #}
-          data-expire="{{ u.expire_at|dt_local('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
+          data-expire="{{ u.expire_at|dt_local_raw('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
           data-profile-url="{{ url_for('radius.users_profile', username=u.username) if can_submit('radius.users_profile', 'GET') else '' }}"
           data-edit-url="{{ url_for('radius.users_edit', username=u.username) if can_submit('radius.users_edit', 'GET') else '' }}"

@@ -148,7 +148,7 @@
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
           </td>
-          {% set _st = r.acctstarttime|dt_local if r.acctstarttime else '' %}
+          {% set _st = r.acctstarttime|dt_local_raw if r.acctstarttime else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _st[:10] or '—' }}</span>
@@ -157,7 +157,7 @@
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if r.acctstoptime %}
-              {% set _et = r.acctstoptime|dt_local %}
+              {% set _et = r.acctstoptime|dt_local_raw %}
               <span class="rep-primary">{{ _et[:10] }}</span>
               <span class="rep-sub">{{ _et[11:16] }}</span>
             {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}

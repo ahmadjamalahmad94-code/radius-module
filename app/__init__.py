@@ -1197,6 +1197,13 @@ def _install_stubs(app: Flask) -> None:
 
     app.jinja_env.filters["dt_local"] = _dt_local_isolated
     app.jinja_env.filters["date_local"] = _date_local_isolated
+    # 🔴 النسخةُ غيرُ المعزولة للاستعمالِ الآليّ: تقطيعُ «[:10]»/«[11:16]»،
+    #    تفكيكُ «%Y|%m|%d|%H:%M»، قيمُ data-*/value يقرؤها الـJS. العزلُ أعلاه
+    #    يضيف محرفًا في أوّل النصّ فكان كلُّ تقطيعٍ ينزاح خانةً: «2026-10-0» و
+    #    « 17:0» في 15 تقريرًا، و«⁦2026»|int = 0 فيفرغ تاريخُ الانتهاء في نموذجِ
+    #    تعديلِ المشترك، و`new Date("⁦…")` = Invalid Date في نافذةِ التمديد.
+    app.jinja_env.filters["dt_local_raw"] = _to_local
+    app.jinja_env.filters["date_local_raw"] = _to_local_date
 
     # D9 (bidi) — الموجة الثانية: النصوص الحرّة التي تُبنى في بايثون ولا تمرّ
     # بـ dt_local (سلسلة «من X إلى Y» في سجلّ التدقيق، أجسام الإشعارات،
