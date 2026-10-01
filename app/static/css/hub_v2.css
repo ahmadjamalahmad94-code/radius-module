@@ -1631,7 +1631,7 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
   /* الأزرارُ الموسومةُ بنصٍّ عريضةٌ أصلًا، لكنّ ارتفاعَها 35–36px — نرفع
      البُعدَ الأصغرَ وحده إلى 40 دون لمسِ العرض. */
   .hub-btn,.batch-btn,.cc-mode-toggle button,.cc-hero-modes button,
-  .cc-hero-search-btn,.pl-view-toggle button,.ntl-fchip{
+  .cc-hero-search-btn,.pl-view-toggle button,.ntl-fchip,.view-toggle button{
     min-height:40px !important;
   }
 }
@@ -1661,4 +1661,28 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
   textarea{
     font-size:16px !important;
   }
+}
+
+/* ── D-new: عناصرُ تحكّمٍ تهرب خارجَ الشاشةِ من صناديقِ flex/grid ──────────
+   الجذرُ: `min-width:auto` هو الافتراضُ لأبناءِ flex وgrid، فالابنُ يرفض
+   الانضغاطَ تحتَ عرضِ محتواه. ‎.report-jump عرضُه 368px داخلَ ‎.uds-hero-top
+   عرضُه 286px، و‎.batches-toolbar 353px داخلَ شبكةٍ عمودُها 326px، وكلُّ
+   السَّلَفِ ‎overflow:visible حتّى ‎main ذي ‎overflow-x:clip — فتنزلق العناصرُ
+   خارجَ الحدِّ الأيسر (‎left=-4..-45) بلا شريطِ تمريرٍ يُدركها، فتصير غيرَ
+   قابلةٍ للوصولِ إطلاقًا. رُصد على /reports/manager_events و
+   /reports/user_events و/cards/batches.
+   ⚠️ الالتفافُ (flex-wrap) يُسمح به في الصناديقِ الصفّيّةِ وحدَها: في حاضنٍ
+   ‎flex-direction:column يعني ‎wrap «عمودًا ثانيًا» يُرسَم بجانبِ الصندوق —
+   أي خارجَ الشاشةِ في RTL (‎.batches-hero: المحتوى 540px في 306px). ── */
+@media (max-width: 700px){
+  .uds-hero-top,.uds-hero-actions,.uds-hero,.hub-hero-shell,
+  .report-jump,.hbsel,
+  .batches-command,.batches-hero,.batches-hero__actions,.batches-toolbar,
+  .view-toggle,.view-toggle--hero{
+    min-width:0;
+    max-width:100%;
+  }
+  .uds-hero-top,.uds-hero-actions,.report-jump,
+  .batches-hero__actions,.view-toggle--hero{ flex-wrap:wrap; }
+  .report-jump,.uds-hero-actions,.batches-hero__actions{ flex:1 1 100%; }
 }

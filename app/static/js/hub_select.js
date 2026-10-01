@@ -38,7 +38,15 @@
 
     var wrap = document.createElement("div");
     wrap.className = "hbsel";
-    if (prevWidth > 40) wrap.style.minWidth = prevWidth + "px";
+    // minWidth يحفظ عرضَ الحقلِ الأصليِّ داخلَ شريطِ الفلاتر، لكنّه كان
+    // يُطبَّق كما هو فيدفع الواجهةَ خارجَ الشاشةِ على جوّالٍ عريضُه 360
+    // (رُصد: ‎.hbsel-trigger عند left=-11..-45 في /cards/batches
+    // و/reports/user_events و/reports/manager_events). نُقيّده بالمساحةِ
+    // الفعليّةِ للحاضن ونمنع تجاوزَها.
+    wrap.style.maxWidth = "100%";
+    var hostW = (sel.parentElement && sel.parentElement.clientWidth) || 0;
+    var capW = hostW > 40 ? Math.min(prevWidth, hostW) : prevWidth;
+    if (capW > 40) wrap.style.minWidth = capW + "px";
 
     var trigger = document.createElement("button");
     trigger.type = "button";
@@ -129,13 +137,31 @@
       var left = isRTL ? (r.right - pw) : r.left;
       left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
       panel.style.left = left + "px";
-      var spaceBelow = window.innerHeight - r.bottom;
-      if (spaceBelow < ph + 12 && r.top > ph + 12) {
+      // سقفُ ارتفاعٍ وتمريرٌ داخليّ: بلا max-height كانت لوحةٌ بعشرةِ خيارات
+      // (326px) تخرج 33px من منفذِ 640، ومع لوحةِ المفاتيح (371px) تخرج
+      // 302px — فلا يرى المستخدمُ الباقاتِ ولا يستطيع تمريرَها. نحسب
+      // المساحةَ من الطرفَين ونختار أوسعَهما ثمّ نُقيّد اللوحةَ بها.
+      var GAP = 6, EDGE = 8;
+      var vh = window.innerHeight;
+      var spaceBelow = vh - r.bottom - GAP - EDGE;
+      var spaceAbove = r.top - GAP - EDGE;
+      var openUp = (spaceBelow < Math.min(ph, 160)) && (spaceAbove > spaceBelow);
+      var avail = Math.max(120, openUp ? spaceAbove : spaceBelow);
+      panel.style.maxHeight = avail + "px";
+      panel.style.overflowY = "auto";
+      var hh = Math.min(ph, avail);
+      if (openUp) {
         panel.style.top = "auto";
-        panel.style.bottom = (window.innerHeight - r.top + 6) + "px";
+        panel.style.bottom = Math.max(EDGE, vh - r.top + GAP) + "px";
       } else {
         panel.style.bottom = "auto";
-        panel.style.top = (r.bottom + 6) + "px";
+        // تثبيتٌ داخلَ المنفذ: المرساةُ قد تُصبح فوقَ الحدِّ الأعلى أو تحتَ
+        // الأسفلِ (انطواءُ شريطِ العنوان، لوحةُ المفاتيح) فنُزلق اللوحةَ
+        // لتبقى مرئيّةً بدلًا من أن تختفي.
+        var top = r.bottom + GAP;
+        top = Math.min(top, vh - hh - EDGE);
+        top = Math.max(EDGE, top);
+        panel.style.top = top + "px";
       }
     }
 
@@ -251,8 +277,13 @@
         trackRaf = 0;
         if (!OPEN) return;
         var r = OPEN.trigger.getBoundingClientRect();
-        // خرج الزرُّ من الشاشة ⇒ لم يعد للوحةِ مرساة، فتُغلق.
-        if (r.bottom < 0 || r.top > window.innerHeight) { closeOpen(); return; }
+        // كان: «خرج الزرُّ من الشاشة ⇒ أُغلق». ولمسُ الزرِّ نفسِه يُركّزه
+        // فيُلصقه المتصفّحُ بالحدِّ الأعلى (top=0)، فأيُّ تمريرٍ تالٍ — بل
+        // انطواءُ شريطِ عنوانِ أندرويد وحده — يُخرجه فورًا فتموت القائمةُ في
+        // لحظةِ فتحها («تفتح وتختفي بسرعة»). الآن نُغلق فقط إذا بَعُدت
+        // المرساةُ منفذًا كاملًا، وما دونَ ذلك نُعيد التموضعَ واللوحةُ مُقيَّدة.
+        var vh2 = window.innerHeight;
+        if (r.bottom < -vh2 || r.top > vh2 * 2) { closeOpen(); return; }
         OPEN.position();
       });
       return;
@@ -264,7 +295,13 @@
   var LAST_W = window.innerWidth;
   window.addEventListener("resize", function () {
     var w = window.innerWidth;
-    if (w === LAST_W) return;
+    if (w === LAST_W) {
+      // ارتفاعٌ وحدَه تغيّر = لوحةُ مفاتيح. كان المعالجُ «يعود» فلا يُغلق
+      // (صحيح) ولا يُعيد التموضعَ (خطأ): اللوحةُ position:fixed فتبقى حيثُ
+      // كانت، فتصير كلُّها تحتَ لوحةِ المفاتيحِ خارجَ الشاشة.
+      if (OPEN) OPEN.position();
+      return;
+    }
     LAST_W = w;
     if (OPEN) closeOpen();
   });
