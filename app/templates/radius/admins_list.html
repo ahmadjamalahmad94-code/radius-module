@@ -186,7 +186,7 @@
             <select class="hub-select" name="role_id">
               <option value="">{{ _('— بدون —') }}</option>
               {% for r in roles_all %}
-                <option value="{{ r.id }}">{{ r.display_name or r.name }} ({{ r.name }})</option>
+                <option value="{{ r.id }}">{{ r.display_name or r.name }}</option>
               {% endfor %}
             </select>
             <span class="hub-field-hint">{{ _('الدور يحدّد الصلاحيات الفعلية للمدير — «بدون» يعني حسابًا بلا أذونات محدّدة.') }}</span>

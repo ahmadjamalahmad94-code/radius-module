@@ -72,7 +72,7 @@
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المُصنِّع') }}</label>
         <select class="hub-select" name="vendor">
-          {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+          {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ {'mikrotik':'MikroTik','cisco':'Cisco','huawei':'Huawei','ubiquiti':'Ubiquiti','other':_('أخرى')}.get(v, v) }}</option>{% endfor %}
         </select>
       </div>
       {# إصدارُ RouterOS — مطلوبٌ لأنّ مولّدَ سكربتِ التهيئة يَبني أمرَ نفقِ
@@ -93,7 +93,7 @@
         <label class="hub-field-label">{{ _('النوع') }}</label>
         <select class="hub-select" name="nas_type">
           {% for t in ["hotspot","pppoe","dhcp","router","ap","switch","firewall","other"] %}
-            <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
+            <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ {'hotspot':_('هوت سبوت'),'pppoe':'PPPoE','dhcp':'DHCP','router':_('راوتر'),'ap':_('نقطة وصول'),'switch':_('سويتش'),'firewall':_('جدار ناري'),'other':_('أخرى')}.get(t, t) }}</option>
           {% endfor %}
         </select>
       </div>

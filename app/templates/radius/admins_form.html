@@ -62,7 +62,7 @@
           <option value="">{{ _('— بدون —') }}</option>
           {% for r in roles %}
             <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
-              {{ r.display_name or r.name }} ({{ r.name }})
+              {{ r.display_name or r.name }}
             </option>
           {% endfor %}
         </select>
