@@ -1253,7 +1253,7 @@ class AccountingService:
                               "balance", "credit_limit"),
     }
     # أعمدة داخليّة لا تُعرض كعمود مستقلّ (تُستعمل لتنسيق المبالغ لكلّ عملة).
-    _HIDDEN_COLUMNS = ("mixed_currency",)
+    _HIDDEN_COLUMNS = ("mixed_currency", "voided")  # voided = شارة «ملغاة» لا عمود
 
     @classmethod
     def column_label(cls, column: str) -> str:
@@ -1466,6 +1466,9 @@ class AccountingService:
             return " · ".join(
                 f"{float(e.get(key) or 0):,.2f} {e.get('currency') or ''}".strip()
                 for e in value if isinstance(e, dict))
+        if column == "username" and item.get("voided") and value:
+            # عمودُ ``voided`` مخفيّ ⇒ الشارةُ تُحمل في الاسم كما في الجدول
+            return f"{value} (ملغاة)"
         return self._export_value(self.value_label(column, value))
 
     @staticmethod

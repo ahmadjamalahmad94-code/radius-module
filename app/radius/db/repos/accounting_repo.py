@@ -1010,6 +1010,11 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
                                     ("total", "count"))
         item["by_currency"] = by_cur
         item["mixed_currency"] = len(by_cur) > 1
+        # «ملغاة»: مَن أُلغيت **كلُّ** دفعاته — لا دفعةَ فعليّةً واحدة (‏count=0).
+        # يبقى ظاهرًا في القائمة (أثرُ المراجعةِ لا يُمحى: دفعَ ثمّ أُلغيت دفعتُه)،
+        # لكنّه **لا يُعَدّ** في «عدد الدافعين». قرارُ المالك 2026-10-01 (الخيار ج).
+        # الإلغاءُ الجزئيُّ (بقيت له دفعةٌ فعليّة) ليس «ملغاة».
+        item["voided"] = int(item["count"] or 0) == 0
     return rows
 
 
@@ -1057,7 +1062,33 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
             (tenant_id, *sv),
         ).fetchall()
     ]
-    return {"payers": int(row["payers"] or 0), "entries": int(row["entries"] or 0),
+    # «عدد الدافعين» = مَن له **دفعةٌ فعليّةٌ واحدةٌ على الأقلّ** — بتجميعِ القائمةِ
+    # نفسِه (subscriber_id, username) كي يطابق صفوفَها غيرَ الملغاة **بالضبط**.
+    # مَن أُلغيت كلُّ دفعاته يظهر في القائمةِ بشارة «ملغاة» ويُعَدّ في
+    # ``voided_payers`` لا في ``payers`` — فلا ينتفخ العددُ ولا يضيع الأثر.
+    # قرارُ المالك 2026-10-01 (الخيار ج). كان العددُ يضمّهم (52 والفعليّون 47).
+    pr = db().execute(
+        f"""
+        SELECT SUM(CASE WHEN c > 0 THEN 1 ELSE 0 END) AS payers,
+               SUM(CASE WHEN c = 0 THEN 1 ELSE 0 END) AS voided_payers
+        FROM (
+            SELECT SUM({counted}) AS c
+            FROM accounting_ledger_entries l
+            LEFT JOIN accounting_ledger_entries orig
+              ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
+            WHERE l.tenant_id = ?
+              AND (
+                (l.entry_type = 'payment' AND l.status = 'posted')
+                OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
+              ){sc}
+            GROUP BY l.subscriber_id, l.username
+        )
+        """,
+        (tenant_id, *sv),
+    ).fetchone()
+    return {"payers": int(pr["payers"] or 0),
+            "voided_payers": int(pr["voided_payers"] or 0),
+            "entries": int(row["entries"] or 0),
             "ledger_rows": int(row["ledger_rows"] or 0),
             "total": round(float(row["total"] or 0), 2),
             "by_currency": by_currency, "mixed_currency": len(by_currency) > 1}

@@ -99,7 +99,11 @@
     </form>{% endif %}
   </div>
 {% if items %}
-  {% set columns = items[0].keys()|list %}
+  {# مفاتيحُ داخليّةٌ لا تُعرض أعمدةً خامًّا: `by_currency` قائمةٌ و`mixed_currency`
+     و`voided` منطقيّان — كانت تظهر «[{'currency': …}]» و«False» حرفيًّا. و`voided`
+     يُعرض شارةً «ملغاة» بجانب المستخدم لا عمودًا. #}
+  {% set _hidden_cols = ['by_currency', 'mixed_currency', 'voided'] %}
+  {% set columns = items[0].keys()|reject('in', _hidden_cols)|list %}
   {# تعريب رؤوس الأعمدة + تنسيق القيم المالية — بدل أسماء الحقول الخام
      الإنجليزية (نفس خريطة الأعمدة المعتمدة في صفحة المحاسبة الموحّدة). #}
   {% set col_labels = {
@@ -137,6 +141,8 @@
               {%- elif column in money_cols -%}{{ v|money }}
               {%- else -%}{{ v }}
               {%- endif -%}
+              {#- «ملغاة»: أُلغيت كلُّ دفعاته — يبقى ظاهرًا ولا يُعَدّ في الدافعين (قرارُ المالك). -#}
+              {%- if column == 'username' and row.get('voided') %} <span class="hub-pill hub-pill--grey" title="{{ _('أُلغيت كلُّ دفعات هذا المستفيد — يظهر للمراجعة ولا يُحسب في عدد الدافعين') }}">{{ _('ملغاة') }}</span>{% endif -%}
             </td>
           {% endfor %}
         </tr>

@@ -80,7 +80,7 @@
     'daily': 'كل صف = يوم له دفعات مرحَّلة (آخر 60 يومًا بحركة)',
     'monthly': 'كل صف = شهر له دفعات مرحَّلة',
     'yearly': 'كل صف = سنة لها دفعات مرحَّلة',
-    'subscriber_payments': 'كل صف = مستفيد دفع ولو مرة واحدة',
+    'subscriber_payments': 'مستفيدون دفعوا فعلًا — مَن أُلغيت كلُّ دفعاته يظهر بشارة «ملغاة» ولا يُعَدّ',
     'loans': 'كل صف = حالة سلفة (مفتوحة/مسددة/معدومة…)',
     'activations': 'كل صف = مستخدم فعّل وقتًا عبر الدفع',
     'card_sales': 'كل صف = حزمة بطاقات بيعت منها بطاقات',
@@ -105,7 +105,8 @@
     {'label': 'نوع التقرير',   'value': report_label,              'icon': 'chart-line',  'variant': 'brand',
      'sub': 'يُبنى من نفس قيود السجل المالي'},
     {'label': 'صفوف التقرير (' ~ _row_unit.get(report_type, 'صفوف') ~ ')',
-     'value': report_items|length, 'icon': 'table-list', 'variant': 'blue',
+     'value': ((report_items|rejectattr('voided')|list|length) if report_type == 'subscriber_payments'
+               else report_items|length), 'icon': 'table-list', 'variant': 'blue',
      'sub': _row_hint.get(report_type, '')},
     {'label': 'إجمالي عمود «الإجمالي»',
      'value': (report_total_by_currency|money_multi if report_total_by_currency
@@ -363,6 +364,8 @@
                   {%- elif column in _vlabels -%}{{ _vlabels[column].get(v, v) }}
                   {%- else -%}{{ v }}
                   {%- endif -%}
+                  {#- «ملغاة»: أُلغيت كلُّ دفعاته — يبقى ظاهرًا ولا يُعَدّ في الدافعين (قرارُ المالك 2026-10-01). -#}
+                  {%- if column == 'username' and row.get('voided') %} <span class="hub-pill hub-pill--grey" title="{{ _('أُلغيت كلُّ دفعات هذا المستفيد — يظهر للمراجعة ولا يُحسب في عدد الدافعين') }}">{{ _('ملغاة') }}</span>{% endif -%}
                 </td>
               {% endfor %}
             </tr>
@@ -542,7 +545,7 @@
   // تسميات الخدمة الموحّدة (transactions/avg_amount/outstanding…) تغلب — لا مفاتيح خامّة.
   Object.assign(COL_LABELS, {{ (report_col_labels or {})|tojson }});
   const VALUE_LABELS = {{ (report_value_labels or {})|tojson }};
-  const HIDDEN_COLS = new Set(['mixed_currency']);
+  const HIDDEN_COLS = new Set(['mixed_currency', 'voided']);
   const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit','outstanding','avg_amount','payments','card_sales','expenses']);
   const fmtMoney = (v) => Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
 
