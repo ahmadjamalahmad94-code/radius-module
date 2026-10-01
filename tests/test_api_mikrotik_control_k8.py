@@ -204,9 +204,9 @@ def test_backup_save_rejects_non_object_body(client):
         headers={**AUTH, "Content-Type": "application/json"},
         json=["not", "an", "object"],
     )
-    assert res.status_code == 400
+    assert res.status_code == 422  # عقدُ الـAPI كلِّه: جسمٌ غيرُ كائنٍ = 422 (json_input.py)
     body = res.get_json()
-    assert body["error"]["code"] == "bad_request"
+    assert body["error"]["code"] == "validation_error"
 
 
 # ─── K8.1b: file download (honest unsupported) ───────────────────
@@ -336,7 +336,7 @@ def test_reboot_non_object_body_400(client):
         headers={**AUTH, "Content-Type": "application/json"},
         json="just-a-string",
     )
-    assert res.status_code == 400
+    assert res.status_code == 422  # عقدُ الـAPI كلِّه: جسمٌ غيرُ كائنٍ = 422 (json_input.py)
 
 
 def test_identity_set_without_confirm_returns_409(client):
