@@ -8,7 +8,7 @@
 {% block title %}{{ _("بطاقات الشحن المسبق") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
 {% block page_title %}{{ _("بطاقات الشحن المسبق") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حزمة شحن · تُستخدم لشحن المحفظة من بوابة العميل</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total|ar_count('batch') }} شحن · تُستخدم لشحن المحفظة من بوابة العميل</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

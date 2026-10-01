@@ -22,7 +22,7 @@
 {% block title %}{{ _("قائمة المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length) }} مشترك في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length)|ar_count('subscriber') }} في النتائج</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

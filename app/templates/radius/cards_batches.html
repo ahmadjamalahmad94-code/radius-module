@@ -602,7 +602,7 @@
           <div class="bops-section-title">
             <span class="hub-section-head-icon"><i class="fa-solid fa-table-list"></i></span>
             <span class="hub-section-head-title">{{ _('قائمة الحزم') }}</span>
-            <span class="hub-section-head-meta">{{ total }} حزمة</span>
+            <span class="hub-section-head-meta">{{ total|ar_count('batch') }}</span>
           </div>
           <div class="bops-section-actions">
             <span class="bops-sort-hint" title="{{ _('اضغط على رأس العمود للترتيب') }}">

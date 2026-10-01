@@ -17,7 +17,7 @@
 {% block title %}{{ _("مركز الصلاحيات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ _("مركز الصلاحيات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total_admins }} مدير · {{ matrix.permissions|length }} صلاحية تشغيلية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total_admins|ar_count('admin') }} · {{ matrix.permissions|length }} صلاحية تشغيلية</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

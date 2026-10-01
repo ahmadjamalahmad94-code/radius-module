@@ -234,7 +234,7 @@
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink,#4338ca)"></i>
           المؤهل الآن حسب المعاينة: {{ totals.get('cards', 0) }} كرت
           و{{ totals.get('subscribers', 0) }} مشترك
-          في {{ totals.get('batches_impacted', 0) }} حزمة متأثرة.
+          في {{ totals.get('batches_impacted', 0)|ar_count('batch') }} متأثرة.
         </div>
       </div>
       <div class="fcw-foot">

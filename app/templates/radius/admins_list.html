@@ -6,7 +6,7 @@
 {% block title %}{{ _("المدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ _("المدراء") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ admins|length }} مدير في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (admins|length)|ar_count('admin') }} في النتائج</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

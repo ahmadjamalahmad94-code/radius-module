@@ -11,7 +11,7 @@
 {% block title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ admins|length }} مدير × {{ plans|length }} عرض</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (admins|length)|ar_count('admin') }} × {{ plans|length }} عرض</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}

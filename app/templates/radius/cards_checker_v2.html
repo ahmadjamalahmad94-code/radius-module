@@ -1021,7 +1021,7 @@
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('قطع الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
                 </div>
               </button>
@@ -1441,7 +1441,7 @@
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('فصل الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
                 </div>
               </button>

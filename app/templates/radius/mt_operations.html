@@ -6,7 +6,7 @@
 {% block title %}{{ _("غرفة عمليات الراوترات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ _("غرفة عمليات الراوترات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} راوتر</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (items|length)|ar_count('router') }}</span>{% endblock %}
 
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
