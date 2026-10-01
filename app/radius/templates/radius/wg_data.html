@@ -27,6 +27,12 @@
   .one-time-alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;
                   padding:14px 16px;margin-bottom:18px}
   .copy-btn{font-size:11px;padding:3px 8px;cursor:pointer}
+  /* عمودٌ ثابتُ العرض (340px) بجوار 1fr كان يدفع نموذجَ الإضافةِ كلَّه خارجَ شاشةِ الجوّال
+     يسارًا (RTL) — حقولُه عند x سالب بلا أيِّ تمرير. عمودٌ واحدٌ تحت 900px. */
+  .wg-split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  .wg-split > *{min-width:0}
+  @media (max-width: 900px){ .wg-split{grid-template-columns:minmax(0,1fr)} }
+  .wg-split .table-responsive, .wg-split table{max-width:100%}
 </style>
 {% endblock %}
 
@@ -100,7 +106,7 @@
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+<div class="wg-split">
 
 {# ─────────────── قائمة الـ peers ─────────────── #}
 <div>

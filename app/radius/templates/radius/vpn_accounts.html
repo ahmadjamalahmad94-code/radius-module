@@ -16,6 +16,12 @@
   .vpn-badge.expired{background:#fee2e2;color:#991b1b}
   .vpn-table td{vertical-align:middle;font-size:13px}
   .snap-card{background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+  /* عمودٌ ثابتُ العرض (360px) بجوار 1fr كان يدفع نموذجَ الإضافةِ كلَّه خارجَ شاشةِ الجوّال
+     يسارًا (RTL) — حقولُه عند x سالب بلا أيِّ تمرير. عمودٌ واحدٌ تحت 900px. */
+  .vpn-split{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+  .vpn-split > *{min-width:0}
+  @media (max-width: 900px){ .vpn-split{grid-template-columns:minmax(0,1fr)} }
+  .vpn-split .table-responsive, .vpn-split table{max-width:100%}
 </style>
 {% endblock %}
 
@@ -53,7 +59,7 @@
 </div>
 {% endif %}
 
-<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+<div class="vpn-split">
 
 {# ── قائمة الحسابات ── #}
 <div>
