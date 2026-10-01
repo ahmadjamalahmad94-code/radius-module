@@ -167,7 +167,7 @@
             {{ r.amount|money }}
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
-          <td><bdi>{{ r.operator or '—' }}</bdi></td>
+          <td title="{{ r.operator or '' }}"><bdi>{{ r.operator|actor_name if r.operator else '—' }}</bdi></td>
           <td>
             <span class="rep-src {% if r.scope == 'distributor' %}src-network{% else %}src-panel{% endif %}"
                   title="{{ r.source_type or '' }}">
