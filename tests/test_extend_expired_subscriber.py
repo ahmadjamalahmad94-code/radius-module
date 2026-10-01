@@ -92,14 +92,18 @@ def test_live_subscriber_extends_from_its_own_end_not_from_now(app_ctx):
     assert abs((exp - (end + timedelta(minutes=240))).total_seconds()) < 120
 
 
-def test_subscriber_without_expiry_starts_from_now(app_ctx):
-    """بلا نهايةٍ مسبقة ⇒ المرساةُ الآن (السلوكُ السابق نفسُه)."""
+def test_subscriber_without_expiry_is_rejected_not_converted(app_ctx):
+    """بلا نهايةٍ = «غير محدود». كان يُرسى على «الآن» فيصير ينتهي بعد المدّة
+    (R6 client20: 100/100) — صار يُرفض ويبقى غير محدود (راجع
+    tests/test_r6_extend_unlimited_subscriber.py)."""
+    from app.radius.core.errors import RadiusValidationError
     now = datetime.utcnow()
-    _mk("noexp", now)          # نهاية = الآن تقريبًا
+    _mk("noexp", now)
     db().execute("UPDATE subscribers SET expire_at = NULL WHERE username='noexp'")
-    _extend("noexp", 60)
-    exp = _expire_of("noexp")
-    assert abs((exp - (now + timedelta(minutes=60))).total_seconds()) < 120
+    with pytest.raises(RadiusValidationError):
+        _extend("noexp", 60)
+    assert db().execute("SELECT expire_at FROM subscribers WHERE username='noexp'"
+                        ).fetchone()["expire_at"] is None
 
 
 def test_barely_expired_is_not_shortchanged(app_ctx):
