@@ -2036,8 +2036,8 @@
   // الزبون). نجاحه قبل النشر يؤكّد أن العنوان+المنفذ صحيحان وقابلان
   // للوصول وأن CORS مفتوح — ففشل الدخول لاحقًا لن يُنسب للشبكة.
   // مع AbortController لمهلة قصوى حتى لا يتعلّق على عنوان لا يستجيب.
-  const pingBtn = root.querySelector("[data-mt-store-ping-base]");
-  const pingOut = root.querySelector("[data-mt-store-ping-result]");
+  const pingBtn = document.querySelector("[data-mt-store-ping-base]");
+  const pingOut = document.querySelector("[data-mt-store-ping-result]");
   if (pingBtn && pingOut) {
     const setOut = (state, text) => {
       pingOut.textContent = text;
