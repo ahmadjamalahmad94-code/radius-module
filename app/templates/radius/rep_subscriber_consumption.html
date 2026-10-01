@@ -52,6 +52,10 @@
   .usage-spec{display:inline-flex;align-items:center;gap:5px;font-size:12px;
     font-weight:700;color:var(--hub-text-mute,#475569)}
   .usage-spec input{color-scheme:light;max-width:150px}
+  /* «من [تاريخ] إلى [تاريخ]» صفٌّ inline-flex لا يلتفّ: منتقيا hub_date يحفظان عرضَهما الأصليّ
+     فكان الصفُّ أعرضَ من 360–390px وزرُّ «من» عند x=-22…-83 خارجَ الشاشة. */
+  @media (max-width:560px){ .usage-spec{flex-wrap:wrap;max-width:100%}
+    .usage-spec .hbdate{flex:1 1 130px;min-width:0 !important;max-width:100%} }
   .usage-spec input::-webkit-calendar-picker-indicator{filter:invert(.45);cursor:pointer}
   @media(max-width:640px){.usage-ctl-label{min-width:100%}}
   /* ── شارة النوع في الجدول ── */
