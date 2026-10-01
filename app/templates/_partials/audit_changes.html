@@ -65,16 +65,16 @@
 </td>
 <td class="chg-col chg-c-old" data-label="{{ _('القيمة السابقة') }}">
   <div class="chg-stack">
-  {%- for c in row.changes %}<div class="chg-line chg-old" title="{{ c.old }}"><bdi dir="auto">{{ c.old }}</bdi></div>{% endfor -%}
+  {%- for c in row.changes %}<div class="chg-line chg-old" title="{{ c.old }}"><bdi dir="auto">{{ c.old|bidi_nums }}</bdi></div>{% endfor -%}
   </div>
 </td>
 <td class="chg-col chg-c-new" data-label="{{ _('القيمة الجديدة') }}">
   <div class="chg-stack">
-  {%- for c in row.changes %}<div class="chg-line chg-new" title="{{ c.new }}"><bdi dir="auto">{{ c.new }}</bdi></div>{% endfor -%}
+  {%- for c in row.changes %}<div class="chg-line chg-new" title="{{ c.new }}"><bdi dir="auto">{{ c.new|bidi_nums }}</bdi></div>{% endfor -%}
   </div>
 </td>
 {%- else -%}
-<td class="chg-fallback" colspan="3">{{ fallback or '—' }}</td>
+<td class="chg-fallback" colspan="3">{{ (fallback or '—')|bidi_nums }}</td>
 {%- endif -%}
 {% endmacro %}
 
@@ -82,7 +82,7 @@
    حقليًّا (دورة حياة/مهام آليّة/دخول): أحداث النظام، أحداث المستخدمين. عمود واحد
    «التفاصيل» بدل الأعمدة الثلاثة الفارغة. #}
 {% macro detail_cell(row, fallback="") %}
-<td class="rep-sub small chg-fallback" style="max-width:420px">{{ fallback or '—' }}</td>
+<td class="rep-sub small chg-fallback" style="max-width:420px">{{ (fallback or '—')|bidi_nums }}</td>
 {% endmacro %}
 
 {# الشكل المدمج المُكدَّس «الحقل: كان X ← صار Y» (خليّة واحدة) — مُبقًى للتوافق
@@ -93,9 +93,9 @@
     {% for c in row.changes %}
     <li class="hr-chg">
       <span class="hr-chg-field">{{ c.label }}:</span>
-      <span class="hr-chg-old"><span class="hr-chg-tag">{{ _('كان') }}</span> <bdi dir="auto">{{ c.old }}</bdi></span>
+      <span class="hr-chg-old"><span class="hr-chg-tag">{{ _('كان') }}</span> <bdi dir="auto">{{ c.old|bidi_nums }}</bdi></span>
       <span class="hr-chg-arrow" aria-hidden="true">←</span>
-      <span class="hr-chg-new"><span class="hr-chg-tag">{{ _('صار') }}</span> <bdi dir="auto">{{ c.new }}</bdi></span>
+      <span class="hr-chg-new"><span class="hr-chg-tag">{{ _('صار') }}</span> <bdi dir="auto">{{ c.new|bidi_nums }}</bdi></span>
     </li>
     {% endfor %}
   </ul>

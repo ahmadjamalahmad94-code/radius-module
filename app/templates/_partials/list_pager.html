@@ -13,7 +13,7 @@
 {%- if pager and pager.pages and pager.pages > 1 -%}
 {%- set _args = request.args.to_dict() -%}
 <nav class="uds-table-pager hr-list-pager" data-testid="list-pager" aria-label="{{ _('صفحات النتائج') }}">
-  <div class="uds-pager-info">{{ pager.start }}–{{ pager.end }} {{ _('من') }} {{ pager.total }}</div>
+  <div class="uds-pager-info"><bdi dir="ltr">{{ pager.start }}–{{ pager.end }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ pager.total }}</bdi></div>
   <div class="uds-pager-nav">
     {%- if pager.page > 1 %}{{ _pager_link(_args, param, pager.page - 1, '<i class="fa-solid fa-chevron-right"></i>'|safe) }}{% endif -%}
     {%- set _s = [1, pager.page - 2]|max -%}{%- set _e = [pager.pages, pager.page + 2]|min -%}

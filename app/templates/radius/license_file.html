@@ -553,7 +553,7 @@
               {# count active in this group #}
               {% set ns_cnt = namespace(on=0, total=0) %}
               {% for _ck in _cat_keys %}{% if _ck in _svc %}{% set ns_cnt.total = ns_cnt.total + 1 %}{% if _svc[_ck].status|default('') == 'active' %}{% set ns_cnt.on = ns_cnt.on + 1 %}{% endif %}{% endif %}{% endfor %}
-              <span class="lf-cat-count" style="color:{% if ns_cnt.on > 0 %}#16a34a{% else %}#94a3b8{% endif %}">{{ ns_cnt.on }} / {{ ns_cnt.total }} مفعّلة</span>
+              <span class="lf-cat-count" style="color:{% if ns_cnt.on > 0 %}#16a34a{% else %}#94a3b8{% endif %}"><bdi dir="ltr">{{ ns_cnt.on }} / {{ ns_cnt.total }}</bdi> مفعّلة</span>
             </div>
             <div class="lf-svc-grid">
               {% for key in _cat_keys %}{% if key in _svc %}

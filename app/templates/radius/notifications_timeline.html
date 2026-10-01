@@ -103,7 +103,7 @@
                 </td>
                 <td><span class="ntl-reason">{{ it.reason_label }}</span></td>
                 <td>{{ ch_chips(it.channels) }}</td>
-                <td><div class="ntl-body clip">{{ it.body|actor_refs }}</div></td>
+                <td><div class="ntl-body clip">{{ it.body|actor_refs|bidi_nums }}</div></td>
                 <td>
                   <span class="ntl-when">
                     {% if it.imminent %}{{ _('عند أقرب فحص') }}
@@ -162,7 +162,7 @@
                 </td>
                 <td><span class="ntl-reason">{{ it.reason_label }}</span></td>
                 <td>{{ ch_label(it.channel) }}</td>
-                <td><div class="ntl-body clip">{{ it.body or it.subject or '—' }}</div></td>
+                <td><div class="ntl-body clip">{{ (it.body or it.subject or '—')|actor_refs|bidi_nums }}</div></td>
                 <td><span class="ntl-when">{{ it.when_local or '—' }}</span></td>
                 <td><span class="ntl-err">{{ it.error_message or '' }}</span></td>
               </tr>

@@ -1319,11 +1319,11 @@
       .srv-capped i{ font-size:12px; color:#d97706; }
     </style>
     {%- endif -%}
-    <span class="srv-info">{{ _('عرض') }} {{ _from }} – {{ _to }} {{ _('من') }} {{ total_rows }}</span>
+    <span class="srv-info">{{ _('عرض') }} <bdi dir="ltr">{{ _from }} – {{ _to }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ total_rows }}</bdi></span>
     <span class="srv-nav">
       <a class="srv-btn{{ ' is-off' if page <= 1 else '' }}"{% if page > 1 %} href="?{{ _qs }}page=1"{% endif %} title="{{ _('الأولى') }}"><i class="fa-solid fa-angles-right"></i></a>
       <a class="srv-btn{{ ' is-off' if page <= 1 else '' }}"{% if page > 1 %} href="?{{ _qs }}page={{ page - 1 }}"{% endif %} title="{{ _('السابقة') }}"><i class="fa-solid fa-angle-right"></i></a>
-      <span class="srv-cur">{{ page }} / {{ total_pages }}</span>
+      <span class="srv-cur"><bdi dir="ltr">{{ page }} / {{ total_pages }}</bdi></span>
       <a class="srv-btn{{ ' is-off' if page >= total_pages else '' }}"{% if page < total_pages %} href="?{{ _qs }}page={{ page + 1 }}"{% endif %} title="{{ _('التالية') }}"><i class="fa-solid fa-angle-left"></i></a>
       <a class="srv-btn{{ ' is-off' if page >= total_pages else '' }}"{% if page < total_pages %} href="?{{ _qs }}page={{ total_pages }}"{% endif %} title="{{ _('الأخيرة') }}"><i class="fa-solid fa-angles-left"></i></a>
     </span>

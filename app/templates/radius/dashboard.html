@@ -930,7 +930,7 @@
             <div class="ops-row-title">{{ batch.package_name or batch.batch_code or _("حزمة بدون اسم") }}</div>
             <div class="ops-row-sub">{{ batch.batch_code or _("بدون كود") }}</div>
           </div>
-          <span class="ops-row-num">{{ batch.used or 0 }} / {{ batch.count or batch.generated or 0 }}</span>
+          <span class="ops-row-num"><bdi dir="ltr">{{ batch.used or 0 }} / {{ batch.count or batch.generated or 0 }}</bdi></span>
         </div>
       {% else %}
         <div class="ops-row">

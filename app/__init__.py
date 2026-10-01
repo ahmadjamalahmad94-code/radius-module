@@ -16,6 +16,7 @@ Standalone Flask app لاستضافة وحدة RADIUS بشكل مستقل.
 from __future__ import annotations
 
 import os
+import re as _re
 import secrets
 
 from flask import Flask, redirect, render_template, url_for
@@ -1196,6 +1197,28 @@ def _install_stubs(app: Flask) -> None:
 
     app.jinja_env.filters["dt_local"] = _dt_local_isolated
     app.jinja_env.filters["date_local"] = _date_local_isolated
+
+    # D9 (bidi) — الموجة الثانية: النصوص الحرّة التي تُبنى في بايثون ولا تمرّ
+    # بـ dt_local (سلسلة «من X إلى Y» في سجلّ التدقيق، أجسام الإشعارات،
+    # مدى الفترة «2026-09-26 - 2026-10-02»، لصيقة الشهر «2026-09»). السبب
+    # الجذريّ: مقطعٌ لاتينيُّ الاتّجاه (تاريخ/وقت/مدًى رقميّ) مغروسٌ في فقرةٍ
+    # RTL يتولّى ترتيبَه خوارزميّةُ bidi فينقلب بصريًّا («01-10-2026»). العلاج:
+    # عزل كل مقطعٍ رقميٍّ (ومجموعة «تاريخ وقت» المتلاصقة) بـ LRI…PDI.
+    # ملاحظة: يعمل على نصٍّ صِرف فقط — لا تُمرِّر إليه HTML خامًّا (|safe).
+    _NUMRUN_RE = _re.compile(
+        r"\d[\d:/.–−-]*\d(?:[ 	]+(?:[-–−][ 	]+)?\d[\d:/.–−-]*\d)*"
+    )
+
+    def _bidi_nums(value):
+        """يعزل المقاطع الرقميّة في نصٍّ مختلطِ الاتّجاه كي لا تنقلب."""
+        if value is None:
+            return value
+        s = str(value)
+        if not s or _LRI in s:
+            return s
+        return _NUMRUN_RE.sub(lambda m: f"{_LRI}{m.group(0)}{_PDI}", s)
+
+    app.jinja_env.filters["bidi_nums"] = _bidi_nums
     # f06-L3: مدّة بكلماتٍ عربيّة («1 ساعة و5 دقائق») بدل «1h 5m» في الويب.
     # Imported defensively (see fmt_base_time_ar below): a formatter import
     # failure must never brick create_app().

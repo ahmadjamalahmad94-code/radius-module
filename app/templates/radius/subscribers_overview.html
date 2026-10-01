@@ -82,10 +82,10 @@
                     onchange="if(this.value) location.href = this.value">
               {%- for p in period_options %}
               <option value="{{ url_for('radius.subscribers_overview', period=period, month=(p if period == 'monthly' else None), year=(p if period == 'yearly' else None)) }}"
-                      {% if p|string == selected_label|string %}selected{% endif %}>{{ p }}</option>
+                      {% if p|string == selected_label|string %}selected{% endif %}>{{ p|bidi_nums }}</option>
               {%- endfor %}
             </select>
-            {% else %}{{ selected_label }}{% endif %}
+            {% else %}{{ selected_label|bidi_nums }}{% endif %}
           </span>
         </div>
       </div>

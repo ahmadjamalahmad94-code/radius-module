@@ -707,7 +707,7 @@
           </select>
           <noscript><button type="submit">{{ _('تطبيق') }}</button></noscript>
         </form>
-        <div class="uds-pager-info">{{ pager.start }}–{{ pager.end }} {{ _('من') }} {{ pager.total }}</div>
+        <div class="uds-pager-info"><bdi dir="ltr">{{ pager.start }}–{{ pager.end }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ pager.total }}</bdi></div>
         <div class="uds-pager-nav">
           {% if pager.page > 1 %}
             {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=pager.page - 1, **_pargs) }}" aria-label="{{ _('السابق') }}"><i class="fa-solid fa-chevron-right"></i></a>{% endif %}

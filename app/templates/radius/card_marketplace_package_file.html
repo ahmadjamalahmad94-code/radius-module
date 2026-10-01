@@ -106,7 +106,7 @@
     {% if offer_cards.page > 1 %}
       {% if can_submit('radius.card_marketplace_package_file', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">{{ _('السابق') }}</a>{% endif %}
     {% endif %}
-    <span class="hub-pill">{{ offer_cards.page }} / {{ offer_cards.pages }}</span>
+    <span class="hub-pill"><bdi dir="ltr">{{ offer_cards.page }} / {{ offer_cards.pages }}</bdi></span>
     {% if offer_cards.page < offer_cards.pages %}
       {% if can_submit('radius.card_marketplace_package_file', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">{{ _('التالي') }}</a>{% endif %}
     {% endif %}

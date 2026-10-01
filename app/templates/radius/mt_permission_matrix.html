@@ -266,7 +266,7 @@
           <tr>
             <th class="permx-admin-cell">{{ _('الإجمالي') }}</th>
             {% for p in matrix.permissions %}
-            <th data-mt-perm-col-count="{{ p }}">{{ grant_counts.get(p, 0) }} / {{ total_admins }}</th>
+            <th data-mt-perm-col-count="{{ p }}"><bdi dir="ltr">{{ grant_counts.get(p, 0) }} / {{ total_admins }}</bdi></th>
             {% endfor %}
             <th></th>
           </tr>

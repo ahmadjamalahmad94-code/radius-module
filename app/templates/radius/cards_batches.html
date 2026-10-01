@@ -440,7 +440,7 @@
               <div>
                 <div class="batch-card__title-row">
                   <h2>{% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                         title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة' }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}</h2>
+                         title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة')|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}</h2>
                   {% if is_featured %}<span class="batch-featured">{{ _('مميزة') }}</span>{% endif %}
                 </div>
                 <p class="batch-card__code">
@@ -556,7 +556,7 @@
         </div>
         {% set _cstart = (page - 1) * per_page + 1 %}
         {% set _cend = [page * per_page, total] | min %}
-        <div class="uds-pager-info">{% if total %}{{ _cstart }}–{{ _cend }} من {{ total }}{% else %}0{% endif %}</div>
+        <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _cstart }}–{{ _cend }}</bdi> من <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
         <div class="uds-pager-nav">
           {% set base_args_cards = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
                                     'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
@@ -662,7 +662,7 @@
                       <bdi>{{ b.batch_code }}</bdi>
                     {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                     {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                       title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
+                       title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or 'بدون اسم مخصص')|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                   </div>
                 </td>
                 <td data-column-key="plan" data-sort-value="{{ b.device_count or 1 }}">
@@ -794,7 +794,7 @@
           </div>
           {% set _start = (page - 1) * per_page + 1 %}
           {% set _end = [page * per_page, total] | min %}
-          <div class="uds-pager-info">{% if total %}{{ _start }}–{{ _end }} من {{ total }}{% else %}0{% endif %}</div>
+          <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _start }}–{{ _end }}</bdi> من <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
           <div class="uds-pager-nav">
             {% set base_args = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
                                 'manager': filters.manager, 'distributor_id': filters.distributor_id or '',

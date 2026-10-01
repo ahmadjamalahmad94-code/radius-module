@@ -1227,7 +1227,7 @@
       {% if recent_purchases.page > 1 %}
         {% if can_submit('radius.card_marketplace', 'GET') %}<a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">{{ _('السابق') }}</a>{% endif %}
       {% endif %}
-      <span class="market-pill">{{ recent_purchases.page }} / {{ recent_purchases.pages }}</span>
+      <span class="market-pill"><bdi dir="ltr">{{ recent_purchases.page }} / {{ recent_purchases.pages }}</bdi></span>
       {% if recent_purchases.page < recent_purchases.pages %}
         {% if can_submit('radius.card_marketplace', 'GET') %}<a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">{{ _('التالي') }}</a>{% endif %}
       {% endif %}
