@@ -892,7 +892,15 @@ _PERM_GUARDED: dict[str, str] = {
     # واتساب في `/integrations`. وُحِّدا على مفتاحِ الإعدادات.
     "communications_bot": "settings.edit",
     "communications_campaigns": "users.send_message",
-    "communications_channels": "users.send_message",
+    # SEC r6perms: إعدادُ قناةِ الإرسال (‏`send_url_template`/`balance_url`) هو
+    # **بوّابةُ SMS للشبكةِ كلّها** — عنوانٌ فيه مفتاحُ المزوّدِ عادةً، وإليه تُرسَل
+    # كلُّ رسالة (رموزُ الدخولِ وبياناتُ المشتركين). كان `users.send_message` —
+    # مفتاحُ «إرسال رسالة» — يكفي لتغييره فيُحوِّل كلَّ الرسائلِ إلى عنوانٍ يختاره
+    # (مؤكَّدٌ بالتجربة: 200 والعنوانُ حُفظ)، ويقرأه كاملًا في الصفحة. نفسُ صنفِ
+    # `sms_save` (settings.edit) و`communications_bot` (NEW-7). الحفظُ صار
+    # `settings.edit` والعرضُ `settings.view` (‏_NAV_PERM)؛ «اختبارُ الإرسال»
+    # إرسالٌ فيبقى `users.send_message`.
+    "communications_channels": "settings.edit",
     "communications_channels_test": "users.send_message",
     "communications_deliveries": "users.send_message",
     "communications_guide": "users.send_message",
@@ -1190,6 +1198,8 @@ _PERM_WRITE_ONLY = {
     # the GET view stays on `audit.view` (_NAV_PERM) and only the POST needs
     # the write key `settings.edit`.
     "events_investigations", "events_risk",
+    # SEC r6perms: العرضُ `settings.view` (‏_NAV_PERM) والحفظُ `settings.edit`.
+    "communications_channels",
 }
 
 # بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —

@@ -193,6 +193,9 @@ _NAV_PERM: dict[str, str] = {
     "tunnels_list": _PERM_SUPER,
     "wh_settings": "api.use",
     "tok_list": "api.use",
+    # SEC r6perms: صفحةُ قنواتِ الإرسال تعرض عنوانَ بوّابةِ SMS بمفتاحِ المزوّد —
+    # إعدادٌ يُقرأ بمفتاحِ الإعدادات لا بمفتاحِ «إرسال رسالة».
+    "communications_channels": "settings.view",
 
     # ═══ تدقيق QA RBAC (2026-06): صفحات «عرض» (GET) كانت بلا حارس عرض ═══
     # تُربط بمفتاح القسم المنطقيّ كي يُطبَّق «حارس العرض» (blueprint._perm_guard
