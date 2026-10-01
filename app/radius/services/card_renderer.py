@@ -2920,6 +2920,9 @@ def _resolve_positions(
         fy = max(0.0, min(1.0, raw_y / card_h_mm))
         positions[target_key]["x"] = fx
         positions[target_key]["y"] = fy
+        # وضعه المشغّلُ بيده (سحبٌ أو رقم) — لا «تلقائيّ». ``_reflow_credentials``
+        # لا يحرّك موضعًا صريحًا: المعاينةُ = الطباعة.
+        positions[target_key]["explicit"] = True
 
     qr_size_pct = _optional_positive_float(layout.get("qr_size_pct"))
     if qr_size_pct is not None:
@@ -3625,14 +3628,33 @@ def _reflow_credentials(elements: list[dict], cw: float, ch: float) -> None:
             p["label_font_size"] = float(p["label_font_size"]) * f
             p["padding_x"] = p["height"] * 0.32
     prev_bottom = None
-    for p in pills:  # no pill over the previous one
-        if prev_bottom is not None and p["y"] < prev_bottom + gap:
+    for p in pills:  # no pill over the previous one — unless the OPERATOR placed it
+        # 🔴 الحبّةُ التي وضعها المشغّلُ بيده (سحبٌ أو رقم) لا تُدفع تحت التي
+        # فوقها. هذا الرصُّ (F9) يحسب التداخلَ بارتفاعِ الحبّةِ **الكامل** حتى
+        # حين تكون شفّافةً (‏``surface_enabled=False``) لا يُرى منها إلّا النصّ:
+        #   شكوى Fadi Net 2026-10-01 — قالبُه خلفيّةُ **صورةٍ فيها مربّعا اليوزر
+        #   والباس مرسومَين** والحبّتان شفّافتان. حبّةُ اليوزر عند 17.7mm
+        #   محسوبةٌ بارتفاع 10mm، فكلُّ موضعٍ للباس بين ~18 و28mm **يُدفع إلى
+        #   28.0mm** (حتى المحفوظُ 24.9): «يسحب الباسَ لفوق، يحفظ، فيرجع لتحت»،
+        #   وكلمةُ المرور **تُطبع خارجَ مربّعها**. وصلته مع نشرِ ذلك اليوم.
+        # ⚠️ أمّا حمايةُ «لا تُغطِّ سطرَي الرابط/التذييل» أدناه فتبقى لكلِّ حبّة —
+        # هي شكوى المالكِ نفسِه (F9): حبّةٌ مسحوبةٌ بخطٍّ ضخمٍ غطّت النصّ.
+        # وكما يُبقي منطقُ الـQR أعلاه الحبّةَ «الموضوعة» في مكانها (fix2 N7).
+        if (prev_bottom is not None and p["y"] < prev_bottom + gap
+                and not p.get("explicit")):
             p["y"] = prev_bottom + gap
         prev_bottom = p["y"] + p["height"]
     next_top = bottom_limit
+    below_moved = False
     for p in reversed(pills):  # nothing below the text band's top
-        if p["y"] + p["height"] > next_top:
-            p["y"] = max(0.0, next_top - p["height"])
+        # the operator's pill yields to the meta/footer band, and to a pill
+        # below it only when THAT one was forced up by the band — never to a
+        # neighbour still sitting where it was placed (Fadi Net 2026-10-01).
+        limit = next_top if (below_moved or not p.get("explicit")) else bottom_limit
+        below_moved = False
+        if p["y"] + p["height"] > limit:
+            p["y"] = max(0.0, limit - p["height"])
+            below_moved = True
         next_top = p["y"] - gap
 
 
@@ -3734,6 +3756,8 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
         # yields to a PLACED pill; a WIDENED pill yields to the QR).
         "_nat_x": natural_x,
         "_nat_w": natural_w,
+        # موضعٌ وضعه المشغّلُ بيده — ``_reflow_credentials`` لا يحرّكه.
+        "explicit": bool(pos.get("explicit")),
     }
 
 
