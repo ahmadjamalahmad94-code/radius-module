@@ -286,25 +286,13 @@
 ] %}
 {% set cur_country = vals.get('radius.default_country','') %}
 {% set cur_dial = vals.get('comms.country_dial_code','+970') %}
-{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
-{% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن / فلسطين / العراق / السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
-{% set cur_currency = vals.get('billing.currency','JOD') %}
+{% set currencies = currency_choices if currency_choices is defined else [('ILS','شيكل ₪'),('USD','دولار أمريكي $'),('JOD','دينار أردني'),('EGP','جنيه مصري')] %}
+{% set offsets = [('2','+2 (مصر / فلسطين شتاءً)'),('3','+3 (الأردن / العراق / السعودية / فلسطين صيفًا)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
+{% set cur_currency = vals.get('billing.currency','ILS') or 'ILS' %}
 {% set cur_off = vals.get('billing.timezone_offset','3') %}
-{# قائمة المناطق الزمنية (IANA) — الشام أولًا، ثم الإقليم، ثم عالميّة شائعة #}
-{% set timezones = [
-  ('Asia/Damascus','دمشق (سوريا) ‎+3'),
-  ('Asia/Amman','عمّان (الأردن) ‎+3'),
-  ('Asia/Hebron','فلسطين ‎+2/+3 (صيفي)'),
-  ('Asia/Beirut','بيروت (لبنان) ‎+2/+3 (صيفي)'),
-  ('Asia/Baghdad','بغداد (العراق) ‎+3'),
-  ('Asia/Riyadh','الرياض (السعودية) ‎+3'),
-  ('Africa/Cairo','القاهرة (مصر) ‎+2/+3 (صيفي)'),
-  ('Asia/Dubai','دبي (الإمارات) ‎+4'),
-  ('Asia/Tehran','طهران (إيران) ‎+3:30'),
-  ('Europe/Istanbul','إسطنبول (تركيا) ‎+3'),
-  ('UTC','التوقيت العالمي UTC ‎0')
-] %}
-{% set cur_tz = vals.get('billing.timezone','Asia/Damascus') %}
+{# قائمة المناطق الزمنية (IANA) — فلسطين أولًا (غزة ثم الخليل)، من system_config.PANEL_TIMEZONES #}
+{% set timezones = panel_timezones if panel_timezones is defined else [('Asia/Gaza','غزة (فلسطين)'),('Asia/Hebron','الخليل (فلسطين)')] %}
+{% set cur_tz = vals.get('billing.timezone','Asia/Gaza') or 'Asia/Gaza' %}
 {# تسمية التوقيت المعروضة في مؤشر KPI — اسم المنطقة المختارة إن وُجد بالقائمة #}
 {% set tz_label = cur_tz %}
 {% for tzv, tzl in timezones %}{% if tzv == cur_tz %}{% set tz_label = tzl %}{% endif %}{% endfor %}
@@ -331,11 +319,12 @@
 {# تبويبات JS — لا تغادر الصفحة فلا تُفقد التعديلات غير المحفوظة #}
 <nav class="st-tabs" aria-label="{{ _('مجموعات الإعدادات') }}">
   <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">1</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">7</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="limits"><i class="fa-solid fa-scale-balanced"></i> {{ _('الحدود') }} <span class="st-count">{{ (limit_rows|length) if limit_rows is defined else 0 }}</span><span class="st-dirty-dot"></span></button>
   <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
   {# تبويب «الرسائل والتنبيهات» (Webhook المفرد) أُزيل — وُحِّد الويبهوك في
      صفحة «الربط الخارجي» /admin/radius/webhooks (اشتراكات + سجلّ + HMAC). #}
@@ -347,7 +336,7 @@
 {# ═══════════════ نموذج واحد يضم كل التبويبات (الإخفاء بصري فقط — كل
    الحقول تُرسَل مع الحفظ، والمسار يحفظ المتغيّر منها فقط) ═══════════════ #}
 {# enctype ضروري لرفع ملف الشعار مع بقية الحقول في نفس الحفظ #}
-<form method="post" id="settings-form" enctype="multipart/form-data">
+<form method="post" id="settings-form" enctype="multipart/form-data">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
 {# ─────────────────── تبويب: هوية النظام ─────────────────── #}
 <div class="st-panel is-active" data-st-panel="identity">
@@ -464,8 +453,68 @@
               <option value="{{ code }}" {{ 'selected' if cur_currency == code else '' }}>{{ label }} — {{ code }}</option>
             {% endfor %}
           </select>
-          <div class="help">{{ _('العملة المعتمدة في كل النظام: أسعار الباقات، الفواتير، المحافظ، والتقارير المالية. غيّرها بحذر بعد بدء التشغيل.') }}</div>
+          <div class="help">{{ _('العملة الافتراضيّة لكل قيدٍ جديد (الافتراضيّ: شيكل). يسري التغيير فورًا في اللوحة والتطبيق بعد الحفظ؛ القيود السابقة تحتفظ بعملتها.') }}</div>
           <bdi class="st-key">billing.currency</bdi>
+        </div>
+        {# المنطقة الزمنية بجوار العملة (قرار المالك): فلسطين أولًا + معاينة الوقت المحلّيّ. #}
+        <div class="st-field">
+          <label class="st-field-label">{{ _('المنطقة الزمنية') }}
+            <span class="hub-hint" tabindex="0" data-hint="تُحسب عليها كل الأوقات في اللوحة والتطبيق: العرض، بداية اليوم ونهايته في التقارير، انتهاء الاشتراكات، وجداول السرعة. غزة والخليل: ‎+2 شتاءً و‎+3 صيفًا — التوقيت الصيفيّ يُحسب تلقائيًا."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="billing.timezone" data-st-tz-select>
+            {% for tzv, tzl in timezones %}
+              <option value="{{ tzv }}" {{ 'selected' if cur_tz == tzv else '' }}>{{ tzl }} — {{ tzv }}</option>
+            {% endfor %}
+            {% if cur_tz not in (timezones|map('first')|list) %}
+              <option value="{{ cur_tz }}" selected>{{ cur_tz }}</option>
+            {% endif %}
+          </select>
+          <div class="help" data-st-tz-preview>
+            {{ _('الوقت المحلّيّ الآن:') }}
+            <bdi dir="ltr" data-st-tz-clock>{{ tz_now.local_time if tz_now else '—' }}</bdi>
+            <bdi dir="ltr" data-st-tz-offset>{% if tz_now %}(UTC{{ '%+d'|format((tz_now.utc_offset_minutes // 60)) }}{% if tz_now.utc_offset_minutes % 60 %}:{{ '%02d'|format(tz_now.utc_offset_minutes % 60) }}{% endif %}){% endif %}</bdi>
+          </div>
+          <bdi class="st-key">billing.timezone</bdi>
+          <script>
+          (function () {
+            // معاينة حيّة عند تغيير الاختيار (قبل الحفظ) — Intl يعرف مناطق IANA
+            // وتوقيتها الصيفيّ. الخادم يبقى المرجع بعد الحفظ.
+            var sel = document.querySelector('[data-st-tz-select]');
+            var clock = document.querySelector('[data-st-tz-clock]');
+            var offEl = document.querySelector('[data-st-tz-offset]');
+            if (!sel || !clock || !window.Intl) return;
+            function show() {
+              try {
+                var now = new Date(), tz = sel.value;
+                var parts = {};
+                new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit',
+                  day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+                  .formatToParts(now).forEach(function (p) { parts[p.type] = p.value; });
+                clock.textContent = parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + ':' + parts.minute;
+                var asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
+                var mins = Math.round((asUtc - Math.floor(now.getTime() / 60000) * 60000) / 60000);
+                var h = Math.trunc(mins / 60), m = Math.abs(mins % 60);
+                if (offEl) offEl.textContent = '(UTC' + (mins < 0 ? '-' : '+') + Math.abs(h) + (m ? ':' + ('0' + m).slice(-2) : '') + ')';
+              } catch (_) {}
+            }
+            sel.addEventListener('change', show);
+          })();
+          </script>
+        </div>
+        {# قرار المالك: مشتركٌ جديد بلا تاريخ انتهاء — منتهٍ فورًا (الافتراضيّ) أو بلا انتهاء (HobeHub). #}
+        {% set cwe_choices = create_without_expiry_choices if create_without_expiry_choices is defined else [('expired','منتهٍ فورًا'),('unlimited','بلا انتهاء')] %}
+        {% set cur_cwe = vals.get('subscribers.create_without_expiry','expired') or 'expired' %}
+        <div class="st-field">
+          <label class="st-field-label">{{ _('المشترك الجديد بلا تاريخ انتهاء') }}
+            <span class="hub-hint" tabindex="0" data-hint="ينطبق على كل إنشاءٍ جديد حين لا يُعطى تاريخ: نموذج الويب بتاريخ فارغ، التطبيق وواجهة API، وإنشاء المدير. لا ينطبق على استيراد مايكروتيك ولا معالج الترحيل: ينسخان الحساب كما هو في مصدره (بلا انتهاء يبقى بلا انتهاء). «بدون انتهاء» المختارة صراحةً وأيّ تاريخٍ صريح تغلب دائمًا."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="subscribers.create_without_expiry">
+            {% for v, l in cwe_choices %}
+              <option value="{{ v }}" {{ 'selected' if cur_cwe == v else '' }}>{{ l }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">{{ _('منتهٍ فورًا: يولد المشترك منتهيًا حتى يُدفع له أو يُمدَّد. بلا انتهاء: لا ينتهي أبدًا (للخدمة المجّانيّة).') }}</div>
+          <bdi class="st-key">subscribers.create_without_expiry</bdi>
         </div>
         <div class="st-field">
           <label class="st-field-label">{{ _("نسبة الضريبة %%") }}</label>
@@ -491,18 +540,6 @@
     </header>
     <div class="st-section-body">
       <div class="st-grid">
-        <div class="st-field">
-          <label class="st-field-label">{{ _('المنطقة الزمنية') }}
-            <span class="hub-hint" tabindex="0" data-hint="المنطقة الزمنية لموقعك (IANA). تُحسب عليها كل الأوقات المعروضة في اللوحة — النسخ المحفوظة والسجلات والإشعارات والمشتركون والبطاقات — وكذلك تقييم جداول السرعة. آمنة تجاه التوقيت الصيفي تلقائيًا."><i class="fa-solid fa-info"></i></span>
-          </label>
-          <select class="hub-select" name="billing.timezone">
-            {% for tzv, tzl in timezones %}
-              <option value="{{ tzv }}" {{ 'selected' if cur_tz == tzv else '' }}>{{ tzl }}</option>
-            {% endfor %}
-          </select>
-          <div class="help">{{ _('المرجع الأساسي للوقت — كل الأوقات في اللوحة تُعرض بهذه المنطقة (آمنة تجاه التوقيت الصيفي عبر zoneinfo)، وتُقيَّم عليها نوافذ جداول السرعة.') }}</div>
-          <bdi class="st-key">billing.timezone</bdi>
-        </div>
         <div class="st-field">
           <label class="st-field-label">{{ _('فارق التوقيت الاحتياطي (عن UTC)') }}
             <span class="hub-hint" tabindex="0" data-hint="يُستخدم فقط حين تتعذّر قاعدة المناطق الزمنية أو لمنطقة غير موجودة بالقائمة. المنطقة الزمنية أعلاه تتقدّم عليه دائمًا."><i class="fa-solid fa-info"></i></span>
@@ -748,6 +785,42 @@
    webhook.target_url / webhook.secret أصلًا — وتُرحَّل أي قيمة مضبوطة
    سابقًا إلى اشتراك عبر migration 134_webhook_settings_to_subscription. #}
 
+{# ─────────────────── تبويب: الحدود (قرار المالك 2026-09-30) ─────────────────── #}
+{# سقوف العمليّة الواحدة لهذا الخادم — المصدر والتحقّق core/limits.py، ويقرؤها
+   الويب والـAPI والتطبيق والمسارات الجماعيّة من هنا. تسري فور الحفظ. #}
+<div class="st-panel" data-st-panel="limits">
+  <section class="st-section st-section--finance" data-st-limits>
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+      <span class="st-section-title">{{ _('الحدود — سقوف العملية الواحدة') }}</span>
+      <span class="st-section-meta">{{ _('تسري فورًا على الويب والتطبيق وواجهة API والعمليات الجماعية') }}</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        {% for lim in (limit_rows if limit_rows is defined else []) %}
+        <div class="st-field" data-st-limit="{{ lim.key }}">
+          <label class="st-field-label" for="lim-{{ loop.index }}">{{ _(lim.label) }}
+            <span class="hub-hint" tabindex="0" data-hint="{{ _(lim.help) }}"><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" id="lim-{{ loop.index }}" type="number" dir="ltr"
+                 name="{{ lim.key }}" value="{{ lim.value }}" min="{{ '1' if lim.kind != 'money' else '0.01' }}"
+                 max="{{ lim.tech_max }}" step="{{ 'any' if lim.kind == 'money' else '1' }}" required>
+          {% if lim.allow_unlimited %}
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+            {{ toggle_switch(name=lim.unlimited_key, checked=lim.unlimited, value="1", id="lim-u-" ~ loop.index) }}
+            <input type="hidden" name="{{ lim.unlimited_key }}" value="0">
+            <span class="hub-text-mute small">{{ _('بلا حدّ') }} — {{ _('يبقى الحدّ التقنيّ') }} <bdi dir="ltr">{{ lim.tech_max }}</bdi></span>
+          </div>
+          {% endif %}
+          <div class="help">{{ _(lim.help) }} {{ _('الافتراضيّ:') }} <bdi dir="ltr">{{ lim.default }}</bdi>.</div>
+          <bdi class="st-key">{{ lim.key }}</bdi>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
 {# ─────────────────── تبويب: متقدم ─────────────────── #}
 <div class="st-panel" data-st-panel="advanced">
   <section class="st-section st-section--advanced">
@@ -787,11 +860,11 @@
           </label>
           <div class="st-suffix">
             <input class="hub-input" type="text" value="{{ store_key or '— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —' }}" dir="ltr" readonly onclick="this.select()">
-            <button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
+            {% if can_submit('radius.settings_rotate_store_key', 'POST') %}<button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
                     formaction="{{ url_for('radius.settings_rotate_store_key') }}" formmethod="post" formnovalidate
                     data-confirm="توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟">
               <i class="fa-solid fa-rotate"></i> {{ _('توليد مفتاح جديد') }}
-            </button>
+            </button>{% endif %}
           </div>
           <div class="help">{{ _('يحمي واجهة المتجر من الاستدعاء الخارجي.') }} <b>{{ _('تدوير المفتاح يتطلب إعادة نشر store.html') }}</b> {{ _('من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.') }}</div>
           <bdi class="st-key">network.store_api_key</bdi>
@@ -825,7 +898,7 @@
   {{ hub.btn("إلغاء والعودة", variant="ghost", href=url_for('radius.dashboard')) }}
 </div>
 
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 <script>
 (() => {

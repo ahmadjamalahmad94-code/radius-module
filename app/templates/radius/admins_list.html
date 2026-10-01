@@ -100,10 +100,10 @@
             {# رقم صفّ ظاهر — لا معرّف DB (المحذوف يحجز معرّفه للأبد). #}
             <td class="num mono">{{ loop.index }}</td>
             <td class="mono">
-              <a href="{{ url_for('radius.admins_edit', admin_id=a.id) }}"
-                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+              {% if can_submit('radius.admins_edit', 'GET') %}<a href="{{ url_for('radius.admins_edit', admin_id=a.id) }}"
+                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">{% endif %}
                 {{ a.username }}
-              </a>
+              {% if can_submit('radius.admins_edit', 'GET') %}</a>{% endif %}
             </td>
             <td>{{ a.full_name or '—' }}</td>
             <td>
@@ -123,16 +123,16 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
+                {% if can_submit('radius.admins_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
-                <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}" style="display:inline">
+                </a>{% endif %}
+                {% if can_submit('radius.admins_delete', 'POST') %}<form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}"
                           data-confirm="أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </td>
           </tr>
@@ -160,7 +160,7 @@
 <div class="fcw-modal" data-fcw-modal="admin-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-admin-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.admins_create') }}">
+    <form method="post" action="{{ url_for('radius.admins_create') }}">{% if not can_submit('radius.admins_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-admin-create-title"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة مدير') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -196,6 +196,19 @@
             {{ toggle_switch(name="enabled", checked=True, value="1", id="fcw-ad-en") }}
             <span class="hub-field-hint">{{ _('المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول.') }}</span>
           </div>
+          {% if can_grant_owner %}
+          {# D12: مستوى الوصول — المالك/الشريك فقط #}
+          <div class="hub-field" data-testid="new-admin-super-user">
+            <span class="hub-field-label">{{ _('سوبر يوزر (كل الصلاحيات)') }}</span>
+            {{ toggle_switch(name="is_super_user", checked=False, value="1", id="fcw-ad-super") }}
+            <span class="hub-field-hint">{{ _('دور «مدير عام»: كل الصلاحيات عدا ما يخصّ المالك وحده.') }}</span>
+          </div>
+          <div class="hub-field" data-testid="new-admin-co-owner">
+            <span class="hub-field-label">{{ _('منح صلاحيات المالك (شريك)') }}</span>
+            {{ toggle_switch(name="is_co_owner", checked=False, value="1", id="fcw-ad-co") }}
+            <span class="hub-field-hint" style="color:#b45309;font-weight:700">{{ _('تحذير: الشريك يملك كل صلاحيات المالك. امنحها لشريكٍ تثق به فقط.') }}</span>
+          </div>
+          {% endif %}
         </div>
 
         {# ── 2) التحقق من الدخول ── #}
@@ -250,7 +263,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> {{ _('إنشاء المدير') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.admins_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 

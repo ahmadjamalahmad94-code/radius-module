@@ -37,7 +37,7 @@
 </section>{# /hub-hero-shell #}
 
 {# ───── نموذج الإنشاء — POST صريح إلى radius.inv_create مع توكن CSRF ───── #}
-<form method="post" id="inv-form" action="{{ url_for('radius.inv_create') }}">
+<form method="post" id="inv-form" action="{{ url_for('radius.inv_create') }}">{% if not can_submit('radius.inv_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {# توكن CSRF مطلوب: التطبيق يرفض أي POST بدونه (_csrf_check) #}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
@@ -135,8 +135,8 @@
 
   <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
     {{ hub.btn("إنشاء الفاتورة", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", href=url_for('radius.inv_list'), variant="ghost") }}
+    {% if can_submit('radius.inv_list', 'GET') %}{{ hub.btn("إلغاء", href=url_for('radius.inv_list'), variant="ghost") }}{% endif %}
   </div>
-</form>
+{% if not can_submit('radius.inv_create') %}</fieldset>{% endif %}</form>
 
 {% endblock %}

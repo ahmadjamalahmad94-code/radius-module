@@ -48,7 +48,7 @@ def _login(client):
     from app.radius.db.repos import admins_repo
     username = f"wiz_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=username, password="wiz-pass",
-                             full_name="Wizard", is_super_admin=True)
+                             full_name="Wizard", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": username, "password": "wiz-pass"},
                       follow_redirects=False)

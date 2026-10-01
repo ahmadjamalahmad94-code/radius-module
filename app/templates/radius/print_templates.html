@@ -456,6 +456,10 @@
   /* عنوان شريط المصمم: صف مرن يحتضن شارة «معاينة مباشرة» بجانب الاسم */
   .pr-designer-summary > span{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
   .pr-designer-drawer[open] > .pr-designer-summary{border-bottom:1px solid var(--hub-border-soft)}
+  .pr-designer-close{display:none;align-items:center;justify-content:center;width:32px;height:32px;flex:none;
+    border:1px solid var(--hub-border-soft);border-radius:10px;background:var(--hub-bg-card);color:var(--hub-text-mute);cursor:pointer}
+  .pr-designer-close:hover{color:#991b1b;background:#fee2e2;border-color:#fecaca}
+  .pr-designer-drawer[open] .pr-designer-close{display:inline-flex}
   /* Preview-fragment styling (mirrors the export.html copy so the same partial renders here) */
   .pt-fragment{display:grid;gap:12px}
   .pt-fragment-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -556,7 +560,7 @@
     "غرفة عمليات تصميم وتصدير البطاقات",
     subtitle="صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.",
     icon="wand-magic-sparkles",
-    actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> '|safe ~ _("الإحصائيات") ~ '</a>'|safe,
+    actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> '|safe ~ _("الإحصائيات") ~ '</a>'|safe if can_submit('radius.print_templates_stats', 'GET') else ''),
     kpis=_hero_kpis
   ) }}
 
@@ -702,7 +706,7 @@
             <a class="hub-btn" data-export-sample-link href="#" title="{{ _('اختر قالبًا') }}">
               <i class="fa-solid fa-file-pdf"></i> {{ _('PDF عينة') }}
             </a>
-            <form method="POST"
+            {% if can_submit('radius.print_templates_cleanup_fixtures', 'POST') %}<form method="POST"
                   action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
                   onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
                   style="margin:0">
@@ -710,7 +714,7 @@
                       title="{{ _('يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.') }}">
                 <i class="fa-solid fa-broom"></i> {{ _('تنظيف القوالب المؤقتة') }}
               </button>
-            </form>
+            </form>{% endif %}
           </div>
           <div class="pr-export-progress" data-export-progress>
             <strong data-progress-title>{{ _('جاهز للتصدير') }}</strong>
@@ -792,13 +796,13 @@
                   <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer">
                     <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                   </a>
-                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
+                  {% if can_submit('radius.print_templates_export_pdf', 'GET') %}<a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
                     <i class="fa-solid fa-file-pdf"></i> {{ _('عينة') }}
-                  </a>
-                  <form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
+                  </a>{% endif %}
+                  {% if can_submit('radius.print_templates_delete', 'POST') %}<form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
                     <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
-                  </form>
+                  </form>{% endif %}
                 </span>
               </article>
             {% else %}
@@ -828,6 +832,11 @@
         <span class="hub-pill hub-pill--blue">{{ _('معاينة مباشرة') }}</span>
       </span>
       <small>{{ _('افتح لعرض/تعديل القوالب أو إنشاء قالب جديد') }}</small>
+      {# F08-L: زرّ × يطوي الدرج (وEsc كذلك — راجع JS أسفل الصفحة) #}
+      <button type="button" class="pr-designer-close" data-designer-close
+              title="{{ _('إغلاق المصمم (Esc)') }}" aria-label="{{ _('إغلاق المصمم') }}">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
     </summary>
   <div class="pr-shell">
     <section class="pr-panel">
@@ -847,13 +856,16 @@
            (وليست تخصيصًا يدويًا محفوظًا) — فعند تبديل محرك التصميم يعيد
            الـ JS هذه الحقول للوضع التلقائي ثم يقرأ الأماكن الجديدة من
            المعاينة المرسومة. أول تعديل يدوي يحوّلها لقيمة مثبّتة. #}
-        {% macro slider_field(label, name, value, min_value, max_value, step_value, unit='', hint='', auto='0') -%}
+        {# orig = the exact stored value (0 = automatic): posted back unchanged
+           unless the operator moved the slider (fix2 N3 — the range input
+           snapped 10.35 → 10.5 and froze automatic sizes/positions). #}
+        {% macro slider_field(label, name, value, min_value, max_value, step_value, unit='', hint='', auto='0', orig=none) -%}
           <label class="pr-slider-field">
             <span class="pr-slider-head">
               <span>{{ label }}</span>
               <output class="pr-slider-value" data-range-value="{{ name }}" data-unit="{{ unit }}">{{ value }}{{ unit }}</output>
             </span>
-            <input class="hub-input pr-range" type="range" name="{{ name }}" min="{{ min_value }}" max="{{ max_value }}" step="{{ step_value }}" value="{{ value }}" data-range-input="{{ name }}" data-preview="{{ name }}" data-auto-default="{{ auto }}">
+            <input class="hub-input pr-range" type="range" name="{{ name }}" min="{{ min_value }}" max="{{ max_value }}" step="{{ step_value }}" value="{{ value }}" data-range-input="{{ name }}" data-preview="{{ name }}" data-auto-default="{{ auto }}"{% if orig is not none %} data-orig="{{ orig }}"{% endif %}>
             {% if hint %}<small>{{ hint }}</small>{% endif %}
           </label>
         {%- endmacro %}
@@ -861,7 +873,7 @@
            تأتي من _effective_field_layout في المسار، فتبدأ الحقول معبأة
            بالمكان الحقيقي بدل الصفر (0 كان يعني «الافتراضي» فقط). #}
         {% set eff = effective_fields or {} %}
-        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">
+        <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-editing="{{ '1' if edit_template_id else '0' }}" data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}" data-preset-bg="{{ 'on' if fl.preset_background_image else 'off' }}">{% if not can_submit(('radius.print_templates_update' if edit_template_id else 'radius.print_templates_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
           {% if form_error %}
             <div class="pr-file-error" role="alert">{{ form_error }}</div>
           {% endif %}
@@ -880,7 +892,7 @@
                 <i class="fa-solid fa-signature"></i> {{ _('اسم القالب') }}
                 <span class="hub-hint" tabindex="0" data-hint="سمِّ القالب باسم واضح يميّزه في غرفة الطباعة وصفحة الإحصائيات — مثل اسم العرض أو الحزمة. يُحفظ مع التصميم ولا يظهر على البطاقة المطبوعة."><i class="fa-solid fa-info"></i></span>
               </span>
-              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="{{ _('مثال: بطاقات رمضان — 4 ساعات') }}">
+              <input class="hub-input" name="name" required maxlength="120" value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="{{ _('مثال: بطاقات رمضان — 4 ساعات') }}">
             </label>
           </div>
 
@@ -979,7 +991,13 @@
             </label>
             {# شريط الشفافية يخص طبقة «خلفية من صورة» بوضع النظام فقط —
                وضع «صورة مرفوعة» يحافظ على الصورة كما هي (opacity=1 خادميًّا). #}
-            <label class="pr-field" data-upload-design-only data-preset-bg-opacity>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
+            {# (fix2 N3) step 0.01 + data-orig: a stored 0.82 no longer snaps to 0.80 on «تحديث القالب». #}
+            <label class="pr-field" data-upload-design-only data-preset-bg-opacity>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.01" value="{{ fl.image_opacity if (fl.image_opacity is defined and fl.image_opacity is not none) else '0.82' }}" data-orig="{{ fl.image_opacity if (fl.image_opacity is defined and fl.image_opacity is not none) else '0.82' }}" data-preview="imageOpacity"></label>
+            {# design keys this form has no control for — posted back unchanged
+               (they were reset to defaults: surface_opacity 0.88 → 0.95). #}
+            <input type="hidden" name="surface_opacity" value="{{ fl.surface_opacity if (fl.surface_opacity is defined and fl.surface_opacity is not none) else '0.95' }}">
+            <input type="hidden" name="pattern_color" value="{{ fl.pattern_color or '#ffffff' }}">
+            {% if fl.pattern_opacity is defined and fl.pattern_opacity is not none %}<input type="hidden" name="pattern_opacity" value="{{ fl.pattern_opacity }}">{% endif %}
           </div>
 
           {# شريط التبويبات (pr-tabs) انتقل إلى عمود المعاينة — فوق
@@ -1217,8 +1235,8 @@
                   <small>{{ _('هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.') }}</small>
                 </div>
                 <div class="pr-grid3">
-                  {{ slider_field('عرض البطاقة', 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm') }}
-                  {{ slider_field('ارتفاع البطاقة', 'card_height_mm', fl.card_height_mm or 54, 35, 110, 0.1, 'mm') }}
+                  {{ slider_field('عرض البطاقة', 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm', orig=(fl.card_width_mm or 85)) }}
+                  {{ slider_field('ارتفاع البطاقة', 'card_height_mm', fl.card_height_mm or 54, 35, 110, 0.1, 'mm', orig=(fl.card_height_mm or 54)) }}
                   {{ slider_field('حجم خط عام احتياطي', 'font_size', fs.font_size or 12, 6, 40, 1, 'px', 'يستخدم فقط كقيمة احتياطية للقوالب القديمة.') }}
                 </div>
               </section>
@@ -1238,6 +1256,10 @@
           {% set _u_font = ((fl.username_font_size if _pt_saved else (fl.username_font_size / _fontK)) | round(1)) if fl.username_font_size else (((eff.username_font_size / _fontK) | round(1)) if eff.username_font_size else 0) %}
           {% set _p_font = ((fl.password_font_size if _pt_saved else (fl.password_font_size / _fontK)) | round(1)) if fl.password_font_size else (((eff.password_font_size / _fontK) | round(1)) if eff.password_font_size else 0) %}
           {% set _l_font = ((fl.credential_label_font_size if _pt_saved else (fl.credential_label_font_size / _fontK)) | round(1)) if fl.credential_label_font_size else (((eff.credential_label_font_size / _fontK) | round(1)) if eff.credential_label_font_size else 0) %}
+          {# exact stored sizes in pt (legacy canvas units converted, unrounded); 0 = automatic #}
+          {% set _u_orig = (fl.username_font_size if _pt_saved else (fl.username_font_size / _fontK)) if fl.username_font_size else 0 %}
+          {% set _p_orig = (fl.password_font_size if _pt_saved else (fl.password_font_size / _fontK)) if fl.password_font_size else 0 %}
+          {% set _l_orig = (fl.credential_label_font_size if _pt_saved else (fl.credential_label_font_size / _fontK)) if fl.credential_label_font_size else 0 %}
           <div class="pr-pane" data-pr-pane="fields">
             {# تبويبات فرعية: مجموعة واحدة ظاهرة في كل مرة (اليوزر /
                الباسورد / الباركود). الإخفاء عرضي فقط — كل الحقول تبقى
@@ -1254,9 +1276,9 @@
                   <small>{{ _('حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1') }}
-                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1') }}
-                  {{ slider_field('حجم خط اليوزر', 'username_font_size', _u_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.username_font_size else '1') }}
+                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1', orig=(fs.username_x or 0)) }}
+                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1', orig=(fs.username_y or 0)) }}
+                  {{ slider_field('حجم خط اليوزر', 'username_font_size', _u_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.username_font_size else '1', orig=_u_orig) }}
                   <label class="pr-field">{{ _('لون اليوزر') }}<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
                   <label class="pr-field">{{ _('خلفية اليوزر') }}<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
                   {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
@@ -1270,14 +1292,14 @@
                   <small>{{ _('تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1') }}
-                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1') }}
-                  {{ slider_field('حجم خط الباسورد', 'password_font_size', _p_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.password_font_size else '1') }}
+                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1', orig=(fs.password_x or 0)) }}
+                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1', orig=(fs.password_y or 0)) }}
+                  {{ slider_field('حجم خط الباسورد', 'password_font_size', _p_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.password_font_size else '1', orig=_p_orig) }}
                   <label class="pr-field">{{ _('لون التسميات') }}<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
                   <label class="pr-field">{{ _('خلفية الباسورد') }}<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
                   {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> {{ _('إظهار خلفية الباسورد') }}<input type="hidden" name="password_surface_enabled" value="0"></label>
-                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', _l_font, 0, 20, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد. القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.credential_label_font_size else '1') }}
+                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', _l_font, 0, 20, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد. القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.credential_label_font_size else '1', orig=_l_orig) }}
                   {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> {{ _('تفعيل خلفيات النصوص') }}<input type="hidden" name="credential_background_enabled" value="0"></label>
                 </div>
@@ -1289,9 +1311,9 @@
                   <small>{{ _('مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_x else '1') }}
-                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_y else '1') }}
-                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 60, 0.5, '%', 'القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.', auto='0' if fl.qr_size_pct else '1') }}
+                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_x else '1', orig=(fs.qr_x or 0)) }}
+                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_y else '1', orig=(fs.qr_y or 0)) }}
+                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 48, 0.5, '%', 'القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.', auto='0' if fl.qr_size_pct else '1', orig=(fl.qr_size_pct or 0)) }}
                   <label class="pr-field">{{ _('لون QR') }}<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
                   <label class="pr-field">{{ _('خلفية QR') }}<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
                 </div>
@@ -1300,7 +1322,7 @@
           </div>
 
           <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'تحديث القالب' if edit_template_id else 'حفظ القالب' }}</button>
-        </form>
+        {% if not can_submit(('radius.print_templates_update' if edit_template_id else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
       </div>
     </section>
 
@@ -1363,9 +1385,9 @@
      (radius.print_templates_stats). داخل غرفة التصميم يبقى الوصول
      للقوالب عبر نافذة الاختيار بالمصغرات + روابط «تعديل». #}
   <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
-    <a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
+    {% if can_submit('radius.print_templates_stats', 'GET') %}<a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
       <i class="fa-solid fa-chart-column"></i> {{ _('القوالب المحفوظة وسجل التصدير — صفحة الإحصائيات') }}
-    </a>
+    </a>{% endif %}
   </div>
   </div>{# /.pr-roompanel[design] #}
 </div>
@@ -1405,6 +1427,23 @@
       activate(t.getAttribute('data-room-tab'));
     });
   });
+
+  /* F08-L: درج المصمم يُغلق بـ× وبـEsc (كان بلا أيّ منهما). لا نغلقه إن كانت
+     نافذةٌ أخرى مفتوحة فوقه (مودال التأكيد/الرفع) — Esc لها أوّلًا. */
+  (function(){
+    var drawer = document.getElementById('designer');
+    if(!drawer) return;
+    var x = drawer.querySelector('[data-designer-close]');
+    if(x) x.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation(); drawer.open = false;
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key !== 'Escape' || !drawer.open) return;
+      var overlay = document.querySelector('#cfmModal:not([hidden]), .uds-modal.is-open, [role="dialog"]:not([hidden]):not(#designer)');
+      if(overlay && overlay.offsetParent !== null) return;
+      drawer.open = false;
+    });
+  })();
 
   // ربط المراسي القديمة بالتبويب الصحيح حتى تبقى الروابط القادمة من
   // صفحات أخرى (حزم البطاقات / صفحة الإحصائيات) تعمل كما هي.
@@ -1551,8 +1590,12 @@
     svgMount.classList.toggle('is-horizontal', !isVertical);
     svgMount.dataset.renderEngine = engine;
   }
-  function syncRenderEngine(){
+  function syncRenderEngine(opts){
     if(!form) return;
+    // f05-M3: عند فتح قالبٍ محفوظ للتعديل، نصوصه المحفوظة هي الحقيقة — كان
+    // التحميل يستبدل «HobeRadius» بـ«هوب راديوس» فيغيّره حفظٌ بلا أيّ تعديل.
+    // الافتراضيّات اللغويّة تُطبَّق فقط حين يبدّل المشغّل المحرّك بنفسه.
+    const keepTexts = !!(opts && opts.keepTexts);
     const engineInput = form.querySelector('[name="render_engine"]');
     const engineKey = (engineInput && engineInput.value) || 'ar_horizontal';
     const profile = renderEngines[engineKey] || renderEngines.ar_horizontal;
@@ -1561,7 +1604,9 @@
       const field = form.querySelector(`[name="${name}"]`);
       if(field) field.value = value;
     });
-    applyLanguageDefaults(profile.credential_label_language === 'arabic' ? 'arabic' : 'english');
+    if(!keepTexts){
+      applyLanguageDefaults(profile.credential_label_language === 'arabic' ? 'arabic' : 'english');
+    }
     syncPreviewOrientation();
   }
 
@@ -1592,6 +1637,25 @@
   }
   // عند تحميل الصفحة مباشرة، قبل أول معاينة.
   ensureAlmaraiLoaded();
+
+  // (fix2 N3) «تحديث القالب» with no edits must change nothing: a slider the
+  // operator did not move posts the EXACT stored value (data-orig), and an
+  // automatic one posts 0 (= automatic) — not the snapped/measured value.
+  if(form){
+    form.querySelectorAll('input[type="range"][data-orig]').forEach(inp => {
+      inp.dataset.initial = inp.value;
+    });
+    form.addEventListener('submit', () => {
+      form.querySelectorAll('input[type="range"][data-orig]').forEach(inp => {
+        let v = null;
+        if(inp.dataset.autoDefault === '1') v = '0';
+        else if(inp.value === inp.dataset.initial) v = inp.dataset.orig;
+        if(v === null) return;
+        inp.step = 'any';
+        inp.value = v;
+      });
+    }, true);
+  }
 
   let fetchSeq = 0;
   let fetchTimer = null;
@@ -1644,7 +1708,11 @@
       const svg = await res.text();
       if(seq !== fetchSeq) return;
       if(!res.ok){
-        throw new Error({{ _("رمز")|tojson }} + ' ' + res.status);
+        let serverMsg = '';
+        try { const j = JSON.parse(svg); serverMsg = (j && j.error && j.error.message) || ''; } catch (_e) {}
+        const e = new Error(serverMsg || ({{ _("رمز")|tojson }} + ' ' + res.status));
+        e.serverMessage = serverMsg;
+        throw e;
       }
       if(!svg || !svg.includes('<svg')){
         throw new Error({{ _("استجابة المعاينة ليست SVG")|tojson }});
@@ -1660,7 +1728,7 @@
       if(wasAbort && seq !== fetchSeq) return;
       const msg = wasAbort
         ? {{ _("استغرقت المعاينة وقتًا طويلًا. غيّر قيمة بسيطة أو أعد المحاولة.")|tojson }}
-        : {{ _("تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.")|tojson }};
+        : ((err && err.serverMessage) || {{ _("تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.")|tojson }});
       showSvgPlaceholder(msg, {error:true});
     } finally {
       clearTimeout(timeout);
@@ -2171,7 +2239,7 @@
     resetAutoFieldsToEngineDefaults();
     scheduleFetch();
   }));
-  syncRenderEngine();
+  syncRenderEngine({keepTexts: !!(form && form.dataset.editing === '1')});
   setDesignSource(form && form.background_style && form.background_style.value === 'image' ? 'image' : 'preset');
   // «خلفية من صورة» داخل تصميم النظام: data-preset-bg على النموذج يُظهر
   // منتقي الصورة/شريط الشفافية في وضع النظام (المعاينة تتحدث عبر change

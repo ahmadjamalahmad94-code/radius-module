@@ -77,6 +77,14 @@ def _manager(role_perms, *, password="mgr-pass"):
                                     is_super_admin=False)
 
 
+def _own(sub, admin):
+    """D09 (fix wave 2): a manager without «عرض كل المشتركين» only reaches his
+    OWN subscribers — make ``admin`` the responsible manager of ``sub``."""
+    from app.radius.db.connection import db
+    db().execute("UPDATE subscribers SET manager_id=? WHERE tenant_id=1 AND username=?",
+                 (int(admin.id), sub.username))
+
+
 def _api_token_for(client, admin, password="mgr-pass") -> dict:
     res = client.post("/api/admin/login", json={"username": admin.username, "password": password})
     assert res.status_code == 200, res.get_json()
@@ -175,7 +183,8 @@ def test_actions_context_full_shape(client):
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=AUTH))
     assert d["username"] == s.username and d["status"] == "enabled"
     assert d["expire_at"] == "2030-01-01T12:00:00Z"
-    assert d["plan"] == {"id": pid, "name": d["plan"]["name"], "price": 30.0, "minutes": 43200}
+    assert d["plan"] == {"id": pid, "name": d["plan"]["name"], "price": 30.0, "minutes": 43200,
+                         "rate_per_minute": round(30.0 / 43200, 8)}  # fix2: per-minute rate
     assert d["effective_price"] == 30.0
     assert d["balance"] == -12.5 and d["debt"] == 12.5
     assert len(d["open_loans"]) == 1
@@ -187,7 +196,8 @@ def test_actions_context_full_shape(client):
     assert [t["label"] for t in d["message_templates"]] == [
         "ترحيب", "تذكير انتهاء", "تأكيد دفعة", "تذكير سداد", "صيانة"]
     assert s.username in d["message_templates"][0]["text_filled"]
-    assert d["max_free_loan_hours"] == 72 and d["max_debt_loan_days"] == 366
+    # owner rule (fix wave 2): one operation adds at most 1 year → 365, not 366
+    assert d["max_free_loan_hours"] == 72 and d["max_debt_loan_days"] == 365
     perms = d["permissions"]
     assert set(perms) >= {"extend", "quota", "payment", "loan", "balance", "change_plan",
                           "send_message", "disconnect", "status", "delete", "rename",
@@ -216,6 +226,7 @@ def test_manager_permissions_follow_role(client):
     pid = _plan()
     s = _sub("perm_" + uuid4().hex[:6], plan_id=pid)
     mgr = _manager(("users.view", "users.extend"))
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr))
     assert d["permissions"]["extend"] is True
@@ -262,7 +273,13 @@ def test_viewer_sees_no_actions(client):
     role = admins_repo.get_role_by_name("viewer")
     mgr = admins_repo.create_admin(username="v_" + uuid4().hex[:6], password="mgr-pass",
                                    full_name="V", role_id=role.id, is_super_admin=False)
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
+    # p01/D06: the context carries the subscriber's balance/loans/plan, so it
+    # needs users.view like the web subscriber page — a bare viewer gets 403.
+    _err(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr),
+         403, "forbidden")
+    admins_repo.update_role(role.id, permissions=("dashboard.view", "users.view"))
     d = _data(client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr))
     for key in ("extend", "payment", "loan", "balance", "quota", "change_plan", "send_message"):
         assert d["permissions"][key] is False, key
@@ -302,11 +319,12 @@ def test_extend_expire_at_offset_is_an_instant(client):
     pid = _plan()
     s = _sub("exa_" + uuid4().hex[:6], plan_id=pid)
     d = _data(client.post(f"/api/v1/accounts/{s.username}/extend", headers=AUTH,
-                          json={"mode": "expire_at", "expire_at": "2031-05-01T15:00:00+03:00"}))
-    assert d["new_expire_at"] == "2031-05-01T12:00:00Z"
+                          json={"mode": "expire_at", "expire_at": "2030-05-01T15:00:00+03:00"}))
+    assert d["new_expire_at"] == "2030-05-01T12:00:00Z"
+    # (within one year of the current expiry — owner rule: one extend ≤ 1 year)
     d = _data(client.post(f"/api/v1/accounts/{s.username}/extend", headers=AUTH,
-                          json={"mode": "expire_at", "expire_at": "2031-06-01T08:30:00"}))
-    assert d["new_expire_at"] == "2031-06-01T08:30:00Z"  # naive = UTC
+                          json={"mode": "expire_at", "expire_at": "2030-06-01T08:30:00"}))
+    assert d["new_expire_at"] == "2030-06-01T08:30:00Z"  # naive = UTC
 
 
 @pytest.mark.parametrize("charge_mode,amount", [("free", "0"), ("paid", "3.00"), ("debt", "3.00")])
@@ -345,6 +363,7 @@ def test_extend_spend_gate_blocks_zero_trust_manager(client):
     pid = _plan()
     s = _sub("gate_" + uuid4().hex[:6], plan_id=pid, balance=50)
     mgr = _manager(("users.view", "users.extend"))
+    _own(s, mgr)
     hdr = _api_token_for(client, mgr)
     before = _state(s.username)
     err = _err(client.post(f"/api/v1/accounts/{s.username}/extend", headers=hdr, json={
@@ -389,6 +408,8 @@ def test_quota_topup_reset_and_parity(client):
     # without any quota refuses a top-up (see test_stress_fix_money).
     from app.radius.db.connection import db
     db().execute("UPDATE access_plans SET quota_total_mb = 1024 WHERE id = ?", (pid,))
+    # fix3 (F04 N-L1): reset-daily needs a daily cap — 1440 min/day never binds.
+    db().execute("UPDATE access_plans SET max_daily_minutes = 1440 WHERE id = ?", (pid,))
     a, b = _pair(plan_id=pid, balance=20)
     client.post(f"/admin/radius/users/{a.username}/quota/topup", data={
         "_csrf_token": csrf, "quota_mb": "500", "quota_target": "combined",

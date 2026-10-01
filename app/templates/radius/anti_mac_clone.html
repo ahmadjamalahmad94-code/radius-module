@@ -45,7 +45,7 @@
    الإعدادات
    ════════════════════════════════════════════════════════════════════ #}
 {% call hub.section("إعدادات الميزة", icon="sliders") %}
-  <form method="post" action="{{ url_for('radius.anti_mac_clone_save_settings') }}" id="amc-form">
+  <form method="post" action="{{ url_for('radius.anti_mac_clone_save_settings') }}" id="amc-form">{% if not can_submit('radius.anti_mac_clone_save_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
     {# الـtoggle العام — صريح وواضح، الافتراضي مغلق. #}
@@ -168,7 +168,7 @@
     </p>
 
     {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
-  </form>
+  {% if not can_submit('radius.anti_mac_clone_save_settings') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {# ════════════════════════════════════════════════════════════════════
@@ -222,7 +222,7 @@
           </td>
           <td class="small mono">{{ b.last_seen_at|dt_local }}</td>
           <td>
-            <form method="post"
+            {% if can_submit('radius.anti_mac_clone_binding_action', 'POST') %}<form method="post"
                   action="{{ url_for('radius.anti_mac_clone_binding_action', binding_id=b.id, action='suspend') }}"
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -230,8 +230,8 @@
                       data-confirm="تعليق هذا الارتباط؟ سيُمنع الجهاز من الاستخدام السلس حتى التفعيل.">
                 <i class="fa-solid fa-pause"></i> {{ _('تعليق') }}
               </button>
-            </form>
-            <form method="post"
+            </form>{% endif %}
+            {% if can_submit('radius.anti_mac_clone_binding_action', 'POST') %}<form method="post"
                   action="{{ url_for('radius.anti_mac_clone_binding_action', binding_id=b.id, action='delete') }}"
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -239,7 +239,7 @@
                       data-confirm="حذف الارتباط؟ سيُعاد إنشاؤه عند أوّل دخول ناجح لاحق.">
                 <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
               </button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
         {% endfor %}

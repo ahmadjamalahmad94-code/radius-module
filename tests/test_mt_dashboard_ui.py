@@ -50,7 +50,7 @@ def _login(client) -> None:
         username=username,
         password="dash-pass",
         full_name="Dashboard Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/admin/radius/login",

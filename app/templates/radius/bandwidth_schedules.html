@@ -91,7 +91,7 @@
   <div class="bsm-modal" data-bsm-modal="schedule-create" hidden>
    <div class="bsm-dialog" role="dialog" aria-modal="true" aria-labelledby="bsm-schedule-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
+    <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">{% if not can_submit('radius.bandwidth_schedules_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="bsm-head">
         <h3 id="bsm-schedule-create-title"><i class="fa-solid fa-plus"></i> {{ _('إضافة جدول سرعة') }}</h3>
         <button type="button" class="bsm-x" data-bsm-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -210,7 +210,7 @@
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الجدول') }}
         </button>
       </div>
-    </form>
+    {% if not can_submit('radius.bandwidth_schedules_create') %}</fieldset>{% endif %}</form>
    </div>
   </div>{# /bsm-modal #}
 
@@ -273,18 +273,18 @@
                           data-bsm-open="schedule-edit-{{ item.get('id') }}">
                     <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                   </button>
-                  <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
+                  {% if can_submit('radius.bandwidth_schedules_apply', 'POST') %}<form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}" style="display:inline">
                     <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
                       <i class="fa-solid fa-shield-halved"></i> {{ _('فحص الجاهزية') }}
                     </button>
-                  </form>
+                  </form>{% endif %}
                   {# الحذف: نموذج POST مع CSRF (حاقن تلقائي) + تأكيد بمودال الواجهة الموحّد (data-confirm) لا confirm() المتصفّح #}
-                  <form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
+                  {% if can_submit('radius.bandwidth_schedules_delete', 'POST') %}<form method="post" action="{{ url_for('radius.bandwidth_schedules_delete', schedule_id=item.get('id')) }}" style="display:inline">
                     <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                             data-confirm="{{ _('حذف جدول «%(name)s»؟ لا يمكن التراجع.', name=item.get('name')) }}">
                       <i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}
                     </button>
-                  </form>
+                  </form>{% endif %}
                 </div>
                 <div class="small" style="margin-top:5px">
                   {{ hub.pill("فحص الجاهزية لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
@@ -302,7 +302,7 @@
     <div class="bsm-modal" data-bsm-modal="schedule-edit-{{ item.get('id') }}" hidden>
      <div class="bsm-dialog" role="dialog" aria-modal="true" aria-labelledby="bsm-edit-title-{{ item.get('id') }}">
       {# method="post" ضروري لحاقن الـ CSRF التلقائي. التحديث لا يغيّر نطاق القاعدة (مشترك/باقة/كروت). #}
-      <form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">
+      <form method="post" action="{{ url_for('radius.bandwidth_schedules_update', schedule_id=item.get('id')) }}">{% if not can_submit('radius.bandwidth_schedules_update') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
         <div class="bsm-head">
           <h3 id="bsm-edit-title-{{ item.get('id') }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل جدول السرعة') }}</h3>
           <button type="button" class="bsm-x" data-bsm-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -376,7 +376,7 @@
             <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديل') }}
           </button>
         </div>
-      </form>
+      {% if not can_submit('radius.bandwidth_schedules_update') %}</fieldset>{% endif %}</form>
      </div>
     </div>
     {% endfor %}

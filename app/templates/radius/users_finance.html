@@ -148,13 +148,15 @@
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('سلف المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th data-uds-nosort data-uds-nocol style="width:340px">{{ _('تسوية') }}</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('المتبقّي') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th data-uds-nosort data-uds-nocol style="width:340px">{{ _('تسوية') }}</th></tr></thead>
       <tbody>
         {% for loan in loans %}
         <tr>
           <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.duration_minutes|dur_days }}</td>
-          <td class="mono"><strong>{{ loan.amount|money }}</strong></td>
+          <td class="mono">{{ loan.amount|money(loan.currency) }}</td>
+          {# المتبقّي بعد التسويات الجزئيّة (سلفة 4.67 سُدِّد منها 2 ⇒ 2.67) #}
+          <td class="mono"><strong>{{ (loan.outstanding or 0)|money(loan.currency) }}</strong></td>
           <td>
             {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
             {% elif loan.status == 'voided' %}{{ hub.pill("مُسامَحة", variant="grey") }}
@@ -163,14 +165,15 @@
           <td class="small">{{ loan.reason or '—' }}</td>
           <td>
             {% if loan.status == 'open' %}
-            <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
+            {% if can_submit('radius.users_loan_settle', 'POST') %}<form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
-              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:100px">
+              {# يُملأ بالمتبقّي لا بالأصل (كان «3.33» يتجاوز المتبقّي 1.66 فيُرفض). #}
+              <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ '%.2f'|format(loan.outstanding if loan.outstanding is not none else (loan.amount or 0)) }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
-            </form>
+            </form>{% endif %}
             {% else %}<span class="hub-text-mute small">—</span>{% endif %}
           </td>
         </tr>
@@ -223,7 +226,9 @@
 <div class="uds-modal" id="ff-payment" data-uds-modal data-ff-modal="payment" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('تسجيل دفعة نقدية') }}">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">{% if not can_submit('radius.users_payment_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
+      {# N10: الصفحة تُعيد التحميل بعد النجاح — الخادم يحفظ رسالة النجاح flash لتظهر بعده #}
+      <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
       <div class="uds-modal-head"><h3><i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
@@ -253,10 +258,10 @@
         <div class="ff-loans">
           <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة ({{ open_loans|length }}) — اختر لكل واحدة:</div>
           {% for ln in open_loans %}
-          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.amount or 0 }}">
+          <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.outstanding if ln.outstanding is not none else (ln.amount or 0) }}">
             <div class="ff-loan-info">
               <span class="ff-chip ff-chip--days"><i class="fa-solid fa-calendar-day"></i> {{ ln.duration_minutes|dur_days }}</span>
-              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> القيمة {{ (ln.amount or 0)|money }}</span>
+              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> المتبقّي {{ (ln.outstanding if ln.outstanding is not none else (ln.amount or 0))|money(ln.currency) }}</span>
             </div>
             <div class="ff-loan-acts">
               <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>{{ _('خصم') }}</span></label>
@@ -283,14 +288,15 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_payment_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
 {# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
 <div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
   <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('منح سلفة') }}">
-    <form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+    {% if can_submit('radius.users_loan_create', 'POST') %}<form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+      <input type="hidden" name="flash_on_reload" value="1">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
       <div class="uds-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
@@ -329,7 +335,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('منح') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
@@ -362,7 +368,8 @@
       id:parseInt(r.dataset.loanId,10), amount:parseFloat(r.dataset.loanAmount||"0"),
       action:(r.querySelector("input[type=radio]:checked")||{}).value||"defer",
     }));
-    const settled = rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter(r=>r.action==="settle").reduce((t,r)=>t+r.amount,0), Math.max(amount,0));
     // دين الرصيد السالب: نخصص له جزءًا من الدفعة بعد السلف وبحد قيمة الدين.
     const settleBalEl = payModal.querySelector("[data-ff-settle-balance]");
     const settleBal = (settleBalEl && settleBalEl.checked) ? Math.min(Math.max(amount-settled,0), DEBT_DUE) : 0;
@@ -372,20 +379,32 @@
     const field = payModal.querySelector("[data-ff-actions]"); if(field) field.value = acts.length?JSON.stringify(acts):"";
     const cov = payModal.querySelector("[data-ff-pay-coverage]");
     if(cov){
-      if(amount>0 && EFF_PRICE>0){
+      // F08-L: أكثر من سنة → قاعدة المالك بدل «≈ 428571 يوم» (الخادم يرفض بنفس النصّ).
+      if(amount>0 && EFF_PRICE>0 && days > {{ hr_limits.extend_max_days }}){
+        cov.textContent = {{ hr_limits.extend_too_long|tojson }} + " " + {{ _("(المبلغ يغطّي أكثر من سنة — قسّمه على أكثر من دفعة).")|tojson }};
+        cov.classList.add("is-over-cap");
+      } else if(amount>0 && EFF_PRICE>0){
+        cov.classList.remove("is-over-cap");
         const parts = [];
         if(settled>0) parts.push(`${ {{ _("خصم")|tojson }} } ${money(settled)} ${ {{ _("لتسوية سلف")|tojson }} }`);
         if(settleBal>0) parts.push(`${ {{ _("سداد دين")|tojson }} } ${money(settleBal)}`);
         let msg = `${ {{ _("إجمالي ما سيُضاف ≈")|tojson }} } ${arDays(days)}.`;
         if(parts.length) msg = `${parts.join({{ _(" و")|tojson }})}${ {{ _("؛ والباقي")|tojson }} } ${money(timeAmount)} → ${msg}`;
         cov.textContent = msg;
-      } else cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }};
+      } else { cov.classList.remove("is-over-cap"); cov.textContent = {{ _("أدخل المبلغ لعرض عدد الأيام التي يغطّيها.")|tojson }}; }
     }
   }
   payModal?.querySelector("[data-ff-pay-amount]")?.addEventListener("input", payCoverage);
   payModal?.querySelectorAll("[data-ff-loan-row] input[type=radio]").forEach(r=> r.addEventListener("change", payCoverage));
   payModal?.querySelector("[data-ff-settle-balance]")?.addEventListener("change", payCoverage);
 
+  function hrPriceOfMinutes(price, minutes, planMin){
+    const cents = Math.round((Number(price)||0)*100), m = Math.floor(Number(minutes)||0), base = Math.floor(Number(planMin)||0);
+    if(cents<=0 || m<=0 || base<=0) return 0;
+    const n = cents*m; let q = Math.floor(n/base); const r = n - q*base;
+    if(2*r >= base) q += 1;
+    return q/100;
+  }
   // ── loan: free/debt + auto-price from days ──
   const loanModal = root.querySelector("[data-ff-modal='loan']");
   function loanSync(){
@@ -395,7 +414,8 @@
     loanModal.querySelector("[data-ff-loan-pfd]").value = debt ? "1" : "0";
     const days = Math.max(0, parseInt(loanModal.querySelector("[data-ff-loan-days]")?.value || "0", 10));
     const minutes = days*1440;
-    const amount = (debt && EFF_PRICE>0 && PLAN_MIN>0 && minutes>0) ? Math.round(EFF_PRICE*(minutes/PLAN_MIN)*100)/100 : 0;
+    // نفس دالّة سعر الخادم (قروش × دقائق ÷ أساس، نصف للأعلى بحسابٍ صحيح).
+    const amount = debt ? hrPriceOfMinutes(EFF_PRICE, minutes, PLAN_MIN) : 0;
     const amtEl = loanModal.querySelector("[data-ff-loan-amount]"); if(amtEl) amtEl.value = amount?amount.toFixed(2):"0";
     const hint = loanModal.querySelector("[data-ff-loan-hint]");
     if(hint){

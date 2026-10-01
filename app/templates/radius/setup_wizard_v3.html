@@ -860,10 +860,10 @@ ads.example"></textarea>
     <h2>{{ _('تم تجهيز الراوتر بنجاح!') }}</h2>
     <p>{{ _('الراوتر يعمل الآن ضمن الأسطول ويتلقّى مصادقة النظام.') }}</p>
     <footer class="swz-actions">
-      <a class="swz-btn swz-btn-primary"
+      {% if can_submit('radius.mt_operations', 'GET') %}<a class="swz-btn swz-btn-primary"
          href="{{ url_for('radius.mt_operations') }}">
         {{ _('إدارة الراوترات') }}
-      </a>
+      </a>{% endif %}
       <a class="swz-btn swz-btn-ghost" href="">
         {{ _('إضافة راوتر آخر') }}
       </a>

@@ -134,11 +134,18 @@ def live_usernames(tenant_id: int, *, window_min: Optional[int] = None) -> set[s
     الحياة) — لكل المستأجر. تُستهلك لعرض شارة/تأثير «متصل» في القوائم بلا
     استعلام لكل صفّ. لا ترمي أبدًا — مجموعة فارغة عند أيّ خطأ."""
     cutoff = _cutoff_dt(window_min)
+    # مرشِّح SQL أوّليّ (مجموعةٌ شاملة): يُسقط الصفوف المفتوحة التي لا يَبلغ
+    # أيٌّ من طابعَيها العتبة معجميًّا بعد التطبيع — زومبي الجلسات بلا Stop
+    # كانت تُحلَّل كلُّها في بايثون عند كلّ فتحٍ لقائمة المشتركين (re-test R01:
+    # p95 5.3 ث). التحقّق الدقيق كما هو في ``_is_live`` على الناجين فقط.
+    cut = to_space_ts(cutoff.isoformat())[:19]
     try:
         rows = db().execute(
             "SELECT username, acctstarttime, acctupdatetime FROM radacct "
-            "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='')",
-            (int(tenant_id),),
+            "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='') "
+            f"AND ({acct_norm_sql('acctupdatetime')} >= ? "
+            f"     OR {acct_norm_sql('acctstarttime')} >= ?)",
+            (int(tenant_id), cut, cut),
         ).fetchall()
     except Exception:  # noqa: BLE001 — لا نكسر قائمة بسبب شارة اتصال
         return set()

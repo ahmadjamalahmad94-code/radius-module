@@ -100,6 +100,9 @@
     menu.style.visibility = "";
   }
 
+  var MENU_OPENED_AT = 0;
+  var MENU_COARSE = !!(window.matchMedia &&
+                  window.matchMedia("(pointer: coarse)").matches);
   document.addEventListener("click", function (e) {
     var trigger = e.target.closest("[data-uds-menu-trigger]");
     if (trigger) {
@@ -113,6 +116,7 @@
       if (isOpen) return;
       placeMenu(menu, trigger);
       trigger.setAttribute("aria-expanded", "true");
+      MENU_OPENED_AT = Date.now();
       return;
     }
     // click inside an open menu: let the item act, then close — unless the
@@ -128,8 +132,21 @@
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") { closeAllMenus(); closeAllModals(); }
   });
-  window.addEventListener("resize", closeAllMenus, true);
-  window.addEventListener("scroll", closeAllMenus, true);
+  // على الجوّال، انطواء شريط العنوان أو ظهور لوحة المفاتيح يُطلقان
+  // resize/scroll لم يطلبهما المستخدم — فنتجاهلهما بدل إغلاق القائمة
+  // أمام عينيه (نفس إصلاح hub_select.js/hub_date.js).
+  var MENU_LAST_W = window.innerWidth;
+  window.addEventListener("resize", function () {
+    var w = window.innerWidth;
+    if (w === MENU_LAST_W) return; // ارتفاعٌ فقط تغيّر (لوحة مفاتيح/شريط) — تجاهل
+    MENU_LAST_W = w;
+    closeAllMenus();
+  }, true);
+  window.addEventListener("scroll", function (e) {
+    if (Date.now() - MENU_OPENED_AT < 400) return;
+    if (MENU_COARSE) return; // تمرير خشن (لمسة) لا يُغلق القوائم على الجوّال
+    closeAllMenus();
+  }, true);
 
   /* ── Side-strip search filter (e.g. template picker) ─────────────── */
   document.addEventListener("input", function (e) {

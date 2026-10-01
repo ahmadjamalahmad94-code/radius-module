@@ -1713,7 +1713,7 @@ body.mt-modal-open{overflow:hidden}
       <h3><i class="fa-solid fa-microchip"></i> {{ _('موارد الراوتر') }}</h3>
       <span class="mt-card-meta">
         {% if resource and resource.recorded_at %}<i class="fa-solid fa-clock" style="font-size:10px;opacity:.6"></i> {{ resource.recorded_at|dt_local }}{% else %}{{ _('بانتظار أول قراءة…') }}{% endif %}
-        · <a href="{{ url_for('radius.resource_alerts_settings') if endpoint_exists('radius.resource_alerts_settings') else '#' }}" style="color:#6B5AED;font-weight:700"><i class="fa-solid fa-sliders" style="font-size:10px"></i> {{ _('إعدادات الحدود') }}</a>
+        · {% if can_submit('radius.resource_alerts_settings', 'GET') %}<a href="{{ url_for('radius.resource_alerts_settings') if endpoint_exists('radius.resource_alerts_settings') else '#' }}" style="color:#6B5AED;font-weight:700">{% endif %}<i class="fa-solid fa-sliders" style="font-size:10px"></i> {{ _('إعدادات الحدود') }}{% if can_submit('radius.resource_alerts_settings', 'GET') %}</a>{% endif %}
       </span>
     </header>
     <div class="mt-card-body">
@@ -2629,10 +2629,10 @@ body.mt-modal-open{overflow:hidden}
            وخطّاف الحالة hotspot لم تتغيّر — لا نُغيّر النصّ
            «بوابة الدخول» في باقي الصفحات (~20 موضعاً غير ذي
            صلة: قوالب الزبون، الفواتير، الوثائق…). #}
-        <a class="np-svc-card is-inactive"
+        {% if can_submit('radius.setup_wizard_v3_router_service_flow', 'GET') %}<a class="np-svc-card is-inactive"
            data-rh-svc-card="hotspot"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                            router_id=nas.id, service_key='hotspot') }}">
+                            router_id=nas.id, service_key='hotspot') }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
           <h5 class="np-svc-title">{{ _('الهوت سبوت') }}</h5>
           {# لا شارة ترقية — «الهوت سبوت» خدمة مفتوحة بلا فئات تتراقى
@@ -2640,48 +2640,48 @@ body.mt-modal-open{overflow:hidden}
              الترقيات تبقى للخدمات ذات المواصفات الفعليّة (loop_detect،
              bt_wifi_block، public-ip). راجع service_specs.py. #}
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
-        </a>
+        {% if can_submit('radius.setup_wizard_v3_router_service_flow', 'GET') %}</a>{% endif %}
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
-        <a class="np-svc-card is-inactive"
+        {% if can_submit('radius.setup_wizard_v3_router_service_flow', 'GET') %}<a class="np-svc-card is-inactive"
            data-rh-svc-card="broadband"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                            router_id=nas.id, service_key='broadband') }}">
+                            router_id=nas.id, service_key='broadband') }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--green"><i class="fa-solid fa-ethernet"></i></span>
           <h5 class="np-svc-title">{{ _('البرودباند') }}</h5>
           {# لا شارة ترقية — «البرودباند» خدمة مفتوحة كذلك. #}
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
-        </a>
+        {% if can_submit('radius.setup_wizard_v3_router_service_flow', 'GET') %}</a>{% endif %}
         {# مصمّم صفحة الدخول (أداة). #}
-        <a class="np-svc-card np-svc-card--tool"
+        {% if can_submit('radius.mt_login_designer', 'GET') %}<a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="login-designer"
            href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-palette"></i></span>
           <h5 class="np-svc-title">{{ _('مصمّم صفحة الدخول') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        </a>{% endif %}
         {# «حظر المواقع» — بطاقة مباشرة على صفحة الخدمة (لا تمرّ عبر
            صفحة هبوط NPC). الـendpoint npc_web_block_list_scoped هو
            الـrouting المُجزّأ الموجود فعلًا للراوتر — نَستخدمه مباشرةً
            كرابط الخدمة كما طلب المالك بعد إزالة غلاف NPC. الاسم
            العرضي «حظر المواقع» (طلب المالك). #}
-        <a class="np-svc-card is-inactive"
+        {% if can_submit('radius.npc_web_block_list_scoped', 'GET') %}<a class="np-svc-card is-inactive"
            data-mt-router-link="npc-web-block"
            data-rh-svc-card="block-sites"
-           href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
+           href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--red"><i class="fa-solid fa-ban"></i></span>
           <h5 class="np-svc-title">{{ _('حظر المواقع') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
-        </a>
+        {% if can_submit('radius.npc_web_block_list_scoped', 'GET') %}</a>{% endif %}
         {# «المواقع المسموحة» — بطاقة مباشرة. نفس فكرة «حظر المواقع»:
            رابط مباشر إلى npc_walled_garden_list_scoped بلا غلاف NPC. #}
-        <a class="np-svc-card is-inactive"
+        {% if can_submit('radius.npc_walled_garden_list_scoped', 'GET') %}<a class="np-svc-card is-inactive"
            data-mt-router-link="npc-walled-garden"
            data-rh-svc-card="open-sites"
-           href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
+           href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-door-open"></i></span>
           <h5 class="np-svc-title">{{ _('المواقع المسموحة') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
-        </a>
+        {% if can_submit('radius.npc_walled_garden_list_scoped', 'GET') %}</a>{% endif %}
         {# منع بث البلوتوث والواي فاي — بطاقة خدمة دائمة الإتاحة (يونيو
            2026، طلب المالك): لا «تفعيل» عامّ ولا «ترقية» — الخدمة مُلائمة
            دومًا لشبكة عامّة، والتفعيل = اختيار المداخل في صفحة الخدمة.
@@ -2710,13 +2710,13 @@ body.mt-modal-open{overflow:hidden}
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
         </a>
         {# النسخ الاحتياطية (أداة). #}
-        <a class="np-svc-card np-svc-card--tool"
+        {% if can_submit('radius.mt_backups_list', 'GET') %}<a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="backups"
            href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-floppy-disk"></i></span>
           <h5 class="np-svc-title">{{ _('النسخ الاحتياطية') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        </a>{% endif %}
         {# تتبّع اللوب — بطاقة خدمة دائمة الإتاحة (يونيو 2026، طلب المالك):
            لا «تفعيل» عامّ ولا «ترقية» — كَشف اللوب من نَظافة الشبكة
            العامّة، يَنطبق دومًا، والتفعيل = اختيار المداخل في صفحة الخدمة.
@@ -2729,11 +2729,11 @@ body.mt-modal-open{overflow:hidden}
            لـ«ظَهر لوب فعلًا» مُستقلّ عن التضبيط. #}
         {% set _loop_ports = (((pss_services or {}).get('loop_detect', {}) or {}).get('ports') or []) %}
         {% set _loop_configured = _loop_ports | length > 0 %}
-        <a class="np-svc-card is-unknown" data-rh-loop-tile
+        {% if can_submit('radius.mt_port_services_form', 'GET') %}<a class="np-svc-card is-unknown" data-rh-loop-tile
            data-rh-svc-card="loop_detect"
            data-pss-saved-enabled="{{ '1' if _loop_configured else '0' }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
-           title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">
+           title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-arrows-spin"></i></span>
           <h5 class="np-svc-title">
             {{ _('تتبّع اللوب') }}
@@ -2743,7 +2743,7 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
-        </a>
+        {% if can_submit('radius.mt_port_services_form', 'GET') %}</a>{% endif %}
         {# ══════════════════════════════════════════════════════════════
            فصل مفهومَي «تغيير IP» (طلب المالك، يونيو 2026): كانت بطاقة
            واحدة «تغيير IP الخروج (مدفوعة)» يَفتح زرّها الأساسيّ تدفّق
@@ -2784,16 +2784,16 @@ body.mt-modal-open{overflow:hidden}
            مع hint=coa_setip؛ هناك يُرسَل CoA-Request مع Framed-IP-Address
            الجديد دون قطع (جلسات Hotspot غير مدعومة وتُبيَّن بوضوح). لا
            شارة «مدفوعة» ولا status-dot (ليست خدمة مُزوَّدة، بل اختصار فعل). #}
-        <a class="np-svc-card is-inactive"
+        {% if can_submit('radius.online_list', 'GET') %}<a class="np-svc-card is-inactive"
            data-rh-coa-setip
            href="{{ url_for('radius.online_list', nas=nas.address, hint='coa_setip') }}"
-           title="{{ _('مجّانيّ/داخليّ — تطبيق تغيير IP الجلسة الداخلية (LAN) لمتصلٍ حيٍّ عبر CoA دون قطع. ليس عنوان التصفّح العامّ') }}">
+           title="{{ _('مجّانيّ/داخليّ — تطبيق تغيير IP الجلسة الداخلية (LAN) لمتصلٍ حيٍّ عبر CoA دون قطع. ليس عنوان التصفّح العامّ') }}">{% endif %}
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-network-wired"></i></span>
           <h5 class="np-svc-title">{{ _('تغيير IP الجلسة الداخلية (CoA)') }}</h5>
           <span class="ssm-upgrade-pill ssm-pill--activate" aria-hidden="true">
             <i class="fa-solid fa-bolt"></i> {{ _('تطبيق IP حيّ') }}
           </span>
-        </a>
+        {% if can_submit('radius.online_list', 'GET') %}</a>{% endif %}
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
            اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
            فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
@@ -2803,14 +2803,14 @@ body.mt-modal-open{overflow:hidden}
         {# سطر الوصف أُزيل (يونيو 2026): كانت هذه البطاقة و«تتبع حالة
            الأجهزة» الوحيدتَين بسطرَين فتكسران تساوي ارتفاعات الشبكة.
            النص الكامل باقٍ في title (تلميح المرور) على البطاقة نفسها. #}
-        <a class="np-svc-card np-svc-card--tool"
+        {% if can_submit('radius.diagnostics', 'GET') %}<a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="diagnostics"
            href="{{ url_for('radius.diagnostics') }}"
            title="{{ _('فحص اتصال كل راوترات الأسطول واكتشاف الأعطال مبكراً') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-stethoscope"></i></span>
           <h5 class="np-svc-title">{{ _('تشخيص الراوترات') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        </a>{% endif %}
         {# «تتبع حالة الأجهزة» — أداة مراقبة مستمرّة على مستوى
            المستأجر (لا nas_id). تختلف عن «تشخيص الراوترات»:
            هذه تتتبّع حالة كل أجهزة الشبكة (راوترات، نقاط وصول،
@@ -2819,14 +2819,14 @@ body.mt-modal-open{overflow:hidden}
            في app/radius/routes/device_health.py باسم endpoint
            «device_health_page». رمز الـqrcode-network ليعكس فكرة
            «شبكة من الأجهزة المُراقَبة». #}
-        <a class="np-svc-card np-svc-card--tool"
+        {% if can_submit('radius.device_health_page', 'GET') %}<a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="device-health"
            href="{{ url_for('radius.device_health_page') }}"
            title="{{ _('مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل') }}">
           <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-heart-pulse"></i></span>
           <h5 class="np-svc-title">{{ _('تتبع حالة الأجهزة') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        </a>{% endif %}
       </div>
 
     </div>{# /.rh-svc-panel--all — نهاية قسم «كل الخدمات» #}

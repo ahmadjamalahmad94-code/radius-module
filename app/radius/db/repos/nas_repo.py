@@ -43,6 +43,12 @@ def _row(r) -> NasDevice:
         # feat/mikrotik-user-import — واجهة الجلب المفضّلة (migration 124).
         # قراءة آمنة (افتراضي auto لقواعد ما قبل 124).
         api_type=_g(r, "api_type", "auto") or "auto",
+        # إصدارُ RouterOS ('6'/'7'/'') — يُقرأ آمنًا لقواعد ما قبل الهجرة 034.
+        # يسري عبر الـDTO كي **تحمله مساراتُ الإضافة الثلاثة كلُّها** (الويب
+        # والـAPI والمعالج) إلى مولّدِ السكربت. كان عمودًا في الجدول وحدَه
+        # يكتبه المعالجُ بتحديثٍ خامٍّ منفصل، فكلُّ راوترٍ أُضيف من الويب أو
+        # الـAPI وُلد بإصدارٍ فارغ ⇒ يُعامَل كـv7 ⇒ أمرُ نفقٍ يرفضه ROS 6.
+        ros_version=_g(r, "ros_version", "") or "",
     )
 
 
@@ -85,15 +91,17 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                     api_port, api_user, api_password, api_use_tls,
                     location, coordinates, monitoring_enabled, description, enabled,
                     require_message_authenticator, ssh_port, tags, metadata,
+                    ros_version,
                     deleted_at, deleted_by, delete_reason,
                     created_at, updated_at)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (d.tenant_id, d.name, d.shortname, d.address, d.secret, d.vendor, d.nas_type,
                   d.ports, d.snmp_community, d.auth_port, d.acct_port, d.coa_port,
                   d.api_port, d.api_user, d.api_password, int(d.api_use_tls),
                   d.location, d.coordinates, int(d.monitoring_enabled),
                   d.description, int(d.enabled),
                   int(d.require_message_authenticator), d.ssh_port, d.tags, d.metadata or "{}",
+                  d.ros_version or "",
                   dt_to_iso(d.deleted_at), d.deleted_by, d.delete_reason,
                   now, now))
             new_id = cur.lastrowid
@@ -105,6 +113,7 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                     api_port=?, api_user=?, api_password=?, api_use_tls=?,
                     location=?, coordinates=?, monitoring_enabled=?, description=?, enabled=?,
                     require_message_authenticator=?, ssh_port=?, tags=?, metadata=?,
+                    ros_version=?,
                     deleted_at=?, deleted_by=?, delete_reason=?,
                     updated_at=?
                 WHERE tenant_id = ? AND id = ?
@@ -114,6 +123,7 @@ def upsert_nas(d: NasDevice) -> NasDevice:
                   d.location, d.coordinates, int(d.monitoring_enabled),
                   d.description, int(d.enabled),
                   int(d.require_message_authenticator), d.ssh_port, d.tags, d.metadata or "{}",
+                  d.ros_version or "",
                   dt_to_iso(d.deleted_at), d.deleted_by, d.delete_reason,
                   now, d.tenant_id, d.id))
             new_id = d.id
@@ -157,13 +167,33 @@ def archive_nas(tenant_id: int, nas_id: int, *, actor: str = "",
 
 
 def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
+    # f06-H1/H2: عنوانٌ صار لراوترٍ حيٍّ آخر ⇒ RadiusConflict (409)، وعنوانٌ لا
+    # يقرؤه الرديوس (IPv6 بمعرّف نطاق) ⇒ RadiusValidationError (422). لا
+    # راوتران حيّان على عنوانٍ واحد أبدًا.
+    from ...services.devices import check_restorable_nas
+    check_restorable_nas(tenant_id, nas_id)
     with transaction() as conn:
+        # A deleted router's name is free for reuse (migration 178). If a live
+        # router took it meanwhile, the restored row gets a suffixed name
+        # instead of failing on the live-name unique index.
+        row = conn.execute(
+            "SELECT name FROM nas_devices WHERE tenant_id = ? AND id = ? "
+            "AND deleted_at IS NOT NULL", (tenant_id, nas_id)).fetchone()
+        if not row:
+            return False
+        name = row["name"] or ""
+        taken = conn.execute(
+            "SELECT 1 FROM nas_devices WHERE tenant_id = ? AND id != ? "
+            "AND deleted_at IS NULL AND lower(trim(name)) = lower(trim(?))",
+            (tenant_id, nas_id, name)).fetchone()
+        if taken:
+            name = f"{name[:80]} (مستعاد {nas_id})"
         cur = conn.execute("""
             UPDATE nas_devices
             SET deleted_at = NULL, deleted_by = '', delete_reason = '',
-                enabled = 0, monitoring_enabled = 0, updated_at = ?
+                enabled = 0, monitoring_enabled = 0, name = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
-        """, (now_iso(), tenant_id, nas_id))
+        """, (name, now_iso(), tenant_id, nas_id))
         return cur.rowcount > 0
 
 

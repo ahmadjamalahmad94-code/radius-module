@@ -12,7 +12,7 @@
 {% block title %}{{ _("الكروت المستخدمة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
 {% block page_title %}{{ _("الكروت المستخدمة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total|ar_count('kart') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الكروت #}
@@ -63,7 +63,7 @@
 {% if items %}
 {# ───── جدول الكروت — uds موحّد (فرز + ترقيم + تصدير) ───── #}
 {% call hub.section("الكروت المستخدمة", icon="table-list",
-                    meta=items|length|string + " كرت", flush=True) %}
+                    meta=items|length|ar_count('kart'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">

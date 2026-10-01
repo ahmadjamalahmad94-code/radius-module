@@ -51,6 +51,8 @@ _STR_FIELDS = (
     "snmp_community", "api_user", "api_password",
     "location", "coordinates", "description",
     "tags", "metadata",
+    # إصدارُ RouterOS ('6'/'7'/'') — يسري إلى مولّدِ سكربتِ التهيئة.
+    "ros_version",
 )
 _INT_FIELDS = (
     "ports", "auth_port", "acct_port", "coa_port", "api_port", "ssh_port",
@@ -120,6 +122,15 @@ def _apply_body(device: NasDevice, body: dict) -> NasDevice:
             )
     if "nas_type" in changes:
         changes["nas_type"] = changes["nas_type"].strip().lower()
+    if "ros_version" in changes:
+        # '6' | '7' | '' فقط. نقبل "6.48.6"/"7.23" ونأخذ الرقمَ الأكبر، كي
+        # يُمرّر المتكاملُ ما قرأه من الراوتر كما هو بلا تقطيعٍ يدويّ.
+        _rv = changes["ros_version"].strip()
+        _major = _rv.split(".", 1)[0] if _rv else ""
+        if _major not in ("", "6", "7"):
+            raise RadiusValidationError(
+                f"إصدار RouterOS غير مدعوم: «{_rv[:16]}». المسموح: 6 أو 7.")
+        changes["ros_version"] = _major
     return replace(device, **changes)
 
 
@@ -132,8 +143,8 @@ def _json_body():
 
 
 def _conflict(e: RadiusConflict):
-    return fail("nas_address_conflict", e.message, status=409,
-                details=e.details or None)
+    code = (e.details or {}).get("code") or "nas_address_conflict"
+    return fail(code, e.message, status=409, details=e.details or None)
 
 
 def _serialize(device: NasDevice, *, radius_client_warning: dict | None = None) -> dict:
@@ -241,8 +252,10 @@ def nas_get(nas_id: int):
 
 
 def nas_patch(nas_id: int):
-    body = _json_body()
-    if body is None:
+    # f06-L11: جسمٌ `null` أو JSON تالف أو فارغ كان يُقرأ {} ⇒ 200 بلا شيء.
+    # التعديل يتطلّب كائن JSON صريحًا (ولو `{}`).
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
         return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     svc = _svc()
     try:

@@ -110,7 +110,7 @@
               {{ archive.summary.finance.revenue|money }}
             {%- else -%}—{%- endif -%}
           </td>
-          <td class="small">{{ archive.created_by or '—' }}</td>
+          <td class="small">{{ archive.created_by|actor_name if archive.created_by else '—' }}</td>
           <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ archive.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
@@ -129,8 +129,8 @@
 {# ───────────── صندوق عائم: إنشاء لقطة أرشيف ───────────── #}
 <div class="fcw-modal" data-fcw-modal="archive-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-archive-create-title">
-    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post"> فقط. #}
-    <form method="post" action="{{ url_for('radius.reports_archive_create') }}" data-testid="archive-create-form">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %} فقط. #}
+    {% if can_submit('radius.reports_archive_create', 'POST') %}<form method="post" action="{{ url_for('radius.reports_archive_create') }}" data-testid="archive-create-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
         <h3 id="fcw-archive-create-title"><i class="fa-solid fa-lock"></i> {{ _('إنشاء لقطة أرشيف') }}</h3>
@@ -167,7 +167,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> {{ _('إنشاء اللقطة') }}</button>
       </div>
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>{% endif %}
   </div>
 </div>
 

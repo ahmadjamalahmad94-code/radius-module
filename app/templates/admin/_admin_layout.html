@@ -193,6 +193,9 @@
       .hr-page-nav-list{grid-template-columns:1fr}
     }
   </style>
+  {# رسائل أخطاء AJAX بالعربيّة: يطبّع ردود JSON الفاشلة (رمز/كائن ⇒ الرسالة
+     العربيّة) قبل أن تقرأها نوافذ الصفحة. في الرأس ليسبق أيّ fetch. #}
+  <script src="{{ url_for('static', filename='js/hr_ajax_errors.js', v=asset_v('js/hr_ajax_errors.js') if asset_v is defined else None) }}"></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -285,12 +288,19 @@
     {# #16: top-bar icons wired to real routes (endpoint_exists guard → never 500s).
        gear → RADIUS settings · bell → alerts/notifications center · envelope →
        license-panel messages (welcome / renewal / near-expiry deliveries). #}
+    {# F01-F2: الترس فقط لمن يفتح الإعدادات فعلًا (نفس قرار الحارس) — لا رابط يقود إلى 403. #}
+    {% if endpoint_exists('radius.settings_page') and (can_submit is not defined or can_submit('radius.settings_page', 'GET')) %}
     <a class="ic hb-settings-ic" title="{{ _('إعدادات الراديوس') }}"
-       href="{{ url_for('radius.settings_page') if endpoint_exists('radius.settings_page') else '#' }}">
+       href="{{ url_for('radius.settings_page') }}">
       <i class="fa-solid fa-gear"></i>
     </a>
+    {% endif %}
     {# الجرس: قائمة منسدلة بأحدث التنبيهات المفتوحة — كل تنبيه رابط يفتح
        صفحة تفاصيله مباشرة، والعدّاد حقيقي من قاعدة البيانات بدل الرقم الثابت. #}
+    {# F01-F13: تنبيهات الراوترات/النظام لمن يفتح مركزها فقط (نفس قرار الحارس) —
+       كانت تظهر لمن لا يملك nas.view وكلّ روابطها 403. #}
+    {% set _bell_ok = can_open_mt is not defined or (can_open_mt('radius.mt_alerts_index') and (not endpoint_exists('radius.mt_alerts_detail') or can_open_mt('radius.mt_alerts_detail'))) %}
+    {% if _bell_ok %}
     {% set _bell = topbar_alerts(6) if topbar_alerts is defined else {'count': 0, 'items': []} %}
     {% set _alerts_url = url_for('radius.mt_alerts_index') if endpoint_exists('radius.mt_alerts_index') else '#' %}
     <div class="bell-wrap" style="position:relative">
@@ -342,6 +352,7 @@
         </a>
       </div>
     </div>
+    {% endif %}
     {# الظرف = مركز الإشعارات الموحّد: عدّ غير المقروء الحقيقي + قائمة منسدلة
        بأحدث الإشعارات (محلّية + من لوحة التراخيص عبر الجسر). كل عنصر رابط
        يفتح هدفه ويُعلّمه مقروءًا. التذييل ← صفحة مركز الإشعارات. #}
@@ -642,6 +653,9 @@
 <script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
 {# قائمة إجراءات سريعة بزرّ الفأرة الأيمن على صفوف الجداول (tr[data-rowctx]) #}
 <script src="{{ url_for('static', filename='js/row_context_menu.js') }}"></script>
+{# حارس النقر المزدوج على نماذج الإجراء (إضافة وقت، تطبيق فاحص البطاقات…) —
+   عامّ لكل نماذج الموقع، مُحمَّل مبكرًا قبل أيّ سكربت صفحة يعتمد عليه. #}
+<script src="{{ url_for('static', filename='js/submit_guard.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_guide_collapse.js') }}"></script>
 {# القوائم المنسدلة الحديثة الموحّدة — يلفّ كل select.hub-select تلقائيًا #}
@@ -706,7 +720,7 @@
 {# أرقام إنجليزية (0-9) في كل اللوحة — عرضًا وكتابةً وفي التلميحات. مصدرٌ
    واحد في static/js/latin_digits.js تحمّله الصفحات المستقلّة أيضًا. متزامن
    عمدًا (لا defer) كي يُطبَّع المحتوى قبل أوّل رسم. #}
-<script src="{{ url_for('static', filename='js/latin_digits.js', v='3') }}"></script>
+<script src="{{ url_for('static', filename='js/latin_digits.js', v=asset_v('js/latin_digits.js') if asset_v is defined else '4') }}"></script>
 <script>
   // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
   // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر
@@ -1013,6 +1027,23 @@
   }
   tick();
   setInterval(tick, 1000);
+})();
+</script>
+<script>
+/* D04: استعادة نموذجٍ رُفض حفظه (صفحة 403 تحفظ الحقول ثم تعود هنا). */
+/* F01-F1: تعمل أيضًا حين يعيد المتصفّح الصفحة من ذاكرة الرجوع (bfcache —
+   pageshow.persisted) فلا يبقى المفتاح عالقًا ليملأ زيارة لاحقة. */
+(function(){
+function take(){try{var raw=sessionStorage.getItem('hr_refused_form');if(!raw)return null;
+var d=JSON.parse(raw);if(!d||d.path!==location.pathname)return null;sessionStorage.removeItem('hr_refused_form');return d;}catch(e){return null;}}
+function fill(d){try{var f=d.fields||{};Object.keys(f).forEach(function(n){
+var els=document.getElementsByName(n);var vals=f[n]||[];for(var i=0;i<els.length;i++){var el=els[i];
+if(el.type==='checkbox'||el.type==='radio'){el.checked=vals.indexOf(el.value)>=0;}
+else if(el.type!=='file'&&el.type!=='hidden'&&el.type!=='password'){el.value=vals[i]!==undefined?vals[i]:(vals[0]||'');}
+try{el.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}}});}catch(e){}}
+var d=take();
+if(d){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){fill(d);});}else{fill(d);}}
+window.addEventListener('pageshow',function(ev){if(ev.persisted){var d2=take();if(d2)fill(d2);}});
 })();
 </script>
 </body>

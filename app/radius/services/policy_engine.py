@@ -103,6 +103,7 @@ _MSG = {
     "provider_active_cap": "تم بلوغ الحدّ الأقصى للمتصلين المتزامنين لباقتك — انتظر انتهاء جلسة أو رقّ باقتك",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
+    "ok_card_time_left": "أهلًا بك — الوقت المتبقّي في بطاقتك:",
 }
 
 # fail2ban — قائمة سماح: العدّاد التلقائي يُحسب **فقط** على فشل المصادقة
@@ -374,27 +375,38 @@ def _subscriber_used_bytes(sub: Subscriber) -> int:
     if carried > 0:
         return carried
     try:
-        from ..db.connection import db
-        row = db().execute(
-            "SELECT COALESCE(SUM(acctinputoctets), 0)"
-            "     + COALESCE(SUM(acctoutputoctets), 0) AS b"
-            "  FROM radacct WHERE tenant_id = ? AND username = ?",
-            (int(sub.tenant_id), str(sub.username))).fetchone()
-        return int(row["b"] or 0) if row else 0
+        # استهلاك **الفترة الحاليّة** (منذ آخر تغيير عرضٍ/تجديد — quota_period)،
+        # وبلا فترةٍ مسجّلة: منذ الأزل كما كان. كان الأزليّ دائمًا فلا يُعيد
+        # التجديدُ الكوتة أبدًا.
+        from . import quota_period
+        return int(quota_period.period_used_bytes(sub))
     except Exception:  # noqa: BLE001 — لا نقطع خدمةً بسبب عطبِ قراءة
         _LOG.warning("quota: تعذّر جمعُ الاستهلاك من radacct (user=%r) — "
                      "يُؤخذ العدّادُ المحمول", sub.username, exc_info=True)
         return carried
 
 
-def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
-    """هل بَلغ الاستهلاك المُحاسَب سقف الكوتا الفعّال؟ (بلا قراءة DB — يعتمد على
-    عدّادات sub). 0/لا سقف → False."""
+def _quota_exhaustion(sub: Subscriber, plan: Optional[AccessPlan]) -> str:
+    """أيّ كوتةٍ نفدت: «total» (الإجماليّة للفترة) أو «monthly»/«daily» (كوتات
+    الباقة الشهريّة/اليوميّة، إجماليّةً أو بالاتجاه) أو "" لا شيء.
+
+    🔴 كانت الإجماليّة وحدها تُنفَّذ؛ الحقول اليوميّة/الشهريّة/بالاتجاه تُخزَّن
+    وتُعرض ولا يفحصها شيء (إعادة اختبار R04 N6). محصّن: خطأ القراءة ⇒ لا رفض."""
     cap_mb = _effective_quota_mb(sub, plan)
-    if cap_mb <= 0:
-        return False
-    used_mb = _subscriber_used_bytes(sub) / 1_048_576
-    return used_mb >= cap_mb
+    if cap_mb > 0 and _subscriber_used_bytes(sub) / 1_048_576 >= cap_mb:
+        return "total"
+    try:
+        from . import quota_period
+        return quota_period.window_exhaustion(sub, plan)
+    except Exception:  # noqa: BLE001 — لا نقطع خدمةً بسبب عطبِ قراءة
+        _LOG.warning("quota: تعذّر فحص الكوتة اليوميّة/الشهريّة (user=%r)",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return ""
+
+
+def _is_quota_exhausted(sub: Subscriber, plan: Optional[AccessPlan]) -> bool:
+    """هل نفدت أيّ كوتةٍ سارية (إجماليّة/شهريّة/يوميّة/اتجاه)؟ 0/لا سقف → False."""
+    return bool(_quota_exhaustion(sub, plan))
 
 
 def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
@@ -409,7 +421,8 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
       • reduce_speed → سماح؛ التخفيف يُطبَّق في ``_build_accept_attrs``.
       • notify       → سماح + إطلاق حدث إشعار 'quota_exhausted'.
     """
-    if not _is_quota_exhausted(sub, plan):
+    which = _quota_exhaustion(sub, plan)
+    if not which:
         return None
     mode = "stop"
     try:
@@ -426,7 +439,10 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
         except Exception:  # noqa: BLE001
             pass
         return None
-    return _reject("quota_exhausted")
+    return _reject("quota_exhausted", extra_message={
+        "daily": " (الكوتة اليوميّة — تتجدّد غدًا)",
+        "monthly": " (الكوتة الشهريّة — تتجدّد الشهر القادم)",
+    }.get(which, ""))
 
 
 def _check_card_time_budget(sub: Subscriber,
@@ -594,6 +610,21 @@ def _local_day_start_utc(tenant_id: int) -> str:
     return local_midnight.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def _daily_since(sub: Subscriber) -> str:
+    """بداية «اليوم» لسقوف الوقت اليوميّة: منتصف الليل المحلّيّ، أو لحظة آخر
+    «استعادة الكوتة اليوميّة» إن كانت اليوم (كانت الاستعادة لا تُعيد شيئًا)."""
+    since = _local_day_start_utc(int(sub.tenant_id))
+    try:
+        from . import quota_period
+        st = quota_period.get_state(int(sub.tenant_id), getattr(sub, "id", None))
+        reset = str((st or {}).get("daily_reset_at") or "").strip().replace(" ", "T")[:19]
+        if reset and reset > since:
+            return reset
+    except Exception:  # noqa: BLE001
+        pass
+    return since
+
+
 def _elapsed_since(since_iso: str) -> int:
     """ثواني منقضية منذ ``since_iso`` (UTC) حتى الآن — حدّ أعلى فيزيائيّ لاستهلاك
     النافذة: لا يُمكن أن يتّصل المشترك ثوانيَ أكثر ممّا انقضى منها. نُقيّد به عدّاد
@@ -658,12 +689,21 @@ def daily_used_seconds_bulk(tenant_id: int, usernames,
         from .device_limit import acct_norm_sql, to_space_ts, _parse_acct_dt
         since = since_iso or _local_day_start_utc(int(tenant_id))
         nrm = acct_norm_sql("acctstarttime")
+        nrm_stop = acct_norm_sql("acctstoptime")
         ph = ",".join("?" * len(names))
+        since_sp = to_space_ts(since)
+        # 🔴 F04 H1 (الشقيق الزمنيّ): جلسةٌ بدأت قبل منتصف الليل وما زالت
+        # مفتوحة (أو أُغلقت بعده) كانت خارج «اليوم» كلّيًّا — PPPoE متّصلٌ
+        # أيّامًا بلا حدٍّ يوميّ. الآن تُحسب **حصّتها بعد بداية اليوم** فقط
+        # (الفترة تُقصّ عند ``since``).
         rows = db().execute(
             f"SELECT username, acctstarttime, "
             f"       COALESCE(acctsessiontime,0) AS dur FROM radacct "
-            f"WHERE tenant_id=? AND username IN ({ph}) AND {nrm} >= ?",
-            (int(tenant_id), *names, to_space_ts(since))).fetchall()
+            f"WHERE tenant_id=? AND username IN ({ph}) AND ({nrm} >= ? "
+            f"   OR acctstoptime IS NULL OR acctstoptime = '' OR {nrm_stop} > ?)",
+            (int(tenant_id), *names, since_sp, since_sp)).fetchall()
+        since_dt = _parse_acct_dt(since_sp)
+        since_ep = int(timegm(since_dt.timetuple())) if since_dt else None
         by_user: dict = {}
         for r in rows:
             dur = int(r["dur"] or 0)
@@ -673,7 +713,12 @@ def daily_used_seconds_bulk(tenant_id: int, usernames,
             if dt is None:
                 continue
             start = int(timegm(dt.timetuple()))   # naive UTC → epoch (consistent)
-            by_user.setdefault(str(r["username"]), []).append((start, start + dur))
+            end = start + dur
+            if since_ep is not None:
+                if end <= since_ep:
+                    continue                      # ended before the day started
+                start = max(start, since_ep)      # only today's share of a straddler
+            by_user.setdefault(str(r["username"]), []).append((start, end))
         # قيِّد بالمنقضي منذ منتصف الليل المحلّي — لا يَظهر «4س» بينما لم يَمضِ
         # من اليوم إلا دقائق (جلسة عابرة لمنتصف الليل).
         cap = _elapsed_since(since)
@@ -702,7 +747,7 @@ def _check_connection_time(sub: Subscriber, plan: Optional[AccessPlan],
             if used >= total_cap_min * 60:
                 return _reject("time_total_exhausted")
         if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
+            since = _daily_since(sub)
             # wall-clock (اتحاد فترات) — نفس مصدر عمود «وقت اليوم»، فلا تُضاعِف
             # الأجهزة المتزامنة الاستهلاك اليوميّ فتُقطَع الخدمة مبكّرًا. (يُقيَّد
             # داخليًّا بالمنقضي منذ منتصف الليل.)
@@ -732,7 +777,7 @@ def _time_cap_remaining_seconds(sub: Subscriber,
             remainings.append(total_cap_min * 60
                               - _accounted_session_seconds(tid, user))
         if daily_cap_min > 0:
-            since = _local_day_start_utc(tid)
+            since = _daily_since(sub)
             used_today = min(_accounted_session_seconds(tid, user, since_iso=since),
                              _elapsed_since(since))
             remainings.append(daily_cap_min * 60 - used_today)
@@ -1111,6 +1156,18 @@ def authorize(req: AuthRequest) -> AuthDecision:
             sub = _card_to_subscriber(card)
             source = "card"
     if not sub:
+        # fix2 (R05-N5): أسماء البطاقات تُخزَّن بأحرفٍ صغيرة (التوليد والاستيراد
+        # معًا). بطاقةٌ مستوردةٌ طُبعت في نظامها الأصليّ «ABC12» تبقى تعمل حين
+        # يكتبها الزبون كما طُبعت — للبطاقات فقط، وبعد فشل المطابقة الحرفيّة.
+        _lc = (req.username or "").strip().lower()
+        if _lc and _lc != req.username:
+            card = cards_repo.get_card_by_username(req.tenant_id, _lc)
+            if card:
+                from dataclasses import replace as _dc_replace
+                req = _dc_replace(req, username=_lc)
+                sub = _card_to_subscriber(card)
+                source = "card"
+    if not sub:
         _LOG.warning("auth_decision user=%r reason=user_not_found "
                       "(لا subscriber ولا card في tenant=%d)",
                       req.username, req.tenant_id)
@@ -1207,9 +1264,15 @@ def authorize(req: AuthRequest) -> AuthDecision:
     reply = _build_accept_attrs(sub, plan)
     msg = _MSG["ok_welcome"]
     if sub.expire_at:
-        days_left = (sub.expire_at - now).days
-        if 0 <= days_left <= 3:
-            msg = _MSG["ok_expires_soon"] + f" ({days_left} يوم)"
+        # f05-L5: المتبقّي بوحداتٍ صحيحة — كانت بطاقةٌ بقيت لها ساعات تقرأ
+        # «(0 يوم)». والبطاقة ليست «اشتراكًا يُجدَّد»: تُخبَر بوقتها المتبقّي.
+        left = int((sub.expire_at - now).total_seconds())
+        if 0 <= left < 4 * 86400:
+            from ..core.duration_fmt import fmt_remaining_ar
+            if sub.user_type == USER_TYPE_CARD or sub.card_batch_id:
+                msg = _MSG["ok_card_time_left"] + f" {fmt_remaining_ar(left)}"
+            else:
+                msg = _MSG["ok_expires_soon"] + f" ({fmt_remaining_ar(left)})"
     reply["Reply-Message"] = msg
     _LOG.warning("auth_decision user=%r source=%s accepted attrs=%d",
                   req.username, source, len(reply))
@@ -1241,6 +1304,107 @@ def _card_batch_window_seconds(tenant_id, batch_id) -> int:
                      "(tenant=%r batch=%r)", tenant_id, batch_id, exc_info=True)
         return 0
     return _card_window_seconds(row) if row else 0
+
+
+def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan) -> Optional[int]:
+    """f05-M1 — سقفُ الجلسة من **ميزانيّة البطاقة** بدل ``plan.duration_minutes``.
+
+    * ``None`` → لا نعرف ميزانيّةً للبطاقة (لا صفّ بطاقة/لا مدّة): يبقى
+      السلوك القديم (مدّة الباقة).
+    * ``0``    → البطاقة مختومة (``expire_at``) في نمط النافذة: المتبقّي حتى
+      ``expire_at`` — وفيه المنحة — هو الحاكم، فلا سقف من الباقة.
+    * ``> 0``  → الثواني: نافذة «من أوّل اتّصال» كاملةً (الأساس + المنحة) قبل
+      الختم، أو رصيد الاستخدام المتبقّي (الأساس + المنحة − المستهلَك) في نمط
+      «بالثانية». خصمٌ استنفدها → ``1`` (لا صفر: الصفر «بلا حدّ» عند الراوتر؛
+      والمُصادِق يرفضها قبل هذا أصلًا).
+    """
+    from . import card_accounting
+    try:
+        row = db().execute(
+            "SELECT COALESCE(c.extra_seconds, 0) AS extra_seconds, "
+            "       b.id AS batch_id, b.count_by_seconds, b.count_from_first_connect, "
+            "       b.time_value, b.time_unit, b.validity_after_first_login_days "
+            "  FROM cards c LEFT JOIN card_batches b "
+            "    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id "
+            " WHERE c.tenant_id = ? AND c.username = ?",
+            (int(sub.tenant_id), sub.username)).fetchone()
+    except Exception:  # noqa: BLE001 — لا نكسر الـaccept؛ السلوك القديم
+        _LOG.warning("policy_engine: card budget lookup failed for %r",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return None
+    if not row or row["batch_id"] is None:
+        return None
+    extra = int(row["extra_seconds"] or 0)
+    by_seconds = bool(row["count_by_seconds"]) and not bool(
+        row["count_from_first_connect"])
+    if by_seconds:
+        # نفس ميزانيّة المُصادِق (card_batch_flags.check_card_time_budget):
+        # الباقة أوّلًا ثمّ زمن الحزمة، + المنحة، − المستهلَك.
+        base = int(plan.duration_minutes or 0) * 60 or card_accounting.unit_to_seconds(
+            row["time_value"] or 0, row["time_unit"] or "days")
+        if base <= 0:
+            return None
+        used = _accounted_session_seconds(int(sub.tenant_id), sub.username)
+        return max(1, base + extra - used)
+    if sub.expire_at:
+        return 0
+    base = card_accounting.budget_seconds(
+        validity_after_first_login_days=row["validity_after_first_login_days"] or 0,
+        time_value=row["time_value"] or 0,
+        time_unit=row["time_unit"] or "days",
+        duration_minutes=int(plan.duration_minutes or 0),
+        validity_days=int(getattr(plan, "validity_days", 0) or 0),
+    )
+    if base <= 0:
+        return None
+    total = card_accounting.budget_with_extra(base, extra)
+    return total if total > 0 else 1
+
+
+def _card_session_window_seconds(tenant_id, batch_id, username) -> int:
+    """نافذة أوّل دخول **مع منحة المشغّل** على هذه البطاقة.
+
+    fix2 (R13-H1): «إضافة/خصم وقت» يُكتب في `cards.extra_seconds`، وكانت
+    النافذة تُقرأ من الحزمة وحدها ⇒ المنحة رقمٌ في الفاحص لا يصل إلى
+    الراوتر. ``-1`` = استنفدها خصمٌ (منتهية، لا «بلا حدّ»).
+    """
+    base = _card_batch_window_seconds(tenant_id, batch_id)
+    if base <= 0 or not username:
+        return base
+    try:
+        row = db().execute(
+            "SELECT COALESCE(c.extra_seconds, 0) AS extra_seconds, "
+            "       b.count_by_seconds, b.count_from_first_connect "
+            "  FROM cards c LEFT JOIN card_batches b "
+            "    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id "
+            " WHERE c.tenant_id = ? AND c.username = ?",
+            (int(tenant_id), username)).fetchone()
+    except Exception:  # noqa: BLE001
+        return base
+    if not row:
+        return base
+    return _add_card_extra(base, row, row["extra_seconds"])
+
+
+def _add_card_extra(base: int, batch_row, extra_seconds) -> int:
+    """نافذةٌ (‏`_card_window_seconds`) + منحة المشغّل.
+
+    * لا نافذة (0) → 0 كما هو.
+    * نمط «بالثانية»: النافذة هنا سقفٌ تقويميّ (صلاحيّة بعد أوّل دخول)،
+      والمنحةُ تذهب لرصيد الاستخدام (‏card_batch_flags) لا إليه.
+    * وإلّا: الأساس + المنحة، و``-1`` إن استنفدها خصمٌ (منتهية).
+    """
+    if base <= 0:
+        return base
+    try:
+        by_seconds = bool(batch_row["count_by_seconds"]) and not bool(
+            batch_row["count_from_first_connect"])
+    except (KeyError, IndexError, TypeError):
+        by_seconds = False
+    if by_seconds:
+        return base
+    total = base + int(extra_seconds or 0)
+    return total if total > 0 else -1
 
 
 def _card_window_seconds(batch_row) -> int:
@@ -1428,18 +1592,24 @@ def _do_update_login_timestamps(req: AuthRequest, *, source: str,
                 _b = conn.execute("""
                     SELECT b.time_value, b.time_unit,
                            b.validity_after_first_login_days,
-                           b.count_by_seconds, b.count_from_first_connect
+                           b.count_by_seconds, b.count_from_first_connect,
+                           COALESCE(c.extra_seconds, 0) AS extra_seconds
                       FROM cards c
                       JOIN card_batches b
                         ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
                      WHERE c.tenant_id = ? AND c.username = ?
                 """, (req.tenant_id, req.username)).fetchone()
+                # fix2 (R13-H1): النافذة تشمل «إضافة/خصم وقت» الممنوحة قبل أوّل
+                # دخول — كانت تُقرأ من الحزمة وحدها فتُهمَل المنحة كلّها.
                 seconds = _card_window_seconds(_b) if _b else 0
+                seconds = _add_card_extra(seconds, _b, _b["extra_seconds"]) if _b else 0
+                if seconds < 0:
+                    seconds = 0     # مستنفَدة: expire_at مختومٌ سلفًا بالخصم
                 if seconds > 0:
                     # من بدايةِ العدّ الصادقة لا من «الآن» — وإلّا عاد ⑤
                     # من الباب الآخر: ختمٌ قديمٌ ونافذةٌ تبدأ اليوم.
-                    _exp = (stamp_dt
-                            + timedelta(seconds=seconds)).isoformat() + "Z"
+                    from .card_accounting import clamp_expiry
+                    _exp = clamp_expiry(stamp_dt, seconds).isoformat() + "Z"
                     conn.execute(
                         "UPDATE cards SET expire_at = ? "
                         "WHERE tenant_id = ? AND username = ? "
@@ -1648,7 +1818,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
                           or bool(sub.card_batch_id))
         timeout = plan.session_timeout_sec or 0
         if not timeout and plan.duration_minutes and is_time_budget:
-            timeout = plan.duration_minutes * 60
+            # f05-M1: للبطاقة ميزانيّتُها (الأساس + منحة المشغّل) — هي سقف
+            # الجلسة لا مدّةُ الباقة. كانت «إضافة وقت» على باقة «ساعة» تُطيل
+            # النافذة ويبقى Session-Timeout=3600 فيُقطع الزبون عند الدقيقة ٦٠.
+            card_cap = _card_budget_session_cap(sub, plan)
+            timeout = (plan.duration_minutes * 60 if card_cap is None
+                       else card_cap)
         if sub.expire_at:
             remaining = int((sub.expire_at - datetime.utcnow()).total_seconds())
             if remaining > 0:
@@ -1663,7 +1838,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             # المقيسة: بطاقةُ ١٠ دقائق قُرئت ٦٣ دقيقةً في جلسةٍ واحدة، وأخرى
             # ٢٧٥ دقيقة. والمدّةُ ليست مجهولة: هي مكتوبةٌ على الحزمة سلفًا
             # (`time_value/time_unit`) فنقرؤها ولا ننتظر الختم.
-            window = _card_batch_window_seconds(sub.tenant_id, sub.card_batch_id)
+            window = _card_session_window_seconds(sub.tenant_id, sub.card_batch_id,
+                                                  sub.username)
+            if window < 0:
+                # استنفدها خصمُ المشغّل — لا جلسةَ مفتوحة (دفاعٌ ثانٍ؛ المُصادِق
+                # يرفضها قبل هذا عبر _check_card_time_budget).
+                window = 1
             if window > 0:
                 timeout = window if not timeout else min(timeout, window)
         if timeout > 0:

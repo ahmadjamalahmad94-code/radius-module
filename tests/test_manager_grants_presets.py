@@ -47,8 +47,12 @@ def app(monkeypatch, tmp_path):
 def _mgr(username) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») now carries every non-owner
+    # permission AND grant — a plain manager gets the legacy key list instead.
+    from mg_test_roles import plain_role_id
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", is_super_admin=False,
+                                   role_id=plain_role_id())
     return int(adm.id)
 
 

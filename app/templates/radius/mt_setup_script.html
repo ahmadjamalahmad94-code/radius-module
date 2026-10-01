@@ -94,9 +94,9 @@
 
 {% if is_v6_tunnel %}
 <div style="margin-top:var(--cc-gap-section,16px)">
-  <a href="{{ url_for('radius.mt_sstp_credentials', nas_id=nas.id) }}" class="hub-btn hub-btn--secondary">
+  {% if can_submit('radius.mt_sstp_credentials', 'GET') %}<a href="{{ url_for('radius.mt_sstp_credentials', nas_id=nas.id) }}" class="hub-btn hub-btn--secondary">
     <i class="fa-solid fa-shield-halved"></i> {{ _('إعدادات نفق') }} {{ mgmt_transport }}
-  </a>
+  </a>{% endif %}
 </div>
 {% endif %}
 

@@ -62,12 +62,12 @@
       <span class="wg-badge {% if svc.status == 'active' %}active{% elif svc.status == 'suspended' %}suspended{% else %}quota_exceeded{% endif %}"
             style="margin-right:8px">{{ svc.status }}</span>
     </h2>
-    <form method="post" action="{{ url_for('radius.wg_data_sync_quota') }}" style="display:inline">
+    {% if can_submit('radius.wg_data_sync_quota', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_sync_quota') }}" style="display:inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm btn-outline-secondary">
         <i class="fa-solid fa-arrow-rotate-right"></i> تحديث الكوتا
       </button>
-    </form>
+    </form>{% endif %}
   </div>
   <div class="kpi-row">
     <div class="kpi">
@@ -152,25 +152,25 @@
         <td>
           <div class="btn-group btn-group-sm">
             {% if peer.status == 'active' %}
-            <form method="post"
+            {% if can_submit('radius.wg_data_suspend_peer', 'POST') %}<form method="post"
                   action="{{ url_for('radius.wg_data_suspend_peer', peer_id=peer.id) }}"
                   style="display:inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-warning" title="تعطيل">
                 <i class="fa-solid fa-pause"></i>
               </button>
-            </form>
+            </form>{% endif %}
             {% elif peer.status == 'suspended' %}
-            <form method="post"
+            {% if can_submit('radius.wg_data_activate_peer', 'POST') %}<form method="post"
                   action="{{ url_for('radius.wg_data_activate_peer', peer_id=peer.id) }}"
                   style="display:inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-success" title="تفعيل">
                 <i class="fa-solid fa-play"></i>
               </button>
-            </form>
+            </form>{% endif %}
             {% endif %}
-            <form method="post"
+            {% if can_submit('radius.wg_data_remove_peer', 'POST') %}<form method="post"
                   action="{{ url_for('radius.wg_data_remove_peer', peer_id=peer.id) }}"
                   style="display:inline"
                   onsubmit="return confirm('إلغاء peer «{{ peer.display_name or peer.peer_address }}» نهائيًا؟')">
@@ -178,7 +178,7 @@
               <button class="btn btn-sm btn-outline-danger" title="حذف">
                 <i class="fa-solid fa-trash"></i>
               </button>
-            </form>
+            </form>{% endif %}
           </div>
         </td>
       </tr>
@@ -193,7 +193,7 @@
 <div>
   <div class="info-card">
     <h3 style="font-size:15px;margin:0 0 16px">إضافة peer جديد</h3>
-    <form method="post" action="{{ url_for('radius.wg_data_add_peer') }}">
+    {% if can_submit('radius.wg_data_add_peer', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_add_peer') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
         <label class="form-label" style="font-size:13px">الاسم للعرض</label>
@@ -221,7 +221,7 @@
       <button type="submit" class="btn btn-primary btn-sm w-100">
         <i class="fa-solid fa-plus"></i> إضافة peer وتوليد الإعداد
       </button>
-    </form>
+    </form>{% endif %}
     <div style="margin-top:12px;font-size:11px;color:var(--d-text-muted)">
       <i class="fa-solid fa-circle-info"></i>
       سيُوَلَّد keypair جديد — احفظ إعداد الـ client فور ظهوره.
@@ -238,7 +238,7 @@
     <p style="font-size:13px;color:var(--d-text-muted);margin-bottom:20px">
       سيُوَلَّد keypair جديد. Private key يُكتب إلى الملف المحدد ولا يُحفظ في قاعدة البيانات.
     </p>
-    <form method="post" action="{{ url_for('radius.wg_data_init') }}">
+    {% if can_submit('radius.wg_data_init', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_init') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       {% if allocations %}
@@ -273,7 +273,7 @@
       <button type="submit" class="btn btn-primary w-100">
         <i class="fa-solid fa-key"></i> تهيئة وتوليد المفاتيح
       </button>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 {% endif %}

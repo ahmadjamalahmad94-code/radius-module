@@ -955,6 +955,9 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         static_ip=str(c.fields.get("static_ip", "") or ""),
         remark=remark,
         balance=float(bal.value) if bal.ok else 0.0,
+        # تصحيح المالك (fix wave 2): الترحيل ينسخ حسابًا قائمًا فيحفظ مصدره —
+        # بلا تاريخ انتهاء في المصدر ⇒ بلا انتهاء هنا. إعداد
+        # subscribers.create_without_expiry للإنشاء الحقيقيّ فقط.
         expire_at=exp.value if exp.ok else None,
         metadata=json.dumps(meta, ensure_ascii=False) if meta else "{}")
     saved = subscribers_repo.upsert_subscriber(s)

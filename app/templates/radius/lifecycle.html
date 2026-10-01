@@ -119,13 +119,13 @@
             </td>
             <td>
               {% if policy.get('enabled') %}
-                <form method="post"
+                {% if can_submit('radius.lifecycle_policy_disable', 'POST') %}<form method="post"
                       action="{{ url_for('radius.lifecycle_policy_disable', policy_id=policy.get('id')) }}"
                       style="margin:0">
                   <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
                     <i class="fa-solid fa-pause"></i> {{ _('تعطيل') }}
                   </button>
-                </form>
+                </form>{% endif %}
               {% else %}—{% endif %}
             </td>
           </tr>
@@ -148,7 +148,7 @@
 <div class="fcw-modal" data-fcw-modal="policy-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-policy-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
+    <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">{% if not can_submit('radius.lifecycle_policy_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-policy-create-title"><i class="fa-solid fa-circle-plus"></i> {{ _('إضافة سياسة أرشفة') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -211,7 +211,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ السياسة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.lifecycle_policy_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
@@ -219,7 +219,7 @@
    نفس عقد التشغيل: POST → radius.lifecycle_run بلا حقول إضافية. #}
 <div class="fcw-modal" data-fcw-modal="lifecycle-run" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-lifecycle-run-title" style="width:min(460px,100%)">
-    <form method="post" action="{{ url_for('radius.lifecycle_run') }}">
+    {% if can_submit('radius.lifecycle_run', 'POST') %}<form method="post" action="{{ url_for('radius.lifecycle_run') }}">
       <div class="fcw-head">
         <h3 id="fcw-lifecycle-run-title"><i class="fa-solid fa-play"></i> {{ _('تشغيل الأرشفة الآن') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -241,7 +241,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-play"></i> {{ _('نعم، شغّل الأرشفة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

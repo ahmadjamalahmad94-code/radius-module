@@ -168,6 +168,12 @@ def _current_admin():
             admin_id = None
     if admin_id is None:
         return None
+    return _admin_by_id(admin_id)
+
+
+def _admin_by_id(admin_id):
+    """The Admin DTO for ``admin_id`` through the admins service store (the
+    same lookup the decorator uses), or None."""
     try:
         from .admins import get_admins_service
         svc = get_admins_service()
@@ -200,6 +206,33 @@ def _is_primary_owner(admin) -> bool:
         return bool(getattr(admin, "is_super_admin", False))
 
 
+def _is_super_role(admin) -> bool:
+    """Does the admin hold the system «مدير عام» (super_admin) role?"""
+    try:
+        rid = getattr(admin, "role_id", None)
+        if not rid:
+            return False
+        from ..db.repos import admins_repo
+        return bool(admins_repo.role_is_super(admins_repo.get_role(int(rid))))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _mikrotik_access_allowed(admin) -> bool:
+    """False only when the owner explicitly set «mikrotik.access» to «ممنوع»
+    for this admin (or its role). Default and «حسب الدور» ⇒ True, so the
+    behaviour is unchanged unless the owner turns it off."""
+    aid = getattr(admin, "id", None)
+    if not aid:
+        return True
+    try:
+        from . import manager_grants as _mg
+        tid = int(getattr(admin, "tenant_id", 0) or 0) or 1
+        return bool(_mg.action_permitted(int(aid), "mikrotik.access", tenant_id=tid))
+    except Exception:  # noqa: BLE001 — never break auth; default allow
+        return True
+
+
 def admin_permissions(admin) -> frozenset[str]:
     """Resolve the full set of MikroTik permissions for `admin`.
 
@@ -212,6 +245,19 @@ def admin_permissions(admin) -> frozenset[str]:
         return frozenset()
     if _is_primary_owner(admin):
         return frozenset(ALL_PERMISSIONS)
+    # قرار المالك 2026-09-30: مفتاح «mikrotik.access» يتيح منع الوصول لصفحات
+    # مايكروتيك عن مدير/دور (تجاوز «ممنوع») مع بقائها مفتوحة افتراضًا. المالك
+    # الأساسيّ فوق هذا (عاد قبل هذا السطر).
+    if not _mikrotik_access_allowed(admin):
+        return frozenset()
+    if _is_super_role(admin):
+        # fix3 integration: «مدير عام» = every permission that is not
+        # owner-only — but the mikrotik.* keys are not in the RBAC catalogue,
+        # so its role could never carry them and every legacy page answered it
+        # 403 while the sidebar/dashboard showed the link. It holds what
+        # mikrotik.admin implies; the opt-in apply/override/risky keys stay
+        # explicit (as for any mikrotik.admin holder).
+        return frozenset({PERM_ADMIN, *_IMPLIED_BY_ADMIN})
     try:
         from .admins import get_admins_service
         raw = tuple(get_admins_service().permissions_of(admin) or ())
@@ -255,6 +301,28 @@ def require_perms(*perms: str) -> tuple[bool, str]:
     if missing:
         return False, "ليست لديك صلاحية كافية: " + ", ".join(missing)
     return True, ""
+
+
+def admin_id_missing(admin_id, perms) -> list[str]:
+    """The keys of ``perms`` that admin ``admin_id`` does NOT hold — the
+    decorator's own resolution (:func:`admin_permissions` of the admin loaded
+    through the same store), for the panel guard and the API guard."""
+    if not perms:
+        return []
+    held = admin_permissions(_admin_by_id(admin_id)) if admin_id else frozenset()
+    return [p for p in perms if p not in held]
+
+
+def endpoint_required_perms(endpoint: str) -> tuple[str, ...]:
+    """The ``requires_perm`` keys of a panel endpoint (``radius.x`` or ``x``),
+    read from the decorated view (``_hr_required_perms``) — () when none."""
+    try:
+        from flask import current_app
+        name = endpoint if "." in endpoint else "radius." + endpoint
+        return tuple(getattr(current_app.view_functions.get(name),
+                             "_hr_required_perms", ()) or ())
+    except Exception:  # noqa: BLE001 — outside an app context
+        return ()
 
 
 # ─── Route decorator ──────────────────────────────────────────
@@ -313,11 +381,15 @@ def requires_perm(*perms: str):
                     403,
                     {"Content-Type": "text/html; charset=utf-8"},
                 )
+        # F01-F2: the UI gating helper (can_submit) reads this to hide links
+        # to a page this decorator would refuse — same decision, no copy.
+        wrapper._hr_required_perms = tuple(perms)
         return wrapper
     return deco
 
 
 __all__ = [
+    "admin_id_missing", "endpoint_required_perms",
     "PERM_VIEW", "PERM_DIAGNOSTICS", "PERM_MANAGE",
     "PERM_PROGRAM", "PERM_DEPLOY_LOGIN", "PERM_ROLLBACK",
     "PERM_BACKUP", "PERM_RESTORE",

@@ -19,7 +19,9 @@ from typing import Any, Optional
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
-from ...radius.core.numbers import MONEY_MAX, finite_int, money_float
+from ...radius.core.numbers import (
+    MONEY_MAX, check_expiry, check_extend_minutes, finite_int, money_float, round_money,
+)
 from ...radius.services import subscriber_actions as sa
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
@@ -28,54 +30,31 @@ from .idempotency import idempotent
 
 # Money-moving actions: an Idempotency-Key / client_request_id replays the
 # first result instead of charging twice (double tap / retry after timeout).
-_IDEMPOTENT = {"extend", "quota/topup", "payment", "balance", "loan"}
+# quota/reset-daily and change-plan charge the wallet too (paid/debt): the same
+# key twice used to double-charge the daily reset.
+_IDEMPOTENT = {"extend", "quota/topup", "quota/reset-daily", "change-plan",
+               "payment", "balance", "loan"}
 
 # action key (app menu / permissions flag) → the web endpoint whose guard decides.
-WEB_ENDPOINT: dict[str, str] = {
-    "extend": "users_extend",
-    "quota": "users_quota_topup",
-    "quota_reset": "users_quota_reset_daily",
-    "payment": "users_payment_create",
-    "loan": "users_loan_create",
-    "balance": "users_balance_add",
-    "change_plan": "users_change_plan",
-    "send_message": "users_send_sms",
-    "send_credentials": "users_send_credentials",
-    "disconnect": "online_disconnect",
-    "status": "users_toggle",
-    "delete": "users_delete",
-    "rename": "users_update",
-    "reset_password": "users_update",
-    "edit": "users_update",
-}
+# D17: ONE map shared with the web panel's button gating
+# (services/subscriber_action_flags) — the web hides exactly what the app hides.
+from ...radius.services.subscriber_action_flags import WEB_ENDPOINT  # noqa: E402
 
 _FORBIDDEN_AR = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
 _MAX_FREE_LOAN_HOURS_DEFAULT = 72
 _PAYMENT_METHODS = ("cash", "bank", "manual")
 _CHARGE_MODES = ("free", "paid", "debt")
 
-# Service validation messages are English (the web flashes them as-is); the app
-# gets them in Arabic. Unknown messages pass through unchanged.
-_SERVICE_MSG_AR = {
-    "amount must be > 0": "المبلغ يجب أن يكون أكبر من صفر.",
-    "minutes > 0 required": "المدّة يجب أن تكون أكبر من صفر.",
-    "expire_at required": "تاريخ الانتهاء مطلوب.",
-    "unknown extend charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown quota charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown reset charge mode": "طريقة الاستعادة غير معروفة.",
-    "quota_mb must be > 0": "حجم الكوتة يجب أن يكون أكبر من صفر.",
-    "unknown quota target": "نوع الكوتة غير معروف.",
-    "plan_id required": "اختر العرض الجديد.",
-    "unknown plan change policy": "طريقة تغيير العرض غير معروفة.",
-    "selected plan is not cheaper": "العرض المختار ليس أرخص من الحالي.",
-    "selected plan is not more expensive": "العرض المختار ليس أغلى من الحالي.",
-    "plan price and duration are required for this option":
-        "هذا الخيار يتطلّب سعرًا ومدّة للعرضين.",
-    "unsupported message channel": "قناة الإرسال غير مدعومة.",
-    "message required": "نص الرسالة مطلوب.",
-    "subscriber mobile is empty": "لا يوجد رقم جوال لهذا المشترك.",
-    "subscriber id required": "المشترك غير صالح.",
-}
+# Service messages are Arabic at the source now; the ONE shared translation layer
+# (core/messages_ar) also serves the web flashes, so web and app show the same text.
+from ...radius.core.messages_ar import SERVICE_MSG_AR as _SERVICE_MSG_AR  # noqa: E402
+from ...radius.core.messages_ar import translate_service_message  # noqa: E402
+
+
+def _balance_visible() -> bool:
+    """«رؤية الرصيد» of the token's admin (services/sensitive_visibility)."""
+    from ...radius.services.sensitive_visibility import can_view_balance
+    return can_view_balance()
 
 
 def register(bp: Blueprint) -> None:
@@ -114,11 +93,14 @@ def _identity() -> tuple[Optional[_Identity], Any]:
     """Resolve the admin behind the token exactly like the web login does
     (owner flag via ``_resolve_is_super``, role permissions via the admins
     service). Cached on ``g`` for the request."""
-    cached = getattr(g, "_sa_identity", None)
-    if cached is not None:
-        return cached, None
     tid = int(getattr(g, "tenant_id", 1) or 1)
     aid = int(getattr(g, "admin_id", 0) or 0)
+    # The cache is bound to the token behind THIS request (an app context that
+    # outlives one request — tests, CLI — must not reuse another token's rights).
+    cache_key = (tid, aid, getattr(g, "api_token_id", None))
+    cached = getattr(g, "_sa_identity", None)
+    if cached is not None and getattr(g, "_sa_identity_key", None) == cache_key:
+        return cached, None
     if aid <= 0:
         ident = _Identity(sa.ActionCaller(
             tenant_id=tid, admin_id=None, is_super=True,
@@ -141,6 +123,7 @@ def _identity() -> tuple[Optional[_Identity], Any]:
             tenant_id=tid, admin_id=aid, is_super=_resolve_is_super(admin),
             actor=admin.full_name or admin.username), perms)
     g._sa_identity = ident
+    g._sa_identity_key = cache_key
     return ident, None
 
 
@@ -174,9 +157,21 @@ def _allowed(ident: _Identity, key: str) -> bool:
 def _forbidden(key: str, status: int = 403):
     from ...radius.routes.blueprint import _PERM_GUARDED
     details = {"action": key, "web_endpoint": WEB_ENDPOINT[key]}
-    perm = _PERM_GUARDED.get(WEB_ENDPOINT[key])
+    # D24: the permission/reason that ACTUALLY denied (not the table key, which
+    # may well be held — e.g. a locked section or bulk.ops).
+    info = getattr(g, "_rbac_denial", None) or {}
+    perm = info.get("permission") or (None if info.get("reason") else _PERM_GUARDED.get(WEB_ENDPOINT[key]))
     if perm:
         details["permission"] = perm
+    if info.get("reason"):
+        details["reason"] = info["reason"]
+        try:
+            from ...radius.routes.blueprint import denial_message
+            msg = denial_message()
+            if msg and status != 429:
+                return fail("forbidden", msg, status=403, details=details)
+        except Exception:  # noqa: BLE001
+            pass
     if status == 429:
         return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
                     status=429, details=details)
@@ -254,7 +249,7 @@ def _truthy(value) -> bool:
 
 
 def _svc_error(e: RadiusError):
-    msg = _SERVICE_MSG_AR.get(e.message, e.message)
+    msg = translate_service_message(e.message)
     if isinstance(e, sa.SpendBlocked):
         return fail("spend_blocked", msg, status=403)
     if isinstance(e, RadiusNotFound):
@@ -326,6 +321,11 @@ def _price_of_minutes(sub, minutes: int) -> float:
                                          base_minutes=basis["minutes"])
 
 
+def _plan_rate(plan) -> float:
+    from ...radius.services.users import plan_rate_per_minute
+    return round(plan_rate_per_minute(plan), 8)
+
+
 def _max_free_loan_hours() -> int:
     from ...radius.services.accounting import _max_loan_minutes
     return _max_loan_minutes() // 60
@@ -374,17 +374,28 @@ def actions_context(username: str):
                 "created_at": _iso_z(ln.get("created_at")),
             })
 
-    # The DAILY allowance comes from the plan only — the subscriber's
-    # combined_quota_mb is the total cap (a top-up used to show up as a new
-    # «daily» quota as well).
-    daily_quota_mb = (
-        int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
-        int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
-    cap_mb = _effective_quota_mb(sub, plan)
+    # One source for caps + usage (quota_period): the total cap for the current
+    # period (plan or subscriber override incl. this period's top-ups) and the
+    # plan's daily / monthly caps (combined or per direction) incl. today's /
+    # this month's top-ups. has_quota is true for ANY enforced cap — a monthly-
+    # or daily-only plan used to read «no quota» (top-up disabled / refused).
+    from ...radius.services import quota_period
     try:
-        used_mb = round(_subscriber_used_bytes(sub) / 1_048_576, 2)
+        qs = quota_period.quota_status(sub, plan)
     except Exception:  # noqa: BLE001
-        used_mb = None
+        qs = None
+    cap_mb = _effective_quota_mb(sub, plan)
+    if qs is not None:
+        daily_quota_mb = int(qs["daily"]["combined"] or 0)
+        used_mb = qs["period_used_mb"]
+    else:
+        daily_quota_mb = (
+            int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
+            int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
+        try:
+            used_mb = round(_subscriber_used_bytes(sub) / 1_048_576, 2)
+        except Exception:  # noqa: BLE001
+            used_mb = None
 
     channels = {"sms": False, "whatsapp": False}
     try:
@@ -421,21 +432,41 @@ def actions_context(username: str):
             "name": plan_name,
             "price": float(getattr(plan, "price", 0) or 0),
             "minutes": int(basis["minutes"]),
+            # change-plan direction is decided by price per minute (see
+            # docs/radius/plan_change_policy.md) — compare with /profiles
+            # ``rate_per_minute``, never the total price.
+            "rate_per_minute": _plan_rate(plan),
         } if plan else None),
         "effective_price": float(basis["price"]),
         "price_is_custom": bool(basis["custom"]),
-        "balance": balance,
-        "debt": round(max(-balance, 0.0), 2),
+        # fix3 (F01 F18): hidden when «رؤية الرصيد» is off (the debt stays —
+        # it is the amount the payment/extend dialogs collect).
+        "balance": balance if _balance_visible() else None,
+        # max(-0.0, 0.0) is -0.0 → "debt": -0.0 for every zero balance.
+        "debt": round_money(max(-balance, 0.0)),
+        # Everything the subscriber owes: negative-balance debt (debt extends,
+        # plan-change debt, …) + the outstanding of the open loans.
+        "open_debt_total": round_money(max(-balance, 0.0)
+                                       + sum(ln["amount"] for ln in loans)),
         "open_loans": loans,
         "quota": {
-            "has_quota": bool(daily_quota_mb > 0 or cap_mb > 0),
+            "has_quota": bool((qs or {}).get("has_quota") or daily_quota_mb > 0 or cap_mb > 0),
             "daily_quota_mb": daily_quota_mb or None,
-            "used_today_mb": None,
+            "used_today_mb": (qs["daily"]["used_mb"] if qs else None),
             "quota_mb": cap_mb or None,
             "used_mb": used_mb,
             "combined_quota_mb": int(sub.combined_quota_mb or 0),
             "download_quota_mb": int(sub.download_quota_mb or 0),
             "upload_quota_mb": int(sub.upload_quota_mb or 0),
+            # New (fix2): top-ups of the current period (removed on plan change /
+            # renewal) and the plan's daily / monthly windows with usage.
+            "period_topup_mb": int((qs or {}).get("topup_mb") or 0),
+            "daily": (qs or {}).get("daily"),
+            "monthly": (qs or {}).get("monthly"),
+            # fix3 (F04 N-L1): «استعادة الكوتة اليوميّة» only means something with
+            # a daily quota or a daily time cap — the server refuses it (422)
+            # otherwise, so the app hides the action when this is false.
+            "daily_reset_available": _daily_reset_available(sub),
         },
         "online_sessions": _open_sessions(tid, sub.username),
         "channels": channels,
@@ -477,8 +508,16 @@ def action_extend(username: str):
             price_minutes = minutes
         amount_sent = body.get("amount") not in (None, "")
         amount = _num(body.get("amount"), field="amount", default=0.0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError: 0001-01-01T00:00+03:00 / 9999-12-31T23:59-05:00 were 500.
         return _invalid("قيمة المدّة أو تاريخ الانتهاء أو المبلغ غير صحيحة.")
+    try:
+        # Owner caps: one extend adds at most 1 year; no expiry after 2100.
+        if expire_at is not None:
+            check_expiry(expire_at)
+        check_extend_minutes(price_minutes)
+    except RadiusValidationError as e:
+        return _invalid(e.message)
     if charge_mode == "free":
         amount = 0.0
     elif amount_sent and amount <= 0:
@@ -525,6 +564,7 @@ def action_change_plan(username: str):
         "username": username,
         "plan_id": plan_id,
         "policy": policy,
+        "direction": result.get("direction"),
         "new_expire_at": _iso_z(getattr(saved, "expire_at", None)),
         "debt_amount": float(result.get("debt_amount") or 0),
         "minute_delta": int(result.get("minute_delta") or 0),
@@ -556,9 +596,15 @@ def action_quota_topup(username: str):
         saved = get_users_service().add_quota(
             actor=ident.caller.actor, username=username, quota_mb=quota_mb,
             quota_target=str(body.get("quota_target") or "combined").strip(),
-            charge_mode=charge_mode, amount=amount, currency=default_currency(), notes=notes)
+            charge_mode=charge_mode, amount=amount, currency=default_currency(), notes=notes,
+            quota_window=str(body.get("quota_window") or "auto").strip())
     except RadiusError as e:
         return _svc_error(e)
+    from ...radius.services import quota_period
+    try:
+        qs = quota_period.quota_status(saved, _plan(saved))
+    except Exception:  # noqa: BLE001
+        qs = {}
     return ok({
         "username": username,
         "quota": {
@@ -566,9 +612,18 @@ def action_quota_topup(username: str):
             "combined_quota_mb": int(saved.combined_quota_mb or 0),
             "download_quota_mb": int(saved.download_quota_mb or 0),
             "upload_quota_mb": int(saved.upload_quota_mb or 0),
+            "quota_mb": int(qs.get("total_cap_mb") or 0) or None,
+            "period_topup_mb": int(qs.get("topup_mb") or 0),
+            "daily": qs.get("daily"),
+            "monthly": qs.get("monthly"),
         },
         "balance": float(saved.balance or 0),
     })
+
+
+def _daily_reset_available(sub) -> bool:
+    from ...radius.services.users import daily_reset_applicable
+    return bool(daily_reset_applicable(sub))
 
 
 def action_quota_reset(username: str):

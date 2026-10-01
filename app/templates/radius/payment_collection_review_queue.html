@@ -84,9 +84,9 @@
           {# ترجمة الحالة للعربية عبر st_pill بدل تمرير القيمة الإنجليزية الخام #}
           <td>{{ st_pill(item.status) }}</td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
+            {% if can_submit('radius.payment_collection_request_detail', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
               <i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}
-            </a>
+            </a>{% endif %}
           </td>
         </tr>
         {% endfor %}

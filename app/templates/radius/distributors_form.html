@@ -67,7 +67,7 @@
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
-<form id="ds-form" method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">
+<form id="ds-form" method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">{% if not can_submit(('radius.distributors_create' if is_new else 'radius.distributors_update')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. Identity ─────────────────────── #}
   {% call hub.section("بيانات الموزع", icon="id-card") %}
@@ -229,12 +229,12 @@
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.distributors_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ الموزع" if is_new else "حفظ التعديلات" }}
     </button>
   </div>
-</form>
+{% if not can_submit(('radius.distributors_create' if is_new else 'radius.distributors_update')) %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {% endblock %}

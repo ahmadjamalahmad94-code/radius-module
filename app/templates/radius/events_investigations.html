@@ -95,15 +95,15 @@
    نفس نمط events_center، لتبقى الأقسام الأربعة قريبة من بعضها بصريًا. ───── #}
 {% call hub.section("صفحات مركز الأحداث والمخاطر", icon="compass", meta="الأحداث · المخاطر · الأمان · التحقيقات") %}
   <div class="hub-actions" data-testid="investigations-siblings">
-    {{ hub.action_card("الأحداث",     sub="سجل أحداث الأعمال للعرض والمراجعة",
-                       icon="timeline",       href=url_for('radius.events_center'),         variant="brand") }}
-    {{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد الفحص ومراجعة التنبيهات",
-                       icon="shield-halved",  href=url_for('radius.events_risk'),           variant="amber") }}
-    {{ hub.action_card("الأمان",       sub="أحداث الصلاحيات والدخول الفاشل",
-                       icon="lock",           href=url_for('radius.events_security'),       variant="red") }}
-    {{ hub.action_card("التحقيقات",    sub="أنت هنا — ملفات المراجعة البشرية المفتوحة",
+    {% if can_submit('radius.events_center', 'GET') %}{{ hub.action_card("الأحداث",     sub="سجل أحداث الأعمال للعرض والمراجعة",
+                       icon="timeline",       href=url_for('radius.events_center'),         variant="brand") }}{% endif %}
+    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد الفحص ومراجعة التنبيهات",
+                       icon="shield-halved",  href=url_for('radius.events_risk'),           variant="amber") }}{% endif %}
+    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card("الأمان",       sub="أحداث الصلاحيات والدخول الفاشل",
+                       icon="lock",           href=url_for('radius.events_security'),       variant="red") }}{% endif %}
+    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card("التحقيقات",    sub="أنت هنا — ملفات المراجعة البشرية المفتوحة",
                        icon="magnifying-glass-chart", href=url_for('radius.events_investigations'),
-                       variant="brand", disabled=True) }}
+                       variant="brand", disabled=True) }}{% endif %}
   </div>
 {% endcall %}
 
@@ -126,7 +126,7 @@
       املأ النموذج لفتح ملف متابعة جديد: اكتب عنوانًا واضحًا، حدّد مدى الخطورة، واربطه بالعنصر المعني
       (مشترك، بطاقة، جهاز…) حتى يعرف أي مشغّل لاحق ما الذي تجري مراجعته ولماذا.
     </p>
-    <form method="post" class="hub-form-grid" data-testid="investigation-form" autocomplete="off">
+    <form method="post" class="hub-form-grid" data-testid="investigation-form" autocomplete="off">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('العنوان') }}
         <input class="hub-input" name="title" required placeholder="{{ _('مثال: محاولات دخول متكررة لمشترك واحد') }}">
@@ -154,7 +154,7 @@
         <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله.') }}</span>
       </label>
       {{ hub.btn("فتح التحقيق", icon="folder-plus", variant="primary", type="submit") }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ── قائمة التحقيقات — جدول uds موحّد مع شارات حالة/خطورة وفُتِح-بواسطة-ومتى ── #}

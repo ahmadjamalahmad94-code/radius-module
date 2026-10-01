@@ -9,6 +9,8 @@ from flask import Blueprint, g, request
 from ...radius.services.card_users_marketplace import (
     CardMarketplaceError,
     CardUsersMarketplaceService,
+    arabic_error_message,
+    int_input,
 )
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -106,7 +108,9 @@ def _bool_arg(name: str, default: bool = True) -> bool:
 
 def _marketplace_error(exc: Exception):
     raw = str(exc)
-    code, message, status = _ERRORS.get(raw, ("validation_error", raw or "تعذر تنفيذ العملية", 422))
+    # f05-M5: لا نصّ بايثون/إنجليزيّ للمستخدم («invalid literal for int()…»).
+    code, message, status = _ERRORS.get(
+        raw, ("validation_error", arabic_error_message(exc) if raw else "تعذر تنفيذ العملية", 422))
     return fail(code, message, status=status)
 
 
@@ -212,7 +216,7 @@ def card_user_purchase(card_user_id: int):
     try:
         purchase = _service().purchase_package(
             card_user_id=card_user_id,
-            package_id=int(body.get("package_id") or 0),
+            package_id=int_input(body.get("package_id"), label="الباقة"),
             actor=_actor(),
         )
     except (CardMarketplaceError, ValueError) as exc:
@@ -243,11 +247,14 @@ def card_marketplace_package_create():
     try:
         package = _service().create_package(
             name=str(body.get("name") or ""),
-            plan_id=int(body.get("plan_id") or 0),
+            plan_id=int_input(body.get("plan_id"), label="العرض"),
             price=body.get("price"),
-            duration_minutes=int(body.get("duration_minutes") or 0),
-            speed_down_kbps=int(body.get("speed_down_kbps") or 0),
-            speed_up_kbps=int(body.get("speed_up_kbps") or 0),
+            duration_minutes=int_input(body.get("duration_minutes"), label="المدّة بالدقائق",
+                                       maximum=525600),
+            speed_down_kbps=int_input(body.get("speed_down_kbps"), label="سرعة التنزيل",
+                                      maximum=10_000_000),
+            speed_up_kbps=int_input(body.get("speed_up_kbps"), label="سرعة الرفع",
+                                    maximum=10_000_000),
             currency=str(body.get("currency") or default_currency()),
             card_color=str(body.get("card_color") or "#14b8a6"),
             metadata=body.get("metadata") if isinstance(body.get("metadata"), dict) else {},

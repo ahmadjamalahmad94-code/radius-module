@@ -29,8 +29,8 @@
   subtitle="أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.",
   icon="users-viewfinder",
   actions_html=(
-    '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة") ~ '</a>'|safe
-    ~ '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe
+    ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة") ~ '</a>'|safe if can_submit('radius.communications_send', 'GET') else '')
+    ~ ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else '')
   ),
   kpis=[
     {'label': 'الشرائح المحفوظة', 'value': segments|length, 'icon': 'layer-group', 'variant': 'brand', 'sub': 'شريحة قابلة لإعادة الاستخدام'},
@@ -57,7 +57,7 @@
 
   {# ════════ CREATE SEGMENT ════════ #}
   {% call hub.section("إنشاء شريحة", icon="users-viewfinder") %}
-    <form method="post" class="caud-form" data-testid="audience-segment-form">
+    <form method="post" class="caud-form" data-testid="audience-segment-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
       <div class="caud-row">
@@ -108,7 +108,7 @@
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ ومعاينة') }}</button>
         <span class="caud-note">{{ _('يحفظ الشريحة ثم يعرض جمهورها — لا يتم إرسال أي رسالة.') }}</span>
       </div>
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ════════ SEGMENTS + PREVIEW ════════ #}

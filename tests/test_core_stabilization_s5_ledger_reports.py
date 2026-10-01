@@ -100,7 +100,8 @@ def test_financial_report_csv_export_is_real(client):
     assert export.status_code == 200
     assert export.headers["Content-Type"].startswith("text/csv")
     text = export.get_data(as_text=True)
-    assert "username" in text
+    # رأس التصدير بتسميات عربيّة (fix wave 2) — «اسم المستخدم» لا «username».
+    assert "اسم المستخدم" in text
     assert item["username"] in text
     assert "19" in text
 
@@ -121,7 +122,7 @@ def test_financial_report_xlsx_export_is_real(client):
     workbook = load_workbook(io.BytesIO(export.data), read_only=True)
     sheet = workbook.active
     rows = list(sheet.iter_rows(values_only=True))
-    assert "username" in rows[0]
+    assert "اسم المستخدم" in rows[0]
     assert any(item["username"] in row for row in rows[1:])
 
 

@@ -91,7 +91,7 @@ def _form_dto() -> Tenant:
         phone=(request.form.get("phone") or "").strip(),
         currency=(request.form.get("currency") or default_currency()).strip(),
         locale=(request.form.get("locale") or "ar").strip(),
-        timezone=(request.form.get("timezone") or "Asia/Amman").strip(),
+        timezone=(request.form.get("timezone") or "Asia/Gaza").strip(),
         logo_url=(request.form.get("logo_url") or "").strip(),
         primary_color=(request.form.get("primary_color") or "#2BAACC").strip(),
         status=(request.form.get("status") or TENANT_STATUS_ACTIVE).strip(),

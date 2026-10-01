@@ -51,8 +51,12 @@ def app(monkeypatch, tmp_path):
 def _mgr(username="m1") -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») now carries every non-owner
+    # permission AND grant — a plain manager gets the legacy key list instead.
+    from mg_test_roles import plain_role_id
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", is_super_admin=False,
+                                   role_id=plain_role_id())
     return int(adm.id)
 
 
@@ -95,8 +99,11 @@ def test_password_masked_from_manager(app):
     with app.app_context():
         m = _mgr("m_hide"); _sub("secretsub", password="secretpw99", manager_id=m)
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
-        html = c.get("/admin/radius/users/secretsub/edit").get_data(as_text=True)
+        _login(c, admin_id=m, is_super=False,
+               perms=("users.view", "users.edit", "cards.view"))
+        r = c.get("/admin/radius/users/secretsub/edit")
+        html = r.get_data(as_text=True)
+    assert r.status_code == 200
     assert "secretpw99" not in html      # stripped server-side
 
 
@@ -105,7 +112,9 @@ def test_password_visible_with_grant(app):
         m = _mgr("m_show"); _sub("shownsub", password="secretpw99", manager_id=m)
         _grant(m, "can_see_password", True)
     with app.test_client() as c:
-        _login(c, admin_id=m, is_super=False)
+        # the edit form needs users.edit (p01/D08 maps every form page)
+        _login(c, admin_id=m, is_super=False,
+               perms=("users.view", "users.edit", "cards.view"))
         html = c.get("/admin/radius/users/shownsub/edit").get_data(as_text=True)
     assert "secretpw99" in html
 

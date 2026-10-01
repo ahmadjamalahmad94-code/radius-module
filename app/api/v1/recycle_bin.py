@@ -9,10 +9,11 @@ from typing import Callable
 
 from flask import Blueprint, g, request
 
+from ...radius.core.errors import RadiusConflict, RadiusValidationError
 from ...radius.db.connection import db
 from ...radius.db.helpers import row_to_dict
 from ...radius.db.repos import admins_repo, cards_repo, nas_repo, plans_repo, subscribers_repo
-from ...radius.services.lifecycle import retention_status
+from ...radius.services.lifecycle import recycle_display, retention_status
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -50,13 +51,41 @@ def _limit_offset() -> tuple[int, int]:
     return limit, offset
 
 
+def _viewer() -> tuple[bool, list, int | None]:
+    """(owner-level?, RBAC keys, admin id) behind the credential."""
+    from ..access_control import _token_identity, admin_id, is_owner_level
+    if is_owner_level():
+        return True, [], None
+    return False, list(_token_identity()[1]), admin_id() or None
+
+
+def _scope_clause(table: str) -> tuple[str, list]:
+    """fix3 (F01 F4): a manager lists only HIS archived subscribers / batches."""
+    is_owner, _perms, aid = _viewer()
+    if is_owner or not aid:
+        return "", []
+    if table == "subscribers":
+        from ...radius.services.subscriber_scope import owner_scope_clause, scope_admin_id
+        scope = scope_admin_id(int(aid), tenant_id=_tid())
+        return owner_scope_clause(scope, tenant_id=_tid()) if scope is not None else ("", [])
+    if table == "card_batches":
+        from ...radius.services.card_batch_scope import batch_scope_admin_id, batch_scope_clause
+        scope = batch_scope_admin_id(int(aid), tenant_id=_tid())
+        if scope is None:
+            return "", []
+        clause, vals = batch_scope_clause(scope, alias="card_batches")
+        return " AND " + clause, vals
+    return "", []
+
+
 def _deleted_rows(table: str, *, limit: int, offset: int) -> list[dict]:
     tenant_tables = {"subscribers", "access_plans", "nas_devices", "card_batches"}
     if table in tenant_tables:
+        clause, cvals = _scope_clause(table)
         rows = db().execute(
-            f"SELECT * FROM {table} WHERE tenant_id = ? AND deleted_at IS NOT NULL "
-            "ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
-            (_tid(), limit, offset),
+            f"SELECT * FROM {table} WHERE tenant_id = ? AND deleted_at IS NOT NULL"
+            + clause + " ORDER BY deleted_at DESC LIMIT ? OFFSET ?",
+            (_tid(), *cvals, limit, offset),
         ).fetchall()
     elif table == "roles":
         rows = db().execute(
@@ -82,14 +111,18 @@ def _serialize_deleted(table: str, row: dict) -> dict:
         or str(row.get("id"))
     )
     retention = retention_status(row)
+    status = row.get("status") or ("enabled" if row.get("enabled") else "disabled")
+    shown = recycle_display(table, row, status)
     return {
         "entity_type": table,
         "id": row.get("id"),
-        "label": label,
-        "status": row.get("status") or ("enabled" if row.get("enabled") else "disabled"),
+        "label": shown["label"] or label,
+        "status": status,
+        "status_label": shown["status_label"],
         "deleted_at": row.get("deleted_at"),
         "deleted_by": row.get("deleted_by") or "",
-        "delete_reason": row.get("delete_reason") or "",
+        "deleted_by_label": shown["deleted_by_label"],
+        "delete_reason": shown["delete_reason"],
         "archive_source": row.get("archive_source") or ("manual" if row.get("deleted_at") else ""),
         "archive_policy_id": row.get("archive_policy_id"),
         "retention_expires_at": row.get("retention_expires_at"),
@@ -182,6 +215,9 @@ def recycle_bin_list():
     tables = [t for t in tables if t]
     if requested and not tables:
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+    from ...radius.services.recycle_restore_policy import table_visible
+    _owner, _perms, _aid = _viewer()
+    tables = [t for t in tables if table_visible(t, is_owner=_owner, perms=_perms)]
     items: list[dict] = []
     for table in tables:
         items.extend(_deleted_rows(table, limit=limit, offset=offset))
@@ -222,7 +258,23 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
         return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
-    changed = _restore_handler(table)(entity_id)
+    # fix3 (F01 F4): same per-entity rule as the web (one policy module).
+    from ...radius.services.recycle_restore_policy import restore_denial
+    _owner, _perms, _aid = _viewer()
+    denied = restore_denial(table, entity_id, admin_id=_aid, is_owner=_owner,
+                            perms=_perms, tenant_id=_tid())
+    if denied is not None:
+        details = {"reason": denied["reason"]}
+        if denied["permission"]:
+            details["permission"] = denied["permission"]
+        return fail("forbidden", denied["message"], status=403, details=details)
+    try:
+        changed = _restore_handler(table)(entity_id)
+    except RadiusConflict as e:
+        # f06-H1: restoring a router whose address a live router now uses.
+        return fail((e.details or {}).get("code") or "conflict", e.message, status=409)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     if not changed:
         return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)
     return ok({"entity_type": table, "id": entity_id, "restored": True})

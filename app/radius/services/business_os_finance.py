@@ -60,6 +60,37 @@ def money_to_minor(amount: Any) -> int:
     return int(dec * 100)
 
 
+# f05-M5: ترجمةٌ واحدة لرسائل Business OS الإنجليزيّة (كانت في business_os API
+# وحده، فتسرّبت «amount must be numeric» عبر محفظة مستخدم الكروت).
+BUSINESS_ERROR_AR = {
+    "amount must be numeric": "المبلغ يجب أن يكون رقمًا صحيحًا.",
+    "unknown event category": "تصنيف الحدث غير معروف.",
+    "unknown event severity": "درجة الحدث غير معروفة.",
+    "event_key is required": "مفتاح الحدث مطلوب.",
+    "unknown ledger entry_type": "نوع قيد الدفتر غير معروف.",
+    "debit_account is required": "حساب المدين مطلوب.",
+    "credit_account is required": "حساب الدائن مطلوب.",
+    "unknown wallet owner_type": "نوع صاحب المحفظة غير معروف.",
+    "owner_id is required for this wallet owner_type": "معرّف صاحب المحفظة مطلوب لهذا النوع.",
+    "unsupported wallet transaction": "حركة المحفظة غير مدعومة.",
+    "wallet not found": "المحفظة غير موجودة.",
+    "wallet balance cannot go negative": "رصيد المحفظة لا يمكن أن يصبح سالبًا.",
+    "reference_type is required": "نوع المرجع مطلوب.",
+    "prices cannot be negative": "الأسعار لا يمكن أن تكون سالبة.",
+}
+
+
+def arabic_business_error(raw: str) -> str:
+    """رسالة Business OS الإنجليزيّة ⇒ عربيّة (غير المعروفة تعود كما هي)."""
+    raw = str(raw or "")
+    if raw in BUSINESS_ERROR_AR:
+        return BUSINESS_ERROR_AR[raw]
+    if raw.endswith(" must be positive"):
+        field = raw.removesuffix(" must be positive")
+        return f"قيمة {field} يجب أن تكون أكبر من صفر."
+    return raw
+
+
 def minor_to_money(value: Any) -> str:
     return str((Decimal(int(value or 0)) / Decimal(100)).quantize(_CENTS))
 
@@ -73,6 +104,62 @@ def _positive_minor(amount: Any, *, field: str = "amount") -> int:
 
 def _json(value: dict[str, Any] | None) -> str:
     return json.dumps(value or {}, ensure_ascii=False, sort_keys=True)
+
+
+# ── Arabic display labels for ledger accounts / targets (re-test R11 L-2: the
+# app's «العمليات التجارية» table showed `cash`, `wallet:4`, `distributor #1`).
+# The raw fields stay unchanged; `*_label` fields are added next to them.
+_LEDGER_ACCOUNT_AR = {
+    "cash": "الصندوق (نقدًا)",
+    "revenue": "الإيرادات",
+    "card_inventory_cost": "تكلفة مخزون البطاقات",
+    "card_marketplace_revenue": "إيراد سوق البطاقات",
+    "discounts": "الخصومات",
+    "receivables": "الذمم المدينة",
+}
+_LEDGER_OWNER_AR = {
+    "manager": "المدير", "admin": "المدير", "card_user": "مستخدم البطاقات",
+    "subscriber": "المشترك", "distributor": "الموزّع", "provider": "المزوّد",
+    "company": "الشركة", "tenant": "الشبكة",
+}
+_LEDGER_TARGET_AR = {
+    "subscriber": "مشترك", "card": "بطاقة", "card_user": "مستخدم بطاقات",
+    "distributor": "موزّع", "manager": "مدير", "admin": "مدير",
+    "wallet": "محفظة", "batch": "حزمة", "card_batch": "حزمة", "plan": "باقة",
+    "payment": "دفعة", "loan": "سلفة", "invoice": "فاتورة",
+}
+
+
+def ledger_account_label(account: Any) -> str:
+    raw = str(account or "").strip()
+    if not raw:
+        return "—"
+    if raw in _LEDGER_ACCOUNT_AR:
+        return _LEDGER_ACCOUNT_AR[raw]
+    parts = raw.split(":")
+    if parts[0] == "wallet":
+        if len(parts) == 2 and parts[1]:
+            return f"محفظة #{parts[1]}"
+        if len(parts) >= 3:
+            owner = _LEDGER_OWNER_AR.get(parts[1], parts[1])
+            return f"محفظة {owner} #{parts[2]}"
+        return "محفظة"
+    if len(parts) == 2 and parts[0] in _LEDGER_TARGET_AR:
+        return f"{_LEDGER_TARGET_AR[parts[0]]} #{parts[1]}"
+    return raw
+
+
+def _ledger_labels(row: dict[str, Any]) -> dict[str, Any]:
+    row["debit_account_label"] = ledger_account_label(row.get("debit_account"))
+    row["credit_account_label"] = ledger_account_label(row.get("credit_account"))
+    ttype = str(row.get("target_type") or "").strip()
+    tid = row.get("target_id")
+    if ttype:
+        name = _LEDGER_TARGET_AR.get(ttype, ttype)
+        row["target_label"] = f"{name} #{tid}" if tid not in (None, "") else name
+    else:
+        row["target_label"] = "—"
+    return row
 
 
 def _row(row: Any) -> dict[str, Any]:
@@ -171,6 +258,12 @@ class EventService:
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM business_events WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        # fix3 (F02 H2): request scope (owner / view-all → every event).
+        from .subscriber_scope import entity_scope_sql
+        esc, esv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                    actor_id_col="actor_id", tenant_id=int(tenant_id))
+        sql += esc
+        params += esv
         if category:
             sql += " AND category=?"
             params.append(category)
@@ -298,9 +391,17 @@ class LedgerService:
         entry_type: str = "",
         reference_type: str = "",
         limit: int = 100,
+        scoped: bool = False,
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM ledger_entries WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        if scoped:
+            # fix3: the request admin's subscriber scope (read views only).
+            from .subscriber_scope import entity_scope_sql
+            lsc, lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                        actor_id_col="actor_id", tenant_id=int(tenant_id))
+            sql += lsc
+            params += lsv
         if entry_type:
             sql += " AND entry_type=?"
             params.append(entry_type)
@@ -309,7 +410,8 @@ class LedgerService:
             params.append(reference_type)
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(int(limit))
-        return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
+        return [_ledger_labels(_row(row))
+                for row in db().execute(sql, tuple(params)).fetchall()]
 
 
 class WalletService:
@@ -377,9 +479,16 @@ class WalletService:
         owner_type: str = "",
         status: str = "",
         limit: int = 100,
+        scoped: bool = False,
     ) -> list[dict[str, Any]]:
         sql = "SELECT * FROM wallets WHERE tenant_id=?"
         params: list[Any] = [int(tenant_id)]
+        if scoped:
+            # fix3: the request admin's subscriber scope (read views only).
+            from .subscriber_scope import entity_scope_sql
+            wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=int(tenant_id))
+            sql += wsc
+            params += wsv
         if owner_type:
             sql += " AND owner_type=?"
             params.append(owner_type)

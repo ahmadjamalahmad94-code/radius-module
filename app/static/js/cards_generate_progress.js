@@ -141,11 +141,66 @@
     poll(statusUrl).catch(handleError);
   }
 
+  // fix2 (R13-L3): ملخّصٌ يؤكّده المشغّل قبل كلّ توليد — «رجوع» ثمّ إرسالٌ
+  // بقيمٍ مُعادة جزئيًّا أنشأ حزمة 20 بطاقة لم يطلبها أحد.
+  function generateSummary(form) {
+    var el = form.elements;
+    var count = (el.count && el.count.value) || "?";
+    var planSel = el.plan_id;
+    var plan = planSel && planSel.options && planSel.selectedIndex >= 0
+      ? (planSel.options[planSel.selectedIndex].text || "").trim() : "";
+    var name = (el.package_name && el.package_name.value || "").trim();
+    var len = (el.username_length && el.username_length.value) || "";
+    var pre = (el.username_prefix && el.username_prefix.value || "").trim();
+    var lines = ["توليد " + ((window.UDS && UDS.arCount) ? UDS.arCount(count, "بطاقة", "بطاقات", "بطاقةً") : (count + " بطاقة")) + (plan ? " على الباقة «" + plan + "»" : "") + "؟"];
+    if (name) lines.push("اسم الحزمة: " + name);
+    if (len) lines.push("طول اسم الدخول: " + len + (pre ? " · البادئة: " + pre : ""));
+    return lines.join("\n");
+  }
+
+  function confirmGenerate(form) {
+    if (!form.hasAttribute("data-confirm-generate")) return Promise.resolve(true);
+    var msg = generateSummary(form);
+    if (window.UDS && typeof window.UDS.confirm === "function") {
+      return window.UDS.confirm({ message: msg });
+    }
+    return Promise.resolve(window.confirm(msg));
+  }
+
   document.addEventListener("submit", function (event) {
     var form = event.target.closest("[data-card-generate-form]");
     if (!form) return;
-    if (!window.fetch || !form.dataset.progressStartUrl || !form.dataset.progressStatusUrl) return;
+    if (form.dataset.confirmed === "1") { form.dataset.confirmed = ""; return; }
+    var progress = window.fetch && form.dataset.progressStartUrl && form.dataset.progressStatusUrl;
+    if (!progress && !form.hasAttribute("data-confirm-generate")) return;
     event.preventDefault();
-    startGenerate(form).catch(handleError);
+    if (form.dataset.generating === "1") return;
+    confirmGenerate(form).then(function (ok) {
+      if (!ok) return;
+      if (progress) {
+        startGenerate(form).catch(handleError);
+      } else {
+        form.dataset.confirmed = "1";
+        if (typeof form.requestSubmit === "function") form.requestSubmit();
+        else form.submit();
+      }
+    });
+  });
+
+  // fix2 (R13-L3): الرجوع إلى الصفحة (bfcache أو إعادة تحميلٍ بسجلّ التنقّل)
+  // يُعيد ضبط النموذج **كاملًا** ويقول ذلك صراحةً — لا استعادة جزئيّة.
+  window.addEventListener("pageshow", function (event) {
+    var nav = (performance.getEntriesByType && performance.getEntriesByType("navigation")[0]) || null;
+    var back = event.persisted || (nav && nav.type === "back_forward");
+    if (!back) return;
+    Array.prototype.slice.call(document.querySelectorAll("[data-card-generate-form]")).forEach(function (form) {
+      form.reset();
+      setBusy(form, false);
+      form.dataset.confirmed = "";
+    });
+    var panel = document.querySelector("[data-card-generate-progress]");
+    if (panel) panel.hidden = true;
+    var note = document.querySelector("[data-generate-back-notice]");
+    if (note) note.hidden = false;
   });
 })();

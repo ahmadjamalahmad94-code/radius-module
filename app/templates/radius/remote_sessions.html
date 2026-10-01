@@ -86,13 +86,13 @@
               {% else %}<strong class="mono" data-rs-countdown="{{ s.seconds_left }}">—</strong>{% endif %}
             </td>
             <td>
-              <form method="post" style="margin:0"
+              {% if can_submit('radius.mt_remote_close', 'POST') %}<form method="post" style="margin:0"
                     action="{{ url_for('radius.mt_remote_close', nas_id=s.router_id, session_id=s.id) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                 <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                         data-confirm="{{ _('إغلاق جلسة %(r)s الآن؟', r=s.router_name) }}">
                   <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
-              </form>
+              </form>{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -129,8 +129,8 @@
             <td>{% if s.unrestricted %}<span class="hub-text-mute">{{ _('من أي مكان') }}</span>
                 {% else %}<span class="mono">{{ s.source_ip }}</span>{% endif %}</td>
             <td>{{ s.opened_by }}</td>
-            <td class="hub-text-mute small">{{ s.opened_at }}</td>
-            <td class="hub-text-mute small">{{ s.closed_at or '—' }}</td>
+            <td class="hub-text-mute small"><bdi dir="ltr">{{ s.opened_at }}</bdi></td>
+            <td class="hub-text-mute small"><bdi dir="ltr">{{ s.closed_at or '—' }}</bdi></td>
             <td>
               {% if s.status == 'active' %}{{ hub.pill(_('نشطة'), variant='green') }}
               {% elif s.status == 'expired' %}{{ hub.pill(_('انتهت'), variant='amber') }}

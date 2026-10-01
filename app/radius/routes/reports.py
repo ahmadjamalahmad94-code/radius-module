@@ -609,6 +609,11 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
             row["actor_label"] = login_names[_actor_raw]
             # الاسم التسجيليّ الخام كسطرٍ ثانويّ خافت (لا يَتصدّر ولا يَتذبذب).
             row["actor_login"] = _actor_raw
+        elif _actor_raw.startswith("api-token") or _actor_raw.lower() == "unknown":
+            # F08-L: مفتاح جلسة التطبيق («api-token:78» واسمه login:<user>:…)
+            # → «تطبيق — <المدير>»؛ و«unknown» → «غير معروف».
+            from ..services.actor_names import actor_display
+            row["actor_label"] = actor_display(_actor_raw)
         else:
             row["actor_label"] = _display_actor(_actor_raw, token_names)
         row["action_label"] = _display_action(str(row.get("action") or ""))
@@ -897,7 +902,8 @@ def rep_subscriber_consumption():
     metric = (request.args.get("metric") or "total").strip().lower()
     if metric not in _USAGE_METRICS:
         metric = "total"
-    date_from, date_to, preset = _resolve_usage_range(request.args, _dt.date.today())
+    from ..core.system_config import local_today
+    date_from, date_to, preset = _resolve_usage_range(request.args, local_today())
     f = {"q": q, "date_from": date_from, "date_to": date_to}
 
     # تطبيع عمود radacct قبل المقارنة كي تَصِحّ الحدود «مسافة» لصيغتَي
@@ -905,6 +911,10 @@ def rep_subscriber_consumption():
     # لولا التطبيع — ‎'T' > مسافة). راجع device_limit.acct_norm_sql.
     dw_j, dp_j = _date_where(acct_norm_sql("ra.acctstarttime"), date_from, date_to)
     clause_j = (" AND " + " AND ".join(dw_j)) if dw_j else ""
+    # fix3: scoped manager → his subscribers'/cards' usage only.
+    _sc, _sv = _scope("ra.username")
+    clause_j += _sc
+    dp_j = [*dp_j, *_sv]
     type_clause = _usage_type_clause(utype)
 
     # ── الإجماليات للنوع المختار في النطاق (KPI + الرسم الدائري) ──
@@ -967,7 +977,7 @@ def rep_subscriber_consumption():
     online_now = int(db().execute(
         "SELECT COUNT(DISTINCT ra.username) AS c FROM radacct ra" + _USAGE_JOINS +
         "WHERE ra.tenant_id=? AND (ra.acctstoptime IS NULL OR ra.acctstoptime='')"
-        + type_clause, [tid]
+        + _sc + type_clause, [tid, *_sv]
     ).fetchone()["c"] or 0)
 
     return render_template(
@@ -996,8 +1006,9 @@ def _recent_week_options(count: int = 26) -> list[tuple[str, str]]:
     """آخر N أسبوعًا ISO كقائمة (القيمة «2026-W39»، والعرض بأرقامٍ لاتينيّة مع
     مداه «22/09 – 28/09»). بديل input[type=week] الذي يرسمه متصفّحٌ عربيّ
     بأرقامٍ هنديّة مهما كانت لغة الصفحة (طلب «شبكة المحترف»)."""
-    from datetime import date, timedelta
-    today = date.today()
+    from datetime import timedelta
+    from ..core.system_config import local_today
+    today = local_today()  # يوم اللوحة (غزة) لا يوم الحاوية
     monday = today - timedelta(days=today.weekday())
     out = []
     for i in range(count):
@@ -1011,8 +1022,8 @@ def _recent_week_options(count: int = 26) -> list[tuple[str, str]]:
 
 def _recent_month_options(count: int = 24) -> list[tuple[str, str]]:
     """آخر N شهرًا «2026-09» — بديل input[type=month] (نفس سبب الأسبوع)."""
-    from datetime import date
-    today = date.today()
+    from ..core.system_config import local_today
+    today = local_today()
     y, m = today.year, today.month
     out = []
     for _ in range(count):
@@ -1072,12 +1083,28 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/cash_transactions", "rep_cash_transactions", rep_cash_transactions, methods=["GET"])
 
 
+def _money_visible() -> bool:
+    """fix3 (F08 H3): money figures need ``reports.finance`` (not reports.view)."""
+    return bool(session.get("is_super_admin")) or \
+        "reports.finance" in set(session.get("permissions") or ())
+
+
+def _hide_money(summary: dict) -> dict:
+    """Blank the finance block of the executive summary for a viewer without
+    ``reports.finance`` — the page and summary.json never carry the numbers."""
+    if _money_visible() or not isinstance(summary, dict):
+        return summary
+    fin = summary.get("finance") or {}
+    summary["finance"] = {k: ([] if isinstance(v, list) else (False if isinstance(v, bool) else "—"))
+                          for k, v in fin.items() if k != "url"}
+    summary["finance"]["hidden"] = True
+    return summary
+
+
 def reports_home():
     svc = _svc()
-    summary = svc.executive_summary(
-        date_from=(request.args.get("date_from") or "").strip(),
-        date_to=(request.args.get("date_to") or "").strip(),
-    )
+    f = _args()
+    summary = _hide_money(svc.executive_summary(date_from=f["date_from"], date_to=f["date_to"]))
     return render_template(
         "radius/reports_center.html",
         summary=summary,
@@ -1087,10 +1114,10 @@ def reports_home():
 
 
 def reports_summary_json():
-    summary = _svc().executive_summary(
+    summary = _hide_money(_svc().executive_summary(
         date_from=(request.args.get("date_from") or "").strip(),
         date_to=(request.args.get("date_to") or "").strip(),
-    )
+    ))
     return jsonify({"status": "ok", "summary": summary})
 
 
@@ -1107,10 +1134,12 @@ def reports_distributors():
 
 
 def _report_page(report_type: str, title: str):
+    # يوم محلّيّ شامل؛ تاريخ غير صالح → تنبيه + بلا فلترة (لا 500 ولا «اليوم» خفيًّا).
+    f = _args()
     data = _svc().report_data(
         report_type,
-        date_from=(request.args.get("date_from") or "").strip(),
-        date_to=(request.args.get("date_to") or "").strip(),
+        date_from=f["date_from"],
+        date_to=f["date_to"],
     )
     return render_template(
         "radius/reports_detail.html",
@@ -1126,12 +1155,18 @@ def reports_archive():
     return render_template(
         "radius/reports_archive.html",
         archives=svc.list_archives(),
-        summary=svc.executive_summary(),
+        summary=_hide_money(svc.executive_summary()),
         active="archive",
     )
 
 
 def reports_archive_create():
+    # fix3: an archive freezes the NETWORK's numbers — a manager limited to
+    # his own subscribers would store a partial «network» snapshot.
+    from ..services.subscriber_scope import current_scope_admin_id
+    if current_scope_admin_id(tenant_id=_tid()) is not None:
+        flash("إنشاء أرشيف تقارير الشبكة يتطلّب «عرض كل المشتركين».", "error")
+        return redirect(url_for("radius.reports_archive"))
     archive = _svc().create_archive_snapshot(
         archive_type=request.form.get("archive_type") or "yearly",
         period=request.form.get("period") or "",
@@ -1145,6 +1180,14 @@ def reports_archive_create():
     return redirect(url_for("radius.reports_archive"))
 
 
+def _scope(column: str = "username", by: str = "username") -> tuple[str, list]:
+    """fix3 (F02 H2 / F08 H3): the session admin's subscriber scope on a
+    report query — ``("", [])`` for the owner / co-owner / «عرض كل المشتركين».
+    The ONE predicate (services/subscriber_scope) shared with the API."""
+    from ..services.subscriber_scope import scope_sql
+    return scope_sql(column, by=by, tenant_id=_tid())
+
+
 def _limit() -> tuple[int, int]:
     try:
         l = min(max(int(request.args.get("limit") or 100), 1), 1000)
@@ -1155,21 +1198,35 @@ def _limit() -> tuple[int, int]:
 
 
 def _args() -> dict:
-    """فلاتر مشتركة لصفحات التقارير: بحث نصّي + نطاق تاريخ."""
-    return {
+    """فلاتر مشتركة لصفحات التقارير: بحث نصّي + نطاق تاريخ.
+
+    تاريخ غير صالح أو نطاق مقلوب → تنبيه عربيّ + عرضٌ بلا فلترة تاريخ."""
+    from ..services.report_dates import ReportDateError, local_bounds
+
+    f = {
         "q":         (request.args.get("q") or "").strip(),
         "date_from": (request.args.get("date_from") or "").strip(),
         "date_to":   (request.args.get("date_to") or "").strip(),
     }
+    if f["date_from"] or f["date_to"]:
+        try:
+            local_bounds(f["date_from"], f["date_to"], _tid())
+        except ReportDateError as exc:
+            flash(f"{exc.message} عُرضت النتائج بلا فلترة تاريخ.", "warning")
+            f["date_from"] = f["date_to"] = ""
+    return f
 
 
 def _date_where(col: str, date_from: str, date_to: str) -> tuple[list, list]:
-    where, params = [], []
-    if date_from:
-        where.append(f"{col} >= ?"); params.append(f"{date_from} 00:00:00")
-    if date_to:
-        where.append(f"{col} <= ?"); params.append(f"{date_to} 23:59:59")
-    return where, params
+    """نطاق **اليوم المحلّيّ** شاملًا (from=to=اليوم يعيد اليوم كلّه) على طابعٍ
+    مطبَّع — كانت المقارنة نصّيّةً على يوم UTC فيُعيد اليوم نفسه 0 صفوف و``to``
+    يقطع عند منتصف ليل UTC. قيمة غير صالحة تُهمَل (نُبِّه عليها في ``_args``)."""
+    from ..services.report_dates import ReportDateError, date_range_sql
+
+    try:
+        return date_range_sql(col, date_from, date_to, _tid())
+    except ReportDateError:
+        return [], []
 
 
 def _audit_rows(base_where: str, base_params: list, f: dict, *,
@@ -1177,6 +1234,12 @@ def _audit_rows(base_where: str, base_params: list, f: dict, *,
     """قراءة audit_log مع فلاتر q + نطاق تاريخ. يرجّع (rows, total_count)."""
     where = [base_where]
     params = list(base_params)
+    # fix3: a scoped manager reads only events about HIS subscribers or by him.
+    from ..services.subscriber_scope import audit_scope_sql
+    asc, asv = audit_scope_sql(tenant_id=_tid())
+    if asc:
+        where.append(asc[len(" AND "):])
+        params += asv
     if f["q"]:
         like = f"%{f['q']}%"
         where.append("(" + " OR ".join(f"{c} LIKE ?" for c in q_cols) + ")")
@@ -1187,10 +1250,23 @@ def _audit_rows(base_where: str, base_params: list, f: dict, *,
     total = db().execute(
         f"SELECT COUNT(*) AS c FROM audit_log WHERE {where_sql}", params
     ).fetchone()["c"]
+    # F08-L: ترقيم خادميّ — كانت الصفحة تقف عند أوّل ``limit`` صفّ (500) بلا
+    # سبيلٍ لما بعدها. ``pn`` رقم الصفحة (لا «page»: rep_manager_events تستعمله
+    # فلترًا للصفحة المزارة). النتيجة في f["pager"] للقالب (_partials/list_pager).
+    pages = max(1, -(-int(total or 0) // max(1, int(limit))))
+    try:
+        pn = int(request.args.get("pn") or 1)
+    except (TypeError, ValueError):
+        pn = 1
+    pn = min(max(1, pn), pages)
+    offset = (pn - 1) * int(limit)
     rows = [dict(r) for r in db().execute(
-        f"SELECT * FROM audit_log WHERE {where_sql} ORDER BY id DESC LIMIT ?",
-        params + [limit],
+        f"SELECT * FROM audit_log WHERE {where_sql} ORDER BY id DESC LIMIT ? OFFSET ?",
+        params + [limit, offset],
     ).fetchall()]
+    f["pager"] = {"page": pn, "pages": pages, "per_page": int(limit),
+                  "total": int(total or 0),
+                  "start": (offset + 1) if rows else 0, "end": offset + len(rows)}
     return _decorate_audit_rows(rows), total
 
 
@@ -1200,8 +1276,9 @@ def rep_sessions():
     limit, offset = _limit()
     f = _args()
     username = (request.args.get("username") or "").strip()
-    sql = "SELECT * FROM radacct WHERE tenant_id = ?"
-    vals: list = [_tid()]
+    sc, sv = _scope("username")
+    sql = "SELECT * FROM radacct WHERE tenant_id = ?" + sc
+    vals: list = [_tid(), *sv]
     if username:
         sql += " AND username LIKE ?"
         vals.append(f"%{username}%")
@@ -1222,6 +1299,10 @@ def rep_failed_logins():
     f = _args()
     where = ["tenant_id = ?", "reply != 'Access-Accept'"]
     params: list = [_tid()]
+    sc, sv = _scope("username")
+    if sc:
+        where.append(sc[len(" AND "):])
+        params += sv
     if f["q"]:
         where.append("(username LIKE ? OR nas LIKE ? OR class LIKE ?)")
         params += [f"%{f['q']}%"] * 3
@@ -1241,7 +1322,7 @@ def rep_failed_logins():
     last24 = db().execute(
         "SELECT COUNT(*) AS c FROM radpostauth "
         "WHERE tenant_id = ? AND reply != 'Access-Accept' "
-        "AND authdate >= datetime('now', '-1 day')", [_tid()]
+        "AND authdate >= datetime('now', '-1 day')" + sc, [_tid(), *sv]
     ).fetchone()["c"]
     return render_template("radius/rep_failed_logins.html",
                            items=rows, total=total, last24=last24, filters=f, limit=500)
@@ -1445,6 +1526,10 @@ def rep_mac_history():
     f = _args()
     where = ["tenant_id = ?", "callingstationid != ''"]
     params: list = [_tid()]
+    sc, sv = _scope("username")
+    if sc:
+        where.append(sc[len(" AND "):])
+        params += sv
     if f["q"]:
         where.append("(username LIKE ? OR callingstationid LIKE ? OR nasipaddress LIKE ?)")
         params += [f"%{f['q']}%"] * 3
@@ -1503,6 +1588,10 @@ def rep_coa_failures():
     where = ["tenant_id = ?", "kind IN ('disconnect','reset_password')",
              "status IN ('failed','retrying')"]
     params: list = [_tid()]
+    sc, sv = _scope("entity_key")
+    if sc:
+        where.append(sc[len(" AND "):])
+        params += sv
     if f["q"]:
         where.append("(kind LIKE ? OR status LIKE ?)")
         params += [f"%{f['q']}%"] * 2
@@ -1585,6 +1674,10 @@ def _outcome_clause(outcome: str) -> str:
 
 def _distinct_managers() -> list[str]:
     """أسماء المدراء (الفاعلون البشريّون) لقائمة فلتر «المدير»."""
+    from ..services.subscriber_scope import admin_actor_labels, current_scope_admin_id
+    _sid = current_scope_admin_id(tenant_id=_tid())
+    if _sid is not None:
+        return [x for x in admin_actor_labels(int(_sid)) if x != "\x00"]
     try:
         rows = db().execute(
             "SELECT DISTINCT actor FROM audit_log WHERE tenant_id = ? "
@@ -1940,6 +2033,11 @@ def rep_used_cards():
     f = _args()
     where = ["c.tenant_id = ?", "c.used = 1"]
     params: list = [_tid()]
+    from ..services.card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(column="c.batch_id", tenant_id=_tid())
+    if bsc:
+        where.append(bsc[len(" AND "):])
+        params += bsv
     if f["q"]:
         where.append("(c.username LIKE ? OR c.used_by_mac LIKE ?)")
         params += [f"%{f['q']}%"] * 2
@@ -1965,6 +2063,13 @@ def rep_balance_movements():
     # حركات الرصيد العامة (مشتركون/مدراء) من accounting_ledger_entries
     where = ["tenant_id = ?"]
     params: list = [_tid()]
+    from ..services.subscriber_scope import current_scope_admin_id
+    _scope_id = current_scope_admin_id(tenant_id=_tid())
+    sc, sv = _scope("subscriber_id", by="id")
+    if sc:
+        # his subscribers' movements + his own manager-wallet rows (fix3).
+        where.append("(" + sc[len(" AND "):] + " OR admin_id = ?)")
+        params += [*sv, int(_scope_id)]
     if f["q"]:
         where.append("(username LIKE ? OR operator LIKE ? OR entry_type LIKE ? OR source_type LIKE ?)")
         params += [f"%{f['q']}%"] * 4
@@ -1983,6 +2088,9 @@ def rep_balance_movements():
     # حركات رصيد الموزّعين
     dwhere = ["dl.tenant_id = ?"]
     dparams: list = [_tid()]
+    if _scope_id is not None:
+        dwhere.append("(d.admin_id = ? OR d.login_admin_id = ?)")
+        dparams += [int(_scope_id), int(_scope_id)]
     if f["q"]:
         dwhere.append("(d.name LIKE ? OR dl.entry_type LIKE ?)")
         dparams += [f"%{f['q']}%"] * 2
@@ -2012,6 +2120,10 @@ def rep_cash_transactions():
     f = _args()
     where = ["tenant_id = ?"]
     params: list = [_tid()]
+    sc, sv = _scope("subscriber_id", by="id")
+    if sc:
+        where.append(sc[len(" AND "):])
+        params += sv
     if f["q"]:
         where.append("(username LIKE ? OR created_by LIKE ? OR method LIKE ?)")
         params += [f"%{f['q']}%"] * 3

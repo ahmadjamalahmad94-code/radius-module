@@ -325,7 +325,7 @@
 
     <form class="hub-form" method="post"
           action="{{ url_for('radius.mt_port_services_plan', nas_id=nas.id, slug=service.slug) }}"
-          data-pss-form>
+          data-pss-form>{% if not can_submit('radius.mt_port_services_plan') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
       {# الواجهات المُطبَّقة فعلًا على هذه الخدمة (الحالة المحفوظة) —
          نَعرض لكلٍّ منها زرّ حذف مباشر في مربّعها الكبير. #}
@@ -400,12 +400,12 @@
         {# فحص اللوب الحيّ (لخدمة كشف اللوب فقط) — يرسل نفس النموذج
            بمنافذه المختارة إلى مسار loop-check عبر formaction. #}
         {% if service.slug == 'loop_detect' %}
-        <button type="submit" class="hub-btn hub-btn--ghost"
+        {% if can_submit('radius.mt_port_services_loop_check', 'POST') %}<button type="submit" class="hub-btn hub-btn--ghost"
                 formaction="{{ url_for('radius.mt_port_services_loop_check', nas_id=nas.id, slug=service.slug) }}"
                 formmethod="post" data-pss-loop-check>
           <i class="fa-solid fa-magnifying-glass"></i>
           {{ _('فحص اللوب') }}
-        </button>
+        </button>{% endif %}
         {% endif %}
         {# طلب تفعيل/ترقية الخدمة بمواصفاتها — يَفتح نافذة المواصفات
            الموحّدة (طلب من المزوّد). يُخفى تَمامًا للخدمات دائمة الإتاحة
@@ -425,7 +425,7 @@
         </button>
         {% endif %}
       </div>
-    </form>
+    {% if not can_submit('radius.mt_port_services_plan') %}</fieldset>{% endif %}</form>
   {% endcall %}
   {% endif %}
 
@@ -525,7 +525,7 @@
   {% endcall %}
 
   {% call hub.section("الفحص الدوري التلقائي", icon="clock") %}
-    <form class="hub-form" method="post" data-pss-loop-settings-form
+    {% if can_submit('radius.mt_port_services_loop_settings', 'POST') %}<form class="hub-form" method="post" data-pss-loop-settings-form
           action="{{ url_for('radius.mt_port_services_loop_settings', nas_id=nas.id, slug=service.slug) }}"
           style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px">
       <label style="display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;cursor:pointer;padding-bottom:9px">
@@ -544,7 +544,7 @@
       <button type="submit" class="hub-btn hub-btn--primary" style="margin-bottom:1px">
         <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
       </button>
-    </form>
+    </form>{% endif %}
     <div class="hub-field-hint pss-field-hint">
       {{ _('الفحص الدوري يقرأ حالة كل المنافذ المفعّلة تلقائيًا ويسجّل النتيجة في السجل أدناه، ويفتح تنبيهًا ذكيًا فور اكتشاف لوب. أدنى فترة 5 دقائق (دقة دورة الخادم).') }}
     </div>
@@ -720,7 +720,7 @@
 
       {# وجهة النموذج حسب وضع الخطة: تفعيل → apply ، إزالة → remove. #}
       {% set _is_remove = (plan_mode == 'remove') %}
-      <form method="post"
+      {% if can_submit('radius.mt_port_services_remove', 'POST') %}<form method="post"
             action="{{ url_for('radius.mt_port_services_remove' if _is_remove else 'radius.mt_port_services_apply', nas_id=nas.id, slug=plan.slug) }}"
             data-pss-apply-form data-pss-mode="{{ plan_mode }}"
             data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=plan.slug) }}"
@@ -754,7 +754,7 @@
           </span>
           {% endif %}
         </div>
-      </form>
+      </form>{% endif %}
 
       {# ── تقدم التنفيذ منفذًا منفذًا — يملؤه السكربت أسفل الصفحة.
          بدل سكربت واحد «نجح كله أو فشل بصمت»: كل منفذ يُدفَع وحده

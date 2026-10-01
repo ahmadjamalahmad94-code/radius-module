@@ -24,6 +24,7 @@ from ..access_control import current_distributor, deny_out_of_scope, subscriber_
 from ..auth import require_api_token
 from ..responses import fail, ok
 from ...radius.core.numbers import strict_float  # Infinity/NaN → ValueError (422)
+from ...radius.core.messages_ar import error_message_ar
 from .idempotency import idempotent
 from .paging import PagingError, page_args
 
@@ -117,6 +118,17 @@ def payments_list():
     try:
         limit, offset = page_args(default=100, maximum=500)
         subscriber_id = request.args.get("subscriber_id")
+        username = (request.args.get("username") or "").strip()
+        if username and not subscriber_id:
+            # F01 F7: ``?username=`` was silently ignored → every payment of
+            # the tenant came back. Resolve it (unknown name → empty list).
+            from ...radius.db.connection import db as _db
+            _row = _db().execute(
+                "SELECT id FROM subscribers WHERE tenant_id = ? AND username = ?",
+                (int(getattr(g, "tenant_id", 1)), username)).fetchone()
+            if _row is None:
+                return ok({"items": [], "count": 0})
+            subscriber_id = str(_row["id"])
         dist = current_distributor()
         if subscriber_id and not subscriber_in_scope(subscriber_id=int(subscriber_id)):
             return deny_out_of_scope()
@@ -135,7 +147,17 @@ def payments_list():
 
 
 def payments_create():
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {} if not request.get_data() else None
+    if not isinstance(body, dict):
+        # [1] / "x" were AttributeError -> 500.
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+    # Same permission as the web «تسجيل دفعة نقدية» (users.payments).
+    from .loans import _guard
+    _caller, denied = _guard("users_payment_create")
+    if denied is not None:
+        return denied
     dist = current_distributor()
     if dist and not subscriber_in_scope(
         username=str(body.get("username") or "").strip(),
@@ -149,7 +171,11 @@ def payments_create():
             distributor_id=int(dist["id"]) if dist else None,
         )
     except RadiusValidationError as e:
-        return fail("validation_error", e.message, status=422, details=e.details)
+        return fail("validation_error", error_message_ar(e), status=422, details=e.details)
+    except RadiusNotFound as e:
+        return fail("not_found", error_message_ar(e), status=404)
+    except RadiusConflict as e:
+        return fail("conflict", error_message_ar(e), status=409)
     if payment.get("dry_run") and not payment.get("id"):
         # معاينة: لا شيء كُتب — 200 لا 201.
         return ok({"payment": payment, "dry_run": True}, status=200)
@@ -157,7 +183,14 @@ def payments_create():
 
 
 def payments_void(payment_id: int):
-    body = request.get_json(silent=True) or {}
+    # Owner-only, exactly like the web ledger void (finance_ledger_void).
+    from .loans import _guard
+    _caller, denied = _guard("finance_ledger_void")
+    if denied is not None:
+        return denied
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
     try:
         payment = service_from_context().get_payment(payment_id)
         if current_distributor() and not subscriber_in_scope(
@@ -275,6 +308,8 @@ def payment_collection_settings_get():
 
 def payment_collection_settings_patch():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     repo = PaymentSettingsRepository()
     try:
         merged = _settings_as_kwargs(repo.get(_tid()), body.get("settings", body))

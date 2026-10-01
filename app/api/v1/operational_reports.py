@@ -5,6 +5,7 @@ from flask import Blueprint, g, request
 
 from ...radius.core.tenant import DEFAULT_TENANT_ID
 from ...radius.db.repos import operational_reports_repo
+from ...radius.services.report_dates import ReportDateError, strict_int
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -22,18 +23,39 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+# fix3 (F08 H3): money slugs need reports.finance (web parity), not reports.view.
+_MONEY_SLUGS = frozenset({"balance-movements", "cash-transactions"})
+
+
 def operational_report(slug: str):
+    if (slug or "").strip().lower() in _MONEY_SLUGS:
+        from ..access_control import require_web_permission
+        denied = require_web_permission("rep_cash_transactions", "GET")
+        if denied is not None:
+            return denied
     query = (request.args.get("q") or request.args.get("query") or "").strip()
     if len(query) > 120:
         return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+    # from/date_from و to/date_to = يوم محلّيّ شامل (كانت تُتجاهَل كليًّا)؛
+    # تاريخ غير صالح/نطاق مقلوب/limit غير رقميّ → 422 عربيّ (لا صمتٌ يعيد 100).
+    date_from = request.args.get("date_from") or request.args.get("from") or ""
+    date_to = request.args.get("date_to") or request.args.get("to") or ""
     try:
+        limit = strict_int(request.args.get("limit"), default=100, minimum=1,
+                           maximum=1000, label="limit")
+        offset = strict_int(request.args.get("offset"), default=0, minimum=0,
+                            maximum=10**9, label="offset")
         payload = operational_reports_repo.list_report(
             _tid(),
             slug,
             query=query,
-            limit=request.args.get("limit"),
-            offset=request.args.get("offset"),
+            limit=limit,
+            offset=offset,
+            date_from=date_from.strip(),
+            date_to=date_to.strip(),
         )
+    except ReportDateError as exc:
+        return fail("validation_error", exc.message, status=422)
     except KeyError:
         return fail(
             "not_found",

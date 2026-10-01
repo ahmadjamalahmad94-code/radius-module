@@ -60,8 +60,13 @@
   </div>
   {% endif %}
 
+  {# fix3 integration: save/reset need mikrotik.deploy_login (requires_perm) —
+     a viewer (mikrotik.view) sees the texts read-only, without reset buttons. #}
+  {% set _he_can_save = can_submit('radius.hotspot_errors_save') %}
+  {% set _he_can_reset = can_submit('radius.hotspot_errors_reset') %}
   <form method="post" action="{{ url_for('radius.hotspot_errors_save') }}">
     {{ csrf_token_input() | safe }}
+    {% if not _he_can_save %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
     {% call hub.section("نصوص رسائل الأخطاء", icon="list-check",
                         meta=(rows|length|string) ~ " رسالة") %}
@@ -113,14 +118,14 @@
               </label>
             </td>
             <td class="he-act">
-              <button type="submit"
+              {% if _he_can_reset %}<button type="submit"
                       class="hub-btn hub-btn--ghost hub-btn--sm"
                       formaction="{{ url_for('radius.hotspot_errors_reset') }}"
                       formnovalidate
                       name="key" value="{{ r.key }}"
                       title="{{ _('استعادة النص الافتراضي لهذه الرسالة') }}">
                 <i class="fa-solid fa-rotate-left"></i>
-              </button>
+              </button>{% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -137,20 +142,22 @@
       </div>
       <div class="he-savebar-actions">
         {# استعادة الكل عبر مودال تأكيد عائم موحّد بدل confirm() #}
-        <button type="button"
+        {% if _he_can_reset %}<button type="button"
                 class="hub-btn hub-btn--ghost"
                 data-uds-modal-open="heResetAllModal">
           <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكل') }}
-        </button>
-        <button type="submit" class="hub-btn hub-btn--primary">
+        </button>{% endif %}
+        {% if _he_can_save %}<button type="submit" class="hub-btn hub-btn--primary">
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الرسائل') }}
-        </button>
+        </button>{% endif %}
       </div>
     </div>
+    {% if not _he_can_save %}</fieldset>{% endif %}
   </form>
 </section>
 
 {# ───── مودال تأكيد «استعادة الكل» العائم الموحّد (بدل confirm) ───── #}
+{% if _he_can_reset %}
 {% call hub.modal("heResetAllModal", "استعادة كل الرسائل", icon="rotate-left", size="sm",
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("إلغاء") ~ '</button>'|safe) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
@@ -165,6 +172,7 @@
     </button>
   </form>
 {% endcall %}
+{% endif %}
 
 {# سلوك النوافذ العائمة الموحّد: فتح عبر data-uds-modal-open، إغلاق/ESC تلقائيًا #}
 <script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>

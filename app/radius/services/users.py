@@ -10,7 +10,12 @@ from ..core.constants import (
     AUDIT_ACTION_ENABLE, AUDIT_ACTION_RESET_PASSWORD, AUDIT_ACTION_UPDATE,
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
-from ..core.errors import RadiusConflict, RadiusValidationError
+from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
+from ..core.numbers import (
+    NonFiniteNumber,
+    action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
+    finite_float, round_money,
+)
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..db.connection import after_commit, atomic, in_transaction
@@ -26,6 +31,20 @@ def _currency(value) -> str:
     return normalize_currency(value)
 
 
+def _charge_amount(charge_mode: str, amount) -> float:
+    """مبلغ «مدفوع/دين» مُقرَّبًا لقرشين **قبل** الفحص — 0.004 كان يمرّ «> 0»
+    ثم يُسجَّل قيد دين 0.00 ويمنح ساعة مجّانًا — وبسقف العمليّة الواحدة
+    (كان «أضف وقت» في الويب يقبل دينًا بقيمة 1e11). المجّانيّ يمرّ كما هو."""
+    if charge_mode not in {"paid", "debt"}:
+        return amount
+    value = round_money(finite_float(amount, field="amount"))
+    if value <= 0:
+        raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
+    # «الحدود»: مبلغ تمديد/كوتة/استعادة = دفعةٌ من المشترك (أقصى دفعة نقدية).
+    action_amount(value, field="amount", kind="payment")
+    return value
+
+
 def _require_paid_balance(sub, amount, charge_mode: str) -> None:
     """«مدفوع — نقدًا» في نوافذ الويب/التطبيق = «تُخصم القيمة من رصيد المشترك»
     (قرار المالك: المدفوع يستهلك الرصيد المسبق). رصيدٌ لا يكفي كان يَنزل سالبًا
@@ -39,7 +58,34 @@ def _require_paid_balance(sub, amount, charge_mode: str) -> None:
             "«مدفوع» يُخصم من الرصيد. أضِف رصيدًا أولًا أو اختر «دين».")
 
 
-def _username_in_use(tenant_id: int, username: str) -> bool:
+ARCHIVED_NAME_MSG = ("الاسم يخص مشتركًا مؤرشفًا — استرجعه من سلة المحذوفات "
+                     "أو احذفه نهائيًا")
+
+
+def _search_term(search) -> str:
+    """Arabic-Indic digits → Latin: «٠٥٩٩» found nothing (re-test R01 N10)."""
+    from .subscriber_validation import latin_digits
+    return latin_digits(search).strip()
+
+
+def _username_archived(tenant_id: int, username: str, *,
+                       exclude_id: Optional[int] = None) -> bool:
+    """The name (case/space-insensitive) belongs to an ARCHIVED subscriber."""
+    from ..db.connection import db
+    name = str(username or "").strip().lower()
+    if not name:
+        return False
+    sql = ("SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+           "AND deleted_at IS NOT NULL")
+    args: list = [int(tenant_id or 1), name]
+    if exclude_id is not None:
+        sql += " AND id <> ?"
+        args.append(int(exclude_id))
+    return bool(db().execute(sql + " LIMIT 1", args).fetchone())
+
+
+def _username_in_use(tenant_id: int, username: str, *,
+                     exclude_id: Optional[int] = None) -> bool:
     """الاسم محجوزٌ لمشتركٍ قائم أو لبطاقة (نفس فضاء أسماء الدخول)، بمقارنةٍ
     لا تفرّق بين حالة الأحرف ولا المسافات الطرفيّة."""
     from ..db.connection import db
@@ -47,10 +93,14 @@ def _username_in_use(tenant_id: int, username: str) -> bool:
     if not name:
         return False
     conn = db()
-    if conn.execute(
-        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
-        "AND deleted_at IS NULL LIMIT 1", (int(tenant_id or 1), name),
-    ).fetchone():
+    sql = ("SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+           "AND deleted_at IS NULL")
+    args: list = [int(tenant_id or 1), name]
+    if exclude_id is not None:
+        # a rename may change only the case of its OWN name
+        sql += " AND id <> ?"
+        args.append(int(exclude_id))
+    if conn.execute(sql + " LIMIT 1", args).fetchone():
         return True
     try:
         return bool(conn.execute(
@@ -79,7 +129,7 @@ class UsersService:
         """إجماليّ المطابقين — لعدد صفحات الترقيم الخادميّ (مستقلّ عن limit)."""
         try:
             return int(self._adapter.count_accounts(
-                status=status, user_type=user_type, search=(search or None),
+                status=status, user_type=user_type, search=(_search_term(search) or None),
                 expiring_within_days=expiring_within_days,
                 owner_admin_id=owner_admin_id, plan_id=plan_id,
                 usernames_in=usernames_in))
@@ -108,7 +158,7 @@ class UsersService:
         # plan_id يُدفَع للـSQL (لا فلترة-بعد-الجلب) كي يصحّ الترقيم الخادميّ:
         # كانت الفلترة بعد LIMIT تُرجع أقلّ من page_size عند تفعيل فلتر الباقة.
         items = list(self._adapter.list_accounts(
-            status=status, user_type=user_type, search=(search or None),
+            status=status, user_type=user_type, search=(_search_term(search) or None),
             expiring_within_days=expiring_within_days,
             owner_admin_id=owner_admin_id, plan_id=plan_id,
             usernames_in=usernames_in,
@@ -126,7 +176,7 @@ class UsersService:
         يُصلِح نقص العدّ حين كانت البطاقات تُحسب من القائمة المحمّلة فقط.
         owner_admin_id يَقصُر العدّ على نطاق المدير (نفس عزل القائمة)."""
         return self._adapter.account_status_counts(
-            user_type=user_type, search=(search or None),
+            user_type=user_type, search=(_search_term(search) or None),
             plan_id=plan_id, expiring_within_days=expiring_within_days,
             owner_admin_id=owner_admin_id,
         )
@@ -135,7 +185,16 @@ class UsersService:
         return self._adapter.get_account(username)
 
     @atomic  # the «name free?» check and the insert under ONE write lock
-    def create(self, *, actor: str, sub: Subscriber) -> Subscriber:
+    def create(self, *, actor: str, sub: Subscriber,
+               creator_admin_id: Optional[int] = None) -> Subscriber:
+        # F02 H1 / F07 H1: every create path (web, API/app, import) stamps the
+        # creating non-owner admin as «المدير المسؤول» — he never loses sight of
+        # what he just created. ``creator_admin_id`` None = the request's admin.
+        from .subscriber_scope import creator_manager_id
+        _mid = creator_manager_id(sub.manager_id, creator_admin_id=creator_admin_id,
+                                  tenant_id=getattr(sub, "tenant_id", 1) or 1)
+        if _mid != sub.manager_id:
+            sub = replace(sub, manager_id=_mid)
         _validate(sub)
         # نفس قاعدة إعادة التسمية: اسم الدخول مفتاح RADIUS — الإنشاء كان يقبل
         # مسافات/عربيًّا/إيموجي/«/» (والأخير يجعل الحساب غير قابل للوصول عبر
@@ -146,7 +205,23 @@ class UsersService:
         # إنشاءٌ فقط — الاسم المحجوز يُرفض (409 في الـAPI، رسالة في الويب).
         if _username_in_use(getattr(sub, "tenant_id", 1) or 1, sub.username):
             raise RadiusConflict("اسم المستخدم مستخدم مسبقًا.")
+        # 🔴 اسمُ مشتركٍ مؤرشف: الحفظ «upsert» كان يُحيي الصفّ المؤرشف نفسه
+        # (نفس id) فيرث المشتركُ الجديد دفتره الماليّ ويختفي القديم من سلّة
+        # المحذوفات (re-test R01 N5). الأسلم: رفضٌ صريح — لا يُمسّ السجلّ
+        # القديم ولا أثرُه؛ يسترجعه المشغّل أو يحذفه نهائيًّا ثمّ يُنشئ.
+        if _username_archived(getattr(sub, "tenant_id", 1) or 1, sub.username):
+            raise RadiusConflict(ARCHIVED_NAME_MSG)
+        from .subscriber_validation import validate_subscriber_fields
+        validate_subscriber_fields(sub)
+        # ⏸ سؤال المالك (F03): «سنة في المرة» عند الإنشاء — مُطفأ حتى يقرّر
+        # (core.numbers.CREATE_EXPIRY_ONE_YEAR_RULE). لا أثر وهو مُطفأ.
+        from ..core.numbers import check_create_expiry
+        check_create_expiry(getattr(sub, "expire_at", None))
         saved = self._adapter.upsert_account(sub)
+        if abs(float(saved.balance or 0)) >= 0.005:
+            # an opening balance is money too — same ledger row as an edit.
+            _record_manual_balance_change(
+                actor=actor, before=replace(saved, balance=0.0), saved=saved)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="user", target_id=saved.username,
                            payload={"plan_id": saved.plan_id})
@@ -157,7 +232,22 @@ class UsersService:
         }, dedup_key=saved.username)
         return saved
 
-    def update(self, *, actor: str, sub: Subscriber) -> Subscriber:
+    @atomic  # read + write under ONE write lock (BEGIN IMMEDIATE, cross-process)
+    def update(self, *, actor: str, sub: Subscriber,
+               base: Optional[Subscriber] = None,
+               clear_expiry: bool = False) -> Subscriber:
+        """Save an edited subscriber.
+
+        ``base`` = the row as the caller loaded it before editing. When given,
+        only the fields that differ between ``base`` and ``sub`` are applied —
+        onto the row re-read here under the write lock — and only those
+        columns are written. A renewal, top-up or status change that committed
+        after the caller's read therefore survives (re-test R01 N1: 5/24 PATCH
+        rounds lost +60 min, 1/25 lost +5 balance, worse with 2 workers).
+
+        ``clear_expiry`` = an explicit «بدون انتهاء» (API ``expire_at: null``,
+        app, web checkbox): NULL expiry = never expires. A missing/blank expiry
+        otherwise keeps the stored one (see the rule below)."""
         # Fetch the current row UP-FRONT — it serves two purposes and is
         # non-fatal if it fails (brand-new subscriber / lookup error):
         #   1) password preservation (defense in depth, see below);
@@ -167,6 +257,21 @@ class UsersService:
             existing = self._adapter.get_account(sub.username)
         except Exception:  # noqa: BLE001 — lookup failure must not break update
             existing = None
+        if base is not None and existing is None:
+            # F01 F3: the caller edited a row that is gone now (archived or
+            # renamed meanwhile) — an edit never re-creates / un-deletes it.
+            raise RadiusConflict(
+                "المشترك حُذف أو أُعيدت تسميته بعد فتح النموذج — لم يُحفَظ شيء.")
+        changed: Optional[set] = None
+        if base is not None and existing is not None:
+            changed = _changed_fields(base, sub)
+            if clear_expiry:
+                changed.add("expire_at")
+            sub = replace(existing, **{f: (None if (f == "expire_at" and clear_expiry)
+                                           else getattr(sub, f))
+                                       for f in changed})
+        elif clear_expiry:
+            sub = replace(sub, expire_at=None)
 
         # Defense in depth — protect the stored password from being
         # silently wiped by a form submit (or any caller) that didn't
@@ -179,18 +284,39 @@ class UsersService:
         # path is the ONLY way to clear/change a password.
         if not (sub.password or "").strip():
             if existing and (existing.password or "").strip():
-                from dataclasses import replace
                 sub = replace(sub, password=existing.password)
+                if changed is not None:
+                    changed.discard("password")
         # Same defense for the subscription expiry (expire_at). The profile
         # form leaves the date picker blank to mean «keep as-is»; a blank
         # (None) DTO must never NULL the stored expiry — that would silently
         # un-expire / mis-expire the account. Only a concrete date from the
-        # picker, or the dedicated renewal/plan-change/card flows, change it.
-        if sub.expire_at is None and existing and existing.expire_at is not None:
-            from dataclasses import replace
+        # picker, the explicit «بدون انتهاء» (clear_expiry), or the dedicated
+        # renewal/plan-change/card flows change it.
+        if (sub.expire_at is None and existing and existing.expire_at is not None
+                and not clear_expiry):
             sub = replace(sub, expire_at=existing.expire_at)
+            if changed is not None:
+                changed.discard("expire_at")
         _validate(sub)
-        saved = self._adapter.upsert_account(sub)
+        from .subscriber_validation import (validate_expiry_jump,
+                                            validate_subscriber_fields)
+        if existing is None:
+            validate_subscriber_fields(sub)
+        else:
+            fields = changed if changed is not None else _changed_fields(existing, sub)
+            validate_subscriber_fields(sub, fields)
+            if "expire_at" in fields and sub.expire_at is not None:
+                # Owner rule: one edit moves the expiry forward ≤ 1 year.
+                validate_expiry_jump(existing.expire_at, sub.expire_at)
+        if changed is not None and _supports_partial(self._adapter):
+            saved = self._adapter.upsert_account(sub, only_fields=changed)
+        else:
+            saved = self._adapter.upsert_account(sub)
+        # A direct balance write (owner-only) is money: it gets its ledger row
+        # like every other balance movement («تعديل رصيد يدوي»).
+        if existing is not None:
+            _record_manual_balance_change(actor=actor, before=existing, saved=saved)
         # لقطتان مقروءتان قبل/بعد → يَظهر «الحقل: من X إلى Y» في سجل التعديلات
         # (كان يُسجَّل الفعل بلا تفاصيل). قيَم مقروءة: اسم العرض + حالة عربيّة.
         _tid_a = getattr(saved, "tenant_id", None) or 1
@@ -239,12 +365,22 @@ class UsersService:
         if new_username == old_username:
             return {"renamed": False, "old": old_username, "new": old_username,
                     "had_live_session": False, "tables": {}}
+        _validate_new_username(new_username)
         # Friendly uniqueness pre-check (the adapter enforces it authoritatively
-        # too, inside the same transaction as the cascade).
+        # too, inside the same transaction as the cascade). Case- and
+        # space-insensitive like create: «R10_001» beside «r10_001» was
+        # accepted (re-test R10 N2 / R01 L3). Only the row itself may differ
+        # by case (a case-only rename of its own name).
         _tid_scope = getattr(existing, "tenant_id", None) or 1
-        if self._username_taken(new_username, tenant_id=_tid_scope):
+        if (self._username_taken(new_username, tenant_id=_tid_scope)
+                or _username_in_use(_tid_scope, new_username,
+                                    exclude_id=getattr(existing, "id", None))):
             raise RadiusValidationError(
                 f"اسم الدخول «{new_username}» مستخدَم بالفعل لمشترك أو بطاقة أخرى.")
+        # an archived subscriber still owns its name (UNIQUE row) — was a 500.
+        if _username_archived(_tid_scope, new_username,
+                              exclude_id=getattr(existing, "id", None)):
+            raise RadiusConflict(ARCHIVED_NAME_MSG)
 
         result = self._adapter.rename_account(
             old_username, new_username, disconnect=disconnect)
@@ -279,8 +415,20 @@ class UsersService:
     @atomic
     def change_plan(self, *, actor: str, username: str, plan_id: int,
                     policy: str) -> dict:
+        """تغيير عرض المشترك وفق سياسةٍ صريحة (قواعدٌ موثَّقة في
+        ``docs/radius/plan_change_policy.md``):
+
+        • الاتجاه (أرخص/أغلى/مساوٍ) **بسعر الدقيقة** لا بالسعر الإجماليّ —
+          عرضٌ بلا مدّة يُحسب شهرًا (43200 د) كما في التسعير والدفعات. العرض
+          المجّانيّ (أو «بلا عرض») سعرُ دقيقته صفر: الانتقال منه لمدفوعٍ «أغلى».
+        • ``lower_*`` للأرخص فقط، ``higher_*`` للأغلى فقط، ``neutral_keep_expiry``
+          للمساوي فقط — لا تغييرَ «محايد» يتجاوز فرق السعر.
+        • لا تغيير إلى العرض الحاليّ نفسه، ولا إلى عرضٍ معطّل أو مؤرشف.
+        • التعويض/الإنقاص يُزيح تاريخ الانتهاء بالفارق فقط (تُحفظ الثواني)؛
+          فارقٌ صفريّ لا يمسّ التاريخ.
+        """
         if plan_id <= 0:
-            raise RadiusValidationError("plan_id required")
+            raise RadiusValidationError("اختر العرض الجديد.")
         allowed = {
             "lower_compensate",
             "lower_keep_expiry",
@@ -290,23 +438,51 @@ class UsersService:
             "neutral_keep_expiry",
         }
         if policy not in allowed:
-            raise RadiusValidationError("unknown plan change policy")
+            raise RadiusValidationError("طريقة تغيير العرض غير معروفة.")
 
         sub = self._adapter.get_account(username)
+        if sub.plan_id and int(sub.plan_id) == int(plan_id):
+            raise RadiusValidationError("العرض المختار هو العرض الحاليّ للمشترك — اختر عرضًا آخر.")
         old_plan = None
         if sub.plan_id:
             try:
                 old_plan = self._adapter.get_profile(int(sub.plan_id))
             except Exception:  # noqa: BLE001
-                old_plan = None
-        new_plan = self._adapter.get_profile(plan_id)
+                # عرضٌ حاليّ مؤرشف ما زال عقدَ المشترك: سعره يحدّد الاتجاه
+                # (كان «بلا عرض» ⇒ مجّانيّ ⇒ كلّ انتقالٍ «أرخص» بلا تعويض).
+                try:
+                    from ..db.repos import plans_repo
+                    old_plan = plans_repo.get_plan(int(sub.tenant_id or 1), int(sub.plan_id),
+                                                   include_deleted=True)
+                except Exception:  # noqa: BLE001
+                    old_plan = None
+        try:
+            new_plan = self._adapter.get_profile(plan_id)
+        except RadiusNotFound:
+            raise RadiusNotFound("العرض المختار غير موجود أو مؤرشف.")
+        if getattr(new_plan, "deleted_at", None):
+            raise RadiusNotFound("العرض المختار غير موجود أو مؤرشف.")
+        if not bool(getattr(new_plan, "enabled", True)):
+            raise RadiusValidationError(
+                "العرض المختار معطّل — فعّله من صفحة العروض أوّلًا أو اختر عرضًا آخر.")
 
         old_price = float(getattr(old_plan, "price", 0) or 0)
         new_price = float(getattr(new_plan, "price", 0) or 0)
-        if policy.startswith("lower_") and old_price and new_price >= old_price:
-            raise RadiusValidationError("selected plan is not cheaper")
-        if policy.startswith("higher_") and old_price and new_price <= old_price:
-            raise RadiusValidationError("selected plan is not more expensive")
+        old_rate = plan_rate_per_minute(old_plan)
+        new_rate = plan_rate_per_minute(new_plan)
+        direction = plan_change_direction(old_plan, new_plan)
+        if policy.startswith("lower_") and direction != "lower":
+            raise RadiusValidationError(
+                "العرض المختار ليس أرخص من الحاليّ (المقارنة بسعر اليوم/الدقيقة) — "
+                "اختر أحد خيارات العرض " + _DIRECTION_AR[direction] + ".")
+        if policy.startswith("higher_") and direction != "higher":
+            raise RadiusValidationError(
+                "العرض المختار ليس أغلى من الحاليّ (المقارنة بسعر اليوم/الدقيقة) — "
+                "اختر أحد خيارات العرض " + _DIRECTION_AR[direction] + ".")
+        if policy == "neutral_keep_expiry" and direction != "neutral":
+            raise RadiusValidationError(
+                "العرض المختار " + _DIRECTION_AR[direction] + " من الحاليّ — «تغيير العرض فقط» "
+                "للعروض المتساوية السعر؛ اختر تعويضًا/إنقاصًا/دينًا أو «بدون تعويض/دين».")
 
         now = datetime.utcnow()
         remaining = _remaining_minutes(sub.expire_at, now)
@@ -314,21 +490,46 @@ class UsersService:
         minute_delta = 0
         debt_amount = 0.0
 
-        if policy in {"lower_compensate", "higher_reduce_days", "higher_debt"}:
-            old_rate = _minute_rate(old_plan)
-            new_rate = _minute_rate(new_plan)
-            if remaining > 0 and (old_rate <= 0 or new_rate <= 0):
-                raise RadiusValidationError("plan price and duration are required for this option")
-            if policy == "lower_compensate" and remaining > 0:
+        if policy in {"lower_compensate", "higher_reduce_days", "higher_debt"} and remaining > 0:
+            if policy == "lower_compensate":
+                if new_rate <= 0:
+                    raise RadiusValidationError(
+                        "لا يمكن التعويض بأيامٍ على عرضٍ مجّانيّ — اختر «تغيير العرض بدون تعويض».")
                 adjusted = max(remaining, int(round((remaining * old_rate) / new_rate)))
-                new_expire_at = now + timedelta(minutes=adjusted)
                 minute_delta = adjusted - remaining
-            elif policy == "higher_reduce_days" and remaining > 0:
+            elif policy == "higher_reduce_days":
                 adjusted = min(remaining, int(round((remaining * old_rate) / new_rate)))
-                new_expire_at = now + timedelta(minutes=max(0, adjusted))
-                minute_delta = adjusted - remaining
-            elif policy == "higher_debt" and remaining > 0:
+                minute_delta = max(0, adjusted) - remaining
+            elif policy == "higher_debt":
                 debt_amount = round(max((new_rate - old_rate) * remaining, 0), 2)
+            # 🔴 F04 M1 / F08 H2 — سقوف المالك تسري على تغيير العرض أيضًا (قرارٌ
+            # موثَّق: **رفض 422 لا قصّ** — القصّ يُسقط من حقّ المشترك بصمت):
+            #   • التعويض وقتٌ يُضاف ⇒ ≤ سنة في العمليّة الواحدة (120 ₪ ⇒ 0.01 ₪
+            #     كان يعطي 518 مليون دقيقة وانتهاءً سنة 3012)؛
+            #   • الانتهاء الناتج ≤ 2100؛
+            #   • دين فرق السعر مبلغٌ لا يُحوَّل وقتًا ⇒ ≤ 100,000.
+            from ..core import limits
+            if minute_delta > limits.max_extend_minutes():
+                raise NonFiniteNumber(
+                    f"{limits.extend_too_long_msg()} — التعويض المحسوب لهذا التغيير "
+                    f"{_fmt_minutes_ar(minute_delta)}. اختر «تغيير العرض بدون تعويض» "
+                    "ثم مدّد يدويًّا على دفعات، أو اختر عرضًا أقرب سعرًا.",
+                    details={"field": "policy", "minute_delta": minute_delta})
+            _debt_cap = limits.money_cap("payment")
+            if debt_amount > _debt_cap + 1e-9:
+                raise NonFiniteNumber(
+                    f"دين فرق السعر المحسوب ({debt_amount:.2f}) يتجاوز الحدّ الأقصى "
+                    f"للعملية الواحدة ({limits.fmt_amount(_debt_cap)}). اختر «إنقاص الأيام» "
+                    "أو «بدون دين/تعويض».",
+                    details={"field": "policy", "debt_amount": debt_amount})
+            if minute_delta:
+                # إزاحةٌ بالفارق فقط: ثواني النهاية الأصليّة تبقى (كان يُعاد بناؤها
+                # من «الآن + المتبقّي بالدقائق» فتضيع حتى 59 ثانية حتى بفارقٍ صفريّ).
+                # add_minutes_capped: ما بعد 2100 (أو الفائض) ⇒ 422 لا 500.
+                new_expire_at = add_minutes_capped(sub.expire_at, minute_delta)
+                if new_expire_at < now:
+                    new_expire_at = now
+        debt_amount = debt_amount + 0.0
 
         new_balance = float(sub.balance or 0) - debt_amount
         # الدين يُطرح من رصيد المشترك ⇒ يُقيَّد بعملة الرصيد (عملة النظام) لا
@@ -342,6 +543,11 @@ class UsersService:
                 balance=new_balance,
             )
         )
+        # فترة كوتة جديدة: إضافات الكوتة للعرض السابق لا تُورَّث للجديد (كان
+        # 1024+100 يبقى 1124 بعد الترقية إلى 20 GB أو لعرضٍ بلا كوتة).
+        from . import quota_period
+        if quota_period.start_new_period(saved, reason="plan_change") is not None:
+            saved = self._adapter.get_account(username)
         if debt_amount > 0:
             _record_plan_change_debt(
                 actor=actor,
@@ -382,6 +588,7 @@ class UsersService:
             "old_plan": old_plan,
             "new_plan": new_plan,
             "policy": policy,
+            "direction": direction,
             "remaining_minutes": remaining,
             "minute_delta": minute_delta,
             "debt_amount": debt_amount,
@@ -393,15 +600,15 @@ class UsersService:
         # الإشعارات (comms_providers.HTTP_CHANNELS)؛ أي قيمة أخرى مرفوضة.
         ch = (channel or "sms").strip().lower()
         if ch not in {"sms", "whatsapp"}:
-            raise RadiusValidationError("unsupported message channel")
+            raise RadiusValidationError("قناة الإرسال غير مدعومة.")
         body = (message or "").strip()
         if not body:
-            raise RadiusValidationError("message required")
+            raise RadiusValidationError("نص الرسالة مطلوب.")
         sub = self._adapter.get_account(username)
         if not sub.id:
-            raise RadiusValidationError("subscriber id required")
+            raise RadiusValidationError("المشترك غير صالح.")
         if not (sub.mobile or "").strip():
-            raise RadiusValidationError("subscriber mobile is empty")
+            raise RadiusValidationError("لا يوجد رقم جوال لهذا المشترك.")
 
         # تعويض {username} بالاسم الفعلي — مفيد في الإرسال الجماعي حيث
         # تُرسل نفس الرسالة لعدة مشتركين (الواجهة تُبقي المتغيّر كما هو).
@@ -440,11 +647,14 @@ class UsersService:
         """
         currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown reset charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الاستعادة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
 
         sub = self._adapter.get_account(username)
+        # F04 N-L1: لا كوتة يوميّة ولا حدّ وقتٍ يوميّ ⇒ لا شيء يُستعاد — كان يُحصِّل
+        # المبلغ (رصيد −5) على عرضٍ بلا أيّ سقف يوميّ. يُرفض في كلّ الأنماط.
+        if not daily_reset_applicable(sub):
+            raise NothingToReset(NOTHING_TO_RESET_AR)
         _require_paid_balance(sub, amount, charge_mode)
         changes = {
             "used_seconds": 0,
@@ -461,6 +671,10 @@ class UsersService:
             # بقيمة X» while leaving the balance untouched (the confirmed bug).
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
+        # يومٌ جديد من الآن للكوتة والوقت اليوميّين (العدّادان أعلاه لا يكتبهما
+        # أحدٌ لمشتركٍ حقيقيّ — الاستهلاك يُقرأ من radacct).
+        from . import quota_period
+        quota_period.reset_daily(saved)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -503,16 +717,21 @@ class UsersService:
     def add_quota(self, *, actor: str, username: str, quota_mb: int,
                   quota_target: str = "combined", charge_mode: str = "free",
                   amount: float = 0.0, currency: str = "",
-                  notes: str = "") -> Subscriber:
+                  notes: str = "", quota_window: str = "auto") -> Subscriber:
+        """إضافة كوتة **للسقف الساري** — بالأولويّة: الإجماليّ (للفترة الحاليّة
+        فقط) ⇒ الشهريّ (هذا الشهر) ⇒ اليوميّ (اليوم). ``quota_window`` يفرض
+        نافذةً بعينها (total/monthly/daily). راجع ``quota_period``."""
         currency = _currency(currency)
         if quota_mb <= 0:
-            raise RadiusValidationError("quota_mb must be > 0")
+            raise RadiusValidationError("حجم الكوتة يجب أن يكون أكبر من صفر.")
         if quota_target not in {"combined", "download", "upload"}:
-            raise RadiusValidationError("unknown quota target")
+            raise RadiusValidationError("نوع الكوتة غير معروف.")
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown quota charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
+        quota_window = (quota_window or "auto").strip().lower()
+        if quota_window not in {"auto", "total", "monthly", "daily"}:
+            raise RadiusValidationError("نافذة الكوتة غير معروفة (total أو monthly أو daily).")
 
         sub = self._adapter.get_account(username)
         # 🔴 الإضافة **تُضاف إلى السقف الساري** لا تحلّ محلّه. كان المسار يجمع
@@ -526,12 +745,20 @@ class UsersService:
                 plan = self._adapter.get_profile(int(sub.plan_id))
             except Exception:  # noqa: BLE001 — عرضٌ مؤرشف/محذوف ⇒ بلا كوتا عرض
                 plan = None
+        from . import quota_period
         sub_combined = int(sub.combined_quota_mb or 0)
         sub_down = int(sub.download_quota_mb or 0)
         sub_up = int(sub.upload_quota_mb or 0)
         plan_total = int(getattr(plan, "quota_total_mb", 0) or 0) if plan else 0
         per_direction = sub_combined <= 0 and (sub_down > 0 or sub_up > 0)
-        if sub_combined <= 0 and not per_direction and plan_total <= 0:
+        has_total = sub_combined > 0 or per_direction or plan_total > 0
+        wcaps = quota_period.plan_window_caps(plan)
+        if quota_window == "auto":
+            quota_window = ("total" if has_total else
+                            "monthly" if any(wcaps["monthly"].values()) else
+                            "daily" if any(wcaps["daily"].values()) else "")
+        if not quota_window or (quota_window == "total" and not has_total) or (
+                quota_window in wcaps and not any(wcaps[quota_window].values())):
             raise RadiusValidationError(
                 "هذا المشترك بلا سقف كوتة (استهلاك غير محدود) — لا يوجد رصيد كوتة "
                 "لتُضاف إليه. لتحديد سقف عدّل كوتة المشترك أو باقته.")
@@ -542,7 +769,21 @@ class UsersService:
             "upload_quota_mb": sub.upload_quota_mb,
             "balance": float(sub.balance or 0),
         }
-        if per_direction:
+        window_label = {"monthly": "الشهريّة", "daily": "اليوميّة"}.get(quota_window, "")
+        if quota_window != "total":
+            # كوتة الباقة الشهريّة/اليوميّة: الإضافة لهذا الشهر/اليوم فقط، ولا
+            # يُنشأ تجاوزٌ دائم على المشترك.
+            caps = wcaps[quota_window]
+            if not caps.get(quota_target):
+                if quota_target == "combined":
+                    raise RadiusValidationError(
+                        f"كوتة هذا المشترك {window_label} بالاتجاه (تنزيل/رفع) — "
+                        "اختر «تنزيل» أو «رفع».")
+                raise RadiusValidationError(
+                    f"كوتة هذا المشترك {window_label} لا تشمل هذا الاتجاه — "
+                    "أضِف إلى «الكوتة الإجماليّة» أو الاتجاه المحدَّد في الباقة.")
+            changes = {"balance": float(sub.balance or 0)}
+        elif per_direction:
             if quota_target == "download":
                 changes["download_quota_mb"] = sub_down + quota_mb
             elif quota_target == "upload":
@@ -564,6 +805,13 @@ class UsersService:
             # the balance untouched while claiming «مدفوعة».
             changes["balance"] = float(sub.balance or 0) - float(amount)
         saved = self._adapter.upsert_account(replace(sub, **changes))
+        # الإضافة تخصّ الفترة/اليوم/الشهر الجاري فقط — تُزال مع الفترة التالية.
+        window_total = None
+        if quota_window == "total":
+            quota_period.record_total_topup(sub, saved, quota_mb)
+        else:
+            window_total = quota_period.record_window_topup(
+                saved, quota_window, quota_target, quota_mb)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -577,6 +825,7 @@ class UsersService:
                 metadata={
                     "quota_mb": quota_mb,
                     "quota_target": quota_target,
+                    "quota_window": quota_window,
                     "charge_mode": charge_mode,
                 },
             )
@@ -588,6 +837,7 @@ class UsersService:
             payload={
                 "quota_mb": quota_mb,
                 "quota_target": quota_target,
+                "quota_window": quota_window,
                 "charge_mode": charge_mode,
                 "amount": amount,
                 "currency": currency,
@@ -599,6 +849,9 @@ class UsersService:
             "download": saved.download_quota_mb,
             "upload": saved.upload_quota_mb,
         }.get(quota_target, saved.combined_quota_mb)
+        if window_total is not None:
+            _new_total = (int(wcaps[quota_window].get(quota_target) or 0)
+                          + int(window_total.get(quota_target) or 0))
         _target_ar = {"combined": "", "download": " (تنزيل)",
                       "upload": " (رفع)"}.get(quota_target, "")
         _notify_alert(saved.tenant_id, "quota_added", {
@@ -614,8 +867,10 @@ class UsersService:
                          currency: str = "", notes: str = "",
                          settled_deduction: float = 0.0) -> Subscriber:
         currency = _currency(currency)
+        amount = round_money(finite_float(amount, field="amount"))
         if amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("المبلغ يجب أن يكون أكبر من صفر.")
+        action_amount(amount, field="amount", kind="balance")   # «أقصى إضافة رصيد»
         # Net wallet credit = cash received − the part used to settle open loans.
         # Loans the operator chose to «خصم» are cleared separately (their own
         # settlement ledger), so ONLY the remainder lands in the wallet — the
@@ -665,11 +920,24 @@ class UsersService:
                 "new_balance": _fmt_money_ar(saved.balance, currency),
                 "actor": actor,
             }, dedup_key=f"credit:{username}:{credit}")
+        # إشعار المشترك نفسه بشحن رصيده («إضافة شحن» — مُطفأ افتراضيًّا).
+        if credit > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                notify_event(
+                    "recharge_added",
+                    tenant_id=saved.tenant_id,
+                    subscriber=find_subscriber(saved.tenant_id, username=username),
+                    context={"amount": _fmt_money_ar(credit, currency),
+                             "balance": _fmt_money_ar(saved.balance, currency)},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل عمليّة الشحن أبدًا
+                pass
         return saved
 
     @atomic
     def apply_payment_to_balance(self, *, actor: str, username: str,
-                                 amount: float) -> float:
+                                 amount: float, payment_id: int | None = None) -> float:
         """يسوي جزءًا من دفعة نقدية مع رصيد سالب مسجل كدين.
 
         يرفع الرصيد باتجاه الصفر دون تجاوزه، ويسجل قيد `debt_settlement`
@@ -697,6 +965,8 @@ class UsersService:
             metadata={
                 "previous_balance": previous,
                 "new_balance": float(saved.balance or 0),
+                # إلغاء الدفعة يعكس هذا التسديد (يعود الدين إلى الرصيد).
+                "payment_id": int(payment_id) if payment_id else None,
             },
         )
         self._audit.record(
@@ -708,9 +978,15 @@ class UsersService:
         )
         return settle
 
+    # 🔴 تعطيل/تفعيل = قراءةُ الصفّ ثم كتابتُه كلّه (upsert). خارج معاملةٍ كانت
+    # القراءة تسبق قفل الكتابة، فيكتب التعطيلُ نسخةً قديمة فوق تمديدٍ متزامن
+    # (1 من 170 جولة فقدت ساعة ودينًا — الرصيد ≠ الدفتر). @atomic = BEGIN
+    # IMMEDIATE قبل القراءة كبقيّة الإجراءات؛ الطرد/الإشعار بعد COMMIT.
+    @atomic
     def disable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
-        self._adapter.upsert_account(replace(u, status=STATUS_DISABLED))
+        # status only — a full-row write here undid a concurrent extend (R02).
+        _upsert_fields(self._adapter, replace(u, status=STATUS_DISABLED), {"status"})
         self._audit.record(actor=actor, action=AUDIT_ACTION_DISABLE,
                            target_type="user", target_id=username)
         _notify_subscriber(u.tenant_id, "subscriber_disabled", subscriber=u)
@@ -719,9 +995,10 @@ class UsersService:
         _reconcile_policy(u.tenant_id, usernames=[username],
                           reason="subscriber_disable")
 
+    @atomic
     def enable(self, *, actor: str, username: str) -> None:
         u = self._adapter.get_account(username)
-        self._adapter.upsert_account(replace(u, status=STATUS_ENABLED))
+        _upsert_fields(self._adapter, replace(u, status=STATUS_ENABLED), {"status"})
         self._audit.record(actor=actor, action=AUDIT_ACTION_ENABLE,
                            target_type="user", target_id=username)
         _notify_subscriber(u.tenant_id, "subscriber_reactivated", subscriber=u)
@@ -742,12 +1019,13 @@ class UsersService:
                     charge_mode: str = "free", amount: float = 0.0,
                     currency: str = "", notes: str = "") -> Subscriber:
         if minutes <= 0:
-            raise RadiusValidationError("minutes > 0 required")
+            raise RadiusValidationError("المدّة يجب أن تكون أكبر من صفر.")
+        # قرار المالك: أقصى تمديد في العمليّة الواحدة سنة (التكرار مسموح).
+        check_extend_minutes(minutes)
         currency = _currency(currency)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown extend charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
         u = self._adapter.get_account(username)
         _require_paid_balance(u, amount, charge_mode)
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
@@ -764,7 +1042,8 @@ class UsersService:
         #   • منتهٍ  → يُمدَّد من **الآن** فينال المدّة كاملةً فعلًا.
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
-        new_exp = _anchor + timedelta(minutes=minutes)
+        # فائضٌ/ما بعد 2100 ⇒ 422 (كان 9999-12-31 + دقيقة ⇒ 500).
+        new_exp = add_minutes_capped(_anchor, minutes)
         new_balance = float(u.balance or 0)
         if charge_mode in {"paid", "debt"}:
             # paid pays from the prepaid balance, debt goes on credit — both
@@ -799,14 +1078,18 @@ class UsersService:
         نفسَه سواءٌ أُضيفت مدّةٌ أم عُيّن تاريخ؛ وقد يكون سالبًا عند التقصير.
         """
         if not isinstance(expire_at, datetime):
-            raise RadiusValidationError("expire_at required")
+            raise RadiusValidationError("تاريخ الانتهاء مطلوب.")
+        check_expiry(expire_at)
         if charge_mode not in {"free", "paid", "debt"}:
-            raise RadiusValidationError("unknown extend charge mode")
-        if charge_mode in {"paid", "debt"} and amount <= 0:
-            raise RadiusValidationError("amount must be > 0")
+            raise RadiusValidationError("طريقة الإضافة غير معروفة.")
+        amount = _charge_amount(charge_mode, amount)
         currency = _currency(currency)
         u = self._adapter.get_account(username)
         _require_paid_balance(u, amount, charge_mode)
+        # Owner rule (2026-09-29): one set-expiry moves the end ≤ 1 year past
+        # max(now, current end); never beyond 2100.
+        from .subscriber_validation import validate_expiry_jump
+        validate_expiry_jump(u.expire_at, expire_at)
         _now = datetime.utcnow()
         _anchor = max(u.expire_at, _now) if u.expire_at else _now
         minutes = int(round((expire_at - _anchor).total_seconds() / 60))
@@ -836,6 +1119,10 @@ class UsersService:
             # «مدفوعة» while leaving the balance untouched (the confirmed bug).
             new_balance -= float(amount)
         saved = self._adapter.upsert_account(replace(u, expire_at=new_exp, balance=new_balance))
+        # تجديد (منتهٍ يعود، أو فترةٌ كاملة) ⇒ فترة كوتة جديدة: الاستهلاك يُعدّ
+        # من الآن وإضافات الفترة السابقة تُزال (quota_period).
+        from . import quota_period
+        quota_period.on_time_added(u, new_expire=new_exp, minutes=minutes, reason=action)
         if charge_mode in {"paid", "debt"}:
             _record_subscriber_ledger(
                 actor=actor,
@@ -860,23 +1147,32 @@ class UsersService:
                                     "amount": float(amount) if charge_mode in {"paid", "debt"} else 0},
                            before={"expiry": _old_exp},
                            after={"expiry": _new_exp})
-        # تنبيه إدارة — «دين» = سلفة وقت؛ غيره = إضافة/تمديد وقت.
-        if charge_mode == "debt":
-            _notify_alert(saved.tenant_id, "loan_granted", {
-                "username": username,
-                "duration": duration_label,
-                "amount": _fmt_money_ar(amount, currency),
-                "status": "مُسجّلة (دين)", "actor": actor,
-                "reason": (notes or ledger_note),
-            }, dedup_key=f"loan_ext:{username}:{minutes}")
-        else:
-            _notify_alert(saved.tenant_id, "time_added", {
-                "username": username,
-                "duration": duration_label,
-                "new_expiry": _fmt_dt_local(new_exp),
-                "kind": ("مدفوع" if charge_mode == "paid" else "مجاني"),
-                "actor": actor,
-            }, dedup_key=f"time_added:{username}:{minutes}")
+        # تنبيه إدارة — «إضافة/تمديد وقت» لكلّ الأنماط. 🔴 التمديد على الدين كان
+        # يُطلق «سلفة وقت» (F07): ليس سلفة (لا قيد سلفة ولا تسوية لها) بل تمديدٌ
+        # بدينٍ على الرصيد — النوع والمبلغ في «النوع».
+        _kind = {"paid": "مدفوع", "debt": "على الدين"}.get(charge_mode, "مجاني")
+        if charge_mode in {"paid", "debt"}:
+            _kind += " — " + _fmt_money_ar(amount, currency)
+        _notify_alert(saved.tenant_id, "time_added", {
+            "username": username,
+            "duration": duration_label,
+            "new_expiry": _fmt_dt_local(new_exp),
+            "kind": _kind,
+            "actor": actor,
+        }, dedup_key=f"time_added:{username}:{minutes}")
+        # إشعار المشترك بخصم رصيده مقابل الوقت («سحب رصيد» — مُطفأ افتراضيًّا).
+        if charge_mode in {"paid", "debt"} and amount > 0:
+            try:
+                from .notifications_engine import notify_event, find_subscriber
+                notify_event(
+                    "balance_withdraw",
+                    tenant_id=saved.tenant_id,
+                    subscriber=find_subscriber(saved.tenant_id, username=username),
+                    context={"amount": _fmt_money_ar(amount, currency),
+                             "balance": _fmt_money_ar(saved.balance, currency)},
+                )
+            except Exception:  # noqa: BLE001 — لا يعطّل العمليّة أبدًا
+                pass
         return saved
 
     def delete(self, *, actor: str, username: str) -> None:
@@ -886,6 +1182,62 @@ class UsersService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_ARCHIVE,
                            target_type="user", target_id=username,
                            payload={"mode": "soft_delete"})
+
+
+# DTO fields an edit can never change through update(): identity and
+# bookkeeping columns.
+_NOT_EDITABLE = frozenset({"id", "tenant_id", "username", "created_at", "updated_at"})
+
+
+def _changed_fields(before: Subscriber, after: Subscriber) -> set:
+    """DTO field names whose value differs between two snapshots."""
+    from dataclasses import fields as _dc_fields
+    out = set()
+    for f in _dc_fields(Subscriber):
+        name = f.name
+        if name in _NOT_EDITABLE:
+            continue
+        if getattr(before, name, None) != getattr(after, name, None):
+            out.add(name)
+    return out
+
+
+def _supports_partial(adapter) -> bool:
+    import inspect
+    try:
+        return "only_fields" in inspect.signature(adapter.upsert_account).parameters
+    except (TypeError, ValueError):
+        return False
+
+
+def _upsert_fields(adapter, sub: Subscriber, fields: set) -> Subscriber:
+    if _supports_partial(adapter):
+        return adapter.upsert_account(sub, only_fields=fields)
+    return adapter.upsert_account(sub)
+
+
+def _record_manual_balance_change(*, actor: str, before: Subscriber,
+                                  saved: Subscriber) -> None:
+    """Ledger row for a direct balance edit (owner PATCH / import tools).
+
+    Before this, ``PATCH {"balance": 475}`` changed the wallet with no ledger
+    row and no 360 timeline event (re-test R01 H3)."""
+    old = round(float(before.balance or 0), 2)
+    new = round(float(saved.balance or 0), 2)
+    delta = round(new - old, 2)
+    if abs(delta) < 0.005:
+        return
+    _record_subscriber_ledger(
+        actor=actor,
+        subscriber=saved,
+        entry_type="cash_balance",
+        direction="credit" if delta > 0 else "debit",
+        amount=abs(delta),
+        currency=default_currency(),
+        source_type="subscriber_manual_balance",
+        notes="تعديل رصيد يدوي",
+        metadata={"previous_balance": old, "new_balance": new},
+    )
 
 
 def _validate(sub: Subscriber) -> None:
@@ -918,10 +1270,17 @@ def validate_new_password(password, *, previous=None) -> None:
 
 
 def _validate_new_username(username: str) -> None:
+    """A NEW login name (create / rename): 3–64 of ``A-Za-z0-9._@-``. The app
+    already asks for 3; the web and API took 1–2 (re-test R01 N11). Existing
+    shorter legacy names stay editable — only a new name is checked."""
+    from .subscriber_validation import MIN_USERNAME_LENGTH
     if not _USERNAME_RE.match(username or ""):
         raise RadiusValidationError(
             "اسم الدخول يسمح بالأحرف اللاتينية والأرقام والرموز . _ - @ فقط "
             "(بدون مسافات، حتى ٦٤ حرفًا).")
+    if len(username) < MIN_USERNAME_LENGTH:
+        raise RadiusValidationError(
+            f"اسم الدخول {MIN_USERNAME_LENGTH} أحرف على الأقل.")
 
 
 def _plan_minutes(plan) -> int:
@@ -947,17 +1306,77 @@ def _plan_minutes(plan) -> int:
 
 
 def _minute_rate(plan) -> float:
-    minutes = _plan_minutes(plan)
-    price = float(getattr(plan, "price", 0) or 0)
-    if minutes <= 0 or price <= 0:
+    return plan_rate_per_minute(plan)
+
+
+# عرضٌ بلا مدّة يُسعَّر شهرًا — نفس ``AccountingService.price_basis`` (الدفعات
+# والتمديد والسلف) وسياق إجراءات التطبيق، فلا يقول السياق «30 يومًا» ثم
+# يرفض تغيير العرض «يتطلّب سعرًا ومدّة».
+PLAN_PERIOD_FALLBACK_MINUTES = 43200
+_DIRECTION_AR = {"lower": "الأرخص", "higher": "الأغلى", "neutral": "المساوي"}
+
+
+def plan_period_minutes(plan) -> int:
+    """مدّة فترة العرض بالدقائق (المدّة، وإلّا الصلاحية، وإلّا شهر)."""
+    if not plan:
+        return 0
+    return _plan_minutes(plan) or PLAN_PERIOD_FALLBACK_MINUTES
+
+
+def plan_rate_per_minute(plan) -> float:
+    """سعر الدقيقة للعرض (0 للعرض المجّانيّ أو غيابه)."""
+    price = float(getattr(plan, "price", 0) or 0) if plan else 0.0
+    if price <= 0:
         return 0.0
-    return price / minutes
+    return price / plan_period_minutes(plan)
+
+
+def plan_change_direction(old_plan, new_plan) -> str:
+    """«lower» / «higher» / «neutral» — بسعر الدقيقة (مصدرٌ واحد للويب والـ API)."""
+    old_rate = plan_rate_per_minute(old_plan)
+    new_rate = plan_rate_per_minute(new_plan)
+    if old_rate <= 0 and new_rate <= 0:
+        return "neutral"
+    if old_rate <= 0:
+        return "higher"
+    if new_rate <= 0:
+        return "lower"
+    if abs(new_rate - old_rate) <= 1e-9 * max(old_rate, new_rate):
+        return "neutral"
+    return "lower" if new_rate < old_rate else "higher"
 
 
 def _remaining_minutes(expire_at, now: datetime) -> int:
     if not expire_at:
         return 0
     return max(0, int((expire_at - now).total_seconds() // 60))
+
+
+NOTHING_TO_RESET_AR = ("لا توجد لهذا المشترك كوتة يوميّة ولا حدّ وقتٍ يوميّ — لا شيء "
+                       "لاستعادته (ولا يُحصَّل أيّ مبلغ).")
+
+
+class NothingToReset(RadiusValidationError):
+    """«استعادة الكوتة اليوميّة» على مشتركٍ بلا سقفٍ يوميّ (422)."""
+
+
+def daily_reset_applicable(sub) -> bool:
+    """هل لـ«استعادة الكوتة اليوميّة» معنى؟ — كوتة يوميّة في العرض (إجماليّة أو
+    باتجاه) أو حدّ وقت اتصالٍ يوميّ (العرض أو تجاوز المشترك). محصّن: خطأ
+    القراءة ⇒ True (السلوك السابق، لا نمنع استعادةً مشروعة)."""
+    try:
+        plan = None
+        if getattr(sub, "plan_id", None):
+            from ..db.repos import plans_repo
+            plan = plans_repo.get_plan(int(getattr(sub, "tenant_id", 1) or 1),
+                                       int(sub.plan_id), include_deleted=True)
+        from . import quota_period
+        if any(quota_period.plan_window_caps(plan)["daily"].values()):
+            return True
+        from .policy_engine import _effective_time_caps
+        return _effective_time_caps(sub, plan)[1] > 0
+    except Exception:  # noqa: BLE001
+        return True
 
 
 def _record_plan_change_debt(*, actor: str, subscriber: Subscriber,
@@ -1235,7 +1654,9 @@ def _describe_subscriber_changes(old, new) -> str:
             ("السرعة", _speed(old), _speed(new)),
             ("الكوتا", _quota(old), _quota(new)),
         ]
-        parts = [f"{label}: {o} → {n}" for (label, o, n) in fields if o != n]
+        # ⁦…⁩ (LRI/PDI U+2066/U+2069): بدونهما ينعكس اتجاه السهم داخل سياق RTL
+        # فيصير «120 ₪ ← 1 ₪» بدل «1 ₪ → 120 ₪» (بلاغ D9).
+        parts = [f"{label}: ⁦{o} → {n}⁩" for (label, o, n) in fields if o != n]
 
         # كلمة المرور — لا تُطبَع أبدًا، يُذكَر فقط أنها تغيّرت.
         op = getattr(old, "password", "") or ""

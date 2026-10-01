@@ -50,9 +50,10 @@ def _make_admin(*, is_super_admin: bool, viewer: bool = False):
     otherwise role_id defaults to super_admin role (all RBAC perms)."""
     from app.radius.db.repos import admins_repo
     role_id = None
-    if viewer:
-        r = admins_repo.get_role_by_name("viewer")
-        role_id = r.id if r else None
+    # explicit role: create_admin() without one is now the least-privileged
+    # role (never super_admin).
+    r = admins_repo.get_role_by_name("viewer" if viewer else "super_admin")
+    role_id = r.id if r else None
     return admins_repo.create_admin(
         username=f"s4_{uuid4().hex[:8]}",
         password="s4-pass",

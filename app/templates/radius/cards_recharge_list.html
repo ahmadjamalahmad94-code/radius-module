@@ -263,7 +263,7 @@
       </div>
     </div>
     <div class="rc-hero-actions">
-      {{ hub.btn("توليد دفعة جديدة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}
+      {% if can_submit('radius.cards_recharge_new', 'GET') %}{{ hub.btn("توليد دفعة جديدة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}{% endif %}
     </div>
   </div>
 
@@ -281,7 +281,7 @@
                  sub="ولّد دفعة بفئات متعدّدة لتبدأ بيع بطاقات الشحن لعملائك.",
                  icon="wallet") }}
     <div style="text-align:center;margin-top:12px">
-      {{ hub.btn("أنشئ أوّل دفعة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}
+      {% if can_submit('radius.cards_recharge_new', 'GET') %}{{ hub.btn("أنشئ أوّل دفعة", icon="bolt", href=url_for('radius.cards_recharge_new'), variant="primary") }}{% endif %}
     </div>
 
   {% else %}
@@ -305,7 +305,7 @@
   <div class="rc-grid" data-view-panel="chips">
     {% for b in batches %}
     <div class="rc-card">
-      <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}" class="rc-card-link">
+      {% if can_submit('radius.cards_recharge_batch', 'GET') %}<a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}" class="rc-card-link">{% endif %}
         <div class="rc-card-head">
           <div style="flex:1;min-width:0">
             <span class="rc-card-num">#{{ b.id }}</span>
@@ -318,13 +318,13 @@
           <div class="stat"><div class="k">{{ _('مستخدمة') }}</div><div class="v">{{ b.used_count or 0 }}</div></div>
           <div class="stat"><div class="k">{{ _('القيمة') }}</div><div class="v">{{ (b.price_bulk or 0)|money }}</div></div>
         </div>
-      </a>
+      {% if can_submit('radius.cards_recharge_batch', 'GET') %}</a>{% endif %}
       <div class="rc-card-actions">
         <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
-        <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
-           class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
+        {% if can_submit('radius.cards_recharge_batch', 'GET') %}<a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
+           class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">{% endif %}
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
-        </a>
+        {% if can_submit('radius.cards_recharge_batch', 'GET') %}</a>{% endif %}
         <button type="button" class="rc-act rc-act--print" title="{{ _('طباعة') }}"
                 aria-label="{{ _('طباعة الحزمة') }}"
                 data-print-batch
@@ -334,7 +334,7 @@
                 data-batch-total="{{ b.card_count or 0 }}">
           <i class="fa-solid fa-print" aria-hidden="true"></i>
         </button>
-        <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
+        {% if can_submit('radius.cards_recharge_batch_delete', 'POST') %}<form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
               style="display:inline-flex;margin:0"
               data-confirm-form
               data-confirm-title="{{ _('حذف حزمة الشحن') }}"
@@ -344,7 +344,7 @@
           <button type="submit" class="rc-act rc-act--delete" title="{{ _('حذف') }}" aria-label="{{ _('حذف الحزمة') }}">
             <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
           </button>
-        </form>
+        </form>{% endif %}
       </div>
     </div>
     {% endfor %}
@@ -379,10 +379,10 @@
           <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ b.created_at|dt_local if b.created_at else '' }}</td>
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
-              <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
-                 class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة') }}">
+              {% if can_submit('radius.cards_recharge_batch', 'GET') %}<a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
+                 class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة') }}">{% endif %}
                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
-              </a>
+              {% if can_submit('radius.cards_recharge_batch', 'GET') %}</a>{% endif %}
               <button type="button" class="rc-act rc-act--print" title="{{ _('طباعة') }}" aria-label="{{ _('طباعة') }}"
                       data-print-batch data-batch-id="{{ b.id }}"
                       data-batch-code="{{ b.batch_code or '' }}"
@@ -390,7 +390,7 @@
                       data-batch-total="{{ b.card_count or 0 }}">
                 <i class="fa-solid fa-print" aria-hidden="true"></i>
               </button>
-              <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
+              {% if can_submit('radius.cards_recharge_batch_delete', 'POST') %}<form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
                     style="display:inline-flex;margin:0"
                     data-confirm-form
                     data-confirm-title="{{ _('حذف حزمة الشحن') }}"
@@ -400,7 +400,7 @@
                 <button type="submit" class="rc-act rc-act--delete" title="{{ _('حذف') }}" aria-label="{{ _('حذف') }}">
                   <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
-              </form>
+              </form>{% endif %}
             </div>
           </td>
         </tr>

@@ -62,8 +62,9 @@ def _seed_plan(name: str, *, price: float, days: int = 30, tenant_id: int = 1) -
         """
         INSERT INTO access_plans(
             tenant_id, name, duration_minutes, validity_days, price,
-            currency, enabled, created_at, updated_at, quota_total_mb
-        ) VALUES(?,?,?,?,?,?,?,?,?,1024)
+            currency, enabled, created_at, updated_at, quota_total_mb,
+            max_daily_minutes
+        ) VALUES(?,?,?,?,?,?,?,?,?,1024,1440)
         """,
         (tenant_id, name, days * 24 * 60, days, price, "JOD", 1,
          datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),

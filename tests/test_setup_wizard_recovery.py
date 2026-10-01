@@ -42,6 +42,8 @@ def app(monkeypatch, tmp_path):
 def _auth_session(client):
     with client.session_transaction() as sess:
         sess["admin_id"] = 1
+        # owner session: the setup wizard is owner-only (p01/D07)
+        sess["is_super_admin"] = True
         sess["admin_user"] = "qa_admin"
         sess["admin_name"] = "QA Admin"
         sess["tenant_id"] = 1

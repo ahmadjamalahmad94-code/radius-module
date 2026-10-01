@@ -82,6 +82,7 @@ def _require_router(tenant_id: int, router_id: int):
 def create_device(tenant_id: int, params: dict) -> dict:
     """Validate + persist a new device. Returns {device_id, network, warnings}.
     Raises DeviceHealthError on any validation failure. NO router mutation."""
+    validate_params(params)
     tid = int(tenant_id)
     router_id = _to_int(params.get("router_id"), 0)
     if not router_id:
@@ -181,6 +182,7 @@ def create_device(tenant_id: int, params: dict) -> dict:
 def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
     """Patch editable fields; recompute network when IP/prefix/octet change.
     Returns {ok, warnings}. Raises DeviceHealthError on validation failure."""
+    validate_params(params)
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
@@ -470,8 +472,12 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
         tenant_id=tid, device_id=int(device_id), event_type=status,
         previous_status=device["status"], new_status=status,
         latency_ms=latency, message="فحص ping يدوي.")
-    return {"ok": True, "status": status, "latency_ms": latency,
-            "error": probe["error"]}
+    # f06-L10: `ok` is the REAL result — the device answered (up/high latency).
+    # A failed probe (router unreachable → «unavailable», or device down) used
+    # to answer ok:true next to its error text.
+    return {"ok": status in ("up", "high_latency"), "status": status,
+            "latency_ms": latency, "error": probe["error"],
+            "probe_ran": status != "unavailable"}
 
 
 # ── live-apply panel toggle (owner: «كله من اللوحة مش التيرمنال») ──
@@ -673,7 +679,60 @@ def _to_int(value: Any, default: int) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
-        return default
+        try:   # «24.0» (validated integral by validate_params)
+            f = float(value)
+            return int(f) if f.is_integer() else default
+        except (TypeError, ValueError, OverflowError):
+            return default
+
+
+# f06-L10 — مدخلات الـAPI كانت تُبتلع: اسمٌ بـ500 حرف ⇒ 201،
+# monitoring_enabled:"maybe" ⇒ false صامتًا، subnet_prefix:"abc" ⇒ 24 صامتًا.
+_TEXT_LIMITS = {"name": ("اسم الجهاز", 100), "interface_name": ("المدخل (interface)", 64),
+                "location": ("الموقع", 255), "notes": ("الملاحظات", 1000),
+                "device_type": ("نوع الجهاز", 32), "alert_channel": ("قناة التنبيه", 32)}
+_INT_LIMITS = {"router_id": ("الراوتر", 0, 2**31 - 1),
+               "subnet_prefix": ("بادئة الشبكة", 1, 32),
+               "gateway_last_octet": ("آخر خانة للبوابة", 1, 254),
+               "ping_threshold_ms": ("حدّ زمن الاستجابة", 1, 60000),
+               "netwatch_interval_sec": ("فاصل المراقبة", 5, 86400),
+               "netwatch_timeout_sec": ("مهلة المراقبة", 1, 300)}
+_TRUE = ("1", "true", "yes", "on", "نعم")
+_FALSE = ("0", "false", "no", "off", "لا", "")
+
+
+def validate_params(params: dict) -> None:
+    """Reject malformed values with an Arabic DeviceHealthError (422) instead
+    of silently falling back to defaults."""
+    if not isinstance(params, dict):
+        raise DeviceHealthError("جسم الطلب يجب أن يكون كائن JSON.")
+    from ..core.numbers import NonFiniteNumber, finite_float
+    for key, (label, limit) in _TEXT_LIMITS.items():
+        val = params.get(key)
+        if val is None:
+            continue
+        if isinstance(val, (dict, list, bool)):
+            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون نصًّا.")
+        if len(str(val)) > limit:
+            raise DeviceHealthError(f"«{label}» طويل جدًا (الحد الأقصى {limit} حرفًا).")
+    for key, (label, lo, hi) in _INT_LIMITS.items():
+        val = params.get(key)
+        if val is None or (isinstance(val, str) and not val.strip()):
+            continue
+        try:
+            if isinstance(val, bool):
+                raise NonFiniteNumber("bool")
+            num = finite_float(val, field=key)
+        except NonFiniteNumber:
+            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.") from None
+        if not num.is_integer() or not lo <= int(num) <= hi:
+            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا بين {lo} و{hi}.")
+    if "monitoring_enabled" in params:
+        val = params.get("monitoring_enabled")
+        if not (val is None or isinstance(val, bool)
+                or (isinstance(val, int) and val in (0, 1))
+                or str(val).strip().lower() in _TRUE + _FALSE):
+            raise DeviceHealthError("قيمة «المراقبة» يجب أن تكون true أو false.")
 
 
 def _to_bool(value: Any, default: bool) -> bool:

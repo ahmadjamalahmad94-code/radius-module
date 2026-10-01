@@ -40,7 +40,7 @@
 </section>{# /hub-hero-shell #}
 
 {# ───── نموذج الإنشاء — POST إلى radius.tk_create بنفس أسماء الحقول ───── #}
-<form method="post" id="tk-form" action="{{ url_for('radius.tk_create') }}">
+<form method="post" id="tk-form" action="{{ url_for('radius.tk_create') }}">{% if not can_submit('radius.tk_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("معلومات التذكرة", icon="circle-info") %}
     <div class="hub-form-row">
@@ -99,8 +99,8 @@
 
   <div class="hub-flex-row" style="margin-top:16px">
     {{ hub.btn("إنشاء التذكرة", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}
+    {% if can_submit('radius.tk_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}{% endif %}
   </div>
-</form>
+{% if not can_submit('radius.tk_create') %}</fieldset>{% endif %}</form>
 
 {% endblock %}

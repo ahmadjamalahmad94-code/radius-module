@@ -228,11 +228,11 @@ def _batch_operations_conditions(*, status: str = "", q: str = "",
     # عزل مِلكية المدير على الحِزم: حِزمه المباشرة (manager_id) ∪ حِزم موزّعيه
     # (distributor_id ضمن موزّعيه). يُطبَّق خادميًّا حين «عرض كل حزم البطاقات» مُطفأة.
     if owner_admin_id is not None:
-        where.append(
-            "(b.manager_id = ? OR b.distributor_id IN ("
-            "SELECT id FROM distributors WHERE tenant_id = b.tenant_id AND admin_id = ?))"
-        )
-        vals.extend([int(owner_admin_id), int(owner_admin_id)])
+        # fix3: one predicate with the API / direct URLs (services/card_batch_scope).
+        from ...services.card_batch_scope import batch_scope_clause
+        _bc, _bv = batch_scope_clause(int(owner_admin_id), alias="b")
+        where.append(_bc)
+        vals.extend(_bv)
 
     status = (status or "").strip().lower()
     if status in {"deleted", "archived"}:
@@ -369,8 +369,18 @@ def list_batch_operations(
     """
     params = [*_batch_operations_base_params(tenant_id), tenant_id, *vals, limit, offset]
     rows = [row_to_dict(row) for row in db().execute(sql, params).fetchall()]
+    _default_cur = None
     for item in rows:
         item["operational_status"] = _operation_status_from_row(item)
+        # f05-L6: عملة سعر البطاقة في كل عنصر (كانت في تفاصيل الحزمة فقط):
+        # عملة باقة الحزمة، وإلّا عملة لوحة التحكم.
+        cur = str(item.get("plan_currency") or "").strip()
+        if not cur:
+            if _default_cur is None:
+                from ...core.system_config import default_currency
+                _default_cur = default_currency() or "ILS"
+            cur = _default_cur
+        item["currency"] = cur
     return rows
 
 
@@ -511,7 +521,13 @@ def _build_batch_code(tenant_id: int, conn: Optional[sqlite3.Connection] = None)
     outside the write lock let two parallel generates pick the same code and
     one died with a raw 500 on ``idx_batch_unique``."""
     conn = conn or db()
-    day = datetime.utcnow().strftime("%Y%m%d")
+    # f05 (r05 N13): يوم الرمز = يوم لوحة التحكم المحلّيّ (Asia/Gaza افتراضًا،
+    # بالتوقيت الصيفيّ) لا يوم UTC — حزمةٌ وُلّدت 01:21 محلّيًّا كانت B-<أمس>.
+    try:
+        from ...core.system_config import local_today
+        day = local_today(int(tenant_id)).strftime("%Y%m%d")
+    except Exception:  # noqa: BLE001 — لا يكسر التوليد أبدًا
+        day = datetime.utcnow().strftime("%Y%m%d")
     prefix = f"B-{day}-"
     base = 0
     for r in conn.execute(
@@ -667,6 +683,8 @@ def create_batch(b: CardBatch) -> CardBatch:
 
 
 IDEMPOTENCY_KEY_FIELD = "idempotency_key"
+#: f05 (r05 N7): بصمة جسم الطلب الأوّل — المفتاح نفسه بجسمٍ مختلف ⇒ 422.
+IDEMPOTENCY_FP_FIELD = "idempotency_fp"
 
 
 def find_batch_by_idempotency_key(conn: sqlite3.Connection, tenant_id: int,
@@ -688,6 +706,28 @@ def find_batch_by_idempotency_key(conn: sqlite3.Connection, tenant_id: int,
         (tenant_id, key),
     ).fetchone()
     return int(row["id"]) if row else None
+
+
+def _check_idempotency_fingerprint(conn: sqlite3.Connection, tenant_id: int,
+                                   batch_id: int, new_metadata) -> None:
+    """المفتاح نفسه، وجسمٌ مختلف عن الطلب الأوّل ⇒ ``IdempotencyKeyReused``.
+    حزمٌ قديمة بلا بصمة تُعاد كما كانت (لا نعرف جسمها)."""
+    import json
+    try:
+        new_fp = (json.loads(new_metadata or "{}") or {}).get(IDEMPOTENCY_FP_FIELD)
+    except (TypeError, ValueError, AttributeError):
+        new_fp = None
+    if not new_fp:
+        return
+    row = conn.execute(
+        "SELECT CASE WHEN json_valid(metadata) "
+        "            THEN json_extract(metadata, '$.idempotency_fp') END AS fp "
+        "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+        (tenant_id, batch_id)).fetchone()
+    old_fp = row["fp"] if row else None
+    if old_fp and old_fp != new_fp:
+        from ...services.idempotency import IdempotencyKeyReused
+        raise IdempotencyKeyReused()
 
 
 def create_batch_with_cards(
@@ -717,6 +757,8 @@ def create_batch_with_cards(
     tenant_id = int(b.tenant_id)
     with write_transaction() as conn:
         replay_id = find_batch_by_idempotency_key(conn, tenant_id, idempotency_key)
+        if replay_id is not None:
+            _check_idempotency_fingerprint(conn, tenant_id, replay_id, b.metadata)
         if replay_id is None:
             code = _build_batch_code(tenant_id, conn)
             batch_id = _insert_batch_row(conn, b, code)
@@ -881,7 +923,32 @@ def archive_batch(tenant_id: int, batch_id: int, *, actor: str, reason: str = ""
                 WHERE tenant_id = ? AND batch_id = ?
                   AND (deleted_at IS NULL OR deleted_at = '')
             """, (now, actor or "system", _BATCH_CASCADE_TAG, tenant_id, batch_id))
+            # fix2 (R05-N10): حسابُ مصادقة البطاقة (مرآة `subscribers`) كان يبقى
+            # `enabled` في /accounts والحزمةُ مؤرشفة. المُصادِق يرفضها أصلًا
+            # (حزمةٌ ميّتة ⇒ disabled في policy_engine)، والآن الحالة المعروضة
+            # تقول الحقيقة نفسها. الاستعادة تعيدها.
+            conn.execute("""
+                UPDATE subscribers SET status = 'disabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'enabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
+
+
+def card_is_archived(tenant_id: int, card_id: int) -> bool:
+    """البطاقة محذوفة ناعمًا، أو حزمتُها مؤرشفة (في السلّة)."""
+    row = db().execute(
+        """
+        SELECT COALESCE(c.deleted_at, '') AS card_deleted,
+               COALESCE(b.deleted_at, '') AS batch_deleted
+          FROM cards c
+          LEFT JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+         WHERE c.tenant_id = ? AND c.id = ?
+        """,
+        (int(tenant_id), int(card_id)),
+    ).fetchone()
+    return bool(row and (row["card_deleted"] or row["batch_deleted"]))
 
 
 def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
@@ -901,6 +968,14 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
                 SET deleted_at = NULL, deleted_by = '', delete_reason = ''
                 WHERE tenant_id = ? AND batch_id = ? AND delete_reason = ?
             """, (tenant_id, batch_id, _BATCH_CASCADE_TAG))
+            # fix2 (R05-N10): أعِد حسابات البطاقات الحيّة (غير الموقوفة/المحذوفة).
+            conn.execute("""
+                UPDATE subscribers SET status = 'enabled'
+                 WHERE tenant_id = ? AND user_type = 'card' AND status = 'disabled'
+                   AND username IN (SELECT username FROM cards
+                                     WHERE tenant_id = ? AND batch_id = ?
+                                       AND revoked = 0 AND deleted_at IS NULL)
+            """, (tenant_id, tenant_id, batch_id))
         return cur.rowcount > 0
 
 
@@ -1032,7 +1107,15 @@ def batch_operational_summary(tenant_id: int, batch_id: int) -> Optional[dict]:
         "retention_expires_at": dt_to_iso(batch.retention_expires_at),
         "created_at": dt_to_iso(batch.created_at),
         "expires_at": dt_to_iso(batch.expire_at),
+        # f05-L6: السعر وعملته في الملخّص كما في تفاصيل الحزمة.
+        "price_per_card": float(batch.price_per_card or 0),
+        "currency": _batch_currency_of(tenant_id, batch.plan_id),
     }
+
+
+def _batch_currency_of(tenant_id: int, plan_id) -> str:
+    from ...services.card_batch_price import batch_currency
+    return batch_currency(tenant_id, plan_id)
 
 
 _CHARSETS = {
@@ -1714,7 +1797,8 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
 
     from ..helpers import parse_dt
     from ...services.card_accounting import (MODE_FROM_FIRST_CONNECT,
-                                             budget_seconds, remaining_seconds)
+                                             budget_seconds, is_exhausted,
+                                             remaining_seconds)
 
     if not delta_seconds:
         return None
@@ -1748,6 +1832,9 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         first_conn = parse_dt(row["first_used_at"])
 
         def _remaining(extra: int):
+            # fix2: خصمٌ استنفد الميزانية كلّها = **منتهية** (0)، لا «بلا حدّ».
+            if is_exhausted(base_budget, extra):
+                return 0
             return remaining_seconds(
                 mode=mode, budget=base_budget + extra, now=now,
                 first_connection_at=first_conn, accounted_seconds=0,
@@ -1760,6 +1847,12 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         #    يزيد بما مَنحتَه بالضبط (12س + ساعة = 13س) — لا أكثر.
         new_extra = max(old_extra + delta_seconds, -base_budget)
         new_first = None
+        # 🔴 fix2 (R13-H1): خصمٌ أكبر من وقت البطاقة كان يُنزل الميزانية إلى
+        #    صفر — والصفر في كلّ القرّاء يعني «بلا حدّ»، فبقيت البطاقة
+        #    «جاهزة» بوقتٍ مفتوح. الآن الصفر بعد خصمٍ = **منتهية**: تُختم
+        #    `expire_at` في الماضي فيرفضها المُصادِق، ويقرؤها العرض صفرًا.
+        exhausted = is_exhausted(base_budget, new_extra)
+        was_exhausted = is_exhausted(base_budget, old_extra)
 
         # 🔴 وهنا الدرس: النسخة الأولى جعلت المنحة تنفخ الميزانية كي تصل
         #    النهاية إلى «الآن + delta». فبطاقةٌ بدأت قبل يومين ونصف احتاجت
@@ -1809,7 +1902,16 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         #    إلّا حين لا يجد مشتركاً بالاسم نفسه.
         old_expire = row["expire_at"]
         new_expire = None
-        if mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
+        clear_expire = False
+        if exhausted:
+            # منتهيةٌ الآن — لم تبدأ أو حيّة أو «بالثانية»: المُصادِق يرفض.
+            new_expire = now - timedelta(seconds=1)
+        elif (mode == MODE_FROM_FIRST_CONNECT and first_conn is None
+                and was_exhausted and old_expire):
+            # كانت مستنفَدةً بخصمٍ ولم تبدأ، ثمّ مُنحت وقتًا: نُزيل ختم
+            # الاستنفاد فتُختم نافذتُها (الأساس + المنحة) عند أوّل دخول.
+            clear_expire = True
+        elif mode == MODE_FROM_FIRST_CONNECT and first_conn is not None:
             # نهايةُ النافذة = بدايتُها + الميزانية — نفسُ معادلة
             # `remaining_seconds`، فيتطابق المعروض والمُنفَّذ تماماً.
             new_expire = first_conn + timedelta(seconds=base_budget + new_extra)
@@ -1821,6 +1923,31 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
                 anchor = max(old_end, now) if delta_seconds > 0 else old_end
                 new_expire = anchor + timedelta(seconds=delta_seconds)
 
+        # f05-M2: «لا انتهاء بعد سنة 2100» — على النهاية المختومة، أو على
+        # النهاية التي سيختمها أوّل دخولٍ الآن (بطاقة لم تبدأ). كان 8 منحٍ
+        # بـ3650 يومًا تختم 2106 عند أوّل دخول. الاستثناء يُرجِع المعاملة.
+        if not exhausted and delta_seconds > 0:
+            from ...core import limits
+            from ...core.numbers import NonFiniteNumber, check_expiry
+            try:
+                potential = (new_expire if new_expire is not None else
+                             now + timedelta(seconds=max(0, base_budget + new_extra)))
+            except (OverflowError, ValueError):
+                raise NonFiniteNumber(limits.expiry_too_far_msg(),
+                                      details={"field": "expire_at"}) from None
+            check_expiry(potential)
+
+        if clear_expire:
+            conn.execute(
+                "UPDATE cards SET expire_at = NULL WHERE tenant_id = ? AND id = ?",
+                (tenant_id, card_id),
+            )
+            conn.execute(
+                "UPDATE subscribers SET expire_at = NULL "
+                " WHERE tenant_id = ? AND user_type = 'card' AND username = "
+                "       (SELECT username FROM cards WHERE tenant_id = ? AND id = ?)",
+                (tenant_id, tenant_id, card_id),
+            )
         if new_expire is not None:
             stamp = new_expire.isoformat() + "Z"
             conn.execute(
@@ -1843,7 +1970,12 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
             "remaining_after":    _remaining(new_extra) or 0,
             "expire_at_old":      old_expire,
             "expire_at_new":      (new_expire.isoformat() + "Z")
-                                  if new_expire is not None else old_expire,
+                                  if new_expire is not None
+                                  else (None if clear_expire else old_expire),
+            "exhausted":          exhausted,
+            "base_budget":        base_budget,
+            "budget_after":       max(0, base_budget + new_extra)
+                                  if base_budget > 0 else 0,
         }
 
 
@@ -2141,7 +2273,8 @@ def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
 def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
                          revoked: Optional[bool],
                          search: Optional[str],
-                         status: Optional[str] = None) -> tuple[str, list]:
+                         status: Optional[str] = None,
+                         tenant_id: int = 1) -> tuple[str, list]:
     """يبني WHERE + values المشتركة بين list_cards و count_cards.
     R10.4: استُخرج إلى دالة مستقلة لمنع الفرع بين عداد و قائمة.
     إعادة تصميم صفحة الكروت: أُضيف `status` كفلتر حالة موحّد
@@ -2173,6 +2306,12 @@ def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
             # LIKE على username — مفهرس بـ tenant_id ضمنيًا، و LIKE
             # على text قصير سريع حتى بدون فهرس مخصّص.
             where.append("username LIKE ?"); vals.append(f"%{s}%")
+    # fix3 (F01 F10): «رؤية كل حِزم البطاقات» — the request admin's card-batch
+    # scope on every card list/count (web «كل الكروت» + API).
+    from ...services.card_batch_scope import batch_scope_sql
+    bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=int(tenant_id))
+    if bsc:
+        where.append(bsc[len(" AND "):]); vals.extend(bsv)
     return " AND ".join(where), vals
 
 
@@ -2183,7 +2322,7 @@ def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
     """R10.4: أضفنا search (LIKE على username) + limit/offset للـ pagination."""
     where, vals = _build_cards_filter(
         batch_id=batch_id, used=used, revoked=revoked, search=search,
-        status=status)
+        status=status, tenant_id=tenant_id)
     sql = f"SELECT * FROM cards WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?"
     cur = db().execute(sql, [tenant_id, *vals, limit, offset])
     return [_card_row(r) for r in cur.fetchall()]
@@ -2195,7 +2334,7 @@ def count_cards(tenant_id: int, *, batch_id: Optional[int] = None,
     """R10.4: عدّ الكروت بنفس فلاتر list_cards (للـ pagination في الـ UI)."""
     where, vals = _build_cards_filter(
         batch_id=batch_id, used=used, revoked=revoked, search=search,
-        status=status)
+        status=status, tenant_id=tenant_id)
     row = db().execute(
         f"SELECT COUNT(*) AS c FROM cards WHERE {where}",
         [tenant_id, *vals]).fetchone()
@@ -2209,7 +2348,7 @@ def cards_status_counts(tenant_id: int, *, batch_id: Optional[int] = None,
     المشغّل توزيع الحالات كاملًا مهما كان الفلتر المختار).
     التعريفات مطابقة لشروط `status` في `_build_cards_filter`."""
     where, vals = _build_cards_filter(
-        batch_id=batch_id, used=None, revoked=None, search=search)
+        batch_id=batch_id, used=None, revoked=None, search=search, tenant_id=tenant_id)
     row = db().execute(
         f"""
         SELECT

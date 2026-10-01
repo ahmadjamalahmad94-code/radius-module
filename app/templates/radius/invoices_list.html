@@ -120,7 +120,7 @@
               {% else %}{{ hub.pill(i.status, variant="grey") }}{% endif %}
             </td>
             <td>
-              <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              {% if can_submit('radius.inv_status', 'POST') %}<form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 {# توكن CSRF مطلوب لطلبات POST (ملاحظة #7) #}
                 {{ csrf_token_input() }}
                 <select class="hub-select" name="status" style="font-size:11.5px;padding:4px 6px;min-width:auto">
@@ -133,7 +133,7 @@
                 <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('تحديث') }}">
                   <i class="fa-solid fa-check"></i>
                 </button>
-              </form>
+              </form>{% endif %}
             </td>
           </tr>
           {% endfor %}

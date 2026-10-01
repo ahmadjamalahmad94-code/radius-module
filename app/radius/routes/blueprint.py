@@ -456,6 +456,9 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             clear_current_admin()
             flash("انتهت صلاحية جلستك. سجّل الدخول من جديد.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        # D05: صلاحيات الدور/علَم المالك تُعاد قراءتها فور تغيّرها (ختم authz).
+        from ..auth.session_helpers import refresh_authz_if_stale
+        refresh_authz_if_stale()
         # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
         # مركزياً بكلمة مرور أوليّة يُحوَّل لصفحة الحساب حتى يغيّرها — تُستثنى صفحة
         # الحساب نفسها + الخروج + مبدّل اللغة كي لا تحدث حلقة إعادة توجيه.
@@ -680,7 +683,6 @@ _PERM_GUARDED: dict[str, str] = {
     "cards_generate_progress_start": "cards.generate",
     "cards_revoke": "cards.revoke",
     # سلة المحذوفات: الاستعادة تخص البطاقات المحذوفة
-    "recycle_bin_restore": "cards.restore",
     # بطاقات الشحن وحزم الطباعة
     "cards_recharge_new": "cards.recharge",
     "cards_recharge_batch_delete": "cards.recharge",
@@ -716,9 +718,10 @@ _PERM_GUARDED: dict[str, str] = {
     "manager_approval_reject": "admins.policy",
 
     # ═══ التقارير (routes/reports.py + accounting.py) ═══
-    "reports_home": "reports.view", "reports_financial": "reports.view",
-    "reports_cards": "reports.view", "reports_distributors": "reports.view",
-    "reports_archive": "reports.view", "reports_archive_create": "reports.view",
+    # fix3 (F08 H3): money reports need reports.finance, not just reports.view.
+    "reports_home": "reports.view", "reports_financial": "reports.finance",
+    "reports_cards": "reports.view", "reports_distributors": "reports.finance",
+    "reports_archive": "reports.finance", "reports_archive_create": "reports.finance",
     "rep_sessions": "reports.view", "rep_failed_logins": "reports.view",
     "rep_subscriber_consumption": "reports.view",
     "rep_login_status": "reports.view", "rep_login_states": "reports.view",
@@ -731,8 +734,8 @@ _PERM_GUARDED: dict[str, str] = {
     "rep_manager_events": "reports.view", "rep_manager_login_status": "reports.view",
     "rep_user_events": "reports.view", "rep_speed_failures": "reports.view",
     "rep_mikrotik_actions": "reports.view",
-    "rep_used_cards": "reports.view", "rep_balance_movements": "reports.view",
-    "rep_cash_transactions": "reports.view",
+    "rep_used_cards": "reports.view", "rep_balance_movements": "reports.finance",
+    "rep_cash_transactions": "reports.finance",
     # دفتر القيود والتقارير المالية — مفتاح مالي مستقل
     "finance_ledger": "reports.finance",
     "finance_reports": "reports.finance",
@@ -964,6 +967,180 @@ _PERM_GUARDED: dict[str, str] = {
     # Provider service request (bridge) + store-key rotation:
     "service_request_create": "api.use",
     "settings_rotate_store_key": _PERM_SUPER,
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ═══ p01/D07+D08 (2026-09-29): كل مسار لوحة مُسجَّل هنا أو في ═══
+    # _NAV_PERM أو في _GUARD_ALLOWLIST — tests/test_perm_guard_coverage.py
+    # يُفشل البناء عند أيّ مسار جديد بلا حارس. الحسّاس مالك فقط.
+    # ═══════════════════════════════════════════════════════════════════
+    # حذف نهائيّ بلا رجعة (سلّة المحذوفات) — للمالك/المالك المشارك وحده (D25).
+    "recycle_bin_purge": _PERM_SUPER,
+    # صيانة قاعدة البيانات (حذف سجلّات قديمة) — مالك فقط مثل بقيّة backups_*.
+    "backups_prune_logs": _PERM_SUPER, "backups_gdrive_poll": _PERM_SUPER,
+    # الترحيل وتحديث النظام وفرض مفاتيح الـAPI — المعالِج يَفحص المالك أصلًا؛
+    # التسجيل هنا يجعل الحارس المركزيّ مصدرَ القرار.
+    "migration_index": _PERM_SUPER, "migration_analyze": _PERM_SUPER,
+    "migration_analyze_status": _PERM_SUPER, "migration_plan": _PERM_SUPER,
+    "migration_commit": _PERM_SUPER, "migration_commit_status": _PERM_SUPER,
+    "migration_jobs": _PERM_SUPER,
+    "system_update": _PERM_SUPER, "system_update_check": _PERM_SUPER,
+    "system_update_request": _PERM_SUPER, "system_update_status": _PERM_SUPER,
+    "tok_enforcement": _PERM_SUPER,
+    # مختبر الدفع + التحصيل — «مزوّد فقط» مثل payments_lab/collection_hub.
+    "pay_demo": _PERM_SUPER, "pay_demo_start": _PERM_SUPER,
+    "pay_demo_otp": _PERM_SUPER, "pay_demo_resend": _PERM_SUPER,
+    "payment_collection_requests": _PERM_SUPER,
+    "payment_collection_request_detail": _PERM_SUPER,
+    "payment_collection_review_queue_web": _PERM_SUPER,
+    "payment_collection_reconciliation_web": _PERM_SUPER,
+    # دخول بوابة المزوّد (SSO) — حساب المالك التجاريّ.
+    "license_file_portal_sso": _PERM_SUPER,
+    # نماذج «مدير جديد/تعديل مدير» — الحفظ نفسه مالك فقط.
+    "admins_new": _PERM_SUPER, "admins_edit": _PERM_SUPER,
+    # وصول بعيد + حسابات أنفاق الإدارة + تقارير/تصدير VPN وWG — مالك فقط
+    # (كل الكتابات المقابلة __super__ أصلًا؛ التصدير يَكشف أسرار الأنفاق).
+    "remote_device_access_form": _PERM_SUPER,
+    "vpn_accounts_list": _PERM_SUPER, "wg_data_dashboard": _PERM_SUPER,
+    "vpn_service_reports": _PERM_SUPER,
+    "vpn_reports_export_accounts": _PERM_SUPER,
+    "vpn_reports_export_wg_peers": _PERM_SUPER,
+    "vpn_reports_export_audit": _PERM_SUPER,
+    # معالج الإعداد v1/v2 + الأسطول — الصفحة نفسها مالك فقط (setup_wizard_page)؛
+    # خطواته تُهيّئ الراوتر والخادم (أنفاق/نظراء WG/RADIUS) → مالك فقط.
+    "setup_wizard_v2_page": _PERM_SUPER,
+    "setup_wizard_fleet_page": _PERM_SUPER,
+    "setup_wizard_fleet_data": _PERM_SUPER,
+    "setup_wizard_fleet_router": _PERM_SUPER,
+    "setup_wizard_fleet_router_resume": _PERM_SUPER,
+    "setup_wizard_fleet_router_retire": _PERM_SUPER,
+    "setup_wizard_fleet_emergency_reset_preview": _PERM_SUPER,
+    "setup_wizard_fleet_emergency_reset": _PERM_SUPER,
+    "setup_wizard_fleet_cancel_tentative": _PERM_SUPER,
+    "setup_wizard_fleet_reclaim_expired": _PERM_SUPER,
+    "setup_wizard_server_wg_readiness": _PERM_SUPER,
+    "setup_wizard_create_run": _PERM_SUPER,
+    "setup_wizard_get_run": _PERM_SUPER,
+    "setup_wizard_set_internet_source": _PERM_SUPER,
+    "setup_wizard_generate_internet_script": _PERM_SUPER,
+    "setup_wizard_verify_internet": _PERM_SUPER,
+    "setup_wizard_generate_vpn_script": _PERM_SUPER,
+    "setup_wizard_router_public_key": _PERM_SUPER,
+    "setup_wizard_router_public_key_auto_detect": _PERM_SUPER,
+    "setup_wizard_server_peer_complete": _PERM_SUPER,
+    "setup_wizard_server_peer_dry_run": _PERM_SUPER,
+    "setup_wizard_server_peer_apply": _PERM_SUPER,
+    "setup_wizard_server_peer_rollback": _PERM_SUPER,
+    "setup_wizard_server_peer_verify": _PERM_SUPER,
+    "setup_wizard_server_peer_health": _PERM_SUPER,
+    "setup_wizard_server_peer_operations": _PERM_SUPER,
+    "setup_wizard_verify_vpn": _PERM_SUPER,
+    "setup_wizard_interfaces_candidates": _PERM_SUPER,
+    "setup_wizard_generate_hotspot_script": _PERM_SUPER,
+    "setup_wizard_verify_hotspot": _PERM_SUPER,
+    "setup_wizard_generate_broadband_script": _PERM_SUPER,
+    "setup_wizard_verify_broadband": _PERM_SUPER,
+    "setup_wizard_run_summary": _PERM_SUPER,
+    "setup_wizard_dry_run": _PERM_SUPER,
+    "setup_wizard_apply": _PERM_SUPER,
+    "setup_wizard_rollback": _PERM_SUPER,
+    "setup_wizard_operations": _PERM_SUPER,
+    "setup_wizard_inventory": _PERM_SUPER,
+    "setup_wizard_inventory_latest": _PERM_SUPER,
+    "setup_wizard_orchestrate_hotspot": _PERM_SUPER,
+    "setup_wizard_orchestrate_broadband": _PERM_SUPER,
+    "setup_wizard_added_services_catalog": _PERM_SUPER,
+    "setup_wizard_added_services_plan": _PERM_SUPER,
+    "setup_wizard_added_services_dry_run": _PERM_SUPER,
+    "setup_wizard_added_services_apply": _PERM_SUPER,
+    "setup_wizard_added_services_verify": _PERM_SUPER,
+    "setup_wizard_support_bundle": _PERM_SUPER,
+    "setup_wizard_health": _PERM_SUPER,
+    "setup_wizard_pilot_drill": _PERM_SUPER,
+    "setup_wizard_recovery": _PERM_SUPER,
+    "setup_wizard_recovery_resume": _PERM_SUPER,
+    "setup_wizard_recovery_retry_verification": _PERM_SUPER,
+    "setup_wizard_recovery_regenerate_script": _PERM_SUPER,
+    "setup_wizard_recovery_abandon_step": _PERM_SUPER,
+    "setup_wizard_recovery_retire_router": _PERM_SUPER,
+    # معالج v3 — مسار إضافة راوتر بمفتاح صفحته (nas.create)؛ ما يَمسّ الخادم
+    # نفسه (نظير WG على الخادم، فرض التسجيل، ضبط RADIUS الخادم) والوصول البعيد
+    # → مالك فقط؛ خدمات الراوتر (معاينة/تطبيق/تحقّق/سحب) → nas.edit.
+    "setup_wizard_v3_create_run": "nas.create",
+    "setup_wizard_v3_get_state": "nas.create",
+    "setup_wizard_v3_router_info": "nas.create",
+    "setup_wizard_v3_generate_script": "nas.create",
+    "setup_wizard_v3_submit_key": "nas.create",
+    "setup_wizard_v3_mark_handshake": "nas.create",
+    "setup_wizard_v3_register": "nas.create",
+    "setup_wizard_v3_phase_planners_index": "nas.create",
+    "setup_wizard_v3_phase_plan": "nas.create",
+    "setup_wizard_v3_handshake_status": "nas.create",
+    "setup_wizard_v3_discover_interfaces": "nas.create",
+    "setup_wizard_v3_diagnostics_catalogue": "nas.create",
+    "setup_wizard_v3_apply_peer": _PERM_SUPER,
+    "setup_wizard_v3_force_register": _PERM_SUPER,
+    "setup_wizard_v3_configure_server_radius": _PERM_SUPER,
+    "setup_wizard_v3_remote_access_apply": _PERM_SUPER,
+    "setup_wizard_v3_router_services_dashboard": "nas.edit",
+    "setup_wizard_v3_router_service_flow": "nas.edit",
+    "setup_wizard_v3_router_discover_interfaces": "nas.edit",
+    "setup_wizard_v3_hotspot_preview": "nas.edit",
+    "setup_wizard_v3_hotspot_apply": "nas.edit",
+    "setup_wizard_v3_hotspot_verify": "nas.edit",
+    "setup_wizard_v3_broadband_preview": "nas.edit",
+    "setup_wizard_v3_broadband_apply": "nas.edit",
+    "setup_wizard_v3_broadband_verify": "nas.edit",
+    "setup_wizard_v3_broadband_script": "nas.edit",
+    "setup_wizard_v3_block_sites_preview": "nas.edit",
+    "setup_wizard_v3_block_sites_apply": "nas.edit",
+    "setup_wizard_v3_block_sites_verify": "nas.edit",
+    "setup_wizard_v3_open_sites_preview": "nas.edit",
+    "setup_wizard_v3_open_sites_apply": "nas.edit",
+    "setup_wizard_v3_open_sites_verify": "nas.edit",
+    "setup_wizard_v3_block_sites_current": "nas.edit",
+    "setup_wizard_v3_open_sites_current": "nas.edit",
+    "setup_wizard_v3_hotspot_current": "nas.edit",
+    "setup_wizard_v3_broadband_current": "nas.edit",
+    "setup_wizard_v3_router_inventory": "nas.edit",
+    "setup_wizard_v3_router_inventory_remove": "nas.edit",
+    "setup_wizard_v3_router_exit_nodes": "nas.edit",
+    "setup_wizard_v3_public_ip_preview": "nas.edit",
+    "setup_wizard_v3_public_ip_apply": "nas.edit",
+    "setup_wizard_v3_public_ip_verify": "nas.edit",
+    "setup_wizard_v3_remote_access_preview": "nas.edit",
+    "setup_wizard_v3_remote_access_verify": "nas.edit",
+    "setup_wizard_v3_service_revoke": "nas.edit",
+    "setup_wizard_v3_router_services_status": "nas.edit",
+    # نفق إدارة SSTP/WG للراوتر (POST) — كانت في _NAV_PERM وحدها (GET فقط).
+    "mt_sstp_test": "nas.edit", "mt_sstp_sync": "nas.edit",
+    "mt_sstp_reset": "nas.edit", "mt_sstp_user_toggle": "nas.edit",
+    "mt_sstp_user_expiry": "nas.edit", "mt_sstp_user_reset": "nas.edit",
+    "mt_sstp_user_delete": "nas.edit",
+    "mt_wg_peer_regenerate": "nas.edit", "mt_wg_peer_remove": "nas.edit",
+    # Netwatch على الراوتر + مسح الشبكة + طابور المزامنة.
+    "router_events_netwatch_install": "nas.edit",
+    "router_events_netwatch_remove": "nas.edit",
+    "network_ip_scan_page": "nas.edit",
+    "sync_retry": "nas.edit", "sync_cancel": "nas.edit",
+    # المتصلون الآن / التحكّم بالسرعة.
+    "online_force_close": "online.disconnect",
+    "online_temp_speed_reauth": "users.temp_speed",
+    "operations_speed_control": "users.temp_speed",
+    "operations_speed_control_manual": "users.temp_speed",
+    # معاينة التجديد (POST للقراءة) + مجموعات المشتركين.
+    "subscriber_renewal_preview": "users.view",
+    "subscriber_groups_create": "users.edit",
+    "subscriber_groups_update": "users.edit",
+    "subscriber_groups_delete": "users.edit",
+    # إعدادات النظام العامّة.
+    "system_settings_page": "settings.edit",
+    # قناة واتساب — مفتاح قسم الاتصالات (مثل communications_*) فوق بوّابة
+    # الفعل comms.whatsapp (مطفأة افتراضًا، يَمنحها المالك لكل مدير).
+    # fix3 (D15 / F01 F2): ONE key — settings.edit (the comms.whatsapp gate is
+    # derived from it too); it needed settings.edit AND users.send_message.
+    "whatsapp_settings": "settings.edit",
+    "whatsapp_test": "settings.edit",
+    "whatsapp_cloud_test": "settings.edit",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
@@ -977,6 +1154,8 @@ _PERM_WRITE_ONLY = {
     # SEC M3/H6 — GET+POST endpoints newly guarded: gate the POST (write) only,
     # leave the GET view to the existing nav-perm logic.
     "vch_generate", "wh_settings", "subscriber_notifications",
+    # p01/D07: GET+POST pages whose GET view is mapped in _NAV_PERM.
+    "network_ip_scan_page", "system_settings_page",
 }
 
 # بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —
@@ -989,6 +1168,62 @@ _PERM_WRITE_ONLY = {
 _NAV_VIEW_GUARD_SKIP = {
     "audit_log_index", "mt_alerts_index", "hotspot_errors_page",
     "cards_checker",
+}
+
+# p01/D07+D08 — مسارات مقصودٌ أن لا يَحرسها مفتاحٌ في الخريطتين، مع السبب.
+# كل مسار لوحة (أيّ method) يجب أن يكون: في _PERM_GUARDED، أو في _NAV_PERM
+# (للـGET)، أو مُزخرَفًا بـrequires_perm/require_perm، أو عامًّا
+# (_PUBLIC_ENDPOINTS)، أو هنا. tests/test_perm_guard_coverage.py يَفرض ذلك.
+_GUARD_ALLOWLIST: dict[str, str] = {
+    # ── خدمة ذاتيّة لكل مسؤول مُسجَّل (حسابه/لغته/إشعاراته/الأدلة) ──
+    "account": "self-service: own account page",
+    "account_password": "self-service: own password (throttled)",
+    "auth_switch_tenant": "self-service: handler checks tenant membership",
+    "set_locale": "self-service: UI language",
+    "dashboard": "home page for every admin",
+    "dashboard_alias": "home page alias",
+    "docs_center": "help center", "docs_section": "help center",
+    "docs_guide": "help center", "docs_add_subscriber": "help center",
+    "notifications_center": "own admin notifications",
+    "notifications_timeline": "own admin notifications",
+    "notifications_poll": "own admin notifications (bell)",
+    "notification_open": "own admin notifications",
+    "notification_read": "own admin notifications",
+    "notifications_read_all": "own admin notifications",
+    "notifications_contact": "own notification contact",
+    "notifications_test_push": "push test to own devices",
+    "notification_sounds_page": "own notification sound",
+    "notification_sound_audio": "own notification sound",
+    "notification_sound_save": "own notification sound",
+    "notification_sound_clear": "own notification sound",
+    "notification_sound_mode": "own notification sound",
+    # ── صفحات حالة الترخيص/المزوّد (يجب أن تبقى مرئيّة عند القفل) ──
+    "license_activate_page": "license lock page",
+    "license_expired_page": "license lock page",
+    "provider_blocked_page": "provider gate page",
+    "provider_upgrade_page": "provider gate page",
+    # ── حارسٌ داخل المعالِج (منحة كيان/فعل لا مفتاح دور) ──
+    "cards_checker": "GET view open by design; POST guarded by cards.verify",
+    "cards_checker_v2": "GET view open by design; actions post to cards_checker",
+    "recycle_bin_restore": "in-handler (fix3 F01 F4): per entity type — cards.restore for card batches, users.create subscribers, plans.create plans, nas.create NAS, owner-only admins/roles; scope applies",
+    "cards_batches_import": "in-handler: owner or can_import_batches grant",
+    "cards_batches_import_preview": "in-handler: owner or can_import_batches grant",
+    "cards_offers": "lists only the offers the owner shared with this manager",
+    "cards_offer_create": "in-handler: owner or offer.create entity grant",
+    "cards_offer_edit": "in-handler: owner or offer.edit entity grant",
+    "cards_offer_visibility": "in-handler: owner only",
+    "cards_offer_toggle": "in-handler: owner only",
+    "cards_offer_use": "in-handler: offer visibility + generate gate",
+    "sub_manager_create": "in-handler: owner or can_create_sub_managers grant",
+    "sub_manager_delegate": "in-handler: owner or parent-manager check",
+    "routers_action": "in-handler: per-action routers.* key (ACTION_PERM)",
+    # ── مصادقة غير جلسة الإدارة (توكن الراوتر / جلسة بوابة المشترك) ──
+    "router_events_netwatch_webhook": "router webhook: HMAC token in URL",
+    "portal_subscriber_data_connection": "subscriber portal session",
+    "portal_subscriber_data_connection_download": "subscriber portal session",
+    "portal_subscriber_telegram_connect_start": "subscriber portal session",
+    "portal_subscriber_telegram_connect_poll": "subscriber portal session",
+    "portal_card_redeem": "card portal session",
 }
 
 
@@ -1006,7 +1241,83 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
 
     ``tenant_id=None`` يَحسبه كما كان الحارس (g ثم الجلسة ثم الافتراضي).
     ``record_activity=False`` لفحصٍ استكشافيّ لا يُسجّل حركة في المعدّل اليوميّ.
+
+    D24: سبب الرفض الفعليّ (الصلاحية/القسم/البوّابة الناقصة فعلًا) يُحفظ في
+    ``g._rbac_denial`` لرسالة 403 — بدل تسمية مفتاح الجدول ولو كان ممنوحًا.
     """
+    try:
+        g._rbac_denial = None
+    except Exception:  # noqa: BLE001 — خارج سياق طلب
+        pass
+    code = _rbac_denial_status_impl(
+        name, method, is_super=is_super, perms=perms, admin_id=admin_id,
+        tenant_id=tenant_id, record_activity=record_activity)
+    return code
+
+
+def _is_own_distributor_record(admin_id, tenant_id) -> bool:
+    """Is ``view_args['distributor_id']`` the distributor whose login is
+    ``admin_id`` (``distributors.login_admin_id``)?"""
+    try:
+        from flask import has_request_context
+        if not admin_id or not has_request_context():
+            return False
+        did = (request.view_args or {}).get("distributor_id")
+        if did is None:
+            return False
+        from ..db.repos import operations_repo
+        from flask import session as _s
+        tid = int(tenant_id or getattr(g, "tenant_id", None) or _s.get("tenant_id") or 1)
+        dist = operations_repo.get_distributor(tid, int(did))
+        return bool(dist) and int(dist.get("login_admin_id") or 0) == int(admin_id)
+    except Exception:  # noqa: BLE001 — no exemption on error
+        return False
+
+
+def _deny(code: int, *, permission: str = "", reason: str = "") -> int:
+    """يسجّل سبب الرفض (D24) ويُرجع الرمز."""
+    try:
+        g._rbac_denial = {"permission": permission, "reason": reason}
+    except Exception:  # noqa: BLE001
+        pass
+    return code
+
+
+# D24: أسماء عربيّة لأسباب الرفض (تظهر في صفحة 403 وتفاصيل JSON).
+_DENIAL_REASON_AR = {
+    "section_blocked": "هذا القسم مُعطَّل على هذه النسخة.",
+    "section_hidden": "هذا القسم مخفيّ عن حسابك.",
+    "section_locked": "هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.",
+    "action": "الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة",
+    "bulk": "العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).",
+    "rate": "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+    "owner_only": "هذا الإجراء مقصور على المالك أو الشريك.",
+    "out_of_scope": "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».",
+    "permission": "تنقصك الصلاحية",
+}
+
+
+def denial_message() -> str:
+    """رسالة 403 عربيّة تسمّي الصلاحية/السبب الناقص فعلًا (D24)، أو ''."""
+    info = getattr(g, "_rbac_denial", None) or {}
+    reason = info.get("reason") or ""
+    perm = info.get("permission") or ""
+    base = _DENIAL_REASON_AR.get(reason, "")
+    if reason in ("action", "permission") and perm:
+        # fix3 (D24 / F01 F23): the Arabic name of the key(s), never the raw
+        # key (it stays in the JSON ``permission`` field for tools).
+        try:
+            from ..services.permission_labels import rbac_keys_label
+            label = rbac_keys_label(perm)
+        except Exception:  # noqa: BLE001
+            label = perm
+        return f"{base}: «{label}»."
+    return base
+
+
+def _rbac_denial_status_impl(name: str, method: str, *, is_super: bool, perms,
+                             admin_id, tenant_id: int | None = None,
+                             record_activity: bool = True) -> int | None:
     from flask import session
     from ..auth.section_flags import is_section_blocked
     from ..auth.ui_permissions import _NAV_PERM
@@ -1014,7 +1325,29 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
     #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
     #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
     if not is_super and is_section_blocked(name):
-        return 403
+        return _deny(403, reason="section_blocked")
+
+    # fix3 integration (webui open item): pages behind the legacy
+    # ``mt_permissions.requires_perm`` layer (mikrotik.* keys — smart alerts,
+    # hotspot errors, audit log, MikroTik tools…) are decided HERE too, so the
+    # guard, every UI gate built on it (can_submit / can_open / gate_html) and
+    # the API ``web:`` mappings refuse exactly what the decorator refuses:
+    # hidden ⇔ refused, shown ⇔ allowed. Owner / co-owner bypass (as the
+    # decorator's own owner rule).
+    if not is_super:
+        from ..services import mt_permissions as _mtp
+        _need = _mtp.endpoint_required_perms(name)
+        if _need:
+            _missing = _mtp.admin_id_missing(admin_id, _need)
+            if _missing:
+                return _deny(403, reason="permission", permission=",".join(_missing))
+
+    # fix3 (F02 L3 / F07 H2): a distributor LOGIN reads its OWN distributor
+    # page (web detail, API summary/batches) — never another's, never writes.
+    if (not is_super and name == "distributors_detail"
+            and method in ("GET", "HEAD", "OPTIONS")
+            and _is_own_distributor_record(admin_id, tenant_id)):
+        return None
 
     # ── (3b) حارس الأقسام الدقيق لكل مدير (owner-configured 3-state). ──
     # المالك يَضبط لكل مدير: «مفتوح» / «مقفول (عرض فقط)» / «مخفي». المخفي
@@ -1034,9 +1367,12 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
             # حقل) → 403 لأيّ method. المقفول → 403 للكتابة. السوبر يَتجاوز.
             if _mg.endpoint_effectively_hidden(
                     _aid, name, tenant_id=_tid, perms=perms):
-                return 403
-            elif _state == _mg.LOCKED and _mg.is_mutating_method(method):
-                return 403
+                return _deny(403, reason="section_hidden")
+            # D03: القسم المقفول يرفض **فتح نموذج** الإضافة/التعديل أيضًا (لا
+            # «يفتح ثم يُرفَض عند الحفظ فتضيع البيانات»).
+            elif _state == _mg.LOCKED and (_mg.is_mutating_method(method)
+                                            or _mg.is_form_endpoint(name)):
+                return _deny(403, reason="section_locked")
             # ── (3c) بوّابة الفعل الشاملة — «كل شيء بصلاحية». ──
             # كل عمليّة (كتابة) يُنفّذها المدير مربوطة ببوّابة يَضبطها المالك؛
             # إن كانت مُطفأة → 403 (لا يُتجاوَز بعنوان مباشر ولا POST مُلفَّق).
@@ -1051,12 +1387,13 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
                     _aspec = _mg.ACTION_REGISTRY.get(_akey, {})
                     if (_mg.is_mutating_method(method) or _aspec.get("gate_get")) \
                             and not _mg.action_permitted(_aid2, _akey, tenant_id=_tid):
-                        return 403
+                        return _deny(403, reason="action",
+                                     permission=_mg.rbac_perm_label(_akey) or _akey)
                 # بوّابة العمليّات المجمّعة الإضافيّة (المرحلة D): مسار *_bulk
                 # يَتطلّب bulk.ops فوق فعله المفرد.
                 if _mg.is_mutating_method(method) \
                         and _mg.bulk_blocked(_aid2, name, tenant_id=_tid):
-                    return 403
+                    return _deny(403, reason="bulk", permission="bulk.ops")
                 # A2: معدّل الفعل اليوميّ — إن كان للفعل حدٌّ مضبوط للمدير،
                 # يُرفَض عند بلوغه (ويُسجَّل عند السماح). أفعال الكتابة فقط.
                 if _akey and _mg.is_mutating_method(method):
@@ -1066,19 +1403,26 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
                     if (_act.gate_and_record(_aid2, _akey, tenant_id=_tid)
                             if record_activity
                             else _act.rate_blocked(_aid2, _akey, tenant_id=_tid)):
-                        return 429
+                        return _deny(429, reason="rate")
         except Exception:  # noqa: BLE001 — fail-open: لا نَكسر أيّ طلب
             pass
 
     # ── (1) حارس الكتابة/السوبر ──
+    # D12: endpointات «__super__» التي يصلها دور «مدير عام» بمفتاح RBAC (إدارة
+    # المدراء والأدوار) — منطقٌ في auth/owner.SUPER_DELEGABLE لا تعديل للجدول.
+    from ..auth.owner import super_delegate_perm
+    _deleg = super_delegate_perm(name)
     required = _PERM_GUARDED.get(name)
     if required is not None and not (
         name in _PERM_WRITE_ONLY
         and method in ("GET", "HEAD", "OPTIONS")
     ):
         if not is_super:
-            if required == _PERM_SUPER or required not in perms:
-                return 403
+            if required == _PERM_SUPER:
+                if not (_deleg and _deleg in perms):
+                    return _deny(403, reason="owner_only")
+            elif required not in perms:
+                return _deny(403, reason="permission", permission=required)
 
     # ── (2) حارس العرض على القراءة (مطابقة الشريط الجانبي) ──
     if (
@@ -1088,8 +1432,11 @@ def rbac_denial_status(name: str, method: str, *, is_super: bool, perms,
     ):
         view_required = _NAV_PERM.get(name)
         if view_required is not None:
-            if view_required == _PERM_SUPER or view_required not in perms:
-                return 403
+            if view_required == _PERM_SUPER:
+                if not (_deleg and _deleg in perms):
+                    return _deny(403, reason="owner_only")
+            elif view_required not in perms:
+                return _deny(403, reason="permission", permission=view_required)
     return None
 
 
@@ -1248,7 +1595,85 @@ def _install_permission_guard(bp: Blueprint) -> None:
             admin_id=session.get("admin_id"))
         if _denied is not None:
             abort(_denied)
+        # ── D09: نطاق المِلكية على كل صفحة/فعل لمشتركٍ بعينه (360/ملف/تعديل/
+        #    أفعال/جماعيّ) — لا القائمة وحدها. مسندٌ واحد مع الـAPI. ──
+        if not is_super and _subscriber_scope_denied(name):
+            _deny(403, reason="out_of_scope")
+            abort(403)
         return None
+
+
+def _subscriber_scope_denied(name: str) -> bool:
+    """هل يمسّ الطلبُ مشتركًا خارج نطاق المدير؟ (D09) — للمسارات التي تحمل
+    ``<username>`` تحت ``/users/`` أو ``<subscriber_id>`` تحت ``/subscribers/``،
+    وللعمليّات الجماعيّة (حقل ``usernames``). fail-open على خطأ (لا نكسر اللوحة)."""
+    try:
+        rule = str(getattr(request, "url_rule", "") or "")
+        va = request.view_args or {}
+        from flask import session
+        from ..services import subscriber_scope as _scope
+        tid = int(session.get("tenant_id") or 1)
+        aid = session.get("admin_id")
+        if va.get("username") and "/users/<username>" in rule:
+            return not _scope.subscriber_accessible(aid, username=str(va["username"]),
+                                                   tenant_id=tid)
+        if va.get("subscriber_id") and "/subscribers/<int:subscriber_id>" in rule:
+            return not _scope.subscriber_accessible(aid, subscriber_id=int(va["subscriber_id"]),
+                                                   tenant_id=tid)
+        # fix3 (F01 F10): a card batch by direct URL (cards/print/recharge/pricing).
+        if va.get("batch_id") and ("/cards/" in rule or "/card-pricing/" in rule):
+            from ..services.card_batch_scope import batch_accessible
+            return not batch_accessible(int(va["batch_id"]), aid, tenant_id=tid)
+        # fix3 (F02 H3): online/session actions carry the subscriber in the FORM
+        # (username / session id), not the URL — same predicate as the API.
+        if request.method == "POST" and name.startswith(("online_", "sessions_")):
+            names = [u.strip() for u in request.form.getlist("username") if u and u.strip()]
+            if not names:
+                names = _online_form_usernames(tid)
+            if names:
+                return len(_scope.filter_accessible(names, aid, tenant_id=tid)) != len(names)
+        # fix3 (F02 M3): a subscriber picked from a picker (tickets/services/
+        # billing/bandwidth schedules…) — never another manager's subscriber.
+        if request.method == "POST":
+            sid = (request.form.get("subscriber_id") or "").strip()
+            if sid.isdigit():
+                return not _scope.subscriber_accessible(aid, subscriber_id=int(sid),
+                                                       tenant_id=tid)
+            su = (request.form.get("subscriber_username") or "").strip()
+            if su:
+                return not _scope.subscriber_accessible(aid, username=su, tenant_id=tid)
+        if request.method == "POST" and name.startswith("users_") and "usernames" in request.form:
+            raw = request.form.getlist("usernames")
+            if len(raw) == 1 and "," in raw[0]:
+                raw = raw[0].split(",")
+            names = [u.strip() for u in raw if u and u.strip()]
+            return len(_scope.filter_accessible(names, aid, tenant_id=tid)) != len(names)
+    except Exception:  # noqa: BLE001
+        return False
+    return False
+
+
+def _online_form_usernames(tenant_id: int) -> list[str]:
+    """Subscribers named by an online action that posts only session ids
+    (``session_id`` / ``acctsessionid`` / ``radacctid``) — resolved in radacct."""
+    from ..db.connection import db
+    names: list[str] = []
+    for sid in request.form.getlist("session_id") + request.form.getlist("acctsessionid"):
+        sid = (sid or "").strip()
+        if sid:
+            row = db().execute(
+                "SELECT username FROM radacct WHERE tenant_id = ? AND acctsessionid = ? "
+                "ORDER BY radacctid DESC LIMIT 1", (int(tenant_id), sid)).fetchone()
+            if row and row["username"]:
+                names.append(str(row["username"]))
+    for rid in request.form.getlist("radacctid"):
+        if (rid or "").strip().isdigit():
+            row = db().execute(
+                "SELECT username FROM radacct WHERE tenant_id = ? AND radacctid = ?",
+                (int(tenant_id), int(rid))).fetchone()
+            if row and row["username"]:
+                names.append(str(row["username"]))
+    return names
 
 
 def _wants_json_response() -> bool:
@@ -1290,10 +1715,42 @@ def _install_error_handlers(bp: Blueprint) -> None:
 
     @bp.errorhandler(403)
     def _friendly_forbidden(err):  # noqa: ANN001
-        if _wants_json_response():
-            return jsonify({"ok": False, "error": _MSG}), 403
+        # D24: سبب الرفض الفعليّ (الصلاحية/القسم الناقص فعلًا) إن عُرف.
         try:
-            return render_template("radius/forbidden_403.html"), 403
+            detail = denial_message()
+        except Exception:  # noqa: BLE001
+            detail = ""
+        if _wants_json_response():
+            body = {"ok": False, "error": _MSG}
+            if detail:
+                body["detail"] = detail
+                info = getattr(g, "_rbac_denial", None) or {}
+                if info.get("permission"):
+                    body["permission"] = info["permission"]
+            return jsonify(body), 403
+        # D04: نموذجٌ أُرسِل فرُفِض — لا نستبدل الصفحة فتضيع البيانات: نعيد عرض
+        # النموذج نفسه بما كتبه المدير + رسالة عربيّة (إنشاء/تعديل المشترك)،
+        # وللنماذج الأخرى صفحة 403 تحفظ الحقول وتعيده للنموذج ممتلئًا.
+        refused_fields = None
+        if request.method == "POST":
+            try:
+                from .users import rerender_refused_form
+                msg = "لم يُحفَظ: " + (detail or _MSG) + " — بياناتك باقية في النموذج."
+                page = rerender_refused_form(msg)
+                if page is not None:
+                    return page
+            except Exception:  # noqa: BLE001 — never 500 over the safety net
+                pass
+            try:
+                refused_fields = {
+                    k: request.form.getlist(k) for k in request.form.keys()
+                    if k != "_csrf_token" and "password" not in k.lower()}
+            except Exception:  # noqa: BLE001
+                refused_fields = None
+        try:
+            return render_template("radius/forbidden_403.html",
+                                   denial_detail=detail,
+                                   refused_fields=refused_fields), 403
         except Exception:  # noqa: BLE001 — never 500 the operator over chrome
             return (
                 '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'

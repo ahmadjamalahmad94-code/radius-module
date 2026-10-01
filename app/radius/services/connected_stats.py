@@ -89,7 +89,7 @@ def stats(tenant_id: int, *, mode: str = DEFAULT_MODE,
     # الراوترات القابلة للوصول فقط — فارغ عند الانقطاع، لا جلسات لا يمكن
     # التحقّق منها. يَرتدّ تلقائيًّا إلى نافذة radacct حين لا سجلّ liveness.
     from . import connected_live
-    active_now = connected_live.connected_now(tid)
+    active_now = connected_live.connected_now(tid, real_only=True)
 
     if mode == "failed":
         result = _failed_stats(tid, f, t)

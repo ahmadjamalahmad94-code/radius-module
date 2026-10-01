@@ -62,14 +62,14 @@
   </div>
   {% if can_toggle_enforcement %}
   {% set _enf_msg = 'تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.' %}
-  <form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0">
+  {% if can_submit('radius.tok_enforcement', 'POST') %}<form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0">
     <input type="hidden" name="enable" value="{{ '0' if enforcement_on else '1' }}">
     {% if enforcement_on %}
       <button class="hub-btn hub-btn--secondary" type="submit" data-confirm="{{ _enf_msg }}"><i class="fa-solid fa-toggle-off"></i> {{ _('تعطيل الفرض') }}</button>
     {% else %}
       <button class="hub-btn hub-btn--danger" type="submit" data-confirm="{{ _enf_msg }}"><i class="fa-solid fa-toggle-on"></i> {{ _('تفعيل الفرض الآن') }}</button>
     {% endif %}
-  </form>
+  </form>{% endif %}
   {% else %}
     <span class="hub-text-mute" style="font-size:12px">{{ _('التبديل متاح لمدير النظام الأعلى فقط (أو عبر متغيّر البيئة') }} <code>HOBERADIUS_API_AUTH_REQUIRED</code>).</span>
   {% endif %}
@@ -77,11 +77,11 @@
 
 {# ───── Create-token form ───── #}
 {% call hub.section("إنشاء رمز جديد", icon="plus") %}
-  <form method="post" class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap">
+  <form method="post" class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input class="hub-input grow" type="text" name="name"
            placeholder="{{ _('اسم الرمز الجديد (مثال: integration-prod)') }}" required style="flex:1;min-width:200px">
     {{ hub.btn("إنشاء رمز", icon="plus", variant="primary", type="submit") }}
-  </form>
+  {% if not can_post_here() %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {% if items %}
@@ -129,13 +129,13 @@
             <td class="mono small">{{ t.created_at|dt_local if t.created_at else '—' }}</td>
             <td>
               {% if not t.revoked %}
-                <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
+                {% if can_submit('radius.tok_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
                       style="display:inline; margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                           data-confirm="إلغاء الرمز «{{ t.name|e }}»؟ لا يمكن استعادته.">
                     <i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}
                   </button>
-                </form>
+                </form>{% endif %}
               {% else %}
                 <span class="hub-text-mute" style="font-size:12px">—</span>
               {% endif %}

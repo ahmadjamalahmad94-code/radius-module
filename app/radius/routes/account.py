@@ -44,6 +44,10 @@ def account_password():
     if new_password != confirm_password:
         flash("تأكيد كلمة المرور غير مطابق.", "error")
         return redirect(url_for("radius.account"))
+    if new_password == current_password:
+        # same rule as POST /api/admin/password (re-test R08 NEW-3)
+        flash("كلمة المرور الجديدة يجب أن تختلف عن الحالية.", "error")
+        return redirect(url_for("radius.account"))
 
     if admin.managed_by_license_admin:
         result = LicenseAdminIdentitySyncService().change_password_from_runtime(

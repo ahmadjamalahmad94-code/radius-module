@@ -15,6 +15,7 @@ from ...radius.core.errors import (
 )
 from ...radius.services import subscriber_actions as sa
 from ...radius.services.accounting import service_from_context
+from ...radius.services.report_dates import ReportDateError
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -55,6 +56,24 @@ def _guard(web_endpoint: str):
     return c, None
 
 
+# Reading loans: the web shows them on «دفعات وسلف المستفيد» (users.loans) and in
+# the finance center «الديون والسلف» (reports.finance). A manager with neither
+# (e.g. only users.payments) listed ALL loans of the tenant through the API.
+_LOAN_READ_PERMS = ("users.loans", "reports.finance")
+
+
+def _read_guard():
+    """Identity + read permission for GET /loans and /loans/<id> → error or None."""
+    from .subscriber_actions import _FORBIDDEN_AR, _identity
+    ident, err = _identity()
+    if err is not None:
+        return err
+    if ident.caller.is_super or any(p in ident.perms for p in _LOAN_READ_PERMS):
+        return None
+    return fail("forbidden", _FORBIDDEN_AR, status=403,
+                details={"permission": " | ".join(_LOAN_READ_PERMS)})
+
+
 def _error(e: RadiusError):
     if isinstance(e, sa.SpendBlocked):
         return fail("spend_blocked", e.message, status=403)
@@ -69,6 +88,9 @@ def _error(e: RadiusError):
 
 
 def loans_list():
+    denied = _read_guard()
+    if denied is not None:
+        return denied
     try:
         limit, offset = page_args(default=100, maximum=500)
         raw_sid = (request.args.get("subscriber_id") or "").strip()
@@ -84,9 +106,16 @@ def loans_list():
         subscriber_id=subscriber_id,
     ):
         return deny_out_of_scope()
+    # F03-N9: نطاق تاريخ الإنشاء (يوم اللوحة المحلّيّ) — كان يُتجاهَل بصمت.
+    date_from = (request.args.get("date_from") or request.args.get("from") or "").strip()
+    date_to = (request.args.get("date_to") or request.args.get("to") or "").strip()
     svc = service_from_context()
-    items = svc.list_loans(status=status, subscriber_id=subscriber_id,
-                           limit=limit, offset=offset)
+    try:
+        items = svc.list_loans(status=status, subscriber_id=subscriber_id,
+                               limit=limit, offset=offset,
+                               date_from=date_from, date_to=date_to)
+    except ReportDateError as exc:
+        return fail("validation_error", exc.message, status=422)
     scoped = bool(current_distributor() and not subscriber_id)
     if scoped:
         items = [item for item in items if subscriber_in_scope(
@@ -97,7 +126,8 @@ def loans_list():
     if not scoped:
         # Totals of EVERY matching loan (not just this page) — the loans center
         # summed only the first 100 rows on the phone.
-        totals = svc.loan_totals(status=status, subscriber_id=subscriber_id)
+        totals = svc.loan_totals(status=status, subscriber_id=subscriber_id,
+                                 date_from=date_from, date_to=date_to)
         payload["totals"] = totals
         payload["total_count"] = totals["count"]
         payload["has_more"] = offset + len(items) < totals["count"]
@@ -139,6 +169,9 @@ def loans_create():
 
 
 def loans_get(loan_id: int):
+    denied = _read_guard()
+    if denied is not None:
+        return denied
     try:
         loan = service_from_context().get_loan(loan_id)
     except RadiusError as e:

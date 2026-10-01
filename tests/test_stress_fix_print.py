@@ -171,7 +171,7 @@ def _web_login(client) -> str:
     from app.radius.db.repos import admins_repo
     u = f"sfp_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=u, password="sfp-pass", full_name="SF",
-                             is_super_admin=True)
+                             is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login", data={"username": u, "password": "sfp-pass"})
     assert res.status_code in {302, 303}
     client.get("/admin/radius/cards/print")

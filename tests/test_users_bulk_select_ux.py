@@ -44,7 +44,7 @@ def _page(app) -> str:
     with app.app_context():
         u = f"own_{uuid4().hex[:8]}"
         admins_repo.create_admin(username=u, password="p",
-                                 full_name="Owner", is_super_admin=True)
+                                 full_name="Owner", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
         # Seed one subscriber so the data table (not the empty state) renders.
         from app.radius.db.connection import transaction
         with transaction() as c:

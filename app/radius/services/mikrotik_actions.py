@@ -886,6 +886,13 @@ def fetch_mikrotik_actions(tenant_id: int, *, section: str = "all",
     _seen_sids = _audit_disconnect_session_ids(tenant_id, date_from, date_to)
     rows += _radacct_disconnect_rows(tenant_id, date_from, date_to, rip, _seen_sids)
 
+    # fix3 (F02 H2): a scoped manager — only actions on HIS subscribers/cards.
+    from .subscriber_scope import accessible_usernames, current_scope_admin_id
+    _scope = current_scope_admin_id(tenant_id=int(tenant_id))
+    if _scope is not None:
+        _allowed = accessible_usernames(int(_scope), tenant_id=int(tenant_id))
+        rows = [r for r in rows if str(r.get("subject") or "") in _allowed]
+
     # section filter
     def _in_section(r: dict) -> bool:
         if section == "all":

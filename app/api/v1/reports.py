@@ -4,8 +4,9 @@ from __future__ import annotations
 from flask import Blueprint, Response, g, request
 
 from ...radius.core.errors import RadiusValidationError
-from ...radius.services.accounting import service_from_context
+from ...radius.services.accounting import AccountingService, service_from_context
 from ..auth import require_api_token
+from ..json_input import json_object
 from ..responses import fail, ok
 from .paging import PagingError, page_args
 
@@ -74,7 +75,9 @@ def _report_view(report_type: str):
             items = service_from_context().reports(report_type=report_type)
         except RadiusValidationError as e:
             return fail("validation_error", e.message, status=422)
-        return ok({"items": items, "count": len(items), "report_type": report_type})
+        # ``columns`` = تسميات عربيّة لكلّ مفتاح (المفاتيح نفسها لا تتغيّر).
+        return ok({"items": items, "count": len(items), "report_type": report_type,
+                   "columns": AccountingService.report_columns(report_type, items)})
 
     _view.__name__ = f"reports_{report_type}_view"
     return _view
@@ -97,6 +100,7 @@ def _subscriber_payments_view():
         "items": items, "count": len(items), "report_type": "subscriber_payments",
         "total_count": totals["payers"], "totals": totals,
         "has_more": limit is not None and offset + len(items) < totals["payers"],
+        "columns": AccountingService.report_columns("subscriber_payments", items),
     })
 
 
@@ -108,7 +112,7 @@ def _report_csv_view(report_type: str, slug: str):
             return fail("validation_error", e.message, status=422)
         return Response(
             csv_text,
-            mimetype="text/csv; charset=utf-8",
+            mimetype="text/csv",
             headers={
                 "Content-Disposition": f'attachment; filename="hoberadius-{slug.replace("/", "-")}.csv"',
             },
@@ -181,16 +185,23 @@ def reports_snapshots_list():
 
 
 def reports_snapshots_create():
-    body = request.get_json(silent=True) or {}
-    report_type = str(body.get("report_type") or "").strip()
+    # جسم مصفوفة/قيمة مفردة كان يُسقط 500 (body.get على list) → 422 عربيّ.
+    body, err = json_object()
+    if err:
+        return err
+    report_type = body.get("report_type")
+    report_type = report_type.strip() if isinstance(report_type, str) else ""
     if not report_type:
         return fail("validation_error", "نوع التقرير مطلوب.", status=422)
     try:
+        # نطاقٌ مقلوب أو تاريخٌ غير صالح → 422 (كان يُحفظ لقطةً فارغة 201؛ الويب يرفضه).
+        date_from, date_to = AccountingService.validate_report_range(
+            body.get("date_from"), body.get("date_to"))
         snapshot = service_from_context().create_report_snapshot(
             report_type=report_type,
             actor=_actor(),
-            date_from=str(body.get("date_from") or ""),
-            date_to=str(body.get("date_to") or ""),
+            date_from=date_from,
+            date_to=date_to,
             parameters=body.get("parameters") if isinstance(body.get("parameters"), dict) else {},
         )
     except RadiusValidationError as e:

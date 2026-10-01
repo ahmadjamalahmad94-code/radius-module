@@ -41,7 +41,7 @@
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form id="nd-form" method="post"
-      action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
+      action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">{% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية والشبكة ─────────────────────── #}
   {% call hub.section("الهوية والشبكة", icon="network-wired") %}
@@ -61,14 +61,33 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المفتاح المشترك') }} <span class="req">*</span></label>
-        <input class="hub-input" type="text" name="secret" {% if is_new %}required{% endif %} value="{{ device.secret or '' }}">
+        {% if is_new %}
+        <input class="hub-input" type="text" name="secret" required value="{{ device.secret or '' }}" autocomplete="off">
         <div class="hub-field-hint">{{ _('يطابق المفتاح على جهاز الشبكة نفسه.') }}</div>
+        {% else %}
+        <input class="hub-input" type="password" name="secret" value="" autocomplete="new-password" placeholder="{{ _('محفوظ — اتركه فارغًا للإبقاء عليه') }}">
+        <div class="hub-field-hint">{{ _('اتركه فارغًا للإبقاء على المفتاح الحالي، أو اكتب مفتاحًا جديدًا لتغييره.') }}</div>
+        {% endif %}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المُصنِّع') }}</label>
         <select class="hub-select" name="vendor">
           {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
         </select>
+      </div>
+      {# إصدارُ RouterOS — مطلوبٌ لأنّ مولّدَ سكربتِ التهيئة يَبني أمرَ نفقِ
+         الإدارة على أساسه: ROS 6 يرفض `port=` و
+         `verify-server-address-from-certificate=` و`keepalive-timeout=`
+         فيفشلُ السطرُ كلُّه ولا يُنشأ النفقُ إطلاقًا — فشلٌ صامتٌ وسطَ
+         عشراتِ الأسطر. و«غير محدّد» يُعامَل كـ7 في المولّد. #}
+      <div class="hub-field">
+        <label class="hub-field-label">{{ _('إصدار RouterOS') }}</label>
+        <select class="hub-select" name="ros_version">
+          <option value="" {% if not device.ros_version %}selected{% endif %}>{{ _('غير محدّد') }}</option>
+          <option value="7" {% if device.ros_version == '7' %}selected{% endif %}>{{ _('RouterOS 7 (وأحدث)') }}</option>
+          <option value="6" {% if device.ros_version == '6' %}selected{% endif %}>{{ _('RouterOS 6 (قديم)') }}</option>
+        </select>
+        <div class="hub-field-hint">{{ _('يحدّد صيغة أمر نفق الإدارة في سكربت التهيئة. اتركه «غير محدّد» ولن تستطيع توليد السكربت حتى تختار.') }}</div>
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('النوع') }}</label>
@@ -152,7 +171,11 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('كلمة مرور الراوتر') }}</label>
-        <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}">
+        {% if is_new %}
+        <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}" autocomplete="off">
+        {% else %}
+        <input class="hub-input" type="password" name="api_password" value="" autocomplete="new-password" placeholder="{{ _('محفوظة — اتركها فارغة للإبقاء عليها') }}">
+        {% endif %}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('اتصال مشفّر') }}</label>
@@ -175,7 +198,7 @@
         {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
         {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
       </span>
-      <span>{{ _('الوقت:') }} <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
+      <span>{{ _('الوقت:') }} <span class="hub-text-mono"><bdi dir="ltr">{{ device.last_check_at }}</bdi></span></span>
     </div>
     <div class="hub-field-hint" style="margin-top:8px">
       {{ _('يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.') }}
@@ -184,9 +207,9 @@
   {% endif %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
-    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}
+    {% if can_submit('radius.devices_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}{% endif %}
     {{ hub.btn(("حفظ الجهاز" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}</fieldset>{% endif %}</form>
 {% endcall %}
 {% endblock %}

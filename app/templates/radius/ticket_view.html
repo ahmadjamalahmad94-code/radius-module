@@ -99,7 +99,17 @@
   'connection':      'الاتصال والخدمة',
   'hardware':        'الأجهزة والمعدّات',
   'complaint':       'شكوى',
-  'service_request': 'طلب خدمة'
+  'service_request': 'طلب خدمة',
+  'network':         'الشبكة',
+  'installation':    'التركيب',
+  'account':         'الحساب',
+  'cards':           'الكروت',
+  'technical':       'دعم فنّي',
+  'support':         'دعم فنّي',
+  'payment':         'الدفع',
+  'internet':        'الإنترنت',
+  'speed':           'السرعة',
+  'other':           'أخرى'
 } %}
 {% set _status_map = {
   'open':        ('مفتوحة',      'amber'),
@@ -195,7 +205,7 @@
       </div>
 
       {# ── صندوق الردّ اللاصق — عقد قائم: POST إلى radius.tk_reply بحقل body ── #}
-      <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" class="tkv-composer">
+      {% if can_submit('radius.tk_reply', 'POST') %}<form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" class="tkv-composer">
         <label class="hub-field-label" for="tk-reply-body" style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
           <i class="fa-solid fa-reply" style="color:var(--hub-brand-ink,#4338ca)"></i> {{ _('إضافة ردّ') }}
         </label>
@@ -205,7 +215,7 @@
           <span class="tkv-composer-hint">{{ _('يظهر الردّ في سجلّ المحادثة باسم الإداري الحالي.') }}</span>
           {{ hub.btn("إرسال الردّ", icon="paper-plane", variant="primary", type="submit") }}
         </div>
-      </form>
+      </form>{% endif %}
     {% endcall %}
   </div>
 

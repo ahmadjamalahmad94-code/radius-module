@@ -13,6 +13,8 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 
 {% extends "admin/_admin_layout.html" %}
+{# fix3 (F01 F12): username link target decided once (the guard's own answer) #}
+{% set _user_link_edit = not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_edit')) %}
 {% import "_partials/hub.html" as hub %}
 {% import "radius/_subs_labels.html" as L %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
@@ -588,6 +590,9 @@
   }
   .usrch-clear:hover{ background:#fee2e2; color:#991b1b; }
   .usrch-dates{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .usrch-hint{ flex-basis:100%; font-size:12px; font-weight:700; color:#6d28d9;
+    background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:6px 10px; }
+  .usrch-hint[hidden]{ display:none; }
   .usrch-dates[hidden]{ display:none; }
   .usrch-date-label{
     display:inline-flex; align-items:center; gap:6px;
@@ -599,6 +604,9 @@
 {% endblock %}
 
 {% block content %}
+{# D17: أزرار الأفعال تُعرَض حسب قرار الحارس نفسه الذي يقرؤه التطبيق (actions-context). #}
+{% set _sa = subscriber_actions() if subscriber_actions is defined else {} %}
+<style>[data-perm-denied]{display:none !important}</style>
 <div class="hr-page-shell" data-admin-rhythm data-users-page>
 
 {# عدّادات KPI تأتي من الخادم (تجميع DB فوق كامل الجدول، مستقلّ عن حدّ
@@ -639,15 +647,16 @@
       {# زرّ الإضافة يَظهر فقط إذا كان القسم قابلًا للكتابة وفعل «إنشاء مشترك»
          ممنوحًا. الخادم يَحرس users_create بـ403 أيضًا (manager_grants). #}
       {% if (manager_can_write is not defined or manager_can_write('subscribers'))
-            and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
-      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
+            and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create'))
+            and not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
+      {% if can_submit('radius.users_new', 'GET') %}<a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
          data-testid="users-add-btn">
         <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
-      </a>
+      </a>{% endif %}
       {% endif %}
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.online_list') }}">
+      {% if can_submit('radius.online_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.online_list') }}">
         <i class="fa-solid fa-wifi"></i> {{ _('المتصلون الآن') }}
-      </a>
+      </a>{% endif %}
     </div>
   </header>
 
@@ -708,6 +717,12 @@
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
+  {# F08-L: الفلترة الفوريّة تشمل صفوف الصفحة المحمّلة فقط — نقول ذلك صراحةً
+     بدل «لا نتائج» مضلّلة، وEnter يرسل البحث للخادم (كل المشتركين). #}
+  <div class="usrch-hint" data-users-search-hint role="status" hidden>
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    {{ _('البحث الفوري يشمل هذه الصفحة فقط — اضغط Enter للبحث في كل المشتركين') }}
+  </div>
   <div class="usrch-dates" data-users-date-range hidden>
     <label class="usrch-date-label">{{ _('من') }}
       <input class="hub-input usrch-date" type="date" data-users-date-from aria-label="{{ _('تاريخ الإنشاء من') }}">
@@ -727,7 +742,7 @@
   <select class="hub-select" name="plan_id">
     <option value="">{{ _('كل الباقات') }}</option>
     {% for p in plans %}
-      <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+      <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name|truncate(60, True, '…') }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="group_id">
@@ -740,9 +755,12 @@
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة (أيقونات فقط): CSV محلي، Excel/PDF عبر
      /admin/radius/export/table — كلها عبر window.hubTableExport #}
+  {# fix3 (F01 F11): التصدير بمفتاح users.export (نفس قرار الحارس) #}
+  {% if not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_export')) %}
   {{ hub.btn("", icon="file-csv",   variant="secondary", size="sm", attrs='data-users-export="csv"  title="CSV"   aria-label="CSV"') }}
   {{ hub.btn("", icon="file-excel", variant="secondary", size="sm", attrs='data-users-export="xlsx" title="Excel" aria-label="Excel"') }}
   {{ hub.btn("", icon="file-pdf",   variant="secondary", size="sm", attrs='data-users-export="pdf"  title="PDF"   aria-label="PDF"') }}
+  {% endif %}
   {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm", attrs='data-users-print') }}
 </form>
 
@@ -774,12 +792,12 @@
       <strong>{{ _att_label }}</strong>
       <span class="users-attention-chip-count">{{ items|length }} {{ _('صف') }}</span>
     </span>
-    <a class="hub-btn hub-btn--ghost hub-btn--sm users-attention-chip-clear"
+    {% if can_submit('radius.users_list', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--sm users-attention-chip-clear"
        href="{{ url_for('radius.users_list', **_clear_args) }}"
        title="{{ _('إزالة الفلتر') }}" aria-label="{{ _('إزالة الفلتر') }}">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       <span>{{ _('إزالة الفلتر') }}</span>
-    </a>
+    </a>{% endif %}
   </div>
   <style>
     .users-attention-chip{
@@ -842,7 +860,7 @@
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
       <i class="fa-solid fa-id-badge"></i> {{ _('الملف') }}
     </a>
-    <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="edit" href="#">
+    <a class="hub-btn hub-btn--secondary hub-btn--sm"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} data-single-action data-usq-link="edit" href="#">
       <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
@@ -855,23 +873,23 @@
       <div class="usq-menu-panel">
         {# data-multi-ok: كل إجراءات التفعيل والرصيد تدعم التحديد المتعدد —
            النافذة تعرض المستلمين وتُرسل لمسار الدفعة (القيمة لكل مشترك). #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="extend">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="extend"{% if not _sa.get('extend', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="quota"{% if not _sa.get('quota', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota-reset">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="quota-reset"{% if not _sa.get('quota_reset', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
         </button>
         {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (المالك): كانت
            تُضيف للمحفظة فقط دون تمديد الانتهاء؛ «الدفعة» تُطبَّق على الحساب وتُمدِّد
            الانتهاء حسب مدّة الباقة. المسار/الخدمة (users_balance_add) باقيان لكن بلا
            مدخل في الواجهة. #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="payment">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="payment"{% if not _sa.get('payment', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-money-bill-wave"></i> {{ _('دفعة نقدية') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="loan">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="loan"{% if not _sa.get('loan', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('إضافة سلفة') }}
         </button>
       </div>
@@ -882,35 +900,35 @@
       </summary>
       <div class="usq-menu-panel">
         {# data-multi-ok: إرسال الرسائل يدعم التحديد المتعدد فلا يُعطَّل #}
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="sms">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-open="sms"{% if not _sa.get('send_message', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة قصيرة') }}
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan"{% if not _sa.get('change_plan', True) %} hidden data-perm-denied{% endif %}>
           <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض') }}
         </button>
         {# data-multi-ok: مسار الفصل يقبل أصلًا حقول username متكررة (getlist) #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+        {% if can_submit('radius.online_disconnect', 'POST') %}<form method="post"{% if not _sa.get('disconnect', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
           <input type="hidden" name="username" data-usq-field="username">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
             <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
           </button>
-        </form>
+        </form>{% endif %}
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار التبديل الجماعي #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="toggle"
+        {% if can_submit('radius.users_toggle_bulk', 'POST') %}<form method="post"{% if not _sa.get('status', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="toggle"
               data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_toggle_bulk') }}">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
             <i class="fa-solid fa-pause"></i> {{ _('تغيير الحالة') }}
           </button>
-        </form>
+        </form>{% endif %}
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار الأرشفة الجماعية #}
-        <form method="post" data-single-action data-multi-ok data-usq-form="delete"
+        {% if can_submit('radius.users_bulk_delete', 'POST') %}<form method="post"{% if not _sa.get('delete', True) %} hidden data-perm-denied{% endif %} data-single-action{{ ' data-multi-ok' if _sa.get('any_bulk', True) else '' }} data-usq-form="delete"
               data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_bulk_delete') }}">
           <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
             <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة') }}
           </button>
-        </form>
+        </form>{% endif %}
       </div>
     </details>
   </div>
@@ -929,15 +947,15 @@
     <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-users-bulk-clear>
       <i class="fa-solid fa-xmark"></i> {{ _('إلغاء التحديد') }}
     </button>
-    <button type="button" class="hub-btn hub-btn--danger" data-users-bulk-open>
+    <button type="button" class="hub-btn hub-btn--danger"{% if not _sa.get('bulk_delete', True) %} hidden data-perm-denied{% endif %} data-users-bulk-open>
       <i class="fa-solid fa-trash-can"></i> {{ _('حذف المحدد (') }}<span data-users-bulk-count2>0</span>)
     </button>
   </div>
 </div>
 
 {# Hidden bulk-delete form — JS fills the usernames before submit. #}
-<form method="post" action="{{ url_for('radius.users_bulk_delete') }}"
-      data-users-bulk-form hidden></form>
+{% if can_submit('radius.users_bulk_delete', 'POST') %}<form method="post" action="{{ url_for('radius.users_bulk_delete') }}"
+      data-users-bulk-form hidden></form>{% endif %}
 
 {# ───── Subscribers Table ──────────────────────────────────── #}
 {% if items %}
@@ -991,11 +1009,11 @@
            Drives the smart-activation coverage hint so "كم يوم يغطي المبلغ"
            is computed against what this subscriber actually pays. #}
         {% set _eff_price = u.custom_price if (u.custom_price and u.custom_price > 0) else (p.price if p else 0) %}
-        {% set _expire_ts = (u.expire_at.timestamp()|int) if u.expire_at else 0 %}
-        {% set _last_login_ts = (u.last_login_at.timestamp()|int) if u.last_login_at else 0 %}
-        {% set _last_seen_ts = (u.last_seen_at.timestamp()|int) if u.last_seen_at else 0 %}
-        {% set _first_login_ts = (u.first_login_at.timestamp()|int) if u.first_login_at else 0 %}
-        {% set _created_ts = (u.created_at.timestamp()|int) if u.created_at else 0 %}
+        {% set _expire_ts = (u.expire_at|epoch) if u.expire_at else 0 %}
+        {% set _last_login_ts = (u.last_login_at|epoch) if u.last_login_at else 0 %}
+        {% set _last_seen_ts = (u.last_seen_at|epoch) if u.last_seen_at else 0 %}
+        {% set _first_login_ts = (u.first_login_at|epoch) if u.first_login_at else 0 %}
+        {% set _created_ts = (u.created_at|epoch) if u.created_at else 0 %}
         {# acctinputoctets = رفع، acctoutputoctets = تنزيل — RFC 2866.
            والمصدرُ `usage_bytes` المجموعُ من radacct: أعمدةُ
            `subscribers.used_bytes_*` لا يكتبها أحدٌ لمشتركٍ حقيقيّ
@@ -1030,27 +1048,42 @@
           data-plan-custom="{{ 1 if (u.custom_price and u.custom_price > 0) else 0 }}"
           data-plan-currency="{{ cfg.currency }}"
           data-plan-minutes="{{ _plan_minutes }}"
+          data-plan-rate="{{ ((p.price or 0) / _plan_minutes) if (p and (p.price or 0) > 0) else 0 }}"
           {# 🔴 كان `strftime` خامًا على UTC، فيقول «ينتهي 21:00» لمن نهايتُه
              منتصفُ الليل عنده — وعليه كان يُبنى حسابُ السعر أيضًا. #}
           data-expire="{{ u.expire_at|dt_local('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
-          data-profile-url="{{ url_for('radius.users_profile', username=u.username) }}"
-          data-edit-url="{{ url_for('radius.users_edit', username=u.username) }}"
+          data-profile-url="{{ url_for('radius.users_profile', username=u.username) if can_submit('radius.users_profile', 'GET') else '' }}"
+          data-edit-url="{{ url_for('radius.users_edit', username=u.username) if can_submit('radius.users_edit', 'GET') else '' }}"
           data-finance-url="{{ url_for('radius.users_finance', username=u.username) }}">
           <td data-col="chk"><input type="checkbox" aria-label="تحديد {{ u.username }}" data-users-row-check></td>
           {# «#» = رقم الصفّ الظاهر لا معرّف قاعدة البيانات — المعرّفات لا يُعاد
              استخدامها بعد الحذف فتتضخّم (57 ألفًا لـ1590 مشتركًا). #}
           <td data-col="id"       data-sort-value="{{ loop.index }}" class="num mono">{{ loop.index }}</td>
           <td data-col="user"     data-sort-value="{{ u.username }}">
+            {# fix3 (F01 F12, scope + webui): the link opens a page the admin CAN
+               open — the edit form with users.edit, else the read-only profile;
+               neither ⇒ the name stays as plain text (the guard decides). #}
+            {% if _user_link_edit and can_submit('radius.users_edit', 'GET') %}
             <a href="{{ url_for('radius.users_edit', username=u.username) }}"
                class="hr-entity-link"
                title="{{ _('تعديل المشترك') }}">{{ u.username }}</a>
+            {% elif can_submit('radius.users_profile', 'GET') %}
+            <a href="{{ url_for('radius.users_profile', username=u.username) }}"
+               class="hr-entity-link"
+               title="{{ _('ملف المشترك') }}">{{ u.username }}</a>
+            {% else %}{{ u.username }}{% endif %}
           </td>
           {# Password cell — masked by default; eye reveals, copy hands it to the operator
              without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
              page is admin-only, so this is intentional (matches the edit form behavior). #}
-          <td data-col="password" class="hr-pw-cell" data-hr-pw="{{ u.password|e }}" style="white-space:nowrap">
-            {% if u.password %}
+          {# fix3 (F01 F5): the plain password is NEVER embedded in the page —
+             it is fetched on demand from a permission-checked endpoint, and the
+             buttons exist only for «رؤية كلمة مرور المشترك». #}
+          <td data-col="password" class="hr-pw-cell"
+              data-hr-pw-url="{{ url_for('radius.users_password', username=u.username) if can_view_passwords else '' }}"
+              style="white-space:nowrap">
+            {% if u.password and can_view_passwords %}
               <span class="hr-pw-text mono" data-hr-pw-text>••••••••</span>
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
                       data-hr-pw-toggle aria-label="{{ _('إظهار/إخفاء') }}" title="{{ _('إظهار/إخفاء') }}"
@@ -1069,20 +1102,20 @@
           <td data-col="name"   data-sort-value="{{ u.full_name or '' }}">{{ u.full_name or '—' }}</td>
           <td data-col="mobile" data-sort-value="{{ u.mobile or '' }}" class="mono">{{ u.mobile or '—' }}</td>
           <td data-col="plan"   data-sort-value="{{ p.name if p else '' }}">
-            {% if p %}<a class="hr-entity-link hr-entity-link--pill"
+            {% if p %}{% if can_submit('radius.plans_edit', 'GET') %}<a class="hr-entity-link hr-entity-link--pill"
                         href="{{ url_for('radius.plans_edit', plan_id=p.id) }}"
-                        title="{{ _('تعديل الباقة') }}">{{ hub.pill(p.name, variant="brand", dot=False) }}</a>{% else %}—{% endif %}
+                        title="{{ _('تعديل الباقة') }}">{% endif %}{{ hub.pill(p.name, variant="brand", dot=False) }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}{% else %}—{% endif %}
           </td>
           <td data-col="card" data-sort-value="{{ u.card_batch_id or 0 }}">
             {# لا «#id» إنجليزي: نعرض «حزمة رقم N» عربيًّا والخام في title #}
             {% if u.card_batch_id %}
-              <a class="hr-entity-link hr-entity-link--pill"
+              {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link hr-entity-link--pill"
                  href="{{ url_for('radius.cards_of_batch', batch_id=u.card_batch_id) }}"
-                 title="حزمة الكرت رقم {{ u.card_batch_id }}">
+                 title="حزمة الكرت رقم {{ u.card_batch_id }}">{% endif %}
                 <span class="hub-pill hub-pill--violet">
                   <i class="fa-solid fa-id-card"></i> حزمة رقم {{ u.card_batch_id }}
                 </span>
-              </a>
+              {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           {# DHCP device — pretty pill if fingerprint exists, dash otherwise #}
@@ -1121,7 +1154,7 @@
             {%- if _dt and (_dt.total_sec or _du) -%}
               <span class="du-pill du-{{ _dt.bucket or 'neutral' }}"
                     {%- if not _dt.total_sec %} title="{{ _('بلا حدّ زمنيّ') }}"{% endif %}>
-                <bdi dir="ltr" class="du-cell">{{ _dt.used_txt }} / {{ _dt.total_txt or '∞' }}</bdi>
+                <bdi class="du-cell-ar">{{ _dt.used_ar or _dt.used_txt }} / {{ _dt.total_ar or _dt.total_txt or '∞' }}</bdi>
               </span>
             {%- else -%}—{%- endif -%}
           </td>
@@ -1169,15 +1202,15 @@
             {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}
           </td>
           {%- set _lr = last_renewal.get(u.username) if last_renewal else None -%}
-          <td data-col="last_renewal" data-sort-value="{{ (_lr.timestamp()|int) if _lr else 0 }}" class="mono small">
+          <td data-col="last_renewal" data-sort-value="{{ (_lr|epoch) if _lr else 0 }}" class="mono small">
             {{ _lr.strftime('%Y-%m-%d') if _lr else '—' }}
           </td>
           <td data-col="actions">
             <div class="urow-actions">
-              <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('ملف 360°') }}"
+              {% if can_submit('radius.users_profile', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('ملف 360°') }}"
                  href="{{ url_for('radius.users_profile', username=u.username) }}">
                 <i class="fa-solid fa-id-badge"></i>
-              </a>
+              </a>{% endif %}
 
               {# ── «تفعيل» menu — activation / balance / quota / loan ── #}
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm urow-menu-btn"
@@ -1185,22 +1218,22 @@
                 <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
               <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات التفعيل') }}">
-                <button type="button" class="urow-item" data-urow-open="extend">
+                <button type="button" class="urow-item" data-urow-open="extend"{% if not _sa.get('extend', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-clock"></i> {{ _('تجديد / إضافة وقت') }}
                 </button>
                 {# «إضافة رصيد نقدي» أُخفِيت — مُوحَّدة مع «تسجيل دفعة نقدية» (انظر التعليق
                    في شريط الإجراءات السريع أعلاه). #}
-                <button type="button" class="urow-item" data-urow-open="quota">
+                <button type="button" class="urow-item" data-urow-open="quota"{% if not _sa.get('quota', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة / جيجا') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="payment">
+                <button type="button" class="urow-item" data-urow-open="payment"{% if not _sa.get('payment', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="loan">
+                <button type="button" class="urow-item" data-urow-open="loan"{% if not _sa.get('loan', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}
                 </button>
                 <div class="urow-sep"></div>
-                <button type="button" class="urow-item" data-urow-open="quota-reset">
+                <button type="button" class="urow-item" data-urow-open="quota-reset"{% if not _sa.get('quota_reset', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
                 </button>
               </div>
@@ -1211,44 +1244,44 @@
                 <i class="fa-solid fa-sliders"></i> {{ _('إدارية') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
               <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات إدارية') }}">
-                <a class="urow-item" href="{{ url_for('radius.users_edit', username=u.username) }}">
+                {% if can_submit('radius.users_edit', 'GET') %}<a class="urow-item"{% if not _sa.get('edit', True) %} hidden data-perm-denied{% endif %} href="{{ url_for('radius.users_edit', username=u.username) }}">
                   <i class="fa-solid fa-pen"></i> {{ _('تعديل المشترك') }}
-                </a>
-                <a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
+                </a>{% endif %}
+                {% if can_submit('radius.users_finance', 'GET') %}<a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
                   <i class="fa-solid fa-wallet"></i> {{ _('الدفعات والسلف') }}
-                </a>
+                </a>{% endif %}
                 <div class="urow-sep"></div>
-                <button type="button" class="urow-item" data-urow-open="sms">
+                <button type="button" class="urow-item" data-urow-open="sms"{% if not _sa.get('send_message', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تفعيل') }}
                 </button>
-                <button type="button" class="urow-item" data-send-credentials
+                <button type="button" class="urow-item"{% if not _sa.get('send_credentials', True) %} hidden data-perm-denied{% endif %} data-send-credentials
                         data-credentials-url="{{ url_for('radius.users_send_credentials', username=u.username) }}"
                         data-username="{{ u.username|e }}"
                         title="{{ _('إرسال اسم المستخدم وكلمة المرور للمشترك عبر SMS') }}">
                   <i class="fa-solid fa-id-card"></i> {{ _('إرسال بيانات المشترك') }}
                 </button>
-                <button type="button" class="urow-item" data-urow-open="plan">
+                <button type="button" class="urow-item" data-urow-open="plan"{% if not _sa.get('change_plan', True) %} hidden data-perm-denied{% endif %}>
                   <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض / السرعة') }}
                 </button>
-                <form method="post" action="{{ url_for('radius.online_disconnect') }}">
+                {% if can_submit('radius.online_disconnect', 'POST') %}<form method="post"{% if not _sa.get('disconnect', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.online_disconnect') }}">
                   <input type="hidden" name="username" value="{{ u.username }}">
                   <button type="submit" class="urow-item">
                     <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
                   </button>
-                </form>
-                <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}">
+                </form>{% endif %}
+                {% if can_submit('radius.users_toggle', 'POST') %}<form method="post"{% if not _sa.get('status', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_toggle', username=u.username) }}">
                   <button type="submit" class="urow-item">
                     <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
                     {{ 'تعطيل المشترك' if u.status=='enabled' else 'تفعيل المشترك' }}
                   </button>
-                </form>
+                </form>{% endif %}
                 <div class="urow-sep"></div>
-                <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
+                {% if can_submit('radius.users_delete', 'POST') %}<form method="post"{% if not _sa.get('delete', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_delete', username=u.username) }}"
                       data-urow-confirm="أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
                   <button type="submit" class="urow-item urow-item--danger">
                     <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المشترك') }}
                   </button>
-                </form>
+                </form>{% endif %}
               </div>
             </div>
           </td>
@@ -1324,15 +1357,17 @@
     icon="users-slash"
   ) }}
   {% if (manager_can_write is not defined or manager_can_write('subscribers'))
-        and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create')) %}
-  <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
+        and (manager_action_allowed is not defined or manager_action_allowed('subscriber.create'))
+        and not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
+  {% if can_submit('radius.users_new', 'GET') %}<a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
      style="margin-top:4px">
     <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
-  </a>
+  </a>{% endif %}
   {% endif %}
 </div>
 {% endif %}
 
+{% if can_submit('radius.users_change_plan') %}
 <div class="usq-modal" data-usq-modal="plan" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-plan-title">
     <form method="post" data-usq-modal-form="plan" data-action-template="{{ url_for('radius.users_change_plan', username='__USERNAME__') }}">
@@ -1351,9 +1386,13 @@
         <label class="usq-field">{{ _('عرض جديد') }}
           <select class="hub-select" name="plan_id" required data-usq-plan-select>
             <option value="">{{ _('اختر العرض') }}</option>
-            {% for p in plans %}
-              <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ p.duration_minutes or 0 }}">
-                {{ p.name }} — {{ (p.price or 0)|money }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
+            {# الباقات المعطّلة لا تُعرض (الخادم يرفضها)، والحالية تُعطَّل عند الفتح.
+               الاتجاه (أرخص/أغلى) بسعر الدقيقة — نفس قاعدة الخادم (plan_rate_per_minute). #}
+            {% for p in plans if p.enabled %}
+              {%- set _opt_minutes = p.duration_minutes or ((p.validity_days or 0) * 1440) or 43200 -%}
+              <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ _opt_minutes }}"
+                      data-rate="{{ ((p.price or 0) / _opt_minutes) if (p.price or 0) > 0 else 0 }}">
+                {{ p.name|truncate(60, True, '…') }} — {{ (p.price or 0)|money }}{% if p.currency and p.currency != cfg.currency %} {{ p.currency }}{% endif %}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
               </option>
             {% endfor %}
           </select>
@@ -1397,12 +1436,13 @@
     </form>
   </div>
 </div>
+{% endif %}
 
 <div class="usq-modal" data-usq-modal="extend" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-extend-title">
     <form method="post" data-usq-modal-form="extend"
           data-action-template="{{ url_for('radius.users_extend', username='__USERNAME__') }}"
-          data-bulk-action="{{ url_for('radius.users_extend_bulk') }}">
+          data-bulk-action="{{ url_for('radius.users_extend_bulk') }}">{% if not can_submit('radius.users_extend_bulk') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="minutes" data-usq-minutes value="1440">
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
@@ -1504,13 +1544,13 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_extend_bulk') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
 <div class="usq-modal" data-usq-modal="sms" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-sms-title">
-    <form method="post" data-usq-modal-form="sms"
+    {% if can_submit('radius.users_send_sms_bulk', 'POST') %}<form method="post" data-usq-modal-form="sms"
           data-action-template="{{ url_for('radius.users_send_sms', username='__USERNAME__') }}"
           data-bulk-action="{{ url_for('radius.users_send_sms_bulk') }}">
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند الإرسال الجماعي #}
@@ -1563,7 +1603,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
@@ -1571,7 +1611,7 @@
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-quota-title">
     <form method="post" data-usq-modal-form="quota"
           data-action-template="{{ url_for('radius.users_quota_topup', username='__USERNAME__') }}"
-          data-bulk-action="{{ url_for('radius.users_quota_topup_bulk') }}">
+          data-bulk-action="{{ url_for('radius.users_quota_topup_bulk') }}">{% if not can_submit('radius.users_quota_topup_bulk') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
@@ -1637,7 +1677,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_quota_topup_bulk') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
@@ -1645,7 +1685,7 @@
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-quota-reset-title">
     <form method="post" data-usq-modal-form="quota-reset"
           data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}"
-          data-bulk-action="{{ url_for('radius.users_quota_reset_daily_bulk') }}">
+          data-bulk-action="{{ url_for('radius.users_quota_reset_daily_bulk') }}">{% if not can_submit('radius.users_quota_reset_daily_bulk') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
@@ -1707,13 +1747,13 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('استعادة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_quota_reset_daily_bulk') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
 <div class="usq-modal" data-usq-modal="balance" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-balance-title">
-    <form method="post" data-usq-modal-form="balance"
+    {% if can_submit('radius.users_balance_add_bulk', 'POST') %}<form method="post" data-usq-modal-form="balance"
           data-action-template="{{ url_for('radius.users_balance_add', username='__USERNAME__') }}"
           data-bulk-action="{{ url_for('radius.users_balance_add_bulk') }}">
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
@@ -1760,13 +1800,13 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
 <div class="usq-modal" data-usq-modal="payment" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-payment-title">
-    <form method="post" data-usq-modal-form="payment"
+    {% if can_submit('radius.users_payment_create_bulk', 'POST') %}<form method="post" data-usq-modal-form="payment"
           data-action-template="{{ url_for('radius.users_payment_create', username='__USERNAME__') }}"
           data-bulk-action="{{ url_for('radius.users_payment_create_bulk') }}">
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
@@ -1816,7 +1856,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
@@ -1824,7 +1864,7 @@
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-loan-title">
     <form method="post" data-usq-modal-form="loan"
           data-action-template="{{ url_for('radius.users_loan_create', username='__USERNAME__') }}"
-          data-bulk-action="{{ url_for('radius.users_loan_create_bulk') }}">
+          data-bulk-action="{{ url_for('radius.users_loan_create_bulk') }}">{% if not can_submit('radius.users_loan_create_bulk') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
@@ -1887,7 +1927,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.users_loan_create_bulk') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 
@@ -1895,7 +1935,7 @@
 <div class="usq-modal" data-users-bulk-modal hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="ubulk-title" style="width:min(560px,100%)">
     <div class="usq-head">
-      <h3 id="ubulk-title">{{ _('تأكيد حذف المشتركين المحددين') }}</h3>
+      <h3 id="ubulk-title">{{ _('تأكيد أرشفة المشتركين المحددين') }}</h3>
       <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-users-bulk-cancel aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
@@ -1918,7 +1958,8 @@
     <div class="usq-foot">
       <button class="hub-btn hub-btn--ghost" type="button" data-users-bulk-cancel>{{ _('إلغاء') }}</button>
       <button class="hub-btn hub-btn--danger" type="button" data-users-bulk-confirm disabled>
-        <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائي للتحديد') }}
+        {# كان «حذف نهائي» والإجراء أرشفةٌ قابلة للاسترجاع (re-test R01 N13). #}
+        <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المحدَّدين (نقل للسلّة)') }}
       </button>
     </div>
   </div>
@@ -1989,7 +2030,10 @@
     }
     page.querySelectorAll("[data-usq-current='username']").forEach((el) => { el.textContent = data.username || "—"; });
     page.querySelectorAll("[data-usq-current='plan']").forEach((el) => { el.textContent = data.planName || "—"; });
-    page.querySelectorAll("[data-usq-current='expire']").forEach((el) => { el.textContent = data.expire || "—"; });
+    page.querySelectorAll("[data-usq-current='expire']").forEach((el) => {
+      // ⁦…⁩ (LRI/PDI): بدونهما ينعكس ترتيب التاريخ/الوقت داخل سياق RTL (بلاغ D9)
+      el.textContent = data.expire ? "⁦" + data.expire + "⁩" : "—";
+    });
     page.querySelectorAll("[data-usq-current='price']").forEach((el) => {
       const price = parseFloat(data.planPrice || "0");
       el.textContent = price > 0 ? fmtMoney(price, data.planCurrency) : "—";
@@ -2075,7 +2119,8 @@
     const amount = parseFloat(modal.querySelector("[data-usq-balance-amount]")?.value || "0");
     // Open-loan settlement: «خصم» loans are deducted; the wallet gets the rest.
     const rows = loanRows(modal);
-    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0), Math.max(amount, 0));
     const actions = rows.filter((r) => r.action !== "defer").map((r) => ({loan_id: r.loan_id, action: r.action}));
     const field = modal.querySelector("[data-usq-actions]");
     if (field) field.value = actions.length ? JSON.stringify(actions) : "";
@@ -2138,6 +2183,20 @@
     }
     if (scope === "extend") syncExtendAmount();
   }
+  // سعر مدّة = نفس دالّة الخادم calculate_proportional_amount حرفيًّا: السعر
+  // بالقروش × الدقائق ÷ دقائق الباقة بحسابٍ صحيح، مقرّبًا نصفًا للأعلى — كان
+  // Math.round على فاصلة عائمة يختلف بقرش عن الـAPI/الجماعيّ (0.63 مقابل 0.62).
+  function hrPriceOfMinutes(price, minutes, planMin) {
+    const cents = Math.round((Number(price) || 0) * 100);
+    const m = Math.floor(Number(minutes) || 0);
+    const base = Math.floor(Number(planMin) || 0);
+    if (cents <= 0 || m <= 0 || base <= 0) return 0;
+    const n = cents * m;
+    let q = Math.floor(n / base);
+    const r = n - q * base;
+    if (2 * r >= base) q += 1;
+    return q / 100;
+  }
   // «منح سلفة» — debt loans are priced from DAYS: amount = effective price ×
   // (duration / plan duration). The amount field is read-only (auto), and a live
   // preview «سيتم تسجيل دين ٣ أيام بقيمة ٩ ₪» reassures the operator.
@@ -2151,8 +2210,7 @@
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
-    const amount = (price > 0 && planMin > 0 && minutes > 0)
-      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amount = hrPriceOfMinutes(price, minutes, planMin);
     const amtField = modal.querySelector("[data-usq-loan-amount]");
     // «مجانية» = وقت فقط بلا قيمة: الحقل المخفيّ كان يُرسل المبلغ المحسوب
     // فيُسجَّل دينًا على العروض المسعّرة. القيمة تُرسَل في وضع الدين وحده.
@@ -2178,8 +2236,7 @@
     const price = parseFloat(activeRow.dataset.planPrice || "0");
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
-    const amount = (price > 0 && planMin > 0 && minutes > 0)
-      ? Math.round(price * (minutes / planMin) * 100) / 100 : 0;
+    const amount = hrPriceOfMinutes(price, minutes, planMin);
     const amtField = modal.querySelector("[data-usq-extend-amount]");
     if (amtField) amtField.value = amount ? amount.toFixed(2) : "0";
     const mode = modal.querySelector("input[name='charge_mode']:checked")?.value || "free";
@@ -2215,7 +2272,8 @@
     const planMin = parseInt(activeRow.dataset.planMinutes || "0", 10);
     const cur = activeRow.dataset.planCurrency || {{ cfg.currency|tojson }};
     const rows = loanRows(modal);
-    const settled = rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0);
+    // الخادم يسدّد من المبلغ المدفوع فقط (تسوية جزئيّة) — لا يُعرض خصمٌ أكبر منه.
+    const settled = Math.min(rows.filter((r) => r.action === "settle").reduce((t, r) => t + r.amount, 0), Math.max(amount, 0));
     const timeAmount = Math.max(amount - settled, 0);
     // أنسب وحدة (فترة/أيام/ساعات/دقائق) بدل «≈ 0 يوم» لباقة دون اليوم — مصدر مشترك.
     const cover = coverageCover(timeAmount, price, planMin);
@@ -2225,11 +2283,19 @@
     if (field) field.value = actions.length ? JSON.stringify(actions) : "";
     const cov = modal.querySelector("[data-usq-coverage]");
     if (cov) {
-      if (amount > 0 && price > 0) {
+      // F08-L: المبلغ يشتري أكثر من سنة → قاعدة المالك (أقصى تمديد في المرّة سنة)
+      // بدل «≈ 428571 يوم» — الخادم سيرفضه بنفس النصّ.
+      const _overCap = price > 0 && planMin > 0 && (timeAmount / price) * planMin > {{ hr_limits.extend_max_days }} * 1440;
+      if (amount > 0 && price > 0 && _overCap) {
+        cov.textContent = {{ hr_limits.extend_too_long|tojson }} + " " + {{ _("(المبلغ يغطّي أكثر من سنة — قسّمه على أكثر من دفعة).")|tojson }};
+        cov.classList.add("is-over-cap");
+      } else if (amount > 0 && price > 0) {
+        cov.classList.remove("is-over-cap");
         let msg = `${ {{ _("يُطبَّق على الحساب ويُمدِّد الانتهاء بـ ≈")|tojson }} } ${cover || arDuration(0)}.`;
         if (settled > 0) msg = `${ {{ _("سيُخصم")|tojson }} } ${fmtMoney(settled, cur)} ${ {{ _("لتسوية سلف؛ والباقي")|tojson }} } ${fmtMoney(timeAmount, cur)} → ${msg}`;
         cov.textContent = msg;
       } else {
+        cov.classList.remove("is-over-cap");
         cov.textContent = {{ _("أدخل المبلغ لعرض المدّة التي يُضيفها للحساب.")|tojson }};
       }
     }
@@ -2386,7 +2452,13 @@
     const at = modal.querySelector("[data-usq-exact-at]");
     if (at) {
       at.disabled = mode !== "exact";
-      if (mode === "exact" && !at.value) at.value = defaultExactValue();
+      if (mode === "exact" && !at.value) {
+        at.value = defaultExactValue();
+        // بدون هذا الحدث تبقى لوحة hub_date تعرض «اختر التاريخ والوقت»
+        // بينما القيمة الفعليّة محدَّدة سلفًا — فيحفظ المستخدم تاريخًا لم
+        // يره قط. أطلق change كي يعرض التسمية القيمة الحقيقيّة فورًا.
+        at.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     }
     updateMinutes();
     syncExtendAmount();
@@ -2410,7 +2482,9 @@
   function updateMinutes() {
     const form = page.querySelector("[data-usq-modal-form='extend']");
     if (!form) return;
-    form.querySelector("[data-usq-minutes]").value = String(Math.max(1, readDurationMinutes(form)));
+    // لا max(1, …): مدّة 0/فارغة كانت تُرسَل «1» فتُضاف دقيقة بصمت. الخادم
+    // يرفض 0 برسالة عربيّة (مثل الـAPI).
+    form.querySelector("[data-usq-minutes]").value = String(readDurationMinutes(form));
   }
 
   function updatePlanPolicy() {
@@ -2418,20 +2492,42 @@
     const row = activeRow;
     if (!form || !row) return;
     const select = form.querySelector("[data-usq-plan-select]");
+    // العرض الحاليّ لا يُختار (الخادم يرفض «تغيير» إلى نفس العرض).
+    Array.from(select.options).forEach((opt) => {
+      opt.disabled = !!opt.value && opt.value === row.dataset.planId;
+    });
+    if (select.options[select.selectedIndex]?.disabled) {
+      select.value = "";
+      // بدون هذا الحدث تبقى تسمية hub_select القديمة ظاهرة (تعرض عرضًا لم
+      // يعد مختارًا فعليًا)، فيظنّ المستخدم أنّ شيئًا مختار ويضغط حفظ.
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     const selected = select.options[select.selectedIndex];
-    const currentPrice = parseFloat(row.dataset.planPrice || "0");
-    const nextPrice = parseFloat(selected?.dataset.price || "0");
-    const samePlan = selected?.value && selected.value === row.dataset.planId;
-    const mode = (!selected?.value || samePlan || currentPrice <= 0 || nextPrice <= 0)
-      ? "neutral"
-      : (nextPrice < currentPrice ? "lower" : (nextPrice > currentPrice ? "higher" : "neutral"));
+    // 🔴 الاتجاه بسعر الدقيقة لا بالسعر الإجماليّ: 70/30 يومًا → 5/يوم كان
+    // «أرخص» فيُعرض «تعويض» ثم لا يحدث شيء (الخادم يحسب بالدقيقة).
+    const currentRate = parseFloat(row.dataset.planRate || "0");
+    const nextRate = parseFloat(selected?.dataset.rate || "0");
+    const EPS = 1e-9;
+    let mode = "neutral";
+    if (selected?.value) {
+      if (currentRate <= 0 && nextRate > 0) mode = "higher";
+      else if (currentRate > 0 && nextRate <= 0) mode = "lower";
+      else if (nextRate < currentRate - EPS) mode = "lower";
+      else if (nextRate > currentRate + EPS) mode = "higher";
+    }
     page.querySelectorAll("[data-usq-policy]").forEach((box) => {
       const visible = box.dataset.usqPolicy === mode;
       box.hidden = !visible;
       box.querySelectorAll("input[name='policy']").forEach((input, idx) => {
         input.disabled = !visible;
         input.checked = visible && idx === 0;
+        // لا تعويض بأيامٍ على عرضٍ مجّانيّ (الخادم يرفضه).
+        if (visible && input.value === "lower_compensate" && nextRate <= 0) input.disabled = true;
       });
+      if (visible && mode === "lower" && nextRate <= 0) {
+        const keep = box.querySelector("input[value='lower_keep_expiry']");
+        if (keep) keep.checked = true;
+      }
     });
     const hint = page.querySelector("[data-usq-plan-hint]");
     if (hint) {
@@ -2570,6 +2666,7 @@
   });
 
   // ── Per-row two-menu dropdowns (تفعيل / إدارية) ────────────
+  let rowPopOpenedAt = 0;
   function closeRowPops() {
     page.querySelectorAll("[data-urow-pop]").forEach((pop) => { pop.hidden = true; });
     page.querySelectorAll("[data-urow-trigger][aria-expanded='true']")
@@ -2601,6 +2698,7 @@
       pop.style.top = `${top}px`;
       pop.style.visibility = "";
       trigger.setAttribute("aria-expanded", "true");
+      rowPopOpenedAt = Date.now();
     });
   });
   // Per-row modal openers: set this row as the active context, then open.
@@ -2659,7 +2757,16 @@
   });
 
   document.addEventListener("click", closeRowPops);
-  window.addEventListener("resize", closeRowPops);
+  // انطواء شريط عنوان الجوّال أو ظهور لوحة المفاتيح يُطلقان resize لم
+  // يطلبه المستخدم — تجاهل تغيّر الارتفاع فقط، أغلق عند تغيّر العرض
+  // الفعلي (نفس إصلاح hub_select.js/hub_date.js).
+  let rowPopLastW = window.innerWidth;
+  window.addEventListener("resize", () => {
+    const w = window.innerWidth;
+    if (w === rowPopLastW) return;
+    rowPopLastW = w;
+    closeRowPops();
+  });
   page.querySelector(".hr-table-scroll")?.addEventListener("scroll", closeRowPops);
 
   page.querySelectorAll("[data-usq-close]").forEach((button) => {
@@ -2674,6 +2781,14 @@
     if (event.key === "Escape") { closeModals(); closeBulkModal(); }
   });
   page.querySelector("[data-usq-plan-select]")?.addEventListener("change", updatePlanPolicy);
+  // رسالة تحقّق عربيّة بدل «Please select an item in the list.» الإنجليزيّة
+  // الأصليّة — تظهر إذا حاول المستخدم الحفظ والحقل ما يزال فارغًا.
+  page.querySelector("[data-usq-plan-select]")?.addEventListener("invalid", (event) => {
+    event.target.setCustomValidity({{ _("الرجاء اختيار عرض من القائمة.")|tojson }});
+  });
+  page.querySelector("[data-usq-plan-select]")?.addEventListener("change", (event) => {
+    event.target.setCustomValidity("");
+  });
   page.querySelectorAll("[data-usq-dur-value], [data-usq-dur-unit]").forEach((input) => {
     const ev = input.tagName === "SELECT" ? "change" : "input";
     input.addEventListener(ev, () => { updateMinutes(); syncExtendAmount(); });
@@ -2955,22 +3070,38 @@
   });
 
   // ── Password column: reveal-eye + copy-to-clipboard ──────────
-  // The masked text node holds the dots; data-hr-pw on the <td>
-  // carries the real password (the page is admin-only and the DB
-  // already stores plaintext for RADIUS PAP/CHAP).
+  // fix3 (F01 F5): the password is not in the page. It is fetched on demand
+  // from users_password (permission + scope checked server-side) and kept in
+  // memory only for this cell.
+  const pwCache = new WeakMap();
+  async function fetchPw(cell) {
+    if (pwCache.has(cell)) return pwCache.get(cell);
+    const url = cell.dataset.hrPwUrl || "";
+    if (!url) return "";
+    try {
+      const res = await fetch(url, {headers: {"Accept": "application/json",
+                                              "X-Requested-With": "fetch"},
+                                    credentials: "same-origin"});
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j || !j.ok) return "";
+      pwCache.set(cell, String(j.password || ""));
+      return pwCache.get(cell);
+    } catch (e) { return ""; }
+  }
   document.querySelectorAll("[data-hr-pw-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const cell = btn.closest(".hr-pw-cell");
       if (!cell) return;
       const txt = cell.querySelector("[data-hr-pw-text]");
       const icon = btn.querySelector("i");
-      const pw = cell.dataset.hrPw || "";
       const revealed = txt.dataset.revealed === "1";
       if (revealed) {
         txt.textContent = "••••••••";
         txt.dataset.revealed = "0";
         if (icon) { icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); }
       } else {
+        const pw = await fetchPw(cell);
+        if (!pw) return;
         txt.textContent = pw;
         txt.dataset.revealed = "1";
         if (icon) { icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); }
@@ -2978,10 +3109,10 @@
     });
   });
   document.querySelectorAll("[data-hr-pw-copy]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const cell = btn.closest(".hr-pw-cell");
       if (!cell) return;
-      const pw = cell.dataset.hrPw || "";
+      const pw = await fetchPw(cell);
       if (!pw) return;
       const icon = btn.querySelector("i");
       const flash = (ok) => {
@@ -3034,6 +3165,10 @@
   const dateWrap  = document.querySelector("[data-users-date-range]");
   const dateFrom  = document.querySelector("[data-users-date-from]");
   const dateTo    = document.querySelector("[data-users-date-to]");
+  const liveHint  = document.querySelector("[data-users-search-hint]");
+  /* ما طبّقه الخادم فعلًا (q في الرابط) — الفلترة الفوريّة لما يختلف عنه
+     تخصّ الصفحة المحمّلة فقط، فنُظهر «اضغط Enter…». */
+  const serverQ   = (new URLSearchParams(window.location.search).get("q") || "").trim().toLowerCase();
 
   const cellText = (r, col) => {
     const td = r.querySelector('[data-col="' + col + '"]');
@@ -3064,6 +3199,7 @@
       r.style.display = hit ? "" : "none";
     });
     if (clearBtn) clearBtn.hidden = !(q && q.value);
+    if (liveHint) liveHint.hidden = !(scope !== "created" && needle && needle !== serverQ);
   };
 
   if (q) {
@@ -3094,20 +3230,16 @@
   if (q && q.value) applyFilter();   // أظهر زر المسح إن وُجد بحث محفوظ من الخادم
 
   /* ── تصدير CSV / Excel / PDF ──
-     نصدّر كل الصفوف (لا الصفحة الحالية فقط) مع احترام البحث الفوري،
-     ونستثني عمودَي التحديد والإجراءات من الملف. */
-  if (table.tHead) {
-    Array.from(table.tHead.rows[0].cells).forEach(th => {
-      const k = th.dataset.col;
-      if (k === "chk" || k === "actions") th.setAttribute("data-uds-noexport", "");
-    });
-  }
-  const exportRows = () => rows().filter(r => !r.hasAttribute("data-live-hidden"));
+     كل المطابقين لفلاتر الصفحة (البحث/الحالة/العرض/المجموعة…) من الخادم —
+     كان التصدير يأخذ صفوف الصفحة المعروضة فقط (10 من 704، re-test R12 N9). */
   document.querySelectorAll("[data-users-export]").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (!window.hubTableExport) return;
-      window.hubTableExport(table, {{ _("قائمة المشتركين")|tojson }},
-        btn.getAttribute("data-users-export"), { rows: exportRows() });
+      const params = new URLSearchParams(window.location.search);
+      ["page", "page_size"].forEach(k => params.delete(k));
+      const live = q && q.value ? q.value.trim() : "";
+      if (live) params.set("q", live);
+      params.set("fmt", btn.getAttribute("data-users-export") || "csv");
+      window.open({{ url_for('radius.users_export')|tojson }} + "?" + params.toString(), "_blank");
     });
   });
 

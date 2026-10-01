@@ -14,7 +14,8 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
-from ..core.errors import RadiusError
+from ..core.errors import RadiusError, RadiusValidationError
+from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
 from ..services.accounting import service_from_context
@@ -23,6 +24,8 @@ from ..services.users import get_users_service
 from ..services import subscriber_actions as _sa
 from .speed_rules_ui import create_staged_speed_rules, handle_embedded_speed_rule, speed_rules_panel
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
+from ..core.numbers import check_expiry, check_extend_minutes
+from ..services.accounting import calculate_proportional_amount
 
 
 # ════════════════════════════════════════════════════════════════
@@ -197,6 +200,7 @@ def _profile_temp_speed_state(sub, now: datetime) -> dict:
 def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
     bp.add_url_rule("/subscribers", "subscribers_list", users_list, methods=["GET"])
+    bp.add_url_rule("/users/export", "users_export", users_export, methods=["GET"])
     bp.add_url_rule("/users/new", "users_new", users_new, methods=["GET"])
     bp.add_url_rule("/users", "users_create", users_create, methods=["POST"])
     bp.add_url_rule("/users/<username>/profile", "users_profile", users_profile, methods=["GET"])
@@ -209,6 +213,9 @@ def register_users_routes(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule("/users/<username>/edit", "users_edit", users_edit, methods=["GET"])
+    # fix3 (F01 F5): the list fetches a password on demand (never embedded).
+    bp.add_url_rule("/users/<username>/password", "users_password", users_password,
+                    methods=["GET"])
     bp.add_url_rule("/users/<username>", "users_update", users_update, methods=["POST"])
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
     bp.add_url_rule("/users/bulk-delete", "users_bulk_delete", users_bulk_delete, methods=["POST"])
@@ -265,18 +272,12 @@ def _subscriber_scope_admin_id():
     None (بلا عزل) حين يكون المُستخدِم المالك/السوبر أو يَملك صلاحية «عرض كل
     المشتركين» (can_view_all_subscribers). خلاف ذلك = معرّفه هو، فتُقصَر
     القائمة على مشتركيه ∪ مشتركي موزّعيه (عزل خادميّ في subscribers_repo)."""
-    from ..auth.session_helpers import current_admin_id, is_super_admin
+    from ..auth.session_helpers import is_super_admin
     if is_super_admin():
         return None
-    me = current_admin_id()
-    if not me:
-        return None
-    from ..services.manager_distributor_ops import ManagerDistributorOpsService
-    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
-        entity_type="manager", entity_id=int(me), permission="can_view_all_subscribers"
-    ):
-        return None
-    return int(me)
+    # D09: المسند المشترك للويب والـAPI (services/subscriber_scope).
+    from ..services.subscriber_scope import scope_admin_id
+    return scope_admin_id(tenant_id=_tid())
 
 
 def _form_float(name: str, default: float = 0.0) -> float:
@@ -399,6 +400,96 @@ _WEB_FORM_UNMANAGED = (
 )
 
 
+# ── F03-N1/N2: «احفظ ما غيّره المشغّل فقط» ─────────────────────────────────
+# صفحة تعديلٍ تُركت مفتوحة كانت تُعيد كلّ حقلٍ تغيّر بعد فتحها (الباقة بعد تغيير
+# مدفوع، السعر المخصّص، الجوال، الحالة — فيُعاد تفعيل مشتركٍ عُطّل…) لأنّ كلّ
+# قيمةٍ مُرسَلة تختلف عن الصفّ **لحظة الحفظ** كانت تُعَدّ تغييرًا. الآن تحمل الصفحة
+# لقطةَ قيَم الحقول لحظة فتحها (_form_orig) — حقلٌ مُرسَلٌ بقيمته المحمَّلة نفسها
+# لم يلمسه المشغّل فتبقى قيمته **الحاليّة** في القاعدة. (التاريخ: expire_orig،
+# و«بدون انتهاء»: no_expiry_orig.)
+_FORM_ORIG_SKIP = frozenset({
+    # fix3 integration: pppoe_password is a secret like password — a digest
+    # only (scope F01 F5 hides it from admins without «رؤية كلمة مرور المشترك»;
+    # the plain snapshot would have leaked it through the hidden field).
+    "id", "tenant_id", "username", "password", "pppoe_password", "metadata",
+    "expire_at", "user_type",
+    "working_days", "updated_by", "updated_at", "deleted_at", "deleted_by",
+    "delete_reason",
+}) | frozenset(_WEB_FORM_UNMANAGED)
+
+
+def _orig_norm(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return str(int(f)) if f == int(f) else repr(round(f, 6))
+    if isinstance(v, datetime):
+        return v.isoformat()
+    return str(v).strip()
+
+
+def _orig_same(a: str, b: str) -> bool:
+    return a == b or {a, b} <= {"", "0"}
+
+
+def _pw_digest(pw) -> str:
+    import hashlib
+    return hashlib.sha256(("hr-form-orig|" + str(pw or "")).encode("utf-8")).hexdigest()[:32]
+
+
+def form_orig_snapshot(sub: Subscriber) -> str:
+    """لقطة JSON لقيَم النموذج لحظة فتح صفحة التعديل (حقل مخفيّ _form_orig).
+    كلمة المرور بصمةٌ فقط (لا تُكشَف في الـDOM)."""
+    from dataclasses import fields as _fields
+    snap = {f.name: _orig_norm(getattr(sub, f.name, None))
+            for f in _fields(sub) if f.name not in _FORM_ORIG_SKIP}
+    flat = _grouped_to_flat(_parse_metadata(getattr(sub, "metadata", None)))
+    meta = {mf: _orig_norm(flat.get(mf)) for mf in _META_FIELDS}
+    return json.dumps({"f": snap, "m": meta, "pw": _pw_digest(sub.password),
+                       "ppw": _pw_digest(getattr(sub, "pppoe_password", None))},
+                      ensure_ascii=False, separators=(",", ":"))
+
+
+def _posted_form_orig() -> dict | None:
+    raw = (request.form.get("_form_orig") or "").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _keep_untouched_fields(dto: Subscriber, before: Subscriber | None) -> Subscriber:
+    """حقلٌ أُرسل بقيمته المحمَّلة (لم يلمسه المشغّل) ⇒ قيمة القاعدة **الآن**."""
+    orig = _posted_form_orig()
+    if before is None or not orig:
+        return dto
+    from dataclasses import replace as _replace
+    snap = orig.get("f") or {}
+    keep = {}
+    for name, was in snap.items():
+        if name in _FORM_ORIG_SKIP or not hasattr(dto, name) or not hasattr(before, name):
+            continue
+        if _orig_same(_orig_norm(getattr(dto, name)), str(was)):
+            keep[name] = getattr(before, name)
+    if "connection_schedule" in keep:
+        keep["working_days"] = before.working_days
+    # كلمة المرور: نفس الكلمة المحمَّلة ⇒ لم تُغيَّر (تغييرٌ عبر الـAPI بعد فتح
+    # الصفحة يبقى). فارغة ⇒ الخدمة تُبقي المخزَّنة أصلًا.
+    if dto.password and orig.get("pw") and _pw_digest(dto.password) == orig.get("pw"):
+        keep["password"] = before.password
+    _ppw = getattr(dto, "pppoe_password", None)
+    if (_ppw and orig.get("ppw") and hasattr(before, "pppoe_password")
+            and _pw_digest(_ppw) == orig.get("ppw")):
+        keep["pppoe_password"] = before.pppoe_password
+    return _replace(dto, **keep) if keep else dto
+
+
 def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) -> Subscriber:
     """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata).
 
@@ -438,8 +529,13 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
 
     # metadata: نجمع الحقول المسطّحة من الـ form ثم نُجمّعها
     flat_meta = {}
+    # F03-N1: حقلٌ وصفيّ لم يلمسه المشغّل (نفس قيمته لحظة فتح الصفحة) لا يُكتب —
+    # فتبقى قيمته الحاليّة في القاعدة (دمجٌ مع base_meta أدناه).
+    _orig_meta = ((_posted_form_orig() or {}).get("m") or {}) if existing is not None else {}
     for mf in _META_FIELDS:
         v = _s(mf)
+        if mf in _orig_meta and _orig_same(_orig_norm(v), str(_orig_meta.get(mf))):
+            continue
         if v:
             flat_meta[mf] = v
 
@@ -510,20 +606,41 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     #     «23:59» في غزّة تُخزَّن 23:59 UTC = 02:59 من **اليوم التالي**: يومٌ
     #     زائدٌ بثلاث ساعاتٍ لم يبعه أحد.
     # الآن: الساعةُ حقلٌ (فارغٌ = آخرُ اللحظة كما كانت)، والتحويلُ مرّةً واحدة.
-    _e_t = (_s("expire_time") or "").strip() or "23:59:59"
+    _e_t_raw = (_s("expire_time") or "").strip()
+    _e_t = _e_t_raw or "23:59:59"
     _expire_at = None
+    _no_expiry = _form_no_expiry()
     if _e_y and _e_m and _e_d:
         from ..core.system_config import from_local
         _expire_at = from_local(f"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {_e_t}")
+        # «ساعة الانتهاء» تُعرض HH:MM فكان كلّ حفظٍ يقصّ الثواني (…:27Z ⇒
+        # …:00Z). ساعةٌ لم تتغيّر دقيقتُها تحتفظ بثواني النهاية المخزّنة.
+        _prev = getattr(existing, "expire_at", None) if existing is not None else None
+        if (_expire_at is not None and _prev is not None and _e_t_raw
+                and len(_e_t_raw) == 5 and _e_t_raw == _local_hhmm(_prev)):
+            _expire_at = _expire_at.replace(second=_prev.second)
+    if existing is not None and "expire_orig" in request.form:
+        # 🔴 النموذج يُرسل التاريخ كما حُمِّل. تجديدٌ جرى بعد فتح الصفحة كان
+        # يُعاد إلى الوراء بحفظ «ملاحظات» فقط (re-test R01 N2). المرجعُ قيمةُ
+        # الصفحة لحظة فتحها (حقل مخفيّ): منتقٍ لم يلمسه المشغّل ⇒ None ⇒
+        # UsersService.update تُبقي النهاية المخزّنة الآن (المجدَّدة).
+        _posted = (f"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {(_e_t_raw or '23:59')[:5]}"
+                   if (_e_y and _e_m and _e_d) else "")
+        if _posted == _s("expire_orig"):
+            _expire_at = None
     # Blank (or invalid) date:
-    #   • CREATE (existing is None) ⇒ default to the creation moment, so a
-    #     subscriber added WITHOUT picking a date is born EXPIRED (fail-closed).
-    #     The operator must choose a date to make the account usable — we never
-    #     silently create a permanent/never-expiring account by omission.
+    #   • CREATE (existing is None) ⇒ the server setting
+    #     ``subscribers.create_without_expiry``: «expired» (default) = the
+    #     creation moment, so a subscriber added WITHOUT picking a date is born
+    #     EXPIRED (fail-closed); «unlimited» = no expiry (the free HobeHub
+    #     server). The explicit «بدون انتهاء» checkbox always means none.
     #   • EDIT (existing given) ⇒ leave None; UsersService.update preserves the
     #     stored expiry (a blank date on a routine save never changes it).
-    if _expire_at is None and existing is None:
-        _expire_at = datetime.utcnow()
+    if _no_expiry:
+        _expire_at = None
+    elif _expire_at is None and existing is None:
+        from ..core.system_config import default_new_subscriber_expiry
+        _expire_at = default_new_subscriber_expiry()
 
     return Subscriber(
         id=sub_id,
@@ -556,7 +673,7 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         # شخصي
         full_name=_s("full_name"),
         father_name=_s("father_name"),
-        mobile=_s("mobile"),
+        mobile=_latin(_s("mobile")),
         email=_s("email"),
         national_id=_s("national_id"),
         nationality=_s("nationality"),
@@ -612,6 +729,25 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     )
 
 
+def _latin(value: str) -> str:
+    from ..services.subscriber_validation import latin_digits
+    return latin_digits(value)
+
+
+def _form_no_expiry() -> bool:
+    """The explicit «بدون انتهاء» checkbox (NULL expiry = never expires) —
+    the same meaning as ``expire_at: null`` in the API / the app."""
+    return request.form.get("no_expiry", "") in ("1", "on", "true", "yes")
+
+
+def _local_hhmm(dt) -> str:
+    try:
+        from ..core.system_config import to_local
+        return to_local(dt, fmt="%H:%M")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _sub_with_meta_for_template(sub: Subscriber) -> dict:
     """يحوّل sub إلى dict + يسطّح metadata للوصول البسيط من القالب."""
     from dataclasses import asdict
@@ -663,8 +799,9 @@ def _sub_with_meta_for_template(sub: Subscriber) -> dict:
 def users_list():
     q = (request.args.get("q") or "").strip()
     status = (request.args.get("status") or "").strip() or None
-    plan_id = request.args.get("plan_id")
-    plan_id = int(plan_id) if plan_id else None
+    plan_id = (request.args.get("plan_id") or "").strip()
+    # «?plan_id=abc» was a Werkzeug 500 page (re-test R12 N12).
+    plan_id = int(plan_id) if plan_id.isdigit() else None
     group_id_raw = (request.args.get("group_id") or "").strip()
     group_id = int(group_id_raw) if group_id_raw.isdigit() else None
     # «ما يحتاج انتباه» — تصفية مرتبطة بتنبيهات لوحة التحكم.
@@ -963,6 +1100,7 @@ def users_list():
     return render_template("radius/users_list.html",
         items=items, plans=plans, q=q, status=status, plan_id=plan_id,
         group_id=group_id, subscriber_groups=subscriber_groups,
+        can_view_passwords=_can_view_passwords(),
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         attention=attention, online_only=online_only,
@@ -981,6 +1119,135 @@ def users_list():
         total_rows=int(total_rows), total_pages=total_pages,
         all_capped=all_capped, all_render_cap=_ALL_RENDER_CAP,
         sort=sort, sort_dir=sdir)
+
+
+def _can_view_passwords() -> bool:
+    """«رؤية كلمة مرور المشترك» for the session admin (one helper, web + API)."""
+    if session.get("is_super_admin"):
+        return True
+    from ..services.sensitive_visibility import can_view_subscriber_passwords
+    return can_view_subscriber_passwords(session.get("admin_id"),
+                                         perms=session.get("permissions") or (),
+                                         tenant_id=_tid())
+
+
+def users_password(username: str):
+    """GET /users/<username>/password — JSON ``{ok, password}`` for the list's
+    reveal/copy buttons. ``users.view`` + scope (guard) + «رؤية كلمة مرور
+    المشترك» here; every refusal is an Arabic 403, nothing is leaked."""
+    from flask import jsonify
+    if not _can_view_passwords():
+        return jsonify({"ok": False, "error": "لا تملك صلاحية «رؤية كلمة مرور المشترك».",
+                        "permission": "scope.view_passwords"}), 403
+    try:
+        sub = get_users_service().get(username)
+    except RadiusError:
+        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
+    resp = jsonify({"ok": True, "password": sub.password or ""})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+_EXPORT_STATUS_AR = {
+    "enabled": "فعّال", "expired": "منتهي", "disabled": "معطّل",
+    "suspended": "موقوف", "banned": "محظور", "pending": "معلّق",
+}
+_EXPORT_MAX_ROWS = 20000
+
+
+def users_export():
+    """GET /users/export?fmt=csv|xlsx|pdf&<list filters> — every subscriber
+    matching the list filters, not only the rendered page.
+
+    The export buttons used to serialise the table rows in the browser, so a
+    filter with 704 matches at page size 10 exported 10 rows (re-test R12 N9).
+    The same filters as the list (search, status, plan, group, «ما يحتاج
+    انتباه», online, manager scope) are applied in SQL here."""
+    from datetime import datetime as _dt
+
+    from ..core.system_config import to_local
+    from .table_export import _build_csv, _build_pdf, _build_xlsx, _filename
+    from flask import Response
+
+    fmt = (request.args.get("fmt") or "csv").strip().lower()
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip() or None
+    _pid = (request.args.get("plan_id") or "").strip()
+    plan_id = int(_pid) if _pid.isdigit() else None
+    _gid = (request.args.get("group_id") or "").strip()
+    group_id = int(_gid) if _gid.isdigit() else None
+    attention = (request.args.get("attention") or "").strip() or None
+    expiring = None
+    if attention == "expired":
+        status = "expired"
+    elif attention == "expiring_3d":
+        expiring, status = 3, "enabled"
+    usernames_in = None
+    if group_id:
+        try:
+            from ..db.repos import subscriber_groups_repo
+            usernames_in = list(subscriber_groups_repo.list_member_usernames(_tid(), group_id))
+        except Exception:  # noqa: BLE001
+            usernames_in = []
+    if (request.args.get("online") or "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from ..services.live_sessions import live_usernames
+            online = live_usernames(_tid())
+        except Exception:  # noqa: BLE001
+            online = set()
+        usernames_in = (list(set(usernames_in) & online) if usernames_in is not None
+                        else list(online))
+    sort = (request.args.get("sort") or "id").strip()
+    sdir = "asc" if (request.args.get("dir") or "").strip().lower() == "asc" else "desc"
+    svc = get_users_service()
+    filters = dict(status=status, plan_id=plan_id, search=q,
+                   expiring_within_days=expiring,
+                   owner_admin_id=_subscriber_scope_admin_id(),
+                   usernames_in=usernames_in)
+    items: list = []
+    offset = 0
+    while len(items) < _EXPORT_MAX_ROWS:
+        chunk = list(svc.list(order_by=sort, order_dir=sdir, limit=500,
+                              offset=offset, **filters))
+        items.extend(chunk)
+        if len(chunk) < 500:
+            break
+        offset += 500
+    items = items[:_EXPORT_MAX_ROWS]
+    plans = {p.id: p.name for p in get_plans_service().list(limit=500)}
+    now = _dt.utcnow()
+    # fix3 (F01 F18): the balance column only with «رؤية الرصيد».
+    from ..services.sensitive_visibility import can_view_balance
+    show_balance = bool(session.get("is_super_admin")) or can_view_balance(
+        session.get("admin_id"), tenant_id=_tid())
+    columns = ["اسم المستخدم", "الاسم", "الجوال", "العرض", "الحالة",
+               *(["الرصيد"] if show_balance else []),
+               "تاريخ الانتهاء", "تاريخ الإضافة", "ملاحظات"]
+    rows = []
+    for u in items:
+        st = u.status or ""
+        if st == "enabled" and u.expire_at is not None and u.expire_at < now:
+            st = "expired"
+        rows.append([
+            u.username, u.full_name or "", u.mobile or "",
+            plans.get(u.plan_id, "") if u.plan_id else "",
+            _EXPORT_STATUS_AR.get(st, st),
+            *([f"{float(u.balance or 0):.2f}"] if show_balance else []),
+            to_local(u.expire_at, fmt="%Y-%m-%d %H:%M") if u.expire_at else "بدون انتهاء",
+            to_local(u.created_at, fmt="%Y-%m-%d") if u.created_at else "",
+            u.remark or "",
+        ])
+    title = "قائمة المشتركين"
+    if fmt == "pdf":
+        return Response(_build_pdf(title, columns, rows), mimetype="application/pdf",
+                        headers={"Content-Disposition": _filename(title, "pdf")})
+    if fmt == "xlsx":
+        return Response(_build_xlsx(title, columns, rows),
+                        mimetype=("application/vnd.openxmlformats-officedocument"
+                                  ".spreadsheetml.sheet"),
+                        headers={"Content-Disposition": _filename(title, "xlsx")})
+    return Response(_build_csv(columns, rows), mimetype="text/csv",
+                    headers={"Content-Disposition": _filename(title, "csv")})
 
 
 def _form_select_options() -> dict:
@@ -1057,6 +1324,24 @@ def _existing_temp_duration(before) -> int:
         return 0
 
 
+TEMP_SPEED_ZERO_MSG = ("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                      "فلا تُفعَّل بها سرعة مؤقتة.")
+
+
+def _check_temp_speed_form() -> None:
+    """F08-L: «سرعة مؤقتة» مفعّلة بـ0/0 كانت تُحفَظ (علَم بلا سرعة ولا نهاية).
+    تُرفض قبل أيّ حفظ برسالة عربيّة — نفس قاعدة الخدمة المشتركة."""
+    if request.form.get("temporary_speed", "") not in ("1", "on", "true", "yes"):
+        return
+    def _i(n):
+        try:
+            return int(float(request.form.get(n) or 0))
+        except (TypeError, ValueError):
+            return 0
+    if _i("temporary_download_speed_kbps") <= 0 and _i("temporary_upload_speed_kbps") <= 0:
+        raise RadiusValidationError(TEMP_SPEED_ZERO_MSG)
+
+
 def _delegate_temp_speed(username: str, before) -> None:
     """Route the profile form's temp-speed intent through the SHARED service
     (services/temp_speed.py) — the exact same apply/cancel the «المتصلون الآن»
@@ -1124,6 +1409,43 @@ def users_temp_speed_cancel(username: str):
     return redirect(url_for("radius.users_profile", username=username))
 
 
+def rerender_refused_form(message: str):
+    """D04 — شبكة أمان: POST نموذج مشترك رُفض بصلاحية (403) يُعاد عرضه بما كتبه
+    المدير + رسالة عربيّة، بدل صفحة 403 تمسح كل شيء. None = ليس نموذج مشترك."""
+    ep = (request.endpoint or "").split(".", 1)[-1]
+    if ep not in ("users_create", "users_update"):
+        return None
+    from flask import g as _g
+    if ((getattr(_g, "_rbac_denial", None) or {}).get("reason")) == "out_of_scope":
+        return None     # لا نعرض سجلّ مشتركٍ خارج النطاق
+
+    try:
+        before = None
+        username = (request.view_args or {}).get("username")
+        if ep == "users_update" and username:
+            try:
+                before = get_users_service().get(username)
+            except Exception:  # noqa: BLE001
+                before = None
+        dto = _form_dto(existing=before)
+        if before is not None:
+            from dataclasses import replace
+            dto = replace(dto, username=username)
+    except Exception:  # noqa: BLE001 — مدخلات لا تُفسَّر: صفحة 403 العامّة
+        return None
+    flash(message, "error")
+    plans = list(get_plans_service().list(limit=500))
+    is_new = ep == "users_create"
+    return render_template("radius/users_form.html",
+        sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
+        user_types=USER_TYPES, is_new=is_new,
+        speed_rules_panel=_new_subscriber_speed_panel() if is_new else None,
+        login_macs=[] if is_new else _subscriber_login_macs(username),
+        default_country=_default_country(),
+        form_refused=True,
+        **_form_select_options()), 403
+
+
 def users_create():
     dto = _form_dto()
     # المرحلة A: سقف «أقصى عدد مشتركين» للمدير (0 = بلا حدّ). إنفاذ خادميّ عند
@@ -1140,6 +1462,20 @@ def users_create():
                 speed_rules_panel=_new_subscriber_speed_panel(),
                 login_macs=[], default_country=_default_country(),
                 **_form_select_options()), 400
+    # D19: التحكّم الحقليّ يسري على الإنشاء أيضًا — الحقل غير الممنوح يأخذ
+    # قيمة النموذج الفارغ (المدير المسؤول = المُنشئ، بلا سعر مخصّص…)، والرصيد
+    # لا يُضبط عند الإنشاء (يُضاف عبر «إضافة رصيد» بمساره وبوّابته).
+    if not session.get("is_super_admin"):
+        from dataclasses import replace as _replace
+        from ..services import manager_grants as _mg
+        _aid = session.get("admin_id")
+        # expiry not granted → «no date picked» = subscribers.create_without_expiry
+        from ..core.system_config import default_new_subscriber_expiry
+        _default = Subscriber(id=None, username=dto.username, password=dto.password,
+                              status="enabled", manager_id=_aid,
+                              expire_at=default_new_subscriber_expiry())
+        dto = _mg.enforce_create(_aid, "subscriber", dto, _default, tenant_id=_tid())
+        dto = _replace(dto, balance=0)
     # ملاحظة (2026-06-18): أُزيل حارس سقف الإنشاء create-time للمشتركين.
     # سقف «اكتف» من المزوّد ليس على إجمالي الحسابات بل على عدد الجلسات
     # المتزامنة المتصلة الآن (cards + subscribers + PPPoE + hotspot)،
@@ -1148,10 +1484,18 @@ def users_create():
     # (cards/nas/…) ما زالت تَنفّذ في مساراتها.
     try:
         from ..services.users import validate_new_password
+        _raw_pw = request.form.get("password") or ""
+        if _raw_pw and not _raw_pw.strip():
+            # «    » passed the browser minlength, was stripped to "" and the
+            # account was created with an EMPTY password (re-test R01 N8).
+            raise RadiusValidationError("كلمة المرور لا تكون مسافات فقط.")
+        if not dto.password and not dto.login_without_password:
+            raise RadiusValidationError("كلمة المرور مطلوبة (4 أحرف على الأقل).")
         validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
+        _check_temp_speed_form()
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
@@ -1159,7 +1503,7 @@ def users_create():
             speed_rules_panel=_new_subscriber_speed_panel(),
             login_macs=[],
             default_country=_default_country(),
-            **_form_select_options()), 400
+            **_form_select_options()), (422 if isinstance(e, RadiusValidationError) else 400)
 
     _delegate_temp_speed(saved.username, None)
 
@@ -1180,7 +1524,7 @@ def users_create():
         )
     except RadiusError as e:
         flash(
-            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {e.message}",
+            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {error_message_ar(e)}",
             "warning",
         )
     if not created_rules and (request.form.get("sr_starts_at_time") or "").strip():
@@ -1208,7 +1552,7 @@ def users_create():
             )
         except RadiusError as e:
             flash(
-                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {e.message}",
+                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {error_message_ar(e)}",
                 "warning",
             )
 
@@ -1518,6 +1862,12 @@ def users_profile(username: str):
             (tid, sub_obj.id),
         ).fetchall()
         used_cards = [dict(r) for r in used_cards]
+        # fix3 (F01 F5): card passwords follow the card-password rule.
+        from ..services.sensitive_visibility import can_view_card_passwords, mask_passwords
+        used_cards = mask_passwords(used_cards, visible=bool(session.get("is_super_admin"))
+                                    or can_view_card_passwords(
+                                        session.get("admin_id"),
+                                        perms=session.get("permissions") or ()))
     except Exception:
         used_cards = []
 
@@ -1559,6 +1909,26 @@ def users_profile(username: str):
     used_bytes = (agg.get("dn") or 0) + (agg.get("up") or 0)
     used_mb    = used_bytes / (1024 * 1024)
     remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
+    quota_label = "الكوتا الكلية"
+    # مصدرٌ واحد مع الإنفاذ (quota_period): سقف الفترة الإجماليّ وإلّا كوتة
+    # الباقة الشهريّة/اليوميّة — كانت باقة 100 GB شهريًّا تُعرض «0 MB» بالأحمر.
+    try:
+        from ..services import quota_period
+        _qs = quota_period.quota_status(sub_obj, plan)
+        if _qs["total_cap_mb"] > 0:
+            quota_total_mb = _qs["total_cap_mb"]
+            if _qs["period_used_mb"] is not None:
+                used_mb = _qs["period_used_mb"]
+        else:
+            for _w, _lbl in (("monthly", "الكوتا الشهريّة"), ("daily", "الكوتا اليوميّة")):
+                _cap = _qs[_w]["combined"] or (_qs[_w]["download"] + _qs[_w]["upload"])
+                if _cap:
+                    quota_total_mb, quota_label = _cap, _lbl
+                    used_mb = _qs[_w]["used_mb"] or 0
+                    break
+        remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
+    except Exception:  # noqa: BLE001 — العرض لا ينكسر بسبب قراءة الكوتة
+        pass
 
     speed_dn = sub_obj.download_speed_kbps or (plan.speed_down_kbps if plan else 0) or 0
     speed_up = sub_obj.upload_speed_kbps or (plan.speed_up_kbps   if plan else 0) or 0
@@ -1568,6 +1938,7 @@ def users_profile(username: str):
         "quota_dn_mb":   quota_dn_mb,
         "quota_up_mb":   quota_up_mb,
         "quota_total_mb": quota_total_mb,
+        "quota_label":   quota_label,
         "used_mb":       used_mb,
         "remaining_mb":  remaining_mb,
         "speed_dn":      speed_dn,
@@ -1674,12 +2045,12 @@ def users_edit(username: str):
     # — projection خادميّ: نُفرِّغ القيمة قبل بلوغ القالب فلا تَظهر في الـDOM.
     # حفظ نموذج بكلمة مرور فارغة يُبقي القائمة (users.py service يَحفظها)، فلا
     # يُمحى السرّ. السوبر/المالك يَرى دائمًا.
-    if not session.get("is_super_admin"):
-        from ..services import manager_grants as _mg
-        if not _mg.can_see(session.get("admin_id"), "can_see_password", tenant_id=_tid()):
-            sub_view["password"] = ""
+    if not _can_view_passwords():
+        sub_view["password"] = ""
+        sub_view["pppoe_password"] = ""
     return render_template("radius/users_form.html",
         sub=sub_view,
+        form_orig=form_orig_snapshot(sub),
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
@@ -1807,6 +2178,82 @@ def _sync_subscriber_rules(tenant_id: int, actor, form, username: str) -> None:
             continue
 
 
+def _missing_subscriber_on_save(username: str):
+    """F01 F3 — the edit form was saved for a subscriber that is not live:
+    archived meanwhile (stale form) → 409; never existed / renamed → 404.
+    Nothing is written either way."""
+    from ..db.repos import subscribers_repo
+    from .status_notice import status_notice
+    archived = None
+    try:
+        archived = subscribers_repo.get_subscriber(_tid(), username, include_deleted=True)
+    except Exception:  # noqa: BLE001
+        archived = None
+    back = url_for("radius.users_list")
+    if archived is not None and getattr(archived, "deleted_at", None):
+        return status_notice(
+            409, "لم يُحفَظ التعديل",
+            f"المشترك «{username}» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — "
+            "لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.",
+            back_url=back, back_label="قائمة المشتركين", code="stale_deleted")
+    renamed_to = None
+    try:
+        from ..db.connection import db as _db
+        import json as _json
+        rows = _db().execute(
+            "SELECT target_id, before_json FROM audit_log WHERE tenant_id = ? "
+            "AND target_type = 'user' AND before_json LIKE '%login_username%' "
+            "AND before_json LIKE ? ORDER BY id DESC LIMIT 20",
+            (_tid(), "%" + username + "%")).fetchall()
+        for row in rows:
+            try:
+                if (_json.loads(row["before_json"] or "{}") or {}).get("login_username") == username:
+                    renamed_to = row["target_id"]
+                    break
+            except (TypeError, ValueError):
+                continue
+    except Exception:  # noqa: BLE001
+        renamed_to = None
+    if renamed_to:
+        return status_notice(
+            409, "لم يُحفَظ التعديل",
+            f"أُعيدت تسمية المشترك «{username}» إلى «{renamed_to}» بعد فتح نموذج التعديل — "
+            "لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.",
+            back_url=url_for("radius.users_edit", username=renamed_to),
+            back_label="فتح النموذج الحاليّ", code="stale_renamed")
+    return status_notice(
+        404, "المشترك غير موجود",
+        f"لا يوجد مشترك باسم «{username}» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. "
+        "لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).",
+        back_url=back, back_label="قائمة المشتركين", code="not_found")
+
+
+def _as_really_submitted(dto, before, clear_expiry: bool):
+    """fix3 (F02 L4): what the operator ACTUALLY changed, for the «locked field
+    not saved» warning — the form always re-posts an empty password (= keep)
+    and the loaded expiry (minute precision); those are not changes."""
+    from dataclasses import replace
+    if before is None:
+        return dto
+    changes = {}
+    if not (dto.password or "").strip():
+        changes["password"] = before.password
+    if not (getattr(dto, "pppoe_password", None) or "") and getattr(before, "pppoe_password", None):
+        changes["pppoe_password"] = before.pppoe_password
+    exp, old = dto.expire_at, before.expire_at
+    if not clear_expiry:
+        if exp is None:
+            changes["expire_at"] = old
+        elif old is not None:
+            try:
+                from ..core.timeparse import to_naive_utc
+                if abs((to_naive_utc(exp) - to_naive_utc(old)).total_seconds()) < 60:
+                    changes["expire_at"] = old
+            except Exception:  # noqa: BLE001
+                pass
+    return replace(dto, **changes) if changes else dto
+
+
 def users_update(username: str):
     if request.form.get("_speed_rule_action"):
         try:
@@ -1821,7 +2268,7 @@ def users_update(username: str):
             )
             flash("تم تنفيذ إجراء قواعد السرعة لهذا المشترك.", "success")
         except RadiusError as e:
-            flash(e.message, "error")
+            flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_edit", username=username))
 
     # ── اسم الدخول قابل للتعديل الآن (مفتاح مصادقة RADIUS) ──────────────
@@ -1845,7 +2292,7 @@ def users_update(username: str):
                     actor=_actor(), old_username=username,
                     new_username=posted_username)
             except RadiusError as e:
-                flash(e.message, "error")
+                flash(error_message_ar(e), "error")
                 return redirect(url_for("radius.users_edit", username=username))
             # بقيّة الحفظ تستهدف الاسم الجديد.
             flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
@@ -1854,39 +2301,77 @@ def users_update(username: str):
     before = None
     try:
         before = get_users_service().get(username)
-    except Exception:  # noqa: BLE001 — fall back to create-style temp handling
+    except Exception:  # noqa: BLE001
         before = None
+    if before is None:
+        # F01 F3: the edit save was an UPSERT — a name that doesn't exist was
+        # CREATED (users.edit bypassed users.create), and a stale form re-opened
+        # after a delete/rename resurrected or duplicated the subscriber.
+        return _missing_subscriber_on_save(username)
     dto = _form_dto(existing=before)
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
+    # fix3 (F01 F5): the edit form hides the PPPoE password from an admin
+    # without «رؤية كلمة مرور المشترك» — its blank field must not wipe it.
+    if (not (request.form.get("pppoe_password") or "").strip()
+            and not _can_view_passwords()):
+        dto = replace(dto, pppoe_password=getattr(before, "pppoe_password", None))
     # الحقول التي لا يديرها النموذج (الرصيد، الاستهلاك، أوّل دخول…) تُحفَظ كما هي:
     # «Subscriber(...)» في _form_dto يعطيها الافتراضي (0/فارغ) فكان «حفظ التعديلات»
     # بلا أي تغيير يُصفّر الرصيد (إعادة اختبار R02: −888.61 ⇐ 0.00 بلا قيد).
     if before is not None:
         dto = replace(dto, **{f: getattr(before, f) for f in _WEB_FORM_UNMANAGED
                               if hasattr(before, f)})
+        # «Hotspot» ⇐ «hotspot»: the checkboxes post lower case; an unchanged
+        # service is not a change (the audit showed it as one — R01 N12).
+        if (dto.service_type or "").lower() == (before.service_type or "").lower():
+            dto = replace(dto, service_type=before.service_type)
+        # F03-N1: ما لم يلمسه المشغّل منذ فتح الصفحة يبقى على قيمته الحاليّة.
+        dto = _keep_untouched_fields(dto, before)
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
     # القائمة (دفاع خادميّ: أيّ POST مُلفَّق لحقلٍ غير ممنوح يُتجاهَل). السوبر/
     # المالك يَتجاوز. يُطبَّق على التعديل فقط (before موجود).
+    clear_expiry = _form_no_expiry()
+    _locked_dropped: list[str] = []
     if before is not None and not session.get("is_super_admin"):
         from ..services import manager_grants as _mg
+        _submitted = _as_really_submitted(dto, before, clear_expiry)
         dto = _mg.enforce_dto(session.get("admin_id"), "subscriber", dto, before,
                               tenant_id=_tid())
+        # D20: لا «تم التحديث» صامتًا فوق حقلٍ مقفول أُعيد لقيمته.
+        _locked_dropped = _mg.locked_changes(session.get("admin_id"), "subscriber",
+                                             _submitted, dto, tenant_id=_tid())
+        try:
+            if clear_expiry and _mg.field_locked(session.get("admin_id"), "subscriber",
+                                                 "expiry", tenant_id=_tid()):
+                clear_expiry = False
+        except Exception:  # noqa: BLE001
+            pass
+    if before is not None and before.expire_at is None and clear_expiry:
+        clear_expiry = False   # already «بدون انتهاء» — nothing to clear
+    # F03-N2: «بدون انتهاء» كان مُعلَّمًا لحظة فتح الصفحة ولم يلمسه المشغّل ⇒
+    # ليس طلبَ مسح — تجديدٌ جرى بعد فتح الصفحة يبقى (كان يُعاد «بلا انتهاء»).
+    if clear_expiry and request.form.get("no_expiry_orig") == "1":
+        clear_expiry = False
     try:
         from ..services.users import validate_new_password
         # a CHANGED password must be ≥ 4; an unchanged legacy one saves as is.
         validate_new_password(dto.password,
                               previous=(before.password if before is not None else None))
-        get_users_service().update(actor=_actor(), sub=dto)
+        _check_temp_speed_form()
+        # base=before → only what the operator changed is written, under the
+        # write lock (a renewal/top-up that landed meanwhile is kept — R01 N1).
+        get_users_service().update(actor=_actor(), sub=dto, base=before,
+                                   clear_expiry=clear_expiry)
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))
         return render_template("radius/users_form.html",
             sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
             user_types=USER_TYPES, is_new=False, login_macs=_subscriber_login_macs(username),
             default_country=_default_country(),
-            speed_rules_panel=None), 400
+            speed_rules_panel=None), (422 if isinstance(e, RadiusValidationError) else 400)
     # Temp-speed apply/cancel via the shared service (one source of truth with
     # the online page) — immediate live CoA + scheduled auto-revert.
     _delegate_temp_speed(username, before)
@@ -1894,6 +2379,9 @@ def users_update(username: str):
     # toggle, per-row enabled flips) — all in one redirect at the end.
     _sync_subscriber_rules(_tid(), _actor(), request.form, username)
     flash("تم التحديث.", "success")
+    if _locked_dropped:
+        flash("لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): "
+              + "، ".join(_locked_dropped), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1902,7 +2390,7 @@ def users_delete(username: str):
         get_users_service().delete(actor=_actor(), username=username)
         flash("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1968,7 +2456,7 @@ def users_toggle(username: str):
             get_users_service().enable(actor=_actor(), username=username)
             flash("تم التفعيل.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2046,12 +2534,33 @@ def _form_expire_at():
     return dt
 
 
+def _extend_refused(message: str):
+    """رفضُ «إضافة وقت» بلا أيّ أثر: 422 JSON لطلبات fetch (مثل الـAPI)، وإلّا
+    وميض خطأ عربيّ ورجوع للقائمة."""
+    if request.headers.get("X-Requested-With") == "fetch" \
+            or "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": False, "error": message}), 422
+    flash(message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
 def users_extend(username: str):
+    # 🔴 كانت المدّة 0/الفارغة/التاريخ الممسوح تُضيف دقيقة بصمت (الواجهة
+    # ترسل max(1, …) والتاريخ الفارغ يسقط إلى وضع المدّة). الآن تُرفض مثل الـAPI.
+    if "expire_at" in request.form and not (request.form.get("expire_at") or "").strip():
+        return _extend_refused("تاريخ الانتهاء مطلوب.")
     try:
         # وضعان في نموذجٍ واحد: «أضِف مدّة» و«عيِّن تاريخ الانتهاء». وجودُ
         # `expire_at` هو الفاصل — فلا يُقرأ `minutes` أصلًا في وضع التعيين.
         _exp = _form_expire_at()
-        m = 0 if _exp is not None else int(request.form.get("minutes"))
+        m = 0
+        if _exp is None:
+            _raw_m = (request.form.get("minutes") or "").strip()
+            if not _raw_m:
+                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
+            m = int(_raw_m)
+            if m <= 0:
+                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
         # Spend gate (paid/debt) + extend_time/set_expiry — the SAME helper the
@@ -2071,10 +2580,12 @@ def users_extend(username: str):
             flash(f"تم تعيين انتهاء الحساب: {to_local(_exp)} ({mode_label}).", "success")
         else:
             flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
-    except (TypeError, ValueError):
-        flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
     except RadiusError as e:
-        flash(e.message, "error")
+        # قبل ValueError: أخطاء السقوف (سنة/2100/100,000) ترث الاثنين —
+        # رسالتها العربيّة الدقيقة لا الرسالة العامّة.
+        return _extend_refused(error_message_ar(e))
+    except (TypeError, ValueError, OverflowError):
+        return _extend_refused("قيمة المدّة أو تاريخ الانتهاء غير صحيحة")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2099,7 +2610,14 @@ def users_extend_bulk():
             minutes = int(request.form.get("minutes"))
             if minutes <= 0:
                 raise ValueError
-    except (TypeError, ValueError):
+            # سقف المالك: أقصى تمديد في المرّة الواحدة سنة (لكلّ مشترك).
+            check_extend_minutes(minutes)
+        else:
+            check_expiry(expire_at)
+    except RadiusError as e:
+        flash(error_message_ar(e), "error")
+        return redirect(url_for("radius.users_list"))
+    except (TypeError, ValueError, OverflowError):
         flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
         return redirect(url_for("radius.users_list"))
 
@@ -2128,7 +2646,10 @@ def users_extend_bulk():
                     _anchor = max(_u.expire_at, _now) if _u.expire_at else _now
                     _billable = max(0, int(round((expire_at - _anchor).total_seconds() / 60)))
                 if price > 0 and plan_min > 0:
-                    amount = round(price * (_billable / plan_min), 2)
+                    # دالّة السعر الوحيدة (نصف للأعلى) — كان round() يعطي 0.62
+                    # هنا و0.63 في النافذة الفرديّة لنفس الـ3 ساعات.
+                    amount = calculate_proportional_amount(
+                        minutes=_billable, plan_price=price, base_minutes=plan_min)
             if expire_at is not None:
                 svc.set_expiry(
                     actor=actor, username=name, expire_at=expire_at,
@@ -2143,8 +2664,9 @@ def users_extend_bulk():
                 currency=currency, notes=notes,
             )
             done += 1
-        except RadiusError:
-            failed.append(name)
+        except RadiusError as e:
+            # السبب بجانب الاسم (رصيد لا يكفي/سعر صفر/سقف السنة…) — كان الاسم وحده.
+            failed.append(f"{name} ({error_message_ar(e)})")
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
@@ -2173,18 +2695,22 @@ def users_change_plan(username: str):
         )
         debt = float(result.get("debt_amount") or 0)
         delta = int(result.get("minute_delta") or 0)
+        # المدّة بالأيام والساعات والدقائق (كانت «تعويض 0 يوم» لستّ ساعات).
+        from ..services.users import _fmt_minutes_ar
         if debt > 0:
             flash(f"تم تغيير العرض وتسجيل دين فرق السعر بقيمة {debt:.2f}.", "success")
         elif delta > 0:
-            flash(f"تم تغيير العرض وتعويض {delta // 1440} يوم إضافي.", "success")
+            flash(f"تم تغيير العرض وتعويض {_fmt_minutes_ar(delta)} إضافيّة.", "success")
         elif delta < 0:
-            flash(f"تم تغيير العرض وإنقاص {abs(delta) // 1440} يوم.", "warning")
+            flash(f"تم تغيير العرض وإنقاص {_fmt_minutes_ar(abs(delta))}.", "warning")
         else:
             flash("تم تغيير العرض للمشترك.", "success")
+    except RadiusError as e:
+        # قبل ValueError: أخطاء السقوف (NonFiniteNumber) ترث ValueError أيضًا
+        # فكانت تُعرض «اختيار العرض غير صحيح» بدل سببها (سنة/2100/100,000).
+        flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
         flash("اختيار العرض غير صحيح.", "error")
-    except RadiusError as e:
-        flash(e.message, "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2200,7 +2726,7 @@ def users_send_sms(username: str):
         label = "واتساب" if channel == "whatsapp" else "SMS"
         flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2275,7 +2801,7 @@ def users_quota_reset_daily(username: str):
             username=username,
             charge_mode=charge_mode,
             amount=amount,
-            currency=(request.form.get("currency") or default_currency()).strip(),
+            currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
@@ -2284,10 +2810,10 @@ def users_quota_reset_daily(username: str):
                   f"الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
         else:
             flash("تمت استعادة الكوتة اليومية للمشترك (مجانية).", "success")
+    except RadiusError as e:
+        flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
         flash("قيمة المبلغ غير صحيحة.", "error")
-    except RadiusError as e:
-        flash(e.message, "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2308,12 +2834,14 @@ def users_quota_reset_daily_bulk():
     except (TypeError, ValueError):
         flash("قيمة المبلغ غير صحيحة.", "error")
         return redirect(url_for("radius.users_list"))
-    currency = (request.form.get("currency") or default_currency()).strip()
+    currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
     actor = _actor()
     done = 0
     failed: list[str] = []
+    skipped: list[str] = []
+    from ..services.users import NothingToReset
     for name in usernames:
         try:
             svc.reset_daily_quota(
@@ -2321,6 +2849,8 @@ def users_quota_reset_daily_bulk():
                 amount=amount, currency=currency, notes=notes,
             )
             done += 1
+        except NothingToReset:
+            skipped.append(name)   # بلا سقفٍ يوميّ — لا استعادة ولا مبلغ
         except RadiusError:
             failed.append(name)
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
@@ -2329,6 +2859,10 @@ def users_quota_reset_daily_bulk():
     mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
     if done:
         flash(f"تمت استعادة الكوتة اليومية ({mode_label}) لـ {done} مشترك.", "success")
+    if skipped:
+        preview = "، ".join(skipped[:10]) + ("…" if len(skipped) > 10 else "")
+        flash(f"تُخطّي {len(skipped)} مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ "
+              f"(لم يُحصَّل منهم شيء): {preview}", "info")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
         flash(f"تعذّرت الاستعادة لـ {len(failed)} مشترك: {preview}", "warning")
@@ -2347,15 +2881,15 @@ def users_quota_topup(username: str):
             quota_target=(request.form.get("quota_target") or "combined").strip(),
             charge_mode=charge_mode,
             amount=amount,
-            currency=(request.form.get("currency") or default_currency()).strip(),
+            currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
         mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
         flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+    except RadiusError as e:
+        flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
         flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
-    except RadiusError as e:
-        flash(e.message, "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2378,7 +2912,7 @@ def users_quota_topup_bulk():
         return redirect(url_for("radius.users_list"))
     quota_target = (request.form.get("quota_target") or "combined").strip()
     charge_mode = (request.form.get("charge_mode") or "free").strip()
-    currency = (request.form.get("currency") or default_currency()).strip()
+    currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
     svc = get_users_service()
     actor = _actor()
@@ -2423,11 +2957,11 @@ def users_balance_add(username: str):
             notes=(request.form.get("notes") or "").strip(),
             loan_actions=_parse_loan_actions(),
         )
+    except RadiusError as e:
+        flash(error_message_ar(e), "error")
+        return redirect(url_for("radius.users_list"))
     except (TypeError, ValueError):
         flash("قيمة الرصيد النقدي غير صحيحة.", "error")
-        return redirect(url_for("radius.users_list"))
-    except RadiusError as e:
-        flash(e.message, "error")
         return redirect(url_for("radius.users_list"))
     saved = _res["subscriber"]
     settled_done = _res["settled_done"]

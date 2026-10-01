@@ -32,6 +32,12 @@ from ..services.store_withdrawals import (
 )
 
 
+
+def _ar_err(exc) -> str:
+    """f05-M5: Arabic text for the user — English/Python leftovers → Arabic."""
+    from ..services.card_users_marketplace import arabic_error_message
+    return arabic_error_message(exc)
+
 def register_store_support_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/store-support", "store_support", store_support, methods=["GET"])
     bp.add_url_rule(
@@ -215,7 +221,7 @@ def store_support_deposit_confirm(req_id: int):
         )
         flash("تم تأكيد طلب الشحن وإضافة الرصيد لمحفظة الزبون.", "success")
     except (StoreDepositError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -224,7 +230,7 @@ def store_support_deposit_reject(req_id: int):
         _deposits().reject(req_id, actor=_actor(), note=request.form.get("note") or "")
         flash("تم رفض طلب الشحن.", "success")
     except (StoreDepositError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -238,7 +244,7 @@ def store_support_withdrawal_confirm(req_id: int):
         )
         flash("تم تأكيد تنفيذ السحب وخصم الرصيد من محفظة الزبون.", "success")
     except (StoreWithdrawalError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -249,7 +255,7 @@ def store_support_withdrawal_reject(req_id: int):
         )
         flash("تم رفض طلب السحب.", "success")
     except (StoreWithdrawalError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -279,7 +285,7 @@ def store_support_payment_method_create():
         )
         flash("تمت إضافة قناة استلام جديدة.", "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -290,7 +296,7 @@ def store_support_payment_method_update(method_id: int):
             svc.delete_payment_method(method_id)
             flash("تم حذف قناة الاستلام.", "success")
         except (StoreDepositError, ValueError) as exc:
-            flash(str(exc), "error")
+            flash(_ar_err(exc), "error")
         return redirect(url_for("radius.store_support"))
 
     try:
@@ -313,7 +319,7 @@ def store_support_payment_method_update(method_id: int):
         svc.update_payment_method(method_id, **fields)
         flash("تم تحديث قناة الاستلام.", "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
 
 
@@ -334,7 +340,7 @@ def store_support_chat_post(card_user_id: int):
             admin_actor=_actor(),
         )
     except (StoreChatError, StoreUploadError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support", chat=card_user_id))
 
 
@@ -348,7 +354,7 @@ def store_support_chat_status(card_user_id: int):
         flash("تم وضع المحادثة كمُعالَجة." if new == "resolved"
               else "أُعيد فتح المحادثة.", "success")
     except (StoreChatError, ValueError) as exc:
-        flash(str(exc), "error")
+        flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support", chat=card_user_id) + "#chat")
 
 

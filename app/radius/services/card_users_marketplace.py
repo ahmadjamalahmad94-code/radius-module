@@ -82,6 +82,63 @@ class CardMarketplaceError(ValueError):
     """Raised for safe marketplace validation errors."""
 
 
+def market_money_minor(value: Any, *, label: str, allow_zero: bool,
+                       tenant_id: int | None = None) -> int:
+    """f05-M5 — مبلغ السوق/المحفظة: رقمٌ منتهٍ، موجب (أو صفر حين يُسمح)،
+    وسقف العمليّة الواحدة من «الحدود» (``limits.max_amount_generic``، الافتراض
+    100,000 — قرار المالك) — كان 1e12 يُقبل (رصيد 1,000,000,000,005). رسائل
+    عربيّة لا «amount must be numeric»."""
+    from ..core import limits
+    from ..core.numbers import NonFiniteNumber, finite_float
+    try:
+        amount = finite_float(value, field="amount")
+    except NonFiniteNumber:
+        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون رقمًا صالحًا.") from None
+    if amount < 0 or (amount == 0 and not allow_zero):
+        raise CardMarketplaceError(
+            f"قيمة «{label}» يجب أن تكون أكبر من صفر." if not allow_zero
+            else f"قيمة «{label}» لا يمكن أن تكون سالبة.")
+    cap_msg = limits.amount_error(amount, "generic", label=label, tenant_id=tenant_id)
+    if cap_msg:
+        raise CardMarketplaceError(cap_msg)
+    try:
+        return money_to_minor(amount)
+    except BusinessOSValidationError:
+        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون رقمًا صالحًا.") from None
+
+
+def int_input(value: Any, *, label: str, default: int = 0, minimum: int = 0,
+              maximum: int | None = None) -> int:
+    """f05-M5 — عدد صحيح من حقل نموذج/JSON برسالةٍ عربيّة (لا «invalid literal
+    for int() with base 10: 'abc'»). فارغ ⇒ ``default``."""
+    from ..core.numbers import NonFiniteNumber, finite_float
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return default
+    try:
+        out = finite_float(value, field="amount")
+    except NonFiniteNumber:
+        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.") from None
+    if not out.is_integer():
+        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.")
+    n = int(out)
+    if n < minimum or (maximum is not None and n > maximum):
+        raise CardMarketplaceError(f"قيمة «{label}» خارج النطاق المسموح.")
+    return n
+
+
+def arabic_error_message(exc: BaseException) -> str:
+    """نصّ خطأٍ آمن للعرض: العربيّ يمرّ كما هو، ورسائل Business OS الإنجليزيّة
+    تُترجم، وأيّ نصٍّ إنجليزيّ/بايثونيّ آخر ⇒ رسالة عامّة عربيّة."""
+    raw = str(exc or "").strip()
+    if re.search(r"[\u0600-\u06FF]", raw):
+        return raw
+    from .business_os_finance import arabic_business_error
+    translated = arabic_business_error(raw)
+    if translated != raw:
+        return translated
+    return "قيمة غير صالحة — تحقّق من الحقول المُدخلة."
+
+
 def _json(value: dict[str, Any] | None) -> str:
     return json.dumps(value or {}, ensure_ascii=False, sort_keys=True)
 
@@ -427,11 +484,10 @@ class CardUsersMarketplaceService:
         # Status «الحالة» — active (فعّال, sellable) by default; a paused
         # (موقوف) offer is created hidden from the buyer portal until enabled.
         active_flag = 0 if str(active).strip().lower() in {"0", "false", "no", "off", ""} else 1
-        price_minor = money_to_minor(price)
         # صفر مسموح: باقة سوق مجّانيّة (يُصدَر الكرت للمستفيد بلا خصم من محفظته).
-        # السالب فقط مرفوض.
-        if price_minor < 0:
-            raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
+        # السالب مرفوض، وسقف «الحدود» (f05-M5 + fix3-moneyquota).
+        price_minor = market_money_minor(price, label="سعر الباقة", allow_zero=True,
+                                         tenant_id=self.tenant_id)
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
         meta = dict(metadata or {})
@@ -500,10 +556,9 @@ class CardUsersMarketplaceService:
         existing = self.get_package(int(package_id))   # raises if missing
         if not str(name or "").strip():
             raise CardMarketplaceError("اسم الباقة مطلوب.")
-        price_minor = money_to_minor(price)
-        # صفر مسموح: باقة سوق مجّانيّة. السالب فقط مرفوض.
-        if price_minor < 0:
-            raise CardMarketplaceError("سعر الباقة لا يمكن أن يكون سالبًا.")
+        # صفر مسموح: باقة سوق مجّانيّة. السالب مرفوض، وسقف «الحدود» (f05-M5 + fix3-moneyquota).
+        price_minor = market_money_minor(price, label="سعر الباقة", allow_zero=True,
+                                         tenant_id=self.tenant_id)
         if not self._plan_exists(plan_id):
             raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
 
@@ -858,11 +913,14 @@ class CardUsersMarketplaceService:
         return _row(row)
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
+        # f05-M5: مبلغ شحن المحفظة ≤ سقف «الحدود» (الافتراض 100,000) وموجب — ويب/API/لوحة الموزّع معًا.
+        amount_minor = market_money_minor(amount, label="مبلغ الشحن", allow_zero=False,
+                                          tenant_id=self.tenant_id)
         wallet = self._wallet_for_card_user(card_user_id)
         credit = self.wallets.credit(
             tenant_id=self.tenant_id,
             wallet_id=int(wallet["id"]),
-            amount=amount,
+            amount=minor_to_money(amount_minor),
             actor_type="admin",
             actor_id=None,
             reference_type="card_user_recharge",

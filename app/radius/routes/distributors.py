@@ -7,6 +7,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 
 from ..auth.session_helpers import current_admin_id, is_super_admin
 from ..core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..db.repos import admins_repo
 from ..services.cards import get_cards_service
@@ -71,12 +72,22 @@ def _can_manage_distributors() -> bool:
     )
 
 
+def _sees_all() -> bool:
+    """المالك/الشريك أو دور «مدير عام» (كل الصلاحيات غير المالكيّة) يرى ويدير كل
+    الموزّعين؛ غيره موزّعيه فقط، ودخول الموزّع لا يتّسع أبدًا."""
+    if is_super_admin():
+        return True
+    from ..services.distributor_scope import sees_all_distributors
+    return sees_all_distributors(current_admin_id(), tenant_id=_tid())
+
+
 def _owner_admin_id() -> int | None:
     """المالك المُسنَد للموزّع عند الإنشاء/التعديل.
 
     محدود → نفسه دائمًا (مقفل، يَتجاهل أيّ admin_id مُرسَل بالنموذج).
-    سوبر  → القيمة المختارة من النموذج (مدير بعينه) أو None (بلا مالك)."""
-    if not is_super_admin():
+    سوبر/«مدير عام» → القيمة المختارة من النموذج (مدير بعينه) أو None (بلا مالك؛
+    في التعديل None = يبقى المالك الحاليّ)."""
+    if not _sees_all():
         return current_admin_id()
     raw = (request.form.get("admin_id") or "").strip()
     if not raw:
@@ -89,18 +100,24 @@ def _owner_admin_id() -> int | None:
 
 def _assert_distributor_access(distributor: dict) -> None:
     """يَمنع المدير المحدود من لمس موزّعٍ لا يَتبع له (مِلكية admin_id).
-    السوبر يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
-    if is_super_admin():
+    السوبر/«مدير عام» يَصل للكل. عدم التطابق → 403 (لا 404 حتى لا نُفشي وجوده)."""
+    if _sees_all():
         return
     me = current_admin_id()
     owner = int(distributor.get("admin_id") or 0)
-    if not me or owner != int(me):
-        abort(403)
+    if me and owner == int(me):
+        return
+    # fix3 (F02 L3): the distributor LOGIN may READ its own record (GET only;
+    # every write keeps requiring the owning manager / reports.finance).
+    if (me and request.method in ("GET", "HEAD")
+            and int(distributor.get("login_admin_id") or 0) == int(me)):
+        return
+    abort(403)
 
 
 def _managers_for_form() -> list:
-    """قائمة المدراء لاختيار مالك الموزّع — للسوبر فقط. المحدود يَرى نفسه."""
-    if is_super_admin():
+    """قائمة المدراء لاختيار مالك الموزّع — للسوبر/«مدير عام». المحدود يَرى نفسه."""
+    if _sees_all():
         return admins_repo.list_admins()
     me = current_admin_id()
     return [a for a in admins_repo.list_admins() if a.id == me]
@@ -177,8 +194,8 @@ def _form_payload() -> dict:
 
 def distributors_list():
     status = (request.args.get("status") or "").strip() or None
-    # عزل المِلكية: المدير المحدود يَرى موزّعيه فقط؛ السوبر يَرى الكل.
-    scope_admin = None if is_super_admin() else current_admin_id()
+    # عزل المِلكية: المدير المحدود يَرى موزّعيه فقط؛ السوبر/«مدير عام» يَرى الكل.
+    scope_admin = None if _sees_all() else current_admin_id()
     items = _svc().list_distributors(
         tenant_id=_tid(), status=status, admin_id=scope_admin, limit=500
     )
@@ -188,7 +205,7 @@ def distributors_list():
         status=status or "",
         # ?new=1 يفتح الصندوق العائم «إضافة موزع» تلقائيًا (رابط /distributors/new القديم)
         open_new_modal=(request.args.get("new") == "1"),
-        is_super=is_super_admin(),
+        is_super=_sees_all(),
         can_manage_distributors=_can_manage_distributors(),
         managers=_managers_for_form(),
         current_manager_id=current_admin_id(),
@@ -213,12 +230,12 @@ def distributors_create():
             data=_form_payload(),
         )
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return render_template(
             "radius/distributors_form.html",
             form=request.form,
             is_new=True,
-            is_super=is_super_admin(),
+            is_super=_sees_all(),
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400
@@ -276,7 +293,7 @@ def distributors_edit(distributor_id: int):
         form=_distributor_form_values(distributor),
         distributor=distributor,
         is_new=False,
-        is_super=is_super_admin(),
+        is_super=_sees_all(),
         managers=_managers_for_form(),
         current_manager_id=current_admin_id(),
     )
@@ -297,13 +314,13 @@ def distributors_update(distributor_id: int):
     except RadiusNotFound:
         abort(404)
     except RadiusValidationError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
         return render_template(
             "radius/distributors_form.html",
             form=request.form,
             distributor={"id": distributor_id},
             is_new=False,
-            is_super=is_super_admin(),
+            is_super=_sees_all(),
             managers=_managers_for_form(),
             current_manager_id=current_admin_id(),
         ), 400
@@ -344,8 +361,11 @@ def _detail_context(distributor_id: int) -> dict:
 
 
 def distributors_detail(distributor_id: int):
+    from uuid import uuid4
     return render_template(
         "radius/distributors_detail.html",
+        # مفتاح تكرار لكلّ عرضٍ للنموذج: نقرتان/إعادة إرسال = حركة واحدة.
+        idem_nonce=uuid4().hex,
         **_detail_context(distributor_id),
     )
 
@@ -377,7 +397,7 @@ def distributors_assign_batch(distributor_id: int):
         )
         flash("تم ربط الحزمة بالموزع.", "success")
     except RadiusError as e:
-        flash(e.message, "error")
+        flash(error_message_ar(e), "error")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
 
@@ -388,6 +408,21 @@ def distributors_settle(distributor_id: int):
         )
     except RadiusNotFound:
         abort(404)
+    # منع التكرار (نفس منطق الـAPI): المفتاح المخفيّ في النموذج يُحجز قبل
+    # التسجيل؛ نقرةٌ ثانية/إعادة إرسال بالمفتاح نفسه لا تُسجّل حركةً ثانية.
+    from ..services import idempotency as _idem
+    idem_key = (request.form.get("client_request_id") or "").strip()[:_idem.MAX_KEY]
+    idem_scope = f"WEB POST {request.path}"
+    if idem_key:
+        _state, _row = _idem.claim(
+            _tid(), idem_key, idem_scope,
+            _idem.fingerprint("POST", request.path, request.form.to_dict(flat=True)))
+        if _state == _idem.REPLAY:
+            flash("سُجِّلت هذه الحركة مسبقًا — لم تُكرَّر.", "warning")
+            return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
+        if _state in (_idem.IN_PROGRESS, _idem.MISMATCH):
+            flash("طلبٌ بنفس النموذج قيد التنفيذ أو استُخدم لحركةٍ أخرى — حدّث الصفحة.", "error")
+            return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().settle_distributor(
             tenant_id=_tid(),
@@ -404,6 +439,14 @@ def distributors_settle(distributor_id: int):
             },
         )
         flash("تم تسجيل حركة الموزع.", "success")
+        if idem_key:
+            _idem.finish(_tid(), idem_key, idem_scope, 302, "{}")
     except RadiusError as e:
-        flash(e.message, "error")
+        if idem_key:
+            _idem.release(_tid(), idem_key, idem_scope)
+        flash(error_message_ar(e), "error")
+    except Exception:
+        if idem_key:
+            _idem.release(_tid(), idem_key, idem_scope)
+        raise
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))

@@ -321,8 +321,8 @@
   actions_html=(
     '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.cards_print_quick') ~ '">'|safe
     ~ '<i class="fa-solid fa-bolt"></i> '|safe ~ _("منشئ كروت PDF (سريع)") ~ '</a> '|safe
-    ~ '<a class="hub-btn" href="'|safe ~ url_for('radius.cards_print_new') ~ '">'|safe
-    ~ '<i class="fa-solid fa-file-import"></i> '|safe ~ _("استيراد دفعة جديدة") ~ '</a>'|safe
+    ~ ('<a class="hub-btn" href="'|safe ~ url_for('radius.cards_print_new') ~ '">'|safe
+    ~ '<i class="fa-solid fa-file-import"></i> '|safe ~ _("استيراد دفعة جديدة") ~ '</a>'|safe if can_submit('radius.cards_print_new', 'GET') else '')
   ),
   kpis=[
     {'label': 'إجمالي الحزم',      'value': total,          'icon': 'layer-group',   'variant': 'brand', 'sub': 'حزمة طباعة محفوظة'},
@@ -341,7 +341,7 @@
       icon="print"
     ) }}
     <div style="text-align:center;margin-top:12px">
-      {{ hub.btn("أنشئ أوّل حزمة", icon="bolt", href=url_for('radius.cards_print_new'), variant="primary") }}
+      {% if can_submit('radius.cards_print_new', 'GET') %}{{ hub.btn("أنشئ أوّل حزمة", icon="bolt", href=url_for('radius.cards_print_new'), variant="primary") }}{% endif %}
     </div>
 
   {% else %}
@@ -367,7 +367,7 @@
     {% for b in batches %}
     <div class="pc-card">
       {# Main info area — the only clickable surface for navigation #}
-      <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="pc-card-link">
+      {% if can_submit('radius.cards_print_batch', 'GET') %}<a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}" class="pc-card-link">{% endif %}
         <div class="pc-card-head">
           <div style="flex:1;min-width:0">
             <span class="pc-card-num">#{{ b.id }}</span>
@@ -380,16 +380,16 @@
           <div class="pc-stat"><div class="k">{{ _('بيع') }}</div><div class="v">{{ b.price_per_card|money }}</div></div>
           <div class="pc-stat"><div class="k">{{ _('جملة') }}</div><div class="v">{{ b.price_bulk|money }}</div></div>
         </div>
-      </a>
+      {% if can_submit('radius.cards_print_batch', 'GET') %}</a>{% endif %}
 
       {# Action row — outside the link so buttons don't navigate #}
       <div class="pc-card-actions">
         <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
 
-        <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
-           class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
+        {% if can_submit('radius.cards_print_batch', 'GET') %}<a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
+           class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">{% endif %}
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
-        </a>
+        {% if can_submit('radius.cards_print_batch', 'GET') %}</a>{% endif %}
 
         <button type="button" class="pc-act pc-act--quick" title="{{ _('منشئ كروت PDF (سريع)') }}"
                 aria-label="{{ _('منشئ كروت PDF للحزمة') }}"
@@ -407,7 +407,7 @@
           <i class="fa-solid fa-print" aria-hidden="true"></i>
         </button>
 
-        <form method="post"
+        {% if can_submit('radius.cards_print_batch_delete', 'POST') %}<form method="post"
               action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
               style="display:inline-flex;margin:0"
               data-confirm-form
@@ -419,7 +419,7 @@
                   aria-label="{{ _('حذف الحزمة') }}">
             <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
           </button>
-        </form>
+        </form>{% endif %}
       </div>
     </div>
     {% endfor %}
@@ -454,10 +454,10 @@
           <td style="font-size:12px;color:#64748b;direction:ltr;text-align:start">{{ b.created_at|dt_local if b.created_at else '' }}</td>
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
-              <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
-                 class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
+              {% if can_submit('radius.cards_print_batch', 'GET') %}<a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
+                 class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">{% endif %}
                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
-              </a>
+              {% if can_submit('radius.cards_print_batch', 'GET') %}</a>{% endif %}
               <button type="button" class="pc-act pc-act--quick" title="{{ _('منشئ كروت PDF (سريع)') }}"
                       aria-label="{{ _('منشئ كروت PDF للحزمة') }}"
                       data-quickfloat-open data-batch-id="{{ b.id }}">
@@ -472,7 +472,7 @@
                       data-batch-total="{{ b.card_count or 0 }}">
                 <i class="fa-solid fa-print" aria-hidden="true"></i>
               </button>
-              <form method="post"
+              {% if can_submit('radius.cards_print_batch_delete', 'POST') %}<form method="post"
                     action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
                     style="display:inline-flex;margin:0"
                     data-confirm-form
@@ -484,7 +484,7 @@
                         aria-label="{{ _('حذف الحزمة') }}">
                   <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
-              </form>
+              </form>{% endif %}
             </div>
           </td>
         </tr>

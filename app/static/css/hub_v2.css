@@ -379,6 +379,9 @@ html[dir="ltr"]{
    The Latin token («1h 30m / 3h», core.duration_fmt) lives in .du-cell —
    forced logical-LTR so digits + unit letters never bidi-flip in RTL. */
 .du-cell{ font-weight:700; direction:ltr; unicode-bidi:isolate-override; display:inline-block; }
+/* f06-L3: the web shows Arabic WORDS («1 ساعة و30 دقيقة / 3 ساعات»); a digit
+   next to an Arabic word never flips, so a plain RTL isolate is enough. */
+.du-cell-ar{ font-weight:700; unicode-bidi:isolate; display:inline-block; }
 .du-pill{
   display:inline-flex; align-items:center; padding:2px 10px;
   border-radius:999px; font-size:12px; border:1px solid transparent;
@@ -1606,4 +1609,24 @@ a.hr-entity-link--pill:hover .hub-pill,
 a.hr-entity-link--pill:focus-visible .hub-pill{
   filter: brightness(.97);
   box-shadow: 0 0 0 2px var(--hub-brand-soft, #f5f3ff);
+}
+
+/* ── D10: منطقة لمسٍ لا تقلّ عن 40×40px للأزرار الأيقونيّة الصغيرة ─────
+   على الجوّال تلمس الإصبع، لا مؤشّر الفأرة الدقيق؛ زرٌّ 24-30px يرفع
+   احتمال لمس الزرّ المجاور الخطر (حذف/تعطيل) بالخطأ. الحشوة الإضافيّة
+   لا تُغيّر الحجم البصريّ الظاهر إن كانت الأيقونة أصغر من الصندوق. ── */
+@media (pointer: coarse){
+  .hub-btn--sm,.hub-btn--icon,.uf-pw-toggle,.co-sales-picker,.uds-pager button,.hr-table-scroll input[type="checkbox"]{
+    min-width:40px;min-height:40px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+}
+
+/* ── D11: خطوطُ حقولٍ أصغر من 16px تجعل Safari/iOS يُكبّر الصفحة تلقائيًّا
+   عند التركيز (ولا يُعيدها)، فينزاح التخطيط. على الشاشات الصغيرة فقط
+   نرفع خط الإدخال إلى 16px تحديدًا لمنع هذا التكبير. ───────────────── */
+@media (max-width: 640px){
+  .hub-input,.hub-select,.hub-textarea,select.hub-input,input.hub-input,textarea.hub-textarea{
+    font-size:16px;
+  }
 }

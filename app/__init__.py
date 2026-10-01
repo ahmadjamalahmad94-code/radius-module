@@ -95,6 +95,9 @@ def create_app() -> Flask:
 
     _install_stubs(app)
     _install_i18n(app)
+    # «٣٥٫٥» من لوحة عربيّة ⇒ «35.5» في نماذج الويب قبل أيّ مسار (R12 N1).
+    from .radius.core.form_numbers import install_form_number_normalizer
+    install_form_number_normalizer(app)
     _install_api_cors(app)
     _install_store_cors(app)
     _install_store_key_guard(app)
@@ -579,8 +582,10 @@ def _install_stubs(app: Flask) -> None:
             from flask import g as _g
             from app.radius.core.tenant import DEFAULT_TENANT_ID
             from app.radius.db.repos import alerts_repo
+            from app.radius.services.notifications import can_see_router_alerts
             tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
-            rows = alerts_repo.list_open(tid, limit=50)
+            # fix3 (F01 F13): router/system alerts only for nas.view holders.
+            rows = alerts_repo.list_open(tid, limit=50) if can_see_router_alerts() else []
             items = [{
                 "id": int(r["id"]),
                 "title": r.get("title_ar") or "",
@@ -603,9 +608,12 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.tenant import DEFAULT_TENANT_ID
             from app.radius.services import notifications as _notif
             tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            # fix3 (F01 F9 / F08 M2): only what THIS admin may see, his reads.
+            viewer = _notif.current_viewer(tid)
             return {
-                "count": _notif.unread_count(tid),
-                "items": _notif.recent_for_bell(tid, limit=max(1, int(limit))),
+                "count": _notif.unread_count(tid, viewer=viewer),
+                "items": _notif.recent_for_bell(tid, limit=max(1, int(limit)),
+                                                viewer=viewer),
             }
         except Exception:  # noqa: BLE001 — جرس الإشعارات لا يكسر أي صفحة أبدًا
             return {"count": 0, "items": []}
@@ -716,6 +724,7 @@ def _install_stubs(app: Flask) -> None:
         # آمن — can() يُرجِع True للسوبر دائمًا (يفحص session['is_super_admin']).
         return {
             "can": _uip.can,
+            "legacy_perm_ok": _uip.legacy_perm_ok,
             "ui_unauth_mode": _uip.ui_unauth_mode,
             "perm_for_endpoint": _uip.perm_for_endpoint,
         }
@@ -861,8 +870,22 @@ def _install_stubs(app: Flask) -> None:
                 aid = _sess.get("admin_id")
                 tid = int(_sess.get("tenant_id") or 1)
                 perms = _sess.get("permissions") or []
-                return _mg.endpoint_effectively_hidden(
-                    aid, endpoint, tenant_id=tid, perms=perms)
+                if _mg.endpoint_effectively_hidden(
+                        aid, endpoint, tenant_id=tid, perms=perms):
+                    return True
+                # D03: مدخل نموذج (إضافة/تعديل) يرفضه الحارس عند فتحه — قسمٌ
+                # مقفول، أو فعل «إنشاء» غير ممنوح — يُخفى في كل مكان (السايدبار،
+                # أزرار اللوحة، أزرار القائمة): نفس قرار الحارس على GET، فلا زرّ
+                # يفتح نموذجًا يُرفَض حفظه.
+                name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
+                akey = _mg.endpoint_action(name)
+                if _mg.is_form_endpoint(name) or (
+                        akey and _mg.ACTION_REGISTRY.get(akey, {}).get("gate_get")):
+                    from app.radius.routes.blueprint import rbac_denial_status
+                    return rbac_denial_status(
+                        name, "GET", is_super=False, perms=perms, admin_id=aid,
+                        tenant_id=tid, record_activity=False) is not None
+                return False
             except Exception:  # noqa: BLE001 — fail-open (visible)
                 return False
 
@@ -915,7 +938,153 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001 — fail-open (not locked)
                 return False
 
+        def _sub_actions() -> dict:
+            """D17: أعلام أفعال المشترك للمدير الحاليّ — نفس قرار actions-context
+            في التطبيق (services/subscriber_action_flags)."""
+            try:
+                from app.radius.services.subscriber_action_flags import session_action_flags
+                return session_action_flags()
+            except Exception:  # noqa: BLE001 — fail-open (عرض)
+                from collections import defaultdict
+                return defaultdict(lambda: True)
+
+        def _manager_locked_fields(entity: str) -> list:
+            """D20: أسماء حقول النموذج المقفولة على المدير الحاليّ (للقراءة فقط)."""
+            if _is_super():
+                return []
+            try:
+                from app.radius.services import manager_grants as _mg
+                return _mg.locked_attr_names(_sess.get("admin_id"), entity,
+                                             tenant_id=int(_sess.get("tenant_id") or 1))
+            except Exception:  # noqa: BLE001
+                return []
+
+        def _can_submit(endpoint: str, method: str = "POST") -> bool:
+            """F01-F2: الزرّ/الرابط/النموذج يُعرَض فقط إن كان طلبه (endpoint +
+            method) سيَقبله الخادم لهذا المدير — **نفس قرار** حارس اللوحة
+            (routes/blueprint.rbac_denial_status: أعلام القسم، الأقسام الدقيقة،
+            بوّابة الفعل، bulk.ops، مفتاح الكتابة/المالك، مفتاح العرض). لا يفتح
+            نموذجٌ لا يُحفَظ، ولا زرّ يقود إلى 403. السوبر دائمًا نعم؛ فحصٌ بلا
+            تسجيل حركة (record_activity=False)؛ مُخزَّن لكل طلب. fail-open عند
+            خطأ داخليّ (الخادم يبقى الحَكَم)."""
+            if _is_super():
+                return True
+            # جلسةٌ بلا مفتاح «permissions» ليست جلسة دخول حقيقيّة (كلّ دخول يكتبه
+            # ولو فارغًا) — لا قرار RBAC ممكن: fail-open كبقيّة طبقة العرض.
+            try:
+                if "permissions" not in _sess:
+                    return True
+            except Exception:  # noqa: BLE001
+                return True
+            name = (endpoint or "").split(".", 1)[1] if (endpoint or "").startswith("radius.") else (endpoint or "")
+            meth = (method or "POST").upper()
+            try:
+                from flask import g as _g
+                cache = getattr(_g, "_can_submit_cache", None)
+                if cache is None:
+                    cache = {}
+                    _g._can_submit_cache = cache
+            except Exception:  # noqa: BLE001
+                cache = {}
+            key = (name, meth)
+            if key in cache:
+                return cache[key]
+            # نموذجٌ يرسل POST إلى عنوانٍ اسمه لصفحة GET (مثل /users → users_list)
+            # يصل فعليًّا إلى endpoint آخر على نفس المسار (users_create) — نحكم عليه.
+            try:
+                _rules = app.url_map._rules_by_endpoint.get("radius." + name) or []
+                if _rules and not any(meth in (r.methods or ()) for r in _rules):
+                    for _r in app.url_map.iter_rules():
+                        if _r.rule == _rules[0].rule and meth in (_r.methods or ()) \
+                                and _r.endpoint.startswith("radius."):
+                            name = _r.endpoint.split(".", 1)[1]
+                            break
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                from flask import g as _g
+                from app.radius.routes.blueprint import rbac_denial_status
+                _saved = getattr(_g, "_rbac_denial", None)
+                try:
+                    res = rbac_denial_status(
+                        name, meth, is_super=False,
+                        perms=_sess.get("permissions") or [],
+                        admin_id=_sess.get("admin_id"),
+                        tenant_id=int(_sess.get("tenant_id") or 1),
+                        record_activity=False) is None
+                finally:
+                    # لا نطمس سبب رفضٍ حقيقيّ تعرضه صفحة 403 نفسها.
+                    _g._rbac_denial = _saved
+            except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
+                res = True
+            # رابط «جديد/تعديل» يفتح نموذجًا: يُعرَض فقط إن كان حفظه مقبولًا أيضًا
+            # (bw_new يفتح بـplans.create وحفظه bw_create يطلب plans.edit).
+            if res and meth == "GET":
+                pair = (name[:-4] + "_create" if name.endswith("_new")
+                        else name[:-5] + "_update" if name.endswith("_edit") else "")
+                if pair and ("radius." + pair) in app.view_functions:
+                    cache[key] = res     # guard against a self-cycle
+                    res = _can_submit(pair, "POST")
+            cache[key] = res
+            return res
+
+        def _can_any(*endpoints: str) -> bool:
+            return any(_can_submit(e) for e in endpoints)
+
+        def _can_open_mt(endpoint: str) -> bool:
+            """صفحات طبقة mikrotik.* القديمة (مزخرف mt_permissions.requires_perm):
+            حارس اللوحة + نفس فحص المزخرف. تُستعمل حيث يَظهر رابطها لكلّ مدير
+            (جرس تنبيهات الراوترات في الشريط العلويّ — F01-F13)."""
+            if not _can_submit(endpoint, "GET"):
+                return False
+            if _is_super():
+                return True
+            try:
+                name = endpoint if endpoint.startswith("radius.") else "radius." + endpoint
+                _need = getattr(app.view_functions.get(name), "_hr_required_perms", None)
+                if _need:
+                    from app.radius.services.mt_permissions import require_perms
+                    return bool(require_perms(*_need)[0])
+            except Exception:  # noqa: BLE001 — fail-open
+                pass
+            return True
+
+        def _can_open(url, method: str = "GET") -> bool:
+            """رابطٌ عنوانه بيانات (تنبيه/إشعار/بطاقة لوحة): يُحلّ العنوان إلى
+            endpoint ثم نفس قرار الحارس. عنوان خارجيّ/غير معروف ⇒ نعم."""
+            if _is_super() or not url:
+                return True
+            try:
+                from urllib.parse import urlsplit
+                parts = urlsplit(str(url))
+                if parts.netloc or not parts.path.startswith("/admin/radius/"):
+                    return True
+                ep, _args = app.url_map.bind("localhost").match(parts.path, method=method)
+            except Exception:  # noqa: BLE001
+                return True
+            return _can_submit(ep, method)
+
+        def _can_post_here() -> bool:
+            """نموذجٌ يُرسَل إلى عنوان الصفحة نفسها (بلا action): قرار الحارس على
+            الـendpoint الذي يستقبل POST لهذا العنوان."""
+            if _is_super():
+                return True
+            try:
+                from flask import request as _rq
+                adapter = app.url_map.bind_to_environ(_rq.environ)
+                ep, _args = adapter.match(method="POST")
+            except Exception:  # noqa: BLE001 — لا مسار POST هنا: لا شيء نحجبه
+                return True
+            return _can_submit(ep, "POST")
+
         return {
+            "can_submit": _can_submit,
+            "can_submit_any": _can_any,
+            "can_post_here": _can_post_here,
+            "can_open": _can_open,
+            "can_open_mt": _can_open_mt,
+            "manager_locked_fields": _manager_locked_fields,
+            "subscriber_actions": _sub_actions,
             "manager_nav_hidden": _manager_nav_hidden,
             "manager_section_locked": _manager_section_locked,
             "manager_can_write": _manager_can_write,
@@ -923,6 +1092,40 @@ def _install_stubs(app: Flask) -> None:
             "manager_action_allowed": _manager_action_allowed,
             "manager_can_see": _manager_can_see,
         }
+
+    # F01-F2: the gating helpers are ALSO Jinja globals, so macros imported
+    # without context (_partials/hub.html btn/action_card…) can gate their own
+    # href. They only read the request-bound session/g proxies at call time.
+    _gating = _inject_manager_grants()
+    for _gk in ("can_submit", "can_submit_any", "can_post_here", "can_open"):
+        app.jinja_env.globals.setdefault(_gk, _gating[_gk])
+
+    import re as _re_gate
+    _GATE_A = _re_gate.compile(r'<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>(.*?)</a>', _re_gate.S | _re_gate.I)
+    _GATE_FORM = _re_gate.compile(r'<form\b([^>]*?)\baction="([^"]*)"([^>]*)>(.*?)</form>',
+                                  _re_gate.S | _re_gate.I)
+
+    def _gate_html(html):
+        """F01-F2: HTML built as a string (hero actions_html, modal footers):
+        a link/form whose target the guard would refuse is dropped — the same
+        decision as can_open(). Owner/super: unchanged."""
+        from markupsafe import Markup
+        s = str(html or "")
+        if not s or ("href=" not in s and "action=" not in s):
+            return html
+        can_open = _gating["can_open"]
+
+        def _form(m):
+            meth = "POST" if _re_gate.search(r'method\s*=\s*"post"', m.group(1) + m.group(3), _re_gate.I) else "GET"
+            return m.group(0) if can_open(m.group(2), meth) else ""
+
+        def _a(m):
+            return m.group(0) if can_open(m.group(2)) else ""
+        s = _GATE_FORM.sub(_form, s)
+        s = _GATE_A.sub(_a, s)
+        return Markup(s)
+
+    app.jinja_env.filters.setdefault("gate_html", _gate_html)
 
     # Provider gate template helpers — provider_endpoint_blocked /
     # provider_service_disabled. Used by the sidebar macro to silently hide
@@ -958,22 +1161,75 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.system_config import (
                 CURRENCY_NAMES, CURRENCY_SYMBOLS, _DEFAULTS,
             )
-            cur = (_DEFAULTS.get("billing.currency") or "JOD").upper()
+            cur = (_DEFAULTS.get("billing.currency") or "ILS").upper()
             return {"cfg": {"currency": cur,
                             "currency_symbol": CURRENCY_SYMBOLS.get(cur, cur),
                             "currency_name": CURRENCY_NAMES.get(cur, cur),
-                            "tz_offset": 3.0, "system_name": "HobeRadius", "country": "",
+                            "tz_offset": 3.0, "tz_name": _DEFAULTS.get("billing.timezone", "Asia/Gaza"),
+                            "system_name": "HobeRadius", "country": "",
                             "logo_url": "", "primary_color": "#2BAACC"}}
 
     from app.radius.core.system_config import (
         format_duration_days as _dur_days,
         format_money as _fmt_money,
+        format_money_multi as _fmt_money_multi,
         to_local as _to_local,
         to_local_date as _to_local_date,
     )
     app.jinja_env.filters["money"] = _fmt_money
-    app.jinja_env.filters["dt_local"] = _to_local
-    app.jinja_env.filters["date_local"] = _to_local_date
+    # مبلغ لكل عملة («5,683.89 ₪ · 426.31 USD») لإجماليّات by_currency.
+    app.jinja_env.filters["money_multi"] = _fmt_money_multi
+
+    # D9 (bidi): كل تاريخ/وقت يمرّ عبر dt_local/date_local يُعزَل بـ
+    # U+2066 LRI … U+2069 PDI كي لا ينعكس داخل سياق RTL (تقارير الماليّة/
+    # الأحداث/التذاكر/الموزّعين وأي صفحة تستخدم هذين الفلترين — مصدر واحد
+    # بدل تعديل ~190 موضعًا يدويًّا). "—" (لا قيمة) لا تُعزَل.
+    _LRI, _PDI = "⁦", "⁩"
+
+    def _dt_local_isolated(value, *args, **kwargs):
+        s = _to_local(value, *args, **kwargs)
+        return f"{_LRI}{s}{_PDI}" if s and s != "—" else s
+
+    def _date_local_isolated(value, *args, **kwargs):
+        s = _to_local_date(value, *args, **kwargs)
+        return f"{_LRI}{s}{_PDI}" if s and s != "—" else s
+
+    app.jinja_env.filters["dt_local"] = _dt_local_isolated
+    app.jinja_env.filters["date_local"] = _date_local_isolated
+    # f06-L3: مدّة بكلماتٍ عربيّة («1 ساعة و5 دقائق») بدل «1h 5m» في الويب.
+    # Imported defensively (see fmt_base_time_ar below): a formatter import
+    # failure must never brick create_app().
+    try:
+        from app.radius.core.duration_fmt import fmt_compact_ar as _dur_ar
+    except Exception:  # noqa: BLE001
+        app.logger.exception("fmt_compact_ar import failed; using degraded fallback")
+
+        def _dur_ar(seconds):
+            s = max(0, int(seconds or 0))
+            h, m = s // 3600, (s % 3600) // 60
+            return f"{h} ساعة و{m} دقيقة" if h else f"{m} دقيقة"
+    app.jinja_env.filters["dur_ar"] = _dur_ar
+    # Reports / profile / portal: the same words, but a sub-minute session keeps
+    # its seconds («45 ثانية») — fix3 integration.
+    try:
+        from app.radius.core.duration_fmt import fmt_duration_ar as _dur_ar_s
+    except Exception:  # noqa: BLE001
+        _dur_ar_s = _dur_ar
+    app.jinja_env.filters["dur_ar_s"] = _dur_ar_s
+
+    def _epoch(value) -> int:
+        """UTC epoch seconds of a stored (naive UTC) datetime — 0 when absent or
+        unrepresentable. ``dt.timestamp()`` raised OSError for a year-0001
+        expiry and took the whole subscribers list down (re-test R01 N4)."""
+        if not value or not hasattr(value, "timetuple"):
+            return 0
+        try:
+            import calendar
+            tt = value.utctimetuple() if getattr(value, "tzinfo", None) else value.timetuple()
+            return int(calendar.timegm(tt))
+        except Exception:  # noqa: BLE001
+            return 0
+    app.jinja_env.filters["epoch"] = _epoch
     # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations
     # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
     app.jinja_env.filters["dur_days"] = _dur_days
@@ -1028,12 +1284,63 @@ def _install_stubs(app: Flask) -> None:
     app.jinja_env.globals.setdefault("permission_label", _perm_label)
     app.jinja_env.filters.setdefault("permission_label", _perm_label)
 
+    # F08-L: جمعٌ عربيّ صحيح للأعداد («3 بطاقات»، «11 إعدادًا») — مصدر واحد.
+    from .radius.core.ar_text import ar_count as _ar_count
+    app.jinja_env.filters.setdefault("ar_count", _ar_count)
+    app.jinja_env.globals.setdefault("ar_count", _ar_count)
+    # F08-L: فاعل خام («api-token:72»، «unknown») → اسم عرض مقروء.
+    from .radius.services.actor_names import (
+        actor_display as _actor_display, humanize_actor_refs as _actor_refs)
+    app.jinja_env.filters.setdefault("actor_name", _actor_display)
+    app.jinja_env.filters.setdefault("actor_refs", _actor_refs)
+    # حدود المالك المعروضة في الواجهة — مصدرها الخادم نفسه، لا أرقام مكرّرة في
+    # القوالب. كائنٌ واحد (دمج fix3-webui + fix3-moneyquota):
+    #   • ``hr_limits.extend_max_days`` / ``.extend_too_long`` — «الحدود» الحيّة
+    #     (core.limits، تُقرأ كلّ طلب)؛ ``.card_username_len_max`` /
+    #     ``.card_password_len_max`` — ثوابت مولّد البطاقات؛
+    #   • ``hr_limits()`` — لقطة ``limits.snapshot()`` كاملة (max_extend_minutes…).
+    #   • أيّ اسمٍ آخر في اللقطة متاحٌ كخاصّيّة (``hr_limits.max_loan_amount``).
+    from .radius.services.cards import (
+        PASSWORD_LENGTH_MAX as _pw_max, USERNAME_LENGTH_MAX as _un_max)
+
+    class _HrLimits:
+        _static = {"card_username_len_max": _un_max, "card_password_len_max": _pw_max}
+
+        def __call__(self, tenant_id=None):
+            from .radius.core import limits as _lim
+            return _lim.snapshot(tenant_id)
+
+        def __getattr__(self, name):
+            if name.startswith("_"):
+                raise AttributeError(name)
+            if name in self._static:
+                return self._static[name]
+            from .radius.core import limits as _lim
+            if name == "extend_max_days":
+                return _lim.max_extend_days()
+            if name == "extend_too_long":
+                return _lim.extend_too_long_msg()
+            snap = _lim.snapshot()
+            if name in snap:
+                return snap[name]
+            raise AttributeError(name)
+
+        def __getitem__(self, name):
+            try:
+                return getattr(self, name)
+            except AttributeError:
+                raise KeyError(name) from None
+
+    app.jinja_env.globals["hr_limits"] = _HrLimits()
+
     # رقم الراوتر المعروض «#N» = ترتيبه بين راوترات المستأجر الحيّة، لا
     # المعرّف الداخليّ (AUTOINCREMENT لا يُعاد — تجارب محذوفة كانت تجعل
     # الراوتر الوحيد يظهر «#39»). المعرّف الداخليّ يبقى في الروابط (مفتاح
     # تقنيّ للحسابات rtr-<id> والملفّات) — العرض فقط ترتيبيّ.
     from .radius.db.repos.nas_repo import display_ordinal as _router_no
     app.jinja_env.globals.setdefault("router_no", _router_no)
+
+    # «الحدود» — ``hr_limits`` (أعلاه) يعرض سقوف core.limits الحيّة للقوالب.
 
     # endpoints مستثناة من CSRF (بوّابات دخول مع credentials check)
     _CSRF_EXEMPT_PATHS = {
@@ -1077,17 +1384,52 @@ def _install_stubs(app: Flask) -> None:
             csrf_token()  # يولّد ويحفظ في session
             return redirect(request.referrer or "/admin/radius/login")
         if sent != expected:
-            # Return JSON for AJAX/JSON requests so fetch().then(r.json()) works
-            # and the UI shows a readable message instead of swallowing the error.
-            if request.is_json or request.headers.get("X-CSRFToken") is not None:
-                from flask import jsonify as _jsonify
-                return _jsonify({
-                    "ok": False,
-                    "status": "csrf_error",
-                    "message_ar": "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.",
-                }), 400
-            return ("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى", 400)
+            return _csrf_failure_response()
         return None
+
+    def _csrf_failure_response():
+        """F08-L: فشل رمز الحماية — JSON عربيّ لطلبات AJAX (fetch/XHR بأيّ
+        جسم)، وصفحة عربيّة منسّقة للتصفّح تحفظ ما كُتب (كانت نصًّا خامًا)."""
+        from flask import request, jsonify as _jsonify, render_template as _rt
+        msg = "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى."
+        accept = request.headers.get("Accept") or ""
+        wants_json = (
+            request.is_json
+            or request.headers.get("X-CSRFToken") is not None
+            or (request.headers.get("X-Requested-With") or "").lower() == "xmlhttprequest"
+            or ("application/json" in accept and "text/html" not in accept)
+        )
+        if wants_json:
+            return _jsonify({
+                "ok": False,
+                "status": "csrf_error",
+                "error": msg,
+                "message": msg,
+                "message_ar": msg,
+            }), 400
+        try:
+            fields = {
+                k: request.form.getlist(k) for k in request.form.keys()
+                if k != "_csrf_token" and "password" not in k.lower()
+                and "secret" not in k.lower()}
+        except Exception:  # noqa: BLE001
+            fields = {}
+        back = request.referrer or ""
+        try:
+            from urllib.parse import urlparse
+            _u = urlparse(back)
+            # رجوعٌ داخل الموقع فقط (لا رابط خارجيّ من ترويسة Referer).
+            back = (_u.path + ("?" + _u.query if _u.query else "")) if (
+                not _u.netloc or _u.netloc == request.host) else ""
+        except Exception:  # noqa: BLE001
+            back = ""
+        try:
+            return _rt("radius/csrf_error.html", fields=fields,
+                       back_url=back), 400
+        except Exception:  # noqa: BLE001 — never 500 over a CSRF refusal
+            return ('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
+                    "<h1>انتهت صلاحية الصفحة</h1><p>" + msg + "</p></html>",
+                    400, {"Content-Type": "text/html; charset=utf-8"})
 
     # حقن _csrf_token في كل <form method="post"> تلقائيًا
     import re
@@ -1109,6 +1451,37 @@ def _install_stubs(app: Flask) -> None:
         token = str(escape(csrf_token()))
         field = f'<input type="hidden" name="_csrf_token" value="{token}">'
         response.set_data(_FORM_RE.sub(r"\1" + field, html))
+        return response
+
+    @app.after_request
+    def _relative_self_redirects(response):
+        # Re-test R13 L5: behind nginx on :8443 the proxied Host header has no
+        # port, so Werkzeug's absolute redirects (the strict-slash
+        # /admin/radius → /admin/radius/ and every url_for-built Location)
+        # dropped «:8443». A redirect to the SAME host and scheme is sent as a
+        # relative Location; the browser resolves it against the URL it really
+        # used, port included. Other hosts / schemes / explicit ports: as-is.
+        loc = response.headers.get("Location")
+        if not loc or not (300 <= response.status_code < 400):
+            return response
+        from urllib.parse import urlsplit
+        from flask import request as _r
+        try:
+            parts = urlsplit(loc)
+            if (parts.scheme and parts.netloc
+                    and parts.scheme == _r.scheme
+                    and (parts.hostname or "").lower()
+                    == (_r.host or "").rsplit(":", 1)[0].strip("[]").lower()
+                    and (parts.port is None
+                         or f"{parts.hostname}:{parts.port}".lower() == (_r.host or "").lower())):
+                rel = parts.path or "/"
+                if parts.query:
+                    rel += "?" + parts.query
+                if parts.fragment:
+                    rel += "#" + parts.fragment
+                response.headers["Location"] = rel
+        except ValueError:
+            pass
         return response
 
     @app.after_request

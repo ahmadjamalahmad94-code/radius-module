@@ -68,8 +68,9 @@ def _live_session_totals(tenant_id: int) -> tuple[int, int, int]:
         bi = int(row["bi"] or 0) if row else 0
         bo = int(row["bo"] or 0) if row else 0
         try:
+            # نفس عدّاد اللوحة/الـAPI: جلسات مشتركين/كروت حقيقيّين فقط.
             from . import connected_live
-            count = connected_live.connected_now(int(tenant_id))
+            count = connected_live.connected_now(int(tenant_id), real_only=True)
         except Exception:  # noqa: BLE001
             count = int(db().execute(
                 "SELECT COUNT(*) AS c FROM radacct "

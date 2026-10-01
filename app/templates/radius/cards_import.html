@@ -230,7 +230,7 @@
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
-<form method="post" action="{{ url_for('radius.cards_batches_import') }}">
+<form method="post" action="{{ url_for('radius.cards_batches_import') }}">{% if not can_submit('radius.cards_batches_import') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {% call hub.section("بيانات الملف", icon="box-archive") %}
     <div class="hub-form-row">
       <div class="hub-field">
@@ -380,10 +380,10 @@
     </div>
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
       {{ hub.btn("استيراد الملف", icon="file-import", type="submit", variant="primary") }}
-      {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_batches'), variant="secondary") }}
+      {% if can_submit('radius.cards_batches', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_batches'), variant="secondary") }}{% endif %}
     </div>
   {% endcall %}
-</form>
+{% if not can_submit('radius.cards_batches_import') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 <script>

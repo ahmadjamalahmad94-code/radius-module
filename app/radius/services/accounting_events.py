@@ -32,6 +32,14 @@ def _int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _octets(payload: dict[str, Any], direction: str) -> int:
+    """``Acct-{In,Out}put-Octets`` + ``Acct-…-Gigawords`` × 2^32 (0 if absent)."""
+    cap = direction.capitalize()
+    octets = _int(payload.get(f"{direction}_octets") or payload.get(f"Acct-{cap}-Octets"))
+    giga = _int(payload.get(f"{direction}_gigawords") or payload.get(f"Acct-{cap}-Gigawords"))
+    return max(0, octets) + max(0, giga) * 4294967296
+
+
 class AccountingEventsService:
     def ingest(self, *, tenant_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         event = self.normalize(tenant_id=tenant_id, payload=payload)
@@ -77,8 +85,11 @@ class AccountingEventsService:
             "nas_ip_address": nas_ip,
             "calling_station_id": str(payload.get("calling_station_id") or payload.get("Calling-Station-Id") or ""),
             "framed_ip_address": str(payload.get("framed_ip_address") or payload.get("Framed-IP-Address") or ""),
-            "input_octets": _int(payload.get("input_octets") or payload.get("Acct-Input-Octets")),
-            "output_octets": _int(payload.get("output_octets") or payload.get("Acct-Output-Octets")),
+            # RFC 2869 Acct-*-Gigawords: the 32-bit octet counters wrap every
+            # 4 GiB and the overflow count arrives separately. Fold it in (like
+            # the FreeRADIUS sql queries do) — a 5 GB session was stored as ~0.7 GB.
+            "input_octets": _octets(payload, "input"),
+            "output_octets": _octets(payload, "output"),
             "session_time": _int(payload.get("session_time") or payload.get("Acct-Session-Time")),
             # NAS-supplied Acct-Terminate-Cause (RFC 2866) — the REAL reason a
             # session ended (Session-Timeout for card/sub time-budget expiry,
@@ -91,39 +102,54 @@ class AccountingEventsService:
             "status_type": status,
         }
 
-    def list_online(self, *, tenant_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    # fix3 (F02 H2 / F07 M3): ``scope`` = the manager's owner-scope admin id
+    # (None = every row) — the one subscriber predicate (subscriber_scope).
+    @staticmethod
+    def _scope(scope, tenant_id) -> tuple[str, list]:
+        if scope is None:
+            return "", []
+        from .subscriber_scope import scope_sql
+        return scope_sql("username", scope=int(scope), tenant_id=int(tenant_id),
+                         use_request=False)
+
+    def list_online(self, *, tenant_id: int, limit: int = 100,
+                    offset: int = 0, scope=None) -> list[dict[str, Any]]:
+        sc, sv = self._scope(scope, tenant_id)
         rows = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ? AND acctstoptime IS NULL
-            ORDER BY radacctid DESC
-            LIMIT ?
-            """,
-            (int(tenant_id), max(1, min(int(limit or 100), 500))),
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctstoptime IS NULL" + sc
+            + " ORDER BY radacctid DESC LIMIT ? OFFSET ?",
+            (int(tenant_id), *sv, max(1, min(int(limit or 100), 1000)),
+             max(0, int(offset or 0))),
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def session_detail(self, *, tenant_id: int, session_id: str) -> dict[str, Any] | None:
+    def count_online(self, *, tenant_id: int, scope=None) -> int:
+        """Every open radacct row of the tenant (the `total` of /accounting/online)."""
+        sc, sv = self._scope(scope, tenant_id)
         row = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ? AND acctsessionid = ?
-            ORDER BY radacctid DESC
-            LIMIT 1
-            """,
-            (int(tenant_id), str(session_id)),
+            "SELECT COUNT(*) AS n FROM radacct "
+            "WHERE tenant_id = ? AND acctstoptime IS NULL" + sc,
+            (int(tenant_id), *sv),
+        ).fetchone()
+        return int(row["n"] or 0) if row else 0
+
+    def session_detail(self, *, tenant_id: int, session_id: str,
+                       scope=None) -> dict[str, Any] | None:
+        sc, sv = self._scope(scope, tenant_id)
+        row = db().execute(
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctsessionid = ?" + sc
+            + " ORDER BY radacctid DESC LIMIT 1",
+            (int(tenant_id), str(session_id), *sv),
         ).fetchone()
         return dict(row) if row else None
 
-    def list_history(self, *, tenant_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    def list_history(self, *, tenant_id: int, limit: int = 100,
+                     scope=None) -> list[dict[str, Any]]:
+        sc, sv = self._scope(scope, tenant_id)
         rows = db().execute(
-            """
-            SELECT * FROM radacct
-            WHERE tenant_id = ?
-            ORDER BY radacctid DESC
-            LIMIT ?
-            """,
-            (int(tenant_id), max(1, min(int(limit or 100), 500))),
+            "SELECT * FROM radacct WHERE tenant_id = ?" + sc
+            + " ORDER BY radacctid DESC LIMIT ?",
+            (int(tenant_id), *sv, max(1, min(int(limit or 100), 500))),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -289,13 +315,33 @@ class AccountingEventsService:
                 pass
             return {"kicked": 0, "error": str(exc)}
 
+    def _note_quota_baseline(self, event: dict[str, Any]) -> None:
+        """The first Interim/Stop after local midnight / the 1st overwrites the
+        last pre-boundary reading — keep it as the daily/monthly quota
+        baseline of this session (quota_period, F04 H1). Fail-safe."""
+        try:
+            from .quota_period import note_pre_interim
+            prev = db().execute(
+                "SELECT radacctid, username, acctstarttime, acctupdatetime, "
+                "acctinputoctets, acctoutputoctets FROM radacct "
+                "WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ? "
+                "AND acctstoptime IS NULL ORDER BY radacctid DESC LIMIT 1",
+                (event["tenant_id"], event["acct_session_id"],
+                 event["nas_ip_address"])).fetchone()
+            note_pre_interim(event["tenant_id"], dict(prev) if prev else None)
+        except Exception:  # noqa: BLE001
+            pass
+
     def _interim(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()
+        self._note_quota_baseline(event)
         cur = db().execute(
             """
             UPDATE radacct
             SET acctupdatetime = ?, acctinputoctets = ?, acctoutputoctets = ?,
-                acctsessiontime = ?, framedipaddress = ?
+                acctsessiontime = ?,
+                -- an Interim without Framed-IP-Address keeps the stored IP
+                framedipaddress = COALESCE(NULLIF(?, ''), framedipaddress)
             WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ?
               AND acctstoptime IS NULL
             """,
@@ -310,10 +356,78 @@ class AccountingEventsService:
                 event["nas_ip_address"],
             ),
         )
+        # فحص الكوتة عند كلّ Interim (إجماليّة/شهريّة/يوميّة/بالاتجاه): من نفدت
+        # كوتته يُفصل الآن لا عند إعادة المصادقة. محصّن — لا يُفشل المحاسبة.
+        if not cur.rowcount:
+            # f06-L8: Interim بلا Start (ضاع الـStart) ⇒ نفتح الجلسة كما يفعل
+            # مسار FreeRADIUS (بداية = الآن − مدّة الجلسة، مع الـIP). ورودُ
+            # Interim متأخّر بعد Stop لا يُعيد فتح جلسةٍ مغلقة.
+            prior = self._last_session_row(event)
+            if prior is not None:
+                return {"status": "already_stopped", "session": dict(prior)}
+            return self._insert_missing_start(event, closed=False)
+        if cur.rowcount and event.get("username"):
+            try:
+                from .quota_period import enforce_after_interim
+                enforce_after_interim(event["tenant_id"], event["username"])
+            except Exception:  # noqa: BLE001
+                pass
         return {"status": "updated" if cur.rowcount else "not_found", "session": self._open_session(event)}
+
+    def _last_session_row(self, event: dict[str, Any]):
+        return db().execute(
+            "SELECT * FROM radacct WHERE tenant_id = ? AND acctsessionid = ? "
+            "AND nasipaddress = ? ORDER BY radacctid DESC LIMIT 1",
+            (event["tenant_id"], event["acct_session_id"], event["nas_ip_address"]),
+        ).fetchone()
+
+    def _insert_missing_start(self, event: dict[str, Any], *, closed: bool) -> dict[str, Any]:
+        """f06-L8 — صفّ جلسةٍ لم يصل Start لها: كان Stop/Interim بلا Start
+        يُرجع ``not_found`` بـ200 فيضيع الاستهلاك ولا يُعيد العميل المحاولة.
+        البداية = الآن − Acct-Session-Time (نفس مسار FreeRADIUS)."""
+        now_dt = datetime.utcnow()
+        secs = max(0, _int(event.get("session_time"), 0))
+        try:
+            start = (now_dt - timedelta(seconds=secs)).isoformat() + "Z"
+        except OverflowError:
+            start = now_dt.isoformat() + "Z"
+        now = now_dt.isoformat() + "Z"
+        cur = db().execute(
+            """
+            INSERT INTO radacct (
+              tenant_id, acctsessionid, acctuniqueid, username, nasipaddress,
+              acctstarttime, acctupdatetime, acctstoptime, callingstationid,
+              framedipaddress, acctinputoctets, acctoutputoctets, acctsessiontime,
+              acctterminatecause
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event["tenant_id"],
+                event["acct_session_id"],
+                event["acct_unique_session_id"],
+                event["username"],
+                event["nas_ip_address"],
+                start,
+                now,
+                now if closed else None,
+                event["calling_station_id"],
+                event["framed_ip_address"],
+                event["input_octets"],
+                event["output_octets"],
+                event["session_time"],
+                (event.get("terminate_cause") or "User-Request") if closed else "",
+            ),
+        )
+        row = db().execute("SELECT * FROM radacct WHERE radacctid = ?",
+                           (cur.lastrowid,)).fetchone()
+        return {"status": "stopped" if closed else "started",
+                "inserted_without_start": True,
+                "session": dict(row) if row else None}
 
     def _stop(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()
+        self._note_quota_baseline(event)
         cur = db().execute(
             """
             UPDATE radacct
@@ -362,6 +476,13 @@ class AccountingEventsService:
                 rebalance_device_split(event["tenant_id"], event["username"])
             except Exception:  # noqa: BLE001
                 pass
+        if not cur.rowcount:
+            # f06-L8: Stop بلا Start ⇒ صفٌّ مغلق بالاستهلاك (كما يفعل مسار
+            # FreeRADIUS)؛ Stop مُعاد لجلسةٍ أُغلقت ⇒ لا تكرار.
+            prior = self._last_session_row(event)
+            if prior is not None:
+                return {"status": "already_stopped", "session": dict(prior)}
+            return self._insert_missing_start(event, closed=True)
         return {
             "status": "stopped" if cur.rowcount else "not_found",
             "session": self.session_detail(tenant_id=event["tenant_id"], session_id=event["acct_session_id"]),

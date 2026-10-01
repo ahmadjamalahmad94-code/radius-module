@@ -93,10 +93,8 @@ def _business_error_message(exc: Exception) -> str:
     raw = str(exc)
     if raw in _ERROR_TRANSLATIONS:
         return _ERROR_TRANSLATIONS[raw]
-    if raw.endswith(" must be positive"):
-        field = raw.removesuffix(" must be positive")
-        return f"قيمة {field} يجب أن تكون أكبر من صفر."
-    return raw
+    from ...radius.services.business_os_finance import arabic_business_error
+    return arabic_business_error(raw)
 
 
 def _validation_error(exc: Exception):
@@ -109,6 +107,7 @@ def wallets_list():
         owner_type=(request.args.get("owner_type") or "").strip(),
         status=(request.args.get("status") or "").strip(),
         limit=_limit(),
+        scoped=True,  # fix3: subscriber scope of the token admin
     )
     return ok({"items": items, "count": len(items)})
 
@@ -190,6 +189,7 @@ def ledger_list():
         entry_type=(request.args.get("entry_type") or "").strip(),
         reference_type=(request.args.get("reference_type") or "").strip(),
         limit=_limit(),
+        scoped=True,  # fix3: subscriber scope of the token admin
     )
     return ok({"items": items, "count": len(items)})
 
@@ -225,59 +225,36 @@ def revenue_list():
     الحزم، مرتّبةً بالأحدث. ``totals.collected`` = صافي الدفعات (الدفعات −
     إلغاؤها) مطابقًا لتقرير «دفعات المستفيدين»."""
     from ...radius.db.repos import accounting_repo
+    from ...radius.services.business_os_finance_center import revenue_items
 
+    # المصدر نفسه لصفحة الويب «المركز المالي» (revenue_items/revenue_summary).
+    # الدفعة المُلغاة: status «voided» وصافي ربحها 0 (كان التطبيق يجمعه ربحًا).
     limit = _limit()
-    items: list[dict[str, Any]] = []
-    for pay in accounting_repo.payment_revenue_items(_tid(), limit=limit):
-        amount = float(pay.get("amount") or 0)
-        items.append({
-            "id": int(pay["id"]),
-            "source_type": "subscriber_payment",
-            "source_id": pay.get("source_id"),
-            "price_snapshot_id": None,
-            "original_price": amount,
-            "retail_price": amount,
-            "wholesale_cost": 0.0,
-            "collected_amount": amount,
-            "debt_amount": 0.0,
-            "discount_amount": 0.0,
-            "net_profit": amount,
-            "company_share": amount,
-            "currency": pay.get("currency") or default_currency(),
-            "status": pay.get("status") or "posted",
-            "metadata": {"username": pay.get("username") or "",
-                         "subscriber_id": pay.get("subscriber_id"),
-                         "operator": pay.get("operator") or "",
-                         "ledger_entry_id": int(pay["id"])},
-            "created_at": pay.get("created_at"),
-        })
-    rows = db().execute(
-        """
-        SELECT * FROM revenue_records
-        WHERE tenant_id=?
-        ORDER BY id DESC LIMIT ?
-        """,
-        (_tid(), limit),
-    ).fetchall()
-    for row in rows:
-        item = dict(row)
-        for key in tuple(item):
-            if key.endswith("_minor"):
-                item[key[:-6]] = minor_to_money(item[key])
-        item["metadata"] = json_load(item.get("metadata_json"), {})
-        items.append(item)
-    items.sort(key=lambda it: str(it.get("created_at") or "").replace("T", " "), reverse=True)
-    items = items[:limit]
+    try:
+        offset = max(int(request.args.get("offset") or 0), 0)
+    except (TypeError, ValueError):
+        return fail("validation_error", "قيمة offset يجب أن تكون رقمًا صحيحًا.", status=422)
+    items = revenue_items(_tid(), limit=limit, offset=offset)
     totals = accounting_repo.subscriber_payment_totals(_tid())
-    return ok({"items": items, "count": len(items),
+    rev = accounting_repo.revenue_summary(_tid())
+    return ok({"items": items, "count": len(items), "limit": limit, "offset": offset,
+               "has_more": len(items) == limit,
                "totals": {"collected": totals["total"], "ledger_entries": totals["entries"],
                           "by_currency": totals.get("by_currency", []),
-                          "mixed_currency": bool(totals.get("mixed_currency"))}})
+                          "mixed_currency": bool(totals.get("mixed_currency")),
+                          # جديد: الإيراد والربح الصافي على الكلّ (لا مجموع صفحة
+                          # الصفوف المحمّلة) — ولكلّ عملة رقمها.
+                          "revenue": rev["revenue"], "net_profit": rev["profit"],
+                          "transactions": rev["transactions"],
+                          "revenue_by_currency": rev["by_currency"]}})
 
 
 def _event_out(item: dict[str, Any]) -> dict[str, Any]:
     # metadata كائنًا مفكوكًا مثل /events-center (metadata_json يبقى للتوافق).
     item["metadata"] = json_load(item.get("metadata_json"), default={}) or {}
+    # نصّ أحداث القيود بمبلغٍ مُنسَّق (لا «-1e+09») — المصدر نفسه لمركز الأحداث.
+    from ...radius.services.events_risk_center import ledger_message_display
+    item["message"] = ledger_message_display(item)
     return item
 
 
@@ -385,18 +362,27 @@ def price_snapshots_capture():
 
 def business_summary():
     tenant_id = _tid()
+    # fix3 (F02 H2): the token admin's subscriber scope on every figure.
+    from ...radius.services.subscriber_scope import current_scope_admin_id, entity_scope_sql
+    wsc, wsv = entity_scope_sql("owner_type", "owner_id", tenant_id=tenant_id)
+    lsc, lsv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                actor_id_col="actor_id", tenant_id=tenant_id)
+    scoped = current_scope_admin_id(tenant_id=tenant_id) is not None
     row = db().execute(
-        """
-        SELECT
-          (SELECT COUNT(*) FROM wallets WHERE tenant_id=?) AS wallets,
-          (SELECT COALESCE(SUM(balance_minor), 0) FROM wallets WHERE tenant_id=?) AS wallet_balance_minor,
-          (SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?) AS ledger_entries,
-          (SELECT COALESCE(SUM(amount_minor), 0) FROM ledger_entries WHERE tenant_id=? AND voided_at IS NULL) AS ledger_total_minor,
-          (SELECT COUNT(*) FROM business_events WHERE tenant_id=?) AS events,
-          (SELECT COUNT(*) FROM price_snapshots WHERE tenant_id=?) AS price_snapshots,
-          (SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?) AS revenue_records
-        """,
-        (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+        "SELECT"
+        " (SELECT COUNT(*) FROM wallets WHERE tenant_id=?" + wsc + ") AS wallets,"
+        " (SELECT COALESCE(SUM(balance_minor), 0) FROM wallets WHERE tenant_id=?" + wsc
+        + ") AS wallet_balance_minor,"
+        " (SELECT COUNT(*) FROM ledger_entries WHERE tenant_id=?" + lsc + ") AS ledger_entries,"
+        " (SELECT COALESCE(SUM(amount_minor), 0) FROM ledger_entries WHERE tenant_id=?"
+        " AND voided_at IS NULL" + lsc + ") AS ledger_total_minor,"
+        " (SELECT COUNT(*) FROM business_events WHERE tenant_id=?" + lsc + ") AS events,"
+        " (SELECT COUNT(*) FROM price_snapshots WHERE tenant_id=?" + (" AND 0" if scoped else "")
+        + ") AS price_snapshots,"
+        " (SELECT COUNT(*) FROM revenue_records WHERE tenant_id=?" + (" AND 0" if scoped else "")
+        + ") AS revenue_records",
+        (tenant_id, *wsv, tenant_id, *wsv, tenant_id, *lsv, tenant_id, *lsv,
+         tenant_id, *lsv, tenant_id, tenant_id),
     ).fetchone()
     data = dict(row or {})
     data["wallet_balance"] = minor_to_money(data.pop("wallet_balance_minor", 0))

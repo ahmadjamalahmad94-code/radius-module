@@ -14,9 +14,13 @@ from ..core.errors import RadiusError
 
 # /online server-side paging (leftover wave 2026-09-28).
 ONLINE_SCAN_CAP = 50_000          # same safety cap as GET /api/v1/sessions/online
-ONLINE_PAGE_SIZE = 500
+# 100 rows by default (re-test R07 N14): every row is ~6 KB of HTML with two
+# forms and five action buttons, so 500 rows = a 3.3 MB page that took ~21 s
+# to load and render on the demo server. Larger pages stay one click away.
+ONLINE_PAGE_SIZE = 100
 ONLINE_PAGE_SIZES = (100, 200, 500, 1000)
 from ..integration.factory import get_radius_adapter
+from ..integration.radius_coa import coa_code_ar
 from ..services.sessions import get_online_sessions_service
 
 
@@ -293,6 +297,10 @@ def online_list():
     except RadiusError as e:
         items = []
         error = e.message
+    # fix3 (F02 H2): a manager without «عرض كل المشتركين» sees only the live
+    # sessions of his own subscribers (one predicate with the API).
+    from ..services.subscriber_scope import filter_rows as _scope_rows
+    items = _scope_rows(items, key="username", tenant_id=_tid())
 
     # فلترة الحالة الحيّة: لا نَعرض جلسات على راوتر غير قابل للوصول (لا يمكن
     # التحقّق → لا بيانات). نُطبّق الفلترة فقط حين يوجد سجلّ liveness (المُستطلِع
@@ -412,20 +420,28 @@ def online_list():
     # بحث حرّ داخل «المتصلون الآن»: يطابق اسم الدخول/الاسم/الجوال/MAC/IP/الباقة/الراوتر
     # (تطابق جزئيّ غير حسّاس لحالة الأحرف). خادميّ ليتّسق مع بقيّة الفلاتر.
     if search_q:
+        # OnlineSession has `framed_ip` (not ip_address) and no phone: the
+        # mobile comes from the subscriber row (re-test R07 N3 — IP / phone
+        # searches never matched although the placeholder offers them).
+        from ..services.sessions import mobiles_by_username
+        _mobiles = mobiles_by_username(_tid(), (it.username for it in items))
+
         def _q_match(it) -> bool:
             hay = " ".join(
                 str(v or "").lower()
                 for v in (
                     getattr(it, "username", ""),
                     getattr(it, "full_name", ""),
-                    getattr(it, "phone", ""),
+                    _mobiles.get(getattr(it, "username", "") or "", ""),
                     getattr(it, "mac_address", ""),
-                    getattr(it, "ip_address", ""),
+                    getattr(it, "framed_ip", ""),
                     getattr(it, "plan_name", ""),
                     getattr(it, "nas_address", ""),
                 )
             )
-            return search_q in hay
+            return search_q in hay or mac_query_matches(
+                search_q, getattr(it, "mac_address", ""))
+        from ..services.sessions import mac_query_matches
         items = [it for it in items if _q_match(it)]
 
     # ── the page cut: counters describe the WHOLE filtered result ──
@@ -745,7 +761,7 @@ def online_lock_mac():
 
                 svc = get_users_service()
                 sub = svc.get(username)
-                svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
+                svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac), base=sub)
             ok.append(f"{username} ({mac})")
         except RadiusError as e:
             failed.append(f"{username}: {e.message or 'تعذّر تثبيت MAC'}")
@@ -787,7 +803,7 @@ def online_lock_ip():
 
             svc = get_users_service()
             sub = svc.get(username)
-            svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
+            svc.update(actor=_actor(), sub=replace(sub, static_ip=ip), base=sub)
             ok.append(f"{username} ({ip})")
         except RadiusError as e:
             failed.append(f"{username}: {e.message or 'تعذّر تثبيت IP'}")
@@ -839,26 +855,31 @@ def _apply_temp_speed_request(force_mode: str | None):
         ok = result["coa"].get("ok")
         code = result["coa"].get("code") or "no_coa"
         mode = result.get("mode")
+        # ends_at is naive UTC — show it in the panel's local time (the
+        # operator read a raw UTC ISO as local: 3 h off — re-test R07 N8).
+        from ..core.system_config import to_local as _to_local
+        ends_local = _to_local(result.get("ends_at"))
         if mode == MODE_DISCONNECT_REAUTH:
             # PoD path — the user is disconnected and reconnects with the new
             # rate from the DB. "no_active_session" here is benign.
             if ok:
                 flash(f"طُبِّقت السرعة المؤقتة ({result['rate']}) على {username} "
                       f"بالفصل وإعادة الاتصال — سيعود بالسرعة الجديدة خلال ثوانٍ "
-                      f"(حتى {result['ends_at']}).", "success")
+                      f"(حتى {ends_local}).", "success")
             elif code == "no_active_session":
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
                       f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.",
                       "info")
             else:
+                from ..integration.radius_coa import coa_code_ar
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username}، "
-                      f"لكن تعذّر الفصل ({code}) — تحقّق من اتصال الراوتر.",
+                      f"لكن تعذّر الفصل ({coa_code_ar(code)}) — تحقّق من اتصال الراوتر.",
                       "warning")
         else:
             # live_coa (default) — a live rate change with NO disconnect.
             if ok:
                 flash(f"تم تطبيق السرعة المؤقتة ({result['rate']}) على {username} "
-                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {result['ends_at']}).",
+                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {ends_local}).",
                       "success")
             elif code == "no_active_session":
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
@@ -869,9 +890,10 @@ def _apply_temp_speed_request(force_mode: str | None):
             else:
                 # CoA reached the router but was not confirmed. We do NOT
                 # disconnect automatically — offer the manual force button.
+                from ..integration.radius_coa import coa_code_ar
                 flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
-                      f"{result['ends_at']}، لكن الراوتر لم يؤكّد تطبيق CoA "
-                      f"({code}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
+                      f"{ends_local}، لكن الراوتر لم يؤكّد تطبيق CoA "
+                      f"({coa_code_ar(code)}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
                       f"زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: "
                       f"المنفذ 3799 والـ secret).", "warning")
     except RadiusError as e:
@@ -993,12 +1015,12 @@ def online_coa_set_ip():
     if out.ok:
         flash(
             f"تم تغيير IP لـ {username} إلى {new_ip} على المايكروتيك/السيرفر "
-            f"{out.nas_ip} — {out.code_name}.",
+            f"{out.nas_ip} — {coa_code_ar(out.code_name)}.",
             "success",
         )
     else:
         flash(
-            f"فشل تغيير IP لـ {username}: {out.code_name}"
+            f"فشل تغيير IP لـ {username}: {coa_code_ar(out.code_name)}"
             + (f" — {out.reply_message}" if out.reply_message else "")
             + (f" ({out.detail})" if out.detail else ""),
             "error",
@@ -1016,7 +1038,7 @@ def online_coa_set_speed():
         rx = int((request.form.get("rx_kbps") or "0").strip())
         tx = int((request.form.get("tx_kbps") or "0").strip())
     except (TypeError, ValueError):
-        flash("rx_kbps و tx_kbps يجب أن تكون أرقامًا", "error")
+        flash("سرعة التنزيل والرفع يجب أن تكونا أرقامًا صحيحة.", "error")
         return _return_to_online()
     if not username:
         flash("اسم المستخدم مطلوب", "error")
@@ -1039,12 +1061,12 @@ def online_coa_set_speed():
     if out.ok:
         flash(
             f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "
-            f"— {out.code_name}.",
+            f"— {coa_code_ar(out.code_name)}.",
             "success",
         )
     else:
         flash(
-            f"فشل تطبيق السرعة على {username}: {out.code_name}"
+            f"فشل تطبيق السرعة على {username}: {coa_code_ar(out.code_name)}"
             + (f" — {out.reply_message}" if out.reply_message else ""),
             "error",
         )

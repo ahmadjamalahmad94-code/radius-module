@@ -19,19 +19,19 @@
 {% endblock %}
 {% block page_sub %}
   <span class="sub">
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       style="color:var(--hub-brand-ink);text-decoration:none">
+    {% if can_submit('radius.network_devices_list', 'GET') %}<a href="{{ url_for('radius.network_devices_list') }}"
+       style="color:var(--hub-brand-ink);text-decoration:none">{% endif %}
       <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
-    </a>
+    {% if can_submit('radius.network_devices_list', 'GET') %}</a>{% endif %}
   </span>
 {% endblock %}
 
 {% block content %}
 
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
+  {% if can_submit('radius.network_devices_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
-  </a>
+  </a>{% endif %}
   <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
     <i class="fa-solid fa-{{ 'floppy-disk' if is_edit else 'plus' }}"></i>
     {{ "حفظ التعديلات" if is_edit else "إضافة الجهاز" }}
@@ -64,7 +64,7 @@
 <form id="nd-form" method="post"
       action="{{ url_for('radius.network_devices_update', device_id=device.id)
                  if is_edit else
-                 url_for('radius.network_devices_create') }}">
+                 url_for('radius.network_devices_create') }}">{% if not can_submit(('radius.network_devices_update' if is_edit else 'radius.network_devices_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() | safe }}
 
   {# ── 1. الهوية والربط ─────────────────────── #}
@@ -188,11 +188,11 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;gap:10px;margin-top:16px">
-    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.network_devices_list')) }}
+    {% if can_submit('radius.network_devices_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.network_devices_list')) }}{% endif %}
     {{ hub.btn(("حفظ التعديلات" if is_edit else "إضافة الجهاز"),
                icon=("floppy-disk" if is_edit else "plus"), variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit(('radius.network_devices_update' if is_edit else 'radius.network_devices_create')) %}</fieldset>{% endif %}</form>
 
 {% if is_edit and device.ip_address %}
 {# ── Router-side Netwatch (Sprint 6) ────────────────────────
@@ -208,15 +208,15 @@
     أيّهما يأتي أولًا يُسجَّل، وتنبيه تلجرام يُرسل مرة واحدة خلال فترة التهدئة.
   </p>
   <div class="hub-flex-row" style="gap:10px">
-    <form method="post"
+    {% if can_submit('radius.router_events_netwatch_install', 'POST') %}<form method="post"
           action="{{ url_for('radius.router_events_netwatch_install', device_id=device.id) }}"
           style="display:inline">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--primary" style="padding:6px 14px;font-size:12.5px">
         <i class="fa-solid fa-play"></i> {{ _('فعِّل على الراوتر') }}
       </button>
-    </form>
-    <form method="post"
+    </form>{% endif %}
+    {% if can_submit('radius.router_events_netwatch_remove', 'POST') %}<form method="post"
           action="{{ url_for('radius.router_events_netwatch_remove', device_id=device.id) }}"
           onsubmit="return confirm('إزالة netwatch من الراوتر؟');"
           style="display:inline">
@@ -224,7 +224,7 @@
       <button type="submit" class="hub-btn hub-btn--ghost" style="padding:6px 14px;font-size:12.5px">
         <i class="fa-solid fa-stop"></i> {{ _('ألغِ من الراوتر') }}
       </button>
-    </form>
+    </form>{% endif %}
   </div>
   <p class="hub-text-mute" style="margin:14px 0 0;font-size:11.5px;line-height:1.8">
     <i class="fa-solid fa-circle-info"></i>

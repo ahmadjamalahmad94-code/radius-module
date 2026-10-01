@@ -65,6 +65,8 @@ def list_vouchers():
 
 def generate_vouchers():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     try:
         count = min(max(1, int(body.get("count") or 1)), 1000)
     except (TypeError, ValueError):
@@ -84,6 +86,10 @@ def generate_vouchers():
         return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
     if amount <= 0:
         return fail("validation_error", "قيمة القسيمة يجب أن تكون أكبر من صفر.", status=422)
+    from ...radius.core import limits
+    _msg = limits.amount_error(amount, "generic", label="قيمة القسيمة")
+    if _msg:   # «الحدود» — باقي المدخلات الماليّة
+        return fail("validation_error", _msg, status=422)
     # عدد خانات الكود (اختياري) — الافتراضي 12، والحدود الآمنة 6–16.
     try:
         code_length = int(body.get("code_length") or vouchers_repo.CODE_LEN_DEFAULT)

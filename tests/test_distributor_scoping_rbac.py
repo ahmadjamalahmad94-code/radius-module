@@ -70,9 +70,11 @@ def _plan_id() -> int:
 def _sub_admin(username: str) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») carries every non-owner key and
+    # grant — a plain manager gets the least-privileged role.
     adm = admins_repo.create_admin(
         username=username, password="x12345678", full_name=f"Manager {username}",
-        is_super_admin=False,
+        is_super_admin=False, role_id=admins_repo.least_privileged_role_id(),
     )
     return int(adm.id)
 

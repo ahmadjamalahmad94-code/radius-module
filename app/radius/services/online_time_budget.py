@@ -31,7 +31,7 @@ import datetime as _dt
 import logging
 from typing import Any, Mapping, Optional
 
-from ..core.duration_fmt import fmt_compact
+from ..core.duration_fmt import fmt_compact, fmt_compact_ar
 
 _LOG = logging.getLogger(__name__)
 
@@ -67,6 +67,9 @@ def _cell(used_sec: int, total_sec: Optional[int]) -> dict:
         "total_sec": total,
         "used_txt": fmt_compact(used),
         "total_txt": fmt_compact(total) if total else "",
+        # f06-L3: عرض الويب بكلماتٍ عربيّة (الحقول اللاتينيّة أعلاه عقدُ الـAPI).
+        "used_ar": fmt_compact_ar(used),
+        "total_ar": fmt_compact_ar(total) if total else "",
         "bucket": thirds_bucket(used, total),
     }
 
@@ -106,6 +109,8 @@ def _card_cells(tenant_id: int, usernames: list[str],
     ph = ",".join("?" * len(usernames))
     rows = db().execute(
         f"SELECT c.username, c.expire_at AS card_expire_at, "
+        f"       COALESCE(c.extra_seconds, 0) AS extra_seconds, "
+        f"       c.first_used_at AS first_used_at, "
         f"       COALESCE(b.count_from_first_connect, 0) AS from_first, "
         f"       COALESCE(b.validity_after_first_login_days, 0) AS vafl_days, "
         f"       COALESCE(b.time_value, 0) AS time_value, "
@@ -125,15 +130,25 @@ def _card_cells(tenant_id: int, usernames: list[str],
         uname = str(d.get("username") or "")
         use = usage.get(uname, {})
         accounted = int(use.get("total_sec") or 0)
-        first_at = use.get("first_at")
+        # بداية النافذة: `first_used_at` (قد تُعيد المنحةُ تثبيتها) ثمّ radacct —
+        # نفس ترتيب فاحص البطاقة.
+        from ..db.helpers import parse_dt as _pdt
+        first_at = _pdt(d.get("first_used_at")) or use.get("first_at")
         mode = ca.accounting_mode(bool(d.get("from_first")))
-        budget = ca.budget_seconds(
+        base = ca.budget_seconds(
             validity_after_first_login_days=d.get("vafl_days"),
             time_value=d.get("time_value"),
             time_unit=str(d.get("time_unit") or "days"),
             duration_minutes=d.get("duration_minutes"),
             validity_days=d.get("validity_days"),
         )
+        # fix2 (R13-H1): «إضافة/خصم وقت» (‏cards.extra_seconds) جزءٌ من
+        # الميزانية هنا كما في الفاحص والمُصادِق؛ واستنفادُها = منتهية لا «بلا حدّ».
+        extra = int(d.get("extra_seconds") or 0)
+        if ca.is_exhausted(base, extra):
+            out[uname] = _cell(base, base)
+            continue
+        budget = ca.budget_with_extra(base, extra)
         if budget > 0:
             remaining = ca.remaining_seconds(
                 mode=mode, budget=budget, now=now,

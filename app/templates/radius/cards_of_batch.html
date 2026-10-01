@@ -21,7 +21,7 @@
 {% block title %}{{ _("كروت الحزمة") }} {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}{{ _("كروت الحزمة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ summary.total if summary else 0 }} كرت</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (summary.total if summary else 0)|ar_count('kart') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -441,12 +441,12 @@
 <div class="batch-cards-page" data-batch-cards-page>
   {% if batch %}
     {% set hero_actions %}
-      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+      {% if can_submit('radius.cards_batch_edit', 'GET') %}<a class="hub-btn hub-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
         <i class="fa-solid fa-pen"></i> {{ _('تعديل الحزمة') }}
-      </a>
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
+      </a>{% endif %}
+      {% if can_submit('radius.cards_checker', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
         <i class="fa-solid fa-magnifying-glass-chart"></i> {{ _('الفحص') }}
-      </a>
+      </a>{% endif %}
       {# MT79/MT81 — تصدير كروت هذه الحزمة باختيار الأعمدة والنطاق:
          الموزّع يريد «اسم وكلمة» فقط ليطبع، والجرد يريد «غير المستعملة»
          فقط. الخياران يُمرَّران كـquery ويظهران في اسم الملفّ. #}
@@ -461,20 +461,20 @@
           <option value="all" selected>{{ _('كل البطاقات') }}</option>
           <option value="unused">{{ _('غير المستعملة فقط') }}</option>
         </select>
-        <a class="hub-btn hub-btn--secondary" data-bc-export-link="xlsx"
+        {% if can_submit('radius.cards_of_batch_export_xlsx', 'GET') %}<a class="hub-btn hub-btn--secondary" data-bc-export-link="xlsx"
            data-base="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=batch.id) }}"
            href="{{ url_for('radius.cards_of_batch_export_xlsx', batch_id=batch.id) }}">
           <i class="fa-solid fa-file-excel"></i> {{ _('Excel') }}
-        </a>
-        <a class="hub-btn hub-btn--secondary" data-bc-export-link="csv"
+        </a>{% endif %}
+        {% if can_submit('radius.cards_of_batch_export_csv', 'GET') %}<a class="hub-btn hub-btn--secondary" data-bc-export-link="csv"
            data-base="{{ url_for('radius.cards_of_batch_export_csv', batch_id=batch.id) }}"
            href="{{ url_for('radius.cards_of_batch_export_csv', batch_id=batch.id) }}">
           <i class="fa-solid fa-file-csv"></i> {{ _('CSV') }}
-        </a>
+        </a>{% endif %}
       </span>
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
+      {% if can_submit('radius.cards_batches', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
         <i class="fa-solid fa-table-cells-large"></i> {{ _('كل الحزم') }}
-      </a>
+      </a>{% endif %}
     {% endset %}
 
     {# ───── الصدفة الموحّدة: هيرو الحزمة + شريط KPI في صف واحد إجباري ─────
@@ -513,24 +513,44 @@
       ],
       note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
     )) %}
-    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|string ~ " كرت", flush=True) %}
+    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|ar_count('kart'), flush=True) %}
       <div style="padding:14px 16px 0">
+        {# fix2 (R05-N3): بحثٌ وترقيمٌ خادميّان — الصفحة تُصيّر صفحةً واحدة فقط
+           (كانت تُصيّر كلّ البطاقات: 10,000 كرت = 52MB في 253ث). #}
+        <form class="bc-toolbar bc-server-search" method="get" action="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}" data-server-search>
+          <input class="bc-search" type="search" name="q" value="{{ pager.q if pager else '' }}" maxlength="128"
+                 placeholder="{{ _('بحث في كل كروت الحزمة: اسم الدخول أو كلمة المرور أو MAC أو #رقم') }}" aria-label="{{ _('بحث في كروت الحزمة') }}">
+          <select class="hub-select" name="status" aria-label="{{ _('تصفية بالحالة') }}">
+            <option value="" {{ 'selected' if not (pager and pager.status) }}>{{ _('كل الحالات') }}</option>
+            <option value="ready" {{ 'selected' if pager and pager.status == 'ready' }}>{{ _('متاح') }}</option>
+            <option value="online" {{ 'selected' if pager and pager.status == 'online' }}>{{ _('متصل') }}</option>
+            <option value="used_offline" {{ 'selected' if pager and pager.status == 'used_offline' }}>{{ _('مستخدم') }}</option>
+            <option value="expired" {{ 'selected' if pager and pager.status == 'expired' }}>{{ _('منتهي') }}</option>
+            <option value="revoked" {{ 'selected' if pager and pager.status == 'revoked' }}>{{ _('موقوف') }}</option>
+          </select>
+          <input type="hidden" name="per_page" value="{{ pager.per_page if pager else 50 }}">
+          <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-magnifying-glass"></i> {{ _('بحث') }}</button>
+          {% if pager and (pager.q or pager.status) %}
+          {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, per_page=pager.per_page) }}">{{ _('مسح') }}</a>{% endif %}
+          {% endif %}
+        </form>
         <div class="bc-toolbar">
-          <input class="bc-search" type="search" placeholder="{{ _('بحث باسم الكرت أو MAC أو IP...') }}" data-card-search>
+          <input class="bc-search" type="search" placeholder="{{ _('تصفية سريعة داخل هذه الصفحة...') }}" data-card-search>
           <div class="bc-columns" data-columns-menu>
             <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-columns-toggle>
               <i class="fa-solid fa-sliders"></i> {{ _('الأعمدة') }}
             </button>
             <div class="bc-columns-menu" data-columns-list></div>
           </div>
-          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-export-visible>
-            <i class="fa-solid fa-file-csv"></i> CSV
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-export-visible
+                  title="{{ _('يصدّر صفوف هذه الصفحة؛ لتصدير كل الحزمة استعمل «تصدير الكروت»') }}">
+            <i class="fa-solid fa-file-csv"></i> {{ _('CSV الصفحة') }}
           </button>
         </div>
 
         <div class="bc-bulk" data-bulk-bar>
           <strong><span data-selected-count>0</span> {{ _('كرت محدد') }}</strong>
-          <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
+          {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
             <input type="hidden" name="return_to" value="{{ request.full_path }}">
             <div class="bc-selected-inputs" data-selected-inputs></div>
@@ -558,7 +578,7 @@
               <input name="reason" type="text" placeholder="{{ _('سبب الإجراء') }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
             </div>
-          </form>
+          </form>{% endif %}
         </div>
       </div>
 
@@ -615,29 +635,29 @@
               <td data-col="actions">
                 <div class="bc-row-actions">
                   <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" title="{{ _('تعديل سريع') }}" data-edit-card><i class="fa-solid fa-pen"></i></button>
-                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                  {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
                     <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="{{ _('قطع الاتصال') }}" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
-                  </form>
+                  </form>{% endif %}
                   {# MT107 — تغيير كلمة مرور كرتٍ واحد عند تسرُّبها.
                      تُولَّد بنمط الحزمة وتظهر فورًا في عمود كلمة المرور،
                      وتُقطع جلسات الكرت في الفعل نفسه. #}
-                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                  {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
                     <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="change_password"
                             title="{{ _('تغيير كلمة المرور') }}" type="submit"
                             data-confirm="{{ _('تغيير كلمة مرور %(u)s؟ ستُولَّد كلمة جديدة وتُقطع جلساتها النشطة.', u=c.username) }}"><i class="fa-solid fa-key"></i></button>
-                  </form>
-                  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
+                  </form>{% endif %}
+                  {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
                     <button class="hub-btn hub-btn--danger hub-btn--icon" name="bulk_action" value="soft_delete" title="{{ _('حذف') }}" type="submit"><i class="fa-solid fa-trash"></i></button>
-                  </form>
+                  </form>{% endif %}
                 </div>
               </td>
               <td data-col="card">
@@ -675,19 +695,36 @@
          يعمل فوق نتائج البحث الحي: البحث يحدد الصفوف المطابقة، والمُرقِّم
          يعرض شريحة منها. «تحديد الكل» يخص الصفوف الظاهرة في الصفحة
          الحالية فقط — التصدير CSV يشمل كل المطابقات لا الصفحة فقط. #}
-      <div class="uds-table-pager bc-pager" data-cards-pager>
-        <div class="uds-pager-size">
+      {# fix2 (R05-N3): مُرقِّمٌ خادميّ — روابط حقيقيّة، والصفحة لا تحمل إلا صفوفها. #}
+      {% set _pargs = {'q': pager.q, 'status': pager.status, 'per_page': pager.per_page} %}
+      <nav class="uds-table-pager bc-pager" data-server-pager aria-label="{{ _('صفحات الكروت') }}">
+        <form class="uds-pager-size" method="get" action="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">
           {{ _('صفوف بالصفحة') }}
-          <select data-page-size aria-label="{{ _('عدد الصفوف بالصفحة') }}">
-            <option value="10">10</option>
-            <option value="25" selected>25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
+          <input type="hidden" name="q" value="{{ pager.q }}">
+          <input type="hidden" name="status" value="{{ pager.status }}">
+          <select name="per_page" aria-label="{{ _('عدد الصفوف بالصفحة') }}" data-auto-submit>
+            {% for n in pager.sizes %}<option value="{{ n }}" {{ 'selected' if n == pager.per_page }}>{{ n }}</option>{% endfor %}
           </select>
+          <noscript><button type="submit">{{ _('تطبيق') }}</button></noscript>
+        </form>
+        <div class="uds-pager-info">{{ pager.start }}–{{ pager.end }} {{ _('من') }} {{ pager.total }}</div>
+        <div class="uds-pager-nav">
+          {% if pager.page > 1 %}
+            {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=pager.page - 1, **_pargs) }}" aria-label="{{ _('السابق') }}"><i class="fa-solid fa-chevron-right"></i></a>{% endif %}
+          {% endif %}
+          {% set _s = [1, pager.page - 2]|max %}{% set _e = [pager.pages, pager.page + 2]|min %}
+          {% if _s > 1 %}{% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=1, **_pargs) }}">1</a>{% endif %}{% if _s > 2 %}<span class="uds-pager-dots">…</span>{% endif %}{% endif %}
+          {% for p in range(_s, _e + 1) %}
+            {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn{{ ' is-active' if p == pager.page }}" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=p, **_pargs) }}"{{ ' aria-current="page"'|safe if p == pager.page }}>{{ p }}</a>{% endif %}
+          {% endfor %}
+          {% if _e < pager.pages %}{% if _e < pager.pages - 1 %}<span class="uds-pager-dots">…</span>{% endif %}{% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=pager.pages, **_pargs) }}">{{ pager.pages }}</a>{% endif %}{% endif %}
+          {% if pager.page < pager.pages %}
+            {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="uds-pager-btn" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id, page=pager.page + 1, **_pargs) }}" aria-label="{{ _('التالي') }}"><i class="fa-solid fa-chevron-left"></i></a>{% endif %}
+          {% endif %}
         </div>
-        <div class="uds-pager-info" data-pager-info></div>
-        <div class="uds-pager-nav" data-pager-nav></div>
-      </div>
+      </nav>
+      {% elif pager and (pager.q or pager.status) %}
+        <div class="bc-empty">{{ _('لا توجد كروت مطابقة للبحث.') }}</div>
       {% else %}
         <div class="bc-empty">{{ _('لا توجد كروت داخل هذه الحزمة.') }}</div>
       {% endif %}
@@ -705,7 +742,7 @@
       <h3>{{ _('تعديل سريع للكرت') }} <span data-dialog-card-title></span></h3>
       <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" data-dialog-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-dialog-form>
+    {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-dialog-form>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="return_to" value="{{ request.full_path }}">
       <input type="hidden" name="card_ids" data-dialog-card-id>
@@ -748,7 +785,7 @@
         <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> {{ _('تفعيل') }}</button>
         <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> {{ _('إيقاف') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </dialog>
 {% endif %}
@@ -775,7 +812,14 @@
   const pageSizeSel = page.querySelector('[data-page-size]');
   const pagerInfo = page.querySelector('[data-pager-info]');
   const pagerNav = page.querySelector('[data-pager-nav]');
-  const view = { page: 1, size: pageSizeSel ? parseInt(pageSizeSel.value, 10) || 25 : 25 };
+  /* fix2: الترقيم صار خادميًّا — الصفحة تحمل صفوفها فقط، فلا تقسيم هنا. */
+  /* F05-H1: بلا مُحدِّد حجمٍ محلّيّ (الترقيم خادميّ) لا تقسيم إطلاقًا — size=0
+     يعني «كل صفوف الصفحة». كانت Infinity فصار البدء 0×∞ = NaN وكل الصفوف
+     display:none (جدول فارغ، تحديد الكل/الإجراءات/CSV بلا صفوف). */
+  const view = { page: 1, size: pageSizeSel ? (parseInt(pageSizeSel.value, 10) || 25) : 0 };
+  page.querySelectorAll('[data-auto-submit]').forEach(sel => {
+    sel.addEventListener('change', () => sel.form && sel.form.submit());
+  });
 
   function rows() {
     return table ? Array.from(table.querySelectorAll('tbody tr[data-row]')) : [];
@@ -845,10 +889,13 @@
   function applyView() {
     const matched = matchedRows();
     const total = matched.length;
-    const pages = Math.max(1, Math.ceil(total / view.size));
+    /* حجمٌ غير صالح (0/NaN/∞) = كل الصفوف المطابقة في صفحة واحدة. */
+    const size = (Number.isFinite(view.size) && view.size > 0) ? view.size : Math.max(1, total);
+    const pages = Math.max(1, Math.ceil(total / size));
+    if (!(view.page >= 1)) view.page = 1;
     if (view.page > pages) view.page = pages;
-    const start = (view.page - 1) * view.size;
-    const end = Math.min(start + view.size, total);
+    const start = (view.page - 1) * size;
+    const end = Math.min(start + size, total);
     let idx = 0;
     rows().forEach(row => {
       if (row.dataset.bcMatch === '0') { row.style.display = 'none'; return; }

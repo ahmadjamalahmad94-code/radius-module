@@ -71,6 +71,12 @@ def new_speed(current: Any, mult: float, fixed: int, *, plan_name: str = "",
     except (TypeError, ValueError):
         base = 0
     out = int(base * mult)
+    # 0 kbps means «بلا حدّ» in the plan: a tiny multiplier (0.0001) must not
+    # silently turn a limited plan into an unlimited one (re-test R07 N4).
+    if base > 0 and out < 1:
+        raise RadiusValidationError(
+            f"الناتج لسرعة {direction} في الباقة «{plan_name}» أقل من 1 كيلوبت/ث "
+            "(الصفر يعني سرعة بلا حدّ) — استخدم مضاعفًا أكبر.")
     if out > MAX_PLAN_KBPS:
         raise RadiusValidationError(
             f"الناتج لسرعة {direction} في الباقة «{plan_name}» ({out:,} كيلوبت/ث) "

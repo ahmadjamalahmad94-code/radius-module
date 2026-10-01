@@ -160,13 +160,13 @@
             {% if j.status in ['queued', 'retrying', 'failed'] %}
             <div class="hub-flex-row" style="gap:6px;flex-wrap:nowrap">
               {# إعادة المحاولة فورًا — نفس مسار POST تمامًا (غير هدّامة فلا تحتاج تأكيدًا) #}
-              <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}"
+              {% if can_submit('radius.sync_retry', 'POST') %}<form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}"
                     style="display:inline;margin:0">
                 <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
                         title="{{ _('إعادة المحاولة الآن') }}">
                   <i class="fa-solid fa-rotate"></i> {{ _('إعادة الآن') }}
                 </button>
-              </form>
+              </form>{% endif %}
               {# الإلغاء متاح للمهام المنتظِرة/المعاد محاولتها فقط (شرط الخادم نفسه)
                  — عبر مودال تأكيد عائم بدل confirm() #}
               {% if j.status in ['queued', 'retrying'] %}

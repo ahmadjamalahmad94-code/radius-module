@@ -25,7 +25,7 @@
   note="لضبط عنوان ACS العامّ: HOBERADIUS_GENIEACS_CWMP_URL."
 )) %}
   {% call hub.section("بيانات الربط", icon="link") %}
-    <form method="POST" action="{{ url_for('radius.routers_enroll') }}" class="mt-setup-form-v2">
+    {% if can_submit('radius.routers_enroll', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_enroll') }}" class="mt-setup-form-v2">
       {{ csrf_token_input() | safe }}
       <div style="display:grid;gap:16px;max-width:520px">
         <div class="mtw-field">
@@ -45,10 +45,10 @@
         {% endif %}
       </div>
       <div class="mt-setup-actions" style="justify-content:flex-end;padding:8px 2px 0">
-        <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.routers_list') }}">{{ _('إلغاء') }}</a>
+        {% if can_submit('radius.routers_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.routers_list') }}">{{ _('إلغاء') }}</a>{% endif %}
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد بيانات الربط') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 {% endcall %}
 {% endblock %}

@@ -123,15 +123,22 @@ def _require_online_row(body: dict):
     return row
 
 
-def _matches_query(item: dict, query: str) -> bool:
+def _matches_query(item: dict, query: str, mobiles: dict | None = None) -> bool:
     if not query:
         return True
     q = query.lower()
+    if mobiles and q in str(mobiles.get(item.get("username") or "", "")).lower():
+        return True
+    # f06-L4: a MAC in any notation (dashes/colons/dots) — same helper as the web.
+    from ...radius.services.sessions import mac_query_matches
+    if mac_query_matches(query, item.get("mac_address")):
+        return True
+    # Same fields as the web /online search (+ session id / type / state).
     return any(
         q in str(item.get(key) or "").lower()
         for key in (
-            "username", "mac_address", "framed_ip", "nas_address",
-            "session_id", "user_type", "state",
+            "username", "full_name", "mac_address", "framed_ip", "plan_name",
+            "nas_address", "session_id", "user_type", "state",
         )
     )
 
@@ -272,10 +279,18 @@ def sessions_online():
     except Exception:  # noqa: BLE001
         pass
 
-    from ..access_control import current_distributor
-    scoped = bool(current_distributor())
-    rows = [asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)]
+    # fix3 (F02 H2): every scoped manager (not only a distributor login) sees
+    # only his own subscribers' live sessions — one set lookup, no per-row query.
+    from ..access_control import subscriber_scope_admin_id
+    from ...radius.services.subscriber_scope import filter_rows as _scope_rows
+    scoped = False
+    rows = _scope_rows([asdict(s) for s in _svc().list(limit=_ONLINE_SCAN_CAP)],
+                       key="username", tenant_id=_tid(), scope=subscriber_scope_admin_id())
     accounts = _lookup_accounts(r.get("username") for r in rows)
+    mobiles: dict = {}
+    if query:
+        from ...radius.services.sessions import mobiles_by_username
+        mobiles = mobiles_by_username(_tid(), (r.get("username") for r in rows))
     items = []
     for data in rows:
         enriched = _enrich_session(data, accounts)
@@ -283,7 +298,7 @@ def sessions_online():
             continue
         if kind != "all" and enriched.get("user_type") != kind:
             continue
-        if _matches_query(enriched, query):
+        if _matches_query(enriched, query, mobiles):
             items.append(enriched)
 
     # حالة السرعة لكل جلسة (يطابق منطق صفحة الويب: _has_active_temporary_speed
@@ -399,7 +414,7 @@ def sessions_lock_mac():
 
             svc = get_users_service()
             sub = svc.get(username)
-            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
+            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac), base=sub)
             target_type = "subscriber"
     except PermissionError:
         return deny_out_of_scope()
@@ -437,7 +452,7 @@ def sessions_lock_ip():
 
         svc = get_users_service()
         sub = svc.get(username)
-        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
+        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip), base=sub)
     except PermissionError:
         return deny_out_of_scope()
     except RadiusError as e:

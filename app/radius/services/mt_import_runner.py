@@ -99,8 +99,12 @@ def _norm_dup_mode(mode: str) -> str:
     return _DUP_ALIASES.get(m, DUP_SKIP)
 
 
-def _subscriber_from_candidate(tenant_id: int, cand) -> Subscriber:
-    """يبني Subscriber جديدًا من مرشّح المعاينة (للإنشاء)."""
+def _subscriber_from_candidate(tenant_id: int, cand, manager_id=None) -> Subscriber:
+    """يبني Subscriber جديدًا من مرشّح المعاينة (للإنشاء).
+
+    تصحيح المالك (fix wave 2): الاستيراد **ينسخ حسابًا قائمًا** فيحفظ مصدره —
+    مستخدم مايكروتيك بلا تاريخ انتهاء يبقى بلا انتهاء هنا. إعداد
+    ``subscribers.create_without_expiry`` للإنشاء الحقيقيّ فقط (ويب/API/تطبيق)."""
     return Subscriber(
         id=None, tenant_id=int(tenant_id),
         username=cand.username, password=cand.password,
@@ -109,6 +113,8 @@ def _subscriber_from_candidate(tenant_id: int, cand) -> Subscriber:
         mac_lock=(cand.mac or None),
         static_ip=(cand.static_ip or None),
         status=(STATUS_DISABLED if cand.disabled else STATUS_ENABLED),
+        expire_at=None,
+        manager_id=manager_id,
     )
 
 
@@ -157,6 +163,12 @@ def run_import(*, tenant_id: int, nas: Mapping[str, Any], preview: ImportPreview
         adapter = get_radius_adapter()
 
     plan_cache: dict = {}
+    # fix3 (F02 H1): an import run by a non-owner manager stamps him as the
+    # responsible manager — like every other create path.
+    from .subscriber_scope import creator_manager_id
+    import_manager_id = (creator_manager_id(None, creator_admin_id=int(actor_id),
+                                            tenant_id=int(tenant_id))
+                         if actor_id else None)
 
     try:
         for row in preview.rows:
@@ -195,7 +207,8 @@ def run_import(*, tenant_id: int, nas: Mapping[str, Any], preview: ImportPreview
                 _ensure_plan(tenant_id, cand, plan_cache, result, dry_run)
             try:
                 if not dry_run:
-                    adapter.upsert_account(_subscriber_from_candidate(tenant_id, cand))
+                    adapter.upsert_account(_subscriber_from_candidate(
+                        tenant_id, cand, manager_id=import_manager_id))
                 result.imported += 1
             except (RadiusValidationError, Exception) as exc:  # noqa: BLE001
                 result.failed += 1

@@ -282,7 +282,7 @@ def test_web_create_refuses_short_password_and_legacy_edit_still_saves(client):
             "status": "enabled", "user_type": "subscriber"}
     res = client.post("/admin/radius/users",
                       data=dict(form, username="webshort", password="ab"))
-    assert res.status_code == 400
+    assert res.status_code == 422  # fix wave 2: web validation = 422 like the API
     assert _get("webshort") is None
     # a migrated account with a 3-char password can still be edited as is …
     legacy = _sub(plan_id=pid, password="abc")
@@ -293,7 +293,7 @@ def test_web_create_refuses_short_password_and_legacy_edit_still_saves(client):
     # … but a CHANGED password must be ≥ 4
     res = client.post(f"/admin/radius/users/{legacy.username}",
                       data=dict(form, password="xy", full_name="Renamed"))
-    assert res.status_code == 400
+    assert res.status_code == 422
     assert _get(legacy.username).password == "abc"
 
 
@@ -669,7 +669,8 @@ def test_print_job_cancel_and_queue_cap(client, monkeypatch):
     d = _data(client.post(f"/api/v1/print-jobs/{job['id']}/cancel", headers=AUTH))
     assert d["job"]["status"] == "cancelled"
     _data(client.delete(f"/api/v1/print-jobs/{job['id']}", headers=AUTH))  # idempotent
-    _err(client.get(f"/api/v1/print-jobs/{job['id']}/download", headers=AUTH), 422)
+    # fix2: a cancelled job is never downloadable — 409 (was 422 «not ready»)
+    _err(client.get(f"/api/v1/print-jobs/{job['id']}/download", headers=AUTH), 409)
     _err(client.post("/api/v1/print-jobs/999999/cancel", headers=AUTH), 404)
     # the worker never starts a cancelled job
     from app.radius.services.operations import get_operations_service

@@ -32,15 +32,15 @@
 
 {# ───── Unified hero: title + actions (replaces the invisible page-head) ───── #}
 {% set _actions %}
-  <a class="hub-btn hub-btn--secondary"
+  {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
     <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع إلى القائمة') }}
-  </a>
+  </a>{% endif %}
   {% if policy %}
-    <a class="hub-btn hub-btn--primary"
+    {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--primary"
        href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
       <i class="fa-solid fa-eye"></i> {{ _('توليد المعاينة') }}
-    </a>
+    </a>{% endif %}
   {% endif %}
 {% endset %}
 {{ hub.hero(
@@ -228,11 +228,11 @@
             <i class="fa-regular fa-floppy-disk"></i>
             حفظ {% if not policy %}والمتابعة للمعاينة{% endif %}
           </button>
-          <a class="hub-btn hub-btn--secondary"
+          {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
              href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
             <i class="fa-solid fa-xmark"></i>
             {{ _('إلغاء') }}
-          </a>
+          </a>{% endif %}
         </div>
       {% endcall %}
     </div>
@@ -263,7 +263,7 @@
         {% call hub.section(_children_title|trim, icon="rectangle-list", meta=("(" ~ children|length ~ ")")) %}
 
           {# ── Add form (inline) ── #}
-          <form method="POST"
+          {% if can_submit('radius.npc_', 'POST') %}<form method="POST"
                 action="{{ url_for('radius.npc_' ~ service.key ~ '_child_add', policy_id=policy.id) }}"
                 style="display:flex; gap:6px; flex-wrap:wrap;
                        align-items:flex-end; margin-bottom:12px;">
@@ -313,7 +313,7 @@
               <i class="fa-solid fa-plus"></i>
               {{ _('إضافة') }}
             </button>
-          </form>
+          </form>{% endif %}
 
           {% if children %}
             <ul style="margin:0; padding:0; list-style:none;
@@ -339,7 +339,7 @@
                       [{{ child.entry_type }}{% if child.dst_port %} :{{ child.dst_port }}{% endif %}]
                     </span>
                   {% endif %}
-                  <form class="npc-inline-form"
+                  {% if can_submit('radius.npc_', 'POST') %}<form class="npc-inline-form"
                         method="POST"
                         action="{{ url_for('radius.npc_' ~ service.key ~ '_child_delete', policy_id=policy.id, child_id=child.id) }}"
                         style="margin-inline-start:auto;">
@@ -348,7 +348,7 @@
                             title="{{ _('حذف') }}">
                       <i class="fa-regular fa-trash-can"></i>
                     </button>
-                  </form>
+                  </form>{% endif %}
                 </li>
               {% endfor %}
             </ul>

@@ -32,12 +32,12 @@ def app(monkeypatch):
             del sys.modules[k]
 
 
-def _mk_manager_with_role(role_granular: dict | None):
+def _mk_manager_with_role(role_granular: dict | None, perms=("store.view",)):
     from app.radius.db.repos import admins_repo, tenants_repo
     tenants_repo.ensure_default_tenant()
     admins_repo.ensure_default_roles()
     role = admins_repo.create_role(name="store_ops", display_name="Store Ops",
-                                   permissions=("store.view",))
+                                   permissions=tuple(perms))
     if role_granular is not None:
         admins_repo.set_role_granular(role.id, role_granular)
     admin = admins_repo.create_admin(username="mgr_role", password="p",
@@ -47,22 +47,33 @@ def _mk_manager_with_role(role_granular: dict | None):
 
 
 def test_manager_inherits_action_from_role(app):
+    """fix wave 2 (p01/D15): store actions DERIVE from the role's RBAC key
+    (storeuser.create ← store.user_add); an explicit grant that has no RBAC
+    counterpart (bulk.ops) is still inherited from the role's grants."""
     with app.app_context():
         from app.radius.services import manager_grants as mg
         _role, admin = _mk_manager_with_role(
-            {"action_grants": {"_actions": {"storeuser.create": True}}})
+            {"action_grants": {"_actions": {"bulk.ops": True}}},
+            perms=("store.view", "store.user_add"))
         # لا سياسة فرديّة للمدير — يَرث الفعل من دوره (افتراض الفعل False).
+        assert mg.action_permitted(admin.id, "bulk.ops", tenant_id=1) is True
         assert mg.action_permitted(admin.id, "storeuser.create", tenant_id=1) is True
 
 
 def test_manager_inherits_scope_flag_from_role(app):
+    """fix wave 2 (p01/D09): «رؤية كل المشتركين» on a role IS the RBAC key
+    scope.view_all_subscribers; other flags are still inherited from the
+    role's grants."""
     with app.app_context():
         from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
         _role, admin = _mk_manager_with_role(
-            {"flags": {"can_view_all_subscribers": True}})
+            {"flags": {"can_manage_distributors": True}},
+            perms=("store.view", "scope.view_all_subscribers"))
         svc = ManagerDistributorOpsService(tenant_id=1)
         assert svc.has_permission(entity_type="manager", entity_id=admin.id,
                                   permission="can_view_all_subscribers") is True
+        assert svc.has_permission(entity_type="manager", entity_id=admin.id,
+                                  permission="can_manage_distributors") is True
         # علَم لم يُمنَح على الدور يبقى False
         assert svc.has_permission(entity_type="manager", entity_id=admin.id,
                                   permission="can_see_profit") is False
@@ -111,12 +122,12 @@ def test_reset_overrides_returns_to_role(app):
     with app.app_context():
         from app.radius.services import manager_grants as mg
         _role, admin = _mk_manager_with_role(
-            {"action_grants": {"_actions": {"storeuser.create": True}}})
-        mg.set_action_override(admin.id, "storeuser.create", False, tenant_id=1)
-        assert mg.action_permitted(admin.id, "storeuser.create", tenant_id=1) is False
+            {"action_grants": {"_actions": {"bulk.ops": True}}})
+        mg.set_action_override(admin.id, "bulk.ops", False, tenant_id=1)
+        assert mg.action_permitted(admin.id, "bulk.ops", tenant_id=1) is False
         mg.reset_overrides_to_role(admin.id, tenant_id=1)
         # عاد لوراثة الدور (True)
-        assert mg.action_permitted(admin.id, "storeuser.create", tenant_id=1) is True
+        assert mg.action_permitted(admin.id, "bulk.ops", tenant_id=1) is True
 
 
 # ─────────────────────────── HTTP: محرّر أساس الدور ───────────────────────────
@@ -162,11 +173,12 @@ def test_role_grants_save_persists_and_manager_inherits(app):
                                          role_id=role.id)
     c = app.test_client()
     _super(c)
-    # احفظ على الدور: علَم رؤية + فعل متجر
+    # احفظ على الدور: علَم (إدارة الموزّعين) + فعل بلا مفتاح RBAC (bulk.ops) + قسم.
+    # (رؤية كل المشتركين وأفعال المتجر صارت مفاتيح RBAC في مصفوفة الدور — D09/D15.)
     res = c.post(f"/admin/radius/roles/{role.id}/grants",
                  data={"_csrf_token": "tk",
-                       "can_view_all_subscribers": "1",
-                       "action_storeuser.create": "1",
+                       "can_manage_distributors": "1",
+                       "action_bulk.ops": "1",
                        "section_cards": "hidden"},
                  follow_redirects=False)
     assert res.status_code in {302, 303}
@@ -174,11 +186,11 @@ def test_role_grants_save_persists_and_manager_inherits(app):
         from app.radius.services import manager_grants as mg
         from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
         blob = admins_repo.get_role_granular(role.id)
-        assert blob.get("flags", {}).get("can_view_all_subscribers") is True
+        assert blob.get("flags", {}).get("can_manage_distributors") is True
         assert blob.get("section_access", {}).get("cards") == "hidden"
         # المدير يَرث الكلّ دون أي ضبط فرديّ
-        assert mg.action_permitted(admin.id, "storeuser.create", tenant_id=1) is True
+        assert mg.action_permitted(admin.id, "bulk.ops", tenant_id=1) is True
         assert mg.get_section_access(admin.id, tenant_id=1).get("cards") == "hidden"
         svc = ManagerDistributorOpsService(tenant_id=1)
         assert svc.has_permission(entity_type="manager", entity_id=admin.id,
-                                  permission="can_view_all_subscribers") is True
+                                  permission="can_manage_distributors") is True

@@ -93,6 +93,8 @@ def get_invoice(invoice_id: int):
 
 def create_invoice():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     try:
         subscriber_id = int(body.get("subscriber_id") or 0)
     except (TypeError, ValueError):
@@ -109,6 +111,10 @@ def create_invoice():
     username = str(body.get("username") or "").strip()
     if subscriber_id <= 0 or amount < 0 or not username:
         return fail("validation_error", "اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة.", status=422)
+    from ...radius.core import limits
+    _msg = limits.amount_error(amount, "generic", label="قيمة الفاتورة")
+    if _msg:   # «الحدود» — باقي المدخلات الماليّة
+        return fail("validation_error", _msg, status=422)
     try:
         plan_id = int(body["plan_id"]) if body.get("plan_id") not in (None, "") else None
         router_id = int(body["router_id"]) if body.get("router_id") not in (None, "") else None
@@ -150,6 +156,8 @@ def create_invoice():
 
 def update_status(invoice_id: int):
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     status = str(body.get("status") or "").strip()
     if status not in INVOICE_STATUSES:
         return fail("validation_error", "حالة الفاتورة غير صحيحة.", status=422)

@@ -203,6 +203,13 @@ class CreditDashboardService:
             raise CreditDashboardError("المبلغ غير صالح") from exc
         if amount_minor <= 0:
             raise CreditDashboardError("المبلغ يجب أن يكون أكبر من صفر.")
+        # «الحدود»: شحن الموزّع ⇒ «أقصى إضافة رصيد/دفعة للموزّع»، والمدير ⇒ العامّ.
+        from ..core import limits
+        _msg = limits.amount_error(amount_minor / 100.0,
+                                   "distributor" if etype == "distributor" else "generic",
+                                   label="المبلغ", tenant_id=self.tenant_id)
+        if _msg:
+            raise CreditDashboardError(_msg)
         method = (method or "cash").strip()[:40] or "cash"
         note = (note or "").strip()[:300]
         # أيّ قيمة غير «debt» تسقط للوضع الآمن «مدفوع» (لا يُنشئ ديناً).

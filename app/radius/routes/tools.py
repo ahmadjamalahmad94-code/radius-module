@@ -93,7 +93,7 @@ def tool_set_speeds():
                            payload={"mult_down": mult_down, "mult_up": mult_up,
                                     "set_down": set_down, "set_up": set_up,
                                     "changed": changed})
-        flash(f"تم تعديل سرعات {changed} خطة.", "success")
+        flash(f"تم تعديل سرعات {changed} باقة.", "success")
         return redirect(url_for("radius.tool_set_speeds"))
     plans = plans_repo.list_plans(_tid(), limit=500)
     return render_template("radius/tool_set_speeds.html", plans=plans)

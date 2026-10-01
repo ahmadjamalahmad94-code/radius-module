@@ -115,6 +115,9 @@ def audit(tenant_id: int = 1, *, enforce: Optional[bool] = None) -> dict[str, An
         KIND_MISSING: 0, KIND_OVER: 0, KIND_EXPIRED_LIVE: 0,
         "kicked": 0, "details": [], "enforce": bool(enforce),
         "tolerance_sec": tol,
+        # أقربُ انتهاءٍ مستقبليٍّ (ثوانٍ) بين الجلسات الحيّة — يستعمله العاملُ
+        # لينام حتى تلك اللحظةِ بالضبط فيَطرد المتأثّرَ في وقته (جدولةٌ دقيقة).
+        "next_secs": None,
     }
     rows = db().execute(
         "SELECT id, name, address, api_user, api_password, api_port "
@@ -144,13 +147,30 @@ def audit(tenant_id: int = 1, *, enforce: Optional[bool] = None) -> dict[str, An
                 "SELECT expire_at FROM cards "
                 " WHERE tenant_id = ? AND username = ? AND deleted_at IS NULL "
                 " LIMIT 1", (int(tenant_id), user)).fetchone()
-            if not card:
-                continue          # ليس من بطاقاتنا — خارجَ ولايتنا
-            exp = _parse_dt(card[0] if not isinstance(card, dict) else card["expire_at"])
+            exp = None
+            if card:
+                exp = _parse_dt(card[0] if not isinstance(card, dict)
+                                else card["expire_at"])
+            else:
+                # ليس بطاقةً — جرّبْ جدولَ المشتركين. المشترك بتاريخِ انتهاءٍ
+                # مضبوطٍ يُطرد في وقته تمامًا كالبطاقة. و``change_plan`` يُعيد
+                # حسابَ ``expire_at``، فتغييرُ الباقة/العرض/المجموعة يُلتقط هنا
+                # تلقائيًّا بلا ربطِ كلِّ مسارِ تعديلٍ يدويًّا.
+                srow = db().execute(
+                    "SELECT expire_at FROM subscribers "
+                    " WHERE tenant_id = ? AND username = ? "
+                    "   AND deleted_at IS NULL LIMIT 1",
+                    (int(tenant_id), user)).fetchone()
+                if srow:
+                    exp = _parse_dt(srow[0] if not isinstance(srow, dict)
+                                    else srow["expire_at"])
             if exp is None:
-                continue          # بلا نافذة — لا شيءَ نقارنه
+                continue          # لا بطاقةً ولا مشتركًا بنافذة — خارجَ ولايتنا
             rep["checked"] += 1
             ours = int((exp - now).total_seconds())
+            if ours > 0:
+                rep["next_secs"] = (ours if rep["next_secs"] is None
+                                    else min(int(rep["next_secs"]), ours))
             kind = classify(parse_duration(a.get("session-time-left")), ours,
                             tolerance_sec=tol)
             if not kind:

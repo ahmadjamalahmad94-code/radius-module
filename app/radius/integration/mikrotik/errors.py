@@ -14,6 +14,25 @@ class ConnectError(MikrotikError):
     """فشل الاتصال (TCP/TLS)."""
 
 
+def os_error_reason_ar(exc: BaseException) -> str:
+    """Arabic reason for a socket-level failure — never the raw
+    «[Errno 111] Connection refused» text (re-test R11 L-1)."""
+    import errno as _errno
+    import socket as _socket
+
+    if isinstance(exc, ConnectionRefusedError) or getattr(exc, "errno", None) == _errno.ECONNREFUSED:
+        return "رُفض الاتصال — خدمة API على الراوتر معطّلة أو المنفذ مغلق."
+    if isinstance(exc, (_socket.timeout, TimeoutError)) or "timed out" in str(exc).lower():
+        return "انتهت المهلة — الراوتر لا يرد."
+    if isinstance(exc, _socket.gaierror):
+        return "تعذّر حلّ اسم الراوتر."
+    if getattr(exc, "errno", None) in (_errno.ENETUNREACH, _errno.EHOSTUNREACH):
+        return "لا يوجد مسار إلى الراوتر (الشبكة أو النفق غير متاح)."
+    if isinstance(exc, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+        return "انقطع الاتصال بالراوتر."
+    return "الراوتر غير متاح."
+
+
 class AuthError(MikrotikError):
     """فشل تسجيل الدخول (/login)."""
 

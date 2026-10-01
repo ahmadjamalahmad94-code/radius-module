@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from ..core.system_config import default_new_subscriber_expiry
 from ..core.types import Subscriber
 from ..db.connection import db
 from ..db.helpers import now_iso, row_to_dict
@@ -98,11 +99,17 @@ class ManagerDistributorOpsService:
         require_approval_above: Any = 0,
     ) -> dict[str, Any]:
         etype = self._entity_type(entity_type)
-        perms = {**DEFAULT_PERMISSIONS, **(permissions or {})}
+        # D02: المدير يُخزَّن **تجاوزاتٍ صريحة فقط** (sparse). دمجُ الافتراضات هنا
+        # كان يكتب كل علَم False صراحةً فيغلب علَم الدور («عرض كل المشتركين»)
+        # بمجرّد فتح ملفّ المدير أو حفظه. الموزّع بلا دور — يبقى صفًّا كاملًا.
+        if etype == "manager":
+            perms = {k: bool(v) for k, v in (permissions or {}).items()}
+        else:
+            perms = {**DEFAULT_PERMISSIONS, **(permissions or {})}
         limit_values = {**DEFAULT_LIMITS, **(limits or {})}
         credit_minor = money_to_minor(credit_limit or limit_values.get("credit_limit") or 0)
         approval_minor = money_to_minor(require_approval_above or 0)
-        existing = self.get_policy(entity_type=etype, entity_id=entity_id, create=False)
+        existing = self._raw_row(etype, entity_id)
         now = now_iso()
         if existing:
             db().execute(
@@ -150,20 +157,88 @@ class ManagerDistributorOpsService:
             )
         return self.get_policy(entity_type=etype, entity_id=entity_id)
 
-    def get_policy(self, *, entity_type: str, entity_id: int, create: bool = True) -> dict[str, Any]:
+    def update_policy(
+        self,
+        *,
+        entity_type: str,
+        entity_id: int,
+        permissions: dict[str, Any] | None = None,
+        limits: dict[str, Any] | None = None,
+        credit_limit: Any = None,
+    ) -> dict[str, Any]:
+        """تحديثٌ **جزئيّ** لسياسة: يدمج ما أُعطي فقط فوق المخزَّن ويُبقي الباقي
+        كما هو (الأعلام الأخرى، الحدود غير المذكورة، سقف الائتمان، نسبة الربح،
+        حدّ الاعتماد). ``set_policy`` يستبدل الصفّ كلّه — كان تفويضُ مديرٍ فرعيّ
+        يُعيد حدوده وسقف ائتمانه إلى الافتراض (fix wave 2)."""
         etype = self._entity_type(entity_type)
-        row = db().execute(
+        self.ensure_row(entity_type=etype, entity_id=entity_id)
+        row = self._raw_row(etype, entity_id)
+        stored_perms = _load(row["permissions_json"]) if row else {}
+        stored_limits = _load(row["limits_json"]) if row else {}
+        if permissions:
+            stored_perms.update({k: bool(v) for k, v in permissions.items()})
+        if limits:
+            stored_limits.update(dict(limits))
+        credit_minor = (int(row["credit_limit_minor"] or 0) if row else 0)
+        if credit_limit is not None:
+            credit_minor = money_to_minor(credit_limit or 0)
+            stored_limits["credit_limit"] = minor_to_money(credit_minor)
+        db().execute(
+            """
+            UPDATE manager_distributor_policies
+            SET permissions_json=?, limits_json=?, credit_limit_minor=?, updated_at=?
+            WHERE tenant_id=? AND entity_type=? AND entity_id=?
+            """,
+            (_json(stored_perms), _json(stored_limits), credit_minor, now_iso(),
+             self.tenant_id, etype, int(entity_id)),
+        )
+        return self.get_policy(entity_type=etype, entity_id=entity_id)
+
+    def _raw_row(self, etype: str, entity_id: int):
+        return db().execute(
             """
             SELECT * FROM manager_distributor_policies
             WHERE tenant_id=? AND entity_type=? AND entity_id=?
             """,
             (self.tenant_id, etype, int(entity_id)),
         ).fetchone()
+
+    def ensure_row(self, *, entity_type: str, entity_id: int) -> None:
+        """يُنشئ صفّ سياسةٍ **فارغًا** (بلا أعلام/حدود مخزّنة) إن غاب — لكتّاب
+        أعمدة المنح. لا يكتب افتراضاتٍ صريحة (D02)."""
+        etype = self._entity_type(entity_type)
+        if self._raw_row(etype, entity_id):
+            return
+        now = now_iso()
+        db().execute(
+            """
+            INSERT OR IGNORE INTO manager_distributor_policies(
+                tenant_id, entity_type, entity_id, permissions_json,
+                limits_json, profit_share_percent, credit_limit_minor,
+                require_approval_above_minor, status, created_at, updated_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (self.tenant_id, etype, int(entity_id), "{}", "{}", 0.0, 0, 0,
+             "active", now, now),
+        )
+
+    def get_policy(self, *, entity_type: str, entity_id: int, create: bool = False) -> dict[str, Any]:
+        """السياسة الفعّالة. **القراءة لا تكتب** (D02): ``create`` افتراضه False،
+        وغياب الصفّ يُرجع سياسةً افتراضيّةً مركَّبة (الافتراض ← الدور) بلا
+        إنشاء صفّ. ``create=True`` يُنشئ صفًّا فارغًا (sparse) لا افتراضات."""
+        etype = self._entity_type(entity_type)
+        row = self._raw_row(etype, entity_id)
         if not row and create:
-            return self.set_policy(entity_type=etype, entity_id=entity_id)
-        if not row:
-            return {}
-        out = row_to_dict(row)
+            self.ensure_row(entity_type=etype, entity_id=entity_id)
+            row = self._raw_row(etype, entity_id)
+        if row:
+            out = row_to_dict(row)
+        else:
+            out = {"id": None, "tenant_id": self.tenant_id, "entity_type": etype,
+                   "entity_id": int(entity_id), "permissions_json": "{}",
+                   "limits_json": "{}", "profit_share_percent": 0,
+                   "credit_limit_minor": 0, "require_approval_above_minor": 0,
+                   "status": "active", "_virtual": True}
         # وراثة الدور: أعلام دور المدير أساسٌ تحت تجاوزاته الفرديّة (فوق
         # الافتراض). فيَظهر الأثر في العرض وفي assert_allowed معًا. الحدود لا
         # تُورَث (فرديّة). التوزيع لا دور له.
@@ -270,6 +345,8 @@ class ManagerDistributorOpsService:
                 status="pending",
                 manager_id=int(manager_id),
                 remark="created_without_activation",
+                # قرار المالك: بلا تاريخ ⇒ إعداد create_without_expiry.
+                expire_at=default_new_subscriber_expiry(self.tenant_id),
             )
         )
         self._operation(
@@ -318,12 +395,24 @@ class ManagerDistributorOpsService:
         """قراءة صلاحية مفردة دون إنشاء صفّ سياسة جديد (create=False).
 
         تُرجع False إن لم تكن للمدير سياسةٌ بعد — الافتراض الآمن «ممنوع»."""
-        policy = self.get_policy(entity_type=entity_type, entity_id=entity_id, create=False)
+        etype = self._entity_type(entity_type)
+        if etype == "manager":
+            # علَمٌ صار فعلًا مُشتقًّا من RBAC (إنشاء/تفعيل/سلفة/توليد/استيراد):
+            # مصدرٌ واحد = بوّابة الفعل (صلاحية الدور + التجاوز الصريح).
+            try:
+                from . import manager_grants as _mg
+                akey = _mg.FLAG_DERIVED_ACTION.get(permission)
+                if akey:
+                    return bool(_mg.action_permitted(int(entity_id), akey,
+                                                     tenant_id=self.tenant_id))
+            except Exception:  # noqa: BLE001
+                pass
+        row = self._raw_row(etype, entity_id)
         # أعلام المدير **الخام** المخزَّنة (لا النسخة المدموجة بالافتراض) كي
         # تَظهر أعلام الدور الموروثة في الفجوات التي لم يَضبطها المدير صراحةً.
-        mgr_raw = _load(policy.get("permissions_json")) if policy else {}
+        mgr_raw = _load(row["permissions_json"]) if row else {}
         role_flags: dict = {}
-        if self._entity_type(entity_type) == "manager":
+        if etype == "manager":
             try:
                 from . import manager_grants as _mg
                 role_flags = _mg.role_flags_for_admin(int(entity_id), tenant_id=self.tenant_id)
@@ -333,8 +422,16 @@ class ManagerDistributorOpsService:
         effective = {**DEFAULT_PERMISSIONS, **role_flags, **(mgr_raw or {})}
         return bool(effective.get(permission))
 
-    def list_scope(self, *, entity_type: str) -> list[dict[str, Any]]:
+    def list_scope(self, *, entity_type: str,
+                   owner_admin_id: int | None = None) -> list[dict[str, Any]]:
+        """``owner_admin_id`` (موزّعون فقط): عزل المِلكية — موزّعو ذلك المدير."""
         etype = self._entity_type(entity_type)
+        if etype == "distributor" and owner_admin_id is not None:
+            rows = db().execute(
+                "SELECT id, COALESCE(display_name, name, '') AS username, COALESCE(display_name, name, '') AS full_name, status FROM distributors WHERE tenant_id=? AND admin_id=? ORDER BY id DESC LIMIT 500",
+                (self.tenant_id, int(owner_admin_id)),
+            ).fetchall()
+            return [row_to_dict(row) for row in rows]
         if etype == "manager":
             rows = db().execute(
                 "SELECT id, username, full_name, CASE WHEN enabled=1 THEN 'active' ELSE 'disabled' END AS status FROM admins ORDER BY id DESC LIMIT 500"

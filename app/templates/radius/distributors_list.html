@@ -105,10 +105,10 @@
           <tr>
             <td class="num mono">{{ d.id }}</td>
             <td class="mono">
-              <a href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}"
-                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+              {% if can_submit('radius.distributors_detail', 'GET') %}<a href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}"
+                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">{% endif %}
                 {{ d.name }}
-              </a>
+              {% if can_submit('radius.distributors_detail', 'GET') %}</a>{% endif %}
             </td>
             <td>{{ d.display_name or d.name }}</td>
             <td>
@@ -151,15 +151,15 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px">
-                <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض') }}"
+                {% if can_submit('radius.distributors_detail', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض') }}"
                    href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
                   <i class="fa-solid fa-eye"></i>
-                </a>
+                </a>{% endif %}
                 {% if can_manage_distributors %}
-                <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
+                {% if can_submit('radius.distributors_edit', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.distributors_edit', distributor_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
-                </a>
+                </a>{% endif %}
                 {% endif %}
               </div>
             </td>
@@ -188,7 +188,7 @@
 <div class="fcw-modal" data-fcw-modal="distributor-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-distributor-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.distributors_create') }}">
+    <form method="post" action="{{ url_for('radius.distributors_create') }}">{% if not can_submit('radius.distributors_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-distributor-create-title"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة موزع') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -332,7 +332,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> {{ _('حفظ الموزع') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.distributors_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 

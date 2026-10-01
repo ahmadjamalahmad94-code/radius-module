@@ -21,7 +21,8 @@ from datetime import datetime
 
 from flask import Blueprint, g, request
 
-from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.errors import (RadiusConflict, RadiusError, RadiusNotFound,
+                                   RadiusValidationError)
 from ...radius.core.numbers import money_float
 from ...radius.core.timeparse import parse_iso_utc
 from ...radius.core.types import Subscriber
@@ -30,9 +31,7 @@ from ...radius.services.license_admin_capacity import (
     capacity_error_response,
 )
 from ..access_control import (
-    current_distributor,
     deny_out_of_scope,
-    distributor_batch_ids,
     require_web_permission,
     subscriber_in_scope,
     token_bypasses_rbac,
@@ -92,7 +91,51 @@ _DATETIME_FIELDS = ("expire_at", "first_login_at", "last_login_at", "last_seen_a
 def _parse_dt(v):
     # «Z»/إزاحة → تلك اللحظة بـ UTC ساكن؛ الساكن = UTC. كان يحذف «Z» فقط
     # فيُخزَّن «+03:00» واعيًا → لوحة التحكّم 500 (مقارنة ساكن/واعٍ).
-    return parse_iso_utc(v)
+    # نصٌّ غير صالح («tomorrow»، «2026-13-45») كان يُخزَّن «بلا انتهاء» عند
+    # الإنشاء ويُتجاهل عند التعديل (re-test R01 M5) — الآن 422.
+    if v in (None, ""):
+        return None
+    if isinstance(v, bool) or not isinstance(v, str):
+        raise RadiusValidationError("تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.")
+    try:
+        return parse_iso_utc(v, strict=True)
+    except (ValueError, OverflowError):
+        raise RadiusValidationError(
+            "تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.")
+
+
+# Free-text fields: a dict/list/bool used to reach SQLite → HTTP 500.
+_TEXT_FIELDS = frozenset({
+    "service_type", "pppoe_username", "pppoe_password", "pppoe_ip",
+    "full_name", "father_name", "mobile", "email", "address", "city",
+    "district", "state", "zip", "coordinates", "national_id", "account_type",
+    "photo_url", "status", "group", "pool", "mac_lock", "static_ip",
+    "caller_id", "primary_dns_ppp", "secondary_dns_ppp", "device_connection_file",
+    "nationality", "country", "payment_method", "payment_reference",
+    "working_days", "allowed_macs", "beneficiary_ref", "remark",
+})
+# Nullable text columns: "" / null → NULL (as the web form stores them).
+_NULLABLE_TEXT = frozenset({"mac_lock", "static_ip"})
+
+
+def _strict_int(field_name: str, value) -> int:
+    """int / integral float / digit string (Arabic-Indic digits accepted).
+    A bool, a fraction or text → 422 (``int(True)``/``int(1.9)`` were
+    accepted silently)."""
+    from ...radius.services.subscriber_validation import latin_digits
+    if isinstance(value, bool):
+        raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value) or value != int(value):
+            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+        return int(value)
+    if isinstance(value, str):
+        s = latin_digits(value).strip()
+        if s.lstrip("-").isdigit():
+            return int(s)
+    raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
 
 
 def _normalize_metadata(raw) -> str:
@@ -136,12 +179,23 @@ def _coerce(field_name: str, value):
     if field_name == "metadata":
         return _normalize_metadata(value)
     if field_name == "plan_id" or field_name == "manager_id":
-        if value in (None, "", 0):
-            return None if field_name == "plan_id" else 0
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+        # null / "" / 0 = unassign. manager_id 0 was written as 0 and failed
+        # the admins FK → 500 (a manager could not be unassigned, R01 M3).
+        if value is None or value == "" or (not isinstance(value, bool) and value == 0):
+            return None
+        return _strict_int(field_name, value)
+    if field_name in _TEXT_FIELDS:
+        if value is None:
+            return None if field_name in _NULLABLE_TEXT else ""
+        if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون نصًّا.")
+        text = value if isinstance(value, str) else str(value)
+        if field_name == "mobile":
+            from ...radius.services.subscriber_validation import latin_digits
+            text = latin_digits(text).strip()
+        if field_name in _NULLABLE_TEXT and not text.strip():
+            return None
+        return text
     # leave strings/booleans/numbers to the dataclass — replace() won't coerce
     # but it does accept whatever is on the right type. We do a few common
     # coercions for numerics that often arrive as strings.
@@ -179,17 +233,16 @@ def _coerce(field_name: str, value):
     }:
         if value in (None, ""):
             return 0
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمية.")
+        return _strict_int(field_name, value)
     if field_name in {
         "bandwidth_control_enabled", "custom_speed", "temporary_speed",
         "auto_renewal",
         "connection_time_limit_enabled", "quota_limit_enabled",
         "equal_share_download", "equal_share_upload",
     }:
-        return bool(value)
+        # bool("false") is True — the strict parser rejects junk instead.
+        from ...radius.core.strict_input import parse_strict_bool
+        return parse_strict_bool(value, label=field_name)
     return value
 
 
@@ -238,6 +291,15 @@ def _serialize(sub: Subscriber) -> dict:
             d["metadata"] = {}
     # Convert allowed_days tuple → list for JSON friendliness (Plan only — kept
     # here so the helper covers both DTOs if reused).
+    # fix3 (F01 F5 / F18): the same visibility rules as the web — the PPPoE
+    # password needs «رؤية كلمة مرور المشترك», the balance «رؤية الرصيد».
+    from ...radius.services.sensitive_visibility import (
+        MASK, can_view_balance, can_view_subscriber_passwords)
+    if d.get("pppoe_password") and not can_view_subscriber_passwords(tenant_id=_tid()):
+        d["pppoe_password"] = MASK
+    if not can_view_balance(tenant_id=_tid()):
+        d["balance"] = None
+        d["balance_hidden"] = True
     return d
 
 
@@ -382,10 +444,11 @@ def accounts_list():
                     "قيمة expiring_within_days بين 1 و 365.", status=422)
     filters = dict(status=status, plan_id=plan_id, search=search,
                    user_type=user_type, expiring_within_days=expiring_days)
-    if current_distributor():
-        # distributor token: only subscribers of its assigned card batches —
-        # filtered in SQL (username IN …) so total/has_more stay exact.
-        filters["usernames_in"] = _distributor_usernames()
+    # D09 + fix3: a manager without «عرض كل المشتركين» lists his own subscribers
+    # (+ his distributors'); a distributor login its assigned batches ∪ what it
+    # created — ONE predicate in SQL (same as the web list), so total is exact.
+    from ..access_control import subscriber_scope_admin_id
+    filters["owner_admin_id"] = subscriber_scope_admin_id()
     items = _svc().list(limit=limit, offset=offset, **filters)
     total = _svc().count(**filters)
     return ok({
@@ -400,21 +463,6 @@ def accounts_list():
     })
 
 
-def _distributor_usernames() -> list[str]:
-    """Usernames of the live subscribers on the calling distributor's
-    assigned card batches (the same scope ``subscriber_in_scope`` checks)."""
-    allowed = sorted(distributor_batch_ids())
-    if not allowed:
-        return []
-    from ...radius.db.connection import db
-    rows = db().execute(
-        "SELECT username FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL "
-        "AND card_batch_id IN (%s)" % ",".join("?" for _ in allowed),
-        [_tid(), *allowed],
-    ).fetchall()
-    return [r["username"] for r in rows]
-
-
 def accounts_create():
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
@@ -425,7 +473,16 @@ def accounts_create():
         return fail("validation_error", "اسم الدخول وكلمة المرور مطلوبان.", status=422)
     if not isinstance(body["username"], str):
         return fail("validation_error", "اسم الدخول يجب أن يكون نصًا.", status=422)
+    if not isinstance(body["password"], (str, int)) or isinstance(body["password"], bool):
+        return fail("validation_error", "كلمة المرور يجب أن تكون نصًا.", status=422)
     _aid = _restricted_admin_id()
+    if _aid is not None and body.get("balance") not in (None, "", 0, 0.0, "0"):
+        # same rule as PATCH: money enters a wallet only through «إضافة رصيد»
+        # (spend gate) — an opening balance on create bypassed it.
+        return fail(
+            "forbidden",
+            "تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».",
+            status=403, details={"field": "balance"})
     if _aid is not None:
         from ...radius.services import manager_grants as _mg
         if _mg.subscriber_cap_blocked(_aid, tenant_id=_tid()):
@@ -452,6 +509,31 @@ def accounts_create():
         sub = _apply_body(seed, body)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    if "expire_at" not in body:
+        # قرار المالك: مفتاح expire_at **غائب** ⇒ إعداد الخادم
+        # subscribers.create_without_expiry — «expired» (الافتراضيّ) يولد
+        # منتهيًا (= لحظة الإنشاء)، «unlimited» بلا انتهاء (HobeHub).
+        # ‎"expire_at": null الصريح ⇒ بلا انتهاء دائمًا؛ وتاريخٌ صريح ⇒ هو.
+        from ...radius.core.system_config import default_new_subscriber_expiry
+        sub = replace(sub, expire_at=default_new_subscriber_expiry(_tid()))
+    if _aid is not None:
+        # D19: field grants apply on CREATE too (same rule as the web form):
+        # a non-granted field takes the empty-form default (responsible manager
+        # = the creator, no custom price…); the balance is never set on create —
+        # it goes through the /balance action with its wallet/spend gate.
+        if float(sub.balance or 0) != 0:
+            return fail(
+                "forbidden",
+                "لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.",
+                status=403, details={"field": "balance"})
+        from ...radius.services import manager_grants as _mg
+        # A non-granted expiry falls back to «no expiry given» — the server's
+        # subscribers.create_without_expiry rule (born expired by default).
+        from ...radius.core.system_config import default_new_subscriber_expiry
+        _default = Subscriber(id=None, tenant_id=_tid(), username=sub.username,
+                              password=sub.password, status="enabled", manager_id=_aid,
+                              expire_at=default_new_subscriber_expiry(_tid()))
+        sub = _mg.enforce_create(_aid, "subscriber", sub, _default, tenant_id=_tid())
 
     try:
         from ...radius.services.users import validate_new_password
@@ -514,11 +596,33 @@ def accounts_get(username: str):
 
 
 def accounts_patch(username: str):
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
         return fail("not_found", "الحساب غير موجود.", status=404)
+    posted_name = body.get("username")
+    if posted_name is not None and str(posted_name).strip() != sub.username:
+        # the name is the RADIUS key: it changes only through the rename
+        # cascade — silently ignoring it made the app say «تم» (R10 N7).
+        return fail("validation_error",
+                    "لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».",
+                    status=422, details={"field": "username"})
+    # «بدون انتهاء»: an explicit null / "" clears the expiry (never expires).
+    # It was a silent no-op (200, old expiry kept — R10 N3). A MISSING key
+    # keeps the stored expiry.
+    clear_expiry = "expire_at" in body and body["expire_at"] in (None, "")
+    if "balance" in body and body["balance"] in (None, ""):
+        # fix3: GET hides the balance (null) without «رؤية الرصيد» — a client
+        # that echoes the object back means «unchanged», never «set to 0».
+        body = {k: v for k, v in body.items() if k not in ("balance", "balance_hidden")}
+    from ...radius.services.sensitive_visibility import MASK as _PW_MASK
+    if body.get("pppoe_password") == _PW_MASK:
+        body = {k: v for k, v in body.items() if k != "pppoe_password"}   # masked echo
     try:
         new_sub = _apply_body(sub, body)
     except RadiusValidationError as e:
@@ -526,10 +630,23 @@ def accounts_patch(username: str):
     new_sub, denied = _patch_denial(sub, new_sub)
     if denied is not None:
         return denied
+    _aid = _restricted_admin_id()
+    if clear_expiry and _aid is not None:
+        try:
+            from ...radius.services import manager_grants as _mg
+            if _mg.field_locked(_aid, "subscriber", "expiry", tenant_id=_tid()):
+                clear_expiry = False   # a locked field is reverted, never cleared
+        except Exception:  # noqa: BLE001 — fail-open like the web field guard
+            pass
     try:
-        _svc().update(actor=_actor(), sub=new_sub)
+        # base=sub → only the fields this body changed are written, under the
+        # write lock (a concurrent renewal/top-up is kept — R01 N1).
+        _svc().update(actor=_actor(), sub=new_sub, base=sub,
+                      clear_expiry=clear_expiry)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    except RadiusConflict as e:
+        return fail("conflict", e.message, status=409)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok(_serialize(_svc().get(username)))
@@ -604,17 +721,32 @@ def _notify_password_changed(username: str) -> None:
 
 
 def accounts_extend(username: str):
-    body = request.get_json(silent=True) or {}
+    from ...radius.core.numbers import check_extend_minutes, finite_int
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
     try:
-        minutes = int(body.get("minutes") or 0)
+        # finite_int: 1.9 was silently 1, true was 1 minute.
+        minutes = finite_int(body.get("minutes"), field="minutes", default=0,
+                             min=-1_000_000_000, max=1_000_000_000)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة minutes يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", "المدّة يجب أن تكون عددًا صحيحًا من الدقائق.", status=422)
     if minutes <= 0:
-        return fail("validation_error", "قيمة minutes يجب أن تكون أكبر من صفر.", status=422)
+        return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
+    try:
+        # owner rule: one extend ≤ 1 year (1e12 minutes was a 500 — R01 M3).
+        check_extend_minutes(minutes)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     try:
         saved = _svc().extend_time(actor=_actor(), username=username, minutes=minutes)
     except RadiusNotFound:
         return fail("not_found", "الحساب غير موجود.", status=404)
+    except RadiusValidationError as e:
+        # 1-year cap / expiry after 2100 → 422 (was 500).
+        return fail("validation_error", e.message, status=422)
+    except (OverflowError, ValueError):
+        return fail("validation_error", "المدة الناتجة تتجاوز الحدّ المسموح.", status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"username": username, "extended_minutes": minutes,
@@ -660,7 +792,28 @@ def accounts_360(username: str):
         payload = Subscriber360Service(tenant_id=_tid()).get_by_username(username)
     except KeyError:
         return fail("not_found", "الحساب غير موجود.", status=404)
-    return ok(_safe_360_payload(payload))
+    safe = _safe_360_payload(payload)
+    from ...radius.services.sensitive_visibility import can_view_balance
+    if not can_view_balance(tenant_id=_tid()):
+        safe = _hide_balance(safe)      # fix3 (F01 F18): «رؤية الرصيد» off
+    return ok(safe)
+
+
+_BALANCE_KEYS = {"balance", "wallet_balance", "current_balance", "balance_before",
+                 "balance_after"}
+
+
+def _hide_balance(value):
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            out[key] = None if str(key).lower() in _BALANCE_KEYS else _hide_balance(item)
+        if "balance" in value:
+            out["balance_hidden"] = True
+        return out
+    if isinstance(value, list):
+        return [_hide_balance(item) for item in value]
+    return value
 
 
 _SENSITIVE_360_KEYS = {

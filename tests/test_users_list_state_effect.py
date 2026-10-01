@@ -59,7 +59,7 @@ def seeded(app):
         u = f"rs_{uuid4().hex[:10]}"
         admin = admins_repo.create_admin(username=u, password="rs-pass",
                                          full_name="RS Tester",
-                                         is_super_admin=True)
+                                         is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
         aid = int(getattr(admin, "id", 0) or 0)
         from app.radius.db.connection import transaction
         with transaction() as c:
@@ -92,7 +92,7 @@ def _login(app):
         u = f"rs_{uuid4().hex[:10]}"
         with app.app_context():
             admins_repo.create_admin(username=u, password="rs-pass",
-                                     full_name="RS Tester", is_super_admin=True)
+                                     full_name="RS Tester", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "rs-pass"})
     assert res.status_code in {302, 303}

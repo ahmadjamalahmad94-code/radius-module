@@ -37,9 +37,9 @@
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة — روابط مباشرة لمسارات التصدير حسب النوع الحالي #}
-  {{ hub.btn("CSV", href=url_for('radius.finance_reports_export_csv', type=report_type), icon="file-csv", variant="secondary", size="sm") }}
-  {{ hub.btn("Excel", href=url_for('radius.finance_reports_export_xlsx', type=report_type), icon="file-excel", variant="secondary", size="sm") }}
-  {{ hub.btn("PDF", href=url_for('radius.finance_reports_export_pdf', type=report_type), icon="file-pdf", variant="secondary", size="sm") }}
+  {% if can_submit('radius.finance_reports_export_csv', 'GET') %}{{ hub.btn("CSV", href=url_for('radius.finance_reports_export_csv', type=report_type), icon="file-csv", variant="secondary", size="sm") }}{% endif %}
+  {% if can_submit('radius.finance_reports_export_xlsx', 'GET') %}{{ hub.btn("Excel", href=url_for('radius.finance_reports_export_xlsx', type=report_type), icon="file-excel", variant="secondary", size="sm") }}{% endif %}
+  {% if can_submit('radius.finance_reports_export_pdf', 'GET') %}{{ hub.btn("PDF", href=url_for('radius.finance_reports_export_pdf', type=report_type), icon="file-pdf", variant="secondary", size="sm") }}{% endif %}
   {# زر الطباعة: أضيف onclick=window.print() لأن hub.btn بلا href ينتج زر بلا فعل #}
   {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm", attrs='onclick="window.print()"') }}
 {% endcall %}
@@ -72,7 +72,7 @@
             <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
             <td>{{ snap.source }}</td>
             <td class="mono small">{{ (snap.result or {}).get('count', 0) }}</td>
-            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="small">{{ snap.created_by|actor_name if snap.created_by else "—" }}</td>
             <td class="mono small">{{ snap.created_at|dt_local }}</td>
           </tr>
           {% endfor %}
@@ -92,11 +92,11 @@
     </div>
     {# نموذج POST مستقل (لا يصح تداخل النماذج)؛ حقوله report_type + CSRF
        كما يعتمدها المعالج بالخلفية دون تغيير. #}
-    <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:inline">
+    {% if can_submit('radius.finance_reports_snapshot', 'POST') %}<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:inline">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="report_type" value="{{ report_type }}">
       {{ hub.btn("حفظ لقطة ثابتة", icon="lock", variant="secondary", type="submit", size="sm") }}
-    </form>
+    </form>{% endif %}
   </div>
 {% if items %}
   {% set columns = items[0].keys()|list %}

@@ -106,7 +106,7 @@ def _logged_in(app):
         u = f"sep_{uuid4().hex[:10]}"
         admins_repo.create_admin(
             username=u, password="sep-pass", full_name="Sep Tester",
-            is_super_admin=True,
+            is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
         )
     res = client.post(
         "/admin/radius/login",

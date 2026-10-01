@@ -113,6 +113,8 @@ def _dto(*, nas_id=None) -> NasDevice:
         require_message_authenticator=_b("require_message_authenticator"),
         ssh_port=_i("ssh_port", 22),
         tags=_s("tags"),
+        # إصدارُ RouterOS — يُختار في النموذج ويسري إلى مولّدِ السكربت.
+        ros_version=_s("ros_version"),
     )
 
 
@@ -152,9 +154,37 @@ def devices_edit(nas_id: int):
         device=device, vendors=NAS_VENDORS, is_new=False)
 
 
+def _merge_form_over(existing: NasDevice) -> NasDevice:
+    """The edit form carries only some of a router's fields. Start from the
+    STORED row so fields the form doesn't have (``metadata`` set via the API,
+    tenant) survive a web save, and treat an empty secret / router password as
+    «keep the current one» — the edit page no longer renders them (R07 N7/N12)."""
+    from dataclasses import replace
+    form = _dto(nas_id=existing.id)
+    changes = {}
+    for f in ("name", "address", "vendor", "nas_type", "shortname", "ports",
+              "snmp_community", "auth_port", "acct_port", "coa_port", "api_port",
+              "api_user", "location", "coordinates", "description", "ssh_port",
+              "tags"):
+        if f in request.form:
+            changes[f] = getattr(form, f)
+    for f in ("api_use_tls", "monitoring_enabled", "enabled",
+              "require_message_authenticator"):
+        changes[f] = getattr(form, f)
+    if form.secret:
+        changes["secret"] = form.secret
+    if form.api_password:
+        changes["api_password"] = form.api_password
+    return replace(existing, **changes)
+
+
 def devices_update(nas_id: int):
-    dto = _dto(nas_id=nas_id)
     svc = get_nas_devices_service()
+    try:
+        existing = svc.get(nas_id)
+    except RadiusError:
+        abort(404)
+    dto = _merge_form_over(existing)
     try:
         _check_form_ints()
         svc.update(actor=_actor(), device=dto)

@@ -44,8 +44,8 @@
   {% call hub.section("تنبيه: لا يوجد رمز ربط مفعل", icon="triangle-exclamation") %}
     <div class="hub-text-mute" style="font-size:13.5px;line-height:1.9">
       {{ _('لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من') }}
-      <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener"
-         style="font-weight:800;color:var(--hub-brand,#5b21b6);text-decoration:underline">{{ _('إدارة رموز الربط') }}</a>
+      {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener"
+         style="font-weight:800;color:var(--hub-brand,#5b21b6);text-decoration:underline">{% endif %}{{ _('إدارة رموز الربط') }}{% if can_submit('radius.tok_list', 'GET') %}</a>{% endif %}
       {{ _('ثم ارجع والصقه في الحقل أدناه.') }}
     </div>
   {% endcall %}
@@ -74,7 +74,7 @@
              placeholder="{{ _('الصق رمز الربط من شاشة إدارة الرموز') }}">
       <div class="hub-field-hint">
         {{ _('لديك') }} <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
-        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">{{ _('إدارة الرموز') }}</a>
+        {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">{% endif %}{{ _('إدارة الرموز') }}{% if can_submit('radius.tok_list', 'GET') %}</a>{% endif %}
       </div>
     </div>
   {% endcall %}

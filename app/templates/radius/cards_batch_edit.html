@@ -109,7 +109,7 @@
 ) }}
 
 <div class="cg-form">
-<form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+<form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">{% if not can_submit('radius.cards_batch_edit') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. بيانات الحزمة (نفس قسم الإنشاء) ─────────────────── #}
   <section class="cg-section cg-section--batch" id="cg-batch">
@@ -120,7 +120,7 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>{{ _('اسم الحزمة') }}</label>
-          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}"></div>
+          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}" required maxlength="160"></div>
         <div class="cg-field"><label>{{ _('الباقة المرتبطة') }} <span class="req">*</span></label>
           <select class="hub-select" name="plan_id" required>
             {% for p in plans %}
@@ -309,12 +309,12 @@
 
   {# ── شريط الحفظ (نفس مكان أزرار الإنشاء) ────────────────── #}
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}
     </button>
   </div>
-</form>
+{% if not can_submit('radius.cards_batch_edit') %}</fieldset>{% endif %}</form>
 </div>{# /.cg-form #}
 
 <script>

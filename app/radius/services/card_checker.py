@@ -94,6 +94,20 @@ def _resolve_accounting(record: dict) -> tuple[str, int]:
     return mode, budget
 
 
+def _is_exhausted_by_deduction(record: dict) -> bool:
+    """«خصم وقت» أكبر من وقت البطاقة (الأساس + المنحة ≤ 0) ⇒ منتهية."""
+    from .card_accounting import is_exhausted
+    base = budget_seconds(
+        validity_after_first_login_days=record.get(
+            "batch_validity_after_first_login_days") or 0,
+        time_value=record.get("batch_time_value") or 0,
+        time_unit=record.get("batch_time_unit") or "days",
+        duration_minutes=record.get("profile_duration_minutes") or 0,
+        validity_days=record.get("profile_validity_days") or 0,
+    )
+    return is_exhausted(base, record.get("card_extra_seconds") or 0)
+
+
 def _bytes(value: Any) -> int:
     try:
         return max(0, int(value or 0))
@@ -537,6 +551,9 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
     # Both the «طريقة الاحتساب» label and remaining_seconds derive from this
     # single resolution — never again from "has it connected?" alone.
     acct_mode, acct_budget = _resolve_accounting(record)
+    # fix2 (R13-H1): خصمٌ استنفد وقت البطاقة كلّه = **منتهية** (متبقٍّ 0)،
+    # لا ميزانيةَ صفرٍ تُقرأ «بلا حدّ» فتبقى «جاهزة».
+    acct_exhausted = _is_exhausted_by_deduction(record)
     first_connection_at = (
         parse_dt(record.get("first_used_at"))
         or parse_dt(accounting_summary.get("first_session_at"))
@@ -550,10 +567,13 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
         accounted_seconds=used_seconds,
         expire_at=parse_dt(record.get("card_expire_at")),
     )
+    if acct_exhausted:
+        remaining = 0
 
     card = {
         "exists": True,
-        "status": _status(record, now),
+        "status": ("expired" if acct_exhausted and _status(record, now) != "revoked"
+                   else _status(record, now)),
         "query": query,
         "id": record.get("card_id"),
         "username": record.get("username"),

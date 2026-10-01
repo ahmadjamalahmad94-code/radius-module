@@ -685,6 +685,9 @@
 {% set printed_cards = card_dashboard.printed if card_dashboard and card_dashboard.printed else {} %}
 {% set electronic_cards = card_dashboard.electronic if card_dashboard and card_dashboard.electronic else {} %}
 {% set alerts = metrics.alerts or [] %}
+{% set sales_today = metrics.sales_today or {} %}
+{# fix3 (F01 F8): sections by key (owner: all) — dashboard_metrics.dashboard_access #}
+{% set _da = dash_access if (dash_access is defined and dash_access) else {"subscribers": true, "cards": true, "network": true, "plans": true, "finance": true, "system": true} %}
 {% set sub_total = (subs.total or snap.total_subscribers or 0)|int %}
 {% set sub_online = (subs.online or snap.online_now or 0)|int %}
 {% set sub_active = (subs.active or snap.enabled_subscribers or 0)|int %}
@@ -730,13 +733,17 @@
       </div>
     </div>
     <div class="ops-actions">
-      <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>
-      <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>
-      <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>
+      {# D03: نفس فحص السايدبار (manager_nav_hidden) — لا زرّ يفتح نموذجًا يُرفَض #}
+      {% if not (manager_nav_hidden is defined and manager_nav_hidden('radius.users_new')) %}
+      {% if can_submit('radius.users_new', 'GET') %}<a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>{% endif %}
+      {% endif %}
+      {% if can_submit('radius.cards_generate', 'GET') %}<a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>{% endif %}
+      {% if can_submit('radius.setup_wizard_v3_page', 'GET') %}<a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>{% endif %}
     </div>
   </section>
 
   <section class="ops-modules" aria-label="{{ _('ملخص أقسام الراديوس') }}">
+    {% if _da.subscribers %}
     <article class="ops-module" style="--tone:#2563eb;--soft-tone:#eff6ff;--glow:rgba(37,99,235,.10)">
       <div class="ops-module-head">
         <div>
@@ -755,11 +762,13 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> {{ _('إدارة المشتركين') }}</a>
+        {% if can_submit('radius.users_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> {{ _('إدارة المشتركين') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ sub_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.cards %}
     <article class="ops-module" style="--tone:#7c3aed;--soft-tone:#f3e8ff;--glow:rgba(124,58,237,.11)">
       <div class="ops-module-head">
         <div>
@@ -778,11 +787,13 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> {{ _('حزم البطاقات') }}</a>
+        {% if can_submit('radius.cards_batches', 'GET') %}<a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> {{ _('حزم البطاقات') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ printed_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.cards %}
     <article class="ops-module" style="--tone:#14b8a6;--soft-tone:#ecfeff;--glow:rgba(20,184,166,.12)">
       <div class="ops-module-head">
         <div>
@@ -801,12 +812,14 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> {{ _('حزم البيع') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> {{ _('المستخدمون') }}</a>
+        {% if can_submit('radius.card_marketplace', 'GET') %}<a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> {{ _('حزم البيع') }}</a>{% endif %}
+        {% if can_submit('radius.card_users_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> {{ _('المستخدمون') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ electronic_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.network %}
     <article class="ops-module" style="--tone:#0891b2;--soft-tone:#ecfeff;--glow:rgba(8,145,178,.12)">
       <div class="ops-module-head">
         <div>
@@ -823,11 +836,13 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> {{ _('الأجهزة') }}</a>
+        {% if can_submit('radius.devices_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> {{ _('الأجهزة') }}</a>{% endif %}
         <div class="ops-mini-bar"><span style="width:{{ nas_pct }}%"></span></div>
       </div>
     </article>
+    {% endif %}
 
+    {% if _da.plans %}
     <article class="ops-module" style="--tone:#f59e0b;--soft-tone:#fffbeb;--glow:rgba(245,158,11,.14)">
       <div class="ops-module-head">
         <div>
@@ -844,11 +859,40 @@
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>
+        {% if can_submit('radius.plans_list', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>{% endif %}
+        {% if can_submit('radius.plans_new', 'GET') %}<a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>{% endif %}
       </div>
     </article>
+    {% endif %}
 
+    {# «إجمالي مبيعات اليوم» (طلب المالك): بطاقات اليوم + مبيعاته لكلّ عملة —
+       يوم اللوحة المحلّيّ، مقصورٌ على المدير، والمبلغ يحتاج reports.finance.
+       المصدر: dashboard_metrics.get_sales_today (نفس /api/v1/dashboard.sales_today). #}
+    {% if _da.cards or _da.finance %}
+    <article class="ops-module" data-sales-today style="--tone:#16a34a;--soft-tone:#f0fdf4;--glow:rgba(22,163,74,.12)">
+      <div class="ops-module-head">
+        <div>
+          <h2>{{ _('إجمالي مبيعات اليوم') }}</h2>
+          <p>{{ _('البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ.') }}</p>
+        </div>
+        <span class="ops-big-icon"><i class="fa-solid fa-cash-register"></i></span>
+      </div>
+      <div>
+        <div class="ops-primary-number"><strong data-sales-today-cards>{{ "{:,}".format((sales_today.cards_count or 0)|int) }}</strong><span>{{ _('بطاقة') }}</span>{% if sales_today.money_visible %}<span aria-hidden="true"> · </span><strong data-sales-today-total>{{ (sales_today.by_currency or [])|money_multi('total', 0) }}</strong>{% endif %}</div>
+        {% if sales_today.money_visible %}
+        <div class="ops-metrics">
+          <div class="ops-metric"><span>{{ _('عدد البطاقات المباعة') }}</span><strong>{{ "{:,}".format((sales_today.cards_count or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('قيمة البطاقات') }}</span><strong>{{ (sales_today.by_currency or [])|money_multi('total', 0) }}</strong></div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="ops-module-foot">
+        {% if sales_today.money_visible and can_open(url_for('radius.finance_reports', type='daily')) %}<a class="ops-link" href="{{ url_for('radius.finance_reports', type='daily') }}"><i class="fa-solid fa-chart-column"></i> {{ _('تقرير المبيعات اليوميّة') }}</a>{% endif %}
+      </div>
+    </article>
+    {% endif %}
+
+    {% if _da.finance %}
     <article class="ops-module" style="--tone:#fb923c;--soft-tone:#fff7ed;--glow:rgba(251,146,60,.14)">
       <div class="ops-module-head">
         <div>
@@ -858,20 +902,22 @@
         <span class="ops-big-icon"><i class="fa-solid fa-chart-line"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ revenue_month|money }}</strong><span>{{ _('هذا الشهر') }}</span></div>
+        <div class="ops-primary-number"><strong>{{ (finance.revenue_month_by_currency or [])|money_multi('revenue', revenue_month) }}</strong><span>{{ _('هذا الشهر') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>{{ _('اليوم') }}</span><strong>{{ revenue_today|money }}</strong></div>
-          <div class="ops-metric"><span>{{ _('السنة') }}</span><strong>{{ revenue_year|money }}</strong></div>
+          <div class="ops-metric"><span>{{ _('اليوم') }}</span><strong>{{ (finance.revenue_today_by_currency or [])|money_multi('revenue', revenue_today) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('السنة') }}</span><strong>{{ (finance.revenue_year_by_currency or [])|money_multi('revenue', revenue_year) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> {{ _('المالية') }}</a>
-        <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>
+        {% if can_submit('radius.business_finance', 'GET') %}<a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> {{ _('المالية') }}</a>{% endif %}
+        {% if can_submit('radius.reports_home', 'GET') %}<a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>{% endif %}
       </div>
     </article>
+    {% endif %}
   </section>
 
   <section class="ops-secondary">
+    {% if _da.cards %}
     <article class="ops-list-card">
       <div class="ops-list-head">
         <h3>{{ _('آخر الحزم') }}</h3>
@@ -897,6 +943,7 @@
         </div>
       {% endfor %}
     </article>
+    {% endif %}
 
     <article class="ops-list-card">
       <div class="ops-list-head">
@@ -909,12 +956,14 @@
         {%- set _ep = alert.link_endpoint if (alert.link_endpoint and endpoint_exists(alert.link_endpoint)) else
                       ('radius.mt_alerts_index' if endpoint_exists('radius.mt_alerts_index') else none) -%}
         {%- set _link_args = alert.link_args if (alert.link_args and alert.link_endpoint == _ep) else {} -%}
-        <a class="ops-alert ops-alert--link" href="{{ url_for(_ep, **_link_args) if _ep else '#' }}"
+        {#- F01-F2: تنبيهٌ وجهته مرفوضة لهذا المدير يبقى ظاهرًا بلا رابط (لا 403). -#}
+        {%- set _alert_ok = _ep and can_submit(_ep, 'GET') -%}
+        <{{ 'a' if _alert_ok else 'div' }} class="ops-alert{{ ' ops-alert--link' if _alert_ok }}"{% if _alert_ok %} href="{{ url_for(_ep, **_link_args) }}"{% endif %}
            style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
           <i class="fa-solid {{ 'fa-circle-exclamation' if alert.level == 'danger' else ('fa-triangle-exclamation' if alert.level == 'warn' else 'fa-circle-info') }}"></i>
           <span>{{ alert.message }}</span>
-          <i class="fa-solid fa-chevron-left ops-alert-go" aria-hidden="true"></i>
-        </a>
+          {% if _alert_ok %}<i class="fa-solid fa-chevron-left ops-alert-go" aria-hidden="true"></i>{% endif %}
+        </{{ 'a' if _alert_ok else 'div' }}>
       {% else %}
         <div class="ops-alert" style="--tone:#16a34a;--tone-soft:#f0fdf4">
           <i class="fa-solid fa-circle-check"></i>
@@ -923,6 +972,7 @@
       {% endfor %}
     </article>
   </section>
+  {% if _da.system %}
   <section class="ops-vps-grid" aria-label="{{ _('ملخص خادم الربط') }}">
     <article class="ops-vps-card ops-vps--brand">
       <div class="ops-vps-head">
@@ -1061,6 +1111,7 @@
       </div>
     </article>
   </section>
+  {% endif %}
 
 </div>
 {% endblock %}

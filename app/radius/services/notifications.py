@@ -32,7 +32,8 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
            title: str = "", body: str = "", link: str = "",
            dedup_key: str = "", source: str = "local",
            source_ref: str = "", push: Optional[bool] = None,
-           event_key: str = "") -> Optional[int]:
+           event_key: str = "", subscriber_username: str = "",
+           audience: str = "", actor_admin_id: Optional[int] = None) -> Optional[int]:
     """ينشئ إشعارًا (أو يتجاهله إن تكرّر مفتاحه). يُرجع id أو None.
 
     عند إنشاء إشعار **محلّيّ جديد** (نقطة الاختناق الوحيدة للجرس) يُحوَّل طلب
@@ -54,7 +55,8 @@ def notify(tenant_id: int, *, type: str = "system", severity: str = "info",
         nid, is_new = notifications_repo.create_returning(
             tenant_id, type=type, severity=severity, title=title, body=body,
             link=link, dedup_key=dedup_key, source=source, source_ref=source_ref,
-            event_key=event_key)
+            event_key=event_key, subscriber_username=subscriber_username,
+            audience=audience, actor_admin_id=actor_admin_id)
     except Exception:  # noqa: BLE001 — الإشعارات لا تكسر شيئًا أبدًا
         _LOG.exception("notify failed")
         return None
@@ -151,16 +153,73 @@ def push_status(tenant_id: int) -> dict:
     return base
 
 
-def recent_for_bell(tenant_id: int, limit: int = 6) -> list[dict]:
+# ── fix3 (F01 F9 / F08 M2): who sees which notification ─────────────────
+# Non-subscriber alert groups and the RBAC key that opens them to a manager.
+# «security», «system» and legacy rows (no group) stay owner / co-owner only.
+AUDIENCE_PERMISSION = {
+    "network": "nas.view",
+    "routers": "nas.view",
+    "store": "store.view",
+    "finance": "reports.finance",
+}
+
+
+def viewer_for(admin_id: Optional[int], *, tenant_id: int = 1) -> Optional[dict]:
+    """The notification viewer of an admin — ``None`` = sees everything with
+    the tenant-wide read state (owner / co-owner / unbound credential)."""
+    if not admin_id:
+        return None
+    from ..auth.owner import is_owner_like
+    if is_owner_like(int(admin_id)):
+        return None
+    from ..db.repos import admins_repo
+    from .subscriber_scope import scope_admin_id
+    admin = admins_repo.get_admin(int(admin_id))
+    perms = set(admins_repo.admin_permissions(admin)) if admin is not None else set()
+    return {
+        "admin_id": int(admin_id),
+        "scope": scope_admin_id(int(admin_id), tenant_id=tenant_id),
+        "users_view": "users.view" in perms,
+        "audiences": {aud for aud, key in AUDIENCE_PERMISSION.items() if key in perms},
+    }
+
+
+def current_viewer(tenant_id: int = 1) -> Optional[dict]:
+    """``viewer_for`` the admin behind the current request (web or API)."""
+    from .subscriber_scope import request_admin_id, request_is_owner_session
+    if request_is_owner_session():
+        return None
     try:
-        return notifications_repo.recent(tenant_id, limit=limit)
+        return viewer_for(request_admin_id(), tenant_id=tenant_id)
+    except Exception:  # noqa: BLE001 — fail-closed: a manager with no rights
+        from .subscriber_scope import request_admin_id as _rid
+        aid = _rid()
+        return {"admin_id": int(aid), "scope": int(aid), "users_view": False,
+                "audiences": set()} if aid else None
+
+
+def can_see_router_alerts() -> bool:
+    """fix3 (F01 F13): router/system smart alerts in the header bell need
+    ``nas.view`` (their pages do) — owner / co-owner always."""
+    try:
+        from flask import session
+        if session.get("is_super_admin"):
+            return True
+        return "nas.view" in set(session.get("permissions") or ())
+    except Exception:  # noqa: BLE001 — fail-closed
+        return False
+
+
+def recent_for_bell(tenant_id: int, limit: int = 6, *, viewer=None) -> list[dict]:
+    try:
+        return notifications_repo.recent(tenant_id, limit=limit, viewer=viewer)
     except Exception:  # noqa: BLE001
         return []
 
 
-def unread_count(tenant_id: int) -> int:
+def unread_count(tenant_id: int, *, viewer=None) -> int:
     try:
-        return notifications_repo.unread_count(tenant_id)
+        return notifications_repo.unread_count(tenant_id, viewer=viewer)
     except Exception:  # noqa: BLE001
         return 0
 
@@ -190,7 +249,8 @@ def license_days_badge(expires_at, *, today: Optional[_dt.date] = None) -> dict:
     expiry = _parse_date(expires_at)
     if expiry is None:
         return {"days_left": None}
-    ref = today or _dt.date.today()
+    from ..core.system_config import local_today
+    ref = today or local_today()
     days_left = (expiry - ref).days
     if days_left >= 20:
         color, pulse = "green", False
@@ -247,7 +307,8 @@ def surface_license_countdown(tenant_id: int = 1,
     if expiry is None:
         return {"fired": False, "reason": "no_expiry"}
 
-    ref = today or _dt.date.today()
+    from ..core.system_config import local_today
+    ref = today or local_today()
     days_left = (expiry - ref).days
     band = _band_for(days_left)
     if band is None:

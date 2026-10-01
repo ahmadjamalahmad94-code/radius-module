@@ -46,6 +46,7 @@
   .qk-grid2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   @media(max-width:720px){.qk-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .qk-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:#475569}
+  .qk-field[hidden]{display:none}
   .qk-field>input,.qk-field>select{margin-top:auto;height:42px;box-sizing:border-box;
       border:1px solid #cbd5e1;border-radius:10px;padding:0 10px;font:inherit;background:#fff;color:#0f172a;
       transition:border-color .15s,box-shadow .15s}
@@ -84,6 +85,13 @@
   .qk-sheet-total{margin:0;font-size:12.5px;font-weight:900;color:#3730a3;background:#eef2ff;border:1px solid #c7d2fe;
       border-radius:10px;padding:8px 10px;display:flex;gap:6px;align-items:center}
   .qk-top .qk-field{flex:1;min-width:180px}
+  /* (fix2 N4) a very long template name made the <select> 11,000–33,000 px
+     wide at 390 px: the page clipped and the preview went blank. */
+  .qk-top .qk-field, .qk-field{min-width:0;max-width:100%}
+  .qk-field>select{width:100%;max-width:100%;min-width:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+  .qk-card{min-width:0;max-width:100%}
+  .qk-preview-error{margin:8px 0 0;font-size:12px;font-weight:900;color:#b91c1c;background:#fef2f2;
+      border:1px solid #fecaca;border-radius:10px;padding:8px 10px}
 </style>
 {% endblock %}
 
@@ -91,7 +99,7 @@
 {% set is_edit = tpl and tpl.id %}
 <form method="post" id="qkForm"
       action="{{ url_for('radius.print_templates_update', template_id=tpl.id) if is_edit else url_for('radius.print_templates_create') }}"
-      enctype="multipart/form-data">
+      enctype="multipart/form-data">{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
   <input type="hidden" name="return_to" value="quick">
   <input type="hidden" name="quick_export" value="0" data-qk-export-flag>
@@ -116,6 +124,7 @@
       <div class="qk-preview" data-qk-preview>
         <p class="qk-note">{{ _('المعاينة تظهر هنا…') }}</p>
       </div>
+      <p class="qk-preview-error" data-qk-preview-error role="alert" hidden></p>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         {# سوتش اتجاه التصميم: يقلب محرك الرسم فيأخذ التصميم الأفقي
            كانفس أفقيًا بنسبته الصحيحة بدل التمدد بالقالب العمودي. #}
@@ -144,7 +153,7 @@
           <select data-qk-template-switch>
             <option value="0" {% if not is_edit %}selected{% endif %}>{{ _('+ تصميم جديد') }}</option>
             {% for t in templates %}
-              <option value="{{ t.id }}" {% if is_edit and t.id == tpl.id %}selected{% endif %}>{{ t.name }}</option>
+              <option value="{{ t.id }}" title="{{ t.name }}" {% if is_edit and t.id == tpl.id %}selected{% endif %}>{{ t.name|truncate(60, true, '…') }}</option>
             {% endfor %}
           </select>
         </label>
@@ -152,17 +161,17 @@
           <select data-qk-batch>
             <option value="">{{ _('— اختر الحزمة —') }}</option>
             {% for b in batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>{% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or b.generated or '?' }})</option>
             {% endfor %}
             {% for b in print_only_batches %}
-              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
+              <option value="{{ b.id }}" data-nopw="{{ '1' if b.login_without_password else '0' }}" data-price="{{ (batch_prices or {}).get(b.id, '') }}" {% if selected_batch == b.id %}selected{% endif %}>🖨 {% set _nm = b.package_name or b.service_name or b.plan_name %}{{ (_nm ~ ' — ') if _nm }}{{ b.batch_code or b.id }} ({{ b.total_cards or '?' }})</option>
             {% endfor %}
           </select>
         </label>
       </div>
 
       <label class="qk-field">{{ _('اسم القالب') }}
-        <input name="name" value="{{ tpl.name if is_edit else _('قالب سريع') }}" required>
+        <input name="name" value="{{ tpl.name if is_edit else _('قالب سريع') }}" required maxlength="120">
       </label>
 
       <div class="qk-sec">
@@ -181,7 +190,12 @@
             <input type="number" name="password_font_size" min="0" max="36" step="0.5" value="{{ fl.password_font_size or '' }}" placeholder="{{ _('تلقائي') }}">
           </label>
           <label class="qk-check"><input type="checkbox" name="show_qr" value="1" data-qk-qr {% if fl.show_qr %}checked{% endif %}> {{ _('إظهار QR') }}<input type="hidden" name="show_qr" value="0"></label>
-          <label class="qk-check"><input type="checkbox" name="show_price" value="1" {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          <label class="qk-check"><input type="checkbox" name="show_price" value="1" data-qk-show-price {% if fl.show_price %}checked{% endif %}> {{ _('إظهار السعر') }}<input type="hidden" name="show_price" value="0"></label>
+          {# f05-M4: نصّ السعر المطبوع — يُملأ من سعر الحزمة وعملتها («2 ILS») عند
+             تفعيل «إظهار السعر» كما في التطبيق؛ يمكن تعديله. فارغ = لا يُطبع سعر. #}
+          <label class="qk-field" data-qk-price-wrap {% if not fl.show_price %}hidden{% endif %}>{{ _('نصّ السعر') }}
+            <input name="price_text" maxlength="60" value="{{ fl.price_text or '' }}" data-qk-price placeholder="{{ _('مثال: 5 ILS') }}">
+          </label>
           <p class="qk-note" data-qk-nopw-note hidden style="grid-column:1/-1;margin:0">
             <i class="fa-solid fa-circle-info"></i> {{ _('هذه الحزمة بلا كلمة مرور — تُطبع البطاقات باسم المستخدم فقط.') }}</p>
           {# رابط دخول الهوت سبوت: بدونه يحمل الـQR اسم المستخدم نصًّا فقط.
@@ -189,10 +203,20 @@
              + u/p للاحتياط) فيدخل الزبون فور المسح. #}
           <label class="qk-field" style="grid-column:1/-1">
             {{ _('رابط دخول الهوت سبوت (للـQR)') }}
+            {# (fix2 I1) the field shows THIS template's link only — a link borrowed
+               from another template was saved silently into templates that
+               had none. The usual link is offered as a one-tap suggestion. #}
             <input name="hotspot_login_url" dir="ltr" data-qk-qrurl
-                   value="{{ qr_login_url or fl.hotspot_login_url or '' }}"
-                   placeholder="hotspot.hoberadius.com {{ _('أو') }} 10.5.50.1">
+                   value="{{ fl.hotspot_login_url or '' }}"
+                   placeholder="{{ qr_login_url or ('hotspot.hoberadius.com ' ~ _('أو') ~ ' 10.5.50.1') }}">
           </label>
+          {% if qr_login_url and not fl.hotspot_login_url %}
+          <p class="qk-note" style="grid-column:1/-1;margin:-4px 0 0">
+            <button type="button" class="qk-btn qk-btn--save" style="flex:0;padding:4px 10px;display:inline-flex"
+                    data-qk-qrurl-use="{{ qr_login_url }}">{{ _('استخدم الرابط المعتاد') }}</button>
+            <bdi dir="ltr">{{ qr_login_url }}</bdi>
+          </p>
+          {% endif %}
           <p class="qk-note" data-qk-qrhint style="grid-column:1/-1;margin:-4px 0 0">
             {{ _('اكتب عنوان الراوتر أو نطاق صفحة الدخول — يتحوّل تلقائيًا إلى') }}
             <bdi dir="ltr">/login?username=…&password=…</bdi>
@@ -309,13 +333,13 @@
         <button type="submit" class="qk-btn qk-btn--save">
           <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
         </button>
-        <a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
+        {% if can_submit('radius.print_templates', 'GET') %}<a class="qk-btn qk-btn--adv" href="{{ url_for('radius.print_templates', edit_template=tpl.id) + '#designer' if is_edit else url_for('radius.print_templates') }}">
           <i class="fa-solid fa-sliders"></i> {{ _('المصمم المتقدم') }}
-        </a>
+        </a>{% endif %}
       </div>
     </div>
   </div>
-</form>
+{% if not can_submit(('radius.print_templates_update' if is_edit else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
 
 <script>
 (function(){
@@ -344,8 +368,11 @@
       // قالبٌ قائم: المعاينة تدمج على المخزَّن تمامًا كما سيفعل «حفظ».
       if(tplId) fd.set('quick_template_id', String(tplId));
       fetch(svgUrl, {method:'POST', body:fd})
-        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(r => r.ok ? r.text() : r.json().then(
+          j => Promise.reject(new Error((j && j.error && j.error.message) || '')),
+          () => Promise.reject(new Error(''))))
         .then(svg => { if(mySeq === seq){
+            showPreviewError('');
             previewMount.innerHTML = svg;
             const el = previewMount.querySelector('svg');
             if(el){
@@ -357,9 +384,25 @@
             }
             attachDrag();
           } })
-        .catch(() => {});
+        .catch(err => { if(mySeq === seq){
+            // (fix2 N6) the preview no longer stays silently stale: say why.
+            showPreviewError((err && err.message) || {{ _('تعذّر تحديث المعاينة. راجع القيم أو أعد المحاولة.')|tojson }});
+          } });
     }, 250);
   }
+  function showPreviewError(msg){
+    const box = document.querySelector('[data-qk-preview-error]');
+    if(!box) return;
+    box.textContent = msg || '';
+    box.hidden = !msg;
+  }
+  document.querySelectorAll('[data-qk-qrurl-use]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inp = form.querySelector('[data-qk-qrurl]');
+      if(inp){ inp.value = btn.getAttribute('data-qk-qrurl-use') || ''; inp.dispatchEvent(new Event('input', {bubbles:true})); }
+      const row = btn.closest('p'); if(row) row.hidden = true;
+    });
+  });
   // ── سحب اليوزر/الباس/الباركود على المعاينة مباشرة ──
   // تحريك حي بـtransform ثم إعادة رسم مرجعية عند الإفلات؛ الإحداثيات
   // تُكتب في حقول *_x/*_y بالمليمتر (نفس دلالة المصمم المتقدم).
@@ -523,9 +566,30 @@
   const noPwNote = document.querySelector('[data-qk-nopw-note]');
   function syncBatchMirror(){ batchMirror.value = batchSel.value || ''; }
   function syncNoPw(){ if(noPwNote) noPwNote.hidden = !batchNoPw(); }
-  batchSel.addEventListener('change', () => { syncBatchMirror(); syncNoPw(); refreshPreview(); });
+  // f05-M4: «إظهار السعر» ⇒ نصّ السعر من الحزمة المختارة (ما لم يكتبه المشغّل).
+  const showPrice = document.querySelector('[data-qk-show-price]');
+  const priceInput = document.querySelector('[data-qk-price]');
+  const priceWrap = document.querySelector('[data-qk-price-wrap]');
+  let autoPrice = '';
+  function batchPrice(){
+    const opt = batchSel.selectedOptions && batchSel.selectedOptions[0];
+    return (opt && opt.getAttribute('data-price')) || '';
+  }
+  function syncPrice(){
+    if(!showPrice || !priceInput) return;
+    if(priceWrap) priceWrap.hidden = !showPrice.checked;
+    if(!showPrice.checked) return;
+    const cur = (priceInput.value || '').trim();
+    if(!cur || cur === autoPrice){
+      autoPrice = batchPrice();
+      priceInput.value = autoPrice;
+    }
+  }
+  if(showPrice) showPrice.addEventListener('change', () => { syncPrice(); refreshPreview(); });
+  batchSel.addEventListener('change', () => { syncBatchMirror(); syncNoPw(); syncPrice(); refreshPreview(); });
   syncBatchMirror();
   syncNoPw();
+  syncPrice();
   refreshPreview();
   tplSwitch.addEventListener('change', () => {
     const q = new URLSearchParams();

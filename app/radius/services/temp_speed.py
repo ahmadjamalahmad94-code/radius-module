@@ -312,11 +312,12 @@ def parse_duration_minutes(*, duration_minutes: Any = None, duration: Any = None
     dur = 0
     if duration is not None and not (isinstance(duration, str) and not duration.strip()):
         dur = int(min(_number(duration, "المدة", integer=True), 10**7))
+    # f06-L3: رسائل عربيّة بالكامل (كانت «minutes أو hours أو days»).
     if unit is not None and not isinstance(unit, str):
-        raise ValueError("وحدة المدة يجب أن تكون minutes أو hours أو days.")
+        raise ValueError("وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام.")
     mult = _UNIT_MINUTES.get(str(unit or "minutes").strip().lower())
     if mult is None:
-        raise ValueError("وحدة المدة غير معروفة — المسموح: minutes أو hours أو days.")
+        raise ValueError("وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام.")
     return dur * mult
 
 
@@ -353,6 +354,11 @@ def apply_temp_speed(
     # «0 = غير محدود» على أي اتجاه (يطابق المرجع): MikroTik يعامل 0 كـ unlimited
     # في الـ simple queue. أي قيمة موجبة أقل من الحد الأدنى تُرفض (أقل من 64k
     # يساوي عمليًا قطع الخدمة). قيمة سالبة تُرفض أيضًا عبر الشرط نفسه.
+    # F08-L: 0/0 = «بلا تقييد» في الاتجاهين — سرعةٌ مؤقتة بلا سرعة لا معنى لها
+    # (كانت تُفعَّل علَمًا بلا سرعة ولا نهاية). ويب/API/تطبيق عبر هذه الخدمة.
+    if down_kbps <= 0 and up_kbps <= 0:
+        raise ValueError("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                         "فلا تُفعَّل بها سرعة مؤقتة.")
     if (down_kbps and down_kbps < _MIN_KBPS) or (up_kbps and up_kbps < _MIN_KBPS):
         raise ValueError(f"السرعة يجب أن تكون 0 (غير محدود) أو {_MIN_KBPS} كيلوبت فأكثر")
     if down_kbps > _MAX_KBPS or up_kbps > _MAX_KBPS:

@@ -120,6 +120,25 @@ for c in hoberadius hoberadius-freeradius hoberadius-nginx; do
     fi
 done
 
+# ─── 5b) منفذُ اللوحةِ المنشورُ فعلًا = المطلوبُ في .env ────────────────────
+# 🔴 الفجوةُ بينهما هي العطبُ نفسُه: `.env` يطلب 443:8443، لكنّ `docker compose`
+#    بلا `--env-file` يقرأ الاستبدالَ من deploy/ فيسقط إلى 8443 **بصمت**.
+#    وقع على client21 فانقطعت لوحتُه يومَين دون أن يُنبّه شيءٌ. لا تفحصْ
+#    8443 داخليًّا وتظنَّ الأمرَ بخير — افحصِ المنشورَ مقابلَ المطلوب.
+sec "Panel published port"
+_want=$(grep -E '^HOBERADIUS_PANEL_HTTPS_PUBLISH=' "${HR_ROOT:-/opt/hoberadius}/.env" 2>/dev/null \
+        | cut -d= -f2- | cut -d: -f1)
+_want="${_want:-8443}"
+_got=$(docker ps --format '{{.Ports}}' --filter name=hoberadius-nginx 2>/dev/null \
+       | tr ',' '\n' | grep -E '\->8443/tcp' | grep -oE '[0-9]+->' | tr -d '>-' | head -1)
+if [ -z "$_got" ]; then
+    fail "لا منفذَ منشورٌ للوحة إطلاقًا (المطلوب $_want) — اللوحةُ غيرُ قابلةٍ للوصول"
+elif [ "$_got" = "$_want" ]; then
+    ok "منفذُ اللوحة $_got = المطلوب"
+else
+    fail "منفذُ اللوحة المنشورُ $_got ≠ المطلوبُ $_want في .env — أعِدْ الإنشاءَ بـ: docker compose --env-file ${HR_ROOT:-/opt/hoberadius}/.env -f ${HR_ROOT:-/opt/hoberadius}/deploy/docker-compose.yml up -d --force-recreate nginx"
+fi
+
 # ─── 6) FreeRADIUS host networking ──────────────────────────────────────────
 sec "FreeRADIUS network mode"
 

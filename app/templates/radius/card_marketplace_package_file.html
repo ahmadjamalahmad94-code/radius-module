@@ -45,7 +45,7 @@
        ('<button type="button" class="hub-btn" data-fcw-open="stock-upload"><i class="fa-solid fa-file-arrow-up"></i> '|safe ~ _("رفع ملف بطاقات") ~ '</button>'|safe
         ~ '<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="stock-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> '|safe ~ _("توليد حزمة") ~ '</button>'|safe
         if _is_stock else ''|safe)
-       ~ '<a class="hub-btn hub-btn--ghost" href="'|safe ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> '|safe ~ _("عودة للسوق") ~ '</a>'|safe)) }}
+       ~ ('<a class="hub-btn hub-btn--ghost" href="'|safe ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> '|safe ~ _("عودة للسوق") ~ '</a>'|safe if can_submit('radius.card_marketplace', 'GET') else ''))) }}
 
 <div class="hub-kpi-grid">
   {# عمليات الشراء (كل عملية = مشترك له اتصاله الخاص) — ليست عدد بطاقات #}
@@ -69,7 +69,7 @@
 {% elif _low_stock %}
 <p class="cm-note cm-note--warn">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining }} بطاقة فقط من أصل {{ stock_total }}.</span>
+  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining|ar_count('card') }} فقط من أصل {{ stock_total }}.</span>
 </p>
 {% endif %}
 
@@ -104,11 +104,11 @@
   {% if offer_cards and offer_cards.pages > 1 %}
   <nav class="cm-cards-pager" role="navigation" aria-label="{{ _('ترقيم بطاقات العرض') }}">
     {% if offer_cards.page > 1 %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">{{ _('السابق') }}</a>
+      {% if can_submit('radius.card_marketplace_package_file', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">{{ _('السابق') }}</a>{% endif %}
     {% endif %}
     <span class="hub-pill">{{ offer_cards.page }} / {{ offer_cards.pages }}</span>
     {% if offer_cards.page < offer_cards.pages %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">{{ _('التالي') }}</a>
+      {% if can_submit('radius.card_marketplace_package_file', 'GET') %}<a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">{{ _('التالي') }}</a>{% endif %}
     {% endif %}
   </nav>
   {% endif %}
@@ -181,7 +181,7 @@
 
 <div class="fcw-modal" data-fcw-modal="stock-upload" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-upload-title">
-    <form method="post" enctype="multipart/form-data"
+    {% if can_submit('radius.card_marketplace_inventory_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
           action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="return_to" value="file">
@@ -205,13 +205,13 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> {{ _('إضافة للمخزون') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
 <div class="fcw-modal" data-fcw-modal="stock-generate" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-generate-title">
-    <form method="post" action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
+    {% if can_submit('radius.card_marketplace_inventory_upload', 'POST') %}<form method="post" action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="return_to" value="file">
       <div class="fcw-head">
@@ -233,7 +233,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد وإضافة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 

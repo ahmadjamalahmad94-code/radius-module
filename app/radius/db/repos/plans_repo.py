@@ -9,6 +9,31 @@ from ..connection import db, transaction
 from ..helpers import dt_to_iso, json_dump, json_load, now_iso, parse_dt
 
 
+# أقصى طول لاسم الباقة على كلّ مسارات الكتابة (اسمٌ من 3,015 حرفًا كسر صفحات
+# الويب: قائمة المشتركين صارت بعرض 17,142 بكسل).
+PLAN_NAME_MAX = 100
+
+
+# ── أولويّة العرض: مقياسٌ واحد 1–10 (الأصغر أعلى)، الافتراض 5 — للويب والـAPI
+# والتطبيق (F04 N-L10). كان الـAPI يفترض 100 ويقبل حتى 1000 والويب يقصّ إلى
+# 1–10 عند الحفظ فيعيد كتابة أولويّة عرضٍ أُنشئ من الـAPI بصمت. قيمٌ قديمة:
+# 0/فارغ/100 (افتراضات قديمة) ⇒ 5، وما فوق 10 ⇒ 10 (هجرة 190 + القراءة).
+PRIORITY_MIN = 1
+PRIORITY_MAX = 10
+PRIORITY_DEFAULT = 5
+_LEGACY_PRIORITY_DEFAULTS = (0, 100)
+
+
+def normalize_priority(value) -> int:
+    try:
+        v = int(value or 0)
+    except (TypeError, ValueError):
+        return PRIORITY_DEFAULT
+    if v in _LEGACY_PRIORITY_DEFAULTS:
+        return PRIORITY_DEFAULT
+    return max(PRIORITY_MIN, min(PRIORITY_MAX, v))
+
+
 def _g(row: Any, key: str, default):
     """Safe getter for sqlite3.Row — fallback for older DB snapshots."""
     try:
@@ -86,7 +111,7 @@ def _row(r) -> AccessPlan:
         price=r["price"] or 0.0, currency=r["currency"] or default_currency(),
         plan_tier=r["plan_tier"] or "Personal", prepaid=bool(r["prepaid"]),
         project=r["project"] or "", description=r["description"] or "",
-        enabled=bool(r["enabled"]), priority=r["priority"] or 100,
+        enabled=bool(r["enabled"]), priority=normalize_priority(r["priority"]),
         color=r["color"] or "#2BAACC",
         # RM-H3 fields — safe defaults for rows from before migration 012
         speed_control_enabled=bool(_g(r,"speed_control_enabled",0)),
@@ -221,11 +246,31 @@ def archive_plan(tenant_id: int, plan_id: int, *, actor: str = "",
 
 
 def restore_plan(tenant_id: int, plan_id: int, *, actor: str = "") -> bool:
+    """استعادة باقةٍ مؤرشفة (تعود معطّلة).
+
+    🔴 تفرّد الاسم بلا تفريق حالة الأحرف يسري على الاستعادة أيضًا: كانت
+    «r04_CaseRestore» تُستعاد بجوار «R04_caserestore» القائمة ⇒ باقتان
+    فعّالتان باسمٍ واحد، ثم يرفض أيُّ تعديلٍ للمستعادة «الاسم مستخدم مسبقًا».
+    الآن تُستعاد باسمٍ مميّز «الاسم (مستعادة #id)» فتبقى قابلةً للتعديل."""
     with transaction() as conn:
+        row = conn.execute(
+            "SELECT name FROM access_plans WHERE tenant_id = ? AND id = ? "
+            "AND deleted_at IS NOT NULL", (tenant_id, plan_id)).fetchone()
+        if not row:
+            return False
+        name = (row["name"] or "").strip()
+        new_name = name
+        clash = conn.execute(
+            "SELECT 1 FROM access_plans WHERE tenant_id = ? AND id != ? "
+            "AND deleted_at IS NULL AND lower(trim(name)) = lower(?) LIMIT 1",
+            (tenant_id, plan_id, name)).fetchone()
+        if clash:
+            suffix = f" (مستعادة #{int(plan_id)})"
+            new_name = name[:max(1, PLAN_NAME_MAX - len(suffix))].rstrip() + suffix
         cur = conn.execute("""
             UPDATE access_plans
             SET deleted_at = NULL, deleted_by = '', delete_reason = '',
-                enabled = 0, updated_at = ?
+                enabled = 0, name = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ? AND deleted_at IS NOT NULL
-        """, (now_iso(), tenant_id, plan_id))
+        """, (new_name, now_iso(), tenant_id, plan_id))
         return cur.rowcount > 0

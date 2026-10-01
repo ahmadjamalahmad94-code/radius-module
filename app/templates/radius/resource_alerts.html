@@ -34,7 +34,7 @@
      subtitle=_('حين يتجاوز أي مقياس حدّه يصلك تنبيه تلجرام فورًا (واسم الراوتر + القيمة + الوقت)، وعند عودته تحت الحدّ يصلك تنبيه «عاد لطبيعته». القراءة تلقائية عبر نفق الإدارة — لا حاجة لأي إعداد على الراوتر.'),
      icon="sliders") %}{% endcall %}
 
-<form method="post" action="{{ url_for('radius.resource_alerts_save') }}">
+{% if can_submit('radius.resource_alerts_save', 'POST') %}<form method="post" action="{{ url_for('radius.resource_alerts_save') }}">
   {{ csrf_token_input()|safe }}
   {% call hub.section(_('الحدود'), icon="gauge-high") %}
     <label class="ra-toggle">
@@ -82,11 +82,11 @@
       {{ hub.btn(_('حفظ الحدود'), icon="floppy-disk", variant="primary", type="submit") }}
     </div>
   {% endcall %}
-</form>
+</form>{% endif %}
 
 {# ── التنبيهات الدوريّة: تذكير المفصول + تقرير الأسطول (تُغطّي الأجهزة والراوترات) ── #}
 {% set p = periodic or {} %}
-<form method="post" action="{{ url_for('radius.monitoring_periodic_save') }}">
+{% if can_submit('radius.monitoring_periodic_save', 'POST') %}<form method="post" action="{{ url_for('radius.monitoring_periodic_save') }}">
   {{ csrf_token_input()|safe }}
   {% call hub.section(_('التنبيهات الدوريّة'), icon="clock-rotate-left",
        meta=_('تذكير ما دام مفصولًا + تقرير فحص دوريّ للأسطول')) %}
@@ -116,5 +116,5 @@
       {{ hub.btn(_('حفظ التنبيهات الدوريّة'), icon="floppy-disk", variant="primary", type="submit") }}
     </div>
   {% endcall %}
-</form>
+</form>{% endif %}
 {% endblock %}

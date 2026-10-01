@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, g, request
 
 from ...radius.db.repos import api_tokens_repo, audit_repo
-from ..access_control import admin_id, is_owner_or_super, require_web_permission
+from ..access_control import admin_id, is_owner_level, require_web_permission
 from ..auth import require_api_token
 from ...radius.core.timeparse import parse_iso_utc
 from ..responses import fail, ok
@@ -19,7 +19,9 @@ _OWN_ONLY_AR = "لا يمكنك إدارة توكن لم تُنشئه أنت."
 
 
 def _manages_all() -> bool:
-    return is_owner_or_super()
+    # Owner / co-owner only — the «مدير عام» role sees and revokes only its own
+    # tokens (tokens of other admins, incl. the owner's, are owner-level assets).
+    return is_owner_level()
 
 
 def _visible(record: dict) -> bool:

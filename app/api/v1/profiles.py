@@ -18,6 +18,8 @@ from typing import Any
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusConflict, RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.core.strict_input import parse_strict_bool
+from ...radius.services.plans import plan_field_label
 from ...radius.core.types import AccessPlan
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
@@ -75,6 +77,9 @@ _BOOL_FIELDS = (
     "speed_control_enabled", "burst_enabled", "nightly_unlimited_enabled",
     "single_use_once", "hotspot_enabled", "ppp_enabled",
     "loan_enabled", "speed_override_allowed",
+    # «بلا حدّ للسرعة» (هجرة 172) — كان الويب وحده يقبله، فالتطبيق/الـ API لا
+    # يستطيع إنشاء باقةٍ مفتوحة السرعة (الصفر يُرفض بلا هذا العلَم).
+    "speed_unlimited", "shared_single_session",
 )
 _TUPLE_FIELDS = ("allowed_days", "router_ids")
 
@@ -111,14 +116,26 @@ def _normalize_metadata(raw) -> str:
 
 
 def _coerce_int(name: str, v: Any) -> int:
+    """عددٌ صحيح من الجسم. يرفض ``true`` (كانت تُخزَّن 1) والكسور (90.7 كانت
+    تصير 90) والنصّ غير الرقميّ والقيم الضخمة (10^20 و2^63 كانت 500 من
+    SQLite) — كلّها 422 عربيّ باسم الحقل المقروء. المدى الدقيق لكلّ حقل
+    (سالب/سقف) يفحصه ``plans._validate`` المشترك مع الويب."""
+    from ...radius.services.plans import PLAN_INT_MAX, plan_field_label
+    label = plan_field_label(name)
     if v in (None, ""):
         return 0
+    if isinstance(v, bool) or isinstance(v, (dict, list, tuple)):
+        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+    if isinstance(v, float):
+        if v != v or v in (float("inf"), float("-inf")) or not v.is_integer():
+            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
     try:
-        return int(v)
-    except (TypeError, ValueError):
-        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
-    except OverflowError:
-        raise RadiusValidationError(f"قيمة {name} أكبر من المسموح.")
+        out = int(v if not isinstance(v, str) else v.strip())
+    except (TypeError, ValueError, OverflowError):
+        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+    if abs(out) > PLAN_INT_MAX:
+        raise RadiusValidationError(f"قيمة «{label}» أكبر من المسموح.")
+    return out
 
 
 from ...radius.core.numbers import NonFiniteNumber, strict_float  # noqa: E402
@@ -127,12 +144,14 @@ from ...radius.core.numbers import NonFiniteNumber, strict_float  # noqa: E402
 def _coerce_float(name: str, v: Any) -> float:
     if v in (None, ""):
         return 0.0
+    if isinstance(v, bool):
+        raise RadiusValidationError(f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمية.")
     try:
-        return strict_float(v, name)
+        return strict_float(v, name) + 0.0  # ‎-0.0 → 0.0
     except NonFiniteNumber:
         raise
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمية.")
+        raise RadiusValidationError(f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمية.")
 
 
 def _coerce_days(v: Any) -> tuple[str, ...]:
@@ -148,7 +167,9 @@ def _coerce_days(v: Any) -> tuple[str, ...]:
         raise RadiusValidationError("الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.")
     bad = [p for p in parts if p not in _VALID_DAYS]
     if bad:
-        raise RadiusValidationError(f"الأيام المسموحة تحتوي قيمًا غير صحيحة: {bad}")
+        raise RadiusValidationError(
+            "الأيام المسموحة تحتوي قيمًا غير صحيحة: " + "، ".join(str(b) for b in bad)
+            + " (المسموح: sun, mon, tue, wed, thu, fri, sat).")
     # de-dup, preserve canonical order
     canonical_order = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
     seen = set(parts)
@@ -182,12 +203,26 @@ def _apply_body(plan: AccessPlan, body: dict) -> AccessPlan:
     for k in _INT_FIELDS:
         if k in body:
             changes[k] = _coerce_int(k, body[k])
+    # priority: 1–10 like the web (F04 N-L10). 0/null and 100 — the old API /
+    # app defaults — mean «not chosen» ⇒ 5 (plans._normalize); anything else
+    # outside 1–10 is a 422 from plans._validate.
+    if int(changes.get("data_value") or 0) > 0 and int(changes.get("data_value") or 0) != int(
+            getattr(plan, "data_value", 0) or 0):
+        # F04 N-L11: data_value/data_unit were stored and never enforced nor shown
+        # (has_quota false) — a «2 GB» plan was unlimited. Refused, not guessed:
+        # the enforced caps are quota_total_mb / quota_daily_mb / quota_monthly_mb
+        # (+ per-direction). An unchanged stored value (old rows) passes.
+        raise RadiusValidationError(
+            "حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» "
+            "للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb).")
     for k in _FLOAT_FIELDS:
         if k in body:
             changes[k] = _coerce_float(k, body[k])
     for k in _BOOL_FIELDS:
         if k in body:
-            changes[k] = bool(body[k])
+            # 🔴 ‏bool("false") صحيحٌ في بايثون — كانت "false"/"0"/"no" تُخزَّن
+            # «مفعّل». المحلّل الصارم المشترك يقبل الصيغ المعروفة ويرفض الباقي.
+            changes[k] = parse_strict_bool(body[k], label=plan_field_label(k))
     if "allowed_days" in body:
         days = _coerce_days(body["allowed_days"])
         # Service expects at least one day; treat empty as "all 7".
@@ -212,6 +247,13 @@ def _serialize(plan: AccessPlan) -> dict:
         d["allowed_days"] = list(d["allowed_days"])
     if isinstance(d.get("router_ids"), tuple):
         d["router_ids"] = list(d["router_ids"])
+    # Derived (read-only, fix2): the plan's pricing period (duration, else
+    # validity, else a 30-day month — same basis as payments/extend) and its
+    # price per minute. The change-plan picker must compare ``rate_per_minute``
+    # (70/30 days is dearer per day than 5/1 day), never the total price.
+    from ...radius.services.users import plan_period_minutes, plan_rate_per_minute
+    d["period_minutes"] = int(plan_period_minutes(plan))
+    d["rate_per_minute"] = round(plan_rate_per_minute(plan), 8)
     # Metadata string → parsed dict for client convenience.
     meta = d.get("metadata")
     if isinstance(meta, str):
@@ -233,6 +275,13 @@ def register(bp: Blueprint) -> None:
                     require_api_token(profiles_patch), methods=["PATCH"])
     bp.add_url_rule("/profiles/<int:profile_id>", "profiles_delete",
                     require_api_token(profiles_delete), methods=["DELETE"])
+    # fix3 integration: a lightweight picker list for the create forms — readable
+    # with plans.view OR the permission of the form that needs it (users.create /
+    # cards.generate), so a manager without «عرض الباقات» can still pick a plan.
+    bp.add_url_rule("/plans/options", "plans_options",
+                    require_api_token(plans_options), methods=["GET"])
+    bp.add_url_rule("/profiles/options", "profiles_options",
+                    require_api_token(plans_options), methods=["GET"])
 
 
 def _svc():
@@ -252,6 +301,37 @@ def profiles_list():
     return ok({"items": [_serialize(p) for p in items], "count": len(items)})
 
 
+def plan_option(plan: AccessPlan, system_currency: str) -> dict:
+    """One picker row: only what a create form needs (no speeds/quotas/metadata)."""
+    from ...radius.services.users import plan_period_minutes
+    return {
+        "id": plan.id,
+        "name": plan.name,
+        "price": float(plan.price or 0),
+        "currency": (plan.currency or "").strip().upper() or system_currency,
+        "duration_minutes": int(plan.duration_minutes or 0),
+        "duration_value": int(plan.duration_value or 0),
+        "duration_unit": plan.duration_unit or "",
+        "validity_days": int(plan.validity_days or 0),
+        "period_minutes": int(plan_period_minutes(plan)),
+        "plan_type": plan.plan_type or "",
+    }
+
+
+def plans_options():
+    """``GET /api/v1/plans/options`` (alias ``/profiles/options``) — active plans
+    (enabled, not archived) as ``{id, name, price, currency, duration…}``.
+
+    Guard: ``plans.view`` OR ``users.create`` OR ``cards.generate`` (the same web
+    decisions as the plans page / create form / generate form)."""
+    from ...radius.core.system_config import default_currency
+    system_currency = (default_currency() or "").strip().upper()
+    items = [plan_option(p, system_currency) for p in _svc().list(limit=1000)
+             if getattr(p, "enabled", True) and getattr(p, "deleted_at", None) is None]
+    items.sort(key=lambda r: (str(r["name"] or "").lower(), r["id"] or 0))
+    return ok({"items": items, "count": len(items), "currency": system_currency})
+
+
 def profiles_get(profile_id: int):
     try:
         plan = _svc().get(profile_id)
@@ -263,10 +343,10 @@ def profiles_get(profile_id: int):
 
 
 def profiles_create():
-    body = request.get_json(silent=True)
-    if body is not None and not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
-    body = body or {}
+    from ..json_input import json_object
+    body, err = json_object()
+    if err is not None:
+        return err
     if not isinstance(body.get("name"), str) or not body["name"].strip():
         return fail("validation_error", "اسم الباقة مطلوب.", status=422)
     capacity = CapacityEnforcementService().check_create(
@@ -298,10 +378,11 @@ def profiles_create():
 
 
 def profiles_patch(profile_id: int):
-    body = request.get_json(silent=True)
-    if body is not None and not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
-    body = body or {}
+    # نصٌّ غير JSON كان يمرّ «200» بلا أيّ تغيير — الآن 422 (json_object).
+    from ..json_input import json_object
+    body, err = json_object()
+    if err is not None:
+        return err
     try:
         existing = _svc().get(profile_id)
     except RadiusNotFound:

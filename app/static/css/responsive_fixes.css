@@ -149,3 +149,35 @@
     margin-bottom: 12px;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+   4. CHECKBOX / RADIO NEVER STRETCH (F08-M3).
+      Page rules like `.hub-form-grid input{width:100%}` also hit checkboxes
+      and radios; a visually-hidden toggle input (position:absolute) then
+      became as wide as the page and caused horizontal scroll
+      (/communications/campaigns). Specificity (0,1,2) beats the common
+      `.x input` (0,1,1) page rules; max-width only ever shrinks, so the
+      0/1px hidden inputs of switches are untouched.
+   ─────────────────────────────────────────────────────────────────────── */
+body input[type="checkbox"],
+body input[type="radio"]{
+  max-width: 2.25em;
+}
+
+/* F08-L: a numeric field holding a non-numeric character («1e9», «12abc») is
+   marked, never silently stripped (latin_digits.js markNum). */
+input.hr-num-invalid,
+input[data-hr-num][aria-invalid="true"]{
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .15) !important;
+}
+
+/* F01-F2: a form the manager may VIEW but not SAVE renders read-only — every
+   control disabled through <fieldset disabled class="hr-readonly"> (layout
+   unchanged: display:contents) with a short notice. */
+fieldset.hr-readonly{ display: contents; border: 0; margin: 0; padding: 0; min-width: 0; }
+.hr-ro-note{
+  display: flex; align-items: center; gap: 8px; margin: 0 0 12px;
+  padding: 9px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+}

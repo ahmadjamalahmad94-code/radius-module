@@ -45,6 +45,22 @@
   .sec-opt input:checked + span.is-locked { border-color:#D97706; background:#FEF3C7; color:#92400E; }
   .sec-opt input:checked + span.is-hidden { border-color:#DC2626; background:#FEE2E2; color:#991B1B; }
   .sec-opt input:focus-visible + span{ outline:2px solid var(--hub-brand,#2BAACC); outline-offset:2px; }
+  /* «حسب الدور / مسموح / ممنوع» — تجاوز فرديّ ثلاثيّ لكل فعلٍ وعلَم */
+  .sec-opt input:checked + span.is-inherit{ border-color:#0284C7; background:#E0F2FE; color:#075985; }
+  .sec-opt input:disabled + span{ opacity:.45; cursor:not-allowed; }
+  .tri-list{ display:flex; flex-direction:column; gap:8px; padding:10px 14px 14px; }
+  .tri-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px;
+            padding:10px 12px; border:1px solid var(--hub-border,#E5E7EB);
+            border-radius:12px; background:var(--hub-surface-2,#FAFAFA); }
+  .tri-row__label{ flex:1 1 200px; min-width:180px; font-weight:800; font-size:13px;
+                   color:var(--hub-text,#111827); display:flex; flex-direction:column; gap:3px; }
+  .tri-row__meta{ font-size:11.5px; font-weight:700; color:var(--hub-text-mute,#6B7280); }
+  .tri-row__meta b{ font-weight:800; }
+  .tri-eff{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px;
+            font-size:11.5px; font-weight:800; white-space:nowrap; }
+  .tri-eff.is-yes{ background:#DCFCE7; color:#166534; }
+  .tri-eff.is-no{ background:#FEE2E2; color:#991B1B; }
+  .tri-warn{ font-size:11.5px; font-weight:700; color:#B45309; }
   /* التحكّم الحقليّ (المستوى 3) — قائمة قابلة للطيّ لكل كيان */
   .fg-list{ display:flex; flex-direction:column; gap:14px; margin-top:6px; }
   .fg-entity{ border:1px solid var(--hub-border,#E5E7EB); border-radius:14px;
@@ -70,7 +86,7 @@
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("المشغلون") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("المشغلون") ~ '</a>'|safe if can_submit('radius.business_operators', 'GET') else ''),
   kpis=[
     {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
     {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
@@ -94,7 +110,7 @@
 
 <div class="hub-grid-1-1">
   {% call hub.section("شحن المحفظة", icon="wallet") %}
-    <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
+    {% if can_submit('radius.business_operator_recharge', 'POST') %}<form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label class="op-field"><span>{{ _('المبلغ') }}</span>
         <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
@@ -108,7 +124,7 @@
         </select>
       </label>
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wallet"></i> {{ _('شحن') }}</button>
-    </form>
+    </form>{% endif %}
   {% endcall %}
 
   {% if profile.entity_type == 'manager' %}
@@ -119,7 +135,7 @@
       </div>
       {# تطبيق قالب #}
       {% if presets %}
-      <form method="post" action="{{ url_for('radius.business_operator_apply_preset', entity_id=profile.entity_id) }}"
+      {% if can_submit('radius.business_operator_apply_preset', 'POST') %}<form method="post" action="{{ url_for('radius.business_operator_apply_preset', entity_id=profile.entity_id) }}"
             class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="apply-preset-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <label class="op-field" style="flex:1 1 220px"><span>{{ _('طبّق قالبًا') }}</span>
@@ -128,10 +144,10 @@
           </select>
         </label>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('تطبيق') }}</button>
-      </form>
+      </form>{% endif %}
       {% endif %}
       {# حفظ الحالية كقالب #}
-      <form method="post" action="{{ url_for('radius.manager_presets_create') }}"
+      {% if can_submit('radius.manager_presets_create', 'POST') %}<form method="post" action="{{ url_for('radius.manager_presets_create') }}"
             class="op-field" style="flex-direction:row;flex-wrap:wrap;align-items:end;gap:10px" data-testid="save-preset-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <input type="hidden" name="source_manager_id" value="{{ profile.entity_id }}">
@@ -139,17 +155,17 @@
           <input class="hub-input" name="name" placeholder="{{ _('اسم القالب') }}" required data-testid="preset-name">
         </label>
         <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ كقالب') }}</button>
-      </form>
+      </form>{% endif %}
       {% if presets %}
       <div class="op-field"><span>{{ _('القوالب المحفوظة') }}</span>
         <div class="sec-matrix">
           {% for p in presets %}
           <div class="sec-row" data-testid="preset-row-{{ p.id }}">
             <span class="sec-row__label"><i class="fa-solid fa-clone"></i> {{ p.name }}</span>
-            <form method="post" action="{{ url_for('radius.manager_presets_delete', preset_id=p.id) }}" style="margin-inline-start:auto">
+            {% if can_submit('radius.manager_presets_delete', 'POST') %}<form method="post" action="{{ url_for('radius.manager_presets_delete', preset_id=p.id) }}" style="margin-inline-start:auto">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
-            </form>
+            </form>{% endif %}
           </div>
           {% endfor %}
         </div>
@@ -166,8 +182,8 @@
       <i class="fa-solid fa-people-roof" style="color:#0284c7;font-size:16px"></i>
       <span style="font-weight:700;font-size:12.5px;line-height:1.8;flex:1;min-width:200px">
         {{ _('الأفعال والرؤية موروثة من الدور') }}
-        «<a href="{{ url_for('radius.roles_edit', role_id=mgr_role.id, _anchor='role-grants') }}"
-            style="font-weight:800;color:#0369a1">{{ mgr_role.display_name or mgr_role.name }}</a>».
+        «{% if can_submit('radius.roles_edit', 'GET') %}<a href="{{ url_for('radius.roles_edit', role_id=mgr_role.id, _anchor='role-grants') }}"
+            style="font-weight:800;color:#0369a1">{% endif %}{{ mgr_role.display_name or mgr_role.name }}{% if can_submit('radius.roles_edit', 'GET') %}</a>{% endif %}».
         {{ _('عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا المدير فقط.') }}
       </span>
       <button type="submit" form="op-reset-grants-form" class="hub-btn hub-btn--ghost hub-btn--sm"
@@ -176,50 +192,65 @@
         <i class="fa-solid fa-rotate-left"></i> {{ _('تصفير التجاوزات') }}
       </button>
     </div>
-    <form id="op-reset-grants-form" method="post"
+    {% if can_submit('radius.business_operator_reset_grants', 'POST') %}<form id="op-reset-grants-form" method="post"
           action="{{ url_for('radius.business_operator_reset_grants', entity_id=profile.entity_id) }}"
-          style="display:none">{{ csrf_token_input() | safe if csrf_token_input is defined else '' }}</form>
+          style="display:none">{{ csrf_token_input() | safe if csrf_token_input is defined else '' }}</form>{% endif %}
     {% endif %}
-    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
+    <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">{% if not can_submit('radius.business_operator_policy') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      {# أعلام «نطاق الرؤية» فقط هنا (رؤية كل المشتركين/الحزم). أفعال can_*
-         (إنشاء/تفعيل/سلفة/استيراد/إدارة موزّعين…) انتقلت لمصفوفة «الأفعال»
-         الموحّدة أدناه فلا تُكرَّر. #}
-      {% set _scope_flags = ['can_view_all_subscribers', 'can_view_all_card_batches', 'can_see_wholesale', 'can_see_password', 'can_create_sub_managers', 'can_see_balance', 'can_see_profit'] %}
-      {% if profile.permissions %}
-      <div class="op-field"><span>{{ _('نطاق الرؤية والحماية الماليّة') }}</span>
-        <div class="op-checks">
-          {% for key in _scope_flags %}
-            {% if key in profile.permissions %}
-            {{ toggle_switch(name=key, checked=profile.permissions[key], value="1", on_label=permission_label(key), off_label=permission_label(key)) }}
-            {% endif %}
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {# ───── المستوى 2: مصفوفة الأفعال الموحّدة — كل عمليّة بصلاحية ───── #}
-      {% if action_catalog %}
-      <div class="op-field" data-testid="action-matrix">
-        <span>{{ _('الأفعال المسموح بها') }}</span>
+      {# ───── الصلاحيات الدقيقة: «حسب الدور / مسموح / ممنوع» لكل فعلٍ وعلَم ─────
+         «حسب الدور» (الافتراض) لا يُخزِّن شيئًا فيرث المدير ما يمنحه دوره الآن؛
+         «مسموح/ممنوع» تجاوزٌ صريح لهذا المدير وحده — مثل «تأكيد الإيداع: مسموح،
+         تأكيد السحب: ممنوع» والدور يمنح store.review. قيمة الدور الحاليّة تظهر
+         بجانب كل صفّ، والقرار الفعليّ في الشارة. #}
+      {% if tri_catalog %}
+      <div class="op-field" data-testid="tri-matrix">
+        <span>{{ _('الصلاحيات الدقيقة لهذا المدير') }}</span>
         <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9;margin-bottom:4px">
-          {{ _('كل عمليّة مربوطة بصلاحية يَضبطها المالك وتُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403) ولو حاول المدير مباشرةً. أفعال «توليد/سلفة/تفعيل/استيراد» مقيّدة افتراضًا.') }}
+          {{ _('لكل فعلٍ ثلاث حالات: «حسب الدور» يرث ما يمنحه دوره (يتبع أيّ تعديلٍ لاحق على الدور) • «مسموح» و«ممنوع» تجاوزٌ لهذا المدير وحده. كل قرارٍ يُنفَّذ على الخادم (ويب وتطبيق) — الممنوع يُرفَض (403) ولو حاول مباشرةً. الأفعال المرتبطة بمفتاح صلاحية في الدور لا يتخطّاها «مسموح»: امنح المفتاح للدور أوّلًا.') }}
         </div>
         <div class="fg-list">
-          {% for grp in action_catalog %}
-          <details class="fg-entity" data-testid="action-group-{{ grp.section }}" open>
+          {% for grp in tri_catalog %}
+          <details class="fg-entity" data-testid="tri-group-{{ grp.section }}" open>
             <summary class="fg-summary">
               <span style="font-weight:800;font-size:13px"><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</span>
               <i class="fa-solid fa-chevron-down fg-chev"></i>
             </summary>
-            <div class="fg-fields">
-              {% for a in grp.actions %}
-              <label class="fg-field">
-                <input type="checkbox" name="{{ a.input_name }}" value="1"
-                       data-testid="action-{{ a.key }}"
-                       {% if a.checked %}checked{% endif %}>
-                <span>{{ _(a.label) }}</span>
-              </label>
+            <div class="tri-list">
+              {% for r in grp.rows %}
+              <div class="tri-row" data-testid="tri-row-{{ r.key }}" data-state="{{ r.state }}">
+                <div class="tri-row__label">
+                  <span>{{ _(r.label) }}</span>
+                  <span class="tri-row__meta" data-testid="tri-role-{{ r.key }}">({{ _('الدور') }}: <b>{{ _(r.role_label) }}</b>){% if r.derived %} · {{ _('المفتاح') }}: <code>{{ r.rbac_label }}</code>{% endif %}</span>
+                  {% if r.allow_ineffective %}
+                  <span class="tri-warn"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('«مسموح» لا يعمل حتى يُمنح الدور المفتاح') }} <code>{{ r.rbac_label }}</code></span>
+                  {% endif %}
+                </div>
+                <div class="sec-states" role="radiogroup" aria-label="{{ _(r.label) }}">
+                  <label class="sec-opt">
+                    <input type="radio" name="{{ r.input }}" value="inherit"
+                           data-testid="tri-{{ r.key }}-inherit"
+                           {% if r.state == 'inherit' %}checked{% endif %}>
+                    <span class="is-inherit"><i class="fa-solid fa-people-roof"></i> {{ _('حسب الدور') }}</span>
+                  </label>
+                  <label class="sec-opt" {% if r.allow_disabled %}title="{{ _('يتطلّب مفتاح الدور') }} {{ r.rbac_label }}"{% endif %}>
+                    <input type="radio" name="{{ r.input }}" value="allow"
+                           data-testid="tri-{{ r.key }}-allow"
+                           {% if r.state == 'allow' %}checked{% endif %}
+                           {% if r.allow_disabled %}disabled{% endif %}>
+                    <span class="is-open"><i class="fa-solid fa-check"></i> {{ _('مسموح') }}</span>
+                  </label>
+                  <label class="sec-opt">
+                    <input type="radio" name="{{ r.input }}" value="deny"
+                           data-testid="tri-{{ r.key }}-deny"
+                           {% if r.state == 'deny' %}checked{% endif %}>
+                    <span class="is-hidden"><i class="fa-solid fa-ban"></i> {{ _('ممنوع') }}</span>
+                  </label>
+                </div>
+                <span class="tri-eff {{ 'is-yes' if r.effective else 'is-no' }}" data-testid="tri-eff-{{ r.key }}">
+                  {{ _('الفعليّ') }}: {{ _('مسموح') if r.effective else _('ممنوع') }}
+                </span>
+              </div>
               {% endfor %}
             </div>
           </details>
@@ -284,23 +315,10 @@
               </label>
               <i class="fa-solid fa-chevron-down fg-chev"></i>
             </summary>
-            {% if ent.supports_edit_action %}
-            {# كيان مالكيّ افتراضًا — يجب منح «السماح بالتعديل» ليَصِل المدير أصلًا #}
-            <label class="fg-field" style="padding:2px 18px 0 18px;font-weight:800;color:#92400E">
-              <input type="checkbox" name="action_edit_{{ ent.entity }}" value="1"
-                     data-testid="action-edit-{{ ent.entity }}"
-                     {% if ent.edit_allowed %}checked{% endif %}>
-              <span><i class="fa-solid fa-pen-to-square"></i> {{ _('السماح للمدير بتعديل هذا الكيان') }}</span>
-            </label>
-            {% endif %}
-            {% if ent.supports_create_action %}
-            {# «إضافة» منفصلةٌ عن «تعديل» — مصحّحُ السعر ليس مؤلّفَ العرض #}
-            <label class="fg-field" style="padding:2px 18px 0 18px;font-weight:800;color:#92400E">
-              <input type="checkbox" name="action_create_{{ ent.entity }}" value="1"
-                     data-testid="action-create-{{ ent.entity }}"
-                     {% if ent.create_allowed %}checked{% endif %}>
-              <span><i class="fa-solid fa-plus"></i> {{ _('السماح للمدير بإضافة كيان جديد') }}</span>
-            </label>
+            {% if ent.supports_edit_action or ent.supports_create_action %}
+            <div class="hub-text-mute" style="padding:2px 18px 0 18px;font-size:11.5px;font-weight:700">
+              <i class="fa-solid fa-circle-info"></i> {{ _('السماح بتعديل/إضافة هذا الكيان يُضبط في «الصلاحيات الدقيقة» أعلاه (حسب الدور/مسموح/ممنوع).') }}
+            </div>
             {% endif %}
             <div class="fg-fields">
               {% for f in ent.fields %}
@@ -387,7 +405,7 @@
         {{ toggle_switch(name="loan_wallet_deducted", checked=profile.limits.loan_wallet_deducted, value="1") }}
       </div>
       <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ السياسة') }}</button>
-    </form>
+    {% if not can_submit('radius.business_operator_policy') %}</fieldset>{% endif %}</form>
   {% endcall %}
 </div>
 

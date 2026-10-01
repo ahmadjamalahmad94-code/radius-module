@@ -39,7 +39,7 @@ class Tenant:
     phone: str = ""
     currency: str = "ILS"
     locale: str = "ar"
-    timezone: str = "Asia/Amman"
+    timezone: str = "Asia/Gaza"  # فلسطين (قرار المالك 2026-09-29)
     logo_url: str = ""
     primary_color: str = "#2BAACC"
     status: str = TENANT_STATUS_ACTIVE

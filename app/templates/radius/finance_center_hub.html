@@ -184,25 +184,27 @@
     {'label': 'إجمالي الأستاذ','value': summary.ledger_total|money,       'icon': 'book-open',     'variant': 'amber'},
   ] %}
 {% elif tab == 'revenue' %}
+  {# الإيراد/الربح من دفعات الدفتر + سجلّات الكروت (مصدر /api/v1/finance/revenue)،
+     ولكلّ عملة رقمها — لا ILS+USD+EUR مجموعةً بعلامة عملة النظام. #}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',    'variant': 'amber'},
+    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',    'variant': 'amber'},
     {'label': 'سجلات الإيراد',    'value': summary.revenue_records,        'icon': 'receipt',       'variant': 'blue'},
     {'label': 'حصص الموزعين',     'value': summary.distributor_shares|money,'icon': 'people-arrows','variant': 'brand'},
   ] %}
 {% elif tab == 'loans_debts' %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الديون', 'value': debts.total|money,        'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': 'إجمالي الديون', 'value': debts.by_currency|money_multi('outstanding', debts.total), 'icon': 'file-invoice-dollar', 'variant': 'amber'},
     {'label': 'عدد الذمم',     'value': debts['count'] or 0,      'icon': 'list-ol',             'variant': 'blue'},
     {'label': 'عدد السلف',     'value': summary.loan_count,       'icon': 'list',                'variant': 'brand'},
     {'label': 'سلف مفتوحة',    'value': summary.open_loan_count,  'icon': 'hourglass-half',      'variant': 'green'},
   ] %}
 {% else %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',  'variant': 'green'},
-    {'label': 'التحصيلات',        'value': summary.total_collections|money,'icon': 'cash-register','variant': 'brand'},
+    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',  'variant': 'green'},
+    {'label': 'التحصيلات',        'value': summary.revenue_by_currency|money_multi('payments', summary.total_collections),'icon': 'cash-register','variant': 'brand'},
     {'label': 'أرصدة المحافظ',    'value': summary.wallet_balance|money,   'icon': 'wallet',       'variant': 'blue'},
-    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',   'variant': 'amber'},
+    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',   'variant': 'amber'},
   ] %}
 {% endif %}
 
@@ -215,7 +217,7 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis,
   search_action=url_for('radius.finance_center_hub')
 ) %}
@@ -227,6 +229,9 @@
     <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>{{ _('مسددة') }}</option>
     <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>{{ _('ملغاة') }}</option>
   </select>
+  {# F03-N9: نطاق تاريخ إنشاء السلفة (يوم اللوحة المحلّيّ) #}
+  <label class="fc-date-lbl">{{ _('من') }} <input class="hub-input" type="date" name="date_from" value="{{ loan_from or '' }}" aria-label="{{ _('من تاريخ') }}"></label>
+  <label class="fc-date-lbl">{{ _('إلى') }} <input class="hub-input" type="date" name="date_to" value="{{ loan_to or '' }}" aria-label="{{ _('إلى تاريخ') }}"></label>
   {{ hub.btn("تطبيق الفلتر", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 {% else %}
@@ -234,16 +239,16 @@
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis
 ) }}
 {% endif %}
 
 <nav class="fc-tabs" aria-label="{{ _('تبويبات المركز المالي') }}">
-  <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</a>
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</a>{% endif %}
+  {% if can_submit('radius.finance_center_hub', 'GET') %}<a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</a>{% endif %}
 </nav>
 </section>{# /hub-hero-shell #}
 
@@ -268,8 +273,9 @@
     <div class="fc-tiles-2">
       {# حصص الموزعين إيراد = أخضر، السلف والديون خصوم = أحمر #}
       {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="green") }}
-      {{ hub.tile("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="red") }}
-      {{ hub.tile("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="red") }}
+      {# المتبقّي على السلف المفتوحة (بعد التسويات الجزئيّة) لا قيمتها الأصليّة #}
+      {{ hub.tile("قيمة السلف المفتوحة", summary.loans_by_currency|money_multi('outstanding', summary.total_loans), icon="hand-holding-dollar", variant="red") }}
+      {{ hub.tile("إجمالي الديون", debts.by_currency|money_multi('outstanding', debts.total), icon="file-invoice-dollar", variant="red") }}
       {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
@@ -337,7 +343,7 @@
           <td>
             {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
                الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
-            <form method="post" class="fc-wallet-form fcw-act"
+            {% if can_submit('radius.business_finance_wallet_credit', 'POST') %}<form method="post" class="fc-wallet-form fcw-act"
                   action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
                   data-fcw-act
                   data-credit-url="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
@@ -354,7 +360,7 @@
               </span>
               <button class="hub-btn hub-btn--secondary" type="submit"
                       {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>{{ _('تنفيذ') }}</button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
       {% endfor %}
@@ -410,7 +416,7 @@
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-wallet-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">،
        وبدونه يرفض الخادم الطلب بـ 400 (طلب غير صحيح). #}
-    <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
+    {% if can_submit('radius.business_finance_wallets_create', 'POST') %}<form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div class="fcw-head">
         <h3 id="fcw-wallet-create-title"><i class="fa-solid fa-circle-plus"></i> {{ _('إنشاء محفظة') }}</h3>
@@ -447,7 +453,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إنشاء محفظة') }}</button>
       </div>
-    </form>
+    </form>{% endif %}
   </div>
 </div>
 
@@ -499,10 +505,10 @@
           <td class="num mono">{{ item.id }}</td>
           {# المصدر معرَّب بالكامل بالاسم الحقيقي (يُبنى في الخدمة) — الخام في title للتتبّع فقط #}
           <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or 'مصدر إيراد آخر' }}</td>
-          <td class="num">{{ item.original_price|money }}</td>
-          <td class="num">{{ item.collected|money }}</td>
-          <td class="num">{{ item.wholesale_cost|money }}</td>
-          <td class="num"><strong>{{ item.net_profit|money }}</strong></td>
+          <td class="num">{{ item.original_price|money(item.currency) }}</td>
+          <td class="num">{{ item.collected|money(item.currency) }}{% if item.status == 'voided' %} {{ hub.pill("ملغاة", variant="grey") }}{% endif %}</td>
+          <td class="num">{{ item.wholesale_cost|money(item.currency) }}</td>
+          <td class="num"><strong>{{ item.net_profit|money(item.currency) }}</strong></td>
           <td class="mono small">{{ item.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
@@ -527,7 +533,7 @@
         <tr>
           <th class="num">#</th>
           <th>{{ _('المشترك') }}</th>
-          <th class="num">{{ _('المبلغ') }}</th>
+          <th class="num">{{ _('المتبقّي') }}</th>
           <th>{{ _('السبب') }}</th>
           <th>{{ _('الاعتماد') }}</th>
           <th>{{ _('بدأت') }}</th>
@@ -539,7 +545,7 @@
         <tr>
           <td class="num mono">{{ d.id }}</td>
           <td class="mono">{{ d.username or '—' }}</td>
-          <td class="num"><strong>{{ d.amount|money }}</strong></td>
+          <td class="num" title="{{ _('القيمة الأصليّة') }}: {{ d.amount|money(d.currency) }}"><strong>{{ d.outstanding|money(d.currency) }}</strong></td>
           <td class="small">{{ d.reason or '—' }}</td>
           <td>{{ hub.pill(approval_label(d.approval_status), variant="green" if d.approval_status == "approved" else ("amber" if d.approval_status == "pending" else "grey")) }}</td>
           <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
@@ -564,6 +570,7 @@
           <th>{{ _('المشترك') }}</th>
           <th class="num">{{ _('المدة') }}</th>
           <th class="num">{{ _('المبلغ') }}</th>
+          <th class="num">{{ _('المتبقّي') }}</th>
           <th>{{ _('الحالة') }}</th>
           <th>{{ _('البداية') }}</th>
           <th>{{ _('النهاية') }}</th>
@@ -576,7 +583,8 @@
           <td>{{ loan.username or loan.subscriber_id }}</td>
           {# المدة بصيغة إنسانية (أيام/ساعات) بدل عدد الدقائق الخام — عبر فلتر dur_days #}
           <td class="num" data-sort-value="{{ loan.duration_minutes or 0 }}">{{ loan.duration_minutes|dur_days }}</td>
-          <td class="num">{{ loan.amount|money }}</td>
+          <td class="num">{{ loan.amount|money(loan.currency) }}</td>
+          <td class="num">{{ loan.outstanding|money(loan.currency) }}</td>
           <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
           <td class="mono small">{{ loan.starts_at|dt_local }}</td>
           <td class="mono small">{{ loan.ends_at|dt_local }}</td>

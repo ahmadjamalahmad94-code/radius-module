@@ -175,3 +175,81 @@ def test_read_only_mode_never_kicks(monkeypatch):
     assert rep[KIND_EXPIRED_LIVE] == 1
     assert removed == []
     assert rep["kicked"] == 0
+
+
+# ─────────── التوسعة: تغطية المشتركين + الجدولة الدقيقة (next_secs) ───────────
+
+def _audit_tableaware(monkeypatch, active, *, cards=None, subs=None, enforce=True):
+    """مُحاكٍ يميّز جدولَي cards/subscribers — لاختبار تغطية المشترك."""
+    from datetime import datetime, timedelta
+
+    from app.radius.services import session_timer_guard as g
+
+    cards = cards or {}
+    subs = subs or {}
+    _FakeClient.removed = []
+    now = datetime.utcnow()
+
+    def _val(d, u):
+        left = d.get(u)
+        if left is None:
+            return None
+        return ((now + timedelta(seconds=left)).isoformat() + "Z",)
+
+    class _DB:
+        def execute(self, sql, args=()):
+            low = sql.lower()
+
+            class _C:
+                def fetchall(self_inner):
+                    return [(1, "SAM", "10.50.0.2", "api", "x", 8728)]
+
+                def fetchone(self_inner):
+                    if "from cards" in low:
+                        return _val(cards, args[1])
+                    if "from subscribers" in low:
+                        return _val(subs, args[1])
+                    return None
+            return _C()
+
+    monkeypatch.setattr(g, "MikrotikClient", lambda **k: _FakeClient(active),
+                        raising=False)
+    monkeypatch.setattr(g, "db", lambda: _DB(), raising=False)
+    import app.radius.db.connection as _conn
+    monkeypatch.setattr(_conn, "db", lambda: _DB(), raising=False)
+    import app.radius.integration.mikrotik.client as _mtc
+    monkeypatch.setattr(_mtc, "MikrotikClient",
+                        lambda **k: _FakeClient(active), raising=False)
+    rep = g.audit(1, enforce=enforce)
+    return rep, list(_FakeClient.removed)
+
+
+def test_enforce_kicks_expired_subscriber_not_only_cards(monkeypatch):
+    """مشتركٌ (لا بطاقة) انتهى تاريخُه والجلسةُ قائمة ⇒ يُطرد — التوسعة الجديدة."""
+    rep, removed = _audit_tableaware(
+        monkeypatch,
+        [{"user": "88", ".id": "*9", "session-time-left": ""}],
+        cards={}, subs={"88": -60})
+    assert rep[KIND_EXPIRED_LIVE] == 1
+    assert removed == ["*9"]
+    assert rep["kicked"] == 1
+
+
+def test_next_secs_reports_nearest_future_expiry(monkeypatch):
+    """`next_secs` = أصغرُ انتهاءٍ مستقبليٍّ بين المتّصلين (للنوم التكيّفيّ)."""
+    rep, removed = _audit_tableaware(
+        monkeypatch,
+        [{"user": "88", ".id": "*9", "session-time-left": "1h"},
+         {"user": "99", ".id": "*10", "session-time-left": "1h"}],
+        subs={"88": 300, "99": 47})
+    assert removed == []
+    assert rep["next_secs"] == 47
+
+
+def test_next_secs_is_none_when_no_future_sessions(monkeypatch):
+    """لا انتهاءَ مستقبليّ (كلٌّ منتهٍ أو لا نافذة) ⇒ next_secs=None ⇒ ينام السقف."""
+    rep, removed = _audit_tableaware(
+        monkeypatch,
+        [{"user": "88", ".id": "*9", "session-time-left": ""}],
+        subs={"88": -5})
+    assert rep["next_secs"] is None

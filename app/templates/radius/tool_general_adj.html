@@ -11,7 +11,7 @@
   icon="layer-group"
 ) }}
 
-<form method="post">
+<form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("قائمة المستخدمين", icon="users") %}
     <div class="hub-field">
@@ -43,7 +43,9 @@
       </div>
       <div class="hub-field" id="row-minutes" style="display:{{ 'grid' if _act == 'extend' else 'none' }}">
         <label class="hub-field-label">{{ _('عدد الدقائق') }}</label>
-        <input class="hub-input" type="number" name="minutes" min="1" value="{{ form.minutes if form and form.minutes else 60 }}">
+        {% set _lim = hr_limits() %}
+        <input class="hub-input" type="number" name="minutes" min="1" max="{{ _lim.max_extend_minutes }}" value="{{ form.minutes if form and form.minutes else 60 }}">
+        <div class="hub-text-mute small">{{ _('الحدّ في المرة الواحدة:') }} {{ _lim.max_extend_days }} {{ _('يومًا') }} ({{ _lim.max_extend_minutes }} {{ _('دقيقة') }}) — {{ _('كرّر التمديد إن احتجت أكثر.') }}</div>
       </div>
       <div class="hub-field" id="row-password" style="display:{{ 'grid' if _act == 'reset_password' else 'none' }}">
         <label class="hub-field-label">{{ _('كلمة المرور الجديدة') }}</label>
@@ -58,9 +60,9 @@
     </button>
     {{ hub.btn("نفّذ", icon="bolt", variant="primary", type="submit",
                 attrs='onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"') }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}
+    {% if can_submit('radius.users_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {% if preview %}
 <div style="height:14px"></div>
@@ -77,7 +79,7 @@
       <tr>
         <td class="mono">{{ it.username }}</td>
         <td>{% if not it.ok %}{{ _('سيفشل') }}{% elif it.status == 'no_change' %}{{ _('بلا تغيير') }}{% else %}{{ _('سينجح') }}{% endif %}</td>
-        <td>{{ it.error or it.note or (it.new_expire_at ~ ' UTC' if it.new_expire_at else '') }}</td>
+        <td>{{ it.error or it.note or ((it.new_expire_at|dt_local) if it.new_expire_at else '') }}</td>
       </tr>
     {% endfor %}
     </tbody>

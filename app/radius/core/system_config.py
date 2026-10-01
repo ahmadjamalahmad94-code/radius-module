@@ -5,6 +5,7 @@ control panel). Exposed to all templates as `cfg`, plus the `money` and
 """
 from __future__ import annotations
 
+import functools
 from datetime import date, datetime, timedelta, timezone, tzinfo
 from typing import Any
 
@@ -27,18 +28,101 @@ CURRENCY_NAMES = {
 
 _DEFAULTS = {
     "billing.currency": "ILS",
-    # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo). The
-    # owner is Levantine (UTC+3); Asia/Damascus is the default — see FLAG in the
-    # PR notes; both Asia/Damascus and Asia/Amman are permanent UTC+3 today.
-    "billing.timezone": "Asia/Damascus",
+    # Primary timezone setting: an IANA zone name (DST-safe via zoneinfo).
+    # قرار المالك 2026-09-29: فلسطين — Asia/Gaza (والخليل Asia/Hebron بنفس
+    # القواعد): ‎+2 شتاءً و‎+3 صيفًا. لا إزاحة ثابتة أبدًا؛ zoneinfo يحسب الصيفيّ.
+    "billing.timezone": "Asia/Gaza",
     # Legacy fixed hour offset — kept as a fallback for environments without the
     # IANA database, and for any zone not in the picker. The IANA name wins.
     "billing.timezone_offset": "3",
+    # قرار المالك 2026-09-29: مشتركٌ يُنشأ **بلا** تاريخ انتهاء (نموذج الويب
+    # بتاريخ فارغ، ‎POST /accounts بلا مفتاح expire_at، التطبيق، الاستيراد)
+    # يولد «منتهيًا» (expire_at = لحظة الإنشاء) — لا حسابٌ دائم بالسهو.
+    # «unlimited» = بلا انتهاء (NULL) — لخادم HobeHub المجّانيّ فقط.
+    # الاختيار الصريح يغلب دائمًا: «بدون انتهاء» / ‎expire_at: null ⇒ NULL،
+    # وتاريخٌ صريح ⇒ هو.
+    "subscribers.create_without_expiry": "expired",
     "system.name": "HobeRadius",
     "radius.default_country": "",
     "branding.logo_url": "",
     "branding.primary_color": "#2BAACC",
 }
+
+
+# قائمة العملات في صفحة الإعدادات — الشيكل أولًا (الافتراضيّ).
+CURRENCY_CHOICES = [
+    ("ILS", "شيكل ₪"), ("USD", "دولار أمريكي $"), ("JOD", "دينار أردني"),
+    ("EGP", "جنيه مصري"), ("IQD", "دينار عراقي"), ("SAR", "ريال سعودي"),
+    ("AED", "درهم إماراتي"), ("EUR", "يورو €"), ("TRY", "ليرة تركية"),
+]
+
+# قائمة المناطق الزمنية (IANA) — فلسطين أولًا. لا نكتب إزاحةً ثابتة في التسمية
+# لمنطقةٍ لها توقيتٌ صيفيّ: الإزاحة الحاليّة تُعرض حيّةً بجانب المعاينة.
+PANEL_TIMEZONES = [
+    ("Asia/Gaza", "غزة (فلسطين)"),
+    ("Asia/Hebron", "الخليل (فلسطين)"),
+    ("Asia/Amman", "عمّان (الأردن)"),
+    ("Asia/Damascus", "دمشق (سوريا)"),
+    ("Asia/Beirut", "بيروت (لبنان)"),
+    ("Africa/Cairo", "القاهرة (مصر)"),
+    ("Asia/Baghdad", "بغداد (العراق)"),
+    ("Asia/Riyadh", "الرياض (السعودية)"),
+    ("Asia/Dubai", "دبي (الإمارات)"),
+    ("Asia/Tehran", "طهران (إيران)"),
+    ("Europe/Istanbul", "إسطنبول (تركيا)"),
+    ("UTC", "التوقيت العالمي UTC"),
+]
+PANEL_TIMEZONE_LABELS = dict(PANEL_TIMEZONES)
+
+# «المشترك الجديد بلا تاريخ انتهاء» — القيم المسموحة لـ
+# ``subscribers.create_without_expiry`` (الأولى = الافتراضيّ).
+CREATE_WITHOUT_EXPIRY_CHOICES = [
+    ("expired", "منتهٍ فورًا"),
+    ("unlimited", "بلا انتهاء"),
+]
+CREATE_WITHOUT_EXPIRY_LABEL = "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"
+
+
+def create_without_expiry_mode(tenant_id: int | None = None) -> str:
+    """``expired`` (الافتراضيّ) أو ``unlimited`` — ما يعنيه إنشاء مشتركٍ لم
+    يُعطَ تاريخ انتهاء. قيمةٌ تالفة ⇒ الافتراضيّ الآمن (منتهٍ)."""
+    key = "subscribers.create_without_expiry"
+    default = _DEFAULTS[key]
+    try:
+        from ..db.repos import tenants_repo
+        tid = int(tenant_id) if tenant_id is not None else _tid()
+        val = str(tenants_repo.get_setting(tid, key, default) or "").strip().lower()
+    except Exception:  # noqa: BLE001 — settings read must never break a create
+        val = default
+    return val if val in dict(CREATE_WITHOUT_EXPIRY_CHOICES) else default
+
+
+def default_new_subscriber_expiry(tenant_id: int | None = None,
+                                  now: datetime | None = None) -> datetime | None:
+    """نهاية مشتركٍ جديد **لم يُعطَ** تاريخًا (ولم يُطلب «بدون انتهاء» صراحةً):
+    لحظة الإنشاء (UTC ساكن) — فيولد منتهيًا — أو ``None`` حين يضبط الخادم
+    ``unlimited``. مصدرٌ واحد للإنشاء الحقيقيّ: الويب والـAPI/التطبيق وإنشاء
+    المدير/«مستخدمو البطاقات». **لا** يسري على استيراد مايكروتيك ولا معالج
+    الترحيل — ينسخان حسابًا قائمًا فيحفظان مصدره (بلا انتهاء = بلا انتهاء)."""
+    if create_without_expiry_mode(tenant_id) == "unlimited":
+        return None
+    return (now or datetime.utcnow()).replace(microsecond=0)
+
+
+def is_valid_timezone(name: str) -> bool:
+    """اسم IANA تعرفه zoneinfo (أو UTC)."""
+    name = (name or "").strip()
+    if not name:
+        return False
+    if name.upper() == "UTC":
+        return True
+    if ZoneInfo is None:
+        return False
+    try:
+        ZoneInfo(name)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _tid() -> int:
@@ -58,8 +142,9 @@ def _get(key: str) -> str:
 def system_config() -> dict[str, Any]:
     currency = (_get("billing.currency") or "ILS").upper()
     try:
-        tz_offset = float(_get("billing.timezone_offset") or 3)
-    except (TypeError, ValueError):
+        # الإزاحة الحاليّة للمنطقة (صيفيّ/شتويّ) — لا الاحتياط الثابت.
+        tz_offset = effective_timezone()["utc_offset_minutes"] / 60.0
+    except Exception:  # noqa: BLE001
         tz_offset = 3.0
     return {
         "currency": currency,
@@ -74,6 +159,36 @@ def system_config() -> dict[str, Any]:
     }
 
 
+def effective_timezone(tenant_id: int | None = None,
+                       at: datetime | None = None) -> dict[str, Any]:
+    """المنطقة الزمنية **الفعليّة** للوحة + إزاحتها الآن عن UTC بالدقائق.
+
+    ``timezone``: اسم IANA صالح دائمًا — المضبوط إن عرفته zoneinfo، وإلّا
+    (اسم تالف/قاعدة غائبة) المكافئ الثابت للإزاحة الاحتياطيّة ``Etc/GMT-3``
+    (إشارة IANA معكوسة) أو ``UTC``. ``utc_offset_minutes`` تتغيّر مع الصيفيّ
+    (غزة: 120 شتاءً، 180 صيفًا). ``at`` لحظة UTC (افتراضًا الآن)."""
+    name, off = _tz_settings(tenant_id)
+    tz = _resolve_tzinfo(name, off)
+    when = at or datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    local = when.astimezone(tz)
+    delta = local.utcoffset() or timedelta(0)
+    minutes = int(delta.total_seconds() // 60)
+    if is_valid_timezone(name):
+        eff = "UTC" if name.strip().upper() == "UTC" else name.strip()
+    elif minutes % 60 == 0 and minutes:
+        eff = f"Etc/GMT{-minutes // 60:+d}"
+    else:
+        eff = "UTC"
+    return {
+        "timezone": eff,
+        "timezone_label": PANEL_TIMEZONE_LABELS.get(eff, eff),
+        "utc_offset_minutes": minutes,
+        "local_time": local.strftime("%Y-%m-%d %H:%M"),
+    }
+
+
 def effective_system_settings() -> dict[str, Any]:
     """The EFFECTIVE system money/time settings for API clients (the app).
 
@@ -82,13 +197,39 @@ def effective_system_settings() -> dict[str, Any]:
     one currency while the server writes another (stress 2026-09-28: the
     settings API said JOD while every payment was recorded in ILS)."""
     cfg = system_config()
+    tz = effective_timezone()
     return {
         "currency": cfg["currency"],
         "currency_symbol": cfg["currency_symbol"],
         "currency_name": cfg["currency_name"],
-        "tz_name": cfg["tz_name"],
-        "tz_offset": cfg["tz_offset"],
+        # المنطقة الفعليّة (اسم IANA) — التطبيق يعرض/يختار الأوقات بها.
+        "timezone": tz["timezone"],
+        "timezone_label": tz["timezone_label"],
+        # الإزاحة **الحاليّة** بالدقائق (غزة 120 شتاءً / 180 صيفًا).
+        "utc_offset_minutes": tz["utc_offset_minutes"],
+        "local_time": tz["local_time"],
+        # حقلان قديمان للتوافق: الاسم كما هو، والإزاحة الحاليّة بالساعات
+        # (لم تعد إزاحة الاحتياط الثابتة — كانت +3 حتى في شتاء غزة).
+        "tz_name": tz["timezone"],
+        "tz_offset": tz["utc_offset_minutes"] / 60.0,
+        # «expired» | «unlimited» — ما يعنيه إنشاء مشتركٍ بلا expire_at.
+        "create_without_expiry": create_without_expiry_mode(),
+        # F03 N7: القاعدة الواحدة لتحويل وقتٍ محلّيّ مكتوب إلى UTC (الويب يطبّقها
+        # في from_local؛ التطبيق يطبّقها بجدول التحوّلات أدناه — لا بإزاحة الآن).
+        "local_time_rule": dict(LOCAL_TIME_RULE),
+        "tz_transitions": tz_transitions(),
+        # «الحدود» — سقوف العمليّة الواحدة لهذا الخادم (core.limits): التطبيق
+        # يتحقّق بالأرقام نفسها التي يفرضها الخادم.
+        "limits": _limits_snapshot(),
     }
+
+
+def _limits_snapshot() -> dict[str, Any]:
+    try:
+        from .limits import snapshot
+        return snapshot()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def default_currency() -> str:
@@ -118,6 +259,42 @@ def format_money(amount: Any, currency: str | None = None) -> str:
     if s.endswith(".00"):
         s = s[:-3]
     return f"{s} {sym}"
+
+
+def format_money_multi(by_currency: Any, key: str = "total",
+                       fallback: Any = None) -> str:
+    """مبلغٌ لكلّ عملة بدل رقمٍ واحد مخلوط: «5,683.89 ₪ · 426.31 USD».
+
+    لا سعر صرف في النظام، فجمعُ ILS+USD+EUR في رقمٍ واحد بعلامة ₪ كذبٌ.
+    ``by_currency`` قائمة ``[{"currency": "ILS", key: x}, …]`` (شكل الـAPI) أو
+    قاموس ``{"ILS": x}``. عملة النظام بالرمز، والبقيّة برمز ISO. كلّ جزء
+    معزول باتّجاه (LRI…PDI) كي لا يتبعثر الترتيب داخل نصّ عربيّ. قائمة فارغة
+    → ``fallback`` بعملة النظام."""
+    if isinstance(by_currency, dict):
+        entries = [{"currency": c, key: v} for c, v in by_currency.items()]
+    else:
+        entries = [e for e in (by_currency or []) if isinstance(e, dict)]
+    try:
+        system_cur = system_config()["currency"].upper()
+    except Exception:  # noqa: BLE001 — عرضٌ فقط
+        system_cur = _DEFAULTS["billing.currency"]
+    parts: list[str] = []
+    for e in entries:
+        try:
+            amount = float(e.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        cur = str(e.get("currency") or system_cur).upper()
+        if len(entries) > 1 and abs(amount) < 0.005:
+            continue
+        if cur == system_cur:
+            text = format_money(amount, cur)
+        else:
+            text = f"{amount:,.2f} {cur}"
+        parts.append("\u2066" + text + "\u2069")
+    if not parts:
+        return format_money(fallback if fallback is not None else 0)
+    return " · ".join(parts)
 
 
 def _resolve_tzinfo(tz_name: str, tz_offset_hours: float) -> tzinfo:
@@ -212,6 +389,73 @@ def to_local_date(value: Any) -> str:
     return to_local(value, fmt="%Y-%m-%d")
 
 
+# ── تحويل الوقت المحلّيّ ⇒ UTC: قاعدةٌ واحدة للويب والـAPI والتطبيق (F03 N7) ──
+# ليلة انتهاء التوقيت الصيفيّ (غزة 2026-10-24: 02:00+03 ⇒ 01:00+02) تتكرّر
+# الساعة 01:00–01:59؛ الويب كان يضع «01:30» عند 22:30Z والتطبيق عند 23:30Z
+# (ساعةٌ فرق). القاعدة: **الظهور الأوّل** (fold=0 — إزاحة ما قبل التحوّل:
+# 01:30 ⇒ 22:30Z). وليلة بدء الصيفيّ (ساعةٌ لا وجود لها) تُقرأ بإزاحة ما قبل
+# التحوّل فتقع بعد القفزة (00:30 غير الموجودة ⇒ 01:30 الصيفيّة). التطبيق يطبّق
+# القاعدة بجدول ``tz_transitions`` (لحظات التحوّل وإزاحتا قبل/بعد).
+LOCAL_TIME_RULE = {
+    "ambiguous": "earlier",
+    "nonexistent": "shift_forward",
+    "description_ar": ("وقتٌ محلّيّ يتكرّر (ليلة انتهاء التوقيت الصيفيّ) يُحتسب بظهوره "
+                       "الأوّل — بإزاحة ما قبل التحوّل؛ ووقتٌ غير موجود (ليلة بدء "
+                       "الصيفيّ) يُقرأ بإزاحة ما قبل التحوّل فيقع بعد القفزة."),
+}
+
+
+def tz_transitions(tenant_id: int | None = None, *, at: datetime | None = None,
+                   months_back: int = 12, months_ahead: int = 24) -> list[dict]:
+    """تحوّلات إزاحة منطقة اللوحة حول ``at`` (افتراضًا الآن): ``[{"at": UTC ISO Z،
+    "offset_before_minutes"، "offset_after_minutes"}]``. محصّن: [] عند الخطأ."""
+    try:
+        name, off = _tz_settings(tenant_id)
+        when = (at or datetime.now(timezone.utc))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return [dict(t) for t in _tz_transitions_cached(
+            name, float(off), when.year, when.month, int(months_back), int(months_ahead))]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+@functools.lru_cache(maxsize=32)
+def _tz_transitions_cached(name: str, off: float, year: int, month: int,
+                           months_back: int, months_ahead: int) -> tuple:
+    tz = _resolve_tzinfo(name, off)
+    start_idx = year * 12 + (month - 1) - months_back
+    end_idx = year * 12 + (month - 1) + months_ahead
+    t = datetime(start_idx // 12, start_idx % 12 + 1, 1, tzinfo=timezone.utc)
+    end = datetime(end_idx // 12, end_idx % 12 + 1, 1, tzinfo=timezone.utc)
+    step = timedelta(hours=6)
+
+    def _off(x: datetime) -> int:
+        return int((x.astimezone(tz).utcoffset() or timedelta(0)).total_seconds() // 60)
+
+    out = []
+    prev = _off(t)
+    while t < end:
+        nxt = t + step
+        cur = _off(nxt)
+        if cur != prev:
+            lo, hi = t, nxt                      # offset(lo) == prev, offset(hi) == cur
+            while hi - lo > timedelta(minutes=1):
+                mid = lo + (hi - lo) / 2
+                mid = mid.replace(second=0, microsecond=0)
+                if mid <= lo:
+                    mid = lo + timedelta(minutes=1)
+                if _off(mid) == prev:
+                    lo = mid
+                else:
+                    hi = mid
+            out.append({"at": hi.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "offset_before_minutes": prev, "offset_after_minutes": cur})
+            prev = cur
+        t = nxt
+    return tuple(out)
+
+
 def from_local(value: Any, tenant_id: int | None = None,
                default_time: str = "") -> datetime | None:
     """Inverse of :func:`to_local` — a local wall-clock string -> naive UTC.
@@ -239,7 +483,8 @@ def from_local(value: Any, tenant_id: int | None = None,
     if dt.tzinfo is not None:  # already anchored -> just normalise to UTC
         return dt.astimezone(timezone.utc).replace(tzinfo=None)
     try:
-        return dt.replace(tzinfo=tenant_tzinfo(tenant_id)).astimezone(
+        # fold=0 صراحةً: الظهور الأوّل للساعة المكرّرة (LOCAL_TIME_RULE).
+        return dt.replace(tzinfo=tenant_tzinfo(tenant_id), fold=0).astimezone(
             timezone.utc).replace(tzinfo=None)
     except Exception:  # noqa: BLE001 — a broken zone must not lose the date
         return dt

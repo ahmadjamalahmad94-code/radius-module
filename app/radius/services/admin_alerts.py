@@ -17,6 +17,7 @@ feat/telegram-admin-alerts. مصدر واحد لكل «إشعارات الإدا
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -77,14 +78,14 @@ ALERTS: list[AlertSpec] = [
         "غُيّر:\n{changed}\n"
         "بواسطة: {actor}",
         {"username": "ahmad99", "full_name": "أحمد علي",
-         "changed": "• الباقة: 10 ميجا → 20 ميجا\n"
-                    "• الجوال: 0599123456 → 0598765432",
+         "changed": "• الباقة: ⁦10 ميجا → 20 ميجا⁩\n"
+                    "• الجوال: ⁦0599123456 → 0598765432⁩",
          "actor": "المدير"},
     ),
     AlertSpec(
         "loan_granted", "subscribers", "سلفة وقت",
         "يُرسل عند منح سلفة وقت — من البوابة (customer_portals.submit_loan_request) "
-        "أو من الإدارة (accounting.create_loan، وكذلك users.extend_time بنمط «دين»).",
+        "أو من الإدارة (accounting.create_loan).",
         "💳 <b>سلفة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المدة: {duration}\n"
@@ -98,8 +99,8 @@ ALERTS: list[AlertSpec] = [
     ),
     AlertSpec(
         "time_added", "subscribers", "إضافة/تمديد وقت",
-        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بنمط "
-        "«مجاني» أو «مدفوع»؛ نمط «دين» يُرسَل كسلفة).",
+        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بأيّ نمط: "
+        "«مجاني» أو «مدفوع» أو «على الدين» — النوع والمبلغ في «النوع»).",
         "⏱️ <b>إضافة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الوقت المضاف: {duration}\n"
@@ -607,9 +608,23 @@ def _notify_bell(tenant_id: int, spec: "AlertSpec", context: dict | None,
                 link = url
         except Exception:  # noqa: BLE001
             link = ""
+        # fix3 (F01 F9): the bell is per-admin — record WHO the event is about
+        # (subscriber → owner scope), its group and the acting admin.
+        sub_name = ""
+        if spec.group in ("subscribers", "finance"):
+            sub_name = str((context or {}).get("username") or "").strip()
+            if sub_name in ("—", "-"):
+                sub_name = ""
+        try:
+            from .subscriber_scope import request_admin_id
+            actor_id = request_admin_id()
+        except Exception:  # noqa: BLE001
+            actor_id = None
         _notif.notify(
             int(tenant_id), type=ntype, severity=severity,
             title=spec.label, body=body, link=link,
+            subscriber_username=sub_name, audience=spec.group,
+            actor_admin_id=actor_id,
             source="local", source_ref=f"alert:{spec.key}", push=push,
             # MT90 — مفتاح الحدث نفسه هو مفتاح صوته. صفحة الأصوات مُشتقّة من
             # هذا السجلّ، فكلّ تنبيهٍ يُضاف هنا يظهر هناك بلا خطوةٍ إضافيّة.
@@ -692,6 +707,14 @@ def render(key: str, context: dict | None = None) -> str:
     if not spec:
         return ""
     ctx = _SafeDict({k: ("" if v is None else v) for k, v in (context or {}).items()})
+    # F08-L: الفاعل الخام («api-token:78») → «تطبيق — <المدير>» في كلّ القنوات
+    # (الجرس/الدفع/تلجرام) — لا رمز داخليّ في نصّ يقرؤه المالك.
+    if ctx.get("actor"):
+        try:
+            from .actor_names import actor_display
+            ctx["actor"] = actor_display(ctx["actor"])
+        except Exception:  # noqa: BLE001 — التنسيق لا يكسر الإرسال أبدًا
+            pass
     try:
         body = spec.template.format_map(ctx)
     except Exception:  # noqa: BLE001 — قالب لا يكسر الإرسال أبدًا
@@ -936,6 +959,38 @@ def test_connection(tenant_id: int) -> dict:
 # ════════════════════════════════════════════════════════════════════════
 # الجرد للعرض في الواجهة
 # ════════════════════════════════════════════════════════════════════════
+_CODE_TOKEN = re.compile(
+    r"\b(?=[\w./]*[a-z])[A-Za-z_][A-Za-z0-9_]*(?:[./][A-Za-z_][A-Za-z0-9_]*)+\b"
+    r"|\b[a-z][a-z0-9]*_[A-Za-z0-9_]+\b")
+_PAREN = re.compile(r"\s*\(([^()]*)\)")
+
+
+def public_description(text: str) -> str:
+    """The event description as shown to the operator (web «إشعارات الإدارة»
+    and GET /api/v1/admin-alerts): the spec keeps developer references —
+    «(services/users.UsersService.create)», «accounting.create_loan»,
+    «⚑ …» follow-up notes — which reached the page as raw code (re-test R13
+    L4). They are stripped for display; the spec text itself is unchanged."""
+    s = str(text or "")
+    s = re.sub(r"\s*⚑[^.]*\.?", "", s)
+    s = s.replace("نوع support", "نوع «دعم»")
+    s = _CODE_TOKEN.sub("", s)
+
+    def _paren(m: "re.Match") -> str:
+        inner = re.sub(r"\b[a-z][a-z0-9]*\b", "", m.group(1))
+        inner = re.sub(r"\s*([،؛/,])\s*(?=[،؛/,]|$)", "", inner)
+        inner = re.sub(r"^[\s،؛/,]+|[\s،؛/,]+$", "", inner)
+        inner = re.sub(r"\s{2,}", " ", inner).strip(" -")
+        keep = re.search(r"[A-Za-z0-9\u0600-\u06FF]", inner)
+        return f" ({inner})" if keep else ""
+
+    s = _PAREN.sub(_paren, s)
+    s = re.sub(r"\s+—\s*(?=[.،]|$)", "", s)
+    s = re.sub(r"\s{2,}", " ", s)
+    s = re.sub(r"\s+([.،؛])", r"\1", s)
+    return s.strip()
+
+
 def catalogue(tenant_id: int) -> list[dict]:
     tid = int(tenant_id)
     out = []
@@ -946,7 +1001,7 @@ def catalogue(tenant_id: int) -> list[dict]:
             "group": spec.group,
             "group_label": _GROUP_LABEL.get(spec.group, spec.group),
             "label": spec.label,
-            "description": spec.description,
+            "description": public_description(spec.description),
             "enabled": is_enabled(tid, spec.key),
             "channels": sorted(chans),
             "template": spec.template,

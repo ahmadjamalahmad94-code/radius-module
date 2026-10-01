@@ -57,6 +57,42 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _actor_id():
+    aid = session.get("admin_id")
+    return int(aid) if aid else None
+
+
+def _super_role_id():
+    from ..core.constants import ROLE_SUPER_ADMIN
+    r = admins_repo.get_role_by_name(ROLE_SUPER_ADMIN)
+    return r.id if r else None
+
+
+def _is_super_role(role_id) -> bool:
+    return bool(role_id and admins_repo.role_is_super(admins_repo.get_role(int(role_id))))
+
+
+def _roles_for_actor(roles):
+    """D12: غير المالك يرى في قائمة الأدوار ما لا يتجاوز صلاحياته فقط."""
+    from ..auth.owner import is_owner_like
+    if is_owner_like():
+        return roles
+    mine = set(get_admins_service().permissions_of(admins_repo.get_admin(_actor_id()))) \
+        if _actor_id() else set()
+    out = []
+    for r in roles:
+        probe = type("A", (), {"role_id": r.id})()
+        if set(admins_repo.admin_permissions(probe)) <= mine:
+            out.append(r)
+    return out
+
+
+def _form_perms():
+    """D14: محرّر الأدوار يعرض المفاتيح الحيّة فقط (القديمة الميّتة مخفيّة)."""
+    from ..core.constants import EDITABLE_PERMISSIONS
+    return EDITABLE_PERMISSIONS
+
+
 def admins_list():
     svc = get_admins_service()
     admins = svc.list_admins()
@@ -65,7 +101,8 @@ def admins_list():
     return render_template(
         "radius/admins_list.html", admins=admins, roles=roles,
         # قائمة الأدوار كما هي (ترتيبًا) لقائمة «الدور» داخل صندوق «إضافة مدير» العائم
-        roles_all=roles_seq,
+        roles_all=_roles_for_actor(roles_seq),
+        can_grant_owner=_can_grant_owner(),
         # ?new=1 يفتح الصندوق العائم «إضافة مدير» تلقائيًا (الرابط القديم /admins/new يبقى حيًّا)
         open_new_modal=(request.args.get("new") == "1"),
     )
@@ -81,8 +118,38 @@ def _s(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+def _can_grant_owner() -> bool:
+    from ..auth.owner import is_owner_like
+    return is_owner_like()
+
+
 def admins_create():
     svc = get_admins_service()
+    from ..auth.owner import OwnerGuardError, assert_role_within_actor
+    want_super = bool(request.form.get("is_super_user"))
+    want_co = bool(request.form.get("is_co_owner"))
+    try:
+        role_id = int(request.form.get("role_id") or 0) or None
+    except (TypeError, ValueError):
+        role_id = -1
+    if want_super:
+        role_id = _super_role_id()
+    # دورٌ مجهول يُرفَض (422) — لا يُنشأ مديرٌ بدورٍ معلَّق. بلا دور = الأقلّ
+    # صلاحيةً (services.admins.create_admin)، أبدًا لا «مدير عام».
+    if role_id is not None and (role_id <= 0 or admins_repo.get_role(int(role_id)) is None):
+        flash("الدور المحدد غير موجود — اختر دورًا للمدير.", "error")
+        return render_template("radius/admins_form.html",
+            admin=None, roles=svc.list_roles(), is_new=True), 422
+    try:
+        if (want_super or want_co) and not _can_grant_owner():
+            raise OwnerGuardError(
+                "منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك.")
+        if role_id:
+            probe = type("A", (), {"role_id": role_id})()
+            assert_role_within_actor(_actor_id(), admins_repo.admin_permissions(probe))
+    except OwnerGuardError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.admins_list"))
     try:
         a = svc.create_admin(
             actor=_actor(),
@@ -91,7 +158,7 @@ def admins_create():
             full_name=_s("full_name"),
             email=_s("email"),
             mobile=_s("mobile"),
-            role_id=int(request.form.get("role_id") or 0) or None,
+            role_id=role_id,
             enabled=bool(request.form.get("enabled")),
             # RM-H6: profile fields (passed via repo since service signature may not accept)
         )
@@ -105,6 +172,10 @@ def admins_create():
         if any(profile.values()):
             try: admins_repo.update_admin(a.id, **profile)
             except Exception: pass
+        if want_super:
+            admins_repo.update_admin(a.id, is_super_admin=True)
+        if want_co:
+            admins_repo.set_co_owner(a.id, True)
     except (ValueError, RadiusError) as e:
         flash(str(e), "error")
         return render_template("radius/admins_form.html",
@@ -120,7 +191,11 @@ def admins_edit(admin_id: int):
     svc = get_admins_service()
     a = svc.get_admin(admin_id)
     if not a: abort(404)
-    return render_template("radius/admins_form.html", admin=a, roles=svc.list_roles(), is_new=False)
+    return render_template("radius/admins_form.html", admin=a,
+                           roles=_roles_for_actor(svc.list_roles()), is_new=False,
+                           can_grant_owner=_can_grant_owner(),
+                           admin_is_super_role=_is_super_role(a.role_id),
+                           target_is_original_owner=admins_repo.is_original_owner(a.id))
 
 
 def admins_update(admin_id: int):
@@ -134,11 +209,44 @@ def admins_update(admin_id: int):
     if request.form.get("role_id"):
         try: changes["role_id"] = int(request.form["role_id"])
         except (TypeError, ValueError): pass
-    changes["enabled"] = bool(request.form.get("enabled"))
+    # fix3 (F01 F15): only a form that carried the toggle changes «enabled» —
+    # a crafted POST without it silently disabled the target admin.
+    if "enabled" in request.form or request.form.get("enabled_present"):
+        changes["enabled"] = bool(request.form.get("enabled"))
     password = (request.form.get("password") or "").strip()
     # تطبيق profile fields عبر repo مباشرة لتجنب تقييد الـ service
     profile_keys = ("phone","profile_notes","avatar_url","tags")
     profile_changes = {k: changes.pop(k) for k in list(changes) if k in profile_keys}
+
+    # ── D12: مستوى الوصول (سوبر يوزر / شريك) + حماية المالك الأصليّ ──
+    existing = admins_repo.get_admin(admin_id)
+    if existing is None:
+        abort(404)
+    super_change = co_change = False
+    want_co = bool(getattr(existing, "is_co_owner", False))
+    if request.form.get("access_level_present"):
+        want_super = bool(request.form.get("is_super_user"))
+        cur_super = _is_super_role(existing.role_id)
+        if want_super != cur_super:
+            super_change = True
+            if want_super:
+                changes["role_id"] = _super_role_id()
+            elif changes.get("role_id") in (None, _super_role_id()):
+                changes["role_id"] = admins_repo.least_privileged_role_id()
+            changes["is_super_admin"] = want_super
+        if not admins_repo.is_original_owner(admin_id):
+            want_co = bool(request.form.get("is_co_owner"))
+            co_change = want_co != bool(getattr(existing, "is_co_owner", False))
+    from ..auth.owner import OwnerGuardError, assert_can_modify_admin
+    try:
+        new_role = changes.get("role_id")
+        assert_can_modify_admin(
+            _actor_id(), admin_id,
+            new_role_id=new_role if new_role != existing.role_id else None,
+            co_owner_change=co_change, super_change=super_change)
+    except OwnerGuardError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.admins_list"))
 
     # ── Per-manager monetary credit caps — SUPER-ADMIN ONLY (server-side).
     # The section is hidden for non-supers; if one POSTs the caps anyway → 403.
@@ -162,6 +270,8 @@ def admins_update(admin_id: int):
             except Exception: pass
         if cap_changes:
             admins_repo.update_admin(admin_id, **cap_changes)
+        if co_change:
+            admins_repo.set_co_owner(admin_id, want_co)
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error"); return redirect(url_for("radius.admins_list"))
     # admins-report v2 — post-CRUD trigger for edit/deactivate.
@@ -171,6 +281,14 @@ def admins_update(admin_id: int):
 
 
 def admins_delete(admin_id: int):
+    from ..auth.owner import OwnerGuardError, assert_can_modify_admin
+    try:
+        assert_can_modify_admin(_actor_id(), admin_id, deleting=True)
+        if _actor_id() == int(admin_id):
+            raise OwnerGuardError("لا يمكنك حذف حسابك أنت.")
+    except OwnerGuardError as e:
+        flash(str(e), "error")
+        return redirect(url_for("radius.admins_list"))
     try:
         get_admins_service().delete_admin(actor=_actor(), admin_id=admin_id)
         # admins-report v2 — differential tombstone right after the delete;
@@ -193,9 +311,14 @@ def roles_list():
 
 def roles_update(role_id: int):
     """legacy: permissions-only update."""
+    refused = _reject_unknown_permissions(url_for("radius.roles_list"))
+    if refused is not None:
+        return refused
     svc = get_admins_service()
     chosen = tuple(request.form.getlist("permissions"))
     try:
+        from ..auth.owner import assert_role_within_actor
+        assert_role_within_actor(_actor_id(), chosen)
         svc.update_role_permissions(actor=_actor(), role_id=role_id, perms=chosen)
         flash("تم تحديث الصلاحيات.", "success")
     except Exception as e:  # noqa: BLE001
@@ -234,10 +357,30 @@ def _permission_groups(perms):
 
 
 def roles_new():
-    perms = get_admins_service().all_permissions()
+    perms = _form_perms()
     return render_template("radius/roles_form.html",
         role=None, perms=perms, is_new=True,
         groups=_permission_groups(perms))
+
+
+def _unknown_permission_keys() -> list[str]:
+    """fix3 (F02 M2): keys the role form posted that are not real permissions."""
+    from ..core.constants import ALL_PERMISSIONS
+    known = set(ALL_PERMISSIONS)
+    return sorted({p for p in request.form.getlist("permissions") if p not in known})
+
+
+def _reject_unknown_permissions(back_url: str):
+    """422 in Arabic (like POST /api/v1/roles) — nothing is stored."""
+    bad = _unknown_permission_keys()
+    if not bad:
+        return None
+    from .status_notice import status_notice
+    return status_notice(
+        422, "لم يُحفَظ الدور",
+        "صلاحيات غير معروفة: " + "، ".join(bad) + " — لم يُحفَظ شيء.",
+        back_url=back_url, back_label="رجوع إلى الدور", code="unknown_permission",
+        unknown=bad)
 
 
 def roles_create():
@@ -245,7 +388,12 @@ def roles_create():
     if not name:
         flash("اسم الدور مطلوب.", "error")
         return redirect(url_for("radius.roles_new"))
+    refused = _reject_unknown_permissions(url_for("radius.roles_new"))
+    if refused is not None:
+        return refused
     try:
+        from ..auth.owner import assert_role_within_actor
+        assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
         admins_repo.create_role(
             name=name,
             display_name=(request.form.get("display_name") or "").strip() or name,
@@ -270,14 +418,25 @@ def _role_grants_context(role_id: int) -> dict:
     from ..services import manager_grants as _mg
     blob = admins_repo.get_role_granular(role_id)
     flags = blob.get("flags") if isinstance(blob.get("flags"), dict) else {}
+    # D09: «رؤية كل المشتركين/الحزم» على الدور = مفتاح RBAC في المصفوفة أعلاه
+    # (مربّعٌ واحد) — لا يُكرَّر هنا.
     scope_flags = [
         {"key": k, "label": lbl, "checked": bool(flags.get(k))}
         for k, lbl in _mg.SCOPE_FLAG_REGISTRY.items()
+        if k not in _mg.ROLE_RBAC_SCOPE_FLAGS
     ]
+    # تقسيم الأفعال المُشتقّة من المفاتيح («حسب المفتاح/مسموح/ممنوع») — مثل
+    # «تأكيد الإيداع نعم / السحب لا» لكل مدراء الدور. دور «مدير عام» = كل
+    # الصلاحيات غير المالكيّة فلا تقسيم عليه (أساسه مركَّب).
+    role = admins_repo.get_role(role_id)
+    role_super = bool(admins_repo.role_is_super(role))
     return {
         "action_catalog": _mg.role_action_catalog(blob),
         "scope_flags": scope_flags,
         "section_catalog": _mg.role_section_catalog(blob),
+        "derived_catalog": ([] if role_super else _mg.role_derived_catalog(
+            blob, getattr(role, "permissions", ()) or ())),
+        "role_is_super": role_super,
     }
 
 
@@ -287,7 +446,7 @@ def roles_edit(role_id: int):
     page. The standalone /grants page now redirects here."""
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
-    perms = get_admins_service().all_permissions()
+    perms = _form_perms()
     return render_template("radius/roles_form.html",
         role=r, perms=perms, is_new=False,
         groups=_permission_groups(perms),
@@ -297,7 +456,12 @@ def roles_edit(role_id: int):
 def roles_save(role_id: int):
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
+    refused = _reject_unknown_permissions(url_for("radius.roles_edit", role_id=role_id))
+    if refused is not None:
+        return refused
     try:
+        from ..auth.owner import assert_role_within_actor
+        assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
         admins_repo.update_role(
             role_id,
             display_name=(request.form.get("display_name") or "").strip() or r.name,
@@ -318,6 +482,17 @@ def roles_delete(role_id: int):
     if r.is_system:
         flash("لا يمكن أرشفة دور النظام.", "error")
         return redirect(url_for("radius.roles_list"))
+    # D22: دورٌ مُسنَد لمدراء لا يُحذف بصمت (كانوا يفقدون كل صلاحياتهم).
+    in_use = admins_repo.role_usage_count(role_id)
+    if in_use:
+        # F02 L2 / D22: a real Arabic 409 page/JSON — not «Redirecting…».
+        from .status_notice import status_notice
+        return status_notice(
+            409, "لا يمكن حذف الدور",
+            f"لا يمكن حذف الدور «{r.display_name or r.name}»: مُسنَد إلى {in_use} مدير. "
+            "انقلهم إلى دورٍ آخر أوّلًا.",
+            back_url=url_for("radius.roles_list"), back_label="قائمة الأدوار",
+            code="role_in_use", admins_count=int(in_use))
     try:
         admins_repo.delete_role(role_id)
         flash(f"تمت أرشفة الدور «{r.name}» ✓", "success")
@@ -345,6 +520,10 @@ def roles_grants_save(role_id: int):
     from ..services import manager_grants as _mg
     try:
         blob = _mg.parse_grants_form(request.form)
+        # «حسب المفتاح / مسموح / ممنوع» للأفعال المُشتقّة (tri_<key>) — غير
+        # المُرسَل يحتفظ بقيمته القائمة (نموذج قديم لا يمسح التقسيم).
+        blob = _mg.apply_role_derived_form(
+            blob, request.form, existing=admins_repo.get_role_granular(role_id))
         admins_repo.set_role_granular(role_id, blob)
         flash(f"تم حفظ أساس صلاحيات الدور «{r.display_name or r.name}» — "
               f"يَرثه كلّ مدير بهذا الدور ✓", "success")

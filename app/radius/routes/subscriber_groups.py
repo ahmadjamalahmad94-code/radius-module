@@ -235,16 +235,22 @@ def sg_quota_reset_daily(gid: int):
 
     reset_count = 0
     failed = 0
+    skipped = 0
     svc = get_users_service()
+    from ..services.users import NothingToReset
     for username in usernames:
         try:
             svc.reset_daily_quota(actor=_actor(), username=username)
             reset_count += 1
+        except NothingToReset:
+            skipped += 1
         except RadiusError:
             failed += 1
 
     if reset_count:
         flash(f"تمت استعادة الكوتة اليومية لـ {reset_count} مشترك في مجموعة «{group['name']}».", "success")
+    if skipped:
+        flash(f"تُخطّي {skipped} مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ.", "info")
     if failed:
         flash(f"تعذّرت استعادة الكوتة لـ {failed} مشترك.", "error")
     return redirect(url_for("radius.subscriber_groups_list"))

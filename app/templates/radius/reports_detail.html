@@ -71,11 +71,13 @@
   {% set _sub = "إيرادات ودفعات وهامش وديون الفترة المختارة — قراءة مشتقة من المعاملات المسجّلة فقط، بلا تعديل على التاريخ المالي." %}
   {% set _icon = 'coins' %}
   {% set _m = {} %}
-  {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% endfor %}
+  {% set _bc = {} %}
+  {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% if _bc.update({it.metric: (it.by_currency or [])}) %}{% endif %}{% endfor %}
+  {# لكلّ عملة رقمها (دفعات الدفتر + سجلّات الكروت) — لا ILS+USD مجموعةً بعلامة عملة النظام #}
   {% set _kpis = [
-    {'label': 'الإيرادات',       'value': _m.get('revenue', 0)|money,            'icon': 'coins',          'variant': 'brand'},
-    {'label': 'الدفعات',         'value': _m.get('payments', 0)|money,           'icon': 'hand-holding-dollar', 'variant': 'green'},
-    {'label': 'هامش الربح',      'value': _m.get('margin', 0)|money,             'icon': 'scale-balanced', 'variant': 'amber'},
+    {'label': 'الإيرادات',       'value': _bc.get('revenue', [])|money_multi('total', _m.get('revenue', 0)),  'icon': 'coins',          'variant': 'brand'},
+    {'label': 'الدفعات',         'value': _bc.get('payments', [])|money_multi('total', _m.get('payments', 0)), 'icon': 'hand-holding-dollar', 'variant': 'green'},
+    {'label': 'هامش الربح',      'value': _bc.get('margin', [])|money_multi('total', _m.get('margin', 0)),     'icon': 'scale-balanced', 'variant': 'amber'},
     {'label': 'ديون المشتركين',  'value': _m.get('subscriber_debts', 0)|money,   'icon': 'circle-exclamation', 'variant': 'red'},
   ] %}
 {% endif %}
@@ -90,7 +92,7 @@
   subtitle=_sub,
   icon=_icon,
   kpis=_kpis,
-  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> '|safe ~ _("لقطات الأرشيف") ~ '</a>'|safe)|safe
+  actions_html=_report_jump ~ (('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> '|safe ~ _("لقطات الأرشيف") ~ '</a>'|safe if can_submit('radius.reports_archive', 'GET') else ''))|safe
 ) %}
   {# تمرير type كما هو إن جاء في الرابط (?type=yearly) — نفس سلوك القالب للمسارين #}
   {% if request.args.get('type') %}<input type="hidden" name="type" value="{{ request.args.get('type') }}">{% endif %}
@@ -157,7 +159,8 @@
           <tr>
             <td>{{ metric_labels.get(row.metric, row.metric|replace('_', ' ')) }}</td>
             <td class="num mono">
-              {%- if row.metric in money_metrics %}{{ row.value|money }}
+              {%- if row.metric in money_metrics and row.by_currency %}{{ row.by_currency|money_multi('total', row.value) }}
+              {%- elif row.metric in money_metrics %}{{ row.value|money }}
               {%- else %}{{ row.value }}{% endif -%}
             </td>
           </tr>

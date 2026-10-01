@@ -33,7 +33,7 @@
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
-<form method="post" id="set-speeds-form">
+<form method="post" id="set-speeds-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("اختر الباقات", icon="layer-group", meta=(plans|length ~ ' باقة') if plans else '', flush=True) %}
     <div class="hub-table-wrap" style="border:none">
@@ -95,8 +95,8 @@
   <div class="hub-flex-row" style="margin-top:16px">
     {{ hub.btn("تطبيق", icon="bolt", variant="primary", type="submit",
                 attrs='onclick="return confirm(\'تأكيد تعديل السرعات؟\')"') }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.plans_list')) }}
+    {% if can_submit('radius.plans_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.plans_list')) }}{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 {% endcall %}
 {% endblock %}

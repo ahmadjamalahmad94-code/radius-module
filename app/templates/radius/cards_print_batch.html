@@ -13,7 +13,7 @@
 {% block title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total_cards }} بطاقة طباعة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total_cards|ar_count('card') }} طباعة</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -44,8 +44,8 @@
     ~ ' data-batch-name="'|safe ~ ((batch.package_name or batch.batch_code or ('حزمة #' ~ batch.id))|e) ~ '"'|safe
     ~ ' data-batch-total="'|safe ~ (batch.card_count or total_cards) ~ '">'|safe
     ~ '<i class="fa-solid fa-print"></i> '|safe ~ _("اطبع هذه الحزمة") ~ '</button>'|safe
-    ~ '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.cards_print_list') ~ '">'|safe
-    ~ '<i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع لقائمة الحزم") ~ '</a>'|safe
+    ~ ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.cards_print_list') ~ '">'|safe
+    ~ '<i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع لقائمة الحزم") ~ '</a>'|safe if can_submit('radius.cards_print_list', 'GET') else '')
   ),
   kpis=[
     {'label': 'عدد البطاقات', 'value': batch.card_count or total_cards,
@@ -77,7 +77,7 @@
   {% set range_lo = (page - 1) * per_page + 1 %}
   {% set range_hi = [page * per_page, total_cards] | min %}
 
-  {% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة", flush=True) %}
+  {% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards|ar_count('card'), flush=True) %}
 
     {# Toolbar — row range + per-page selector #}
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--hub-border)">
@@ -129,8 +129,8 @@
         {% if disabled %}
           <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
         {% else %}
-          <a class="hub-btn hub-btn--secondary hub-btn--sm"
-             href="{{ url_for('radius.cards_print_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
+          {% if can_submit('radius.cards_print_batch', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
+             href="{{ url_for('radius.cards_print_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>{% endif %}
         {% endif %}
       {%- endmacro %}
       {{ page_link(1,           '«', disabled=(page == 1)) }}

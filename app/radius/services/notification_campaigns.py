@@ -778,8 +778,19 @@ class NotificationCampaignService:
 
         return rows
 
+    # Arabic label per delivery status (raw «skipped» reached the app's
+    # «التواصل» screen — re-test R11 L-2). `status` itself is unchanged.
+    _DELIVERY_STATUS_AR = {
+        "queued": "في الطابور", "pending": "بالانتظار", "sent": "تم الإرسال",
+        "delivered": "تم التسليم", "read": "مقروء", "failed": "فشل",
+        "skipped": "تم التخطّي", "dry_run_ready": "معاينة جاهزة",
+        "cancelled": "ملغاة",
+    }
+
     def _delivery_row(self, row: dict[str, Any]) -> dict[str, Any]:
         row["result"] = _load(row.get("result_json"), {})
+        status = str(row.get("status") or "")
+        row["status_label"] = self._DELIVERY_STATUS_AR.get(status, status or "—")
         return row
 
     @staticmethod

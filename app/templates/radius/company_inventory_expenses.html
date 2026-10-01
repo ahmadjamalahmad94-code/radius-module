@@ -123,11 +123,11 @@
             <span class="cie-badge cie-badge--{{ v }}">{{ item.status }}</span>
           </td>
           <td>
-            <form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}"
+            {% if can_submit('radius.company_inventory_item_deactivate', 'POST') %}<form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}"
                   onsubmit="return confirm('تعطيل هذا الصنف؟ لن تُحذف حركاته.');">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-box-archive"></i> {{ _('تعطيل') }}</button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -162,7 +162,7 @@
       <tbody>
         {% for m in incoming_records %}
         <tr>
-          <td>{{ m.movement_date }}</td>
+          <td><bdi dir="ltr">{{ m.movement_date }}</bdi></td>
           <td><strong>{{ m.item_name or "—" }}</strong></td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ m.unit_cost|money if m.unit_cost else "—" }}</td>
@@ -199,7 +199,7 @@
       <tbody>
         {% for m in usage_records %}
         <tr>
-          <td>{{ m.movement_date }}</td>
+          <td><bdi dir="ltr">{{ m.movement_date }}</bdi></td>
           <td><strong>{{ m.item_name or "—" }}</strong></td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
           <td>{{ m.usage_reason or "—" }}</td>
@@ -235,7 +235,7 @@
       <tbody>
         {% for e in expense_records %}
         <tr>
-          <td>{{ e.expense_date }}</td>
+          <td><bdi dir="ltr">{{ e.expense_date }}</bdi></td>
           <td><strong>{{ e.title }}</strong></td>
           <td>{{ e.category or "غير مصنّف" }}</td>
           <td class="num mono tabular-nums" style="direction:ltr"><strong>{{ e.amount|money }}</strong></td>
@@ -305,7 +305,7 @@
       <thead><tr><th>{{ _('التاريخ') }}</th><th>{{ _('الصنف') }}</th><th>{{ _('النوع') }}</th><th class="num">{{ _('الكمية') }}</th><th class="num">{{ _('القيمة') }}</th><th data-uds-nosort>{{ _('التفاصيل') }}</th></tr></thead>
       <tbody>{% for m in reports.movements %}
         <tr>
-          <td>{{ m.movement_date }}</td>
+          <td><bdi dir="ltr">{{ m.movement_date }}</bdi></td>
           <td><strong>{{ m.item_name or "—" }}</strong></td>
           <td>
             {% if m.movement_type=='incoming' %}<span class="cie-badge cie-badge--in">{{ _('وارد') }}</span>
@@ -329,7 +329,7 @@
 
 {# Item modal #}
 <dialog class="cie-modal" data-modal="item">
-  <form method="post" action="{{ url_for('radius.company_inventory_item_create') }}">
+  {% if can_submit('radius.company_inventory_item_create', 'POST') %}<form method="post" action="{{ url_for('radius.company_inventory_item_create') }}">
     <div class="cie-modal-head"><h3><i class="fa-solid fa-tag"></i> {{ _('صنف جديد') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -342,12 +342,12 @@
       </div>
     </div>
     <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('حفظ الصنف') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 {# Incoming modal #}
 <dialog class="cie-modal" data-modal="incoming">
-  <form method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
+  {% if can_submit('radius.company_inventory_incoming', 'POST') %}<form method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
     <div class="cie-modal-head"><h3><i class="fa-solid fa-truck-ramp-box"></i> {{ _('تسجيل وارد مخزون') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -370,12 +370,12 @@
       </div>
     </div>
     <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل الوارد') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 {# Usage modal #}
 <dialog class="cie-modal" data-modal="usage">
-  <form method="post" action="{{ url_for('radius.company_inventory_usage') }}">
+  {% if can_submit('radius.company_inventory_usage', 'POST') %}<form method="post" action="{{ url_for('radius.company_inventory_usage') }}">
     <div class="cie-modal-head"><h3><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('تسجيل صرف مخزون') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -396,12 +396,12 @@
       </div>
     </div>
     <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-minus"></i> {{ _('تسجيل الصرف') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 {# Expense modal #}
 <dialog class="cie-modal" data-modal="expense">
-  <form method="post" action="{{ url_for('radius.company_expense_add') }}">
+  {% if can_submit('radius.company_expense_add', 'POST') %}<form method="post" action="{{ url_for('radius.company_expense_add') }}">
     <div class="cie-modal-head"><h3><i class="fa-solid fa-receipt"></i> {{ _('مصروف جديد') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -417,7 +417,7 @@
       </div>
     </div>
     <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('تسجيل المصروف') }}</button></div>
-  </form>
+  </form>{% endif %}
 </dialog>
 
 <script>

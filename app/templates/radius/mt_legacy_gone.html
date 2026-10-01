@@ -18,12 +18,12 @@
 ) }}
 
 <div class="mt-legacy-actions" data-mt-legacy-gone>
-  <a class="hub-btn hub-btn--primary" href="{{ wizard_url }}">
+  {% if can_open(wizard_url) %}<a class="hub-btn hub-btn--primary" href="{{ wizard_url }}">
     <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('افتح معالج إضافة راوتر') }}
-  </a>
-  <a class="hub-btn" href="{{ operations_url }}">
+  </a>{% endif %}
+  {% if can_open(operations_url) %}<a class="hub-btn" href="{{ operations_url }}">
     <i class="fa-solid fa-network-wired"></i> {{ _('غرفة عمليات الراوترات') }}
-  </a>
+  </a>{% endif %}
 </div>
 
 <section class="hub-section" style="margin-top:18px">

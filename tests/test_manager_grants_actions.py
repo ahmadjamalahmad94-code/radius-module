@@ -57,8 +57,12 @@ def app(monkeypatch, tmp_path):
 def _mgr(username="m1") -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») now carries every non-owner
+    # permission AND grant — a plain manager gets the legacy key list instead.
+    from mg_test_roles import plain_role_id
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name="M", is_super_admin=False)
+                                   full_name="M", is_super_admin=False,
+                                   role_id=plain_role_id())
     return int(adm.id)
 
 
@@ -259,8 +263,9 @@ def test_policy_route_persists_action_grants(app):
         mgr = _mgr("m_cfg")
     with app.test_client() as c:
         _login(c, admin_id=1, is_super=True)
-        # grant create (flag) + disable delete (rbac override off = unchecked)
-        # NB: any rbac action checkbox omitted => stored False (owner-off).
+        # grant create (flag) + omit delete. p01/D01 (fix wave 2): RBAC-derived
+        # actions have no checkbox, so an omitted one is NOT stored as «off» any
+        # more — delete keeps following the role (users.delete).
         r = c.post(f"/admin/radius/business-operators/manager/{mgr}/policy",
                    data={"_csrf_token": "off-csrf",
                          "can_create_subscriber": "1",
@@ -271,4 +276,6 @@ def test_policy_route_persists_action_grants(app):
         from app.radius.services import manager_grants as mg
         assert mg.action_permitted(mgr, "subscriber.create", tenant_id=1) is True
         assert mg.action_permitted(mgr, "subscriber.extend", tenant_id=1) is True
-        assert mg.action_permitted(mgr, "subscriber.delete", tenant_id=1) is False
+        assert mg.action_permitted(mgr, "subscriber.delete", tenant_id=1) is True
+        flat = (mg._grants_row(mgr, 1).get("action_grants") or {}).get("_actions") or {}
+        assert "subscriber.delete" not in flat

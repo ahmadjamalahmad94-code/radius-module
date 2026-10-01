@@ -1,12 +1,14 @@
 """PlansService — إدارة الباقات/العروض."""
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from typing import Sequence
 
 from ..core.constants import AUDIT_ACTION_ARCHIVE, AUDIT_ACTION_CREATE, AUDIT_ACTION_UPDATE, PLAN_TYPES
 from ..core.errors import RadiusConflict, RadiusValidationError
 from ..core.types import AccessPlan
+from ..db.repos.plans_repo import PLAN_NAME_MAX
 from ..integration.adapter import RadiusAdapter
 from .operations import validate_service_scope
 from .audit import RadiusAuditService
@@ -27,6 +29,7 @@ class PlansService:
         return self._adapter.get_profile(plan_id)
 
     def create(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
+        plan = _normalize(plan)
         _validate(plan)
         plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
@@ -72,6 +75,8 @@ class PlansService:
     def _unique_clone_name(self, source_name: str) -> str:
         """«الاسم - نسخة»، ثم «… - نسخة 2/3…» عند التعارض — يحترم قيد التفرّد."""
         base = (source_name or "عرض").strip()
+        # الاسم الناتج لا يتجاوز الحدّ (اسمٌ من 100 حرف + «- نسخة 12»).
+        base = base[:max(1, PLAN_NAME_MAX - len(CLONE_NAME_SUFFIX) - 4)].rstrip()
         existing = {(p.name or "").strip() for p in self.list(limit=500)}
         candidate = f"{base}{CLONE_NAME_SUFFIX}"
         if candidate not in existing:
@@ -84,6 +89,7 @@ class PlansService:
     def update(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         if plan.id is None:
             raise RadiusValidationError("تعديل الباقة يتطلّب معرّفها.")
+        plan = _normalize(plan)
         _validate(plan)
         plan = _claim_plan_name(plan)
         try:                                  # لقطة «قبل» لعرض الفرق في السجلّ
@@ -175,6 +181,9 @@ def _claim_plan_name(plan: AccessPlan) -> AccessPlan:
     name = (plan.name or "").strip()
     if not name:
         raise RadiusValidationError("اسم الباقة مطلوب.")
+    if len(name) > PLAN_NAME_MAX:
+        raise RadiusValidationError(
+            f"اسم الباقة أطول من المسموح ({PLAN_NAME_MAX} حرفًا كحدّ أقصى).")
     if name != plan.name:
         plan = replace(plan, name=name)
     tid = int(getattr(plan, "tenant_id", 1) or 1)
@@ -187,10 +196,12 @@ def _claim_plan_name(plan: AccessPlan) -> AccessPlan:
         raise RadiusValidationError(f"اسم الباقة «{name}» مستخدم مسبقًا لباقة أخرى.")
     for r in others:
         if r["name"] == name:  # الفهرس حسّاس للحالة: المطابق حرفيًّا فقط يحجز
+            suffix = f" (مؤرشفة #{int(r['id'])})"
+            archived_name = name[:max(1, PLAN_NAME_MAX - len(suffix))].rstrip() + suffix
             with transaction() as conn:
                 conn.execute(
                     "UPDATE access_plans SET name = ? WHERE tenant_id = ? AND id = ?",
-                    (f"{name} (مؤرشفة #{int(r['id'])})", tid, int(r["id"])))
+                    (archived_name, tid, int(r["id"])))
     return plan
 
 
@@ -209,10 +220,100 @@ _NON_NEGATIVE_PLAN_FIELDS = {
 }
 
 
+# كلّ حقول الباقة العدديّة الصحيحة: غير سالبة وتحت سقفٍ عاقل (كانت 10^20
+# و2^63 تُسقط SQLite بـ 500، وكانت الأجهزة/المهلات/الأولويّة/VLAN السالبة
+# تُقبل). السقف الخاصّ لبعض الحقول في ``_INT_FIELD_MAX``.
+PLAN_INT_MAX = 1_000_000_000
+_INT_PLAN_FIELDS = {
+    "max_daily_minutes": "الحدّ اليوميّ للدقائق",
+    "max_weekly_minutes": "الحدّ الأسبوعيّ للدقائق",
+    "max_monthly_minutes": "الحدّ الشهريّ للدقائق",
+    "session_timeout_sec": "مهلة الجلسة",
+    "idle_timeout_sec": "مهلة الخمول",
+    "data_value": "حجم البيانات",
+    "speed_up_kbps": "سرعة الرفع",
+    "speed_down_kbps": "سرعة التنزيل",
+    "burst_up_kbps": "سرعة الدفعة (رفع)",
+    "burst_down_kbps": "سرعة الدفعة (تنزيل)",
+    "burst_threshold_kbps": "عتبة الدفعة",
+    "burst_time_sec": "زمن الدفعة",
+    "cir_down_kbps": "السرعة المضمونة (تنزيل)",
+    "cir_up_kbps": "السرعة المضمونة (رفع)",
+    "concurrent_sessions": "عدد الجلسات المتزامنة",
+    "vlan_id": "رقم VLAN",
+    "allowed_devices_count": "عدد الأجهزة المسموحة",
+    "priority": "الأولويّة",
+    "max_consumption_times": "عدد مرّات الاستهلاك",
+    "ticket_validity_days": "صلاحية التذكرة بالأيام",
+    "working_hours_limit": "حدّ ساعات العمل",
+    "max_loan_minutes": "الحدّ الأقصى لدقائق السلفة",
+}
+_INT_FIELD_MAX = {
+    "vlan_id": 4094,
+    "concurrent_sessions": 10_000,
+    "allowed_devices_count": 10_000,
+    "priority": 10,
+    "session_timeout_sec": 10 * 365 * 86400,
+    "idle_timeout_sec": 10 * 365 * 86400,
+}
+# حقول الساعات «HH:MM» (من/إلى). «24:00» مقبولة كنهاية يوم.
+_HOUR_FIELDS = {
+    "allowed_hours_from": "ساعة البداية",
+    "allowed_hours_to": "ساعة النهاية",
+    "offer_hours_from": "ساعات العرض — من",
+    "offer_hours_to": "ساعات العرض — إلى",
+}
+_HOUR_RE = re.compile(r"^(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$|^24:00(?::00)?$")
+
+
+def plan_field_label(field: str) -> str:
+    """التسمية العربيّة لحقل باقة (لرسائل الخطأ) — الحقل الخام إن لم يُعرف."""
+    return (_NON_NEGATIVE_PLAN_FIELDS.get(field) or _INT_PLAN_FIELDS.get(field)
+            or _HOUR_FIELDS.get(field) or _OTHER_LABELS.get(field) or field)
+
+
+_OTHER_LABELS = {
+    "name": "اسم الباقة", "enabled": "تفعيل الباقة", "bind_mac": "ربط MAC",
+    "bind_ip": "ربط IP", "force_mac_address": "فرض عنوان MAC",
+    "auto_renew": "التجديد التلقائيّ", "prepaid": "الدفع المسبق",
+    "speed_control_enabled": "التحكّم بالسرعة", "burst_enabled": "الدفعة (Burst)",
+    "nightly_unlimited_enabled": "الليل المفتوح", "single_use_once": "استخدام مرّة واحدة",
+    "hotspot_enabled": "هوت سبوت", "ppp_enabled": "PPP", "loan_enabled": "السلفة",
+    "speed_override_allowed": "تجاوز السرعة", "speed_unlimited": "بلا حدّ للسرعة",
+    "shared_single_session": "جلسة واحدة فعّالة", "bandwidth_id": "ملفّ السرعة",
+    "pool_id": "مجمّع العناوين",
+}
+
+
+_COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,20})$")
+
+
+def _normalize(plan: AccessPlan) -> AccessPlan:
+    """تطبيعٌ لا يغيّر المعنى: نطاق الخدمة بأحرفٍ صغيرة («HOTSPOT» كان يُخزَّن
+    كما هو)، والأرقام العشريّة ‎-0.0 ⇒ 0."""
+    changes = {}
+    scope = (plan.service_scope or "").strip().lower()
+    if scope != plan.service_scope:
+        changes["service_scope"] = scope or "both"
+    for f in ("price", "price_card", "price_bulk"):
+        v = getattr(plan, f, 0)
+        if isinstance(v, float) and v == 0 and str(v).startswith("-"):
+            changes[f] = 0.0
+    # الأولويّة: 0/فارغ/100 = الافتراضات القديمة (الـAPI والتطبيق) ⇒ 5. غير ذلك
+    # خارج 1–10 يرفضه ``_validate`` (F04 N-L10).
+    from ..db.repos.plans_repo import PRIORITY_DEFAULT, _LEGACY_PRIORITY_DEFAULTS
+    if int(getattr(plan, "priority", 0) or 0) in _LEGACY_PRIORITY_DEFAULTS:
+        changes["priority"] = PRIORITY_DEFAULT
+    return replace(plan, **changes) if changes else plan
+
+
 def _validate(plan: AccessPlan) -> None:
     if plan.plan_type not in PLAN_TYPES:
         raise RadiusValidationError(
             f"نوع الباقة غير معروف (المسموح: {'، '.join(PLAN_TYPES)}).")
+    if len((plan.name or "").strip()) > PLAN_NAME_MAX:
+        raise RadiusValidationError(
+            f"اسم الباقة أطول من المسموح ({PLAN_NAME_MAX} حرفًا كحدّ أقصى).")
     for field, label in _NON_NEGATIVE_PLAN_FIELDS.items():
         try:
             value = float(getattr(plan, field, 0) or 0)
@@ -220,6 +321,35 @@ def _validate(plan: AccessPlan) -> None:
             continue
         if value < 0:
             raise RadiusValidationError(f"{label} لا يمكن أن يكون سالبًا.")
+        if value > PLAN_INT_MAX:
+            raise RadiusValidationError(f"قيمة «{label}» أكبر من المسموح.")
+    for field, label in _INT_PLAN_FIELDS.items():
+        try:
+            value = int(getattr(plan, field, 0) or 0)
+        except (TypeError, ValueError, OverflowError):
+            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+        if value < 0:
+            raise RadiusValidationError(f"{label} لا يمكن أن يكون سالبًا.")
+        cap = _INT_FIELD_MAX.get(field, PLAN_INT_MAX)
+        if value > cap:
+            raise RadiusValidationError(
+                f"قيمة «{label}» أكبر من المسموح (الحدّ {cap:,}).".replace(",", "٬"))
+    from ..db.repos.plans_repo import PRIORITY_MAX, PRIORITY_MIN
+    if not PRIORITY_MIN <= int(getattr(plan, "priority", 0) or 0) <= PRIORITY_MAX:
+        # مقياسٌ واحد للويب والـAPI والتطبيق (F04 N-L10).
+        raise RadiusValidationError(
+            f"«الأولويّة» رقمٌ من {PRIORITY_MIN} إلى {PRIORITY_MAX} "
+            f"({PRIORITY_MIN} = الأعلى في القوائم والمتجر).")
+    color = str(getattr(plan, "color", "") or "").strip()
+    if color and not _COLOR_RE.match(color):
+        # كان «<script>…» يُخزَّن ويُحقن في style="background:…".
+        raise RadiusValidationError("لون الباقة يجب أن يكون رمزًا مثل ‎#2BAACC‎.")
+    for field, label in _HOUR_FIELDS.items():
+        raw = str(getattr(plan, field, "") or "").strip()
+        if raw and not _HOUR_RE.match(raw):
+            raise RadiusValidationError(
+                f"«{label}» يجب أن تكون ساعةً صحيحة بصيغة HH:MM (00:00–23:59)، "
+                f"والقيمة «{raw}» غير صالحة.")
     if plan.speed_down_kbps < 0 or plan.speed_up_kbps < 0:
         raise RadiusValidationError("السرعة لا يمكن أن تكون سالبة.")
     # 🔴 الصفرُ ليس «بلا حدّ» تلقائيًّا. ردٌّ بلا Mikrotik-Rate-Limit يجعل

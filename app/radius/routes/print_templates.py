@@ -129,10 +129,20 @@ def _int(name: str, default: int = 0) -> int:
 
 
 def _float(name: str, default: float = 0) -> float:
-    try:
-        return strict_float(request.form.get(name) or default)
-    except (TypeError, ValueError):
+    """حقل رقميّ من نموذج التصميم (ويب + التطبيق عبر ``_quick_form_payload``).
+
+    f05-L8: نصٌّ غير رقميّ («abc» في حجم الخطّ) كان يُبتلع صامتًا إلى
+    الافتراض فيُحفظ القالب 201؛ الآن 422 عربيّ كبقيّة حدود التصميم. الفارغ
+    يبقى «تلقائي» (الافتراض)."""
+    raw = request.form.get(name)
+    if raw is None or not str(raw).strip():
         return default
+    try:
+        return strict_float(raw)
+    except (TypeError, ValueError):
+        from ..services.operations import _label_ar
+        raise RadiusValidationError(
+            f"قيمة {_label_ar(name)} يجب أن تكون رقمية.") from None
 
 
 # علامة بصرية محايدة تُستخدم بدل سلاسل وهمية مثل «SAMPLE» / «CARD1234»
@@ -319,7 +329,9 @@ def _background_from_data_url() -> dict:
     mime_part, encoded = data_url.split(";base64,", 1)
     mime = mime_part.removeprefix("data:").lower()
     if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
-        return {}
+        # (fix2 F10.4) a GIF was dropped silently (saved with the preset
+        # background, 201) while /background answered 422 — same answer now.
+        raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
     try:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as exc:
@@ -676,6 +688,60 @@ def _persist_last_print_settings(settings: dict) -> None:
         pass
 
 
+# ── آخر قالبٍ استعمله **هذا** المدير (fix2 I2) ─────────────────────────
+# شاشة الطباعة السريعة (ويب + تطبيق) كانت تفتح على أحدث قالبٍ حفظه أيّ مشغّل.
+# الآن لكلّ مديرٍ ذاكرته: آخر قالبٍ حفظه/طبع به/اختاره، وإلّا القالب الافتراضيّ.
+_LAST_TEMPLATE_KEY = "print.last_template."
+
+
+def print_admin_key() -> str:
+    """Who is printing: the web admin (session) or the API caller (admin id,
+    else the token id) — the same admin gets the same memory on web and app."""
+    admin_id = getattr(g, "admin_id", None) or session.get("admin_id")
+    if admin_id:
+        return f"admin:{int(admin_id)}"
+    token_id = getattr(g, "api_token_id", None)
+    if token_id:
+        return f"token:{token_id}"
+    return "anonymous"
+
+
+def remember_last_template(template_id) -> None:
+    try:
+        tid = int(template_id or 0)
+    except (TypeError, ValueError):
+        return
+    if tid <= 0:
+        return
+    try:
+        from ..db.repos import tenants_repo
+        tenants_repo.set_setting(_tid(), _LAST_TEMPLATE_KEY + print_admin_key(), str(tid), by=0)
+    except Exception:  # noqa: BLE001 — a preference, never breaks a save
+        pass
+
+
+def last_template_id_for_admin(templates: list | None = None) -> int | None:
+    """This admin's last template if it still exists, else the tenant default."""
+    ops = get_operations_service()
+    ids = None
+    if templates is not None:
+        ids = {int(t.get("id") or 0) for t in templates}
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(_tid(), _LAST_TEMPLATE_KEY + print_admin_key(), "")
+        last = int(raw or 0)
+    except Exception:  # noqa: BLE001
+        last = 0
+    if last:
+        if ids is not None and last in ids:
+            return last
+        if ids is None:
+            from ..db.repos import operations_repo
+            if operations_repo.get_print_template(_tid(), last):
+                return last
+    return ops.get_default_print_template_id(tenant_id=_tid())
+
+
 def get_last_print_settings() -> dict:
     """آخر إعدادات تصدير محفوظة للمستأجر ({} إن لم تُحفظ بعد)."""
     try:
@@ -956,6 +1022,9 @@ def print_templates_create():
         flash("تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية.", "success")
     except RadiusError as exc:
         flash(exc.message, "error")
+        _back = _quick_error_redirect(0)
+        if _back is not None:
+            return _back
         return render_template(
             "radius/print_templates.html",
             **_page_context(form_state=payload or {}, form_error=exc.message),
@@ -974,6 +1043,7 @@ def _quick_return_redirect(template_id: int):
     الحفظ قادمًا من زر «تحميل PDF» فيبدأ التصدير فور تحميل الصفحة."""
     if (request.form.get("return_to") or "").strip() != "quick":
         return None
+    remember_last_template(template_id)
     try:
         _settings = _print_settings_from_request()
         from ..services.operations import validate_print_settings
@@ -989,6 +1059,20 @@ def _quick_return_redirect(template_id: int):
         args["batch_id"] = batch
     if (request.form.get("quick_export") or "") == "1":
         args["auto_export"] = "1"
+    if (request.form.get("quick_embed") or "") == "1":
+        args["embed"] = "1"
+    return redirect(url_for("radius.cards_print_quick", **args))
+
+
+def _quick_error_redirect(template_id: int):
+    """(fix2 N8.3) an invalid «حفظ» from the quick screen landed on the full
+    designer; it goes back to the quick screen (the flash explains why)."""
+    if (request.form.get("return_to") or "").strip() != "quick":
+        return None
+    args: dict = {"template_id": int(template_id or 0)}
+    batch = (request.form.get("quick_batch_id") or "").strip()
+    if batch:
+        args["batch_id"] = batch
     if (request.form.get("quick_embed") or "") == "1":
         args["embed"] = "1"
     return redirect(url_for("radius.cards_print_quick", **args))
@@ -1015,6 +1099,9 @@ def print_templates_update(template_id: int):
         flash("تم تحديث قالب التصميم.", "success")
     except RadiusError as exc:
         flash(exc.message, "error")
+        _back = _quick_error_redirect(int(template_id))
+        if _back is not None:
+            return _back
         return render_template(
             "radius/print_templates.html",
             **_page_context(
@@ -1079,7 +1166,27 @@ def print_templates_designer_svg():
     field directly so the SVG preview can show the bitmap without
     re-uploading the file on every keystroke.
     """
+    try:
+        return _designer_svg_response()
+    except RadiusError as exc:
+        # (fix2 N6) out-of-range values (QR 60 %, font 121, x 500 mm…) gave an
+        # HTML 500 and a silently stale preview: the page now shows this.
+        return jsonify({"ok": False, "error": {
+            "code": "validation_error", "message": exc.message}}), 422
+
+
+def _designer_svg_response():
+    from ..services.operations import _template_layout
     payload = _payload(allow_data_url_background=False)
+    # the same validation «حفظ» applies (Arabic message, no half-rendered card).
+    _template_layout(payload)
+    for key in ("username_x", "username_y", "password_x", "password_y", "qr_x", "qr_y"):
+        raw = (request.form.get(key) or "").strip()
+        if raw:
+            try:
+                strict_float(raw)
+            except (TypeError, ValueError) as exc:
+                raise RadiusValidationError("قيمة موضع العنصر يجب أن تكون رقمية.") from exc
     try:
         quick_tid = int(request.form.get("quick_template_id") or 0)
     except ValueError:
@@ -1356,6 +1463,7 @@ def print_templates_export_job_start(template_id: int):
         )
         # remembered only once the job accepted them (bad settings → 422 above)
         _persist_last_print_settings(_settings)
+        remember_last_template(template_id)
     except RadiusError as exc:
         status = 422 if isinstance(exc, RadiusValidationError) else exc.http_status
         return jsonify({"ok": False, "error": {"message": exc.message, "code": exc.code}}), status

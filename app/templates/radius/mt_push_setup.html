@@ -96,9 +96,9 @@
     <ol style="margin:0;padding-inline-start:22px;font-size:13.5px;line-height:1.9;color:var(--hub-text-soft,#1F2937)">
       <li>
         {{ _('افتح صفحة') }}
-        <a href="{{ url_for('radius.tok_list') }}"
+        {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}"
            style="font-weight:800;color:var(--hub-brand-ink,#5B4BD6);text-decoration:underline"
-           target="_blank" rel="noopener">{{ _('إدارة رموز الربط') }}</a>
+           target="_blank" rel="noopener">{% endif %}{{ _('إدارة رموز الربط') }}{% if can_submit('radius.tok_list', 'GET') %}</a>{% endif %}
         {{ _('(تفتح في تبويب جديد).') }}
       </li>
       <li>{{ _('اضغط') }} <strong>{{ _('«إنشاء رمز جديد»') }}</strong> {{ _('وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.') }}</li>
@@ -130,7 +130,7 @@
       <div class="hub-field-hint">
         {{ _('لديك حالياً') }} <strong>{{ tokens|length }}</strong> {{ _('رمز مفعّل. اسم أحدها:') }}
         <strong>{{ suggested_token_name or '—' }}</strong>.
-        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:var(--hub-brand-ink,#5B4BD6)">{{ _('إدارة الرموز ←') }}</a>
+        {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:var(--hub-brand-ink,#5B4BD6)">{% endif %}{{ _('إدارة الرموز ←') }}{% if can_submit('radius.tok_list', 'GET') %}</a>{% endif %}
       </div>
     </div>
   {% endcall %}

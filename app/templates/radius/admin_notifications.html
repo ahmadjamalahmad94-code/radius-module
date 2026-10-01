@@ -30,7 +30,7 @@
 <div class="hub-note hub-note--amber" style="margin-bottom:14px">
   <i class="fa-solid fa-triangle-exclamation"></i>
   {{ _('بوت تلجرام غير مضبوط — الأحداث تصل للجرس فقط. اضبطه من') }}
-  <a href="{{ url_for('radius.integrations_hub') }}"><b>{{ _('التكاملات والقنوات') }}</b></a>.
+  {% if can_submit('radius.integrations_hub', 'GET') %}<a href="{{ url_for('radius.integrations_hub') }}">{% endif %}<b>{{ _('التكاملات والقنوات') }}</b>{% if can_submit('radius.integrations_hub', 'GET') %}</a>{% endif %}.
 </div>
 {% endif %}
 

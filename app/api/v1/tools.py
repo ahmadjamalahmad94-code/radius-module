@@ -21,6 +21,14 @@ from ..responses import fail, ok
 
 
 def register(bp: Blueprint) -> None:
+    # The app's «الأدوات» screen: which tools THIS admin may run (the guard's
+    # own decision per tool), so owner-only tools are hidden, not 403'd.
+    bp.add_url_rule(
+        "/tools",
+        "tools_catalog",
+        require_api_token(tools_catalog),
+        methods=["GET"],
+    )
     bp.add_url_rule(
         "/tools/set-speeds",
         "tools_set_speeds",
@@ -63,6 +71,25 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+def tools_catalog():
+    """``GET /api/v1/tools`` → ``{"items": [{key, label, method, path, allowed,
+    owner_only}], "allowed": {key: bool}}``. Unbound integration credentials
+    and the owner / co-owner get every tool."""
+    from ..access_control import admin_id, token_admin
+    from ..permission_guard import TOOLS, owner_only_tools, tool_permissions
+    if admin_id() <= 0:
+        allowed = {k: True for k in TOOLS}
+    else:
+        admin = token_admin()
+        allowed = (tool_permissions(admin, tenant_id=_tid()) if admin is not None
+                   else {k: False for k in TOOLS})
+    owner_only = set(owner_only_tools())
+    items = [{"key": k, "label": label, "method": method, "path": path,
+              "allowed": bool(allowed.get(k)), "owner_only": k in owner_only}
+             for k, (_name, method, path, label) in TOOLS.items()]
+    return ok({"items": items, "allowed": allowed})
+
+
 def _actor() -> str:
     token_id = getattr(g, "api_token_id", None)
     admin_id = getattr(g, "admin_id", None)
@@ -93,6 +120,14 @@ def _bool_value(value: Any) -> bool:
     return bool(value)
 
 
+def _strict_flag(data: dict, key: str) -> bool:
+    """A preview / dry-run switch: real booleans and the usual spellings;
+    anything else raises (422) — an unknown value must never mean «apply»."""
+    from ...radius.core.strict_input import parse_strict_bool
+    label = "المعاينة" if key == "preview" else "التجربة بدون تنفيذ (dry_run)"
+    return parse_strict_bool(data.get(key), label=label)
+
+
 def set_speeds():
     data = _payload()
     plan_ids = data.get("plan_ids") or []
@@ -116,7 +151,11 @@ def set_speeds():
 
     # `preview` is the name the app sends for «معاينة»; before
     # this fix only `dry_run` was honoured, so `preview: true` APPLIED the change.
-    dry_run = _bool_value(data.get("dry_run", False)) or _bool_value(data.get("preview", False))
+    # Strict: an unrecognised value («maybe») is a 422, never a silent «apply».
+    try:
+        dry_run = _strict_flag(data, "dry_run") or _strict_flag(data, "preview")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
     changes: list[dict[str, Any]] = []
     plans_to_write = []
     tenant_id = _tid()
@@ -194,7 +233,11 @@ def general_adjustments():
             minutes=data.get("minutes"), new_password=data.get("new_password"))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
-    if _bool_value(data.get("dry_run", False)):
+    try:
+        dry_run = _strict_flag(data, "dry_run") or _strict_flag(data, "preview")
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    if dry_run:
         return ok(ga.plan(_tid(), usernames, params))
     return ok(ga.run(usernames, params, actor=_actor()))
 

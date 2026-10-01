@@ -56,7 +56,7 @@
   "بوت واتساب",
   subtitle="فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.",
   icon="robot",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("تحتاج مساعدة؟ افتح الدليل") ~ '</a>'|safe,
+  actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("تحتاج مساعدة؟ افتح الدليل") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
     {'label': 'حالة البوت', 'value': 'مفعّل' if config.enabled else 'متوقف', 'icon': 'power-off', 'variant': 'green' if config.enabled else 'grey', 'sub': 'الرد التلقائي'},
     {'label': 'قناة واتساب', 'value': 'مهيأة' if wa_ok else 'غير مكتملة', 'icon': 'whatsapp', 'variant': 'green' if wa_ok else 'amber', 'sub': 'وسيلة الإرسال'},
@@ -81,7 +81,7 @@
   note="شرح كامل مصوّر خطوة بخطوة في «الدليل المصوّر» من الأعلى."
 )) %}
 
-<form method="post" action="{{ url_for('radius.communications_bot') }}" data-testid="cbot-form">
+<form method="post" action="{{ url_for('radius.communications_bot') }}" data-testid="cbot-form">{% if not can_submit('radius.communications_bot') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
 
   {# ── 1) Enable toggle ── #}
@@ -103,7 +103,7 @@
         <div>
           قناة واتساب غير مكتملة الضبط بعد. لكي يتمكّن البوت من إرسال الردود،
           اضبط رابط الإرسال وفعّل القناة من
-          <a href="{{ url_for('radius.communications_channels') }}">{{ _('قنوات الإرسال') }}</a>.
+          {% if can_submit('radius.communications_channels', 'GET') %}<a href="{{ url_for('radius.communications_channels') }}">{% endif %}{{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}.
         </div>
       </div>
     {% endif %}
@@ -186,7 +186,7 @@
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px">
     {{ hub.btn("حفظ إعدادات البوت", icon="floppy-disk", variant="primary", type="submit") }}
   </div>
-</form>
+{% if not can_submit('radius.communications_bot') %}</fieldset>{% endif %}</form>
 
 {% endcall %}
 

@@ -116,7 +116,7 @@
 {% call hub.worklayout(aside_html=_aside) %}
 {# عقد الإرسال كما هو: إنشاء → tenants_create، تعديل → tenants_update #}
 <form id="tn-form" method="post"
-      action="{{ url_for('radius.tenants_create') if is_new else url_for('radius.tenants_update', tenant_id=tenant.id) }}">
+      action="{{ url_for('radius.tenants_create') if is_new else url_for('radius.tenants_update', tenant_id=tenant.id) }}">{% if not can_submit(('radius.tenants_create' if is_new else 'radius.tenants_update')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية: المعرّف والاسم وبيانات التواصل ── #}
   {% call hub.section("هوية المستأجر", icon="id-card", meta="من نحن؟") %}
@@ -255,7 +255,7 @@
           {{ hint("رمز عملة المستأجر بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.") }}
         </div>
         <input class="hub-input mono" type="text" name="currency" dir="ltr"
-               value="{{ tenant.currency or cfg.currency }}" placeholder="JOD">
+               value="{{ tenant.currency or cfg.currency }}" placeholder="ILS">
       </div>
 
       <div class="hub-field">
@@ -274,10 +274,10 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('المنطقة الزمنية') }}</label>
-          {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Amman أو Asia/Hebron. تُحسب عليها التقارير والمواعيد.") }}
+          {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Gaza (غزة) أو Asia/Hebron (الخليل). تُحسب عليها التقارير والمواعيد.") }}
         </div>
         <input class="hub-input mono" type="text" name="timezone" dir="ltr"
-               value="{{ tenant.timezone or 'Asia/Amman' }}" placeholder="Asia/Amman">
+               value="{{ tenant.timezone or 'Asia/Gaza' }}" placeholder="Asia/Gaza">
       </div>
 
       <div class="hub-field">
@@ -302,11 +302,11 @@
 
   {# أزرار الحفظ السفلية — نفس النموذج وزرّا الهيرو يكفيان معظم الحالات #}
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.tenants_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ _save_label }}
     </button>
   </div>
-</form>
+{% if not can_submit(('radius.tenants_create' if is_new else 'radius.tenants_update')) %}</fieldset>{% endif %}</form>
 {% endcall %}{# /worklayout #}
 {% endblock %}

@@ -53,6 +53,94 @@ def register(bp: Blueprint) -> None:
                     require_api_token(admin_logout), methods=["POST"])
 
 
+def _is_super_role(a) -> bool:
+    try:
+        return bool(a.role_id and admins_repo.role_is_super(admins_repo.get_role(int(a.role_id))))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _effective_permissions(admin) -> list:
+    """RBAC keys the app should honour: ALL for owner/co-owner (they bypass RBAC),
+    else the role's keys (the «مدير عام» role = all non-owner keys)."""
+    from ..radius.core.constants import ALL_PERMISSIONS
+    if admins_repo.is_primary_owner(admin.id):
+        return list(ALL_PERMISSIONS)
+    return list(admins_repo.admin_permissions(admin))
+
+
+def _grants_summary(admin, tenant_id: int) -> dict:
+    """App contract (permmodel): effective fine-grained grants so the app hides
+    what the server would refuse — actions (ACTION_REGISTRY key → bool),
+    section states (open/locked/hidden) and «عرض كل المشتركين»."""
+    owner = bool(admins_repo.is_primary_owner(admin.id))
+    out = {"actions": {}, "sections": {}, "view_all_subscribers": owner}
+    try:
+        from ..radius.services import manager_grants as _mg
+        from ..radius.services.subscriber_scope import can_view_all_subscribers
+        for key in _mg.ACTION_REGISTRY:
+            out["actions"][key] = True if owner else bool(
+                _mg.action_permitted(admin.id, key, tenant_id=tenant_id))
+        perms = _effective_permissions(admin)
+        for sec in _mg.MANAGER_SECTION_REGISTRY:
+            if owner:
+                out["sections"][sec] = "open"
+            elif _mg.effective_section_hidden(admin.id, sec, tenant_id=tenant_id, perms=perms):
+                out["sections"][sec] = "hidden"
+            else:
+                out["sections"][sec] = _mg.section_state(admin.id, sec, tenant_id=tenant_id)
+        out["view_all_subscribers"] = owner or bool(
+            can_view_all_subscribers(admin.id, tenant_id=tenant_id))
+    except Exception:  # noqa: BLE001 — never break login/me over the summary
+        pass
+    # fix3 (F02 L1): per-field grants so the app renders locked inputs read-only
+    # and never posts them. entity → {controlled, editable[], locked[],
+    # locked_attrs[]}; ``controlled: false`` = every field editable.
+    fields: dict = {}
+    try:
+        from ..radius.services import manager_grants as _mg
+        for entity, defs in _mg.FIELD_REGISTRY.items():
+            granted = None if owner else _mg.field_grants(admin.id, entity, tenant_id=tenant_id)
+            keys = [d["key"] for d in defs]
+            if granted is None:
+                fields[entity] = {"controlled": False, "editable": keys, "locked": [],
+                                  "locked_attrs": []}
+            else:
+                locked = [k for k in keys if k not in granted]
+                fields[entity] = {
+                    "controlled": True,
+                    "editable": [k for k in keys if k in granted],
+                    "locked": locked,
+                    "locked_attrs": sorted({a for d in defs if d["key"] in locked
+                                            for a in d["attrs"]}),
+                }
+    except Exception:  # noqa: BLE001
+        fields = {}
+    out["fields"] = fields
+    # «الأدوات»: tool key → may this admin run it (the API guard's own decision;
+    # set-speeds / test-auth / maintenance / general adjustments are owner-only).
+    try:
+        from .permission_guard import tool_permissions
+        out["tools"] = tool_permissions(admin, tenant_id=tenant_id, owner=owner)
+    except Exception:  # noqa: BLE001
+        out["tools"] = {}
+    return out
+
+
+def _distributor_of(a) -> Optional[dict]:
+    """The distributor this admin account IS (``distributors.login_admin_id``),
+    or None. Owner / co-owner accounts are never treated as a distributor login
+    (same rule as ``access_control.current_distributor``)."""
+    try:
+        if admins_repo.is_primary_owner(a.id):
+            return None
+        from ..radius.db.repos import operations_repo
+        tid = int(getattr(g, "tenant_id", None) or 1)
+        return operations_repo.get_distributor_by_admin(tid, int(a.id))
+    except Exception:  # noqa: BLE001 — never break login/me over this
+        return None
+
+
 def _serialize_admin(a) -> dict:
     return {
         "id": a.id,
@@ -61,7 +149,17 @@ def _serialize_admin(a) -> dict:
         "email": a.email,
         "mobile": a.mobile,
         "role_id": a.role_id,
-        "is_super_admin": a.is_super_admin,
+        # «مدير عام / سوبر يوزر» = دور super_admin (كل الصلاحيات غير المقصورة
+        # على المالك) — من الدور الفعليّ.
+        "is_super_admin": bool(_is_super_role(a)),
+        # «شريك/مالك»: كل صلاحيات المالك.
+        "is_co_owner": bool(getattr(a, "is_co_owner", False)),
+        # مالكٌ (أصليّ أو شريك) = يتجاوز كل الصلاحيات.
+        "is_owner": bool(admins_repo.is_primary_owner(a.id)),
+        "is_original_owner": bool(admins_repo.is_original_owner(a.id)),
+        # A distributor's own app login (D11 ``login_admin_id``): the app shows
+        # the distributor screens and scopes to its assigned batches.
+        **_distributor_fields(a),
         "enabled": a.enabled,
         "last_login_at": a.last_login_at.isoformat() + "Z" if a.last_login_at else None,
         "last_login_ip": a.last_login_ip,
@@ -70,11 +168,20 @@ def _serialize_admin(a) -> dict:
     }
 
 
+def _distributor_fields(a) -> dict:
+    dist = _distributor_of(a)
+    return {
+        "is_distributor": dist is not None,
+        "distributor_id": int(dist["id"]) if dist else None,
+        "distributor_name": (dist.get("name") or None) if dist else None,
+    }
+
+
 def _pick_tenant(admin) -> Optional[int]:
     """Same precedence as the web login: super_admin → all; else memberships;
     else default tenant bootstrap on first login."""
     store = TenantsStore.instance()
-    if admin.is_super_admin:
+    if admin.is_super_admin or admins_repo.is_primary_owner(admin.id):
         tenants = store.list()
     else:
         tenants = store.tenants_for_admin(admin.id)
@@ -127,7 +234,7 @@ def admin_login():
         expires_at=expires_at,
     )
 
-    perms = list(admins_repo.admin_permissions(admin))
+    perms = _effective_permissions(admin)
 
     return ok({
         "token": plain,
@@ -135,6 +242,7 @@ def admin_login():
         "admin": _serialize_admin(admin),
         "tenant_id": tenant_id,
         "permissions": perms,
+        "grants": _grants_summary(admin, tenant_id),
         "expires_at": record.get("expires_at"),
     })
 
@@ -147,7 +255,7 @@ def admin_me():
         return fail("unauthorized",
                     "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
-    perms = list(admins_repo.admin_permissions(admin))
+    perms = _effective_permissions(admin)
     from ..radius.core.system_config import effective_system_settings
     try:
         system = effective_system_settings()
@@ -157,6 +265,7 @@ def admin_me():
         "admin": _serialize_admin(admin),
         "tenant_id": getattr(g, "tenant_id", 1),
         "permissions": perms,
+        "grants": _grants_summary(admin, int(getattr(g, "tenant_id", 1) or 1)),
         # عملة النظام الفعليّة + المنطقة الزمنية (نفس default_currency()).
         "system": system,
     })
@@ -207,6 +316,14 @@ def admin_password():
         return fail(
             "validation_error",
             "تأكيد كلمة المرور غير مطابق.",
+            status=422,
+        )
+    if new_password == current_password:
+        # re-test R08 NEW-3: a "change" to the same password was accepted
+        # (and revoked the other sessions for nothing).
+        return fail(
+            "validation_error",
+            "كلمة المرور الجديدة يجب أن تختلف عن الحالية.",
             status=422,
         )
 

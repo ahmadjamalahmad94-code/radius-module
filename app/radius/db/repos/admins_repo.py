@@ -120,6 +120,8 @@ def get_role_by_name(name: str, *, include_deleted: bool = False) -> Optional[Ro
 
 def update_role_permissions(role_id: int, perms: tuple[str, ...]) -> Optional[Role]:
     with transaction() as conn:
+        conn.execute("UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                     "WHERE role_id = ?", (role_id,))  # D05: يسري فورًا
         conn.execute("UPDATE roles SET permissions = ? WHERE id = ?",
                      (json_dump(list(perms)), role_id))
     return get_role(role_id)
@@ -138,6 +140,8 @@ def get_role_granular(role_id: int) -> dict:
 def set_role_granular(role_id: int, blob: dict) -> Optional[Role]:
     """يَكتب أساس الأفعال/الرؤية الدقيق للدور (JSON)."""
     with transaction() as conn:
+        conn.execute("UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                     "WHERE role_id = ?", (int(role_id),))  # D05
         conn.execute("UPDATE roles SET granular_grants_json = ? WHERE id = ?",
                      (json_dump(blob or {}), int(role_id)))
     return get_role(int(role_id))
@@ -170,6 +174,8 @@ def _row_to_admin(row) -> Admin:
         # إلزام تغيير كلمة المرور عند أول دخول (migration 143) — افتراضي 0 للقطات
         # ما قبل 143، فلا يُلزَم أحدٌ قائم بالتغيير.
         must_change_password=bool(_g(row, "must_change_password", 0)),
+        # «شريك/مالك» محلّيّ (migration 181) — 0 للقطات ما قبلها.
+        is_co_owner=bool(_g(row, "is_co_owner", 0)),
         # Per-manager credit caps (migration 142) — safe defaults for pre-142 snapshots.
         debt_cap_enabled=bool(_g(row, "debt_cap_enabled", 0)),
         debt_cap_minor=int(_g(row, "debt_cap_minor", 0) or 0),
@@ -306,7 +312,23 @@ def _admin_matches_owner_keys(admin, keys: set[str]) -> bool:
 
 
 def admin_is_owner(admin) -> bool:
-    """Is this admin an OWNER (the unrestricted principal)? — object form.
+    """Is this admin OWNER-LIKE (the unrestricted principal)? — object form.
+
+    Owner-like = an ORIGINAL owner (``admin_is_original_owner``) **or** a local
+    co-owner («شريك/مالك», ``admins.is_co_owner``, migration 181). A co-owner
+    gets everything the owner gets (RBAC bypass + the owner-only ``__super__``
+    actions) — see ``app/radius/auth/owner.py``. Protection of the ORIGINAL
+    owner (no co-owner may demote/delete it) keys off
+    ``admin_is_original_owner`` instead."""
+    if admin is None:
+        return False
+    if bool(getattr(admin, "is_co_owner", False)) and getattr(admin, "deleted_at", None) is None:
+        return True
+    return admin_is_original_owner(admin)
+
+
+def admin_is_original_owner(admin) -> bool:
+    """Is this admin an ORIGINAL OWNER? — object form (co-owners excluded).
 
     Set-aware: if a designation has synced, owner = membership in it (by
     username/email; MULTIPLE owners qualify). Otherwise = the legacy min-id
@@ -341,7 +363,44 @@ def is_primary_owner(admin_id: int | None) -> bool:
     القابل للإسناد وأيّ تجاوز يَضبط العلم لحساب غير-مالك. كلاهما يَمرّ عبر فحوص
     الصلاحيات العاديّة ويَخضع للسقوف كأيّ مدير.
 
-    يرجع False بأمان عند أيّ خطأ استعلام (لا يَمنح التجاوز افتراضيًّا)."""
+    يرجع False بأمان عند أيّ خطأ استعلام (لا يَمنح التجاوز افتراضيًّا).
+
+    الشريك المحلّيّ («شريك/مالك»، ``is_co_owner``) مالكٌ هنا أيضًا — يأخذ كلّ ما
+    يأخذه المالك. لحماية المالك الأصليّ استخدم ``is_original_owner``."""
+    if not admin_id:
+        return False
+    if is_co_owner(admin_id):
+        return True
+    return is_original_owner(admin_id)
+
+
+def is_co_owner(admin_id: int | None) -> bool:
+    """هل الحساب شريكٌ محلّيّ («شريك/مالك»)؟ حسابٌ محذوف/معطَّل ليس شريكًا.
+    False بأمان عند أيّ خطأ (عمود غير موجود قبل migration 181)."""
+    if not admin_id:
+        return False
+    try:
+        row = db().execute(
+            "SELECT COALESCE(is_co_owner, 0) AS c FROM admins "
+            "WHERE id = ? AND deleted_at IS NULL AND COALESCE(enabled, 1) = 1",
+            (int(admin_id),)).fetchone()
+        return bool(row and int(row["c"] or 0))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def set_co_owner(admin_id: int, value: bool) -> None:
+    """يضبط علَم الشريك ويزيد ختم الصلاحيات (يسري فورًا على جلساته)."""
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE admins SET is_co_owner = ?, "
+            "authz_epoch = COALESCE(authz_epoch, 0) + 1, updated_at = ? WHERE id = ?",
+            (1 if value else 0, now_iso(), int(admin_id)))
+
+
+def is_original_owner(admin_id: int | None) -> bool:
+    """المالك الأصليّ (بلا الشركاء): مجموعة مالكي لوحة التراخيص، أو أصغر معرّف
+    إن لم تُزامَن مجموعة. هذا الحساب محميّ: لا يَخفضه ولا يحذفه أحدٌ غيره."""
     if not admin_id:
         return False
     try:
@@ -388,6 +447,36 @@ def bump_session_epoch(admin_id: int) -> int:
     return session_epoch(int(admin_id)) or 0
 
 
+def authz_epoch(admin_id: int) -> int:
+    """ختم الصلاحيات الحاليّ (migration 181). 0 عند غياب العمود/الحساب."""
+    try:
+        row = db().execute(
+            "SELECT COALESCE(authz_epoch, 0) AS ep FROM admins WHERE id = ?",
+            (int(admin_id),)).fetchone()
+        return int(row["ep"] or 0) if row else 0
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def bump_authz_epoch(*, admin_ids=None, role_id: Optional[int] = None) -> None:
+    """يزيد ختم الصلاحيات ⇒ الجلسات المفتوحة تُعيد قراءة الدور/علَم المالك في
+    طلبها التالي (بلا تسجيل خروج). يُستدعى عند حفظ الدور أو حذفه، تغيير دور
+    المدير، حفظ منحه، ومنح/سحب الشراكة. best-effort: لا يُفشل الحفظ."""
+    try:
+        with transaction() as conn:
+            if role_id is not None:
+                conn.execute(
+                    "UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                    "WHERE role_id = ?", (int(role_id),))
+            for aid in (admin_ids or ()):
+                if aid:
+                    conn.execute(
+                        "UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                        "WHERE id = ?", (int(aid),))
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin]:
     sql = "SELECT * FROM admins WHERE id = ?"
     if not include_deleted:
@@ -421,10 +510,11 @@ def create_admin(*, username: str, password: str, full_name: str = "",
     if get_by_username(username):
         raise ValueError(f"admin {username!r} already exists")
     if role_id is None:
-        # افتراضٌ برمجيّ قديم (بذر/اختبارات). مداخل المستخدم (API /admins، نموذج
-        # الويب، المدير الفرعيّ) تُمرّر دورًا صريحًا — least_privileged_role_id().
-        r = get_role_by_name(ROLE_SUPER_ADMIN)
-        role_id = r.id if r else None
+        # مديرٌ بلا دورٍ صريح = **الأقلّ صلاحيةً** (viewer) — أبدًا لا «مدير عام».
+        # كان الافتراض super_admin (= كل الصلاحيات غير المالكيّة بعد fix wave 2)
+        # فأيّ مسارٍ ينسى الدور يُنشئ مديرًا بكامل القوّة. من أراد «مدير عام»
+        # يُمرّر دوره صراحةً (البذر/المالك الأوّل/API is_super_admin).
+        role_id = least_privileged_role_id()
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute("""
@@ -504,6 +594,9 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
     # نزيد الختم داخل نفس التحديث فلا تبقى نافذة تُقبل فيها جلسة قديمة.
     if "password_hash" in changes:
         sets.append("session_epoch = COALESCE(session_epoch, 0) + 1")
+    # D05: تغيير الدور/العلَم/التفعيل يُعيد قراءة صلاحيات الجلسات المفتوحة فورًا.
+    if any(k in changes for k in ("role_id", "is_super_admin", "enabled")):
+        sets.append("authz_epoch = COALESCE(authz_epoch, 0) + 1")
     sets.append("updated_at = ?")
     vals.append(now_iso())
     vals.append(admin_id)
@@ -643,7 +736,7 @@ def apply_managed_admin_directive(
             return "unchanged"
         if _enabled_admin_count() <= 1:
             return "skipped_last_admin"     # never strand the panel adminless
-        if admin_is_owner(existing):
+        if admin_is_original_owner(existing):
             return "skipped_owner"          # designated owner is protected
         with transaction() as conn:
             conn.execute("UPDATE admins SET enabled = 0, updated_at = ? WHERE id = ?",
@@ -735,8 +828,11 @@ def upsert_license_admin_user(
     if scheme != "werkzeug" or not _looks_like_werkzeug_hash(password_hash):
         raise ValueError("unsupported password_hash_scheme")
     role_name = _role_name_for_customer_role(role_key)
-    role = get_role_by_name(role_name) or get_role_by_name(ROLE_SUPER_ADMIN)
     is_owner = str(role_key or "").strip().lower() == "owner"
+    # دورٌ مفقود محلّيًّا: المالك → «مدير عام»، وغيره → الأقلّ صلاحيةً (لا
+    # «مدير عام» ضمنيّ لحساب «دعم/فوترة» من لوحة الترخيص).
+    role = get_role_by_name(role_name) or get_role_by_name(
+        ROLE_SUPER_ADMIN if is_owner else ROLE_VIEWER)
     now = now_iso()
     existing = _get_by_external_subject(subject) or get_by_username(username, include_deleted=True)
     with transaction() as conn:
@@ -935,14 +1031,38 @@ def update_role(role_id: int, **changes) -> Optional[Role]:
     vals.append(role_id)
     with transaction() as conn:
         conn.execute(f"UPDATE roles SET {', '.join(sets)} WHERE id = ?", vals)
+        conn.execute("UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                     "WHERE role_id = ?", (role_id,))  # D05
     return get_role(role_id)
 
 
 def admin_permissions(admin: Admin) -> tuple[str, ...]:
+    """صلاحيات RBAC للحساب. دور النظام ``super_admin`` («مدير عام / سوبر يوزر»)
+    = **كل** الصلاحيات غير المقصورة على المالك، مهما كانت القائمة المخزّنة
+    (مفتاحٌ يُضاف لاحقًا للكتالوج يصله تلقائيًّا). المالك/الشريك يتجاوز RBAC
+    أصلًا في الحُرّاس، فلا فرق له هنا."""
     if not admin.role_id:
         return ()
     r = get_role(admin.role_id)
-    return r.permissions if r else ()
+    if r is None:
+        return ()
+    if role_is_super(r):
+        from ...core.constants import ALL_PERMISSIONS
+        return tuple(ALL_PERMISSIONS)
+    return r.permissions
+
+
+def role_is_super(role) -> bool:
+    """هل الدور هو «مدير عام» (super_admin) النظاميّ؟"""
+    return bool(role is not None and getattr(role, "name", "") == ROLE_SUPER_ADMIN)
+
+
+def role_usage_count(role_id: int) -> int:
+    """عدد المدراء (غير المحذوفين) المُسنَد إليهم الدور — لمنع حذف دورٍ مستخدَم."""
+    row = db().execute(
+        "SELECT COUNT(*) AS c FROM admins WHERE role_id = ? AND deleted_at IS NULL",
+        (int(role_id),)).fetchone()
+    return int(row["c"] or 0) if row else 0
 
 
 def archive_role(role_id: int, *, actor: str = "",
@@ -953,6 +1073,8 @@ def archive_role(role_id: int, *, actor: str = "",
             SET deleted_at = ?, deleted_by = ?, delete_reason = ?
             WHERE id = ? AND is_system = 0 AND deleted_at IS NULL
         """, (now_iso(), actor or "system", (reason or "")[:300], role_id))
+        conn.execute("UPDATE admins SET authz_epoch = COALESCE(authz_epoch, 0) + 1 "
+                     "WHERE role_id = ?", (role_id,))  # D05
         return cur.rowcount > 0
 
 

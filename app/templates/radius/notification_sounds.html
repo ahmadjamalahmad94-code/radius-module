@@ -147,7 +147,7 @@
         {% if global_sound %}
           <span class="snd-badge snd-badge--{{ global_sound.origin }}">
             {{ _('محلّيّ') if global_sound.origin == 'local' else _('مركزيّ') }}</span>
-          {{ global_sound.filename or _('تسجيل') }}
+          <span title="{{ global_sound.filename or '' }}">{{ _('صوتٌ مخصّص') if global_sound.filename else _('تسجيل') }}</span>
         {% else %}
           <span class="snd-badge snd-badge--none">{{ _('النغمة الافتراضيّة') }}</span>
         {% endif %}
@@ -171,7 +171,7 @@
         {% if ev.sound %}
           <span class="snd-badge snd-badge--{{ ev.sound.origin }}">
             {{ _('محلّيّ') if ev.sound.origin == 'local' else _('مركزيّ') }}</span>
-          {{ ev.sound.filename or _('تسجيل') }}
+          <span title="{{ ev.sound.filename or '' }}">{{ _('صوتٌ مخصّص') if ev.sound.filename else _('تسجيل') }}</span>
         {% else %}
           <span class="snd-badge snd-badge--none">{{ _('يتبع الصوت العامّ') }}</span>
         {% endif %}

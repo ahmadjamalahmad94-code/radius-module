@@ -109,10 +109,10 @@
               </td>
             {% endfor %}
             <td>
-              <a class="hub-btn hub-btn--primary hub-btn--sm"
+              {% if can_submit('radius.npc_router_landing', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm"
                  href="{{ url_for('radius.npc_router_landing', nas_id=r.id) }}">
                 <i class="fa-solid fa-shield-halved"></i> {{ _('إدارة السياسات') }}
-              </a>
+              </a>{% endif %}
             </td>
           </tr>
           {% endfor %}

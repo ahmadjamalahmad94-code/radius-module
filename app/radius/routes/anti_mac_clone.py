@@ -13,6 +13,7 @@
 لا تكتب في DB سوى عبر الخدمة (set_settings / repo) — للتدقيق الموحَّد.
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (Blueprint, flash, g, jsonify, redirect, render_template,
                    request, session, url_for)
@@ -142,7 +143,7 @@ def save_settings():
                           target_type="settings",
                           target_id=",".join(changed),
                           payload={"changed": changed})
-        flash(f"تم حفظ {len(changed)} إعدادًا لميزة «منع استنساخ MAC».", "success")
+        flash(f"تم حفظ {ar_count(len(changed), 'setting')} لميزة «منع استنساخ MAC».", "success")
     else:
         flash("لا تغييرات.", "info")
     return redirect(url_for("radius.anti_mac_clone_page"))

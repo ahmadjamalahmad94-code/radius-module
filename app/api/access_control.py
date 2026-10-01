@@ -48,26 +48,56 @@ def token_admin():
 
 
 def is_owner_or_super() -> bool:
-    """Owner-level principal: an unbound master credential, the primary
-    owner, or an admin flagged ``is_super_admin`` (same predicate as the
-    admins/roles management gate in ``v1/admins.py``)."""
+    """Unscoped visibility: an unbound master credential, an owner-like admin
+    (original owner or co-owner — ``auth/owner.is_owner_like``), or the
+    «مدير عام» role (``super_admin`` = all non-owner permissions, incl. «رؤية كل
+    المشتركين»). The raw ``is_super_admin`` column alone no longer counts
+    (permmodel D12/D13: a flag set on a limited role used to unlock everything)."""
     aid = admin_id()
     if aid <= 0:
         return True
     try:
-        from ..radius.db.repos import admins_repo
-        if admins_repo.is_primary_owner(aid):
+        from ..radius.auth.owner import is_owner_like
+        if is_owner_like(aid):
             return True
     except Exception:  # noqa: BLE001
         pass
     admin = token_admin()
-    return bool(admin is not None and getattr(admin, "is_super_admin", False))
+    if admin is None or not getattr(admin, "role_id", None):
+        return False
+    try:
+        from ..radius.db.repos import admins_repo
+        return admins_repo.role_is_super(admins_repo.get_role(int(admin.role_id)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def is_owner_level() -> bool:
+    """Owner-level principal (NOT visibility): an unbound master credential, or
+    the owner / co-owner behind the token — the web owner predicate
+    (``radius.auth.owner.is_owner_like``). Neither the bare ``is_super_admin``
+    flag nor the «مدير عام» role is owner-level (p01/D13). Used where an
+    action reaches OTHER admins' assets (e.g. every API token)."""
+    aid = admin_id()
+    if aid <= 0:
+        return True
+    try:
+        from ..radius.auth.owner import is_owner_like
+        return bool(is_owner_like(aid))
+    except Exception:  # noqa: BLE001 — never grant on an unexpected error
+        return False
 
 
 def is_full_access() -> bool:
-    """Full (unscoped) visibility — owner-level principals only. The token's
-    scope list is NOT trusted for a bound principal: an app login always
-    carries ``admin:full``, so the admin behind it decides."""
+    """Full (unscoped) visibility: owner-level principals, or the «مدير عام»
+    role — unless the admin behind the token IS a distributor login, which is
+    always scoped to its assigned batches. The token's scope list is NOT
+    trusted for a bound principal: an app login always carries
+    ``admin:full``, so the admin behind it decides."""
+    if is_owner_level():
+        return True
+    if current_distributor():
+        return False
     return is_owner_or_super()
 
 
@@ -117,20 +147,37 @@ def web_permission_denial(endpoint: str, method: str = "POST", *,
                               record_activity=record_activity)
 
 
+def can_view_card_passwords() -> bool:
+    """May the credential read card passwords? Owner / co-owner / unbound
+    credentials, or an admin holding ``scope.view_passwords`` or
+    ``cards.print`` — the same rule as the web batch-cards page."""
+    if token_bypasses_rbac():
+        return True
+    perms = set(_token_identity()[1])
+    return bool(perms & {"scope.view_passwords", "cards.print"})
+
+
 def forbidden_response(endpoint: str, status: int = 403):
     """Arabic JSON error for a denied web-parity permission check."""
     details: dict[str, Any] = {"web_endpoint": endpoint}
+    message = _FORBIDDEN_AR
     try:
-        from ..radius.routes.blueprint import _PERM_GUARDED
-        perm = _PERM_GUARDED.get(endpoint)
+        # D24: name what ACTUALLY denied (section lock, action gate, bulk.ops…)
+        # rather than the table key, which the admin may well hold.
+        info = getattr(g, "_rbac_denial", None) or {}
+        from ..radius.routes.blueprint import _PERM_GUARDED, denial_message
+        perm = info.get("permission") or (None if info.get("reason") else _PERM_GUARDED.get(endpoint))
         if perm:
             details["permission"] = perm
+        if info.get("reason"):
+            details["reason"] = info["reason"]
+            message = denial_message() or message
     except Exception:  # noqa: BLE001
         pass
     if status == 429:
         return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
                     status=429, details=details)
-    return fail("forbidden", _FORBIDDEN_AR, status=403, details=details)
+    return fail("forbidden", message, status=403, details=details)
 
 
 def require_web_permission(endpoint: str, method: str = "POST"):
@@ -143,7 +190,10 @@ def require_web_permission(endpoint: str, method: str = "POST"):
 
 
 def current_distributor() -> dict | None:
-    if is_full_access():
+    # Owner / co-owner / unbound credentials are never a distributor login;
+    # anyone else (even the «مدير عام» role) whose account IS a distributor
+    # (``distributors.login_admin_id``) is scoped to that distributor.
+    if is_owner_level():
         return None
     try:
         from ..radius.db.repos import operations_repo
@@ -161,30 +211,43 @@ def distributor_batch_ids() -> set[int]:
 
 
 def batch_in_scope(batch_id: int) -> bool:
-    dist = current_distributor()
-    if not dist:
+    """fix3 (F01 F10): «رؤية كل حِزم البطاقات» — the same predicate as the web
+    (``services/card_batch_scope``): owner-level / view-all → any batch; else
+    the manager's own ∪ his distributors' (a distributor login: its own).
+    Used to scope only distributor logins, so every manager read every batch."""
+    if is_owner_level():
         return True
-    from ..radius.db.repos import operations_repo
-    return operations_repo.batch_assigned_to_distributor(
-        tenant_id(), batch_id, int(dist["id"]))
+    from ..radius.services.card_batch_scope import batch_accessible
+    return batch_accessible(batch_id, admin_id(), tenant_id=tenant_id())
 
 
 def subscriber_in_scope(username: str = "", subscriber_id: int | None = None) -> bool:
-    dist = current_distributor()
-    if not dist:
+    """D09 — the SAME predicate as the web panel (``services/subscriber_scope``):
+    owner/co-owner or «عرض كل المشتركين» → any; else own subscribers ∪ those of
+    the manager's distributors ∪ (a distributor login) its assigned batches."""
+    if is_full_access():
         return True
-    from ..radius.db.repos import operations_repo
-    return operations_repo.subscriber_in_distributor_scope(
-        tenant_id(),
-        int(dist["id"]),
-        username=username,
-        subscriber_id=subscriber_id,
-    )
+    # fix3: a distributor login uses the SAME predicate (its assigned batches ∪
+    # the subscribers it created itself) — it used to see only batch rows, so
+    # a subscriber it had just created vanished (F07 H1).
+    from ..radius.services.subscriber_scope import subscriber_accessible
+    return subscriber_accessible(admin_id(), username=username,
+                                 subscriber_id=subscriber_id, tenant_id=tenant_id())
+
+
+def subscriber_scope_admin_id() -> int | None:
+    """Owner-scope for list queries (None = sees all). Distributor logins go
+    through the same predicate (their assigned batches ∪ their own)."""
+    if is_full_access():
+        return None
+    from ..radius.services.subscriber_scope import scope_admin_id
+    return scope_admin_id(admin_id(), tenant_id=tenant_id())
 
 
 def deny_out_of_scope():
     return fail(
         "forbidden",
-        "هذا التوكن لا يملك صلاحية الوصول إلى هذه البيانات.",
+        "هذه البيانات ليست ضمن نطاقك (تخصّ مديرًا أو موزّعًا آخر).",
         status=403,
+        details={"reason": "out_of_scope"},
     )

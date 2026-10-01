@@ -17,12 +17,33 @@ from __future__ import annotations
 
 import json
 import math
+import re
+from datetime import datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from .errors import RadiusValidationError
 
 # سقفٌ عاقل لأيّ مبلغ واحد (يكفي أكبر العملات المحليّة ويمنع 1e308).
 MONEY_MAX = 1_000_000_000.0
+
+# ── سقوف العمليّة الواحدة (موجة الإصلاح 2 + قرار المالك 2026-09-29) ──
+# • مبلغ دفعة/تمديد/سلفة/رصيد/كوتة/حركة موزّع واحدة ≤ 100,000 بعملة النظام.
+# • **أقصى تمديد في المرّة الواحدة سنة (365 يومًا)**: new_expiry − max(now,
+#   current_expiry) ≤ 365 يومًا — للتمديد بمدّة، ولقفزة تعيين التاريخ، ولدقائق
+#   الدفعة المحوَّلة وقتًا، ولوقت السلفة، وللتمديد الجماعيّ. التكرار مسموح.
+# • أيّ انتهاءٍ محسوب بعد سنة 2100 ⇒ 422. كان 1e6 يُنتج سنة 3200/3669 و5e6–1e9
+#   يُسقط الخادم بـ500 «date value out of range».
+# ⚙ منذ موجة الإصلاح 3 (قرار المالك 2026-09-30) هذه **افتراضات** فقط — السقوف
+# الفعّالة تُقرأ من إعدادات «الحدود» لكلّ خادم عبر ``core.limits`` (action_amount /
+# check_extend_minutes / check_expiry / add_minutes_capped / check_create_expiry
+# أدناه تستعملها). لا تستعمل الثوابت مباشرةً في مسارٍ جديد.
+ACTION_AMOUNT_MAX = 100_000.0
+EXTEND_MAX_DAYS = 365
+EXTEND_MAX_MINUTES = EXTEND_MAX_DAYS * 1440
+EXTEND_TOO_LONG_AR = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر"
+EXPIRY_LIMIT = datetime(2101, 1, 1)
+EXPIRY_TOO_FAR_AR = "المدة الناتجة تتجاوز الحدّ المسموح."
 
 _FIELD_AR = {
     "amount": "المبلغ",
@@ -37,9 +58,54 @@ _FIELD_AR = {
     "days": "الأيام",
     "loan_settled_total": "مجموع تسوية السلف",
     "balance_settled_total": "مجموع تسوية الدين",
+    "duration_minutes": "المدّة بالدقائق",
+    "plan_id": "العرض",
 }
 
 _MISSING = object()
+
+# 🔴 أرقام لوحة المفاتيح العربيّة/الفارسيّة (R12 N1): الفاصلة العشريّة «٫»
+# (U+066B) كانت تُحذف في الواجهة فيصير ٣٥٫٥ ⇒ 355، وهنا كان ``float("٣٥٫٥")``
+# يفشل. ``float``/``int`` في بايثون تقرأ الأرقام العربيّة-الهنديّة والفارسيّة
+# أصلًا؛ ينقصها الفواصل: «٫» ⇒ «.»، فاصل الآلاف «٬» (U+066C) ⇒ يُحذف، الناقص
+# الطباعيّ «−» ⇒ «-»، ومحارف الاتّجاه الخفيّة (LRM/RLM/ALM) والمسافة غير
+# الفاصلة ⇒ تُحذف. الفاصلة «,»/«،» لا تُحوَّل هنا عمدًا: «1,000» ملتبسة
+# (ألف؟ واحد؟) فنرفضها برسالة بدل تغيير المقدار بصمت.
+_NUM_TRANS = {0x066B: ".", 0x066C: None, 0x2212: "-", 0xFE63: "-", 0xFF0D: "-",
+              0x200E: None, 0x200F: None, 0x061C: None, 0x00A0: None, 0x202F: None}
+for _i in range(10):
+    _NUM_TRANS[0x0660 + _i] = str(_i)   # ٠-٩
+    _NUM_TRANS[0x06F0 + _i] = str(_i)   # ۰-۹
+del _i
+
+
+def normalize_number_text(value: Any) -> Any:
+    """نصّ رقميّ من لوحة عربيّة/فارسيّة ⇒ صيغة لاتينيّة يفهمها ``float``.
+
+    غير النصوص تعود كما هي. «٣٥٫٥» ⇒ «35.5»، «١٬٠٠٠» ⇒ «1000»، «−٥» ⇒ «-5»."""
+    if not isinstance(value, str):
+        return value
+    return value.translate(_NUM_TRANS).strip()
+
+
+# نصٌّ «رقميّ صِرف» مكتوبٌ بمحارف عربيّة/فارسيّة: إشارة اختياريّة، أرقام
+# (مع «٬» للآلاف)، ثم كسرٌ اختياريّ بعد «٫»/«.». لا يطابق أيّ نصٍّ فيه حرفٌ آخر.
+_AR_NUMERIC_RE = re.compile(
+    r"^\s*[-−﹣－]?[‎‏؜]*"
+    r"[0-9٠-٩۰-۹٬]*"
+    r"(?:[.٫][0-9٠-٩۰-۹]*)?[‎‏؜]*\s*$")
+_AR_NUMERIC_MARK = re.compile(r"[٠-٩۰-۹٫٬−﹣－]")
+_DIGIT_ANY = re.compile(r"[0-9٠-٩۰-۹]")
+
+
+def normalize_numeric_text(value: Any) -> Any:
+    """``normalize_number_text`` لكن **فقط** لنصٍّ رقميّ صِرف فيه محرفٌ عربيّ
+    (رقم ٠-٩/۰-۹ أو «٫»/«٬»/«−»). أيّ نصٍّ آخر (اسم، ملاحظة، «1,5») يعود كما
+    هو حرفيًّا — آمنٌ لتطبيقه على كل حقول نموذج الويب."""
+    if (not isinstance(value, str) or not _AR_NUMERIC_MARK.search(value)
+            or not _DIGIT_ANY.search(value) or not _AR_NUMERIC_RE.match(value)):
+        return value
+    return normalize_number_text(value)
 
 
 class NonFiniteNumber(RadiusValidationError, ValueError):
@@ -67,7 +133,7 @@ def finite_float(value: Any, *, field: str = "amount", min: Optional[float] = No
     if isinstance(value, bool):
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.", details={"field": field})
     try:
-        out = float(value.strip() if isinstance(value, str) else value)
+        out = float(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.",
                               details={"field": field}) from None
@@ -88,7 +154,7 @@ def strict_float(value: Any, field: str = "") -> float:
     (``ValueError``/``TypeError`` للنصّ غير الرقميّ) لكن Infinity/NaN/الفائض
     ترمي ``NonFiniteNumber`` (وهي ``ValueError`` أيضًا) — فكتل
     ``except (TypeError, ValueError)`` الموجودة تعالجها كقيمةٍ خاطئة."""
-    out = float(value)
+    out = float(normalize_number_text(value))
     if not math.isfinite(out) or abs(out) > MONEY_MAX * 1000:
         label = field_label(field) if field else "الرقم"
         raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا منتهيًا صالحًا.",
@@ -118,9 +184,114 @@ def finite_int(value: Any, *, field: str, min: Optional[int] = None,
 
 
 def round_money(value: Any) -> float:
-    """تقريب المال لخانتين عند الكتابة (يزيل ضجيج ‎-42.89999999999999 و‎-0.0)."""
-    out = round(float(value or 0), 2)
+    """تقريب المال لخانتين عند الكتابة (يزيل ضجيج ‎-42.89999999999999 و‎-0.0).
+
+    قاعدةٌ واحدة في كلّ مكان: **نصف للأعلى** على القيمة العشريّة كما تُكتب
+    (``repr``). كان ``round()`` الثنائيّ يعطي 0.625 → 0.62 و376.905 → 376.90
+    بينما يعطي الويب والتطبيق 0.63 — فاختلف السعر بين المسارات."""
+    f = float(value or 0)
+    if not math.isfinite(f):
+        return f
+    out = float(Decimal(repr(f)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
     return 0.0 if out == 0 else out
+
+
+def money_cents(value: Any) -> int:
+    """المبلغ بالقروش (عددٌ صحيح) بعد ``round_money``."""
+    return int((Decimal(repr(round_money(value))) * 100).to_integral_value())
+
+
+def action_amount(value: Any, *, field: str = "amount", kind: str = "generic") -> Any:
+    """422 لمبلغ عمليّةٍ واحدة فوق سقف نوعه في «الحدود» (``core.limits``):
+    payment / balance / distributor / loan / generic — الرسالة تذكر القيمة."""
+    if value is None:
+        return value
+    from . import limits
+    msg = limits.amount_error(value, kind, label=field_label(field))
+    if msg:
+        raise NonFiniteNumber(msg, details={"field": field, "kind": kind})
+    return value
+
+
+def check_expiry(dt: Optional[datetime]) -> Optional[datetime]:
+    """422 «المدة الناتجة تتجاوز الحدّ المسموح» لانتهاءٍ بعد نهاية السنة المضبوطة
+    في «الحدود» (الافتراض والحدّ التقنيّ 2100)."""
+    if dt is None:
+        return dt
+    from . import limits
+    if dt >= limits.expiry_limit():
+        raise NonFiniteNumber(limits.expiry_too_far_msg(), details={"field": "expire_at"})
+    return dt
+
+
+def add_minutes_capped(base: datetime, minutes: int) -> datetime:
+    """``base + minutes`` مع حارس السقف: الفائض (OverflowError = 500 سابقًا) وما
+    بعد السنة المضبوطة ⇒ 422 بالرسالة نفسها."""
+    try:
+        out = base + timedelta(minutes=int(minutes))
+    except (OverflowError, ValueError):
+        from . import limits
+        raise NonFiniteNumber(limits.expiry_too_far_msg(),
+                              details={"field": "expire_at"}) from None
+    return check_expiry(out)
+
+
+def check_extend_minutes(minutes: int) -> int:
+    """422 «أقصى تمديد في المرة الواحدة …» لإضافةٍ فوق «أقصى عدد أيام تفعيل/تمديد»
+    المضبوط (الافتراض 365 ⇒ «سنة»). التكرار مسموح."""
+    from . import limits
+    if int(minutes) > limits.max_extend_minutes():
+        raise NonFiniteNumber(limits.extend_too_long_msg(), details={"field": "minutes"})
+    return int(minutes)
+
+
+# ── قرار المالك (2026-09-30): قاعدة «أقصى أيام في المرة» تسري على **الإنشاء** ──
+# انتهاء مشتركٍ جديد ≤ الآن + «أقصى عدد أيام تفعيل/تمديد» (الافتراض سنة). نقطةٌ
+# واحدة يستدعيها ``UsersService.create`` (الويب، الـAPI/التطبيق، إنشاء المدير).
+# معالج الترحيل واستيراد مايكروتيك لا يمرّان بها (ينسخان حساباتٍ قائمة كما هي).
+# مفتاح الطوارئ فقط: ``HOBERADIUS_CREATE_EXPIRY_ONE_YEAR=0`` يعطّلها.
+CREATE_EXPIRY_ONE_YEAR_RULE = True
+
+
+def create_expiry_rule_enabled() -> bool:
+    import os
+    env = (os.environ.get("HOBERADIUS_CREATE_EXPIRY_ONE_YEAR") or "").strip().lower()
+    if env in {"0", "false", "no", "off"}:
+        return False
+    return bool(CREATE_EXPIRY_ONE_YEAR_RULE or env in {"1", "true", "yes", "on"})
+
+
+def check_create_expiry(expire_at: Optional[datetime],
+                        now: Optional[datetime] = None) -> Optional[datetime]:
+    """422 لانتهاءٍ عند الإنشاء أبعد من «أقصى أيام في المرة» من الآن (+دقيقة سماح
+    لزمن الطلب). بلا تاريخ (NULL) لا يُفحص."""
+    if expire_at is None or not create_expiry_rule_enabled():
+        return expire_at
+    from . import limits
+    limit = (now or datetime.utcnow()) + timedelta(days=limits.max_extend_days(), minutes=1)
+    if expire_at > limit:
+        raise NonFiniteNumber(limits.create_too_long_msg(), details={"field": "expire_at"})
+    return expire_at
+
+
+# خصمٌ من وقت بطاقة: لا معنى لـ«سنة» فيه (خصمٌ أكبر من المتبقّي يُنهيها)، لكن
+# رقمًا فلكيًّا يُفيض timedelta (500) — سقفٌ عاقل برسالةٍ عربيّة.
+DEDUCT_MAX_SECONDS = 3650 * 86400
+DEDUCT_TOO_LONG_AR = "مقدار الخصم يتجاوز الحدّ المسموح (3650 يومًا)."
+
+
+def check_time_delta_seconds(seconds: int) -> int:
+    """f05-M2 — حارسٌ واحد لكل «إضافة/خصم وقت» بالثواني (بطاقة: ويب/API/جماعيّ).
+
+    الإضافة فوق «أقصى عدد أيام تفعيل/تمديد» (``core.limits``، الافتراض سنة) ⇒
+    422 بنفس رسالة تمديد المشترك؛ الخصم فوق 3650 يومًا ⇒ 422."""
+    from . import limits
+    s = int(seconds)
+    if s > limits.max_extend_minutes() * 60:      # «الحدود» (fix3-moneyquota)
+        raise NonFiniteNumber(limits.extend_too_long_msg(), details={"field": "minutes"})
+    if -s > DEDUCT_MAX_SECONDS:
+        raise NonFiniteNumber(DEDUCT_TOO_LONG_AR, details={"field": "minutes"})
+    return s
 
 
 def json_safe(obj: Any) -> Any:
@@ -157,6 +328,11 @@ def _fmt(v: float) -> str:
 
 
 __all__ = [
-    "MONEY_MAX", "NonFiniteNumber", "field_label", "finite_float", "finite_int",
-    "json_dumps_safe", "json_safe", "money_float", "round_money", "strict_float",
+    "ACTION_AMOUNT_MAX", "EXPIRY_LIMIT", "EXPIRY_TOO_FAR_AR", "EXTEND_MAX_DAYS",
+    "EXTEND_MAX_MINUTES", "EXTEND_TOO_LONG_AR", "MONEY_MAX", "NonFiniteNumber", "action_amount",
+    "add_minutes_capped", "check_create_expiry", "check_expiry", "check_extend_minutes",
+    "check_time_delta_seconds", "create_expiry_rule_enabled", "field_label",
+    "finite_float", "finite_int", "json_dumps_safe", "json_safe", "money_cents",
+    "money_float", "normalize_number_text", "normalize_numeric_text", "round_money",
+    "strict_float",
 ]

@@ -123,11 +123,11 @@
           </td>
           <td>
             {# إعادة إدراج المهمة في طابور المزامنة — نفس النهاية POST دون تغيير #}
-            <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
+            {% if can_submit('radius.sync_retry', 'POST') %}<form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
               <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('إعادة المحاولة') }}">
                 <i class="fa-solid fa-rotate"></i>
               </button>
-            </form>
+            </form>{% endif %}
           </td>
         </tr>
         {% endfor %}

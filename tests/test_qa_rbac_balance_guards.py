@@ -49,6 +49,9 @@ def client(app):
 def _mk(*, is_super=False, role=None):
     from app.radius.db.repos import admins_repo
     rid = None
+    # the «super admin» fixture means the super_admin role explicitly —
+    # create_admin() without a role is now the least-privileged role.
+    role = role or ("super_admin" if is_super else None)
     if role:
         r = admins_repo.get_role_by_name(role)
         rid = r.id if r else None
@@ -194,7 +197,8 @@ def test_loan_is_bounded_credit_with_ledger(app):
         AccountingService, _max_loan_minutes, _max_debt_loan_minutes)
     # caps are real and bounded (not unlimited)
     assert _max_loan_minutes() == 72 * 60
-    assert _max_debt_loan_minutes() == 366 * 24 * 60
+    # owner rule (fix wave 2): one operation adds at most one year → 365 days
+    assert _max_debt_loan_minutes() == 365 * 24 * 60
 
     # seed demo data to get a real subscriber to lend to
     from app.radius import seed

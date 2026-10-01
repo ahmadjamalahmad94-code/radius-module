@@ -87,6 +87,53 @@ def _ar_plural(n: int, one: str, two: str, few: str, many: str) -> str:
     return many
 
 
+def fmt_remaining_ar(seconds) -> str:
+    """الوقت المتبقّي بكلماتٍ عربيّة لأكبر وحدتين غير صفريّتين.
+
+    ``90000 -> "1 يوم و1 ساعة"``، ``5400 -> "1 ساعة و30 دقيقة"``،
+    ``7200 -> "2 ساعتان"``… أقلّ من دقيقة ⇒ «أقل من دقيقة». لا «0 يوم» أبدًا
+    (f05-L5: بطاقةٌ بقيت لها ساعات كانت تُخبَر «(0 يوم)»). رقمٌ لاتينيّ بجوار
+    كلمةٍ عربيّة لا ينقلب بالاتّجاه، فلا حاجة لعزل."""
+    s = max(0, int(seconds or 0))
+    if s < 60:
+        return "أقل من دقيقة"
+    d, rem = divmod(s, 86400)
+    h, rem = divmod(rem, 3600)
+    m = rem // 60
+    units = [(d, ('يوم', 'يومان', 'أيام', 'يومًا')),
+             (h, ('ساعة', 'ساعتان', 'ساعات', 'ساعة')),
+             (m, ('دقيقة', 'دقيقتان', 'دقائق', 'دقيقة'))]
+    # «2 ساعتان» ركيك: المثنّى يُقرأ وحده («ساعتان»، «يومان»، «دقيقتان»).
+    parts = [(_ar_plural(n, *w) if n == 2 else f"{n} {_ar_plural(n, *w)}")
+             for n, w in units if n]
+    return " و".join(parts[:2])
+
+
+def fmt_compact_ar(seconds) -> str:
+    """Arabic-word twin of :func:`fmt_compact` for the web panel (f06-L3: the
+    /online columns read «5m» and «8m / ∞» — English units). Two largest
+    non-zero units in words; ``0`` → «0 دقيقة». A Latin digit next to an
+    Arabic WORD never bidi-flips, so no LTR isolate is needed."""
+    s = max(0, int(seconds or 0))
+    if s < 60:
+        return "0 دقيقة"
+    return fmt_remaining_ar(s)
+
+
+def fmt_duration_ar(seconds) -> str:
+    """Session/usage duration in Arabic words for reports and profiles (fix3
+    integration: rep_sessions / users_profile / portal_subscriber now match
+    /online). Same words as :func:`fmt_compact_ar` from one minute up; a short
+    session keeps its seconds («45 ثانية») instead of «0 دقيقة»; 0 → «0 دقيقة»."""
+    s = max(0, int(seconds or 0))
+    if s <= 0:
+        return "0 دقيقة"
+    if s < 60:
+        w = _ar_plural(s, "ثانية", "ثانيتان", "ثوانٍ", "ثانية")
+        return w if s == 2 else f"{s} {w}"
+    return fmt_compact_ar(s)
+
+
 def fmt_base_time_ar(seconds) -> tuple[str, bool]:
     """Human-friendly Arabic label for a card's BASE (total) time budget.
 
@@ -120,5 +167,16 @@ def fmt_base_time_ar(seconds) -> tuple[str, bool]:
         return f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}", False
     if m and not (d or h or sec):
         return f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}", False
-    # Mixed / seconds-level → shared Latin, bidi-safe abbreviation.
-    return fmt_uptime_short(s), True
+    # Mixed budget → full Arabic words joined by «و» («1 يوم و3 ساعات و45
+    # دقيقة»). The Latin «1d 3h 45m» token reached the card checker as raw
+    # English (re-test R13 L4); a digit next to an Arabic WORD never flips.
+    parts = []
+    if d:
+        parts.append(f"{d} {_ar_plural(d, 'يوم', 'يومان', 'أيام', 'يومًا')}")
+    if h:
+        parts.append(f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}")
+    if m:
+        parts.append(f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}")
+    if sec:
+        parts.append(f"{sec} {_ar_plural(sec, 'ثانية', 'ثانيتان', 'ثوانٍ', 'ثانية')}")
+    return " و".join(parts), False

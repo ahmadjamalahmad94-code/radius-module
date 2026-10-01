@@ -56,8 +56,9 @@ def _plan(name, *, price=20.0, tenant_id=1, days=30):
         # quota_total_mb: a quota top-up adds to the quota in force — a plan with
         # no quota at all refuses a top-up (stress fix 2026-09-28).
         "INSERT INTO access_plans(tenant_id, name, duration_minutes, validity_days, "
-        "price, currency, enabled, created_at, updated_at, quota_total_mb) "
-        "VALUES(?,?,?,?,?,?,?,?,?,1024)",
+        "price, currency, enabled, created_at, updated_at, quota_total_mb, "
+        "max_daily_minutes) "  # fix3: reset-daily needs a daily cap (1440 never binds)
+        "VALUES(?,?,?,?,?,?,?,?,?,1024,1440)",
         (tenant_id, name, days * 1440, days, price, "JOD", 1,
          datetime.utcnow().isoformat(), datetime.utcnow().isoformat()),
     )
@@ -111,7 +112,8 @@ SCENARIOS = [
     ("insufficient_small", 2.0, 5.0, -3.0),
     ("insufficient_from_zero", 0.0, 5.0, -5.0),
     ("from_negative", -10.0, 5.0, -15.0),
-    ("very_large", 1_000_000.0, 999_999.0, 1.0),
+    # one operation is capped at 100,000 (fix wave 2) — the largest allowed charge
+    ("very_large", 1_000_000.0, 99_999.0, 900_001.0),
     ("tiny_fraction", 1.0, 0.01, 0.99),
     ("two_decimals", 50.25, 12.75, 37.50),
 ]

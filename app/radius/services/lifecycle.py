@@ -330,6 +330,50 @@ def run(tenant_id: int, *, actor: str = "system:lifecycle", limit: int = 500) ->
     }
 
 
+# ── recycle-bin display labels (web /recycle-bin and GET /api/v1/recycle-bin) ──
+# The raw status («deleted»), actor («adapter», «system», «api-token:23») and
+# the English API archive reason reached the page (re-test R13 L4).
+_RECYCLE_STATUS_AR = {
+    "enabled": "مفعَّل", "active": "مفعَّل", "disabled": "معطَّل",
+    "inactive": "معطَّل", "deleted": "محذوف (في السلّة)", "archived": "مؤرشف",
+    "expired": "منتهي", "suspended": "موقوف", "banned": "محظور",
+    "revoked": "ملغاة", "used": "مستخدمة", "available": "متاحة",
+}
+_RECYCLE_REASON_AR = {
+    "Archived from card batch operations API": "أُرشفت عبر واجهة API لعمليات الحزم.",
+}
+
+
+def recycle_actor_label(actor: Any) -> str:
+    a = str(actor or "").strip()
+    if not a:
+        return "—"
+    if a in ("adapter", "system", "worker", "scheduler"):
+        return "النظام"
+    if a.startswith("api-token:"):
+        tok = a.split(":", 1)[1].strip()
+        return f"واجهة API (رمز #{tok})" if tok and tok != "env" else "واجهة API"
+    if a == "anonymous":
+        return "غير معروف"
+    return a
+
+
+def recycle_display(table: str, row: dict[str, Any], status: str) -> dict[str, Any]:
+    """Arabic display fields for one recycle-bin row (raw fields unchanged)."""
+    label = None
+    if table == "card_batches":
+        name = str(row.get("package_name") or "").strip()
+        code = str(row.get("batch_code") or "").strip()
+        label = f"{name} ({code})" if name and code else (name or code or None)
+    reason = str(row.get("delete_reason") or "")
+    return {
+        "label": label,
+        "status_label": _RECYCLE_STATUS_AR.get(str(status or "").lower(), status or "—"),
+        "deleted_by_label": recycle_actor_label(row.get("deleted_by")),
+        "delete_reason": _RECYCLE_REASON_AR.get(reason, reason),
+    }
+
+
 def retention_status(row: dict[str, Any]) -> dict[str, Any]:
     expires = row.get("retention_expires_at")
     if not expires:

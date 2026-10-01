@@ -72,7 +72,7 @@
   {% call hub.section("أدوات التنظيف", icon="broom") %}
 
     {# 1. Purge radacct #}
-    <form method="post" class="hub-action-row">
+    <form method="post" class="hub-action-row">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="action" value="purge_radacct">
       <span class="hub-action-row-label">
         <i class="fa-solid fa-database"></i>
@@ -84,10 +84,10 @@
       </div>
       {{ hub.btn("تنظيف", icon="broom", variant="danger", size="sm", type="submit",
                  attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد الحذف؟ لا يمكن التراجع.\');"') }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
     {# 2. Purge sync done #}
-    <form method="post" class="hub-action-row">
+    <form method="post" class="hub-action-row">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="action" value="purge_sync_done">
       <span class="hub-action-row-label">
         <i class="fa-solid fa-arrows-rotate"></i>
@@ -99,10 +99,10 @@
       </div>
       {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
                  attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
     {# 3. Purge audit log #}
-    <form method="post" class="hub-action-row">
+    <form method="post" class="hub-action-row">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="action" value="purge_audit">
       <span class="hub-action-row-label">
         <i class="fa-solid fa-clock-rotate-left"></i>
@@ -114,10 +114,10 @@
       </div>
       {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
                  attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
     {# 4. Purge failed webhook attempts #}
-    <form method="post" class="hub-action-row">
+    <form method="post" class="hub-action-row">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="action" value="purge_failed_webhooks">
       <span class="hub-action-row-label">
         <i class="fa-solid fa-paper-plane"></i>
@@ -126,7 +126,7 @@
       <span class="hub-field-hint">{{ _('(فقط المحاولات التي توقفت نهائيًا)') }}</span>
       {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
                  attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
   {% endcall %}
 
@@ -135,7 +135,7 @@
   {% call hub.section("قاعدة البيانات", icon="compress") %}
 
     {# 5. VACUUM #}
-    <form method="post" class="hub-action-row hub-action-row--accent">
+    <form method="post" class="hub-action-row hub-action-row--accent">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="action" value="vacuum">
       <span class="hub-action-row-label">
         <i class="fa-solid fa-compress"></i>
@@ -144,7 +144,7 @@
       <span class="hub-field-hint">{{ _('قد يستغرق بضع ثوانٍ. شغّله بعد عمليات حذف كبيرة.') }}</span>
       {{ hub.btn("تشغيل", icon="compress", variant="primary", size="sm", type="submit",
                  attrs='style="margin-inline-start:auto" onclick="return confirm(\'تنفيذ VACUUM؟\');"') }}
-    </form>
+    {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
   {% endcall %}
 

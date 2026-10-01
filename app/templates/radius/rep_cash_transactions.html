@@ -65,8 +65,8 @@
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
-               href=url_for('radius.rep_cash_transactions')) }}
+    {% if can_submit('radius.rep_cash_transactions', 'GET') %}{{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               href=url_for('radius.rep_cash_transactions')) }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="البحث يطابق اسم المستخدم أو المنفّذ أو طريقة الدفع، ونطاق التاريخ يعمل على وقت تسجيل المعاملة. المؤشرات أعلاه محسوبة على كل النتائج المطابقة، ويُعرض حتى 500 معاملة."><i class="fa-solid fa-info"></i></span>
@@ -124,7 +124,7 @@
               {% if r.discount_reason %}title="سبب الخصم: {{ r.discount_reason }}"{% endif %}>
             {% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}
           </td>
-          <td><bdi>{{ r.created_by or '—' }}</bdi></td>
+          <td title="{{ r.created_by or '' }}"><bdi>{{ r.created_by|actor_name if r.created_by else '—' }}</bdi></td>
           <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
         </tr>
         {% endfor %}

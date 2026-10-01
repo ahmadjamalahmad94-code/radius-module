@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from ..core.system_config import local_today
+from ..core.system_config import local_period_utc_range, local_today
 from ..db.connection import db, transaction
 from ..db.helpers import now_iso, row_to_dict
 from .accounting import AccountingService
@@ -31,6 +31,7 @@ class DashboardReportsService:
 
     def __init__(self, *, tenant_id: int = 1) -> None:
         self.tenant_id = int(tenant_id or 1)
+        self._rev_cache: dict[tuple[str, str], dict[str, Any]] = {}
 
     def executive_summary(self, *, date_from: str = "", date_to: str = "") -> dict[str, Any]:
         # يومُ المشغّل لا يوم UTC — راجع local_today في system_config.
@@ -66,13 +67,21 @@ class DashboardReportsService:
                 "margin_today": self._margin_total(date_from=today, date_to=today),
                 "margin_month": self._margin_for_period(month),
                 "margin_year": self._margin_for_period(year),
+                # لكلّ عملة رقمها (``[{currency, revenue, profit, payments}]``) —
+                # الحقول المفردة أعلاه مجموعٌ خامّ للتوافق.
+                "revenue_by_currency": self._rev(date_from, date_to)["by_currency"],
+                "revenue_today_by_currency": self._rev(today, today)["by_currency"],
+                "revenue_month_by_currency": self._rev_period(month)["by_currency"],
+                "revenue_year_by_currency": self._rev_period(year)["by_currency"],
+                "mixed_currency": bool(self._rev(date_from, date_to)["mixed_currency"]),
                 "url": "/admin/radius/reports/financial",
             },
             "cards": {
-                "total": self._count("cards"),
-                "unused": self._count("cards", "used=0 AND revoked=0"),
-                "active": self._count("cards", "used=1 AND revoked=0"),
-                "expired": self._count("cards", "expire_at!='' AND expire_at IS NOT NULL AND expire_at < ?", (today,)),
+                # الكروت المحذوفة (ومنها كروت الحزم المؤرشفة) لا تُحسب.
+                "total": self._count("cards", "COALESCE(deleted_at, '') = ''"),
+                "unused": self._count("cards", "COALESCE(deleted_at, '') = '' AND used=0 AND revoked=0"),
+                "active": self._count("cards", "COALESCE(deleted_at, '') = '' AND used=1 AND revoked=0"),
+                "expired": self._count("cards", "COALESCE(deleted_at, '') = '' AND expire_at!='' AND expire_at IS NOT NULL AND expire_at < ?", (today,)),
                 "connected": self._connected_cards(),
                 "sold_today": self._cards_sold_for_period(today),
                 "sold_month": self._cards_sold_for_period(month),
@@ -167,6 +176,9 @@ class DashboardReportsService:
         return created
 
     def list_archives(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        if self._scope_id() is not None:
+            # frozen NETWORK-wide snapshots — never shown to a scoped manager.
+            return []
         rows = db().execute(
             """
             SELECT * FROM report_archive_snapshots
@@ -221,10 +233,29 @@ class DashboardReportsService:
         ).fetchone()
         return self._archive_row(row_to_dict(row)) if row else {}
 
+    # ── fix3 (F02 H2 / F01 F8 / F08 H3): the request admin's scope ──────────
+    def _scope_id(self):
+        """None = sees everything; else the manager whose data is shown."""
+        from .subscriber_scope import current_scope_admin_id
+        return current_scope_admin_id(tenant_id=self.tenant_id)
+
+    def _table_scope(self, table: str) -> tuple[str, list[Any]]:
+        if table == "subscribers":
+            scope = self._scope_id()
+            if scope is None:
+                return "", []
+            from .subscriber_scope import owner_scope_clause
+            return owner_scope_clause(int(scope), tenant_id=self.tenant_id)
+        if table == "cards":
+            from .card_batch_scope import batch_scope_sql
+            return batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
+        return "", []
+
     def _count(self, table: str, where: str = "1=1", params: tuple[Any, ...] = ()) -> int:
+        sc, sv = self._table_scope(table)
         row = db().execute(
-            f"SELECT COUNT(*) AS c FROM {table} WHERE tenant_id=? AND {where}",
-            (self.tenant_id, *params),
+            f"SELECT COUNT(*) AS c FROM {table} WHERE tenant_id=? AND {where}" + sc,
+            (self.tenant_id, *params, *sv),
         ).fetchone()
         return int(row["c"] or 0)
 
@@ -234,7 +265,8 @@ class DashboardReportsService:
         try:
             from ..db.repos import subscribers_repo
             return int(subscribers_repo.count_subscribers(
-                self.tenant_id, user_type="subscriber", status=status))
+                self.tenant_id, user_type="subscriber", status=status,
+                owner_admin_id=self._scope_id()))
         except Exception:  # noqa: BLE001
             return 0
 
@@ -249,64 +281,91 @@ class DashboardReportsService:
             params.append(date_to)
         return clause, params
 
+    def _utc_bounds(self, date_from: str = "", date_to: str = "") -> tuple[str, str]:
+        """``YYYY-MM-DD`` محلّيّ (يوم المشغّل) → حدّا UTC [from, to) شاملين لليوم
+        الأخير كاملًا. كانت المقارنة ``substr(created_at,1,10)`` = يوم UTC."""
+        from datetime import date as _date
+
+        def _valid(value: str) -> bool:
+            try:
+                _date.fromisoformat((value or "")[:10])
+                return True
+            except ValueError:
+                return False
+
+        # قيمة غير صالحة تُهمَل (لا تُستبدَل بـ«اليوم» كما يفعل المساعد) —
+        # المسارات تتحقّق وتنبّه قبل الوصول هنا.
+        lower = (local_period_utc_range("daily", date_from[:10], self.tenant_id)[0]
+                 if date_from and _valid(date_from) else "")
+        upper = (local_period_utc_range("daily", date_to[:10], self.tenant_id)[1]
+                 if date_to and _valid(date_to) else "")
+        return lower, upper
+
+    def _rev(self, date_from: str = "", date_to: str = "") -> dict[str, Any]:
+        """الإيراد الموحّد (accounting_repo.revenue_summary) لفترة محلّيّة —
+        المصدر نفسه لـ/api/v1/finance/revenue والمركز المالي. مخزَّن لكلّ نداء."""
+        key = (date_from or "", date_to or "")
+        if key not in self._rev_cache:
+            from ..db.repos import accounting_repo
+            lower, upper = self._utc_bounds(*key)
+            self._rev_cache[key] = accounting_repo.revenue_summary(
+                self.tenant_id, utc_from=lower, utc_to=upper)
+        return self._rev_cache[key]
+
+    def _rev_period(self, period: str) -> dict[str, Any]:
+        """``YYYY-MM`` أو ``YYYY`` محلّيّ → الإيراد الموحّد لذلك الشهر/السنة."""
+        from ..db.repos import accounting_repo
+        key = ("period", period)
+        if key not in self._rev_cache:
+            grain = "yearly" if len(period) == 4 else "monthly"
+            lower, upper = local_period_utc_range(grain, period, self.tenant_id)
+            self._rev_cache[key] = accounting_repo.revenue_summary(
+                self.tenant_id, utc_from=lower, utc_to=upper)
+        return self._rev_cache[key]
+
     def _revenue_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(collected_amount_minor),0) AS total FROM revenue_records WHERE tenant_id=? AND status='posted'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return _money(row["total"])
+        # دفعات الدفتر (صافية من الإلغاء) + سجلّات الكروت المُرحَّلة — كانت
+        # revenue_records وحده (الدفعات لا تكتب فيه) ⇒ «الإيرادات 0 ₪».
+        return float(self._rev(date_from, date_to)["revenue"])
 
     def _margin_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(net_profit_minor),0) AS total FROM revenue_records WHERE tenant_id=? AND status='posted'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev(date_from, date_to)["profit"])
 
     def _invoice_total(self, *, date_from: str = "", date_to: str = "") -> float:
-        clause, params = self._date_clause("created_at", date_from=date_from, date_to=date_to)
-        row = db().execute(
-            f"SELECT COALESCE(SUM(amount),0) AS total FROM invoices WHERE tenant_id=? AND status='paid'{clause}",
-            (self.tenant_id, *params),
-        ).fetchone()
-        return round(float(row["total"] or 0), 2)
+        # «الدفعات» = دفعات المشتركين في الدفتر (كانت الفواتير المدفوعة فقط:
+        # «130 ₪» مقابل ~96.9 ألف في الدفتر).
+        return float(self._rev(date_from, date_to)["payments"])
 
     def _revenue_for_period(self, period: str) -> float:
-        row = db().execute(
-            """
-            SELECT COALESCE(SUM(collected_amount_minor),0) AS total
-            FROM revenue_records
-            WHERE tenant_id=? AND status='posted' AND substr(created_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev_period(period)["revenue"])
 
     def _margin_for_period(self, period: str) -> float:
-        row = db().execute(
-            """
-            SELECT COALESCE(SUM(net_profit_minor),0) AS total
-            FROM revenue_records
-            WHERE tenant_id=? AND status='posted' AND substr(created_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
-        ).fetchone()
-        return _money(row["total"])
+        return float(self._rev_period(period)["profit"])
 
     def _subscriber_debt(self) -> int:
         return self._count("subscribers", "deleted_at IS NULL AND balance < 0")
 
     def _subscriber_debt_amount(self) -> float:
+        sc, sv = self._table_scope("subscribers")
         row = db().execute(
-            "SELECT COALESCE(SUM(ABS(balance)),0) AS total FROM subscribers WHERE tenant_id=? AND deleted_at IS NULL AND balance < 0",
-            (self.tenant_id,),
+            "SELECT COALESCE(SUM(ABS(balance)),0) AS total FROM subscribers WHERE tenant_id=? AND deleted_at IS NULL AND balance < 0" + sc,
+            (self.tenant_id, *sv),
         ).fetchone()
         return round(float(row["total"] or 0), 2)
 
     def _online_count(self) -> int:
-        return self._count("radacct", "acctstoptime IS NULL")
+        # المصدر نفسه للوحة والـAPI: جلسات مشتركين/كروت حقيقيّين فقط.
+        scope = self._scope_id()
+        if scope is not None:
+            from .subscriber_scope import scope_sql
+            sc, sv = scope_sql("username", scope=int(scope), tenant_id=self.tenant_id,
+                               use_request=False)
+            row = db().execute(
+                "SELECT COUNT(DISTINCT username) AS c FROM radacct WHERE tenant_id=? "
+                "AND acctstoptime IS NULL" + sc, (self.tenant_id, *sv)).fetchone()
+            return int(row["c"] or 0)
+        from .dashboard_metrics import get_online_count
+        return int(get_online_count(self.tenant_id))
 
     def _ending_soon(self) -> int:
         today = local_today(self.tenant_id)
@@ -318,56 +377,94 @@ class DashboardReportsService:
         )
 
     def _connected_cards(self) -> int:
+        from .card_batch_scope import batch_scope_sql
+        bsc, bsv = batch_scope_sql(column="c.batch_id", tenant_id=self.tenant_id)
         row = db().execute(
             """
             SELECT COUNT(DISTINCT c.id) AS c
             FROM cards c
             JOIN radacct a ON a.tenant_id=c.tenant_id AND a.username=c.username AND a.acctstoptime IS NULL
             WHERE c.tenant_id=? AND c.used=1 AND c.revoked=0
-            """,
-            (self.tenant_id,),
+            """ + bsc,
+            (self.tenant_id, *bsv),
         ).fetchone()
         return int(row["c"] or 0)
+
+    def cards_sold_by_batch(self, period: str) -> list[dict[str, Any]]:
+        """«مباعة» = بطاقةٌ دخلت أوّل مرّة داخل الفترة **المحلّيّة** (يوم/شهر/سنة
+        المشغّل، Asia/Gaza بتوقيتها الصيفيّ) — ``[{batch_id, count}]``.
+
+        fix3 integration: كانت ``substr(first_used_at,1,10) = اليوم`` تقارن يوم
+        UTC بيومٍ محلّيّ (بطاقة 01:30 بتوقيت غزّة تُحسب لأمس). مصدرٌ واحد لتقرير
+        الكروت («مبيعات اليوم/الشهر/السنة») ولبطاقة «إجمالي مبيعات اليوم».
+        مقصورٌ على حِزم المدير (``card_batch_scope``)."""
+        from .card_batch_scope import batch_scope_sql
+        from .report_dates import range_sql
+        grain = {4: "yearly", 7: "monthly"}.get(len(period or ""), "daily")
+        lower, upper = local_period_utc_range(grain, period, self.tenant_id)
+        rw, rp = range_sql("first_used_at", lower, upper, True)
+        bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
+        rows = db().execute(
+            "SELECT batch_id, COUNT(*) AS c FROM cards "
+            "WHERE tenant_id=? AND used=1 AND first_used_at IS NOT NULL "
+            "AND first_used_at != ''"
+            + "".join(" AND " + w for w in rw) + bsc
+            + " GROUP BY batch_id",
+            (self.tenant_id, *rp, *bsv),
+        ).fetchall()
+        return [{"batch_id": r["batch_id"], "count": int(r["c"] or 0)} for r in rows]
 
     def _cards_sold_for_period(self, period: str) -> int:
-        row = db().execute(
-            """
-            SELECT COUNT(*) AS c FROM cards
-            WHERE tenant_id=? AND used=1 AND first_used_at IS NOT NULL
-              AND substr(first_used_at,1,?)=?
-            """,
-            (self.tenant_id, len(period), period),
-        ).fetchone()
-        return int(row["c"] or 0)
+        return sum(r["count"] for r in self.cards_sold_by_batch(period))
+
+    def _distributor_scope(self, column: str) -> tuple[str, list[Any]]:
+        scope = self._scope_id()
+        if scope is None:
+            return "", []
+        return (f" AND {column} IN (SELECT id FROM distributors WHERE admin_id = ? "
+                "OR login_admin_id = ?)", [int(scope), int(scope)])
 
     def _profit_share_total(self, beneficiary_type: str) -> float:
+        dsc, dsv = self._distributor_scope("beneficiary_id")
         row = db().execute(
             """
             SELECT COALESCE(SUM(share_amount_minor),0) AS total
             FROM profit_shares
             WHERE tenant_id=? AND beneficiary_type=? AND status IN ('posted','pending')
-            """,
-            (self.tenant_id, beneficiary_type),
+            """ + dsc,
+            (self.tenant_id, beneficiary_type, *dsv),
         ).fetchone()
         return _money(row["total"])
 
     def _alerts(self) -> list[dict[str, Any]]:
+        from .subscriber_scope import entity_scope_sql
+        esc, esv = entity_scope_sql("target_type", "target_id", actor_type_col="actor_type",
+                                    actor_id_col="actor_id", tenant_id=self.tenant_id)
         rows = db().execute(
             """
             SELECT severity, event_key, message, created_at
             FROM business_events
             WHERE tenant_id=? AND severity IN ('warning','error','critical')
+            """ + esc + """
             ORDER BY id DESC LIMIT 10
             """,
-            (self.tenant_id,),
+            (self.tenant_id, *esv),
         ).fetchall()
         return [row_to_dict(row) for row in rows]
 
     def _financial_report(self, *, date_from: str = "", date_to: str = "") -> list[dict[str, Any]]:
+        by_cur = self._rev(date_from, date_to)["by_currency"]
+
+        def _split(key: str) -> list[dict[str, Any]]:
+            return [{"currency": c["currency"], "total": c[key]} for c in by_cur]
+
         return [
-            {"metric": "revenue", "value": self._revenue_total(date_from=date_from, date_to=date_to)},
-            {"metric": "payments", "value": self._invoice_total(date_from=date_from, date_to=date_to)},
-            {"metric": "margin", "value": self._margin_total(date_from=date_from, date_to=date_to)},
+            {"metric": "revenue", "value": self._revenue_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("revenue")},
+            {"metric": "payments", "value": self._invoice_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("payments")},
+            {"metric": "margin", "value": self._margin_total(date_from=date_from, date_to=date_to),
+             "by_currency": _split("profit")},
             {"metric": "subscriber_debts", "value": self._subscriber_debt_amount()},
             {"metric": "distributor_profits", "value": self._profit_share_total("distributor")},
         ]
@@ -384,10 +481,11 @@ class DashboardReportsService:
                    COALESCE(SUM(share_amount_minor),0) AS share_total_minor
             FROM profit_shares
             WHERE tenant_id=? AND beneficiary_type='distributor'
+            """ + self._distributor_scope("beneficiary_id")[0] + """
             GROUP BY beneficiary_id
             ORDER BY share_total_minor DESC
             """,
-            (self.tenant_id,),
+            (self.tenant_id, *self._distributor_scope("beneficiary_id")[1]),
         ).fetchall()
         return [
             {
@@ -428,5 +526,11 @@ class DashboardReportsService:
         if archive_type == "daily":
             return period, period
         if archive_type == "monthly":
-            return period + "-01", period + "-31"
+            # آخر يومٍ حقيقيّ في الشهر (كان «-31» دائمًا: 2026-02-31 تاريخٌ غير صالح).
+            import calendar
+            try:
+                last = calendar.monthrange(int(period[:4]), int(period[5:7]))[1]
+            except (TypeError, ValueError):
+                last = 31
+            return period + "-01", f"{period}-{last:02d}"
         return period + "-01-01", period + "-12-31"

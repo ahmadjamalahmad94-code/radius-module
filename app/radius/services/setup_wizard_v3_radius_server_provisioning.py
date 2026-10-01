@@ -73,6 +73,30 @@ class FreeRadiusProvisioningError(Exception):
     """Raised when the snippet can't be written safely."""
 
 
+def radiusd_ip_literal(value) -> str | None:
+    """The canonical ``ipaddr`` FreeRADIUS can load, or ``None``.
+
+    f06-H2: ``ipaddress.ip_address()`` accepts a scoped IPv6 literal
+    («fe80::1%eth0») — radiusd does NOT («Failed parsing configuration item
+    "ipaddr" - Invalid address»), and one such client file stops radiusd from
+    (re)starting for EVERY router on the server. Only a plain IPv4 / IPv6
+    literal without a zone id, that is a real host address (not the
+    unspecified ``0.0.0.0``/``::`` nor multicast), is accepted."""
+    raw = str(value or "").strip()
+    if not raw or "%" in raw or "/" in raw:
+        return None
+    try:
+        ip = ipaddress.ip_address(raw)
+    except ValueError:
+        return None
+    if getattr(ip, "scope_id", None):
+        return None
+    if ip.is_unspecified or ip.is_multicast:
+        return None
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return str(mapped if mapped is not None else ip)
+
+
 def _dir() -> Path:
     raw = os.environ.get(_DIR_ENV)
     return Path(raw) if raw else _DEFAULT_DIR
@@ -108,6 +132,15 @@ def write_client_for_run(
         raise FreeRadiusProvisioningError(
             "radius_secret contains characters that break "
             "clients.conf parsing (\", }, or newline)",
+        )
+    # f06-H2: never hand radiusd an ipaddr it cannot parse.
+    if radiusd_ip_literal(router_vpn_ip) is None:
+        _LOG.warning(
+            "wizard-run-%s: router_vpn_ip %r is not an address FreeRADIUS "
+            "can load — client file NOT written", run_id, str(router_vpn_ip)[:64])
+        raise FreeRadiusProvisioningError(
+            f"router_vpn_ip {str(router_vpn_ip)[:64]!r} is not a plain IP "
+            "address FreeRADIUS can load",
         )
 
     target_dir = _dir()
@@ -338,13 +371,26 @@ def write_client_for_nas(
     # hostname that does not resolve, a CIDR meant as a single router, or
     # garbage («abc», «999.1.1.1») makes FreeRADIUS refuse to (re)start —
     # taking RADIUS down for EVERY router on the server.
-    try:
-        ipaddr = str(ipaddress.ip_address(str(ipaddr).strip()))
-    except ValueError:
+    # f06-H2: … nor a scoped IPv6 («fe80::1%eth0»), which ip_address()
+    # accepts but radiusd rejects. The row is SKIPPED (logged) and any file
+    # this row wrote earlier is removed — one bad row never stops radiusd.
+    literal = radiusd_ip_literal(ipaddr)
+    if literal is None:
+        _LOG.warning(
+            "nas-%s: ipaddr %r is not an address FreeRADIUS can load — "
+            "client file skipped", nas_id, str(ipaddr)[:64])
+        _own = _dir() / f"nas-{int(nas_id)}.conf"
+        try:
+            if _own.exists():
+                _own.unlink()
+                _touch_reload_trigger(_dir())
+        except OSError:
+            _LOG.warning("could not remove %s", _own.name, exc_info=True)
         raise FreeRadiusProvisioningError(
             f"ipaddr {str(ipaddr)[:64]!r} is not a single IP address — "
             "refusing to write a client FreeRADIUS cannot load",
-        ) from None
+        )
+    ipaddr = literal
 
     target_dir = _dir()
     try:
@@ -590,10 +636,35 @@ def _dedupe_clients_by_ipaddr(target_dir) -> dict:
     for a human to confirm the router's real secret."""
     target_dir = Path(target_dir)
     actions: dict[str, list] = {
-        "kept": [], "deleted": [], "secret_conflicts": [],
+        "kept": [], "deleted": [], "secret_conflicts": [], "invalid": [],
     }
     if not target_dir.is_dir():
         return actions
+    # f06-H2 — THE SECOND WALL: a managed client file whose ipaddr radiusd
+    # cannot parse (a scoped «fe80::1%eth0» written before validation existed)
+    # makes the whole daemon refuse to start. Quarantine it as a dot-file —
+    # FreeRADIUS' directory $INCLUDE skips names starting with «.».
+    for path in list(target_dir.iterdir()):
+        if not path.is_file():
+            continue
+        if not (_RUN_FILE_RE.match(path.name) or _NAS_FILE_RE.match(path.name)):
+            continue
+        try:
+            m = _IPADDR_RE.search(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if not m or radiusd_ip_literal(m.group(1)) is not None:
+            continue
+        quarantine = target_dir / f".invalid-{path.name}"
+        try:
+            path.replace(quarantine)
+            actions["invalid"].append(path.name)
+            _LOG.error(
+                "dedupe: client %s has ipaddr %r FreeRADIUS cannot parse — "
+                "quarantined as %s so radiusd keeps running",
+                path.name, m.group(1)[:64], quarantine.name)
+        except OSError:
+            _LOG.warning("could not quarantine %s", path.name, exc_info=True)
     # ipaddr -> list of (path, secret, mtime, is_wizard)
     groups: dict[str, list] = {}
     for path in target_dir.iterdir():
@@ -1191,6 +1262,13 @@ def reconcile_nas_client_files(
         secret = str(r["secret"] or "").strip()
         if not source_ip or not secret:
             # Nothing we can register (incomplete row) — leave it.
+            continue
+        if radiusd_ip_literal(source_ip) is None:
+            # f06-H2: a legacy row with an address radiusd cannot parse is
+            # skipped (its old file, if any, is removed as an orphan below).
+            _LOG.warning(
+                "reconcile_nas: nas-%s has ipaddr %r FreeRADIUS cannot load "
+                "— skipped", nas_id, source_ip[:64])
             continue
         enabled_ids.add(nas_id)
 

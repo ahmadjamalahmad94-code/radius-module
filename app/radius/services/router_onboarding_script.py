@@ -207,21 +207,36 @@ def _section_tunnel(p: OnboardingParams) -> str:
     if p.ros_major() <= 6:
         # v6: نُبقي على default-encryption (مدعوم على v6) ونُسقط فقط الخصائص التي
         # يرفضها v6 (verify-server-address-from-certificate / port / keepalive).
-        sstp_add = (
+        # أسطرٌ قصيرةٌ للّصق: يُنشأ **معطّلًا** ثمّ تُضبط الخصائصُ ثمّ يُفعَّل،
+        # فلا يحاول الاتّصالَ قبل اكتمالِ إعداده (أأمنُ من سطرٍ ذرّيٍّ طويل).
+        sstp_add = "\n".join([
             f'/interface sstp-client add name="{iface}" connect-to={host} '
-            f'user="{user}" password="{pw}" profile=default-encryption '
-            f'verify-server-certificate=no add-default-route=no disabled=no '
-            f'comment="hr: SSTP mgmt to HobeRadius"')
+            f'user="{user}" password="{pw}" disabled=yes',
+            f'/interface sstp-client set [find name="{iface}"] '
+            f'profile=default-encryption verify-server-certificate=no',
+            f'/interface sstp-client set [find name="{iface}"] '
+            f'add-default-route=no comment="hr: SSTP mgmt to HobeRadius"',
+            f'/interface sstp-client enable [find name="{iface}"]',
+        ])
         sstp_note = ("# RouterOS 6 legacy: أمر SSTP مبسّط (بلا "
                      "verify-server-address-from-certificate / port / "
                      "keepalive-timeout — يرفضها v6). | v6-compatible SSTP add.")
     else:
-        sstp_add = (
+        # أسطرٌ قصيرةٌ للّصق (كان سطرًا واحدًا بـ325 حرفًا). يُنشأ **معطّلًا**
+        # ثمّ تُضبط الخصائصُ ثمّ يُفعَّل: فـ
+        # `verify-server-address-from-certificate=no` — الإلزاميّ كيلا يرفّ
+        # النفق — يكون مضبوطًا **قبل** أوّلِ محاولةِ اتّصال، لا بعدها.
+        sstp_add = "\n".join([
             f'/interface sstp-client add name="{iface}" connect-to={host} '
-            f'port={int(p.sstp_port)} user="{user}" password="{pw}" profile=default-encryption '
-            f'verify-server-certificate=no verify-server-address-from-certificate=no '
-            f'add-default-route=no disabled=no '
-            f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"')
+            f'port={int(p.sstp_port)} user="{user}" password="{pw}" disabled=yes',
+            f'/interface sstp-client set [find name="{iface}"] '
+            f'profile=default-encryption verify-server-certificate=no',
+            f'/interface sstp-client set [find name="{iface}"] '
+            f'verify-server-address-from-certificate=no add-default-route=no',
+            f'/interface sstp-client set [find name="{iface}"] '
+            f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"',
+            f'/interface sstp-client enable [find name="{iface}"]',
+        ])
         sstp_note = ("# RouterOS 7: الأمر الكامل (verify-server-address-from-"
                      "certificate=no إلزاميّ كيلا يرفّ النفق). | v7 full SSTP add.")
 
@@ -743,6 +758,14 @@ def split_sections(script: str) -> "List[dict]":
             "start_line": li + 1,
             "body": "\n".join(lines[li:end]).rstrip("\n"),
         })
+    # 🔴 `body` نصٌّ **معلَّقٌ بالعربيّة** — للعرضِ والشرحِ فقط. وزرُّ «نسخ
+    #    القسم» كان ينسخه كما هو، فيَلصق المستخدمُ عربيّةً في طرفيّة WinBox
+    #    وهي سببُ التعليق المُثبَت الذي من أجله أُنشئ `_to_paste_safe` أصلًا
+    #    (وقع هذا فعلًا مع المالك على راوتر GR31). فنُرفق لكلِّ قسمٍ نصَّه
+    #    **الآمن** ليَنسخه الزرّ. والتحويلُ سطريٌّ، فتجميعُ أقسامٍ آمنةٍ يساوي
+    #    حرفيًّا السكربتَ الآمنَ الكامل — لا انحرافَ بين الزرَّين.
+    for sec in sections:
+        sec["paste_body"] = _to_paste_safe(sec["body"]).rstrip("\n")
     return sections
 
 

@@ -108,7 +108,7 @@
 
 <div class="bf-form">
 <form method="post" id="bfForm"
-      action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">
+      action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">{% if not can_submit(('radius.bw_update' if not is_new else 'radius.bw_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {% call hub.section("معطيات الملف", icon="sliders") %}
     <div class="bf-grid">
@@ -225,12 +225,12 @@
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">{{ _('إلغاء') }}</a>
+    {% if can_submit('radius.bw_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الملف" if is_new else "حفظ التعديلات" }}
     </button>
   </div>
-</form>
+{% if not can_submit(('radius.bw_update' if not is_new else 'radius.bw_create')) %}</fieldset>{% endif %}</form>
 </div>
 
 <script>

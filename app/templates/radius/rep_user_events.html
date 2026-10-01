@@ -102,4 +102,7 @@
 {{ hub.empty("لا أحداث مستخدمين بعد",
    sub="غيّر الفلاتر أو لا توجد أحداث مستخدمين بعد.", icon="users-rectangle") }}
 {% endif %}
+{# F08-L: ترقيم خادميّ — ما بعد أوّل دفعة من النتائج #}
+{% from "_partials/list_pager.html" import list_pager with context %}
+{{ list_pager(filters.pager if filters else None) }}
 {% endblock %}

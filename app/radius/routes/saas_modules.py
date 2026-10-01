@@ -25,6 +25,14 @@ def _tid() -> int:
     return int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
 
 
+def _picker_subscribers(*, limit: int = 500):
+    """fix3 (F02 M3): subscriber pickers list only the admin's own subscribers
+    (same predicate as the subscribers list) — never another manager's."""
+    from ..services.subscriber_scope import current_scope_admin_id
+    return subscribers_repo.list_subscribers(
+        _tid(), limit=limit, owner_admin_id=current_scope_admin_id(tenant_id=_tid()))
+
+
 def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
@@ -238,6 +246,11 @@ def vch_generate():
         if count <= 0 or amount <= 0:
             flash("العدد والمبلغ مطلوبان وأكبر من صفر", "error")
             return redirect(url_for("radius.vch_generate"))
+        from ..core import limits
+        _msg = limits.amount_error(amount, "generic", label="قيمة القسيمة")
+        if _msg:   # «الحدود» — نفس سقف /api/v1/vouchers
+            flash(_msg, "error")
+            return redirect(url_for("radius.vch_generate"))
         plan_id = request.form.get("plan_id")
         expire = _date("expire_at")
         # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
@@ -278,7 +291,9 @@ def vch_redeem():
     if v.status != "active":
         flash("هذا الكوبون ملغى ولا يمكن صرفه.", "error")
         return back
-    if v.expire_at and v.expire_at < datetime.now():
+    # expire_at مُدخَلٌ بتوقيت اللوحة الحائطيّ ⇒ نقارنه بساعة اللوحة (zoneinfo).
+    from ..core.system_config import local_now
+    if v.expire_at and v.expire_at < local_now().replace(tzinfo=None):
         flash("انتهت صلاحية هذا الكوبون.", "error")
         return back
     if float(v.amount or 0) <= 0:
@@ -346,10 +361,15 @@ def inv_new():
 
 def inv_create():
     sub_id = _i("subscriber_id")
-    sub = next((s for s in subscribers_repo.list_subscribers(_tid(), limit=10_000)
+    sub = next((s for s in _picker_subscribers(limit=10_000)
                 if s.id == sub_id), None)
     if not sub:
         flash("اختر مشتركًا صحيحًا", "error")
+        return redirect(url_for("radius.inv_new"))
+    from ..core import limits
+    _msg = limits.amount_error(_f("amount"), "generic", label="قيمة الفاتورة")
+    if _msg:   # «الحدود» — نفس سقف /api/v1/invoices
+        flash(_msg, "error")
         return redirect(url_for("radius.inv_new"))
     plan = None
     plan_id_str = request.form.get("plan_id")
@@ -390,7 +410,7 @@ def tk_list():
     status = request.args.get("status") or None
     items = tickets_repo.list_tickets(_tid(), status=status, limit=500)
     # المشتركون مطلوبون لنموذج «تذكرة جديدة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template(
         "radius/tickets_list.html", items=items, status=status, subs=subs,
         # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /tickets/new يبقى حيًّا)
@@ -463,9 +483,14 @@ def tk_status(tid: int):
     if new_status not in TICKET_STATUSES:
         flash("حالة التذكرة غير صحيحة.", "error")
         return redirect(url_for("radius.tk_view", tid=tid))
-    if not tickets_repo.get_ticket(_tid(), tid):
+    ticket = tickets_repo.get_ticket(_tid(), tid)
+    if not ticket:
         abort(404)
-    tickets_repo.update_ticket(_tid(), tid, status=new_status)
+    # طلب الخدمة: نفس حارس الـAPI (مغلق/محلول نهائيّ؛ بقيّة الانتقالات بقرار الإدارة).
+    error = tickets_repo.change_status(_tid(), ticket, new_status)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("radius.tk_view", tid=tid))
     flash("تم تحديث الحالة.", "success")
     return redirect(url_for("radius.tk_view", tid=tid))
 
@@ -475,7 +500,7 @@ def tk_status(tid: int):
 def svc_list():
     items = services_repo.list_all(_tid(), limit=500)
     # المشتركون مطلوبون لنموذج «إضافة معدّة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template(
         "radius/services_list.html", items=items, subs=subs,
         # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /services/new يبقى حيًّا)
@@ -514,7 +539,7 @@ def svc_create():
 def svc_edit(sid: int):
     it = services_repo.get(_tid(), sid)
     if not it: abort(404)
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    subs = _picker_subscribers(limit=500)
     return render_template("radius/services_form.html", item=it, subs=subs, is_new=False)
 
 

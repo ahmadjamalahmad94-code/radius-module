@@ -89,11 +89,12 @@ def test_priority_input_constrained_in_form(app):
     with app.test_client() as client:
         _login_super(client)
         html = client.get(edit_url).get_data(as_text=True)
-    # الحقل مُقيَّد 1–10، والقيمة القديمة (100) تُعرَض مقصوصة إلى 10.
+    # الحقل مُقيَّد 1–10. القيمة 100 كانت افتراض الـAPI القديم («لم تُختر») —
+    # تُطبَّع إلى الافتراض 5 (fix3 F04 N-L10: مقياسٌ واحد 1–10 في كلّ المسارات).
     i = html.find('name="priority"')
     seg = html[i - 120:i + 120]
     assert 'min="1"' in seg and 'max="10"' in seg
-    assert 'value="10"' in seg
+    assert 'value="5"' in seg
 
 
 # ── 2) إزالة تكرار مفاتيح الخدمة — «نوع الخدمة» هو المصدر الوحيد ──────────

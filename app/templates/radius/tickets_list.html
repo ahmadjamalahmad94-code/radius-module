@@ -58,7 +58,17 @@
   'connection':      'الاتصال والخدمة',
   'hardware':        'الأجهزة والمعدّات',
   'complaint':       'شكوى',
-  'service_request': 'طلب خدمة'
+  'service_request': 'طلب خدمة',
+  'network':         'الشبكة',
+  'installation':    'التركيب',
+  'account':         'الحساب',
+  'cards':           'الكروت',
+  'technical':       'دعم فنّي',
+  'support':         'دعم فنّي',
+  'payment':         'الدفع',
+  'internet':        'الإنترنت',
+  'speed':           'السرعة',
+  'other':           'أخرى'
 } %}
 {% set status_map = {
   'open':        ('مفتوحة',      'amber'),
@@ -141,8 +151,8 @@
         <tr>
           <td class="num mono"><bdi dir="ltr">{{ t.id }}</bdi></td>
           <td>
-            <a href="{{ url_for('radius.tk_view', tid=t.id) }}"
-               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">{{ t.subject }}</a>
+            {% if can_submit('radius.tk_view', 'GET') %}<a href="{{ url_for('radius.tk_view', tid=t.id) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">{% endif %}{{ t.subject }}{% if can_submit('radius.tk_view', 'GET') %}</a>{% endif %}
           </td>
           <td>{{ hub.pill(category_labels.get(t.category, t.category or '—'), variant="grey", dot=False) }}</td>
           <td>{{ hub.pill(_pr[0], variant=_pr[1]) }}</td>
@@ -151,10 +161,10 @@
           <td class="mono small">{% if t.assignee_admin_id %}<bdi dir="ltr">#{{ t.assignee_admin_id }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
           <td class="mono small"><bdi dir="ltr">{{ t.created_at|dt_local if t.created_at else '—' }}</bdi></td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح التذكرة') }}"
+            {% if can_submit('radius.tk_view', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح التذكرة') }}"
                href="{{ url_for('radius.tk_view', tid=t.id) }}">
               <i class="fa-solid fa-eye"></i>
-            </a>
+            </a>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -178,7 +188,7 @@
 <div class="fcw-modal" data-fcw-modal="ticket-create" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-ticket-create-title">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
-    <form method="post" action="{{ url_for('radius.tk_create') }}">
+    <form method="post" action="{{ url_for('radius.tk_create') }}">{% if not can_submit('radius.tk_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <div class="fcw-head">
         <h3 id="fcw-ticket-create-title"><i class="fa-solid fa-headset"></i> {{ _('تذكرة جديدة') }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
@@ -242,7 +252,7 @@
         <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إنشاء التذكرة') }}</button>
       </div>
-    </form>
+    {% if not can_submit('radius.tk_create') %}</fieldset>{% endif %}</form>
   </div>
 </div>
 

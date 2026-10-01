@@ -43,8 +43,8 @@ def _seed_plan(name: str, *, price: float, days: int = 30) -> int:
         """
         INSERT INTO access_plans(
             tenant_id, name, duration_minutes, validity_days, price,
-            currency, enabled, created_at, updated_at
-        ) VALUES(?,?,?,?,?,?,?,?,?)
+            currency, enabled, created_at, updated_at, max_daily_minutes
+        ) VALUES(?,?,?,?,?,?,?,?,?,1440)
         """,
         (
             1,

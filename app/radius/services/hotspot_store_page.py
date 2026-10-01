@@ -1463,7 +1463,9 @@ body{min-height:100vh;background:
     var items = data.items || [];
     mcState.page = data.page || 1;
     mcState.pages = data.pages || 1;
-    $('mcCount').textContent = (data.total || 0) + ' بطاقة';
+    // F08-L: جمعٌ عربيّ (نفس قاعدة core/ar_text.ar_count)
+    var _n = data.total || 0, _r = Math.abs(_n) % 100;
+    $('mcCount').textContent = _n + ' ' + ((_n === 2 || (_r >= 3 && _r <= 10)) ? 'بطاقات' : ((_r >= 11 && _r <= 99) ? 'بطاقةً' : 'بطاقة'));
     var box = $('mcList');
     if (!items.length) {
       box.innerHTML = '<div class="card"><div class="empty">' +

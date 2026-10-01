@@ -238,6 +238,9 @@ def test_batches_export_xlsx_and_pdf_are_real_files(client, auth_headers):
             "plan_id": 1,
             "count": 1,
             "username_prefix": "batch-export",
+            # fix2: the length is the WHOLE name - a 12-char prefix needs room
+            # for at least one random digit (it used to silently overflow 8).
+            "username_length": 14,
             "package_name": "Export API Batch",
         },
         headers=auth_headers,

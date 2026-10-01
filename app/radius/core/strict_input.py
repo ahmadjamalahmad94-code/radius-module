@@ -62,7 +62,10 @@ def parse_ranged_int(value: Any, *, label: str, minimum: int, maximum: int,
             raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
         out = int(value)
     elif isinstance(value, str):
-        s = value.strip()
+        # Arabic-Indic/Persian digits and the typographic minus → Latin, the
+        # same normalisation as core.numbers (finite_int / the web form hook).
+        from .numbers import normalize_number_text
+        s = normalize_number_text(value).strip()
         body = s[1:] if s[:1] in "+-" else s
         if not body.isdigit() or not body.isascii() or len(body) > 18:
             raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")

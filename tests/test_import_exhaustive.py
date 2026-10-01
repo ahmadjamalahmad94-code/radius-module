@@ -70,8 +70,11 @@ def _plan_id() -> int:
 def _sub_admin(username: str) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») carries every non-owner key and
+    # grant — a plain manager gets the least-privileged role.
     adm = admins_repo.create_admin(username=username, password="x12345678",
-                                   full_name=f"M {username}", is_super_admin=False)
+                                   full_name=f"M {username}", is_super_admin=False,
+                                   role_id=admins_repo.least_privileged_role_id())
     return int(adm.id)
 
 
@@ -80,6 +83,10 @@ def _grant(manager_id: int, **perms) -> None:
 
     ManagerDistributorOpsService(tenant_id=1).set_policy(
         entity_type="manager", entity_id=manager_id, permissions=perms)
+    if perms.get("can_import_batches"):
+        # p01/D14: «استيراد الحِزم» derives from the RBAC key cards.import.
+        from mg_test_roles import add_role_keys
+        add_role_keys(manager_id, "cards.import")
 
 
 def _seed_card(plan_id: int, username: str) -> None:
@@ -90,6 +97,10 @@ def _seed_card(plan_id: int, username: str) -> None:
 
 
 def _login(client, *, admin_id: int, is_super: bool, perms=("cards.view",)):
+    from mg_test_roles import role_keys
+    if not is_super:
+        with client.application.app_context():
+            perms = sorted(set(perms) | ({"cards.import"} & set(role_keys(admin_id))))
     with client.session_transaction() as sess:
         sess["admin_id"] = admin_id
         sess["admin_user"] = f"admin{admin_id}"
@@ -132,7 +143,10 @@ def test_permission_label(app):
     assert permission_label("can_import_batches") == "استيراد الحِزم"
 
 
-def test_owner_toggles_permission_via_policy_route(app):
+def test_owner_grants_import_through_the_role_key(app):
+    """p01/D14 (fix wave 2): «استيراد الحِزم» IS the RBAC key cards.import —
+    the manager page no longer carries a separate flag (a posted flag grants
+    nothing); the role matrix is the single control."""
     with app.app_context():
         mgr = _sub_admin("tog")
     with app.test_client() as c:
@@ -142,6 +156,12 @@ def test_owner_toggles_permission_via_policy_route(app):
     assert res.status_code in (302, 303)
     with app.app_context():
         from app.radius.services.manager_distributor_ops import ManagerDistributorOpsService
+        svc = ManagerDistributorOpsService(tenant_id=1)
+        assert svc.has_permission(entity_type="manager", entity_id=mgr,
+                                  permission="can_import_batches") is False
+        from mg_test_roles import add_role_keys
+        add_role_keys(mgr, "cards.import")
+    with app.app_context():
         assert ManagerDistributorOpsService(tenant_id=1).has_permission(
             entity_type="manager", entity_id=mgr, permission="can_import_batches") is True
 

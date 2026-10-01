@@ -46,6 +46,9 @@ def settings_get():
         if key == "billing.currency":
             # القيمة الفعليّة (غير مضبوطة/فارغة → عملة النظام)، لا نصّ الكتالوج.
             value = system["currency"]
+        elif key == "billing.timezone":
+            # المنطقة الفعليّة (غير مضبوطة/تالفة → ما تحسب به اللوحة فعلًا).
+            value = system["timezone"]
         items.append(
             {
                 "key": key,
@@ -63,6 +66,8 @@ def settings_get():
 
 def settings_patch():
     body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
+        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
     settings = body.get("settings", body)
     if not isinstance(settings, dict):
         return fail("validation_error", "الإعدادات يجب أن تكون كائنًا.", status=422)
@@ -75,11 +80,40 @@ def settings_patch():
             status=422,
             details={"unknown": unknown},
         )
-    changed: dict[str, str] = {}
-    tenant_id = _tid()
+    # نفس تحقّق صفحة الإعدادات — قبل أيّ كتابة (لا حفظ جزئيّ): منطقةٌ تعرفها
+    # zoneinfo، وعملةٌ برمزٍ حرفيّ.
+    from ...radius.core.system_config import is_valid_timezone
+    clean: dict[str, str] = {}
     for key, value in settings.items():
         skey = str(key)
         sval = "" if value is None else str(value).strip()
+        if skey == "billing.timezone" and sval and not is_valid_timezone(sval):
+            return fail("validation_error",
+                        "المنطقة الزمنية غير معروفة — استخدم اسم IANA مثل Asia/Gaza.",
+                        status=422, details={"field": skey})
+        if skey == "subscribers.create_without_expiry":
+            sval = sval.lower()
+            if sval and sval not in ("expired", "unlimited"):
+                return fail("validation_error",
+                            "القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء).",
+                            status=422, details={"field": skey})
+        if skey.startswith("limits."):
+            # «الحدود» — نفس تحقّق صفحة الإعدادات (core.limits.validate_setting).
+            from ...radius.core import limits as _limits
+            try:
+                sval = _limits.validate_setting(skey, value)
+            except ValueError as exc:
+                return fail("validation_error", str(exc), status=422,
+                            details={"field": skey})
+        if skey == "billing.currency":
+            sval = sval.upper()
+            if sval and (not sval.isalpha() or not (2 <= len(sval) <= 5)):
+                return fail("validation_error", "رمز العملة غير صالح (مثل ILS).",
+                            status=422, details={"field": skey})
+        clean[skey] = sval
+    changed: dict[str, str] = {}
+    tenant_id = _tid()
+    for skey, sval in clean.items():
         old = tenants_repo.get_setting(tenant_id, skey, catalog[skey][1])
         if sval != old:
             tenants_repo.set_setting(

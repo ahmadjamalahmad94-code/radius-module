@@ -26,6 +26,9 @@
   window.__hubDateInit = true;
 
   var OPEN = null; // اللوحة المفتوحة حاليًا (واحدة فقط — نفس نمط hub_select)
+  var OPENED_AT = 0; // وقت آخر فتح — نافذة سماح لتمرير/تغيّر حجم يسبّبهما ظهور لوحة المفاتيح
+  var COARSE = !!(window.matchMedia &&
+                  window.matchMedia("(pointer: coarse)").matches);
 
   /* أسماء الأشهر الشامية + رقم الشهر الميلادي يُعرض صغيرًا بجانبها */
   var MONTHS = [
@@ -408,7 +411,8 @@
       positionPanel();
       trigger.setAttribute("aria-expanded", "true");
       wrap.classList.add("is-open");
-      OPEN = { panel: panel, trigger: trigger, wrap: wrap };
+      OPEN = { panel: panel, trigger: trigger, wrap: wrap, position: positionPanel };
+      OPENED_AT = Date.now();
     }
 
     trigger.addEventListener("click", function () {
@@ -487,13 +491,36 @@
     if (OPEN && e.target && e.target.tagName === "DIALOG") closeOpen();
   }, true);
   // التمرير خارج اللوحة يقفلها (لأنها مثبتة على الشاشة) — التمرير
-  // داخلها مسموح
+  // داخلها مسموح. على الجوّال، انطواء شريط العنوان أو ظهور لوحة
+  // المفاتيح يُطلقان scroll لم يطلبه المستخدم، فنتجاهله (نفس إصلاح
+  // hub_select.js) بدل إغلاق اللوحة أمام عينيه.
+  var trackRaf = 0;
   window.addEventListener("scroll", function (e) {
     if (!OPEN) return;
+    if (Date.now() - OPENED_AT < 400) return;
     if (e.target && e.target.nodeType === 1 && OPEN.panel.contains(e.target)) return;
+    if (COARSE) {
+      if (trackRaf) return;
+      trackRaf = requestAnimationFrame(function () {
+        trackRaf = 0;
+        if (!OPEN) return;
+        var r = OPEN.trigger.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) { closeOpen(); return; }
+        OPEN.position();
+      });
+      return;
+    }
     closeOpen();
   }, true);
-  window.addEventListener("resize", function () { if (OPEN) closeOpen(); });
+  // ارتفاعٌ متغيّرٌ وحدَه = لوحةُ مفاتيحَ ظهرت أو اختفت — لا دورانَ شاشةٍ
+  // ولا تغييرَ حجمِ نافذة فعليّ. الإغلاقُ عليه يقتل اللوحةَ فور فتحها.
+  var LAST_W = window.innerWidth;
+  window.addEventListener("resize", function () {
+    var w = window.innerWidth;
+    if (w === LAST_W) return;
+    LAST_W = w;
+    if (OPEN) closeOpen();
+  });
 
   function init() {
     var inputs = document.querySelectorAll('input[type="date"], input[type="datetime-local"]');

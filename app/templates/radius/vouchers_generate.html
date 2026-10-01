@@ -19,7 +19,7 @@
   '|safe
 ) }}
 
-<form method="post">
+<form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {% call hub.section("معطيات الدفعة", icon="sliders") %}
     <div class="hub-form">
       <div class="hub-field">
@@ -66,8 +66,8 @@
 
   <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
     {{ hub.btn("توليد الكوبونات", icon="wand-magic-sparkles", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", href=url_for('radius.vch_list'), variant="secondary") }}
+    {% if can_submit('radius.vch_list', 'GET') %}{{ hub.btn("إلغاء", href=url_for('radius.vch_list'), variant="secondary") }}{% endif %}
   </div>
-</form>
+{% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {% endblock %}

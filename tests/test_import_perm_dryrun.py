@@ -74,9 +74,11 @@ def _plan_id() -> int:
 def _sub_admin(username: str) -> int:
     from app.radius.db.repos import admins_repo
 
+    # fix wave 2: the default role («مدير عام») carries every non-owner key and
+    # grant — a plain manager gets the least-privileged role.
     adm = admins_repo.create_admin(
         username=username, password="x12345678", full_name=f"Mgr {username}",
-        is_super_admin=False,
+        is_super_admin=False, role_id=admins_repo.least_privileged_role_id(),
     )
     return int(adm.id)
 
@@ -87,9 +89,18 @@ def _grant(manager_id: int, **perms) -> None:
     ManagerDistributorOpsService(tenant_id=1).set_policy(
         entity_type="manager", entity_id=manager_id, permissions=perms,
     )
+    if perms.get("can_import_batches"):
+        # p01/D14: «استيراد الحِزم» derives from the RBAC key cards.import.
+        from mg_test_roles import add_role_keys
+        add_role_keys(manager_id, "cards.import")
 
 
 def _login(client, *, admin_id: int, is_super: bool):
+    from mg_test_roles import role_keys
+    extra = []
+    if not is_super:
+        with client.application.app_context():
+            extra = sorted({"cards.import"} & set(role_keys(admin_id)))
     with client.session_transaction() as sess:
         sess["admin_id"] = admin_id
         sess["admin_user"] = f"admin{admin_id}"
@@ -97,7 +108,7 @@ def _login(client, *, admin_id: int, is_super: bool):
         sess["is_super_admin"] = is_super
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "off-csrf"
-        sess["permissions"] = ["cards.view", "cards.generate"]
+        sess["permissions"] = ["cards.view", "cards.generate"] + extra
 
 
 def _preview(client, csv_bytes: bytes):

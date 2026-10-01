@@ -72,19 +72,37 @@ class TestTemplateMacrosLatinAndIsolated:
         return text[idx:end]
 
     def test_sessions_list_duration_macro(self):
+        """fix3 (F06-L3): «المتصلون الآن» shows Arabic WORDS («10 دقائق»), not
+        «10m». A digit next to an Arabic word never bidi-flips (only the old
+        single-letter units did), so the macro uses the shared `dur_ar`
+        filter and still carries no single-letter Arabic unit."""
         region = self._macro_region(
             "app/templates/radius/sessions_list.html", "{% macro fmt_duration(")
-        assert 'bdi dir="ltr"' in region
+        assert "|dur_ar" in region
         for ch in _ARABIC_UNITS:
-            assert ch not in region, "Arabic unit still in fmt_duration"
+            assert ch not in region, "Arabic unit letter in fmt_duration"
+        from app.radius.core.duration_fmt import fmt_compact_ar
+        assert fmt_compact_ar(600) == "10 دقائق"
+        assert fmt_compact_ar(3900) == "1 ساعة و5 دقائق"
 
     def test_portal_and_report_macros(self):
+        """fix3 integration: the sessions report, the subscriber profile and the
+        subscriber portal show Arabic WORDS like /online (the owner's request);
+        a digit next to an Arabic word never bidi-flips, so no LTR isolate and
+        no single-letter unit (neither Latin «5m» nor Arabic «5د»)."""
         for rel, needle in (
             ("app/templates/radius/rep_sessions.html", "{% macro fmt_dur("),
             ("app/templates/radius/users_profile.html", "{% macro fmt_dur("),
             ("app/templates/radius/portal_subscriber.html", "{% macro fmt_secs("),
+            ("app/templates/radius/portal_subscriber.html", "{% macro fmt_mins("),
         ):
             region = self._macro_region(rel, needle)
-            assert 'bdi dir="ltr"' in region, f"{rel}: macro not LTR-isolated"
-            for ch in _ARABIC_UNITS:
-                assert ch not in region, f"{rel}: Arabic unit still present"
+            assert "|dur_ar_s" in region, f"{rel}: macro not on the Arabic-word filter"
+            assert "bdi" not in region and not re.search(r"\d[dhms]", region)
+        from app.radius.core.duration_fmt import fmt_duration_ar
+        assert fmt_duration_ar(0) == "0 دقيقة"
+        assert fmt_duration_ar(45) == "45 ثانية"
+        assert fmt_duration_ar(2) == "ثانيتان"
+        assert fmt_duration_ar(5) == "5 ثوانٍ"
+        assert fmt_duration_ar(600) == "10 دقائق"
+        assert fmt_duration_ar(90000) == "1 يوم و1 ساعة"

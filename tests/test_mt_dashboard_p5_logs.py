@@ -43,7 +43,7 @@ def _login(client) -> None:
     u = f"p5_{uuid4().hex[:10]}"
     admins_repo.create_admin(
         username=u, password="p5-pass", full_name="P5 Tester",
-        is_super_admin=True,
+        is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
     res = client.post(
         "/admin/radius/login",

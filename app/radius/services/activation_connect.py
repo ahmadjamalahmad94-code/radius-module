@@ -21,6 +21,7 @@ NEVER_ACTIVATED — للاختبار الكامل لدورة remove → pending 
     حقل واحد وإعادة المحاولة بدون كتابة كل شيء من الأوّل.
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import logging
 from dataclasses import dataclass
@@ -316,7 +317,7 @@ def reset_link(tenant_id: int, *, by: int = 0,
 
     return ActivationResult(
         ok=True, code="reset_done",
-        message_ar=(f"تم فكّ الربط. مُسحت {len(cleared_settings)} إعدادًا "
+        message_ar=(f"تم فكّ الربط. مُسح {ar_count(len(cleared_settings), 'setting')} "
                      f"و{deleted_snapshots} لقطة. النسخة الآن في حالة "
                      "«بانتظار التفعيل» — تَستطيع البدء من جديد."),
         details={"cleared_settings": cleared_settings,

@@ -624,6 +624,9 @@ def mt_setup_create():
         api_use_tls=False,
         enabled=True,
         monitoring_enabled=True,
+        # يُضبط هنا لا في التحديثِ الخامِّ أدناه وحدَه: فلا تمرُّ لحظةٌ يكون
+        # الصفُّ فيها بلا إصدارٍ (والفارغُ يُعامَل كـ7 في مولّدِ السكربت).
+        ros_version=ros_version,
     )
     try:
         saved = get_nas_devices_service().create(actor=_actor(), device=dev)
@@ -1392,6 +1395,18 @@ def mt_onboarding_script(nas_id: int):
         # several SSTP properties). Unknown → v7 (full) command.
         ros_version=str(nas.get("ros_version") or ""),
     )
+    # 🔴 لا نُولّد بإصدارٍ مجهول. المولّدُ يُعامل الفارغَ كـ'7' ويُخرج أمرَ نفقٍ
+    #    فيه `port=` و`verify-server-address-from-certificate=` و
+    #    `keepalive-timeout=` — و**ROS 6 يرفض السطرَ كلَّه فلا يُنشأ النفق**،
+    #    بلا خطأٍ ظاهرٍ وسطَ عشراتِ الأسطر الملصوقة. والاكتشافُ التلقائيُّ لا
+    #    يُجدي هنا: أوّلُ ربطٍ لا اتّصالَ فيه أصلًا (السكربتُ نفسُه هو ما يفتح
+    #    الـAPI). فنوقف التوليدَ ونطلب الاختيار. راجع devices_form.html.
+    if not str(nas.get("ros_version") or "").strip():
+        flash(
+            "اختر إصدار RouterOS للراوتر أوّلًا (6 أو 7) — أمرُ نفقِ الإدارة "
+            "يختلف بينهما، والإصدارُ الخطأ يجعل النفقَ لا يُنشأ بلا رسالةِ خطأ.",
+            "error")
+        return redirect(url_for("radius.devices_edit", nas_id=nas_id))
     try:
         # Full (commented) form drives the «explain order» view (keyed on the
         # header banners); the paste-safe form is what the user copies/imports —

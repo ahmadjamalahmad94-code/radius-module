@@ -58,6 +58,13 @@ class NasDevice:
     # لجلب المستخدمين: 'auto' (REST ثم API) | 'rest' | 'api'. مُلحَق في
     # نهاية الـdataclass فلا يُزيح أي بناء موضعي قائم.
     api_type: str = "auto"
+    # إصدارُ RouterOS: '6' | '7' | '' (مجهول). العمودُ قائمٌ منذ الهجرة 034،
+    # لكنّه لم يكن في هذا الـDTO — فكان **المعالجُ وحدَه** يكتبه بتحديثٍ خامٍّ
+    # بعد الإنشاء، ومسارا الويب والـAPI لا يستطيعان ضبطَه أصلًا. والفارغُ
+    # يُعامَل في مولّدِ السكربت كـ'7'، فيخرج أمرُ نفقٍ فيه خصائصُ v7 التي
+    # **يرفضها ROS 6 فلا يُنشأ النفقُ إطلاقًا** — فشلٌ صامتٌ وسطَ عشرات
+    # الأسطر. مُلحَقٌ في النهاية فلا يُزيح أيّ بناءٍ موضعيّ قائم.
+    ros_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -127,7 +134,7 @@ class AccessPlan:
     project: str = ""
     description: str = ""
     enabled: bool = True
-    priority: int = 100
+    priority: int = 5                          # 1–10، الأصغر أعلى (plans_repo.normalize_priority)
     color: str = "#2BAACC"
     # ── RM-H3: AdvRadius extension fields (migration 012) ──
     # سرعة متقدمة + CIR + bursts
@@ -503,6 +510,9 @@ class Admin:
     # إلزام تغيير كلمة المرور عند أول دخول (migration 143). يُضبط للأدمن الذي
     # أنشأته لوحة التراخيص مركزياً بكلمة مرور أوليّة؛ يُمسح عند تغييرها محلياً.
     must_change_password: bool = False
+    # «شريك/مالك» محلّيّ (migration 181): يأخذ كل ما يأخذه المالك. يمنحه المالك
+    # أو شريكٌ آخر فقط. انظر app/radius/auth/owner.py.
+    is_co_owner: bool = False
     # ── Per-manager monetary credit caps (migration 142). Both disabled +
     # amount 0 = ZERO TRUST (a new manager can do nothing that costs money).
     # Amounts in minor units (× 100). Only the super-admin may change these.

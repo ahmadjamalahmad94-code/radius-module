@@ -2,6 +2,7 @@
 Settings — إعدادات النظام لكل tenant (key/value).
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import uuid
 from pathlib import Path
@@ -84,10 +85,15 @@ _SETTINGS_KEYS = [
     ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", _SYS_DEFAULTS["billing.currency"]),
     # المنطقة الزمنية الأساسية (IANA) — تُحسب عليها كل الأوقات المعروضة في
     # اللوحة وتقييم جداول السرعة، وهي آمنة تجاه التوقيت الصيفي (DST) عبر
-    # zoneinfo. الافتراضي Asia/Damascus (+3). يبقى billing.timezone_offset
-    # احتياطًا حين تتعذّر قاعدة المناطق أو لمنطقة خارج القائمة.
-    ("billing.timezone",        "المنطقة الزمنية (IANA)", "Asia/Damascus"),
+    # zoneinfo. الافتراضي Asia/Gaza (فلسطين: ‎+2 شتاءً/‎+3 صيفًا — قرار المالك).
+    # يبقى billing.timezone_offset احتياطًا حين تتعذّر قاعدة المناطق فقط.
+    ("billing.timezone",        "المنطقة الزمنية (IANA)", _SYS_DEFAULTS["billing.timezone"]),
     ("billing.timezone_offset", "فارق توقيت النظام بالساعات (احتياطي إذا تعذّرت المنطقة)", "3"),
+    # قرار المالك: مشتركٌ جديد بلا تاريخ انتهاء يولد منتهيًا (expired) —
+    # إلّا على خادمٍ يضبطها unlimited (HobeHub المجّانيّ).
+    ("subscribers.create_without_expiry",
+     "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء",
+     _SYS_DEFAULTS["subscribers.create_without_expiry"]),
     ("billing.tax_pct",         "ضريبة %",              "0"),
     ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),
     # عرض الأقسام غير المصرّح بها في الواجهة (sidebar/أزرار العمليات):
@@ -175,6 +181,17 @@ _SETTINGS_KEYS = [
     ("device_limit.cards.count",       "الكروت — عدد الأجهزة الافتراضيّ",   "1"),
 ]
 
+# ── «الحدود» — سقوف العمليّة الواحدة لكلّ خادم (قرار المالك 2026-09-30) ──────
+# المصدر والتحقّق في core/limits.py (قيمة موجبة؛ «بلا حدّ» بمفتاح ‎.unlimited
+# صريح مع بقاء السقوف التقنيّة). تُقرأ في كلّ طلب ⇒ التغيير يسري فورًا.
+from ..core import limits as _limits  # noqa: E402
+for _spec in _limits.SPECS:
+    _SETTINGS_KEYS.append((_spec.key, _spec.label, _limits.fmt_amount(_spec.default)))
+    if _spec.allow_unlimited:
+        _SETTINGS_KEYS.append((_limits.unlimited_key(_spec.key),
+                               f"{_spec.label} — بلا حدّ", "0"))
+_LIMIT_KEYS = set(_limits.all_setting_keys())
+
 
 # ── مفاتيح مُخفاة من واجهة الإعدادات (تبقى عاملة بقيمتها/افتراضها) ──────
 # إخفاء = لا تُرسَم في القالب → لا تظهر في النموذج → لا يلمسها الحفظ، فتحتفظ
@@ -236,6 +253,19 @@ def settings_page():
         admin_id = session.get("admin_id") or 0
         changed: dict[str, str] = {}
 
+        # ── «الحدود»: تُتحقَّق كلّها قبل أيّ حفظ (لا حفظ جزئيّ بقيمةٍ مرفوضة) ──
+        limit_vals: dict[str, str] = {}
+        for key in _LIMIT_KEYS:
+            if key in request.form:
+                try:
+                    # مفتاح «بلا حدّ»: المربّع "1" قبل الحقل المخفيّ "0" (نمط الصفحة)
+                    # ⇒ أوّل قيمة تغلب.
+                    limit_vals[key] = _limits.validate_setting(
+                        key, request.form.getlist(key)[0])
+                except ValueError as exc:
+                    flash(str(exc), "error")
+                    return redirect(url_for("radius.settings_page") + "#tab=limits")
+
         # ── شعار مرفوع كملف؟ يُحفظ على القرص ويتقدّم على حقل الرابط
         #    النصي — تُخزَّن النتيجة في نفس المفتاح branding.logo_url. ──
         try:
@@ -246,7 +276,7 @@ def settings_page():
 
         for key, _label, _default in _SETTINGS_KEYS:
             if key in request.form:
-                val = request.form[key].strip()
+                val = limit_vals[key] if key in limit_vals else request.form[key].strip()
                 # الملف المرفوع يتقدّم على قيمة حقل الرابط النصي
                 if key == "branding.logo_url" and uploaded_logo_url:
                     val = uploaded_logo_url
@@ -272,6 +302,24 @@ def settings_page():
                 # ── سلوك حدّ الأجهزة (منفصل كروت/مشتركين) ──
                 #   *.mode  → قيمة محصورة reject/replace.
                 #   *.count → عدد صحيح ≥ 1 (خطأ → 1).
+                # ── المنطقة الزمنية: اسم IANA صالح فقط (اسمٌ تالف كان يُسقط
+                #    كل الأوقات إلى الإزاحة الثابتة الاحتياطيّة بصمت). ──
+                if key == "billing.timezone":
+                    from ..core.system_config import is_valid_timezone
+                    val = val or _SYS_DEFAULTS["billing.timezone"]
+                    if not is_valid_timezone(val):
+                        flash("المنطقة الزمنية غير معروفة — اختر من القائمة (مثل غزة Asia/Gaza).", "error")
+                        return redirect(url_for("radius.settings_page"))
+                if key == "subscribers.create_without_expiry":
+                    val = (val or _SYS_DEFAULTS[key]).lower()
+                    if val not in ("expired", "unlimited"):
+                        flash("قيمة «المشترك الجديد بلا تاريخ انتهاء» غير معروفة — اختر «منتهٍ فورًا» أو «بلا انتهاء».", "error")
+                        return redirect(url_for("radius.settings_page"))
+                if key == "billing.currency":
+                    val = (val or _SYS_DEFAULTS["billing.currency"]).upper()
+                    if not val.isalpha() or not (2 <= len(val) <= 5):
+                        flash("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل).", "error")
+                        return redirect(url_for("radius.settings_page"))
                 if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
                     val = val.strip().lower()
                     if val not in ("reject", "replace"):
@@ -290,7 +338,7 @@ def settings_page():
             audit_repo.record(tenant_id=tenant_id, actor=actor, action="settings_update",
                               target_type="settings", target_id=",".join(changed.keys()),
                               payload={"changed": list(changed.keys())})
-            flash(f"تم حفظ {len(changed)} إعدادًا.", "success")
+            flash(f"تم حفظ {ar_count(len(changed), 'setting')}.", "success")
         else:
             flash("لا تغييرات.", "info")
         return redirect(url_for("radius.settings_page"))
@@ -310,7 +358,23 @@ def settings_page():
     custom_count = sum(
         1 for r in visible if (r["value"] or "") != (r["default"] or ""))
     from ..services.store_key import get_store_key
+    from ..core.system_config import (CREATE_WITHOUT_EXPIRY_CHOICES,
+                                      CURRENCY_CHOICES, PANEL_TIMEZONES,
+                                      effective_timezone)
+    try:
+        tz_now = effective_timezone(tenant_id)
+    except Exception:  # noqa: BLE001 — المعاينة لا تُسقط الصفحة
+        tz_now = None
+    try:
+        limit_rows = _limits.settings_rows(tenant_id)
+    except Exception:  # noqa: BLE001 — القسم لا يُسقط الصفحة
+        limit_rows = []
     return render_template("radius/settings_page.html", items=rows,
+                           limit_rows=limit_rows,
                            store_key=get_store_key(tenant_id),
                            visible_count=visible_count,
-                           custom_count=custom_count)
+                           custom_count=custom_count,
+                           currency_choices=CURRENCY_CHOICES,
+                           panel_timezones=PANEL_TIMEZONES,
+                           create_without_expiry_choices=CREATE_WITHOUT_EXPIRY_CHOICES,
+                           tz_now=tz_now)

@@ -137,6 +137,15 @@ def _web_login(client, username, password="mgr-pass") -> str:
         return sess.get("_csrf_token", "")
 
 
+
+def _own(sub, admin):
+    """D09 (fix wave 2): a manager without «عرض كل المشتركين» reaches only his
+    OWN subscribers — make ``admin`` the responsible manager of ``sub``."""
+    from app.radius.db.connection import db
+    db().execute("UPDATE subscribers SET manager_id=? WHERE tenant_id=1 AND username=?",
+                 (int(admin.id), sub.username))
+
+
 # ─────────────── 1. legacy accounts RBAC ───────────────
 
 LEGACY_WRITES = (
@@ -156,6 +165,7 @@ def test_view_only_manager_is_refused_every_legacy_write(client):
     pid, other = _plan(), _plan()
     s = _sub(plan_id=pid)
     mgr = _manager(("dashboard.view", "users.view", "online.view", "cards.view", "plans.view"))
+    _own(s, mgr)
     hdr = _hdr(client, mgr)
     before = _row(s.username)
     for method, what, body in LEGACY_WRITES:
@@ -182,6 +192,7 @@ def test_manager_with_the_permissions_can_write_but_not_balance(client):
     s = _sub(balance=5)
     mgr = _manager(("users.view", "users.edit", "users.change_status", "users.extend",
                     "users.delete", "users.create"))
+    _own(s, mgr)
     hdr = _hdr(client, mgr)
     url = f"/api/v1/accounts/{s.username}"
     assert client.post(f"{url}/disable", headers=hdr).status_code == 200
@@ -216,6 +227,7 @@ def test_viewer_role_cannot_read_accounts(client):
 def test_actions_context_flags_are_truthful_for_view_only(client):
     s = _sub()
     mgr = _manager(("users.view",))
+    _own(s, mgr)
     hdr = _hdr(client, mgr)
     res = client.get(f"/api/v1/accounts/{s.username}/actions-context", headers=hdr)
     assert res.status_code == 200, res.get_json()
@@ -251,7 +263,7 @@ def _distributor_setup(client):
     batch_id = int(res.get_json()["data"]["batch"]["id"])
     mgr = _manager(("users.view", "users.extend", "users.edit"))
     dist = operations_repo.create_distributor(1, {
-        "admin_id": mgr.id, "name": "dist_" + uuid4().hex[:6],
+        "login_admin_id": mgr.id, "name": "dist_" + uuid4().hex[:6],
         "permissions": ["users.view"], "scope": {"card_batches": "assigned"}}, actor="test")
     operations_repo.assign_batch(1, distributor_id=dist["id"], batch_id=batch_id, actor="test")
     mine = _sub("mine", plan_id=pid, card_batch_id=batch_id)
@@ -292,6 +304,7 @@ def test_owner_app_login_keeps_full_access(client):
 def test_disabled_and_deleted_admin_tokens_are_refused(client):
     s = _sub()
     mgr = _manager(("users.view", "users.edit"))
+    _own(s, mgr)
     hdr = _hdr(client, mgr)
     from app.radius.db.repos import api_tokens_repo
     integ, plain = api_tokens_repo.create_token(tenant_id=1, name="integration",

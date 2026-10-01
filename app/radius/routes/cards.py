@@ -4,6 +4,7 @@ RM-H4: extended generate form with full AdvRadius batch options +
 metadata JSON for future fields.
 """
 from __future__ import annotations
+from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import csv
 import io
@@ -327,7 +328,7 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
                        "href": url_for("radius.cards_batches"),
                        "hint": "افتح حزم البطاقات لتوليد أو استيراد كروت جديدة"})
     elif 0 < available <= 10:
-        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {available} كرت فقط.",
+        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {ar_count(available, 'kart')} فقط.",
                        "href": url_for("radius.cards_batches"),
                        "hint": "راجع الحزم وولّد كروتًا إضافية قبل النفاد"})
     for package in printed_stock_packages:
@@ -342,11 +343,11 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
             })
             break
     if expired:
-        alerts.append({"level": "red", "text": f"{expired} كرت منتهي يحتاج مراجعة.",
+        alerts.append({"level": "red", "text": f"كروت منتهية تحتاج مراجعة: {expired}.",
                        "href": url_for("radius.cards_list", status="expired"),
                        "hint": "اعرض الكروت المنتهية لمراجعتها أو أرشفتها"})
     if revoked:
-        alerts.append({"level": "grey", "text": f"{revoked} كرت محظور ضمن المخزون.",
+        alerts.append({"level": "grey", "text": f"كروت محظورة ضمن المخزون: {revoked}.",
                        "href": url_for("radius.cards_list", status="revoked"),
                        "hint": "اعرض الكروت المحظورة"})
     if not alerts:
@@ -691,6 +692,11 @@ def _cards_sales_snapshot(tenant_id: int) -> dict:
             for period in periods
         ],
     }
+
+
+def _coa_code_ar(code: str) -> str:
+    from ..integration.radius_coa import coa_code_ar
+    return coa_code_ar(code)
 
 
 def _actor() -> str:
@@ -1097,22 +1103,12 @@ def _batch_form_data(batch) -> dict:
 
 
 def _card_batch_scope_admin_id():
-    """معرّف المدير الذي تُقصَر عليه قائمة الحِزم، أو None لرؤية الكل.
-
-    None حين يكون المُستخدِم سوبر/مالك أو يَملك «عرض كل حزم البطاقات»
-    (can_view_all_card_batches). خلاف ذلك = معرّفه، فتُقصَر القائمة على
-    حِزمه ∪ حِزم موزّعيه (عزل خادميّ في cards_repo)."""
+    """معرّف المدير الذي تُقصَر عليه قائمة الحِزم، أو None لرؤية الكل —
+    المسند الواحد ``services/card_batch_scope`` (ويب + API + عناوين مباشرة)."""
     if is_super_admin():
         return None
-    me = current_admin_id()
-    if not me:
-        return None
-    from ..services.manager_distributor_ops import ManagerDistributorOpsService
-    if ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
-        entity_type="manager", entity_id=int(me), permission="can_view_all_card_batches"
-    ):
-        return None
-    return int(me)
+    from ..services.card_batch_scope import batch_scope_admin_id
+    return batch_scope_admin_id(current_admin_id(), tenant_id=_tid()) if current_admin_id() else None
 
 
 def _can_generate_batches() -> bool:
@@ -1297,14 +1293,28 @@ def cards_batches_import():
     sync_failed = int(result.get("radius_sync_failed_count") or 0)
     if sync_failed:
         flash(
-            f"⚠️ الحزمة محفوظة، لكن {sync_failed} بطاقة لم تُنشأ لها حسابات "
+            f"⚠️ الحزمة محفوظة، لكن {ar_count(sync_failed, 'card')} لم تُنشأ لها حسابات "
             "مصادقة (ازدحام على قاعدة البيانات). أعد المزامنة من صفحة الحزمة "
             "قبل بيعها — لا تُعِد الاستيراد.",
             "warning",
         )
     skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
+    # fix2 (R05-N5): تفصيل المتخطّى — المكرّر داخل الملف وغير الصالح بسببه.
+    _rep = result.get("report") or {}
+    _parts = []
+    _dup_file = int((_rep.get("duplicate_in_file") or {}).get("count") or 0)
+    if _dup_file:
+        _parts.append(f"{_dup_file} مكرّر داخل الملف")
+    _dup_sys = int((_rep.get("duplicate_in_system") or {}).get("count") or 0)
+    if _dup_sys:
+        _parts.append(f"{_dup_sys} مستعمل في النظام")
+    for _inv in _rep.get("invalid") or []:
+        _smp = "، ".join(str(x) for x in (_inv.get("samples") or [])[:3])
+        _parts.append(f"{_inv.get('count')} {_inv.get('label')}" + (f" ({_smp})" if _smp else ""))
+    if _parts:
+        flash("المتخطّى: " + " · ".join(_parts), "warning")
     flash(
-        f"تم استيراد {result['inserted_count']} بطاقة صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
+        f"تم استيراد {ar_count(result['inserted_count'], 'card')} صالحة داخل الحزمة {batch.batch_code}.{skipped_label}{sync_label}",
         "success",
     )
     return redirect(url_for("radius.cards_batches", q=batch.batch_code, status="all"))
@@ -1410,6 +1420,13 @@ def cards_batches_import_preview():
     return jsonify(payload), status
 
 
+def _is_owner_session() -> bool:
+    """Owner / co-owner web session (the principal that bypasses RBAC —
+    ``session["is_super_admin"]`` is resolved by ``auth.owner.is_owner_like``)."""
+    from flask import session as _session
+    return bool(_session.get("is_super_admin"))
+
+
 def _selected_batch_ids() -> list[int]:
     ids: list[int] = []
     for raw in request.form.getlist("batch_ids"):
@@ -1446,6 +1463,10 @@ def cards_batches_bulk():
             flash(f"تمت استعادة {changed} حزمة مؤرشفة.", "success")
         elif action == "purge":
             # حذف نهائيّ (بلا رجعة): يمحو الحزمة وكلّ بطاقاتها وأثرها من القاعدة.
+            # p01/D25: عمليّة لا رجعة فيها → للمالك/المالك المشارك وحده، لا
+            # لمجرّد حامل cards.batch_ops + bulk.ops.
+            if not _is_owner_session():
+                abort(403)
             from ..db.repos import cards_repo as _cards_repo
             removed_cards = 0
             for batch_id in batch_ids:
@@ -1454,7 +1475,7 @@ def cards_batches_bulk():
                     changed += 1
                     removed_cards += int(summary.get("cards", 0) or 0)
             flash(
-                f"تمّ الحذف النهائيّ لـ{changed} حزمة و{removed_cards} بطاقة — بلا رجعة.",
+                f"تمّ الحذف النهائيّ لـ{ar_count(changed, 'batch')} و{ar_count(removed_cards, 'card')} — بلا رجعة.",
                 "warning",
             )
         elif action == "refresh":
@@ -1528,7 +1549,7 @@ def cards_batches_export_csv():
     payload = "\ufeff" + out.getvalue()
     return Response(
         payload,
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=card-batches.csv"},
     )
 
@@ -1536,6 +1557,8 @@ def cards_batches_export_csv():
 def _batch_export_rows() -> list[dict]:
     svc = get_cards_service()
     filters = _batch_filters_from_request()
+    # fix3 (F01 F10): the export = the (scoped) list, never every batch.
+    filters["owner_admin_id"] = _card_batch_scope_admin_id()
     return svc.list_batch_operations(**filters, limit=5000, offset=0)
 
 
@@ -1739,6 +1762,9 @@ def _handle_card_operation():
             query = ""
         elif action == "delete_permanent":
             # Hard-delete path retained for the recycle bin screen.
+            # p01/D25: irreversible → owner / co-owner only.
+            if not _is_owner_session():
+                abort(403)
             confirm_delete = _form_str("confirm_delete")
             if confirm_delete != "حذف البطاقة" and confirm_delete.upper() != "DELETE":
                 flash("للحذف النهائي اكتب عبارة التأكيد في خانة التأكيد.", "error")
@@ -1780,12 +1806,20 @@ def _handle_card_operation():
                         elif getattr(coa, "code_name", "") == "no_active_session":
                             coa_note = " — لا جلسة نشطة الآن، سيُطبَّق في الجلسة التالية."
                         else:
-                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({getattr(coa,'code_name','?')})."
-                    flash(
-                        f"{op_label} {amount} {unit_label} من وقت البطاقة. "
-                        f"المتبقي الآن: {rem_h} ساعة و {rem_m} دقيقة.{coa_note}",
-                        "success",
-                    )
+                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({_coa_code_ar(getattr(coa,'code_name',''))})."
+                    if result.get("exhausted"):
+                        # fix2: خصمٌ أكبر من وقت البطاقة يُنهيها — لا «بلا حدّ».
+                        flash(
+                            f"{op_label} {amount} {unit_label} — استُنفد وقت البطاقة "
+                            "كلّه فصارت منتهية وقُطعت جلستها إن كانت متصلة.",
+                            "warning",
+                        )
+                    else:
+                        flash(
+                            f"{op_label} {amount} {unit_label} من وقت البطاقة. "
+                            f"المتبقي الآن: {rem_h} ساعة و {rem_m} دقيقة.{coa_note}",
+                            "success",
+                        )
         elif action == "set_speed":
             # Per-card speed override (migration 024). Persists to
             # cards.card_speed_*_kbps, re-syncs the FreeRADIUS radreply
@@ -1817,7 +1851,7 @@ def _handle_card_operation():
                         elif getattr(coa, "code_name", "") == "no_active_session":
                             coa_note = " — لا جلسة نشطة، سيُطبَّق في الجلسة التالية."
                         else:
-                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({getattr(coa,'code_name','?')})."
+                            coa_note = f" — لم يصل التحديث الفوري للـ MikroTik ({_coa_code_ar(getattr(coa,'code_name',''))})."
                     if down == 0 and up == 0:
                         flash(
                             f"تم إلغاء تخصيص السرعة على البطاقة — ترجع لسرعة الحزمة.{coa_note}",
@@ -2061,13 +2095,15 @@ def cards_generate():
             batch, cards = get_cards_service().generate_batch(
                 actor=_actor(), plan_id=plan_id, count=count, **opts,
             )
-            flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
+            flash(f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}.", "success")
             _apply_pending_batch_speed_rule(batch, request.form)
-            return redirect(url_for("radius.cards_of_batch", batch_id=batch.id))
+            return redirect(_batch_summary_url(batch))
+        except RadiusError as e:
+            # RadiusError first: NonFiniteNumber («الحدود») is also a ValueError
+            # and must show its own Arabic reason, not «قيم غير صحيحة: …».
+            flash(e.message, "error")
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
-        except RadiusError as e:
-            flash(e.message, "error")
     # ── المدير الفرعيّ: عارض العروض بدل النموذج الكامل ──
     # يَختار عرضًا جاهزًا (خطّته/سرعته/صلاحيته/سعره مقفلة من المالك) + الكمية +
     # موزّعَه (للمحاسبة)، ثم يُولّد عبر cards_offer_use الذي يَخصم الجملة من
@@ -2092,6 +2128,7 @@ def cards_generate():
             form=request.form,
             lwp_default=_network_cards_passwordless_default(),
             max_per_batch=max_cards_per_batch(_tid()),
+            username_length_max=_username_length_max(),
         )
 
     plans = list(get_plans_service().list(limit=500))
@@ -2118,7 +2155,15 @@ def cards_generate():
             help_text="أضف قاعدة سرعة مبدئية تنحفظ على الحزمة فور إنشائها وتطبّق على بطاقاتها.",
         ),
         next_batch_id=_next_batch_id_estimate(),
+        username_length_max=_username_length_max(),
     )
+
+
+def _username_length_max() -> int:
+    """f05-L3: حدّ طول الاسم في نموذج الويب = حدّ الخادم نفسه (كانت الخانة
+    max=16 ورسالة الخادم «والحدّ 32»)."""
+    from ..services.cards import USERNAME_LENGTH_MAX
+    return int(USERNAME_LENGTH_MAX)
 
 
 def _next_batch_id_estimate() -> int:
@@ -2149,7 +2194,10 @@ def cards_generate_progress_start():
     app = current_app._get_current_object()
     actor = _actor()
     tenant_id = _tid()
-    redirect_template = url_for("radius.cards_of_batch", batch_id=0)
+    # fix2 (R05-N3): بعد التوليد نذهب إلى **ملخّص الحزمة** (صفّها في قائمة
+    # الحزم: العدد/الحالة/الطباعة/التصدير) لا إلى جدول كلّ كروتها.
+    from urllib.parse import quote as _url_quote
+    redirect_template = url_for("radius.cards_batches", q="__BATCH_CODE__")
     job_id = uuid.uuid4().hex
     _set_generate_job(
         job_id,
@@ -2194,8 +2242,10 @@ def cards_generate_progress_start():
                     generated=len(cards),
                     batch_id=batch.id,
                     batch_code=batch.batch_code,
-                    message=f"تم إنشاء {len(cards)} بطاقة بدون تكرار.",
-                    redirect_url=redirect_template.replace("/0/", f"/{batch.id}/"),
+                    message=f"تم إنشاء {ar_count(len(cards), 'card')} بدون تكرار.",
+                    redirect_url=redirect_template.replace(
+                        "__BATCH_CODE__",
+                        _url_quote(str(batch.batch_code or batch.id))),
                 )
             except RadiusError as e:
                 _set_generate_job(job_id, ok=False, status="error", phase="error", message=e.message)
@@ -2238,8 +2288,9 @@ def cards_batch_edit(batch_id: int):
     # يُطبَّق التحكّم الحقليّ ويَبقى قفلُ حقول البنية دائمًا. غير المُنِح → 403.
     from ..services import manager_grants as _mg
     _super = is_super_admin()
-    if not _super and not _mg.action_allowed(
-            session.get("admin_id"), "batch", "edit", tenant_id=_tid()):
+    # D15: صلاحية RBAC «cards.edit_batch» تكفي (مُشتقّة)، أو المنحة الصريحة القديمة.
+    if not _super and not _mg.action_permitted(
+            session.get("admin_id"), "batch.edit", tenant_id=_tid()):
         abort(403)
     svc = get_cards_service()
     batch = next((b for b in svc.list_batches(limit=1000) if b.id == batch_id), None)
@@ -2268,6 +2319,10 @@ def cards_batch_edit(batch_id: int):
                 "count": _form_int("count", batch.count),
                 "status": _form_str("status") or batch.status,
             })
+            # fix2 (R13-L2): الاسم يُتحقَّق منه (فارغ ⇒ مرفوض) متى أُرسل الحقل فعلًا؛
+            # نموذجٌ لا يحمله لا يمسّ الاسم المخزَّن.
+            if "package_name" not in request.form:
+                data.pop("package_name", None)
             # حقول البنية مقفلة: ارفض أيّ تغيير مُرسَل، ثم جرّدها فلا تُحفَظ.
             _reject_locked_batch_changes(batch, data)
             for _locked in STRUCTURAL_LOCKED_FIELDS:
@@ -2285,8 +2340,8 @@ def cards_batch_edit(batch_id: int):
             if _re and (_re.get("pending") or _re.get("started")):
                 flash(
                     f"تم حفظ التعديلات، وسَرَت المدّة الجديدة على "
-                    f"{_re.get('pending', 0)} بطاقة لم تبدأ بعد و"
-                    f"{_re.get('started', 0)} بطاقة بدأت "
+                    f"{ar_count(_re.get('pending', 0), 'card')} لم تبدأ بعد و"
+                    f"{ar_count(_re.get('started', 0), 'card')} بدأت "
                     "(أُعيد حسابها من أوّل دخولها).",
                     "success",
                 )
@@ -2294,7 +2349,7 @@ def cards_batch_edit(batch_id: int):
                 #    بهذا الحفظ. المشغّل يحتاج الرقمَ الآن لا من شكاوى زبائنه.
                 if _re.get("expired_now"):
                     flash(
-                        f"⚠️ انتهت فورًا {_re['expired_now']} بطاقةً بدأت "
+                        f"⚠️ انتهت فورًا {ar_count(_re['expired_now'], 'card')} بدأت "
                         "سابقًا: نافذتُها الجديدة محسوبةٌ من أوّل دخولها وقد "
                         "مضت. راجعها قبل أن يتّصل أصحابُها.",
                         "warning",
@@ -2302,10 +2357,12 @@ def cards_batch_edit(batch_id: int):
             else:
                 flash("تم حفظ تعديلات دفعة الكروت.", "success")
             return redirect(url_for("radius.cards_of_batch", batch_id=updated.id))
+        except RadiusError as e:
+            # RadiusError first: NonFiniteNumber («الحدود») is also a ValueError
+            # and must show its own Arabic reason, not «قيم غير صحيحة: …».
+            flash(e.message, "error")
         except (TypeError, ValueError) as e:
             flash(f"قيم غير صحيحة: {e}", "error")
-        except RadiusError as e:
-            flash(e.message, "error")
     plans = list(get_plans_service().list(limit=500))
     form = request.form if request.method == "POST" else _batch_form_data(batch)
     return render_template(
@@ -2406,6 +2463,7 @@ def cards_list():
     return render_template(
         "radius/cards_list.html",
         items=items, plans=plans, batches=batches,
+        can_see_card_passwords=_can_see_card_passwords(),
         used=used, revoked=revoked, status=status, batch_id=batch_id, q=q,
         status_counts=status_counts,
         page=page, per_page=per_page, total=total,
@@ -2476,8 +2534,10 @@ def _card_status_meta(row: dict, now: datetime) -> dict:
     if row.get("deleted_at"):
         return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
     if row.get("revoked"):
-        return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
-    if expired:
+        # fix2 (R13-M1): «إيقاف» ليس انتهاءً — المشغّل يحتاج أن يميّز البطاقة
+        # الموقوفة (تعود بـ«تفعيل») من المنتهية.
+        return {"key": "revoked", "label": "موقوف", "tone": "slate", "rank": 3}
+    if expired or row.get("time_exhausted"):
         return {"key": "expired", "label": "منتهي", "tone": "rose", "rank": 3}
     if online:
         return {"key": "online", "label": "متصل", "tone": "green", "rank": 0}
@@ -2503,7 +2563,14 @@ def _card_remaining_meta(row: dict, now: datetime,
             "seconds": seconds,
             "state": "frozen",
         }
+    if row.get("time_exhausted"):
+        # fix2 (R13-H1): «خصم وقت» استنفد وقت البطاقة كلّه.
+        return {"label": "منتهي (خُصم كامل الوقت)", "seconds": 0, "state": "expired"}
     if not expire_at:
+        # fix2 (R13-H1): «إضافة/خصم وقت» قبل أوّل دخول جزءٌ من النافذة —
+        # كان الجدول يعرض مدّة الحزمة وحدها («2 ساعة») بعد كلّ منحة.
+        if window_seconds > 0:
+            window_seconds = max(0, int(window_seconds) + int(row.get("extra_seconds") or 0))
         if window_seconds > 0:
             return {
                 "label": f"{_format_card_seconds(int(window_seconds))} — لم تبدأ",
@@ -2517,7 +2584,119 @@ def _card_remaining_meta(row: dict, now: datetime,
     return {"label": _format_card_seconds(seconds), "seconds": seconds, "state": "active"}
 
 
-def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
+def _batch_window_for_display(tenant_id: int, batch_id: int) -> int:
+    """نافذة الحزمة بالثواني (بلا منحة) كما يختمها المُصادِق عند أوّل دخول."""
+    try:
+        from ..services.policy_engine import _card_window_seconds
+        _brow = db().execute(
+            "SELECT time_value, time_unit, validity_after_first_login_days, "
+            "       count_by_seconds, count_from_first_connect "
+            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
+            (tenant_id, batch_id)).fetchone()
+        return _card_window_seconds(_brow) if _brow else 0
+    except Exception:  # noqa: BLE001 — العرض لا يسقط لأجل تعذّر قراءة النافذة
+        return 0
+
+
+def _mark_time_exhausted(item: dict, window_seconds: int) -> None:
+    """fix2 (R13-H1): «خصم وقت» أكبر من وقت البطاقة ⇒ منتهية (لا «بلا حدّ»).
+    يغطّي أيضًا بياناتٍ قديمة خُصمت قبل الإصلاح بلا ختم `expire_at`."""
+    from ..services.card_accounting import is_exhausted
+    item["time_exhausted"] = bool(
+        window_seconds > 0 and not item.get("revoked")
+        and is_exhausted(window_seconds, item.get("extra_seconds") or 0))
+
+
+#: خيارات «صفوف بالصفحة» في جدول كروت الحزمة (fix2 R05-N3).
+BATCH_CARDS_PAGE_SIZES = (25, 50, 100, 200)
+BATCH_CARDS_DEFAULT_PAGE_SIZE = 50
+
+
+def _batch_cards_index(tenant_id: int, batch_id: int) -> list[dict]:
+    """فهرسٌ خفيف لكلّ بطاقات الحزمة (بلا مجاميع radacct): يكفي لحساب
+    الحالة والمجاميع والبحث وتقسيم الصفحات، ثمّ تُجلب تفاصيل صفحةٍ واحدة."""
+    rows = db().execute(
+        """
+        SELECT c.id, c.username, c.password, c.used, c.first_used_at,
+               c.expire_at, c.revoked, c.deleted_at, c.frozen_remaining_seconds,
+               COALESCE(c.extra_seconds, 0) AS extra_seconds,
+               COALESCE(c.used_by_mac, '') AS used_by_mac,
+               COALESCE(c.locked_mac, '') AS locked_mac
+          FROM cards c
+         WHERE c.tenant_id = ? AND c.batch_id = ? AND c.deleted_at IS NULL
+         ORDER BY c.id DESC
+        """,
+        (tenant_id, batch_id),
+    ).fetchall()
+    online = {
+        str(r["username"]) for r in db().execute(
+            """
+            SELECT DISTINCT username FROM radacct
+             WHERE tenant_id = ? AND acctstoptime IS NULL
+               AND username IN (SELECT username FROM cards
+                                 WHERE tenant_id = ? AND batch_id = ?
+                                   AND deleted_at IS NULL)
+            """,
+            (tenant_id, tenant_id, batch_id),
+        ).fetchall()
+    }
+    window = _batch_window_for_display(tenant_id, batch_id)
+    now = datetime.utcnow()
+    out: list[dict] = []
+    for r in rows:
+        item = dict(r)
+        item["online_sessions"] = 1 if str(item.get("username")) in online else 0
+        _mark_time_exhausted(item, window)
+        item["status_key"] = _card_status_meta(item, now)["key"]
+        out.append(item)
+    return out
+
+
+def _batch_cards_filter(index: list[dict], *, q: str = "", status: str = "",
+                        include_password: bool = True) -> list[dict]:
+    """بحثٌ خادميّ: اسم الدخول/كلمة المرور/MAC/#المعرّف — بأرقامٍ لاتينيّة."""
+    q = _latin_digits_text((q or "").strip()).lower()
+    status = (status or "").strip().lower()
+    out = []
+    for it in index:
+        if status and it.get("status_key") != status:
+            continue
+        if q:
+            # p01/D08: من لا يرى كلمات المرور لا يبحث بها (وإلّا خمّنها حرفًا حرفًا).
+            keys = (("username", "password", "used_by_mac", "locked_mac")
+                    if include_password else ("username", "used_by_mac", "locked_mac"))
+            hay = " ".join(str(it.get(k) or "") for k in keys).lower()
+            if q not in hay and q.lstrip("#") != str(it.get("id")):
+                continue
+        out.append(it)
+    return out
+
+
+def _latin_digits_text(text: str) -> str:
+    """٠-٩ و۰-۹ → 0-9 (بحث المشغّل بلوحة مفاتيح عربيّة)."""
+    table = {ord(a): str(i) for i, a in enumerate("٠١٢٣٤٥٦٧٨٩")}
+    table.update({ord(a): str(i) for i, a in enumerate("۰۱۲۳۴۵۶۷۸۹")})
+    return (text or "").translate(table)
+
+
+def _batch_cards_details(tenant_id: int, batch_id: int,
+                         card_ids: "list[int] | None" = None) -> list[dict]:
+    """صفوف جدول كروت الحزمة بكلّ تفاصيلها.
+
+    ``card_ids`` (fix2 R05-N3): صفحةٌ واحدة فقط — كانت الصفحة تُصيّر كلّ
+    البطاقات (‏5,000 = ‏26MB/115ث، ‏10,000 = ‏52MB/253ث). ومجاميع radacct تُحسب
+    لأسماء هذه الحزمة (أو هذه الصفحة) فقط لا لكلّ جلسات المستأجر.
+    """
+    ids_sql = ""
+    ids_params: list = []
+    if card_ids is not None:
+        if not card_ids:
+            return []
+        ids_sql = " AND c.id IN (" + ",".join("?" * len(card_ids)) + ")"
+        ids_params = [int(i) for i in card_ids]
+    names_sql = ("SELECT c.username FROM cards c WHERE c.tenant_id = ? "
+                 "AND c.batch_id = ? AND c.deleted_at IS NULL" + ids_sql)
+    names_params = [tenant_id, batch_id, *ids_params]
     _cur = default_currency()
     _cur = _cur if _cur.isalpha() else "ILS"
     rows = db().execute(
@@ -2537,6 +2716,7 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
                  MAX(COALESCE(acctupdatetime, acctstoptime, acctstarttime)) AS last_seen_at
             FROM radacct
            WHERE tenant_id = ?
+             AND username IN ({names_sql})
            GROUP BY tenant_id, username
         ),
         latest AS (
@@ -2561,6 +2741,7 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
                      ) AS rn
                 FROM radacct
                WHERE tenant_id = ?
+                 AND username IN ({names_sql})
             )
            WHERE rn = 1
         )
@@ -2583,6 +2764,7 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
                c.card_speed_down_kbps,
                c.card_speed_up_kbps,
                c.frozen_remaining_seconds,
+               COALESCE(c.extra_seconds, 0) AS extra_seconds,
                c.deleted_at,
                COALESCE(p.name, '') AS plan_name,
                COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
@@ -2615,28 +2797,20 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
             ON l.tenant_id = c.tenant_id AND l.username = c.username
          WHERE c.tenant_id = ?
            AND c.batch_id = ?
-           AND c.deleted_at IS NULL
+           AND c.deleted_at IS NULL{ids_sql}
          ORDER BY c.id DESC
         """,
-        (tenant_id, tenant_id, tenant_id, batch_id),
+        (tenant_id, *names_params, tenant_id, *names_params,
+         tenant_id, batch_id, *ids_params),
     ).fetchall()
     now = datetime.utcnow()
     # MT112 — نافذة الحزمة تُقرأ مرّةً واحدة لكلّ الصفوف: البطاقة غير
     # المستعملة تُظهر «٤ ساعات — لم تبدأ» بدل عدٍّ تنازليّ لم يبدأ أصلًا.
-    _window = 0
-    try:
-        from ..services.policy_engine import _card_window_seconds
-        _brow = db().execute(
-            "SELECT time_value, time_unit, validity_after_first_login_days "
-            "  FROM card_batches WHERE tenant_id = ? AND id = ?",
-            (tenant_id, batch_id)).fetchone()
-        if _brow:
-            _window = _card_window_seconds(_brow)
-    except Exception:  # noqa: BLE001 — العرض لا يسقط لأجل تعذّر قراءة النافذة
-        _window = 0
+    _window = _batch_window_for_display(tenant_id, batch_id)
     out: list[dict] = []
     for row in rows:
         item = dict(row)
+        _mark_time_exhausted(item, _window)
         status = _card_status_meta(item, now)
         remaining = _card_remaining_meta(item, now, _window)
         item.update({
@@ -2789,7 +2963,7 @@ def cards_batch_cards_actions(batch_id: int):
         "change_password": "تغيير كلمة المرور",
     }
     if changed:
-        flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {changed} كرت.", "success")
+        flash(f"تم تنفيذ {labels.get(action, 'الإجراء')} على {ar_count(changed, 'kart')}.", "success")
         if action == "change_password":
             if len(new_passwords) == 1:
                 _u, _p = new_passwords[0]
@@ -2802,10 +2976,41 @@ def cards_batch_cards_actions(batch_id: int):
                     "warning",
                 )
     if skipped:
-        flash(f"تم تجاهل {skipped} كرت خارج هذه الحزمة.", "warning")
+        flash(f"تم تجاهل {ar_count(skipped, 'kart')} خارج هذه الحزمة.", "warning")
     if errors:
         flash("لم تكتمل بعض الكروت: " + " | ".join(errors[:3]), "error")
     return redirect(return_to)
+
+
+def _batch_summary_url(batch) -> str:
+    """ملخّص الحزمة بعد التوليد: صفّها في «الحزم» (بحثٌ برمزها الفريد)."""
+    return url_for("radius.cards_batches", q=str(batch.batch_code or batch.id))
+
+
+#: What a viewer without ``scope.view_passwords`` sees instead of a password.
+_MASKED_PASSWORD = "••••••"
+
+
+def _can_see_card_passwords() -> bool:
+    """p01/D08: card passwords are shown only to the owner / co-owner, a holder
+    of the supervisory key ``scope.view_passwords``, or a holder of
+    ``cards.print`` (printing hands out the passwords anyway)."""
+    if session.get("is_super_admin"):
+        return True
+    perms = set(session.get("permissions") or ())
+    return bool(perms & {"scope.view_passwords", "cards.print"})
+
+
+def _mask_card_passwords(items: list[dict]) -> list[dict]:
+    if _can_see_card_passwords():
+        return items
+    out = []
+    for it in items:
+        row = dict(it)
+        if row.get("password"):
+            row["password"] = _MASKED_PASSWORD
+        out.append(row)
+    return out
 
 
 def cards_of_batch(batch_id: int):
@@ -2815,14 +3020,77 @@ def cards_of_batch(batch_id: int):
     plan = None
     if batch:
         plan = plans_repo.get_plan(_tid(), batch.plan_id)
-    items = _batch_cards_details(_tid(), batch_id) if batch else []
+    # fix2 (R05-N3): ترقيمٌ وبحثٌ خادميّان. كانت الصفحة تُصيّر كلّ البطاقات
+    # (‏10,000 = ‏52MB في ‏253ث) ثمّ تُقسّمها بجافاسكربت. الآن: فهرسٌ خفيف لكلّ
+    # الحزمة (الحالة/المجاميع/البحث) وتفاصيلُ صفحةٍ واحدة فقط.
+    q = (request.args.get("q") or "").strip()[:128]
+    status = (request.args.get("status") or "").strip().lower()
+    if status not in ("", "online", "ready", "used_offline", "expired", "revoked"):
+        status = ""
+    try:
+        per_page = int(request.args.get("per_page") or BATCH_CARDS_DEFAULT_PAGE_SIZE)
+    except (TypeError, ValueError):
+        per_page = BATCH_CARDS_DEFAULT_PAGE_SIZE
+    if per_page not in BATCH_CARDS_PAGE_SIZES:
+        per_page = BATCH_CARDS_DEFAULT_PAGE_SIZE
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+    index = _batch_cards_index(_tid(), batch_id) if batch else []
+    filtered = _batch_cards_filter(index, q=q, status=status,
+                                   include_password=_can_see_card_passwords())
+    total_filtered = len(filtered)
+    pages = max(1, -(-total_filtered // per_page))
+    page = min(page, pages)
+    page_ids = [int(it["id"]) for it in
+                filtered[(page - 1) * per_page: page * per_page]]
+    items = _batch_cards_details(_tid(), batch_id, card_ids=page_ids) if batch else []
+    items = _mask_card_passwords(items)
     return render_template(
         "radius/cards_of_batch.html",
         items=items,
         batch=batch,
         plan=plan,
-        summary=_batch_cards_summary(items),
+        summary=_batch_cards_index_summary(index, _tid(), batch_id if batch else 0),
+        pager={
+            "page": page, "pages": pages, "per_page": per_page,
+            "sizes": BATCH_CARDS_PAGE_SIZES, "total": total_filtered,
+            "start": (page - 1) * per_page + (1 if total_filtered else 0),
+            "end": min(page * per_page, total_filtered),
+            "q": q, "status": status,
+        },
     )
+
+
+def _batch_cards_index_summary(index: list[dict], tenant_id: int = 0,
+                               batch_id: int = 0) -> dict:
+    """مجاميع الحزمة كاملةً من الفهرس الخفيف (لا من صفحةٍ واحدة)."""
+    keys = [it.get("status_key") for it in index]
+    up = down = sessions = 0
+    if batch_id and index:
+        try:
+            r = db().execute(
+                "SELECT COUNT(*) AS n, COALESCE(SUM(acctinputoctets), 0) AS up, "
+                "       COALESCE(SUM(acctoutputoctets), 0) AS down "
+                "  FROM radacct WHERE tenant_id = ? AND username IN ("
+                "    SELECT username FROM cards WHERE tenant_id = ? "
+                "       AND batch_id = ? AND deleted_at IS NULL)",
+                (tenant_id, tenant_id, batch_id)).fetchone()
+            sessions, up, down = int(r["n"] or 0), int(r["up"] or 0), int(r["down"] or 0)
+        except Exception:  # noqa: BLE001 — المجاميع زينة، لا تُسقط الصفحة
+            pass
+    return {
+        "total": len(index),
+        "online": keys.count("online"),
+        "ready": keys.count("ready"),
+        "used_offline": keys.count("used_offline"),
+        "expired": keys.count("expired"),
+        "revoked": keys.count("revoked"),
+        "sessions": sessions,
+        "upload_label": _format_card_bytes(up),
+        "download_label": _format_card_bytes(down),
+    }
 
 
 # ── MT79 — تصدير كروت الحزمة (CSV / Excel) ──────────────────────────
@@ -2871,7 +3139,7 @@ def _batch_cards_export_rows(batch_id: int, *, cols: str = "full",
     batch = cards_repo.get_batch(_tid(), batch_id, include_deleted=False)
     if not batch:
         return None, "", []
-    items = _batch_cards_details(_tid(), batch_id)
+    items = _mask_card_passwords(_batch_cards_details(_tid(), batch_id))
     if scope == "unused":
         items = [it for it in items if _card_is_unused(it)]
     columns = (
@@ -2931,7 +3199,7 @@ def cards_of_batch_export_csv(batch_id: int):
     # BOM كي تفتحه Excel العربيّة بترميزٍ صحيح (نفس نمط تصدير الحزم).
     return Response(
         "﻿" + out.getvalue(),
-        mimetype="text/csv; charset=utf-8",
+        mimetype="text/csv",
         headers={"Content-Disposition":
                  _content_disposition(_batch_export_filename(batch, 'csv', cols, scope))},
     )
@@ -3355,14 +3623,14 @@ def cards_offer_use(offer_id: int):
                 from ..services.business_os_finance import minor_to_money
                 margin = int(offer.get("margin_minor") or 0) * count
                 flash(
-                    f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة. "
+                    f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}. "
                     f"خُصم {minor_to_money(int(charge['charged_minor']))} جملةً "
                     f"(هامش متوقّع {minor_to_money(margin)}).",
                     "success",
                 )
             else:
-                flash(f"تم إنشاء دفعة «{batch.batch_code}» — {len(cards)} بطاقة.", "success")
-            return redirect(url_for("radius.cards_of_batch", batch_id=batch.id))
+                flash(f"تم إنشاء دفعة «{batch.batch_code}» — {ar_count(len(cards), 'card')}.", "success")
+            return redirect(_batch_summary_url(batch))
         except CardOfferBalanceError as e:
             flash(str(e), "error")
         except CardOfferError as e:

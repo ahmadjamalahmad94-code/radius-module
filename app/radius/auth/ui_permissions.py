@@ -40,6 +40,17 @@ _NAV_PERM: dict[str, str] = {
     # ── المشتركون ──
     "subscribers_overview": "users.view",
     "subscribers_list": "users.view",
+    # «/users» is the SAME list under another endpoint name — it was
+    # reachable by a dashboard-only viewer (re-test R08 NEW-1). Same for the
+    # subscriber detail pages and the full-list export.
+    "users_list": "users.view",
+    "users_export": "users.export",   # fix3 (F01 F11): the export key, not users.view
+    # fix3 (F01 F5): on-demand password (+ «رؤية كلمة مرور المشترك» in-handler)
+    "users_password": "users.view",
+    "users_profile": "users.view",
+    "users_360": "users.view",
+    "subscriber_360": "users.view",
+    "users_edit": "users.view",
     "users_new": "users.create",
     "subscriber_groups_list": "users.view",
     "subscriber_fields": "users.view",
@@ -204,6 +215,116 @@ _NAV_PERM: dict[str, str] = {
     "integrations_hub": "settings.view",  # FLAG(QA): settings.view مبدئيّ
     "devices_new": "nas.create",
     "bw_new": "plans.create",
+
+    # ═══ p01/D08 (2026-09-29): كل صفحة GET مربوطة بمفتاح عرضها ═══
+    # كانت هذه تُفتح لأيّ مسؤول مُسجَّل بالعنوان المباشر (حتى مدير «لوحة
+    # التحكّم فقط»): كلمات سرّ البطاقات، /users، 360/الملفّ/التعديل، تصدير
+    # VPN/WG، سجلّ الراديوس، أحداث النظام… اختبار
+    # tests/test_perm_guard_coverage.py يُفشل البناء عند صفحة GET غير مربوطة.
+    # ── المشتركون ──
+    "users_list": "users.view",
+    "users_overview": "users.view",
+    "users_profile": "users.view",
+    "users_360": "users.view",
+    "subscriber_360": "users.view",
+    "users_edit": "users.edit",
+    "users_finance": "users.view",
+    "users_open_loans": "users.view",
+    "subscriber_groups_new": "users.edit",
+    "subscriber_groups_edit": "users.edit",
+    "tk_view": "users.view",
+    # لوحة الشحن — قراءاتها JSON بمفتاح اللوحة نفسها.
+    "recharge_search_json": "users.payments",
+    "recharge_subscriber_json": "users.payments",
+    "recharge_recent_json": "users.payments",
+    # ── البطاقات ──
+    "cards_of_batch": "cards.view",
+    "cards_of_batch_export_csv": "cards.view",
+    "cards_of_batch_export_xlsx": "cards.view",
+    "cards_batch_edit": "cards.edit_batch",
+    "cards_generate_progress_status": "cards.generate",
+    "cards_print_new": "cards.print",
+    "cards_print_batch": "cards.print",
+    "cards_recharge_new": "cards.recharge",
+    "cards_recharge_batch": "cards.recharge",
+    "vch_list": "cards.view",
+    "vch_generate": "cards.generate",
+    "print_templates_export_center": "cards.print",
+    "print_templates_stats": "cards.print",
+    "print_templates_preview_fragment": "cards.print",
+    "print_templates_thumbnail": "cards.print",
+    "print_templates_export_pdf": "cards.print",
+    "print_templates_export_job_status": "cards.print",
+    "print_templates_export_job_download": "cards.print",
+    # ── العروض والسرعات ──
+    "plans_edit": "plans.edit",
+    "bw_edit": "plans.edit",
+    "sgrp_list": "plans.view",
+    "sgrp_view": "plans.view",
+    "sgrp_new": "plans.edit",
+    "sgrp_edit": "plans.edit",
+    # ── الشبكة ──
+    "devices_edit": "nas.edit",
+    "mt_list": "nas.view",
+    "mt_new": "nas.create",
+    "mt_edit": "nas.edit",
+    "mt_dashboard": "nas.view",
+    "mt_active_sessions": "nas.view",
+    "mt_import_logs": "nas.view",
+    "mt_setup_script": "nas.create",
+    "mt_wg_details": "nas.view",
+    "network_devices_list": "nas.view",
+    "network_devices_new": "nas.create",
+    "network_devices_edit": "nas.edit",
+    "network_device_bypass_form": "nas.edit",
+    "network_ip_scan_page": "nas.view",
+    "network_policy_index": "nas.view",
+    "npc_router_landing": "nas.view",
+    "device_health_api_events": "nas.view",
+    "device_health_api_alerts": "nas.view",
+    "diagnostics_router": "nas.view",
+    "monitoring_dashboard": "nas.view",
+    "monitoring_api_stats": "nas.view",
+    "ipchange_script": "nas.edit",
+    "pool_new": "nas.edit",
+    "pool_edit": "nas.edit",
+    # ── المال ──
+    "finance_reports_snapshot_json": "reports.finance",
+    "company_inventory_expenses_legacy": "reports.finance",
+    "business_finance": "reports.finance",
+    "business_finance_wallets": "reports.finance",
+    "business_finance_revenue": "reports.finance",
+    "business_finance_debts": "reports.finance",
+    "business_finance_loans": "reports.finance",
+    "distributors_new": "reports.finance",
+    "distributors_detail": "reports.finance",
+    "distributors_edit": "reports.finance",
+    "inv_list": "reports.finance",
+    "inv_new": "reports.finance",
+    # ── التقارير والسجلّات ──
+    "reports_summary_json": "reports.view",
+    "rep_system_events": "reports.view",
+    "rep_card_store_events": "reports.view",
+    "tool_radius_log": "reports.view",
+    "tool_radius_log_json": "reports.view",
+    "events_detail": "audit.view",
+    # ── الإدارة والإعدادات ──
+    "business_operator_profile": "admins.view",
+    "system_settings_page": "settings.view",
+    "system_status": "settings.view",
+    "admin_alerts_page": "settings.view",
+    "admin_notifications": "settings.view",
+    "subscriber_notifications": "settings.view",
+    "network_telegram_settings": "settings.view",
+    "sms": "settings.view",
+    "tk_new": "settings.edit",
+    "svc_new": "settings.edit",
+    "svc_edit": "settings.edit",
+    # ── التكامل ──
+    "wh_deliveries": "api.use",
+    "service_request_list": "api.use",
+    "service_request_kinds": "api.use",
+    "service_request_schema": "api.use",
 }
 
 
@@ -274,14 +395,39 @@ def perm_for_endpoint(endpoint: str) -> str | None:
     """
     name = endpoint.split(".", 1)[1] if endpoint.startswith("radius.") else endpoint
     hit = _NAV_PERM.get(name)
-    if hit is not None:
-        return hit
+    if hit is None:
+        try:
+            from ..routes.blueprint import _PERM_GUARDED
+            hit = _PERM_GUARDED.get(name)
+        except Exception:  # noqa: BLE001
+            hit = None
+    if hit == _PERM_SUPER:
+        # D12: «مدير عام» يصل لإدارة المدراء/الأدوار بمفتاح RBAC — نفس منطق الحارس.
+        try:
+            from .owner import super_delegate_perm
+            hit = super_delegate_perm(name) or hit
+        except Exception:  # noqa: BLE001
+            pass
+    return hit
+
+
+def legacy_perm_ok(endpoint: str) -> bool:
+    """Sidebar twin of the guard's legacy-layer check (fix3 integration): an
+    endpoint decorated with ``mt_permissions.requires_perm`` is shown only when
+    the session admin holds its mikrotik.* keys (owner / co-owner: always) —
+    the decorator would otherwise answer the click with a 403."""
     try:
-        from ..routes.blueprint import _PERM_GUARDED
-        return _PERM_GUARDED.get(name)
-    except Exception:  # noqa: BLE001
-        return None
+        from flask import session
+        if session.get("is_super_admin"):
+            return True
+        from ..services import mt_permissions as _mtp
+        need = _mtp.endpoint_required_perms(endpoint)
+        if not need:
+            return True
+        return bool(_mtp.require_perms(*need)[0])
+    except Exception:  # noqa: BLE001 — never break the sidebar
+        return True
 
 
-__all__ = ["can", "ui_unauth_mode", "perm_for_endpoint",
+__all__ = ["can", "legacy_perm_ok", "ui_unauth_mode", "perm_for_endpoint",
            "UNAUTH_UI_SETTING_KEY", "UNAUTH_UI_DEFAULT"]

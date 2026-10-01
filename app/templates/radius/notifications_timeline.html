@@ -103,13 +103,13 @@
                 </td>
                 <td><span class="ntl-reason">{{ it.reason_label }}</span></td>
                 <td>{{ ch_chips(it.channels) }}</td>
-                <td><div class="ntl-body clip">{{ it.body }}</div></td>
+                <td><div class="ntl-body clip">{{ it.body|actor_refs }}</div></td>
                 <td>
                   <span class="ntl-when">
                     {% if it.imminent %}{{ _('عند أقرب فحص') }}
                     {% elif it.fire_in_days == 1 %}{{ _('غدًا') }}
                     {% else %}{{ _('خلال') }} {{ it.fire_in_days }} {{ _('يوم') }}{% endif %}
-                    <span class="sub">{{ it.fire_date }}</span>
+                    <span class="sub"><bdi dir="ltr">{{ it.fire_date }}</bdi></span>
                   </span>
                 </td>
                 <td>

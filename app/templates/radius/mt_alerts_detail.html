@@ -137,8 +137,8 @@
       </div>
     </div>
     <div class="alrt-actions">
-      {{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
-                 icon="arrow-right", variant="ghost") }}
+      {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
+                 icon="arrow-right", variant="ghost") }}{% endif %}
     </div>
   </div>
 
@@ -251,8 +251,8 @@
 
 {# ═══ 6. شريط الإجراءات السفلي (نفس الرابط الموجود أصلًا — لا نماذج جديدة) ═══ #}
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-  {{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
-             icon="arrow-right", variant="ghost") }}
+  {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
+             icon="arrow-right", variant="ghost") }}{% endif %}
 </div>
 
 {# الجداول الموحدة: فرز + اختيار أعمدة + ترقيم صفحات (مطلوب لجدول الدليل) #}

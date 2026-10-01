@@ -34,7 +34,7 @@
     <i class="fa-solid fa-tags"></i>
     {{ _('لم تختر باقة بعد؟ اعرض باقات المزوّد واختر الأنسب لك.') }}
   </p>
-  <a class="hub-btn hub-btn--primary"
+  {% if can_open(pricing_url) %}<a class="hub-btn hub-btn--primary"
      data-pricing-link
      href="{{ pricing_url }}"
      target="_blank" rel="noopener noreferrer"
@@ -43,7 +43,7 @@
             box-shadow:0 6px 18px rgba(22,163,74,0.40)">
     <i class="fa-solid fa-tags"></i>
     {{ _('اعرض الباقات / اشترك الآن') }}
-  </a>
+  </a>{% endif %}
   <p style="margin:10px 0 0;font-size:12px;color:#15803D">
     <i class="fa-solid fa-up-right-from-square"></i>
     {{ _('يَفتح في تبويب جديد على لوحة المزوّد') }}
@@ -62,13 +62,13 @@
     <i class="fa-solid fa-bolt"></i>
     {{ _('خطوة واحدة لتفعيل النسخة — افتح صفحة الربط، الصق الرابط والمفتاح، اضغط زرّ واحد.') }}
   </p>
-  <a class="hub-btn hub-btn--primary"
+  {% if can_submit('radius.license_connect_page', 'GET') %}<a class="hub-btn hub-btn--primary"
      href="{{ url_for('radius.license_connect_page') }}"
      style="font-size:17px;padding:16px 36px;font-weight:800;
             box-shadow:0 6px 18px rgba(107,90,237,0.35)">
     <i class="fa-solid fa-link"></i>
     {{ _('ربط وتفعيل النسخة الآن') }}
-  </a>
+  </a>{% endif %}
 </div>
 {% endif %}
 
@@ -81,19 +81,19 @@
   </ol>
   <div class="hub-actions">
     {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
-      {{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
+      {% if can_submit('radius.license_file', 'GET') %}{{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
                   href=url_for('radius.license_file'),
-                  variant='secondary', icon='gear') }}
+                  variant='secondary', icon='gear') }}{% endif %}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
-      {{ hub.btn(_('جسر الإدارة (تشخيصي)'),
+      {% if can_submit('radius.admin_bridge', 'GET') %}{{ hub.btn(_('جسر الإدارة (تشخيصي)'),
                   href=url_for('radius.admin_bridge'),
-                  variant='secondary', icon='gauge-high') }}
+                  variant='secondary', icon='gauge-high') }}{% endif %}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
-      {{ hub.btn(_('حالة المنح (تشخيصي)'),
+      {% if can_submit('radius.provider_grants_status_page', 'GET') %}{{ hub.btn(_('حالة المنح (تشخيصي)'),
                   href=url_for('radius.provider_grants_status_page'),
-                  variant='secondary', icon='clipboard-list') }}
+                  variant='secondary', icon='clipboard-list') }}{% endif %}
     {% endif %}
     {{ hub.btn(_('تسجيل الخروج'),
                 href=url_for('radius.auth_logout'),
