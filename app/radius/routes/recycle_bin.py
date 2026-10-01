@@ -199,13 +199,24 @@ def recycle_bin():
 
 
 def recycle_bin_restore(entity_type: str, entity_id: int):
-    if entity_type not in _ENTITY_TABLES:
-        flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
-        return redirect(url_for("radius.recycle_bin"))
     # fix3 (F01 F4): each entity type needs its own key (cards.restore is for
     # card batches only), admins/roles are owner-only, and the scope applies.
-    from ..services.recycle_restore_policy import restore_denial
+    from ..services.recycle_restore_policy import (RESTORE_PERMISSION,
+                                                    restore_denial)
     is_owner, perms, aid = _viewer()
+    if entity_type not in _ENTITY_TABLES:
+        # NEW-11 (r5perms): كان فحصُ «نوعٌ غير مدعوم» **قبل** فحصِ الصلاحيّة،
+        # فكان مديرٌ «لوحةٌ فقط» يَنال 302 على نوعٍ مجهولٍ بينما الأنواعُ
+        # الحقيقيّةُ كلُّها 403 — توجيهٌ قبل الحارسِ يُخفي الرفضَ ويُربك أيَّ
+        # مسحٍ آليّ. مَن لا يَملك أيَّ مفتاحِ استعادةٍ أصلًا يُرفَض 403 هنا
+        # أيضًا؛ ومَن يَملك (أو المالك) يَرى الرسالةَ العربيّةَ المفيدة.
+        if not is_owner and not (set(RESTORE_PERMISSION.values()) & set(perms or ())):
+            from flask import abort
+            from .blueprint import _deny
+            _deny(403, reason="permission", permission="")
+            abort(403)
+        flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
+        return redirect(url_for("radius.recycle_bin"))
     denied = restore_denial(_ENTITY_TABLES[entity_type], entity_id, admin_id=aid,
                             is_owner=is_owner, perms=perms, tenant_id=_tid())
     if denied is not None:

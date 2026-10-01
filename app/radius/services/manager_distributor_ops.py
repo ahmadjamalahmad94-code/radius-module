@@ -373,6 +373,10 @@ class ManagerDistributorOpsService:
         return {
             "entity_type": etype,
             "entity_id": int(entity_id),
+            # F27 (r5perms): اسمُ الكيانِ للعنوانِ و`<h1>`. كانت الصفحةُ
+            # تُعنوَن `manager #2` — نوعٌ ومعرّفٌ إنجليزيّان خامّان — فلا
+            # يَعرف المالكُ سياسةَ **مَن** يُحرّر على صفحةٍ بـ219 حقلًا.
+            "display_name": self._entity_display_name(etype, int(entity_id)),
             "wallet": wallet,
             "balance": wallet.get("balance"),
             "debt_credit": {
@@ -390,6 +394,25 @@ class ManagerDistributorOpsService:
             "operations": operations,
             "score": self._score(wallet, profit, events),
         }
+
+    def _entity_display_name(self, etype: str, entity_id: int) -> str:
+        """الاسمُ المعروضُ للمدير/الموزّع — '' عند التعذّر (القالبُ يَعود
+        إلى «مدير #N» العربيّةِ بدل النوعِ الإنجليزيّ الخامّ)."""
+        try:
+            if etype == "manager":
+                from ..db.repos import admins_repo
+                a = admins_repo.get_admin(int(entity_id))
+                if a is not None:
+                    return str(getattr(a, "full_name", "") or ""
+                               ).strip() or str(getattr(a, "username", "") or "").strip()
+            else:
+                from ..db.repos import operations_repo
+                d = operations_repo.get_distributor(self.tenant_id, int(entity_id))
+                if d:
+                    return str(d.get("name") or d.get("full_name") or "").strip()
+        except Exception:  # noqa: BLE001 — العنوانُ زينةٌ لا يَكسر صفحة
+            pass
+        return ""
 
     def has_permission(self, *, entity_type: str, entity_id: int, permission: str) -> bool:
         """قراءة صلاحية مفردة دون إنشاء صفّ سياسة جديد (create=False).

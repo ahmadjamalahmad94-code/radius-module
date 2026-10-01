@@ -949,12 +949,18 @@ _PERM_GUARDED: dict[str, str] = {
     "sms_balance": "settings.edit",
     "wh_settings": "settings.edit",
     # Bandwidth schedules / IP pools / vouchers / invoices / tickets / services:
-    "bw_create": "plans.edit", "bw_update": "plans.edit",
-    "bw_delete": "plans.edit", "bw_apply": "plans.edit",
-    "pool_create": "nas.edit", "pool_update": "nas.edit", "pool_delete": "nas.edit",
+    # 🔴 SEC r5perms — كان هنا تكرارٌ صامتٌ لمفاتيحٍ مضبوطةٍ أعلاه
+    # (`bw_create` · `bw_update` · `bw_delete` · `bw_apply` · `pool_*` ·
+    # `inv_status`). في حرفيّةِ القواميس **المفتاحُ الأخيرُ يَغلب**، فكان هذا
+    # المسحُ العامُّ (SEC M3/H6) يُلغي الكتلةَ الأدقَّ ويُوحّد الثلاثةَ على
+    # `plans.edit`. الأثر: (١) حاملُ `plans.edit` **يَحذف** ملفَّ سرعةٍ نهائيًّا
+    # بلا `plans.delete` — تصعيدُ صلاحيّةٍ مؤكَّدٌ بالتجربة (302 والصفُّ ذهب)؛
+    # (٢) حاملُ `plans.create` يَفتح `/bandwidth/new` (الصفحةُ مربوطةٌ به) ثمّ
+    # يُرفَض 403 على الحفظ — أصلُ آخرِ صفٍّ في F2. أُزيل التكرارُ فتَغلب
+    # الكتلةُ المقصودة: create→plans.create · update/apply→plans.edit ·
+    # delete→plans.delete.
     "vch_generate": "cards.generate", "vch_redeem": "cards.generate",
     "vch_revoke": "cards.generate",
-    "inv_status": "reports.finance",
     "tk_create": "settings.edit", "tk_reply": "settings.edit",
     "tk_status": "settings.edit",
     "svc_create": "settings.edit", "svc_update": "settings.edit",

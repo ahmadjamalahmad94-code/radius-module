@@ -121,6 +121,13 @@ def notifications_center():
         unread_only=unread_only,
         provider_messages=provider_messages_repo.list_for(tid, limit=20),
         push=notif_svc.push_status(tid),
+        # F27/نصُّ التأكيد (r5perms): «تعليم الكل كمقروء» يسري على الشبكةِ
+        # كلِّها ولكلِّ المدراء **للمالك/الشريك وحدَه** (viewer=None ⇒
+        # UPDATE على `panel_notifications` لكلّ المستأجر). أمّا أيُّ مديرٍ
+        # آخرَ فيُعلّم ما يراه هو، **لنفسه فقط** (صفوفٌ في
+        # `panel_notification_reads`). نصُّ التأكيدِ كان يَقول «لكلّ المدراء»
+        # للجميع — فيُخيف المديرَ من فعلٍ خاصٍّ به ويكذب عليه.
+        read_all_is_tenant_wide=(viewer is None),
     )
 
 

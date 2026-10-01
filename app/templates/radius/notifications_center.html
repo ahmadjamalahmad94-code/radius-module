@@ -64,9 +64,14 @@
 {% set _actions %}
   {% if can_submit('radius.notifications_read_all', 'POST') %}<form method="post" action="{{ url_for('radius.notifications_read_all') }}" style="display:inline">
     {{ csrf_token_input()|safe }}
-    {# تأكيد قبل الإرسال (نافذة التأكيد الموحّدة data-confirm): العمليّة لكلّ الشبكة ولا تُتراجَع #}
+    {# تأكيد قبل الإرسال (نافذة التأكيد الموحّدة data-confirm). النصُّ يجب
+       أن يُطابق الأثرَ الحقيقيّ: المالك/الشريك يُعلّم إشعاراتِ المستأجرِ
+       كلِّها ولكلِّ المدراء؛ وأيُّ مديرٍ آخرَ يُعلّم ما يراه هو، لنفسه فقط. #}
+    {% set _confirm_txt = _('تعليم كلّ الإشعارات كمقروءة؟ يسري على كلّ إشعارات الشبكة ولكلّ المدراء، ولا يمكن التراجع عنه.')
+                          if read_all_is_tenant_wide else
+                          _('تعليم كلّ إشعاراتك كمقروءة؟ يسري على الإشعارات التي تراها ولحسابك وحدَه (لا يمسّ المدراء الآخرين)، ولا يمكن التراجع عنه.') %}
     {{ hub.btn(_('تعليم الكل كمقروء'), icon="check-double", variant="secondary", type="submit", size="sm",
-               attrs=('data-confirm="'|safe ~ _('تعليم كلّ الإشعارات كمقروءة؟ يسري على كلّ إشعارات الشبكة ولكلّ المدراء، ولا يمكن التراجع عنه.') ~ '"'|safe)) }}
+               attrs=('data-confirm="'|safe ~ _confirm_txt ~ '"'|safe)) }}
   </form>{% endif %}
   {{ hub.btn(_('تواصل مع المزوّد'), icon="headset", variant="primary", size="sm",
              attrs='data-uds-modal-open="nc-contact"') }}

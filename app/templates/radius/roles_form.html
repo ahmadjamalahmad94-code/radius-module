@@ -387,8 +387,14 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     <b><i class="fa-solid fa-people-roof" style="color:#6366f1"></i> {{ _('أساس الأفعال والرؤية — يَرثه كل مدير بهذا الدور') }}</b>
   </div>
 
+  {# NEW-3 (r5perms): أساسُ منوحات دور «مدير عام» **يُخزَّن ولا يُقرَأ** —
+     `manager_grants._role_grants_for_admin` يَعود بـ`super_role_grants()`
+     قبل قراءةِ `granular_grants_json`. فكان المالكُ يُحرّر نموذجًا كاملًا
+     ويَحفظه بنجاحٍ ظاهريٍّ ولا يَحدث شيء. نُعطّله بملاحظةٍ صريحةٍ تُسمّي
+     المخرجَ الفعليّ (التجاوزُ الفرديُّ على صفحةِ المدير يعمل ويَغلب). #}
+  {% set _rg_ro = (not can_submit('radius.roles_grants_save')) or role_is_super %}
   <form method="post" id="role-grants-form"
-        action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">{% if not can_submit('radius.roles_grants_save') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
+        action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">{% if _rg_ro %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {% if role_is_super %}{{ _('للعرض فقط — دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك، فأساسُ منوحاته لا يُطبَّق. لحجب شيءٍ عن مديرٍ بهذا الدور اضبط «ممنوع» من صفحته (التجاوز الفرديّ يَغلب).') }}{% else %}{{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}{% endif %}</div><fieldset disabled class="hr-readonly">{% endif %}
     {{ csrf_token_input() | safe }}
 
     {% call hub.section("نطاق الرؤية والإشراف", icon="eye") %}
@@ -496,7 +502,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
       {{ hub.btn("حفظ أساس الدور", icon="floppy-disk", variant="primary", type="submit") }}
     </div>
-  {% if not can_submit('radius.roles_grants_save') %}</fieldset>{% endif %}</form>
+  {% if _rg_ro %}</fieldset>{% endif %}</form>
 </div>
 {% endif %}
 

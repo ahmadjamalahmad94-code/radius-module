@@ -108,15 +108,75 @@ def bw_new():
     return render_template("radius/bandwidth_form.html", item=blank, is_new=True)
 
 
-def bw_create():
-    b = BandwidthProfile(id=None, tenant_id=_tid(),
-        name=(request.form.get("name") or "").strip(),
-        rate_down=_i("rate_down"), rate_down_unit=request.form.get("rate_down_unit") or "Kbps",
-        rate_up=_i("rate_up"), rate_up_unit=request.form.get("rate_up_unit") or "Kbps",
-        burst=(request.form.get("burst") or "").strip(), priority=_i("priority"))
-    bandwidth_repo.upsert(b)
-    flash(f"تم إنشاء «{b.name}».", "success")
+
+# ═══ NEW-9 (r5perms) — نموذجٌ حقيقيٌّ بمدخلاتٍ ناقصةٍ أو مكرّرةٍ لا يُعطي 500 ═══
+# كان `POST /admin/radius/bandwidth` بحمولةٍ فارغة يرفع
+# `sqlite3.IntegrityError: FOREIGN KEY constraint failed`، وباسمٍ مكرّرٍ
+# `UNIQUE constraint failed: bandwidth_profiles.tenant_id, name`، و
+# `POST /admin/radius/services` بحمولةٍ فارغةٍ يرفع FK — **500 للمالكِ نفسِه**
+# بصفحةٍ إنجليزيّةٍ خامّةٍ وضياعِ كلِّ ما كُتب. الصحيحُ: رسالةُ تحقّقٍ عربيّةٌ
+# (400/409) مع إعادةِ عرضِ النموذجِ بما كُتب.
+
+def _integrity_kind(exc) -> str:
+    """unique | foreign_key | notnull | other — من نصِّ خطأِ sqlite."""
+    msg = str(exc).lower()
+    if "unique" in msg:
+        return "unique"
+    if "foreign key" in msg:
+        return "foreign_key"
+    if "not null" in msg:
+        return "notnull"
+    return "other"
+
+
+def _form_error(template: str, message: str, status: int, **ctx):
+    """يُعيد عرضَ النموذجِ بما كُتب + رسالةً عربيّةً ورمزًا صحيحًا."""
+    flash(message, "error")
+    return render_template(template, form_refused=True, **ctx), status
+
+
+def _bw_from_form(existing=None) -> BandwidthProfile:
+    if existing is None:
+        return BandwidthProfile(id=None, tenant_id=_tid(),
+            name=(request.form.get("name") or "").strip(),
+            rate_down=_i("rate_down"), rate_down_unit=request.form.get("rate_down_unit") or "Kbps",
+            rate_up=_i("rate_up"), rate_up_unit=request.form.get("rate_up_unit") or "Kbps",
+            burst=(request.form.get("burst") or "").strip(), priority=_i("priority"))
+    from dataclasses import replace
+    return replace(existing,
+        name=(request.form.get("name") or existing.name).strip(),
+        rate_down=_i("rate_down", existing.rate_down),
+        rate_down_unit=request.form.get("rate_down_unit") or existing.rate_down_unit,
+        rate_up=_i("rate_up", existing.rate_up),
+        rate_up_unit=request.form.get("rate_up_unit") or existing.rate_up_unit,
+        burst=(request.form.get("burst") or existing.burst).strip(),
+        priority=_i("priority", existing.priority))
+
+
+def _bw_save(b, *, is_new: bool):
+    """حفظٌ واحدٌ للإنشاءِ والتعديل مع تحقّقٍ عربيٍّ بدل 500."""
+    if not b.name:
+        return _form_error("radius/bandwidth_form.html",
+                           "اسم ملفّ السرعة مطلوب.", 400, item=b, is_new=is_new)
+    try:
+        bandwidth_repo.upsert(b)
+    except Exception as exc:  # noqa: BLE001 — قيدُ قاعدةٍ ⇒ رسالةٌ لا انفجار
+        kind = _integrity_kind(exc)
+        if kind == "unique":
+            return _form_error("radius/bandwidth_form.html",
+                               f"يوجد ملفُّ سرعةٍ باسم «{b.name}» — اختر اسمًا آخر.",
+                               409, item=b, is_new=is_new)
+        if kind in ("foreign_key", "notnull"):
+            return _form_error("radius/bandwidth_form.html",
+                               "بيانات الملفّ ناقصة أو تُشير إلى سجلٍّ غير موجود — "
+                               "راجع الحقول المطلوبة.", 400, item=b, is_new=is_new)
+        raise
+    flash(f"تم إنشاء «{b.name}»." if is_new else f"تم تحديث «{b.name}».", "success")
     return redirect(url_for("radius.bw_list"))
+
+
+def bw_create():
+    return _bw_save(_bw_from_form(), is_new=True)
 
 
 def bw_edit(bw_id: int):
@@ -128,18 +188,7 @@ def bw_edit(bw_id: int):
 def bw_update(bw_id: int):
     it = bandwidth_repo.get(_tid(), bw_id)
     if not it: abort(404)
-    from dataclasses import replace
-    b = replace(it,
-        name=(request.form.get("name") or it.name).strip(),
-        rate_down=_i("rate_down", it.rate_down),
-        rate_down_unit=request.form.get("rate_down_unit") or it.rate_down_unit,
-        rate_up=_i("rate_up", it.rate_up),
-        rate_up_unit=request.form.get("rate_up_unit") or it.rate_up_unit,
-        burst=(request.form.get("burst") or it.burst).strip(),
-        priority=_i("priority", it.priority))
-    bandwidth_repo.upsert(b)
-    flash("تم التحديث.", "success")
-    return redirect(url_for("radius.bw_list"))
+    return _bw_save(_bw_from_form(it), is_new=False)
 
 
 def bw_delete(bw_id: int):
@@ -530,10 +579,36 @@ def _svc_dto(existing=None) -> Service:
     )
 
 
-def svc_create():
-    services_repo.upsert(_svc_dto())
-    flash("تم الإضافة.", "success")
+def _svc_save(item, *, is_new: bool):
+    """NEW-9: تحقّقٌ عربيٌّ بدل `FOREIGN KEY constraint failed` → 500."""
+    if not item.name:
+        return _form_error("radius/services_form.html", "اسم المعدّة مطلوب.", 400,
+                           item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
+    if not item.subscriber_id:
+        return _form_error("radius/services_form.html",
+                           "اختر المشترك الذي تُسلَّم له المعدّة.", 400,
+                           item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
+    try:
+        services_repo.upsert(item)
+    except Exception as exc:  # noqa: BLE001
+        kind = _integrity_kind(exc)
+        if kind == "unique":
+            return _form_error("radius/services_form.html",
+                               "يوجد سجلُّ معدّةٍ بنفس البيانات — راجع الرقم التسلسليّ.",
+                               409, item=item, subs=_picker_subscribers(limit=500),
+                               is_new=is_new)
+        if kind in ("foreign_key", "notnull"):
+            return _form_error("radius/services_form.html",
+                               "المشترك المحدَّد غير موجود، أو بياناتٌ مطلوبةٌ ناقصة.",
+                               400, item=item, subs=_picker_subscribers(limit=500),
+                               is_new=is_new)
+        raise
+    flash("تم الإضافة." if is_new else "تم التحديث.", "success")
     return redirect(url_for("radius.svc_list"))
+
+
+def svc_create():
+    return _svc_save(_svc_dto(), is_new=True)
 
 
 def svc_edit(sid: int):
@@ -546,9 +621,7 @@ def svc_edit(sid: int):
 def svc_update(sid: int):
     it = services_repo.get(_tid(), sid)
     if not it: abort(404)
-    services_repo.upsert(_svc_dto(it))
-    flash("تم التحديث.", "success")
-    return redirect(url_for("radius.svc_list"))
+    return _svc_save(_svc_dto(it), is_new=False)
 
 
 def svc_delete(sid: int):

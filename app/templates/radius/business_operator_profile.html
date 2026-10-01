@@ -2,7 +2,11 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% set label = profile.entity_type ~ " #" ~ profile.entity_id %}
+{# F27 (r5perms): كان العنوانُ `manager #2` — نوعٌ ومعرّفٌ إنجليزيّان خامّان.
+   نُقدّم اسمَ المدير/الموزّعِ الحقيقيّ، ونَعود إلى تسميةٍ عربيّةٍ بمعرّفه
+   إن لم يكن له اسم. #}
+{% set _kind = _("مدير") if profile.entity_type == "manager" else _("موزّع") %}
+{% set label = profile.display_name or (_kind ~ " #" ~ profile.entity_id) %}
 
 {% block title %}{{ label }} — {{ _("مشغل أعمال") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}

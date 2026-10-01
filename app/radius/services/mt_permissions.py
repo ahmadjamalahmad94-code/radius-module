@@ -267,9 +267,25 @@ def admin_permissions(admin) -> frozenset[str]:
     for p in raw:
         if p in ALL_PERMISSIONS:
             perms.add(p)
+        # F24 (r5perms): جسرٌ بين كتالوجِ RBAC والطبقةِ القديمة.
+        # `audit.view` مفتاحٌ **في كتالوجِ RBAC** يَمنحه المالكُ لأيّ دور،
+        # أمّا `mikrotik.audit.view` فليس في الكتالوج، فلا يستطيع أيُّ دورٍ
+        # حملَه. والنتيجةُ قبل اليوم: حاملُ `audit.view` يُفتَح له
+        # `/api/v1/audit` و`/admin/radius/events` (200) ويُرفَض على
+        # `/admin/radius/audit` و`/admin/radius/permissions` (403)،
+        # ورابطُهما مخفيٌّ عنه فلا يَرى سجلَّ التدقيقِ أبدًا — ميزةٌ
+        # مُشتراةٌ غيرُ قابلةٍ للوصول. نفسُ نمطِ جسرِ «مدير عام» أعلاه.
+        if p in _RBAC_BRIDGE:
+            perms.add(_RBAC_BRIDGE[p])
     if PERM_ADMIN in perms:
         perms.update(_IMPLIED_BY_ADMIN)
     return frozenset(perms)
+
+
+# F24: مفاتيحُ كتالوجِ RBAC التي تَمنح مكافئَها في الطبقةِ القديمة.
+_RBAC_BRIDGE: dict[str, str] = {
+    "audit.view": PERM_AUDIT_VIEW,
+}
 
 
 def has(admin, perm: str) -> bool:
