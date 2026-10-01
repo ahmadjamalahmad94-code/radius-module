@@ -858,15 +858,31 @@ class CardUsersMarketplaceService:
             pass
 
     def _discard_minted_card(self, card: dict[str, Any]) -> None:
-        """Compensation for instant mode: remove the just-minted card + batch."""
+        """Compensation for instant mode: remove the just-minted card — **only**.
+
+        🔴🔴 **لا تحذفِ الحزمة.** كان هذا التعويضُ يحذف ``card_batches`` بعد
+        البطاقة، كما كُتب يومَ كانت لكلِّ شراءٍ حزمتُه. لكنّ ``_store_batch_for_offer``
+        صار **حزمةً واحدةً مشتركةً لكلِّ عرض** (كلُّ مشتريات «8 ساعات» فيها) ⇒
+        **شراءٌ واحدٌ فاشلٌ كان يمحو حزمةَ كلِّ مَن اشترى العرضَ قبله**:
+          * بطاقاتُهم تبقى بـ``batch_id`` يشير إلى حزمةٍ غيرِ موجودة، و
+            ``policy_engine`` لا يعدّها «ميتة» (‏``get_batch`` يُرجع None ⇒
+            ``batch_dead=False``) فتظلّ تُقبَل؛
+          * لكنّ **مدّتَها محفوظةٌ في الحزمة** (‏``time_value``/``count_from_first_connect``)
+            ⇒ ``_card_batch_window_seconds`` يُرجع صفرًا ⇒ **بلا Session-Timeout** ⇒
+            **بطاقةُ 8 ساعاتٍ تصير مفتوحةً بلا حدّ** — لكلِّ مشتري العرض.
+        والحزمةُ الفارغةُ لا ضررَ منها: «ابحثْ أو أنشئ» يعيد استعمالَها للشراءِ التالي.
+
+        بطاقاتُ المتجرِ الفوريّةُ **بلا مرآةٍ** في ``subscribers`` (تُصادَق من
+        ``cards`` مباشرةً)، فحذفُ صفِّها كافٍ لقطعِ الدخول. ونمرّ مع ذلك من
+        ``erase_card_auth_trail`` (‏**بلا** ``batch_id`` — وإلّا محا كلَّ مشتري
+        العرض) كي يبقى للحذفِ مكانٌ واحد، ولتُمحى أيُّ صفوفِ rad* بالاسم."""
+        from ..db.repos.cards_repo import erase_card_auth_trail
         try:
             with transaction() as conn:
+                erase_card_auth_trail(conn, self.tenant_id,
+                                      usernames=[card.get("username")])
                 conn.execute("DELETE FROM cards WHERE tenant_id=? AND id=?",
                              (self.tenant_id, int(card["id"])))
-                batch_id = int(card.get("batch_id") or 0)
-                if batch_id:
-                    conn.execute("DELETE FROM card_batches WHERE tenant_id=? AND id=?",
-                                 (self.tenant_id, batch_id))
         except Exception:  # noqa: BLE001
             pass
 

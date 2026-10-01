@@ -979,6 +979,61 @@ def restore_batch(tenant_id: int, batch_id: int, *, actor: str = "") -> bool:
         return cur.rowcount > 0
 
 
+#: جداولُ RADIUS التي قد تحمل صفوفًا باسمِ البطاقة.
+_RAD_TABLES = ("radcheck", "radreply", "radusergroup")
+
+
+def erase_card_auth_trail(conn, tenant_id: int, *, usernames,
+                          batch_id: Optional[int] = None) -> dict:
+    """🔴 **المكانُ الوحيدُ** الذي يُمحى فيه كلُّ ما يُصادِق عليه RADIUS للبطاقة.
+
+    **كلُّ بطاقةٍ تعيش في مكانَين:**
+      1. صفُّها في ``cards`` — ما تراه اللوحة.
+      2. **مرآتُها** في ``subscribers`` (‏``user_type='card'``) — تُنشأ **لحظةَ
+         التوليد** (``CardsService._insert_card_accounts``)، و**هي ما يقرأه
+         المُصادِق** (``policy_engine.authorize``).
+    فحذفُ (1) وحدَه **يُخفي البطاقةَ من اللوحةِ ويُبقيها تدخل الإنترنت**.
+
+    **لماذا دالّةٌ واحدة:** كان منطقُ «امحُ المكانَين» مكتوبًا داخل
+    ``purge_batch`` وحدَه (أُصلح 2026-09-21)، فكلُّ بابٍ جديدٍ لحذفِ البطاقات
+    كان عليه أن **يتذكّرَه بنفسه** — ونسيه بابان:
+      * ``delete_card_permanently`` — حذفُ بطاقةٍ واحدةٍ نهائيًّا: 60/60 قُبلت بعد
+        الحذف (الجولة السادسة، client20).
+      * ``CardUsersMarketplace._discard_minted_card`` — تعويضُ شراءٍ فوريٍّ فشل:
+        يمحو البطاقةَ والحزمةَ ويترك المرآةَ تعمل.
+    فصار كلُّ بابٍ **يمرّ من هنا**، و``tests/test_card_delete_every_door_kills_auth.py``
+    يفحص كلَّ بابٍ بالمصادقةِ الفعليّة، **ويرفض أيَّ دالّةٍ جديدةٍ تحذف من
+    ``cards`` دون أن تستدعي هذه** — فبابٌ رابعٌ في المستقبل لا يستطيع أن ينسى.
+
+    ``usernames``: أسماءُ البطاقاتِ المحذوفة. تُحذف مرآتُها **بشرط**
+    ``user_type='card'`` — فلا يُمسّ مشتركٌ عاديٌّ يصادف أن يحمل الاسمَ نفسه.
+    ``batch_id``: لحذفِ حزمةٍ كاملة — يمحو أيضًا كلَّ مشتركٍ مشتقٍّ منها
+    (‏``card_batch_id``) كما كان ``purge_batch`` يفعل.
+
+    يعمل **داخل معاملةِ المستدعي** (‏``conn``) فيُمحى كلُّ شيءٍ أو لا شيء.
+    يُرجع عدّادًا لكلِّ جدول."""
+    names = [u for u in (usernames or []) if u]
+    out: dict = {}
+
+    def _run(sql: str, params, key: str) -> None:
+        try:
+            out[key] = conn.execute(sql, params).rowcount
+        except sqlite3.OperationalError:
+            out[key] = 0  # جدولٌ غائبٌ في هذا النشر
+
+    if names:
+        ph = ",".join("?" * len(names))
+        for rt in _RAD_TABLES:
+            _run(f"DELETE FROM {rt} WHERE tenant_id = ? AND username IN ({ph})",
+                 [tenant_id, *names], rt)
+        _run(f"DELETE FROM subscribers WHERE tenant_id = ? AND user_type = 'card' "
+             f"AND username IN ({ph})", [tenant_id, *names], "card_mirrors")
+    if batch_id:
+        _run("DELETE FROM subscribers WHERE tenant_id = ? AND card_batch_id = ?",
+             (tenant_id, batch_id), "batch_subscribers")
+    return out
+
+
 def purge_batch(tenant_id: int, batch_id: int) -> dict:
     """PERMANENT, irreversible physical delete of a batch and its whole
     footprint — unlike :func:`archive_batch` (soft delete / recycle bin),
@@ -1009,21 +1064,18 @@ def purge_batch(tenant_id: int, batch_id: int) -> dict:
             ph = ",".join("?" * len(card_ids))
             _run(f"DELETE FROM card_user_purchases WHERE card_id IN ({ph})", card_ids, "card_user_purchases")
             _run(f"DELETE FROM hotspot_card_purchases WHERE card_id IN ({ph})", card_ids, "hotspot_card_purchases")
-        # belt-and-suspenders: clear any RADIUS rows carrying these usernames
-        if usernames:
-            ph = ",".join("?" * len(usernames))
-            for rt in ("radcheck", "radreply", "radusergroup"):
-                _run(f"DELETE FROM {rt} WHERE tenant_id = ? AND username IN ({ph})",
-                     [tenant_id, *usernames], rt)
+        # ما يُصادِق عليه RADIUS (المرايا + rad*) — من المكانِ الوحيد.
+        trail = erase_card_auth_trail(conn, tenant_id, usernames=usernames,
+                                      batch_id=batch_id)
+        summary.update({k: trail.get(k, 0) for k in _RAD_TABLES})
+        summary["subscribers"] = (trail.get("card_mirrors", 0)
+                                  + trail.get("batch_subscribers", 0))
         # rows that reference the batch
         _run("DELETE FROM card_batch_assignments WHERE batch_id = ?", (batch_id,), "assignments")
         _run("DELETE FROM card_batch_financial_costs WHERE batch_id = ?", (batch_id,), "financial_costs")
         _run("DELETE FROM print_jobs WHERE batch_id = ?", (batch_id,), "print_jobs")
         _run("DELETE FROM bandwidth_schedules WHERE tenant_id = ? AND card_batch_id = ?",
              (tenant_id, batch_id), "bandwidth_schedules")
-        # card-derived subscribers (materialised from this batch's cards)
-        _run("DELETE FROM subscribers WHERE tenant_id = ? AND card_batch_id = ?",
-             (tenant_id, batch_id), "subscribers")
         # the cards themselves, then the batch row
         _run("DELETE FROM cards WHERE tenant_id = ? AND batch_id = ?", (tenant_id, batch_id), "cards")
         _run("DELETE FROM card_batches WHERE tenant_id = ? AND id = ?", (tenant_id, batch_id), "batch")
@@ -2276,19 +2328,7 @@ def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
         ).fetchone()
         if row is None:
             return False
-        username = row["username"]
-        if username:
-            for rt in ("radcheck", "radreply", "radusergroup"):
-                try:
-                    conn.execute(f"DELETE FROM {rt} WHERE tenant_id = ? AND username = ?",
-                                 (tenant_id, username))
-                except sqlite3.OperationalError:
-                    pass  # table absent on this deployment
-            conn.execute(
-                "DELETE FROM subscribers WHERE tenant_id = ? AND username = ? "
-                "AND user_type = 'card'",
-                (tenant_id, username),
-            )
+        erase_card_auth_trail(conn, tenant_id, usernames=[row["username"]])
         cur = conn.execute(
             "DELETE FROM cards WHERE tenant_id = ? AND id = ?",
             (tenant_id, card_id),
