@@ -1476,6 +1476,164 @@ def _install_stubs(app: Flask) -> None:
         response.set_data(_FORM_RE.sub(r"\1" + field, html))
         return response
 
+    # ═══ F2 — لا نموذجَ مرئيٍّ يرفضه الخادمُ 403 ═══
+    # القاعدة (قرار المالك): مَن لا يملك صلاحيّةَ الحفظ يرى النموذجَ **للعرض
+    # فقط** (معطَّلًا) أو لا يراه — ولا يُقدَّم له زرٌّ يرفضه الخادم.
+    #
+    # لماذا طبقةٌ مركزيّةٌ لا وسمٌ في كلّ قالب: تدقيقُ الجولتَين الرابعةِ
+    # والخامسةِ أحصى ١٣ موضعًا (سياسةُ المدير بـ219 حقلًا، عنقودُ
+    # `settings.view` بتسعةِ نماذج، «حقولُ المشترك» بـ49 مفتاحًا، باقةٌ
+    # جديدة…)، وكلُّ قالبٍ جديدٍ يُضيف موضعًا. الحارسُ الخادميُّ موجودٌ
+    # ويعمل؛ الناقصُ كان طبقةَ العرضِ وحدَها. فنُشتقّها من **نفسِ** قرارِ
+    # الحارس (`can_submit` → `rbac_denial_status`) فيستحيل انحرافُهما.
+    #
+    # fail-open بالكامل: أيُّ شكٍّ (فعلٌ لا يُحلَّل، خارج اللوحة، خطأٌ
+    # داخليّ) يَترك النموذجَ كما هو — الخادمُ يبقى الحَكَم.
+    _FORM_OPEN_RE = re.compile(
+        r"<form\b(?=[^>]*\bmethod\s*=\s*['\"]?post['\"]?)[^>]*>",
+        re.IGNORECASE)
+    _ACTION_RE = re.compile(r"""\baction\s*=\s*("([^"]*)"|'([^']*)')""",
+                            re.IGNORECASE)
+    _FORM_ID_RE = re.compile(r"""\bid\s*=\s*["']([A-Za-z0-9_:.\-]+)["']""",
+                             re.IGNORECASE)
+    _EXT_SUBMIT_RE = re.compile(
+        r"""<(?:button|input)\b[^>]*\bform\s*=\s*["']?([A-Za-z0-9_:.\-]+)["']?[^>]*>""",
+        re.IGNORECASE)
+    _READONLY_NOTE = (
+        '<p data-hr-readonly-note="1" style="margin:0 0 10px;padding:8px 12px;'
+        'border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid '
+        '#fed7aa;font-size:13px;line-height:1.6">'
+        'عرضٌ فقط — لا تملك صلاحيّةَ الحفظ على هذا النموذج.</p>')
+
+    def _form_endpoint(action: str) -> str | None:
+        """اسمُ endpoint الذي يستقبل POST هذا النموذج، أو None إن تعذّر."""
+        from urllib.parse import urlsplit
+        from flask import request as _rq
+        raw = (action or "").strip()
+        if not raw:
+            path = _rq.path
+        else:
+            parts = urlsplit(raw)
+            if parts.scheme or parts.netloc:
+                host = (parts.netloc or "").split(":")[0].lower()
+                if host not in {"", "127.0.0.1", "localhost",
+                                (_rq.host or "").split(":")[0].lower()}:
+                    return None  # خارجيّ — لا شأنَ لنا به
+            path = parts.path or _rq.path
+        if not path.startswith("/"):
+            return None
+        try:
+            adapter = app.create_url_adapter(_rq)
+            ep, _args = adapter.match(path, method="POST")
+            return ep
+        except Exception:  # noqa: BLE001 — مسارٌ لا يُحلَّل: اتركه
+            return None
+
+    def _post_allowed(endpoint: str) -> bool:
+        """هل يَقبل الخادمُ POST هذا النموذجِ من هذا المدير؟ — **نفس** دالّةِ
+        قرارِ الحارس (`rbac_denial_status`) حرفًا بحرف، بفحصٍ لا يُسجّل حركةً
+        في المعدّلِ اليوميّ (`record_activity=False`). fail-open عند أيّ خطأ."""
+        from flask import g as _g, session as _s
+        name = endpoint.split(".", 1)[1]
+        try:
+            from app.radius.routes.blueprint import rbac_denial_status
+            _saved = getattr(_g, "_rbac_denial", None)
+            try:
+                return rbac_denial_status(
+                    name, "POST", is_super=False,
+                    perms=_s.get("permissions") or [],
+                    admin_id=_s.get("admin_id"),
+                    tenant_id=int(_s.get("tenant_id") or 1),
+                    record_activity=False) is None
+            finally:
+                # لا نَطمس سببَ رفضٍ حقيقيٍّ تَعرضه صفحةُ 403 نفسها.
+                _g._rbac_denial = _saved
+        except Exception:  # noqa: BLE001 — طبقةُ عرض: الخادمُ هو الحَكَم
+            return True
+
+    def _disable_external_submits(html, ids):
+        """يُعطّل كلَّ زرٍّ خارجَ النموذجِ يُرسله عبر `form="<id>"` — الشريطُ
+        اللاصقُ أعلى النماذجِ الطويلة (سياسةُ المدير، إعداداتُ النظام) يَضع
+        زرَّ «حفظ» خارجَ وسمِ `<form>`، فلا يَصله تعطيلُ `fieldset`."""
+        out, pos, n = [], 0, 0
+        for m in _EXT_SUBMIT_RE.finditer(html):
+            tag = m.group(0)
+            if m.group(1) not in ids or re.search("disabled", tag, re.I):
+                continue
+            closing = "/>" if tag.endswith("/>") else ">"
+            body = tag[:-len(closing)].rstrip()
+            out.append(html[pos:m.start()])
+            out.append(body + ' disabled aria-disabled="true"' + closing)
+            pos, n = m.end(), n + 1
+        if not n:
+            return html, 0
+        out.append(html[pos:])
+        return "".join(out), n
+
+    @app.after_request
+    def _readonly_refused_forms(response):
+        if response.mimetype != "text/html" or response.direct_passthrough:
+            return response
+        try:
+            from flask import session as _s
+            if "permissions" not in _s:        # ليست جلسةَ دخولٍ حقيقيّة
+                return response
+            if bool(_s.get("is_super_admin")):  # المالكُ لا يُحجَب أبدًا
+                return response
+            html = response.get_data(as_text=True)
+        except Exception:  # noqa: BLE001
+            return response
+        if "<form" not in html:
+            return response
+        try:
+            out, pos, changed = [], 0, False
+            blocked_ids = set()
+            for m in _FORM_OPEN_RE.finditer(html):
+                if m.start() < pos:            # داخل نموذجٍ عُولج
+                    continue
+                am = _ACTION_RE.search(m.group(0))
+                action = (am.group(2) if am and am.group(2) is not None
+                          else (am.group(3) if am else "")) or ""
+                ep = _form_endpoint(action)
+                if not ep or not ep.startswith("radius.") or _post_allowed(ep):
+                    continue
+                end = html.find("</form>", m.end())
+                if end < 0:
+                    continue
+                # زرُّ إرسالٍ **خارج** النموذج يُشير إليه بـ`form="<id>"`
+                # (شريطٌ لاصقٌ أعلى الصفحةِ الطويلة) لا يُعطّله `fieldset`
+                # — نجمع معرّفَ النموذجِ ونُعطّل أزرارَه بأنفسنا بعد المسح.
+                im = _FORM_ID_RE.search(m.group(0))
+                if im:
+                    blocked_ids.add(im.group(1))
+                # قالبٌ عطّل نفسَه أصلًا بـ`can_submit` (نمطُ `hr-ro-note` +
+                # `fieldset disabled`) — لا نُضاعف الغلافَ ولا الملاحظة.
+                if ('data-hr-readonly' in m.group(0)
+                        or "hr-ro-note" in html[m.end():end]
+                        or "hr-readonly" in html[m.end():end]):
+                    pos = end
+                    continue
+                out.append(html[pos:m.start()])
+                out.append(m.group(0).replace(">", ' data-hr-readonly="1">', 1))
+                out.append(_READONLY_NOTE)
+                out.append('<fieldset disabled style="border:0;padding:0;margin:0;'
+                           'min-width:0">')
+                out.append(html[m.end():end])
+                out.append("</fieldset>")
+                pos, changed = end, True
+            if changed:
+                out.append(html[pos:])
+                html = "".join(out)
+            if blocked_ids:
+                html, _n = _disable_external_submits(html, blocked_ids)
+                changed = changed or bool(_n)
+            if not changed:
+                return response
+            response.set_data(html)
+        except Exception:  # noqa: BLE001 — طبقةُ عرضٍ: لا تَكسر صفحةً أبدًا
+            return response
+        return response
+
     @app.after_request
     def _relative_self_redirects(response):
         # Re-test R13 L5: behind nginx on :8443 the proxied Host header has no

@@ -87,10 +87,46 @@ def _roles_for_actor(roles):
     return out
 
 
-def _form_perms():
-    """D14: محرّر الأدوار يعرض المفاتيح الحيّة فقط (القديمة الميّتة مخفيّة)."""
+def _role_beyond_actor(role) -> bool:
+    """هل يحمل الدورُ مفتاحًا لا يملكه الفاعل؟ (سقفُ التفويض يَرفض حفظَه.)"""
+    aid = _actor_id()
+    try:
+        from ..auth.owner import _perms_of, _role_perms, is_owner_like_id
+        if aid is None or is_owner_like_id(aid):
+            return False
+        return not (_role_perms(int(role.id)) <= _perms_of(int(aid)))
+    except Exception:  # noqa: BLE001 — fail-open: الخادمُ هو الحَكَم
+        return False
+
+
+def _form_perms(*, role=None):
+    """D14: محرّر الأدوار يعرض المفاتيح الحيّة فقط (القديمة الميّتة مخفيّة).
+
+    F2 (r5perms): ولا يَعرض مفتاحًا **لا يستطيع الفاعلُ منحَه**. سقفُ
+    التفويض (`owner.assert_role_within_actor`) يرفض أيَّ حفظٍ يحمل مفتاحًا
+    لا يملكه الفاعل، فكان حاملُ `admins.edit` يرى ٦٦ مربّعًا ويضغط «إنشاء
+    الدور» فيعود بفلاشٍ «لا يمكنك منح صلاحيات لا تملكها» ولا يُنشأ شيء —
+    وهو عنصرٌ مرئيٌّ يرفضه الخادم.
+
+    عند **تعديل** دورٍ قائم نُبقي مفاتيحَه الحاليّةَ معروضةً حتى لو كانت
+    خارج سقفِ الفاعل: حجبُها يُسقطها صامتةً من الحفظِ التالي (خفضُ صلاحيّةٍ
+    بلا طلب). الخادمُ يَرفض ذلك الحفظَ أصلًا، والنموذجُ يُعطَّل عرضًا."""
     from ..core.constants import EDITABLE_PERMISSIONS
-    return EDITABLE_PERMISSIONS
+    aid = _actor_id()
+    try:
+        from ..auth.owner import _perms_of, is_owner_like_id
+        if aid is None or is_owner_like_id(aid):
+            return EDITABLE_PERMISSIONS
+        mine = set(_perms_of(int(aid)))   # نفسُ مصدرِ سقفِ التفويض
+    except Exception:  # noqa: BLE001 — fail-open: الخادمُ هو الحَكَم
+        return EDITABLE_PERMISSIONS
+    keep = set(mine)
+    if role is not None:
+        try:
+            keep |= set(getattr(role, "permissions", None) or ())
+        except Exception:  # noqa: BLE001
+            pass
+    return tuple(p for p in EDITABLE_PERMISSIONS if p in keep)
 
 
 def admins_list():
@@ -446,9 +482,13 @@ def roles_edit(role_id: int):
     page. The standalone /grants page now redirects here."""
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
-    perms = _form_perms()
+    perms = _form_perms(role=r)
     return render_template("radius/roles_form.html",
         role=r, perms=perms, is_new=False,
+        # F2 (r5perms): دورٌ يحمل مفاتيحَ خارجَ سقفِ تفويضِ الفاعل لا يُحفَظ
+        # أبدًا (`owner.assert_role_within_actor` يَرفض كلَّ حفظٍ عليه)، فلا
+        # يُقدَّم للفاعلِ نموذجٌ محرَّرٌ وزرُّ حفظٍ يعود بفلاشِ رفض.
+        save_blocked_by_delegation=_role_beyond_actor(r),
         groups=_permission_groups(perms),
         **_role_grants_context(role_id))
 

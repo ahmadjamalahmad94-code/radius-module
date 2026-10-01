@@ -186,11 +186,18 @@
             style="font-weight:800;color:#0369a1">{% endif %}{{ mgr_role.display_name or mgr_role.name }}{% if can_submit('radius.roles_edit', 'GET') %}</a>{% endif %}».
         {{ _('عدّل الدور لتطبيقه على كل مدرائه دفعةً؛ وما تضبطه هنا تجاوزٌ فرديّ لهذا المدير فقط.') }}
       </span>
+      {# F2 (r5perms): الزرُّ كان يُرسَم دائمًا بينما نموذجُه الخفيُّ
+         (`op-reset-grants-form`) مشروطٌ بـ`can_submit`، فكان مَن لا يملك
+         «تصفير التجاوزات» يرى زرًّا أحمرَ يؤكّد ثمّ **لا يفعل شيئًا**
+         (الزرُّ يُشير إلى معرّفِ نموذجٍ غيرِ موجودٍ في الصفحة). نُشرّط
+         الزرَّ بنفسِ شرطِ نموذجه. #}
+      {% if can_submit('radius.business_operator_reset_grants', 'POST') %}
       <button type="submit" form="op-reset-grants-form" class="hub-btn hub-btn--ghost hub-btn--sm"
               onclick="return confirm('{{ _('إزالة كل تجاوزات هذا المدير والعودة لوراثة دوره؟ (الحدود الرقميّة تبقى)') }}');"
               style="color:#b91c1c;white-space:nowrap">
         <i class="fa-solid fa-rotate-left"></i> {{ _('تصفير التجاوزات') }}
       </button>
+      {% endif %}
     </div>
     {% if can_submit('radius.business_operator_reset_grants', 'POST') %}<form id="op-reset-grants-form" method="post"
           action="{{ url_for('radius.business_operator_reset_grants', entity_id=profile.entity_id) }}"
