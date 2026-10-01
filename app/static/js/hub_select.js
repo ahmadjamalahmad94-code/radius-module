@@ -131,6 +131,7 @@
       panel.style.zIndex = "99999";
       panel.style.minWidth = r.width + "px";
       panel.style.insetInlineStart = "auto";
+      panel.style.maxHeight = "";  // قِسِ الارتفاعَ الطبيعيّ لا المقيَّدَ من تموضعٍ سابق
       var pw = panel.offsetWidth || r.width;
       var ph = panel.offsetHeight || 200;
       var isRTL = (document.documentElement.dir || "rtl") !== "ltr";
@@ -143,8 +144,17 @@
       // المساحةَ من الطرفَين ونختار أوسعَهما ثمّ نُقيّد اللوحةَ بها.
       var GAP = 6, EDGE = 8;
       var vh = window.innerHeight;
-      var spaceBelow = vh - r.bottom - GAP - EDGE;
-      var spaceAbove = r.top - GAP - EDGE;
+      // 🔴 الشريطُ المرئيّ فعلًا: على iOS Safari وكروم أندرويد (≥108، الافتراضيّ
+      //    resizes-visual) لوحةُ المفاتيح لا تُغيّر innerHeight بل تُقلّص
+      //    visualViewport وحدَه فتُغطّي أسفلَ المنفذ. كان الحسابُ على innerHeight
+      //    فتُرسَم اللوحةُ تحت لوحةِ المفاتيح (رُصد: bottom=613 والمرئيُّ 371 —
+      //    عنصرٌ واحدٌ من تسعِ باقاتٍ ظاهر). نُقيّد بالشريطِ المرئيّ بإحداثيّاتِ
+      //    المنفذِ التخطيطيّ (التي يُقاس بها position:fixed).
+      var vv = window.visualViewport;
+      var vTop = vv ? Math.max(0, vv.offsetTop) : 0;
+      var vBot = vv ? Math.min(vh, vv.offsetTop + vv.height) : vh;
+      var spaceBelow = vBot - r.bottom - GAP - EDGE;
+      var spaceAbove = r.top - vTop - GAP - EDGE;
       var openUp = (spaceBelow < Math.min(ph, 160)) && (spaceAbove > spaceBelow);
       var avail = Math.max(120, openUp ? spaceAbove : spaceBelow);
       panel.style.maxHeight = avail + "px";
@@ -152,15 +162,15 @@
       var hh = Math.min(ph, avail);
       if (openUp) {
         panel.style.top = "auto";
-        panel.style.bottom = Math.max(EDGE, vh - r.top + GAP) + "px";
+        panel.style.bottom = Math.max(vh - vBot + EDGE, vh - r.top + GAP) + "px";
       } else {
         panel.style.bottom = "auto";
         // تثبيتٌ داخلَ المنفذ: المرساةُ قد تُصبح فوقَ الحدِّ الأعلى أو تحتَ
         // الأسفلِ (انطواءُ شريطِ العنوان، لوحةُ المفاتيح) فنُزلق اللوحةَ
         // لتبقى مرئيّةً بدلًا من أن تختفي.
         var top = r.bottom + GAP;
-        top = Math.min(top, vh - hh - EDGE);
-        top = Math.max(EDGE, top);
+        top = Math.min(top, vBot - hh - EDGE);
+        top = Math.max(vTop + EDGE, top);
         panel.style.top = top + "px";
       }
     }
@@ -305,6 +315,14 @@
     LAST_W = w;
     if (OPEN) closeOpen();
   });
+
+  // لوحةُ المفاتيح على iOS/كروم الحديث تُغيّر visualViewport لا innerHeight —
+  // فلا يصل `resize` النافذة. نُعيد التموضعَ على حدثَي الشريطِ المرئيّ أيضًا.
+  if (window.visualViewport) {
+    var vvTick = function () { if (OPEN) OPEN.position(); };
+    window.visualViewport.addEventListener("resize", vvTick);
+    window.visualViewport.addEventListener("scroll", vvTick);
+  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
