@@ -75,6 +75,20 @@
           {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
         </select>
       </div>
+      {# إصدارُ RouterOS — مطلوبٌ لأنّ مولّدَ سكربتِ التهيئة يَبني أمرَ نفقِ
+         الإدارة على أساسه: ROS 6 يرفض `port=` و
+         `verify-server-address-from-certificate=` و`keepalive-timeout=`
+         فيفشلُ السطرُ كلُّه ولا يُنشأ النفقُ إطلاقًا — فشلٌ صامتٌ وسطَ
+         عشراتِ الأسطر. و«غير محدّد» يُعامَل كـ7 في المولّد. #}
+      <div class="hub-field">
+        <label class="hub-field-label">{{ _('إصدار RouterOS') }}</label>
+        <select class="hub-select" name="ros_version">
+          <option value="" {% if not device.ros_version %}selected{% endif %}>{{ _('غير محدّد') }}</option>
+          <option value="7" {% if device.ros_version == '7' %}selected{% endif %}>{{ _('RouterOS 7 (وأحدث)') }}</option>
+          <option value="6" {% if device.ros_version == '6' %}selected{% endif %}>{{ _('RouterOS 6 (قديم)') }}</option>
+        </select>
+        <div class="hub-field-hint">{{ _('يحدّد صيغة أمر نفق الإدارة في سكربت التهيئة. اتركه «غير محدّد» ولن تستطيع توليد السكربت حتى تختار.') }}</div>
+      </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('النوع') }}</label>
         <select class="hub-select" name="nas_type">

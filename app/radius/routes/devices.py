@@ -113,6 +113,8 @@ def _dto(*, nas_id=None) -> NasDevice:
         require_message_authenticator=_b("require_message_authenticator"),
         ssh_port=_i("ssh_port", 22),
         tags=_s("tags"),
+        # إصدارُ RouterOS — يُختار في النموذج ويسري إلى مولّدِ السكربت.
+        ros_version=_s("ros_version"),
     )
 
 

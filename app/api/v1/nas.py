@@ -51,6 +51,8 @@ _STR_FIELDS = (
     "snmp_community", "api_user", "api_password",
     "location", "coordinates", "description",
     "tags", "metadata",
+    # إصدارُ RouterOS ('6'/'7'/'') — يسري إلى مولّدِ سكربتِ التهيئة.
+    "ros_version",
 )
 _INT_FIELDS = (
     "ports", "auth_port", "acct_port", "coa_port", "api_port", "ssh_port",
@@ -120,6 +122,15 @@ def _apply_body(device: NasDevice, body: dict) -> NasDevice:
             )
     if "nas_type" in changes:
         changes["nas_type"] = changes["nas_type"].strip().lower()
+    if "ros_version" in changes:
+        # '6' | '7' | '' فقط. نقبل "6.48.6"/"7.23" ونأخذ الرقمَ الأكبر، كي
+        # يُمرّر المتكاملُ ما قرأه من الراوتر كما هو بلا تقطيعٍ يدويّ.
+        _rv = changes["ros_version"].strip()
+        _major = _rv.split(".", 1)[0] if _rv else ""
+        if _major not in ("", "6", "7"):
+            raise RadiusValidationError(
+                f"إصدار RouterOS غير مدعوم: «{_rv[:16]}». المسموح: 6 أو 7.")
+        changes["ros_version"] = _major
     return replace(device, **changes)
 
 
