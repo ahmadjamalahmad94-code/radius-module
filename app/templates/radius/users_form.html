@@ -1195,7 +1195,17 @@
                 grid.appendChild(c);
               })(d); }
             }
-            function place(){ var r=trg.getBoundingClientRect(); pop.style.right=(window.innerWidth-r.right)+'px'; pop.style.left='auto'; var h=pop.offsetHeight||360; var top=r.bottom+6; if(top+h>window.innerHeight-8 && r.top-h-6>8){top=r.top-h-6;} pop.style.top=top+'px'; }
+            /* تقييدٌ داخلَ الشريطِ المرئيّ (visualViewport) أفقيًّا وعموديًّا — كان التقويمُ
+               (≈360px) يُفتح تحت الحقل بلا تقييد فيُقصّ أسفلَ شاشةِ 360×640 ويغرق تحت
+               لوحةِ المفاتيح على iOS (نفسُ عطبِ hub_date/hub_select). */
+            function place(){ var r=trg.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight, vv=window.visualViewport;
+              var vT=vv?Math.max(0,vv.offsetTop):0, vB=vv?Math.min(vh,vv.offsetTop+vv.height):vh;
+              pop.style.maxHeight=''; var w=pop.offsetWidth||320, h=pop.offsetHeight||360;
+              var right=Math.max(8, Math.min(vw-r.right, vw-w-8)); pop.style.right=right+'px'; pop.style.left='auto';
+              var below=vB-r.bottom-14, above=r.top-vT-14, up=below<h && above>below, avail=Math.max(200, up?above:below);
+              pop.style.maxHeight=avail+'px'; pop.style.overflowY='auto'; var hh=Math.min(h,avail);
+              var top=up?(r.top-hh-6):(r.bottom+6); top=Math.max(vT+8, Math.min(top, vB-hh-8)); pop.style.top=top+'px'; }
+            if(window.visualViewport){ window.visualViewport.addEventListener('resize',function(){ if(!pop.hidden) place(); }); window.visualViewport.addEventListener('scroll',function(){ if(!pop.hidden) place(); }); }
             function open(){ if(locked)return; render(); pop.hidden=false; root.classList.add('is-open'); place(); }
             function close(){ pop.hidden=true; root.classList.remove('is-open'); }
             window.addEventListener('scroll',function(){ if(!pop.hidden) place(); }, true);
