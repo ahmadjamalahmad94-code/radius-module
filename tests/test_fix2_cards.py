@@ -16,6 +16,8 @@
 """
 from __future__ import annotations
 
+
+import re
 import uuid
 from datetime import datetime, timedelta
 
@@ -298,6 +300,16 @@ def test_web_set_time_uses_the_same_enforced_path(client, auth, app):
     assert dec.ok is False
 
 
+# الترقيمُ صار يعزل أرقامَه بـ``<bdi dir="ltr">`` كي لا تنقلب في RTL (كانت
+# تظهر «11–1 من 11» — إصلاحُ الجوّال 474b70fc). فنقارن **النصَّ المرئيَّ**:
+# بلا وسومٍ ولا محارفِ اتّجاهٍ خفيّة.
+_BIDI = re.compile("[‎‏⁦-⁩]")
+
+
+def _visible(html: str) -> str:
+    return re.sub(r"\s+", " ", _BIDI.sub("", re.sub(r"<[^>]+>", "", html)))
+
+
 # ══════════ R05-N3 — batch cards page: server paging + search ══════════
 
 def test_batch_cards_page_is_paged_on_the_server(client, auth, app):
@@ -309,11 +321,11 @@ def test_batch_cards_page_is_paged_on_the_server(client, auth, app):
         assert r.status_code == 200
         assert html.count('data-row\n') + html.count("data-row\r\n") == 50 \
             or html.count("data-card-id=") == 50
-        assert "1–50 من 130" in html
+        assert "1–50 من 130" in _visible(html)
         # page 3 has the last 30
         html3 = c.get(f"/admin/radius/cards/batches/{batch['id']}/cards?page=3").get_data(as_text=True)
         assert html3.count("data-card-id=") == 30
-        assert "101–130 من 130" in html3
+        assert "101–130 من 130" in _visible(html3)
         # per_page is whitelisted
         html_big = c.get(f"/admin/radius/cards/batches/{batch['id']}/cards?per_page=100000").get_data(as_text=True)
         assert html_big.count("data-card-id=") == 50

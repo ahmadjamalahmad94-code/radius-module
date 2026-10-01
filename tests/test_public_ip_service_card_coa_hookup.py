@@ -60,13 +60,25 @@ def client(app):
     return app.test_client()
 
 
-def _login(client) -> None:
+def _login(client, *, owner: bool = True) -> None:
+    """``owner=True`` = **مالكٌ** (شريك، ``is_co_owner``) لا «مدير عام» فقط.
+
+    🔴 طلبُ الخدمةِ المدفوعة (‏``POST /admin/radius/service-requests``) صار للمالكِ
+    وحدَه (r5perms 9176f6d6): «تفعيلُ/ترقيةُ» خدمةٍ تُحمَّل على حسابِ المالكِ في
+    لوحةِ التراخيص، و``ip_change`` يدفع الطلبَ فعلًا خارجَ الخادم — فلا يصرف
+    مديرٌ مالَ المالك. والنافذةُ تُكتَم لغيرِ المالك. كان هذا الاختبارُ يدخل بـ
+    «مدير عام» ويتوقّع النافذة."""
     from app.radius.db.repos import admins_repo
     username = f"coa_card_{uuid4().hex[:10]}"
-    admins_repo.create_admin(
+    admin = admins_repo.create_admin(
         username=username, password="pw",
         full_name="CoA Card Tester", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
+    if owner:
+        from app.radius.db.connection import db
+        aid = admin["id"] if isinstance(admin, dict) else getattr(admin, "id", None)
+        db().execute("UPDATE admins SET is_co_owner = 1 WHERE id = ?", (aid,))
+        db().commit()
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": "pw"},
@@ -205,3 +217,22 @@ def test_change_ip_live_still_surfaces_unsupported_for_hotspot():
     assert out.code_name == "unsupported"
     assert "hotspot" in out.detail.lower()
     assert out.session_type == "hotspot"
+
+
+def test_paid_service_request_window_is_owner_only(app, client):
+    """🔴 «مدير عام» (غيرُ مالك) **لا** يرى نافذةَ طلبِ الخدمةِ المدفوعة ولا زرَّ فتحِها.
+
+    الطلبُ يُحمَّل على حسابِ المالكِ في لوحةِ التراخيص، و``ip_change`` يدفعه
+    خارجَ الخادم — فلا يصرف مديرٌ مالَ المالك (r5perms 9176f6d6). والبطاقةُ
+    نفسُها وإجراءُ CoA المجّانيّ يبقيان ظاهرَين له."""
+    _seed_router(app, nas_id=78, name="edge-gw2", address="203.0.113.43")
+    _login(client, owner=False)
+
+    html = client.get("/admin/radius/mt/78/dashboard").get_data(as_text=True)
+
+    assert 'data-rh-svc-card="public-ip"' in html          # البطاقةُ ظاهرة
+    assert "data-rh-coa-setip" in html                     # وCoA المجّانيّ متاح
+    assert "data-ssm-modal" not in html, \
+        "نافذةُ طلبِ الخدمةِ المدفوعة ظهرت لمديرٍ غيرِ مالك — يصرف مالَ المالك"
+    assert "[data-svc-spec-modal-open]{display:none" in html.replace(" ", ""), \
+        "زرُّ فتحِ نافذةِ الطلبِ المدفوعِ غيرُ مكتومٍ لغيرِ المالك"
