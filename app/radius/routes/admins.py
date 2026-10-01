@@ -351,10 +351,11 @@ def roles_update(role_id: int):
     if refused is not None:
         return refused
     svc = get_admins_service()
-    chosen = tuple(request.form.getlist("permissions"))
+    _existing = admins_repo.get_role(role_id)
+    chosen = _merge_role_permissions(_existing, request.form.getlist("permissions"))
     try:
         from ..auth.owner import assert_role_within_actor
-        assert_role_within_actor(_actor_id(), chosen)
+        assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
         svc.update_role_permissions(actor=_actor(), role_id=role_id, perms=chosen)
         flash("تم تحديث الصلاحيات.", "success")
     except Exception as e:  # noqa: BLE001
@@ -404,6 +405,22 @@ def _unknown_permission_keys() -> list[str]:
     from ..core.constants import ALL_PERMISSIONS
     known = set(ALL_PERMISSIONS)
     return sorted({p for p in request.form.getlist("permissions") if p not in known})
+
+
+def _merge_role_permissions(role, submitted) -> tuple[str, ...]:
+    """SEC r6perms (D01): المحرّر يَعرض المفاتيحَ الحيّةَ فقط
+    (``EDITABLE_PERMISSIONS``)، فحفظُ الدور كان يَستبدل مجموعتَه كلَّها بما
+    أرسلَته الشبكةُ من مربّعاتٍ محرَّرة — فتُسقَط صامتةً كلُّ صلاحيّةٍ **غير
+    محرَّرة** يحملها الدور (``dashboard.view`` و14 مفتاحًا مُهمَلًا). أيُّ حفظٍ
+    لصفحةِ الدور — ولو بلا أيِّ تغيير — كان يَمسح ``dashboard.view`` من الدور
+    (مؤكَّدٌ: 164 دورًا في مسح r6perms). نُبقي مفاتيحَ الدورِ القائمةَ التي لا
+    يُمثّلها المحرّرُ، فيَحكم النموذجُ المفاتيحَ المحرَّرةَ وحدَها ولا يُسقِط ما
+    لا يَعرِضه. (لا يَمنح شيئًا جديدًا: الإبقاءُ على ما كان فقط.)"""
+    from ..core.constants import EDITABLE_PERMISSIONS
+    editable = set(EDITABLE_PERMISSIONS)
+    existing = set(getattr(role, "permissions", None) or ())
+    preserved = existing - editable      # مفاتيحُ الدورِ خارجَ شبكةِ المحرّر
+    return tuple(dict.fromkeys(list(submitted) + sorted(preserved)))
 
 
 def _reject_unknown_permissions(back_url: str):
@@ -506,7 +523,9 @@ def roles_save(role_id: int):
             role_id,
             display_name=(request.form.get("display_name") or "").strip() or r.name,
             description=(request.form.get("description") or "").strip(),
-            permissions=tuple(request.form.getlist("permissions")),
+            # SEC r6perms (D01): نُبقي مفاتيحَ الدورِ غيرَ المحرَّرة (التي لا
+            # يَعرِضها المحرّر) بدل مسحِها صامتًا عند كلِّ حفظ.
+            permissions=_merge_role_permissions(r, request.form.getlist("permissions")),
             color=(request.form.get("color") or "#2BAACC").strip(),
         )
         flash("تم حفظ التعديلات ✓", "success")
