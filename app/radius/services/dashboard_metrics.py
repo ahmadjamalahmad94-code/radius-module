@@ -15,6 +15,7 @@ from typing import Optional
 
 from flask_babel import gettext as _
 
+from ..core.ar_text import ar_count
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 
@@ -442,12 +443,14 @@ def build_alerts(*, subs: dict, cards: dict, plans: dict,
     if exp_soon > 0:
         out.append({"level": "warn", "link_endpoint": "radius.users_list",
                      "link_args": {"attention": "expiring_3d"},
-                     "message": _("%(n)s مشترك ينتهي اشتراكه خلال 3 أيام.", n=exp_soon)})
+                     # صيغةُ المعدود بحسب العدد (ar_count): كان «2 مشترك ينتهي اشتراكه» و
+                     # «25 مشترك انتهى اشتراكه» — المفردُ مع كلِّ عدد (r6ui، التطبيقُ يعرضها كما هي).
+                     "message": _("ينتهي خلال 3 أيام اشتراكُ %(cnt)s.", cnt=ar_count(exp_soon, "subscriber"))})
     expired = subs.get("expired") or 0
     if expired > 0:
         out.append({"level": "info", "link_endpoint": "radius.users_list",
                      "link_args": {"attention": "expired"},
-                     "message": _("%(n)s مشترك انتهى اشتراكه — جدّد أو احذف.", n=expired)})
+                     "message": _("انتهى اشتراكُ %(cnt)s — جدّد أو احذف.", cnt=ar_count(expired, "subscriber"))})
 
     # كروت
     avail = cards.get("available") or 0
