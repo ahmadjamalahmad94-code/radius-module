@@ -993,13 +993,7 @@ def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = Non
                  f"COALESCE(SUM({counted}), 0) AS count, COALESCE(SUM(l.amount), 0) AS total "
                  + frm + (" AND l.subscriber_id = ?" if subscriber_id else "")
                  + f" GROUP BY l.subscriber_id, l.username, {cur_sql}")
-    # HAVING: الدافعُ الذي أُلغيت كلُّ دفعاته كان يَظهر صفًّا بـ«العدد 0» و
-    # «المجموع 0.00» — ضجيجٌ في تقرير «دفعات المستفيدين» (ليس دافعًا فعليًّا)،
-    # وكان يُنفخ «عدد الدافعين» (52 بدل 47). نُبقي من له دفعةٌ فعليّةٌ واحدةٌ
-    # على الأقلّ أو مبلغٌ صافٍ غيرُ صفر (إلغاءٌ جزئيٌّ يَبقى ظاهرًا).
-    sql += (" GROUP BY l.subscriber_id, l.username"
-            f" HAVING SUM({counted}) > 0 OR ROUND(SUM(l.amount), 2) <> 0"
-            " ORDER BY last_entry_at DESC, l.username")
+    sql += " GROUP BY l.subscriber_id, l.username ORDER BY last_entry_at DESC, l.username"
     if limit is not None:
         sql += " LIMIT ? OFFSET ?"
         vals.extend([int(limit), max(int(offset or 0), 0)])
@@ -1027,7 +1021,7 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
     sc, sv = _rscope(tenant_id)
     row = db().execute(
         f"""
-        SELECT COALESCE(SUM({counted}), 0) AS entries,
+        SELECT COUNT(DISTINCT l.username) AS payers, COALESCE(SUM({counted}), 0) AS entries,
                COUNT(*) AS ledger_rows,
                COALESCE(SUM(l.amount), 0) AS total
         FROM accounting_ledger_entries l
@@ -1038,28 +1032,6 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
             (l.entry_type = 'payment' AND l.status = 'posted')
             OR (l.entry_type IN ('void', 'reversal', 'correction') AND orig.entry_type = 'payment')
           ){sc}
-        """,
-        (tenant_id, *sv),
-    ).fetchone()
-    # «عدد الدافعين» بنفسِ شرطِ قائمةِ subscriber_payment_report بالضبط، وإلّا
-    # اختلف الرقمُ عن طولِ القائمة (كان 52 والقائمةُ 47: الدافعُ المُلغاةُ كلُّ
-    # دفعاتِه كان يُعَدّ).
-    payers_row = db().execute(
-        f"""
-        SELECT COUNT(*) AS payers FROM (
-            SELECT l.subscriber_id, l.username
-            FROM accounting_ledger_entries l
-            LEFT JOIN accounting_ledger_entries orig
-              ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
-            WHERE l.tenant_id = ?
-              AND (
-                (l.entry_type = 'payment' AND l.status = 'posted')
-                OR (l.entry_type IN ('void', 'reversal', 'correction')
-                    AND orig.entry_type = 'payment')
-              ){sc}
-            GROUP BY l.subscriber_id, l.username
-            HAVING SUM({counted}) > 0 OR ROUND(SUM(l.amount), 2) <> 0
-        )
         """,
         (tenant_id, *sv),
     ).fetchone()
@@ -1085,7 +1057,7 @@ def subscriber_payment_totals(tenant_id: int) -> dict:
             (tenant_id, *sv),
         ).fetchall()
     ]
-    return {"payers": int(payers_row["payers"] or 0), "entries": int(row["entries"] or 0),
+    return {"payers": int(row["payers"] or 0), "entries": int(row["entries"] or 0),
             "ledger_rows": int(row["ledger_rows"] or 0),
             "total": round(float(row["total"] or 0), 2),
             "by_currency": by_currency, "mixed_currency": len(by_currency) > 1}
