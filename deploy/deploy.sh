@@ -137,6 +137,19 @@ cmd_init() {
         log "   .env موجود — تخطّي."
     fi
 
+    # 🔴 حارسُ مزلقِ الاستبدال: `docker-compose.yml` يقرأ `${VAR}` من `.env`
+    #    في **مجلّدِه** (deploy/) لا من `.env` الحقيقيِّ في الجذر، و
+    #    `env_file: ../.env` يحقنُ داخلَ الحاوية فقط. فأيُّ `docker compose`
+    #    يُشغَّل يدويًّا بلا `--env-file` يُسقط منفذَ اللوحةِ إلى 8443 بصمتٍ
+    #    عند إعادةِ إنشاءِ nginx — وقع هذا على client21 فانقطعت لوحتُه يومَين.
+    #    وصلةٌ رمزيّةٌ في deploy/ تجعل الاستبدالَ يَجد القيمةَ مهما كان
+    #    الاستدعاء، فلا يعتمد الأمرُ على تذكّرِ العَلَم.
+    if [ ! -e "$PROJECT_ROOT/deploy/.env" ]; then
+        ln -s ../.env "$PROJECT_ROOT/deploy/.env" 2>/dev/null \
+            && log "   deploy/.env → ../.env (حارس استبدال compose)" \
+            || log "   ⚠️ تعذّر إنشاء deploy/.env — استعمل --env-file يدويًّا."
+    fi
+
     log "2b) ضبط العنوان العام للخادم (public IP/host) ..."
     public_ip_autoconfigure
 
