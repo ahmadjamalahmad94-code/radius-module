@@ -163,10 +163,13 @@ def archive_card(conn, *, tenant_id: int, card_id: int, policy_id: int,
 def archive_subscriber(conn, *, tenant_id: int, subscriber_id: int, policy_id: int,
                        actor: str, reason: str, retention_expires_at: str) -> bool:
     now = now_iso()
+    # R6: تُحفظ الحالةُ السابقة لتُعاد عند الاسترجاع (subscribers_repo).
+    from .subscribers_repo import ARCHIVE_REMEMBER_STATUS_SQL
     cur = conn.execute(
-        """
+        f"""
         UPDATE subscribers
-        SET deleted_at = ?, deleted_by = ?, delete_reason = ?, status = 'disabled',
+        SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+            {ARCHIVE_REMEMBER_STATUS_SQL}, status = 'disabled',
             updated_at = ?, archive_source = 'auto', archive_policy_id = ?,
             retention_expires_at = ?, auto_archive_at = ?
         WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL

@@ -452,13 +452,33 @@ def upsert_subscriber(s: Subscriber, *, only_fields=None) -> Subscriber:
     return get_subscriber(s.tenant_id, s.username)
 
 
+# R6 (client20): الأرشفةُ تكتب status='disabled' (صفٌّ في السلّة لا يُصادَق)،
+# فكانت تمحو الحالةَ السابقة ويعود كلُّ مشتركٍ مُسترجَعٍ **معطّلًا** — مفعَّلٌ حُذف
+# بالخطأ يبقى مرفوضًا في RADIUS بعد «استُعيد» (60/60). تُحفظ الحالةُ في
+# metadata.status_before_archive وتُعاد عند الاسترجاع. نصُّ metadata غيرُ JSON
+# يُترك كما هو (ويُستعاد الصفُّ معطّلًا كما كان).
+_META_JSON = "COALESCE(NULLIF(metadata, ''), '{}')"
+ARCHIVE_REMEMBER_STATUS_SQL = (
+    f"metadata = CASE WHEN json_valid({_META_JSON}) "
+    f"THEN json_set({_META_JSON}, '$.status_before_archive', status) "
+    "ELSE metadata END")
+_PRIOR_STATUS = f"json_extract({_META_JSON}, '$.status_before_archive')"
+RESTORE_STATUS_SQL = (
+    f"status = CASE WHEN json_valid({_META_JSON}) AND {_PRIOR_STATUS} IN "
+    f"('enabled', 'disabled', 'suspended', 'banned') THEN {_PRIOR_STATUS} "
+    "ELSE 'disabled' END, "
+    f"metadata = CASE WHEN json_valid({_META_JSON}) AND {_PRIOR_STATUS} IS NOT NULL "
+    f"THEN json_remove({_META_JSON}, '$.status_before_archive') ELSE metadata END")
+
+
 def archive_subscriber(tenant_id: int, username: str, *, actor: str = "",
                        reason: str = "") -> bool:
     with transaction() as conn:
         cur = conn.execute(
-            """
+            f"""
             UPDATE subscribers
             SET deleted_at = ?, deleted_by = ?, delete_reason = ?,
+                {ARCHIVE_REMEMBER_STATUS_SQL},
                 status = 'disabled', updated_at = ?
             WHERE tenant_id = ? AND username = ? AND deleted_at IS NULL
             """,
@@ -471,10 +491,10 @@ def archive_subscriber(tenant_id: int, username: str, *, actor: str = "",
 def restore_subscriber(tenant_id: int, username: str, *, actor: str = "") -> bool:
     with transaction() as conn:
         cur = conn.execute(
-            """
+            f"""
             UPDATE subscribers
             SET deleted_at = NULL, deleted_by = '', delete_reason = '',
-                status = 'disabled', updated_at = ?
+                {RESTORE_STATUS_SQL}, updated_at = ?
             WHERE tenant_id = ? AND username = ? AND deleted_at IS NOT NULL
             """,
             (now_iso(), tenant_id, username),
