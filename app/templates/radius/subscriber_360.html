@@ -313,7 +313,7 @@
       {#- مصدر القيمة الخام بحسب نوع عنصر الخط الزمني: نوع قيد / مفتاح حدث / ردّ مصادقة / حالة -#}
       {%- if item.item.entry_type -%}{%- set _raw = item.item.entry_type -%}{%- set _label = L.entry_type(_raw) -%}
       {%- elif item.item.reply -%}{%- set _raw = item.item.reply -%}{%- set _label = L.reply(_raw) -%}
-      {%- elif item.item.status -%}{%- set _raw = item.item.status -%}{%- set _label = L.status(_raw) -%}
+      {%- elif item.item.status -%}{%- set _raw = item.item.status -%}{%- set _label = L.status(_raw) -%}{#- حالةُ قيدٍ ماليّ (open/posted…) ليست في قاموسِ حالةِ المشترك — كانت تظهر خامّة -#}{%- set _hum = L.humanize(_raw)|trim -%}{%- if _label|trim == _hum -%}{%- set _label = L.pay_status(_raw) -%}{%- endif -%}{%- if _label|trim == _hum -%}{%- set _label = L.loan_status(_raw) -%}{%- endif -%}
       {%- else -%}{%- set _raw = item.item.event_key -%}{%- set _label = L.humanize(_raw) -%}{%- endif -%}
       <div class="hub-list-row">
         <strong>{{ item.created_at|dt_local if item.created_at else "—" }}</strong>
