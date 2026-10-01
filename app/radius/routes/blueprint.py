@@ -985,7 +985,10 @@ _PERM_GUARDED: dict[str, str] = {
     "subscriber_groups_quota_reset_daily": "users.quota",
     # Bandwidth share groups:
     "sgrp_create": "plans.edit", "sgrp_update": "plans.edit",
-    "sgrp_delete": "plans.edit", "sgrp_add_member": "plans.edit",
+    # SEC r6perms: حذفُ مجموعةِ مشاركة كان `plans.edit` — مفتاحُ «تعديل» يحذف
+    # (نفسُ صنفِ تصعيدِ bw_delete الذي سدّته r5). الحذفُ مفتاحُه `plans.delete`
+    # كحذفِ الباقةِ وملفِّ السرعة (‏`v1.share_groups_delete` يتبعه عبر web:).
+    "sgrp_delete": "plans.delete", "sgrp_add_member": "plans.edit",
     "sgrp_remove_member": "plans.edit",
     # Bulk maintenance tools (bulk speed change / DB maintenance / bulk adjust)
     # — dangerous → super-only:
