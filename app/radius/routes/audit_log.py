@@ -34,6 +34,9 @@ _RESULT_LABELS = {
     "failed": "فشلت",
     "partial": "جزئية",
     "cancelled": "ملغاة",
+    # نتائجُ يكتبها نشاطُ المدير وخدماتٌ أخرى — كانت تظهر خامّةً («visit») في حبّة النتيجة
+    "visit": "زيارة", "blocked": "محجوبة", "sent": "أُرسلت", "started": "بدأت",
+    "reconciled": "طوبقت", "recovered": "استُعيدت", "pending": "قيد الانتظار",
 }
 
 # High-value exact labels — read better than the auto-composer below.
