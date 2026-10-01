@@ -614,9 +614,11 @@ _PERM_GUARDED: dict[str, str] = {
     # مفاتيح الـAPI — الإنشاء/الإلغاء بنفس مفتاح عرض الصفحة (api.use)؛ الملكيّة
     # (غير المالك يُلغي مفاتيحه فقط) داخل الراوت نفسه.
     "tok_create": "api.use", "tok_revoke": "api.use",
-    # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
-    "tunnels_request": "api.use",
-    "tunnels_sync": "api.use",
+    # الأنفاق — طلبُ/مزامنةُ نفقٍ عبر جسرِ الترخيص يُنشئ حسابَ SSTP على
+    # لوحةِ التراخيصِ خارجَ الخادم (خدمةٌ مدفوعة). كان `api.use` ⇒ المالكُ
+    # وحدَه (SEC r5perms).
+    "tunnels_request": _PERM_SUPER,
+    "tunnels_sync": _PERM_SUPER,
 
     # ═══ أسعار العروض للمدراء — مفاتيح دقيقة بدل super_admin (توسعة 2026-06) ═══
     "admin_pricing_page": "admin_pricing.view",
@@ -918,8 +920,11 @@ _PERM_GUARDED: dict[str, str] = {
     # gated by "api.use" → a non-owner with api.use could repoint the bridge to
     # a rogue panel and (pre-C1) escalate via a forged identity-sync response.
     "license_file_config": _PERM_SUPER,
-    "license_file_sync": "api.use",
-    "license_file_service_request": "api.use",
+    # SEC r5perms — المزامنةُ وطلبُ الخدمة ينطلقان فعلًا إلى لوحةِ التراخيصِ
+    # خارجَ الخادم ويُسجّلان محاولةً على عقدِ الترخيص. كانا `api.use`، فمَن
+    # يملك مفتاحَ التكاملِ البرمجيِّ وحدَه كان يُشغّلهما. ملكُ المالك.
+    "license_file_sync": _PERM_SUPER,
+    "license_file_service_request": _PERM_SUPER,
 
     # ── SEC M3/H6 — state-changing endpoints that were fail-open (reachable by
     # ANY logged-in admin, incl. a limited manager who lacks the section):

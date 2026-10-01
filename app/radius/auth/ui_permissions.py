@@ -176,9 +176,13 @@ _NAV_PERM: dict[str, str] = {
     "license_connect_page": _PERM_SUPER,
 
     # ── التكامل والجسر ──
-    "admin_bridge": "api.use",
-    "license_file": "api.use",
-    "tunnels_list": "api.use",
+    # جسرُ الترخيص (SEC r5perms): كان `api.use` — وهو مفتاحٌ يُمنَح للتكامل
+    # البرمجيّ — فكان أيُّ حاملٍ له يفتح صفحتَي الترخيصِ والجسرِ ويُطلق
+    # مزامنةً حقيقيّةً إلى لوحةِ التراخيصِ **خارج الخادم**. إعدادُ الترخيصِ
+    # وجسرُه ملكُ المالك (مثل `license_file_config` و`license_connect_page`).
+    "admin_bridge": _PERM_SUPER,
+    "license_file": _PERM_SUPER,
+    "tunnels_list": _PERM_SUPER,
     "wh_settings": "api.use",
     "tok_list": "api.use",
 
