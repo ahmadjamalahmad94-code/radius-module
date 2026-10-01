@@ -23,6 +23,16 @@
     • تنبع الحقول من الخادم فقط (مصدر واحد للحقيقة: service_specs).
 -#}
 
+{# 🔴 SEC r5perms — طلبُ «تفعيل/ترقية» يُلزم **المالكَ** بخدمةٍ مدفوعةٍ على
+   لوحةِ التراخيصِ (و`ip_change` يَدفع الطلبَ فعلًا إلى خارجِ الخادم). صار
+   `POST /admin/radius/service-requests` للمالكِ وحدَه. وهذه النافذةُ تُرسل
+   بـ`fetch` لا بنموذجِ HTML، فلا تَصلها طبقةُ «النماذجُ المرفوضةُ للعرضِ
+   فقط». فنَكتم النافذةَ **وكلَّ أزرارِ فتحِها** في مكانٍ واحدٍ هنا (الجزءُ
+   مُضمَّنٌ في كلِّ صفحةٍ فيها زرُّ فتح) بدل وسمِ كلِّ زرٍّ في كلِّ قالب. #}
+{% if not can_submit('radius.service_request_create', 'POST') %}
+<style>[data-svc-spec-modal-open]{display:none !important}</style>
+{% else %}
+
 <div class="ssm-modal" data-ssm-modal hidden>
   <div class="ssm-dialog" role="dialog" aria-modal="true"
        aria-labelledby="ssm-title">
@@ -509,3 +519,4 @@
   window.svcSpecModal = { open, close, toast };
 })();
 </script>
+{% endif %}

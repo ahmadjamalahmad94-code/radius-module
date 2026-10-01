@@ -47,6 +47,35 @@ def require_perm(permission: str):
                 return view(*args, **kwargs)
             perms = get_admins_service().permissions_of(a)
             if permission not in perms:
+                # 🔴 SEC r5perms — كان الرفضُ **توجيهًا 302** إلى اللوحةِ لأيّ
+                # method. أي أنّ `POST /routers/<id>/link` و
+                # `/routers/serial-binding` و`/routers/alert-settings`
+                # و`/routers/enroll` تُجيب 302 لمديرٍ لا يملك `routers.manage`
+                # (ولا دورَ يستطيع حملَه أصلًا بعد D14/F22) — الرفضُ حقيقيٌّ
+                # ولا كتابةَ تقع، لكنّ أيَّ ماسحٍ آليٍّ أو تطبيقِ الجوّال
+                # يقرأ 302 **نجاحًا**. نفسُ صنفِ NEW-11. الآن: الكتابةُ 403
+                # (وJSON للطلباتِ غيرِ المتصفّحة)، والقراءةُ تَبقى توجيهًا
+                # ودودًا إلى اللوحة.
+                from flask import g as _g, jsonify
+                mutating = request.method not in ("GET", "HEAD", "OPTIONS")
+                try:
+                    _g._rbac_denial = {"permission": permission,
+                                       "reason": "permission"}
+                except Exception:  # noqa: BLE001
+                    pass
+                if mutating:
+                    try:
+                        from ..routes.blueprint import _wants_json_response
+                        wants_json = _wants_json_response()
+                    except Exception:  # noqa: BLE001
+                        wants_json = False
+                    msg = f"لا تملك الصلاحية: {permission}"
+                    if wants_json:
+                        return jsonify({"ok": False, "error": msg,
+                                        "code": "forbidden",
+                                        "permission": permission}), 403
+                    from flask import abort
+                    abort(403)
                 flash(f"لا تملك الصلاحية: {permission}", "error")
                 return redirect(url_for("radius.dashboard"))
             return view(*args, **kwargs)

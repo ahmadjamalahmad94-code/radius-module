@@ -50,7 +50,12 @@ _NAV_PERM: dict[str, str] = {
     "users_profile": "users.view",
     "users_360": "users.view",
     "subscriber_360": "users.view",
-    "users_edit": "users.view",
+    # SEC r5perms: كان هنا `"users_edit": "users.view"` **مكرَّرًا** مع إدخالٍ
+    # لاحقٍ `"users_edit": "users.edit"`. في حرفيّةِ القواميس يَغلب الأخير،
+    # فالمفعولُ كان صحيحًا (‏`users.edit`) لكنّ التكرارَ مصيدةٌ بذاتها: لو
+    # أُعيد ترتيبُ الملفِّ يومًا لغلب الأضعفُ فصار حاملُ **العرضِ** يَفتح
+    # نموذجَ التعديل. (نفسُ المصيدةِ كلّفتنا تصعيدَ `plans.edit`→حذفٌ في
+    # `_PERM_GUARDED`.) أُزيل المكرَّرُ الأضعفُ وبقي الإدخالُ الصحيحُ أدناه.
     "users_new": "users.create",
     "subscriber_groups_list": "users.view",
     # SEC r5perms/NEW-8 + F2: صفحةُ «حقول المشترك» صفحةُ **إعدادات** وحفظُها
@@ -333,7 +338,9 @@ _NAV_PERM: dict[str, str] = {
     "svc_edit": "settings.edit",
     # ── التكامل ──
     "wh_deliveries": "api.use",
-    "service_request_list": "api.use",
+    # SEC r5perms: قائمةُ طلباتِ الخدمةِ «للوحة المالك» بنصِّ توصيفِها
+    # نفسِه، وتَكشف ما طُلب من المزوّد ومواصفاته. ملكُ المالك مثل إنشائها.
+    "service_request_list": _PERM_SUPER,
     "service_request_kinds": "api.use",
     "service_request_schema": "api.use",
 }

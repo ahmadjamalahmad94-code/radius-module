@@ -987,7 +987,13 @@ _PERM_GUARDED: dict[str, str] = {
     "admin_notifications_set_channels": "settings.edit",
     "subscriber_notifications": "settings.edit",
     # Provider service request (bridge) + store-key rotation:
-    "service_request_create": "api.use",
+    # 🔴 SEC r5perms — `service_request_create` كان `api.use`: مفتاحُ التكاملِ
+    # البرمجيِّ وحدَه كان يَكتب طلبَ خدمةٍ في `tenant_settings` ويُسجّل تدقيقًا،
+    # ولنوعِ `ip_change` **يَدفع الطلبَ فعلًا إلى لوحةِ التراخيص**
+    # (`ip_change_service.push_request`) — أي يُلزم المالكَ بخدمةٍ مدفوعةٍ خارج
+    # الخادم. نفسُ صنفِ NEW-4. ملكُ المالك (و`service_requests_decision` كان
+    # SUPER أصلًا، فالطرفان متّسقان الآن).
+    "service_request_create": _PERM_SUPER,
     "settings_rotate_store_key": _PERM_SUPER,
 
     # ═══════════════════════════════════════════════════════════════════

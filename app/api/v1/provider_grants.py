@@ -88,6 +88,39 @@ def provider_grants():
         "grace_remaining_days": decision.grace_remaining_days,
     }
 
+    # 🔒 SEC r5perms — صفحةُ الويبِ المكافئةُ (`provider_grants_status_page`)
+    # مقصورةٌ على المالك **لأنّها تكشف محتوى عقد التراخيص**، بينما هذه
+    # النهايةُ كانت «مصادقةٌ فقط» (`API_AUTH_ONLY`) فأيُّ مديرٍ ولو بـ
+    # `dashboard.view` وحدَه كان يقرأ العقدَ كاملًا: تواريخَ الانتهاءِ
+    # والسماحِ وعددَ المدراءِ الحقيقيَّ والسقوفَ الكميّةَ لكلِّ ميزة.
+    # الإبقاءُ على ما يَحتاجه التطبيقُ فعلًا لرسمِ نفسِه فقط:
+    #   • `services` (أيُّ بنودٍ تُرسَم/تُقفَل) — للجميع.
+    #   • `limits.active_online` — تطبيقُ فلاتر يَعرض «N من M متّصل».
+    #   • حالةُ الترخيصِ التي تَحجب اللوحة (state/blocks_panel/status).
+    # وحجبُ الباقي (تواريخ العقدِ وأرقامُ السماحِ وسقوفُ المدراء/الكروت/
+    # الحزم) عن غيرِ المالك. المالكُ/الشريكُ يَرى كلَّ شيءٍ كما كان.
+    # النهايةُ محروسةٌ أصلًا بمصادقةِ أدمن (`API_AUTH_ONLY`)، فالمجهولُ لا
+    # يَصلها. وغيابُ `admin_id` يعني **اعتمادًا رئيسيًّا غيرَ مربوطٍ بحساب**
+    # (توكن بيئة) وهو بمقامِ المالكِ بعرفِ `auth/owner` نفسِه
+    # (‏`actor_id=None` ⇒ مالك) — فلا نَحجب عنه ولا نَكسر عقدَ v3.
+    _owner_view = True
+    try:
+        from app.radius.auth.owner import is_owner_like_id
+        from flask import session as _s
+        _aid = getattr(g, "admin_id", None) or _s.get("admin_id")
+        _owner_view = (not _aid) or is_owner_like_id(int(_aid))
+    except Exception:  # noqa: BLE001 — لا نَكسر رسمَ قوائمِ التطبيق
+        _owner_view = True
+    if not _owner_view:
+        limits = {k: v for k, v in limits.items() if k == "active_online"}
+        license_block = {
+            "state":        license_block["state"],
+            "blocks_panel": license_block["blocks_panel"],
+            "status":       license_block["status"],
+            "reason":       license_block["reason"],
+        }
+        sync_block = {"has_snapshot": has_snapshot, "stale": sync_block["stale"]}
+
     return ok({
         "license":   license_block,
         "services":  services,   # كل عنصر فيه requires_upgrade (v2+) — يَستعمله
