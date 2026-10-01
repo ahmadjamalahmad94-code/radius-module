@@ -94,7 +94,7 @@
 
   /* Typography */
   --hub-font:         "Cairo", "Tajawal", system-ui, -apple-system, sans-serif;
-  --hub-mono:         "JetBrains Mono", "Consolas", "Cairo", monospace;
+  --hub-mono:         "JetBrains Mono", "Consolas", monospace, "Cairo";
   --hub-fs-12:        12px;
   --hub-fs-13:        13px;
   --hub-fs-14:        14px;

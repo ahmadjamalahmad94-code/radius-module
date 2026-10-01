@@ -158,7 +158,7 @@
 
   /* ────────────────────────────── TYPOGRAPHY ────────────────────────────── */
   --cc-font:      "Cairo", "Tajawal", "Segoe UI", -apple-system, sans-serif;
-  --cc-font-mono: ui-monospace, "JetBrains Mono", Consolas, "Cairo", monospace;
+  --cc-font-mono: ui-monospace, "JetBrains Mono", Consolas, monospace, "Cairo";
   --hr-mono:      var(--cc-font-mono);
 
   /* Type scale — every size that appears in the system. Add a new token

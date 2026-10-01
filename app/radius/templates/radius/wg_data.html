@@ -22,7 +22,7 @@
   .kpi-value{font-size:18px;font-weight:700}
   .peer-table td{vertical-align:middle;font-size:13px}
   .config-box{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:16px;
-               font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;
+               font-family:monospace,"Cairo";font-size:12px;white-space:pre;overflow-x:auto;
                border:1px solid #334155;margin-top:12px}
   .one-time-alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;
                   padding:14px 16px;margin-bottom:18px}
@@ -86,7 +86,7 @@
     </div>
     <div class="kpi">
       <div class="kpi-label">Public Key</div>
-      <div class="kpi-value" style="font-size:11px;font-family:monospace;word-break:break-all">
+      <div class="kpi-value" style="font-size:11px;font-family:monospace,'Cairo';word-break:break-all">
         {{ svc.public_key[:24] }}…
       </div>
     </div>
@@ -141,7 +141,7 @@
           <strong>{{ peer.display_name or '—' }}</strong><br>
           <code style="font-size:11px">{{ peer.peer_address }}</code>
         </td>
-        <td style="font-family:monospace;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        <td style="font-family:monospace,'Cairo';font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           {{ peer.public_key[:20] }}…
         </td>
         <td>{{ peer.speed_limit_mbps or '—' }}{% if peer.speed_limit_mbps %} Mbps{% endif %}</td>

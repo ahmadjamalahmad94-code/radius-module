@@ -61,7 +61,7 @@
       <input type="url" id="cn-url" name="base_url" required
              value="{{ state.config.base_url or 'https://hoberadius.com' }}"
              placeholder="https://hoberadius.com"
-             style="direction:ltr;text-align:left;font-family:monospace">
+             style="direction:ltr;text-align:left;font-family:monospace,'Cairo'">
       <div class="hub-text-mute small" style="margin-top:4px">
         {{ _('عادةً https://hoberadius.com — لا تَترك مسافات أو شَرطة مائلة في النهاية.') }}
       </div>
@@ -72,8 +72,8 @@
       <input type="text" id="cn-key" name="license_key" required
              placeholder="{{ _('انسخ المفتاح من صفحة العميل في لوحة المزوّد') }}"
              {% if state.config.has_license_key %}value=""
-             style="direction:ltr;text-align:left;font-family:monospace"
-             {% else %}style="direction:ltr;text-align:left;font-family:monospace"
+             style="direction:ltr;text-align:left;font-family:monospace,'Cairo'"
+             {% else %}style="direction:ltr;text-align:left;font-family:monospace,'Cairo'"
              {% endif %}>
       {% if state.config.has_license_key %}
       <div class="hub-text-mute small" style="margin-top:4px">

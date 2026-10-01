@@ -102,7 +102,7 @@
             {% else %}{{ hub.pill(_("فشل"), variant="red") }}{% endif %}
           </td>
           <td class="rep-cell-dev"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace,'Cairo')">
             {% if r.ip %}<bdi>{{ r.ip }}</bdi>
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>

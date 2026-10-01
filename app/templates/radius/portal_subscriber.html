@@ -135,7 +135,7 @@
     .field textarea{min-height:84px;resize:vertical}
 
     /* ── Helpers ── */
-    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;direction:ltr;unicode-bidi:isolate;font-size:.92em}
+    .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace,"Cairo";direction:ltr;unicode-bidi:isolate;font-size:.92em}
     .num{font-variant-numeric:tabular-nums}
     .card-intro{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin:0 0 14px}
 
@@ -705,7 +705,7 @@
       <pre data-testid="dc-script" id="dc-script-text"
            style="background:#0f172a;color:#e2e8f0;padding:14px;border-radius:12px;
                   overflow:auto;direction:ltr;text-align:left;white-space:pre;
-                  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px">{{ dc_result.script }}</pre>
+                  font-family:ui-monospace,Menlo,Consolas,monospace,"Cairo";font-size:12.5px">{{ dc_result.script }}</pre>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
         <a class="hub-btn" data-testid="dc-download"
            href="{{ url_for('radius.portal_subscriber_data_connection_download') }}"

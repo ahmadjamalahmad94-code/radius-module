@@ -75,8 +75,8 @@
     {% set is_loop = (p.last_status == 'bound') or (p.last_lease_ip and p.last_lease_ip|trim) %}
     <div class="hub-flex-row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 12px;border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;margin-bottom:7px;background:var(--hub-bg-soft,#fafbfc)">
       <div>
-        <span style="font-family:var(--hub-mono,ui-monospace,monospace);direction:ltr;font-size:12.5px">{{ p.interface }}</span>
-        {% if is_loop %}<span style="font-family:var(--hub-mono,ui-monospace,monospace);direction:ltr;font-size:12.5px;color:#b91c1c"> — IP {{ p.last_lease_ip or '—' }}{% if p.last_server_ip %} (من {{ p.last_server_ip }}){% endif %}</span>{% endif %}
+        <span style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo');direction:ltr;font-size:12.5px">{{ p.interface }}</span>
+        {% if is_loop %}<span style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo');direction:ltr;font-size:12.5px;color:#b91c1c"> — IP {{ p.last_lease_ip or '—' }}{% if p.last_server_ip %} (من {{ p.last_server_ip }}){% endif %}</span>{% endif %}
       </div>
       {% if is_loop %}{{ hub.pill("لوب مكتشَف", variant="red") }}
       {% elif p.last_status == 'searching' %}{{ hub.pill("سليم", variant="green") }}

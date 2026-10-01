@@ -818,7 +818,7 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
 /* the code itself — LTR inside the RTL page */
 .hcode-code{ margin:0; max-height:62vh; overflow:auto; direction:ltr; text-align:left;
   background:#1f2330; color:#e6e7ee;
-  font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,"Cairo",monospace);
+  font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,monospace,"Cairo");
   font-size:12.5px; line-height:1.7; counter-reset:hcodeln; padding:8px 0 14px;
   border-radius:0 0 var(--hub-r-card,18px) var(--hub-r-card,18px); }
 .hcode-ln{ display:block; white-space:pre; padding:0 16px 0 60px; position:relative; min-height:1.7em; }
@@ -831,7 +831,7 @@ details.uds-help > summary::-webkit-details-marker{ display: none; }
 /* plain (dynamic / JS-filled) body — same dark surface, no line gutter */
 .hcode-plain{ margin:0; max-height:62vh; overflow:auto; direction:ltr; text-align:left;
   background:#1f2330; color:#e6e7ee; padding:12px 16px;
-  font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,"Cairo",monospace);
+  font-family:var(--hub-font-mono,"JetBrains Mono",Consolas,monospace,"Cairo");
   font-size:12.5px; line-height:1.7; white-space:pre-wrap; word-break:break-word;
   border-radius:0 0 var(--hub-r-card,18px) var(--hub-r-card,18px); }
 .hcode-copybtn.is-ok{ background:var(--hub-green,#16a34a) !important; border-color:var(--hub-green,#16a34a) !important; }
