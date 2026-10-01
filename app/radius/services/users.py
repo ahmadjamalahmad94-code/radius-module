@@ -1027,6 +1027,7 @@ class UsersService:
             raise RadiusValidationError("طريقة الإضافة غير معروفة.")
         amount = _charge_amount(charge_mode, amount)
         u = self._adapter.get_account(username)
+        _reject_extend_unlimited(u)
         _require_paid_balance(u, amount, charge_mode)
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
         #
@@ -1214,6 +1215,22 @@ def _upsert_fields(adapter, sub: Subscriber, fields: set) -> Subscriber:
     if _supports_partial(adapter):
         return adapter.upsert_account(sub, only_fields=fields)
     return adapter.upsert_account(sub)
+
+
+UNLIMITED_EXTEND_MSG = (
+    "هذا المشترك بلا تاريخ انتهاء (غير محدود) — لا وقتَ يُضاف إليه. "
+    "لتحويله إلى اشتراكٍ محدّد عيّن «تاريخ الانتهاء» صراحةً.")
+
+
+def _reject_extend_unlimited(sub: Subscriber) -> None:
+    """«إضافة وقت» لمشتركٍ بلا انتهاء ⇒ 422 لا تحويلٌ صامت.
+
+    🔴 R6 (client20): المرساة ``max(expire_at, now)`` تجعل الفارغَ «الآن»، فكانت
+    إضافةُ ساعةٍ لمشتركٍ غير محدود تجعله ينتهي بعد ساعة (وتخصم ثمنها إن كانت
+    مدفوعة/على الدين) — 100/100. السلفةُ على المشترك نفسه تُبقيه غير محدود؛
+    والتحويلُ المقصود يمرّ بتعيين التاريخ صراحةً (``set_expiry``)."""
+    if sub is not None and getattr(sub, "expire_at", None) is None:
+        raise RadiusValidationError(UNLIMITED_EXTEND_MSG)
 
 
 def _record_manual_balance_change(*, actor: str, before: Subscriber,

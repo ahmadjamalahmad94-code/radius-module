@@ -90,8 +90,12 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
                       currency: str = "", notes: str = ""):
     """«إضافة وقت» — add a duration, or (``expire_at`` given, naive UTC) set the
     exact expiry. Paid/debt renewals pass the manager spend gate first."""
-    from .users import _require_paid_balance, get_users_service
+    from .users import _reject_extend_unlimited, _require_paid_balance, get_users_service
 
+    # R6: مشتركٌ بلا انتهاء لا يُضاف إليه وقت — يُرفض **قبل** بوّابة إنفاق المدير
+    # (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض). تعيينُ التاريخ مسموح.
+    if expire_at is None:
+        _reject_extend_unlimited(get_users_service().get(username))
     # «مدفوع» يُخصم من رصيد المشترك: رصيدٌ لا يكفي يُرفض **قبل** بوّابة إنفاق
     # المدير (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض).
     if charge_mode == "paid":
