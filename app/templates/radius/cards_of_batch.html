@@ -509,7 +509,7 @@
         {'icon': 'table-columns',       'text': 'افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).'},
         {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.'},
         {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.'},
-        {'icon': 'ellipsis',            'text': 'أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة (10–100).'},
+        {'icon': 'ellipsis',            'text': 'أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة (⁦10–100⁩).'},
       ],
       note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
     )) %}
@@ -674,7 +674,7 @@
                   <span class="bc-muted" style="unicode-bidi:plaintext">تم استخدام {{ c.total_time_label }}</span>
                 </div>
               </td>
-              <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label }}</strong><span class="bc-muted">آخر مشاهدة {{ c.last_seen_label }}</span></div></td>
+              <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label|bidi_nums }}</strong><span class="bc-muted">آخر مشاهدة {{ c.last_seen_label|bidi_nums }}</span></div></td>
               <td data-col="disconnect"><strong class="bc-mono">{{ c.last_disconnect_label }}</strong></td>
               <td data-col="download"><div class="bc-flow"><strong>{{ c.total_download_label }}</strong><span class="bc-muted">آخر {{ c.latest_download_label }}</span></div></td>
               <td data-col="upload"><div class="bc-flow"><strong>{{ c.total_upload_label }}</strong><span class="bc-muted">آخر {{ c.latest_upload_label }}</span></div></td>

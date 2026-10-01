@@ -81,7 +81,7 @@
   </span>
   <span class="refresh-meta">
     <i class="fa-solid fa-clock"></i>
-    آخر تحديث: {{ stats.generated_at }}
+    آخر تحديث: {{ stats.generated_at|dt_local if stats.generated_at else "—" }}
     &nbsp;·&nbsp;
     <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">تحديث</a>
   </span>
@@ -272,7 +272,7 @@
   <strong style="color:var(--d-text)">سياسة السعة:</strong>
   &nbsp;
   <span style="color:#22c55e">● أقل من 70%</span> — مفتوح &nbsp;|&nbsp;
-  <span style="color:#f59e0b">● 70–85%</span> — تحذير، التخصيصات مقيَّدة &nbsp;|&nbsp;
+  <span style="color:#f59e0b">● <bdi dir="ltr">70–85%</bdi></span> — تحذير، التخصيصات مقيَّدة &nbsp;|&nbsp;
   <span style="color:#ef4444">● أكثر من 85%</span> — مغلق، لا تخصيصات جديدة
 </div>
 
