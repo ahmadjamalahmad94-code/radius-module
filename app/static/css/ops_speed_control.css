@@ -433,6 +433,14 @@
 @media (max-width: 560px) {
   .opsx-redesign .spdx-profile__main { grid-template-columns: 1fr; }
   .opsx-redesign .spdx-modeswitch__btn { padding: 7px 10px; font-size: .76rem; }
+  /* الشريطُ العلويّ صفٌّ واحدٌ بلا التفاف: العنوان + مبدّلٌ (white-space:nowrap) + زرّ
+     إعادة الضبط أعرضُ من 360–390px، فكان زرُّ «إعادة الضبط» عند x=-58…-24 و«تحميل /
+     رفع منفصل» مقصوصًا — محتجزَين بلا تمريرٍ أفقيّ. نلفّ الشريطَ ونمدّ المبدّل. */
+  .opsx-redesign .spdx-topbar { flex-wrap: wrap; padding: 12px 14px; }
+  .opsx-redesign .spdx-topbar__tools { flex: 1 1 100%; min-width: 0; justify-content: space-between; }
+  .opsx-redesign .spdx-modeswitch { flex: 1 1 auto; min-width: 0; }
+  .opsx-redesign .spdx-modeswitch__btn { flex: 1 1 50%; justify-content: center; min-width: 0; }
+  .opsx-redesign .spdx-icon-btn { flex: 0 0 auto; width: 40px; height: 40px; }
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────── */
