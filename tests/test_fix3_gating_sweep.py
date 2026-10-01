@@ -120,27 +120,47 @@ def _page(app, perms, path):
     return r.status_code, r.get_data(as_text=True)
 
 
-def test_bandwidth_new_is_hidden_and_readonly_without_plans_edit(world):
+def test_bandwidth_new_follows_plans_create_not_plans_edit(world):
+    """r6-perms: «ملفّ سرعة جديد» يَتبع `plans.create` في الطبقتَين معًا.
+
+    كتبت fix3 هذا الاختبارَ حين كان `bw_create` مظلَّلًا على `plans.edit` بمسحِ
+    SEC M3/H6 (مفتاحٌ مكرَّرٌ في `_PERM_GUARDED` يَغلب صامتًا) — وهو التظليلُ
+    نفسُه الذي جعل `plans.edit` **يَحذف** ملفّاتِ السرعة (تصعيدٌ سدّته r5-perms
+    في d7a99f29). بعد السدّ عادت الكتلةُ الدقيقة: create→plans.create ·
+    update/apply→plans.edit · delete→plans.delete. فحاملُ `plans.create` يَحفظ
+    فعلًا ⇒ يرى الرابطَ والنموذجَ محرَّرًا؛ ومَن لا يملكه لا يرى الرابطَ ويُرفَض
+    على الصفحة والحفظ."""
     app, _ = world
     with app.app_context():
-        st, html = _page(app, ("dashboard.view", "plans.view", "plans.create"), "/admin/radius/bandwidth")
+        create = ("dashboard.view", "plans.view", "plans.create")
+        st, html = _page(app, create, "/admin/radius/bandwidth")
+        assert st == 200 and "/admin/radius/bandwidth/new" in html
+        st, html = _page(app, create, "/admin/radius/bandwidth/new")
+        assert st == 200 and 'fieldset disabled class="hr-readonly"' not in html
+        edit_only = ("dashboard.view", "plans.view", "plans.edit")
+        st, html = _page(app, edit_only, "/admin/radius/bandwidth")
         assert st == 200 and "/admin/radius/bandwidth/new" not in html
-        st, html = _page(app, ("dashboard.view", "plans.view", "plans.create"), "/admin/radius/bandwidth/new")
-        assert st == 200
-        assert 'fieldset disabled class="hr-readonly"' in html and "للعرض فقط" in html
-        st, html = _page(app, ("dashboard.view", "plans.view", "plans.create", "plans.edit"),
-                         "/admin/radius/bandwidth")
-        assert "/admin/radius/bandwidth/new" in html
+        st, _html = _page(app, edit_only, "/admin/radius/bandwidth/new")
+        assert st == 403
 
 
-def test_subscriber_fields_readonly_with_users_view_only(world):
+def test_subscriber_fields_is_a_settings_page(world):
+    """r6-perms: «حقول المشترك» صفحةُ إعداداتٍ — عرضُها `settings.view` وحفظُها
+    `settings.edit` (r5-perms/NEW-8). كتبت fix3 هذا الاختبارَ حين كانت تُفتح
+    بـ`users.view` للعرضِ فقط؛ ثمّ أَبلغ تدقيقُ الجولةِ الرابعة (NEW-8) أنّ مفتاحَ
+    عرضِ المشتركين يَفتح أقسامًا لا تخصّه، فنُقلت إلى مفتاحِ قسمِها. ورابطُها في
+    الشريطِ يُفلتَر بالمفتاحِ نفسِه، فلا رابطَ مرئيٌّ يقود إلى 403."""
     app, _ = world
     with app.app_context():
-        st, html = _page(app, ("dashboard.view", "users.view"), "/admin/radius/subscriber-fields")
+        st, html = _page(app, ("dashboard.view", "users.view"), "/admin/radius/users")
+        assert st == 200 and 'href="/admin/radius/subscriber-fields"' not in html
+        st, _html = _page(app, ("dashboard.view", "users.view"), "/admin/radius/subscriber-fields")
+        assert st == 403
+        st, html = _page(app, ("dashboard.view", "settings.view"), "/admin/radius/subscriber-fields")
         assert st == 200 and 'fieldset disabled class="hr-readonly"' in html
         st, html = _page(app, ("dashboard.view", "users.view", "settings.view", "settings.edit"),
                          "/admin/radius/subscriber-fields")
-        assert 'fieldset disabled class="hr-readonly"' not in html
+        assert st == 200 and 'fieldset disabled class="hr-readonly"' not in html
 
 
 @pytest.mark.parametrize("path", [
@@ -186,8 +206,14 @@ def test_can_submit_matches_the_guard(world):
                 assert can("radius." + ep) == (rbac_denial_status(
                     ep, "POST", is_super=False, perms=eff, admin_id=mgr.id, tenant_id=1,
                     record_activity=False) is None), ep
-            assert can("radius.bw_new", "GET") is False          # opens a form it can't save
+            # r6-perms: bw_create = plans.create (لا plans.edit) — يَحفظ ما يَفتحه.
+            assert can("radius.bw_new", "GET") is True
+            assert can("radius.bw_new", "GET") == (rbac_denial_status(
+                "bw_create", "POST", is_super=False, perms=eff, admin_id=mgr.id,
+                tenant_id=1, record_activity=False) is None)
             assert can("radius.plans_new", "GET") is True
+            # الحذفُ مفتاحُه plans.delete — لا يَرثه حاملُ الإنشاء.
+            assert can("radius.bw_delete") is False
 
 
 def test_entity_links_keep_their_text_when_unlinked(world):

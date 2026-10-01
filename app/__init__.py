@@ -1019,7 +1019,8 @@ def _install_stubs(app: Flask) -> None:
             except Exception:  # noqa: BLE001 — fail-open (العرض فقط)
                 res = True
             # رابط «جديد/تعديل» يفتح نموذجًا: يُعرَض فقط إن كان حفظه مقبولًا أيضًا
-            # (bw_new يفتح بـplans.create وحفظه bw_create يطلب plans.edit).
+            # (مثالٌ تاريخيّ: bw_new كان يُفتح بـplans.create بينما حفظُه مظلَّلٌ على
+            # plans.edit — سُدّ التظليلُ في d7a99f29؛ والقاعدةُ العامّةُ باقيةٌ هنا).
             if res and meth == "GET":
                 pair = (name[:-4] + "_create" if name.endswith("_new")
                         else name[:-5] + "_update" if name.endswith("_edit") else "")
