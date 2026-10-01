@@ -658,6 +658,7 @@ def action_payment(username: str):
         amount = _num(body.get("amount"), field="amount")
         actions = _loan_actions(body.get("loan_actions"))
         discount = _num(body.get("discount_amount"), field="discount_amount")
+        dry_run = _truthy(body.get("dry_run"))
     except (TypeError, ValueError):
         return _invalid("قيمة الدفعة أو خيارات السلف غير صحيحة.")
     if amount <= 0:
@@ -674,8 +675,10 @@ def action_payment(username: str):
             discount_amount=discount or 0,
             discount_reason=str(body.get("discount_reason") or "").strip(),
             rounding_mode=rounding, notes=str(body.get("notes") or "").strip(),
-            # «تسجيل دفعة نقدية» on the web posts apply_to_radius=1 (no preview).
-            apply_to_radius=True, dry_run=False,
+            # «معاينة بدون تنفيذ»: the client asks for a preview with dry_run —
+            # the route used to hardcode False, so a preview recorded a REAL
+            # payment (+ ledger + time). The service already honours the flag.
+            apply_to_radius=True, dry_run=dry_run,
             loan_actions=actions, settle_balance=_truthy(body.get("settle_balance")),
         )
         # payment + ledger + earned time + loans/debt: one transaction.
@@ -695,7 +698,9 @@ def action_payment(username: str):
         "new_expire_at": _iso_z(after.expire_at),
         "balance": float(after.balance or 0),
         "message": message,
-    }, status=201)
+        "dry_run": dry_run,
+        # A preview created nothing → 200, not 201.
+    }, status=200 if dry_run else 201)
 
 
 def action_balance(username: str):
@@ -736,6 +741,7 @@ def action_loan(username: str):
     loan_type = str(body_in.get("loan_type") or "free").strip()
     if loan_type not in {"free", "debt"}:
         return _invalid("نوع السلفة غير معروف (free أو debt).")
+    dry_run = _truthy(body_in.get("dry_run"))
     try:
         days = _int(body_in.get("days"), field="days")
         hours = _int(body_in.get("hours"), field="hours")
@@ -761,7 +767,9 @@ def action_loan(username: str):
         "currency": default_currency(),
         "reason": str(body_in.get("reason") or "").strip(),
         "apply_to_radius": True,
-        "dry_run": False,
+        # «معاينة بدون تنفيذ»: was hardcoded False, so a preview recorded a REAL
+        # loan and moved the expiry. create_loan already honours the flag.
+        "dry_run": dry_run,
     }
     try:
         # gate (charges the manager) + loan + window: one transaction.
@@ -772,7 +780,8 @@ def action_loan(username: str):
         return ok({"loan": None, "pending_approval": True,
                    "message": res["message"]}, status=202)
     return ok({"loan": res["loan"], "pending_approval": False,
-               "message": res["message"]}, status=201)
+               "message": res["message"], "dry_run": dry_run},
+              status=200 if dry_run else 201)
 
 
 def action_message(username: str):
