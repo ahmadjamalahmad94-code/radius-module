@@ -488,7 +488,7 @@
       subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
                ~ " · أنشئت " ~ (batch.created_at|dt_local if batch.created_at else '—')
                ~ " · " ~ (batch.created_by or 'بدون مدير')
-               ~ " · تحميل " ~ summary.download_label ~ " / رفع " ~ summary.upload_label,
+               ~ " · تحميل ⁦" ~ summary.download_label ~ "⁩ / رفع ⁦" ~ summary.upload_label ~ "⁩",
       icon="id-card",
       actions_html=hero_actions,
       kpis=[
