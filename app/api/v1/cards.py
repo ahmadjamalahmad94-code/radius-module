@@ -95,6 +95,31 @@ def register(bp: Blueprint) -> None:
 
 # ─────────────── helpers ───────────────
 
+def _live_used(b) -> int:
+    """«مستخدم» الحقيقيّ للحزمة: بطاقاتها الحيّة التي استُعملت (``cards.used``).
+
+    🔴 R6 (client20): كان يُرجع العمود ``card_batches.used`` الذي لا يتحدّث حين
+    تُستعمل البطاقة في RADIUS — فشاشةُ الحزمة في التطبيق تقول «مستخدم 0» لحزمةٍ
+    استُعملت كلُّها (10/20 حزمة). نفسُ تعريف ``used_count`` في الملخّص والقائمة."""
+    try:
+        from ...radius.db.connection import db
+        row = db().execute(
+            "SELECT COUNT(*) AS n FROM cards WHERE tenant_id = ? AND batch_id = ? "
+            "AND deleted_at IS NULL AND used = 1",
+            (int(getattr(b, "tenant_id", None) or _tid()), int(b.id))).fetchone()
+        return int(row["n"] or 0) if row else 0
+    except Exception:  # noqa: BLE001 — never break the batch payload over a counter
+        return int(getattr(b, "used", 0) or 0)
+
+
+def _live_used_items(items: list) -> list:
+    """قائمة الحزم: ``used`` = ``used_count`` الحيّ (العمود المخزَّن قديم)."""
+    for item in items or []:
+        if isinstance(item, dict) and "used_count" in item:
+            item["used"] = int(item.get("used_count") or 0)
+    return items
+
+
 def _serialize_batch(b) -> dict:
     """Stable JSON shape — converts datetimes + drops nothing sensitive."""
     return {
@@ -108,7 +133,7 @@ def _serialize_batch(b) -> dict:
         "original_count": b.original_count or b.count or b.generated,
         "settlement_count": b.settlement_count or b.original_count or b.count,
         "generated": b.generated,
-        "used": b.used,
+        "used": _live_used(b),
         "status": b.status,
         "deleted_at": b.deleted_at.isoformat() + "Z" if b.deleted_at else None,
         "deleted_by": b.deleted_by or None,
@@ -807,13 +832,14 @@ def cards_batches_list():
             items = [i for i in svc.list_batch_operations(
                         **dict(filters, q=batch.batch_code), limit=50, offset=0)
                      if int(i.get("id") or 0) == int(batch.id)]
+            _live_used_items(items)
         return ok({
             "items": items, "count": len(items), "total": len(items),
             "page": 1, "per_page": per_page, "pages": 1,
             "filters": dict(filters, code=code), "meta": meta,
             "next_batch_id": meta["next_batch_id"],
         })
-    items = svc.list_batch_operations(**filters, limit=limit, offset=offset)
+    items = _live_used_items(svc.list_batch_operations(**filters, limit=limit, offset=offset))
     total = svc.count_batch_operations(**filters)
     return ok({
         "items": items,
