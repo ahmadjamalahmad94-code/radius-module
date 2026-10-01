@@ -53,7 +53,10 @@ _NAV_PERM: dict[str, str] = {
     "users_edit": "users.view",
     "users_new": "users.create",
     "subscriber_groups_list": "users.view",
-    "subscriber_fields": "users.view",
+    # SEC r5perms/NEW-8 + F2: صفحةُ «حقول المشترك» صفحةُ **إعدادات** وحفظُها
+    # `settings.edit`. كانت تُفتح بـ`users.view` فيرى حاملُه نموذجًا بـ49
+    # مفتاحًا وزرَّ حفظٍ يرفضه الخادمُ 403. العرضُ صار `settings.view`.
+    "subscriber_fields": "settings.view",
     "online_list": "online.view",
 
     # ── البطاقات ──
@@ -312,6 +315,10 @@ _NAV_PERM: dict[str, str] = {
     "tool_radius_log": "reports.view",
     "tool_radius_log_json": "reports.view",
     "events_detail": "audit.view",
+    # SEC r5perms/NEW-6: عرضُ صفحتَي التحقيقاتِ والمخاطرِ يبقى على مفتاحِ
+    # العرض؛ الكتابةُ عليهما تَلزمها `settings.edit` (_PERM_WRITE_ONLY).
+    "events_investigations": "audit.view",
+    "events_risk": "audit.view",
     # ── الإدارة والإعدادات ──
     "business_operator_profile": "admins.view",
     "system_settings_page": "settings.view",

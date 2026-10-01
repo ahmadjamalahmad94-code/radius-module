@@ -846,8 +846,10 @@ _PERM_GUARDED: dict[str, str] = {
     "mt_import_preview": "nas.create",
     "mt_import_run": "nas.create",
     "devices_test": "nas.view",
-    # تشغيل المُصالِح يدويًّا (flush ghost sessions) — حدّ أدنى: عرض الشبكة.
-    "reconcile_now": "nas.view",
+    # تشغيل المُصالِح يدويًّا — فعلُ كتابةٍ ثقيلٌ يمسّ كلَّ المشتركين
+    # والراوترات (يُغلق جلساتٍ ويُطابق السياسات)، فلا يكفيه مفتاحُ عرضٍ.
+    # كان "nas.view" (SEC r5perms/NEW-5) ⇒ "nas.edit".
+    "reconcile_now": "nas.edit",
     # جامع تحليلات الهوتسبوت (POST): beacon عامّ من أجهزة الزبائن بلا جلسة
     # إدارية — مُعفًى من حارس الدخول (LOGIN-exempt أعلاه) ويَردّ 204 دائمًا.
     # لا يُدرَج في خريطة الصلاحيات وإلّا حَجَبه الحارس (403) فتَنكسر التحليلات
@@ -883,7 +885,12 @@ _PERM_GUARDED: dict[str, str] = {
 
     # ── الاتصالات/الرسائل — كل الصفحات الفرعيّة + الإجراءات بمفتاح الإرسال ──
     "communications_audience": "users.send_message",
-    "communications_bot": "users.send_message",
+    # SEC r5perms/NEW-7: صفحةُ بوت واتساب إعدادٌ على مستوى الشبكةِ كلّها
+    # (تُشعله/تُطفئه لكلّ المشتركين وتُخزَّن في `tenant_settings`)، وكان
+    # `users.send_message` — مفتاحٌ عمليّاتيٌّ للإرسال — يكفي لتبديله، في
+    # حين كان حاملُ `settings.edit` يُرفَض على نفس النهاية وعلى نموذجِ
+    # واتساب في `/integrations`. وُحِّدا على مفتاحِ الإعدادات.
+    "communications_bot": "settings.edit",
     "communications_campaigns": "users.send_message",
     "communications_channels": "users.send_message",
     "communications_channels_test": "users.send_message",
@@ -893,9 +900,13 @@ _PERM_GUARDED: dict[str, str] = {
     "communications_send": "users.send_message",
     "communications_templates": "users.send_message",
 
-    # ── مركز الأحداث (الصفحات الفرعيّة GET/POST) — مفتاح عرض السجلّ ──
-    "events_investigations": "audit.view",
-    "events_risk": "audit.view",
+    # ── مركز الأحداث (الصفحات الفرعيّة GET/POST) ──
+    # SEC r5perms/NEW-6: `audit.view` مفتاحُ **عرضٍ**، وكان يُنشئ تحقيقًا
+    # (صفًّا في `investigations`) ويُشغّل مسحَ المخاطر. العرضُ يبقى على
+    # `audit.view` عبر _NAV_PERM، والكتابةُ تَلزمها `settings.edit`
+    # (الاثنان في _PERM_WRITE_ONLY فيسري هذا على غير-GET فقط).
+    "events_investigations": "settings.edit",
+    "events_risk": "settings.edit",
     "events_security": "audit.view",
 
     # ── دورة الحياة/الاحتفاظ (lifecycle) — تشغيل/سياسات = حذف بيانات مجدول ──
@@ -1136,7 +1147,9 @@ _PERM_GUARDED: dict[str, str] = {
     "subscriber_renewal_preview": "users.view",
     "subscriber_groups_create": "users.edit",
     "subscriber_groups_update": "users.edit",
-    "subscriber_groups_delete": "users.edit",
+    # SEC r5perms/NEW-8: الحذفُ يَلزمه مفتاحُ الحذف لا مفتاحُ التعديل
+    # (كان `users.edit` يحذف مجموعةَ مشتركين كاملة).
+    "subscriber_groups_delete": "users.delete",
     # إعدادات النظام العامّة.
     "system_settings_page": "settings.edit",
     # قناة واتساب — مفتاح قسم الاتصالات (مثل communications_*) فوق بوّابة
@@ -1161,6 +1174,10 @@ _PERM_WRITE_ONLY = {
     "vch_generate", "wh_settings", "subscriber_notifications",
     # p01/D07: GET+POST pages whose GET view is mapped in _NAV_PERM.
     "network_ip_scan_page", "system_settings_page",
+    # SEC r5perms/NEW-6: events-center sub-pages are GET+POST on one endpoint;
+    # the GET view stays on `audit.view` (_NAV_PERM) and only the POST needs
+    # the write key `settings.edit`.
+    "events_investigations", "events_risk",
 }
 
 # بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —
