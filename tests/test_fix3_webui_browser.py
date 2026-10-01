@@ -62,10 +62,11 @@ def test_forbidden_back_to_form_restores_typed_data(app, page):
     page.proxy.login(mgr.username)
     page.goto(H.BASE + "/admin/radius/bandwidth/new")
     assert page.locator("form input[name=name]").count() >= 1
-    # the role loses plans.edit while the form is open → the save is refused
+    # the role loses plans.create while the form is open → the save is refused
+    # (round 6: a NEW profile is gated by plans.create, no longer plans.edit)
     from app.radius.db.repos import admins_repo
     r = admins_repo.create_role(name="r_noedit_" + mgr.username, display_name="R",
-                                permissions=("dashboard.view", "plans.view", "plans.create"))
+                                permissions=("dashboard.view", "plans.view"))
     admins_repo.update_admin(mgr.id, role_id=r.id)
     page.fill("form input[name=name]", "ملف-مكتوب-للاختبار")
     with page.expect_navigation():
@@ -76,6 +77,9 @@ def test_forbidden_back_to_form_restores_typed_data(app, page):
     assert data.get("name") == ["ملف-مكتوب-للاختبار"]
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
+    # the owner gives the permission back; «back to the form» must still
+    # carry what was typed (the form page itself needs plans.create now).
+    admins_repo.update_admin(mgr.id, role_id=mgr.role_id)
     with page.expect_navigation():
         page.click("[data-testid=forbidden-back-to-form]")
     page.wait_for_load_state("domcontentloaded")

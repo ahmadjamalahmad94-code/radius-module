@@ -46,11 +46,15 @@ def _spy(monkeypatch):
 
 
 def _make_subscriber(username="actuser", plan_id=None):
+    # قرار المالك 2026-10-01 (H1، خيار أ): إضافة وقتٍ لمشتركٍ **بلا انتهاء**
+    # تُرفض برسالة «حدّد تاريخ الانتهاء أوّلًا» — فمشتركُ هذه الاختبارات له انتهاء.
+    from datetime import datetime, timedelta
     from app.radius.core.types import Subscriber
     from app.radius.services.users import get_users_service
     return get_users_service().create(actor="seed", sub=Subscriber(
         id=None, username=username, password="pw", tenant_id=1,
-        full_name="أحمد علي", mobile="0599000111", plan_id=plan_id))
+        full_name="أحمد علي", mobile="0599000111", plan_id=plan_id,
+        expire_at=datetime.utcnow() + timedelta(days=5)))
 
 
 def _only(captured, key):

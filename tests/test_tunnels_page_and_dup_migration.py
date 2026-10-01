@@ -59,6 +59,10 @@ def _login(client) -> None:
     u = f"tn_{uuid4().hex[:10]}"
     admins_repo.create_admin(username=u, password="tn-pass", full_name="TN Tester",
                              is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
+    # الصفحات صارت للمالك/الشريك فقط (صلاحيات الجولة السادسة) — المختبِر مالك.
+    from app.radius.db.connection import db as _db
+    _db().execute("UPDATE admins SET is_co_owner=1 WHERE username=?", (u,))
+    _db().commit()
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "tn-pass"})
     assert res.status_code in {302, 303}
