@@ -751,6 +751,11 @@
       <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
     {% endfor %}
   </select>
+  <select class="hub-select" name="access" aria-label="{{ _('نوع الاتصال') }}">
+    <option value="" {% if not access %}selected{% endif %}>{{ _('هوت سبوت وبرود باند') }}</option>
+    <option value="hotspot" {% if access == 'hotspot' %}selected{% endif %}>{{ _('هوت سبوت') }}</option>
+    <option value="broadband" {% if access == 'broadband' %}selected{% endif %}>{{ _('برود باند (PPPoE)') }}</option>
+  </select>
   {{ hub.btn("تطبيق",   icon="filter", variant="primary",   type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة (أيقونات فقط): CSV محلي، Excel/PDF عبر

@@ -445,6 +445,9 @@ class OnlineSession:
     # هويّة العرض — لجعل اسم العرض في جدول الجلسات رابطًا لصفحته (None حين
     # لا عرض معروفًا فلا يُرسم رابط).
     plan_id: Optional[int] = None
+    # radacct.framedprotocol — «PPP» يميّز البرود باند (PPPoE) عن الهوت سبوت
+    # حتى حين يُرسل الراوتر NAS-Port-Type=Ethernet للاثنين.
+    framed_protocol: str = ""
 
 
 @dataclass(frozen=True)

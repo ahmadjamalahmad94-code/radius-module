@@ -589,6 +589,14 @@
           <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>{{ _('بدون سرعة خاصة') }}</option>
         </select>
       </div>
+      <div class="ol-filter">
+        <label for="ol-f-access"><i class="fa-solid fa-wifi"></i> {{ _('نوع الاتصال') }}</label>
+        <select class="hub-select" id="ol-f-access" name="access">
+          <option value="" {% if not selected_access %}selected{% endif %}>{{ _('هوت سبوت وبرود باند') }}</option>
+          <option value="hotspot" {% if selected_access == "hotspot" %}selected{% endif %}>{{ _('هوت سبوت') }}</option>
+          <option value="broadband" {% if selected_access == "broadband" %}selected{% endif %}>{{ _('برود باند (PPPoE)') }}</option>
+        </select>
+      </div>
     </div>
     <button class="hub-btn hub-btn--primary ol-filter-go" type="submit"><i class="fa-solid fa-filter"></i> {{ _('عرض') }}</button>
   </form>

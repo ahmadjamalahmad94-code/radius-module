@@ -146,7 +146,8 @@ class SqliteAdapter(RadiusAdapter):
                        owner_admin_id: Optional[int] = None,
                        plan_id: Optional[int] = None, usernames_in=None,
                        order_by: str = "id", order_dir: str = "desc",
-                       limit: int = 100, offset: int = 0) -> Sequence[Subscriber]:
+                       limit: int = 100, offset: int = 0,
+                       access: Optional[str] = None) -> Sequence[Subscriber]:
         # R9.0: user_type + search يُمرَّران إلى SQL في الـ repo.
         # plan_id + الفرز يُمرَّران للـSQL أيضًا (لا فلترة-بعد-الجلب) كي يصحّ
         # الترقيم الخادميّ. owner_admin_id: عزل نطاق المدير.
@@ -156,7 +157,7 @@ class SqliteAdapter(RadiusAdapter):
             owner_admin_id=owner_admin_id, plan_id=plan_id,
             usernames_in=usernames_in,
             order_by=order_by, order_dir=order_dir,
-            limit=limit, offset=offset,
+            limit=limit, offset=offset, access=access,
         )
         if beneficiary_id is not None:
             items = [s for s in items if s.beneficiary_ref == str(beneficiary_id)]
@@ -167,12 +168,14 @@ class SqliteAdapter(RadiusAdapter):
                        search: Optional[str] = None,
                        expiring_within_days: Optional[int] = None,
                        owner_admin_id: Optional[int] = None,
-                       plan_id: Optional[int] = None, usernames_in=None) -> int:
+                       plan_id: Optional[int] = None, usernames_in=None,
+                       access: Optional[str] = None) -> int:
         """إجماليّ المطابقين لنفس فلاتر list_accounts — لعدد صفحات الترقيم."""
         return subscribers_repo.count_subscribers(
             _tid(), status=status, user_type=user_type, search=search,
             expiring_within_days=expiring_within_days,
             owner_admin_id=owner_admin_id, plan_id=plan_id, usernames_in=usernames_in,
+            access=access,
         )
 
     def account_status_counts(self, *, user_type: Optional[str] = None,
@@ -331,7 +334,7 @@ class SqliteAdapter(RadiusAdapter):
         try:
             rows = db().execute(
                 "SELECT r.acctsessionid, r.acctuniqueid, r.username, "
-                "       r.nasipaddress, r.nasportid, r.nasporttype, "
+                "       r.nasipaddress, r.nasportid, r.nasporttype, r.framedprotocol, "
                 "       r.framedipaddress, r.callingstationid, "
                 "       r.acctstarttime, r.acctupdatetime, "
                 "       r.acctinputoctets, r.acctoutputoctets, r.tenant_id, "
@@ -761,6 +764,7 @@ def _radacct_row_to_session(r, *, parse_dt) -> OnlineSession:
         bytes_out=_safe_int(r["acctoutputoctets"]),
         nas_port_type=r["nasporttype"] or "",
         nas_port_id=r["nasportid"] or "",
+        framed_protocol=(r["framedprotocol"] or "") if "framedprotocol" in r.keys() else "",
         plan_name=r["plan_name"] or "",
         plan_id=(int(r["plan_id"]) if "plan_id" in r.keys() and r["plan_id"] is not None else None),
         user_type=r["user_type"] or "subscriber",

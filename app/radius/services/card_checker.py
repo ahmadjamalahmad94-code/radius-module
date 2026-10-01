@@ -400,6 +400,45 @@ def parse_checker_query(query: Any) -> tuple[str, int | None]:
     return text, None
 
 
+def card_time_brief(tenant_id: int, username: str, *,
+                    now: datetime | None = None) -> dict | None:
+    """«مُستخدَم / متبقّي» للبطاقة — بنفس حسبة الفاحص (الحزمة مصدرُ الحقيقة،
+    منحةُ المشغّل، حدُّ آخر تصفير، والخصمُ المستنفِد = صفر) لكن **بلا آثارٍ
+    جانبيّة** (لا تحديثَ أجهزة) فتصلح لقائمة «المتصلون».
+
+    ``remaining_seconds`` = None ⇒ بلا حدٍّ زمنيّ. ``used_seconds`` = ما استُهلك
+    من وقت البطاقة (‏الميزانية − المتبقّي)، أو مجموعُ الجلسات إن لا ميزانية."""
+    record = cards_repo.get_card_check_record(tenant_id, username)
+    if not record:
+        return None
+    now = now or _utcnow()
+    summary = cards_repo.summarize_card_accounting(
+        tenant_id, record["username"],
+        since=record.get("card_usage_reset_at") or None,
+    )
+    mode, budget = _resolve_accounting(record)
+    session_seconds = _seconds(summary.get("total_session_seconds"))
+    remaining = _remaining_by_mode(
+        mode=mode, budget=budget, now=now,
+        first_connection_at=(parse_dt(record.get("first_used_at"))
+                             or parse_dt(summary.get("first_session_at"))),
+        accounted_seconds=session_seconds,
+        expire_at=parse_dt(record.get("card_expire_at")),
+    )
+    if _is_exhausted_by_deduction(record):
+        remaining = 0
+    if budget > 0 and remaining is not None:
+        used = max(0, int(budget) - int(remaining))
+    else:
+        used = session_seconds
+    return {
+        "used_seconds": used,
+        "remaining_seconds": None if remaining is None else max(0, int(remaining)),
+        "budget_seconds": int(budget or 0),
+        "accounting_mode": mode,
+    }
+
+
 def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dict:
     """Return a stable, Flutter-ready Card Checker payload.
 

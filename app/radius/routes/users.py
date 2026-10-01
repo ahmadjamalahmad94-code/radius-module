@@ -889,10 +889,13 @@ def users_list():
             usernames_in = list(_online_early)
 
     _svc = get_users_service()
+    # «هوت سبوت / برود باند» (قرار المالك 2026-10-01) — نفس فلتر الـAPI.
+    from ..services.access_type import normalize_access
+    access = normalize_access(request.args.get("access")) or ""
     total_rows = int(_svc.count(status=status, plan_id=plan_id, search=q,
                                 expiring_within_days=_expiring_within_days,
                                 owner_admin_id=_scope_admin,
-                                usernames_in=usernames_in))
+                                usernames_in=usernames_in, access=access or None))
     # حدّ أمان «الكل»: فوق _ALL_RENDER_CAP اسقط لترقيم منظّم (page_size=الحدّ)
     # كي لا نُصيّر آلاف الصفوف دفعةً. all_capped يُبلِغ القالب لعرض تنبيه.
     all_capped = show_all and total_rows > _ALL_RENDER_CAP
@@ -910,7 +913,8 @@ def users_list():
                            expiring_within_days=_expiring_within_days,
                            owner_admin_id=_scope_admin, usernames_in=usernames_in,
                            order_by=sort, order_dir=sdir,
-                           limit=_eff_limit, offset=_offset))
+                           limit=_eff_limit, offset=_offset,
+                           access=access or None))
     # حدود العرض «من X – Y من N» (تُحسب خادميًّا لتصحّ مع «الكل»).
     row_from = (_offset + 1) if total_rows else 0
     row_to = min(_offset + _eff_limit, total_rows) if total_rows else 0
@@ -1103,7 +1107,7 @@ def users_list():
         can_view_passwords=_can_view_passwords(),
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
-        attention=attention, online_only=online_only,
+        attention=attention, online_only=online_only, access=access,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
         stat_online=stat_online, stat_expiring=stat_expiring,

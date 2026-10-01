@@ -321,6 +321,18 @@ def parse_duration_minutes(*, duration_minutes: Any = None, duration: Any = None
     return dur * mult
 
 
+def require_speed_account(tenant_id: int, username: str) -> None:
+    """الكرتُ يقبل السرعة المؤقتة فقط إن كان له صفُّ سرعةٍ في ``subscribers``
+    (مرآةُ التوليد). وإلّا ``RadiusError`` برسالةٍ مفهومة بدل «المشترك غير موجود»."""
+    from ..core.errors import RadiusError
+    row = db().execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND username = ? "
+        "AND deleted_at IS NULL LIMIT 1", (int(tenant_id), username)).fetchone()
+    if not row:
+        raise RadiusError("هذا الكرت بلا حساب سرعة (كرت مستورد أو من المتجر) — "
+                          "السرعة المؤقتة غير متاحة له.")
+
+
 def apply_temp_speed(
     *,
     tenant_id: int,

@@ -259,6 +259,9 @@ def online_list():
     selected_nas = (request.args.get("nas") or "").strip()
     selected_plan = (request.args.get("plan") or "").strip()
     selected_speed = (request.args.get("speed") or "").strip().lower()
+    # «هوت سبوت / برود باند» — نفس تصنيف الـAPI (services/access_type.py)
+    from ..services.access_type import classify_session, normalize_access
+    selected_access = normalize_access(request.args.get("access")) or ""
     selected_group_raw = (request.args.get("group_id") or "").strip()
     selected_group_id = int(selected_group_raw) if selected_group_raw.isdigit() else None
     search_q = (request.args.get("q") or "").strip().lower()
@@ -410,6 +413,13 @@ def online_list():
         items = [it for it in items if it.nas_address == selected_nas]
     if selected_plan:
         items = [it for it in items if it.plan_name == selected_plan]
+    if selected_access:
+        items = [it for it in items if classify_session(
+            nas_port_type=it.nas_port_type,
+            framed_protocol=getattr(it, "framed_protocol", ""),
+            service_type=it.service_type,
+            user_type=("card" if filter_type == "card" else it.user_type),
+        ) == selected_access]
     if selected_speed == "special":
         items = [it for it in items if _has_special_speed(it)]
     elif selected_speed == "temporary":
@@ -558,6 +568,7 @@ def online_list():
         selected_nas=selected_nas,
         selected_plan=selected_plan,
         selected_speed=selected_speed,
+        selected_access=selected_access,
         selected_group_id=selected_group_id,
         search_q=search_q,
         group_options=group_options,
@@ -829,7 +840,9 @@ def _apply_temp_speed_request(force_mode: str | None):
         row = _selected_online_row()
         username = row["username"]
         if row["card_id"]:
-            raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
+            # الكرت المولَّد له «مرآة» تحمل سرعته ⇒ يُقبل (قرار المالك 2026-10-01).
+            from ..services.temp_speed import require_speed_account
+            require_speed_account(_tid(), username)
         from ..services.temp_speed import (
             apply_temp_speed, MODE_DISCONNECT_REAUTH,
             parse_duration_minutes, parse_kbps)

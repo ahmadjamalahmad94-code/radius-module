@@ -125,14 +125,16 @@ class UsersService:
     def count(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
               user_type: Optional[str] = "subscriber",
               search: str = "", expiring_within_days: Optional[int] = None,
-              owner_admin_id: Optional[int] = None, usernames_in=None) -> int:
+              owner_admin_id: Optional[int] = None, usernames_in=None,
+              access: Optional[str] = None) -> int:
         """إجماليّ المطابقين — لعدد صفحات الترقيم الخادميّ (مستقلّ عن limit)."""
         try:
             return int(self._adapter.count_accounts(
                 status=status, user_type=user_type, search=(_search_term(search) or None),
                 expiring_within_days=expiring_within_days,
                 owner_admin_id=owner_admin_id, plan_id=plan_id,
-                usernames_in=usernames_in))
+                usernames_in=usernames_in,
+                **({"access": access} if access else {})))
         except Exception:  # noqa: BLE001 — العدّ لا يكسر الصفحة
             return 0
 
@@ -141,7 +143,8 @@ class UsersService:
              search: str = "", expiring_within_days: Optional[int] = None,
              owner_admin_id: Optional[int] = None, usernames_in=None,
              order_by: str = "id", order_dir: str = "desc",
-             limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
+             limit: int = 500, offset: int = 0,
+             access: Optional[str] = None) -> Sequence[Subscriber]:
         """قائمة المشتركين.
 
         R9.0:
@@ -164,6 +167,8 @@ class UsersService:
             usernames_in=usernames_in,
             order_by=order_by, order_dir=order_dir,
             limit=limit, offset=offset,
+            # «هوت سبوت/برود باند» — يُمرَّر فقط حين يُطلب (باكندات بلا الحقل)
+            **({"access": access} if access else {}),
         ))
         return items
 

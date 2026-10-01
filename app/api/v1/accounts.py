@@ -444,6 +444,11 @@ def accounts_list():
                     "قيمة expiring_within_days بين 1 و 365.", status=422)
     filters = dict(status=status, plan_id=plan_id, search=search,
                    user_type=user_type, expiring_within_days=expiring_days)
+    # «هوت سبوت / برود باند» (``access``) — نوعُ خدمة المشترك أو باقته.
+    from ...radius.services.access_type import normalize_access
+    access = normalize_access(args.get("access"))
+    if access:
+        filters["access"] = access
     # D09 + fix3: a manager without «عرض كل المشتركين» lists his own subscribers
     # (+ his distributors'); a distributor login its assigned batches ∪ what it
     # created — ONE predicate in SQL (same as the web list), so total is exact.
@@ -451,8 +456,38 @@ def accounts_list():
     filters["owner_admin_id"] = subscriber_scope_admin_id()
     items = _svc().list(limit=limit, offset=offset, **filters)
     total = _svc().count(**filters)
+    # بيانات الاتصال لبطاقة القائمة (تحميل/رفع/IP/مدّة) + نوع الوصول —
+    # استعلامان مجمَّعان للصفحة كلّها. عطلٌ هنا لا يُسقط القائمة.
+    from ...radius.services.access_type import from_service_type
+    try:
+        from ...radius.services.subscriber_live_usage import live_usage
+        usage = live_usage(_tid(), [s.username for s in items])
+    except Exception:  # noqa: BLE001
+        usage = {}
+    plan_service: dict = {}
+    try:
+        from ...radius.db.connection import db as _db
+        pids = sorted({int(s.plan_id) for s in items if getattr(s, "plan_id", None)})
+        if pids:
+            ph = ",".join("?" for _ in pids)
+            plan_service = {int(r["id"]): r["service_type"] for r in _db().execute(
+                f"SELECT id, service_type FROM access_plans WHERE tenant_id = ? AND id IN ({ph})",
+                (_tid(), *pids)).fetchall()}
+    except Exception:  # noqa: BLE001
+        plan_service = {}
+    out = []
+    for s in items:
+        d = _serialize(s)
+        live = usage.get(s.username)
+        d["live"] = live
+        d["online"] = bool(live and live.get("online"))
+        d["access_type"] = (
+            from_service_type(getattr(s, "service_type", ""))
+            or from_service_type(plan_service.get(getattr(s, "plan_id", None)))
+            or ((live or {}).get("access_type") or ""))
+        out.append(d)
     return ok({
-        "items": [_serialize(s) for s in items],
+        "items": out,
         "count": len(items),
         "total": total,
         "limit": limit,

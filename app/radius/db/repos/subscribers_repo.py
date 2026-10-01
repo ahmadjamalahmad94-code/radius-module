@@ -196,7 +196,8 @@ def list_subscribers(tenant_id: int, *,
                       include_deleted: bool = False,
                       order_by: str = "id", order_dir: str = "desc",
                       plan_id: Optional[int] = None,
-                      usernames_in=None) -> list[Subscriber]:
+                      usernames_in=None,
+                      access: Optional[str] = None) -> list[Subscriber]:
     """قائمة المشتركين مع فلاتر SQL.
 
     R9.0:
@@ -213,7 +214,8 @@ def list_subscribers(tenant_id: int, *,
     where, vals = _subscriber_filter_sql(
         tenant_id, status=status, user_type=user_type, search=search,
         expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
-        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in)
+        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in,
+        access=access)
     # فرز خادميّ آمن: العمود من قائمة بيضاء فقط (لا حقن)، والاتّجاه ASC/DESC.
     # id DESC ثانويّ لثبات الترتيب عند تساوي المفتاح (ترقيم مستقرّ).
     col = _SORTABLE_COLS.get((order_by or "id").strip().lower(), "id")
@@ -269,7 +271,7 @@ def _search_sql(search: str) -> tuple[str, list]:
 def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
                            search=None, expiring_within_days=None,
                            owner_admin_id=None, include_deleted=False,
-                           plan_id=None, usernames_in=None):
+                           plan_id=None, usernames_in=None, access=None):
     """(where_sql, vals) المشترك بين list_subscribers و count_subscribers —
     مصدر واحد لمنطق الفلترة كي لا ينحرف العدّ عن القائمة."""
     sql = " WHERE tenant_id = ?"
@@ -311,6 +313,16 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
         _s_sql, _s_vals = _search_sql(search)
         sql += _s_sql
         vals += _s_vals
+    if access in ("hotspot", "broadband"):
+        # «هوت سبوت / برود باند»: نوعُ خدمة المشترك، وإلّا نوعُ خدمة باقته؛
+        # «both» يظهر في الفلترين. (مصدرٌ واحد: services/access_type.py)
+        from ...services.access_type import service_types_for
+        kinds = service_types_for(access)
+        sql += (" AND LOWER(COALESCE(NULLIF(TRIM(service_type), ''), "
+                "(SELECT ap.service_type FROM access_plans ap "
+                "  WHERE ap.tenant_id = subscribers.tenant_id AND ap.id = subscribers.plan_id), "
+                "'')) IN (%s)" % ",".join("?" for _ in kinds))
+        vals += list(kinds)
     if owner_admin_id is not None:
         clause, cvals = _owner_scope_sql(owner_admin_id)
         sql += clause
@@ -321,13 +333,14 @@ def _subscriber_filter_sql(tenant_id: int, *, status=None, user_type=None,
 def count_subscribers(tenant_id: int, *, status=None, user_type=None,
                       search=None, expiring_within_days=None,
                       owner_admin_id=None, include_deleted=False,
-                      plan_id=None, usernames_in=None) -> int:
+                      plan_id=None, usernames_in=None, access=None) -> int:
     """إجماليّ المشتركين المطابقين لنفس الفلاتر — لحساب عدد صفحات الترقيم
     الخادميّ (مستقلّ عن limit/offset)."""
     where, vals = _subscriber_filter_sql(
         tenant_id, status=status, user_type=user_type, search=search,
         expiring_within_days=expiring_within_days, owner_admin_id=owner_admin_id,
-        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in)
+        include_deleted=include_deleted, plan_id=plan_id, usernames_in=usernames_in,
+        access=access)
     row = db().execute(f"SELECT COUNT(*) AS n FROM subscribers{where}", vals).fetchone()
     return int(row["n"]) if row else 0
 

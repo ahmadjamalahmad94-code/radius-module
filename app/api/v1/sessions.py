@@ -215,6 +215,14 @@ def _enrich_session(item: dict, accounts: tuple[dict, dict] | None = None) -> di
     item["card_batch_id"] = card["batch_id"] if card else None
     item["user_type"] = "card" if is_card else "subscriber"
     item["user_type_label"] = "بطاقة" if is_card else "مشترك"
+    # «هوت سبوت / برود باند» — مصدرٌ واحد (services/access_type.py)
+    from ...radius.services.access_type import classify_session
+    item["access_type"] = classify_session(
+        nas_port_type=item.get("nas_port_type"),
+        framed_protocol=item.get("framed_protocol"),
+        service_type=item.get("service_type"),
+        user_type=item["user_type"],
+    )
     item["expires_at"] = iso_utc_z(expire_at)
 
     # Backward-compatible aliases for older mobile clients and clearer JSON.
@@ -261,6 +269,9 @@ def sessions_online():
         return fail("validation_error", "نوع السرعة يجب أن يكون الكل أو خاصة أو مؤقتة أو عادية.", status=422)
     if len(query) > 80:
         return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+    # «هوت سبوت / برود باند» (``access``): اختياريّ، والقيمة المجهولة = الكل.
+    from ...radius.services.access_type import normalize_access
+    access = normalize_access(request.args.get("access"))
     # Real paging (the list used to stop silently at 500). Default page size
     # stays 500 so older app builds that don't page keep their behaviour.
     try:
@@ -298,6 +309,8 @@ def sessions_online():
             continue
         if kind != "all" and enriched.get("user_type") != kind:
             continue
+        if access and enriched.get("access_type") != access:
+            continue
         if _matches_query(enriched, query, mobiles):
             items.append(enriched)
 
@@ -331,14 +344,31 @@ def sessions_online():
     states: dict[str, int] = {}
     types: dict[str, int] = {"subscriber": 0, "card": 0}
     speeds: dict[str, int] = {"normal": 0, "custom": 0, "temporary": 0}
+    accesses: dict[str, int] = {"hotspot": 0, "broadband": 0}
     for item in items:
         states[item["state"]] = states.get(item["state"], 0) + 1
         user_type = item.get("user_type") or "subscriber"
         types[user_type] = types.get(user_type, 0) + 1
         speeds[item["speed_state"]] = speeds.get(item["speed_state"], 0) + 1
+        if item.get("access_type") in accesses:
+            accesses[item["access_type"]] += 1
 
     total = len(items)
     page = items[offset:offset + limit]
+    # «مُستخدَم / متبقّي» للكروت — للصفحة المعروضة وحدَها (حسبة الفاحص نفسها
+    # بلا آثارٍ جانبيّة). خطأُ كرتٍ واحد لا يُسقط القائمة.
+    from ...radius.services.card_checker import card_time_brief
+    for item in page:
+        if item.get("user_type") != "card":
+            continue
+        try:
+            brief = card_time_brief(_tid(), item.get("username") or "")
+        except Exception:  # noqa: BLE001
+            brief = None
+        if brief:
+            item["card_used_seconds"] = brief["used_seconds"]
+            item["card_remaining_seconds"] = brief["remaining_seconds"]
+            item["card_budget_seconds"] = brief["budget_seconds"]
     for item in page:
         # One timestamp format on every session field: ISO-8601 UTC + «Z».
         for key in ("started_at", "last_update_at", "expire_at"):
@@ -357,9 +387,11 @@ def sessions_online():
         "states": states,
         "types": types,
         "speeds": speeds,
+        "accesses": accesses,
         "query": query,
         "type": kind,
         "speed": speed,
+        "access": access or "all",
     })
 
 
@@ -495,7 +527,11 @@ def sessions_temp_speed():
         row = _require_online_row(body)
         username = row["username"]
         if row["card_id"]:
-            raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
+            # الكرت المولَّد له «مرآة» في subscribers تحمل سرعته ⇒ السرعة
+            # المؤقتة تعمل عليه كالمشترك (قرار المالك 2026-10-01). كرتٌ بلا
+            # مرآة (مستورد قديم/متجر فوريّ) يُرفض برسالةٍ واضحة.
+            from ...radius.services.temp_speed import require_speed_account
+            require_speed_account(_tid(), username)
         from ...radius.services.temp_speed import apply_temp_speed, parse_kbps
 
         down_kbps = parse_kbps(body.get("down_kbps"), "سرعة التنزيل")

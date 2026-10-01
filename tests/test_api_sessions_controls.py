@@ -198,7 +198,9 @@ def test_sessions_api_temporary_speed_and_cancel(app, client, monkeypatch):
     assert calls[1][0] == "cancel"
 
 
-def test_sessions_api_temp_speed_rejects_cards(app, client):
+def test_sessions_api_temp_speed_rejects_card_without_speed_account(app, client):
+    """قرار المالك 2026-10-01: السرعة المؤقتة للكروت أيضًا — لكنّ كرتًا بلا
+    «مرآة» سرعةٍ في subscribers (مستورد/متجر) يُرفض برسالةٍ واضحة."""
     _seed_online_sessions(app)
     res = client.post(
         "/api/v1/sessions/temp-speed",
@@ -212,4 +214,4 @@ def test_sessions_api_temp_speed_rejects_cards(app, client):
         },
     )
     assert res.status_code == 422
-    assert "للمشتركين فقط" in res.get_json()["error"]["message"]
+    assert "بلا حساب سرعة" in res.get_json()["error"]["message"]
