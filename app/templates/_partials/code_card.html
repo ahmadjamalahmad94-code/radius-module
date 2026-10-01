@@ -62,7 +62,11 @@ hcode-ln
 </div>
 {# byte-exact verbatim source for the copy button — never re-assembled #}
 <pre id="{{ id }}-full" hidden>{{ script }}</pre>
-{%- if sections %}{% for sec in sections %}<pre id="{{ id }}-sec-{{ loop.index0 }}" hidden>{{ sec.body }}</pre>{% endfor %}{% endif -%}
+{# 🔴 نسخُ القسمِ يأخذ `paste_body` (بلا تعليقاتٍ ولا عربيّة) لا `body`
+   المعروضَ للشرح: لصقُ العربيّة في طرفيّة WinBox يُعلّقها — وهو العطبُ
+   الذي من أجله وُجد الوضعُ الآمن. ولو خلا القسمُ من أيِّ أمرٍ (ترويسةٌ
+   كلُّها شرح) نُبقي الكتلةَ فارغةً ويُخفي القالبُ زرَّها. #}
+{%- if sections %}{% for sec in sections %}<pre id="{{ id }}-sec-{{ loop.index0 }}" hidden>{{ sec.paste_body if sec.paste_body is defined else sec.body }}</pre>{% endfor %}{% endif -%}
 {%- endmacro %}
 
 
@@ -75,10 +79,13 @@ hcode-ln
         role="button" tabindex="0" title="{{ _('اقفز إلى هذا القسم') }}">
     <span class="hcode-chip-n">{{ loop.index }}</span>
     <span>{{ sec.title }}</span>
+    {# قسمٌ بلا أمرٍ واحد (ترويسةٌ كلُّها شرح) لا زرَّ نسخٍ له — وإلّا نسخ فراغًا. #}
+    {%- if sec.paste_body is not defined or sec.paste_body %}
     <button type="button" class="hcode-chip-copy"
             data-cc-seccopy="{{ target }}" data-cc-sec="{{ loop.index0 }}"
             aria-label="{{ _('نسخ هذا القسم') }}" title="{{ _('نسخ هذا القسم') }}">
       <i class="fa-solid fa-copy"></i></button>
+    {%- endif %}
   </span>
   {%- endfor %}
 </div>
