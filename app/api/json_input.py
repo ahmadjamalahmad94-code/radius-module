@@ -44,6 +44,50 @@ def json_object():
     return body, None
 
 
+_BODY_METHODS = frozenset({"POST", "PUT", "PATCH"})
+
+#: نقاطٌ تقبل مصفوفةَ JSON عُلويّةً قصدًا فلا يسري عليها حارسُ «كائن فقط»
+#: (‏/devices/ingest يقبل مصفوفةَ عقودِ DHCP أو كائنًا فيه ``leases``).
+_ARRAY_BODY_PATHS = frozenset({"/api/v1/devices/ingest"})
+
+
+def install_global_json_object_guard(bp) -> None:
+    """حارسٌ مركزيّ: جسمُ JSON ليس كائنًا ⇒ 422 عربيّة قبل أيّ معالج.
+
+    ‏``request.get_json(silent=True) or {}`` يحمي من الأشكالِ «الكاذبة» فقط
+    (‏``{}`` و``[]`` و``null`` كلُّها falsy فتصير ‎{}‎)، أمّا جسمٌ نصّيٌّ صالحٌ
+    مثل ‎``"x"``‎ فهو **صادق** فيبقى ``str``، ثمّ يُنادى ``body.get(...)`` →
+    ‏AttributeError → 500 بـHTML. سبرُ الجولةِ الخامسة وجدها على 25 نقطةَ
+    كتابةٍ، وفي ‎/api/v1/tenants‎ كانت رسالةُ بايثون الداخليّة تُعرَض للمستخدم.
+
+    مركزيٌّ قصدًا: ‏90 موضعًا يستعمل الصيغةَ الخامّة، وأيُّ نقطةٍ جديدةٍ
+    ستُحمى تلقائيًّا بلا تعديلِ توقيعها — نفسُ نهجِ
+    ``install_global_api_auth_guard``. النقاطُ التي تتوقّع قائمةً (إن وُجدت)
+    تقرأ الجسمَ بنفسها عبر ``get_json`` فلا يمسُّها الحارس إلّا بالرفض، ولذلك
+    يقتصر على مسارات /api وطرقِ الكتابة.
+    """
+    @bp.before_app_request
+    def _global_json_object():  # noqa: ANN202
+        p = request.path or ""
+        if p != "/api" and not p.startswith("/api/"):
+            return None
+        if request.method not in _BODY_METHODS:
+            return None
+        if p.rstrip("/") in _ARRAY_BODY_PATHS:
+            return None
+        if not (request.mimetype or "").endswith("json"):
+            return None  # نماذج/ملفّات — ليست حِمْلَ JSON
+        raw = request.get_data(cache=True) or b""
+        if not raw.strip():
+            return None  # جسمٌ فارغ: المعالجاتُ تعتبره {}
+        body = request.get_json(silent=True)
+        if isinstance(body, dict):
+            return None
+        if body is None and raw.strip() not in (b"null",):
+            return None  # JSON معطوب — يتركُه المعالجُ لقاعدتِه الخاصّة
+        return fail("validation_error", NOT_OBJECT_MESSAGE, status=422)
+
+
 def opt_int(value: Any, *, label: str, minimum: int | None = None,
             maximum: int | None = 2**62) -> int | None:
     """``None``/``""`` → ``None``; an integral int/str → int; anything else

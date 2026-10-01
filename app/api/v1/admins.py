@@ -453,7 +453,7 @@ def roles_create():
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "name مطلوب", status=422)
+        return fail("validation_error", "اسم الدور مطلوب.", status=422)
     try:
         perms = _validate_permissions(body.get("permissions"))
     except RadiusValidationError as e:
@@ -471,8 +471,9 @@ def roles_create():
             permissions=perms,
             color=str(body.get("color") or "#2BAACC").strip(),
         )
-    except ValueError as e:
-        return fail("conflict", str(e), status=409)
+    except ValueError:
+        # كان يُعرض نصُّ المبرمج الإنجليزيّ («role 'x' already exists») للمشغّل.
+        return fail("conflict", f"اسم الدور «{name}» مستخدم مسبقًا.", status=409)
     _audit("create", "role", str(role.id),
            {"name": role.name, "perms_count": len(perms)})
     return ok(_serialize_role(role), status=201)

@@ -135,12 +135,19 @@ def test_card_checker_revoked_status(client, auth_headers):
 
 
 def test_card_checker_expired_status(client, auth_headers):
-    _, card = _generate_card(
-        client,
-        auth_headers,
-        time_value=-1,
-        time_unit="days",
-    )
+    from app.radius.db.connection import transaction
+
+    # كان الاختبار يولّد البطاقة بمدّة ‎-1‎ يوم ليجعلها منتهية، وموجةُ تصليبِ
+    # الكروت صارت ترفض المدّة السالبة بـ422 (وهو الصواب). نولّد بمدّةٍ صحيحة
+    # ثمّ نُرجِع تاريخَ الانتهاء إلى الماضي مباشرةً — نفسُ نيّةِ الاختبار
+    # (الفاحصُ يقول «منتهية») بلا الاعتمادِ على مُدخلٍ غيرِ صالح.
+    _, card = _generate_card(client, auth_headers, time_value=1, time_unit="days")
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE cards SET expire_at = '2020-01-01T00:00:00'"
+            " WHERE tenant_id = 1 AND id = ?",
+            (card["id"],),
+        )
     res = _check(client, auth_headers, card["username"])
     assert res.status_code == 200
     payload = res.get_json()["data"]["card"]
@@ -287,4 +294,13 @@ def test_card_generation_validation_message_is_arabic(client, auth_headers):
         headers=auth_headers,
     )
     assert res.status_code == 422
-    assert res.get_json()["error"]["message"] == "عدد الكروت يجب أن يكون بين 1 و2000."
+    assert res.get_json()["error"]["message"] == "عدد الكروت يجب أن يكون 1 فأكثر."
+
+    # والحدُّ الأعلى مفروضٌ أيضًا برسالةٍ عربيّة (كان مليونَ بطاقةٍ يُقبَل).
+    over = client.post(
+        "/api/v1/cards/generate",
+        json={"plan_id": 1, "count": 100000, "username_prefix": _unique_prefix()},
+        headers=auth_headers,
+    )
+    assert over.status_code == 422
+    assert "الحدّ الأقصى" in over.get_json()["error"]["message"]

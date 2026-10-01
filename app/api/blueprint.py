@@ -25,6 +25,11 @@ def get_api_blueprint() -> Blueprint:
     # يشمل أي نقطة جديدة تلقائيًا بلا تعديل توقيعها — انظر app/api/auth.py.
     from .auth import install_global_api_auth_guard
     install_global_api_auth_guard(bp)
+
+    # حارسُ شكلِ جسمِ JSON: جسمٌ نصّيٌّ/قائمةٌ بدل كائنٍ كان يُنتج 500 على 25
+    # نقطةَ كتابة (انظر app/api/json_input.py).
+    from .json_input import install_global_json_object_guard
+    install_global_json_object_guard(bp)
     return bp
 
 

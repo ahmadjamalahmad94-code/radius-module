@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
+from ...radius.core.numbers import finite_int
 from ...radius.services.accounting import service_from_context
 from ..auth import require_api_token
 from ..responses import fail, ok
@@ -27,7 +28,11 @@ def ledger_list():
         subscriber_id = request.args.get("subscriber_id")
         items = service_from_context().list_ledger(
             entry_type=(request.args.get("entry_type") or "").strip(),
-            subscriber_id=int(subscriber_id) if subscriber_id else None,
+            # finite_int: معرّفٌ أكبر من مدى INTEGER في SQLite كان يَمرّ كعددٍ
+            # ضخمٍ ثمّ يفشل ربطُه بالاستعلام → 500 بدل 422.
+            subscriber_id=(finite_int(subscriber_id, field="subscriber_id",
+                                      min=0, max=2**63 - 1)
+                           if subscriber_id else None),
             limit=limit,
             offset=offset,
         )
@@ -52,7 +57,11 @@ def ledger_void():
     if not isinstance(body, dict):
         body = {}
     try:
-        entry_id = int(body.get("entry_id") or 0)
+        # finite_int (لا ‎int() الخامّ): ‎1e400/Infinity كانت ترفع OverflowError
+        # غير ملتقَطة، والعددُ الضخم (400 رقم) يمرّ ثمّ يفشل ربطُه بـSQLite —
+        # كلاهما 500. السقف هو مدى INTEGER في SQLite.
+        entry_id = finite_int(body.get("entry_id") or 0, field="entry_id",
+                              min=0, max=2**63 - 1)
         if entry_id <= 0:
             raise RadiusValidationError("معرّف القيد مطلوب.")
         entry = service_from_context().void_ledger(

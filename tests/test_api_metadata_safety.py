@@ -138,7 +138,11 @@ def test_profile_invalid_metadata_does_not_wipe(client, auth_headers):
     seed_meta = {"mikrotik": {"profile": "KEEP"}}
     create = client.post(
         "/api/v1/profiles",
-        json={"name": name, "plan_type": "time", "metadata": seed_meta},
+        # السرعةُ صارت مطلوبةً صراحةً (أو «بلا حدّ للسرعة») بعد موجةِ التصليب،
+        # فكان الإنشاءُ يُرفض 422 ويسقط الاختبار قبل أن يفحص الميتاداتا.
+        json={"name": name, "plan_type": "time", "metadata": seed_meta,
+              "speed_down_kbps": 2048, "speed_up_kbps": 512,
+              "duration_minutes": 1440, "price": 5},
         headers=auth_headers,
     )
     assert create.status_code == 201, create.get_json()

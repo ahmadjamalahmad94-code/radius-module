@@ -52,6 +52,12 @@ def create_group():
         max_members = _int(body, "max_members")
     except ValueError:
         return fail("validation_error", "قيم حدود المجموعة يجب أن تكون أرقامًا صحيحة.", status=422)
+    # اسمٌ مكرّر: قيد UNIQUE(tenant_id, name) كان يُفلت IntegrityError → 500
+    # بـHTML. نفحصه أوّلًا ونُعيد 409 عربيّة (مثل subscriber-groups).
+    if any((g.get("name") or "").strip() == name
+           for g in share_groups_repo.list_groups(_tid())):
+        return fail("conflict", f"اسم مجموعة المشاركة «{name}» مستخدم مسبقًا.",
+                    status=409)
     group_id = share_groups_repo.create(
         tenant_id=_tid(),
         name=name,

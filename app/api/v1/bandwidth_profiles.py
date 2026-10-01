@@ -74,6 +74,12 @@ def create_profile():
     profile = _payload()
     if isinstance(profile, tuple):
         return profile
+    # اسمٌ مكرّر: قيد UNIQUE(tenant_id, name) كان يُفلت IntegrityError من
+    # upsert → 500 بـHTML. نُعيد 409 عربيّة بدلًا منه.
+    if any((getattr(p, "name", "") or "").strip() == profile.name
+           for p in bandwidth_repo.list_all(_tid())):
+        return fail("conflict", f"اسم ملف السرعة «{profile.name}» مستخدم مسبقًا.",
+                    status=409)
     saved = bandwidth_repo.upsert(profile)
     return ok(_item(saved), status=201)
 
