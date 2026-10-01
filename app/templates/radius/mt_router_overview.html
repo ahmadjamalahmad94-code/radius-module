@@ -164,7 +164,7 @@
         {% for a in ov.suggested_actions %}
         {{ hub.action_card(
             a.label_ar,
-            sub=a.severity,
+            sub={'critical': _('حرِج'), 'warning': _('تحذير'), 'info': _('معلومة')}.get(a.severity, _('تنبيه')),
             icon=('circle-exclamation' if a.severity == 'critical'
                   else ('triangle-exclamation' if a.severity == 'warning'
                   else 'arrow-right')),
