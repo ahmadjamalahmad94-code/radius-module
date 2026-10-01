@@ -2361,8 +2361,17 @@ class CardsService:
         }
 
     def delete_card_permanently(self, *, actor: str, card_id: int) -> None:
-        if not cards_repo.delete_card_permanently(self._store_tenant_id(), card_id):
+        tenant_id = self._store_tenant_id()
+        card = cards_repo.get_card(tenant_id, card_id)
+        if not cards_repo.delete_card_permanently(tenant_id, card_id):
             raise RadiusValidationError("تعذر حذف البطاقة")
+        # R6: البطاقة لم تعد موجودة ⇒ جلستها الحيّة (إن وُجدت) تُقطع الآن، لا
+        # تبقى حتى انتهاء Session-Timeout. أفضلُ جهد — لا جلسة/لا راوتر: لا بأس.
+        if card is not None and getattr(card, "username", ""):
+            try:
+                self._adapter.disconnect(card.username)
+            except Exception:  # noqa: BLE001
+                pass
         self._audit.record(actor=actor, action="card.delete_permanent",
                            target_type="card", target_id=str(card_id))
 

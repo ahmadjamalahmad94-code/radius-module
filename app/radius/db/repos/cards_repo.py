@@ -2262,7 +2262,33 @@ def set_card_speed_override(tenant_id: int, card_id: int,
 
 
 def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
+    """حذفٌ نهائيّ لبطاقةٍ واحدة **مع مرآتها في RADIUS**.
+
+    🔴 R6 (client20): كان يحذف صفَّ ``cards`` وحده، فتبقى مرآةُ البطاقة في
+    ``subscribers`` (user_type='card') وصفوفُ rad* — والمُصادِق يقرأ المرآة،
+    فظلّت البطاقةُ «المحذوفةُ نهائيًّا» تُقبَل (60/60). نفسُ ما يفعله
+    ``purge_batch`` للحزمة كاملةً، مقصورًا على هذه البطاقة: المرآةُ وحدها
+    (user_type='card') تُحذف، لا مشتركٌ عاديٌّ يصادف أن يحمل الاسمَ نفسه."""
     with transaction() as conn:
+        row = conn.execute(
+            "SELECT username FROM cards WHERE tenant_id = ? AND id = ?",
+            (tenant_id, card_id),
+        ).fetchone()
+        if row is None:
+            return False
+        username = row["username"]
+        if username:
+            for rt in ("radcheck", "radreply", "radusergroup"):
+                try:
+                    conn.execute(f"DELETE FROM {rt} WHERE tenant_id = ? AND username = ?",
+                                 (tenant_id, username))
+                except sqlite3.OperationalError:
+                    pass  # table absent on this deployment
+            conn.execute(
+                "DELETE FROM subscribers WHERE tenant_id = ? AND username = ? "
+                "AND user_type = 'card'",
+                (tenant_id, username),
+            )
         cur = conn.execute(
             "DELETE FROM cards WHERE tenant_id = ? AND id = ?",
             (tenant_id, card_id),
