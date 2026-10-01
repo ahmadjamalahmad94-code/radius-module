@@ -1615,10 +1615,24 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
    على الجوّال تلمس الإصبع، لا مؤشّر الفأرة الدقيق؛ زرٌّ 24-30px يرفع
    احتمال لمس الزرّ المجاور الخطر (حذف/تعطيل) بالخطأ. الحشوة الإضافيّة
    لا تُغيّر الحجم البصريّ الظاهر إن كانت الأيقونة أصغر من الصندوق. ── */
+/* ── D10 (الموجة الثانية): هدفُ اللمسِ 40×40 فعليًّا، لا ارتفاعًا وحده ───────
+   الجذرُ: الموجةُ الأولى كتبت min-width/min-height بلا !important، فمرَّ
+   الارتفاعُ (لا أحدَ يزاحمه) وسُحق العرضُ إلى min-width:0 من قواعدِ تخطيطٍ
+   لاحقةٍ في ملفّاتِ CSS الأخرى (أنماطُ flex: min-width:0) — فصار الزرُّ
+   25×40 أو 29×40. ومعه أزرارٌ لم تكن مشمولةً أصلًا: .batch-action (30 ارتفاعًا)
+   و.uds-pager-btn و.hb-burger و.hb-side-mobile-close و.usrch-clear (22×22). */
 @media (pointer: coarse){
-  .hub-btn--sm,.hub-btn--icon,.uf-pw-toggle,.co-sales-picker,.uds-pager button,.hr-table-scroll input[type="checkbox"]{
-    min-width:40px;min-height:40px;
+  .hub-btn--sm,.hub-btn--icon,.uf-pw-toggle,.co-sales-picker,.uds-pager button,
+  .uds-pager-btn,.batch-action,.hb-burger,.hb-side-mobile-close,.usrch-clear,
+  .hb-side-subhead,.hr-table-scroll input[type="checkbox"]{
+    min-width:40px !important;min-height:40px !important;
     display:inline-flex;align-items:center;justify-content:center;
+  }
+  /* الأزرارُ الموسومةُ بنصٍّ عريضةٌ أصلًا، لكنّ ارتفاعَها 35–36px — نرفع
+     البُعدَ الأصغرَ وحده إلى 40 دون لمسِ العرض. */
+  .hub-btn,.batch-btn,.cc-mode-toggle button,.cc-hero-modes button,
+  .cc-hero-search-btn,.pl-view-toggle button,.ntl-fchip{
+    min-height:40px !important;
   }
 }
 
@@ -1628,5 +1642,23 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
 @media (max-width: 640px){
   .hub-input,.hub-select,.hub-textarea,select.hub-input,input.hub-input,textarea.hub-textarea{
     font-size:16px;
+  }
+}
+
+/* ── D11 (الموجة الثانية): كل حقلِ إدخالٍ نصّيٍّ على جهازٍ لمسيٍّ ≥ 16px ──────
+   الجذرُ: سفاري على iOS يُكبّر الصفحةَ تلقائيًّا عند التركيزِ على حقلٍ خطُّه
+   أصغرُ من 16px ولا يُعيدها — وهو مصدرُ «الإزاحة» التي يشتكي منها المستخدم.
+   القاعدةُ السابقة اقتصرت على ثلاثةِ أصناف (.hub-input/.hub-select/
+   .hub-textarea) وعلى max-width:640px، فبقيَ 85 حقلًا دون 16px: الأصنافُ
+   الأخرى (hbsel-search · hbsel-native · ui-value · ui-unit · حقولُ البحثِ
+   العارية) ومُحدِّداتٌ أقوى تتجاوزها. الإصلاح: الشرطُ هو «مؤشّرٌ خشِن» لا
+   عرضُ الشاشة (فاللوحيُّ والأفقيُّ يُكبّران أيضًا)، والمدى يشمل كلَّ عنصرِ
+   إدخالٍ قابلٍ للتركيز، و!important ضروريٌّ لأنّ المُحدِّداتَ المُشتَّتة في
+   القوالبِ أقوى تحديدًا ولا سبيلَ لحصرها واحدًا واحدًا. ──────────────────── */
+@media (pointer: coarse){
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+  select,
+  textarea{
+    font-size:16px !important;
   }
 }

@@ -167,7 +167,10 @@ def test_online_filter_counts_all_online_not_just_current_page(app, monkeypatch)
                    if r.endpoint == "radius.users_list")
         # page_size صغير (5 < 12) — الباج القديم كان يُظهر «من 24» ومتصلي الصفحة فقط.
         html = client.get(url + "?online=1&page_size=5").get_data(as_text=True)
-        m = _re.search(r'class="srv-info">[^<]*?من\s*(\d+)', html)
+        # ملاحظة: «من» و«الإجمالي» مفصولان الآن بـ<bdi dir="ltr"> (عزلُ
+        # الاتّجاهيّة على الجوّال)، فالنمطُ يسمح بوسوماتٍ بينهما.
+        m = _re.search(r'class="srv-info">.*?من\s*(?:<[^>]+>|\s)*(\d+)', html,
+                       _re.DOTALL)
         assert m, "srv-info total not found"
         assert int(m.group(1)) == 12, f"total should be online-count 12, got {m.group(1)}"
         # ولا يَتسرّب مشترك غير متصل إلى النتائج (نطاق SQL صحيح)
