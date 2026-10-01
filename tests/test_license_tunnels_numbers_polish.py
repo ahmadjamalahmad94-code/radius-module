@@ -40,12 +40,35 @@ def app(monkeypatch):
 
 
 def _client(app):
+    """جلسةُ **المالك** (‏`is_co_owner` — «شريك/مالك»، مقامُ المالكِ نفسُه).
+
+    r6-perms: كان هذا يُنشئ حسابًا بدورِ «مدير عام» (‏`is_super_admin=True`)
+    ويسمّيه مالكًا. لكنّ العلمَ ودورَ «مدير عام» لا يمنحان مقامَ المالك
+    (‏`auth.owner.is_owner_like`)، وصفحاتُ الترخيصِ وجسرِه صارت للمالكِ وحدَه
+    (r5-perms 56321515: كانت `api.use` فيُطلق أيُّ حاملٍ له مزامنةً إلى لوحةِ
+    التراخيص). فصار «المالكُ» المزعومُ يُرفَض 403 — وهو صحيح. الاختبارُ يقصد
+    المالكَ فعلًا، فيُسجَّل الدخولُ بمالك."""
     from app.radius.db.repos import admins_repo
+    from app.radius.db.connection import transaction
     client = app.test_client()
     with app.app_context():
         u = f"own_{uuid4().hex[:8]}"
+        a = admins_repo.create_admin(username=u, password="p",
+                                     full_name="Owner", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
+        with transaction() as c:
+            c.execute("UPDATE admins SET is_co_owner=1 WHERE id=?", (a.id,))
+    client.post("/admin/radius/login", data={"username": u, "password": "p"})
+    return client
+
+
+def _general_manager_client(app):
+    """حسابٌ بدورِ «مدير عام» — ليس مالكًا."""
+    from app.radius.db.repos import admins_repo
+    client = app.test_client()
+    with app.app_context():
+        u = f"gm_{uuid4().hex[:8]}"
         admins_repo.create_admin(username=u, password="p",
-                                 full_name="Owner", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
+                                 full_name="GM", is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
     client.post("/admin/radius/login", data={"username": u, "password": "p"})
     return client
 
@@ -99,6 +122,17 @@ def test_tunnels_page_retired(app):
     # Sidebar no longer links the retired page.
     home = client.get("/admin/radius/subscribers").get_data(as_text=True)
     assert 'href="/admin/radius/tunnels"' not in home
+
+
+def test_license_pages_are_owner_only(app):
+    """«مدير عام» ليس مالكًا: صفحاتُ الترخيصِ والجسرِ 403 (لا 302 صامت)."""
+    gm = _general_manager_client(app)
+    for path in ("/admin/radius/license-file", "/admin/radius/admin-bridge",
+                 "/admin/radius/tunnels"):
+        assert gm.get(path).status_code == 403, path
+    home = gm.get("/admin/radius/subscribers").get_data(as_text=True)
+    assert 'href="/admin/radius/license-file"' not in home
+    assert 'href="/admin/radius/admin-bridge"' not in home
 
 
 def test_subscribers_hash_column_is_row_number(app):
