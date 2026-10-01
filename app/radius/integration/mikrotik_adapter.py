@@ -180,6 +180,10 @@ class MikrotikAdapter(RadiusAdapter):
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
         owner_admin_id: Optional[int] = None,
+        plan_id: Optional[int] = None,
+        usernames_in=None,
+        order_by: str = "id",
+        order_dir: str = "desc",
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -205,6 +209,14 @@ class MikrotikAdapter(RadiusAdapter):
                    if t in s.username.lower()
                    or t in (getattr(s, "full_name", "") or "").lower()
                    or t in (getattr(s, "mobile", "") or "")]
+        if plan_id is not None:
+            out = [s for s in out if getattr(s, "plan_id", None) == plan_id]
+        if usernames_in is not None:
+            _want = {str(u).strip().lower() for u in usernames_in}
+            out = [s for s in out if s.username.lower() in _want]
+        _key = order_by if order_by in ("id", "username", "expire_at", "created_at") else "id"
+        out.sort(key=lambda s: (getattr(s, _key, None) is None, getattr(s, _key, None)),
+                 reverse=(str(order_dir).lower() == "desc"))
         return out[offset : offset + limit]
 
     def account_status_counts(self, *, user_type: Optional[str] = None,

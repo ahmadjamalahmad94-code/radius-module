@@ -143,6 +143,10 @@ class ManualAdapter(RadiusAdapter):
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
         owner_admin_id: Optional[int] = None,
+        plan_id: Optional[int] = None,
+        usernames_in=None,
+        order_by: str = "id",
+        order_dir: str = "desc",
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -170,7 +174,14 @@ class ManualAdapter(RadiusAdapter):
                      if s in a.username.lower()
                      or s in (getattr(a, "full_name", "") or "").lower()
                      or s in (getattr(a, "mobile", "") or "")]
-        items.sort(key=lambda a: a.username)
+        if plan_id is not None:
+            items = [a for a in items if getattr(a, "plan_id", None) == plan_id]
+        if usernames_in is not None:
+            _want = {str(u).strip().lower() for u in usernames_in}
+            items = [a for a in items if a.username.lower() in _want]
+        _key = order_by if order_by in ("id", "username", "expire_at", "created_at") else "id"
+        items.sort(key=lambda a: (getattr(a, _key, None) is None, getattr(a, _key, None)),
+                   reverse=(str(order_dir).lower() == "desc"))
         return items[offset : offset + limit]
 
     def account_status_counts(self, *, user_type: Optional[str] = None,

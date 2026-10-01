@@ -86,6 +86,10 @@ class RadiusAdapter(ABC):
         search: Optional[str] = None,
         expiring_within_days: Optional[int] = None,
         owner_admin_id: Optional[int] = None,
+        plan_id: Optional[int] = None,
+        usernames_in=None,
+        order_by: str = "id",
+        order_dir: str = "desc",
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]: ...
