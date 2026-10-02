@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
-from ..core.errors import RadiusError, RadiusValidationError
+from ..core.errors import RadiusError, RadiusStaleEdit, RadiusValidationError
 from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
@@ -451,6 +451,22 @@ def form_orig_snapshot(sub: Subscriber) -> str:
     return json.dumps({"f": snap, "m": meta, "pw": _pw_digest(sub.password),
                        "ppw": _pw_digest(getattr(sub, "pppoe_password", None))},
                       ensure_ascii=False, separators=(",", ":"))
+
+
+def _row_version_of(sub) -> str:
+    try:
+        from ..services.users import subscriber_version
+        return subscriber_version(sub)
+    except Exception:  # noqa: BLE001 — no token ⇒ the form saves as before
+        return ""
+
+
+def _stale_edit_redirect(username: str):
+    """Zero-w1 M3: another admin changed the subscriber after this page was
+    opened — refuse (409 semantics) instead of writing over his change."""
+    from ..services.users import STALE_EDIT_MSG
+    flash(STALE_EDIT_MSG, "error")
+    return redirect(url_for("radius.users_edit", username=username))
 
 
 def _posted_form_orig() -> dict | None:
@@ -2055,6 +2071,7 @@ def users_edit(username: str):
     return render_template("radius/users_form.html",
         sub=sub_view,
         form_orig=form_orig_snapshot(sub),
+        row_version=_row_version_of(sub),
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
@@ -2281,6 +2298,17 @@ def users_update(username: str):
     # المدير المقيَّد حقليًّا على username لا يستطيع (دفاع خادميّ: نتجاهل أي
     # POST مُلفَّق)، والسوبر/المالك يَتجاوز. عند نجاح إعادة التسمية نُكمل بقيّة
     # الحفظ تحت الاسم الجديد.
+    # Zero-w1 M3 — optimistic concurrency: checked BEFORE the rename so a
+    # stale page never half-applies. The service re-checks under the lock.
+    posted_version = (request.form.get("_row_version") or "").strip()
+    if posted_version:
+        try:
+            _cur = get_users_service().get(username)
+        except Exception:  # noqa: BLE001
+            _cur = None
+        if _cur is not None and _row_version_of(_cur) != posted_version:
+            return _stale_edit_redirect(username)
+    _renamed = False
     posted_username = (request.form.get("username") or "").strip()
     if posted_username and posted_username != username:
         # نفس فحص تطبيق الجوال (services/subscriber_actions) — السوبر يتجاوز،
@@ -2301,6 +2329,7 @@ def users_update(username: str):
             # بقيّة الحفظ تستهدف الاسم الجديد.
             flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
             username = posted_username
+            _renamed = True
 
     before = None
     try:
@@ -2367,7 +2396,12 @@ def users_update(username: str):
         # base=before → only what the operator changed is written, under the
         # write lock (a renewal/top-up that landed meanwhile is kept — R01 N1).
         get_users_service().update(actor=_actor(), sub=dto, base=before,
-                                   clear_expiry=clear_expiry)
+                                   clear_expiry=clear_expiry,
+                                   # after a rename the pre-rename check stood
+                                   expected_version=(None if _renamed
+                                                     else (posted_version or None)))
+    except RadiusStaleEdit:
+        return _stale_edit_redirect(username)
     except RadiusError as e:
         flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))

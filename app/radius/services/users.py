@@ -10,7 +10,8 @@ from ..core.constants import (
     AUDIT_ACTION_ENABLE, AUDIT_ACTION_RESET_PASSWORD, AUDIT_ACTION_UPDATE,
     STATUS_DISABLED, STATUS_ENABLED, USER_TYPES,
 )
-from ..core.errors import RadiusConflict, RadiusNotFound, RadiusValidationError
+from ..core.errors import (RadiusConflict, RadiusNotFound, RadiusStaleEdit,
+                           RadiusValidationError)
 from ..core.numbers import (
     NonFiniteNumber,
     action_amount, add_minutes_capped, check_expiry, check_extend_minutes,
@@ -240,7 +241,8 @@ class UsersService:
     @atomic  # read + write under ONE write lock (BEGIN IMMEDIATE, cross-process)
     def update(self, *, actor: str, sub: Subscriber,
                base: Optional[Subscriber] = None,
-               clear_expiry: bool = False) -> Subscriber:
+               clear_expiry: bool = False,
+               expected_version: Optional[str] = None) -> Subscriber:
         """Save an edited subscriber.
 
         ``base`` = the row as the caller loaded it before editing. When given,
@@ -262,6 +264,13 @@ class UsersService:
             existing = self._adapter.get_account(sub.username)
         except Exception:  # noqa: BLE001 — lookup failure must not break update
             existing = None
+        if expected_version and existing is not None:
+            # Zero-w1 M3 — optimistic concurrency, checked under the write
+            # lock: the client loaded ``expected_version``; any edit, top-up,
+            # renewal or status change committed since ⇒ 409, nothing written
+            # (a stale full-object save used to clobber them, 33/33).
+            if subscriber_version(existing) != str(expected_version).strip():
+                raise RadiusStaleEdit(STALE_EDIT_MSG)
         if base is not None and existing is None:
             # F01 F3: the caller edited a row that is gone now (archived or
             # renamed meanwhile) — an edit never re-creates / un-deletes it.
@@ -1193,6 +1202,43 @@ class UsersService:
 # DTO fields an edit can never change through update(): identity and
 # bookkeeping columns.
 _NOT_EDITABLE = frozenset({"id", "tenant_id", "username", "created_at", "updated_at"})
+
+
+# ── Zero-w1 M3: optimistic concurrency token ────────────────────────────────
+STALE_EDIT_MSG = "عُدِّل هذا المشترك من مدير آخر بعد فتحك له — أعد التحميل."
+
+#: Bookkeeping columns the RADIUS/accounting path rewrites on its own (every
+#: login / interim update). They never make an admin's edit stale.
+_VERSION_SKIP = frozenset({
+    "id", "tenant_id", "username", "created_at", "updated_at", "created_by",
+    "updated_by", "first_login_at", "last_login_at", "last_seen_at",
+    "used_seconds", "used_bytes_in", "used_bytes_out", "online_count",
+})
+
+
+def subscriber_version(sub: Subscriber) -> str:
+    """Content version of a subscriber row: a digest of every admin-meaningful
+    field (profile, plan, money, expiry, status, limits, metadata…), NOT of
+    ``updated_at`` — many writers (renewal, card window, reconcilers) don't
+    touch ``updated_at`` and it has 1-second resolution. Same row ⇒ same value;
+    any committed change by someone else ⇒ a different value. Contract for the
+    clients: GET returns it as ``version``; send it back as ``version`` (or
+    ``If-Match``) on PATCH ⇒ 409 ``stale_version`` when the row changed."""
+    import hashlib
+    import json as _json
+    from dataclasses import fields as _dc_fields
+    snap = {}
+    for f in _dc_fields(Subscriber):
+        if f.name in _VERSION_SKIP:
+            continue
+        v = getattr(sub, f.name, None)
+        if isinstance(v, datetime):
+            v = v.replace(microsecond=0).isoformat()
+        elif isinstance(v, float):
+            v = round(v, 4)
+        snap[f.name] = v
+    raw = _json.dumps(snap, sort_keys=True, default=str, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
 
 
 def _changed_fields(before: Subscriber, after: Subscriber) -> set:

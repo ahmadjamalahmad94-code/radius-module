@@ -72,6 +72,14 @@ class RadiusConflict(RadiusError):
     http_status = 409
 
 
+class RadiusStaleEdit(RadiusConflict):
+    """Zero-w1 M3 — optimistic concurrency: the client edited a version of the
+    row that another admin changed since it was loaded (409, never a silent
+    overwrite)."""
+    code = "stale_version"
+    http_status = 409
+
+
 class RadiusPermissionDenied(RadiusError):
     code = "radius_permission_denied"
     http_status = 403

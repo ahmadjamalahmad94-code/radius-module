@@ -10,6 +10,18 @@ JSON object or a string and stored as a string.
 
 Serialization flattens `metadata` to a parsed dict on the way out, so Flutter
 can read both flat fields and meta groups in one round trip.
+
+Optimistic concurrency (zero-w1 M3) — contract for the app team:
+  * every serialized account carries ``version`` (opaque string; a digest of
+    the admin-editable content — profile, plan, money, expiry, status, limits;
+    NOT login/usage bookkeeping).
+  * ``PATCH /accounts/<u>`` accepts the version the client loaded as the JSON
+    field ``version`` (or the ``If-Match`` header). If another admin changed
+    the subscriber since → **409** ``{"error": {"code": "stale_version",
+    "message": "عُدِّل هذا المشترك من مدير آخر بعد فتحك له — أعد التحميل.",
+    "details": {"current_version": "…"}}}`` and nothing is written.
+  * without ``version`` the request still works (old builds), and only the
+    keys present in the body are applied (diff against the current row).
 """
 from __future__ import annotations
 
@@ -22,7 +34,7 @@ from datetime import datetime
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import (RadiusConflict, RadiusError, RadiusNotFound,
-                                   RadiusValidationError)
+                                   RadiusStaleEdit, RadiusValidationError)
 from ...radius.core.numbers import money_float
 from ...radius.core.timeparse import parse_iso_utc
 from ...radius.core.types import Subscriber
@@ -282,6 +294,9 @@ def _serialize(sub: Subscriber) -> dict:
         if hasattr(v, "isoformat"):
             d[k] = v.isoformat() + "Z"
     d.pop("password", None)
+    # zero-w1 M3: the optimistic-concurrency token (send back on PATCH).
+    from ...radius.services.users import subscriber_version
+    d["version"] = subscriber_version(sub)
     # Convert metadata string → parsed dict so Flutter can use it directly.
     meta = d.get("metadata")
     if isinstance(meta, str):
@@ -651,6 +666,15 @@ def accounts_patch(username: str):
     # It was a silent no-op (200, old expiry kept — R10 N3). A MISSING key
     # keeps the stored expiry.
     clear_expiry = "expire_at" in body and body["expire_at"] in (None, "")
+    # zero-w1 M3: the version the client loaded (body ``version`` or If-Match).
+    expected_version = str(body.get("version") or "").strip() or (
+        (request.headers.get("If-Match") or "").strip().removeprefix("W/").strip('"'))
+    if expected_version:
+        from ...radius.services.users import STALE_EDIT_MSG, subscriber_version
+        if subscriber_version(sub) != expected_version:
+            # fast path (the service re-checks under the write lock)
+            return fail("stale_version", STALE_EDIT_MSG, status=409,
+                        details={"current_version": subscriber_version(sub)})
     if "balance" in body and body["balance"] in (None, ""):
         # fix3: GET hides the balance (null) without «رؤية الرصيد» — a client
         # that echoes the object back means «unchanged», never «set to 0».
@@ -677,9 +701,19 @@ def accounts_patch(username: str):
         # base=sub → only the fields this body changed are written, under the
         # write lock (a concurrent renewal/top-up is kept — R01 N1).
         _svc().update(actor=_actor(), sub=new_sub, base=sub,
-                      clear_expiry=clear_expiry)
+                      clear_expiry=clear_expiry,
+                      expected_version=expected_version or None)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
+    except RadiusStaleEdit as e:
+        cur = None
+        try:
+            from ...radius.services.users import subscriber_version
+            cur = subscriber_version(_svc().get(username))
+        except Exception:  # noqa: BLE001
+            pass
+        return fail("stale_version", e.message, status=409,
+                    details={"current_version": cur})
     except RadiusConflict as e:
         return fail("conflict", e.message, status=409)
     except RadiusError as e:
