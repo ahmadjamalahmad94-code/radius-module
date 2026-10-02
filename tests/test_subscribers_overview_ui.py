@@ -97,7 +97,9 @@ def _seed_payment_and_loan(client) -> dict:
     assert pay.status_code == 201, pay.get_json()
     loan = client.post(
         "/api/v1/loans",
-        json={"username": sub["username"], "hours": 1, "amount": 8, "reason": "qa"},
+        # amount-only (duration derived from the price): an explicit duration
+        # would re-price the value from the plan (owner decision 2026-10-02).
+        json={"username": sub["username"], "amount": 8, "reason": "qa"},
         headers=AUTH,
     )
     assert loan.status_code == 201, loan.get_json()
@@ -110,7 +112,6 @@ def _seed_large_open_loan(client) -> dict:
         "/api/v1/loans",
         json={
             "username": sub["username"],
-            "hours": 1,
             "amount": 98765,
             "reason": "qa-top-debtor",
         },

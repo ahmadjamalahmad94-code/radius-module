@@ -426,7 +426,8 @@ def users_loan_settle(username: str, loan_id: int):
     sub = _subscriber(username)
     body = {
         "amount": _field("amount"),
-        "currency": _field("currency") or default_currency(),
+        # F2: بلا عملة ⇒ عملة السلفة نفسها (كان default_currency() يرفض تسوية سلفةٍ بعملةٍ أخرى).
+        "currency": _field("currency") or "",
         "method": _field("method") or "manual",
         "settlement_type": _field("settlement_type") or "manual",
         "notes": _field("notes"),

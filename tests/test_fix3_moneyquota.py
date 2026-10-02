@@ -435,7 +435,7 @@ def test_bulk_extend_preview_applies_the_one_year_cap(client):
 def test_loans_centre_and_settle_accept_the_arabic_decimal(client):
     s = _sub(plan_id=_plan())
     d = _data(client.post("/api/v1/loans", headers=AUTH,
-                          json={"username": s.username, "days": 1, "amount": "٣٫٢٥"}), 201)
+                          json={"username": s.username, "amount": "٣٫٢٥"}), 201)
     loan = d["loan"]
     assert float(loan["amount"]) == 3.25
     st = _data(client.post(f"/api/v1/loans/{loan['id']}/settle", headers=AUTH,

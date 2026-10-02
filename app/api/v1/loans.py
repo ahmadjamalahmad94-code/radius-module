@@ -134,6 +134,17 @@ def loans_list():
     return ok(payload)
 
 
+def _has_amount(raw) -> bool:
+    try:
+        return float(str(raw).strip().replace("٫", ".")) > 0
+    except (TypeError, ValueError):
+        return False  # the service reports the malformed value itself
+
+
+def _has_duration(body: dict) -> bool:
+    return any(_has_amount(body.get(k)) for k in ("days", "hours", "duration_minutes"))
+
+
 def loans_create():
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
@@ -152,6 +163,11 @@ def loans_create():
         body = dict(body)
         body["username"] = sub["username"]
         body.pop("subscriber_id", None)
+        # 🔑 قرار المالك 2026-10-02 (F11، الخيار «أ»): قيمة سلفة الدين لا تُكتب
+        # يدويًّا — الويب يحسبها دائمًا من سعر الباقة × المدّة (حقلٌ للقراءة فقط،
+        # price_from_days). فمبلغٌ حرٌّ مع مدّةٍ صريحة (تطبيقٌ قديم) يُسعَّر كالويب.
+        if _has_amount(body.get("amount")) and _has_duration(body):
+            body["price_from_days"] = True
         # Same phases as «منح سلفة»: approval queue → advance gate → create,
         # in ONE transaction (a failure after the gate charged the manager
         # rolls the charge back too).
