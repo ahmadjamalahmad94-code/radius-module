@@ -696,10 +696,47 @@ def _db_busy(exc: Exception):
     return None
 
 
+def _manager_cardgen_denial(kind: str):
+    """FIX117 (API) — نفس حارس اللوحة على التوليد/الاستيراد المباشر.
+
+    المدير الفرعيّ يولّد **من العروض المسعَّرة فقط** فتُخصم الجملة من محفظته
+    (قرار المالك cardgen-role-split). كان ``/api/v1/cards/generate`` يقبل أيّ
+    مديرٍ يحمل مفتاح الدور فيولّد حزمةً بمواصفاته **بلا أيّ خصم** — نفس ثغرة
+    النموذج الكامل في الويب (6ba3a872) من باب التطبيق. المالك/الشريك/التوكن
+    غير المقيَّد يمرّ؛ والمدير يمرّ فقط بمنحٍ صريح كاللوحة تمامًا."""
+    from ..access_control import token_bypasses_rbac
+    if token_bypasses_rbac():
+        return None
+    aid = int(getattr(g, "admin_id", 0) or 0)
+    if not aid:
+        return None
+    from ...radius.services import manager_grants
+    if kind == "generate":
+        allowed = (manager_grants.action_permitted(aid, "cards.generate", tenant_id=_tid())
+                   and manager_grants.full_batch_form_granted(aid, tenant_id=_tid()))
+        msg = ("التوليد المباشر غير مسموح لحسابك — ولّد البطاقات من العروض "
+               "المسعَّرة (تُخصم قيمتها من محفظتك)، أو اطلب من المالك منحك "
+               "«توليد بطاقات» صراحةً.")
+    else:
+        from ...radius.services.manager_distributor_ops import ManagerDistributorOpsService
+        try:
+            allowed = ManagerDistributorOpsService(tenant_id=_tid()).has_permission(
+                entity_type="manager", entity_id=aid, permission="can_import_batches")
+        except Exception:  # noqa: BLE001 — مغلقٌ عند الخطأ
+            allowed = False
+        msg = "استيراد الحِزم غير مسموح لحسابك — اطلب من المالك صلاحية «استيراد الحِزم»."
+    if allowed:
+        return None
+    return fail("forbidden", msg, status=403)
+
+
 def cards_generate():
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
         return fail("validation_error", "أرسل جسم الطلب كائن JSON.", status=422)
+    denied = _manager_cardgen_denial("generate")
+    if denied is not None:
+        return denied
     try:
         plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
         count = _field_int(body, "count", 1, "عدد الكروت")
@@ -758,6 +795,9 @@ def cards_generate():
 
 
 def cards_batches_import():
+    denied = _manager_cardgen_denial("import")
+    if denied is not None:
+        return denied
     body = _body()
     try:
         plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
