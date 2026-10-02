@@ -113,7 +113,10 @@ def test_inbound_balance_command_builds_reply_and_sends(app, client, monkeypatch
     # Exactly one send was attempted, to the sender, with the rendered balance.
     assert len(spy.calls) == 1
     call = spy.calls[0]
-    assert call["phone"] == KNOWN_PHONE
+    # The local number is normalised to international form with the tenant's
+    # dial code (comms.country_dial_code, default +970 — 0d4def37) before it
+    # reaches the provider: 0790001122 -> +970790001122.
+    assert call["phone"] == "+970" + KNOWN_PHONE[1:]
     assert "12.5" in call["message"]  # balance substituted from the subscriber
     assert "{balance}" not in call["message"]  # variable was replaced
 

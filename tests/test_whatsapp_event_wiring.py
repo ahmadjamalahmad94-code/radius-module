@@ -113,10 +113,29 @@ def test_account_create_with_gate_on_enqueues_stable_key(app, client, monkeypatc
         payload = spy.calls[0]
         assert payload["source_event_type"] == "otp"
         assert payload["template_key"] == "otp"
-        assert payload["recipient_phone"] == "0790001122"
+        # Normalised with the tenant dial code (comms.country_dial_code,
+        # default +970 — 0d4def37) before the bridge enqueue.
+        assert payload["recipient_phone"] == "+970790001122"
         assert payload["language"] == "ar"
         # Stable, structured idempotency key: otp:<tenant>:<username>:<nonce>.
         assert payload["idempotency_key"].startswith("otp:1:wa_otp_on:")
+
+
+def test_recipient_uses_the_tenant_configured_dial_code(app, client, monkeypatch):
+    """The dial code is a per-tenant setting (Settings → «مفتاح الدولة»), not a
+    hard-coded +970: a Jordanian operator sets +962 and gets +962…"""
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+
+        _set_gate("otp", "1")
+        tenants_repo.set_setting(1, "comms.country_dial_code", "+962", by=0)
+        spy = _install_spy(monkeypatch)
+
+        res = _create_account(client, "wa_otp_jo")
+
+        assert res.status_code == 201, res.get_json()
+        assert len(spy.calls) == 1
+        assert spy.calls[0]["recipient_phone"] == "+962790001122"
 
 
 # ── 2. gate OFF → NO enqueue ──────────────────────────────────────────────
