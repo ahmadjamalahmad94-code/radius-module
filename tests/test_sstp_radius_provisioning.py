@@ -29,6 +29,10 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("FLASK_SECRET", "sstp-prov-secret")
+    # عنوانُ خادم SSTP إعدادٌ مطلوبٌ بلا افتراضٍ مخبوء منذ 2c17ef2f (تسرّب
+    # 187.77.70.18)؛ غيابُه يُرفع RouterMgmtTunnelError عربيًّا — انظر
+    # test_missing_accel_host_fails_with_arabic_message أدناه.
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "203.0.113.10")
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -447,3 +451,18 @@ def test_allocate_excludes_radreply_ips(app):
         fr.replace_user_reply(1, "rtr-y", [("Framed-IP-Address", ":=", "10.50.0.3")])
         ip = rmt.allocate_tunnel_ip(1)
         assert str(ip) == "10.50.0.4"   # .1 server, .2/.3 taken → .4
+
+
+def test_missing_accel_host_fails_with_arabic_message(app, monkeypatch):
+    """2c17ef2f: لا عنوانَ SSTP افتراضيًّا. بلا إعدادٍ يجب أن يتوقّف التوفير
+    برسالةٍ عربيّةٍ تسمّي الإعداد — لا أن يُوجَّه الراوتر لخادمٍ خاطئ."""
+    monkeypatch.delenv("HOBERADIUS_ACCEL_SERVER_HOST", raising=False)
+    monkeypatch.delenv("HOBERADIUS_PUBLIC_IP", raising=False)
+    with app.app_context():
+        from app.radius.services import router_mgmt_tunnel as rmt
+        with pytest.raises(rmt.RouterMgmtTunnelError) as exc:
+            rmt.provision_tunnel("CCRX", transport="sstp", tenant_id=1)
+        msg = str(exc.value)
+        assert "عنوان خادم SSTP غير مضبوط" in msg
+        assert "HOBERADIUS_ACCEL_SERVER_HOST" in msg
+        assert "187.77.70.18" not in msg
