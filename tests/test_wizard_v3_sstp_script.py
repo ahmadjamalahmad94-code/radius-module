@@ -18,7 +18,11 @@ def test_sstp_script_dials_accel_and_wires_radius():
     assert "/interface sstp-client add" in s
     assert "vpn.example.net" in s
     assert 'user="rtr-test-router"' in s
-    assert "port=443" in s
+    # 6133c265: the port rides INSIDE connect-to (RouterOS 6 has no `port`
+    # property on sstp-client — a separate `port=` killed the add live).
+    assert "connect-to=vpn.example.net:443" in s
+    add_line = next(l for l in s.splitlines() if l.startswith("/interface sstp-client add"))
+    assert " port=" not in add_line
     # RADIUS: server = accel gateway, src-address = this router's tunnel IP
     assert "address=10.50.0.1" in s
     assert "src-address=10.50.0.5" in s
