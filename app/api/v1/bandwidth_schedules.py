@@ -84,6 +84,22 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/bandwidth-schedules/effective",
                     "bandwidth_schedules_effective",
                     require_api_token(bandwidth_schedules_effective), methods=["GET"])
+    # zero-w2: edit / delete / enable-toggle — mirror the web routes
+    # bandwidth_schedules_update / _delete (same service, same validation,
+    # same permission via permission_guard → web endpoint).
+    bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>",
+                    "bandwidth_schedules_get",
+                    require_api_token(bandwidth_schedules_get), methods=["GET"])
+    bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>",
+                    "bandwidth_schedules_update",
+                    require_api_token(bandwidth_schedules_update),
+                    methods=["PATCH", "PUT"])
+    bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>",
+                    "bandwidth_schedules_delete",
+                    require_api_token(bandwidth_schedules_delete), methods=["DELETE"])
+    bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>/enabled",
+                    "bandwidth_schedules_set_enabled",
+                    require_api_token(bandwidth_schedules_set_enabled), methods=["POST"])
     bp.add_url_rule("/bandwidth-schedules/<int:schedule_id>/apply",
                     "bandwidth_schedules_apply",
                     require_api_token(bandwidth_schedules_apply), methods=["POST"])
@@ -129,6 +145,90 @@ def bandwidth_schedules_create():
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"schedule": schedule}, status=201)
+
+
+# الحقول القابلة للتعديل (الهدف ثابت بعد الإنشاء — كصفحة الويب).
+_EDIT_FIELDS = (
+    "name", "starts_at_time", "ends_at_time", "days_csv", "speed_down_kbps",
+    "speed_up_kbps", "cir_down_kbps", "cir_up_kbps", "restore_mode",
+    "priority", "enabled", "notes",
+)
+
+_TRUE = {"1", "true", "yes", "on"}
+_FALSE = {"0", "false", "no", "off", ""}
+
+
+def _as_bool(value):
+    """bool من JSON أو نصّ — None عند قيمة غير مفهومة (بدل bool("false") = True)."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value if value is not None else "").strip().lower()
+    if text in _TRUE:
+        return True
+    if text in _FALSE:
+        return False
+    return None
+
+
+def bandwidth_schedules_get(schedule_id: int):
+    item = _svc().get_bandwidth_schedule(tenant_id=_tid(), schedule_id=schedule_id)
+    if not item:
+        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+    return ok({"schedule": item})
+
+
+def bandwidth_schedules_update(schedule_id: int):
+    """تعديل جزئيّ: الحقول الغائبة تبقى على قيمها المحفوظة (الويب يرسل النموذج
+    كاملًا؛ التطبيق قد يرسل حقلًا واحدًا). نفس خدمة/تحقّق صفحة الويب."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return fail("validation_error", "أرسل حقول التعديل ككائن JSON.", status=422)
+    current = _svc().get_bandwidth_schedule(tenant_id=_tid(), schedule_id=schedule_id)
+    if not current:
+        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+    body = _normalise_days(dict(body))
+    data = {k: current.get(k) for k in _EDIT_FIELDS}
+    for key in _EDIT_FIELDS:
+        if key in body:
+            data[key] = body[key]
+    enabled = _as_bool(data.get("enabled"))
+    if enabled is None:
+        return fail("validation_error", "قيمة «مفعّل» غير صالحة.", status=422)
+    data["enabled"] = enabled
+    try:
+        schedule = _svc().update_bandwidth_schedule(
+            tenant_id=_tid(), actor=_actor(), schedule_id=schedule_id, data=data)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"schedule": schedule})
+
+
+def bandwidth_schedules_set_enabled(schedule_id: int):
+    body = request.get_json(silent=True) or {}
+    enabled = _as_bool(body.get("enabled")) if "enabled" in body else None
+    if enabled is None:
+        return fail("validation_error", "حدّد enabled (true/false).", status=422)
+    try:
+        schedule = _svc().set_bandwidth_schedule_enabled(
+            tenant_id=_tid(), actor=_actor(), schedule_id=schedule_id, enabled=enabled)
+    except RadiusNotFound:
+        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+    return ok({"schedule": schedule})
+
+
+def bandwidth_schedules_delete(schedule_id: int):
+    try:
+        _svc().delete_bandwidth_schedule(
+            tenant_id=_tid(), actor=_actor(), schedule_id=schedule_id)
+    except RadiusNotFound:
+        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+    return ok({"deleted": True, "id": schedule_id})
 
 
 def bandwidth_schedules_effective():

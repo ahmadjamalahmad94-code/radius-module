@@ -724,6 +724,21 @@ def _active_rule_for_target(
     elif target_type == "card_batch":
         sql += " AND card_batch_id = ?"
         vals.append(card_batch_id)
+    elif target_type == "subscriber_group":
+        # zero-w2: a group rule belongs to the GROUP'S MEMBERS only — the
+        # same membership predicate as subscriber_groups_repo.list_members
+        # (subscriber_group_id OR the legacy group_name), never the group's
+        # default plan (that matched every user on the plan).
+        sql += """
+            AND subscriber_group_id IN (
+                SELECT g.id FROM subscriber_groups g
+                  JOIN subscribers s
+                    ON s.tenant_id = g.tenant_id
+                   AND (s.subscriber_group_id = g.id OR s.group_name = g.name)
+                 WHERE g.tenant_id = ? AND g.deleted_at IS NULL
+                   AND s.username = ? AND s.deleted_at IS NULL)
+        """
+        vals.extend([tenant_id, subscriber_username or ""])
     else:
         sql += " AND plan_id = ?"
         vals.append(plan_id)
@@ -743,7 +758,10 @@ def resolve_effective_bandwidth_schedule(
     plan_id: int | None = None,
     at: datetime | None = None,
 ) -> Optional[dict]:
-    """Return the active speed rule using subscriber/card-batch/plan priority."""
+    """Return the active speed rule using subscriber / subscriber-group /
+    card-batch / plan priority. A ``subscriber_group`` rule applies to the
+    group's members only (zero-w2; it used to be stored against the group's
+    default plan and never matched a member at auth)."""
     # Evaluate the window in the tenant's configured LOCAL timezone (DST-safe),
     # not UTC — so "night speed at 00:00" means the owner's local midnight.
     # `at` (when provided) is a UTC instant; local_hhmm converts it.
@@ -753,6 +771,14 @@ def resolve_effective_bandwidth_schedule(
         rule = _active_rule_for_target(
             tenant_id,
             target_type="subscriber",
+            subscriber_username=subscriber_username,
+            now_hm=now_hm,
+        )
+        if rule:
+            return rule
+        rule = _active_rule_for_target(
+            tenant_id,
+            target_type="subscriber_group",
             subscriber_username=subscriber_username,
             now_hm=now_hm,
         )
@@ -807,6 +833,15 @@ def usernames_for_bandwidth_schedule(
             (tenant_id, batch_id, limit),
         ).fetchall()
         return [str(row["username"]) for row in rows if row["username"]]
+    if target_type == "subscriber_group":
+        # zero-w2: the group's members — NOT everyone on its default plan
+        # (a live apply of a group rule used to CoA the whole plan).
+        group_id = schedule.get("subscriber_group_id")
+        if not group_id:
+            return []
+        from . import subscriber_groups_repo
+        return subscriber_groups_repo.list_member_usernames(
+            tenant_id, int(group_id), limit=limit)
     plan_id = schedule.get("plan_id")
     rows = db().execute(
         """

@@ -327,6 +327,11 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.bandwidth_schedules_effective": "web:bandwidth_schedules",
     "v1.bandwidth_schedules_create": "web:bandwidth_schedules_create",
     "v1.bandwidth_schedules_apply": "web:bandwidth_schedules_apply",
+    # zero-w2: edit / toggle / delete = the web edit & delete routes.
+    "v1.bandwidth_schedules_get": "web:bandwidth_schedules",
+    "v1.bandwidth_schedules_update": "web:bandwidth_schedules_update",
+    "v1.bandwidth_schedules_set_enabled": "web:bandwidth_schedules_update",
+    "v1.bandwidth_schedules_delete": "web:bandwidth_schedules_delete",
     "v1.share_groups_list": "web:sgrp_list",
     "v1.share_groups_get": "web:sgrp_list",
     "v1.share_groups_create": "web:sgrp_create",

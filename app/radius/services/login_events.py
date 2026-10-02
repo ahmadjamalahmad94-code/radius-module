@@ -297,12 +297,6 @@ def _attempt_pw_map(conn, tid: int, audit_ids: list) -> dict:
         return {}
 
 
-def _bound(dt_from: str, dt_to: str) -> tuple[str, str]:
-    df = (dt_from or "").strip()
-    dt = (dt_to or "").strip()
-    return (f"{df} 00:00:00" if df else ""), (f"{dt} 23:59:59" if dt else "")
-
-
 def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                   date_from: str = "", date_to: str = "") -> list[dict]:
     """يجمع الصفوف الخام من المصدرين مع دفع فلتر «الفاعل» إلى مستوى الاستعلام:
@@ -317,7 +311,15 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
     هكذا الفرز دقيق من قاعدة البيانات نفسها — لا اعتماد على غربلة لاحقة.
     """
     conn = db()
-    lo, hi = _bound(date_from, date_to)
+    # zero-w2: يوم المشغّل المحلّيّ (فلسطين) شاملًا عبر report_dates — كان
+    # _bound يقارن نصّيًّا على يوم UTC ('… 23:59:59'): طابع ISO بـ'T' يخرج من
+    # «to» ويوم «اليوم» يقطع عند منتصف ليل UTC. قيمة غير صالحة → بلا فلترة
+    # (كصفحات تقارير الويب؛ الـAPI يرفضها 422 قبل الوصول هنا).
+    from .report_dates import ReportDateError, local_bounds, range_sql
+    try:
+        lo, hi, hi_excl = local_bounds(date_from, date_to, tenant_id)
+    except ReportDateError:
+        lo, hi, hi_excl = None, None, True
     cutoff_day = _pw_cutoff_day()
     rows: list[dict] = []
 
@@ -332,10 +334,8 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
         # فلتر الفاعل على مستوى SQL — target_type يحمل نوع الفاعل عند التسجيل
         if actor in ("admin", "subscriber", "card"):
             sql += " AND target_type = ?"; vals.append(actor)
-        if lo:
-            sql += " AND created_at >= ?"; vals.append(lo)
-        if hi:
-            sql += " AND created_at <= ?"; vals.append(hi)
+        rw, rp = range_sql("created_at", lo, hi, hi_excl)
+        sql += "".join(f" AND {w}" for w in rw); vals.extend(rp)
         sql += " ORDER BY id DESC LIMIT 2000"
         web_rows = conn.execute(sql, vals).fetchall()
         # النصّ المُحاوَل للفاشلة من الجدول الخاصّ، مربوطًا بـ audit_id.
@@ -377,10 +377,8 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
         elif actor == "subscriber":
             sql += " AND username NOT IN (SELECT username FROM cards WHERE tenant_id = ?)"
             vals.append(tenant_id)
-        if lo:
-            sql += " AND authdate >= ?"; vals.append(lo)
-        if hi:
-            sql += " AND authdate <= ?"; vals.append(hi)
+        rw, rp = range_sql("authdate", lo, hi, hi_excl)
+        sql += "".join(f" AND {w}" for w in rw); vals.extend(rp)
         sql += " ORDER BY id DESC LIMIT 2000"
         net = conn.execute(sql, vals).fetchall()
         if net:
@@ -459,10 +457,17 @@ def _scoped_rows(tenant_id: int, rows: list[dict]) -> list[dict]:
     return out
 
 
-def _today_prefix() -> str:
-    """بادئة تاريخ اليوم (UTC) لمطابقة الطوابع الزمنية المخزّنة نصيًا."""
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def _today_check(tenant_id: int | None = None):
+    """دالّة: هل الطابع (UTC مخزَّن، بمسافة أو 'T') ضمن **اليوم المحلّيّ**؟
+    zero-w2: كانت بادئة يوم UTC — «اليوم» يبدأ الثالثة فجرًا بتوقيت فلسطين."""
+    from ..core.system_config import local_period_utc_range, local_today
+    start, end = local_period_utc_range(
+        "daily", local_today(tenant_id).isoformat(), tenant_id)
+
+    def _is_today(when) -> bool:
+        ts = str(when or "")[:19].replace("T", " ")
+        return bool(ts) and start <= ts < end
+    return _is_today
 
 
 def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
@@ -489,11 +494,13 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
         return True
 
     rows = [r for r in rows if _keep(r)]
-    rows.sort(key=lambda r: r["when"], reverse=True)
+    # طابع مطبَّع للفرز: audit_log يكتب ‎…T…‎ وradpostauth بمسافة — الفرز
+    # النصّيّ الخامّ يضع كل صفوف 'T' قبل صفوف اليوم نفسه بالمسافة.
+    rows.sort(key=lambda r: str(r["when"] or "")[:19].replace("T", " "), reverse=True)
     total_matched = len(rows)
 
     # الإحصاءات تُحسب على كامل المطابق (قبل القصّ) — أرقام دقيقة لا «أرقام المعروض»
-    today = _today_prefix()
+    is_today = _today_check(tenant_id)
     stats = {
         "total": total_matched,
         "ok": sum(1 for r in rows if r["success"]),
@@ -502,9 +509,9 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
         "subs": sum(1 for r in rows if r["actor_type"] == "subscriber"),
         "cards": sum(1 for r in rows if r["actor_type"] == "card"),
         "ips": len({r["ip"] for r in rows if r["ip"]}),
-        "today": sum(1 for r in rows if (r["when"] or "").startswith(today)),
-        "today_ok": sum(1 for r in rows if r["success"] and (r["when"] or "").startswith(today)),
-        "today_fail": sum(1 for r in rows if (not r["success"]) and (r["when"] or "").startswith(today)),
+        "today": sum(1 for r in rows if is_today(r["when"])),
+        "today_ok": sum(1 for r in rows if r["success"] and is_today(r["when"])),
+        "today_fail": sum(1 for r in rows if (not r["success"]) and is_today(r["when"])),
         "uniq_users": len({r["username"] for r in rows if r["username"] and r["username"] != "—"}),
     }
     rows = rows[:limit]
@@ -518,7 +525,7 @@ def login_states_overview(tenant_id: int) -> dict:
         {'admin': {'total':…, 'ok':…, 'fail':…, 'today':…}, 'subscriber': {…}, 'card': {…}}
     """
     rows = _collect_rows(tenant_id)
-    today = _today_prefix()
+    is_today = _today_check(tenant_id)
     out = {k: {"total": 0, "ok": 0, "fail": 0, "today": 0} for k in ("admin", "subscriber", "card")}
     for r in rows:
         bucket = out.get(r["actor_type"])
@@ -529,6 +536,6 @@ def login_states_overview(tenant_id: int) -> dict:
             bucket["ok"] += 1
         else:
             bucket["fail"] += 1
-        if (r["when"] or "").startswith(today):
+        if is_today(r["when"]):
             bucket["today"] += 1
     return out

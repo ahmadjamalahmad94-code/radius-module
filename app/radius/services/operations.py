@@ -1632,7 +1632,7 @@ class OperationsService:
             "has_rule": bool(rule),
             "rate_limit": _rate_limit_from_schedule(rule) if rule else "",
             "source": (rule or {}).get("target_type") or "none",
-            "precedence": ["subscriber", "card_batch", "plan"],
+            "precedence": ["subscriber", "subscriber_group", "card_batch", "plan"],
             "input": {
                 "subscriber_username": subscriber_username,
                 "card_batch_id": card_batch_id,
