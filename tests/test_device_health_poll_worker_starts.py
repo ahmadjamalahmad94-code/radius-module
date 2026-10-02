@@ -184,7 +184,18 @@ def test_poll_due_respects_one_minute_window(app):
     from app.radius.db.connection import db
     settings = {"enabled": True, "minutes": 1}
 
-    # Fresh check just landed (from the previous test) → not due.
+    # Self-contained (was: relied on the previous test's row, which the
+    # started background worker could race — failed ~3/4 runs): land a
+    # fresh poller check through the real poll path, then assert not due.
+    from app.workers.device_health_poll_worker import poll_once
+    from app.radius.db.repos import tenants_repo
+    _seed_one_monitored_device(1)
+    tenants_repo.set_setting(1, "device_health.poll_enabled", "1")
+    tenants_repo.set_setting(1, "device_health.poll_minutes", "1")
+    db().execute("DELETE FROM network_device_health_checks "
+                 "WHERE tenant_id=? AND source='poller'", (1,))
+    poll_once()
+    db().commit()
     assert _poll_due(1, settings) is False, (
         "_poll_due returned True immediately after a check landed — the "
         "interval gate is broken (would burn CPU on every 60s tick)"
@@ -192,10 +203,11 @@ def test_poll_due_respects_one_minute_window(app):
 
     # Backdate the latest poller row by 90 seconds → due again.
     past = (datetime.utcnow() - timedelta(seconds=90)).isoformat() + "Z"
+    # every poller row (a concurrent worker tick may have added one)
     db().execute(
         "UPDATE network_device_health_checks SET created_at=? "
-        "WHERE id=(SELECT MAX(id) FROM network_device_health_checks "
-        "          WHERE tenant_id=? AND source='poller')",
+        "WHERE tenant_id=? AND source='poller'",
         (past, 1),
     )
+    db().commit()
     assert _poll_due(1, settings) is True
