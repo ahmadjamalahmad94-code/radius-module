@@ -397,6 +397,9 @@ _WEB_FORM_UNMANAGED = (
     "first_login_at", "last_login_at", "last_seen_at",
     "used_seconds", "used_bytes_in", "used_bytes_out", "online_count",
     "card_batch_id", "created_by", "created_at", "transport",
+    # PARITY r6: حقولٌ يحرّرها التطبيق وحدَه ولا خانةَ لها في هذا النموذج — كان
+    # «حفظ» الويب يمسحها (فارغ) ويُعيد «تجريبي» إلى «مشترك».
+    "user_type", "nationality", "address", "state", "zip", "payment_reference",
 )
 
 
@@ -532,12 +535,19 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     # F03-N1: حقلٌ وصفيّ لم يلمسه المشغّل (نفس قيمته لحظة فتح الصفحة) لا يُكتب —
     # فتبقى قيمته الحاليّة في القاعدة (دمجٌ مع base_meta أدناه).
     _orig_meta = ((_posted_form_orig() or {}).get("m") or {}) if existing is not None else {}
+    # PARITY r6: خانةٌ أُفرغت عمدًا (كانت لها قيمة) تُحذف من metadata — كان
+    # الفارغ يُتخطّى فيعود القديم بالدمج أدناه، فلا سبيل لمسح «قائمة عناوين
+    # الراوتر» مثلًا. حقول السرعة المؤقّتة (advanced) تملكها خدمتها فلا تُمسّ.
+    _cleared_meta: set[str] = set()
     for mf in _META_FIELDS:
         v = _s(mf)
         if mf in _orig_meta and _orig_same(_orig_norm(v), str(_orig_meta.get(mf))):
             continue
         if v:
             flat_meta[mf] = v
+        elif (existing is not None and mf in request.form
+              and mf not in _META_GROUPS["advanced"]):
+            _cleared_meta.add(mf)
 
     # Temp speed is owned by the shared service (services/temp_speed.py), called
     # from BOTH this profile form and the online page. When temp speed is in play
@@ -576,7 +586,8 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     form_grouped = _flat_to_grouped(flat_meta)
     merged_meta = dict(base_meta)
     for grp, fields in form_grouped.items():
-        merged_meta[grp] = {**(base_meta.get(grp) or {}), **fields}
+        merged_meta[grp] = {k: v for k, v in {**(base_meta.get(grp) or {}), **fields}.items()
+                            if not (k in _cleared_meta and k in _META_GROUPS[grp])}
     meta_json = json.dumps(merged_meta, ensure_ascii=False)
 
     # Speed columns: preserve existing when temp-managed (the service overwrites
