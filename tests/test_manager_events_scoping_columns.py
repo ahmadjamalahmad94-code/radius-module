@@ -240,9 +240,14 @@ def test_card_store_identity_resolves_and_result_labeled(app):
     store = _get(app, "/admin/radius/reports/card_store_events")
     # الهويّة تُحلّ للاسم الحقيقيّ (بدل معرّف رقميّ خام مثل «4»)
     assert "أحمد العميل" in store, "card-store identity not resolved to real name"
-    # نتيجة واضحة لكل صفّ
-    assert "دخول ناجح" in store, "success label missing"
-    assert "محاولة فاشلة" in store, "fail label missing"
+    # نتيجة واضحة لكل صفّ. منذ 9aeb192c (تسجيل كل حركات المتجر) شارة الصفّ =
+    # تسمية الفعل العربيّة (_ACTION_AR): «دخول» أخضر للناجح و«دخول فاشل» أحمر
+    # للفاشل، والسبب يُعرض في عمود التفاصيل؛ «دخول ناجح»/«محاولات فاشلة» صارتا
+    # بطاقتَي المؤشّرات أعلى الصفحة.
+    import re as _re
+    assert _re.search(r'hub-pill--green">\s*دخول\s*<', store), "success label missing"
+    assert _re.search(r'hub-pill--red">\s*دخول فاشل\s*<', store), "fail label missing"
+    assert "دخول ناجح" in store and "محاولات فاشلة" in store   # KPI cards
 
 
 # ─── أعمدة قبل/بعد: فقط حيث للأحداث فرق حقليّ ───
