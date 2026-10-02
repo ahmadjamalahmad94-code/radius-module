@@ -134,9 +134,11 @@ def test_router_dashboard_has_device_health_card(
 # ─── Router-scoped routes ───────────────────────────────────
 
 
-def test_router_landing_redirects_to_remote_access_scoped(
+def test_router_landing_redirects_to_web_block_scoped(
     app, client, monkeypatch,
 ):
+    """66f551e7 retired the remote-access NPC page; the router landing
+    now opens the «حظر المواقع» tab instead."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     r = client.get(
@@ -145,7 +147,8 @@ def test_router_landing_redirects_to_remote_access_scoped(
     )
     assert r.status_code in (301, 302, 303, 307, 308)
     loc = r.headers["Location"]
-    assert "remote-access" in loc
+    assert "web-block" in loc
+    assert "remote-access" not in loc
     assert f"/mt/{rid}/" in loc
 
 
@@ -154,17 +157,17 @@ def test_router_landing_404_for_unknown_router(
 ):
     _login_super(client, monkeypatch)
     # The landing redirects unconditionally to the
-    # remote-access list, where the scoped list view performs
+    # web-block list, where the scoped list view performs
     # the tenant + existence check.
     r = client.get(
-        "/admin/radius/mt/9999/network-policies/remote-access/",
+        "/admin/radius/mt/9999/network-policies/web-block/",
         follow_redirects=False,
     )
     assert r.status_code == 404
 
 
 @pytest.mark.parametrize("slug", [
-    "remote-access", "web-block", "walled-garden",
+    "web-block", "walled-garden",
 ])
 def test_scoped_list_renders_with_router_context(
     app, client, monkeypatch, slug,
@@ -181,16 +184,17 @@ def test_scoped_list_renders_with_router_context(
     assert f"/admin/radius/mt/{rid}/" in html
     assert "npc-tabs" in html
     assert "Dry-Run" not in html
-    # The other two sub-service tabs are reachable from the
-    # scoped tab bar.
+    # The other sub-service tab is reachable from the scoped
+    # tab bar; the retired remote-access tab (66f551e7) is not.
     other_services = (
-        {"remote-access", "web-block", "walled-garden"}
+        {"web-block", "walled-garden"}
         - {slug}
     )
     for other in other_services:
         assert (
             f"/admin/radius/mt/{rid}/network-policies/{other}/"
         ) in html
+    assert "/network-policies/remote-access/" not in html
 
 
 def test_scoped_list_shows_only_this_router_policies(
@@ -202,22 +206,16 @@ def test_scoped_list_shows_only_this_router_policies(
     # Seed one policy per router via the repo directly.
     with app.app_context():
         from app.radius.db.repos import (
-            npc_remote_access_repo as ra,
+            npc_web_block_repo as wb,
         )
-        ra.create(tenant_id=1, router_id=rid_a,
-                   name="policy-on-A",
-                   allow_winbox=True,
-                   source_address_list="ops",
-                   expires_at="2027-01-01T00:00:00Z")
-        ra.create(tenant_id=1, router_id=rid_b,
-                   name="policy-on-B",
-                   allow_winbox=True,
-                   source_address_list="ops",
-                   expires_at="2027-01-01T00:00:00Z")
+        wb.create_policy(tenant_id=1, router_id=rid_a,
+                         name="policy-on-A")
+        wb.create_policy(tenant_id=1, router_id=rid_b,
+                         name="policy-on-B")
     # Scoped to A → sees policy-on-A only.
     r = client.get(
         f"/admin/radius/mt/{rid_a}/network-policies/"
-        "remote-access/"
+        "web-block/"
     )
     html = r.data.decode("utf-8")
     assert "policy-on-A" in html
@@ -225,7 +223,7 @@ def test_scoped_list_shows_only_this_router_policies(
     # Scoped to B → opposite.
     r = client.get(
         f"/admin/radius/mt/{rid_b}/network-policies/"
-        "remote-access/"
+        "web-block/"
     )
     html = r.data.decode("utf-8")
     assert "policy-on-B" in html
@@ -239,7 +237,7 @@ def test_scoped_list_new_button_carries_router_id(
     _login_super(client, monkeypatch)
     r = client.get(
         f"/admin/radius/mt/{rid}/network-policies/"
-        "remote-access/"
+        "web-block/"
     )
     html = r.data.decode("utf-8")
     # The "سياسة جديدة" link pre-fills router_id via query.
@@ -252,7 +250,7 @@ def test_new_policy_form_preselects_router_from_query(
     rid = _seed_router(app, name="preset-target")
     _login_super(client, monkeypatch)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/new"
+        f"/admin/radius/network-policy/web-block/new"
         f"?router_id={rid}"
     )
     assert r.status_code == 200
@@ -321,13 +319,16 @@ def test_global_per_service_list_routes_still_work(
     app, client, monkeypatch,
 ):
     """Sidebar surfacing changed; the per-service global routes
-    still exist (the API and any deep links still resolve)."""
+    still exist (the API and any deep links still resolve) — except
+    remote-access, whose NPC page was retired for good (66f551e7)."""
     _login_super(client, monkeypatch)
-    for slug in ("remote-access", "web-block", "walled-garden"):
+    for slug in ("web-block", "walled-garden"):
         r = client.get(
             f"/admin/radius/network-policy/{slug}/"
         )
         assert r.status_code == 200, slug
+    r = client.get("/admin/radius/network-policy/remote-access/")
+    assert r.status_code == 404
 
 
 # ─── JSON API surface untouched ─────────────────────────────

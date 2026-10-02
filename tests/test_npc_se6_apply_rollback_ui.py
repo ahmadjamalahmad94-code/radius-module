@@ -33,8 +33,21 @@ def client(app):
 
 def _login(client, monkeypatch, *, super_admin=True,
             perms=()):
+    # super_admin → admin id=1, the boot-time «admin» = the min-id OWNER
+    # (owner-only bypass, 6824f26). A non-super login must therefore be a
+    # DIFFERENT, real row: the guard re-validates the session's admin every
+    # request (session_epoch, 21f239a6) and id=1 would resolve as owner.
+    admin_id = 1
+    if not super_admin:
+        with client.application.app_context():
+            from app.radius.db.repos import admins_repo
+            row = admins_repo.get_by_username("bob") or                 admins_repo.create_admin(username="bob",
+                                         password="bob-pass-1",
+                                         full_name="Bob",
+                                         is_super_admin=False)
+        admin_id = row.id
     user = SimpleNamespace(
-        id=1, username="alice",
+        id=admin_id, username="alice" if super_admin else "bob",
         is_super_admin=bool(super_admin),
     )
 
@@ -52,8 +65,8 @@ def _login(client, monkeypatch, *, super_admin=True,
     monkeypatch.setattr(am, "get_admins_service",
                         lambda: _Svc())
     with client.session_transaction() as s:
-        s["admin_id"] = 1
-        s["admin_user"] = "alice"
+        s["admin_id"] = admin_id
+        s["admin_user"] = user.username
         s["tenant_id"] = 1
 
 
@@ -79,18 +92,23 @@ def _seed_router(app, *, name="rt1"):
             return int(cur.lastrowid)
 
 
-def _good_remote_policy(app, rid):
+def _good_policy(app, rid, name="Good policy"):
+    """A valid policy. Was a remote-access policy; that NPC web UI (its
+    preview/apply/changes pages) was retired in 66f551e7, so a web-block
+    policy with one target stands in — same apply/rollback surface."""
     with app.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as r,
+        from app.radius.db.repos import npc_web_block_repo as wb
+        pid = wb.create_policy(
+            tenant_id=1, router_id=rid, name=name, fail_open=True,
         )
-        return r.create(
-            tenant_id=1, router_id=rid,
-            name="Good policy",
-            allow_winbox=True,
-            source_address_list="ops",
-            expires_at="2027-01-01T00:00:00Z",
+        wb.add_target(
+            policy_id=pid,
+            value="tiktok.com",
+            normalized_value="tiktok.com",
+            target_type=wb.TARGET_TYPE_DOMAIN,
+            category="tiktok",
         )
+        return pid
 
 
 # ─── Apply button visibility ────────────────────────────────
@@ -101,9 +119,9 @@ def test_apply_form_visible_for_user_with_apply_perm(
 ):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     assert r.status_code == 200
@@ -121,14 +139,14 @@ def test_apply_form_hidden_for_user_without_apply_perm(
     disabled placeholder, no apply form."""
     rid = _seed_router(app)
     # Need to seed policy first via super admin path.
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     # Now switch to a no-perm user.
     _login(client, monkeypatch, super_admin=False,
-            perms=("npc.remote_access.view",
-                   "npc.remote_access.preview",
-                   "npc.remote_access.manage"))
+            perms=("npc.web_block.view",
+                   "npc.web_block.preview",
+                   "npc.web_block.manage"))
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     assert r.status_code == 200
@@ -143,24 +161,19 @@ def test_apply_form_hidden_for_user_without_apply_perm(
 def test_apply_submit_disabled_when_blockers_present(
     app, client, monkeypatch,
 ):
-    """A policy with no source list + no expiry has a
+    """A policy whose plan carries a planner blocker has a
     contracts blocker. The form still renders for the perm
-    holder, but the submit button is disabled."""
+    holder, but the submit button is disabled. (Was a
+    remote-access policy without source/expiry — retired UI,
+    66f551e7; web-block blocks when its target cap is exceeded,
+    pinned to 0 here.)"""
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    with app.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as r,
-        )
-        # No source list + no expiry → assess_policy blocks
-        # → impact CRITICAL → readiness blocker.
-        pid = r.create(
-            tenant_id=1, router_id=rid,
-            name="Blocked",
-            allow_winbox=True,
-        )
+    import app.radius.services.npc_web_block_planner as wbp
+    monkeypatch.setattr(wbp, "MAX_TARGETS_PER_POLICY", 0)
+    pid = _good_policy(app, rid, name="Blocked")
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -228,16 +241,16 @@ def test_apply_post_redirects_back_to_preview(
     redirect target and `no_snapshot` reason text."""
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     # Trigger CSRF token by visiting a form-bearing page.
     client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     with client.session_transaction() as s:
         csrf = s.get("_csrf_token") or ""
     r = client.post(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/apply",
         data={"_csrf_token": csrf},
         follow_redirects=False,
@@ -265,9 +278,9 @@ def test_changes_page_route_exists_get_only(app):
 def test_changes_page_empty_state(app, client, monkeypatch):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/changes"
     )
     assert r.status_code == 200
@@ -283,13 +296,13 @@ def test_changes_page_lists_seeded_change_sets(
     should render both with their per-router targets."""
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     with app.app_context():
         from app.radius.db.repos import (
             npc_change_sets_repo as cs,
         )
         cs1 = cs.create(
-            tenant_id=1, service="remote_access",
+            tenant_id=1, service="web_block",
             policy_id=pid, action_type=cs.ACTION_APPLY,
             execution_mode=cs.MODE_FULL,
             snapshot_id=1,
@@ -300,12 +313,12 @@ def test_changes_page_lists_seeded_change_sets(
             rendered_script="# x\n",
             rollback_script=(
                 "/ip/firewall/filter remove "
-                "[find comment~\"^HOBE_NPC_REMOTE:1:\"]\n"
+                "[find comment~\"^HOBE_NPC_BLOCK:1:\"]\n"
             ),
             status=cs.TARGET_STATUS_SUCCEEDED,
         )
         cs2 = cs.create(
-            tenant_id=1, service="remote_access",
+            tenant_id=1, service="web_block",
             policy_id=pid, action_type=cs.ACTION_APPLY,
             execution_mode=cs.MODE_FULL,
             snapshot_id=2,
@@ -318,7 +331,7 @@ def test_changes_page_lists_seeded_change_sets(
             status=cs.TARGET_STATUS_FAILED,
         )
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/changes"
     )
     html = r.data.decode("utf-8")
@@ -332,13 +345,13 @@ def test_changes_page_shows_rollback_button_for_eligible(
 ):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     with app.app_context():
         from app.radius.db.repos import (
             npc_change_sets_repo as cs,
         )
         cs1 = cs.create(
-            tenant_id=1, service="remote_access",
+            tenant_id=1, service="web_block",
             policy_id=pid, action_type=cs.ACTION_APPLY,
             execution_mode=cs.MODE_FULL,
             snapshot_id=1,
@@ -349,12 +362,12 @@ def test_changes_page_shows_rollback_button_for_eligible(
             rendered_script="# x\n",
             rollback_script=(
                 "/ip/firewall/filter remove "
-                "[find comment~\"^HOBE_NPC_REMOTE:1:\"]\n"
+                "[find comment~\"^HOBE_NPC_BLOCK:1:\"]\n"
             ),
             status=cs.TARGET_STATUS_SUCCEEDED,
         )
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/changes"
     )
     html = r.data.decode("utf-8")
@@ -369,20 +382,20 @@ def test_changes_page_hides_rollback_for_failed_set(
 ):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     with app.app_context():
         from app.radius.db.repos import (
             npc_change_sets_repo as cs,
         )
         cs1 = cs.create(
-            tenant_id=1, service="remote_access",
+            tenant_id=1, service="web_block",
             policy_id=pid, action_type=cs.ACTION_APPLY,
             execution_mode=cs.MODE_FULL,
             snapshot_id=1,
         )
         cs.update_status(1, cs1, status=cs.STATUS_FAILED)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/changes"
     )
     html = r.data.decode("utf-8")
@@ -394,9 +407,9 @@ def test_changes_page_link_visible_on_preview(
 ):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -412,9 +425,9 @@ def test_apply_post_without_csrf_redirects_to_login(
 ):
     rid = _seed_router(app)
     _login(client, monkeypatch, super_admin=True)
-    pid = _good_remote_policy(app, rid)
+    pid = _good_policy(app, rid)
     r = client.post(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/apply",
         data={},
         follow_redirects=False,

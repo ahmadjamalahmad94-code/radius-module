@@ -87,8 +87,17 @@ def _login_super(client, app, monkeypatch):
 def _login_with_perms(client, app, monkeypatch, perms):
     """Stub the admins service with a non-super admin holding
     exactly `perms`. Used to assert perm-gate behaviour."""
+    # The session guard re-validates the admin row on every request
+    # (session_epoch, admin-session-invalidation fix 21f239a6) — a session
+    # for a non-existent id is logged out. So bob must be a REAL, non-owner
+    # row (the boot-time «admin» id=1 is the owner); the stub below still
+    # pins his permission set.
+    with app.app_context():
+        from app.radius.db.repos import admins_repo
+        bob = admins_repo.get_by_username("bob") or             admins_repo.create_admin(username="bob", password="bob-pass-1",
+                                     full_name="Bob", is_super_admin=False)
     admin = SimpleNamespace(
-        id=2, username="bob", is_super_admin=False,
+        id=bob.id, username="bob", is_super_admin=False,
     )
 
     class _Store:
@@ -106,7 +115,7 @@ def _login_with_perms(client, app, monkeypatch, perms):
                         lambda: _Svc())
 
     with client.session_transaction() as s:
-        s["admin_id"] = 2
+        s["admin_id"] = bob.id
         s["admin_user"] = "bob"
         s["tenant_id"] = 1
 
@@ -118,9 +127,10 @@ def _csrf(client):
     The platform's _inject_csrf after_request hook only seeds
     the token when the response HTML contains a `<form>`. The
     `/network-policy/.../new` form page reliably has one, so
-    we visit it to prime the session token."""
+    we visit it to prime the session token. (web-block: the
+    remote-access UI was retired in 66f551e7.)"""
     client.get(
-        "/admin/radius/network-policy/remote-access/new"
+        "/admin/radius/network-policy/web-block/new"
     )
     with client.session_transaction() as s:
         return s.get("_csrf_token") or ""
@@ -177,7 +187,6 @@ def test_sidebar_drops_all_npc_entries(app, client, monkeypatch):
 
 
 @pytest.mark.parametrize("slug,label", [
-    ("remote-access", "الوصول البعيد"),
     ("web-block",     "حظر المواقع"),
     ("walled-garden", "المواقع المسموحة"),
 ])
@@ -191,7 +200,8 @@ def test_list_pages_render_with_dry_run_banner(
     assert "معاينة فقط" in html
     assert "Dry-Run" not in html
     assert "لم يتم التطبيق على الراوتر" in html
-    assert "الوصول البعيد" in html
+    # The «الوصول البعيد» tab was retired (66f551e7) — no link back to it.
+    assert "/network-policy/remote-access/" not in html
     assert "حظر المواقع" in html
     assert "المواقع المسموحة" in html
     assert "لا توجد سياسات بعد" in html
@@ -245,14 +255,16 @@ def test_dashboard_links_to_npc_per_service(
     r = client.get(f"/admin/radius/mt/{rid}/dashboard")
     assert r.status_code == 200, r.data.decode("utf-8")[:500]
     html = r.data.decode("utf-8")
-    # Three buttons, one per service, each linked to the
-    # router-scoped list.
-    assert f"/mt/{rid}/network-policies/remote-access/" in html
+    # Two direct service cards, each linked to the router-scoped list.
+    # The remote-access card was retired with its NPC page (66f551e7 —
+    # «خدماتي» already carries remote access); the block card is labelled
+    # «حظر المواقع» by owner request (64415a24).
+    assert f"/mt/{rid}/network-policies/remote-access/" not in html
     assert f"/mt/{rid}/network-policies/web-block/" in html
     assert f"/mt/{rid}/network-policies/walled-garden/" in html
-    # And the three Arabic labels.
-    assert "الوصول البعيد" in html
-    assert "حجب المواقع" in html
+    assert 'data-mt-router-link="npc-web-block"' in html
+    assert 'data-mt-router-link="npc-walled-garden"' in html
+    assert "حظر المواقع" in html
     assert "المواقع المسموحة" in html
 
 
@@ -277,7 +289,7 @@ def test_admin_without_npc_perm_gets_403(
     _login_with_perms(
         client, app, monkeypatch, ["mikrotik.view"],
     )
-    for slug in ("remote-access", "web-block", "walled-garden"):
+    for slug in ("web-block", "walled-garden"):
         r = client.get(
             f"/admin/radius/network-policy/{slug}/"
         )
@@ -305,31 +317,53 @@ def test_admin_with_view_only_can_read_but_not_create(
 # ─── New / edit / preview flow ───────────────────────────────
 
 
-def test_remote_access_full_lifecycle_via_ui(
+def test_remote_access_ui_is_retired(app, client, monkeypatch):
+    """66f551e7 (chore(npc)): the «الوصول البعيد» NPC page duplicated the
+    «خدماتي» remote-access card, so its web UI was removed for good. Its
+    URLs — global and router-scoped — must stay gone (404), and no web
+    endpoint may be re-registered. (The JSON API + repo stay, used by the
+    setup-wizard-v3 surface.)"""
+    rid = _seed_router(app)
+    _login_super(client, app, monkeypatch)
+    for url in (
+        "/admin/radius/network-policy/remote-access/",
+        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/remote-access/1/edit",
+        "/admin/radius/network-policy/remote-access/1/preview",
+        f"/admin/radius/mt/{rid}/network-policies/remote-access/",
+    ):
+        assert client.get(url).status_code == 404, url
+    with app.app_context():
+        endpoints = {r.endpoint for r in app.url_map.iter_rules()}
+    assert not any(e.startswith("radius.npc_remote_access")
+                   for e in endpoints)
+
+
+def test_web_block_full_lifecycle_via_ui(
     app, client, monkeypatch,
 ):
+    """The create → edit → preview → preview-POST lifecycle, on a
+    surviving service (web-block) now that remote-access is retired."""
     rid = _seed_router(app)
     _login_super(client, app, monkeypatch)
     csrf = _csrf(client)
 
     # New (GET form renders)
     r = client.get(
-        "/admin/radius/network-policy/remote-access/new"
+        "/admin/radius/network-policy/web-block/new"
     )
     assert r.status_code == 200
     assert "بيانات السياسة" in r.data.decode("utf-8")
 
     # POST create
     r = client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
         data={
             "_csrf_token": csrf,
-            "name": "Emergency Winbox",
+            "name": "Social block",
             "router_id": str(rid),
-            "allow_winbox": "on",
-            "allow_webfig_https": "on",
-            "source_address_list": "ops-bastion",
-            "expires_at": "2027-01-01T00:00:00Z",
+            "scope": "all_users",
+            "fail_open": "on",
             "enabled": "on",
         },
         follow_redirects=False,
@@ -338,36 +372,38 @@ def test_remote_access_full_lifecycle_via_ui(
     assert "/edit" in r.headers["Location"]
 
     with app.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as ra,
-        )
-        rows = ra.list_for_tenant(1)
+        from app.radius.db.repos import npc_web_block_repo as wb
+        rows = wb.list_policies_for_tenant(1)
     assert len(rows) == 1
     pid = rows[0]["id"]
+    client.post(
+        f"/admin/radius/network-policy/web-block/{pid}/children",
+        data={"_csrf_token": csrf,
+              "value": "tiktok.com", "category": "tiktok"},
+        follow_redirects=True,
+    )
 
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}/edit"
+        f"/admin/radius/network-policy/web-block/{pid}/edit"
     )
     assert r.status_code == 200
-    assert "Emergency Winbox" in r.data.decode("utf-8")
+    assert "Social block" in r.data.decode("utf-8")
 
     # Preview GET
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}/preview"
+        f"/admin/radius/network-policy/web-block/{pid}/preview"
     )
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    # Intelligent-preview UI rephrased the "plan ok" pill —
-    # match the noun-only form so the assertion survives copy
-    # tweaks in either direction.
     assert "الخطّة سليمة" in html
-    assert "HOBE_NPC_REMOTE:" in html
+    assert f"HOBE_NPC_BLOCK_{pid}" in html
+    assert "tiktok.com" in html
     assert "rollback" in html
     assert "لم يتم التطبيق على الراوتر" in html
 
     # Preview POST persists + audits
     r = client.post(
-        f"/admin/radius/network-policy/remote-access/{pid}/preview",
+        f"/admin/radius/network-policy/web-block/{pid}/preview",
         data={"_csrf_token": csrf},
         follow_redirects=False,
     )
@@ -377,19 +413,19 @@ def test_remote_access_full_lifecycle_via_ui(
         from app.radius.db.connection import db
         actions = [r["action"] for r in db().execute(
             "SELECT action FROM audit_log "
-            "WHERE target_type='npc_remote_access_policy' "
+            "WHERE target_type='npc_web_block_policy' "
             "ORDER BY id"
         ).fetchall()]
         from app.radius.db.repos import npc_scripts_repo as ns
         latest = ns.latest_for_policy(
-            service="remote_access", policy_id=pid)
+            service="web_block", policy_id=pid)
 
-    assert "npc.remote_access.policy_created" in actions
-    assert "npc.remote_access.preview_generated" in actions
+    assert "npc.web_block.policy_created" in actions
+    assert "npc.web_block.preview_generated" in actions
     assert not any(
-        a in {"npc.remote_access.applied",
-              "npc.remote_access.apply_attempted",
-              "npc.remote_access.apply_failed"}
+        a in {"npc.web_block.applied",
+              "npc.web_block.apply_attempted",
+              "npc.web_block.apply_failed"}
         for a in actions
     )
     assert latest is not None
@@ -515,28 +551,30 @@ def test_preview_download_returns_rsc(app, client, monkeypatch):
     _login_super(client, app, monkeypatch)
     csrf = _csrf(client)
     client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
         data={"_csrf_token": csrf,
               "name": "DL", "router_id": str(rid),
-              "allow_winbox": "on",
-              "source_address_list": "ops",
-              "expires_at": "2027-01-01T00:00:00Z",
+              "scope": "all_users", "fail_open": "on",
               "enabled": "on"},
         follow_redirects=False,
     )
     with app.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as ra,
-        )
-        pid = ra.list_for_tenant(1)[0]["id"]
+        from app.radius.db.repos import npc_web_block_repo as wb
+        pid = wb.list_policies_for_tenant(1)[0]["id"]
+    client.post(
+        f"/admin/radius/network-policy/web-block/{pid}/children",
+        data={"_csrf_token": csrf,
+              "value": "tiktok.com", "category": "tiktok"},
+        follow_redirects=True,
+    )
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview.rsc"
     )
     assert r.status_code == 200
     assert r.mimetype.startswith("text/plain")
     assert r.headers["Content-Disposition"].startswith("attachment")
-    assert b"HOBE_NPC_REMOTE:" in r.data
+    assert f"HOBE_NPC_BLOCK_{pid}".encode() in r.data
 
 
 # ─── Apply absence pin ───────────────────────────────────────
@@ -616,10 +654,10 @@ def test_dry_run_label_appears_on_every_npc_page(
         from app.radius.db.repos import npc_web_block_repo as wb
         pid = wb.list_policies_for_tenant(1)[0]["id"]
     pages = [
-        "/admin/radius/network-policy/remote-access/",
         "/admin/radius/network-policy/web-block/",
         "/admin/radius/network-policy/walled-garden/",
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
+        "/admin/radius/network-policy/walled-garden/new",
         f"/admin/radius/network-policy/web-block/{pid}/edit",
         f"/admin/radius/network-policy/web-block/{pid}/preview",
     ]
