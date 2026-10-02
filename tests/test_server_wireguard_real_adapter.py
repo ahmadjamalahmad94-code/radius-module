@@ -49,6 +49,8 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_VPN_POOL", "10.10.0.0/24")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP", "10.10.0.1")
+    # إعدادٌ مطلوبٌ بلا افتراضٍ مخبوء منذ 75d7dc7d (لا عنوان زبونٍ مثبّت).
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT", "203.0.113.10:51820")
     monkeypatch.setenv("HOBERADIUS_WG_INTERFACE", "wg0")
     monkeypatch.setenv("HOBERADIUS_WG_LISTEN_PORT", "51820")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_WG_BACKUP_DIR", "/backup/wg")

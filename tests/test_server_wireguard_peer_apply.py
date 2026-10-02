@@ -45,6 +45,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_VPN_POOL", "10.10.0.0/24")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP", "10.10.0.1")
+    # إعدادٌ مطلوبٌ بلا افتراضٍ مخبوء منذ 75d7dc7d (لا عنوان زبونٍ مثبّت).
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT", "203.0.113.10:51820")
+    # تجاوزُ بوّابة الترخيص في الاختبار يتطلّب العلامتين معًا (5126bdbe).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     reset_for_tests(os.path.join(tmp_path, "test.db"))
     from app import create_app
 
@@ -344,6 +348,8 @@ def test_v2_renders_server_peer_lab_panel(app):
             sess["admin_id"] = 1
             sess["tenant_id"] = 1
             sess["_csrf_token"] = "test-csrf"
+            # معالج v2 صار للمالك فقط (1ca4b71a — fix(rbac) p01).
+            sess["is_super_admin"] = True
         res = client.get("/admin/radius/setup-wizard-v2")
         html = res.get_data(as_text=True)
 
@@ -352,3 +358,25 @@ def test_v2_renders_server_peer_lab_panel(app):
     assert "data-swv2-server-peer-dry-run" in html
     assert "data-swv2-server-peer-verify" in html
     assert "data-swv2-server-peer-result" in html
+
+
+def test_missing_public_endpoint_fails_with_arabic_message_and_no_reservation(app, monkeypatch):
+    """عنوانُ الخادم العامّ إعدادٌ مطلوبٌ بلا افتراض (75d7dc7d). غيابُه يجب أن
+    يوقف التوليد برسالةٍ عربيّةٍ واضحة قبل حجز أيّ عنوان نفق — لا انهيار."""
+    monkeypatch.delenv("HOBERADIUS_WG_SERVER_ENDPOINT", raising=False)
+    monkeypatch.delenv("HOBERADIUS_PUBLIC_IP", raising=False)
+    with app.app_context():
+        svc = get_setup_wizard_service()
+        run = svc.create_run(tenant_id=1, actor="qa")
+        svc.mark_verified(tenant_id=1, run_id=run["id"], step_key=STEP_INTERNET_VERIFICATION)
+        with pytest.raises(SetupWizardValidationError) as exc:
+            svc.generate_vpn_radius_script(
+                tenant_id=1, run_id=run["id"], payload={"router_label": "Branch"},
+            )
+        assert "عنوان الخادم العامّ غير مضبوط" in str(exc.value)
+        assert "HOBERADIUS_WG_SERVER_ENDPOINT" in str(exc.value)
+        reserved = db().execute(
+            "SELECT COUNT(*) FROM router_provisioning_registry WHERE wizard_run_id=?",
+            (int(run["id"]),),
+        ).fetchone()[0]
+        assert reserved == 0
