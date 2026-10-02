@@ -79,8 +79,12 @@ def test_sidebar_shows_one_consolidated_communications_entry(app):
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
     assert "التواصل والحملات" in html
-    # WhatsApp subscriber gates stay as their own standalone entry.
-    assert "رسائل واتساب للمشتركين" in html
+    # ddfc64cb (notifications unification, phase 1): the standalone WhatsApp
+    # entry was folded into «الإشعارات والتواصل ← التكاملات والقنوات» — the
+    # rich page stays reachable from there, not as its own sidebar item.
+    assert "رسائل واتساب للمشتركين" not in html
+    assert "التكاملات والقنوات" in html
+    assert "/admin/radius/integrations" in html
 
 
 @pytest.mark.parametrize("url", _SUBPAGES)
