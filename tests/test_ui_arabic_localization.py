@@ -45,12 +45,17 @@ def _web_login(client) -> None:
 
     username = f"ui_ar_{uuid4().hex[:10]}"
     password = "ui-ar-pass"
-    admins_repo.create_admin(
+    created = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Arabic UI Tester",
         is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
+    # قرار المالك (6824f26c / 2e5c50e4، ذاكرة owner-only-bypass.md): علَم
+    # is_super_admin وحده لم يَعُد يَمنح تجاوز المالك — الصفحات المقصورة على
+    # المالك (معالج الإعداد، الأقسام المخفيّة افتراضًا) تُرجع 403 لـ«مدير عام».
+    # هذا الاختبار يفحص نصوص الصفحات لا الصلاحيات، فيَدخل بحساب «شريك/مالك».
+    admins_repo.set_co_owner(created.id, True)
     response = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},

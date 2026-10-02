@@ -1393,7 +1393,7 @@ _LOGIN_STATES_KINDS = {
     "card_store": {
         "title": "حالات بوابة متجر البطاقات",
         "icon": "store",
-        "subtitle": "محاولات دخول وتسجيل العملاء عبر متجر البطاقات (store API) — بالجوال وعنوان الشبكة.",
+        "subtitle": "محاولات دخول وتسجيل العملاء عبر متجر البطاقات (تطبيق المتجر) — بالجوال وعنوان الشبكة.",
         "search_ph": "بحث (رقم الجوال / عنوان الشبكة)…",
         "detail_endpoint": "radius.rep_login_states_card_store",
         "actor": "card",
