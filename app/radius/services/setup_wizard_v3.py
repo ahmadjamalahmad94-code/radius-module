@@ -1234,9 +1234,20 @@ class WizardV3Service:
         if nas_id and tunnel_type in ("sstp", "pptp"):
             try:
                 from .router_mgmt_tunnel import (
-                    PPTP_IFACE_NAME, SSTP_IFACE_NAME, load_config,
+                    MGMT_POOL_DEFAULT, MGMT_POOL_ENV, PPTP_IFACE_NAME,
+                    SSTP_IFACE_NAME, RouterMgmtTunnelError, load_config,
                 )
                 _is_sstp = tunnel_type == "sstp"
+                # المجمّعُ وحدَه ما نحتاجه هنا. load_config() يرفض أيضًا غيابَ
+                # عنوانِ خادم SSTP (2c17ef2f) — وذاك لا علاقة له بالختم، فلا
+                # نتركه يُسقط الختمَ كلَّه بصمت (كان يبقى النوعُ 'none').
+                try:
+                    _mgmt_subnet = str(load_config().pool)
+                except RouterMgmtTunnelError:
+                    from ..core import env_settings as _envs
+                    _mgmt_subnet = str(
+                        _envs.env(MGMT_POOL_ENV, MGMT_POOL_DEFAULT) or ""
+                    ).strip()
                 with transaction() as conn3:
                     conn3.execute(
                         "UPDATE nas_devices SET connection_mode=?, "
@@ -1251,7 +1262,7 @@ class WizardV3Service:
                             "sstp_mgmt" if _is_sstp else "pptp_mgmt",
                             "pending",
                             SSTP_IFACE_NAME if _is_sstp else PPTP_IFACE_NAME,
-                            vpn_ip, str(load_config().pool),
+                            vpn_ip, _mgmt_subnet,
                             str(raw.get("tunnel_username") or ""),
                             int(tenant_id), int(nas_id),
                         ),
