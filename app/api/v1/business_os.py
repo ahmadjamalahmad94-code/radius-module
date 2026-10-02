@@ -22,6 +22,7 @@ from ...radius.services.business_os_finance import (
 from ..auth import require_api_token
 from ..json_input import InputError, json_object, opt_int, opt_text
 from ..responses import fail, ok
+from .idempotency import idempotent
 
 
 def register(bp: Blueprint) -> None:
@@ -29,8 +30,11 @@ def register(bp: Blueprint) -> None:
         ("/finance/wallets", "business_wallets_list", wallets_list, ["GET"]),
         ("/finance/wallets", "business_wallets_create", wallets_create, ["POST"]),
         ("/finance/wallets/<int:wallet_id>", "business_wallets_detail", wallets_detail, ["GET"]),
-        ("/finance/wallets/<int:wallet_id>/credit", "business_wallets_credit", wallets_credit, ["POST"]),
-        ("/finance/wallets/<int:wallet_id>/debit", "business_wallets_debit", wallets_debit, ["POST"]),
+        # Zero-w1: real money ⇒ the same Idempotency-Key replay as payments/loans
+        ("/finance/wallets/<int:wallet_id>/credit", "business_wallets_credit",
+         idempotent(wallets_credit), ["POST"]),
+        ("/finance/wallets/<int:wallet_id>/debit", "business_wallets_debit",
+         idempotent(wallets_debit), ["POST"]),
         ("/finance/wallets/<int:wallet_id>/transactions", "business_wallet_transactions", wallet_transactions, ["GET"]),
         ("/finance/ledger", "business_ledger_list", ledger_list, ["GET"]),
         ("/finance/ledger/corrections", "business_ledger_correction", ledger_correction, ["POST"]),
@@ -147,8 +151,53 @@ def wallets_detail(wallet_id: int):
     return ok({"wallet": wallet})
 
 
+def _gate_permissions() -> tuple[str, ...]:
+    """The SafetyGate permission set of the credential — the web's
+    ``finance_center._permissions()``: owner-level (owner / co-owner, or an
+    unbound integration credential) ⇒ ``admin:full``; any other admin ⇒ the
+    role permissions of the admin behind the token (``wallet.credit`` /
+    ``wallet.debit`` must be held explicitly, exactly as on the web)."""
+    from ..access_control import is_owner_level, token_admin
+    if is_owner_level():
+        return ("admin:full",)
+    admin = token_admin()
+    if admin is None:
+        return ()
+    try:
+        from ...radius.services.admins import get_admins_service
+        return tuple(get_admins_service().permissions_of(admin))
+    except Exception:  # noqa: BLE001 — never grant on a lookup error
+        return ()
+
+
+def _safety_gate(action: str, amount: Any = None):
+    """Zero-w1: the API applied only the endpoint RBAC — a 6,000 debit that the
+    web refuses (``max_wallet_debit`` 5,000) returned 201. Same gate as the web
+    (``SafetyGateService.check``). Returns ``(decision, error_response)``."""
+    from ...radius.services.business_os_access import SafetyGateService
+    try:
+        decision = SafetyGateService().check(action, permissions=_gate_permissions(),
+                                             amount=amount)
+    except ValueError:
+        return None, fail("validation_error", "المبلغ يجب أن يكون رقمًا صحيحًا.",
+                          status=422, details={"field": "amount"})
+    if decision.missing_permission:
+        return None, fail("forbidden",
+                          "لا تملك صلاحية خصم المحفظة." if action == "wallet.debit"
+                          else "لا تملك صلاحية شحن المحفظة.",
+                          status=403, details={"missing_permission": decision.missing_permission})
+    if not decision.allowed:
+        return None, fail("limit_exceeded",
+                          "تم منع الخصم: المبلغ يتجاوز حدّ الأمان للخصم الواحد.",
+                          status=422, details={"violations": list(decision.violations)})
+    return decision, None
+
+
 def wallets_credit(wallet_id: int):
     data = _payload()
+    _gate, denied = _safety_gate("wallet.credit")
+    if denied is not None:
+        return denied
     actor_type, actor_id = _actor()
     try:
         result = WalletService().credit(
@@ -169,7 +218,12 @@ def wallets_credit(wallet_id: int):
 
 def wallets_debit(wallet_id: int):
     data = _payload()
+    gate, denied = _safety_gate("wallet.debit", data.get("amount"))
+    if denied is not None:
+        return denied
     actor_type, actor_id = _actor()
+    meta = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+    meta = {**meta, "requires_approval": gate.requires_approval}
     try:
         result = WalletService().debit(
             tenant_id=_tid(),
@@ -180,7 +234,7 @@ def wallets_debit(wallet_id: int):
             reference_type=str(data.get("reference_type") or ""),
             reference_id=data.get("reference_id"),
             notes=str(data.get("notes") or "")[:500],
-            metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
+            metadata=meta,
         )
     except BusinessOSValidationError as exc:
         return _validation_error(exc)

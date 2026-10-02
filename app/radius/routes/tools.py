@@ -258,6 +258,7 @@ def tool_test_auth():
                 called_station_id=form_data["called_station_id"],
                 nas_ip=form_data["nas_ip"],
                 nas_port_type=form_data["nas_port_type"],
+                simulate=True,  # zero-w1 L1: لا يحجز مقعدَ جهاز
             )
             decision = authorize(req)
             result = {

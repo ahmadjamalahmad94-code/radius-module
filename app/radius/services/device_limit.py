@@ -283,11 +283,112 @@ def replace_oldest(tenant_id: int, username: str, sessions: list[dict]) -> int:
         return 0
 
 
+# ── zero-w1 L1: حجزٌ ذرّيٌّ للمقعد بين Access-Accept وAcct-Start ─────────────
+#: مهلة الحجز بالثواني: Acct-Start يصل عادةً خلال ثوانٍ من القبول. بعدها يسقط
+#: الحجز (جهازٌ قُبل ولم يبدأ جلسة لا يحجب غيره إلى الأبد).
+CLAIM_TTL_SECONDS = 60
+
+
+def _mac_norm(raw: Any) -> str:
+    return "".join(ch for ch in str(raw or "").lower() if ch.isalnum())
+
+
+def _device_key(req) -> str:
+    mac = _mac_norm(getattr(req, "calling_station_id", ""))
+    return ("mac:" + mac) if mac else ""
+
+
+def _materialized_macs(conn, tid: int, user: str, since: _dt.datetime) -> dict:
+    """{mac: أحدث بدء جلسة} لجلسات radacct (مفتوحة أو مغلقة) التي بدأت منذ
+    ``since`` — حجزٌ ظهرت جلسته (Acct-Start) صار محسوبًا في radacct أو انتهى؛
+    لا يُعدّ معلّقًا بعدها (جهازٌ دخل ثمّ خرج لا يحجب غيره حتى المهلة)."""
+    out: dict = {}
+    for r in conn.execute(
+            "SELECT callingstationid, acctstarttime FROM radacct "
+            "WHERE tenant_id=? AND username=? AND " + acct_norm_sql("acctstarttime")
+            + " >= ?", (tid, user, to_space_ts(since.isoformat()))).fetchall():
+        mac = _mac_norm(r["callingstationid"])
+        st = _parse_acct_dt(r["acctstarttime"])
+        if mac and st is not None and (mac not in out or st > out[mac]):
+            out[mac] = st
+    return out
+
+
+def claim_slot(tenant_id: int, username: str, req, *, limit: int,
+               mac_aware: bool, replace: bool = False) -> bool:
+    """يحجز مقعدَ جهاز الطالب ذرّيًّا. True = مسموح (وحُجز)، False = بلغ الحدّ.
+
+    سباق round 6 (L1): كلُّ متزامنٍ يقرأ radacct فارغًا (لا Acct-Start بعد)
+    فيُقبل الثمانية. هنا العدُّ والحجز داخل ``BEGIN IMMEDIATE`` واحد: الجلسات
+    الحيّة لأجهزةٍ أخرى + حجوزاتُ أجهزةٍ أخرى خلال ``CLAIM_TTL_SECONDS`` لم تظهر
+    جلستُها بعد. ``replace`` (وضع «فصل الأقدم»): لا رفض — يُسقط أقدمَ الحجوزات
+    المعلّقة ليُفسح مكانًا (الأحدث يفوز، كما يُفصل أقدمُ جهازٍ حيّ). fail-open:
+    أيّ خطأ ⇒ True (السعة ليست أمانًا، كبقيّة الوحدة).
+
+    طلبٌ بلا MAC (لا نميّز «نفس الجهاز» — إعادةُ إرسالٍ من الراوتر لا تُعدّ
+    جهازًا آخر) أو محاكاةٌ (``simulate`` — أداة «اختبار المصادقة») يُفحص فقط ولا
+    يحجز شيئًا."""
+    if limit <= 0:
+        return True
+    try:
+        from ..db.connection import transaction
+        key = _device_key(req)
+        now = _dt.datetime.utcnow()
+        cutoff = (now - _dt.timedelta(seconds=CLAIM_TTL_SECONDS)).isoformat()
+        tid, user = int(tenant_id), str(username)
+        with transaction() as conn:
+            conn.execute("DELETE FROM device_limit_claims WHERE claimed_at < ?",
+                         (cutoff,))
+            live = active_other_devices(tid, user, req, mac_aware=mac_aware)
+            live_macs = {_mac_norm(d.get("callingstationid")) for d in live}
+            rows = conn.execute(
+                "SELECT device_key, claimed_at FROM device_limit_claims "
+                "WHERE tenant_id=? AND username=? AND device_key<>? "
+                "ORDER BY claimed_at",
+                (tid, user, key)).fetchall()
+            started = (_materialized_macs(
+                conn, tid, user,
+                now - _dt.timedelta(seconds=CLAIM_TTL_SECONDS + 10)) if rows else {})
+            pending = []
+            for r in rows:
+                dk = str(r["device_key"])
+                mac = dk[4:] if dk.startswith("mac:") else ""
+                if mac and mac in live_macs:
+                    continue          # محسوبٌ في الجلسات الحيّة أصلًا
+                at = _parse_acct_dt(r["claimed_at"])
+                st = started.get(mac) if mac else None
+                if st is not None and at is not None and st >= at - _dt.timedelta(seconds=10):
+                    continue          # تجسّد (بدأت جلسته — حيّةً أو انتهت)
+                pending.append(r)
+            used = len(live) + len(pending)
+            if used >= limit:
+                if not replace:
+                    return False
+                # الأحدث يفوز: أسقط أقدم الحجوزات المعلّقة بقدر الحاجة. (الجلسات
+                # الحيّة يفصلها replace_oldest في _check_concurrent.)
+                for r in pending[: used - limit + 1]:
+                    conn.execute("DELETE FROM device_limit_claims WHERE tenant_id=? "
+                                 "AND username=? AND device_key=?",
+                                 (tid, user, r["device_key"]))
+            if not key or getattr(req, "simulate", False):
+                return True
+            conn.execute(
+                "INSERT INTO device_limit_claims(tenant_id, username, device_key, claimed_at) "
+                "VALUES(?,?,?,?) ON CONFLICT(tenant_id, username, device_key) "
+                "DO UPDATE SET claimed_at=excluded.claimed_at",
+                (tid, user, key, now.isoformat()))
+        return True
+    except Exception:  # noqa: BLE001 — لا نَكسر المصادقة على خطأ الحجز
+        _LOG.warning("device_limit.claim_slot failed user=%r", username, exc_info=True)
+        return True
+
+
 __all__ = [
     "MODE_REJECT", "MODE_REPLACE", "GLOBAL_MODE_DEFAULT", "GLOBAL_COUNT_DEFAULT",
     "GLOBAL_MODE_KEY", "GLOBAL_MODE_KEY_SUBS", "GLOBAL_MODE_KEY_CARDS",
     "GLOBAL_COUNT_KEY_SUBS", "GLOBAL_COUNT_KEY_CARDS",
     "is_card", "global_mode", "global_count",
     "effective_mode", "effective_limit", "active_other_devices", "replace_oldest",
-    "parse_acct_dt", "acct_norm_sql", "to_space_ts",
+    "parse_acct_dt", "acct_norm_sql", "to_space_ts", "claim_slot",
+    "CLAIM_TTL_SECONDS",
 ]

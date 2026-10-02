@@ -49,6 +49,8 @@ class AuthRequest:
     nas_port: str = ""                 # NAS-Port
     nas_port_type: str = ""
     user_agent: str = ""               # من البوابة عند توفّره (anti-mac-clone)
+    # zero-w1 L1: محاكاة (أداة «اختبار المصادقة») — لا تحجز مقعدَ جهاز.
+    simulate: bool = False
 
 
 @dataclass
@@ -990,6 +992,31 @@ def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan],
         return None
 
 
+def _claim_device_slot(sub: Subscriber, plan: Optional[AccessPlan],
+                       req: AuthRequest) -> Optional[AuthDecision]:
+    """zero-w1 L1 — الخطوة الذرّيّة الأخيرة قبل Access-Accept.
+
+    ``_check_concurrent`` يعدّ جلسات radacct المفتوحة، وبين القبول وAcct-Start
+    نافذةٌ يمرّ فيها كلُّ متزامن (بطاقةُ جهازٍ واحد قُبلت من 8 أجهزة في أوّل
+    دخول). هنا يُحجز مقعدُ الجهاز تحت قفل الكتابة (device_limit.claim_slot):
+    من لا يجد مقعدًا يُرفض «بلغت الحد الأقصى…». fail-open كالفحص الأصليّ."""
+    try:
+        from . import device_limit
+        limit, mac_aware = device_limit.effective_limit(sub, plan)
+        if limit <= 0:
+            return None
+        replace = (device_limit.effective_mode(sub.tenant_id, sub)
+                   == device_limit.MODE_REPLACE)
+        if device_limit.claim_slot(sub.tenant_id, sub.username, req, limit=limit,
+                                   mac_aware=mac_aware, replace=replace):
+            return None
+        return _reject("concurrent_limit")
+    except Exception:  # noqa: BLE001 — لا نَكسر المصادقة على خطأ الحجز
+        _LOG.warning("policy_engine: device-slot claim failed for %r",
+                     req.username, exc_info=True)
+        return None
+
+
 def _check_provider_active_cap(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
     """سقف «اكتف» — أعلى سلطة على عدد الجلسات المتزامنة لهذه النسخة.
 
@@ -1236,6 +1263,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # لحدّه الخاص مَحلًّا من الإجمالي العام. سقف يَأتي من عقد المزوّد
         # (limits.active_online.max). لا يُحتسَب في fail2ban (رفض سعة لا فشل auth).
         lambda: _check_provider_active_cap(sub, req),
+        # zero-w1 L1: آخر خطوة — حجزٌ ذرّيٌّ لمقعد الجهاز (بعد كلّ رفضٍ ممكن
+        # كي لا يحجز طلبٌ مرفوضٌ مقعدًا).
+        lambda: _claim_device_slot(sub, plan, req),
     ):
         bad = fn()
         if bad is not None:
