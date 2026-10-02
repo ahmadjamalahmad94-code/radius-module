@@ -1648,6 +1648,26 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
   }
   .hr-entity-link--pill,.pg-toggle,.an-chip,.usage-tab,.so-flink,.ops-link,
   .co-sales-link,.gd-go,.nnav a,nav[class] > a{ display:inline-flex;align-items:center; }
+  /* r6-lows: المتبقّي بعد r6ui — 269 هدفًا في 45 صفحة (Pixel 7، 360). أزرارُ أيقونةٍ مستقلّة
+     (إرسال نموذج 34، حذف الصف 36، النجمة 30×25، إزالة الشعار 26، مرقِّم الجدول 30)… */
+  .an-test,.rc-denom-remove,.pr-star-btn,.mtld-logo-clear,.dt-controls button,.dt-pages button,
+  .rc-denom-quick button{
+    min-width:40px !important;min-height:40px !important;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  /* …ورقائقُ/تبويباتٌ/أزرارٌ نصّيّةٌ وحقولٌ بارتفاع 30–38px (يُرفع البُعدُ الأصغرُ وحده). */
+  .nc-tab,.hub-tabs > a,.acs-segment-btn,.df-mini,.qk-orient button,.fb-filters a,.cdl-fchip,
+  .spdx-modeswitch__btn,.cs-mode,.gd-copy-btn,.gd-mock-btn,.hbsel-trigger,
+  .hub-input,.ctpl-input,.pl-cred input,.pl-webhook-form input,.sn-days input,.field > input,
+  [data-guide-bound][role=button]{
+    min-height:40px !important;
+  }
+  .nc-tab,.fb-filters a,.hub-tabs > a,.cs-mode{ display:inline-flex;align-items:center; }
+  /* روابطُ عناوينَ مستقلّة (عنوانُ الإشعار، اسمُ العرض، اسمُ الحزمة في بطاقتها، «العودة»):
+     نوسّع منطقةَ اللمس بالحشوة ونُلغي أثرَها على التخطيط بهامشٍ سالبٍ مساوٍ — لا يتحرّك سطر. */
+  .nc-title > a,.pl-name-link,.swsvf-back{ padding-block:10px;margin-block:-10px; }
+  .pl-name-link{ min-width:40px; } /* أسماءُ عروضٍ قصيرة («ساعة» 33px) */
+  h2 > .hr-entity-link{ padding-block:5px; }
 }
 
 /* ── D11: خطوطُ حقولٍ أصغر من 16px تجعل Safari/iOS يُكبّر الصفحة تلقائيًّا

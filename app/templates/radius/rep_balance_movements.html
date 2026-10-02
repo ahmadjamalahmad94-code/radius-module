@@ -114,7 +114,7 @@
   {% if can_submit('radius.demo_cleanup_page', 'GET') %}<a href="{{ url_for('radius.demo_cleanup_page') }}"
      style="flex:none;display:inline-flex;align-items:center;gap:7px;text-decoration:none;
      background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font-weight:900;
-     font-size:12.5px;border-radius:11px;padding:9px 16px">{% endif %}
+     font-size:12.5px;border-radius:11px;padding:9px 16px;min-height:40px;box-sizing:border-box">{% endif %}
     <i class="fa-solid fa-broom"></i> {{ _('تنظيف البيانات التجريبيّة') }}
     <span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.2);font-size:9.5px"><i class="fa-solid fa-crown" style="font-size:8px"></i> {{ _('المالك') }}</span>
   {% if can_submit('radius.demo_cleanup_page', 'GET') %}</a>{% endif %}

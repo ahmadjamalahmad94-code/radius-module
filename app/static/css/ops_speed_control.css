@@ -249,6 +249,11 @@
 .opsx-redesign .spdx-slider--row { max-width: 460px; }
 .opsx-redesign .spdx-slider--mini { max-width: 320px; }
 .opsx-redesign .spdx-slider--mini .spdx-slider__rail { height: 22px; }
+/* هدفُ لمسٍ ≥40px على الجوّال (كان 26/22px): الحاويةُ أطول، والمسارُ المرسومُ 8px والمقبضُ في المنتصف كما هما. */
+@media (pointer: coarse) {
+  .opsx-redesign .spdx-slider__rail,
+  .opsx-redesign .spdx-slider--mini .spdx-slider__rail { height: 40px; }
+}
 .opsx-redesign .spdx-slider--mini .spdx-slider__bubble { margin-block-end: 4px; }
 
 /* ── Toggle switch ─────────────────────────────────────────────────────── */

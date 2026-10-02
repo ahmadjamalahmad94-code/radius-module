@@ -27,6 +27,8 @@
   .one-time-alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;
                   padding:14px 16px;margin-bottom:18px}
   .copy-btn{font-size:11px;padding:3px 8px;cursor:pointer}
+  /* هدفُ لمسٍ ≥40px على الجوّال (زرُّ «تهيئة وتوليد المفاتيح» 28.5px، أيقوناتُ الصفّ) */
+  @media (pointer: coarse){ .btn{min-height:40px} .btn[title]{min-width:40px} }
   /* عمودٌ ثابتُ العرض (340px) بجوار 1fr كان يدفع نموذجَ الإضافةِ كلَّه خارجَ شاشةِ الجوّال
      يسارًا (RTL) — حقولُه عند x سالب بلا أيِّ تمرير. عمودٌ واحدٌ تحت 900px. */
   .wg-split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
