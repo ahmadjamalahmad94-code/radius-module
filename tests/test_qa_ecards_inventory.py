@@ -125,16 +125,27 @@ def test_atomic_claim_prevents_double_sell(app):
         pkg = _inventory_package(s)
         s.add_inventory_stock(package_id=pkg["id"], count=2, actor="qa")
         seen = set()
+        # Distinct buyers need distinct mobiles: an ACTIVE store account's
+        # mobile is unique per tenant (migration 110, c5296115 owner decision
+        # «فرادة الجوال») — a reused number is refused at registration.
         for i in range(2):
-            u = s.create_card_user(display_name=f"B{i}", mobile="059")
+            u = s.create_card_user(display_name=f"B{i}", mobile=f"059900010{i}")
             s.recharge_wallet(card_user_id=u["id"], amount="10.00", actor="qa")
             p = s.purchase_package(card_user_id=u["id"], package_id=pkg["id"], actor="qa")
             seen.add(int(p["card_id"]))
         assert len(seen) == 2  # two distinct cards, never the same one
-        u3 = s.create_card_user(display_name="B3", mobile="059")
+        u3 = s.create_card_user(display_name="B3", mobile="0599000103")
         s.recharge_wallet(card_user_id=u3["id"], amount="10.00", actor="qa")
         with pytest.raises(_err(), match="نفد مخزون"):
             s.purchase_package(card_user_id=u3["id"], package_id=pkg["id"], actor="qa")
+
+
+def test_second_active_buyer_with_same_mobile_is_refused(app):
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        s.create_card_user(display_name="First", mobile="0599000301")
+        with pytest.raises(_err(), match="رقم الجوال مسجّل مسبقًا"):
+            s.create_card_user(display_name="Second", mobile="0599000301")
 
 
 def test_import_rows_as_stock(app):
@@ -157,7 +168,7 @@ def test_purchases_file_paginated_with_detail(app):
         pkg = _inventory_package(s)
         s.add_inventory_stock(package_id=pkg["id"], count=3, actor="qa")
         for i in range(2):
-            u = s.create_card_user(display_name=f"Buyer{i}", mobile="059")
+            u = s.create_card_user(display_name=f"Buyer{i}", mobile=f"059900020{i}")
             s.recharge_wallet(card_user_id=u["id"], amount="10.00", actor="qa")
             s.purchase_package(card_user_id=u["id"], package_id=pkg["id"], actor="qa")
         f = s.purchases_file(pkg["id"], page=1, per_page=1)
