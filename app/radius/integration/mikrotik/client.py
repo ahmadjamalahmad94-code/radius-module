@@ -204,7 +204,14 @@ class MikrotikClient:
     def _read_byte(self) -> int:
         if self._stream is None:
             raise ConnectError("الاتصال مغلق")
-        b = self._stream.read(1)
+        try:
+            b = self._stream.read(1)
+        except OSError as e:  # TimeoutError / reset mid-reply
+            # Like _send: a router dropping mid-read is a connection fault,
+            # not an «unexpected error» (callers log ConnectError as a
+            # one-line warning; a raw TimeoutError printed a full traceback
+            # on every sweep of an unreachable router — client21 GR3).
+            raise ConnectError(f"انقطع الاتصال أثناء القراءة: {e}") from e
         if not b:
             raise ProtocolError("EOF — الراوتر أغلق الاتصال")
         return b[0]
