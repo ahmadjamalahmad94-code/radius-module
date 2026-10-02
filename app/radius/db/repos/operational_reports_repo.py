@@ -96,7 +96,8 @@ def _sanitize_sync(items: list[dict]) -> list[dict]:
 
 def list_report(tenant_id: int, slug: str, *, query: str = "",
                 limit: int = 100, offset: int = 0,
-                date_from: str = "", date_to: str = "") -> dict:
+                date_from: str = "", date_to: str = "",
+                result: str = "", source: str = "") -> dict:
     """Return a safe operational report payload for a known slug.
 
     ``date_from``/``date_to`` = يوم محلّيّ شامل (نفس صفحات تقارير الويب، عبر
@@ -111,6 +112,12 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
     offset = _safe_offset(offset)
     query = (query or "").strip()
     lower, upper, upper_excl = local_bounds(date_from, date_to, tenant_id)
+    # login-event slugs: the web's result (الكل/نجاح/فشل) + source filters.
+    result = (result or "").strip().lower()
+    result = result if result in ("success", "fail") else ""
+    source = (source or "").strip().lower()
+    source = source if source in ("panel", "portal", "network") else ""
+    matched: int | None = None
 
     def _rng(column: str) -> tuple[str, list[Any]]:
         where, params = range_sql(column, lower, upper, upper_excl)
@@ -119,7 +126,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
     # fix3 (F02 H2): the request admin's subscriber scope — the ONE predicate
     # (services/subscriber_scope) shared with the web report pages.
     from ...services.subscriber_scope import (audit_scope_sql, current_scope_admin_id,
-                                              owner_scope_clause, scope_sql)
+                                              scope_sql)
     _scope_id = current_scope_admin_id(tenant_id=int(tenant_id))
 
     def _s(column: str, by: str = "username") -> tuple[str, list[Any]]:
@@ -175,27 +182,14 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
-    elif slug == "login-states":
-        data = fetch_login_events(tenant_id, q=query, limit=limit + offset,
+    elif slug in ("login-states", "login-status"):
+        # zero-w2: «login-status» = the web /reports/login_status page — the
+        # flat login-attempts log (login_events), NOT a subscribers roster.
+        data = fetch_login_events(tenant_id, q=query, result=result, source=source,
+                                  limit=limit + offset,
                                   date_from=date_from, date_to=date_to)
         items = list(data.get("rows") or [])[offset:offset + limit]
-    elif slug == "login-status":
-        sql = """
-            SELECT username, last_login_at, last_seen_at, status, expire_at, online_count
-            FROM subscribers
-            WHERE tenant_id = ? AND deleted_at IS NULL
-        """
-        vals = [tenant_id]
-        if _scope_id is not None:
-            _oc, _ov = owner_scope_clause(int(_scope_id), tenant_id=int(tenant_id))
-            sql += _oc
-            vals.extend(_ov)
-        if query:
-            sql += " AND username LIKE ?"
-            vals.append(f"%{query}%")
-        sql += " ORDER BY COALESCE(last_seen_at, '') DESC LIMIT ? OFFSET ?"
-        vals.extend([limit, offset])
-        items = _rows(sql, vals)
+        matched = int(data.get("matched") or 0)
     elif slug == "mac-history":
         sql = """
             SELECT username, callingstationid AS mac, nasipaddress,
@@ -274,24 +268,14 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             scope=_audit_scope,
         ))
     elif slug == "manager-login-status":
-        sql = """
-            SELECT a.id, a.username, a.full_name, a.email, a.role_id, a.enabled,
-                   a.last_login_at, a.created_at, r.name AS role_name,
-                   r.display_name AS role_display_name
-            FROM admins a
-            LEFT JOIN roles r ON r.id = a.role_id
-            WHERE COALESCE(a.deleted_at, '') = ''
-        """
-        vals = []
-        if _scope_id is not None:
-            sql += " AND a.id = ?"     # a scoped manager: his own row only
-            vals.append(int(_scope_id))
-        if query:
-            sql += " AND (a.username LIKE ? OR a.full_name LIKE ? OR a.email LIKE ?)"
-            vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
-        sql += " ORDER BY COALESCE(a.last_login_at, '') DESC LIMIT ? OFFSET ?"
-        vals.extend([limit, offset])
-        items = _rows(sql, vals)
+        # zero-w2: same source as the web /reports/manager_login_status page —
+        # manager login attempts (login_events, actor locked to "admin"); the
+        # old admins roster had no tenant filter and ignored the dates.
+        data = fetch_login_events(tenant_id, actor="admin", q=query, result=result,
+                                  limit=limit + offset,
+                                  date_from=date_from, date_to=date_to)
+        items = list(data.get("rows") or [])[offset:offset + limit]
+        matched = int(data.get("matched") or 0)
     elif slug == "user-events":
         items = _sanitize_audit(_audit_rows(
             tenant_id,
@@ -370,6 +354,10 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         "offset": offset,
         "date_from": date_from or "",
         "date_to": date_to or "",
+        "result": result,
+        "source": source,
+        # total rows matching the filters (login-event slugs; None elsewhere)
+        "matched": matched,
     }
 
 

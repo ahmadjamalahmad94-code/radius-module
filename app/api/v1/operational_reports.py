@@ -53,6 +53,10 @@ def operational_report(slug: str):
             offset=offset,
             date_from=date_from.strip(),
             date_to=date_to.strip(),
+            # login-status / manager-login-status / login-states: the web
+            # page's «النتيجة» and «المصدر» filters.
+            result=(request.args.get("result") or "").strip(),
+            source=(request.args.get("source") or "").strip(),
         )
     except ReportDateError as exc:
         return fail("validation_error", exc.message, status=422)
