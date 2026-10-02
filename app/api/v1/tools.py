@@ -259,6 +259,7 @@ def test_auth():
         called_station_id=str(data.get("called_station_id") or ""),
         nas_ip=str(data.get("nas_ip") or ""),
         nas_port_type=str(data.get("nas_port_type") or "Ethernet"),
+        simulate=True,  # zero-w1 L1: a diagnostic never claims a device slot
     )
     try:
         decision = authorize(req)
