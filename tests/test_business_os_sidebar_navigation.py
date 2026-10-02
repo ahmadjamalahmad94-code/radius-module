@@ -17,6 +17,9 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "business-os-sidebar-token")
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # بلا NO_SEED يَزرع create_app بيانات تجريبية فيُطفئ تجاوز حارس دورة حياة
+    # الترخيص (conftest) فتُحوَّل كل الصفحات إلى «فعّل الترخيص» (302).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     reset_for_tests(db_file)
     from app import create_app
 
@@ -79,14 +82,21 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "النشاط والأحداث": "/admin/radius/reports/manager_events",
         "المالية والموازنات": "/admin/radius/reports/used_cards",
         "بوابات العملاء": "/admin/radius/customer-portals",
-        "التحصيل والمدفوعات": "/admin/radius/finance/collection",
         "إعدادات النظام": "/admin/radius/settings",
-        "المزامنة": "/admin/radius/sync",
-        "المستأجرون": "/admin/radius/tenants",
     }
     for label, href in expected.items():
         assert label in sidebar
         assert href in sidebar
+
+    # قرارات مالك موثَّقة — هذه البنود لم تَعُد في الشريط:
+    #  • «المزامنة» (طابور المزامنة الخامل) أُزيل نهائيًّا — 6ec81128.
+    #  • «المستأجرون» و«التحصيل والمدفوعات» قدرتا مزوّد default-off (مخفيّتان
+    #    حتى عن السوبر ما لم يَمنحهما العقد) — 82cc1d18.
+    for label, href in (("المزامنة", "/admin/radius/sync"),
+                        ("المستأجرون", "/admin/radius/tenants"),
+                        ("التحصيل والمدفوعات", "/admin/radius/finance/collection")):
+        assert f'href="{href}"' not in sidebar, href
+        assert f">{label}<" not in sidebar, label
 
     assert "/admin/radius/card-pricing" not in sidebar
 
@@ -159,12 +169,17 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/reports/distributors",
         "/admin/radius/reports/archive",
         "/admin/radius/customer-portals",
+        "/admin/radius/settings",
+        # غير مرتبط من الشريط (6ec81128) لكنّ المسار يبقى مسجّلًا ويُصيَّر.
+        "/admin/radius/sync",
+    ]
+    # قدرات مزوّد default-off (82cc1d18): بلا منح العقد يُعاد توجيه GET إلى
+    # لوحة التحكم — حتى للسوبر.
+    default_off_routes = [
         "/admin/radius/finance/collection",
         "/admin/radius/finance/collection?tab=review",
         "/admin/radius/finance/collection?tab=reconciliation",
         "/admin/radius/finance/collection?tab=settings",
-        "/admin/radius/settings",
-        "/admin/radius/sync",
         "/admin/radius/tenants",
     ]
     with app.test_client() as client:
@@ -174,6 +189,11 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
             response = client.get(route)
             if response.status_code != 200 or "text/html" not in response.content_type:
                 failures.append((route, response.status_code, response.content_type))
+        for route in default_off_routes:
+            response = client.get(route)
+            if (response.status_code not in (302, 303)
+                    or not response.headers.get("Location", "").rstrip("/").endswith("/admin/radius")):
+                failures.append((route, response.status_code, response.headers.get("Location")))
 
     assert failures == []
 

@@ -27,6 +27,10 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_IP", "10.10.0.1")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_PUBKEY", "U" * 43 + "=")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT", "187.77.70.18:51820")
+    # v6 SSTP onboarding needs the panel's public SSTP host — there is no
+    # hard-coded default by design (memory accel-host-hardcoded-default-landmine.md).
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "187.77.70.18")
+    monkeypatch.setenv("HOBERADIUS_MGMT_TUNNEL_POOL", "10.50.0.0/24")
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]

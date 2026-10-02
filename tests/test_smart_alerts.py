@@ -41,12 +41,16 @@ def _login(client) -> None:
     from app.radius.db.repos import admins_repo
 
     username = f"sa_{uuid4().hex[:8]}"
-    admins_repo.create_admin(
+    created = admins_repo.create_admin(
         username=username,
         password="sa-pass",
         full_name="اختبار التنبيهات",
         is_super_admin=True,
     )
+    # 6824f26c (ذاكرة owner-only-bypass.md): علَم is_super_admin بلا دور لم يَعُد
+    # يَمنح تجاوز RBAC — الحساب الثاني يأخذ أدنى دور فتُرجع صفحات التنبيهات 403.
+    # الاختبار يفحص الميزة لا الصلاحيات، فيَدخل بحساب «شريك/مالك».
+    admins_repo.set_co_owner(created.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": "sa-pass"},

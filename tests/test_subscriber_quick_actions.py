@@ -682,7 +682,10 @@ def test_plan_minutes_falls_back_to_validity_for_quota_plans(client, app):
     assert 'data-plan-minutes="43200"' in row  # 30 days × 1440 (validity fallback)
 
 
-def test_add_time_modal_is_days_only_no_hours(client, app):
+def test_add_time_modal_offers_days_hours_minutes(client, app):
+    """قرار المالك 2026-08-30 (3ba2a236، ذاكرة extend-time-units-minutes-hours.md):
+    «إضافة وقت» لم تَعُد أيّامًا فقط — حقل مدّة + محدِّد وحدة (أيّام/ساعات/دقائق)
+    يُحوَّل إلى دقائق. يَحلّ محلّ حارس «أيّام فقط» القديم (7171f8d7)."""
     with app.app_context():
         plan = _seed_plan("Days Only Plan", price=30)
         _seed_subscriber(
@@ -693,8 +696,12 @@ def test_add_time_modal_is_days_only_no_hours(client, app):
     _auth_session(client)
     html = client.get("/admin/radius/subscribers").get_data(as_text=True)
     extend_modal = html.split('data-usq-modal="extend"', 1)[1].split('data-usq-modal="sms"', 1)[0]
-    assert "data-usq-days" in extend_modal       # days input kept
-    assert "data-usq-hours" not in extend_modal  # hours input removed
+    assert "data-usq-dur-value" in extend_modal   # one amount field
+    assert "data-usq-dur-unit" in extend_modal    # + its unit selector
+    unit = extend_modal.split("data-usq-dur-unit", 1)[1].split("</select>", 1)[0]
+    for minutes in ('value="1440"', 'value="60"', 'value="1"'):   # days / hours / minutes
+        assert minutes in unit, minutes
+    assert 'value="1440" selected' in unit        # days stays the default unit
 
 
 def test_loan_modal_ajax_success_returns_json_stays_on_page(client, app):

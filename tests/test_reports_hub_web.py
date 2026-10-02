@@ -113,9 +113,12 @@ def test_sidebar_groups_reports_into_five_families(app):
     # cross-link to the accounting hub stays
     assert "تقارير المحاسبة" in html
     # individual report sub-labels now LIVE in the sidebar (one entry each)
-    for label in ("حالات تسجيل الدخول", "سجل تغييرات الماك", "كروت الشحن المستخدمة",
+    # «الكروت المستخدمة» (لا «كروت الشحن المستخدمة») — شكوى المالك b1cb7ce8:
+    # الجدول كروت وصول عاديّة لا كروت شحن رصيد.
+    for label in ("حالات تسجيل الدخول", "سجل تغييرات الماك", "الكروت المستخدمة",
                   "معاملات الكاش", "تحويلات الرصيد", "أحداث المدراء"):
         assert label in html, label
+    assert "كروت الشحن المستخدمة" not in html
 
 
 def test_exports_and_archive_post_stay_standalone(app):

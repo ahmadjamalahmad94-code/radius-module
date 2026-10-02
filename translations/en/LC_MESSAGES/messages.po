@@ -52241,3 +52241,126 @@ msgstr "Consumption thresholds that trigger quota alerts for subscribers (CSV). 
 
 msgid "عروض البطاقات"
 msgstr "Card Offers"
+
+msgid "إدارة البيانات"
+msgstr "Data management"
+
+msgid "دفع بيانات التوزيع"
+msgstr "Push DHCP settings"
+
+msgid "تغيير عنوان التصفح العام (Public)"
+msgstr "Change public browsing IP"
+
+msgid "سجل إجراءات المايكروتيك"
+msgstr "MikroTik actions log"
+
+msgid "أحداث النظام"
+msgstr "System events"
+
+msgid "حركات مشتركي سوق البطاقات"
+msgstr "Card store customer activity"
+
+msgid "سجل حركات مشتركي سوق البطاقات"
+msgstr "Card store customer activity log"
+
+msgid "تعديل باقات المشتركين"
+msgstr "Subscriber plan changes"
+
+msgid "الكروت المستخدمة"
+msgstr "Used vouchers"
+
+msgid "سجل الإشعارات"
+msgstr "Notifications log"
+
+msgid "أصوات الإشعارات"
+msgstr "Notification sounds"
+
+msgid "ربط SMS (TweetSMS)"
+msgstr "SMS connection (TweetSMS)"
+
+msgid "المعمل (تجريبيّ)"
+msgstr "Lab (experimental)"
+
+msgid "المعمل"
+msgstr "Lab"
+
+msgid "تجريبيّ"
+msgstr "Experimental"
+
+msgid "تحديث النظام"
+msgstr "System update"
+
+msgid "ترحيل / استيراد عميل"
+msgstr "Migrate / import customer"
+
+msgid "تصفير البيانات"
+msgstr "Data reset"
+
+msgid "تنظيف البيانات التجريبيّة"
+msgstr "Demo data cleanup"
+
+msgid "إجمالي مبيعات اليوم"
+msgstr "Today's total sales"
+
+msgid "البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ."
+msgstr "Vouchers sold today (first login) and their value per currency — in the panel's local time."
+
+msgid "عدد البطاقات المباعة"
+msgstr "Vouchers sold"
+
+msgid "قيمة البطاقات"
+msgstr "Vouchers value"
+
+msgid "تقرير المبيعات اليوميّة"
+msgstr "Daily sales report"
+
+msgid "توقيت اللوحة"
+msgstr "Panel time"
+
+msgid "الأيّام المتبقّية على ترخيص اللوحة"
+msgstr "Days left on the panel license"
+
+msgid "يتوفّر تحديث جديد"
+msgstr "A new update is available"
+
+msgid "كتم صوت الإشعارات"
+msgstr "Mute notification sounds"
+
+msgid "بحث (رقم الجوال / إجراء)…"
+msgstr "Search (mobile number / action)…"
+
+msgid "نوع الحدث"
+msgstr "Event type"
+
+msgid "شحن بطاقة"
+msgstr "Voucher top-up"
+
+msgid "العميل"
+msgstr "Customer"
+
+msgid "دليل: عروض البطاقات — كيف تستخدمني"
+msgstr "Guide: Voucher offers — how to use me"
+
+msgid "دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني"
+msgstr "Guide: Live CoA control and IP change — how to use me"
+
+msgid "دليل: شحن الرصيد ولوحة الشحن — كيف تستخدمني"
+msgstr "Guide: Credit top-up and the recharge dashboard — how to use me"
+
+msgid "دليل: حدّ الأجهزة وركل الجلسات — كيف تستخدمني"
+msgstr "Guide: Device limit and session kicking — how to use me"
+
+msgid "دليل: الموزّعون — كيف تستخدمني"
+msgstr "Guide: Distributors — how to use me"
+
+msgid "دليل: صلاحيات المدير الدقيقة — كيف تستخدمني"
+msgstr "Guide: Fine-grained manager permissions — how to use me"
+
+msgid "دليل: معالج ترحيل البيانات — كيف تستخدمني"
+msgstr "Guide: Data migration wizard — how to use me"
+
+msgid "دليل: الوصول البعيد وWinBox — كيف تستخدمني"
+msgstr "Guide: Remote access and WinBox — how to use me"
+
+msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
+msgstr "Guide: Management tunnels and the provisioning script — how to use me"

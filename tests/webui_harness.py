@@ -149,6 +149,18 @@ class BrowserProxy:
         path = parts.path + (("?" + parts.query) if parts.query else "")
         headers = {k: v for k, v in req.headers.items()
                    if k.lower() not in ("host", "content-length")}
+        if not any(k.lower() == "cookie" for k in headers):
+            # WebKit (iPhone emulation) stores the session cookie but never
+            # exposes a Cookie header on intercepted requests, so the login
+            # never reached Flask and every page bounced to /login. Rebuild
+            # it from the context's jar (Chromium already sends it).
+            try:
+                jar = self.page.context.cookies(req.url)
+            except Exception:  # noqa: BLE001 — context closing; nothing to send
+                jar = []
+            if jar:
+                headers["Cookie"] = "; ".join(
+                    f"{c['name']}={c['value']}" for c in jar)
         body = req.post_data_buffer
         resp = self.client.open(path, method=req.method, headers=headers,
                                 data=body, base_url=BASE)

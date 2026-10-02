@@ -46,8 +46,12 @@ def client(app):
 def _login(client):
     from app.radius.db.repos import admins_repo
     u = f"a_{uuid4().hex[:8]}"
-    admins_repo.create_admin(username=u, password="pw", full_name="A",
+    created = admins_repo.create_admin(username=u, password="pw", full_name="A",
                              is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
+    # الوصول البعيد/الأنفاق/التهيئة صفحات مقصورة على المالك (auth/owner.py
+    # OWNER_ONLY؛ 6824f26c، ذاكرة owner-only-bypass.md): «مدير عام» وحده لا
+    # يراها، فنَدخل بحساب «شريك/مالك».
+    admins_repo.set_co_owner(created.id, True)
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "pw"}, follow_redirects=False)
     assert res.status_code in {302, 303}
@@ -183,8 +187,9 @@ def test_onboarding_card_dots_and_scrollbar(app, client):
             "SELECT id FROM nas_devices WHERE name='CCR-OB'").fetchone()["id"])
         html = client.get(
             f"/admin/radius/mt/{nid}/onboarding-script").get_data(as_text=True)
+    # 42001c69 نقل الصفحة إلى مكوّن «بطاقة الكود» الموحّد (_partials/code_card.html):
     # real 3-dot window header (not the clipped box-shadow hack)
-    assert 'class="ob-dots"' in html
+    assert 'class="hcode-dots"' in html
     assert "<i></i><i></i><i></i>" in html
     # custom on-brand scrollbar applied to the code surface
-    assert "ob-code hb-scroll hb-scroll--dark" in html
+    assert "hcode-code hb-scroll hb-scroll--dark" in html

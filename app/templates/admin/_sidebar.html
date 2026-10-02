@@ -1025,7 +1025,7 @@
         {{ sub_item('radius.access_control_page', _('التحكم بالدخول'),
             '/access-control' in path) }}
         {# إدارة أقسام الواجهة — قدرة «افتراضيًّا مُطفأة» (default-off): مخفيّة
-           حتى يَمنحها المزوّد صراحةً عبر مفتاح القدرة «sections» (قيد التطوير).
+           حتى يَمنحها المزوّد صراحةً عبر مفتاح القدرة «sections» (ميزة لم تكتمل بعد).
            super-only فوق ذلك؛ الحارس الخادمي يُغلق المسار (redirect/403) على
            غير السوبر أو حين عدم المنح. نُخفي البند هنا ما لم تُمنَح القدرة. #}
         {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.sections_admin_page')

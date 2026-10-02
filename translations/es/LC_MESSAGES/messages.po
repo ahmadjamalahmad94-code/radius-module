@@ -52967,3 +52967,126 @@ msgstr "Umbrales de consumo que activan alertas de cuota para los abonados (CSV)
 
 msgid "عروض البطاقات"
 msgstr "Ofertas de cupones"
+
+msgid "إدارة البيانات"
+msgstr "Gestión de datos"
+
+msgid "دفع بيانات التوزيع"
+msgstr "Envío de ajustes DHCP"
+
+msgid "تغيير عنوان التصفح العام (Public)"
+msgstr "Cambiar la IP pública de navegación"
+
+msgid "سجل إجراءات المايكروتيك"
+msgstr "Registro de acciones MikroTik"
+
+msgid "أحداث النظام"
+msgstr "Eventos del sistema"
+
+msgid "حركات مشتركي سوق البطاقات"
+msgstr "Actividad de clientes de la tienda"
+
+msgid "سجل حركات مشتركي سوق البطاقات"
+msgstr "Registro de actividad de clientes de la tienda"
+
+msgid "تعديل باقات المشتركين"
+msgstr "Cambios de plan de suscriptores"
+
+msgid "الكروت المستخدمة"
+msgstr "Cupones usados"
+
+msgid "سجل الإشعارات"
+msgstr "Registro de notificaciones"
+
+msgid "أصوات الإشعارات"
+msgstr "Sonidos de notificación"
+
+msgid "ربط SMS (TweetSMS)"
+msgstr "Conexión SMS (TweetSMS)"
+
+msgid "المعمل (تجريبيّ)"
+msgstr "Laboratorio (experimental)"
+
+msgid "المعمل"
+msgstr "Laboratorio"
+
+msgid "تجريبيّ"
+msgstr "Experimental"
+
+msgid "تحديث النظام"
+msgstr "Actualización del sistema"
+
+msgid "ترحيل / استيراد عميل"
+msgstr "Migrar / importar cliente"
+
+msgid "تصفير البيانات"
+msgstr "Restablecer datos"
+
+msgid "تنظيف البيانات التجريبيّة"
+msgstr "Limpieza de datos de demostración"
+
+msgid "إجمالي مبيعات اليوم"
+msgstr "Ventas totales de hoy"
+
+msgid "البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ."
+msgstr "Cupones vendidos hoy (primer inicio de sesión) y su valor por moneda — en la hora local del panel."
+
+msgid "عدد البطاقات المباعة"
+msgstr "Cupones vendidos"
+
+msgid "قيمة البطاقات"
+msgstr "Valor de los cupones"
+
+msgid "تقرير المبيعات اليوميّة"
+msgstr "Informe de ventas diarias"
+
+msgid "توقيت اللوحة"
+msgstr "Hora del panel"
+
+msgid "الأيّام المتبقّية على ترخيص اللوحة"
+msgstr "Días restantes de la licencia del panel"
+
+msgid "يتوفّر تحديث جديد"
+msgstr "Hay una nueva actualización disponible"
+
+msgid "كتم صوت الإشعارات"
+msgstr "Silenciar notificaciones"
+
+msgid "بحث (رقم الجوال / إجراء)…"
+msgstr "Buscar (número de móvil / acción)…"
+
+msgid "نوع الحدث"
+msgstr "Tipo de evento"
+
+msgid "شحن بطاقة"
+msgstr "Recarga con cupón"
+
+msgid "العميل"
+msgstr "Cliente"
+
+msgid "دليل: عروض البطاقات — كيف تستخدمني"
+msgstr "Guía: ofertas de cupones — cómo usarme"
+
+msgid "دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني"
+msgstr "Guía: control CoA en vivo y cambio de IP — cómo usarme"
+
+msgid "دليل: شحن الرصيد ولوحة الشحن — كيف تستخدمني"
+msgstr "Guía: recarga de saldo y panel de recarga — cómo usarme"
+
+msgid "دليل: حدّ الأجهزة وركل الجلسات — كيف تستخدمني"
+msgstr "Guía: límite de dispositivos y expulsión de sesiones — cómo usarme"
+
+msgid "دليل: الموزّعون — كيف تستخدمني"
+msgstr "Guía: distribuidores — cómo usarme"
+
+msgid "دليل: صلاحيات المدير الدقيقة — كيف تستخدمني"
+msgstr "Guía: permisos detallados del gestor — cómo usarme"
+
+msgid "دليل: معالج ترحيل البيانات — كيف تستخدمني"
+msgstr "Guía: asistente de migración de datos — cómo usarme"
+
+msgid "دليل: الوصول البعيد وWinBox — كيف تستخدمني"
+msgstr "Guía: acceso remoto y WinBox — cómo usarme"
+
+msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
+msgstr "Guía: túneles de gestión y script de aprovisionamiento — cómo usarme"
