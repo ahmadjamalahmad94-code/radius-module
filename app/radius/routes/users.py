@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.constants import ACCOUNT_STATUSES, USER_TYPES
-from ..core.errors import RadiusError, RadiusStaleEdit, RadiusValidationError
+from ..core.errors import RadiusError, RadiusValidationError
 from ..core.messages_ar import error_message_ar
 from ..core.system_config import default_currency
 from ..core.types import Subscriber
@@ -448,22 +448,15 @@ def form_orig_snapshot(sub: Subscriber) -> str:
             for f in _fields(sub) if f.name not in _FORM_ORIG_SKIP}
     flat = _grouped_to_flat(_parse_metadata(getattr(sub, "metadata", None)))
     meta = {mf: _orig_norm(flat.get(mf)) for mf in _META_FIELDS}
-    return json.dumps({"f": snap, "m": meta, "pw": _pw_digest(sub.password),
+    return json.dumps({"f": snap, "m": meta, "e": _orig_norm(getattr(sub, "expire_at", None)),
+                       "pw": _pw_digest(sub.password),
                        "ppw": _pw_digest(getattr(sub, "pppoe_password", None))},
                       ensure_ascii=False, separators=(",", ":"))
 
 
-def _row_version_of(sub) -> str:
-    try:
-        from ..services.users import subscriber_version
-        return subscriber_version(sub)
-    except Exception:  # noqa: BLE001 — no token ⇒ the form saves as before
-        return ""
-
-
 def _stale_edit_redirect(username: str):
-    """Zero-w1 M3: another admin changed the subscriber after this page was
-    opened — refuse (409 semantics) instead of writing over his change."""
+    """Zero-w1 M3: another admin changed the same field after this page was
+    opened — refuse instead of writing over his change."""
     from ..services.users import STALE_EDIT_MSG
     flash(STALE_EDIT_MSG, "error")
     return redirect(url_for("radius.users_edit", username=username))
@@ -478,6 +471,37 @@ def _posted_form_orig() -> dict | None:
     except (TypeError, ValueError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def _stale_field_conflicts(dto: Subscriber, before: Subscriber | None,
+                           clear_expiry: bool) -> list[str]:
+    """Zero-w1 M3 (web): the fields the operator changed on a page that is now
+    stale AND that another admin changed to something else meanwhile. Fields
+    only one side touched merge as before (F03-N1: the operator's change is
+    written, the concurrent one is kept); the SAME field changed by both is a
+    real conflict — refused («أعد التحميل»), never silently overwritten."""
+    orig = _posted_form_orig()
+    if before is None or not orig:
+        return []
+    snap = orig.get("f") or {}
+    out: list[str] = []
+    for name, was in snap.items():
+        if name in _FORM_ORIG_SKIP or not hasattr(dto, name) or not hasattr(before, name):
+            continue
+        mine, cur, was = (_orig_norm(getattr(dto, name)),
+                          _orig_norm(getattr(before, name)), str(was))
+        if (not _orig_same(mine, was) and not _orig_same(cur, was)
+                and not _orig_same(mine, cur)):
+            out.append(name)
+    # the expiry: an explicit date / «بدون انتهاء» from the operator while the
+    # stored one moved since the page was opened (a renewal meanwhile).
+    if "e" in orig and (dto.expire_at is not None or clear_expiry):
+        cur_e = _orig_norm(before.expire_at)
+        if not _orig_same(cur_e, str(orig.get("e") or "")):
+            mine_e = "" if clear_expiry else _orig_norm(dto.expire_at)
+            if not _orig_same(mine_e, cur_e):
+                out.append("expire_at")
+    return out
 
 
 def _keep_untouched_fields(dto: Subscriber, before: Subscriber | None) -> Subscriber:
@@ -2071,7 +2095,6 @@ def users_edit(username: str):
     return render_template("radius/users_form.html",
         sub=sub_view,
         form_orig=form_orig_snapshot(sub),
-        row_version=_row_version_of(sub),
         plans=plans, statuses=ACCOUNT_STATUSES,
         user_types=USER_TYPES,
         is_new=False,
@@ -2298,17 +2321,6 @@ def users_update(username: str):
     # المدير المقيَّد حقليًّا على username لا يستطيع (دفاع خادميّ: نتجاهل أي
     # POST مُلفَّق)، والسوبر/المالك يَتجاوز. عند نجاح إعادة التسمية نُكمل بقيّة
     # الحفظ تحت الاسم الجديد.
-    # Zero-w1 M3 — optimistic concurrency: checked BEFORE the rename so a
-    # stale page never half-applies. The service re-checks under the lock.
-    posted_version = (request.form.get("_row_version") or "").strip()
-    if posted_version:
-        try:
-            _cur = get_users_service().get(username)
-        except Exception:  # noqa: BLE001
-            _cur = None
-        if _cur is not None and _row_version_of(_cur) != posted_version:
-            return _stale_edit_redirect(username)
-    _renamed = False
     posted_username = (request.form.get("username") or "").strip()
     if posted_username and posted_username != username:
         # نفس فحص تطبيق الجوال (services/subscriber_actions) — السوبر يتجاوز،
@@ -2329,7 +2341,6 @@ def users_update(username: str):
             # بقيّة الحفظ تستهدف الاسم الجديد.
             flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
             username = posted_username
-            _renamed = True
 
     before = None
     try:
@@ -2360,6 +2371,11 @@ def users_update(username: str):
         # service is not a change (the audit showed it as one — R01 N12).
         if (dto.service_type or "").lower() == (before.service_type or "").lower():
             dto = replace(dto, service_type=before.service_type)
+        # Zero-w1 M3: الحقلُ نفسه غيّره المشغّل وغيّره مديرٌ آخر بعد فتح الصفحة ⇒
+        # رفضٌ صريح (لا «آخرُ كاتبٍ يفوز»). ما غيّره طرفٌ واحد يُدمج كما كان.
+        if _stale_field_conflicts(dto, before, _form_no_expiry()
+                                  and request.form.get("no_expiry_orig") != "1"):
+            return _stale_edit_redirect(username)
         # F03-N1: ما لم يلمسه المشغّل منذ فتح الصفحة يبقى على قيمته الحاليّة.
         dto = _keep_untouched_fields(dto, before)
     # المستوى 3: التحكّم الحقليّ لكل مدير — أعِد الحقول غير الممنوحة إلى قيمتها
@@ -2396,12 +2412,7 @@ def users_update(username: str):
         # base=before → only what the operator changed is written, under the
         # write lock (a renewal/top-up that landed meanwhile is kept — R01 N1).
         get_users_service().update(actor=_actor(), sub=dto, base=before,
-                                   clear_expiry=clear_expiry,
-                                   # after a rename the pre-rename check stood
-                                   expected_version=(None if _renamed
-                                                     else (posted_version or None)))
-    except RadiusStaleEdit:
-        return _stale_edit_redirect(username)
+                                   clear_expiry=clear_expiry)
     except RadiusError as e:
         flash(error_message_ar(e), "error")
         plans = list(get_plans_service().list(limit=500))

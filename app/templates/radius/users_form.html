@@ -1126,9 +1126,7 @@
             {# F03-N2: حالة «بدون انتهاء» لحظة فتح الصفحة — مربّعٌ لم يُلمس لا يمسح تجديدًا جرى بعدها. #}
             <input type="hidden" name="no_expiry_orig" value="{{ request.form.get('no_expiry_orig', '') if request.method == 'POST' else ('1' if not sub.expire_at else '') }}">
             {# F03-N1: لقطة قيَم الحقول لحظة فتح الصفحة — يُكتب فقط ما غيّره المشغّل. #}
-            <input type="hidden" name="_form_orig" value="{{ form_orig if form_orig is defined and form_orig else request.form.get('_form_orig', '') }}">
-            {# Zero-w1 M3: نسخة الصفّ لحظة فتح الصفحة — تعديلٌ من مديرٍ آخر بعدها ⇒ رفضٌ لا كتابةٌ فوقه. #}
-            <input type="hidden" name="_row_version" value="{{ row_version if row_version is defined and row_version else request.form.get('_row_version', '') }}">{% endif %}
+            <input type="hidden" name="_form_orig" value="{{ form_orig if form_orig is defined and form_orig else request.form.get('_form_orig', '') }}">{% endif %}
             <div class="help">
               {% if is_new %}{{ _('حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.') }}
               {% else %}{{ _('تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.') }}{% endif %}

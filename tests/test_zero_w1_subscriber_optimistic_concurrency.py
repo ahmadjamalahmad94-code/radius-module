@@ -194,21 +194,51 @@ def _login(client, admin_id):
     client.environ_base["HTTP_X_CSRFTOKEN"] = "tok"
 
 
-def test_web_edit_form_refuses_a_stale_page(app):
-    u = _sub(app)
+def _web_open(app, u):
     c = app.test_client()
     with app.app_context():
         _login(c, _owner_id())
     html = c.get(f"/admin/radius/users/{u}/edit").get_data(as_text=True)
-    m = re.search(r'name="_row_version" value="([^"]*)"', html)
+    m = re.search(r'name="_form_orig" value="([^"]*)"', html)
     assert m and m.group(1)
-    _other_admin_changes(app, u)
+    import html as _h
+    return c, _h.unescape(m.group(1))
+
+
+def _flashes(c):
+    with c.session_transaction() as s:
+        return [msg for _cat, msg in (s.get("_flashes") or [])]
+
+
+def test_web_same_field_changed_by_both_is_refused(app):
+    """The web merges what only one side changed (F03-N1, kept); the SAME
+    field changed by the operator AND by another admin meanwhile was
+    last-writer-wins — now refused with the Arabic «أعد التحميل»."""
+    u = _sub(app)
+    c, orig = _web_open(app, u)
+    from app.radius.db.connection import transaction
+    with app.app_context():
+        with transaction() as cx:
+            cx.execute("UPDATE subscribers SET remark='B note', balance=balance+25"
+                       " WHERE username=?", (u,))
     before = _row(app, u)
     r = c.post(f"/admin/radius/users/{u}",
-               data={"_row_version": m.group(1), "remark": "stale web",
-                     "username": u, "csrf_token": "tok"})
+               data={"_form_orig": orig, "remark": "A note", "username": u,
+                     "csrf_token": "tok"})
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/users/{u}/edit")
+    assert _row(app, u) == before                 # B's remark + balance kept
+    assert any(STALE_AR in m for m in _flashes(c))
+
+
+def test_web_expiry_set_on_a_stale_page_after_a_renewal_is_refused(app):
+    u = _sub(app)
+    c, orig = _web_open(app, u)
+    _other_admin_changes(app, u)                  # renewal +1 day meanwhile
+    before = _row(app, u)
+    r = c.post(f"/admin/radius/users/{u}",
+               data={"_form_orig": orig, "username": u, "csrf_token": "tok",
+                     "expire_orig": "2000-01-01 00:00", "expire_year": "2031",
+                     "expire_month": "1", "expire_day": "1",
+                     "expire_time": "12:00"})
     assert r.status_code == 302 and r.headers["Location"].endswith(f"/users/{u}/edit")
     assert _row(app, u) == before
-    with c.session_transaction() as s:
-        flashes = s.get("_flashes") or []
-    assert any(STALE_AR in msg for _cat, msg in flashes)
