@@ -9,7 +9,15 @@ import pytest
 @pytest.fixture(scope="module")
 def app():
     from app import create_app
-    return create_app()
+    application = create_app()   # seeds demo data (plan 1, admin/admin)
+    # ENV: since 5126bdbe the license-lifecycle gate redirects every panel page
+    # of an unlicensed install to /_license/activate. Its test bypass needs
+    # HOBERADIUS_NO_SEED=1 + HOBERADIUS_LICENSE_GATE_TEST_BYPASS=1 (conftest);
+    # NO_SEED is set only after the seed ran, so the demo data stays.
+    mp = pytest.MonkeyPatch()
+    mp.setenv("HOBERADIUS_NO_SEED", "1")
+    yield application
+    mp.undo()
 
 
 @pytest.fixture
@@ -271,7 +279,9 @@ def test_card_checker_ui_route_and_result_never_expose_password(client, auth_hea
     html = res.get_data(as_text=True)
     assert card["username"] in html
     assert "فحص بطاقة" in html
-    assert "الدفعة" in html
+    # 330c96e0 (Card Checker v2) labels the batch «الحزمة» — the panel-wide term.
+    assert "الحزمة" in html
+    assert data["batch"]["batch_code"] in html
     assert "الباقة" in html
     assert "كلمة مرور" in html
     assert "مركز عمليات البطاقة" in html

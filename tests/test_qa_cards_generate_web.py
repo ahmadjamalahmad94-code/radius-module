@@ -15,7 +15,15 @@ import pytest
 @pytest.fixture(scope="module")
 def app():
     from app import create_app
-    return create_app()
+    application = create_app()   # seeds demo data (plan 1, admin/admin)
+    # ENV: since 5126bdbe the license-lifecycle gate redirects every panel page
+    # of an unlicensed install to /_license/activate. Its test bypass needs
+    # HOBERADIUS_NO_SEED=1 + HOBERADIUS_LICENSE_GATE_TEST_BYPASS=1 (conftest);
+    # NO_SEED is set only after the seed ran, so the demo data stays.
+    mp = pytest.MonkeyPatch()
+    mp.setenv("HOBERADIUS_NO_SEED", "1")
+    yield application
+    mp.undo()
 
 
 @pytest.fixture
@@ -28,12 +36,16 @@ def _web_login(client) -> None:
 
     username = f"cards_web_{uuid4().hex[:10]}"
     password = "cards-web-pass"
-    admins_repo.create_admin(
+    _tester = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Cards Web Tester",
         is_super_admin=True,
     )
+    # STALE since 6824f26c (memory owner-only-bypass.md): the is_super_admin
+    # flag no longer grants the panel bypass — only an owner / co-owner does.
+    # This tester stands for the operator with full access, so make it co-owner.
+    admins_repo.set_co_owner(_tester.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
