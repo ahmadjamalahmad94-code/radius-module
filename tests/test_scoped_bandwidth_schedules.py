@@ -16,6 +16,11 @@ def _fresh_app(monkeypatch):
     from app.radius.db.connection import reset_for_tests
 
     reset_for_tests(db_path)
+    # ENV: these tests use the SEEDED admin/admin (NO_SEED unset), and the
+    # license-lifecycle gate (5126bdbe) honours its test bypass only with
+    # NO_SEED — web pages 302'd to /_license/activate. Open it (test-only).
+    from app.radius.services import license_lifecycle
+    monkeypatch.setattr(license_lifecycle, "_test_bypass_active", lambda: True)
     from app import create_app
     return create_app()
 

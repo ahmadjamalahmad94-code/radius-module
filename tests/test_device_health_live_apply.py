@@ -129,8 +129,16 @@ def test_env_can_force_disable_over_db_on(app, monkeypatch):
 
 
 def _login(client):
+    # 21f239a6: every request re-validates the session against a LIVE admin
+    # row; the old forged id (7) had none → logged out (302 /login). Use the
+    # real primary owner — the bootstrap admin create_app() guarantees
+    # (d13fb302).
+    from app.radius.db.repos import admins_repo
+    with client.application.app_context():
+        owner_id = admins_repo.primary_admin_id()
+    assert owner_id is not None
     with client.session_transaction() as s:
-        s["admin_id"] = 7
+        s["admin_id"] = owner_id
         s["is_super_admin"] = True
         s["tenant_id"] = 1
         s["_csrf_token"] = "csrf"
@@ -156,5 +164,8 @@ def test_route_get_and_post_toggle(app, client):
 def test_page_renders_toggle(app, client):
     _login(client)
     html = client.get("/admin/radius/device-health").get_data(as_text=True)
-    assert "تفعيل التطبيق الحي على الراوترات" in html
+    # d5c9a352 moved the toggle into the «الإعدادات» modal and retitled its
+    # card «التطبيق الحي على الراوترات» (was «تفعيل …»).
+    assert "التطبيق الحي على الراوترات" in html
+    assert 'data-dh-settings-section="live-apply"' in html
     assert 'id="dh-live-apply-toggle"' in html

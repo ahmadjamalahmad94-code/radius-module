@@ -464,9 +464,22 @@ def test_page_uses_design_system_and_unified_table(app):
 
 
 def test_page_forbidden_for_non_super(app):
+    # 21f239a6: the session is re-validated against a LIVE admin row every
+    # request — a forged id (99) with no row is logged out (302 /login),
+    # which never reaches the RBAC guard. Use a real non-owner admin.
+    with app.app_context():
+        from app.radius.db.repos import admins_repo
+        role = admins_repo.create_role(
+            name="su_nonsuper", display_name="Non super",
+            permissions=("dashboard.view",))
+        adm = admins_repo.create_admin(
+            username="su_nonsuper", password="pw-12345678",
+            full_name="Non super", role_id=role.id)
+        assert not admins_repo.is_primary_owner(adm.id)
+        adm_id = adm.id
     c = app.test_client()
     with c.session_transaction() as s:
-        s["admin_id"] = 99
+        s["admin_id"] = adm_id
         s["is_super_admin"] = False
         s["tenant_id"] = 1
     res = c.get("/admin/radius/system/update")

@@ -16,12 +16,19 @@ from uuid import uuid4
 import pytest
 
 
+_OWNER_USER = "mig_owner"
+
+
 @pytest.fixture
 def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "routes.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: create_app() guarantees a bootstrap super-admin on a clean DB =
+    # admin id #1 = the primary owner (the migration wizard is owner-only).
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _OWNER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "pw123456")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     from app.radius.db.connection import reset_for_tests
@@ -41,7 +48,22 @@ def client(app):
 
 
 def _make_admin(is_super=True):
+    """is_super=True → the real primary owner (the bootstrap admin, id #1).
+    Owner-only-bypass decision: a NEW admin carrying is_super_admin is not the
+    owner, so it can't stand in for one any more."""
     from app.radius.db.repos import admins_repo
+    if is_super:
+        owner = admins_repo.get_by_username(_OWNER_USER)
+        assert owner is not None and admins_repo.is_primary_owner(owner.id)
+        return _OWNER_USER
+    return _make_non_owner(flag=False)
+
+
+def _make_non_owner(flag=True):
+    """A later admin (never the owner) — optionally carrying the
+    is_super_admin flag, which must NOT open owner-only pages."""
+    from app.radius.db.repos import admins_repo
+    is_super = flag
     u = f"u_{uuid4().hex[:8]}"
     admins_repo.create_admin(username=u, password="pw123456",
                              full_name="T", is_super_admin=is_super)
@@ -205,8 +227,15 @@ class TestUploadFormats:
         assert "XMLHttpRequest" in html
         assert "xhr.upload.onprogress" in html
         assert "e.loaded" in html and "e.total" in html
-        # ليس مؤقّتًا وهميًّا لتحريك الشريط.
-        assert "setInterval" not in html
+        # ليس مؤقّتًا وهميًّا لتحريك الشريط. منذ e5ff72d3 يحمل القالب الأمّ
+        # (_admin_layout) ساعةَ الشريط العلويّ بـsetInterval(tick, 1000) — لا
+        # علاقة لها بالرفع — فنفحص سكربت صفحة المعالج نفسه لا الصفحة كلّها.
+        from pathlib import Path
+        import app as _app_pkg
+        wiz = (Path(_app_pkg.__file__).parent / "templates" / "radius"
+               / "migration_wizard.html").read_text(encoding="utf-8")
+        assert "xhr.upload.onprogress" in wiz
+        assert "setInterval" not in wiz
 
     def test_commit_progress_and_status_wired(self, client):
         # شريط تقدّم التنفيذ + استطلاع الحالة الخلفيّة موجودان.
@@ -317,7 +346,7 @@ class TestOwnerOnly:
 
     def test_non_owner_forbidden(self, client):
         owner = _make_admin()          # المالك (أصغر معرّف)
-        other = _make_admin()          # مدير لاحق — ليس المالك
+        other = _make_non_owner(flag=True)   # مدير لاحق بعلَم السوبر — ليس المالك
         _login(client, other)
         res = client.get("/admin/radius/migrate")
         assert res.status_code == 403

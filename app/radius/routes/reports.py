@@ -1679,11 +1679,18 @@ def _distinct_managers() -> list[str]:
     if _sid is not None:
         return [x for x in admin_actor_labels(int(_sid)) if x != "\x00"]
     try:
+        # نفس عدسة «أحداث المدراء»: دخول العملاء (بطاقة/مشترك) يُسجَّل بفاعلٍ
+        # = جوّال/اسم العميل، فكان يظهر في قائمة «المدير» كـ«مدير #0599…»
+        # رغم أنّ صفوفه مستبعدة من الجدول. نستبعده هنا بالشرط ذاته.
+        placeholders = ", ".join("?" for _ in _NON_MANAGER_LOGIN_TARGETS)
         rows = db().execute(
             "SELECT DISTINCT actor FROM audit_log WHERE tenant_id = ? "
             "AND actor NOT LIKE 'system%' AND actor NOT LIKE 'api-token%' "
-            "AND actor != 'ui' AND actor != '' ORDER BY actor LIMIT 200",
-            (_tid(),)).fetchall()
+            "AND actor != 'ui' AND actor != '' "
+            "AND NOT (action IN ('auth_login','auth_login_failed') "
+            f"         AND target_type IN ({placeholders})) "
+            "ORDER BY actor LIMIT 200",
+            (_tid(), *_NON_MANAGER_LOGIN_TARGETS)).fetchall()
         return [str(r["actor"]) for r in rows]
     except Exception:  # noqa: BLE001
         return []

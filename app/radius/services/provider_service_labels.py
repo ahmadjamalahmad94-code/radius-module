@@ -23,6 +23,19 @@ from __future__ import annotations
 # قاموس الخدمات (service_key → اسم عربي)
 # ─────────────────────────────────────────────────────────────────────
 SERVICE_NAMES_AR: dict[str, str] = {
+    # ── مفاتيح صفحاتٍ سُجِّلت في بوّابة المزوّد لاحقًا (provider_gate) ──
+    "approvals":               "موافقات المدراء",
+    "credit":                  "رصيد المدراء والموزّعين",
+    "data_export":             "تصدير البيانات",
+    "data_migration":          "ترحيل البيانات",
+    "data_reset":              "تصفير البيانات",
+    "demo_cleanup":            "تنظيف البيانات التجريبية",
+    "docs":                    "مركز الأدلّة",
+    "integrations":            "التكاملات",
+    "services_catalog":        "دليل الخدمات",
+    "sms":                     "الرسائل النصّية",
+    "subscriber_notifications": "إشعارات المشتركين",
+
     # ── المشتركون والبطاقات ──
     "subscribers":         "المشتركون",
     "subscriber_groups":   "مجموعات المشتركين",

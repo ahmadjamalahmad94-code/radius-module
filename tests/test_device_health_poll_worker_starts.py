@@ -43,11 +43,20 @@ def app():
     # Avoid auto-skip of workers — `_start_workers` bails when
     # PYTEST_CURRENT_TEST is set. We need it to RUN so the assertion is real.
     saved = os.environ.pop("PYTEST_CURRENT_TEST", None)
+    # ENV: this module runs on the SEEDED demo DB (it can't set NO_SEED), and
+    # the license-lifecycle gate (5126bdbe) honours its test bypass only with
+    # NO_SEED — without a license snapshot the save endpoint answered 403
+    # («ليس لديك صلاحية…») before the device-health code ran. Open the gate
+    # for this module only.
+    from app.radius.services import license_lifecycle
+    mp = pytest.MonkeyPatch()
+    mp.setattr(license_lifecycle, "_test_bypass_active", lambda: True)
     try:
         from app import create_app
         a = create_app()
         yield a
     finally:
+        mp.undo()
         if saved is not None:
             os.environ["PYTEST_CURRENT_TEST"] = saved
 

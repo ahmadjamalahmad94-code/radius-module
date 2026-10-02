@@ -115,6 +115,63 @@ _ENDPOINT_TO_SERVICE: dict[str, tuple[str, ...]] = {
     "customer_portals_admin":    ("customer_portals", "customer_portal"),
     # ملاحظة: البوّابة المواجهة للزبون نفسها تُحرَس عند نقاط الإدخال
     # المخصّصة، لأنّ «مخفية من البوابة» تخصّها وحدها (لا الإدارة).
+
+    # ── صفحاتٌ أُضيفت بعد خريطة 2026-06 ولم تُسجَّل (فجوةُ إنفاذ: عقدُ
+    #    المزوّد الذي يوقف خدمتها لم يكن يحجبها). المفتاح الأخصّ أوّلًا، والمظلّة
+    #    فقط حيث تستعملها النقاط الشقيقة. البنية التحتيّة (الصحّة، اللغة، صفحات
+    #    المزوّد نفسها، دخول/خروج بوّابة الموزّع، استطلاع/قراءة الإشعارات وملفّ
+    #    صوتها) تبقى غير مسجّلة عمدًا كي لا يكسرها عقدٌ موقوف. وصفحة «تغيير
+    #    عنوان الإنترنت» (ipchange_*) تحرس نفسها داخل الصفحة (لافتة «موقوفة» /
+    #    «طلب تفعيل» من منح ip_change) فلا نحجبها هنا قبل أن تعرض لافتتها.
+    "admin_notifications":              ("admin_alerts", "alerts", "communications"),
+    "admin_notifications_set_channels": ("admin_alerts", "alerts", "communications"),
+    "connected_stats":           ("online", "subscribers"),
+    "connected_stats_json":      ("online", "subscribers"),
+    "subscriber_fields":         ("subscribers",),
+    "subscriber_notifications":  ("subscriber_notifications", "communications"),
+    "credit_dashboard":          ("credit", "finance"),
+    "credit_recharge":           ("credit", "finance"),
+    "manager_approvals":         ("approvals", "admins"),
+    "manager_approval_approve":  ("approvals", "admins"),
+    "manager_approval_reject":   ("approvals", "admins"),
+    "manager_presets_create":    ("business_os",),
+    "manager_presets_delete":    ("business_os",),
+    "sub_manager_create":        ("business_os",),
+    "sub_manager_delegate":      ("business_os",),
+    "portal_distributor_home":   ("distributors",),
+    "sms":                       ("sms", "communications"),
+    "sms_save":                  ("sms", "communications"),
+    "sms_test":                  ("sms", "communications"),
+    "sms_balance":               ("sms", "communications"),
+    "notifications_center":      ("notifications",),
+    "notifications_timeline":    ("notifications",),
+    "notifications_test_push":   ("notifications",),
+    "notification_sounds_page":  ("notifications",),
+    "notification_sound_save":   ("notifications",),
+    "notification_sound_mode":   ("notifications",),
+    "notification_sound_clear":  ("notifications",),
+    "resource_alerts_settings":  ("router_alerts", "network"),
+    "resource_alerts_save":      ("router_alerts", "network"),
+    "integrations_hub":          ("integrations",),
+    "services_catalog":          ("services_catalog",),
+    "export_table":              ("data_export",),
+    "docs_center":               ("docs",),
+    "docs_section":              ("docs",),
+    "docs_guide":                ("docs",),
+    "docs_add_subscriber":       ("docs",),
+    "data_reset_page":           ("data_reset", "system"),
+    "data_reset_summary":        ("data_reset", "system"),
+    "data_reset_run":            ("data_reset", "system"),
+    "demo_cleanup_page":         ("demo_cleanup", "system"),
+    "demo_cleanup_preview":      ("demo_cleanup", "system"),
+    "demo_cleanup_run":          ("demo_cleanup", "system"),
+    "migration_index":           ("data_migration", "system"),
+    "migration_analyze":         ("data_migration", "system"),
+    "migration_analyze_status":  ("data_migration", "system"),
+    "migration_plan":            ("data_migration", "system"),
+    "migration_commit":          ("data_migration", "system"),
+    "migration_commit_status":   ("data_migration", "system"),
+    "migration_jobs":            ("data_migration", "system"),
 }
 
 

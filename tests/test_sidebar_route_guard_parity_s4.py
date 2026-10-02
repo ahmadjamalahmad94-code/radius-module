@@ -22,12 +22,19 @@ from uuid import uuid4
 import pytest
 
 
+_FOUNDER_USER = "s4_founder"
+
+
 @pytest.fixture
 def app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_s4_guard_")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: create_app() guarantees a login (ensure_bootstrap_admin) — on a
+    # clean NO_SEED DB that bootstrap account is admin id #1 = the founder.
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _FOUNDER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "s4-pass")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
@@ -111,9 +118,17 @@ def test_super_admin_200_on_guarded_routes(app, client):
 
 def test_primary_admin_resolves_super_even_when_flag_false(app, client):
     # The FIRST admin in the DB is the owner. Even with is_super_admin=False
-    # and only the viewer role, it must be treated as super.
-    founder = _make_admin(is_super_admin=False, viewer=True)
+    # and only the viewer role, it must be treated as super. Since d13fb302
+    # the first admin is the bootstrap account create_app() guarantees, so we
+    # demote THAT one (flag off + viewer role) and prove it stays super.
     from app.radius.db.repos import admins_repo
+    founder = admins_repo.get_by_username(_FOUNDER_USER)
+    assert founder is not None
+    viewer = admins_repo.get_role_by_name("viewer")
+    admins_repo.update_admin(founder.id, is_super_admin=False,
+                             role_id=viewer.id if viewer else None)
+    founder = admins_repo.get_admin(founder.id)
+    assert founder.is_super_admin is False or founder.is_super_admin == 0
     assert admins_repo.primary_admin_id() == founder.id
     _login(client, founder.username)
     with client.session_transaction() as sess:

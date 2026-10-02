@@ -30,6 +30,9 @@ from uuid import uuid4
 import pytest
 
 
+_OWNER_USER = "owner_boot"
+
+
 # ─────────────────────────── fixtures (NO_SEED) ───────────────────────────
 @pytest.fixture
 def app(monkeypatch):
@@ -37,6 +40,12 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: every boot guarantees a login — ensure_bootstrap_admin() creates
+    # the default super-admin when no admin exists, so on a clean NO_SEED DB the
+    # bootstrap account IS the primary owner (id #1). Name it so the tests log
+    # in as that real owner instead of assuming «the first admin I create».
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _OWNER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "owner-pass")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
@@ -56,12 +65,13 @@ def client(app):
 
 # ─────────────────────────── helpers ───────────────────────────
 def _make_owner():
-    """The FIRST admin created = primary owner (smallest id)."""
+    """The primary owner = the smallest admin id = the bootstrap admin that
+    create_app() guarantees on a clean DB (d13fb302). Asserted, not assumed."""
     from app.radius.db.repos import admins_repo
-    return admins_repo.create_admin(
-        username=f"owner_{uuid4().hex[:8]}", password="owner-pass",
-        full_name="Primary Owner", is_super_admin=True,
-    )
+    owner = admins_repo.get_by_username(_OWNER_USER)
+    assert owner is not None, "bootstrap owner missing"
+    assert owner.id == admins_repo.primary_admin_id()
+    return owner
 
 
 def _make_super_role_admin(*, perms=None, with_flag=False):
@@ -171,6 +181,7 @@ def test_super_role_admin_is_subject_to_his_own_caps(app):
 # ════════════════ SCENARIOS 1-3: RBAC at the route layer ══════════════════════
 _AUDIT_PERM = "mikrotik.audit.view"
 _AUDIT_URL = "/admin/radius/audit"
+_AUDIT_BRIDGE_PERM = "audit.view"
 
 
 def test_owner_reaches_named_perm_route(app, client):
@@ -188,7 +199,12 @@ def test_super_role_admin_403_when_permission_off(app, client):
     from app.radius.core.constants import ALL_PERMISSIONS
     with app.app_context():
         _make_owner()                                      # primary owner #1
-        perms_without = tuple(p for p in ALL_PERMISSIONS if p != _AUDIT_PERM)
+        # d7a99f29 (F24): the catalogue key `audit.view` now BRIDGES to the
+        # legacy `mikrotik.audit.view` (mt_permissions._RBAC_BRIDGE), so «off»
+        # means BOTH keys absent — otherwise the role still legitimately holds
+        # the audit page through the bridge.
+        perms_without = tuple(p for p in ALL_PERMISSIONS
+                              if p not in (_AUDIT_PERM, _AUDIT_BRIDGE_PERM))
         mgr, _ = _make_super_role_admin(perms=perms_without)
     _login(client, mgr.username, "mgr-pass")
     assert client.get(_AUDIT_URL).status_code == 403
