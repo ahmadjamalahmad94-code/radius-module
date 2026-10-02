@@ -140,9 +140,19 @@ def test_designer_get_renders_picker_and_form(app, client):
     assert "data-mt-designer" in html
     assert "data-mt-designer-form" in html
     assert "data-mt-designer-frame" in html
-    # All 4 templates must show in the picker.
+    # STALE since c5802fc1 (owner: «7 أقسام بالترتيب»): the picker is the unified
+    # gallery — one tab per venue type, each listing the owner's chosen designs.
+    # The four R2 starters (classic/card/dark/minimal) are no longer offered
+    # there; they stay registered as the base layouts gallery combos build on.
+    from app.radius.routes.mt_login_designer import _TEMPLATE_SECTIONS
+    from app.radius.services import hotspot_templates as ht
+    for _key, _label, _icon, slugs in _TEMPLATE_SECTIONS:
+        assert f'data-mtld-gsec="{_key}"' in html
+        for slug in slugs:
+            assert slug in ht.TEMPLATES_BY_SLUG, slug
+            assert f'value="{slug}"' in html, slug
     for slug in ("classic", "card", "dark", "minimal"):
-        assert f'value="{slug}"' in html
+        assert slug in ht.TEMPLATES_BY_SLUG
     # And every variable input field is present.
     for var in ("TENANT_NAME", "TENANT_LOGO_URL",
                 "WELCOME_TEXT", "ACCENT_COLOR", "BG_COLOR"):

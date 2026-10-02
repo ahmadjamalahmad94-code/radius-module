@@ -104,7 +104,9 @@ def test_zero_window_changes_nothing(store):
     """حزمةٌ بلا مدّةٍ محدَّدة لا نخترع لبطاقاتها انتهاءً."""
     _add(store, 6, "1006", "2026-07-29T23:00:00Z", None)
     out = cards_repo.realign_batch_card_windows(1, 7, window_seconds=0)
-    assert out == {"pending": 0, "started": 0}
+    # e402bb21 added "expired_now" (cards a mode switch kills retroactively,
+    # reported to the operator) — a zero window must report zero of it too.
+    assert out == {"pending": 0, "started": 0, "expired_now": 0}
     row = store.execute("SELECT expire_at FROM cards WHERE id=6").fetchone()
     assert row["expire_at"] is not None
 

@@ -59,7 +59,7 @@ def test_duration_field_renders_next_to_type_with_min_hr_day_units(app):
         from app.radius.services.plans import get_plans_service
         from flask import url_for
         p = get_plans_service().create(actor="root", plan=AccessPlan(
-            id=None, tenant_id=1, name="4 ميجا", plan_type="time",
+            id=None, tenant_id=1, speed_down_kbps=4096, speed_up_kbps=1024, name="4 ميجا", plan_type="time",
             duration_minutes=480, price=10.0))
         with app.test_request_context():
             edit_url = url_for("radius.plans_edit", plan_id=p.id)
@@ -95,7 +95,7 @@ def test_card_inherits_offer_duration_as_time_budget(app):
 
         # عرض بطاقة: «مدة الوقت» = 8 ساعات (480 دقيقة). لا نافذة وقت صريحة.
         plan = get_plans_service().create(actor="root", plan=AccessPlan(
-            id=None, tenant_id=1, name="بطاقة 8 ساعات", plan_type="time",
+            id=None, tenant_id=1, speed_down_kbps=4096, speed_up_kbps=1024, name="بطاقة 8 ساعات", plan_type="time",
             duration_minutes=8 * 60))
 
         batch, cards = get_cards_service().generate_batch(
@@ -124,7 +124,7 @@ def test_card_generation_does_not_override_explicit_window(app):
         from app.radius.services.plans import get_plans_service
         from app.radius.services.cards import get_cards_service
         plan = get_plans_service().create(actor="root", plan=AccessPlan(
-            id=None, tenant_id=1, name="عرض مزدوج", plan_type="time",
+            id=None, tenant_id=1, speed_down_kbps=4096, speed_up_kbps=1024, name="عرض مزدوج", plan_type="time",
             duration_minutes=8 * 60))
         batch, _ = get_cards_service().generate_batch(
             actor="root", plan_id=plan.id, count=1, package_name="EXP",
@@ -139,7 +139,7 @@ def _subscriber_offer_plan():
     from app.radius.services.plans import get_plans_service
     # 30 يوم = 43200 دقيقة، بسعر 80.
     return get_plans_service().create(actor="root", plan=AccessPlan(
-        id=None, tenant_id=1, name="4 ميجا شهريّ", plan_type="recurring",
+        id=None, tenant_id=1, speed_down_kbps=4096, speed_up_kbps=1024, name="4 ميجا شهريّ", plan_type="recurring",
         duration_minutes=30 * 24 * 60, price=80.0, currency="ILS"))
 
 

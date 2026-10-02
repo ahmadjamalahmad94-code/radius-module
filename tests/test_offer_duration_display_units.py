@@ -34,9 +34,11 @@ def test_offer_duration_renders_in_natural_units(app):
         svc = get_plans_service()
         svc.create(actor="root", plan=AccessPlan(
             id=None, tenant_id=1, name="عرض ثلاث ساعات", plan_type="time",
+            speed_down_kbps=4096, speed_up_kbps=1024,
             duration_minutes=180))          # 3 ساعات
         svc.create(actor="root", plan=AccessPlan(
             id=None, tenant_id=1, name="عرض شهر", plan_type="time",
+            speed_down_kbps=4096, speed_up_kbps=1024,
             duration_minutes=30 * 24 * 60))  # 30 يوم = 43200 دقيقة
 
     with app.test_client() as client:

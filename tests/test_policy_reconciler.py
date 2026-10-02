@@ -212,7 +212,7 @@ def test_plans_update_invokes_hook_with_plan_scope(app, monkeypatch):
         monkeypatch.setattr(
             pr, "reconcile_active_sessions_against_policy",
             lambda tid, **kw: seen.append({"tid": tid, **kw}))
-        plan = _mk_plan(name="سيُعدَّل")
+        plan = _mk_plan(name="سيُعدَّل", speed_down_kbps=4096, speed_up_kbps=1024)
         from dataclasses import replace
         from app.radius.services.plans import get_plans_service
         get_plans_service().update(actor="t",

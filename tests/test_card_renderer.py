@@ -40,7 +40,13 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     from app import create_app
 
-    return create_app()
+    application = create_app()
+    # ENV: since 5126bdbe the license-lifecycle gate redirects every panel page
+    # of an unlicensed install to /_license/activate. Its test bypass needs
+    # HOBERADIUS_NO_SEED=1 + HOBERADIUS_LICENSE_GATE_TEST_BYPASS=1 (conftest);
+    # NO_SEED is set only after create_app() seeded, so the demo data stays.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    return application
 
 
 @pytest.fixture
@@ -97,12 +103,16 @@ def _web_login(client) -> None:
 
     username = f"render_web_{uuid4().hex[:10]}"
     password = "render-web-pass"
-    admins_repo.create_admin(
+    _tester = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Card Renderer Tester",
         is_super_admin=True,
     )
+    # STALE since 6824f26c (memory owner-only-bypass.md): the is_super_admin
+    # flag no longer grants the panel bypass — only an owner / co-owner does.
+    # This tester stands for the operator with full access, so make it co-owner.
+    admins_repo.set_co_owner(_tester.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
@@ -573,8 +583,14 @@ def test_pdf_export_carries_arabic_via_almarai_font(client):
     body = res.data
     assert body.startswith(b"%PDF")
 
-    # Almarai must be embedded so Arabic glyphs actually render.
-    assert b"Almarai" in body, "Almarai TTF was not embedded into the PDF"
+    # An Arabic TTF must be embedded so Arabic glyphs actually render.
+    # Since e5a2acd6 (owner: «Cairo as primary Arabic font») the shipped Cairo
+    # TTF is registered under ReportLab's "Almarai" alias, so the embedded
+    # font is Cairo; the Almarai TTFs are only the fallback if Cairo is missing.
+    import os
+    from app.radius.services import card_renderer as _cr
+    expected = b"Cairo" if os.path.exists(_cr._CAIRO_REGULAR_PATH) else b"Almarai"
+    assert expected in body, f"{expected!r} Arabic TTF was not embedded into the PDF"
     # Helvetica is still in use for the Latin parts (USER/PASS labels,
     # the hotspot/serial meta line, the username/password values).
     assert b"Helvetica" in body, "Latin runs should still use Helvetica"

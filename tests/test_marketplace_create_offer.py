@@ -69,8 +69,25 @@ def _plan_id() -> int:
     return int(cur.lastrowid)
 
 
+def _ensure_admin_row(admin_id: int):
+    """ENV since 0b36254c (session_epoch, memory admin-session-invalidation-incident):
+    every request re-checks that the session's admin still EXISTS and is enabled —
+    a session for a deleted/never-created admin is sent to the login page (302).
+    The old fixture logged in as ids 2/3 that were never created; create them
+    (least-privileged role — the session permissions below are what is tested)."""
+    from app.radius.db.repos import admins_repo
+    while admins_repo.get_admin(int(admin_id)) is None:
+        n = len(admins_repo.list_admins()) + 1
+        admins_repo.create_admin(username=f"mkt_mgr_{n}", password="x12345678",
+                                 full_name=f"Market manager {n}")
+    return admins_repo.session_epoch(int(admin_id))
+
+
 def _login(client, *, is_super: bool = True, permissions=None, admin_id: int = 1):
+    with client.application.app_context():
+        epoch = _ensure_admin_row(admin_id)
     with client.session_transaction() as s:
+        s["admin_sv"] = epoch or 0
         s["admin_id"] = admin_id
         s["admin_user"] = "mkt_admin"
         s["admin_name"] = "Market Admin"

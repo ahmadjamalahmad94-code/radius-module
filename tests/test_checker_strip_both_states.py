@@ -30,6 +30,7 @@ _STRIP_LABELS = (
     "الجلسات",
     "أجهزة متّصلة الآن",
     "وقت البطاقة",
+    "الوقت المستخدم",   # 9f3c1526 / 34e92ac3 (owner): sum of real sessions
     "الوقت المتبقّي",
     "إجمالي الاستهلاك",
 )
@@ -138,9 +139,10 @@ def test_disconnected_card_still_renders_full_kpi_strip(app):
     assert result["active_session"] is False
 
     html = _render(app, "disc1")
-    # The megahero KPI strip is present with all five tiles.
+    # The megahero KPI strip is present with all six tiles (9f3c1526 added
+    # «الوقت المستخدم» on the owner's request).
     assert "uds-hero-kpis" in html
-    assert html.count('class="hub-kpi hub-kpi--') == 5
+    assert html.count('class="hub-kpi hub-kpi--') == len(_STRIP_LABELS)
     for label in _STRIP_LABELS:
         assert label in html, f"missing KPI label: {label}"
     # Stored metrics keep real values; base time = «3 ساعات».
@@ -156,11 +158,11 @@ def test_connected_and_disconnected_strips_are_equivalent(app):
 
     html_conn = _render(app, "conn1")
     html_disc = _render(app, "disc1")
-    # Both states render the same five-tile strip — no state-gated omission.
+    # Both states render the same six-tile strip — no state-gated omission.
     assert "uds-hero-kpis" in html_conn
     assert "uds-hero-kpis" in html_disc
-    assert html_conn.count('class="hub-kpi hub-kpi--') == 5
-    assert html_disc.count('class="hub-kpi hub-kpi--') == 5
+    assert html_conn.count('class="hub-kpi hub-kpi--') == len(_STRIP_LABELS)
+    assert html_disc.count('class="hub-kpi hub-kpi--') == len(_STRIP_LABELS)
 
 
 def test_ajax_lookup_syncs_the_top_strip():

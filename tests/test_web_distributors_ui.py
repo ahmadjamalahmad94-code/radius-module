@@ -29,6 +29,11 @@ def app(monkeypatch):
                 """,
                 (now_iso(),),
             )
+    # ENV: since 5126bdbe the license-lifecycle gate redirects every panel page
+    # of an unlicensed install to /_license/activate. Its test bypass needs
+    # HOBERADIUS_NO_SEED=1 + HOBERADIUS_LICENSE_GATE_TEST_BYPASS=1 (conftest);
+    # NO_SEED is set only after create_app() seeded, so the demo data stays.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     return app
 
 
@@ -42,12 +47,16 @@ def _web_login(client) -> None:
 
     username = f"dist_web_{uuid4().hex[:10]}"
     password = "dist-web-pass"
-    admins_repo.create_admin(
+    _tester = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Distributor Web Tester",
         is_super_admin=True,
     )
+    # STALE since 6824f26c (memory owner-only-bypass.md): the is_super_admin
+    # flag no longer grants the panel bypass — only an owner / co-owner does.
+    # This tester stands for the operator with full access, so make it co-owner.
+    admins_repo.set_co_owner(_tester.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
@@ -57,7 +66,8 @@ def _web_login(client) -> None:
 
 
 def _csrf(client) -> str:
-    res = client.get("/admin/radius/distributors/new")
+    # 0d4def37: the create form is a modal on the list page (?new=1).
+    res = client.get("/admin/radius/distributors?new=1")
     assert res.status_code == 200
     with client.session_transaction() as sess:
         return sess["_csrf_token"]
@@ -68,12 +78,15 @@ def _auth_headers(client) -> dict:
 
     username = f"dist_api_{uuid4().hex[:10]}"
     password = "dist-api-pass"
-    admins_repo.create_admin(
+    _tester = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Distributor API Tester",
         is_super_admin=True,
     )
+    # STALE since 6824f26c / 2e5c50e4 (shared is_owner_like for web + API):
+    # the raw is_super_admin flag grants no bypass; a full-access tester is a co-owner.
+    admins_repo.set_co_owner(_tester.id, True)
     res = client.post(
         "/api/admin/login",
         json={"username": username, "password": password},
@@ -101,15 +114,21 @@ def test_distributors_web_routes_are_login_guarded(client):
 
 def test_distributors_web_form_uses_choice_controls_not_json_fields(client):
     _web_login(client)
-    res = client.get("/admin/radius/distributors/new")
+    # STALE since 0d4def37: «إضافة موزع» became a modal inside the list page;
+    # the legacy /distributors/new URL stays alive and opens it via ?new=1.
+    legacy = client.get("/admin/radius/distributors/new", follow_redirects=False)
+    assert legacy.status_code in {302, 303}
+    assert "new=1" in legacy.headers.get("Location", "")
+    res = client.get("/admin/radius/distributors?new=1")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert 'type="checkbox" name="permissions"' in html
-    assert 'type="hidden" name="scope_json"' in html
+    # The modal picks the scope with radio choices (still never a JSON field).
+    assert 'type="radio" name="scope_json"' in html
     assert "نطاق البيانات (JSON)" not in html
     assert "hub-textarea mono" not in html
     assert "cards.read, cards.sell" not in html
-    assert "اختر الصلاحيات من القائمة" in html
+    assert "الصلاحيات ونطاق البيانات" in html   # the modal's choice section
 
 
 def test_distributors_web_create_detail_assign_and_settle(client):

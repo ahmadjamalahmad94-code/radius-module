@@ -26,7 +26,13 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     from app import create_app
 
-    return create_app()
+    application = create_app()
+    # ENV: since 5126bdbe the license-lifecycle gate redirects every panel page
+    # of an unlicensed install to /_license/activate. Its test bypass needs
+    # HOBERADIUS_NO_SEED=1 + HOBERADIUS_LICENSE_GATE_TEST_BYPASS=1 (conftest);
+    # NO_SEED is set only after create_app() seeded, so the demo data stays.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    return application
 
 
 @pytest.fixture
@@ -39,12 +45,16 @@ def _web_login(client) -> None:
 
     username = f"print_web_{uuid4().hex[:10]}"
     password = "print-web-pass"
-    admins_repo.create_admin(
+    _tester = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Print Template Web Tester",
         is_super_admin=True,
     )
+    # STALE since 6824f26c (memory owner-only-bypass.md): the is_super_admin
+    # flag no longer grants the panel bypass — only an owner / co-owner does.
+    # This tester stands for the operator with full access, so make it co-owner.
+    admins_repo.set_co_owner(_tester.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
@@ -103,7 +113,11 @@ def test_print_templates_create_and_visual_preview(client):
     assert "اختر شكل القالب" in page_html
     assert "اختيار بصري سريع" in page_html
     assert "قالب حديث" in page_html
-    assert page_html.index("pr-preset-picker") < page_html.index('name="name"')
+    # STALE since 0d4def37: the template-name field became a light one-line card
+    # at the top of the form, and the design-source / engine / preset choices
+    # sit right under it — so the name input now comes FIRST.
+    name_input = page_html.index('name="name" required')
+    assert name_input < page_html.index('class="pr-engine-card"') < page_html.index('class="pr-preset-picker"')
     assert "localizedDefaults" in page_html
     assert "بطاقة إنترنت" in page_html
     assert "احتفظ ببيانات الدخول حتى انتهاء الصلاحية" in page_html
@@ -115,7 +129,12 @@ def test_print_templates_create_and_visual_preview(client):
     assert "function syncPreviewOrientation()" in page_html
     assert "svgMount.dataset.renderEngine = engine" in page_html
     assert "openDesignerDrawerFromHash()" in page_html
-    assert "setTimeout(() => fetchSvg(seq), 120)" in page_html
+    # STALE since 0d4def37: the fixed 120 ms debounce became a throttle (leading
+    # fetch + trailing timer, LIVE_FETCH_INTERVAL_MS) so dragging a slider keeps
+    # the card live; stale responses are still dropped by the seq check below.
+    assert "function scheduleFetch()" in page_html
+    assert "const LIVE_FETCH_INTERVAL_MS = " in page_html
+    assert "LIVE_FETCH_INTERVAL_MS - (now - lastFetchAt)" in page_html
     assert "if(seq !== fetchSeq) return;" in page_html
     assert 'name="background_image"' in page_html
     assert 'name="background_style"' in page_html
@@ -204,7 +223,15 @@ def test_print_templates_create_and_visual_preview(client):
     assert created.status_code == 200
     created_html = created.get_data(as_text=True)
     assert name in created_html
-    assert "فتح التصدير" in created_html
+    # STALE since 0d4def37: the saved-templates table (and its per-row
+    # «فتح التصدير» button) moved to the separate statistics page; the design
+    # room links there, and each saved row opens the print room (#export).
+    assert "القوالب المحفوظة وسجل التصدير" in created_html
+    stats = client.get("/admin/radius/print-templates/stats")
+    assert stats.status_code == 200
+    stats_html = stats.get_data(as_text=True)
+    assert name in stats_html
+    assert "/admin/radius/print-templates#export" in stats_html
 
     # Commit 3: the legacy /export URL now redirects to the merged
     # /print-templates#export anchor. Make sure the redirect lands on
@@ -417,8 +444,17 @@ def test_print_template_background_data_url_is_saved_and_exportable(client):
     assert export.status_code == 200
     assert export.data.startswith(b"%PDF")
     assert b"/Subtype /Image" in export.data
-    assert b"/Width 24" in export.data
-    assert b"/Height 18" in export.data
+    # STALE since 0d4def37 (_cover_crop_image_bytes): the PDF no longer stretches
+    # the uploaded 24x18 background — it centre-crops it to the card's aspect
+    # ratio (same as the SVG preview's xMidYMid slice) so the export matches the
+    # preview. The full width survives; the height is cropped to card ratio.
+    import re as _re
+    dims = _re.findall(rb"/Height (\d+)[^>]*?/Width (\d+)|/Width (\d+)[^>]*?/Height (\d+)", export.data)
+    sizes = [(int(a or d), int(b or c)) for a, b, c, d in dims]  # (height, width)
+    assert any(w == 24 and h < 18 for h, w in sizes), sizes
+    h = next(h for h, w in sizes if w == 24)
+    from app.radius.services.card_renderer import CANVAS_LANDSCAPE
+    assert h == round(24 / (CANVAS_LANDSCAPE[0] / CANVAS_LANDSCAPE[1])), h
 
 
 def test_print_template_background_modes_are_separate(client):
