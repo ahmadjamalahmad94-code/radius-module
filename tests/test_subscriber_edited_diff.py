@@ -97,8 +97,10 @@ def test_diff_status_mapped_to_arabic(app):
         changed = U._describe_subscriber_changes(
             _sub(status="enabled"), _sub(status="disabled"))
         assert "الحالة" in changed and "مفعّل" in changed and "معطّل" in changed
-        # تغيير واحد ⇐ سطر واحد ببادئة «• ».
-        assert changed == "• الحالة: مفعّل → معطّل"
+        # تغيير واحد ⇐ سطر واحد ببادئة «• »؛ القيمتان والسهم داخل عزل
+        # LRI/PDI (U+2066/U+2069) كي لا ينعكس السهم في سياق RTL (بلاغ D9،
+        # a363247c).
+        assert changed == "• الحالة: \u2066مفعّل → معطّل\u2069"
 
 
 def test_diff_no_changes_returns_sentinel(app):
