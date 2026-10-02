@@ -624,26 +624,6 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
     return bool(spec.get("default", True))
 
 
-def explicitly_granted(admin_id: Optional[int], action_key: str, *, tenant_id: int = 1) -> bool:
-    """هل منح المالكُ هذا الفعلَ **صراحةً** («مسموح» على المدير أو على دوره، أو
-    علَمه القديم ``can_*`` = True)؟ لا يكفي هنا مفتاحُ RBAC الموروث.
-
-    لماذا؟ بعض الأفعال المُشتقّة من RBAC يَفتح مفتاحُها الصفحةَ نفسَها ولا يعني
-    وحده المنحَ الأوسع: «توليد بطاقات» (cards.generate) يَفتح صفحة التوليد لكلّ
-    مدير — فيولّد من العروض المسعَّرة وتُخصم الجملة من محفظته — بينما **النموذج
-    الكامل** (مواصفاتٌ وأسعارٌ حرّة بلا خصم) قرارٌ صريحٌ للمالك (MT111 /
-    cardgen-role-split). قراءة الفعل المُشتقّ وحده جعلت كلّ «مدير عام» و«مشغّل»
-    يولّد بالنموذج الكامل مجّانًا (دمج da238d4b مع 531cb457)."""
-    if not admin_id:
-        return False
-    row = _grants_row(admin_id, tenant_id)
-    if _tri_get(row, ("action", action_key)) is True:
-        return True
-    flag = (ACTION_REGISTRY.get(action_key) or {}).get("flag")
-    flags = row.get("flags") if isinstance(row.get("flags"), dict) else {}
-    return bool(flag and flags.get(flag) is True)
-
-
 def endpoint_action_permitted(admin_id: Optional[int], endpoint: str, *, tenant_id: int = 1) -> bool:
     """للحارس: هل endpoint (إن كان فعلًا مُسجَّلًا) مسموح للمدير؟ True إن لم
     يكن endpoint فعلًا مُسجَّلًا (لا قيد إضافيّ)."""
