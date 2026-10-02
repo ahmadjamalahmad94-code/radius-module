@@ -210,6 +210,9 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/recycle-bin/<entity_type>/<int:entity_id>/restore",
                     "recycle_bin_restore",
                     require_api_token(recycle_bin_restore), methods=["POST"])
+    bp.add_url_rule("/recycle-bin/<entity_type>/<int:entity_id>/purge",
+                    "recycle_bin_purge",
+                    require_api_token(recycle_bin_purge), methods=["POST"])
 
 
 def recycle_bin_list():
@@ -282,3 +285,41 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     if not changed:
         return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)
     return ok({"entity_type": table, "id": entity_id, "restored": True})
+
+
+def recycle_bin_purge(entity_type: str, entity_id: int):
+    """PERMANENT delete («حذف نهائيّ») of an item already in the recycle bin —
+    the same operation as the web ``recycle_bin_purge`` (owner only, card
+    batches only, the batch must be soft-deleted first). The app's
+    «أرشفة نهائية» called ``/archive`` on rows that were already archived,
+    which is always a 404 — this is the real action behind that button."""
+    table = _SUPPORTED.get(entity_type)
+    if not table:
+        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+    if table != "card_batches":
+        return fail("validation_error",
+                    "الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط.", status=422)
+    row = db().execute(
+        "SELECT id, batch_code FROM card_batches WHERE tenant_id = ? AND id = ? "
+        "AND deleted_at IS NOT NULL",
+        (_tid(), entity_id),
+    ).fetchone()
+    if not row:
+        return fail("not_found",
+                    "تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) "
+                    "ثمّ احذفها نهائيًّا.", status=404)
+    summary = cards_repo.purge_batch(_tid(), entity_id)
+    try:
+        from ...radius.services.audit import get_audit_service
+        get_audit_service().record(
+            actor=_actor(), action="card_batch.purged", target_type="card_batch",
+            target_id=str(entity_id),
+            payload={"batch_code": row["batch_code"], "summary": summary},
+        )
+    except Exception:  # noqa: BLE001 — the purge is done; audit is best-effort
+        pass
+    return ok({
+        "entity_type": table, "id": entity_id, "purged": True,
+        "cards": int(summary.get("cards", 0) or 0),
+        "batch": int(summary.get("batch", 0) or 0),
+    })

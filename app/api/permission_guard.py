@@ -266,6 +266,8 @@ API_PERMISSIONS: dict[str, Spec] = {
     # archiving admins/roles/NAS/plans/subscribers from one generic endpoint
     # is an owner-level operation (the web archives each from its own page).
     "v1.recycle_bin_archive": SUPER,
+    # the web «حذف نهائيّ» (recycle_bin_purge) is owner-only — irreversible.
+    "v1.recycle_bin_purge": SUPER,
     # fix3 (F01 F4): any of the per-type restore keys reaches the handler,
     # which decides per entity type (recycle_restore_policy) + scope.
     "v1.recycle_bin_restore": "cards.restore|users.create|plans.create|nas.create",
@@ -367,6 +369,8 @@ API_PERMISSIONS: dict[str, Spec] = {
     # ── backups (owner only, like every web backups_* route) ──
     "v1.backups_status": "web:backups",
     "v1.backups_run": "web:backups_run",
+    "v1.backups_run_all": "web:backups_run_all",
+    "v1.backups_google_drive_portal_link": "web:license_file_portal_sso",
     "v1.backups_google_drive_connect": "web:backups_gdrive_start",
     "v1.backups_google_drive_poll": "web:backups_gdrive_poll",
     "v1.backups_google_drive_status": "web:backups",
