@@ -159,7 +159,9 @@ def test_hub_shows_5_cards(app):
         res = client.get("/admin/radius/reports/login_states")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    for kind in ("subscriber_net", "card_net", "subscriber_portal", "card_store", "admin"):
+    # مفاتيح الأقسام الخمسة كما رسّختها cdb78f45 (استعادة الـ5-way على main):
+    # subscriber (RADIUS) / card (RADIUS) / sub_portal / card_store / admin.
+    for kind in ("subscriber", "card", "sub_portal", "card_store", "admin"):
         assert f'data-testid="login-states-card-{kind}"' in html, \
             f"hub missing card for kind={kind}"
 
@@ -252,22 +254,17 @@ def test_sidebar_links_under_correct_sections(app):
     assert "/reports/login_states/card_store"  in html, "card_store link missing"
     assert "/reports/login_states/admin"       in html, "admin link missing"
 
-    # ترتيب: المشتركون → البطاقات → الإدارة
-    i_subs_sec  = html.find('data-hb-section="subscribers"')
-    i_cards_sec = html.find('data-hb-section="cards"')
-    i_admin_sec = html.find('data-hb-section="administration"')
-
-    i_subs_link   = html.find("/reports/login_states/subscribers")
-    i_portal_link = html.find("/reports/login_states/sub_portal")
-    i_cards_link  = html.find("/reports/login_states/cards")
-    i_store_link  = html.find("/reports/login_states/card_store")
-    i_admin_link  = html.find("/reports/login_states/admin")
-
-    assert i_subs_sec   < i_subs_link   < i_cards_sec,  "subs link not in المشتركون"
-    assert i_subs_sec   < i_portal_link < i_cards_sec,  "portal link not in المشتركون"
-    assert i_cards_sec  < i_cards_link  < i_admin_sec,  "cards link not in البطاقات"
-    assert i_cards_sec  < i_store_link  < i_admin_sec,  "store link not in البطاقات"
-    assert i_admin_sec  < i_admin_link,                 "admin link not in الإدارة"
+    # الموضع (cdb78f45): الروابط الخمسة مُرسّخة تحت «التقارير → الدخول والأمان»
+    # (data-hb-subgroup="reports-auth") — وأُزيلت نسخها المكرّرة من قسمَي
+    # «المشتركون» و«البطاقات» عمدًا تجنّبًا للتكرار.
+    start = html.find('data-hb-subgroup="reports-auth"')
+    assert start != -1, "reports-auth subgroup not found"
+    end = html.find('data-hb-subgroup=', start + 1)
+    block = html[start:end if end != -1 else len(html)]
+    for slug in ("subscribers", "cards", "sub_portal", "card_store", "admin"):
+        href = f'href="/admin/radius/reports/login_states/{slug}"'
+        assert href in block, f"{slug} link not under reports-auth"
+        assert html.count(href) == 1, f"{slug} link duplicated in sidebar"
 
 
 # ─────────────────── backward compat ───────────────────
