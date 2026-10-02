@@ -45,7 +45,8 @@
     head.appendChild(el('h3', null,
       '<i class="fa-solid fa-file-import"></i> استيراد المشتركين من الراوتر'));
     var x = el('button', { type: 'button', 'aria-label': 'إغلاق' }, '&times;');
-    x.style.cssText = 'border:none;background:none;font-size:26px;cursor:pointer;color:#888;line-height:1';
+    x.style.cssText = 'border:none;background:none;font-size:26px;cursor:pointer;color:#888;line-height:1;' +
+      'min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center';
     x.onclick = close;
     head.appendChild(x);
     card.appendChild(head);
@@ -58,6 +59,13 @@
   }
 
   function close() { if (overlay) overlay.style.display = 'none'; }
+
+  // Escape يُغلق النافذةَ كزرِّ «إغلاق» (كباقي نوافذ اللوحة).
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !overlay || overlay.style.display === 'none') return;
+    e.preventDefault();
+    close();
+  });
 
   function btn(label, kind) {
     var bg = kind === 'primary' ? '#f4ba2a' : (kind === 'danger' ? '#fde2e2' : '#eef2f7');

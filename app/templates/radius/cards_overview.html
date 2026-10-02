@@ -1308,6 +1308,15 @@
 
   const section = document.getElementById(sectionId);
   if (section) bindSalesPickers(section);
+
+  // Escape يُغلق نافذةَ «الكروت المباعة» (مفتوحةٌ بـ:target) كما يفعل زرُّ الإغلاق (href="#").
+  // مستمعٌ على document لأنّ القسمَ يُستبدَل كلّيًّا في updateSales. إن كانت الأجندةُ مفتوحةً فهي أَولى.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || document.getElementById(popoverId)) return;
+    if (!document.querySelector(".co-sales-modal:target")) return;
+    event.preventDefault();
+    window.location.hash = "";
+  });
 })();
 </script>
 
