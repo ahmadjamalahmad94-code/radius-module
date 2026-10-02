@@ -185,10 +185,10 @@
         <div class="sa-card-title">{{ _('الحدود الافتراضية (لكل الراوترات)') }}</div>
         <div class="sa-grid">
           <label class="sa-field">{{ _('السرعة الطبيعية (Mbps)') }}
-            <input type="number" min="0" name="default_speed_mbps" value="{{ settings.default_speed_mbps }}">
+            <input type="number" min="1" name="default_speed_mbps" value="{{ settings.default_speed_mbps }}">
           </label>
           <label class="sa-field">{{ _('الاستهلاك الطبيعي (GB)') }}
-            <input type="number" min="0" name="default_usage_gb" value="{{ settings.default_usage_gb }}">
+            <input type="number" min="1" name="default_usage_gb" value="{{ settings.default_usage_gb }}">
           </label>
           <label class="sa-field">{{ _('نافذة الاستهلاك') }}
             <select name="usage_window">
@@ -210,13 +210,15 @@
               <label class="sa-toggle sa-toggle--sm"><input type="checkbox" name="r_{{ r.id }}_enabled" value="1" {% if r.enabled %}checked{% endif %}><span>{{ r.name }}</span></label>
             </div>
             <div class="sa-grid sa-grid--4">
-              <label class="sa-field">{{ _('مفصول بعد (د)') }}<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ r.offline_after_min }}"></label>
-              <label class="sa-field">{{ _('سرعة (Mbps)') }}<input type="number" min="0" name="r_{{ r.id }}_speed" value="{{ r.normal_speed_mbps }}"></label>
-              <label class="sa-field">{{ _('استهلاك (GB)') }}<input type="number" min="0" name="r_{{ r.id }}_usage" value="{{ r.normal_usage_gb }}"></label>
+              {% set ov = r.override or {} %}
+              <label class="sa-field">{{ _('مفصول بعد (د)') }}<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ ov.offline_after_min if ov.offline_after_min is not none else '' }}" placeholder="{{ settings.offline_after_min }}"></label>
+              <label class="sa-field">{{ _('سرعة (Mbps)') }}<input type="number" min="1" name="r_{{ r.id }}_speed" value="{{ ov.normal_speed_mbps if ov.normal_speed_mbps is not none else '' }}" placeholder="{{ settings.default_speed_mbps }}"></label>
+              <label class="sa-field">{{ _('استهلاك (GB)') }}<input type="number" min="1" name="r_{{ r.id }}_usage" value="{{ ov.normal_usage_gb if ov.normal_usage_gb is not none else '' }}" placeholder="{{ settings.default_usage_gb }}"></label>
               <label class="sa-field">{{ _('النافذة') }}
                 <select name="r_{{ r.id }}_window">
-                  <option value="day" {% if r.usage_window == 'day' %}selected{% endif %}>{{ _('يومي') }}</option>
-                  <option value="month" {% if r.usage_window == 'month' %}selected{% endif %}>{{ _('شهري') }}</option>
+                  <option value="" {% if not ov.usage_window %}selected{% endif %}>{{ _('الافتراضي') }}</option>
+                  <option value="day" {% if ov.usage_window == 'day' %}selected{% endif %}>{{ _('يومي') }}</option>
+                  <option value="month" {% if ov.usage_window == 'month' %}selected{% endif %}>{{ _('شهري') }}</option>
                 </select>
               </label>
             </div>

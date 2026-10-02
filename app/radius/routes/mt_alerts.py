@@ -85,6 +85,12 @@ def _routers_with_thresholds(tid: int) -> list[dict]:
     for d in devices:
         rid = int(getattr(d, "id"))
         eff = smart_alerts.effective_for_router(rid, glob, per_router)
+        ov = per_router.get(rid) or {}
+
+        def _raw(col):
+            v = ov.get(col)
+            return None if v in (None, "") else v
+
         out.append({
             "id": rid,
             "name": getattr(d, "name", None) or f"#{rid}",
@@ -93,6 +99,15 @@ def _routers_with_thresholds(tid: int) -> list[dict]:
             "normal_speed_mbps": eff["normal_speed_mbps"],
             "normal_usage_gb": eff["normal_usage_gb"],
             "usage_window": eff["usage_window"],
+            # parity-c: the form shows the router's OWN override (empty =
+            # inherits the default, shown as placeholder). Pre-filling the
+            # effective values froze the defaults into every router on save.
+            "override": {
+                "offline_after_min": _raw("offline_after_min"),
+                "normal_speed_mbps": _raw("normal_speed_mbps"),
+                "normal_usage_gb": _raw("normal_usage_gb"),
+                "usage_window": _raw("usage_window"),
+            },
         })
     return out
 
@@ -166,14 +181,21 @@ def mt_alerts_settings_save():
     def _checkbox(name: str) -> bool:
         return form.get(name) in {"1", "on", "true", "yes"}
 
-    def _opt_int(name: str):
+    def _opt_int(name: str, minimum: int = 1):
+        """Empty → None (inherit). Same floor as the API (offline ≥ 2, the
+        rest ≥ 1) — parity-c: 0/1 used to be stored (or silently replaced
+        by 100/200) while the app/API refused them."""
         raw = (form.get(name) or "").strip()
         if not raw:
             return None
         try:
-            return max(0, int(float(raw)))
+            return max(minimum, int(float(raw)))
         except (TypeError, ValueError):
             return None
+
+    def _window(name: str):
+        raw = (form.get(name) or "").strip().lower()
+        return raw if raw in {"day", "month"} else None
 
     smart_alerts.save_global_settings(tid, {
         "enabled": _checkbox("enabled"),
@@ -181,10 +203,12 @@ def mt_alerts_settings_save():
         "offline": _checkbox("offline"),
         "high_traffic": _checkbox("high_traffic"),
         "high_usage": _checkbox("high_usage"),
-        "offline_after_min": _opt_int("offline_after_min") or 6,
+        # parity-c: «حلقة (لوب)» was rendered but never saved.
+        "loop": _checkbox("loop"),
+        "offline_after_min": _opt_int("offline_after_min", 2) or 6,
         "default_speed_mbps": _opt_int("default_speed_mbps") or 100,
         "default_usage_gb": _opt_int("default_usage_gb") or 200,
-        "usage_window": (form.get("usage_window") or "day").strip(),
+        "usage_window": _window("usage_window") or "day",
     })
 
     # Per-router rows: present only for routers the operator actually edited.
@@ -198,10 +222,10 @@ def mt_alerts_settings_save():
         router_alert_settings_repo.upsert(
             tenant_id=tid, router_id=rid,
             enabled=_checkbox(f"r_{rid}_enabled"),
-            offline_after_min=_opt_int(f"r_{rid}_offline"),
+            offline_after_min=_opt_int(f"r_{rid}_offline", 2),
             normal_speed_mbps=_opt_int(f"r_{rid}_speed"),
             normal_usage_gb=_opt_int(f"r_{rid}_usage"),
-            usage_window=(form.get(f"r_{rid}_window") or "").strip() or None,
+            usage_window=_window(f"r_{rid}_window"),
         )
 
     flash("تم حفظ إعدادات التنبيهات الذكية.", "success")

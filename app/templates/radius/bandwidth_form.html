@@ -125,7 +125,9 @@
           <input class="hub-input" type="number" name="rate_down" min="0" value="{{ item.rate_down }}"
                  placeholder="10">
           <select class="hub-select" name="rate_down_unit">
-            {% for u in ['Kbps','Mbps'] %}
+            {# parity-c: Gbps too — the app offers it and the server honours it;
+               without it a Gbps profile re-saved here became Kbps. #}
+            {% for u in ['Kbps','Mbps','Gbps'] %}
               <option value="{{ u }}" {% if item.rate_down_unit==u %}selected{% endif %}>{{ u }}</option>
             {% endfor %}
           </select>
@@ -139,7 +141,7 @@
           <input class="hub-input" type="number" name="rate_up" min="0" value="{{ item.rate_up }}"
                  placeholder="5">
           <select class="hub-select" name="rate_up_unit">
-            {% for u in ['Kbps','Mbps'] %}
+            {% for u in ['Kbps','Mbps','Gbps'] %}
               <option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>
             {% endfor %}
           </select>
@@ -267,42 +269,50 @@
   function unitTok(val, unit){
     var n = parseFloat(val);
     if(!isFinite(n) || n <= 0) return '';
-    var suffix = (unit === 'Kbps') ? 'k' : 'M';
+    var suffix = (unit === 'Kbps') ? 'k' : (unit === 'Gbps' ? 'G' : 'M');
     // Strip trailing «.0» for clean lines (10 not 10.0).
     var num = (n % 1 === 0) ? String(n) : String(n);
     return num + suffix;
   }
 
-  // Build «<down>/<up>» — and when burst is on, append the burst form:
-  //   <maxDown>/<maxUp> <burstDown>/<burstUp> <threshDown>/<threshUp> <time>/<time>
-  // This matches the MikroTik rate-limit grammar:
-  //   rx/tx max-burst burst-threshold burst-time
+  // MikroTik rate-limit grammar is «rx/tx» from the ROUTER's side:
+  //   rx = what the router receives = the subscriber's UPLOAD,
+  //   tx = the subscriber's DOWNLOAD — the server's own «{up}k/{down}k».
+  // parity-c: this builder wrote «<down>/<up>» (swapped), and wrote it
+  // even without burst — and a non-empty line REPLACES the rates at auth.
+  // Now: no burst → empty line (the server builds up/down from the rates,
+  // Gbps included); burst on → «up/down burstUp/burstDown thrUp/thrDown t/t».
   function build(){
     if(manual) return;
     var d = unitTok(rateDown && rateDown.value, rateDownU && rateDownU.value);
     var u = unitTok(rateUp && rateUp.value, rateUpU && rateUpU.value);
-    if(!d && !u){ burstStr.value = ''; return; }
-    var base = (d || '0') + '/' + (u || '0');
+    if(!d && !u){ return; }
+    var base = (u || '0') + '/' + (d || '0');
 
     if(burstEnable && burstEnable.checked){
-      var bd = unitTok(bDown && bDown.value, bDownU && bDownU.value) || base.split('/')[0];
-      var bu = unitTok(bUp && bUp.value, bUpU && bUpU.value) || base.split('/')[1];
+      var bd = unitTok(bDown && bDown.value, bDownU && bDownU.value) || (d || '0');
+      var bu = unitTok(bUp && bUp.value, bUpU && bUpU.value) || (u || '0');
       // threshold = pct of max rate (numeric kbit), derived from max line.
       var pct = parseFloat(bThr && bThr.value); if(!isFinite(pct) || pct<=0) pct = 75;
       function thr(valStr, unit){
         var n = parseFloat(valStr); if(!isFinite(n)||n<=0) return '0';
-        var kbit = (unit === 'Kbps') ? n : n*1000;
+        var kbit = (unit === 'Kbps') ? n : (unit === 'Gbps' ? n*1000000 : n*1000);
         var t = Math.round(kbit * pct/100);
         return t + 'k';
       }
       var td = thr(rateDown && rateDown.value, rateDownU && rateDownU.value);
       var tu = thr(rateUp && rateUp.value, rateUpU && rateUpU.value);
       var time = parseInt(bTime && bTime.value, 10); if(!isFinite(time)||time<0) time = 8;
-      burstStr.value = base + ' ' + bd + '/' + bu + ' ' + td + '/' + tu + ' ' + time + '/' + time;
+      burstStr.value = base + ' ' + bu + '/' + bd + ' ' + tu + '/' + td + ' ' + time + '/' + time;
     } else {
-      burstStr.value = base;
+      burstStr.value = '';
     }
   }
+
+  // parity-c: a stored SIMPLE line («a/b», no burst) predates the fix above
+  // and may be swapped — rebuild it from the rates now (→ empty, the server
+  // then builds up/down itself). Lines with burst parts stay manual.
+  if(initialBurst && !manual){ build(); }
 
   // Wire basic inputs → rebuild.
   [rateDown, rateDownU, rateUp, rateUpU,

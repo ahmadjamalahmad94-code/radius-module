@@ -26,8 +26,20 @@ def _item(profile: BandwidthProfile) -> dict:
     }
 
 
+_UNITS = {"kbps": "Kbps", "mbps": "Mbps", "gbps": "Gbps"}
+
+
 def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
     body = request.get_json(silent=True) or {}
+    # parity-c: units are a closed list (Kbps/Mbps/Gbps — the web form's and
+    # the app's); any other string was stored and read as Kbps at auth.
+    units = {}
+    for key in ("rate_down_unit", "rate_up_unit"):
+        raw = str(body.get(key) or "Kbps").strip().lower()
+        if raw not in _UNITS:
+            return fail("validation_error",
+                        "وحدة السرعة يجب أن تكون Kbps أو Mbps أو Gbps.", status=422)
+        units[key] = _UNITS[raw]
     name = str(body.get("name") or "").strip()
     if not name:
         return fail("validation_error", "اسم ملف السرعة مطلوب.", status=422)
@@ -42,9 +54,9 @@ def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
         tenant_id=_tid(),
         name=name,
         rate_down=rate_down,
-        rate_down_unit=str(body.get("rate_down_unit") or "Kbps"),
+        rate_down_unit=units["rate_down_unit"],
         rate_up=rate_up,
-        rate_up_unit=str(body.get("rate_up_unit") or "Kbps"),
+        rate_up_unit=units["rate_up_unit"],
         burst=str(body.get("burst") or ""),
         priority=priority,
     )
@@ -90,6 +102,12 @@ def patch_profile(profile_id: int):
     profile = _payload(profile_id)
     if isinstance(profile, tuple):
         return profile
+    # parity-c: renaming onto another profile's name hit UNIQUE → 500.
+    if any((getattr(p, "name", "") or "").strip() == profile.name
+           and int(getattr(p, "id", 0) or 0) != int(profile_id)
+           for p in bandwidth_repo.list_all(_tid())):
+        return fail("conflict", f"اسم ملف السرعة «{profile.name}» مستخدم مسبقًا.",
+                    status=409)
     return ok(_item(bandwidth_repo.upsert(profile)))
 
 

@@ -85,6 +85,15 @@ def _s(name: str, default: str = "") -> str:
     return (request.form.get(name) or default).strip()
 
 
+def _s_keep(name: str, current) -> str:
+    """Edit-form text: a field PRESENT in the form wins even when emptied
+    (parity-c — «_s(name, stored)» made IP/MAC/location/notes impossible to
+    clear on the web while the app's PATCH could); absent → stored value."""
+    if name in request.form:
+        return (request.form.get(name) or "").strip()
+    return str(current or "").strip()
+
+
 def _i(name: str, default: int) -> int:
     try:
         return int(request.form.get(name) or default)
@@ -194,11 +203,11 @@ def network_devices_update(device_id: int):
     fields = {
         "name":            _s("name", device["name"]),
         "device_type":     _s("device_type", device["device_type"]),
-        "ip_address":      _s("ip_address", device["ip_address"]),
-        "mac_address":     _s("mac_address", device["mac_address"]),
-        "location":        _s("location", device["location"]),
+        "ip_address":      _s_keep("ip_address", device["ip_address"]),
+        "mac_address":     _s_keep("mac_address", device["mac_address"]),
+        "location":        _s_keep("location", device["location"]),
         "management_port": _i("management_port", device["management_port"]),
-        "notes":           _s("notes", device["notes"]),
+        "notes":           _s_keep("notes", device["notes"]),
         "is_critical":     _b("is_critical"),
         "watch_enabled":   _b("watch_enabled"),
         "alert_enabled":   _b("alert_enabled"),

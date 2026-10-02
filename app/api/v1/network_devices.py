@@ -479,7 +479,10 @@ def network_devices_patch(device_id: int):
         router_id = _int_or_none(body.get("router_id"))
         if not router_id:
             return fail("validation_error", "اختر الراوتر التابع له الجهاز.", status=422)
-        if not _router_exists(tenant_id, router_id):
+        # parity-c: like the web edit, only a CHANGED router must exist — a
+        # device whose router was archived could not be saved from the app
+        # at all (it always sends its current router_id).
+        if router_id != item["router_id"] and not _router_exists(tenant_id, router_id):
             return fail("validation_error", "الراوتر المختار غير موجود.", status=422)
         if router_id != item["router_id"]:
             with transaction() as conn:

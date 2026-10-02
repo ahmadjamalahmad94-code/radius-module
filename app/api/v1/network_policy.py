@@ -772,12 +772,22 @@ def wb_target_add(policy_id: int):
         return fail("not_found",
                     f"policy {policy_id} غير موجود", status=404)
     body = _body()
+    # parity-c: the same analyzer as the web form (routes/network_policy.py)
+    # — «https://Site.com/x» picked as «domain» in the app was stored and
+    # pushed raw (address=https://site.com/x) and failed on the router.
+    # The analyzer decides the kind; the client's target_type is a hint only.
+    from ...radius.services import npc_domain_analyzer as analyzer
+    raw_value = str(body.get("value") or "").strip()
+    entry = analyzer.analyze_line(raw_value)
+    if entry.kind == analyzer.KIND_INVALID:
+        return fail("validation_error", f"تعذّر القبول: {entry.reason}",
+                    status=422)
     try:
         tid = wb_repo.add_target(
             policy_id=policy_id,
-            value=str(body.get("value") or ""),
-            target_type=str(body.get("target_type") or ""),
-            normalized_value=body.get("normalized_value"),
+            value=entry.raw or raw_value,
+            target_type=entry.kind,
+            normalized_value=entry.normalized,
             category=str(body.get("category") or "custom"),
             status=str(body.get("status")
                        or wb_repo.STATUS_ACTIVE),

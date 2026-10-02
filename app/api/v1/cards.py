@@ -1270,6 +1270,13 @@ def cards_adjust_time(card_id: int):
         "extra_seconds": int(result.get("extra_seconds_new") or 0),
         "expire_at": result.get("expire_at_new"),
     }
+    # تكافؤ مع رسالة الويب (routes/cards.py set_time): هل وصل التحديث للراوتر؟
+    # None = لم يُرسَل CoA (لا جلسة/خصمٌ أنهى البطاقة فقُطعت).
+    coa = result.get("coa_result")
+    payload["adjustment"]["coa"] = None if coa is None else {
+        "ok": bool(getattr(coa, "ok", False)),
+        "code": str(getattr(coa, "code_name", "") or ""),
+    }
     return ok(payload)
 
 

@@ -165,7 +165,9 @@ def _merge_form_over(existing: NasDevice) -> NasDevice:
     for f in ("name", "address", "vendor", "nas_type", "shortname", "ports",
               "snmp_community", "auth_port", "acct_port", "coa_port", "api_port",
               "api_user", "location", "coordinates", "description", "ssh_port",
-              "tags"):
+              # parity-c: ros_version was dropped on edit (create-only) — the
+              # script generator then sent the operator back here in a loop.
+              "tags", "ros_version"):
         if f in request.form:
             changes[f] = getattr(form, f)
     for f in ("api_use_tls", "monitoring_enabled", "enabled",

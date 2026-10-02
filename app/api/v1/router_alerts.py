@@ -101,6 +101,14 @@ def _settings_payload(tenant_id: int) -> dict:
                 "usage_window": effective["usage_window"] or "day",
                 "last_push_at": last_push.get(router_id, ""),
                 "has_override": bool(override),
+                # parity-c: the router's OWN values (null = inherits the
+                # global default). Editors must pre-fill these, not the
+                # effective ones, or one save freezes the defaults forever.
+                "override": {
+                    key: (None if override.get(key) in (None, "") else override.get(key))
+                    for key in ("offline_after_min", "normal_speed_mbps",
+                                "normal_usage_gb", "usage_window")
+                },
             }
         )
     loop_probes = []
@@ -170,29 +178,26 @@ def router_alerts_settings_patch():
         if global_in is not None:
             if not isinstance(global_in, dict):
                 raise ValueError("settings")
-            values = {
-                "enabled": _bool(global_in.get("enabled"), True),
-                "telegram": _bool(global_in.get("telegram"), True),
-                "offline": _bool(global_in.get("offline"), True),
-                "high_traffic": _bool(global_in.get("high_traffic"), True),
-                "high_usage": _bool(global_in.get("high_usage"), True),
-                "loop": _bool(global_in.get("loop"), True),
-                "offline_after_min": _positive_int(
-                    global_in.get("offline_after_min", 6),
+            # parity-c: a PARTIAL patch — only the keys sent are written
+            # (a missing toggle used to be reset to True / its default).
+            values: dict[str, Any] = {}
+            for key in ("enabled", "telegram", "offline", "high_traffic",
+                        "high_usage", "loop"):
+                if key in global_in:
+                    values[key] = _bool(global_in.get(key), True)
+            if "offline_after_min" in global_in:
+                values["offline_after_min"] = _positive_int(
+                    global_in.get("offline_after_min"),
                     field="offline_after_min",
                     minimum=2,
-                ),
-                "default_speed_mbps": _positive_int(
-                    global_in.get("default_speed_mbps", 100),
-                    field="default_speed_mbps",
-                ),
-                "default_usage_gb": _positive_int(
-                    global_in.get("default_usage_gb", 200),
-                    field="default_usage_gb",
-                ),
-                "usage_window": _usage_window(global_in.get("usage_window", "day")),
-            }
-            smart_alerts.save_global_settings(tenant_id, values, by=_admin_id())
+                )
+            for key in ("default_speed_mbps", "default_usage_gb"):
+                if key in global_in:
+                    values[key] = _positive_int(global_in.get(key), field=key)
+            if "usage_window" in global_in:
+                values["usage_window"] = _usage_window(global_in.get("usage_window"))
+            if values:
+                smart_alerts.save_global_settings(tenant_id, values, by=_admin_id())
 
         if routers_in is not None:
             if not isinstance(routers_in, list):
