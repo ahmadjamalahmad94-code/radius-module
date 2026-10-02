@@ -121,3 +121,21 @@ def test_expired_claim_frees_the_slot(app):
         with transaction() as c:
             c.execute("UPDATE device_limit_claims SET claimed_at='2000-01-01T00:00:00'")
         assert _auth("ttl1", "AA:00:00:00:00:02").ok
+
+
+def test_claim_that_started_and_ended_does_not_block_the_next_device(app):
+    """Phone logs in (claim), its session starts and stops; the laptop logging
+    in right after must not wait for the claim TTL."""
+    from datetime import datetime
+    with app.app_context():
+        _mk_card("swap1", device_count=1)
+        assert _auth("swap1", "AA:00:00:00:00:01").ok
+        from app.radius.db.connection import transaction
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        with transaction() as c:
+            c.execute(
+                "INSERT INTO radacct (tenant_id, acctsessionid, acctuniqueid, username,"
+                " nasipaddress, callingstationid, acctstarttime, acctupdatetime,"
+                " acctstoptime) VALUES (1,'sw1','u-sw1','swap1',?,?,?,?,?)",
+                (NAS_IP, "AA:00:00:00:00:01", now, now, now))
+        assert _auth("swap1", "AA:00:00:00:00:02").ok

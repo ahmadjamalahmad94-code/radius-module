@@ -272,9 +272,29 @@ def replace_oldest(tenant_id: int, username: str, sessions: list[dict]) -> int:
 CLAIM_TTL_SECONDS = 60
 
 
+def _mac_norm(raw: Any) -> str:
+    return "".join(ch for ch in str(raw or "").lower() if ch.isalnum())
+
+
 def _device_key(req) -> str:
-    mac = str(getattr(req, "calling_station_id", "") or "").strip().lower()
+    mac = _mac_norm(getattr(req, "calling_station_id", ""))
     return ("mac:" + mac) if mac else ""
+
+
+def _materialized_macs(conn, tid: int, user: str, since: _dt.datetime) -> dict:
+    """{mac: أحدث بدء جلسة} لجلسات radacct (مفتوحة أو مغلقة) التي بدأت منذ
+    ``since`` — حجزٌ ظهرت جلسته (Acct-Start) صار محسوبًا في radacct أو انتهى؛
+    لا يُعدّ معلّقًا بعدها (جهازٌ دخل ثمّ خرج لا يحجب غيره حتى المهلة)."""
+    out: dict = {}
+    for r in conn.execute(
+            "SELECT callingstationid, acctstarttime FROM radacct "
+            "WHERE tenant_id=? AND username=? AND " + acct_norm_sql("acctstarttime")
+            + " >= ?", (tid, user, to_space_ts(since.isoformat()))).fetchall():
+        mac = _mac_norm(r["callingstationid"])
+        st = _parse_acct_dt(r["acctstarttime"])
+        if mac and st is not None and (mac not in out or st > out[mac]):
+            out[mac] = st
+    return out
 
 
 def claim_slot(tenant_id: int, username: str, req, *, limit: int,
@@ -303,22 +323,26 @@ def claim_slot(tenant_id: int, username: str, req, *, limit: int,
             conn.execute("DELETE FROM device_limit_claims WHERE claimed_at < ?",
                          (cutoff,))
             live = active_other_devices(tid, user, req, mac_aware=mac_aware)
-            live_macs = {str(d.get("callingstationid") or "").strip().lower()
-                         for d in live}
-            req_mac = str(getattr(req, "calling_station_id", "") or "").strip().lower()
-            if req_mac:
-                # جلسةُ الطالب نفسه الحيّة (مستبعدةٌ من live في mac_aware) تعني
-                # أنّ حجزه السابق تجسّد — لا يُحتسب مرّتين.
-                live_macs.add(req_mac)
+            live_macs = {_mac_norm(d.get("callingstationid")) for d in live}
             rows = conn.execute(
                 "SELECT device_key, claimed_at FROM device_limit_claims "
                 "WHERE tenant_id=? AND username=? AND device_key<>? "
                 "ORDER BY claimed_at",
                 (tid, user, key)).fetchall()
-            # حجزٌ تجسّدت جلسته في radacct محسوبٌ هناك أصلًا.
-            pending = [r for r in rows
-                       if not (str(r["device_key"]).startswith("mac:")
-                               and str(r["device_key"])[4:] in live_macs)]
+            started = (_materialized_macs(
+                conn, tid, user,
+                now - _dt.timedelta(seconds=CLAIM_TTL_SECONDS + 10)) if rows else {})
+            pending = []
+            for r in rows:
+                dk = str(r["device_key"])
+                mac = dk[4:] if dk.startswith("mac:") else ""
+                if mac and mac in live_macs:
+                    continue          # محسوبٌ في الجلسات الحيّة أصلًا
+                at = _parse_acct_dt(r["claimed_at"])
+                st = started.get(mac) if mac else None
+                if st is not None and at is not None and st >= at - _dt.timedelta(seconds=10):
+                    continue          # تجسّد (بدأت جلسته — حيّةً أو انتهت)
+                pending.append(r)
             used = len(live) + len(pending)
             if used >= limit:
                 if not replace:
