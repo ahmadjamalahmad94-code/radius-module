@@ -166,7 +166,13 @@ def test_guard_never_deactivate_owner(app):
 def test_guard_never_deactivate_last_admin(app):
     with app.app_context():
         from app.radius.db.repos import admins_repo
-        root = _seed_root()   # the ONLY admin
+        # d13fb302: create_app() always creates the bootstrap admin on a clean
+        # DB, so «root» would be the SECOND enabled admin. Disable the
+        # bootstrap account first so root really is the only enabled admin.
+        for a in admins_repo.list_admins():
+            admins_repo.update_admin(a.id, enabled=False)
+        root = _seed_root()   # the ONLY (enabled) admin
+        assert admins_repo._enabled_admin_count() == 1
         outcome = admins_repo.apply_managed_admin_directive(
             op="deactivate", username="root", active=False)
         assert outcome == "skipped_last_admin"

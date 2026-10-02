@@ -13,6 +13,10 @@ from uuid import uuid4
 import pytest
 
 
+_OWNER_USER = "perm_owner"
+_OWNER_PASS = "perm-web-pass"
+
+
 @pytest.fixture
 def app(monkeypatch):
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
@@ -20,6 +24,10 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "dev-token-please-change")
+    # d13fb302: create_app() guarantees a bootstrap super-admin on a clean DB
+    # (admin id #1 = the primary owner, the only RBAC-bypass principal).
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _OWNER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", _OWNER_PASS)
     from app import create_app
 
     return create_app()
@@ -42,17 +50,16 @@ def _tenant(app):
 
 
 def _web_login(client) -> None:
+    # The owner-only-bypass decision: a NEW admin carrying is_super_admin is
+    # not the bypass principal (it would 403 on the operator profile). Log in
+    # as the real primary owner = the bootstrap admin (d13fb302).
     from app.radius.db.repos import admins_repo
 
-    username = f"perm_web_{uuid4().hex[:10]}"
-    password = "perm-web-pass"
-    admins_repo.create_admin(
-        username=username, password=password,
-        full_name="Perm Tester", is_super_admin=True,
-    )
+    owner = admins_repo.get_by_username(_OWNER_USER)
+    assert owner is not None and admins_repo.is_primary_owner(owner.id)
     res = client.post(
         "/admin/radius/login",
-        data={"username": username, "password": password},
+        data={"username": _OWNER_USER, "password": _OWNER_PASS},
         follow_redirects=False,
     )
     assert res.status_code in {302, 303}
@@ -95,8 +102,13 @@ def test_unknown_key_never_leaks_raw():
 # ───────────────────────── rendered page ─────────────────────────
 
 def test_operator_profile_page_shows_arabic_labels(client):
+    from app.radius.db.repos import admins_repo
+
+    mgr = admins_repo.create_admin(
+        username=f"perm_mgr_{uuid4().hex[:8]}", password="perm-mgr-pass",
+        full_name="Managed Manager")
     _web_login(client)
-    res = client.get("/admin/radius/business-operators/manager/1")
+    res = client.get(f"/admin/radius/business-operators/manager/{mgr.id}")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
 
@@ -108,5 +120,9 @@ def test_operator_profile_page_shows_arabic_labels(client):
     # No raw can_* key is used as a VISIBLE toggle label (data-on/data-off).
     assert 'data-on="can_' not in html
     assert 'data-off="can_' not in html
-    # …while the form wiring (name="can_*") is intact.
-    assert 'name="can_create_subscriber"' in html
+    # …while the form wiring is intact. ce16093d replaced the per-flag
+    # checkboxes (name="can_*") with the tri-state «حسب الدور/مسموح/ممنوع»
+    # rows keyed by ACTION (manager_grants.tri_input_name); the
+    # can_create_subscriber flag is the `subscriber.create` action.
+    assert 'name="tri_subscriber.create"' in html
+    assert 'name="can_create_subscriber"' not in html
