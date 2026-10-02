@@ -484,7 +484,7 @@
        مرتاحة في الصف الواحد. #}
     <section class="hub-hero-shell">
     {{ hub.megahero(
-      "كروت الحزمة " ~ batch.batch_code,
+      "كروت الحزمة ⁦" ~ batch.batch_code ~ "⁩",
       subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
                ~ " · أنشئت " ~ (batch.created_at|dt_local if batch.created_at else '—')
                ~ " · " ~ (batch.created_by or 'بدون مدير')
