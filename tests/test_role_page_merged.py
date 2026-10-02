@@ -140,9 +140,22 @@ def test_merged_page_requires_super_admin(app):
     non-super admin is refused (403) — matching the old /grants guard."""
     with app.app_context():
         role = _mk_role()
+        # 21f239a6: every request re-validates the session against a LIVE,
+        # enabled admin row — a forged admin_id with no row is logged out
+        # (302 /login), which would hide the RBAC answer. Use a real
+        # non-owner admin that holds admins.view.
+        from app.radius.db.repos import admins_repo
+        viewer_role = admins_repo.create_role(
+            name="merge_viewer", display_name="Viewer",
+            permissions=("admins.view",))
+        non_super = admins_repo.create_admin(
+            username="merge_nonsuper", password="pw-12345678",
+            full_name="Non super", role_id=viewer_role.id)
+        assert not admins_repo.is_primary_owner(non_super.id)
+        non_super_id = non_super.id
     c = app.test_client()
     with c.session_transaction() as s:
-        s["admin_id"] = 2
+        s["admin_id"] = non_super_id
         s["is_super_admin"] = False
         s["tenant_id"] = 1
         s["permissions"] = ["admins.view"]

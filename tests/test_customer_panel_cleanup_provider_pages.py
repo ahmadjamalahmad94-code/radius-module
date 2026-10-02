@@ -27,6 +27,9 @@ from uuid import uuid4
 import pytest
 
 
+_OWNER_USER = "cl1_owner"
+
+
 # ───────────────────────── تهيئة تطبيق معزول ─────────────────────────
 @pytest.fixture
 def app(monkeypatch):
@@ -34,6 +37,11 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: create_app() guarantees a bootstrap super-admin on a clean DB;
+    # it is admin id #1 = the primary owner (the ONLY bypass principal since
+    # the owner-only-bypass decision). Name it so «the owner» below is real.
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _OWNER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "cl1-pass")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
@@ -53,6 +61,12 @@ def client(app):
 
 def _make_admin(*, is_super_admin: bool, viewer: bool = False):
     from app.radius.db.repos import admins_repo
+    if is_super_admin and not viewer:
+        # «السوبر/المالك» = المالك الرئيسيّ الفعليّ (حساب الإقلاع id #1). علمُ
+        # is_super_admin على حسابٍ جديد لا يمنح التجاوز (owner-only-bypass).
+        owner = admins_repo.get_by_username(_OWNER_USER)
+        assert owner is not None and admins_repo.is_primary_owner(owner.id)
+        return owner
     role_id = None
     if viewer:
         r = admins_repo.get_role_by_name("viewer")
