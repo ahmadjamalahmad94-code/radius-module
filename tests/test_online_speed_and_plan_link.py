@@ -131,9 +131,12 @@ def test_plan_name_is_entity_link_to_plan_page(app, client):
     html = _page(client)
     assert f'href="/admin/radius/plans/{plan_id}/edit"' in html
     import re
+    # 54bc47fa added the per-plan colour chip: the link also carries
+    # `hr-plan-chip` (+ an optional --plan-color style) — still the
+    # entity-link class, still the real plan id.
     m = re.search(
-        r'<a class="hr-entity-link" href="/admin/radius/plans/%d/edit">([^<]+)</a>'
-        % plan_id, html)
+        r'<a class="hr-entity-link hr-plan-chip"[^>]*'
+        r'href="/admin/radius/plans/%d/edit">([^<]+)</a>' % plan_id, html)
     assert m and "عرض مفتوح" in m.group(1)
 
 
