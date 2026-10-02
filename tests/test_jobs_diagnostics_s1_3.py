@@ -20,12 +20,19 @@ from uuid import uuid4
 import pytest
 
 
+_OWNER_USER = "s1_3_owner"
+
+
 @pytest.fixture
 def app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_s1_3_")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: create_app() guarantees a bootstrap super-admin = admin id #1
+    # = the primary owner (the only RBAC-bypass principal).
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _OWNER_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "s1-pass")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
@@ -44,12 +51,13 @@ def client(app):
 
 
 def _login(client) -> None:
+    # Owner-only-bypass decision: a NEW admin with is_super_admin is not the
+    # bypass principal (it got 403 on the jobs routes). Log in as the real
+    # primary owner — the bootstrap admin.
     from app.radius.db.repos import admins_repo
-    u = f"s1_3_{uuid4().hex[:8]}"
-    admins_repo.create_admin(
-        username=u, password="s1-pass", full_name="S1.3 Tester",
-        is_super_admin=True,
-    )
+    u = _OWNER_USER
+    owner = admins_repo.get_by_username(u)
+    assert owner is not None and admins_repo.is_primary_owner(owner.id)
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "s1-pass"},
