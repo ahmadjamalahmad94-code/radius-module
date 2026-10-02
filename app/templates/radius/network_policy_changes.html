@@ -140,7 +140,7 @@
               <strong>{{ t.router_name or (_('راوتر') ~ ' #' ~ t.router_id) }}</strong>
               {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, 'حالة أخرى') }}</strong>
               {% if t.error_message %}
-                · <span style="font-family:ui-monospace,monospace; direction:ltr;">
+                · <span style="font-family:ui-monospace,monospace,'Cairo'; direction:ltr;">
                   {{ t.error_message[:120] }}
                 </span>
               {% endif %}

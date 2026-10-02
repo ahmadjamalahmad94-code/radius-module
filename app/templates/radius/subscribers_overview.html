@@ -4,7 +4,7 @@
 {% block title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ census.total or 0 }} مشترك · {{ census.online or 0 }} متصل الآن</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (census.total or 0)|ar_count('subscriber') }} · {{ census.online or 0 }} متصل الآن</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -186,12 +186,12 @@
       <div class="so-debt-tile so-debt-tile--red">
         <div class="so-debt-tile-label"><i class="fa-solid fa-circle-minus"></i> {{ _('أرصدة سالبة (عليهم)') }}</div>
         <div class="so-debt-tile-value">{{ owed|money }}</div>
-        <div class="so-debt-tile-meta">{{ outstanding.balance_owed_count or 0 }} مشترك</div>
+        <div class="so-debt-tile-meta">{{ (outstanding.balance_owed_count or 0)|ar_count('subscriber') }}</div>
       </div>
       <div class="so-debt-tile so-debt-tile--green">
         <div class="so-debt-tile-label"><i class="fa-solid fa-circle-plus"></i> {{ _('أرصدة موجبة (رصيد لهم)') }}</div>
         <div class="so-debt-tile-value">{{ credit|money }}</div>
-        <div class="so-debt-tile-meta">{{ outstanding.balance_credit_count or 0 }} مشترك</div>
+        <div class="so-debt-tile-meta">{{ (outstanding.balance_credit_count or 0)|ar_count('subscriber') }}</div>
       </div>
       <div class="so-debt-tile so-debt-tile--total">
         <div class="so-debt-tile-label"><i class="fa-solid fa-scale-unbalanced"></i> {{ _('إجمالي المتبقّي') }}</div>

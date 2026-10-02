@@ -101,7 +101,7 @@
         <input class="hub-input" type="text" name="target_url" id="target_url"
                value="{{ current.target_url if current else '' }}"
                placeholder="https://hobehub.example.com/webhooks/radius"
-               dir="ltr" style="font-family:monospace">
+               dir="ltr" style="font-family:monospace,'Cairo'">
         <div class="hub-field-hint">
           {{ _('رابط') }} <code>HTTPS</code> {{ _('كامل يستقبل طلبات POST. يجب أن يرجع كود استجابة') }}
           <code>2xx</code> {{ _('لاعتبار الإرسال ناجحًا. أي شيء آخر يعتبر فشلًا.') }}
@@ -115,7 +115,7 @@
         <input class="hub-input" type="text" name="secret" id="secret"
                value="{{ current.secret if current else '' }}"
                placeholder="{{ _('مفتاح سري طويل وعشوائي') }}"
-               dir="ltr" style="font-family:monospace">
+               dir="ltr" style="font-family:monospace,'Cairo'">
         <div class="hub-field-hint">
           {{ _('مفتاح سرّي مشترك بين الريدياس وخادم الاستقبال. يستخدم لتوقيع كل طلب عبر') }}
           <code>HMAC-SHA256</code>{{ _('. لا تشاركه ولا تضعه في أي مكان عام.') }}

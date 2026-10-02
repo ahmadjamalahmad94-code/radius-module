@@ -94,7 +94,7 @@
 
   /* Typography */
   --hub-font:         "Cairo", "Tajawal", system-ui, -apple-system, sans-serif;
-  --hub-mono:         "JetBrains Mono", "Consolas", monospace;
+  --hub-mono:         "JetBrains Mono", "Consolas", monospace, "Cairo";
   --hub-fs-12:        12px;
   --hub-fs-13:        13px;
   --hub-fs-14:        14px;
@@ -1634,6 +1634,20 @@ a.hr-entity-link--pill:focus-visible .hub-pill{
   .cc-hero-search-btn,.pl-view-toggle button,.ntl-fchip,.view-toggle button{
     min-height:40px !important;
   }
+  /* r6ui: قياسُ 275 صفحةً على Pixel 7 وجد 1771 هدفًا دون 40px خارجَ القائمةِ أعلاه —
+     أكثرُها في كلِّ صفحة: جرسُ الإشعارات وأيقونتُه (34×34 في الشريطِ العلويّ، 266 صفحة)،
+     ثمّ تبويباتُ التنقّل (37px)، وحبوبُ الكيان (26px)، ورقائقُ الفلاتر والقنوات (33–35px). */
+  #bell-toggle,#notif-toggle,.srv-btn,a.ic,.hb-settings-ic{
+    min-width:40px !important;min-height:40px !important;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .nnav a,nav[class] > a,[role=tablist] > a,.hr-entity-link--pill,.pg-toggle,.an-chip,
+  .usage-tab,.so-flink,.ops-link,.mtld-tab,.lf-svc-btn,.snd-btn,.spdx-ghost-btn,
+  .cbot-del,.ctpl-seed-chip,.co-sales-link,.gd-go,details > summary{
+    min-height:40px !important;
+  }
+  .hr-entity-link--pill,.pg-toggle,.an-chip,.usage-tab,.so-flink,.ops-link,
+  .co-sales-link,.gd-go,.nnav a,nav[class] > a{ display:inline-flex;align-items:center; }
 }
 
 /* ── D11: خطوطُ حقولٍ أصغر من 16px تجعل Safari/iOS يُكبّر الصفحة تلقائيًّا

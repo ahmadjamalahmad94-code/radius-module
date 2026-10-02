@@ -135,7 +135,7 @@
         {% set _typevar = 'red' if r.ok is false else ('amber' if r.ok is none else _cat_accent.get(r.category, 'blue')) %}
         <tr class="{{ _rowcls }}">
           <td class="mono" style="color:var(--hub-text-mute,#94a3b8)">{{ loop.index }}</td>
-          {% set _dl = r.when|dt_local if r.when else '' %}
+          {% set _dl = r.when|dt_local_raw if r.when else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>

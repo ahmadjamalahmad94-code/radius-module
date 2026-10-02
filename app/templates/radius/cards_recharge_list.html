@@ -8,7 +8,7 @@
 {% block title %}{{ _("بطاقات الشحن المسبق") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
 {% block page_title %}{{ _("بطاقات الشحن المسبق") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حزمة شحن · تُستخدم لشحن المحفظة من بوابة العميل</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total|ar_count('batch') }} شحن · تُستخدم لشحن المحفظة من بوابة العميل</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -131,7 +131,7 @@
   .rc-card-num{
     display:block;font-size:11px;font-weight:800;color:#94a3b8;
     letter-spacing:.04em;margin-bottom:2px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace,"Cairo";
   }
   .rc-card-title{
     flex:1;min-width:0;

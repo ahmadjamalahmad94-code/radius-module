@@ -119,7 +119,7 @@
         {% for r in rows %}
         <tr data-audit-row="{{ r.id }}">
           <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
-          {% set _ts = r.created_at|dt_local if r.created_at else '' %}
+          {% set _ts = r.created_at|dt_local_raw if r.created_at else '' %}
           <td class="mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ts %}{{ _ts[:10] }} <span style="color:var(--hub-text-mute)">{{ _ts[11:16] }}</span>{% else %}—{% endif %}
           </td>

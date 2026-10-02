@@ -362,6 +362,8 @@
       <div class="mtitle" style="margin-top:10px" id="su-fail-title">{{ _('فشل التحديث') }}</div>
       <div class="mtext" id="su-fail-error"></div>
       <div class="mtext" id="su-fail-rollback" style="color:var(--hub-green-ink);font-weight:700">{{ _('تمّ التراجع للنسخة السابقة (الكود وقاعدة البيانات) والنظام يعمل.') }}</div>
+      {# كانت حالةُ الفشل بلا أيِّ زرّ: الطبقةُ تبقى فوق الصفحةِ كلِّها ولا مخرجَ إلّا إعادةُ التحميل (r6ui) #}
+      <button type="button" class="hub-btn hub-btn--ghost" style="margin-top:16px" id="su-fail-close"><i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
     </div>
     <pre class="su-log" id="su-log"></pre>
   </div>
@@ -474,6 +476,8 @@
   var noBtn = document.getElementById('su-confirm-no');
   if(noBtn){ noBtn.addEventListener('click', function(){ hide(confirmOv); }); }
 
+  var failClose = document.getElementById('su-fail-close');
+  if(failClose){ failClose.addEventListener('click', function(){ hide(progOv); var yb = document.getElementById('su-confirm-yes'); if(yb){ yb.disabled = false; } }); }
   var yesBtn = document.getElementById('su-confirm-yes');
   if(yesBtn){
     yesBtn.addEventListener('click', function(){
@@ -486,9 +490,9 @@
         .then(function(r){return r.json();})
         .then(function(d){
           if(d && d.ok){ startPolling(); }
-          else { render({state:'failed', error:(d && d.error) || 'request failed', rolled_back:false}); }
+          else { render({state:'failed', error:(d && d.error) || {{ _('رفض الخادم طلب التحديث.')|tojson }}, rolled_back:false}); }
         })
-        .catch(function(){ render({state:'failed', error:'network error', rolled_back:false}); });
+        .catch(function(){ render({state:'failed', error:{{ _('تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.')|tojson }}, rolled_back:false}); });
     });
   }
 

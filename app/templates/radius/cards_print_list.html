@@ -9,7 +9,7 @@
 {% block title %}{{ _("بطاقات الطباعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
 {% block page_title %}{{ _("بطاقات الطباعة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حزمة طباعة · لا تسمح بتسجيل الدخول</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total|ar_count('batch') }} طباعة · لا تسمح بتسجيل الدخول</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -243,7 +243,7 @@
   .pc-card-num{
     display:block; font-size:11px; font-weight:800;
     color:#94a3b8; letter-spacing:.04em; margin-bottom:2px;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace,"Cairo";
   }
   .pc-card-stats{
     display:grid; grid-template-columns:repeat(3,1fr); gap:8px;

@@ -93,7 +93,7 @@
             <td class="mono small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               {{ d.last_response_excerpt or '—' }}
             </td>
-            <td class="mono small" dir="ltr" style="white-space:nowrap">{{ (d.next_attempt_at|dt_local)[11:16] if d.next_attempt_at else '—' }}</td>
+            <td class="mono small" dir="ltr" style="white-space:nowrap">{{ (d.next_attempt_at|dt_local_raw)[11:16] if d.next_attempt_at else '—' }}</td>
             <td class="mono small" dir="ltr" style="white-space:nowrap">{{ d.created_at|dt_local if d.created_at else '—' }}</td>
           </tr>
           {% endfor %}

@@ -486,6 +486,10 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "duration": "المدّة", "device_count": "عدد الأجهزة",
     "on_quota_exhaust": "عند نفاد الكوتا", "service_name": "اسم الخدمة",
     "notes": "ملاحظات",
+    # حمولةُ نشاطِ المدير (manager_activity_audit) — كانت تظهر «page: … · action ar:
+    # … · login: admin · params: …» في عمودِ التفاصيل بسجلّ التدقيق (r6ui)
+    "page": "الصفحة", "action_ar": "العملية", "login": "المستخدم",
+    "params": "المُعطيات", "entity_name": "الكيان", "entity_id": "رقم الكيان",
 }
 
 # قيم منطقية → عربي.

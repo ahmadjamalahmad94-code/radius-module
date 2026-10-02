@@ -236,6 +236,9 @@
       .flash{animation:none}
       .btn-primary{transition:none}
     }
+    /* iOS Safari يُكبّر الصفحةَ عند تركيزِ حقلٍ خطُّه دون 16px فيختلّ تخطيطُ
+       بوّابةِ الزبون بعد كتابةِ رقمه/كلمته — 16px على المؤشّرِ الخشِن. */
+    @media (pointer: coarse){ .field input{font-size:16px} }
   </style>
 </head>
 <body>

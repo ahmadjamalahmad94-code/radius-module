@@ -89,7 +89,7 @@
   .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
   .dg-card strong{ color:#241e4e; }
   .dg-kbd{
-    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:11.5px;
     background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
     padding:1px 7px; color:#5b21b6;
   }
@@ -143,7 +143,7 @@
   .dg-pgrp{ border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
   .dg-pgrp .h{ display:flex; align-items:center; gap:8px; padding:8px 11px; font-size:11.5px; font-weight:900; border-bottom:1px solid #f1f5f9; }
   .dg-pgrp .h .gi{ width:24px; height:24px; border-radius:7px; display:grid; place-items:center; font-size:11px; flex:none; }
-  .dg-pgrp .h .key{ font-family:ui-monospace,Consolas,monospace; font-size:9px; opacity:.7; }
+  .dg-pgrp .h .key{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:9px; opacity:.7; }
   .dg-pgrp .h .cnt{ margin-inline-start:auto; font-size:9px; font-weight:800; color:#64748b; }
   .dg-pgrp .h .all{ border-radius:7px; padding:4px 9px; font-size:9px; font-weight:800; background:#f1f5f9; color:#475569; }
   .dg-pgrp .bar{ height:4px; background:#f1f5f9; }
@@ -159,7 +159,7 @@
   .dg-perm .tk{ width:14px; height:14px; border-radius:4px; border:1.5px solid #cbd5e1; display:grid; place-items:center; font-size:8px; color:#fff; }
   .dg-perm.on{ border-color:#c4b5fd; background:#faf5ff; color:#5b21b6; }
   .dg-perm.on .tk{ background:#7c3aed; border-color:#7c3aed; }
-  .dg-perm .k{ font-family:ui-monospace,Consolas,monospace; font-size:8.5px; opacity:.65; }
+  .dg-perm .k{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:8.5px; opacity:.65; }
 
   /* عدّادات KPI صغيرة */
   .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
@@ -183,7 +183,7 @@
   .dg-example .ic{ width:34px; height:34px; border-radius:10px; background:#dcfce7; color:#15803d; display:grid; place-items:center; font-size:14px; flex:none; }
   .dg-example .t{ font-size:12.5px; font-weight:900; color:#14532d; }
   .dg-example p{ margin:5px 0 0; font-size:11.5px; color:#475569; line-height:1.85; }
-  .dg-example code{ font-family:ui-monospace,Consolas,monospace; font-size:10px; background:#fff; border:1px solid #bbf7d0; border-radius:5px; padding:1px 6px; color:#15803d; }
+  .dg-example code{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:10px; background:#fff; border:1px solid #bbf7d0; border-radius:5px; padding:1px 6px; color:#15803d; }
 
   /* ════ الطباعة ════ */
   @media print{
@@ -267,7 +267,7 @@
           <div class="dg-mock-body">
             <div class="dg-mf">
               <label>{{ _('الاسم الداخلي') }} <span style="color:#dc2626">*</span></label>
-              <div class="dg-mf-input hl" dir="ltr" style="font-family:ui-monospace,Consolas,monospace">branch_manager</div>
+              <div class="dg-mf-input hl" dir="ltr" style="font-family:ui-monospace,Consolas,monospace,'Cairo'">branch_manager</div>
               <div class="dg-mf-help">{{ _('مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.') }}</div>
             </div>
             <div class="dg-mf">

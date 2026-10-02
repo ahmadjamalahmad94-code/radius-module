@@ -56,7 +56,7 @@
       <div class="es-row">
         <div class="es-meta">
           <span class="es-label">{{ it.label }}</span>
-          {% if it.help %}<span class="es-help">{{ it.help }}</span>{% endif %}
+          {% if it.help %}<span class="es-help">{{ it.help|bidi_nums }}</span>{% endif %}
           {% if it.note %}<span class="es-note"><i class="fa-solid fa-circle-info"></i> {{ it.note }}</span>{% endif %}
           <span class="es-key"><bdi dir="ltr">{{ it.key }}</bdi></span>
         </div>

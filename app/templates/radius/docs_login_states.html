@@ -89,7 +89,7 @@
   .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
   .dg-card strong{ color:#241e4e; }
   .dg-kbd{
-    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:11.5px;
     background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
     padding:1px 7px; color:#5b21b6;
   }
@@ -170,7 +170,7 @@
     display:grid; grid-template-columns:1fr 1.4fr; gap:10px; align-items:center;
     border:1px solid #eef2f7; border-radius:10px; padding:8px 12px; background:#fff;
   }
-  .dg-reasonrow .code{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#64748b; direction:ltr; text-align:left; }
+  .dg-reasonrow .code{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:10.5px; color:#64748b; direction:ltr; text-align:left; }
   .dg-reasonrow .ar{ font-size:12px; font-weight:800; color:#241e4e; }
   .dg-reasonrow .ar i{ color:#ef4444; margin-inline-end:6px; font-size:10px; }
 
@@ -310,8 +310,8 @@
 
         <div class="dg-rowmock" aria-hidden="true">
           <div class="hd"><span>{{ _('الوقت') }}</span><span>{{ _('الجهة') }}</span><span>{{ _('النتيجة') }}</span><span>{{ _('الشبكة / الجهاز') }}</span></div>
-          <div class="rw"><span style="font-family:monospace;direction:ltr">06-06 14:20</span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span><span class="dg-ok"><i class="fa-solid fa-check"></i> {{ _('نجاح') }}</span></span><span style="font-family:monospace;direction:ltr">10.0.0.14 · Android</span></div>
-          <div class="rw fail"><span style="font-family:monospace;direction:ltr">06-06 14:18</span><span style="font-weight:900;color:#241e4e">sara_net</span><span><span class="dg-bad"><i class="fa-solid fa-xmark"></i> {{ _('فشل') }}</span><span class="dg-reason">{{ _('كلمة مرور خاطئة') }}</span></span><span style="font-family:monospace;direction:ltr">10.0.0.31 · iPhone</span></div>
+          <div class="rw"><span style="font-family:monospace,'Cairo';direction:ltr">06-06 14:20</span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span><span class="dg-ok"><i class="fa-solid fa-check"></i> {{ _('نجاح') }}</span></span><span style="font-family:monospace,'Cairo';direction:ltr">10.0.0.14 · Android</span></div>
+          <div class="rw fail"><span style="font-family:monospace,'Cairo';direction:ltr">06-06 14:18</span><span style="font-weight:900;color:#241e4e">sara_net</span><span><span class="dg-bad"><i class="fa-solid fa-xmark"></i> {{ _('فشل') }}</span><span class="dg-reason">{{ _('كلمة مرور خاطئة') }}</span></span><span style="font-family:monospace,'Cairo';direction:ltr">10.0.0.31 · iPhone</span></div>
         </div>
         <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أيقونة نوع الجهاز (موبايل/لوحي/حاسوب) تظهر بجانب نظام التشغيل والمتصفح.') }}</div>
       </div>

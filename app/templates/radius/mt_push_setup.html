@@ -41,7 +41,7 @@
     padding:14px 16px;margin-top:4px;
   }
   .pushp-script pre{
-    margin:0;font-family:var(--hub-mono,ui-monospace,monospace);
+    margin:0;font-family:var(--hub-mono,ui-monospace,monospace,"Cairo");
     font-size:12.5px;line-height:1.65;color:#bfdbfe;
     direction:ltr;white-space:pre;
   }
@@ -120,13 +120,13 @@
     <div class="hub-field">
       <label class="hub-field-label" for="pushp-url">{{ _('عنوان الخادم') }}</label>
       <input class="hub-input" type="text" id="pushp-url" value="{{ base_url }}" dir="ltr"
-             style="font-family:var(--hub-mono,ui-monospace,monospace)">
+             style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">
     </div>
     <div class="hub-field">
       <label class="hub-field-label" for="pushp-token">{{ _('رمز الربط') }}</label>
       <input class="hub-input" type="text" id="pushp-token" value="" autocomplete="off" dir="ltr"
              placeholder="{{ _('الصق قيمة رمز الربط من شاشة إدارة الرموز') }}"
-             style="font-family:var(--hub-mono,ui-monospace,monospace)">
+             style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">
       <div class="hub-field-hint">
         {{ _('لديك حالياً') }} <strong>{{ tokens|length }}</strong> {{ _('رمز مفعّل. اسم أحدها:') }}
         <strong>{{ suggested_token_name or '—' }}</strong>.

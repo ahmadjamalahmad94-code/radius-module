@@ -218,7 +218,7 @@
   .online-speed-pill.is-temp{background:#eaf6ff;color:#075985;border-color:#addcff}
   .online-speed-countdown{
     direction:ltr;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace,"Cairo";
     font-weight:900;
     padding-inline-start:2px;
   }
@@ -1617,12 +1617,12 @@
       </div>
       <div class="coa-modal-row">
         <label>{{ _('IP الحالي') }}</label>
-        <input type="text" data-coa-framed-ip-display readonly style="font-family:ui-monospace,monospace">
+        <input type="text" data-coa-framed-ip-display readonly style="font-family:ui-monospace,monospace,'Cairo'">
       </div>
       <div class="coa-modal-row">
         <label for="coa-setip-new">{{ _('IP الجديد') }} <span style="color:var(--hub-red)">*</span></label>
         <input type="text" id="coa-setip-new" name="new_ip" required
-               placeholder="192.168.10.55" style="font-family:ui-monospace,monospace">
+               placeholder="192.168.10.55" style="font-family:ui-monospace,monospace,'Cairo'">
         <div class="coa-modal-hint">{{ _('عنوان IPv4 صالح فقط. سيُرسل في Framed-IP-Address.') }}</div>
       </div>
     </div>

@@ -26,6 +26,15 @@ EVENT_KEY_LABELS: dict[str, str] = {
     "wallet.closed":     "إغلاق المحفظة",
     "business_os.wallet.credit": "إضافة للمحفظة",
     "business_os.wallet.debit":  "خصم من المحفظة",
+    # أحداثُ النظامِ والتنبيهات — كانت تسقط إلى التأنيسِ الأخير فتظهر «offline»
+    # «online» «limit» إنجليزيّةً خامّة في مركزِ الأحداث (r6ui)
+    "router.offline":      "انقطاع راوتر",
+    "router.online":       "عودة راوتر للاتصال",
+    "debt.limit":          "تجاوز حدّ الدَّين",
+    "subscriber.expiring": "اشتراك يقترب من الانتهاء",
+    "batch.low":           "حزمة بطاقات توشك على النفاد",
+    "backup.done":         "اكتمال نسخة احتياطية",
+    "worker.failed":       "فشل مهمّة خلفيّة",
     # المتجر — إيداع / سحب / شات / تسجيل / حزمة
     "store.deposit_requested":   "طلب إيداع",
     "store.deposit_confirmed":   "تأكيد إيداع",
@@ -583,7 +592,12 @@ def _humanize(raw: str) -> str:
     """تأنيس أخير: «a.b_c» → «b c» (آخر مقطع، شُرَط مكان «_» والشرطة).
     لا تُعيد نصًّا يحوي نقاطًا أو أحرفًا لاتينية خامة إذا أمكن التحويل."""
     tail = raw.split(".")[-1] if raw else raw
-    return tail.replace("_", " ").replace("-", " ").strip() or raw
+    out = tail.replace("_", " ").replace("-", " ").strip() or raw
+    # لا نُعيد كلمةً لاتينيّةً خامّة للمستخدم («offline»/«limit»): نصٌّ عربيٌّ عامّ
+    # والمفتاحُ الخامُّ يبقى في title عند العرض.
+    if out and all(ord(ch) < 128 for ch in out):
+        return "حدث نظام"
+    return out
 
 
 def event_key_label(key: str | None) -> str:

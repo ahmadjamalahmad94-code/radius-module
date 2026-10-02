@@ -10,7 +10,7 @@
 {% block title %}{{ _("سجل رسائل واجهة الربط") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-message"></i>{% endblock %}
 {% block page_title %}{{ _("سجل رسائل واجهة الربط") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} رسالة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (items|length)|ar_count('message') }}</span>{% endblock %}
 
 {% block content %}
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}

@@ -23,7 +23,7 @@
   .bk-dlg-title{ font-weight:800; color:#0f172a; }
   .bk-dlg-body{ padding:18px 20px; display:grid; gap:12px; }
   .bk-dlg-body p{ margin:0; font-size:13px; line-height:1.8; color:#475569; }
-  .bk-dlg-target{ font-family:ui-monospace,Consolas,monospace; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12.5px; direction:ltr; unicode-bidi:isolate; word-break:break-all; }
+  .bk-dlg-target{ font-family:ui-monospace,Consolas,monospace,"Cairo"; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12.5px; direction:ltr; unicode-bidi:isolate; word-break:break-all; }
   .bk-dlg-foot{ padding:14px 20px; border-top:1px solid #e2e8f0; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
   .bk-conf-input{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:14px; text-align:center; letter-spacing:2px; }
   .bk-conf-input:focus{ outline:0; border-color:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,.18); }
@@ -111,7 +111,7 @@
   .bkx-fic{ width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;background:#f5f3ff;color:#5b21b6;font-size:15px; }
   .bkx-fic.snap{ background:#fef3c7;color:#b45309; }
   .bkx-fmain{ min-width:0; flex:1; }
-  .bkx-fname{ font-family:ui-monospace,Consolas,monospace; font-size:11.5px; color:#0f172a; font-weight:700; word-break:break-all; direction:ltr; unicode-bidi:isolate; }
+  .bkx-fname{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:11.5px; color:#0f172a; font-weight:700; word-break:break-all; direction:ltr; unicode-bidi:isolate; }
   .bkx-fmeta{ font-size:11px; color:#94a3b8; margin-top:4px; display:flex; gap:5px 14px; flex-wrap:wrap; }
   .bkx-acts{ display:flex; gap:6px; margin-inline-start:auto; flex:none; }
   .bkx-act{ width:34px;height:34px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;
@@ -143,8 +143,8 @@
   .bkx-runs{ display:grid; gap:6px; }
   .bkx-run{ display:flex; align-items:center; gap:10px; font-size:11.5px; padding:8px 11px; border:1px solid #eef2f7; border-radius:10px; }
   .bkx-run .rs{ width:8px;height:8px;border-radius:50%;flex:none; }
-  .bkx-run .rp{ font-family:ui-monospace,monospace; color:#64748b; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; }
-  .bkx-run .rt{ font-family:ui-monospace,monospace; color:#94a3b8; flex:none; }
+  .bkx-run .rp{ font-family:ui-monospace,monospace,"Cairo"; color:#64748b; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; }
+  .bkx-run .rt{ font-family:ui-monospace,monospace,"Cairo"; color:#94a3b8; flex:none; }
   /* nicer native file picker */
   .bkx-input[type=file]::file-selector-button{ border:0; background:#ede9fe; color:#5b21b6; font:inherit; font-weight:800;
     padding:7px 13px; border-radius:8px; margin-inline-end:11px; cursor:pointer; }
@@ -313,7 +313,7 @@
               <span class="bkx-btn ghost" style="width:100%;justify-content:center">
                 <i class="fa-solid fa-folder-open"></i> {{ _('اختر ملف (.sqlite3 أو .sqlite3.gz)') }}
               </span>
-              <span class="bkx-fn" style="display:block;font-size:11.5px;color:#64748b;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all"></span>
+              <span class="bkx-fn" style="display:block;font-size:11.5px;color:#64748b;margin-top:6px;font-family:ui-monospace,monospace,'Cairo';word-break:break-all"></span>
             </label>
             <button type="submit" class="bkx-btn ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-upload"></i> {{ _('رفع الملف (.sqlite3 / .sqlite3.gz)') }}</button>
           </form>{% endif %}

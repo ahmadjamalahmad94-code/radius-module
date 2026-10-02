@@ -22,11 +22,20 @@
   .kpi-value{font-size:18px;font-weight:700}
   .peer-table td{vertical-align:middle;font-size:13px}
   .config-box{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:16px;
-               font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;
+               font-family:monospace,"Cairo";font-size:12px;white-space:pre;overflow-x:auto;
                border:1px solid #334155;margin-top:12px}
   .one-time-alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;
                   padding:14px 16px;margin-bottom:18px}
   .copy-btn{font-size:11px;padding:3px 8px;cursor:pointer}
+  /* عمودٌ ثابتُ العرض (340px) بجوار 1fr كان يدفع نموذجَ الإضافةِ كلَّه خارجَ شاشةِ الجوّال
+     يسارًا (RTL) — حقولُه عند x سالب بلا أيِّ تمرير. عمودٌ واحدٌ تحت 900px. */
+  .wg-split{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  .wg-split > *{min-width:0}
+  @media (max-width: 900px){ .wg-split{grid-template-columns:minmax(0,1fr)} }
+  .wg-split .table-responsive, .wg-split table{max-width:100%}
+  /* حقلُ الإدخال له عرضٌ ذاتيّ (size≈20 محرفًا) يصير الحدَّ الأدنى لعمودِ الشبكة — فيتّسع الصفّ */
+  .main [style*="display:grid"] > *{min-width:0}
+  .main .form-control, .main .form-select{max-width:100%;box-sizing:border-box}
 </style>
 {% endblock %}
 
@@ -80,7 +89,7 @@
     </div>
     <div class="kpi">
       <div class="kpi-label">Public Key</div>
-      <div class="kpi-value" style="font-size:11px;font-family:monospace;word-break:break-all">
+      <div class="kpi-value" style="font-size:11px;font-family:monospace,'Cairo';word-break:break-all">
         {{ svc.public_key[:24] }}…
       </div>
     </div>
@@ -100,7 +109,7 @@
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+<div class="wg-split">
 
 {# ─────────────── قائمة الـ peers ─────────────── #}
 <div>
@@ -135,7 +144,7 @@
           <strong>{{ peer.display_name or '—' }}</strong><br>
           <code style="font-size:11px">{{ peer.peer_address }}</code>
         </td>
-        <td style="font-family:monospace;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        <td style="font-family:monospace,'Cairo';font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
           {{ peer.public_key[:20] }}…
         </td>
         <td>{{ peer.speed_limit_mbps or '—' }}{% if peer.speed_limit_mbps %} Mbps{% endif %}</td>
@@ -205,7 +214,7 @@
         <input type="text" name="notes" class="form-control form-control-sm"
                placeholder="اختياري">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px">
         <div class="mb-3">
           <label class="form-label" style="font-size:13px">حد السرعة (Mbps)</label>
           <input type="number" name="speed_limit_mbps" class="form-control form-control-sm"
@@ -258,7 +267,7 @@
         <input type="text" name="interface_name" class="form-control form-control-sm"
                value="wg-data" style="direction:ltr">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px">
         <div class="mb-3">
           <label class="form-label" style="font-size:13px">المنفذ</label>
           <input type="number" name="listen_port" class="form-control form-control-sm"

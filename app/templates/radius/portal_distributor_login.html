@@ -92,6 +92,9 @@
     .btn-primary:hover{transform:translateY(-1px)}
     .form-foot{margin-top:18px;padding-top:16px;border-top:1px solid var(--hair-soft);
       display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+    /* iOS Safari يُكبّر الصفحةَ عند تركيزِ حقلٍ خطُّه دون 16px فيختلّ تخطيطُ
+       بوّابةِ الزبون بعد كتابةِ رقمه/كلمته — 16px على المؤشّرِ الخشِن. */
+    @media (pointer: coarse){ .field input{font-size:16px} }
   </style>
 </head>
 <body>

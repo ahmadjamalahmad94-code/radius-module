@@ -31,12 +31,12 @@
   .ctpl-input,.ctpl-select{ width:100%; box-sizing:border-box; border:1px solid #cbd5e1;
     border-radius:10px; padding:0 11px; height:38px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
   .ctpl-input:focus,.ctpl-select:focus,.ctpl-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
-  .ctpl-input.mono{ font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate; }
+  .ctpl-input.mono{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:12px; direction:ltr; unicode-bidi:isolate; }
   .ctpl-area{ width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:10px;
     padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a;
     min-height:110px; resize:vertical; line-height:1.85; }
   .ctpl-vars{ display:flex; gap:6px; flex-wrap:wrap; }
-  .ctpl-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
+  .ctpl-var{ font-family:ui-monospace,Consolas,monospace,"Cairo"; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
     padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
   .ctpl-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
   /* channel + status pills in the table (retained custom element) */
@@ -187,7 +187,7 @@
           <tbody>
             {% for item in templates %}
               <tr>
-                <td style="font-family:ui-monospace,monospace;direction:ltr;text-align:start">{{ item.template_key }}</td>
+                <td style="font-family:ui-monospace,monospace,'Cairo';direction:ltr;text-align:start">{{ item.template_key }}</td>
                 <td><span class="ctpl-chpill">{{ ch_label(item.channel) }}</span></td>
                 <td>{{ item.title }}</td>
                 <td>

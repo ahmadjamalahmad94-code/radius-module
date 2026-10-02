@@ -199,7 +199,8 @@ class TestAccountingTriggers:
         assert len(hits) == 1
         ctx, dedup = hits[0]
         assert ctx["username"] == "u_pay"
-        assert "20.00" in ctx["amount"]
+        # صيغةُ المالِ الموحّدة (format_money): «20 ₪» لا «20.00 ILS» (r6ui)
+        assert ctx["amount"].startswith("20") and "ILS" not in ctx["amount"]
         assert ctx["method"] == "نقدًا"
         assert ctx["actor"] == "المحصّل"
         assert dedup and dedup.startswith("payment:")

@@ -103,4 +103,27 @@
     wrapped.__hrAjaxErrors = true;
     RP.json = wrapped;
   }
+
+  // فشلُ الشبكة نفسِها (لا ردَّ من الخادم) يرفضه المتصفّحُ بـTypeError رسالتُه
+  // إنجليزيّةٌ تختلف بالمحرّك: «Failed to fetch» (Chromium) · «Load failed»
+  // (Safari) · «NetworkError when attempting to fetch resource.» (Firefox).
+  // 32 موضعًا في القوالب تعرض `e.message` كما هو — فرأى المشغّل «Failed to fetch»
+  // في معاينة الطباعة السريعة وأزرارِ الأصوات والفحص (r6ui). نعيد الرفضَ بالنوعِ
+  // نفسِه (TypeError) ورسالةٍ عربيّة؛ AbortError ورفضُ الخادم لا يُمسّان.
+  var F = window.fetch;
+  if (typeof F === 'function' && !F.__hrNetAr) {
+    var NET_AR = 'تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.';
+    var fw = function (input, init) {
+      return F.apply(this, arguments).catch(function (e) {
+        if (e && e.name === 'TypeError') {
+          var t = new TypeError(NET_AR);
+          try { t.cause = e; } catch (_) {}
+          throw t;
+        }
+        throw e;
+      });
+    };
+    fw.__hrNetAr = true;
+    window.fetch = fw;
+  }
 })();

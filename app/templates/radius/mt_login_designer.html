@@ -70,7 +70,7 @@
     font-weight: 700;
   }
   .mtld-store-auto bdi,
-  .mtld-mono { font-family: var(--hub-mono, ui-monospace, monospace); }
+  .mtld-mono { font-family: var(--hub-mono, ui-monospace, monospace,"Cairo"); }
   .mtld-store-auto-api { font-size: 12px; }
   .mtld-store-auto details > summary {
     font-size: 11.5px;
@@ -2036,8 +2036,8 @@
   // الزبون). نجاحه قبل النشر يؤكّد أن العنوان+المنفذ صحيحان وقابلان
   // للوصول وأن CORS مفتوح — ففشل الدخول لاحقًا لن يُنسب للشبكة.
   // مع AbortController لمهلة قصوى حتى لا يتعلّق على عنوان لا يستجيب.
-  const pingBtn = root.querySelector("[data-mt-store-ping-base]");
-  const pingOut = root.querySelector("[data-mt-store-ping-result]");
+  const pingBtn = document.querySelector("[data-mt-store-ping-base]");
+  const pingOut = document.querySelector("[data-mt-store-ping-result]");
   if (pingBtn && pingOut) {
     const setOut = (state, text) => {
       pingOut.textContent = text;

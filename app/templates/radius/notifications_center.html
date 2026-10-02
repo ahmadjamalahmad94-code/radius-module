@@ -57,7 +57,10 @@
 {% endblock %}
 
 {% set _type_label = {'license':_('الترخيص'),'subscription':_('الاشتراك'),'service':_('الخدمة'),
-                      'support':_('الدعم'),'billing':_('الفوترة'),'system':_('النظام')} %}
+                      'support':_('الدعم'),'billing':_('الفوترة'),'system':_('النظام'),
+                      'backup':_('النسخ الاحتياطي'),'card':_('البطاقات'),'finance':_('المالية'),
+                      'network':_('الشبكة'),'router':_('الراوترات'),'security':_('الأمان'),
+                      'store':_('المتجر'),'subscriber':_('المشتركون'),'ticket':_('التذاكر')} %}
 
 {% block content %}
 {% set notif_active = 'center' %}{% include "radius/notifications_nav.html" %}
@@ -140,11 +143,11 @@
     <div class="nc-body">
       <div class="nc-title">
         <a href="{{ url_for('radius.notification_open', notif_id=n.id) }}">{{ n.title }}</a>
-        <span class="nc-badge">{{ _type_label.get(n.type, n.type) }}</span>
+        <span class="nc-badge" title="{{ n.type }}">{{ _type_label.get(n.type, _('عام')) }}</span>
         {% if n.source == 'bridge' %}<span class="nc-badge"><i class="fa-solid fa-link" style="font-size:9px"></i> {{ _('لوحة التراخيص') }}</span>{% endif %}
         {% if not n.is_read %}<span class="nc-badge" style="background:#ede9fe;color:#2e1f8c">{{ _('جديد') }}</span>{% endif %}
       </div>
-      {% if n.body %}<div class="nc-text">{{ n.body|actor_refs }}</div>{% endif %}
+      {% if n.body %}<div class="nc-text">{{ n.body|actor_refs|bidi_nums }}</div>{% endif %}
       <div class="nc-meta" title="{{ n.created_local }}">
         <i class="fa-regular fa-clock"></i>{{ n.created_rel or n.created_local }}</div>
     </div>

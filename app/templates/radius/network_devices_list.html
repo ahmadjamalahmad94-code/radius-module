@@ -11,7 +11,7 @@
 {% block title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ devices|length }} جهاز في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (devices|length)|ar_count('device') }} في النتائج</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <style>
@@ -108,7 +108,7 @@
                   <i class="fa-solid fa-circle-check" style="font-size:9px"></i>
                   متّصل
                   {% if d.last_latency_ms is not none %}
-                    <span dir="ltr" style="margin-inline-start:4px;font-family:monospace">
+                    <span dir="ltr" style="margin-inline-start:4px;font-family:monospace,'Cairo'">
                       ({{ "%.1f"|format(d.last_latency_ms) }} ms)
                     </span>
                   {% endif %}

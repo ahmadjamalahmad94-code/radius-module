@@ -1021,7 +1021,7 @@
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('قطع الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
                 </div>
               </button>
@@ -1330,7 +1330,7 @@
               <span class="cc-pill cc-pill-green" style="align-self:flex-start">
                 <span class="dot"></span>{{ 'اتصال ناجح' if card.active_session else 'آخر اتصال' }}
               </span>
-              <div style="font-family:ui-monospace,Consolas,monospace;font-size:18px;font-weight:700;color:var(--hr-navy-900)">
+              <div style="font-family:ui-monospace,Consolas,monospace,'Cairo';font-size:18px;font-weight:700;color:var(--hr-navy-900)">
                 {{ dt(card.last_seen_at) }}
               </div>
               <div class="cc-sub" style="font-size:12.5px">تم الاتصال {% if card.active_session %}بنجاح{% else %}آخر مرة{% endif %}</div>
@@ -1441,7 +1441,7 @@
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('فصل الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
                 </div>
               </button>

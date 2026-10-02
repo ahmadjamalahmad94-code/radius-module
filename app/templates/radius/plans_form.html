@@ -407,7 +407,7 @@
           <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
             <div class="help">{{ _('لون تمييز الباقة في القوائم.') }}</div></div>
-          <div class="pl-field"><label>{{ _('الأولوية') }} <span class="hub-text-mute">{{ _('(١–١٠)') }}</span></label>
+          <div class="pl-field"><label>{{ _('الأولوية') }} <span class="hub-text-mute">(<bdi dir="ltr">1–10</bdi>)</span></label>
             <input class="hub-input" type="number" min="1" max="10" step="1"
                    name="priority" value="{{ [1, [10, (plan.priority or 5)]|min]|max }}">
             <div class="help">{{ _('ترتيب ظهور الباقة في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).') }}</div></div>

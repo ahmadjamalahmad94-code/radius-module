@@ -14,7 +14,7 @@
 {% block title %}{{ _("فشل تحديث السرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}{{ _("فشل تحديث السرعة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} عملية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ total|ar_count('operation') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول العمليات #}
@@ -81,7 +81,7 @@
       <tbody>
         {% for r in items %}
         <tr class="is-fail">
-          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          {% set _dl = r.created_at|dt_local_raw if r.created_at else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>

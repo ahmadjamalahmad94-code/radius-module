@@ -173,6 +173,9 @@
     }
     .form-foot span{display:inline-flex;align-items:center;gap:6px}
     .form-foot i{color:var(--accent-2)}
+    /* iOS Safari يُكبّر الصفحةَ عند تركيزِ حقلٍ خطُّه دون 16px فيختلّ تخطيطُ
+       بوّابةِ الزبون بعد كتابةِ رقمه/كلمته — 16px على المؤشّرِ الخشِن. */
+    @media (pointer: coarse){ .field-wrap input{font-size:16px} }
   </style>
 </head>
 <body>

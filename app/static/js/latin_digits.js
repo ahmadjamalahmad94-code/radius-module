@@ -246,10 +246,27 @@
     var els = root.querySelectorAll(ATTR_SEL);
     for (var i = 0; i < els.length; i++) normalizeAttrsOf(els[i]);
   }
+  // 🔴 «رقم + وحدة لاتينيّة» (0 B · 32.3 GB · 20 Mbps · 300 ms) داخلَ سياقٍ RTL:
+  // الوحدةُ حرفٌ لاتينيٌّ قويّ والرقمُ ضعيف، فترتّبهما خوارزميّةُ bidi «GB 32.3» —
+  // مسحُ r6ui وجد 53 موضعًا في 11 صفحة (لوحة التحكم، الحزم، بطاقات الحزمة، تقرير
+  // الاستهلاك، التحكم بالسرعة، الملف…) تُبنى بقوالبَ وماكروهاتٍ وJS متفرّقة.
+  // نعزل المقطعَ بـLRI…PDI في العقدة النصّيّة نفسِها (مرّةً واحدة؛ المعزولُ يُترك).
+  var UNIT_RX = /(^|[^⁦\d.,])(\d[\d.,]*\s?(?:[KMGT]i?B|[kKMGT]bps|bps|[KMG]b|kB|B|ms)\b)(?!⁩)/g;
+  var UNIT_TEST = /\d\s?(?:[KMGT]i?B|[kKMGT]bps|bps|[KMG]b|kB|B|ms)\b/;
+  function isolateUnits(n) {
+    var v = n.nodeValue;
+    if (!v || !UNIT_TEST.test(v)) return;
+    var p = n.parentNode;
+    if (p && p.closest && p.closest('code,pre,kbd,samp,[dir=ltr],.mono')) return;
+    var w = v.replace(UNIT_RX, function (_m, pre, run) { return pre + '⁦' + run + '⁩'; });
+    if (w !== v) n.nodeValue = w;
+  }
   function normalizeText(root) {
     if (!root) return;
     if (root.nodeType === 3) {                        // عقدة نصّية مباشرة
       if (RX.test(root.nodeValue)) root.nodeValue = toLatin(root.nodeValue);
+      var pn = root.parentNode && root.parentNode.nodeName;
+      if (pn !== 'SCRIPT' && pn !== 'STYLE' && pn !== 'TEXTAREA') isolateUnits(root);
       return;
     }
     if (!root.querySelectorAll && root.nodeType !== 1 && root.nodeType !== 9) return;
@@ -259,6 +276,7 @@
       p = n.parentNode && n.parentNode.nodeName;
       if (p === 'SCRIPT' || p === 'STYLE' || p === 'TEXTAREA') continue;
       if (RX.test(n.nodeValue)) n.nodeValue = toLatin(n.nodeValue);
+      isolateUnits(n);
     }
   }
   function sweep(root) {

@@ -22,7 +22,7 @@
 {% block title %}{{ _("قائمة المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length) }} مشترك في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length)|ar_count('subscriber') }} في النتائج</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -230,7 +230,7 @@
   }
   .ubulk-confirm-list li{
     padding:2px 8px; border-radius:999px; background:#fff;
-    border:1px solid var(--hub-border-soft); font-family:var(--hub-mono, monospace);
+    border:1px solid var(--hub-border-soft); font-family:var(--hub-mono, monospace,"Cairo");
   }
   .ubulk-danger-note{
     display:flex; gap:10px; padding:10px 12px; border-radius:var(--hub-r-md);
@@ -1056,7 +1056,7 @@
           data-plan-rate="{{ ((p.price or 0) / _plan_minutes) if (p and (p.price or 0) > 0) else 0 }}"
           {# 🔴 كان `strftime` خامًا على UTC، فيقول «ينتهي 21:00» لمن نهايتُه
              منتصفُ الليل عنده — وعليه كان يُبنى حسابُ السعر أيضًا. #}
-          data-expire="{{ u.expire_at|dt_local('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
+          data-expire="{{ u.expire_at|dt_local_raw('%Y-%m-%d %H:%M') if u.expire_at else '' }}"
           data-status="{{ u.status }}"
           data-profile-url="{{ url_for('radius.users_profile', username=u.username) if can_submit('radius.users_profile', 'GET') else '' }}"
           data-edit-url="{{ url_for('radius.users_edit', username=u.username) if can_submit('radius.users_edit', 'GET') else '' }}"
@@ -1345,7 +1345,7 @@
   .srv-info{color:var(--hub-text-mute,#94a3b8);font-size:12.5px;font-weight:700;
     margin-inline:auto;font-variant-numeric:tabular-nums}
   .srv-nav{display:inline-flex;align-items:center;gap:6px}
-  .srv-cur{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:800;
+  .srv-cur{font-family:ui-monospace,monospace,"Cairo";font-size:12.5px;font-weight:800;
     color:var(--hub-text,#0f172a);padding:0 6px;font-variant-numeric:tabular-nums}
   .srv-btn{min-width:32px;height:32px;display:inline-grid;place-items:center;
     border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;background:#fff;

@@ -11,7 +11,7 @@
 {% block title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ admins|length }} مدير × {{ plans|length }} عرض</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (admins|length)|ar_count('admin') }} × {{ plans|length }} عرض</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -36,6 +36,12 @@
 .apx-table tr:hover td{ background:#fafbff; }
 /* حقل السعر الخاص — 42px مثل بقية حقول النظام */
 .apx-price{ min-height:42px; height:42px; width:140px; direction:ltr; text-align:center; font-weight:800; }
+/* نافذةُ الأسعار على الجوّال: جدولٌ بأربعةِ أعمدةٍ + حقلٌ 140px أعرضُ من النافذة فكانت
+   حقولُ «السعر الخاص» تُدفع خارجَ الشاشة يسارًا (price_2…price_9 عند x سالب على 360px).
+   عمودُ «أنشئ بواسطة» يُخفى تحت 560px، والحقلُ يضيق، والجدولُ يُمرَّر أفقيًّا كملاذٍ أخير. */
+.apx-scroll{ max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+@media (max-width:560px){ .apx-table th:nth-child(4), .apx-table td:nth-child(4){ display:none; }
+  .apx-price{ width:104px; } .apx-table td, .apx-table th{ padding:6px 6px; } }
 .apx-price:not(:placeholder-shown){ border-color:var(--hub-brand,#6B5AED); background:#f6f4ff; color:var(--hub-brand-ink,#4338ca); }
 .apx-base{ font-weight:800; color:var(--hub-text-soft,#475569); white-space:nowrap; }
 /* شارة عدد الأسعار الخاصة في جدول الملخص */
@@ -183,7 +189,7 @@
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand,#6B5AED)"></i>
           {{ _('اترك الحقل فارغًا ليدفع المدير السعر الأساسي — اكتب رقمًا ليُعتمد سعره الخاص لهذا العرض.') }}
         </div>
-        <table class="apx-table">
+        <div class="apx-scroll"><table class="apx-table">
           <thead>
             <tr>
               <th>{{ _('العرض') }}</th>
@@ -221,7 +227,7 @@
             </tr>
             {% endfor %}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <div class="fcw-foot">
         {# «استعادة الافتراضي» داخل النافذة: زر يفتح نافذة تأكيد fcw (apxr-<id>) — لا confirm() خام #}

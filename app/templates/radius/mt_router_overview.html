@@ -164,7 +164,7 @@
         {% for a in ov.suggested_actions %}
         {{ hub.action_card(
             a.label_ar,
-            sub=a.severity,
+            sub={'critical': _('حرِج'), 'warning': _('تحذير'), 'info': _('معلومة')}.get(a.severity, _('تنبيه')),
             icon=('circle-exclamation' if a.severity == 'critical'
                   else ('triangle-exclamation' if a.severity == 'warning'
                   else 'arrow-right')),
@@ -246,7 +246,7 @@
         {% if ov.last_failed_id %}
         <li>
           {{ hub.pill("فشل", variant="red") }}
-          <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_failed_action }}</code>
+          <code style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">{{ ov.last_failed_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_failed_at }}</span>
           · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
                data-mt-overview-last-failed-link>{% endif %}{{ _('تفاصيل') }}{% if can_submit('radius.audit_log_detail', 'GET') %}</a>{% endif %}
@@ -255,7 +255,7 @@
         {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
         <li>
           {{ hub.pill("حسّاسة", variant="amber") }}
-          <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_danger_action }}</code>
+          <code style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">{{ ov.last_danger_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_danger_at }}</span>
           · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
                data-mt-overview-last-danger-link>{% endif %}{{ _('تفاصيل') }}{% if can_submit('radius.audit_log_detail', 'GET') %}</a>{% endif %}

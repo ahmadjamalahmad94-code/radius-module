@@ -98,7 +98,7 @@
       <tbody>
         {% for r in rows %}
         <tr class="{{ 'is-fail' if not r.success else '' }}">
-          {% set _dl = r.when|dt_local if r.when else '' %}
+          {% set _dl = r.when|dt_local_raw if r.when else '' %}
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
@@ -119,13 +119,13 @@
             {% else %}<span class="rep-muted">{{ source_labels.get(_src, _src or '—') }}</span>{% endif %}
           </td>
           <td class="rep-cell-dev"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace,'Cairo')">
             {% if r.ip %}<span class="rep-primary"><bdi>{{ r.ip }}</bdi></span>{% endif %}
             {% if r.nas %}<span class="rep-sub" style="direction:ltr">{{ r.nas }}</span>{% endif %}
             {% if not r.ip and not r.nas %}<span class="rep-muted">—</span>{% endif %}
           </td>
           <td class="rep-cell-dev"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace,'Cairo')">
             {% if r.browser %}<span class="rep-primary">{{ r.browser }}</span>{% endif %}
             {% if r.mac %}<span class="rep-sub"><bdi>{{ r.mac }}</bdi></span>{% endif %}
             {% if not r.browser and not r.mac %}<span class="rep-muted">—</span>{% endif %}

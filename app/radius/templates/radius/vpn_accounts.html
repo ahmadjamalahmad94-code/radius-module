@@ -16,6 +16,15 @@
   .vpn-badge.expired{background:#fee2e2;color:#991b1b}
   .vpn-table td{vertical-align:middle;font-size:13px}
   .snap-card{background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+  /* عمودٌ ثابتُ العرض (360px) بجوار 1fr كان يدفع نموذجَ الإضافةِ كلَّه خارجَ شاشةِ الجوّال
+     يسارًا (RTL) — حقولُه عند x سالب بلا أيِّ تمرير. عمودٌ واحدٌ تحت 900px. */
+  .vpn-split{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+  .vpn-split > *{min-width:0}
+  @media (max-width: 900px){ .vpn-split{grid-template-columns:minmax(0,1fr)} }
+  .vpn-split .table-responsive, .vpn-split table{max-width:100%}
+  /* حقلُ الإدخال له عرضٌ ذاتيّ (size≈20 محرفًا) يصير الحدَّ الأدنى لعمودِ الشبكة — فيتّسع الصفّ */
+  .main [style*="display:grid"] > *{min-width:0}
+  .main .form-control, .main .form-select{max-width:100%;box-sizing:border-box}
 </style>
 {% endblock %}
 
@@ -53,7 +62,7 @@
 </div>
 {% endif %}
 
-<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+<div class="vpn-split">
 
 {# ── قائمة الحسابات ── #}
 <div>
@@ -191,7 +200,7 @@
         <label class="form-label" style="font-size:13px">الاسم للعرض</label>
         <input type="text" name="display_name" class="form-control form-control-sm" placeholder="اسم العميل">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px">
         <div class="mb-3">
           <label class="form-label" style="font-size:13px">أقصى اتصالات متزامنة</label>
           <input type="number" name="max_concurrent" class="form-control form-control-sm" value="1" min="1" max="99">
@@ -214,7 +223,7 @@
     {% for a in allocations %}
     <div style="padding:8px 0;border-bottom:1px solid var(--d-border);font-size:12px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <span style="font-family:monospace;background:#f1f5f9;padding:1px 5px;border-radius:4px">{{ a.service_type }}</span>
+        <span style="font-family:monospace,'Cairo';background:#f1f5f9;padding:1px 5px;border-radius:4px">{{ a.service_type }}</span>
         {{ a.chr_node_name or 'VPS محلي' }}
       </div>
       <div style="color:var(--d-text-muted)">

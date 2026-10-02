@@ -365,19 +365,39 @@
       // z مرتفع جدًا حتى تعلو فوق أي طبقة مودال بالموقع
       panel.style.zIndex = "99999";
       panel.style.insetInlineStart = "auto";
+      panel.style.maxHeight = "";  // قِسِ الارتفاعَ الطبيعيّ لا المقيَّدَ من تموضعٍ سابق
       var pw = panel.offsetWidth || 280;
       var ph = panel.offsetHeight || 320;
       var isRTL = (document.documentElement.dir || "rtl") !== "ltr";
       var left = isRTL ? (r.right - pw) : r.left;
       left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
       panel.style.left = left + "px";
-      var spaceBelow = window.innerHeight - r.bottom;
-      if (spaceBelow < ph + 12 && r.top > ph + 12) {
+      // نفسُ تقييدِ hub_select: لوحةُ التقويم (≈310px) كانت تُفتح للأسفل متى
+      // لم تتّسع المساحةُ فوقها، بلا سقفِ ارتفاعٍ ولا تقييد — فتخرج من منفذِ
+      // 360×640 بـ14px (صفُّ الأيّامِ الأخير مقصوص، رُصد في 23 صفحةَ تقارير)،
+      // وتغرق تحت لوحةِ المفاتيح على iOS. نحسب الشريطَ المرئيَّ فعلًا
+      // (visualViewport) ونختار الجهةَ الأوسع ثمّ نُقيّد ونُمرّر داخليًّا.
+      var GAP = 6, EDGE = 8;
+      var vh = window.innerHeight;
+      var vv = window.visualViewport;
+      var vTop = vv ? Math.max(0, vv.offsetTop) : 0;
+      var vBot = vv ? Math.min(vh, vv.offsetTop + vv.height) : vh;
+      var spaceBelow = vBot - r.bottom - GAP - EDGE;
+      var spaceAbove = r.top - vTop - GAP - EDGE;
+      var openUp = spaceBelow < ph && spaceAbove > spaceBelow;
+      var avail = Math.max(160, openUp ? spaceAbove : spaceBelow);
+      panel.style.maxHeight = avail + "px";
+      panel.style.overflowY = "auto";
+      var hh = Math.min(ph, avail);
+      if (openUp) {
         panel.style.top = "auto";
-        panel.style.bottom = (window.innerHeight - r.top + 6) + "px";
+        panel.style.bottom = Math.max(vh - vBot + EDGE, vh - r.top + GAP) + "px";
       } else {
         panel.style.bottom = "auto";
-        panel.style.top = (r.bottom + 6) + "px";
+        var top = r.bottom + GAP;
+        top = Math.min(top, vBot - hh - EDGE);
+        top = Math.max(vTop + EDGE, top);
+        panel.style.top = top + "px";
       }
     }
 
@@ -505,7 +525,11 @@
         trackRaf = 0;
         if (!OPEN) return;
         var r = OPEN.trigger.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > window.innerHeight) { closeOpen(); return; }
+        // كان «خرجت المرساةُ ⇒ أُغلق» — وهو بعينه عطبُ «تفتح وتختفي» الذي
+        // أُصلح في hub_select: لمسُ الزرِّ يُلصقه بالحدِّ الأعلى فيُخرجه أيُّ
+        // انطواءٍ لشريطِ العنوان. نُغلق فقط إذا بَعُدت منفذًا كاملًا.
+        var vh2 = window.innerHeight;
+        if (r.bottom < -vh2 || r.top > vh2 * 2) { closeOpen(); return; }
         OPEN.position();
       });
       return;
@@ -517,10 +541,15 @@
   var LAST_W = window.innerWidth;
   window.addEventListener("resize", function () {
     var w = window.innerWidth;
-    if (w === LAST_W) return;
+    if (w === LAST_W) { if (OPEN && OPEN.position) OPEN.position(); return; }
     LAST_W = w;
     if (OPEN) closeOpen();
   });
+  if (window.visualViewport) {
+    var vvTick = function () { if (OPEN && OPEN.position) OPEN.position(); };
+    window.visualViewport.addEventListener("resize", vvTick);
+    window.visualViewport.addEventListener("scroll", vvTick);
+  }
 
   function init() {
     var inputs = document.querySelectorAll('input[type="date"], input[type="datetime-local"]');

@@ -17,6 +17,7 @@ from ..core.numbers import (
     NonFiniteNumber, action_amount, field_label, normalize_number_text, round_money,
 )
 from ..core.system_config import default_currency
+from ..core.system_config import format_money as _format_money
 from ..db.connection import after_commit, atomic
 from ..db.helpers import dt_to_iso, json_load
 from ..db.repos import accounting_repo
@@ -685,7 +686,9 @@ class AccountingService:
         # تنبيه إدارة باستلام دفعة (قناة الإدارة الموحّدة) — محصّن.
         _notify_admin_alert(self.tenant_id, "payment_received", {
             "username": subscriber.get("username") or "—",
-            "amount": f"{float(amount):.2f} {currency}".strip(),
+            # صيغةُ المالِ الموحّدة (₪ لا «ILS»، بلا «.00» زائدة) كبقيّةِ الواجهة —
+            # كان جسمُ الإشعار «القيمة: 10.00 ILS» بجانبِ عنوانه «70 ₪» (r6ui).
+            "amount": _format_money(amount, currency),
             "method": _payment_method_ar(method),
             "actor": actor,
         }, dedup_key=f"payment:{payment.get('id')}")
@@ -900,7 +903,7 @@ class AccountingService:
         _notify_admin_alert(self.tenant_id, "loan_granted", {
             "username": subscriber.get("username") or "—",
             "duration": _fmt_minutes_ar(duration_minutes),
-            "amount": (f"{float(amount):.2f} {_loan_cur}".strip()
+            "amount": (_format_money(amount, _loan_cur)
                        if amount > 0 else "مجانية (بلا قيمة)"),
             "status": ("مُسجَّلة (دين)" if is_debt_loan else "سلفة مجانية"),
             "actor": actor,

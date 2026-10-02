@@ -144,7 +144,7 @@
       <tbody>
         {% for r in items %}
         <tr class="{{ 'is-fail' if r.direction != 'credit' else '' }}">
-          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          {% set _dl = r.created_at|dt_local_raw if r.created_at else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
@@ -167,7 +167,7 @@
             {{ r.amount|money }}
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
-          <td><bdi>{{ r.operator or '—' }}</bdi></td>
+          <td title="{{ r.operator or '' }}"><bdi>{{ r.operator|actor_name if r.operator else '—' }}</bdi></td>
           <td>
             <span class="rep-src {% if r.scope == 'distributor' %}src-network{% else %}src-panel{% endif %}"
                   title="{{ r.source_type or '' }}">

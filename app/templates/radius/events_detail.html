@@ -4,7 +4,7 @@
 {% block title %}{{ _("حدث") }} #{{ event.id }} — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
 {% block page_title %}{{ _("حدث #") }}{{ event.id }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
+{% block page_sub %}<span class="sub" title="{{ event.category }} / {{ event.severity }} / {{ event.event_key }}">{{ event.category_label or event.category }} / {{ event.severity_label or event.severity }} / {{ event.event_key_label or event.event_key }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
@@ -28,12 +28,14 @@
 {# متحكّم «انتقال سريع» المضغوط (data-testid="events-nav") — يُحقن في صف عنوان الهيرو #}
 {% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
 <section class="hub-hero-shell">
-{{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info", actions_html=_events_jump) }}
+{#- رسالةُ الحدث قد تُكتب بالإنجليزيّة من المُنتِج («Wallet created») — نعرض التسميةَ العربيّة حينها -#}
+{% set _ev_msg = event.message if (event.message and not (event.message|string).isascii()) else (event.event_key_label or event.message or event.event_key) %}
+{{ hub.hero("حدث #" ~ event.id, subtitle=_ev_msg, icon="circle-info", actions_html=_events_jump) }}
 <div class="hub-kpi-grid" data-testid="event-detail-summary">
-  {{ hub.kpi("الفئة", event.category, icon="folder") }}
-  {{ hub.kpi("الخطورة", event.severity, icon="signal") }}
-  {{ hub.kpi("الفاعل", event.actor_type ~ " #" ~ (event.actor_id or ""), icon="user") }}
-  {{ hub.kpi("الهدف", event.target_type ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
+  {{ hub.kpi("الفئة", event.category_label or event.category, icon="folder") }}
+  {{ hub.kpi("الخطورة", event.severity_label or event.severity, icon="signal") }}
+  {{ hub.kpi("الفاعل", event.actor_label or (event.actor_type ~ " #" ~ (event.actor_id or "")), icon="user") }}
+  {{ hub.kpi("الهدف", event.target_label or (event.target_type ~ " #" ~ (event.target_id or "")), icon="bullseye") }}
 </div>
 </section>{# /hub-hero-shell #}
 
@@ -62,7 +64,7 @@
       <thead><tr><th>{{ _('الرقم') }}</th><th>{{ _('الخطورة') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الرسالة') }}</th></tr></thead>
       <tbody>
         {% for item in timeline %}
-          <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td>{{ item.event_key }}</td><td>{{ item.message }}</td></tr>
+          <tr><td>#{{ item.id }}</td><td title="{{ item.severity }}">{{ item.severity_label or item.severity }}</td><td title="{{ item.event_key }}">{{ item.event_key_label or item.event_key }}</td><td>{{ item.message if (item.message and not (item.message|string).isascii()) else (item.event_key_label or item.message) }}</td></tr>
         {% else %}
           <tr><td colspan="4">{{ _('لا يوجد خط زمني مرتبط بهذا الكيان.') }}</td></tr>
         {% endfor %}
