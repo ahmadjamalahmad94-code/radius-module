@@ -197,9 +197,19 @@ def test_d1_double_tap_time_apply_only_applies_once(app, mobile_page):
     pg.goto(H.BASE + f"/admin/radius/cards/checker?query={username}")
     pg.wait_for_load_state("networkidle")
 
+    # Count the POSTs that actually reach Flask (server side of the proxy):
+    # WebKit does not emit page "request" events for a form.submit()
+    # navigation that is fulfilled by the route, so a browser-side listener
+    # saw 0 POSTs on the iPhone run even when the time was applied.
     posts = []
-    pg.on("request", lambda req: posts.append(req)
-          if (req.method == "POST" and "/cards/checker" in req.url) else None)
+    _open = pg.proxy.client.open
+
+    def _counting_open(path, **kw):
+        if kw.get("method") == "POST" and "/cards/checker" in path:
+            posts.append(path)
+        return _open(path, **kw)
+
+    pg.proxy.client.open = _counting_open
 
     set_time_btn = pg.locator('[data-cc-op="set-time"]')
     set_time_btn.wait_for(state="visible", timeout=15000)
@@ -212,10 +222,24 @@ def test_d1_double_tap_time_apply_only_applies_once(app, mobile_page):
     pg.locator('[data-cc-unit-value="minutes"]').tap()
 
     apply_btn = pg.locator("#cc-time-apply")
-    apply_btn.tap()
-    apply_btn.tap()  # نقرة ثانية سريعة قبل انتقال الصفحة — يجب أن تُوقَف
+    apply_btn.wait_for(state="visible")
+    # نقرتان سريعتان **قبل** انتقال الصفحة — الثانية يجب أن تُوقَف.
+    # (كانت نقرتا Playwright .tap() متتاليتين: الثانية تنتظر اكتمال تنقّل
+    # الأولى ثمّ تستهدف الصفحة الجديدة حيث النافذة مغلقة فتنتهي مهلتها — فلم
+    # تكن تختبر النقر المزدوج أصلًا. هنا نقرة ثانية بعد 30ms — بعد أن بدأ
+    # إرسال الأولى وقبل وصول الصفحة؛ مُتحقَّق بالطفرة: إزالة حارس
+    # submit_guard.hbGuardedSubmit تجعل الطلبين يصلان فيَفشل الاختبار.)
+    apply_btn.evaluate("b => { b.click(); setTimeout(() => b.click(), 30); }")
 
+    # form.submit() navigation starts asynchronously (WebKit: after the
+    # evaluate returns), so wait until the POST has reached the server
+    # before letting the page settle.
+    for _ in range(100):
+        if posts:
+            break
+        pg.wait_for_timeout(100)
     pg.wait_for_load_state("networkidle")
+    pg.wait_for_timeout(500)  # room for a (buggy) second POST to land
     assert len(posts) == 1, (
         f"expected exactly one set_time POST, got {len(posts)} — D1 regressed"
     )
