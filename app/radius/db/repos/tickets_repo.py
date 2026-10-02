@@ -91,6 +91,27 @@ def update_ticket(tenant_id: int, tid: int, **changes) -> Optional[Ticket]:
 SERVICE_REQUEST_CATEGORY = "service_request"
 SERVICE_REQUEST_TERMINAL = ("closed", "resolved")
 
+# zero-w3: the categories the GENERIC ticket form offers (web modal, web form,
+# app) — one list, one set of labels. «طلب خدمة» is NOT here: a service request
+# carries its own data (kind/plan/amount…) and is created only through the
+# service-request flow (/service-requests). Created from the generic form it
+# was a request without its data — the decision worked, but status edits 409'd.
+TICKET_CREATE_CATEGORIES: dict[str, str] = {
+    "general": "عام",
+    "billing": "الفواتير والدفع",
+    "connection": "الاتصال والخدمة",
+    "hardware": "الأجهزة والمعدّات",
+    "complaint": "شكوى",
+}
+
+
+def generic_create_category_error(category: str) -> Optional[str]:
+    """رسالة رفضٍ عربيّة إن كان التصنيف ممنوعًا في الإنشاء العامّ، وإلّا None."""
+    if str(category or "").strip().lower() == SERVICE_REQUEST_CATEGORY:
+        return ("«طلب خدمة» لا يُنشأ من نموذج التذكرة العامّ — استخدم «طلب خدمة» "
+                "من صفحة طلبات الخدمات حتى تُحفظ بياناته.")
+    return None
+
 
 def service_request_status_error(ticket: Ticket, new_status: str) -> Optional[str]:
     """رسالة رفضٍ عربيّة (→ 409) إن كان تغيير الحالة العامّ ممنوعًا، وإلّا None."""

@@ -313,7 +313,20 @@ def vch_generate():
         if _msg:   # «الحدود» — نفس سقف /api/v1/vouchers
             flash(_msg, "error")
             return redirect(url_for("radius.vch_generate"))
-        plan_id = request.form.get("plan_id")
+        plan_id = None
+        _raw_plan = (request.form.get("plan_id") or "").strip()
+        if _raw_plan:
+            # zero-w3: نصّ/باقة غير موجودة كانا 500 (ValueError/FOREIGN KEY).
+            try:
+                plan_id = int(_raw_plan)
+            except ValueError:
+                flash("معرّف الباقة يجب أن يكون رقمًا صحيحًا.", "error")
+                return redirect(url_for("radius.billing_hub", tab="vouchers"))
+            if plan_id <= 0:
+                plan_id = None
+            elif plans_repo.get_plan(_tid(), plan_id) is None:
+                flash("الباقة المحدّدة غير موجودة.", "error")
+                return redirect(url_for("radius.billing_hub", tab="vouchers"))
         expire = _date("expire_at")
         # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
         # والحدود الآمنة (6–16) تُفرض داخل الـ repo أيضًا.
@@ -321,7 +334,7 @@ def vch_generate():
         code_length = min(max(code_length, vouchers_repo.CODE_LEN_MIN), vouchers_repo.CODE_LEN_MAX)
         new_items = vouchers_repo.generate_bulk(
             tenant_id=_tid(), amount=amount, count=count,
-            plan_id=int(plan_id) if plan_id else None,
+            plan_id=plan_id,
             expire_at=expire,
             generated_by=session.get("admin_id") or 0,
             code_length=code_length,
@@ -434,9 +447,12 @@ def inv_create():
         flash(_msg, "error")
         return redirect(url_for("radius.inv_new"))
     plan = None
-    plan_id_str = request.form.get("plan_id")
+    plan_id_str = (request.form.get("plan_id") or "").strip()
     if plan_id_str:
-        plan = plans_repo.get_plan(_tid(), int(plan_id_str))
+        try:
+            plan = plans_repo.get_plan(_tid(), int(plan_id_str))
+        except ValueError:
+            plan = None
     inv = Invoice(
         id=None, tenant_id=_tid(), invoice_number="",
         subscriber_id=sub.id, username=sub.username,
@@ -506,10 +522,16 @@ def tk_create():
     _priority = request.form.get("priority") or "normal"
     if _priority not in TICKET_PRIORITIES:
         _priority = "normal"
+    _category = (request.form.get("category") or "general").strip()[:60] or "general"
+    # zero-w3: «طلب خدمة» يُنشأ من مساره فقط (لا طلبٌ بلا بياناته) — كالـAPI.
+    _cat_err = tickets_repo.generic_create_category_error(_category)
+    if _cat_err:
+        flash(_cat_err, "error")
+        return redirect(url_for("radius.tk_new"))
     t = Ticket(
         id=None, tenant_id=_tid(), subscriber_id=sub_id,
         subject=_subject,
-        category=(request.form.get("category") or "general")[:60],
+        category=_category,
         priority=_priority,
         body=(request.form.get("body") or "").strip(),
     )
@@ -600,6 +622,13 @@ def _svc_save(item, *, is_new: bool):
     if not item.subscriber_id:
         return _form_error("radius/services_form.html",
                            "اختر المشترك الذي تُسلَّم له المعدّة.", 400,
+                           item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
+    from ..db.connection import db as _db
+    if not _db().execute(
+            "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
+            (_tid(), int(item.subscriber_id))).fetchone():
+        # zero-w3: مشتركُ شبكةٍ أخرى كان يمرّ (الـFK يفحص الوجود لا الشبكة).
+        return _form_error("radius/services_form.html", "المشترك المحدَّد غير موجود.", 400,
                            item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
     try:
         services_repo.upsert(item)

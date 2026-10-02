@@ -160,6 +160,9 @@ def create_ticket():
         if priority not in TICKET_PRIORITIES or status not in TICKET_STATUSES:
             return fail("validation_error", "أولوية التذكرة أو حالتها غير صحيحة.", status=422)
         category = opt_text(body.get("category"), label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+        _cat_err = tickets_repo.generic_create_category_error(category)
+        if _cat_err:
+            raise InputError(_cat_err)
         text = opt_text(body.get("body"), label="نص التذكرة", max_len=_BODY_MAX)
         attachments = _attachments(body.get("attachments"))
         assignee_admin_id = _assignee(body.get("assignee_admin_id"))
@@ -203,6 +206,11 @@ def patch_ticket(ticket_id: int):
             if (current.category == tickets_repo.SERVICE_REQUEST_CATEGORY
                     and changes["category"] != current.category):
                 return fail("conflict", "لا يمكن تغيير تصنيف طلب خدمة.", status=409)
+            # zero-w3: ولا تصير تذكرةٌ عاديّةٌ «طلب خدمة» بلا بياناته.
+            if (current.category != tickets_repo.SERVICE_REQUEST_CATEGORY
+                    and tickets_repo.generic_create_category_error(changes["category"])):
+                return fail("conflict", tickets_repo.generic_create_category_error(
+                    changes["category"]), status=409)
         if "body" in body:
             changes["body"] = opt_text(body["body"], label="نص التذكرة", max_len=_BODY_MAX)
         if "priority" in body:

@@ -84,6 +84,15 @@ def generate_vouchers():
         parsed_plan_id = int(plan_id) if plan_id not in (None, "") else None
     except (TypeError, ValueError):
         return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
+    # zero-w3: 0 = «بلا باقة» (the app sent 0 for a blank field) and a plan
+    # that is not in this network is a 422 — both were a FOREIGN KEY 500.
+    if parsed_plan_id is not None and parsed_plan_id <= 0:
+        parsed_plan_id = None
+    if parsed_plan_id is not None:
+        from ...radius.db.repos import plans_repo
+        if plans_repo.get_plan(_tid(), parsed_plan_id) is None:
+            return fail("validation_error", "الباقة المحدّدة غير موجودة.", status=422,
+                        details={"field": "plan_id"})
     if amount <= 0:
         return fail("validation_error", "قيمة القسيمة يجب أن تكون أكبر من صفر.", status=422)
     from ...radius.core import limits
