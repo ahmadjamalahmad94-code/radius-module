@@ -23,8 +23,8 @@
   @media (max-width: 900px){ .vpn-split{grid-template-columns:minmax(0,1fr)} }
   .vpn-split .table-responsive, .vpn-split table{max-width:100%}
   /* حقلُ الإدخال له عرضٌ ذاتيّ (size≈20 محرفًا) يصير الحدَّ الأدنى لعمودِ الشبكة — فيتّسع الصفّ */
-  .vpn-split [style*="display:grid"] > *{min-width:0}
-  .vpn-split input, .vpn-split select, .vpn-split textarea{max-width:100%;box-sizing:border-box}
+  .main [style*="display:grid"] > *{min-width:0}
+  .main .form-control, .main .form-select{max-width:100%;box-sizing:border-box}
 </style>
 {% endblock %}
 
