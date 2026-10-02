@@ -427,11 +427,24 @@ def batch_operations_totals(
     manager: str = "",
     distributor_id: Optional[int] = None,
     owner_admin_id: Optional[int] = None,
+    day: str = "",
+    month: str = "",
 ) -> dict:
-    now = now_iso()
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    month = datetime.utcnow().strftime("%Y-%m")
-    year = datetime.utcnow().strftime("%Y")
+    """إجماليّات «مركز عمليات الحزم».
+
+    ``day`` (‏YYYY-MM-DD) و``month`` (‏YYYY-MM) **محلّيّان** يختارهما المالك
+    (2026-10-02: «أغيّر اليوم/الشهر ويجيب العدد والسعر»)؛ الفارغ = اليوم/الشهر
+    الحاليّ. الحدود تُحوَّل إلى UTC نصفِ مفتوحة عبر ``local_period_utc_range``
+    — كان «اليوم» يُقارن ``SUBSTR(first_used_at,1,10)`` بتاريخ UTC فتُنسب مبيعات
+    منتصف الليل حتى الثالثة فجرًا (غزّة +3) لليوم السابق."""
+    from ...core.system_config import local_period_utc_range, local_today
+    today_l = local_today(tenant_id)
+    day = (day or "").strip() or today_l.strftime("%Y-%m-%d")
+    month = (month or "").strip() or today_l.strftime("%Y-%m")
+    year = day[:4]
+    d0, d1 = local_period_utc_range("daily", day, tenant_id)
+    m0, m1 = local_period_utc_range("monthly", month, tenant_id)
+    y0, y1 = local_period_utc_range("yearly", year, tenant_id)
     where, vals = _batch_operations_conditions(
         status=status,
         q=q,
@@ -440,39 +453,27 @@ def batch_operations_totals(
         distributor_id=distributor_id,
         owner_admin_id=owner_admin_id,
     )
+    # ‏first_used_at يُكتب بـ«T» مرّةً وبمسافةٍ مرّة — نوحّده قبل المقارنة.
+    fu = "REPLACE(COALESCE(c.first_used_at, ''), 'T', ' ')"
+    in_day = f"{fu} >= ? AND {fu} < ?"
+    unit = """CASE
+                    WHEN b.price_per_card > 0 THEN b.price_per_card
+                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
+                    ELSE 0
+                END"""
     sql = _batch_operations_base_sql() + f"""
         SELECT
             COUNT(DISTINCT b.id) AS batch_count,
-            -- MT73 — عدّ الكروت عبر **كل** الحزم المُرشَّحة. بطاقة «إجمالي
-            -- الكروت» كانت تُجمَع في القالب بحلقةٍ على الصفحة المعروضة فقط،
-            -- فتُظهر 1,099 بدل 7,555 وتتغيّر بتغيّر الصفحة — رقمُ جردٍ ومالٍ
-            -- مُضلِّل. DISTINCT ضروريّ: الاستعلام يَربط الكروت فتتضاعف الصفوف.
+            -- MT73 — عدّ الكروت عبر **كل** الحزم المُرشَّحة (DISTINCT لأنّ
+            -- الاستعلام يربط الكروت فتتضاعف الصفوف).
             COUNT(DISTINCT c.id) AS total_cards,
             COALESCE(SUM(CASE WHEN b.total_price > 0 THEN b.total_price ELSE b.price_per_card * b.generated END), 0) AS configured_value,
-            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ? THEN 1 ELSE 0 END), 0) AS used_today,
-            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ? THEN 1 ELSE 0 END), 0) AS used_month,
-            COALESCE(SUM(CASE WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 4) = ? THEN 1 ELSE 0 END), 0) AS used_year,
-            COALESCE(SUM(CASE
-                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 10) = ?
-                THEN CASE
-                    WHEN b.price_per_card > 0 THEN b.price_per_card
-                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
-                    ELSE 0
-                END ELSE 0 END), 0) AS value_today,
-            COALESCE(SUM(CASE
-                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 7) = ?
-                THEN CASE
-                    WHEN b.price_per_card > 0 THEN b.price_per_card
-                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
-                    ELSE 0
-                END ELSE 0 END), 0) AS value_month,
-            COALESCE(SUM(CASE
-                WHEN c.used = 1 AND SUBSTR(COALESCE(c.first_used_at, ''), 1, 4) = ?
-                THEN CASE
-                    WHEN b.price_per_card > 0 THEN b.price_per_card
-                    WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
-                    ELSE 0
-                END ELSE 0 END), 0) AS value_year
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN 1 ELSE 0 END), 0) AS used_today,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN 1 ELSE 0 END), 0) AS used_month,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN 1 ELSE 0 END), 0) AS used_year,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_today,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_month,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_year
         FROM card_batches b
         LEFT JOIN access_plans p
           ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
@@ -483,15 +484,13 @@ def batch_operations_totals(
     """
     params = [
         *_batch_operations_base_params(tenant_id),
-        today, month, year, today, month, year,
+        d0, d1, m0, m1, y0, y1, d0, d1, m0, m1, y0, y1,
         tenant_id, *vals,
     ]
     row = db().execute(sql, params).fetchone()
     data = row_to_dict(row) if row else {}
     return {
         "batch_count": int(data.get("batch_count") or 0),
-        # MT73 — عدّ الكروت عبر كل الحزم المُرشَّحة (القاموس يُبنى بمفاتيح
-        # صريحة، فأيّ عمودٍ جديد يُسقَط ما لم يُضَف هنا أيضًا).
         "total_cards": int(data.get("total_cards") or 0),
         "configured_value": float(data.get("configured_value") or 0),
         "used_today": int(data.get("used_today") or 0),
@@ -500,6 +499,9 @@ def batch_operations_totals(
         "value_today": float(data.get("value_today") or 0),
         "value_month": float(data.get("value_month") or 0),
         "value_year": float(data.get("value_year") or 0),
+        # اليوم/الشهر المحسوبان فعلًا (يُعرضان فوق البطاقتين).
+        "day": day,
+        "month": month,
     }
 
 

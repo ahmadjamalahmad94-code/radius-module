@@ -696,6 +696,21 @@ def _db_busy(exc: Exception):
     return None
 
 
+def _totals_period() -> dict:
+    """«بطاقات اليوم/الشهر» لأيّ يومٍ أو شهرٍ يختاره المالك (2026-10-02).
+    ``day=YYYY-MM-DD`` و``month=YYYY-MM`` محلّيّان؛ القيمة غير الصالحة تُتجاهل
+    فيُحسب اليوم/الشهر الحاليّ."""
+    import re as _re
+    day = (request.args.get("day") or "").strip()
+    month = (request.args.get("month") or "").strip()
+    out = {}
+    if _re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+        out["day"] = day
+    if _re.fullmatch(r"\d{4}-\d{2}", month):
+        out["month"] = month
+    return out
+
+
 def _manager_cardgen_denial(kind: str):
     """FIX117 (API) — نفس حارس اللوحة على التوليد/الاستيراد المباشر.
 
@@ -888,7 +903,7 @@ def cards_batches_list():
         "page": page,
         "per_page": per_page,
         "pages": max(1, (total + per_page - 1) // per_page),
-        "totals": svc.batch_operations_totals(**filters),
+        "totals": svc.batch_operations_totals(**filters, **_totals_period()),
         "filters": filters,
         "meta": meta,
         "next_batch_id": meta["next_batch_id"],
