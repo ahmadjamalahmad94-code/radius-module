@@ -82,6 +82,7 @@
   .qk-slider-head b{min-width:34px;text-align:center;font-size:15px;font-weight:950;color:#fff;border-radius:8px;padding:2px 8px;
       background:linear-gradient(135deg,#7c3aed,#22a7bd)}
   .qk-slider input[type=range]{width:100%;accent-color:#7c3aed;cursor:pointer;height:26px}
+  @media (pointer: coarse){ .qk-slider input[type=range]{height:40px} } /* هدفُ لمسٍ ≥40px */
   .qk-sheet-total{margin:0;font-size:12.5px;font-weight:900;color:#3730a3;background:#eef2ff;border:1px solid #c7d2fe;
       border-radius:10px;padding:8px 10px;display:flex;gap:6px;align-items:center}
   .qk-top .qk-field{flex:1;min-width:180px}
@@ -227,7 +228,7 @@
           {% set _surf_on = fl.username_surface_enabled if 'username_surface_enabled' in fl else (fl.credential_background_enabled if 'credential_background_enabled' in fl else true) %}
           <label class="qk-check" style="grid-column:span 2"><input type="checkbox" data-qk-surf {% if _surf_on %}checked{% endif %}> {{ _('خلفية خلف الأرقام') }}</label>
           <label class="qk-field">{{ _('لون الخلفية') }}
-            <input type="color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-color style="padding:3px;cursor:pointer">
+            <input type="color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-qk-surf-color style="padding:3px;cursor:pointer;font-size:16px">
           </label>
           <input type="hidden" name="credential_background_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>
           <input type="hidden" name="username_surface_enabled" value="{{ '1' if _surf_on else '0' }}" data-qk-surf-v>

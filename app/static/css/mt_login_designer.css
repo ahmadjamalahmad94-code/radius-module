@@ -460,6 +460,7 @@
   inline-size: 38px;
   block-size: 34px;
   padding: 2px;
+  font-size: 16px; /* iOS لا يكبّر الصفحةَ عند لمسِ حقلٍ ≥16px (لا أثرَ مرئيًّا على منتقي اللون) */
   border: 1px solid var(--hub-border, #E2E8F0);
   border-radius: 8px;
   background: #fff;
