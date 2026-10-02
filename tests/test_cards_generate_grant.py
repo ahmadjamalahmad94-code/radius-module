@@ -19,7 +19,9 @@ from app.radius.routes import cards as cards_routes
 @pytest.fixture()
 def guard(monkeypatch):
     """يعزل `_can_generate_batches` عن الجلسة وقاعدة البيانات."""
-    state = {"super": False, "me": 3, "granted": False}
+    # rbac  = the derived RBAC action (cards.generate key / deny override / expiry)
+    # granted = the owner's EXPLICIT «مسموح» (can_create_batch / _actions True)
+    state = {"super": False, "me": 3, "granted": False, "rbac": True}
 
     monkeypatch.setattr(cards_routes, "is_super_admin", lambda: state["super"])
     monkeypatch.setattr(cards_routes, "current_admin_id", lambda: state["me"])
@@ -28,6 +30,11 @@ def guard(monkeypatch):
     from app.radius.services import manager_grants
     monkeypatch.setattr(
         manager_grants, "action_permitted",
+        lambda admin_id, key, *, tenant_id=1: (
+            state["rbac"] and key == "cards.generate"),
+    )
+    monkeypatch.setattr(
+        manager_grants, "explicitly_granted",
         lambda admin_id, key, *, tenant_id=1: (
             state["granted"] and key == "cards.generate"),
     )
@@ -42,6 +49,22 @@ def test_owner_may_always_generate(guard):
 def test_manager_without_the_grant_is_denied(guard):
     """الافتراض مغلق — وإلّا وُلّدت بطاقاتٌ بلا خصمٍ من محفظة أحد."""
     guard["granted"] = False
+    assert cards_routes._can_generate_batches() is False
+
+
+def test_rbac_key_alone_is_not_the_grant(guard):
+    """مفتاح RBAC «توليد بطاقات» يفتح الصفحة (عارض العروض المحاسَب) لكلّ «مدير
+    عام»/«مشغّل» افتراضًا — لو كفى وحده لعاد النموذج الكامل المجّانيّ مفتوحًا
+    للجميع (da238d4b + 531cb457). المنحُ الصريح شرطٌ."""
+    guard["rbac"] = True
+    guard["granted"] = False
+    assert cards_routes._can_generate_batches() is False
+
+
+def test_explicit_grant_still_obeys_a_deny_or_expiry(guard):
+    """«ممنوع» صريح / انتهاء المنوحات / سقف الأب تأتي من action_permitted."""
+    guard["rbac"] = False
+    guard["granted"] = True
     assert cards_routes._can_generate_batches() is False
 
 

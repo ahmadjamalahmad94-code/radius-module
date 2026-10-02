@@ -241,6 +241,28 @@ def test_super_generate_get_shows_full_form(app):
     assert "نوع الحزمة" in html
 
 
+def test_manager_with_explicit_owner_grant_gets_full_form(app):
+    """MT111: the owner's explicit «مسموح» on «إنشاء دفعة بطاقات» opens the full
+    form for that one manager — the RBAC key alone (above) does not."""
+    with app.app_context():
+        plan = _plan_id()
+        mgr = _sub_admin("mgr_granted")
+        from app.radius.services import manager_grants
+        manager_grants.set_action_override(mgr, "cards.generate", True)
+    with app.test_client() as client:
+        _login(client, admin_id=mgr, is_super=False)
+        page = client.get("/admin/radius/cards/generate")
+        assert page.status_code == 200
+        assert "نوع الحزمة" in page.get_data(as_text=True)
+        res = client.post("/admin/radius/cards/generate", data={
+            "_csrf_token": "off-csrf", "plan_id": str(plan), "count": "1",
+            "price_per_card": "2", "batch_type": "printed",
+        })
+    assert res.status_code in (302, 303)
+    with app.app_context():
+        assert _latest_batch() is not None
+
+
 # ═══ 3. owner pricing auto-compute (total = count × sell, server-side) ═══════
 def test_owner_generate_computes_total_price_serverside(app):
     with app.app_context():

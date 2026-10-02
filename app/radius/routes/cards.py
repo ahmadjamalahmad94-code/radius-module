@@ -1133,8 +1133,14 @@ def _can_generate_batches() -> bool:
     if not me:
         return False
     from ..services import manager_grants
-    return manager_grants.action_permitted(int(me), "cards.generate",
-                                           tenant_id=_tid())
+    # 🔴 مفتاح RBAC «توليد بطاقات» يَفتح الصفحة لكلّ مدير (عارض العروض المحاسَب)؛
+    # فلو كفى وحده لصار النموذج الكامل المجّانيّ مفتوحًا لكلّ «مدير عام»/«مشغّل»
+    # افتراضًا — أي عادت فجوة «مدير يولّد حزمةً بلا خصم». المنحُ الصريح شرطٌ
+    # إضافيّ، و«ممنوع»/انتهاء المنوحات/سقف الأب تبقى عبر action_permitted.
+    return (manager_grants.action_permitted(int(me), "cards.generate",
+                                            tenant_id=_tid())
+            and manager_grants.explicitly_granted(int(me), "cards.generate",
+                                                  tenant_id=_tid()))
 
 
 def _can_import_batches() -> bool:
