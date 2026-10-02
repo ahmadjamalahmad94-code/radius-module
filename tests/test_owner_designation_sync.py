@@ -26,6 +26,17 @@ from uuid import uuid4
 import pytest
 
 
+_BOOT_USER = "boot_owner"
+
+
+def _min_id_admin():
+    """The bootstrap admin = the legacy min-id owner (asserted, not assumed)."""
+    from app.radius.db.repos import admins_repo
+    adm = admins_repo.get_by_username(_BOOT_USER)
+    assert adm is not None and adm.id == admins_repo.primary_admin_id()
+    return adm
+
+
 # ─────────────────────────── fixtures (NO_SEED) ───────────────────────────
 @pytest.fixture
 def app(monkeypatch):
@@ -33,6 +44,12 @@ def app(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # d13fb302: create_app() always guarantees a login via
+    # ensure_bootstrap_admin() — on a clean NO_SEED DB that bootstrap account
+    # is admin id #1, i.e. the legacy min-id owner. Name it so the fallback
+    # tests address the real min-id admin instead of «the first one I create».
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_USER", _BOOT_USER)
+    monkeypatch.setenv("HOBERADIUS_BOOTSTRAP_ADMIN_PASS", "pass-1234")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for k in list(sys.modules):
@@ -74,6 +91,10 @@ def _login(client, username, password="pass-1234"):
 
 _AUDIT_PERM = "mikrotik.audit.view"
 _AUDIT_URL = "/admin/radius/audit"
+# d7a99f29 (F24): the catalogue key `audit.view` bridges to the legacy
+# `mikrotik.audit.view` (mt_permissions._RBAC_BRIDGE) — «without the audit
+# permission» therefore means without BOTH keys.
+_AUDIT_BRIDGE_PERM = "audit.view"
 
 
 # ════════════════ two designated owners both qualify; a third does not ════════
@@ -122,7 +143,7 @@ def test_designation_overrides_min_id(app):
     with app.app_context():
         from app.radius.db.repos import admins_repo
 
-        owner1 = _make_admin()                 # id #1 — the legacy min-id owner
+        owner1 = _min_id_admin()               # id #1 — the legacy min-id owner
         owner2 = _make_admin()                 # id #2 — the designated owner
         # before any designation: min-id fallback → owner1 is the owner.
         assert admins_repo.is_primary_owner(owner1.id) is True
@@ -139,7 +160,7 @@ def test_min_id_fallback_when_no_designation(app):
         from app.radius.db.repos import admins_repo
         from app.radius.services.manager_credit import ManagerCreditService
 
-        owner = _make_admin()                  # id #1
+        owner = _min_id_admin()                # id #1
         other = _make_admin()                  # id #2
         # no set_designated_owners() called → designation absent.
         assert admins_repo.designated_owner_keys() is None
@@ -184,7 +205,8 @@ def test_route_designated_owner_bypasses_third_403(app, client):
         owner1 = _make_admin()
         owner2 = _make_admin()
         # third holds a full role MINUS the audit perm → must 403 (no bypass).
-        perms_without = tuple(p for p in ALL_PERMISSIONS if p != _AUDIT_PERM)
+        perms_without = tuple(p for p in ALL_PERMISSIONS
+                              if p not in (_AUDIT_PERM, _AUDIT_BRIDGE_PERM))
         third = _make_admin(perms=perms_without)
         admins_repo.set_designated_owners([owner1.username, owner2.username])
         o1u, o2u, t3u = owner1.username, owner2.username, third.username
