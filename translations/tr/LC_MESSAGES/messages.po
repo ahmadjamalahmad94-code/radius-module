@@ -52277,3 +52277,126 @@ msgstr "Abonelere kota uyarıları tetikleyen tüketim eşikleri (CSV). Örnek: 
 
 msgid "عروض البطاقات"
 msgstr "Kupon Teklifleri"
+
+msgid "إدارة البيانات"
+msgstr "Veri yönetimi"
+
+msgid "دفع بيانات التوزيع"
+msgstr "DHCP ayarlarını gönder"
+
+msgid "تغيير عنوان التصفح العام (Public)"
+msgstr "Genel tarama IP'sini değiştir"
+
+msgid "سجل إجراءات المايكروتيك"
+msgstr "MikroTik işlem günlüğü"
+
+msgid "أحداث النظام"
+msgstr "Sistem olayları"
+
+msgid "حركات مشتركي سوق البطاقات"
+msgstr "Kart mağazası müşteri hareketleri"
+
+msgid "سجل حركات مشتركي سوق البطاقات"
+msgstr "Kart mağazası müşteri hareket günlüğü"
+
+msgid "تعديل باقات المشتركين"
+msgstr "Abone paket değişiklikleri"
+
+msgid "الكروت المستخدمة"
+msgstr "Kullanılan kartlar"
+
+msgid "سجل الإشعارات"
+msgstr "Bildirim günlüğü"
+
+msgid "أصوات الإشعارات"
+msgstr "Bildirim sesleri"
+
+msgid "ربط SMS (TweetSMS)"
+msgstr "SMS bağlantısı (TweetSMS)"
+
+msgid "المعمل (تجريبيّ)"
+msgstr "Laboratuvar (deneysel)"
+
+msgid "المعمل"
+msgstr "Laboratuvar"
+
+msgid "تجريبيّ"
+msgstr "Deneysel"
+
+msgid "تحديث النظام"
+msgstr "Sistem güncellemesi"
+
+msgid "ترحيل / استيراد عميل"
+msgstr "Müşteri taşı / içe aktar"
+
+msgid "تصفير البيانات"
+msgstr "Verileri sıfırla"
+
+msgid "تنظيف البيانات التجريبيّة"
+msgstr "Demo verilerini temizle"
+
+msgid "إجمالي مبيعات اليوم"
+msgstr "Bugünün toplam satışları"
+
+msgid "البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ."
+msgstr "Bugün satılan kartlar (ilk giriş) ve para birimine göre değerleri — panelin yerel saatine göre."
+
+msgid "عدد البطاقات المباعة"
+msgstr "Satılan kart sayısı"
+
+msgid "قيمة البطاقات"
+msgstr "Kartların değeri"
+
+msgid "تقرير المبيعات اليوميّة"
+msgstr "Günlük satış raporu"
+
+msgid "توقيت اللوحة"
+msgstr "Panel saati"
+
+msgid "الأيّام المتبقّية على ترخيص اللوحة"
+msgstr "Panel lisansında kalan gün"
+
+msgid "يتوفّر تحديث جديد"
+msgstr "Yeni bir güncelleme mevcut"
+
+msgid "كتم صوت الإشعارات"
+msgstr "Bildirim seslerini kapat"
+
+msgid "بحث (رقم الجوال / إجراء)…"
+msgstr "Ara (cep numarası / işlem)…"
+
+msgid "نوع الحدث"
+msgstr "Olay türü"
+
+msgid "شحن بطاقة"
+msgstr "Kartla yükleme"
+
+msgid "العميل"
+msgstr "Müşteri"
+
+msgid "دليل: عروض البطاقات — كيف تستخدمني"
+msgstr "Kılavuz: Kart teklifleri — nasıl kullanılır"
+
+msgid "دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني"
+msgstr "Kılavuz: Canlı CoA kontrolü ve IP değişikliği — nasıl kullanılır"
+
+msgid "دليل: شحن الرصيد ولوحة الشحن — كيف تستخدمني"
+msgstr "Kılavuz: Bakiye yükleme ve yükleme paneli — nasıl kullanılır"
+
+msgid "دليل: حدّ الأجهزة وركل الجلسات — كيف تستخدمني"
+msgstr "Kılavuz: Cihaz sınırı ve oturum atma — nasıl kullanılır"
+
+msgid "دليل: الموزّعون — كيف تستخدمني"
+msgstr "Kılavuz: Bayiler — nasıl kullanılır"
+
+msgid "دليل: صلاحيات المدير الدقيقة — كيف تستخدمني"
+msgstr "Kılavuz: Ayrıntılı yönetici yetkileri — nasıl kullanılır"
+
+msgid "دليل: معالج ترحيل البيانات — كيف تستخدمني"
+msgstr "Kılavuz: Veri taşıma sihirbazı — nasıl kullanılır"
+
+msgid "دليل: الوصول البعيد وWinBox — كيف تستخدمني"
+msgstr "Kılavuz: Uzaktan erişim ve WinBox — nasıl kullanılır"
+
+msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
+msgstr "Kılavuz: Yönetim tünelleri ve hazırlama betiği — nasıl kullanılır"
