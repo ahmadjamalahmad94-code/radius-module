@@ -59,9 +59,16 @@ def _page(app) -> str:
     return resp.get_data(as_text=True)
 
 
-def test_page_sizes_include_200_500_1000(app):
+def test_page_sizes_include_200_500_and_all(app):
+    """214047d8 (memory subscribers-server-side-pagination.md): the client-side
+    data-page-sizes table became server-side pagination; the size picker is
+    now the GET select «صفوف بالصفحة» fed by routes/users._PAGE_SIZES —
+    10/25/50/100/200/500 + «الكل» (owner request #4) in place of 1000."""
+    import re
     html = _page(app)
-    assert 'data-page-sizes="10,20,50,100,200,500,1000"' in html
+    sel = html.split('id="srv-ps"', 1)[1].split("</select>", 1)[0]
+    values = re.findall(r'<option value="([^"]+)"', sel)
+    assert values == ["10", "25", "50", "100", "200", "500", "all"], values
 
 
 def test_bulk_confirm_message_is_capped_not_a_wall(app):
