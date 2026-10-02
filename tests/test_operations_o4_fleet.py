@@ -108,24 +108,26 @@ def test_fleet_summary_disabled_count_is_server_rendered(app, client):
 
 
 def test_fleet_summary_live_cards_start_em_dash(app, client):
-    """العقد الجديد بعد إصلاح radacct:
-      • بطاقة «متصل» تبدأ بعدّ radacct الموثوق (رقم) لا «—» — فهذا الرقم
-        حقيقة فورية (جلسات RADIUS نشطة)، لا يَعتمد على أول استطلاع API.
-      • بطاقتا «غير متصل»/«جزئي» مفهومان خاصّان بالـAPI فقط، فتبدآن «—»
-        حتى يُجيب الاستطلاع.
-    بلا أي جلسة نشطة (لم تُزرع radacct) ⇒ «متصل» = 0 (صفر صادق)."""
+    """Shell-first contract (015a198d, perf): the page no longer computes
+    «متصل» from radacct during render — that sync work delayed the whole
+    page. Every live card (connected/unreachable/partial) starts «—» and the
+    radacct-backed count arrives from the lazy JSON endpoint
+    (radius.mt_operations_live) wired on the table. With no radacct session
+    seeded that endpoint reports an honest 0."""
     _seed(app, 60, enabled=True)
     _login(client)
     html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
     import re
-    # بطاقة «متصل» مزروعة من radacct (رقم) لا «—».
-    assert 'data-mt-radacct-connected="0"' in html
     conn = re.search(
         r'data-mt-fleet="connected"[^>]*>.*?data-mt-fleet-value[^>]*>\s*([^<\s]+)\s*</div>',
         html, re.S)
-    assert conn and conn.group(1).isdigit(), \
-        f"connected card must start with a radacct number, got {conn and conn.group(1)}"
-    # بطاقتا API فقط (غير متصل/جزئي) ما زالتا تبدآن «—».
+    assert conn and conn.group(1) == "—",         f"connected card must start «—» (shell-first), got {conn and conn.group(1)}"
     matches = re.findall(r'data-mt-fleet-value[^>]*>\s*([^<\s]+)\s*</div>', html)
-    assert sum(1 for v in matches if v == "—") >= 2, \
-        f"expected ≥2 em-dash (unreachable/partial), got {matches}"
+    assert sum(1 for v in matches if v == "—") >= 3,         f"expected ≥3 em-dash (connected/unreachable/partial), got {matches}"
+    # The lazy seed is wired, and it carries the radacct number.
+    assert 'data-mt-live-url="/admin/radius/mt/operations/live"' in html
+    live = client.get("/admin/radius/mt/operations/live").get_json()
+    assert live["ok"] is True
+    assert live["connected"] == 0
+    assert live["routers"]["60"] == {"online": False, "active": 0}
+

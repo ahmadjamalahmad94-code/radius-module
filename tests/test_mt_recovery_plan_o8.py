@@ -40,6 +40,11 @@ def _login(client) -> None:
         username=u, password="o8-pass", full_name="O8",
         is_super_admin=True,
     )
+    # owner-only bypass (6824f26): the is_super_admin flag alone no longer
+    # bypasses RBAC, and the boot-time «admin» (d13fb302) is always the
+    # min-id owner — so designate the tester as owner, as the licensing
+    # panel does. Same fix as test_route_permissions_s3_2._login.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "o8-pass"},
@@ -142,9 +147,21 @@ def test_nearest_backup_picked_before_event(app):
             result_status="partial",
         )
         # Newer backup AFTER the event (must NOT be picked).
-        br.record(tenant_id=1, router_id=100,
-                   backup_type="binary", filename="after.backup",
-                   status="success")
+        after_id = br.record(tenant_id=1, router_id=100,
+                             backup_type="binary", filename="after.backup",
+                             status="success")
+        # Windows' wall clock ticks every ~15.6 ms, so the three rows above
+        # can share one created_at and the strict «before the event»
+        # comparison sees no candidate. Pin distinct, ordered timestamps.
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            c.execute("UPDATE router_backups SET created_at=? "
+                      "WHERE filename='old.backup' AND router_id=100",
+                      ("2026-01-01T10:00:00.000000Z",))
+            c.execute("UPDATE audit_log SET created_at=? WHERE id=?",
+                      ("2026-01-01T10:00:01.000000Z", aid))
+            c.execute("UPDATE router_backups SET created_at=? WHERE id=?",
+                      ("2026-01-01T10:00:02.000000Z", after_id))
         from app.radius.services.mt_recovery_plan import build_plan
         plan = build_plan(tenant_id=1, audit_id=aid)
     assert plan.nearest_backup is not None

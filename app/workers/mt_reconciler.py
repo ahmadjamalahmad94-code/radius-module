@@ -525,6 +525,17 @@ def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
         mac = row.get("mac") or ""
         key = (user.lower(), mac)
         match = existing.get(key)
+        if (match is not None and int(row.get("uptime_sec") or 0) > 0
+                and not str(match["acctuniqueid"] or "").startswith(_MTSYNC_PREFIX)):
+            # 🔴 صفٌّ حقيقيٌّ مفتوحٌ لنفس (المستخدم، الماك) — على أيّ NAS — لا
+            #    يحجب وحدَه: صفٌّ زومبيٌّ مفتوحٌ منذ ساعاتٍ (لم يصله Acct-Stop)
+            #    ليس هذه الجلسة التي عمرُها ثوانٍ (1e6915cc). البحثُ الواسع
+            #    على مستوى المستأجر (9bb486de، نفقان) أعاد هذا الحجبَ بعد الدمج
+            #    88d9dd04. فالصفُّ الحقيقيّ يُحكَم بـ`_covered_by_real_row` أدناه:
+            #    نفسُ الجلسة (بدايةٌ ضمن ±5د أو تداخلٌ ≥60ث) ⇒ لا نسخة؛ وإلّا ⇒
+            #    جلسةٌ جديدةٌ حقيقيّة تُمادَّى. لا نلمس الصفَّ الحقيقيَّ أبدًا.
+            #    وبلا `uptime` لا نعرف عمرَ الجلسة فنُبقي الحجبَ (الاتّجاه الآمن).
+            match = None
         if match is not None:
             # Refresh ONLY our own synthetic rows; a real RADIUS row wins untouched.
             if str(match["acctuniqueid"] or "").startswith(_MTSYNC_PREFIX):

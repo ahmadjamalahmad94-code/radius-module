@@ -57,8 +57,9 @@ def _login_super(client, monkeypatch):
 
 
 def _csrf(client):
+    # remote-access NPC UI retired (66f551e7) — prime on web-block.
     client.get(
-        "/admin/radius/network-policy/remote-access/new"
+        "/admin/radius/network-policy/web-block/new"
     )
     with client.session_transaction() as s:
         return s.get("_csrf_token") or ""
@@ -92,22 +93,41 @@ def _seed_router(app, *, name=None, address=None):
             return int(cur.lastrowid)
 
 
-def _good_remote_policy(client, csrf, rid):
+def _good_policy(client, csrf, rid):
+    """A valid policy to drive the apply ROUTE. Was a remote-access
+    policy; that NPC web UI (and its /apply route) was retired in
+    66f551e7, so a web-block policy with one target stands in — same
+    guarded apply engine (npc_apply_service)."""
     client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
         data={"_csrf_token": csrf,
               "name": "good", "router_id": str(rid),
-              "allow_winbox": "on",
-              "source_address_list": "ops",
-              "expires_at": "2027-01-01T00:00:00Z",
-              "enabled": "on"},
+              "scope": "all_users",
+              "fail_open": "on", "enabled": "on"},
         follow_redirects=False,
     )
     with client.application.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as r,
-        )
-        return r.list_for_tenant(1)[-1]["id"]
+        from app.radius.db.repos import npc_web_block_repo as r
+        pid = r.list_policies_for_tenant(1)[-1]["id"]
+    client.post(
+        f"/admin/radius/network-policy/web-block/{pid}/children",
+        data={"_csrf_token": csrf,
+              "value": "tiktok.com", "category": "tiktok"},
+        follow_redirects=True,
+    )
+    return pid
+
+
+# A web-block plan drops forward traffic (CONFIRM_FIREWALL_DROP) and its
+# tiktok target carries a «likely» CDN dependency (CONFIRM_DEPENDENCY_IMPACT).
+# The contracts engine
+# (npc_execution_contracts) demands those ticks; the preview renders them as
+# `confirm__<code>` checkboxes. We tick them so each test's refusal/success is
+# about what it names, not a missing tick. (Remote-access needed none.)
+_CONFIRM = {
+    "confirm__confirm_firewall_drop": "on",
+    "confirm__confirm_dependency_impact": "on",
+}
 
 
 def _install_fakes(app, monkeypatch):
@@ -165,14 +185,14 @@ def test_apply_route_exists_post_only(app):
 def test_apply_get_method_not_allowed(app, client, monkeypatch):
     _login_super(client, monkeypatch)
     r = client.get(
-        "/admin/radius/network-policy/remote-access/1/apply"
+        "/admin/radius/network-policy/web-block/1/apply"
     )
     assert r.status_code == 405
 
 
 def test_apply_unauth_redirects_to_login(app, client):
     r = client.post(
-        "/admin/radius/network-policy/remote-access/1/apply",
+        "/admin/radius/network-policy/web-block/1/apply",
         data={},
         follow_redirects=False,
     )
@@ -183,21 +203,25 @@ def test_apply_unauth_redirects_to_login(app, client):
 def test_apply_without_apply_perm_is_403(
     app, client, monkeypatch,
 ):
-    """A signed-in admin who lacks `npc.remote_access.apply`
+    """A signed-in admin who lacks `npc.web_block.apply`
     must get 403 on the apply route. The perm decorator is
     the first gate after CSRF."""
     rid = _seed_router(app)
     # Seed a policy directly so we have a target id.
     with app.app_context():
         from app.radius.db.repos import (
-            npc_remote_access_repo as r,
+            admins_repo,
+            npc_web_block_repo as r,
         )
-        pid = r.create(tenant_id=1, router_id=rid,
-                        name="x", allow_winbox=True,
-                        source_address_list="ops",
-                        expires_at="2027-01-01T00:00:00Z")
+        pid = r.create_policy(tenant_id=1, router_id=rid, name="x")
+        # A REAL non-owner row: the session guard re-validates the admin
+        # every request (session_epoch, 21f239a6), so a forged session for
+        # a missing id would bounce to login instead of reaching the gate.
+        bob_row = admins_repo.create_admin(
+            username="bob", password="bob-pass-1", full_name="Bob",
+            is_super_admin=False)
     # Stub admins service: Bob has only a non-apply perm.
-    bob = SimpleNamespace(id=2, username="bob",
+    bob = SimpleNamespace(id=bob_row.id, username="bob",
                           is_super_admin=False)
 
     class _Store:
@@ -208,7 +232,7 @@ def test_apply_without_apply_perm_is_403(
     class _Svc:
         _store = _Store()
         def permissions_of(self, _):
-            return ("npc.remote_access.view",)
+            return ("npc.web_block.view",)
 
     import app.radius.services.admins as am
     monkeypatch.setattr(am, "get_admins_service",
@@ -217,12 +241,12 @@ def test_apply_without_apply_perm_is_403(
     # token in one shot — avoids depending on which pages
     # carry forms in the test environment.
     with client.session_transaction() as s:
-        s["admin_id"] = 2
+        s["admin_id"] = bob_row.id
         s["admin_user"] = "bob"
         s["tenant_id"] = 1
         s["_csrf_token"] = "test-token"
     r = client.post(
-        f"/admin/radius/network-policy/remote-access/{pid}/apply",
+        f"/admin/radius/network-policy/web-block/{pid}/apply",
         data={"_csrf_token": "test-token"},
         follow_redirects=False,
     )
@@ -238,15 +262,15 @@ def test_apply_success_creates_change_set_with_targets(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     fake_exec = _install_fakes(app, monkeypatch)
     try:
         fake_exec.program_success(rid, for_forward=True)
         r = client.post(
-            f"/admin/radius/network-policy/remote-access/{pid}"
+            f"/admin/radius/network-policy/web-block/{pid}"
             "/apply",
             data={"_csrf_token": csrf,
-                  "execution_mode": "full"},
+                  "execution_mode": "full", **_CONFIRM},
             follow_redirects=False,
         )
         # Route redirects back to the preview.
@@ -257,7 +281,7 @@ def test_apply_success_creates_change_set_with_targets(
                 npc_change_sets_repo as cs,
             )
             sets = cs.list_for_policy(
-                1, service="remote_access", policy_id=pid,
+                1, service="web_block", policy_id=pid,
             )
             assert sets, "no change_set created"
             change_set = sets[0]
@@ -282,24 +306,24 @@ def test_apply_records_apply_audit_event(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     fake_exec = _install_fakes(app, monkeypatch)
     try:
         fake_exec.program_success(rid, for_forward=True)
         client.post(
-            f"/admin/radius/network-policy/remote-access/{pid}"
+            f"/admin/radius/network-policy/web-block/{pid}"
             "/apply",
-            data={"_csrf_token": csrf},
+            data={"_csrf_token": csrf, **_CONFIRM},
             follow_redirects=False,
         )
         with app.app_context():
             from app.radius.db.connection import db
             actions = [r["action"] for r in db().execute(
                 "SELECT action FROM audit_log "
-                "WHERE target_type='npc_remote_access_policy' "
+                "WHERE target_type='npc_web_block_policy' "
                 "ORDER BY id"
             ).fetchall()]
-        assert "npc.remote_access.applied" in actions
+        assert "npc.web_block.applied" in actions
     finally:
         _teardown_fakes()
 
@@ -313,7 +337,7 @@ def test_apply_failure_creates_partial_status(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     fake_exec = _install_fakes(app, monkeypatch)
     try:
         # Program the executor to fail.
@@ -322,9 +346,9 @@ def test_apply_failure_creates_partial_status(
             error="MikroTikTrap: invalid syntax",
         )
         r = client.post(
-            f"/admin/radius/network-policy/remote-access/{pid}"
+            f"/admin/radius/network-policy/web-block/{pid}"
             "/apply",
-            data={"_csrf_token": csrf},
+            data={"_csrf_token": csrf, **_CONFIRM},
             follow_redirects=False,
         )
         assert r.status_code in (302, 303)
@@ -333,7 +357,7 @@ def test_apply_failure_creates_partial_status(
                 npc_change_sets_repo as cs,
             )
             sets = cs.list_for_policy(
-                1, service="remote_access", policy_id=pid,
+                1, service="web_block", policy_id=pid,
             )
             change_set = sets[0]
             # Single-router failure → aggregate FAILED.
@@ -353,7 +377,7 @@ def test_apply_blocks_when_render_unsafe(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     fake_exec = _install_fakes(app, monkeypatch)
     try:
         # Force the renderer to refuse by patching the
@@ -368,9 +392,9 @@ def test_apply_blocks_when_render_unsafe(
         monkeypatch.setattr(rmod, "render_forward_script", _bad)
 
         r = client.post(
-            f"/admin/radius/network-policy/remote-access/{pid}"
+            f"/admin/radius/network-policy/web-block/{pid}"
             "/apply",
-            data={"_csrf_token": csrf},
+            data={"_csrf_token": csrf, **_CONFIRM},
             follow_redirects=False,
         )
         # Route redirects; the change_set is NOT created
@@ -381,7 +405,7 @@ def test_apply_blocks_when_render_unsafe(
                 npc_change_sets_repo as cs,
             )
             sets = cs.list_for_policy(
-                1, service="remote_access", policy_id=pid,
+                1, service="web_block", policy_id=pid,
             )
             assert sets == []
         # Executor saw NO forward calls.
@@ -403,7 +427,7 @@ def test_apply_blocks_when_no_snapshot(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     # Note: NOT installing the fake reader → snapshot capture
     # raises StateReaderNotConfigured → snapshot_id stays None
     # → contracts engine refuses.
@@ -414,9 +438,9 @@ def test_apply_blocks_when_no_snapshot(
     exec_mod.set_router_executor(fake_exec)
     try:
         r = client.post(
-            f"/admin/radius/network-policy/remote-access/{pid}"
+            f"/admin/radius/network-policy/web-block/{pid}"
             "/apply",
-            data={"_csrf_token": csrf},
+            data={"_csrf_token": csrf, **_CONFIRM},
             follow_redirects=False,
         )
         assert r.status_code in (302, 303)
@@ -425,7 +449,7 @@ def test_apply_blocks_when_no_snapshot(
                 npc_change_sets_repo as cs,
             )
             sets = cs.list_for_policy(
-                1, service="remote_access", policy_id=pid,
+                1, service="web_block", policy_id=pid,
             )
         # No change_set created — contracts refused.
         assert sets == []

@@ -64,7 +64,17 @@ def _login_non_apply(client, monkeypatch):
     """A regular admin with only view/manage permission — does
     NOT carry the `.apply` permission. Used to verify the
     readiness card honestly surfaces the missing-perm gate."""
-    sa = SimpleNamespace(id=2, username="viewer",
+    # The session guard re-validates the admin row every request
+    # (session_epoch, 21f239a6) — a forged session for a missing id is
+    # logged out, so «viewer» is a real, non-owner row (the boot-time
+    # «admin» id=1 is the owner). The stub still pins his permissions.
+    with client.application.app_context():
+        from app.radius.db.repos import admins_repo
+        row = admins_repo.get_by_username("viewer") or             admins_repo.create_admin(username="viewer",
+                                     password="viewer-pass-1",
+                                     full_name="Viewer",
+                                     is_super_admin=False)
+    sa = SimpleNamespace(id=row.id, username="viewer",
                          is_super_admin=False)
 
     class _Store:
@@ -76,23 +86,24 @@ def _login_non_apply(client, monkeypatch):
         _store = _Store()
         def permissions_of(self, _):
             return (
-                "npc.remote_access.view",
-                "npc.remote_access.manage",
-                "npc.remote_access.preview",
+                "npc.web_block.view",
+                "npc.web_block.manage",
+                "npc.web_block.preview",
             )
 
     import app.radius.services.admins as admins_mod
     monkeypatch.setattr(admins_mod, "get_admins_service",
                         lambda: _Svc())
     with client.session_transaction() as s:
-        s["admin_id"] = 2
+        s["admin_id"] = row.id
         s["admin_user"] = "viewer"
         s["tenant_id"] = 1
 
 
 def _csrf(client):
+    # remote-access NPC UI retired (66f551e7) — prime on web-block.
     client.get(
-        "/admin/radius/network-policy/remote-access/new"
+        "/admin/radius/network-policy/web-block/new"
     )
     with client.session_transaction() as s:
         return s.get("_csrf_token") or ""
@@ -119,40 +130,41 @@ def _seed_router(app):
             return int(cur.lastrowid)
 
 
-def _good_remote_policy(client, csrf, rid):
+def _web_block_with_target(client, csrf, rid, name):
     client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
         data={"_csrf_token": csrf,
-              "name": "good", "router_id": str(rid),
-              "allow_winbox": "on",
-              "source_address_list": "ops",
-              "expires_at": "2027-01-01T00:00:00Z",
-              "enabled": "on"},
+              "name": name, "router_id": str(rid),
+              "scope": "all_users",
+              "fail_open": "on", "enabled": "on"},
         follow_redirects=False,
     )
     with client.application.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as r,
-        )
-        return r.list_for_tenant(1)[-1]["id"]
-
-
-def _bad_remote_policy(client, csrf, rid):
-    """A policy with no source list AND no expiry — assess
-    returns a blocker → impact CRITICAL → readiness fails."""
+        from app.radius.db.repos import npc_web_block_repo as r
+        pid = r.list_policies_for_tenant(1)[-1]["id"]
     client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        f"/admin/radius/network-policy/web-block/{pid}/children",
         data={"_csrf_token": csrf,
-              "name": "bad", "router_id": str(rid),
-              "allow_winbox": "on",
-              "enabled": "on"},
-        follow_redirects=False,
+              "value": "tiktok.com", "category": "tiktok"},
+        follow_redirects=True,
     )
-    with client.application.app_context():
-        from app.radius.db.repos import (
-            npc_remote_access_repo as r,
-        )
-        return r.list_for_tenant(1)[-1]["id"]
+    return pid
+
+
+def _good_policy(client, csrf, rid):
+    """A valid policy. Was a remote-access policy; that NPC web UI was
+    retired in 66f551e7, so a web-block policy with one target stands
+    in (same preview/readiness surface)."""
+    return _web_block_with_target(client, csrf, rid, "good")
+
+
+def _bad_policy(client, csrf, rid, monkeypatch):
+    """A policy whose plan carries a planner blocker → readiness fails.
+    (Was remote-access without source/expiry.) Web-block blocks when the
+    target count exceeds the supported maximum — pin that cap to 0."""
+    import app.radius.services.npc_web_block_planner as wbp
+    monkeypatch.setattr(wbp, "MAX_TARGETS_PER_POLICY", 0)
+    return _web_block_with_target(client, csrf, rid, "bad")
 
 
 # ─── Section presence ────────────────────────────────────────
@@ -164,9 +176,9 @@ def test_readiness_section_renders_on_preview(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     assert r.status_code == 200
@@ -192,10 +204,10 @@ def test_preview_readiness_surfaces_runtime_gates(
     # then switch back to viewer.
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     _login_non_apply(client, monkeypatch)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -212,17 +224,19 @@ def test_not_ready_state_for_invalid_policy(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _bad_remote_policy(client, csrf, rid)
+    pid = _bad_policy(client, csrf, rid, monkeypatch)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
-    # Either blocked because no source+no expiry (planner
-    # blocker bubbles into impact.risk=critical → readiness
-    # blocker) OR risk pill = critical.
+    # Planner blocker (target cap exceeded) bubbles into
+    # impact.risk=critical → readiness blocker.
     assert 'data-test="npc-readiness-not-ready"' in html
     assert 'data-test="npc-readiness-blockers"' in html
+    # …and it is THIS policy's planner blocker, not only the
+    # generic preview-time gates every policy shows.
+    assert "exceeds the supported maximum" in html
 
 
 # ─── Disabled apply placeholder ──────────────────────────────
@@ -236,11 +250,11 @@ def test_disabled_apply_placeholder_visible(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     # Switch to a non-apply user for the GET preview.
     _login_non_apply(client, monkeypatch)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -277,9 +291,9 @@ def test_apply_form_visible_to_super_admin_on_preview(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -298,9 +312,9 @@ def test_dry_run_labels_remain_visible_on_preview(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -318,9 +332,9 @@ def test_script_section_appears_after_readiness(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    pid = _good_remote_policy(client, csrf, rid)
+    pid = _good_policy(client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")

@@ -24,6 +24,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "test.db"))
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # The license-lifecycle gate's test bypass is dual-key: it only opens
+    # together with NO_SEED (see conftest) — without it every panel page
+    # 302s to /_license/activate. Every other app fixture sets it.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_VPN_POOL", "10.10.0.0/24")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP", "10.10.0.1")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT", "187.77.70.18:51820")
@@ -36,6 +40,10 @@ def app(monkeypatch, tmp_path):
 def _auth_session(client):
     with client.session_transaction() as sess:
         sess["admin_id"] = 1
+        # id=1 is the boot-time «admin» = the owner (d13fb302). Since the
+        # owner-only bypass (6824f26) the guard reads the session's owner
+        # flag, which a real login sets via set_current_admin().
+        sess["is_super_admin"] = True
         sess["admin_user"] = "qa_admin"
         sess["admin_name"] = "QA Admin"
         sess["tenant_id"] = 1

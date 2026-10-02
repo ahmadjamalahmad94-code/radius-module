@@ -30,8 +30,16 @@ def app(monkeypatch):
             del sys.modules[k]
 
 
-def _seed_session(conn, *, username, session_id, nas_ip):
+def _seed_session(conn, *, username, session_id, nas_ip, real_user=True):
     now = datetime.utcnow().isoformat() + "Z"
+    if real_user:
+        # «المتصلون الآن» lists only sessions that resolve to a REAL subscriber
+        # or card of the tenant (5e76e15 FIX A, memory connected-real-radius-only:
+        # mac-cookie «T-<MAC>» / router trial users are not shown). Seed one.
+        conn.execute(
+            "INSERT INTO subscribers (tenant_id, username, password, user_type, "
+            "status, created_at) VALUES (1, ?, 'p', 'subscriber', 'enabled', ?)",
+            (username, now))
     conn.execute("""
         INSERT INTO radacct
             (tenant_id, acctsessionid, acctuniqueid, username,
@@ -78,3 +86,16 @@ def test_online_nas_ip_only_when_no_device(app):
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "10.99.99.99" in body
+
+
+def test_online_hides_session_of_unknown_user(app):
+    """A radacct row whose username is neither a subscriber nor a card (a
+    router-local mac-cookie/trial user) is not a «connected» RADIUS user."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        with transaction() as c:
+            _seed_session(c, username="T-AABBCCDDEEFF", session_id="g1",
+                          nas_ip="10.10.0.2", real_user=False)
+    resp = _logged_in(app).get("/admin/radius/online")
+    assert resp.status_code == 200
+    assert "T-AABBCCDDEEFF" not in resp.get_data(as_text=True)

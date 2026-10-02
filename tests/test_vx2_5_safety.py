@@ -68,9 +68,14 @@ def _admin(*perms, super_admin=False):
     lookup — to keep tests pure we monkeypatch the service
     fallback through a global super_admin=True. For perm
     sub-sets we use the admin's role permissions field via
-    a SimpleNamespace + monkeypatched admins service."""
+    a SimpleNamespace + monkeypatched admins service.
+
+    Owner-only bypass (6824f26): admin_permissions() grants everything to
+    the OWNER (id=1 = the boot-time «admin», d13fb302) regardless of the
+    flag. So a perm-subset admin must NOT be id=1, or every «lacks perm»
+    case is silently the owner; the «super» case IS the owner."""
     return SimpleNamespace(
-        id=1, username="t", role_id=None,
+        id=1 if super_admin else 9001, username="t", role_id=None,
         is_super_admin=bool(super_admin),
         _vx2_perms=tuple(perms),
     )

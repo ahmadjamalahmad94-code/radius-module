@@ -42,7 +42,7 @@ def client(app):
     return app.test_client()
 
 
-def _login(client) -> None:
+def _login(client, *, owner: bool = False) -> None:
     from app.radius.db.repos import admins_repo
 
     username = f"mt_dash_{uuid4().hex[:10]}"
@@ -52,6 +52,10 @@ def _login(client) -> None:
         full_name="Dashboard Tester",
         is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None),
     )
+    if owner:
+        # paid-service requests are owner-only (r5perms 9176f6d6) — the
+        # «مدير عام» role no longer gets the request window.
+        admins_repo.set_designated_owners([username])
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": "dash-pass"},
@@ -113,9 +117,13 @@ def test_dashboard_renders_shell_and_markers(app, client):
 
     # KPI cards each carry their kind. JS fills them later from
     # /system/overview — the page itself just renders the shell.
-    for kind in ("uptime", "cpu", "memory", "temperature",
-                 "version", "dialed"):
+    # d064cdaf (owner complaint: duplicated, contradicting metrics): the
+    # strip keeps router IDENTITY only; CPU/RAM/disk/temperature live in the
+    # single «موارد الراوتر» card (same DB sample as the threshold alerts).
+    for kind in ("uptime", "clock", "version", "dialed"):
         assert f'data-mt-kpi="{kind}"' in html
+    for kind in ("cpu", "memory", "disk", "temperature"):
+        assert f'data-mt-kpi="{kind}"' not in html
 
     # K9.2 panels — markers must be in place from this commit on.
     assert "data-mt-live-traffic" in html
@@ -249,7 +257,7 @@ def test_dashboard_shows_all_services_including_paid_public_ip(app, client):
     «تغيير IP الخروج» (المدفوعة) تظهر كلّها كبطاقات دائمًا — حتى لو
     الراوتر مفصول (لا اتصال أصلًا)."""
     _seed_router(app, nas_id=12, name="all-svc", address="203.0.113.12")
-    _login(client)
+    _login(client, owner=True)
 
     res = client.get("/admin/radius/mt/12/dashboard")
     assert res.status_code == 200
