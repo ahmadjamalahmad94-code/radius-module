@@ -17,6 +17,9 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", "sidebar-" + secrets.token_hex(8))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # تجاوزُ بوّابة الترخيص في الاختبار يتطلّب العلامتين معًا (5126bdbe):
+    # NO_SEED=1 + LICENSE_GATE_TEST_BYPASS=1 (من conftest)، وإلّا 302 للتفعيل.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     reset_for_tests(db_file)
     from app import create_app
 
@@ -53,7 +56,11 @@ def test_setup_wizard_sidebar_shows_two_consolidated_paths(app):
 
     assert response.status_code == 200
     sidebar = _sidebar(html)
-    assert "الإعداد والتشغيل" in sidebar
+    # قسم «الإعداد والتشغيل» دُمج في «الشبكة» عائلةً اسمها «إضافة وإعداد»
+    # (0d4def37 — موثَّق في تعليق _sidebar.html). فالعائلة هي الحارس الآن.
+    assert "إضافة وإعداد" in sidebar
+    assert 'data-hb-subgroup="network-setup"' in sidebar
+    assert "الإعداد والتشغيل" not in sidebar
     assert "إضافة راوتر (سريع)" in sidebar
     assert "إعداد راوتر متقدم" in sidebar
     # superseded / duplicate labels no longer in the sidebar
