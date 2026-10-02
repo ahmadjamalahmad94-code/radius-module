@@ -848,14 +848,18 @@ def test_backup_status_and_local_run_are_non_destructive(client):
 
 
 def test_google_drive_connect_contract_returns_arabic_disabled_message(client):
+    # 76fbf53f replaced the 501 «not implemented» stub with the real Google
+    # Drive device flow. Without saved OAuth client credentials the endpoint
+    # must answer a clear Arabic `needs_configuration` (409) — never a silent
+    # 501 and never English OAuth text — and must not contact Google.
     res = client.post(
         "/api/v1/backups/google-drive/connect",
         json={},
         headers=_auth(client),
     )
-    assert res.status_code == 501
+    assert res.status_code == 409
     body = res.get_json()
     assert body["ok"] is False
-    assert body["error"]["code"] == "not_implemented"
-    assert "غير مفعل حاليًا" in body["error"]["message"]
+    assert body["error"]["code"] == "needs_configuration"
+    assert "بانتظار تفعيلك" in body["error"]["message"]
     assert "OAuth is intentionally not enabled" not in body["error"]["message"]

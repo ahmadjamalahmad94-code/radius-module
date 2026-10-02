@@ -65,8 +65,11 @@ def test_with_grant_form_opens_and_save_succeeds(app):
     aid = _make_submanager(app)
     c = _client(app, aid, perms=["users.view", "users.create"])
     assert c.get("/admin/radius/users/new").status_code == 200
+    # 2e34f616: web create enforces the same ≥4-char password rule as the
+    # API/app (validate_new_password) — «p» is now a 422 validation error,
+    # which is not what this dead-end test is about. Use a valid password.
     r = c.post("/admin/radius/users",
-               data={"username": "okuser", "password": "p", "_csrf_token": "tok"},
+               data={"username": "okuser", "password": "p1234", "_csrf_token": "tok"},
                follow_redirects=False)
     assert r.status_code in (302, 303)                                # created
     with app.app_context():
