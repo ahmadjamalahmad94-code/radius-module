@@ -34,8 +34,12 @@ def app(monkeypatch):
 def _login(client):
     from app.radius.db.repos import admins_repo
     u = f"an_{uuid4().hex[:8]}"
-    admins_repo.create_admin(username=u, password="p", full_name="T",
+    _tester = admins_repo.create_admin(username=u, password="p", full_name="T",
                              is_super_admin=True)
+    # STALE since 6824f26c (memory owner-only-bypass.md): the is_super_admin
+    # flag no longer opens the MikroTik/hotspot guards — only an owner / co-owner
+    # does (a fresh install auto-creates «admin», the smallest id = the owner).
+    admins_repo.set_co_owner(_tester.id, True)
     client.post("/admin/radius/login", data={"username": u, "password": "p"})
 
 
