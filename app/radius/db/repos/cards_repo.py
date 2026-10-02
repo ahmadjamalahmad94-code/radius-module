@@ -429,6 +429,8 @@ def batch_operations_totals(
     owner_admin_id: Optional[int] = None,
     day: str = "",
     month: str = "",
+    range_from: str = "",
+    range_to: str = "",
 ) -> dict:
     """إجماليّات «مركز عمليات الحزم».
 
@@ -445,6 +447,15 @@ def batch_operations_totals(
     d0, d1 = local_period_utc_range("daily", day, tenant_id)
     m0, m1 = local_period_utc_range("monthly", month, tenant_id)
     y0, y1 = local_period_utc_range("yearly", year, tenant_id)
+    # «المبيعات» لفترةٍ يختارها المالك (يوم/أسبوع/شهر/من–إلى، 2026-10-02):
+    # من بداية يوم «من» المحلّيّ حتى نهاية يوم «إلى» المحلّيّ. الافتراض = الشهر.
+    rf = (range_from or "").strip() or f"{month}-01"
+    rt = (range_to or "").strip() or ""
+    r0, _ = local_period_utc_range("daily", rf, tenant_id)
+    if rt:
+        _, r1 = local_period_utc_range("daily", rt, tenant_id)
+    else:
+        r1 = m1
     where, vals = _batch_operations_conditions(
         status=status,
         q=q,
@@ -473,7 +484,9 @@ def batch_operations_totals(
             COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN 1 ELSE 0 END), 0) AS used_year,
             COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_today,
             COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_month,
-            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_year
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_year,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN 1 ELSE 0 END), 0) AS used_range,
+            COALESCE(SUM(CASE WHEN c.used = 1 AND {in_day} THEN {unit} ELSE 0 END), 0) AS value_range
         FROM card_batches b
         LEFT JOIN access_plans p
           ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
@@ -484,7 +497,7 @@ def batch_operations_totals(
     """
     params = [
         *_batch_operations_base_params(tenant_id),
-        d0, d1, m0, m1, y0, y1, d0, d1, m0, m1, y0, y1,
+        d0, d1, m0, m1, y0, y1, d0, d1, m0, m1, y0, y1, r0, r1, r0, r1,
         tenant_id, *vals,
     ]
     row = db().execute(sql, params).fetchone()
@@ -502,6 +515,10 @@ def batch_operations_totals(
         # اليوم/الشهر المحسوبان فعلًا (يُعرضان فوق البطاقتين).
         "day": day,
         "month": month,
+        "used_range": int(data.get("used_range") or 0),
+        "value_range": float(data.get("value_range") or 0),
+        "range_from": rf,
+        "range_to": rt or "",
     }
 
 

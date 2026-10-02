@@ -81,3 +81,13 @@ def test_bad_values_fall_back_to_current(app):
     c = app.test_client()
     t = _totals(c, "?status=all&day=yesterday&month=13")
     assert len(t["day"]) == 10 and len(t["month"]) == 7
+
+
+def test_sales_for_any_range(app):
+    """«المبيعات» لأيّ فترة من–إلى (يوم/أسبوع/شهر/مخصّصة) — طلب المالك 2026-10-02."""
+    c = app.test_client()
+    t = _totals(c, "?status=all&from=2026-08-01&to=2026-09-11")
+    assert (t["used_range"], t["value_range"]) == (3, 15.0), t
+    t = _totals(c, "?status=all&from=2026-09-11&to=2026-09-11")
+    assert (t["used_range"], t["value_range"]) == (1, 5.0), t
+    assert (t["range_from"], t["range_to"]) == ("2026-09-11", "2026-09-11")

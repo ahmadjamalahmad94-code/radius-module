@@ -708,6 +708,13 @@ def _totals_period() -> dict:
         out["day"] = day
     if _re.fullmatch(r"\d{4}-\d{2}", month):
         out["month"] = month
+    # «المبيعات» لفترة من–إلى (YYYY-MM-DD محلّيّ، شاملة لليومين)
+    rf = (request.args.get("from") or "").strip()
+    rt = (request.args.get("to") or "").strip()
+    if _re.fullmatch(r"\d{4}-\d{2}-\d{2}", rf):
+        out["range_from"] = rf
+    if _re.fullmatch(r"\d{4}-\d{2}-\d{2}", rt):
+        out["range_to"] = rt
     return out
 
 
