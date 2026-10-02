@@ -43,8 +43,17 @@ import pytest
 
 @pytest.fixture(scope="module")
 def app():
+    # ENV: this file logs in with the SEEDED demo accounts (admin / operator),
+    # so it cannot set HOBERADIUS_NO_SEED — and the license-lifecycle gate
+    # (5126bdbe) only honours its test bypass together with NO_SEED. Without a
+    # license snapshot every page 302s to /_license/activate, masking the
+    # section-guard answer under test. Open the gate for this module only.
+    from app.radius.services import license_lifecycle
+    mp = pytest.MonkeyPatch()
+    mp.setattr(license_lifecycle, "_test_bypass_active", lambda: True)
     from app import create_app
-    return create_app()
+    yield create_app()
+    mp.undo()
 
 
 @pytest.fixture
@@ -185,10 +194,30 @@ def test_toggle_disable_blocks_default_visible_section_for_operator(client, app,
         _cleanup()
 
 
-def test_sections_admin_page_is_super_only(client):
+def test_sections_admin_page_is_super_only(client, monkeypatch):
     """The page that lets you flip flags must itself be super-only —
     otherwise an operator could re-enable a section they were locked out
-    of (privilege escalation)."""
+    of (privilege escalation).
+
+    Owner decision 4e66f613 (memory default-off-capability-sections): the
+    page is ALSO a default-OFF provider capability (`sections`). Until the
+    provider grants it, nobody — not even the super-admin — reaches it (GET
+    redirects to the dashboard). Once granted, it is super-only (403 for
+    the operator, 200 for the super-admin)."""
+    # (a) capability not granted → closed for everyone (redirect, not 200).
+    _login(client, "operator", "operator")
+    r = client.get("/admin/radius/sections", follow_redirects=False)
+    assert r.status_code == 302 and "/sections" not in r.headers["Location"]
+    _login(client, "admin", "admin")
+    r = client.get("/admin/radius/sections", follow_redirects=False)
+    assert r.status_code == 302 and "/sections" not in r.headers["Location"]
+
+    # (b) provider grants `sections` → the page itself stays super-only.
+    from app.radius.services import provider_grant
+    _orig = provider_grant.is_capability_granted
+    monkeypatch.setattr(
+        provider_grant, "is_capability_granted",
+        lambda tid, key: True if key == "sections" else _orig(tid, key))
     _login(client, "operator", "operator")
     assert client.get("/admin/radius/sections").status_code == 403
     _login(client, "admin", "admin")

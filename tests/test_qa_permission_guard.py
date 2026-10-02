@@ -17,8 +17,17 @@ import pytest
 
 @pytest.fixture(scope="module")
 def app():
+    # ENV: this file logs in with the SEEDED demo accounts (admin / operator),
+    # so it cannot set HOBERADIUS_NO_SEED — and the license-lifecycle gate
+    # (5126bdbe) only honours its test bypass together with NO_SEED. Without a
+    # license snapshot every page 302s to /_license/activate, masking the RBAC
+    # answer under test. Open the gate for this module only.
+    from app.radius.services import license_lifecycle
+    mp = pytest.MonkeyPatch()
+    mp.setattr(license_lifecycle, "_test_bypass_active", lambda: True)
     from app import create_app
-    return create_app()
+    yield create_app()
+    mp.undo()
 
 
 @pytest.fixture
