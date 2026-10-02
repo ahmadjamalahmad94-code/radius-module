@@ -11,8 +11,27 @@ import pytest
 
 @pytest.fixture(scope="module")
 def app():
+    # Test-safe app: no demo seed + no workers. Without HOBERADIUS_NO_SEED the
+    # license-lifecycle gate's test bypass is not armed (dual key, see
+    # conftest) and every page 302s to /_license/activate; and the demo
+    # «admin/admin» login this test used to rely on is gone — a fresh install
+    # boots admin #1 with a real password (commit d13fb302).
+    mp = pytest.MonkeyPatch()
+    mp.setenv("HOBERADIUS_NO_SEED", "1")
+    mp.setenv("HOBERADIUS_NO_WORKER", "1")
     from app import create_app
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        from app.radius.core.constants import ROLE_SUPER_ADMIN
+        from app.radius.db.repos import admins_repo
+        admins_repo.ensure_default_roles()
+        role = admins_repo.get_role_by_name(ROLE_SUPER_ADMIN)
+        # «مدير عام» role = every non-owner-only permission (exports included).
+        admins_repo.create_admin(username="qa_pdf_exporter", password="qa-pdf-pass-1",
+                                 full_name="QA PDF", role_id=role.id,
+                                 is_super_admin=True)
+    yield flask_app
+    mp.undo()
 
 
 @pytest.fixture
@@ -21,7 +40,9 @@ def client(app):
 
 
 def _login(client):
-    client.post("/admin/radius/login", data={"username": "admin", "password": "admin"})
+    res = client.post("/admin/radius/login",
+                      data={"username": "qa_pdf_exporter", "password": "qa-pdf-pass-1"})
+    assert res.status_code in (302, 303)
 
 
 @pytest.mark.parametrize("url", [
