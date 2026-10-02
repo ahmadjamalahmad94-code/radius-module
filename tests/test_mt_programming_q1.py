@@ -301,6 +301,26 @@ def test_program_form_returns_404_for_unknown_router(app, client):
     assert res.status_code == 404
 
 
+def test_program_wizard_is_hidden_from_ui_but_reachable(app, client):
+    """Owner decision 2026-07 (memory mt-programming-ui-hidden): the
+    standalone «برمجة مايكروتيك» wizard is hidden from the UI only — no
+    router-dashboard entry and no help-centre section — while its routes
+    stay registered (site_exit / port_script / preview depend on the
+    service). Guards both halves so neither drifts silently."""
+    _seed(app, nas_id=1)
+    _login(client)
+    res = client.get("/admin/radius/mt/1/dashboard")
+    assert res.status_code == 200
+    dash = res.get_data(as_text=True)
+    assert "data-mt-dashboard" in dash
+    assert "/admin/radius/mt/1/program" not in dash
+    assert "/admin/radius/mt/1/assistant" not in dash
+    with app.app_context():
+        endpoints = {r.endpoint for r in app.url_map.iter_rules()}
+    assert "radius.mt_program_form" in endpoints
+    assert client.get("/admin/radius/mt/1/program").status_code == 200
+
+
 def test_program_form_renders_shell(app, client):
     _seed(app, nas_id=1)
     _login(client)
