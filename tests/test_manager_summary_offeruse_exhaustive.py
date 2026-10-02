@@ -128,6 +128,44 @@ def test_owner_still_sees_full_batch_form(app):
     assert "كيف تُولّد البطاقات" not in html
 
 
+# ═══ FIX117 — the role key alone never opens the free full form ═════════════
+def test_manager_role_key_alone_cannot_post_full_form(app):
+    """«cards.generate» (operator role default) opens the offer picker only. A
+    direct POST of the full form (own specs/prices, NO wallet debit) is 403 —
+    the «manager with zero balance generates for free» hole stays closed."""
+    with app.app_context():
+        plan = _plan_id(); mgr = _sub_admin("ms3"); _offer(plan, mgr)
+    with app.test_client() as c:
+        _login(c, admin_id=mgr, is_super=False)
+        res = c.post("/admin/radius/cards/generate",
+                     data={"_csrf_token": "off-csrf", "plan_id": str(plan),
+                           "count": "5", "price_per_card": "0"})
+    assert res.status_code == 403
+    with app.app_context():
+        n = db().execute("SELECT COUNT(*) FROM card_batches").fetchone()[0]
+    assert n == 0
+
+
+def test_manager_with_explicit_grant_gets_full_form(app):
+    """MT111 still holds: the owner's explicit «مسموح» on «توليد بطاقات»
+    opens the full form for that manager."""
+    from flask import g
+
+    with app.app_context():
+        plan = _plan_id(); mgr = _sub_admin("ms4"); _offer(plan, mgr)
+        from app.radius.services import manager_grants
+        manager_grants.save_manager_overrides(
+            mgr, {manager_grants.tri_input_name("cards.generate"): "allow"},
+            tenant_id=1, actor_id=1, actor_owner=True)
+        g.pop("_mg_grants_cache", None)
+        assert manager_grants.full_batch_form_granted(mgr, tenant_id=1) is True
+    with app.test_client() as c:
+        _login(c, admin_id=mgr, is_super=False)
+        html = c.get("/admin/radius/cards/generate").get_data(as_text=True)
+    assert "نوع الحزمة" in html
+    assert "كيف تُولّد البطاقات" not in html
+
+
 # ═══ offer-use page (redesign) — every field/wiring intact ══════════════════
 def _use_html(app, mgr, offer_id):
     with app.test_client() as c:

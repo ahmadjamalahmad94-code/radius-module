@@ -19,7 +19,9 @@ from app.radius.routes import cards as cards_routes
 @pytest.fixture()
 def guard(monkeypatch):
     """يعزل `_can_generate_batches` عن الجلسة وقاعدة البيانات."""
-    state = {"super": False, "me": 3, "granted": False}
+    # rbac   = the role key «cards.generate» (opens the offer picker);
+    # granted = the owner's EXPLICIT full-form grant (FIX117: both required).
+    state = {"super": False, "me": 3, "granted": False, "rbac": True}
 
     monkeypatch.setattr(cards_routes, "is_super_admin", lambda: state["super"])
     monkeypatch.setattr(cards_routes, "current_admin_id", lambda: state["me"])
@@ -29,7 +31,11 @@ def guard(monkeypatch):
     monkeypatch.setattr(
         manager_grants, "action_permitted",
         lambda admin_id, key, *, tenant_id=1: (
-            state["granted"] and key == "cards.generate"),
+            state["rbac"] and key == "cards.generate"),
+    )
+    monkeypatch.setattr(
+        manager_grants, "full_batch_form_granted",
+        lambda admin_id, *, tenant_id=1: state["granted"],
     )
     return state
 
@@ -49,6 +55,21 @@ def test_manager_with_the_grant_is_allowed(guard):
     """جوهر العطب: المنح كان يُعرض ولا يُطاع."""
     guard["granted"] = True
     assert cards_routes._can_generate_batches() is True
+
+
+def test_role_key_alone_does_not_open_the_full_form(guard):
+    """FIX117 — the RBAC key «cards.generate» (operator role default) only opens
+    the wallet-charged offer picker. Without the explicit grant the full form
+    (own specs/prices, NO wallet debit) stays closed."""
+    guard["rbac"] = True
+    guard["granted"] = False
+    assert cards_routes._can_generate_batches() is False
+
+
+def test_explicit_grant_without_role_key_is_denied(guard):
+    guard["rbac"] = False
+    guard["granted"] = True
+    assert cards_routes._can_generate_batches() is False
 
 
 def test_anonymous_is_denied(guard):

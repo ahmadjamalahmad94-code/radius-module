@@ -624,6 +624,28 @@ def action_permitted(admin_id: Optional[int], action_key: str, *, tenant_id: int
     return bool(spec.get("default", True))
 
 
+def full_batch_form_granted(admin_id: Optional[int], *, tenant_id: int = 1) -> bool:
+    """FIX117 — هل منح المالكُ هذا المدير **صراحةً** النموذجَ الكامل لتوليد البطاقات؟
+
+    مفتاح RBAC ‏``cards.generate`` («توليد بطاقات») هو ما يفتح صفحة التوليد أصلًا
+    — أي «عارض العروض» المُحاسَب الذي يخصم الجملة من محفظة المدير (دور «مشغّل»
+    يحمله افتراضًا). فلو كفى وحده للنموذج الكامل لولّد كلّ مديرٍ بطاقاتٍ
+    بمواصفاتٍ وأسعارٍ يختارها **بلا خصم** — الفجوة التي أغلقها قرار المالك
+    (cardgen-role-split: «مدير برصيد صفر يولّد مجّانًا»). لذا يُشترط فوق المفتاح
+    تفعيلٌ صريح: تجاوز «مسموح» على فعل ``cards.generate`` (الحقل الثلاثيّ في صفحة
+    المدير/الدور) أو العلَم القديم ``can_create_batch`` مخزَّنًا True. «حسب الدور»
+    = عارض العروض فقط. أيّ خطأ = False (مغلق)."""
+    if not admin_id:
+        return False
+    try:
+        if _action_overrides(admin_id, tenant_id).get("cards.generate") is True:
+            return True
+        flags = _grants_row(admin_id, tenant_id).get("flags") or {}
+        return flags.get("can_create_batch") is True
+    except Exception:  # noqa: BLE001 — لا نفتح نموذجًا مجّانيًّا على خطأ
+        return False
+
+
 def endpoint_action_permitted(admin_id: Optional[int], endpoint: str, *, tenant_id: int = 1) -> bool:
     """للحارس: هل endpoint (إن كان فعلًا مُسجَّلًا) مسموح للمدير؟ True إن لم
     يكن endpoint فعلًا مُسجَّلًا (لا قيد إضافيّ)."""
