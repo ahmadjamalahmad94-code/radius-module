@@ -25,7 +25,26 @@ def _row(r) -> Invoice:
         payment_gateway_id=r["payment_gateway_id"],
         status=r["status"], note=r["note"] or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
+        currency=_row_currency(r),
     )
+
+
+def _row_currency(r) -> str:
+    try:
+        value = r["currency"]
+    except (IndexError, KeyError):   # a DB before migration 194
+        value = ""
+    return str(value or "").strip().upper()
+
+
+def _currency_for_new(inv: Invoice) -> str:
+    """The currency a NEW invoice is written in: the one given, else the
+    system currency at write time (stored, so a later setting change does not
+    re-label it)."""
+    if (inv.currency or "").strip():
+        return inv.currency.strip().upper()
+    from ...core.system_config import default_currency
+    return default_currency()
 
 
 def _next_invoice_number(tenant_id: int) -> str:
@@ -67,13 +86,15 @@ def create(inv: Invoice) -> Invoice:
             INSERT INTO invoices(tenant_id, invoice_number, subscriber_id, username, amount,
                 admin_id, plan_id, plan_name, service_type, router_id, direction,
                 balance_before, balance_after, recharged_on, expiration_at,
-                payment_method, payment_gateway_id, status, note, created_at, updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                payment_method, payment_gateway_id, status, note, created_at, updated_at,
+                currency)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (inv.tenant_id, number, inv.subscriber_id, inv.username, inv.amount,
               inv.admin_id, inv.plan_id, inv.plan_name, inv.service_type,
               inv.router_id, inv.direction, inv.balance_before, inv.balance_after,
               dt_to_iso(inv.recharged_on), dt_to_iso(inv.expiration_at),
-              inv.payment_method, inv.payment_gateway_id, inv.status, inv.note, now, now))
+              inv.payment_method, inv.payment_gateway_id, inv.status, inv.note, now, now,
+              _currency_for_new(inv)))
         new_id = cur.lastrowid
     return get(inv.tenant_id, new_id)
 

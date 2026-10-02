@@ -277,21 +277,28 @@ def add_expense(
     reference: str = "",
     notes: str = "",
     created_by_admin_id: Optional[int] = None,
+    currency: str = "",
 ) -> dict:
     now = now_iso()
+    # zero-w3 (migration 194): the expense keeps the currency it was paid in —
+    # the system currency at write time unless one is given (per-row rule).
+    if not (currency or "").strip():
+        from ...core.system_config import default_currency
+        currency = default_currency()
     with transaction() as conn:
         cur = conn.execute(
             """
             INSERT INTO company_expenses
                 (tenant_id, title, category, amount, expense_date, paid_to,
                  payment_method, reference, notes, created_by_admin_id,
-                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 created_at, updated_at, currency)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 tenant_id, title, category, amount, expense_date or now,
                 paid_to or None, payment_method or None, reference or None,
                 notes or None, created_by_admin_id, now, now,
+                currency.strip().upper(),
             ),
         )
         exp_id = cur.lastrowid

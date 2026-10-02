@@ -61,6 +61,14 @@ def _payload(service_id: int | None = None) -> Service | tuple:
         return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
     if not name or subscriber_id <= 0:
         return fail("validation_error", "اختر المشترك وأدخل اسم الخدمة.", status=422)
+    # zero-w3: a subscriber that is not in this network was a FOREIGN KEY 500
+    # (or, for another tenant's id, an equipment row on a foreign subscriber).
+    from ...radius.db.connection import db
+    if db().execute(
+            "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
+            (_tid(), subscriber_id)).fetchone() is None:
+        return fail("validation_error", "المشترك غير موجود.", status=422,
+                    details={"field": "subscriber_id"})
     try:
         given_at = _dt(body.get("given_at"))
         returned_at = _dt(body.get("returned_at"))

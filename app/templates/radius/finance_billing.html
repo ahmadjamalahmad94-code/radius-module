@@ -147,7 +147,7 @@
             <td><strong>{{ i.invoice_number or i.id }}</strong></td>
             <td>{{ i.username }}</td>
             <td>{{ i.plan_name or "—" }}</td>
-            <td class="num"><strong>{{ i.amount|money }}</strong></td>
+            <td class="num"><strong>{{ i.amount|money(i.currency) }}</strong></td>
             {# الاتجاه معرّب — القيمة الخام في title #}
             <td>{% if i.direction %}<span title="{{ i.direction }}">{{ _dir_ar.get(i.direction, i.direction) }}</span>{% else %}—{% endif %}</td>
             {# طريقة الدفع معرّبة — القيمة الخام في title #}

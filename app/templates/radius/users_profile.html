@@ -958,7 +958,7 @@
               <td class="mono">{{ inv.id or inv.invoice_number or "—" }}</td>
               <td class="small muted">{{ fmt_dt(inv.created_at or inv.issued_at) }}</td>
               <td>{{ inv.description or inv.plan_name or "—" }}</td>
-              <td class="num">{{ "%.2f"|format((inv.amount or 0)|float) }}</td>
+              <td class="num">{{ (inv.amount or 0)|money(inv.currency) }}</td>
               <td>
                 {# النص دائماً من L.pay_status (لا سقوط للخام)؛ لون الشارة حسب الحالة #}
                 {%- set st = (inv.status or "pending")|lower -%}

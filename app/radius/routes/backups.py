@@ -160,21 +160,10 @@ def backups_schedule():
 
 def _gdrive_status(tid: int) -> dict:
     """اتصال جوجل درايف يعيش في لوحة التراخيص لكل عميل.
-    نقرأه عبر جسر الربط حتى تعرض صفحة الريدياس حالته الفعلية."""
-    try:
-        from ..services.admin_panel_client import AdminPanelClient
-        r = AdminPanelClient().fetch_google_drive_status()
-        if r.get("ok"):
-            resp = r.get("response") or {}
-            return {
-                "connected": bool(resp.get("connected")),
-                "email": resp.get("email") or "",
-                "folder_name": resp.get("folder_name") or "",
-                "last_upload_at": resp.get("last_upload_at") or "",
-            }
-    except Exception:  # noqa: BLE001
-        pass
-    return {"connected": False, "email": "", "folder_name": "", "last_upload_at": ""}
+    نقرأه عبر جسر الربط حتى تعرض صفحة الريدياس حالته الفعلية.
+    (المصدر الواحد للويب والـAPI: services.backup_drive_link.)"""
+    from ..services.backup_drive_link import panel_google_drive_status
+    return panel_google_drive_status()
 
 
 def backups_run():
