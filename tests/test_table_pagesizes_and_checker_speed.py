@@ -80,7 +80,13 @@ def test_checker_template_has_speed_macro_and_metric():
     src = _read("app", "templates", "radius", "cards_checker_v2.html")
     assert "{% macro spd(kbps)" in src
     assert "سرعة البطاقة" in src
-    assert "spd(p.speed_down_kbps)" in src
+    # STALE since b371d1b4 (owner): the speed left the metric tile (whose
+    # `'<span>' ~ spd(..)` concat leaked «</span>» as text) and sits under
+    # «الاشتراك» as a plain-text side row built from the card's plan speed.
+    assert 'data-cc-field="plan_speed"' in src
+    assert "card.profile.speed_down_kbps" in src
+    assert "card.profile.speed_up_kbps" in src
+    assert "~ spd(" not in src
 
 
 @pytest.fixture
