@@ -43,7 +43,8 @@ def _login_super(client):
 
 def _create(client, **form):
     from flask import url_for
-    body = {"_csrf_token": "off-csrf", "plan_type": "time"}
+    body = {"_csrf_token": "off-csrf", "plan_type": "time",
+            "speed_down_kbps": "4096", "speed_up_kbps": "1024"}
     body.update(form)
     return client.post("/admin/radius/plans", data=body, follow_redirects=False)
 
@@ -70,11 +71,16 @@ def test_priority_clamped_to_1_10_on_save(app):
         # قيمة سليمة (7) تبقى كما هي.
         assert _create(client, name="عرض وسط", priority="7",
                        service_type="Hotspot").status_code == 302
+        # قرار e9d652ee: عرضٌ بلا سرعةٍ ولا «بلا حدّ» صريح يُرفض ولا يُحفظ.
+        assert _create(client, name="عرض بلا سرعة", priority="5",
+                       service_type="Hotspot", speed_down_kbps="0",
+                       speed_up_kbps="0").status_code == 400
 
     with app.app_context():
         assert _plan_by_name("عرض عالي").priority == 10
         assert _plan_by_name("عرض منخفض").priority == 1
         assert _plan_by_name("عرض وسط").priority == 7
+        assert _plan_by_name("عرض بلا سرعة") is None
 
 
 def test_priority_input_constrained_in_form(app):
@@ -83,7 +89,8 @@ def test_priority_input_constrained_in_form(app):
         from app.radius.services.plans import get_plans_service
         from flask import url_for
         p = get_plans_service().create(actor="root", plan=AccessPlan(
-            id=None, tenant_id=1, name="عرض", plan_type="time", priority=100))
+            id=None, tenant_id=1, name="عرض", plan_type="time", priority=100,
+            speed_down_kbps=4096, speed_up_kbps=1024))
         with app.test_request_context():
             edit_url = url_for("radius.plans_edit", plan_id=p.id)
     with app.test_client() as client:
@@ -105,7 +112,8 @@ def test_service_toggles_removed_and_type_drives_enablement(app):
         from app.radius.services.plans import get_plans_service
         from flask import url_for
         p = get_plans_service().create(actor="root", plan=AccessPlan(
-            id=None, tenant_id=1, name="عرض خدمة", plan_type="time"))
+            id=None, tenant_id=1, name="عرض خدمة", plan_type="time",
+            speed_down_kbps=4096, speed_up_kbps=1024))
         with app.test_request_context():
             edit_url = url_for("radius.plans_edit", plan_id=p.id)
 
@@ -153,11 +161,15 @@ def test_offer_card_speeds_render_in_mega(app):
             speed_down_kbps=1536, speed_up_kbps=1536))
         svc.create(actor="root", plan=AccessPlan(
             id=None, tenant_id=1, name="بلا حد", plan_type="unlimited",
-            speed_down_kbps=0, speed_up_kbps=0))
+            speed_down_kbps=0, speed_up_kbps=0, speed_unlimited=True))
 
     with app.test_client() as client:
         _login_super(client)
-        html = client.get("/admin/radius/plans").get_data(as_text=True)
+        # منذ aa9f8542 («details + cards view fetched on demand») تُجلب
+        # بطاقاتُ العروض بطلبٍ منفصل (?fragment=cards) لا ضمن الصفحة.
+        page = client.get("/admin/radius/plans").get_data(as_text=True)
+        assert "data-pl-cards-src" in page
+        html = client.get("/admin/radius/plans?fragment=cards").get_data(as_text=True)
 
     # بطاقة العرض: 8192K ⟶ «8↓ / 8↑ ميجا»، والصيغة الخام القديمة زالت.
     assert "8↓ / 8↑" in html
