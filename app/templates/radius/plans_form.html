@@ -526,6 +526,14 @@
           <div class="pl-field"><label>{{ _('كوتا إجمالية') }}</label>
             {{ unit_input_picker(name="quota_total_mb", value=plan.quota_total_mb or 0, kind="quota", units=["MB","GB"]) }}
             <div class="help">{{ _('إجمالي البيانات المسموحة للحساب. 0 = غير محدودة.') }}</div></div>
+          {# الكوتا اليوميّة/الشهريّة المُطبَّقة (services/quota_period.py) — كانت
+             بلا حقل فيصفّرها كل حفظٍ من الويب. #}
+          <div class="pl-field"><label>{{ _('كوتا يومية') }}</label>
+            {{ unit_input_picker(name="quota_daily_mb", value=plan.quota_daily_mb or 0, kind="quota", units=["MB","GB"]) }}
+            <div class="help">{{ _('0 = بلا حدّ') }}</div></div>
+          <div class="pl-field"><label>{{ _('كوتا شهرية') }}</label>
+            {{ unit_input_picker(name="quota_monthly_mb", value=plan.quota_monthly_mb or 0, kind="quota", units=["MB","GB"]) }}
+            <div class="help">{{ _('0 = بلا حدّ') }}</div></div>
           <div class="pl-field"><label>{{ _('صلاحية (أيام)') }}</label>
             <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}">
             <div class="help">{{ _('كم يوم يبقى الحساب صالحًا بعد التفعيل.') }}</div></div>
@@ -840,9 +848,9 @@
                 <div class="pl-field"><label>VLAN</label>
                   <input class="hub-input" type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}">
                   <div class="help">{{ _('معرّف الشبكة الافتراضية VLAN. 0 = بلا VLAN.') }}</div></div>
-                <div class="pl-field"><label>{{ _('نطاق عناوين الشبكة') }}</label>
+                <div class="pl-field"><label>{{ _('قائمة عناوين (Address-List)') }}</label>
                   <input class="hub-input" type="text" name="address_pool" value="{{ plan.address_pool or '' }}">
-                  <div class="help">{{ _('اسم مجمّع عناوين الشبكة العام.') }}</div></div>
+                  <div class="help">{{ _('اسم Address-List في الراوتر يُضاف إليه عنوان المشترك') }}</div></div>
                 {# «نطاق الخدمة» أُزيل — كان يكرّر بطاقات «نوع الخدمة» أعلى
                    النموذج. النطاق يُشتقّ خادميًا من نوع الخدمة المختار
                    (Hotspot→hotspot، PPPoE→broadband، Both→both). #}
@@ -919,7 +927,7 @@
             <input class="hub-input" type="number" step="0.01" min="0" name="price" value="{{ plan.price or 0 }}">
             <div class="help">{{ _('سعر الباقة بعملة النظام.') }}</div></div>
           <div class="pl-field"><label>{{ _('العملة') }}</label>
-            <input class="hub-input" type="text" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
+            <input class="hub-input" type="text" name="currency" value="{{ plan.currency or cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
             <div class="help">{{ _('عملة النظام، تُضبط من الإعدادات العامة.') }}</div></div>
         </div>
       </div>

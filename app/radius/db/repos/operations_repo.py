@@ -74,7 +74,7 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
             UPDATE distributors
             SET name = ?, display_name = ?, email = ?, phone = ?, status = ?,
                 permissions_json = ?, scope_json = ?,
-                balance = ?, credit_limit = ?, debt_balance = ?,
+                credit_limit = ?,
                 admin_id = COALESCE(?, admin_id),
                 login_admin_id = COALESCE(?, login_admin_id),
                 notes = ?, updated_at = ?
@@ -88,9 +88,10 @@ def update_distributor(tenant_id: int, distributor_id: int, data: dict) -> dict:
                 data.get("status") or "active",
                 _json(data.get("permissions"), []),
                 _json(data.get("scope"), {}),
-                float(data.get("balance") or 0),
+                # balance/debt_balance لا يكتبهما التعديل أبدًا: يتغيّران بحركات
+                # الدفتر (تسوية/دفعة/دين) وحدها — نموذجٌ فُتح قبل حركةٍ كان يُعيدهما
+                # لقيمته القديمة (دين 40 ودفعة 25 → 0/0).
                 float(data.get("credit_limit") or 0),
-                float(data.get("debt_balance") or 0),
                 # COALESCE: تمرير None يُبقي المالك الحاليّ كما هو (لا يَطمسه).
                 (int(data["admin_id"]) if data.get("admin_id") else None),
                 (int(data["login_admin_id"]) if data.get("login_admin_id") else None),
@@ -287,7 +288,13 @@ def list_assigned_batches(tenant_id: int, distributor_id: int, *,
         """
         SELECT
             b.id, b.batch_code, b.package_name, b.plan_id, b.count,
-            b.generated, b.used, b.status, b.created_at, b.expire_at,
+            b.generated,
+            -- «مستخدم» الحيّ (نفس تعريف api/v1/cards._live_used): العمود
+            -- card_batches.used لا يتحدّث حين تُستعمل البطاقة في RADIUS.
+            (SELECT COUNT(*) FROM cards c
+              WHERE c.tenant_id = b.tenant_id AND c.batch_id = b.id
+                AND c.deleted_at IS NULL AND c.used = 1) AS used,
+            b.status, b.created_at, b.expire_at,
             b.distributor_id, b.assigned_to,
             a.assigned_at, a.assigned_by, a.notes AS assignment_notes
         FROM card_batch_assignments a

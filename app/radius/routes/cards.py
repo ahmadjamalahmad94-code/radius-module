@@ -881,22 +881,14 @@ def _enforce_batch_owner_scope(form_manager_id: int, form_distributor_id):
     * السوبر: يَختار المدير بحرّية؛ والموزّع — إن اختير — يجب أن يَتبع ذلك
       المدير (أو يكون بلا مالك). موزّعٌ يَتبع مديرًا آخر يُرفَض.
     """
-    super_ = is_super_admin()
-    eff_manager = int(form_manager_id or 0) if super_ else int(current_admin_id() or 0)
-    dist_id = int(form_distributor_id) if form_distributor_id else None
-    if dist_id:
-        dist = operations_repo.get_distributor(_tid(), dist_id)
-        if not dist:
-            raise RadiusValidationError("الموزع المحدد غير موجود.")
-        owner = int(dist.get("admin_id") or 0)
-        if super_:
-            if eff_manager and owner and owner != eff_manager:
-                raise RadiusValidationError("هذا الموزع لا يتبع المدير المختار.")
-        else:
-            # المحدود لا يَصل إلا لموزّعيه — الموزّعون بلا مالك ليسوا له.
-            if owner != eff_manager:
-                raise RadiusValidationError("لا تملك صلاحية على هذا الموزع.")
-    return eff_manager, dist_id
+    # المسند المشترك مع الـAPI (services/card_batch_scope.resolve_batch_owner).
+    from ..services.card_batch_scope import resolve_batch_owner
+    return resolve_batch_owner(
+        tenant_id=_tid(), is_super=is_super_admin(),
+        caller_admin_id=current_admin_id(),
+        requested_manager_id=form_manager_id,
+        requested_distributor_id=form_distributor_id,
+    )
 
 
 def _collect_batch_options() -> dict:
@@ -2282,6 +2274,55 @@ def _reject_locked_batch_changes(batch, data) -> None:
             )
 
 
+# الحقول التي يَعرضها ويُرسلها نموذج «تعديل الحزمة» (cards_batch_edit.html).
+# التعديل لا يكتب إلّا هذه — كان يُعيد استعمال _collect_batch_options كما هو
+# فيُرسل distributor_id=None (→ 0) ويُعيد بناء metadata (نوع «مطبوعة» يدوس
+# «إلكترونيّة») ويُصفّر مفاتيحَ غير معروضة (transfer_to_student_status_on_connect،
+# close_user_session_on_disconnect…) ويستبدل السعر الإجماليّ المكتوب بالعدد×السعر.
+# مفاتيح نصّيّة/رقميّة: تُكتب فقط متى أُرسلت فعلًا في النموذج.
+_BATCH_EDIT_VALUE_KEYS = (
+    "package_name", "plan_id", "count", "status", "price_per_card", "price_bulk",
+    "total_quota_mb", "service_name", "username_length", "password_length",
+    "password_generation_type", "username_prefix", "username_suffix",
+    "device_count", "device_limit_mode", "duration_mode",
+    "validity_after_first_login_days", "on_quota_exhaust", "notes",
+)
+# مفاتيح التبديل المعروضة في النموذج: غيابها من POST = «مُطفأ» (سلوك مربّع
+# الاختيار)، فتُكتب دائمًا. ما ليس هنا لا يمسّه التعديل أبدًا.
+_BATCH_EDIT_TOGGLE_KEYS = (
+    "count_from_first_connect", "count_by_seconds", "login_without_password",
+    "auto_renew_after_first_use", "switch_to_mac_on_connect", "lock_to_mac_on_close",
+)
+
+
+def _batch_edit_payload(batch, data: dict, form, *, is_super: bool) -> dict:
+    """يُقصِر بيانات _collect_batch_options على ما يَعرضه نموذج التعديل."""
+    out = {k: data[k] for k in _BATCH_EDIT_VALUE_KEYS if k in form and k in data}
+    for k in _BATCH_EDIT_TOGGLE_KEYS:
+        if k in data:
+            out[k] = data[k]
+    if "time_value" in form or "time_limit_minutes" in form:
+        out["time_value"] = data.get("time_value")
+        out["time_unit"] = data.get("time_unit")
+    elif "time_unit" in form:
+        out["time_unit"] = data.get("time_unit")
+    # «السعر الإجماليّ (مرجعي)» حقلٌ قابلٌ للكتابة في نموذج التعديل: يُحترم
+    # المكتوب. نموذجٌ لا يُرسله ويُغيّر سعر البيع ⇒ العدد × السعر (كالتوليد).
+    if "total_price" in form:
+        out["total_price"] = _form_float("total_price")
+    elif "price_per_card" in form:
+        out["total_price"] = round(
+            max(0, int(getattr(batch, "count", 0) or 0)) * _form_float("price_per_card"), 2)
+    # «المدير المسؤول»: للسوبر وحده (غيره كان يَنسب الحزمة لنفسه بمجرّد الحفظ).
+    # تغييره يُطابَق مع موزّع الحزمة المخزَّن بالمسند المشترك.
+    if is_super and "manager_id" in form:
+        new_mgr = _form_int("manager_id")
+        if new_mgr != int(getattr(batch, "manager_id", 0) or 0):
+            _enforce_batch_owner_scope(new_mgr, getattr(batch, "distributor_id", None))
+        out["manager_id"] = new_mgr
+    return out
+
+
 def cards_batch_edit(batch_id: int):
     # تعديل الحزمة: مالكيّ افتراضًا (حجبٌ خادميّ على العرض والحفظ). المالك
     # يَفتحه لمديرٍ صراحةً بمنح فعل «تعديل» للكيان batch (opt-in) — عندها
@@ -2325,6 +2366,10 @@ def cards_batch_edit(batch_id: int):
                 data.pop("package_name", None)
             # حقول البنية مقفلة: ارفض أيّ تغيير مُرسَل، ثم جرّدها فلا تُحفَظ.
             _reject_locked_batch_changes(batch, data)
+            # لا تكتب إلّا ما يَعرضه النموذج (distributor_id/metadata/مفاتيح غير
+            # معروضة تبقى كما هي). بعد فحص القفل: حقلٌ بنيويّ مُرسَل يُرفض ولو
+            # لم يكن معروضًا.
+            data = _batch_edit_payload(batch, data, request.form, is_super=_super)
             for _locked in STRUCTURAL_LOCKED_FIELDS:
                 data.pop(_locked, None)
             # المستوى 3: التحكّم الحقليّ للمدير غير السوبر — أسقِط مفاتيح الحقول

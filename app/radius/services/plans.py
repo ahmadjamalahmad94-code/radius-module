@@ -29,7 +29,7 @@ class PlansService:
         return self._adapter.get_profile(plan_id)
 
     def create(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
-        plan = _normalize(plan)
+        plan = _normalize(plan, existing=None)
         _validate(plan)
         plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
@@ -89,13 +89,13 @@ class PlansService:
     def update(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         if plan.id is None:
             raise RadiusValidationError("تعديل الباقة يتطلّب معرّفها.")
-        plan = _normalize(plan)
-        _validate(plan)
-        plan = _claim_plan_name(plan)
         try:                                  # لقطة «قبل» لعرض الفرق في السجلّ
             existing = self._adapter.get_profile(plan.id)
         except Exception:  # noqa: BLE001
             existing = None
+        plan = _normalize(plan, existing=existing)
+        _validate(plan)
+        plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
                            target_type="plan", target_id=str(saved.id),
@@ -288,12 +288,78 @@ _OTHER_LABELS = {
 _COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{3,20})$")
 
 
-def _normalize(plan: AccessPlan) -> AccessPlan:
-    """تطبيعٌ لا يغيّر المعنى: نطاق الخدمة بأحرفٍ صغيرة («HOTSPOT» كان يُخزَّن
-    كما هو)، والأرقام العشريّة ‎-0.0 ⇒ 0."""
+# نوع الخدمة: الهجاء القانونيّ للويب (بطاقتا «هوت سبوت»/«برودباند»).
+_SERVICE_TYPE_CANON = {
+    "hotspot": "Hotspot", "pppoe": "PPPoE", "broadband": "PPPoE", "both": "Both",
+}
+
+
+def scope_from_service_type(service_type: str) -> str:
+    """نطاق الخدمة مشتقّ من «نوع الخدمة»: Hotspot→hotspot، PPPoE→broadband،
+    Both→both (مصدرٌ واحد للويب والـAPI)."""
+    t = (service_type or "").strip().lower()
+    if t == "both":
+        return "both"
+    if t in ("pppoe", "broadband"):
+        return "broadband"
+    return "hotspot"
+
+
+def derive_duration(minutes: int) -> tuple[int, str]:
+    """(duration_value, duration_unit) من الدقائق — أيّام/ساعات/دقائق (MT71).
+    التنفيذ على duration_minutes وحده؛ هذان للعرض و``_base_plan_minutes``."""
+    m = int(minutes or 0)
+    if m and m % 1440 == 0:
+        return m // 1440, "Days"
+    if m and m % 60 == 0:
+        return m // 60, "Hrs"
+    return m, "Mins"
+
+
+def _service_changes(plan: AccessPlan, existing: AccessPlan | None) -> dict:
+    """service_type قانونيّ + اشتقاق service_scope/hotspot_enabled/ppp_enabled
+    منه (كان الـAPI يخزّن ما يصله: PPPoE مع scope=both وhotspot مفعّل).
+    القيم القديمة (Balance/Voucher/Others) تبقى فقط إن لم تتغيّر."""
+    raw = (plan.service_type or "").strip()
+    canon = _SERVICE_TYPE_CANON.get(raw.lower())
+    if canon is None:
+        old = (getattr(existing, "service_type", "") or "").strip() if existing else ""
+        if raw and raw == old:
+            return {}                       # قيمةٌ قديمة لم تتغيّر — لا نمسّها
+        if raw:
+            raise RadiusValidationError(
+                f"نوع الخدمة «{raw}» غير معروف (المسموح: Hotspot / PPPoE / Both).")
+        canon = "Hotspot"
+    return {
+        "service_type": canon,
+        "service_scope": scope_from_service_type(canon),
+        "hotspot_enabled": canon in ("Hotspot", "Both"),
+        "ppp_enabled": canon in ("PPPoE", "Both"),
+    }
+
+
+def _duration_changes(plan: AccessPlan, existing: AccessPlan | None) -> dict:
+    """duration_value/unit تُشتقّ من duration_minutes عند كل حفظ (ويب وAPI) —
+    كان PATCH الدقائق يترك «8 Hrs» مع 1440 دقيقة. صفر دقائق: يُصفَّر الزوج فقط
+    إن كانت الدقائق قبلها موجبة (باقةٌ قديمة بزوجٍ بلا دقائق تبقى كما هي)."""
+    minutes = int(plan.duration_minutes or 0)
+    if minutes <= 0 and not (existing is not None
+                             and int(existing.duration_minutes or 0) > 0):
+        return {}
+    val, unit = derive_duration(minutes)
+    if (plan.duration_value, plan.duration_unit) == (val, unit):
+        return {}
+    return {"duration_value": val, "duration_unit": unit}
+
+
+def _normalize(plan: AccessPlan, existing: AccessPlan | None = None) -> AccessPlan:
+    """تطبيعٌ مشترك للويب والـAPI: نوع الخدمة ومشتقّاته، زوج المدّة من
+    الدقائق، نطاق الخدمة بأحرفٍ صغيرة، والأرقام العشريّة ‎-0.0 ⇒ 0."""
     changes = {}
-    scope = (plan.service_scope or "").strip().lower()
-    if scope != plan.service_scope:
+    changes.update(_service_changes(plan, existing))
+    changes.update(_duration_changes(plan, existing))
+    scope = (changes.get("service_scope", plan.service_scope) or "").strip().lower()
+    if scope != changes.get("service_scope", plan.service_scope):
         changes["service_scope"] = scope or "both"
     for f in ("price", "price_card", "price_bulk"):
         v = getattr(plan, f, 0)

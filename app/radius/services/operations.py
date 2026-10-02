@@ -1022,6 +1022,24 @@ def _distributor_payload(data: dict, *, include_metadata: bool = True) -> dict:
     return normalized
 
 
+def set_distributor_portal_password(tenant_id: int, distributor_id: int, raw) -> bool:
+    """يحفظ hash كلمة مرور بوابة «فحص كروت» (فارغة = لا تغيير ⇒ False).
+    مشترك بين نموذج الويب والـAPI؛ لا يُخزَّن نص صريح أبدًا."""
+    if raw is None:
+        return False
+    if not isinstance(raw, str):
+        raise RadiusValidationError("كلمة مرور بوابة الفحص يجب أن تكون نصًّا.")
+    raw = raw.strip()
+    if not raw:
+        return False
+    if len(raw) > 120:
+        raise RadiusValidationError("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا).")
+    from werkzeug.security import generate_password_hash
+    operations_repo.set_distributor_portal_password(
+        int(tenant_id), int(distributor_id), generate_password_hash(raw))
+    return True
+
+
 def _optional_admin_ref(value) -> int | None:
     if value in (None, "", 0, "0"):
         return None
@@ -1083,6 +1101,13 @@ class OperationsService:
 
     def create_distributor(self, *, tenant_id: int, actor: str, data: dict) -> dict:
         normalized = _distributor_payload(data)
+        # الرصيد/الدين الافتتاحيّ مسموحٌ عند الإنشاء وحده — لكن لا يبدأ الموزّع
+        # بدينٍ فوق سقف ائتمانه (حين يكون محدّدًا).
+        _limit = float(normalized.get("credit_limit") or 0)
+        _debt = float(normalized.get("debt_balance") or 0)
+        if _limit > 0 and _debt > _limit + 1e-9:
+            raise RadiusValidationError(
+                f"الدين الافتتاحيّ ({_debt:g}) أكبر من حدّ الائتمان ({_limit:g}).")
         _ensure_distributor_refs(tenant_id, normalized)
         try:
             saved = operations_repo.create_distributor(tenant_id, normalized, actor=actor)

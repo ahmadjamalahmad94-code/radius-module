@@ -233,7 +233,40 @@ def _apply_body(plan: AccessPlan, body: dict) -> AccessPlan:
         changes["router_ids"] = _coerce_router_ids(body["router_ids"])
     if "metadata" in body:
         changes["metadata"] = _normalize_metadata(body["metadata"])
+    if "connection_schedule" in body:
+        changes["connection_schedule"] = _coerce_connection_schedule(
+            body["connection_schedule"])
+    if "service_scope" in body:
+        # service_scope مشتقّ من service_type في الخدمة (مثل الويب). نطاقٌ غير
+        # صالح يبقى 422؛ ونطاقٌ وحده (بلا service_type) يُترجَم إلى نوع الخدمة
+        # المقابل بدل أن يُتجاهَل بصمت.
+        from ...radius.services.operations import validate_service_scope
+        scope = validate_service_scope(str(body["service_scope"] or ""))
+        if "service_type" not in body:
+            changes["service_type"] = {"hotspot": "Hotspot", "broadband": "PPPoE",
+                                       "both": "Both"}[scope]
     return replace(plan, **changes)
+
+
+def _coerce_connection_schedule(v: Any) -> str:
+    """«الأيام والأوقات المسموحة» (مُطبَّق) — نفس تحقّق الويب
+    (access_schedule.parse/serialize)، لكن المدخل غير الصالح 422 لا تفريغٌ صامت.
+    يقبل نصّ JSON أو كائنًا ``{"windows": [...]}``؛ فارغ/null ⇒ بلا قيد."""
+    from ...radius.core.access_schedule import AccessScheduleError, serialize
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return ""
+    if not isinstance(v, (str, dict)):
+        raise RadiusValidationError(
+            "«الأيام والأوقات المسموحة» (connection_schedule) يجب أن تكون كائن JSON "
+            "بالشكل {\"windows\": [...]}.")
+    try:
+        return serialize(v)
+    except AccessScheduleError as e:
+        raise RadiusValidationError(
+            f"«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة: {e}")
+    except (TypeError, ValueError, AttributeError):
+        raise RadiusValidationError(
+            "«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة.")
 
 
 def _serialize(plan: AccessPlan) -> dict:

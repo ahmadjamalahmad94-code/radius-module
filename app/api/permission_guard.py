@@ -186,6 +186,7 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.accounts_action_send_credentials": "web:users_send_credentials",
     "v1.accounts_action_rename": "web:users_update",
     "v1.accounts_action_disconnect": "web:online_disconnect",
+    "v1.accounts_action_temp_speed_cancel": "web:users_temp_speed_cancel",
 
     # ── cards ──
     "v1.cards_generate": "web:cards_generate",
@@ -295,6 +296,7 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.distributors_summary": "web:distributors_detail",
     "v1.distributors_batches": "web:distributors_detail",
     "v1.distributors_create": "web:distributors_create",
+    "v1.distributors_update": "web:distributors_update",
     "v1.distributors_assign_batch": "web:distributors_assign_batch",
     "v1.distributors_settle": "web:distributors_settle",
 

@@ -634,6 +634,46 @@ def _username_length_or_auto(body: dict) -> int:
     return max(8, min(32, fixed + 4))
 
 
+_DEVICE_LIMIT_MODES = ("", "reject", "replace")
+
+
+def _device_limit_mode(body: dict) -> str:
+    """سلوك حدّ الأجهزة للحزمة: '' (اتبع الإعداد العام للكروت) أو reject أو
+    replace — نفس قيم نموذج الويب. غير ذلك ⇒ 422 (كان يُسقَط صامتًا)."""
+    raw = body.get("device_limit_mode")
+    if raw is None:
+        return ""
+    if not isinstance(raw, str):
+        raise RadiusValidationError(
+            "قيمة «device_limit_mode» يجب أن تكون نصًّا: reject أو replace أو فارغة.")
+    value = raw.strip().lower()
+    if value not in _DEVICE_LIMIT_MODES:
+        raise RadiusValidationError(
+            "قيمة «device_limit_mode» غير صحيحة — المسموح: reject أو replace أو فارغة "
+            "(اتبع الإعداد العام).")
+    return value
+
+
+def _batch_owner(body: dict, *, default_manager_id: int = 0):
+    """(manager_id, distributor_id) للحزمة بنفس قواعد الويب
+    (services/card_batch_scope.resolve_batch_owner): غير السوبر تُنسب الحزمة له
+    دائمًا (فيراها في قائمته) ولا يختار إلّا موزّعيه؛ السوبر يختار بحرّية والموزّع
+    يجب أن يتبع المدير المختار."""
+    from ..access_control import admin_id, token_bypasses_rbac
+    from ...radius.services.card_batch_scope import resolve_batch_owner
+    if body.get("manager_id") in (None, ""):
+        requested_manager = default_manager_id
+    else:
+        requested_manager = _field_int(body, "manager_id", 0, "رقم المدير")
+    raw_dist = body.get("distributor_id")
+    dist = (None if raw_dist in (None, "", 0, "0")
+            else _field_int(body, "distributor_id", None, "رقم الموزّع"))
+    return resolve_batch_owner(
+        tenant_id=_tid(), is_super=bool(token_bypasses_rbac()),
+        caller_admin_id=admin_id(), requested_manager_id=requested_manager,
+        requested_distributor_id=dist)
+
+
 def _generate_kwargs(body: dict) -> dict:
     """Parse + type-check the generate body into CardsService kwargs.
     Honours the same fields as the web generator, incl. «رقم فقط»
@@ -664,6 +704,7 @@ def _generate_kwargs(body: dict) -> dict:
         time_value=_field_int(body, "time_value", 0, "مدّة البطاقة"),
         time_unit=str(body.get("time_unit") or "days").strip(),
         device_count=_field_int(body, "device_count", 1, "عدد الأجهزة"),
+        device_limit_mode=_device_limit_mode(body),
         duration_mode=str(body.get("duration_mode") or "time_unit"),
         validity_after_first_login_days=_field_int(
             body, "validity_after_first_login_days", 0, "الصلاحية بعد أوّل دخول"),
@@ -683,7 +724,7 @@ def _generate_kwargs(body: dict) -> dict:
         total_quota_mb=_field_int(body, "total_quota_mb", 0, "الكوتا"),
         package_name=str(body.get("package_name") or "").strip(),
         service_name=str(body.get("service_name") or "").strip(),
-        manager_id=_field_int(body, "manager_id", 0, "رقم المدير"),
+        **dict(zip(("manager_id", "distributor_id"), _batch_owner(body))),
         notes=str(body.get("notes") or "")[:300],
     )
 
@@ -1073,7 +1114,31 @@ def cards_batch_update(batch_id: int):
     if not isinstance(body, dict):
         return fail("validation_error", "بيانات الطلب يجب أن تكون كائن JSON.", status=422)
     from ...radius.services.cards import get_cards_service
+    from ...radius.db.repos import cards_repo
     try:
+        body = dict(body)
+        if "device_limit_mode" in body:
+            body["device_limit_mode"] = _device_limit_mode(body)
+        if "manager_id" in body or "distributor_id" in body:
+            current = cards_repo.get_batch(_tid(), batch_id)
+            if current is None:
+                return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.",
+                            status=404)
+            # نفس عزل التوليد: غير السوبر لا يَنسب الحزمة لغيره ولا يربطها
+            # بموزّعٍ لا يتبع له؛ الغائب من المفتاحين يبقى كما هو.
+            mgr, dist = _batch_owner(
+                {"manager_id": body.get("manager_id"),
+                 "distributor_id": (body["distributor_id"] if "distributor_id" in body
+                                    else current.distributor_id)},
+                default_manager_id=int(current.manager_id or 0))
+            from ..access_control import token_bypasses_rbac
+            if "manager_id" in body:
+                if token_bypasses_rbac():
+                    body["manager_id"] = mgr
+                else:
+                    body.pop("manager_id")
+            if "distributor_id" in body:
+                body["distributor_id"] = dist or 0
         batch = get_cards_service().update_batch(
             actor=_actor(),
             batch_id=batch_id,
@@ -1279,12 +1344,25 @@ def cards_disconnect(card_id: int):
         return response
     body = _body()
     session_id = str(body.get("session_id") or "")
+    # مثل فاحص الويب: «session_ids» (قائمة) = الجلسات المحدّدة؛ لا هذه ولا
+    # «session_id» = كل جلسات البطاقة.
+    raw_ids = body.get("session_ids")
+    if raw_ids is None:
+        session_ids = None
+    elif isinstance(raw_ids, list) and all(
+            isinstance(x, (str, int)) and not isinstance(x, bool) for x in raw_ids):
+        session_ids = [str(x).strip() for x in raw_ids if str(x).strip()][:100] or None
+    else:
+        return fail("validation_error",
+                    "«session_ids» يجب أن تكون قائمة معرّفات جلسات.", status=422)
     from ...radius.services.cards import get_cards_service
     try:
+        extra = {"session_ids": session_ids} if session_ids else {}
         get_cards_service().disconnect_card(
             actor=_actor(),
             username=card.username,
             session_id=session_id,
+            **extra,
         )
     except RadiusError as e:
         return _radius_error_response(e)

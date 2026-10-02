@@ -71,6 +71,11 @@ def register(bp: Blueprint) -> None:
         ("send-credentials", "POST", "accounts_action_send_credentials", action_send_credentials),
         ("rename", "POST", "accounts_action_rename", action_rename),
         ("disconnect", "POST", "accounts_action_disconnect", action_disconnect),
+        # Web-only until parity-a: the profile's «إلغاء السرعة المؤقتة» (X beside
+        # the countdown, users_temp_speed_cancel) — same shared service, works
+        # for an offline subscriber too (/sessions/temp-speed/cancel needs a live row).
+        ("temp-speed/cancel", "POST", "accounts_action_temp_speed_cancel",
+         action_temp_speed_cancel),
     )
     for path, method, endpoint, view in rules:
         if path in _IDEMPOTENT:
@@ -417,9 +422,13 @@ def actions_context(username: str):
                   .replace("{expire}", expire_local).replace("{plan}", plan_name or ""))
         templates.append({**t, "text_filled": filled})
 
-    perm_keys = ("extend", "quota", "payment", "loan", "balance", "change_plan",
-                 "send_message", "send_credentials", "disconnect", "status",
-                 "delete", "rename", "reset_password", "edit")
+    # quota_reset / temp_speed_cancel: their own web endpoints (the web menu gates
+    # «استعادة الكوتة اليومية» on quota_reset, the profile's cancel X on
+    # temp_speed_cancel) — the app used to borrow «quota» for the reset.
+    perm_keys = ("extend", "quota", "quota_reset", "payment", "loan", "balance",
+                 "change_plan", "send_message", "send_credentials", "disconnect",
+                 "status", "delete", "rename", "reset_password", "edit",
+                 "temp_speed_cancel")
     return ok({
         "username": sub.username,
         "full_name": sub.full_name or "",
@@ -469,6 +478,7 @@ def actions_context(username: str):
             "daily_reset_available": _daily_reset_available(sub),
         },
         "online_sessions": _open_sessions(tid, sub.username),
+        "temp_speed": _temp_speed_state(sub),
         "channels": channels,
         "message_templates": templates,
         "max_free_loan_hours": _max_free_loan_hours(),
@@ -838,6 +848,50 @@ def action_rename(username: str):
                "old_username": username,
                "renamed": bool(result.get("renamed")),
                "had_live_session": bool(result.get("had_live_session"))})
+
+
+def _temp_speed_state(sub) -> Optional[dict]:
+    """The profile page's «سرعة مؤقتة» bar (routes/users._profile_temp_speed_state)
+    for the app: null when the subscriber has no temp-speed flag."""
+    try:
+        from ...radius.routes.users import _profile_temp_speed_state
+        st = _profile_temp_speed_state(sub, datetime.utcnow())
+    except Exception:  # noqa: BLE001 — a broken metadata blob never breaks the context
+        return None
+    if not st.get("has_flag"):
+        return None
+    return {
+        "active": bool(st.get("active")),
+        "expired": bool(st.get("expired")),
+        "unknown": bool(st.get("unknown")),
+        "ends_at": _iso_z(st.get("ends_at")),
+        "remaining_seconds": st.get("remaining_seconds"),
+        "down_kbps": int(st.get("down_kbps") or 0),
+        "up_kbps": int(st.get("up_kbps") or 0),
+    }
+
+
+def action_temp_speed_cancel(username: str):
+    """«إلغاء السرعة المؤقتة» — the web profile's users_temp_speed_cancel: the
+    shared services/temp_speed.cancel_temp_speed (restore CoA to the live
+    session + clear the window). No window → 200 with reverted=false (the web
+    flashes a warning, not an error)."""
+    ident, sub, err = _prelude(username, "temp_speed_cancel")
+    if err is not None:
+        return err
+    from ...radius.services.temp_speed import cancel_temp_speed
+    try:
+        result = cancel_temp_speed(tenant_id=ident.caller.tenant_id,
+                                   actor=ident.caller.actor, username=username)
+    except RadiusError as e:
+        return _svc_error(e)
+    reverted = bool(result.get("reverted"))
+    return ok({
+        "username": username,
+        "reverted": reverted,
+        "message": (f"تم إلغاء السرعة المؤقتة لـ «{username}» وأُعيدت السرعة الطبيعية."
+                    if reverted else "لا توجد سرعة مؤقتة فعّالة لهذا المشترك."),
+    })
 
 
 def action_disconnect(username: str):
