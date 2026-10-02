@@ -376,7 +376,14 @@ def admins_patch(admin_id: int):
     try:
         assert_can_modify_admin(
             _actor_id(), admin_id,
-            new_role_id=changes.get("role_id") if "role_id" in changes else None,
+            # Parity-b: only a CHANGED role is an escalation (the web passes
+            # None for an unchanged role) — the app re-sends the current
+            # role_id on every edit, which blocked a manager from editing
+            # e.g. the phone of an admin whose role holds a key he lacks.
+            new_role_id=(changes.get("role_id")
+                         if "role_id" in changes
+                         and changes.get("role_id") != getattr(existing, "role_id", None)
+                         else None),
             co_owner_change=co_change, super_change=super_change)
     except OwnerGuardError as exc:
         return _owner_guard_fail(exc)
@@ -499,6 +506,11 @@ def roles_patch(role_id: int):
             assert_role_within_actor(_actor_id(), changes["permissions"])
         except OwnerGuardError as exc:
             return _owner_guard_fail(exc)
+        # Parity-b: like the web role form (_merge_role_permissions) — keys the
+        # editor does not show (deprecated / dashboard.view) are preserved,
+        # never silently stripped by a save.
+        from ...radius.routes.admins import _merge_role_permissions
+        changes["permissions"] = list(_merge_role_permissions(existing, changes["permissions"]))
     role = admins_repo.update_role(role_id, **changes)
     if not role:
         return fail("not_found", "الدور غير موجود.", status=404)

@@ -31,6 +31,10 @@ _SUPPORTED = {
     "roles": "roles",
     "card_batch": "card_batches",
     "card_batches": "card_batches",
+    # Parity-b: the LIST returns the table name as ``entity_type`` — the app
+    # restores with it, and «access_plans»/«nas_devices» used to be a 422.
+    "access_plans": "access_plans",
+    "nas_devices": "nas_devices",
 }
 
 

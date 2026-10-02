@@ -356,6 +356,10 @@ def admin_password():
         })
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
+    # Parity-b: like the web /account/password — a changed password ends the
+    # «must change password» state (else the web keeps redirecting to /account).
+    if getattr(admin, "must_change_password", False):
+        admins_repo.clear_must_change_password(int(admin.id or 0))
     return ok({
         "updated": True,
         "source": "local",

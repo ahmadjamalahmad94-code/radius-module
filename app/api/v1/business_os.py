@@ -112,14 +112,27 @@ def wallets_list():
     return ok({"items": items, "count": len(items)})
 
 
+def _wallet_currency(raw) -> str:
+    """ISO code from the supported list; blank = the system currency."""
+    code = str(raw or "").strip().upper() or default_currency().upper()
+    return code
+
+
 def wallets_create():
     data = _payload()
+    # Parity-b F6: «ils» was stored lowercase and «XYZ» accepted — the web
+    # offers a fixed list; the same list here.
+    from ...radius.core.settings_validation import currency_codes
+    if _wallet_currency(data.get("currency")) not in currency_codes():
+        return fail("validation_error",
+                    "العملة غير مدعومة — اختر من: " + "، ".join(currency_codes()) + ".",
+                    status=422, details={"field": "currency"})
     try:
         wallet = WalletService().create_wallet(
             tenant_id=_tid(),
             owner_type=str(data.get("owner_type") or ""),
             owner_id=data.get("owner_id"),
-            currency=str(data.get("currency") or default_currency()),
+            currency=_wallet_currency(data.get("currency")),
             metadata=data.get("metadata") if isinstance(data.get("metadata"), dict) else {},
         )
     except BusinessOSValidationError as exc:

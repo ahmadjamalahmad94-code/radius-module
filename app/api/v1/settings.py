@@ -105,11 +105,15 @@ def settings_patch():
             except ValueError as exc:
                 return fail("validation_error", str(exc), status=422,
                             details={"field": skey})
-        if skey == "billing.currency":
-            sval = sval.upper()
-            if sval and (not sval.isalpha() or not (2 <= len(sval) <= 5)):
-                return fail("validation_error", "رمز العملة غير صالح (مثل ILS).",
-                            status=422, details={"field": skey})
+        # Parity-b: the web page's checks (selects/toggles/colour picker and
+        # its route guards) — one shared validator, so free text from the
+        # app's generic dialog can't store what the web can't.
+        from ...radius.core.settings_validation import clean_setting
+        try:
+            sval = clean_setting(skey, sval)
+        except ValueError as exc:
+            return fail("validation_error", str(exc), status=422,
+                        details={"field": skey})
         clean[skey] = sval
     changed: dict[str, str] = {}
     tenant_id = _tid()

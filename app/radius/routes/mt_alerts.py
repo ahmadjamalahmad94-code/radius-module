@@ -181,10 +181,14 @@ def mt_alerts_settings_save():
         "offline": _checkbox("offline"),
         "high_traffic": _checkbox("high_traffic"),
         "high_usage": _checkbox("high_usage"),
-        "offline_after_min": _opt_int("offline_after_min") or 6,
+        # Parity-b: the «loop» checkbox was posted but never saved (the app/API
+        # saved it). Same bounds as the API: offline ≥ 2 min, day/month only.
+        "loop": _checkbox("loop"),
+        "offline_after_min": max(2, _opt_int("offline_after_min") or 6),
         "default_speed_mbps": _opt_int("default_speed_mbps") or 100,
         "default_usage_gb": _opt_int("default_usage_gb") or 200,
-        "usage_window": (form.get("usage_window") or "day").strip(),
+        "usage_window": ("month" if (form.get("usage_window") or "").strip() == "month"
+                         else "day"),
     })
 
     # Per-router rows: present only for routers the operator actually edited.

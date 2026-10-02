@@ -112,7 +112,7 @@ def toggle_alert(key: str):
         return fail("not_found", "تنبيه غير معروف.", status=404)
     body = request.get_json(silent=True) or {}
     enabled = bool(body.get("enabled"))
-    admin_alerts.set_enabled(_tid(), key, enabled, by=int(getattr(g, "admin_id", 0) or 0))
+    admin_alerts.set_telegram(_tid(), key, enabled, by=int(getattr(g, "admin_id", 0) or 0))
     return ok({"key": key, "enabled": enabled})
 
 

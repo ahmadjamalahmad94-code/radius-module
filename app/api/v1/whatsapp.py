@@ -202,6 +202,10 @@ def whatsapp_settings_save():
         )
 
     for key, _label in WHATSAPP_EVENTS:
+        # Parity-b: a partial map updates only the keys it names (an absent
+        # key used to switch that message OFF).
+        if key not in raw:
+            continue
         tenants_repo.set_setting(
             tenant_id,
             _setting_key(key),
