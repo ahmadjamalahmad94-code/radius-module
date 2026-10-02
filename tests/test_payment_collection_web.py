@@ -13,6 +13,26 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+def _grant_finance_collection(tenant_id: int = 1) -> None:
+    import json
+    from datetime import datetime
+
+    from app.radius.db.connection import db
+
+    now = datetime.utcnow().isoformat() + "Z"
+    payload = {"status": "active",
+               "services": {"finance_collection": {"enabled": True,
+                                                     "status": "active"}},
+               "features": {}, "limits": {}}
+    db().execute(
+        """INSERT INTO license_admin_bridge_snapshots
+           (tenant_id, snapshot_type, normalized_status, source_url,
+            payload_json, error_json, fetched_at, stale_after_seconds, created_at)
+           VALUES (?, 'capacity_contract', 'active', 'test://provider',
+                   ?, '{}', ?, 86400, ?)""",
+        (int(tenant_id), json.dumps(payload, ensure_ascii=False), now, now))
+
+
 @pytest.fixture
 def app(monkeypatch):
     tmp = tempfile.mkdtemp(prefix="hr_payments_web_")
@@ -26,7 +46,16 @@ def app(monkeypatch):
             del sys.modules[key]
     from app import create_app
 
-    yield create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        # «التحصيل» is a provider capability that is OFF by default — even the
+        # super admin is redirected away until the licensing panel grants it
+        # (provider_gate._DEFAULT_OFF_CAPABILITY, memory
+        # tenants-finance-collection-default-off-gate). Simulate that grant so
+        # these page-render tests exercise the pages, not the gate (the gate
+        # itself is covered by test_tenants_finance_collection_gate.py).
+        _grant_finance_collection(1)
+    yield flask_app
 
     for key in list(sys.modules):
         if key.startswith("app."):
@@ -38,17 +67,23 @@ def client(app):
     return app.test_client()
 
 
-def _web_login(client) -> None:
+def _web_login(client, *, owner: bool = True) -> None:
     from app.radius.db.repos import admins_repo
 
     username = f"payments_web_{uuid4().hex[:10]}"
     password = "payments-web-pass"
-    admins_repo.create_admin(
+    created = admins_repo.create_admin(
         username=username,
         password=password,
         full_name="Payments Web Tester",
         is_super_admin=True,
     )
+    if owner:
+        # Payment gateways / collection approval are OWNER-ONLY (auth/owner.py
+        # OWNER_ONLY, commit bbaf1b54) and a fresh install always boots the
+        # default admin as id #1 = the owner (commit d13fb302). Our tester is a
+        # co-owner («شريك/مالك») so it carries the owner's reach.
+        admins_repo.set_co_owner(created.id, True)
     res = client.post(
         "/admin/radius/login",
         data={"username": username, "password": password},
@@ -151,3 +186,11 @@ def test_payment_collection_reconciliation_page_renders(client):
     html = response.get_data(as_text=True)
     assert "المطابقة والتدقيق" in html
     assert "مدفوع بلا قيد مالي" in html
+
+
+def test_payment_collection_pages_are_owner_only(client):
+    """A «مدير عام» (is_super_admin flag, not owner/co-owner) is refused:
+    collection approval belongs to the owner alone (auth/owner.py OWNER_ONLY)."""
+    _web_login(client, owner=False)
+    res = client.get("/admin/radius/payments/settings", follow_redirects=True)
+    assert res.status_code == 403
