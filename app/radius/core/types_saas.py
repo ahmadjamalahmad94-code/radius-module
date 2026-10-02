@@ -93,6 +93,9 @@ class Invoice:
     note: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    # zero-w3 (migration 194): the currency the invoice was written in —
+    # displayed per row, not in today's billing.currency. "" → system currency.
+    currency: str = ""
 
 
 @dataclass(frozen=True)

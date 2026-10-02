@@ -35,6 +35,11 @@ def _dt(raw):
         raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
 
 
+def _system_currency() -> str:
+    from ...radius.core.system_config import default_currency
+    return default_currency()
+
+
 def _item(invoice: Invoice) -> dict:
     return {
         "id": invoice.id,
@@ -42,6 +47,8 @@ def _item(invoice: Invoice) -> dict:
         "subscriber_id": invoice.subscriber_id,
         "username": invoice.username,
         "amount": invoice.amount,
+        # zero-w3: the row's own currency (per-row rule) — the app shows it.
+        "currency": invoice.currency or _system_currency(),
         "admin_id": invoice.admin_id,
         "plan_id": invoice.plan_id,
         "plan_name": invoice.plan_name,
@@ -146,6 +153,31 @@ def create_invoice():
                          if body.get("balance_after") not in (None, "") else _bal + amount)
     except (TypeError, ValueError):
         return fail("validation_error", "القيم الرقمية في الفاتورة يجب أن تكون صحيحة.", status=422)
+    # zero-w3: 0 = «غير محدّد» (the app sent 0 for blank numeric fields) and a
+    # plan / router / gateway that is not in this network is a 422 — each was
+    # a FOREIGN KEY 500.
+    plan_id = plan_id if plan_id and plan_id > 0 else None
+    router_id = router_id if router_id and router_id > 0 else None
+    payment_gateway_id = (payment_gateway_id
+                          if payment_gateway_id and payment_gateway_id > 0 else None)
+    plan_name = str(body.get("plan_name") or "")
+    if plan_id is not None:
+        from ...radius.db.repos import plans_repo
+        _plan = plans_repo.get_plan(_tid(), plan_id)
+        if _plan is None:
+            return fail("validation_error", "الباقة المحدّدة غير موجودة.", status=422,
+                        details={"field": "plan_id"})
+        plan_name = plan_name or _plan.name
+    if router_id is not None and db().execute(
+            "SELECT 1 FROM nas_devices WHERE tenant_id = ? AND id = ?",
+            (_tid(), router_id)).fetchone() is None:
+        return fail("validation_error", "جهاز الشبكة المحدّد غير موجود.", status=422,
+                    details={"field": "router_id"})
+    if payment_gateway_id is not None and db().execute(
+            "SELECT 1 FROM payment_gateways WHERE tenant_id = ? AND id = ?",
+            (_tid(), payment_gateway_id)).fetchone() is None:
+        return fail("validation_error", "بوّابة الدفع المحدّدة غير موجودة.", status=422,
+                    details={"field": "payment_gateway_id"})
     invoice = Invoice(
         id=None,
         tenant_id=_tid(),
@@ -155,7 +187,7 @@ def create_invoice():
         amount=amount,
         admin_id=int(getattr(g, "admin_id", 0) or 0),
         plan_id=plan_id,
-        plan_name=str(body.get("plan_name") or ""),
+        plan_name=plan_name,
         service_type=str(body.get("service_type") or "Hotspot"),
         router_id=router_id,
         direction=str(body.get("direction") or "charge"),

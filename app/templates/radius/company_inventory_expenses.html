@@ -238,7 +238,7 @@
           <td><bdi dir="ltr">{{ e.expense_date }}</bdi></td>
           <td><strong>{{ e.title }}</strong></td>
           <td>{{ e.category or "غير مصنّف" }}</td>
-          <td class="num mono tabular-nums" style="direction:ltr"><strong>{{ e.amount|money }}</strong></td>
+          <td class="num mono tabular-nums" style="direction:ltr"><strong>{{ e.amount|money(e.currency) }}</strong></td>
           <td>{{ e.paid_to or "—" }}</td>
           <td>{{ e.payment_method or "—" }}</td>
         </tr>
