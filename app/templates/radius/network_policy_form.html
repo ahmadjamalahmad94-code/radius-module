@@ -200,15 +200,18 @@
         {% call hub.section("إعدادات الاستثناء", icon="shield-halved") %}
           <div class="hub-field">
             <label class="hub-field-label" for="hotspot_profile">
-              {{ _('نطاق ملف بوابة الدخول (اختياري)') }}
+              {{ _('اسم سيرفر الهوتسبوت (اختياري)') }}
             </label>
             <input class="hub-input" type="text" name="hotspot_profile"
                    id="hotspot_profile"
-                   placeholder="{{ _('مثلاً: hsprof1') }}"
+                   placeholder="{{ _('مثلاً: hotspot1') }}"
                    value="{{ policy.hotspot_profile if policy else '' }}">
             <span class="hub-field-hint">
-              اسم ملف بوابة الدخول في الراوتر لتقييد التطبيق؛
-              تركها فارغة = كل الـ profiles.
+              {# parity-c: the planner emits this as «server=» on
+                 /ip hotspot walled-garden — a hotspot SERVER name, not a
+                 profile (the old label said «ملف»). #}
+              اسم سيرفر الهوتسبوت في الراوتر (/ip hotspot) لتقييد الاستثناء عليه؛
+              تركها فارغة = كل السيرفرات.
             </span>
           </div>
         {% endcall %}

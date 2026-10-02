@@ -135,21 +135,34 @@ def _form_error(template: str, message: str, status: int, **ctx):
     return render_template(template, form_refused=True, **ctx), status
 
 
+_BW_UNITS = {"kbps": "Kbps", "mbps": "Mbps", "gbps": "Gbps"}
+
+
+def _bw_unit(name: str, fallback: str) -> str:
+    """parity-c: Kbps/Mbps/Gbps only (the app's list; the API checks it too)."""
+    raw = (request.form.get(name) or "").strip().lower()
+    return _BW_UNITS.get(raw) or fallback
+
+
 def _bw_from_form(existing=None) -> BandwidthProfile:
     if existing is None:
         return BandwidthProfile(id=None, tenant_id=_tid(),
             name=(request.form.get("name") or "").strip(),
-            rate_down=_i("rate_down"), rate_down_unit=request.form.get("rate_down_unit") or "Kbps",
-            rate_up=_i("rate_up"), rate_up_unit=request.form.get("rate_up_unit") or "Kbps",
+            rate_down=_i("rate_down"), rate_down_unit=_bw_unit("rate_down_unit", "Kbps"),
+            rate_up=_i("rate_up"), rate_up_unit=_bw_unit("rate_up_unit", "Kbps"),
             burst=(request.form.get("burst") or "").strip(), priority=_i("priority"))
     from dataclasses import replace
+    # parity-c: «burst» present-but-empty = cleared (the builder empties it
+    # when burst is off so the rates apply); absent = keep the stored line.
+    burst = (request.form.get("burst") if "burst" in request.form
+             else existing.burst) or ""
     return replace(existing,
         name=(request.form.get("name") or existing.name).strip(),
         rate_down=_i("rate_down", existing.rate_down),
-        rate_down_unit=request.form.get("rate_down_unit") or existing.rate_down_unit,
+        rate_down_unit=_bw_unit("rate_down_unit", existing.rate_down_unit),
         rate_up=_i("rate_up", existing.rate_up),
-        rate_up_unit=request.form.get("rate_up_unit") or existing.rate_up_unit,
-        burst=(request.form.get("burst") or existing.burst).strip(),
+        rate_up_unit=_bw_unit("rate_up_unit", existing.rate_up_unit),
+        burst=burst.strip(),
         priority=_i("priority", existing.priority))
 
 

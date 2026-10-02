@@ -125,9 +125,13 @@ def plan(
                 note=f"host allow: {value}",
             ))
         else:
-            # /ip hotspot walled-garden ip — L3 allowlist.
+            # /ip hotspot walled-garden ip — L3 allowlist. parity-c: a
+            # «dst_address_list» entry names an address LIST, so it must be
+            # emitted as dst-address-list= (dst-address=<name> is invalid).
+            addr_key = ("dst-address-list" if et == "dst_address_list"
+                        else "dst-address")
             attrs = {
-                "dst-address": value,
+                addr_key: value,
                 "action": "accept",
                 "comment": f"{cprefix}entry:{et}",
             }

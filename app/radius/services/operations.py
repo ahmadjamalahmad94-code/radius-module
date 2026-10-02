@@ -1293,6 +1293,20 @@ class OperationsService:
             enforce_credit_limit=True,
         )
 
+    # parity-c: the web forms offer exactly these three (bandwidth_schedules
+    # / _speed_rules_panel / _speed_schedules_panel); the app offered
+    # previous_value/manual that no web form could show back.
+    _RESTORE_MODES = ("profile_default", "keep_current", "disconnect")
+
+    @classmethod
+    def _restore_mode(cls, data: dict) -> str:
+        mode = str(data.get("restore_mode") or "profile_default").strip().lower()
+        if mode not in cls._RESTORE_MODES:
+            raise RadiusValidationError(
+                "طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، "
+                "إبقاء آخر سرعة، فصل الجلسة.")
+        return mode
+
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,
                                   data: dict) -> dict:
         name = (data.get("name") or "").strip()
@@ -1352,7 +1366,7 @@ class OperationsService:
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
             "cir_down_kbps": _int_field(data, "cir_down_kbps"),
             "cir_up_kbps": _int_field(data, "cir_up_kbps"),
-            "restore_mode": (data.get("restore_mode") or "profile_default").strip(),
+            "restore_mode": self._restore_mode(data),
             "enabled": bool(data.get("enabled", True)),
             "notes": (data.get("notes") or "")[:500],
             "metadata": data.get("metadata") or {},
@@ -1411,12 +1425,16 @@ class OperationsService:
             "name": (data.get("name") or current.get("name") or "قاعدة سرعة").strip(),
             "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
             "ends_at_time": _validate_time(data.get("ends_at_time"), "ends_at_time"),
-            "days_csv": (data.get("days_csv") or "").strip(),
+            # parity-c: a form WITHOUT a days field (the standalone
+            # /bandwidth-schedules edit) must keep the stored days, not
+            # wipe the days chosen in the embedded speed-rule panels.
+            "days_csv": ((data.get("days_csv") if "days_csv" in data
+                          else current.get("days_csv")) or "").strip(),
             "speed_down_kbps": _int_field(data, "speed_down_kbps"),
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
             "cir_down_kbps": _int_field(data, "cir_down_kbps"),
             "cir_up_kbps": _int_field(data, "cir_up_kbps"),
-            "restore_mode": (data.get("restore_mode") or "profile_default").strip(),
+            "restore_mode": self._restore_mode(data),
             "priority": _int_field(data, "priority", minimum=1, default=100),
             "enabled": bool(data.get("enabled", True)),
             "notes": (data.get("notes") or "")[:500],
