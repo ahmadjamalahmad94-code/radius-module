@@ -150,7 +150,7 @@ def test_sstp_run_stamps_management_tunnel_columns(app):
         row = db().execute(
             "SELECT management_tunnel_type, management_tunnel_status, "
             "  management_remote_address, management_tunnel_interface_name, "
-            "  management_secret_ref, connection_mode "
+            "  management_secret_ref, connection_mode, management_vpn_subnet "
             "FROM nas_devices WHERE name='r-sstp'").fetchone()
         assert row is not None, 'لم يُسجَّل الراوتر أصلًا'
         assert row[0] == 'sstp_mgmt', f'نوعُ النفق: {row[0]!r}'
@@ -159,3 +159,6 @@ def test_sstp_run_stamps_management_tunnel_columns(app):
         assert row[3] == 'hr-sstp-mgmt'
         assert row[4] == 'rtr-r-sstp'
         assert row[5] == 'vpn'
+        # الختمُ لا يتعلّق بعنوانِ خادم SSTP (غيرُ مضبوطٍ في هذه البيئة عمدًا):
+        # load_config() يرفض غيابَه فكان يُسقط الختمَ كلَّه بصمت.
+        assert row[6] == '10.50.0.0/24'

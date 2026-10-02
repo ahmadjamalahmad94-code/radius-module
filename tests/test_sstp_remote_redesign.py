@@ -44,11 +44,18 @@ def client(app):
     return app.test_client()
 
 
-def _login(client):
+def _login(client, *, owner: bool = True):
+    """يدخل بمدير «مدير عام». ``/mt/remote-sessions`` مالكٌ فقط (e5935616)،
+    ومنذ 7c21d8e8/bbaf1b54 لا يمنح علَمُ is_super_admin ولا دورُ super_admin
+    مقامَ المالك — فالمالك هنا «شريك/مالك» (is_co_owner=1)."""
     from app.radius.db.repos import admins_repo
+    from app.radius.db.connection import db
     u = f"a_{uuid4().hex[:8]}"
-    admins_repo.create_admin(username=u, password="pw", full_name="A",
+    adm = admins_repo.create_admin(username=u, password="pw", full_name="A",
                              is_super_admin=True, role_id=getattr(admins_repo.get_role_by_name("super_admin"), "id", None))
+    if owner:
+        db().execute("UPDATE admins SET is_co_owner=1 WHERE id=?", (adm.id,))
+        db().commit()
     res = client.post("/admin/radius/login",
                       data={"username": u, "password": "pw"},
                       follow_redirects=False)
@@ -111,16 +118,42 @@ def test_remote_sessions_uses_design_system(app, client):
         _login(client)
         nas_id = _v6_router(client)
         token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        # 77757b23: قيدُ المصدر صار اختياريًّا (الافتراض «من أي مكان»)، و IP
+        # المشرف من X-Forwarded-For للتدقيق فقط لا للقفل. فالقفلُ يُطلب صراحةً.
         client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
-                    data={"_csrf_token": token},
-                    headers={"X-Forwarded-For": "198.51.100.9"},
+                    data={"_csrf_token": token, "source_mode": "restrict",
+                          "allowed_source": "198.51.100.9"},
+                    headers={"X-Forwarded-For": "203.0.113.77"},
                     follow_redirects=True)
         html = client.get(
             "/admin/radius/mt/remote-sessions").get_data(as_text=True)
         assert "uds-hero" in html and "uds-hero-kpis" in html
         assert 'data-uds-table' in html and "hub-section" in html
-        # The active session row still surfaces the source-IP lock
+        # The active session row still surfaces the explicit source-IP lock
         assert "198.51.100.9" in html
+        # ...and the admin's XFF address is NOT turned into a lock
+        assert "203.0.113.77" not in html
+
+
+def test_remote_sessions_default_open_is_unrestricted(app, client):
+    """77757b23: فتحٌ بلا قيدٍ صريح = «من أي مكان» (لا قفل على IP المشرف)."""
+    with app.app_context():
+        _login(client)
+        nas_id = _v6_router(client)
+        token = _csrf(client, f"/admin/radius/mt/{nas_id}/sstp")
+        client.post(f"/admin/radius/mt/{nas_id}/remote/winbox/open",
+                    data={"_csrf_token": token},
+                    headers={"X-Forwarded-For": "198.51.100.9"},
+                    follow_redirects=True)
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT source_ip FROM router_remote_sessions WHERE status='active'"
+        ).fetchone()
+        assert row["source_ip"] == "any"
+        html = client.get(
+            "/admin/radius/mt/remote-sessions").get_data(as_text=True)
+        assert "من أي مكان" in html
+        assert "198.51.100.9" not in html
 
 
 def test_remote_sessions_empty_state(app, client):
@@ -130,3 +163,13 @@ def test_remote_sessions_empty_state(app, client):
             "/admin/radius/mt/remote-sessions").get_data(as_text=True)
         # Honest empty state, never a silently blank table
         assert "hub-empty" in html
+
+
+def test_remote_sessions_is_owner_only_not_super_role(app, client):
+    """e5935616 + 7c21d8e8: جلسات WinBox البعيدة للمالك وحده؛ دور «مدير عام»
+    بعلَم is_super_admin لا يكفي."""
+    with app.app_context():
+        _login(client, owner=False)
+        res = client.get("/admin/radius/mt/remote-sessions")
+        assert res.status_code == 403
+        assert "uds-hero-kpis" not in res.get_data(as_text=True)
