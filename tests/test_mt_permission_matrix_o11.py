@@ -39,6 +39,11 @@ def _login(client, *, super_admin=True):
         username=u, password="o11-pass", full_name="O11",
         is_super_admin=super_admin,
     )
+    if super_admin:
+        # owner-only bypass (6824f26): the flag alone is no longer «super»;
+        # the boot-time «admin» (d13fb302) is the min-id owner, so designate
+        # the tester as owner the way the licensing panel does.
+        admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "o11-pass"},
@@ -51,33 +56,52 @@ def _login(client, *, super_admin=True):
 # ─── Service (pure) ─────────────────────────────────────────
 
 
-def test_empty_db_matrix_lists_no_rows(app):
+def test_fresh_db_matrix_lists_only_bootstrap_owner(app):
+    """A fresh install is never admin-less any more: create_app() seeds the
+    default «admin» (d13fb302, guaranteed login on a new VPS). The matrix
+    therefore lists exactly that one row — the min-id owner, via_super."""
     with app.app_context():
         from app.radius.services.mt_permission_matrix import build_matrix
         m = build_matrix()
     # ALL_PERMISSIONS is a known small set.
     from app.radius.services import mt_permissions as mp
     assert set(m.permissions) == set(mp.ALL_PERMISSIONS)
-    assert m.rows == ()
-    assert m.total_admins() == 0
+    assert m.total_admins() == 1
+    (row,) = m.rows
+    assert row.username == "admin"
+    assert row.via_super is True
+    assert row.granted_count == len(m.permissions)
 
 
-def test_super_admin_row_has_all_cells_true(app):
+def test_owner_row_has_all_cells_true_but_bare_flag_does_not(app):
+    """Owner-only bypass (6824f26, owner decision 2026-06-28): only the
+    owner resolves via_super (every cell true). A non-owner account that
+    merely carries the is_super_admin flag is an ordinary admin — its
+    cells come from its role/grants only (none here)."""
     with app.app_context():
         from app.radius.db.repos import admins_repo
         admins_repo.create_admin(
             username="alice_o11", password="pw",
             full_name="Alice", is_super_admin=True,
         )
+        admins_repo.create_admin(
+            username="owner_o11", password="pw",
+            full_name="Owner", is_super_admin=True,
+        )
+        admins_repo.set_designated_owners(["owner_o11"])
         from app.radius.services.mt_permission_matrix import build_matrix
         m = build_matrix()
+    owner = [r for r in m.rows if r.username == "owner_o11"][0]
+    assert owner.via_super is True
+    assert all(owner.granted.values())
+    assert owner.granted_count == len(m.permissions)
     rows = [r for r in m.rows if r.username == "alice_o11"]
     assert rows, "alice_o11 missing from matrix"
     r = rows[0]
     assert r.is_super_admin is True
-    assert r.via_super is True
-    assert all(r.granted.values())
-    assert r.granted_count == len(m.permissions)
+    assert r.via_super is False
+    assert not any(r.granted.values())
+    assert r.granted_count == 0
 
 
 def test_non_super_with_role_only_has_listed_perms(app):
