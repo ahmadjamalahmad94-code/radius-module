@@ -555,6 +555,13 @@ class CardsService:
             # الصلاحيةُ نافذةً للحزمة كمدّة العرض تمامًا، فيتّفق الفاحص والختم.
             time_value, time_unit = int(plan.validity_days), "days"
             duration_mode = "time_unit"
+        # «المحاسبة بالثانية» (Mode A) بلا أيّ رصيد — لا صلاحية بعد أوّل اتصال ولا
+        # مدّة ولا مدّة عرضٍ موروثة — بطاقةٌ بلا حدّ (check_card_time_budget يُعامل
+        # الرصيد 0 «بلا حدّ»). كان يمنعه نموذج الويب وحده؛ الآن كل مستدعٍ (API → 422).
+        if (count_by_seconds and int(time_value or 0) <= 0
+                and int(validity_after_first_login_days or 0) <= 0):
+            raise RadiusValidationError(
+                "عند اختيار المحاسبة بالثانية يجب تحديد صلاحية البطاقة بعد أول اتصال.")
         # ── #20: two duration modes, driven purely by count_from_first_connect ──
         #
         # RADIUS attribute mapping (materialised by the auth path — see

@@ -107,5 +107,35 @@ def batch_accessible(batch_id, admin_id: Optional[int] = None, *, tenant_id: int
 
 OUT_OF_SCOPE_BATCH_AR = "هذه الحزمة ليست ضمن نطاقك (حزم مدير أو موزّع آخر)."
 
+
+def resolve_batch_owner(*, tenant_id: int, is_super: bool, caller_admin_id,
+                        requested_manager_id, requested_distributor_id):
+    """عزل خادميّ لـ (manager_id, distributor_id) لحزمة كروت — مسندٌ واحد للويب
+    (التوليد المباشر/التدريجيّ) والـAPI (توليد + تعديل الحزمة):
+
+    * غير السوبر: تُنسب الحزمة له هو دائمًا (يُتجاهَل أيّ manager_id مُرسَل)،
+      وأيّ موزّع لا يَتبع له يُرفَض (الموزّعون بلا مالك ليسوا له).
+    * السوبر: يَختار المدير بحرّية؛ والموزّع — إن اختير — يجب أن يَتبع ذلك
+      المدير (أو يكون بلا مالك). موزّعٌ يَتبع مديرًا آخر يُرفَض.
+
+    يُرجع ``(manager_id, distributor_id|None)`` أو يرفع RadiusValidationError."""
+    from ..core.errors import RadiusValidationError
+    from ..db.repos import operations_repo
+    eff_manager = (int(requested_manager_id or 0) if is_super
+                   else int(caller_admin_id or 0))
+    dist_id = int(requested_distributor_id) if requested_distributor_id else None
+    if dist_id:
+        dist = operations_repo.get_distributor(int(tenant_id), dist_id)
+        if not dist:
+            raise RadiusValidationError("الموزع المحدد غير موجود.")
+        owner = int(dist.get("admin_id") or 0)
+        if is_super:
+            if eff_manager and owner and owner != eff_manager:
+                raise RadiusValidationError("هذا الموزع لا يتبع المدير المختار.")
+        elif owner != eff_manager:
+            raise RadiusValidationError("لا تملك صلاحية على هذا الموزع.")
+    return eff_manager, dist_id
+
 __all__ = ["can_view_all_card_batches", "batch_scope_admin_id", "batch_scope_clause",
-           "batch_scope_sql", "batch_accessible", "OUT_OF_SCOPE_BATCH_AR"]
+           "batch_scope_sql", "batch_accessible", "OUT_OF_SCOPE_BATCH_AR",
+           "resolve_batch_owner"]

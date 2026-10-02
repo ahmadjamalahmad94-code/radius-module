@@ -248,15 +248,12 @@ def _maybe_set_portal_password(distributor_id: int) -> None:
     """يحفظ hash كلمة مرور بوابة «فحص كروت» إن أُدخلت (فارغة = لا تغيير).
 
     الحقل اختياري في نموذجي الإنشاء والتعديل؛ لا يُخزَّن نص صريح أبدًا."""
-    raw = (request.form.get("portal_password") or "").strip()
-    if not raw:
-        return
-    from werkzeug.security import generate_password_hash
-
-    from ..db.repos import operations_repo
-    operations_repo.set_distributor_portal_password(
-        _tid(), int(distributor_id), generate_password_hash(raw)
-    )
+    from ..services.operations import set_distributor_portal_password
+    try:
+        set_distributor_portal_password(
+            _tid(), int(distributor_id), request.form.get("portal_password") or "")
+    except RadiusValidationError as e:
+        flash(error_message_ar(e), "error")
 
 
 def _distributor_form_values(distributor: dict) -> dict:
@@ -302,6 +299,7 @@ def distributors_edit(distributor_id: int):
 def distributors_update(distributor_id: int):
     if not _can_manage_distributors():
         abort(403)
+    existing = None
     try:
         existing = _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
         _assert_distributor_access(existing)
@@ -318,7 +316,7 @@ def distributors_update(distributor_id: int):
         return render_template(
             "radius/distributors_form.html",
             form=request.form,
-            distributor={"id": distributor_id},
+            distributor=existing or {"id": distributor_id},
             is_new=False,
             is_super=_sees_all(),
             managers=_managers_for_form(),

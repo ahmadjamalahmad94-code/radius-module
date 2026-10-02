@@ -95,6 +95,9 @@ _EDITABLE = (
     "working_days", "device_count", "allowed_macs",
     # misc
     "beneficiary_ref", "remark",
+    # PARITY r6: «قسم كلمة المرور» و«عند بلوغ حدّ الأجهزة» — يقرؤهما محرّك
+    # السياسة عند المصادقة، وكانا في نموذج الويب وحده (الـAPI يُسقطهما بصمت).
+    "login_without_password", "device_limit_mode",
 )
 
 _DATETIME_FIELDS = ("expire_at", "first_login_at", "last_login_at", "last_seen_at")
@@ -246,9 +249,16 @@ def _coerce(field_name: str, value):
         if value in (None, ""):
             return 0
         return _strict_int(field_name, value)
+    if field_name == "device_limit_mode":
+        # "" = الافتراض العامّ (من الإعدادات)، كما في قائمة نموذج الويب.
+        mode = "" if value is None else value
+        if not isinstance(mode, str) or mode.strip().lower() not in ("", "reject", "replace"):
+            raise RadiusValidationError(
+                "عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.")
+        return mode.strip().lower()
     if field_name in {
         "bandwidth_control_enabled", "custom_speed", "temporary_speed",
-        "auto_renewal",
+        "auto_renewal", "login_without_password",
         "connection_time_limit_enabled", "quota_limit_enabled",
         "equal_share_download", "equal_share_upload",
     }:
@@ -519,10 +529,14 @@ def accounts_create():
         body = {} if body is None else None
     if body is None:
         return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
-    if not body.get("username") or not body.get("password"):
+    # «قسم كلمة المرور» معطَّل ⇒ الدخول بالاسم وحدَه، فلا تُطلب كلمة (كالويب).
+    _no_pw = body.get("login_without_password") in (True, 1, "1", "true", "on", "yes")
+    if not body.get("username") or (not body.get("password") and not _no_pw):
         return fail("validation_error", "اسم الدخول وكلمة المرور مطلوبان.", status=422)
     if not isinstance(body["username"], str):
         return fail("validation_error", "اسم الدخول يجب أن يكون نصًا.", status=422)
+    if body.get("password") in (None, "") and _no_pw:
+        body = {**body, "password": ""}
     if not isinstance(body["password"], (str, int)) or isinstance(body["password"], bool):
         return fail("validation_error", "كلمة المرور يجب أن تكون نصًا.", status=422)
     _aid = _restricted_admin_id()

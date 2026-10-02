@@ -101,6 +101,9 @@
           <option value="active"   {% if st == 'active' %}selected{% endif %}>{{ _('مفعَّل') }}</option>
           <option value="inactive" {% if st == 'inactive' %}selected{% endif %}>{{ _('غير مفعَّل') }}</option>
           <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>{{ _('محظور') }}</option>
+          {# الخادم يقبلهما — غيابهما كان يُعيد موزّعًا معطّلًا/موقوفًا إلى «مفعَّل» بمجرّد الحفظ #}
+          <option value="disabled"  {% if st == 'disabled' %}selected{% endif %}>{{ _('معطّل') }}</option>
+          <option value="suspended" {% if st == 'suspended' %}selected{% endif %}>{{ _('موقوف') }}</option>
         </select>
       </div>
       {# ── المالك (المدير الذي يتبع له الموزع) ── #}
@@ -109,7 +112,9 @@
       <div class="ds-field">
         <label>{{ _('المدير المالك') }}</label>
         <select class="hub-select" name="admin_id">
-          <option value="">{{ _('— بدون مالك —') }}</option>
+          {# التعديل لا يُفرغ المالك (فارغ = يبقى الحاليّ)؛ فلا يُعرض «بدون مالك»
+             إلّا عند الإنشاء أو لموزّعٍ بلا مالكٍ أصلًا. #}
+          {% if is_new or not _owner %}<option value="">{{ _('— بدون مالك —') }}</option>{% endif %}
           {% for m in managers %}
             <option value="{{ m.id }}" {% if _owner and _owner|string == m.id|string %}selected{% endif %}>{{ m.full_name or m.username }}</option>
           {% endfor %}
@@ -134,8 +139,9 @@
         <label>{{ _('حد الائتمان') }}</label>
         <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0"
                value="{{ form.get('credit_limit','0') }}">
-        <div class="help">{{ _('قيمة مرجعية للمتابعة، وليست نظام فوترة كاملًا.') }}</div>
+        <div class="help">{{ _('أقصى دين مسموح للموزّع؛ يُمنع تسجيل دين يتجاوزه. 0 = بلا حدّ') }}</div>
       </div>
+      {% if is_new %}
       <div class="ds-field">
         <label>{{ _('الرصيد الحالي') }}</label>
         <input class="hub-input" type="number" name="balance" step="0.01"
@@ -146,6 +152,21 @@
         <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0"
                value="{{ form.get('debt_balance','0') }}">
       </div>
+      {% else %}
+      {# للعرض فقط: الرصيد والدين يتغيّران بحركات التسوية/الدفع/الدين من صفحة
+         تفاصيل الموزع — حفظ هذا النموذج لا يمسّهما. #}
+      <div class="ds-field">
+        <label>{{ _('الرصيد الحالي') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+        <input class="hub-input" type="number" step="0.01" readonly disabled
+               value="{{ distributor.balance if distributor and distributor.balance is defined else form.get('balance','0') }}">
+      </div>
+      <div class="ds-field">
+        <label>{{ _('الدين الحالي') }} <i class="fa-solid fa-lock" style="font-size:11px;color:var(--hub-text-mute)"></i></label>
+        <input class="hub-input" type="number" step="0.01" readonly disabled
+               value="{{ distributor.debt_balance if distributor and distributor.debt_balance is defined else form.get('debt_balance','0') }}">
+        <div class="help">{{ _('يتغيّران بحركات التسوية والدفع والدين من صفحة تفاصيل الموزع، لا من هذا النموذج.') }}</div>
+      </div>
+      {% endif %}
     </div>
   {% endcall %}
 

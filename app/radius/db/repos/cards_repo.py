@@ -32,7 +32,8 @@ def _batch_row(r) -> CardBatch:
         username_prefix=r["username_prefix"] or "", username_suffix=r["username_suffix"] or "",
         username_length=r["username_length"] or 8,
         include_batch_number=bool(r["include_batch_number"]),
-        password_length=r["password_length"] or 6,
+        # 0 = حزمة «رقم فقط» (بلا كلمة مرور) — قيمةٌ صحيحة لا «فارغة»؛ 6 للـNULL وحده.
+        password_length=6 if r["password_length"] is None else r["password_length"],
         password_charset=r["password_charset"] or "digits",
         expire_at=parse_dt(r["expire_at"]),
         validity_after_first_login_days=r["validity_after_first_login_days"] or 0,

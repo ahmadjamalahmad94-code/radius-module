@@ -59,11 +59,56 @@ def _out_of_scope(distributor_id: int, *, allow_self: bool = False):
                 status=403, details={"reason": "out_of_scope"})
 
 
+def _public_distributor(row):
+    """صفّ الموزّع كما يُعرض للتطبيق: بلا ``portal_password_hash`` أبدًا (كان
+    ``SELECT *`` يُسرّبه في القائمة والملخّص والإنشاء — حتى لدخول الموزّع
+    نفسه). ``has_portal_password`` يكفي التطبيقَ ليعرف هل البوابة مضبوطة."""
+    if not isinstance(row, dict):
+        return row
+    out = dict(row)
+    secret = out.pop("portal_password_hash", None)
+    out["has_portal_password"] = bool(secret)
+    return out
+
+
+def _scope_value(raw):
+    """نطاق الفحص كما يُرسله نموذج الويب (``scope_json``): كائن أو نصّ JSON؛
+    الفارغ = «الحزم المعيّنة فقط»."""
+    if raw in (None, ""):
+        return {"card_batches": "assigned"}
+    if isinstance(raw, str):
+        import json
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            raise RadiusValidationError("نطاق البيانات غير صالح.") from None
+    if not isinstance(raw, dict):
+        raise RadiusValidationError("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا.")
+    return raw
+
+
+def _body_scope(body: dict):
+    """(present, scope) — يقبل ``scope`` أو ``scope_json`` مثل الويب."""
+    for key in ("scope", "scope_json"):
+        if key in body:
+            return True, _scope_value(body.get(key))
+    return False, None
+
+
+def _check_portal_password(value) -> None:
+    if value is not None and not isinstance(value, str):
+        raise RadiusValidationError("كلمة مرور بوابة الفحص يجب أن تكون نصًّا.")
+    if isinstance(value, str) and len(value.strip()) > 120:
+        raise RadiusValidationError("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا).")
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/distributors", "distributors_list",
                     require_api_token(distributors_list), methods=["GET"])
     bp.add_url_rule("/distributors", "distributors_create",
                     require_api_token(distributors_create), methods=["POST"])
+    bp.add_url_rule("/distributors/<int:distributor_id>", "distributors_update",
+                    require_api_token(distributors_update), methods=["PATCH"])
     bp.add_url_rule("/distributors/<int:distributor_id>/summary",
                     "distributors_summary",
                     require_api_token(distributors_summary), methods=["GET"])
@@ -103,7 +148,7 @@ def distributors_list():
         )
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
-    items = rows[:limit]
+    items = [_public_distributor(r) for r in rows[:limit]]
     return ok({"items": items, "count": len(items), "limit": limit,
                "offset": offset, "has_more": len(rows) > limit})
 
@@ -138,19 +183,104 @@ def distributors_create():
     body, err = json_object()
     if err:
         return err
+    body = dict(body)
     if not _sees_all():
         # الويب: المدير المحدود مالكُ موزّعه دائمًا (لا يُنشئه باسم مديرٍ آخر).
-        body = dict(body)
         body["admin_id"] = _viewer_id()
+    portal_password = body.pop("portal_password", None)
     try:
+        present, scope = _body_scope(body)
+        body.pop("scope_json", None)
+        # مثل نموذج الويب: بلا نطاق = «الحزم المعيّنة فقط».
+        body["scope"] = scope if present else _scope_value(None)
+        _check_portal_password(portal_password)
         saved = _svc().create_distributor(
             tenant_id=_tid(), actor=_actor(), data=body
         )
+        from ...radius.services.operations import set_distributor_portal_password
+        if set_distributor_portal_password(_tid(), int(saved["id"]), portal_password):
+            saved = _svc().get_distributor(tenant_id=_tid(),
+                                           distributor_id=int(saved["id"]))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
-    return ok({"distributor": saved}, status=201)
+    return ok({"distributor": _public_distributor(saved)}, status=201)
+
+
+# الحقول التي يقبلها PATCH — الرصيد والدين ليسا منها أبدًا (حركات الدفتر وحدها).
+_PATCHABLE = ("name", "display_name", "phone", "email", "status", "credit_limit",
+              "notes", "permissions")
+
+
+def distributors_update(distributor_id: int):
+    """PATCH /distributors/<id> — تعديلٌ جزئيّ بنفس صلاحيات ونطاق الإنشاء
+    والملخّص. الغائب يبقى كما هو؛ balance/debt_balance لا يُكتبان أبدًا."""
+    if not _can_manage_distributors():
+        return fail("forbidden",
+                    "لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.",
+                    status=403)
+    denied = _out_of_scope(distributor_id)
+    if denied is not None:
+        return denied
+    body, err = json_object()
+    if err:
+        return err
+    try:
+        existing = _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    for money in ("balance", "debt_balance"):
+        if money in body:
+            try:
+                same = float(body.get(money)) == float(existing.get(money) or 0)
+            except (TypeError, ValueError):
+                same = False
+            if not same:
+                return fail(
+                    "validation_error",
+                    "الرصيد والدين لا يُعدَّلان من هنا — استخدم حركات التسوية/الدفع "
+                    "(/distributors/<id>/settle).", status=422,
+                    details={"field": money})
+    data = {
+        "name": existing.get("name") or "",
+        "display_name": existing.get("display_name") or "",
+        "email": existing.get("email") or "",
+        "phone": existing.get("phone") or "",
+        "status": existing.get("status") or "active",
+        "permissions": list(existing.get("permissions_json") or []),
+        "scope": existing.get("scope_json") or {},
+        "credit_limit": existing.get("credit_limit") or 0,
+        "notes": existing.get("notes") or "",
+        # None = يبقى المالك/حساب الدخول الحاليّ (COALESCE في الـrepo).
+        "admin_id": None,
+        "login_admin_id": None,
+    }
+    for key in _PATCHABLE:
+        if key in body:
+            data[key] = body.get(key)
+    if "admin_id" in body:
+        # نفس قاعدة الإنشاء: المحدود مالكُ موزّعيه دائمًا (لا ينقله لغيره)؛
+        # «مدير عام»/المالك يختار. فارغ = يبقى المالك الحاليّ.
+        data["admin_id"] = body.get("admin_id") if _sees_all() else _viewer_id()
+    portal_password = body.get("portal_password")
+    try:
+        present, scope = _body_scope(body)
+        if present:
+            data["scope"] = scope
+        _check_portal_password(portal_password)
+        _svc().update_distributor(tenant_id=_tid(), distributor_id=distributor_id,
+                                  actor=_actor(), data=data)
+        from ...radius.services.operations import set_distributor_portal_password
+        set_distributor_portal_password(_tid(), int(distributor_id), portal_password)
+        saved = _svc().get_distributor(tenant_id=_tid(), distributor_id=distributor_id)
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"distributor": _public_distributor(saved)})
 
 
 def distributors_summary(distributor_id: int):
@@ -163,6 +293,8 @@ def distributors_summary(distributor_id: int):
         )
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
+    summary = dict(summary)
+    summary["distributor"] = _public_distributor(summary.get("distributor"))
     return ok({"summary": summary})
 
 

@@ -190,13 +190,10 @@ def _scope_from_service_type(service_type: str) -> str:
     """نطاق الخدمة (hotspot/broadband/both) مشتقّ من «نوع الخدمة» بدل حقل
     منفصل مكرّر: حُذف حقل «نطاق الخدمة» من النموذج لأنه يكرّر بطاقات نوع
     الخدمة، ونشتقّه هنا حتى يحفظ العرض بقابلية الخدمة الصحيحة.
-        Hotspot → hotspot، PPPoE → broadband، Both → both."""
-    t = (service_type or "").strip().lower()
-    if t == "both":
-        return "both"
-    if t in ("pppoe", "broadband"):
-        return "broadband"
-    return "hotspot"
+        Hotspot → hotspot، PPPoE → broadband، Both → both.
+    المنطق في ``services.plans.scope_from_service_type`` (مشترك مع الـAPI)."""
+    from ..services.plans import scope_from_service_type
+    return scope_from_service_type(service_type)
 
 
 def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
@@ -217,20 +214,13 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     hotspot_enabled = service_type in ("Hotspot", "Both")
     ppp_enabled = service_type in ("PPPoE", "Both")
 
-    # MT71 — الوحدة تُشتقّ من الدقائق عند كل حفظ.
-    # منتقي المدة في النموذج يُحوّل «٤ ساعات» إلى 240 ويُرسل الدقائق فقط،
-    # فيبقى العمودان (duration_value/duration_unit) على ما وُلدا عليه
-    # (0 Mins) أو يتقادمان بعد أيّ تعديل ⇒ اللوحة والتقارير تقرأ «240
-    # دقيقة» بدل «4 ساعات» (طلب المالك 2026-07-28: ساعاتٌ وأيّام، والدقائق
-    # لما دون الساعة). الاشتقاق هنا يُبقيهما صادقَين دائمًا بلا تغيير أيّ
-    # سلوك: التنفيذ يبقى على duration_minutes وحده.
+    # MT71 — الوحدة تُشتقّ من الدقائق عند كل حفظ (منتقي المدة يُرسل الدقائق
+    # فقط). الاشتقاق صار في ``services.plans._normalize`` المشترك مع الـAPI
+    # (كان PATCH الدقائق يترك «8 Hrs» مع 1440 دقيقة)؛ نحسبه هنا أيضًا ليُعاد
+    # عرض النموذج صادقًا عند خطأ تحقّق.
+    from ..services.plans import derive_duration
     _dur_min = _i("duration_minutes")
-    if _dur_min and _dur_min % 1440 == 0:
-        _dur_val, _dur_unit = _dur_min // 1440, "Days"
-    elif _dur_min and _dur_min % 60 == 0:
-        _dur_val, _dur_unit = _dur_min // 60, "Hrs"
-    else:
-        _dur_val, _dur_unit = _dur_min, "Mins"
+    _dur_val, _dur_unit = derive_duration(_dur_min)
 
     return AccessPlan(
         id=plan_id,
@@ -306,6 +296,93 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         connection_schedule=_normalize_connection_schedule(_s("connection_schedule")),
         metadata=meta_json,
     )
+
+
+# ── حقول AccessPlan التي **يعرضها** نموذج الويب فعلًا (بما فيها المشتقّة من
+# حقلٍ معروض: duration_* من duration_minutes، والنطاق/التفعيل من service_type
+# — يشتقّها ``services.plans._normalize``). عند التعديل تُؤخذ هذه فقط من
+# النموذج وكل ما سواها يبقى من الباقة المحفوظة: كان فتح الباقة وحفظها بلا
+# تغيير يصفّر ~15 حقلًا لا يعرضها النموذج (الأيام المسموحة، عدد الأجهزة، فرض
+# MAC، الفئة، الدفع المسبق، التجديد التلقائيّ، سعر البطاقة/الجملة، PPP،
+# النطاق…). metadata يُدمج لا يُستبدل.
+_WEB_FORM_FIELDS = (
+    "name", "code", "plan_type", "service_type",
+    "duration_minutes", "duration_value", "duration_unit",
+    "validity_days",
+    "max_daily_minutes", "max_weekly_minutes", "max_monthly_minutes",
+    "quota_total_mb", "quota_daily_mb", "quota_monthly_mb", "quota_reset_strategy",
+    "speed_up_kbps", "speed_down_kbps",
+    "burst_up_kbps", "burst_down_kbps", "burst_threshold_kbps", "burst_time_sec",
+    "concurrent_sessions", "session_timeout_sec", "idle_timeout_sec",
+    "address_pool", "framed_pool", "vlan_id", "ipv6_pool",
+    "bind_mac", "bind_ip",
+    "price", "currency", "description", "enabled", "priority", "color",
+    "speed_control_enabled", "cir_down_kbps", "cir_up_kbps",
+    "burst_enabled", "nightly_unlimited_enabled", "speed_unlimited",
+    "monthly_download_quota_mb", "monthly_upload_quota_mb", "monthly_combined_quota_mb",
+    "daily_download_quota_mb", "daily_upload_quota_mb", "daily_combined_quota_mb",
+    "single_use_once", "max_consumption_times", "ticket_validity_days",
+    "working_hours_limit",
+    "loan_enabled", "max_loan_minutes", "speed_override_allowed",
+    "shared_single_session", "offer_hours_from", "offer_hours_to",
+    "connection_schedule",
+)
+
+
+def _merge_metadata(existing_raw, form_flat: dict) -> str:
+    """metadata المحفوظة + حقول النموذج (``_META_FIELDS``) فوقها. المفاتيح
+    خارج ``_META_FIELDS`` (من التطبيق/الـAPI) تبقى؛ حقلٌ معروضٌ فارغ في النموذج
+    (مفتاحٌ مُطفأ) يُزال من مجموعته — ونسخته المسطّحة القديمة في الجذر تُزال
+    أيضًا كي لا تُقرأ بديلًا."""
+    try:
+        raw_obj = json.loads(existing_raw or "{}") if isinstance(existing_raw, str) else existing_raw
+        present = set(raw_obj) if isinstance(raw_obj, dict) else set()
+    except (ValueError, TypeError):
+        present = set()
+    try:
+        data = _parse_metadata(existing_raw)
+    except Exception:  # noqa: BLE001 — metadata ليست كائنًا (قائمة) ⇒ نبدأ نظيفًا
+        data = _parse_metadata({})
+    data = {k: (dict(v) if isinstance(v, dict) else v) for k, v in data.items()}
+    for grp, fields in _META_GROUPS.items():
+        bucket = data.get(grp)
+        if not isinstance(bucket, dict):
+            bucket = {}
+            data[grp] = bucket
+        for f in fields:
+            v = form_flat.get(f, "")
+            if v not in (None, ""):
+                bucket[f] = v
+            else:
+                bucket.pop(f, None)
+            if f in data and not isinstance(data.get(f), dict):
+                data.pop(f, None)
+        if not bucket and grp not in present:   # لا نُضيف مجموعاتٍ فارغة
+            data.pop(grp, None)
+    return json.dumps(data, ensure_ascii=False)
+
+
+def _form_meta_flat() -> dict:
+    out = {}
+    for mf in _META_FIELDS:
+        v = _s(mf)
+        if v:
+            out[mf] = v
+    return out
+
+
+def _merge_web_form(existing: AccessPlan, dto: AccessPlan) -> AccessPlan:
+    """الباقة المحفوظة + ما يعرضه النموذج فقط (انظر ``_WEB_FORM_FIELDS``)."""
+    from dataclasses import replace
+    changes = {f: getattr(dto, f) for f in _WEB_FORM_FIELDS}
+    # نوع خدمة قديم (Balance/Voucher…) يعرضه النموذج «هوت سبوت»: يبقى كما هو
+    # ما لم يغيّر المستخدم البطاقتين فعلًا.
+    old_st = (existing.service_type or "").strip()
+    if old_st and old_st.lower() not in ("hotspot", "pppoe", "broadband", "both") \
+            and dto.service_type == "Hotspot":
+        changes["service_type"] = existing.service_type
+    changes["metadata"] = _merge_metadata(existing.metadata, _form_meta_flat())
+    return replace(existing, **changes)
 
 
 def _normalize_connection_schedule(raw: str) -> str:
@@ -420,11 +497,15 @@ def plans_update(plan_id: int):
             flash(e.message, "error")
         return redirect(url_for("radius.plans_edit", plan_id=plan_id))
 
+    try:
+        existing = get_plans_service().get(plan_id)
+    except RadiusError:
+        abort(404)
     # علمَا «توزيع متساوٍ» (= تقسيم السرعة على الأجهزة) قبل الحفظ — لكشف التغيير.
-    _old_split = _plan_split_flags_by_id(plan_id)
+    _old_split = _plan_split_flags(existing)
 
     try:
-        dto = _form_to_dto(plan_id=plan_id)
+        dto = _merge_web_form(existing, _form_to_dto(plan_id=plan_id))
     except RadiusError as e:
         flash(e.message, "error")
         return redirect(url_for("radius.plans_edit", plan_id=plan_id))
@@ -467,15 +548,30 @@ def plans_clone(plan_id: int):
     return redirect(url_for("radius.plans_edit", plan_id=saved.id))
 
 
-def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
-    """(توزيع_تنزيل, توزيع_رفع) من metadata العرض — الافتراضيّ (False, False)."""
+def _plan_split_flags(plan) -> tuple[bool, bool]:
+    """(توزيع_تنزيل, توزيع_رفع) من metadata العرض — الافتراضيّ (False, False).
+    العلَمان مخزّنان تحت ``metadata.subscription`` (كانت القراءة من الجذر
+    فتُرى دائمًا False: إطفاؤه لا يُورَّث، وتشغيله يُعاد توريثه مع كل حفظ).
+    المفتاح المسطّح في الجذر (صيغة قديمة) بديلٌ فقط حين يغيب عن المجموعات."""
     def _on(v) -> bool:
         return str(v).strip().lower() in ("1", "true", "on", "t", "yes")
     try:
-        import json as _json
-        p = get_plans_service().get(plan_id)
-        m = _json.loads(getattr(p, "metadata", "") or "{}")
-        return (_on(m.get("equal_download_speed")), _on(m.get("equal_upload_speed")))
+        raw = _parse_metadata(getattr(plan, "metadata", "") or "{}")
+        flat = _grouped_to_flat(raw)
+
+        def _get(k):
+            if k in flat:
+                return flat.get(k)
+            v = raw.get(k)
+            return None if isinstance(v, dict) else v
+        return (_on(_get("equal_download_speed")), _on(_get("equal_upload_speed")))
+    except Exception:  # noqa: BLE001
+        return (False, False)
+
+
+def _plan_split_flags_by_id(plan_id: int) -> tuple[bool, bool]:
+    try:
+        return _plan_split_flags(get_plans_service().get(plan_id))
     except Exception:  # noqa: BLE001
         return (False, False)
 
