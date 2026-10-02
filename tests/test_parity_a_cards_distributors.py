@@ -283,7 +283,11 @@ def test_api_generate_rejects_distributor_of_other_manager(app, client):
         "manager_id": owner}), 422)
 
 
-def test_api_generate_non_super_owns_batch_and_cannot_use_foreign_distributor(app, client):
+def test_api_generate_non_super_owns_batch_and_cannot_use_foreign_distributor(app, client, monkeypatch):
+    # FIX117: direct generation by a manager needs the owner's explicit grant
+    # (otherwise a free batch with no wallet debit) — grant it here.
+    from app.radius.services import manager_grants
+    monkeypatch.setattr(manager_grants, "full_batch_form_granted", lambda *a, **k: True)
     with app.app_context():
         pid = _plan()
         mgr = _admin(("cards.view", "cards.generate", "cards.edit_batch"))
