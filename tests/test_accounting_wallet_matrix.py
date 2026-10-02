@@ -131,9 +131,13 @@ def test_wallet_transaction_ledger_reconciles(app):
 # B — ManagerCreditService spend gate boundaries
 # ════════════════════════════════════════════════════════════════════════
 def _owner():
+    """The primary owner = admin id #1, which a fresh install always boots
+    (commit d13fb302, ensure_bootstrap_admin). A later is_super_admin account
+    is NOT the owner and stays capped (manager_credit.is_uncapped)."""
     from app.radius.db.repos import admins_repo
 
-    return admins_repo.create_admin(username="own", password="x", is_super_admin=True).id
+    admins_repo.ensure_bootstrap_admin()
+    return admins_repo.primary_admin_id()
 
 
 def _mgr(debt_cap=None, loan_cap=None):

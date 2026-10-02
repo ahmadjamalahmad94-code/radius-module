@@ -76,11 +76,17 @@ def _wallet_balance_minor(owner_type: str, owner_id: int, tenant_id: int = 1) ->
 
 
 def _owner_admin():
-    """Create admin id #1 — the primary owner (uncapped provider)."""
+    """The primary owner (uncapped provider) = admin id #1.
+
+    A fresh install ALWAYS boots the default admin (commit d13fb302,
+    ensure_bootstrap_admin — even under HOBERADIUS_NO_SEED), so that account is
+    the min-id owner; a later ``is_super_admin`` account is NOT the owner and is
+    capped like any manager (manager_credit.is_uncapped, owner decision). Return
+    the real owner instead of creating a look-alike."""
     from app.radius.db.repos import admins_repo
 
-    return admins_repo.create_admin(username="owner1", password="x",
-                                    is_super_admin=True).id
+    admins_repo.ensure_bootstrap_admin()
+    return admins_repo.primary_admin_id()
 
 
 def _manager(*, debt_cap=None, loan_cap=None):
@@ -262,6 +268,23 @@ def test_owner_is_uncapped(app, cost_minor):
         assert svc.is_uncapped(owner) is True
         decision = svc.evaluate(owner, cost_minor)
         assert decision.ok and decision.mode == "debt"  # funded as uncapped debt
+
+
+@pytest.mark.parametrize("cost_minor", [5000, 1000000])
+def test_super_flag_non_owner_is_capped(app, cost_minor):
+    # Owner decision (manager_credit.is_uncapped): only the primary owner is
+    # uncapped — an is_super_admin («مدير عام») account with an empty wallet and
+    # no cap is blocked like any manager.
+    from app.radius.db.repos import admins_repo
+
+    with app.app_context():
+        _owner_admin()
+        flagged = admins_repo.create_admin(username="super_not_owner", password="x",
+                                           is_super_admin=True).id
+        _fund_manager(flagged, 0.0)
+        svc = _credit_svc()
+        assert svc.is_uncapped(flagged) is False
+        assert svc.evaluate(flagged, cost_minor).ok is False
 
 
 def test_gate_partial_wallet_then_debt(app):
