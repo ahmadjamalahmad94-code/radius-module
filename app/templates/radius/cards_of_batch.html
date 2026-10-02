@@ -483,10 +483,12 @@
        مؤشر «تحميل / رفع» انتقل إلى سطر الوصف حتى تبقى الخمسة الرئيسية
        مرتاحة في الصف الواحد. #}
     <section class="hub-hero-shell">
+    {#- nowrap: رمزُ الحزمة وتاريخُ الإنشاء+الوقت وحدةٌ واحدة لا تلتفّ على سطرَين («B-20260925-» / «0001»،
+        «2026-09-25» / «13:57»). Markup + ~ يُهرِّب الأجزاءَ النصّيّة (batch_code، الاسم) تلقائيًّا. #}
     {{ hub.megahero(
-      "كروت الحزمة ⁦" ~ batch.batch_code ~ "⁩",
+      "كروت الحزمة " ~ ('<span style="white-space:nowrap">⁦'|safe) ~ batch.batch_code ~ ('⁩</span>'|safe),
       subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
-               ~ " · أنشئت " ~ (batch.created_at|dt_local if batch.created_at else '—')
+               ~ " · أنشئت " ~ ('<span style="white-space:nowrap">'|safe) ~ (batch.created_at|dt_local if batch.created_at else '—') ~ ('</span>'|safe)
                ~ " · " ~ (batch.created_by or 'بدون مدير')
                ~ " · تحميل ⁦" ~ summary.download_label ~ "⁩ / رفع ⁦" ~ summary.upload_label ~ "⁩",
       icon="id-card",
@@ -509,7 +511,7 @@
         {'icon': 'table-columns',       'text': 'افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).'},
         {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.'},
         {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.'},
-        {'icon': 'ellipsis',            'text': 'أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة (⁦10–100⁩).'},
+        {'icon': 'ellipsis',            'text': ('أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة <span style="white-space:nowrap">(⁦10–100⁩).</span>'|safe)},
       ],
       note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
     )) %}
