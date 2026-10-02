@@ -186,6 +186,23 @@ def to_space_ts(raw: Any) -> str:
     return str(raw or "").replace("T", " ").replace("Z", "").strip()
 
 
+def card_reset_since(conn, tenant_id: int, username: str) -> str:
+    """حدُّ «تصفير الاستخدام» للبطاقة بصيغة المسافة ('' إن لم تُصفَّر).
+
+    🔴 فادي نت 2026-10-02: بطاقةٌ صُفِّرت ثمّ دخلت فختمها المحرّك من **أقدم
+    جلسةٍ قبل التصفير** (أمس) ⇒ وُلدت منتهيةً، وطردها الحارس بعد دقائق.
+    كلّ ما يشتقّ وقت البطاقة من ``radacct`` يجب أن يتجاهل ما قبل هذا الحدّ."""
+    try:
+        row = conn.execute(
+            "SELECT usage_reset_at FROM cards WHERE tenant_id = ? AND username = ?",
+            (int(tenant_id), str(username))).fetchone()
+    except Exception:  # noqa: BLE001 — جدولٌ قديم بلا العمود
+        return ""
+    if not row:
+        return ""
+    return to_space_ts(row["usage_reset_at"] if hasattr(row, "keys") else row[0])
+
+
 def active_other_devices(tenant_id: int, username: str, req,
                          *, mac_aware: bool) -> list[dict]:
     """صفوف radacct الحيّة فعلاً لـ ``username`` (acctstoptime IS NULL + ضمن

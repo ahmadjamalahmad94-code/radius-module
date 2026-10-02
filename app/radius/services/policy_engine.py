@@ -1344,7 +1344,11 @@ def _card_budget_session_cap(sub: Subscriber, plan: AccessPlan) -> Optional[int]
             row["time_value"] or 0, row["time_unit"] or "days")
         if base <= 0:
             return None
-        used = _accounted_session_seconds(int(sub.tenant_id), sub.username)
+        from ..db.connection import db as _db
+        from .device_limit import card_reset_since
+        used = _accounted_session_seconds(
+            int(sub.tenant_id), sub.username,
+            since_iso=card_reset_since(_db(), int(sub.tenant_id), sub.username) or None)
         return max(1, base + extra - used)
     if sub.expire_at:
         return 0
@@ -1504,12 +1508,14 @@ def _earliest_accounted_start(conn, tenant_id: int, username: str):
     محصَّن: أيُّ خطأٍ يُعيد None فيبقى السلوكُ القديم (الآن).
     """
     try:
-        from .device_limit import _parse_acct_dt, acct_norm_sql
+        from .device_limit import _parse_acct_dt, acct_norm_sql, card_reset_since
+        since = card_reset_since(conn, tenant_id, username)
         row = conn.execute(
             f"SELECT MIN({acct_norm_sql('acctstarttime')}) AS s FROM radacct "
             f" WHERE tenant_id = ? AND username = ? "
-            f"   AND acctstarttime IS NOT NULL AND acctstarttime != ''",
-            (int(tenant_id), username)).fetchone()
+            f"   AND acctstarttime IS NOT NULL AND acctstarttime != ''"
+            f"   AND {acct_norm_sql('acctstarttime')} >= ?",
+            (int(tenant_id), username, since)).fetchone()
         if not row or not row["s"]:
             return None
         return _parse_acct_dt(row["s"])

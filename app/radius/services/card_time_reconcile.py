@@ -164,12 +164,14 @@ def _first_connection(conn: sqlite3.Connection, tenant_id: int, username: str,
     خُتمت البطاقةُ من دخولٍ لاحقٍ — فبدت النافذةُ صادقةً وهي مزوَّرة، وهذا
     المصالِحُ كان يمرّ عليها ولا يراها. المحاسبةُ أقدمُ شاهدٍ فهي الحَكَم.
     والقراءةُ عبر `acct_norm_sql` لأنّ الجدولَ يحمل صيغتَي طوابع."""
-    from .device_limit import acct_norm_sql
+    from .device_limit import acct_norm_sql, card_reset_since
+    # ما قبل «تصفير الاستخدام» ليس بدايةً لهذه النافذة.
     row = conn.execute(
         f"SELECT MIN({acct_norm_sql('acctstarttime')}) AS first_start "
         f"  FROM radacct WHERE tenant_id = ? AND username = ? "
-        f"   AND acctstarttime IS NOT NULL AND acctstarttime <> ''",
-        (tenant_id, username),
+        f"   AND acctstarttime IS NOT NULL AND acctstarttime <> '' "
+        f"   AND {acct_norm_sql('acctstarttime')} >= ?",
+        (tenant_id, username, card_reset_since(conn, tenant_id, username)),
     ).fetchone()
     stamped = _parse_dt(first_used_at)
     accounted = _parse_dt(row["first_start"] if row else None)

@@ -1841,6 +1841,20 @@ def reset_card_usage(tenant_id: int, card_id: int) -> bool:
             """,
             (now_iso(), tenant_id, card_id),
         )
+        if cur.rowcount:
+            # 🔴 المرآة في `subscribers` هي ما يُنفِّذ به المُصادِق — بقاءُ
+            #    `expire_at` القديم فيها يجعل البطاقة المصفَّرة منتهيةً
+            #    (فادي نت 2026-10-02). وأوّل دخولٍ يختمها من جديد.
+            conn.execute(
+                """
+                UPDATE subscribers
+                   SET expire_at = NULL, first_login_at = NULL
+                 WHERE tenant_id = ? AND user_type = 'card'
+                   AND username = (SELECT username FROM cards
+                                    WHERE tenant_id = ? AND id = ?)
+                """,
+                (tenant_id, tenant_id, card_id),
+            )
         return bool(cur.rowcount)
 
 

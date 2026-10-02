@@ -111,10 +111,15 @@ def _card_extra_seconds(tenant_id: int, username: str) -> int:
 def _accounted_seconds(tenant_id: int, username: str) -> int:
     """مجموع acctsessiontime من radacct (نفس عدّاد policy_engine لوقت الاتصال)."""
     from ..db.connection import db
-    row = db().execute(
+    from .device_limit import acct_norm_sql, card_reset_since
+    conn = db()
+    # ما قبل «تصفير الاستخدام» لا يُحسب على البطاقة.
+    row = conn.execute(
         "SELECT COALESCE(SUM(acctsessiontime), 0) AS s FROM radacct "
-        "WHERE tenant_id = ? AND username = ?",
-        (int(tenant_id), str(username)),
+        "WHERE tenant_id = ? AND username = ? "
+        f"AND {acct_norm_sql('acctstarttime')} >= ?",
+        (int(tenant_id), str(username),
+         card_reset_since(conn, tenant_id, username)),
     ).fetchone()
     return int((row["s"] if row else 0) or 0)
 

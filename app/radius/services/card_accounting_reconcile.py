@@ -152,6 +152,9 @@ class CardAccountingReconcileService:
                 (SELECT MIN(r.acctstarttime) FROM radacct r
                    WHERE r.tenant_id = c.tenant_id AND r.username = c.username
                      AND r.acctstarttime IS NOT NULL AND r.acctstarttime <> ''
+                     -- ما قبل «تصفير الاستخدام» ليس بدايةً لهذه النافذة
+                     AND replace(replace(r.acctstarttime, 'T', ' '), 'Z', '')
+                         >= replace(replace(COALESCE(c.usage_reset_at, ''), 'T', ' '), 'Z', '')
                 ) AS first_session_at
             FROM cards c
             LEFT JOIN card_batches b
