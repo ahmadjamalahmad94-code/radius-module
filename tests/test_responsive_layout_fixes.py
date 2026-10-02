@@ -110,9 +110,17 @@ KEY_PAGES = [
     "/admin/radius/network/devices",
     "/admin/radius/connected-stats",
     "/admin/radius/webhooks",
-    "/admin/radius/tunnels",
+    # «الأنفاق» القديمة أُلغيت (قرار المالك 2026-07، 52c022fd) وتحوّل إلى
+    # «جسر الإدارة» — فنَفحص الصفحة الوريثة بدلها.
+    "/admin/radius/admin-bridge",
     "/admin/radius/settings/system",
 ]
+
+
+def test_retired_tunnels_page_redirects_to_admin_bridge(client):
+    r = client.get("/admin/radius/tunnels")
+    assert r.status_code in (302, 303)
+    assert r.headers["Location"].endswith("/admin/radius/admin-bridge")
 
 
 @pytest.mark.parametrize("path", KEY_PAGES)
