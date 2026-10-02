@@ -20,6 +20,12 @@ def client(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # Collection is FROZEN by policy until a real gateway (jawwal_pay + api
+    # confirmation) is linked (collection_frozen, commit 0d4def37) — every
+    # write here would answer 423. These tests exercise the collection logic
+    # itself, so they open it through the documented dev/test hatch; the
+    # freeze itself is guarded by test_payment_collection_api::*frozen*.
+    monkeypatch.setenv("HOBERADIUS_COLLECTION_FORCE_OPEN", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for key in list(sys.modules):

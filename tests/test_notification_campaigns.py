@@ -19,12 +19,35 @@ def app(monkeypatch, tmp_path):
     db_file = os.path.join(tmp_path, "notification_campaigns.db")
     monkeypatch.setenv("HOBERADIUS_DB_PATH", db_file)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # Test-safe app: without NO_SEED the license gate's dual-key test bypass
+    # is not armed (conftest) and every admin page 302s to /_license/activate.
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     reset_for_tests(db_file)
     from app import create_app
 
-    return create_app()
+    flask_app = create_app()
+    with flask_app.app_context():
+        _seed_subscribers(4)
+        # manager #2 (admin #1 = the bootstrap owner) for the manager-scope audience.
+        from app.radius.db.repos import admins_repo
+        assert admins_repo.create_admin(username="camp_mgr2", password="x12345678").id == 2
+    return flask_app
+
+
+def _seed_subscribers(count: int) -> None:
+    """Subscribers #1..#count — the audience tests address them by id. They
+    used to come from the demo seed, which is off in a test-safe app."""
+    from app.radius.core.types import Subscriber
+    from app.radius.db.repos import subscribers_repo
+
+    for i in range(1, count + 1):
+        sub = subscribers_repo.upsert_subscriber(Subscriber(
+            id=None, tenant_id=1, username=f"camp_sub{i}", password="pw",
+            full_name=f"Sub {i}", mobile=f"059900040{i}", status="enabled",
+        ))
+        assert int(sub.id) == i
 
 
 def _auth_session(client):

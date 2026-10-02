@@ -540,6 +540,20 @@ class SetupWizardService:
                 step_key=STEP_VPN_RADIUS_VERIFICATION,
             ),
         )
+        # عنوانُ الخادم العامّ صار إعدادًا مطلوبًا بلا افتراضٍ مخبوء (75d7dc7d:
+        # عنوانُ زبونٍ واحدٍ كان يتسرّب لكلّ النسخ). نفحصه قبل حجز عنوان نفقٍ
+        # كي لا يبقى حجزٌ معلّق، ونُرجع رسالةً عربيّةً يفهمها المشغّل.
+        if not str(
+            payload.get("vps_public_endpoint")
+            or self._router_provisioning.endpoint_defaults().get("vps_public_endpoint")
+            or ""
+        ).strip():
+            raise SetupWizardValidationError(
+                "عنوان الخادم العامّ غير مضبوط — أدخله في الحقل أو اضبط "
+                "HOBERADIUS_WG_SERVER_ENDPOINT (أو HOBERADIUS_PUBLIC_IP) في بيئة "
+                "الخادم. لا عنوان افتراضيّ مثبّت عمدًا كي لا تُوجَّه الراوترات "
+                "لخادم خاطئ."
+            )
         reservation = self._router_provisioning.reserve_for_run(
             tenant_id=tenant_id,
             wizard_run_id=run_id,

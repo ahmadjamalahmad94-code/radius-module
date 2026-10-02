@@ -20,6 +20,12 @@ def client(monkeypatch):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    # Collection is FROZEN by policy until a real gateway (jawwal_pay + api
+    # confirmation) is linked (collection_frozen, commit 0d4def37) — every
+    # write here would answer 423. These tests exercise the collection logic
+    # itself, so they open it through the documented dev/test hatch; the
+    # freeze itself is guarded by test_payment_collection_api::*frozen*.
+    monkeypatch.setenv("HOBERADIUS_COLLECTION_FORCE_OPEN", "1")
     monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     for key in list(sys.modules):
@@ -228,3 +234,35 @@ def test_request_list_filters(client):
     data = response.get_json()["data"]
     assert data["count"] == 1
     assert data["items"][0]["purpose"] == "card_purchase"
+
+
+# ── Freeze policy guard (commit 0d4def37, collection_frozen) ────────────────
+# Without the dev/test hatch the collection section stays FROZEN until a real
+# gateway is linked: a manual wallet — even enabled — never accepts a request.
+def test_collection_frozen_without_real_gateway_answers_423(client, monkeypatch):
+    monkeypatch.delenv("HOBERADIUS_COLLECTION_FORCE_OPEN", raising=False)
+    # Reads + settings stay available (preparing the section is allowed).
+    assert client.get("/api/v1/payments/settings", headers=_auth()).status_code == 200
+    assert _enable_settings(client).status_code == 200
+    response = client.post(
+        "/api/v1/payments/requests",
+        json={"payer_type": "subscriber", "purpose": "card_purchase", "amount": 20},
+        headers=_auth(),
+    )
+    assert response.status_code == 423
+    assert response.get_json()["error"]["code"] == "collection_frozen"
+
+
+def test_collection_freeze_rule_requires_jawwal_pay_with_api_confirmation(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.radius.routes.finance_collection import collection_frozen
+
+    monkeypatch.delenv("HOBERADIUS_COLLECTION_FORCE_OPEN", raising=False)
+    assert collection_frozen(None) is True
+    assert collection_frozen(SimpleNamespace(
+        enabled=True, provider="manual_wallet", confirmation_mode="manual")) is True
+    assert collection_frozen(SimpleNamespace(
+        enabled=False, provider="jawwal_pay", confirmation_mode="api")) is True
+    assert collection_frozen(SimpleNamespace(
+        enabled=True, provider="jawwal_pay", confirmation_mode="api")) is False

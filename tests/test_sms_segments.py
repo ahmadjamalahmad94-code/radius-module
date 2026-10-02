@@ -82,12 +82,28 @@ def test_summary_ar_mentions_count_and_over_limit():
 
 
 # ───────────────────── SMS default templates stay ≤ 60 ──────────────────────
+def _sends_template_over_sms(event) -> bool:
+    """Does the SMS channel of this event send ``event.template``?
+
+    Credential-bearing events (sends_credentials / sends_card_credentials /
+    sends_account_credentials) never do: their SMS channel sends a dedicated
+    short credentials body directly (notifications_engine dispatch, commit
+    72ebed64 — subscriber_created gained the SMS channel that way), and the
+    friendly ``template`` only feeds the other channels. Their real SMS body is
+    pinned by test_credentials_sms_body_is_single_segment below."""
+    return "sms" in event.channels and not (
+        event.sends_credentials
+        or event.sends_card_credentials
+        or event.sends_account_credentials
+    )
+
+
 def test_all_sms_default_templates_within_60_chars():
     from app.radius.services.notifications_engine import EVENTS
 
     offenders = []
     for key, event in EVENTS.items():
-        if "sms" in event.channels:
+        if _sends_template_over_sms(event):
             info = ss.analyze(event.template)
             if info.length > ss.RECOMMENDED_MAX:
                 offenders.append((key, info.length, event.template))
@@ -98,9 +114,19 @@ def test_sms_default_templates_are_single_segment():
     from app.radius.services.notifications_engine import EVENTS
 
     for key, event in EVENTS.items():
-        if "sms" in event.channels:
+        if _sends_template_over_sms(event):
             info = ss.analyze(event.template)
             assert info.segments <= 1, f"{key} default template is multi-segment"
+
+
+def test_credentials_sms_body_is_single_segment():
+    """What subscriber_created ACTUALLY sends by SMS: the short credentials body
+    (typical 8-char user/pass) — within 60 chars, one paid segment."""
+    from app.radius.services.subscriber_credentials import build_body
+
+    info = ss.analyze(build_body("user1234", "pass5678"))
+    assert info.length <= ss.RECOMMENDED_MAX
+    assert info.segments == 1
 
 
 # ─────────────────────── send path surfaces segment cost ────────────────────

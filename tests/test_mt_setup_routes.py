@@ -46,6 +46,10 @@ def app(monkeypatch, tmp_path):
                         "TestServerPubKey00000000000000000000000000A=")
     monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT",
                         "203.0.113.10:51820")
+    # 2c17ef2f removed the hardcoded SSTP server-host default (it leaked one
+    # box's IP to every unconfigured install) — the SSTP/PPTP tunnel path now
+    # requires the host explicitly, exactly like the WG endpoint above.
+    monkeypatch.setenv("HOBERADIUS_ACCEL_SERVER_HOST", "203.0.113.10")
     for k in list(sys.modules):
         if k.startswith("app."):
             del sys.modules[k]
@@ -519,6 +523,28 @@ def test_v6_wizard_works_without_any_address(app, client):
         ).fetchone()
     assert row is not None and row["address"]            # row created + has IP
     assert row["management_tunnel_type"] == "sstp_mgmt"
+
+
+def test_v6_wizard_refuses_without_accel_host(app, client, monkeypatch):
+    """2c17ef2f: with no SSTP server host configured the wizard must fail
+    clearly and create NO router row — never fall back to a baked-in IP."""
+    monkeypatch.delenv("HOBERADIUS_ACCEL_SERVER_HOST", raising=False)
+    monkeypatch.delenv("HOBERADIUS_PUBLIC_IP", raising=False)
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/setup",
+        data={"_csrf_token": token, "name": "MT-v6-NoHost", "ros_version": "6"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    assert res.headers.get("Location", "").endswith("/admin/radius/mt/setup")
+    with app.app_context():
+        from app.radius.db.connection import db
+        row = db().execute(
+            "SELECT id FROM nas_devices WHERE name = ?", ("MT-v6-NoHost",),
+        ).fetchone()
+    assert row is None
 
 
 def test_v7_wizard_sstp_uses_tunnel_not_wireguard(app, client):

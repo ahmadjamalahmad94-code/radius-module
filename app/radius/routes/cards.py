@@ -1133,8 +1133,13 @@ def _can_generate_batches() -> bool:
     if not me:
         return False
     from ..services import manager_grants
-    return manager_grants.action_permitted(int(me), "cards.generate",
-                                           tenant_id=_tid())
+    # FIX117 — بعد توحيد RBAC (da238d4b) صار «cards.generate» فعلًا مشتقًّا من
+    # مفتاح الدور نفسه الذي يفتح عارض العروض، فكان كلّ «مشغّل» يرى النموذج
+    # الكامل ويولّد بلا خصم. المفتاح شرطٌ لازم، والمنح الصريح شرطٌ ثانٍ.
+    if not manager_grants.action_permitted(int(me), "cards.generate",
+                                           tenant_id=_tid()):
+        return False
+    return manager_grants.full_batch_form_granted(int(me), tenant_id=_tid())
 
 
 def _can_import_batches() -> bool:

@@ -18,6 +18,8 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp_path, "t.db"))
     monkeypatch.setenv("HOBERADIUS_API_TOKENS", token)
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    # تجاوزُ بوّابة الترخيص في الاختبار يتطلّب العلامتين معًا (5126bdbe).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_WG_PEERS_DIR", str(tmp_path / "peers.d"))
     reset_for_tests(os.path.join(tmp_path, "t.db"))
     from app import create_app
@@ -25,12 +27,15 @@ def app(monkeypatch, tmp_path):
     return create_app()
 
 
-def _auth(client):
+def _auth(client, *, owner: bool = True):
     with client.session_transaction() as sess:
         sess["admin_id"] = 1
         sess["admin_user"] = "qa_admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
+        # أسطولُ المعالج وإلغاءُ الحجز والكنس صارت للمالك فقط
+        # (1ca4b71a — fix(rbac) p01: setup_wizard_fleet_* = __super__).
+        sess["is_super_admin"] = owner
 
 
 def _seed_router(
@@ -191,3 +196,35 @@ def test_fleet_data_includes_tentative_fields(app):
     assert row["is_tentative"] is True
     assert row["tentative_expires_at"]
     assert row["is_reclaimed"] is False
+
+
+# ─── Owner-only (1ca4b71a) ─────────────────────────────────
+
+
+def test_fleet_cancel_and_reclaim_are_owner_only(app):
+    """إلغاءُ الحجز والكنس يحرّران عناوينَ أنفاق — غيرُ المالك يُرفض 403
+    ولا يُمسّ الصفّ."""
+    client = app.test_client()
+    _auth(client, owner=False)
+    with app.app_context():
+        rid = _seed_router(label="guarded")
+    cancel = client.post(
+        f"/admin/radius/setup-wizard/fleet/router/{rid}/cancel-tentative",
+        headers={"X-CSRFToken": "test-csrf"},
+        json={},
+    )
+    sweep = client.post(
+        "/admin/radius/setup-wizard/fleet/reclaim-expired",
+        headers={"X-CSRFToken": "test-csrf"},
+        json={},
+    )
+    data = client.get("/admin/radius/setup-wizard/fleet/data")
+    assert cancel.status_code == 403
+    assert sweep.status_code == 403
+    assert data.status_code == 403
+    with app.app_context():
+        row = db().execute(
+            "SELECT lifecycle_state FROM router_provisioning_registry WHERE id=?",
+            (rid,),
+        ).fetchone()
+    assert row["lifecycle_state"] == "waiting_router_key"

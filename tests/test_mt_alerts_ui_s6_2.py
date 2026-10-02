@@ -39,6 +39,11 @@ def _login(client) -> None:
         username=u, password="s6-pass", full_name="S6.2",
         is_super_admin=True,
     )
+    # owner-only bypass (6824f26): the is_super_admin flag alone no longer
+    # bypasses RBAC, and the boot-time «admin» (d13fb302) is always the
+    # min-id owner — so designate the tester as owner, as the licensing
+    # panel does. Same fix as test_route_permissions_s3_2._login.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "s6-pass"},
@@ -98,8 +103,12 @@ def test_alerts_index_filter_by_severity(app, client):
     _login(client)
     html = client.get(
         "/admin/radius/alerts?severity=critical").get_data(as_text=True)
-    assert "الراوتر مفصول" in html
-    assert "انتفاضة ترافيك" not in html
+    # The topbar bell (0d4def37) lists ALL open alerts on every page, so the
+    # filter is asserted on the alerts table only, not the whole document.
+    start = html.index("data-mt-alerts-rows")
+    table = html[start:html.index("</table>", start)]
+    assert "الراوتر مفصول" in table
+    assert "انتفاضة ترافيك" not in table
 
 
 def test_alerts_index_resolved_view(app, client):

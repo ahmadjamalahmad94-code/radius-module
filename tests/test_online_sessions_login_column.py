@@ -75,8 +75,9 @@ def test_two_distinct_column_headers(app):
     assert 'data-col="name"' in html
     assert 'data-col="login"' in html
     assert "اسم الدخول" in html
-    # …and the login column has its own <th>.
-    assert '<th data-col="login">' in html
+    # …and the login column has its own <th> (sortable since e65a75c6,
+    # click-to-sort columns — hence the extra attribute).
+    assert '<th data-col="login" data-sortable>' in html
 
 
 def test_name_and_login_are_separate_cells(app):

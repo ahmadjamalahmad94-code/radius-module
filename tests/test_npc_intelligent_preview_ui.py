@@ -65,8 +65,9 @@ def _login_super(client, monkeypatch):
 
 
 def _csrf(client):
+    # remote-access NPC UI retired (66f551e7) — prime the token on web-block.
     client.get(
-        "/admin/radius/network-policy/remote-access/new"
+        "/admin/radius/network-policy/web-block/new"
     )
     with client.session_transaction() as s:
         return s.get("_csrf_token") or ""
@@ -95,19 +96,24 @@ def _seed_router(app, name="rt1"):
             return int(cur.lastrowid)
 
 
-def _create_remote_policy(client, csrf, router_id, name="Win"):
+def _create_previewable_policy(app, client, csrf, router_id, name="WB-ok"):
+    """A VALID policy whose preview exercises every intelligence section.
+
+    These tests used a remote-access policy, but that NPC web UI was
+    retired (66f551e7 — duplicated «خدماتي»). A web-block policy with one
+    real target is the surviving equivalent: a non-empty, valid plan."""
     r = client.post(
-        "/admin/radius/network-policy/remote-access/new",
+        "/admin/radius/network-policy/web-block/new",
         data={"_csrf_token": csrf,
               "name": name, "router_id": str(router_id),
-              "allow_winbox": "on",
-              "allow_webfig_https": "on",
-              "source_address_list": "ops",
-              "expires_at": "2027-01-01T00:00:00Z",
-              "enabled": "on"},
+              "scope": "all_users",
+              "fail_open": "on", "enabled": "on"},
         follow_redirects=False,
     )
     assert r.status_code in (302, 303), r.data.decode()[:200]
+    pid = _last_policy_id(app, "wb")
+    _add_target(client, csrf, pid, "tiktok.com", category="tiktok")
+    return pid
 
 
 def _create_web_block_policy(client, csrf, router_id, name="WB"):
@@ -153,17 +159,16 @@ def _last_policy_id(app, repo_attr):
 # ─── Section presence ────────────────────────────────────────
 
 
-def test_all_ten_sections_present_on_remote_access_preview(
+def test_all_ten_sections_present_on_policy_preview(
     app, client, monkeypatch,
 ):
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
 
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     assert r.status_code == 200
@@ -204,10 +209,9 @@ def test_health_score_renders_score_and_grade(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -229,20 +233,12 @@ def test_smart_recommendations_render_when_present(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    # Remote access policy without source list + without
-    # expiry forces a blocking error → recommendation appears.
-    client.post(
-        "/admin/radius/network-policy/remote-access/new",
-        data={"_csrf_token": csrf,
-              "name": "no-source-no-expiry",
-              "router_id": str(rid),
-              "allow_winbox": "on",
-              "enabled": "on"},
-        follow_redirects=False,
-    )
-    pid = _last_policy_id(app, "ra")
+    # (Was a remote-access policy without source/expiry; that UI was
+    # retired in 66f551e7 — a target-less web-block is the equivalent.)
+    _create_web_block_policy(client, csrf, rid, name="no-targets")
+    pid = _last_policy_id(app, "wb")
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     assert r.status_code == 200
@@ -365,10 +361,9 @@ def test_canary_plan_renders_steps(app, client, monkeypatch):
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -388,18 +383,19 @@ def test_glossary_section_renders_items(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
     assert "شرح مبسَّط للمصطلحات" in html
-    # remote_access plans include `input-chain`, `scheduler`,
-    # `accept` glossary entries.
+    # Only the terms the plan actually uses are explained
+    # (npc_beginner_explainer._terms_used): every plan carries
+    # «firewall»; a web-block plan adds its address-list.
     assert 'data-test="npc-glossary-item"' in html
-    assert "سلسلة input" in html or "السماح" in html
+    assert "الجدار الناري" in html
+    assert "قائمة العناوين" in html
 
 
 # ─── Rollback confidence visible ─────────────────────────────
@@ -411,10 +407,9 @@ def test_rollback_section_shows_positive_state_for_valid_plan(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -431,10 +426,9 @@ def test_script_viewer_is_collapsed_and_after_intelligence(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -464,10 +458,9 @@ def test_dry_run_banner_and_label_remain_on_preview(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -490,10 +483,9 @@ def test_apply_form_uses_safe_label_in_new_preview_ui(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")
@@ -518,10 +510,9 @@ def test_preview_avoids_panic_language(
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     csrf = _csrf(client)
-    _create_remote_policy(client, csrf, rid)
-    pid = _last_policy_id(app, "ra")
+    pid = _create_previewable_policy(app, client, csrf, rid)
     r = client.get(
-        f"/admin/radius/network-policy/remote-access/{pid}"
+        f"/admin/radius/network-policy/web-block/{pid}"
         "/preview"
     )
     html = r.data.decode("utf-8")

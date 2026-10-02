@@ -26,6 +26,10 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_VPN_POOL", "10.10.0.0/24")
     monkeypatch.setenv("HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP", "10.10.0.1")
+    # إعدادٌ مطلوبٌ بلا افتراضٍ مخبوء منذ 75d7dc7d (لا عنوان زبونٍ مثبّت).
+    monkeypatch.setenv("HOBERADIUS_WG_SERVER_ENDPOINT", "203.0.113.10:51820")
+    # تجاوزُ بوّابة الترخيص في الاختبار يتطلّب العلامتين معًا (5126bdbe).
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
     monkeypatch.setenv("HOBERADIUS_WG_INTERFACE", "wg0")
     reset_for_tests(os.path.join(tmp_path, "test.db"))
     from app import create_app
@@ -40,6 +44,8 @@ def _auth_session(client):
         sess["admin_name"] = "QA Admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
+        # معالج v1/v2 وخطواته صارت للمالك فقط (1ca4b71a — fix(rbac) p01).
+        sess["is_super_admin"] = True
 
 
 def _post(client, url: str, payload: dict):
@@ -201,3 +207,22 @@ def test_v2_route_renders_peer_health_panel(app):
 
     assert "data-swv2-peer-health-panel" in html
     assert "data-swv2-server-peer-health" in html
+
+
+def test_v2_wizard_and_peer_health_are_owner_only(app):
+    """1ca4b71a: صفحة v2 وفحص صحّة peer يُهيّئان الخادم/الأنفاق → مالك فقط."""
+    run_id, peer = _prepared_peer(app)
+    with app.test_client() as client:
+        _auth_session(client)
+        with client.session_transaction() as sess:
+            sess["is_super_admin"] = False
+        page = client.get("/admin/radius/setup-wizard-v2")
+        res = _post(
+            client,
+            f"/admin/radius/setup-wizard/runs/{run_id}/server-peer/health",
+            {"output": _wg_show(VALID_KEY, peer["allowed_ips"])},
+        )
+
+    assert page.status_code == 403
+    assert res.status_code == 403
+    assert "data-swv2-peer-health-panel" not in page.get_data(as_text=True)

@@ -63,8 +63,18 @@ def test_finance_center_dashboard_route_renders(app):
 
 
 def test_finance_wallets_route_lists_wallets_and_recent_transactions(app):
+    # Owner decisions guarded here:
+    #  * 785ac3b9 — a wallet shows its owner's REAL name, never the «النوع #id»
+    #    template (a missing owner shows a dash only);
+    #  * default currency is the shekel ₪ (memory default-currency-shekel,
+    #    2026-08-02), not the old JOD «د.أ».
     with app.app_context():
-        wallet = _wallet_service()().create_wallet(tenant_id=1, owner_type="manager", owner_id=44)
+        from app.radius.db.repos import admins_repo
+
+        mgr = admins_repo.create_admin(username="wallet_mgr", password="x12345678",
+                                       full_name="مدير المحفظة")
+        wallet = _wallet_service()().create_wallet(tenant_id=1, owner_type="manager",
+                                                   owner_id=mgr.id)
         _wallet_service()().credit(
             tenant_id=1,
             wallet_id=wallet["id"],
@@ -80,8 +90,10 @@ def test_finance_wallets_route_lists_wallets_and_recent_transactions(app):
         html = res.get_data(as_text=True)
 
     assert res.status_code == 200
-    assert "مدير #44" in html
-    assert "25 د.أ" in html
+    assert "مدير المحفظة" in html
+    assert f"مدير #{mgr.id}" not in html
+    assert "25 ₪" in html
+    assert "25 د.أ" not in html
     assert "شحن" in html
     assert "خصم" in html
 

@@ -41,6 +41,11 @@ def _login(client) -> None:
         username=u, password="vx2-pass", full_name="VX2",
         is_super_admin=True,
     )
+    # owner-only bypass (6824f26): the is_super_admin flag alone no longer
+    # bypasses RBAC, and the boot-time «admin» (d13fb302) is always the
+    # min-id owner — so designate the tester as owner, as the licensing
+    # panel does. Same fix as test_route_permissions_s3_2._login.
+    admins_repo.set_designated_owners([u])
     res = client.post(
         "/admin/radius/login",
         data={"username": u, "password": "vx2-pass"},
