@@ -284,10 +284,41 @@ def test_route_no_longer_hardcodes_end_of_day_as_utc(routes_src):
     assert "from_local(f\"{_e_y:04d}-{_e_m:02d}-{_e_d:02d} {_e_t}\")" in routes_src
 
 
-def test_route_sends_expire_at_down_the_set_expiry_path(routes_src):
-    """وجودُ `expire_at` يحوّل المسار — ولا يُقرأ `minutes` عندها أصلًا."""
-    assert "_svc.set_expiry(expire_at=_exp, **_kw)" in routes_src
+def test_route_sends_expire_at_down_the_set_expiry_path(routes_src, app_ctx, monkeypatch):
+    """وجودُ `expire_at` يحوّل المسار — ولا يُقرأ `minutes` عندها أصلًا.
+
+    81de86b5 نقل التفريع من المسار إلى المساعد المشترك مع تطبيق الجوال
+    (subscriber_actions.extend_subscriber) — «web parity by construction» —
+    فنَفحص السلوك: المسار يمرّر `_exp` للمساعد، والمساعد يَسلك set_expiry
+    حصرًا حين يَصله expire_at (ولا يَلمس extend_time)."""
     assert "def _form_expire_at()" in routes_src
+    route = routes_src[routes_src.index("def users_extend(username"):]
+    route = route[:route.index("\ndef ")]
+    assert "_exp = _form_expire_at()" in route
+    assert "expire_at=_exp" in route and "extend_subscriber(" in route
+
+    from app.radius.services import subscriber_actions as sa
+    from app.radius.services import users as users_mod
+
+    calls = []
+
+    class _FakeSvc:
+        def set_expiry(self, **kw):
+            calls.append(("set_expiry", kw))
+
+        def extend_time(self, **kw):
+            calls.append(("extend_time", kw))
+
+        def get(self, username):
+            raise AssertionError("expire_at path must not consult the no-expiry guard")
+
+    monkeypatch.setattr(users_mod, "get_users_service", lambda: _FakeSvc())
+    when = datetime(2026, 12, 31, 21, 0, 0)
+    caller = sa.ActionCaller(tenant_id=1, admin_id=1, is_super=True, actor="t")
+    sa.extend_subscriber(caller, "u1", minutes=999, expire_at=when)
+    assert [c[0] for c in calls] == ["set_expiry"]
+    assert calls[0][1]["expire_at"] == when
+    assert "minutes" not in calls[0][1]
 
 
 def test_bulk_route_supports_setting_one_shared_deadline(routes_src):
