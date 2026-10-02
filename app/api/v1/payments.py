@@ -49,6 +49,15 @@ def _payment_error_message(message: object) -> str:
 
 
 def _actor() -> str:
+    """The admin behind the token (name), like /loans and the web — payments
+    and voids from the app used to record «api-token:<id>» (parity-b F4)."""
+    try:
+        from .subscriber_actions import _identity
+        ident, _err = _identity()
+        if ident is not None and getattr(ident.caller, "actor", ""):
+            return str(ident.caller.actor)
+    except Exception:  # noqa: BLE001 — attribution must never break a payment
+        pass
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
 
 
@@ -164,6 +173,13 @@ def payments_create():
         subscriber_id=body.get("subscriber_id"),
     ):
         return deny_out_of_scope()
+    # Parity-b F12: the same payment methods as the web modal / /accounts/<u>/payment
+    # (any string — «bitcoin» — used to be stored).
+    from .subscriber_actions import _PAYMENT_METHODS
+    if str(body.get("method") or "cash") not in _PAYMENT_METHODS:
+        return fail("validation_error",
+                    "طريقة الدفع غير معروفة (نقدًا cash، تحويل bank، يدوي manual).",
+                    status=422, details={"field": "method"})
     try:
         payment = service_from_context().create_payment(
             body,

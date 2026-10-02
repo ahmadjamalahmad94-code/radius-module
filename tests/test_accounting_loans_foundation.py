@@ -135,13 +135,15 @@ def test_loan_lifecycle_and_settlement(client, monkeypatch):
     loan = create.get_json()["data"]["loan"]
     assert loan["status"] == "open"
     assert loan["duration_minutes"] == 120
-    assert loan["amount"] == 10
+    # Owner decision 2026-10-02 (F11): a typed value with an explicit duration
+    # is re-priced like the web — plan price × duration (150 / 30 days × 2 h).
+    assert loan["amount"] == 0.42
     assert loan["ledger_entry_id"]
     assert loan["activation_window"]["applied_to_radius"] is False
 
     settle = client.post(
         f"/api/v1/loans/{loan['id']}/settle",
-        json={"amount": 10, "method": "cash", "notes": "paid"},
+        json={"amount": 0.42, "method": "cash", "notes": "paid"},
         headers=AUTH,
     )
     assert settle.status_code == 201, settle.get_json()

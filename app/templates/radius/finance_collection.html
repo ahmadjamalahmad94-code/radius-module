@@ -273,7 +273,9 @@
              (cfg.currency) لا قيمة مثبّتة. value يبقى الكود الخام كما يعتمده الـPOST. #}
           {% set _currency_names = {'JOD':'دينار أردني','ILS':'شيكل','USD':'دولار','IQD':'دينار عراقي','SAR':'ريال سعودي','EGP':'جنيه مصري','AED':'درهم إماراتي','EUR':'يورو','TRY':'ليرة تركية'} %}
           <select class="hub-select" name="currency">
-            {% for c in ['JOD','ILS','USD','IQD','SAR','EGP','AED','EUR','TRY'] %}<option value="{{ c }}" {% if (settings.currency if settings else cfg.currency) == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
+            {# parity-b: only what the server accepts (payments_repo.CURRENCIES) —
+               the other codes were offered and then refused («currency»). #}
+            {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else cfg.currency) == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
           </select>
         </label>
         <label>{{ _('رقم المحفظة') }}<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>

@@ -574,6 +574,26 @@ def set_channels(tenant_id: int, key: str, channels, *, by: int = 0) -> set[str]
     return chans
 
 
+def set_telegram(tenant_id: int, key: str, enabled: bool, *, by: int = 0) -> None:
+    """The per-event Telegram switch (app + old web page).
+
+    Parity-b: once the channel matrix has stored ``alerts.channels.<key>``,
+    ``dispatch`` reads ONLY that — writing just the legacy flag left Telegram
+    sending while the switch showed OFF. Keep both in step."""
+    if key not in _BY_KEY:
+        return
+    tid = int(tenant_id)
+    if str(tenants_repo.get_setting(tid, _channels_key(key), "") or "").strip():
+        chans = channels_for(tid, key)
+        if enabled:
+            chans.add("telegram")
+        else:
+            chans.discard("telegram")
+        set_channels(tid, key, chans, by=by)
+    else:
+        set_enabled(tid, key, enabled, by=by)
+
+
 def _strip_html(text: str) -> str:
     """نصّ عادي مختصر للجرس (يزيل وسوم HTML الخفيفة + سطر التذييل/الرابط)."""
     import re

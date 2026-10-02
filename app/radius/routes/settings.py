@@ -317,8 +317,16 @@ def settings_page():
                         return redirect(url_for("radius.settings_page"))
                 if key == "billing.currency":
                     val = (val or _SYS_DEFAULTS["billing.currency"]).upper()
-                    if not val.isalpha() or not (2 <= len(val) <= 5):
+                    from ..core.settings_validation import currency_codes
+                    if val not in currency_codes():
                         flash("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل).", "error")
+                        return redirect(url_for("radius.settings_page"))
+                if key == "branding.primary_color" and val:
+                    from ..core.settings_validation import clean_setting
+                    try:
+                        val = clean_setting(key, val)
+                    except ValueError as exc:
+                        flash(str(exc), "error")
                         return redirect(url_for("radius.settings_page"))
                 if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
                     val = val.strip().lower()

@@ -109,8 +109,24 @@ def create_invoice():
     except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
     username = str(body.get("username") or "").strip()
-    if subscriber_id <= 0 or amount < 0 or not username:
+    if subscriber_id <= 0 or amount < 0:
         return fail("validation_error", "اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة.", status=422)
+    # Parity-b F7: like the web (inv_create) — the subscriber is resolved in
+    # this tenant and the username/balances come from it. A typed id that does
+    # not exist was a 500 (FK); a wrong-but-valid id put the invoice in another
+    # subscriber's customer portal under a mismatched username.
+    from ...radius.db.connection import db
+    sub = db().execute(
+        "SELECT id, username, balance FROM subscribers WHERE tenant_id = ? AND id = ? "
+        "AND deleted_at IS NULL", (_tid(), subscriber_id)).fetchone()
+    if sub is None:
+        return fail("validation_error", "المشترك غير موجود.", status=422,
+                    details={"field": "subscriber_id"})
+    if username and username != str(sub["username"]):
+        return fail("validation_error",
+                    f"اسم المستخدم لا يطابق المشترك #{subscriber_id} ({sub['username']}).",
+                    status=422, details={"field": "username"})
+    username = str(sub["username"])
     from ...radius.core import limits
     _msg = limits.amount_error(amount, "generic", label="قيمة الفاتورة")
     if _msg:   # «الحدود» — باقي المدخلات الماليّة
@@ -123,8 +139,11 @@ def create_invoice():
             if body.get("payment_gateway_id") not in (None, "")
             else None
         )
-        balance_before = strict_float(body.get("balance_before") or 0)
-        balance_after = strict_float(body.get("balance_after") or 0)
+        _bal = float(sub["balance"] or 0)
+        balance_before = (strict_float(body["balance_before"])
+                          if body.get("balance_before") not in (None, "") else _bal)
+        balance_after = (strict_float(body["balance_after"])
+                         if body.get("balance_after") not in (None, "") else _bal + amount)
     except (TypeError, ValueError):
         return fail("validation_error", "القيم الرقمية في الفاتورة يجب أن تكون صحيحة.", status=422)
     invoice = Invoice(
@@ -142,7 +161,7 @@ def create_invoice():
         direction=str(body.get("direction") or "charge"),
         balance_before=balance_before,
         balance_after=balance_after,
-        recharged_on=recharged_on,
+        recharged_on=recharged_on or datetime.utcnow(),
         expiration_at=expiration_at,
         payment_method=str(body.get("payment_method") or "cash"),
         payment_gateway_id=payment_gateway_id,

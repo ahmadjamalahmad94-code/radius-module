@@ -115,7 +115,7 @@ def toggle_alert():
     if not admin_alerts.get_spec(key):
         return jsonify({"ok": False, "error": "تنبيه غير معروف."}), 404
     enabled = (request.form.get("enabled") or "") in ("1", "on", "true", "yes")
-    admin_alerts.set_enabled(_tid(), key, enabled, by=_admin_id())
+    admin_alerts.set_telegram(_tid(), key, enabled, by=_admin_id())
     return jsonify({"ok": True, "key": key, "enabled": enabled})
 
 

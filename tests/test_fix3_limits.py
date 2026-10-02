@@ -272,7 +272,7 @@ def test_each_money_limit_is_enforced_with_its_value(client):
                          json={"amount": 20.01}))
     assert "(20)" in e["message"]
     e = _err(client.post("/api/v1/loans", headers=AUTH,
-                         json={"username": s.username, "days": 1, "amount": 10.01}))
+                         json={"username": s.username, "amount": 10.01}))
     assert "(10)" in e["message"]
     e = _err(client.post(f"/api/v1/accounts/{s.username}/extend", headers=AUTH,
                          json={"minutes": 60, "charge_mode": "debt", "amount": 50.01}))

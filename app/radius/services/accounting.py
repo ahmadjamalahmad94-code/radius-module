@@ -821,7 +821,9 @@ class AccountingService:
                 "للمُدد الأطول استخدم «تسجيل دين (مدين)»."
             )
         now = datetime.utcnow()
-        loan_currency = normalize_currency(body.get("currency"))
+        # F1: قيمة السلفة تُحسب من سعر الباقة بعملة النظام — فالعملة دائمًا عملة
+        # النظام (كان مركز السلف في التطبيق يوسم 10 ₪ بـ«10 JOD»).
+        loan_currency = normalize_currency(default_currency())
         if _truthy(body.get("dry_run")):
             # المعاينة لا تكتب شيئًا: لا سلفة ولا قيد ولا تنبيه — فقط ما كان سيحدث.
             preview = {
@@ -1116,6 +1118,14 @@ class AccountingService:
             if kind == "writeoff":
                 plan.append({"loan_id": loan_id, "action": "writeoff", "amount": 0.0})
                 continue
+            # F3: لا تحويل عملات — نقد الدفعة (عملة النظام) لا يُسدّد سلفةً بعملةٍ أخرى
+            # (كانت 30 ₪ «تسدّد» 20 USD بالقيمة الاسميّة وتُخصم 20 من أساس الوقت).
+            loan_cur = normalize_currency(loan.get("currency"))
+            pay_cur = normalize_currency(default_currency())
+            if loan_cur != pay_cur:
+                raise RadiusValidationError(
+                    f"السلفة #{loan_id} بعملة {loan_cur} ولا تُسدَّد من دفعةٍ بعملة "
+                    f"{pay_cur} — سوِّها من «تسوية السلفة» بعملتها أو سامحها.")
             due = float(loan.get("outstanding") or 0)
             pay = due if remaining_cash is None else min(due, remaining_cash)
             pay = round(max(pay, 0.0), 2)
