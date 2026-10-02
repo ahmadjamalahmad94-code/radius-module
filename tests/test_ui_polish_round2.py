@@ -39,11 +39,21 @@ def test_shared_print_modal_partial_exists():
 
 
 def test_both_card_pages_include_shared_modal_and_drop_inline_copy():
+    # STALE since b57c5828 + d81847fc (MT86/MT86.1): «طباعة» in the batches list
+    # opens the new «منشئ كروت PDF» floating builder; the old «تجهيز ملف
+    # البطاقات» modal was removed from that page (zero users). The builder is
+    # ONE shared partial (_quickfloat.html) included by both pages — the same
+    # no-copy rule this test guarded for the old modal.
     for page in ("cards_batches.html", "cards_print_list.html"):
         s = _src(page)
-        assert 'include "radius/_card_print_modal.html"' in s, f"{page}: الإدراج مفقود"
-        # لم تَعُد النسخة المضمّنة (لوحة النافذة) موجودة داخل الصفحة نفسها.
+        assert 'include "radius/_quickfloat.html"' in s, f"{page}: الإدراج مفقود"
+        assert "data-quickfloat-open" in s, f"{page}: زرّ الطباعة لا يفتح المنشئ"
+        # لا نسخة مضمّنة من أيّ نافذة داخل الصفحة نفسها.
+        assert "qkfloat__panel" not in s, f"{page}: ما زالت نسخة المنشئ مكرّرة"
         assert "batch-print-modal__panel" not in s, f"{page}: ما زالت النسخة المكرّرة"
+    # The legacy modal survives only as a shared include on the print-list page.
+    assert 'include "radius/_card_print_modal.html"' in _src("cards_print_list.html")
+    assert 'include "radius/_card_print_modal.html"' not in _src("cards_batches.html")
 
 
 def test_shared_modal_renders_once_with_unified_letter_label(app):
