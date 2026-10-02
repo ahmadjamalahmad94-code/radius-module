@@ -2087,6 +2087,19 @@ class CardsService:
                            })
         return {"macs": macs, "kicked": kicked, "kept": kept}
 
+    def audit_card_mac_lock(self, *, actor: str, card_id: int, mac: str,
+                            source: str = "online") -> None:
+        """Zero-w1: «تثبيت MAC» على بطاقة من صفحة المتصلين (ويب + API) كان يكتب
+        ``cards.locked_mac`` مباشرةً بلا صفّ تدقيق — بخلاف المشترك (``user.update``
+        بفرق الحقول) وبخلاف «فاحص البطاقات» (``card.lock_mac``). الصفّ نفسه هنا
+        (بيانات قبل/بعد + المصدر) فيظهر في سجلّ التدقيق ونشاط المدير."""
+        macs = [m for m in (mac or "").split(",") if m]
+        self._audit.record(actor=actor, action="card.lock_mac",
+                           target_type="card", target_id=str(card_id),
+                           payload={"macs": macs, "count": len(macs),
+                                    "source": source},
+                           after={"locked_mac": mac or ""})
+
     def unlock_card_mac(self, *, actor: str, card_id: int) -> None:
         if not cards_repo.set_card_locked_mac(self._store_tenant_id(), card_id, "", actor=actor):
             raise RadiusValidationError("تعذر إلغاء تثبيت MAC")

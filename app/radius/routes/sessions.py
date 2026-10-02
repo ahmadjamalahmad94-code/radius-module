@@ -767,6 +767,11 @@ def online_lock_mac():
                     _tid(), int(row["card_id"]), mac, actor=_actor()
                 ):
                     raise RadiusError("تعذّر تثبيت MAC للبطاقة.")
+                # zero-w1: same audit row as the subscriber path / cards checker.
+                from ..services.cards import get_cards_service
+                get_cards_service().audit_card_mac_lock(
+                    actor=_actor(), card_id=int(row["card_id"]), mac=mac,
+                    source="online")
             else:
                 from ..services.users import get_users_service
 

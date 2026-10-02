@@ -440,6 +440,11 @@ def sessions_lock_mac():
             )
             if not changed:
                 raise RadiusError("تعذر تثبيت MAC للبطاقة.")
+            # zero-w1: same audit row as the subscriber path / cards checker.
+            from ...radius.services.cards import get_cards_service
+            get_cards_service().audit_card_mac_lock(
+                actor=_actor(), card_id=int(row["card_id"]), mac=mac,
+                source="online_api")
             target_type = "card"
         else:
             from ...radius.services.users import get_users_service
