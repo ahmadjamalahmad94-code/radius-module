@@ -120,7 +120,9 @@ _ENDPOINT_TO_SERVICE: dict[str, tuple[str, ...]] = {
     #    المزوّد الذي يوقف خدمتها لم يكن يحجبها). المفتاح الأخصّ أوّلًا، والمظلّة
     #    فقط حيث تستعملها النقاط الشقيقة. البنية التحتيّة (الصحّة، اللغة، صفحات
     #    المزوّد نفسها، دخول/خروج بوّابة الموزّع، استطلاع/قراءة الإشعارات وملفّ
-    #    صوتها) تبقى غير مسجّلة عمدًا كي لا يكسرها عقدٌ موقوف.
+    #    صوتها) تبقى غير مسجّلة عمدًا كي لا يكسرها عقدٌ موقوف. وصفحة «تغيير
+    #    عنوان الإنترنت» (ipchange_*) تحرس نفسها داخل الصفحة (لافتة «موقوفة» /
+    #    «طلب تفعيل» من منح ip_change) فلا نحجبها هنا قبل أن تعرض لافتتها.
     "admin_notifications":              ("admin_alerts", "alerts", "communications"),
     "admin_notifications_set_channels": ("admin_alerts", "alerts", "communications"),
     "connected_stats":           ("online", "subscribers"),
@@ -150,9 +152,6 @@ _ENDPOINT_TO_SERVICE: dict[str, tuple[str, ...]] = {
     "notification_sound_clear":  ("notifications",),
     "resource_alerts_settings":  ("router_alerts", "network"),
     "resource_alerts_save":      ("router_alerts", "network"),
-    "ipchange_page":             ("ip_change", "network"),
-    "ipchange_push":             ("ip_change", "network"),
-    "ipchange_script":           ("ip_change", "network"),
     "integrations_hub":          ("integrations",),
     "services_catalog":          ("services_catalog",),
     "export_table":              ("data_export",),
