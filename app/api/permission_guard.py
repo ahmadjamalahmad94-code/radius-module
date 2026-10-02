@@ -71,6 +71,7 @@ API_AUTH_ONLY: dict[str, str] = {
     "v1.devices_push_token_register": "own device FCM token",
     "v1.devices_push_token_unregister": "own device FCM token",
     "v1.dashboard_get": "home screen (web dashboard is open to every admin)",
+    "v1.dashboard_sales": "home sales tile for a picked period (same access rules as sales_today)",
     "v1.provider_grants": "provider contract the app needs to render menus",
     "v1.api_contracts": "static API contract metadata",
     "v1.permissions_catalog": "static permission catalogue (names only)",

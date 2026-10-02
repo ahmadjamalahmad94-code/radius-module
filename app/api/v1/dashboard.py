@@ -19,12 +19,29 @@ from ..responses import ok
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/dashboard", "dashboard_get",
                     require_api_token(dashboard_get), methods=["GET"])
+    bp.add_url_rule("/dashboard/sales", "dashboard_sales",
+                    require_api_token(dashboard_sales), methods=["GET"])
 
 
 def dashboard_get():
     from ...radius.services.dashboard_metrics import build_dashboard_metrics
     data = build_dashboard_metrics()
     return ok(_with_flat_counter_aliases(data))
+
+
+def dashboard_sales():
+    """«المبيعات» على اللوحة لفترةٍ يختارها المالك (2026-10-02): ``from``/``to``
+    (‏YYYY-MM-DD محلّيّ، شاملان). نفس حسبة ``sales_today`` وصلاحيّاتها
+    (المبالغ لحامل «التقارير المالية» فقط، حِزم المدير فقط)."""
+    import re
+    from flask import request
+    from ...radius.services.dashboard_metrics import get_sales_today
+    f = (request.args.get("from") or "").strip()
+    t = (request.args.get("to") or "").strip()
+    pat = r"\d{4}-\d{2}-\d{2}"
+    return ok(get_sales_today(
+        date_from=f if re.fullmatch(pat, f) else "",
+        date_to=t if re.fullmatch(pat, t) else ""))
 
 
 def _with_flat_counter_aliases(data: dict) -> dict:

@@ -510,7 +510,8 @@ def dashboard_access() -> dict:
 
 
 def get_sales_today(tenant_id: Optional[int] = None, *,
-                    access: Optional[dict] = None) -> dict:
+                    access: Optional[dict] = None,
+                    date_from: str = "", date_to: str = "") -> dict:
     """«إجمالي مبيعات اليوم» (طلب المالك 2026-09-30) — مثال «100 بطاقة · 200 شيكل».
 
     «اليوم» = يوم اللوحة المحلّيّ (Asia/Gaza بتوقيتها الصيفيّ، ``local_today``)،
@@ -532,13 +533,18 @@ def get_sales_today(tenant_id: Optional[int] = None, *,
     access = access if access is not None else dashboard_access()
     from ..core.system_config import local_today
     today = local_today(t).isoformat()
+    # فترة يختارها المالك (يوم/أسبوع/شهر/من–إلى، 2026-10-02) — الافتراض اليوم.
+    d_from = (date_from or "").strip() or today
+    d_to = (date_to or "").strip() or d_from
     money = bool(access.get("finance"))
-    out: dict = {"date": today, "cards_count": 0, "money_visible": money}
+    out: dict = {"date": d_from, "date_to": d_to, "cards_count": 0,
+                 "money_visible": money}
     if not (access.get("cards") or money):
         return out
     try:
         from .dashboard_reports import DashboardReportsService
-        sold = DashboardReportsService(tenant_id=t).cards_sold_by_batch(today)
+        sold = DashboardReportsService(tenant_id=t).cards_sold_by_batch(
+            d_from, d_to if d_to != d_from else "")
     except Exception:  # noqa: BLE001 — لا تكسر اللوحة
         sold = []
     out["cards_count"] = sum(int(r["count"]) for r in sold)

@@ -390,7 +390,7 @@ class DashboardReportsService:
         ).fetchone()
         return int(row["c"] or 0)
 
-    def cards_sold_by_batch(self, period: str) -> list[dict[str, Any]]:
+    def cards_sold_by_batch(self, period: str, period_to: str = "") -> list[dict[str, Any]]:
         """«مباعة» = بطاقةٌ دخلت أوّل مرّة داخل الفترة **المحلّيّة** (يوم/شهر/سنة
         المشغّل، Asia/Gaza بتوقيتها الصيفيّ) — ``[{batch_id, count}]``.
 
@@ -402,6 +402,9 @@ class DashboardReportsService:
         from .report_dates import range_sql
         grain = {4: "yearly", 7: "monthly"}.get(len(period or ""), "daily")
         lower, upper = local_period_utc_range(grain, period, self.tenant_id)
+        if period_to and grain == "daily":
+            # «المبيعات» لفترة من–إلى (المالك 2026-10-02): حتى نهاية يوم «إلى» المحلّيّ
+            _, upper = local_period_utc_range("daily", period_to, self.tenant_id)
         rw, rp = range_sql("first_used_at", lower, upper, True)
         bsc, bsv = batch_scope_sql(column="batch_id", tenant_id=self.tenant_id)
         rows = db().execute(
