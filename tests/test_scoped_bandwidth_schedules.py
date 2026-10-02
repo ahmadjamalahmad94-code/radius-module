@@ -233,7 +233,8 @@ def test_effective_speed_rule_api_explains_precedence(monkeypatch):
     data = resolved.get_json()["data"]
     assert data["source"] == "subscriber"
     assert data["rate_limit"] == "700k/7000k"
-    assert data["precedence"] == ["subscriber", "card_batch", "plan"]
+    # zero-w2: subscriber-group rules sit between the subscriber and the batch.
+    assert data["precedence"] == ["subscriber", "subscriber_group", "card_batch", "plan"]
 
 
 def test_bandwidth_schedule_apply_is_dry_run_unless_live_flag_enabled(monkeypatch):
