@@ -145,10 +145,20 @@ def test_materialize_disabled_by_env(app, monkeypatch):
 
 
 def test_vanished_synthetic_is_closed_by_orphan_pass(app):
+    """A synthetic row whose session left the router is closed by the orphan
+    pass — but only under the read guards added since (1ddf5f64 / 0723f214,
+    memory reconciler-empty-and-partial-read-guards): an EMPTY live set is
+    blindness and closes nothing, and a session must be absent on TWO
+    consecutive non-empty reads before it is closed."""
     from app.workers.mt_reconciler import _materialize_nas, _reconcile_nas
+    other = {("someone_else", "AA:BB:CC:DD:EE:FF")}   # router answered, ahmad gone
     with app.app_context():
         _materialize_nas(1, "10.10.0.2", _hotspot())
-        closed = _reconcile_nas(1, "10.10.0.2", set())   # router now shows nothing
+        assert _reconcile_nas(1, "10.10.0.2", set()) == 0   # empty read = blind
+        assert _reconcile_nas(1, "10.10.0.2", other) == 0   # first absence deferred
+        r = _db().execute("SELECT acctstoptime FROM radacct WHERE username='ahmad'").fetchone()
+        assert r["acctstoptime"] is None
+        closed = _reconcile_nas(1, "10.10.0.2", other)      # second absence → close
         assert closed == 1
         r = _db().execute("SELECT acctstoptime FROM radacct WHERE username='ahmad'").fetchone()
         assert r["acctstoptime"] is not None
