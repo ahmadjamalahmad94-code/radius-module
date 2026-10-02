@@ -33,6 +33,9 @@
   .wg-split > *{min-width:0}
   @media (max-width: 900px){ .wg-split{grid-template-columns:minmax(0,1fr)} }
   .wg-split .table-responsive, .wg-split table{max-width:100%}
+  /* حقلُ الإدخال له عرضٌ ذاتيّ (size≈20 محرفًا) يصير الحدَّ الأدنى لعمودِ الشبكة — فيتّسع الصفّ */
+  .wg-split [style*="display:grid"] > *{min-width:0}
+  .wg-split input, .wg-split select, .wg-split textarea{max-width:100%;box-sizing:border-box}
 </style>
 {% endblock %}
 
