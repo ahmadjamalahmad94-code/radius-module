@@ -76,18 +76,28 @@ def test_every_admin_hub_page_renders_with_its_nav(app):
                 assert f'data-testid="{nav}"' in res.get_data(as_text=True), (url, nav)
 
 
-def test_sidebar_collapsed_to_three_admin_hubs_plus_system(app):
+def test_sidebar_collapsed_to_three_admin_hubs_plus_system(app, monkeypatch):
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
     # ملاحظة (chore/customer-panel-cleanup-1، يونيو 2026): «طابور المزامنة»
     # أُزيل من الشريط الجانبي (طابور router-push خامل بعد إسقاط mikrotik_configs)
-    # فلم يَعُد ضمن البنود المتوقّعة. «المستأجرون» باقٍ لكن للسوبر فقط — وهذا
-    # الاختبار يُصادق سوبر (انظر _auth) فيَظهر له.
+    # فلم يَعُد ضمن البنود المتوقّعة.
     for label in ("المدراء والموزعون", "الأدوار والصلاحيات",
                   "البيانات والحفظ والأرشفة",
-                  "إعدادات النظام", "المستأجرون"):
+                  "إعدادات النظام"):
         assert label in html, label
+    # «المستأجرون» صار قدرة مزوّد default-off (82cc1d18): مخفيّ حتى عن السوبر
+    # ما لم يَمنحه عقد المزوّد صراحةً…
+    assert "المستأجرون" not in html
+    # …ويَظهر للسوبر فقط بعد المنح.
+    from app.radius.services import provider_grant
+    monkeypatch.setattr(provider_grant, "is_capability_granted",
+                        lambda tid, key: key == "tenants")
+    with app.test_client() as client:
+        _auth(client)
+        granted = client.get("/admin/radius/").get_data(as_text=True)
+    assert "المستأجرون" in granted
     # «طابور المزامنة» مُزال نهائيًّا من الشريط (لا للسوبر أيضًا).
     assert "طابور المزامنة" not in html
     # sub-labels now live in the in-section navs, not the sidebar
