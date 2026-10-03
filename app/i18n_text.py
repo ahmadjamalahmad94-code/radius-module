@@ -1,0 +1,117 @@
+"""أدوات تغليف نصوص الواجهة في بايثون (i18n) — بلا أيّ اعتماد على بقيّة التطبيق.
+
+القاعدة (انظر I18N.md):
+    • ``_tr('نص')`` — ترجمة **فوريّة** بلغة الطلب الحالي. للرسائل التي تُبنى
+      وقت الطلب: flash، أخطاء API، رسائل الاستثناءات، النصوص المركّبة
+      (``_tr('تم حذف %(n)s مشترك', n=n)``). بالعربيّة (الافتراضيّ) أو خارج
+      سياق الطلب تُعيد النصّ العربيّ نفسه حرفيًّا ⇒ لا يتغيّر أيّ سلوك عربيّ.
+    • ``N_('نص')`` — **وَسم** بلا ترجمة فوريّة: يُعيد ``LStr`` (صنف فرعيّ من
+      ``str`` مطابق تمامًا للنصّ) فيبقى كلّ منطق بايثون (مقارنة/مفاتيح/تخزين/
+      JSON) كما هو. يُترجَم فقط **عند الإخراج**: في قوالب Jinja (``finalize``)
+      وفي تسلسل JSON للّوحة (``translate_marked``). مناسب للثوابت على مستوى
+      الوحدة (تسميات/قوائم) التي تُقيَّم مرّة واحدة وقت الاستيراد.
+
+كلا الاسمين مفتاح استخراج لـ pybabel (``-k _tr -k N_``) فيدخل النصّ الكتالوج.
+"""
+from __future__ import annotations
+
+__all__ = ["_tr", "N_", "LStr", "translate_marked", "translate_text"]
+
+
+class LStr(str):
+    """نصّ واجهة عربيّ موسوم للترجمة عند الإخراج. سلوكه كـ ``str`` تمامًا."""
+
+    __slots__ = ()
+
+    def __reduce__(self):  # pickle/deepcopy ⇒ يبقى موسومًا
+        return (LStr, (str(self),))
+
+
+def N_(s):  # noqa: N802 — اسم اصطلاحيّ لمفتاح الاستخراج
+    """وَسم نصّ واجهة (بلا ترجمة فوريّة). انظر شرح الوحدة."""
+    if type(s) is str:
+        return LStr(s)
+    return s
+
+
+def _translations():
+    try:
+        from flask_babel import get_translations
+        return get_translations()
+    except Exception:  # noqa: BLE001 — خارج سياق التطبيق ⇒ بلا ترجمة
+        return None
+
+
+def _active() -> bool:
+    """هل لغة الطلب الحالي غير العربيّة؟ (لا ترجمة إطلاقًا بالعربيّة)."""
+    try:
+        from flask_babel import get_locale
+        loc = get_locale()
+        return loc is not None and str(loc).split("_")[0].lower() != "ar"
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def translate_text(s: str, t=None) -> str:
+    """ترجمة نصّ (msgid عربيّ) بلغة الطلب — بلا تنسيق ``%``."""
+    if t is None:
+        t = _translations()
+    if t is None:
+        return str(s)
+    try:
+        return t.ugettext(str(s))
+    except Exception:  # noqa: BLE001
+        return str(s)
+
+
+def _tr(__s, /, **kw):  # noqa: N807
+    """ترجمة فوريّة + تنسيق ``%(name)s`` اختياريّ (مثل gettext في Flask-Babel).
+
+    • بلا وسائط: لا تنسيق ``%`` إطلاقًا (فالـ ``%`` المفرد آمن).
+    • بوسائط: ``%`` الحرفيّة في النصّ يجب أن تكون ``%%``.
+    • أيّ ``LStr`` بين الوسائط يُترجَم أيضًا.
+    • ترجمة تالفة (نائب ناقص) ⇒ سقوط آمن للنصّ العربيّ."""
+    src = str(__s)
+    t = _translations() if _active() else None
+    out = translate_text(src, t) if t is not None else src
+    if not kw:
+        return out
+    if t is not None:
+        kw = {k: (translate_text(v, t) if type(v) is LStr else v) for k, v in kw.items()}
+    try:
+        return out % kw
+    except (KeyError, ValueError, TypeError):
+        try:
+            return src % kw
+        except (KeyError, ValueError, TypeError):
+            return src
+
+
+def translate_marked(obj, _t=None):
+    """يُعيد نسخة من ``obj`` تُستبدَل فيها كل ``LStr`` بترجمتها (للـ JSON).
+
+    بالعربيّة يُعيد ``obj`` نفسه دون مشي."""
+    if _t is None:
+        if not _active():
+            return obj
+        _t = _translations()
+        if _t is None:
+            return obj
+    tp = type(obj)
+    if tp is LStr:
+        return translate_text(obj, _t)
+    if tp is dict:
+        # المفاتيح لا تُترجَم أبدًا (معرّفات يقرؤها الكود).
+        return {k: translate_marked(v, _t) for k, v in obj.items()}
+    if tp is list:
+        return [translate_marked(v, _t) for v in obj]
+    if tp is tuple:
+        return tuple(translate_marked(v, _t) for v in obj)
+    return obj
+
+
+def jinja_finalize(value):
+    """``Environment.finalize``: يترجم ``LStr`` عند إخراجه في القالب."""
+    if type(value) is LStr and _active():
+        return translate_text(value)
+    return value

@@ -195,6 +195,7 @@
   </style>
   {# رسائل أخطاء AJAX بالعربيّة: يطبّع ردود JSON الفاشلة (رمز/كائن ⇒ الرسالة
      العربيّة) قبل أن تقرأها نوافذ الصفحة. في الرأس ليسبق أيّ fetch. #}
+  {% include "_partials/hr_i18n_js.html" %}
   <script src="{{ url_for('static', filename='js/hr_ajax_errors.js', v=asset_v('js/hr_ajax_errors.js') if asset_v is defined else None) }}"></script>
   {% block head_extra %}{% endblock %}
 </head>

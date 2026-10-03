@@ -123,6 +123,11 @@ def init_i18n(app) -> None:
 
     babel.init_app(app, locale_selector=select_locale)
 
+    # نصوص بايثون الموسومة N_() (LStr) تُترجَم عند إخراجها في القوالب.
+    from app.i18n_text import jinja_finalize
+    app.jinja_env.finalize = jinja_finalize
+    app.jinja_env.globals["hr_js_i18n"] = js_catalog
+
     @app.context_processor
     def _inject_i18n():
         # get_locale يُمرَّر كدالة ليستدعيها القالب: {{ get_locale() }}.
@@ -133,3 +138,58 @@ def init_i18n(app) -> None:
             "LANGUAGES": LANGUAGES,
             "SUPPORTED_LOCALES": SUPPORTED_LOCALES,
         }
+
+
+# ─────────────── كتالوج JavaScript الثابت ───────────────
+
+_JS_MSGIDS: frozenset[str] | None = None
+
+
+def _js_msgids() -> frozenset[str]:
+    """كل msgid ملفوف بـ ``hrT('…')`` في ``app/static/js/*.js`` (يُحسب مرّة)."""
+    global _JS_MSGIDS
+    if _JS_MSGIDS is None:
+        import os
+        from babel.messages.extract import extract_javascript
+        root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "static", "js")
+        ids: set[str] = set()
+        try:
+            for fn in sorted(os.listdir(root)):
+                if not fn.endswith(".js"):
+                    continue
+                with open(os.path.join(root, fn), "rb") as fh:
+                    for _ln, _fn, msg, _c in extract_javascript(
+                            fh, {"hrT": None}, [], {"encoding": "utf-8"}):
+                        if isinstance(msg, str) and msg:
+                            ids.add(msg)
+        except Exception:  # noqa: BLE001 — لا ترجمة JS خير من صفحة مكسورة
+            pass
+        _JS_MSGIDS = frozenset(ids)
+    return _JS_MSGIDS
+
+
+_JS_CACHE: dict[str, dict[str, str]] = {}
+
+
+def js_catalog() -> dict[str, str]:
+    """قاموس {msgid: ترجمة} لنصوص JS الثابتة بلغة الطلب (فارغ بالعربيّة).
+
+    يُحقن في ``window.HR_I18N`` من القوالب الجذريّة، وتقرؤه الدالّة ``hrT``
+    في كل ملف JS. نصّ بلا ترجمة لا يُرسَل (يبقى عربيًّا)."""
+    code = current_locale()
+    if code == DEFAULT_LOCALE:
+        return {}
+    cached = _JS_CACHE.get(code)
+    if cached is not None:
+        return cached
+    from app.i18n_text import _translations, translate_text
+    t = _translations()
+    out: dict[str, str] = {}
+    if t is not None:
+        for mid in _js_msgids():
+            tr = translate_text(mid, t)
+            if tr and tr != mid:
+                out[mid] = tr
+    _JS_CACHE[code] = out
+    return out

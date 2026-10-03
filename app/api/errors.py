@@ -36,7 +36,9 @@ class SafeJSONProvider(DefaultJSONProvider):
     """``jsonify``/``tojson`` بلا Infinity/NaN (تصير null)."""
 
     def dumps(self, obj, **kwargs):  # noqa: ANN001
-        return json_dumps_safe(obj, super().dumps, **kwargs)
+        # نصوص الواجهة الموسومة بـ N_() تُترجَم بلغة الطلب (بالعربيّة: لا مشي).
+        from app.i18n_text import translate_marked
+        return json_dumps_safe(translate_marked(obj), super().dumps, **kwargs)
 
 
 def _is_api_request() -> bool:

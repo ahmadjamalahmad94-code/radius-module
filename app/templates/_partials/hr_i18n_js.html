@@ -1,0 +1,4 @@
+{#- كتالوج ترجمة نصوص JavaScript الثابتة (app/static/js) بلغة الطلب.
+    تقرؤه الدالّة hrT('…') المعرّفة أعلى كل ملف JS؛ فارغ بالعربيّة.
+    ضمّنه في <head> أيّ صفحة مستقلّة (لا ترث _admin_layout) تحمّل ملفّ JS ثابتًا. -#}
+<script>window.HR_I18N = {{ (hr_js_i18n() if hr_js_i18n is defined else {})|tojson }};</script>
