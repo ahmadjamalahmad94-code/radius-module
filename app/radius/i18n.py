@@ -71,6 +71,14 @@ def select_locale() -> str:
     except Exception:  # noqa: BLE001
         pass
 
+    # API بلا جلسة (تطبيق الجوال/التكاملات بالتوكن): العربيّة دائمًا — التطبيق عربيّ
+    # بالكامل، ورسائل API المُغلَّفة يجب ألّا تتبدّل بإعداد لغة اللوحة الافتراضيّ.
+    try:
+        if request.path.startswith("/api/"):
+            return DEFAULT_LOCALE
+    except Exception:  # noqa: BLE001
+        pass
+
     # 3) الإعداد العام general.default_locale
     try:
         from .core.tenant import DEFAULT_TENANT_ID
