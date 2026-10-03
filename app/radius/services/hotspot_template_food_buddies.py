@@ -9,6 +9,7 @@
 يُعيد استعمال هيكل الشِّل المُثبَت (دخول/CHAP/تبويبات CSS)؛ البَصمة z-index:-1
 خلفيّة، الشريط غير مُغطّى، العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -89,13 +90,13 @@ _BUD_ART = """
 
 _BUD_HERO = ("""
       <div class="fb-hero">
-        <div class="fb-frame">""" + _BUD_ART + """</div>
+        <div class="fb-frame">""" + _BUD_ART + N_("""</div>
         <div class="fb-cap">
           <div><b>جوعان؟ إحنا هنا!</b><span>اتصل بالواي‑فاي واطلب ألذّ الوجبات</span></div>
           <div class="fb-badge"><span class="fb-dot"></span> مفتوح</div>
         </div>
       </div>
-""")
+"""))
 
 _BUD_STYLE = """
 <style id="hr-food-buddies">

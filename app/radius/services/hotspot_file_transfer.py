@@ -17,6 +17,7 @@ HTML كبيرًا (شعار/خط base64 مضمّن) فبعض إصدارات Rout
 API الموجودة في nas_devices.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import base64
 import ftplib
@@ -150,12 +151,12 @@ def _short_ftp_reason(e: BaseException) -> str:
     """رسالة عربية مختصرة لفشل FTP الشائع."""
     low = str(e).lower()
     if "refused" in low or "timed out" in low or "timeout" in low:
-        return ("تعذّر الوصول إلى خدمة FTP على الراوتر (مرفوض/مهلة) — "
-                "فعّل FTP على الراوتر أو افتح المنفذ 21 عبر النفق.")
+        return (N_("تعذّر الوصول إلى خدمة FTP على الراوتر (مرفوض/مهلة) — "
+                "فعّل FTP على الراوتر أو افتح المنفذ 21 عبر النفق."))
     if "login" in low or "530" in low or "credentials" in low:
-        return ("رُفض اعتماد FTP — تأكّد أن مستخدم API يملك صلاحية ftp "
-                "على الراوتر.")
-    return "فشل الرفع عبر FTP: " + str(e)
+        return (N_("رُفض اعتماد FTP — تأكّد أن مستخدم API يملك صلاحية ftp "
+                "على الراوتر."))
+    return N_("فشل الرفع عبر FTP: ") + str(e)
 
 
 # ─── السحب من اللوحة عبر النفق (/tool fetch) — بديل FTP لا يحتاجه ──────
@@ -232,17 +233,17 @@ def _short_fetch_reason(e: BaseException) -> str:
     low = str(e).lower()
     if "already exists" in low:
         # لا ينبغي أن يحدث (نحذف أولًا + fetch يستبدل) — رسالة احتياطيّة.
-        return "الملف موجود على الراوتر وتعذّر استبداله عبر /tool fetch."
+        return N_("الملف موجود على الراوتر وتعذّر استبداله عبر /tool fetch.")
     if any(n in low for n in ("refused", "timed out", "timeout", "no route",
                               "could not connect", "failure", "unreachable")):
         # سحب الراوتر بـ /tool fetch حركةٌ **صادرة من الراوتر نفسه** فلا
         # يَحكمها walled-garden (ذاك للأجهزة خلف الهوتسبوت لا لحركة الراوتر).
         # السبب الحقيقيّ: تعذّر بلوغ اللوحة على عنوان نفق الإدارة (10.10.0.1:80).
-        return ("تعذّر سحب الملف بـ /tool fetch — لم يَبلغ الراوتر اللوحة على "
+        return (N_("تعذّر سحب الملف بـ /tool fetch — لم يَبلغ الراوتر اللوحة على "
                 "عنوان نفق الإدارة (HOBERADIUS_WG_SERVER_IP، افتراضيًّا "
                 "‏10.10.0.1:80). تأكّد أن نفق WireGuard قائم وأن جدار الـVPS "
-                "يَسمح بمدخل wg0 إلى المنفذ 80.")
-    return "فشل السحب عبر /tool fetch: " + str(e)
+                "يَسمح بمدخل wg0 إلى المنفذ 80."))
+    return N_("فشل السحب عبر /tool fetch: ") + str(e)
 
 
 def router_fetch_upload(client, remote_path: str, data: bytes, *,
@@ -264,8 +265,8 @@ def router_fetch_upload(client, remote_path: str, data: bytes, *,
     total = len(data)
     if not base_url:
         raise FetchUploadError(
-            "لا يوجد عنوان لوحة يصله الراوتر عبر النفق (عنوان خادم الراديوس "
-            "غير مضبوط) — تعذّر السحب بـ /tool fetch.")
+            N_("لا يوجد عنوان لوحة يصله الراوتر عبر النفق (عنوان خادم الراديوس "
+            "غير مضبوط) — تعذّر السحب بـ /tool fetch."))
     token = stash_fn(data, content_type)
     url = base_url.rstrip("/") + pull_path + token
 
@@ -283,8 +284,8 @@ def router_fetch_upload(client, remote_path: str, data: bytes, *,
 
     if verify and not _file_present(client, remote_path):
         raise FetchUploadError(
-            "اكتمل أمر /tool fetch لكن الملف لم يظهر على الراوتر — تحقّق أن "
-            "مجلد الوجهة موجود وأن السحب وصل اللوحة.")
+            N_("اكتمل أمر /tool fetch لكن الملف لم يظهر على الراوتر — تحقّق أن "
+            "مجلد الوجهة موجود وأن السحب وصل اللوحة."))
 
     if on_progress:
         try:

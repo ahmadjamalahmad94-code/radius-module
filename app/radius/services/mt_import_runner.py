@@ -27,6 +27,7 @@
 وضع التحديث لا نمسح كلمة مرور موجودة بقيمة فارغة. لا كلمات مرور في السجلّ.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -136,7 +137,7 @@ def _ensure_plan(tenant_id: int, cand, cache: dict, result: ImportResult,
     plan = plans_repo.upsert_plan(AccessPlan(
         id=None, tenant_id=int(tenant_id), name=cand.profile, enabled=True,
         service_type=cand.service_type or "",
-        description="أُنشئت تلقائيًّا أثناء استيراد المايكروتيك"))
+        description=N_("أُنشئت تلقائيًّا أثناء استيراد المايكروتيك")))
     cache[key] = int(plan.id)
     cand.plan_id = int(plan.id)
     result.created_plans.append(cand.profile)
@@ -186,7 +187,7 @@ def run_import(*, tenant_id: int, nas: Mapping[str, Any], preview: ImportPreview
                     result.failed += 1
                     result.errors.append({"username": cand.username,
                                           "action": "conflict",
-                                          "reason": "موجود مسبقًا (تعارض)"})
+                                          "reason": _tr("موجود مسبقًا (تعارض)")})
                     continue
                 # mode == update → تحديث.
                 if create_missing_plans:
@@ -265,8 +266,7 @@ def _apply_update(adapter, tenant_id: int, cand) -> None:
 
 
 def _summary_message(result: ImportResult) -> str:
-    return (f"جديد {result.imported} · محدّث {result.updated} · "
-            f"متخطّى {result.skipped} · فاشل {result.failed}")
+    return (_tr('جديد %(imported)s · محدّث %(updated)s · متخطّى %(skipped)s · فاشل %(failed)s', imported=result.imported, updated=result.updated, skipped=result.skipped, failed=result.failed))
 
 
 __all__ = [

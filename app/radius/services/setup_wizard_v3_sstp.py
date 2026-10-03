@@ -13,6 +13,7 @@ Reuses the shared, proven building blocks:
   - ``mgmt_acl.service_lockdown_lines`` — the single-source management ACL.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 
 def ntp_script_lines() -> list[str]:
@@ -21,7 +22,7 @@ def ntp_script_lines() -> list[str]:
     self-heals the clock on every boot. ROS7 uses the servers list; ROS6 the
     legacy primary/secondary."""
     return [
-        "# --- NTP time sync (يمنع فشل الاتصال بسبب ساعة قديمة بعد انقطاع كهرباء) ---",
+        N_("# --- NTP time sync (يمنع فشل الاتصال بسبب ساعة قديمة بعد انقطاع كهرباء) ---"),
         ":local rosVer [/system resource get version]",
         ':local rosMajor [:tonum [:pick $rosVer 0 [:find $rosVer "."]]]',
         ":if ($rosMajor >= 7) do={",
@@ -107,7 +108,7 @@ def render_sstp_unified_script(
         "",
         ':put ""',
         ':put "════════════════════════════════════════════════"',
-        ':put "SSTP tunnel configured — الراوتر سيتّصل بالخادم الآمن. تابع الحالة في المعالج."',
+        N_(':put "SSTP tunnel configured — الراوتر سيتّصل بالخادم الآمن. تابع الحالة في المعالج."'),
         ':put "════════════════════════════════════════════════"',
     ]
     return "\n".join(lines)

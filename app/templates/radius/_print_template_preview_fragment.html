@@ -28,11 +28,11 @@
      data-orientation="{{ orient }}">
   <header class="pt-fragment-head">
     <div>
-      <strong>{{ template.name if template else 'بدون قالب' }}</strong>
+      <strong>{{ template.name if template else _('بدون قالب') }}</strong>
       <small>
         {{ layout.design_preset or 'custom' }} ·
         {{ (template.cards_per_row if template else 2) }}×{{ (template.cards_per_column if template else 5) }}
-        {% if batch %} · حزمة #{{ batch.id }}{% if batch.batch_name %} ({{ batch.batch_name }}){% endif %}{% endif %}
+        {% if batch %} {{ _('· حزمة #') }}{{ batch.id }}{% if batch.batch_name %} ({{ batch.batch_name }}){% endif %}{% endif %}
       </small>
     </div>
     {% if batch %}
@@ -61,8 +61,7 @@
     {% if card_svgs %}
       <p class="pt-fragment-note">
         <i class="fa-solid fa-circle-info"></i>
-        أول {{ card_svgs|length|ar_count('card') }} من الحزمة كمعاينة فعلية، مرسومة بنفس المحرّك الذي يولّد PDF.
-        كلمات المرور تظهر فقط داخل PDF التصدير.
+        {{ _('أول %(v)s من الحزمة كمعاينة فعلية، مرسومة بنفس المحرّك الذي يولّد PDF. كلمات المرور تظهر فقط داخل PDF التصدير.', v=card_svgs|length|ar_count('card')) }}
       </p>
     {% endif %}
   {% endif %}

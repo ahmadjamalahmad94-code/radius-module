@@ -5,6 +5,7 @@ activation outcomes with ``applied_to_radius=False``; they do not call the live
 RADIUS activation path.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 from dataclasses import dataclass
@@ -50,11 +51,11 @@ _BUCKET_META = {
     "subscriber": ("من طرف المشترك",
                    "الجهاز أُطفئ أو ضعُفت الإشارة/الخطّ — المشكلة عند الزبون غالبًا.",
                    "red", "user"),
-    "idle":       ("خمول (لا حركة بيانات)",
-                   "انقطع بعد فترة بلا استخدام — راجع «مهلة الخمول» في الباقة/الراوتر.",
+    "idle":       (N_("خمول (لا حركة بيانات)"),
+                   N_("انقطع بعد فترة بلا استخدام — راجع «مهلة الخمول» في الباقة/الراوتر."),
                    "amber", "hourglass-half"),
-    "plan":       ("انتهاء مدّة الجلسة",
-                   "مهلة الجلسة (Session-Timeout) في الباقة قصيرة فتُعاد المصادقة.",
+    "plan":       (N_("انتهاء مدّة الجلسة"),
+                   N_("مهلة الجلسة (Session-Timeout) في الباقة قصيرة فتُعاد المصادقة."),
                    "blue", "gauge-high"),
     "router":     ("من الراوتر (NAS)",
                    "جهاز الشبكة نفسه أنهى الجلسة — راجع الراوتر (إعادة تشغيل/منفذ).",
@@ -65,22 +66,22 @@ _BUCKET_META = {
     "reconcile":  ("تنظيف جلسة شبح",
                    "كانت الجلسة غايبة فعليًّا فنظّفها النظام — يشير عادةً لفقد اتصال.",
                    "grey", "broom"),
-    "unknown":    ("غير محدّد",
-                   "لا سبب مسجّل (جلسة ما زالت مفتوحة أو الراوتر لم يُرسل السبب).",
+    "unknown":    (N_("غير محدّد"),
+                   N_("لا سبب مسجّل (جلسة ما زالت مفتوحة أو الراوتر لم يُرسل السبب)."),
                    "grey", "circle-question"),
 }
 
 # تعريب سبب الإنهاء الخام (RADIUS القياسيّ + أسباب المُصالح) لقائمة آخر الجلسات.
 _CAUSE_AR = {
-    "User-Request": "طلب المستخدم", "Lost-Carrier": "انقطاع الاتصال",
-    "Lost-Service": "انقطاع الخدمة", "Idle-Timeout": "مهلة خمول",
-    "Session-Timeout": "انتهاء مدة الجلسة", "Admin-Reset": "إنهاء إداري",
-    "Admin-Reboot": "إعادة تشغيل إداريّة", "NAS-Request": "طلب جهاز الشبكة",
-    "NAS-Reboot": "إعادة تشغيل الراوتر", "NAS-Error": "خطأ جهاز الشبكة",
-    "Port-Error": "خطأ منفذ", "Device-Limit-Replace": "استبدال (حدّ الأجهزة)",
-    "Admin-Force-Close": "إغلاق إجباريّ", "Stale-Session-Timeout": "تنظيف جلسة خاملة",
-    "NAS-Lost-Session": "جلسة مفقودة", "Reconciliation-Stale": "مصالحة الجلسات",
-    "Host-Request": "طلب المضيف", "User-Error": "خطأ المستخدم",
+    "User-Request": N_("طلب المستخدم"), "Lost-Carrier": N_("انقطاع الاتصال"),
+    "Lost-Service": N_("انقطاع الخدمة"), "Idle-Timeout": N_("مهلة خمول"),
+    "Session-Timeout": N_("انتهاء مدة الجلسة"), "Admin-Reset": N_("إنهاء إداري"),
+    "Admin-Reboot": N_("إعادة تشغيل إداريّة"), "NAS-Request": N_("طلب جهاز الشبكة"),
+    "NAS-Reboot": N_("إعادة تشغيل الراوتر"), "NAS-Error": N_("خطأ جهاز الشبكة"),
+    "Port-Error": N_("خطأ منفذ"), "Device-Limit-Replace": N_("استبدال (حدّ الأجهزة)"),
+    "Admin-Force-Close": N_("إغلاق إجباريّ"), "Stale-Session-Timeout": N_("تنظيف جلسة خاملة"),
+    "NAS-Lost-Session": N_("جلسة مفقودة"), "Reconciliation-Stale": N_("مصالحة الجلسات"),
+    "Host-Request": N_("طلب المضيف"), "User-Error": N_("خطأ المستخدم"),
 }
 
 

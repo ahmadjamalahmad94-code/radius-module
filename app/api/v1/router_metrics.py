@@ -17,6 +17,7 @@ Scoped to the caller's tenant via the API token; the router_id must belong to
 that tenant. A fresh push also clears the router's offline alert immediately.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -44,17 +45,17 @@ def router_metrics_ingest(router_id: int):
     tenant_id = _tid()
     router = nas_repo.get_nas(tenant_id, int(router_id))
     if not router:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
 
     raw = (request.get_data(as_text=True) or "").strip()
     if not raw:
-        return fail("empty_body", "بيانات المقاييس مطلوبة.", status=400)
+        return fail("empty_body", _tr("بيانات المقاييس مطلوبة."), status=400)
     try:
         body = json.loads(raw)
     except (ValueError, TypeError):
-        return fail("invalid_json", "بيانات الطلب ليست بصيغة صحيحة.", status=400)
+        return fail("invalid_json", _tr("بيانات الطلب ليست بصيغة صحيحة."), status=400)
     if not isinstance(body, dict):
-        return fail("invalid_shape", "أرسل كائنًا يحتوي قائمة الواجهات.", status=400)
+        return fail("invalid_shape", _tr("أرسل كائنًا يحتوي قائمة الواجهات."), status=400)
 
     raw_ifaces = body.get("interfaces")
     if not isinstance(raw_ifaces, list):

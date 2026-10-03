@@ -14,33 +14,33 @@
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
 {{ hub.megahero(
-  "مجموعات المشاركة",
-  subtitle="مجموعات لمشاركة الكروت والباقات بين الموزّعين.",
+  _('مجموعات المشاركة'),
+  subtitle=_('مجموعات لمشاركة الكروت والباقات بين الموزّعين.'),
   icon="people-arrows",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.sgrp_new') + '">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة مجموعة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
-    {'label': 'مفعَّلة',  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},
-    {'label': 'معطَّلة',  'value': items|length - _enabled, 'icon': 'toggle-off',  'variant': 'amber'},
+    {'label': _('الإجمالي'), 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
+    {'label': _('مفعَّلة'),  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},
+    {'label': _('معطَّلة'),  'value': items|length - _enabled, 'icon': 'toggle-off',  'variant': 'amber'},
   ]
 ) }}
 
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو مجموعة مشاركة يتقاسم أعضاؤها الكوتا والسرعة المحددة لها.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو مجموعة مشاركة يتقاسم أعضاؤها الكوتا والسرعة المحددة لها.'),
   items=[
-    {'icon': 'database',     'text': 'الكوتا المشتركة هي إجمالي البيانات المتاحة لكل الأعضاء؛ «غير محدود» يعني بلا سقف.'},
-    {'icon': 'gauge-high',   'text': 'السرعة تُعرض تنزيلًا / رفعًا بالـ Kbps وتُطبَّق على كامل المجموعة.'},
-    {'icon': 'users',        'text': 'الأعضاء يبيّن العدد الحالي مقابل حدّ الأعضاء (∞ يعني بلا حد).'},
-    {'icon': 'toggle-on',    'text': 'المجموعة المعطَّلة تبقى محفوظة لكنها لا تُستخدم للمشاركة.'},
+    {'icon': 'database',     'text': _('الكوتا المشتركة هي إجمالي البيانات المتاحة لكل الأعضاء؛ «غير محدود» يعني بلا سقف.')},
+    {'icon': 'gauge-high',   'text': _('السرعة تُعرض تنزيلًا / رفعًا بالـ Kbps وتُطبَّق على كامل المجموعة.')},
+    {'icon': 'users',        'text': _('الأعضاء يبيّن العدد الحالي مقابل حدّ الأعضاء (∞ يعني بلا حد).')},
+    {'icon': 'toggle-on',    'text': _('المجموعة المعطَّلة تبقى محفوظة لكنها لا تُستخدم للمشاركة.')},
   ]
 )) %}
-  {% call hub.section("جميع المجموعات", icon="layer-group", meta=(items|length ~ ' مجموعة') if items else '', flush=True) %}
+  {% call hub.section(_('جميع المجموعات'), icon="layer-group", meta=(_('%(length)s مجموعة', length=items|length)) if items else '', flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -88,7 +88,7 @@
                   <i class="fa-solid fa-pen"></i>
                 </a>{% endif %}
                 {% if can_submit('radius.sgrp_delete', 'POST') %}<form method="post" action="{{ url_for('radius.sgrp_delete', gid=g.id) }}"
-                      onsubmit="return confirm('حذف؟')" style="display:inline;margin:0">
+                      onsubmit="return confirm({{ _('حذف؟')|tojson|forceescape }})" style="display:inline;margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
@@ -103,7 +103,7 @@
   {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا توجد مجموعات بعد.", icon="people-arrows") }}
+{{ hub.empty(_('لا توجد مجموعات بعد.'), icon="people-arrows") }}
 {% endif %}
 
 {% endblock %}

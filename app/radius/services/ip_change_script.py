@@ -22,6 +22,7 @@
 وحارس التسرّب. RouterOS صالح (لا توكِن قالب خام).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 from typing import Any
@@ -123,7 +124,7 @@ def _apply_script(*, server_host: str, public_ip: str, username: str,
 
     lines: list[str] = []
     lines.append(f"# ═══ HobeRadius — تغيير الـIP (تطبيق) — {reference}{spd} ═══")
-    lines.append("# الصق هذا في تيرمنال المايكروتيك (New Terminal).")
+    lines.append(N_("# الصق هذا في تيرمنال المايكروتيك (New Terminal)."))
     lines.append("")
     # (1) قياس الـIP العام قبل التغيير.
     lines.append(":global hobeIpBefore \"\"")
@@ -206,22 +207,22 @@ def _apply_script(*, server_host: str, public_ip: str, username: str,
     lines.append('  :set hobeIpAfter ($r2->"data")')
     lines.append('} on-error={ :set hobeIpAfter "?" }')
     lines.append(':log info ("IP-CHANGE: after=" . $hobeIpAfter)')
-    lines.append(':put ("IP قبل: " . $hobeIpBefore)')
-    lines.append(':put ("IP بعد: " . $hobeIpAfter)')
+    lines.append(N_(':put ("IP قبل: " . $hobeIpBefore)'))
+    lines.append(N_(':put ("IP بعد: " . $hobeIpAfter)'))
     lines.append(f':if ($hobeIpAfter = "{safe_pub}") do={{')
-    lines.append('  :put "النتيجة: نجح ✓ — الـIP العام صار IP الخادم."')
+    lines.append(N_('  :put "النتيجة: نجح ✓ — الـIP العام صار IP الخادم."'))
     lines.append("}")
     lines.append(f':if (($hobeIpAfter != "{safe_pub}") and '
                  '($hobeIpAfter != $hobeIpBefore) and '
                  '($hobeIpAfter != "?")) do={')
-    lines.append('  :put "النتيجة: تغيّر الـIP لكن ليس IP الخادم المتوقّع — راجع التزويد."')
+    lines.append(N_('  :put "النتيجة: تغيّر الـIP لكن ليس IP الخادم المتوقّع — راجع التزويد."'))
     lines.append("}")
     lines.append(':if (($hobeIpAfter = $hobeIpBefore) or ($hobeIpAfter = "?")) do={')
-    lines.append('  :put "النتيجة: فشل ✗ — لم يتغيّر الـIP. شغّل سكربت التراجع وراجع الفحوص أدناه."')
+    lines.append(N_('  :put "النتيجة: فشل ✗ — لم يتغيّر الـIP. شغّل سكربت التراجع وراجع الفحوص أدناه."'))
     lines.append("}")
     lines.append("")
     # (12) فحوص صحّة/استكشاف أخطاء.
-    lines.append("# ── فحوص صحّة (استكشاف الأخطاء) ──")
+    lines.append(N_("# ── فحوص صحّة (استكشاف الأخطاء) ──"))
     lines.append(f'/interface sstp-client print detail where name="{IFACE}"')
     lines.append(f'/ip route print detail where comment~"{TAG_BASE}"')
     lines.append('/ping 1.1.1.1 count=4')
@@ -233,7 +234,7 @@ def _rollback_script(*, public_ip: str, reference: str) -> str:
     safe_pub = dc._safe_quoted(public_ip, field="public_ip")
     lines: list[str] = []
     lines.append(f"# ═══ HobeRadius — تغيير الـIP (تراجع) — {reference} ═══")
-    lines.append("# يزيل كل آثار «تغيير IP» ويُعيد المسار الأصليّ.")
+    lines.append(N_("# يزيل كل آثار «تغيير IP» ويُعيد المسار الأصليّ."))
     lines.append("")
     lines.append(":global wanGw \"\"")
     lines.append(":do {")
@@ -253,7 +254,7 @@ def _rollback_script(*, public_ip: str, reference: str) -> str:
     lines.append('  /ip route set [find where dst-address="0.0.0.0/0" '
                  'and gateway=$wanGw and !routing-mark] distance=1')
     lines.append("}")
-    lines.append(':put "تمّ التراجع — استُعيد المسار الأصليّ."')
+    lines.append(N_(':put "تمّ التراجع — استُعيد المسار الأصليّ."'))
     lines.append('/ping 1.1.1.1 count=4')
     return "\n".join(lines)
 
@@ -268,7 +269,7 @@ def generate(*, server_host: str, public_ip: str, username: str,
     public_ip:   الـIP العام الجديد المتوقَّع (للمقارنة في التحقّق + العرض).
     """
     if not (server_host and username and password and public_ip):
-        raise dc.DataConnectionError("بيانات التزويد ناقصة لتوليد السكربت.")
+        raise dc.DataConnectionError(N_("بيانات التزويد ناقصة لتوليد السكربت."))
     apply_script = _apply_script(
         server_host=server_host, public_ip=public_ip, username=username,
         password=password, version=int(version), reference=reference,

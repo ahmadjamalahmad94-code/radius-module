@@ -21,8 +21,8 @@
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
 
 {%- set ALL_DAYS = [
-  ('sat','السبت'),('sun','الأحد'),('mon','الإثنين'),('tue','الثلاثاء'),
-  ('wed','الأربعاء'),('thu','الخميس'),('fri','الجمعة'),
+  ('sat',_('السبت')),('sun',_('الأحد')),('mon',_('الإثنين')),('tue',_('الثلاثاء')),
+  ('wed',_('الأربعاء')),('thu',_('الخميس')),('fri',_('الجمعة')),
 ] -%}
 
 {# Pending-target mode: the parent form is creating a NEW subscriber /
@@ -34,8 +34,8 @@
                           or speed_rules_panel.plan_id
                           or speed_rules_panel.card_batch_id
                           or speed_rules_panel.subscriber_group_id) -%}
-{%- set sr_pending_target_label = 'الحزمة' if speed_rules_panel.target_type == 'card_batch' else ('العرض' if speed_rules_panel.target_type == 'plan' else 'المشترك') -%}
-{%- set sr_pending_save_label = 'إنشاء الحزمة' if speed_rules_panel.target_type == 'card_batch' else ('حفظ العرض' if speed_rules_panel.target_type == 'plan' else 'حفظ المشترك') -%}
+{%- set sr_pending_target_label = _('الحزمة') if speed_rules_panel.target_type == 'card_batch' else (_('العرض') if speed_rules_panel.target_type == 'plan' else _('المشترك')) -%}
+{%- set sr_pending_save_label = _('إنشاء الحزمة') if speed_rules_panel.target_type == 'card_batch' else (_('حفظ العرض') if speed_rules_panel.target_type == 'plan' else _('حفظ المشترك')) -%}
 
 <style>
   /* ── Panel shell ───────────────────────────────────────────── */
@@ -512,17 +512,17 @@
           </span>
           <span class="sr2-sum-days">
             {%- if sel_days|length == 0 or sel_days|length == 7 -%}
-              كل الأيام
+              {{ _('كل الأيام') }}
             {%- elif sel_days|length <= 3 -%}
               {%- for d in sel_days -%}{{ day_label_map.get(d, d) }}{% if not loop.last %} · {% endif %}{%- endfor -%}
             {%- else -%}
-              {{ sel_days|length }} أيام
+              {{ sel_days|length }} {{ _('أيام') }}
             {%- endif -%}
           </span>
           <span class="sr2-sum-spacer"></span>
           <span class="sr2-sum-status">
-            {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> مفعَّلة
-            {% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
+            {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> {{ _('مفعَّلة') }}
+            {% else %}<i class="fa-solid fa-circle-pause"></i> {{ _('معطَّلة') }}{% endif %}
           </span>
           <button type="button" class="sr2-sum-edit" data-toggle-rule="{{ rule.id }}">
             <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
@@ -530,7 +530,7 @@
           <button class="sr2-sum-del" type="submit"
                   name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
                   title="{{ _('حذف القاعدة') }}"
-                  onclick="return confirm('حذف هذه القاعدة؟');">
+                  onclick="return confirm({{ _('حذف هذه القاعدة؟')|tojson|forceescape }});">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
@@ -608,7 +608,7 @@
             <input type="checkbox" name="sr_edit_enabled_{{ rule.id }}" value="1"
               {% if rule.enabled %}checked{% endif %}>
             <span class="sr2-foot-status-text">
-              {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> مفعَّلة{% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
+              {% if rule.enabled %}<i class="fa-solid fa-circle-check"></i> {{ _('مفعَّلة') }}{% else %}<i class="fa-solid fa-circle-pause"></i> {{ _('معطَّلة') }}{% endif %}
             </span>
           </label>
           <div class="sr2-foot-actions">
@@ -626,7 +626,7 @@
             </button>
             <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                     name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
-                    onclick="return confirm('حذف هذه القاعدة؟');">
+                    onclick="return confirm({{ _('حذف هذه القاعدة؟')|tojson|forceescape }});">
               <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
             </button>
           </div>
@@ -774,7 +774,7 @@
         {% if sr_pending %}
           <span class="sr2-help" style="flex:1; color: var(--hub-brand-ink); font-weight:700">
             <i class="fa-solid fa-circle-info"></i>
-            ستُحفظ القاعدة مع {{ sr_pending_target_label }} تلقائيًا عند الضغط على «{{ sr_pending_save_label }}» أسفل الصفحة.
+            {{ _('ستُحفظ القاعدة مع %(sr_pending_target_label)s تلقائيًا عند الضغط على «%(sr_pending_save_label)s» أسفل الصفحة.', sr_pending_target_label=sr_pending_target_label, sr_pending_save_label=sr_pending_save_label) }}
           </span>
           <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
                   data-add-action="copy">

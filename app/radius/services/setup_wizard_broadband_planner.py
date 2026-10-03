@@ -1,5 +1,6 @@
 """SW5 broadband/PPPoE bootstrap planner (preview-only)."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -107,7 +108,7 @@ class BroadbandBootstrapPlanner:
         for iface in selected_interfaces:
             if iface in blocked_set:
                 raise SetupWizardValidationError(
-                    f"الواجهة '{iface}' مستبعدة للحماية ولا يمكن استخدامها للبرودباند"
+                    _tr("الواجهة '%(iface)s' مستبعدة للحماية ولا يمكن استخدامها للبرودباند", iface=iface)
                 )
 
         blocked_networks = [
@@ -123,7 +124,7 @@ class BroadbandBootstrapPlanner:
             local_address = _ip(payload.get("local_address"), "local_address")
             remote_pool_cidr = _network(payload.get("remote_pool_cidr"), "remote_pool_cidr")
             if any(remote_pool_cidr.overlaps(other) for other in blocked_networks):
-                raise SetupWizardValidationError("نطاق العناوين البعيد يتعارض مع واجهة الإنترنت أو الربط الخاص أو الهوتسبوت")
+                raise SetupWizardValidationError(N_("نطاق العناوين البعيد يتعارض مع واجهة الإنترنت أو الربط الخاص أو الهوتسبوت"))
         else:
             remote_pool_cidr = _choose_smart_subnet(blocked_networks)
             local_address = str(list(remote_pool_cidr.hosts())[0])
@@ -207,9 +208,9 @@ class BroadbandBootstrapPlanner:
                 "/tool ping 8.8.8.8 count=5",
             ],
             warnings=[
-                "المخطط معاينة فقط ولا ينفذ تلقائياً.",
-                "تم استبعاد واجهات الإنترنت والربط الخاص من هذا المخطط.",
-                "تم تقييد NAT على نطاق broadband pool فقط.",
+                N_("المخطط معاينة فقط ولا ينفذ تلقائياً."),
+                N_("تم استبعاد واجهات الإنترنت والربط الخاص من هذا المخطط."),
+                N_("تم تقييد NAT على نطاق broadband pool فقط."),
             ],
             generated_objects=[
                 {"type": "ppp.profile", "name": profile_name, "tag": tag},

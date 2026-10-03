@@ -13,6 +13,7 @@
     - status_ar: تحويل الحالات الإنجليزية إلى عربية لعرضها في الواجهة.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import subprocess
@@ -31,13 +32,13 @@ _SYNC_CRIT_MIN  = 20
 
 # ترجمة حالات الصحة إلى العربية
 _STATUS_AR: dict[str, str] = {
-    "ok":          "سليم",
-    "warning":     "تحذير",
-    "critical":    "خطر",
-    "unknown":     "غير معروف",
-    "unconfigured": "غير مهيأ",
-    "disconnected": "غير متصل",
-    "not_synced":   "لم تتم المزامنة بعد",
+    "ok":          N_("سليم"),
+    "warning":     N_("تحذير"),
+    "critical":    N_("خطر"),
+    "unknown":     N_("غير معروف"),
+    "unconfigured": N_("غير مهيأ"),
+    "disconnected": N_("غير متصل"),
+    "not_synced":   N_("لم تتم المزامنة بعد"),
 }
 
 
@@ -76,41 +77,41 @@ def _capacity_health(used: int, max_allowed: int) -> str:
 
 def _check_license_sync(snapshot: dict | None) -> dict:
     if not snapshot:
-        return {"name": "license_sync", "title": "مزامنة الترخيص",
+        return {"name": "license_sync", "title": _tr("مزامنة الترخيص"),
                 "status": "not_synced", "status_ar": status_ar("not_synced"),
-                "detail": "لم تتم المزامنة بعد"}
+                "detail": _tr("لم تتم المزامنة بعد")}
     synced_str = snapshot.get("synced_at") or ""
     try:
         # نقبل ISO مع Z أو +00:00
         synced_at = datetime.fromisoformat(synced_str.replace("Z", "+00:00"))
         age_min = (datetime.now(timezone.utc) - synced_at).total_seconds() / 60.0
         if age_min <= _SYNC_WARN_MIN:
-            return {"name": "license_sync", "title": "مزامنة الترخيص",
+            return {"name": "license_sync", "title": _tr("مزامنة الترخيص"),
                     "status": "ok", "status_ar": status_ar("ok"),
-                    "detail": f"منذ {age_min:.0f} دقيقة"}
+                    "detail": _tr('منذ %(age_min)s دقيقة', age_min=format(age_min, '.0f'))}
         if age_min <= _SYNC_CRIT_MIN:
-            return {"name": "license_sync", "title": "مزامنة الترخيص",
+            return {"name": "license_sync", "title": _tr("مزامنة الترخيص"),
                     "status": "warning", "status_ar": status_ar("warning"),
-                    "detail": f"منذ {age_min:.0f} دقيقة — ابطأ من المعتاد"}
-        return {"name": "license_sync", "title": "مزامنة الترخيص",
+                    "detail": _tr('منذ %(age_min)s دقيقة — ابطأ من المعتاد', age_min=format(age_min, '.0f'))}
+        return {"name": "license_sync", "title": _tr("مزامنة الترخيص"),
                 "status": "critical", "status_ar": status_ar("critical"),
-                "detail": f"منذ {age_min:.0f} دقيقة — تحقق من systemd timer"}
+                "detail": _tr('منذ %(age_min)s دقيقة — تحقق من systemd timer', age_min=format(age_min, '.0f'))}
     except (ValueError, TypeError):
-        return {"name": "license_sync", "title": "مزامنة الترخيص",
+        return {"name": "license_sync", "title": _tr("مزامنة الترخيص"),
                 "status": "unknown", "status_ar": status_ar("unknown"),
-                "detail": "تاريخ المزامنة غير صالح"}
+                "detail": _tr("تاريخ المزامنة غير صالح")}
 
 
 def _check_license_status(snapshot: dict | None) -> dict:
     if not snapshot:
-        return {"name": "license_status", "title": "حالة الترخيص",
+        return {"name": "license_status", "title": _tr("حالة الترخيص"),
                 "status": "unknown", "status_ar": status_ar("unknown"),
-                "detail": "لا توجد بيانات ترخيص"}
+                "detail": _tr("لا توجد بيانات ترخيص")}
     ls = snapshot.get("license_status", "unknown")
     st = "ok" if ls == "active" else "critical"
     return {
         "name": "license_status",
-        "title": "حالة الترخيص",
+        "title": _tr("حالة الترخيص"),
         "status": st,
         "status_ar": status_ar(st),
         "detail": ls,
@@ -125,24 +126,24 @@ def _check_wg_interface(iface: str) -> dict:
             capture_output=True, text=True, timeout=5, check=False,
         )
         if r.returncode == 0:
-            return {"name": "wg_data", "title": f"واجهة {iface}",
+            return {"name": "wg_data", "title": _tr('واجهة %(iface)s', iface=iface),
                     "status": "ok", "status_ar": status_ar("ok"),
-                    "detail": "الواجهة نشطة"}
-        detail = r.stderr.strip() or "wg show أعاد خطأ"
-        return {"name": "wg_data", "title": f"واجهة {iface}",
+                    "detail": _tr("الواجهة نشطة")}
+        detail = r.stderr.strip() or _tr("wg show أعاد خطأ")
+        return {"name": "wg_data", "title": _tr('واجهة %(iface)s', iface=iface),
                 "status": "critical", "status_ar": status_ar("critical"),
                 "detail": detail}
     except FileNotFoundError:
         # بيئة تطوير — wg غير مثبّت
-        return {"name": "wg_data", "title": f"واجهة {iface}",
+        return {"name": "wg_data", "title": _tr('واجهة %(iface)s', iface=iface),
                 "status": "unconfigured", "status_ar": status_ar("unconfigured"),
-                "detail": "wg غير مثبّت (بيئة تطوير)"}
+                "detail": _tr("wg غير مثبّت (بيئة تطوير)")}
     except subprocess.TimeoutExpired:
-        return {"name": "wg_data", "title": f"واجهة {iface}",
+        return {"name": "wg_data", "title": _tr('واجهة %(iface)s', iface=iface),
                 "status": "unknown", "status_ar": status_ar("unknown"),
-                "detail": "wg show تجاوز الوقت المحدد"}
+                "detail": _tr("wg show تجاوز الوقت المحدد")}
     except Exception as exc:  # noqa: BLE001
-        return {"name": "wg_data", "title": f"واجهة {iface}",
+        return {"name": "wg_data", "title": _tr('واجهة %(iface)s', iface=iface),
                 "status": "unknown", "status_ar": status_ar("unknown"),
                 "detail": str(exc)}
 
@@ -158,7 +159,7 @@ def _check_wg_quota(wg: dict) -> dict | None:
     limit_mb = limit / 1_048_576
     return {
         "name": "wg_quota",
-        "title": "كوتا WireGuard",
+        "title": _tr("كوتا WireGuard"),
         "status": st,
         "status_ar": status_ar(st),
         "detail": f"{pct:.1f}% — {used_mb:.1f} MB / {limit_mb:.0f} MB",

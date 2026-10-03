@@ -19,14 +19,14 @@
    (events_center: category/severity/actor/target/correlation/from/to). #}
 <section class="hub-hero-shell" data-testid="events-hero">
 {% call hub.megahero(
-  "مركز الأحداث",
-  subtitle="بوابة واحدة لأحداث التشغيل: سجل المراجعة، تقييم المخاطر، الأمان، والتحقيقات — للعرض والتحقيق فقط، لا إجراءات حذف من هنا.",
+  _('مركز الأحداث'),
+  subtitle=_('بوابة واحدة لأحداث التشغيل: سجل المراجعة، تقييم المخاطر، الأمان، والتحقيقات — للعرض والتحقيق فقط، لا إجراءات حذف من هنا.'),
   icon="timeline",
   actions_html=_events_jump,
   kpis=[
-    {'label': 'الأحداث',           'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
-    {'label': 'التنبيهات المفتوحة', 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
-    {'label': 'حرجة',              'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('الأحداث'),           'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
+    {'label': _('التنبيهات المفتوحة'), 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
+    {'label': _('حرجة'),              'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
   search_action=url_for('radius.events_center')
 ) %}
@@ -37,36 +37,36 @@
   <input class="hub-input" name="target_type"    placeholder="{{ _('نوع الهدف') }}"    value="{{ request.args.get('target_type', '') }}">
   <input class="hub-input" name="target_id" type="number" placeholder="{{ _('رقم الهدف') }}"  value="{{ request.args.get('target_id', '') }}">
   <input class="hub-input grow" name="correlation_id" placeholder="{{ _('معرّف الترابط') }}" value="{{ request.args.get('correlation_id', '') }}">
-  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('فلترة'), icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {# ───── أقسام المركز: بطاقات تعريفية أنيقة تفتح الصفحات الفرعية
    مع وصف موجز لكل قسم — مكمّلة لشريط التبويبات أعلاه. ───── #}
-{% call hub.section("أقسام المركز", icon="compass", meta="المخاطر · الأمان · التحقيقات") %}
+{% call hub.section(_('أقسام المركز'), icon="compass", meta=_('المخاطر · الأمان · التحقيقات')) %}
   <div class="hub-actions" data-testid="events-sections">
-    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة",
+    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card(_('تقييم المخاطر'), sub=_('تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة'),
                        icon="shield-halved", href=url_for('radius.events_risk'), variant="amber") }}{% endif %}
-    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card("الأمان", sub="أحداث فئة الأمان + إشارات الاحتيال المفتوحة",
+    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card(_('الأمان'), sub=_('أحداث فئة الأمان + إشارات الاحتيال المفتوحة'),
                        icon="lock", href=url_for('radius.events_security'), variant="red") }}{% endif %}
-    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card("التحقيقات", sub="فتح ومتابعة تحقيقات على الكيانات المشبوهة",
+    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card(_('التحقيقات'), sub=_('فتح ومتابعة تحقيقات على الكيانات المشبوهة'),
                        icon="magnifying-glass-chart", href=url_for('radius.events_investigations'), variant="brand") }}{% endif %}
   </div>
 {% endcall %}
 
 {# ───── الجدول الرئيسي + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو حدث تشغيل محفوظ كسجل للمراجعة. استخدم الفلاتر في الأعلى لتضييق النتائج.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو حدث تشغيل محفوظ كسجل للمراجعة. استخدم الفلاتر في الأعلى لتضييق النتائج.'),
   items=[
-    {'icon': 'hashtag',     'text': 'الرقم رابط إلى تفاصيل الحدث وخطه الزمني للكيان المرتبط.'},
-    {'icon': 'layer-group', 'text': 'الفئة والمفتاح يحدّدان نوع الحدث ومصدره داخل النظام.'},
-    {'icon': 'triangle-exclamation', 'text': 'الخطورة تساعدك على تمييز الأحداث الحرجة عن العادية.'},
-    {'icon': 'link',        'text': 'معرّف الترابط يجمع الأحداث المرتبطة بنفس العملية معًا.'},
+    {'icon': 'hashtag',     'text': _('الرقم رابط إلى تفاصيل الحدث وخطه الزمني للكيان المرتبط.')},
+    {'icon': 'layer-group', 'text': _('الفئة والمفتاح يحدّدان نوع الحدث ومصدره داخل النظام.')},
+    {'icon': 'triangle-exclamation', 'text': _('الخطورة تساعدك على تمييز الأحداث الحرجة عن العادية.')},
+    {'icon': 'link',        'text': _('معرّف الترابط يجمع الأحداث المرتبطة بنفس العملية معًا.')},
   ],
-  note="هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل على الأحداث من هنا."
+  note=_('هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل على الأحداث من هنا.')
 )) %}
-  {% call hub.section("قائمة الأحداث", icon="list", meta=events|length|string + " حدث", flush=True) %}
+  {% call hub.section(_('قائمة الأحداث'), icon="list", meta=events|length|string + _(' حدث'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="events-table">
         <thead>
@@ -86,11 +86,11 @@
               <td class="num">{% if can_submit('radius.events_detail', 'GET') %}<a href="{{ url_for('radius.events_detail', event_id=event.id) }}">{% endif %}#{{ event.id }}{% if can_submit('radius.events_detail', 'GET') %}</a>{% endif %}</td>
               <td title="{{ event.category or '' }}">{{ event.category_label or '—' }}</td>
               <td>
-                {%- if event.severity == 'critical' -%}{{ hub.pill("حرِج", variant="red") }}
-                {%- elif event.severity == 'warning' -%}{{ hub.pill("تحذير", variant="amber") }}
-                {%- elif event.severity == 'info' -%}{{ hub.pill("معلومة", variant="blue") }}
-                {%- elif event.severity == 'error' -%}{{ hub.pill("خطأ", variant="red") }}
-                {%- elif event.severity == 'debug' -%}{{ hub.pill("تشخيص", variant="grey") }}
+                {%- if event.severity == 'critical' -%}{{ hub.pill(_('حرِج'), variant="red") }}
+                {%- elif event.severity == 'warning' -%}{{ hub.pill(_('تحذير'), variant="amber") }}
+                {%- elif event.severity == 'info' -%}{{ hub.pill(_('معلومة'), variant="blue") }}
+                {%- elif event.severity == 'error' -%}{{ hub.pill(_('خطأ'), variant="red") }}
+                {%- elif event.severity == 'debug' -%}{{ hub.pill(_('تشخيص'), variant="grey") }}
                 {%- else -%}{{ hub.pill(event.severity_label or '—', variant="grey") }}{%- endif -%}
               </td>
               <td title="{{ event.event_key or '' }}">{{ event.event_key_label or '—' }}</td>

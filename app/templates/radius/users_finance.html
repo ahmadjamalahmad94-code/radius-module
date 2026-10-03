@@ -76,8 +76,8 @@
    .uds-hero واحدة (بدّلنا hub.hero القديم + ff-kpis المنفصلة + غلاف
    hub-hero-shell امتثالًا لقاعدة «هيرو واحد مدموج فقط»). #}
 {{ hub.megahero(
-  "دفعات وسلف المستفيد",
-  subtitle="السعر والمدة تُحتسب تلقائيًا حسب باقة المشترك: " + sub.username,
+  _('دفعات وسلف المستفيد'),
+  subtitle=_('السعر والمدة تُحتسب تلقائيًا حسب باقة المشترك: %(username)s', username=sub.username),
   icon="wallet",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.users_edit', username=sub.username) + '">
@@ -88,13 +88,13 @@
     </a>
   '|safe,
   kpis=[
-    {'label': 'الرصيد الحالي', 'value': (sub.balance or 0)|money, 'icon': 'scale-balanced',
+    {'label': _('الرصيد الحالي'), 'value': (sub.balance or 0)|money, 'icon': 'scale-balanced',
      'variant': ('red' if (sub.balance or 0) < 0 else 'green'),
-     'sub': ('عليه دين' if (sub.balance or 0) < 0 else 'رصيد دائن')},
-    {'label': 'سعر الباقة الفعّال', 'value': eff_price|money, 'icon': 'tag',
-     'variant': 'brand', 'sub': ('سعر مخصّص' if price_custom else 'سعر العرض')},
-    {'label': 'الدفعات', 'value': payments|length, 'icon': 'receipt', 'variant': 'blue'},
-    {'label': 'سلف مفتوحة', 'value': open_loans|length, 'icon': 'hand-holding-dollar', 'variant': 'amber'}
+     'sub': (_('عليه دين') if (sub.balance or 0) < 0 else _('رصيد دائن'))},
+    {'label': _('سعر الباقة الفعّال'), 'value': eff_price|money, 'icon': 'tag',
+     'variant': 'brand', 'sub': (_('سعر مخصّص') if price_custom else _('سعر العرض'))},
+    {'label': _('الدفعات'), 'value': payments|length, 'icon': 'receipt', 'variant': 'blue'},
+    {'label': _('سلف مفتوحة'), 'value': open_loans|length, 'icon': 'hand-holding-dollar', 'variant': 'amber'}
   ]
 ) }}
 
@@ -110,7 +110,7 @@
 </div>
 
 {% if payments %}
-{% call hub.section("آخر الدفعات", icon="receipt", meta=payments|length|string + " دفعة", flush=True) %}
+{% call hub.section(_('آخر الدفعات'), icon="receipt", meta=payments|length|string + _(' دفعة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('دفعات المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -140,11 +140,11 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("آخر الدفعات", icon="receipt") %}{{ hub.empty("لا توجد دفعات بعد", icon="receipt") }}{% endcall %}
+  {% call hub.section(_('آخر الدفعات'), icon="receipt") %}{{ hub.empty(_('لا توجد دفعات بعد'), icon="receipt") }}{% endcall %}
 {% endif %}
 
 {% if loans %}
-{% call hub.section("السلف والتسويات", icon="handshake", meta=loans|length|string + " سلفة", flush=True) %}
+{% call hub.section(_('السلف والتسويات'), icon="handshake", meta=loans|length|string + _(' سلفة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('سلف المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -158,9 +158,9 @@
           {# المتبقّي بعد التسويات الجزئيّة (سلفة 4.67 سُدِّد منها 2 ⇒ 2.67) #}
           <td class="mono"><strong>{{ (loan.outstanding or 0)|money(loan.currency) }}</strong></td>
           <td>
-            {% if loan.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
-            {% elif loan.status == 'voided' %}{{ hub.pill("مُسامَحة", variant="grey") }}
-            {% else %}{{ hub.pill("مُسوّاة", variant="green") }}{% endif %}
+            {% if loan.status == 'open' %}{{ hub.pill(_('مفتوحة'), variant="amber") }}
+            {% elif loan.status == 'voided' %}{{ hub.pill(_('مُسامَحة'), variant="grey") }}
+            {% else %}{{ hub.pill(_('مُسوّاة'), variant="green") }}{% endif %}
           </td>
           <td class="small">{{ loan.reason or '—' }}</td>
           <td>
@@ -183,11 +183,11 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("السلف والتسويات", icon="handshake") %}{{ hub.empty("لا توجد سلف بعد", icon="hand-holding-dollar") }}{% endcall %}
+  {% call hub.section(_('السلف والتسويات'), icon="handshake") %}{{ hub.empty(_('لا توجد سلف بعد'), icon="hand-holding-dollar") }}{% endcall %}
 {% endif %}
 
 {% if ledger %}
-{% call hub.section("سجل القيود", icon="scale-balanced", meta=ledger|length|string + " قيد", flush=True) %}
+{% call hub.section(_('سجل القيود'), icon="scale-balanced", meta=ledger|length|string + _(' قيد'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('سجل قيود المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -207,7 +207,7 @@
           <td class="mono"><strong>{{ entry.amount|money }}</strong></td>
           {# المصدر: نوعه معرّب عبر L.entry_type؛ معرّفه الرقمي بتسمية عربية «مرجع رقم N»
              (لا كلمة إنجليزية ولا «#») مع إبقاء الرقم الخام في title. #}
-          <td class="small">{% if entry.source_type %}{{ L.ident(L.entry_type(entry.source_type), entry.source_type) }}{% else %}—{% endif %}{% if entry.source_id %} <span class="hub-text-mute mono" title="source_id={{ entry.source_id }}">مرجع رقم {{ entry.source_id }}</span>{% endif %}</td>
+          <td class="small">{% if entry.source_type %}{{ L.ident(L.entry_type(entry.source_type), entry.source_type) }}{% else %}—{% endif %}{% if entry.source_id %} <span class="hub-text-mute mono" title="source_id={{ entry.source_id }}">{{ _('مرجع رقم %(source_id)s', source_id=entry.source_id) }}</span>{% endif %}</td>
           <td class="small">{{ entry.notes or '—' }}</td>
           <td class="mono small">{{ entry.created_at|dt_local }}</td>
         </tr>
@@ -217,7 +217,7 @@
   </div>
 {% endcall %}
 {% else %}
-  {% call hub.section("سجل القيود", icon="scale-balanced") %}{{ hub.empty("لا توجد قيود مالية بعد", icon="scale-balanced") }}{% endcall %}
+  {% call hub.section(_('سجل القيود'), icon="scale-balanced") %}{{ hub.empty(_('لا توجد قيود مالية بعد'), icon="scale-balanced") }}{% endcall %}
 {% endif %}
 
 {# ───────────── نافذة موحّدة (uds-modal): تسجيل دفعة ─────────────
@@ -256,12 +256,12 @@
         </div>
         {% if open_loans %}
         <div class="ff-loans">
-          <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مستحقّة ({{ open_loans|length }}) — اختر لكل واحدة:</div>
+          <div class="ff-loans-head"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('سلف مستحقّة (%(length)s) — اختر لكل واحدة:', length=open_loans|length) }}</div>
           {% for ln in open_loans %}
           <div class="ff-loan-row" data-ff-loan-row data-loan-id="{{ ln.id }}" data-loan-amount="{{ ln.outstanding if ln.outstanding is not none else (ln.amount or 0) }}">
             <div class="ff-loan-info">
               <span class="ff-chip ff-chip--days"><i class="fa-solid fa-calendar-day"></i> {{ ln.duration_minutes|dur_days }}</span>
-              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> المتبقّي {{ (ln.outstanding if ln.outstanding is not none else (ln.amount or 0))|money(ln.currency) }}</span>
+              <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> {{ _('المتبقّي %(v)s', v=(ln.outstanding if ln.outstanding is not none else (ln.amount or 0))|money(ln.currency)) }}</span>
             </div>
             <div class="ff-loan-acts">
               <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>{{ _('خصم') }}</span></label>

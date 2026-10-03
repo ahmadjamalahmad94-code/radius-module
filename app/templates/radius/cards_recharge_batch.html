@@ -8,7 +8,7 @@
 {% block title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ batch.package_name or batch.batch_code or _('حزمة') }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total_cards|ar_count('card') }} شحن</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s شحن', v=total_cards|ar_count('card')) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -58,48 +58,48 @@
 
 {# ───── Merged mega-hero: title + subtitle + back action + KPI strip ───── #}
 {{ hub.megahero(
-  batch.package_name or batch.batch_code or 'حزمة بلا اسم',
-  subtitle="حزمة شحن مسبق — يدخل العميل الرمز في بوابته فيُضاف لرصيد محفظته.",
+  batch.package_name or batch.batch_code or _('حزمة بلا اسم'),
+  subtitle=_('حزمة شحن مسبق — يدخل العميل الرمز في بوابته فيُضاف لرصيد محفظته.'),
   icon="layer-group",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_recharge_list') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة لقائمة الحزم") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي البطاقات', 'value': batch.card_count or total_cards,
-     'icon': 'id-card', 'variant': 'brand', 'sub': 'بطاقة محفوظة'},
-    {'label': 'المستخدمة', 'value': batch.used_count or 0,
-     'icon': 'circle-check', 'variant': 'green', 'sub': 'رُدّت في محافظ العملاء'},
-    {'label': 'القيمة الكلية', 'value': (batch.total_value or batch.price_bulk)|money,
-     'icon': 'coins', 'variant': 'amber', 'sub': 'مجموع قيم البطاقات'},
-    {'label': 'أُنشئت في', 'value': (batch.created_at|date_local if batch.created_at else '—'),
-     'icon': 'calendar', 'variant': 'purple', 'sub': 'تاريخ التوليد'},
+    {'label': _('إجمالي البطاقات'), 'value': batch.card_count or total_cards,
+     'icon': 'id-card', 'variant': 'brand', 'sub': _('بطاقة محفوظة')},
+    {'label': _('المستخدمة'), 'value': batch.used_count or 0,
+     'icon': 'circle-check', 'variant': 'green', 'sub': _('رُدّت في محافظ العملاء')},
+    {'label': _('القيمة الكلية'), 'value': (batch.total_value or batch.price_bulk)|money,
+     'icon': 'coins', 'variant': 'amber', 'sub': _('مجموع قيم البطاقات')},
+    {'label': _('أُنشئت في'), 'value': (batch.created_at|date_local if batch.created_at else '—'),
+     'icon': 'calendar', 'variant': 'purple', 'sub': _('تاريخ التوليد')},
   ]
 ) }}
 
 {# ───── Main (carded sections) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الحزمة؟",
-  intro="كل صف هو بطاقة شحن مسبق؛ يدخل العميل رمزها في بوابته فتُضاف قيمتها إلى رصيد محفظته.",
+  _('كيف تقرأ هذه الحزمة؟'),
+  intro=_('كل صف هو بطاقة شحن مسبق؛ يدخل العميل رمزها في بوابته فتُضاف قيمتها إلى رصيد محفظته.'),
   items=[
-    {'icon': 'key',          'text': '«الرمز» و«الـ PIN» هما ما يدخله العميل في صفحة استرداد البطاقة.'},
-    {'icon': 'coins',        'text': '«القيمة» هي المبلغ الذي يُضاف لمحفظة العميل عند الاسترداد.'},
-    {'icon': 'circle-check', 'text': 'البطاقة «مستخدمة» تعني أنها رُدّت بالفعل ولا يمكن استخدامها ثانيةً.'},
-    {'icon': 'layer-group',  'text': 'قد تخلط الحزمة فئات متعددة — تظهر في «ملخّص الحزمة».'},
+    {'icon': 'key',          'text': _('«الرمز» و«الـ PIN» هما ما يدخله العميل في صفحة استرداد البطاقة.')},
+    {'icon': 'coins',        'text': _('«القيمة» هي المبلغ الذي يُضاف لمحفظة العميل عند الاسترداد.')},
+    {'icon': 'circle-check', 'text': _('البطاقة «مستخدمة» تعني أنها رُدّت بالفعل ولا يمكن استخدامها ثانيةً.')},
+    {'icon': 'layer-group',  'text': _('قد تخلط الحزمة فئات متعددة — تظهر في «ملخّص الحزمة».')},
   ],
-  note="هذه الصفحة للعرض فقط — لا يمكن تعديل البطاقات بعد توليدها."
+  note=_('هذه الصفحة للعرض فقط — لا يمكن تعديل البطاقات بعد توليدها.')
 )) %}
 
-  {% call hub.section("ملخّص الحزمة", icon="chart-column") %}
+  {% call hub.section(_('ملخّص الحزمة'), icon="chart-column") %}
     <div class="hub-kpi-grid">
-      {{ hub.kpi("إجمالي البطاقات", batch.card_count or total_cards,
-                 icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
-      {{ hub.kpi("المستخدمة", batch.used_count or 0,
-                 icon="circle-check", variant="green", sub="رُدّت في محافظ العملاء") }}
-      {{ hub.kpi("القيمة الكلية", (batch.total_value or batch.price_bulk)|money,
-                 icon="coins", variant="amber", sub="مجموع قيم البطاقات") }}
-      {{ hub.kpi("أُنشئت في", batch.created_at|date_local if batch.created_at else '—',
-                 icon="calendar", variant="purple", sub="تاريخ التوليد") }}
+      {{ hub.kpi(_('إجمالي البطاقات'), batch.card_count or total_cards,
+                 icon="id-card", variant="brand", sub=_('بطاقة محفوظة')) }}
+      {{ hub.kpi(_('المستخدمة'), batch.used_count or 0,
+                 icon="circle-check", variant="green", sub=_('رُدّت في محافظ العملاء')) }}
+      {{ hub.kpi(_('القيمة الكلية'), (batch.total_value or batch.price_bulk)|money,
+                 icon="coins", variant="amber", sub=_('مجموع قيم البطاقات')) }}
+      {{ hub.kpi(_('أُنشئت في'), batch.created_at|date_local if batch.created_at else '—',
+                 icon="calendar", variant="purple", sub=_('تاريخ التوليد')) }}
     </div>
 
     {% if denominations %}
@@ -114,7 +114,7 @@
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("بطاقات الحزمة", icon="id-card",
+  {% call hub.section(_('بطاقات الحزمة'), icon="id-card",
                       meta=total_cards|ar_count('card'), flush=True) %}
 
     {% set range_lo = (page - 1) * per_page + 1 %}
@@ -162,9 +162,9 @@
             <td class="num mono"><strong style="color:var(--hub-brand-ink)">{{ c.wallet_value|money }}</strong></td>
             <td>
               {% if c.used %}
-                {{ hub.pill("مستخدمة", variant="green") }}
+                {{ hub.pill(_('مستخدمة'), variant="green") }}
               {% else %}
-                {{ hub.pill("جاهزة", variant="brand") }}
+                {{ hub.pill(_('جاهزة'), variant="brand") }}
               {% endif %}
             </td>
             <td class="mono small"

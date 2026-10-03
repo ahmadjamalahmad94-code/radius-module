@@ -29,6 +29,7 @@ Status marker   (host agent → panel), default /var/lib/hoberadius/update-statu
     {state: running|success|failed, log, finished_at, request_at, ...}
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import logging
@@ -306,18 +307,18 @@ def changelog_html(state: dict[str, Any]) -> Markup:
 #   "neutral" — nothing to alarm about (not checked yet, bridge off, no channel).
 #   "failed"  — a genuine failure → the amber «تعذّر التحقّق» banner.
 _REASON_LABELS: dict[str, tuple[str, str]] = {
-    "ok": ("ok", "تمّ التحقّق بنجاح."),
-    "never_checked": ("neutral", "لم يتم التحقّق من التحديثات بعد."),
-    "disabled": ("neutral", "الربط مع لوحة التراخيص غير مُفعَّل."),
-    "not_configured": ("neutral", "إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص)."),
-    "config_missing": ("neutral", "إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص)."),
-    "not_found": ("neutral", "لا توجد قناة تحديث منشورة على اللوحة بعد."),
-    "https_required": ("failed", "يتطلّب رابط لوحة تراخيص آمن (HTTPS)."),
-    "timeout": ("failed", "تعذّر الاتصال بخادم التراخيص (انتهت المهلة)."),
-    "unreachable": ("failed", "تعذّر الاتصال بخادم التراخيص."),
-    "unauthorized": ("failed", "رُفض الطلب: مشكلة توقيع أو ترخيص (401)."),
-    "service_unavailable": ("failed", "خدمة التحديث غير متوفرة حاليًا على اللوحة."),
-    "bad_payload": ("failed", "وصل ردّ غير صالح من خادم التراخيص."),
+    "ok": ("ok", N_("تمّ التحقّق بنجاح.")),
+    "never_checked": ("neutral", N_("لم يتم التحقّق من التحديثات بعد.")),
+    "disabled": ("neutral", N_("الربط مع لوحة التراخيص غير مُفعَّل.")),
+    "not_configured": ("neutral", N_("إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص).")),
+    "config_missing": ("neutral", N_("إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص).")),
+    "not_found": ("neutral", N_("لا توجد قناة تحديث منشورة على اللوحة بعد.")),
+    "https_required": ("failed", N_("يتطلّب رابط لوحة تراخيص آمن (HTTPS).")),
+    "timeout": ("failed", N_("تعذّر الاتصال بخادم التراخيص (انتهت المهلة).")),
+    "unreachable": ("failed", N_("تعذّر الاتصال بخادم التراخيص.")),
+    "unauthorized": ("failed", N_("رُفض الطلب: مشكلة توقيع أو ترخيص (401).")),
+    "service_unavailable": ("failed", N_("خدمة التحديث غير متوفرة حاليًا على اللوحة.")),
+    "bad_payload": ("failed", N_("وصل ردّ غير صالح من خادم التراخيص.")),
 }
 
 
@@ -333,8 +334,8 @@ def reason_info(reason: str) -> dict[str, str]:
         kind, message = _REASON_LABELS[key]
         return {"kind": kind, "message": message}
     if key.startswith("http_"):
-        return {"kind": "failed", "message": f"رُفض الطلب من الخادم (HTTP {key[5:]})."}
-    return {"kind": "failed", "message": "تعذّر التحقّق من التحديثات الآن."}
+        return {"kind": "failed", "message": _tr('رُفض الطلب من الخادم (HTTP %(v)s).', v=key[5:])}
+    return {"kind": "failed", "message": _tr("تعذّر التحقّق من التحديثات الآن.")}
 
 
 # ── opt-in request (panel → host agent) ───────────────────────────────

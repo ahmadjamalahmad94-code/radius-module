@@ -25,6 +25,7 @@ What is PENDING (shown as an honest "not collected yet", never faked):
     column exists but nothing polls ``wg show`` yet, so it stays 0.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import dataclass
@@ -119,23 +120,23 @@ def _peer_status(row: dict, has_peer: "bool | None") -> dict:
     """
     check = str(row.get("last_check_status") or "").strip().lower()
     if not bool(row.get("enabled", 1)):
-        return {"state": "disabled", "color": "amber", "label": "معطّل",
-                "reason": "الراوتر معطّل في اللوحة."}
+        return {"state": "disabled", "color": "amber", "label": _tr("معطّل"),
+                "reason": _tr("الراوتر معطّل في اللوحة.")}
     if check == "reachable":
-        return {"state": "active", "color": "green", "label": "متّصل",
-                "reason": "الراوتر يُجاب عبر نفق WireGuard (آخر فحص ناجح)."}
+        return {"state": "active", "color": "green", "label": _tr("متّصل"),
+                "reason": _tr("الراوتر يُجاب عبر نفق WireGuard (آخر فحص ناجح).")}
     if check in ("timeout", "unreachable"):
-        return {"state": "down", "color": "red", "label": "لا يستجيب",
-                "reason": "تعذّر الوصول إلى الراوتر عبر النفق في آخر فحص."}
+        return {"state": "down", "color": "red", "label": _tr("لا يستجيب"),
+                "reason": _tr("تعذّر الوصول إلى الراوتر عبر النفق في آخر فحص.")}
     if has_peer is True:
-        return {"state": "ready", "color": "green", "label": "Peer جاهز",
-                "reason": "أُنشئ peer على الخادم لهذا الراوتر."}
+        return {"state": "ready", "color": "green", "label": _tr("Peer جاهز"),
+                "reason": _tr("أُنشئ peer على الخادم لهذا الراوتر.")}
     if has_peer is False:
-        return {"state": "no_peer", "color": "red", "label": "لا Peer",
-                "reason": "لم يُنشأ peer على الخادم بعد — أعِد توليد المفاتيح أو شغّل المعالج."}
+        return {"state": "no_peer", "color": "red", "label": _tr("لا Peer"),
+                "reason": _tr("لم يُنشأ peer على الخادم بعد — أعِد توليد المفاتيح أو شغّل المعالج.")}
     # peers dir unreadable → honestly unknown
-    return {"state": "unknown", "color": "grey", "label": "لم يُفحص",
-            "reason": "لم يُختبر النفق بعد، وتعذّر التحقّق من peer الخادم."}
+    return {"state": "unknown", "color": "grey", "label": _tr("لم يُفحص"),
+            "reason": _tr("لم يُختبر النفق بعد، وتعذّر التحقّق من peer الخادم.")}
 
 
 # ─── list / fetch ────────────────────────────────────────────────────
@@ -276,20 +277,20 @@ def regenerate_peer(tenant_id: int, nas_id: int) -> str:
     """
     row = get_wg_nas(tenant_id, nas_id)
     if not row:
-        raise WireguardMgmtError("ليس راوتر WireGuard مُدار.")
+        raise WireguardMgmtError(_tr("ليس راوتر WireGuard مُدار."))
     name = str(row.get("name") or "").strip()
     try:
         cfg = wpm.load_config()
     except ValueError as exc:
         raise WireguardMgmtError(
-            "إعدادات خادم WireGuard غير مُهيّأة في البيئة: " + str(exc)) from exc
+            _tr("إعدادات خادم WireGuard غير مُهيّأة في البيئة: ") + str(exc)) from exc
     try:
         # free the old peer file so the IP can be reclaimed, then write a
         # fresh keypair + allocation. The host reloader picks both up.
         wpm.deprovision_peer(name, cfg=cfg)
         res = wpm.provision_peer(name, cfg=cfg)
     except (OSError, ValueError, RuntimeError) as exc:
-        raise WireguardMgmtError("تعذّر كتابة peer على الخادم: " + str(exc)) from exc
+        raise WireguardMgmtError(_tr("تعذّر كتابة peer على الخادم: ") + str(exc)) from exc
 
     new_ip = str(res.allowed_ip)
     with transaction() as c:
@@ -319,12 +320,12 @@ def remove_peer(tenant_id: int, nas_id: int) -> bool:
     """
     row = get_wg_nas(tenant_id, nas_id)
     if not row:
-        raise WireguardMgmtError("ليس راوتر WireGuard مُدار.")
+        raise WireguardMgmtError(_tr("ليس راوتر WireGuard مُدار."))
     name = str(row.get("name") or "").strip()
     try:
         removed = wpm.deprovision_peer(name)
     except ValueError as exc:
-        raise WireguardMgmtError("تعذّر إزالة peer: " + str(exc)) from exc
+        raise WireguardMgmtError(_tr("تعذّر إزالة peer: ") + str(exc)) from exc
     # forget the cached public key so the row reflects "no peer"
     with transaction() as c:
         c.execute(

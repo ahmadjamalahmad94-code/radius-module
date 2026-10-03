@@ -40,34 +40,34 @@
 {# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ──
    نوع المهمة (kind) كما يولّده integration/router_sync.py #}
 {% set kind_labels = {
-  'subscriber_upsert': 'تحديث مشترك',
-  'subscriber_delete': 'حذف مشترك',
-  'plan_upsert':       'تحديث باقة',
-  'plan_delete':       'حذف باقة',
-  'pool_upsert':       'تحديث حوض عناوين',
-  'disconnect':        'قطع جلسة',
-  'reset_password':    'إعادة تعيين كلمة المرور'
+  'subscriber_upsert': _('تحديث مشترك'),
+  'subscriber_delete': _('حذف مشترك'),
+  'plan_upsert':       _('تحديث باقة'),
+  'plan_delete':       _('حذف باقة'),
+  'pool_upsert':       _('تحديث حوض عناوين'),
+  'disconnect':        _('قطع جلسة'),
+  'reset_password':    _('إعادة تعيين كلمة المرور')
 } %}
 {# حالة المهمة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
 {% set status_map = {
-  'queued':   ('في الانتظار',    'blue'),
-  'syncing':  ('جاري المزامنة',  'blue'),
-  'retrying': ('تُعاد المحاولة', 'amber'),
-  'done':     ('مكتملة',         'green'),
-  'failed':   ('فاشلة',          'red')
+  'queued':   (_('في الانتظار'),    'blue'),
+  'syncing':  (_('جاري المزامنة'),  'blue'),
+  'retrying': (_('تُعاد المحاولة'), 'amber'),
+  'done':     (_('مكتملة'),         'green'),
+  'failed':   (_('فاشلة'),          'red')
 } %}
 
 {# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة الحالة ───── #}
 <section class="hub-hero-shell" data-testid="sync-hero">
 {% call hub.megahero(
-  "طابور المزامنة",
-  subtitle="كل تغيير على المشتركين والباقات يتحوّل إلى مهمة تُدفع للراوترات تلقائيًا — تابع هنا ما اكتمل وما تعثّر.",
+  _('طابور المزامنة'),
+  subtitle=_('كل تغيير على المشتركين والباقات يتحوّل إلى مهمة تُدفع للراوترات تلقائيًا — تابع هنا ما اكتمل وما تعثّر.'),
   icon="arrows-rotate",
   kpis=[
-    {'label': 'في الانتظار',    'value': stats.queued,   'icon': 'hourglass-half', 'variant': 'brand'},
-    {'label': 'تُعاد المحاولة', 'value': stats.retrying, 'icon': 'rotate-right',   'variant': 'amber'},
-    {'label': 'مكتملة',         'value': stats.done,     'icon': 'circle-check',   'variant': 'green'},
-    {'label': 'فاشلة',          'value': stats.failed,   'icon': 'circle-xmark',   'variant': 'red'},
+    {'label': _('في الانتظار'),    'value': stats.queued,   'icon': 'hourglass-half', 'variant': 'brand'},
+    {'label': _('تُعاد المحاولة'), 'value': stats.retrying, 'icon': 'rotate-right',   'variant': 'amber'},
+    {'label': _('مكتملة'),         'value': stats.done,     'icon': 'circle-check',   'variant': 'green'},
+    {'label': _('فاشلة'),          'value': stats.failed,   'icon': 'circle-xmark',   'variant': 'red'},
   ],
   search_action=url_for('radius.sync_list'),
   search_method="get"
@@ -81,21 +81,21 @@
     <option value="done"     {% if status == 'done'     %}selected{% endif %}>{{ _('مكتملة') }}</option>
     <option value="failed"   {% if status == 'failed'   %}selected{% endif %}>{{ _('فاشلة') }}</option>
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if status %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.sync_list') + "'" + '"') }}
   {% endif %}
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
-        data-hint="كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة (عمود «الراوتر المستهدف» يوضّح ذلك). المهام الفاشلة تُعاد تلقائيًا بفواصل متصاعدة حتى ٦ محاولات، وزر «إعادة الآن» يعيدها فورًا، وإلغاء مهمة منتظِرة يوقفها نهائيًا فلا يصل التغيير إلى الراوتر."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة (عمود «الراوتر المستهدف» يوضّح ذلك). المهام الفاشلة تُعاد تلقائيًا بفواصل متصاعدة حتى ٦ محاولات، وزر «إعادة الآن» يعيدها فورًا، وإلغاء مهمة منتظِرة يوقفها نهائيًا فلا يصل التغيير إلى الراوتر.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if jobs %}
 {# ───── جدول مهام المزامنة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("مهام المزامنة", icon="table-list",
-                    meta=jobs|length|string ~ " مهمة", flush=True) %}
+{% call hub.section(_('مهام المزامنة'), icon="table-list",
+                    meta=_('%(string)s مهمة', string=jobs|length|string), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        data-uds-export-title="{{ _('طابور المزامنة') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -131,14 +131,14 @@
              • عند الفشل نُظهر آخر راوتر تعثّر عليه التنفيذ (last_router_id) إن سُجّل. #}
           <td>
             {% if j.router_id %}
-              {{ hub.pill(router_names.get(j.router_id, 'راوتر #' ~ j.router_id), variant="blue", dot=False) }}
+              {{ hub.pill(router_names.get(j.router_id, _('راوتر #%(router_id)s', router_id=j.router_id)), variant="blue", dot=False) }}
             {% else %}
               <span class="small" style="font-weight:700">{{ _('كل الراوترات المفعّلة') }}</span>
               {% if routers_enabled %}<span class="hub-text-mute small"> (<bdi dir="ltr">{{ routers_enabled }}</bdi>)</span>{% endif %}
             {% endif %}
             {% if j.last_router_id and j.status in ['failed', 'retrying'] %}
               <div class="small" style="color:var(--hub-red-ink,#B91C1C)">
-                آخر فشل على: {{ router_names.get(j.last_router_id, 'راوتر #' ~ j.last_router_id) }}
+                {{ _('آخر فشل على:') }} {{ router_names.get(j.last_router_id, _('راوتر #%(last_router_id)s', last_router_id=j.last_router_id)) }}
               </div>
             {% endif %}
           </td>
@@ -193,8 +193,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا مهام تطابق الفلتر" if status else "الطابور فارغ — كل شيء متزامن",
-  sub="غيّر فلتر الحالة في الأعلى لعرض مهام أخرى." if status else "عند تعديل مشترك أو باقة تظهر مهمة المزامنة هنا وتُدفع للراوترات تلقائيًا.",
+  _('لا مهام تطابق الفلتر') if status else _('الطابور فارغ — كل شيء متزامن'),
+  sub=_('غيّر فلتر الحالة في الأعلى لعرض مهام أخرى.') if status else _('عند تعديل مشترك أو باقة تظهر مهمة المزامنة هنا وتُدفع للراوترات تلقائيًا.'),
   icon="arrows-rotate"
 ) }}
 {% endif %}
@@ -207,13 +207,11 @@
     <button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> {{ _("إلغاء المهمة") }}</button>
   </form>
 {% endset %}
-{% call hub.modal("syncCancelModal", "تأكيد إلغاء المهمة", icon="ban", size="sm",
+{% call hub.modal("syncCancelModal", _('تأكيد إلغاء المهمة'), icon="ban", size="sm",
    footer_html=_sync_cancel_foot) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>
-    <span>{{ _('ستُلغى مهمة «') }}<strong data-sync-cancel-kind></strong>» للعنصر
-      «<strong class="mono" data-sync-cancel-entity></strong>» نهائيًا —
-      لن يُدفع هذا التغيير إلى الراوتر.</span>
+    <span>{{ _('ستُلغى مهمة «') }}<strong data-sync-cancel-kind></strong>{{ _('» للعنصر «') }}<strong class="mono" data-sync-cancel-entity></strong>{{ _('» نهائيًا — لن يُدفع هذا التغيير إلى الراوتر.') }}</span>
   </div>
 {% endcall %}
 

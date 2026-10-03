@@ -42,7 +42,7 @@
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
 
-  {% call hub.section("نظرة عامّة", icon="circle-info") %}
+  {% call hub.section(_('نظرة عامّة'), icon="circle-info") %}
     <dl class="kv">
       <dt>{{ _('الحالة') }}</dt><dd>{{ d.status_ar }} {% if d.is_online %}· <span style="color:#16a34a">● {{ _('متصل') }}</span>{% else %}· <span style="color:#94a3b8">○ {{ _('غير متصل') }}</span>{% endif %}</dd>
       <dt>{{ _('المشترك/المستخدم') }}</dt><dd>{{ d.radius_username or '—' }}</dd>
@@ -54,7 +54,7 @@
     </dl>
   {% endcall %}
 
-  {% call hub.section("الشبكة", icon="ethernet") %}
+  {% call hub.section(_('الشبكة'), icon="ethernet") %}
     <dl class="kv">
       <dt>WAN IP</dt><dd class="mono">{{ d.wan_ip or '—' }}</dd>
       <dt>WAN MAC</dt><dd class="mono">{{ d.wan_mac or '—' }}</dd>
@@ -65,9 +65,9 @@
 </div>
 
 {% if d.status == 'active' %}
-{% call hub.section("أوامر عن بُعد", icon="bolt") %}
+{% call hub.section(_('أوامر عن بُعد'), icon="bolt") %}
   <div class="act-grid">
-    {% for a, ic, lbl in [('refresh','rotate','تحديث البيانات'),('reboot','power-off','إعادة تشغيل'),('connection_request','satellite-dish','طلب اتصال')] %}
+    {% for a, ic, lbl in [('refresh','rotate',_('تحديث البيانات')),('reboot','power-off',_('إعادة تشغيل')),('connection_request','satellite-dish',_('طلب اتصال'))] %}
     {% if can_submit('radius.routers_action', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_action', device_id=d.id) }}"
           onsubmit="return confirm('{{ _('تنفيذ:') }} {{ lbl }}؟');">
       {{ csrf_token_input() | safe }}<input type="hidden" name="action_type" value="{{ a }}">
@@ -78,13 +78,13 @@
   <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">{{ _('تغيير Wi-Fi/PPPoE و Firmware يُضاف في المراحل التالية من التجربة.') }}</p>
 {% endcall %}
 {% else %}
-{% call hub.section("بانتظار أوّل اتصال", icon="clock") %}
+{% call hub.section(_('بانتظار أوّل اتصال'), icon="clock") %}
   <p style="color:#64748b">{{ _('الراوتر لم يتّصل بـ GenieACS بعد. تأكّد من وضع بيانات ACS في إعداد TR-069 داخل الراوتر. يظهر التسجيل تلقائيًّا عند أوّل Inform.') }}</p>
 {% endcall %}
 {% endif %}
 
 {% if d.actions %}
-{% call hub.section("سجلّ الأوامر", icon="list-check", meta=(d.actions|length)|string) %}
+{% call hub.section(_('سجلّ الأوامر'), icon="list-check", meta=(d.actions|length)|string) %}
   <div class="hub-table-wrap"><table class="hub-table">
     <thead><tr><th>{{ _('الأمر') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التفاصيل') }}</th><th>{{ _('المنفّذ') }}</th><th>{{ _('الوقت') }}</th></tr></thead>
     <tbody>{% for a in d.actions %}

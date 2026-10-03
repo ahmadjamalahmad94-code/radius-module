@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 
@@ -27,12 +28,12 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
+        raise ValueError(_tr("قيم التاريخ يجب أن تكون نصًا بصيغة ISO."))
     try:
         # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
         return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
-        raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
+        raise ValueError(_tr("قيمة التاريخ غير صالحة. استخدم صيغة ISO.")) from exc
 
 
 def _system_currency() -> str:
@@ -94,22 +95,22 @@ def list_invoices():
 def get_invoice(invoice_id: int):
     invoice = invoices_repo.get(_tid(), invoice_id)
     if not invoice:
-        return fail("not_found", "الفاتورة غير موجودة.", status=404)
+        return fail("not_found", _tr("الفاتورة غير موجودة."), status=404)
     return ok(_item(invoice))
 
 
 def create_invoice():
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     try:
         subscriber_id = int(body.get("subscriber_id") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف المشترك يجب أن يكون رقمًا صحيحًا."), status=422)
     try:
         amount = strict_float(body.get("amount") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة الفاتورة يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة الفاتورة يجب أن تكون رقمًا صحيحًا."), status=422)
     try:
         recharged_on = _dt(body.get("recharged_on"))
         expiration_at = _dt(body.get("expiration_at"))
@@ -117,7 +118,7 @@ def create_invoice():
         return fail("validation_error", str(exc), status=422)
     username = str(body.get("username") or "").strip()
     if subscriber_id <= 0 or amount < 0:
-        return fail("validation_error", "اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة.", status=422)
+        return fail("validation_error", _tr("اختر المشترك، وأدخل اسم المستخدم، وقيمة الفاتورة."), status=422)
     # Parity-b F7: like the web (inv_create) — the subscriber is resolved in
     # this tenant and the username/balances come from it. A typed id that does
     # not exist was a 500 (FK); a wrong-but-valid id put the invoice in another
@@ -127,15 +128,15 @@ def create_invoice():
         "SELECT id, username, balance FROM subscribers WHERE tenant_id = ? AND id = ? "
         "AND deleted_at IS NULL", (_tid(), subscriber_id)).fetchone()
     if sub is None:
-        return fail("validation_error", "المشترك غير موجود.", status=422,
+        return fail("validation_error", _tr("المشترك غير موجود."), status=422,
                     details={"field": "subscriber_id"})
     if username and username != str(sub["username"]):
         return fail("validation_error",
-                    f"اسم المستخدم لا يطابق المشترك #{subscriber_id} ({sub['username']}).",
+                    _tr('اسم المستخدم لا يطابق المشترك #%(subscriber_id)s (%(username)s).', subscriber_id=subscriber_id, username=sub['username']),
                     status=422, details={"field": "username"})
     username = str(sub["username"])
     from ...radius.core import limits
-    _msg = limits.amount_error(amount, "generic", label="قيمة الفاتورة")
+    _msg = limits.amount_error(amount, "generic", label=N_("قيمة الفاتورة"))
     if _msg:   # «الحدود» — باقي المدخلات الماليّة
         return fail("validation_error", _msg, status=422)
     try:
@@ -152,7 +153,7 @@ def create_invoice():
         balance_after = (strict_float(body["balance_after"])
                          if body.get("balance_after") not in (None, "") else _bal + amount)
     except (TypeError, ValueError):
-        return fail("validation_error", "القيم الرقمية في الفاتورة يجب أن تكون صحيحة.", status=422)
+        return fail("validation_error", _tr("القيم الرقمية في الفاتورة يجب أن تكون صحيحة."), status=422)
     # zero-w3: 0 = «غير محدّد» (the app sent 0 for blank numeric fields) and a
     # plan / router / gateway that is not in this network is a 422 — each was
     # a FOREIGN KEY 500.
@@ -165,18 +166,18 @@ def create_invoice():
         from ...radius.db.repos import plans_repo
         _plan = plans_repo.get_plan(_tid(), plan_id)
         if _plan is None:
-            return fail("validation_error", "الباقة المحدّدة غير موجودة.", status=422,
+            return fail("validation_error", _tr("الباقة المحدّدة غير موجودة."), status=422,
                         details={"field": "plan_id"})
         plan_name = plan_name or _plan.name
     if router_id is not None and db().execute(
             "SELECT 1 FROM nas_devices WHERE tenant_id = ? AND id = ?",
             (_tid(), router_id)).fetchone() is None:
-        return fail("validation_error", "جهاز الشبكة المحدّد غير موجود.", status=422,
+        return fail("validation_error", _tr("جهاز الشبكة المحدّد غير موجود."), status=422,
                     details={"field": "router_id"})
     if payment_gateway_id is not None and db().execute(
             "SELECT 1 FROM payment_gateways WHERE tenant_id = ? AND id = ?",
             (_tid(), payment_gateway_id)).fetchone() is None:
-        return fail("validation_error", "بوّابة الدفع المحدّدة غير موجودة.", status=422,
+        return fail("validation_error", _tr("بوّابة الدفع المحدّدة غير موجودة."), status=422,
                     details={"field": "payment_gateway_id"})
     invoice = Invoice(
         id=None,
@@ -201,18 +202,18 @@ def create_invoice():
         note=str(body.get("note") or ""),
     )
     if invoice.status not in INVOICE_STATUSES:
-        return fail("validation_error", "حالة الفاتورة غير صحيحة.", status=422)
+        return fail("validation_error", _tr("حالة الفاتورة غير صحيحة."), status=422)
     return ok(_item(invoices_repo.create(invoice)), status=201)
 
 
 def update_status(invoice_id: int):
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     status = str(body.get("status") or "").strip()
     if status not in INVOICE_STATUSES:
-        return fail("validation_error", "حالة الفاتورة غير صحيحة.", status=422)
+        return fail("validation_error", _tr("حالة الفاتورة غير صحيحة."), status=422)
     if not invoices_repo.get(_tid(), invoice_id):
-        return fail("not_found", "الفاتورة غير موجودة.", status=404)
+        return fail("not_found", _tr("الفاتورة غير موجودة."), status=404)
     invoices_repo.update_status(_tid(), invoice_id, status, note=str(body.get("note") or ""))
     return ok(_item(invoices_repo.get(_tid(), invoice_id)))

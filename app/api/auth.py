@@ -30,6 +30,7 @@
 عند نجاح التحقّق نضع: g.api_token_id, g.tenant_id (override).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import functools
 import logging
@@ -303,14 +304,14 @@ def enforce_api_auth():
                 rec = None
             if not rec:
                 _LOG.warning("invalid api token attempt (len=%d)", len(token))
-                return fail("unauthorized", "توكن غير صالح", status=401)
+                return fail("unauthorized", _tr("توكن غير صالح"), status=401)
             # 2a. expiry — fail closed
             expired = _is_expired(rec.get("expires_at"))
             if expired is True:
                 _LOG.info("expired api token attempted (id=%s)", rec.get("id"))
                 return fail(
                     "token_expired",
-                    "انتهت صلاحية الـ token — سجّل دخول مجددًا",
+                    _tr("انتهت صلاحية الـ token — سجّل دخول مجددًا"),
                     status=401,
                 )
             tenant_id = rec["tenant_id"]
@@ -323,7 +324,7 @@ def enforce_api_auth():
                 _LOG.info("api token of inactive admin rejected (id=%s)", token_id)
                 return fail(
                     "token_revoked",
-                    "الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد.",
+                    _tr("الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد."),
                     status=401,
                 )
             # touch last_used (best-effort)
@@ -342,8 +343,8 @@ def enforce_api_auth():
         if not basic:
             return fail(
                 "unauthorized",
-                "مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> "
-                "أو X-API-Key) أو اعتماد أدمن (Basic بيوزر/باس الأدمن).",
+                _tr("مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> "
+                "أو X-API-Key) أو اعتماد أدمن (Basic بيوزر/باس الأدمن)."),
                 status=401,
             )
         admin, tenant_id = basic
@@ -358,7 +359,7 @@ def enforce_api_auth():
     key = f"{key_prefix}{rate_key}"
     if rpm > 0 and not _rate_limit_check(key, per_minute=rpm):
         return fail("rate_limited",
-                    f"تجاوزت الحد ({rpm} req/min)", status=429,
+                    _tr('تجاوزت الحد (%(rpm)s req/min)', rpm=rpm), status=429,
                     details={"retry_after_seconds": 60})
 
     # set context

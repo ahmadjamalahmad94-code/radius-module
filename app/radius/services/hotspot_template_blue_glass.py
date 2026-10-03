@@ -11,6 +11,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -116,13 +117,13 @@ _GLASS_ART = """
 
 _GLASS_HERO = ("""
       <div class="bg-hero">
-        <div class="bg-frame">""" + _GLASS_ART + """</div>
+        <div class="bg-frame">""" + _GLASS_ART + N_("""</div>
         <div class="bg-cap">
           <div><b>مكتبك في المدينة</b><span>إنترنت سريع وآمن لمساحات العمل الحرّ</span></div>
           <div class="bg-badge"><span class="bg-dot"></span> جاهز</div>
         </div>
       </div>
-""")
+"""))
 
 _GLASS_STYLE = """
 <style id="hr-blue-glass">

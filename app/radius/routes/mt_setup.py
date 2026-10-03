@@ -21,6 +21,7 @@ Three endpoints back the Phase-L wizard flow:
         to write because /system/overview already does the job.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from ..core import env_settings
@@ -223,10 +224,10 @@ def _provisioned_peer_ips() -> "set[str] | None":
 
 
 _CHECK_STATUS_AR = {
-    "reachable":   "ناجح",
-    "timeout":     "انتهت المهلة",
-    "unreachable": "تعذّر الاتصال",
-    "unknown":     "غير معروف",
+    "reachable":   N_("ناجح"),
+    "timeout":     N_("انتهت المهلة"),
+    "unreachable": N_("تعذّر الاتصال"),
+    "unknown":     N_("غير معروف"),
 }
 
 
@@ -256,7 +257,7 @@ def _derive_mgmt_status(
     ros = str(item.get("ros_version") or "")
     # نوع النفق المتوقّع حسب إصدار RouterOS (مرآة recommended_management_tunnel).
     tunnel_label = ("WireGuard" if ros.startswith("7")
-                    else ("SSTP" if ros.startswith("6") else "الإدارة"))
+                    else ("SSTP" if ros.startswith("6") else _tr("الإدارة")))
 
     check = str(item.get("last_check_status") or "").strip().lower()
     at = str(item.get("last_check_at") or "").strip()
@@ -268,15 +269,15 @@ def _derive_mgmt_status(
     # 0) الإشارة الحيّة لها الأولوية المطلقة (نفس مصدر عمود «متصل»).
     if live == "connected":
         return {
-            "state": "active", "color": "green", "label": "نفق فعّال",
-            "reason": ("نفق إدارة %s فعّال — اللوحة تتواصل مع الراوتر الآن "
-                       "(حركة حيّة عبر النفق)." % tunnel_label),
+            "state": "active", "color": "green", "label": _tr("نفق فعّال"),
+            "reason": (_tr("نفق إدارة %s فعّال — اللوحة تتواصل مع الراوتر الآن "
+                       "(حركة حيّة عبر النفق).") % tunnel_label),
         }
     if live == "down":
         return {
-            "state": "down", "color": "red", "label": "النفق متوقف",
-            "reason": ("لا استجابة حيّة من الراوتر عبر نفق %s الآن. تأكّد أن "
-                       "الراوتر يعمل وأن النفق متصل." % tunnel_label),
+            "state": "down", "color": "red", "label": _tr("النفق متوقف"),
+            "reason": (_tr("لا استجابة حيّة من الراوتر عبر نفق %s الآن. تأكّد أن "
+                       "الراوتر يعمل وأن النفق متصل.") % tunnel_label),
         }
 
     # 1) صفوف يُستطلَع اتصالها حيًّا: لا نؤكّد حالة من فحص TCP اليدوي القديم
@@ -284,63 +285,63 @@ def _derive_mgmt_status(
     #    نؤجّل القرار للاستطلاع الحيّ كي لا نتناقض مع عمود «الحالة».
     if live_pollable:
         return {
-            "state": "checking", "color": "grey", "label": "جارٍ الفحص…",
-            "reason": ("يُقاس اتصال نفق %s حيًّا الآن عبر استطلاع الراوتر…"
+            "state": "checking", "color": "grey", "label": _tr("جارٍ الفحص…"),
+            "reason": (_tr("يُقاس اتصال نفق %s حيًّا الآن عبر استطلاع الراوتر…")
                        % tunnel_label),
         }
 
     # 2) أقوى إشارة ساكنة (للصفوف غير المُستطلَعة): فحص الوصول عبر النفق.
     if check == "reachable":
         return {
-            "state": "active", "color": "green", "label": "نفق فعّال",
-            "reason": ("نفق إدارة %s فعّال — الراوتر يُجاب عبر النفق%s."
-                       % (tunnel_label, (" (آخر فحص ناجح — " + at + ")") if at else " (آخر فحص ناجح)")),
+            "state": "active", "color": "green", "label": _tr("نفق فعّال"),
+            "reason": (_tr("نفق إدارة %s فعّال — الراوتر يُجاب عبر النفق%s.")
+                       % (tunnel_label, (_tr(" (آخر فحص ناجح — ") + at + ")") if at else _tr(" (آخر فحص ناجح)"))),
         }
     if check in ("timeout", "unreachable"):
         return {
-            "state": "down", "color": "red", "label": "النفق متوقف",
-            "reason": ("تعذّر الوصول إلى الراوتر عبر نفق %s (%s%s). تأكّد أن الراوتر يعمل وأن النفق متصل."
-                       % (tunnel_label, _CHECK_STATUS_AR.get(check, check), (" في " + at) if at else "")),
+            "state": "down", "color": "red", "label": _tr("النفق متوقف"),
+            "reason": (_tr("تعذّر الوصول إلى الراوتر عبر نفق %s (%s%s). تأكّد أن الراوتر يعمل وأن النفق متصل.")
+                       % (tunnel_label, _CHECK_STATUS_AR.get(check, check), (_tr(" في ") + at) if at else "")),
         }
 
     # 3) فشل التجهيز.
     if lifecycle == "failed":
         return {
-            "state": "down", "color": "red", "label": "فشل التجهيز",
+            "state": "down", "color": "red", "label": _tr("فشل التجهيز"),
             "reason": (item.get("failure_reason")
-                       or "فشل تجهيز نفق الإدارة. أعد تشغيل معالج التجهيز."),
+                       or _tr("فشل تجهيز نفق الإدارة. أعد تشغيل معالج التجهيز.")),
         }
 
     # 4) التجهيز ما زال جارياً.
     if lifecycle in ("reserved", "waiting_router_key", "peer_ready",
                      "vpn_verified", "radius_pending", "api_pending"):
         return {
-            "state": "pending", "color": "amber", "label": "قيد الإعداد",
-            "reason": ("نفق %s قيد الإعداد (%s)."
+            "state": "pending", "color": "amber", "label": _tr("قيد الإعداد"),
+            "reason": (_tr("نفق %s قيد الإعداد (%s).")
                        % (tunnel_label, item.get("lifecycle_label_ar") or lifecycle)),
         }
 
     # 5) أُنشئ peer لكن لم يُختبر الوصول بعد.
     if has_peer:
         return {
-            "state": "pending", "color": "amber", "label": "بانتظار أول فحص",
-            "reason": ("أُنشئ peer نفق %s لهذا الراوتر، لكن لم يُختبر الوصول بعد — "
-                       "اضغط «اختبار الاتصال» في قائمة الأجهزة." % tunnel_label),
+            "state": "pending", "color": "amber", "label": _tr("بانتظار أول فحص"),
+            "reason": (_tr("أُنشئ peer نفق %s لهذا الراوتر، لكن لم يُختبر الوصول بعد — "
+                       "اضغط «اختبار الاتصال» في قائمة الأجهزة.") % tunnel_label),
         }
 
     # 6) لم يُنشأ peer إطلاقاً (والقراءة متاحة).
     if has_peer is False:
         return {
-            "state": "not_setup", "color": "grey", "label": "لم يُنشأ نفق",
-            "reason": ("لم يُنشأ peer نفق %s لهذا الراوتر بعد. شغّل معالج التجهيز لإنشاء النفق."
+            "state": "not_setup", "color": "grey", "label": _tr("لم يُنشأ نفق"),
+            "reason": (_tr("لم يُنشأ peer نفق %s لهذا الراوتر بعد. شغّل معالج التجهيز لإنشاء النفق.")
                        % tunnel_label),
         }
 
     # 7) تعذّر تحديد وجود peer (لا يمكن قراءة wg-peers.d) ولا يوجد فحص.
     return {
-        "state": "unknown", "color": "grey", "label": "لم يُختبر بعد",
-        "reason": ("لم يُختبر نفق %s بعد — اضغط «اختبار الاتصال» في قائمة الأجهزة "
-                   "لقياس الوصول عبر النفق." % tunnel_label),
+        "state": "unknown", "color": "grey", "label": _tr("لم يُختبر بعد"),
+        "reason": (_tr("لم يُختبر نفق %s بعد — اضغط «اختبار الاتصال» في قائمة الأجهزة "
+                   "لقياس الوصول عبر النفق.") % tunnel_label),
     }
 
 
@@ -403,13 +404,13 @@ def mt_operations():
         "radius_pending", "api_pending", "failed",
     }
     LIFECYCLE_LABELS_AR = {
-        "reserved":            ("محجوز",            "grey"),
-        "waiting_router_key":  ("بانتظار مفتاح",     "amber"),
-        "peer_ready":          ("VPN جاهز",         "amber"),
-        "vpn_verified":        ("اختبار التجهيز",    "amber"),
-        "radius_pending":      ("RADIUS قيد الإعداد", "amber"),
-        "api_pending":         ("API قيد الإعداد",   "amber"),
-        "failed":              ("فشل التجهيز",       "red"),
+        "reserved":            (N_("محجوز"),            "grey"),
+        "waiting_router_key":  (N_("بانتظار مفتاح"),     "amber"),
+        "peer_ready":          (N_("VPN جاهز"),         "amber"),
+        "vpn_verified":        (N_("اختبار التجهيز"),    "amber"),
+        "radius_pending":      (N_("RADIUS قيد الإعداد"), "amber"),
+        "api_pending":         (N_("API قيد الإعداد"),   "amber"),
+        "failed":              (N_("فشل التجهيز"),       "red"),
     }
     items = []
     for n, row in enumerate(rows, start=1):
@@ -527,10 +528,10 @@ def mt_setup_create():
     # Hard validation. Friendly form-level checks live in the
     # template; this is the last line of defence.
     if not name:
-        flash("اكتب اسمًا للراوتر", "error")
+        flash(_tr("اكتب اسمًا للراوتر"), "error")
         return redirect(url_for("radius.mt_setup_form"))
     if ros_version not in SUPPORTED_ROS_VERSIONS:
-        flash("اختر نسخة RouterOS (6 أو 7)", "error")
+        flash(_tr("اختر نسخة RouterOS (6 أو 7)"), "error")
         return redirect(url_for("radius.mt_setup_form"))
     # v6 always goes through a management tunnel — SSTP (default) or PPTP. The
     # tunnel auto-assigns the router's stable IP, so there is no manual
@@ -558,8 +559,8 @@ def mt_setup_create():
 
     if use_wireguard and not server_ip:
         flash(
-            "لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا أو اضبط "
-            "HOBERADIUS_PUBLIC_IP",
+            _tr("لم نتمكّن من معرفة عنوان السيرفر — اكتبه يدويًّا أو اضبط "
+            "HOBERADIUS_PUBLIC_IP"),
             "error",
         )
         return redirect(url_for("radius.mt_setup_form"))
@@ -575,13 +576,11 @@ def mt_setup_create():
         try:
             wg_provision = wpm.provision_peer(name)
         except ValueError as exc:
-            flash(f"تعذّر تجهيز WireGuard: {exc}", "error")
+            flash(_tr('تعذّر تجهيز WireGuard: %(exc)s', exc=exc), "error")
             return redirect(url_for("radius.mt_setup_form"))
         except Exception as exc:  # noqa: BLE001
             flash(
-                "WG غير مهيّأ على السيرفر بعد — تأكّد أن "
-                "HOBERADIUS_WG_SERVER_PUBKEY و HOBERADIUS_WG_SERVER_ENDPOINT "
-                f"مضبوطين في .env. ({exc})",
+                _tr('WG غير مهيّأ على السيرفر بعد — تأكّد أن HOBERADIUS_WG_SERVER_PUBKEY و HOBERADIUS_WG_SERVER_ENDPOINT مضبوطين في .env. (%(exc)s)', exc=exc),
                 "error",
             )
             return redirect(url_for("radius.mt_setup_form"))
@@ -599,12 +598,11 @@ def mt_setup_create():
             tun_provision = rmt.provision_tunnel(
                 name, transport=transport, tenant_id=_tid())
         except rmt.RouterMgmtTunnelError as exc:
-            flash(f"تعذّر تجهيز نفق الإدارة: {exc}", "error")
+            flash(_tr('تعذّر تجهيز نفق الإدارة: %(exc)s', exc=exc), "error")
             return redirect(url_for("radius.mt_setup_form"))
         except Exception as exc:  # noqa: BLE001
             flash(
-                "خادم accel غير مهيّأ بعد — تأكّد من ضبط HOBERADIUS_ACCEL_SERVER_HOST "
-                f"و HOBERADIUS_MGMT_TUNNEL_POOL في الإعدادات. ({exc})",
+                _tr('خادم accel غير مهيّأ بعد — تأكّد من ضبط HOBERADIUS_ACCEL_SERVER_HOST و HOBERADIUS_MGMT_TUNNEL_POOL في الإعدادات. (%(exc)s)', exc=exc),
                 "error",
             )
             return redirect(url_for("radius.mt_setup_form"))
@@ -644,7 +642,7 @@ def mt_setup_create():
                 rmt.deprovision_tunnel(tun_provision.tunnel_username, tenant_id=_tid())
             except Exception:
                 pass
-        flash(f"فشل إنشاء صف الراوتر: {exc}", "error")
+        flash(_tr('فشل إنشاء صف الراوتر: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_setup_form"))
 
     # Backfill L2 columns + (M2) the K1 VPN columns. The FreeRADIUS
@@ -796,7 +794,7 @@ def mt_setup_script(nas_id: int):
         try:
             cfg = wpm.load_config()
         except ValueError as exc:
-            flash(f"تعذّر قراءة إعدادات WireGuard من البيئة: {exc}", "error")
+            flash(_tr('تعذّر قراءة إعدادات WireGuard من البيئة: %(exc)s', exc=exc), "error")
             return redirect(url_for("radius.mt_setup_form"))
         if wg_priv:
             wg_priv_revealed = True
@@ -822,7 +820,7 @@ def mt_setup_script(nas_id: int):
         try:
             tcfg = rmt.load_config()
         except rmt.RouterMgmtTunnelError as exc:
-            flash(f"تعذّر قراءة إعدادات نفق الإدارة: {exc}", "error")
+            flash(_tr('تعذّر قراءة إعدادات نفق الإدارة: %(exc)s', exc=exc), "error")
             return redirect(url_for("radius.mt_setup_form"))
         username = (nas.get("management_secret_ref")
                     or rmt.tunnel_username(nas["name"]))
@@ -861,7 +859,7 @@ def mt_setup_script(nas_id: int):
             api_allowed_address=api_allowed_address,
         )
     except ValueError as exc:
-        flash(f"تعذّر توليد السكربت: {exc}", "error")
+        flash(_tr('تعذّر توليد السكربت: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_setup_form"))
 
     # Section line-ranges so each «شرح الكود» row jumps + highlights the right
@@ -1052,7 +1050,7 @@ def mt_sstp_sync(nas_id: int):
     try:
         res = rmt.ensure_tunnel_radius_user(username, tenant_id=_tid())
     except rmt.RouterMgmtTunnelError as exc:
-        flash(f"تعذّرت المزامنة مع RADIUS: {exc}", "error")
+        flash(_tr('تعذّرت المزامنة مع RADIUS: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
     # Keep nas_devices' tunnel IP consistent with what RADIUS now holds.
     with transaction() as c:
@@ -1075,7 +1073,7 @@ def mt_sstp_sync(nas_id: int):
             "sstp sync: FreeRADIUS client re-registration failed nas=%s",
             nas_id,
         )
-    flash("تمّت المزامنة مع RADIUS — الحساب جاهز لمصادقة MSCHAP-v2.", "success")
+    flash(_tr("تمّت المزامنة مع RADIUS — الحساب جاهز لمصادقة MSCHAP-v2."), "success")
     return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
 
@@ -1089,43 +1087,43 @@ def mt_sstp_reset(nas_id: int):
         res = rmt.ensure_tunnel_radius_user(
             username, tenant_id=_tid(), password=supplied)
     except rmt.RouterMgmtTunnelError as exc:
-        flash(f"تعذّر تعيين كلمة المرور: {exc}", "error")
+        flash(_tr('تعذّر تعيين كلمة المرور: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
     # Reveal once on the next render so the operator can copy the new MikroTik
     # block. The canonical copy stays in radcheck.
     session[f"_sstp_pw_{nas_id}"] = res.password
-    flash("كلمة مرور النفق جاهزة — تُعرض مرة واحدة. انسخ إعدادات MikroTik أدناه.",
+    flash(_tr("كلمة مرور النفق جاهزة — تُعرض مرة واحدة. انسخ إعدادات MikroTik أدناه."),
           "success")
     return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
 
 #: UI labels + remediation for each diagnostic code (Arabic).
 _SSTP_DIAG_LABELS = {
-    rmt.DIAG_OK: ("جاهز", "الحساب مهيّأ لمصادقة MSCHAP-v2 عبر SSTP/PPTP.", "green"),
+    rmt.DIAG_OK: (N_("جاهز"), N_("الحساب مهيّأ لمصادقة MSCHAP-v2 عبر SSTP/PPTP."), "green"),
     rmt.DIAG_INVALID_USER: (
-        "مستخدم غير موجود",
-        "لا حساب rtr- في RADIUS — اضغط «مزامنة مع RADIUS» لإنشائه.", "red"),
+        N_("مستخدم غير موجود"),
+        N_("لا حساب rtr- في RADIUS — اضغط «مزامنة مع RADIUS» لإنشائه."), "red"),
     rmt.DIAG_MISSING_SECRET: (
-        "لا كلمة مرور",
-        "الحساب موجود بلا سرّ — أعد تعيين كلمة المرور.", "red"),
+        N_("لا كلمة مرور"),
+        N_("الحساب موجود بلا سرّ — أعد تعيين كلمة المرور."), "red"),
     rmt.DIAG_MSCHAP_INCOMPATIBLE: (
-        "سرّ غير متوافق مع MSCHAP",
-        "السرّ المخزّن غير قابل للعكس (لا يصلح لـMSCHAP-v2) — أعد تعيين كلمة "
-        "المرور لكتابة Cleartext/NT-Password.", "red"),
+        N_("سرّ غير متوافق مع MSCHAP"),
+        N_("السرّ المخزّن غير قابل للعكس (لا يصلح لـMSCHAP-v2) — أعد تعيين كلمة "
+        "المرور لكتابة Cleartext/NT-Password."), "red"),
     rmt.DIAG_DISABLED: (
-        "الحساب معطّل",
-        "الحساب مضبوط على الرفض (Auth-Type := Reject) — أعد المزامنة لتفعيله.",
+        N_("الحساب معطّل"),
+        N_("الحساب مضبوط على الرفض (Auth-Type := Reject) — أعد المزامنة لتفعيله."),
         "amber"),
     rmt.DIAG_EXPIRED: (
-        "منتهي الصلاحية",
-        "تاريخ انتهاء الحساب مضى — حدّث الصلاحية أو أعد المزامنة.", "amber"),
+        N_("منتهي الصلاحية"),
+        N_("تاريخ انتهاء الحساب مضى — حدّث الصلاحية أو أعد المزامنة."), "amber"),
     rmt.DIAG_NO_FRAMED_IP: (
-        "لا عنوان نفق ثابت",
-        "لا Framed-IP — أعد المزامنة لتثبيت عنوان النفق.", "amber"),
+        N_("لا عنوان نفق ثابت"),
+        N_("لا Framed-IP — أعد المزامنة لتثبيت عنوان النفق."), "amber"),
     rmt.DIAG_WRONG_PASSWORD: (
-        "كلمة المرور خاطئة",
-        "كلمة المرور المُدخلة لا تطابق المخزّنة — صحّحها على الراوتر أو أعد "
-        "تعيينها.", "red"),
+        N_("كلمة المرور خاطئة"),
+        N_("كلمة المرور المُدخلة لا تطابق المخزّنة — صحّحها على الراوتر أو أعد "
+        "تعيينها."), "red"),
 }
 
 
@@ -1164,7 +1162,7 @@ def mt_sstp_user_toggle():
     username = _require_known_tunnel_user(request.form.get("username") or "")
     enabled = (request.form.get("enabled") or "").strip().lower() in ("1", "true", "on", "yes")
     rmt.set_tunnel_enabled(username, tenant_id=_tid(), enabled=enabled)
-    flash(("تم تفعيل" if enabled else "تم تعطيل") + f" الحساب {username}.", "success")
+    flash((_tr("تم تفعيل") if enabled else _tr("تم تعطيل")) + _tr(' الحساب %(username)s.', username=username), "success")
     return redirect(url_for("radius.mt_sstp_users"))
 
 
@@ -1181,10 +1179,10 @@ def mt_sstp_user_expiry():
             except ValueError:
                 continue
         if expire_at is None:
-            flash("صيغة تاريخ الانتهاء غير مفهومة.", "error")
+            flash(_tr("صيغة تاريخ الانتهاء غير مفهومة."), "error")
             return redirect(url_for("radius.mt_sstp_users"))
     rmt.set_tunnel_expiry(username, tenant_id=_tid(), expire_at=expire_at)
-    flash(("حُدّثت صلاحية " if expire_at else "أُزيلت صلاحية ") + username + ".",
+    flash((_tr("حُدّثت صلاحية ") if expire_at else _tr("أُزيلت صلاحية ")) + username + ".",
           "success")
     return redirect(url_for("radius.mt_sstp_users"))
 
@@ -1195,16 +1193,16 @@ def mt_sstp_user_reset():
     try:
         rmt.ensure_tunnel_radius_user(username, tenant_id=_tid(), password=supplied)
     except rmt.RouterMgmtTunnelError as exc:
-        flash(f"تعذّر تعيين كلمة المرور: {exc}", "error")
+        flash(_tr('تعذّر تعيين كلمة المرور: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_sstp_users"))
-    flash(f"حُدّثت كلمة مرور {username} — مرئية في الجدول.", "success")
+    flash(_tr('حُدّثت كلمة مرور %(username)s — مرئية في الجدول.', username=username), "success")
     return redirect(url_for("radius.mt_sstp_users"))
 
 
 def mt_sstp_user_delete():
     username = _require_known_tunnel_user(request.form.get("username") or "")
     rmt.deprovision_tunnel(username, tenant_id=_tid())
-    flash(f"حُذف حساب النفق {username} من RADIUS.", "success")
+    flash(_tr('حُذف حساب النفق %(username)s من RADIUS.', username=username), "success")
     return redirect(url_for("radius.mt_sstp_users"))
 
 
@@ -1244,13 +1242,13 @@ def mt_wg_peer_regenerate():
     try:
         priv = wg.regenerate_peer(_tid(), nas_id)
     except wg.WireguardMgmtError as exc:
-        flash(f"تعذّر توليد مفاتيح WireGuard: {exc}", "error")
+        flash(_tr('تعذّر توليد مفاتيح WireGuard: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_wg_peers"))
     # One-time reveal through the SAME mechanism the wizard uses: stash the
     # private key for one render of the setup-script page, then it self-deletes.
     session[f"_wg_router_priv_{nas_id}"] = priv
-    flash("وُلِّدت مفاتيح WireGuard جديدة — انسخ سكربت الراوتر الآن "
-          "(يُعرض المفتاح الخاصّ مرّة واحدة).", "success")
+    flash(_tr("وُلِّدت مفاتيح WireGuard جديدة — انسخ سكربت الراوتر الآن "
+          "(يُعرض المفتاح الخاصّ مرّة واحدة)."), "success")
     return redirect(url_for("radius.mt_setup_script", nas_id=nas_id))
 
 
@@ -1260,13 +1258,13 @@ def mt_wg_peer_remove():
     try:
         removed = wg.remove_peer(_tid(), nas_id)
     except wg.WireguardMgmtError as exc:
-        flash(f"تعذّر إزالة peer: {exc}", "error")
+        flash(_tr('تعذّر إزالة peer: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_wg_peers"))
     if removed:
-        flash("أُزيل peer الراوتر من الخادم — يتوقّف النفق حتى إعادة التوليد.",
+        flash(_tr("أُزيل peer الراوتر من الخادم — يتوقّف النفق حتى إعادة التوليد."),
               "success")
     else:
-        flash("لا peer مُسجَّل لهذا الراوتر على الخادم.", "info")
+        flash(_tr("لا peer مُسجَّل لهذا الراوتر على الخادم."), "info")
     return redirect(url_for("radius.mt_wg_peers"))
 
 
@@ -1293,7 +1291,7 @@ def mt_wg_details(nas_id: int):
             cfg = wpm.load_config()
             wg_preview = render_wg_block(
                 nas_name=peer["name"],
-                router_private_key="<المفتاح-الخاص-يظهر-مرّة-عند-إعادة-التوليد>",
+                router_private_key=N_("<المفتاح-الخاص-يظهر-مرّة-عند-إعادة-التوليد>"),
                 server_pubkey=cfg.server_pubkey,
                 server_endpoint=cfg.server_endpoint,
                 allowed_subnet=str(cfg.subnet),
@@ -1358,7 +1356,7 @@ def mt_onboarding_script(nas_id: int):
     try:
         cfg = rmt.load_config()
     except rmt.RouterMgmtTunnelError as exc:
-        flash(f"خادم accel غير مهيّأ: {exc}", "error")
+        flash(_tr('خادم accel غير مهيّأ: %(exc)s', exc=exc), "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
     # The rtr- account holds the UNIQUE tunnel password. Ensure it exists, then
@@ -1369,7 +1367,7 @@ def mt_onboarding_script(nas_id: int):
             res = rmt.ensure_tunnel_radius_user(username, tenant_id=_tid(), cfg=cfg)
             tunnel_pw, tunnel_ip = res.password, str(res.tunnel_ip)
         except rmt.RouterMgmtTunnelError as exc:
-            flash(f"تعذّر تجهيز حساب النفق: {exc}", "error")
+            flash(_tr('تعذّر تجهيز حساب النفق: %(exc)s', exc=exc), "error")
             return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
     else:
         tunnel_pw, tunnel_ip = st.cleartext, st.framed_ip
@@ -1403,8 +1401,8 @@ def mt_onboarding_script(nas_id: int):
     #    الـAPI). فنوقف التوليدَ ونطلب الاختيار. راجع devices_form.html.
     if not str(nas.get("ros_version") or "").strip():
         flash(
-            "اختر إصدار RouterOS للراوتر أوّلًا (6 أو 7) — أمرُ نفقِ الإدارة "
-            "يختلف بينهما، والإصدارُ الخطأ يجعل النفقَ لا يُنشأ بلا رسالةِ خطأ.",
+            _tr("اختر إصدار RouterOS للراوتر أوّلًا (6 أو 7) — أمرُ نفقِ الإدارة "
+            "يختلف بينهما، والإصدارُ الخطأ يجعل النفقَ لا يُنشأ بلا رسالةِ خطأ."),
             "error")
         return redirect(url_for("radius.devices_edit", nas_id=nas_id))
     try:
@@ -1416,8 +1414,7 @@ def mt_onboarding_script(nas_id: int):
         script = build_onboarding_script(params, paste_safe=True)
     except OnboardingScriptError as exc:
         flash(
-            f"تعذّر توليد السكربت — بيانات الراوتر ناقصة/ضعيفة: {exc}. "
-            "تحقّق من سرّ RADIUS وكلمة مرور النفق.", "error")
+            _tr('تعذّر توليد السكربت — بيانات الراوتر ناقصة/ضعيفة: %(exc)s. تحقّق من سرّ RADIUS وكلمة مرور النفق.', exc=exc), "error")
         return redirect(url_for("radius.mt_sstp_credentials", nas_id=nas_id))
 
     _sections = split_sections(full_script)
@@ -1521,13 +1518,13 @@ def _wg_winbox_hint(nas: dict) -> str:
         return ""
     check = str(nas.get("last_check_status") or "").strip().lower()
     if check in ("timeout", "unreachable", "down"):
-        return ("ملاحظة: آخر فحص يُظهر أن الراوتر لا يستجيب عبر نفق WireGuard — "
+        return (N_("ملاحظة: آخر فحص يُظهر أن الراوتر لا يستجيب عبر نفق WireGuard — "
                 "النفق على الأرجح غير متّصل، وأيّ اتصال WinBox سيُغلق أيضًا. "
-                "تحقّق من مصافحة WireGuard (الـpeer على الخادم + endpoint) أولًا.")
-    return ("إن أُغلق WinBox رغم فتح المنفذ: النفق متّصل لكن الراوتر يرفض المصدر. "
+                "تحقّق من مصافحة WireGuard (الـpeer على الخادم + endpoint) أولًا."))
+    return (N_("إن أُغلق WinBox رغم فتح المنفذ: النفق متّصل لكن الراوتر يرفض المصدر. "
             "أعد لصق «بلوك WireGuard» المُحدَّث على الراوتر مرّة واحدة (صار idempotent "
             "— يَمسح أي تكرار من لصقات سابقة ثم يَفتح WinBox على شبكة النفق). "
-            "صفحة «اتصالات WireGuard» ← تفاصيل الراوتر ← انسخ البلوك.")
+            "صفحة «اتصالات WireGuard» ← تفاصيل الراوتر ← انسخ البلوك."))
 
 
 def mt_remote_winbox_open(nas_id: int):
@@ -1547,8 +1544,8 @@ def mt_remote_winbox_open(nas_id: int):
         source_mode = "restrict" if allowed_source else "any"
     if source_mode == "restrict":
         if not allowed_source:
-            flash("اخترتَ التقييد على IP/CIDR لكن لم تُدخل عنوانًا — اكتب IP أو "
-                  "نطاق CIDR، أو اختر «من أي مكان».", "error")
+            flash(_tr("اخترتَ التقييد على IP/CIDR لكن لم تُدخل عنوانًا — اكتب IP أو "
+                  "نطاق CIDR، أو اختر «من أي مكان»."), "error")
             return redirect(back)
     else:
         allowed_source = ""   # «any» — ignore any stray value in the hidden field
@@ -1562,17 +1559,15 @@ def mt_remote_winbox_open(nas_id: int):
             opened_by=_actor(), service="winbox",
             persistent=persistent or None, allowed_source=allowed_source,
             dst_port=(winbox_port or None))
-        scope = ("من أي مكان (بدون قيد IP)" if res.get("unrestricted")
-                 else f"مقفول على {res['source_ip']}")
+        scope = (N_("من أي مكان (بدون قيد IP)") if res.get("unrestricted")
+                 else _tr('مقفول على %(source_ip)s', source_ip=res['source_ip']))
         if res.get("always_on"):
             flash(
-                f"فُتح WinBox بوضع دائم — الصق في WinBox: {res['endpoint']} "
-                f"({scope}). يبقى مفتوحًا حتى الإغلاق اليدويّ.",
+                _tr('فُتح WinBox بوضع دائم — الصق في WinBox: %(endpoint)s (%(scope)s). يبقى مفتوحًا حتى الإغلاق اليدويّ.', endpoint=res['endpoint'], scope=scope),
                 "success")
         else:
             flash(
-                f"فُتح WinBox — الصق في WinBox: {res['endpoint']} "
-                f"({scope}). يُغلق تلقائيًّا عند الانتهاء.",
+                _tr('فُتح WinBox — الصق في WinBox: %(endpoint)s (%(scope)s). يُغلق تلقائيًّا عند الانتهاء.', endpoint=res['endpoint'], scope=scope),
                 "success")
         # MT115 — منفذ الراوتر: أقرأناه أم افترضناه؟ منفذٌ مفترَضٌ خاطئ يُنتج
         # رابطًا لا يتّصل بلا رسالة خطأ — وهذا ما حدث فعلًا («وين بوكس مش
@@ -1580,16 +1575,14 @@ def mt_remote_winbox_open(nas_id: int):
         _src = res.get("dst_port_source")
         _dp = res.get("dst_port")
         if _src == "router":
-            flash(f"قُرئ منفذ WinBox من الراوتر تلقائيًّا: {_dp}.", "info")
+            flash(_tr('قُرئ منفذ WinBox من الراوتر تلقائيًّا: %(dp)s.', dp=_dp), "info")
         elif _src == "disabled":
             flash(
-                f"تنبيه: خدمة WinBox على الراوتر منفذها {_dp} لكنّها "
-                "**معطّلة** — فعّلها من /ip service وإلّا لن يتّصل الرابط.",
+                _tr('تنبيه: خدمة WinBox على الراوتر منفذها %(dp)s لكنّها **معطّلة** — فعّلها من /ip service وإلّا لن يتّصل الرابط.', dp=_dp),
                 "warning")
         elif _src == "default":
             flash(
-                f"تعذّر قراءة المنفذ من الراوتر، فاستُعمل القياسيّ {_dp}. "
-                "إن كان الزبون قد غيّره فاكتبه يدويًّا في خانة «منفذ الراوتر».",
+                _tr('تعذّر قراءة المنفذ من الراوتر، فاستُعمل القياسيّ %(dp)s. إن كان الزبون قد غيّره فاكتبه يدويًّا في خانة «منفذ الراوتر».', dp=_dp),
                 "warning")
         # For a WireGuard-managed router, surface WHY a connection might still
         # fail (so a closed WinBox isn't a silent dead-end): the tunnel being
@@ -1598,9 +1591,9 @@ def mt_remote_winbox_open(nas_id: int):
         if hint:
             flash(hint, "info")
     except ra.RemoteAccessError as exc:
-        flash(f"تعذّر فتح WinBox: {exc}", "error")
+        flash(_tr('تعذّر فتح WinBox: %(exc)s', exc=exc), "error")
     except RuntimeError as exc:
-        flash(f"تعذّر فتح WinBox: {exc}", "error")
+        flash(_tr('تعذّر فتح WinBox: %(exc)s', exc=exc), "error")
     return redirect(back)
 
 
@@ -1609,7 +1602,7 @@ def mt_remote_close(nas_id: int, session_id: int):
     nas = _remote_nas_or_404(nas_id)
     ra.close_session(tenant_id=_tid(), session_id=session_id,
                      closed_by=_actor(), source_ip=_client_ip())
-    flash("أُغلقت جلسة الوصول البعيد.", "success")
+    flash(_tr("أُغلقت جلسة الوصول البعيد."), "success")
     return redirect(_remote_return_url(nas_id, nas))
 
 

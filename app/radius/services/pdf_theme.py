@@ -35,6 +35,7 @@
 """
 
 from __future__ import annotations
+from app.i18n_text import N_
 
 import io
 import os
@@ -76,9 +77,9 @@ _ARABIC_RE = re.compile(r"[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]")
 # عملة النظام شيكل). نستبدلها بكلمة عربية مقروءة قبل التشكيل —
 # تُطبَّق على كل نص يمرّ عبر ar() (خلايا الجداول/الرؤوس/KPI).
 _GLYPH_SUBS = {
-    "₪": "شيكل",   # U+20AA — شيكل (غير موجود في Cairo)
-    "₺": "ليرة",    # U+20BA — ليرة تركية (غير موجود في Cairo)
-    "﷼": "ريال",    # U+FDFC — علامة الريال (غير موجودة في Cairo)
+    "₪": N_("شيكل"),   # U+20AA — شيكل (غير موجود في Cairo)
+    "₺": N_("ليرة"),    # U+20BA — ليرة تركية (غير موجود في Cairo)
+    "﷼": N_("ريال"),    # U+FDFC — علامة الريال (غير موجودة في Cairo)
     "₨": "Rs",      # U+20A8 — روبية (غير موجودة في Cairo)
 }
 
@@ -265,7 +266,7 @@ class _PageChrome:
         canvas.drawString(28, top - 45, self.generated_at)
         from reportlab.pdfbase.pdfmetrics import stringWidth
         value_w = stringWidth(self.generated_at, f_reg, 8.5)
-        canvas.drawString(28 + value_w + 5, top - 45, ar("تاريخ الإصدار:"))
+        canvas.drawString(28 + value_w + 5, top - 45, ar(N_("تاريخ الإصدار:")))
 
         # ── التذييل: خط بنفسجي رفيع + رقم الصفحة + توقيع ──
         canvas.setStrokeColor(_hex(BRAND_LINE))
@@ -438,7 +439,7 @@ def section_title(text: str):
     return Paragraph(ar(text), style)
 
 
-def empty_state(text: str = "لا توجد بيانات لعرضها في هذا التقرير"):
+def empty_state(text: str = N_("لا توجد بيانات لعرضها في هذا التقرير")):
     """رسالة «لا توجد بيانات» أنيقة بدل جدول فارغ قبيح."""
     from reportlab.lib.enums import TA_CENTER
     from reportlab.lib.styles import ParagraphStyle
@@ -492,16 +493,16 @@ def build_premium_pdf(*, title: str, story: list, subtitle: str = "",
 
 # حالات الحزمة التشغيلية → عربي (نُبقي القيمة الخام لو ظهرت حالة جديدة)
 _BATCH_STATUS_AR = {
-    "active": "نشطة",
-    "available": "متاحة",
-    "draft": "مسودة",
-    "archived": "مؤرشفة",
-    "pending_archive": "بانتظار الأرشفة",
-    "depleted": "مستنفدة",
-    "expired": "منتهية",
-    "revoked": "ملغاة",
-    "deleted": "محذوفة",
-    "in_use": "قيد الاستخدام",
+    "active": N_("نشطة"),
+    "available": N_("متاحة"),
+    "draft": N_("مسودة"),
+    "archived": N_("مؤرشفة"),
+    "pending_archive": N_("بانتظار الأرشفة"),
+    "depleted": N_("مستنفدة"),
+    "expired": N_("منتهية"),
+    "revoked": N_("ملغاة"),
+    "deleted": N_("محذوفة"),
+    "in_use": N_("قيد الاستخدام"),
 }
 
 
@@ -514,18 +515,18 @@ def build_batches_pdf(rows: list[dict]) -> bytes:
     from reportlab.platypus import Spacer
 
     headers = [
-        "رمز الحزمة",
-        "الباقة",
-        "الخطة",
-        "الحالة",
-        "المولّدة",
-        "المتاحة",
-        "النشطة",
-        "المتبقية",
-        "سعر الكرت",
-        "القيمة التقديرية",
-        "الموزع",
-        "تاريخ الإنشاء",
+        N_("رمز الحزمة"),
+        N_("الباقة"),
+        N_("الخطة"),
+        N_("الحالة"),
+        N_("المولّدة"),
+        N_("المتاحة"),
+        N_("النشطة"),
+        N_("المتبقية"),
+        N_("سعر الكرت"),
+        N_("القيمة التقديرية"),
+        N_("الموزع"),
+        N_("تاريخ الإنشاء"),
     ]
 
     def _money_value(item: dict) -> float:
@@ -571,10 +572,10 @@ def build_batches_pdf(rows: list[dict]) -> bytes:
 
     story: list = []
     if not body:
-        story.append(empty_state("لا توجد حِزَم كروت مطابقة لعوامل التصفية"))
+        story.append(empty_state(N_("لا توجد حِزَم كروت مطابقة لعوامل التصفية")))
     else:
         totals_row = [
-            "الإجمالي", "", "", "",
+            N_("الإجمالي"), "", "", "",
             fmt_int(total_generated),
             fmt_int(total_available),
             fmt_int(total_active),
@@ -584,10 +585,10 @@ def build_batches_pdf(rows: list[dict]) -> bytes:
             "", "",
         ]
         kpis = [
-            ("عدد الحِزَم", fmt_int(len(body))),
-            ("كروت مولّدة", fmt_int(total_generated)),
-            ("كروت متاحة", fmt_int(total_available)),
-            ("القيمة التقديرية", fmt_money(total_value)),
+            (N_("عدد الحِزَم"), fmt_int(len(body))),
+            (N_("كروت مولّدة"), fmt_int(total_generated)),
+            (N_("كروت متاحة"), fmt_int(total_available)),
+            (N_("القيمة التقديرية"), fmt_money(total_value)),
         ]
         story.append(kpi_row(kpis, page_width=content_width(landscape_mode=True)))
         story.append(Spacer(1, 14))
@@ -597,11 +598,11 @@ def build_batches_pdf(rows: list[dict]) -> bytes:
     if len(rows) > 100:
         subtitle += f" من أصل {len(rows)} (التفاصيل الكاملة في CSV/XLSX)"
     return build_premium_pdf(
-        title="تقرير حِزَم الكروت",
+        title=N_("تقرير حِزَم الكروت"),
         subtitle=subtitle,
         story=story,
         landscape_mode=True,
-        footer_note="HobeRadius • إدارة الكروت",
+        footer_note=N_("HobeRadius • إدارة الكروت"),
     )
 
 

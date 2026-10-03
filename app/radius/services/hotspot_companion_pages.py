@@ -29,6 +29,7 @@ build_all_companions() يعيد قاموس {filename: html} لكل الصفحا�
 يستهلكه مسار النشر (رفع كل ملف) ومسار الـ ZIP (الكتابة في الحزمة).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 import re
@@ -95,7 +96,7 @@ def _theme(safe: dict[str, str],
         "accent": accent,
         "bg": bg,
         # الاسم والشعار يدخلان نص HTML/سمات — يُهرَّبان.
-        "name": _esc(safe.get("TENANT_NAME") or "الشبكة"),
+        "name": _esc(safe.get("TENANT_NAME") or N_("الشبكة")),
         "logo": _esc(safe.get("TENANT_LOGO_URL") or ""),
         # جلد القالب النشط — كتلة :root الكاملة + رسمة التوقيع.
         "tokens_css": skin.get("tokens_css", "") or "",
@@ -336,7 +337,7 @@ def build_alogin(safe: dict[str, str],
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
-        + '<div class="hr-name">' + th["name"] + "</div>\n"
+        + '<div class="hr-name">' + th["name"] + N_("</div>\n"
         # حالة الخطأ: نعرض السبب وزر العودة — لا توجيه ولا حلقة.
         '$(if error)\n'
         '<div class="hr-err">$(error)</div>\n'
@@ -345,7 +346,7 @@ def build_alogin(safe: dict[str, str],
         '$(endif)\n'
         # الحالة العادية (دخول ناجح): رسمة توقيع القالب + تأكيد + توجيه
         # للصفحة المطلوبة أصلًا. لا إعادة إرسال للاعتماد (كان سبب الحلقة).
-        '$(if error == "")\n'
+        '$(if error == "")\n')
         + _illus_tag(th)
         + '<div class="hr-spin"></div>\n'
         '<div class="hr-sub">تم تسجيل دخولك بنجاح — جارٍ نقلك إلى '
@@ -367,7 +368,7 @@ def build_alogin(safe: dict[str, str],
     # توجيه احتياطيّ بـ meta (يعمل حتى لو عُطِّل JS) — للحالة الناجحة فقط.
     head_extra = ('$(if error == "")<meta http-equiv="refresh" '
                   'content="2; url=$(link-orig)">$(endif)\n')
-    return _doc("تم تسجيل الدخول — " + th["name"], body, th,
+    return _doc(N_("تم تسجيل الدخول — ") + th["name"], body, th,
                 head_extra=head_extra, safe=safe)
 
 
@@ -395,7 +396,7 @@ def build_status(safe: dict[str, str], *,
     if su:
         store_link = (
             '<a class="hr-btn alt" style="margin-top:10px" href="'
-            + _esc(su) + '">متجر البطاقات الإلكتروني</a>\n')
+            + _esc(su) + N_('">متجر البطاقات الإلكتروني</a>\n'))
     # كتلة الإضافات الثانويّة (post-login) — أسفل تفاصيل الجلسة، لا بديلًا عنها.
     addons_html = ""
     try:
@@ -406,16 +407,16 @@ def build_status(safe: dict[str, str], *,
                   "logo": th["logo"]})
         if widgets.strip():
             addons_html = (
-                '<div class="hr-addons">\n'
-                '<div class="hr-addons-h">عروض وإضافات</div>\n'
+                N_('<div class="hr-addons">\n'
+                '<div class="hr-addons-h">عروض وإضافات</div>\n')
                 + widgets + "\n</div>\n")
     except Exception:  # noqa: BLE001 — الإضافات لا تكسر صفحة الحالة أبدًا
         addons_html = ""
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
-        + '<div class="hr-name">مرحباً $(username)</div>\n'
-        '<div class="hr-sub">أنت متصل بشبكة ' + th["name"]
+        + N_('<div class="hr-name">مرحباً $(username)</div>\n'
+        '<div class="hr-sub">أنت متصل بشبكة ') + th["name"]
         + " — تفاصيل جلستك الحالية</div>\n"
         # مؤشر «مباشر» نابض فوق العدّاد الحيّ.
         '<div class="hr-live"><span class="hr-live-dot"></span>'
@@ -491,7 +492,7 @@ def build_status(safe: dict[str, str], *,
     # تحديث دوري إن فعّله بروفايل الهوت سبوت (status-refresh).
     head_extra = ('$(if refresh-timeout)<meta http-equiv="refresh" '
                   'content="$(refresh-timeout-secs)">$(endif)\n')
-    return _doc("حالة الاتصال — " + th["name"], body, th,
+    return _doc(N_("حالة الاتصال — ") + th["name"], body, th,
                 head_extra=head_extra, safe=safe)
 
 
@@ -506,7 +507,7 @@ def build_logout(safe: dict[str, str],
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
-        + '<div class="hr-name">انتهت الجلسة</div>\n'
+        + N_('<div class="hr-name">انتهت الجلسة</div>\n'
         '<div class="hr-sub">تم فصل اتصالك بالإنترنت بأمان. هذا ملخص '
         'استخدامك.</div>\n'
         '<div class="hr-stats">\n'
@@ -516,10 +517,10 @@ def build_logout(safe: dict[str, str],
         "<span>حجم الاستهلاك</span></div>\n"
         "</div>\n"
         '<a class="hr-btn" href="$(link-login)">الدخول من جديد</a>\n'
-        '<div class="hr-foot">' + th["name"] + "</div>\n"
+        '<div class="hr-foot">') + th["name"] + "</div>\n"
         "</div>"
     )
-    return _doc("تم الخروج — " + th["name"], body, th, safe=safe)
+    return _doc(N_("تم الخروج — ") + th["name"], body, th, safe=safe)
 
 
 # ─── error.html — صفحة خطأ منسّقة ───────────────────────────────
@@ -533,14 +534,14 @@ def build_error(safe: dict[str, str],
     body = (
         '<div class="hr-card">\n'
         + _logo_tag(th)
-        + '<div class="hr-name">حدث خطأ</div>\n'
+        + N_('<div class="hr-name">حدث خطأ</div>\n'
         '<div class="hr-err">$(error)</div>\n'
         '<a class="hr-btn alt" href="$(link-login)">العودة لتسجيل '
         'الدخول</a>\n'
-        '<div class="hr-foot">' + th["name"] + "</div>\n"
+        '<div class="hr-foot">') + th["name"] + "</div>\n"
         "</div>"
     )
-    return _doc("خطأ — " + th["name"], body, th, safe=safe)
+    return _doc(N_("خطأ — ") + th["name"], body, th, safe=safe)
 
 
 # ─── rlogin / redirect — صفحات إعادة التوجيه القياسية ───────────
@@ -609,12 +610,12 @@ def build_radvert(safe: dict[str, str],
         + _logo_tag(th)
         + '<div class="hr-name">' + th["name"] + "</div>\n"
         + _illus_tag(th)
-        + '<div class="hr-spin"></div>\n'
+        + N_('<div class="hr-spin"></div>\n'
         '<div class="hr-sub">جارٍ المتابعة... إن لم يحدث شيء، افتح '
         '<a href="$(link-redirect)" target="hotspot_advert" '
         'style="color:var(--accent);font-weight:700">الإعلان</a> '
         'يدويًا.</div>\n'
-        '<div class="hr-foot">' + th["name"] + "</div>\n"
+        '<div class="hr-foot">') + th["name"] + "</div>\n"
         "</div>\n"
         '<script>\n'
         'var popup="";\n'
@@ -630,7 +631,7 @@ def build_radvert(safe: dict[str, str],
         'window.onload=openAdvert;\n'
         '</script>'
     )
-    return _doc("إعلان — " + th["name"], body, th, head_extra=head_extra,
+    return _doc(N_("إعلان — ") + th["name"], body, th, head_extra=head_extra,
                 safe=safe)
 
 

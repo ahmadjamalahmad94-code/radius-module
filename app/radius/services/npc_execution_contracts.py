@@ -67,6 +67,7 @@ Hard rules:
     unsafe script.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from dataclasses import dataclass, field
@@ -268,7 +269,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_MISSING_APPLY_PERM, severity="blocker",
             message_ar=(
-                "صلاحية apply مفقودة لدى المستخدم الحالي."
+                N_("صلاحية apply مفقودة لدى المستخدم الحالي.")
             ),
         ))
 
@@ -277,8 +278,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_NO_VALID_PREVIEW, severity="blocker",
             message_ar=(
-                "لا توجد معاينة محفوظة لهذه السياسة — يجب توليد "
-                "معاينة قبل أي محاولة تنفيذ."
+                N_("لا توجد معاينة محفوظة لهذه السياسة — يجب توليد "
+                "معاينة قبل أي محاولة تنفيذ.")
             ),
         ))
     if (inputs.has_preview
@@ -287,8 +288,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_PREVIEW_STALE, severity="blocker",
             message_ar=(
-                "تم تعديل السياسة بعد آخر معاينة — أعد توليد "
-                "المعاينة قبل المتابعة."
+                N_("تم تعديل السياسة بعد آخر معاينة — أعد توليد "
+                "المعاينة قبل المتابعة.")
             ),
         ))
     if (inputs.has_preview
@@ -298,8 +299,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_PREVIEW_HASH_MISMATCH, severity="blocker",
             message_ar=(
-                "تطابق المعاينة فشل — السكربت المراد تنفيذه "
-                "ليس هو نفسه السكربت الذي تمت مراجعته."
+                N_("تطابق المعاينة فشل — السكربت المراد تنفيذه "
+                "ليس هو نفسه السكربت الذي تمت مراجعته.")
             ),
         ))
 
@@ -308,8 +309,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_NO_ROLLBACK, severity="blocker",
             message_ar=(
-                "لا يوجد سكربت rollback — التنفيذ بدون "
-                "إمكانية تراجع غير مسموح."
+                N_("لا يوجد سكربت rollback — التنفيذ بدون "
+                "إمكانية تراجع غير مسموح.")
             ),
         ))
 
@@ -318,8 +319,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_NO_SNAPSHOT, severity="blocker",
             message_ar=(
-                "لا يوجد snapshot قبل التنفيذ — يجب التقاط "
-                "حالة الراوتر قبل أي تعديل."
+                N_("لا يوجد snapshot قبل التنفيذ — يجب التقاط "
+                "حالة الراوتر قبل أي تعديل.")
             ),
         ))
 
@@ -328,15 +329,14 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_NO_TARGET_ROUTERS, severity="blocker",
             message_ar=(
-                "قائمة الراوترات المستهدفة فارغة."
+                N_("قائمة الراوترات المستهدفة فارغة.")
             ),
         ))
     if inputs.offline_router_ids:
         blockers.append(ContractIssue(
             code=BLOCK_TARGET_ROUTER_OFFLINE, severity="blocker",
             message_ar=(
-                f"بعض الراوترات المستهدفة غير متّصلة: "
-                f"{sorted(inputs.offline_router_ids)}."
+                _tr('بعض الراوترات المستهدفة غير متّصلة: %(v)s.', v=sorted(inputs.offline_router_ids))
             ),
         ))
 
@@ -345,33 +345,32 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_CRITICAL_RISK, severity="blocker",
             message_ar=(
-                "تحليل الأثر يصنّف الخطّة critical — لا يمكن "
-                "التنفيذ قبل إعادة التخطيط."
+                N_("تحليل الأثر يصنّف الخطّة critical — لا يمكن "
+                "التنفيذ قبل إعادة التخطيط.")
             ),
         ))
     elif inputs.impact_risk_level == "high":
         warnings.append(ContractIssue(
             code=WARN_HIGH_RISK, severity="warning",
-            message_ar="مستوى الخطر مرتفع — راجع الأسباب أعلاه.",
+            message_ar=N_("مستوى الخطر مرتفع — راجع الأسباب أعلاه."),
         ))
     elif inputs.impact_risk_level == "medium":
         warnings.append(ContractIssue(
             code=WARN_MEDIUM_RISK, severity="warning",
-            message_ar="مستوى الخطر متوسط.",
+            message_ar=N_("مستوى الخطر متوسط."),
         ))
 
     if inputs.health_grade == "dangerous":
         blockers.append(ContractIssue(
             code=BLOCK_DANGEROUS_HEALTH, severity="blocker",
-            message_ar="درجة السلامة منخفضة جداً.",
+            message_ar=N_("درجة السلامة منخفضة جداً."),
         ))
 
     if inputs.conflict_high_count > 0:
         blockers.append(ContractIssue(
             code=BLOCK_CRITICAL_CONFLICT, severity="blocker",
             message_ar=(
-                f"يوجد {inputs.conflict_high_count} تعارض(ات) "
-                "عالي الخطورة مع سياسات أخرى — حلّها أوّلاً."
+                _tr('يوجد %(conflict_high_count)s تعارض(ات) عالي الخطورة مع سياسات أخرى — حلّها أوّلاً.', conflict_high_count=inputs.conflict_high_count)
             ),
         ))
 
@@ -380,16 +379,16 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_UNSAFE_SCRIPT, severity="blocker",
             message_ar=(
-                "السكربت مرفوض تلقائياً بسبب محتوى حسّاس — "
-                "لا يمكن المتابعة."
+                N_("السكربت مرفوض تلقائياً بسبب محتوى حسّاس — "
+                "لا يمكن المتابعة.")
             ),
         ))
     if _scan_secret_like(inputs.forward_script):
         blockers.append(ContractIssue(
             code=BLOCK_SECRET_LIKE_CONTENT, severity="blocker",
             message_ar=(
-                "السكربت يحوي قيماً تشبه بيانات حسّاسة — رُفض "
-                "تلقائياً."
+                N_("السكربت يحوي قيماً تشبه بيانات حسّاسة — رُفض "
+                "تلقائياً.")
             ),
         ))
     if _scan_unmanaged_remove(inputs.forward_script) \
@@ -397,8 +396,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_UNMANAGED_DELETION, severity="blocker",
             message_ar=(
-                "اكتُشف أمر حذف بدون البادئة المُدارة "
-                "(^HOBE_NPC_...) — لا يُسمح بتنفيذه."
+                N_("اكتُشف أمر حذف بدون البادئة المُدارة "
+                "(^HOBE_NPC_...) — لا يُسمح بتنفيذه.")
             ),
         ))
 
@@ -408,9 +407,9 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
             code=BLOCK_ALL_ROUTERS_WITHOUT_CANARY,
             severity="blocker",
             message_ar=(
-                "السياسة تستهدف كل الراوترات — يجب الموافقة "
+                N_("السياسة تستهدف كل الراوترات — يجب الموافقة "
                 "صراحةً على تخطّي canary، أو اختيار راوترات "
-                "محدَّدة."
+                "محدَّدة.")
             ),
         ))
 
@@ -418,7 +417,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
     if inputs.blast_radius == "large":
         warnings.append(ContractIssue(
             code=WARN_LARGE_BLAST, severity="warning",
-            message_ar="نطاق التأثير واسع.",
+            message_ar=N_("نطاق التأثير واسع."),
         ))
         required.append(CONFIRM_LARGE_BLAST)
     elif inputs.blast_radius == "critical":
@@ -426,7 +425,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         # impact_risk_level is not critical we still warn.
         warnings.append(ContractIssue(
             code=WARN_LARGE_BLAST, severity="warning",
-            message_ar="نطاق التأثير حرج — مراجعة مطلوبة.",
+            message_ar=N_("نطاق التأثير حرج — مراجعة مطلوبة."),
         ))
         required.append(CONFIRM_LARGE_BLAST)
 
@@ -434,8 +433,8 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         warnings.append(ContractIssue(
             code=WARN_DEPENDENCY_UNCERTAINTY, severity="warning",
             message_ar=(
-                "بعض التبعيّات غير مؤكَّدة — يفضّل المراجعة قبل "
-                "التنفيذ."
+                N_("بعض التبعيّات غير مؤكَّدة — يفضّل المراجعة قبل "
+                "التنفيذ.")
             ),
         ))
         required.append(CONFIRM_DEPENDENCY_IMPACT)
@@ -444,7 +443,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         warnings.append(ContractIssue(
             code=WARN_CANARY_RECOMMENDED, severity="warning",
             message_ar=(
-                "توصية: تطبيق تدريجي (canary) قبل التنفيذ الكامل."
+                N_("توصية: تطبيق تدريجي (canary) قبل التنفيذ الكامل.")
             ),
         ))
 
@@ -453,9 +452,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
             code=WARN_ESTIMATED_USERS_HEURISTIC,
             severity="warning",
             message_ar=(
-                f"عدد المستخدمين تقدير حسابي "
-                f"(~{inputs.blast_estimated_users}) — وليس "
-                "قياساً مباشراً."
+                _tr('عدد المستخدمين تقدير حسابي (~%(blast_estimated_users)s) — وليس قياساً مباشراً.', blast_estimated_users=inputs.blast_estimated_users)
             ),
         ))
 
@@ -479,8 +476,7 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
         blockers.append(ContractIssue(
             code=BLOCK_MISSING_CONFIRMATION, severity="blocker",
             message_ar=(
-                "موافقات صريحة مطلوبة قبل التنفيذ — "
-                f"المفقود: {missing_confirms}."
+                _tr('موافقات صريحة مطلوبة قبل التنفيذ — المفقود: %(missing_confirms)s.', missing_confirms=missing_confirms)
             ),
         ))
 
@@ -504,26 +500,26 @@ def evaluate(inputs: ContractInputs) -> ContractDecision:
     ready = not blockers
     if ready:
         reason = (
-            "الخطّة جاهزة للتنفيذ وفق المعايير الحاليّة."
+            _tr("الخطّة جاهزة للتنفيذ وفق المعايير الحاليّة.")
         )
     elif any(b.code == BLOCK_CRITICAL_RISK for b in blockers):
         reason = (
-            "الخطّة critical — التنفيذ ممنوع حتى إعادة التخطيط."
+            _tr("الخطّة critical — التنفيذ ممنوع حتى إعادة التخطيط.")
         )
     elif any(b.code == BLOCK_UNSAFE_SCRIPT
               or b.code == BLOCK_UNMANAGED_DELETION
               or b.code == BLOCK_SECRET_LIKE_CONTENT
               for b in blockers):
         reason = (
-            "محتوى السكربت غير آمن — التنفيذ ممنوع."
+            _tr("محتوى السكربت غير آمن — التنفيذ ممنوع.")
         )
     elif any(b.code == BLOCK_MISSING_CONFIRMATION for b in blockers):
         reason = (
-            "بانتظار موافقات صريحة من المشغّل قبل التنفيذ."
+            _tr("بانتظار موافقات صريحة من المشغّل قبل التنفيذ.")
         )
     else:
         reason = (
-            "هناك موانع تنفيذ — راجع التفاصيل وعالج الأسباب."
+            _tr("هناك موانع تنفيذ — راجع التفاصيل وعالج الأسباب.")
         )
 
     return ContractDecision(

@@ -18,6 +18,7 @@ full URL (HOBERADIUS_PUBLIC_URL prefix), so the API path is
 deliberately verbose to disambiguate from /api/v1.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from typing import Any
@@ -157,15 +158,11 @@ def router_events_netwatch_webhook():
         ip = device.get("ip_address") or ""
         if status == "down":
             msg = (
-                f"⚠️ <b>الراوتر يقول: انقطع</b> «{name}»\n"
-                f"IP: <code>{ip}</code>\n"
-                f"المصدر: <code>router netwatch</code>"
+                _tr('⚠️ <b>الراوتر يقول: انقطع</b> «%(name)s»\nIP: <code>%(ip)s</code>\nالمصدر: <code>router netwatch</code>', name=name, ip=ip)
             )
         else:
             msg = (
-                f"✅ <b>الراوتر يقول: عاد</b> «{name}»\n"
-                f"IP: <code>{ip}</code>\n"
-                f"المصدر: <code>router netwatch</code>"
+                _tr('✅ <b>الراوتر يقول: عاد</b> «%(name)s»\nIP: <code>%(ip)s</code>\nالمصدر: <code>router netwatch</code>', name=name, ip=ip)
             )
         ok, err = telegram_notifier.send_to_tenant(int(r["tenant_id"]), msg)
         delivery = "sent" if ok else ("failed" if err else "skipped")
@@ -200,11 +197,10 @@ def router_events_netwatch_install(device_id: int):
         nas=nas, tenant_id=tenant_id, device=device,
     )
     if not ok:
-        flash(f"فشل التفعيل: {err}", "danger")
+        flash(_tr('فشل التفعيل: %(err)s', err=err), "danger")
     else:
         flash(
-            f"فُعّل netwatch على «{device['name']}». "
-            f"الراوتر سيُنبّه HobeRadius عند انقطاع/عودة الجهاز.",
+            _tr('فُعّل netwatch على «%(name)s». الراوتر سيُنبّه HobeRadius عند انقطاع/عودة الجهاز.', name=device['name']),
             "success",
         )
     return redirect(url_for(
@@ -218,10 +214,10 @@ def router_events_netwatch_remove(device_id: int):
         nas=nas, device_id=device_id,
     )
     if not ok:
-        flash(f"فشل الإلغاء: {err}", "warning")
+        flash(_tr('فشل الإلغاء: %(err)s', err=err), "warning")
     else:
         flash(
-            f"أُلغي netwatch عن «{device['name']}» على الراوتر.",
+            _tr('أُلغي netwatch عن «%(name)s» على الراوتر.', name=device['name']),
             "success",
         )
     return redirect(url_for(

@@ -2,6 +2,7 @@
 Settings — إعدادات النظام لكل tenant (key/value).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _l, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import uuid
@@ -45,14 +46,14 @@ def _save_logo_upload() -> str | None:
     ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
     mime = (f.mimetype or "").lower()
     if ext not in _LOGO_ALLOWED_EXT or mime not in _LOGO_ALLOWED_MIME:
-        raise ValueError("نوع ملف الشعار غير مدعوم — المسموح: PNG أو JPG أو SVG أو WEBP.")
+        raise ValueError(_tr("نوع ملف الشعار غير مدعوم — المسموح: PNG أو JPG أو SVG أو WEBP."))
 
     # ── التحقق من الحجم (≤ 2MB) دون تحميل أكثر من اللازم ──
     raw = f.read(_LOGO_MAX_BYTES + 1)
     if not raw:
         return None
     if len(raw) > _LOGO_MAX_BYTES:
-        raise ValueError("حجم ملف الشعار يتجاوز الحد المسموح (2MB) — صغّر الصورة وأعد الرفع.")
+        raise ValueError(_tr("حجم ملف الشعار يتجاوز الحد المسموح (2MB) — صغّر الصورة وأعد الرفع."))
 
     # ── اسم آمن ببادئة عشوائية (uuid) حتى لا تتصادم الأسماء ──
     safe = secure_filename(f.filename) or f"logo.{ext}"
@@ -72,44 +73,44 @@ def _save_logo_upload() -> str | None:
 
 # مفاتيح معيارية نعرضها في الواجهة (key, label, default)
 _SETTINGS_KEYS = [
-    ("system.name",             "اسم النظام",            "HobeRadius"),
-    ("branding.logo_url",       "رابط الشعار",         ""),
-    ("branding.primary_color",  "اللون الأساسي",        "#2BAACC"),
-    ("radius.default_country",   "الدولة (موقع النظام)", ""),
+    ("system.name",             N_("اسم النظام"),            "HobeRadius"),
+    ("branding.logo_url",       N_("رابط الشعار"),         ""),
+    ("branding.primary_color",  N_("اللون الأساسي"),        "#2BAACC"),
+    ("radius.default_country",   N_("الدولة (موقع النظام)"), ""),
     # مفتاح الاتصال الدولي (+970 / +962 ...) — يُستخدم لتطبيع أرقام الجوال
     # المحلية (التي تبدأ بـ 0) قبل الإرسال عبر SMS/واتساب.
-    ("comms.country_dial_code",  "مفتاح الدولة (للرسائل)", "+970"),
+    ("comms.country_dial_code",  N_("مفتاح الدولة (للرسائل)"), "+970"),
     # الافتراضيّ = عملة النظام الفعليّة (default_currency → ILS)، لا JOD:
     # كانت الصفحة وواجهة /api/v1/settings تعرضان JOD بينما كل قيدٍ جديد
     # يُسجَّل بـ ILS.
-    ("billing.currency",        "العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)", _SYS_DEFAULTS["billing.currency"]),
+    ("billing.currency",        N_("العملة (JOD / ILS / USD / IQD / SAR / EGP / AED)"), _SYS_DEFAULTS["billing.currency"]),
     # المنطقة الزمنية الأساسية (IANA) — تُحسب عليها كل الأوقات المعروضة في
     # اللوحة وتقييم جداول السرعة، وهي آمنة تجاه التوقيت الصيفي (DST) عبر
     # zoneinfo. الافتراضي Asia/Gaza (فلسطين: ‎+2 شتاءً/‎+3 صيفًا — قرار المالك).
     # يبقى billing.timezone_offset احتياطًا حين تتعذّر قاعدة المناطق فقط.
-    ("billing.timezone",        "المنطقة الزمنية (IANA)", _SYS_DEFAULTS["billing.timezone"]),
-    ("billing.timezone_offset", "فارق توقيت النظام بالساعات (احتياطي إذا تعذّرت المنطقة)", "3"),
+    ("billing.timezone",        N_("المنطقة الزمنية (IANA)"), _SYS_DEFAULTS["billing.timezone"]),
+    ("billing.timezone_offset", N_("فارق توقيت النظام بالساعات (احتياطي إذا تعذّرت المنطقة)"), "3"),
     # قرار المالك: مشتركٌ جديد بلا تاريخ انتهاء يولد منتهيًا (expired) —
     # إلّا على خادمٍ يضبطها unlimited (HobeHub المجّانيّ).
     ("subscribers.create_without_expiry",
-     "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء",
+     N_("المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"),
      _SYS_DEFAULTS["subscribers.create_without_expiry"]),
-    ("billing.tax_pct",         "ضريبة %",              "0"),
-    ("auth.allow_password_reset", "السماح بإعادة تعيين كلمة المرور", "1"),
+    ("billing.tax_pct",         N_("ضريبة %"),              "0"),
+    ("auth.allow_password_reset", N_("السماح بإعادة تعيين كلمة المرور"), "1"),
     # عرض الأقسام غير المصرّح بها في الواجهة (sidebar/أزرار العمليات):
     # "freeze" = تجميد بقفل (يرى البند معطّلًا بقفل)، "hide" = إخفاء كلي.
     # يقرؤه ui_unauth_mode() في auth/ui_permissions.py — super_admin لا يتأثر.
-    ("security.unauthorized_ui", "عرض الأقسام غير المصرّح بها (freeze / hide)", "freeze"),
-    ("cards.default_username_length", "طول اسم البطاقة الافتراضي",   "8"),
-    ("cards.default_password_length", "طول كلمة مرور البطاقة الافتراضي", "6"),
+    ("security.unauthorized_ui", N_("عرض الأقسام غير المصرّح بها (freeze / hide)"), "freeze"),
+    ("cards.default_username_length", N_("طول اسم البطاقة الافتراضي"),   "8"),
+    ("cards.default_password_length", N_("طول كلمة مرور البطاقة الافتراضي"), "6"),
     # 🔴 شبكاتٌ تبيع «رقمًا فقط»: رقمُ البطاقة هو السرّ. هذا الافتراضُ
     # يُطبَّق **لحظةَ إنشاء الحزمة**: يضبط وضعَ المفتاح في صفحة التوليد،
     # وترثه الحزمُ التي تُنشأ بلا نموذج (استيراد · عرضٌ تجاريّ · متجر). فلا
     # تخرج حزمةٌ بكلمةِ مرورٍ في شبكةٍ تبيع «رقمًا فقط» لمجرّد أنّ أحدًا نسي
     # (سمير ٢٠٢٦-٠٩-٠٣). ولا يمسّ حزمةً قائمةً: قرارُ كلّ حزمةٍ محفوظٌ فيها.
     ("cards.login_without_password_default",
-     "قسم كلمة المرور للحزم الجديدة — الوضع الافتراضي", "0"),
-    ("quota.threshold_alerts",  "نِسَب تنبيه الكوتا (CSV)",  "80,95,100"),
+     N_("قسم كلمة المرور للحزم الجديدة — الوضع الافتراضي"), "0"),
+    ("quota.threshold_alerts",  N_("نِسَب تنبيه الكوتا (CSV)"),  "80,95,100"),
     # ── أُخرِجت من واجهة الإعدادات (تقليل الضجيج — قرار المالك) ─────────
     # المفاتيح التالية كانت تُعرض هنا كحقول قابلة للتحرير لكنها افتراضات
     # تقنية لا تحتاج تدخّلًا (ولا يقرؤها أي مستهلك في الكود اليوم). أُزيلت
@@ -130,13 +131,13 @@ _SETTINGS_KEYS = [
     # يُضبط مرة واحدة هنا ويُستخدم تلقائيًا لبناء روابط متجر
     # البطاقات الإلكترونية (/portal/card) في مصمّم صفحات الهوت
     # سبوت، فلا يكتب المشغّل أي رابط يدويًا في التصاميم.
-    ("network.radius_server_ip", "عنوان IP سيرفر الراديوس — يُستخدم تلقائيًا لرابط متجر البطاقات في صفحات الهوت سبوت", ""),
+    ("network.radius_server_ip", N_("عنوان IP سيرفر الراديوس — يُستخدم تلقائيًا لرابط متجر البطاقات في صفحات الهوت سبوت"), ""),
     # (session.timeout_minutes / display.records_per_page أُخرِجا — انظر الكتلة أعلاه)
     # عنوان الـ VPS العام — يُستخدم في معالج «اتصال عن بُعد» لبناء
     # روابط Winbox/SSH/WebFig/API من خارج الشبكة (المنافذ
     # 51000-51199 عبر nginx-stream). اتركه فارغاً للرجوع إلى env
     # var HOBERADIUS_PUBLIC_HOST أو عنوان WG داخلي.
-    ("infra.public_host",       "عنوان VPS العام (لروابط الاتصال عن بُعد)", ""),
+    ("infra.public_host",       N_("عنوان VPS العام (لروابط الاتصال عن بُعد)"), ""),
 
     # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
     # كانت هنا مفاتيح «خادم الأنفاق CHR المركزي» (network.chr_host /
@@ -148,22 +149,22 @@ _SETTINGS_KEYS = [
     # مفاتيح تتحكّم بما يظهر للمشترك ويُسمح له به داخل بوابته
     # (portal_subscriber.html). المُنفَّذ فعليًا اليوم موسوم أدناه؛ ما لم
     # يُنفَّذ بعد يبقى إعدادًا مُخزَّنًا جاهزًا للربط لاحقًا (راجع التقرير).
-    ("portal.show_usage",          "عرض الاستهلاك (تحميل/رفع/وقت)",        "1"),
-    ("portal.show_sessions",       "عرض سجل الجلسات",                      "1"),
-    ("portal.show_invoices",       "عرض الفواتير والمحفظة",                "1"),
-    ("portal.allow_password_change", "السماح بتغيير كلمة المرور ذاتيًا",   "1"),
-    ("portal.allow_renewal_request", "السماح بطلب التجديد الذاتي",         "1"),
-    ("portal.allow_loan_request",  "السماح بطلب سلفة وقت",                 "1"),
-    ("portal.show_support",        "إظهار الدعم/الشكاوى",                  "1"),
-    ("portal.allow_self_purchase", "السماح بالشراء/التجديد الذاتي (دفع)",  "0"),
-    ("portal.allow_plan_change",   "السماح بتغيير الباقة ذاتيًا",          "0"),
+    ("portal.show_usage",          N_("عرض الاستهلاك (تحميل/رفع/وقت)"),        "1"),
+    ("portal.show_sessions",       N_("عرض سجل الجلسات"),                      "1"),
+    ("portal.show_invoices",       N_("عرض الفواتير والمحفظة"),                "1"),
+    ("portal.allow_password_change", N_("السماح بتغيير كلمة المرور ذاتيًا"),   "1"),
+    ("portal.allow_renewal_request", N_("السماح بطلب التجديد الذاتي"),         "1"),
+    ("portal.allow_loan_request",  N_("السماح بطلب سلفة وقت"),                 "1"),
+    ("portal.show_support",        N_("إظهار الدعم/الشكاوى"),                  "1"),
+    ("portal.allow_self_purchase", N_("السماح بالشراء/التجديد الذاتي (دفع)"),  "0"),
+    ("portal.allow_plan_change",   N_("السماح بتغيير الباقة ذاتيًا"),          "0"),
 
     # ── المنع/السماح باستخدام MAC العشوائي (الخاص) ──────────────────
     # مفتاحان مستقلّان تمامًا. عند التفعيل يُرفض/يُمنع تسجيل الدخول من
     # الأجهزة التي تستخدم عنوان MAC عشوائي (locally-administered) — الخانة
     # السداسية الثانية من أول بايت ضمن {2,6,A,E}. مُنفَّذ في policy_engine.
-    ("security.block_random_mac_cards",       "منع MAC العشوائي في البطاقات",  "0"),
-    ("security.block_random_mac_subscribers", "منع MAC العشوائي في المشتركين", "0"),
+    ("security.block_random_mac_cards",       N_("منع MAC العشوائي في البطاقات"),  "0"),
+    ("security.block_random_mac_subscribers", N_("منع MAC العشوائي في المشتركين"), "0"),
 
     # ── سلوك «عدد الأجهزة المسموحة» (Simultaneous-Use) — مُنفصل لكلّ نوع ──
     # قرار المالك: «طرد الجلسات أو الرفض، خليه منفصل للكروت والمشتركين». لكلّ
@@ -175,10 +176,10 @@ _SETTINGS_KEYS = [
     # الفرديّ. مُنفَّذ في policy_engine._check_concurrent عبر services/device_limit.py.
     # (migration 153 يَنسخ القيمة القديمة الموحَّدة billing.device_limit_mode إلى
     #  المفتاحين فلا يَتغيّر السلوك عند الترقية.)
-    ("device_limit.subscribers.mode",  "المشتركون — عند بلوغ حدّ الأجهزة (reject/replace)", "reject"),
-    ("device_limit.subscribers.count", "المشتركون — عدد الأجهزة الافتراضيّ", "1"),
-    ("device_limit.cards.mode",        "الكروت — عند بلوغ حدّ الأجهزة (reject/replace)",   "reject"),
-    ("device_limit.cards.count",       "الكروت — عدد الأجهزة الافتراضيّ",   "1"),
+    ("device_limit.subscribers.mode",  N_("المشتركون — عند بلوغ حدّ الأجهزة (reject/replace)"), "reject"),
+    ("device_limit.subscribers.count", N_("المشتركون — عدد الأجهزة الافتراضيّ"), "1"),
+    ("device_limit.cards.mode",        N_("الكروت — عند بلوغ حدّ الأجهزة (reject/replace)"),   "reject"),
+    ("device_limit.cards.count",       N_("الكروت — عدد الأجهزة الافتراضيّ"),   "1"),
 ]
 
 # ── «الحدود» — سقوف العمليّة الواحدة لكلّ خادم (قرار المالك 2026-09-30) ──────
@@ -189,7 +190,7 @@ for _spec in _limits.SPECS:
     _SETTINGS_KEYS.append((_spec.key, _spec.label, _limits.fmt_amount(_spec.default)))
     if _spec.allow_unlimited:
         _SETTINGS_KEYS.append((_limits.unlimited_key(_spec.key),
-                               f"{_spec.label} — بلا حدّ", "0"))
+                               _l("%(label)s — بلا حدّ", label=_spec.label), "0"))
 _LIMIT_KEYS = set(_limits.all_setting_keys())
 
 
@@ -240,8 +241,8 @@ def settings_rotate_store_key():
                       action="store_key_rotate", target_type="settings",
                       target_id="network.store_api_key",
                       payload={"rotated": True})
-    flash("تم توليد مفتاح متجر جديد. أعِد نشر store.html من مصمّم صفحة "
-          "الدخول ليعمل متجرك بالمفتاح الجديد — المفتاح القديم توقّف فورًا.",
+    flash(_tr("تم توليد مفتاح متجر جديد. أعِد نشر store.html من مصمّم صفحة "
+          "الدخول ليعمل متجرك بالمفتاح الجديد — المفتاح القديم توقّف فورًا."),
           "warning")
     return redirect(url_for("radius.settings_page"))
 
@@ -286,7 +287,7 @@ def settings_page():
                 if key == "comms.country_dial_code" and val:
                     digits = val.lstrip("+").replace(" ", "")
                     if not digits.isdigit() or not (1 <= len(digits) <= 4):
-                        flash("مفتاح الدولة غير صالح — استخدم الصيغة الدولية مثل ‎+970 أو ‎+962.", "error")
+                        flash(_tr("مفتاح الدولة غير صالح — استخدم الصيغة الدولية مثل ‎+970 أو ‎+962."), "error")
                         return redirect(url_for("radius.settings_page"))
                     val = "+" + digits
                 # ── تحقّق عنوان IP سيرفر الراديوس: IPv4 أو اسم مضيف ──
@@ -296,7 +297,7 @@ def settings_page():
                     import re as _re
                     _host = val.removeprefix("http://").removeprefix("https://").rstrip("/")
                     if not _re.fullmatch(r"[A-Za-z0-9\.\-]{1,253}", _host):
-                        flash("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف.", "error")
+                        flash(_tr("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف."), "error")
                         return redirect(url_for("radius.settings_page"))
                     val = _host
                 # ── سلوك حدّ الأجهزة (منفصل كروت/مشتركين) ──
@@ -308,18 +309,18 @@ def settings_page():
                     from ..core.system_config import is_valid_timezone
                     val = val or _SYS_DEFAULTS["billing.timezone"]
                     if not is_valid_timezone(val):
-                        flash("المنطقة الزمنية غير معروفة — اختر من القائمة (مثل غزة Asia/Gaza).", "error")
+                        flash(_tr("المنطقة الزمنية غير معروفة — اختر من القائمة (مثل غزة Asia/Gaza)."), "error")
                         return redirect(url_for("radius.settings_page"))
                 if key == "subscribers.create_without_expiry":
                     val = (val or _SYS_DEFAULTS[key]).lower()
                     if val not in ("expired", "unlimited"):
-                        flash("قيمة «المشترك الجديد بلا تاريخ انتهاء» غير معروفة — اختر «منتهٍ فورًا» أو «بلا انتهاء».", "error")
+                        flash(_tr("قيمة «المشترك الجديد بلا تاريخ انتهاء» غير معروفة — اختر «منتهٍ فورًا» أو «بلا انتهاء»."), "error")
                         return redirect(url_for("radius.settings_page"))
                 if key == "billing.currency":
                     val = (val or _SYS_DEFAULTS["billing.currency"]).upper()
                     from ..core.settings_validation import currency_codes
                     if val not in currency_codes():
-                        flash("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل).", "error")
+                        flash(_tr("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل)."), "error")
                         return redirect(url_for("radius.settings_page"))
                 if key == "branding.primary_color" and val:
                     from ..core.settings_validation import clean_setting
@@ -346,9 +347,9 @@ def settings_page():
             audit_repo.record(tenant_id=tenant_id, actor=actor, action="settings_update",
                               target_type="settings", target_id=",".join(changed.keys()),
                               payload={"changed": list(changed.keys())})
-            flash(f"تم حفظ {ar_count(len(changed), 'setting')}.", "success")
+            flash(_tr('تم حفظ %(v)s.', v=ar_count(len(changed), 'setting')), "success")
         else:
-            flash("لا تغييرات.", "info")
+            flash(_tr("لا تغييرات."), "info")
         return redirect(url_for("radius.settings_page"))
 
     rows = []

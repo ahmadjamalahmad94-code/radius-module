@@ -6,6 +6,7 @@ A requested tunnel's SSTP user/password is shown ONCE in the response for local
 injection and is not stored.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -52,8 +53,8 @@ def tunnels_list():
     # صفحة أنفاق CHR القديمة أُلغيت من الواجهة (قرار المالك 2026-07): أنفاق
     # الإدارة الحاليّة per-router (SSTP/WG) ولها صفحاتها في قسم الشبكة.
     # المسار يبقى (روابط قديمة/محفوظات) لكنه يحوّل إلى «جسر الإدارة».
-    flash("صفحة «الأنفاق» القديمة أُلغيت — أنفاق الإدارة الحاليّة لكل راوتر "
-          "تجدها في «اتصالات WireGuard» و«حسابات نفق SSTP/PPTP».", "info")
+    flash(_tr("صفحة «الأنفاق» القديمة أُلغيت — أنفاق الإدارة الحاليّة لكل راوتر "
+          "تجدها في «اتصالات WireGuard» و«حسابات نفق SSTP/PPTP»."), "info")
     return redirect(url_for("radius.admin_bridge"))
 
 
@@ -70,13 +71,13 @@ def tunnels_request():
         tenant_id=_tid(), tunnel_type=tunnel_type, router_id=router_id, label=label,
     )
     if not result.get("ok"):
-        flash(f"تعذّر طلب النفق: {_status_label(result.get('status'))}.", "error")
+        flash(_tr('تعذّر طلب النفق: %(v)s.', v=_status_label(result.get('status'))), "error")
         return redirect(url_for("radius.tunnels_list"))
 
     tunnel = result.get("tunnel") or {}
     creds = result.get("credentials") or {}
     flash(
-        f"تم إنشاء النفق «{tunnel.get('remote_name')}». انسخ بيانات الدخول الآن — لن تُعرض مرة أخرى ولا تُخزَّن.",
+        _tr('تم إنشاء النفق «%(v)s». انسخ بيانات الدخول الآن — لن تُعرض مرة أخرى ولا تُخزَّن.', v=tunnel.get('remote_name')),
         "success",
     )
     # Render directly (no redirect) so the one-time credentials live only in this
@@ -96,25 +97,22 @@ def tunnels_sync():
     result = LicenseTunnelBridgeService().sync_tunnels(tenant_id=_tid())
     if result.get("ok"):
         flash(
-            "تمت مزامنة الأنفاق: "
-            f"{result.get('active_count', 0)} فعّال، "
-            f"{result.get('suspended_count', 0)} موقوف، "
-            f"{result.get('revoked_count', 0)} ملغى.",
+            _tr('تمت مزامنة الأنفاق: %(v)s فعّال، %(v2)s موقوف، %(v3)s ملغى.', v=result.get('active_count', 0), v2=result.get('suspended_count', 0), v3=result.get('revoked_count', 0)),
             "success",
         )
     else:
-        flash(f"تعذّرت مزامنة الأنفاق: {_status_label(result.get('status'))}.", "error")
+        flash(_tr('تعذّرت مزامنة الأنفاق: %(v)s.', v=_status_label(result.get('status'))), "error")
     return redirect(url_for("radius.tunnels_list"))
 
 
 def _status_label(status: Any) -> str:
     labels = {
-        "https_required": "الاتصال الآمن (HTTPS) مطلوب",
-        "config_missing": "إعدادات الربط غير مكتملة",
-        "disabled": "الجسر غير مفعّل",
-        "denied": "فشل التحقق من سر الربط أو التوقيع",
-        "timeout": "انتهت مهلة الاتصال بلوحة التراخيص",
-        "unavailable": "لوحة التراخيص غير متاحة الآن",
-        "invalid_payload": "رد لوحة التراخيص غير متوقّع",
+        "https_required": N_("الاتصال الآمن (HTTPS) مطلوب"),
+        "config_missing": N_("إعدادات الربط غير مكتملة"),
+        "disabled": N_("الجسر غير مفعّل"),
+        "denied": N_("فشل التحقق من سر الربط أو التوقيع"),
+        "timeout": N_("انتهت مهلة الاتصال بلوحة التراخيص"),
+        "unavailable": N_("لوحة التراخيص غير متاحة الآن"),
+        "invalid_payload": N_("رد لوحة التراخيص غير متوقّع"),
     }
-    return labels.get(str(status or "").strip().lower(), "حالة غير معروفة من لوحة التراخيص")
+    return labels.get(str(status or "").strip().lower(), N_("حالة غير معروفة من لوحة التراخيص"))

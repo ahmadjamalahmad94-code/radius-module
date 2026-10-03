@@ -16,75 +16,76 @@
 فتغطّي هذه الصفحة وأيّ واجهة صلاحيات شقيقة تعرض نفس المفاتيح.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 # ── 1) خريطة دقيقة للمفاتيح المعروفة (permission key → عربي) ──
 PERMISSION_LABELS: dict[str, str] = {
     # صلاحيات المشغّل الأساسية (DEFAULT_PERMISSIONS في manager_distributor_ops)
-    "can_create_subscriber":   "إنشاء مشترك",
-    "can_create_batch":        "إنشاء دفعة بطاقات",
-    "can_activate_subscriber": "تفعيل مشترك",
-    "can_give_free_days":      "منح أيام مجانية",
-    "can_give_trial_days":     "منح أيام تجريبية",
-    "can_give_loan":           "منح سلفة",
-    "can_manage_distributors": "إدارة الموزعين",
-    "can_view_all_subscribers": "عرض كل المشتركين",
-    "can_view_all_card_batches": "عرض كل حزم البطاقات",
-    "can_import_batches":       "استيراد الحِزم",
-    "can_see_wholesale":        "رؤية سعر التكلفة/الجملة",
-    "can_see_password":         "رؤية كلمة مرور المشترك",
-    "can_create_sub_managers":  "إنشاء مدراء فرعيّين + تفويض",
-    "can_see_balance":          "رؤية الرصيد والماليّات",
-    "can_see_profit":           "رؤية الأرباح/الهامش",
+    "can_create_subscriber":   N_("إنشاء مشترك"),
+    "can_create_batch":        N_("إنشاء دفعة بطاقات"),
+    "can_activate_subscriber": N_("تفعيل مشترك"),
+    "can_give_free_days":      N_("منح أيام مجانية"),
+    "can_give_trial_days":     N_("منح أيام تجريبية"),
+    "can_give_loan":           N_("منح سلفة"),
+    "can_manage_distributors": N_("إدارة الموزعين"),
+    "can_view_all_subscribers": N_("عرض كل المشتركين"),
+    "can_view_all_card_batches": N_("عرض كل حزم البطاقات"),
+    "can_import_batches":       N_("استيراد الحِزم"),
+    "can_see_wholesale":        N_("رؤية سعر التكلفة/الجملة"),
+    "can_see_password":         N_("رؤية كلمة مرور المشترك"),
+    "can_create_sub_managers":  N_("إنشاء مدراء فرعيّين + تفويض"),
+    "can_see_balance":          N_("رؤية الرصيد والماليّات"),
+    "can_see_profit":           N_("رؤية الأرباح/الهامش"),
     # حدود/أعلام شقيقة قد تظهر بنفس واجهة التبديل
-    "loan_wallet_deducted":    "السلفة تُخصم من المحفظة",
-    "can_wallet_credit":       "إضافة رصيد للمحفظة",
-    "can_wallet_debit":        "خصم من المحفظة",
-    "can_reset_usage":         "تصفير الاستهلاك",
-    "can_lock_mac":            "قفل عنوان MAC",
-    "can_disconnect":          "فصل الجلسات",
-    "can_change_offer":        "تغيير العرض",
-    "can_request_offer_change": "طلب تغيير العرض",
+    "loan_wallet_deducted":    N_("السلفة تُخصم من المحفظة"),
+    "can_wallet_credit":       N_("إضافة رصيد للمحفظة"),
+    "can_wallet_debit":        N_("خصم من المحفظة"),
+    "can_reset_usage":         N_("تصفير الاستهلاك"),
+    "can_lock_mac":            N_("قفل عنوان MAC"),
+    "can_disconnect":          N_("فصل الجلسات"),
+    "can_change_offer":        N_("تغيير العرض"),
+    "can_request_offer_change": N_("طلب تغيير العرض"),
 }
 
 # ── 2) قواميس المُركِّب (verb/noun) للمفاتيح غير المعرّفة ──
 _PERM_VERBS: dict[str, str] = {
-    "create":   "إنشاء",
-    "activate": "تفعيل",
-    "give":     "منح",
-    "add":      "إضافة",
-    "delete":   "حذف",
-    "remove":   "إزالة",
-    "disable":  "تعطيل",
-    "enable":   "تفعيل",
-    "reset":    "تصفير",
-    "lock":     "قفل",
-    "unlock":   "فكّ قفل",
-    "disconnect": "فصل",
-    "change":   "تغيير",
-    "request":  "طلب",
-    "view":     "عرض",
-    "manage":   "إدارة",
-    "apply":    "تطبيق",
-    "override": "تجاوز",
+    "create":   N_("إنشاء"),
+    "activate": N_("تفعيل"),
+    "give":     N_("منح"),
+    "add":      N_("إضافة"),
+    "delete":   N_("حذف"),
+    "remove":   N_("إزالة"),
+    "disable":  N_("تعطيل"),
+    "enable":   N_("تفعيل"),
+    "reset":    N_("تصفير"),
+    "lock":     N_("قفل"),
+    "unlock":   N_("فكّ قفل"),
+    "disconnect": N_("فصل"),
+    "change":   N_("تغيير"),
+    "request":  N_("طلب"),
+    "view":     N_("عرض"),
+    "manage":   N_("إدارة"),
+    "apply":    N_("تطبيق"),
+    "override": N_("تجاوز"),
 }
 _PERM_NOUNS: dict[str, str] = {
-    "subscriber":  "مشترك",
-    "batch":       "دفعة بطاقات",
-    "loan":        "سلفة",
-    "free_days":   "أيام مجانية",
-    "trial_days":  "أيام تجريبية",
-    "mac":         "عنوان MAC",
-    "usage":       "الاستهلاك",
-    "wallet":      "المحفظة",
-    "credit":      "رصيد",
-    "debit":       "خصم",
-    "offer":       "العرض",
-    "subscribers": "المشتركين",
-    "days":        "الأيام",
-    "session":     "الجلسة",
-    "sessions":    "الجلسات",
-    "distributor":  "الموزع",
-    "distributors": "الموزعين",
+    "subscriber":  N_("مشترك"),
+    "batch":       N_("دفعة بطاقات"),
+    "loan":        N_("سلفة"),
+    "free_days":   N_("أيام مجانية"),
+    "trial_days":  N_("أيام تجريبية"),
+    "mac":         N_("عنوان MAC"),
+    "usage":       N_("الاستهلاك"),
+    "wallet":      N_("المحفظة"),
+    "credit":      N_("رصيد"),
+    "debit":       N_("خصم"),
+    "offer":       N_("العرض"),
+    "subscribers": N_("المشتركين"),
+    "days":        N_("الأيام"),
+    "session":     N_("الجلسة"),
+    "sessions":    N_("الجلسات"),
+    "distributor":  N_("الموزع"),
+    "distributors": N_("الموزعين"),
 }
 
 
@@ -120,7 +121,7 @@ def rbac_key_label(key: str | None) -> str:
     :func:`permission_label` (flags) — never the raw key when a label exists."""
     raw = (key or "").strip()
     if not raw:
-        return "صلاحية"
+        return N_("صلاحية")
     labels = _RBAC_LABELS_CACHE.get("labels")
     if labels is None:
         labels = {}
@@ -141,7 +142,7 @@ def rbac_keys_label(spec: str | None) -> str:
     """``a|b`` / «a أو b» → Arabic labels joined by «أو»."""
     import re as _re
     parts = [p.strip() for p in _re.split(r"\||\s+أو\s+", str(spec or "")) if p.strip()]
-    return " أو ".join(rbac_key_label(p) for p in parts) or "صلاحية"
+    return _tr(" أو ").join(rbac_key_label(p) for p in parts) or N_("صلاحية")
 
 
 def permission_label(key: str | None) -> str:
@@ -149,7 +150,7 @@ def permission_label(key: str | None) -> str:
     ولا مفتاح `can_*` خام."""
     raw = (key or "").strip()
     if not raw:
-        return "صلاحية"
+        return N_("صلاحية")
     # 1) خريطة دقيقة
     if raw in PERMISSION_LABELS:
         return PERMISSION_LABELS[raw]

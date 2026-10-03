@@ -6,7 +6,7 @@
 {% block title %}{{ _("ملفات السرعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
 {% block page_title %}{{ _("ملفات السرعة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} ملف</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s ملف', length=items|length) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -19,34 +19,34 @@
 
 {# ───── Merged hero: title + actions + KPI strip (no search bar) ───── #}
 {{ hub.megahero(
-  "ملفات السرعة",
-  subtitle="إدارة ملفّات عرض الحزمة — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية، لتربطها بالباقات.",
+  _('ملفات السرعة'),
+  subtitle=_('إدارة ملفّات عرض الحزمة — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية، لتربطها بالباقات.'),
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.bw_new') + '">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة ملف") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي',        'value': items|length,                  'icon': 'gauge',  'variant': 'brand'},
-    {'label': 'بسرعة مؤقتة',     'value': _with_burst,                   'icon': 'rocket', 'variant': 'green'},
-    {'label': 'بدون سرعة مؤقتة', 'value': items|length - _with_burst,    'icon': 'minus',  'variant': 'grey'},
+    {'label': _('الإجمالي'),        'value': items|length,                  'icon': 'gauge',  'variant': 'brand'},
+    {'label': _('بسرعة مؤقتة'),     'value': _with_burst,                   'icon': 'rocket', 'variant': 'green'},
+    {'label': _('بدون سرعة مؤقتة'), 'value': items|length - _with_burst,    'icon': 'minus',  'variant': 'grey'},
   ]
 ) }}
 
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو ملف Bandwidth يحدّد سرعات الاتصال؛ تربطه بالباقات للتحكم في تجربة المشترك.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو ملف Bandwidth يحدّد سرعات الاتصال؛ تربطه بالباقات للتحكم في تجربة المشترك.'),
   items=[
-    {'icon': 'arrow-down', 'text': 'التنزيل هو السرعة القصوى للاستقبال (تظهر بوحدتها — Kbps/Mbps حسب الإعداد).'},
-    {'icon': 'arrow-up',   'text': 'الرفع هو السرعة القصوى للإرسال بنفس الوحدة المعروضة بجانب القيمة.'},
-    {'icon': 'rocket',     'text': 'السرعة المؤقتة (Burst) تسمح بتجاوز قصير للحد قبل العودة للسرعة الأساسية.'},
-    {'icon': 'sort',       'text': 'الأولوية الأقل رقمًا تُخدَم أوّلًا عند ازدحام الشبكة.'},
+    {'icon': 'arrow-down', 'text': _('التنزيل هو السرعة القصوى للاستقبال (تظهر بوحدتها — Kbps/Mbps حسب الإعداد).')},
+    {'icon': 'arrow-up',   'text': _('الرفع هو السرعة القصوى للإرسال بنفس الوحدة المعروضة بجانب القيمة.')},
+    {'icon': 'rocket',     'text': _('السرعة المؤقتة (Burst) تسمح بتجاوز قصير للحد قبل العودة للسرعة الأساسية.')},
+    {'icon': 'sort',       'text': _('الأولوية الأقل رقمًا تُخدَم أوّلًا عند ازدحام الشبكة.')},
   ],
-  note="القيم هنا سرعات اتصال — تأكّد من مطابقة الوحدة (Kbps أو Mbps) لما يدعمه مزوّدك."
+  note=_('القيم هنا سرعات اتصال — تأكّد من مطابقة الوحدة (Kbps أو Mbps) لما يدعمه مزوّدك.')
 )) %}
-  {% call hub.section("الملفات", icon="table-list", meta=items|length|string + " ملف", flush=True) %}
+  {% call hub.section(_('الملفات'), icon="table-list", meta=items|length|string + _(' ملف'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -106,8 +106,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد ملفات سرعة بعد",
-  sub="أضف أوّل ملف عرض حزمة من زرّ «إضافة ملف» أعلى الصفحة لربطه بالباقات.",
+  _('لا توجد ملفات سرعة بعد'),
+  sub=_('أضف أوّل ملف عرض حزمة من زرّ «إضافة ملف» أعلى الصفحة لربطه بالباقات.'),
   icon="gauge"
 ) }}
 {% endif %}

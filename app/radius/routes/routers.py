@@ -4,6 +4,7 @@
 داخل الخدمة. لا تختلط بأي قسم آخر — قسم مستقلّ «المعمل (تجريبيّ)» في الشريط.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
                    request, session, url_for)
@@ -146,7 +147,7 @@ def routers_alert_settings():
         m = 10
     tenants_repo.set_setting(_tid(), "tr069.offline_after_minutes", str(m),
                              by=current_admin_id() or 0)
-    flash("حُفِظت عتبة الفصل. تُدار قنوات التنبيه من: الإعدادات ← تنبيهات تلجرام.",
+    flash(_tr("حُفِظت عتبة الفصل. تُدار قنوات التنبيه من: الإعدادات ← تنبيهات تلجرام."),
           "success")
     return redirect(url_for("radius.routers_setup"))
 
@@ -161,14 +162,14 @@ def routers_serial_binding_add():
     sub_id = request.form.get("subscriber_id") or None
     note = (request.form.get("note") or "").strip()
     if not serial:
-        flash("أدخل الرقم التسلسليّ للراوتر.", "error")
+        flash(_tr("أدخل الرقم التسلسليّ للراوتر."), "error")
         return redirect(url_for("radius.routers_setup"))
     Tr069DeviceService(_tid()).add_serial_binding(
         serial_number=serial, radius_username=username,
         subscriber_id=int(sub_id) if sub_id else None,
         owner_admin_id=current_admin_id(), note=note,
         actor=session.get("admin_name") or "admin")
-    flash("حُفِظ الربط المسبق — سيُربَط الراوتر تلقائيًّا بمجرّد اتصاله.", "success")
+    flash(_tr("حُفِظ الربط المسبق — سيُربَط الراوتر تلقائيًّا بمجرّد اتصاله."), "success")
     return redirect(url_for("radius.routers_setup"))
 
 
@@ -179,7 +180,7 @@ def routers_serial_binding_delete(binding_id: int):
         return g
     ok = Tr069DeviceService(_tid()).delete_serial_binding(
         binding_id, viewer_admin_id=current_admin_id(), can_view_all=_can_view_all())
-    flash("حُذِف الربط المسبق." if ok else "تعذّر الحذف.", "success" if ok else "error")
+    flash(_tr("حُذِف الربط المسبق.") if ok else _tr("تعذّر الحذف."), "success" if ok else "error")
     return redirect(url_for("radius.routers_setup"))
 
 
@@ -210,7 +211,7 @@ def routers_enroll_cancel(device_id: int):
     if g:
         return g
     Tr069EnrollmentService(_tid()).cancel(device_id)
-    flash("أُلغي التسجيل المعلّق.", "success")
+    flash(_tr("أُلغي التسجيل المعلّق."), "success")
     return redirect(url_for("radius.routers_list"))
 
 
@@ -223,7 +224,7 @@ def routers_action(device_id: int):
     from ..auth.ui_permissions import can
     perm = ACTION_PERM.get(action_type, "routers.manage")
     if not can(perm):
-        flash(f"لا تملك الصلاحية: {perm}", "error")
+        flash(_tr('لا تملك الصلاحية: %(perm)s', perm=perm), "error")
         return redirect(url_for("radius.routers_detail", device_id=device_id))
     params = {k: v for k, v in request.form.items()
               if k not in ("action_type", "_csrf_token", "csrf_token")}
@@ -233,7 +234,7 @@ def routers_action(device_id: int):
                         actor=session.get("admin_name") or "admin",
                         owner_admin_id=current_admin_id(),
                         viewer_admin_id=current_admin_id(), can_view_all=_can_view_all())
-        flash(f"تمّت جدولة الأمر: {res['summary']} — سيُنفَّذ عند اتصال الراوتر.", "success")
+        flash(_tr('تمّت جدولة الأمر: %(summary)s — سيُنفَّذ عند اتصال الراوتر.', summary=res['summary']), "success")
     except Tr069ActionError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.routers_detail", device_id=device_id))
@@ -250,7 +251,7 @@ def routers_link(device_id: int):
         device_id, int(sub_id) if sub_id else None, username,
         actor=session.get("admin_name") or "admin",
         viewer_admin_id=current_admin_id(), can_view_all=_can_view_all())
-    flash("تمّ ربط الجهاز بالمشترك." if ok else "تعذّر الربط.",
+    flash(_tr("تمّ ربط الجهاز بالمشترك.") if ok else _tr("تعذّر الربط."),
           "success" if ok else "error")
     return redirect(url_for("radius.routers_detail", device_id=device_id))
 

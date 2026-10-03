@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -38,17 +39,17 @@ def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
         raw = str(body.get(key) or "Kbps").strip().lower()
         if raw not in _UNITS:
             return fail("validation_error",
-                        "وحدة السرعة يجب أن تكون Kbps أو Mbps أو Gbps.", status=422)
+                        _tr("وحدة السرعة يجب أن تكون Kbps أو Mbps أو Gbps."), status=422)
         units[key] = _UNITS[raw]
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "اسم ملف السرعة مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم ملف السرعة مطلوب."), status=422)
     try:
         rate_down = max(0, int(body.get("rate_down") or 0))
         rate_up = max(0, int(body.get("rate_up") or 0))
         priority = int(body.get("priority") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة."), status=422)
     return BandwidthProfile(
         id=profile_id,
         tenant_id=_tid(),
@@ -78,7 +79,7 @@ def list_profiles():
 def get_profile(profile_id: int):
     profile = bandwidth_repo.get(_tid(), profile_id)
     if not profile:
-        return fail("not_found", "ملف السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("ملف السرعة غير موجود."), status=404)
     return ok(_item(profile))
 
 
@@ -90,7 +91,7 @@ def create_profile():
     # upsert → 500 بـHTML. نُعيد 409 عربيّة بدلًا منه.
     if any((getattr(p, "name", "") or "").strip() == profile.name
            for p in bandwidth_repo.list_all(_tid())):
-        return fail("conflict", f"اسم ملف السرعة «{profile.name}» مستخدم مسبقًا.",
+        return fail("conflict", _tr('اسم ملف السرعة «%(name)s» مستخدم مسبقًا.', name=profile.name),
                     status=409)
     saved = bandwidth_repo.upsert(profile)
     return ok(_item(saved), status=201)
@@ -98,7 +99,7 @@ def create_profile():
 
 def patch_profile(profile_id: int):
     if not bandwidth_repo.get(_tid(), profile_id):
-        return fail("not_found", "ملف السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("ملف السرعة غير موجود."), status=404)
     profile = _payload(profile_id)
     if isinstance(profile, tuple):
         return profile
@@ -106,13 +107,13 @@ def patch_profile(profile_id: int):
     if any((getattr(p, "name", "") or "").strip() == profile.name
            and int(getattr(p, "id", 0) or 0) != int(profile_id)
            for p in bandwidth_repo.list_all(_tid())):
-        return fail("conflict", f"اسم ملف السرعة «{profile.name}» مستخدم مسبقًا.",
+        return fail("conflict", _tr('اسم ملف السرعة «%(name)s» مستخدم مسبقًا.', name=profile.name),
                     status=409)
     return ok(_item(bandwidth_repo.upsert(profile)))
 
 
 def delete_profile(profile_id: int):
     if not bandwidth_repo.get(_tid(), profile_id):
-        return fail("not_found", "ملف السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("ملف السرعة غير موجود."), status=404)
     bandwidth_repo.delete(_tid(), profile_id)
     return ok({"id": profile_id, "deleted": True})

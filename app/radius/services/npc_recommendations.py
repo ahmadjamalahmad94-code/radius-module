@@ -23,6 +23,7 @@ Output: a list of `Recommendation` items with:
   * priority           — 1 (highest) .. 5 (lowest)
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
@@ -104,11 +105,11 @@ def build(
     # ── 1. Hold-and-replan when canary says hold ───────
     if canary.recommended_strategy == STRATEGY_HOLD:
         recs.append(Recommendation(
-            title_ar="أوقف التطبيق وأعِد التخطيط",
+            title_ar=N_("أوقف التطبيق وأعِد التخطيط"),
             explanation_ar=(
-                "نطاق التأثير حرج جداً — راجع السياسة وحاول "
+                N_("نطاق التأثير حرج جداً — راجع السياسة وحاول "
                 "تقليل عدد الراوترات أو فترة التطبيق قبل "
-                "المتابعة."
+                "المتابعة.")
             ),
             action_type=ACTION_HOLD_AND_REPLAN,
             confidence=CONFIDENCE_HIGH,
@@ -118,11 +119,9 @@ def build(
     # ── 2. Canary-first when blast says so ─────────────
     elif canary.recommended_strategy == STRATEGY_CANARY:
         recs.append(Recommendation(
-            title_ar="ابدأ بـ Canary على راوتر واحد",
+            title_ar=N_("ابدأ بـ Canary على راوتر واحد"),
             explanation_ar=(
-                "النطاق واسع — طبِّق على راوتر واحد، انتظر "
-                f"({canary.wait_time_recommendation_ar}) ثم "
-                "وسِّع التطبيق تدريجياً."
+                _tr('النطاق واسع — طبِّق على راوتر واحد، انتظر (%(wait_time_recommendation_ar)s) ثم وسِّع التطبيق تدريجياً.', wait_time_recommendation_ar=canary.wait_time_recommendation_ar)
             ),
             action_type=ACTION_CANARY_FIRST,
             confidence=CONFIDENCE_HIGH,
@@ -132,11 +131,11 @@ def build(
     # ── 3. Missing rollback → high-priority warning ────
     if not impact.rollback_available:
         recs.append(Recommendation(
-            title_ar="أنشئ خطة تراجع",
+            title_ar=N_("أنشئ خطة تراجع"),
             explanation_ar=(
-                "لا يوجد سكربت rollback لهذه السياسة — تأكَّد "
+                N_("لا يوجد سكربت rollback لهذه السياسة — تأكَّد "
                 "من إنتاج خطة تراجع يدوية قبل التطبيق، أو راجع "
-                "إعدادات السياسة لتفعيل التراجع التلقائي."
+                "إعدادات السياسة لتفعيل التراجع التلقائي.")
             ),
             action_type=ACTION_CREATE_ROLLBACK,
             confidence=CONFIDENCE_HIGH,
@@ -153,7 +152,7 @@ def build(
             confidence = (CONFIDENCE_HIGH if c.severity == "high"
                           else CONFIDENCE_MEDIUM)
             recs.append(Recommendation(
-                title_ar=f"حلّ التعارض مع «{c.policy_name}»",
+                title_ar=_tr('حلّ التعارض مع «%(policy_name)s»', policy_name=c.policy_name),
                 explanation_ar=(
                     f"{c.reason_ar} — {c.recommendation_ar}"
                 ),
@@ -173,11 +172,11 @@ def build(
                 if rd and rd not in domains:
                     domains.append(rd)
         recs.append(Recommendation(
-            title_ar="راجع التبعيّات المُكتشَفة",
+            title_ar=N_("راجع التبعيّات المُكتشَفة"),
             explanation_ar=(
-                "النظام اكتشف عائلة خدمات قد تتأثّر بهذه "
+                N_("النظام اكتشف عائلة خدمات قد تتأثّر بهذه "
                 "السياسة. راجع القائمة وقرِّر إن كنت تريد إضافة "
-                "النطاقات المرتبطة قبل التطبيق."
+                "النطاقات المرتبطة قبل التطبيق.")
             ),
             action_type=ACTION_REVIEW_DEPS,
             confidence=CONFIDENCE_MEDIUM,
@@ -196,12 +195,12 @@ def build(
                         sample_domains.append(rd)
             recs.append(Recommendation(
                 title_ar=(
-                    "أضف النطاقات المرتبطة بثقة عالية"
+                    N_("أضف النطاقات المرتبطة بثقة عالية")
                 ),
                 explanation_ar=(
-                    "بعض التبعيّات معروفة بثقة كاملة — يُنصح "
+                    N_("بعض التبعيّات معروفة بثقة كاملة — يُنصح "
                     "بإضافتها إلى قائمة الحظر حتى يكون التطبيق "
-                    "مكتملاً."
+                    "مكتملاً.")
                 ),
                 action_type=ACTION_ADD_RELATED_DOMS,
                 confidence=CONFIDENCE_HIGH,
@@ -212,11 +211,11 @@ def build(
     # ── 6. Limit scope for very high blast ─────────────
     if blast.blast_radius in ("large", "critical"):
         recs.append(Recommendation(
-            title_ar="قلِّل نطاق التطبيق",
+            title_ar=N_("قلِّل نطاق التطبيق"),
             explanation_ar=(
-                "النطاق واسع — انظر إن كان بالإمكان تقسيم "
+                N_("النطاق واسع — انظر إن كان بالإمكان تقسيم "
                 "السياسة إلى سياسات أصغر لكل مجموعة من "
-                "الراوترات."
+                "الراوترات.")
             ),
             action_type=ACTION_LIMIT_SCOPE,
             confidence=CONFIDENCE_MEDIUM,
@@ -227,12 +226,12 @@ def build(
     if (policy_type == "remote_access" and policy is not None):
         if not (policy.get("expires_at") or "").strip():
             recs.append(Recommendation(
-                title_ar="حدِّد وقت انتهاء صلاحية تلقائي",
+                title_ar=N_("حدِّد وقت انتهاء صلاحية تلقائي"),
                 explanation_ar=(
-                    "هذه سياسة وصول بعيد — تركها بدون وقت "
+                    N_("هذه سياسة وصول بعيد — تركها بدون وقت "
                     "انتهاء يفتح المنفذ إلى أجل غير مسمّى. "
                     "يُنصح بضبط expires_at حتى تُحذف القاعدة "
-                    "تلقائياً."
+                    "تلقائياً.")
                 ),
                 action_type=ACTION_ADD_EXPIRY,
                 confidence=CONFIDENCE_HIGH,

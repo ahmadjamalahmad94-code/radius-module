@@ -12,8 +12,8 @@
 {% block content %}
 <div class="sw-page" data-setup-wizard-page data-current-run-id="{{ summary.run.id if summary else '' }}">
   {{ hub.megahero(
-    "معالج إعداد HobeRadius",
-    subtitle="إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة — ٧ مراحل.",
+    _('معالج إعداد HobeRadius'),
+    subtitle=_('إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة — ٧ مراحل.'),
     icon="wand-magic-sparkles",
     actions_html='
       <button type="button" class="hub-btn hub-btn--primary" data-sw-action="create-run">'|safe ~ _("بدء تشغيل جديد") ~ '</button>

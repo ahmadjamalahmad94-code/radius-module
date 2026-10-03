@@ -11,6 +11,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -93,13 +94,13 @@ _DEV_ART = """
 
 _DEV_HERO = ("""
       <div class="dv-hero">
-        <div class="dv-frame">""" + _DEV_ART + """</div>
+        <div class="dv-frame">""" + _DEV_ART + N_("""</div>
         <div class="dv-cap">
           <div><b>بيئة عملك جاهزة</b><span>اتصال مستقرّ ومنخفض الكمون للمطوّرين</span></div>
           <div class="dv-badge"><span class="dv-dot"></span> online</div>
         </div>
       </div>
-""")
+"""))
 
 _DEV_STYLE = """
 <style id="hr-dev-grid">

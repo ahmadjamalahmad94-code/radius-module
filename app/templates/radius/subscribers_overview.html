@@ -4,7 +4,7 @@
 {% block title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("نظرة عامة - المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (census.total or 0)|ar_count('subscriber') }} · {{ census.online or 0 }} متصل الآن</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s · %(v2)s متصل الآن', v=(census.total or 0)|ar_count('subscriber'), v2=census.online or 0) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -22,9 +22,9 @@
 
 {% macro fmt_minutes(m) -%}
   {%- set m = (m or 0)|int -%}
-  {%- if m >= 1440 -%}{{ (m // 1440) }} يوم
-  {%- elif m >= 60 -%}{{ (m // 60) }} ساعة
-  {%- else -%}{{ m }} دقيقة
+  {%- if m >= 1440 -%}{{ (m // 1440) }} {{ _('يوم') }}
+  {%- elif m >= 60 -%}{{ (m // 60) }} {{ _('ساعة') }}
+  {%- else -%}{{ m }} {{ _('دقيقة') }}
   {%- endif -%}
 {%- endmacro %}
 
@@ -49,7 +49,7 @@
   </div>
   <div class="so-lane-value">{{ value_html|safe }}</div>
   {%- if sub_html %}<div class="so-lane-sub">{{ sub_html|safe }}</div>{% endif -%}
-  <div class="so-spark" role="img" aria-label="{{ title }} — آخر الفترات">
+  <div class="so-spark" role="img" aria-label="{{ _('%(title)s — آخر الفترات', title=title) }}">
     {%- for b in bars %}
       <span class="so-spark-bar" style="height:{{ '%.1f'|format(b.pct) }}%"
             title="{{ b.period }}: {{ money_value(b.value) }}"></span>
@@ -76,7 +76,7 @@
         <h1 class="so-hero-title">{{ _('نظرة عامة — المشتركون') }}</h1>
         <div class="so-hero-sub">
           {{ _('ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط.') }}
-          <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> الفترة المعروضة:
+          <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> {{ _('الفترة المعروضة:') }}
             {% if period_options and period_options|length > 1 %}
             <select class="so-period-pick" aria-label="{{ _('اختيار الفترة') }}"
                     onchange="if(this.value) location.href = this.value">
@@ -123,12 +123,12 @@
   </div>
 
   <div class="so-hero-kpis">
-    {{ hub.kpi("المُحصّل", (sales_sel.total or 0)|money, icon="coins", variant="brand", sub=((sales_sel.count or 0)|string) ~ " دفعة") }}
-    {{ hub.kpi("السلف", (loan_sel.total or 0)|money, icon="hand-holding-dollar", variant="amber", sub=((loan_sel.count or 0)|string) ~ " سلفة · " ~ fmt_minutes(loan_sel.minutes)) }}
-    {{ hub.kpi("التفعيل", (act_sel.count or 0)|string, icon="bolt", variant="blue", sub=((act_sel.amount or 0)|money) ~ " · " ~ fmt_minutes(act_sel.minutes)) }}
-    {{ hub.kpi("الجيجات", fmt_gb(data_sel.gb), icon="database", variant="green", sub=((data_sel.sessions or 0)|string) ~ " جلسة") }}
-    {{ hub.kpi("الديون", (outstanding.outstanding_total or 0)|money, icon="scale-unbalanced", variant="red", sub="حتى اللحظة") }}
-    {{ hub.kpi("المشتركون", census.total or 0, icon="users", variant="brand", sub=((census.online or 0)|string) ~ " متصل") }}
+    {{ hub.kpi(_('المُحصّل'), (sales_sel.total or 0)|money, icon="coins", variant="brand", sub=_('%(v)s دفعة', v=((sales_sel.count or 0)|string))) }}
+    {{ hub.kpi(_('السلف'), (loan_sel.total or 0)|money, icon="hand-holding-dollar", variant="amber", sub=_('%(v)s سلفة · %(v2)s', v=((loan_sel.count or 0)|string), v2=fmt_minutes(loan_sel.minutes))) }}
+    {{ hub.kpi(_('التفعيل'), (act_sel.count or 0)|string, icon="bolt", variant="blue", sub=((act_sel.amount or 0)|money) ~ " · " ~ fmt_minutes(act_sel.minutes)) }}
+    {{ hub.kpi(_('الجيجات'), fmt_gb(data_sel.gb), icon="database", variant="green", sub=_('%(v)s جلسة', v=((data_sel.sessions or 0)|string))) }}
+    {{ hub.kpi(_('الديون'), (outstanding.outstanding_total or 0)|money, icon="scale-unbalanced", variant="red", sub=_('حتى اللحظة')) }}
+    {{ hub.kpi(_('المشتركون'), census.total or 0, icon="users", variant="brand", sub=_('%(v)s متصل', v=((census.online or 0)|string))) }}
   </div>
 
   {# ── حالة المشتركين — مدموجة في الهيرو ── #}
@@ -136,42 +136,42 @@
      (راجع hub_v2.css). الأسماء green/blue/amber/red/grey لا تُلوّن شيئًا،
      لذا استُبدلت بالأسماء المعتمدة كي يظهر الترميز اللوني لحالات المشتركين. #}
   <div class="so-census so-census--hero">
-    {{ hub.tile("الإجمالي", census.total or 0, icon="users", variant="brand") }}
-    {{ hub.tile("مفعّل", census.enabled or 0, icon="circle-check", variant="ok") }}
-    {{ hub.tile("متصل الآن", census.online or 0, icon="wifi", variant="brand") }}
-    {{ hub.tile("منتهي", census.expired or 0, icon="hourglass-end", variant="warn") }}
-    {{ hub.tile("معطّل", census.disabled or 0, icon="ban", variant="danger") }}
-    {{ hub.tile("موقوف", census.suspended or 0, icon="circle-pause") }}
+    {{ hub.tile(_('الإجمالي'), census.total or 0, icon="users", variant="brand") }}
+    {{ hub.tile(_('مفعّل'), census.enabled or 0, icon="circle-check", variant="ok") }}
+    {{ hub.tile(_('متصل الآن'), census.online or 0, icon="wifi", variant="brand") }}
+    {{ hub.tile(_('منتهي'), census.expired or 0, icon="hourglass-end", variant="warn") }}
+    {{ hub.tile(_('معطّل'), census.disabled or 0, icon="ban", variant="danger") }}
+    {{ hub.tile(_('موقوف'), census.suspended or 0, icon="circle-pause") }}
   </div>
 </section>
 
 {# ───── Period performance board (4 lanes, monthly/yearly only) ───── #}
-{% call hub.section("الأداء حسب الفترة", icon="chart-column", meta=("شهري" if period == "monthly" else "سنوي") ~ " · آخر 12 فترة") %}
+{% call hub.section(_('الأداء حسب الفترة'), icon="chart-column", meta=(_('شهري') if period == "monthly" else _('سنوي')) ~ _(' · آخر 12 فترة')) %}
   <div class="so-board">
-    {{ lane("المُحصّل", "coins", "brand",
+    {{ lane(_('المُحصّل'), "coins", "brand",
             (sales_sel.total or 0)|money,
-            "المبالغ المُحصّلة من المشتركين خلال الفترة",
-            sales_bars, "radius.finance_ledger", "السجل المالي") }}
+            _('المبالغ المُحصّلة من المشتركين خلال الفترة'),
+            sales_bars, "radius.finance_ledger", _('السجل المالي')) }}
 
-    {{ lane("السلف", "hand-holding-dollar", "amber",
+    {{ lane(_('السلف'), "hand-holding-dollar", "amber",
             (loan_sel.total or 0)|money,
-            ((loan_sel.count or 0)|string) ~ " سلفة · " ~ ((loan_sel.still_open or 0)|string) ~ " مفتوحة",
-            loan_bars, "radius.business_finance_loans", "تفاصيل السلف") }}
+            _('%(v)s سلفة · %(v2)s مفتوحة', v=((loan_sel.count or 0)|string), v2=((loan_sel.still_open or 0)|string)),
+            loan_bars, "radius.business_finance_loans", _('تفاصيل السلف')) }}
 
-    {{ lane("التفعيل", "bolt", "blue",
-            (act_sel.count or 0)|string ~ " تفعيل",
+    {{ lane(_('التفعيل'), "bolt", "blue",
+            _('%(string)s تفعيل', string=(act_sel.count or 0)|string),
             ((act_sel.amount or 0)|money) ~ " · " ~ fmt_minutes(act_sel.minutes),
-            act_bars, "radius.finance_ledger", "السجل المالي") }}
+            act_bars, "radius.finance_ledger", _('السجل المالي')) }}
 
-    {{ lane("الجيجات المستهلَكة", "database", "green",
+    {{ lane(_('الجيجات المستهلَكة'), "database", "green",
             fmt_gb(data_sel.gb),
-            ((data_sel.sessions or 0)|string) ~ " جلسة خلال الفترة",
-            data_bars, "radius.business_finance_revenue", "الإيرادات") }}
+            _('%(v)s جلسة خلال الفترة', v=((data_sel.sessions or 0)|string)),
+            data_bars, "radius.business_finance_revenue", _('الإيرادات')) }}
   </div>
 {% endcall %}
 
 {# ───── شو ضل — الديون حتى اللحظة (point-in-time) ───── #}
-{% call hub.section("شو ضل — الديون حتى اللحظة", icon="scale-unbalanced", meta="حتى اللحظة (غير مرتبط بالفترة)") %}
+{% call hub.section(_('شو ضل — الديون حتى اللحظة'), icon="scale-unbalanced", meta=_('حتى اللحظة (غير مرتبط بالفترة)')) %}
   {% set owed = outstanding.balance_owed or 0 %}
   {% set credit = outstanding.balance_credit or 0 %}
   {% set open_loans = outstanding.open_loans_total or 0 %}
@@ -181,7 +181,7 @@
       <div class="so-debt-tile so-debt-tile--amber">
         <div class="so-debt-tile-label"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('سلف مفتوحة') }}</div>
         <div class="so-debt-tile-value">{{ open_loans|money }}</div>
-        <div class="so-debt-tile-meta">{{ outstanding.open_loans_count or 0 }} سلفة · {{ fmt_minutes(outstanding.open_loans_minutes) }}</div>
+        <div class="so-debt-tile-meta">{{ _('%(v)s سلفة · %(v2)s', v=outstanding.open_loans_count or 0, v2=fmt_minutes(outstanding.open_loans_minutes)) }}</div>
       </div>
       <div class="so-debt-tile so-debt-tile--red">
         <div class="so-debt-tile-label"><i class="fa-solid fa-circle-minus"></i> {{ _('أرصدة سالبة (عليهم)') }}</div>
@@ -200,14 +200,14 @@
       </div>
     </div>
     <div class="so-debt-links">
-      {{ finance_link("radius.business_finance_debts", "تفاصيل الديون في المالية", icon="scale-balanced") }}
-      {{ finance_link("radius.business_finance_loans", "تفاصيل السلف في المالية", icon="hand-holding-dollar") }}
+      {{ finance_link("radius.business_finance_debts", _('تفاصيل الديون في المالية'), icon="scale-balanced") }}
+      {{ finance_link("radius.business_finance_loans", _('تفاصيل السلف في المالية'), icon="hand-holding-dollar") }}
     </div>
   </div>
 {% endcall %}
 
 {# ───── أكبر المدينين — per-subscriber drill-down to Finance ───── #}
-{% call hub.section("أكبر المدينين", icon="user-clock", meta="مشترك مشترك → المالية") %}
+{% call hub.section(_('أكبر المدينين'), icon="user-clock", meta=_('مشترك مشترك → المالية')) %}
   {% if debtors %}
   {# استُبدل بحث المكبّرة المخصص بنظام الجداول الموحد (فرز + اختيار أعمدة + ترقيم صفحات) #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -232,19 +232,19 @@
           <td class="num mono">{{ (d.open_loans_total or 0)|money }}</td>
           <td class="num mono">{{ d.open_loans_count or 0 }}</td>
           <td class="num mono {% if (d.balance or 0) < 0 %}so-neg{% endif %}">{{ (d.balance or 0)|money }}</td>
-          <td>{{ finance_link("radius.users_finance", "ملف المالية", icon="up-right-from-square", username=d.username) }}</td>
+          <td>{{ finance_link("radius.users_finance", _('ملف المالية'), icon="up-right-from-square", username=d.username) }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا مديونيات مفتوحة", sub="عند وجود سلف مفتوحة أو أرصدة سالبة سيظهر أصحابها هنا مع رابط لملفهم المالي.", icon="circle-check") }}
+    {{ hub.empty(_('لا مديونيات مفتوحة'), sub=_('عند وجود سلف مفتوحة أو أرصدة سالبة سيظهر أصحابها هنا مع رابط لملفهم المالي.'), icon="circle-check") }}
   {% endif %}
 {% endcall %}
 
 {# ───── الكوتة المخصّصة حسب الباقة (point-in-time allocation) ───── #}
-{% call hub.section("الكوتة المخصّصة حسب الباقة", icon="layer-group", meta="مخصّص حتى اللحظة") %}
+{% call hub.section(_('الكوتة المخصّصة حسب الباقة'), icon="layer-group", meta=_('مخصّص حتى اللحظة')) %}
   {% if quota %}
   {# نظام الجداول الموحد: فرز + اختيار أعمدة + ترقيم صفحات #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -280,7 +280,7 @@
   </div>
   <div class="so-note"><i class="fa-solid fa-circle-info"></i> {{ _('الكوتة هنا = المخصّص لكل باقة (الحدّ). الاستهلاك الفعلي معروض في بطاقة «الجيجات» أعلاه.') }}</div>
   {% else %}
-    {{ hub.empty("لا باقات بكوتة محدّدة", sub="عند تخصيص كوتة للباقات سيظهر توزيعها هنا.", icon="layer-group") }}
+    {{ hub.empty(_('لا باقات بكوتة محدّدة'), sub=_('عند تخصيص كوتة للباقات سيظهر توزيعها هنا.'), icon="layer-group") }}
   {% endif %}
 {% endcall %}
 

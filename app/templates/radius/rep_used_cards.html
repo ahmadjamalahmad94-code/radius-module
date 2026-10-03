@@ -31,15 +31,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="used-cards-hero">
 {% call hub.megahero(
-  "الكروت المستخدمة",
-  subtitle="كل كرت استُخدم فعليًا — متى فُعّل ومن أي جهاز وعلى أي باقة ومتى ينتهي.",
+  _('الكروت المستخدمة'),
+  subtitle=_('كل كرت استُخدم فعليًا — متى فُعّل ومن أي جهاز وعلى أي باقة ومتى ينتهي.'),
   icon="ticket",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'ticket',       'variant': 'brand'},
-    {'label': 'سارية',          'value': _active,       'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'ملغاة',          'value': _revoked,      'icon': 'ban',          'variant': 'red'},
-    {'label': 'باقات مختلفة',   'value': _plans,        'icon': 'tags',         'variant': 'blue'},
+    {'label': _('إجمالي المطابق'), 'value': total,        'icon': 'ticket',       'variant': 'brand'},
+    {'label': _('سارية'),          'value': _active,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('ملغاة'),          'value': _revoked,      'icon': 'ban',          'variant': 'red'},
+    {'label': _('باقات مختلفة'),   'value': _plans,        'icon': 'tags',         'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_used_cards')
 ) %}
@@ -50,19 +50,19 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_used_cards') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم الكرت أو عنوان الجهاز (MAC)، ونطاق التاريخ يعمل على تاريخ أول استخدام. يُعرض حتى 500 كرت."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق اسم الكرت أو عنوان الجهاز (MAC)، ونطاق التاريخ يعمل على تاريخ أول استخدام. يُعرض حتى 500 كرت.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول الكروت — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("الكروت المستخدمة", icon="table-list",
+{% call hub.section(_('الكروت المستخدمة'), icon="table-list",
                     meta=items|length|ar_count('kart'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
@@ -83,7 +83,7 @@
         <tr class="{{ 'is-fail' if r.revoked else '' }}">
           <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
           <td><strong><bdi>{{ r.username }}</bdi></strong></td>
-          <td>{{ r.plan_name or (('باقة #' ~ r.plan_id) if r.plan_id else '—') }}</td>
+          <td>{{ r.plan_name or ((_('باقة #%(plan_id)s', plan_id=r.plan_id)) if r.plan_id else '—') }}</td>
           {% set _fu = r.first_used_at|dt_local_raw if r.first_used_at else '' %}
           <td class="mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
@@ -96,8 +96,8 @@
             {{ r.expire_at|date_local if r.expire_at else '—' }}
           </td>
           <td>
-            {% if r.revoked %}{{ hub.pill("ملغى", variant="red") }}
-            {% else %}{{ hub.pill("مستخدم", variant="green") }}{% endif %}
+            {% if r.revoked %}{{ hub.pill(_('ملغى'), variant="red") }}
+            {% else %}{{ hub.pill(_('مستخدم'), variant="green") }}{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -106,8 +106,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا كروت مستخدمة مطابقة",
-   sub="غيّر الفلاتر أو لا توجد كروت مستخدمة بعد.", icon="ticket") }}
+{{ hub.empty(_('لا كروت مستخدمة مطابقة'),
+   sub=_('غيّر الفلاتر أو لا توجد كروت مستخدمة بعد.'), icon="ticket") }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

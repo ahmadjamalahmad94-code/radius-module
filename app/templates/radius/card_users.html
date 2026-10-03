@@ -15,7 +15,7 @@
 {% block title %}{{ _("مستخدمو البطاقات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
 {% block page_title %}{{ _("مستخدمو البطاقات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ card_users|length }} مستخدم · {{ users_summary.users or 0 }} حساب نشط</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s مستخدم · %(v)s حساب نشط', length=card_users|length, v=users_summary.users or 0) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -44,8 +44,8 @@
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "مستخدمو البطاقات",
-  subtitle="الزبائن الذين يشترون البطاقات ويشحنون محافظهم. كل حساب يربط محفظة إلكترونية يستعملها لشراء البطاقات أو الباقات.",
+  _('مستخدمو البطاقات'),
+  subtitle=_('الزبائن الذين يشترون البطاقات ويشحنون محافظهم. كل حساب يربط محفظة إلكترونية يستعملها لشراء البطاقات أو الباقات.'),
   icon="users-rectangle",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="cuAddModal">
@@ -55,32 +55,32 @@
       <i class="fa-solid fa-store"></i> '|safe ~ _("سوق البطاقات") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي المستخدمين', 'value': users_summary.users or 0,                   'icon': 'users-rectangle', 'variant': 'brand', 'sub': 'حساب نشط'},
-    {'label': 'إجمالي الرصيد',     'value': users_summary.balance|money,                 'icon': 'wallet',          'variant': 'green', 'sub': 'مجموع المحافظ'},
-    {'label': 'إجمالي المشتريات',  'value': users_summary.purchases or 0,                'icon': 'cart-shopping',   'variant': 'blue',  'sub': 'عملية شراء'},
-    {'label': 'إجمالي المبيعات',   'value': "%.2f"|format(users_summary.spent or 0),     'icon': 'coins',           'variant': 'amber', 'sub': 'من المحافظ'},
+    {'label': _('إجمالي المستخدمين'), 'value': users_summary.users or 0,                   'icon': 'users-rectangle', 'variant': 'brand', 'sub': _('حساب نشط')},
+    {'label': _('إجمالي الرصيد'),     'value': users_summary.balance|money,                 'icon': 'wallet',          'variant': 'green', 'sub': _('مجموع المحافظ')},
+    {'label': _('إجمالي المشتريات'),  'value': users_summary.purchases or 0,                'icon': 'cart-shopping',   'variant': 'blue',  'sub': _('عملية شراء')},
+    {'label': _('إجمالي المبيعات'),   'value': "%.2f"|format(users_summary.spent or 0),     'icon': 'coins',           'variant': 'amber', 'sub': _('من المحافظ')},
   ]
 ) %}
 {% endcall %}
 
 {% if not card_users %}
-{{ hub.empty("لا يوجد مستخدمو بطاقات بعد",
-             sub="اضغط «إضافة مستفيد» بالأعلى — الزبون يستخدم الحساب للدخول إلى /portal/card وشحن محفظته.",
+{{ hub.empty(_('لا يوجد مستخدمو بطاقات بعد'),
+             sub=_('اضغط «إضافة مستفيد» بالأعلى — الزبون يستخدم الحساب للدخول إلى /portal/card وشحن محفظته.'),
              icon="users-rectangle") }}
 {% else %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو حساب زبون يشتري البطاقات ويشحن محفظته الإلكترونية. اضغط أي صف لفتح الملف الكامل للحساب.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو حساب زبون يشتري البطاقات ويشحن محفظته الإلكترونية. اضغط أي صف لفتح الملف الكامل للحساب.'),
   items=[
-    {'icon': 'wallet',        'text': 'رصيد المحفظة هو المبلغ المتاح للزبون لشراء البطاقات أو الباقات.'},
-    {'icon': 'cart-shopping', 'text': 'المشتريات تعدّ عمليات الشراء التي قام بها الزبون من حسابه.'},
-    {'icon': 'id-card',       'text': 'بطاقاتي هي عدد البطاقات التي يملكها الزبون حاليًا.'},
-    {'icon': 'circle-info',   'text': 'الدخول للزبون يكون عبر /portal/card باسمه وكلمة مروره.'},
+    {'icon': 'wallet',        'text': _('رصيد المحفظة هو المبلغ المتاح للزبون لشراء البطاقات أو الباقات.')},
+    {'icon': 'cart-shopping', 'text': _('المشتريات تعدّ عمليات الشراء التي قام بها الزبون من حسابه.')},
+    {'icon': 'id-card',       'text': _('بطاقاتي هي عدد البطاقات التي يملكها الزبون حاليًا.')},
+    {'icon': 'circle-info',   'text': _('الدخول للزبون يكون عبر /portal/card باسمه وكلمة مروره.')},
   ],
-  note="الحساب الموقوف أو المؤرشف يبقى محفوظًا لكنه لا يستطيع الدخول أو الشراء."
+  note=_('الحساب الموقوف أو المؤرشف يبقى محفوظًا لكنه لا يستطيع الدخول أو الشراء.')
 )) %}
-  {% call hub.section("الحسابات", icon="users-rectangle", meta=card_users|length|string + " حساب", flush=True) %}
+  {% call hub.section(_('الحسابات'), icon="users-rectangle", meta=card_users|length|string + _(' حساب'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -113,9 +113,9 @@
             <td class="num">{{ u.purchase_count or 0 }}</td>
             <td class="num">{{ u.owned_cards_count or 0 }}</td>
             <td>
-              {% if st == 'active' %}{{ hub.pill("نشط", variant="green") }}
-              {% elif st == 'disabled' %}{{ hub.pill("معطّل", variant="amber") }}
-              {% else %}{{ hub.pill("محذوف", variant="grey") }}{% endif %}
+              {% if st == 'active' %}{{ hub.pill(_('نشط'), variant="green") }}
+              {% elif st == 'disabled' %}{{ hub.pill(_('معطّل'), variant="amber") }}
+              {% else %}{{ hub.pill(_('محذوف'), variant="grey") }}{% endif %}
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
@@ -168,8 +168,7 @@
       <div class="fcw-body">
         <p class="fcw-note">
           <i class="fa-solid fa-circle-info"></i>
-          تُنشَأ محفظة إلكترونية تلقائياً مع الحساب، ويصبح فعّالاً فوراً.
-          يدخل الزبون عبر <bdi>/portal/card</bdi> {{ _('باسمه وكلمة مروره.') }}
+          {{ _('تُنشَأ محفظة إلكترونية تلقائياً مع الحساب، ويصبح فعّالاً فوراً. يدخل الزبون عبر') }} <bdi>/portal/card</bdi> {{ _('باسمه وكلمة مروره.') }}
         </p>
         <div class="hub-field">
           <label class="hub-field-label" for="cu-display_name">{{ _('الاسم الثلاثي') }} <span class="req">*</span></label>

@@ -5,6 +5,7 @@ tags) and adds roles CRUD (create/edit/delete with color picker and
 grouped permissions). Also adds /admins/profile-summary read-only view.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
@@ -173,13 +174,13 @@ def admins_create():
     # دورٌ مجهول يُرفَض (422) — لا يُنشأ مديرٌ بدورٍ معلَّق. بلا دور = الأقلّ
     # صلاحيةً (services.admins.create_admin)، أبدًا لا «مدير عام».
     if role_id is not None and (role_id <= 0 or admins_repo.get_role(int(role_id)) is None):
-        flash("الدور المحدد غير موجود — اختر دورًا للمدير.", "error")
+        flash(_tr("الدور المحدد غير موجود — اختر دورًا للمدير."), "error")
         return render_template("radius/admins_form.html",
             admin=None, roles=svc.list_roles(), is_new=True), 422
     try:
         if (want_super or want_co) and not _can_grant_owner():
             raise OwnerGuardError(
-                "منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك.")
+                _tr("منح صلاحيات المالك (شريك) أو «سوبر يوزر» مقصورٌ على المالك أو الشريك."))
         if role_id:
             probe = type("A", (), {"role_id": role_id})()
             assert_role_within_actor(_actor_id(), admins_repo.admin_permissions(probe))
@@ -219,7 +220,7 @@ def admins_create():
     # admins-report v2 — post-CRUD trigger: notify the panel immediately so
     # the new admin appears there without waiting for the periodic worker.
     _notify_panel_of_admin_change()
-    flash(f"تم إنشاء المدير «{a.username}».", "success")
+    flash(_tr('تم إنشاء المدير «%(username)s».', username=a.username), "success")
     return redirect(url_for("radius.admins_list"))
 
 
@@ -312,7 +313,7 @@ def admins_update(admin_id: int):
         flash(str(e), "error"); return redirect(url_for("radius.admins_list"))
     # admins-report v2 — post-CRUD trigger for edit/deactivate.
     _notify_panel_of_admin_change()
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     return redirect(url_for("radius.admins_list"))
 
 
@@ -321,7 +322,7 @@ def admins_delete(admin_id: int):
     try:
         assert_can_modify_admin(_actor_id(), admin_id, deleting=True)
         if _actor_id() == int(admin_id):
-            raise OwnerGuardError("لا يمكنك حذف حسابك أنت.")
+            raise OwnerGuardError(_tr("لا يمكنك حذف حسابك أنت."))
     except OwnerGuardError as e:
         flash(str(e), "error")
         return redirect(url_for("radius.admins_list"))
@@ -330,7 +331,7 @@ def admins_delete(admin_id: int):
         # admins-report v2 — differential tombstone right after the delete;
         # the next periodic full-snapshot reconciles the full roster anyway.
         _notify_panel_of_admin_change(deleted_admin_id=int(admin_id))
-        flash("تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات.", "success")
+        flash(_tr("تمت أرشفة المدير. يمكنك استعادته من سلة المحذوفات."), "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.admins_list"))
@@ -357,7 +358,7 @@ def roles_update(role_id: int):
         from ..auth.owner import assert_role_within_actor
         assert_role_within_actor(_actor_id(), request.form.getlist("permissions"))
         svc.update_role_permissions(actor=_actor(), role_id=role_id, perms=chosen)
-        flash("تم تحديث الصلاحيات.", "success")
+        flash(_tr("تم تحديث الصلاحيات."), "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.roles_list"))
@@ -430,16 +431,16 @@ def _reject_unknown_permissions(back_url: str):
         return None
     from .status_notice import status_notice
     return status_notice(
-        422, "لم يُحفَظ الدور",
-        "صلاحيات غير معروفة: " + "، ".join(bad) + " — لم يُحفَظ شيء.",
-        back_url=back_url, back_label="رجوع إلى الدور", code="unknown_permission",
+        422, _tr("لم يُحفَظ الدور"),
+        _tr("صلاحيات غير معروفة: ") + "، ".join(bad) + _tr(" — لم يُحفَظ شيء."),
+        back_url=back_url, back_label=N_("رجوع إلى الدور"), code="unknown_permission",
         unknown=bad)
 
 
 def roles_create():
     name = (request.form.get("name") or "").strip()
     if not name:
-        flash("اسم الدور مطلوب.", "error")
+        flash(_tr("اسم الدور مطلوب."), "error")
         return redirect(url_for("radius.roles_new"))
     refused = _reject_unknown_permissions(url_for("radius.roles_new"))
     if refused is not None:
@@ -454,7 +455,7 @@ def roles_create():
             permissions=tuple(request.form.getlist("permissions")),
             color=(request.form.get("color") or "#2BAACC").strip(),
         )
-        flash(f"تم إنشاء الدور «{name}» ✓", "success")
+        flash(_tr('تم إنشاء الدور «%(name)s» ✓', name=name), "success")
         return redirect(url_for("radius.roles_list"))
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
@@ -528,7 +529,7 @@ def roles_save(role_id: int):
             permissions=_merge_role_permissions(r, request.form.getlist("permissions")),
             color=(request.form.get("color") or "#2BAACC").strip(),
         )
-        flash("تم حفظ التعديلات ✓", "success")
+        flash(_tr("تم حفظ التعديلات ✓"), "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     # Stay on the merged page after saving basic-info/permissions.
@@ -539,7 +540,7 @@ def roles_delete(role_id: int):
     r = admins_repo.get_role(role_id)
     if not r: abort(404)
     if r.is_system:
-        flash("لا يمكن أرشفة دور النظام.", "error")
+        flash(_tr("لا يمكن أرشفة دور النظام."), "error")
         return redirect(url_for("radius.roles_list"))
     # D22: دورٌ مُسنَد لمدراء لا يُحذف بصمت (كانوا يفقدون كل صلاحياتهم).
     in_use = admins_repo.role_usage_count(role_id)
@@ -547,14 +548,13 @@ def roles_delete(role_id: int):
         # F02 L2 / D22: a real Arabic 409 page/JSON — not «Redirecting…».
         from .status_notice import status_notice
         return status_notice(
-            409, "لا يمكن حذف الدور",
-            f"لا يمكن حذف الدور «{r.display_name or r.name}»: مُسنَد إلى {in_use} مدير. "
-            "انقلهم إلى دورٍ آخر أوّلًا.",
-            back_url=url_for("radius.roles_list"), back_label="قائمة الأدوار",
+            409, _tr("لا يمكن حذف الدور"),
+            _tr('لا يمكن حذف الدور «%(name)s»: مُسنَد إلى %(in_use)s مدير. انقلهم إلى دورٍ آخر أوّلًا.', name=r.display_name or r.name, in_use=in_use),
+            back_url=url_for("radius.roles_list"), back_label=N_("قائمة الأدوار"),
             code="role_in_use", admins_count=int(in_use))
     try:
         admins_repo.delete_role(role_id)
-        flash(f"تمت أرشفة الدور «{r.name}» ✓", "success")
+        flash(_tr('تمت أرشفة الدور «%(name)s» ✓', name=r.name), "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     return redirect(url_for("radius.roles_list"))
@@ -584,8 +584,7 @@ def roles_grants_save(role_id: int):
         blob = _mg.apply_role_derived_form(
             blob, request.form, existing=admins_repo.get_role_granular(role_id))
         admins_repo.set_role_granular(role_id, blob)
-        flash(f"تم حفظ أساس صلاحيات الدور «{r.display_name or r.name}» — "
-              f"يَرثه كلّ مدير بهذا الدور ✓", "success")
+        flash(_tr('تم حفظ أساس صلاحيات الدور «%(name)s» — يَرثه كلّ مدير بهذا الدور ✓', name=r.display_name or r.name), "success")
     except Exception as e:  # noqa: BLE001
         flash(str(e), "error")
     # Return to the merged page, anchored on the grants section.

@@ -21,6 +21,7 @@
     HR-LoopDetect)؛ الحالة تُقرأ حيًّا عبر read_loop_status (bound=لوب).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from dataclasses import dataclass, field
@@ -224,11 +225,11 @@ class PortScriptPlan:
 
 _BT_WIFI_BLOCK = PortScriptService(
     slug="bt_wifi_block",
-    title="منع بث البلوتوث والواي فاي",
+    title=N_("منع بث البلوتوث والواي فاي"),
     description=(
-        "يثبّت TTL=1 على الترافيك الخارج من المنافذ المختارة (قاعدة mangle "
+        N_("يثبّت TTL=1 على الترافيك الخارج من المنافذ المختارة (قاعدة mangle "
         "في postrouting)، فيمنع مشاركة الإنترنت عبر البلوتوث/الواي فاي خلف "
-        "جهاز الزبون. كل قاعدة تحمل وسم HR-AntiShare لتسهيل الإزالة."
+        "جهاز الزبون. كل قاعدة تحمل وسم HR-AntiShare لتسهيل الإزالة.")
     ),
     icon="tower-broadcast",
     # سطر التفعيل لكل منفذ: قاعدة mangle تثبّت TTL=1 على الخارج منه.
@@ -239,10 +240,10 @@ _BT_WIFI_BLOCK = PortScriptService(
         'comment="' + BT_WIFI_TAG + " " + IFACE_PLACEHOLDER + '"'
     ),
     script_template="\n".join([
-        "# === Hoberadius — منع بث البلوتوث والواي فاي (تفعيل) ===",
-        "# الخدمة: bt_wifi_block — تثبيت TTL=1 لمنع المشاركة.",
-        "# المنافذ المختارة: {{PORTS}}",
-        "# كل قاعدة mangle تحمل comment=\"" + BT_WIFI_TAG + " <iface>\".",
+        N_("# === Hoberadius — منع بث البلوتوث والواي فاي (تفعيل) ==="),
+        N_("# الخدمة: bt_wifi_block — تثبيت TTL=1 لمنع المشاركة."),
+        N_("# المنافذ المختارة: {{PORTS}}"),
+        N_("# كل قاعدة mangle تحمل comment=\"") + BT_WIFI_TAG + " <iface>\".",
         "{{IFACES}}",
         "",
     ]),
@@ -252,10 +253,10 @@ _BT_WIFI_BLOCK = PortScriptService(
         '[find comment="' + BT_WIFI_TAG + " " + IFACE_PLACEHOLDER + '"]'
     ),
     remove_template="\n".join([
-        "# === Hoberadius — منع بث البلوتوث والواي فاي (إزالة) ===",
-        "# الخدمة: bt_wifi_block — إزالة قواعد TTL=1 الموسومة "
+        N_("# === Hoberadius — منع بث البلوتوث والواي فاي (إزالة) ==="),
+        N_("# الخدمة: bt_wifi_block — إزالة قواعد TTL=1 الموسومة ")
         + BT_WIFI_TAG + ".",
-        "# المنافذ المختارة: {{PORTS}}",
+        N_("# المنافذ المختارة: {{PORTS}}"),
         "{{IFACES}}",
         "",
     ]),
@@ -272,11 +273,11 @@ _BT_WIFI_BLOCK = PortScriptService(
 
 _LOOP_DETECT = PortScriptService(
     slug="loop_detect",
-    title="تتبّع اللوب",
+    title=N_("تتبّع اللوب"),
     description=(
-        "يضيف عميل DHCP على المنافذ المختارة لكشف اللوب: إن استلم المنفذ "
+        N_("يضيف عميل DHCP على المنافذ المختارة لكشف اللوب: إن استلم المنفذ "
         "عنوانًا (bound) فهناك لوب، وإن بقي searching فلا لوب. زر «فحص "
-        "اللوب» يقرأ الحالة الحيّة من الراوتر ويعرضها لكل منفذ."
+        "اللوب» يقرأ الحالة الحيّة من الراوتر ويعرضها لكل منفذ.")
     ),
     icon="arrows-spin",
     # سطر التفعيل لكل منفذ: عميل DHCP بلا مسار افتراضي ولا DNS/NTP،
@@ -293,11 +294,11 @@ _LOOP_DETECT = PortScriptService(
         'comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"'
     ),
     script_template="\n".join([
-        "# === Hoberadius — تتبّع اللوب (Loop Detection) (تفعيل) ===",
-        "# الخدمة: loop_detect — عميل DHCP لكل منفذ لكشف اللوب.",
-        "# المنافذ المختارة: {{PORTS}}",
-        "# كل عميل يحمل comment=\"" + LOOP_DETECT_TAG + " <iface>\".",
-        "# بعد التفعيل استخدم «فحص اللوب» لقراءة الحالة (bound=لوب).",
+        N_("# === Hoberadius — تتبّع اللوب (Loop Detection) (تفعيل) ==="),
+        N_("# الخدمة: loop_detect — عميل DHCP لكل منفذ لكشف اللوب."),
+        N_("# المنافذ المختارة: {{PORTS}}"),
+        N_("# كل عميل يحمل comment=\"") + LOOP_DETECT_TAG + " <iface>\".",
+        N_("# بعد التفعيل استخدم «فحص اللوب» لقراءة الحالة (bound=لوب)."),
         "{{IFACES}}",
         "",
     ]),
@@ -307,10 +308,10 @@ _LOOP_DETECT = PortScriptService(
         '[find comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"]'
     ),
     remove_template="\n".join([
-        "# === Hoberadius — تتبّع اللوب (إزالة) ===",
-        "# الخدمة: loop_detect — إزالة عملاء DHCP الموسومين "
+        N_("# === Hoberadius — تتبّع اللوب (إزالة) ==="),
+        N_("# الخدمة: loop_detect — إزالة عملاء DHCP الموسومين ")
         + LOOP_DETECT_TAG + ".",
-        "# المنافذ المختارة: {{PORTS}}",
+        N_("# المنافذ المختارة: {{PORTS}}"),
         "{{IFACES}}",
         "",
     ]),
@@ -346,12 +347,12 @@ def _validate_ports(ports: Sequence[str]) -> list[str]:
         if not name:
             continue
         if not _INTERFACE_NAME_RE.match(name):
-            raise ValueError(f"اسم الواجهة غير صالح: {name}")
+            raise ValueError(_tr('اسم الواجهة غير صالح: %(name)s', name=name))
         if name not in seen:
             seen.add(name)
             out.append(name)
     if not out:
-        raise ValueError("اختر منفذًا واحدًا على الأقل.")
+        raise ValueError(_tr("اختر منفذًا واحدًا على الأقل."))
     return out
 
 
@@ -389,20 +390,20 @@ def build_plan(slug: str, ports: Sequence[str],
     التفعيل. يرفع ValueError عند slug غير معروف أو منافذ غير صالحة."""
     service = get_service(slug)
     if service is None:
-        raise ValueError("الخدمة غير معروفة.")
+        raise ValueError(_tr("الخدمة غير معروفة."))
     valid_ports = _validate_ports(ports)
     script = render_script(service, valid_ports, remove=remove)
-    action = "الإزالة/التعطيل" if remove else "التفعيل"
+    action = N_("الإزالة/التعطيل") if remove else N_("التفعيل")
     summary = [
-        f"الخدمة: {service.title} ({action}).",
-        f"المنافذ المختارة ({len(valid_ports)}): {', '.join(valid_ports)}.",
-        f"كل أمر يحمل comment={service.comment} لتسهيل التراجع.",
+        _tr('الخدمة: %(title)s (%(action)s).', title=service.title, action=action),
+        _tr('المنافذ المختارة (%(v)s): %(v2)s.', v=len(valid_ports), v2=', '.join(valid_ports)),
+        _tr('كل أمر يحمل comment=%(comment)s لتسهيل التراجع.', comment=service.comment),
     ]
     warnings: list[str] = []
     if service.is_placeholder:
         warnings.append(
-            "هذا قالب مبدئي — لم يُضَف السكربت الفعلي بعد. الدفع للراوتر "
-            "معطّل حتى يُلصَق سكربت المستخدم في قالب الخدمة."
+            N_("هذا قالب مبدئي — لم يُضَف السكربت الفعلي بعد. الدفع للراوتر "
+            "معطّل حتى يُلصَق سكربت المستخدم في قالب الخدمة.")
         )
     return PortScriptPlan(
         slug=service.slug,
@@ -508,11 +509,11 @@ def _probe_from_row(iface: str, row: Mapping[str, Any]) -> "LoopProbe":
     has_addr = bool(address) and not address.startswith("0.0.0.0")
     is_loop = status.startswith("bound") or has_addr
     if is_loop:
-        msg = f"لوب مكتشف على {iface} — رجع IP {address or '—'}"
+        msg = _tr('لوب مكتشف على %(iface)s — رجع IP %(v)s', iface=iface, v=address or '—')
         if dhcp_server:
-            msg += f" من DHCP server {dhcp_server}"
+            msg += _tr(' من DHCP server %(dhcp_server)s', dhcp_server=dhcp_server)
     else:
-        msg = f"لا لوب على {iface} (الحالة: {status or 'searching'})"
+        msg = _tr('لا لوب على %(iface)s (الحالة: %(v)s)', iface=iface, v=status or 'searching')
     return LoopProbe(
         iface=iface, status=status, address=address, gateway=gateway,
         dhcp_server=dhcp_server, is_loop=is_loop, message=msg,
@@ -526,8 +527,7 @@ def _probe_missing(iface: str) -> "LoopProbe":
         iface=iface, status="no-rule", address="", gateway="",
         dhcp_server="", is_loop=False,
         message=(
-            f"لم تُركَّب قاعدة كشف اللوب على {iface} بعد — "
-            "اضغط «معاينة سكربت التفعيل» ثم «تطبيق» أولًا."
+            _tr('لم تُركَّب قاعدة كشف اللوب على %(iface)s بعد — اضغط «معاينة سكربت التفعيل» ثم «تطبيق» أولًا.', iface=iface)
         ),
     )
 
@@ -594,10 +594,10 @@ def read_loop_status(nas_call: Mapping[str, Any],
     try:
         res = dhcp_client_fn(nas_call)
     except Exception as e:  # noqa: BLE001
-        return [], f"تعذّر قراءة حالة اللوب من الراوتر: {e}"
+        return [], _tr('تعذّر قراءة حالة اللوب من الراوتر: %(e)s', e=e)
     if not getattr(res, "ok", False):
         return [], (_clean(getattr(res, "error", ""))
-                    or "تعذّر الاتصال بالراوتر لقراءة حالة اللوب.")
+                    or N_("تعذّر الاتصال بالراوتر لقراءة حالة اللوب."))
     probes = parse_loop_status(
         getattr(res, "data", []) or [], only_ports=only_ports)
     return probes, ""

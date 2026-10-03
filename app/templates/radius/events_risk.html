@@ -26,29 +26,29 @@
 
 {# ── خرائط التعريب: مفاتيح التنبيهات، الخطورة، وأنواع الكيانات ── #}
 {% set flag_labels = {
-  'wallet_negative':          'محفظة برصيد سالب',
-  'repeated_failed_logins':   'محاولات دخول فاشلة متكررة',
-  'subscriber_repeated_loans':'سلف متكررة لنفس المستفيد',
-  'suspicious_discount':      'خصم يستوجب المراجعة',
-  'revenue_ledger_mismatch':  'إيراد بلا قيد مطابق في الدفتر'
+  'wallet_negative':          _('محفظة برصيد سالب'),
+  'repeated_failed_logins':   _('محاولات دخول فاشلة متكررة'),
+  'subscriber_repeated_loans':_('سلف متكررة لنفس المستفيد'),
+  'suspicious_discount':      _('خصم يستوجب المراجعة'),
+  'revenue_ledger_mismatch':  _('إيراد بلا قيد مطابق في الدفتر')
 } %}
 {% set severity_meta = {
-  'critical': {'label': 'حرجة',  'variant': 'red'},
-  'error':    {'label': 'خطأ',   'variant': 'red'},
-  'warning':  {'label': 'تحذير', 'variant': 'amber'},
-  'info':     {'label': 'معلومة','variant': 'blue'}
+  'critical': {'label': _('حرجة'),  'variant': 'red'},
+  'error':    {'label': _('خطأ'),   'variant': 'red'},
+  'warning':  {'label': _('تحذير'), 'variant': 'amber'},
+  'info':     {'label': _('معلومة'),'variant': 'blue'}
 } %}
 {% set entity_labels = {
-  'subscriber':  'مشترك',
-  'user':        'مشترك',
-  'distributor': 'موزّع',
-  'manager':     'مدير',
-  'admin':       'مدير',
-  'wallet':      'محفظة',
-  'card':        'كرت',
-  'invoice':     'فاتورة',
-  'payment':     'دفعة',
-  'tenant':      'مستأجر'
+  'subscriber':  _('مشترك'),
+  'user':        _('مشترك'),
+  'distributor': _('موزّع'),
+  'manager':     _('مدير'),
+  'admin':       _('مدير'),
+  'wallet':      _('محفظة'),
+  'card':        _('كرت'),
+  'invoice':     _('فاتورة'),
+  'payment':     _('دفعة'),
+  'tenant':      _('مستأجر')
 } %}
 
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + زر الفحص ─────
@@ -56,13 +56,13 @@
 <section class="hub-hero-shell" data-testid="risk-hero">
 {# _events_jump متغيّر block-set (Markup) — يُعلَّم الجزء الحرفي |safe قبل دمجه بـ«~» وإلا تُهرَّب وسوم النموذج فيظهر خامًا #}
 {{ hub.megahero(
-  "مركز المخاطر",
-  subtitle="فحص واضح للمحافظ والخصومات والسلف ومحاولات الدخول وتطابق القيود المالية — قبل اتخاذ أي إجراء.",
+  _('مركز المخاطر'),
+  subtitle=_('فحص واضح للمحافظ والخصومات والسلف ومحاولات الدخول وتطابق القيود المالية — قبل اتخاذ أي إجراء.'),
   icon="shield-halved",
   kpis=[
-    {'label': 'الأحداث',            'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
-    {'label': 'التنبيهات المفتوحة', 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
-    {'label': 'أحداث حرجة',         'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('الأحداث'),            'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
+    {'label': _('التنبيهات المفتوحة'), 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
+    {'label': _('أحداث حرجة'),         'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
   actions_html=_events_jump ~ (
     '<form method="post" data-testid="risk-scan-form" style="margin:0">'|safe
@@ -74,24 +74,24 @@
 </section>{# /hub-hero-shell #}
 
 {% if result %}
-  {% call hub.section("نتيجة الفحص", icon="circle-check") %}
-    <p data-testid="risk-scan-result" style="margin:0">تم إنشاء {{ result.flags_created }} تنبيه.</p>
+  {% call hub.section(_('نتيجة الفحص'), icon="circle-check") %}
+    <p data-testid="risk-scan-result" style="margin:0">{{ _('تم إنشاء %(flags_created)s تنبيه.', flags_created=result.flags_created) }}</p>
   {% endcall %}
 {% endif %}
 
 {# ───── المحتوى الرئيسي (جدول مبطّق) + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو تنبيه احتيال أنشأته قواعد الفحص. شغّل الفحص من الأعلى لتحديث القائمة.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو تنبيه احتيال أنشأته قواعد الفحص. شغّل الفحص من الأعلى لتحديث القائمة.'),
   items=[
-    {'icon': 'hashtag',              'text': 'الرقم والنوع يحدّدان مصدر التنبيه وقاعدته داخل النظام.'},
-    {'icon': 'triangle-exclamation', 'text': 'الخطورة والنقاط تساعدانك على ترتيب التنبيهات حسب الأولوية.'},
-    {'icon': 'cube',                 'text': 'الكيان يربط التنبيه بصاحبه (محفظة، مشترك، موزّع، ...).'},
-    {'icon': 'shield-halved',        'text': 'الأحداث الأصلية تبقى محفوظة للمراجعة ولا تُحذف من هنا.'},
+    {'icon': 'hashtag',              'text': _('الرقم والنوع يحدّدان مصدر التنبيه وقاعدته داخل النظام.')},
+    {'icon': 'triangle-exclamation', 'text': _('الخطورة والنقاط تساعدانك على ترتيب التنبيهات حسب الأولوية.')},
+    {'icon': 'cube',                 'text': _('الكيان يربط التنبيه بصاحبه (محفظة، مشترك، موزّع، ...).')},
+    {'icon': 'shield-halved',        'text': _('الأحداث الأصلية تبقى محفوظة للمراجعة ولا تُحذف من هنا.')},
   ],
-  note="هذه الصفحة للعرض فقط — لا توجد إجراءات حذف على الأحداث من هنا."
+  note=_('هذه الصفحة للعرض فقط — لا توجد إجراءات حذف على الأحداث من هنا.')
 )) %}
-  {% call hub.section("تنبيهات الاحتيال", icon="flag", meta=flags|length|string + " تنبيه", flush=True) %}
+  {% call hub.section(_('تنبيهات الاحتيال'), icon="flag", meta=flags|length|string + _(' تنبيه'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="fraud-flags-table">
         <thead>
@@ -117,7 +117,7 @@
               <td>{{ hub.pill(_sev.label, variant=_sev.variant, dot=False) }}</td>
               <td class="num">{{ flag.risk_score }}</td>
               <td>
-                {{ entity_labels.get(flag.entity_type, flag.entity_type or 'كيان') }}
+                {{ entity_labels.get(flag.entity_type, flag.entity_type or _('كيان')) }}
                 {%- if flag.entity_id %} <bdi class="mono small">#{{ flag.entity_id }}</bdi>{% endif %}
               </td>
               <td class="small">{{ flag.summary }}</td>

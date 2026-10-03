@@ -6,26 +6,26 @@
 {% block title %}{{ _("إشعارات التلجرام") }}{% endblock %}
 {% block page_icon %}<i class="fa-brands fa-telegram"></i>{% endblock %}
 {% block page_title %}{{ _("إشعارات التلجرام") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ catalogue|length }} تنبيه</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s تنبيه', length=catalogue|length) }}</span>{% endblock %}
 
 {% block content %}
 <input type="hidden" id="ac-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
 {% set _on = catalogue|selectattr('enabled')|list|length %}
 {{ hub.megahero(
-  "إشعارات التلجرام",
-  subtitle="اربط بوت تلجرام، فعّل التنبيهات التي تريد استقبالها، جرّب كل واحدة بضغطة، وعايِن شكل الرسالة قبل أن تصل فعليًا.",
+  _('إشعارات التلجرام'),
+  subtitle=_('اربط بوت تلجرام، فعّل التنبيهات التي تريد استقبالها، جرّب كل واحدة بضغطة، وعايِن شكل الرسالة قبل أن تصل فعليًا.'),
   icon="bell",
   kpis=[
-    {'label': 'حالة البوت', 'value': ('جاهز' if bot.ready else 'غير مضبوط'), 'icon': 'robot', 'variant': ('green' if bot.ready else 'amber')},
-    {'label': 'تنبيهات مفعّلة', 'value': _on, 'icon': 'bell', 'variant': 'brand'},
-    {'label': 'إجمالي الجرد', 'value': catalogue|length, 'icon': 'list', 'variant': 'slate'},
+    {'label': _('حالة البوت'), 'value': (_('جاهز') if bot.ready else _('غير مضبوط')), 'icon': 'robot', 'variant': ('green' if bot.ready else 'amber')},
+    {'label': _('تنبيهات مفعّلة'), 'value': _on, 'icon': 'bell', 'variant': 'brand'},
+    {'label': _('إجمالي الجرد'), 'value': catalogue|length, 'icon': 'list', 'variant': 'slate'},
   ]
 ) }}
 
 {# ═══════════ إعداد البوت ═══════════ #}
-{% call hub.section("إعداد بوت التلجرام", icon="robot",
-                    meta=("مضبوط" if bot.ready else "غير مكتمل")) %}
+{% call hub.section(_('إعداد بوت التلجرام'), icon="robot",
+                    meta=(_('مضبوط') if bot.ready else _('غير مكتمل'))) %}
   <p class="card-intro">{{ _('الصق توكن البوت ومعرّف المحادثة/القناة، فعّل الإشعارات، ثم اضغط «اختبار الاتصال».') }}
     {% if bot.has_token %}<br><span class="hub-text-mute">{{ _('التوكن الحالي محفوظ مشفّرًا') }}: <code>{{ bot.token_masked }}</code> — {{ _('اتركه فارغًا للإبقاء عليه.') }}</span>{% endif %}
   </p>
@@ -51,7 +51,7 @@
       <label for="enabled" style="margin:0">{{ _('تفعيل إرسال الإشعارات إلى تلجرام') }}</label>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      {{ hub.btn("حفظ بيانات البوت", variant="primary", icon="floppy-disk", type="submit") }}
+      {{ hub.btn(_('حفظ بيانات البوت'), variant="primary", icon="floppy-disk", type="submit") }}
       <button type="button" class="hub-btn hub-btn--secondary" id="ac-test-conn">
         <i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}
       </button>

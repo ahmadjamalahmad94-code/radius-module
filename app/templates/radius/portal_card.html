@@ -484,7 +484,7 @@
   </a>
   <div class="nav-user">
     <i class="fa-regular fa-circle-user" style="font-size:18px;color:var(--ink-3)"></i>
-    <span>{{ dashboard.card_user.display_name or 'مستخدم' }}</span>
+    <span>{{ dashboard.card_user.display_name or _('مستخدم') }}</span>
   </div>
   <a href="{{ url_for('portal.card_logout') }}" class="nav-logout">
     <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
@@ -513,7 +513,7 @@
      wallet balances in minor units (1/100), and purchases the same. #}
   {% set wallet_balance = (dashboard.wallet.balance_minor or 0) / 100 %}
   {% set wallet_currency = dashboard.wallet.currency or cfg.currency %}
-  {% set user_name = dashboard.card_user.display_name or 'مستخدم' %}
+  {% set user_name = dashboard.card_user.display_name or _('مستخدم') %}
 
   {# ── Balance hero — horizontal layout: balance | divider | stats ── #}
   <section class="balance-card" aria-label="{{ _('رصيد المحفظة') }}">
@@ -591,7 +591,7 @@
           <div class="history-item is-debit">
             <span class="ico"><i class="fa-solid fa-cart-shopping"></i></span>
             <div class="body">
-              <div class="title">{{ p.package_name or 'عملية شراء' }}</div>
+              <div class="title">{{ p.package_name or _('عملية شراء') }}</div>
               <div class="sub">{{ p.created_at|dt_local if p.created_at else '' }}</div>
             </div>
             <div class="amount">−{{ ((p.amount_minor or 0) / 100)|money }}</div>
@@ -618,25 +618,25 @@
         {% set _price = (pkg.suggested_price or pkg.price or 0)|float %}
         {% set _affordable = wallet_balance >= _price %}
       <div class="market-card">
-        <div class="market-name">{{ pkg.display_name or pkg.name or 'باقة' }}</div>
+        <div class="market-name">{{ pkg.display_name or pkg.name or _('باقة') }}</div>
         <div class="market-meta">
           {% if pkg.duration_minutes %}
             <span class="item"><i class="fa-regular fa-clock"></i>
               {%- set d = (pkg.duration_minutes or 0)|int -%}
-              {%- if d >= 1440 and d % 1440 == 0 %} {{ d // 1440 }} يوم
-              {%- elif d >= 60 %} {{ (d / 60)|round(1) }} ساعة
-              {%- else %} {{ d }} دقيقة{% endif -%}
+              {%- if d >= 1440 and d % 1440 == 0 %} {{ d // 1440 }} {{ _('يوم') }}
+              {%- elif d >= 60 %} {{ (d / 60)|round(1) }} {{ _('ساعة') }}
+              {%- else %} {{ d }} {{ _('دقيقة') }}{% endif -%}
             </span>
           {% endif %}
           {% if pkg.speed_down_kbps %}
             <span class="item"><i class="fa-solid fa-gauge-high"></i>
               {%- set s = (pkg.speed_down_kbps or 0)|int -%}
-              {%- if s >= 1024 %} {{ (s / 1024)|round(1) }} ميجا
-              {%- else %} {{ s }} كيلو{% endif -%}
+              {%- if s >= 1024 %} {{ (s / 1024)|round(1) }} {{ _('ميجا') }}
+              {%- else %} {{ s }} {{ _('كيلو') }}{% endif -%}
             </span>
           {% endif %}
           {% if pkg.quota_total_mb %}
-            <span class="item"><i class="fa-solid fa-database"></i> {{ pkg.quota_total_mb }} م.ب</span>
+            <span class="item"><i class="fa-solid fa-database"></i> {{ _('%(quota_total_mb)s م.ب', quota_total_mb=pkg.quota_total_mb) }}</span>
           {% endif %}
         </div>
         <div class="market-price">
@@ -645,12 +645,12 @@
         <button type="button" class="market-buy"
                 {% if not _affordable %}disabled{% endif %}
                 data-buy-id="{{ pkg.id }}"
-                data-buy-name="{{ (pkg.display_name or pkg.name or 'باقة')|e }}"
+                data-buy-name="{{ (pkg.display_name or pkg.name or _('باقة'))|e }}"
                 data-buy-price="{{ _price }}">
           {% if _affordable %}
-            <i class="fa-solid fa-cart-shopping"></i> اشترِ الباقة
+            <i class="fa-solid fa-cart-shopping"></i> {{ _('اشترِ الباقة') }}
           {% else %}
-            <i class="fa-solid fa-wallet"></i> رصيدك غير كافٍ
+            <i class="fa-solid fa-wallet"></i> {{ _('رصيدك غير كافٍ') }}
           {% endif %}
         </button>
       </div>
@@ -672,9 +672,9 @@
         <div class="my-card-body">
           <div class="my-card-head">
             <i class="fa-solid fa-wifi"></i>
-            <span>{{ c.package_name or 'بطاقة' }}</span>
+            <span>{{ c.package_name or _('بطاقة') }}</span>
             <span class="my-card-status">
-              {% if _revoked %}ملغاة{% elif _used %}مستخدمة{% else %}جاهزة{% endif %}
+              {% if _revoked %}{{ _('ملغاة') }}{% elif _used %}{{ _('مستخدمة') }}{% else %}{{ _('جاهزة') }}{% endif %}
             </span>
           </div>
           <div class="my-card-num">{{ c.username }}</div>
@@ -697,7 +697,7 @@
             {% if c.total_seconds is defined and c.total_seconds %}
             <div class="cell">
               <span class="k">{{ _('الاستخدام') }}</span>
-              <span class="v">{{ (c.total_seconds // 60) }} دقيقة</span>
+              <span class="v">{{ _('%(v)s دقيقة', v=(c.total_seconds // 60)) }}</span>
             </div>
             {% endif %}
           </div>
@@ -715,11 +715,11 @@
           <button type="button" class="my-card-btn"
                   data-card-detail
                   data-card-user="{{ c.username }}"
-                  data-card-pkg="{{ (c.package_name or 'بطاقة')|e }}"
+                  data-card-pkg="{{ (c.package_name or _('بطاقة'))|e }}"
                   data-card-created="{{ (c.created_at or '')[:19] }}"
                   data-card-used="{{ (c.first_used_at or '')[:19] }}"
                   data-card-expire="{{ (c.expire_at or '')[:19] }}"
-                  data-card-status="{% if _revoked %}ملغاة{% elif _used %}مستخدمة{% else %}جاهزة{% endif %}">
+                  data-card-status="{% if _revoked %}{{ _('ملغاة') }}{% elif _used %}{{ _('مستخدمة') }}{% else %}{{ _('جاهزة') }}{% endif %}">
             <i class="fa-regular fa-circle-info"></i>
             {{ _('التفاصيل') }}
           </button>

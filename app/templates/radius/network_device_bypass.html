@@ -31,42 +31,40 @@
   </a>{% endif %}
 {% endset %}
 {{ hub.megahero(
-  "تجهيز «" ~ device.name ~ "» للإدارة",
-  subtitle="يضيف الجهاز إلى الراوتر بـ DHCP lease ثابت + IP binding "
-           "(يتخطّى الـ hotspot) + يدرجه في قائمة عناوين موحّدة. "
-           "كل سطر يحمل علامة HOBE_DEVICE_BYPASS:" ~ device.id ~ ": ليُحذف بأمان عند الحاجة.",
+  _('تجهيز «%(name)s» للإدارة', name=device.name),
+  subtitle=_('يضيف الجهاز إلى الراوتر بـ DHCP lease ثابت + IP binding (يتخطّى الـ hotspot) + يدرجه في قائمة عناوين موحّدة. كل سطر يحمل علامة HOBE_DEVICE_BYPASS:%(id)s: ليُحذف بأمان عند الحاجة.', id=device.id),
   icon="link",
   actions_html=_actions,
   kpis=[
-    {'label': 'النوع',   'value': device.device_type,                      'icon': 'wifi',         'variant': 'brand'},
+    {'label': _('النوع'),   'value': device.device_type,                      'icon': 'wifi',         'variant': 'brand'},
     {'label': 'MAC',     'value': device.mac_address or '—',               'icon': 'ethernet',     'variant': ('green' if device.mac_address else 'amber')},
     {'label': 'IP',      'value': device.ip_address or '—',                'icon': 'network-wired', 'variant': ('green' if device.ip_address else 'amber')},
-    {'label': 'الراوتر', 'value': nas.name,                                'icon': 'server',       'variant': 'brand'},
-    {'label': 'الجاهزية','value': ('جاهز' if _ready else 'ناقص'),          'icon': ('circle-check' if _ready else 'triangle-exclamation'), 'variant': ('green' if _ready else 'amber')},
+    {'label': _('الراوتر'), 'value': nas.name,                                'icon': 'server',       'variant': 'brand'},
+    {'label': _('الجاهزية'),'value': (_('جاهز') if _ready else _('ناقص')),          'icon': ('circle-check' if _ready else 'triangle-exclamation'), 'variant': ('green' if _ready else 'amber')},
   ]
 ) }}
 
 {# ───── Main (form cards) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف يعمل التجهيز؟",
-  intro="يجهّز الجهاز للإدارة المباشرة عبر الراوتر، ويترك أثرًا قابلًا للحذف بأمان.",
+  _('كيف يعمل التجهيز؟'),
+  intro=_('يجهّز الجهاز للإدارة المباشرة عبر الراوتر، ويترك أثرًا قابلًا للحذف بأمان.'),
   icon="link",
   items=[
-    {'icon': 'ethernet',   'text': 'DHCP lease ثابت يربط الـ MAC بالـ IP فلا يتغيّر العنوان.'},
-    {'icon': 'door-open',  'text': 'تخطّي بوابة الدخول يجعل الجهاز متاحًا بلا شاشة تسجيل دخول.'},
-    {'icon': 'list',       'text': 'قائمة العناوين الموحّدة تتيح تطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.'},
-    {'icon': 'eraser',     'text': 'الإزالة تحذف فقط السطور المعلّمة — لا تلمس أي إعداد يدوي.'},
+    {'icon': 'ethernet',   'text': _('DHCP lease ثابت يربط الـ MAC بالـ IP فلا يتغيّر العنوان.')},
+    {'icon': 'door-open',  'text': _('تخطّي بوابة الدخول يجعل الجهاز متاحًا بلا شاشة تسجيل دخول.')},
+    {'icon': 'list',       'text': _('قائمة العناوين الموحّدة تتيح تطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.')},
+    {'icon': 'eraser',     'text': _('الإزالة تحذف فقط السطور المعلّمة — لا تلمس أي إعداد يدوي.')},
   ],
-  note="كل سطر يُضاف يحمل علامة HOBE_DEVICE_BYPASS:" ~ device.id ~ ": ليُحذف بأمان عند الحاجة."
+  note=_('كل سطر يُضاف يحمل علامة HOBE_DEVICE_BYPASS:%(id)s: ليُحذف بأمان عند الحاجة.', id=device.id)
 )) %}
 
   {# ── Device summary ── #}
-  {% call hub.section("بيانات الجهاز", icon="wifi") %}
+  {% call hub.section(_('بيانات الجهاز'), icon="wifi") %}
     <div class="ndb-summary-grid">
       <div><strong>{{ _('الاسم:') }}</strong> {{ device.name }}</div>
       <div><strong>{{ _('النوع:') }}</strong> {{ device.device_type }}</div>
-      <div><strong>IP:</strong> <code class="ndb-mono" dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
-      <div><strong>MAC:</strong> <code class="ndb-mono" dir="ltr">{{ device.mac_address or '— غير محدّد' }}</code></div>
+      <div><strong>IP:</strong> <code class="ndb-mono" dir="ltr">{{ device.ip_address or _('— غير محدّد') }}</code></div>
+      <div><strong>MAC:</strong> <code class="ndb-mono" dir="ltr">{{ device.mac_address or _('— غير محدّد') }}</code></div>
       <div><strong>{{ _('الراوتر:') }}</strong> {{ nas.name }} (<code class="ndb-mono" dir="ltr">{{ nas.address }}</code>)</div>
     </div>
     {% if not _ready %}
@@ -89,7 +87,7 @@
         class="hr-form-card">{% if not can_submit('radius.network_device_bypass_apply') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     {{ csrf_token_input() | safe }}
 
-    {% call hub.section("خيارات التجهيز", icon="gear") %}
+    {% call hub.section(_('خيارات التجهيز'), icon="gear") %}
 
       {% if dhcp_error %}
       <div class="ndb-warn ndb-warn--red" style="margin-bottom:14px">
@@ -110,7 +108,7 @@
             <option value="{{ s.name }}" {% if s.disabled %}disabled{% endif %}>
               {{ s.name }}
               {% if s.interface %} (interface: {{ s.interface }}){% endif %}
-              {% if s.disabled %} — معطّل{% endif %}
+              {% if s.disabled %} {{ _('— معطّل') }}{% endif %}
             </option>
           {% endfor %}
         </select>
@@ -155,15 +153,14 @@
   {% if not can_submit('radius.network_device_bypass_apply') %}</fieldset>{% endif %}</form>
 
   {# ── Cleanup section ── #}
-  {% call hub.section("إزالة التجهيز", icon="eraser") %}
+  {% call hub.section(_('إزالة التجهيز'), icon="eraser") %}
     <p class="hub-text-mute" style="margin:0 0 12px;font-size:12.5px;line-height:1.7">
       {{ _('يحذف كل السطور على الراوتر اللي تحمل علامة') }}
-      <code class="ndb-mono" dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> —
-      آمن، لا يلمس أي إعدادات وضعتها يدويًا.
+      <code class="ndb-mono" dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> {{ _('— آمن، لا يلمس أي إعدادات وضعتها يدويًا.') }}
     </p>
     {% if can_submit('radius.network_device_bypass_remove', 'POST') %}<form method="post"
           action="{{ url_for('radius.network_device_bypass_remove', device_id=device.id) }}"
-          onsubmit="return confirm('تأكيد إزالة التجهيز من الراوتر؟');">
+          onsubmit="return confirm({{ _('تأكيد إزالة التجهيز من الراوتر؟')|tojson|forceescape }});">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--danger">
         <i class="fa-solid fa-trash"></i> {{ _('إزالة من الراوتر') }}

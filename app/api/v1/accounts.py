@@ -24,6 +24,7 @@ Optimistic concurrency (zero-w1 M3) — contract for the app team:
     keys present in the body are applied (diff against the current row).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import functools
 import json
@@ -111,12 +112,12 @@ def _parse_dt(v):
     if v in (None, ""):
         return None
     if isinstance(v, bool) or not isinstance(v, str):
-        raise RadiusValidationError("تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.")
+        raise RadiusValidationError(_tr("تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601."))
     try:
         return parse_iso_utc(v, strict=True)
     except (ValueError, OverflowError):
         raise RadiusValidationError(
-            "تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.")
+            _tr("تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z."))
 
 
 # Free-text fields: a dict/list/bool used to reach SQLite → HTTP 500.
@@ -139,18 +140,18 @@ def _strict_int(field_name: str, value) -> int:
     accepted silently)."""
     from ...radius.services.subscriber_validation import latin_digits
     if isinstance(value, bool):
-        raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.', field_name=field_name))
     if isinstance(value, int):
         return value
     if isinstance(value, float):
         if not math.isfinite(value) or value != int(value):
-            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr('قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.', field_name=field_name))
         return int(value)
     if isinstance(value, str):
         s = latin_digits(value).strip()
         if s.lstrip("-").isdigit():
             return int(s)
-    raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون رقمًا صحيحًا.")
+    raise RadiusValidationError(_tr('قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.', field_name=field_name))
 
 
 def _normalize_metadata(raw) -> str:
@@ -172,18 +173,18 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError("بيانات metadata ليست JSON صالحًا.")
+            raise RadiusValidationError(_tr("بيانات metadata ليست JSON صالحًا."))
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
-                "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
+                _tr("بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON."))
         return raw
     if isinstance(raw, (dict, list)):
         try:
             return json.dumps(raw, ensure_ascii=False)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError(f"تعذّر تحويل metadata إلى JSON: {e}")
+            raise RadiusValidationError(_tr('تعذّر تحويل metadata إلى JSON: %(e)s', e=e))
     raise RadiusValidationError(
-        f"metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع {type(raw).__name__}.")
+        _tr('metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.', v=type(raw).__name__))
 
 
 def _coerce(field_name: str, value):
@@ -203,7 +204,7 @@ def _coerce(field_name: str, value):
         if value is None:
             return None if field_name in _NULLABLE_TEXT else ""
         if isinstance(value, bool) or not isinstance(value, (str, int, float)):
-            raise RadiusValidationError(f"قيمة {field_name} يجب أن تكون نصًّا.")
+            raise RadiusValidationError(_tr('قيمة %(field_name)s يجب أن تكون نصًّا.', field_name=field_name))
         text = value if isinstance(value, str) else str(value)
         if field_name == "mobile":
             from ...radius.services.subscriber_validation import latin_digits
@@ -221,13 +222,13 @@ def _coerce(field_name: str, value):
         if value in (None, ""):
             return 0.0
         if isinstance(value, bool):
-            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا.")
+            raise RadiusValidationError(_tr("السعر المخصّص يجب أن يكون رقمًا."))
         try:
             price = float(value)
         except (TypeError, ValueError):
-            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا.")
+            raise RadiusValidationError(_tr("السعر المخصّص يجب أن يكون رقمًا."))
         if not math.isfinite(price) or price < 0 or price > 1_000_000_000:
-            raise RadiusValidationError("السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).")
+            raise RadiusValidationError(_tr("السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة)."))
         return price
     if field_name == "user_type":
         # الـAPI يُنشئ/يعدّل مشتركين فقط (subscriber أو trial). تحويل مشترك إلى
@@ -235,9 +236,9 @@ def _coerce(field_name: str, value):
         ut = str(value or "subscriber").strip().lower()
         if ut == "card":
             raise RadiusValidationError(
-                "لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».")
+                _tr("لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت»."))
         if ut not in ("subscriber", "trial"):
-            raise RadiusValidationError("نوع الحساب غير معروف (المسموح: subscriber أو trial).")
+            raise RadiusValidationError(_tr("نوع الحساب غير معروف (المسموح: subscriber أو trial)."))
         return ut
     if field_name in {
         "download_speed_kbps", "upload_speed_kbps",
@@ -254,7 +255,7 @@ def _coerce(field_name: str, value):
         mode = "" if value is None else value
         if not isinstance(mode, str) or mode.strip().lower() not in ("", "reject", "replace"):
             raise RadiusValidationError(
-                "عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.")
+                _tr("عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace."))
         return mode.strip().lower()
     if field_name in {
         "bandwidth_control_enabled", "custom_speed", "temporary_speed",
@@ -394,7 +395,7 @@ def _patch_denial(before: Subscriber, after: Subscriber):
     if float(after.balance or 0) != float(before.balance or 0):
         return after, fail(
             "forbidden",
-            "تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».",
+            _tr("تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد»."),
             status=403, details={"field": "balance"})
     try:
         from ...radius.services import manager_grants as _mg
@@ -438,20 +439,20 @@ def accounts_list():
             limit = max(1, min(int(args.get("limit") or 50), 500))
             offset = max(int(args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة."), status=422)
     status = (args.get("status") or "").strip().lower() or None
     status = _STATUS_ALIASES.get(status, status) if status else None
     if status and status not in _LIST_STATUSES:
         return fail("validation_error",
-                    "قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).",
+                    _tr("قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned)."),
                     status=422)
     search = (args.get("q") or args.get("search") or "").strip()
     if len(search) > 100:
-        return fail("validation_error", "نصّ البحث طويل جدًا.", status=422)
+        return fail("validation_error", _tr("نصّ البحث طويل جدًا."), status=422)
     user_type = (args.get("user_type") or "subscriber").strip().lower()
     if user_type not in ("subscriber", "trial"):
         return fail("validation_error",
-                    "قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).",
+                    _tr("قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards)."),
                     status=422)
     plan_id = args.get("plan_id")
     plan_id = int(plan_id) if (plan_id and plan_id.isdigit()) else None
@@ -462,11 +463,11 @@ def accounts_list():
         expiring_days = int(expiring) if expiring not in (None, "") else None
     except ValueError:
         return fail("validation_error",
-                    "قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.",
+                    _tr("قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا."),
                     status=422)
     if expiring_days is not None and not 1 <= expiring_days <= 365:
         return fail("validation_error",
-                    "قيمة expiring_within_days بين 1 و 365.", status=422)
+                    _tr("قيمة expiring_within_days بين 1 و 365."), status=422)
     filters = dict(status=status, plan_id=plan_id, search=search,
                    user_type=user_type, expiring_within_days=expiring_days)
     # «هوت سبوت / برود باند» (``access``) — نوعُ خدمة المشترك أو باقته.
@@ -528,31 +529,31 @@ def accounts_create():
     if not isinstance(body, dict):
         body = {} if body is None else None
     if body is None:
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     # «قسم كلمة المرور» معطَّل ⇒ الدخول بالاسم وحدَه، فلا تُطلب كلمة (كالويب).
     _no_pw = body.get("login_without_password") in (True, 1, "1", "true", "on", "yes")
     if not body.get("username") or (not body.get("password") and not _no_pw):
-        return fail("validation_error", "اسم الدخول وكلمة المرور مطلوبان.", status=422)
+        return fail("validation_error", _tr("اسم الدخول وكلمة المرور مطلوبان."), status=422)
     if not isinstance(body["username"], str):
-        return fail("validation_error", "اسم الدخول يجب أن يكون نصًا.", status=422)
+        return fail("validation_error", _tr("اسم الدخول يجب أن يكون نصًا."), status=422)
     if body.get("password") in (None, "") and _no_pw:
         body = {**body, "password": ""}
     if not isinstance(body["password"], (str, int)) or isinstance(body["password"], bool):
-        return fail("validation_error", "كلمة المرور يجب أن تكون نصًا.", status=422)
+        return fail("validation_error", _tr("كلمة المرور يجب أن تكون نصًا."), status=422)
     _aid = _restricted_admin_id()
     if _aid is not None and body.get("balance") not in (None, "", 0, 0.0, "0"):
         # same rule as PATCH: money enters a wallet only through «إضافة رصيد»
         # (spend gate) — an opening balance on create bypassed it.
         return fail(
             "forbidden",
-            "تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».",
+            _tr("تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد»."),
             status=403, details={"field": "balance"})
     if _aid is not None:
         from ...radius.services import manager_grants as _mg
         if _mg.subscriber_cap_blocked(_aid, tenant_id=_tid()):
             _cap = _mg.limit_value(_aid, "max_subscribers", tenant_id=_tid())
             return fail("forbidden",
-                        f"بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين ({_cap}).",
+                        _tr('بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).', cap=_cap),
                         status=403)
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
@@ -588,7 +589,7 @@ def accounts_create():
         if float(sub.balance or 0) != 0:
             return fail(
                 "forbidden",
-                "لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.",
+                _tr("لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء."),
                 status=403, details={"field": "balance"})
         from ...radius.services import manager_grants as _mg
         # A non-granted expiry falls back to «no expiry given» — the server's
@@ -655,7 +656,7 @@ def accounts_get(username: str):
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", f"الحساب {username} غير موجود.", status=404)
+        return fail("not_found", _tr('الحساب %(username)s غير موجود.', username=username), status=404)
     return ok(_serialize(sub))
 
 
@@ -664,17 +665,17 @@ def accounts_patch(username: str):
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     posted_name = body.get("username")
     if posted_name is not None and str(posted_name).strip() != sub.username:
         # the name is the RADIUS key: it changes only through the rename
         # cascade — silently ignoring it made the app say «تم» (R10 N7).
         return fail("validation_error",
-                    "لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».",
+                    _tr("لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم»."),
                     status=422, details={"field": "username"})
     # «بدون انتهاء»: an explicit null / "" clears the expiry (never expires).
     # It was a silent no-op (200, old expiry kept — R10 N3). A MISSING key
@@ -739,7 +740,7 @@ def accounts_delete(username: str):
     try:
         _svc().delete(actor=_actor(), username=username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"deleted": username, "archived": True})
@@ -750,7 +751,7 @@ def accounts_reset_pw(username: str):
     body = body if isinstance(body, dict) else {}
     pw = body.get("new_password")
     if not pw or not isinstance(pw, (str, int)):
-        return fail("validation_error", "كلمة المرور الجديدة (new_password) مطلوبة.", status=422)
+        return fail("validation_error", _tr("كلمة المرور الجديدة (new_password) مطلوبة."), status=422)
     _aid = _restricted_admin_id()
     if _aid is not None:
         try:
@@ -759,12 +760,12 @@ def accounts_reset_pw(username: str):
         except Exception:  # noqa: BLE001 — fail-open like the web field guard
             _pw_locked = False
         if _pw_locked:
-            return fail("forbidden", "ليس لديك صلاحية لتغيير كلمة مرور المشترك.",
+            return fail("forbidden", _tr("ليس لديك صلاحية لتغيير كلمة مرور المشترك."),
                         status=403, details={"field": "password"})
     try:
         _svc().reset_password(actor=_actor(), username=username, new_password=str(pw))
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     except RadiusError as e:
@@ -813,9 +814,9 @@ def accounts_extend(username: str):
         minutes = finite_int(body.get("minutes"), field="minutes", default=0,
                              min=-1_000_000_000, max=1_000_000_000)
     except (TypeError, ValueError):
-        return fail("validation_error", "المدّة يجب أن تكون عددًا صحيحًا من الدقائق.", status=422)
+        return fail("validation_error", _tr("المدّة يجب أن تكون عددًا صحيحًا من الدقائق."), status=422)
     if minutes <= 0:
-        return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
+        return fail("validation_error", _tr("المدّة يجب أن تكون أكبر من صفر."), status=422)
     try:
         # owner rule: one extend ≤ 1 year (1e12 minutes was a 500 — R01 M3).
         check_extend_minutes(minutes)
@@ -824,12 +825,12 @@ def accounts_extend(username: str):
     try:
         saved = _svc().extend_time(actor=_actor(), username=username, minutes=minutes)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     except RadiusValidationError as e:
         # 1-year cap / expiry after 2100 → 422 (was 500).
         return fail("validation_error", e.message, status=422)
     except (OverflowError, ValueError):
-        return fail("validation_error", "المدة الناتجة تتجاوز الحدّ المسموح.", status=422)
+        return fail("validation_error", _tr("المدة الناتجة تتجاوز الحدّ المسموح."), status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({"username": username, "extended_minutes": minutes,
@@ -840,7 +841,7 @@ def accounts_disable(username: str):
     try:
         _svc().disable(actor=_actor(), username=username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     return ok({"username": username, "status": "disabled"})
 
 
@@ -848,7 +849,7 @@ def accounts_enable(username: str):
     try:
         _svc().enable(actor=_actor(), username=username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     return ok({"username": username, "status": "enabled"})
 
 
@@ -856,7 +857,7 @@ def accounts_usage(username: str):
     try:
         sub = _svc().get(username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     return ok({
         "username": sub.username,
         "used_seconds": sub.used_seconds,
@@ -874,7 +875,7 @@ def accounts_360(username: str):
     try:
         payload = Subscriber360Service(tenant_id=_tid()).get_by_username(username)
     except KeyError:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     safe = _safe_360_payload(payload)
     from ...radius.services.sensitive_visibility import can_view_balance
     if not can_view_balance(tenant_id=_tid()):

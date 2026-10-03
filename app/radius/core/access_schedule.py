@@ -30,6 +30,7 @@ This module owns:
 See SERVICES_COOKBOOK §17.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import re
@@ -38,8 +39,8 @@ from typing import Iterable, Optional
 
 DAYS: tuple[str, ...] = ("sat", "sun", "mon", "tue", "wed", "thu", "fri")
 DAY_NAMES_AR: dict[str, str] = {
-    "sat": "السبت", "sun": "الأحد",   "mon": "الإثنين", "tue": "الثلاثاء",
-    "wed": "الأربعاء", "thu": "الخميس", "fri": "الجمعة",
+    "sat": N_("السبت"), "sun": N_("الأحد"),   "mon": N_("الإثنين"), "tue": N_("الثلاثاء"),
+    "wed": N_("الأربعاء"), "thu": N_("الخميس"), "fri": N_("الجمعة"),
 }
 # Python's weekday() returns Mon=0..Sun=6. Map to our codes.
 _PY_WEEKDAY_TO_CODE: dict[int, str] = {
@@ -61,10 +62,10 @@ def _parse_time(s: str) -> Optional[time]:
         return None
     m = _TIME_RE.match(s)
     if not m:
-        raise AccessScheduleError(f"وقت غير صالح: {s!r} (المتوقع HH:MM)")
+        raise AccessScheduleError(_tr('وقت غير صالح: %(s)s (المتوقع HH:MM)', s=repr(s)))
     h, mm = int(m.group(1)), int(m.group(2))
     if not (0 <= h <= 23 and 0 <= mm <= 59):
-        raise AccessScheduleError(f"وقت خارج النطاق: {s!r}")
+        raise AccessScheduleError(_tr('وقت خارج النطاق: %(s)s', s=repr(s)))
     return time(h, mm)
 
 
@@ -80,11 +81,11 @@ def _normalize_days(raw) -> list[str]:
     elif isinstance(raw, (list, tuple)):
         items = [str(d).strip().lower() for d in raw if str(d).strip()]
     else:
-        raise AccessScheduleError(f"days يجب أن تكون قائمة، وُجد: {type(raw).__name__}")
+        raise AccessScheduleError(_tr('days يجب أن تكون قائمة، وُجد: %(v)s', v=type(raw).__name__))
     seen, out = set(), []
     for d in items:
         if d not in DAYS:
-            raise AccessScheduleError(f"يوم غير معروف: {d!r}")
+            raise AccessScheduleError(_tr('يوم غير معروف: %(d)s', d=repr(d)))
         if d not in seen:
             seen.add(d); out.append(d)
     # Keep canonical order (sat..fri)
@@ -103,22 +104,22 @@ def parse(raw) -> dict:
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as e:
-            raise AccessScheduleError(f"JSON غير صالح: {e}") from e
+            raise AccessScheduleError(_tr('JSON غير صالح: %(e)s', e=e)) from e
     elif isinstance(raw, dict):
         data = raw
     else:
-        raise AccessScheduleError(f"النوع غير مدعوم: {type(raw).__name__}")
+        raise AccessScheduleError(_tr('النوع غير مدعوم: %(v)s', v=type(raw).__name__))
 
     wins_raw = data.get("windows") if isinstance(data, dict) else None
     if wins_raw is None:
         return {"windows": []}
     if not isinstance(wins_raw, list):
-        raise AccessScheduleError("windows يجب أن تكون قائمة")
+        raise AccessScheduleError(_tr("windows يجب أن تكون قائمة"))
 
     out_windows: list[dict] = []
     for i, w in enumerate(wins_raw):
         if not isinstance(w, dict):
-            raise AccessScheduleError(f"window #{i} ليس dict")
+            raise AccessScheduleError(_tr('window #%(i)s ليس dict', i=i))
         days = _normalize_days(w.get("days"))
         t_from = _parse_time(w.get("from", ""))
         t_to   = _parse_time(w.get("to",   ""))

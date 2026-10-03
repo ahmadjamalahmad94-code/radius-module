@@ -9,6 +9,7 @@
 يُعيد استعمال هيكل الشِّل المُثبَت (دخول/CHAP/تبويبات CSS)؛ البَصمة z-index:-1
 خلفيّة، الشريط غير مُغطّى، العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -97,13 +98,13 @@ _MENU_ART = ("""
 
 _MENU_HERO = ("""
       <div class="mb-hero">
-        <div class="mb-frame">""" + _MENU_ART + """</div>
+        <div class="mb-frame">""" + _MENU_ART + N_("""</div>
         <div class="mb-cap">
           <div><b>امسح وتصفّح القائمة</b><span>اطلب بسرعة عبر رمز QR — واي‑فاي مجّانيّ للزبائن</span></div>
           <div class="mb-badge"><span class="mb-dot"></span> عرض اليوم</div>
         </div>
       </div>
-""")
+"""))
 
 _MENU_STYLE = """
 <style id="hr-menu-board">

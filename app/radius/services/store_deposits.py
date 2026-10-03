@@ -17,6 +17,7 @@ pending ذرّيًا بحارس rowcount قبل أي ائتمان، فلا يُ�
 يعرضها المتجر للزبون لينسخ الرقم/يمسح QR قبل التحويل.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -60,20 +61,20 @@ def parse_active_flag(value: Any, *, default: bool = True) -> bool:
         return True
     if text in _ACTIVE_FALSE:
         return False
-    raise StoreDepositError("قيمة «مفعّلة» غير صالحة — استخدم 1 أو 0.")
+    raise StoreDepositError(_tr("قيمة «مفعّلة» غير صالحة — استخدم 1 أو 0."))
 
 _METHOD_AR = {
-    "jawaly_pay": "جوالي باي",
-    "bank": "تحويل بنكي",
+    "jawaly_pay": N_("جوالي باي"),
+    "bank": N_("تحويل بنكي"),
     "palpay": "PalPay",
-    "other": "قناة أخرى",
+    "other": N_("قناة أخرى"),
 }
 
 _STATUS_AR = {
-    "pending": "بانتظار المراجعة",
-    "confirmed": "مؤكَّد — أُضيف الرصيد",
-    "adjusted": "مؤكَّد بمبلغ معدَّل",
-    "rejected": "مرفوض",
+    "pending": N_("بانتظار المراجعة"),
+    "confirmed": N_("مؤكَّد — أُضيف الرصيد"),
+    "adjusted": N_("مؤكَّد بمبلغ معدَّل"),
+    "rejected": N_("مرفوض"),
 }
 
 
@@ -89,7 +90,7 @@ class DepositRequestService:
         out = row_to_dict(row)
         # fallback عربي محسوم — لا يتسرّب المفتاح الخام للعمود مهما كانت القيمة
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
-                                          "قناة أخرى")
+                                          N_("قناة أخرى"))
         out["qr_image_url"] = store_image_url(out.get("qr_image_path") or "")
         out["logo_image_url"] = store_image_url(out.get("logo_image_path") or "")
         return out
@@ -125,7 +126,7 @@ class DepositRequestService:
             (self.tenant_id, int(method_id)),
         ).fetchone()
         if not row:
-            raise StoreDepositError("قناة الاستلام غير موجودة.")
+            raise StoreDepositError(_tr("قناة الاستلام غير موجودة."))
         return self._method_row(row)
 
     def create_payment_method(
@@ -138,7 +139,7 @@ class DepositRequestService:
         if m not in VALID_METHODS:
             m = "other"
         if not str(label or "").strip():
-            raise StoreDepositError("اسم القناة مطلوب.")
+            raise StoreDepositError(_tr("اسم القناة مطلوب."))
         now = now_iso()
         cur = db().execute(
             """
@@ -206,9 +207,9 @@ class DepositRequestService:
             out["confirmed_amount"] = None
         # fallback عربي محسوم لكليهما — لا قيمة خام إنجليزية في العمود أبدًا
         out["status_ar"] = _STATUS_AR.get(str(out.get("status") or ""),
-                                          "غير محدّدة")
+                                          N_("غير محدّدة"))
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
-                                          "قناة أخرى")
+                                          N_("قناة أخرى"))
         out["receipt_image_url"] = store_image_url(out.get("receipt_image_path") or "")
         # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
         # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
@@ -233,7 +234,7 @@ class DepositRequestService:
         CardUsersMarketplaceService(tenant_id=self.tenant_id).get_card_user(int(card_user_id))
         amount_minor = money_to_minor(amount_claimed)
         if amount_minor <= 0:
-            raise StoreDepositError("أدخل مبلغًا صحيحًا أكبر من صفر.")
+            raise StoreDepositError(_tr("أدخل مبلغًا صحيحًا أكبر من صفر."))
         m = str(method or "other").strip().lower()
         if m not in VALID_METHODS:
             m = "other"
@@ -257,7 +258,7 @@ class DepositRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.deposit_requested",
-            message="طلب إيداع جديد بانتظار مراجعة المدير.",
+            message=N_("طلب إيداع جديد بانتظار مراجعة المدير."),
             actor_type="card_user", actor_id=int(card_user_id),
             target_type="card_user", target_id=int(card_user_id),
             metadata={"deposit_request_id": request_id,
@@ -279,7 +280,7 @@ class DepositRequestService:
             (self.tenant_id, int(request_id)),
         ).fetchone()
         if not row:
-            raise StoreDepositError("طلب الإيداع غير موجود.")
+            raise StoreDepositError(_tr("طلب الإيداع غير موجود."))
         return self._row(row)
 
     def list_requests(self, *, status: str = "", card_user_id: int | None = None,
@@ -324,7 +325,7 @@ class DepositRequestService:
             amount_minor = money_to_minor(confirmed_amount)
             final_status = "adjusted"
         if amount_minor <= 0:
-            raise StoreDepositError("المبلغ المعتمد يجب أن يكون أكبر من صفر.")
+            raise StoreDepositError(_tr("المبلغ المعتمد يجب أن يكون أكبر من صفر."))
         now = now_iso()
         # (1) المطالبة الذرّية: pending → الحالة النهائية بحارس rowcount.
         #     من يفلح هنا وحده يُكمل الائتمان؛ أي نداء/مدير آخر يجد
@@ -351,7 +352,7 @@ class DepositRequestService:
                 amount=minor_to_money(amount_minor),
                 actor_type="admin", actor_id=None,
                 reference_type="store_deposit", reference_id=int(request_id),
-                notes=f"تأكيد إيداع المتجر #{request_id} بواسطة {actor}",
+                notes=_tr('تأكيد إيداع المتجر #%(request_id)s بواسطة %(actor)s', request_id=request_id, actor=actor),
                 metadata={"deposit_request_id": int(request_id),
                           "status": final_status},
             )
@@ -374,7 +375,7 @@ class DepositRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.deposit_confirmed",
-            message=f"تأكيد إيداع وإضافة {minor_to_money(amount_minor)} للمحفظة.",
+            message=_tr('تأكيد إيداع وإضافة %(v)s للمحفظة.', v=minor_to_money(amount_minor)),
             actor_type="admin", target_type="card_user",
             target_id=int(req["card_user_id"]),
             metadata={"deposit_request_id": int(request_id),
@@ -383,8 +384,7 @@ class DepositRequestService:
         )
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
-            f"تم تأكيد إيداعك وإضافة {minor_to_money(amount_minor)} "
-            f"{default_currency()} إلى رصيدك. شكرًا لك.",
+            _tr('تم تأكيد إيداعك وإضافة %(v)s %(default_currency)s إلى رصيدك. شكرًا لك.', v=minor_to_money(amount_minor), default_currency=default_currency()),
         )
         # إشعار حركة «شحن رصيد» للمشتري على قنواته المُفعَّلة (لا يكسر الإيداع).
         try:
@@ -425,15 +425,15 @@ class DepositRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.deposit_rejected",
-            message="رُفض طلب إيداع المتجر.",
+            message=N_("رُفض طلب إيداع المتجر."),
             actor_type="admin", target_type="card_user",
             target_id=int(req["card_user_id"]),
             metadata={"deposit_request_id": int(request_id)},
         )
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
-            "نعتذر، لم نتمكّن من تأكيد إيداعك"
-            + (f" — {note}" if note else "") + ". تواصل معنا للمساعدة.",
+            _tr("نعتذر، لم نتمكّن من تأكيد إيداعك")
+            + (f" — {note}" if note else "") + _tr(". تواصل معنا للمساعدة."),
         )
         try:
             from .store_alerts import resolve_deposit
@@ -456,7 +456,7 @@ def _notify_customer(tenant_id: int, card_user_id: int, message: str) -> None:
             ) VALUES(?,?,?,?,?,?,?,?)
             """,
             (int(tenant_id), int(card_user_id), "admin", str(message),
-             "النظام", 1, 0, now_iso()),
+             N_("النظام"), 1, 0, now_iso()),
         )
     except Exception:  # noqa: BLE001 — الإشعار لا يكسر التأكيد
         pass

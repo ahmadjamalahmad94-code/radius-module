@@ -11,6 +11,7 @@
 لتغيّره بعد الطلب) نعيد الطلب pending برسالة واضحة بلا خصم معلّق.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -33,9 +34,9 @@ class StoreWithdrawalError(ValueError):
 
 
 _STATUS_AR = {
-    "pending": "بانتظار التنفيذ",
-    "confirmed": "نُفِّذ — خُصم الرصيد",
-    "rejected": "مرفوض",
+    "pending": N_("بانتظار التنفيذ"),
+    "confirmed": N_("نُفِّذ — خُصم الرصيد"),
+    "rejected": N_("مرفوض"),
 }
 
 
@@ -50,7 +51,7 @@ class WithdrawalRequestService:
         out["amount"] = minor_to_money(out.get("amount_minor"))
         # fallback عربي محسوم — لا يتسرّب مفتاح الحالة الخام للعمود
         out["status_ar"] = _STATUS_AR.get(str(out.get("status") or ""),
-                                          "غير محدّدة")
+                                          N_("غير محدّدة"))
         # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
         # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
         out["currency"] = default_currency()
@@ -71,17 +72,17 @@ class WithdrawalRequestService:
         البنيوي عند التأكيد)."""
         CardUsersMarketplaceService(tenant_id=self.tenant_id).get_card_user(int(card_user_id))
         if not str(payee_name or "").strip():
-            raise StoreWithdrawalError("اسم صاحب الحساب مطلوب.")
+            raise StoreWithdrawalError(_tr("اسم صاحب الحساب مطلوب."))
         if not str(payee_account or "").strip():
-            raise StoreWithdrawalError("رقم الحساب الذي نحوّل إليه مطلوب.")
+            raise StoreWithdrawalError(_tr("رقم الحساب الذي نحوّل إليه مطلوب."))
         amount_minor = money_to_minor(amount)
         if amount_minor <= 0:
-            raise StoreWithdrawalError("أدخل مبلغًا صحيحًا أكبر من صفر.")
+            raise StoreWithdrawalError(_tr("أدخل مبلغًا صحيحًا أكبر من صفر."))
         wallet = self._wallet(int(card_user_id))
         balance_minor = int(wallet.get("balance_minor") or 0)
         if amount_minor > balance_minor:
             raise StoreWithdrawalError(
-                f"المبلغ المطلوب أكبر من رصيدك ({minor_to_money(balance_minor)}).")
+                _tr('المبلغ المطلوب أكبر من رصيدك (%(v)s).', v=minor_to_money(balance_minor)))
         cur_code = str(currency or wallet.get("currency") or default_currency()).upper()[:8]
         now = now_iso()
         cur = db().execute(
@@ -99,7 +100,7 @@ class WithdrawalRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.withdrawal_requested",
-            message="طلب سحب رصيد جديد بانتظار تنفيذ المدير.",
+            message=N_("طلب سحب رصيد جديد بانتظار تنفيذ المدير."),
             actor_type="card_user", actor_id=int(card_user_id),
             target_type="card_user", target_id=int(card_user_id),
             metadata={"withdrawal_request_id": request_id,
@@ -121,7 +122,7 @@ class WithdrawalRequestService:
             (self.tenant_id, int(request_id)),
         ).fetchone()
         if not row:
-            raise StoreWithdrawalError("طلب السحب غير موجود.")
+            raise StoreWithdrawalError(_tr("طلب السحب غير موجود."))
         return self._row(row)
 
     def list_requests(self, *, status: str = "", card_user_id: int | None = None,
@@ -179,7 +180,7 @@ class WithdrawalRequestService:
                 amount=minor_to_money(amount_minor),
                 actor_type="admin", actor_id=None,
                 reference_type="store_withdrawal", reference_id=int(request_id),
-                notes=f"تنفيذ سحب المتجر #{request_id} بواسطة {actor}",
+                notes=_tr('تنفيذ سحب المتجر #%(request_id)s بواسطة %(actor)s', request_id=request_id, actor=actor),
                 metadata={"withdrawal_request_id": int(request_id)},
             )
         except BusinessOSValidationError as exc:
@@ -194,7 +195,7 @@ class WithdrawalRequestService:
             # "cannot go negative" ⇒ نقص الرصيد بعد الطلب.
             if "negative" in str(exc):
                 raise StoreWithdrawalError(
-                    "رصيد الزبون لم يعد يكفي لهذا السحب (تغيّر بعد الطلب).") from exc
+                    _tr("رصيد الزبون لم يعد يكفي لهذا السحب (تغيّر بعد الطلب).")) from exc
             raise
         except Exception:
             db().execute(
@@ -214,7 +215,7 @@ class WithdrawalRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.withdrawal_confirmed",
-            message=f"تنفيذ سحب وخصم {minor_to_money(amount_minor)} من المحفظة.",
+            message=_tr('تنفيذ سحب وخصم %(v)s من المحفظة.', v=minor_to_money(amount_minor)),
             actor_type="admin", target_type="card_user",
             target_id=int(req["card_user_id"]),
             metadata={"withdrawal_request_id": int(request_id),
@@ -223,8 +224,7 @@ class WithdrawalRequestService:
         )
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
-            f"تم تنفيذ طلب سحبك ({minor_to_money(amount_minor)} "
-            f"{default_currency()}) وخصمه من رصيدك.",
+            _tr('تم تنفيذ طلب سحبك (%(v)s %(default_currency)s) وخصمه من رصيدك.', v=minor_to_money(amount_minor), default_currency=default_currency()),
         )
         # إشعار حركة «سحب رصيد» للمشتري على قنواته المُفعَّلة (لا يكسر السحب).
         try:
@@ -265,15 +265,15 @@ class WithdrawalRequestService:
         self.events.record_event(
             tenant_id=self.tenant_id, category="financial",
             event_key="store.withdrawal_rejected",
-            message="رُفض طلب سحب المتجر.",
+            message=N_("رُفض طلب سحب المتجر."),
             actor_type="admin", target_type="card_user",
             target_id=int(req["card_user_id"]),
             metadata={"withdrawal_request_id": int(request_id)},
         )
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
-            "نعتذر، لم نتمكّن من تنفيذ طلب سحبك"
-            + (f" — {note}" if note else "") + ". تواصل معنا للمساعدة.",
+            _tr("نعتذر، لم نتمكّن من تنفيذ طلب سحبك")
+            + (f" — {note}" if note else "") + _tr(". تواصل معنا للمساعدة."),
         )
         try:
             from .store_alerts import resolve_withdrawal

@@ -10,11 +10,11 @@
 
 {% macro readable_value(value) -%}
   {%- if value is mapping -%}
-    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+    <span class="sub">{{ _('مجموعة بيانات — %(length)s بند', length=value|length) }}</span>
   {%- elif value is sequence and value is not string -%}
-    <span class="sub">قائمة — {{ value|length }} بند</span>
+    <span class="sub">{{ _('قائمة — %(length)s بند', length=value|length) }}</span>
   {%- elif value is boolean -%}
-    {{ 'نعم' if value else 'لا' }}
+    {{ _('نعم') if value else _('لا') }}
   {%- elif value is none -%}
     —
   {%- else -%}
@@ -30,16 +30,16 @@
 <section class="hub-hero-shell">
 {#- رسالةُ الحدث قد تُكتب بالإنجليزيّة من المُنتِج («Wallet created») — نعرض التسميةَ العربيّة حينها -#}
 {% set _ev_msg = event.message if (event.message and not (event.message|string).isascii()) else (event.event_key_label or event.message or event.event_key) %}
-{{ hub.hero("حدث #" ~ event.id, subtitle=_ev_msg, icon="circle-info", actions_html=_events_jump) }}
+{{ hub.hero(_('حدث #%(id)s', id=event.id), subtitle=_ev_msg, icon="circle-info", actions_html=_events_jump) }}
 <div class="hub-kpi-grid" data-testid="event-detail-summary">
-  {{ hub.kpi("الفئة", event.category_label or event.category, icon="folder") }}
-  {{ hub.kpi("الخطورة", event.severity_label or event.severity, icon="signal") }}
-  {{ hub.kpi("الفاعل", event.actor_label or (event.actor_type ~ " #" ~ (event.actor_id or "")), icon="user") }}
-  {{ hub.kpi("الهدف", event.target_label or (event.target_type ~ " #" ~ (event.target_id or "")), icon="bullseye") }}
+  {{ hub.kpi(_('الفئة'), event.category_label or event.category, icon="folder") }}
+  {{ hub.kpi(_('الخطورة'), event.severity_label or event.severity, icon="signal") }}
+  {{ hub.kpi(_('الفاعل'), event.actor_label or (event.actor_type ~ " #" ~ (event.actor_id or "")), icon="user") }}
+  {{ hub.kpi(_('الهدف'), event.target_label or (event.target_type ~ " #" ~ (event.target_id or "")), icon="bullseye") }}
 </div>
 </section>{# /hub-hero-shell #}
 
-{% call hub.section("البيانات الوصفية", icon="brackets-curly") %}
+{% call hub.section(_('البيانات الوصفية'), icon="brackets-curly") %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-testid="event-metadata">
     <table class="hub-table">
       <thead><tr><th>{{ _('البند') }}</th><th>{{ _('القيمة') }}</th></tr></thead>
@@ -58,7 +58,7 @@
   </div>
 {% endcall %}
 
-{% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
+{% call hub.section(_('الخط الزمني للكيان'), icon="timeline", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
     <table class="hub-table" data-testid="entity-timeline-table">
       <thead><tr><th>{{ _('الرقم') }}</th><th>{{ _('الخطورة') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الرسالة') }}</th></tr></thead>

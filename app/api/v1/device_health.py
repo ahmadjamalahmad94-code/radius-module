@@ -13,6 +13,7 @@ per-device `apply` — they push to the router and are gated by
 light reachability check.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from flask import Blueprint, g, request
 
@@ -109,7 +110,7 @@ def create_device():
     }, status=201)
 
 
-_NOT_FOUND_MSG = "الجهاز غير موجود."
+_NOT_FOUND_MSG = N_("الجهاز غير موجود.")
 
 
 def _missing(device_id: int):

@@ -9,6 +9,7 @@ runs the work, and returns a dict result (the runner stores the
 result through the repo's redaction pipeline).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any
 
@@ -66,15 +67,15 @@ def handle_mt_diag_scan(job: dict, payload: dict) -> dict[str, Any]:
     routers (mt_health.scan_router returns fetch_errors and the
     handler treats them as a partial-but-OK outcome, not a
     runner-level failure)."""
-    progress(job["id"], 10, "تحميل بيانات الراوتر")
+    progress(job["id"], 10, _tr("تحميل بيانات الراوتر"))
     tenant_id = int(job.get("tenant_id") or 1)
     nas_id = job.get("router_id") or payload.get("router_id")
     if not nas_id:
-        raise ValueError("router_id مطلوب لتشغيل التشخيص.")
+        raise ValueError(_tr("router_id مطلوب لتشغيل التشخيص."))
     nas = _load_nas(int(nas_id), tenant_id)
     if not nas:
         raise ValueError(
-            f"الراوتر #{nas_id} غير موجود في هذا المستأجر.")
+            _tr('الراوتر #%(nas_id)s غير موجود في هذا المستأجر.', nas_id=nas_id))
     if not nas.get("enabled"):
         # Disabled routers aren't a runner failure — they're an
         # operator state. Returning a "skipped" result keeps the
@@ -84,12 +85,12 @@ def handle_mt_diag_scan(job: dict, payload: dict) -> dict[str, Any]:
             "router_id": int(nas_id),
             "router_name": nas.get("name"),
             "skipped": True,
-            "reason": "الراوتر معطّل من الإعدادات — لا فحص.",
+            "reason": _tr("الراوتر معطّل من الإعدادات — لا فحص."),
         }
 
-    progress(job["id"], 40, "استعلام عن الواجهات والعناوين")
+    progress(job["id"], 40, _tr("استعلام عن الواجهات والعناوين"))
     report = mt_health.scan_router(_nas_to_admin_client_shape(nas))
-    progress(job["id"], 90, "تجميع التقرير")
+    progress(job["id"], 90, _tr("تجميع التقرير"))
     return {
         "router_id":    int(nas_id),
         "router_name":  nas.get("name"),

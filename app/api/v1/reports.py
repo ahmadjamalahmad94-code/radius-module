@@ -1,5 +1,6 @@
 """Customer service report API foundations."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, Response, g, request
 
@@ -167,7 +168,7 @@ def _page_args(default_limit: int = 50) -> tuple[int, int]:
         limit = min(max(int(request.args.get("limit") or default_limit), 1), 200)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
+        raise RadiusValidationError(_tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."))
     return limit, offset
 
 
@@ -192,7 +193,7 @@ def reports_snapshots_create():
     report_type = body.get("report_type")
     report_type = report_type.strip() if isinstance(report_type, str) else ""
     if not report_type:
-        return fail("validation_error", "نوع التقرير مطلوب.", status=422)
+        return fail("validation_error", _tr("نوع التقرير مطلوب."), status=422)
     try:
         # نطاقٌ مقلوب أو تاريخٌ غير صالح → 422 (كان يُحفظ لقطةً فارغة 201؛ الويب يرفضه).
         date_from, date_to = AccountingService.validate_report_range(

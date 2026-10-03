@@ -31,7 +31,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% set title_ar = "مستأجر جديد" if is_new else ("تعديل المستأجر: " ~ (tenant.display_name or tenant.name)) %}
+{% set title_ar = _('مستأجر جديد') if is_new else (_('تعديل المستأجر: %(v)s', v=(tenant.display_name or tenant.name))) %}
 {% block title %}{{ title_ar }} — {{ _("هوب ريديوس") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building-user"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -65,17 +65,17 @@
 {% block content %}
 {# ── خرائط التعريب الثابتة لفئات الاشتراك والحالات ── #}
 {% set tier_meta = {
-  'starter':    {'label': 'أساسية',   'icon': 'seedling', 'desc': 'للبدايات الصغيرة وحجم محدود من المشتركين.'},
-  'pro':        {'label': 'احترافية', 'icon': 'rocket',   'desc': 'لمزوّد متنامٍ يحتاج سعة أكبر وطلبات واجهة أعلى.'},
-  'enterprise': {'label': 'مؤسسية',   'icon': 'city',     'desc': 'لأكبر العملاء بأعلى الحدود والسعة.'}
+  'starter':    {'label': _('أساسية'),   'icon': 'seedling', 'desc': _('للبدايات الصغيرة وحجم محدود من المشتركين.')},
+  'pro':        {'label': _('احترافية'), 'icon': 'rocket',   'desc': _('لمزوّد متنامٍ يحتاج سعة أكبر وطلبات واجهة أعلى.')},
+  'enterprise': {'label': _('مؤسسية'),   'icon': 'city',     'desc': _('لأكبر العملاء بأعلى الحدود والسعة.')}
 } %}
 {% set status_meta = {
-  'active':    {'label': 'مفعَّلة',  'icon': 'circle-check'},
-  'trial':     {'label': 'تجريبية', 'icon': 'hourglass-half'},
-  'suspended': {'label': 'موقوفة',  'icon': 'circle-pause'},
-  'closed':    {'label': 'مغلقة',   'icon': 'lock'}
+  'active':    {'label': _('مفعَّلة'),  'icon': 'circle-check'},
+  'trial':     {'label': _('تجريبية'), 'icon': 'hourglass-half'},
+  'suspended': {'label': _('موقوفة'),  'icon': 'circle-pause'},
+  'closed':    {'label': _('مغلقة'),   'icon': 'lock'}
 } %}
-{% set _save_label = "إنشاء المستأجر" if is_new else "حفظ التعديلات" %}
+{% set _save_label = _('إنشاء المستأجر') if is_new else _('حفظ التعديلات') %}
 
 {# مساعد قصير لزرّ الشرح (i): يبني أيقونة hub-hint بنص data-hint #}
 {% macro hint(text) -%}
@@ -86,7 +86,7 @@
 <section class="hub-hero-shell" data-testid="tenants-form-hero">
 {{ hub.megahero(
   title_ar,
-  subtitle="المستأجر مساحة عمل معزولة لشركة أو مزوّد خدمة: مشتركوه ومديروه وبياناته وحدوده منفصلة تمامًا عن غيره. فئة الاشتراك تضبط الحدود الافتراضية تلقائيًا — املأ الهوية واختر الفئة، والباقي اختياري.",
+  subtitle=_('المستأجر مساحة عمل معزولة لشركة أو مزوّد خدمة: مشتركوه ومديروه وبياناته وحدوده منفصلة تمامًا عن غيره. فئة الاشتراك تضبط الحدود الافتراضية تلقائيًا — املأ الهوية واختر الفئة، والباقي اختياري.'),
   icon="building-user",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.tenants_list') ~ '">
@@ -100,17 +100,17 @@
 
 {# ── لوحة المساعدة الجانبية «ما هو المستأجر؟» (تظهر يسار النموذج في RTL) ── #}
 {% set _aside = hub.helppanel(
-  "ما هو المستأجر؟",
+  _('ما هو المستأجر؟'),
   icon="circle-question",
-  intro="المستأجر (Tenant) هو حساب شركة مستقل داخل المنصّة متعدّدة المستأجرين — تخيّله صندوقًا مقفلًا خاصًا بكل عميل على نفس النظام.",
+  intro=_('المستأجر (Tenant) هو حساب شركة مستقل داخل المنصّة متعدّدة المستأجرين — تخيّله صندوقًا مقفلًا خاصًا بكل عميل على نفس النظام.'),
   items=[
-    {'icon': 'box-archive', 'text': 'عزل كامل: مشتركو ومديرو وبيانات كل مستأجر لا يراها مستأجر آخر.'},
-    {'icon': 'layer-group', 'text': 'فئة الاشتراك (أساسية/احترافية/مؤسسية) تحدّد السقوف الافتراضية.'},
-    {'icon': 'gauge-high',  'text': 'يمكنك تجاوز أي حد يدويًا، أو تركه = 0 ليتبع حدّ الفئة.'},
-    {'icon': 'palette',     'text': 'لكل مستأجر علامته الخاصة: العملة واللغة واللون والشعار.'},
-    {'icon': 'circle-pause','text': '«موقوفة» توقف الدخول بلا حذف؛ «مغلقة» إنهاء نهائي.'}
+    {'icon': 'box-archive', 'text': _('عزل كامل: مشتركو ومديرو وبيانات كل مستأجر لا يراها مستأجر آخر.')},
+    {'icon': 'layer-group', 'text': _('فئة الاشتراك (أساسية/احترافية/مؤسسية) تحدّد السقوف الافتراضية.')},
+    {'icon': 'gauge-high',  'text': _('يمكنك تجاوز أي حد يدويًا، أو تركه = 0 ليتبع حدّ الفئة.')},
+    {'icon': 'palette',     'text': _('لكل مستأجر علامته الخاصة: العملة واللغة واللون والشعار.')},
+    {'icon': 'circle-pause','text': _('«موقوفة» توقف الدخول بلا حذف؛ «مغلقة» إنهاء نهائي.')}
   ],
-  note="المعرّف المختصر (slug) يدخل في الروابط ولا يُعدَّل بعد الإنشاء — اخترْه بعناية."
+  note=_('المعرّف المختصر (slug) يدخل في الروابط ولا يُعدَّل بعد الإنشاء — اخترْه بعناية.')
 ) %}
 
 {% call hub.worklayout(aside_html=_aside) %}
@@ -119,12 +119,12 @@
       action="{{ url_for('radius.tenants_create') if is_new else url_for('radius.tenants_update', tenant_id=tenant.id) }}">{% if not can_submit(('radius.tenants_create' if is_new else 'radius.tenants_update')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية: المعرّف والاسم وبيانات التواصل ── #}
-  {% call hub.section("هوية المستأجر", icon="id-card", meta="من نحن؟") %}
+  {% call hub.section(_('هوية المستأجر'), icon="id-card", meta=_('من نحن؟')) %}
     <div class="tnf-grid">
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('المعرّف المختصر') }} <span class="req">*</span></label>
-          {{ hint("معرّف لاتيني قصير يميّز المستأجر في الروابط والأنظمة الداخلية. حروف صغيرة بلا مسافات، مثل acme. لا يُعدَّل بعد الإنشاء حفاظًا على ثبات الروابط.") }}
+          {{ hint(_('معرّف لاتيني قصير يميّز المستأجر في الروابط والأنظمة الداخلية. حروف صغيرة بلا مسافات، مثل acme. لا يُعدَّل بعد الإنشاء حفاظًا على ثبات الروابط.')) }}
         </div>
         <input class="hub-input mono" type="text" name="slug" required dir="ltr"
                value="{{ tenant.slug or '' }}" placeholder="acme"
@@ -140,7 +140,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('اسم المستأجر') }} <span class="req">*</span></label>
-          {{ hint("الاسم الرسمي للشركة أو الجهة كما يُسجَّل في النظام، مثل: شركة أكمي للاتصالات.") }}
+          {{ hint(_('الاسم الرسمي للشركة أو الجهة كما يُسجَّل في النظام، مثل: شركة أكمي للاتصالات.')) }}
         </div>
         <input class="hub-input" type="text" name="name" required value="{{ tenant.name or '' }}"
                placeholder="{{ _('شركة أكمي للاتصالات') }}">
@@ -149,7 +149,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('اسم العرض') }}</label>
-          {{ hint("اسم ودّي يظهر للمشغّلين بدل الاسم الرسمي. اتركه فارغًا لاستخدام اسم المستأجر نفسه.") }}
+          {{ hint(_('اسم ودّي يظهر للمشغّلين بدل الاسم الرسمي. اتركه فارغًا لاستخدام اسم المستأجر نفسه.')) }}
         </div>
         <input class="hub-input" type="text" name="display_name" value="{{ tenant.display_name or '' }}"
                placeholder="{{ _('أكمي') }}">
@@ -158,7 +158,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('البريد الإلكتروني') }}</label>
-          {{ hint("بريد جهة التواصل الأساسية للمستأجر — يُستخدم للإشعارات والتنبيهات الإدارية.") }}
+          {{ hint(_('بريد جهة التواصل الأساسية للمستأجر — يُستخدم للإشعارات والتنبيهات الإدارية.')) }}
         </div>
         <input class="hub-input" type="email" name="email" dir="ltr" value="{{ tenant.email or '' }}"
                placeholder="ops@acme.com">
@@ -167,7 +167,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('رقم الجوال') }}</label>
-          {{ hint("رقم تواصل مباشر مع مسؤول المستأجر، بصيغة دولية مثل +962790000000.") }}
+          {{ hint(_('رقم تواصل مباشر مع مسؤول المستأجر، بصيغة دولية مثل +962790000000.')) }}
         </div>
         <input class="hub-input" type="tel" name="phone" dir="ltr" value="{{ tenant.phone or '' }}"
                placeholder="+962790000000">
@@ -176,11 +176,11 @@
   {% endcall %}
 
   {# ── 2. الفئة والحالة معًا — قسم واحد ── #}
-  {% call hub.section("فئة الاشتراك والحالة", icon="layer-group", meta="السعة والتشغيل") %}
+  {% call hub.section(_('فئة الاشتراك والحالة'), icon="layer-group", meta=_('السعة والتشغيل')) %}
     <div class="hub-field">
       <div class="tnf-lab">
         <label class="hub-field-label">{{ _('فئة الاشتراك') }} <span class="req">*</span></label>
-        {{ hint("الباقة التي تحدّد السقوف الافتراضية للمستأجر (عدد المشتركين والأجهزة وطلبات الواجهة). تغييرها لاحقًا قد يعيد ضبط الحدود وفق الفئة الجديدة.") }}
+        {{ hint(_('الباقة التي تحدّد السقوف الافتراضية للمستأجر (عدد المشتركين والأجهزة وطلبات الواجهة). تغييرها لاحقًا قد يعيد ضبط الحدود وفق الفئة الجديدة.')) }}
       </div>
       {# بطاقات الفئات: التسمية العربية + سقف المشتركين من tier_limits،
          مع احتواء أي فئة مجهولة بعرض مفتاحها كما هو #}
@@ -191,7 +191,7 @@
         {% set _x = _tier_opts.append({
           'value': t,
           'title': _m.label,
-          'sub': ('حتى ' ~ _lim.max_subscribers ~ ' مشترك · ' ~ _lim.max_nas ~ ' جهاز') if _lim else _m.get('desc',''),
+          'sub': (_('حتى %(max_subscribers)s مشترك · %(max_nas)s جهاز', max_subscribers=_lim.max_subscribers, max_nas=_lim.max_nas)) if _lim else _m.get('desc',''),
           'icon': _m.icon
         }) %}
       {% endfor %}
@@ -201,7 +201,7 @@
     <div class="hub-field" style="margin-top:16px">
       <div class="tnf-lab">
         <label class="hub-field-label">{{ _('حالة المستأجر') }}</label>
-        {{ hint("«مفعَّلة» تعمل بالكامل. «تجريبية» فترة اختبار. «موقوفة» تمنع الدخول دون حذف البيانات. «مغلقة» إنهاء نهائي للحساب.") }}
+        {{ hint(_('«مفعَّلة» تعمل بالكامل. «تجريبية» فترة اختبار. «موقوفة» تمنع الدخول دون حذف البيانات. «مغلقة» إنهاء نهائي للحساب.')) }}
       </div>
       {% set _status_opts = [] %}
       {% for s in statuses %}
@@ -213,12 +213,12 @@
   {% endcall %}
 
   {# ── 3. الحدود التشغيلية (اختيارية — 0 = قيمة الفئة) ── #}
-  {% call hub.section("الحدود التشغيلية", icon="gauge-high", meta="اختياري") %}
+  {% call hub.section(_('الحدود التشغيلية'), icon="gauge-high", meta=_('اختياري')) %}
     <div class="tnf-grid tnf-grid--3">
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('سقف المشتركين') }}</label>
-          {{ hint("أقصى عدد مشتركين مسموح لهذا المستأجر. اتركه 0 ليتبع حدّ فئة الاشتراك المختارة.") }}
+          {{ hint(_('أقصى عدد مشتركين مسموح لهذا المستأجر. اتركه 0 ليتبع حدّ فئة الاشتراك المختارة.')) }}
         </div>
         <input class="hub-input" type="number" name="max_subscribers" min="0" dir="ltr"
                value="{{ tenant.max_subscribers or 0 }}">
@@ -226,7 +226,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('سقف أجهزة الشبكة') }}</label>
-          {{ hint("أقصى عدد أجهزة شبكة (NAS/راوترات) يمكن للمستأجر ربطها. اتركه 0 ليتبع حدّ الفئة.") }}
+          {{ hint(_('أقصى عدد أجهزة شبكة (NAS/راوترات) يمكن للمستأجر ربطها. اتركه 0 ليتبع حدّ الفئة.')) }}
         </div>
         <input class="hub-input" type="number" name="max_nas" min="0" dir="ltr"
                value="{{ tenant.max_nas or 0 }}">
@@ -234,7 +234,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('سقف طلبات الواجهة (بالدقيقة)') }}</label>
-          {{ hint("الحدّ الأقصى لطلبات الـ API في الدقيقة (rate limit) لحماية النظام من الإفراط. اتركه 0 ليتبع حدّ الفئة.") }}
+          {{ hint(_('الحدّ الأقصى لطلبات الـ API في الدقيقة (rate limit) لحماية النظام من الإفراط. اتركه 0 ليتبع حدّ الفئة.')) }}
         </div>
         <input class="hub-input" type="number" name="api_rpm" min="0" dir="ltr"
                value="{{ tenant.api_rpm or 0 }}">
@@ -247,12 +247,12 @@
   {% endcall %}
 
   {# ── 4. الإقليم والعلامة (كله اختياري) ── #}
-  {% call hub.section("الإقليم والعلامة", icon="palette", meta="اختياري") %}
+  {% call hub.section(_('الإقليم والعلامة'), icon="palette", meta=_('اختياري')) %}
     <div class="tnf-grid">
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('العملة') }}</label>
-          {{ hint("رمز عملة المستأجر بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.") }}
+          {{ hint(_('رمز عملة المستأجر بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.')) }}
         </div>
         <input class="hub-input mono" type="text" name="currency" dir="ltr"
                value="{{ tenant.currency or cfg.currency }}" placeholder="ILS">
@@ -261,12 +261,12 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('لغة الواجهة') }}</label>
-          {{ hint("اللغة الافتراضية لواجهة هذا المستأجر: العربية أو الإنجليزية.") }}
+          {{ hint(_('اللغة الافتراضية لواجهة هذا المستأجر: العربية أو الإنجليزية.')) }}
         </div>
         {{ hub.cardselect("locale",
           options=[
-            {'value': 'ar', 'title': 'العربية',    'icon': 'language'},
-            {'value': 'en', 'title': 'الإنجليزية', 'icon': 'language'}
+            {'value': 'ar', 'title': _('العربية'),    'icon': 'language'},
+            {'value': 'en', 'title': _('الإنجليزية'), 'icon': 'language'}
           ],
           value=tenant.locale, type="radio") }}
       </div>
@@ -274,7 +274,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('المنطقة الزمنية') }}</label>
-          {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Gaza (غزة) أو Asia/Hebron (الخليل). تُحسب عليها التقارير والمواعيد.") }}
+          {{ hint(_('منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Gaza (غزة) أو Asia/Hebron (الخليل). تُحسب عليها التقارير والمواعيد.')) }}
         </div>
         <input class="hub-input mono" type="text" name="timezone" dir="ltr"
                value="{{ tenant.timezone or 'Asia/Gaza' }}" placeholder="Asia/Gaza">
@@ -283,7 +283,7 @@
       <div class="hub-field">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('لون العلامة') }}</label>
-          {{ hint("اللون الأساسي لعلامة المستأجر برمز سداسي، مثل #2BAACC. يظهر في بوابة مشتركيه.") }}
+          {{ hint(_('اللون الأساسي لعلامة المستأجر برمز سداسي، مثل #2BAACC. يظهر في بوابة مشتركيه.')) }}
         </div>
         <input class="hub-input mono" type="text" name="primary_color" dir="ltr"
                value="{{ tenant.primary_color or '#2BAACC' }}" placeholder="#2BAACC">
@@ -292,7 +292,7 @@
       <div class="hub-field" style="grid-column:1 / -1">
         <div class="tnf-lab">
           <label class="hub-field-label">{{ _('رابط الشعار') }}</label>
-          {{ hint("رابط مباشر لصورة شعار المستأجر (يبدأ بـ https://). يظهر في الواجهة وبوابة المشتركين.") }}
+          {{ hint(_('رابط مباشر لصورة شعار المستأجر (يبدأ بـ https://). يظهر في الواجهة وبوابة المشتركين.')) }}
         </div>
         <input class="hub-input mono" type="text" name="logo_url" dir="ltr"
                value="{{ tenant.logo_url or '' }}" placeholder="https://acme.com/logo.png">

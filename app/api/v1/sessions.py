@@ -1,5 +1,6 @@
 """Sessions endpoints: online users list and live session controls."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict, replace
 from datetime import datetime
@@ -52,7 +53,7 @@ def _body() -> dict:
     if body is None:
         return {}
     if not isinstance(body, dict):
-        raise _BadBody("جسم الطلب يجب أن يكون كائن JSON.")
+        raise _BadBody(_tr("جسم الطلب يجب أن يكون كائن JSON."))
     return body
 
 
@@ -62,10 +63,10 @@ def _text_field(body: dict, key: str, label: str, *, allow_int: bool = False) ->
         return ""
     allowed = (str, int) if allow_int else (str,)
     if isinstance(value, bool) or not isinstance(value, allowed):
-        raise _BadBody(f"«{label}» يجب أن يكون نصًّا.")
+        raise _BadBody(_tr('«%(label)s» يجب أن يكون نصًّا.', label=label))
     value = str(value).strip()
     if len(value) > 256:
-        raise _BadBody(f"«{label}» طويل جدًا.")
+        raise _BadBody(_tr('«%(label)s» طويل جدًا.', label=label))
     return value
 
 
@@ -80,17 +81,17 @@ def _normalise_mac(raw: str) -> str:
     cleaned = (raw or "").strip().upper().replace("-", ":")
     hex_only = cleaned.replace(":", "")
     if len(hex_only) != 12 or any(c not in "0123456789ABCDEF" for c in hex_only):
-        raise RadiusError("عنوان MAC في الجلسة غير صالح.")
+        raise RadiusError(_tr("عنوان MAC في الجلسة غير صالح."))
     return ":".join(hex_only[i:i + 2] for i in range(0, 12, 2))
 
 
 def _selected_online_row(body: dict):
-    username = _text_field(body, "username", "اسم المستخدم")
-    session_id = _text_field(body, "session_id", "معرف الجلسة", allow_int=True)
+    username = _text_field(body, "username", N_("اسم المستخدم"))
+    session_id = _text_field(body, "session_id", N_("معرف الجلسة"), allow_int=True)
     if not username:
-        raise RadiusError("اسم المستخدم مطلوب.")
+        raise RadiusError(_tr("اسم المستخدم مطلوب."))
     if not session_id:
-        raise RadiusError("معرف الجلسة مطلوب.")
+        raise RadiusError(_tr("معرف الجلسة مطلوب."))
     if not subscriber_in_scope(username=username):
         return None
 
@@ -116,10 +117,10 @@ def _selected_online_row(body: dict):
 def _require_online_row(body: dict):
     row = _selected_online_row(body)
     if row is None:
-        username = _text_field(body, "username", "اسم المستخدم")
+        username = _text_field(body, "username", N_("اسم المستخدم"))
         if username and not subscriber_in_scope(username=username):
             raise PermissionError
-        raise RadiusError("الجلسة المحددة غير متصلة الآن أو انتهت.")
+        raise RadiusError(_tr("الجلسة المحددة غير متصلة الآن أو انتهت."))
     return row
 
 
@@ -214,7 +215,7 @@ def _enrich_session(item: dict, accounts: tuple[dict, dict] | None = None) -> di
     item["card_id"] = card["id"] if card else None
     item["card_batch_id"] = card["batch_id"] if card else None
     item["user_type"] = "card" if is_card else "subscriber"
-    item["user_type_label"] = "بطاقة" if is_card else "مشترك"
+    item["user_type_label"] = N_("بطاقة") if is_card else N_("مشترك")
     # «هوت سبوت / برود باند» — مصدرٌ واحد (services/access_type.py)
     from ...radius.services.access_type import classify_session
     item["access_type"] = classify_session(
@@ -259,16 +260,16 @@ def sessions_online():
     }
     kind = aliases.get(kind, kind)
     if kind not in {"all", "subscriber", "card"}:
-        return fail("validation_error", "نوع الجلسات يجب أن يكون الكل أو مشترك أو كرت.", status=422)
+        return fail("validation_error", _tr("نوع الجلسات يجب أن يكون الكل أو مشترك أو كرت."), status=422)
     # فلتر نوع السرعة — يطابق صفحة الجلسات المتصلة (selected_speed):
     #   ""/all = الكل · special = سرعة خاصة أو مؤقتة فعّالة · temporary = مؤقتة
     #   فعّالة فقط · normal = بدون سرعة خاصة.
     speed = (request.args.get("speed") or "").strip().lower()
     speed = {"": "all", "all": "all"}.get(speed, speed)
     if speed not in {"all", "special", "temporary", "normal"}:
-        return fail("validation_error", "نوع السرعة يجب أن يكون الكل أو خاصة أو مؤقتة أو عادية.", status=422)
+        return fail("validation_error", _tr("نوع السرعة يجب أن يكون الكل أو خاصة أو مؤقتة أو عادية."), status=422)
     if len(query) > 80:
-        return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+        return fail("validation_error", _tr("عبارة البحث طويلة جدًا."), status=422)
     # «هوت سبوت / برود باند» (``access``): اختياريّ، والقيمة المجهولة = الكل.
     from ...radius.services.access_type import normalize_access
     access = normalize_access(request.args.get("access"))
@@ -278,9 +279,9 @@ def sessions_online():
         limit = int(request.args.get("limit") or 500)
         offset = int(request.args.get("offset") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     if limit < 1 or limit > 1000 or offset < 0:
-        return fail("validation_error", "limit بين 1 و1000، و offset لا يكون سالبًا.", status=422)
+        return fail("validation_error", _tr("limit بين 1 و1000، و offset لا يكون سالبًا."), status=422)
 
     # موازاةً لصفحة الويب: نُنهي نوافذ السرعة المؤقتة المنتهية (revert CoA)
     # قبل القراءة كي لا تُعرض جلسة مخنوقة بعد انتهاء نافذتها. محصّن.
@@ -400,19 +401,19 @@ def _disconnect_error(e: RadiusError):
     /accounts/<u>/disconnect): no live session → 409, router failure → 502."""
     if isinstance(e, RadiusConflict):
         code = (e.details or {}).get("code") or "no_active_session"
-        return fail(code, e.message or "لا توجد جلسة نشطة.", status=409)
-    return fail("disconnect_failed", e.message or "تعذّر قطع الجلسة.", status=502)
+        return fail(code, e.message or _tr("لا توجد جلسة نشطة."), status=409)
+    return fail("disconnect_failed", e.message or _tr("تعذّر قطع الجلسة."), status=502)
 
 
 def sessions_disconnect():
     try:
         body = _body()
-        username = _text_field(body, "username", "اسم المستخدم")
-        session_id = _text_field(body, "session_id", "معرف الجلسة", allow_int=True) or None
+        username = _text_field(body, "username", N_("اسم المستخدم"))
+        session_id = _text_field(body, "session_id", N_("معرف الجلسة"), allow_int=True) or None
     except _BadBody as e:
         return fail("validation_error", e.message, status=422)
     if not username:
-        return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم المستخدم مطلوب."), status=422)
     if not subscriber_in_scope(username=username):
         return deny_out_of_scope()
     try:
@@ -422,7 +423,7 @@ def sessions_disconnect():
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("sessions/disconnect failed for %s", username)
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء قطع الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء قطع الجلسة."), status=500)
     return ok({"username": username, "session_id": session_id, "disconnect_requested": True})
 
 
@@ -439,7 +440,7 @@ def sessions_lock_mac():
                 _tid(), int(row["card_id"]), mac, actor=_actor()
             )
             if not changed:
-                raise RadiusError("تعذر تثبيت MAC للبطاقة.")
+                raise RadiusError(_tr("تعذر تثبيت MAC للبطاقة."))
             # zero-w1: same audit row as the subscriber path / cards checker.
             from ...radius.services.cards import get_cards_service
             get_cards_service().audit_card_mac_lock(
@@ -460,7 +461,7 @@ def sessions_lock_mac():
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("session action failed")
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة."), status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
@@ -476,14 +477,14 @@ def sessions_lock_ip():
         row = _require_online_row(body)
         username = row["username"]
         if row["card_id"]:
-            raise RadiusError("تثبيت IP متاح للمشتركين فقط.")
+            raise RadiusError(_tr("تثبيت IP متاح للمشتركين فقط."))
         ip = (row["framedipaddress"] or "").strip()
         if not ip:
-            raise RadiusError("لا يوجد IP على الجلسة المحددة.")
+            raise RadiusError(_tr("لا يوجد IP على الجلسة المحددة."))
         try:
             ip_address(ip)
         except ValueError as exc:
-            raise RadiusError("عنوان IP في الجلسة غير صالح.") from exc
+            raise RadiusError(_tr("عنوان IP في الجلسة غير صالح.")) from exc
 
         from ...radius.services.users import get_users_service
 
@@ -497,7 +498,7 @@ def sessions_lock_ip():
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("session action failed")
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة."), status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
@@ -539,8 +540,8 @@ def sessions_temp_speed():
             require_speed_account(_tid(), username)
         from ...radius.services.temp_speed import apply_temp_speed, parse_kbps
 
-        down_kbps = parse_kbps(body.get("down_kbps"), "سرعة التنزيل")
-        up_kbps = parse_kbps(body.get("up_kbps"), "سرعة الرفع")
+        down_kbps = parse_kbps(body.get("down_kbps"), N_("سرعة التنزيل"))
+        up_kbps = parse_kbps(body.get("up_kbps"), N_("سرعة الرفع"))
         duration_minutes = _effective_duration_minutes(body)
         result = apply_temp_speed(
             tenant_id=_tid(),
@@ -559,7 +560,7 @@ def sessions_temp_speed():
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("session action failed")
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة."), status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],
@@ -584,7 +585,7 @@ def sessions_temp_speed_cancel():
     except Exception:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).exception("session action failed")
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء تنفيذ العملية على الجلسة."), status=500)
     return ok({
         "username": username,
         "session_id": row["acctsessionid"],

@@ -1,5 +1,6 @@
 """Web admin screens for distributor operations."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 
@@ -135,9 +136,9 @@ def _float_field(name: str, default: float = 0.0) -> float:
         return strict_float(raw)
     except NonFiniteNumber:
         # Infinity/NaN/1e400: same wording as the shared service check.
-        raise RadiusValidationError(f"قيمة الحقل «{name}» خارج النطاق المسموح.") from None
+        raise RadiusValidationError(_tr('قيمة الحقل «%(name)s» خارج النطاق المسموح.', name=name)) from None
     except ValueError:
-        raise RadiusValidationError(f"قيمة الحقل «{name}» يجب أن تكون رقمية.") from None
+        raise RadiusValidationError(_tr('قيمة الحقل «%(name)s» يجب أن تكون رقمية.', name=name)) from None
 
 
 def _permissions(raw: str) -> list[str]:
@@ -169,9 +170,9 @@ def _scope(raw: str) -> dict:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        raise RadiusValidationError("نطاق البيانات غير صالح.") from None
+        raise RadiusValidationError(_tr("نطاق البيانات غير صالح.")) from None
     if not isinstance(parsed, dict):
-        raise RadiusValidationError("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا.")
+        raise RadiusValidationError(_tr("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا."))
     return parsed
 
 
@@ -221,7 +222,7 @@ def distributors_new():
 def distributors_create():
     # بوّابة خادميّة: المدير المحدود بلا صلاحية «إدارة الموزعين» يُرفَض (403).
     if not _can_manage_distributors():
-        flash("لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.", "error")
+        flash(_tr("لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها."), "error")
         abort(403)
     try:
         saved = _svc().create_distributor(
@@ -240,7 +241,7 @@ def distributors_create():
             current_manager_id=current_admin_id(),
         ), 400
     _maybe_set_portal_password(saved["id"])
-    flash("تم إنشاء الموزع.", "success")
+    flash(_tr("تم إنشاء الموزع."), "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=saved["id"]))
 
 
@@ -323,7 +324,7 @@ def distributors_update(distributor_id: int):
             current_manager_id=current_admin_id(),
         ), 400
     _maybe_set_portal_password(distributor_id)
-    flash("تم تحديث الموزع.", "success")
+    flash(_tr("تم تحديث الموزع."), "success")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
 
 
@@ -383,7 +384,7 @@ def distributors_assign_batch(distributor_id: int):
     try:
         batch_id = _svc().resolve_batch_ref(_tid(), ref, is_code=is_code)
     except RadiusError as e:
-        flash(e.message if ref else "اختر حزمة كروت صحيحة.", "error")
+        flash(e.message if ref else _tr("اختر حزمة كروت صحيحة."), "error")
         return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().assign_batch(
@@ -393,7 +394,7 @@ def distributors_assign_batch(distributor_id: int):
             actor=_actor(),
             notes=_field("notes"),
         )
-        flash("تم ربط الحزمة بالموزع.", "success")
+        flash(_tr("تم ربط الحزمة بالموزع."), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
@@ -416,10 +417,10 @@ def distributors_settle(distributor_id: int):
             _tid(), idem_key, idem_scope,
             _idem.fingerprint("POST", request.path, request.form.to_dict(flat=True)))
         if _state == _idem.REPLAY:
-            flash("سُجِّلت هذه الحركة مسبقًا — لم تُكرَّر.", "warning")
+            flash(_tr("سُجِّلت هذه الحركة مسبقًا — لم تُكرَّر."), "warning")
             return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
         if _state in (_idem.IN_PROGRESS, _idem.MISMATCH):
-            flash("طلبٌ بنفس النموذج قيد التنفيذ أو استُخدم لحركةٍ أخرى — حدّث الصفحة.", "error")
+            flash(_tr("طلبٌ بنفس النموذج قيد التنفيذ أو استُخدم لحركةٍ أخرى — حدّث الصفحة."), "error")
             return redirect(url_for("radius.distributors_detail", distributor_id=distributor_id))
     try:
         _svc().settle_distributor(
@@ -436,7 +437,7 @@ def distributors_settle(distributor_id: int):
                 "apply_to": _field("apply_to"),
             },
         )
-        flash("تم تسجيل حركة الموزع.", "success")
+        flash(_tr("تم تسجيل حركة الموزع."), "success")
         if idem_key:
             _idem.finish(_tid(), idem_key, idem_scope, 302, "{}")
     except RadiusError as e:

@@ -25,6 +25,7 @@
 data-svc-spec-modal-open) — فلا قنوات مكرّرة.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 import re
@@ -88,7 +89,7 @@ def service_request_schema(service_type: str):
     """GET المخطّط — يُعيده الـJS فيرسم النموذج ديناميكيًّا."""
     kind = kind_for_service(service_type)
     if kind is None:
-        return jsonify({"ok": False, "error": "نوع الخدمة غير معروف"}), 404
+        return jsonify({"ok": False, "error": _tr("نوع الخدمة غير معروف")}), 404
     return jsonify({
         "ok": True,
         "service_type": service_type,
@@ -113,22 +114,22 @@ def service_request_create():
 
     service_type = str(body.get("service_type") or "").strip()
     if not _SLUG_RE.match(service_type):
-        return jsonify({"ok": False, "error": "نوع الخدمة غير صالح"}), 400
+        return jsonify({"ok": False, "error": _tr("نوع الخدمة غير صالح")}), 400
     if kind_for_service(service_type) is None:
-        return jsonify({"ok": False, "error": "نوع الخدمة غير معروف"}), 400
+        return jsonify({"ok": False, "error": _tr("نوع الخدمة غير معروف")}), 400
 
     action = str(body.get("action") or "activate").strip().lower()
     if action not in _ACTIONS:
         return jsonify({"ok": False,
-                        "error": "العملية يجب أن تكون activate أو upgrade"}), 400
+                        "error": _tr("العملية يجب أن تكون activate أو upgrade")}), 400
 
     scope = str(body.get("scope") or "").strip()
     if scope and not _SCOPE_RE.match(scope):
-        return jsonify({"ok": False, "error": "نطاق غير صالح"}), 400
+        return jsonify({"ok": False, "error": _tr("نطاق غير صالح")}), 400
 
     spec_payload = body.get("spec") or {}
     if not isinstance(spec_payload, dict):
-        return jsonify({"ok": False, "error": "حقل المواصفات يجب أن يكون كائنًا"}), 400
+        return jsonify({"ok": False, "error": _tr("حقل المواصفات يجب أن يكون كائنًا")}), 400
 
     spec, errors = validate_spec(service_type, spec_payload)
     if errors:
@@ -155,7 +156,7 @@ def service_request_create():
         )
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False,
-                        "error": f"تعذّر حفظ الطلب: {e}"}), 500
+                        "error": _tr('تعذّر حفظ الطلب: %(e)s', e=e)}), 500
 
     get_audit_service().record(
         actor=str(getattr(g, "admin_id", None) or "ui"),

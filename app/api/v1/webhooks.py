@@ -4,6 +4,7 @@ Webhooks config + اختبار الإرسال.
 HobeHub يستخدم هذه الـ endpoints ليُسجِّل URL الذي يستقبل الأحداث منا.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, request
 
@@ -39,14 +40,14 @@ def webhooks_get():
 def webhooks_set():
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     url = (body.get("target_url") or "").strip()
     if url and not (url.startswith("http://") or url.startswith("https://")):
-        return fail("validation_error", "رابط الاستقبال يجب أن يبدأ بـ http:// أو https://.", status=422)
+        return fail("validation_error", _tr("رابط الاستقبال يجب أن يبدأ بـ http:// أو https://."), status=422)
     secret = (body.get("secret") or "").strip()
     events = body.get("enabled_events")
     if events is not None and not isinstance(events, list):
-        return fail("validation_error", "الأحداث المفعلة يجب أن تكون قائمة.", status=422)
+        return fail("validation_error", _tr("الأحداث المفعلة يجب أن تكون قائمة."), status=422)
     cfg = _config_store().update(target_url=url, secret=secret, enabled_events=events)
     return ok({
         "target_url": cfg.target_url,
@@ -59,7 +60,7 @@ def webhooks_test():
     from app.webhooks.dispatcher import dispatch_event
     event_id = dispatch_event(
         "webhook.test",
-        {"message": "هذا حدث اختبار من HobeRadius"},
+        {"message": _tr("هذا حدث اختبار من HobeRadius")},
     )
     return ok({"dispatched": True, "event_id": event_id})
 
@@ -88,11 +89,11 @@ def webhooks_deliveries():
 
     status = (request.args.get("status") or "").strip()
     if status and status not in {"queued", "retrying", "delivered", "failed"}:
-        return fail("validation_error", "حالة التسليم غير معروفة.", status=422)
+        return fail("validation_error", _tr("حالة التسليم غير معروفة."), status=422)
     try:
         limit = min(500, max(1, int(request.args.get("limit") or 200)))
     except ValueError:
-        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة limit يجب أن تكون رقمًا صحيحًا."), status=422)
     items = webhooks_repo.list_deliveries(
         int(getattr(g, "tenant_id", 1)),
         status=status or None,

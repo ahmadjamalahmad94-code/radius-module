@@ -38,6 +38,7 @@ Public surface used by the L3 / M2 wizard:
         wizard' badges + IP allocation status.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import base64
 import ipaddress
@@ -193,7 +194,7 @@ def _slugify_router_name(name: str) -> str:
     """
     raw = (name or "").strip()
     if not raw:
-        raise ValueError("اسم الراوتر فارغ بعد التنظيف")
+        raise ValueError(_tr("اسم الراوتر فارغ بعد التنظيف"))
 
     cleaned = re.sub(r"\s+", "-", raw)
     cleaned = re.sub(r"[^A-Za-z0-9._-]", "", cleaned)
@@ -208,7 +209,7 @@ def _slugify_router_name(name: str) -> str:
 
     if not _PEER_NAME_RE.match(cleaned):
         raise ValueError(
-            f"اسم الراوتر بعد التنظيف لا يتطابق مع النمط: {cleaned!r}"
+            _tr('اسم الراوتر بعد التنظيف لا يتطابق مع النمط: %(cleaned)s', cleaned=repr(cleaned))
         )
     return cleaned
 

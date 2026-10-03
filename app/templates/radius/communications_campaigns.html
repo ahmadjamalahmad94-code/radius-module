@@ -15,13 +15,13 @@
 
 {# ───── ONE unified hero: title + subtitle + KPI strip (no filter here) ───── #}
 {% call hub.megahero(
-  "الحملات",
-  subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ — لا يُرسل شيء من هذه الشاشة.",
+  _('الحملات'),
+  subtitle=_('حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ — لا يُرسل شيء من هذه الشاشة.'),
   icon="bullhorn",
   kpis=[
-    {'label': 'القوالب المتاحة', 'value': templates|length, 'icon': 'file-lines', 'variant': 'brand', 'sub': 'قالب جاهز للحملة'},
-    {'label': 'الإجراءات الاختيارية', 'value': 3, 'icon': 'list-check', 'variant': 'amber', 'sub': 'تُعاين بدون تنفيذ'},
-    {'label': 'وضع المعاينة', 'value': 'آمن', 'icon': 'shield-halved', 'variant': 'green', 'sub': 'بدون إرسال خارجي'},
+    {'label': _('القوالب المتاحة'), 'value': templates|length, 'icon': 'file-lines', 'variant': 'brand', 'sub': _('قالب جاهز للحملة')},
+    {'label': _('الإجراءات الاختيارية'), 'value': 3, 'icon': 'list-check', 'variant': 'amber', 'sub': _('تُعاين بدون تنفيذ')},
+    {'label': _('وضع المعاينة'), 'value': _('آمن'), 'icon': 'shield-halved', 'variant': 'green', 'sub': _('بدون إرسال خارجي')},
   ]
 ) %}
 {% endcall %}
@@ -30,20 +30,20 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "ما هذه الصفحة؟",
-  intro="جهّز حملة وعاين أثرها قبل أي إرسال. المعاينة لا تُرسل رسائل خارجية ولا تطبّق أي إجراء — تُظهر فقط عدد المستلمين والإجراءات التي ستحدث.",
+  _('ما هذه الصفحة؟'),
+  intro=_('جهّز حملة وعاين أثرها قبل أي إرسال. المعاينة لا تُرسل رسائل خارجية ولا تطبّق أي إجراء — تُظهر فقط عدد المستلمين والإجراءات التي ستحدث.'),
   icon="circle-info",
   items=[
-    {'icon': 'key', 'text': 'مفتاح الحملة معرّف فريد يميّزها (مثل renewal-may) ويظهر في السجلات.'},
-    {'icon': 'file-lines', 'text': 'القالب هو نص الرسالة الجاهز؛ أنشئ قوالب جديدة من صفحة «القوالب».'},
-    {'icon': 'users', 'text': 'الهدف والحد يحدّدان الجمهور وعدد المستلمين الأقصى في المعاينة.'},
-    {'icon': 'shield-halved', 'text': 'الإجراءات الاختيارية (أيام مجانية / رصيد محفظة) تُعاين فقط — لا تُنفّذ.'},
+    {'icon': 'key', 'text': _('مفتاح الحملة معرّف فريد يميّزها (مثل renewal-may) ويظهر في السجلات.')},
+    {'icon': 'file-lines', 'text': _('القالب هو نص الرسالة الجاهز؛ أنشئ قوالب جديدة من صفحة «القوالب».')},
+    {'icon': 'users', 'text': _('الهدف والحد يحدّدان الجمهور وعدد المستلمين الأقصى في المعاينة.')},
+    {'icon': 'shield-halved', 'text': _('الإجراءات الاختيارية (أيام مجانية / رصيد محفظة) تُعاين فقط — لا تُنفّذ.')},
   ],
-  note="هذه الصفحة للتجهيز والمعاينة فقط؛ الإرسال الفعلي يتم من صفحة «إرسال رسالة»."
+  note=_('هذه الصفحة للتجهيز والمعاينة فقط؛ الإرسال الفعلي يتم من صفحة «إرسال رسالة».')
 )) %}
 
   {# ════════ CAMPAIGN DRY-RUN FORM ════════ #}
-  {% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
+  {% call hub.section(_('تجهيز معاينة حملة بدون إرسال'), icon="clipboard-check") %}
     <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('مفتاح الحملة') }} <input name="campaign_key" required placeholder="renewal-may"></label>
@@ -97,11 +97,11 @@
 
   {# ════════ DRY-RUN RESULT ════════ #}
   {% if campaign %}
-    {% call hub.section("نتيجة المعاينة", icon="circle-info") %}
+    {% call hub.section(_('نتيجة المعاينة'), icon="circle-info") %}
       <div data-testid="campaign-dry-run-result">
         {{ hub.kv([
-          {'label': 'عدد المستلمين', 'value': campaign.dry_run.recipient_count, 'mono': True},
-          {'label': 'إرسال خارجي', 'value': campaign.dry_run.external_send},
+          {'label': _('عدد المستلمين'), 'value': campaign.dry_run.recipient_count, 'mono': True},
+          {'label': _('إرسال خارجي'), 'value': campaign.dry_run.external_send},
         ]) }}
         <div class="hub-section-head" style="margin-top:14px">
           <span class="hub-section-head-icon"><i class="fa-solid fa-list-check"></i></span>

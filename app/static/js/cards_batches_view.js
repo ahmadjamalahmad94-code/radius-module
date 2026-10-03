@@ -1,3 +1,4 @@
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -394,7 +395,7 @@
   function openModal(batch) {
     if (batchIdInput) batchIdInput.value = batch.id || "";
     if (batchSummary) {
-      batchSummary.textContent = (batch.name || "حزمة بطاقات") + " · " + (batch.code || "بدون كود") + " · " + ((window.UDS && UDS.arCount) ? UDS.arCount(batch.total || 0, "بطاقة", "بطاقات", "بطاقةً") : ((batch.total || "0") + " بطاقة"));
+      batchSummary.textContent = (batch.name || hrT('حزمة بطاقات')) + " · " + (batch.code || hrT('بدون كود')) + " · " + ((window.UDS && UDS.arCount) ? UDS.arCount(batch.total || 0, hrT('بطاقة'), hrT('بطاقات'), hrT('بطاقةً')) : ((batch.total || "0") + hrT(' بطاقة')));
     }
     resetProgress();
     closeGallery();
@@ -411,7 +412,7 @@
     });
     // Reflect the choice in the compact "chosen" chip + the live preview,
     // then close the floating gallery so the main box stays uncluttered.
-    var name = button.getAttribute("data-template-name") || "قالب";
+    var name = button.getAttribute("data-template-name") || hrT('قالب');
     var thumb = button.getAttribute("data-template-thumb") || "";
     if (selectedName) selectedName.textContent = name;
     if (selectedThumb) {
@@ -441,7 +442,7 @@
     progressBox.hidden = true;
     if (progressBar) progressBar.style.width = "0%";
     if (progressPercent) progressPercent.textContent = "0%";
-    if (progressTitle) progressTitle.textContent = "بدء تجهيز ملف PDF...";
+    if (progressTitle) progressTitle.textContent = hrT('بدء تجهيز ملف PDF...');
     if (downloadLink) {
       downloadLink.hidden = true;
       downloadLink.removeAttribute("href");
@@ -483,9 +484,9 @@
   }
 
   function showError(message) {
-    setProgress(100, "فشل تجهيز الملف", "done");
+    setProgress(100, hrT('فشل تجهيز الملف'), "done");
     if (errorBox) {
-      errorBox.textContent = message || "تعذر تجهيز ملف PDF.";
+      errorBox.textContent = message || hrT('تعذر تجهيز ملف PDF.');
       errorBox.hidden = false;
     }
   }
@@ -500,7 +501,7 @@
         var job = payload.job || payload;
         var status = job.status || "";
         var progress = job.progress || 0;
-        var label = job.stage_label || "تجهيز ملف PDF...";
+        var label = job.stage_label || hrT('تجهيز ملف PDF...');
         var stage = "rendering";
         if (status === "queued") stage = "queued";
         if (progress >= 70) stage = "pdf";
@@ -508,7 +509,7 @@
         setProgress(progress, label, stage);
 
         if (status === "success" || job.download_ready) {
-          setProgress(100, "تم تجهيز ملف PDF. بدأ التحميل.", "done");
+          setProgress(100, hrT('تم تجهيز ملف PDF. بدأ التحميل.'), "done");
           if (downloadLink) {
             downloadLink.href = downloadUrl;
             downloadLink.hidden = false;
@@ -522,13 +523,13 @@
           return;
         }
         if (status === "failed") {
-          showError(job.error_message || job.message || "فشل تجهيز ملف PDF.");
+          showError(job.error_message || job.message || hrT('فشل تجهيز ملف PDF.'));
           return;
         }
         pollTimer = window.setTimeout(function () { pollJob(statusUrl, downloadUrl); }, 900);
       })
       .catch(function (err) {
-        showError("تعذر متابعة حالة التصدير: " + err.message);
+        showError(hrT('تعذر متابعة حالة التصدير: ') + err.message);
       });
   }
 
@@ -574,16 +575,16 @@
       event.preventDefault();
       resetProgress();
       if (!selectedTemplate) {
-        showError("اختر قالبًا محفوظًا قبل التصدير.");
+        showError(hrT('اختر قالبًا محفوظًا قبل التصدير.'));
         return;
       }
       var jobUrl = selectedTemplate.getAttribute("data-job-url");
       if (!jobUrl) {
-        showError("لا يوجد مسار تصدير لهذا القالب.");
+        showError(hrT('لا يوجد مسار تصدير لهذا القالب.'));
         return;
       }
       var body = new window.FormData(form);
-      setProgress(8, "إرسال مهمة التصدير إلى الخادم...", "queued");
+      setProgress(8, hrT('إرسال مهمة التصدير إلى الخادم...'), "queued");
       window.fetch(jobUrl, {
         method: "POST",
         body: body,
@@ -594,12 +595,12 @@
           return response.json();
         })
         .then(function (payload) {
-          if (!payload.ok) throw new Error(payload.message || "تعذر إنشاء المهمة.");
-          setProgress(18, "تم إنشاء المهمة. يجري رسم البطاقات...", "rendering");
+          if (!payload.ok) throw new Error(payload.message || hrT('تعذر إنشاء المهمة.'));
+          setProgress(18, hrT('تم إنشاء المهمة. يجري رسم البطاقات...'), "rendering");
           pollJob(payload.status_url, payload.download_url);
         })
         .catch(function (err) {
-          showError(err.message || "تعذر بدء التصدير.");
+          showError(err.message || hrT('تعذر بدء التصدير.'));
         });
     });
   }

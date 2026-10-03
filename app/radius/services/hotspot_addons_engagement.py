@@ -7,6 +7,7 @@
 الإضافة تعرض الرمز والزبون يستبدله (لا تجاوز خادمي هنا).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -54,13 +55,13 @@ def _frag_spin(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="spin_to_win", category=CAT_ENGAGEMENT, label_ar="عجلة الحظ",
-    desc_ar="عجلة تدور وتكشف جائزة (سطر لكل جائزة) — تعمل أوفلاين؛ تُفرَض الجوائز عبر نظام القسائم.",
+    key="spin_to_win", category=CAT_ENGAGEMENT, label_ar=N_("عجلة الحظ"),
+    desc_ar=N_("عجلة تدور وتكشف جائزة (سطر لكل جائزة) — تعمل أوفلاين؛ تُفرَض الجوائز عبر نظام القسائم."),
     surface=SURFACE_PRELOGIN, icon="dharmachakra", server_side=True,
     fields=(
-        AddonField(key="prizes", label_ar="الجوائز (سطر لكل واحدة)",
+        AddonField(key="prizes", label_ar=N_("الجوائز (سطر لكل واحدة)"),
                    kind="textarea", max_len=400,
-                   placeholder="١٠ دقائق مجانية\nخصم ٢٠٪\nحظ أوفر"),
+                   placeholder=N_("١٠ دقائق مجانية\nخصم ٢٠٪\nحظ أوفر")),
     ),
     pre_fragment=_frag_spin))
 
@@ -70,7 +71,7 @@ register(AddonSpec(
 # ════════════════════════════════════════════════════════════════
 def _widget_referral(cfg: dict, ctx: dict) -> str:
     link = safe_url(cfg.get("share_url", ""))
-    msg = _esc(cfg.get("message") or "ادعُ أصدقاءك واكسب مكافآت!")
+    msg = _esc(cfg.get("message") or N_("ادعُ أصدقاءك واكسب مكافآت!"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     share = ""
     if link:
@@ -84,13 +85,13 @@ def _widget_referral(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="referral", category=CAT_ENGAGEMENT, label_ar="الإحالة",
-    desc_ar="زرّ مشاركة رابط دعوة (Web Share أو نسخ) على صفحة ما بعد الدخول.",
+    key="referral", category=CAT_ENGAGEMENT, label_ar=N_("الإحالة"),
+    desc_ar=N_("زرّ مشاركة رابط دعوة (Web Share أو نسخ) على صفحة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN, icon="user-plus",
     fields=(
-        AddonField(key="message", label_ar="الرسالة",
-                   default="ادعُ أصدقاءك واكسب مكافآت!", max_len=120),
-        AddonField(key="share_url", label_ar="رابط الدعوة", kind="url"),
+        AddonField(key="message", label_ar=N_("الرسالة"),
+                   default=N_("ادعُ أصدقاءك واكسب مكافآت!"), max_len=120),
+        AddonField(key="share_url", label_ar=N_("رابط الدعوة"), kind="url"),
     ),
     post_widget=_widget_referral))
 
@@ -106,11 +107,11 @@ def _widget_feedback(cfg: dict, ctx: dict) -> str:
     import json
     accent = _esc(ctx.get("accent", "#2563EB"))
     return (
-        '<h3 style="margin:4px 0">قيّم تجربتك</h3>'
+        N_('<h3 style="margin:4px 0">قيّم تجربتك</h3>'
         '<div id="hr-stars" style="font-size:30px;cursor:pointer;direction:ltr">'
         '<span data-s="1">☆</span><span data-s="2">☆</span><span data-s="3">☆</span>'
         '<span data-s="4">☆</span><span data-s="5">☆</span></div>'
-        "<script>(function(){var R=" + json.dumps(review) + ",F=" + json.dumps(private)
+        "<script>(function(){var R=") + json.dumps(review) + ",F=" + json.dumps(private)
         + ",st=document.getElementById('hr-stars');if(!st)return;"
         "var sp=st.getElementsByTagName('span');"
         "for(var i=0;i<sp.length;i++){(function(s){s.addEventListener('click',function(){"
@@ -121,13 +122,13 @@ def _widget_feedback(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="feedback_review", category=CAT_ENGAGEMENT, label_ar="تقييم → مراجعة جوجل",
-    desc_ar="نجوم تقييم: ٤+ توجّه لمراجعة جوجل، والأقل لنموذج خاص (قمع المراجعات).",
+    key="feedback_review", category=CAT_ENGAGEMENT, label_ar=N_("تقييم → مراجعة جوجل"),
+    desc_ar=N_("نجوم تقييم: ٤+ توجّه لمراجعة جوجل، والأقل لنموذج خاص (قمع المراجعات)."),
     surface=SURFACE_POSTLOGIN, icon="star-half-stroke",
     fields=(
-        AddonField(key="review_url", label_ar="رابط مراجعة جوجل (٤+)", kind="url",
+        AddonField(key="review_url", label_ar=N_("رابط مراجعة جوجل (٤+)"), kind="url",
                    placeholder="https://g.page/r/.../review"),
-        AddonField(key="feedback_url", label_ar="رابط النموذج الخاص (أقل من ٤)", kind="url"),
+        AddonField(key="feedback_url", label_ar=N_("رابط النموذج الخاص (أقل من ٤)"), kind="url"),
     ),
     post_widget=_widget_feedback))
 
@@ -153,13 +154,13 @@ def _widget_redirect(cfg: dict, ctx: dict) -> str:
 
 register(AddonSpec(
     key="post_connect_redirect", category=CAT_ENGAGEMENT,
-    label_ar="إعادة توجيه بعد الاتصال",
-    desc_ar="تحويل تلقائي لموقع علامتك بعد الدخول خلال ثوانٍ (نطاقه يُفتح تلقائيًّا).",
+    label_ar=N_("إعادة توجيه بعد الاتصال"),
+    desc_ar=N_("تحويل تلقائي لموقع علامتك بعد الدخول خلال ثوانٍ (نطاقه يُفتح تلقائيًّا)."),
     surface=SURFACE_POSTLOGIN, icon="arrow-right-from-bracket",
     fields=(
-        AddonField(key="url", label_ar="رابط التحويل", kind="url",
+        AddonField(key="url", label_ar=N_("رابط التحويل"), kind="url",
                    placeholder="https://example.com"),
-        AddonField(key="seconds", label_ar="بعد كم ثانية", kind="number",
+        AddonField(key="seconds", label_ar=N_("بعد كم ثانية"), kind="number",
                    default="4", min_num=0, max_num=30),
     ),
     post_widget=_widget_redirect))
@@ -183,8 +184,8 @@ def _widget_checkin(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="daily_checkin", category=CAT_ENGAGEMENT, label_ar="حضور يومي (سلسلة)",
-    desc_ar="عدّاد أيام متتالية يُحفظ على جهاز الزبون — يشجّع العودة.",
+    key="daily_checkin", category=CAT_ENGAGEMENT, label_ar=N_("حضور يومي (سلسلة)"),
+    desc_ar=N_("عدّاد أيام متتالية يُحفظ على جهاز الزبون — يشجّع العودة."),
     surface=SURFACE_POSTLOGIN, icon="calendar-check",
     post_widget=_widget_checkin))
 
@@ -203,19 +204,19 @@ def _widget_trial_timer(cfg: dict, ctx: dict) -> str:
         '<h3 style="margin:4px 0">وقت التجربة المتبقّي</h3>'
         f'<div id="hr-trial" dir="ltr" style="font-size:26px;font-weight:900;'
         f'color:{accent}">--:--</div>'
-        "<script>(function(){var end=Date.now()+" + str(mins) + "*60000,"
+        "<script>(function(){var end=Date.now()+" + str(mins) + N_("*60000,"
         "e=document.getElementById('hr-trial');if(!e)return;function t(){"
         "var s=Math.max(0,Math.round((end-Date.now())/1000)),m=Math.floor(s/60);"
         "e.textContent=(m<10?'0':'')+m+':'+((s%60)<10?'0':'')+(s%60);"
-        "if(s<=0)e.textContent='انتهى';}t();setInterval(t,1000);})();</script>")
+        "if(s<=0)e.textContent='انتهى';}t();setInterval(t,1000);})();</script>"))
 
 
 register(AddonSpec(
-    key="trial_timer", category=CAT_ENGAGEMENT, label_ar="مؤقّت التجربة",
-    desc_ar="عدّاد تنازلي لمدّة التجربة المجانية على صفحة ما بعد الدخول.",
+    key="trial_timer", category=CAT_ENGAGEMENT, label_ar=N_("مؤقّت التجربة"),
+    desc_ar=N_("عدّاد تنازلي لمدّة التجربة المجانية على صفحة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN, icon="stopwatch",
     fields=(
-        AddonField(key="minutes", label_ar="دقائق التجربة", kind="number",
+        AddonField(key="minutes", label_ar=N_("دقائق التجربة"), kind="number",
                    default="10", min_num=1, max_num=1440),
     ),
     post_widget=_widget_trial_timer))

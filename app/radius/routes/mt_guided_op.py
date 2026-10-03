@@ -11,6 +11,7 @@ advisory; the underlying operation pages (program/restore)
 remain guarded by their own stricter permissions.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from flask import (
     Blueprint, abort, g, render_template, request,
@@ -32,11 +33,11 @@ from ..services.mt_guided_op import (
 # ("بوابة الدخول" / "البرودباند") instead of leaking raw enum
 # keys like "programming_hotspot" into the visible UI.
 _OP_PICKER_LABELS_AR: dict[str, str] = {
-    OP_PROGRAMMING_HOTSPOT: "برمجة بوابة الدخول",
-    OP_PROGRAMMING_PPPOE:   "برمجة البرودباند",
-    OP_UNPROGRAMMING:       "تراجع وإزالة برمجة",
-    OP_RESTORE:             "استعادة من نسخة احتياطية",
-    OP_BACKUP_SAVE:         "حفظ نسخة احتياطية",
+    OP_PROGRAMMING_HOTSPOT: N_("برمجة بوابة الدخول"),
+    OP_PROGRAMMING_PPPOE:   N_("برمجة البرودباند"),
+    OP_UNPROGRAMMING:       N_("تراجع وإزالة برمجة"),
+    OP_RESTORE:             N_("استعادة من نسخة احتياطية"),
+    OP_BACKUP_SAVE:         N_("حفظ نسخة احتياطية"),
 }
 from ..services.mt_permissions import PERM_VIEW, requires_perm
 

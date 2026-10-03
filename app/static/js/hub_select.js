@@ -8,6 +8,7 @@
 
    استثناءات: select[multiple] أو select[data-native] تُترك أصلية.
    ════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   if (window.__hubSelectInit) return;
@@ -73,7 +74,7 @@
       search.className = "hbsel-search";
       // يمكن تخصيص نص البحث لكل select عبر data-search-placeholder
       // (مثل قائمة المشتركين: "ابحث بالاسم أو اليوزر...")
-      search.placeholder = sel.getAttribute("data-search-placeholder") || "بحث...";
+      search.placeholder = sel.getAttribute("data-search-placeholder") || hrT('بحث...');
       panel.appendChild(search);
     }
 
@@ -115,7 +116,7 @@
       if (!list.children.length) {
         var empty = document.createElement("div");
         empty.className = "hbsel-empty";
-        empty.textContent = "لا نتائج";
+        empty.textContent = hrT('لا نتائج');
         list.appendChild(empty);
       }
     }

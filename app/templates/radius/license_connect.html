@@ -161,7 +161,7 @@
         style="margin-top:10px">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <button class="hub-btn hub-btn--danger" type="submit"
-            data-confirm="فكّ الربط نهائيًّا؟ ستَعود النسخة إلى شاشة «بانتظار التفعيل». لا أثر على عقد المزوّد نفسه.">
+            data-confirm="{{ _('فكّ الربط نهائيًّا؟ ستَعود النسخة إلى شاشة «بانتظار التفعيل». لا أثر على عقد المزوّد نفسه.') }}">
       <i class="fa-solid fa-link-slash"></i>
       {{ _('فكّ الربط الآن') }}
     </button>

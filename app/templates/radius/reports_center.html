@@ -20,15 +20,15 @@
 <section class="hub-hero-shell" data-testid="reports-hero">
 {# _report_jump متغيّر block-set (Markup) — يُعلَّم الجزء الحرفي |safe قبل دمجه بـ«~» وإلا تُهرَّب وسومه فيظهر الزر نصًّا خامًا #}
 {% call hub.megahero(
-  "مركز التقارير",
-  subtitle="بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية، وأرشيف لقطات ثابتة لا تُعاد كتابتها.",
+  _('مركز التقارير'),
+  subtitle=_('بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية، وأرشيف لقطات ثابتة لا تُعاد كتابتها.'),
   icon="chart-line",
   actions_html=_report_jump ~ (('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> '|safe ~ _("الأرشيف") ~ '</a>'|safe if can_submit('radius.reports_archive', 'GET') else ''))|safe,
   kpis=[
-    {'label': 'المشتركون', 'value': summary.subscribers.total,  'icon': 'users',   'variant': 'blue'},
-    {'label': 'المتصلون الآن', 'value': summary.subscribers.online, 'icon': 'wifi',    'variant': 'green'},
-    {'label': 'الإيرادات', 'value': summary.finance.revenue,    'icon': 'coins',   'variant': 'amber'},
-    {'label': 'البطاقات',  'value': summary.cards.total,         'icon': 'id-card', 'variant': 'brand'},
+    {'label': _('المشتركون'), 'value': summary.subscribers.total,  'icon': 'users',   'variant': 'blue'},
+    {'label': _('المتصلون الآن'), 'value': summary.subscribers.online, 'icon': 'wifi',    'variant': 'green'},
+    {'label': _('الإيرادات'), 'value': summary.finance.revenue,    'icon': 'coins',   'variant': 'amber'},
+    {'label': _('البطاقات'),  'value': summary.cards.total,         'icon': 'id-card', 'variant': 'brand'},
   ],
   search_action=url_for('radius.reports_home')
 ) %}
@@ -39,13 +39,13 @@
   <label class="hub-field-label" for="rc-to" style="margin:0">{{ _('إلى تاريخ') }}</label>
   <input class="hub-input" type="date" id="rc-to" name="date_to"
          value="{{ summary.filters.date_to }}">
-  {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق الفترة'), icon="filter", variant="primary", type="submit", size="sm") }}
   {# زر مسح الفترة — يظهر فقط عند وجود فلتر فعّال، توحيدًا مع صفحة التقرير التفصيلي #}
   {% if summary.filters.date_from or summary.filters.date_to %}
-    {% if can_submit('radius.reports_home', 'GET') %}{{ hub.btn("مسح الفترة", href=url_for('radius.reports_home'), icon="rotate-left", variant="ghost", size="sm") }}{% endif %}
+    {% if can_submit('radius.reports_home', 'GET') %}{{ hub.btn(_('مسح الفترة'), href=url_for('radius.reports_home'), icon="rotate-left", variant="ghost", size="sm") }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="اختيار فترة يعيد حساب الإيرادات والمؤشرات للفترة المحددة فقط — بلا أي تعديل على التاريخ المالي المخزّن."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('اختيار فترة يعيد حساب الإيرادات والمؤشرات للفترة المحددة فقط — بلا أي تعديل على التاريخ المالي المخزّن.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -54,47 +54,47 @@
 
 {# ───── المحتوى الرئيسي + لوحة المساعدة على اليسار (نمط worklayout الموحّد) ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ مركز التقارير؟",
-  intro="هذه الصفحة هي بوابة التقارير: مؤشرات تنفيذية سريعة في الأعلى، ثم تفاصيل قابلة للفتح ومكتبة تقارير كاملة.",
+  _('كيف تقرأ مركز التقارير؟'),
+  intro=_('هذه الصفحة هي بوابة التقارير: مؤشرات تنفيذية سريعة في الأعلى، ثم تفاصيل قابلة للفتح ومكتبة تقارير كاملة.'),
   items=[
-    {'icon': 'arrow-up-right-from-square', 'text': 'جدول «المؤشرات التفصيلية» يفتح كل رقم على قائمته الكاملة المُفلترة.'},
-    {'icon': 'folder-open',                'text': 'مكتبة التقارير تجمع كل تقرير تفصيلي في بطاقة واحدة قابلة للنقر.'},
-    {'icon': 'chart-simple',               'text': 'بطاقات الإيرادات تعرض اليوم/الشهر/السنة والهامش دون تعديل التاريخ المالي.'},
-    {'icon': 'box-archive',                'text': 'الأرشيف يحفظ لقطات ثابتة لا تتغيّر مع الوقت، من زر «الأرشيف» في الأعلى.'},
+    {'icon': 'arrow-up-right-from-square', 'text': _('جدول «المؤشرات التفصيلية» يفتح كل رقم على قائمته الكاملة المُفلترة.')},
+    {'icon': 'folder-open',                'text': _('مكتبة التقارير تجمع كل تقرير تفصيلي في بطاقة واحدة قابلة للنقر.')},
+    {'icon': 'chart-simple',               'text': _('بطاقات الإيرادات تعرض اليوم/الشهر/السنة والهامش دون تعديل التاريخ المالي.')},
+    {'icon': 'box-archive',                'text': _('الأرشيف يحفظ لقطات ثابتة لا تتغيّر مع الوقت، من زر «الأرشيف» في الأعلى.')},
   ],
-  note="جميع القراءات هنا للعرض فقط ومحصورة ضمن نطاق المستأجر الحالي."
+  note=_('جميع القراءات هنا للعرض فقط ومحصورة ضمن نطاق المستأجر الحالي.')
 )) %}
 
   {# ── 0) قسم تقارير المشتركين — يظهر عند فتح الرابط ?section=subscribers
         (رابط «تقارير المشتركين» في مكتبة التقارير). نفس بيانات الملخص
         القائمة summary.subscribers — بلا أي استعلام أو مسار جديد. ── #}
   {% if request.args.get('section') == 'subscribers' %}
-  {% call hub.section("تقارير المشتركين", icon="users",
-                      meta="حالة المشتركين ونشاط الدخول") %}
+  {% call hub.section(_('تقارير المشتركين'), icon="users",
+                      meta=_('حالة المشتركين ونشاط الدخول')) %}
     <div class="hub-kpi-grid" data-testid="subscribers-section">
-      {{ hub.kpi("إجمالي المشتركين", summary.subscribers.total,   icon="users",        variant="brand") }}
-      {{ hub.kpi("النشطون",          summary.subscribers.active,  icon="circle-check", variant="green") }}
-      {{ hub.kpi("المعطلون",         summary.subscribers.disabled,icon="circle-xmark", variant="red") }}
-      {{ hub.kpi("المتصلون الآن",    summary.subscribers.online,  icon="wifi",         variant="blue") }}
-      {{ hub.kpi("ينتهون قريبًا",    summary.subscribers.ending_soon, icon="hourglass-half", variant="amber") }}
-      {{ hub.kpi("عليهم ديون",       summary.subscribers.debt,    icon="circle-exclamation", variant="red") }}
+      {{ hub.kpi(_('إجمالي المشتركين'), summary.subscribers.total,   icon="users",        variant="brand") }}
+      {{ hub.kpi(_('النشطون'),          summary.subscribers.active,  icon="circle-check", variant="green") }}
+      {{ hub.kpi(_('المعطلون'),         summary.subscribers.disabled,icon="circle-xmark", variant="red") }}
+      {{ hub.kpi(_('المتصلون الآن'),    summary.subscribers.online,  icon="wifi",         variant="blue") }}
+      {{ hub.kpi(_('ينتهون قريبًا'),    summary.subscribers.ending_soon, icon="hourglass-half", variant="amber") }}
+      {{ hub.kpi(_('عليهم ديون'),       summary.subscribers.debt,    icon="circle-exclamation", variant="red") }}
     </div>
     <div class="hub-actions" style="margin-top:12px">
-      {{ hub.action_card("قائمة المشتركين", sub="كل المشتركين مع الفلاتر الكاملة",
+      {{ hub.action_card(_('قائمة المشتركين'), sub=_('كل المشتركين مع الفلاتر الكاملة'),
                          icon="users", href=summary.drilldowns.subscribers_total, variant="brand") }}
-      {{ hub.action_card("المتصلون الآن", sub="الجلسات النشطة لحظة بلحظة",
+      {{ hub.action_card(_('المتصلون الآن'), sub=_('الجلسات النشطة لحظة بلحظة'),
                          icon="wifi", href=summary.drilldowns.online_users, variant="green") }}
-      {% if can_submit('radius.rep_login_status', 'GET') %}{{ hub.action_card("حالة دخول المشتركين", sub="آخر دخول وآخر ظهور لكل مشترك",
+      {% if can_submit('radius.rep_login_status', 'GET') %}{{ hub.action_card(_('حالة دخول المشتركين'), sub=_('آخر دخول وآخر ظهور لكل مشترك'),
                          icon="right-to-bracket", href=url_for('radius.rep_login_status'), variant="blue") }}{% endif %}
-      {% if can_submit('radius.rep_user_events', 'GET') %}{{ hub.action_card("أحداث المشتركين", sub="سجل عمليات التعديل والتمديد",
+      {% if can_submit('radius.rep_user_events', 'GET') %}{{ hub.action_card(_('أحداث المشتركين'), sub=_('سجل عمليات التعديل والتمديد'),
                          icon="clock-rotate-left", href=url_for('radius.rep_user_events'), variant="grey") }}{% endif %}
     </div>
   {% endcall %}
   {% endif %}
 
   {# ── 1) مؤشرات تفصيلية: كل رقم يفتح على قائمته الكاملة — جدول uds موحّد ── #}
-  {% call hub.section("مؤشرات تفصيلية", icon="arrow-up-right-from-square",
-                      meta="كل رقم يفتح على قائمته الكاملة", flush=True) %}
+  {% call hub.section(_('مؤشرات تفصيلية'), icon="arrow-up-right-from-square",
+                      meta=_('كل رقم يفتح على قائمته الكاملة'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table style="border:none;border-radius:0">
       <table class="hub-table rep-table" data-testid="drilldown-links">
         <thead>
@@ -116,30 +116,30 @@
   {% endcall %}
 
   {# ── 2) مكتبة التقارير: بطاقة قابلة للنقر لكل تقرير تفصيلي ── #}
-  {% call hub.section("مكتبة التقارير", icon="folder-open",
-                      meta=catalog|length|string + " تقرير") %}
+  {% call hub.section(_('مكتبة التقارير'), icon="folder-open",
+                      meta=catalog|length|string + _(' تقرير')) %}
     <div class="hub-actions" data-testid="report-catalog">
       {% for report in catalog %}
-        {{ hub.action_card(report.title, sub=report.description or "افتح التقرير التفصيلي",
+        {{ hub.action_card(report.title, sub=report.description or _('افتح التقرير التفصيلي'),
                            icon="file-lines", href=report.url, variant="grey") }}
       {% endfor %}
     </div>
   {% endcall %}
 
   {# ── 3) الإيرادات والهامش: قراءات الفترات الثلاث + هامش السنة ── #}
-  {% call hub.section("الإيرادات والهامش", icon="chart-simple",
-                      meta="قراءة فقط — لا تعديل على التاريخ المالي") %}
+  {% call hub.section(_('الإيرادات والهامش'), icon="chart-simple",
+                      meta=_('قراءة فقط — لا تعديل على التاريخ المالي')) %}
     <div class="hub-kpi-grid" data-testid="revenue-periods">
-      {{ hub.kpi("إيراد اليوم", summary.finance.revenue_today, icon="calendar-day") }}
-      {{ hub.kpi("إيراد الشهر", summary.finance.revenue_month, icon="calendar") }}
-      {{ hub.kpi("إيراد السنة", summary.finance.revenue_year, icon="calendar-days") }}
-      {{ hub.kpi("هامش السنة", summary.finance.margin_year, icon="scale-balanced", variant="green") }}
+      {{ hub.kpi(_('إيراد اليوم'), summary.finance.revenue_today, icon="calendar-day") }}
+      {{ hub.kpi(_('إيراد الشهر'), summary.finance.revenue_month, icon="calendar") }}
+      {{ hub.kpi(_('إيراد السنة'), summary.finance.revenue_year, icon="calendar-days") }}
+      {{ hub.kpi(_('هامش السنة'), summary.finance.margin_year, icon="scale-balanced", variant="green") }}
     </div>
     <p class="hub-text-soft" style="margin:12px 0 0;font-size:12.5px">
       <i class="fa-solid fa-shield-halved"></i>
       {{ _('هذه الأرقام مشتقة من المعاملات المسجّلة فقط') }}
       <span class="hub-hint" tabindex="0"
-            data-hint="الهامش = الإيراد بعد خصم حصص الموزعين والتكاليف المسجّلة. أي لقطة أرشيف تُحفَظ نسخة ثابتة لا تتأثر بتعديلات لاحقة."><i class="fa-solid fa-info"></i></span>
+            data-hint="{{ _('الهامش = الإيراد بعد خصم حصص الموزعين والتكاليف المسجّلة. أي لقطة أرشيف تُحفَظ نسخة ثابتة لا تتأثر بتعديلات لاحقة.') }}"><i class="fa-solid fa-info"></i></span>
     </p>
   {% endcall %}
 

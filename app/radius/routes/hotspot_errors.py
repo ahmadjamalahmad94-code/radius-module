@@ -11,6 +11,7 @@ hotspot/errors.txt وتُرفع للراوتر تلقائيًا عند نشر ص
 (انظر mt_login_designer.deploy + download.zip).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
@@ -140,12 +141,11 @@ def hotspot_errors_reset():
     key = (request.form.get("key") or "").strip()
     if key and key in hem.ERROR_KEYS_BY_KEY:
         err_repo.reset_message(tid, key)
-        flash_ok = (f"استُعيد النص الافتراضي للرسالة "
-                    f"«{hem.ERROR_KEYS_BY_KEY[key].name_ar}».")
+        flash_ok = (_tr('استُعيد النص الافتراضي للرسالة «%(name_ar)s».', name_ar=hem.ERROR_KEYS_BY_KEY[key].name_ar))
         _action_payload = {"key": key}
     else:
         err_repo.reset_all(tid)
-        flash_ok = "استُعيدت كل الرسائل إلى نصوصها الافتراضية."
+        flash_ok = N_("استُعيدت كل الرسائل إلى نصوصها الافتراضية.")
         _action_payload = {"key": "*"}
     get_audit_service().record(
         actor=str(getattr(g, "admin_id", None) or "ui"),

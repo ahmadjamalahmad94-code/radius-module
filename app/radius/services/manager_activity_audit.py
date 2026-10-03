@@ -37,6 +37,7 @@ Volume control:
     (escape hatch; default ON).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import logging
@@ -149,7 +150,7 @@ def _detect_noop(response) -> bool:
     msg = str(data.get("message") or data.get("message_ar")
               or data.get("info") or "")
     return any(p in msg for p in (
-        "لا تغيير", "لم يتغيّر", "لم يتغير", "دون تغيير", "بلا تغيير", "لا جديد",
+        N_("لا تغيير"), N_("لم يتغيّر"), N_("لم يتغير"), N_("دون تغيير"), N_("بلا تغيير"), N_("لا جديد"),
     ))
 
 
@@ -168,91 +169,91 @@ def note_noop() -> None:
 # a section-noun + verb derivation (_fallback_page_label) so nothing leaks raw
 # English — the endpoint name is snake_case and section-prefixed.
 _PAGE_LABELS: dict[str, str] = {
-    "dashboard": "لوحة التحكم",
-    "account": "حسابي",
-    "account_password": "تغيير كلمة المرور",
-    "auth_logout": "تسجيل الخروج",
-    "users_list": "المشتركون",
-    "users_overview": "المشتركون",
-    "user_detail": "بطاقة المشترك",
-    "users_create": "إضافة مشترك",
-    "users_edit": "تعديل مشترك",
-    "users_delete": "حذف مشترك",
-    "users_extend": "تمديد اشتراك",
-    "users_toggle": "تفعيل/تعطيل مشترك",
-    "users_change_status": "تغيير حالة المشترك",
-    "cards_overview": "الكروت",
-    "cards_batches": "حزم الكروت",
-    "cards_generate": "توليد كروت",
-    "cards_checker": "فاحص الكروت",
-    "cards_print": "طباعة الكروت",
-    "card_offers": "عروض الكروت",
-    "marketplace": "السوق",
-    "admins_list": "المدراء والأدوار",
-    "admins_create": "إضافة مدير",
-    "admins_update": "تعديل مدير",
-    "online_list": "المتصلون الآن",
-    "online_disconnect": "فصل مشترك",
-    "reports_home": "التقارير",
-    "rep_manager_events": "تقرير أحداث المدراء",
-    "backups_index": "النسخ الاحتياطية",
-    "settings_page": "إعدادات النظام",
-    "finance_center": "المركز المالي",
-    "credit_dashboard": "شحن الرصيد",
+    "dashboard": N_("لوحة التحكم"),
+    "account": N_("حسابي"),
+    "account_password": N_("تغيير كلمة المرور"),
+    "auth_logout": N_("تسجيل الخروج"),
+    "users_list": N_("المشتركون"),
+    "users_overview": N_("المشتركون"),
+    "user_detail": N_("بطاقة المشترك"),
+    "users_create": N_("إضافة مشترك"),
+    "users_edit": N_("تعديل مشترك"),
+    "users_delete": N_("حذف مشترك"),
+    "users_extend": N_("تمديد اشتراك"),
+    "users_toggle": N_("تفعيل/تعطيل مشترك"),
+    "users_change_status": N_("تغيير حالة المشترك"),
+    "cards_overview": N_("الكروت"),
+    "cards_batches": N_("حزم الكروت"),
+    "cards_generate": N_("توليد كروت"),
+    "cards_checker": N_("فاحص الكروت"),
+    "cards_print": N_("طباعة الكروت"),
+    "card_offers": N_("عروض الكروت"),
+    "marketplace": N_("السوق"),
+    "admins_list": N_("المدراء والأدوار"),
+    "admins_create": N_("إضافة مدير"),
+    "admins_update": N_("تعديل مدير"),
+    "online_list": N_("المتصلون الآن"),
+    "online_disconnect": N_("فصل مشترك"),
+    "reports_home": N_("التقارير"),
+    "rep_manager_events": N_("تقرير أحداث المدراء"),
+    "backups_index": N_("النسخ الاحتياطية"),
+    "settings_page": N_("إعدادات النظام"),
+    "finance_center": N_("المركز المالي"),
+    "credit_dashboard": N_("شحن الرصيد"),
 }
 
 # Section-noun map for the fallback: leading token of the endpoint → Arabic.
 _SECTION_NOUNS: dict[str, str] = {
-    "dashboard": "لوحة التحكم", "users": "المشتركون", "user": "المشتركون",
-    "subscribers": "المشتركون", "cards": "الكروت", "card": "الكروت",
-    "offers": "العروض", "offer": "العروض", "marketplace": "السوق",
-    "batches": "الحزم", "batch": "الحزم", "admins": "المدراء",
-    "admin": "الإدارة", "managers": "المدراء", "manager": "المدراء",
-    "roles": "الأدوار", "online": "المتصلون الآن", "sessions": "الجلسات",
-    "reports": "التقارير", "rep": "التقارير", "report": "التقارير",
-    "backups": "النسخ الاحتياطية", "backup": "النسخ الاحتياطية",
-    "settings": "الإعدادات", "finance": "المالية", "accounting": "المحاسبة",
-    "billing": "الفوترة", "collection": "التحصيل", "plans": "الباقات",
-    "plan": "الباقات", "nas": "أجهزة الشبكة", "devices": "المايكروتيك",
-    "device": "المايكروتيك", "mt": "المايكروتيك", "router": "الراوتر",
-    "routers": "الراوترات", "bandwidth": "السرعة", "speed": "السرعة",
-    "distributors": "الموزّعون", "distributor": "الموزّعون",
-    "communications": "الاتصالات", "comms": "الاتصالات",
-    "notifications": "الإشعارات", "monitoring": "المراقبة",
-    "audit": "سجل التدقيق", "credit": "الرصيد", "hotspot": "الهوت سبوت",
-    "access": "التحكم بالدخول", "tenants": "المستأجرون", "docs": "الأدلة",
-    "wg": "WireGuard", "sstp": "SSTP", "integrations": "التكاملات",
-    "data": "البيانات", "migration": "الترحيل", "jobs": "المهام",
+    "dashboard": N_("لوحة التحكم"), "users": N_("المشتركون"), "user": N_("المشتركون"),
+    "subscribers": N_("المشتركون"), "cards": N_("الكروت"), "card": N_("الكروت"),
+    "offers": N_("العروض"), "offer": N_("العروض"), "marketplace": N_("السوق"),
+    "batches": N_("الحزم"), "batch": N_("الحزم"), "admins": N_("المدراء"),
+    "admin": N_("الإدارة"), "managers": N_("المدراء"), "manager": N_("المدراء"),
+    "roles": N_("الأدوار"), "online": N_("المتصلون الآن"), "sessions": N_("الجلسات"),
+    "reports": N_("التقارير"), "rep": N_("التقارير"), "report": N_("التقارير"),
+    "backups": N_("النسخ الاحتياطية"), "backup": N_("النسخ الاحتياطية"),
+    "settings": N_("الإعدادات"), "finance": N_("المالية"), "accounting": N_("المحاسبة"),
+    "billing": N_("الفوترة"), "collection": N_("التحصيل"), "plans": N_("الباقات"),
+    "plan": N_("الباقات"), "nas": N_("أجهزة الشبكة"), "devices": N_("المايكروتيك"),
+    "device": N_("المايكروتيك"), "mt": N_("المايكروتيك"), "router": N_("الراوتر"),
+    "routers": N_("الراوترات"), "bandwidth": N_("السرعة"), "speed": N_("السرعة"),
+    "distributors": N_("الموزّعون"), "distributor": N_("الموزّعون"),
+    "communications": N_("الاتصالات"), "comms": N_("الاتصالات"),
+    "notifications": N_("الإشعارات"), "monitoring": N_("المراقبة"),
+    "audit": N_("سجل التدقيق"), "credit": N_("الرصيد"), "hotspot": N_("الهوت سبوت"),
+    "access": N_("التحكم بالدخول"), "tenants": N_("المستأجرون"), "docs": N_("الأدلة"),
+    "wg": "WireGuard", "sstp": "SSTP", "integrations": N_("التكاملات"),
+    "data": N_("البيانات"), "migration": N_("الترحيل"), "jobs": N_("المهام"),
 }
 
 # Verb tokens → Arabic + a compact machine action key.
 _VERB_MAP: dict[str, tuple[str, str]] = {
-    "create": ("إضافة", "create"), "add": ("إضافة", "create"),
-    "new": ("إضافة", "create"), "generate": ("توليد", "create"),
-    "import": ("استيراد", "import"), "issue": ("إصدار", "create"),
-    "edit": ("تعديل", "update"), "update": ("تعديل", "update"),
-    "save": ("حفظ", "update"), "set": ("ضبط", "update"),
-    "change": ("تغيير", "update"), "rename": ("إعادة تسمية", "update"),
-    "toggle": ("تبديل", "update"), "apply": ("تطبيق", "update"),
-    "assign": ("إسناد", "update"), "extend": ("تمديد", "update"),
-    "recharge": ("شحن", "update"), "renew": ("تجديد", "update"),
-    "adjust": ("تعديل", "update"), "delete": ("حذف", "delete"),
-    "remove": ("حذف", "delete"), "destroy": ("حذف", "delete"),
-    "purge": ("تفريغ", "delete"), "wipe": ("مسح", "delete"),
-    "revoke": ("سحب", "delete"), "disconnect": ("فصل", "disconnect"),
-    "kick": ("فصل", "disconnect"), "reset": ("إعادة ضبط", "reset"),
-    "reboot": ("إعادة تشغيل", "reboot"), "restart": ("إعادة تشغيل", "reboot"),
-    "sync": ("مزامنة", "sync"), "run": ("تشغيل", "run"),
-    "export": ("تصدير", "export"), "send": ("إرسال", "send"),
-    "block": ("حظر", "block"), "unblock": ("رفع الحظر", "unblock"),
-    "activate": ("تفعيل", "activate"), "deactivate": ("تعطيل", "deactivate"),
-    "enable": ("تفعيل", "activate"), "disable": ("تعطيل", "deactivate"),
-    "approve": ("اعتماد", "approve"), "reject": ("رفض", "reject"),
-    "print": ("طباعة", "print"), "upload": ("رفع", "upload"),
-    "download": ("تنزيل", "download"), "connect": ("ربط", "connect"),
-    "install": ("تركيب", "install"), "publish": ("نشر", "publish"),
-    "verify": ("فحص", "verify"), "login": ("دخول", "login"),
-    "logout": ("خروج", "logout"),
+    "create": (N_("إضافة"), "create"), "add": (N_("إضافة"), "create"),
+    "new": (N_("إضافة"), "create"), "generate": (N_("توليد"), "create"),
+    "import": (N_("استيراد"), "import"), "issue": (N_("إصدار"), "create"),
+    "edit": (N_("تعديل"), "update"), "update": (N_("تعديل"), "update"),
+    "save": (N_("حفظ"), "update"), "set": (N_("ضبط"), "update"),
+    "change": (N_("تغيير"), "update"), "rename": (N_("إعادة تسمية"), "update"),
+    "toggle": (N_("تبديل"), "update"), "apply": (N_("تطبيق"), "update"),
+    "assign": (N_("إسناد"), "update"), "extend": (N_("تمديد"), "update"),
+    "recharge": (N_("شحن"), "update"), "renew": (N_("تجديد"), "update"),
+    "adjust": (N_("تعديل"), "update"), "delete": (N_("حذف"), "delete"),
+    "remove": (N_("حذف"), "delete"), "destroy": (N_("حذف"), "delete"),
+    "purge": (N_("تفريغ"), "delete"), "wipe": (N_("مسح"), "delete"),
+    "revoke": (N_("سحب"), "delete"), "disconnect": (N_("فصل"), "disconnect"),
+    "kick": (N_("فصل"), "disconnect"), "reset": (N_("إعادة ضبط"), "reset"),
+    "reboot": (N_("إعادة تشغيل"), "reboot"), "restart": (N_("إعادة تشغيل"), "reboot"),
+    "sync": (N_("مزامنة"), "sync"), "run": (N_("تشغيل"), "run"),
+    "export": (N_("تصدير"), "export"), "send": (N_("إرسال"), "send"),
+    "block": (N_("حظر"), "block"), "unblock": (N_("رفع الحظر"), "unblock"),
+    "activate": (N_("تفعيل"), "activate"), "deactivate": (N_("تعطيل"), "deactivate"),
+    "enable": (N_("تفعيل"), "activate"), "disable": (N_("تعطيل"), "deactivate"),
+    "approve": (N_("اعتماد"), "approve"), "reject": (N_("رفض"), "reject"),
+    "print": (N_("طباعة"), "print"), "upload": (N_("رفع"), "upload"),
+    "download": (N_("تنزيل"), "download"), "connect": (N_("ربط"), "connect"),
+    "install": (N_("تركيب"), "install"), "publish": (N_("نشر"), "publish"),
+    "verify": (N_("فحص"), "verify"), "login": (N_("دخول"), "login"),
+    "logout": (N_("خروج"), "logout"),
 }
 
 
@@ -260,7 +261,7 @@ def page_label(endpoint_name: str) -> str:
     """Arabic label for the PAGE the endpoint belongs to. Never English."""
     name = (endpoint_name or "").strip()
     if not name:
-        return "صفحة"
+        return N_("صفحة")
     if name in _PAGE_LABELS:
         return _PAGE_LABELS[name]
     return _fallback_page_label(name)
@@ -283,7 +284,7 @@ def _fallback_page_label(name: str) -> str:
     if noun:
         return noun
     # Last resort: never leak raw English — a generic Arabic placeholder.
-    return "صفحة الإدارة"
+    return N_("صفحة الإدارة")
 
 
 def _action_key(endpoint_name: str, method: str) -> str:
@@ -298,7 +299,7 @@ def action_label(endpoint_name: str, method: str, outcome: str) -> str:
     """Human Arabic phrase: what he DID (or TRIED to do). Used by the report."""
     name = (endpoint_name or "").strip()
     if outcome == "visit":
-        return f"دخل صفحة: {page_label(name)}"
+        return _tr('دخل صفحة: %(v)s', v=page_label(name))
     verb = ""
     for t in name.split("_"):
         if t in _VERB_MAP:
@@ -308,7 +309,7 @@ def action_label(endpoint_name: str, method: str, outcome: str) -> str:
     if verb:
         return f"{verb} — {page}"
     # Unknown verb: describe by page + the raw method so it stays informative.
-    return f"إجراء على: {page}"
+    return _tr('إجراء على: %(page)s', page=page)
 
 
 # ── target entity resolution ────────────────────────────────────────────────
@@ -328,9 +329,9 @@ _ARG_TO_TYPE: dict[str, str] = {
 }
 
 _TYPE_AR: dict[str, str] = {
-    "subscriber": "مشترك", "card": "كرت", "batch": "حزمة", "offer": "عرض",
-    "admin": "مدير", "plan": "باقة", "router": "راوتر",
-    "distributor": "موزّع", "account": "حساب",
+    "subscriber": N_("مشترك"), "card": N_("كرت"), "batch": N_("حزمة"), "offer": N_("عرض"),
+    "admin": N_("مدير"), "plan": N_("باقة"), "router": N_("راوتر"),
+    "distributor": N_("موزّع"), "account": N_("حساب"),
 }
 
 
@@ -453,12 +454,12 @@ def _client_ip() -> str:
 
 def _reason(outcome: str, status: int) -> str:
     if outcome == "blocked":
-        return "محظور — لا صلاحية" if status == 403 else (
-            "محظور — تجاوز الحدّ" if status == 429 else "محظور")
+        return N_("محظور — لا صلاحية") if status == 403 else (
+            N_("محظور — تجاوز الحدّ") if status == 429 else N_("محظور"))
     if outcome == "failed":
         if status >= 500:
-            return "خطأ في الخادم"
-        return "فشل التحقّق"
+            return N_("خطأ في الخادم")
+        return N_("فشل التحقّق")
     return ""
 
 

@@ -1,5 +1,6 @@
 """Remote Device Access routes — Sprint 5."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template,
@@ -103,7 +104,7 @@ def remote_device_access_form(device_id: int):
 def remote_device_access_open(device_id: int):
     device, nas = _load_pair(device_id)
     if not device["ip_address"]:
-        flash("لا يمكن فتح الجلسة — IP الجهاز فارغ.", "danger")
+        flash(_tr("لا يمكن فتح الجلسة — IP الجهاز فارغ."), "danger")
         return redirect(url_for(
             "radius.remote_device_access_form", device_id=device_id,
         ))
@@ -126,12 +127,12 @@ def remote_device_access_open(device_id: int):
         notes=notes,
     )
     if not ok or not session:
-        flash(f"فشل فتح الجلسة: {err}", "danger")
+        flash(_tr('فشل فتح الجلسة: %(err)s', err=err), "danger")
         return redirect(url_for(
             "radius.remote_device_access_form", device_id=device_id,
         ))
     flash(
-        f"تم فتح الجلسة #{session['id']} — تنتهي خلال {ttl_minutes} دقيقة.",
+        _tr('تم فتح الجلسة #%(id)s — تنتهي خلال %(ttl_minutes)s دقيقة.', id=session['id'], ttl_minutes=ttl_minutes),
         "success",
     )
     return redirect(url_for(
@@ -145,7 +146,7 @@ def remote_device_access_close(device_id: int, session_id: int):
     if not session or session["device_id"] != device_id:
         abort(404)
     if session["status"] != "active":
-        flash("هذه الجلسة مغلقة بالفعل.", "info")
+        flash(_tr("هذه الجلسة مغلقة بالفعل."), "info")
         return redirect(url_for(
             "radius.remote_device_access_form", device_id=device_id,
         ))
@@ -155,7 +156,7 @@ def remote_device_access_close(device_id: int, session_id: int):
     if warn:
         flash(warn, "warning")
     else:
-        flash(f"أُغلقت الجلسة #{session_id}.", "success")
+        flash(_tr('أُغلقت الجلسة #%(session_id)s.', session_id=session_id), "success")
     return redirect(url_for(
         "radius.remote_device_access_form", device_id=device_id,
     ))

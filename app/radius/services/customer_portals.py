@@ -1,5 +1,6 @@
 """Self-scoped subscriber and card-user portal services."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from datetime import datetime, timezone
@@ -75,7 +76,7 @@ class CustomerPortalService:
             "notifications": self._events("subscriber", int(subscriber["id"])),
             "cards": self._subscriber_cards(int(subscriber["id"]), subscriber["username"]),
             "loan_policy": self.loan_policy(subscriber_id),
-            "walled_garden_note": "أضف رابط هذه البوابة إلى قائمة السماح في MikroTik حتى يصل لها المشترك المنتهي.",
+            "walled_garden_note": _tr("أضف رابط هذه البوابة إلى قائمة السماح في MikroTik حتى يصل لها المشترك المنتهي."),
         }
 
     def card_user_dashboard(self, card_user_id: int) -> dict[str, Any]:
@@ -84,7 +85,7 @@ class CustomerPortalService:
             card.pop("password", None)
         data["marketplace"] = CardUsersMarketplaceService(tenant_id=self.tenant_id).list_packages(active_only=True)
         data["notifications"] = self._events("card_user", int(card_user_id))
-        data["walled_garden_note"] = "أضف رابط بوابة الكروت إلى قائمة السماح في MikroTik عند بيع الكروت من شبكة مقيدة."
+        data["walled_garden_note"] = N_("أضف رابط بوابة الكروت إلى قائمة السماح في MikroTik عند بيع الكروت من شبكة مقيدة.")
         return data
 
     def redeem_card_to_wallet(
@@ -97,7 +98,7 @@ class CustomerPortalService:
         number = str(card_number or "").strip()
         password = str(card_password or "").strip()
         if not number:
-            raise RadiusValidationError("رقم البطاقة مطلوب.")
+            raise RadiusValidationError(_tr("رقم البطاقة مطلوب."))
         row = db().execute(
             """
             SELECT c.*, b.price_per_card, b.price_bulk, b.count, b.package_name
@@ -109,12 +110,12 @@ class CustomerPortalService:
             (self.tenant_id, number),
         ).fetchone()
         if not row:
-            raise RadiusValidationError("رقم البطاقة غير موجود.")
+            raise RadiusValidationError(_tr("رقم البطاقة غير موجود."))
         card = row_to_dict(row)
         if int(card.get("revoked") or 0):
-            raise RadiusValidationError("البطاقة ملغاة.")
+            raise RadiusValidationError(_tr("البطاقة ملغاة."))
         if int(card.get("used") or 0):
-            raise RadiusValidationError("البطاقة استُخدمت من قبل.")
+            raise RadiusValidationError(_tr("البطاقة استُخدمت من قبل."))
         # Recharge cards require both code + PIN. Legacy import
         # batches (where the password may be empty) accept the
         # code alone.
@@ -122,9 +123,9 @@ class CustomerPortalService:
         recharge_only = int(card.get("recharge_only") or 0)
         if recharge_only or stored_pin:
             if not password:
-                raise RadiusValidationError("الرقم السري مطلوب.")
+                raise RadiusValidationError(_tr("الرقم السري مطلوب."))
             if password != stored_pin:
-                raise RadiusValidationError("الرقم السري غير صحيح.")
+                raise RadiusValidationError(_tr("الرقم السري غير صحيح."))
         # Prefer per-card wallet_value (recharge batches set this per
         # denomination); fall back to the batch's price_per_card, then
         # to (price_bulk / count) for legacy import batches.
@@ -136,7 +137,7 @@ class CustomerPortalService:
             bulk = float(card.get("price_bulk") or 0)
             price = (bulk / count) if count > 0 and bulk > 0 else 0
         if price <= 0:
-            raise RadiusValidationError("لا توجد قيمة محفظة لهذه البطاقة.")
+            raise RadiusValidationError(_tr("لا توجد قيمة محفظة لهذه البطاقة."))
 
         wallet = CardUsersMarketplaceService(tenant_id=self.tenant_id)._wallet_for_card_user(card_user_id)
         credit = WalletService().credit(
@@ -165,7 +166,7 @@ class CustomerPortalService:
                 (now, self.tenant_id, int(card["id"])),
             )
             if cur.rowcount <= 0:
-                raise RadiusValidationError("تم شحن هذه البطاقة من قبل.")
+                raise RadiusValidationError(_tr("تم شحن هذه البطاقة من قبل."))
         return {
             "card": card,
             "wallet": credit["wallet"],
@@ -194,7 +195,7 @@ class CustomerPortalService:
                 "auto_approve": False,
                 "allowed_minutes": 0,
                 "sequence": "disabled",
-                "reason": "السلفة غير مفعّلة لهذه الباقة.",
+                "reason": _tr("السلفة غير مفعّلة لهذه الباقة."),
             }
         sequence_limit = 2 * 24 * 60 if open_count == 0 else 24 * 60 if open_count == 1 else 0
         allowed = min(plan_max, sequence_limit)
@@ -204,7 +205,7 @@ class CustomerPortalService:
             "allowed_minutes": allowed,
             "sequence": "first_2_days_then_1_day",
             "open_loan_count": open_count,
-            "reason": "" if allowed > 0 else "تحتاج السلفة الحالية إلى موافقة الموظف.",
+            "reason": "" if allowed > 0 else _tr("تحتاج السلفة الحالية إلى موافقة الموظف."),
         }
 
     def submit_loan_request(self, *, subscriber_id: int, requested_minutes: int, reason: str = "") -> dict[str, Any]:
@@ -221,7 +222,7 @@ class CustomerPortalService:
                     "subscriber_id": int(subscriber["id"]),
                     "duration_minutes": requested,
                     "amount": 0,
-                    "reason": reason or "سلفة من بوابة المشترك",
+                    "reason": reason or _tr("سلفة من بوابة المشترك"),
                 },
                 actor="subscriber_portal",
             )
@@ -248,13 +249,13 @@ class CustomerPortalService:
         # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب.
         try:
             from .admin_alerts import dispatch
-            _status_ar = {"auto_approved": "مقبولة تلقائيًا",
-                          "requires_approval": "بانتظار الموافقة"}.get(status, status)
+            _status_ar = {"auto_approved": N_("مقبولة تلقائيًا"),
+                          "requires_approval": N_("بانتظار الموافقة")}.get(status, status)
             _sub = self.get_subscriber(subscriber_id)
             dispatch(self.tenant_id, "loan_granted", {
                 "username": _sub.get("username") or subscriber_id,
-                "duration": f"{requested} دقيقة", "amount": "—",
-                "status": _status_ar, "actor": "بوابة المشترك",
+                "duration": _tr('%(requested)s دقيقة', requested=requested), "amount": "—",
+                "status": _status_ar, "actor": N_("بوابة المشترك"),
                 "reason": reason or "—",
             }, dedup_key=f"{subscriber_id}:{request_id}")
         except Exception:  # noqa: BLE001
@@ -274,7 +275,7 @@ class CustomerPortalService:
             result={
                 "applied_to_radius": False,
                 "gateway": "manual_review",
-                "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
+                "message_ar": _tr("تم تسجيل الطلب بانتظار مراجعة الإدارة."),
             },
         )
         self._attach_ticket_to_request(
@@ -287,7 +288,7 @@ class CustomerPortalService:
             result={
                 "applied_to_radius": False,
                 "gateway": "manual_review",
-                "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
+                "message_ar": _tr("تم تسجيل الطلب بانتظار مراجعة الإدارة."),
             },
         )
         # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب. نفصل: «شكوى/دعم» =
@@ -301,12 +302,12 @@ class CustomerPortalService:
                 dispatch(self.tenant_id, "portal_message", {
                     "username": _uname,
                     "message": (clean_reason.replace("[شكوى]", "").strip()
-                                or "رسالة من بوابة المشترك"),
+                                or _tr("رسالة من بوابة المشترك")),
                 }, dedup_key=f"portal_msg:{request_id}")
             else:
                 dispatch(self.tenant_id, "service_request_new", {
                     "username": _uname,
-                    "service": "تجديد اشتراك", "status": "بانتظار الموافقة",
+                    "service": N_("تجديد اشتراك"), "status": N_("بانتظار الموافقة"),
                 }, dedup_key=f"svc_req:{request_id}")
         except Exception:  # noqa: BLE001
             pass
@@ -395,27 +396,27 @@ class CustomerPortalService:
         result: dict[str, Any],
     ) -> None:
         labels = {
-            "loan": "طلب سلفة وقت",
-            "renewal": "طلب تجديد اشتراك",
-            "support": "طلب دعم من بوابة المشترك",
+            "loan": N_("طلب سلفة وقت"),
+            "renewal": N_("طلب تجديد اشتراك"),
+            "support": N_("طلب دعم من بوابة المشترك"),
         }
-        label = labels.get(request_type, "طلب من بوابة المشترك")
+        label = labels.get(request_type, N_("طلب من بوابة المشترك"))
         subscriber = self.get_subscriber(subscriber_id)
         ticket_status = "closed" if status == "auto_approved" else "open"
         body_lines = [
-            f"مصدر الطلب: بوابة المشترك",
-            f"رقم طلب البوابة: CPR-{request_id}",
-            f"نوع الطلب: {label}",
-            f"المشترك: {subscriber.get('username')}",
+            _tr('مصدر الطلب: بوابة المشترك'),
+            _tr('رقم طلب البوابة: CPR-%(request_id)s', request_id=request_id),
+            _tr('نوع الطلب: %(label)s', label=label),
+            _tr('المشترك: %(v)s', v=subscriber.get('username')),
         ]
         if requested_minutes:
-            body_lines.append(f"الدقائق المطلوبة: {requested_minutes}")
+            body_lines.append(_tr('الدقائق المطلوبة: %(requested_minutes)s', requested_minutes=requested_minutes))
         if reason:
-            body_lines.extend(["", "ملاحظة المشترك:", reason])
+            body_lines.extend(["", N_("ملاحظة المشترك:"), reason])
         if status == "auto_approved":
-            body_lines.append("تم اعتماد الطلب تلقائيًا حسب سياسة الباقة.")
+            body_lines.append(N_("تم اعتماد الطلب تلقائيًا حسب سياسة الباقة."))
         else:
-            body_lines.append("الطلب مفتوح لمراجعة الإدارة والمتابعة من قسم الدعم.")
+            body_lines.append(N_("الطلب مفتوح لمراجعة الإدارة والمتابعة من قسم الدعم."))
         ticket = tickets_repo.create_ticket(Ticket(
             id=None,
             tenant_id=self.tenant_id,
@@ -446,8 +447,8 @@ class CustomerPortalService:
             (
                 self.tenant_id,
                 int(subscriber_id),
-                "تم تسجيل طلبك",
-                f"تم فتح تذكرة متابعة رقم TK-{ticket.id} لطلبك: {label}.",
+                N_("تم تسجيل طلبك"),
+                _tr('تم فتح تذكرة متابعة رقم TK-%(id)s لطلبك: %(label)s.', id=ticket.id, label=label),
                 "in_app",
                 0,
                 now_iso(),
@@ -457,7 +458,7 @@ class CustomerPortalService:
             tenant_id=self.tenant_id,
             category="subscriber",
             event_key="customer_portal.request_created",
-            message=f"تم تسجيل {label} وفتح تذكرة متابعة رقم TK-{ticket.id}.",
+            message=_tr('تم تسجيل %(label)s وفتح تذكرة متابعة رقم TK-%(id)s.', label=label, id=ticket.id),
             severity="info",
             actor_type="subscriber",
             actor_id=int(subscriber_id),

@@ -18,12 +18,12 @@
 
 {# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
 {% call hub.megahero(
-  "رسائل واجهة الربط",
-  subtitle="كل فعل نفّذه تطبيق خارجيّ متّصل بالنظام عبر الـAPI (مثل بوّابة المشترك أو متجر البطاقات) — الأفعال هنا آليّة عبر «مفتاح ربط»، لا مدير من داخل اللوحة. اسم المفتاح يُبيّن مصدرها وعنوان الشبكة يُبيّن من أين اتّصل.",
+  _('رسائل واجهة الربط'),
+  subtitle=_('كل فعل نفّذه تطبيق خارجيّ متّصل بالنظام عبر الـAPI (مثل بوّابة المشترك أو متجر البطاقات) — الأفعال هنا آليّة عبر «مفتاح ربط»، لا مدير من داخل اللوحة. اسم المفتاح يُبيّن مصدرها وعنوان الشبكة يُبيّن من أين اتّصل.'),
   icon="message",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الرسائل', 'value': total, 'icon': 'message', 'variant': 'brand'},
+    {'label': _('إجمالي الرسائل'), 'value': total, 'icon': 'message', 'variant': 'brand'},
   ],
   search_action=url_for('radius.rep_api_messages')
 ) %}
@@ -34,9 +34,9 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('مسح'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_api_messages') + "'" + '"') }}
   {% endif %}
 {% endcall %}
@@ -44,19 +44,19 @@
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هنا فعلٌ نفّذه تطبيق خارجيّ متّصل عبر الـAPI — وليس مديرًا من داخل اللوحة.",
+  _('كيف تقرأ هذا التقرير؟'),
+  intro=_('كل صف هنا فعلٌ نفّذه تطبيق خارجيّ متّصل عبر الـAPI — وليس مديرًا من داخل اللوحة.'),
   items=[
-    {'icon': 'key',           'text': '«مفتاح الربط» = تطبيق/تكامل خارجيّ متّصل بالنظام عبر واجهة الـAPI (بوّابة، متجر، أو نظام شريك). يظهر باسمه — الأفعال في هذا السجلّ نفّذها هو.'},
-    {'icon': 'user-secret',   'text': 'لمعرفة الشخص المحدَّد داخل ذلك التطبيق يجب أن يُرسل التطبيقُ هويّته مع الاستدعاء؛ اللوحة تعرف المفتاح وعنوان الشبكة فقط.'},
-    {'icon': 'bolt',          'text': '«الفعل» هو العملية التي طُلب تنفيذها (تعديل، قطع جلسة…).'},
-    {'icon': 'cube',          'text': '«الكيان» و«المعرّف» يحددان العنصر المتأثر بالاستدعاء.'},
-    {'icon': 'network-wired', 'text': '«عنوان الشبكة» هو الـ IP الذي جاء منه الاستدعاء — يُبيّن من أين اتّصل ذلك التطبيق.'},
+    {'icon': 'key',           'text': _('«مفتاح الربط» = تطبيق/تكامل خارجيّ متّصل بالنظام عبر واجهة الـAPI (بوّابة، متجر، أو نظام شريك). يظهر باسمه — الأفعال في هذا السجلّ نفّذها هو.')},
+    {'icon': 'user-secret',   'text': _('لمعرفة الشخص المحدَّد داخل ذلك التطبيق يجب أن يُرسل التطبيقُ هويّته مع الاستدعاء؛ اللوحة تعرف المفتاح وعنوان الشبكة فقط.')},
+    {'icon': 'bolt',          'text': _('«الفعل» هو العملية التي طُلب تنفيذها (تعديل، قطع جلسة…).')},
+    {'icon': 'cube',          'text': _('«الكيان» و«المعرّف» يحددان العنصر المتأثر بالاستدعاء.')},
+    {'icon': 'network-wired', 'text': _('«عنوان الشبكة» هو الـ IP الذي جاء منه الاستدعاء — يُبيّن من أين اتّصل ذلك التطبيق.')},
   ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log."
+  note=_('هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log.')
 )) %}
-  {% call hub.section("الرسائل", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
+  {% call hub.section(_('الرسائل'), icon="table-list",
+                      meta=items|length|string + _(' صف'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
          style="border:none;border-radius:0">
       <table class="hub-table">
@@ -64,7 +64,7 @@
           <tr>
             <th class="num" style="width:70px" data-uds-nosort>#</th>
             <th>{{ _('مفتاح الربط') }}
-              <span class="hub-hint" tabindex="0" data-hint="تطبيق/تكامل خارجيّ متّصل عبر الـAPI نفّذ هذا الفعل — يظهر باسمه. للشخص المحدَّد يجب أن يُرسل التطبيق هويّته.">
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('تطبيق/تكامل خارجيّ متّصل عبر الـAPI نفّذ هذا الفعل — يظهر باسمه. للشخص المحدَّد يجب أن يُرسل التطبيق هويّته.') }}">
                 <i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الفعل') }}</th>
@@ -96,8 +96,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد رسائل ربط بعد",
-  sub="يظهر هنا أول استدعاء بمجرد استخدام أي مفتاح واجهة.",
+  _('لا توجد رسائل ربط بعد'),
+  sub=_('يظهر هنا أول استدعاء بمجرد استخدام أي مفتاح واجهة.'),
   icon="message"
 ) }}
 {% endif %}

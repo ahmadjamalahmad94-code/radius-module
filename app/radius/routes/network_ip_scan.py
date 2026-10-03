@@ -5,6 +5,7 @@
   POST /admin/radius/network/scan/add       — register a discovered device
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint, flash, g, redirect, render_template,
@@ -67,12 +68,12 @@ def network_ip_scan_page():
         if selected_router_id:
             nas_dc = nas_repo.get_nas(tenant_id, selected_router_id)
             if not nas_dc:
-                flash("الراوتر غير موجود.", "danger")
+                flash(_tr("الراوتر غير موجود."), "danger")
                 return redirect(url_for("radius.network_ip_scan_page"))
             selected_router_name = nas_dc.name
             result = network_ip_scan.scan_router(_nas_dict(nas_dc))
             if not result.ok:
-                scan_error = result.error or "تعذّر الاتصال بالراوتر."
+                scan_error = result.error or N_("تعذّر الاتصال بالراوتر.")
             else:
                 scan_rows = result.data or []
 
@@ -109,14 +110,14 @@ def network_ip_scan_add():
     mac = (request.form.get("mac") or "").strip()
     hostname = (request.form.get("hostname") or "").strip()
     if not router_id or not ip:
-        flash("بيانات ناقصة.", "danger")
+        flash(_tr("بيانات ناقصة."), "danger")
         return redirect(url_for("radius.network_ip_scan_page"))
     if not nas_repo.get_nas(tenant_id, router_id):
-        flash("الراوتر غير موجود.", "danger")
+        flash(_tr("الراوتر غير موجود."), "danger")
         return redirect(url_for("radius.network_ip_scan_page"))
     # Use the hostname (if any) as a starting name; operator can
     # rename later from the edit form.
-    name = hostname or f"جهاز {ip}"
+    name = hostname or _tr('جهاز %(ip)s', ip=ip)
     new_id = network_devices_repo.create(
         tenant_id=tenant_id,
         router_id=router_id,
@@ -127,8 +128,7 @@ def network_ip_scan_add():
         watch_enabled=True,  # added from a scan → likely wants monitoring
     )
     flash(
-        f"أُضيف الجهاز «{name}» للسجلّ (رقم {new_id}). "
-        f"عدّل اسمه ونوعه من صفحة «تابع أجهزة الشبكة».",
+        _tr('أُضيف الجهاز «%(name)s» للسجلّ (رقم %(new_id)s). عدّل اسمه ونوعه من صفحة «تابع أجهزة الشبكة».', name=name, new_id=new_id),
         "success",
     )
     return redirect(url_for("radius.network_ip_scan_page",

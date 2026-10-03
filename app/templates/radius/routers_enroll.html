@@ -7,24 +7,24 @@
 
 {% block content %}
 {% call hub.megahero(
-  "تسجيل راوتر",
-  subtitle="اختر المشترك واسم الدخول (PPPoE)، ثم يولّد النظام بيانات ربط الراوتر بـ GenieACS. تُعرَض كلمات المرور مرّة واحدة فقط بعد الإنشاء.",
+  _('تسجيل راوتر'),
+  subtitle=_('اختر المشترك واسم الدخول (PPPoE)، ثم يولّد النظام بيانات ربط الراوتر بـ GenieACS. تُعرَض كلمات المرور مرّة واحدة فقط بعد الإنشاء.'),
   icon="plus"
 ) %}{% endcall %}
 
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف يعمل التسجيل؟",
-  intro="التسجيل يربط راوتر المشترك بحسابه، فتديره عن بُعد.",
+  _('كيف يعمل التسجيل؟'),
+  intro=_('التسجيل يربط راوتر المشترك بحسابه، فتديره عن بُعد.'),
   icon="circle-info",
   items=[
-    {'icon':'user','text':'اختر المشترك واسم PPPoE الذي يستخدمه الراوتر.'},
-    {'icon':'key','text':'يولّد النظام ACS URL + مستخدم/كلمة CWMP (تُعرَض مرّة واحدة).'},
-    {'icon':'wrench','text':'يضع الفنّي هذه البيانات في إعداد TR-069 داخل الراوتر.'},
-    {'icon':'circle-check','text':'عند أوّل اتصال يتحوّل الراوتر إلى «مُسجَّل» ويظهر بكل بياناته.'}
+    {'icon':'user','text':_('اختر المشترك واسم PPPoE الذي يستخدمه الراوتر.')},
+    {'icon':'key','text':_('يولّد النظام ACS URL + مستخدم/كلمة CWMP (تُعرَض مرّة واحدة).')},
+    {'icon':'wrench','text':_('يضع الفنّي هذه البيانات في إعداد TR-069 داخل الراوتر.')},
+    {'icon':'circle-check','text':_('عند أوّل اتصال يتحوّل الراوتر إلى «مُسجَّل» ويظهر بكل بياناته.')}
   ],
-  note="لضبط عنوان ACS العامّ: HOBERADIUS_GENIEACS_CWMP_URL."
+  note=_('لضبط عنوان ACS العامّ: HOBERADIUS_GENIEACS_CWMP_URL.')
 )) %}
-  {% call hub.section("بيانات الربط", icon="link") %}
+  {% call hub.section(_('بيانات الربط'), icon="link") %}
     {% if can_submit('radius.routers_enroll', 'POST') %}<form method="POST" action="{{ url_for('radius.routers_enroll') }}" class="mt-setup-form-v2">
       {{ csrf_token_input() | safe }}
       <div style="display:grid;gap:16px;max-width:520px">

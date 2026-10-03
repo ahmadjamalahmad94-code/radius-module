@@ -17,7 +17,7 @@
 {%- endmacro %}
 
 {% macro cards_grid(items, sub_counts) %}
-{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
+{% set TYPE_AR = {'time':_('وقت'),'quota':_('كوتا'),'hybrid':_('مدمج'),'unlimited':_('غير محدود'),'recurring':_('متكرر')} %}
 <div class="pl-cards-grid">
       {% for p in items %}
       {% set _subs = sub_counts.get(p.id, 0) if sub_counts else 0 %}
@@ -35,9 +35,9 @@
         </div>
         <div class="pl-card__chips">
           {{ hub.pill(TYPE_AR.get(p.plan_type, p.plan_type or '—'), variant="brand", dot=False) }}
-          {% if p.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
-          {% else %}{{ hub.pill("معطَّلة", variant="amber", dot=False) }}{% endif %}
-          {% if _subs %}{{ hub.pill(_subs|string + " مشترك", variant="blue", dot=False) }}{% endif %}
+          {% if p.enabled %}{{ hub.pill(_('مفعَّلة'), variant="green", dot=False) }}
+          {% else %}{{ hub.pill(_('معطَّلة'), variant="amber", dot=False) }}{% endif %}
+          {% if _subs %}{{ hub.pill(_subs|string + _(' مشترك'), variant="blue", dot=False) }}{% endif %}
         </div>
         <div class="pl-card__specs">
           <div class="pl-card__spec">
@@ -46,14 +46,14 @@
           </div>
           <div class="pl-card__spec">
             <span>{{ _('الكوتا') }}</span>
-            <strong>{% if p.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>{% else %}غير محدودة{% endif %}</strong>
+            <strong>{% if p.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>{% else %}{{ _('غير محدودة') }}{% endif %}</strong>
           </div>
           <div class="pl-card__spec">
             <span>{{ _('المدة / الصلاحية') }}</span>
             <strong>
               {% if p.duration_minutes %}{{ dur_ar(p.duration_minutes) }}{% endif %}
-              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
-              {% if not p.duration_minutes and not p.validity_days %}غير محدودة{% endif %}
+              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> {{ _('يوم') }}{% endif %}
+              {% if not p.duration_minutes and not p.validity_days %}{{ _('غير محدودة') }}{% endif %}
             </strong>
           </div>
           <div class="pl-card__spec">
@@ -72,13 +72,13 @@
           </a>{% endif %}
           {# نسخ العرض: نسخة كاملة المواصفات ثم تعديلها (CSRF يُحقن خادميًّا) #}
           {% if can_submit('radius.plans_clone', 'POST') %}<form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
-                onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
+                onsubmit="return confirm({{ _('إنشاء نسخة من «%(e)s» لتعديلها؟', e=p.name|e)|tojson|forceescape }});">
             <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon hub-btn--sm" title="{{ _('نسخ الباقة') }}">
               <i class="fa-solid fa-clone"></i>
             </button>
           </form>{% endif %}
           {% if can_submit('radius.plans_delete', 'POST') %}<form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
-                onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
+                onsubmit="return confirm({{ _('أرشفة «%(e)s»؟ يمكن استعادتها من سلة المحذوفات.', e=p.name|e)|tojson|forceescape }});">
             <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="{{ _('أرشفة') }}">
               <i class="fa-solid fa-box-archive"></i>
             </button>
@@ -90,12 +90,12 @@
 {% endmacro %}
 
 {% macro plan_detail(p) %}
-{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
-{% set SCOPE_AR = {'hotspot':'هوتسبوت','broadband':'برودباند','both':'الكل'} %}
-{% set DAY_AR = {'mon':'الاثنين','tue':'الثلاثاء','wed':'الأربعاء','thu':'الخميس','fri':'الجمعة','sat':'السبت','sun':'الأحد'} %}
+{% set TYPE_AR = {'time':_('وقت'),'quota':_('كوتا'),'hybrid':_('مدمج'),'unlimited':_('غير محدود'),'recurring':_('متكرر')} %}
+{% set SCOPE_AR = {'hotspot':_('هوتسبوت'),'broadband':_('برودباند'),'both':_('الكل')} %}
+{% set DAY_AR = {'mon':_('الاثنين'),'tue':_('الثلاثاء'),'wed':_('الأربعاء'),'thu':_('الخميس'),'fri':_('الجمعة'),'sat':_('السبت'),'sun':_('الأحد')} %}
   {# أيام السماح بالعربية — «كل الأيام» إن كانت السبعة كلها مسموحة #}
   {% if not p.allowed_days or p.allowed_days|length == 7 %}
-    {% set _days_label = 'كل الأيام' %}
+    {% set _days_label = _('كل الأيام') %}
   {% else %}
     {% set _days = [] %}
     {% for d in p.allowed_days %}{% set _x = _days.append(DAY_AR.get(d, d)) %}{% endfor %}
@@ -108,24 +108,24 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-circle-info"></i> {{ _('أساسيات') }}</h4>
         {{ hub.kv([
-          {'label':'الاسم',    'value': p.name},
-          {'label':'الكود',    'value': p.code or '—', 'mono': True},
-          {'label':'النوع',    'value': TYPE_AR.get(p.plan_type, p.plan_type or '—')},
-          {'label':'الخدمة',   'value': 'Hotspot + PPPoE' if (p.service_type or '')|lower == 'both' else (p.service_type or '—')},
-          {'label':'النطاق',   'value': SCOPE_AR.get(p.service_scope, p.service_scope or 'الكل')},
-          {'label':'الحالة',   'value': 'مفعَّلة' if p.enabled else 'معطَّلة'},
-          {'label':'الأولوية', 'value': p.priority or '—', 'mono': True},
-          {'label':'الوصف',    'value': p.description or '—'},
+          {'label':_('الاسم'),    'value': p.name},
+          {'label':_('الكود'),    'value': p.code or '—', 'mono': True},
+          {'label':_('النوع'),    'value': TYPE_AR.get(p.plan_type, p.plan_type or '—')},
+          {'label':_('الخدمة'),   'value': 'Hotspot + PPPoE' if (p.service_type or '')|lower == 'both' else (p.service_type or '—')},
+          {'label':_('النطاق'),   'value': SCOPE_AR.get(p.service_scope, p.service_scope or _('الكل'))},
+          {'label':_('الحالة'),   'value': _('مفعَّلة') if p.enabled else _('معطَّلة')},
+          {'label':_('الأولوية'), 'value': p.priority or '—', 'mono': True},
+          {'label':_('الوصف'),    'value': p.description or '—'},
         ]) }}
       </div>
 
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-coins"></i> {{ _('التسعير') }}</h4>
         {{ hub.kv([
-          {'label':'السعر',        'value': p.price|money, 'mono': True},
-          {'label':'العملة',       'value': p.currency or 'عملة النظام'},
-          {'label':'مسبق الدفع',   'value': 'نعم' if p.prepaid else 'لا'},
-          {'label':'فئة الباقة',   'value': p.plan_tier or '—'},
+          {'label':_('السعر'),        'value': p.price|money, 'mono': True},
+          {'label':_('العملة'),       'value': p.currency or _('عملة النظام')},
+          {'label':_('مسبق الدفع'),   'value': _('نعم') if p.prepaid else _('لا')},
+          {'label':_('فئة الباقة'),   'value': p.plan_tier or '—'},
         ]) }}
       </div>
 
@@ -133,16 +133,16 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-gauge-high"></i> {{ _('السرعات') }}</h4>
         {{ hub.kv([
-          {'label':'تنزيل',          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else 'غير محدّدة', 'mono': True},
-          {'label':'رفع',            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else 'غير محدّدة', 'mono': True},
-          {'label':'تحكم بالسرعة',   'value': 'مفعَّل' if p.speed_control_enabled else 'معطَّل'},
-          {'label':'CIR تنزيل',      'value': ((p.cir_down_kbps|string) + ' Kbps') if p.cir_down_kbps else '—', 'mono': True},
-          {'label':'CIR رفع',        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
-          {'label':'Burst',          'value': 'مفعَّل' if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else 'معطَّل'},
-          {'label':'Burst تنزيل/رفع','value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
-          {'label':'عتبة / زمن Burst','value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' s') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
-          {'label':'ليلي غير محدود', 'value': 'مفعَّل' if p.nightly_unlimited_enabled else 'معطَّل'},
-          {'label':'تجاوز السرعة مسموح', 'value': 'نعم' if p.speed_override_allowed else 'لا'},
+          {'label':_('تنزيل'),          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else _('غير محدّدة'), 'mono': True},
+          {'label':_('رفع'),            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else _('غير محدّدة'), 'mono': True},
+          {'label':_('تحكم بالسرعة'),   'value': _('مفعَّل') if p.speed_control_enabled else _('معطَّل')},
+          {'label':_('CIR تنزيل'),      'value': ((p.cir_down_kbps|string) + ' Kbps') if p.cir_down_kbps else '—', 'mono': True},
+          {'label':_('CIR رفع'),        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
+          {'label':'Burst',          'value': _('مفعَّل') if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else _('معطَّل')},
+          {'label':_('Burst تنزيل/رفع'),'value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
+          {'label':_('عتبة / زمن Burst'),'value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' s') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
+          {'label':_('ليلي غير محدود'), 'value': _('مفعَّل') if p.nightly_unlimited_enabled else _('معطَّل')},
+          {'label':_('تجاوز السرعة مسموح'), 'value': _('نعم') if p.speed_override_allowed else _('لا')},
         ]) }}
       </div>
 
@@ -150,12 +150,12 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-database"></i> {{ _('الكوتا') }}</h4>
         {{ hub.kv([
-          {'label':'إجمالية',        'value': ("%.1f GB"|format(p.quota_total_mb/1024)) if p.quota_total_mb else 'غير محدودة', 'mono': True},
-          {'label':'يومية',          'value': ("%.1f GB"|format(p.quota_daily_mb/1024)) if p.quota_daily_mb else '—', 'mono': True},
-          {'label':'شهرية',          'value': ("%.1f GB"|format(p.quota_monthly_mb/1024)) if p.quota_monthly_mb else '—', 'mono': True},
-          {'label':'يومية ↓/↑/مجمَّعة', 'value': ((p.daily_download_quota_mb|string) + ' / ' + (p.daily_upload_quota_mb|string) + ' / ' + (p.daily_combined_quota_mb|string) + ' MB') if (p.daily_download_quota_mb or p.daily_upload_quota_mb or p.daily_combined_quota_mb) else '—', 'mono': True},
-          {'label':'شهرية ↓/↑/مجمَّعة', 'value': ((p.monthly_download_quota_mb|string) + ' / ' + (p.monthly_upload_quota_mb|string) + ' / ' + (p.monthly_combined_quota_mb|string) + ' MB') if (p.monthly_download_quota_mb or p.monthly_upload_quota_mb or p.monthly_combined_quota_mb) else '—', 'mono': True},
-          {'label':'إستراتيجية التصفير', 'value': p.quota_reset_strategy or '—'},
+          {'label':_('إجمالية'),        'value': ("%.1f GB"|format(p.quota_total_mb/1024)) if p.quota_total_mb else _('غير محدودة'), 'mono': True},
+          {'label':_('يومية'),          'value': ("%.1f GB"|format(p.quota_daily_mb/1024)) if p.quota_daily_mb else '—', 'mono': True},
+          {'label':_('شهرية'),          'value': ("%.1f GB"|format(p.quota_monthly_mb/1024)) if p.quota_monthly_mb else '—', 'mono': True},
+          {'label':_('يومية ↓/↑/مجمَّعة'), 'value': ((p.daily_download_quota_mb|string) + ' / ' + (p.daily_upload_quota_mb|string) + ' / ' + (p.daily_combined_quota_mb|string) + ' MB') if (p.daily_download_quota_mb or p.daily_upload_quota_mb or p.daily_combined_quota_mb) else '—', 'mono': True},
+          {'label':_('شهرية ↓/↑/مجمَّعة'), 'value': ((p.monthly_download_quota_mb|string) + ' / ' + (p.monthly_upload_quota_mb|string) + ' / ' + (p.monthly_combined_quota_mb|string) + ' MB') if (p.monthly_download_quota_mb or p.monthly_upload_quota_mb or p.monthly_combined_quota_mb) else '—', 'mono': True},
+          {'label':_('إستراتيجية التصفير'), 'value': p.quota_reset_strategy or '—'},
         ]) }}
       </div>
 
@@ -163,15 +163,15 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-hourglass-half"></i> {{ _('الوقت والصلاحية') }}</h4>
         {{ hub.kv([
-          {'label':'المدة',             'value': (fmt_base_time_ar(p.duration_minutes * 60)[0]) if p.duration_minutes else 'غير محدودة'},
-          {'label':'الصلاحية',          'value': ((p.validity_days|string) + ' يوم') if p.validity_days else '—', 'mono': True},
-          {'label':'حد يومي',           'value': ((p.max_daily_minutes|string) + ' دقيقة') if p.max_daily_minutes else '—', 'mono': True},
-          {'label':'حد أسبوعي',         'value': ((p.max_weekly_minutes|string) + ' دقيقة') if p.max_weekly_minutes else '—', 'mono': True},
-          {'label':'حد شهري',           'value': ((p.max_monthly_minutes|string) + ' دقيقة') if p.max_monthly_minutes else '—', 'mono': True},
-          {'label':'مهلة الجلسة',       'value': ((p.session_timeout_sec|string) + ' s') if p.session_timeout_sec else '—', 'mono': True},
-          {'label':'مهلة الخمول',       'value': ((p.idle_timeout_sec|string) + ' s') if p.idle_timeout_sec else '—', 'mono': True},
-          {'label':'صلاحية التذكرة',    'value': ((p.ticket_validity_days|string) + ' يوم') if p.ticket_validity_days else '—', 'mono': True},
-          {'label':'حد ساعات العمل',    'value': p.working_hours_limit or '—', 'mono': True},
+          {'label':_('المدة'),             'value': (fmt_base_time_ar(p.duration_minutes * 60)[0]) if p.duration_minutes else _('غير محدودة')},
+          {'label':_('الصلاحية'),          'value': ((p.validity_days|string) + _(' يوم')) if p.validity_days else '—', 'mono': True},
+          {'label':_('حد يومي'),           'value': ((p.max_daily_minutes|string) + _(' دقيقة')) if p.max_daily_minutes else '—', 'mono': True},
+          {'label':_('حد أسبوعي'),         'value': ((p.max_weekly_minutes|string) + _(' دقيقة')) if p.max_weekly_minutes else '—', 'mono': True},
+          {'label':_('حد شهري'),           'value': ((p.max_monthly_minutes|string) + _(' دقيقة')) if p.max_monthly_minutes else '—', 'mono': True},
+          {'label':_('مهلة الجلسة'),       'value': ((p.session_timeout_sec|string) + ' s') if p.session_timeout_sec else '—', 'mono': True},
+          {'label':_('مهلة الخمول'),       'value': ((p.idle_timeout_sec|string) + ' s') if p.idle_timeout_sec else '—', 'mono': True},
+          {'label':_('صلاحية التذكرة'),    'value': ((p.ticket_validity_days|string) + _(' يوم')) if p.ticket_validity_days else '—', 'mono': True},
+          {'label':_('حد ساعات العمل'),    'value': p.working_hours_limit or '—', 'mono': True},
         ]) }}
       </div>
 
@@ -179,13 +179,13 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة والجلسات') }}</h4>
         {{ hub.kv([
-          {'label':'جلسات متزامنة', 'value': p.concurrent_sessions or 1, 'mono': True},
+          {'label':_('جلسات متزامنة'), 'value': p.concurrent_sessions or 1, 'mono': True},
           {'label':'Address Pool',  'value': p.address_pool or '—', 'mono': True},
           {'label':'Framed Pool',   'value': p.framed_pool or '—', 'mono': True},
           {'label':'IPv6 Pool',     'value': p.ipv6_pool or '—', 'mono': True},
           {'label':'VLAN',          'value': p.vlan_id or '—', 'mono': True},
-          {'label':'ربط MAC',       'value': 'نعم' if p.bind_mac else 'لا'},
-          {'label':'ربط IP',        'value': 'نعم' if p.bind_ip else 'لا'},
+          {'label':_('ربط MAC'),       'value': _('نعم') if p.bind_mac else _('لا')},
+          {'label':_('ربط IP'),        'value': _('نعم') if p.bind_ip else _('لا')},
         ]) }}
       </div>
 
@@ -193,14 +193,14 @@
       <div class="pl-detail-group">
         <h4><i class="fa-solid fa-sliders"></i> {{ _('الخدمات والقيود') }}</h4>
         {{ hub.kv([
-          {'label':'هوتسبوت',          'value': 'مفعَّل' if p.hotspot_enabled else 'معطَّل'},
-          {'label':'PPP',              'value': 'مفعَّل' if p.ppp_enabled else 'معطَّل'},
-          {'label':'السلف (الديون)',   'value': ('حتى ' + (p.max_loan_minutes|string) + ' دقيقة') if (p.loan_enabled and p.max_loan_minutes) else ('مفعَّلة' if p.loan_enabled else 'معطَّلة')},
-          {'label':'استخدام لمرة واحدة','value': 'نعم' if p.single_use_once else 'لا'},
-          {'label':'أقصى مرات استهلاك', 'value': p.max_consumption_times or '—', 'mono': True},
-          {'label':'أيام السماح',       'value': _days_label},
-          {'label':'ساعات السماح',      'value': (p.allowed_hours_from + ' → ' + p.allowed_hours_to) if (p.allowed_hours_from or p.allowed_hours_to) else 'كل اليوم', 'mono': True},
-          {'label':'ساعات العرض',       'value': (p.offer_hours_from + ' → ' + p.offer_hours_to) if (p.offer_hours_from or p.offer_hours_to) else '—', 'mono': True},
+          {'label':_('هوتسبوت'),          'value': _('مفعَّل') if p.hotspot_enabled else _('معطَّل')},
+          {'label':'PPP',              'value': _('مفعَّل') if p.ppp_enabled else _('معطَّل')},
+          {'label':_('السلف (الديون)'),   'value': (_('حتى ') + (p.max_loan_minutes|string) + _(' دقيقة')) if (p.loan_enabled and p.max_loan_minutes) else (_('مفعَّلة') if p.loan_enabled else _('معطَّلة'))},
+          {'label':_('استخدام لمرة واحدة'),'value': _('نعم') if p.single_use_once else _('لا')},
+          {'label':_('أقصى مرات استهلاك'), 'value': p.max_consumption_times or '—', 'mono': True},
+          {'label':_('أيام السماح'),       'value': _days_label},
+          {'label':_('ساعات السماح'),      'value': (p.allowed_hours_from + ' → ' + p.allowed_hours_to) if (p.allowed_hours_from or p.allowed_hours_to) else _('كل اليوم'), 'mono': True},
+          {'label':_('ساعات العرض'),       'value': (p.offer_hours_from + ' → ' + p.offer_hours_to) if (p.offer_hours_from or p.offer_hours_to) else '—', 'mono': True},
         ]) }}
       </div>
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from datetime import datetime
 
@@ -27,12 +28,12 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("قيم التاريخ يجب أن تكون نصًا بصيغة ISO.")
+        raise ValueError(_tr("قيم التاريخ يجب أن تكون نصًا بصيغة ISO."))
     try:
         # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
         return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
-        raise ValueError("قيمة التاريخ غير صالحة. استخدم صيغة ISO.") from exc
+        raise ValueError(_tr("قيمة التاريخ غير صالحة. استخدم صيغة ISO.")) from exc
 
 
 def _item(service: Service) -> dict:
@@ -58,16 +59,16 @@ def _payload(service_id: int | None = None) -> Service | tuple:
     try:
         subscriber_id = int(body.get("subscriber_id") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف المشترك يجب أن يكون رقمًا صحيحًا."), status=422)
     if not name or subscriber_id <= 0:
-        return fail("validation_error", "اختر المشترك وأدخل اسم الخدمة.", status=422)
+        return fail("validation_error", _tr("اختر المشترك وأدخل اسم الخدمة."), status=422)
     # zero-w3: a subscriber that is not in this network was a FOREIGN KEY 500
     # (or, for another tenant's id, an equipment row on a foreign subscriber).
     from ...radius.db.connection import db
     if db().execute(
             "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
             (_tid(), subscriber_id)).fetchone() is None:
-        return fail("validation_error", "المشترك غير موجود.", status=422,
+        return fail("validation_error", _tr("المشترك غير موجود."), status=422,
                     details={"field": "subscriber_id"})
     try:
         given_at = _dt(body.get("given_at"))
@@ -77,7 +78,7 @@ def _payload(service_id: int | None = None) -> Service | tuple:
     try:
         rent_per_month = strict_float(body.get("rent_per_month") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة الإيجار الشهري يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة الإيجار الشهري يجب أن تكون رقمًا صحيحًا."), status=422)
     return Service(
         id=service_id,
         tenant_id=_tid(),
@@ -108,7 +109,7 @@ def list_services():
     try:
         parsed_subscriber_id = int(subscriber_id) if subscriber_id else None
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف المشترك يجب أن يكون رقمًا صحيحًا."), status=422)
     items = [
         _item(s)
         for s in services_repo.list_all(
@@ -125,7 +126,7 @@ def list_services():
 def get_service(service_id: int):
     service = services_repo.get(_tid(), service_id)
     if not service:
-        return fail("not_found", "الخدمة غير موجودة.", status=404)
+        return fail("not_found", _tr("الخدمة غير موجودة."), status=404)
     return ok(_item(service))
 
 
@@ -138,7 +139,7 @@ def create_service():
 
 def patch_service(service_id: int):
     if not services_repo.get(_tid(), service_id):
-        return fail("not_found", "الخدمة غير موجودة.", status=404)
+        return fail("not_found", _tr("الخدمة غير موجودة."), status=404)
     service = _payload(service_id)
     if isinstance(service, tuple):
         return service
@@ -147,6 +148,6 @@ def patch_service(service_id: int):
 
 def delete_service(service_id: int):
     if not services_repo.get(_tid(), service_id):
-        return fail("not_found", "الخدمة غير موجودة.", status=404)
+        return fail("not_found", _tr("الخدمة غير موجودة."), status=404)
     services_repo.delete(_tid(), service_id)
     return ok({"id": service_id, "deleted": True})

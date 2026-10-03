@@ -22,6 +22,7 @@ mock في الإنتاج: نستدعي getMe/getUpdates فعليًّا، ونح�
                 سطح إشعارات المشترك بجدول مخصّص).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 import logging
@@ -82,18 +83,18 @@ def get_me(token: str) -> dict:
     """يُعيد ``{ok, username, name, id, error}``. لا يرفع استثناء."""
     token = (token or "").strip()
     if not token:
-        return {"ok": False, "error": "لا يوجد توكن بوت محفوظ."}
+        return {"ok": False, "error": _tr("لا يوجد توكن بوت محفوظ.")}
     try:
         res = _api_call(token, "getMe")
     except TelegramNetworkError as e:
-        return {"ok": False, "error": f"تعذّر الاتصال بتيليجرام: {e}"}
+        return {"ok": False, "error": _tr('تعذّر الاتصال بتيليجرام: %(e)s', e=e)}
     if not res.get("ok"):
-        desc = res.get("description") or "توكن غير صالح"
-        return {"ok": False, "error": f"تيليجرام رفض التوكن: {desc}"}
+        desc = res.get("description") or _tr("توكن غير صالح")
+        return {"ok": False, "error": _tr('تيليجرام رفض التوكن: %(desc)s', desc=desc)}
     r = res.get("result") or {}
     username = r.get("username") or ""
     if not username:
-        return {"ok": False, "error": "البوت بلا اسم مستخدم (username)."}
+        return {"ok": False, "error": _tr("البوت بلا اسم مستخدم (username).")}
     return {
         "ok": True,
         "username": username,
@@ -172,11 +173,11 @@ def start_link(
     tid = int(tenant_id)
     tok = _resolve_token(tid, token)
     if not tok:
-        return {"ok": False, "error": "أضف توكن البوت أولًا (من BotFather)."}
+        return {"ok": False, "error": _tr("أضف توكن البوت أولًا (من BotFather).")}
 
     me = get_me(tok)
     if not me.get("ok"):
-        return {"ok": False, "error": me.get("error") or "تعذّر التحقّق من البوت."}
+        return {"ok": False, "error": me.get("error") or _tr("تعذّر التحقّق من البوت.")}
 
     # احفظ التوكن الجديد (admin) كي يعمل الإرسال فورًا بعد الربط.
     if scope == "admin" and (token or "").strip():
@@ -297,13 +298,13 @@ def poll_link(
                     "error": ""}
         return {"ok": True, "linked": False, "status": "expired",
                 "account_name": "", "chat_id_masked": "",
-                "error": "انتهت نافذة الربط — أعد المحاولة."}
+                "error": _tr("انتهت نافذة الربط — أعد المحاولة.")}
 
     tok = _resolve_token(tid, None)
     if not tok:
         return {"ok": False, "linked": False, "status": "pending",
                 "account_name": "", "chat_id_masked": "",
-                "error": "لا يوجد توكن بوت."}
+                "error": _tr("لا يوجد توكن بوت.")}
 
     captured = _poll_once(tid, tok)
     if captured and captured["code"] == active["code"]:

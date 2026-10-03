@@ -12,7 +12,7 @@
 {% block title %}{{ _("سجلّ نشاط") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
 {% block page_title %}{{ _("سجلّ نشاط الراوتر") }} — {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #%(v)s · %(address)s', v=router_no(nas.id), address=nas.address) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -27,44 +27,44 @@
 
 {# ───── Merged hero: title + subtitle + raw-detail action + KPI strip ───── #}
 {% call hub.megahero(
-  "سجلّ نشاط — " ~ nas.name,
-  subtitle="ما حدث على هذا الراوتر — بلغة المشغّل وبدون عرض الاستجابة الخام. جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address,
+  _('سجلّ نشاط — %(name)s', name=nas.name),
+  subtitle=_('ما حدث على هذا الراوتر — بلغة المشغّل وبدون عرض الاستجابة الخام. جهاز شبكة #%(id)s · %(address)s', id=nas.id, address=nas.address),
   icon="timeline",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.audit_log_index') + '?router_id='|safe + nas.id|string + '" data-mt-timeline-raw-link>
       <i class="fa-solid fa-code"></i> '|safe ~ _("التفاصيل الفنية") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الأحداث', 'value': entries|length, 'icon': 'clock-rotate-left', 'variant': 'brand'},
-    {'label': 'حرجة',    'value': _critical,      'icon': 'triangle-exclamation', 'variant': 'red'},
-    {'label': 'تحذيرات', 'value': _warning,       'icon': 'circle-exclamation',   'variant': 'amber'},
-    {'label': 'إخفاقات', 'value': _failed,        'icon': 'circle-xmark',         'variant': 'red'},
+    {'label': _('الأحداث'), 'value': entries|length, 'icon': 'clock-rotate-left', 'variant': 'brand'},
+    {'label': _('حرجة'),    'value': _critical,      'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('تحذيرات'), 'value': _warning,       'icon': 'circle-exclamation',   'variant': 'amber'},
+    {'label': _('إخفاقات'), 'value': _failed,        'icon': 'circle-xmark',         'variant': 'red'},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ السجلّ؟",
-  intro="كل سطر هو حدث جرى على هذا الراوتر، مرتّب من الأحدث للأقدم، ومصاغ بلغة المشغّل.",
+  _('كيف تقرأ السجلّ؟'),
+  intro=_('كل سطر هو حدث جرى على هذا الراوتر، مرتّب من الأحدث للأقدم، ومصاغ بلغة المشغّل.'),
   icon="clipboard-check",
   items=[
-    {'icon': 'triangle-exclamation', 'text': 'الشارة الأولى تبيّن خطورة الحدث: حرجة، تحذير، أو معلومة.'},
-    {'icon': 'circle-check', 'text': 'الشارة الثانية تبيّن نتيجة العملية: نجح، فشل، أو جزئي.'},
-    {'icon': 'life-ring', 'text': 'عند الفشل يظهر اقتراح إصلاح قابل للتنفيذ مباشرة.'},
-    {'icon': 'code', 'text': '«تفاصيل الراو» يفتح الاستجابة الخام لهذا الحدث للمراجعة الفنية.'},
+    {'icon': 'triangle-exclamation', 'text': _('الشارة الأولى تبيّن خطورة الحدث: حرجة، تحذير، أو معلومة.')},
+    {'icon': 'circle-check', 'text': _('الشارة الثانية تبيّن نتيجة العملية: نجح، فشل، أو جزئي.')},
+    {'icon': 'life-ring', 'text': _('عند الفشل يظهر اقتراح إصلاح قابل للتنفيذ مباشرة.')},
+    {'icon': 'code', 'text': _('«تفاصيل الراو» يفتح الاستجابة الخام لهذا الحدث للمراجعة الفنية.')},
   ],
-  note="هذا السجلّ للقراءة فقط — يعرض العمليّاتِ نفسَها التي يعرضها مركزُ التدقيق."
+  note=_('هذا السجلّ للقراءة فقط — يعرض العمليّاتِ نفسَها التي يعرضها مركزُ التدقيق.')
 )) %}
 
-  {% call hub.section("آخر النشاط", icon="clock-rotate-left") %}
+  {% call hub.section(_('آخر النشاط'), icon="clock-rotate-left") %}
     <div class="hub-text-mute" style="font-size:12px;margin-bottom:10px">
       <span data-mt-timeline-total>{{ entries|length }}</span> {{ _('حدث') }}
     </div>
 
     {% if not entries %}
     {{ hub.empty(
-      "لا يوجد نشاط مسجَّل لهذا الراوتر بعد.",
-      sub="ستظهر هنا الأحداث فور تنفيذ أول عملية على هذا الراوتر.",
+      _('لا يوجد نشاط مسجَّل لهذا الراوتر بعد.'),
+      sub=_('ستظهر هنا الأحداث فور تنفيذ أول عملية على هذا الراوتر.'),
       icon="clock-rotate-left"
     ) }}
     <p hidden data-mt-timeline-empty></p>
@@ -86,19 +86,19 @@
         <div>
           <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
             {% if e.severity == "critical" %}
-            {{ hub.pill("حرجة", variant="red") }}
+            {{ hub.pill(_('حرجة'), variant="red") }}
             {% elif e.severity == "warning" %}
-            {{ hub.pill("تحذير", variant="amber") }}
+            {{ hub.pill(_('تحذير'), variant="amber") }}
             {% else %}
-            {{ hub.pill("معلومة", variant="blue") }}
+            {{ hub.pill(_('معلومة'), variant="blue") }}
             {% endif %}
 
             {% if e.result_status == "success" %}
-            {{ hub.pill("نجح", variant="green") }}
+            {{ hub.pill(_('نجح'), variant="green") }}
             {% elif e.result_status == "failed" %}
-            {{ hub.pill("فشل", variant="red") }}
+            {{ hub.pill(_('فشل'), variant="red") }}
             {% elif e.result_status == "partial" %}
-            {{ hub.pill("جزئي", variant="amber") }}
+            {{ hub.pill(_('جزئي'), variant="amber") }}
             {% endif %}
 
             <span class="uds-timeline-msg" style="font-weight:600">{{ e.headline_ar | safe }}</span>
@@ -136,7 +136,7 @@
                class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-job="{{ e.related_job_id }}">
               <i class="fa-solid fa-list-check"></i>
-              مهمة #{{ e.related_job_id }}
+              {{ _('مهمة #%(related_job_id)s', related_job_id=e.related_job_id) }}
             </a>{% endif %}
             {% endif %}
           </div>

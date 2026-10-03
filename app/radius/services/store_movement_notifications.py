@@ -26,6 +26,7 @@ the SMS body to the buyer's own number — never into the delivery log, WhatsApp
 Telegram, or the audit payload (a redacted audit row records only the outcome).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import logging
@@ -104,15 +105,13 @@ def build_cards_sms_body(cards: list[dict[str, Any]]) -> str:
     if len(clean) == 1:
         c = clean[0]
         return (
-            "بطاقتك جاهزة ✅\n"
-            f"المستخدم: {c['username']}\n"
-            f"كلمة المرور: {c['password']}"
+            _tr('بطاقتك جاهزة ✅\nالمستخدم: %(username)s\nكلمة المرور: %(password)s', username=c['username'], password=c['password'])
         )
     listed = clean[:_MAX_LISTED_CARDS]
-    lines = [f"بطاقاتك ({len(clean)}):"]
+    lines = [_tr('بطاقاتك (%(v)s):', v=len(clean))]
     lines += [f"{c['username']} / {c['password']}" for c in listed]
     if len(clean) > _MAX_LISTED_CARDS:
-        lines.append(f"و{ar_count(len(clean) - _MAX_LISTED_CARDS, 'card')} أخرى في حسابك.")
+        lines.append(_tr('و%(v)s أخرى في حسابك.', v=ar_count(len(clean) - _MAX_LISTED_CARDS, 'card')))
     return "\n".join(lines)
 
 
@@ -174,16 +173,16 @@ def send_cards_credentials_sms(tenant_id: int, recipient, cards: list[dict[str, 
     tid = int(tenant_id or 1)
     mobile = str(getattr(recipient, "mobile", "") or "").strip()
     if not mobile:
-        return {"ok": False, "error_ar": "لا يوجد رقم جوال للمشتري", "reason": "no_mobile", "segments": {}}
+        return {"ok": False, "error_ar": _tr("لا يوجد رقم جوال للمشتري"), "reason": "no_mobile", "segments": {}}
 
     body = build_cards_sms_body(cards)
     if not body:
-        return {"ok": False, "error_ar": "لا توجد بيانات بطاقات للإرسال", "reason": "no_cards", "segments": {}}
+        return {"ok": False, "error_ar": _tr("لا توجد بيانات بطاقات للإرسال"), "reason": "no_cards", "segments": {}}
 
     from . import tweetsms
 
     if not tweetsms.is_connected(tid):
-        return {"ok": False, "error_ar": "اربط حساب SMS أولاً", "reason": "not_connected", "segments": {}}
+        return {"ok": False, "error_ar": _tr("اربط حساب SMS أولاً"), "reason": "not_connected", "segments": {}}
 
     segments = _segments(body)
     try:
@@ -191,14 +190,14 @@ def send_cards_credentials_sms(tenant_id: int, recipient, cards: list[dict[str, 
     except Exception as exc:  # noqa: BLE001 — adapter is defensive, but be safe
         _audit_cards_sms(tid, actor, card_user_id, ok=False, reason="send_error",
                          count=len(cards or []), segments=segments, code="")
-        return {"ok": False, "error_ar": f"تعذّر الإرسال: {exc}", "reason": "send_error", "segments": segments}
+        return {"ok": False, "error_ar": _tr('تعذّر الإرسال: %(exc)s', exc=exc), "reason": "send_error", "segments": segments}
 
     ok = bool(outcome.get("ok"))
     first = (outcome.get("results") or [{}])[0]
     code = str(first.get("code") or "")
     segments = outcome.get("segments") or segments
     error_ar = "" if ok else (outcome.get("error_ar") or first.get("message_ar")
-                              or "فشل الإرسال عبر TweetSMS.")
+                              or _tr("فشل الإرسال عبر TweetSMS."))
     _audit_cards_sms(tid, actor, card_user_id, ok=ok,
                      reason=("sent" if ok else "send_failed"),
                      count=len(cards or []), segments=segments, code=code)
@@ -214,9 +213,7 @@ def build_account_sms_body(username: str, password: str) -> str:
     if not u or not p:
         return ""
     return (
-        "تم إنشاء حسابك ✅\n"
-        f"اسم المستخدم: {u}\n"
-        f"كلمة المرور: {p}"
+        _tr('تم إنشاء حسابك ✅\nاسم المستخدم: %(u)s\nكلمة المرور: %(p)s', u=u, p=p)
     )
 
 
@@ -229,16 +226,16 @@ def send_account_credentials_sms(tenant_id: int, recipient, account: dict[str, A
     tid = int(tenant_id or 1)
     mobile = str(getattr(recipient, "mobile", "") or "").strip()
     if not mobile:
-        return {"ok": False, "error_ar": "لا يوجد رقم جوال للمستفيد", "reason": "no_mobile", "segments": {}}
+        return {"ok": False, "error_ar": _tr("لا يوجد رقم جوال للمستفيد"), "reason": "no_mobile", "segments": {}}
 
     body = build_account_sms_body((account or {}).get("username"), (account or {}).get("password"))
     if not body:
-        return {"ok": False, "error_ar": "لا توجد بيانات حساب للإرسال", "reason": "no_account", "segments": {}}
+        return {"ok": False, "error_ar": _tr("لا توجد بيانات حساب للإرسال"), "reason": "no_account", "segments": {}}
 
     from . import tweetsms
 
     if not tweetsms.is_connected(tid):
-        return {"ok": False, "error_ar": "اربط حساب SMS أولاً", "reason": "not_connected", "segments": {}}
+        return {"ok": False, "error_ar": _tr("اربط حساب SMS أولاً"), "reason": "not_connected", "segments": {}}
 
     segments = _segments(body)
     try:
@@ -246,14 +243,14 @@ def send_account_credentials_sms(tenant_id: int, recipient, account: dict[str, A
     except Exception as exc:  # noqa: BLE001 — adapter is defensive, but be safe
         _audit_cards_sms(tid, actor, card_user_id, ok=False, reason="send_error",
                          count=1, segments=segments, code="", kind="account")
-        return {"ok": False, "error_ar": f"تعذّر الإرسال: {exc}", "reason": "send_error", "segments": segments}
+        return {"ok": False, "error_ar": _tr('تعذّر الإرسال: %(exc)s', exc=exc), "reason": "send_error", "segments": segments}
 
     ok = bool(outcome.get("ok"))
     first = (outcome.get("results") or [{}])[0]
     code = str(first.get("code") or "")
     segments = outcome.get("segments") or segments
     error_ar = "" if ok else (outcome.get("error_ar") or first.get("message_ar")
-                              or "فشل الإرسال عبر TweetSMS.")
+                              or _tr("فشل الإرسال عبر TweetSMS."))
     _audit_cards_sms(tid, actor, card_user_id, ok=ok,
                      reason=("sent" if ok else "send_failed"),
                      count=1, segments=segments, code=code, kind="account")
@@ -267,27 +264,27 @@ def send_account_credentials_whatsapp(tenant_id: int, recipient, account: dict[s
     tid = int(tenant_id or 1)
     mobile = str(getattr(recipient, "mobile", "") or "").strip()
     if not mobile:
-        return {"ok": False, "error_ar": "لا يوجد رقم جوال للمستفيد", "reason": "no_mobile"}
+        return {"ok": False, "error_ar": _tr("لا يوجد رقم جوال للمستفيد"), "reason": "no_mobile"}
 
     body = build_account_sms_body((account or {}).get("username"), (account or {}).get("password"))
     if not body:
-        return {"ok": False, "error_ar": "لا توجد بيانات حساب للإرسال", "reason": "no_account"}
+        return {"ok": False, "error_ar": _tr("لا توجد بيانات حساب للإرسال"), "reason": "no_account"}
 
     from . import comms_providers
 
     if not comms_providers.is_channel_active(
         comms_providers.load_channel_config(tid, "whatsapp")
     ):
-        return {"ok": False, "error_ar": "اضبط قناة واتساب أولاً", "reason": "not_connected"}
+        return {"ok": False, "error_ar": _tr("اضبط قناة واتساب أولاً"), "reason": "not_connected"}
 
     try:
         ok, err = comms_providers.direct_send(tid, "whatsapp", mobile, body)
     except Exception as exc:  # noqa: BLE001 — provider is defensive, but be safe
         _audit_cards_sms(tid, actor, card_user_id, ok=False, reason="send_error",
                          count=1, segments={}, code="", channel="whatsapp", kind="account")
-        return {"ok": False, "error_ar": f"تعذّر الإرسال: {exc}", "reason": "send_error"}
+        return {"ok": False, "error_ar": _tr('تعذّر الإرسال: %(exc)s', exc=exc), "reason": "send_error"}
 
-    error_ar = "" if ok else (err or "فشل الإرسال عبر واتساب.")
+    error_ar = "" if ok else (err or _tr("فشل الإرسال عبر واتساب."))
     _audit_cards_sms(tid, actor, card_user_id, ok=ok,
                      reason=("sent" if ok else "send_failed"),
                      count=1, segments={}, code="", channel="whatsapp", kind="account")
@@ -308,27 +305,27 @@ def send_cards_credentials_whatsapp(tenant_id: int, recipient, cards: list[dict[
     tid = int(tenant_id or 1)
     mobile = str(getattr(recipient, "mobile", "") or "").strip()
     if not mobile:
-        return {"ok": False, "error_ar": "لا يوجد رقم جوال للمشتري", "reason": "no_mobile"}
+        return {"ok": False, "error_ar": _tr("لا يوجد رقم جوال للمشتري"), "reason": "no_mobile"}
 
     body = build_cards_sms_body(cards)
     if not body:
-        return {"ok": False, "error_ar": "لا توجد بيانات بطاقات للإرسال", "reason": "no_cards"}
+        return {"ok": False, "error_ar": _tr("لا توجد بيانات بطاقات للإرسال"), "reason": "no_cards"}
 
     from . import comms_providers
 
     if not comms_providers.is_channel_active(
         comms_providers.load_channel_config(tid, "whatsapp")
     ):
-        return {"ok": False, "error_ar": "اضبط قناة واتساب أولاً", "reason": "not_connected"}
+        return {"ok": False, "error_ar": _tr("اضبط قناة واتساب أولاً"), "reason": "not_connected"}
 
     try:
         ok, err = comms_providers.direct_send(tid, "whatsapp", mobile, body)
     except Exception as exc:  # noqa: BLE001 — provider is defensive, but be safe
         _audit_cards_sms(tid, actor, card_user_id, ok=False, reason="send_error",
                          count=len(cards or []), segments={}, code="", channel="whatsapp")
-        return {"ok": False, "error_ar": f"تعذّر الإرسال: {exc}", "reason": "send_error"}
+        return {"ok": False, "error_ar": _tr('تعذّر الإرسال: %(exc)s', exc=exc), "reason": "send_error"}
 
-    error_ar = "" if ok else (err or "فشل الإرسال عبر واتساب.")
+    error_ar = "" if ok else (err or _tr("فشل الإرسال عبر واتساب."))
     _audit_cards_sms(tid, actor, card_user_id, ok=ok,
                      reason=("sent" if ok else "send_failed"),
                      count=len(cards or []), segments={}, code="", channel="whatsapp")

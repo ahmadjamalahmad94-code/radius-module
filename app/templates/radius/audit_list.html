@@ -12,12 +12,12 @@
 
 {% block content %}
 {{ hub.hero(
-  "سجل التدقيق",
-  subtitle="سجلّ كامل لكل أحداث النظام — يساعدك في تتبع من فعل ماذا ومتى.",
+  _('سجل التدقيق'),
+  subtitle=_('سجلّ كامل لكل أحداث النظام — يساعدك في تتبع من فعل ماذا ومتى.'),
   icon="clock-rotate-left"
 ) }}
 
-{% call hub.section("الأحداث الأخيرة", icon="list-check", meta=(items|length ~ ' حدث') if items else '', flush=True) %}
+{% call hub.section(_('الأحداث الأخيرة'), icon="list-check", meta=(_('%(length)s حدث', length=items|length)) if items else '', flush=True) %}
   {% if items %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none">
       <table class="hub-table">
@@ -38,8 +38,8 @@
           <tr>
             <td class="num mono">{{ r.id }}</td>
             <td title="{{ r.actor }}"><strong>{{ r.actor|actor_name }}</strong></td>
-            <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action_label or 'عملية' }}</span></td>
-            <td>{{ r.target_label or 'هدف' }}</td>
+            <td><span class="hub-pill hub-pill--brand"><span class="dot"></span>{{ r.action_label or _('عملية') }}</span></td>
+            <td>{{ r.target_label or _('هدف') }}</td>
             <td class="mono">{{ r.target_id or '—' }}</td>
             <td class="mono">{{ r.ip_address or '—' }}</td>
             <td class="mono">{{ r.created_at|dt_local if r.created_at else '—' }}</td>
@@ -54,7 +54,7 @@
       </table>
     </div>
   {% else %}
-    {{ hub.empty("لا توجد سجلات بعد.", icon="clock-rotate-left") }}
+    {{ hub.empty(_('لا توجد سجلات بعد.'), icon="clock-rotate-left") }}
   {% endif %}
 {% endcall %}
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

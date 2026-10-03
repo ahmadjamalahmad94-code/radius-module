@@ -2,6 +2,7 @@
    نافذة مستقلّة (vanilla، بلا اعتماد على نظام مودال خارجي):
    اختر نوعًا → اتصال وجلب (معاينة) → ضبط خيارات التكرار → تأكيد → نتيجة.
    كل النداءات AJAX تُرسل X-CSRFToken من وسم <meta name="csrf-token">. */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   'use strict';
 
@@ -15,7 +16,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
       body: JSON.stringify(body || {}),
-    }).then(function (r) { return r.json().catch(function () { return { ok: false, error: 'خطأ في الاستجابة' }; }); });
+    }).then(function (r) { return r.json().catch(function () { return { ok: false, error: hrT('خطأ في الاستجابة') }; }); });
   }
 
   function el(tag, attrs, html) {
@@ -43,8 +44,8 @@
     head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;' +
       'padding:16px 20px;border-bottom:1px solid #eee';
     head.appendChild(el('h3', null,
-      '<i class="fa-solid fa-file-import"></i> استيراد المشتركين من الراوتر'));
-    var x = el('button', { type: 'button', 'aria-label': 'إغلاق' }, '&times;');
+      ('<i class="fa-solid fa-file-import">' + '</i>' + ' ' + hrT('استيراد المشتركين من الراوتر'))));
+    var x = el('button', { type: 'button', 'aria-label': hrT('إغلاق') }, '&times;');
     x.style.cssText = 'border:none;background:none;font-size:26px;cursor:pointer;color:#888;line-height:1;' +
       'min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center';
     x.onclick = close;
@@ -85,13 +86,13 @@
   function renderStart() {
     body.innerHTML = '';
     body.appendChild(el('div', null,
-      '<div style="color:#666;font-size:13px;margin-bottom:14px">الراوتر: <strong>' +
+      ('<div style="color:#666;font-size:13px;margin-bottom:14px">' + hrT('الراوتر:') + ' ' + '<strong>') +
       escapeHtml(state.nasName) + '</strong></div>'));
     var box = el('div');
     box.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px';
-    [['hotspot', 'بوابة الدخول (Hotspot)', 'fa-wifi'],
-     ['broadband', 'نطاق عريض (PPPoE)', 'fa-ethernet'],
-     ['usermanager', 'User-Manager (غير مدعوم بعد)', 'fa-ban']].forEach(function (t) {
+    [['hotspot', hrT('بوابة الدخول (Hotspot)'), 'fa-wifi'],
+     ['broadband', hrT('نطاق عريض (PPPoE)'), 'fa-ethernet'],
+     ['usermanager', hrT('User-Manager (غير مدعوم بعد)'), 'fa-ban']].forEach(function (t) {
       var disabled = t[0] === 'usermanager';
       var c = el('button', { type: 'button', 'data-type': t[0] },
         '<i class="fa-solid ' + t[2] + '"></i> ' + t[1]);
@@ -107,11 +108,11 @@
 
     var foot = el('div');
     foot.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px';
-    var logsLink = el('a', { href: '#' }, '<i class="fa-solid fa-clock-rotate-left"></i> آخر العمليات');
+    var logsLink = el('a', { href: '#' }, ('<i class="fa-solid fa-clock-rotate-left">' + '</i>' + ' ' + hrT('آخر العمليات')));
     logsLink.style.cssText = 'font-size:12.5px;color:#1c52a8;text-decoration:none';
     logsLink.onclick = function (e) { e.preventDefault(); renderLogs(); };
     foot.appendChild(logsLink);
-    var go = btn('<i class="fa-solid fa-plug"></i> اتصال وجلب', 'primary');
+    var go = btn(('<i class="fa-solid fa-plug">' + '</i>' + ' ' + hrT('اتصال وجلب')), 'primary');
     go.onclick = doPreview;
     foot.appendChild(go);
     body.appendChild(foot);
@@ -131,10 +132,10 @@
 
   // ─── الخطوة 2: المعاينة ───
   function doPreview() {
-    setBusy('جارٍ الاتصال بالراوتر وجلب الحسابات…');
+    setBusy(hrT('جارٍ الاتصال بالراوتر وجلب الحسابات…'));
     post('/admin/radius/devices/' + state.nasId + '/import/preview',
       { import_type: state.importType }).then(function (res) {
-      if (!res.ok) { renderStart(); body.insertAdjacentHTML('afterbegin', errBox(res.error || 'فشل الجلب')); return; }
+      if (!res.ok) { renderStart(); body.insertAdjacentHTML('afterbegin', errBox(res.error || hrT('فشل الجلب'))); return; }
       state.transport = res.transport || '';
       renderPreview(res.preview, res.transport);
     });
@@ -146,11 +147,11 @@
     var summary = el('div');
     summary.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center';
     summary.innerHTML =
-      pill('الإجمالي ' + prev.total, '#475569') + ' ' +
-      pill('جديد ' + (c['new'] || 0), '#1f8f51') + ' ' +
-      pill('مكرّر ' + (c['duplicate'] || 0), '#b45309') + ' ' +
-      pill('غير صالح ' + (c['invalid'] || 0), '#b91c1c') +
-      '<span style="margin-in[start]:auto;color:#888;font-size:11.5px">عبر ' +
+      pill(hrT('الإجمالي ') + prev.total, '#475569') + ' ' +
+      pill(hrT('جديد ') + (c['new'] || 0), '#1f8f51') + ' ' +
+      pill(hrT('مكرّر ') + (c['duplicate'] || 0), '#b45309') + ' ' +
+      pill(hrT('غير صالح ') + (c['invalid'] || 0), '#b91c1c') +
+      ('<span style="margin-in[start]:auto;color:#888;font-size:11.5px">' + hrT('عبر') + ' ') +
       (transport === 'rest' ? 'REST' : 'API') + '</span>';
     body.appendChild(summary);
 
@@ -166,7 +167,7 @@
     wrap.style.cssText = 'max-height:260px;overflow:auto;border:1px solid #eee;border-radius:9px;margin-bottom:14px';
     var rows = (prev.rows || []).slice(0, 200).map(function (r) {
       var sc = r.status === 'new' ? '#1f8f51' : (r.status === 'duplicate' ? '#b45309' : '#b91c1c');
-      var sl = r.status === 'new' ? 'جديد' : (r.status === 'duplicate' ? 'مكرّر' : 'غير صالح');
+      var sl = r.status === 'new' ? hrT('جديد') : (r.status === 'duplicate' ? hrT('مكرّر') : hrT('غير صالح'));
       return '<tr style="border-top:1px solid #f0f0f0">' +
         '<td style="padding:6px 9px">' + escapeHtml(r.username || '—') + '</td>' +
         '<td style="padding:6px 9px;color:#666">' + escapeHtml(r.profile || '—') + '</td>' +
@@ -176,32 +177,32 @@
     }).join('');
     wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12.5px">' +
       '<thead><tr style="background:#f7f9fc;text-align:right">' +
-      '<th style="padding:7px 9px">المستخدم</th><th style="padding:7px 9px">البروفايل</th>' +
-      '<th style="padding:7px 9px">الخطّة</th><th style="padding:7px 9px">الحالة</th>' +
-      '<th style="padding:7px 9px">ملاحظة</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      ('<th style="padding:7px 9px">' + hrT('المستخدم') + '</th>' + '<th style="padding:7px 9px">' + hrT('البروفايل') + '</th>') +
+      ('<th style="padding:7px 9px">' + hrT('الخطّة') + '</th>' + '<th style="padding:7px 9px">' + hrT('الحالة') + '</th>') +
+      ('<th style="padding:7px 9px">' + hrT('ملاحظة') + '</th>' + '</tr>' + '</thead>' + '<tbody>') + rows + '</tbody></table>';
     body.appendChild(wrap);
 
     // خيارات التكرار
     var opts = el('div');
     opts.style.cssText = 'background:#f7f9fc;border-radius:9px;padding:13px;margin-bottom:14px;font-size:13px';
     opts.innerHTML =
-      '<div style="margin-bottom:9px"><strong>عند وجود مستخدم مكرّر:</strong></div>' +
-      '<label style="margin-inline-end:14px"><input type="radio" name="mtdup" value="skip" checked> تخطٍّ</label>' +
-      '<label style="margin-inline-end:14px"><input type="radio" name="mtdup" value="update"> تحديث</label>' +
-      '<label style="margin-inline-end:14px"><input type="radio" name="mtdup" value="conflict"> اعتباره تعارضًا</label>' +
+      ('<div style="margin-bottom:9px">' + '<strong>' + hrT('عند وجود مستخدم مكرّر:') + '</strong>' + '</div>') +
+      ('<label style="margin-inline-end:14px">' + '<input type="radio" name="mtdup" value="skip" checked>' + ' ' + hrT('تخطٍّ') + '</label>') +
+      ('<label style="margin-inline-end:14px">' + '<input type="radio" name="mtdup" value="update">' + ' ' + hrT('تحديث') + '</label>') +
+      ('<label style="margin-inline-end:14px">' + '<input type="radio" name="mtdup" value="conflict">' + ' ' + hrT('اعتباره تعارضًا') + '</label>') +
       '<div style="margin-top:11px;border-top:1px dashed #ddd;padding-top:11px">' +
       '<label style="display:block;margin-bottom:6px"><input type="checkbox" id="mtmkplans"> ' +
-      'إنشاء خطّة تلقائيًّا للبروفايلات غير المربوطة</label>' +
+      (hrT('إنشاء خطّة تلقائيًّا للبروفايلات غير المربوطة') + '</label>') +
       '<label style="display:block"><input type="checkbox" id="mtdry"> ' +
-      'محاكاة فقط (بلا كتابة)</label></div>';
+      (hrT('محاكاة فقط (بلا كتابة)') + '</label>' + '</div>');
     body.appendChild(opts);
 
     var foot = el('div');
     foot.style.cssText = 'display:flex;justify-content:space-between;gap:8px';
-    var back = btn('<i class="fa-solid fa-arrow-right"></i> رجوع', '');
+    var back = btn(('<i class="fa-solid fa-arrow-right">' + '</i>' + ' ' + hrT('رجوع')), '');
     back.onclick = renderStart;
     foot.appendChild(back);
-    var go = btn('<i class="fa-solid fa-check"></i> تأكيد الاستيراد', 'primary');
+    var go = btn(('<i class="fa-solid fa-check">' + '</i>' + ' ' + hrT('تأكيد الاستيراد')), 'primary');
     go.onclick = doRun;
     foot.appendChild(go);
     body.appendChild(foot);
@@ -212,12 +213,12 @@
     var mode = (document.querySelector('input[name="mtdup"]:checked') || {}).value || 'skip';
     var mkplans = !!(document.getElementById('mtmkplans') || {}).checked;
     var dry = !!(document.getElementById('mtdry') || {}).checked;
-    setBusy(dry ? 'محاكاة الاستيراد…' : 'جارٍ استيراد المشتركين…');
+    setBusy(dry ? hrT('محاكاة الاستيراد…') : hrT('جارٍ استيراد المشتركين…'));
     post('/admin/radius/devices/' + state.nasId + '/import/run', {
       import_type: state.importType, duplicate_mode: mode,
       create_missing_plans: mkplans ? '1' : '0', dry_run: dry ? '1' : '0',
     }).then(function (res) {
-      if (!res.ok) { renderStart(); body.insertAdjacentHTML('afterbegin', errBox(res.error || 'فشل الاستيراد')); return; }
+      if (!res.ok) { renderStart(); body.insertAdjacentHTML('afterbegin', errBox(res.error || hrT('فشل الاستيراد'))); return; }
       renderResult(res.result);
     });
   }
@@ -230,19 +231,19 @@
       '<i class="fa-solid ' + (ok ? 'fa-circle-check' : 'fa-circle-xmark') +
       '" style="font-size:38px;color:' + (ok ? '#1f8f51' : '#b91c1c') + '"></i>' +
       '<div style="margin-top:8px;font-weight:700">' +
-      (r.dry_run ? 'انتهت المحاكاة' : (ok ? 'تمّ الاستيراد' : 'فشل الاستيراد')) + '</div></div>');
+      (r.dry_run ? hrT('انتهت المحاكاة') : (ok ? hrT('تمّ الاستيراد') : hrT('فشل الاستيراد'))) + '</div></div>');
     var grid = el('div');
     grid.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:14px';
     grid.innerHTML =
-      pill('جديد ' + r.imported, '#1f8f51') + ' ' +
-      pill('محدّث ' + r.updated, '#1c52a8') + ' ' +
-      pill('متخطّى ' + r.skipped, '#b45309') + ' ' +
-      pill('فاشل ' + r.failed, '#b91c1c');
+      pill(hrT('جديد ') + r.imported, '#1f8f51') + ' ' +
+      pill(hrT('محدّث ') + r.updated, '#1c52a8') + ' ' +
+      pill(hrT('متخطّى ') + r.skipped, '#b45309') + ' ' +
+      pill(hrT('فاشل ') + r.failed, '#b91c1c');
     body.appendChild(grid);
 
     if (r.created_plans && r.created_plans.length) {
       body.insertAdjacentHTML('beforeend',
-        '<div style="font-size:12.5px;color:#555;margin-bottom:10px">خطط أُنشئت: ' +
+        ('<div style="font-size:12.5px;color:#555;margin-bottom:10px">' + hrT('خطط أُنشئت:') + ' ') +
         r.created_plans.map(escapeHtml).join('، ') + '</div>');
     }
     if (r.errors && r.errors.length) {
@@ -258,12 +259,12 @@
       body.insertAdjacentHTML('beforeend',
         '<div style="font-size:12.5px;color:#92560a;background:#fff7e6;border:1px solid #f3d488;' +
         'border-radius:9px;padding:10px;margin-bottom:14px">' +
-        '💡 تذكير: تأكّد أنّ إعدادات RADIUS (السرّ المشترك + المنافذ) مضبوطة على هذا الراوتر ' +
-        'كي يصادق المستوردون فعليًّا.</div>');
+        hrT('💡 تذكير: تأكّد أنّ إعدادات RADIUS (السرّ المشترك + المنافذ) مضبوطة على هذا الراوتر ') +
+        (hrT('كي يصادق المستوردون فعليًّا.') + '</div>'));
     }
     var foot = el('div');
     foot.style.cssText = 'display:flex;justify-content:flex-end;gap:8px';
-    var done = btn('تمّ', 'primary');
+    var done = btn(hrT('تمّ'), 'primary');
     done.onclick = close;
     foot.appendChild(done);
     body.appendChild(foot);
@@ -271,24 +272,24 @@
 
   // ─── السجلّ ───
   function renderLogs() {
-    setBusy('جارٍ تحميل آخر العمليات…');
+    setBusy(hrT('جارٍ تحميل آخر العمليات…'));
     fetch('/admin/radius/devices/' + state.nasId + '/import/logs')
       .then(function (r) { return r.json(); }).then(function (res) {
         body.innerHTML = '';
-        var back = btn('<i class="fa-solid fa-arrow-right"></i> رجوع', '');
+        var back = btn(('<i class="fa-solid fa-arrow-right">' + '</i>' + ' ' + hrT('رجوع')), '');
         back.onclick = renderStart;
         body.appendChild(back);
         var logs = (res.logs || []);
         if (!logs.length) {
           body.insertAdjacentHTML('beforeend',
-            '<div style="text-align:center;color:#888;padding:24px;font-size:13px">لا عمليات سابقة.</div>');
+            ('<div style="text-align:center;color:#888;padding:24px;font-size:13px">' + hrT('لا عمليات سابقة.') + '</div>'));
           return;
         }
         var html = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px">' +
           '<thead><tr style="background:#f7f9fc;text-align:right">' +
-          '<th style="padding:7px 9px">النوع</th><th style="padding:7px 9px">جديد</th>' +
-          '<th style="padding:7px 9px">محدّث</th><th style="padding:7px 9px">متخطّى</th>' +
-          '<th style="padding:7px 9px">فاشل</th><th style="padding:7px 9px">الوقت</th></tr></thead><tbody>' +
+          ('<th style="padding:7px 9px">' + hrT('النوع') + '</th>' + '<th style="padding:7px 9px">' + hrT('جديد') + '</th>') +
+          ('<th style="padding:7px 9px">' + hrT('محدّث') + '</th>' + '<th style="padding:7px 9px">' + hrT('متخطّى') + '</th>') +
+          ('<th style="padding:7px 9px">' + hrT('فاشل') + '</th>' + '<th style="padding:7px 9px">' + hrT('الوقت') + '</th>' + '</tr>' + '</thead>' + '<tbody>') +
           logs.map(function (l) {
             return '<tr style="border-top:1px solid #f0f0f0">' +
               '<td style="padding:6px 9px">' + escapeHtml(l.import_type || '') + '</td>' +

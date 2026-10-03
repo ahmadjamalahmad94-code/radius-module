@@ -10,6 +10,7 @@
 كل القراءات/الكتابات tenant-scoped. تطبيع MAC مركزي (upper + ':' separator).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from typing import Any, Optional
@@ -106,7 +107,7 @@ def upsert_binding(*, tenant_id: int, username: str, mac: str,
     """
     mac = normalize_mac(mac)
     if not username or not mac:
-        raise ValueError("username + mac مطلوبان")
+        raise ValueError(_tr("username + mac مطلوبان"))
     now = now_iso()
     tid = int(tenant_id)
     with transaction() as conn:

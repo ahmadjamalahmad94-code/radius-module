@@ -1,5 +1,6 @@
 """Operations Center and dry-run Speed Control Center."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import re
@@ -15,11 +16,11 @@ class OperationsSpeedError(ValueError):
 
 
 SPEED_PRESETS: dict[str, dict[str, Any]] = {
-    "normal": {"label": "الوضع الطبيعي", "multiplier": 1.0, "vip_protected": True},
-    "pressure": {"label": "وضع الضغط", "multiplier": 0.7, "vip_protected": True},
-    "night": {"label": "وضع الليل", "multiplier": 1.25, "vip_protected": True},
-    "emergency": {"label": "وضع الطوارئ", "multiplier": 0.4, "vip_protected": True},
-    "vip_protected": {"label": "حماية الباقات المهمة", "multiplier": 1.0, "vip_protected": True},
+    "normal": {"label": N_("الوضع الطبيعي"), "multiplier": 1.0, "vip_protected": True},
+    "pressure": {"label": N_("وضع الضغط"), "multiplier": 0.7, "vip_protected": True},
+    "night": {"label": N_("وضع الليل"), "multiplier": 1.25, "vip_protected": True},
+    "emergency": {"label": N_("وضع الطوارئ"), "multiplier": 0.4, "vip_protected": True},
+    "vip_protected": {"label": N_("حماية الباقات المهمة"), "multiplier": 1.0, "vip_protected": True},
 }
 
 
@@ -51,12 +52,12 @@ class OperationsSpeedCenterService:
                 {
                     "key": "disconnect_all",
                     "status": "blocked_until_live_approval",
-                    "reason": "هذا الإجراء يحتاج ربطًا حيًا آمنًا وموافقة صريحة من المشغّل قبل التنفيذ.",
+                    "reason": _tr("هذا الإجراء يحتاج ربطًا حيًا آمنًا وموافقة صريحة من المشغّل قبل التنفيذ."),
                 },
                 {
                     "key": "global_speed_cut",
                     "status": "dry_run_only",
-                    "reason": "استخدم معاينة التحكم بالسرعة أولًا. هذا المركز لا يرسل أوامر CoA حيّة مباشرة.",
+                    "reason": _tr("استخدم معاينة التحكم بالسرعة أولًا. هذا المركز لا يرسل أوامر CoA حيّة مباشرة."),
                 },
             ],
         }
@@ -155,13 +156,13 @@ class OperationsSpeedCenterService:
             key = self._key(policy_key or f"{preset}-{now}")
         except OperationsSpeedError:
             key = self._key(f"{preset}-{now.replace(':', '').replace('.', '')}")
-        clean_title = str(title or "").strip() or f"سياسة سرعة - {SPEED_PRESETS.get(preset, SPEED_PRESETS['normal'])['label']}"
+        clean_title = str(title or "").strip() or _tr('سياسة سرعة - %(label)s', label=SPEED_PRESETS.get(preset, SPEED_PRESETS['normal'])['label'])
         event = self.events.record_event(
             tenant_id=self.tenant_id,
             category="system",
             severity="info",
             event_key="speed_control.dry_run_saved",
-            message="تم حفظ سياسة سرعة كمعاينة بدون تطبيق مباشر على RADIUS",
+            message=N_("تم حفظ سياسة سرعة كمعاينة بدون تطبيق مباشر على RADIUS"),
             actor_type="admin",
             target_type="speed_control_policy",
             metadata={"preset": preset, "applied_to_radius": False},
@@ -256,7 +257,7 @@ class OperationsSpeedCenterService:
         mult = float(preview["multiplier"])
         ov = {str(k): v for k, v in (overrides or {}).items()}
         is_reset = abs(mult - 1.0) < 1e-9 and not ov
-        label = SPEED_PRESETS.get(preset, {}).get("label") or "نسبة مخصّصة"
+        label = SPEED_PRESETS.get(preset, {}).get("label") or _tr("نسبة مخصّصة")
         from ..db.repos import tenants_repo
         active = {
             "multiplier": mult, "overrides": ov,
@@ -292,9 +293,9 @@ class OperationsSpeedCenterService:
             tenant_id=self.tenant_id, category="system",
             severity="info" if is_reset else "warning",
             event_key="speed_control.applied",
-            message=("أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين."
+            message=(N_("أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين.")
                      if is_reset else
-                     f"طُبِّقت سياسة السرعة «{label}» حيًّا على المتصلين (CoA)."),
+                     _tr('طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).', label=label)),
             actor_type="admin", target_type="speed_control_policy", target_id=pid,
             metadata={"preset": preset, "multiplier": mult, "reset": is_reset,
                       "coa_targets": coa.get("targets"), "coa_applied": coa.get("applied"),
@@ -308,7 +309,7 @@ class OperationsSpeedCenterService:
         كي تعكس السرعة المطبَّقة لا 100% دائمًا. {multiplier, overrides,
         profile_ids, preset, label}؛ الافتراضي 100% حين لا سياسة نشطة."""
         default = {"multiplier": 1.0, "overrides": {}, "profile_ids": [],
-                   "preset": "normal", "label": "الوضع الطبيعي", "pct": 100}
+                   "preset": "normal", "label": _tr("الوضع الطبيعي"), "pct": 100}
         try:
             from ..db.repos import tenants_repo
             raw = tenants_repo.get_setting(self.tenant_id, "speed.active_factors", "")
@@ -337,7 +338,7 @@ class OperationsSpeedCenterService:
                 (self.tenant_id, self._key(str(policy_key_or_id))),
             ).fetchone()
         if not row:
-            raise OperationsSpeedError("سياسة السرعة غير موجودة.")
+            raise OperationsSpeedError(_tr("سياسة السرعة غير موجودة."))
         return self._policy_row(row_to_dict(row))
 
     def list_policies(self, *, limit: int = 100) -> list[dict[str, Any]]:
@@ -493,5 +494,5 @@ class OperationsSpeedCenterService:
     def _key(value: str) -> str:
         key = re.sub(r"[^a-zA-Z0-9_.-]+", "-", str(value or "").strip().lower()).strip("-")
         if not key:
-            raise OperationsSpeedError("اسم السياسة المختصر مطلوب.")
+            raise OperationsSpeedError(_tr("اسم السياسة المختصر مطلوب."))
         return key[:120]

@@ -10,6 +10,7 @@
 واحد. كل ثيم يستعمل لون المزوّد ACCENT_COLOR عبر ctx فيبقى مُمَوضَعًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -42,8 +43,8 @@ def _t_glass(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_glass", category=CAT_THEME, label_ar="ثيم زجاجي (Glassmorphism)",
-    desc_ar="تأثير زجاجي ضبابي شفّاف على البطاقات — CSS نقيّ يعمل قبل الدخول.",
+    key="theme_glass", category=CAT_THEME, label_ar=N_("ثيم زجاجي (Glassmorphism)"),
+    desc_ar=N_("تأثير زجاجي ضبابي شفّاف على البطاقات — CSS نقيّ يعمل قبل الدخول."),
     surface=SURFACE_PRELOGIN, icon="layer-group", server_side=True,
     pre_fragment=_t_glass))
 
@@ -62,8 +63,8 @@ def _t_gradient(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_gradient", category=CAT_THEME, label_ar="تدرّج لوني (Mesh)",
-    desc_ar="خلفية تدرّج لوني شبكي حيّ تمتزج مع لون مزوّدك.",
+    key="theme_gradient", category=CAT_THEME, label_ar=N_("تدرّج لوني (Mesh)"),
+    desc_ar=N_("خلفية تدرّج لوني شبكي حيّ تمتزج مع لون مزوّدك."),
     surface=SURFACE_PRELOGIN, icon="palette", server_side=True,
     pre_fragment=_t_gradient))
 
@@ -89,8 +90,8 @@ def _t_dark(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_dark", category=CAT_THEME, label_ar="الوضع الليلي",
-    desc_ar="ثيم داكن مريح للعين — خلفية كحليّة ونصوص فاتحة.",
+    key="theme_dark", category=CAT_THEME, label_ar=N_("الوضع الليلي"),
+    desc_ar=N_("ثيم داكن مريح للعين — خلفية كحليّة ونصوص فاتحة."),
     surface=SURFACE_PRELOGIN, icon="moon", server_side=True,
     pre_fragment=_t_dark))
 
@@ -110,8 +111,8 @@ def _t_anim(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_animations", category=CAT_THEME, label_ar="حركات دقيقة",
-    desc_ar="حركات ظهور ولمس ناعمة للبطاقات والحقول — CSS فقط.",
+    key="theme_animations", category=CAT_THEME, label_ar=N_("حركات دقيقة"),
+    desc_ar=N_("حركات ظهور ولمس ناعمة للبطاقات والحقول — CSS فقط."),
     surface=SURFACE_PRELOGIN, icon="wand-magic-sparkles", server_side=True,
     pre_fragment=_t_anim))
 
@@ -131,13 +132,13 @@ def _t_fsbg(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_fullscreen_bg", category=CAT_THEME, label_ar="خلفية صورة كاملة",
-    desc_ar="صورة ملء الشاشة كخلفية (رابط صورة؛ نطاقها يُفتح تلقائيًّا).",
+    key="theme_fullscreen_bg", category=CAT_THEME, label_ar=N_("خلفية صورة كاملة"),
+    desc_ar=N_("صورة ملء الشاشة كخلفية (رابط صورة؛ نطاقها يُفتح تلقائيًّا)."),
     surface=SURFACE_PRELOGIN, icon="image",
     fields=(
-        AddonField(key="image_url", label_ar="رابط صورة الخلفية", kind="url",
+        AddonField(key="image_url", label_ar=N_("رابط صورة الخلفية"), kind="url",
                    placeholder="https://cdn.example.com/bg.jpg"),
-        AddonField(key="dim", label_ar="تعتيم للقراءة", kind="select",
+        AddonField(key="dim", label_ar=N_("تعتيم للقراءة"), kind="select",
                    default="yes", options=(("yes", "نعم"), ("no", "لا"))),
     ),
     pre_fragment=_t_fsbg))
@@ -158,8 +159,8 @@ def _t_minimal(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_minimal", category=CAT_THEME, label_ar="بسيط (Minimalist)",
-    desc_ar="مظهر نظيف بلا حدود ولا ظلال — حقول بخطّ سفلي فقط.",
+    key="theme_minimal", category=CAT_THEME, label_ar=N_("بسيط (Minimalist)"),
+    desc_ar=N_("مظهر نظيف بلا حدود ولا ظلال — حقول بخطّ سفلي فقط."),
     surface=SURFACE_PRELOGIN, icon="minus", server_side=True,
     pre_fragment=_t_minimal))
 
@@ -177,17 +178,17 @@ def _t_branded(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_branded", category=CAT_THEME, label_ar="هويتك التجارية",
-    desc_ar="لمسات بلون علامتك على الترويسات والأزرار والحدود.",
+    key="theme_branded", category=CAT_THEME, label_ar=N_("هويتك التجارية"),
+    desc_ar=N_("لمسات بلون علامتك على الترويسات والأزرار والحدود."),
     surface=SURFACE_PRELOGIN, icon="bookmark", server_side=True,
     pre_fragment=_t_branded))
 
 
 # ── 8) Seasonal (Ramadan / Eid / National Day) ──
 _SEASON = {
-    "ramadan": ("#16a34a", "#0f5132", "🌙", "رمضان كريم"),
-    "eid": ("#d97706", "#7c2d12", "🎉", "عيد مبارك"),
-    "national": ("#15803d", "#052e16", "🇸🇦", "يوم وطني سعيد"),
+    "ramadan": ("#16a34a", "#0f5132", "🌙", N_("رمضان كريم")),
+    "eid": ("#d97706", "#7c2d12", "🎉", N_("عيد مبارك")),
+    "national": ("#15803d", "#052e16", "🇸🇦", N_("يوم وطني سعيد")),
 }
 
 
@@ -218,11 +219,11 @@ def _t_seasonal(cfg, ctx):
 
 
 register(AddonSpec(
-    key="theme_seasonal", category=CAT_THEME, label_ar="ثيم موسمي",
-    desc_ar="زينة موسمية (رمضان/عيد/يوم وطني) بلمسة لونية وتهنئة.",
+    key="theme_seasonal", category=CAT_THEME, label_ar=N_("ثيم موسمي"),
+    desc_ar=N_("زينة موسمية (رمضان/عيد/يوم وطني) بلمسة لونية وتهنئة."),
     surface=SURFACE_PRELOGIN, icon="star-and-crescent",
     fields=(
-        AddonField(key="season", label_ar="المناسبة", kind="select",
+        AddonField(key="season", label_ar=N_("المناسبة"), kind="select",
                    default="ramadan", options=(
                        ("ramadan", "رمضان"), ("eid", "عيد"),
                        ("national", "يوم وطني"))),

@@ -26,8 +26,8 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + أزرار الإجراء ───── #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "تذكرة جديدة",
-  subtitle="افتح تذكرة دعم باسم مشترك — اربطها بصاحبها، صنّفها، وحدّد أولويتها لتُعالَج بالترتيب الصحيح.",
+  _('تذكرة جديدة'),
+  subtitle=_('افتح تذكرة دعم باسم مشترك — اربطها بصاحبها، صنّفها، وحدّد أولويتها لتُعالَج بالترتيب الصحيح.'),
   icon="headset",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.tk_list') ~ '">
@@ -42,7 +42,7 @@
 {# ───── نموذج الإنشاء — POST إلى radius.tk_create بنفس أسماء الحقول ───── #}
 <form method="post" id="tk-form" action="{{ url_for('radius.tk_create') }}">{% if not can_submit('radius.tk_create') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-  {% call hub.section("معلومات التذكرة", icon="circle-info") %}
+  {% call hub.section(_('معلومات التذكرة'), icon="circle-info") %}
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
@@ -78,10 +78,10 @@
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">{{ _('الأولوية') }}</label>
         {{ hub.cardselect("priority", [
-            {"value": "low",    "title": "منخفضة", "icon": "angle-down"},
-            {"value": "normal", "title": "عادية",  "icon": "minus"},
-            {"value": "high",   "title": "مرتفعة", "icon": "angle-up"},
-            {"value": "urgent", "title": "عاجلة",  "icon": "triangle-exclamation"}
+            {"value": "low",    "title": _('منخفضة'), "icon": "angle-down"},
+            {"value": "normal", "title": _('عادية'),  "icon": "minus"},
+            {"value": "high",   "title": _('مرتفعة'), "icon": "angle-up"},
+            {"value": "urgent", "title": _('عاجلة'),  "icon": "triangle-exclamation"}
         ], value="normal") }}
         <div class="hub-field-hint">{{ _('تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.') }}</div>
       </div>
@@ -97,8 +97,8 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:16px">
-    {{ hub.btn("إنشاء التذكرة", icon="floppy-disk", variant="primary", type="submit") }}
-    {% if can_submit('radius.tk_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}{% endif %}
+    {{ hub.btn(_('إنشاء التذكرة'), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.tk_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="ghost", href=url_for('radius.tk_list')) }}{% endif %}
   </div>
 {% if not can_submit('radius.tk_create') %}</fieldset>{% endif %}</form>
 

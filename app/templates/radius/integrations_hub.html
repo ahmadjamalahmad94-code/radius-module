@@ -13,21 +13,21 @@
 <input type="hidden" id="ih-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 {% set _tg_ready = telegram.enabled and telegram.bot_token and telegram.chat_id %}
 {{ hub.megahero(
-  "التكاملات والقنوات",
-  subtitle="اضبط كل قنوات الإشعار في مكان واحد: تلجرام (الأساس)، واتساب، رسائل SMS، والربط الخارجي (Webhook). ثم اختر قنوات كل حدث من «إشعارات الإدارة».",
+  _('التكاملات والقنوات'),
+  subtitle=_('اضبط كل قنوات الإشعار في مكان واحد: تلجرام (الأساس)، واتساب، رسائل SMS، والربط الخارجي (Webhook). ثم اختر قنوات كل حدث من «إشعارات الإدارة».'),
   icon="plug-circle-bolt",
   kpis=[
-    {'label': 'تلجرام', 'value': ('مضبوط' if _tg_ready else 'غير مضبوط'), 'icon': 'paper-plane', 'variant': ('green' if _tg_ready else 'amber')},
-    {'label': 'واتساب', 'value': (wa_gates|selectattr('enabled')|list|length ~ ' حدث'), 'icon': 'whatsapp', 'variant': 'brand'},
-    {'label': 'SMS', 'value': ('مفعّل' if sms.enabled else 'متوقّف'), 'icon': 'comment-sms', 'variant': ('green' if sms.enabled else 'slate')},
-    {'label': 'Webhook', 'value': ('مفعّل' if (webhook and webhook.enabled) else 'متوقّف'), 'icon': 'link', 'variant': ('green' if (webhook and webhook.enabled) else 'slate')}
+    {'label': _('تلجرام'), 'value': (_('مضبوط') if _tg_ready else _('غير مضبوط')), 'icon': 'paper-plane', 'variant': ('green' if _tg_ready else 'amber')},
+    {'label': _('واتساب'), 'value': (_('%(length)s حدث', length=wa_gates|selectattr('enabled')|list|length)), 'icon': 'whatsapp', 'variant': 'brand'},
+    {'label': 'SMS', 'value': (_('مفعّل') if sms.enabled else _('متوقّف')), 'icon': 'comment-sms', 'variant': ('green' if sms.enabled else 'slate')},
+    {'label': 'Webhook', 'value': (_('مفعّل') if (webhook and webhook.enabled) else _('متوقّف')), 'icon': 'link', 'variant': ('green' if (webhook and webhook.enabled) else 'slate')}
   ]
 ) }}
 
 {# ═══════════ تلجرام — ربط بضغطة واحدة (الأساس القانوني) ═══════════ #}
 {% set _tg_linked = tg_connect and tg_connect.linked %}
-{% call hub.section("بوت تلجرام (إشعارات الإدارة)", icon="paper-plane",
-                    meta=("متصل ✓" if _tg_linked else ("مضبوط" if _tg_ready else "غير مربوط"))) %}
+{% call hub.section(_('بوت تلجرام (إشعارات الإدارة)'), icon="paper-plane",
+                    meta=(_('متصل ✓') if _tg_linked else (_('مضبوط') if _tg_ready else _('غير مربوط')))) %}
   <p class="card-intro">{{ _('أنشئ بوتًا مرّة واحدة عبر @BotFather واحصل على التوكن، ثم الصقه واضغط «اربط تيليجرام». يظهر رابط/رمز QR — افتحه على هاتفك واضغط START، فنلتقط معرّف المحادثة تلقائيًّا (لا حاجة لنسخه يدويًّا).') }}</p>
 
   {# ═══════════ دليل الخطوات (مرئي، مرقّم، RTL) ═══════════
@@ -65,7 +65,7 @@
   <div class="field" style="max-width:520px">
     <label for="bot_token">{{ _('توكن البوت (من BotFather)') }}</label>
     <input type="password" id="bot_token" name="bot_token" autocomplete="off"
-           placeholder="{{ '••••••••  (محفوظ)' if telegram.bot_token else '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11' }}">
+           placeholder="{{ _('••••••••  (محفوظ)') if telegram.bot_token else '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11' }}">
     {% if telegram.bot_token %}<small class="hub-text-mute">{{ _('محفوظ مشفّرًا — اتركه فارغًا لاستخدام المحفوظ.') }}</small>{% endif %}
   </div>
   <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
@@ -119,7 +119,7 @@
 {% endcall %}
 
 {# ═══════════ واتساب (بوّابات الأحداث — الأسرار في لوحة العميل) ═══════════ #}
-{% call hub.section("واتساب", icon="whatsapp", meta=(wa_gates|selectattr('enabled')|list|length ~ " مفعّل")) %}
+{% call hub.section(_('واتساب'), icon="whatsapp", meta=(_('%(length)s مفعّل', length=wa_gates|selectattr('enabled')|list|length))) %}
   <p class="card-intro">{{ _('تُدار بيانات اعتماد واتساب من بوابة العميل (لوحة التراخيص). هنا تتحكّم بأيّ أحداث المشترك تُرسَل عبر واتساب.') }}</p>
   <form method="post" action="{{ url_for('radius.whatsapp_settings') }}">{% if not can_submit('radius.whatsapp_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -142,7 +142,7 @@
 {% endcall %}
 
 {# ═══════════ رسائل SMS (TweetSMS — اربط حسابك الخاص) ═══════════ #}
-{% call hub.section("رسائل SMS", icon="comment-sms", meta=("مربوط" if (sms and sms.connected) else "بحاجة إلى ربط")) %}
+{% call hub.section(_('رسائل SMS'), icon="comment-sms", meta=(_('مربوط') if (sms and sms.connected) else _('بحاجة إلى ربط'))) %}
   <p class="card-intro">{{ _('رسائل SMS خدمة مجانية بنظام «اربط حسابك الخاص»: تربط حساب TweetSMS الخاص بك وتشتري الرصيد من المزوّد مباشرةً. لا حِزم تُباع من الإدارة.') }}</p>
   <div class="hub-flex-row" style="gap:10px;margin-top:12px;flex-wrap:wrap">
     {% if endpoint_exists is not defined or endpoint_exists('radius.sms') %}
@@ -152,7 +152,7 @@
 {% endcall %}
 
 {# ═══════════ الربط الخارجي (Webhook) ═══════════ #}
-{% call hub.section("الربط الخارجي (Webhook)", icon="link", meta=("مفعّل" if (webhook and webhook.enabled) else "متوقّف")) %}
+{% call hub.section(_('الربط الخارجي (Webhook)'), icon="link", meta=(_('مفعّل') if (webhook and webhook.enabled) else _('متوقّف'))) %}
   <p class="card-intro">{{ _('يرسل النظام طلب POST موقّع (HMAC) إلى رابطك عند الأحداث المهمّة.') }}</p>
   <form method="post" action="{{ url_for('radius.wh_settings') }}">{% if not can_submit('radius.wh_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">

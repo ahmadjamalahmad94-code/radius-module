@@ -200,8 +200,8 @@
 
 {% block content %}
 {{ hub.hero(
-  "استيراد ملف كروت",
-  subtitle="ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع خدمة المصادقة عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.",
+  _('استيراد ملف كروت'),
+  subtitle=_('ارفع ملفًا جاهزًا للحساب التشغيلي أو استيرادًا يمكن مزامنته مع خدمة المصادقة عند الحاجة. لا يتم عرض كلمات المرور بعد الحفظ.'),
   icon="file-import",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
@@ -215,23 +215,23 @@
 
 {% set help_aside %}
 {% call hub.helppanel(
-  "كيف تستورد ملف كروت",
-  intro="ارفع ملف الكروت أو الصقها يدويًّا، واربطها بباقة. المحرّك الذكي يكتشف أعمدة اسم المستخدم وكلمة المرور تلقائيًّا.",
+  _('كيف تستورد ملف كروت'),
+  intro=_('ارفع ملف الكروت أو الصقها يدويًّا، واربطها بباقة. المحرّك الذكي يكتشف أعمدة اسم المستخدم وكلمة المرور تلقائيًّا.'),
   icon="file-import",
   items=[
-    {"icon": "wand-magic-sparkles", "text": "ارفع CSV أو XLSX أو PDF بأيّ ترتيب أعمدة — المحرّك يكتشف الأعمدة ويعبّئ مربّع النص تلقائيًّا."},
-    {"icon": "keyboard", "text": "يمكنك أيضًا اللصق المباشر: سطر لكل كرت، أو CSV/TSV بأعمدة username,password."},
-    {"icon": "layer-group", "text": "اربط الملف بباقة للتصنيف والعدادات؛ هذا لا يعني تطبيقًا على الشبكة إذا كان الملف خارجيًّا."},
-    {"icon": "shuffle", "text": "نوع المصدر «خارجي» للحساب فقط، و«مستورد» لإنشاء حسابات داخل خدمة المصادقة."},
-    {"icon": "rotate", "text": "فعّل المزامنة فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة."}
+    {"icon": "wand-magic-sparkles", "text": _('ارفع CSV أو XLSX أو PDF بأيّ ترتيب أعمدة — المحرّك يكتشف الأعمدة ويعبّئ مربّع النص تلقائيًّا.')},
+    {"icon": "keyboard", "text": _('يمكنك أيضًا اللصق المباشر: سطر لكل كرت، أو CSV/TSV بأعمدة username,password.')},
+    {"icon": "layer-group", "text": _('اربط الملف بباقة للتصنيف والعدادات؛ هذا لا يعني تطبيقًا على الشبكة إذا كان الملف خارجيًّا.')},
+    {"icon": "shuffle", "text": _('نوع المصدر «خارجي» للحساب فقط، و«مستورد» لإنشاء حسابات داخل خدمة المصادقة.')},
+    {"icon": "rotate", "text": _('فعّل المزامنة فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة.')}
   ],
-  note="كلمات المرور لا تظهر بعد الحفظ. يُتجاهل خيار المزامنة تلقائيًّا إذا كان نوع المصدر «ملف خارجي»."
+  note=_('كلمات المرور لا تظهر بعد الحفظ. يُتجاهل خيار المزامنة تلقائيًّا إذا كان نوع المصدر «ملف خارجي».')
 ) %}{% endcall %}
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form method="post" action="{{ url_for('radius.cards_batches_import') }}">{% if not can_submit('radius.cards_batches_import') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
-  {% call hub.section("بيانات الملف", icon="box-archive") %}
+  {% call hub.section(_('بيانات الملف'), icon="box-archive") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label" for="plan_id">{{ _('الباقة المرتبطة') }} <span class="req">*</span></label>
@@ -292,15 +292,15 @@
       <label class="hub-field-label">{{ _('نوع المصدر') }}</label>
       {{ hub.cardselect("source_type",
         [
-          {"value": "external", "title": "ملف خارجي — للحساب فقط", "sub": "جرد ومحاسبة فقط: لا يُنشئ حسابات في خدمة المصادقة ولا ينفّذ أيّ إجراء على الشبكة. البطاقات للعدّ والتصنيف فقط ولا يمكنها تسجيل الدخول.", "icon": "folder-open"},
-          {"value": "imported", "title": "ملف مستورد — داخل خدمة المصادقة", "sub": "يُنشئ حسابات فعلية في خدمة المصادقة يمكنها تسجيل الدخول — تُزامَن تلقائيًّا عند الاستيراد.", "icon": "right-to-bracket"}
+          {"value": "external", "title": _('ملف خارجي — للحساب فقط'), "sub": _('جرد ومحاسبة فقط: لا يُنشئ حسابات في خدمة المصادقة ولا ينفّذ أيّ إجراء على الشبكة. البطاقات للعدّ والتصنيف فقط ولا يمكنها تسجيل الدخول.'), "icon": "folder-open"},
+          {"value": "imported", "title": _('ملف مستورد — داخل خدمة المصادقة'), "sub": _('يُنشئ حسابات فعلية في خدمة المصادقة يمكنها تسجيل الدخول — تُزامَن تلقائيًّا عند الاستيراد.'), "icon": "right-to-bracket"}
         ],
         value=(form.get('source_type') or 'external')) }}
       <div class="hub-field-hint" style="margin-top:8px">{{ _('يحدّد هذا الاختيار وحده سلوك الاستيراد: «خارجي» = محاسبة فقط، «مستورد» = حسابات فعلية تُزامَن مع خدمة المصادقة.') }}</div>
     </div>
   {% endcall %}
 
-  {% call hub.section("محتوى الملف", icon="file-lines") %}
+  {% call hub.section(_('محتوى الملف'), icon="file-lines") %}
     <div class="ci-smart" id="ci-smart"
          data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
          data-preview-url="{{ url_for('radius.cards_batches_import_preview') }}"
@@ -323,8 +323,7 @@
         <span class="ci-smart-tag" id="ci-smart-tag" hidden></span>
       </div>
       <div class="hub-field-hint" style="margin-bottom:10px">
-        ارفع ملف CSV أو XLSX أو PDF — بأيّ ترتيب أعمدة، عربيًّا أو إنجليزيًّا — والمحرّك سيكتشف
-        عمود اسم المستخدم وعمود كلمة المرور تلقائيًّا ويعبّئ مربّع النص بالأسفل.
+        {{ _('ارفع ملف CSV أو XLSX أو PDF — بأيّ ترتيب أعمدة، عربيًّا أو إنجليزيًّا — والمحرّك سيكتشف عمود اسم المستخدم وعمود كلمة المرور تلقائيًّا ويعبّئ مربّع النص بالأسفل.') }}
       </div>
       <div class="ci-smart-body">
         <label style="display:block;cursor:pointer">
@@ -367,20 +366,19 @@
       <textarea class="hub-input ci-textarea" id="csv_text" name="csv_text" required
         placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
       <div class="hub-field-hint">
-        يمكنك أيضًا اللصق المباشر هنا: سطر لكل كرت، أو CSV/TSV يحتوي الأعمدة username,password.
-        يمكن ترك كلمة المرور فارغة، ولن تظهر كلمات المرور بعد الاستيراد.
+        {{ _('يمكنك أيضًا اللصق المباشر هنا: سطر لكل كرت، أو CSV/TSV يحتوي الأعمدة username,password. يمكن ترك كلمة المرور فارغة، ولن تظهر كلمات المرور بعد الاستيراد.') }}
       </div>
     </div>
   {% endcall %}
 
-  {% call hub.section("اعتماد الاستيراد", icon="shield-halved") %}
+  {% call hub.section(_('اعتماد الاستيراد'), icon="shield-halved") %}
     <div class="hub-field">
       <label class="hub-field-label" for="notes">{{ _('ملاحظات') }}</label>
       <textarea class="hub-input" id="notes" name="notes" rows="3" placeholder="{{ _('سبب الاستيراد أو مرجع الملف') }}">{{ form.get('notes') or '' }}</textarea>
     </div>
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
-      {{ hub.btn("استيراد الملف", icon="file-import", type="submit", variant="primary") }}
-      {% if can_submit('radius.cards_batches', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_batches'), variant="secondary") }}{% endif %}
+      {{ hub.btn(_('استيراد الملف'), icon="file-import", type="submit", variant="primary") }}
+      {% if can_submit('radius.cards_batches', 'GET') %}{{ hub.btn(_('إلغاء'), icon="xmark", href=url_for('radius.cards_batches'), variant="secondary") }}{% endif %}
     </div>
   {% endcall %}
 {% if not can_submit('radius.cards_batches_import') %}</fieldset>{% endif %}</form>

@@ -20,6 +20,7 @@
     HOBERADIUS_TENANT_ID            (default: 1)
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import asyncio
 import hashlib
@@ -60,8 +61,8 @@ def _shared_secret() -> bytes:
     s = _env("HOBERADIUS_RADIUS_SECRET")
     if not s:
         raise RuntimeError(
-            "HOBERADIUS_RADIUS_SECRET غير مضبوط. "
-            "أضفه إلى ملف البيئة: HOBERADIUS_RADIUS_SECRET=your-secret"
+            _tr("HOBERADIUS_RADIUS_SECRET غير مضبوط. "
+            "أضفه إلى ملف البيئة: HOBERADIUS_RADIUS_SECRET=your-secret")
         )
     return s.encode("utf-8")
 

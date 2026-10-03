@@ -35,6 +35,7 @@
 /file/set أو /file/add) — انظر deploy_store أدناه.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 from dataclasses import dataclass
@@ -71,8 +72,8 @@ _LOOPBACK_RE = re.compile(
     r"(:\d+)?/?$", re.IGNORECASE)
 
 API_BASE_LOOPBACK_MSG = (
-    "ضبط عنوان الراديوس بالإعدادات أولًا — عنوان محلي لن يعمل من "
-    "أجهزة الزبائن (network.radius_server_ip في الإعدادات).")
+    N_("ضبط عنوان الراديوس بالإعدادات أولًا — عنوان محلي لن يعمل من "
+    "أجهزة الزبائن (network.radius_server_ip في الإعدادات)."))
 
 
 def api_base_unusable(api_base: str) -> bool:
@@ -160,14 +161,14 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
     host, _ = _api_base_host_port(api_base)
     cmd = walled_garden_command(api_base)
     if not host:
-        return WalledGardenResult(ok=False, error="عنوان API فارغ.",
+        return WalledGardenResult(ok=False, error=N_("عنوان API فارغ."),
                                   command=cmd)
     try:
         rows = client.run("/ip/hotspot/walled-garden/ip/print") or []
     except Exception as e:  # noqa: BLE001
         return WalledGardenResult(
             ok=False, command=cmd,
-            error="تعذر قراءة قواعد walled-garden: " + str(e))
+            error=N_("تعذر قراءة قواعد walled-garden: ") + str(e))
     # Authoritative cleanup: remove OUR prior tagged rows FIRST (by .id), then add
     # fresh — so a re-deploy COLLAPSES to exactly one set and clears any duplicates
     # already piled up. Scoped to our comment tag → we never touch a rule we did
@@ -185,7 +186,7 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
         except Exception as e:  # noqa: BLE001
             return WalledGardenResult(
                 ok=False, removed=removed, command=cmd,
-                error="حذف قاعدة walled-garden قديمة فشل: " + str(e))
+                error=N_("حذف قاعدة walled-garden قديمة فشل: ") + str(e))
     added = 0
     for port in walled_garden_ports(api_base):
         try:
@@ -200,7 +201,7 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
         except Exception as e:  # noqa: BLE001
             return WalledGardenResult(
                 ok=False, added=added, removed=removed, command=cmd,
-                error="إضافة قاعدة walled-garden فشلت: " + str(e))
+                error=N_("إضافة قاعدة walled-garden فشلت: ") + str(e))
     return WalledGardenResult(ok=True, added=added, removed=removed,
                               command=cmd)
 
@@ -256,7 +257,7 @@ def ensure_walled_garden_hosts(
     except Exception as e:  # noqa: BLE001
         return WalledGardenHostsResult(
             ok=False, command=cmd,
-            error="تعذّر قراءة قواعد walled-garden: " + str(e))
+            error=N_("تعذّر قراءة قواعد walled-garden: ") + str(e))
     # Authoritative cleanup: remove OUR prior tagged (HobeRadius-Addon) rows FIRST,
     # then add the wanted set fresh — re-deploy collapses to one set, no pile-up.
     # Scoped to our comment tag → user's own walled-garden hosts are untouched.
@@ -273,7 +274,7 @@ def ensure_walled_garden_hosts(
         except Exception as e:  # noqa: BLE001
             return WalledGardenHostsResult(
                 ok=False, removed=removed, command=cmd,
-                error="حذف نطاق walled-garden قديم فشل: " + str(e))
+                error=N_("حذف نطاق walled-garden قديم فشل: ") + str(e))
     added = 0
     for h in wanted:
         try:
@@ -286,7 +287,7 @@ def ensure_walled_garden_hosts(
         except Exception as e:  # noqa: BLE001
             return WalledGardenHostsResult(
                 ok=False, added=added, removed=removed, command=cmd,
-                error="إضافة نطاق walled-garden فشلت: " + str(e))
+                error=N_("إضافة نطاق walled-garden فشلت: ") + str(e))
     return WalledGardenHostsResult(ok=True, added=added, removed=removed,
                                    command=cmd)
 
@@ -339,12 +340,12 @@ def render_store_page(
     if not base or not _API_BASE_RE.match(base):
         if strict:
             raise StorePageError(
-                "عنوان سيرفر الراديوس غير صالح — اضبط network.radius_server_ip في الإعدادات.")
+                N_("عنوان سيرفر الراديوس غير صالح — اضبط network.radius_server_ip في الإعدادات."))
         # غير صارم: نحقن عنوانًا فارغًا فيلتقطه حارس JS ويعرض التحذير.
         base = ""
     name = str(tenant_name or "").strip() or "Hoberadius WiFi"
     if not _NAME_RE.match(name):
-        raise StorePageError("اسم المزوّد غير صالح لصفحة المتجر.")
+        raise StorePageError(N_("اسم المزوّد غير صالح لصفحة المتجر."))
     color = str(accent_color or "").strip() or "#4F46E5"
     if not _COLOR_RE.match(color):
         color = "#4F46E5"
@@ -452,7 +453,7 @@ def deploy_store(
         # ونلحق السبب الواضح من المسار الذكي (انقطاع/حجم/FTP).
         return StoreDeployResult(
             ok=False, path=target_path, bytes=res.bytes,
-            error="رفع متجر الراوتر فشل: " + res.error,
+            error=N_("رفع متجر الراوتر فشل: ") + res.error,
             via=res.via, chunks=res.chunks, assets=n_assets)
     return StoreDeployResult(
         ok=True, path=target_path, bytes=res.bytes,

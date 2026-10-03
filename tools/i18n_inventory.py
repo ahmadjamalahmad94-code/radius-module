@@ -77,6 +77,7 @@ PARSE_VOCAB_NAME = re.compile(
 #: ملفّات/أنماط لا تُمسح إطلاقًا — مع السبب (تظهر في التقرير).
 SKIP_FILES: dict[str, str] = {
     "app/radius/db/migrations/*": "ترحيلات DB — قيم بذر تُخزَّن بيانات، لا نصوص واجهة.",
+    "app/radius/seed.py": "بيانات تجريبيّة (أسماء/باقات وهميّة) تُبذَر في DB — محتوى لا واجهة.",
     # قوالب مكرّرة يحجبها app/templates (محمِّل التطبيق يسبق محمِّل البلوبرنت)
     "app/radius/templates/radius/devices_form.html": "مُحجوب بنسخة app/templates — لا يُعرَض أبدًا.",
     "app/radius/templates/radius/devices_list.html": "مُحجوب بنسخة app/templates — لا يُعرَض أبدًا.",
@@ -293,7 +294,7 @@ def _js_tok(src, start, end, depth, until_brace):
 
 _JS_LOGIC_CALLEES = {
     "includes", "indexOf", "lastIndexOf", "startsWith", "endsWith", "split",
-    "getAttribute", "setAttribute", "removeAttribute", "hasAttribute", "toggleAttribute",
+    "getAttribute", "removeAttribute", "hasAttribute", "toggleAttribute",
     "querySelector", "querySelectorAll", "getElementById", "getElementsByClassName",
     "getElementsByName", "closest", "matches", "getItem", "setItem", "removeItem",
     "has", "get", "delete", "contains", "RegExp", "match", "matchAll", "search",
@@ -301,7 +302,8 @@ _JS_LOGIC_CALLEES = {
     "addEventListener", "removeEventListener", "dispatchEvent", "CustomEvent", "Event",
     "find", "findIndex", "filter",
 }
-_JS_LOGIC_FIRST_ARG_ONLY = {"replace", "replaceAll", "set", "append", "add", "remove", "toggle"}
+_JS_LOGIC_FIRST_ARG_ONLY = {"replace", "replaceAll", "set", "append", "add", "remove", "toggle",
+                            "setAttribute"}
 
 
 def classify_js_tokens(toks: list[JsTok], src: str):
@@ -367,6 +369,11 @@ def classify_js_tokens(toks: list[JsTok], src: str):
         elif (prev is not None and prev.type == "punct" and prev.value in ("===", "!==", "==", "!=")) or \
                 (nxt is not None and nxt.type == "punct" and nxt.value in ("===", "!==", "==", "!=")):
             status, reason = "ignored", "compare"
+            # مقارنة بما كتبه المستخدم (عبارة تأكيد) ⇒ typed-confirm
+            near = sig[max(0, idx - 4):idx + 5]
+            if any(x.type == "ident" and x.value in ("typed", "confirm", "value", "word", "phrase", "confirmIn")
+                   for x in near):
+                reason = "typed-confirm"
         elif prev is not None and prev.type == "ident" and prev.value == "case":
             status, reason = "ignored", "compare"
         elif nxt is not None and nxt.type == "punct" and nxt.value == ":" and \
@@ -443,10 +450,16 @@ class JTok:
 
 
 def jinja_tokens(src: str, start: int, end: int) -> list[JTok]:
-    toks = []
+    """رموز تعبير Jinja. السلاسل المتجاورة ("a" "b") تُدمَج رمزًا واحدًا
+    (كما يفعل Jinja نفسه) — قيمتها نصّ حرفيّ جاهز لـ literal_eval."""
+    toks: list[JTok] = []
     for m in _JINJA_TOKEN.finditer(src, start, end):
         kind = m.lastgroup
         if kind == "ws":
+            continue
+        if kind == "str" and toks and toks[-1].type == "str":
+            prev = toks[-1]
+            toks[-1] = JTok("str", prev.start, m.end(), prev.value + " " + m.group())
             continue
         toks.append(JTok(kind, m.start(), m.end(), m.group()))
     return toks
@@ -511,7 +524,7 @@ def classify_jinja_expr(src: str, start: int, end: int, is_block: bool):
         elif top and top[2] == "sub":
             st, rs = "ignored", "key"
         elif top and top[2] == "call" and top[0] in _JINJA_LOGIC_CALLEES and \
-                not (top[0] == "replace" and top[1] >= 1):
+                not (top[0] in ("replace", "get", "pop", "setdefault") and top[1] >= 1):
             st, rs = "ignored", "logic-arg"
         else:
             st, rs = "leak", ""
@@ -571,6 +584,11 @@ def jinja_regions(src: str):
         k = min(n, j + 2)
         inner_s = m.end()
         inner_e = j
+        # علامات التحكّم بالمسافات {{- … -}} / {%+ … +%} ليست جزءًا من التعبير
+        if inner_s < inner_e and src[inner_s] in "-+":
+            inner_s += 1
+        if inner_e > inner_s and src[inner_e - 1] in "-+":
+            inner_e -= 1
         regions.append((kind, m.start(), k, inner_s, inner_e))
         i = k
         if kind == "block":
@@ -591,6 +609,8 @@ _DISPLAY_ATTRS = {
     "placeholder", "title", "alt", "aria-label", "aria-description", "aria-placeholder",
     "aria-roledescription", "aria-valuetext", "label", "summary", "content", "abbr",
     "data-original-title", "data-bs-original-title", "tooltip",
+    "data-column-label", "data-cc-inert", "data-on", "data-off", "data-urow-confirm",
+    "data-uds-export-title",
 }
 _DISPLAY_DATA_PREFIX = (
     "data-confirm", "data-title", "data-tooltip", "data-tip", "data-hint", "data-label",
@@ -647,11 +667,11 @@ def _html_scan(masked: str, start: int, end: int, emit, region_cb):
         j = name_m.end()
         attrs = []
         while j < end:
-            while j < end and masked[j] in " \t\r\n/":
+            while j < end and masked[j] in " \t\r\n/\x01":
                 j += 1
             if j >= end or masked[j] == ">":
                 break
-            am = re.compile(r"[^\s=>/]+").match(masked, j)
+            am = re.compile(r"[^\s=>/\x01]+").match(masked, j)
             if not am:
                 j += 1
                 continue
@@ -1005,6 +1025,9 @@ def _classify_py(node, parent, docs, text):
                     return "ignored", "regex", flags, scope
                 if name in _PY_SQL_FUNCS and child in p.args and p.args and child is p.args[0]:
                     return "ignored", "sql", flags, scope
+                if name in ("startswith", "endswith", "find", "rfind", "index", "count",
+                            "removeprefix", "removesuffix") and isinstance(p.func, ast.Attribute):
+                    flags.append("cmp:sub")
                 if name in _PY_LOGIC_METHODS and isinstance(p.func, ast.Attribute):
                     if not (name == "replace" and child in p.args and p.args.index(child) >= 1) and \
                             not (name in ("get", "pop", "setdefault") and child in p.args
@@ -1020,6 +1043,11 @@ def _classify_py(node, parent, docs, text):
             if break_here:
                 break
         if isinstance(p, ast.Compare):
+            # 'x' in msg  ⇒ فحص احتواء (cmp:sub) ؛ غيره مساواة (cmp:eq)
+            if child is p.left and any(isinstance(o, (ast.In, ast.NotIn)) for o in p.ops):
+                flags.append("cmp:sub")
+            else:
+                flags.append("cmp:eq")
             return "ignored", "compare", flags, scope
         if isinstance(p, ast.Dict):
             if child in p.keys:
@@ -1031,8 +1059,10 @@ def _classify_py(node, parent, docs, text):
         if isinstance(p, ast.Subscript) and child is p.slice:
             return "ignored", "key", flags, scope
         if isinstance(p, (ast.Tuple, ast.List, ast.Set)) and child in p.elts and isinstance(child, ast.Constant):
-            if any(isinstance(e, ast.Constant) and isinstance(e.value, str) and
-                   re.fullmatch(r"[a-z][a-z0-9_ ]*", e.value) for e in p.elts):
+            # قائمة مرادفات: كل عناصرها سلاسل، ومنها ≥2 معرّف لاتينيّ (("name","الاسم","title"…)).
+            # (لا تشمل ("not_found", "رسالة", 404) — رسالة خطأ للعرض.)
+            if all(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in p.elts) and \
+                    sum(1 for e in p.elts if re.fullmatch(r"[a-z][a-z0-9_ ]*", e.value)) >= 2:
                 return "ignored", "parse-vocab", flags, scope
         if isinstance(p, ast.keyword) and p.arg and PARSE_VOCAB_NAME.search(p.arg.upper()):
             return "ignored", "parse-vocab", flags, scope

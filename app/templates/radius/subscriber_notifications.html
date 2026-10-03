@@ -15,13 +15,13 @@
 {% set _on = [] %}
 {% for grp in groups %}{% for r in grp.rules %}{% if r.enabled %}{% set _x = _on.append(1) %}{% endif %}{% endfor %}{% endfor %}
 {{ hub.megahero(
-  "إشعارات المشتركين",
-  subtitle="السطح الموحّد لإشعارات المشترك. لكل حدث فعّله واختر قنواته — تيليجرام هو الأساس (بلا مفاتيح؛ يربطه المشترك بضغطة من بوابته) ويصل لمحادثته مباشرة، وواتساب/SMS لهاتف ملفه إن هيّأت القناة من «التكاملات والقنوات».",
+  _('إشعارات المشتركين'),
+  subtitle=_('السطح الموحّد لإشعارات المشترك. لكل حدث فعّله واختر قنواته — تيليجرام هو الأساس (بلا مفاتيح؛ يربطه المشترك بضغطة من بوابته) ويصل لمحادثته مباشرة، وواتساب/SMS لهاتف ملفه إن هيّأت القناة من «التكاملات والقنوات».'),
   icon="comment-dots",
   kpis=[
-    {'label':'أحداث مُفعّلة','value':_on|length,'icon':'bell','variant':'green'},
-    {'label':'القنوات','value':'تيليجرام/واتساب/SMS','icon':'tower-broadcast','variant':'brand'},
-    {'label':'تيليجرام','value':('جاهز' if chan_ready.telegram else 'غير مضبوط'),'icon':'paper-plane','variant':('green' if chan_ready.telegram else 'amber')}
+    {'label':_('أحداث مُفعّلة'),'value':_on|length,'icon':'bell','variant':'green'},
+    {'label':_('القنوات'),'value':_('تيليجرام/واتساب/SMS'),'icon':'tower-broadcast','variant':'brand'},
+    {'label':_('تيليجرام'),'value':(_('جاهز') if chan_ready.telegram else _('غير مضبوط')),'icon':'paper-plane','variant':('green' if chan_ready.telegram else 'amber')}
   ]
 ) }}
 
@@ -44,7 +44,7 @@
   {% set _grp_icon = {'subscribers':'users','billing':'wallet','store':'store'}.get(grp.key, 'wallet') %}
   <div class="sn-group{% if grp.key=='store' %} sn-group--store{% endif %}">
   {% call hub.section(grp.label, icon=_grp_icon,
-                      meta=(grp.rules|length ~ " حدث")) %}
+                      meta=(_('%(length)s حدث', length=grp.rules|length))) %}
     {% if grp.key=='store' %}
     <div class="hub-note hub-note--info" style="margin-bottom:12px">
       <i class="fa-solid fa-store"></i>
@@ -70,7 +70,7 @@
             {% set sel = ch in r.channels %}
             {% set ready = chan_ready.get(ch, False) %}
             <label class="sn-chan{% if sel %} sel{% endif %}{% if not ready %} unset{% endif %}"
-                   title="{{ channel_labels[ch] }}{% if not ready %} — غير مهيّأة (تُضبط من التكاملات){% endif %}">
+                   title="{{ channel_labels[ch] }}{% if not ready %} — {{ _('غير مهيّأة (تُضبط من التكاملات)') }}{% endif %}">
               <input type="checkbox" name="{{ ek }}__channels" value="{{ ch }}" {% if sel %}checked{% endif %}>
               <i class="fa-{{ 'brands' if ch=='whatsapp' else 'solid' }} fa-{{ {'telegram':'paper-plane','whatsapp':'whatsapp','sms':'comment-sms'}[ch] }}"></i>
               {{ channel_labels[ch] }}{% if not ready %} <span class="sn-cog">⚙︎</span>{% endif %}
@@ -97,7 +97,7 @@
   <div class="sn-savebar">
     <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _("حفظ الإعدادات") }}</button>
     <span class="sn-foot"><i class="fa-solid fa-circle-info"></i>
-      القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.
+      {{ _('القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.') }}
     </span>
   </div>
 {% if not can_submit('radius.subscriber_notifications') %}</fieldset>{% endif %}</form>

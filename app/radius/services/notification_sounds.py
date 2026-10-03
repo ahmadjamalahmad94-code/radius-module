@@ -14,6 +14,7 @@
 """
 
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import base64
 import hashlib
@@ -89,33 +90,33 @@ class SoundEvent:
 # تكراره كان يُظهر بندين متشابهين في الصفحة («انقطاع راوتر» و«راوتر غير
 # متصل») لا يُميّزهما أحد.
 _EXTRA_EVENTS: tuple[SoundEvent, ...] = (
-    SoundEvent("router_up", "راوتر: عاد للاتصال", "network"),
-    SoundEvent("device_down", "جهاز شبكة: انقطع (أكسس بوينت وغيره)", "network",
-               "من صفحة «تتبّع الأجهزة» — منطقةٌ واحدة تتأثّر"),
-    SoundEvent("device_up", "جهاز شبكة: عاد للاتصال", "network"),
-    SoundEvent("device_unavailable", "جهاز شبكة: غير متاح لأنّ راوتره ساقط",
-               "network", "ليس عطب الجهاز — أصلِح الراوتر أوّلًا"),
-    SoundEvent("network_high_latency", "جهاز شبكة: ارتفاع البنج", "network"),
-    SoundEvent("health_digest_ok", "الفحص الدوريّ انتهى — كلّ الأجهزة سليمة",
-               "system", "طمأنةٌ دوريّة لا إجراء فيها — يُنصح بصوتٍ هادئ"),
-    SoundEvent("health_digest_issues", "الفحص الدوريّ انتهى — توجد أجهزة بها مشاكل",
-               "system", "هذا وحده يستوجب أن تفتح اللوحة — ميّزه"),
+    SoundEvent("router_up", N_("راوتر: عاد للاتصال"), "network"),
+    SoundEvent("device_down", N_("جهاز شبكة: انقطع (أكسس بوينت وغيره)"), "network",
+               N_("من صفحة «تتبّع الأجهزة» — منطقةٌ واحدة تتأثّر")),
+    SoundEvent("device_up", N_("جهاز شبكة: عاد للاتصال"), "network"),
+    SoundEvent("device_unavailable", N_("جهاز شبكة: غير متاح لأنّ راوتره ساقط"),
+               "network", N_("ليس عطب الجهاز — أصلِح الراوتر أوّلًا")),
+    SoundEvent("network_high_latency", N_("جهاز شبكة: ارتفاع البنج"), "network"),
+    SoundEvent("health_digest_ok", N_("الفحص الدوريّ انتهى — كلّ الأجهزة سليمة"),
+               "system", N_("طمأنةٌ دوريّة لا إجراء فيها — يُنصح بصوتٍ هادئ")),
+    SoundEvent("health_digest_issues", N_("الفحص الدوريّ انتهى — توجد أجهزة بها مشاكل"),
+               "system", N_("هذا وحده يستوجب أن تفتح اللوحة — ميّزه")),
 
     # ── موارد المايكروتيك (MT99) ──
     # كلّ بندٍ يقول: ما الذي تجاوز، وما أثره العمليّ. العتبات في:
     # الإعدادات ← مراقبة الموارد.
-    SoundEvent("res_cpu_high", "المعالج مرتفع (فوق العتبة، افتراضيًّا ٨٥٪)",
-               "resources", "الراوتر يبطؤ: تأخّر المصادقة وتقطّع الإدارة"),
-    SoundEvent("res_ram_high", "الذاكرة ممتلئة (فوق العتبة، افتراضيًّا ٩٠٪)",
-               "resources", "خطر إعادة تشغيلٍ ذاتيّة أو سقوط خدمات"),
-    SoundEvent("res_temp_high", "الحرارة مرتفعة (فوق العتبة، افتراضيًّا ٧٠°)",
-               "resources", "تهويةٌ سيّئة — يسبق العطب المادّيّ"),
-    SoundEvent("res_disk_high", "مساحة القرص شحّت (تحت العتبة، افتراضيًّا ١٠٪)",
-               "resources", "يمنع النسخ الاحتياطيّ وتسجيل السجلّات"),
-    SoundEvent("res_traffic_high", "حركة المرور تجاوزت العتبة المضبوطة",
-               "resources", "تُضبط يدويًّا؛ ٠ = مُعطّلة"),
-    SoundEvent("res_recovered", "مورد عاد تحت العتبة (تعافى)",
-               "resources", "انتهاء الحالة — طمأنةٌ لا إنذار"),
+    SoundEvent("res_cpu_high", N_("المعالج مرتفع (فوق العتبة، افتراضيًّا ٨٥٪)"),
+               "resources", N_("الراوتر يبطؤ: تأخّر المصادقة وتقطّع الإدارة")),
+    SoundEvent("res_ram_high", N_("الذاكرة ممتلئة (فوق العتبة، افتراضيًّا ٩٠٪)"),
+               "resources", N_("خطر إعادة تشغيلٍ ذاتيّة أو سقوط خدمات")),
+    SoundEvent("res_temp_high", N_("الحرارة مرتفعة (فوق العتبة، افتراضيًّا ٧٠°)"),
+               "resources", N_("تهويةٌ سيّئة — يسبق العطب المادّيّ")),
+    SoundEvent("res_disk_high", N_("مساحة القرص شحّت (تحت العتبة، افتراضيًّا ١٠٪)"),
+               "resources", N_("يمنع النسخ الاحتياطيّ وتسجيل السجلّات")),
+    SoundEvent("res_traffic_high", N_("حركة المرور تجاوزت العتبة المضبوطة"),
+               "resources", N_("تُضبط يدويًّا؛ ٠ = مُعطّلة")),
+    SoundEvent("res_recovered", N_("مورد عاد تحت العتبة (تعافى)"),
+               "resources", N_("انتهاء الحالة — طمأنةٌ لا إنذار")),
 )
 
 
@@ -127,22 +128,22 @@ _EXTRA_EVENTS: tuple[SoundEvent, ...] = (
 # السطر مرّةً ويقرّر أيّ صوتٍ يستحقّ — فالغموض هنا يكلّفه وقتًا كلّ مرّة.
 _LABEL_OVERRIDES = {
     # ── المايكروتيك: الراوتر الذي يُشغّل الريديوس ──
-    "router_offline": "🔴 المايكروتيك لا يردّ — تنقطع الشبكة كلّها",
-    "router_up": "المايكروتيك عاد للاتصال",
-    "mikrotik_connection_problem": "اللوحة لا تصل للمايكروتيك (API مقفلة أو كلمة مرور خاطئة)",
-    "router_high_traffic": "المايكروتيك: ذروة السرعة تجاوزت الحدّ — الخطّ ممتلئ الآن",
-    "router_high_usage": "المايكروتيك: الداتا المستهلكة تجاوزت الحدّ خلال المدّة",
+    "router_offline": N_("🔴 المايكروتيك لا يردّ — تنقطع الشبكة كلّها"),
+    "router_up": N_("المايكروتيك عاد للاتصال"),
+    "mikrotik_connection_problem": N_("اللوحة لا تصل للمايكروتيك (API مقفلة أو كلمة مرور خاطئة)"),
+    "router_high_traffic": N_("المايكروتيك: ذروة السرعة تجاوزت الحدّ — الخطّ ممتلئ الآن"),
+    "router_high_usage": N_("المايكروتيك: الداتا المستهلكة تجاوزت الحدّ خلال المدّة"),
     # ── أجهزة التوزيع: ما تتتبّعه من صفحة «تتبّع الأجهزة» ──
-    "device_down": "جهاز توزيع لا يردّ — منطقةٌ واحدة تنقطع",
-    "device_up": "جهاز توزيع عاد للاتصال",
-    "device_unavailable": "جهاز توزيع غير مفحوص لأنّ المايكروتيك ساقط",
-    "network_high_latency": "جهاز توزيع: بنج مرتفع — بطءٌ لا انقطاع",
-    "device_health": "تتبّع الأجهزة: تقرير عامّ عن حالة الأجهزة",
+    "device_down": N_("جهاز توزيع لا يردّ — منطقةٌ واحدة تنقطع"),
+    "device_up": N_("جهاز توزيع عاد للاتصال"),
+    "device_unavailable": N_("جهاز توزيع غير مفحوص لأنّ المايكروتيك ساقط"),
+    "network_high_latency": N_("جهاز توزيع: بنج مرتفع — بطءٌ لا انقطاع"),
+    "device_health": N_("تتبّع الأجهزة: تقرير عامّ عن حالة الأجهزة"),
     # ── المشتركون: تسمياتٌ من السجلّ كانت مبهمة ──
-    "loan_granted": "منح مشترك سلفة وقت (رصيدٌ مؤقّت قبل الدفع)",
+    "loan_granted": N_("منح مشترك سلفة وقت (رصيدٌ مؤقّت قبل الدفع)"),
     # ── الشبكة ──
-    "network_disconnect": "الشبكة: فصل جهاز أو بنج سيّئ",
-    "loop_detected": "لوب في الشبكة (حلقة تُغرق المُبدّل)",
+    "network_disconnect": N_("الشبكة: فصل جهاز أو بنج سيّئ"),
+    "loop_detected": N_("لوب في الشبكة (حلقة تُغرق المُبدّل)"),
 }
 
 
@@ -206,18 +207,18 @@ EVENTS: dict[str, SoundEvent] = {e.key: e for e in _EVENTS}
 EVENT_KEYS: tuple[str, ...] = tuple(EVENTS.keys())
 
 GROUP_LABELS = {
-    "subscribers": "المشتركون",
-    "network": "الشبكة والأجهزة",
-    "finance": "المال والتحصيل",
-    "store": "المتجر",
-    "security": "الأمان",
-    "resources": "موارد المايكروتيك (معالج · ذاكرة · حرارة · قرص)",
-    "system": "النظام",
-    "billing": "الفوترة",
+    "subscribers": N_("المشتركون"),
+    "network": N_("الشبكة والأجهزة"),
+    "finance": N_("المال والتحصيل"),
+    "store": N_("المتجر"),
+    "security": N_("الأمان"),
+    "resources": N_("موارد المايكروتيك (معالج · ذاكرة · حرارة · قرص)"),
+    "system": N_("النظام"),
+    "billing": N_("الفوترة"),
     # فرع TR-069 يُضيف مجموعة `routers` (أجهزة الزبائن عبر GenieACS).
     # الكتالوج مُشتقٌّ من السجلّ الحيّ، فمجموعةٌ بلا تسمية هنا تظهر في
     # الصفحة بمفتاحها الإنجليزيّ — وهو ما أمسكه الاختبار عند الدمج.
-    "routers": "أجهزة الزبائن (TR-069)",
+    "routers": N_("أجهزة الزبائن (TR-069)"),
 }
 
 # الأنواع الخشنة الموجودة في panel_notifications.type — كارتدادٍ وسيط بين
@@ -261,8 +262,8 @@ def _write_with_retry(fn):
             break
     _LOG.warning("notification sound write failed: %s", last)
     if "locked" in last.lower():
-        return False, "القاعدة مشغولة الآن — أعد المحاولة بعد لحظات."
-    return False, "تعذّر الحفظ."
+        return False, N_("القاعدة مشغولة الآن — أعد المحاولة بعد لحظات.")
+    return False, N_("تعذّر الحفظ.")
 
 
 def _checksum(raw: bytes) -> str:
@@ -281,14 +282,14 @@ def save_sound(tenant_id: int, sound_key: str, raw: bytes, *,
     """
     key = (sound_key or "").strip()
     if not is_valid_key(key):
-        return False, "مفتاح إشعارٍ غير معروف."
+        return False, N_("مفتاح إشعارٍ غير معروف.")
     if not raw:
-        return False, "الملفّ فارغ."
+        return False, N_("الملفّ فارغ.")
     if len(raw) > MAX_BYTES:
-        return False, f"الملفّ كبير جدًّا (الحدّ {MAX_BYTES // (1024 * 1024)} ميغابايت)."
+        return False, _tr('الملفّ كبير جدًّا (الحدّ %(v)s ميغابايت).', v=MAX_BYTES // (1024 * 1024))
     m = (mime or "").strip() or "audio/mpeg"
     if not m.startswith(_ALLOWED_MIME_PREFIX) and m != _OCTET:
-        return False, "الملفّ ليس صوتيًّا."
+        return False, N_("الملفّ ليس صوتيًّا.")
     if origin not in ("local", "central"):
         origin = "local"
     b64 = base64.b64encode(raw).decode("ascii")
@@ -303,11 +304,11 @@ def save_sound(tenant_id: int, sound_key: str, raw: bytes, *,
             if cur is not None:
                 # السحب المركزيّ لا يدوس رفعًا محلّيًّا — قرار العميل يفوز.
                 if origin == "central" and (cur["origin"] or "") == "local":
-                    outcome["done"] = (False, "يوجد صوتٌ محلّيّ لهذا الحدث — "
-                                              "المركزيّ لا يستبدله.")
+                    outcome["done"] = (False, N_("يوجد صوتٌ محلّيّ لهذا الحدث — "
+                                              "المركزيّ لا يستبدله."))
                     return
                 if (cur["checksum"] or "") == csum and (cur["origin"] or "") == origin:
-                    outcome["done"] = (True, "الصوت نفسه — لا تغيير.")
+                    outcome["done"] = (True, N_("الصوت نفسه — لا تغيير."))
                     return
                 cn.execute(
                     "UPDATE notification_sounds SET mime=?, filename=?, data_b64=?, "
@@ -321,18 +322,18 @@ def save_sound(tenant_id: int, sound_key: str, raw: bytes, *,
                     "VALUES (?,?,?,?,?,?,?,?)",
                     (tenant_id, key, m, (filename or "")[:120], b64, origin,
                      csum, now_iso()))
-        outcome["done"] = (True, "حُفظ الصوت.")
+        outcome["done"] = (True, N_("حُفظ الصوت."))
 
     ok, err = _write_with_retry(_do)
     if not ok:
         return False, err
-    return outcome.get("done", (True, "حُفظ الصوت."))
+    return outcome.get("done", (True, N_("حُفظ الصوت.")))
 
 
 def clear_sound(tenant_id: int, sound_key: str) -> tuple[bool, str]:
     key = (sound_key or "").strip()
     if not is_valid_key(key):
-        return False, "مفتاح إشعارٍ غير معروف."
+        return False, N_("مفتاح إشعارٍ غير معروف.")
     def _do():
         with transaction() as cn:
             cn.execute("DELETE FROM notification_sounds WHERE tenant_id=? "
@@ -341,7 +342,7 @@ def clear_sound(tenant_id: int, sound_key: str) -> tuple[bool, str]:
     ok, err = _write_with_retry(_do)
     if not ok:
         return False, err
-    return True, "أُعيدت النغمة الافتراضيّة لهذا الحدث."
+    return True, N_("أُعيدت النغمة الافتراضيّة لهذا الحدث.")
 
 
 def _row(tenant_id: int, key: str) -> Optional[dict]:

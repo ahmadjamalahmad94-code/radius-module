@@ -69,8 +69,8 @@
 </style>
 
 {# ───── شرح الفرق: «جدول زمني دائم» مقابل «سرعة لحظية مؤقتة» ───── #}
-{% call hub.section("ما الفرق؟ اقرأ أولًا", icon="circle-question",
-                    meta="هذه الصفحة فيها أداتان مختلفتان") %}
+{% call hub.section(_('ما الفرق؟ اقرأ أولًا'), icon="circle-question",
+                    meta=_('هذه الصفحة فيها أداتان مختلفتان')) %}
   <div class="ssp-help">
     <div class="ssp-help-card is-schedule">
       <span class="ic"><i class="fa-solid fa-calendar-clock"></i></span>
@@ -93,8 +93,8 @@
 
 {# ───── قسم الجداول الزمنية (CRUD كامل موصول بنفس backend) ───── #}
 {% set _enabled_count = schedules|selectattr('enabled')|list|length if schedules else 0 %}
-{% call hub.section("الجداول الزمنية للسرعة", icon="calendar-clock",
-                    meta=((schedules|length if schedules else 0)|string) + " جدول · " + (_enabled_count|string) + " مفعَّل") %}
+{% call hub.section(_('الجداول الزمنية للسرعة'), icon="calendar-clock",
+                    meta=((schedules|length if schedules else 0)|string) + _(' جدول · ') + (_enabled_count|string) + _(' مفعَّل')) %}
 
   {# لافتة حالة التطبيق الحيّ — تكشف علم البيئة بدل الصمت #}
   {% if live_apply_enabled %}
@@ -144,13 +144,13 @@
           </td>
           <td class="small">
             {% if item.get('target_type') == 'subscriber' %}
-              {{ hub.pill("مشترك", variant="blue", dot=False) }}
+              {{ hub.pill(_('مشترك'), variant="blue", dot=False) }}
               <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ item.get('subscriber_username') }}</div>
             {% elif item.get('target_type') == 'card_batch' %}
-              {{ hub.pill("كروت", variant="amber", dot=False) }}
+              {{ hub.pill(_('كروت'), variant="amber", dot=False) }}
               <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}</div>
             {% else %}
-              {{ hub.pill("عرض", variant="brand", dot=False) }}
+              {{ hub.pill(_('عرض'), variant="brand", dot=False) }}
             {% endif %}
             <div class="hub-text-mute small">{{ _('أولوية') }} {{ item.get('priority') or 100 }}</div>
           </td>
@@ -166,7 +166,7 @@
             {% endif %}
           </td>
           <td>
-            {% if item.get('enabled') %}{{ hub.pill("مفعَّل", variant="green") }}{% else %}{{ hub.pill("معطَّل", variant="grey") }}{% endif %}
+            {% if item.get('enabled') %}{{ hub.pill(_('مفعَّل'), variant="green") }}{% else %}{{ hub.pill(_('معطَّل'), variant="grey") }}{% endif %}
           </td>
           <td>
             <div class="ssp-actions">
@@ -204,8 +204,8 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد جداول زمنية بعد",
-                 sub="اضغط «إضافة جدول زمني» لإنشاء قاعدة سرعة تعمل ضمن نافذة وقت متكرّرة (مثل سرعة الليل).",
+    {{ hub.empty(_('لا توجد جداول زمنية بعد'),
+                 sub=_('اضغط «إضافة جدول زمني» لإنشاء قاعدة سرعة تعمل ضمن نافذة وقت متكرّرة (مثل سرعة الليل).'),
                  icon="calendar-clock") }}
   {% endif %}
 {% endcall %}
@@ -256,7 +256,7 @@
         {{ _('باقة الكروت / الدفعة') }}
         <select class="hub-select" name="card_batch_id" data-ssp-req="card_batch">
           <option value="">{{ _('— اختر دفعة كروت —') }}</option>
-          {% for batch in sched_batches %}<option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or 'بدون اسم' }}</option>{% endfor %}
+          {% for batch in sched_batches %}<option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or _('بدون اسم') }}</option>{% endfor %}
         </select>
       </label>
 

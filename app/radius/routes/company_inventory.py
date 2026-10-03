@@ -6,6 +6,7 @@ subscriptions, revenue, or profit. See
 docs/company_inventory_expenses/COMPANY_INVENTORY_EXPENSES.md.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -137,7 +138,7 @@ def company_inventory_item_create():
             low_stock_threshold=_field("low_stock_threshold") or None,
             notes=_field("notes"),
         )
-        flash("تم إنشاء الصنف.", "success")
+        flash(_tr("تم إنشاء الصنف."), "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
     return _redirect("overview")
@@ -160,7 +161,7 @@ def company_inventory_incoming():
             notes=_field("notes"),
             created_by_admin_id=_admin_id(),
         )
-        flash("تم تسجيل وارد المخزون.", "success")
+        flash(_tr("تم تسجيل وارد المخزون."), "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
     return _redirect("incoming")
@@ -181,7 +182,7 @@ def company_inventory_usage():
             notes=_field("notes"),
             created_by_admin_id=_admin_id(),
         )
-        flash("تم تسجيل صرف المخزون.", "success")
+        flash(_tr("تم تسجيل صرف المخزون."), "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
     return _redirect("usage")
@@ -202,7 +203,7 @@ def company_expense_add():
             notes=_field("notes"),
             created_by_admin_id=_admin_id(),
         )
-        flash("تم تسجيل المصروف.", "success")
+        flash(_tr("تم تسجيل المصروف."), "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
     return _redirect("expenses")
@@ -211,7 +212,7 @@ def company_expense_add():
 def company_inventory_item_deactivate(item_id: int):
     try:
         _svc().deactivate_item(tenant_id=_tid(), actor=_actor(), item_id=item_id)
-        flash("تم تعطيل الصنف.", "success")
+        flash(_tr("تم تعطيل الصنف."), "success")
     except CompanyInventoryError as exc:
         flash(str(exc), "error")
     return _redirect("overview")

@@ -25,6 +25,7 @@ Used by:
 - The dashboard status chip (K9) that decides 🟢/🟡/🔴.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import shutil
@@ -220,16 +221,16 @@ def status_for(
         if age <= FRESH_HANDSHAKE_MAX:
             return VpnStatus("fresh", age, True, "")
         if age <= SLOW_HANDSHAKE_MAX:
-            return VpnStatus("slow", age, None, "آخر handshake قديم")
-        return VpnStatus("stale", age, False, "لا توجد handshake حديثة")
+            return VpnStatus("slow", age, None, N_("آخر handshake قديم"))
+        return VpnStatus("stale", age, False, N_("لا توجد handshake حديثة"))
 
     # No handshake yet (or wg unavailable) → fall back to ping
     alive = is_peer_alive(peer_ip)
     if alive is True:
-        return VpnStatus("slow", None, True, "ping ناجح، لا handshake")
+        return VpnStatus("slow", None, True, N_("ping ناجح، لا handshake"))
     if alive is False:
-        return VpnStatus("stale", None, False, "ping فاشل")
-    return VpnStatus("unknown", None, None, "wg / ping غير متاح")
+        return VpnStatus("stale", None, False, N_("ping فاشل"))
+    return VpnStatus("unknown", None, None, N_("wg / ping غير متاح"))
 
 
 def clear_caches() -> None:

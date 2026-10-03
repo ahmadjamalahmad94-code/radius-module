@@ -12,6 +12,7 @@ Every helper raises ``RadiusValidationError`` with an Arabic message; the API
 maps it to 422 and the web routes flash it.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from datetime import datetime
 from typing import Any
@@ -32,14 +33,14 @@ def parse_strict_bool(value: Any, *, label: str) -> bool:
     if isinstance(value, int):
         if value in (0, 1):
             return bool(value)
-        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون true أو false.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون true أو false.', label=label))
     if isinstance(value, str):
         v = value.strip().lower()
         if v in _TRUE:
             return True
         if v in _FALSE:
             return False
-    raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون true أو false.")
+    raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون true أو false.', label=label))
 
 
 def parse_ranged_int(value: Any, *, label: str, minimum: int, maximum: int,
@@ -52,14 +53,14 @@ def parse_ranged_int(value: Any, *, label: str, minimum: int, maximum: int,
     if value is None or (isinstance(value, str) and not value.strip()):
         if default is not None:
             return default
-        raise RadiusValidationError(f"قيمة «{label}» مطلوبة.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» مطلوبة.', label=label))
     if isinstance(value, bool):
-        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
     if isinstance(value, int):
         out = value
     elif isinstance(value, float):
         if value != value or value in (float("inf"), float("-inf")) or not value.is_integer():
-            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
         out = int(value)
     elif isinstance(value, str):
         # Arabic-Indic/Persian digits and the typographic minus → Latin, the
@@ -68,13 +69,13 @@ def parse_ranged_int(value: Any, *, label: str, minimum: int, maximum: int,
         s = normalize_number_text(value).strip()
         body = s[1:] if s[:1] in "+-" else s
         if not body.isdigit() or not body.isascii() or len(body) > 18:
-            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
         out = int(s)
     else:
-        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
     if out < minimum or out > maximum:
         raise RadiusValidationError(
-            f"قيمة «{label}» يجب أن تكون بين {minimum} و{maximum}.")
+            _tr('قيمة «%(label)s» يجب أن تكون بين %(minimum)s و%(maximum)s.', label=label, minimum=minimum, maximum=maximum))
     return out
 
 

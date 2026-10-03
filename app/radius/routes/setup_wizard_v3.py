@@ -43,6 +43,7 @@ Endpoints
         the unified script. Auth = secret short code.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from ..core import env_settings
@@ -183,7 +184,7 @@ def _build_fail_substeps(fail_stage: str) -> list[dict]:
 def setup_wizard_v3_page():
     return render_template(
         "radius/setup_wizard_v3.html",
-        page_title="معالج إضافة راوتر v3",
+        page_title=N_("معالج إضافة راوتر v3"),
     )
 
 
@@ -198,7 +199,7 @@ ROUTER_SERVICE_CARDS = [
     {
         "key": "hotspot",
         "title_ar": "Hotspot",
-        "subtitle_ar": "بوابة دخول عامّة مع صفحة تسجيل دخول",
+        "subtitle_ar": N_("بوابة دخول عامّة مع صفحة تسجيل دخول"),
         "icon": "wifi",
         "color": "blue",
         "phases_count": 4,
@@ -206,39 +207,39 @@ ROUTER_SERVICE_CARDS = [
     {
         "key": "broadband",
         "title_ar": "Broadband",
-        "subtitle_ar": "PPPoE — اشتراك ثابت بمستخدم وكلمة مرور",
+        "subtitle_ar": N_("PPPoE — اشتراك ثابت بمستخدم وكلمة مرور"),
         "icon": "ethernet",
         "color": "green",
         "phases_count": 4,
     },
     {
         "key": "block-sites",
-        "title_ar": "حجب مواقع",
-        "subtitle_ar": "منع الوصول لمواقع محدّدة",
+        "title_ar": N_("حجب مواقع"),
+        "subtitle_ar": N_("منع الوصول لمواقع محدّدة"),
         "icon": "ban",
         "color": "red",
         "phases_count": 3,
     },
     {
         "key": "open-sites",
-        "title_ar": "فتح مواقع",
-        "subtitle_ar": "السماح بمواقع بدون تسجيل دخول",
+        "title_ar": N_("فتح مواقع"),
+        "subtitle_ar": N_("السماح بمواقع بدون تسجيل دخول"),
         "icon": "circle-check",
         "color": "teal",
         "phases_count": 3,
     },
     {
         "key": "public-ip",
-        "title_ar": "تغيير عنوان التصفح العام (Public)",
-        "subtitle_ar": "توجيه المشتركين عبر عنوان إنترنت عامّ جديد",
+        "title_ar": N_("تغيير عنوان التصفح العام (Public)"),
+        "subtitle_ar": N_("توجيه المشتركين عبر عنوان إنترنت عامّ جديد"),
         "icon": "globe",
         "color": "amber",
         "phases_count": 4,
     },
     {
         "key": "remote-access",
-        "title_ar": "اتصال عن بُعد",
-        "subtitle_ar": "نفق VPN للفنّي لإدارة الراوتر",
+        "title_ar": N_("اتصال عن بُعد"),
+        "subtitle_ar": N_("نفق VPN للفنّي لإدارة الراوتر"),
         "icon": "key",
         "color": "purple",
         "phases_count": 3,
@@ -277,10 +278,10 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return _err(
-            "لا توجد كلمة مرور API لهذا الراوتر — افتح صفحة تعديل الراوتر وأدخلها.",
+            _tr("لا توجد كلمة مرور API لهذا الراوتر — افتح صفحة تعديل الراوتر وأدخلها."),
             status=409, code="no_api_password",
         )
     try:
@@ -294,7 +295,7 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
     except InterfaceDiscoveryError as exc:
         return _err(str(exc), status=502, code="discovery_failed")
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر اكتشاف الواجهات: {exc}", status=500,
+        return _err(_tr('تعذّر اكتشاف الواجهات: %(exc)s', exc=exc), status=500,
                     code="discovery_error")
     # Detect WAN-side interface(s): look up the default route and
     # the WireGuard tunnel interface, and mark them in the response
@@ -392,29 +393,29 @@ def setup_wizard_v3_router_discover_interfaces(router_id: int):
 _BLOCKING_ERRORS_AR = {
     # Hotspot
     "hotspot_no_interface_selected":
-        "اختر واجهة شبكة واحدة على الأقل قبل المتابعة.",
+        N_("اختر واجهة شبكة واحدة على الأقل قبل المتابعة."),
     "hotspot_subnet_conflict":
-        "النطاق الذي اخترته يتعارض مع شبكة أخرى على الراوتر. "
-        "غيّره يدوياً أو اضغط «توليد».",
+        N_("النطاق الذي اخترته يتعارض مع شبكة أخرى على الراوتر. "
+        "غيّره يدوياً أو اضغط «توليد»."),
     # Broadband
     "broadband_no_interface_selected":
-        "اختر واجهة شبكة واحدة على الأقل قبل المتابعة.",
+        N_("اختر واجهة شبكة واحدة على الأقل قبل المتابعة."),
     "broadband_pool_conflict":
-        "نطاق المشتركين يتعارض مع شبكة أخرى على الراوتر. "
-        "غيّر «نطاق المشتركين» يدوياً.",
+        N_("نطاق المشتركين يتعارض مع شبكة أخرى على الراوتر. "
+        "غيّر «نطاق المشتركين» يدوياً."),
     # Added services (block_sites / walled_garden / site_exit)
     "added_services_no_domains":
-        "اكتب موقعاً واحداً على الأقل قبل المتابعة.",
+        N_("اكتب موقعاً واحداً على الأقل قبل المتابعة."),
     "added_services_too_many_targets":
-        "عدد المواقع تجاوز الحدّ الأقصى (200). اختصر القائمة وحاول مرة أخرى.",
+        N_("عدد المواقع تجاوز الحدّ الأقصى (200). اختصر القائمة وحاول مرة أخرى."),
     "added_services_module_not_available":
-        "هذه الخدمة غير مدعومة بعد على هذه النسخة.",
+        N_("هذه الخدمة غير مدعومة بعد على هذه النسخة."),
     "site_exit_no_exit_node":
-        "اختر عقدة خروج (VPS exit node) قبل المتابعة.",
+        N_("اختر عقدة خروج (VPS exit node) قبل المتابعة."),
     "site_exit_invalid_destinations":
-        "صيغة المواقع غير صحيحة — تأكّد من كتابة domain صحيح في كل سطر.",
+        N_("صيغة المواقع غير صحيحة — تأكّد من كتابة domain صحيح في كل سطر."),
     "radius_secret_mismatch":
-        "سرّ RADIUS مفقود أو غير صحيح لهذا الراوتر. تحقّق من صفحة تعديل الراوتر.",
+        N_("سرّ RADIUS مفقود أو غير صحيح لهذا الراوتر. تحقّق من صفحة تعديل الراوتر."),
 }
 
 
@@ -448,7 +449,7 @@ def _plan_hotspot(router_id: int, inputs: dict) -> dict:
     )
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return None, 404, {"error": "الراوتر غير موجود",
+        return None, 404, {"error": _tr("الراوتر غير موجود"),
                            "code": "router_not_found"}
     inputs = dict(inputs)
     inputs.setdefault("radius_secret", str(nas.secret or ""))
@@ -474,12 +475,12 @@ def _hotspot_preview_bullets(plan_result) -> list[str]:
         bullets.extend(notes)
     # Fallback summary if the planner didn't emit notes.
     if not bullets:
-        bullets.append("سيتم إنشاء خادم Hotspot جديد على الواجهات المختارة.")
-        bullets.append("سيُضاف خادم DHCP يوزّع عناوين IP على الأجهزة المتصلة.")
-        bullets.append("سيُربط بـ RADIUS الخاص بهذا الخادم لتفعيل الحسابات.")
+        bullets.append(N_("سيتم إنشاء خادم Hotspot جديد على الواجهات المختارة."))
+        bullets.append(N_("سيُضاف خادم DHCP يوزّع عناوين IP على الأجهزة المتصلة."))
+        bullets.append(N_("سيُربط بـ RADIUS الخاص بهذا الخادم لتفعيل الحسابات."))
     warnings = list(getattr(plan_result, "warnings", ()) or ())
     for w in warnings:
-        bullets.append(f"⚠ تنبيه: {w}")
+        bullets.append(_tr('⚠ تنبيه: %(w)s', w=w))
     return bullets
 
 
@@ -490,7 +491,7 @@ def setup_wizard_v3_hotspot_preview(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
 
     body = _body() or {}
     inputs = {
@@ -502,7 +503,7 @@ def setup_wizard_v3_hotspot_preview(router_id: int):
     }
     if not inputs["selected_interfaces"]:
         return _err(
-            "اختر واجهة شبكة واحدة على الأقل قبل المعاينة.",
+            _tr("اختر واجهة شبكة واحدة على الأقل قبل المعاينة."),
             status=400, code="no_interface_selected",
         )
 
@@ -538,7 +539,7 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
 
     body = _body() or {}
     inputs = {
@@ -549,7 +550,7 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
         "blocked_network_cidrs": [],
     }
     if not inputs["selected_interfaces"]:
-        return _err("اختر واجهة شبكة واحدة على الأقل.",
+        return _err(_tr("اختر واجهة شبكة واحدة على الأقل."),
                     status=400, code="no_interface_selected")
 
     plan_result, status, err = _plan_hotspot(router_id, inputs)
@@ -561,7 +562,7 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
-        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+        return _err(_tr("لا يوجد سكربت لإرساله — تحقّق من المدخلات."),
                     status=400, code="empty_script")
 
     # Inject HOBERADIUS_SETUP tag on /ip hotspot add + /ip hotspot
@@ -578,19 +579,19 @@ def setup_wizard_v3_hotspot_apply(router_id: int):
         )
     except ExecutorNotConfigured:
         return _err(
-            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم. "
-            "راجع المسؤول لتفعيل LiveRouterExecutor.",
+            _tr("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم. "
+            "راجع المسؤول لتفعيل LiveRouterExecutor."),
             status=503, code="executor_not_configured",
         )
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ غير متوقّع عند الإرسال: {exc}",
+        return _err(_tr('خطأ غير متوقّع عند الإرسال: %(exc)s', exc=exc),
                     status=500, code="apply_error")
 
     if not exec_result.ok:
         fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
-            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "error": exec_result.error_message or _tr("تعذّر تنفيذ السكربت"),
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
             "fail_stage": fail_stage,
@@ -620,9 +621,9 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
 
     checks = []
@@ -631,7 +632,7 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc),
                     status=500, code="mt_client_load_error")
 
     cfg = {
@@ -650,7 +651,7 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
             running = [s for s in servers
                        if str(s.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
-                "label": "خادم Hotspot يعمل",
+                "label": _tr("خادم Hotspot يعمل"),
                 "status": "ok" if running else "fail",
             })
             # Check 2: At least one DHCP server tied to a hotspot
@@ -659,7 +660,7 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
             dhcp_active = [d for d in dhcp
                            if str(d.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
-                "label": "خادم DHCP يوزّع العناوين",
+                "label": _tr("خادم DHCP يوزّع العناوين"),
                 "status": "ok" if dhcp_active else "fail",
             })
             # Check 3: Hotspot profile points at RADIUS (best effort).
@@ -669,13 +670,13 @@ def setup_wizard_v3_hotspot_verify(router_id: int):
                 for p in profiles
             )
             checks.append({
-                "label": "تفعيل مصادقة RADIUS",
+                "label": _tr("تفعيل مصادقة RADIUS"),
                 "status": "ok" if radius_linked else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
 
@@ -702,12 +703,12 @@ def _broadband_preview_bullets(plan_result) -> list[str]:
     if notes:
         bullets.extend(notes)
     if not bullets:
-        bullets.append("سيتم تفعيل خادم PPPoE على الواجهات المختارة.")
-        bullets.append("سيُنشَأ pool عناوين IP يوزّع على المشتركين تلقائياً.")
-        bullets.append("سيُربط بـ RADIUS لمصادقة المشتركين باسم المستخدم وكلمة المرور.")
+        bullets.append(N_("سيتم تفعيل خادم PPPoE على الواجهات المختارة."))
+        bullets.append(N_("سيُنشَأ pool عناوين IP يوزّع على المشتركين تلقائياً."))
+        bullets.append(N_("سيُربط بـ RADIUS لمصادقة المشتركين باسم المستخدم وكلمة المرور."))
     warnings = list(getattr(plan_result, "warnings", ()) or ())
     for w in warnings:
-        bullets.append(f"⚠ تنبيه: {w}")
+        bullets.append(_tr('⚠ تنبيه: %(w)s', w=w))
     return bullets
 
 
@@ -717,7 +718,7 @@ def setup_wizard_v3_broadband_preview(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
 
     body = _body() or {}
     # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
@@ -746,7 +747,7 @@ def setup_wizard_v3_broadband_preview(router_id: int):
         "blocked_network_cidrs": [],
     }
     if not inputs["selected_interfaces"]:
-        return _err("اختر واجهة شبكة واحدة على الأقل قبل المعاينة.",
+        return _err(_tr("اختر واجهة شبكة واحدة على الأقل قبل المعاينة."),
                     status=400, code="no_interface_selected")
     plan_result, status, err = _plan_broadband(router_id, inputs)
     if err:
@@ -908,7 +909,7 @@ def setup_wizard_v3_broadband_apply(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
 
     body = _body() or {}
     # Defaults — BroadbandBootstrapPlanner in mode="manual" REQUIRES
@@ -937,7 +938,7 @@ def setup_wizard_v3_broadband_apply(router_id: int):
         "blocked_network_cidrs": [],
     }
     if not inputs["selected_interfaces"]:
-        return _err("اختر واجهة شبكة واحدة على الأقل.",
+        return _err(_tr("اختر واجهة شبكة واحدة على الأقل."),
                     status=400, code="no_interface_selected")
     plan_result, status, err = _plan_broadband(router_id, inputs)
     if err:
@@ -948,7 +949,7 @@ def setup_wizard_v3_broadband_apply(router_id: int):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
-        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+        return _err(_tr("لا يوجد سكربت لإرساله — تحقّق من المدخلات."),
                     status=400, code="empty_script")
     # Post-process the legacy planner output before sending — strips
     # the dns-server="x.x.x.x" attribute that RouterOS 7 refuses
@@ -961,17 +962,17 @@ def setup_wizard_v3_broadband_apply(router_id: int):
         )
     except ExecutorNotConfigured:
         return _err(
-            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+            _tr("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم."),
             status=503, code="executor_not_configured",
         )
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ غير متوقّع: {exc}",
+        return _err(_tr('خطأ غير متوقّع: %(exc)s', exc=exc),
                     status=500, code="apply_error")
     if not exec_result.ok:
         fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
-            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "error": exec_result.error_message or _tr("تعذّر تنفيذ السكربت"),
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
             "fail_stage": fail_stage,
@@ -1002,7 +1003,7 @@ def setup_wizard_v3_broadband_script(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     body = _body() or {}
     inputs = {
         "selected_interfaces": list(body.get("selected_interfaces") or []),
@@ -1017,7 +1018,7 @@ def setup_wizard_v3_broadband_script(router_id: int):
         "blocked_network_cidrs": [],
     }
     if not inputs["selected_interfaces"]:
-        return _err("اختر واجهة شبكة واحدة على الأقل.",
+        return _err(_tr("اختر واجهة شبكة واحدة على الأقل."),
                     status=400, code="no_interface_selected")
     plan_result, status, err = _plan_broadband(router_id, inputs)
     if err:
@@ -1038,16 +1039,16 @@ def setup_wizard_v3_broadband_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
 
     checks = []
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc),
                     status=500, code="mt_client_load_error")
 
     cfg = {
@@ -1065,13 +1066,13 @@ def setup_wizard_v3_broadband_verify(router_id: int):
             running = [s for s in servers
                        if str(s.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
-                "label": "خادم PPPoE يعمل",
+                "label": _tr("خادم PPPoE يعمل"),
                 "status": "ok" if running else "fail",
             })
             # Check 2: IP pool exists.
             pools = list(mt.print_("/ip/pool/print"))
             checks.append({
-                "label": "نطاق IP المشتركين موجود",
+                "label": _tr("نطاق IP المشتركين موجود"),
                 "status": "ok" if pools else "fail",
             })
             # Check 3: PPP global RADIUS enable. In RouterOS 7 this
@@ -1098,13 +1099,13 @@ def setup_wizard_v3_broadband_verify(router_id: int):
                     for p in profiles
                 )
             checks.append({
-                "label": "RADIUS مفعَّل لـ PPP",
+                "label": _tr("RADIUS مفعَّل لـ PPP"),
                 "status": "ok" if radius_linked else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
 
@@ -1145,7 +1146,7 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     plan_result, status, err = _plan_added_service(router_id, service_key, inputs)
     if err:
         return jsonify({"ok": False, **err}), status
@@ -1155,7 +1156,7 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
             "blocking_errors": _translate_blockers(plan_result.blocking_errors),
         }), 409
     if not plan_result.script or not plan_result.script.strip():
-        return _err("لا يوجد سكربت لإرساله — تحقّق من المدخلات.",
+        return _err(_tr("لا يوجد سكربت لإرساله — تحقّق من المدخلات."),
                     status=400, code="empty_script")
     script_to_send = plan_result.script
     try:
@@ -1164,17 +1165,17 @@ def _added_service_apply(router_id: int, service_key: str, inputs: dict):
         )
     except ExecutorNotConfigured:
         return _err(
-            "وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+            _tr("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم."),
             status=503, code="executor_not_configured",
         )
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ غير متوقّع: {exc}",
+        return _err(_tr('خطأ غير متوقّع: %(exc)s', exc=exc),
                     status=500, code="apply_error")
     if not exec_result.ok:
         fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
-            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "error": exec_result.error_message or _tr("تعذّر تنفيذ السكربت"),
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
             "fail_stage": fail_stage,
@@ -1327,7 +1328,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return jsonify({"ok": True, "groups": []})
     groups: list = []
@@ -1400,12 +1401,12 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "service_type": "hotspot",
                     "label": str(s.get("interface", "") or "—"),
                     "details": {
-                        "الواجهة": str(s.get("interface", "") or "—"),
-                        "اسم الخادم": str(s.get("name", "") or "—"),
-                        "الملف": str(s.get("profile", "") or "—"),
-                        "الحالة": ("معطّل"
+                        N_("الواجهة"): str(s.get("interface", "") or "—"),
+                        N_("اسم الخادم"): str(s.get("name", "") or "—"),
+                        N_("الملف"): str(s.get("profile", "") or "—"),
+                        N_("الحالة"): (N_("معطّل")
                                    if str(s.get("disabled", "")).lower() in ("true", "yes")
-                                   else "يعمل"),
+                                   else N_("يعمل")),
                     },
                     "source": _classify_hotspot_source(s),
                 })
@@ -1429,12 +1430,12 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "service_type": "broadband",
                     "label": str(s.get("interface", "") or "—"),
                     "details": {
-                        "الواجهة": str(s.get("interface", "") or "—"),
-                        "الخدمة": str(s.get("service-name", "") or "—"),
-                        "الملف الافتراضي": str(s.get("default-profile", "") or "—"),
-                        "الحالة": ("معطّل"
+                        N_("الواجهة"): str(s.get("interface", "") or "—"),
+                        N_("الخدمة"): str(s.get("service-name", "") or "—"),
+                        N_("الملف الافتراضي"): str(s.get("default-profile", "") or "—"),
+                        N_("الحالة"): (N_("معطّل")
                                    if str(s.get("disabled", "")).lower() in ("true", "yes")
-                                   else "يعمل"),
+                                   else N_("يعمل")),
                     },
                     "source": _classify_broadband_source(s),
                 })
@@ -1463,15 +1464,15 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "service_type": "block-sites",
                     "label": addr,
                     "details": {
-                        "الموقع": addr,
-                        "القائمة": str(e.get("list", "") or "—"),
+                        N_("الموقع"): addr,
+                        N_("القائمة"): str(e.get("list", "") or "—"),
                     },
                     "source": _classify_source(e.get("comment", "")),
                 })
             if block_items:
                 groups.append({
                     "service_type": "block-sites",
-                    "title": "حجب مواقع",
+                    "title": _tr("حجب مواقع"),
                     "color": "red",
                     "icon": "ban",
                     "items": block_items,
@@ -1494,15 +1495,15 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "service_type": "open-sites",
                     "label": host,
                     "details": {
-                        "الموقع": host,
-                        "البروتوكول": str(e.get("server", "") or "—"),
+                        N_("الموقع"): host,
+                        N_("البروتوكول"): str(e.get("server", "") or "—"),
                     },
                     "source": _classify_source(e.get("comment", "")),
                 })
             if open_items:
                 groups.append({
                     "service_type": "open-sites",
-                    "title": "فتح مواقع (Walled Garden)",
+                    "title": _tr("فتح مواقع (Walled Garden)"),
                     "color": "teal",
                     "icon": "circle-check",
                     "items": open_items,
@@ -1522,9 +1523,9 @@ def setup_wizard_v3_router_inventory(router_id: int):
                     "service_type": "public-ip",
                     "label": str(r.get("action", "") or "mark"),
                     "details": {
-                        "السلسلة": str(r.get("chain", "") or "—"),
-                        "العمل": str(r.get("action", "") or "—"),
-                        "الهدف": str(r.get("dst-address-list", "")
+                        N_("السلسلة"): str(r.get("chain", "") or "—"),
+                        N_("العمل"): str(r.get("action", "") or "—"),
+                        N_("الهدف"): str(r.get("dst-address-list", "")
                                      or r.get("new-routing-mark", "") or "—"),
                     },
                     "source": "hoberadius",
@@ -1532,7 +1533,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
             if siteexit_items:
                 groups.append({
                     "service_type": "public-ip",
-                    "title": "تغيير عنوان التصفح العام (Public)",
+                    "title": _tr("تغيير عنوان التصفح العام (Public)"),
                     "color": "amber",
                     "icon": "globe",
                     "items": siteexit_items,
@@ -1644,31 +1645,31 @@ def setup_wizard_v3_router_inventory(router_id: int):
                 tech_user_name = f"hr-tech-{token[:10]}" if token else ""
                 # Permission label in Arabic for the inventory card.
                 perm_ar = {
-                    "read":  "قراءة فقط",
-                    "write": "تعديل محدود",
-                    "full":  "تعديل كامل",
+                    "read":  N_("قراءة فقط"),
+                    "write": N_("تعديل محدود"),
+                    "full":  N_("تعديل كامل"),
                 }.get(perm_tier, "—")
 
                 details: dict = {}
                 if vps_url:
-                    details["عنوان الاتصال (VPS)"] = vps_url
+                    details[N_("عنوان الاتصال (VPS)")] = vps_url
                 if tech_user_name:
-                    details["اسم المستخدم"] = tech_user_name
+                    details[N_("اسم المستخدم")] = tech_user_name
                 if perm_tier:
-                    details["الصلاحيّة"] = perm_ar
-                details["المنفذ على الراوتر"] = str(r.get("dst-port", "") or "—")
-                details["IP المصدر"] = str(r.get("src-address", "") or "أي")
+                    details[N_("الصلاحيّة")] = perm_ar
+                details[N_("المنفذ على الراوتر")] = str(r.get("dst-port", "") or "—")
+                details[N_("IP المصدر")] = str(r.get("src-address", "") or N_("أي"))
                 if is_permanent:
-                    details["المدّة"] = "دائم (لا يُحذف تلقائيّاً)"
+                    details[N_("المدّة")] = N_("دائم (لا يُحذف تلقائيّاً)")
                 else:
                     if ttl_h:
                         if ttl_h.isdigit() and int(ttl_h) >= 24 and int(ttl_h) % 24 == 0:
-                            details["المدّة المُحدّدة"] = f"{int(ttl_h) // 24} يوم"
+                            details[N_("المدّة المُحدّدة")] = _tr('%(v)s يوم', v=int(ttl_h) // 24)
                         else:
-                            details["المدّة المُحدّدة"] = f"{ttl_h} ساعة"
+                            details[N_("المدّة المُحدّدة")] = _tr('%(ttl_h)s ساعة', ttl_h=ttl_h)
                     if next_run:
-                        details["ينتهي في"] = next_run
-                details["معرّف الإذن"] = token or "—"
+                        details[N_("ينتهي في")] = next_run
+                details[N_("معرّف الإذن")] = token or "—"
 
                 remote_items.append({
                     "target":       str(r.get(".id", "") or ""),
@@ -1689,7 +1690,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
             if remote_items:
                 groups.append({
                     "service_type": "remote-access",
-                    "title": "اتصال عن بُعد",
+                    "title": _tr("اتصال عن بُعد"),
                     "color": "purple",
                     "icon": "key",
                     "items": remote_items,
@@ -1699,7 +1700,7 @@ def setup_wizard_v3_router_inventory(router_id: int):
             )
     except Exception as exc:  # noqa: BLE001
         return jsonify({"ok": False,
-                        "error": f"تعذّر قراءة الخدمات: {exc}",
+                        "error": _tr('تعذّر قراءة الخدمات: %(exc)s', exc=exc),
                         "groups": groups,
                         "router_info": router_info,
                         "timings": timings}), 502
@@ -1739,12 +1740,12 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     body = _body() or {}
     service_type = str(body.get("service_type") or "").strip()
     target = str(body.get("target") or "").strip()
     if not target:
-        return _err("معرّف العنصر مفقود.", status=400, code="missing_target")
+        return _err(_tr("معرّف العنصر مفقود."), status=400, code="missing_target")
 
     # Map service_type → RouterOS path the row lives in.
     SVC_PATHS = {
@@ -1757,7 +1758,7 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
     }
     path = SVC_PATHS.get(service_type)
     if not path:
-        return _err(f"نوع خدمة غير مدعوم: {service_type}",
+        return _err(_tr('نوع خدمة غير مدعوم: %(service_type)s', service_type=service_type),
                     status=400, code="unknown_service")
 
     # ── Special case: remote-access entries are a tuple of
@@ -1874,14 +1875,14 @@ def setup_wizard_v3_router_inventory_remove(router_id: int):
             router_id=router_id, script=script,
         )
     except ExecutorNotConfigured:
-        return _err("وحدة تنفيذ السكربتات غير مُهيّأة.",
+        return _err(_tr("وحدة تنفيذ السكربتات غير مُهيّأة."),
                     status=503, code="executor_not_configured")
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ: {exc}", status=500, code="remove_error")
+        return _err(_tr('خطأ: %(exc)s', exc=exc), status=500, code="remove_error")
     if not exec_result.ok:
         return jsonify({
             "ok": False, "code": "remove_failed",
-            "error": exec_result.error_message or "تعذّر الحذف",
+            "error": exec_result.error_message or _tr("تعذّر الحذف"),
             "stderr": exec_result.stderr or "",
         }), 502
     return jsonify({"ok": True, "duration_ms": exec_result.duration_ms})
@@ -1896,7 +1897,7 @@ def setup_wizard_v3_hotspot_current(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return jsonify({"ok": True, "interfaces": [], "installations": []})
     try:
@@ -1943,7 +1944,7 @@ def setup_wizard_v3_broadband_current(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return jsonify({"ok": True, "interfaces": [], "installations": []})
     try:
@@ -2007,7 +2008,7 @@ def setup_wizard_v3_block_sites_current(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return jsonify({"ok": True, "domains": []})
     try:
@@ -2033,7 +2034,7 @@ def setup_wizard_v3_open_sites_current(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         return jsonify({"ok": True, "domains": []})
     try:
@@ -2060,7 +2061,7 @@ def setup_wizard_v3_block_sites_preview(router_id: int):
     body = _body() or {}
     domains = list(body.get("domains") or [])
     if not domains:
-        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+        return _err(_tr("اكتب موقعاً واحداً على الأقل قبل المعاينة."),
                     status=400, code="no_domains")
     plan_result, status, err = _plan_added_service(
         router_id, "block_sites", {"domains": domains},
@@ -2072,12 +2073,12 @@ def setup_wizard_v3_block_sites_preview(router_id: int):
     if notes:
         bullets.extend(notes)
     else:
-        bullets.append(f"سيتم إنشاء قائمة عناوين تحتوي {len(domains)} موقعاً.")
-        bullets.append("سيُضاف قاعدة في جدار الحماية تمنع الحركة لهذه القائمة.")
-        bullets.append("التغيير قابل للتراجع بإعادة تشغيل الخدمة بقائمة فارغة.")
+        bullets.append(_tr('سيتم إنشاء قائمة عناوين تحتوي %(v)s موقعاً.', v=len(domains)))
+        bullets.append(N_("سيُضاف قاعدة في جدار الحماية تمنع الحركة لهذه القائمة."))
+        bullets.append(N_("التغيير قابل للتراجع بإعادة تشغيل الخدمة بقائمة فارغة."))
     warnings = list(getattr(plan_result, "warnings", ()) or ())
     for w in warnings:
-        bullets.append(f"⚠ تنبيه: {w}")
+        bullets.append(_tr('⚠ تنبيه: %(w)s', w=w))
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
@@ -2102,15 +2103,15 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
     checks = []
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc), status=500,
                     code="mt_client_load_error")
     cfg = {
         "host": nas.address, "username": nas.api_user or "admin",
@@ -2125,7 +2126,7 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
             managed = [e for e in entries
                        if _is_block_sites_entry(e.get("comment", ""))]
             checks.append({
-                "label": f"قائمة العناوين المحجوبة موجودة ({len(managed)} إدخالاً)",
+                "label": _tr('قائمة العناوين المحجوبة موجودة (%(v)s إدخالاً)', v=len(managed)),
                 "status": "ok" if managed else "fail",
             })
             # Check 2: filter rule referencing the list.
@@ -2134,13 +2135,13 @@ def setup_wizard_v3_block_sites_verify(router_id: int):
                              if str(r.get("action", "")).lower() == "drop"
                              and _is_block_sites_entry(r.get("comment", ""))]
             checks.append({
-                "label": "قاعدة الحجب نشطة في جدار الحماية",
+                "label": _tr("قاعدة الحجب نشطة في جدار الحماية"),
                 "status": "ok" if blocked_rules else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
     all_ok = all(c["status"] == "ok" for c in checks)
@@ -2151,7 +2152,7 @@ def setup_wizard_v3_open_sites_preview(router_id: int):
     body = _body() or {}
     domains = list(body.get("domains") or [])
     if not domains:
-        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+        return _err(_tr("اكتب موقعاً واحداً على الأقل قبل المعاينة."),
                     status=400, code="no_domains")
     plan_result, status, err = _plan_added_service(
         router_id, "walled_garden", {"domains": domains},
@@ -2164,13 +2165,13 @@ def setup_wizard_v3_open_sites_preview(router_id: int):
         bullets.extend(notes)
     else:
         bullets.append(
-            f"سيتم السماح بالوصول لـ {len(domains)} موقعاً قبل تسجيل الدخول."
+            _tr('سيتم السماح بالوصول لـ %(v)s موقعاً قبل تسجيل الدخول.', v=len(domains))
         )
-        bullets.append("المستخدمون يصلون لهذه المواقع مباشرة دون شاشة Hotspot.")
-        bullets.append("التغيير قابل للتراجع بإفراغ القائمة وإعادة التطبيق.")
+        bullets.append(N_("المستخدمون يصلون لهذه المواقع مباشرة دون شاشة Hotspot."))
+        bullets.append(N_("التغيير قابل للتراجع بإفراغ القائمة وإعادة التطبيق."))
     warnings = list(getattr(plan_result, "warnings", ()) or ())
     for w in warnings:
-        bullets.append(f"⚠ تنبيه: {w}")
+        bullets.append(_tr('⚠ تنبيه: %(w)s', w=w))
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
@@ -2195,15 +2196,15 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
     checks = []
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}",
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc),
                     status=500, code="mt_client_load_error")
     cfg = {
         "host": nas.address, "username": nas.api_user or "admin",
@@ -2218,7 +2219,7 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
             managed = [e for e in entries
                        if _is_walled_garden_entry(e.get("comment", ""))]
             checks.append({
-                "label": f"إدخالات المواقع المسموحة موجودة ({len(managed)} موقعاً)",
+                "label": _tr('إدخالات المواقع المسموحة موجودة (%(v)s موقعاً)', v=len(managed)),
                 "status": "ok" if managed else "fail",
             })
             # Check: Hotspot must be active for walled-garden to take effect.
@@ -2226,13 +2227,13 @@ def setup_wizard_v3_open_sites_verify(router_id: int):
             running = [s for s in servers
                        if str(s.get("disabled", "")).lower() in ("false", "no", "")]
             checks.append({
-                "label": "Hotspot نشط (شرط لعمل القائمة)",
+                "label": _tr("Hotspot نشط (شرط لعمل القائمة)"),
                 "status": "ok" if running else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
     all_ok = all(c["status"] == "ok" for c in checks)
@@ -2245,11 +2246,11 @@ def setup_wizard_v3_router_exit_nodes(router_id: int):
     from ..db.repos import vps_exit_nodes_repo, nas_repo
 
     if not nas_repo.get_nas(_tid(), router_id):
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     try:
         rows = vps_exit_nodes_repo.list_for_tenant(_tid())
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر قراءة عقد الخروج: {exc}", status=500,
+        return _err(_tr('تعذّر قراءة عقد الخروج: %(exc)s', exc=exc), status=500,
                     code="exit_nodes_load_error")
     # Normalise — only expose the fields the partial needs.
     nodes = [{
@@ -2266,10 +2267,10 @@ def setup_wizard_v3_public_ip_preview(router_id: int):
     destinations = list(body.get("destinations") or [])
     exit_node_id = body.get("exit_node_id")
     if not exit_node_id:
-        return _err("اختر عقدة خروج قبل المعاينة.",
+        return _err(_tr("اختر عقدة خروج قبل المعاينة."),
                     status=400, code="no_exit_node")
     if not destinations:
-        return _err("اكتب موقعاً واحداً على الأقل قبل المعاينة.",
+        return _err(_tr("اكتب موقعاً واحداً على الأقل قبل المعاينة."),
                     status=400, code="no_destinations")
     plan_result, status, err = _plan_added_service(
         router_id, "site_exit_public_ip",
@@ -2287,13 +2288,13 @@ def setup_wizard_v3_public_ip_preview(router_id: int):
         bullets.extend(notes)
     else:
         bullets.append(
-            f"سيتم توجيه {len(destinations)} موقعاً عبر عقدة الخروج المختارة."
+            _tr('سيتم توجيه %(v)s موقعاً عبر عقدة الخروج المختارة.', v=len(destinations))
         )
-        bullets.append("يتم إنشاء mangle rules + routing table مخصّصة لهذه المواقع.")
-        bullets.append("باقي حركة الراوتر تبقى على المسار الافتراضي.")
+        bullets.append(N_("يتم إنشاء mangle rules + routing table مخصّصة لهذه المواقع."))
+        bullets.append(N_("باقي حركة الراوتر تبقى على المسار الافتراضي."))
     warnings = list(getattr(plan_result, "warnings", ()) or ())
     for w in warnings:
-        bullets.append(f"⚠ تنبيه: {w}")
+        bullets.append(_tr('⚠ تنبيه: %(w)s', w=w))
     if plan_result.blocking_errors:
         return jsonify({
             "ok": False, "code": "planner_blocked",
@@ -2324,15 +2325,15 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
     checks = []
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc), status=500,
                     code="mt_client_load_error")
     cfg = {
         "host": nas.address, "username": nas.api_user or "admin",
@@ -2347,7 +2348,7 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
                               if "HOBERADIUS_SETUP" in str(m.get("comment", ""))
                               and "site_exit" in str(m.get("comment", ""))]
             checks.append({
-                "label": f"قواعد التوجيه (mangle) موجودة ({len(managed_mangle)})",
+                "label": _tr('قواعد التوجيه (mangle) موجودة (%(v)s)', v=len(managed_mangle)),
                 "status": "ok" if managed_mangle else "fail",
             })
             # Check 2: routing table entry for the exit node.
@@ -2356,7 +2357,7 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
                               if "HOBERADIUS_SETUP" in str(r.get("comment", ""))
                               and "site_exit" in str(r.get("comment", ""))]
             checks.append({
-                "label": "مسار التوجيه عبر العقدة موجود",
+                "label": _tr("مسار التوجيه عبر العقدة موجود"),
                 "status": "ok" if managed_routes else "fail",
             })
             # Check 3: address-list with destinations.
@@ -2365,13 +2366,13 @@ def setup_wizard_v3_public_ip_verify(router_id: int):
                                if "HOBERADIUS_SETUP" in str(e.get("comment", ""))
                                and "site_exit" in str(e.get("comment", ""))]
             checks.append({
-                "label": f"قائمة المواقع المختارة محمَّلة ({len(managed_entries)})",
+                "label": _tr('قائمة المواقع المختارة محمَّلة (%(v)s)', v=len(managed_entries)),
                 "status": "ok" if managed_entries else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
     all_ok = all(c["status"] == "ok" for c in checks)
@@ -2535,10 +2536,10 @@ def setup_wizard_v3_remote_access_preview(router_id: int):
     ttl_hours = int(body.get("ttl_hours") or 4)
     source_ip = str(body.get("source_ip") or "").strip()
     if not services:
-        return _err("اختر خدمة واحدة على الأقل.",
+        return _err(_tr("اختر خدمة واحدة على الأقل."),
                     status=400, code="no_services")
     if ttl_hours < 0 or ttl_hours > 720:
-        return _err("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم).",
+        return _err(_tr("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم)."),
                     status=400, code="bad_ttl")
     svc_names_ar = {
         "winbox": "Winbox (8291)",
@@ -2550,33 +2551,33 @@ def setup_wizard_v3_remote_access_preview(router_id: int):
                for s in services]
     if ttl_hours == 0:
         duration_bullet = (
-            "المدّة: دائم — لا يُحذف تلقائيّاً (الإلغاء يدوي من «خدماتي»)."
+            N_("المدّة: دائم — لا يُحذف تلقائيّاً (الإلغاء يدوي من «خدماتي»).")
         )
     elif ttl_hours >= 24 and ttl_hours % 24 == 0:
         duration_bullet = (
-            f"المدّة: {ttl_hours // 24} يوم — تُحذف القواعد تلقائيّاً عند انتهائها."
+            _tr('المدّة: %(v)s يوم — تُحذف القواعد تلقائيّاً عند انتهائها.', v=ttl_hours // 24)
         )
     else:
         duration_bullet = (
-            f"المدّة: {ttl_hours} ساعة — تُحذف القواعد تلقائيّاً عند انتهائها."
+            _tr('المدّة: %(ttl_hours)s ساعة — تُحذف القواعد تلقائيّاً عند انتهائها.', ttl_hours=ttl_hours)
         )
     permission = str(body.get("permission") or "write").strip()
     if permission not in _REMOTE_ACCESS_GROUPS:
         permission = "write"
     perm_ar = {
-        "read":  "قراءة فقط",
-        "write": "تعديل محدود (بدون system/users)",
-        "full":  "تعديل كامل (admin)",
+        "read":  N_("قراءة فقط"),
+        "write": N_("تعديل محدود (بدون system/users)"),
+        "full":  N_("تعديل كامل (admin)"),
     }[permission]
     bullets = [
-        f"سيُسمح بالاتصال على: {' • '.join(enabled)}.",
-        (f"من IP: {source_ip}" if source_ip
-         else "من أي IP (الأفضل تحديد IP الفنّي)."),
+        _tr('سيُسمح بالاتصال على: %(v)s.', v=' • '.join(enabled)),
+        (_tr('من IP: %(source_ip)s', source_ip=source_ip) if source_ip
+         else N_("من أي IP (الأفضل تحديد IP الفنّي).")),
         duration_bullet,
-        f"صلاحيّة الفنّي على الراوتر: {perm_ar}.",
-        "سنُنشئ مستخدم RouterOS مؤقّت بكلمة مرور عشوائيّة — "
-        "كلمة مرور admin تبعك لن تخرج.",
-        "يمكن إلغاء الوصول يدويّاً في أي وقت من تبويب «خدماتي».",
+        _tr('صلاحيّة الفنّي على الراوتر: %(perm_ar)s.', perm_ar=perm_ar),
+        N_("سنُنشئ مستخدم RouterOS مؤقّت بكلمة مرور عشوائيّة — "
+        "كلمة مرور admin تبعك لن تخرج."),
+        N_("يمكن إلغاء الوصول يدويّاً في أي وقت من تبويب «خدماتي»."),
     ]
     # Build a *preview* of the same script the apply path would send.
     # The grant_token + creds will be regenerated server-side at apply
@@ -2602,7 +2603,7 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     body = _body() or {}
     services = list(body.get("services") or [])
     ttl_hours = int(body.get("ttl_hours") or 4)
@@ -2611,17 +2612,17 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
     permission = str(body.get("permission") or "write").strip()
     if permission not in _REMOTE_ACCESS_GROUPS:
         return _err(
-            "صلاحيّة غير صالحة. اختر قراءة / تعديل محدود / تعديل كامل.",
+            _tr("صلاحيّة غير صالحة. اختر قراءة / تعديل محدود / تعديل كامل."),
             status=400, code="bad_permission",
         )
     if not services:
-        return _err("اختر خدمة واحدة على الأقل.",
+        return _err(_tr("اختر خدمة واحدة على الأقل."),
                     status=400, code="no_services")
     if not grant_token:
-        return _err("معرّف القاعدة غير صالح.",
+        return _err(_tr("معرّف القاعدة غير صالح."),
                     status=400, code="bad_token")
     if ttl_hours < 0 or ttl_hours > 720:
-        return _err("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم).",
+        return _err(_tr("المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم)."),
                     status=400, code="bad_ttl")
     # Generate the temporary RouterOS user + password right here. The
     # password is returned to the operator ONCE in the response — we
@@ -2642,16 +2643,16 @@ def setup_wizard_v3_remote_access_apply(router_id: int):
             router_id=router_id, script=script,
         )
     except ExecutorNotConfigured:
-        return _err("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+        return _err(_tr("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم."),
                     status=503, code="executor_not_configured")
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ غير متوقّع: {exc}",
+        return _err(_tr('خطأ غير متوقّع: %(exc)s', exc=exc),
                     status=500, code="apply_error")
     if not exec_result.ok:
         fail_stage = _infer_fail_stage(exec_result)
         return jsonify({
             "ok": False, "code": "apply_failed",
-            "error": exec_result.error_message or "تعذّر تنفيذ السكربت",
+            "error": exec_result.error_message or _tr("تعذّر تنفيذ السكربت"),
             "stderr": exec_result.stderr or "",
             "duration_ms": exec_result.duration_ms,
             "fail_stage": fail_stage,
@@ -2760,18 +2761,18 @@ def setup_wizard_v3_remote_access_verify(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
-        return _err("لا توجد كلمة مرور API لهذا الراوتر.",
+        return _err(_tr("لا توجد كلمة مرور API لهذا الراوتر."),
                     status=409, code="no_api_password")
     token = str(request.args.get("token") or "").strip()
     if not token:
-        return _err("معرّف القاعدة مفقود.", status=400, code="missing_token")
+        return _err(_tr("معرّف القاعدة مفقود."), status=400, code="missing_token")
     checks = []
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc), status=500,
                     code="mt_client_load_error")
     cfg = {
         "host": nas.address, "username": nas.api_user or "admin",
@@ -2785,20 +2786,20 @@ def setup_wizard_v3_remote_access_verify(router_id: int):
             rules = list(mt.print_("/ip/firewall/filter/print"))
             mine = [r for r in rules if tag in str(r.get("comment", ""))]
             checks.append({
-                "label": f"قاعدة الإتاحة نشطة ({len(mine)} قاعدة)",
+                "label": _tr('قاعدة الإتاحة نشطة (%(v)s قاعدة)', v=len(mine)),
                 "status": "ok" if mine else "fail",
             })
             # Check 2: scheduler entry exists for auto-revoke.
             scheds = list(mt.print_("/system/scheduler/print"))
             mine_s = [s for s in scheds if tag in str(s.get("comment", ""))]
             checks.append({
-                "label": "مؤقّت الإلغاء التلقائي مضبوط",
+                "label": _tr("مؤقّت الإلغاء التلقائي مضبوط"),
                 "status": "ok" if mine_s else "fail",
             })
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر للفحص: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر للفحص: %(exc)s', exc=exc),
             "checks": checks,
         }), 502
     all_ok = all(c["status"] == "ok" for c in checks)
@@ -2871,10 +2872,10 @@ def setup_wizard_v3_service_revoke(router_id: int, service_key: str):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     builder = _REVOKE_SCRIPTS.get(service_key)
     if not builder:
-        return _err(f"الإيقاف غير مدعوم لهذه الخدمة: {service_key}",
+        return _err(_tr('الإيقاف غير مدعوم لهذه الخدمة: %(service_key)s', service_key=service_key),
                     status=400, code="revoke_not_supported")
     script = builder(router_id)
     try:
@@ -2882,15 +2883,15 @@ def setup_wizard_v3_service_revoke(router_id: int, service_key: str):
             router_id=router_id, script=script,
         )
     except ExecutorNotConfigured:
-        return _err("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم.",
+        return _err(_tr("وحدة تنفيذ السكربتات غير مُهيّأة على الخادم."),
                     status=503, code="executor_not_configured")
     except Exception as exc:  # noqa: BLE001
-        return _err(f"خطأ غير متوقّع: {exc}",
+        return _err(_tr('خطأ غير متوقّع: %(exc)s', exc=exc),
                     status=500, code="revoke_error")
     if not exec_result.ok:
         return jsonify({
             "ok": False, "code": "revoke_failed",
-            "error": exec_result.error_message or "تعذّر تنفيذ سكربت الإيقاف",
+            "error": exec_result.error_message or _tr("تعذّر تنفيذ سكربت الإيقاف"),
             "stderr": exec_result.stderr or "",
         }), 502
     return jsonify({"ok": True, "duration_ms": exec_result.duration_ms})
@@ -2917,7 +2918,7 @@ def setup_wizard_v3_router_services_status(router_id: int):
 
     nas = nas_repo.get_nas(_tid(), router_id)
     if not nas:
-        return _err("الراوتر غير موجود", status=404, code="router_not_found")
+        return _err(_tr("الراوتر غير موجود"), status=404, code="router_not_found")
     if not nas.api_password:
         # Treat as "unknown" — no creds, all services neutral.
         return jsonify({
@@ -2930,7 +2931,7 @@ def setup_wizard_v3_router_services_status(router_id: int):
     try:
         from ..integration.mikrotik import MikrotikClient
     except Exception as exc:  # noqa: BLE001
-        return _err(f"تعذّر تحميل عميل MikroTik: {exc}", status=500,
+        return _err(_tr('تعذّر تحميل عميل MikroTik: %(exc)s', exc=exc), status=500,
                     code="mt_client_load_error")
     cfg = {
         "host": nas.address, "username": nas.api_user or "admin",
@@ -2987,7 +2988,7 @@ def setup_wizard_v3_router_services_status(router_id: int):
     except Exception as exc:  # noqa: BLE001
         return jsonify({
             "ok": False, "code": "probe_failed",
-            "error": f"تعذّر الاتصال بالراوتر: {exc}",
+            "error": _tr('تعذّر الاتصال بالراوتر: %(exc)s', exc=exc),
             # Return current best-effort partial status.
             "services": status,
         }), 502
@@ -3017,7 +3018,7 @@ def setup_wizard_v3_router_service_flow(router_id: int, service_key: str):
     )
     if not card:
         return _err(
-            f"خدمة غير معروفة: {service_key}",
+            _tr('خدمة غير معروفة: %(service_key)s', service_key=service_key),
             status=404, code="unknown_service",
         )
     # Per-service configure form. Each commit that wires a service
@@ -3093,7 +3094,7 @@ def setup_wizard_v3_generate_script(run_id: int):
             return _err(str(exc))
         except Exception as exc:  # noqa: BLE001
             return _err(
-                f"تعذّر توليد سكربت {binding_type.upper()}: {exc}",
+                _tr('تعذّر توليد سكربت %(upper)s: %(exc)s', upper=binding_type.upper(), exc=exc),
                 code="tunnel_generate_failed",
             )
         return jsonify({"ok": True, **result})
@@ -3110,14 +3111,14 @@ def setup_wizard_v3_generate_script(run_id: int):
     )
     if not endpoint:
         return _err(
-            "vps_public_endpoint غير معروف. اضبط "
-            "HOBERADIUS_PUBLIC_HOST في بيئة الخادم.",
+            _tr("vps_public_endpoint غير معروف. اضبط "
+            "HOBERADIUS_PUBLIC_HOST في بيئة الخادم."),
             code="missing_endpoint",
         )
     if not pubkey:
         return _err(
-            "مفتاح WireGuard العام للخادم غير معروف. اضبط "
-            "HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم.",
+            _tr("مفتاح WireGuard العام للخادم غير معروف. اضبط "
+            "HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم."),
             code="missing_server_pubkey",
         )
     try:
@@ -3256,9 +3257,9 @@ def setup_wizard_v3_phase_planners_index():
         "phases": [
             {
                 "phase": "internet",
-                "title_ar": "وصلة الإنترنت (uplink)",
+                "title_ar": _tr("وصلة الإنترنت (uplink)"),
                 "description_ar": (
-                    "VLAN / IP ثابت / DHCP / PPPoE"
+                    _tr("VLAN / IP ثابت / DHCP / PPPoE")
                 ),
                 "required_inputs": ["source_type"],
             },
@@ -3266,7 +3267,7 @@ def setup_wizard_v3_phase_planners_index():
                 "phase": "vpn_radius",
                 "title_ar": "VPN + RADIUS",
                 "description_ar": (
-                    "إنشاء واجهة WireGuard + ربط RADIUS"
+                    _tr("إنشاء واجهة WireGuard + ربط RADIUS")
                 ),
                 "required_inputs": [
                     "router_vpn_ip", "vps_vpn_ip",
@@ -3276,9 +3277,9 @@ def setup_wizard_v3_phase_planners_index():
             },
             {
                 "phase": "hotspot",
-                "title_ar": "Hotspot (وصول عام)",
+                "title_ar": _tr("Hotspot (وصول عام)"),
                 "description_ar": (
-                    "خادم Hotspot + DHCP + RADIUS authentication"
+                    _tr("خادم Hotspot + DHCP + RADIUS authentication")
                 ),
                 "required_inputs": [
                     "selected_interfaces", "subnet_base",
@@ -3289,7 +3290,7 @@ def setup_wizard_v3_phase_planners_index():
                 "phase": "broadband",
                 "title_ar": "Broadband / PPPoE server",
                 "description_ar": (
-                    "خادم PPPoE + IP pool + NAT مقيّد"
+                    _tr("خادم PPPoE + IP pool + NAT مقيّد")
                 ),
                 "required_inputs": [
                     "selected_interfaces", "local_address",
@@ -3298,9 +3299,9 @@ def setup_wizard_v3_phase_planners_index():
             },
             {
                 "phase": "added_services",
-                "title_ar": "خدمات إضافية",
+                "title_ar": _tr("خدمات إضافية"),
                 "description_ar": (
-                    "walled garden / حجب مواقع / Site exit"
+                    _tr("walled garden / حجب مواقع / Site exit")
                 ),
                 "required_inputs": ["service_key"],
             },
@@ -3378,7 +3379,7 @@ def setup_wizard_v3_phase_plan(run_id: int, phase: str):
                 diagnostics.append({
                     "code": code,
                     "ar_explanation": (
-                        "خطأ تشخيصي غير معروف."
+                        N_("خطأ تشخيصي غير معروف.")
                     ),
                     "severity": "error",
                 })
@@ -3449,7 +3450,7 @@ def setup_wizard_v3_configure_server_radius(run_id: int):
 
     if not run.router_vpn_ip:
         return _err(
-            "أكمل الخطوة 3 (الربط بالخادم) أوّلاً.",
+            _tr("أكمل الخطوة 3 (الربط بالخادم) أوّلاً."),
             status=409,
             code="no_vpn_ip",
         )
@@ -3459,8 +3460,8 @@ def setup_wizard_v3_configure_server_radius(run_id: int):
     secret = str(raw_state.get("radius_secret") or "").strip()
     if not secret:
         return _err(
-            "لم يتم توليد سرّ RADIUS بعد. ارجع للخطوة 3 "
-            "واضغط (توليد سكربت الربط).",
+            _tr("لم يتم توليد سرّ RADIUS بعد. ارجع للخطوة 3 "
+            "واضغط (توليد سكربت الربط)."),
             status=409,
             code="no_secret",
         )
@@ -3480,7 +3481,7 @@ def setup_wizard_v3_configure_server_radius(run_id: int):
         )
     except Exception as exc:  # noqa: BLE001
         return _err(
-            f"خطأ غير متوقّع: {exc}",
+            _tr('خطأ غير متوقّع: %(exc)s', exc=exc),
             status=500,
             code="freeradius_provisioning_error",
         )
@@ -3521,8 +3522,8 @@ def setup_wizard_v3_discover_interfaces(run_id: int):
             # already-allocated router VPN IP from the run.
             if not run.router_vpn_ip:
                 return _err(
-                    "أكمل الخطوة 3 أوّلاً — لم يُخصَّص "
-                    "عنوان الربط الخاص للراوتر بعد.",
+                    _tr("أكمل الخطوة 3 أوّلاً — لم يُخصَّص "
+                    "عنوان الربط الخاص للراوتر بعد."),
                     status=409,
                     code="no_vpn_ip",
                 )
@@ -3535,7 +3536,7 @@ def setup_wizard_v3_discover_interfaces(run_id: int):
         return _err(str(exc), status=400, code="discovery_failed")
     except Exception as exc:  # noqa: BLE001
         return _err(
-            f"فشل اكتشاف المنافذ: {exc}",
+            _tr('فشل اكتشاف المنافذ: %(exc)s', exc=exc),
             status=500,
             code="discovery_error",
         )

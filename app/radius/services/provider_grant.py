@@ -34,6 +34,7 @@
     التخطّي.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import dataclass
@@ -522,8 +523,7 @@ def check_limit(tenant_id: int, feature_key: str,
         return LimitDecision(feature_key=feature_key, allowed=True, limit=None)
     current = _current_usage(tenant_id, usage_metric) if usage_metric else 0
     if current + int(increment or 0) > limit:
-        msg = (f"تم الوصول إلى الحدّ المسموح من المزوّد لهذه الخدمة "
-                f"({current} من {limit}).")
+        msg = (_tr('تم الوصول إلى الحدّ المسموح من المزوّد لهذه الخدمة (%(current)s من %(limit)s).', current=current, limit=limit))
         return LimitDecision(feature_key=feature_key, allowed=False,
                               current=current, limit=limit,
                               reason="provider_limit_exceeded",

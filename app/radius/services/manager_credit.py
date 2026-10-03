@@ -25,6 +25,7 @@ who can't afford it, the owner may explicitly extend the debt — even beyond th
 manager's own cap (owner override) — via the design-system confirm modal.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -39,12 +40,12 @@ from .business_os_finance import (
 )
 
 # ── Toast messages (design-system toast, never native alert) ──────────────────
-NO_BALANCE_MSG = "لا يوجد رصيد كافٍ"
-NO_BALANCE_OWN_MSG = "لا يوجد لديك رصيد كافٍ"
-LOAN_EXCEEDED_MSG = "تجاوزت سقف السلف"
+NO_BALANCE_MSG = N_("لا يوجد رصيد كافٍ")
+NO_BALANCE_OWN_MSG = N_("لا يوجد لديك رصيد كافٍ")
+LOAN_EXCEEDED_MSG = N_("تجاوزت سقف السلف")
 # Shown inside the design-system CONFIRM modal when the super links a package to
 # a manager who can't cover it (no cap set / zero-trust manager).
-SUPER_DEBT_CONFIRM_MSG = "المدير لا يوجد لديه رصيد كافٍ — هل تريد إضافتها كدين؟"
+SUPER_DEBT_CONFIRM_MSG = N_("المدير لا يوجد لديه رصيد كافٍ — هل تريد إضافتها كدين؟")
 
 
 def _signed_money(minor: int) -> str:
@@ -59,10 +60,9 @@ def build_super_confirm_message(*, exceeds_cap: bool, cap_minor: int, new_effect
     eff = _signed_money(new_effective_minor)
     if exceeds_cap:
         return (
-            f"هذا يتجاوز سقف دين المدير ({minor_to_money(cap_minor)}). "
-            f"الرصيد سيصبح {eff}. هل تريد المتابعة؟"
+            _tr('هذا يتجاوز سقف دين المدير (%(v)s). الرصيد سيصبح %(eff)s. هل تريد المتابعة؟', v=minor_to_money(cap_minor), eff=eff)
         )
-    return f"المدير لا يوجد لديه رصيد كافٍ — الرصيد سيصبح {eff}. هل تريد إضافتها كدين؟"
+    return _tr('المدير لا يوجد لديه رصيد كافٍ — الرصيد سيصبح %(eff)s. هل تريد إضافتها كدين؟', eff=eff)
 
 # Ledger kinds.
 KIND_DEBT = "debt"
@@ -222,7 +222,7 @@ class ManagerCreditService:
         self._record(
             manager_id=int(manager_id), kind=KIND_DEBT_SETTLE, amount_minor=settled,
             reference_type=reference_type or "debt_settle", reference_id=reference_id,
-            actor=actor, super_override=False, notes=notes or "تسديد دين عبر الشحن",
+            actor=actor, super_override=False, notes=notes or N_("تسديد دين عبر الشحن"),
             currency=currency or default_currency(),
         )
         return settled
@@ -244,7 +244,7 @@ class ManagerCreditService:
             manager_id=int(manager_id), kind=KIND_DEBT, amount_minor=amount_minor,
             reference_type=reference_type or "on_account_credit", reference_id=reference_id,
             actor=actor, super_override=super_override,
-            notes=notes or "رصيد على الحساب (دين)",
+            notes=notes or N_("رصيد على الحساب (دين)"),
             currency=currency or default_currency(),
         )
         return amount_minor
@@ -389,20 +389,20 @@ class ManagerCreditService:
                 tenant_id=self.tenant_id, wallet_id=int(self.wallet(manager_id)["id"]),
                 amount=minor_to_money(wallet_back), actor_type="manager", actor_id=int(manager_id),
                 reference_type=reference_type or "credit_reversal", reference_id=reference_id,
-                notes=notes or "استرجاع", metadata={"reversal": True},
+                notes=notes or N_("استرجاع"), metadata={"reversal": True},
             )
         if debt_back > 0:
             self._record(
                 manager_id=manager_id, kind=KIND_DEBT_SETTLE, amount_minor=debt_back,
                 reference_type=reference_type or "debt_reversal", reference_id=reference_id,
-                actor=actor, super_override=False, notes=notes or "استرجاع دين",
+                actor=actor, super_override=False, notes=notes or N_("استرجاع دين"),
                 currency=default_currency(),
             )
         if advance_back > 0:
             self._record(
                 manager_id=manager_id, kind=KIND_ADVANCE_SETTLE, amount_minor=advance_back,
                 reference_type=reference_type or "advance_reversal", reference_id=reference_id,
-                actor=actor, super_override=False, notes=notes or "استرجاع سلفة",
+                actor=actor, super_override=False, notes=notes or N_("استرجاع سلفة"),
                 currency=default_currency(),
             )
 

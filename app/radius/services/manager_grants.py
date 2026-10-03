@@ -22,6 +22,7 @@
 كل القراءات مخزَّنة لكل طلب في ``flask.g`` — لا استعلام DB إضافيّ لكل بند.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from typing import Any, Iterable, Optional
@@ -45,7 +46,7 @@ DEFAULT_SECTION_STATE = OPEN
 # الحسّاسة لكل قسم — أضِف endpointات جديدة هنا عند الحاجة.
 MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     "subscribers": {
-        "label": "المشتركون",
+        "label": N_("المشتركون"),
         "icon": "users",
         "view_perm": "users.view",
         "endpoints": (
@@ -71,7 +72,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
     # الجلسات / المتصلون الآن — عائلة أفعال «المتصلون» مُفرَدة بقسمها الخاصّ
     # (نُقِلت من قسم المشتركين) ليَضبط المالك كل فعلٍ بحدة.
     "sessions": {
-        "label": "الجلسات / المتصلون",
+        "label": N_("الجلسات / المتصلون"),
         "icon": "wifi",
         "view_perm": "online.view",
         "endpoints": (
@@ -84,7 +85,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "cards": {
-        "label": "البطاقات",
+        "label": N_("البطاقات"),
         "icon": "id-card",
         "view_perm": "cards.view",
         "endpoints": (
@@ -104,7 +105,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "plans": {
-        "label": "الباقات والسرعات",
+        "label": N_("الباقات والسرعات"),
         "icon": "tags",
         "view_perm": "plans.view",
         "endpoints": (
@@ -114,7 +115,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "distributors": {
-        "label": "الموزّعون",
+        "label": N_("الموزّعون"),
         "icon": "people-carry-box",
         "view_perm": "reports.finance",
         "endpoints": (
@@ -124,7 +125,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "network": {
-        "label": "الشبكة والراوترات",
+        "label": N_("الشبكة والراوترات"),
         "icon": "network-wired",
         "view_perm": "nas.view",
         "endpoints": (
@@ -138,7 +139,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "reports": {
-        "label": "التقارير",
+        "label": N_("التقارير"),
         "icon": "chart-line",
         "view_perm": "reports.view",
         "endpoints": (
@@ -152,7 +153,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "finance": {
-        "label": "المال والمحاسبة",
+        "label": N_("المال والمحاسبة"),
         "icon": "file-invoice-dollar",
         "view_perm": "reports.finance",
         "endpoints": (
@@ -166,7 +167,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "communications": {
-        "label": "الاتصالات والحملات",
+        "label": N_("الاتصالات والحملات"),
         "icon": "paper-plane",
         "view_perm": "users.send_message",
         "endpoints": (
@@ -178,7 +179,7 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     },
     "store": {
-        "label": "المتجر الإلكتروني",
+        "label": N_("المتجر الإلكتروني"),
         "icon": "store",
         "view_perm": "store.review",
         "endpoints": (
@@ -200,24 +201,24 @@ MANAGER_SECTION_REGISTRY: dict[str, dict[str, Any]] = {
 FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
     "subscriber": (
         # D21: إعادة تسمية اسم الدخول قابلة للمنح تحت التحكّم الحقليّ.
-        {"key": "username", "label": "اسم الدخول (إعادة تسمية)", "attrs": ("username",)},
-        {"key": "name",     "label": "الاسم",         "attrs": ("full_name",)},
-        {"key": "password", "label": "كلمة المرور",    "attrs": ("password",)},
+        {"key": "username", "label": N_("اسم الدخول (إعادة تسمية)"), "attrs": ("username",)},
+        {"key": "name",     "label": N_("الاسم"),         "attrs": ("full_name",)},
+        {"key": "password", "label": N_("كلمة المرور"),    "attrs": ("password",)},
         {"key": "mac",      "label": "MAC",            "attrs": ("mac_lock",)},
         {"key": "ip",       "label": "IP",             "attrs": ("static_ip", "pppoe_ip")},
-        {"key": "plan",     "label": "العرض/الباقة",   "attrs": ("plan_id",)},
-        {"key": "price",    "label": "السعر المخصّص",  "attrs": ("custom_price",)},
-        {"key": "status",   "label": "الحالة",         "attrs": ("status",)},
-        {"key": "quota",    "label": "الكوتا",         "attrs": ("download_quota_mb",
+        {"key": "plan",     "label": N_("العرض/الباقة"),   "attrs": ("plan_id",)},
+        {"key": "price",    "label": N_("السعر المخصّص"),  "attrs": ("custom_price",)},
+        {"key": "status",   "label": N_("الحالة"),         "attrs": ("status",)},
+        {"key": "quota",    "label": N_("الكوتا"),         "attrs": ("download_quota_mb",
                                                                   "upload_quota_mb",
                                                                   "combined_quota_mb",
                                                                   "quota_limit_enabled")},
-        {"key": "expiry",   "label": "تاريخ الانتهاء", "attrs": ("expire_at",)},
-        {"key": "device_count", "label": "عدد الأجهزة", "attrs": ("device_count",
+        {"key": "expiry",   "label": N_("تاريخ الانتهاء"), "attrs": ("expire_at",)},
+        {"key": "device_count", "label": N_("عدد الأجهزة"), "attrs": ("device_count",
                                                                   "device_limit_mode",
                                                                   "allowed_macs")},
-        {"key": "reassign", "label": "نقل المشترك (المدير المسؤول)", "attrs": ("manager_id",)},
-        {"key": "speed",    "label": "السرعة",         "attrs": ("bandwidth_control_enabled",
+        {"key": "reassign", "label": N_("نقل المشترك (المدير المسؤول)"), "attrs": ("manager_id",)},
+        {"key": "speed",    "label": N_("السرعة"),         "attrs": ("bandwidth_control_enabled",
                                                                   "download_speed_kbps",
                                                                   "upload_speed_kbps",
                                                                   "custom_speed")},
@@ -225,21 +226,21 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
     # عرض البطاقات (card_offers) — attrs = أسماء وسائط update_offer (None=إبقاء).
     # السرعة/الكوتا للعرض مشتقّتان من الباقة المرتبطة (plan) لا أعمدة مستقلّة.
     "offer": (
-        {"key": "name",     "label": "الاسم",                 "attrs": ("name",)},
-        {"key": "plan",     "label": "الباقة (السرعة/الكوتا)", "attrs": ("plan_id",)},
-        {"key": "duration", "label": "المدّة",                "attrs": ("duration_minutes",)},
-        {"key": "price",    "label": "السعر",                 "attrs": ("selling", "wholesale")},
+        {"key": "name",     "label": N_("الاسم"),                 "attrs": ("name",)},
+        {"key": "plan",     "label": N_("الباقة (السرعة/الكوتا)"), "attrs": ("plan_id",)},
+        {"key": "duration", "label": N_("المدّة"),                "attrs": ("duration_minutes",)},
+        {"key": "price",    "label": N_("السعر"),                 "attrs": ("selling", "wholesale")},
     ),
     # الباقة/الحزمة (card_batch) — attrs = مفاتيح dict الخاصّة بـupdate_batch.
     # حقول البنية (count/digits/…) مقفولة دومًا خارج هذا السجلّ
     # (STRUCTURAL_LOCKED_FIELDS) — انظر [[batch-edit-owner-only-structural-lock]].
     "batch": (
-        {"key": "name",       "label": "الاسم",           "attrs": ("package_name",)},
-        {"key": "plan",       "label": "الباقة",          "attrs": ("plan_id",)},
-        {"key": "accounting", "label": "طريقة الاحتساب",  "attrs": ("count_by_seconds",
+        {"key": "name",       "label": N_("الاسم"),           "attrs": ("package_name",)},
+        {"key": "plan",       "label": N_("الباقة"),          "attrs": ("plan_id",)},
+        {"key": "accounting", "label": N_("طريقة الاحتساب"),  "attrs": ("count_by_seconds",
                                                                     "count_from_first_connect",
                                                                     "duration_mode")},
-        {"key": "price",      "label": "السعر",           "attrs": ("price_per_card",
+        {"key": "price",      "label": N_("السعر"),           "attrs": ("price_per_card",
                                                                     "price_bulk",
                                                                     "total_price")},
     ),
@@ -267,42 +268,42 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     # يشمل نموذج «إضافة مشترك» (GET users_new) مع gate_get: كي يُحرَس فتح
     # النموذج بنفس منحة الحفظ، فلا «يفتح ثم يُرفَض» — الطريق المسدود. المدير بلا
     # منحة «إنشاء مشترك» لا يفتح النموذج أصلًا (والزرّ مخفيّ عبر manager_action_allowed).
-    "subscriber.create": {"label": "إنشاء مشترك", "section": "subscribers",
+    "subscriber.create": {"label": N_("إنشاء مشترك"), "section": "subscribers",
         "endpoints": ("users_create", "users_new"), "flag": "can_create_subscriber",
         "gate_get": True},
-    "subscriber.delete": {"label": "حذف مشترك", "section": "subscribers",
+    "subscriber.delete": {"label": N_("حذف مشترك"), "section": "subscribers",
         "endpoints": ("users_delete", "users_bulk_delete"), "default": True},
-    "subscriber.status": {"label": "تفعيل / تعطيل", "section": "subscribers",
+    "subscriber.status": {"label": N_("تفعيل / تعطيل"), "section": "subscribers",
         "endpoints": ("users_toggle", "users_toggle_bulk"), "flag": "can_activate_subscriber"},
-    "subscriber.extend": {"label": "إضافة وقت / تمديد", "section": "subscribers",
+    "subscriber.extend": {"label": N_("إضافة وقت / تمديد"), "section": "subscribers",
         "endpoints": ("users_extend", "users_extend_bulk"), "default": True},
-    "subscriber.renew": {"label": "تجديد", "section": "subscribers",
+    "subscriber.renew": {"label": N_("تجديد"), "section": "subscribers",
         "endpoints": ("users_change_plan",), "default": True},
-    "subscriber.quota": {"label": "إضافة / استعادة كوتا", "section": "subscribers",
+    "subscriber.quota": {"label": N_("إضافة / استعادة كوتا"), "section": "subscribers",
         "endpoints": ("users_quota_topup", "users_quota_topup_bulk",
                       "users_quota_reset_daily", "users_quota_reset_daily_bulk"),
         "default": True},
-    "subscriber.balance_add": {"label": "إضافة رصيد / شحن", "section": "subscribers",
+    "subscriber.balance_add": {"label": N_("إضافة رصيد / شحن"), "section": "subscribers",
         "endpoints": ("users_balance_add", "users_balance_add_bulk"), "default": True},
-    "subscriber.payment": {"label": "تسجيل دفعة / تحصيل", "section": "subscribers",
+    "subscriber.payment": {"label": N_("تسجيل دفعة / تحصيل"), "section": "subscribers",
         "endpoints": ("users_payment_create", "users_payment_create_bulk"), "default": True},
-    "subscriber.loan": {"label": "منح سلفة", "section": "subscribers",
+    "subscriber.loan": {"label": N_("منح سلفة"), "section": "subscribers",
         "endpoints": ("users_loan_create", "users_loan_create_bulk", "users_loan_settle"),
         "flag": "can_give_loan"},
-    "subscriber.free_days": {"label": "منح أيام مجانية", "section": "subscribers",
+    "subscriber.free_days": {"label": N_("منح أيام مجانية"), "section": "subscribers",
         "endpoints": (), "flag": "can_give_free_days"},
-    "subscriber.trial_days": {"label": "منح أيام تجريبية", "section": "subscribers",
+    "subscriber.trial_days": {"label": N_("منح أيام تجريبية"), "section": "subscribers",
         "endpoints": (), "flag": "can_give_trial_days"},
-    "subscriber.send_credentials": {"label": "إرسال بيانات الدخول", "section": "subscribers",
+    "subscriber.send_credentials": {"label": N_("إرسال بيانات الدخول"), "section": "subscribers",
         "endpoints": ("users_send_credentials",), "default": True},
     # ── الاتصالات (المرحلة E — ضبط التكلفة): كل قناة بصلاحيتها، افتراض OFF ──
-    "comms.sms": {"label": "إرسال SMS", "section": "communications",
+    "comms.sms": {"label": N_("إرسال SMS"), "section": "communications",
         "endpoints": ("users_send_sms", "users_send_sms_bulk", "communications_send"),
         "default": False},
-    "comms.whatsapp": {"label": "إرسال واتساب", "section": "communications",
+    "comms.whatsapp": {"label": N_("إرسال واتساب"), "section": "communications",
         "endpoints": ("whatsapp_settings", "whatsapp_test", "whatsapp_cloud_test"),
         "default": False},
-    "comms.templates": {"label": "تعديل قوالب الإشعارات", "section": "communications",
+    "comms.templates": {"label": N_("تعديل قوالب الإشعارات"), "section": "communications",
         "endpoints": ("communications_templates",), "default": False},
     # ── مايكروتيك: صفحات إدارة الراوتر (تنبيهات ذكية، تدقيق، نسخ احتياطي،
     #    مصمّم الدخول، أدوات mt). «مدير عام» يفتحها افتراضًا؛ هذا المفتاح
@@ -315,68 +316,68 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     #    فيكتبُ **كلُّ حفظٍ لأساسِ الدور — حتى بلا أيِّ تغيير — تجاوزًا لم يطلبه
     #    المالك** (‏NEW-1، نفسُ نمطِ D01 الذي كلّف الحملةَ جولتَين). والعلَمُ
     #    يُظهرُ المفتاحَ للمالكِ أيضًا، وهو ما طلبه صريحًا (‏NEW-2).
-    "mikrotik.access": {"label": "الوصول لصفحات مايكروتيك", "section": "sessions",
+    "mikrotik.access": {"label": N_("الوصول لصفحات مايكروتيك"), "section": "sessions",
         "endpoints": (), "default": True, "virtual": True},
     # ── الجلسات / المتصلون («وسّع المجال»: كل فعلٍ من شاشة المتصلين بصلاحيته) ──
     # نُقِلت أفعال online_* من قسم المشتركين إلى قسم «الجلسات» المستقلّ. افتراضها
     # OFF (مقيّد) — المالك يَمنح كل فعلٍ بحدة. حُرّاس RBAC القائمة تَبقى فوقها.
-    "session.edit": {"label": "تعديل الجلسة (IP/سرعة حيّة عبر CoA)", "section": "sessions",
+    "session.edit": {"label": N_("تعديل الجلسة (IP/سرعة حيّة عبر CoA)"), "section": "sessions",
         "endpoints": ("online_coa_set_ip", "online_coa_set_speed"), "default": False},
-    "session.lock_mac": {"label": "تثبيت MAC من الجلسة", "section": "sessions",
+    "session.lock_mac": {"label": N_("تثبيت MAC من الجلسة"), "section": "sessions",
         "endpoints": ("online_lock_mac",), "default": False},
-    "session.lock_ip": {"label": "تثبيت IP من الجلسة", "section": "sessions",
+    "session.lock_ip": {"label": N_("تثبيت IP من الجلسة"), "section": "sessions",
         "endpoints": ("online_lock_ip",), "default": False},
-    "session.disconnect": {"label": "قطع جلسة نشطة", "section": "sessions",
+    "session.disconnect": {"label": N_("قطع جلسة نشطة"), "section": "sessions",
         "endpoints": ("online_disconnect",), "default": False},
-    "session.force_close": {"label": "إغلاق إجباري للجلسة", "section": "sessions",
+    "session.force_close": {"label": N_("إغلاق إجباري للجلسة"), "section": "sessions",
         "endpoints": ("online_force_close",), "default": False},
-    "session.reconcile": {"label": "مزامنة/تسوية الجلسات", "section": "sessions",
+    "session.reconcile": {"label": N_("مزامنة/تسوية الجلسات"), "section": "sessions",
         "endpoints": ("online_reconcile",), "default": False},
-    "session.temp_speed": {"label": "سرعة مؤقتة من الجلسة", "section": "sessions",
+    "session.temp_speed": {"label": N_("سرعة مؤقتة من الجلسة"), "section": "sessions",
         # D26: إلغاء السرعة المؤقتة من ملف المشترك = نفس البوّابة (users.temp_speed)
         # كشاشة المتصلين — لا صلاحيةٌ في صفحة وأخرى في غيرها.
         "endpoints": ("online_temp_speed", "online_temp_speed_cancel",
                       "users_temp_speed_cancel"), "default": False},
     # ── البطاقات ──
-    "cards.generate": {"label": "توليد بطاقات", "section": "cards",
+    "cards.generate": {"label": N_("توليد بطاقات"), "section": "cards",
         "endpoints": ("cards_generate", "cards_generate_progress_start"),
         "flag": "can_create_batch"},
-    "cards.import": {"label": "استيراد حزم", "section": "cards",
+    "cards.import": {"label": N_("استيراد حزم"), "section": "cards",
         "endpoints": ("cards_import", "cards_import_analyze"), "flag": "can_import_batches"},
-    "cards.revoke": {"label": "إبطال بطاقة", "section": "cards",
+    "cards.revoke": {"label": N_("إبطال بطاقة"), "section": "cards",
         "endpoints": ("cards_revoke",), "default": True},
-    "cards.batch_ops": {"label": "عمليّات الحزم المجمّعة", "section": "cards",
+    "cards.batch_ops": {"label": N_("عمليّات الحزم المجمّعة"), "section": "cards",
         "endpoints": ("cards_batches_bulk", "cards_batch_cards_actions"), "default": True},
-    "cards.recharge": {"label": "بطاقات شحن مسبق", "section": "cards",
+    "cards.recharge": {"label": N_("بطاقات شحن مسبق"), "section": "cards",
         "endpoints": ("cards_recharge_new", "cards_recharge_batch_delete"), "default": True},
-    "cards.print": {"label": "بطاقات طباعة", "section": "cards",
+    "cards.print": {"label": N_("بطاقات طباعة"), "section": "cards",
         "endpoints": ("cards_print_new", "cards_print_batch_delete"), "default": True},
-    "batch.edit": {"label": "تعديل الحزمة", "section": "cards",
+    "batch.edit": {"label": N_("تعديل الحزمة"), "section": "cards",
         "endpoints": ("cards_batch_edit",), "entity_edit": "batch"},
-    "offer.edit": {"label": "تعديل العرض", "section": "cards",
+    "offer.edit": {"label": N_("تعديل العرض"), "section": "cards",
         "endpoints": ("cards_offer_edit",), "entity_edit": "offer"},
     # إضافةُ عرضٍ كانت مقصورةً على المالك بشرطٍ مثبَّتٍ في المسار، فلا تُمنَح
     # مهما فعل المالك. صارت بوّابةَ فعلٍ على الكيان نفسه (offer) بعمليّة
     # ``create`` — **افتراضُها OFF** فلا يتغيّر سلوك أيّ نسخةٍ قائمة، والمالك
     # يَفتحها لمن يشاء من صفحة صلاحيّات المدير.
-    "offer.create": {"label": "إضافة عرض", "section": "cards",
+    "offer.create": {"label": N_("إضافة عرض"), "section": "cards",
         "endpoints": ("cards_offer_create",), "entity_edit": "offer",
         "entity_op": "create"},
     # ── الباقات ──
-    "plan.create": {"label": "إنشاء باقة", "section": "plans",
+    "plan.create": {"label": N_("إنشاء باقة"), "section": "plans",
         "endpoints": ("plans_create", "plans_clone"), "default": True},
-    "plan.edit": {"label": "تعديل باقة", "section": "plans",
+    "plan.edit": {"label": N_("تعديل باقة"), "section": "plans",
         "endpoints": ("plans_update",), "default": True},
-    "plan.delete": {"label": "حذف باقة", "section": "plans",
+    "plan.delete": {"label": N_("حذف باقة"), "section": "plans",
         "endpoints": ("plans_delete",), "default": True},
     # ── الموزّعون ──
-    "distributor.manage": {"label": "إدارة الموزّعين", "section": "distributors",
+    "distributor.manage": {"label": N_("إدارة الموزّعين"), "section": "distributors",
         "endpoints": ("distributors_create", "distributors_update",
                       "distributors_assign_batch", "distributors_settle"),
         "flag": "can_manage_distributors"},
     # ── تصدير البيانات (المرحلة C) — مسارات GET، لذا نُحرسها على القراءة أيضًا
     # (gate_get). افتراض OFF: المدير غير المُصرَّح لا يُصدِّر CSV/Excel/PDF. ──
-    "data.export": {"label": "تصدير البيانات (CSV/Excel/PDF)", "section": "reports",
+    "data.export": {"label": N_("تصدير البيانات (CSV/Excel/PDF)"), "section": "reports",
         "endpoints": ("export_table", "users_export", "cards_batches_export_csv",
                       "cards_batches_export_pdf", "cards_batches_export_xlsx",
                       "finance_reports_export_csv", "finance_reports_export_xlsx",
@@ -385,26 +386,26 @@ ACTION_REGISTRY: dict[str, dict[str, Any]] = {
     # ── المتجر الإلكترونيّ («وسّع المجال»: تقسيم store.review + مستخدمو المتجر) ──
     # أُفرِد تأكيد الإيداع عن السحب فيَقدر المالك يَمنح أحدهما دون الآخر.
     # افتراضها OFF (مقيّد)؛ حارس store.review RBAC يَبقى فوقها (لا يُضعَف).
-    "store.deposit_approve": {"label": "تأكيد الإيداع (المتجر)", "section": "store",
+    "store.deposit_approve": {"label": N_("تأكيد الإيداع (المتجر)"), "section": "store",
         "endpoints": ("store_support_deposit_confirm", "store_support_deposit_reject"),
         "default": False},
-    "store.withdraw_approve": {"label": "تأكيد السحب (المتجر)", "section": "store",
+    "store.withdraw_approve": {"label": N_("تأكيد السحب (المتجر)"), "section": "store",
         "endpoints": ("store_support_withdrawal_confirm", "store_support_withdrawal_reject"),
         "default": False},
-    "storeuser.create": {"label": "إنشاء مستخدم متجر", "section": "store",
+    "storeuser.create": {"label": N_("إنشاء مستخدم متجر"), "section": "store",
         "endpoints": ("card_users_create",), "default": False},
-    "storeuser.edit": {"label": "تعديل مستخدم متجر (شحن/شراء)", "section": "store",
+    "storeuser.edit": {"label": N_("تعديل مستخدم متجر (شحن/شراء)"), "section": "store",
         "endpoints": ("card_user_recharge", "card_user_purchase"), "default": False},
-    "storeuser.password": {"label": "تغيير كلمة مرور مستخدم متجر", "section": "store",
+    "storeuser.password": {"label": N_("تغيير كلمة مرور مستخدم متجر"), "section": "store",
         "endpoints": ("card_user_password",), "default": False},
-    "storeuser.delete": {"label": "حذف/استعادة مستخدم متجر", "section": "store",
+    "storeuser.delete": {"label": N_("حذف/استعادة مستخدم متجر"), "section": "store",
         "endpoints": ("card_user_delete", "card_user_restore"), "default": False},
     # ── المرحلة D: أفعال خطرة ──
     # «العمليّات المجمّعة» بوّابة **إضافيّة** فوق فعل كل عمليّة (مسارات *_bulk
     # مربوطة سلفًا بأفعالها المفردة): virtual (بلا endpoints خاصّة)، يُنفَّذ عبر
     # BULK_ENDPOINTS في الحارس. افتراض OFF → المدير لا يُجري عمليّات جماعيّة
     # ما لم يَمنحها المالك.
-    "bulk.ops": {"label": "العمليّات المجمّعة (تعديل/حذف جماعيّ)",
+    "bulk.ops": {"label": N_("العمليّات المجمّعة (تعديل/حذف جماعيّ)"),
         "section": "subscribers", "endpoints": (), "default": False, "virtual": True},
 }
 
@@ -478,7 +479,7 @@ def rbac_perm_label(action_key: str) -> str:
     """مفاتيح RBAC المطلوبة لفعلٍ مُشتقّ، نصًّا (لرسائل الرفض)."""
     rbac = (ACTION_REGISTRY.get(action_key) or {}).get("rbac_perm")
     if isinstance(rbac, (tuple, list)):
-        return " أو ".join(rbac)
+        return _tr(" أو ").join(rbac)
     return str(rbac or "")
 
 
@@ -688,10 +689,10 @@ LIMIT_KEYS = ("max_subscribers", "max_cards_total", "max_cards_daily")
 # can_see_* في permissions_json وتُنفَّذ بحجب البيانات على الخادم (لا CSS).
 # المرحلة B: الجملة/التكلفة. المرحلة C تُوسّعها (كلمة سر/رصيد/أرباح…).
 VISIBILITY_REGISTRY: dict[str, str] = {
-    "can_see_wholesale": "رؤية سعر التكلفة/الجملة",
-    "can_see_password":  "رؤية كلمة مرور المشترك",
-    "can_see_balance":   "رؤية الرصيد والماليّات",
-    "can_see_profit":    "رؤية الأرباح/الهامش",
+    "can_see_wholesale": N_("رؤية سعر التكلفة/الجملة"),
+    "can_see_password":  N_("رؤية كلمة مرور المشترك"),
+    "can_see_balance":   N_("رؤية الرصيد والماليّات"),
+    "can_see_profit":    N_("رؤية الأرباح/الهامش"),
 }
 
 
@@ -898,11 +899,11 @@ def card_cap_block_reason(admin_id: Optional[int], add_count: int, *, tenant_id:
     if total_cap > 0:
         cur = manager_card_count(int(admin_id), tenant_id=tenant_id)
         if cur + add_count > total_cap:
-            return f"يتجاوز الحدّ الأقصى الإجماليّ للبطاقات ({total_cap})."
+            return _tr('يتجاوز الحدّ الأقصى الإجماليّ للبطاقات (%(total_cap)s).', total_cap=total_cap)
     if daily_cap > 0:
         cur_day = manager_card_count(int(admin_id), tenant_id=tenant_id, today_only=True)
         if cur_day + add_count > daily_cap:
-            return f"يتجاوز الحدّ الأقصى اليوميّ للبطاقات ({daily_cap})."
+            return _tr('يتجاوز الحدّ الأقصى اليوميّ للبطاقات (%(daily_cap)s).', daily_cap=daily_cap)
     return None
 
 
@@ -917,9 +918,9 @@ def limits_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
     used_subs = manager_subscriber_count(int(admin_id), tenant_id=tenant_id) if admin_id else 0
     used_cards = manager_card_count(int(admin_id), tenant_id=tenant_id) if admin_id else 0
     return [
-        {"key": "max_subscribers", "label": "أقصى عدد مشتركين", "value": _v("max_subscribers"), "used": used_subs},
-        {"key": "max_cards_total", "label": "أقصى عدد بطاقات (إجماليّ)", "value": _v("max_cards_total"), "used": used_cards},
-        {"key": "max_cards_daily", "label": "أقصى عدد بطاقات (يوميّ)", "value": _v("max_cards_daily"), "used": None},
+        {"key": "max_subscribers", "label": _tr("أقصى عدد مشتركين"), "value": _v("max_subscribers"), "used": used_subs},
+        {"key": "max_cards_total", "label": _tr("أقصى عدد بطاقات (إجماليّ)"), "value": _v("max_cards_total"), "used": used_cards},
+        {"key": "max_cards_daily", "label": _tr("أقصى عدد بطاقات (يوميّ)"), "value": _v("max_cards_daily"), "used": None},
     ]
 
 
@@ -1040,13 +1041,13 @@ def action_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dict[
 # أعلام «نطاق الرؤية/الإشراف» التي ليست أفعالًا في ACTION_REGISTRY — تُعرَض
 # في محرّر أساس الدور بقسم «نطاق الرؤية» وتُخزَّن في blob["flags"].
 SCOPE_FLAG_REGISTRY: dict[str, str] = {
-    "can_view_all_subscribers":  "عرض كل المشتركين",
-    "can_view_all_card_batches": "عرض كل حزم البطاقات",
-    "can_see_wholesale":         "رؤية سعر التكلفة/الجملة",
-    "can_see_password":          "رؤية كلمة مرور المشترك",
-    "can_see_balance":           "رؤية الرصيد والماليّات",
-    "can_see_profit":            "رؤية الأرباح/الهامش",
-    "can_create_sub_managers":   "إنشاء مدراء فرعيّين + تفويض",
+    "can_view_all_subscribers":  N_("عرض كل المشتركين"),
+    "can_view_all_card_batches": N_("عرض كل حزم البطاقات"),
+    "can_see_wholesale":         N_("رؤية سعر التكلفة/الجملة"),
+    "can_see_password":          N_("رؤية كلمة مرور المشترك"),
+    "can_see_balance":           N_("رؤية الرصيد والماليّات"),
+    "can_see_profit":            N_("رؤية الأرباح/الهامش"),
+    "can_create_sub_managers":   N_("إنشاء مدراء فرعيّين + تفويض"),
 }
 
 
@@ -1757,7 +1758,7 @@ def set_action_grants(
 TRI_INHERIT, TRI_ALLOW, TRI_DENY = "inherit", "allow", "deny"
 TRI_STATES = (TRI_INHERIT, TRI_ALLOW, TRI_DENY)
 TRI_PREFIX = "tri_"
-_TRI_WORD = {True: "مسموح", False: "ممنوع"}
+_TRI_WORD = {True: N_("مسموح"), False: N_("ممنوع")}
 VISIBILITY_GROUP = "_visibility"
 
 
@@ -1825,9 +1826,9 @@ def _tri_role_value(admin_id: Optional[int], row: dict[str, Any], rg: dict[str, 
     store = row["store"]
     if row.get("rbac"):
         if not _rbac_any(row["rbac"], _admin_rbac_perms(admin_id, tenant_id)):
-            return False, "ينقص الدور المفتاح " + rbac_perm_label(row["key"])
+            return False, _tr("ينقص الدور المفتاح ") + rbac_perm_label(row["key"])
         if _tri_get(rg, ("action", row["key"])) is False:
-            return False, "مُطفأ في أساس الدور"
+            return False, N_("مُطفأ في أساس الدور")
         return True, ""
     v = _tri_get(rg, store)
     if v is not None:
@@ -1876,7 +1877,7 @@ def tristate_catalog(admin_id: Optional[int], *, tenant_id: int = 1) -> list[dic
         })
     out: list[dict[str, Any]] = []
     if VISIBILITY_GROUP in groups:
-        out.append({"section": VISIBILITY_GROUP, "label": "نطاق الرؤية والحماية الماليّة",
+        out.append({"section": VISIBILITY_GROUP, "label": _tr("نطاق الرؤية والحماية الماليّة"),
                     "icon": "eye", "rows": groups[VISIBILITY_GROUP]})
     for sec, spec in MANAGER_SECTION_REGISTRY.items():
         if sec in groups:
@@ -2009,7 +2010,7 @@ def role_derived_catalog(blob: dict[str, Any], role_perms) -> list[dict[str, Any
             "key": row["key"], "input": tri_input_name(row["key"]),
             "label": row["label"], "state": tri_state_of(stored),
             "rbac_label": rbac_perm_label(row["key"]), "has_key": has_key,
-            "key_label": "ممنوح" if has_key else "غير ممنوح",
+            "key_label": _tr("ممنوح") if has_key else _tr("غير ممنوح"),
             "allow_disabled": (not has_key) and stored is not True,
             "effective": bool(has_key and stored is not False),
         })

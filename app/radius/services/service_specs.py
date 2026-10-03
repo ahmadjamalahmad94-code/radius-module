@@ -35,6 +35,7 @@ checkbox، JS-only. النتيجة: لا تجربة موحّدة، ولا «طل
   • أضِف إدخالًا في SERVICE_TYPE_MAP لربط خدمة بنوع موجود.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -123,45 +124,45 @@ class SpecKind:
 
 _KIND_BANDWIDTH = SpecKind(
     key="bandwidth_plan",
-    title="مواصفات خدمة باندويذث",
+    title=N_("مواصفات خدمة باندويذث"),
     summary=(
-        "حدّد السرعتَين (تنزيل/رفع)، الكوتا الشهريّة إن وُجدت، "
-        "ومدّة الصلاحية. تُستخدم لخطط الهوت سبوت والبرودباند."
+        N_("حدّد السرعتَين (تنزيل/رفع)، الكوتا الشهريّة إن وُجدت، "
+        "ومدّة الصلاحية. تُستخدم لخطط الهوت سبوت والبرودباند.")
     ),
     fields=(
-        SpecField(key="download_mbps", label="سرعة التنزيل (Mbps)",
+        SpecField(key="download_mbps", label=N_("سرعة التنزيل (Mbps)"),
                   type="number", required=True, min=1, max=10000,
-                  placeholder="مثل: 25"),
-        SpecField(key="upload_mbps", label="سرعة الرفع (Mbps)",
+                  placeholder=N_("مثل: 25")),
+        SpecField(key="upload_mbps", label=N_("سرعة الرفع (Mbps)"),
                   type="number", required=True, min=1, max=10000,
-                  placeholder="مثل: 5"),
-        SpecField(key="quota_gb", label="الكوتا الشهريّة (GB)",
+                  placeholder=N_("مثل: 5")),
+        SpecField(key="quota_gb", label=N_("الكوتا الشهريّة (GB)"),
                   type="number", required=False, min=0, max=1_048_576,
-                  placeholder="اتركها فارغة لخطّة لامحدودة",
-                  help_text="0 أو فارغ = بلا كوتا"),
-        SpecField(key="validity_days", label="مدّة الصلاحية (أيام)",
+                  placeholder=N_("اتركها فارغة لخطّة لامحدودة"),
+                  help_text=N_("0 أو فارغ = بلا كوتا")),
+        SpecField(key="validity_days", label=N_("مدّة الصلاحية (أيام)"),
                   type="number", required=True, min=1, max=3650,
                   default=30),
-        SpecField(key="notes", label="ملاحظات", type="textarea",
+        SpecField(key="notes", label=N_("ملاحظات"), type="textarea",
                   required=False, max_length=1000,
-                  placeholder="سبب الطلب أو متطلّبات إضافيّة…"),
+                  placeholder=N_("سبب الطلب أو متطلّبات إضافيّة…")),
     ),
 )
 
 
 _KIND_TUNNEL = SpecKind(
     key="tunnel",
-    title="مواصفات خدمة نفق / IP عمومي",
+    title=N_("مواصفات خدمة نفق / IP عمومي"),
     summary=(
-        "حدّد المنافذ المطلوبة، الحدّ الأقصى للجلسات المتزامنة، "
-        "وهل يحتاج IP ثابتًا. تُستخدم لتغيير عنوان التصفح العام والوصول البعيد."
+        N_("حدّد المنافذ المطلوبة، الحدّ الأقصى للجلسات المتزامنة، "
+        "وهل يحتاج IP ثابتًا. تُستخدم لتغيير عنوان التصفح العام والوصول البعيد.")
     ),
     fields=(
-        SpecField(key="ports", label="المنافذ المطلوبة (مفصولة بفواصل)",
+        SpecField(key="ports", label=N_("المنافذ المطلوبة (مفصولة بفواصل)"),
                   type="text", required=True, max_length=200,
-                  placeholder="مثل: 80,443,1194",
-                  help_text="أرقام المنافذ TCP/UDP فقط (1-65535)."),
-        SpecField(key="protocol", label="البروتوكول",
+                  placeholder=N_("مثل: 80,443,1194"),
+                  help_text=N_("أرقام المنافذ TCP/UDP فقط (1-65535).")),
+        SpecField(key="protocol", label=N_("البروتوكول"),
                   type="select", required=True,
                   options=(
                       {"value": "tcp",    "label": "TCP"},
@@ -169,12 +170,12 @@ _KIND_TUNNEL = SpecKind(
                       {"value": "both",   "label": "TCP + UDP"},
                   ),
                   default="tcp"),
-        SpecField(key="concurrent_sessions", label="حدّ الجلسات المتزامنة",
+        SpecField(key="concurrent_sessions", label=N_("حدّ الجلسات المتزامنة"),
                   type="number", required=False, min=1, max=10000,
-                  placeholder="اتركها فارغة لاستخدام الافتراضي"),
-        SpecField(key="static_ip", label="يحتاج IP ثابتًا",
+                  placeholder=N_("اتركها فارغة لاستخدام الافتراضي")),
+        SpecField(key="static_ip", label=N_("يحتاج IP ثابتًا"),
                   type="checkbox", required=False, default=False),
-        SpecField(key="notes", label="ملاحظات", type="textarea",
+        SpecField(key="notes", label=N_("ملاحظات"), type="textarea",
                   required=False, max_length=1000),
     ),
 )
@@ -182,19 +183,19 @@ _KIND_TUNNEL = SpecKind(
 
 _KIND_PORT_SCRIPT = SpecKind(
     key="port_script",
-    title="مواصفات خدمة مبنيّة على المنافذ",
+    title=N_("مواصفات خدمة مبنيّة على المنافذ"),
     summary=(
-        "اختر منافذ الراوتر التي تنطبق عليها الخدمة (LAN فقط)؛ "
-        "تُستخدم لمنع البث وتتبّع اللوب."
+        N_("اختر منافذ الراوتر التي تنطبق عليها الخدمة (LAN فقط)؛ "
+        "تُستخدم لمنع البث وتتبّع اللوب.")
     ),
     fields=(
-        SpecField(key="ports", label="منافذ الراوتر (مفصولة بفواصل)",
+        SpecField(key="ports", label=N_("منافذ الراوتر (مفصولة بفواصل)"),
                   type="text", required=True, max_length=400,
-                  placeholder="مثل: ether2,ether3,ether4",
-                  help_text="LAN فقط — WAN والأنفاق مرفوضة."),
-        SpecField(key="apply_immediately", label="تطبيق فوريّ بعد الموافقة",
+                  placeholder=N_("مثل: ether2,ether3,ether4"),
+                  help_text=N_("LAN فقط — WAN والأنفاق مرفوضة.")),
+        SpecField(key="apply_immediately", label=N_("تطبيق فوريّ بعد الموافقة"),
                   type="checkbox", required=False, default=True),
-        SpecField(key="notes", label="ملاحظات", type="textarea",
+        SpecField(key="notes", label=N_("ملاحظات"), type="textarea",
                   required=False, max_length=1000),
     ),
 )
@@ -202,20 +203,20 @@ _KIND_PORT_SCRIPT = SpecKind(
 
 _KIND_QUOTA = SpecKind(
     key="quota",
-    title="مواصفات خدمة بكوتا",
+    title=N_("مواصفات خدمة بكوتا"),
     summary=(
-        "حدّد الكمّيّة المطلوبة (ميغابايت) ومدّة الصلاحية ورسالة "
-        "موجزة. تُستخدم للخدمات المدفوعة المحدودة بحجم."
+        N_("حدّد الكمّيّة المطلوبة (ميغابايت) ومدّة الصلاحية ورسالة "
+        "موجزة. تُستخدم للخدمات المدفوعة المحدودة بحجم.")
     ),
     fields=(
-        SpecField(key="quota_mb", label="الكمّيّة المطلوبة (ميغابايت)",
+        SpecField(key="quota_mb", label=N_("الكمّيّة المطلوبة (ميغابايت)"),
                   type="number", required=True, min=1, max=1_048_576,
-                  placeholder="مثل: 2048"),
-        SpecField(key="validity_days", label="مدّة الصلاحية (أيام)",
+                  placeholder=N_("مثل: 2048")),
+        SpecField(key="validity_days", label=N_("مدّة الصلاحية (أيام)"),
                   type="number", required=False, min=1, max=365,
                   default=30,
-                  help_text="افتراضيًّا 30 يومًا."),
-        SpecField(key="notes", label="ملاحظات (سبب الطلب)",
+                  help_text=N_("افتراضيًّا 30 يومًا.")),
+        SpecField(key="notes", label=N_("ملاحظات (سبب الطلب)"),
                   type="textarea", required=False, max_length=1000),
     ),
 )
@@ -223,27 +224,27 @@ _KIND_QUOTA = SpecKind(
 
 _KIND_SITE_POLICY = SpecKind(
     key="site_policy",
-    title="مواصفات سياسة مواقع",
+    title=N_("مواصفات سياسة مواقع"),
     summary=(
-        "اكتب المواقع (سطر لكل واحد)، وحدّد نطاق التطبيق "
-        "(جميع المستخدمين / الهوت سبوت / البرودباند)."
+        N_("اكتب المواقع (سطر لكل واحد)، وحدّد نطاق التطبيق "
+        "(جميع المستخدمين / الهوت سبوت / البرودباند).")
     ),
     fields=(
-        SpecField(key="sites", label="المواقع (سطر لكل موقع)",
+        SpecField(key="sites", label=N_("المواقع (سطر لكل موقع)"),
                   type="textarea", required=True, max_length=8000,
                   placeholder="example.com\nyoutube.com\n*.facebook.com"),
-        SpecField(key="scope", label="نطاق التطبيق",
+        SpecField(key="scope", label=N_("نطاق التطبيق"),
                   type="select", required=True,
                   options=(
-                      {"value": "all",       "label": "جميع المستخدمين"},
-                      {"value": "hotspot",   "label": "الهوت سبوت فقط"},
-                      {"value": "broadband", "label": "البرودباند فقط"},
+                      {"value": "all",       "label": N_("جميع المستخدمين")},
+                      {"value": "hotspot",   "label": N_("الهوت سبوت فقط")},
+                      {"value": "broadband", "label": N_("البرودباند فقط")},
                   ),
                   default="all"),
         SpecField(key="match_subdomains",
-                  label="مطابقة النطاقات الفرعيّة تلقائيًّا",
+                  label=N_("مطابقة النطاقات الفرعيّة تلقائيًّا"),
                   type="checkbox", required=False, default=True),
-        SpecField(key="notes", label="ملاحظات", type="textarea",
+        SpecField(key="notes", label=N_("ملاحظات"), type="textarea",
                   required=False, max_length=1000),
     ),
 )
@@ -251,33 +252,33 @@ _KIND_SITE_POLICY = SpecKind(
 
 _KIND_IP_CHANGE = SpecKind(
     key="ip_change",
-    title="مواصفات خدمة تغيير الـIP",
+    title=N_("مواصفات خدمة تغيير الـIP"),
     summary=(
-        "حدّد السرعة المطلوبة بالميغابِت/الثانية (Mbps). الاشتراك شهريّ "
+        N_("حدّد السرعة المطلوبة بالميغابِت/الثانية (Mbps). الاشتراك شهريّ "
         "متجدّد والبيانات غير محدودة — الشراء للسرعة (rate-limit) لا للكمّيّة، "
-        "والسعر لكلّ ميغا من السرعة."
+        "والسعر لكلّ ميغا من السرعة.")
     ),
     fields=(
-        SpecField(key="requested_speed_mbps", label="السرعة المطلوبة (Mbps)",
+        SpecField(key="requested_speed_mbps", label=N_("السرعة المطلوبة (Mbps)"),
                   type="number", required=True, min=1, max=10000,
-                  placeholder="مثل: 100",
-                  help_text="عدد الميغابِت في الثانية — السعر يُحسب لكلّ ميغا."),
+                  placeholder=N_("مثل: 100"),
+                  help_text=N_("عدد الميغابِت في الثانية — السعر يُحسب لكلّ ميغا.")),
         # دورة الفوترة وحدّ البيانات ثابتتان لهذه الخدمة (شهريّ/غير محدودة)؛
         # نُمرّرهما كحقلين بخيار وحيد كي يَحملهما الطلب عبر validate_spec
         # (العقد يُلزم أن يَحمل الطلب billing=monthly و data=unlimited).
-        SpecField(key="billing_cycle", label="دورة الفوترة",
+        SpecField(key="billing_cycle", label=N_("دورة الفوترة"),
                   type="select", required=True,
-                  options=({"value": "monthly", "label": "شهريّ متجدّد"},),
+                  options=({"value": "monthly", "label": N_("شهريّ متجدّد")},),
                   default="monthly",
-                  help_text="اشتراك شهريّ متجدّد."),
-        SpecField(key="data_limit", label="حدّ البيانات",
+                  help_text=N_("اشتراك شهريّ متجدّد.")),
+        SpecField(key="data_limit", label=N_("حدّ البيانات"),
                   type="select", required=True,
-                  options=({"value": "unlimited", "label": "غير محدودة"},),
+                  options=({"value": "unlimited", "label": N_("غير محدودة")},),
                   default="unlimited",
-                  help_text="الكمّيّة مفتوحة — الشراء للسرعة لا للكمّيّة."),
-        SpecField(key="notes", label="ملاحظات", type="textarea",
+                  help_text=N_("الكمّيّة مفتوحة — الشراء للسرعة لا للكمّيّة.")),
+        SpecField(key="notes", label=N_("ملاحظات"), type="textarea",
                   required=False, max_length=1000,
-                  placeholder="أيّ تفاصيل إضافيّة عن الطلب…"),
+                  placeholder=N_("أيّ تفاصيل إضافيّة عن الطلب…")),
     ),
 )
 
@@ -333,23 +334,23 @@ SERVICE_TYPE_MAP: dict[str, str] = {
 # المواصفات؛ فقط نصّ مقروء للمشغّل.
 
 SERVICE_LABELS: dict[str, str] = {
-    "bt_wifi_block":  "منع بث البلوتوث والواي فاي",
-    "loop_detect":    "تتبّع اللوب",
-    "hotspot":        "خطّة هوت سبوت",
-    "broadband":      "خطّة برودباند",
-    "subscriber_plan_upgrade": "ترقية خطّة المشترك",
-    "public-ip":      "تغيير عنوان التصفح العام (Public)",
-    "public_ip":      "تغيير عنوان التصفح العام (Public)",
-    "remote-access":  "الوصول البعيد",
-    "remote_access":  "الوصول البعيد",
-    "vpn_tunnel":     "نفق VPN",
-    "ip_change":      "تغيير عنوان التصفح العام (Public)",
-    "ipchange":       "تغيير عنوان التصفح العام (Public)",
-    "ip-change":      "تغيير عنوان التصفح العام (Public)",
-    "block-sites":    "حجب مواقع",
-    "block_sites":    "حجب مواقع",
-    "open-sites":     "فتح مواقع (Walled Garden)",
-    "open_sites":     "فتح مواقع (Walled Garden)",
+    "bt_wifi_block":  N_("منع بث البلوتوث والواي فاي"),
+    "loop_detect":    N_("تتبّع اللوب"),
+    "hotspot":        N_("خطّة هوت سبوت"),
+    "broadband":      N_("خطّة برودباند"),
+    "subscriber_plan_upgrade": N_("ترقية خطّة المشترك"),
+    "public-ip":      N_("تغيير عنوان التصفح العام (Public)"),
+    "public_ip":      N_("تغيير عنوان التصفح العام (Public)"),
+    "remote-access":  N_("الوصول البعيد"),
+    "remote_access":  N_("الوصول البعيد"),
+    "vpn_tunnel":     N_("نفق VPN"),
+    "ip_change":      N_("تغيير عنوان التصفح العام (Public)"),
+    "ipchange":       N_("تغيير عنوان التصفح العام (Public)"),
+    "ip-change":      N_("تغيير عنوان التصفح العام (Public)"),
+    "block-sites":    N_("حجب مواقع"),
+    "block_sites":    N_("حجب مواقع"),
+    "open-sites":     N_("فتح مواقع (Walled Garden)"),
+    "open_sites":     N_("فتح مواقع (Walled Garden)"),
 }
 
 
@@ -446,7 +447,7 @@ def kind_for_service(service_type: str) -> SpecKind | None:
 def service_label(service_type: str) -> str:
     """تسمية عربيّة قصيرة للخدمة (مفيدة في رأس النافذة والـtoast)."""
     return SERVICE_LABELS.get((service_type or "").strip(),
-                              service_type or "خدمة")
+                              service_type or N_("خدمة"))
 
 
 # ─── التحقّق من المواصفات المُرسَلة من الواجهة ──────────────────
@@ -487,7 +488,7 @@ def validate_spec(service_type: str, payload: dict[str, Any]
     """
     kind = kind_for_service(service_type)
     if kind is None:
-        return {}, ["نوع الخدمة غير معروف"]
+        return {}, [N_("نوع الخدمة غير معروف")]
 
     clean: dict[str, Any] = {}
     errors: list[str] = []
@@ -499,13 +500,13 @@ def validate_spec(service_type: str, payload: dict[str, Any]
             v = _coerce_number(raw)
             if v is None:
                 if f.required:
-                    errors.append(f"الحقل «{f.label}» مطلوب.")
+                    errors.append(_tr('الحقل «%(label)s» مطلوب.', label=f.label))
                 continue
             if f.min is not None and v < f.min:
-                errors.append(f"«{f.label}» يجب ألا يقلّ عن {int(f.min)}.")
+                errors.append(_tr('«%(label)s» يجب ألا يقلّ عن %(v)s.', label=f.label, v=int(f.min)))
                 continue
             if f.max is not None and v > f.max:
-                errors.append(f"«{f.label}» يجب ألا يزيد عن {int(f.max)}.")
+                errors.append(_tr('«%(label)s» يجب ألا يزيد عن %(v)s.', label=f.label, v=int(f.max)))
                 continue
             clean[f.key] = int(v) if v.is_integer() else v
 
@@ -516,11 +517,11 @@ def validate_spec(service_type: str, payload: dict[str, Any]
             v = str(raw or "").strip()
             if not v:
                 if f.required:
-                    errors.append(f"الحقل «{f.label}» مطلوب.")
+                    errors.append(_tr('الحقل «%(label)s» مطلوب.', label=f.label))
                 continue
             allowed = {str(o.get("value")) for o in f.options}
             if v not in allowed:
-                errors.append(f"قيمة غير صالحة للحقل «{f.label}».")
+                errors.append(_tr('قيمة غير صالحة للحقل «%(label)s».', label=f.label))
                 continue
             clean[f.key] = v
 
@@ -528,17 +529,16 @@ def validate_spec(service_type: str, payload: dict[str, Any]
             v = str(raw or "").strip()
             if not v:
                 if f.required:
-                    errors.append(f"الحقل «{f.label}» مطلوب.")
+                    errors.append(_tr('الحقل «%(label)s» مطلوب.', label=f.label))
                 continue
             if f.max_length and len(v) > f.max_length:
                 errors.append(
-                    f"«{f.label}» يتجاوز الحدّ المسموح "
-                    f"({f.max_length} حرفًا).")
+                    _tr('«%(label)s» يتجاوز الحدّ المسموح (%(max_length)s حرفًا).', label=f.label, max_length=f.max_length))
                 continue
             clean[f.key] = v
 
         else:
-            errors.append(f"نوع حقل غير معروف: {f.type}")
+            errors.append(_tr('نوع حقل غير معروف: %(type)s', type=f.type))
 
     return clean, errors
 

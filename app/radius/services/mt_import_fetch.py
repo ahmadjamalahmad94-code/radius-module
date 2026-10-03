@@ -24,6 +24,7 @@
 في الذاكرة خادمِيًّا ولا تُسجَّل قطّ.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import dataclass, field
@@ -91,7 +92,7 @@ def _norm_import_type(import_type: str) -> str:
         return IMPORT_BROADBAND
     if t in ("hotspot", "hs"):
         return IMPORT_HOTSPOT
-    raise ValueError(f"نوع استيراد غير مدعوم: {import_type!r}")
+    raise ValueError(_tr('نوع استيراد غير مدعوم: %(import_type)s', import_type=repr(import_type)))
 
 
 def _resolve_transport(nas: Mapping[str, Any], override: str) -> str:
@@ -142,7 +143,7 @@ def _fetch_rest(nas: Mapping[str, Any], import_type: str) -> FetchResult:
     res = FetchResult(import_type=import_type, attempted=[TRANSPORT_REST])
     host = resolve_connection_address(nas)
     if not host:
-        res.error = "عنوان الراوتر غير محدد"
+        res.error = _tr("عنوان الراوتر غير محدد")
         return res
     base, verify = _rest_base(nas)
     path = _REST_PATH[import_type]
@@ -156,7 +157,7 @@ def _fetch_rest(nas: Mapping[str, Any], import_type: str) -> FetchResult:
         # لا نُدرج كلمة المرور أبدًا — نسجّل المضيف/المسار فقط.
         _LOG.info("MT import REST fetch failed host=%s path=%s — %s",
                   host, path, exc.__class__.__name__)
-        res.error = f"تعذّر الجلب عبر REST: {exc}"
+        res.error = _tr('تعذّر الجلب عبر REST: %(exc)s', exc=exc)
         return res
     res.ok = True
     res.transport = TRANSPORT_REST
@@ -177,7 +178,7 @@ def _fetch_api(nas: Mapping[str, Any], import_type: str) -> FetchResult:
         work=lambda c: list(c.print_(print_path)),
     )
     if not mt.ok:
-        res.error = mt.error or "تعذّر الجلب عبر API"
+        res.error = mt.error or _tr("تعذّر الجلب عبر API")
         return res
     rows = mt.data if isinstance(mt.data, list) else []
     res.ok = True

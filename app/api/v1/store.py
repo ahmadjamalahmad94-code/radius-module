@@ -33,6 +33,7 @@ CORS:
   تلقائيًا فلا CSRF عبر الأصول.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import functools
 import logging
@@ -274,8 +275,8 @@ def install_store_key_guard(app) -> None:
         if not verify_store_key(request.headers.get(STORE_KEY_HEADER, ""), tid):
             return fail(
                 "store_key_invalid",
-                "هذا الطلب لا يحمل مفتاح المتجر الصحيح — استخدم متجرك "
-                "المنشور لا أداة خارجية.",
+                _tr("هذا الطلب لا يحمل مفتاح المتجر الصحيح — استخدم متجرك "
+                "المنشور لا أداة خارجية."),
                 status=403,
             )
         return None
@@ -367,9 +368,9 @@ def _public_card_user(user: dict[str, Any]) -> dict[str, Any]:
 
 
 _AVAILABILITY_AR = {
-    "available": "متوفر",
-    "limited": "كمية محدودة",
-    "out": "نفد",
+    "available": N_("متوفر"),
+    "limited": N_("كمية محدودة"),
+    "out": N_("نفد"),
 }
 
 
@@ -500,11 +501,11 @@ def _card_state(card: dict[str, Any]) -> str:
 
 # نصوص الحالات بالعربية — تُرسل جاهزة فلا تترجم الصفحة شيئًا.
 _CARD_STATE_AR = {
-    "active": "فعالة الآن",
-    "unused": "غير مستخدمة بعد",
-    "expired": "منتهية",
-    "consumed": "مستهلكة",
-    "revoked": "ملغاة",
+    "active": N_("فعالة الآن"),
+    "unused": N_("غير مستخدمة بعد"),
+    "expired": N_("منتهية"),
+    "consumed": N_("مستهلكة"),
+    "revoked": N_("ملغاة"),
 }
 
 
@@ -549,13 +550,13 @@ def store_register():
     if not name or not mobile or not password:
         return fail(
             "validation_error",
-            "أدخل الاسم الثلاثي ورقم الجوال وكلمة المرور.",
+            _tr("أدخل الاسم الثلاثي ورقم الجوال وكلمة المرور."),
             status=422,
         )
     if _register_throttled(_client_ip()):
         return fail(
             "rate_limited",
-            "محاولات تسجيل كثيرة — انتظر قليلًا ثم حاول مجددًا.",
+            _tr("محاولات تسجيل كثيرة — انتظر قليلًا ثم حاول مجددًا."),
             status=429,
             details={"retry_after_seconds": int(_REGISTER_WINDOW_SECONDS)},
         )
@@ -567,7 +568,7 @@ def store_register():
     except CardMarketplaceError as exc:
         _emit_store_event("store.register_failed", card_user_id=0, mobile=mobile,
                           severity="warning", error_message=str(exc))
-        return fail("register_failed", str(exc) or "تعذّر إنشاء الحساب.",
+        return fail("register_failed", str(exc) or _tr("تعذّر إنشاء الحساب."),
                     status=422)
     uid = int(user.get("id") or 0)
     _emit_store_event("store.register", card_user_id=uid, mobile=mobile,
@@ -598,14 +599,14 @@ def store_login():
     if not mobile or not password:
         return fail(
             "validation_error",
-            "أدخل رقم الجوال وكلمة المرور.",
+            _tr("أدخل رقم الجوال وكلمة المرور."),
             status=422,
         )
     throttle_key = f"{mobile}|{_client_ip()}"
     if _login_throttled(throttle_key):
         return fail(
             "rate_limited",
-            "محاولات كثيرة — انتظر دقيقة ثم حاول مجددًا.",
+            _tr("محاولات كثيرة — انتظر دقيقة ثم حاول مجددًا."),
             status=429,
             details={"retry_after_seconds": 60},
         )
@@ -625,7 +626,7 @@ def store_login():
             pass
         return fail(
             "invalid_credentials",
-            "رقم الجوال أو كلمة المرور غير صحيحة.",
+            _tr("رقم الجوال أو كلمة المرور غير صحيحة."),
             status=401,
         )
     try:
@@ -658,7 +659,7 @@ def store_me():
     try:
         user = svc.get_card_user(_cuid())
     except CardMarketplaceError:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     wallet = svc._wallet_for_card_user(_cuid())  # noqa: SLF001 — نفس استخدام بوابة البطاقات
     return ok({
         "card_user": _public_card_user(user),
@@ -692,7 +693,7 @@ def store_redeem():
                           mobile=str(cuid), severity="warning",
                           payload={"card_number": card_number},
                           error_message=str(exc))
-        return fail("redeem_failed", str(exc) or "تعذر شحن البطاقة.",
+        return fail("redeem_failed", str(exc) or _tr("تعذر شحن البطاقة."),
                     status=422)
     _emit_store_event("store.card_redeem", card_user_id=cuid, mobile=str(cuid),
                       payload={"card_number": card_number,
@@ -711,7 +712,7 @@ def store_purchase():
     except (TypeError, ValueError):
         package_id = 0
     if package_id <= 0:
-        return fail("validation_error", "اختر باقة أولاً.", status=422)
+        return fail("validation_error", _tr("اختر باقة أولاً."), status=422)
     svc = _marketplace()
     cuid = _cuid()
     try:
@@ -721,7 +722,7 @@ def store_purchase():
             actor="mikrotik_store",
         )
     except (CardMarketplaceError, ValueError) as exc:
-        msg = str(exc) or "تعذر إتمام الشراء."
+        msg = str(exc) or _tr("تعذر إتمام الشراء.")
         code = "insufficient_balance" if "غير كاف" in msg else "purchase_failed"
         status = 402 if code == "insufficient_balance" else 422
         _emit_store_event("store.purchase_failed", card_user_id=cuid,
@@ -874,7 +875,7 @@ def store_my_cards():
         items.append({
             "purchase_id": int(card.get("purchase_id") or 0),
             "card_id": int(card.get("card_id") or 0),
-            "package_name": str(card.get("package_name") or "بطاقة"),
+            "package_name": str(card.get("package_name") or N_("بطاقة")),
             "username": str(card.get("username") or ""),
             "password": str(card.get("password") or ""),
             "price": _money(card.get("amount_minor")),
@@ -945,7 +946,7 @@ def store_purchases():
         """,
         (_tid(), _cuid(), per_page, offset),
     ).fetchall()
-    status_ar = {"completed": "مكتملة", "failed": "فاشلة", "voided": "ملغاة"}
+    status_ar = {"completed": N_("مكتملة"), "failed": N_("فاشلة"), "voided": N_("ملغاة")}
     items = []
     for row in rows:
         item = row_to_dict(row)
@@ -957,7 +958,7 @@ def store_purchases():
             "currency": _cfg_currency(),
             "status": st,
             "status_ar": status_ar.get(st, st),
-            "package_name": str(item.get("package_name") or "باقة"),
+            "package_name": str(item.get("package_name") or N_("باقة")),
             "card_username": str(item.get("card_username") or ""),
             "card_used": bool(int(item.get("card_used") or 0)),
             "card_revoked": bool(int(item.get("card_revoked") or 0)),
@@ -1071,7 +1072,7 @@ def store_deposit_create():
                           payload={"amount": amount_claimed},
                           error_message=str(exc))
         return fail("deposit_failed",
-                    str(exc) or "تعذّر إنشاء طلب الإيداع.", status=422)
+                    str(exc) or _tr("تعذّر إنشاء طلب الإيداع."), status=422)
     _emit_store_event("store.deposit", card_user_id=cuid, mobile=str(cuid),
                       payload={"amount": str(req.get("amount_claimed") or amount_claimed),
                                "method": f.get("method") or "other",
@@ -1106,7 +1107,7 @@ def store_withdrawal_create():
                           payload={"amount": amount},
                           error_message=str(exc))
         return fail("withdrawal_failed",
-                    str(exc) or "تعذّر إنشاء طلب السحب.", status=422)
+                    str(exc) or _tr("تعذّر إنشاء طلب السحب."), status=422)
     _emit_store_event("store.withdrawal", card_user_id=cuid, mobile=str(cuid),
                       payload={"amount": str(req.get("amount") or amount),
                                "payee_name": str(body.get("payee_name") or ""),
@@ -1151,6 +1152,6 @@ def store_chat_post():
             card_user_id=_cuid(), sender="customer",
             body=str(body_text), image_path=image_path)
     except ValueError as exc:  # StoreChatError
-        return fail("chat_failed", str(exc) or "تعذّر إرسال الرسالة.",
+        return fail("chat_failed", str(exc) or _tr("تعذّر إرسال الرسالة."),
                     status=422)
     return ok({"message": msg}, status=201)

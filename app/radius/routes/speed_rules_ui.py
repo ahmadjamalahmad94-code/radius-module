@@ -1,5 +1,6 @@
 """Shared helpers for embedding speed-rule controls in admin edit pages."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from ..core.errors import RadiusValidationError
 from ..services.operations import get_operations_service
@@ -165,19 +166,19 @@ def handle_embedded_speed_rule(
         try:
             return int(action.split(":", 1)[1])
         except (IndexError, TypeError, ValueError):
-            raise RadiusValidationError("قاعدة السرعة غير واضحة")
+            raise RadiusValidationError(_tr("قاعدة السرعة غير واضحة"))
 
     def _assert_target(rule: dict) -> None:
         if not rule or rule.get("target_type") != target_type:
-            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا القسم")
+            raise RadiusValidationError(_tr("قاعدة السرعة لا تتبع هذا القسم"))
         if target_type == "plan" and int(rule.get("plan_id") or 0) != int(plan_id or 0):
-            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا العرض")
+            raise RadiusValidationError(_tr("قاعدة السرعة لا تتبع هذا العرض"))
         if target_type == "subscriber" and (rule.get("subscriber_username") or "") != subscriber_username:
-            raise RadiusValidationError("قاعدة السرعة لا تتبع هذا المشترك")
+            raise RadiusValidationError(_tr("قاعدة السرعة لا تتبع هذا المشترك"))
         if target_type == "card_batch" and int(rule.get("card_batch_id") or 0) != int(card_batch_id or 0):
-            raise RadiusValidationError("قاعدة السرعة لا تتبع هذه الحزمة")
+            raise RadiusValidationError(_tr("قاعدة السرعة لا تتبع هذه الحزمة"))
         if target_type == "subscriber_group" and int(rule.get("subscriber_group_id") or 0) != int(subscriber_group_id or 0):
-            raise RadiusValidationError("قاعدة السرعة لا تتبع هذه المجموعة")
+            raise RadiusValidationError(_tr("قاعدة السرعة لا تتبع هذه المجموعة"))
 
     if action in {"enable_all", "disable_all"}:
         svc.set_bandwidth_schedules_enabled_for_target(
@@ -242,13 +243,13 @@ def handle_embedded_speed_rule(
         try:
             source_id = int(source_raw or 0)
         except (TypeError, ValueError):
-            raise RadiusValidationError("اختر جدول سرعة محفوظًا أولًا")
+            raise RadiusValidationError(_tr("اختر جدول سرعة محفوظًا أولًا"))
         source = svc.get_bandwidth_schedule(tenant_id=tenant_id, schedule_id=source_id)
         if not source:
-            raise RadiusValidationError("جدول السرعة المحفوظ غير موجود")
+            raise RadiusValidationError(_tr("جدول السرعة المحفوظ غير موجود"))
         payload = {
             **base,
-            "name": form.get("sr_copy_name") or f"نسخة من {source.get('name') or 'جدول محفوظ'}",
+            "name": form.get("sr_copy_name") or _tr('نسخة من %(v)s', v=source.get('name') or N_('جدول محفوظ')),
             "priority": form.get("sr_priority") or source.get("priority") or 100,
             "starts_at_time": source.get("starts_at_time"),
             "ends_at_time": source.get("ends_at_time"),

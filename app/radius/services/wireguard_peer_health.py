@@ -1,5 +1,6 @@
 """Read-only WireGuard peer health evaluation for setup wizard peers."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 import re
@@ -297,7 +298,7 @@ class WireGuardPeerHealthService:
             "checks": checks,
             "peer": peer,
             "diagnostics": diagnostics,
-            "recommendation_ar": diagnostics[0]["suggested_fix_ar"] if diagnostics else "أعد الفحص بعد دقيقة.",
+            "recommendation_ar": diagnostics[0]["suggested_fix_ar"] if diagnostics else _tr("أعد الفحص بعد دقيقة."),
             "raw_observations": {
                 "source": source,
                 "peer_count": peer_count,
@@ -310,54 +311,54 @@ class WireGuardPeerHealthService:
     def _diag(code: str) -> dict[str, Any]:
         catalog = {
             "healthy": (
-                "الربط نشط",
-                "تم العثور على peer والـ handshake حديث.",
-                "استمر إلى خطوة التحقق التالية.",
+                N_("الربط نشط"),
+                N_("تم العثور على peer والـ handshake حديث."),
+                N_("استمر إلى خطوة التحقق التالية."),
             ),
             "applied_no_handshake": (
-                "تمت إضافة peer بدون handshake بعد",
-                "الخادم يرى peer لكن الراوتر لم يتصل بعد.",
-                "تأكد من لصق سكربت الراوتر ثم أعد التحقق بعد دقيقة.",
+                N_("تمت إضافة peer بدون handshake بعد"),
+                N_("الخادم يرى peer لكن الراوتر لم يتصل بعد."),
+                N_("تأكد من لصق سكربت الراوتر ثم أعد التحقق بعد دقيقة."),
             ),
             "stale_peer": (
-                "الـ handshake قديم",
-                "peer موجود لكن آخر اتصال قديم.",
-                "افحص اتصال الراوتر بالإنترنت و endpoint وفتح UDP.",
+                N_("الـ handshake قديم"),
+                N_("peer موجود لكن آخر اتصال قديم."),
+                N_("افحص اتصال الراوتر بالإنترنت و endpoint وفتح UDP."),
             ),
             "missing_peer": (
-                "peer غير موجود",
-                "لم يتم العثور على public key المتوقع في WireGuard.",
-                "راجع خطوة apply أو ألصق مخرجات wg show الصحيحة.",
+                N_("peer غير موجود"),
+                N_("لم يتم العثور على public key المتوقع في WireGuard."),
+                N_("راجع خطوة apply أو ألصق مخرجات wg show الصحيحة."),
             ),
             "allowed_ip_mismatch": (
-                "عنوان السماح غير مطابق",
-                "تم العثور على peer أو IP لكن الربط لا يطابق الحجز.",
-                "افحص allowed IP وتأكد أنه يساوي عنوان الراوتر المحجوز /32.",
+                N_("عنوان السماح غير مطابق"),
+                N_("تم العثور على peer أو IP لكن الربط لا يطابق الحجز."),
+                N_("افحص allowed IP وتأكد أنه يساوي عنوان الراوتر المحجوز /32."),
             ),
             "public_key_mismatch": (
-                "Public key غير مطابق",
-                "العنوان المحجوز موجود على peer آخر.",
-                "تحقق من public key الخاص بالراوتر قبل إعادة apply.",
+                N_("Public key غير مطابق"),
+                N_("العنوان المحجوز موجود على peer آخر."),
+                N_("تحقق من public key الخاص بالراوتر قبل إعادة apply."),
             ),
             "duplicate_peer": (
-                "تكرار في peer",
-                "يوجد أكثر من peer بنفس المفتاح أو نفس allowed IP.",
-                "أوقف الاختبار وراجع إعدادات WireGuard يدويًا داخل المختبر.",
+                N_("تكرار في peer"),
+                N_("يوجد أكثر من peer بنفس المفتاح أو نفس allowed IP."),
+                N_("أوقف الاختبار وراجع إعدادات WireGuard يدويًا داخل المختبر."),
             ),
             "offline": (
-                "الراوتر يبدو غير متصل",
-                "الـ handshake قديم وحركة RX/TX لم تتغير.",
-                "افحص اتصال VPS والراوتر وجرّب إعادة التحقق بعد دقيقة.",
+                N_("الراوتر يبدو غير متصل"),
+                N_("الـ handshake قديم وحركة RX/TX لم تتغير."),
+                N_("افحص اتصال VPS والراوتر وجرّب إعادة التحقق بعد دقيقة."),
             ),
             "probe_unavailable": (
-                "الفحص غير متاح",
-                "لا يوجد runner قراءة فقط متاح أو تم حظره للأمان.",
-                "ألصق مخرجات wg show أو فعّل readiness المختبرية للقراءة فقط.",
+                N_("الفحص غير متاح"),
+                N_("لا يوجد runner قراءة فقط متاح أو تم حظره للأمان."),
+                N_("ألصق مخرجات wg show أو فعّل readiness المختبرية للقراءة فقط."),
             ),
         }
         title, explanation, fix = catalog.get(
             code,
-            ("حالة غير معروفة", "لم نتمكن من تصنيف حالة peer بدقة.", "أعد التحقق بعد دقيقة أو راجع التفاصيل الهندسية."),
+            (N_("حالة غير معروفة"), N_("لم نتمكن من تصنيف حالة peer بدقة."), N_("أعد التحقق بعد دقيقة أو راجع التفاصيل الهندسية.")),
         )
         return {
             "code": code,

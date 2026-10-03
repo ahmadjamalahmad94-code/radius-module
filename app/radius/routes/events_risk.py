@@ -1,5 +1,6 @@
 """Events, risk, security, and investigation center routes."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -81,7 +82,7 @@ def events_risk():
     result = None
     if request.method == "POST":
         result = svc.run_risk_rules()
-        flash(f"أنشأ فحص المخاطر {result['flags_created']} إشارة.", "success")
+        flash(_tr('أنشأ فحص المخاطر %(flags_created)s إشارة.', flags_created=result['flags_created']), "success")
     return render_template("radius/events_risk.html", flags=svc.list_fraud_flags(), result=result, summary=svc.dashboard())
 
 
@@ -105,7 +106,7 @@ def events_investigations():
                 summary=request.form.get("summary") or "",
                 actor=_actor(),
             )
-            flash("تم فتح تحقيق.", "success")
+            flash(_tr("تم فتح تحقيق."), "success")
         except EventsRiskError as exc:
             flash(str(exc), "error")
         return redirect(url_for("radius.events_investigations"))

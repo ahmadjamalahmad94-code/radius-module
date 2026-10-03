@@ -43,15 +43,15 @@
   </a>{% endif %}
 {% endset %}
 {{ hub.megahero(
-  "سجل التغييرات",
-  subtitle=policy.name ~ " · " ~ router_name ~ " — كل تنفيذ أو تراجع مسجَّل لهذه السياسة، مع نتيجة كل راوتر وزر تراجع للسجلّات المؤهَّلة.",
+  _('سجل التغييرات'),
+  subtitle=_('%(name)s · %(router_name)s — كل تنفيذ أو تراجع مسجَّل لهذه السياسة، مع نتيجة كل راوتر وزر تراجع للسجلّات المؤهَّلة.', name=policy.name, router_name=router_name),
   icon="rectangle-list",
   actions_html=_actions,
   kpis=[
-    {'label': 'الإجمالي', 'value': change_sets|length, 'icon': 'layer-group',  'variant': 'brand'},
-    {'label': 'نجح',      'value': _succeeded,          'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'فشل',      'value': _failed,             'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'تراجع',    'value': _rolledback,         'icon': 'rotate-left',  'variant': 'amber'},
+    {'label': _('الإجمالي'), 'value': change_sets|length, 'icon': 'layer-group',  'variant': 'brand'},
+    {'label': _('نجح'),      'value': _succeeded,          'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('فشل'),      'value': _failed,             'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('تراجع'),    'value': _rolledback,         'icon': 'rotate-left',  'variant': 'amber'},
   ]
 ) }}
 
@@ -60,22 +60,22 @@
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا السجل؟",
-  intro="كل بطاقة هي عملية تنفيذ أو تراجع واحدة (change_set). تحتها تفصيل نتيجة كل راوتر استُهدف.",
+  _('كيف تقرأ هذا السجل؟'),
+  intro=_('كل بطاقة هي عملية تنفيذ أو تراجع واحدة (change_set). تحتها تفصيل نتيجة كل راوتر استُهدف.'),
   icon="compass",
   items=[
-    {'icon': 'shield-halved', 'text': '«تنفيذ» يطبّق السياسة على الراوتر؛ «تراجع» يلغي تنفيذًا سابقًا.'},
-    {'icon': 'circle-half-stroke', 'text': 'النجاح الجزئي يعني أن بعض الراوترات نجحت وأخرى فشلت.'},
-    {'icon': 'router', 'text': 'صف الراوتر الأخضر نجح، الأحمر فشل، والرمادي تُخطّي.'},
-    {'icon': 'rotate-left', 'text': 'زر التراجع يطابق فقط القواعد التي يحمل تعليقها HOBE_NPC_…'},
+    {'icon': 'shield-halved', 'text': _('«تنفيذ» يطبّق السياسة على الراوتر؛ «تراجع» يلغي تنفيذًا سابقًا.')},
+    {'icon': 'circle-half-stroke', 'text': _('النجاح الجزئي يعني أن بعض الراوترات نجحت وأخرى فشلت.')},
+    {'icon': 'router', 'text': _('صف الراوتر الأخضر نجح، الأحمر فشل، والرمادي تُخطّي.')},
+    {'icon': 'rotate-left', 'text': _('زر التراجع يطابق فقط القواعد التي يحمل تعليقها HOBE_NPC_…')},
   ],
-  note="التراجع لا يلمس أي قاعدة لم ينشئها النظام — آمن على إعداداتك اليدوية."
+  note=_('التراجع لا يلمس أي قاعدة لم ينشئها النظام — آمن على إعداداتك اليدوية.')
 )) %}
 
 {% if not change_sets %}
   {{ hub.empty(
-    "لا توجد عمليات تنفيذ مسجَّلة لهذه السياسة بعد.",
-    sub="يظهر هنا كل تنفيذ أو تراجع بعد أن يحدث، مع تفاصيل كل راوتر.",
+    _('لا توجد عمليات تنفيذ مسجَّلة لهذه السياسة بعد.'),
+    sub=_('يظهر هنا كل تنفيذ أو تراجع بعد أن يحدث، مع تفاصيل كل راوتر.'),
     icon="folder-open"
   ) }}
   <span hidden data-test="npc-changes-empty"></span>
@@ -86,30 +86,30 @@
         <span class="npc-cs-num mono tnum" style="direction:ltr">#{{ cs.id }}</span>
 
         {% if cs.action_type == 'apply' %}
-          {{ hub.pill("تنفيذ", variant="brand") }}
+          {{ hub.pill(_('تنفيذ'), variant="brand") }}
         {% else %}
-          {{ hub.pill("تراجع", variant="grey") }}
+          {{ hub.pill(_('تراجع'), variant="grey") }}
         {% endif %}
 
         {# Status pill #}
         {% if cs.status == 'succeeded' %}
-          {{ hub.pill("نجح", variant="green") }}
+          {{ hub.pill(_('نجح'), variant="green") }}
         {% elif cs.status == 'partially_succeeded' %}
-          {{ hub.pill("نجاح جزئي", variant="amber") }}
+          {{ hub.pill(_('نجاح جزئي'), variant="amber") }}
         {% elif cs.status == 'failed' %}
-          {{ hub.pill("فشل", variant="red") }}
+          {{ hub.pill(_('فشل'), variant="red") }}
         {% elif cs.status == 'rolled_back' %}
-          {{ hub.pill("تمّ التراجع", variant="grey") }}
+          {{ hub.pill(_('تمّ التراجع'), variant="grey") }}
         {% elif cs.status == 'partially_rolled_back' %}
-          {{ hub.pill("تراجع جزئي", variant="amber") }}
+          {{ hub.pill(_('تراجع جزئي'), variant="amber") }}
         {% else %}
-          {{ hub.pill("حالة أخرى", variant="grey") }}
+          {{ hub.pill(_('حالة أخرى'), variant="grey") }}
         {% endif %}
 
         {# تعريب وضع التنفيذ (full/canary/staged/rollback) بدل المفتاح الخام #}
         {% set _mode_ar = {
-          'full': 'كامل', 'canary': 'تجريبي محدود',
-          'staged': 'مرحلي', 'rollback': 'تراجع'
+          'full': _('كامل'), 'canary': _('تجريبي محدود'),
+          'staged': _('مرحلي'), 'rollback': _('تراجع')
         } %}
         <span class="npc-cs-meta" style="margin-inline-start:auto;">
           <span class="mono tnum" style="direction:ltr">{{ cs.created_at|dt_local }}</span>
@@ -129,16 +129,16 @@
               {% endif %}"
                  data-test="npc-cs-target">
               {% set _t_status_ar = {
-                'succeeded': 'نجح',
-                'failed': 'فشل',
-                'rolled_back': 'تمّ التراجع',
-                'skipped': 'تُخطّي',
-                'partially_succeeded': 'نجاح جزئي'
+                'succeeded': _('نجح'),
+                'failed': _('فشل'),
+                'rolled_back': _('تمّ التراجع'),
+                'skipped': _('تُخطّي'),
+                'partially_succeeded': _('نجاح جزئي')
               } %}
               <i class="fa-solid fa-router"></i>
               {# اسم الراوتر الفعلي (router_name مُزيّن من المسار) بدل «#رقم» خام #}
               <strong>{{ t.router_name or (_('راوتر') ~ ' #' ~ t.router_id) }}</strong>
-              {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, 'حالة أخرى') }}</strong>
+              {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, _('حالة أخرى')) }}</strong>
               {% if t.error_message %}
                 · <span style="font-family:ui-monospace,monospace,'Cairo'; direction:ltr;">
                   {{ t.error_message[:120] }}
@@ -154,7 +154,7 @@
               action="{{ url_for('radius.npc_' ~ service.key ~ '_rollback', policy_id=policy.id, change_set_id=cs.id) }}"
               style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"
               data-test="npc-cs-rollback-form"
-              onsubmit="return confirm('سيتم التراجع فقط عن التغييرات التي أنشأها النظام. متابعة؟');">
+              onsubmit="return confirm({{ _('سيتم التراجع فقط عن التغييرات التي أنشأها النظام. متابعة؟')|tojson|forceescape }});">
           {{ csrf_token_input() | safe }}
           <button type="submit"
                   class="hub-btn hub-btn--secondary hub-btn--sm"

@@ -10,6 +10,7 @@ scoping (stress-test 2026-09-28: every app login got ``admin:full`` → a
 distributor's app could read/act on every subscriber — IDOR).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional
 
@@ -17,7 +18,7 @@ from flask import g
 
 from .responses import fail
 
-_FORBIDDEN_AR = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
+_FORBIDDEN_AR = N_("ليس لديك صلاحية لتنفيذ هذا الإجراء.")
 
 
 def tenant_id() -> int:
@@ -175,7 +176,7 @@ def forbidden_response(endpoint: str, status: int = 403):
     except Exception:  # noqa: BLE001
         pass
     if status == 429:
-        return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+        return fail("rate_limited", _tr("بلغت الحدّ اليوميّ المسموح لهذا الإجراء."),
                     status=429, details=details)
     return fail("forbidden", message, status=403, details=details)
 
@@ -247,7 +248,7 @@ def subscriber_scope_admin_id() -> int | None:
 def deny_out_of_scope():
     return fail(
         "forbidden",
-        "هذه البيانات ليست ضمن نطاقك (تخصّ مديرًا أو موزّعًا آخر).",
+        _tr("هذه البيانات ليست ضمن نطاقك (تخصّ مديرًا أو موزّعًا آخر)."),
         status=403,
         details={"reason": "out_of_scope"},
     )

@@ -13,6 +13,7 @@ before submitting. These helpers exist so:
 See SERVICES_COOKBOOK §18.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Optional
 
@@ -30,10 +31,10 @@ QUOTA_UNITS: list[tuple[str, str, int]] = [
     ("TB", "TB", 1024 * 1024),
 ]
 TIME_UNITS: list[tuple[str, str, int]] = [
-    ("min",   "دقائق",  1),
-    ("hr",    "ساعات",  60),
-    ("day",   "أيام",   60 * 24),
-    ("month", "شهور",   60 * 24 * 30),
+    ("min",   N_("دقائق"),  1),
+    ("hr",    N_("ساعات"),  60),
+    ("day",   N_("أيام"),   60 * 24),
+    ("month", N_("شهور"),   60 * 24 * 30),
 ]
 SIZE_UNITS: list[tuple[str, str, int]] = [
     ("KB", "KB", 1),

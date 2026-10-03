@@ -22,6 +22,7 @@ individual sections are tolerated (we set "—" for the entry); the
 manifest is best-effort and never blocks the actual backup save.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 from typing import Any, Mapping
@@ -93,7 +94,7 @@ def build_manifest(nas: Mapping[str, Any]) -> dict:
         manifest["router"]["error"] = "no_api_password"
         return {
             "manifest": manifest,
-            "summary":  "تعذّر القراءة (لا توجد كلمة مرور API).",
+            "summary":  _tr("تعذّر القراءة (لا توجد كلمة مرور API)."),
         }
 
     try:
@@ -236,7 +237,7 @@ def build_manifest(nas: Mapping[str, Any]) -> dict:
         manifest["router"]["error"] = str(exc)
         return {
             "manifest": manifest,
-            "summary":  f"تعذّر القراءة الكاملة: {exc}",
+            "summary":  _tr('تعذّر القراءة الكاملة: %(exc)s', exc=exc),
         }
 
     # Build the one-line summary the list view uses.
@@ -262,11 +263,11 @@ def _summary_line(m: dict) -> str:
              + fw.get("nat_rules", 0)
              + fw.get("mangle_rules", 0))
     if rules:
-        parts.append(f"قواعد جدار: {rules}")
+        parts.append(_tr('قواعد جدار: %(rules)s', rules=rules))
     if wg.get("peers_count"):
         parts.append(f"WireGuard: {wg['peers_count']} peers")
     if not parts:
-        return "لا توجد خدمات مفعَّلة."
+        return N_("لا توجد خدمات مفعَّلة.")
     return " · ".join(parts)
 
 

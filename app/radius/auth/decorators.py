@@ -1,5 +1,6 @@
 """decorators للحماية: login_required + require_perm."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import functools
 
@@ -13,19 +14,19 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped(*args, **kwargs):
         if not current_admin_id():
-            flash("سجّل الدخول للمتابعة.", "warning")
+            flash(_tr("سجّل الدخول للمتابعة."), "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
         a = current_admin()
         if a is None or not a.enabled:
             from .session_helpers import clear_current_admin
             clear_current_admin()
-            flash("الحساب غير متاح، أعد تسجيل الدخول.", "error")
+            flash(N_("الحساب غير متاح، أعد تسجيل الدخول."), "error")
             return redirect(url_for("radius.auth_login"))
         # إلزام تغيير كلمة المرور عند أول دخول: الأدمن الذي أنشأته لوحة التراخيص
         # مركزياً بكلمة مرور أوليّة يُحوَّل إلى صفحة الحساب حتى يغيّرها. صفحة الحساب
         # وتسجيل الخروج غير محميَّين بهذا الـ decorator فلا تحدث حلقة إعادة توجيه.
         if getattr(a, "must_change_password", False):
-            flash("لأمانك، يجب تغيير كلمة المرور قبل المتابعة.", "warning")
+            flash(_tr("لأمانك، يجب تغيير كلمة المرور قبل المتابعة."), "warning")
             return redirect(url_for("radius.account"))
         return view(*args, **kwargs)
     return wrapped
@@ -69,14 +70,14 @@ def require_perm(permission: str):
                         wants_json = _wants_json_response()
                     except Exception:  # noqa: BLE001
                         wants_json = False
-                    msg = f"لا تملك الصلاحية: {permission}"
+                    msg = _tr('لا تملك الصلاحية: %(permission)s', permission=permission)
                     if wants_json:
                         return jsonify({"ok": False, "error": msg,
                                         "code": "forbidden",
                                         "permission": permission}), 403
                     from flask import abort
                     abort(403)
-                flash(f"لا تملك الصلاحية: {permission}", "error")
+                flash(_tr('لا تملك الصلاحية: %(permission)s', permission=permission), "error")
                 return redirect(url_for("radius.dashboard"))
             return view(*args, **kwargs)
         return wrapped

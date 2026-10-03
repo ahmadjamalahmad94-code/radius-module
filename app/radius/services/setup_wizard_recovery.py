@@ -5,6 +5,7 @@ terminal/abandoned operator decisions, but it never mutates MikroTik or VPS
 state and never performs automatic repair.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from datetime import datetime, timedelta
@@ -135,13 +136,13 @@ class SetupWizardRecoveryAnalyzer:
         if "retired" in {registry_state, registry_status, run_status}:
             recovery_state = "terminal_retired"
             severity = "terminal"
-            problems.append(_problem("router_retired", "تم إيقاف هذا الراوتر", "هذا المسار أصبح نهائيًا ولا يمكن استكماله بشكل طبيعي."))
+            problems.append(_problem("router_retired", _tr("تم إيقاف هذا الراوتر"), _tr("هذا المسار أصبح نهائيًا ولا يمكن استكماله بشكل طبيعي.")))
             blocked_actions.append({"action": "resume", "reason": "router_retired"})
             return self._result(
                 recovery_state,
                 severity,
                 problems,
-                recommended_actions=[_action("review_support_bundle", "راجع حزمة الدعم قبل فتح مسار جديد")],
+                recommended_actions=[_action("review_support_bundle", _tr("راجع حزمة الدعم قبل فتح مسار جديد"))],
                 safe_actions=["support_bundle"],
                 blocked_actions=blocked_actions,
                 registry=registry,
@@ -153,23 +154,23 @@ class SetupWizardRecoveryAnalyzer:
         if applied_ops and failed_ops:
             recovery_state = "partial_apply"
             severity = "high"
-            problems.append(_problem("partial_apply_detected", "تم تطبيق جزء من العمليات ثم فشل جزء آخر", "يجب مراجعة العمليات المطبقة والرجوع للـ rollback المتاح قبل المتابعة."))
-            recommended_actions.append(_action("review_rollback", "راجع خطة الرجوع للعمليات التي تحمل وسم HOBERADIUS فقط"))
+            problems.append(_problem("partial_apply_detected", _tr("تم تطبيق جزء من العمليات ثم فشل جزء آخر"), _tr("يجب مراجعة العمليات المطبقة والرجوع للـ rollback المتاح قبل المتابعة.")))
+            recommended_actions.append(_action("review_rollback", _tr("راجع خطة الرجوع للعمليات التي تحمل وسم HOBERADIUS فقط")))
             safe_actions.extend(["repair_plan", "retry_verification"])
 
         risk = (snapshot or {}).get("risk_report") or {}
         if _has_subnet_conflict(risk):
             recovery_state = "subnet_conflict"
             severity = _max_severity(severity, "high")
-            problems.append(_problem("subnet_conflict", "يوجد تداخل في الشبكات", "الشبكة المقترحة تتداخل مع WAN أو VPN أو شبكة موجودة على الراوتر."))
-            recommended_actions.append(_action("regenerate_plan", "أعد توليد الخطة بنفس الحجز مع اختيار مدى مختلف"))
+            problems.append(_problem("subnet_conflict", _tr("يوجد تداخل في الشبكات"), _tr("الشبكة المقترحة تتداخل مع WAN أو VPN أو شبكة موجودة على الراوتر.")))
+            recommended_actions.append(_action("regenerate_plan", _tr("أعد توليد الخطة بنفس الحجز مع اختيار مدى مختلف")))
 
         if snapshot and _is_stale(str(snapshot.get("created_at") or ""), self.stale_minutes):
             if recovery_state == "clean_resume":
                 recovery_state = "stale_inventory"
             severity = _max_severity(severity, "medium")
-            problems.append(_problem("stale_inventory", "معلومات الراوتر قديمة", "اجمع inventory جديد قبل التخطيط أو dry-run."))
-            recommended_actions.append(_action("refresh_inventory", "حدّث قراءة الراوتر أو الصق مخرجات inventory جديدة"))
+            problems.append(_problem("stale_inventory", _tr("معلومات الراوتر قديمة"), _tr("اجمع inventory جديد قبل التخطيط أو dry-run.")))
+            recommended_actions.append(_action("refresh_inventory", _tr("حدّث قراءة الراوتر أو الصق مخرجات inventory جديدة")))
 
         peer_status = str((prepared_peer or {}).get("status") or "")
         public_key_masked = str((prepared_peer or {}).get("router_public_key_masked") or "")
@@ -177,15 +178,15 @@ class SetupWizardRecoveryAnalyzer:
             if recovery_state == "clean_resume":
                 recovery_state = "peer_key_missing"
             severity = _max_severity(severity, "medium")
-            problems.append(_problem("peer_key_missing", "مفتاح الراوتر غير موجود", "يجب لصق public key الناتج من MikroTik قبل تجهيز peer على السيرفر."))
-            recommended_actions.append(_action("submit_router_key", "الصق public key للراوتر ثم أعد فحص الربط"))
+            problems.append(_problem("peer_key_missing", _tr("مفتاح الراوتر غير موجود"), _tr("يجب لصق public key الناتج من MikroTik قبل تجهيز peer على السيرفر.")))
+            recommended_actions.append(_action("submit_router_key", _tr("الصق public key للراوتر ثم أعد فحص الربط")))
 
         duplicate_codes = {"duplicate_peer_conflict", "duplicate_public_key", "duplicate_allowed_ip"}
         if any(str(item.get("code") or "") in duplicate_codes for item in diagnostics):
             recovery_state = "duplicate_peer_conflict"
             severity = _max_severity(severity, "high")
-            problems.append(_problem("duplicate_peer_conflict", "تعارض في WireGuard peer", "يوجد public key أو allowed IP مستخدم مسبقًا. لا تعيد الإصدار قبل مراجعة الحجز."))
-            recommended_actions.append(_action("review_peer_collision", "راجع الحجز الحالي وتأكد أن المفتاح ليس مستخدمًا لراوتر آخر"))
+            problems.append(_problem("duplicate_peer_conflict", _tr("تعارض في WireGuard peer"), _tr("يوجد public key أو allowed IP مستخدم مسبقًا. لا تعيد الإصدار قبل مراجعة الحجز.")))
+            recommended_actions.append(_action("review_peer_collision", _tr("راجع الحجز الحالي وتأكد أن المفتاح ليس مستخدمًا لراوتر آخر")))
 
         failed_steps = [step for step in steps if str(step.get("status") or "") == "failed"]
         vpn_failed = any("vpn" in str(step.get("step_key") or "") for step in failed_steps)
@@ -197,12 +198,12 @@ class SetupWizardRecoveryAnalyzer:
         }:
             recovery_state = "failed_verification" if vpn_failed else "waiting_user_action"
             severity = _max_severity(severity, "high" if vpn_failed else "medium")
-            problems.append(_problem("verification_failed", "فشل تحقق سابق", "يمكن إعادة التحقق بعد معالجة السبب الظاهر في التشخيص."))
-            recommended_actions.append(_action("retry_verification", "أعد التحقق بعد لصق المخرجات أو تحديث التشخيص"))
+            problems.append(_problem("verification_failed", _tr("فشل تحقق سابق"), _tr("يمكن إعادة التحقق بعد معالجة السبب الظاهر في التشخيص.")))
+            recommended_actions.append(_action("retry_verification", _tr("أعد التحقق بعد لصق المخرجات أو تحديث التشخيص")))
             safe_actions.append("retry_verification")
 
         if recovery_state == "clean_resume":
-            recommended_actions.append(_action("continue_current_step", "استكمل من آخر خطوة آمنة"))
+            recommended_actions.append(_action("continue_current_step", _tr("استكمل من آخر خطوة آمنة")))
         elif recovery_state not in {"partial_apply", "failed_verification"}:
             safe_actions.append("repair_plan")
 
@@ -285,7 +286,7 @@ class SetupWizardRecoveryService:
             "status": "ready",
             "next_safe_step": analysis.get("next_safe_step"),
             "analysis": analysis,
-            "message_ar": "يمكنك الاستكمال من آخر خطوة آمنة.",
+            "message_ar": _tr("يمكنك الاستكمال من آخر خطوة آمنة."),
         }
 
     def retry_verification(
@@ -327,7 +328,7 @@ class SetupWizardRecoveryService:
             return {
                 "status": "blocked",
                 "reason": "unsupported_regeneration_step",
-                "message_ar": "إعادة التوليد الآمنة مفعلة حاليًا لسكربت الربط والمصادقة فقط.",
+                "message_ar": _tr("إعادة التوليد الآمنة مفعلة حاليًا لسكربت الربط والمصادقة فقط."),
             }
         before = self.registry.latest_for_run(tenant_id=tenant_id, wizard_run_id=run_id)
         payload = {
@@ -367,7 +368,7 @@ class SetupWizardRecoveryService:
         return {
             "status": "plan_only",
             "reason": reason,
-            "message_ar": "إعادة إصدار بيانات الراوتر تحتاج مراجعة مشغل قبل إنشاء حجز جديد.",
+            "message_ar": _tr("إعادة إصدار بيانات الراوتر تحتاج مراجعة مشغل قبل إنشاء حجز جديد."),
         }
 
     def abandon_step(
@@ -433,14 +434,14 @@ class SetupWizardRecoveryService:
         state = str(analysis.get("recovery_state") or "")
         steps = {
             "partial_apply": [
-                "راجع العمليات المطبقة فقط.",
-                "استخدم rollback للعمليات الموسومة HOBERADIUS بعد dry-run.",
-                "أعد التحقق بعد الرجوع أو الإصلاح اليدوي.",
+                N_("راجع العمليات المطبقة فقط."),
+                N_("استخدم rollback للعمليات الموسومة HOBERADIUS بعد dry-run."),
+                N_("أعد التحقق بعد الرجوع أو الإصلاح اليدوي."),
             ],
-            "stale_inventory": ["اجمع inventory جديد.", "أعد تشغيل dry-run قبل أي تطبيق مختبري."],
-            "peer_key_missing": ["الصق public key للراوتر.", "نفذ dry-run للـ server peer ثم تحقق."],
-            "failed_verification": ["افتح التشخيص.", "عالج السبب المحتمل.", "أعد التحقق بالمخرجات الجديدة."],
-        }.get(state, ["استكمل من الخطوة الآمنة المقترحة."])
+            "stale_inventory": [N_("اجمع inventory جديد."), N_("أعد تشغيل dry-run قبل أي تطبيق مختبري.")],
+            "peer_key_missing": [N_("الصق public key للراوتر."), N_("نفذ dry-run للـ server peer ثم تحقق.")],
+            "failed_verification": [N_("افتح التشخيص."), N_("عالج السبب المحتمل."), N_("أعد التحقق بالمخرجات الجديدة.")],
+        }.get(state, [N_("استكمل من الخطوة الآمنة المقترحة.")])
         return {"status": "plan_ready", "recovery_state": state, "steps": steps, "analysis": analysis}
 
     def _context(self, *, tenant_id: int, run_id: int) -> dict[str, Any]:

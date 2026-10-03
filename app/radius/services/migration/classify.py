@@ -13,6 +13,7 @@
 المستخدم لاحقًا). دوال خالصة — لا تقرأ DB ولا تكتب.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from . import patterns
 from .model import SectionMatch, SourceDataset, SourceTable
@@ -140,7 +141,7 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
                 matches.append(SectionMatch(
                     section=SEC_BATCHES, source_table=cu.name, confidence=0.92,
                     recognized_as="adv_card_users_batch", row_count=cu.row_count,
-                    note="حِزم الكروت الحقيقيّة (card_users) — كل كرت في حزمته"))
+                    note=N_("حِزم الكروت الحقيقيّة (card_users) — كل كرت في حزمته")))
 
     # (2) MikroTik — مُميِّز صريح حسب اسم الجدول (لا «دفعة ثقة» عمياء).
     for table in dataset.tables:
@@ -155,7 +156,7 @@ def classify_dataset(dataset: SourceDataset) -> list[SectionMatch]:
             matches.append(SectionMatch(
                 section=section_key, source_table=table.name,
                 confidence=0.9, column_map=column_map, recognized_as="mikrotik",
-                row_count=table.row_count, note="تصدير MikroTik"))
+                row_count=table.row_count, note=N_("تصدير MikroTik")))
             consumed.add(table.name)
 
     # (3) تسجيل عامّ لبقيّة الجداول. عند وجود FreeRADIUS المشتركون حصريًّا من
@@ -204,7 +205,7 @@ def _adv_series_batch_match(series: SourceTable) -> SectionMatch | None:
     return SectionMatch(
         section=SEC_BATCHES, source_table=series.name, confidence=0.85,
         recognized_as="adv_series_batch", row_count=series.row_count,
-        note="حِزم الكروت المطبوعة (series_cards)", column_map=cmap)
+        note=N_("حِزم الكروت المطبوعة (series_cards)"), column_map=cmap)
 
 
 def _rank(section_key: str) -> int:
@@ -289,7 +290,7 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
         section=SEC_SUBSCRIBERS, source_table=radcheck.name,
         confidence=0.98, recognized_as="freeradius",
         row_count=len(_users_where("0" if iscard_col else None)),
-        note="مشتركون موحّدون من FreeRADIUS (" + "‏+".join(parts) +
+        note=_tr("مشتركون موحّدون من FreeRADIUS (") + "‏+".join(parts) +
              (", is_card=0" if iscard_col else "") + ")",
         column_map=sub_cmap))
 
@@ -315,7 +316,7 @@ def _detect_freeradius(dataset: SourceDataset) -> list[SectionMatch]:
             section=SEC_CARDS, source_table=radcheck.name,
             confidence=0.95, recognized_as="freeradius_cards",
             row_count=len(card_users),
-            note="كروت/قسائم من radcheck (is_card=1، ضمن مجموعة)",
+            note=N_("كروت/قسائم من radcheck (is_card=1، ضمن مجموعة)"),
             column_map=card_cmap))
 
     # ── الباقات — من radgroupreply (السرعة = Mikrotik-Rate-Limit المخزَّنة)
@@ -449,8 +450,8 @@ def _freeradius_plans_match(dataset) -> SectionMatch | None:
         section=SEC_PLANS, source_table=src, confidence=0.97,
         recognized_as="freeradius_plans", row_count=len(groups),
         column_map=cmap,
-        note="باقات موحّدة من مجموعات FreeRADIUS (السرعة من Mikrotik-Rate-Limit"
-             + (" + إثراء profiles" if prof is not None else "") + ")")
+        note=_tr("باقات موحّدة من مجموعات FreeRADIUS (السرعة من Mikrotik-Rate-Limit")
+             + (N_(" + إثراء profiles") if prof is not None else "") + ")")
 
 
 # أسماء جداول تُعدّ «ملفّ مشترك» تُدمَج مع radcheck (تُستثنى الكروت/المدراء/المساعِدة).
@@ -583,8 +584,8 @@ def _best_section_for_table(table: SourceTable, *,
             confidence=confidence, column_map=column_map, recognized_as="generic",
             row_count=table.row_count,
             default_enabled=(confidence >= _DEFAULT_ENABLE_CONFIDENCE and not aux),
-            note=("جدول مساعِد (سجلّ/إعداد) — راجعه" if aux else
-                  ("تطابق اسم الجدول + الأعمدة" if hint else "تطابق الأعمدة")),
+            note=(N_("جدول مساعِد (سجلّ/إعداد) — راجعه") if aux else
+                  (N_("تطابق اسم الجدول + الأعمدة") if hint else N_("تطابق الأعمدة"))),
         )
         # كسر التعادل: الثقة الأعلى، ثمّ القسم الأكثر تخصّصًا (أعمدة مطابقة أكثر).
         if best is None or (cand.confidence, matched_fields) > \

@@ -49,8 +49,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "حالة النظام",
-  subtitle="تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة الشبكة، وعدّادات الكيانات",
+  _('حالة النظام'),
+  subtitle=_('تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة الشبكة، وعدّادات الكيانات'),
   icon="heart-pulse"
 ) }}
 
@@ -63,7 +63,7 @@
       {% if w.is_alive %}<span class="st-dot-ok">●</span>{% else %}<span class="st-dot-err">●</span>{% endif %}
       {{ w.name }}
     </div>
-    <div class="sub">آخر نبضة قبل {{ w.last_beat_age_sec }} ثانية</div>
+    <div class="sub">{{ _('آخر نبضة قبل %(last_beat_age_sec)s ثانية', last_beat_age_sec=w.last_beat_age_sec) }}</div>
     {% if w.info_summary %}<div class="sub">{{ w.info_summary }}</div>{% endif %}
   </div>
   {% else %}
@@ -79,25 +79,25 @@
 {% set _wh_total = s.webhook_deliveries.delivered + s.webhook_deliveries.queued + s.webhook_deliveries.retrying + s.webhook_deliveries.failed %}
 <div class="hub-kpi-grid">
   {{ hub.kpi(
-      "طابور المزامنة",
+      _('طابور المزامنة'),
       s.sync_queue.total,
       icon="rotate",
       variant="brand",
-      sub=("في الانتظار " ~ s.sync_queue.queued ~ " · فشل " ~ s.sync_queue.failed ~ " · مكتمل " ~ s.sync_queue.done)
+      sub=(_('في الانتظار %(queued)s · فشل %(failed)s · مكتمل %(done)s', queued=s.sync_queue.queued, failed=s.sync_queue.failed, done=s.sync_queue.done))
   ) }}
   {{ hub.kpi(
-      "إشعارات الربط",
+      _('إشعارات الربط'),
       _wh_total,
       icon="bolt",
       variant="blue",
-      sub=("تم الإرسال " ~ s.webhook_deliveries.delivered ~ " · يعاد المحاولة " ~ s.webhook_deliveries.retrying ~ " · فشل " ~ s.webhook_deliveries.failed)
+      sub=(_('تم الإرسال %(delivered)s · يعاد المحاولة %(retrying)s · فشل %(failed)s', delivered=s.webhook_deliveries.delivered, retrying=s.webhook_deliveries.retrying, failed=s.webhook_deliveries.failed))
   ) }}
   {{ hub.kpi(
-      "أجهزة الشبكة",
+      _('أجهزة الشبكة'),
       s.mt_routers.enabled|string ~ " / " ~ s.mt_routers.total|string,
       icon="router",
       variant="green",
-      sub="مفعَّل / إجمالي"
+      sub=_('مفعَّل / إجمالي')
   ) }}
 </div>
 
@@ -114,7 +114,7 @@
 </div>
 
 {# Entity counts #}
-{% call hub.section("عدّادات الكيانات", icon="database", flush=True) %}
+{% call hub.section(_('عدّادات الكيانات'), icon="database", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
@@ -137,8 +137,8 @@
 
 {# تفاصيل اتصالات الراوتر #}
 {% if s.mt_routers['items'] %}
-  {% call hub.section("أجهزة الشبكة", icon="router",
-                      meta=s.mt_routers['items']|length|string + " اتصال", flush=True) %}
+  {% call hub.section(_('أجهزة الشبكة'), icon="router",
+                      meta=s.mt_routers['items']|length|string + _(' اتصال'), flush=True) %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -158,8 +158,8 @@
             <td><strong>{{ r.name }}</strong></td>
             <td class="mono">{{ r.host }}</td>
             <td>
-              {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+              {% if r.enabled %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+              {% else %}{{ hub.pill(_('معطَّل'), variant="red") }}{% endif %}
             </td>
             <td class="mono small">{{ r.last_seen_at|dt_local if r.last_seen_at else '—' }}</td>
             <td class="mono small" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
@@ -172,14 +172,13 @@
     </div>
   {% endcall %}
 {% else %}
-  {% call hub.section("أجهزة الشبكة", icon="router") %}
-    {{ hub.empty("لا توجد اتصالات راوتر", icon="router") }}
+  {% call hub.section(_('أجهزة الشبكة'), icon="router") %}
+    {{ hub.empty(_('لا توجد اتصالات راوتر'), icon="router") }}
   {% endcall %}
 {% endif %}
 
 <div class="hub-text-mute" style="margin-top:10px;font-size:12px;line-height:1.7">
-  {{ _('للاستجابة الفنية استخدم') }} <code>?format=json</code> {{ _('أو') }} <code>Accept: application/json</code>.
-  آخر تحديث: <span class="mono">{{ s.now }}</span>
+  {{ _('للاستجابة الفنية استخدم') }} <code>?format=json</code> {{ _('أو') }} <code>Accept: application/json</code>{{ _('. آخر تحديث:') }} <span class="mono">{{ s.now }}</span>
 </div>
 
 {% endblock %}

@@ -6,7 +6,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% set ttl = "إضافة ملف سرعة" if is_new else "تعديل: " + (item.name or 'ملف سرعة') %}
+{% set ttl = _('إضافة ملف سرعة') if is_new else _('تعديل: ') + (item.name or _('ملف سرعة')) %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -97,7 +97,7 @@
 
 {{ hub.hero(
   ttl,
-  subtitle="ملف سرعة Bandwidth — اكتب الاسم وسرعة التنزيل والرفع، وسنبني سطر السرعة للراوتر تلقائيًا",
+  subtitle=_('ملف سرعة Bandwidth — اكتب الاسم وسرعة التنزيل والرفع، وسنبني سطر السرعة للراوتر تلقائيًا'),
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.bw_list') + '">
@@ -110,7 +110,7 @@
 <form method="post" id="bfForm"
       action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">{% if not can_submit(('radius.bw_update' if not is_new else 'radius.bw_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-  {% call hub.section("معطيات الملف", icon="sliders") %}
+  {% call hub.section(_('معطيات الملف'), icon="sliders") %}
     <div class="bf-grid">
       <div class="bf-field full">
         <label>{{ _('الاسم') }} <span class="req">*</span></label>
@@ -171,7 +171,7 @@
         <div class="bf-adv-panel" id="bfAdvPanel" hidden>
           <div class="bf-adv-note">
             {{ _('سطر السرعة يُبنى تلقائيًا من سرعتي التنزيل والرفع أعلاه على الصيغة') }}
-            <code>&lt;تنزيل&gt;/&lt;رفع&gt;</code>{{ _('. فعِّل Burst لإضافة سرعة مؤقتة، أو عدّل السطر يدويًا.') }}
+            <code>{{ _('&lt;تنزيل&gt;/&lt;رفع&gt;') }}</code>{{ _('. فعِّل Burst لإضافة سرعة مؤقتة، أو عدّل السطر يدويًا.') }}
           </div>
 
           <label class="bf-burst-on">
@@ -229,7 +229,7 @@
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     {% if can_submit('radius.bw_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الملف" if is_new else "حفظ التعديلات" }}
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('إنشاء الملف') if is_new else _('حفظ التعديلات') }}
     </button>
   </div>
 {% if not can_submit(('radius.bw_update' if not is_new else 'radius.bw_create')) %}</fieldset>{% endif %}</form>

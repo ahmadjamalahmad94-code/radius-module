@@ -1,5 +1,6 @@
 """Manager/distributor operational profile routes."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -125,7 +126,7 @@ def business_operator_profile(entity_type: str, entity_id: int):
 
 
 # تسميات الكيانات القابلة للتحكّم الحقليّ (عربيّة).
-_ENTITY_LABELS = {"subscriber": "المشترك", "offer": "العرض", "batch": "الباقة (الحزمة)"}
+_ENTITY_LABELS = {"subscriber": N_("المشترك"), "offer": N_("العرض"), "batch": N_("الباقة (الحزمة)")}
 
 # كيانات «مالك فقط» افتراضًا يَفتح المالك تعديلَها لمديرٍ صراحةً (منح فعل
 # «تعديل»). المشترك يُدار عبر وصول القسم لا فعلًا مستقلًّا هنا.
@@ -179,7 +180,7 @@ def _policy_actor_guard(entity_id: int) -> tuple[int, bool]:
     actor_owner = bool(session.get("is_super_admin")) or (bool(actor) and is_owner_like(actor))
     if not actor_owner:
         if not actor or actor == int(entity_id):
-            raise OwnerGuardError("لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك.")
+            raise OwnerGuardError(_tr("لا يمكنك تعديل صلاحياتك بنفسك — يعدّلها المالك."))
         assert_can_modify_admin(actor, int(entity_id))
     return actor, actor_owner
 
@@ -300,9 +301,9 @@ def business_operator_policy(entity_type: str, entity_id: int):
                 _ar.bump_authz_epoch(admin_ids=[int(entity_id)])
             except Exception:  # noqa: BLE001
                 pass
-        flash("تم تحديث صلاحيات وحدود المشغل.", "success")
+        flash(_tr("تم تحديث صلاحيات وحدود المشغل."), "success")
         if saved and saved.get("refused"):
-            flash("لم يُمنَح «مسموح» لما لا تملكه أنت: " + "، ".join(saved["refused"][:8]),
+            flash(_tr("لم يُمنَح «مسموح» لما لا تملكه أنت: ") + "، ".join(saved["refused"][:8]),
                   "warning")
     except OwnerGuardError as exc:
         flash(str(exc), "error")
@@ -317,8 +318,8 @@ def business_operator_reset_grants(entity_id: int):
     try:
         from ..services import manager_grants as _mg
         _mg.reset_overrides_to_role(int(entity_id), tenant_id=_tid())
-        flash("تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة "
-              "(الحدود الرقميّة باقية).", "success")
+        flash(_tr("تمت إعادة هذا المدير لوراثة أساس دوره — أُزيلت تجاوزاته الفرديّة "
+              "(الحدود الرقميّة باقية)."), "success")
     except Exception as exc:  # noqa: BLE001
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile",
@@ -337,7 +338,7 @@ def manager_presets_create():
             source_manager_id=int(src) if src and str(src).isdigit() else None,
             by=int(session.get("admin_id") or 0),
         )
-        flash("تم حفظ قالب الصلاحيات.", "success")
+        flash(_tr("تم حفظ قالب الصلاحيات."), "success")
     except _p.ManagerPresetError as exc:
         flash(str(exc), "error")
     return redirect(request.referrer or url_for("radius.business_operators"))
@@ -346,7 +347,7 @@ def manager_presets_create():
 def manager_presets_delete(preset_id: int):
     from ..services import manager_presets as _p
     _p.delete_preset(preset_id, tenant_id=_tid())
-    flash("تم حذف القالب.", "success")
+    flash(_tr("تم حذف القالب."), "success")
     return redirect(request.referrer or url_for("radius.business_operators"))
 
 
@@ -356,7 +357,7 @@ def business_operator_apply_preset(entity_id: int):
     try:
         _p.apply_preset(int(request.form.get("preset_id") or 0), int(entity_id),
                         tenant_id=_tid())
-        flash("تم تطبيق القالب على المدير. يمكنك التعديل الآن.", "success")
+        flash(_tr("تم تطبيق القالب على المدير. يمكنك التعديل الآن."), "success")
     except _p.ManagerPresetError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile",
@@ -383,7 +384,7 @@ def sub_manager_create():
     username = (request.form.get("username") or "").strip()
     password = request.form.get("password") or ""
     if not username or len(password) < 8:
-        flash("اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل.", "error")
+        flash(_tr("اسم المستخدم مطلوب وكلمة المرور 8 أحرف على الأقل."), "error")
         return redirect(request.referrer or url_for("radius.business_operators"))
     # الفرعيّ يرث دور مُنشئه (أو الأب المختار من السوبر) — لا أعلى منه. كان
     # بلا دور فيأخذ super_admin (٧٧ صلاحية) فيتجاوز مُنشئَه نفسه.
@@ -408,9 +409,9 @@ def sub_manager_create():
         _picked = admins_repo.get_role(int(_raw_role)) if _raw_role.isdigit() else None
         try:
             if _picked is None:
-                raise OwnerGuardError("الدور المحدد غير موجود.")
+                raise OwnerGuardError(_tr("الدور المحدد غير موجود."))
             if admins_repo.role_is_super(_picked) and not _actor_is_super():
-                raise OwnerGuardError("منح دور «مدير عام» مقصورٌ على المالك أو الشريك.")
+                raise OwnerGuardError(_tr("منح دور «مدير عام» مقصورٌ على المالك أو الشريك."))
             assert_role_within_actor(_actor_id(), tuple(_picked.permissions or ()))
         except OwnerGuardError as exc:
             flash(str(exc), "error")
@@ -432,7 +433,7 @@ def sub_manager_create():
         # افتراضيًّا لمديرٍ أبوه محدود).
         if parent and not _mg_owner_like(parent):
             _inherit_parent_caps(int(child.id), int(parent))
-        flash(f"تم إنشاء المدير الفرعيّ «{username}».", "success")
+        flash(_tr('تم إنشاء المدير الفرعيّ «%(username)s».', username=username), "success")
     except ValueError as exc:
         flash(str(exc), "error")
     return redirect(request.referrer or url_for("radius.business_operators"))
@@ -519,7 +520,7 @@ def sub_manager_delegate(child_id: int):
         _ar.bump_authz_epoch(admin_ids=[int(child_id)])
     except Exception:  # noqa: BLE001 — الختم تحسين (جلسات الابن تُحدَّث فورًا)
         pass
-    flash("تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك).", "success")
+    flash(_tr("تم تفويض الصلاحيات للمدير الفرعيّ (ضمن سقف صلاحياتك)."), "success")
     return redirect(url_for("radius.business_operator_profile",
                             entity_type="manager", entity_id=child_id))
 
@@ -552,7 +553,7 @@ def _decorate_approvals(rows: list) -> list:
     for r in rows:
         d = dict(r)
         aid = int(d.get("admin_id") or 0)
-        d["admin_label"] = names.get(aid) or (f"مدير محذوف (#{aid})" if aid else "—")
+        d["admin_label"] = names.get(aid) or (_tr('مدير محذوف (#%(aid)s)', aid=aid) if aid else "—")
         key = str(d.get("action_key") or "")
         d["action_label"] = (_mg.ACTION_REGISTRY.get(key) or {}).get("label") or key or "—"
         try:
@@ -570,11 +571,11 @@ def manager_approval_approve(approval_id: int):
     from ..services import manager_approvals as _ap
     try:
         _ap.approve(approval_id, decided_by=int(session.get("admin_id") or 0), tenant_id=_tid())
-        flash("تم اعتماد الطلب وتنفيذه.", "success")
+        flash(_tr("تم اعتماد الطلب وتنفيذه."), "success")
     except _ap.ApprovalError as exc:
         flash(str(exc), "error")
     except Exception as exc:  # noqa: BLE001 — أظهِر سبب فشل التنفيذ للمالك
-        flash(f"تعذّر تنفيذ الطلب بعد الاعتماد: {exc}", "error")
+        flash(_tr('تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s', exc=exc), "error")
     return redirect(url_for("radius.manager_approvals"))
 
 
@@ -582,7 +583,7 @@ def manager_approval_reject(approval_id: int):
     from ..services import manager_approvals as _ap
     try:
         _ap.reject(approval_id, decided_by=int(session.get("admin_id") or 0), tenant_id=_tid())
-        flash("تم رفض الطلب.", "success")
+        flash(_tr("تم رفض الطلب."), "success")
     except _ap.ApprovalError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.manager_approvals"))
@@ -597,7 +598,7 @@ def business_operator_recharge(entity_type: str, entity_id: int):
             method=request.form.get("method") or "cash",
             actor=_actor(),
         )
-        flash("تم شحن محفظة المشغل.", "success")
+        flash(_tr("تم شحن محفظة المشغل."), "success")
     except (ManagerDistributorError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.business_operator_profile", entity_type=entity_type, entity_id=entity_id))

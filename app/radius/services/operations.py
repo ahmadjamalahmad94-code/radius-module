@@ -1,5 +1,6 @@
 """Operational ISP foundations: distributors, schedules, printing, backups."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import math
 import re
@@ -40,10 +41,10 @@ class PrintTemplateNameTaken(RadiusConflict):
 def _print_template_name(value) -> str:
     name = str(value or "").strip()
     if not name:
-        raise RadiusValidationError("اسم القالب مطلوب.")
+        raise RadiusValidationError(_tr("اسم القالب مطلوب."))
     if len(name) > PRINT_TEMPLATE_NAME_MAX:
         raise RadiusValidationError(
-            f"اسم القالب طويل جدًّا — {PRINT_TEMPLATE_NAME_MAX} حرفًا على الأكثر.")
+            _tr('اسم القالب طويل جدًّا — %(PRINT_TEMPLATE_NAME_MAX)s حرفًا على الأكثر.', PRINT_TEMPLATE_NAME_MAX=PRINT_TEMPLATE_NAME_MAX))
     return name
 
 
@@ -67,8 +68,8 @@ PRINT_JOBS_MAX_PENDING = 10
 _PRINT_JOB_ACTIVE_STATES = ("queued", "started", "rendering", "finalizing")
 
 
-PRINT_JOB_CANCELLED_MESSAGE = "أُلغيت مهمة الطباعة."
-_PRINT_JOB_STATUS_AR = {"success": "مكتملة", "failed": "فشلت", "cancelled": "ملغاة"}
+PRINT_JOB_CANCELLED_MESSAGE = N_("أُلغيت مهمة الطباعة.")
+_PRINT_JOB_STATUS_AR = {"success": N_("مكتملة"), "failed": N_("فشلت"), "cancelled": N_("ملغاة")}
 
 
 class PrintJobCancelled(Exception):
@@ -83,7 +84,7 @@ def _print_job_cancelled(tenant_id: int, job_id: int) -> bool:
     return job.get("status") == "cancelled"
 _PRINT_PRESETS: dict[str, dict[str, Any]] = {
     "modern": {
-        "label": "حديث",
+        "label": N_("حديث"),
         "gradient_start": "#0f172a",
         "gradient_end": "#22a7bd",
         "accent_color": "#f59e0b",
@@ -91,11 +92,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#e8f7fb",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة إنترنت",
-        "footer_text": "احتفظ ببيانات الدخول حتى انتهاء الصلاحية",
+        "card_title": N_("بطاقة إنترنت"),
+        "footer_text": N_("احتفظ ببيانات الدخول حتى انتهاء الصلاحية"),
     },
     "dark": {
-        "label": "داكن احترافي",
+        "label": N_("داكن احترافي"),
         "gradient_start": "#111827",
         "gradient_end": "#334155",
         "accent_color": "#38bdf8",
@@ -103,11 +104,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#dbeafe",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "قسيمة هوتسبوت",
-        "footer_text": "الدعم الفني متوفر من نقطة البيع",
+        "card_title": N_("قسيمة هوتسبوت"),
+        "footer_text": N_("الدعم الفني متوفر من نقطة البيع"),
     },
     "gold": {
-        "label": "ذهبي",
+        "label": N_("ذهبي"),
         "gradient_start": "#3b2f1c",
         "gradient_end": "#b7791f",
         "accent_color": "#facc15",
@@ -115,11 +116,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#fff7d6",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة مميزة",
-        "footer_text": "سرعة ثابتة وتجربة أفضل",
+        "card_title": N_("بطاقة مميزة"),
+        "footer_text": N_("سرعة ثابتة وتجربة أفضل"),
     },
     "minimal": {
-        "label": "بسيط",
+        "label": N_("بسيط"),
         "gradient_start": "#ffffff",
         "gradient_end": "#f8fafc",
         "accent_color": "#0ea5e9",
@@ -127,11 +128,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#eff6ff",
         "qr_style": "clean",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة دخول",
-        "footer_text": "استخدم اسم المستخدم وكلمة المرور مرة واحدة",
+        "card_title": N_("بطاقة دخول"),
+        "footer_text": N_("استخدم اسم المستخدم وكلمة المرور مرة واحدة"),
     },
     "telecom": {
-        "label": "اتصالات",
+        "label": N_("اتصالات"),
         "gradient_start": "#083344",
         "gradient_end": "#0891b2",
         "accent_color": "#67e8f9",
@@ -139,11 +140,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#cffafe",
         "qr_style": "rounded",
         "brand_name": "HobeRadius",
-        "card_title": "دخول واي فاي",
-        "footer_text": "امسح رمز QR أو أدخل البيانات يدويًا",
+        "card_title": N_("دخول واي فاي"),
+        "footer_text": N_("امسح رمز QR أو أدخل البيانات يدويًا"),
     },
     "neon": {
-        "label": "نيون",
+        "label": N_("نيون"),
         "gradient_start": "#240046",
         "gradient_end": "#00b4d8",
         "accent_color": "#c8ff00",
@@ -151,11 +152,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#e0f2fe",
         "qr_style": "boxed",
         "brand_name": "HobeRadius",
-        "card_title": "بطاقة سرعة",
-        "footer_text": "سلّم هذه البطاقة للعميل بعد الدفع",
+        "card_title": N_("بطاقة سرعة"),
+        "footer_text": N_("سلّم هذه البطاقة للعميل بعد الدفع"),
     },
     "aurora": {
-        "label": "شفق",
+        "label": N_("شفق"),
         "gradient_start": "#172554",
         "gradient_end": "#14b8a6",
         "accent_color": "#f472b6",
@@ -163,11 +164,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#ecfeff",
         "qr_style": "rounded",
         "brand_name": "HobeRadius",
-        "card_title": "دخول واي فاي ذكي",
-        "footer_text": "امسح الرمز واتصل واستمتع بخدمة مستقرة",
+        "card_title": N_("دخول واي فاي ذكي"),
+        "footer_text": N_("امسح الرمز واتصل واستمتع بخدمة مستقرة"),
     },
     "fiber": {
-        "label": "فايبر احترافي",
+        "label": N_("فايبر احترافي"),
         "gradient_start": "#020617",
         "gradient_end": "#2563eb",
         "accent_color": "#38bdf8",
@@ -175,11 +176,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#dbeafe",
         "qr_style": "boxed",
         "brand_name": "HobeRadius Fiber",
-        "card_title": "دخول فايبر",
-        "footer_text": "بطاقة دخول بسرعة عالية",
+        "card_title": N_("دخول فايبر"),
+        "footer_text": N_("بطاقة دخول بسرعة عالية"),
     },
     "sunset": {
-        "label": "غروب",
+        "label": N_("غروب"),
         "gradient_start": "#7c2d12",
         "gradient_end": "#db2777",
         "accent_color": "#fde047",
@@ -187,11 +188,11 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#ffedd5",
         "qr_style": "rounded",
         "brand_name": "HobeRadius",
-        "card_title": "قسيمة ذهبية",
-        "footer_text": "احتفظ بهذه البطاقة حتى انتهاء الاشتراك",
+        "card_title": N_("قسيمة ذهبية"),
+        "footer_text": N_("احتفظ بهذه البطاقة حتى انتهاء الاشتراك"),
     },
     "matrix": {
-        "label": "شبكة",
+        "label": N_("شبكة"),
         "gradient_start": "#022c22",
         "gradient_end": "#0f172a",
         "accent_color": "#22c55e",
@@ -199,8 +200,8 @@ _PRINT_PRESETS: dict[str, dict[str, Any]] = {
         "surface_color": "#d1fae5",
         "qr_style": "clean",
         "brand_name": "HobeRadius",
-        "card_title": "رمز دخول",
-        "footer_text": "رمز دخول آمن لبوابة الهوتسبوت",
+        "card_title": N_("رمز دخول"),
+        "footer_text": N_("رمز دخول آمن لبوابة الهوتسبوت"),
     },
 }
 # مكتبة «القوالب الجاهزة» الموسّعة (قوالب حسب نوع المنشأة والنمط) —
@@ -229,38 +230,38 @@ _PRINT_BOOL_FIELDS = {
 # الطباعة في التطبيق وحوار الحفظ ونماذج الموزّعين. المفتاح التقنيّ يبقى بين
 # قوسين للمطوّر.
 _FIELD_LABELS_AR = {
-    "print_columns": "عدد الأعمدة",
-    "print_rows": "عدد الصفوف",
-    "print_margin_mm": "هامش الصفحة",
-    "print_margin_top_mm": "الهامش العلويّ",
-    "print_margin_right_mm": "الهامش الأيمن",
-    "print_margin_bottom_mm": "الهامش السفليّ",
-    "print_margin_left_mm": "الهامش الأيسر",
-    "print_row_gap_mm": "المسافة بين الصفوف",
-    "print_column_gap_mm": "المسافة بين الأعمدة",
-    "card_width_mm": "عرض البطاقة",
-    "card_height_mm": "ارتفاع البطاقة",
-    "username_font_size": "خطّ اسم المستخدم",
-    "password_font_size": "خطّ كلمة المرور",
-    "credential_label_font_size": "خطّ العناوين",
-    "qr_size_pct": "حجم رمز QR",
-    "username_x": "موضع اسم المستخدم الأفقيّ",
-    "username_y": "موضع اسم المستخدم العموديّ",
-    "password_x": "موضع كلمة المرور الأفقيّ",
-    "password_y": "موضع كلمة المرور العموديّ",
-    "qr_x": "موضع QR الأفقيّ",
-    "qr_y": "موضع QR العموديّ",
-    "font_size": "حجم الخطّ",
-    "cards_per_row": "البطاقات في الصفّ",
-    "cards_per_column": "البطاقات في العمود",
-    "surface_opacity": "شفافيّة شريط البيانات",
-    "image_opacity": "شفافيّة الصورة",
-    "watermark_opacity": "شفافيّة العلامة المائيّة",
-    "pattern_opacity": "شفافيّة الزخرفة",
-    "amount": "المبلغ",
-    "balance": "الرصيد",
-    "credit_limit": "حدّ الائتمان",
-    "debt_balance": "الدين",
+    "print_columns": N_("عدد الأعمدة"),
+    "print_rows": N_("عدد الصفوف"),
+    "print_margin_mm": N_("هامش الصفحة"),
+    "print_margin_top_mm": N_("الهامش العلويّ"),
+    "print_margin_right_mm": N_("الهامش الأيمن"),
+    "print_margin_bottom_mm": N_("الهامش السفليّ"),
+    "print_margin_left_mm": N_("الهامش الأيسر"),
+    "print_row_gap_mm": N_("المسافة بين الصفوف"),
+    "print_column_gap_mm": N_("المسافة بين الأعمدة"),
+    "card_width_mm": N_("عرض البطاقة"),
+    "card_height_mm": N_("ارتفاع البطاقة"),
+    "username_font_size": N_("خطّ اسم المستخدم"),
+    "password_font_size": N_("خطّ كلمة المرور"),
+    "credential_label_font_size": N_("خطّ العناوين"),
+    "qr_size_pct": N_("حجم رمز QR"),
+    "username_x": N_("موضع اسم المستخدم الأفقيّ"),
+    "username_y": N_("موضع اسم المستخدم العموديّ"),
+    "password_x": N_("موضع كلمة المرور الأفقيّ"),
+    "password_y": N_("موضع كلمة المرور العموديّ"),
+    "qr_x": N_("موضع QR الأفقيّ"),
+    "qr_y": N_("موضع QR العموديّ"),
+    "font_size": N_("حجم الخطّ"),
+    "cards_per_row": N_("البطاقات في الصفّ"),
+    "cards_per_column": N_("البطاقات في العمود"),
+    "surface_opacity": N_("شفافيّة شريط البيانات"),
+    "image_opacity": N_("شفافيّة الصورة"),
+    "watermark_opacity": N_("شفافيّة العلامة المائيّة"),
+    "pattern_opacity": N_("شفافيّة الزخرفة"),
+    "amount": N_("المبلغ"),
+    "balance": N_("الرصيد"),
+    "credit_limit": N_("حدّ الائتمان"),
+    "debt_balance": N_("الدين"),
 }
 # سقف معقول للأرقام: يمنع 1e300 وما شابه (Infinity/NaN مرفوضان أصلًا).
 _MAX_MONEY = 1_000_000_000.0
@@ -279,18 +280,18 @@ def _int_field(data: dict, key: str, *, minimum: int = 0, default: int = 0) -> i
     if raw in (None, ""):
         raw = default
     if isinstance(raw, (bool, dict, list)):
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب أن تكون رقمًا صحيحًا.', v=_label_ar(key)))
     if isinstance(raw, float) and raw.is_integer():
         raw = int(raw)
     try:
         value = int(raw)
     except (TypeError, ValueError, OverflowError):
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب أن تكون رقمًا صحيحًا.', v=_label_ar(key)))
     if isinstance(raw, float) or (isinstance(raw, str) and not raw.strip().lstrip("+-").isdigit()):
         # 2.5 كان يُقبَل بصمت فيُطبع عمودان.
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب أن تكون رقمًا صحيحًا.', v=_label_ar(key)))
     if value < minimum:
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تقل عن {minimum}.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب ألا تقل عن %(minimum)s.', v=_label_ar(key), minimum=minimum))
     return value
 
 
@@ -303,19 +304,19 @@ def _float_field(data: dict, key: str, *, minimum: float = 0.0,
     if raw in (None, ""):
         raw = default
     if isinstance(raw, (bool, dict, list)):
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمية.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب أن تكون رقمية.', v=_label_ar(key)))
     try:
         value = float(raw)
     except (TypeError, ValueError, OverflowError):
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب أن تكون رقمية.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب أن تكون رقمية.', v=_label_ar(key)))
     # float("inf")/float("nan") تمرّ من «< minimum»: Infinity كانت تُخزَّن
     # فتكسر JSON القائمة كلّها، وNaN تنتهي بخطأ NOT NULL = 500.
     # NonFiniteNumber = RadiusValidationError (422) + ValueError (core).
     if not math.isfinite(value) or abs(value) > _MAX_MONEY:
-        raise NonFiniteNumber(f"قيمة {_label_ar(key)} خارج النطاق المسموح.",
+        raise NonFiniteNumber(_tr('قيمة %(v)s خارج النطاق المسموح.', v=_label_ar(key)),
                               details={"field": key})
     if value < minimum:
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تقل عن {minimum:g}.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب ألا تقل عن %(minimum)s.', v=_label_ar(key), minimum=format(minimum, 'g')))
     return value
 
 
@@ -329,7 +330,7 @@ def _optional_int_field(
 ) -> int:
     value = _int_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تزيد على {maximum}.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب ألا تزيد على %(maximum)s.', v=_label_ar(key), maximum=maximum))
     return value
 
 
@@ -343,7 +344,7 @@ def _optional_float_field(
 ) -> float:
     value = _float_field(data, key, minimum=minimum, default=default)
     if maximum is not None and value > maximum:
-        raise RadiusValidationError(f"قيمة {_label_ar(key)} يجب ألا تزيد على {maximum:g}.")
+        raise RadiusValidationError(_tr('قيمة %(v)s يجب ألا تزيد على %(maximum)s.', v=_label_ar(key), maximum=format(maximum, 'g')))
     return value
 
 
@@ -462,7 +463,7 @@ def _template_layout(data: dict) -> dict:
         "validity_text": _text("validity_text", "", 60),
         "instructions_text": _text(
             "instructions_text",
-            "استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.",
+            N_("استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول."),
             180,
         ),
         "background_style": background_style,
@@ -547,20 +548,20 @@ def _print_sheet_settings(settings: Optional[dict]) -> dict:
     fit_raw = str(raw.get("print_fit_mode") or "").strip().lower()
     if fit_raw not in _PRINT_FIT_MODES:
         raise RadiusValidationError(
-            "ملاءمة البطاقة (print_fit_mode) يجب أن تكون stretch أو uniform.")
+            _tr("ملاءمة البطاقة (print_fit_mode) يجب أن تكون stretch أو uniform."))
     cut_raw = raw.get("print_cut_lines")
     if not isinstance(cut_raw, bool) and cut_raw not in (None, 0, 1) and (
             str(cut_raw).strip().lower() not in _PRINT_BOOL_WORDS):
         raise RadiusValidationError(
-            "خطوط القصّ (print_cut_lines) يجب أن تكون نعم أو لا (1 أو 0).")
+            _tr("خطوط القصّ (print_cut_lines) يجب أن تكون نعم أو لا (1 أو 0)."))
     page_size = str(raw.get("print_page_size") or raw.get("page_size") or "A4").strip()
     if page_size.lower() not in {"a4", "letter"}:
-        raise RadiusValidationError("مقاس الورقة (print_page_size) يجب أن يكون A4 أو Letter.")
+        raise RadiusValidationError(_tr("مقاس الورقة (print_page_size) يجب أن يكون A4 أو Letter."))
     orientation = str(
         raw.get("print_orientation") or raw.get("orientation") or "portrait"
     ).strip().lower()
     if orientation not in _PRINT_ORIENTATIONS:
-        raise RadiusValidationError("اتجاه الورقة (print_orientation) يجب أن يكون portrait أو landscape.")
+        raise RadiusValidationError(_tr("اتجاه الورقة (print_orientation) يجب أن يكون portrait أو landscape."))
     margin_default = _optional_float_field(
         raw, "print_margin_mm", minimum=0, maximum=80, default=10
     )
@@ -668,8 +669,8 @@ def _reject_archived_batch(batch) -> None:
     """Printing dead cards of a batch in the recycle bin is refused (409)."""
     if batch is not None and getattr(batch, "deleted_at", None):
         raise RadiusConflict(
-            "هذه الحزمة مؤرشفة (في سلّة المحذوفات) وبطاقاتها معطّلة — "
-            "استرجعها أولًا ثم اطبعها.")
+            _tr("هذه الحزمة مؤرشفة (في سلّة المحذوفات) وبطاقاتها معطّلة — "
+            "استرجعها أولًا ثم اطبعها."))
 
 
 def _strict_print_geometry(*, page_width: float, page_height: float,
@@ -698,14 +699,14 @@ def _strict_print_geometry(*, page_width: float, page_height: float,
     available_height = page_height - margin_top - margin_bottom - (row_gap * (rows - 1))
     if available_width <= 0 or available_height <= 0:
         raise RadiusValidationError(
-            "إعدادات الطباعة لا تترك مساحة للطباعة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
+            _tr("إعدادات الطباعة لا تترك مساحة للطباعة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف."))
 
     aspect = float(canvas_width) / max(float(canvas_height), 1.0)
     max_card_width = available_width / cols
     max_card_height = available_height / rows
     if max_card_width <= 0 or max_card_height <= 0:
         raise RadiusValidationError(
-            "إعدادات الطباعة لا تترك مساحة للبطاقة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف.")
+            _tr("إعدادات الطباعة لا تترك مساحة للبطاقة — قلّل الهوامش أو المسافات أو عدد الأعمدة/الصفوف."))
 
     if str(sheet.get("fit_mode") or "uniform") == "stretch":
         # تمدد: البطاقة تملأ خانتها طولًا وعرضًا تمامًا حسب إعدادات
@@ -905,7 +906,7 @@ def validate_service_scope(value: str) -> str:
     scope = (value or "both").strip().lower()
     if scope not in _SERVICE_SCOPES:
         raise RadiusValidationError(
-            "نطاق الخدمة يجب أن يكون hotspot أو broadband أو both."
+            _tr("نطاق الخدمة يجب أن يكون hotspot أو broadband أو both.")
         )
     return scope
 
@@ -913,10 +914,10 @@ def validate_service_scope(value: str) -> str:
 def _validate_time(value: str, field: str) -> str:
     raw = (value or "").strip()
     if not _TIME_RE.match(raw):
-        raise RadiusValidationError("يجب إدخال الوقت بصيغة ساعة:دقيقة (HH:MM)")
+        raise RadiusValidationError(_tr("يجب إدخال الوقت بصيغة ساعة:دقيقة (HH:MM)"))
     hour, minute = [int(part) for part in raw.split(":", 1)]
     if hour > 23 or minute > 59:
-        raise RadiusValidationError("الوقت المُدخل غير صالح")
+        raise RadiusValidationError(_tr("الوقت المُدخل غير صالح"))
     return raw
 
 
@@ -958,56 +959,56 @@ def _dist_text(data: dict, key: str, label: str, *, max_len: int = 200) -> str:
     if raw is None:
         return ""
     if isinstance(raw, bool) or not isinstance(raw, (str, int, float)):
-        raise RadiusValidationError(f"قيمة {label} يجب أن تكون نصًا.")
+        raise RadiusValidationError(_tr('قيمة %(label)s يجب أن تكون نصًا.', label=label))
     text = str(raw).strip()
     if len(text) > max_len:
-        raise RadiusValidationError(f"{label} أطول من المسموح ({max_len} حرفًا كحدّ أقصى).")
+        raise RadiusValidationError(_tr('%(label)s أطول من المسموح (%(max_len)s حرفًا كحدّ أقصى).', label=label, max_len=max_len))
     return text
 
 
 def _distributor_payload(data: dict, *, include_metadata: bool = True) -> dict:
     if not isinstance(data, dict):
-        raise RadiusValidationError("بيانات الموزّع يجب أن تكون كائن JSON.")
+        raise RadiusValidationError(_tr("بيانات الموزّع يجب أن تكون كائن JSON."))
     raw_name = data.get("name") if data.get("name") not in (None, "") else data.get("username")
     if raw_name is not None and not isinstance(raw_name, str):
-        raise RadiusValidationError("اسم الموزّع يجب أن يكون نصًا.")
+        raise RadiusValidationError(_tr("اسم الموزّع يجب أن يكون نصًا."))
     name = (raw_name or "").strip()
     if not name:
-        raise RadiusValidationError("اسم الموزّع مطلوب.")
+        raise RadiusValidationError(_tr("اسم الموزّع مطلوب."))
     if len(name) > _DISTRIBUTOR_NAME_MAX:
         raise RadiusValidationError(
-            f"اسم الموزّع أطول من المسموح ({_DISTRIBUTOR_NAME_MAX} حرفًا كحدّ أقصى).")
-    status = (_dist_text(data, "status", "الحالة", max_len=20) or "active").lower()
+            _tr('اسم الموزّع أطول من المسموح (%(DISTRIBUTOR_NAME_MAX)s حرفًا كحدّ أقصى).', DISTRIBUTOR_NAME_MAX=_DISTRIBUTOR_NAME_MAX))
+    status = (_dist_text(data, "status", N_("الحالة"), max_len=20) or "active").lower()
     if status not in _DISTRIBUTOR_STATUSES:
-        raise RadiusValidationError("حالة الموزّع غير صحيحة (active / inactive / blocked).")
+        raise RadiusValidationError(_tr("حالة الموزّع غير صحيحة (active / inactive / blocked)."))
     permissions = data.get("permissions") or []
     if not isinstance(permissions, list) or not all(isinstance(x, str) for x in permissions):
-        raise RadiusValidationError("الصلاحيات يجب أن تكون قائمة نصوص.")
+        raise RadiusValidationError(_tr("الصلاحيات يجب أن تكون قائمة نصوص."))
     scope = data.get("scope") or {}
     if not isinstance(scope, dict):
-        raise RadiusValidationError("نطاق الموزّع (scope) يجب أن يكون كائنًا.")
+        raise RadiusValidationError(_tr("نطاق الموزّع (scope) يجب أن يكون كائنًا."))
     admin_id = data.get("admin_id")
     if admin_id in (None, "", 0, "0"):
         admin_id = None
     else:
         if isinstance(admin_id, (bool, dict, list)):
-            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا."))
         try:
             admin_id = int(admin_id)
         except (TypeError, ValueError):
-            raise RadiusValidationError("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr("معرّف المدير المالك يجب أن يكون رقمًا صحيحًا."))
     normalized = {
         "name": name,
-        "display_name": _dist_text(data, "display_name", "الاسم المعروض") or name,
-        "email": _dist_text(data, "email", "البريد"),
-        "phone": _dist_text(data, "phone", "الهاتف", max_len=40),
+        "display_name": _dist_text(data, "display_name", N_("الاسم المعروض")) or name,
+        "email": _dist_text(data, "email", N_("البريد")),
+        "phone": _dist_text(data, "phone", N_("الهاتف"), max_len=40),
         "status": status,
         "permissions": permissions,
         "scope": scope,
         "balance": _float_field(data, "balance", default=0),
         "credit_limit": _float_field(data, "credit_limit", default=0),
         "debt_balance": _float_field(data, "debt_balance", default=0),
-        "notes": _dist_text(data, "notes", "الملاحظات", max_len=2000)[:500],
+        "notes": _dist_text(data, "notes", N_("الملاحظات"), max_len=2000)[:500],
         # المالك (المدير الذي يتبع له الموزع). يُحدَّد خادميًّا في الراوت:
         # محدود → نفسه (مقفل)، سوبر → المدير المختار. None = بلا مالك
         # (وفي التعديل: None → يُبقي المالك كما هو — COALESCE في الـrepo).
@@ -1028,12 +1029,12 @@ def set_distributor_portal_password(tenant_id: int, distributor_id: int, raw) ->
     if raw is None:
         return False
     if not isinstance(raw, str):
-        raise RadiusValidationError("كلمة مرور بوابة الفحص يجب أن تكون نصًّا.")
+        raise RadiusValidationError(_tr("كلمة مرور بوابة الفحص يجب أن تكون نصًّا."))
     raw = raw.strip()
     if not raw:
         return False
     if len(raw) > 120:
-        raise RadiusValidationError("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا).")
+        raise RadiusValidationError(_tr("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا)."))
     from werkzeug.security import generate_password_hash
     operations_repo.set_distributor_portal_password(
         int(tenant_id), int(distributor_id), generate_password_hash(raw))
@@ -1044,11 +1045,11 @@ def _optional_admin_ref(value) -> int | None:
     if value in (None, "", 0, "0"):
         return None
     if isinstance(value, (bool, dict, list)):
-        raise RadiusValidationError("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا."))
     try:
         return int(value)
     except (TypeError, ValueError):
-        raise RadiusValidationError("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr("معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا."))
 
 
 def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
@@ -1061,24 +1062,24 @@ def _ensure_distributor_refs(tenant_id: int, normalized: dict, *,
         sql += " AND id <> ?"
         vals.append(int(exclude_id))
     if db().execute(sql, vals).fetchone():
-        raise RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+        raise RadiusValidationError(_tr("اسم الموزّع مستخدم مسبقًا."))
     admin_id = normalized.get("admin_id")
     if admin_id is not None and not db().execute(
             "SELECT 1 FROM admins WHERE id = ?", (int(admin_id),)).fetchone():
-        raise RadiusValidationError("المدير المالك المحدَّد غير موجود.")
+        raise RadiusValidationError(_tr("المدير المالك المحدَّد غير موجود."))
     login_id = normalized.get("login_admin_id")
     if login_id is not None and not db().execute(
             "SELECT 1 FROM admins WHERE id = ?", (int(login_id),)).fetchone():
-        raise RadiusValidationError("حساب دخول الموزّع المحدَّد غير موجود.")
+        raise RadiusValidationError(_tr("حساب دخول الموزّع المحدَّد غير موجود."))
 
 
 def _distributor_integrity_error(exc: Exception) -> RadiusValidationError:
     text = str(exc).upper()
     if "UNIQUE" in text:
-        return RadiusValidationError("اسم الموزّع مستخدم مسبقًا.")
+        return RadiusValidationError(_tr("اسم الموزّع مستخدم مسبقًا."))
     if "FOREIGN KEY" in text:
-        return RadiusValidationError("المدير المالك المحدَّد غير موجود.")
-    return RadiusValidationError("بيانات الموزّع غير صالحة — راجع القيم المدخلة.")
+        return RadiusValidationError(_tr("المدير المالك المحدَّد غير موجود."))
+    return RadiusValidationError(_tr("بيانات الموزّع غير صالحة — راجع القيم المدخلة."))
 
 
 def _require_active_distributor(distributor: dict) -> None:
@@ -1087,12 +1088,11 @@ def _require_active_distributor(distributor: dict) -> None:
     status = str(distributor.get("status") or "active").strip().lower()
     if status != "active":
         raise RadiusConflict(
-            "الموزّع غير مفعّل — فعّله أولًا قبل إسناد حزم أو تسجيل دين جديد.")
+            _tr("الموزّع غير مفعّل — فعّله أولًا قبل إسناد حزم أو تسجيل دين جديد."))
 
 
 def _credit_limit_message(limit: float, debt: float) -> str:
-    return (f"الحركة تتجاوز حدّ ائتمان الموزّع (سقف الدين {limit:g}): "
-            f"الدين الحاليّ {debt:g} والمتاح {max(limit - debt, 0):g}.")
+    return (_tr('الحركة تتجاوز حدّ ائتمان الموزّع (سقف الدين %(limit)s): الدين الحاليّ %(debt)s والمتاح %(v)s.', limit=format(limit, 'g'), debt=format(debt, 'g'), v=format(max(limit - debt, 0), 'g')))
 
 
 class OperationsService:
@@ -1107,7 +1107,7 @@ class OperationsService:
         _debt = float(normalized.get("debt_balance") or 0)
         if _limit > 0 and _debt > _limit + 1e-9:
             raise RadiusValidationError(
-                f"الدين الافتتاحيّ ({_debt:g}) أكبر من حدّ الائتمان ({_limit:g}).")
+                _tr('الدين الافتتاحيّ (%(debt)s) أكبر من حدّ الائتمان (%(limit)s).', debt=format(_debt, 'g'), limit=format(_limit, 'g')))
         _ensure_distributor_refs(tenant_id, normalized)
         try:
             saved = operations_repo.create_distributor(tenant_id, normalized, actor=actor)
@@ -1150,7 +1150,7 @@ class OperationsService:
     def get_distributor(self, *, tenant_id: int, distributor_id: int) -> dict:
         distributor = operations_repo.get_distributor(tenant_id, distributor_id)
         if not distributor:
-            raise RadiusNotFound("الموزّع غير موجود.")
+            raise RadiusNotFound(_tr("الموزّع غير موجود."))
         return distributor
 
     @staticmethod
@@ -1168,24 +1168,24 @@ class OperationsService:
         id field a non-number must look like a batch code. Raises
         ``RadiusNotFound`` (Arabic) for an unknown code, 422 otherwise."""
         if isinstance(ref, bool) or isinstance(ref, (dict, list, float)):
-            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا."))
         text = str(ref if ref is not None else "").strip()
         if not text or text == "0":
-            raise RadiusValidationError("اختر حزمة الكروت أولًا.")
+            raise RadiusValidationError(_tr("اختر حزمة الكروت أولًا."))
         if text.isdigit() and not is_code:
             return int(text)
         if not is_code and not cls._BATCH_CODE_RE.match(text):
-            raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا."))
         batch = cards_repo.get_batch_by_code(tenant_id, text)
         if batch is None:
-            raise RadiusNotFound(f"لا توجد حزمة كروت بالرمز «{text[:64]}».")
+            raise RadiusNotFound(_tr('لا توجد حزمة كروت بالرمز «%(v)s».', v=text[:64]))
         return int(batch.id)
 
     def assign_batch(self, *, tenant_id: int, distributor_id: int, batch_id: int,
                      actor: str, notes: str = "") -> dict:
         distributor = self.get_distributor(tenant_id=tenant_id, distributor_id=distributor_id)
         if not cards_repo.get_batch(tenant_id, batch_id):
-            raise RadiusNotFound("حزمة الكروت غير موجودة.")
+            raise RadiusNotFound(_tr("حزمة الكروت غير موجودة."))
         # موزّع غير مفعّل لا يستلم حزمًا جديدة (كانت تُسنَد إليه بصمت).
         self._require_active(distributor)
         assignment = operations_repo.assign_batch(
@@ -1211,7 +1211,7 @@ class OperationsService:
     def distributor_summary(self, *, tenant_id: int, distributor_id: int) -> dict:
         summary = operations_repo.distributor_summary(tenant_id, distributor_id)
         if not summary:
-            raise RadiusNotFound("الموزّع غير موجود.")
+            raise RadiusNotFound(_tr("الموزّع غير موجود."))
         return summary
 
     def settle_distributor(self, *, tenant_id: int, distributor_id: int,
@@ -1224,10 +1224,10 @@ class OperationsService:
         action_amount(amount, field="amount", kind="distributor")
         for _k in ("direction", "entry_type", "currency", "notes", "related_type"):
             if data.get(_k) is not None and not isinstance(data.get(_k), str):
-                raise RadiusValidationError("قيم التسوية النصّيّة غير صحيحة.")
+                raise RadiusValidationError(_tr("قيم التسوية النصّيّة غير صحيحة."))
         direction = (data.get("direction") or "credit").strip().lower()
         if direction not in {"credit", "debit"}:
-            raise RadiusValidationError("اتّجاه الحركة يجب أن يكون credit (دفعة) أو debit (دين).")
+            raise RadiusValidationError(_tr("اتّجاه الحركة يجب أن يكون credit (دفعة) أو debit (دين)."))
         if direction == "debit":
             # دين جديد: ممنوع على موزّع غير مفعّل، ولا يتجاوز حدّ الائتمان
             # حين يكون محدّدًا (> 0). الدفعات (credit) تبقى مسموحة دائمًا —
@@ -1240,11 +1240,11 @@ class OperationsService:
         related_id = data.get("related_id")
         if related_id not in (None, ""):
             if isinstance(related_id, (bool, dict, list)):
-                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+                raise RadiusValidationError(_tr("قيمة related_id يجب أن تكون رقمًا صحيحًا."))
             try:
                 related_id = int(related_id)
             except (TypeError, ValueError):
-                raise RadiusValidationError("قيمة related_id يجب أن تكون رقمًا صحيحًا.")
+                raise RadiusValidationError(_tr("قيمة related_id يجب أن تكون رقمًا صحيحًا."))
         else:
             related_id = None
         entry_type = (data.get("entry_type") or "settlement").strip().lower()
@@ -1255,7 +1255,7 @@ class OperationsService:
                 if not isinstance(raw_apply, str) or raw_apply.strip().lower() not in (
                         "balance", "debt"):
                     raise RadiusValidationError(
-                        "حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين).")
+                        _tr("حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين)."))
                 apply_to = raw_apply.strip().lower()
             else:
                 # تطبيقات قديمة بلا apply_to: عليه دين → خصم من الدين، وإلّا للرصيد.
@@ -1265,8 +1265,7 @@ class OperationsService:
                 debt = float(distributor.get("debt_balance") or 0)
                 if amount > debt + 1e-9:
                     raise RadiusValidationError(
-                        f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
-                        f"الدين المتبقّي {debt:g}. اختر «إضافة للرصيد» للزيادة.")
+                        _tr('المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(debt)s. اختر «إضافة للرصيد» للزيادة.', amount=format(amount, 'g'), debt=format(debt, 'g')))
         try:
             entry = self._post_distributor_payment(
                 tenant_id, distributor_id, entry_type=entry_type, direction=direction,
@@ -1274,8 +1273,7 @@ class OperationsService:
                 apply_to=apply_to)
         except operations_repo.DistributorDebtExceeded as exc:
             raise RadiusValidationError(
-                f"المبلغ ({amount:g}) أكبر من الدين المستحقّ على الموزّع — "
-                f"الدين المتبقّي {exc.remaining:g}. اختر «إضافة للرصيد» للزيادة.")
+                _tr('المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(remaining)s. اختر «إضافة للرصيد» للزيادة.', amount=format(amount, 'g'), remaining=format(exc.remaining, 'g')))
         except ValueError as exc:
             # the atomic guard in post_distributor_ledger (a parallel debit won)
             if str(exc) != "credit_limit":
@@ -1328,15 +1326,15 @@ class OperationsService:
         mode = str(data.get("restore_mode") or "profile_default").strip().lower()
         if mode not in cls._RESTORE_MODES:
             raise RadiusValidationError(
-                "طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، "
-                "إبقاء آخر سرعة، فصل الجلسة.")
+                _tr("طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، "
+                "إبقاء آخر سرعة، فصل الجلسة."))
         return mode
 
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,
                                   data: dict) -> dict:
         name = (data.get("name") or "").strip()
         if not name:
-            raise RadiusValidationError("الاسم مطلوب.")
+            raise RadiusValidationError(_tr("الاسم مطلوب."))
         target_type = (data.get("target_type") or "plan").strip().lower()
         if target_type not in {"plan", "subscriber", "card_batch", "subscriber_group"}:
             raise RadiusValidationError(
@@ -1348,20 +1346,20 @@ class OperationsService:
         subscriber_group_id = None
         if target_type == "plan":
             if not plan_id:
-                raise RadiusValidationError("اختر العرض.")
+                raise RadiusValidationError(_tr("اختر العرض."))
             if not plans_repo.get_plan(tenant_id, plan_id):
                 raise RadiusNotFound("plan not found")
         elif target_type == "subscriber":
             from ..db.repos import subscribers_repo
             subscriber_username = (data.get("subscriber_username") or data.get("username") or "").strip()
             if not subscriber_username:
-                raise RadiusValidationError("اسم المشترك مطلوب.")
+                raise RadiusValidationError(_tr("اسم المشترك مطلوب."))
             sub = subscribers_repo.get_subscriber(tenant_id, subscriber_username)
             if not sub:
                 raise RadiusNotFound("subscriber not found")
             plan_id = sub.plan_id or plan_id
             if not plan_id:
-                raise RadiusValidationError("المشترك بلا عرض — حدّد العرض أولًا.")
+                raise RadiusValidationError(_tr("المشترك بلا عرض — حدّد العرض أولًا."))
         elif target_type == "card_batch":
             from ..db.repos import cards_repo
             card_batch_id = _int_field(data, "card_batch_id", minimum=1)
@@ -1399,8 +1397,8 @@ class OperationsService:
         if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]) \
                 and normalized["restore_mode"] != "disconnect":
             raise RadiusValidationError(
-                "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
-                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
+                _tr("أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
+                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».")
             )
         saved = operations_repo.create_bandwidth_schedule(
             tenant_id, normalized, actor=actor
@@ -1467,8 +1465,8 @@ class OperationsService:
         if not (normalized["speed_down_kbps"] or normalized["speed_up_kbps"]) \
                 and normalized["restore_mode"] != "disconnect":
             raise RadiusValidationError(
-                "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
-                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
+                _tr("أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). "
+                "إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».")
             )
         saved = operations_repo.update_bandwidth_schedule(tenant_id, schedule_id, normalized)
         self._audit.record(
@@ -1669,7 +1667,7 @@ class OperationsService:
         name = _print_template_name(data.get("name"))
         orientation = (data.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
+            raise RadiusValidationError(_tr("اتجاه القالب يجب أن يكون portrait أو landscape."))
         layout = _template_layout(data)
         normalized = {
             "name": name,
@@ -1694,7 +1692,7 @@ class OperationsService:
                 tenant_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise PrintTemplateNameTaken("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.",
+            raise PrintTemplateNameTaken(_tr("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر."),
                                          details={"field": "name", "name": name})
         self._audit.record(
             actor=actor,
@@ -1709,7 +1707,7 @@ class OperationsService:
                               template_id: int, data: dict) -> dict:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         merged = {**current, **data}
         if isinstance(current.get("layout_json"), dict):
             merged["layout"] = {**current["layout_json"], **(data.get("layout") or {})}
@@ -1717,7 +1715,7 @@ class OperationsService:
             _print_template_name(data.get("name"))
         orientation = str(merged.get("orientation") or "portrait").strip().lower()
         if orientation not in _PRINT_ORIENTATIONS:
-            raise RadiusValidationError("اتجاه القالب يجب أن يكون portrait أو landscape.")
+            raise RadiusValidationError(_tr("اتجاه القالب يجب أن يكون portrait أو landscape."))
         layout = _template_layout(merged)
         normalized = {
             "name": str(merged.get("name") or "").strip(),
@@ -1743,7 +1741,7 @@ class OperationsService:
                 tenant_id, template_id, normalized, actor=actor
             )
         except sqlite3.IntegrityError:
-            raise PrintTemplateNameTaken("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.",
+            raise PrintTemplateNameTaken(_tr("يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر."),
                                          details={"field": "name",
                                                   "name": normalized["name"]})
         self._audit.record(
@@ -1763,7 +1761,7 @@ class OperationsService:
                               template_id: int) -> bool:
         current = operations_repo.get_print_template(tenant_id, template_id)
         if not current:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         ok = operations_repo.delete_print_template(tenant_id, template_id)
         if ok:
             self._audit.record(
@@ -1822,7 +1820,7 @@ class OperationsService:
         """
         target = operations_repo.get_print_template(tenant_id, template_id)
         if not target:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         for row in operations_repo.list_print_templates(tenant_id, limit=10_000):
             layout = dict(row.get("layout_json") or {})
             wants_on = int(row["id"]) == int(template_id)
@@ -1864,7 +1862,7 @@ class OperationsService:
                                       sample: Optional[dict] = None) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         layout = template.get("layout_json")
         if not isinstance(layout, dict):
             layout = template.get("layout") if isinstance(template.get("layout"), dict) else {}
@@ -1950,7 +1948,7 @@ class OperationsService:
                                   job_id: int | None = None) -> bytes:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
 
         from io import BytesIO
         from reportlab.lib.pagesizes import A4, letter, landscape, portrait
@@ -2001,7 +1999,7 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+                raise RadiusNotFound(_tr("حزمة الكروت غير موجودة."))
             _reject_archived_batch(batch)
             # scope="unused" → only cards that were NEVER opened (used=0) and
             # not revoked; "all" (default) → every card in the batch.
@@ -2041,8 +2039,8 @@ class OperationsService:
         if not cards:
             if batch_id and str(scope or "").strip().lower() == "unused":
                 raise RadiusValidationError(
-                    "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.")
-            raise RadiusValidationError("الحزمة المختارة لا تحتوي كروتًا للطباعة.")
+                    _tr("لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة."))
+            raise RadiusValidationError(_tr("الحزمة المختارة لا تحتوي كروتًا للطباعة."))
 
         first_model = build_card_render_model(
             template,
@@ -2079,7 +2077,7 @@ class OperationsService:
             "batch_code": getattr(batch, "batch_code", "") if batch else "",
             "progress": 8,
             "stage": "started",
-            "stage_label": "بدأ تجهيز ملف PDF",
+            "stage_label": _tr("بدأ تجهيز ملف PDF"),
         }
         if job_id:
             job = operations_repo.update_print_job(
@@ -2088,7 +2086,7 @@ class OperationsService:
                 status="started",
                 card_count=len(cards),
                 file_name=file_name,
-                message="بدأ إنشاء ملف PDF.",
+                message=N_("بدأ إنشاء ملف PDF."),
                 metadata=job_metadata,
             )
         else:
@@ -2125,7 +2123,7 @@ class OperationsService:
                         metadata={
                             "progress": min(progress, 88),
                             "stage": "rendering",
-                            "stage_label": "رسم البطاقات داخل ملف PDF",
+                            "stage_label": _tr("رسم البطاقات داخل ملف PDF"),
                             "rendered_cards": idx + 1,
                             "total_cards": len(cards),
                             "cards_per_page": cards_per_page,
@@ -2157,7 +2155,7 @@ class OperationsService:
                 metadata={
                     "progress": 92,
                     "stage": "finalizing",
-                    "stage_label": "إغلاق الملف وتجهيز التنزيل",
+                    "stage_label": _tr("إغلاق الملف وتجهيز التنزيل"),
                     "total_cards": len(cards),
                 },
             )
@@ -2191,7 +2189,7 @@ class OperationsService:
                     "bytes": len(payload),
                     "progress": 100,
                     "stage": "completed",
-                    "stage_label": "اكتمل ملف PDF",
+                    "stage_label": _tr("اكتمل ملف PDF"),
                 },
             )
             self._audit.record(
@@ -2214,7 +2212,7 @@ class OperationsService:
                 card_count=len(cards),
                 file_name=file_name,
                 message=(getattr(exc, "message", "") or str(exc)
-                         or "تعذّر تجهيز ملف PDF."),
+                         or N_("تعذّر تجهيز ملف PDF.")),
                 metadata={"template_name": template.get("name"), "batch_id": batch_id},
             )
             raise
@@ -2239,7 +2237,7 @@ class OperationsService:
         if template_id:
             current = operations_repo.get_print_template(tenant_id, template_id)
             if not current:
-                raise RadiusNotFound("قالب الطباعة غير موجود.")
+                raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         if current:
             merged = {**current, **data}
             if isinstance(current.get("layout_json"), dict):
@@ -2314,7 +2312,7 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+                raise RadiusNotFound(_tr("حزمة الكروت غير موجودة."))
             no_pw = bool(getattr(batch, "login_without_password", False))
             _apply_batch_price_fallback(tenant_id, template, batch, overrides)
             for c in cards_repo.list_cards(tenant_id, batch_id=batch_id,
@@ -2387,7 +2385,7 @@ class OperationsService:
     ) -> dict:
         template = operations_repo.get_print_template(tenant_id, template_id)
         if not template:
-            raise RadiusNotFound("قالب الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("قالب الطباعة غير موجود."))
         batch = None
         card_count = 1
         export_type = "sample_pdf_async"
@@ -2396,7 +2394,7 @@ class OperationsService:
         if batch_id:
             batch = cards_repo.get_batch(tenant_id, batch_id, include_deleted=True)
             if not batch:
-                raise RadiusNotFound("حزمة الكروت غير موجودة.")
+                raise RadiusNotFound(_tr("حزمة الكروت غير موجودة."))
             _reject_archived_batch(batch)
             # Count cheaply from the existing batch list helper; this is only
             # metadata for progress UX. The renderer resolves the actual cards.
@@ -2411,8 +2409,7 @@ class OperationsService:
             (tenant_id, *_PRINT_JOB_ACTIVE_STATES)).fetchone()[0] or 0)
         if pending >= PRINT_JOBS_MAX_PENDING:
             raise RadiusConflict(
-                f"طابور الطباعة ممتلئ ({pending} مهام قيد الانتظار/التنفيذ) — "
-                "انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.")
+                _tr('طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.', pending=pending))
         job = operations_repo.create_print_job(
             tenant_id,
             template_id=template_id,
@@ -2421,12 +2418,12 @@ class OperationsService:
             status="queued",
             card_count=card_count,
             file_name=file_name,
-            message="تم وضع مهمة PDF في الطابور.",
+            message=N_("تم وضع مهمة PDF في الطابور."),
             metadata={
                 "experimental_async": True,
                 "progress": 2,
                 "stage": "queued",
-                "stage_label": "تم وضع المهمة في الطابور",
+                "stage_label": _tr("تم وضع المهمة في الطابور"),
                 "template_name": template.get("name"),
                 "batch_code": getattr(batch, "batch_code", "") if batch else "",
                 "download_ready": False,
@@ -2477,11 +2474,11 @@ class OperationsService:
                     tenant_id,
                     job_id,
                     status="started",
-                    message="بدأ تجهيز ملف PDF.",
+                    message=N_("بدأ تجهيز ملف PDF."),
                     metadata={
                         "progress": 5,
                         "stage": "worker_started",
-                        "stage_label": "بدأ عامل التصدير",
+                        "stage_label": _tr("بدأ عامل التصدير"),
                     },
                 )
                 payload = self.export_print_template_pdf(
@@ -2509,7 +2506,7 @@ class OperationsService:
                     "bytes": len(payload),
                     "progress": 100,
                     "stage": "completed",
-                    "stage_label": "اكتمل ملف PDF وأصبح جاهزًا للتنزيل",
+                    "stage_label": _tr("اكتمل ملف PDF وأصبح جاهزًا للتنزيل"),
                 })
                 # the finished job keeps its counters (was: rendered_cards 0 of N)
                 _stored_meta = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
@@ -2524,7 +2521,7 @@ class OperationsService:
                     status="success",
                     card_count=int(job.get("card_count") or 0),
                     file_name=file_name,
-                    message="اكتمل ملف PDF.",
+                    message=N_("اكتمل ملف PDF."),
                     metadata=metadata,
                 )
                 if not won:
@@ -2544,13 +2541,13 @@ class OperationsService:
                 card_count=0,
                 file_name="",
                 message=(getattr(exc, "message", "") or
-                         f"تعذّر تجهيز ملف PDF: {exc}"),
+                         _tr('تعذّر تجهيز ملف PDF: %(exc)s', exc=exc)),
                 metadata={
                     "experimental_async": True,
                     "download_ready": False,
                     "progress": 100,
                     "stage": "failed",
-                    "stage_label": "فشل تجهيز ملف PDF",
+                    "stage_label": _tr("فشل تجهيز ملف PDF"),
                 },
             )
         finally:
@@ -2559,7 +2556,7 @@ class OperationsService:
     def get_print_job(self, *, tenant_id: int, job_id: int) -> dict:
         job = operations_repo.get_print_job(tenant_id, job_id)
         if not job:
-            raise RadiusNotFound("مهمة الطباعة غير موجودة.")
+            raise RadiusNotFound(_tr("مهمة الطباعة غير موجودة."))
         return job
 
     def cancel_print_job(self, *, tenant_id: int, job_id: int, actor: str = "system") -> dict:
@@ -2577,13 +2574,12 @@ class OperationsService:
         won = operations_repo.finish_print_job_if(
             tenant_id, job_id, from_states=_PRINT_JOB_ACTIVE_STATES,
             status="cancelled", message=PRINT_JOB_CANCELLED_MESSAGE,
-            metadata={"stage": "cancelled", "stage_label": "أُلغيت المهمة",
+            metadata={"stage": "cancelled", "stage_label": _tr("أُلغيت المهمة"),
                       "download_ready": False, "cancelled_by": actor})
         job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
         if not won and str(job.get("status") or "") != "cancelled":
             raise RadiusConflict(
-                "انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها "
-                f"(الحالة: {_PRINT_JOB_STATUS_AR.get(job.get('status'), job.get('status'))}).")
+                _tr('انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s).', v=_PRINT_JOB_STATUS_AR.get(job.get('status'), job.get('status'))))
         if won:
             self._audit.record(actor=actor, action="print_job.cancel",
                                target_type="print_job", target_id=str(job_id))
@@ -2592,21 +2588,21 @@ class OperationsService:
     def get_print_job_file(self, *, tenant_id: int, job_id: int) -> tuple[bytes, str]:
         job = self.get_print_job(tenant_id=tenant_id, job_id=job_id)
         if job.get("status") == "cancelled":
-            raise RadiusConflict("أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.")
+            raise RadiusConflict(_tr("أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل."))
         if job.get("status") == "failed":
-            raise RadiusConflict("فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.")
+            raise RadiusConflict(_tr("فشلت مهمة الطباعة — لا يوجد ملف للتنزيل."))
         if job.get("status") != "success":
-            raise RadiusValidationError("ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.")
+            raise RadiusValidationError(_tr("ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة."))
         metadata = job.get("metadata_json") if isinstance(job.get("metadata_json"), dict) else {}
         raw_path = metadata.get("download_path")
         if not raw_path:
-            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("ملف مهمة الطباعة غير موجود."))
         base_dir = self._print_export_dir(tenant_id).resolve()
         file_path = Path(str(raw_path)).resolve()
         if base_dir not in file_path.parents and file_path != base_dir:
-            raise RadiusValidationError("مسار ملف مهمة الطباعة غير صالح.")
+            raise RadiusValidationError(_tr("مسار ملف مهمة الطباعة غير صالح."))
         if not file_path.exists():
-            raise RadiusNotFound("ملف مهمة الطباعة غير موجود.")
+            raise RadiusNotFound(_tr("ملف مهمة الطباعة غير موجود."))
         return file_path.read_bytes(), str(job.get("file_name") or file_path.name)
 
     def backup_status(self, *, tenant_id: int) -> dict:
@@ -2628,23 +2624,23 @@ class OperationsService:
                 "folder_name": "HobeRadius Backups",
                 "last_upload_at": "",
                 "last_error": str(exc)[:200],
-                "message_ar": "تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.",
+                "message_ar": _tr("تعذرت قراءة حالة جوجل درايف من إعدادات الخادم."),
             }
         configured = bool(raw.get("configured"))
         connected = bool(raw.get("connected"))
         pending = bool(raw.get("pending"))
         if connected:
             status = "connected"
-            message = "جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة."
+            message = _tr("جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة.")
         elif pending:
             status = "pending"
-            message = "طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم."
+            message = _tr("طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم.")
         elif configured:
             status = "configured_not_connected"
-            message = "إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد."
+            message = _tr("إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد.")
         else:
             status = "not_configured"
-            message = "جوجل درايف غير مفعل حاليًا من إعدادات الخادم."
+            message = _tr("جوجل درايف غير مفعل حاليًا من إعدادات الخادم.")
         return {
             "configured": configured,
             "connected": connected,
@@ -2813,11 +2809,11 @@ class OperationsService:
                         pass
             verified = target.exists() and target.stat().st_size > 0
             status = "success" if verified else "failed"
-            kind_ar = "نسخة أساسية (بيانات العمل)" if lean else "أرشيف كامل (يشمل السجلّات)"
-            comp_ar = " مضغوطة gzip" if compressed else ""
+            kind_ar = _tr("نسخة أساسية (بيانات العمل)") if lean else _tr("أرشيف كامل (يشمل السجلّات)")
+            comp_ar = _tr(" مضغوطة gzip") if compressed else ""
             message = (
-                f"تم إنشاء نسخة SQLite محلية والتحقق منها — {kind_ar}{comp_ar}."
-                if verified else "لم يتم إنشاء ملف النسخة الاحتياطية."
+                _tr('تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s.', kind_ar=kind_ar, comp_ar=comp_ar)
+                if verified else _tr("لم يتم إنشاء ملف النسخة الاحتياطية.")
             )
         except sqlite3.Error as exc:
             verified = False
@@ -2981,16 +2977,16 @@ class OperationsService:
         """Delete a single local backup file (validated). Audited."""
         path = self.resolve_local_backup_path(name=name)
         if not path:
-            return {"ok": False, "message": "ملف النسخة غير موجود أو غير صالح."}
+            return {"ok": False, "message": _tr("ملف النسخة غير موجود أو غير صالح.")}
         try:
             path.unlink()
         except OSError as exc:
-            return {"ok": False, "message": f"تعذّر حذف الملف: {exc}"}
+            return {"ok": False, "message": _tr('تعذّر حذف الملف: %(exc)s', exc=exc)}
         self._audit.record(
             actor=actor, action="backup.local_deleted", target_type="backup_file",
             target_id=name, payload={"name": name},
         )
-        return {"ok": True, "message": f"تم حذف النسخة {name}."}
+        return {"ok": True, "message": _tr('تم حذف النسخة %(name)s.', name=name)}
 
     # ── Unified "full backup": local → panel → Drive (one action) ──
     def panel_backup_enabled(self, *, tenant_id: int) -> bool:
@@ -3016,19 +3012,19 @@ class OperationsService:
         local = self.run_local_backup(tenant_id=tenant_id, actor=actor, lean=lean)
         local_ok = bool(local.get("verified"))
         steps.append({
-            "key": "local", "label": "نسخة محلية",
+            "key": "local", "label": _tr("نسخة محلية"),
             "status": "success" if local_ok else "failed",
-            "message": "تم إنشاء النسخة المحلية والتحقق منها." if local_ok
-                       else (local.get("run", {}).get("message") or "تعذّر إنشاء النسخة المحلية."),
+            "message": _tr("تم إنشاء النسخة المحلية والتحقق منها.") if local_ok
+                       else (local.get("run", {}).get("message") or _tr("تعذّر إنشاء النسخة المحلية.")),
         })
 
         panel_ok = False
         if not self.panel_backup_enabled(tenant_id=tenant_id):
-            steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "skipped",
-                          "message": "الخدمة غير مفعّلة (خدمة مدفوعة)."})
+            steps.append({"key": "panel", "label": _tr("لوحة التراخيص"), "status": "skipped",
+                          "message": _tr("الخدمة غير مفعّلة (خدمة مدفوعة).")})
         elif not local_ok:
-            steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "skipped",
-                          "message": "تم التخطّي بسبب فشل النسخة المحلية."})
+            steps.append({"key": "panel", "label": _tr("لوحة التراخيص"), "status": "skipped",
+                          "message": _tr("تم التخطّي بسبب فشل النسخة المحلية.")})
         else:
             try:
                 from .license_admin_backup_upload import BackupUploadService
@@ -3037,16 +3033,16 @@ class OperationsService:
                 if up.get("ok") and not up.get("dry_run"):
                     panel_ok = True
                     content = bool((up.get("payload") or {}).get("content_included"))
-                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "success",
-                                  "message": "تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل." if content
-                                             else "تم تسجيل البيانات الوصفية على ملفك."})
+                    steps.append({"key": "panel", "label": _tr("لوحة التراخيص"), "status": "success",
+                                  "message": _tr("تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل.") if content
+                                             else _tr("تم تسجيل البيانات الوصفية على ملفك.")})
                 else:
                     from .license_admin_backup_upload import friendly_panel_backup_error
-                    steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed",
+                    steps.append({"key": "panel", "label": _tr("لوحة التراخيص"), "status": "failed",
                                   "message": friendly_panel_backup_error(up)})
             except Exception as exc:  # noqa: BLE001
-                steps.append({"key": "panel", "label": "لوحة التراخيص", "status": "failed",
-                              "message": f"تعذّر رفع النسخة إلى لوحة التراخيص: {exc}"})
+                steps.append({"key": "panel", "label": _tr("لوحة التراخيص"), "status": "failed",
+                              "message": _tr('تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s', exc=exc)})
 
         # درايف: مساران ممكنان — (1) ربط محلي مباشر من الريدياس (device flow):
         # run_local_backup يرفع فعليًا ويعيد نتيجته في local["drive"]؛ نعرضها
@@ -3055,11 +3051,11 @@ class OperationsService:
         drive_local = (local or {}).get("drive") if isinstance(local, dict) else None
         if isinstance(drive_local, dict):
             if drive_local.get("ok"):
-                steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
-                              "message": "تم رفع النسخة إلى جوجل درايف المربوط."})
+                steps.append({"key": "drive", "label": _tr("جوجل درايف"), "status": "success",
+                              "message": _tr("تم رفع النسخة إلى جوجل درايف المربوط.")})
             else:
-                steps.append({"key": "drive", "label": "جوجل درايف", "status": "failed",
-                              "message": f"تعذّر الرفع إلى جوجل درايف: {drive_local.get('error') or 'خطأ غير محدّد'}"})
+                steps.append({"key": "drive", "label": _tr("جوجل درايف"), "status": "failed",
+                              "message": _tr('تعذّر الرفع إلى جوجل درايف: %(v)s', v=drive_local.get('error') or N_('خطأ غير محدّد'))})
         else:
             # لا ربط محلي → اعتمد مسار اللوحة (read the PANEL's Drive status).
             connected = False
@@ -3071,14 +3067,14 @@ class OperationsService:
             except Exception:  # noqa: BLE001
                 connected = False
             if not connected:
-                steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
-                              "message": "غير مربوط — اربط جوجل درايف من بوابة العميل."})
+                steps.append({"key": "drive", "label": _tr("جوجل درايف"), "status": "skipped",
+                              "message": _tr("غير مربوط — اربط جوجل درايف من بوابة العميل.")})
             elif panel_ok:
-                steps.append({"key": "drive", "label": "جوجل درايف", "status": "success",
-                              "message": "وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية."})
+                steps.append({"key": "drive", "label": _tr("جوجل درايف"), "status": "success",
+                              "message": _tr("وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية.")})
             else:
-                steps.append({"key": "drive", "label": "جوجل درايف", "status": "skipped",
-                              "message": "يتطلّب نجاح الرفع إلى اللوحة أولًا."})
+                steps.append({"key": "drive", "label": _tr("جوجل درايف"), "status": "skipped",
+                              "message": _tr("يتطلّب نجاح الرفع إلى اللوحة أولًا.")})
         return {"ok": local_ok, "steps": steps}
 
     def import_uploaded_backup(self, *, tenant_id: int, actor: str, fileobj, filename: str) -> dict:
@@ -3094,7 +3090,7 @@ class OperationsService:
         try:
             fileobj.save(str(staging))
         except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "message": f"تعذّر حفظ الملف المرفوع: {exc}"}
+            return {"ok": False, "message": _tr('تعذّر حفظ الملف المرفوع: %(exc)s', exc=exc)}
         try:
             with open(staging, "rb") as fh:
                 header = fh.read(16)
@@ -3103,7 +3099,7 @@ class OperationsService:
                 staging.unlink()
             except OSError:
                 pass
-            return {"ok": False, "message": f"تعذّرت قراءة الملف: {exc}"}
+            return {"ok": False, "message": _tr('تعذّرت قراءة الملف: %(exc)s', exc=exc)}
         if header.startswith(_bkz.GZIP_MAGIC):
             # A gzip backup is valid only if it inflates to a SQLite database.
             if not _bkz.gzip_sqlite_header_ok(staging):
@@ -3111,7 +3107,7 @@ class OperationsService:
                     staging.unlink()
                 except OSError:
                     pass
-                return {"ok": False, "message": "الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة."}
+                return {"ok": False, "message": _tr("الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة.")}
             safe = f"uploaded-{stamp}.sqlite3.gz"
         elif header.startswith(b"SQLite format 3"):
             safe = f"uploaded-{stamp}.sqlite3"
@@ -3120,7 +3116,7 @@ class OperationsService:
                 staging.unlink()
             except OSError:
                 pass
-            return {"ok": False, "message": "الملف ليس قاعدة بيانات SQLite صالحة."}
+            return {"ok": False, "message": _tr("الملف ليس قاعدة بيانات SQLite صالحة.")}
         target = backup_dir / safe
         try:
             staging.replace(target)
@@ -3129,12 +3125,12 @@ class OperationsService:
                 staging.unlink()
             except OSError:
                 pass
-            return {"ok": False, "message": f"تعذّر حفظ الملف المرفوع: {exc}"}
+            return {"ok": False, "message": _tr('تعذّر حفظ الملف المرفوع: %(exc)s', exc=exc)}
         try:
             job = operations_repo.ensure_backup_job(tenant_id, actor=actor)
             operations_repo.record_backup_run(
                 tenant_id, job_id=job.get("id"), status="success",
-                path=str(target), message="نسخة مرفوعة من جهاز المستخدم.")
+                path=str(target), message=N_("نسخة مرفوعة من جهاز المستخدم."))
         except Exception:  # noqa: BLE001
             pass
         self._audit.record(actor=actor, action="backup.uploaded_import", target_type="backup_file",
@@ -3143,7 +3139,7 @@ class OperationsService:
             self.prune_local_backups_by_count(tenant_id=tenant_id)
         except Exception:  # noqa: BLE001
             pass
-        return {"ok": True, "name": safe, "message": "تم رفع النسخة من جهازك وحفظها محليًا."}
+        return {"ok": True, "name": safe, "message": _tr("تم رفع النسخة من جهازك وحفظها محليًا.")}
 
     # ── Scheduling (auto backups) ──
     BACKUP_SCHEDULE_INTERVALS = {"6h": 6 * 3600, "12h": 12 * 3600, "daily": 86400, "weekly": 7 * 86400}
@@ -3218,12 +3214,12 @@ class OperationsService:
 
     # Tables surfaced in the per-backup content summary (read-only counts).
     BACKUP_SUMMARY_TABLES = [
-        ("subscribers", "المشتركون"),
-        ("cards", "الكروت"),
-        ("access_plans", "الباقات"),
-        ("card_batches", "دفعات الكروت"),
-        ("vouchers", "القسائم"),
-        ("subscriber_recharges", "عمليات التعبئة"),
+        ("subscribers", N_("المشتركون")),
+        ("cards", N_("الكروت")),
+        ("access_plans", N_("الباقات")),
+        ("card_batches", N_("دفعات الكروت")),
+        ("vouchers", N_("القسائم")),
+        ("subscriber_recharges", N_("عمليات التعبئة")),
     ]
 
     def summarize_local_backup(self, *, name: str) -> dict:
@@ -3282,11 +3278,11 @@ class OperationsService:
 
         if str(env_settings.env("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() in {"1", "true", "yes", "on"}:
             return {"ok": False, "code": "restore_disabled",
-                    "message": "الاستعادة داخل التطبيق معطّلة على هذا الخادم."}
+                    "message": _tr("الاستعادة داخل التطبيق معطّلة على هذا الخادم.")}
 
         source = self.resolve_local_backup_path(name=name)
         if not source:
-            return {"ok": False, "code": "not_found", "message": "ملف النسخة غير موجود أو غير صالح."}
+            return {"ok": False, "code": "not_found", "message": _tr("ملف النسخة غير موجود أو غير صالح.")}
 
         # 1) Pre-restore snapshot of the CURRENT database (rollback safety net).
         snapshot_dir = self._backup_dir()
@@ -3302,10 +3298,10 @@ class OperationsService:
                 error_message=f"snapshot failed: {exc}",
             )
             return {"ok": False, "code": "snapshot_failed",
-                    "message": f"تعذّر أخذ نسخة احترازية قبل الاستعادة: {exc}"}
+                    "message": _tr('تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s', exc=exc)}
         if not snapshot_ok:
             return {"ok": False, "code": "snapshot_failed",
-                    "message": "تعذّر أخذ نسخة احترازية قبل الاستعادة."}
+                    "message": _tr("تعذّر أخذ نسخة احترازية قبل الاستعادة.")}
 
         # 2) Materialize the source. Compressed backups (.sqlite3.gz) are sniffed
         #    by their gzip magic bytes (1f 8b) — not just the extension — and
@@ -3326,7 +3322,7 @@ class OperationsService:
                     payload={"snapshot": snapshot.name},
                 )
                 return {"ok": False, "code": "decompress_failed",
-                        "message": f"تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: {snapshot.name}. الخطأ: {exc}"}
+                        "message": _tr('تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s', name=snapshot.name, exc=exc)}
 
         # 3) Restore: copy the chosen backup INTO the live database.
         try:
@@ -3348,7 +3344,7 @@ class OperationsService:
                 payload={"snapshot": snapshot.name},
             )
             return {"ok": False, "code": "restore_failed",
-                    "message": f"فشلت الاستعادة. النسخة الاحترازية محفوظة: {snapshot.name}. الخطأ: {exc}"}
+                    "message": _tr('فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s', name=snapshot.name, exc=exc)}
         finally:
             if tmp is not None:
                 try:
@@ -3362,7 +3358,7 @@ class OperationsService:
             payload={"restored_from": name, "pre_restore_snapshot": snapshot.name},
         )
         return {"ok": True, "restored_from": name, "snapshot": snapshot.name,
-                "message": f"تمت الاستعادة من «{name}». تم حفظ نسخة احترازية: {snapshot.name}."}
+                "message": _tr('تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s.', name=name, name2=snapshot.name)}
 
 
 def get_operations_service() -> OperationsService:

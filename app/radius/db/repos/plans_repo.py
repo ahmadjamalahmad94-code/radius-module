@@ -1,5 +1,6 @@
 """Access Plans repo."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Optional
 
@@ -265,7 +266,7 @@ def restore_plan(tenant_id: int, plan_id: int, *, actor: str = "") -> bool:
             "AND deleted_at IS NULL AND lower(trim(name)) = lower(?) LIMIT 1",
             (tenant_id, plan_id, name)).fetchone()
         if clash:
-            suffix = f" (مستعادة #{int(plan_id)})"
+            suffix = _tr(' (مستعادة #%(v)s)', v=int(plan_id))
             new_name = name[:max(1, PLAN_NAME_MAX - len(suffix))].rstrip() + suffix
         cur = conn.execute("""
             UPDATE access_plans

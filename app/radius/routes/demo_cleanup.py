@@ -12,6 +12,7 @@
 أيّ حركة حقيقيّة. الأداة idempotent: تشغيلها ثانيةً لا يحذف شيئًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -93,12 +94,12 @@ def demo_cleanup_run():
     confirm = str(payload.get("confirm") or "").strip()
     if confirm != CONFIRM_WORD:
         return jsonify({"ok": False, "code": "confirm",
-                        "message": f"للمتابعة اكتب كلمة التأكيد «{CONFIRM_WORD}» بالضبط."}), 200
+                        "message": _tr('للمتابعة اكتب كلمة التأكيد «%(CONFIRM_WORD)s» بالضبط.', CONFIRM_WORD=CONFIRM_WORD)}), 200
 
     # قفل: عمليّة واحدة في المرّة.
     if not _CLEANUP_LOCK.acquire(blocking=False):
         return jsonify({"ok": False, "code": "busy",
-                        "message": "هناك عمليّة تنظيف جارية بالفعل. انتظر انتهاءها."}), 200
+                        "message": _tr("هناك عمليّة تنظيف جارية بالفعل. انتظر انتهاءها.")}), 200
     try:
         t = _tid()
         actor = _actor()
@@ -108,7 +109,7 @@ def demo_cleanup_run():
         if not pre.get("total"):
             return jsonify({"ok": True, "code": "empty", "total_deleted": 0,
                             "report": [],
-                            "message": "لا توجد صفوف تجريبيّة (demo-seed) للحذف."}), 200
+                            "message": _tr("لا توجد صفوف تجريبيّة (demo-seed) للحذف.")}), 200
 
         # ── (1) نسخة احتياطيّة إلزاميّة أوّلًا (أرشيف كامل مضغوط gzip) ──
         from ..services.operations import get_operations_service
@@ -118,14 +119,14 @@ def demo_cleanup_run():
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("demo-cleanup backup crashed")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة — أُلغي الحذف "
-                                       "ولم يُحذف شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة — أُلغي الحذف "
+                                       "ولم يُحذف شيء."),
                             "detail": str(exc)}), 200
         if not bk.get("verified"):
-            msg = (bk.get("run") or {}).get("message") or "فشل التحقّق من النسخة."
+            msg = (bk.get("run") or {}).get("message") or _tr("فشل التحقّق من النسخة.")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغي "
-                                       "الحذف ولم يُحذف شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغي "
+                                       "الحذف ولم يُحذف شيء."),
                             "detail": msg}), 200
         backup_name = os.path.basename((bk.get("run") or {}).get("path") or "")
 
@@ -136,7 +137,7 @@ def demo_cleanup_run():
             _LOG.exception("demo-cleanup purge failed")
             return jsonify({
                 "ok": False, "code": "error", "backup": backup_name,
-                "message": f"تعذّر الحذف — أُعيد كل شيء (لم يُحذف). {exc}",
+                "message": _tr('تعذّر الحذف — أُعيد كل شيء (لم يُحذف). %(exc)s', exc=exc),
                 "detail": str(exc),
             }), 200
 
@@ -152,7 +153,7 @@ def demo_cleanup_run():
         except Exception:  # noqa: BLE001 — التدقيق لا يكسر النتيجة
             pass
         result["backup"] = backup_name
-        result["message"] = "تم حذف البيانات التجريبيّة بنجاح."
+        result["message"] = N_("تم حذف البيانات التجريبيّة بنجاح.")
         return jsonify(result)
     finally:
         _CLEANUP_LOCK.release()

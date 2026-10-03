@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -143,8 +144,8 @@ def _settings_payload(tenant_id: int) -> dict:
             "loop_routers": len({int(item["router_id"]) for item in loop_probes}),
         },
         "usage_windows": [
-            {"key": "day", "label": "يومي"},
-            {"key": "month", "label": "شهري"},
+            {"key": "day", "label": _tr("يومي")},
+            {"key": "month", "label": _tr("شهري")},
         ],
     }
 
@@ -167,7 +168,7 @@ def router_alerts_settings_patch():
 
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "بيانات الإعدادات مطلوبة.", status=422)
+        return fail("validation_error", _tr("بيانات الإعدادات مطلوبة."), status=422)
 
     tenant_id = _tid()
     errors: dict[str, str] = {}
@@ -209,7 +210,7 @@ def router_alerts_settings_patch():
                 if nas_repo.get_nas(tenant_id, router_id) is None:
                     return fail(
                         "not_found",
-                        "الراوتر غير موجود.",
+                        _tr("الراوتر غير موجود."),
                         status=404,
                         details={"router_id": router_id},
                     )
@@ -238,8 +239,8 @@ def router_alerts_settings_patch():
                 )
     except ValueError as exc:
         field = str(exc) or "settings"
-        errors[field] = "القيمة غير صالحة."
-        return fail("validation_error", "راجع قيم إعدادات التنبيه.", status=422, details=errors)
+        errors[field] = N_("القيمة غير صالحة.")
+        return fail("validation_error", _tr("راجع قيم إعدادات التنبيه."), status=422, details=errors)
 
     audit_repo.record(
         tenant_id=tenant_id,

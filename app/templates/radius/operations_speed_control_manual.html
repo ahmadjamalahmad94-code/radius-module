@@ -44,14 +44,14 @@
 {% set _total_online = control_profiles|sum(attribute='online') %}
 <section class="hub-hero-shell" data-testid="speed-manual-hero">
 {{ hub.megahero(
-  "التحكم اليدوي بالسرعة",
-  subtitle="اسحب الشريط أو حرّك المؤشر لضبط النِّسَب فورًا لكل الباقات أو لكل باقة على حدة — معاينة حية ثم حفظ كسياسة معاينة.",
+  _('التحكم اليدوي بالسرعة'),
+  subtitle=_('اسحب الشريط أو حرّك المؤشر لضبط النِّسَب فورًا لكل الباقات أو لكل باقة على حدة — معاينة حية ثم حفظ كسياسة معاينة.'),
   icon="sliders",
   kpis=[
-    {'label': 'عدد الباقات', 'value': control_profiles|length, 'icon': 'layer-group', 'variant': 'blue'},
-    {'label': 'المشتركون المشمولون', 'value': _total_subs, 'icon': 'users', 'variant': 'brand'},
-    {'label': 'المتصلون الآن', 'value': _total_online, 'icon': 'wifi', 'variant': 'green'},
-    {'label': 'السياسات المحفوظة', 'value': policies|length, 'icon': 'floppy-disk', 'variant': 'amber'}
+    {'label': _('عدد الباقات'), 'value': control_profiles|length, 'icon': 'layer-group', 'variant': 'blue'},
+    {'label': _('المشتركون المشمولون'), 'value': _total_subs, 'icon': 'users', 'variant': 'brand'},
+    {'label': _('المتصلون الآن'), 'value': _total_online, 'icon': 'wifi', 'variant': 'green'},
+    {'label': _('السياسات المحفوظة'), 'value': policies|length, 'icon': 'floppy-disk', 'variant': 'amber'}
   ]
 ) }}
 {# تبويب الانتقال بين الصفحتين الشقيقتين #}
@@ -289,7 +289,7 @@
                 <span class="spdx-slider__fill" data-fill></span>
                 <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input" data-row-uni
-                       aria-label="النسبة الحالية لباقة {{ p.name }}">
+                       aria-label="{{ _('النسبة الحالية لباقة %(name)s', name=p.name) }}">
               </div>
               <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
             </div>
@@ -304,7 +304,7 @@
                 <span class="spdx-slider__fill" data-fill></span>
                 <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input spdx-slider__input--purple" data-row-down
-                       aria-label="نسبة التحميل لباقة {{ p.name }}">
+                       aria-label="{{ _('نسبة التحميل لباقة %(name)s', name=p.name) }}">
               </div>
             </div>
             <div class="spdx-slider spdx-slider--row spdx-slider--mini spdx-slider--teal" data-slider-wrap>
@@ -314,7 +314,7 @@
                 <span class="spdx-slider__fill" data-fill></span>
                 <input type="range" min="0" max="300" step="1" value="100"
                        class="spdx-slider__input spdx-slider__input--teal" data-row-up
-                       aria-label="نسبة الرفع لباقة {{ p.name }}">
+                       aria-label="{{ _('نسبة الرفع لباقة %(name)s', name=p.name) }}">
               </div>
             </div>
           </div>
@@ -336,7 +336,7 @@
 
           <div class="spdx-profile__actions">
             <label class="spdx-switch spdx-switch--sm">
-              <input type="checkbox" data-enable checked aria-label="تفعيل التحكّم لباقة {{ p.name }}">
+              <input type="checkbox" data-enable checked aria-label="{{ _('تفعيل التحكّم لباقة %(name)s', name=p.name) }}">
               <span class="spdx-switch__track"></span>
             </label>
             <button type="button" class="spdx-ghost-btn" data-action="restore-one" title="{{ _('استعادة السرعة الأصلية') }}">
@@ -394,10 +394,10 @@
 
 {# ───── آخر السياسات المحفوظة (مرجع سريع): جدول موحّد uds ───── #}
 {% set _policy_status_labels = {
-  'dry_run_ready': 'جاهزة للمعاينة', 'pending': 'معلّقة', 'applied': 'مطبّقة', 'cancelled': 'ملغاة'
+  'dry_run_ready': _('جاهزة للمعاينة'), 'pending': _('معلّقة'), 'applied': _('مطبّقة'), 'cancelled': _('ملغاة')
 } %}
-{% call hub.section("سياسات المعاينة المحفوظة", icon="box-archive",
-                    meta=(policies|length|string + " سياسة"), flush=True) %}
+{% call hub.section(_('سياسات المعاينة المحفوظة'), icon="box-archive",
+                    meta=(policies|length|string + _(' سياسة')), flush=True) %}
   {% if policies %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="speed-manual-policies-table">
@@ -413,16 +413,16 @@
             <td><bdi dir="ltr">#{{ policy.id }}</bdi></td>
             <td>{{ policy.title }}</td>
             <td class="mono"><bdi dir="ltr">{{ policy.policy_key }}</bdi></td>
-            <td>{{ hub.pill(_policy_status_labels.get(policy.status, 'حالة غير معروفة'),
+            <td>{{ hub.pill(_policy_status_labels.get(policy.status, _('حالة غير معروفة')),
                             variant=("green" if policy.status == "dry_run_ready" else "grey")) }}</td>
-            <td>{{ "نعم" if policy.applied_to_radius else "لا" }}</td>
+            <td>{{ _('نعم') if policy.applied_to_radius else _('لا') }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد سياسات محفوظة حتى الآن.", sub="احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.", icon="box-archive") }}
+    {{ hub.empty(_('لا توجد سياسات محفوظة حتى الآن.'), sub=_('احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.'), icon="box-archive") }}
   {% endif %}
 {% endcall %}
 

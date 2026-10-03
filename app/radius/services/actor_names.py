@@ -15,13 +15,14 @@
 لا يرفع أبدًا — أيّ خطأ يُرجع النصّ الأصليّ.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
 _SYSTEM_JOBS_AR = {
-    "backup-scheduler": "مجدول النسخ الاحتياطي",
-    "reconciler": "المطابقة التلقائيّة",
-    "worker": "العامل الخلفيّ",
+    "backup-scheduler": N_("مجدول النسخ الاحتياطي"),
+    "reconciler": N_("المطابقة التلقائيّة"),
+    "worker": N_("العامل الخلفيّ"),
 }
 
 
@@ -55,14 +56,14 @@ def _admin_name_by_id(aid: int) -> str:
 
 def _token_label(token_id: str) -> str:
     if not token_id.isdigit():
-        return "تطبيق / مفتاح ربط"
+        return N_("تطبيق / مفتاح ربط")
     try:
         r = _db().execute("SELECT name, created_by FROM api_tokens WHERE id = ?",
                           (int(token_id),)).fetchone()
     except Exception:  # noqa: BLE001
         r = None
     if not r:
-        return f"مفتاح ربط #{token_id}"
+        return _tr('مفتاح ربط #%(token_id)s', token_id=token_id)
     name = str(r["name"] or "").strip()
     who = _admin_name_by_id(int(r["created_by"] or 0)) if r["created_by"] else ""
     if name.startswith("login:"):
@@ -70,13 +71,13 @@ def _token_label(token_id: str) -> str:
         if not who:
             parts = name.split(":")
             who = parts[1] if len(parts) > 1 else ""
-        return f"تطبيق — {who}" if who else "تطبيق"
+        return _tr('تطبيق — %(who)s', who=who) if who else N_("تطبيق")
     if who:
         # fix3 integration: مفتاح ربطٍ أنشأه مدير ⇒ اسم المدير (لا اسم المفتاح).
-        return f"تطبيق — {who}"
+        return _tr('تطبيق — %(who)s', who=who)
     if name:
-        return f"مفتاح: {name}"
-    return f"مفتاح ربط #{token_id}"
+        return _tr('مفتاح: %(name)s', name=name)
+    return _tr('مفتاح ربط #%(token_id)s', token_id=token_id)
 
 
 def actor_display(actor: Any) -> str:
@@ -89,20 +90,20 @@ def actor_display(actor: Any) -> str:
     try:
         low = raw.lower()
         if not raw or low in ("unknown", "none", "null", "-", "—"):
-            out = "غير معروف"
+            out = N_("غير معروف")
         elif low == "system":
-            out = "النظام"
+            out = N_("النظام")
         elif low == "ui":
-            out = "عملية واجهة (تلقائي)"
+            out = N_("عملية واجهة (تلقائي)")
         elif low.startswith("system:"):
             job = raw.split(":", 1)[1].strip()
-            out = "النظام: " + (_SYSTEM_JOBS_AR.get(job) or job.replace("-", " ").replace("_", " "))
+            out = _tr("النظام: ") + (_SYSTEM_JOBS_AR.get(job) or job.replace("-", " ").replace("_", " "))
         elif low.startswith("api-token"):
             rest = raw[len("api-token"):]
             tail = rest[1:].strip() if rest[:1] in (":", "-") else ""
-            out = _token_label(tail) if tail and tail.lower() != "env" else "تطبيق / مفتاح ربط"
+            out = _token_label(tail) if tail and tail.lower() != "env" else N_("تطبيق / مفتاح ربط")
         elif raw.isdigit():
-            out = _admin_name_by_id(int(raw)) or f"مدير #{raw}"
+            out = _admin_name_by_id(int(raw)) or _tr('مدير #%(raw)s', raw=raw)
         else:
             try:
                 r = _db().execute("SELECT full_name FROM admins WHERE username = ?",

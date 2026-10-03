@@ -7,11 +7,11 @@
 {% block page_sub %}<span class="sub">{{ _('مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.') }}</span>{% endblock %}
 
 {# ── tiny Arabic helpers ── #}
-{% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي عبر واجهة الربط'}.get(m, 'غير محدد') }}{% endmacro %}
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':_('ربط ذاتي عبر واجهة الربط')}.get(m, _('غير محدد')) }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('البريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
-  {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set m = {'sent':(_('تم الإرسال'),'green'),'delivered':(_('تم التسليم'),'green'),'read':(_('مقروءة'),'green'),'queued':(_('بالطابور'),'amber'),'pending':(_('قيد الانتظار'),'amber'),'skipped':(_('تم التخطّي'),'grey'),'failed':(_('فشلت'),'red'),'error':(_('خطأ'),'red')} -%}
   {%- set pair = m.get(s, (s if s else '—','grey')) -%}
   <span class="oc-stpill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
 {% endmacro %}
@@ -76,21 +76,21 @@
 
 {# ───── ONE unified hero: title + actions + live-status KPI strip ───── #}
 {% call hub.megahero(
-  "غرفة العمليات",
-  subtitle="نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.",
+  _('غرفة العمليات'),
+  subtitle=_('نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.'),
   icon="satellite-dish",
   actions_html=(
     ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else '')
     ~ ('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة سريعة") ~ '</a>'|safe if can_submit('radius.communications_send', 'GET') else '')
   ),
   kpis=[
-    {'label': 'القدرات المفعّلة', 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': 'مفعّلة الآن'},
-    {'label': 'قناة الرسائل القصيرة', 'value': 'مفعّلة' if (ch_sms and ch_sms.active) else 'متوقفة', 'icon': 'comment-sms', 'variant': 'green' if (ch_sms and ch_sms.active) else 'amber', 'sub': (mode_label(ch_sms.mode) if ch_sms else '—')},
-    {'label': 'قناة واتساب', 'value': 'مفعّلة' if (ch_wa and ch_wa.active) else 'متوقفة', 'icon': 'whatsapp', 'variant': 'green' if (ch_wa and ch_wa.active) else 'amber', 'sub': (mode_label(ch_wa.mode) if ch_wa else '—')},
-    {'label': 'بوت واتساب', 'value': status.bot.commands, 'icon': 'robot', 'variant': 'green' if status.bot.enabled else 'grey', 'sub': ('أمر مُفعّل' if status.bot.enabled else 'متوقف')},
-    {'label': 'الإشعارات الحدثية', 'value': status.notifications.enabled ~ ' / ' ~ status.notifications.total, 'icon': 'bell', 'variant': 'amber' if status.notifications.enabled else 'grey', 'sub': 'حدث مُفعّل'},
-    {'label': 'تنبيهات الشبكة', 'value': 'متصل' if status.telegram.connected else 'غير متصل', 'icon': 'telegram', 'variant': 'blue' if status.telegram.connected else 'red', 'sub': 'عبر تلجرام'},
-    {'label': 'آخر الإرسالات', 'value': status.deliveries.sent ~ ' ✓', 'icon': 'truck-fast', 'variant': 'green', 'sub': status.deliveries.failed ~ ' فاشلة · ' ~ status.deliveries.queued ~ ' بالطابور'}
+    {'label': _('القدرات المفعّلة'), 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': _('مفعّلة الآن')},
+    {'label': _('قناة الرسائل القصيرة'), 'value': _('مفعّلة') if (ch_sms and ch_sms.active) else _('متوقفة'), 'icon': 'comment-sms', 'variant': 'green' if (ch_sms and ch_sms.active) else 'amber', 'sub': (mode_label(ch_sms.mode) if ch_sms else '—')},
+    {'label': _('قناة واتساب'), 'value': _('مفعّلة') if (ch_wa and ch_wa.active) else _('متوقفة'), 'icon': 'whatsapp', 'variant': 'green' if (ch_wa and ch_wa.active) else 'amber', 'sub': (mode_label(ch_wa.mode) if ch_wa else '—')},
+    {'label': _('بوت واتساب'), 'value': status.bot.commands, 'icon': 'robot', 'variant': 'green' if status.bot.enabled else 'grey', 'sub': (_('أمر مُفعّل') if status.bot.enabled else _('متوقف'))},
+    {'label': _('الإشعارات الحدثية'), 'value': status.notifications.enabled ~ ' / ' ~ status.notifications.total, 'icon': 'bell', 'variant': 'amber' if status.notifications.enabled else 'grey', 'sub': _('حدث مُفعّل')},
+    {'label': _('تنبيهات الشبكة'), 'value': _('متصل') if status.telegram.connected else _('غير متصل'), 'icon': 'telegram', 'variant': 'blue' if status.telegram.connected else 'red', 'sub': _('عبر تلجرام')},
+    {'label': _('آخر الإرسالات'), 'value': status.deliveries.sent ~ ' ✓', 'icon': 'truck-fast', 'variant': 'green', 'sub': _('%(failed)s فاشلة · %(queued)s بالطابور', failed=status.deliveries.failed, queued=status.deliveries.queued)}
   ]
 ) %}
 {% endcall %}
@@ -99,20 +99,20 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "ما هذه الصفحة؟",
-  intro="هذه هي الصفحة الرئيسية لمركز التواصل: تعرض حالة كل قناة وإشعار وبوت في مكان واحد، وتتيح إرسالًا سريعًا.",
+  _('ما هذه الصفحة؟'),
+  intro=_('هذه هي الصفحة الرئيسية لمركز التواصل: تعرض حالة كل قناة وإشعار وبوت في مكان واحد، وتتيح إرسالًا سريعًا.'),
   icon="circle-info",
   items=[
-    {'icon': 'tower-broadcast', 'text': 'القنوات (الرسائل القصيرة وواتساب) هي وسيلة إيصال الرسائل للمشتركين.'},
-    {'icon': 'robot', 'text': 'بوت واتساب يردّ تلقائيًا على المشتركين بمعلومات الحساب والرصيد.'},
-    {'icon': 'bell', 'text': 'الإشعارات الحدثية ترسل تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء.'},
-    {'icon': 'telegram', 'text': 'تنبيهات الشبكة عبر تلجرام لمراقبة الراوترات والأجهزة.'}
+    {'icon': 'tower-broadcast', 'text': _('القنوات (الرسائل القصيرة وواتساب) هي وسيلة إيصال الرسائل للمشتركين.')},
+    {'icon': 'robot', 'text': _('بوت واتساب يردّ تلقائيًا على المشتركين بمعلومات الحساب والرصيد.')},
+    {'icon': 'bell', 'text': _('الإشعارات الحدثية ترسل تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء.')},
+    {'icon': 'telegram', 'text': _('تنبيهات الشبكة عبر تلجرام لمراقبة الراوترات والأجهزة.')}
   ],
-  note="جديد على الإعداد؟ افتح «دليل وشروحات» من الأعلى لربط واتساب وتلجرام خطوة بخطوة."
+  note=_('جديد على الإعداد؟ افتح «دليل وشروحات» من الأعلى لربط واتساب وتلجرام خطوة بخطوة.')
 )) %}
 
   {# ════════ QUICK-SEND (one-tap) ════════ #}
-  {% call hub.section("إرسال رسالة سريعة", icon="bolt") %}
+  {% call hub.section(_('إرسال رسالة سريعة'), icon="bolt") %}
     {% if can_submit('radius.communications_send', 'POST') %}<form class="oc-send" method="post" action="{{ url_for('radius.communications_send') }}" data-testid="oc-quicksend">
       {{ csrf_token_input() }}
       <input type="hidden" name="target" value="subscriber">
@@ -148,7 +148,7 @@
   {% endcall %}
 
   {# ════════ BIG QUICK-ACTION TILES ════════ #}
-  {% call hub.section("إجراءات سريعة", icon="bolt", meta="كل قسم بكبسة زر") %}
+  {% call hub.section(_('إجراءات سريعة'), icon="bolt", meta=_('كل قسم بكبسة زر')) %}
     <div class="oc-actions" data-testid="oc-actions">
       {% if can_submit('radius.communications_channels', 'GET') %}<a class="oc-act" href="{{ url_for('radius.communications_channels') }}">{% endif %}
         <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
@@ -189,7 +189,7 @@
   {% endcall %}
 
   {# ════════ RECENT DELIVERIES TABLE ════════ #}
-  {% call hub.section("أحدث عمليات الإرسال", icon="clock-rotate-left", meta="آخر 8 عمليات", flush=True) %}
+  {% call hub.section(_('أحدث عمليات الإرسال'), icon="clock-rotate-left", meta=_('آخر 8 عمليات'), flush=True) %}
     {% if deliveries %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
@@ -207,7 +207,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا توجد عمليات إرسال بعد.", sub="جرّب «إرسال رسالة سريعة» بالأعلى، أو افتح الدليل لإعداد القنوات.", icon="truck-fast") }}
+      {{ hub.empty(_('لا توجد عمليات إرسال بعد.'), sub=_('جرّب «إرسال رسالة سريعة» بالأعلى، أو افتح الدليل لإعداد القنوات.'), icon="truck-fast") }}
     {% endif %}
   {% endcall %}
 

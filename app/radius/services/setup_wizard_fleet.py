@@ -1,5 +1,6 @@
 """Fleet-level read-only provisioning dashboard helpers for Setup Wizard."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import ipaddress
 import os
@@ -314,12 +315,12 @@ def _last_verification(value: Any) -> dict[str, Any]:
 
 def _health_for(lifecycle_state: str, peer_status: str) -> dict[str, Any]:
     if lifecycle_state in {"fully_onboarded", "api_verified", "radius_verified", "vpn_verified"}:
-        return {"status": "healthy", "score": 90, "label_ar": "سليم"}
+        return {"status": "healthy", "score": 90, "label_ar": _tr("سليم")}
     if lifecycle_state == "failed":
-        return {"status": "stale", "score": 20, "label_ar": "متعثر"}
+        return {"status": "stale", "score": 20, "label_ar": _tr("متعثر")}
     if peer_status in {"ready_to_apply", "applied"} or lifecycle_state == "peer_ready":
-        return {"status": "missing_handshake", "score": 45, "label_ar": "ينتظر handshake"}
-    return {"status": "not_verified", "score": 10, "label_ar": "لم يتم التحقق"}
+        return {"status": "missing_handshake", "score": 45, "label_ar": _tr("ينتظر handshake")}
+    return {"status": "not_verified", "score": 10, "label_ar": _tr("لم يتم التحقق")}
 
 
 def _next_action(lifecycle_state: str, peer_status: str, needs_action: bool) -> str:

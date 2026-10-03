@@ -22,6 +22,7 @@ fetch) — هكذا يمرّ _csrf_token تلقائيًا عبر حاقن الن
 app/__init__.py ويُنزَّل الملف مباشرة من المتصفح بدون أي تعقيد Blob.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import io
 import json
@@ -59,7 +60,7 @@ def _parse_payload() -> tuple[str, list[str], list[list[str]], str]:
         except ValueError:
             rows = []
 
-    title = (title or "تصدير جدول").strip()[:120]
+    title = (title or N_("تصدير جدول")).strip()[:120]
     fmt = (fmt or "csv").strip().lower()
     if not isinstance(columns, list):
         columns = []
@@ -118,7 +119,7 @@ def _build_xlsx(title: str, columns: list[str], rows: list[list[str]]) -> bytes:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = (title or "تصدير")[:31] or "تصدير"
+    ws.title = (title or _tr("تصدير"))[:31] or _tr("تصدير")
     ws.sheet_view.rightToLeft = True  # اتجاه الورقة RTL للقراءة العربية
 
     thin = Side(style="thin", color=_argb(BRAND_LINE)[2:])
@@ -178,7 +179,7 @@ def _build_pdf(title: str, columns: list[str], rows: list[list[str]]) -> bytes:
 
     return build_premium_pdf(
         title=title,
-        subtitle=f"عدد السجلات: {len(rows)}",
+        subtitle=_tr('عدد السجلات: %(v)s', v=len(rows)),
         story=story,
         landscape_mode=len(columns) > 5,  # الجداول العريضة أفقيًا
         footer_note="HobeRadius • Hobe Hub",

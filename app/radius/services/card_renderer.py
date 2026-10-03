@@ -76,6 +76,7 @@ layout that matches the live preview rather than piling everything
 into the top-left corner like the old PDF path did.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import base64
 import functools
@@ -362,10 +363,10 @@ def _pil_supports_raqm() -> bool:
             import logging
 
             logging.getLogger(__name__).warning(
-                "Pillow بدون دعم Raqm: نص الـPDF العربي سيُرسم بخط نظام "
+                N_("Pillow بدون دعم Raqm: نص الـPDF العربي سيُرسم بخط نظام "
                 "(Tahoma/Arial) بدل خط المراعي الظاهر في المعاينة. "
                 "ثبّت عجلة Pillow الرسمية لاستعادة التطابق، وشغّل "
-                "python tools/check_font_pipeline.py للتشخيص."
+                "python tools/check_font_pipeline.py للتشخيص.")
             )
         except Exception:  # pragma: no cover — defensive
             pass
@@ -448,10 +449,10 @@ _COVERAGE_IGNORABLE = frozenset(
 # بدائل نصية أخيرة لرموز لا يغطيها أي خط متاح على الجهاز —
 # تُستخدم فقط عند فشل كل الخطوط (الخيار ب): مربع tofu أسوأ من نص واضح.
 _SYMBOL_TEXT_FALLBACKS = {
-    "₪": "شيكل",  # ₪ — بالكلمة: المنتج عربيّ أوّلًا، و«ILS» غريبة على الزبون
+    "₪": N_("شيكل"),  # ₪ — بالكلمة: المنتج عربيّ أوّلًا، و«ILS» غريبة على الزبون
     "₺": "TL",    # ₺ ليرة تركية
     "€": "EUR",   # € يورو
-    "﷼": "ر.س",   # ﷼ ريال
+    "﷼": N_("ر.س"),   # ﷼ ريال
     "✦": "*",     # ✦ نجمة زخرفية
 }
 
@@ -1147,7 +1148,7 @@ def build_card_render_model(
 
     # ── Text + meta ──
     brand_text   = _override(overrides, "brand_name",   layout, "HobeRadius")
-    title_text   = _override(overrides, "card_title",   layout, "بطاقة إنترنت")
+    title_text   = _override(overrides, "card_title",   layout, N_("بطاقة إنترنت"))
     footer_text  = _override(overrides, "footer_text",  layout, "")
     hotspot_text = _override(overrides, "hotspot_address", layout, "")
     price_text   = _override(overrides, "price_text",   layout, "")
@@ -1816,7 +1817,7 @@ def _embed_arabic_font_marker(pdf, ch: float) -> None:
         pdf.setFillColorRGB(1, 1, 1)
         for face in faces:
             pdf.setFont(face, 1)
-            pdf.drawString(-1000, ch + 1000, "ا")
+            pdf.drawString(-1000, ch + 1000, N_("ا"))
         pdf.restoreState()
     except Exception:
         try:
@@ -2996,7 +2997,7 @@ def _resolve_show_flags(layout: dict) -> dict[str, bool]:
 
 def _credential_label(kind: str, language: str) -> str:
     if str(language or "").lower() == "arabic":
-        return "اسم المستخدم" if kind == "user" else "كلمة المرور"
+        return N_("اسم المستخدم") if kind == "user" else N_("كلمة المرور")
     return "USER" if kind == "user" else "PASS"
 
 
@@ -3375,8 +3376,8 @@ def _fit_footer_text(text: str, base_size: float, max_width: float, *,
     return max(1.0, base_size * target / w), words[0]
 
 
-QR_NO_ROOM_MESSAGE = ("لا توجد مساحة لرمز QR دون أن يغطّي اسم المستخدم أو كلمة المرور — "
-                      "صغّر خطّ البيانات أو حجم الرمز، أو انقل الحقول، أو أخفِ رمز QR.")
+QR_NO_ROOM_MESSAGE = (N_("لا توجد مساحة لرمز QR دون أن يغطّي اسم المستخدم أو كلمة المرور — "
+                      "صغّر خطّ البيانات أو حجم الرمز، أو انقل الحقول، أو أخفِ رمز QR."))
 
 
 def _keep_qr_clear_of_credentials(elements: list[dict], cw: float, ch: float, *,

@@ -15,6 +15,7 @@
 (الـAPI: 422؛ الويب: تنبيه + عرض بلا فلترة).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import date, timedelta
 from typing import Any
@@ -26,8 +27,8 @@ class ReportDateError(ValueError):
         self.message = message
 
 
-_BAD_DATE = "صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD."
-_BAD_ORDER = "تاريخ «من» يجب أن يسبق تاريخ «إلى»."
+_BAD_DATE = N_("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+_BAD_ORDER = N_("تاريخ «من» يجب أن يسبق تاريخ «إلى».")
 
 
 def _bound(value: Any, *, end: bool, tenant_id: int | None) -> str | None:
@@ -97,7 +98,7 @@ def strict_int(value: Any, *, default: int, minimum: int, maximum: int,
     try:
         number = int(str(value).strip())
     except (TypeError, ValueError):
-        raise ReportDateError(f"قيمة {label} يجب أن تكون رقمًا صحيحًا.")
+        raise ReportDateError(_tr('قيمة %(label)s يجب أن تكون رقمًا صحيحًا.', label=label))
     return min(max(number, minimum), maximum)
 
 

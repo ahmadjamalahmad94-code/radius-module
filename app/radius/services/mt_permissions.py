@@ -20,6 +20,7 @@ The permission strings are stable identifiers — never rename;
 add new ones instead. Role rows in the DB store these as text.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Iterable
 
@@ -311,11 +312,11 @@ def require_perms(*perms: str) -> tuple[bool, str]:
         return True, ""
     admin = _current_admin()
     if admin is None:
-        return False, "تحتاج إلى تسجيل الدخول للوصول لهذه الصفحة."
+        return False, N_("تحتاج إلى تسجيل الدخول للوصول لهذه الصفحة.")
     held = admin_permissions(admin)
     missing = [p for p in perms if p not in held]
     if missing:
-        return False, "ليست لديك صلاحية كافية: " + ", ".join(missing)
+        return False, _tr("ليست لديك صلاحية كافية: ") + ", ".join(missing)
     return True, ""
 
 
@@ -383,17 +384,13 @@ def requires_perm(*perms: str):
             try:
                 return render_template(
                     "admin/forbidden.html",
-                    reason=reason or "ليست لديك صلاحية كافية.",
+                    reason=reason or N_("ليست لديك صلاحية كافية."),
                 ), 403
             except Exception:  # noqa: BLE001
                 # Template missing → don't 500 the operator;
                 # surface a tiny readable page.
                 return (
-                    "<h1 dir=\"rtl\" lang=\"ar\" "
-                    "style=\"font-family: sans-serif\">"
-                    "403 — ممنوع</h1><p dir=\"rtl\">"
-                    f"{reason or 'ليست لديك صلاحية كافية.'}"
-                    "</p>",
+                    _tr('<h1 dir="rtl" lang="ar" style="font-family: sans-serif">403 — ممنوع</h1><p dir="rtl">%(v)s</p>', v=reason or N_('ليست لديك صلاحية كافية.')),
                     403,
                     {"Content-Type": "text/html; charset=utf-8"},
                 )

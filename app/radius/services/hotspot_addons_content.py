@@ -14,6 +14,7 @@
     walled-garden تلقائي.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 import json as _json
@@ -41,7 +42,7 @@ def _widget_radio(cfg: dict, ctx: dict) -> str:
     url = safe_url(cfg.get("stream_url", ""))
     if not url:
         return ""
-    title = _esc(cfg.get("title") or "راديو")
+    title = _esc(cfg.get("title") or N_("راديو"))
     return (
         f'<h3 style="margin:4px 0">{title}</h3>'
         '<audio controls preload="none" style="width:100%;margin-top:6px">'
@@ -51,13 +52,13 @@ def _widget_radio(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="internet_radio",
     category=CAT_CONTENT,
-    label_ar="راديو إنترنت",
-    desc_ar="مشغّل راديو على صفحة ما بعد الدخول (رابط البثّ يُفتح تلقائيًّا في walled-garden).",
+    label_ar=N_("راديو إنترنت"),
+    desc_ar=N_("مشغّل راديو على صفحة ما بعد الدخول (رابط البثّ يُفتح تلقائيًّا في walled-garden)."),
     surface=SURFACE_POSTLOGIN,
     icon="radio",
     fields=(
-        AddonField(key="title", label_ar="العنوان", default="راديو", max_len=40),
-        AddonField(key="stream_url", label_ar="رابط البثّ (stream)", kind="url",
+        AddonField(key="title", label_ar=N_("العنوان"), default=N_("راديو"), max_len=40),
+        AddonField(key="stream_url", label_ar=N_("رابط البثّ (stream)"), kind="url",
                    placeholder="https://stream.example.com/live"),
     ),
     post_widget=_widget_radio,
@@ -88,15 +89,15 @@ def _frag_ticker(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="news_ticker",
     category=CAT_CONTENT,
-    label_ar="شريط أخبار متحرّك",
-    desc_ar="شريط عناوين متحرّك يُخبَز في الصفحة ويعمل قبل الدخول (سطر لكل عنوان).",
+    label_ar=N_("شريط أخبار متحرّك"),
+    desc_ar=N_("شريط عناوين متحرّك يُخبَز في الصفحة ويعمل قبل الدخول (سطر لكل عنوان)."),
     surface=SURFACE_PRELOGIN,
     icon="newspaper",
     server_side=True,
     fields=(
-        AddonField(key="items", label_ar="العناوين (سطر لكل واحد)",
+        AddonField(key="items", label_ar=N_("العناوين (سطر لكل واحد)"),
                    kind="textarea", max_len=600,
-                   placeholder="عرض رمضان: ٥٠٪ خصم\nصيانة الجمعة ٢ظهرًا"),
+                   placeholder=N_("عرض رمضان: ٥٠٪ خصم\nصيانة الجمعة ٢ظهرًا")),
     ),
     pre_fragment=_frag_ticker,
 ))
@@ -133,14 +134,14 @@ def _frag_prayer(cfg: dict, ctx: dict) -> str:
         '<div class="hr-pray" dir="rtl" style="margin:14px auto;max-width:540px;'
         'border:1px solid #e6eaf2;border-radius:14px;background:#fff;'
         'overflow:hidden">'
-        '<div style="background:' + accent + ';color:#fff;padding:8px 14px;'
+        '<div style="background:' + accent + N_(';color:#fff;padding:8px 14px;'
         'display:flex;justify-content:space-between;font-weight:800">'
         '<span>مواقيت الصلاة</span><span id="hr-hijri"></span></div>'
         '<div id="hr-pray-grid" style="display:grid;'
         'grid-template-columns:repeat(3,1fr);gap:1px;background:#eef2f7"></div>'
         '</div>'
         '<script>(function(){'
-        'var LAT=' + repr(lat) + ',LON=' + repr(lon) + ',TZ=' + repr(tz) + ','
+        'var LAT=') + repr(lat) + ',LON=' + repr(lon) + ',TZ=' + repr(tz) + ','
         'FA=' + fajr_ang + ',IA=' + isha_ang + ',ASR=' + asr_factor + ';'
         'function dR(d){return d*Math.PI/180;}function rD(r){return r*180/Math.PI;}'
         'var now=new Date();'
@@ -192,19 +193,19 @@ def _frag_prayer(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="prayer_times",
     category=CAT_CONTENT,
-    label_ar="مواقيت الصلاة + التاريخ الهجري",
-    desc_ar="مواقيت الصلاة والتاريخ الهجري — تُحسب في المتصفّح من إحداثياتك، تعمل قبل الدخول وبلا إنترنت وتتحدّث يوميًّا.",
+    label_ar=N_("مواقيت الصلاة + التاريخ الهجري"),
+    desc_ar=N_("مواقيت الصلاة والتاريخ الهجري — تُحسب في المتصفّح من إحداثياتك، تعمل قبل الدخول وبلا إنترنت وتتحدّث يوميًّا."),
     surface=SURFACE_PRELOGIN,
     icon="mosque",
     server_side=True,
     fields=(
-        AddonField(key="lat", label_ar="خط العرض (latitude)", kind="text",
+        AddonField(key="lat", label_ar=N_("خط العرض (latitude)"), kind="text",
                    default="21.42", placeholder="21.42", max_len=12),
-        AddonField(key="lon", label_ar="خط الطول (longitude)", kind="text",
+        AddonField(key="lon", label_ar=N_("خط الطول (longitude)"), kind="text",
                    default="39.83", placeholder="39.83", max_len=12),
-        AddonField(key="tz", label_ar="فرق التوقيت (ساعات)", kind="text",
+        AddonField(key="tz", label_ar=N_("فرق التوقيت (ساعات)"), kind="text",
                    default="3", placeholder="3", max_len=6),
-        AddonField(key="method", label_ar="طريقة الحساب", kind="select",
+        AddonField(key="method", label_ar=N_("طريقة الحساب"), kind="select",
                    default="umm_alqura", options=(
                        ("umm_alqura", "أم القرى (السعودية)"),
                        ("mwl", "رابطة العالم الإسلامي"),
@@ -212,7 +213,7 @@ register(AddonSpec(
                        ("karachi", "كراتشي"),
                        ("gulf", "الخليج"),
                        ("isna", "أمريكا الشمالية (ISNA)"))),
-        AddonField(key="asr", label_ar="مذهب العصر", kind="select",
+        AddonField(key="asr", label_ar=N_("مذهب العصر"), kind="select",
                    default="standard", options=(
                        ("standard", "الجمهور (ظل ١)"),
                        ("hanafi", "الحنفي (ظل ٢)"))),
@@ -225,11 +226,11 @@ register(AddonSpec(
 # 4) الطقس (pre — لقطة تُجلب وقت التوليد، fail-safe)
 # ════════════════════════════════════════════════════════════════
 _WMO = {
-    0: ("صحو", "☀️"), 1: ("صحو غالبًا", "🌤️"), 2: ("غائم جزئيًّا", "⛅"),
-    3: ("غائم", "☁️"), 45: ("ضباب", "🌫️"), 48: ("ضباب", "🌫️"),
-    51: ("رذاذ", "🌦️"), 61: ("مطر خفيف", "🌧️"), 63: ("مطر", "🌧️"),
-    65: ("مطر غزير", "🌧️"), 71: ("ثلج", "🌨️"), 80: ("زخّات", "🌦️"),
-    95: ("عاصفة رعدية", "⛈️"),
+    0: (N_("صحو"), "☀️"), 1: (N_("صحو غالبًا"), "🌤️"), 2: (N_("غائم جزئيًّا"), "⛅"),
+    3: (N_("غائم"), "☁️"), 45: (N_("ضباب"), "🌫️"), 48: (N_("ضباب"), "🌫️"),
+    51: (N_("رذاذ"), "🌦️"), 61: (N_("مطر خفيف"), "🌧️"), 63: (N_("مطر"), "🌧️"),
+    65: (N_("مطر غزير"), "🌧️"), 71: (N_("ثلج"), "🌨️"), 80: (N_("زخّات"), "🌦️"),
+    95: (N_("عاصفة رعدية"), "⛈️"),
 }
 
 
@@ -277,15 +278,15 @@ def _frag_weather(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="weather",
     category=CAT_CONTENT,
-    label_ar="الطقس",
-    desc_ar="لقطة طقس حاليّة تُجلب وقت النشر وتُخبَز في الصفحة (تعمل قبل الدخول؛ تتحدّث عند إعادة النشر).",
+    label_ar=N_("الطقس"),
+    desc_ar=N_("لقطة طقس حاليّة تُجلب وقت النشر وتُخبَز في الصفحة (تعمل قبل الدخول؛ تتحدّث عند إعادة النشر)."),
     surface=SURFACE_PRELOGIN,
     icon="cloud-sun",
     server_side=True,
     fields=(
-        AddonField(key="city", label_ar="اسم المدينة (اختياري)", max_len=40),
-        AddonField(key="lat", label_ar="خط العرض", default="", max_len=12),
-        AddonField(key="lon", label_ar="خط الطول", default="", max_len=12),
+        AddonField(key="city", label_ar=N_("اسم المدينة (اختياري)"), max_len=40),
+        AddonField(key="lat", label_ar=N_("خط العرض"), default="", max_len=12),
+        AddonField(key="lon", label_ar=N_("خط الطول"), default="", max_len=12),
     ),
     pre_fragment=_frag_weather,
 ))
@@ -316,12 +317,12 @@ def _frag_carousel(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="image_carousel",
     category=CAT_CONTENT,
-    label_ar="معرض صور متحرّك",
-    desc_ar="شريط صور ينزلق تلقائيًّا (رابط صورة لكل سطر؛ نطاقاتها تُفتح تلقائيًّا في walled-garden).",
+    label_ar=N_("معرض صور متحرّك"),
+    desc_ar=N_("شريط صور ينزلق تلقائيًّا (رابط صورة لكل سطر؛ نطاقاتها تُفتح تلقائيًّا في walled-garden)."),
     surface=SURFACE_PRELOGIN,
     icon="images",
     fields=(
-        AddonField(key="images", label_ar="روابط الصور (سطر لكل صورة)",
+        AddonField(key="images", label_ar=N_("روابط الصور (سطر لكل صورة)"),
                    kind="textarea", max_len=1200, url_list=True,
                    placeholder="https://cdn.example.com/1.jpg"),
     ),
@@ -364,7 +365,7 @@ def _frag_qr_menu(cfg: dict, ctx: dict) -> str:
     url = safe_url(cfg.get("url", ""))
     if not url:
         return ""
-    title = _esc(cfg.get("title") or "قائمتنا")
+    title = _esc(cfg.get("title") or N_("قائمتنا"))
     svg = _qr_svg(url)
     if not svg:
         return ""
@@ -381,14 +382,14 @@ def _frag_qr_menu(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="qr_menu",
     category=CAT_CONTENT,
-    label_ar="قائمة QR",
-    desc_ar="رمز QR مخبوز في الصفحة (SVG) يفتح قائمتك/موقعك — يعمل قبل الدخول وبلا إنترنت.",
+    label_ar=N_("قائمة QR"),
+    desc_ar=N_("رمز QR مخبوز في الصفحة (SVG) يفتح قائمتك/موقعك — يعمل قبل الدخول وبلا إنترنت."),
     surface=SURFACE_PRELOGIN,
     icon="qrcode",
     server_side=True,
     fields=(
-        AddonField(key="title", label_ar="العنوان", default="قائمتنا", max_len=40),
-        AddonField(key="url", label_ar="الرابط (قائمة/موقع)", kind="url",
+        AddonField(key="title", label_ar=N_("العنوان"), default=N_("قائمتنا"), max_len=40),
+        AddonField(key="url", label_ar=N_("الرابط (قائمة/موقع)"), kind="url",
                    placeholder="https://menu.example.com"),
     ),
     pre_fragment=_frag_qr_menu,
@@ -402,7 +403,7 @@ def _widget_survey(cfg: dict, ctx: dict) -> str:
     url = safe_url(cfg.get("form_url", ""))
     if not url:
         return ""
-    q = _esc(cfg.get("question") or "كيف كانت تجربتك؟")
+    q = _esc(cfg.get("question") or N_("كيف كانت تجربتك؟"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     return (
         f'<h3 style="margin:4px 0">{q}</h3>'
@@ -415,14 +416,14 @@ def _widget_survey(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="survey",
     category=CAT_CONTENT,
-    label_ar="استبيان / تقييم",
-    desc_ar="زر يفتح نموذج رأي خارجي على صفحة ما بعد الدخول (نطاقه يُفتح تلقائيًّا).",
+    label_ar=N_("استبيان / تقييم"),
+    desc_ar=N_("زر يفتح نموذج رأي خارجي على صفحة ما بعد الدخول (نطاقه يُفتح تلقائيًّا)."),
     surface=SURFACE_POSTLOGIN,
     icon="square-poll-vertical",
     fields=(
-        AddonField(key="question", label_ar="السؤال",
-                   default="كيف كانت تجربتك؟", max_len=80),
-        AddonField(key="form_url", label_ar="رابط النموذج", kind="url",
+        AddonField(key="question", label_ar=N_("السؤال"),
+                   default=N_("كيف كانت تجربتك؟"), max_len=80),
+        AddonField(key="form_url", label_ar=N_("رابط النموذج"), kind="url",
                    placeholder="https://forms.gle/..."),
     ),
     post_widget=_widget_survey,

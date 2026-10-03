@@ -3,23 +3,23 @@
 
 {# ───── قواميس تعريب الحالات: تحوّل قيم enum الإنجليزية الخام إلى عربية للمستخدم ───── #}
 {%- set status_labels = {
-  'pending': 'معلّقة', 'paid': 'مدفوع', 'rejected': 'مرفوض',
-  'proof_submitted': 'إثبات مرسل', 'under_review': 'تحت المراجعة',
-  'expired': 'انتهى', 'cancelled': 'ملغى', 'failed': 'فشل'
+  'pending': _('معلّقة'), 'paid': _('مدفوع'), 'rejected': _('مرفوض'),
+  'proof_submitted': _('إثبات مرسل'), 'under_review': _('تحت المراجعة'),
+  'expired': _('انتهى'), 'cancelled': _('ملغى'), 'failed': _('فشل')
 } -%}
-{%- set review_labels = {'approved': 'موافق عليه', 'rejected': 'مرفوض', 'pending': 'قيد الانتظار'} -%}
-{%- set apply_labels = {'applied': 'مطبّق', 'failed': 'فشل', 'pending': 'قيد الانتظار'} -%}
+{%- set review_labels = {'approved': _('موافق عليه'), 'rejected': _('مرفوض'), 'pending': _('قيد الانتظار')} -%}
+{%- set apply_labels = {'applied': _('مطبّق'), 'failed': _('فشل'), 'pending': _('قيد الانتظار')} -%}
 {# تعريب الغرض ونوع الدافع — مطابِق للقواميس في payment_collection_requests.html
    لمنع ظهور قيم enum الإنجليزية الخام في كتلة تفاصيل الطلب. #}
 {%- set PURPOSE_AR = {
-  'card_purchase': 'شراء بطاقة', 'monthly_subscription': 'اشتراك شهري',
-  'subscriber_renewal': 'تجديد مشترك', 'quota_topup': 'إعادة تعبئة الحصة',
-  'time_extension': 'تمديد المدة', 'distributor_payment': 'دفع الموزع',
-  'loan_settlement': 'تسوية قرض'
+  'card_purchase': _('شراء بطاقة'), 'monthly_subscription': _('اشتراك شهري'),
+  'subscriber_renewal': _('تجديد مشترك'), 'quota_topup': _('إعادة تعبئة الحصة'),
+  'time_extension': _('تمديد المدة'), 'distributor_payment': _('دفع الموزع'),
+  'loan_settlement': _('تسوية قرض')
 } -%}
 {%- set PAYER_AR = {
-  'subscriber': 'مشترك', 'card_user': 'مستخدم بطاقة', 'distributor': 'موزع',
-  'manager': 'مدير', 'guest': 'زائر'
+  'subscriber': _('مشترك'), 'card_user': _('مستخدم بطاقة'), 'distributor': _('موزع'),
+  'manager': _('مدير'), 'guest': _('زائر')
 } -%}
 
 {% block title %}{{ _("دفعة") }} {{ item.reference_code }}{% endblock %}
@@ -44,20 +44,20 @@
 {# ───── الهيرو الموحّد المدموج: عنوان + إجراءات + شريط KPIs في كتلة .uds-hero واحدة ───── #}
 {# الحالة معرّبة عبر status_labels وتطبيق الخدمة عبر apply_labels لتجنّب ظهور enum خام #}
 {{ hub.megahero(
-  "دفعة " ~ item.reference_code,
-  subtitle="تفاصيل طلب التحصيل ومراجعة إثبات الدفع — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
+  _('دفعة %(reference_code)s', reference_code=item.reference_code),
+  subtitle=_('تفاصيل طلب التحصيل ومراجعة إثبات الدفع — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.'),
   icon="receipt",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("كل الطلبات") ~ '</a>'|safe if can_submit('radius.payment_collection_requests', 'GET') else ''),
   kpis=[
-    {'label': 'المبلغ', 'value': item.amount|money, 'icon': 'money-bill-wave', 'variant': 'green'},
-    {'label': 'الحالة', 'value': status_labels.get(item.status, item.status), 'icon': 'circle-info', 'variant': 'brand'},
-    {'label': 'القيد المالي', 'value': item.ledger_entry_id or 'لم يُرحّل بعد', 'icon': 'scale-balanced', 'variant': 'blue'},
-    {'label': 'تطبيق الخدمة', 'value': apply_labels.get(item.service_apply_status, item.service_apply_status) if item.service_apply_status else 'غير مطبّق', 'icon': 'bolt', 'variant': 'amber'}
+    {'label': _('المبلغ'), 'value': item.amount|money, 'icon': 'money-bill-wave', 'variant': 'green'},
+    {'label': _('الحالة'), 'value': status_labels.get(item.status, item.status), 'icon': 'circle-info', 'variant': 'brand'},
+    {'label': _('القيد المالي'), 'value': item.ledger_entry_id or _('لم يُرحّل بعد'), 'icon': 'scale-balanced', 'variant': 'blue'},
+    {'label': _('تطبيق الخدمة'), 'value': apply_labels.get(item.service_apply_status, item.service_apply_status) if item.service_apply_status else _('غير مطبّق'), 'icon': 'bolt', 'variant': 'amber'}
   ]
 ) }}
 
 <div class="hub-grid-2">
-  {% call hub.section("تفاصيل الطلب", icon="circle-info") %}
+  {% call hub.section(_('تفاصيل الطلب'), icon="circle-info") %}
     <dl class="pcd-kv">
       <dt>{{ _('المعرّف') }}</dt><dd class="mono">{{ item.id }}</dd>
       <dt>{{ _('المرجع') }}</dt><dd class="mono">{{ item.reference_code }}</dd>
@@ -68,14 +68,14 @@
       <dt>{{ _('المحفظة') }}</dt><dd class="mono">{{ item.receiver_wallet }}</dd>
       {# تعريب الحالة عبر القاموس بدل عرض enum خام #}
       <dt>{{ _('الحالة') }}</dt><dd>{{ status_labels.get(item.status, item.status) }}</dd>
-      <dt>{{ _('دفتر القيود') }}</dt><dd class="mono">{{ item.ledger_entry_id or 'لم يُرحّل بعد' }}</dd>
+      <dt>{{ _('دفتر القيود') }}</dt><dd class="mono">{{ item.ledger_entry_id or _('لم يُرحّل بعد') }}</dd>
       {# تعريب حالة تطبيق الخدمة عبر apply_labels بدل عرض enum خام #}
-      <dt>{{ _('تطبيق الخدمة') }}</dt><dd>{% if item.service_apply_status %}<span title="{{ item.service_apply_status }}">{{ apply_labels.get(item.service_apply_status, item.service_apply_status) }}</span>{% else %}غير مطبّق{% endif %}</dd>
+      <dt>{{ _('تطبيق الخدمة') }}</dt><dd>{% if item.service_apply_status %}<span title="{{ item.service_apply_status }}">{{ apply_labels.get(item.service_apply_status, item.service_apply_status) }}</span>{% else %}{{ _('غير مطبّق') }}{% endif %}</dd>
       <dt>{{ _('ينتهي في') }}</dt><dd class="mono">{{ item.expires_at|dt_local if item.expires_at else '—' }}</dd>
     </dl>
   {% endcall %}
 
-  {% call hub.section("إثباتات الدفع", icon="file-lines", meta=(proofs|length|string + " إثبات") if proofs else "", flush=True) %}
+  {% call hub.section(_('إثباتات الدفع'), icon="file-lines", meta=(proofs|length|string + _(' إثبات')) if proofs else "", flush=True) %}
     {% if proofs %}
     {# جدول موحّد uds-table: فرز + ترقيم + اختيار أعمدة + تصدير CSV/XLSX/PDF #}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -89,14 +89,14 @@
             <td class="small">{{ proof.note or '—' }}</td>
             <td class="mono small">{{ proof.submitted_at|dt_local }}</td>
             {# تعريب حالة المراجعة عبر review_labels مع افتراض قيد الانتظار #}
-            <td>{{ review_labels.get(proof.review_status, 'قيد الانتظار') }}</td>
+            <td>{{ review_labels.get(proof.review_status, _('قيد الانتظار')) }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     {% else %}
-    <div style="padding:6px 4px">{{ hub.empty("لم يتم إرسال إثبات دفع بعد.", icon="file-lines") }}</div>
+    <div style="padding:6px 4px">{{ hub.empty(_('لم يتم إرسال إثبات دفع بعد.'), icon="file-lines") }}</div>
     {% endif %}
   {% endcall %}
 </div>
@@ -117,7 +117,7 @@
 {% endif %}
 
 {% if item.status in ['proof_submitted','under_review'] %}
-{% call hub.section("مراجعة يدوية", icon="clipboard-check") %}
+{% call hub.section(_('مراجعة يدوية'), icon="clipboard-check") %}
   <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
     {{ _('القبول يعلّم الدفع كمدفوع ويرحّل قيدًا واحدًا قابلًا للتكرار الآمن. تفعيل الخدمة لا ينفذ في هذه المرحلة.') }}
   </p>
@@ -131,7 +131,7 @@
       {% if frozen %}
       <span style="display:inline-flex;align-items:center;gap:6px">
         <button class="hub-btn hub-btn--primary" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-check"></i> {{ _('قبول الدفع اليدوي') }}</button>
-        <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
+        <span class="hub-hint" tabindex="0" data-hint="{{ _('مجمّد حتى ربط بوابة دفع') }}"><i class="fa-solid fa-snowflake"></i></span>
       </span>
       {% else %}
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('قبول الدفع اليدوي') }}</button>
@@ -146,7 +146,7 @@
       {% if frozen %}
       <span style="display:inline-flex;align-items:center;gap:6px">
         <button class="hub-btn hub-btn--secondary" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-xmark"></i> {{ _('رفض الإثبات') }}</button>
-        <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
+        <span class="hub-hint" tabindex="0" data-hint="{{ _('مجمّد حتى ربط بوابة دفع') }}"><i class="fa-solid fa-snowflake"></i></span>
       </span>
       {% else %}
       <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض الإثبات') }}</button>
@@ -157,7 +157,7 @@
 {% endif %}
 
 {% if item.status == 'paid' %}
-{% call hub.section("تطبيق الخدمة", icon="bolt", meta=(apply_attempts|length|string + " محاولة") if apply_attempts else "", flush=apply_attempts|length > 0) %}
+{% call hub.section(_('تطبيق الخدمة'), icon="bolt", meta=(apply_attempts|length|string + _(' محاولة')) if apply_attempts else "", flush=apply_attempts|length > 0) %}
   <div style="{% if apply_attempts %}padding:14px 16px{% endif %}">
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">
       {{ _('هذا يسجل تطبيق الاستحقاق فقط. لا يستدعي خدمة المصادقة أو فصل الجلسات أو الراوتر.') }}
@@ -168,7 +168,7 @@
       {# مجمّد: تطبيق الخدمة معطّل حتى ربط بوابة دفع #}
       <span style="display:inline-flex;align-items:center;gap:6px">
         <button class="hub-btn hub-btn--primary" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-bolt"></i> {{ _('تسجيل تطبيق الخدمة') }}</button>
-        <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
+        <span class="hub-hint" tabindex="0" data-hint="{{ _('مجمّد حتى ربط بوابة دفع') }}"><i class="fa-solid fa-snowflake"></i></span>
       </span>
       {% else %}
       <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-bolt"></i> {{ _('تسجيل تطبيق الخدمة') }}</button>

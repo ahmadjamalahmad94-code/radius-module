@@ -1,5 +1,6 @@
 """Operational reports JSON API for Flutter parity."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -35,7 +36,7 @@ def operational_report(slug: str):
             return denied
     query = (request.args.get("q") or request.args.get("query") or "").strip()
     if len(query) > 120:
-        return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+        return fail("validation_error", _tr("عبارة البحث طويلة جدًا."), status=422)
     # from/date_from و to/date_to = يوم محلّيّ شامل (كانت تُتجاهَل كليًّا)؛
     # تاريخ غير صالح/نطاق مقلوب/limit غير رقميّ → 422 عربيّ (لا صمتٌ يعيد 100).
     date_from = request.args.get("date_from") or request.args.get("from") or ""
@@ -63,7 +64,7 @@ def operational_report(slug: str):
     except KeyError:
         return fail(
             "not_found",
-            "تقرير التشغيل المطلوب غير متاح.",
+            N_("تقرير التشغيل المطلوب غير متاح."),
             status=404,
             details={"slug": slug, "available": sorted(operational_reports_repo.REPORT_SLUGS)},
         )

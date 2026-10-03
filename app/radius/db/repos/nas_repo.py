@@ -1,5 +1,6 @@
 """NAS Devices repo."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Optional, Sequence
 
@@ -187,7 +188,7 @@ def restore_nas(tenant_id: int, nas_id: int, *, actor: str = "") -> bool:
             "AND deleted_at IS NULL AND lower(trim(name)) = lower(trim(?))",
             (tenant_id, nas_id, name)).fetchone()
         if taken:
-            name = f"{name[:80]} (مستعاد {nas_id})"
+            name = _tr('%(v)s (مستعاد %(nas_id)s)', v=name[:80], nas_id=nas_id)
         cur = conn.execute("""
             UPDATE nas_devices
             SET deleted_at = NULL, deleted_by = '', delete_reason = '',

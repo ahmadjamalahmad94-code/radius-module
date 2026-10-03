@@ -36,8 +36,8 @@
 <section class="hub-hero-shell">
 {# _report_jump متغيّر block-set (Markup) — يُعلَّم الجزء الحرفي |safe قبل دمجه بـ«~» وإلا تُهرَّب وسومه فتظهر الأزرار نصًّا خامًا #}
 {{ hub.megahero(
-  "أرشيف التقارير",
-  subtitle="اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء — مرجع ثابت لا يُستبدل ولا يُحذف، حتى لو تغيّرت الأرقام لاحقًا.",
+  _('أرشيف التقارير'),
+  subtitle=_('اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء — مرجع ثابت لا يُستبدل ولا يُحذف، حتى لو تغيّرت الأرقام لاحقًا.'),
   icon="box-archive",
   actions_html=_report_jump ~ ('
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="archive-create">
@@ -47,14 +47,14 @@
       <i class="fa-solid fa-chart-line"></i> '|safe ~ _("التقارير الحية") ~ '
     </a>'|safe)|safe,
   kpis=[
-    {'label': 'إجمالي اللقطات', 'value': archives|length, 'icon': 'box-archive',  'variant': 'brand',
-     'sub': 'كل اللقطات المحفوظة بلا حذف'},
-    {'label': 'سنوية',          'value': _yearly,         'icon': 'calendar',     'variant': 'green',
-     'sub': 'لقطة لكل سنة كاملة'},
-    {'label': 'شهرية',          'value': _monthly,        'icon': 'calendar-day', 'variant': 'amber',
-     'sub': 'لقطة لكل شهر كامل'},
-    {'label': 'يومية',          'value': _daily,          'icon': 'clock',        'variant': 'blue',
-     'sub': 'لقطة ليوم محدد'},
+    {'label': _('إجمالي اللقطات'), 'value': archives|length, 'icon': 'box-archive',  'variant': 'brand',
+     'sub': _('كل اللقطات المحفوظة بلا حذف')},
+    {'label': _('سنوية'),          'value': _yearly,         'icon': 'calendar',     'variant': 'green',
+     'sub': _('لقطة لكل سنة كاملة')},
+    {'label': _('شهرية'),          'value': _monthly,        'icon': 'calendar-day', 'variant': 'amber',
+     'sub': _('لقطة لكل شهر كامل')},
+    {'label': _('يومية'),          'value': _daily,          'icon': 'clock',        'variant': 'blue',
+     'sub': _('لقطة ليوم محدد')},
   ]
 ) }}
 </section>{# /hub-hero-shell #}
@@ -63,7 +63,7 @@
 {# ───── جدول اللقطات المحفوظة — نفس أعمدة جدول لقطات المحاسبة:
         الفترة (من–إلى) + عدد الصفوف + الإجمالي، من اللقطة المصدر المجمّدة.
         الأرشيفات القديمة بلا لقطة مصدر تعرض «—» بدل أرقام مضلِّلة. ───── #}
-{% call hub.section("اللقطات المحفوظة", icon="lock", meta=archives|length|string + " لقطة", flush=True) %}
+{% call hub.section(_('اللقطات المحفوظة'), icon="lock", meta=archives|length|string + _(' لقطة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="archive-snapshots-table" data-persist-key="rep-archive">
       <thead>
@@ -72,7 +72,7 @@
           <th>{{ _('النوع') }}</th>
           <th>{{ _('فترة الأرشفة') }}</th>
           <th>{{ _('الفترة (من–إلى)') }}
-            <span class="hub-hint" tabindex="0" data-hint="نطاق التواريخ الذي فُلترت به صفوف اللقطة المصدر وقت التجميد. اللقطات الأقدم من هذه الميزة تعرض «—»."><i class="fa-solid fa-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('نطاق التواريخ الذي فُلترت به صفوف اللقطة المصدر وقت التجميد. اللقطات الأقدم من هذه الميزة تعرض «—».') }}"><i class="fa-solid fa-info"></i></span>
           </th>
           <th class="num">{{ _('عدد الصفوف') }}</th>
           <th class="num">{{ _('الإجمالي') }}</th>
@@ -86,11 +86,11 @@
         <tr>
           <td class="num mono small">#{{ archive.id }}</td>
           <td>
-            {% if archive.archive_type == 'yearly' %}{{ hub.pill("سنوية", variant="green", dot=False) }}
-            {% elif archive.archive_type == 'monthly' %}{{ hub.pill("شهرية", variant="amber", dot=False) }}
-            {% elif archive.archive_type == 'daily' %}{{ hub.pill("يومية", variant="blue", dot=False) }}
+            {% if archive.archive_type == 'yearly' %}{{ hub.pill(_('سنوية'), variant="green", dot=False) }}
+            {% elif archive.archive_type == 'monthly' %}{{ hub.pill(_('شهرية'), variant="amber", dot=False) }}
+            {% elif archive.archive_type == 'daily' %}{{ hub.pill(_('يومية'), variant="blue", dot=False) }}
             {# نوع غير معروف: نعرض ملصقًا عربيًا محايدًا ونحفظ القيمة الخام في title بدل عرض إنجليزي خام #}
-            {% else %}<span title="{{ archive.archive_type or '' }}">{{ hub.pill("غير محدد", variant="grey", dot=False) }}</span>{% endif %}
+            {% else %}<span title="{{ archive.archive_type or '' }}">{{ hub.pill(_('غير محدد'), variant="grey", dot=False) }}</span>{% endif %}
           </td>
           <td class="mono small">{{ archive.period }}</td>
           <td class="mono small" style="white-space:nowrap;direction:ltr;text-align:end">
@@ -120,8 +120,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد لقطات أرشيف حتى الآن",
-  sub="اضغط زر «إنشاء لقطة أرشيف» في الأعلى لحفظ نتيجة تقرير كمرجع ثابت لا يتغيّر.",
+  _('لا توجد لقطات أرشيف حتى الآن'),
+  sub=_('اضغط زر «إنشاء لقطة أرشيف» في الأعلى لحفظ نتيجة تقرير كمرجع ثابت لا يتغيّر.'),
   icon="box-archive"
 ) }}
 {% endif %}

@@ -30,21 +30,21 @@
 {% block content %}
 
 {{ hub.megahero(
-  "منع استنساخ MAC",
-  subtitle="عند تشغيل الميزة: نربط عنوان MAC ببصمة الجهاز عند أول دخول ناجح، ثم نُعيد التحقّق على كل auth. نفس الـMAC ببصمة مختلفة = استنساخ → رفض + تنبيه + ركل الجلسة الحيّة. الميزة OFF افتراضيًّا — إن أردتها لباقات/مجموعات محدّدة استخدم النطاق.",
+  _('منع استنساخ MAC'),
+  subtitle=_('عند تشغيل الميزة: نربط عنوان MAC ببصمة الجهاز عند أول دخول ناجح، ثم نُعيد التحقّق على كل auth. نفس الـMAC ببصمة مختلفة = استنساخ → رفض + تنبيه + ركل الجلسة الحيّة. الميزة OFF افتراضيًّا — إن أردتها لباقات/مجموعات محدّدة استخدم النطاق.'),
   icon="shield-virus",
   kpis=[
-    {'label': 'ارتباطات نشطة', 'value': counts.active_bindings, 'icon': 'link',         'variant': 'brand'},
-    {'label': 'كشف استنساخ',   'value': counts.clone_detected,  'icon': 'user-secret',  'variant': 'red'},
-    {'label': 'تحقّق ناجح',    'value': counts.verify_ok,       'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'ركل جلسات',     'value': counts.concurrent_kick, 'icon': 'ban',          'variant': 'amber'},
+    {'label': _('ارتباطات نشطة'), 'value': counts.active_bindings, 'icon': 'link',         'variant': 'brand'},
+    {'label': _('كشف استنساخ'),   'value': counts.clone_detected,  'icon': 'user-secret',  'variant': 'red'},
+    {'label': _('تحقّق ناجح'),    'value': counts.verify_ok,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('ركل جلسات'),     'value': counts.concurrent_kick, 'icon': 'ban',          'variant': 'amber'},
   ]
 ) }}
 
 {# ════════════════════════════════════════════════════════════════════
    الإعدادات
    ════════════════════════════════════════════════════════════════════ #}
-{% call hub.section("إعدادات الميزة", icon="sliders") %}
+{% call hub.section(_('إعدادات الميزة'), icon="sliders") %}
   <form method="post" action="{{ url_for('radius.anti_mac_clone_save_settings') }}" id="amc-form">{% if not can_submit('radius.anti_mac_clone_save_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
@@ -167,15 +167,15 @@
       {{ _('تحفّظ مهم: جهازان من نفس الطراز قد يتشابهان في الإشارات (false positive). استخدم النمط Monitor قبل Enforce حتى تطمئنّ للنطاق. تجوال نفس الجهاز بين الـAP الواحد لا يُحسب استنساخًا. تجديد DHCP لنفس الجهاز بنفس MAC/IP ليس استنساخًا. عناوين MAC العشوائية في كل اتصال جديد ليست استنساخًا أصلًا.') }}
     </p>
 
-    {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+    {{ hub.btn(_('حفظ الإعدادات'), variant="primary", icon="floppy-disk", type="submit") }}
   {% if not can_submit('radius.anti_mac_clone_save_settings') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {# ════════════════════════════════════════════════════════════════════
    قائمة الارتباطات (mac_clone_bindings)
    ════════════════════════════════════════════════════════════════════ #}
-{% call hub.section("ارتباطات (MAC ↔ بصمة الجهاز)", icon="link",
-                     meta=(counts.active_bindings|string + ' فعّال · ' + counts.bindings|string + ' إجمالي')) %}
+{% call hub.section(_('ارتباطات (MAC ↔ بصمة الجهاز)'), icon="link",
+                     meta=(counts.active_bindings|string + _(' فعّال · ') + counts.bindings|string + _(' إجمالي'))) %}
   {% if bindings %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="amc-bindings-table">
@@ -210,9 +210,9 @@
             {% if b.called_station %}<br><span class="hub-text-mute" style="font-size:11px">{{ b.called_station }}</span>{% endif %}
           </td>
           <td>
-            {% if b.status == 'active' %}{{ hub.pill('فعّال', variant='green') }}
-            {% elif b.status == 'suspended' %}{{ hub.pill('معلَّق', variant='amber') }}
-            {% else %}{{ hub.pill('مستبدَل', variant='gray') }}{% endif %}
+            {% if b.status == 'active' %}{{ hub.pill(_('فعّال'), variant='green') }}
+            {% elif b.status == 'suspended' %}{{ hub.pill(_('معلَّق'), variant='amber') }}
+            {% else %}{{ hub.pill(_('مستبدَل'), variant='gray') }}{% endif %}
           </td>
           <td class="small">
             <span style="color:var(--ok,#16a34a)">✓ {{ b.verify_count }}</span>
@@ -227,7 +227,7 @@
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-                      data-confirm="تعليق هذا الارتباط؟ سيُمنع الجهاز من الاستخدام السلس حتى التفعيل.">
+                      data-confirm="{{ _('تعليق هذا الارتباط؟ سيُمنع الجهاز من الاستخدام السلس حتى التفعيل.') }}">
                 <i class="fa-solid fa-pause"></i> {{ _('تعليق') }}
               </button>
             </form>{% endif %}
@@ -236,7 +236,7 @@
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
-                      data-confirm="حذف الارتباط؟ سيُعاد إنشاؤه عند أوّل دخول ناجح لاحق.">
+                      data-confirm="{{ _('حذف الارتباط؟ سيُعاد إنشاؤه عند أوّل دخول ناجح لاحق.') }}">
                 <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
               </button>
             </form>{% endif %}
@@ -260,8 +260,8 @@
 {# ════════════════════════════════════════════════════════════════════
    سجلّ الأحداث (mac_clone_events) — للمراجعة
    ════════════════════════════════════════════════════════════════════ #}
-{% call hub.section("سجلّ أحداث الكشف", icon="clipboard-list",
-                     meta=(events|length|string + ' من آخر ' + counts.clone_detected|string + ' كشفًا')) %}
+{% call hub.section(_('سجلّ أحداث الكشف'), icon="clipboard-list",
+                     meta=(events|length|string + _(' من آخر ') + counts.clone_detected|string + _(' كشفًا'))) %}
   {% if events %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="amc-events-table">
@@ -279,27 +279,27 @@
       <tbody>
         {% for e in events %}
         {% set _evtype = e.event_type %}
-        {% set _evlabel = {'bind':'ربط أوّل', 'verify_ok':'تحقّق ✓',
-                            'clone_detected':'كشف استنساخ',
-                            'stepup_required':'مطلوب تصعيد',
-                            'concurrent_kick':'ركل جلسة'}.get(_evtype, _evtype) %}
+        {% set _evlabel = {'bind':_('ربط أوّل'), 'verify_ok':_('تحقّق ✓'),
+                            'clone_detected':_('كشف استنساخ'),
+                            'stepup_required':_('مطلوب تصعيد'),
+                            'concurrent_kick':_('ركل جلسة')}.get(_evtype, _evtype) %}
         <tr>
           <td class="mono small">{{ e.created_at|dt_local }}</td>
           <td class="mono small">{{ e.username }}</td>
           <td class="mono small">{{ e.mac }}</td>
           <td>
-            {% if _evtype == 'clone_detected' %}{{ hub.pill('كشف استنساخ', variant='red') }}
-            {% elif _evtype == 'stepup_required' %}{{ hub.pill('مطلوب تصعيد', variant='amber') }}
-            {% elif _evtype == 'concurrent_kick' %}{{ hub.pill('ركل جلسة', variant='amber') }}
-            {% elif _evtype == 'bind' %}{{ hub.pill('ربط', variant='brand') }}
-            {% elif _evtype == 'verify_ok' %}{{ hub.pill('تحقّق', variant='green') }}
+            {% if _evtype == 'clone_detected' %}{{ hub.pill(_('كشف استنساخ'), variant='red') }}
+            {% elif _evtype == 'stepup_required' %}{{ hub.pill(_('مطلوب تصعيد'), variant='amber') }}
+            {% elif _evtype == 'concurrent_kick' %}{{ hub.pill(_('ركل جلسة'), variant='amber') }}
+            {% elif _evtype == 'bind' %}{{ hub.pill(_('ربط'), variant='brand') }}
+            {% elif _evtype == 'verify_ok' %}{{ hub.pill(_('تحقّق'), variant='green') }}
             {% else %}{{ hub.pill(_evlabel, variant='gray') }}{% endif %}
           </td>
           <td class="small">{{ e.decision or '—' }}</td>
           <td class="small">
-            {% if e.confidence == 'high' %}{{ hub.pill('عالية', variant='red') }}
-            {% elif e.confidence == 'medium' %}{{ hub.pill('متوسطة', variant='amber') }}
-            {% elif e.confidence == 'low' %}{{ hub.pill('منخفضة', variant='gray') }}
+            {% if e.confidence == 'high' %}{{ hub.pill(_('عالية'), variant='red') }}
+            {% elif e.confidence == 'medium' %}{{ hub.pill(_('متوسطة'), variant='amber') }}
+            {% elif e.confidence == 'low' %}{{ hub.pill(_('منخفضة'), variant='gray') }}
             {% else %}—{% endif %}
           </td>
           <td class="small mono">{{ e.score }}</td>

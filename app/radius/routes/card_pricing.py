@@ -1,5 +1,6 @@
 """Card pricing and batch financial costing routes."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.system_config import default_currency
 
 from typing import Any
@@ -201,7 +202,7 @@ def card_pricing_update_package(package_id: int):
             allowed_manager_ids=_parse_ids(request.form.get("allowed_manager_ids") or ""),
             allowed_distributor_ids=_parse_ids(request.form.get("allowed_distributor_ids") or ""),
         )
-        flash("تم تحديث أسعار الباقة.", "success")
+        flash(_tr("تم تحديث أسعار الباقة."), "success")
     except (CardPricingError, ValueError) as exc:
         flash(arabic_pricing_error(exc), "error")
     return redirect(url_for("radius.card_pricing"))
@@ -217,9 +218,9 @@ def card_pricing_create_batch():
     # f05-M5: «abc» كان يُسقط الصفحة بـ500 (int() خارج أيّ try).
     from ..services.card_users_marketplace import CardMarketplaceError, int_input
     try:
-        package_id = int_input(request.form.get("package_id"), label="الباقة")
-        count = int_input(request.form.get("count"), label="عدد البطاقات", maximum=10000)
-        manager_id = int_input(request.form.get("responsible_manager_id"), label="المدير")
+        package_id = int_input(request.form.get("package_id"), label=N_("الباقة"))
+        count = int_input(request.form.get("count"), label=N_("عدد البطاقات"), maximum=10000)
+        manager_id = int_input(request.form.get("responsible_manager_id"), label=N_("المدير"))
     except CardMarketplaceError as exc:
         flash(arabic_pricing_error(exc), "error")
         return redirect(url_for("radius.card_pricing"))
@@ -236,7 +237,7 @@ def card_pricing_create_batch():
             actor_is_super=actor_is_super,
             allow_super_debt=allow_super_debt,
         )
-        flash("تم إنشاء سجل تكلفة الدفعة وخصم محفظة المدير.", "success")
+        flash(_tr("تم إنشاء سجل تكلفة الدفعة وخصم محفظة المدير."), "success")
         return redirect(url_for("radius.card_pricing_batch_detail", batch_id=result["batch"]["id"]))
     except ManagerCreditConfirmRequired as confirm:
         # Super-admin linked a package to a manager who can't cover it. Re-render

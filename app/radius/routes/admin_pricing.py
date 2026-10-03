@@ -9,6 +9,7 @@
 هذه الشاشة إدارة بيانات فقط.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -79,8 +80,8 @@ def admin_pricing_save(admin_id: int):
         flash(str(exc), "error")
         return redirect(url_for("radius.admin_pricing_page"))
     flash(
-        f"تم الحفظ: {result['set']} سعرًا خاصًا مثبَّتًا"
-        + (f"، و{result['cleared']} أُعيد للافتراضي" if result["cleared"] else "")
+        _tr('تم الحفظ: %(set)s سعرًا خاصًا مثبَّتًا', set=result['set'])
+        + (_tr('، و%(cleared)s أُعيد للافتراضي', cleared=result['cleared']) if result["cleared"] else "")
         + ".",
         "success",
     )
@@ -91,9 +92,9 @@ def admin_pricing_reset(admin_id: int):
     """«استعادة»: مسح كل الأسعار الخاصة لمدير واحد — يعود للأسعار الرسمية."""
     removed = AdminPricingService(tenant_id=_tid()).reset_admin(admin_id=admin_id)
     if removed:
-        flash(f"تمت الاستعادة — أُزيل {removed} سعرًا خاصًا لهذا المدير.", "success")
+        flash(_tr('تمت الاستعادة — أُزيل %(removed)s سعرًا خاصًا لهذا المدير.', removed=removed), "success")
     else:
-        flash("لا أسعار خاصة لهذا المدير أصلًا.", "info")
+        flash(_tr("لا أسعار خاصة لهذا المدير أصلًا."), "info")
     return redirect(url_for("radius.admin_pricing_page"))
 
 
@@ -101,7 +102,7 @@ def admin_pricing_reset_all():
     """«استعادة الكل»: مسح كل الأسعار الخاصة لجميع المدراء."""
     removed = AdminPricingService(tenant_id=_tid()).reset_all()
     if removed:
-        flash(f"تمت استعادة الكل — أُزيل {removed} سعرًا خاصًا.", "success")
+        flash(_tr('تمت استعادة الكل — أُزيل %(removed)s سعرًا خاصًا.', removed=removed), "success")
     else:
-        flash("لا أسعار خاصة مسجَّلة أصلًا.", "info")
+        flash(_tr("لا أسعار خاصة مسجَّلة أصلًا."), "info")
     return redirect(url_for("radius.admin_pricing_page"))

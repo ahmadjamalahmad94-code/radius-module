@@ -5,7 +5,7 @@
 {% block title %}{{ _("الكوبونات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-ticket"></i>{% endblock %}
 {% block page_title %}{{ _("الكوبونات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} كوبون في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s كوبون في النتائج', length=items|length) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -13,8 +13,8 @@
    كتلة واحدة بفواصل ناعمة بدل ثلاث كتل مكدّسة — نفس العقد والأسماء. #}
 <section class="hub-hero-shell">
 {{ hub.hero(
-  "الكوبونات",
-  subtitle="إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة",
+  _('الكوبونات'),
+  subtitle=_('إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة'),
   icon="ticket",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.vch_generate') + '">
@@ -24,10 +24,10 @@
 ) }}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("نشطة",          stats.active or 0,  icon="circle-check", variant="green") }}
-  {{ hub.kpi("مستخدمة",       stats.used or 0,    icon="handshake",     variant="blue") }}
-  {{ hub.kpi("ملغاة",         stats.revoked or 0, icon="ban",           variant="red") }}
-  {{ hub.kpi("القيمة الإجمالية", "%.2f"|format(stats.total_amount or 0), icon="coins", variant="amber") }}
+  {{ hub.kpi(_('نشطة'),          stats.active or 0,  icon="circle-check", variant="green") }}
+  {{ hub.kpi(_('مستخدمة'),       stats.used or 0,    icon="handshake",     variant="blue") }}
+  {{ hub.kpi(_('ملغاة'),         stats.revoked or 0, icon="ban",           variant="red") }}
+  {{ hub.kpi(_('القيمة الإجمالية'), "%.2f"|format(stats.total_amount or 0), icon="coins", variant="amber") }}
 </div>
 
 <form method="get" class="hub-filterbar">
@@ -38,14 +38,14 @@
     <option value="revoked" {% if status=='revoked' %}selected{% endif %}>{{ _('ملغاة') }}</option>
     <option value="expired" {% if status=='expired' %}selected{% endif %}>{{ _('منتهية') }}</option>
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
 </form>
 </section>{# /hub-hero-shell #}
 
 {% if items %}
-{% call hub.section("قائمة الكوبونات", icon="table-list", meta=items|length|string + " كوبون", flush=True) %}
+{% call hub.section(_('قائمة الكوبونات'), icon="table-list", meta=items|length|string + _(' كوبون'), flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="vouchers-list">
       <thead>
@@ -72,10 +72,10 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td>
-            {% if v.status == 'active' %}{{ hub.pill("نشط", variant="green") }}
-            {% elif v.status == 'used' %}{{ hub.pill("مستخدم", variant="blue") }}
-            {% elif v.status == 'revoked' %}{{ hub.pill("ملغى", variant="red") }}
-            {% elif v.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
+            {% if v.status == 'active' %}{{ hub.pill(_('نشط'), variant="green") }}
+            {% elif v.status == 'used' %}{{ hub.pill(_('مستخدم'), variant="blue") }}
+            {% elif v.status == 'revoked' %}{{ hub.pill(_('ملغى'), variant="red") }}
+            {% elif v.status == 'expired' %}{{ hub.pill(_('منتهٍ'), variant="amber") }}
             {% else %}{{ hub.pill(v.status, variant="grey") }}{% endif %}
           </td>
           <td class="mono small">{{ v.expire_at|date_local if v.expire_at else '—' }}</td>
@@ -83,7 +83,7 @@
           <td>
             {% if v.status == 'active' %}
             {% if can_submit('radius.vch_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
-                  onsubmit="return confirm('إلغاء الكوبون {{ v.code|e }}؟');" style="display:inline">
+                  onsubmit="return confirm({{ _('إلغاء الكوبون %(e)s؟', e=v.code|e)|tojson|forceescape }});" style="display:inline">
               <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
@@ -98,8 +98,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا كوبونات بهذه الفلترة",
-  sub="ولّد دفعة كوبونات جديدة من زرّ «توليد كوبونات» في الأعلى.",
+  _('لا كوبونات بهذه الفلترة'),
+  sub=_('ولّد دفعة كوبونات جديدة من زرّ «توليد كوبونات» في الأعلى.'),
   icon="ticket"
 ) }}
 {% endif %}

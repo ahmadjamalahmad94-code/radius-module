@@ -15,7 +15,7 @@
 {% block title %}{{ _("تعديل جهاز") if is_edit else _("إضافة جهاز") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}
-  {{ "تعديل جهاز" if is_edit else "إضافة جهاز شبكة" }}
+  {{ _('تعديل جهاز') if is_edit else _('إضافة جهاز شبكة') }}
 {% endblock %}
 {% block page_sub %}
   <span class="sub">
@@ -34,30 +34,29 @@
   </a>{% endif %}
   <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
     <i class="fa-solid fa-{{ 'floppy-disk' if is_edit else 'plus' }}"></i>
-    {{ "حفظ التعديلات" if is_edit else "إضافة الجهاز" }}
+    {{ _('حفظ التعديلات') if is_edit else _('إضافة الجهاز') }}
   </button>
 {% endset %}
 {{ hub.hero(
-  ("تعديل جهاز: " + device.name) if is_edit else "إضافة جهاز شبكة",
-  subtitle=("حدّث بيانات الجهاز أو أعد ربطه براوتر آخر."
+  (_('تعديل جهاز: ') + device.name) if is_edit else _('إضافة جهاز شبكة'),
+  subtitle=(_('حدّث بيانات الجهاز أو أعد ربطه براوتر آخر.')
             if is_edit else
-            "سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) "
-            "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."),
+            _('سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن.')),
   icon="wifi",
   actions_html=_actions
 ) }}
 
 {% set help_aside = hub.helppanel(
-  "عن أجهزة الشبكة",
-  intro="جهاز الشبكة هو أي عتاد داخل شبكة الراوتر تريد متابعته وإدارته من لوحة الراديوس.",
+  _('عن أجهزة الشبكة'),
+  intro=_('جهاز الشبكة هو أي عتاد داخل شبكة الراوتر تريد متابعته وإدارته من لوحة الراديوس.'),
   icon="wifi",
   items=[
-    {"icon": "server",   "text": "اختر الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN)."},
-    {"icon": "ethernet", "text": "احفظ IP و MAC لتفعيل «تجهيز الجهاز للإدارة» و«الفتح عن بُعد»."},
-    {"icon": "eye",      "text": "فعِّل المراقبة الدوريّة ليفحص النظام حالة الجهاز ويحدّثها."},
-    {"icon": "bell",     "text": "فعِّل تنبيه الانقطاع ليصلك إشعار تلجرام عند توقّف الجهاز."}
+    {"icon": "server",   "text": _('اختر الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).')},
+    {"icon": "ethernet", "text": _('احفظ IP و MAC لتفعيل «تجهيز الجهاز للإدارة» و«الفتح عن بُعد».')},
+    {"icon": "eye",      "text": _('فعِّل المراقبة الدوريّة ليفحص النظام حالة الجهاز ويحدّثها.')},
+    {"icon": "bell",     "text": _('فعِّل تنبيه الانقطاع ليصلك إشعار تلجرام عند توقّف الجهاز.')}
   ],
-  note="الجهاز المُعلَّم «مهم» يظهر في لوحة المتابعة وتُفعَّل تنبيهاته."
+  note=_('الجهاز المُعلَّم «مهم» يظهر في لوحة المتابعة وتُفعَّل تنبيهاته.')
 ) %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
@@ -68,7 +67,7 @@
   {{ csrf_token_input() | safe }}
 
   {# ── 1. الهوية والربط ─────────────────────── #}
-  {% call hub.section("الهوية والربط", icon="network-wired") %}
+  {% call hub.section(_('الهوية والربط'), icon="network-wired") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label" for="router_id">{{ _('الراوتر') }} <span class="req">*</span></label>
@@ -116,7 +115,7 @@
   {% endcall %}
 
   {# ── 2. الشبكة ───────────────────────────────── #}
-  {% call hub.section("الشبكة", icon="ethernet") %}
+  {% call hub.section(_('الشبكة'), icon="ethernet") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label" for="ip_address">{{ _('IP الجهاز') }}</label>
@@ -145,7 +144,7 @@
   {% endcall %}
 
   {# ── 3. الملاحظات والمراقبة ───────────────────── #}
-  {% call hub.section("الملاحظات والمراقبة", icon="eye") %}
+  {% call hub.section(_('الملاحظات والمراقبة'), icon="eye") %}
     <div class="hub-field" style="margin-bottom:14px">
       <label class="hub-field-label" for="notes">{{ _('ملاحظات') }}</label>
       <textarea class="hub-textarea" name="notes" id="notes" rows="2"
@@ -188,8 +187,8 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;gap:10px;margin-top:16px">
-    {% if can_submit('radius.network_devices_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.network_devices_list')) }}{% endif %}
-    {{ hub.btn(("حفظ التعديلات" if is_edit else "إضافة الجهاز"),
+    {% if can_submit('radius.network_devices_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="secondary", href=url_for('radius.network_devices_list')) }}{% endif %}
+    {{ hub.btn((_('حفظ التعديلات') if is_edit else _('إضافة الجهاز')),
                icon=("floppy-disk" if is_edit else "plus"), variant="primary", type="submit") }}
   </div>
 {% if not can_submit(('radius.network_devices_update' if is_edit else 'radius.network_devices_create')) %}</fieldset>{% endif %}</form>
@@ -200,12 +199,9 @@
    router itself pings the device every minute and webhooks
    HobeRadius on every flip. Useful when the VPS-side cron
    can't reach the LAN (no hr-wg → LAN route configured). #}
-{% call hub.section("مراقبة من الراوتر (Netwatch)", icon="tower-broadcast") %}
+{% call hub.section(_('مراقبة من الراوتر (Netwatch)'), icon="tower-broadcast") %}
   <p class="hub-text-mute" style="margin:0 0 14px;font-size:12.5px;line-height:1.8">
-    {{ _('خيار متقدّم: يُفعِّل') }} <code>/tool netwatch</code> على الراوتر بنفسه ليرسل
-    تنبيهًا لـ HobeRadius فور تغيُّر حالة الجهاز (انقطاع/عودة). مفيد عندما
-    لا يصل خادم الربط مباشرة للشبكة الداخلية. يعمل بالتوازي مع المراقبة الدوريّة من خادم الربط —
-    أيّهما يأتي أولًا يُسجَّل، وتنبيه تلجرام يُرسل مرة واحدة خلال فترة التهدئة.
+    {{ _('خيار متقدّم: يُفعِّل') }} <code>/tool netwatch</code> {{ _('على الراوتر بنفسه ليرسل تنبيهًا لـ HobeRadius فور تغيُّر حالة الجهاز (انقطاع/عودة). مفيد عندما لا يصل خادم الربط مباشرة للشبكة الداخلية. يعمل بالتوازي مع المراقبة الدوريّة من خادم الربط — أيّهما يأتي أولًا يُسجَّل، وتنبيه تلجرام يُرسل مرة واحدة خلال فترة التهدئة.') }}
   </p>
   <div class="hub-flex-row" style="gap:10px">
     {% if can_submit('radius.router_events_netwatch_install', 'POST') %}<form method="post"
@@ -218,7 +214,7 @@
     </form>{% endif %}
     {% if can_submit('radius.router_events_netwatch_remove', 'POST') %}<form method="post"
           action="{{ url_for('radius.router_events_netwatch_remove', device_id=device.id) }}"
-          onsubmit="return confirm('إزالة netwatch من الراوتر؟');"
+          onsubmit="return confirm({{ _('إزالة netwatch من الراوتر؟')|tojson|forceescape }});"
           style="display:inline">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--ghost" style="padding:6px 14px;font-size:12.5px">
@@ -228,9 +224,7 @@
   </div>
   <p class="hub-text-mute" style="margin:14px 0 0;font-size:11.5px;line-height:1.8">
     <i class="fa-solid fa-circle-info"></i>
-    {{ _('يحتاج المتغيّر') }} <code>HOBERADIUS_PUBLIC_URL</code> مضبوطًا في الخادم
-    (مثل <code dir="ltr">https://radius.example.com</code>) ليصل الـ webhook
-    من الراوتر بنجاح.
+    {{ _('يحتاج المتغيّر') }} <code>HOBERADIUS_PUBLIC_URL</code> {{ _('مضبوطًا في الخادم (مثل') }} <code dir="ltr">https://radius.example.com</code>{{ _(') ليصل الـ webhook من الراوتر بنجاح.') }}
   </p>
 {% endcall %}
 {% endif %}

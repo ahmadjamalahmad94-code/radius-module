@@ -11,6 +11,7 @@
 أيّ حذف، وإن فشلت يُلغى التصفير. عمليّة واحدة في المرّة (قفل) لمنع الإرسال المزدوج.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -95,10 +96,10 @@ def data_reset_page():
     for c in cats:
         groups.setdefault(c.group, []).append(c)
     group_labels = {
-        "core": "البيانات الأساسيّة",
-        "network": "الشبكة والأجهزة",
-        "money": "المال",
-        "logs": "السجلّات والجلسات",
+        "core": N_("البيانات الأساسيّة"),
+        "network": N_("الشبكة والأجهزة"),
+        "money": N_("المال"),
+        "logs": N_("السجلّات والجلسات"),
     }
     return render_template(
         "radius/data_reset.html",
@@ -115,7 +116,7 @@ def data_reset_summary():
     payload = request.get_json(silent=True) or {}
     keys = _valid_keys(payload.get("keys"))
     if not keys:
-        return jsonify({"ok": False, "message": "اختر فئة واحدة على الأقلّ."}), 200
+        return jsonify({"ok": False, "message": _tr("اختر فئة واحدة على الأقلّ.")}), 200
     out = get_data_reset_service().summarize(
         tenant_id=_tid(), keys=keys, current_admin_id=_current_admin_id())
     return jsonify(out)
@@ -129,16 +130,16 @@ def data_reset_run():
 
     if not keys:
         return jsonify({"ok": False, "code": "no_keys",
-                        "message": "اختر فئة واحدة على الأقلّ للتصفير."}), 200
+                        "message": _tr("اختر فئة واحدة على الأقلّ للتصفير.")}), 200
     # تأكيد صريح: يجب كتابة كلمة التأكيد حرفيًّا (تصفير) — أو «حذف» كبديل.
     if confirm != CONFIRM_WORD and confirm != "حذف":
         return jsonify({"ok": False, "code": "confirm",
-                        "message": f"للمتابعة اكتب كلمة التأكيد «{CONFIRM_WORD}» بالضبط."}), 200
+                        "message": _tr('للمتابعة اكتب كلمة التأكيد «%(CONFIRM_WORD)s» بالضبط.', CONFIRM_WORD=CONFIRM_WORD)}), 200
 
     # قفل: عمليّة واحدة في المرّة (منع الإرسال المزدوج).
     if not _WIPE_LOCK.acquire(blocking=False):
         return jsonify({"ok": False, "code": "busy",
-                        "message": "هناك عمليّة تصفير جارية بالفعل. انتظر انتهاءها."}), 200
+                        "message": _tr("هناك عمليّة تصفير جارية بالفعل. انتظر انتهاءها.")}), 200
     try:
         t = _tid()
         actor = _actor()
@@ -150,14 +151,14 @@ def data_reset_run():
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("data-reset backup crashed")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة — أُلغي التصفير "
-                                       "ولم يُحذف شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة — أُلغي التصفير "
+                                       "ولم يُحذف شيء."),
                             "detail": str(exc)}), 200
         if not bk.get("verified"):
-            msg = (bk.get("run") or {}).get("message") or "فشل التحقّق من النسخة."
+            msg = (bk.get("run") or {}).get("message") or _tr("فشل التحقّق من النسخة.")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغي "
-                                       "التصفير ولم يُحذف شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغي "
+                                       "التصفير ولم يُحذف شيء."),
                             "detail": msg}), 200
         backup_name = os.path.basename((bk.get("run") or {}).get("path") or "")
 
@@ -169,16 +170,16 @@ def data_reset_run():
             _LOG.warning("data-reset integrity block: %s", exc)
             return jsonify({
                 "ok": False, "code": "integrity", "backup": backup_name,
-                "message": "تعذّر الحذف بسبب ارتباط مرجعيّ بين البيانات — لم "
+                "message": _tr("تعذّر الحذف بسبب ارتباط مرجعيّ بين البيانات — لم "
                            "يُحذف شيء (أُعيد كل شيء). اختر الفئات المرتبطة معًا "
-                           "(مثلًا «الباقات» مع «الكروت» و«المشتركون»).",
+                           "(مثلًا «الباقات» مع «الكروت» و«المشتركون»)."),
                 "detail": str(exc),
             }), 200
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("data-reset wipe failed")
             return jsonify({
                 "ok": False, "code": "error", "backup": backup_name,
-                "message": f"تعذّر التصفير — أُعيد كل شيء (لم يُحذف). {exc}",
+                "message": _tr('تعذّر التصفير — أُعيد كل شيء (لم يُحذف). %(exc)s', exc=exc),
                 "detail": str(exc),
             }), 200
 
@@ -193,7 +194,7 @@ def data_reset_run():
         except Exception:  # noqa: BLE001 — التدقيق لا يكسر النتيجة
             pass
         result["backup"] = backup_name
-        result["message"] = "تم التصفير بنجاح."
+        result["message"] = N_("تم التصفير بنجاح.")
         return jsonify(result)
     finally:
         _WIPE_LOCK.release()

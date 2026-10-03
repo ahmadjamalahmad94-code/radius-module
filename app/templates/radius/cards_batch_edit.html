@@ -95,8 +95,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "تعديل حزمة بطاقات — " + batch.batch_code,
-  subtitle="عدّل ربط الباقة، السعر، نمط التوليد، الصلاحية وقواعد السرعة — بدون إعادة توليد البطاقات",
+  _('تعديل حزمة بطاقات — %(batch_code)s', batch_code=batch.batch_code),
+  subtitle=_('عدّل ربط الباقة، السعر، نمط التوليد، الصلاحية وقواعد السرعة — بدون إعادة توليد البطاقات'),
   icon="pen-to-square",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_of_batch', batch_id=batch.id) + '">
@@ -255,7 +255,7 @@
                  value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
         <div class="cg-field"><label>{{ _('العدّ من أول اتصال') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="cfc", on_label="مفعَّل: المدة تبدأ من أول دخول (نمط B)", off_label="معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)") }}
+            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="cfc", on_label=_('مفعَّل: المدة تبدأ من أول دخول (نمط B)'), off_label=_('معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)')) }}
           </div>
           <div class="help">{{ _('يحدّد نمط المدة: عند التفعيل تُحسب المدة كعدّ تنازلي من أول دخول؛ وعند التعطيل تكون رصيد ثوانٍ استخدام يُستهلك فقط أثناء الاتصال.') }}</div></div>
         <div class="cg-field"><label>{{ _('العدّ بالثواني') }}</label>
@@ -267,7 +267,7 @@
         <div class="cg-field"><label>{{ _('الدخول برقم البطاقة فقط (بلا كلمة مرور)') }}</label>
           <div class="cg-chk">
             {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
-                             on_label="مفعَّل: يكفي رقم البطاقة للدخول", off_label="معطّل: كلمة المرور مطلوبة") }}
+                             on_label=_('مفعَّل: يكفي رقم البطاقة للدخول'), off_label=_('معطّل: كلمة المرور مطلوبة')) }}
           </div></div>
       </div>
     </div>

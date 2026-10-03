@@ -6,6 +6,7 @@
  * the button label flips to ✓ only when navigator.clipboard
  * actually resolves.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -45,7 +46,7 @@
       await copyText(text);
       const original = button.innerHTML;
       button.classList.add("is-copied");
-      button.innerHTML = '<i class="fa-solid fa-check"></i> تم النسخ';
+      button.innerHTML = ('<i class="fa-solid fa-check">' + '</i>' + ' ' + hrT('تم النسخ'));
       setTimeout(() => {
         button.classList.remove("is-copied");
         button.innerHTML = original;
@@ -55,7 +56,7 @@
       // manually, don't silently pretend it worked.
       button.classList.remove("is-copied");
       button.innerHTML =
-        '<i class="fa-solid fa-triangle-exclamation"></i> اضغط Ctrl+C يدويًّا';
+        ('<i class="fa-solid fa-triangle-exclamation">' + '</i>' + ' ' + hrT('اضغط Ctrl+C يدويًّا'));
       block.focus();
       // The pre is not natively selectable on every browser; mark
       // it so the operator can drag-select the whole block.

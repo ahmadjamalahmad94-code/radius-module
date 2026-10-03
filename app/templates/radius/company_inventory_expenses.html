@@ -52,14 +52,14 @@
 {# ───── Merged full-width hero: title + subtitle + icon + totals as KPIs ───── #}
 {% set _alert_variant = "red" if summary.low_or_out_count else "green" %}
 {{ hub.megahero(
-  "مخزون ومصروفات الشركة",
-  subtitle="سجّل وارد وصرف المخزون ومصروفات الشركة في دفتر داخلي للمتابعة فقط. الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل.",
+  _('مخزون ومصروفات الشركة'),
+  subtitle=_('سجّل وارد وصرف المخزون ومصروفات الشركة في دفتر داخلي للمتابعة فقط. الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل.'),
   icon="boxes-stacked",
   kpis=[
-    {'label': 'قيمة الوارد',    'value': summary.incoming_value|money, 'icon': 'truck-ramp-box',       'variant': 'green'},
-    {'label': 'مصروفات الشركة', 'value': summary.expenses_total|money, 'icon': 'receipt',              'variant': 'amber'},
-    {'label': 'الأصناف النشطة', 'value': summary.items_count,          'icon': 'boxes-stacked',        'variant': 'blue'},
-    {'label': 'تنبيه مخزون',    'value': summary.low_or_out_count,     'icon': 'triangle-exclamation', 'variant': _alert_variant},
+    {'label': _('قيمة الوارد'),    'value': summary.incoming_value|money, 'icon': 'truck-ramp-box',       'variant': 'green'},
+    {'label': _('مصروفات الشركة'), 'value': summary.expenses_total|money, 'icon': 'receipt',              'variant': 'amber'},
+    {'label': _('الأصناف النشطة'), 'value': summary.items_count,          'icon': 'boxes-stacked',        'variant': 'blue'},
+    {'label': _('تنبيه مخزون'),    'value': summary.low_or_out_count,     'icon': 'triangle-exclamation', 'variant': _alert_variant},
   ]
 ) }}
 
@@ -73,22 +73,22 @@
 </nav>
 
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "دفتر داخلي للمتابعة فقط",
-  intro="هذه الصفحة لمتابعة مخزون ومصروفات الشركة داخليًا. لا تؤثر على المبيعات أو المدفوعات أو أرصدة العملاء أو الموزعين أو القيود المحاسبية.",
+  _('دفتر داخلي للمتابعة فقط'),
+  intro=_('هذه الصفحة لمتابعة مخزون ومصروفات الشركة داخليًا. لا تؤثر على المبيعات أو المدفوعات أو أرصدة العملاء أو الموزعين أو القيود المحاسبية.'),
   icon="circle-info",
   items=[
-    {'icon': 'warehouse',          'text': 'ملخص المخزون يعرض الوارد والمصروف والمتبقي وقيمة كل صنف وحالته.'},
-    {'icon': 'truck-ramp-box',     'text': 'الوارد: كل دفعة شراء تدخل المخزون — اربطها بصنف موجود أو أنشئ صنفًا جديدًا.'},
-    {'icon': 'screwdriver-wrench', 'text': 'الصرف: ما يُستهلك من المخزون مع السبب والموقع والفني.'},
-    {'icon': 'receipt',            'text': 'المصروفات: مصاريف الشركة العامة (تشغيل / أجور / صيانة).'},
+    {'icon': 'warehouse',          'text': _('ملخص المخزون يعرض الوارد والمصروف والمتبقي وقيمة كل صنف وحالته.')},
+    {'icon': 'truck-ramp-box',     'text': _('الوارد: كل دفعة شراء تدخل المخزون — اربطها بصنف موجود أو أنشئ صنفًا جديدًا.')},
+    {'icon': 'screwdriver-wrench', 'text': _('الصرف: ما يُستهلك من المخزون مع السبب والموقع والفني.')},
+    {'icon': 'receipt',            'text': _('المصروفات: مصاريف الشركة العامة (تشغيل / أجور / صيانة).')},
   ],
-  note="الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل."
+  note=_('الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل.')
 )) %}
 
 {# ════════════════════ TAB: OVERVIEW ════════════════════ #}
 {% if tab == 'overview' %}
-{% call hub.section("ملخص المخزون", icon="warehouse",
-   meta=(overview|length|string + " صنف") if overview else "",
+{% call hub.section(_('ملخص المخزون'), icon="warehouse",
+   meta=(overview|length|string + _(' صنف')) if overview else "",
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="item">
@@ -111,7 +111,7 @@
         {% for item in overview %}
         <tr>
           <td><strong>{{ item.name }}</strong></td>
-          <td>{{ item.category or "غير مصنّف" }}</td>
+          <td>{{ item.category or _('غير مصنّف') }}</td>
           <td>{{ item.unit or "—" }}</td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ "%g"|format(item.purchased) }}</td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ "%g"|format(item.used) }}</td>
@@ -124,7 +124,7 @@
           </td>
           <td>
             {% if can_submit('radius.company_inventory_item_deactivate', 'POST') %}<form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}"
-                  onsubmit="return confirm('تعطيل هذا الصنف؟ لن تُحذف حركاته.');">
+                  onsubmit="return confirm({{ _('تعطيل هذا الصنف؟ لن تُحذف حركاته.')|tojson|forceescape }});">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-box-archive"></i> {{ _('تعطيل') }}</button>
             </form>{% endif %}
@@ -136,7 +136,7 @@
   </div>
   {% else %}
     <div class="cie-empty-cta">
-      {{ hub.empty("لا توجد أصناف بعد.", sub="أضف أول وارد مخزون وسيظهر الصنف هنا تلقائيًا.", icon="boxes-stacked") }}
+      {{ hub.empty(_('لا توجد أصناف بعد.'), sub=_('أضف أول وارد مخزون وسيظهر الصنف هنا تلقائيًا.'), icon="boxes-stacked") }}
       <div style="margin-top:14px"><button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming"><i class="fa-solid fa-plus"></i> {{ _('تسجيل أول وارد') }}</button></div>
     </div>
   {% endif %}
@@ -145,8 +145,8 @@
 
 {# ════════════════════ TAB: INCOMING ════════════════════ #}
 {% if tab == 'incoming' %}
-{% call hub.section("وارد المخزون", icon="truck-ramp-box",
-   meta=(incoming_records|length|string + " حركة") if incoming_records else "",
+{% call hub.section(_('وارد المخزون'), icon="truck-ramp-box",
+   meta=(incoming_records|length|string + _(' حركة')) if incoming_records else "",
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming">
@@ -175,15 +175,15 @@
     </table>
   </div>
   {% else %}
-    <div class="cie-empty-cta">{{ hub.empty("لا يوجد وارد مسجّل بعد.", sub="اضغط «تسجيل وارد» لإضافة أول حركة.", icon="truck-ramp-box") }}</div>
+    <div class="cie-empty-cta">{{ hub.empty(_('لا يوجد وارد مسجّل بعد.'), sub=_('اضغط «تسجيل وارد» لإضافة أول حركة.'), icon="truck-ramp-box") }}</div>
   {% endif %}
 {% endcall %}
 {% endif %}
 
 {# ════════════════════ TAB: USAGE ════════════════════ #}
 {% if tab == 'usage' %}
-{% call hub.section("صرف المخزون", icon="screwdriver-wrench",
-   meta=(usage_records|length|string + " حركة") if usage_records else "",
+{% call hub.section(_('صرف المخزون'), icon="screwdriver-wrench",
+   meta=(usage_records|length|string + _(' حركة')) if usage_records else "",
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="usage">
@@ -211,15 +211,15 @@
     </table>
   </div>
   {% else %}
-    <div class="cie-empty-cta">{{ hub.empty("لا يوجد صرف مسجّل بعد.", sub="اضغط «تسجيل صرف» لإضافة أول حركة.", icon="screwdriver-wrench") }}</div>
+    <div class="cie-empty-cta">{{ hub.empty(_('لا يوجد صرف مسجّل بعد.'), sub=_('اضغط «تسجيل صرف» لإضافة أول حركة.'), icon="screwdriver-wrench") }}</div>
   {% endif %}
 {% endcall %}
 {% endif %}
 
 {# ════════════════════ TAB: EXPENSES ════════════════════ #}
 {% if tab == 'expenses' %}
-{% call hub.section("مصروفات الشركة", icon="receipt",
-   meta=(expense_records|length|string + " مصروف") if expense_records else "",
+{% call hub.section(_('مصروفات الشركة'), icon="receipt",
+   meta=(expense_records|length|string + _(' مصروف')) if expense_records else "",
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="expense">
@@ -237,7 +237,7 @@
         <tr>
           <td><bdi dir="ltr">{{ e.expense_date }}</bdi></td>
           <td><strong>{{ e.title }}</strong></td>
-          <td>{{ e.category or "غير مصنّف" }}</td>
+          <td>{{ e.category or _('غير مصنّف') }}</td>
           <td class="num mono tabular-nums" style="direction:ltr"><strong>{{ e.amount|money(e.currency) }}</strong></td>
           <td>{{ e.paid_to or "—" }}</td>
           <td>{{ e.payment_method or "—" }}</td>
@@ -247,14 +247,14 @@
     </table>
   </div>
   {% else %}
-    <div class="cie-empty-cta">{{ hub.empty("لا توجد مصروفات بعد.", sub="اضغط «مصروف جديد» لتسجيل أول مصروف.", icon="receipt") }}</div>
+    <div class="cie-empty-cta">{{ hub.empty(_('لا توجد مصروفات بعد.'), sub=_('اضغط «مصروف جديد» لتسجيل أول مصروف.'), icon="receipt") }}</div>
   {% endif %}
 {% endcall %}
 {% endif %}
 
 {# ════════════════════ TAB: REPORTS ════════════════════ #}
 {% if tab == 'reports' %}
-{% call hub.section("تصفية السجل والتقارير", icon="filter") %}
+{% call hub.section(_('تصفية السجل والتقارير'), icon="filter") %}
   <form method="get" action="{{ url_for('radius.company_inventory') }}" class="cie-form-grid">
     <input type="hidden" name="tab" value="reports">
     <label>{{ _('من تاريخ') }} <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
@@ -279,14 +279,14 @@
 {% endcall %}
 
 <div class="hub-tile-grid" style="margin-top:16px">
-  {{ hub.tile("وارد المخزون (قيمة)", reports.incoming_value|money, icon="truck-ramp-box") }}
-  {{ hub.tile("كمية الصرف", "%g"|format(reports.usage_quantity), icon="screwdriver-wrench") }}
-  {{ hub.tile("مصروفات الشركة", reports.expenses_total|money, icon="receipt") }}
-  {{ hub.tile("عدد فئات المصروف", reports.expenses_by_category|length, icon="layer-group") }}
+  {{ hub.tile(_('وارد المخزون (قيمة)'), reports.incoming_value|money, icon="truck-ramp-box") }}
+  {{ hub.tile(_('كمية الصرف'), "%g"|format(reports.usage_quantity), icon="screwdriver-wrench") }}
+  {{ hub.tile(_('مصروفات الشركة'), reports.expenses_total|money, icon="receipt") }}
+  {{ hub.tile(_('عدد فئات المصروف'), reports.expenses_by_category|length, icon="layer-group") }}
 </div>
 
 {% if reports.expenses_by_category %}
-<div style="margin-top:16px">{% call hub.section("المصروفات حسب الفئة", icon="layer-group", flush=True) %}
+<div style="margin-top:16px">{% call hub.section(_('المصروفات حسب الفئة'), icon="layer-group", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead><tr><th>{{ _('الفئة') }}</th><th class="num">{{ _('الإجمالي') }}</th><th class="num">{{ _('العدد') }}</th></tr></thead>
@@ -298,7 +298,7 @@
 {% endcall %}</div>
 {% endif %}
 
-<div style="margin-top:16px">{% call hub.section("آخر الحركات", icon="clock-rotate-left", flush=True) %}
+<div style="margin-top:16px">{% call hub.section(_('آخر الحركات'), icon="clock-rotate-left", flush=True) %}
   {% if reports.movements %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -319,7 +319,7 @@
       {% endfor %}</tbody>
     </table>
   </div>
-  {% else %}{{ hub.empty("لا توجد حركات في الفترة المحددة.", icon="clock-rotate-left") }}{% endif %}
+  {% else %}{{ hub.empty(_('لا توجد حركات في الفترة المحددة.'), icon="clock-rotate-left") }}{% endif %}
 {% endcall %}</div>
 {% endif %}
 

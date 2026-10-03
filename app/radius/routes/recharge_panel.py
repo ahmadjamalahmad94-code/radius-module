@@ -14,6 +14,7 @@
   بحث لحظي، بطاقة المشترك، آخر عمليات هذا المسؤول، ومؤشرات المحفظة.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 
@@ -183,8 +184,8 @@ def _recent_operations(tenant_id: int, actor: str, limit: int = 5) -> list[dict]
             "amount_label": format_money(p.get("amount"), p.get("currency")),
             "method": p.get("method") or "cash",
             # طريقة الدفع معرَّبة من الخادم (القالب يعرّب محلياً كذلك كحارس).
-            "method_label": {"cash": "نقدًا", "transfer": "حوالة", "wallet": "محفظة"}.get(
-                p.get("method"), p.get("method") or "نقدًا"
+            "method_label": {"cash": N_("نقدًا"), "transfer": N_("حوالة"), "wallet": N_("محفظة")}.get(
+                p.get("method"), p.get("method") or N_("نقدًا")
             ),
             "status": p.get("status") or "posted",
             "earned_minutes": int(p.get("earned_minutes") or 0),
@@ -253,13 +254,13 @@ def recharge_search_json():
 
 def _status_label(status: str) -> str:
     return {
-        "enabled": "نشط",
-        "disabled": "معطّل",
-        "expired": "منتهي",
-        "suspended": "موقوف",
-        "pending": "قيد التفعيل",
-        "banned": "محظور",
-    }.get(status, status or "غير معروف")
+        "enabled": N_("نشط"),
+        "disabled": N_("معطّل"),
+        "expired": N_("منتهي"),
+        "suspended": N_("موقوف"),
+        "pending": N_("قيد التفعيل"),
+        "banned": N_("محظور"),
+    }.get(status, status or N_("غير معروف"))
 
 
 def recharge_subscriber_json(username: str):
@@ -269,7 +270,7 @@ def recharge_subscriber_json(username: str):
     try:
         sub = get_users_service().get(username)
     except RadiusError:
-        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
+        return jsonify({"ok": False, "error": _tr("المشترك غير موجود.")}), 404
 
     plan_name = ""
     if sub.plan_id:

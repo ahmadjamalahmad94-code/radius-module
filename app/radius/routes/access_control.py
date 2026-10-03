@@ -7,6 +7,7 @@
 الإنفاذ في policy_engine عبر services/access_control.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (Blueprint, flash, g, redirect, render_template, request,
@@ -32,26 +33,26 @@ _SECURITY_KEYS = {
 
 # نطاقات «تعليق الوصول» (الطبقة A) — تُمرَّر لنموذج التعليق.
 SUSPENSION_SCOPE_LABELS = [
-    ("subscriber", "مشترك محدّد"),
-    ("group", "مجموعة مشتركين"),
-    ("plan", "عرض/باقة"),
-    ("card_batch", "حزمة بطاقات"),
-    ("all_subscribers", "كل المشتركين"),
-    ("all_hotspot", "كل الهوتسبوت"),
-    ("all_cards", "كل البطاقات"),
-    ("all_pppoe", "كل PPPoE"),
+    ("subscriber", N_("مشترك محدّد")),
+    ("group", N_("مجموعة مشتركين")),
+    ("plan", N_("عرض/باقة")),
+    ("card_batch", N_("حزمة بطاقات")),
+    ("all_subscribers", N_("كل المشتركين")),
+    ("all_hotspot", N_("كل الهوتسبوت")),
+    ("all_cards", N_("كل البطاقات")),
+    ("all_pppoe", N_("كل PPPoE")),
 ]
 # نطاقات «الحظر» الأمني (الطبقة B) — تُمرَّر لنموذج الحظر.
 BLOCK_SCOPE_LABELS = [
-    ("ip", "عنوان IP"),
-    ("mac", "عنوان MAC"),
+    ("ip", N_("عنوان IP")),
+    ("mac", N_("عنوان MAC")),
 ]
 # خريطة موحّدة لعرض التسمية في الجداول.
 SCOPE_LABEL_MAP = dict(SUSPENSION_SCOPE_LABELS + BLOCK_SCOPE_LABELS)
 DURATION_LABELS = [
-    ("permanent", "دائم حتى الرفع اليدوي"),
-    ("daily_window", "نافذة يومية متكرّرة"),
-    ("until", "حتى تاريخ/وقت محدّد"),
+    ("permanent", N_("دائم حتى الرفع اليدوي")),
+    ("daily_window", N_("نافذة يومية متكرّرة")),
+    ("until", N_("حتى تاريخ/وقت محدّد")),
 ]
 
 
@@ -155,9 +156,9 @@ def access_control_page():
         am_plans=plans_list,
         am_batches=batches_list,
         am_mode_labels=[
-            ("open",   "Open — بلا ربط أجهزة (حدّ الجلسات من العرض)"),
-            ("tofu",   "TOFU — أوّل دخول ناجح يربط الجهاز، سقف N أجهزة"),
-            ("manual", "Manual — قائمة سماح يدوية (افتراضي رفض)"),
+            ("open",   N_("Open — بلا ربط أجهزة (حدّ الجلسات من العرض)")),
+            ("tofu",   N_("TOFU — أوّل دخول ناجح يربط الجهاز، سقف N أجهزة")),
+            ("manual", N_("Manual — قائمة سماح يدوية (افتراضي رفض)")),
         ],
     )
 
@@ -185,13 +186,13 @@ def access_control_save_settings():
         audit_repo.record(tenant_id=tid, actor=actor, action="access_control_settings",
                           target_type="settings", target_id=",".join(changed),
                           payload={"changed": changed})
-        flash(f"تم حفظ {ar_count(len(changed), 'setting')}.", "success")
+        flash(_tr('تم حفظ %(v)s.', v=ar_count(len(changed), 'setting')), "success")
     else:
         # No effect — tell the activity interceptor to tag this «بلا تأثير»
         # (owner wants no-effect attempts distinguishable, not just recorded).
         from ..services.manager_activity_audit import note_noop
         note_noop()
-        flash("لا تغييرات.", "info")
+        flash(_tr("لا تغييرات."), "info")
     return redirect(url_for("radius.access_control_page"))
 
 
@@ -200,7 +201,7 @@ def access_control_add_block():
     actor, admin_id = _actor()
     block_type = request.form.get("block_type") or ""
     is_block = ac.layer_of(block_type) == ac.LAYER_BLOCK
-    noun = "الحظر" if is_block else "التعليق"
+    noun = N_("الحظر") if is_block else N_("التعليق")
     try:
         block_id = ac.create_block_from_input(
             tenant_id=tid,
@@ -219,7 +220,7 @@ def access_control_add_block():
         # الإنفاذ الفوريّ على الجلسات الحيّة يجري داخل create_block_from_input
         # نفسها (نطاق-واعٍ: مشترك/عرض/حزمة/مجموعة، والباقي شامل) — موقع الحفظ
         # المركزيّ، فلا تكرار هنا.
-        flash(f"تم إضافة {noun}.", "success")
+        flash(_tr('تم إضافة %(noun)s.', noun=noun), "success")
     except ac.AccessControlError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.access_control_page"))
@@ -229,16 +230,16 @@ def access_control_clear_block(block_id: int):
     tid = _tid()
     actor, admin_id = _actor()
     existing = access_blocks_repo.get_block(tid, int(block_id))
-    noun = "الحظر"
+    noun = N_("الحظر")
     if existing and ac.layer_of(existing.get("block_type")) == ac.LAYER_SUSPENSION:
-        noun = "التعليق"
+        noun = N_("التعليق")
     if access_blocks_repo.clear_block(tid, int(block_id), by=admin_id):
         audit_repo.record(tenant_id=tid, actor=actor, action="access_control_clear",
                           target_type="access_control", target_id=str(block_id),
                           payload={"cleared": True})
-        flash(f"تم رفع {noun}.", "success")
+        flash(_tr('تم رفع %(noun)s.', noun=noun), "success")
     else:
-        flash("السجلّ غير موجود أو مرفوع سابقًا.", "info")
+        flash(_tr("السجلّ غير موجود أو مرفوع سابقًا."), "info")
     return redirect(url_for("radius.access_control_page"))
 
 
@@ -267,16 +268,16 @@ def allow_mode_upsert():
     note = (request.form.get("note") or "").strip()[:200]
 
     if scope_type not in allow_mode_repo.VALID_SCOPES:
-        flash("نطاق السياسة غير صالح.", "error")
+        flash(_tr("نطاق السياسة غير صالح."), "error")
         return _redirect_am()
     if scope_id <= 0:
-        flash("اختر العرض/الحزمة المستهدفة.", "error")
+        flash(_tr("اختر العرض/الحزمة المستهدفة."), "error")
         return _redirect_am()
     if mode not in allow_mode_repo.VALID_MODES:
-        flash("نمط السماح غير صالح.", "error")
+        flash(_tr("نمط السماح غير صالح."), "error")
         return _redirect_am()
     if mode == "tofu" and max_devices <= 0:
-        flash("نمط TOFU يحتاج عددًا صالحًا (1 على الأقل) للأجهزة المسموحة.", "error")
+        flash(_tr("نمط TOFU يحتاج عددًا صالحًا (1 على الأقل) للأجهزة المسموحة."), "error")
         return _redirect_am()
 
     try:
@@ -293,7 +294,7 @@ def allow_mode_upsert():
                                     "mode": mode,
                                     "max_devices": max_devices,
                                     "active": active})
-        flash("تم حفظ سياسة نمط السماح.", "success")
+        flash(_tr("تم حفظ سياسة نمط السماح."), "success")
     except ValueError as exc:
         flash(str(exc), "error")
     return _redirect_am()
@@ -308,9 +309,9 @@ def allow_mode_delete_policy(policy_id: int):
                           target_type="allow_mode_policy",
                           target_id=str(policy_id),
                           payload={"deleted": True})
-        flash("حُذفت السياسة وكل أجهزتها.", "success")
+        flash(_tr("حُذفت السياسة وكل أجهزتها."), "success")
     else:
-        flash("السياسة غير موجودة.", "info")
+        flash(_tr("السياسة غير موجودة."), "info")
     return _redirect_am()
 
 
@@ -319,7 +320,7 @@ def allow_mode_toggle_policy(policy_id: int):
     actor, admin_id = _actor()
     pol = allow_mode_repo.get_policy_by_id(tid, int(policy_id))
     if not pol:
-        flash("السياسة غير موجودة.", "info")
+        flash(_tr("السياسة غير موجودة."), "info")
         return _redirect_am()
     new_active = not bool(pol.get("active"))
     if allow_mode_repo.set_policy_active(tid, int(policy_id), new_active):
@@ -328,7 +329,7 @@ def allow_mode_toggle_policy(policy_id: int):
                           target_type="allow_mode_policy",
                           target_id=str(policy_id),
                           payload={"active": new_active})
-        flash("تم تفعيل السياسة." if new_active else "تم تعليق السياسة.",
+        flash(_tr("تم تفعيل السياسة.") if new_active else _tr("تم تعليق السياسة."),
               "success")
     return _redirect_am()
 
@@ -343,7 +344,7 @@ def allow_mode_add_device():
         policy_id = 0
     pol = allow_mode_repo.get_policy_by_id(tid, policy_id)
     if not pol:
-        flash("السياسة غير موجودة.", "error")
+        flash(_tr("السياسة غير موجودة."), "error")
         return _redirect_am()
     username = (request.form.get("username") or "").strip()
     mac = (request.form.get("mac") or "").strip()
@@ -351,7 +352,7 @@ def allow_mode_add_device():
     norm = allow_mode_repo.normalize_mac(mac)
     import re as _re
     if not _re.match(r"^[0-9A-F]{2}(:[0-9A-F]{2}){5}$", norm):
-        flash("صيغة MAC غير صالحة (مثال: AA:BB:CC:DD:EE:FF).", "error")
+        flash(_tr("صيغة MAC غير صالحة (مثال: AA:BB:CC:DD:EE:FF)."), "error")
         return _redirect_am()
     dev = allow_mode_repo.add_device(
         policy_id=policy_id, username=username, mac=norm,
@@ -364,9 +365,9 @@ def allow_mode_add_device():
                           payload={"policy_id": policy_id,
                                     "username": username,
                                     "mac": norm})
-        flash("تمت إضافة الجهاز.", "success")
+        flash(_tr("تمت إضافة الجهاز."), "success")
     else:
-        flash("تعذّر إضافة الجهاز.", "error")
+        flash(_tr("تعذّر إضافة الجهاز."), "error")
     return _redirect_am()
 
 
@@ -382,7 +383,7 @@ def allow_mode_delete_device(device_id: int):
         (int(device_id), tid),
     ).fetchone()
     if not row:
-        flash("الجهاز غير موجود.", "info")
+        flash(_tr("الجهاز غير موجود."), "info")
         return _redirect_am()
     if allow_mode_repo.delete_device(int(device_id)):
         audit_repo.record(tenant_id=tid, actor=actor,
@@ -390,5 +391,5 @@ def allow_mode_delete_device(device_id: int):
                           target_type="allow_mode_device",
                           target_id=str(device_id),
                           payload={"deleted": True})
-        flash("حُذف الجهاز.", "success")
+        flash(_tr("حُذف الجهاز."), "success")
     return _redirect_am()

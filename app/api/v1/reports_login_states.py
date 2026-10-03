@@ -8,6 +8,7 @@ exact same actor + source-lock the web routes pin, so the API can't mix RADIUS
 with portal events.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -51,7 +52,7 @@ def detail(kind: str):
     source مثبّت على مستوى المسار (source_lock) للأقسام الخمسة عدا admin —
     لا يُتجاوز من الـquery (يمنع خلط RADIUS بالبوابة، مطابقة للويب)."""
     if kind not in _KINDS:
-        return fail("not_found", "قسم حالات الدخول غير معروف.", status=404,
+        return fail("not_found", _tr("قسم حالات الدخول غير معروف."), status=404,
                     details={"kinds": list(_KINDS)})
     actor, source_lock = _KINDS[kind]
     a = request.args

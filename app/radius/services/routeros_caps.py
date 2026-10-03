@@ -17,6 +17,7 @@ against the operator's selection.
 Pure functions only — no DB, no I/O. Trivially unit-testable.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 
@@ -160,11 +161,11 @@ def summary(version: object) -> dict:
     major = parse_major(version)
     wg = supports_wireguard(version)
     if wg:
-        note = "RouterOS 7: يدعم WireGuard — يمكن إضافته خلف NAT تلقائيًا (وضع VPN)."
+        note = _tr("RouterOS 7: يدعم WireGuard — يمكن إضافته خلف NAT تلقائيًا (وضع VPN).")
     else:
         note = (
-            "RouterOS 6: لا يدعم WireGuard. استخدم عنوانًا مباشرًا "
-            "(IP عام / منفذ موجّه) أو وضع دفع DHCP للوصول خلف NAT."
+            _tr("RouterOS 6: لا يدعم WireGuard. استخدم عنوانًا مباشرًا "
+            "(IP عام / منفذ موجّه) أو وضع دفع DHCP للوصول خلف NAT.")
         )
     return {
         "major": major,
@@ -344,59 +345,59 @@ def validate_connection_plan(
     # WireGuard on v6 — blocking for either role.
     if mgmt == "wireguard" and not wg:
         err("routeros_v6_wireguard_not_supported",
-            "RouterOS 6 لا يدعم WireGuard. استخدم SSTP للإدارة.")
+            _tr("RouterOS 6 لا يدعم WireGuard. استخدم SSTP للإدارة."))
     if traffic == "wireguard_traffic" and not wg:
         err("routeros_v6_wireguard_not_supported",
-            "نفق ترافيك WireGuard غير مدعوم على RouterOS 6.")
+            _tr("نفق ترافيك WireGuard غير مدعوم على RouterOS 6."))
 
     # Type / version validity.
     if mgmt not in MANAGEMENT_TUNNEL_TYPES:
-        err("invalid_management_tunnel", f"نوع نفق إدارة غير معروف: {mgmt}")
+        err("invalid_management_tunnel", _tr('نوع نفق إدارة غير معروف: %(mgmt)s', mgmt=mgmt))
     elif mgmt not in _allowed_management(version):
         err("management_not_supported_for_version",
-            f"نفق الإدارة «{mgmt}» غير مدعوم على هذا الإصدار.")
+            _tr('نفق الإدارة «%(mgmt)s» غير مدعوم على هذا الإصدار.', mgmt=mgmt))
     if traffic not in TRAFFIC_TUNNEL_TYPES:
-        err("invalid_traffic_tunnel", f"نوع نفق ترافيك غير معروف: {traffic}")
+        err("invalid_traffic_tunnel", _tr('نوع نفق ترافيك غير معروف: %(traffic)s', traffic=traffic))
     elif traffic not in _allowed_traffic(version):
         err("traffic_not_supported_for_version",
-            f"نفق الترافيك «{traffic}» غير مدعوم على هذا الإصدار.")
+            _tr('نفق الترافيك «%(traffic)s» غير مدعوم على هذا الإصدار.', traffic=traffic))
 
     # A traffic tunnel can never be the only tunnel — management must stay up.
     if traffic != "none" and mgmt == "none":
         err("management_tunnel_would_be_lost",
-            "لا يمكن تفعيل نفق ترافيك دون نفق إدارة فعّال.")
+            _tr("لا يمكن تفعيل نفق ترافيك دون نفق إدارة فعّال."))
 
     # SSTP management must never own the default route.
     if mgmt == "sstp_mgmt" and sstp_sets_default_route:
         err("sstp_must_not_own_default_route",
-            "نفق SSTP للإدارة فقط — لا يجوز ضبط Default Route عليه.")
+            _tr("نفق SSTP للإدارة فقط — لا يجوز ضبط Default Route عليه."))
 
     # Only one tunnel may own the default route.
     if sstp_sets_default_route and traffic_owns_default_route:
         err("default_route_conflict",
-            "لا يمكن أن يملك SSTP و L2TP/IPsec الـ Default Route في آن واحد.")
+            _tr("لا يمكن أن يملك SSTP و L2TP/IPsec الـ Default Route في آن واحد."))
 
     # Traffic-mode specific gates.
     if traffic_mode is not None and traffic_mode not in TRAFFIC_MODES:
-        err("invalid_traffic_mode", f"وضع ترافيك غير معروف: {traffic_mode}")
+        err("invalid_traffic_mode", _tr('وضع ترافيك غير معروف: %(traffic_mode)s', traffic_mode=traffic_mode))
     if traffic_mode == "full_tunnel" and not full_tunnel_confirmed:
         err("full_tunnel_requires_confirmation",
-            "وضع تمرير كل الترافيك يتطلب تأكيدًا صريحًا من المشغّل.")
+            _tr("وضع تمرير كل الترافيك يتطلب تأكيدًا صريحًا من المشغّل."))
     if traffic_mode == "selected_pool" and not selected_pool:
         err("missing_selected_pool",
-            "وضع التجمّع المحدد يتطلب اختيار IP Pool.")
+            _tr("وضع التجمّع المحدد يتطلب اختيار IP Pool."))
 
     # SSTP on v7 works but WireGuard is the better management choice.
     if mgmt == "sstp_mgmt" and wg:
         warn("sstp_on_v7_not_recommended",
-             "RouterOS 7 يُفضّل WireGuard للإدارة بدل SSTP.")
+             N_("RouterOS 7 يُفضّل WireGuard للإدارة بدل SSTP."))
 
     # PPTP is allowed only as an explicit Legacy choice — never silently. It
     # is valid (not blocking) but always carries the insecurity warning.
     if traffic == "pptp_traffic":
         warn("pptp_insecure_legacy",
-             "PPTP غير آمن (تشفير MS-CHAPv2 مخترَق) — للاستخدام الاضطراري فقط. "
-             "يُفضّل L2TP/IPsec.")
+             N_("PPTP غير آمن (تشفير MS-CHAPv2 مخترَق) — للاستخدام الاضطراري فقط. "
+             "يُفضّل L2TP/IPsec."))
 
     return {"valid": not errors, "errors": errors, "warnings": warnings}
 

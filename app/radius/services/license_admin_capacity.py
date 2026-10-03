@@ -5,6 +5,7 @@ selected create operations. It does not fetch remote data, mutate RADIUS,
 touch MikroTik, or enforce anything when no contract snapshot exists.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -81,7 +82,7 @@ class CapacityDecision:
     allowed: bool
     feature_key: str
     code: str = "allowed"
-    message_ar: str = "مسموح"
+    message_ar: str = N_("مسموح")
     current_usage: int | None = None
     limit: int | None = None
     warning_codes: list[str] = field(default_factory=list)
@@ -182,7 +183,7 @@ class CapacityEnforcementService:
                 allowed=False,
                 feature_key=feature_key,
                 code="capacity_limit_exceeded",
-                message_ar="تم الوصول إلى الحد المسموح لهذه الميزة.",
+                message_ar=N_("تم الوصول إلى الحد المسموح لهذه الميزة."),
                 current_usage=current,
                 limit=limit,
                 warning_codes=warnings,
@@ -237,7 +238,7 @@ class CapacityEnforcementService:
                 allowed=False,
                 feature_key="cards",
                 code="capacity_limit_exceeded",
-                message_ar="عدد الكروت في هذه الدفعة يتجاوز الحد المسموح.",
+                message_ar=N_("عدد الكروت في هذه الدفعة يتجاوز الحد المسموح."),
                 current_usage=requested_count,
                 limit=per_batch_limit,
                 warning_codes=warnings,
@@ -255,7 +256,7 @@ class CapacityEnforcementService:
                     allowed=False,
                     feature_key="cards",
                     code="capacity_limit_exceeded",
-                    message_ar="تم تجاوز حد الكروت الشهري المسموح.",
+                    message_ar=N_("تم تجاوز حد الكروت الشهري المسموح."),
                     current_usage=current_month,
                     limit=monthly_limit,
                     warning_codes=warnings,
@@ -368,7 +369,7 @@ class CapacityEnforcementService:
                 "available": True,
                 "mode": "local_intent_only",
                 "dry_run_only": True,
-                "message_ar": "يمكن استخدام هذه البيانات لعرض طلب ترقية، بدون إرسال أي طلب مدفوع من هذا المسار.",
+                "message_ar": _tr("يمكن استخدام هذه البيانات لعرض طلب ترقية، بدون إرسال أي طلب مدفوع من هذا المسار."),
             },
         }
 
@@ -438,7 +439,7 @@ class CapacityEnforcementService:
             allowed=False,
             feature_key=feature_key,
             code="license_not_active",
-            message_ar="النظام غير مفعّل من لوحة التراخيص أو الترخيص موقوف/منتهي.",
+            message_ar=N_("النظام غير مفعّل من لوحة التراخيص أو الترخيص موقوف/منتهي."),
             warning_codes=[*warnings, "license_not_active"],
             contract_status=status,
         )
@@ -501,7 +502,7 @@ class CapacityEnforcementService:
             allowed=False,
             feature_key=feature_key,
             code="service_not_enabled",
-            message_ar="هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص.",
+            message_ar=N_("هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص."),
             warning_codes=[*warnings, "service_not_enabled"],
             contract_status=contract_status,
         )
@@ -520,10 +521,10 @@ class CapacityEnforcementService:
 
     def _feature_block_message(self, feature_state: str) -> str:
         if feature_state in {"readonly", "read_only"}:
-            return "هذه الميزة للقراءة فقط حسب عقد الترخيص الحالي."
+            return N_("هذه الميزة للقراءة فقط حسب عقد الترخيص الحالي.")
         if feature_state == "hidden":
-            return "هذه الميزة غير متاحة في عقد الترخيص الحالي."
-        return "هذه الميزة مقفلة حسب عقد الترخيص الحالي."
+            return N_("هذه الميزة غير متاحة في عقد الترخيص الحالي.")
+        return N_("هذه الميزة مقفلة حسب عقد الترخيص الحالي.")
 
     def _feature_status_message(
         self,
@@ -535,10 +536,10 @@ class CapacityEnforcementService:
         if feature_state in FEATURE_BLOCK_CODES:
             return self._feature_block_message(feature_state)
         if limit is None:
-            return "لا يوجد حد مخزن لهذه الميزة حالياً."
+            return N_("لا يوجد حد مخزن لهذه الميزة حالياً.")
         if current_usage >= limit:
-            return "وصلت هذه الميزة إلى الحد المخزن في عقد الترخيص."
-        return "هذه الميزة ضمن الحدود المخزنة حالياً."
+            return N_("وصلت هذه الميزة إلى الحد المخزن في عقد الترخيص.")
+        return N_("هذه الميزة ضمن الحدود المخزنة حالياً.")
 
     def _upgrade_hint(
         self,
@@ -548,9 +549,9 @@ class CapacityEnforcementService:
         limit: int | None,
     ) -> str:
         if feature_state in FEATURE_BLOCK_CODES:
-            return "قد تحتاج إلى ترقية الباقة أو تفعيل الميزة من لوحة الإدارة."
+            return N_("قد تحتاج إلى ترقية الباقة أو تفعيل الميزة من لوحة الإدارة.")
         if limit is not None and current_usage >= limit:
-            return "قد تحتاج إلى رفع الحد قبل إضافة عناصر جديدة."
+            return N_("قد تحتاج إلى رفع الحد قبل إضافة عناصر جديدة.")
         if feature_key == "cards" and limit is None:
-            return "يمكن للواجهة عرض حالة الكروت بدون حظر عند عدم وجود حد شهري مخزن."
+            return N_("يمكن للواجهة عرض حالة الكروت بدون حظر عند عدم وجود حد شهري مخزن.")
         return ""

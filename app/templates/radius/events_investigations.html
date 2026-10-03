@@ -42,12 +42,12 @@
 
 {# ── خرائط التعريب: الحالة، الخطورة، نوع الكيان — موحّدة مع events_security/events_risk ── #}
 {% set _status_labels = {
-  'open':        'مفتوح',
-  'in_review':   'قيد المراجعة',
-  'in_progress': 'قيد المراجعة',
-  'closed':      'مغلق',
-  'resolved':    'تمت المعالجة',
-  'dismissed':   'مرفوض'
+  'open':        _('مفتوح'),
+  'in_review':   _('قيد المراجعة'),
+  'in_progress': _('قيد المراجعة'),
+  'closed':      _('مغلق'),
+  'resolved':    _('تمت المعالجة'),
+  'dismissed':   _('مرفوض')
 } %}
 {% set _status_variant = {
   'open':        'amber',
@@ -57,15 +57,15 @@
   'resolved':    'green',
   'dismissed':   'grey'
 } %}
-{% set _severity_labels  = {'info': 'معلومة', 'warning': 'تحذير', 'error': 'خطأ', 'critical': 'حرج'} %}
+{% set _severity_labels  = {'info': _('معلومة'), 'warning': _('تحذير'), 'error': _('خطأ'), 'critical': _('حرج')} %}
 {% set _severity_variant = {'info': 'blue',   'warning': 'amber', 'error': 'red', 'critical': 'red'} %}
 {% set _entity_labels = {
-  'subscriber':  'مشترك', 'user':   'مشترك',
-  'card':        'بطاقة', 'card_batch': 'دفعة كروت',
-  'wallet':      'محفظة', 'admin':  'مدير',  'manager': 'مدير',
-  'distributor': 'موزّع', 'device': 'جهاز شبكة', 'router':  'راوتر',
-  'session':     'جلسة',  'event':  'حدث',   'invoice': 'فاتورة',
-  'payment':     'دفعة',  'plan':   'باقة',  'tenant':  'مستأجر'
+  'subscriber':  _('مشترك'), 'user':   _('مشترك'),
+  'card':        _('بطاقة'), 'card_batch': _('دفعة كروت'),
+  'wallet':      _('محفظة'), 'admin':  _('مدير'),  'manager': _('مدير'),
+  'distributor': _('موزّع'), 'device': _('جهاز شبكة'), 'router':  _('راوتر'),
+  'session':     _('جلسة'),  'event':  _('حدث'),   'invoice': _('فاتورة'),
+  'payment':     _('دفعة'),  'plan':   _('باقة'),  'tenant':  _('مستأجر')
 } %}
 
 {# عدّات KPI تُحسب على القائمة الكاملة — مفيدة في الصدر وفي meta عناوين الأقسام #}
@@ -79,29 +79,29 @@
 {# ───── الصدفة الموحّدة: هيرو واحد (عنوان + KPI) — لا فلاتر في هذه الصفحة ───── #}
 <section class="hub-hero-shell" data-testid="investigations-hero">
 {{ hub.megahero(
-  "التحقيقات",
-  subtitle="التحقيق ملف مراجعة بشرية تفتحه عندما يلفت انتباهك حدث أو تنبيه مريب، لتتابع فحصه حتى الإغلاق — هذا تتبّع فقط وليس إصلاحًا تلقائيًا.",
+  _('التحقيقات'),
+  subtitle=_('التحقيق ملف مراجعة بشرية تفتحه عندما يلفت انتباهك حدث أو تنبيه مريب، لتتابع فحصه حتى الإغلاق — هذا تتبّع فقط وليس إصلاحًا تلقائيًا.'),
   icon="magnifying-glass-chart",
   actions_html=_events_jump,
   kpis=[
-    {'label': 'إجمالي التحقيقات', 'value': investigations|length, 'icon': 'folder-open',          'variant': 'brand'},
-    {'label': 'مفتوحة',          'value': _open,                  'icon': 'folder-tree',          'variant': 'amber'},
-    {'label': 'حرجة',            'value': _critical,              'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('إجمالي التحقيقات'), 'value': investigations|length, 'icon': 'folder-open',          'variant': 'brand'},
+    {'label': _('مفتوحة'),          'value': _open,                  'icon': 'folder-tree',          'variant': 'amber'},
+    {'label': _('حرجة'),            'value': _critical,              'icon': 'triangle-exclamation', 'variant': 'red'},
   ]
 ) }}
 </section>{# /hub-hero-shell #}
 
 {# ───── الصفحات الشقيقة في مركز الأحداث والمخاطر — بطاقات تنقل سريعة على
    نفس نمط events_center، لتبقى الأقسام الأربعة قريبة من بعضها بصريًا. ───── #}
-{% call hub.section("صفحات مركز الأحداث والمخاطر", icon="compass", meta="الأحداث · المخاطر · الأمان · التحقيقات") %}
+{% call hub.section(_('صفحات مركز الأحداث والمخاطر'), icon="compass", meta=_('الأحداث · المخاطر · الأمان · التحقيقات')) %}
   <div class="hub-actions" data-testid="investigations-siblings">
-    {% if can_submit('radius.events_center', 'GET') %}{{ hub.action_card("الأحداث",     sub="سجل أحداث الأعمال للعرض والمراجعة",
+    {% if can_submit('radius.events_center', 'GET') %}{{ hub.action_card(_('الأحداث'),     sub=_('سجل أحداث الأعمال للعرض والمراجعة'),
                        icon="timeline",       href=url_for('radius.events_center'),         variant="brand") }}{% endif %}
-    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد الفحص ومراجعة التنبيهات",
+    {% if can_submit('radius.events_risk', 'GET') %}{{ hub.action_card(_('تقييم المخاطر'), sub=_('تشغيل قواعد الفحص ومراجعة التنبيهات'),
                        icon="shield-halved",  href=url_for('radius.events_risk'),           variant="amber") }}{% endif %}
-    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card("الأمان",       sub="أحداث الصلاحيات والدخول الفاشل",
+    {% if can_submit('radius.events_security', 'GET') %}{{ hub.action_card(_('الأمان'),       sub=_('أحداث الصلاحيات والدخول الفاشل'),
                        icon="lock",           href=url_for('radius.events_security'),       variant="red") }}{% endif %}
-    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card("التحقيقات",    sub="أنت هنا — ملفات المراجعة البشرية المفتوحة",
+    {% if can_submit('radius.events_investigations', 'GET') %}{{ hub.action_card(_('التحقيقات'),    sub=_('أنت هنا — ملفات المراجعة البشرية المفتوحة'),
                        icon="magnifying-glass-chart", href=url_for('radius.events_investigations'),
                        variant="brand", disabled=True) }}{% endif %}
   </div>
@@ -109,22 +109,21 @@
 
 {# ───── المحتوى الرئيسي (نموذج فتح + جدول مبطّق) + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف ملف مراجعة بشرية فُتح لمتابعة ملاحظة مخاطر أو احتيال. هذه الصفحة للتتبع فقط.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف ملف مراجعة بشرية فُتح لمتابعة ملاحظة مخاطر أو احتيال. هذه الصفحة للتتبع فقط.'),
   items=[
-    {'icon': 'plus',                 'text': 'استخدم نموذج «فتح تحقيق» لبدء حالة مراجعة جديدة مرتبطة بكيان معيّن.'},
-    {'icon': 'triangle-exclamation', 'text': 'الخطورة تساعدك على ترتيب الحالات الحرجة قبل العادية.'},
-    {'icon': 'link',                 'text': 'نوع الكيان ورقمه يربطان التحقيق بالعنصر المعني في النظام.'},
-    {'icon': 'folder-open',          'text': 'الحالة تبقى «مفتوحة» حتى تكتمل المراجعة البشرية.'},
+    {'icon': 'plus',                 'text': _('استخدم نموذج «فتح تحقيق» لبدء حالة مراجعة جديدة مرتبطة بكيان معيّن.')},
+    {'icon': 'triangle-exclamation', 'text': _('الخطورة تساعدك على ترتيب الحالات الحرجة قبل العادية.')},
+    {'icon': 'link',                 'text': _('نوع الكيان ورقمه يربطان التحقيق بالعنصر المعني في النظام.')},
+    {'icon': 'folder-open',          'text': _('الحالة تبقى «مفتوحة» حتى تكتمل المراجعة البشرية.')},
   ],
-  note="فتح تحقيق لا يطبّق أي إجراء تلقائي — إنه سجل مراجعة بشرية فقط."
+  note=_('فتح تحقيق لا يطبّق أي إجراء تلقائي — إنه سجل مراجعة بشرية فقط.')
 )) %}
 
   {# ── نموذج «فتح تحقيق» — سجل مراجعة بشرية، بلا أي إجراء تلقائي ── #}
-  {% call hub.section("فتح تحقيق", icon="plus", meta="سجل مراجعة بشرية — بلا أي إجراء تلقائي") %}
+  {% call hub.section(_('فتح تحقيق'), icon="plus", meta=_('سجل مراجعة بشرية — بلا أي إجراء تلقائي')) %}
     <p class="help" style="margin:0 0 12px;font-size:12px;color:var(--hub-text-mute);line-height:1.85">
-      املأ النموذج لفتح ملف متابعة جديد: اكتب عنوانًا واضحًا، حدّد مدى الخطورة، واربطه بالعنصر المعني
-      (مشترك، بطاقة، جهاز…) حتى يعرف أي مشغّل لاحق ما الذي تجري مراجعته ولماذا.
+      {{ _('املأ النموذج لفتح ملف متابعة جديد: اكتب عنوانًا واضحًا، حدّد مدى الخطورة، واربطه بالعنصر المعني (مشترك، بطاقة، جهاز…) حتى يعرف أي مشغّل لاحق ما الذي تجري مراجعته ولماذا.') }}
     </p>
     <form method="post" class="hub-form-grid" data-testid="investigation-form" autocomplete="off">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -153,19 +152,18 @@
         <textarea class="hub-input" name="summary" rows="4" placeholder="{{ _('ما الذي لاحظته؟ وما الخطوة التالية للمراجعة؟') }}"></textarea>
         <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله.') }}</span>
       </label>
-      {{ hub.btn("فتح التحقيق", icon="folder-plus", variant="primary", type="submit") }}
+      {{ hub.btn(_('فتح التحقيق'), icon="folder-plus", variant="primary", type="submit") }}
     {% if not can_post_here() %}</fieldset>{% endif %}</form>
   {% endcall %}
 
   {# ── قائمة التحقيقات — جدول uds موحّد مع شارات حالة/خطورة وفُتِح-بواسطة-ومتى ── #}
-  {% set _list_meta = (investigations|length|string) + ' تحقيق'
-                   ~ (' · ' ~ _open|string ~ ' مفتوح'   if _open       else '')
-                   ~ (' · ' ~ _critical|string ~ ' حرج' if _critical   else '')
-                   ~ (' · ' ~ _closed|string ~ ' مغلق' if _closed     else '') %}
-  {% call hub.section("قائمة التحقيقات", icon="folder-open", meta=_list_meta, flush=True) %}
+  {% set _list_meta = (investigations|length|string) + _(' تحقيق')
+                   ~ (_(' · %(string)s مفتوح', string=_open|string)   if _open       else '')
+                   ~ (_(' · %(string)s حرج', string=_critical|string) if _critical   else '')
+                   ~ (_(' · %(string)s مغلق', string=_closed|string) if _closed     else '') %}
+  {% call hub.section(_('قائمة التحقيقات'), icon="folder-open", meta=_list_meta, flush=True) %}
     <p class="help" style="margin:0;padding:10px 14px;font-size:12px;color:var(--hub-text-mute);line-height:1.85;border-bottom:1px solid var(--hub-border-soft,#e2e8f0)">
-      كل صف ملف مراجعة واحد. ابدأ بالحالات «المفتوحة» ذات الخطورة «الحرجة»، راجع العنصر المرتبط بها،
-      ثم أغلق الملف عند انتهاء المراجعة.
+      {{ _('كل صف ملف مراجعة واحد. ابدأ بالحالات «المفتوحة» ذات الخطورة «الحرجة»، راجع العنصر المرتبط بها، ثم أغلق الملف عند انتهاء المراجعة.') }}
     </p>
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
          data-uds-export-title="{{ _('التحقيقات') }}" style="border:none;border-radius:0">
@@ -173,22 +171,22 @@
         <thead>
           <tr>
             <th class="num">{{ _('الرقم') }}
-              <span class="hub-hint" tabindex="0" data-hint="رقم تسلسلي يميز ملف التحقيق — استخدمه عند الإشارة إليه في الملاحظات."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('رقم تسلسلي يميز ملف التحقيق — استخدمه عند الإشارة إليه في الملاحظات.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th data-uds-nosort>{{ _('العنوان والملخّص') }}
-              <span class="hub-hint" tabindex="0" data-hint="ملخص سبب فتح التحقيق كما كتبه المشغّل، وأسفله الملخّص التفصيلي إن وُجد."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('ملخص سبب فتح التحقيق كما كتبه المشغّل، وأسفله الملخّص التفصيلي إن وُجد.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الحالة') }}
-              <span class="hub-hint" tabindex="0" data-hint="«مفتوح» = المراجعة لم تكتمل؛ «قيد المراجعة» = العمل جارٍ؛ «مغلق» = انتهت المراجعة."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('«مفتوح» = المراجعة لم تكتمل؛ «قيد المراجعة» = العمل جارٍ؛ «مغلق» = انتهت المراجعة.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الخطورة') }}
-              <span class="hub-hint" tabindex="0" data-hint="ترتيب أولوية المراجعة: حرج ثم خطأ ثم تحذير ثم معلومة."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('ترتيب أولوية المراجعة: حرج ثم خطأ ثم تحذير ثم معلومة.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الكيان') }}
-              <span class="hub-hint" tabindex="0" data-hint="العنصر المعني بالتحقيق (مشترك، بطاقة، جهاز…) ورقمه التعريفي في النظام."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('العنصر المعني بالتحقيق (مشترك، بطاقة، جهاز…) ورقمه التعريفي في النظام.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th data-uds-nosort>{{ _('فُتح') }}
-              <span class="hub-hint" tabindex="0" data-hint="من فتح هذا الملف ومتى — يساعد على إسناد المتابعة لاحقًا."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('من فتح هذا الملف ومتى — يساعد على إسناد المتابعة لاحقًا.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
           </tr>
         </thead>
@@ -239,8 +237,8 @@
           {% else %}
             <tr><td colspan="6" style="padding:0">
               {{ hub.empty(
-                  "لا توجد تحقيقات بعد",
-                  sub="افتح أول تحقيق من نموذج «فتح تحقيق» في الأعلى — كل ملف يبقى للمراجعة البشرية فقط.",
+                  _('لا توجد تحقيقات بعد'),
+                  sub=_('افتح أول تحقيق من نموذج «فتح تحقيق» في الأعلى — كل ملف يبقى للمراجعة البشرية فقط.'),
                   icon="magnifying-glass-chart"
               ) }}
             </td></tr>

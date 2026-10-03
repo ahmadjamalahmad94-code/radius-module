@@ -37,9 +37,9 @@
 {# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
 <section class="hub-hero-shell">
 {{ hub.hero(
-     "ملف العرض — " ~ package.name,
-     subtitle=("عرض مخزون: المخزون المتبقّي أعلاه والمشتريات بالأسفل (لا تكرار). تعبئة المخزون من الأزرار." if _is_stock
-               else "عرض توليد فوري: كل عملية شراء تُنشئ مشتركًا له اتصاله الخاص (اسم مستخدم/كلمة مرور) — بلا توليد بطاقة لكل عملية."),
+     _('ملف العرض — %(name)s', name=package.name),
+     subtitle=(_('عرض مخزون: المخزون المتبقّي أعلاه والمشتريات بالأسفل (لا تكرار). تعبئة المخزون من الأزرار.') if _is_stock
+               else _('عرض توليد فوري: كل عملية شراء تُنشئ مشتركًا له اتصاله الخاص (اسم مستخدم/كلمة مرور) — بلا توليد بطاقة لكل عملية.')),
      icon="folder-open",
      actions_html=(
        ('<button type="button" class="hub-btn" data-fcw-open="stock-upload"><i class="fa-solid fa-file-arrow-up"></i> '|safe ~ _("رفع ملف بطاقات") ~ '</button>'|safe
@@ -49,14 +49,14 @@
 
 <div class="hub-kpi-grid">
   {# عمليات الشراء (كل عملية = مشترك له اتصاله الخاص) — ليست عدد بطاقات #}
-  {{ hub.kpi("إجمالي المشتريات", total, icon="receipt") }}
+  {{ hub.kpi(_('إجمالي المشتريات'), total, icon="receipt") }}
   {% if _is_stock %}
-    {{ hub.kpi("المخزون الكلي", stock_total, icon="boxes-stacked", variant="brand") }}
-    {{ hub.kpi("المباع (من المخزون)", sold, icon="cart-shopping", variant="amber") }}
-    {{ hub.kpi("المتبقّي (غير المباع)", remaining, icon="warehouse", variant=("red" if remaining <= 0 else ("amber" if _low_stock else "green"))) }}
+    {{ hub.kpi(_('المخزون الكلي'), stock_total, icon="boxes-stacked", variant="brand") }}
+    {{ hub.kpi(_('المباع (من المخزون)'), sold, icon="cart-shopping", variant="amber") }}
+    {{ hub.kpi(_('المتبقّي (غير المباع)'), remaining, icon="warehouse", variant=("red" if remaining <= 0 else ("amber" if _low_stock else "green"))) }}
   {% else %}
-    {{ hub.kpi("نمط البيع", "توليد فوري", icon="bolt", variant="brand") }}
-    {{ hub.kpi("المشتركون", total, icon="users", variant="green") }}
+    {{ hub.kpi(_('نمط البيع'), _('توليد فوري'), icon="bolt", variant="brand") }}
+    {{ hub.kpi(_('المشتركون'), total, icon="users", variant="green") }}
   {% endif %}
 </div>
 </section>{# /hub-hero-shell #}
@@ -69,7 +69,7 @@
 {% elif _low_stock %}
 <p class="cm-note cm-note--warn">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining|ar_count('card') }} فقط من أصل {{ stock_total }}.</span>
+  <span>{{ _('المخزون منخفض (أقل من 10%%) — تبقّى %(v)s فقط من أصل %(stock_total)s.', v=remaining|ar_count('card'), stock_total=stock_total) }}</span>
 </p>
 {% endif %}
 
@@ -77,8 +77,8 @@
        المشتريات بالأسفل (البطاقة المباعة تظهر هناك لا هنا). عروض التوليد الفوري
        لا مخزون لها فيُخفى هذا القسم كليًّا. ───── #}
 {% if _is_stock %}
-{% call hub.section("المخزون المتبقّي (غير المباعة)", icon="warehouse",
-                    meta=((offer_cards.total if offer_cards else 0) ~ " متبقٍّ"), flush=True) %}
+{% call hub.section(_('المخزون المتبقّي (غير المباعة)'), icon="warehouse",
+                    meta=(_('%(v)s متبقٍّ', v=(offer_cards.total if offer_cards else 0))), flush=True) %}
   {% set card_rows = [] %}
   {% for it in (offer_cards['items'] if offer_cards else []) %}
     {% set _x = card_rows.append({
@@ -91,15 +91,15 @@
   {% endfor %}
   {{ hub_table(
        columns=[
-         {"label": "الكود", "key": "code", "mono": true},
-         {"label": "كلمة المرور", "key": "password", "mono": true},
-         {"label": "الحالة", "key": "status"},
-         {"label": "تاريخ التوليد/الرفع", "key": "created"},
-         {"label": "الحزمة", "key": "batch", "mono": true},
+         {"label": _('الكود'), "key": "code", "mono": true},
+         {"label": _('كلمة المرور'), "key": "password", "mono": true},
+         {"label": _('الحالة'), "key": "status"},
+         {"label": _('تاريخ التوليد/الرفع'), "key": "created"},
+         {"label": _('الحزمة'), "key": "batch", "mono": true},
        ],
        rows=card_rows,
        wide=true,
-       empty_message="نفد المخزون — كل البطاقات بيعت (تظهر بالأسفل). أضف مخزونًا من الأزرار بالأعلى.") }}
+       empty_message=_('نفد المخزون — كل البطاقات بيعت (تظهر بالأسفل). أضف مخزونًا من الأزرار بالأعلى.')) }}
 
   {% if offer_cards and offer_cards.pages > 1 %}
   <nav class="cm-cards-pager" role="navigation" aria-label="{{ _('ترقيم بطاقات العرض') }}">
@@ -118,11 +118,11 @@
 {# ───── المشتريات / المشتركون (المباعة): كل عملية شراء = مشترك له اتصاله
        الخاص (اسم مستخدم/كلمة مرور) + استهلاك الراديوس. disjoint عن «المخزون
        المتبقّي» أعلاه. العنوان يبقى يحمل «ملف مشتريات» (يعتمدها الاختبار). ───── #}
-{% call hub.section("ملف مشتريات هذا العرض — المشتركون (المباعة)", icon="users",
-                    meta=(total ~ " مشترك"), flush=True) %}
+{% call hub.section(_('ملف مشتريات هذا العرض — المشتركون (المباعة)'), icon="users",
+                    meta=(_('%(total)s مشترك', total=total)), flush=True) %}
   {% set rows = [] %}
   {% for it in items %}
-    {% set _status = "ملغاة" if it.revoked else ("مستخدمة" if it.used else "جاهزة") %}
+    {% set _status = _('ملغاة') if it.revoked else (_('مستخدمة') if it.used else _('جاهزة')) %}
     {% set _x = rows.append({
         "username": ('<bdi>'|safe ~ (it.username or "—")|e ~ '</bdi>'|safe),
         "password": ('<bdi>'|safe ~ (it.password or "—")|e ~ '</bdi>'|safe),
@@ -136,18 +136,18 @@
   {% endfor %}
   {{ hub_table(
        columns=[
-         {"label": "المستخدم", "key": "username", "mono": true},
-         {"label": "كلمة المرور", "key": "password", "mono": true},
-         {"label": "المشتري", "key": "buyer"},
-         {"label": "السعر", "key": "price", "numeric": true},
-         {"label": "التاريخ", "key": "when"},
-         {"label": "الحالة", "key": "status"},
-         {"label": "تنزيل", "key": "down", "numeric": true},
-         {"label": "رفع", "key": "up", "numeric": true},
+         {"label": _('المستخدم'), "key": "username", "mono": true},
+         {"label": _('كلمة المرور'), "key": "password", "mono": true},
+         {"label": _('المشتري'), "key": "buyer"},
+         {"label": _('السعر'), "key": "price", "numeric": true},
+         {"label": _('التاريخ'), "key": "when"},
+         {"label": _('الحالة'), "key": "status"},
+         {"label": _('تنزيل'), "key": "down", "numeric": true},
+         {"label": _('رفع'), "key": "up", "numeric": true},
        ],
        rows=rows,
        wide=true,
-       empty_message="لا توجد مشتريات لهذا العرض بعد.") }}
+       empty_message=_('لا توجد مشتريات لهذا العرض بعد.')) }}
 
   {% if pages > 1 or per_page != 20 %}
   <form method="get" action="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
@@ -155,7 +155,7 @@
          page=page, total_pages=pages,
          base_url=url_for('radius.card_marketplace_package_file', package_id=package.id),
          per_page=per_page, per_page_options=[20, 50, 100],
-         info_text=("عرض %s من %s" | format(items|length, total))) }}
+         info_text=_('عرض %(shown)s من %(total)s', shown=items|length, total=total)) }}
   </form>
   {% endif %}
 {% endcall %}

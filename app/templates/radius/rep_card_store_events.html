@@ -13,7 +13,7 @@
 {% block title %}{{ _("سجل حركات مشتركي سوق البطاقات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
 {% block page_title %}{{ _("حركات مشتركي سوق البطاقات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s حدث', total=total) }}</span>{% endblock %}
 
 {% block content %}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
@@ -29,19 +29,19 @@
 {% set _redeem     = items|selectattr('action', 'equalto', 'store.card_redeem')|list|length %}
 
 {% call hub.megahero(
-  "حركات مشتركي سوق البطاقات",
-  subtitle="كل حدث يخصّ عميل متجر البطاقات — تسجيل ودخول وشراء وإيداع وسحب وشحن بطاقة — بعنوان الشبكة والوقت.",
+  _('حركات مشتركي سوق البطاقات'),
+  subtitle=_('كل حدث يخصّ عميل متجر البطاقات — تسجيل ودخول وشراء وإيداع وسحب وشحن بطاقة — بعنوان الشبكة والوقت.'),
   icon="store",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': total,       'icon': 'store',               'variant': 'brand'},
-    {'label': 'دخول ناجح',      'value': _login_ok,    'icon': 'right-to-bracket',    'variant': 'green'},
-    {'label': 'محاولات فاشلة',  'value': _login_fail,  'icon': 'triangle-exclamation', 'variant': 'red'},
-    {'label': 'تسجيل',          'value': _register,    'icon': 'user-plus',            'variant': 'blue'},
-    {'label': 'مشتريات',        'value': _purchase,    'icon': 'bag-shopping',         'variant': 'teal'},
-    {'label': 'إيداع',          'value': _deposit,     'icon': 'arrow-down-to-line',   'variant': 'green'},
-    {'label': 'سحب',            'value': _withdrawal,  'icon': 'arrow-up-from-line',   'variant': 'amber'},
-    {'label': 'شحن بطاقة',      'value': _redeem,      'icon': 'credit-card',          'variant': 'purple'},
+    {'label': _('إجمالي الأحداث'), 'value': total,       'icon': 'store',               'variant': 'brand'},
+    {'label': _('دخول ناجح'),      'value': _login_ok,    'icon': 'right-to-bracket',    'variant': 'green'},
+    {'label': _('محاولات فاشلة'),  'value': _login_fail,  'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('تسجيل'),          'value': _register,    'icon': 'user-plus',            'variant': 'blue'},
+    {'label': _('مشتريات'),        'value': _purchase,    'icon': 'bag-shopping',         'variant': 'teal'},
+    {'label': _('إيداع'),          'value': _deposit,     'icon': 'arrow-down-to-line',   'variant': 'green'},
+    {'label': _('سحب'),            'value': _withdrawal,  'icon': 'arrow-up-from-line',   'variant': 'amber'},
+    {'label': _('شحن بطاقة'),      'value': _redeem,      'icon': 'credit-card',          'variant': 'purple'},
   ],
   search_action=url_for('radius.rep_card_store_events')
 ) %}
@@ -63,28 +63,28 @@
     <option value="deposit"   {% if event_type == 'deposit' %}selected{% endif %}>{{ _('إيداع') }}</option>
     <option value="withdrawal"{% if event_type == 'withdrawal' %}selected{% endif %}>{{ _('سحب') }}</option>
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to or event_type) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('مسح'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_card_store_events') + "'" + '"') }}
   {% endif %}
 {% endcall %}
 
 {% if items %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا السجلّ؟",
-  intro="كل صف حدث يخصّ عميلًا في متجر البطاقات — مرتّبًا حسب الأحدث.",
+  _('كيف تقرأ هذا السجلّ؟'),
+  intro=_('كل صف حدث يخصّ عميلًا في متجر البطاقات — مرتّبًا حسب الأحدث.'),
   items=[
-    {'icon': 'user',               'text': '«العميل» هو اسم + رقم جوال مشترك المتجر الذي نفّذ الحدث.'},
-    {'icon': 'right-to-bracket',   'text': '«الفعل» = دخول / تسجيل / شراء / إيداع / سحب / شحن بطاقة / خروج.'},
-    {'icon': 'triangle-exclamation','text': 'الأحداث الفاشلة تُعرض بشارة حمراء مع سبب الفشل.'},
-    {'icon': 'globe',              'text': '«عنوان الشبكة» هو IP الذي جاء منه العميل.'},
-    {'icon': 'circle-info',        'text': 'هذا السجلّ منفصل عن «أحداث المدراء» — عمليّات العملاء لا تظهر هناك.'},
+    {'icon': 'user',               'text': _('«العميل» هو اسم + رقم جوال مشترك المتجر الذي نفّذ الحدث.')},
+    {'icon': 'right-to-bracket',   'text': _('«الفعل» = دخول / تسجيل / شراء / إيداع / سحب / شحن بطاقة / خروج.')},
+    {'icon': 'triangle-exclamation','text': _('الأحداث الفاشلة تُعرض بشارة حمراء مع سبب الفشل.')},
+    {'icon': 'globe',              'text': _('«عنوان الشبكة» هو IP الذي جاء منه العميل.')},
+    {'icon': 'circle-info',        'text': _('هذا السجلّ منفصل عن «أحداث المدراء» — عمليّات العملاء لا تظهر هناك.')},
   ],
-  note="للقراءة فقط — البيانات من سجل التدقيق audit_log، مفروزة على فاعل المتجر."
+  note=_('للقراءة فقط — البيانات من سجل التدقيق audit_log، مفروزة على فاعل المتجر.')
 )) %}
-  {% call hub.section("حركات العملاء", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
+  {% call hub.section(_('حركات العملاء'), icon="table-list",
+                      meta=items|length|string + _(' صف'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="card_store_events" data-uds-page-size="25"
          style="border:none;border-radius:0">
       <table class="hub-table">
@@ -135,8 +135,8 @@
   {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا حركات لمشتركي المتجر بعد",
-   sub="غيّر الفلاتر أو لم يسجّل عملاء المتجر أي حركة بعد.", icon="store") }}
+{{ hub.empty(_('لا حركات لمشتركي المتجر بعد'),
+   sub=_('غيّر الفلاتر أو لم يسجّل عملاء المتجر أي حركة بعد.'), icon="store") }}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

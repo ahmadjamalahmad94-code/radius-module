@@ -7,6 +7,7 @@
 وتستخدم معاملات SQL (لا حقن قيم نصيًا).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -65,11 +66,11 @@ class StoreChatService:
         مقروءة للمدير) والعكس صحيح. تسجيل الحدث أفضل-جهد لرسائل الزبون."""
         snd = str(sender or "").strip().lower()
         if snd not in VALID_SENDERS:
-            raise StoreChatError("مرسِل غير صالح.")
+            raise StoreChatError(_tr("مرسِل غير صالح."))
         text = str(body or "").strip()
         img = str(image_path or "").strip()
         if not text and not img:
-            raise StoreChatError("اكتب رسالة أو أرفق صورة.")
+            raise StoreChatError(_tr("اكتب رسالة أو أرفق صورة."))
         if len(text) > _MAX_BODY:
             text = text[:_MAX_BODY]
         if snd == "customer":
@@ -106,7 +107,7 @@ class StoreChatService:
                     tenant_id=self.tenant_id,
                     category="card",
                     event_key="store_chat.customer_message",
-                    message="أرسل زبون رسالة في شات المتجر.",
+                    message=N_("أرسل زبون رسالة في شات المتجر."),
                     target_type="card_user",
                     target_id=int(card_user_id),
                 )
@@ -156,7 +157,7 @@ class StoreChatService:
         customer والعكس. يعيد عدد الصفوف المتأثّرة."""
         rdr = str(reader or "").strip().lower()
         if rdr not in VALID_SENDERS:
-            raise StoreChatError("قارئ غير صالح.")
+            raise StoreChatError(_tr("قارئ غير صالح."))
         if rdr == "admin":
             sql = (
                 "UPDATE store_chat_messages SET read_by_admin=1 "
@@ -261,7 +262,7 @@ class StoreChatService:
         «بانتظار ردّ» حتى لو كانت آخر رسالة من الزبون (المدير عالجها بلا ردّ)."""
         st = str(status or "").strip().lower()
         if st not in ("open", "resolved"):
-            raise StoreChatError("حالة غير صالحة.")
+            raise StoreChatError(_tr("حالة غير صالحة."))
         self._upsert_thread(card_user_id, status=st,
                             status_by=str(actor or ""), status_at=now_iso())
         # ضبط «resolved» يحلّ تنبيه اللوحة أيضًا (عولج الخيط).
@@ -323,5 +324,5 @@ class StoreChatService:
             (self.tenant_id, int(message_id)),
         ).fetchone()
         if not row:
-            raise StoreChatError("الرسالة غير موجودة.")
+            raise StoreChatError(_tr("الرسالة غير موجودة."))
         return _row(row)

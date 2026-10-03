@@ -12,6 +12,7 @@ No DB / Flask / network — pure functions only. The
 orchestrator persists the result.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Mapping
 
@@ -95,12 +96,12 @@ class VpnRadiusPhasePlanner(PhasePlannerBase):
         radius_tag = self.comment_prefix(run_id=run_id, step="radius")
         api_tag = self.comment_prefix(run_id=run_id, step="api")
         notes = [
-            "ألصق السكربت في MikroTik Terminal، ثم انتظر "
-            "اكتمال أوامر التحقّق في الأسفل قبل المتابعة.",
-            "تأكّد من فتح UDP على منفذ الـ endpoint عند مزوّد "
-            "الإنترنت قبل لصق السكربت.",
-            "سرّ RADIUS يظهر داخل السكربت — لا تشاركه مع طرف "
-            "خارجي بعد اللصق.",
+            _tr("ألصق السكربت في MikroTik Terminal، ثم انتظر "
+            "اكتمال أوامر التحقّق في الأسفل قبل المتابعة."),
+            _tr("تأكّد من فتح UDP على منفذ الـ endpoint عند مزوّد "
+            "الإنترنت قبل لصق السكربت."),
+            _tr("سرّ RADIUS يظهر داخل السكربت — لا تشاركه مع طرف "
+            "خارجي بعد اللصق."),
         ]
         return PhasePlanResult(
             phase=self.PHASE,

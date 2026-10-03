@@ -4,27 +4,27 @@
 {% block title %}{{ _("الديون — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}{{ _("الديون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ debts.count or 0 }} ذمّة مفتوحة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s ذمّة مفتوحة', v=debts.count or 0) }}</span>{% endblock %}
 
 {% block content %}
 {# ───── الميجاهيرو الموحّد: يدمج العنوان + شريط KPIs في كتلة .uds-hero واحدة
    بدل الهيرو القديم المنفصل (hub.hero + hub-kpi-grid). والعنوان الفرعي مُعرَّب
    بالكامل دون أي نص تقني إنجليزي. ───── #}
 {{ hub.megahero(
-  "الديون",
-  subtitle="الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (من جدول السلف، الحالة: مفتوحة).",
+  _('الديون'),
+  subtitle=_('الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (من جدول السلف، الحالة: مفتوحة).'),
   icon="file-invoice-dollar",
   kpis=[
-    {'label': 'إجمالي الديون', 'value': debts.total|money,             'icon': 'file-invoice-dollar', 'variant': 'amber'},
-    {'label': 'عدد الذمم',     'value': debts.count or 0,              'icon': 'list-ol',             'variant': 'blue'},
-    {'label': 'التحصيلات',     'value': summary.total_collections|money,'icon': 'cash-register',       'variant': 'brand'},
-    {'label': 'الربح الصافي',  'value': summary.total_profit|money,    'icon': 'chart-line',          'variant': 'green'},
+    {'label': _('إجمالي الديون'), 'value': debts.total|money,             'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': _('عدد الذمم'),     'value': debts.count or 0,              'icon': 'list-ol',             'variant': 'blue'},
+    {'label': _('التحصيلات'),     'value': summary.total_collections|money,'icon': 'cash-register',       'variant': 'brand'},
+    {'label': _('الربح الصافي'),  'value': summary.total_profit|money,    'icon': 'chart-line',          'variant': 'green'},
   ]
 ) }}
 {% include "radius/_finance_nav.html" %}
 
 {% if debts['items'] %}
-{% call hub.section("الذمم المفتوحة", icon="table-list", meta=debts.count|string + " ذمّة", flush=True) %}
+{% call hub.section(_('الذمم المفتوحة'), icon="table-list", meta=debts.count|string + _(' ذمّة'), flush=True) %}
   {# جدول البيانات الموحّد UDS: الـ wrap بـ data-uds-table يُفعّل تلقائياً
      شريط الأعمدة + الفرز + الترقيم + أزرار التصدير الثلاثة (CSV/XLSX/PDF).
      أُزيلت معاملات النظام القديم (data-paginated/data-page-sizes/data-persist-key). #}
@@ -50,9 +50,9 @@
           <td class="num"><strong>{{ (d.outstanding if d.outstanding is defined else d.amount)|money }}</strong></td>
           <td class="small">{{ d.reason or '—' }}</td>
           <td>
-            {% if d.approval_status == 'approved' %}{{ hub.pill("معتمَدة", variant="green") }}
-            {% elif d.approval_status == 'pending' %}{{ hub.pill("بانتظار", variant="amber") }}
-            {% elif d.approval_status == 'not_required' %}{{ hub.pill("لا يلزم", variant="grey") }}
+            {% if d.approval_status == 'approved' %}{{ hub.pill(_('معتمَدة'), variant="green") }}
+            {% elif d.approval_status == 'pending' %}{{ hub.pill(_('بانتظار'), variant="amber") }}
+            {% elif d.approval_status == 'not_required' %}{{ hub.pill(_('لا يلزم'), variant="grey") }}
             {% else %}{{ hub.pill(d.approval_status or '—', variant="grey") }}{% endif %}
           </td>
           <td class="mono small">{{ d.starts_at|dt_local if d.starts_at else '—' }}</td>
@@ -66,8 +66,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا ذمم مفتوحة",
-  sub="لا توجد سلف غير مسدَّدة على المشتركين حاليًا. تظهر هنا أي سلفة بحالة «مفتوحة» باعتبارها دَينًا مستحقًا.",
+  _('لا ذمم مفتوحة'),
+  sub=_('لا توجد سلف غير مسدَّدة على المشتركين حاليًا. تظهر هنا أي سلفة بحالة «مفتوحة» باعتبارها دَينًا مستحقًا.'),
   icon="file-invoice-dollar"
 ) }}
 {% endif %}

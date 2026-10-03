@@ -15,7 +15,7 @@
 {% block title %}{{ _("تقرير الاستهلاك") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-database"></i>{% endblock %}
 {% block page_title %}{{ _("تقرير الاستهلاك") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} حساب</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s حساب', length=items|length) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -103,17 +103,17 @@
 
 {# تسميات/ألوان النوع لشارة الجدول (نفس منطق الـbackend). #}
 {% set _type_meta = {
-  'card':      ('بطاقة',  '#6b5aed'),
-  'broadband': ('برودباند','#2563eb'),
-  'hotspot':   ('هوت سبوت','#0d9488'),
-  'other':     ('أخرى',   '#64748b')
+  'card':      (_('بطاقة'),  '#6b5aed'),
+  'broadband': (_('برودباند'),'#2563eb'),
+  'hotspot':   (_('هوت سبوت'),'#0d9488'),
+  'other':     (_('أخرى'),   '#64748b')
 } %}
 
 {% block content %}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
 {# مقياس المقارنة (تنزيل/رفع/إجمالي) + معاملات الحالة المحمولة عبر الروابط. #}
-{% set _metric_label = {'total': 'الإجمالي', 'dl': 'تنزيل', 'ul': 'رفع'} %}
+{% set _metric_label = {'total': _('الإجمالي'), 'dl': _('تنزيل'), 'ul': _('رفع')} %}
 {% set _cf = (filters.date_from or none) %}
 {% set _ct = (filters.date_to or none) %}
 {% set _csd = (spec_day or none) %}
@@ -121,35 +121,35 @@
 {% set _csm = (spec_month or none) %}
 {% set _cq = (q or none) %}
 {% set _presets = [
-  ('today','اليوم'),('yesterday','أمس'),('week','هذا الأسبوع'),
-  ('month','هذا الشهر'),('custom','مخصّص')
+  ('today',_('اليوم')),('yesterday',_('أمس')),('week',_('هذا الأسبوع')),
+  ('month',_('هذا الشهر')),('custom',_('مخصّص'))
 ] %}
-{% set _metrics = [('total','الإجمالي','right-left'),('dl','تنزيل','arrow-down'),('ul','رفع','arrow-up')] %}
+{% set _metrics = [('total',_('الإجمالي'),'right-left'),('dl',_('تنزيل'),'arrow-down'),('ul',_('رفع'),'arrow-up')] %}
 {% set _tabs = [
-  ('all','الكل','layer-group'),
-  ('subscriber','مشتركين','user'),
-  ('card','بطاقات','id-card'),
-  ('broadband','برودباند','network-wired'),
-  ('hotspot','هوت سبوت','wifi'),
-  ('other','أخرى','circle-question')
+  ('all',_('الكل'),'layer-group'),
+  ('subscriber',_('مشتركين'),'user'),
+  ('card',_('بطاقات'),'id-card'),
+  ('broadband',_('برودباند'),'network-wired'),
+  ('hotspot',_('هوت سبوت'),'wifi'),
+  ('other',_('أخرى'),'circle-question')
 ] %}
 
 {# ───── مؤشرات KPI من الإجماليات (مفلترة بالنوع+الفترة، مرتّبة بالمقياس) ───── #}
 {% set _top_label = (top.display_name or top.username) if top else '—' %}
 <section class="hub-hero-shell" data-testid="usage-hero">
 {{ hub.megahero(
-  "تقرير الاستهلاك",
-  subtitle="إجمالي الاستهلاك لكل حساب من جدول radacct — مُصنَّفًا بالنوع، مع مقياس مقارنة (تنزيل/رفع/إجمالي) وقوالب فترة. كل ضابط يُعيد تحجيم البطاقات والرسوم والجدول معًا.",
+  _('تقرير الاستهلاك'),
+  subtitle=_('إجمالي الاستهلاك لكل حساب من جدول radacct — مُصنَّفًا بالنوع، مع مقياس مقارنة (تنزيل/رفع/إجمالي) وقوالب فترة. كل ضابط يُعيد تحجيم البطاقات والرسوم والجدول معًا.'),
   icon="database",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الاستهلاك', 'value': fmt_gb(totals.total), 'icon': 'database', 'variant': 'brand',
-     'sub': totals.consumers|string + ' حساب في الفترة'},
-    {'label': 'الأعلى استهلاكًا', 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
-     'sub': (fmt_bytes_raw(top[metric]) + ' · ' + _metric_label[metric]) if top else 'لا بيانات'},
-    {'label': 'عدد الحسابات', 'value': totals.consumers, 'icon': 'users', 'variant': 'blue',
-     'sub': 'متصل الآن: ' + online_now|string},
-    {'label': 'إجمالي النقل', 'value': fmt_bytes_raw(totals.total), 'icon': 'right-left', 'variant': 'green',
+    {'label': _('إجمالي الاستهلاك'), 'value': fmt_gb(totals.total), 'icon': 'database', 'variant': 'brand',
+     'sub': totals.consumers|string + _(' حساب في الفترة')},
+    {'label': _('الأعلى استهلاكًا'), 'value': _top_label, 'icon': 'crown', 'variant': 'amber',
+     'sub': (fmt_bytes_raw(top[metric]) + ' · ' + _metric_label[metric]) if top else _('لا بيانات')},
+    {'label': _('عدد الحسابات'), 'value': totals.consumers, 'icon': 'users', 'variant': 'blue',
+     'sub': _('متصل الآن: ') + online_now|string},
+    {'label': _('إجمالي النقل'), 'value': fmt_bytes_raw(totals.total), 'icon': 'right-left', 'variant': 'green',
      'sub': '↓ ' + fmt_bytes_raw(totals.dl) + ' · ↑ ' + fmt_bytes_raw(totals.ul)},
   ]
 ) }}
@@ -172,18 +172,18 @@
     </span>
     <select class="hub-select" name="limit" title="{{ _('عدد الصفوف') }}">
       {% for n in [100, 200, 500, 1000] %}
-        <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} حساب</option>
+        <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ _('%(n)s حساب', n=n) }}</option>
       {% endfor %}
     </select>
-    {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-    {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm",
+    {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
+    {{ hub.btn(_('طباعة'), icon="print", variant="ghost", size="sm",
                attrs='onclick="window.print();return false;"') }}
     {% if q or utype != 'all' or metric != 'total' or preset != 'custom' or _cf or _ct %}
-      {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+      {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                  attrs='onclick="window.location=' + "'" + url_for('radius.rep_subscriber_consumption') + "'" + '"') }}
     {% endif %}
     <span class="hub-hint" tabindex="0"
-          data-hint="بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. المقياس يقود الترتيب وأعلى-10. التجميع على تاريخ بداية الجلسة."><i class="fa-solid fa-info"></i></span>
+          data-hint="{{ _('بطاقة=قسيمة هوت سبوت (جدول cards)؛ مشترك=حساب مُسمّى؛ برودباند=PPPoE؛ هوت سبوت=مشترك هوت سبوت؛ أخرى=غير مرتبط. المقياس يقود الترتيب وأعلى-10. التجميع على تاريخ بداية الجلسة.') }}"><i class="fa-solid fa-info"></i></span>
   </div>
 
   {# ── الفترة: المصدر الوحيد لاختيار التاريخ — قوالب سريعة | مدى مخصّص |
@@ -266,7 +266,7 @@
     {% set _ulpct = (100.0 - _dlpct)|round(1) %}
     <div class="usage-donut-wrap">
       <div class="usage-donut" role="img"
-           aria-label="تنزيل {{ _dlpct }}% رفع {{ _ulpct }}%"
+           aria-label="{{ _('تنزيل %(dlpct)s%% رفع %(ulpct)s%%', dlpct=_dlpct, ulpct=_ulpct) }}"
            style="background:conic-gradient(#f59e0b 0 {{ _dlpct }}%, #3b82f6 {{ _dlpct }}% 100%)">
         <div class="usage-donut-hole">
           <span class="usage-donut-total">{{ fmt_bytes_raw(totals.total) }}</span>
@@ -303,8 +303,8 @@
 
 {% if items %}
 {# ───── جدول الاستهلاك لكل حساب — uds (فرز + بحث + ترقيم + تصدير) ───── #}
-{% call hub.section("تقرير الاستهلاك", icon="table-list",
-                    meta=items|length|string + " حساب", flush=True) %}
+{% call hub.section(_('تقرير الاستهلاك'), icon="table-list",
+                    meta=items|length|string + _(' حساب'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        data-uds-export-title="{{ _("تقرير الاستهلاك") }}" style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -323,7 +323,7 @@
       </thead>
       <tbody>
         {% for r in items %}
-        {% set _tm = _type_meta.get(r.atype, ('أخرى', '#64748b')) %}
+        {% set _tm = _type_meta.get(r.atype, (_('أخرى'), '#64748b')) %}
         <tr>
           <td class="num mono"><bdi>{{ loop.index }}</bdi></td>
           <td><strong><bdi>{{ r.username }}</bdi></strong></td>
@@ -342,8 +342,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا استهلاك في النتائج",
-  sub="جرّب «الكل» أو تخفيف البحث أو توسيع نطاق التاريخ." if (q or utype != 'all' or (filters and (filters.date_from or filters.date_to))) else "لم تُسجَّل أي بيانات استهلاك بعد في جدول radacct.",
+  _('لا استهلاك في النتائج'),
+  sub=_('جرّب «الكل» أو تخفيف البحث أو توسيع نطاق التاريخ.') if (q or utype != 'all' or (filters and (filters.date_from or filters.date_to))) else _('لم تُسجَّل أي بيانات استهلاك بعد في جدول radacct.'),
   icon="database"
 ) }}
 {% endif %}

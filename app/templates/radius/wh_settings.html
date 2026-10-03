@@ -29,9 +29,8 @@
   </button>
 {% endset %}
 {{ hub.hero(
-  "إشعارات الربط الخارجي",
-  subtitle="إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع "
-           "أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.",
+  _('إشعارات الربط الخارجي'),
+  subtitle=_('إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.'),
   icon="bolt",
   actions_html=_actions
 ) }}
@@ -39,9 +38,8 @@
 {# ───── Help panel (left) — what it is + retry policy ───── #}
 {% set _help %}
   {% call hub.helppanel(
-    "ما هي إشعارات الربط الخارجي؟",
-    intro="عند كل دفعة جديدة أو تجديد أو تنبيه، يرسل النظام إشعارًا آليًا موقّعًا "
-          "للرابط الذي تحدده.",
+    _('ما هي إشعارات الربط الخارجي؟'),
+    intro=_('عند كل دفعة جديدة أو تجديد أو تنبيه، يرسل النظام إشعارًا آليًا موقّعًا للرابط الذي تحدده.'),
     icon="circle-question"
   ) %}
     <ol style="margin:0;padding-inline-start:20px;color:var(--hub-text-soft);font-size:12.5px;line-height:2">
@@ -75,16 +73,16 @@
 
   {# ───── Status KPI strip ───── #}
   <div class="hub-kpi-grid">
-    {{ hub.kpi("حالة الإشعارات",
-               "مُفعَّلة" if current and current.enabled else ("معطَّلة" if current else "لم تُضبط بعد"),
+    {{ hub.kpi(_('حالة الإشعارات'),
+               _('مُفعَّلة') if current and current.enabled else (_('معطَّلة') if current else _('لم تُضبط بعد')),
                icon="toggle-on" if current and current.enabled else "toggle-off",
                variant=("green" if current and current.enabled else ("amber" if current else "grey"))) }}
-    {{ hub.kpi("رابط الاستقبال",
-               "موجود" if current and current.target_url else "غير محدد",
+    {{ hub.kpi(_('رابط الاستقبال'),
+               _('موجود') if current and current.target_url else _('غير محدد'),
                icon="link",
                variant=("blue" if current and current.target_url else "grey")) }}
-    {{ hub.kpi("التوقيع الأمني",
-               "مضبوط" if current and current.secret else "غير مضبوط",
+    {{ hub.kpi(_('التوقيع الأمني'),
+               _('مضبوط') if current and current.secret else _('غير مضبوط'),
                icon="shield-halved",
                variant=("violet" if current and current.secret else "grey")) }}
   </div>
@@ -92,7 +90,7 @@
   {# ───── Settings form ───── #}
   <form method="post" id="wh-settings-form" class="hr-form-card">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-    {% call hub.section("إعدادات الربط", icon="sliders") %}
+    {% call hub.section(_('إعدادات الربط'), icon="sliders") %}
 
       <div class="hub-field">
         <label class="hub-field-label" for="target_url">
@@ -151,10 +149,9 @@
   {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
   {# ───── Events that get sent ───── #}
-  {% call hub.section("ماذا يُرسَل؟", icon="paper-plane") %}
+  {% call hub.section(_('ماذا يُرسَل؟'), icon="paper-plane") %}
     <div class="hub-field-hint" style="margin-bottom:10px">
-      تُرسَل الأحداث التالية إلى الرابط الخارجي مع اسم الحدث، وقت حدوثه، رقم المنشأة،
-      وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك:
+      {{ _('تُرسَل الأحداث التالية إلى الرابط الخارجي مع اسم الحدث، وقت حدوثه، رقم المنشأة، وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك:') }}
     </div>
     <div class="wh-events">
       <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('دفعة جديدة') }}</span>
@@ -164,8 +161,7 @@
       <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('تنبيه أمني') }}</span>
     </div>
     <div class="hub-field-hint" style="margin-top:12px">
-      لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي
-      أو أعطِه للمطور المسؤول عن النظام الخارجي.
+      {{ _('لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي أو أعطِه للمطور المسؤول عن النظام الخارجي.') }}
     </div>
   {% endcall %}
 

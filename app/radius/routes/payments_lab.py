@@ -15,6 +15,7 @@
 يعلّم الجلسة paid فقط — الترحيل عبر AccountingService يُربط لاحقًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 
@@ -37,24 +38,24 @@ def _tid() -> int:
 DEMO_ITEMS: dict[str, dict] = {
     "invoice": {
         "key": "invoice",
-        "title": "فاتورة اشتراك شهري",
-        "sub": "تجديد الاشتراك الشهري للمشترك",
+        "title": N_("فاتورة اشتراك شهري"),
+        "sub": N_("تجديد الاشتراك الشهري للمشترك"),
         "icon": "file-invoice",
         "amount_minor": 10000,  # 100.00 شيكل
         "needs_username": True,
     },
     "card_2m": {
         "key": "card_2m",
-        "title": "بطاقة 2 ميجا",
-        "sub": "بطاقة إنترنت بسرعة 2 ميجا — شهر كامل",
+        "title": N_("بطاقة 2 ميجا"),
+        "sub": N_("بطاقة إنترنت بسرعة 2 ميجا — شهر كامل"),
         "icon": "wifi",
         "amount_minor": 5000,   # 50.00 شيكل
         "needs_username": False,
     },
     "card_8h": {
         "key": "card_8h",
-        "title": "بطاقة 8 ساعات",
-        "sub": "بطاقة استخدام مؤقت — 8 ساعات تصفّح",
+        "title": N_("بطاقة 8 ساعات"),
+        "sub": N_("بطاقة استخدام مؤقت — 8 ساعات تصفّح"),
         "icon": "clock",
         "amount_minor": 1000,   # 10.00 شيكل
         "needs_username": False,
@@ -63,11 +64,11 @@ DEMO_ITEMS: dict[str, dict] = {
 
 # ─── بطاقات «ادفع عبر» في الواجهة — كلها تمرّ عبر المحاكاة اليوم ───
 UI_PROVIDERS: list[dict] = [
-    {"key": "jawwalpay", "title": "جوال باي", "sub": "محفظة جوال الإلكترونية",
+    {"key": "jawwalpay", "title": N_("جوال باي"), "sub": N_("محفظة جوال الإلكترونية"),
      "icon": "mobile-screen-button", "tone": "#7C3AED"},
-    {"key": "palpay", "title": "بال باي", "sub": "محفظة بنك فلسطين",
+    {"key": "palpay", "title": N_("بال باي"), "sub": N_("محفظة بنك فلسطين"),
      "icon": "wallet", "tone": "#0EA5E9"},
-    {"key": "esadad", "title": "إي-سداد", "sub": "المقاصّة الوطنية للمدفوعات",
+    {"key": "esadad", "title": N_("إي-سداد"), "sub": N_("المقاصّة الوطنية للمدفوعات"),
      "icon": "building-columns", "tone": "#059669"},
 ]
 
@@ -75,12 +76,12 @@ UI_PROVIDERS: list[dict] = [
 # تسميات الحقول معرّبة مع إبقاء المعرّف التقني بين قوسين (قاعدة ثنائية اللغة:
 # عناوين عربية + معرّفات شيفرية لاتينية). الحقول معطّلة (عرض فقط).
 REAL_PROVIDER_STUBS: list[dict] = [
-    {"key": "jawwalpay", "title": "بوابة تاجر جوال باي",
-     "fields": ["معرّف التاجر (Merchant ID)", "مفتاح الـAPI", "سرّ الـWebhook"]},
-    {"key": "esadad", "title": "إي-سداد (المقاصّة الوطنية)",
-     "fields": ["رمز المُحصّل (Biller Code)", "مفتاح الـAPI", "سرّ الـWebhook"]},
-    {"key": "lahza", "title": "لحظة (بطاقات بنكية)",
-     "fields": ["المفتاح العام (Public Key)", "المفتاح السرّي (Secret Key)", "سرّ الـWebhook"]},
+    {"key": "jawwalpay", "title": N_("بوابة تاجر جوال باي"),
+     "fields": [N_("معرّف التاجر (Merchant ID)"), N_("مفتاح الـAPI"), N_("سرّ الـWebhook")]},
+    {"key": "esadad", "title": N_("إي-سداد (المقاصّة الوطنية)"),
+     "fields": [N_("رمز المُحصّل (Biller Code)"), N_("مفتاح الـAPI"), N_("سرّ الـWebhook")]},
+    {"key": "lahza", "title": N_("لحظة (بطاقات بنكية)"),
+     "fields": [N_("المفتاح العام (Public Key)"), N_("المفتاح السرّي (Secret Key)"), N_("سرّ الـWebhook")]},
 ]
 
 
@@ -124,14 +125,14 @@ def payments_lab_webhook():
     provider = MockWalletProvider()
     result = provider.handle_webhook(request)
     if result.get("ok"):
-        flash("تمت محاكاة إشعار webhook — الجلسة الآن مدفوعة (تجريبي).", "success")
+        flash(_tr("تمت محاكاة إشعار webhook — الجلسة الآن مدفوعة (تجريبي)."), "success")
     else:
         reason = {
-            "reference": "أدخل مرجع الجلسة.",
-            "not_found": "لا توجد جلسة بهذا المرجع.",
-            "status": "الجلسة ليست بانتظار الدفع.",
-        }.get(result.get("error", ""), "تعذّرت محاكاة الإشعار.")
-        flash(f"محاكاة webhook فشلت: {reason}", "warning")
+            "reference": N_("أدخل مرجع الجلسة."),
+            "not_found": N_("لا توجد جلسة بهذا المرجع."),
+            "status": N_("الجلسة ليست بانتظار الدفع."),
+        }.get(result.get("error", ""), N_("تعذّرت محاكاة الإشعار."))
+        flash(_tr('محاكاة webhook فشلت: %(reason)s', reason=reason), "warning")
     return redirect(url_for("radius.payments_lab"))
 
 
@@ -146,8 +147,8 @@ def _checkout_view(c: dict) -> dict:
     return {
         **c,
         "amount_display": f"{c['amount_minor'] / 100:.2f}",
-        "item_title": item.get("title") or "عملية دفع",
-        "ui_provider": ui or {"key": ui_key, "title": ui_key or "محفظة",
+        "item_title": item.get("title") or _tr("عملية دفع"),
+        "ui_provider": ui or {"key": ui_key, "title": ui_key or _tr("محفظة"),
                               "icon": "wallet", "tone": "#7C3AED"},
         "phone": ((meta.get("customer") or {}).get("phone")) or "",
     }
@@ -165,7 +166,7 @@ def pay_demo():
         if raw:
             checkout = _checkout_view(raw)
         else:
-            flash("جلسة الدفع غير موجودة.", "warning")
+            flash(_tr("جلسة الدفع غير موجودة."), "warning")
     return render_template(
         "radius/pay_demo.html",
         items=list(DEMO_ITEMS.values()),
@@ -184,13 +185,13 @@ def pay_demo_start():
 
     item = DEMO_ITEMS.get(item_key)
     if not item:
-        flash("اختر ما تريد دفعه أولًا.", "warning")
+        flash(_tr("اختر ما تريد دفعه أولًا."), "warning")
         return redirect(url_for("radius.pay_demo"))
     if ui_provider not in {p["key"] for p in UI_PROVIDERS}:
-        flash("اختر وسيلة الدفع.", "warning")
+        flash(_tr("اختر وسيلة الدفع."), "warning")
         return redirect(url_for("radius.pay_demo"))
     if not phone or len(phone) < 9:
-        flash("أدخل رقم هاتف المحفظة (مثال: 0599000000).", "warning")
+        flash(_tr("أدخل رقم هاتف المحفظة (مثال: 0599000000)."), "warning")
         return redirect(url_for("radius.pay_demo"))
 
     provider = get_provider("mock_wallet")
@@ -221,14 +222,14 @@ def pay_demo_otp():
     result = provider.confirm_otp(checkout_id, otp, tenant_id=_tid())
     if not result.get("ok"):
         msg = {
-            "wrong_otp": "رمز التحقق غير صحيح"
-                         + (f" — تبقّى {result.get('attempts_left')} محاولات."
+            "wrong_otp": _tr("رمز التحقق غير صحيح")
+                         + (_tr(' — تبقّى %(v)s محاولات.', v=result.get('attempts_left'))
                             if result.get("attempts_left") else "."),
-            "expired": "انتهت صلاحية رمز التحقق — ابدأ عملية جديدة.",
-            "too_many_attempts": "تجاوزت عدد المحاولات — فشلت العملية.",
-            "not_found": "جلسة الدفع غير موجودة.",
-            "status": "الجلسة ليست بانتظار رمز التحقق.",
-        }.get(result.get("error", ""), "تعذّر تأكيد الرمز.")
+            "expired": N_("انتهت صلاحية رمز التحقق — ابدأ عملية جديدة."),
+            "too_many_attempts": N_("تجاوزت عدد المحاولات — فشلت العملية."),
+            "not_found": N_("جلسة الدفع غير موجودة."),
+            "status": N_("الجلسة ليست بانتظار رمز التحقق."),
+        }.get(result.get("error", ""), N_("تعذّر تأكيد الرمز."))
         flash(msg, "danger")
     return redirect(url_for("radius.pay_demo", checkout=checkout_id))
 
@@ -241,7 +242,7 @@ def pay_demo_resend():
     provider = MockWalletProvider()
     result = provider.resend_otp(checkout_id, tenant_id=_tid())
     if result.get("ok"):
-        flash("تم إرسال رمز تحقق جديد (تجريبي — يظهر في مختبر الدفع).", "info")
+        flash(_tr("تم إرسال رمز تحقق جديد (تجريبي — يظهر في مختبر الدفع)."), "info")
     else:
-        flash("تعذّرت إعادة الإرسال — تحقق من حالة الجلسة.", "warning")
+        flash(_tr("تعذّرت إعادة الإرسال — تحقق من حالة الجلسة."), "warning")
     return redirect(url_for("radius.pay_demo", checkout=checkout_id))

@@ -23,6 +23,7 @@ Each problem item carries:
     deduplicated alert pipeline)
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -102,18 +103,18 @@ def _problems_for_router(ov) -> list[Problem]:
     out: list[Problem] = []
     rid = ov.nas_id
     # اسم عرض ودّي: عند غياب الاسم نستخدم «راوتر #رقم» بدل «#رقم» الخام
-    rname = ov.name or f"راوتر #{rid}"
+    rname = ov.name or _tr('راوتر #%(rid)s', rid=rid)
     href_overview = f"/admin/radius/mt/{rid}/overview"
 
     if not ov.enabled:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_DISABLED, severity=SEV_INFO,
-            title_ar=f"{rname} معطّل",
-            explanation_ar="الراوتر معطّل من الإعدادات — "
-                            "لا تشغيل عليه حاليًا.",
-            suggested_action_ar="فعّله من غرفة العمليات "
-                                "إذا كان يجب أن يعمل.",
+            title_ar=_tr('%(rname)s معطّل', rname=rname),
+            explanation_ar=N_("الراوتر معطّل من الإعدادات — "
+                            "لا تشغيل عليه حاليًا."),
+            suggested_action_ar=N_("فعّله من غرفة العمليات "
+                                "إذا كان يجب أن يعمل."),
             suggested_href=href_overview,
         ))
         # When disabled we stop here — other signals are noise.
@@ -123,12 +124,12 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_SNAPSHOT_FAILED, severity=SEV_CRITICAL,
-            title_ar=f"{rname} لا يستجيب",
-            explanation_ar="آخر محاولة لقراءة بيانات الراوتر فشلت. "
+            title_ar=_tr('%(rname)s لا يستجيب', rname=rname),
+            explanation_ar=N_("آخر محاولة لقراءة بيانات الراوتر فشلت. "
                             "السبب الأشيع بعد إطفاء طويل: ساعة الراوتر "
-                            "رجعت للماضي فرفض WireGuard المصافحة القديمة.",
-            suggested_action_ar="افتح التشخيص لقائمة الأسباب المرتّبة وحلولها "
-                                "(تصحيح الوقت/NTP، تغيّر الآي بي، النفق، الإطفاء).",
+                            "رجعت للماضي فرفض WireGuard المصافحة القديمة."),
+            suggested_action_ar=N_("افتح التشخيص لقائمة الأسباب المرتّبة وحلولها "
+                                "(تصحيح الوقت/NTP، تغيّر الآي بي، النفق، الإطفاء)."),
             suggested_href=(
                 f"/admin/radius/jobs/diagnostics/{rid}"),
             last_seen=ov.snapshot_last_success_at or "",
@@ -137,10 +138,10 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_SNAPSHOT_STALE, severity=SEV_WARNING,
-            title_ar=f"{rname} ببيانات قديمة",
-            explanation_ar="آخر snapshot قديم — قد يكون "
-                            "الراوتر بعيدًا عن التحديث.",
-            suggested_action_ar="شغّل تشخيصًا.",
+            title_ar=_tr('%(rname)s ببيانات قديمة', rname=rname),
+            explanation_ar=N_("آخر snapshot قديم — قد يكون "
+                            "الراوتر بعيدًا عن التحديث."),
+            suggested_action_ar=N_("شغّل تشخيصًا."),
             suggested_href=(
                 f"/admin/radius/jobs/diagnostics/{rid}"),
             last_seen=ov.snapshot_last_success_at or "",
@@ -150,20 +151,20 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_BACKUP_MISSING, severity=SEV_WARNING,
-            title_ar=f"{rname} بلا نسخة احتياطية",
-            explanation_ar="لا توجد نسخة احتياطية مسجَّلة لهذا "
+            title_ar=_tr('%(rname)s بلا نسخة احتياطية', rname=rname),
+            explanation_ar=N_("لا توجد نسخة احتياطية مسجَّلة لهذا "
                             "الراوتر — أي تعديل خطر يفقده قابلية "
-                            "الاستعادة.",
-            suggested_action_ar="خذ نسخة احتياطية الآن.",
+                            "الاستعادة."),
+            suggested_action_ar=N_("خذ نسخة احتياطية الآن."),
             suggested_href=f"/admin/radius/mt/{rid}/backups",
         ))
     elif ov.backup_status == "stale":
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_BACKUP_STALE, severity=SEV_INFO,
-            title_ar=f"{rname} نسخة احتياطية قديمة",
-            explanation_ar="آخر نسخة احتياطية قديمة.",
-            suggested_action_ar="خذ نسخة جديدة اليوم عند أول فرصة.",
+            title_ar=_tr('%(rname)s نسخة احتياطية قديمة', rname=rname),
+            explanation_ar=N_("آخر نسخة احتياطية قديمة."),
+            suggested_action_ar=N_("خذ نسخة جديدة اليوم عند أول فرصة."),
             suggested_href=f"/admin/radius/mt/{rid}/backups",
             last_seen=ov.last_backup_at or "",
         ))
@@ -172,10 +173,9 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_CRITICAL_ALERT, severity=SEV_CRITICAL,
-            title_ar=(f"{rname} يحمل "
-                      f"{ov.active_alerts_critical} تنبيهًا حرجًا"),
-            explanation_ar="تنبيهات لم تُعالَج من نظام التنبيهات.",
-            suggested_action_ar="افتح صفحة التنبيهات الحرجة.",
+            title_ar=(_tr('%(rname)s يحمل %(active_alerts_critical)s تنبيهًا حرجًا', rname=rname, active_alerts_critical=ov.active_alerts_critical)),
+            explanation_ar=N_("تنبيهات لم تُعالَج من نظام التنبيهات."),
+            suggested_action_ar=N_("افتح صفحة التنبيهات الحرجة."),
             suggested_href=(
                 f"/admin/radius/alerts?router_id={rid}"
                 "&severity=critical"),
@@ -184,10 +184,9 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_WARNING_ALERT, severity=SEV_WARNING,
-            title_ar=(f"{rname} يحمل "
-                      f"{ov.active_alerts_warning} تنبيهًا تحذيريًا"),
-            explanation_ar="تنبيهات تحذيرية مفتوحة.",
-            suggested_action_ar="راجع التنبيهات.",
+            title_ar=(_tr('%(rname)s يحمل %(active_alerts_warning)s تنبيهًا تحذيريًا', rname=rname, active_alerts_warning=ov.active_alerts_warning)),
+            explanation_ar=N_("تنبيهات تحذيرية مفتوحة."),
+            suggested_action_ar=N_("راجع التنبيهات."),
             suggested_href=(
                 f"/admin/radius/alerts?router_id={rid}"
                 "&severity=warning"),
@@ -197,10 +196,9 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_RECENT_FAILURE, severity=SEV_WARNING,
-            title_ar=f"{rname}: آخر عملية فاشلة",
-            explanation_ar=f"الإجراء «{ov.last_failed_action}» "
-                            "فشل آخر مرة.",
-            suggested_action_ar="افتح تفاصيل العملية في سجل العمليات.",
+            title_ar=_tr('%(rname)s: آخر عملية فاشلة', rname=rname),
+            explanation_ar=_tr('الإجراء «%(last_failed_action)s» فشل آخر مرة.', last_failed_action=ov.last_failed_action),
+            suggested_action_ar=N_("افتح تفاصيل العملية في سجل العمليات."),
             suggested_href=(
                 f"/admin/radius/audit/{ov.last_failed_id}"),
             last_seen=ov.last_failed_at or "",
@@ -210,12 +208,12 @@ def _problems_for_router(ov) -> list[Problem]:
         out.append(Problem(
             router_id=rid, router_name=rname,
             type=PROBLEM_PARTIAL_APPLY, severity=SEV_CRITICAL,
-            title_ar=f"{rname}: تطبيق جزئي يحتاج تراجع",
-            explanation_ar=("آخر برمجة طُبِّقت جزئيًا — حالة "
-                             "غير متّسقة على الراوتر."),
-            suggested_action_ar=("شغّل Unprogram لإزالة الكائنات "
+            title_ar=_tr('%(rname)s: تطبيق جزئي يحتاج تراجع', rname=rname),
+            explanation_ar=(N_("آخر برمجة طُبِّقت جزئيًا — حالة "
+                             "غير متّسقة على الراوتر.")),
+            suggested_action_ar=(N_("شغّل Unprogram لإزالة الكائنات "
                                   "التي حملت comment="
-                                  "hoberadius:* ثم أعد المحاولة."),
+                                  "hoberadius:* ثم أعد المحاولة.")),
             suggested_href=f"/admin/radius/mt/{rid}/program",
             last_seen=ov.last_audit_at or "",
         ))

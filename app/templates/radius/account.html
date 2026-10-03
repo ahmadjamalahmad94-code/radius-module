@@ -5,24 +5,24 @@
 
 {% block content %}
 {{ hub.hero(
-  "حسابي",
-  subtitle="إدارة حساب الدخول الحالي. إذا كان الحساب مدارًا من لوحة التراخيص، فاللوحة تبقى المرجع النهائي لكلمة المرور والإصدار.",
+  _('حسابي'),
+  subtitle=_('إدارة حساب الدخول الحالي. إذا كان الحساب مدارًا من لوحة التراخيص، فاللوحة تبقى المرجع النهائي لكلمة المرور والإصدار.'),
   icon="user-shield"
 ) }}
 
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("بيانات الحساب", icon="id-card") %}
+  {% call hub.section(_('بيانات الحساب'), icon="id-card") %}
     {{ hub.kv([
-      {'label': 'اسم المستخدم', 'value': admin.username, 'mono': True},
-      {'label': 'الاسم', 'value': admin.full_name or '—'},
-      {'label': 'البريد', 'value': admin.email or '—', 'mono': True},
-      {'label': 'نوع الإدارة', 'value': 'من لوحة التراخيص' if admin.managed_by_license_admin else 'محلي'},
-      {'label': 'معرّف المستخدم في لوحة التراخيص', 'value': admin.external_subject or '—', 'mono': True},
-      {'label': 'إصدار كلمة المرور', 'value': admin.external_password_version or 0, 'mono': True},
+      {'label': _('اسم المستخدم'), 'value': admin.username, 'mono': True},
+      {'label': _('الاسم'), 'value': admin.full_name or '—'},
+      {'label': _('البريد'), 'value': admin.email or '—', 'mono': True},
+      {'label': _('نوع الإدارة'), 'value': _('من لوحة التراخيص') if admin.managed_by_license_admin else _('محلي')},
+      {'label': _('معرّف المستخدم في لوحة التراخيص'), 'value': admin.external_subject or '—', 'mono': True},
+      {'label': _('إصدار كلمة المرور'), 'value': admin.external_password_version or 0, 'mono': True},
     ]) }}
   {% endcall %}
 
-  {% call hub.section("تغيير كلمة المرور", icon="key") %}
+  {% call hub.section(_('تغيير كلمة المرور'), icon="key") %}
     <form method="post" action="{{ url_for('radius.account_password') }}" class="hub-form">
       {{ csrf_token_input() | safe }}
       <div class="hub-field">
@@ -45,7 +45,7 @@
   {% endcall %}
 </div>
 
-{% call hub.section("قاعدة السلطة", icon="shield-halved") %}
+{% call hub.section(_('قاعدة السلطة'), icon="shield-halved") %}
   <div class="hub-empty" style="text-align:initial">
     <div class="hub-empty-msg">{{ _('تغيير كلمة المرور من الجهتين مع بقاء لوحة التراخيص هي المرجع') }}</div>
     <div class="hub-empty-sub">{{ _('يمكن أن يبدأ الطلب من الريدياس، لكن لوحة التراخيص هي التي تحفظ النسخة المشفرة النهائية وتزيد رقم الإصدار. لا يتم نقل بيانات كلمات المرور عبر اتصال غير آمن في الإنتاج.') }}</div>

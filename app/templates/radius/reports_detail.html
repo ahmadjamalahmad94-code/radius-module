@@ -29,19 +29,19 @@
 
 {# ── خرائط التعريب: أسماء المؤشرات لكل نوع تقرير ── #}
 {% set metric_labels = {
-  'revenue':              'الإيرادات',
-  'payments':             'الدفعات المحصّلة',
-  'margin':               'هامش الربح',
-  'subscriber_debts':     'ديون المشتركين',
-  'distributor_profits':  'أرباح الموزعين',
-  'total':                'إجمالي الكروت',
-  'active':               'كروت مستخدمة',
-  'unused':               'كروت غير مستخدمة',
-  'expired':              'كروت منتهية',
-  'connected':            'كروت متصلة الآن',
-  'sold_today':           'مباعة اليوم',
-  'sold_month':           'مباعة هذا الشهر',
-  'sold_year':            'مباعة هذه السنة'
+  'revenue':              _('الإيرادات'),
+  'payments':             _('الدفعات المحصّلة'),
+  'margin':               _('هامش الربح'),
+  'subscriber_debts':     _('ديون المشتركين'),
+  'distributor_profits':  _('أرباح الموزعين'),
+  'total':                _('إجمالي الكروت'),
+  'active':               _('كروت مستخدمة'),
+  'unused':               _('كروت غير مستخدمة'),
+  'expired':              _('كروت منتهية'),
+  'connected':            _('كروت متصلة الآن'),
+  'sold_today':           _('مباعة اليوم'),
+  'sold_month':           _('مباعة هذا الشهر'),
+  'sold_year':            _('مباعة هذه السنة')
 } %}
 {# المؤشرات المالية تُعرض بصيغة المال؛ مؤشرات الكروت أعداد صحيحة #}
 {% set money_metrics = ['revenue', 'payments', 'margin', 'subscriber_debts', 'distributor_profits'] %}
@@ -49,36 +49,36 @@
 {# ── تجهيز محتوى الهيرو حسب نوع التقرير (نفس بيانات المسار، بلا استعلامات جديدة) ── #}
 {% set items = data['items'] %}
 {% if report_type == 'distributors' %}
-  {% set _sub = "حصص الموزعين وأرباحهم المسجّلة من قيود توزيع الأرباح — قراءة فقط ضمن نطاق المستأجر." %}
+  {% set _sub = _('حصص الموزعين وأرباحهم المسجّلة من قيود توزيع الأرباح — قراءة فقط ضمن نطاق المستأجر.') %}
   {% set _icon = 'people-arrows' %}
   {% set _kpis = [
-    {'label': 'عدد الموزعين',   'value': items|length,                          'icon': 'users',      'variant': 'brand'},
-    {'label': 'إجمالي الحصص',   'value': items|sum(attribute='share_count'),     'icon': 'table-list', 'variant': 'blue'},
-    {'label': 'إجمالي الأرباح', 'value': (items|sum(attribute='share_total'))|money, 'icon': 'coins', 'variant': 'green'},
+    {'label': _('عدد الموزعين'),   'value': items|length,                          'icon': 'users',      'variant': 'brand'},
+    {'label': _('إجمالي الحصص'),   'value': items|sum(attribute='share_count'),     'icon': 'table-list', 'variant': 'blue'},
+    {'label': _('إجمالي الأرباح'), 'value': (items|sum(attribute='share_total'))|money, 'icon': 'coins', 'variant': 'green'},
   ] %}
 {% elif report_type == 'cards' %}
-  {% set _sub = "حالة مخزون الكروت: المستخدم وغير المستخدم والمنتهي، مع مبيعات اليوم والشهر والسنة." %}
+  {% set _sub = _('حالة مخزون الكروت: المستخدم وغير المستخدم والمنتهي، مع مبيعات اليوم والشهر والسنة.') %}
   {% set _icon = 'id-card' %}
   {% set _m = {} %}
   {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% endfor %}
   {% set _kpis = [
-    {'label': 'إجمالي الكروت',     'value': _m.get('total', 0),   'icon': 'id-card',     'variant': 'brand'},
-    {'label': 'غير مستخدمة',       'value': _m.get('unused', 0),  'icon': 'box-open',    'variant': 'blue'},
-    {'label': 'مستخدمة',           'value': _m.get('active', 0),  'icon': 'circle-check','variant': 'green'},
-    {'label': 'مباعة هذا الشهر',   'value': _m.get('sold_month', 0), 'icon': 'cart-shopping', 'variant': 'amber'},
+    {'label': _('إجمالي الكروت'),     'value': _m.get('total', 0),   'icon': 'id-card',     'variant': 'brand'},
+    {'label': _('غير مستخدمة'),       'value': _m.get('unused', 0),  'icon': 'box-open',    'variant': 'blue'},
+    {'label': _('مستخدمة'),           'value': _m.get('active', 0),  'icon': 'circle-check','variant': 'green'},
+    {'label': _('مباعة هذا الشهر'),   'value': _m.get('sold_month', 0), 'icon': 'cart-shopping', 'variant': 'amber'},
   ] %}
 {% else %}
-  {% set _sub = "إيرادات ودفعات وهامش وديون الفترة المختارة — قراءة مشتقة من المعاملات المسجّلة فقط، بلا تعديل على التاريخ المالي." %}
+  {% set _sub = _('إيرادات ودفعات وهامش وديون الفترة المختارة — قراءة مشتقة من المعاملات المسجّلة فقط، بلا تعديل على التاريخ المالي.') %}
   {% set _icon = 'coins' %}
   {% set _m = {} %}
   {% set _bc = {} %}
   {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% if _bc.update({it.metric: (it.by_currency or [])}) %}{% endif %}{% endfor %}
   {# لكلّ عملة رقمها (دفعات الدفتر + سجلّات الكروت) — لا ILS+USD مجموعةً بعلامة عملة النظام #}
   {% set _kpis = [
-    {'label': 'الإيرادات',       'value': _bc.get('revenue', [])|money_multi('total', _m.get('revenue', 0)),  'icon': 'coins',          'variant': 'brand'},
-    {'label': 'الدفعات',         'value': _bc.get('payments', [])|money_multi('total', _m.get('payments', 0)), 'icon': 'hand-holding-dollar', 'variant': 'green'},
-    {'label': 'هامش الربح',      'value': _bc.get('margin', [])|money_multi('total', _m.get('margin', 0)),     'icon': 'scale-balanced', 'variant': 'amber'},
-    {'label': 'ديون المشتركين',  'value': _m.get('subscriber_debts', 0)|money,   'icon': 'circle-exclamation', 'variant': 'red'},
+    {'label': _('الإيرادات'),       'value': _bc.get('revenue', [])|money_multi('total', _m.get('revenue', 0)),  'icon': 'coins',          'variant': 'brand'},
+    {'label': _('الدفعات'),         'value': _bc.get('payments', [])|money_multi('total', _m.get('payments', 0)), 'icon': 'hand-holding-dollar', 'variant': 'green'},
+    {'label': _('هامش الربح'),      'value': _bc.get('margin', [])|money_multi('total', _m.get('margin', 0)),     'icon': 'scale-balanced', 'variant': 'amber'},
+    {'label': _('ديون المشتركين'),  'value': _m.get('subscriber_debts', 0)|money,   'icon': 'circle-exclamation', 'variant': 'red'},
   ] %}
 {% endif %}
 
@@ -102,14 +102,14 @@
   <label class="hub-field-label" for="rd-to" style="margin:0">{{ _('إلى تاريخ') }}</label>
   <input class="hub-input" type="date" id="rd-to" name="date_to"
          value="{{ request.args.get('date_to','') }}">
-  {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق الفترة'), icon="filter", variant="primary", type="submit", size="sm") }}
   {# مسح الفترة — رابط حقيقي بدل زر يعتمد JS مضمّن؛ يحافظ على ?type إن وُجد #}
   {% if request.args.get('date_from') or request.args.get('date_to') %}
     {%- set _reset_url = request.path ~ ('?type=' ~ request.args.get('type') if request.args.get('type') else '') -%}
-    {{ hub.btn("مسح الفترة", href=_reset_url, icon="rotate-left", variant="ghost", size="sm") }}
+    {{ hub.btn(_('مسح الفترة'), href=_reset_url, icon="rotate-left", variant="ghost", size="sm") }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="اختيار فترة يعيد حساب قيم التقرير للفترة المحددة فقط — لقطات الأرشيف الثابتة تُنشأ من تبويب الأرشيف."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('اختيار فترة يعيد حساب قيم التقرير للفترة المحددة فقط — لقطات الأرشيف الثابتة تُنشأ من تبويب الأرشيف.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -118,8 +118,8 @@
 
 {# ───── جدول صفوف التقرير — uds موحّد (فرز + ترقيم) مع التعريب الكامل ───── #}
 {% if report_type == 'distributors' %}
-  {% call hub.section("حصص الموزعين", icon="table-list",
-                      meta=items|length|string + " موزّع", flush=True) %}
+  {% call hub.section(_('حصص الموزعين'), icon="table-list",
+                      meta=items|length|string + _(' موزّع'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
       <table class="hub-table rep-table" data-testid="report-detail-table">
         <thead>
@@ -144,8 +144,8 @@
     </div>
   {% endcall %}
 {% else %}
-  {% call hub.section("قيم التقرير", icon="table-list",
-                      meta=items|length|string + " مؤشر", flush=True) %}
+  {% call hub.section(_('قيم التقرير'), icon="table-list",
+                      meta=items|length|string + _(' مؤشر'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
       <table class="hub-table rep-table" data-testid="report-detail-table">
         <thead>

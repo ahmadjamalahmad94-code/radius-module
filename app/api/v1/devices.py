@@ -21,6 +21,7 @@ Endpoints
 All endpoints scoped to the caller's tenant via the API token.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -81,14 +82,14 @@ def push_token_register():
     Idempotent on the token. The radius module never holds the Firebase key."""
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("invalid_shape", "أرسل كائن JSON.", status=400)
+        return fail("invalid_shape", _tr("أرسل كائن JSON."), status=400)
     token = str(body.get("token") or "").strip()
     if not token:
-        return fail("missing_token", "رمز الجهاز (token) مطلوب.", status=400)
+        return fail("missing_token", _tr("رمز الجهاز (token) مطلوب."), status=400)
     platform = str(body.get("platform") or "").strip().lower()
     if platform not in _ALLOWED_PLATFORMS:
         return fail("invalid_platform",
-                    "المنصّة يجب أن تكون android أو ios أو web.", status=400)
+                    _tr("المنصّة يجب أن تكون android أو ios أو web."), status=400)
     app_version = str(body.get("app_version") or "").strip()[:40]
 
     from ...radius.services.admin_panel_client import AdminPanelClient
@@ -110,10 +111,10 @@ def push_token_unregister():
     central device-token store). Idempotent — removing a missing token is fine."""
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("invalid_shape", "أرسل كائن JSON.", status=400)
+        return fail("invalid_shape", _tr("أرسل كائن JSON."), status=400)
     token = str(body.get("token") or "").strip()
     if not token:
-        return fail("missing_token", "رمز الجهاز (token) مطلوب.", status=400)
+        return fail("missing_token", _tr("رمز الجهاز (token) مطلوب."), status=400)
     from ...radius.services.admin_panel_client import AdminPanelClient
     resp = AdminPanelClient().unregister_push_token(token=token)
     inner = resp.get("response") if isinstance(resp, dict) else None
@@ -125,7 +126,7 @@ def devices_by_mac(mac: str):
     from ...radius.db.repos import device_fingerprints_repo
     fp = device_fingerprints_repo.get_by_mac(_tid(), mac)
     if not fp:
-        return fail("not_found", "لا توجد بصمة جهاز لهذا العنوان.", status=404)
+        return fail("not_found", _tr("لا توجد بصمة جهاز لهذا العنوان."), status=404)
     return ok({"device": fp})
 
 
@@ -193,13 +194,13 @@ def devices_ingest():
     raw = request.get_data(as_text=True) or ""
     raw = raw.strip()
     if not raw:
-        return fail("empty_body", "بيانات الأجهزة مطلوبة.", status=400)
+        return fail("empty_body", _tr("بيانات الأجهزة مطلوبة."), status=400)
 
     # Accept both JSON and text-as-JSON
     try:
         body = json.loads(raw)
     except (ValueError, TypeError):
-        return fail("invalid_json", "بيانات الطلب ليست JSON صالحًا.", status=400)
+        return fail("invalid_json", _tr("بيانات الطلب ليست JSON صالحًا."), status=400)
 
     if isinstance(body, dict) and "leases" in body:
         leases = body["leases"]
@@ -207,11 +208,11 @@ def devices_ingest():
         leases = body
     else:
         return fail("invalid_shape",
-                    "أرسل مصفوفة JSON أو كائنًا يحتوي leases.",
+                    _tr("أرسل مصفوفة JSON أو كائنًا يحتوي leases."),
                     status=400)
 
     if not isinstance(leases, list):
-        return fail("invalid_shape", "قائمة leases يجب أن تكون مصفوفة.", status=400)
+        return fail("invalid_shape", _tr("قائمة leases يجب أن تكون مصفوفة."), status=400)
 
     tenant_id = _tid()
     ingested = 0

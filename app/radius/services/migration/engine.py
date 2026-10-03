@@ -20,6 +20,7 @@
 بـwerkzeug عبر ``create_admin``.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import re
@@ -40,10 +41,10 @@ from .sections import (
 
 # حاوية الكروت المستورَدة: حزمة واحدة تُجمَّع تحتها حسابات الكروت (إذ
 # cards.batch_id غير قابل للـNULL) — مصدر FreeRADIUS لا يملك مفهوم «حزمة».
-_IMPORT_BATCH_NAME = "كروت مستورَدة"
+_IMPORT_BATCH_NAME = N_("كروت مستورَدة")
 _IMPORT_BATCH_KEY = norm_key(_IMPORT_BATCH_NAME)
 # باقة احتياطيّة تُنشأ فقط لو استُورِدت كروت من مصدر بلا أيّ باقة (قسائم صرفة).
-_IMPORT_PLAN_NAME = "باقة مستورَدة"
+_IMPORT_PLAN_NAME = N_("باقة مستورَدة")
 _IMPORT_PLAN_KEY = norm_key(_IMPORT_PLAN_NAME)
 
 
@@ -81,7 +82,7 @@ def _finish_analyze(dataset, progress_cb=None) -> AnalysisResult:
     res.recognized_label = presets.label(res.recognized_source)
     if not matches and dataset.tables:
         res.warnings.append(
-            "لم يُتعرَّف تلقائيًّا على أيّ قسم — يمكنك ربط الأعمدة يدويًّا.")
+            N_("لم يُتعرَّف تلقائيًّا على أيّ قسم — يمكنك ربط الأعمدة يدويًّا."))
     if progress_cb:
         # عدّ نهائيّ لكل قسم (من صفوف الترشيحات) لعرضه حيًّا.
         counts: dict[str, int] = {}
@@ -194,11 +195,11 @@ def _classify_row(tenant_id, section, c: Candidate, mode, existing, incoming,
     preview = _safe_preview(c)
     if not c.natural_key:
         return RowPlan(natural_key="", status=ROW_INVALID,
-                       reason=f"بلا {_field_label(section, nat)} — يُستبعَد",
+                       reason=_tr('بلا %(v)s — يُستبعَد', v=_field_label(section, nat)),
                        preview=preview), ""
     if c.natural_key in seen:
         return RowPlan(natural_key=c.source_ref, status=ROW_SKIP,
-                       reason="مكرّر داخل الملف المصدر", preview=preview), ""
+                       reason=N_("مكرّر داخل الملف المصدر"), preview=preview), ""
     seen.add(c.natural_key)
 
     warn = ""
@@ -210,16 +211,15 @@ def _classify_row(tenant_id, section, c: Candidate, mode, existing, incoming,
         if ref_val in existing.get(target_section, {}) or \
                 ref_val in incoming.get(target_section, set()):
             continue
-        warn = (f"بعض القيم في «{_field_label(section, ref_field)}» لا تطابق "
-                f"{_section_label(target_section)} موجودًا أو مستورَدًا — سيُربط لاحقًا/يُترك فارغًا")
+        warn = (_tr('بعض القيم في «%(v)s» لا تطابق %(v2)s موجودًا أو مستورَدًا — سيُربط لاحقًا/يُترك فارغًا', v=_field_label(section, ref_field), v2=_section_label(target_section)))
 
     exists = c.natural_key in existing.get(section.key, {})
     if exists and mode == "skip":
         return RowPlan(natural_key=c.source_ref, status=ROW_SKIP,
-                       reason="موجود مسبقًا (وضع التخطّي)", preview=preview), warn
+                       reason=N_("موجود مسبقًا (وضع التخطّي)"), preview=preview), warn
     if exists:
         return RowPlan(natural_key=c.source_ref, status=ROW_MERGE,
-                       reason="موجود مسبقًا — سيُحدَّث", preview=preview), warn
+                       reason=N_("موجود مسبقًا — سيُحدَّث"), preview=preview), warn
     return RowPlan(natural_key=c.source_ref, status=ROW_NEW, reason="",
                    preview=preview), warn
 
@@ -325,7 +325,7 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
                     sr.skipped += 1
                     sr.errors.append({"key": c.source_ref or "",
                                       "action": "invalid",
-                                      "reason": "بلا مفتاح طبيعيّ"})
+                                      "reason": _tr("بلا مفتاح طبيعيّ")})
                     continue
                 if c.natural_key in seen:
                     sr.skipped += 1
@@ -383,8 +383,7 @@ def commit(tenant_id: int, dataset, matches: list[SectionMatch], *,
 
     if pw_flagged:
         report.warnings.append(
-            f"{pw_flagged} كلمة مرور مُجزّأة (hash) حُفِظت كعلم في البيانات الوصفيّة — "
-            "تتطلّب إعادة تعيين كي تعمل المصادقة (لم تُكسَر صامتةً).")
+            _tr('%(pw_flagged)s كلمة مرور مُجزّأة (hash) حُفِظت كعلم في البيانات الوصفيّة — تتطلّب إعادة تعيين كي تعمل المصادقة (لم تُكسَر صامتةً).', pw_flagged=pw_flagged))
     # نبضة ختاميّة: «إنهاء… ضبط العدّادات» (بعد كتابة كل الأقسام).
     if progress_cb:
         try:
@@ -554,7 +553,7 @@ def _commit_plan(tenant_id, c, mode, idmap, actor, dry_run):
         idmap[SEC_PLANS][c.natural_key] = _placeholder(idmap, SEC_PLANS)
         return "created", False
     plan = AccessPlan(id=None, name=name, tenant_id=tenant_id,
-                      description="مستورَد عبر معالج الترحيل", **attrs)
+                      description=N_("مستورَد عبر معالج الترحيل"), **attrs)
     saved = plans_repo.upsert_plan(plan)
     idmap[SEC_PLANS][c.natural_key] = int(saved.id)
     return "created", False
@@ -603,7 +602,7 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
     # card_batches.plan_id غير قابل للـNULL وله FK لـaccess_plans — حزمة بلا
     # باقة محلولة تُتخطّى بسبب واضح بدل كسر قيد المفتاح الأجنبيّ.
     if not (plan_id and plan_id > 0):
-        raise _SkipRow("الباقة غير معروفة للحزمة — لم تُنشأ الحزمة")
+        raise _SkipRow(_tr("الباقة غير معروفة للحزمة — لم تُنشأ الحزمة"))
     if dry_run:
         idmap[SEC_BATCHES][c.natural_key] = _placeholder(idmap, SEC_BATCHES)
         return "created", False
@@ -617,8 +616,8 @@ def _commit_batch(tenant_id, c, mode, idmap, actor, dry_run):
             manager_id = int(a.id)
             created_by = mgr_login
     series = str(c.fields.get("_series", "") or "").strip().strip("-")
-    notes = ("مستورَد عبر معالج الترحيل — سلسلة " + series) if series \
-        else "مستورَد عبر معالج الترحيل"
+    notes = (_tr("مستورَد عبر معالج الترحيل — سلسلة ") + series) if series \
+        else _tr("مستورَد عبر معالج الترحيل")
     batch = CardBatch(id=None, batch_code="", plan_id=int(plan_id),
                       count=_to_int(c.fields.get("count")) or 0,
                       tenant_id=tenant_id, package_name=name,
@@ -1000,7 +999,7 @@ def _ensure_import_card_batch(tenant_id, idmap, actor, dry_run):
     b = CardBatch(id=None, batch_code="", plan_id=int(default_plan), count=0,
                   tenant_id=tenant_id, package_name=_IMPORT_BATCH_NAME,
                   created_by=actor,
-                  notes="حاوية الكروت المستورَدة عبر معالج الترحيل")
+                  notes=N_("حاوية الكروت المستورَدة عبر معالج الترحيل"))
     saved = cards_repo.create_batch(b)
     meta["card_batch_id"] = int(saved.id)
     meta["card_batch_plan"] = default_plan
@@ -1051,7 +1050,7 @@ def _commit_card(tenant_id, c, mode, idmap, actor, dry_run):
             tenant_id, idmap, actor, dry_run)
         card_plan = plan_id or batch_plan
     if not batch_id or not card_plan:
-        raise _SkipRow("لا توجد باقة/حزمة صالحة للكرت — لم يُستورَد")
+        raise _SkipRow(_tr("لا توجد باقة/حزمة صالحة للكرت — لم يُستورَد"))
     if dry_run:
         idmap[SEC_CARDS][key] = _placeholder(idmap, SEC_CARDS)
         return "created", flagged
@@ -1230,8 +1229,8 @@ def _to_int(v, default: int = 0) -> int:
 
 
 def _field_label(section, target: str) -> str:
-    labels = {"username": "اسم المستخدم", "name": "الاسم", "plan": "الباقة",
-              "role": "الدور", "manager": "المدير", "batch": "الحزمة"}
+    labels = {"username": N_("اسم المستخدم"), "name": N_("الاسم"), "plan": N_("الباقة"),
+              "role": N_("الدور"), "manager": N_("المدير"), "batch": N_("الحزمة")}
     return labels.get(target, target)
 
 

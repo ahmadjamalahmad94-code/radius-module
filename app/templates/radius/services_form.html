@@ -19,7 +19,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% set ttl = "إضافة معدّة" if is_new else "تعديل معدّة" %}
+{% set ttl = _('إضافة معدّة') if is_new else _('تعديل معدّة') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -28,25 +28,25 @@
 {% block content %}
 {# ── تعريب قيم النوع والحالة (القيم المُرسَلة للخادم تبقى إنجليزية) ── #}
 {% set type_labels = {
-  'router':  'راوتر',
+  'router':  _('راوتر'),
   'onu':     'ONU',
-  'modem':   'مودم',
-  'cable':   'كبل',
-  'antenna': 'هوائي',
-  'other':   'أخرى'
+  'modem':   _('مودم'),
+  'cable':   _('كبل'),
+  'antenna': _('هوائي'),
+  'other':   _('أخرى')
 } %}
 {% set status_labels = {
-  'given':    'مسلَّمة (بحوزة المشترك)',
-  'returned': 'مرتجعة (عادت إليك)',
-  'lost':     'مفقودة',
-  'damaged':  'متضرّرة'
+  'given':    _('مسلَّمة (بحوزة المشترك)'),
+  'returned': _('مرتجعة (عادت إليك)'),
+  'lost':     _('مفقودة'),
+  'damaged':  _('متضرّرة')
 } %}
 
 {# ───── صدفة الهيرو الموحّدة: عنوان + أزرار الإجراء ───── #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
   ttl,
-  subtitle="سجلّ المعدّة الفعلية — راوتر أو ONU أو مودم — المربوطة بمشترك، مع تواريخ التسليم والإرجاع والإيجار الشهري.",
+  subtitle=_('سجلّ المعدّة الفعلية — راوتر أو ONU أو مودم — المربوطة بمشترك، مع تواريخ التسليم والإرجاع والإيجار الشهري.'),
   icon="toolbox",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.svc_list') ~ '">
@@ -62,7 +62,7 @@
 <form method="post" id="svc-form"
       action="{{ url_for('radius.svc_update', sid=item.id) if not is_new else url_for('radius.svc_create') }}">{% if not can_submit(('radius.svc_update' if not is_new else 'radius.svc_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-  {% call hub.section("هوية المعدّة", icon="microchip") %}
+  {% call hub.section(_('هوية المعدّة'), icon="microchip") %}
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
@@ -112,7 +112,7 @@
     </div>
   {% endcall %}
 
-  {% call hub.section("الإسناد والحالة", icon="clipboard-check") %}
+  {% call hub.section(_('الإسناد والحالة'), icon="clipboard-check") %}
     <div class="hub-form-row">
 
       <div class="hub-field">
@@ -157,8 +157,8 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:16px">
-    {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
-    {% if can_submit('radius.svc_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.svc_list')) }}{% endif %}
+    {{ hub.btn(_('حفظ'), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.svc_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="ghost", href=url_for('radius.svc_list')) }}{% endif %}
   </div>
 {% if not can_submit(('radius.svc_update' if not is_new else 'radius.svc_create')) %}</fieldset>{% endif %}</form>
 

@@ -2,6 +2,7 @@
  * أو بلا إنترنت خلفها)، بلا تحديث للصفحة. يَستطلع نقطة health.json دوريًّا
  * ويعرض شريطًا سفليًّا مع زرّ «إعادة اختبار» لكل جهاز (يطلب اتصالًا فوريًّا).
  * محصّن: أي فشل شبكة يُتجاهَل بصمت (لا يكسر الصفحة). */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   var host = document.getElementById("rtr-live");
@@ -11,7 +12,7 @@
   var csrf = host.getAttribute("data-csrf") || "";
   var intervalMs = parseInt(host.getAttribute("data-interval") || "20000", 10);
 
-  var LABEL = { offline: "مفصول عن ACS", no_internet: "بلا إنترنت" };
+  var LABEL = { offline: hrT('مفصول عن ACS'), no_internet: hrT('بلا إنترنت') };
 
   function el(tag, cls, txt) {
     var e = document.createElement(tag);
@@ -33,10 +34,10 @@
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString()
     }).then(function () {
-      btn.textContent = "أُرسل الطلب";
+      btn.textContent = hrT('أُرسل الطلب');
     }).catch(function () {
       btn.disabled = false;
-      btn.textContent = "إعادة اختبار";
+      btn.textContent = hrT('إعادة اختبار');
     });
   }
 
@@ -47,7 +48,7 @@
     var head = el("div", "rtr-live-head");
     head.appendChild(el("span", "rtr-live-x", "⚠"));
     head.appendChild(el("strong", null,
-      "تعذّر الوصول إلى " + issues.length + " من أجهزة المشتركين:"));
+      hrT('تعذّر الوصول إلى ') + issues.length + hrT(' من أجهزة المشتركين:')));
     host.appendChild(head);
     var list = el("div", "rtr-live-list");
     issues.forEach(function (it) {
@@ -55,7 +56,7 @@
       var lbl = LABEL[it.issue] || it.issue;
       var txt = it.name + " — " + lbl + (it.ip ? " (" + it.ip + ")" : "");
       row.appendChild(el("span", "rtr-live-name", txt));
-      var btn = el("button", "rtr-live-btn", "إعادة اختبار");
+      var btn = el("button", "rtr-live-btn", hrT('إعادة اختبار'));
       btn.type = "button";
       btn.addEventListener("click", function () { retest(it.id, btn); });
       row.appendChild(btn);

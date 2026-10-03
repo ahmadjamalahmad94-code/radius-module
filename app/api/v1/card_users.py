@@ -1,5 +1,6 @@
 """Card users and electronic-card marketplace API contracts."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ...radius.core.system_config import default_currency
 
 from typing import Any
@@ -17,21 +18,21 @@ from ..responses import fail, ok
 
 
 _ERRORS = {
-    "display_name is required": ("validation_error", "اسم مستخدم الكروت مطلوب", 422),
+    "display_name is required": ("validation_error", N_("اسم مستخدم الكروت مطلوب"), 422),
     "password must be at least 4 characters": (
         "validation_error",
-        "كلمة المرور يجب أن تكون 4 أحرف على الأقل",
+        N_("كلمة المرور يجب أن تكون 4 أحرف على الأقل"),
         422,
     ),
-    "card user not found": ("not_found", "مستخدم الكروت غير موجود", 404),
+    "card user not found": ("not_found", N_("مستخدم الكروت غير موجود"), 404),
     # الخدمة ترفع النصّ العربيّ مباشرةً — كان يسقط إلى 422 بدل 404.
-    "مستخدم الكروت غير موجود.": ("not_found", "مستخدم الكروت غير موجود", 404),
-    "name is required": ("validation_error", "اسم الباقة مطلوب", 422),
-    "price must be positive": ("validation_error", "السعر يجب أن يكون أكبر من صفر", 422),
-    "plan not found": ("not_found", "العرض المرتبط غير موجود", 404),
-    "package not found": ("not_found", "باقة الكروت غير موجودة", 404),
-    "package is inactive": ("conflict", "باقة الكروت غير مفعلة", 409),
-    "insufficient wallet balance": ("insufficient_balance", "رصيد المحفظة غير كاف", 402),
+    "مستخدم الكروت غير موجود.": ("not_found", N_("مستخدم الكروت غير موجود"), 404),
+    "name is required": ("validation_error", N_("اسم الباقة مطلوب"), 422),
+    "price must be positive": ("validation_error", N_("السعر يجب أن يكون أكبر من صفر"), 422),
+    "plan not found": ("not_found", N_("العرض المرتبط غير موجود"), 404),
+    "package not found": ("not_found", N_("باقة الكروت غير موجودة"), 404),
+    "package is inactive": ("conflict", N_("باقة الكروت غير مفعلة"), 409),
+    "insufficient wallet balance": ("insufficient_balance", N_("رصيد المحفظة غير كاف"), 402),
 }
 
 
@@ -110,7 +111,7 @@ def _marketplace_error(exc: Exception):
     raw = str(exc)
     # f05-M5: لا نصّ بايثون/إنجليزيّ للمستخدم («invalid literal for int()…»).
     code, message, status = _ERRORS.get(
-        raw, ("validation_error", arabic_error_message(exc) if raw else "تعذر تنفيذ العملية", 422))
+        raw, ("validation_error", arabic_error_message(exc) if raw else N_("تعذر تنفيذ العملية"), 422))
     return fail(code, message, status=status)
 
 
@@ -188,7 +189,7 @@ def card_user_360(card_user_id: int):
         "messages": [
             {
                 "status": "not_configured",
-                "message": "لم يتم ربط مزود الرسائل بعد.",
+                "message": _tr("لم يتم ربط مزود الرسائل بعد."),
             }
         ],
         "events": data.get("events") or [],
@@ -216,7 +217,7 @@ def card_user_purchase(card_user_id: int):
     try:
         purchase = _service().purchase_package(
             card_user_id=card_user_id,
-            package_id=int_input(body.get("package_id"), label="الباقة"),
+            package_id=int_input(body.get("package_id"), label=N_("الباقة")),
             actor=_actor(),
         )
     except (CardMarketplaceError, ValueError) as exc:
@@ -247,13 +248,13 @@ def card_marketplace_package_create():
     try:
         package = _service().create_package(
             name=str(body.get("name") or ""),
-            plan_id=int_input(body.get("plan_id"), label="العرض"),
+            plan_id=int_input(body.get("plan_id"), label=N_("العرض")),
             price=body.get("price"),
-            duration_minutes=int_input(body.get("duration_minutes"), label="المدّة بالدقائق",
+            duration_minutes=int_input(body.get("duration_minutes"), label=N_("المدّة بالدقائق"),
                                        maximum=525600),
-            speed_down_kbps=int_input(body.get("speed_down_kbps"), label="سرعة التنزيل",
+            speed_down_kbps=int_input(body.get("speed_down_kbps"), label=N_("سرعة التنزيل"),
                                       maximum=10_000_000),
-            speed_up_kbps=int_input(body.get("speed_up_kbps"), label="سرعة الرفع",
+            speed_up_kbps=int_input(body.get("speed_up_kbps"), label=N_("سرعة الرفع"),
                                     maximum=10_000_000),
             currency=str(body.get("currency") or default_currency()),
             card_color=str(body.get("card_color") or "#14b8a6"),

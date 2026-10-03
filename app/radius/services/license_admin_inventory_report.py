@@ -25,6 +25,7 @@ Invariants (enforced here + at the transport in
 * Cap at 200 admins per report (contract limit).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Iterable
 
@@ -147,7 +148,7 @@ class LicenseAdminInventoryReportService:
                 "ok": False,
                 "status": "empty_admins",
                 "error": {"code": "empty_admins",
-                          "message": "لا يوجد مدراء محلّيّون — لن يُرسَل التقرير."},
+                          "message": _tr("لا يوجد مدراء محلّيّون — لن يُرسَل التقرير.")},
                 "reported_count": 0,
             }
         result = self.admin_client.post_admins_report(

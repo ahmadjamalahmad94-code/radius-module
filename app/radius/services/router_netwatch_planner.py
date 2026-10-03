@@ -11,6 +11,7 @@ remove step can sweep our rows without touching operator-
 authored netwatch entries.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import os
@@ -52,13 +53,13 @@ def install_netwatch(
     if not public_url:
         return (
             False,
-            "HOBERADIUS_PUBLIC_URL غير محدد — لا يمكن للراوتر "
-            "إرسال الـ webhook. اضبط المتغير في إعدادات الخادم.",
+            N_("HOBERADIUS_PUBLIC_URL غير محدد — لا يمكن للراوتر "
+            "إرسال الـ webhook. اضبط المتغير في إعدادات الخادم."),
             None,
         )
     ip = (device.get("ip_address") or "").strip()
     if not ip:
-        return False, "الجهاز يحتاج IP محفوظ قبل التفعيل.", None
+        return False, N_("الجهاز يحتاج IP محفوظ قبل التفعيل."), None
 
     device_id = int(device["id"])
     token = router_event_token.make_token(int(tenant_id), device_id)
@@ -107,7 +108,7 @@ def install_netwatch(
         nas=nas, operation=f"netwatch:install:{device_id}", work=_work,
     )
     if not result.ok:
-        return False, result.error or "تعذّر تنفيذ السكربت على الراوتر.", None
+        return False, result.error or N_("تعذّر تنفيذ السكربت على الراوتر."), None
     return True, "", {
         "webhook_up":   base + "&state=up",
         "webhook_down": base + "&state=down",
@@ -144,7 +145,7 @@ def remove_netwatch(
         nas=nas, operation=f"netwatch:remove:{device_id}", work=_work,
     )
     if not result.ok:
-        return False, result.error or "تعذّر الوصول للراوتر."
+        return False, result.error or N_("تعذّر الوصول للراوتر.")
     return True, ""
 
 

@@ -1,5 +1,6 @@
 """TenantsService — إدارة الـ tenants."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Optional
 
@@ -23,9 +24,9 @@ class TenantsService:
 
     def create(self, *, actor: str, tenant: Tenant) -> Tenant:
         if not tenant.slug or not tenant.name:
-            raise RadiusValidationError("slug + name مطلوبان")
+            raise RadiusValidationError(_tr("slug + name مطلوبان"))
         if tenant.plan_tier not in TIER_LIMITS:
-            raise RadiusValidationError(f"plan_tier غير معروف: {tenant.plan_tier}")
+            raise RadiusValidationError(_tr('plan_tier غير معروف: %(plan_tier)s', plan_tier=tenant.plan_tier))
         saved = self._store.create(tenant)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="tenant", target_id=str(saved.id),
@@ -34,7 +35,7 @@ class TenantsService:
 
     def update(self, *, actor: str, tenant_id: int, **changes) -> Optional[Tenant]:
         if "plan_tier" in changes and changes["plan_tier"] not in TIER_LIMITS:
-            raise RadiusValidationError(f"plan_tier غير معروف")
+            raise RadiusValidationError(_tr('plan_tier غير معروف'))
         saved = self._store.update(tenant_id, **changes)
         if saved:
             self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,

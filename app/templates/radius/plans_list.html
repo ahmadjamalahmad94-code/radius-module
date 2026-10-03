@@ -169,15 +169,15 @@
 {% set _assigned = sub_counts.values()|sum if sub_counts else 0 %}
 
 {# تسميات عربية لأنواع الباقات #}
-{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
-{% set SCOPE_AR = {'hotspot':'هوتسبوت','broadband':'برودباند','both':'الكل'} %}
-{% set DAY_AR = {'mon':'الاثنين','tue':'الثلاثاء','wed':'الأربعاء','thu':'الخميس','fri':'الجمعة','sat':'السبت','sun':'الأحد'} %}
+{% set TYPE_AR = {'time':_('وقت'),'quota':_('كوتا'),'hybrid':_('مدمج'),'unlimited':_('غير محدود'),'recurring':_('متكرر')} %}
+{% set SCOPE_AR = {'hotspot':_('هوتسبوت'),'broadband':_('برودباند'),'both':_('الكل')} %}
+{% set DAY_AR = {'mon':_('الاثنين'),'tue':_('الثلاثاء'),'wed':_('الأربعاء'),'thu':_('الخميس'),'fri':_('الجمعة'),'sat':_('السبت'),'sun':_('الأحد')} %}
 
 {# ───── الصدفة الموحّدة: هيرو + KPI صف واحد + فلترة مدمجة ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "العروض والخطط",
-  subtitle="إدارة باقات الإنترنت بكل إمكانياتها: السعر، السرعات والـ Burst، الكوتا اليومية والشهرية، الصلاحية، الجلسات، نطاق الخدمة والقيود — مع تفاصيل كاملة لكل باقة بنقرة واحدة.",
+  _('العروض والخطط'),
+  subtitle=_('إدارة باقات الإنترنت بكل إمكانياتها: السعر، السرعات والـ Burst، الكوتا اليومية والشهرية، الصلاحية، الجلسات، نطاق الخدمة والقيود — مع تفاصيل كاملة لكل باقة بنقرة واحدة.'),
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.plans_new') + '">
@@ -187,13 +187,13 @@
       <i class="fa-solid fa-chart-pie"></i> '|safe ~ _("نظرة عامة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'عدد الباقات',          'value': items|length,        'icon': 'layer-group',  'variant': 'brand'},
-    {'label': 'المفعَّلة',             'value': _enabled,            'icon': 'toggle-on',    'variant': 'green',
-     'sub': (items|length - _enabled)|string + ' معطَّلة'},
-    {'label': 'متوسط السعر',          'value': _avg_price|money,    'icon': 'coins',        'variant': 'amber',
-     'sub': _priced|length|string + ' باقة مسعَّرة'},
-    {'label': 'المشتركون الموزَّعون', 'value': _assigned,           'icon': 'users',        'variant': 'blue',
-     'sub': 'على ' + (sub_counts|length|string) + ' باقة'},
+    {'label': _('عدد الباقات'),          'value': items|length,        'icon': 'layer-group',  'variant': 'brand'},
+    {'label': _('المفعَّلة'),             'value': _enabled,            'icon': 'toggle-on',    'variant': 'green',
+     'sub': _('%(v)s معطَّلة', v=(items|length - _enabled)|string)},
+    {'label': _('متوسط السعر'),          'value': _avg_price|money,    'icon': 'coins',        'variant': 'amber',
+     'sub': _('%(length)s باقة مسعَّرة', length=_priced|length|string)},
+    {'label': _('المشتركون الموزَّعون'), 'value': _assigned,           'icon': 'users',        'variant': 'blue',
+     'sub': _('على %(length)s باقة', length=(sub_counts|length|string))},
   ]
 ) %}
   {# فلترة حيّة (عميل) — لا يوجد فلتر خادم لهذا الراوت، فالبحث فوري على الصفوف #}
@@ -227,7 +227,7 @@
 
 {# ═════════ عرض الجدول الموحّد (uds): كل الإمكانيات كأعمدة ═════════ #}
 <div class="pl-table-view">
-{% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
+{% call hub.section(_('الباقات'), icon="table-list", meta=items|length|string + _(' عرض'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
@@ -281,23 +281,23 @@
           <td class="mono small">
             {% if p.quota_total_mb %}
               <bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>
-              {% if p.quota_daily_mb %}<span class="hub-text-mute" title="{{ _('كوتا يومية') }}"> · <bdi dir="ltr">{{ "%.1f"|format(p.quota_daily_mb/1024) }}/يوم</bdi></span>{% endif %}
+              {% if p.quota_daily_mb %}<span class="hub-text-mute" title="{{ _('كوتا يومية') }}"> · <bdi dir="ltr">{{ "%.1f"|format(p.quota_daily_mb/1024) }}{{ _('/يوم') }}</bdi></span>{% endif %}
             {% elif p.quota_daily_mb or p.quota_monthly_mb or p.daily_combined_quota_mb or p.monthly_combined_quota_mb %}
-              {% if p.quota_daily_mb or p.daily_combined_quota_mb %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_daily_mb or p.daily_combined_quota_mb))/1024) }} GB</bdi>/يوم{% endif %}
-              {% if p.quota_monthly_mb or p.monthly_combined_quota_mb %}{% if p.quota_daily_mb or p.daily_combined_quota_mb %} · {% endif %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_monthly_mb or p.monthly_combined_quota_mb))/1024) }} GB</bdi>/شهر{% endif %}
+              {% if p.quota_daily_mb or p.daily_combined_quota_mb %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_daily_mb or p.daily_combined_quota_mb))/1024) }} GB</bdi>{{ _('/يوم') }}{% endif %}
+              {% if p.quota_monthly_mb or p.monthly_combined_quota_mb %}{% if p.quota_daily_mb or p.daily_combined_quota_mb %} · {% endif %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_monthly_mb or p.monthly_combined_quota_mb))/1024) }} GB</bdi>{{ _('/شهر') }}{% endif %}
             {% else %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="mono small">
             {% if p.duration_minutes %}{{ dur_ar(p.duration_minutes) }}{% endif %}
-            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}صلاحية <bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
+            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ _('صلاحية') }} <bdi dir="ltr">{{ p.validity_days }}</bdi> {{ _('يوم') }}{% endif %}
             {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="num mono">{{ p.concurrent_sessions or 1 }}</td>
           <td class="num"><strong><bdi dir="ltr">{{ p.price|money }}</bdi></strong></td>
           <td class="num mono">{{ _subs }}</td>
           <td>
-            {% if p.enabled %}{{ hub.pill("مفعَّلة", variant="green") }}
-            {% else %}{{ hub.pill("معطَّلة", variant="amber") }}{% endif %}
+            {% if p.enabled %}{{ hub.pill(_('مفعَّلة'), variant="green") }}
+            {% else %}{{ hub.pill(_('معطَّلة'), variant="amber") }}{% endif %}
           </td>
           <td class="num mono">{{ p.priority or '—' }}</td>
           <td>
@@ -324,13 +324,13 @@
               </a>{% endif %}
               {# نسخ العرض: ينشئ نسخة بكل المواصفات ثم يفتح تعديلها (CSRF يُحقن خادميًّا) #}
               {% if can_submit('radius.plans_clone', 'POST') %}<form method="post" action="{{ url_for('radius.plans_clone', plan_id=p.id) }}"
-                    onsubmit="return confirm('إنشاء نسخة من «{{ p.name|e }}» لتعديلها؟');">
+                    onsubmit="return confirm({{ _('إنشاء نسخة من «%(e)s» لتعديلها؟', e=p.name|e)|tojson|forceescape }});">
                 <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('نسخ الباقة') }}">
                   <i class="fa-solid fa-clone"></i>
                 </button>
               </form>{% endif %}
               {% if can_submit('radius.plans_delete', 'POST') %}<form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
-                    onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
+                    onsubmit="return confirm({{ _('أرشفة «%(e)s»؟ يمكن استعادتها من سلة المحذوفات.', e=p.name|e)|tojson|forceescape }});">
                 <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
@@ -349,7 +349,7 @@
    🔴 يُحمَّل عند الطلب (fragment=cards) — كان يُصيَّر مع الجدول دائمًا فيُضاعف
    وزن الصفحة (1.8 MB لـ115 باقة مع كتل التفاصيل المخفيّة). #}
 <div class="pl-cards-view">
-  {% call hub.section("الباقات", icon="grip", meta=items|length|string + " عرض") %}
+  {% call hub.section(_('الباقات'), icon="grip", meta=items|length|string + _(' عرض')) %}
     <div data-pl-cards-src="{{ url_for('radius.plans_list', fragment='cards') }}">
       <p class="hub-text-mute" style="padding:12px">{{ _('جارٍ تحميل البطاقات…') }}</p>
     </div>
@@ -360,14 +360,14 @@
 {# ═════════ تفاصيل الباقة: تُجلب عند النقر (fragment=detail) ═════════
    كانت كتلةٌ مخفيّة لكلّ باقة تُصيَّر مسبقًا (~9 KB لكلّ باقة). #}
 {# النافذة الموحّدة الواحدة — يملؤها JS من كتلة الباقة المطلوبة #}
-{% call hub.modal("pl-detail-modal", "تفاصيل الباقة", icon="tags", size="lg") %}
+{% call hub.modal("pl-detail-modal", _('تفاصيل الباقة'), icon="tags", size="lg") %}
   <div data-pl-modal-body></div>
 {% endcall %}
 
 {% else %}
 {{ hub.empty(
-  "لا عروض بعد",
-  sub="أنشئ أول عرض من زرّ «إضافة عرض» في الأعلى لتبدأ ببيع الباقات.",
+  _('لا عروض بعد'),
+  sub=_('أنشئ أول عرض من زرّ «إضافة عرض» في الأعلى لتبدأ ببيع الباقات.'),
   icon="tags"
 ) }}
 {% endif %}

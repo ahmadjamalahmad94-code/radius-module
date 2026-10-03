@@ -32,8 +32,8 @@
 
 {# ───── Merged hero: title + subtitle + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "مركز تسعير البطاقات",
-  subtitle="ضبط سياسة سعر البيع والجملة وحدود الخصم للباقات، ثم تسجيل تكلفة الحزمة عند تحميلها على مدير. هنا لا يتم توليد الكروت ولا يطبَّق شيء مباشر على خدمة المصادقة.",
+  _('مركز تسعير البطاقات'),
+  subtitle=_('ضبط سياسة سعر البيع والجملة وحدود الخصم للباقات، ثم تسجيل تكلفة الحزمة عند تحميلها على مدير. هنا لا يتم توليد الكروت ولا يطبَّق شيء مباشر على خدمة المصادقة.'),
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.cards_generate') + '">
@@ -46,29 +46,29 @@
       <i class="fa-solid fa-store"></i> '|safe ~ _("سوق البطاقات") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'باقات مسعرة',        'value': num(pricing_overview.priced_packages),    'icon': 'tags',        'variant': 'brand'},
-    {'label': 'متوسط هامش البطاقة', 'value': money(pricing_overview.avg_margin),        'icon': 'chart-line',  'variant': 'amber'},
-    {'label': 'كروت غير مستخدمة',   'value': num(pricing_overview.unused_cards),        'icon': 'box-open',    'variant': 'green'},
-    {'label': 'إيراد مسجل',          'value': money_text(pricing_overview.revenue_total),'icon': 'sack-dollar', 'variant': 'violet'},
+    {'label': _('باقات مسعرة'),        'value': num(pricing_overview.priced_packages),    'icon': 'tags',        'variant': 'brand'},
+    {'label': _('متوسط هامش البطاقة'), 'value': money(pricing_overview.avg_margin),        'icon': 'chart-line',  'variant': 'amber'},
+    {'label': _('كروت غير مستخدمة'),   'value': num(pricing_overview.unused_cards),        'icon': 'box-open',    'variant': 'green'},
+    {'label': _('إيراد مسجل'),          'value': money_text(pricing_overview.revenue_total),'icon': 'sack-dollar', 'variant': 'violet'},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "وظيفة الصفحة",
-  intro="هذا القسم لضبط سياسات تسعير الباقات ثم تحميل تكلفة الحزمة على محفظة المدير المسؤول.",
+  _('وظيفة الصفحة'),
+  intro=_('هذا القسم لضبط سياسات تسعير الباقات ثم تحميل تكلفة الحزمة على محفظة المدير المسؤول.'),
   items=[
-    {'icon': 'tag',          'text': 'سياسة السعر: سعر بيع، جملة، حد أدنى، وخصم مسموح.'},
-    {'icon': 'wallet',       'text': 'تكلفة المدير: تحميل تكلفة الجملة على محفظة المدير المسؤول.'},
-    {'icon': 'camera-retro', 'text': 'لقطة غير قابلة للتغيير: كل حزمة تحتفظ بسعرها وقت الإنشاء حتى لو تغيرت السياسة لاحقًا.'},
+    {'icon': 'tag',          'text': _('سياسة السعر: سعر بيع، جملة، حد أدنى، وخصم مسموح.')},
+    {'icon': 'wallet',       'text': _('تكلفة المدير: تحميل تكلفة الجملة على محفظة المدير المسؤول.')},
+    {'icon': 'camera-retro', 'text': _('لقطة غير قابلة للتغيير: كل حزمة تحتفظ بسعرها وقت الإنشاء حتى لو تغيرت السياسة لاحقًا.')},
   ],
-  note="تعديل أسعار حزمة مسجّلة يتم من صفحة تعديل الحزمة حتى لا تختلط بسياسات الباقات."
+  note=_('تعديل أسعار حزمة مسجّلة يتم من صفحة تعديل الحزمة حتى لا تختلط بسياسات الباقات.')
 )) %}
 
   {# ─── Pricing policies → unified data-table ─── #}
   {% if packages or priced_batches %}
-  {% call hub.section("سياسات تسعير الباقات", icon="scale-balanced",
-       meta=num(packages|length + priced_batches|length) + " عنصر تسعير", flush=True) %}
+  {% call hub.section(_('سياسات تسعير الباقات'), icon="scale-balanced",
+       meta=num(packages|length + priced_batches|length) + _(' عنصر تسعير'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
          data-uds-export-title="{{ _('سياسات تسعير الباقات') }}"
          data-testid="card-pricing-packages" style="border:none;border-radius:0">
@@ -96,7 +96,7 @@
                   <strong style="color:var(--hub-text)">{{ package.name }}</strong>
                 </div>
               </td>
-              <td class="mono small">الباقة #{{ package.id }} · الخطة #{{ package.plan_id }}</td>
+              <td class="mono small">{{ _('الباقة #%(id)s · الخطة #%(plan_id)s', id=package.id, plan_id=package.plan_id) }}</td>
               <td class="num"><span class="hub-text-mute">—</span></td>
               <td class="num" dir="ltr" style="font-variant-numeric:tabular-nums">{{ money(package.retail_price, package.currency) }}</td>
               <td class="num" dir="ltr" style="font-variant-numeric:tabular-nums">{{ money(package.wholesale_price, package.currency) }}</td>
@@ -147,22 +147,22 @@
   {% endcall %}
   {% else %}
     {{ hub.empty(
-      "لا توجد أسعار مسجلة بعد",
-      sub="أضف سعر البيع وسعر الجملة عند إنشاء حزمة البطاقات أو من تعديل الحزمة.",
+      _('لا توجد أسعار مسجلة بعد'),
+      sub=_('أضف سعر البيع وسعر الجملة عند إنشاء حزمة البطاقات أو من تعديل الحزمة.'),
       icon="tags"
     ) }}
   {% endif %}
 
   {# ─── Cost a batch (financial costing) — form kept EXACTLY ─── #}
-  {% call hub.section("تحميل تكلفة حزمة", icon="file-invoice-dollar",
-       meta="يخصم الجملة من محفظة المدير ويثبت لقطة السعر") %}
+  {% call hub.section(_('تحميل تكلفة حزمة'), icon="file-invoice-dollar",
+       meta=_('يخصم الجملة من محفظة المدير ويثبت لقطة السعر')) %}
     {% if can_submit('radius.card_pricing_create_batch', 'POST') %}<form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="cp-cost-form" data-testid="costed-batch-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الباقة') }}</label>
         <select class="hub-input" name="package_id" required>
           {% for package in packages %}
-            <option value="{{ package.id }}">{{ package.name }} - جملة {{ package.wholesale_price|money }}</option>
+            <option value="{{ package.id }}">{{ _('%(name)s - جملة %(money)s', name=package.name, money=package.wholesale_price|money) }}</option>
           {% endfor %}
         </select>
       </div>
@@ -170,7 +170,7 @@
         <label class="hub-field-label">{{ _('المدير المسؤول') }}</label>
         <select class="hub-input" name="responsible_manager_id" required>
           {% for manager in managers %}
-            <option value="{{ manager.id }}">{{ manager.display_name }} - رصيد {{ manager.balance|money }}</option>
+            <option value="{{ manager.id }}">{{ _('%(display_name)s - رصيد %(money)s', display_name=manager.display_name, money=manager.balance|money) }}</option>
           {% endfor %}
         </select>
       </div>
@@ -186,22 +186,22 @@
   {% endcall %}
 
   {# ─── Recent cost records ─── #}
-  {% call hub.section("آخر سجلات التكلفة", icon="clock-rotate-left",
-       meta=num(costed_batches|length) + " سجل") %}
+  {% call hub.section(_('آخر سجلات التكلفة'), icon="clock-rotate-left",
+       meta=num(costed_batches|length) + _(' سجل')) %}
     {% if costed_batches %}
     <div class="cp-record-list">
       {% for item in costed_batches %}
         {% if can_submit('radius.card_pricing_batch_detail', 'GET') %}<a class="hub-action" href="{{ url_for('radius.card_pricing_batch_detail', batch_id=item.batch_id) }}">
           <span class="hub-action-icon hub-action-icon--brand"><i class="fa-solid fa-file-invoice-dollar"></i></span>
           <div class="hub-action-body">
-            <div class="hub-action-title">{{ item.package_name or item.batch_code or ("حزمة #" ~ item.batch_id) }}</div>
+            <div class="hub-action-title">{{ item.package_name or item.batch_code or (_('حزمة #%(batch_id)s', batch_id=item.batch_id)) }}</div>
             <div class="hub-action-sub">{{ item.manager_name }} - {{ item.count|ar_count('kart') }} · {{ money_text(item.wholesale_total) }}</div>
           </div>
         </a>{% endif %}
       {% endfor %}
     </div>
     {% else %}
-      {{ hub.empty("لا توجد سجلات بعد", sub="ستظهر هنا الحزم التي تم تحميل تكلفتها على مدير.", icon="inbox") }}
+      {{ hub.empty(_('لا توجد سجلات بعد'), sub=_('ستظهر هنا الحزم التي تم تحميل تكلفتها على مدير.'), icon="inbox") }}
     {% endif %}
   {% endcall %}
 
@@ -211,7 +211,7 @@
 {# ───── Shared modal for editing a package pricing policy.
    Replaces the per-card inline <details> forms — same fields, same action,
    same field names. JS clones the active row's data into this one form. ───── #}
-{% call hub.modal("pkgPricingModal", "تعديل سياسة السعر", icon="sliders", size="",
+{% call hub.modal("pkgPricingModal", _('تعديل سياسة السعر'), icon="sliders", size="",
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("إلغاء") ~ '</button>'|safe
      ~ '<button type="submit" form="pkgPricingForm" class="hub-btn hub-btn--primary"><i class="fa-solid fa-check"></i> '|safe ~ _("حفظ السياسة") ~ '</button>'|safe) %}
   <form method="post" id="pkgPricingForm" data-pkg-form class="cp-cost-form">

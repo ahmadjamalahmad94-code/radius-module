@@ -10,6 +10,7 @@
     export HOBERADIUS_VPN_SECRET_KEY="$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import base64
 import hashlib
@@ -94,34 +95,33 @@ def create_account(
     """ينشئ حساب VPN. يرفع ValueError عند انتهاك القواعد."""
     alloc = get_allocation(tenant_id, allocation_mirror_id)
     if not alloc:
-        raise ValueError("التخصيص غير موجود.")
+        raise ValueError(_tr("التخصيص غير موجود."))
     if alloc["status"] not in ("active", "pending"):
-        raise ValueError(f"التخصيص غير نشط (الحالة: {alloc['status']}).")
+        raise ValueError(_tr('التخصيص غير نشط (الحالة: %(status)s).', status=alloc['status']))
 
     current = count_active_accounts(tenant_id, allocation_mirror_id)
     max_allowed = alloc.get("max_accounts") or 0
     if max_allowed > 0 and current >= max_allowed:
         raise ValueError(
-            f"وصلت إلى الحد الأقصى من الحسابات ({max_allowed}). "
-            "تواصل مع المزوّد لرفع الحد."
+            _tr('وصلت إلى الحد الأقصى من الحسابات (%(max_allowed)s). تواصل مع المزوّد لرفع الحد.', max_allowed=max_allowed)
         )
 
     username = username.strip().lower()
     if not username:
-        raise ValueError("اسم المستخدم مطلوب.")
+        raise ValueError(_tr("اسم المستخدم مطلوب."))
     if len(username) > 64:
-        raise ValueError("اسم المستخدم طويل جدًا (الحد 64 حرف).")
+        raise ValueError(_tr("اسم المستخدم طويل جدًا (الحد 64 حرف)."))
     if not raw_password:
-        raise ValueError("كلمة المرور مطلوبة.")
+        raise ValueError(_tr("كلمة المرور مطلوبة."))
     if len(raw_password) < 8:
-        raise ValueError("كلمة المرور قصيرة جدًا (8 أحرف على الأقل).")
+        raise ValueError(_tr("كلمة المرور قصيرة جدًا (8 أحرف على الأقل)."))
 
     existing = _db().execute(
         "SELECT id FROM vpn_account WHERE tenant_id=? AND username=? AND allocation_mirror_id=?",
         (tenant_id, username, allocation_mirror_id),
     ).fetchone()
     if existing:
-        raise ValueError(f"اسم المستخدم «{username}» موجود مسبقًا في هذا التخصيص.")
+        raise ValueError(_tr('اسم المستخدم «%(username)s» موجود مسبقًا في هذا التخصيص.', username=username))
 
     encrypted = _encrypt(raw_password)
     now = _now()
@@ -144,7 +144,7 @@ def create_account(
             """INSERT INTO service_audit_log
                (tenant_id, entity_type, entity_id, action, actor, description, meta_json, created_at)
                VALUES (?, 'vpn_account', ?, 'create', 'admin', ?, '{}', ?)""",
-            (tenant_id, account_id, f"إنشاء حساب VPN: {username}", now),
+            (tenant_id, account_id, _tr('إنشاء حساب VPN: %(username)s', username=username), now),
         )
 
     LOG.info("vpn_account: created %s (tenant=%d, alloc=%d)", username, tenant_id, allocation_mirror_id)

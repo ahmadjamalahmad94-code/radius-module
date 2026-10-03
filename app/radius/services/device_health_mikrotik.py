@@ -20,6 +20,7 @@ Writes (Phase 3 — NOT wired to any route here):
 The managed-comment marker lets a future remove step sweep only our rows.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import os
 from ..core import env_settings
@@ -143,13 +144,13 @@ def live_apply_enabled(tenant_id: Optional[int] = None) -> bool:
 
 def _live_apply_allowed(live: bool, tenant_id: Optional[int] = None) -> tuple[bool, str]:
     if not live:
-        return False, "التطبيق الحيّ غير مُفعّل لهذا الطلب (dry-run)."
+        return False, N_("التطبيق الحيّ غير مُفعّل لهذا الطلب (dry-run).")
     if not live_apply_enabled(tenant_id):
         if env_force_disabled():
-            return False, ("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
-                           "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY).")
-        return False, ("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من "
-                       "اللوحة «تفعيل التطبيق الحي على الراوترات».")
+            return False, (N_("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
+                           "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY)."))
+        return False, (N_("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من "
+                       "اللوحة «تفعيل التطبيق الحي على الراوترات»."))
     return True, ""
 
 

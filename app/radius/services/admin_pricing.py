@@ -10,6 +10,7 @@
 (tenant, admin, plan) بسعر REAL موجب + من/متى عُدِّل.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Optional
 
@@ -98,7 +99,7 @@ class AdminPricingService:
         """تعيين/تحديث السعر الخاص لمدير على عرض (upsert)."""
         value = _coerce_price(price)
         if value <= 0:
-            raise RadiusValidationError("السعر الخاص يجب أن يكون رقمًا موجبًا.")
+            raise RadiusValidationError(_tr("السعر الخاص يجب أن يكون رقمًا موجبًا."))
         db().execute(
             """
             INSERT INTO admin_plan_prices(tenant_id, admin_id, plan_id, price,

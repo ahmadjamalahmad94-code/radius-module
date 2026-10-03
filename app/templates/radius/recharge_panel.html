@@ -212,13 +212,13 @@
    نموذج uds-hero-search — لا هيرو منفصل ولا hub-hero-shell قديمة. البحث هنا
    لحظي (autocomplete عبر JS) لا يُرسَل بالنموذج، لذا نمنع الإرسال بـ onsubmit. #}
 {% call hub.megahero(
-    "لوحة الشحن",
-    subtitle="ابحث عن المشترك، اختر العملية، وفعّل بنقرة — كل العمليات تُسجَّل في السجل المالي الموحّد.",
+    _('لوحة الشحن'),
+    subtitle=_('ابحث عن المشترك، اختر العملية، وفعّل بنقرة — كل العمليات تُسجَّل في السجل المالي الموحّد.'),
     icon="bolt",
     kpis=[
-      {'label': 'رصيد المحفظة',        'value': kpis.wallet_balance|money,   'icon': 'wallet',        'variant': 'brand', 'sub': 'محافظك المسجّلة في المركز المالي'},
-      {'label': 'الديون المفتوحة',     'value': kpis.open_debts|money,       'icon': 'file-invoice-dollar', 'variant': 'amber', 'sub': 'سلف غير مسددة'},
-      {'label': 'محصلة اليوم',         'value': kpis.collected_today|money,  'icon': 'cash-register', 'variant': 'green', 'sub': 'دفعاتك المرحَّلة اليوم'},
+      {'label': _('رصيد المحفظة'),        'value': kpis.wallet_balance|money,   'icon': 'wallet',        'variant': 'brand', 'sub': _('محافظك المسجّلة في المركز المالي')},
+      {'label': _('الديون المفتوحة'),     'value': kpis.open_debts|money,       'icon': 'file-invoice-dollar', 'variant': 'amber', 'sub': _('سلف غير مسددة')},
+      {'label': _('محصلة اليوم'),         'value': kpis.collected_today|money,  'icon': 'cash-register', 'variant': 'green', 'sub': _('دفعاتك المرحَّلة اليوم')},
     ]
 ) %}
   {# حقل البحث النصي يندمج في حزام uds-hero-search (الارتفاع 42px يُطبَّق
@@ -270,7 +270,7 @@
     </div>
   </div>
 
-  {% call hub.section("اختر العملية", icon="wand-magic-sparkles") %}
+  {% call hub.section(_('اختر العملية'), icon="wand-magic-sparkles") %}
     {# ═══ RBAC على مستوى العملية — النمط المرجعي لكل الصفحات ═══
        كل بطاقة عملية مربوطة بمفتاح الحارس الخادمي نفسه (راجع
        _PERM_GUARDED في routes/blueprint.py):
@@ -297,23 +297,23 @@
               style="opacity:.45;cursor:not-allowed" aria-disabled="true">
         <span class="rcp-act-ic"><i class="fa-solid fa-lock"></i></span>
         <span class="rcp-act-t">{{ title }}
-          <span class="hub-hint" tabindex="0" data-hint="ليست ضمن صلاحياتك"><i class="fa-solid fa-lock"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('ليست ضمن صلاحياتك') }}"><i class="fa-solid fa-lock"></i></span>
         </span>
         <span class="rcp-act-s">{{ _('ليست ضمن صلاحياتك') }}</span>
       </button>
       {%- endif -%}
     {%- endmacro -%}
     <div class="rcp-actions" id="rcp-actions">
-      {{ rcp_action('renew', 'rotate', 'تجديد نفس الباقة', 'دفعة بسعر الباقة × عدد المرات', 'users.payments') }}
-      {{ rcp_action('time', 'clock', 'تفعيل بالوقت', 'إضافة أيام/ساعات للحساب', 'users.extend') }}
-      {{ rcp_action('plan', 'shuffle', 'تغيير العرض ثم تفعيل', 'نقل المشترك لعرض آخر وتجديده', 'users.change_plan') }}
-      {{ rcp_action('cash', 'money-bill-wave', 'شحن مبلغ نقدي', 'المبلغ يتحوّل وقتًا تناسبيًا', 'users.payments') }}
+      {{ rcp_action('renew', 'rotate', _('تجديد نفس الباقة'), _('دفعة بسعر الباقة × عدد المرات'), 'users.payments') }}
+      {{ rcp_action('time', 'clock', _('تفعيل بالوقت'), _('إضافة أيام/ساعات للحساب'), 'users.extend') }}
+      {{ rcp_action('plan', 'shuffle', _('تغيير العرض ثم تفعيل'), _('نقل المشترك لعرض آخر وتجديده'), 'users.change_plan') }}
+      {{ rcp_action('cash', 'money-bill-wave', _('شحن مبلغ نقدي'), _('المبلغ يتحوّل وقتًا تناسبيًا'), 'users.payments') }}
       {# تفعيل بالكارت — مسار كروت الهوتسبوت الحالي لا يدعم شحن مشترك
          مباشرة بكود كرت من لوحة الإدارة؛ يُفعَّل لاحقًا عند توفر الخدمة. #}
       <button type="button" class="rcp-act" data-act="card" disabled>
         <span class="rcp-act-ic"><i class="fa-solid fa-id-card"></i></span>
         <span class="rcp-act-t">{{ _('تفعيل بالكارت') }}
-          <span class="hub-hint" tabindex="0" data-hint="شحن المشترك بكود كرت من لوحة الإدارة غير متاح بعد — قريباً."><i class="fa-solid fa-circle-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('شحن المشترك بكود كرت من لوحة الإدارة غير متاح بعد — قريباً.') }}"><i class="fa-solid fa-circle-info"></i></span>
         </span>
         <span class="rcp-act-s">{{ _('قريباً') }}</span>
       </button>
@@ -333,7 +333,7 @@
         <span class="rcp-total-chip"><i class="fa-solid fa-equals"></i> {{ _('الإجمالي:') }} <span id="renew-total">—</span></span>
         <label style="display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--hub-text-mute)">
           <input type="checkbox" id="renew-apply" checked> {{ _('تطبيق المدة فورًا على الحساب') }}
-          <span class="hub-hint" tabindex="0" data-hint="عند التفعيل تُضاف المدة المكتسبة مباشرة إلى تاريخ انتهاء المشترك في RADIUS."><i class="fa-solid fa-circle-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('عند التفعيل تُضاف المدة المكتسبة مباشرة إلى تاريخ انتهاء المشترك في RADIUS.') }}"><i class="fa-solid fa-circle-info"></i></span>
         </label>
       </div>
 
@@ -374,7 +374,7 @@
         </div>
         <div class="rcp-field">
           <label>{{ _('سياسة المدة المتبقية') }}
-            <span class="hub-hint" tabindex="0" data-hint="«الحفاظ على الانتهاء» يبقي تاريخ الانتهاء كما هو. خيارات التعويض/الدين تتطلب أن يكون العرض الجديد أرخص/أغلى فعلًا."><i class="fa-solid fa-circle-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('«الحفاظ على الانتهاء» يبقي تاريخ الانتهاء كما هو. خيارات التعويض/الدين تتطلب أن يكون العرض الجديد أرخص/أغلى فعلًا.') }}"><i class="fa-solid fa-circle-info"></i></span>
           </label>
           <select class="hub-input" id="plan-policy" style="min-width:230px">
             <option value="neutral_keep_expiry" selected>{{ _('الحفاظ على تاريخ الانتهاء') }}</option>
@@ -394,7 +394,7 @@
       {# شحن مبلغ نقدي #}
       <div class="rcp-pane" data-pane="cash">
         <div class="rcp-field">
-          <label>المبلغ ({{ currency }})</label>
+          <label>{{ _('المبلغ (%(currency)s)', currency=currency) }}</label>
           <input type="number" class="hub-input" id="cash-amount" min="0.01" step="0.01" placeholder="0.00" style="width:150px">
         </div>
         <div class="rcp-field">
@@ -427,8 +427,8 @@
 
 {# ═════════ آخر عملياتك اليوم ═════════ #}
 {# قاموس ترجمة طريقة الدفع — الخادم يعيد القيمة الخام الإنجليزية فنترجمها هنا. #}
-{% set _method_labels = {'cash': 'نقدًا', 'transfer': 'حوالة', 'wallet': 'محفظة'} %}
-{% call hub.section("آخر عملياتك اليوم", icon="clock-rotate-left", meta="آخر 5 عمليات") %}
+{% set _method_labels = {'cash': _('نقدًا'), 'transfer': _('حوالة'), 'wallet': _('محفظة')} %}
+{% call hub.section(_('آخر عملياتك اليوم'), icon="clock-rotate-left", meta=_('آخر 5 عمليات')) %}
   <div id="rcp-recent">
     {% if recent %}
       {% for op in recent %}
@@ -436,26 +436,26 @@
         <span class="rcp-recent-ic"><i class="fa-solid fa-check"></i></span>
         <div>
           <div class="rcp-recent-t"><bdi dir="ltr">{{ op.username }}</bdi></div>
-          <div class="rcp-recent-s">{{ op.created_at|dt_local }} · {{ _method_labels.get(op.method, op.method or 'نقدًا') }}</div>
+          <div class="rcp-recent-s">{{ op.created_at|dt_local }} · {{ _method_labels.get(op.method, op.method or _('نقدًا')) }}</div>
         </div>
         <span class="rcp-recent-amt">{{ op.amount_label }}</span>
       </div>
       {% endfor %}
     {% else %}
-      {{ hub.empty("لا عمليات اليوم بعد.", sub="أول عملية شحن تنجزها ستظهر هنا فورًا.", icon="bolt") }}
+      {{ hub.empty(_('لا عمليات اليوم بعد.'), sub=_('أول عملية شحن تنجزها ستظهر هنا فورًا.'), icon="bolt") }}
     {% endif %}
   </div>
 {% endcall %}
 
 {# ═════════ نافذة التأكيد العائمة ═════════ #}
-{% call hub.modal("rcp-confirm", "تأكيد العملية", icon="bolt",
+{% call hub.modal("rcp-confirm", _('تأكيد العملية'), icon="bolt",
      footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("إلغاء") ~ '</button>'|safe
                  ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-confirm-go"><i class="fa-solid fa-check"></i> '|safe ~ _("تأكيد وتنفيذ") ~ '</button>'|safe) %}
   <div id="rcp-confirm-body"></div>
 {% endcall %}
 
 {# ═════════ نافذة النجاح ═════════ #}
-{% call hub.modal("rcp-done", "تمت العملية", icon="circle-check",
+{% call hub.modal("rcp-done", _('تمت العملية'), icon="circle-check",
      footer_html='<button type="button" class="hub-btn hub-btn--secondary" id="rcp-print"><i class="fa-solid fa-print"></i> '|safe ~ _("طباعة الفاتورة") ~ '</button>'|safe
                  ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-new" data-uds-modal-close><i class="fa-solid fa-plus"></i> '|safe ~ _("عملية جديدة") ~ '</button>'|safe) %}
   <div class="rcp-success-check"><i class="fa-solid fa-check"></i></div>

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -28,12 +29,12 @@ def _payload(pool_id: int | None = None) -> IpPool | tuple:
     name = str(body.get("pool_name") or body.get("name") or "").strip()
     ip_range = str(body.get("range_ip") or "").strip()
     if not name or not ip_range:
-        return fail("validation_error", "اسم الـ pool ونطاق العناوين مطلوبان.", status=422)
+        return fail("validation_error", N_("اسم الـ pool ونطاق العناوين مطلوبان."), status=422)
     router_id = body.get("router_id")
     try:
         parsed_router_id = int(router_id) if router_id not in (None, "") else None
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف الراوتر يجب أن يكون رقمًا صحيحًا."), status=422)
     return IpPool(
         id=pool_id,
         tenant_id=_tid(),
@@ -60,7 +61,7 @@ def list_pools():
 def get_pool(pool_id: int):
     pool = pools_repo.get(_tid(), pool_id)
     if not pool:
-        return fail("not_found", "الـ pool غير موجود.", status=404)
+        return fail("not_found", _tr("الـ pool غير موجود."), status=404)
     return ok(_item(pool))
 
 
@@ -73,7 +74,7 @@ def create_pool():
 
 def patch_pool(pool_id: int):
     if not pools_repo.get(_tid(), pool_id):
-        return fail("not_found", "الـ pool غير موجود.", status=404)
+        return fail("not_found", _tr("الـ pool غير موجود."), status=404)
     pool = _payload(pool_id)
     if isinstance(pool, tuple):
         return pool
@@ -82,6 +83,6 @@ def patch_pool(pool_id: int):
 
 def delete_pool(pool_id: int):
     if not pools_repo.get(_tid(), pool_id):
-        return fail("not_found", "الـ pool غير موجود.", status=404)
+        return fail("not_found", _tr("الـ pool غير موجود."), status=404)
     pools_repo.delete(_tid(), pool_id)
     return ok({"id": pool_id, "deleted": True})

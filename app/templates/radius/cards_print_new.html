@@ -399,8 +399,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "استيراد دفعة طباعة",
-  subtitle="ارفع ملف الكروت — Excel، CSV، أو PDF بأي ترتيب أعمدة. المحرّك يكتشف اليوزرات والباسوردات تلقائياً.",
+  _('استيراد دفعة طباعة'),
+  subtitle=_('ارفع ملف الكروت — Excel، CSV، أو PDF بأي ترتيب أعمدة. المحرّك يكتشف اليوزرات والباسوردات تلقائياً.'),
   icon="file-import",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_print_list') + '">
@@ -425,24 +425,20 @@
     <ol class="pc-help-steps">
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>{{ _('عرّف الحزمة:') }}</b> اكتب اسم الحزمة وسعرها
-          (السعر اختياري — يظهر على ملف الطباعة).</span>
+        <span class="tx"><b>{{ _('عرّف الحزمة:') }}</b> {{ _('اكتب اسم الحزمة وسعرها (السعر اختياري — يظهر على ملف الطباعة).') }}</span>
       </li>
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>{{ _('حلّل الملف:') }}</b> ارفع ملف الكروت ثم اضغط
-          «حلّل» — المحرّك يكتشف أعمدة اليوزر والباسورد تلقائيًا.</span>
+        <span class="tx"><b>{{ _('حلّل الملف:') }}</b> {{ _('ارفع ملف الكروت ثم اضغط «حلّل» — المحرّك يكتشف أعمدة اليوزر والباسورد تلقائيًا.') }}</span>
       </li>
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>{{ _('راجع واحفظ:') }}</b> دقّق النص المستخرج، عدّله
-          إن لزم، ثم احفظ دفعة الطباعة.</span>
+        <span class="tx"><b>{{ _('راجع واحفظ:') }}</b> {{ _('دقّق النص المستخرج، عدّله إن لزم، ثم احفظ دفعة الطباعة.') }}</span>
       </li>
     </ol>
     <div class="pc-help-note">
       <i class="fa-solid fa-circle-info"></i>
-      <span>بطاقات الطباعة لا تُرحَّل إلى خدمة المصادقة ولا تسمح
-        بتسجيل الدخول — هي للطباعة فقط.</span>
+      <span>{{ _('بطاقات الطباعة لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول — هي للطباعة فقط.') }}</span>
     </div>
   </div>
 </aside>
@@ -453,24 +449,24 @@
   {{ csrf_token_input() | safe }}
 
   {# ── 1. Package metadata ── #}
-  {% call hub.section("بيانات الحزمة", icon="box-archive") %}
-    {% call hub.fieldset("التعريف والتسعير", icon="tag") %}
+  {% call hub.section(_('بيانات الحزمة'), icon="box-archive") %}
+    {% call hub.fieldset(_('التعريف والتسعير'), icon="tag") %}
       <div class="pc-row">
-        {{ hub.field("اسم الحزمة", "package_name",
+        {{ hub.field(_('اسم الحزمة'), "package_name",
                      value=form.get('package_name') or '',
                      required=True,
                      placeholder=_("مثل: دفعة شهر ٧ — للطباعة"),
-                     hint="يظهر في القائمة وعلى ملف الطباعة") }}
-        {{ hub.field("سعر البيع للبطاقة", "price_per_card",
+                     hint=_('يظهر في القائمة وعلى ملف الطباعة')) }}
+        {{ hub.field(_('سعر البيع للبطاقة'), "price_per_card",
                      type="number",
                      value=form.get('price_per_card') or '',
                      placeholder="0.00",
-                     hint="السعر للقطعة الواحدة") }}
-        {{ hub.field("سعر الجملة (إجمالي)", "price_bulk",
+                     hint=_('السعر للقطعة الواحدة')) }}
+        {{ hub.field(_('سعر الجملة (إجمالي)'), "price_bulk",
                      type="number",
                      value=form.get('price_bulk') or '',
                      placeholder="0.00",
-                     hint="التكلفة الكلية للدفعة") }}
+                     hint=_('التكلفة الكلية للدفعة')) }}
       </div>
     {% endcall %}
 
@@ -481,7 +477,7 @@
   {% endcall %}
 
   {# ── 2. Smart engine ── #}
-  {% call hub.section("المحرّك الذكي — تحليل ملف الكروت", icon="wand-magic-sparkles") %}
+  {% call hub.section(_('المحرّك الذكي — تحليل ملف الكروت'), icon="wand-magic-sparkles") %}
     <div id="pc-smart" class="pc-smart-body"
          data-csrf="{{ csrf_token() if csrf_token is defined else '' }}"
          data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
@@ -506,7 +502,7 @@
           </div>
           <p class="pc-dz-title">{{ _('اسحب الملف هنا أو اضغط للاختيار') }}</p>
           <p class="pc-dz-sub">
-            <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> &nbsp;حتى 12MB
+            <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> {{ _('&nbsp;حتى 12MB') }}
           </p>
         </div>
 
@@ -561,7 +557,7 @@
   {% endcall %}
 
   {# ── 3. Review and save ── #}
-  {% call hub.section("راجع البطاقات قبل الحفظ", icon="list-check") %}
+  {% call hub.section(_('راجع البطاقات قبل الحفظ'), icon="list-check") %}
     <div class="hub-field">
       <label class="hub-field-label" for="csv_text">
         {{ _('نص الكروت') }} <span class="req">*</span>
@@ -574,8 +570,8 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid #f1f5f9">
-      {{ hub.btn("احفظ دفعة الطباعة", icon="file-import", type="submit", variant="primary") }}
-      {% if can_submit('radius.cards_print_list', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_print_list'), variant="secondary") }}{% endif %}
+      {{ hub.btn(_('احفظ دفعة الطباعة'), icon="file-import", type="submit", variant="primary") }}
+      {% if can_submit('radius.cards_print_list', 'GET') %}{{ hub.btn(_('إلغاء'), icon="xmark", href=url_for('radius.cards_print_list'), variant="secondary") }}{% endif %}
     </div>
   {% endcall %}
 

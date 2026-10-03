@@ -13,6 +13,7 @@ URL tree:
   GET  /cards/print/<batch_id>         → cards inside a batch + print modal
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (
@@ -236,7 +237,7 @@ def cards_print_new():
     notes = (request.form.get("notes") or "").strip()
 
     if not package_name:
-        flash("اسم الحزمة مطلوب.", "error")
+        flash(_tr("اسم الحزمة مطلوب."), "error")
         return _render_new_form(), 422
 
     # Re-use the engine's text parser — handles paste-direct flows
@@ -248,7 +249,7 @@ def cards_print_new():
     ]
     if not rows:
         flash(
-            "لم يُعثر على أي بطاقة قابلة للاستيراد — راجع النص أو ارفع الملف مرة أخرى.",
+            _tr("لم يُعثر على أي بطاقة قابلة للاستيراد — راجع النص أو ارفع الملف مرة أخرى."),
             "error",
         )
         return _render_new_form(), 422
@@ -271,10 +272,9 @@ def cards_print_new():
 
     batch = result["batch"]
     skipped = result["skipped_count"]
-    skipped_label = f" تم تخطي {skipped} مكرر/غير صالح." if skipped else ""
+    skipped_label = _tr(' تم تخطي %(skipped)s مكرر/غير صالح.', skipped=skipped) if skipped else ""
     flash(
-        f"تم استيراد {ar_count(result['inserted_count'], 'card')} طباعة "
-        f"داخل الحزمة «{batch.package_name or batch.batch_code}».{skipped_label}",
+        _tr('تم استيراد %(v)s طباعة داخل الحزمة «%(batch_code)s».%(skipped_label)s', v=ar_count(result['inserted_count'], 'card'), batch_code=batch.package_name or batch.batch_code, skipped_label=skipped_label),
         "success",
     )
     return redirect(url_for("radius.cards_print_batch", batch_id=batch.id))
@@ -286,15 +286,15 @@ def cards_print_new_preview():
     """
     upload = request.files.get("file")
     if upload is None or not upload.filename:
-        return jsonify({"ok": False, "error": "اختر ملفًا قبل الرفع."}), 400
+        return jsonify({"ok": False, "error": _tr("اختر ملفًا قبل الرفع.")}), 400
 
     raw = upload.read(_IMPORT_MAX_BYTES + 1)
     if not raw:
-        return jsonify({"ok": False, "error": "الملف فارغ أو غير قابل للقراءة."}), 400
+        return jsonify({"ok": False, "error": _tr("الملف فارغ أو غير قابل للقراءة.")}), 400
     if len(raw) > _IMPORT_MAX_BYTES:
         return jsonify({
             "ok": False,
-            "error": "حجم الملف يتجاوز 12MB — قسّمه إلى دفعات أصغر.",
+            "error": _tr("حجم الملف يتجاوز 12MB — قسّمه إلى دفعات أصغر."),
         }), 413
 
     result = cards_import_engine.parse(raw, upload.filename or "")
@@ -349,9 +349,9 @@ def cards_print_batch_delete(batch_id: int):
         actor=_actor(), batch_id=batch_id,
     )
     if ok:
-        flash("تم حذف حزمة الطباعة.", "success")
+        flash(_tr("تم حذف حزمة الطباعة."), "success")
     else:
-        flash("الحزمة غير موجودة أو غير قابلة للحذف.", "error")
+        flash(_tr("الحزمة غير موجودة أو غير قابلة للحذف."), "error")
     return redirect(url_for("radius.cards_print_list"))
 
 

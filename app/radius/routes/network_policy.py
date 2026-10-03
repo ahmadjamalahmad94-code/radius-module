@@ -20,6 +20,7 @@ Sidebar entry: «الشبكة → سياسات الشبكة → [حظر المو
 sub-service.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Optional
@@ -89,7 +90,7 @@ _REGISTRY: dict[str, _ServiceDef] = {
     "web-block": _ServiceDef(
         key=nc.SERVICE_WEB_BLOCK,
         url_slug="web-block",
-        label_ar="حظر المواقع",
+        label_ar=N_("حظر المواقع"),
         icon="ban",
         perms={
             "view":    PERM_NPC_WEB_BLOCK_VIEW,
@@ -109,7 +110,7 @@ _REGISTRY: dict[str, _ServiceDef] = {
     "walled-garden": _ServiceDef(
         key=nc.SERVICE_WALLED_GARDEN,
         url_slug="walled-garden",
-        label_ar="المواقع المسموحة",
+        label_ar=N_("المواقع المسموحة"),
         icon="shield-halved",
         perms={
             "view":    PERM_NPC_WALLED_GARDEN_VIEW,
@@ -210,7 +211,7 @@ def _nas_name(router_id: Optional[int]) -> str:
         "SELECT name FROM nas_devices WHERE id=? AND tenant_id=?",
         (int(router_id), _tid()),
     ).fetchone()
-    return row["name"] if row else f"راوتر #{router_id}"
+    return row["name"] if row else _tr('راوتر #%(router_id)s', router_id=router_id)
 
 
 # ─── Per-service repo + planner adapters ─────────────────────
@@ -249,7 +250,7 @@ def _adapter(svc: _ServiceDef) -> _PolicyAdapter:
             get_child=wb_repo.get_target,
             delete_child=wb_repo.delete_target,
             child_counts=wb_repo.target_counts,
-            child_label_ar="وجهات الحظر",
+            child_label_ar=N_("وجهات الحظر"),
         )
     if svc.key == nc.SERVICE_WALLED_GARDEN:
         return _PolicyAdapter(
@@ -265,7 +266,7 @@ def _adapter(svc: _ServiceDef) -> _PolicyAdapter:
             get_child=wg_repo.get_entry,
             delete_child=wg_repo.delete_entry,
             child_counts=wg_repo.entry_counts,
-            child_label_ar="إدخالات الإستثناء",
+            child_label_ar=N_("إدخالات الإستثناء"),
         )
     abort(404)
 
@@ -436,7 +437,7 @@ def npc_index():
         }
     return render_template(
         "radius/network_policy_router_picker.html",
-        page_title="سياسات الشبكة",
+        page_title=N_("سياسات الشبكة"),
         routers=routers,
         services=list(_REGISTRY.values()),
     )
@@ -564,9 +565,9 @@ def _extract_form(svc: _ServiceDef, form) -> dict[str, Any]:
 
 def _validate_required(payload: dict) -> Optional[str]:
     if not payload.get("name"):
-        return "اسم السياسة مطلوب."
+        return N_("اسم السياسة مطلوب.")
     if not payload.get("router_id"):
-        return "اختر الراوتر المستهدف."
+        return N_("اختر الراوتر المستهدف.")
     return None
 
 
@@ -593,7 +594,7 @@ def _make_new_view(svc: _ServiceDef):
                 child_counts={},
                 routers=_nas_list(),
                 preset_router_id=preset_router_id,
-                page_title=f"إضافة سياسة — {svc.label_ar}",
+                page_title=_tr('إضافة سياسة — %(label_ar)s', label_ar=svc.label_ar),
             )
 
         payload = _extract_form(svc, request.form)
@@ -606,7 +607,7 @@ def _make_new_view(svc: _ServiceDef):
         try:
             pid = ad.create(tenant_id=_tid(), **payload)
         except ValueError as e:
-            flash(f"تعذّر إنشاء السياسة: {e}", "danger")
+            flash(_tr('تعذّر إنشاء السياسة: %(e)s', e=e), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_new"
             ))
@@ -615,7 +616,7 @@ def _make_new_view(svc: _ServiceDef):
             policy_id=pid,
             router_id=int(payload["router_id"]),
         )
-        flash("أُنشئت السياسة بنجاح. التطبيق ما زال معاينة فقط.",
+        flash(_tr("أُنشئت السياسة بنجاح. التطبيق ما زال معاينة فقط."),
               "success")
         return redirect(url_for(
             f"radius.npc_{svc.key}_edit", policy_id=pid,
@@ -636,7 +637,7 @@ def _make_edit_view(svc: _ServiceDef):
             try:
                 ad.update(_tid(), policy_id, **payload)
             except ValueError as e:
-                flash(f"تعذّر حفظ السياسة: {e}", "danger")
+                flash(_tr('تعذّر حفظ السياسة: %(e)s', e=e), "danger")
                 return redirect(url_for(
                     f"radius.npc_{svc.key}_edit",
                     policy_id=policy_id,
@@ -646,8 +647,8 @@ def _make_edit_view(svc: _ServiceDef):
                 policy_id=policy_id,
                 router_id=policy["router_id"],
             )
-            flash("حُفظت التغييرات. ما زال هذا معاينة فقط — "
-                  "لم يُطبَّق على الراوتر.", "success")
+            flash(_tr("حُفظت التغييرات. ما زال هذا معاينة فقط — "
+                  "لم يُطبَّق على الراوتر."), "success")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_edit", policy_id=policy_id,
             ))
@@ -668,7 +669,7 @@ def _make_edit_view(svc: _ServiceDef):
             children=children,
             child_counts=counts,
             routers=_nas_list(),
-            page_title=(f"تحرير: {policy['name']}"),
+            page_title=(_tr('تحرير: %(name)s', name=policy['name'])),
         )
     return _view
 
@@ -734,12 +735,12 @@ def _make_preview_view(svc: _ServiceDef):
                     command_count=plan.total_commands,
                     can_apply=True,
                 )
-                flash("تم توليد المعاينة وحفظها. "
-                      "لم يُطبَّق على الراوتر — هذه معاينة فقط.",
+                flash(_tr("تم توليد المعاينة وحفظها. "
+                      "لم يُطبَّق على الراوتر — هذه معاينة فقط."),
                       "success")
             except scripts_repo.SecretInScriptError as e:
                 render_error = str(e)
-                flash(f"رفض المُولِّد بسبب: {e}", "danger")
+                flash(_tr('رفض المُولِّد بسبب: %(e)s', e=e), "danger")
 
         # Operator-facing breakdown derived from the plan +
         # children, kept in the route so the template stays
@@ -772,7 +773,7 @@ def _make_preview_view(svc: _ServiceDef):
             summary=summary,
             explanation=explanation,
             intelligence=intelligence,
-            page_title=f"معاينة: {policy['name']}",
+            page_title=_tr('معاينة: %(name)s', name=policy['name']),
         )
     return _view
 
@@ -983,65 +984,64 @@ def _compute_readiness_v1_deprecated_body(
 
     if render_error:
         blockers.append(
-            "السكربت مرفوض تلقائياً بسبب محتوى حسّاس — لا يمكن "
-            "المتابعة."
+            N_("السكربت مرفوض تلقائياً بسبب محتوى حسّاس — لا يمكن "
+            "المتابعة.")
         )
     if not forward.strip():
         blockers.append(
-            "لا يوجد سكربت forward لتنفيذه — حدّث السياسة "
-            "ثم أعد المعاينة."
+            N_("لا يوجد سكربت forward لتنفيذه — حدّث السياسة "
+            "ثم أعد المعاينة.")
         )
     if impact.risk_level == "critical":
         blockers.append(
-            "تحليل الأثر يصنّف الخطّة critical — يجب إعادة "
-            "التخطيط قبل أي تنفيذ."
+            N_("تحليل الأثر يصنّف الخطّة critical — يجب إعادة "
+            "التخطيط قبل أي تنفيذ.")
         )
     if health.grade in ("dangerous",):
         blockers.append(
-            "درجة السلامة منخفضة جداً — راجع التحذيرات أعلاه."
+            N_("درجة السلامة منخفضة جداً — راجع التحذيرات أعلاه.")
         )
     if not impact.rollback_available:
         blockers.append(
-            "لا يوجد سكربت rollback — التنفيذ بدون إمكانية "
-            "تراجع غير مسموح."
+            N_("لا يوجد سكربت rollback — التنفيذ بدون إمكانية "
+            "تراجع غير مسموح.")
         )
     high_conflicts = [c for c in conflicts.conflicts
                       if c.severity == "high"]
     if high_conflicts:
         blockers.append(
-            f"يوجد {len(high_conflicts)} تعارض(ات) عالي الخطورة "
-            "مع سياسات أخرى — حلّها أوّلاً."
+            _tr('يوجد %(v)s تعارض(ات) عالي الخطورة مع سياسات أخرى — حلّها أوّلاً.', v=len(high_conflicts))
         )
 
     # Warnings (soft)
     if impact.risk_level == "high":
-        warnings.append("مستوى الخطر مرتفع — راجع الأسباب أعلاه.")
+        warnings.append(N_("مستوى الخطر مرتفع — راجع الأسباب أعلاه."))
     if blast.blast_radius in ("large", "critical"):
         warnings.append(
-            "نطاق التأثير واسع — مفضّل البدء بـ canary."
+            N_("نطاق التأثير واسع — مفضّل البدء بـ canary.")
         )
     if canary.recommended_strategy in (
         canary_svc.STRATEGY_CANARY, canary_svc.STRATEGY_HOLD,
     ):
         warnings.append(
-            "هناك توصية بالتطبيق التدريجي قبل أي تطبيق كامل."
+            N_("هناك توصية بالتطبيق التدريجي قبل أي تطبيق كامل.")
         )
     if health.grade == "risky":
         warnings.append(
-            "درجة السلامة في خانة «محفوفة بالمخاطر» — "
-            "تحقّق من الخطّة قبل المتابعة."
+            N_("درجة السلامة في خانة «محفوفة بالمخاطر» — "
+            "تحقّق من الخطّة قبل المتابعة.")
         )
 
     checklist = [
-        {"label": "السكربت forward موجود ومُولَّد بنجاح.",
+        {"label": _tr("السكربت forward موجود ومُولَّد بنجاح."),
          "status_ok": bool(forward.strip()) and not render_error},
-        {"label": "سكربت rollback متاح.",
+        {"label": _tr("سكربت rollback متاح."),
          "status_ok": bool(impact.rollback_available)},
-        {"label": "تحليل الأثر ليس في خانة critical.",
+        {"label": _tr("تحليل الأثر ليس في خانة critical."),
          "status_ok": impact.risk_level != "critical"},
-        {"label": "درجة السلامة فوق خط الخطر.",
+        {"label": _tr("درجة السلامة فوق خط الخطر."),
          "status_ok": health.grade not in ("dangerous",)},
-        {"label": "لا تعارضات عالية الخطورة مع سياسات أخرى.",
+        {"label": _tr("لا تعارضات عالية الخطورة مع سياسات أخرى."),
          "status_ok": not high_conflicts},
     ]
 
@@ -1054,8 +1054,8 @@ def _compute_readiness_v1_deprecated_body(
         "apply_perm":             apply_perm,
         "apply_perm_label_ar":    f"npc.{svc.key}.apply",
         "caveat_ar":              (
-            "التنفيذ لا يبدأ إلا بعد نجاح المعاينة وعدم وجود موانع. "
-            "كل عملية تطبيق تُسجّل للمراجعة ويمكن الرجوع إلى تفاصيلها."
+            _tr("التنفيذ لا يبدأ إلا بعد نجاح المعاينة وعدم وجود موانع. "
+            "كل عملية تطبيق تُسجّل للمراجعة ويمكن الرجوع إلى تفاصيلها.")
         ),
     }
 
@@ -1127,8 +1127,8 @@ def _make_apply_view(svc: _ServiceDef):
         except Exception as _snap_err:  # noqa: BLE001
             snapshot_id = None
             snapshot_reason_ar = str(_snap_err) or (
-                "تعذّر التقاط لقطة الحالة الحيّة من الراوتر — تحقّق "
-                "من الاتصال واعتمادات API."
+                _tr("تعذّر التقاط لقطة الحالة الحيّة من الراوتر — تحقّق "
+                "من الاتصال واعتمادات API.")
             )
         if snapshot_reason_ar:
             flash(snapshot_reason_ar, "warning")
@@ -1186,20 +1186,19 @@ def _make_apply_view(svc: _ServiceDef):
         # tests can validate the wiring rather than the polish.
         if result.ok:
             flash(
-                "تم التنفيذ بنجاح على الراوتر — "
-                f"change_set #{result.change_set_id}.",
+                _tr('تم التنفيذ بنجاح على الراوتر — change_set #%(change_set_id)s.', change_set_id=result.change_set_id),
                 "success",
             )
         elif result.status == cs_repo.STATUS_FAILED \
                 and result.blockers:
             flash(
-                "التنفيذ ممنوع — موانع: "
+                _tr("التنفيذ ممنوع — موانع: ")
                 + ", ".join(b.code for b in result.blockers),
                 "danger",
             )
         else:
             flash(
-                "نتيجة التنفيذ: " + result.reason_ar,
+                _tr("نتيجة التنفيذ: ") + result.reason_ar,
                 "warning",
             )
         return redirect(url_for(
@@ -1231,7 +1230,7 @@ def _make_changes_view(svc: _ServiceDef):
             for t in cs_repo.list_targets(int(r["id"])):
                 t = dict(t)
                 t["router_name"] = _nas_name(t.get("router_id")) \
-                    or f"راوتر #{t.get('router_id')}"
+                    or _tr('راوتر #%(v)s', v=t.get('router_id'))
                 _tgts.append(t)
             r["targets"] = _tgts
             r["rollback_eligible"] = (
@@ -1254,7 +1253,7 @@ def _make_changes_view(svc: _ServiceDef):
             change_sets=decorated,
             can_rollback=current_admin_has(apply_perm),
             page_title=(
-                f"سجل التغييرات: {policy['name']}"
+                _tr('سجل التغييرات: %(name)s', name=policy['name'])
             ),
         )
     return _view
@@ -1287,12 +1286,11 @@ def _make_rollback_view(svc: _ServiceDef):
         )
         if result.ok:
             flash(
-                f"تم التراجع بنجاح — change_set "
-                f"#{result.change_set_id}.", "success",
+                _tr('تم التراجع بنجاح — change_set #%(change_set_id)s.', change_set_id=result.change_set_id), "success",
             )
         else:
             flash(
-                f"تعذّر التراجع: {result.reason_ar}",
+                _tr('تعذّر التراجع: %(reason_ar)s', reason_ar=result.reason_ar),
                 "danger",
             )
         return redirect(url_for(
@@ -1324,13 +1322,13 @@ def _make_download_view(svc: _ServiceDef):
         try:
             forward = renderer.render_forward_script(plan)
         except renderer.RenderSafetyError as e:
-            flash(f"تعذّر توليد السكربت: {e}", "danger")
+            flash(_tr('تعذّر توليد السكربت: %(e)s', e=e), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_preview",
                 policy_id=policy_id,
             ))
         if not forward:
-            flash("لا يوجد سكربت قابل للتنزيل — راجع الأخطاء.",
+            flash(_tr("لا يوجد سكربت قابل للتنزيل — راجع الأخطاء."),
                   "warning")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_preview",
@@ -1364,7 +1362,7 @@ def _make_delete_view(svc: _ServiceDef):
             policy_id=policy_id,
             router_id=policy["router_id"],
         )
-        flash("حُذفت السياسة. (محلياً — لم يُطبَّق على الراوتر.)",
+        flash(_tr("حُذفت السياسة. (محلياً — لم يُطبَّق على الراوتر.)"),
               "success")
         return redirect(url_for(f"radius.npc_{svc.key}_list"))
     return _view
@@ -1382,13 +1380,13 @@ def _make_duplicate_view(svc: _ServiceDef):
         # dict — keeps a single source of truth for field
         # whitelisting per service.
         proxy = _row_to_form_dict(svc, src)
-        proxy["name"] = f"{src['name']} (نسخة)"
+        proxy["name"] = _tr('%(name)s (نسخة)', name=src['name'])
         proxy["slug"] = None
         proxy["router_id"] = src["router_id"]
         try:
             new_id = ad.create(tenant_id=_tid(), **proxy)
         except ValueError as e:
-            flash(f"تعذّرت النسخة: {e}", "danger")
+            flash(_tr('تعذّرت النسخة: %(e)s', e=e), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_list"
             ))
@@ -1398,7 +1396,7 @@ def _make_duplicate_view(svc: _ServiceDef):
             router_id=src["router_id"],
             duplicated_from=policy_id,
         )
-        flash("أُنشئت نسخة جديدة من السياسة.", "success")
+        flash(_tr("أُنشئت نسخة جديدة من السياسة."), "success")
         return redirect(url_for(
             f"radius.npc_{svc.key}_edit", policy_id=new_id,
         ))
@@ -1441,7 +1439,7 @@ def _make_child_add_view(svc: _ServiceDef):
             abort(404)
         raw_value = (request.form.get("value") or "").strip()
         if not raw_value:
-            flash("القيمة فارغة.", "danger")
+            flash(_tr("القيمة فارغة."), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_edit",
                 policy_id=policy_id,
@@ -1453,7 +1451,7 @@ def _make_child_add_view(svc: _ServiceDef):
             # would give. We accept domain / ip / cidr.
             entry = analyzer.analyze_line(raw_value)
             if entry.kind == analyzer.KIND_INVALID:
-                flash(f"تعذّر القبول: {entry.reason}", "danger")
+                flash(_tr('تعذّر القبول: %(reason)s', reason=entry.reason), "danger")
                 return redirect(url_for(
                     f"radius.npc_{svc.key}_edit",
                     policy_id=policy_id,
@@ -1470,7 +1468,7 @@ def _make_child_add_view(svc: _ServiceDef):
                     status=wb_repo.STATUS_ACTIVE,
                 )
             except ValueError as e:
-                flash(f"تعذّرت الإضافة: {e}", "danger")
+                flash(_tr('تعذّرت الإضافة: %(e)s', e=e), "danger")
                 return redirect(url_for(
                     f"radius.npc_{svc.key}_edit",
                     policy_id=policy_id,
@@ -1482,7 +1480,7 @@ def _make_child_add_view(svc: _ServiceDef):
                 target_id=tid, category=category,
                 value=entry.normalized,
             )
-            flash("أُضيفت الوجهة.", "success")
+            flash(_tr("أُضيفت الوجهة."), "success")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_edit",
                 policy_id=policy_id,
@@ -1492,7 +1490,7 @@ def _make_child_add_view(svc: _ServiceDef):
         entry_type = (request.form.get("entry_type")
                        or "").strip()
         if not entry_type:
-            flash("اختر نوع الإدخال (host / IP).", "danger")
+            flash(_tr("اختر نوع الإدخال (host / IP)."), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_edit",
                 policy_id=policy_id,
@@ -1510,7 +1508,7 @@ def _make_child_add_view(svc: _ServiceDef):
                 status=wg_repo.STATUS_ACTIVE,
             )
         except ValueError as e:
-            flash(f"تعذّرت الإضافة: {e}", "danger")
+            flash(_tr('تعذّرت الإضافة: %(e)s', e=e), "danger")
             return redirect(url_for(
                 f"radius.npc_{svc.key}_edit",
                 policy_id=policy_id,
@@ -1522,7 +1520,7 @@ def _make_child_add_view(svc: _ServiceDef):
             entry_id=eid, entry_type=entry_type,
             value=raw_value,
         )
-        flash("أُضيف الإدخال.", "success")
+        flash(_tr("أُضيف الإدخال."), "success")
         return redirect(url_for(
             f"radius.npc_{svc.key}_edit", policy_id=policy_id,
         ))
@@ -1548,7 +1546,7 @@ def _make_child_delete_view(svc: _ServiceDef):
             router_id=policy["router_id"],
             child_id=child_id,
         )
-        flash("حُذف العنصر.", "success")
+        flash(_tr("حُذف العنصر."), "success")
         return redirect(url_for(
             f"radius.npc_{svc.key}_edit", policy_id=policy_id,
         ))
@@ -1589,18 +1587,17 @@ def _explain_plan(
         n_filter = len(plan.filter_ops)
         if n_addr:
             will_do.append(
-                f"سيتم إنشاء قائمة عناوين بـ {n_addr} مدخلاً "
-                "تحت اسم managed."
+                _tr('سيتم إنشاء قائمة عناوين بـ %(n_addr)s مدخلاً تحت اسم managed.', n_addr=n_addr)
             )
         if n_filter:
             will_do.append(
-                "سيتم إضافة قاعدة drop واحدة على سلسلة forward "
-                "تستهدف القائمة أعلاه فقط."
+                N_("سيتم إضافة قاعدة drop واحدة على سلسلة forward "
+                "تستهدف القائمة أعلاه فقط.")
             )
         will_skip.extend([
-            "ملف الهوت‌سبوت (hotspot profile) لا يُعدَّل.",
-            "الـ NAT والـ DHCP لا يتأثّران.",
-            "قواعد الـ firewall الأخرى لا تُلمس.",
+            N_("ملف الهوت‌سبوت (hotspot profile) لا يُعدَّل."),
+            N_("الـ NAT والـ DHCP لا يتأثّران."),
+            N_("قواعد الـ firewall الأخرى لا تُلمس."),
         ])
 
     else:  # walled_garden
@@ -1611,20 +1608,16 @@ def _explain_plan(
         n_wg = len(plan.walled_garden_ops)
         if n_wg:
             will_do.append(
-                f"سيتم إضافة {n_wg} مدخل/إدخال إلى الـ "
-                "walled-garden قبل تسجيل الدخول."
+                _tr('سيتم إضافة %(n_wg)s مدخل/إدخال إلى الـ walled-garden قبل تسجيل الدخول.', n_wg=n_wg)
             )
         will_skip.extend([
-            "قواعد الـ hotspot login نفسها لا تُلمس.",
-            "قوالب الـ landing page لا تُعدَّل.",
-            "صلاحيات المستخدمين/البطاقات لا تُلمس.",
+            N_("قواعد الـ hotspot login نفسها لا تُلمس."),
+            N_("قوالب الـ landing page لا تُعدَّل."),
+            N_("صلاحيات المستخدمين/البطاقات لا تُلمس."),
         ])
 
     rollback_ar = (
-        "يمكن التراجع الكامل عبر سكربت rollback المُولَّد. "
-        "يطابق التعليقات المُدارة فقط "
-        f"({plan.comment_prefix or 'HOBE_NPC_…'}) "
-        "ولا يلمس أي قاعدة لم نُنشئها."
+        _tr('يمكن التراجع الكامل عبر سكربت rollback المُولَّد. يطابق التعليقات المُدارة فقط (%(v)s) ولا يلمس أي قاعدة لم نُنشئها.', v=plan.comment_prefix or 'HOBE_NPC_…')
     )
     return {
         "will_do":     will_do,

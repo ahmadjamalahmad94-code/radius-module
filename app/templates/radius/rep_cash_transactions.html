@@ -13,7 +13,7 @@
 {% block title %}{{ _("معاملات الكاش") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-money-bill-wave"></i>{% endblock %}
 {% block page_title %}{{ _("معاملات الكاش") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} معاملة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s معاملة', total=total) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المعاملات #}
@@ -26,33 +26,33 @@
 
 {# ── تعريب طرق الدفع وحالات المعاملة (القيمة الأصلية تبقى في title) ── #}
 {% set method_labels = {
-  'cash':     'نقدًا',
-  'wallet':   'محفظة',
-  'bank':     'تحويل بنكي',
-  'transfer': 'حوالة',
-  'manual':   'يدوي',
-  'card':     'بطاقة',
-  'online':   'دفع إلكتروني'
+  'cash':     _('نقدًا'),
+  'wallet':   _('محفظة'),
+  'bank':     _('تحويل بنكي'),
+  'transfer': _('حوالة'),
+  'manual':   _('يدوي'),
+  'card':     _('بطاقة'),
+  'online':   _('دفع إلكتروني')
 } %}
 {% set status_pills = {
-  'posted':    ('مُثبتة',       'green'),
-  'pending':   ('قيد المراجعة', 'amber'),
-  'void':      ('ملغاة',        'red'),
-  'failed':    ('فاشلة',        'red'),
-  'refunded':  ('مُستردّة',     'blue')
+  'posted':    (_('مُثبتة'),       'green'),
+  'pending':   (_('قيد المراجعة'), 'amber'),
+  'void':      (_('ملغاة'),        'red'),
+  'failed':    (_('فاشلة'),        'red'),
+  'refunded':  (_('مُستردّة'),     'blue')
 } %}
 
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="cash-transactions-hero">
 {% call hub.megahero(
-  "معاملات الكاش",
-  subtitle="سجل المدفوعات النقدية: المبلغ المحصّل والسعر بعد الخصم ومن سجّل المعاملة.",
+  _('معاملات الكاش'),
+  subtitle=_('سجل المدفوعات النقدية: المبلغ المحصّل والسعر بعد الخصم ومن سجّل المعاملة.'),
   icon="money-bill-wave",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'عدد المعاملات',    'value': total,                'icon': 'receipt', 'variant': 'brand'},
-    {'label': 'إجمالي المبالغ',   'value': total_amount|money,   'icon': 'coins',   'variant': 'green'},
-    {'label': 'إجمالي الخصومات',  'value': total_discount|money, 'icon': 'tag',     'variant': 'amber'},
+    {'label': _('عدد المعاملات'),    'value': total,                'icon': 'receipt', 'variant': 'brand'},
+    {'label': _('إجمالي المبالغ'),   'value': total_amount|money,   'icon': 'coins',   'variant': 'green'},
+    {'label': _('إجمالي الخصومات'),  'value': total_discount|money, 'icon': 'tag',     'variant': 'amber'},
   ],
   search_action=url_for('radius.rep_cash_transactions')
 ) %}
@@ -63,20 +63,20 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {% if can_submit('radius.rep_cash_transactions', 'GET') %}{{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {% if can_submit('radius.rep_cash_transactions', 'GET') %}{{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                href=url_for('radius.rep_cash_transactions')) }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم المستخدم أو المنفّذ أو طريقة الدفع، ونطاق التاريخ يعمل على وقت تسجيل المعاملة. المؤشرات أعلاه محسوبة على كل النتائج المطابقة، ويُعرض حتى 500 معاملة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق اسم المستخدم أو المنفّذ أو طريقة الدفع، ونطاق التاريخ يعمل على وقت تسجيل المعاملة. المؤشرات أعلاه محسوبة على كل النتائج المطابقة، ويُعرض حتى 500 معاملة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول المعاملات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("سجل المعاملات", icon="table-list",
-                    meta=items|length|string + " معاملة", flush=True) %}
+{% call hub.section(_('سجل المعاملات'), icon="table-list",
+                    meta=items|length|string + _(' معاملة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -108,12 +108,12 @@
             {{ r.amount|money }}
           </td>
           {# الطريقة الخام في title؛ أي طريقة غير معروفة → «أخرى» عربيًا لا كود إنجليزي #}
-          <td title="{{ r.method or '' }}">{{ method_labels.get(r.method, 'أخرى') if r.method else '—' }}</td>
+          <td title="{{ r.method or '' }}">{{ method_labels.get(r.method, _('أخرى')) if r.method else '—' }}</td>
           <td>
             {% set _sp = status_pills.get(r.status) %}
             {% if _sp %}{{ hub.pill(_sp[0], variant=_sp[1]) }}
             {% elif r.status %}{{ hub.pill(r.status, variant="grey") }}
-            {% else %}{{ hub.pill("غير محددة", variant="grey") }}{% endif %}
+            {% else %}{{ hub.pill(_('غير محددة'), variant="grey") }}{% endif %}
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
@@ -121,7 +121,7 @@
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr"
-              {% if r.discount_reason %}title="سبب الخصم: {{ r.discount_reason }}"{% endif %}>
+              {% if r.discount_reason %}title="{{ _('سبب الخصم: %(discount_reason)s', discount_reason=r.discount_reason) }}"{% endif %}>
             {% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}
           </td>
           <td title="{{ r.created_by or '' }}"><bdi>{{ r.created_by|actor_name if r.created_by else '—' }}</bdi></td>
@@ -133,8 +133,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا معاملات كاش مطابقة",
-   sub="غيّر الفلاتر أو لا توجد معاملات مسجّلة بعد.", icon="money-bill-wave") }}
+{{ hub.empty(_('لا معاملات كاش مطابقة'),
+   sub=_('غيّر الفلاتر أو لا توجد معاملات مسجّلة بعد.'), icon="money-bill-wave") }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

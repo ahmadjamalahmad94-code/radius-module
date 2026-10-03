@@ -6,6 +6,7 @@
  *
  * الإعداد يأتي من window.HR_NOTIF = {pollUrl, interval, alerts, notif}.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   var CFG = window.HR_NOTIF || {};
@@ -190,7 +191,7 @@
       if (!audioBlockedNotified) {
         audioBlockedNotified = true;
         try {
-          toast("notif", "🔇 المتصفّح يمنع الصوت حتى تنقر في الصفحة — انقر مرّة.");
+          toast("notif", hrT('🔇 المتصفّح يمنع الصوت حتى تنقر في الصفحة — انقر مرّة.'));
         } catch (e) {}
       }
       setTimeout(pumpQueue, 700);          // أعِد المحاولة حتى يُستأنف
@@ -260,9 +261,9 @@
       '<span class="hr-nt-ic"><i class="fa-solid ' +
       (kind === "alert" ? "fa-triangle-exclamation" : "fa-bell") + '"></i></span>' +
       '<span class="hr-nt-body"><b>' +
-      (kind === "alert" ? "تنبيه جديد" : "إشعار جديد") +
+      (kind === "alert" ? hrT('تنبيه جديد') : hrT('إشعار جديد')) +
       "</b><span>" + escapeHtml(title || "") + "</span></span>" +
-      '<button class="hr-nt-x" aria-label="إغلاق">&times;</button>';
+      '<button class="hr-nt-x" aria-label="' + hrT('إغلاق') + '">&times;</button>';
     card.querySelector(".hr-nt-x").addEventListener("click", function () { dismiss(card); });
     card.addEventListener("click", function (e) {
       if (e.target.closest(".hr-nt-x")) return;
@@ -339,14 +340,14 @@
       });
       else alertSound(data);
       if (newNotif) {
-        var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || "لديك إشعار جديد";
+        var nt = (data.notif.items && data.notif.items[0] && data.notif.items[0].title) || hrT('لديك إشعار جديد');
         toast("notif", nt);
-        desktopNotify("إشعار جديد", nt);
+        desktopNotify(hrT('إشعار جديد'), nt);
       }
       if (newAlert) {
-        var at = (data.alerts.items && data.alerts.items[0] && data.alerts.items[0].title) || "تنبيه جديد";
+        var at = (data.alerts.items && data.alerts.items[0] && data.alerts.items[0].title) || hrT('تنبيه جديد');
         toast("alert", at);
-        desktopNotify("تنبيه جديد", at);
+        desktopNotify(hrT('تنبيه جديد'), at);
       }
     }
     last.alerts = aCount;
@@ -406,7 +407,7 @@
   function syncMuteBtn() {
     document.querySelectorAll("[data-hr-mute-toggle]").forEach(function (btn) {
       var on = soundOn();
-      btn.setAttribute("title", on ? "كتم صوت الإشعارات" : "تفعيل صوت الإشعارات");
+      btn.setAttribute("title", on ? hrT('كتم صوت الإشعارات') : hrT('تفعيل صوت الإشعارات'));
       var i = btn.querySelector("i");
       if (i) i.className = "fa-solid " + (on ? "fa-volume-high" : "fa-volume-xmark");
     });

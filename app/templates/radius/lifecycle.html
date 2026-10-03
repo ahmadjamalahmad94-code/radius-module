@@ -28,17 +28,17 @@
 {% endblock %}
 
 {% block content %}
-{% set lc_entity = {'card':'بطاقة','subscriber':'مشترك','card_batch':'حزمة بطاقات','external_file':'ملف خارجي'} %}
-{% set lc_trigger = {'expired_at':'بعد الانتهاء','disabled_at':'بعد التعطيل','created_at':'بعد الإنشاء'} %}
-{% set lc_unit = {'days':'أيام','hours':'ساعات','minutes':'دقائق','months':'أشهر','weeks':'أسابيع'} %}
+{% set lc_entity = {'card':_('بطاقة'),'subscriber':_('مشترك'),'card_batch':_('حزمة بطاقات'),'external_file':_('ملف خارجي')} %}
+{% set lc_trigger = {'expired_at':_('بعد الانتهاء'),'disabled_at':_('بعد التعطيل'),'created_at':_('بعد الإنشاء')} %}
+{% set lc_unit = {'days':_('أيام'),'hours':_('ساعات'),'minutes':_('دقائق'),'months':_('أشهر'),'weeks':_('أسابيع')} %}
 {% include "radius/data_protection_nav.html" %}
 
 {% set totals = preview.get('totals') or {} %}
 
 {# ───── Merged hero: title + subtitle + icon + KPI strip + run action ───── #}
 {{ hub.megahero(
-  "الأرشفة التلقائية والاحتفاظ",
-  subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة. لا حذف نهائي — أرشفة آمنة مع تسجيل الحدث والسياسة.",
+  _('الأرشفة التلقائية والاحتفاظ'),
+  subtitle=_('نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة. لا حذف نهائي — أرشفة آمنة مع تسجيل الحدث والسياسة.'),
   icon="box-archive",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="policy-create">
@@ -48,34 +48,32 @@
       <i class="fa-solid fa-play"></i> '|safe ~ _("تشغيل الأرشفة الآن") ~ '
     </button>'|safe,
   kpis=[
-    {'label': 'كروت جاهزة للأرشفة',     'value': totals.get('cards', 0),            'icon': 'id-card',        'variant': 'brand', 'sub': 'حسب السياسات المفعّلة للكروت المنتهية.'},
-    {'label': 'مشتركين جاهزين للأرشفة', 'value': totals.get('subscribers', 0),      'icon': 'users',          'variant': 'blue',  'sub': 'حسب سياسات انتهاء الاشتراك وعدم التجديد.'},
-    {'label': 'حزم متأثرة',             'value': totals.get('batches_impacted', 0), 'icon': 'boxes-stacked',  'variant': 'amber', 'sub': 'الأرشفة لا تغيّر العدد الأصلي للحزمة.'},
+    {'label': _('كروت جاهزة للأرشفة'),     'value': totals.get('cards', 0),            'icon': 'id-card',        'variant': 'brand', 'sub': _('حسب السياسات المفعّلة للكروت المنتهية.')},
+    {'label': _('مشتركين جاهزين للأرشفة'), 'value': totals.get('subscribers', 0),      'icon': 'users',          'variant': 'blue',  'sub': _('حسب سياسات انتهاء الاشتراك وعدم التجديد.')},
+    {'label': _('حزم متأثرة'),             'value': totals.get('batches_impacted', 0), 'icon': 'boxes-stacked',  'variant': 'amber', 'sub': _('الأرشفة لا تغيّر العدد الأصلي للحزمة.')},
   ]
 ) }}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل الأرشفة الآمنة؟",
-  intro="هذه الصفحة لا تحذف بيانات نهائيًا. كل عملية تعني نقلًا آمنًا إلى سلة المحذوفات مع بقاء العدد الأصلي للحزمة ثابتًا للمحاسبة.",
+  _('كيف تعمل الأرشفة الآمنة؟'),
+  intro=_('هذه الصفحة لا تحذف بيانات نهائيًا. كل عملية تعني نقلًا آمنًا إلى سلة المحذوفات مع بقاء العدد الأصلي للحزمة ثابتًا للمحاسبة.'),
   icon="shield-halved",
   items=[
-    {'icon': 'circle-plus', 'text': 'أضف سياسة تحدّد العنصر وشرط الأرشفة ومدة التأخير بعد الانتهاء.'},
-    {'icon': 'clock',       'text': 'مدة الاحتفاظ تحكم كم تبقى العناصر قابلة للاستعادة في السلة؛ بعد انتهائها يُقفَل زرّ الاستعادة (لا حذف نهائي تلقائي).'},
-    {'icon': 'eye',         'text': 'المعاينة تُظهر عدد العناصر المؤهلة لكل سياسة قبل التشغيل.'},
-    {'icon': 'pause',       'text': 'يمكنك تعطيل أي سياسة مفعّلة دون فقدان إعداداتها.'},
+    {'icon': 'circle-plus', 'text': _('أضف سياسة تحدّد العنصر وشرط الأرشفة ومدة التأخير بعد الانتهاء.')},
+    {'icon': 'clock',       'text': _('مدة الاحتفاظ تحكم كم تبقى العناصر قابلة للاستعادة في السلة؛ بعد انتهائها يُقفَل زرّ الاستعادة (لا حذف نهائي تلقائي).')},
+    {'icon': 'eye',         'text': _('المعاينة تُظهر عدد العناصر المؤهلة لكل سياسة قبل التشغيل.')},
+    {'icon': 'pause',       'text': _('يمكنك تعطيل أي سياسة مفعّلة دون فقدان إعداداتها.')},
   ],
-  note="«تشغيل الأرشفة الآن» ينقل العناصر المؤهلة إلى سلة المحذوفات فقط — يمكن استعادتها لاحقًا."
+  note=_('«تشغيل الأرشفة الآن» ينقل العناصر المؤهلة إلى سلة المحذوفات فقط — يمكن استعادتها لاحقًا.')
 )) %}
 
-{% call hub.section("معاينة التنفيذ", icon="eye") %}
+{% call hub.section(_('معاينة التنفيذ'), icon="eye") %}
   {% for item in preview.get('policies') or [] %}
     {% set policy = item.get('policy') or {} %}
     <div class="hub-flash hub-flash--info" style="margin-bottom:10px">
-      <strong>سياسة #{{ policy.get('id') }}</strong>:
-      {{ lc_entity.get(policy.get('entity_type'), policy.get('entity_type')) }} بعد {{ policy.get('delay_value') }} {{ lc_unit.get(policy.get('delay_unit'), policy.get('delay_unit')) }}
-      &nbsp;·&nbsp; كروت: <strong>{{ item.get('cards_count', 0) }}</strong>
-      &nbsp;·&nbsp; مشتركين: <strong>{{ item.get('subscribers_count', 0) }}</strong>
+      <strong>{{ _('سياسة #%(v)s', v=policy.get('id')) }}</strong>{{ _(': %(v)s بعد %(v2)s %(v3)s &nbsp;·&nbsp; كروت:', v=lc_entity.get(policy.get('entity_type'), policy.get('entity_type')), v2=policy.get('delay_value'), v3=lc_unit.get(policy.get('delay_unit'), policy.get('delay_unit'))) }} <strong>{{ item.get('cards_count', 0) }}</strong>
+      {{ _('&nbsp;·&nbsp; مشتركين:') }} <strong>{{ item.get('subscribers_count', 0) }}</strong>
       {% if not item.get('supported') %}
         <span class="hub-pill hub-pill--grey" style="margin-inline-start:8px">
           {{ _('محفوظة كسياسة، التنفيذ الآلي عند تفعيلها') }}
@@ -83,11 +81,11 @@
       {% endif %}
     </div>
   {% else %}
-    {{ hub.empty("لا توجد سياسات بعد.", icon="clock") }}
+    {{ hub.empty(_('لا توجد سياسات بعد.'), icon="clock") }}
   {% endfor %}
 {% endcall %}
 
-{% call hub.section("السياسات الحالية", icon="list", meta=(policies|length ~ ' سياسة') if policies else '', flush=True) %}
+{% call hub.section(_('السياسات الحالية'), icon="list", meta=(_('%(length)s سياسة', length=policies|length)) if policies else '', flush=True) %}
   {% if policies %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -134,7 +132,7 @@
       </table>
     </div>
   {% else %}
-    {{ hub.empty("لا توجد سياسات أرشفة محفوظة.", icon="clock") }}
+    {{ hub.empty(_('لا توجد سياسات أرشفة محفوظة.'), icon="clock") }}
   {% endif %}
 {% endcall %}
 
@@ -203,8 +201,7 @@
         <input type="hidden" name="enabled" value="1">
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
           <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink,#4338ca)"></i>
-          السياسة تُحفظ مفعَّلة وتعمل أرشفةً آمنة فقط — نقل إلى سلة المحذوفات بلا حذف نهائي،
-          ويمكنك تعطيلها لاحقًا من جدول «السياسات الحالية».
+          {{ _('السياسة تُحفظ مفعَّلة وتعمل أرشفةً آمنة فقط — نقل إلى سلة المحذوفات بلا حذف نهائي، ويمكنك تعطيلها لاحقًا من جدول «السياسات الحالية».') }}
         </div>
       </div>
       <div class="fcw-foot">
@@ -227,14 +224,11 @@
       <div class="fcw-body">
         <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
           {{ _('ستُنقل العناصر المؤهلة حسب السياسات المفعّلة إلى') }}
-          <strong>{{ _('سلة المحذوفات فقط') }}</strong> — لا حذف نهائي،
-          ويمكن استعادة أي عنصر منها لاحقًا.
+          <strong>{{ _('سلة المحذوفات فقط') }}</strong> {{ _('— لا حذف نهائي، ويمكن استعادة أي عنصر منها لاحقًا.') }}
         </div>
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink,#4338ca)"></i>
-          المؤهل الآن حسب المعاينة: {{ totals.get('cards', 0) }} كرت
-          و{{ totals.get('subscribers', 0) }} مشترك
-          في {{ totals.get('batches_impacted', 0)|ar_count('batch') }} متأثرة.
+          {{ _('المؤهل الآن حسب المعاينة: %(v)s كرت و%(v2)s مشترك في %(v3)s متأثرة.', v=totals.get('cards', 0), v2=totals.get('subscribers', 0), v3=totals.get('batches_impacted', 0)|ar_count('batch')) }}
         </div>
       </div>
       <div class="fcw-foot">

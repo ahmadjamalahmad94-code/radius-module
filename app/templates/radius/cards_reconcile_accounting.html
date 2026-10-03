@@ -93,7 +93,7 @@
     }).then(function(r){ return r.json(); });
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
-  function fmtDur(sec){ sec=parseInt(sec||0,10); var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60); return h+'س '+m+'د'; }
+  function fmtDur(sec){ sec=parseInt(sec||0,10); var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60); return h+{{ _('س ')|tojson }}+m+{{ _('د')|tojson }}; }
 
   function renderPlan(p){
     var rows = (p.card_updates||[]).map(function(u){
@@ -121,7 +121,7 @@
     post('{{ url_for("radius.cards_reconcile_accounting_plan") }}').then(function(res){
       planBtn.disabled = false;
       if(res && res.ok){ renderPlan(res.plan); }
-      else { msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||'خطأ')+'</div>'; }
+      else { msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||{{ _('خطأ')|tojson }})+'</div>'; }
     }).catch(function(e){ planBtn.disabled=false; msg.innerHTML='<div class="rc-msg rc-msg-err">'+esc(e)+'</div>'; });
   });
 
@@ -138,7 +138,7 @@
         applyBox.hidden = true;
       } else {
         applyBtn.disabled = false;
-        msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||'خطأ')+'</div>';
+        msg.innerHTML = '<div class="rc-msg rc-msg-err">'+esc((res&&res.message)||{{ _('خطأ')|tojson }})+'</div>';
       }
     }).catch(function(e){ applyBtn.disabled=false; msg.innerHTML='<div class="rc-msg rc-msg-err">'+esc(e)+'</div>'; });
   });

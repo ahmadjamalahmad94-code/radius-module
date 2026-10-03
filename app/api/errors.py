@@ -15,6 +15,7 @@
    (وإلا حجزت قفل الكتابة لكل الطلبات التالية).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 
@@ -28,8 +29,8 @@ from .responses import fail
 
 _LOG = logging.getLogger("app.api.errors")
 
-SERVER_BUSY_MESSAGE = "الخادم مشغول الآن، أعد المحاولة بعد لحظات."
-SERVER_ERROR_MESSAGE = "حدث خطأ غير متوقع في الخادم. أعد المحاولة، وإن تكرّر فأبلغ الدعم الفنّي."
+SERVER_BUSY_MESSAGE = N_("الخادم مشغول الآن، أعد المحاولة بعد لحظات.")
+SERVER_ERROR_MESSAGE = N_("حدث خطأ غير متوقع في الخادم. أعد المحاولة، وإن تكرّر فأبلغ الدعم الفنّي.")
 
 
 class SafeJSONProvider(DefaultJSONProvider):
@@ -71,8 +72,8 @@ def api_exception_response(exc: BaseException):
     return fail("server_error", SERVER_ERROR_MESSAGE, status=500)
 
 
-NOT_FOUND_MESSAGE = "المسار أو السجلّ المطلوب غير موجود."
-METHOD_NOT_ALLOWED_MESSAGE = "هذه العمليّة غير مدعومة على هذا المسار."
+NOT_FOUND_MESSAGE = N_("المسار أو السجلّ المطلوب غير موجود.")
+METHOD_NOT_ALLOWED_MESSAGE = N_("هذه العمليّة غير مدعومة على هذا المسار.")
 
 
 def api_http_error_response(exc: HTTPException):

@@ -7,6 +7,7 @@
 بصمت. ويُرفض المفتاح الأطول من ``MAX_KEY``.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import hashlib
 import json
@@ -18,8 +19,9 @@ from ..db.connection import db, transaction
 
 TTL_HOURS = 24
 MAX_KEY = 200
-MISMATCH_AR = "مفتاح التكرار استُخدم لطلب مختلف."
-TOO_LONG_AR = f"مفتاح التكرار طويل جدًا (الحدّ {MAX_KEY} حرفًا)."
+MISMATCH_AR = N_("مفتاح التكرار استُخدم لطلب مختلف.")
+TOO_LONG_MSG = N_("مفتاح التكرار طويل جدًا (الحدّ %(n)s حرفًا).")
+TOO_LONG_AR = TOO_LONG_MSG % {"n": MAX_KEY}
 
 from ..core.errors import RadiusValidationError
 

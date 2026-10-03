@@ -10,6 +10,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -97,13 +98,13 @@ _SCHOOL_ART = """
 
 _SCHOOL_HERO = ("""
       <div class="hs-hero">
-        <div class="hs-frame">""" + _SCHOOL_ART + """</div>
+        <div class="hs-frame">""" + _SCHOOL_ART + N_("""</div>
         <div class="hs-cap">
           <div><b>مرحباً بالأبطال!</b><span>إنترنت آمن ومرح للتعلّم واللعب</span></div>
           <div class="hs-badge"><span class="hs-dot"></span> جاهز</div>
         </div>
       </div>
-""")
+"""))
 
 _SCHOOL_STYLE = """
 <style id="hr-happy-school">

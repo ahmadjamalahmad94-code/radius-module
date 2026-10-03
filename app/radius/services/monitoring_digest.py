@@ -17,6 +17,7 @@ router_health_monitor بإضافتين احترافيّتين، تُغطّيان
 الخَنق محفوظ في monitoring_notify_state.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import datetime as _dt
 import logging
@@ -106,8 +107,8 @@ def _human_duration(seconds: Optional[float]) -> str:
     if m and not d:
         parts.append(f"{m} دقيقة")
     if not parts:
-        return "أقل من دقيقة"
-    return " و".join(parts)
+        return N_("أقل من دقيقة")
+    return N_(" و").join(parts)
 
 
 # ── جمع حالة الأسطول ────────────────────────────────────────────
@@ -131,16 +132,16 @@ def _weaknesses(sample: dict, thresholds: dict) -> list[str]:
     # كل بند «التسمية: ⁨القيمة⁩» — يُعرَض في سطر قصير مستقلّ في التقرير.
     out: list[str] = []
     if cpu is not None and cpu > thresholds["cpu_pct"]:
-        out.append("المعالج: " + iso(f"{int(cpu)}%"))
+        out.append(N_("المعالج: ") + iso(f"{int(cpu)}%"))
     if temp is not None and temp > thresholds["temp_c"]:
-        out.append("الحرارة: " + iso(f"{temp}°م"))
+        out.append(N_("الحرارة: ") + iso(f"{temp}°م"))
     if ram is not None and ram > thresholds["ram_pct"]:
-        out.append("الذاكرة: " + iso(f"{round(ram)}%"))
+        out.append(N_("الذاكرة: ") + iso(f"{round(ram)}%"))
     if disk is not None and disk < thresholds["disk_free_pct"]:
-        out.append("القرص الحرّ: " + iso(f"{round(disk)}%"))
+        out.append(N_("القرص الحرّ: ") + iso(f"{round(disk)}%"))
     if thresholds["traffic_mbps"] > 0 and traffic is not None \
             and traffic > thresholds["traffic_mbps"]:
-        out.append("الحركة: " + iso(f"{round(traffic, 1)} م.ب/ث"))
+        out.append(N_("الحركة: ") + iso(f"{round(traffic, 1)} م.ب/ث"))
     return out
 
 
@@ -274,7 +275,7 @@ def _reminder_message(item: dict, duration: str) -> str:
         lines.append(f"🔴 «{name}» — الراوتر ما زال غير متصل")
     elif item["status"] == "unavailable":
         lines.append(f"📵 «{name}» — ما زال غير متاح")
-        reason = "الراوتر الأمّ مفصول"
+        reason = N_("الراوتر الأمّ مفصول")
     else:
         lines.append(f"🔴 «{name}» — ما زال مفصولًا")
     if reason:
@@ -306,13 +307,13 @@ def digest_sweep(tenant_id: int, *, now: Optional[_dt.datetime] = None) -> int:
     msg = build_digest_message(state)
     atype = "fleet_digest_ok" if state["all_good"] else "fleet_digest_issues"
     ok, _r = dha.dispatch(
-        tid, alert_type=atype, message=msg, name="الأسطول",
+        tid, alert_type=atype, message=msg, name=N_("الأسطول"),
         link="/admin/radius/device-health")
     notify_repo.upsert(tid, _DIGEST_SCOPE, last_sent_at=_iso(now))
     return 1 if ok else 0
 
 
-_KIND_LABEL = {"device": "جهاز", "router": "راوتر"}
+_KIND_LABEL = {"device": N_("جهاز"), "router": N_("راوتر")}
 
 
 def build_digest_message(state: dict) -> str:
@@ -331,7 +332,7 @@ def build_digest_message(state: dict) -> str:
 
     # لمحة الحالة: كل عدّاد في سطر قصير مستقلّ (تلجرام يلفّ الأسطر الطويلة فيكسر
     # المعنى — فلا نَجمع عدّة بنود في سطر واحد). الأصفار تُحذف عدا «سليم».
-    lines = ["⚠️ الفحص الدوري — توجد ملاحظات", "", "الحالة:"]
+    lines = [N_("⚠️ الفحص الدوري — توجد ملاحظات"), "", N_("الحالة:")]
     if n_down:
         lines.append(f"🔴 مفصول: {iso(n_down)}")
     if n_weak:
@@ -342,7 +343,7 @@ def build_digest_message(state: dict) -> str:
 
     if state["down"]:
         lines.append("")
-        lines.append("🔴 المفصولة:")
+        lines.append(N_("🔴 المفصولة:"))
         for d in state["down"]:
             dur = _human_duration(_age_sec(d.get("down_since") or "", state["now"]))
             kind = _KIND_LABEL.get(d.get("kind"), "")
@@ -357,7 +358,7 @@ def build_digest_message(state: dict) -> str:
                 lines.append(f"  • {it}")
     if state["high_latency"]:
         lines.append("")
-        lines.append("🐌 بنج عالٍ:")
+        lines.append(N_("🐌 بنج عالٍ:"))
         for h in state["high_latency"]:
             tail = f" — {iso(h['detail'])}" if h.get("detail") else ""
             lines.append(f"• «{h['name']}»" + tail)

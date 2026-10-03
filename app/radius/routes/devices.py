@@ -4,6 +4,7 @@ RM-H5: extended form/list with full AdvRadius fields and a /test
 endpoint that does a TCP socket reachability check (timeout 2s).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import socket
 
@@ -56,9 +57,9 @@ def _i(name, default):
 
 
 _PORT_LABELS = {
-    "ports": "عدد المنافذ", "auth_port": "منفذ المصادقة",
-    "acct_port": "منفذ المحاسبة", "coa_port": "منفذ CoA",
-    "api_port": "منفذ API", "ssh_port": "منفذ SSH",
+    "ports": N_("عدد المنافذ"), "auth_port": N_("منفذ المصادقة"),
+    "acct_port": N_("منفذ المحاسبة"), "coa_port": N_("منفذ CoA"),
+    "api_port": N_("منفذ API"), "ssh_port": N_("منفذ SSH"),
 }
 
 
@@ -73,13 +74,13 @@ def _check_form_ints() -> None:
             continue
         body = raw[1:] if raw[:1] in "+-" else raw
         if not body.isdigit() or not body.isascii() or len(body) > 18:
-            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
 
 
 def _flash_radius_warning(svc) -> None:
     warn = getattr(svc, "radius_client_warning", None)
     if warn:
-        flash(warn.get("message") or "تعذّر تسجيل الراوتر في الرديوس.", "warning")
+        flash(warn.get("message") or _tr("تعذّر تسجيل الراوتر في الرديوس."), "warning")
 
 
 def _b(name): return request.form.get(name, "") in ("1","on","true","yes")
@@ -140,7 +141,7 @@ def devices_create():
         flash(e.message, "error")
         return render_template("radius/devices_form.html",
             device=dto, vendors=NAS_VENDORS, is_new=True), 400
-    flash(f"تم إنشاء «{saved.name}».", "success")
+    flash(_tr('تم إنشاء «%(name)s».', name=saved.name), "success")
     _flash_radius_warning(svc)
     return redirect(url_for("radius.devices_list"))
 
@@ -194,7 +195,7 @@ def devices_update(nas_id: int):
         flash(e.message, "error")
         return render_template("radius/devices_form.html",
             device=dto, vendors=NAS_VENDORS, is_new=False), 400
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     _flash_radius_warning(svc)
     return redirect(url_for("radius.devices_list"))
 
@@ -202,7 +203,7 @@ def devices_update(nas_id: int):
 def devices_delete(nas_id: int):
     try:
         get_nas_devices_service().delete(actor=_actor(), nas_id=nas_id)
-        flash("تمت أرشفة جهاز الشبكة. يمكنك استعادته من سلة المحذوفات.", "success")
+        flash(_tr("تمت أرشفة جهاز الشبكة. يمكنك استعادته من سلة المحذوفات."), "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.devices_list"))
@@ -230,7 +231,7 @@ def devices_test(nas_id: int):
     # text, no 500 on an invalid legacy address/port).
     from ..services.devices import probe_nas_tcp as _probe_tcp
     if not (1 <= port <= 65535):
-        status, message = "unreachable", f"منفذ API غير صالح ({port}) — عدّل إعدادات الراوتر."
+        status, message = "unreachable", _tr('منفذ API غير صالح (%(port)s) — عدّل إعدادات الراوتر.', port=port)
     else:
         status, message = _probe_tcp(ip, port)
     if status == "reachable":
@@ -287,11 +288,11 @@ def devices_toggle(nas_id: int):
         requested = "disable" if dev.enabled else "enable"
     ok = _flip_enabled(nas_id, action=requested)
     if not ok:
-        flash("تعذّر تغيير حالة الراوتر — تأكّد من وجوده.", "error")
+        flash(_tr("تعذّر تغيير حالة الراوتر — تأكّد من وجوده."), "error")
     else:
         flash(
-            "تم تفعيل الراوتر." if requested == "enable"
-            else "تم تعطيل الراوتر.",
+            _tr("تم تفعيل الراوتر.") if requested == "enable"
+            else _tr("تم تعطيل الراوتر."),
             "success",
         )
     # If the caller came from Operations Center, send them back
@@ -315,7 +316,7 @@ def devices_bulk_toggle():
     """
     action = (request.form.get("action") or "").strip().lower()
     if action not in ("enable", "disable"):
-        flash("إجراء غير معروف.", "error")
+        flash(_tr("إجراء غير معروف."), "error")
         return redirect(url_for("radius.mt_operations"))
 
     raw_ids = request.form.getlist("ids") or request.form.getlist("ids[]")
@@ -326,7 +327,7 @@ def devices_bulk_toggle():
         except (TypeError, ValueError):
             continue
     if not nas_ids:
-        flash("لم تختر أي راوتر.", "error")
+        flash(_tr("لم تختر أي راوتر."), "error")
         return redirect(url_for("radius.mt_operations"))
 
     changed = 0
@@ -335,8 +336,8 @@ def devices_bulk_toggle():
             changed += 1
 
     if changed:
-        verb = "تفعيل" if action == "enable" else "تعطيل"
-        flash(f"تم {verb} {changed} راوتر.", "success")
+        verb = N_("تفعيل") if action == "enable" else N_("تعطيل")
+        flash(_tr('تم %(verb)s %(changed)s راوتر.', verb=verb, changed=changed), "success")
     else:
-        flash("لم يتم تغيير أي راوتر — قد تكون الاختيارات قديمة.", "warning")
+        flash(_tr("لم يتم تغيير أي راوتر — قد تكون الاختيارات قديمة."), "warning")
     return redirect(url_for("radius.mt_operations"))

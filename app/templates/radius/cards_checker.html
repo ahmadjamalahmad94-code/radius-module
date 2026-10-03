@@ -23,10 +23,10 @@
   {%- set d = s // 86400 -%}
   {%- set h = (s % 86400) // 3600 -%}
   {%- set m = (s % 3600) // 60 -%}
-  {%- if d > 0 -%}{{ d }} يوم {{ h }} ساعة
-  {%- elif h > 0 -%}{{ h }} ساعة {{ m }} دقيقة
-  {%- elif m > 0 -%}{{ m }} دقيقة
-  {%- else -%}{{ s }} ثانية
+  {%- if d > 0 -%}{{ d }} {{ _('يوم') }} {{ h }} {{ _('ساعة') }}
+  {%- elif h > 0 -%}{{ h }} {{ _('ساعة') }} {{ m }} {{ _('دقيقة') }}
+  {%- elif m > 0 -%}{{ m }} {{ _('دقيقة') }}
+  {%- else -%}{{ s }} {{ _('ثانية') }}
   {%- endif -%}
 {%- endmacro %}
 
@@ -106,8 +106,8 @@
 
 {% block content %}
 {{ hub.hero(
-  "مركز عمليات البطاقة",
-  subtitle="النسخة القديمة من مركز عمليات البطاقة",
+  _('مركز عمليات البطاقة'),
+  subtitle=_('النسخة القديمة من مركز عمليات البطاقة'),
   icon="id-card-clip"
 ) }}
 
@@ -117,14 +117,14 @@
 {% set macs = summary.macs if summary else [] %}
 {# enums معرّبة — موائمة لاصطلاح cards_checker_v2.html (revoked→ملغاة) #}
 {% set status_labels = {
-  'available':'متاحة',
-  'active':'مستخدمة',
-  'expired':'منتهية',
-  'revoked':'موقوف',
-  'deleted':'مؤرشفة',
-  'pending':'معلّقة',
-  'not_found':'غير موجودة',
-  'unknown':'غير معروف'
+  'available':_('متاحة'),
+  'active':_('مستخدمة'),
+  'expired':_('منتهية'),
+  'revoked':_('موقوف'),
+  'deleted':_('مؤرشفة'),
+  'pending':_('معلّقة'),
+  'not_found':_('غير موجودة'),
+  'unknown':_('غير معروف')
 } %}
 {% set status_class = {
   'available':'ok',
@@ -174,7 +174,7 @@
             <div class="ops-badges" style="margin-top:10px">
               <span class="ops-badge {{ status_class.get(card.status, '') }}"
                     title="{{ card.status or 'unknown' }}">
-                <i class="fa-solid fa-circle"></i> {{ status_labels.get(card.status, card.status or 'غير معروف') }}
+                <i class="fa-solid fa-circle"></i> {{ status_labels.get(card.status, card.status or _('غير معروف')) }}
               </span>
               {% if card.locked_mac %}
                 <span class="ops-badge ok"><i class="fa-solid fa-lock"></i> {{ _('مثبتة على MAC') }}</span>
@@ -188,8 +188,8 @@
             </div>
           </div>
           <div class="ops-badges">
-            <span class="ops-badge">مصادر البيانات: {{ (card.data_sources or [])|join('، ') }}</span>
-            <span class="ops-badge">كلمة المرور محفوظة: {{ 'نعم' if card.has_password else 'لا' }}</span>
+            <span class="ops-badge">{{ _('مصادر البيانات:') }} {{ (card.data_sources or [])|join('، ') }}</span>
+            <span class="ops-badge">{{ _('كلمة المرور محفوظة:') }} {{ _('نعم') if card.has_password else _('لا') }}</span>
           </div>
         </div>
       </div>
@@ -198,7 +198,7 @@
     {% if (summary.unique_macs or 0) >= 3 %}
       <div class="ops-alert danger">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <div>هذه البطاقة اتصلت من {{ summary.unique_macs }} عناوين MAC مختلفة. راجع الجلسات قبل التصفير أو التثبيت حتى لا تقفل مستخدمًا شرعيًا بالخطأ.</div>
+        <div>{{ _('هذه البطاقة اتصلت من %(unique_macs)s عناوين MAC مختلفة. راجع الجلسات قبل التصفير أو التثبيت حتى لا تقفل مستخدمًا شرعيًا بالخطأ.', unique_macs=summary.unique_macs) }}</div>
       </div>
     {% elif (summary.unique_macs or 0) > 1 %}
       <div class="ops-alert">
@@ -218,7 +218,7 @@
             <div class="ops-stat"><div class="label">{{ _('عدد الجلسات') }}</div><div class="value">{{ summary.sessions_count or 0 }}</div><div class="subvalue">{{ _('كل محاولات الاتصال المسجلة') }}</div></div>
             <div class="ops-stat"><div class="label">{{ _('جلسات متصلة الآن') }}</div><div class="value">{{ summary.online_sessions or 0 }}</div><div class="subvalue">{{ _('بدون وقت إغلاق') }}</div></div>
             <div class="ops-stat"><div class="label">{{ _('عدد MAC مختلف') }}</div><div class="value">{{ summary.unique_macs or 0 }}</div><div class="subvalue">{{ _('مؤشر مشاركة البطاقة') }}</div></div>
-            <div class="ops-stat"><div class="label">{{ _('الوقت المتبقي') }}</div><div class="value">{{ duration(card.remaining_seconds) if card.remaining_seconds is not none else 'غير محدد' }}</div><div class="subvalue">{{ _('حسب تاريخ انتهاء البطاقة') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('الوقت المتبقي') }}</div><div class="value">{{ duration(card.remaining_seconds) if card.remaining_seconds is not none else _('غير محدد') }}</div><div class="subvalue">{{ _('حسب تاريخ انتهاء البطاقة') }}</div></div>
             <div class="ops-stat"><div class="label">{{ _('إجمالي مدة الاتصال') }}</div><div class="value">{{ duration(summary.total_session_seconds) }}</div><div class="subvalue">{{ _('مجموع الجلسات') }}</div></div>
             <div class="ops-stat"><div class="label">{{ _('الرفع') }}</div><div class="value">{{ bytes_size(summary.total_upload_bytes) }}</div><div class="subvalue">{{ _('من radacct') }}</div></div>
             <div class="ops-stat"><div class="label">{{ _('التنزيل') }}</div><div class="value">{{ bytes_size(summary.total_download_bytes) }}</div><div class="subvalue">{{ _('من radacct') }}</div></div>
@@ -244,7 +244,7 @@
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="unlock_mac">
                 <button class="hub-btn hub-btn--ghost" type="submit"><i class="fa-solid fa-lock-open"></i> {{ _('فك التثبيت') }}</button>
-                <span class="ops-muted">{{ _('الحالي:') }} <span class="mono">{{ card.locked_mac or 'غير مثبتة' }}</span></span>
+                <span class="ops-muted">{{ _('الحالي:') }} <span class="mono">{{ card.locked_mac or _('غير مثبتة') }}</span></span>
               </form>
             </div>
 
@@ -258,8 +258,8 @@
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="disconnect">
                   <input type="hidden" name="session_id" value="{{ session.session_id }}">
-                  <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> طرد جلسة {{ session.session_id or session.id }}</button>
-                  <span class="ops-muted mono">{{ session.mac_address or 'MAC غير معروف' }} · {{ session.ip_address or 'IP غير معروف' }}</span>
+                  <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> {{ _('طرد جلسة %(id)s', id=session.session_id or session.id) }}</button>
+                  <span class="ops-muted mono">{{ session.mac_address or _('MAC غير معروف') }} · {{ session.ip_address or _('IP غير معروف') }}</span>
                 </form>
               {% endfor %}
               {% if (summary.online_sessions or 0) == 0 %}
@@ -285,7 +285,7 @@
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="enable">
                   <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-circle-check"></i> {{ _('إعادة تفعيل') }}</button>
-                  {% if card.disabled_reason %}<span class="ops-muted">سبب التعطيل: {{ card.disabled_reason }}</span>{% endif %}
+                  {% if card.disabled_reason %}<span class="ops-muted">{{ _('سبب التعطيل: %(disabled_reason)s', disabled_reason=card.disabled_reason) }}</span>{% endif %}
                 </form>
               {% else %}
                 <form method="post" class="ops-inline">
@@ -316,12 +316,12 @@
       <div class="ops-card-body">
         <h3 class="ops-card-title"><span><i class="fa-solid fa-circle-info"></i> {{ _('بيانات البطاقة والباقات') }}</span></h3>
         <div class="ops-details">
-          <div class="ops-field"><div class="k">{{ _('الدفعة') }}</div><div class="v">{% if card.batch %}{{ card.batch.batch_code }}{% if card.batch.package_name %} · {{ card.batch.package_name }}{% endif %}{% else %}غير مرتبطة{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الدفعة') }}</div><div class="v">{% if card.batch %}{{ card.batch.batch_code }}{% if card.batch.package_name %} · {{ card.batch.package_name }}{% endif %}{% else %}{{ _('غير مرتبطة') }}{% endif %}</div></div>
           <div class="ops-field"><div class="k">{{ _('حالة الدفعة') }}</div><div class="v">{{ card.batch.status if card.batch else '—' }}</div></div>
           <div class="ops-field"><div class="k">{{ _('منشئ الدفعة') }}</div><div class="v">{{ card.batch.created_by if card.batch else '—' }}</div></div>
-          <div class="ops-field"><div class="k">{{ _('الباقة') }}</div><div class="v">{{ card.profile.name if card.profile else 'غير مرتبطة' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الباقة') }}</div><div class="v">{{ card.profile.name if card.profile else _('غير مرتبطة') }}</div></div>
           <div class="ops-field"><div class="k">{{ _('سرعة التنزيل/الرفع') }}</div><div class="v">{% if card.profile %}<span dir="ltr">{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps</span>{% else %}—{% endif %}</div></div>
-          <div class="ops-field"><div class="k">{{ _('الحصة') }}</div><div class="v">{% if card.profile %}إجمالي {{ card.profile.quota_total_mb or 0 }} MB · يومي {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الحصة') }}</div><div class="v">{% if card.profile %}{{ _('إجمالي') }} {{ card.profile.quota_total_mb or 0 }} {{ _('MB · يومي') }} {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
           <div class="ops-field"><div class="k">{{ _('تاريخ الإنشاء') }}</div><div class="v mono">{{ dt(card.created_at) }}</div></div>
           <div class="ops-field"><div class="k">{{ _('بداية الاستخدام') }}</div><div class="v mono">{{ dt(card.started_at) }}</div></div>
           <div class="ops-field"><div class="k">{{ _('تاريخ الانتهاء') }}</div><div class="v mono">{{ dt(card.expires_at) }}</div></div>
@@ -336,14 +336,14 @@
       <div class="ops-card-body">
         <h3 class="ops-card-title">
           <span><i class="fa-solid fa-network-wired"></i> {{ _('الأجهزة التي استخدمت البطاقة') }}</span>
-          <span class="ops-muted">{{ macs|length }} MAC معروض</span>
+          <span class="ops-muted">{{ _('%(length)s MAC معروض', length=macs|length) }}</span>
         </h3>
         {% if macs %}
           <div class="ops-macs">
             {% for item in macs %}
               <div class="ops-mac">
                 <div class="mac">{{ item.mac }}</div>
-                <div class="ops-muted">الجلسات: {{ item.sessions_count }} · متصل الآن: {{ item.online_sessions }} · آخر ظهور: {{ dt(item.last_seen_at) }}</div>
+                <div class="ops-muted">{{ _('الجلسات: %(sessions_count)s · متصل الآن: %(online_sessions)s · آخر ظهور: %(v)s', sessions_count=item.sessions_count, online_sessions=item.online_sessions, v=dt(item.last_seen_at)) }}</div>
               </div>
             {% endfor %}
           </div>
@@ -357,7 +357,7 @@
       <div class="ops-card-body">
         <h3 class="ops-card-title">
           <span><i class="fa-solid fa-table-list"></i> {{ _('جدول الجلسات التفصيلي') }}</span>
-          <span class="ops-muted">آخر {{ sessions|length }} جلسة</span>
+          <span class="ops-muted">{{ _('آخر %(length)s جلسة', length=sessions|length) }}</span>
         </h3>
         {% if sessions %}
           <div class="ops-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
@@ -397,7 +397,7 @@
                     <td>{{ bytes_size(session.upload_bytes) }}</td>
                     <td>{{ bytes_size(session.download_bytes) }}</td>
                     <td>{{ session.service_type or '—' }}</td>
-                    <td>{{ session.device_hint or session.nas_port_type or 'غير متاح' }}</td>
+                    <td>{{ session.device_hint or session.nas_port_type or _('غير متاح') }}</td>
                     <td>{{ session.terminate_cause or '—' }}</td>
                   </tr>
                 {% endfor %}
@@ -419,17 +419,17 @@
         </div>
         <div class="ops-badges" style="margin-top:10px">
           {% set labels = {
-            'assigned_to':'المستفيد المرتبط',
-            'batch':'الدفعة',
-            'cancelled_at':'وقت الإلغاء',
-            'created_at':'تاريخ الإنشاء',
-            'deleted_at':'وقت الأرشفة',
-            'expires_at':'تاريخ الانتهاء',
-            'last_seen_at':'آخر ظهور',
+            'assigned_to':_('المستفيد المرتبط'),
+            'batch':_('الدفعة'),
+            'cancelled_at':_('وقت الإلغاء'),
+            'created_at':_('تاريخ الإنشاء'),
+            'deleted_at':_('وقت الأرشفة'),
+            'expires_at':_('تاريخ الانتهاء'),
+            'last_seen_at':_('آخر ظهور'),
             'mac_address':'MAC',
             'ip_address':'IP',
-            'profile':'الباقة',
-            'sold_by':'البائع'
+            'profile':_('الباقة'),
+            'sold_by':_('البائع')
           } %}
           {% for item in card.missing_fields or [] %}
             <span class="ops-badge">{{ labels.get(item, item) }}</span>

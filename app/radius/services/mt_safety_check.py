@@ -32,6 +32,7 @@ Severity ladder (high → low):
 `allowed=False` only when severity == blocked.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -118,11 +119,10 @@ def evaluate(
         return SafetyCheck(
             allowed=False, severity=SEV_BLOCKED,
             blocking_reasons=[
-                f"ليست لديك صلاحية {required_perm} لتنفيذ هذه "
-                "العملية."
+                _tr('ليست لديك صلاحية %(required_perm)s لتنفيذ هذه العملية.', required_perm=required_perm)
             ],
             warnings=[], recommendations=[
-                "اطلب من مدير النظام إضافة الصلاحية لدورك."
+                N_("اطلب من مدير النظام إضافة الصلاحية لدورك.")
             ],
             requires_confirmation=False,
             summary={"reason": "permission_denied",
@@ -136,7 +136,7 @@ def evaluate(
         return SafetyCheck(
             allowed=False, severity=SEV_BLOCKED,
             blocking_reasons=[
-                "الراوتر غير موجود في نطاقك."
+                N_("الراوتر غير موجود في نطاقك.")
             ],
             recommendations=[],
             requires_confirmation=False,
@@ -149,9 +149,9 @@ def evaluate(
         return SafetyCheck(
             allowed=False, severity=SEV_BLOCKED,
             blocking_reasons=[
-                "الراوتر معطّل — لا يمكن تنفيذ عمليات عليه."
+                N_("الراوتر معطّل — لا يمكن تنفيذ عمليات عليه.")
             ],
-            recommendations=["فعّل الراوتر من غرفة العمليات."],
+            recommendations=[N_("فعّل الراوتر من غرفة العمليات.")],
             requires_confirmation=False,
             summary={"reason": "router_disabled",
                      "operation": operation},
@@ -163,8 +163,8 @@ def evaluate(
         return SafetyCheck(
             allowed=False, severity=SEV_BLOCKED,
             blocking_reasons=[
-                "الراوتر غير متصل — انتظر استعادة الاتصال "
-                "قبل المحاولة."
+                N_("الراوتر غير متصل — انتظر استعادة الاتصال "
+                "قبل المحاولة.")
             ],
             recommendations=hs.reasons,
             requires_confirmation=False,
@@ -188,25 +188,25 @@ def evaluate(
     if ov.snapshot_status == "stale":
         severity = _worse(severity, SEV_WARNING)
         warnings.append(
-            "بيانات الراوتر قديمة — قد تكون الحالة الحالية "
-            "مختلفة عما تراه.")
-        recs.append("شغّل تشخيصًا لتحديث snapshot قبل التطبيق.")
+            N_("بيانات الراوتر قديمة — قد تكون الحالة الحالية "
+            "مختلفة عما تراه."))
+        recs.append(N_("شغّل تشخيصًا لتحديث snapshot قبل التطبيق."))
     elif ov.snapshot_status == "unknown":
         severity = _worse(severity, SEV_WARNING)
         warnings.append(
-            "لا توجد بيانات snapshot — حالة الراوتر غير "
-            "مؤكّدة.")
-        recs.append("شغّل تشخيصًا قبل المتابعة.")
+            N_("لا توجد بيانات snapshot — حالة الراوتر غير "
+            "مؤكّدة."))
+        recs.append(N_("شغّل تشخيصًا قبل المتابعة."))
 
     # 6. Backup readiness — missing/stale is warning, not block.
     if ov.backup_status == "missing":
         severity = _worse(severity, SEV_WARNING)
         warnings.append(
-            "لا توجد نسخة احتياطية — إن فشلت العملية لن تستطيع "
-            "الاستعادة.")
-        recs.append("خذ نسخة احتياطية قبل أي تعديل خطر.")
+            N_("لا توجد نسخة احتياطية — إن فشلت العملية لن تستطيع "
+            "الاستعادة."))
+        recs.append(N_("خذ نسخة احتياطية قبل أي تعديل خطر."))
     elif ov.backup_status == "stale":
-        warnings.append("آخر نسخة احتياطية قديمة.")
+        warnings.append(N_("آخر نسخة احتياطية قديمة."))
         # Stale alone stays info severity.
 
     # 7. Partial-apply on the same router → critical (the router
@@ -214,9 +214,9 @@ def evaluate(
     if (ov.last_audit_result or "").lower() == "partial":
         severity = _worse(severity, SEV_CRITICAL)
         warnings.append(
-            "آخر برمجة طُبّقت جزئيًا — حالة الراوتر غير متّسقة.")
+            N_("آخر برمجة طُبّقت جزئيًا — حالة الراوتر غير متّسقة."))
         recs.append(
-            "نفّذ Unprogram أوّلًا، ثم أعد البرمجة من جديد.")
+            N_("نفّذ Unprogram أوّلًا، ثم أعد البرمجة من جديد."))
 
     # 8. Override handling for critical severity.
     if severity == SEV_CRITICAL:
@@ -224,9 +224,9 @@ def evaluate(
             return SafetyCheck(
                 allowed=False, severity=SEV_BLOCKED,
                 blocking_reasons=[
-                    "حالة الراوتر حرجة — التنفيذ يحتاج "
+                    N_("حالة الراوتر حرجة — التنفيذ يحتاج "
                     "تأكيدًا صريحًا من مدير ذي صلاحية "
-                    "mikrotik.admin."
+                    "mikrotik.admin.")
                 ],
                 warnings=warnings, recommendations=recs,
                 requires_confirmation=True,
@@ -242,8 +242,8 @@ def evaluate(
             return SafetyCheck(
                 allowed=False, severity=SEV_BLOCKED,
                 blocking_reasons=[
-                    "لا تملك صلاحية mikrotik.admin لتجاوز "
-                    "حالة حرجة."
+                    N_("لا تملك صلاحية mikrotik.admin لتجاوز "
+                    "حالة حرجة.")
                 ],
                 warnings=warnings, recommendations=recs,
                 requires_confirmation=True,

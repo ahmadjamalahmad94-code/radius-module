@@ -7,6 +7,7 @@ owner-approval queue + manager advance gate (``subscriber_actions.loan_gate``)
 and then ``create_loan``. ``dry_run`` is a real preview: nothing is written.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, request
 
@@ -48,7 +49,7 @@ def _guard(web_endpoint: str):
                               perms=ident.perms, admin_id=c.admin_id,
                               tenant_id=c.tenant_id)
     if code == 429:
-        return None, fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+        return None, fail("rate_limited", _tr("بلغت الحدّ اليوميّ المسموح لهذا الإجراء."),
                           status=429)
     if code is not None:
         return None, fail("forbidden", _FORBIDDEN_AR, status=403,
@@ -97,10 +98,10 @@ def loans_list():
         subscriber_id = int(raw_sid) if raw_sid else None
     except (PagingError, ValueError):
         return fail("validation_error",
-                    "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة.", status=422)
+                    _tr("قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة."), status=422)
     status = (request.args.get("status") or "").strip().lower()
     if status and status not in _LOAN_STATUSES:
-        return fail("validation_error", "حالة السلفة غير معروفة (open أو settled أو voided).",
+        return fail("validation_error", _tr("حالة السلفة غير معروفة (open أو settled أو voided)."),
                     status=422)
     if current_distributor() and subscriber_id and not subscriber_in_scope(
         subscriber_id=subscriber_id,
@@ -148,7 +149,7 @@ def _has_duration(body: dict) -> bool:
 def loans_create():
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     caller, err = _guard("users_loan_create")
     if err is not None:
         return err
@@ -205,7 +206,7 @@ def loans_settle(loan_id: int):
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     caller, err = _guard("users_loan_settle")
     if err is not None:
         return err

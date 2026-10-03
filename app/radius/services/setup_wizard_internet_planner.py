@@ -1,5 +1,6 @@
 """SW2: Internet uplink script planner (preview-only, no execution)."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -186,10 +187,10 @@ class InternetUplinkScriptPlanner:
         add_default_route = _boolish(payload.get("add_default_route"), True)
         use_peer_dns = _boolish(payload.get("use_peer_dns"), False)
         warnings = [
-            "راجع الواجهة الأب بعناية. اختيار واجهة الإدارة الحالية قد يسبب فقدان الوصول.",
-            "احفظ نسخة احتياطية من الراوتر قبل تنفيذ أي سكربت uplink.",
+            _tr("راجع الواجهة الأب بعناية. اختيار واجهة الإدارة الحالية قد يسبب فقدان الوصول."),
+            _tr("احفظ نسخة احتياطية من الراوتر قبل تنفيذ أي سكربت uplink."),
         ]
-        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (شبكة افتراضية)")
+        lines = self._base_header(tag=tag, title=N_("خطة ربط الإنترنت (شبكة افتراضية)"))
         lines += [
             "# Create VLAN interface (idempotent by name check)",
             f':if ([:len [/interface vlan find where name="{vlan_name}"]] = 0) do={{',
@@ -267,7 +268,7 @@ class InternetUplinkScriptPlanner:
         gateway = _validate_ipv4(payload.get("gateway"), "gateway")
         nat_enabled = _boolish(payload.get("nat_enabled"), False)
         dns_servers = _validate_dns_list(payload.get("dns_servers"))
-        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (عنوان ثابت)")
+        lines = self._base_header(tag=tag, title=N_("خطة ربط الإنترنت (عنوان ثابت)"))
         lines += [
             "# Static uplink address",
             f':if ([:len [/ip address find where interface="{interface}" and address="{address_cidr}"]] = 0) do={{',
@@ -306,8 +307,8 @@ class InternetUplinkScriptPlanner:
             lines=lines,
             validation_commands=validation_commands,
             warnings=[
-                "تأكد أن gateway يخص مزود الخدمة على نفس وصلة الإنترنت.",
-                "تأكد أن هذه الواجهة ليست LAN داخلية.",
+                N_("تأكد أن gateway يخص مزود الخدمة على نفس وصلة الإنترنت."),
+                N_("تأكد أن هذه الواجهة ليست LAN داخلية."),
             ],
             generated_objects=[{"type": "ip.address-route", "name": interface, "tag": tag}],
             masked_sensitive_values={},
@@ -318,7 +319,7 @@ class InternetUplinkScriptPlanner:
         add_default_route = _boolish(payload.get("add_default_route"), True)
         use_peer_dns = _boolish(payload.get("use_peer_dns"), True)
         nat_enabled = _boolish(payload.get("nat_enabled"), False)
-        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (عميل توزيع عناوين مباشر)")
+        lines = self._base_header(tag=tag, title=N_("خطة ربط الإنترنت (عميل توزيع عناوين مباشر)"))
         lines += [
             "# DHCP client directly on selected interface",
             f':if ([:len [/ip dhcp-client find where interface="{interface}"]] = 0) do={{',
@@ -347,7 +348,7 @@ class InternetUplinkScriptPlanner:
             lines=lines,
             validation_commands=validation_commands,
             warnings=[
-                "إذا كانت الشبكة تعطي DNS غير موثوق، عطّل use_peer_dns وحدد DNS يدويًا عند الحاجة.",
+                N_("إذا كانت الشبكة تعطي DNS غير موثوق، عطّل use_peer_dns وحدد DNS يدويًا عند الحاجة."),
             ],
             generated_objects=[{"type": "ip.dhcp-client", "name": interface, "tag": tag}],
             masked_sensitive_values={},
@@ -369,7 +370,7 @@ class InternetUplinkScriptPlanner:
         if fixed_ip:
             _validate_ipv4(fixed_ip, "fixed_ip")
         ppp_name = _clean_name(payload.get("pppoe_client_name"), "pppoe_client_name", fallback=f"hr-pppoe-{interface}")
-        lines = self._base_header(tag=tag, title="خطة ربط الإنترنت (برودباند)")
+        lines = self._base_header(tag=tag, title=N_("خطة ربط الإنترنت (برودباند)"))
         lines += [
             "# PPPoE client on selected interface",
             f':if ([:len [/interface pppoe-client find where name="{ppp_name}"]] = 0) do={{',
@@ -415,8 +416,8 @@ class InternetUplinkScriptPlanner:
             lines=lines,
             validation_commands=validation_commands,
             warnings=[
-                "كلمة مرور PPPoE تظهر داخل نص السكربت فقط لغرض النسخ إلى MikroTik Terminal.",
-                "لا يتم تخزين كلمة مرور PPPoE كنص صريح في metadata الخاصة بالمخطط.",
+                N_("كلمة مرور PPPoE تظهر داخل نص السكربت فقط لغرض النسخ إلى MikroTik Terminal."),
+                N_("لا يتم تخزين كلمة مرور PPPoE كنص صريح في metadata الخاصة بالمخطط."),
             ],
             generated_objects=[{"type": "interface.pppoe-client", "name": ppp_name, "tag": tag}],
             masked_sensitive_values={"password": "***"},

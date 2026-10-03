@@ -53,35 +53,35 @@
 {% block content %}
 {# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ── #}
 {% set category_labels = {
-  'general':         'عام',
-  'billing':         'الفواتير والدفع',
-  'connection':      'الاتصال والخدمة',
-  'hardware':        'الأجهزة والمعدّات',
-  'complaint':       'شكوى',
-  'service_request': 'طلب خدمة',
-  'network':         'الشبكة',
-  'installation':    'التركيب',
-  'account':         'الحساب',
-  'cards':           'الكروت',
-  'technical':       'دعم فنّي',
-  'support':         'دعم فنّي',
-  'payment':         'الدفع',
-  'internet':        'الإنترنت',
-  'speed':           'السرعة',
-  'other':           'أخرى'
+  'general':         _('عام'),
+  'billing':         _('الفواتير والدفع'),
+  'connection':      _('الاتصال والخدمة'),
+  'hardware':        _('الأجهزة والمعدّات'),
+  'complaint':       _('شكوى'),
+  'service_request': _('طلب خدمة'),
+  'network':         _('الشبكة'),
+  'installation':    _('التركيب'),
+  'account':         _('الحساب'),
+  'cards':           _('الكروت'),
+  'technical':       _('دعم فنّي'),
+  'support':         _('دعم فنّي'),
+  'payment':         _('الدفع'),
+  'internet':        _('الإنترنت'),
+  'speed':           _('السرعة'),
+  'other':           _('أخرى')
 } %}
 {% set status_map = {
-  'open':        ('مفتوحة',      'amber'),
-  'pending':     ('معلَّقة',      'amber'),
-  'in_progress': ('قيد المعالجة', 'blue'),
-  'resolved':    ('محلولة',      'green'),
-  'closed':      ('مغلقة',       'grey')
+  'open':        (_('مفتوحة'),      'amber'),
+  'pending':     (_('معلَّقة'),      'amber'),
+  'in_progress': (_('قيد المعالجة'), 'blue'),
+  'resolved':    (_('محلولة'),      'green'),
+  'closed':      (_('مغلقة'),       'grey')
 } %}
 {% set prio_map = {
-  'urgent': ('عاجلة',  'red'),
-  'high':   ('مرتفعة', 'amber'),
-  'normal': ('عادية',  'blue'),
-  'low':    ('منخفضة', 'grey')
+  'urgent': (_('عاجلة'),  'red'),
+  'high':   (_('مرتفعة'), 'amber'),
+  'normal': (_('عادية'),  'blue'),
+  'low':    (_('منخفضة'), 'grey')
 } %}
 
 {# عدّادات الحالة من النتائج الحالية (بلا استعلامات إضافية) #}
@@ -92,18 +92,18 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة الحالة ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "التذاكر والشكاوى",
-  subtitle="متابعة طلبات الدعم والشكاوى من المشتركين حتى الإغلاق — فلترة بالحالة وفتح المحادثة من الجدول.",
+  _('التذاكر والشكاوى'),
+  subtitle=_('متابعة طلبات الدعم والشكاوى من المشتركين حتى الإغلاق — فلترة بالحالة وفتح المحادثة من الجدول.'),
   icon="headset",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="ticket-create">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("تذكرة جديدة") ~ '
     </button>'|safe,
   kpis=[
-    {'label': 'في النتائج',   'value': items|length, 'icon': 'list',         'variant': 'brand'},
-    {'label': 'مفتوحة',       'value': _open,        'icon': 'folder-open',  'variant': 'amber'},
-    {'label': 'قيد المعالجة', 'value': _prog,        'icon': 'spinner',      'variant': 'blue'},
-    {'label': 'محلولة',       'value': _resol,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('في النتائج'),   'value': items|length, 'icon': 'list',         'variant': 'brand'},
+    {'label': _('مفتوحة'),       'value': _open,        'icon': 'folder-open',  'variant': 'amber'},
+    {'label': _('قيد المعالجة'), 'value': _prog,        'icon': 'spinner',      'variant': 'blue'},
+    {'label': _('محلولة'),       'value': _resol,       'icon': 'circle-check', 'variant': 'green'},
   ],
   search_action=url_for('radius.tk_list')
 ) %}
@@ -116,19 +116,19 @@
     <option value="resolved"    {% if status == 'resolved' %}selected{% endif %}>{{ _('محلولة') }}</option>
     <option value="closed"      {% if status == 'closed' %}selected{% endif %}>{{ _('مغلقة') }}</option>
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if status %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.tk_list') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="مسار التذكرة المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. الأولوية «عاجلة/مرتفعة» تُعالج أولًا."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('مسار التذكرة المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. الأولوية «عاجلة/مرتفعة» تُعالج أولًا.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول التذاكر — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("قائمة التذاكر", icon="table-list", meta=items|length|string + " تذكرة", flush=True) %}
+{% call hub.section(_('قائمة التذاكر'), icon="table-list", meta=items|length|string + _(' تذكرة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        data-uds-export-title="{{ _('التذاكر') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -174,8 +174,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا تذاكر تطابق الفلتر" if status else "لا تذاكر بعد",
-  sub="غيّر فلتر الحالة في الأعلى أو أنشئ تذكرة جديدة." if status else "أنشئ أول تذكرة من زرّ «تذكرة جديدة» أعلى الصفحة.",
+  _('لا تذاكر تطابق الفلتر') if status else _('لا تذاكر بعد'),
+  sub=_('غيّر فلتر الحالة في الأعلى أو أنشئ تذكرة جديدة.') if status else _('أنشئ أول تذكرة من زرّ «تذكرة جديدة» أعلى الصفحة.'),
   icon="headset"
 ) }}
 {% endif %}

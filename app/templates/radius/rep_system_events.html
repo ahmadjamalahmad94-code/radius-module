@@ -11,7 +11,7 @@
 {% block title %}{{ _("أحداث النظام") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gears"></i>{% endblock %}
 {% block page_title %}{{ _("أحداث النظام") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s حدث', total=total) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -27,15 +27,15 @@
 
 <section class="hub-hero-shell" data-testid="system-events-hero">
 {% call hub.megahero(
-  "أحداث النظام",
-  subtitle="العمليّات الآليّة/المجدولة التي نفّذها النظام (نسخ احتياطي مجدول، مصالحات، مكانس…) — منفصلة عن أحداث المدراء البشريّة.",
+  _('أحداث النظام'),
+  subtitle=_('العمليّات الآليّة/المجدولة التي نفّذها النظام (نسخ احتياطي مجدول، مصالحات، مكانس…) — منفصلة عن أحداث المدراء البشريّة.'),
   icon="gears",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'list-check', 'variant': 'brand'},
-    {'label': 'المعروض',        'value': items|length, 'icon': 'table-list', 'variant': 'blue'},
-    {'label': 'فاعلون آليّون',  'value': _actors,      'icon': 'robot',      'variant': 'green'},
-    {'label': 'نسخ احتياطي',    'value': _bk.n,       'icon': 'database',   'variant': 'violet'},
+    {'label': _('إجمالي المطابق'), 'value': total,        'icon': 'list-check', 'variant': 'brand'},
+    {'label': _('المعروض'),        'value': items|length, 'icon': 'table-list', 'variant': 'blue'},
+    {'label': _('فاعلون آليّون'),  'value': _actors,      'icon': 'robot',      'variant': 'green'},
+    {'label': _('نسخ احتياطي'),    'value': _bk.n,       'icon': 'database',   'variant': 'violet'},
   ],
   search_action=url_for('radius.rep_system_events')
 ) %}
@@ -46,19 +46,19 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_system_events') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="أحداث النظام هي العمليّات الآليّة (الفاعل يبدأ بـ system) — لا أفعال المدراء. البحث يطابق اسم المهمّة أو الإجراء أو معرّف الهدف، والبيانات من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('أحداث النظام هي العمليّات الآليّة (الفاعل يبدأ بـ system) — لا أفعال المدراء. البحث يطابق اسم المهمّة أو الإجراء أو معرّف الهدف، والبيانات من سجل التدقيق audit_log للقراءة فقط.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
-{% call hub.section("سجل أحداث النظام", icon="table-list",
-                    meta=items|length|string + " حدث", flush=True) %}
+{% call hub.section(_('سجل أحداث النظام'), icon="table-list",
+                    meta=items|length|string + _(' حدث'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="system_events" data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -96,8 +96,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا أحداث نظام مطابقة",
-   sub="غيّر الفلاتر أو لم يسجّل النظام أي عملية آليّة بعد.", icon="gears") }}
+{{ hub.empty(_('لا أحداث نظام مطابقة'),
+   sub=_('غيّر الفلاتر أو لم يسجّل النظام أي عملية آليّة بعد.'), icon="gears") }}
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

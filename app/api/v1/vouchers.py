@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 
@@ -26,12 +27,12 @@ def _dt(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("تاريخ الانتهاء يجب أن يكون نصًا بصيغة ISO.")
+        raise ValueError(_tr("تاريخ الانتهاء يجب أن يكون نصًا بصيغة ISO."))
     try:
         # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
         return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
-        raise ValueError("تاريخ الانتهاء غير صالح. استخدم صيغة ISO.") from exc
+        raise ValueError(_tr("تاريخ الانتهاء غير صالح. استخدم صيغة ISO.")) from exc
 
 
 def _item(voucher) -> dict:
@@ -66,15 +67,15 @@ def list_vouchers():
 def generate_vouchers():
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     try:
         count = min(max(1, int(body.get("count") or 1)), 1000)
     except (TypeError, ValueError):
-        return fail("validation_error", "عدد القسائم يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("عدد القسائم يجب أن يكون رقمًا صحيحًا."), status=422)
     try:
         amount = strict_float(body.get("amount") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة القسيمة يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة القسيمة يجب أن تكون رقمًا صحيحًا."), status=422)
     try:
         expire_at = _dt(body.get("expire_at"))
     except ValueError as exc:
@@ -83,7 +84,7 @@ def generate_vouchers():
     try:
         parsed_plan_id = int(plan_id) if plan_id not in (None, "") else None
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف الباقة يجب أن يكون رقمًا صحيحًا."), status=422)
     # zero-w3: 0 = «بلا باقة» (the app sent 0 for a blank field) and a plan
     # that is not in this network is a 422 — both were a FOREIGN KEY 500.
     if parsed_plan_id is not None and parsed_plan_id <= 0:
@@ -91,19 +92,19 @@ def generate_vouchers():
     if parsed_plan_id is not None:
         from ...radius.db.repos import plans_repo
         if plans_repo.get_plan(_tid(), parsed_plan_id) is None:
-            return fail("validation_error", "الباقة المحدّدة غير موجودة.", status=422,
+            return fail("validation_error", _tr("الباقة المحدّدة غير موجودة."), status=422,
                         details={"field": "plan_id"})
     if amount <= 0:
-        return fail("validation_error", "قيمة القسيمة يجب أن تكون أكبر من صفر.", status=422)
+        return fail("validation_error", _tr("قيمة القسيمة يجب أن تكون أكبر من صفر."), status=422)
     from ...radius.core import limits
-    _msg = limits.amount_error(amount, "generic", label="قيمة القسيمة")
+    _msg = limits.amount_error(amount, "generic", label=N_("قيمة القسيمة"))
     if _msg:   # «الحدود» — باقي المدخلات الماليّة
         return fail("validation_error", _msg, status=422)
     # عدد خانات الكود (اختياري) — الافتراضي 12، والحدود الآمنة 6–16.
     try:
         code_length = int(body.get("code_length") or vouchers_repo.CODE_LEN_DEFAULT)
     except (TypeError, ValueError):
-        return fail("validation_error", "عدد خانات الكود يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("عدد خانات الكود يجب أن يكون رقمًا صحيحًا."), status=422)
     code_length = min(max(code_length, vouchers_repo.CODE_LEN_MIN), vouchers_repo.CODE_LEN_MAX)
     items = vouchers_repo.generate_bulk(
         tenant_id=_tid(),
@@ -119,6 +120,6 @@ def generate_vouchers():
 
 def revoke_voucher(voucher_id: int):
     if not vouchers_repo.get(_tid(), voucher_id):
-        return fail("not_found", "القسيمة غير موجودة.", status=404)
+        return fail("not_found", _tr("القسيمة غير موجودة."), status=404)
     vouchers_repo.revoke(_tid(), voucher_id)
     return ok({"id": voucher_id, "status": "revoked"})

@@ -120,8 +120,8 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
 <section class="hub-hero-shell" data-testid="roles-hero">
 {% call hub.megahero(
-  "الأدوار والصلاحيات",
-  subtitle="كل دور حزمة صلاحيات تُسند للمدراء فتحدّد ما يصلون إليه — أنشئ الأدوار وعدّلها وامنحها من شاشة المدراء.",
+  _('الأدوار والصلاحيات'),
+  subtitle=_('كل دور حزمة صلاحيات تُسند للمدراء فتحدّد ما يصلون إليه — أنشئ الأدوار وعدّلها وامنحها من شاشة المدراء.'),
   icon="key",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.roles_new') ~ '">
@@ -131,10 +131,10 @@
       <i class="fa-solid fa-user-shield"></i> '|safe ~ _("المدراء") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي الأدوار',    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
-    {'label': 'أدوار النظام',      'value': _sys,                'icon': 'lock',       'variant': 'amber'},
-    {'label': 'أدوار مخصّصة',      'value': roles|length - _sys, 'icon': 'user-pen',   'variant': 'green'},
-    {'label': 'الصلاحيات المتاحة', 'value': perms|length,        'icon': 'list-check', 'variant': 'blue'},
+    {'label': _('إجمالي الأدوار'),    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
+    {'label': _('أدوار النظام'),      'value': _sys,                'icon': 'lock',       'variant': 'amber'},
+    {'label': _('أدوار مخصّصة'),      'value': roles|length - _sys, 'icon': 'user-pen',   'variant': 'green'},
+    {'label': _('الصلاحيات المتاحة'), 'value': perms|length,        'icon': 'list-check', 'variant': 'blue'},
   ]
 ) %}
   {# لا فلاتر خادمية في هذا المسار — سطر إرشادي بسيط بدلًا منها #}
@@ -144,14 +144,14 @@
   </span>
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
-        data-hint="أدوار النظام محميّة: تُعدَّل صلاحياتها لكن لا تُحذف. أرشفة دور مخصّص لا تحذفه نهائيًا — يُستعاد من سلة المحذوفات. كل صلاحية تظهر بتسميتها العربية ومفتاحها التقني."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('أدوار النظام محميّة: تُعدَّل صلاحياتها لكن لا تُحذف. أرشفة دور مخصّص لا تحذفه نهائيًا — يُستعاد من سلة المحذوفات. كل صلاحية تظهر بتسميتها العربية ومفتاحها التقني.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if roles %}
 {# ───── شبكة بطاقات الأدوار ───── #}
-{% call hub.section("الأدوار المعرَّفة", icon="grip",
-                    meta=roles|length|string ~ " دور") %}
+{% call hub.section(_('الأدوار المعرَّفة'), icon="grip",
+                    meta=_('%(string)s دور', string=roles|length|string)) %}
   <div class="rl-grid">
     {% for r in roles %}
     {# لا تلوين مخصّصًا لكل دور هنا — كل البطاقات بكسوة العلامة الموحّدة #}
@@ -165,12 +165,12 @@
         <div class="rl-badges">
           {# شارات بنمط محايد موحّد — لا تباين لوني بين البطاقات #}
           {% if r.is_system %}
-            {{ hub.pill("دور نظام", variant="grey", dot=False) }}
+            {{ hub.pill(_('دور نظام'), variant="grey", dot=False) }}
           {% endif %}
-          {{ hub.pill(r.permissions|length|string ~ " صلاحية", variant="grey", dot=False) }}
+          {{ hub.pill(_('%(string)s صلاحية', string=r.permissions|length|string), variant="grey", dot=False) }}
         </div>
       </div>
-      <div class="rl-desc">{{ r.description or 'بدون وصف.' }}</div>
+      <div class="rl-desc">{{ r.description or _('بدون وصف.') }}</div>
       <div class="rl-chips">
         {# أول 4 صلاحيات بالتسمية العربية + المفتاح، والبقية كعدّاد #}
         {% for p in r.permissions[:4] %}{{ pl.perm_chip(p) }}{% endfor %}
@@ -204,8 +204,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا أدوار مُعرَّفة بعد",
-  sub="أنشئ أول دور من زرّ «إضافة دور جديد» في الأعلى لتبدأ بمنح الصلاحيات للمدراء.",
+  _('لا أدوار مُعرَّفة بعد'),
+  sub=_('أنشئ أول دور من زرّ «إضافة دور جديد» في الأعلى لتبدأ بمنح الصلاحيات للمدراء.'),
   icon="key"
 ) }}
 {% endif %}
@@ -222,7 +222,7 @@
   </form>
   {% endif %}
 {% endset %}
-{% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
+{% call hub.modal("roleArchiveModal", _('تأكيد أرشفة الدور'), icon="box-archive", size="sm",
    footer_html=_role_arch_foot) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>

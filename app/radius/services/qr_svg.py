@@ -16,6 +16,10 @@
 """
 from __future__ import annotations
 
+import html
+
+from app.i18n_text import _tr
+
 import logging
 
 _LOG = logging.getLogger(__name__)
@@ -54,7 +58,7 @@ def _placeholder_svg(box: int, quiet: int, dark: str, light: str) -> str:
         f'fill="{dark}">✈</text>'
         f'<text x="{cx}" y="{cx+dim*0.16:.0f}" text-anchor="middle" '
         f'font-family="Cairo,sans-serif" font-size="{dim*0.045:.0f}" fill="{dark}">'
-        f'استخدم الزرّ بالأسفل</text>'
+        f'{html.escape(_tr("استخدم الزرّ بالأسفل"))}</text>'
         f'</svg>'
     )
 

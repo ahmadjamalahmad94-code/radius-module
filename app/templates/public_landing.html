@@ -19,8 +19,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="{{ cfg.primary_color or '#2BAACC' }}">
-  <meta name="description" content="{{ cfg.system_name or 'HobeRadius' }} — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.">
-  <title>{{ cfg.system_name or 'HobeRadius' }} — البوّابة الرئيسية</title>
+  <meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.', v=cfg.system_name or 'HobeRadius') }}">
+  <title>{{ _('%(v)s — البوّابة الرئيسية', v=cfg.system_name or 'HobeRadius') }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <style>
     :root{
@@ -173,19 +173,16 @@
       </span>
       <div>
         <div class="brand-name">{{ cfg.system_name or 'HobeRadius' }}</div>
-        <div class="brand-sub">بوّابة إدارة الشبكة والاشتراكات</div>
+        <div class="brand-sub">{{ _('بوّابة إدارة الشبكة والاشتراكات') }}</div>
       </div>
     </div>
   </header>
 
   <section class="hero">
     <div>
-      <h1>أهلًا بك في <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
+      <h1>{{ _('أهلًا بك في') }} <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
       <p>
-        منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت.
-        اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين،
-        بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء
-        بطاقات الإنترنت وشحن الرصيد.
+        {{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين، بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.') }}
       </p>
     </div>
     <div class="hero-art" aria-hidden="true">
@@ -234,7 +231,7 @@
     </div>
   </section>
 
-  <nav class="entries" aria-label="بوّابات الدخول">
+  <nav class="entries" aria-label="{{ _('بوّابات الدخول') }}">
 
     <a class="entry entry--admin" href="{{ url_for('radius.auth_login') }}">
       <span class="entry-icon" aria-hidden="true">
@@ -244,9 +241,9 @@
           <path d="M7.5 9.5l2 2-2 2M12.5 13.5h4" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </span>
-      <h2>دخول الإدارة</h2>
-      <p>لوحة تحكّم المشغّلين والمديرين — إدارة المشتركين والراوترات والبطاقات والتقارير الماليّة.</p>
-      <span class="entry-go">الدخول إلى اللوحة
+      <h2>{{ _('دخول الإدارة') }}</h2>
+      <p>{{ _('لوحة تحكّم المشغّلين والمديرين — إدارة المشتركين والراوترات والبطاقات والتقارير الماليّة.') }}</p>
+      <span class="entry-go">{{ _('الدخول إلى اللوحة') }}
         <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </a>
@@ -258,9 +255,9 @@
           <path d="M5 20c.8-3.6 3.7-5.6 7-5.6s6.2 2 7 5.6" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
         </svg>
       </span>
-      <h2>دخول المشتركين</h2>
-      <p>بوّابة المشترك — تابع اشتراكك واستهلاكك، اطلب تجديدًا أو سلفة، ونزّل إعداد الاتصال بضغطة.</p>
-      <span class="entry-go">الدخول إلى بوّابتي
+      <h2>{{ _('دخول المشتركين') }}</h2>
+      <p>{{ _('بوّابة المشترك — تابع اشتراكك واستهلاكك، اطلب تجديدًا أو سلفة، ونزّل إعداد الاتصال بضغطة.') }}</p>
+      <span class="entry-go">{{ _('الدخول إلى بوّابتي') }}
         <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </a>
@@ -273,9 +270,9 @@
           <path d="M6 14.5h5" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
         </svg>
       </span>
-      <h2>سوق البطاقات الإلكتروني</h2>
-      <p>اشترِ بطاقات الإنترنت واشحن رصيدك إلكترونيًّا — تصفّح الباقات المتاحة وفعّل بطاقتك فورًا.</p>
-      <span class="entry-go">الدخول إلى السوق
+      <h2>{{ _('سوق البطاقات الإلكتروني') }}</h2>
+      <p>{{ _('اشترِ بطاقات الإنترنت واشحن رصيدك إلكترونيًّا — تصفّح الباقات المتاحة وفعّل بطاقتك فورًا.') }}</p>
+      <span class="entry-go">{{ _('الدخول إلى السوق') }}
         <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
     </a>
@@ -283,7 +280,7 @@
   </nav>
 
   <footer>
-    مشغَّل بواسطة <b>{{ cfg.system_name or 'HobeRadius' }}</b> — إدارة الشبكات والاشتراكات
+    {{ _('مشغَّل بواسطة') }} <b>{{ cfg.system_name or 'HobeRadius' }}</b> {{ _('— إدارة الشبكات والاشتراكات') }}
   </footer>
 </div>
 </body>

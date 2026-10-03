@@ -1,5 +1,6 @@
 """SW3 VPN/RADIUS bootstrap planner (preview-only, no execution)."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -107,7 +108,7 @@ class VpnRadiusBootstrapPlanner:
 
         lines = [
             "# ================================================",
-            "# معاينة ربط HobeRadius والمصادقة",
+            N_("# معاينة ربط HobeRadius والمصادقة"),
             "# Preview only - no destructive commands",
             f"# Tags: {vpn_tag}, {radius_tag}, {api_tag}",
             f"# Router registry: {router_tag or 'not-reserved'}",
@@ -125,19 +126,19 @@ class VpnRadiusBootstrapPlanner:
             f'/ip route remove [find where gateway="{wg_interface}" and comment~"HOBERADIUS_SETUP"]',
             "",
             "# --- NTP time sync (prevents WireGuard handshake rejection on stale clock) ---",
-            "# الهدف بالعربي: لو رجعت ساعة الراوتر للماضي بعد إطفاء طويل، يرفض",
-            "# WireGuard المصافحة (طابع زمني قديم / anti-replay) فيظهر «فشل الاتصال»",
-            "# بلا سبب واضح. تفعيل عميل NTP يصحّح الوقت تلقائياً عند كل إقلاع ويمنع",
-            "# تكرار المشكلة. idempotent: لا نكرّر الخوادم، ونتفرّع حسب إصدار RouterOS.",
+            N_("# الهدف بالعربي: لو رجعت ساعة الراوتر للماضي بعد إطفاء طويل، يرفض"),
+            N_("# WireGuard المصافحة (طابع زمني قديم / anti-replay) فيظهر «فشل الاتصال»"),
+            N_("# بلا سبب واضح. تفعيل عميل NTP يصحّح الوقت تلقائياً عند كل إقلاع ويمنع"),
+            N_("# تكرار المشكلة. idempotent: لا نكرّر الخوادم، ونتفرّع حسب إصدار RouterOS."),
             ":local rosVer [/system resource get version]",
             ':local rosMajor [:tonum [:pick $rosVer 0 [:find $rosVer "."]]]',
             ":if ($rosMajor >= 7) do={",
-            "  # RouterOS 7: عميل NTP موحّد + قائمة خوادم منفصلة",
+            N_("  # RouterOS 7: عميل NTP موحّد + قائمة خوادم منفصلة"),
             "  /system ntp client set enabled=yes mode=unicast",
             '  :if ([:len [/system ntp client servers find where address="216.239.35.0"]] = 0) do={ /system ntp client servers add address=216.239.35.0 }',
             '  :if ([:len [/system ntp client servers find where address="162.159.200.1"]] = 0) do={ /system ntp client servers add address=162.159.200.1 }',
             "} else={",
-            "  # RouterOS 6: الصيغة الأقدم (لا توجد قائمة servers مستقلة)",
+            N_("  # RouterOS 6: الصيغة الأقدم (لا توجد قائمة servers مستقلة)"),
             "  /system ntp client set enabled=yes primary-ntp=216.239.35.0 secondary-ntp=162.159.200.1",
             "}",
             "",
@@ -173,12 +174,12 @@ class VpnRadiusBootstrapPlanner:
             ]
         else:
             lines += [
-                "# لا يمكن إنشاء peer الآن لأن مفتاح WireGuard العام للسيرفر غير مضبوط في HobeRadius.",
-                f'# اسم peer المحجوز لهذا الراوتر: "{peer_name}"',
-                f'# عنوان Allowed Address المتوقع عند ضبط المفتاح: "{allowed_address}"',
-                f'# مسار الخادم المتوقع داخل النفق: "{allowed_address}" عبر "{wg_interface}"',
-                "# اضبط HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم ثم أعد توليد السكربت.",
-                "# لم يتم توليد أمر إنشاء peer حتى لا يفشل MikroTik برسالة no key set.",
+                N_("# لا يمكن إنشاء peer الآن لأن مفتاح WireGuard العام للسيرفر غير مضبوط في HobeRadius."),
+                _tr('# اسم peer المحجوز لهذا الراوتر: "%(peer_name)s"', peer_name=peer_name),
+                _tr('# عنوان Allowed Address المتوقع عند ضبط المفتاح: "%(allowed_address)s"', allowed_address=allowed_address),
+                _tr('# مسار الخادم المتوقع داخل النفق: "%(allowed_address)s" عبر "%(wg_interface)s"', allowed_address=allowed_address, wg_interface=wg_interface),
+                N_("# اضبط HOBERADIUS_WG_SERVER_PUBKEY في بيئة الخادم ثم أعد توليد السكربت."),
+                N_("# لم يتم توليد أمر إنشاء peer حتى لا يفشل MikroTik برسالة no key set."),
                 "",
             ]
         lines += [
@@ -193,7 +194,7 @@ class VpnRadiusBootstrapPlanner:
             "# Manual apply step (outside this planner): create API user with least privileges.",
             "",
             "# ===== Validation checks =====",
-            "# تأكّد أن NTP مفعّل والساعة مضبوطة قبل اختبار النفق (وقت خاطئ = رفض مصافحة).",
+            N_("# تأكّد أن NTP مفعّل والساعة مضبوطة قبل اختبار النفق (وقت خاطئ = رفض مصافحة)."),
             "/system ntp client print",
             "/system clock print",
             "/interface wireguard print detail",
@@ -215,14 +216,14 @@ class VpnRadiusBootstrapPlanner:
             "# - Keep a full router backup before any rollback."
         )
         warnings = [
-            "هذا المخطط للمعاينة فقط ولا ينفذ تلقائياً على أي راوتر.",
-            "سر RADIUS يظهر داخل نص السكربت لنسخه إلى الطرف المطلوب فقط.",
-            "إذا كانت الواجهة المختارة هي واجهة الإدارة الحالية، نفّذ من جلسة محلية لتجنب فقد الوصول.",
+            _tr("هذا المخطط للمعاينة فقط ولا ينفذ تلقائياً على أي راوتر."),
+            _tr("سر RADIUS يظهر داخل نص السكربت لنسخه إلى الطرف المطلوب فقط."),
+            _tr("إذا كانت الواجهة المختارة هي واجهة الإدارة الحالية، نفّذ من جلسة محلية لتجنب فقد الوصول."),
         ]
         if server_public_key:
-            warnings.insert(1, "تم تضمين مفتاح WireGuard العام للسيرفر لإنشاء peer صالح على MikroTik.")
+            warnings.insert(1, N_("تم تضمين مفتاح WireGuard العام للسيرفر لإنشاء peer صالح على MikroTik."))
         else:
-            warnings.insert(1, "مفتاح WireGuard العام للسيرفر غير مضبوط؛ لن يتم إنشاء peer حتى تضبط HOBERADIUS_WG_SERVER_PUBKEY.")
+            warnings.insert(1, N_("مفتاح WireGuard العام للسيرفر غير مضبوط؛ لن يتم إنشاء peer حتى تضبط HOBERADIUS_WG_SERVER_PUBKEY."))
         return VpnRadiusBootstrapPlan(
             script_text=script_text,
             rollback_script_text=rollback_script,

@@ -101,52 +101,52 @@
 
 {# ── شرح عربي قصير لكل نوع رسالة (يظهر تحت الاسم داخل الجدول) ── #}
 {% set _event_help = {
-  'otp': 'إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته.',
-  'expiry': 'تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب.',
-  'quota': 'تنبيه المشترك عندما تقترب باقته من النفاد.',
-  'maintenance': 'إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول.',
-  'password': 'إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه.',
-  'portal': 'إرسال روابط الدخول والدعوات إلى بوابة المشترك.'
+  'otp': _('إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته.'),
+  'expiry': _('تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب.'),
+  'quota': _('تنبيه المشترك عندما تقترب باقته من النفاد.'),
+  'maintenance': _('إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول.'),
+  'password': _('إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه.'),
+  'portal': _('إرسال روابط الدخول والدعوات إلى بوابة المشترك.')
 } %}
 
 {# ───── الصدفة الموحّدة: سطر تعريفي عربي واحد + شريط KPI بصف واحد ─────
    نستدعي megahero كتعبير مباشر (وليس call block) حتى لا يُرسم صف البحث. #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "رسائل واتساب للمشتركين",
-  subtitle="اختر أنواع الرسائل المسموح إرسالها للمشتركين عبر واتساب الرسمي — الربط والإرسال تتولاهما لوحة التراخيص.",
+  _('رسائل واتساب للمشتركين'),
+  subtitle=_('اختر أنواع الرسائل المسموح إرسالها للمشتركين عبر واتساب الرسمي — الربط والإرسال تتولاهما لوحة التراخيص.'),
   icon="whatsapp",
   actions_html=(
     ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ panel_portal_url ~ '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> '|safe ~ _("إدارة الربط من لوحة التراخيص") ~ '</a>'|safe) if panel_portal_url else ''|safe
   ),
   kpis=[
-    {'label': 'حالة الربط', 'value': ('متصل' if _on else ('غير متصل' if _pending else 'بحاجة إلى الإعداد')) if status.ok else 'غير متوفّرة',
+    {'label': _('حالة الربط'), 'value': (_('متصل') if _on else (_('غير متصل') if _pending else _('بحاجة إلى الإعداد'))) if status.ok else _('غير متوفّرة'),
      'icon': 'wave-square', 'variant': ('green' if _on else ('amber' if (_pending or not status.ok) else 'red')),
-     'sub': 'كما تردّها لوحة التراخيص'},
-    {'label': 'النشاط التجاري', 'value': (status.business or '—') if status.ok else '—', 'icon': 'briefcase', 'variant': 'brand', 'sub': 'الاسم المربوط بالحساب'},
-    {'label': 'رقم واتساب', 'value': (status.phone or '—') if status.ok else '—', 'icon': 'phone', 'variant': 'blue', 'sub': 'الرقم الرسمي للإرسال'},
-    {'label': 'الرسائل المُرسَلة', 'value': (status.usage.sent if (status.usage and status.usage.sent is defined) else '—'), 'icon': 'paper-plane', 'variant': 'green', 'sub': 'إجمالي ما أُرسل'},
-    {'label': 'الرصيد المتبقّي', 'value': (status.usage.remaining if (status.usage and status.usage.remaining is defined) else '—'), 'icon': 'gauge', 'variant': 'amber', 'sub': 'ضمن الحد المتاح'}
+     'sub': _('كما تردّها لوحة التراخيص')},
+    {'label': _('النشاط التجاري'), 'value': (status.business or '—') if status.ok else '—', 'icon': 'briefcase', 'variant': 'brand', 'sub': _('الاسم المربوط بالحساب')},
+    {'label': _('رقم واتساب'), 'value': (status.phone or '—') if status.ok else '—', 'icon': 'phone', 'variant': 'blue', 'sub': _('الرقم الرسمي للإرسال')},
+    {'label': _('الرسائل المُرسَلة'), 'value': (status.usage.sent if (status.usage and status.usage.sent is defined) else '—'), 'icon': 'paper-plane', 'variant': 'green', 'sub': _('إجمالي ما أُرسل')},
+    {'label': _('الرصيد المتبقّي'), 'value': (status.usage.remaining if (status.usage and status.usage.remaining is defined) else '—'), 'icon': 'gauge', 'variant': 'amber', 'sub': _('ضمن الحد المتاح')}
   ]
 ) }}
 </section>{# /hub-hero-shell #}
 
 {# ───── تخطيط العمل: الأقسام + لوحة مساعدة قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "ما هذه الصفحة؟",
-  intro="رسائل واتساب الرسمية تمر عبر لوحة التراخيص فقط. هنا تتحكم بأنواع الرسائل المسموح بإرسالها للمشتركين وتُجرّب الإرسال — دون تخزين أي بيانات ربط في هذا النظام.",
+  _('ما هذه الصفحة؟'),
+  intro=_('رسائل واتساب الرسمية تمر عبر لوحة التراخيص فقط. هنا تتحكم بأنواع الرسائل المسموح بإرسالها للمشتركين وتُجرّب الإرسال — دون تخزين أي بيانات ربط في هذا النظام.'),
   icon="circle-info",
   items=[
-    {'icon': 'shield-halved', 'text': 'لا يُخزَّن هنا أي مفتاح أو رمز ربط — الاتصال الرسمي يتولّاه مزوّد الخدمة عبر لوحة التراخيص.'},
-    {'icon': 'sliders', 'text': 'مفاتيح أنواع الرسائل إعدادات محلية فقط، تقرر ما يُسمح بإرساله للمشتركين.'},
-    {'icon': 'user-check', 'text': 'لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا مسبقًا على الاستلام وبما يتوافق مع سياسات واتساب.'},
-    {'icon': 'paper-plane', 'text': 'رسالة الاختبار تُرسل عبر لوحة التراخيص للتأكد من سلامة الربط من طرف لطرف.'}
+    {'icon': 'shield-halved', 'text': _('لا يُخزَّن هنا أي مفتاح أو رمز ربط — الاتصال الرسمي يتولّاه مزوّد الخدمة عبر لوحة التراخيص.')},
+    {'icon': 'sliders', 'text': _('مفاتيح أنواع الرسائل إعدادات محلية فقط، تقرر ما يُسمح بإرساله للمشتركين.')},
+    {'icon': 'user-check', 'text': _('لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا مسبقًا على الاستلام وبما يتوافق مع سياسات واتساب.')},
+    {'icon': 'paper-plane', 'text': _('رسالة الاختبار تُرسل عبر لوحة التراخيص للتأكد من سلامة الربط من طرف لطرف.')}
   ],
-  note="إدارة الربط الرسمي واعتماد القوالب يتمّان في بوابة لوحة التراخيص — حالتهما تنعكس هنا تلقائيًا."
+  note=_('إدارة الربط الرسمي واعتماد القوالب يتمّان في بوابة لوحة التراخيص — حالتهما تنعكس هنا تلقائيًا.')
 )) %}
 
   {# ════════ (أ) حالة الربط — كما تردّها لوحة التراخيص ════════ #}
-  {% call hub.section("حالة الربط", icon="wave-square", meta="كما تردّها لوحة التراخيص") %}
+  {% call hub.section(_('حالة الربط'), icon="wave-square", meta=_('كما تردّها لوحة التراخيص')) %}
     {% if status.ok %}
       {% set cls = 'on' if status.onboarding == 'connected' else ('off' if status.onboarding == 'not_connected' else 'dead') %}
       <div class="wa-status {{ cls }}" data-testid="wa-status" data-onboarding="{{ status.onboarding }}">
@@ -166,8 +166,8 @@
         <div class="wa-status-meta">
           {% if status.onboarding != 'connected' %}
             <span class="wa-tag">
-              {% if status.onboarding == 'not_connected' %}أعد ربط واتساب من لوحة التراخيص لاستئناف الإرسال.
-              {% else %}لم يتم ربط واتساب الرسمي بعد — اربطه من لوحة التراخيص.{% endif %}
+              {% if status.onboarding == 'not_connected' %}{{ _('أعد ربط واتساب من لوحة التراخيص لاستئناف الإرسال.') }}
+              {% else %}{{ _('لم يتم ربط واتساب الرسمي بعد — اربطه من لوحة التراخيص.') }}{% endif %}
             </span>
           {% endif %}
           {% if status.business %}
@@ -193,22 +193,20 @@
         <span class="ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <div class="tx">
           <b>{{ _('تعذّر جلب الحالة من لوحة التراخيص') }}</b>
-          تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ترخيص النظام»، ثم حدّث الصفحة.
-          يمكنك ضبط أنواع الرسائل بالأسفل الآن — ستُطبَّق فور توفّر الربط.
+          {{ _('تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ترخيص النظام»، ثم حدّث الصفحة. يمكنك ضبط أنواع الرسائل بالأسفل الآن — ستُطبَّق فور توفّر الربط.') }}
         </div>
       </div>
     {% endif %}
   {% endcall %}
 
   {# ════════ (ب) أنواع الرسائل المسموح بها — جدول موحّد uds ════════ #}
-  {% call hub.section("أنواع الرسائل المسموح بها", icon="sliders", meta="مفاتيح محلية تتحكم بما يُرسل للمشتركين") %}
+  {% call hub.section(_('أنواع الرسائل المسموح بها'), icon="sliders", meta=_('مفاتيح محلية تتحكم بما يُرسل للمشتركين')) %}
     <form method="post" action="{{ url_for('radius.whatsapp_settings') }}" class="hub-form" data-testid="wa-settings-form">{% if not can_submit('radius.whatsapp_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       {{ csrf_token_input() | safe }}
 
       <div class="hub-note hub-note--info">
         <i class="fa-solid fa-shield-halved"></i>
-        <span>هذه المفاتيح إعدادات محلية فقط ولا تحتوي على أي بيانات ربط. لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا
-          مسبقًا على استلام رسائل واتساب، وبما يتوافق مع سياسات واتساب الرسمية.</span>
+        <span>{{ _('هذه المفاتيح إعدادات محلية فقط ولا تحتوي على أي بيانات ربط. لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا مسبقًا على استلام رسائل واتساب، وبما يتوافق مع سياسات واتساب الرسمية.') }}</span>
       </div>
 
       {# جدول موحّد: اسم النوع + شرح قصير، مُعرّف الإعداد التقني، مفتاح التفعيل #}
@@ -232,7 +230,7 @@
               {# المُعرّف التقني يبقى لاتينيًا بخط أحادي المسافة وباتجاه يسار-يمين #}
               <td><span class="wa-ev-key"><bdi dir="ltr">whatsapp.send.{{ key }}</bdi></span></td>
               <td>{{ toggle_switch(name="send_" ~ key, checked=toggles.get(key), value="1",
-                                   on_label="مسموح", off_label="متوقف", size="sm") }}</td>
+                                   on_label=_('مسموح'), off_label=_('متوقف'), size="sm") }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -247,13 +245,13 @@
   {% endcall %}
 
   {# ════════ (ج) رسالة اختبار — تمر عبر جسر لوحة التراخيص فقط ════════ #}
-  {% call hub.section("رسالة اختبار", icon="paper-plane", meta="تُرسل عبر لوحة التراخيص للتأكد من الربط") %}
+  {% call hub.section(_('رسالة اختبار'), icon="paper-plane", meta=_('تُرسل عبر لوحة التراخيص للتأكد من الربط')) %}
     {% if can_submit('radius.whatsapp_test', 'POST') %}<form method="post" action="{{ url_for('radius.whatsapp_test') }}" class="hub-form" data-testid="wa-test-form">
       {{ csrf_token_input() | safe }}
 
       <div class="hub-field" style="max-width:360px">
         <label for="wa-phone">{{ _('رقم هاتف المستلم') }}
-          <span class="hub-hint" tabindex="0" data-hint="أدخل الرقم بالصيغة الدولية الكاملة (رمز الدولة ثم الرقم بلا صفر بادئ ولا رموز). تُرسل رسالة قالب اختبار واحدة فقط."><i class="fa-solid fa-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('أدخل الرقم بالصيغة الدولية الكاملة (رمز الدولة ثم الرقم بلا صفر بادئ ولا رموز). تُرسل رسالة قالب اختبار واحدة فقط.') }}"><i class="fa-solid fa-info"></i></span>
         </label>
         <input id="wa-phone" class="hub-input mono" type="tel" name="recipient_phone" inputmode="tel" placeholder="9627xxxxxxxx" autocomplete="off" dir="ltr">
         <div class="hub-field-hint">{{ _('أدخل الرقم بصيغة دولية. تُرسل رسالة قالب اختبار واحدة عبر مزوّد لوحة التراخيص.') }}</div>
@@ -273,7 +271,7 @@
 
   {# ════════ (د) إدارة الربط من بوابة لوحة التراخيص ════════ #}
   {% if panel_portal_url %}
-    {% call hub.section("إدارة ربط واتساب", icon="plug-circle-bolt", meta="من بوابة لوحة التراخيص") %}
+    {% call hub.section(_('إدارة ربط واتساب'), icon="plug-circle-bolt", meta=_('من بوابة لوحة التراخيص')) %}
       <div class="hub-empty" data-testid="wa-portal-link" style="text-align:initial">
         <div class="hub-empty-msg">{{ _('الربط الرسمي للحساب واعتماد القوالب يتمّان في بوابة لوحة التراخيص') }}</div>
         <div class="hub-empty-sub" style="margin-bottom:14px">{{ _('من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى تلقائيًا.') }}</div>

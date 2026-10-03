@@ -12,6 +12,7 @@ Datetimes out are UTC ISO with a trailing ``Z``; ``expire_at`` in is ISO — a
 value with ``Z``/offset is that instant, a naive value is UTC.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -40,7 +41,7 @@ _IDEMPOTENT = {"extend", "quota/topup", "quota/reset-daily", "change-plan",
 # (services/subscriber_action_flags) — the web hides exactly what the app hides.
 from ...radius.services.subscriber_action_flags import WEB_ENDPOINT  # noqa: E402
 
-_FORBIDDEN_AR = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
+_FORBIDDEN_AR = N_("ليس لديك صلاحية لتنفيذ هذا الإجراء.")
 _MAX_FREE_LOAN_HOURS_DEFAULT = 72
 _PAYMENT_METHODS = ("cash", "bank", "manual")
 _CHARGE_MODES = ("free", "paid", "debt")
@@ -118,7 +119,7 @@ def _identity() -> tuple[Optional[_Identity], Any]:
         admin = AdminsStore.instance().get_admin(aid)
         if admin is None or not getattr(admin, "enabled", False):
             return None, fail("forbidden",
-                              "الحساب الإداري المرتبط بهذا التوكن غير موجود أو معطّل.",
+                              _tr("الحساب الإداري المرتبط بهذا التوكن غير موجود أو معطّل."),
                               status=403)
         try:
             perms = list(get_admins_service().permissions_of(admin))
@@ -178,7 +179,7 @@ def _forbidden(key: str, status: int = 403):
         except Exception:  # noqa: BLE001
             pass
     if status == 429:
-        return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+        return fail("rate_limited", _tr("بلغت الحدّ اليوميّ المسموح لهذا الإجراء."),
                     status=429, details=details)
     return fail("forbidden", _FORBIDDEN_AR, status=403, details=details)
 
@@ -198,7 +199,7 @@ def _prelude(username: str, key: str):
     try:
         sub = get_users_service().get(username)
     except RadiusNotFound:
-        return None, None, fail("not_found", "الحساب غير موجود.", status=404)
+        return None, None, fail("not_found", _tr("الحساب غير موجود."), status=404)
     return ident, sub, None
 
 
@@ -258,7 +259,7 @@ def _svc_error(e: RadiusError):
     if isinstance(e, sa.SpendBlocked):
         return fail("spend_blocked", msg, status=403)
     if isinstance(e, RadiusNotFound):
-        return fail("not_found", msg or "الحساب غير موجود.", status=404)
+        return fail("not_found", msg or _tr("الحساب غير موجود."), status=404)
     if isinstance(e, RadiusConflict):
         return fail("conflict", msg, status=409, details=e.details)
     if isinstance(e, RadiusValidationError):
@@ -357,7 +358,7 @@ def actions_context(username: str):
     try:
         sub = get_users_service().get(username)
     except RadiusNotFound:
-        return fail("not_found", "الحساب غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب غير موجود."), status=404)
     tid = ident.caller.tenant_id
     acc = service_from_context()
     basis = acc.price_basis(sub)
@@ -497,15 +498,15 @@ def action_extend(username: str):
     body = _body()
     mode = str(body.get("mode") or ("expire_at" if body.get("expire_at") else "duration")).strip()
     if mode not in {"duration", "expire_at"}:
-        return _invalid("طريقة التحديد غير معروفة (duration أو expire_at).")
+        return _invalid(_tr("طريقة التحديد غير معروفة (duration أو expire_at)."))
     charge_mode = str(body.get("charge_mode") or "free").strip()
     if charge_mode not in _CHARGE_MODES:
-        return _invalid("طريقة الإضافة غير معروفة (free أو paid أو debt).")
+        return _invalid(_tr("طريقة الإضافة غير معروفة (free أو paid أو debt)."))
     try:
         if mode == "expire_at":
             expire_at = _parse_expire_at(body.get("expire_at"))
             if expire_at is None:
-                return _invalid("تاريخ الانتهاء مطلوب.")
+                return _invalid(_tr("تاريخ الانتهاء مطلوب."))
             minutes = 0
             now = datetime.utcnow()
             anchor = max(sub.expire_at, now) if sub.expire_at else now
@@ -514,13 +515,13 @@ def action_extend(username: str):
             expire_at = None
             minutes = _int(body.get("minutes"), field="minutes")
             if minutes <= 0:
-                return _invalid("المدّة يجب أن تكون أكبر من صفر.")
+                return _invalid(_tr("المدّة يجب أن تكون أكبر من صفر."))
             price_minutes = minutes
         amount_sent = body.get("amount") not in (None, "")
         amount = _num(body.get("amount"), field="amount", default=0.0)
     except (TypeError, ValueError, OverflowError):
         # OverflowError: 0001-01-01T00:00+03:00 / 9999-12-31T23:59-05:00 were 500.
-        return _invalid("قيمة المدّة أو تاريخ الانتهاء أو المبلغ غير صحيحة.")
+        return _invalid(_tr("قيمة المدّة أو تاريخ الانتهاء أو المبلغ غير صحيحة."))
     try:
         # Owner caps: one extend adds at most 1 year; no expiry after 2100.
         if expire_at is not None:
@@ -532,7 +533,7 @@ def action_extend(username: str):
         amount = 0.0
     elif amount_sent and amount <= 0:
         # A negative/zero amount used to be silently replaced by the auto price.
-        return _invalid("المبلغ يجب أن يكون أكبر من صفر.")
+        return _invalid(_tr("المبلغ يجب أن يكون أكبر من صفر."))
     elif not amount_sent:
         # Not sent → the price the web dialog pre-fills (read-only there).
         amount = _price_of_minutes(sub, price_minutes)
@@ -562,7 +563,7 @@ def action_change_plan(username: str):
     try:
         plan_id = _int(body.get("plan_id"), field="plan_id")
     except (TypeError, ValueError):
-        return _invalid("اختيار العرض غير صحيح.")
+        return _invalid(_tr("اختيار العرض غير صحيح."))
     policy = str(body.get("policy") or "").strip()
     try:
         result = get_users_service().change_plan(
@@ -601,7 +602,7 @@ def action_quota_topup(username: str):
         quota_mb = _int(body.get("quota_mb"), field="quota_mb")
         charge_mode, amount, notes = _charge(body)
     except (TypeError, ValueError):
-        return _invalid("قيمة الكوتة أو المبلغ أو طريقة الإضافة غير صحيحة.")
+        return _invalid(_tr("قيمة الكوتة أو المبلغ أو طريقة الإضافة غير صحيحة."))
     try:
         saved = get_users_service().add_quota(
             actor=ident.caller.actor, username=username, quota_mb=quota_mb,
@@ -646,7 +647,7 @@ def action_quota_reset(username: str):
     try:
         charge_mode, amount, notes = _charge(body)
     except (TypeError, ValueError):
-        return _invalid("قيمة المبلغ أو طريقة الاستعادة غير صحيحة.")
+        return _invalid(_tr("قيمة المبلغ أو طريقة الاستعادة غير صحيحة."))
     try:
         saved = get_users_service().reset_daily_quota(
             actor=ident.caller.actor, username=username, charge_mode=charge_mode,
@@ -670,12 +671,12 @@ def action_payment(username: str):
         discount = _num(body.get("discount_amount"), field="discount_amount")
         dry_run = _truthy(body.get("dry_run"))
     except (TypeError, ValueError):
-        return _invalid("قيمة الدفعة أو خيارات السلف غير صحيحة.")
+        return _invalid(_tr("قيمة الدفعة أو خيارات السلف غير صحيحة."))
     if amount <= 0:
-        return _invalid("قيمة الدفعة غير صحيحة.")
+        return _invalid(_tr("قيمة الدفعة غير صحيحة."))
     method = str(body.get("method") or "cash").strip()
     if method not in _PAYMENT_METHODS:
-        return _invalid("طريقة الدفع غير معروفة (cash أو bank أو manual).")
+        return _invalid(_tr("طريقة الدفع غير معروفة (cash أو bank أو manual)."))
     rounding = str(body.get("rounding_mode") or "floor").strip()
     try:
         plan = sa.payment_prepare(
@@ -723,9 +724,9 @@ def action_balance(username: str):
         amount = _num(body.get("amount"), field="amount")
         actions = _loan_actions(body.get("loan_actions"))
     except (TypeError, ValueError):
-        return _invalid("قيمة الرصيد النقدي أو خيارات السلف غير صحيحة.")
+        return _invalid(_tr("قيمة الرصيد النقدي أو خيارات السلف غير صحيحة."))
     if amount <= 0:
-        return _invalid("قيمة الرصيد النقدي غير صحيحة.")
+        return _invalid(_tr("قيمة الرصيد النقدي غير صحيحة."))
     try:
         res = sa.add_subscriber_balance(
             ident.caller, username, amount=amount, currency=default_currency(),
@@ -750,15 +751,15 @@ def action_loan(username: str):
     body_in = _body()
     loan_type = str(body_in.get("loan_type") or "free").strip()
     if loan_type not in {"free", "debt"}:
-        return _invalid("نوع السلفة غير معروف (free أو debt).")
+        return _invalid(_tr("نوع السلفة غير معروف (free أو debt)."))
     dry_run = _truthy(body_in.get("dry_run"))
     try:
         days = _int(body_in.get("days"), field="days")
         hours = _int(body_in.get("hours"), field="hours")
     except (TypeError, ValueError):
-        return _invalid("عدد الأيام أو الساعات غير صحيح.")
+        return _invalid(_tr("عدد الأيام أو الساعات غير صحيح."))
     if days < 0 or hours < 0 or (days * 1440 + hours * 60) <= 0:
-        return _invalid("حدّد مدّة السلفة (أيام و/أو ساعات).")
+        return _invalid(_tr("حدّد مدّة السلفة (أيام و/أو ساعات)."))
     debt = loan_type == "debt"
     amount = 0.0
     if debt:
@@ -807,10 +808,10 @@ def action_message(username: str):
             message=str(body.get("message") or ""), channel=channel)
     except RadiusError as e:
         return _svc_error(e)
-    label = "واتساب" if channel == "whatsapp" else "SMS"
+    label = _tr("واتساب") if channel == "whatsapp" else "SMS"
     queued = int(result.get("queued_count", 0) or 0)
     return ok({"sent": queued > 0, "queued_count": queued, "channel": channel,
-               "message": f"تمت إضافة رسالة {label} إلى قائمة الإرسال ({queued})."})
+               "message": _tr('تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(queued)s).', label=label, queued=queued)})
 
 
 def action_send_credentials(username: str):
@@ -819,7 +820,7 @@ def action_send_credentials(username: str):
         return err
     payload, status = sa.send_credentials(ident.caller, username)
     if status == 404:
-        return fail("not_found", payload.get("error") or "المشترك غير موجود.", status=404)
+        return fail("not_found", payload.get("error") or _tr("المشترك غير موجود."), status=404)
     seg = payload.get("segments") or {}
     return ok({
         "sent": bool(payload.get("ok")),
@@ -835,7 +836,7 @@ def action_rename(username: str):
     if err is not None:
         return err
     if sa.username_rename_locked(ident.caller):
-        return fail("forbidden", "غير مسموح لك بتعديل اسم الدخول.", status=403,
+        return fail("forbidden", _tr("غير مسموح لك بتعديل اسم الدخول."), status=403,
                     details={"action": "rename", "field": "username"})
     from ...radius.services.users import get_users_service
     new_username = str(_body().get("new_username") or "").strip()
@@ -889,8 +890,8 @@ def action_temp_speed_cancel(username: str):
     return ok({
         "username": username,
         "reverted": reverted,
-        "message": (f"تم إلغاء السرعة المؤقتة لـ «{username}» وأُعيدت السرعة الطبيعية."
-                    if reverted else "لا توجد سرعة مؤقتة فعّالة لهذا المشترك."),
+        "message": (_tr('تم إلغاء السرعة المؤقتة لـ «%(username)s» وأُعيدت السرعة الطبيعية.', username=username)
+                    if reverted else _tr("لا توجد سرعة مؤقتة فعّالة لهذا المشترك.")),
     })
 
 
@@ -909,6 +910,6 @@ def action_disconnect(username: str):
         from .sessions import _disconnect_error
         return _disconnect_error(e)
     except Exception:  # noqa: BLE001 — same surface as /sessions/disconnect
-        return fail("internal_error", "حدث خطأ غير متوقع أثناء قطع الجلسة.", status=500)
+        return fail("internal_error", _tr("حدث خطأ غير متوقع أثناء قطع الجلسة."), status=500)
     return ok({"username": username, "disconnected": count,
                "disconnect_requested": True})

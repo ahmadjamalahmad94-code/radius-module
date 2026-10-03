@@ -1,5 +1,6 @@
 """Accounting + loans foundation service."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import csv
 import io
@@ -34,7 +35,7 @@ def normalize_currency(value: Any, *, default: str = "") -> str:
         return str(default or default_currency()).strip().upper()[:8]
     if code not in CURRENCY_SYMBOLS:
         raise RadiusValidationError(
-            f"العملة «{code[:12]}» غير مدعومة. العملات المدعومة: "
+            _tr('العملة «%(v)s» غير مدعومة. العملات المدعومة: ', v=code[:12])
             + "، ".join(sorted(CURRENCY_SYMBOLS)) + ".")
     return code
 
@@ -65,38 +66,38 @@ def _to_float(value: Any, *, field: str, minimum: float = 0.0) -> float:
     # الرسائل عربيّة من المصدر (كانت «amount must be >= 0.01» تصل للويب خامًا).
     if isinstance(value, bool):
         # ‎"amount": true كان يُقرأ 1.00 (تسوية/دفعة بقيمة 1).
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون رقمًا.', v=field_label(field)),
                               details={"field": field})
     try:
         # «٣٫٢٥» / «١٬٠٠٠» — the shared parser (F03 N6: the loans centre and
         # settle refused the Arabic decimal the rest of the API accepts).
         out = float(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون رقمًا.', v=field_label(field)),
                               details={"field": field}) from None
     if not math.isfinite(out) or abs(out) > MONEY_MAX:
         # «nan» كان يمرّ (NaN < minimum خطأ) ثم يُسقط الإدراج بـ 500.
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون رقمًا منتهيًا صالحًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون رقمًا منتهيًا صالحًا.', v=field_label(field)),
                               details={"field": field})
     if out < minimum:
         raise NonFiniteNumber(
-            f"قيمة «{field_label(field)}» يجب ألّا تقلّ عن {_fmt_num(minimum)}.",
+            _tr('قيمة «%(v)s» يجب ألّا تقلّ عن %(v2)s.', v=field_label(field), v2=_fmt_num(minimum)),
             details={"field": field})
     return out
 
 
 def _to_int(value: Any, *, field: str, minimum: int = 0) -> int:
     if isinstance(value, bool):
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون عددًا صحيحًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون عددًا صحيحًا.', v=field_label(field)),
                               details={"field": field})
     try:
         out = int(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون عددًا صحيحًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون عددًا صحيحًا.', v=field_label(field)),
                               details={"field": field}) from None
     if out < minimum:
         raise NonFiniteNumber(
-            f"قيمة «{field_label(field)}» يجب ألّا تقلّ عن {minimum}.",
+            _tr('قيمة «%(v)s» يجب ألّا تقلّ عن %(minimum)s.', v=field_label(field), minimum=minimum),
             details={"field": field})
     return out
 
@@ -115,10 +116,10 @@ def _notify_admin_alert(tenant_id, key: str, context: dict, *,
 
 
 _PAYMENT_METHOD_AR: dict[str, str] = {
-    "cash": "نقدًا", "bank": "تحويل بنكي", "bank_transfer": "تحويل بنكي",
-    "transfer": "تحويل", "card": "بطاقة", "wallet": "محفظة",
-    "jawwal": "محفظة جوّال", "jawwal_pay": "محفظة جوّال",
-    "online": "دفع إلكترونيّ", "cheque": "شيك", "check": "شيك",
+    "cash": N_("نقدًا"), "bank": N_("تحويل بنكي"), "bank_transfer": N_("تحويل بنكي"),
+    "transfer": N_("تحويل"), "card": N_("بطاقة"), "wallet": N_("محفظة"),
+    "jawwal": N_("محفظة جوّال"), "jawwal_pay": N_("محفظة جوّال"),
+    "online": N_("دفع إلكترونيّ"), "cheque": N_("شيك"), "check": N_("شيك"),
 }
 
 
@@ -139,13 +140,13 @@ def _fmt_minutes_ar(minutes) -> str:
     hours, mins = divmod(rem, 60)
     parts = []
     if days:
-        parts.append(f"{days} يوم")
+        parts.append(_tr('%(days)s يوم', days=days))
     if hours:
-        parts.append(f"{hours} ساعة")
+        parts.append(_tr('%(hours)s ساعة', hours=hours))
     if mins:
-        parts.append(f"{mins} دقيقة")
-    human = " و".join(parts) if parts else f"{m} دقيقة"
-    return f"{human} ({m} دقيقة)" if (days or hours) else human
+        parts.append(_tr('%(mins)s دقيقة', mins=mins))
+    human = _tr(" و").join(parts) if parts else _tr('%(m)s دقيقة', m=m)
+    return _tr('%(human)s (%(m)s دقيقة)', human=human, m=m) if (days or hours) else human
 
 
 def _max_loan_minutes() -> int:
@@ -318,7 +319,7 @@ class AccountingService:
             username=str(body.get("username") or "").strip(),
         )
         if not subscriber:
-            raise RadiusValidationError("المشترك غير موجود.")
+            raise RadiusValidationError(_tr("المشترك غير موجود."))
         return subscriber
 
     def list_ledger(self, *, entry_type: str = "", subscriber_id: int | None = None,
@@ -339,7 +340,7 @@ class AccountingService:
         ويُسترجع وقتها — فلا يبقى في قائمة الدفعات «posted» وهو معكوس."""
         original = accounting_repo.get_ledger_entry(self.tenant_id, entry_id)
         if not original:
-            raise RadiusNotFound("القيد غير موجود.")
+            raise RadiusNotFound(_tr("القيد غير موجود."))
         if (original.get("entry_type") == "payment"
                 and original.get("source_type") == "payment"
                 and original.get("source_id")
@@ -350,9 +351,9 @@ class AccountingService:
                                          reason=reason)["entry"]
         source = str(original.get("source_type") or "")
         if accounting_repo.is_reversal_entry(original):
-            raise RadiusValidationError("لا يمكن عكس قيدٍ عكسيّ.")
+            raise RadiusValidationError(_tr("لا يمكن عكس قيدٍ عكسيّ."))
         if accounting_repo.ledger_entry_reversed(self.tenant_id, entry_id):
-            raise RadiusConflict("هذا القيد معكوسٌ (مُلغى) مسبقًا.")
+            raise RadiusConflict(_tr("هذا القيد معكوسٌ (مُلغى) مسبقًا."))
         # ── موجة الإصلاح 2: العكس يعكس **الأثر** لا القيد وحده ──
         # كان عكس قيد رصيدٍ نقديّ يكتب قيدًا عكسيًّا ويترك الرصيد كما هو (فلا
         # يطابق الرصيدُ الدفتر)، وعكس قيد سلفة يتركها مفتوحةً بوقتها. القاعدة:
@@ -377,7 +378,7 @@ class AccountingService:
             reason=reason,
         )
         if not entry:
-            raise RadiusNotFound("القيد غير موجود.")
+            raise RadiusNotFound(_tr("القيد غير موجود."))
         if source in _WALLET_SOURCES and (original.get("username") or original.get("subscriber_id")):
             amount = float(original.get("amount") or 0)
             delta = -amount if original.get("direction") == "credit" else amount
@@ -398,15 +399,15 @@ class AccountingService:
         loan = self.get_loan(int(original["source_id"]))
         if accounting_repo.loan_posted_settlements(self.tenant_id, int(loan["id"])):
             raise RadiusConflict(
-                "لهذه السلفة تسويات مُرحَّلة — اعكس قيود تسويتها أوّلًا ثم ألغِ السلفة.")
+                _tr("لهذه السلفة تسويات مُرحَّلة — اعكس قيود تسويتها أوّلًا ثم ألغِ السلفة."))
         if loan.get("status") != "open":
-            raise RadiusConflict("السلفة ليست مفتوحة (مُسامَحة أو ملغاة مسبقًا).")
+            raise RadiusConflict(_tr("السلفة ليست مفتوحة (مُسامَحة أو ملغاة مسبقًا)."))
         entry = accounting_repo.void_ledger_entry(
             tenant_id=self.tenant_id, entry_id=int(original["id"]), actor=actor,
             reason=reason)
         if not accounting_repo.set_loan_status(self.tenant_id, int(loan["id"]),
                                                status="voided", expect=("open",)):
-            raise RadiusConflict("السلفة ليست مفتوحة.")
+            raise RadiusConflict(_tr("السلفة ليست مفتوحة."))
         meta = json_load(loan.get("metadata_json"), default={}) or {}
         try:
             applied = int(meta.get("applied_minutes") or 0)
@@ -422,11 +423,11 @@ class AccountingService:
     def _void_settlement_entry(self, original: dict, *, actor: str, reason: str) -> dict:
         settlement = accounting_repo.get_settlement(self.tenant_id, int(original["source_id"]))
         if not settlement or int(settlement.get("ledger_entry_id") or 0) != int(original["id"]):
-            raise RadiusNotFound("التسوية غير موجودة.")
+            raise RadiusNotFound(_tr("التسوية غير موجودة."))
         loan = self.get_loan(int(settlement.get("loan_id") or 0))
         if loan.get("status") not in {"open", "settled"}:
             raise RadiusConflict(
-                "السلفة مُسامَحة أو ملغاة — لا يمكن إعادة فتحها بعكس تسويتها.")
+                _tr("السلفة مُسامَحة أو ملغاة — لا يمكن إعادة فتحها بعكس تسويتها."))
         out = accounting_repo.void_settlement(
             tenant_id=self.tenant_id, settlement_id=int(settlement["id"]), actor=actor,
             reason=reason)
@@ -440,7 +441,7 @@ class AccountingService:
         loan = self.get_loan(int(original["source_id"]))
         if loan.get("status") != "voided" or accounting_repo.ledger_entry_reversed(
                 self.tenant_id, int(loan.get("ledger_entry_id") or 0)):
-            raise RadiusConflict("لا توجد مسامحة قائمة لهذه السلفة لإلغائها.")
+            raise RadiusConflict(_tr("لا توجد مسامحة قائمة لهذه السلفة لإلغائها."))
         entry = accounting_repo.void_ledger_entry(
             tenant_id=self.tenant_id, entry_id=int(original["id"]), actor=actor,
             reason=reason)
@@ -462,7 +463,7 @@ class AccountingService:
     def get_payment(self, payment_id: int) -> dict:
         payment = accounting_repo.get_payment(self.tenant_id, payment_id)
         if not payment:
-            raise RadiusNotFound("الدفعة غير موجودة.")
+            raise RadiusNotFound(_tr("الدفعة غير موجودة."))
         return payment
 
     @atomic
@@ -484,7 +485,7 @@ class AccountingService:
             دفعاتٌ سُجِّلت قبل هذا التغيير لا تحمل رابط التسوية فلا تُعكس."""
         payment = self.get_payment(payment_id)
         if payment.get("status") == "voided":
-            raise RadiusConflict("الدفعة مُلغاة مسبقًا.")
+            raise RadiusConflict(_tr("الدفعة مُلغاة مسبقًا."))
         result = accounting_repo.void_payment(
             tenant_id=self.tenant_id,
             payment=payment,
@@ -492,14 +493,14 @@ class AccountingService:
             reason=reason,
         )
         if not result:
-            raise RadiusValidationError("قيد الدفعة في الدفتر غير موجود.")
+            raise RadiusValidationError(_tr("قيد الدفعة في الدفتر غير موجود."))
         meta = json_load(payment.get("metadata_json"), default={}) or {}
         try:
             applied = int(meta.get("applied_minutes") or 0)
         except (TypeError, ValueError):
             applied = 0
         time_result = {"status": "skipped", "minutes": 0,
-                       "reason": "لم يُطبَّق وقتٌ من هذه الدفعة على الحساب."}
+                       "reason": _tr("لم يُطبَّق وقتٌ من هذه الدفعة على الحساب.")}
         if applied > 0 and payment.get("username"):
             time_result = revoke_activation_minutes(
                 username=str(payment["username"]), minutes=applied, actor=actor,
@@ -514,7 +515,7 @@ class AccountingService:
     def _reverse_payment_settlements(self, payment: dict, *, actor: str,
                                      reason: str = "") -> dict:
         """عكسُ ما سدّدته الدفعة من سلفٍ ودين رصيد (داخل معاملة الإلغاء)."""
-        note = reason or f"إلغاء الدفعة #{payment['id']}"
+        note = reason or _tr('إلغاء الدفعة #%(id)s', id=payment['id'])
         loans: list[dict] = []
         for st in accounting_repo.payment_settlements(self.tenant_id, int(payment["id"])):
             loan = accounting_repo.get_loan(self.tenant_id, int(st.get("loan_id") or 0))
@@ -549,7 +550,7 @@ class AccountingService:
             account = adapter.get_account(username)
         except _NotFound:
             raise RadiusConflict(
-                "المشترك صاحب القيد مؤرشف أو غير موجود — لا يمكن عكس أثره على الرصيد.") from None
+                _tr("المشترك صاحب القيد مؤرشف أو غير موجود — لا يمكن عكس أثره على الرصيد.")) from None
         adapter.upsert_account(_replace(
             account, balance=round_money(float(account.balance or 0) + float(delta))))
 
@@ -565,7 +566,7 @@ class AccountingService:
         # المبلغ يُقرَّب لقرشين أوّلًا ثمّ يُفحص: 0.004 كان يمرّ «> 0» ويُسجَّل 0.00.
         amount = round_money(_to_float(body.get("amount"), field="amount", minimum=0))
         if amount < 0.01:
-            raise NonFiniteNumber("المبلغ يجب أن يكون أكبر من صفر.", details={"field": "amount"})
+            raise NonFiniteNumber(_tr("المبلغ يجب أن يكون أكبر من صفر."), details={"field": "amount"})
         action_amount(amount, field="amount", kind="payment")
         # عملة الدفعة = عملة الرصيد/النظام ما لم تُرسَل عملةٌ مدعومة صراحةً — لا
         # عملة العرض: لا سعر صرف في النظام، والتطبيق والويب يرسلان عملة النظام.
@@ -574,7 +575,7 @@ class AccountingService:
         notes = str(body.get("notes") or "")[:500]
         rounding = str(body.get("rounding_mode") or "floor")
         if rounding not in {"floor", "ceil", "nearest"}:
-            raise RadiusValidationError("طريقة التقريب غير معروفة (floor أو ceil أو nearest).")
+            raise RadiusValidationError(_tr("طريقة التقريب غير معروفة (floor أو ceil أو nearest)."))
 
         # The subscriber's stored custom_price is the OFFICIAL base price for all
         # money math (full payment, partial payment, renewal, loan). It overrides
@@ -736,8 +737,7 @@ class AccountingService:
         201 بصمت ويُصفّر السعر). مشترك بين الـAPI والويب (create_payment)."""
         if discount > 0 and discount > float(plan_price or 0) + 0.005:
             raise RadiusValidationError(
-                f"الخصم ({discount:,.2f}) أكبر من سعر الباقة ({float(plan_price or 0):,.2f}) — "
-                "لا يمكن أن يتجاوز الخصم السعر.")
+                _tr('الخصم (%(discount)s) أكبر من سعر الباقة (%(v)s) — لا يمكن أن يتجاوز الخصم السعر.', discount=format(discount, ',.2f'), v=format(float(plan_price or 0), ',.2f')))
 
     def check_payment_discount(self, body: dict) -> None:
         """فحصٌ مبكّر للقراءة فقط (قبل أيّ بوّابة/أثر) — نفس قاعدة create_payment."""
@@ -795,7 +795,7 @@ class AccountingService:
         if duration_minutes <= 0:
             if body.get("duration_minutes") in (None, ""):
                 # كان: «duration_minutes must be an integer» لسلفةٍ بلا أيام ولا ساعات.
-                raise RadiusValidationError("حدّد مدّة السلفة (أيام و/أو ساعات).")
+                raise RadiusValidationError(_tr("حدّد مدّة السلفة (أيام و/أو ساعات)."))
             duration_minutes = _to_int(
                 body.get("duration_minutes"),
                 field="duration_minutes",
@@ -814,11 +814,10 @@ class AccountingService:
                     raise NonFiniteNumber(limits.extend_too_long_msg(),
                                           details={"field": "duration_minutes"})
                 raise RadiusValidationError(
-                    f"مدة الدين تتجاوز الحدّ الأقصى المعقول ({cap_minutes // (24 * 60)} يومًا)."
+                    _tr('مدة الدين تتجاوز الحدّ الأقصى المعقول (%(v)s يومًا).', v=cap_minutes // (24 * 60))
                 )
             raise RadiusValidationError(
-                f"مدة السلفة المجانية تتجاوز الحدّ المسموح ({max_minutes // 60} ساعة) — "
-                "للمُدد الأطول استخدم «تسجيل دين (مدين)»."
+                _tr('مدة السلفة المجانية تتجاوز الحدّ المسموح (%(v)s ساعة) — للمُدد الأطول استخدم «تسجيل دين (مدين)».', v=max_minutes // 60)
             )
         now = datetime.utcnow()
         # F1: قيمة السلفة تُحسب من سعر الباقة بعملة النظام — فالعملة دائمًا عملة
@@ -906,8 +905,8 @@ class AccountingService:
             "username": subscriber.get("username") or "—",
             "duration": _fmt_minutes_ar(duration_minutes),
             "amount": (_format_money(amount, _loan_cur)
-                       if amount > 0 else "مجانية (بلا قيمة)"),
-            "status": ("مُسجَّلة (دين)" if is_debt_loan else "سلفة مجانية"),
+                       if amount > 0 else N_("مجانية (بلا قيمة)")),
+            "status": (N_("مُسجَّلة (دين)") if is_debt_loan else N_("سلفة مجانية")),
             "actor": actor,
             "reason": (str(body.get("reason") or "").strip() or "—"),
         }, dedup_key=f"loan:{loan.get('id')}")
@@ -954,8 +953,8 @@ class AccountingService:
             explicit = _to_int(raw_minutes, field="duration_minutes", minimum=1)
             if duration_minutes and duration_minutes != explicit:
                 raise RadiusValidationError(
-                    "حدّد مدّة السلفة مرّةً واحدة: الأيام/الساعات أو «duration_minutes» "
-                    "(القيمتان المُرسَلتان مختلفتان).")
+                    _tr("حدّد مدّة السلفة مرّةً واحدة: الأيام/الساعات أو «duration_minutes» "
+                    "(القيمتان المُرسَلتان مختلفتان)."))
             duration_minutes = explicit
         # Operator-picks-DAYS flow: when the modal prices the loan from its
         # duration (price_from_days), derive the loan VALUE from the subscriber's
@@ -994,7 +993,7 @@ class AccountingService:
     def get_loan(self, loan_id: int) -> dict:
         loan = accounting_repo.get_loan(self.tenant_id, loan_id)
         if not loan:
-            raise RadiusNotFound("السلفة غير موجودة.")
+            raise RadiusNotFound(_tr("السلفة غير موجودة."))
         return loan
 
     def loan_totals(self, *, status: str = "", subscriber_id: int | None = None,
@@ -1015,32 +1014,32 @@ class AccountingService:
         * العملة يجب أن تطابق عملة السلفة (لا تحويل عملات)."""
         loan = self.get_loan(loan_id)
         if subscriber_id is not None and int(loan.get("subscriber_id") or 0) != int(subscriber_id):
-            raise RadiusNotFound("السلفة غير موجودة لهذا المشترك.")
+            raise RadiusNotFound(_tr("السلفة غير موجودة لهذا المشترك."))
         if loan["status"] != "open":
-            raise RadiusConflict("السلفة ليست مفتوحة (مُسوّاة أو مُسامَحة مسبقًا).")
+            raise RadiusConflict(_tr("السلفة ليست مفتوحة (مُسوّاة أو مُسامَحة مسبقًا)."))
         outstanding = float(loan.get("outstanding") or 0)
         raw = body.get("amount")
         requested = 0.0 if raw in (None, "") else _to_float(raw, field="amount", minimum=0)
         if 0 < requested and round_money(requested) <= 0:
             # 0.004 كان يكتب قيد تسوية بقيمة 0.00 ويُبقي السلفة كما هي.
-            raise NonFiniteNumber("مبلغ التسوية أقلّ من قرشٍ واحد (0.01).",
+            raise NonFiniteNumber(_tr("مبلغ التسوية أقلّ من قرشٍ واحد (0.01)."),
                                   details={"field": "amount"})
         requested = round_money(requested)
         loan_value = float(loan.get("amount") or 0)
         if loan_value <= 0 and requested > 0:
             raise RadiusValidationError(
-                "هذه سلفة مجّانيّة (بلا قيمة ماليّة) — لا يُقبل مبلغ لتسويتها؛ "
-                "أغلقها بلا مبلغ.")
+                _tr("هذه سلفة مجّانيّة (بلا قيمة ماليّة) — لا يُقبل مبلغ لتسويتها؛ "
+                "أغلقها بلا مبلغ."))
         if requested <= 0:
             requested = outstanding
         if requested > outstanding + 0.005:
             raise RadiusValidationError(
-                f"المبلغ ({requested:.2f}) يتجاوز المتبقّي على السلفة ({outstanding:.2f}).")
+                _tr('المبلغ (%(requested)s) يتجاوز المتبقّي على السلفة (%(outstanding)s).', requested=format(requested, '.2f'), outstanding=format(outstanding, '.2f')))
         loan_currency = normalize_currency(loan.get("currency"))
         currency = normalize_currency(body.get("currency"), default=loan_currency)
         if currency != loan_currency:
             raise RadiusValidationError(
-                f"عملة التسوية ({currency}) يجب أن تطابق عملة السلفة ({loan_currency}).")
+                _tr('عملة التسوية (%(currency)s) يجب أن تطابق عملة السلفة (%(loan_currency)s).', currency=currency, loan_currency=loan_currency))
         settlement = accounting_repo.settle_loan(
             tenant_id=self.tenant_id,
             loan=loan,
@@ -1057,13 +1056,13 @@ class AccountingService:
     def writeoff_loan(self, loan_id: int, *, actor: str, notes: str = "") -> dict:
         loan = self.get_loan(loan_id)
         if loan["status"] != "open":
-            raise RadiusConflict("السلفة ليست مفتوحة.")
+            raise RadiusConflict(_tr("السلفة ليست مفتوحة."))
         return accounting_repo.writeoff_loan(
             tenant_id=self.tenant_id,
             loan=loan,
             currency=normalize_currency(loan.get("currency")),
             created_by=actor,
-            notes=(notes or "مسامحة سلفة")[:500],
+            notes=(notes or N_("مسامحة سلفة"))[:500],
         )
 
     def open_loans_for(self, *, subscriber_id: int) -> list[dict]:
@@ -1103,7 +1102,7 @@ class AccountingService:
             if loan_id in seen:
                 if seen[loan_id] != kind:
                     raise RadiusValidationError(
-                        f"السلفة #{loan_id} مكرّرة في الطلب بخيارين مختلفين.")
+                        _tr('السلفة #%(loan_id)s مكرّرة في الطلب بخيارين مختلفين.', loan_id=loan_id))
                 continue
             seen[loan_id] = kind
             if kind not in {"settle", "writeoff"}:
@@ -1112,7 +1111,7 @@ class AccountingService:
             if not loan:
                 continue
             if subscriber_id is not None and int(loan.get("subscriber_id") or 0) != int(subscriber_id):
-                raise RadiusValidationError(f"السلفة #{loan_id} لا تخصّ هذا المشترك.")
+                raise RadiusValidationError(_tr('السلفة #%(loan_id)s لا تخصّ هذا المشترك.', loan_id=loan_id))
             if loan.get("status") != "open":
                 continue
             if kind == "writeoff":
@@ -1124,8 +1123,7 @@ class AccountingService:
             pay_cur = normalize_currency(default_currency())
             if loan_cur != pay_cur:
                 raise RadiusValidationError(
-                    f"السلفة #{loan_id} بعملة {loan_cur} ولا تُسدَّد من دفعةٍ بعملة "
-                    f"{pay_cur} — سوِّها من «تسوية السلفة» بعملتها أو سامحها.")
+                    _tr('السلفة #%(loan_id)s بعملة %(loan_cur)s ولا تُسدَّد من دفعةٍ بعملة %(pay_cur)s — سوِّها من «تسوية السلفة» بعملتها أو سامحها.', loan_id=loan_id, loan_cur=loan_cur, pay_cur=pay_cur))
             due = float(loan.get("outstanding") or 0)
             pay = due if remaining_cash is None else min(due, remaining_cash)
             pay = round(max(pay, 0.0), 2)
@@ -1176,7 +1174,7 @@ class AccountingService:
                     accounting_repo.settle_loan(
                         tenant_id=self.tenant_id, loan=loan, amount=amt,
                         currency=currency, method="payment", created_by=actor,
-                        notes="تسوية مع دفعة", metadata={"settlement_type": "with_payment"},
+                        notes=N_("تسوية مع دفعة"), metadata={"settlement_type": "with_payment"},
                         payment_id=payment_id,
                     )
                     settled_total += amt
@@ -1184,7 +1182,7 @@ class AccountingService:
                 elif item.get("action") == "writeoff":
                     accounting_repo.writeoff_loan(
                         tenant_id=self.tenant_id, loan=loan, currency=currency,
-                        created_by=actor, notes="مسامحة سلفة",
+                        created_by=actor, notes=N_("مسامحة سلفة"),
                     )
                     writeoff_ids.append(loan_id)
             except RadiusConflict:
@@ -1247,7 +1245,7 @@ class AccountingService:
             return accounting_repo.profit_loss_summary(self.tenant_id)
         if report_type == "distributor_debts":
             return accounting_repo.distributor_debts_report(self.tenant_id)
-        raise RadiusValidationError("نوع التقرير غير مدعوم.")
+        raise RadiusValidationError(_tr("نوع التقرير غير مدعوم."))
 
     # ── أعمدة كلّ تقرير (بالترتيب) — كي يَخرج التصدير برأسه حتى بلا بيانات،
     # وكي يعرض الويب والـAPI تسمياتٍ عربيّة لا مفاتيح خامّة. مفاتيح البيانات
@@ -1284,9 +1282,9 @@ class AccountingService:
 
     # قيمٌ خامّة تُعرَّب في العرض والتصدير (البيانات في JSON تبقى كما هي).
     _VALUE_LABELS = {
-        "status": {"open": "مفتوحة", "settled": "مسدّدة", "voided": "ملغاة / مُسامَحة",
-                   "posted": "مُرحَّلة", "pending": "معلّقة"},
-        "source": {"accounting_ledger_entries": "دفتر القيود المحاسبيّة"},
+        "status": {"open": N_("مفتوحة"), "settled": N_("مسدّدة"), "voided": N_("ملغاة / مُسامَحة"),
+                   "posted": N_("مُرحَّلة"), "pending": N_("معلّقة")},
+        "source": {"accounting_ledger_entries": N_("دفتر القيود المحاسبيّة")},
     }
 
     @classmethod
@@ -1328,47 +1326,47 @@ class AccountingService:
     # المفاتيح هنا تطابق مفاتيح أعمدة repos/accounting_repo بالضبط؛
     # أي عمود غير معرّف يظهر بمفتاحه الخام كاحتياط (لن يكسر التصدير).
     _PDF_REPORT_TITLES = {
-        "daily": "تقرير المبيعات اليومية",
-        "monthly": "تقرير المبيعات الشهرية",
-        "yearly": "تقرير المبيعات السنوية",
-        "subscriber_payments": "تقرير دفعات المستفيدين",
-        "loans": "تقرير السلف",
-        "activations": "تقرير التفعيلات",
-        "card_sales": "تقرير مبيعات الكروت",
-        "profit_loss": "تقرير الربح والخسارة",
-        "distributor_debts": "تقرير ديون الموزعين",
+        "daily": N_("تقرير المبيعات اليومية"),
+        "monthly": N_("تقرير المبيعات الشهرية"),
+        "yearly": N_("تقرير المبيعات السنوية"),
+        "subscriber_payments": N_("تقرير دفعات المستفيدين"),
+        "loans": N_("تقرير السلف"),
+        "activations": N_("تقرير التفعيلات"),
+        "card_sales": N_("تقرير مبيعات الكروت"),
+        "profit_loss": N_("تقرير الربح والخسارة"),
+        "distributor_debts": N_("تقرير ديون الموزعين"),
     }
     _PDF_COLUMN_LABELS = {
-        "period": "الفترة",
-        "count": "عدد العمليات",
-        "total": "الإجمالي",
-        "subscriber_id": "رقم المستفيد",
-        "username": "اسم المستخدم",
-        "last_entry_at": "آخر حركة",
-        "status": "الحالة",
-        "transactions": "عدد العمليات",
-        "subscribers": "عدد المشتركين",
-        "avg_amount": "متوسّط العملية",
-        "outstanding": "المتبقّي",
-        "by_currency": "حسب العملة",
-        "duration_minutes": "الدقائق",
-        "activation_count": "عدد التفعيلات",
-        "earned_minutes": "الدقائق المكتسبة",
-        "batch_id": "رقم الحزمة",
-        "credits": "الإيرادات (دائن)",
-        "debits": "المصروفات (مدين)",
-        "payments": "دفعات محصَّلة (صافي الإلغاء)",
-        "card_sales": "مبيعات الكروت",
-        "expenses": "مصروفات الشركة",
-        "net": "الصافي",
-        "entries": "عدد القيود",
-        "source": "المصدر",
-        "distributor_id": "رقم الموزع",
-        "name": "اسم الموزع",
-        "display_name": "الاسم المعروض",
-        "debt_balance": "رصيد الدين",
-        "balance": "الرصيد",
-        "credit_limit": "سقف الائتمان",
+        "period": N_("الفترة"),
+        "count": N_("عدد العمليات"),
+        "total": N_("الإجمالي"),
+        "subscriber_id": N_("رقم المستفيد"),
+        "username": N_("اسم المستخدم"),
+        "last_entry_at": N_("آخر حركة"),
+        "status": N_("الحالة"),
+        "transactions": N_("عدد العمليات"),
+        "subscribers": N_("عدد المشتركين"),
+        "avg_amount": N_("متوسّط العملية"),
+        "outstanding": N_("المتبقّي"),
+        "by_currency": N_("حسب العملة"),
+        "duration_minutes": N_("الدقائق"),
+        "activation_count": N_("عدد التفعيلات"),
+        "earned_minutes": N_("الدقائق المكتسبة"),
+        "batch_id": N_("رقم الحزمة"),
+        "credits": N_("الإيرادات (دائن)"),
+        "debits": N_("المصروفات (مدين)"),
+        "payments": N_("دفعات محصَّلة (صافي الإلغاء)"),
+        "card_sales": N_("مبيعات الكروت"),
+        "expenses": N_("مصروفات الشركة"),
+        "net": N_("الصافي"),
+        "entries": N_("عدد القيود"),
+        "source": N_("المصدر"),
+        "distributor_id": N_("رقم الموزع"),
+        "name": N_("اسم الموزع"),
+        "display_name": N_("الاسم المعروض"),
+        "debt_balance": N_("رصيد الدين"),
+        "balance": N_("الرصيد"),
+        "credit_limit": N_("سقف الائتمان"),
     }
     # الأعمدة المالية تُنسَّق كمبالغ (فواصل آلاف + منزلتان عشريتان)
     _PDF_MONEY_COLUMNS = {
@@ -1392,8 +1390,8 @@ class AccountingService:
         from reportlab.platypus import Spacer
 
         items, columns = self._report_export_rows(report_type=report_type)
-        title = self._PDF_REPORT_TITLES.get(report_type, f"تقرير {report_type}")
-        subtitle = f"عدد السجلات: {len(items)}"
+        title = self._PDF_REPORT_TITLES.get(report_type, _tr('تقرير %(report_type)s', report_type=report_type))
+        subtitle = _tr('عدد السجلات: %(v)s', v=len(items))
 
         story: list = []
         if not items:
@@ -1435,7 +1433,7 @@ class AccountingService:
                 totals_row = []
                 for index, column in enumerate(columns):
                     if index == 0 and column not in sums:
-                        totals_row.append("الإجمالي")
+                        totals_row.append(N_("الإجمالي"))
                     elif column in self._PDF_MONEY_COLUMNS:
                         totals_row.append(fmt_money(sums[column]))
                     elif column in self._PDF_COUNT_COLUMNS:
@@ -1444,7 +1442,7 @@ class AccountingService:
                         totals_row.append("")
 
             # بطاقات KPI خفيفة أعلى الجدول (الإجمالي المالي + عدد السجلات)
-            kpis: list[tuple[str, str]] = [("عدد السجلات", fmt_int(len(items)))]
+            kpis: list[tuple[str, str]] = [(N_("عدد السجلات"), fmt_int(len(items)))]
             money_cols = [c for c in columns if c in self._PDF_MONEY_COLUMNS]
             for column in money_cols[:3]:
                 kpis.append((
@@ -1460,7 +1458,7 @@ class AccountingService:
             subtitle=subtitle,
             story=story,
             landscape_mode=True,
-            footer_note="HobeRadius • التقارير المالية",
+            footer_note=N_("HobeRadius • التقارير المالية"),
         )
 
     def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
@@ -1481,7 +1479,7 @@ class AccountingService:
                 for e in value if isinstance(e, dict))
         if column == "username" and item.get("voided") and value:
             # عمودُ ``voided`` مخفيّ ⇒ الشارةُ تُحمل في الاسم كما في الجدول
-            return f"{value} (ملغاة)"
+            return _tr('%(value)s (ملغاة)', value=value)
         return self._export_value(self.value_label(column, value))
 
     @staticmethod
@@ -1563,17 +1561,17 @@ class AccountingService:
                 out.append("")
                 continue
             if not isinstance(value, str):
-                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+                raise RadiusValidationError(_tr("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم."))
             raw = value.strip()
             try:
                 _date.fromisoformat(raw)
             except ValueError:
-                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+                raise RadiusValidationError(_tr("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم."))
             if len(raw) != 10:
-                raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+                raise RadiusValidationError(_tr("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم."))
             out.append(raw)
         if out[0] and out[1] and out[0] > out[1]:
-            raise RadiusValidationError("تاريخ «من» يجب أن يسبق تاريخ «إلى».")
+            raise RadiusValidationError(_tr("تاريخ «من» يجب أن يسبق تاريخ «إلى»."))
         return out[0], out[1]
 
     @classmethod
@@ -1638,7 +1636,7 @@ class AccountingService:
     def get_report_snapshot(self, snapshot_id: int) -> dict:
         snapshot = accounting_repo.get_report_snapshot(self.tenant_id, snapshot_id)
         if not snapshot:
-            raise RadiusValidationError("اللقطة غير موجودة.")
+            raise RadiusValidationError(_tr("اللقطة غير موجودة."))
         return snapshot
 
 

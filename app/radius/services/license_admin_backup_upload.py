@@ -5,6 +5,7 @@ explicit opt-in env flag is enabled and the artifact is below the configured
 size cap.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import base64
 import hashlib
@@ -47,36 +48,35 @@ def friendly_panel_backup_error(result: dict[str, Any]) -> str:
     hay = f"{status} {raw_msg}".lower()
     # Bridge not wired on this instance.
     if status in {"disabled", "config_missing"}:
-        return ("جسر لوحة التراخيص غير مُعدّ — افتح صفحة «ترخيص النظام» واضبط "
+        return (N_("جسر لوحة التراخيص غير مُعدّ — افتح صفحة «ترخيص النظام» واضبط "
                 "رابط اللوحة ومفتاح الترخيص (HOBERADIUS_ADMIN_BASE_URL + "
-                "HOBERADIUS_LICENSE_KEY) ثم أعد المحاولة.")
+                "HOBERADIUS_LICENSE_KEY) ثم أعد المحاولة."))
     if status == "timeout":
-        return ("انتهت مهلة الرفع إلى لوحة التراخيص — قد يكون حجم النسخة كبيرًا أو "
+        return (N_("انتهت مهلة الرفع إلى لوحة التراخيص — قد يكون حجم النسخة كبيرًا أو "
                 "الشبكة بطيئة. أعد المحاولة، وإن تكرّر فقد يحتاج خادم اللوحة لرفع "
-                "حدّ مهلة/حجم الرفع.")
+                "حدّ مهلة/حجم الرفع."))
     if status == "unavailable":
-        return (f"تعذّر الوصول إلى لوحة التراخيص ({raw_msg or 'خطأ اتصال'}). تأكّد أن "
-                "رابط اللوحة صحيح ويعمل ثم أعد المحاولة.")
+        return (_tr('تعذّر الوصول إلى لوحة التراخيص (%(v)s). تأكّد أن رابط اللوحة صحيح ويعمل ثم أعد المحاولة.', v=raw_msg or N_('خطأ اتصال')))
     # Size limits (either our local cap or the panel/proxy 413).
     if "too_large" in hay or http_status == 413 or "entity too large" in hay:
-        return ("حجم النسخة يتجاوز الحدّ المسموح للرفع إلى لوحة التراخيص. ارفع حدّ "
+        return (N_("حجم النسخة يتجاوز الحدّ المسموح للرفع إلى لوحة التراخيص. ارفع حدّ "
                 "حجم الرفع على خادم اللوحة (client_max_body_size في الوكيل + حدّ "
-                "اللوحة)، أو قلّل الحجم.")
+                "اللوحة)، أو قلّل الحجم."))
     if "customer_pending" in hay or "customer_disabled" in hay:
-        return ("حساب العميل على لوحة التراخيص غير مُفعّل بعد — راجع لوحة التراخيص "
-                "لتفعيل بطاقة العميل ثم أعد المحاولة.")
+        return (N_("حساب العميل على لوحة التراخيص غير مُفعّل بعد — راجع لوحة التراخيص "
+                "لتفعيل بطاقة العميل ثم أعد المحاولة."))
     if ("not_provisioned" in hay or "service_disabled" in hay
             or "backups_disabled" in hay or "not_subscribed" in hay):
-        return ("خدمة النسخ الاحتياطي غير مُجهّزة على لوحة التراخيص لهذا العميل "
-                "(خدمة مدفوعة) — أرسل «طلب تفعيل» أولًا.")
+        return (N_("خدمة النسخ الاحتياطي غير مُجهّزة على لوحة التراخيص لهذا العميل "
+                "(خدمة مدفوعة) — أرسل «طلب تفعيل» أولًا."))
     if status in {"unauthorized", "forbidden"} or http_status in (401,) or "unauthorized" in hay:
-        return ("رفض الترخيص: مفتاح الترخيص غير صالح أو غير مُعرَّف على لوحة "
-                "التراخيص — تحقّق من HOBERADIUS_LICENSE_KEY في صفحة «ترخيص النظام».")
+        return (N_("رفض الترخيص: مفتاح الترخيص غير صالح أو غير مُعرَّف على لوحة "
+                "التراخيص — تحقّق من HOBERADIUS_LICENSE_KEY في صفحة «ترخيص النظام»."))
     # Fallback: surface the real reason the panel returned (never a blank fail).
-    detail = raw_msg or status or "سبب غير محدّد"
+    detail = raw_msg or status or _tr("سبب غير محدّد")
     if http_status:
         detail = f"{detail} (HTTP {http_status})"
-    return f"رفضت لوحة التراخيص رفع النسخة: {detail}"
+    return _tr('رفضت لوحة التراخيص رفع النسخة: %(detail)s', detail=detail)
 
 
 def _truthy(value: str | None) -> bool:

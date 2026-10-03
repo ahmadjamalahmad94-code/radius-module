@@ -6,6 +6,7 @@ The public port is allocated from the SAME host-published range
 collisions with BOTH pools (npc_remote_port_mappings + active rows here).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Optional
 
@@ -49,7 +50,7 @@ def allocate_port(*, base: int = PORT_RANGE_BASE,
         if p not in used:
             return p
     raise RuntimeError(
-        f"نطاق منافذ الوصول البعيد ممتلئ ({base}-{ceiling}) — أغلق جلسات قديمة")
+        _tr('نطاق منافذ الوصول البعيد ممتلئ (%(base)s-%(ceiling)s) — أغلق جلسات قديمة', base=base, ceiling=ceiling))
 
 
 def create_session(*, tenant_id: int, router_id: int, service: str,

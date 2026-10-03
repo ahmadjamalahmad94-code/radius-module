@@ -6,6 +6,7 @@ NasDevicesService — منطق إدارة الـ NAS.
 - كل عملية كتابة → audit.record(...).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import logging
@@ -60,7 +61,7 @@ class NasDevicesService:
 
     def update(self, *, actor: str, device: NasDevice) -> NasDevice:
         if device.id is None:
-            raise RadiusValidationError("معرّف الراوتر مطلوب للتعديل.")
+            raise RadiusValidationError(_tr("معرّف الراوتر مطلوب للتعديل."))
         existing = self._adapter.get_nas(device.id)
         device = _validate(device, existing=existing)
         _pop_radius_sync()
@@ -154,19 +155,19 @@ _TEXT_MAX = {
     "api_password": 256, "tags": 1000, "metadata": 10000,
 }
 _TEXT_LABELS = {
-    "name": "اسم الراوتر", "shortname": "الاسم المختصر", "location": "الموقع",
-    "coordinates": "الإحداثيات", "description": "الوصف",
-    "snmp_community": "SNMP community", "api_user": "مستخدم API",
-    "api_password": "كلمة سر API", "tags": "الوسوم", "metadata": "البيانات الإضافية",
+    "name": N_("اسم الراوتر"), "shortname": N_("الاسم المختصر"), "location": N_("الموقع"),
+    "coordinates": N_("الإحداثيات"), "description": N_("الوصف"),
+    "snmp_community": "SNMP community", "api_user": N_("مستخدم API"),
+    "api_password": N_("كلمة سر API"), "tags": N_("الوسوم"), "metadata": N_("البيانات الإضافية"),
 }
 # (field, label, min, max)
 _PORT_FIELDS = (
-    ("auth_port", "منفذ المصادقة", 1, 65535),
-    ("acct_port", "منفذ المحاسبة", 1, 65535),
-    ("coa_port", "منفذ CoA", 1, 65535),
-    ("api_port", "منفذ API", 1, 65535),
-    ("ssh_port", "منفذ SSH", 1, 65535),
-    ("ports", "عدد المنافذ", 0, 65535),
+    ("auth_port", N_("منفذ المصادقة"), 1, 65535),
+    ("acct_port", N_("منفذ المحاسبة"), 1, 65535),
+    ("coa_port", N_("منفذ CoA"), 1, 65535),
+    ("api_port", N_("منفذ API"), 1, 65535),
+    ("ssh_port", N_("منفذ SSH"), 1, 65535),
+    ("ports", N_("عدد المنافذ"), 0, 65535),
 )
 
 
@@ -175,16 +176,16 @@ def normalize_nas_address(raw) -> str:
     Raises RadiusValidationError (Arabic) for anything else."""
     addr = str(raw or "").strip()
     if not addr:
-        raise RadiusValidationError("عنوان الراوتر مطلوب.")
+        raise RadiusValidationError(_tr("عنوان الراوتر مطلوب."))
     if len(addr) > 253:
-        raise RadiusValidationError("عنوان الراوتر طويل جدًا.")
+        raise RadiusValidationError(_tr("عنوان الراوتر طويل جدًا."))
     if "%" in addr:
         # f06-H2: «fe80::1%eth0» — ip_address() يقبل معرّف النطاق (zone id)
         # لكنّ FreeRADIUS يرفضه («Invalid address») فيتعطّل الرديوس لكلّ
         # الراوترات عند إعادة التشغيل التالية.
         raise RadiusValidationError(
-            "عنوان IPv6 بمعرّف نطاق (مثل ‎%eth0) غير مدعوم في الرديوس — "
-            "أدخل العنوان بلا «%…» (عنوان IPv4 أو IPv6 عاديّ).")
+            _tr("عنوان IPv6 بمعرّف نطاق (مثل ‎%eth0) غير مدعوم في الرديوس — "
+            "أدخل العنوان بلا «%…» (عنوان IPv4 أو IPv6 عاديّ)."))
     try:
         ip = ipaddress.ip_address(addr)
     except ValueError:
@@ -192,23 +193,23 @@ def normalize_nas_address(raw) -> str:
     if ip is not None:
         if ip.is_unspecified or ip.is_multicast:
             raise RadiusValidationError(
-                f"العنوان {addr[:64]} ليس عنوان جهازٍ صالحًا للراوتر.")
+                _tr('العنوان %(v)s ليس عنوان جهازٍ صالحًا للراوتر.', v=addr[:64]))
         # «::ffff:192.0.2.1» IS 192.0.2.1 — store the IPv4 form so the
         # duplicate-address check (and the FreeRADIUS client key) sees it.
         mapped = getattr(ip, "ipv4_mapped", None)
         return str(mapped if mapped is not None else ip)
     if "/" in addr:
         raise RadiusValidationError(
-            "عنوان الراوتر يجب أن يكون عنوان IP واحدًا، لا نطاق شبكة (CIDR).")
+            _tr("عنوان الراوتر يجب أن يكون عنوان IP واحدًا، لا نطاق شبكة (CIDR)."))
     labels = addr.rstrip(".").split(".")
     if all(lbl.isdigit() for lbl in labels if lbl):
-        raise RadiusValidationError(f"عنوان IP غير صالح: {addr[:64]}")
+        raise RadiusValidationError(_tr('عنوان IP غير صالح: %(v)s', v=addr[:64]))
     # A hostname must be a real FQDN («router.example.com»): a single word
     # («abc») or a numeric TLD is a typo, not a router address.
     if (len(labels) < 2 or not labels[-1].isalpha()
             or not all(_HOST_LABEL.match(lbl) for lbl in labels)):
         raise RadiusValidationError(
-            "عنوان الراوتر غير صالح — أدخل عنوان IP (مثل 10.0.0.1) أو اسم نطاق صحيحًا.")
+            _tr("عنوان الراوتر غير صالح — أدخل عنوان IP (مثل 10.0.0.1) أو اسم نطاق صحيحًا."))
     return addr.rstrip(".").lower()
 
 
@@ -241,7 +242,7 @@ def check_restorable_nas(tenant_id: int, nas_id: int) -> None:
         address = normalize_nas_address(row["address"])
     except RadiusValidationError as exc:
         raise RadiusValidationError(
-            f"لا يمكن استعادة الراوتر: {exc.message} عدّل العنوان بعد إضافته من جديد.",
+            _tr('لا يمكن استعادة الراوتر: %(message)s عدّل العنوان بعد إضافته من جديد.', message=exc.message),
             details={"field": "address", "code": "nas_address_invalid"}) from None
     for addr in (address, str(row["mra"]).strip(), str(row["vpa"]).strip()):
         if not addr:
@@ -250,11 +251,9 @@ def check_restorable_nas(tenant_id: int, nas_id: int) -> None:
         if owner is None:
             continue
         same_tenant = int(owner["tenant_id"]) == int(tenant_id)
-        who = f" «{owner['name']}»" if same_tenant and owner["name"] else " آخر"
+        who = f" «{owner['name']}»" if same_tenant and owner["name"] else N_(" آخر")
         raise RadiusConflict(
-            f"لا يمكن استعادة الراوتر: العنوان {addr} مستخدم الآن لراوتر{who} — "
-            "راوتران بعنوانٍ واحد يعطّلان الرديوس. احذف ذلك الراوتر أو غيّر "
-            "عنوانه أولًا، ثم أعد المحاولة.",
+            _tr('لا يمكن استعادة الراوتر: العنوان %(addr)s مستخدم الآن لراوتر%(who)s — راوتران بعنوانٍ واحد يعطّلان الرديوس. احذف ذلك الراوتر أو غيّر عنوانه أولًا، ثم أعد المحاولة.', addr=addr, who=who),
             details={"field": "address", "code": "nas_address_conflict",
                      "existing_nas_id": owner["id"] if same_tenant else None})
 
@@ -332,7 +331,7 @@ def _request_tenant_id() -> int:
 
 def _name_conflict(name: str, owner_id=None) -> RadiusConflict:
     return RadiusConflict(
-        f"اسم الراوتر «{str(name)[:100]}» مستخدم لراوتر آخر — اختر اسمًا مختلفًا.",
+        _tr('اسم الراوتر «%(v)s» مستخدم لراوتر آخر — اختر اسمًا مختلفًا.', v=str(name)[:100]),
         details={"field": "name", "code": "nas_name_conflict",
                  "existing_nas_id": owner_id},
     )
@@ -366,22 +365,20 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
     if changed("vendor") or vendor != device.vendor:
         if vendor not in NAS_VENDORS:
             raise RadiusValidationError(
-                f"نوع الجهاز غير معروف: «{str(device.vendor)[:40]}». "
-                f"المسموح: {'، '.join(NAS_VENDORS)}.")
+                _tr('نوع الجهاز غير معروف: «%(v)s». المسموح: %(v2)s.', v=str(device.vendor)[:40], v2='، '.join(NAS_VENDORS)))
         changes["vendor"] = vendor
 
     if changed("nas_type"):
         nas_type = str(device.nas_type or "").strip().lower() or "hotspot"
         if nas_type not in NAS_TYPES_ALLOWED:
             raise RadiusValidationError(
-                f"نوع الخدمة غير معروف: «{str(device.nas_type)[:40]}». "
-                f"المسموح: {'، '.join(NAS_TYPES_ALLOWED)}.")
+                _tr('نوع الخدمة غير معروف: «%(v)s». المسموح: %(v2)s.', v=str(device.nas_type)[:40], v2='، '.join(NAS_TYPES_ALLOWED)))
         changes["nas_type"] = nas_type
 
     if changed("name"):
         name = str(device.name or "").strip()
         if not name:
-            raise RadiusValidationError("اسم الراوتر مطلوب.")
+            raise RadiusValidationError(_tr("اسم الراوتر مطلوب."))
         changes["name"] = name
         tenant = ((existing.tenant_id if existing is not None else None)
                   or device.tenant_id or _request_tenant_id())
@@ -393,7 +390,7 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
         val = changes.get(field, getattr(device, field))
         if changed(field) and val is not None and len(str(val)) > limit:
             raise RadiusValidationError(
-                f"«{_TEXT_LABELS[field]}» طويل جدًا (الحد الأقصى {limit} حرفًا).")
+                _tr('«%(v)s» طويل جدًا (الحد الأقصى %(limit)s حرفًا).', v=_TEXT_LABELS[field], limit=limit))
 
     for field, label, lo, hi in _PORT_FIELDS:
         if changed(field):
@@ -412,10 +409,9 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
         if owner is not None:
             same_tenant = int(owner["tenant_id"]) == int(device.tenant_id or 0) or (
                 existing is not None and int(owner["tenant_id"]) == int(existing.tenant_id))
-            who = f" «{owner['name']}»" if same_tenant and owner["name"] else " آخر"
+            who = f" «{owner['name']}»" if same_tenant and owner["name"] else N_(" آخر")
             raise RadiusConflict(
-                f"العنوان {address} مستخدم لراوتر{who} على هذا الخادم — لا يمكن "
-                "تسجيل راوترين بنفس العنوان في الرديوس (يتعطّل الرديوس كليًّا).",
+                _tr('العنوان %(address)s مستخدم لراوتر%(who)s على هذا الخادم — لا يمكن تسجيل راوترين بنفس العنوان في الرديوس (يتعطّل الرديوس كليًّا).', address=address, who=who),
                 details={"field": "address", "existing_nas_id":
                          owner["id"] if same_tenant else None},
             )
@@ -424,8 +420,8 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
     if changed("secret") and secret:
         if not _SECRET_OK.match(secret):
             raise RadiusValidationError(
-                "كلمة سر الرديوس غير صالحة: 1–128 حرفًا إنجليزيًا/أرقامًا/رموزًا، "
-                "بلا مسافات ولا الرموز \" ' ` { } # \\ $.")
+                _tr("كلمة سر الرديوس غير صالحة: 1–128 حرفًا إنجليزيًا/أرقامًا/رموزًا، "
+                "بلا مسافات ولا الرموز \" ' ` { } # \\ $."))
 
     # A router that will be REGISTERED in FreeRADIUS (enabled + secret) must be
     # keyed on an IP literal — a hostname that fails to resolve at reload makes
@@ -436,8 +432,8 @@ def _validate(device: NasDevice, *, existing: Optional[NasDevice]) -> NasDevice:
         source = _tunnel_source_ip(device.id) or str(address or "").strip()
         if not _is_ip_literal(source):
             raise RadiusValidationError(
-                "لتسجيل الراوتر في الرديوس يجب أن يكون عنوانه IP صريحًا (لا اسم "
-                "نطاق). أدخل عنوان IP أو عطّل الراوتر.")
+                _tr("لتسجيل الراوتر في الرديوس يجب أن يكون عنوانه IP صريحًا (لا اسم "
+                "نطاق). أدخل عنوان IP أو عطّل الراوتر."))
 
     return replace(device, **changes) if changes else device
 
@@ -459,8 +455,8 @@ def _radius_sync_warning(result) -> Optional[dict]:
     return {
         "ok": False,
         "code": "radius_client_sync_failed",
-        "message": ("حُفظ الراوتر لكن تعذّر تسجيله في خادم الرديوس — لن يستجيب "
-                    "الرديوس لهذا الراوتر حتى تُصلَح المشكلة."),
+        "message": (_tr("حُفظ الراوتر لكن تعذّر تسجيله في خادم الرديوس — لن يستجيب "
+                    "الرديوس لهذا الراوتر حتى تُصلَح المشكلة.")),
         "detail": detail,
     }
 
@@ -472,17 +468,17 @@ def probe_nas_tcp(ip: str, port: int) -> tuple[str, str]:
     UnicodeError (not an OSError) → HTML 500."""
     try:
         with socket.create_connection((ip, port), timeout=2.0):
-            return "reachable", f"الاتصال نجح على {ip}:{port}"
+            return "reachable", _tr('الاتصال نجح على %(ip)s:%(port)s', ip=ip, port=port)
     except socket.timeout:
-        return "timeout", f"انتهت المهلة (2 ث) على {ip}:{port} — الراوتر لا يرد."
+        return "timeout", _tr('انتهت المهلة (2 ث) على %(ip)s:%(port)s — الراوتر لا يرد.', ip=ip, port=port)
     except socket.gaierror:
-        return "unreachable", "تعذّر حلّ اسم الراوتر — تحقّق من العنوان."
+        return "unreachable", N_("تعذّر حلّ اسم الراوتر — تحقّق من العنوان.")
     except ConnectionRefusedError:
-        return "unreachable", f"الراوتر رفض الاتصال على المنفذ {port} — تأكّد من تفعيل خدمة API."
+        return "unreachable", _tr('الراوتر رفض الاتصال على المنفذ %(port)s — تأكّد من تفعيل خدمة API.', port=port)
     except OSError:
-        return "unreachable", f"تعذّر الوصول إلى {str(ip)[:64]}:{port} — الشبكة غير متاحة."
+        return "unreachable", _tr('تعذّر الوصول إلى %(v)s:%(port)s — الشبكة غير متاحة.', v=str(ip)[:64], port=port)
     except (UnicodeError, ValueError):
-        return "unreachable", "عنوان الراوتر غير صالح — عدّله ثم أعد الاختبار."
+        return "unreachable", N_("عنوان الراوتر غير صالح — عدّله ثم أعد الاختبار.")
 
 
 # Helper للـ routes في M2 (يستخدم الـ defaults)

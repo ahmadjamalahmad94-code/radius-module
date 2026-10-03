@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -36,13 +37,13 @@ def _iso(value) -> str | None:
 # the raw keys network / installation / account / cards reached the list —
 # re-test R13 L4). Unknown keys fall back to the key itself.
 TICKET_CATEGORY_LABELS = {
-    "general": "عام", "billing": "الفواتير والدفع",
-    "connection": "الاتصال والخدمة", "hardware": "الأجهزة والمعدّات",
-    "complaint": "شكوى", "service_request": "طلب خدمة",
-    "network": "الشبكة", "installation": "التركيب", "account": "الحساب",
-    "cards": "الكروت", "technical": "دعم فنّي", "support": "دعم فنّي",
-    "payment": "الدفع", "internet": "الإنترنت", "speed": "السرعة",
-    "other": "أخرى",
+    "general": N_("عام"), "billing": N_("الفواتير والدفع"),
+    "connection": N_("الاتصال والخدمة"), "hardware": N_("الأجهزة والمعدّات"),
+    "complaint": N_("شكوى"), "service_request": N_("طلب خدمة"),
+    "network": N_("الشبكة"), "installation": N_("التركيب"), "account": N_("الحساب"),
+    "cards": N_("الكروت"), "technical": N_("دعم فنّي"), "support": N_("دعم فنّي"),
+    "payment": N_("الدفع"), "internet": N_("الإنترنت"), "speed": N_("السرعة"),
+    "other": N_("أخرى"),
 }
 
 
@@ -90,16 +91,16 @@ def _attachments(value) -> tuple:
     if value in (None, ""):
         return ()
     if not isinstance(value, (list, tuple)) or not all(isinstance(a, str) for a in value):
-        raise InputError("المرفقات يجب أن تكون قائمة روابط نصّيّة.")
+        raise InputError(_tr("المرفقات يجب أن تكون قائمة روابط نصّيّة."))
     if len(value) > _ATTACHMENTS_MAX:
-        raise InputError(f"عدد المرفقات أكبر من المسموح ({_ATTACHMENTS_MAX}).")
+        raise InputError(_tr('عدد المرفقات أكبر من المسموح (%(ATTACHMENTS_MAX)s).', ATTACHMENTS_MAX=_ATTACHMENTS_MAX))
     return tuple(a.strip() for a in value if a.strip())
 
 
 def _assignee(value) -> int | None:
-    admin_id = opt_int(value, label="الموظف المسؤول", minimum=1)
+    admin_id = opt_int(value, label=N_("الموظف المسؤول"), minimum=1)
     if admin_id is not None and not _admin_exists(admin_id):
-        raise InputError("الموظف المسؤول غير موجود.")
+        raise InputError(_tr("الموظف المسؤول غير موجود."))
     return admin_id
 
 
@@ -114,12 +115,12 @@ def register(bp: Blueprint) -> None:
 def list_tickets():
     status = (request.args.get("status") or "").strip() or None
     if status and status not in TICKET_STATUSES:
-        return fail("validation_error", "حالة التذكرة غير صحيحة.", status=422)
+        return fail("validation_error", _tr("حالة التذكرة غير صحيحة."), status=422)
     subscriber_id = request.args.get("subscriber_id")
     try:
         parsed_subscriber_id = int(subscriber_id) if subscriber_id else None
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف المشترك يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف المشترك يجب أن يكون رقمًا صحيحًا."), status=422)
     limit = max(1, _int_arg("limit", 200))
     offset = _int_arg("offset", 0, maximum=100000)
     rows = tickets_repo.list_tickets(
@@ -138,7 +139,7 @@ def list_tickets():
 def get_ticket(ticket_id: int):
     ticket = tickets_repo.get_ticket(_tid(), ticket_id)
     if not ticket:
-        return fail("not_found", "التذكرة غير موجودة.", status=404)
+        return fail("not_found", _tr("التذكرة غير موجودة."), status=404)
     replies = [_reply(r) for r in tickets_repo.list_replies(_tid(), ticket_id)]
     return ok({"ticket": _ticket(ticket), "replies": replies})
 
@@ -148,28 +149,28 @@ def create_ticket():
     if err:
         return err
     try:
-        subject = opt_text(body.get("subject"), label="عنوان التذكرة", max_len=_SUBJECT_MAX)
+        subject = opt_text(body.get("subject"), label=N_("عنوان التذكرة"), max_len=_SUBJECT_MAX)
         try:
-            subscriber_id = opt_int(body.get("subscriber_id"), label="معرّف المشترك") or 0
+            subscriber_id = opt_int(body.get("subscriber_id"), label=N_("معرّف المشترك")) or 0
         except InputError:
-            raise InputError("معرّف المشترك يجب أن يكون رقمًا صحيحًا.")
+            raise InputError(_tr("معرّف المشترك يجب أن يكون رقمًا صحيحًا."))
         if not subject or subscriber_id <= 0:
-            return fail("validation_error", "اختر المشترك وأدخل عنوان التذكرة.", status=422)
-        priority = opt_text(body.get("priority"), label="الأولوية") or "normal"
-        status = opt_text(body.get("status"), label="الحالة") or "open"
+            return fail("validation_error", _tr("اختر المشترك وأدخل عنوان التذكرة."), status=422)
+        priority = opt_text(body.get("priority"), label=N_("الأولوية")) or "normal"
+        status = opt_text(body.get("status"), label=N_("الحالة")) or "open"
         if priority not in TICKET_PRIORITIES or status not in TICKET_STATUSES:
-            return fail("validation_error", "أولوية التذكرة أو حالتها غير صحيحة.", status=422)
-        category = opt_text(body.get("category"), label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+            return fail("validation_error", _tr("أولوية التذكرة أو حالتها غير صحيحة."), status=422)
+        category = opt_text(body.get("category"), label=N_("التصنيف"), max_len=_CATEGORY_MAX) or "general"
         _cat_err = tickets_repo.generic_create_category_error(category)
         if _cat_err:
             raise InputError(_cat_err)
-        text = opt_text(body.get("body"), label="نص التذكرة", max_len=_BODY_MAX)
+        text = opt_text(body.get("body"), label=N_("نص التذكرة"), max_len=_BODY_MAX)
         attachments = _attachments(body.get("attachments"))
         assignee_admin_id = _assignee(body.get("assignee_admin_id"))
     except InputError as e:
         return fail("validation_error", e.message, status=422)
     if not _subscriber_exists(subscriber_id):
-        return fail("not_found", "المشترك غير موجود.", status=404)
+        return fail("not_found", _tr("المشترك غير موجود."), status=404)
     ticket = Ticket(
         id=None,
         tenant_id=_tid(),
@@ -188,38 +189,38 @@ def create_ticket():
 def patch_ticket(ticket_id: int):
     current = tickets_repo.get_ticket(_tid(), ticket_id)
     if not current:
-        return fail("not_found", "التذكرة غير موجودة.", status=404)
+        return fail("not_found", _tr("التذكرة غير موجودة."), status=404)
     body, err = json_object()
     if err:
         return err
     changes: dict = {}
     try:
         if "subject" in body:
-            subject = opt_text(body["subject"], label="عنوان التذكرة", max_len=_SUBJECT_MAX)
+            subject = opt_text(body["subject"], label=N_("عنوان التذكرة"), max_len=_SUBJECT_MAX)
             if not subject:
-                raise InputError("عنوان التذكرة لا يمكن أن يكون فارغًا.")
+                raise InputError(_tr("عنوان التذكرة لا يمكن أن يكون فارغًا."))
             changes["subject"] = subject
         if "category" in body:
             changes["category"] = opt_text(
-                body["category"], label="التصنيف", max_len=_CATEGORY_MAX) or "general"
+                body["category"], label=N_("التصنيف"), max_len=_CATEGORY_MAX) or "general"
             # طلب الخدمة لا يُعاد تصنيفه (كان منفذًا لتجاوز آلة القرارات).
             if (current.category == tickets_repo.SERVICE_REQUEST_CATEGORY
                     and changes["category"] != current.category):
-                return fail("conflict", "لا يمكن تغيير تصنيف طلب خدمة.", status=409)
+                return fail("conflict", _tr("لا يمكن تغيير تصنيف طلب خدمة."), status=409)
             # zero-w3: ولا تصير تذكرةٌ عاديّةٌ «طلب خدمة» بلا بياناته.
             if (current.category != tickets_repo.SERVICE_REQUEST_CATEGORY
                     and tickets_repo.generic_create_category_error(changes["category"])):
                 return fail("conflict", tickets_repo.generic_create_category_error(
                     changes["category"]), status=409)
         if "body" in body:
-            changes["body"] = opt_text(body["body"], label="نص التذكرة", max_len=_BODY_MAX)
+            changes["body"] = opt_text(body["body"], label=N_("نص التذكرة"), max_len=_BODY_MAX)
         if "priority" in body:
             if body["priority"] not in TICKET_PRIORITIES:
-                raise InputError("أولوية التذكرة غير صحيحة.")
+                raise InputError(_tr("أولوية التذكرة غير صحيحة."))
             changes["priority"] = body["priority"]
         if "status" in body:
             if body["status"] not in TICKET_STATUSES:
-                raise InputError("حالة التذكرة غير صحيحة.")
+                raise InputError(_tr("حالة التذكرة غير صحيحة."))
             changes["status"] = body["status"]
         if "assignee_admin_id" in body:
             changes["assignee_admin_id"] = _assignee(body["assignee_admin_id"])
@@ -237,16 +238,16 @@ def patch_ticket(ticket_id: int):
 
 def add_reply(ticket_id: int):
     if not tickets_repo.get_ticket(_tid(), ticket_id):
-        return fail("not_found", "التذكرة غير موجودة.", status=404)
+        return fail("not_found", _tr("التذكرة غير موجودة."), status=404)
     body, err = json_object()
     if err:
         return err
     try:
-        text = opt_text(body.get("body"), label="نص الرد", max_len=_BODY_MAX)
+        text = opt_text(body.get("body"), label=N_("نص الرد"), max_len=_BODY_MAX)
     except InputError as e:
         return fail("validation_error", e.message, status=422)
     if not text:
-        return fail("validation_error", "نص الرد مطلوب.", status=422)
+        return fail("validation_error", _tr("نص الرد مطلوب."), status=422)
     reply = TicketReply(
         id=None,
         tenant_id=_tid(),

@@ -164,7 +164,7 @@
       const u = unitSel.value;
       const base = isFinite(v) ? Math.round(v * ratios[u]) : 0;
       hidden.value = String(base);
-      const msg = ok ? "" : "أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».";
+      const msg = ok ? "" : {{ _('أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».')|tojson }};
       try { valInp.setCustomValidity(msg); } catch (_) {}
       if (ok) valInp.removeAttribute("aria-invalid"); else valInp.setAttribute("aria-invalid", "true");
     }

@@ -13,6 +13,7 @@ accidentally wipe it). This differs from the web form's full-replace, but is
 the safe JSON equivalent.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -92,13 +93,13 @@ def send_test():
     """POST /network/telegram/test — إرسال رسالة اختبار الآن (يطابق
     network_telegram_test). يُعيد ok/خطأ المُرسِل."""
     test_text = (
-        "✅ <b>اختبار التنبيهات</b>\n"
+        _tr("✅ <b>اختبار التنبيهات</b>\n"
         "تم إرسال هذه الرسالة من إعدادات تلجرام في HobeRadius.\n"
-        "إذا تستلمها — إعداداتك صحيحة وستصلك التنبيهات الفعلية عند انقطاع جهاز."
+        "إذا تستلمها — إعداداتك صحيحة وستصلك التنبيهات الفعلية عند انقطاع جهاز.")
     )
     sent, err = telegram_notifier.send_to_tenant(_tid(), test_text)
     if sent:
         return ok({"sent": True})
     return fail("telegram_send_failed",
-                err or "لم يتم الإرسال — تأكّد من التوكن وchat id وتفعيل التنبيهات.",
+                err or _tr("لم يتم الإرسال — تأكّد من التوكن وchat id وتفعيل التنبيهات."),
                 status=502, details={"sent": False})

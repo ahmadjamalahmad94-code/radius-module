@@ -13,7 +13,7 @@
 {% block title %}{{ _("تقرير الجلسات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
 {% block page_title %}{{ _("تقرير الجلسات والمحاسبة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s صف', length=items|length) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات لجدول الجلسات #}
@@ -42,20 +42,20 @@
 
 {# ── تعريب أسباب إنهاء الجلسة القياسية في RADIUS (تبقى القيمة الأصلية في title) ── #}
 {% set cause_labels = {
-  'User-Request':        'طلب المستخدم',
-  'Lost-Carrier':        'انقطاع الاتصال',
-  'Lost-Service':        'انقطاع الخدمة',
-  'Idle-Timeout':        'مهلة خمول',
-  'Session-Timeout':     'انتهاء مدة الجلسة',
-  'Admin-Reset':         'إنهاء إداري',
-  'Admin-Reboot':        'إعادة تشغيل إدارية',
-  'Port-Error':          'خطأ منفذ',
-  'NAS-Error':           'خطأ جهاز الشبكة',
-  'NAS-Request':         'طلب جهاز الشبكة',
-  'NAS-Reboot':          'إعادة تشغيل جهاز الشبكة',
-  'Port-Unneeded':       'منفذ غير مطلوب',
-  'Service-Unavailable': 'الخدمة غير متاحة',
-  'Host-Request':        'طلب المضيف'
+  'User-Request':        _('طلب المستخدم'),
+  'Lost-Carrier':        _('انقطاع الاتصال'),
+  'Lost-Service':        _('انقطاع الخدمة'),
+  'Idle-Timeout':        _('مهلة خمول'),
+  'Session-Timeout':     _('انتهاء مدة الجلسة'),
+  'Admin-Reset':         _('إنهاء إداري'),
+  'Admin-Reboot':        _('إعادة تشغيل إدارية'),
+  'Port-Error':          _('خطأ منفذ'),
+  'NAS-Error':           _('خطأ جهاز الشبكة'),
+  'NAS-Request':         _('طلب جهاز الشبكة'),
+  'NAS-Reboot':          _('إعادة تشغيل جهاز الشبكة'),
+  'Port-Unneeded':       _('منفذ غير مطلوب'),
+  'Service-Unavailable': _('الخدمة غير متاحة'),
+  'Host-Request':        _('طلب المضيف')
 } %}
 
 {# ───── مؤشرات مشتقة من نفس `items` (بلا أي تغيير خلفي) ───── #}
@@ -69,15 +69,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="sessions-hero">
 {% call hub.megahero(
-  "تقرير الجلسات",
-  subtitle="سجل جلسات المصادقة من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء.",
+  _('تقرير الجلسات'),
+  subtitle=_('سجل جلسات المصادقة من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء.'),
   icon="chart-line",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'الصفوف',   'value': items|length, 'icon': 'table-list',  'variant': 'brand'},
-    {'label': 'نشطة',     'value': _active,      'icon': 'circle-play', 'variant': 'green'},
-    {'label': 'تنزيل',    'value': fmt_bytes_raw(_total_down), 'icon': 'download', 'variant': 'amber'},
-    {'label': 'رفع',      'value': fmt_bytes_raw(_total_up),   'icon': 'upload',   'variant': 'blue'},
+    {'label': _('الصفوف'),   'value': items|length, 'icon': 'table-list',  'variant': 'brand'},
+    {'label': _('نشطة'),     'value': _active,      'icon': 'circle-play', 'variant': 'green'},
+    {'label': _('تنزيل'),    'value': fmt_bytes_raw(_total_down), 'icon': 'download', 'variant': 'amber'},
+    {'label': _('رفع'),      'value': fmt_bytes_raw(_total_up),   'icon': 'upload',   'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_sessions')
 ) %}
@@ -89,23 +89,23 @@
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
-      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} صف</option>
+      <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ _('%(n)s صف', n=n) }}</option>
     {% endfor %}
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if username or (filters and (filters.date_from or filters.date_to)) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_sessions') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="الفلترة تعمل على اسم المستخدم ونطاق تاريخ بداية الجلسة، ويمكن رفع حد الصفوف حتى 1000."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('الفلترة تعمل على اسم المستخدم ونطاق تاريخ بداية الجلسة، ويمكن رفع حد الصفوف حتى 1000.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول الجلسات — uds موحّد (فرز + ترقيم + تصدير)، بلا أي كتل مكدّسة ───── #}
-{% call hub.section("سجل الجلسات", icon="table-list",
-                    meta=items|length|string + " جلسة", flush=True) %}
+{% call hub.section(_('سجل الجلسات'), icon="table-list",
+                    meta=items|length|string + _(' جلسة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -160,7 +160,7 @@
               {% set _et = r.acctstoptime|dt_local_raw %}
               <span class="rep-primary">{{ _et[:10] }}</span>
               <span class="rep-sub">{{ _et[11:16] }}</span>
-            {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
+            {% else %}{{ hub.pill(_('نشطة'), variant="green") }}{% endif %}
           </td>
           {# سبب الإنهاء معرَّب من خريطة RADIUS القياسية — والقيمة الخام في title #}
           <td class="small" title="{{ r.acctterminatecause or '' }}">
@@ -177,8 +177,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا جلسات في النتائج",
-  sub="جرّب تخفيف فلترة المستخدم أو رفع حد النتائج." if username else "لم تُسجَّل أي جلسة بعد في جدول radacct.",
+  _('لا جلسات في النتائج'),
+  sub=_('جرّب تخفيف فلترة المستخدم أو رفع حد النتائج.') if username else _('لم تُسجَّل أي جلسة بعد في جدول radacct.'),
   icon="chart-line"
 ) }}
 {% endif %}

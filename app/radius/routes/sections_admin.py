@@ -14,6 +14,7 @@
 وهو السلوك المطلوب: المالك دائماً يستعيد التحكّم.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -50,11 +51,11 @@ def sections_admin_save():
     disabled = disabled_raw in ("1", "true", "on", "yes")
     try:
         set_flags(name, hidden=hidden, disabled=disabled, by=_current_admin_id_safe())
-        flash("تم تحديث حالة القسم.", "success")
+        flash(_tr("تم تحديث حالة القسم."), "success")
     except KeyError:
-        flash("قسم غير معروف.", "error")
+        flash(_tr("قسم غير معروف."), "error")
     except Exception as exc:  # noqa: BLE001
-        flash(f"تعذّر التحديث: {exc}", "error")
+        flash(_tr('تعذّر التحديث: %(exc)s', exc=exc), "error")
     return redirect(url_for("radius.sections_admin_page"))
 
 
@@ -62,11 +63,11 @@ def sections_admin_reset():
     name = (request.form.get("section") or "").strip()
     try:
         reset_to_defaults(name, by=_current_admin_id_safe())
-        flash("تم إرجاع القسم إلى علاماته الافتراضية.", "success")
+        flash(_tr("تم إرجاع القسم إلى علاماته الافتراضية."), "success")
     except KeyError:
-        flash("قسم غير معروف.", "error")
+        flash(_tr("قسم غير معروف."), "error")
     except Exception as exc:  # noqa: BLE001
-        flash(f"تعذّر التحديث: {exc}", "error")
+        flash(_tr('تعذّر التحديث: %(exc)s', exc=exc), "error")
     return redirect(url_for("radius.sections_admin_page"))
 
 

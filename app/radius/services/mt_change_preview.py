@@ -15,6 +15,7 @@ into a human-friendly diff against the router's current state:
     know we can't claim certainty.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -59,30 +60,30 @@ class ChangePreview:
 
 _PATH_TO_KIND = {
     "/ip/pool/add": ("pool", "ip-pool",
-                      "نطاق عناوين IP جديد للـ pool"),
+                      N_("نطاق عناوين IP جديد للـ pool")),
     "/ip/address/add": ("address", "ip-address",
-                        "عنوان IP جديد على الواجهة"),
+                        N_("عنوان IP جديد على الواجهة")),
     "/ip/dhcp-server/add": ("dhcp-server", "dhcp-server",
-                             "خادم DHCP جديد"),
+                             N_("خادم DHCP جديد")),
     "/ip/dhcp-server/network/add": (
         "dhcp-network", "dhcp-network",
-        "تكوين شبكة DHCP (gateway/dns)"),
+        N_("تكوين شبكة DHCP (gateway/dns)")),
     "/ip/hotspot/profile/add": (
         "hotspot-profile", "hotspot-profile",
-        "ملفّ تعريف Hotspot جديد"),
+        N_("ملفّ تعريف Hotspot جديد")),
     "/ip/hotspot/add": (
-        "hotspot", "hotspot-server", "خادم Hotspot جديد"),
+        "hotspot", "hotspot-server", N_("خادم Hotspot جديد")),
     "/ip/hotspot/user/profile/add": (
         "hotspot-user-profile", "hotspot-user-profile",
-        "ملف مستخدمي Hotspot الافتراضي"),
+        N_("ملف مستخدمي Hotspot الافتراضي")),
     "/ip/hotspot/walled-garden/ip/add": (
         "walled-garden", "walled-garden",
-        "سماح Walled-Garden لعنوان IP"),
+        N_("سماح Walled-Garden لعنوان IP")),
     "/ppp/profile/add": (
-        "ppp-profile", "ppp-profile", "ملفّ PPP جديد"),
+        "ppp-profile", "ppp-profile", N_("ملفّ PPP جديد")),
     "/interface/pppoe-server/server/add": (
         "pppoe-server", "pppoe-server",
-        "خادم PPPoE جديد على الواجهة"),
+        N_("خادم PPPoE جديد على الواجهة")),
 }
 
 
@@ -92,7 +93,7 @@ def _to_item(cmd) -> ChangeItem:
     attrs = cmd.attrs or {}
     kind, _label, fallback_detail = _PATH_TO_KIND.get(
         path, ("router-object", "object",
-                "تغيير على الراوتر"))
+                N_("تغيير على الراوتر")))
     name = (attrs.get("name") or attrs.get("address")
              or attrs.get("interface") or attrs.get("service-name")
              or attrs.get("dst-host") or "")
@@ -111,7 +112,7 @@ def _to_item(cmd) -> ChangeItem:
     )
     return ChangeItem(
         kind=kind, action="add",
-        name=name or "(بلا اسم)",
+        name=name or N_("(بلا اسم)"),
         detail_ar=detail, path=path,
     )
 
@@ -139,7 +140,7 @@ def preview_plan(
     if plan is None:
         return ChangePreview(
             data_quality_warnings_ar=[
-                "لا يوجد plan ليُعاينَ."
+                N_("لا يوجد plan ليُعاينَ.")
             ],
         )
 
@@ -177,8 +178,7 @@ def preview_plan(
         ]
         if existing_on_target:
             out.impact_ar.append(
-                f"الواجهة {target_iface} تحمل عناوين بالفعل — "
-                "قد يتأثّر المستخدمون المتّصلون أثناء التطبيق.")
+                _tr('الواجهة %(target_iface)s تحمل عناوين بالفعل — قد يتأثّر المستخدمون المتّصلون أثناء التطبيق.', target_iface=target_iface))
         # If the interface row exists + has running clients
         # (best-effort from rx/tx counters), warn explicitly.
         iface_row = next(
@@ -187,18 +187,17 @@ def preview_plan(
         if iface_row and str(
                 iface_row.get("running")) == "true":
             out.impact_ar.append(
-                f"الواجهة {target_iface} تعمل حاليًا — "
-                "التطبيق سيُحدث تغييرًا على شبكة نشطة.")
+                _tr('الواجهة %(target_iface)s تعمل حاليًا — التطبيق سيُحدث تغييرًا على شبكة نشطة.', target_iface=target_iface))
 
     # Data-quality warnings.
     if snapshot_status == "stale":
         out.data_quality_warnings_ar.append(
-            "بيانات الراوتر قديمة — قد تختلف الحالة الفعلية "
-            "عن ما يظهر في المعاينة.")
+            N_("بيانات الراوتر قديمة — قد تختلف الحالة الفعلية "
+            "عن ما يظهر في المعاينة."))
     elif snapshot_status in {"failed", "unknown"}:
         out.data_quality_warnings_ar.append(
-            "لا يمكن مقارنة الحالة الحالية — البيانات غير "
-            "متوفرة أو فشل آخر تحديث.")
+            N_("لا يمكن مقارنة الحالة الحالية — البيانات غير "
+            "متوفرة أو فشل آخر تحديث."))
 
     return out
 

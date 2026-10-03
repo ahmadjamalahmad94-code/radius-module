@@ -4,6 +4,7 @@ No canonical V40 event callback endpoint is confirmed in the P11 prompt, so
 this module records local events and exposes safe summaries only.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 from datetime import datetime
@@ -13,18 +14,18 @@ from app.radius.db.connection import db
 from app.radius.services.admin_panel_client import sanitize_bridge_payload
 
 EVENT_LABELS_AR = {
-    "license.snapshot_refreshed": "تم تحديث حالة الترخيص",
-    "capacity.contract_refreshed": "تم تحديث عقد السعة",
-    "usage.report_sent": "تم إرسال تقرير الاستخدام",
-    "heartbeat.sent": "تم إرسال نبض الحالة",
-    "backup.upload_succeeded": "تم رفع النسخة الاحتياطية",
-    "backup.upload_failed": "تعذر رفع النسخة الاحتياطية",
-    "restore.request_received": "تم استلام طلب استعادة",
-    "restore.status_changed": "تغيرت حالة الاستعادة",
-    "service_activation.received": "تم استلام تفعيل خدمة",
-    "service_activation.executed": "تم تنفيذ تفعيل خدمة",
-    "service_activation.failed": "فشل تفعيل خدمة",
-    "accounting.degraded": "تدهور مسار المحاسبة",
+    "license.snapshot_refreshed": N_("تم تحديث حالة الترخيص"),
+    "capacity.contract_refreshed": N_("تم تحديث عقد السعة"),
+    "usage.report_sent": N_("تم إرسال تقرير الاستخدام"),
+    "heartbeat.sent": N_("تم إرسال نبض الحالة"),
+    "backup.upload_succeeded": N_("تم رفع النسخة الاحتياطية"),
+    "backup.upload_failed": N_("تعذر رفع النسخة الاحتياطية"),
+    "restore.request_received": N_("تم استلام طلب استعادة"),
+    "restore.status_changed": N_("تغيرت حالة الاستعادة"),
+    "service_activation.received": N_("تم استلام تفعيل خدمة"),
+    "service_activation.executed": N_("تم تنفيذ تفعيل خدمة"),
+    "service_activation.failed": N_("فشل تفعيل خدمة"),
+    "accounting.degraded": N_("تدهور مسار المحاسبة"),
 }
 
 SEVERITIES = {"info", "warning", "error", "critical"}
@@ -69,7 +70,7 @@ class BridgeEventService:
                 str(source or "radius-module"),
                 str(reference or ""),
                 str(event_key) if event_key else None,
-                label_ar or EVENT_LABELS_AR.get(str(event_type), "حدث تشغيلي"),
+                label_ar or EVENT_LABELS_AR.get(str(event_type), N_("حدث تشغيلي")),
                 json.dumps(safe_payload, ensure_ascii=False),
                 _utcnow(),
             ),

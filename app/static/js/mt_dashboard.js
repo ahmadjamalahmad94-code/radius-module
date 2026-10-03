@@ -10,6 +10,7 @@
  * K9.2 adds : SSE live traffic + active-users panels.
  * K9.3 adds : quick actions strip + confirmation modals.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -94,8 +95,8 @@
   if (!CFG.apiToken) {
     setStatus(
       "error",
-      "لا يوجد رمز واجهة الربط مُهيَّأ",
-      "اضبط رمز واجهة الربط في إعدادات البيئة ثم أعد تحميل الصفحة.",
+      hrT('لا يوجد رمز واجهة الربط مُهيَّأ'),
+      hrT('اضبط رمز واجهة الربط في إعدادات البيئة ثم أعد تحميل الصفحة.'),
     );
     return; // Without a token every fetch will 401 — bail loudly.
   }
@@ -183,7 +184,7 @@
     const clockRow    = clock[0] || {};
 
     setKpi("uptime", resourceRow["uptime"] || "—",
-           resourceRow["build-time"] ? "بُني " + resourceRow["build-time"] : null);
+           resourceRow["build-time"] ? hrT('بُني ') + resourceRow["build-time"] : null);
 
     // CPU — set value + progress bar in a single call. (A previous
     // unconditional second call wiped the progress the first set, so
@@ -235,14 +236,14 @@
       }
     }
     setKpi("temperature", temp != null ? temp + "°C" : "—",
-           "من /system/health");
+           hrT('من /system/health'));
 
     // Clock — RouterOS 7 exposes `time` + `date` from
     // /system/clock/print; older versions sometimes use
     // `current-time` / `current-date`. Try both shapes.
     const ctime = clockRow.time || clockRow["current-time"];
     const cdate = clockRow.date || clockRow["current-date"];
-    setKpi("clock", ctime || "—", cdate || "وقت الراوتر الحالي");
+    setKpi("clock", ctime || "—", cdate || hrT('وقت الراوتر الحالي'));
     if (window.console && !ctime) {
       console.log("[overview] clock: no time field — section.clock =",
                   sections.clock,
@@ -254,11 +255,11 @@
 
     const dialed = (payload && payload.connection && payload.connection.address) || "—";
     const mode = (payload && payload.connection && payload.connection.mode) || "—";
-    setKpi("dialed", dialed, mode === "vpn" ? "عبر نفق الإدارة" : "اتصال مباشر");
+    setKpi("dialed", dialed, mode === "vpn" ? hrT('عبر نفق الإدارة') : hrT('اتصال مباشر'));
   }
 
   async function refreshOverview() {
-    setStatus("pending", "جارٍ التحديث…", "");
+    setStatus("pending", hrT('جارٍ التحديث…'), "");
     try {
       const { res, body } = await api("/mikrotik/" + CFG.routerId + "/system/overview");
       if (!res.ok || !body || body.ok === false) {
@@ -266,9 +267,9 @@
         // الصارخة. الرمز التقني يبقى في الـ console للتشخيص فقط.
         const msg = body && body.error && body.error.message
           ? body.error.message
-          : (res.status ? ("رمز " + res.status) : "تحقّق من نفق الإدارة");
+          : (res.status ? (hrT('رمز ') + res.status) : hrT('تحقّق من نفق الإدارة'));
         if (window.console) console.warn("[mt-status] overview HTTP", res.status, body);
-        setStatus("error", "غير متصل", msg);
+        setStatus("error", hrT('غير متصل'), msg);
         return;
       }
       const data = body.data || {};
@@ -280,14 +281,14 @@
       const apiAddr = (data.connection && data.connection.address) || "";
       const metaAddr = apiAddr || CFG.routerAddress || "—";
       if (data.any_ok === false) {
-        setStatus("error", "الراوتر غير قابل للوصول", metaAddr);
+        setStatus("error", hrT('الراوتر غير قابل للوصول'), metaAddr);
       } else if (data.all_ok === false) {
-        setStatus("pending", "بعض الأقسام غير متاحة", metaAddr);
+        setStatus("pending", hrT('بعض الأقسام غير متاحة'), metaAddr);
       } else {
-        setStatus("ok", "الراوتر متصل", metaAddr);
+        setStatus("ok", hrT('الراوتر متصل'), metaAddr);
       }
     } catch (e) {
-      setStatus("error", "خطأ في الشبكة", String(e));
+      setStatus("error", hrT('خطأ في الشبكة'), String(e));
     }
   }
 
@@ -384,12 +385,12 @@
     if (!res.ok || !body || body.ok === false) return;
     const env = body.data || {};
     if (env.ok === false) {
-      trafficMsg.textContent = env.error || "تعذّر جلب قائمة الواجهات.";
+      trafficMsg.textContent = env.error || hrT('تعذّر جلب قائمة الواجهات.');
       return;
     }
     const rows = env.data || [];
     if (!rows.length) {
-      trafficMsg.textContent = "لا توجد واجهات على هذا الراوتر.";
+      trafficMsg.textContent = hrT('لا توجد واجهات على هذا الراوتر.');
       return;
     }
     // Preserve the placeholder option, then append real names.
@@ -401,7 +402,7 @@
       opt.textContent = name + (r.type ? "  ·  " + r.type : "");
       ifaceSelect.appendChild(opt);
     }
-    trafficMsg.textContent = "اختر واجهة لعرض الحركة الحيّة.";
+    trafficMsg.textContent = hrT('اختر واجهة لعرض الحركة الحيّة.');
   }
 
   async function pollTraffic(ifaceName) {
@@ -410,19 +411,19 @@
       + "/interfaces/" + encodeURIComponent(ifaceName) + "/traffic"
     );
     if (!res.ok || !body || body.ok === false) {
-      trafficMsg.textContent = "تعذّر القراءة (HTTP " + res.status + ").";
+      trafficMsg.textContent = hrT('تعذّر القراءة (HTTP ') + res.status + ").";
       return;
     }
     const env = body.data || {};
     if (env.ok === false) {
-      trafficMsg.textContent = env.error || "تعذّر القراءة من الراوتر.";
+      trafficMsg.textContent = env.error || hrT('تعذّر القراءة من الراوتر.');
       return;
     }
     const sample = (env.data && env.data[0]) || {};
     const rx = asNumber(sample["rx-bits-per-second"]);
     const tx = asNumber(sample["tx-bits-per-second"]);
     if (rx == null && tx == null) {
-      trafficMsg.textContent = "الراوتر لم يُرجع بيانات قياس.";
+      trafficMsg.textContent = hrT('الراوتر لم يُرجع بيانات قياس.');
       return;
     }
     trafficMsg.textContent = "";
@@ -453,10 +454,10 @@
       rxLabel.textContent = "—";
       txLabel.textContent = "—";
       if (!name) {
-        trafficMsg.textContent = "اختر واجهة لعرض الحركة الحيّة.";
+        trafficMsg.textContent = hrT('اختر واجهة لعرض الحركة الحيّة.');
         return;
       }
-      trafficMsg.textContent = "جارٍ القراءة…";
+      trafficMsg.textContent = hrT('جارٍ القراءة…');
       pollTraffic(name);
       trafficTimer = setInterval(() => pollTraffic(name), TRAFFIC_POLL_MS);
     });
@@ -493,7 +494,7 @@
   const usersTable     = root.querySelector("[data-mt-active-users-table]");
   const usersRows      = root.querySelector("[data-mt-active-users-rows]");
   const usersUpdated   = root.querySelector("[data-mt-active-users-updated]");
-  const TYPE_LBL = { hotspot: "بوابة الدخول", ppp: "برودباند", other: "أخرى" };
+  const TYPE_LBL = { hotspot: hrT('بوابة الدخول'), ppp: hrT('برودباند'), other: hrT('أخرى') };
 
   function fmtUptime(sec) {
     if (sec == null || !Number.isFinite(Number(sec))) return "—";
@@ -593,13 +594,13 @@
   const actionModalTtl  = root.querySelector("[data-mt-action-modal-title] span");
   // Friendly titles for the modal header per action kind.
   const ACTION_TITLES = {
-    backup:       "حفظ نسخة احتياطية",
-    reboot:       "إعادة تشغيل الراوتر",
-    ping:         "اختبار الوصول",
-    identity:     "تعديل اسم الراوتر",
-    traceroute:   "تتبّع المسار",
-    "dns-flush":  "مسح كاش DNS",
-    "clock-sync": "مزامنة الوقت",
+    backup:       hrT('حفظ نسخة احتياطية'),
+    reboot:       hrT('إعادة تشغيل الراوتر'),
+    ping:         hrT('اختبار الوصول'),
+    identity:     hrT('تعديل اسم الراوتر'),
+    traceroute:   hrT('تتبّع المسار'),
+    "dns-flush":  hrT('مسح كاش DNS'),
+    "clock-sync": hrT('مزامنة الوقت'),
   };
   function showActionModal(on) {
     if (!actionModalEl) return;
@@ -678,7 +679,7 @@
     function failBody() {
       return body(`
         <div class="mt-action-result-summary">
-          ${safeHtml(errMsg || "تعذّر تنفيذ العملية على الراوتر.")}
+          ${safeHtml(errMsg || hrT('تعذّر تنفيذ العملية على الراوتر.'))}
         </div>`);
     }
 
@@ -694,7 +695,7 @@
     // counters (sent / received / packet-loss / avg-rtt) update on
     // each row — the LAST row carries the final totals.
     if (kind === "ping") {
-      if (!ok) return head("فشل اختبار Ping", "/tools/ping") + failBody();
+      if (!ok) return head(hrT('فشل اختبار Ping'), "/tools/ping") + failBody();
       // The API wraps the array in `data.data` (envelope has its own
       // `data` key, the inner row-set is also called `data`). Try
       // both shapes so a future API change doesn't break us.
@@ -709,7 +710,7 @@
         tableHtml = `
           <table>
             <thead>
-              <tr><th>#</th><th>السعة</th><th>TTL</th><th>الزمن</th><th>الحالة</th></tr>
+              <tr><th>#</th><th>${hrT('السعة')}</th><th>TTL</th><th>${hrT('الزمن')}</th><th>${hrT('الحالة')}</th></tr>
             </thead>
             <tbody>
               ${replies.map((r, i) => {
@@ -722,8 +723,8 @@
                   <td>${safeHtml(r.ttl != null ? r.ttl : "—")}</td>
                   <td>${safeHtml(r.time != null && r.time !== "" ? r.time : "—")}</td>
                   <td>${arrived
-                    ? '<span style="color:#10B981">✓ وصل</span>'
-                    : '<span style="color:#DC2626">✗ ضاع</span>'}</td>
+                    ? ('<span style="color:#10B981">' + hrT('✓ وصل') + '</span>')
+                    : ('<span style="color:#DC2626">' + hrT('✗ ضاع') + '</span>')}</td>
                 </tr>`;
               }).join("")}
             </tbody>
@@ -741,15 +742,10 @@
       const avgRtt = last["avg-rtt"] || last.avg_rtt || last.time || "—";
       const minRtt = last["min-rtt"] || "—";
       const maxRtt = last["max-rtt"] || "—";
-      return head(`Ping إلى ${target || "—"}`, "/tools/ping") + body(`
+      return head(hrT('Ping إلى {v}', {v: target || "—"}), "/tools/ping") + body(`
         ${tableHtml}
         <div class="mt-action-result-summary">
-          مُرسَل: <strong>${sent}</strong> ·
-          مُستلَم: <strong>${recv}</strong> ·
-          فاقد: <strong>${loss}%</strong> ·
-          متوسط: <strong>${safeHtml(avgRtt)}</strong> ·
-          أدنى: <strong>${safeHtml(minRtt)}</strong> ·
-          أعلى: <strong>${safeHtml(maxRtt)}</strong>
+          ${hrT('مُرسَل:')} <strong>${sent}</strong> ${hrT('·\r\n          مُستلَم:')} <strong>${recv}</strong> ${hrT('·\r\n          فاقد:')} <strong>${loss}%</strong> ${hrT('·\r\n          متوسط:')} <strong>${safeHtml(avgRtt)}</strong> ${hrT('·\r\n          أدنى:')} <strong>${safeHtml(minRtt)}</strong> ${hrT('·\r\n          أعلى:')} <strong>${safeHtml(maxRtt)}</strong>
         </div>
       `);
     }
@@ -764,7 +760,7 @@
     // or time). The traceroute may also stream results — we get the
     // final accumulated table back from the API endpoint.
     if (kind === "traceroute") {
-      if (!ok) return head("فشل Traceroute", "/tools/traceroute") + failBody();
+      if (!ok) return head(hrT('فشل Traceroute'), "/tools/traceroute") + failBody();
       const hops = Array.isArray(data.data)    ? data.data
                  : Array.isArray(data.hops)    ? data.hops
                  : Array.isArray(data.replies) ? data.replies
@@ -788,17 +784,17 @@
           <td>${safeHtml(loss)}</td>
         </tr>`;
       }).join("");
-      return head(`Traceroute إلى ${target || "—"}`, "/tools/traceroute") + body(`
+      return head(hrT('Traceroute إلى {v}', {v: target || "—"}), "/tools/traceroute") + body(`
         <table>
           <thead>
-            <tr><th>القفزة</th><th>العنوان</th><th>آخر/متوسط</th><th>الفقد</th></tr>
+            <tr><th>${hrT('القفزة')}</th><th>${hrT('العنوان')}</th><th>${hrT('آخر/متوسط')}</th><th>${hrT('الفقد')}</th></tr>
           </thead>
-          <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:#94A3B8">لا توجد قفزات</td></tr>'}</tbody>
+          <tbody>${rows || ('<tr>' + '<td colspan="4" style="text-align:center;color:#94A3B8">' + hrT('لا توجد قفزات') + '</td>' + '</tr>')}</tbody>
         </table>
         <div class="mt-action-result-summary">
-          عدد القفزات: <strong>${hops.length}</strong>
+          ${hrT('عدد القفزات:')} <strong>${hops.length}</strong>
           ${hops[hops.length-1] && hops[hops.length-1].status
-            ? ' · الحالة الأخيرة: <strong>' + safeHtml(hops[hops.length-1].status) + '</strong>'
+            ? (' ' + hrT('· الحالة الأخيرة:') + ' ' + '<strong>') + safeHtml(hops[hops.length-1].status) + '</strong>'
             : ''}
         </div>
       `);
@@ -810,7 +806,7 @@
     // shape lookup is deterministic. We still defensively handle
     // every legacy shape.
     if (kind === "dns-resolve") {
-      if (!ok) return head("فشل حلّ النطاق", "/resolve") + failBody();
+      if (!ok) return head(hrT('فشل حلّ النطاق'), "/resolve") + failBody();
       const rows = Array.isArray(data.data) ? data.data : [];
       const first = rows[0] || {};
       const name = data.name || data.host || data.query || first.name || "";
@@ -836,25 +832,25 @@
         push(r.host);
       });
       const list = addrs.map(a => `<dd>${safeHtml(a)}</dd>`).join("");
-      return head(`نتيجة الحلّ — ${name}`, "/resolve") + body(`
+      return head(hrT('نتيجة الحلّ — {name}', {name}), "/resolve") + body(`
         <dl class="mt-kv">
-          <dt>النطاق</dt><dd>${safeHtml(name)}</dd>
+          <dt>${hrT('النطاق')}</dt><dd>${safeHtml(name)}</dd>
           ${list
-            ? `<dt>العناوين</dt><dd>${addrs.length} نتيجة</dd>${list}`
-            : '<dt>العناوين</dt><dd>— (لم يُحَلّ)</dd>'}
+            ? `<dt>${hrT('العناوين')}</dt><dd>${hrT('{n} نتيجة', {n: addrs.length})}</dd>${list}`
+            : ('<dt>' + hrT('العناوين') + '</dt>' + '<dd>' + hrT('— (لم يُحَلّ)') + '</dd>')}
         </dl>
         ${list ? `
           <div class="mt-action-result-summary">
-            ✓ النطاق متاح. هذي IPs اللي يحلّها الراوتر حالياً.
+            ${hrT('✓ النطاق متاح. هذي IPs اللي يحلّها الراوتر حالياً.')}
           </div>` : `
           <div class="mt-action-result-summary"
                style="background:#FEF3C7;border-color:#FCD34D;color:#92400E">
-            ⚠ الراوتر استلم الطلب لكن لم يُرجع أي IP. الأسباب الشائعة:
+            ${hrT('⚠ الراوتر استلم الطلب لكن لم يُرجع أي IP. الأسباب الشائعة:')}
             <ol style="margin:6px 14px 0;padding:0;font-size:12px">
-              <li>الـ DNS غير مُهيَّأ على الراوتر — تحقّق من
+              <li>${hrT('الـ DNS غير مُهيَّأ على الراوتر — تحقّق من')}
                   <code>/ip dns set servers=…</code></li>
-              <li>النطاق غير موجود (NXDOMAIN)</li>
-              <li>الـ tunnel لا يصل لخادم DNS الذي يستعمله الراوتر</li>
+              <li>${hrT('النطاق غير موجود (NXDOMAIN)')}</li>
+              <li>${hrT('الـ tunnel لا يصل لخادم DNS الذي يستعمله الراوتر')}</li>
             </ol>
           </div>`}
       `);
@@ -862,69 +858,68 @@
 
     // ── DNS FLUSH ─────────────────────────────────────────
     if (kind === "dns-flush") {
-      if (!ok) return head("فشل مسح كاش DNS", "/ip/dns/cache/flush") + failBody();
-      return head("تم مسح كاش DNS بنجاح", "/ip/dns/cache/flush") + body(`
+      if (!ok) return head(hrT('فشل مسح كاش DNS'), "/ip/dns/cache/flush") + failBody();
+      return head(hrT('تم مسح كاش DNS بنجاح'), "/ip/dns/cache/flush") + body(`
         <div class="mt-action-result-summary">
-          ✓ كاش DNS فارغ الآن. ستُعاد الاستعلامات من المصدر عند الطلب التالي.
+          ${hrT('✓ كاش DNS فارغ الآن. ستُعاد الاستعلامات من المصدر عند الطلب التالي.')}
         </div>
       `);
     }
 
     // ── CLOCK SYNC ────────────────────────────────────────
     if (kind === "clock-sync") {
-      if (!ok) return head("فشل مزامنة الوقت", "/system/ntp") + failBody();
-      return head("تمت مزامنة الوقت", "/system/ntp/client") + body(`
+      if (!ok) return head(hrT('فشل مزامنة الوقت'), "/system/ntp") + failBody();
+      return head(hrT('تمت مزامنة الوقت'), "/system/ntp/client") + body(`
         <dl class="mt-kv">
-          ${data.time     ? `<dt>الوقت الآن</dt><dd>${safeHtml(data.time)}</dd>` : ""}
-          ${data.ntp_peer ? `<dt>خادم NTP</dt><dd>${safeHtml(data.ntp_peer)}</dd>` : ""}
+          ${data.time     ? `<dt>${hrT('الوقت الآن')}</dt><dd>${safeHtml(data.time)}</dd>` : ""}
+          ${data.ntp_peer ? `<dt>${hrT('خادم NTP')}</dt><dd>${safeHtml(data.ntp_peer)}</dd>` : ""}
         </dl>
         <div class="mt-action-result-summary">
-          ✓ ساعة الراوتر مضبوطة بنجاح من خادم NTP.
+          ${hrT('✓ ساعة الراوتر مضبوطة بنجاح من خادم NTP.')}
         </div>
       `);
     }
 
     // ── BACKUP ────────────────────────────────────────────
     if (kind === "backup") {
-      if (!ok) return head("فشل حفظ النسخة الاحتياطية", "/system/backup/save") + failBody();
-      return head("تم حفظ النسخة الاحتياطية", "/system/backup/save") + body(`
+      if (!ok) return head(hrT('فشل حفظ النسخة الاحتياطية'), "/system/backup/save") + failBody();
+      return head(hrT('تم حفظ النسخة الاحتياطية'), "/system/backup/save") + body(`
         <dl class="mt-kv">
-          ${data.name ? `<dt>اسم الملف</dt><dd>${safeHtml(data.name)}</dd>` : ""}
-          ${data.size ? `<dt>الحجم</dt><dd>${safeHtml(data.size)}</dd>` : ""}
+          ${data.name ? `<dt>${hrT('اسم الملف')}</dt><dd>${safeHtml(data.name)}</dd>` : ""}
+          ${data.size ? `<dt>${hrT('الحجم')}</dt><dd>${safeHtml(data.size)}</dd>` : ""}
         </dl>
         <div class="mt-action-result-summary">
-          تم حفظ ملف النسخة الاحتياطية على الراوتر. يمكنك تنزيله من قائمة الملفات في أداة إدارة الراوتر.
+          ${hrT('تم حفظ ملف النسخة الاحتياطية على الراوتر. يمكنك تنزيله من قائمة الملفات في أداة إدارة الراوتر.')}
         </div>
       `);
     }
 
     // ── REBOOT ────────────────────────────────────────────
     if (kind === "reboot") {
-      if (!ok) return head("فشل إعادة التشغيل", "/system/reboot") + failBody();
-      return head("تمت إعادة التشغيل", "/system/reboot") + body(`
+      if (!ok) return head(hrT('فشل إعادة التشغيل'), "/system/reboot") + failBody();
+      return head(hrT('تمت إعادة التشغيل'), "/system/reboot") + body(`
         <div class="mt-action-result-summary">
-          الراوتر يُعيد التشغيل الآن. سيُقطع الاتصال لدقيقة تقريباً.
-          أعد تحميل الصفحة بعد دقيقة.
+          ${hrT('الراوتر يُعيد التشغيل الآن. سيُقطع الاتصال لدقيقة تقريباً.\r\n          أعد تحميل الصفحة بعد دقيقة.')}
         </div>
       `);
     }
 
     // ── IDENTITY ──────────────────────────────────────────
     if (kind === "identity") {
-      if (!ok) return head("فشل تعديل الاسم", "/system/identity") + failBody();
-      return head("تم تحديث اسم الراوتر", "/system/identity") + body(`
+      if (!ok) return head(hrT('فشل تعديل الاسم'), "/system/identity") + failBody();
+      return head(hrT('تم تحديث اسم الراوتر'), "/system/identity") + body(`
         <dl class="mt-kv">
-          ${data.name ? `<dt>الاسم الجديد</dt><dd>${safeHtml(data.name)}</dd>` : ""}
+          ${data.name ? `<dt>${hrT('الاسم الجديد')}</dt><dd>${safeHtml(data.name)}</dd>` : ""}
         </dl>
       `);
     }
 
     // ── DEFAULT (unknown action) ──────────────────────────
     return head(
-      ok ? "تمّ تنفيذ العملية" : "فشلت العملية",
+      ok ? hrT('تمّ تنفيذ العملية') : hrT('فشلت العملية'),
       ""
     ) + (ok
-      ? body('<div class="mt-action-result-summary">✓ تمت العملية. تظهر التفاصيل المهمة هنا حسب نوع الأمر.</div>')
+      ? body(('<div class="mt-action-result-summary">' + hrT('✓ تمت العملية. تظهر التفاصيل المهمة هنا حسب نوع الأمر.') + '</div>'))
       : failBody());
   }
 
@@ -948,7 +943,7 @@
     if (actionButtons[key]) actionButtons[key].classList.add("is-active");
     // #47 — set the modal title + open the popup so the form is no
     // longer rendered at the bottom of the page.
-    if (actionModalTtl) actionModalTtl.textContent = ACTION_TITLES[key] || "الإجراء";
+    if (actionModalTtl) actionModalTtl.textContent = ACTION_TITLES[key] || hrT('الإجراء');
     showActionModal(true);
     const cancel = actionFormEl.querySelector(".mt-cancel");
     if (cancel) cancel.addEventListener("click", closeForm);
@@ -965,50 +960,50 @@
    */
   const PROGRESS_STAGES = {
     ping: [
-      { label: "الاتصال بالراوتر عبر نفق الإدارة",     hint: "إنشاء قناة آمنة مشفّرة", t: 400 },
-      { label: "إرسال حزم Ping من الراوتر",    hint: "نطلب من الراوتر أن يُرسل الحزم للهدف", t: 1200 },
-      { label: "انتظار الردود من الهدف",        hint: "كل حزمة تنتظر TTL لإلتقاط ردّها", t: 1600 },
-      { label: "جلب النتيجة من الراوتر",        hint: "جمع الإحصائيات النهائية", t: 400 },
+      { label: hrT('الاتصال بالراوتر عبر نفق الإدارة'),     hint: hrT('إنشاء قناة آمنة مشفّرة'), t: 400 },
+      { label: hrT('إرسال حزم Ping من الراوتر'),    hint: hrT('نطلب من الراوتر أن يُرسل الحزم للهدف'), t: 1200 },
+      { label: hrT('انتظار الردود من الهدف'),        hint: hrT('كل حزمة تنتظر TTL لإلتقاط ردّها'), t: 1600 },
+      { label: hrT('جلب النتيجة من الراوتر'),        hint: hrT('جمع الإحصائيات النهائية'), t: 400 },
     ],
     traceroute: [
-      { label: "الاتصال بالراوتر عبر نفق الإدارة",     hint: "إنشاء قناة آمنة مشفّرة", t: 400 },
-      { label: "تنفيذ traceroute على الراوتر",  hint: "خطوة-بخطوة عبر شبكة الـ ISP", t: 4000 },
-      { label: "جمع القفزات",                   hint: "بعض القفزات قد تتأخّر — لا تقلق", t: 3000 },
-      { label: "إرسال النتيجة",                 hint: "جلب الجدول النهائي", t: 400 },
+      { label: hrT('الاتصال بالراوتر عبر نفق الإدارة'),     hint: hrT('إنشاء قناة آمنة مشفّرة'), t: 400 },
+      { label: hrT('تنفيذ traceroute على الراوتر'),  hint: hrT('خطوة-بخطوة عبر شبكة الـ ISP'), t: 4000 },
+      { label: hrT('جمع القفزات'),                   hint: hrT('بعض القفزات قد تتأخّر — لا تقلق'), t: 3000 },
+      { label: hrT('إرسال النتيجة'),                 hint: hrT('جلب الجدول النهائي'), t: 400 },
     ],
     "dns-resolve": [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "استعلام DNS",                    hint: "سؤال خادم DNS عن الاسم", t: 800 },
-      { label: "جلب النتيجة",                    hint: "العناوين IP المُحلَّلة", t: 200 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('استعلام DNS'),                    hint: hrT('سؤال خادم DNS عن الاسم'), t: 800 },
+      { label: hrT('جلب النتيجة'),                    hint: hrT('العناوين IP المُحلَّلة'), t: 200 },
     ],
     "dns-flush": [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "تنفيذ /ip/dns/cache/flush",      hint: "إفراغ كاش الـ DNS", t: 500 },
-      { label: "تأكيد العملية",                  hint: "الكاش فارغ الآن", t: 200 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('تنفيذ /ip/dns/cache/flush'),      hint: hrT('إفراغ كاش الـ DNS'), t: 500 },
+      { label: hrT('تأكيد العملية'),                  hint: hrT('الكاش فارغ الآن'), t: 200 },
     ],
     "clock-sync": [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "إيقاف عميل NTP مؤقّتاً",         hint: "خطوة تحضيرية", t: 400 },
-      { label: "إعادة تفعيله للمزامنة",          hint: "العميل يربط مع pool خوادم NTP", t: 1000 },
-      { label: "قراءة الساعة الجديدة",           hint: "للتحقّق", t: 300 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('إيقاف عميل NTP مؤقّتاً'),         hint: hrT('خطوة تحضيرية'), t: 400 },
+      { label: hrT('إعادة تفعيله للمزامنة'),          hint: hrT('العميل يربط مع pool خوادم NTP'), t: 1000 },
+      { label: hrT('قراءة الساعة الجديدة'),           hint: hrT('للتحقّق'), t: 300 },
     ],
     backup: [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 400 },
-      { label: "تنفيذ /system/backup/save",       hint: "الراوتر يكتب الملف على الذاكرة الداخلية", t: 1500 },
-      { label: "التحقق من إنشاء الملف",          hint: "قائمة /file بعد الحفظ", t: 600 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 400 },
+      { label: hrT('تنفيذ /system/backup/save'),       hint: hrT('الراوتر يكتب الملف على الذاكرة الداخلية'), t: 1500 },
+      { label: hrT('التحقق من إنشاء الملف'),          hint: hrT('قائمة /file بعد الحفظ'), t: 600 },
     ],
     reboot: [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "إرسال أمر /system/reboot",        hint: "الراوتر يبدأ الإقلاع", t: 500 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('إرسال أمر /system/reboot'),        hint: hrT('الراوتر يبدأ الإقلاع'), t: 500 },
     ],
     identity: [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "تعديل /system/identity",          hint: "تطبيق الاسم الجديد", t: 400 },
-      { label: "تأكيد التغيير",                   hint: "قراءة الاسم بعد التعديل", t: 300 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('تعديل /system/identity'),          hint: hrT('تطبيق الاسم الجديد'), t: 400 },
+      { label: hrT('تأكيد التغيير'),                   hint: hrT('قراءة الاسم بعد التعديل'), t: 300 },
     ],
     disconnect: [
-      { label: "الاتصال بالراوتر",              hint: "قناة ربط آمنة", t: 300 },
-      { label: "إزالة الجلسة من /active",        hint: "كَيك الجلسة", t: 400 },
+      { label: hrT('الاتصال بالراوتر'),              hint: hrT('قناة ربط آمنة'), t: 300 },
+      { label: hrT('إزالة الجلسة من /active'),        hint: hrT('كَيك الجلسة'), t: 400 },
     ],
   };
 
@@ -1022,22 +1017,22 @@
   function showProgress(kind) {
     if (!actionResEl) return () => {};
     const stages = PROGRESS_STAGES[kind] || [
-      { label: "الاتصال بالراوتر",        hint: "قناة ربط آمنة", t: 400 },
-      { label: "تنفيذ الأمر",              hint: "يعمل…", t: 1500 },
-      { label: "جلب النتيجة",              hint: "نهائي", t: 400 },
+      { label: hrT('الاتصال بالراوتر'),        hint: hrT('قناة ربط آمنة'), t: 400 },
+      { label: hrT('تنفيذ الأمر'),              hint: hrT('يعمل…'), t: 1500 },
+      { label: hrT('جلب النتيجة'),              hint: hrT('نهائي'), t: 400 },
     ];
     actionResEl.classList.remove("is-ok", "is-fail");
     actionResEl.classList.add("is-progress");
     const titleMap = {
-      ping:          "اختبار Ping",
+      ping:          hrT('اختبار Ping'),
       traceroute:    "Traceroute",
-      "dns-resolve": "حلّ نطاق DNS",
-      "dns-flush":   "مسح كاش DNS",
-      "clock-sync":  "مزامنة الوقت",
-      backup:        "حفظ نسخة احتياطية",
-      reboot:        "إعادة تشغيل",
-      identity:      "تعديل اسم الراوتر",
-      disconnect:    "قطع الاتصال",
+      "dns-resolve": hrT('حلّ نطاق DNS'),
+      "dns-flush":   hrT('مسح كاش DNS'),
+      "clock-sync":  hrT('مزامنة الوقت'),
+      backup:        hrT('حفظ نسخة احتياطية'),
+      reboot:        hrT('إعادة تشغيل'),
+      identity:      hrT('تعديل اسم الراوتر'),
+      disconnect:    hrT('قطع الاتصال'),
     };
     actionResEl.innerHTML = `
       <div class="mt-action-result-head">
@@ -1045,12 +1040,12 @@
           <i class="fa-solid fa-spinner fa-spin"></i>
         </span>
         <span class="mt-action-result-title">
-          ${safeHtml(titleMap[kind] || "تنفيذ العملية")} — جارٍ المعالجة…
+          ${safeHtml(titleMap[kind] || hrT('تنفيذ العملية'))} — ${hrT('جارٍ المعالجة…')}
         </span>
         <span class="mt-action-result-meta" data-mt-progress-tick>0.0s</span>
       </div>
       <div class="mt-action-result-body">
-        <ol class="mt-action-stages" aria-label="مراحل التنفيذ">
+        <ol class="mt-action-stages" aria-label="${hrT('مراحل التنفيذ')}">
           ${stages.map((s, i) => `
             <li class="mt-action-stage" data-stage-index="${i}">
               <span class="mt-action-stage-bullet">
@@ -1067,11 +1062,11 @@
           `).join("")}
         </ol>
         <div class="mt-action-progress-bar"
-             aria-label="جارٍ التنفيذ" role="progressbar">
+             aria-label="${hrT('جارٍ التنفيذ')}" role="progressbar">
           <div class="mt-action-progress-bar-fill"></div>
         </div>
         <div class="mt-action-result-summary">
-          نُنفّذ الأمر على الراوتر عبر نفق الإدارة. لا تُغلق الصفحة.
+          ${hrT('نُنفّذ الأمر على الراوتر عبر نفق الإدارة. لا تُغلق الصفحة.')}
         </div>
       </div>
     `;
@@ -1163,13 +1158,13 @@
   if (actionButtons.backup) {
     actionButtons.backup.addEventListener("click", () => {
       openForm("backup", `
-        <label>اسم النسخة (اختياري — الافتراضي اسم تلقائي بتاريخ اليوم)
+        <label>${hrT('اسم النسخة (اختياري — الافتراضي اسم تلقائي بتاريخ اليوم)')}
           <input type="text" name="name" placeholder="20260602-01"
                  maxlength="64" data-mt-backup-name>
         </label>
         <div class="mt-action-row">
-          <button type="submit">حفظ الآن</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit">${hrT('حفظ الآن')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const submit = actionFormEl.querySelector("button[type=submit]");
@@ -1190,24 +1185,24 @@
   if (actionButtons.ping) {
     actionButtons.ping.addEventListener("click", () => {
       openForm("ping", `
-        <label>الهدف
+        <label>${hrT('الهدف')}
           <input type="text" name="target" placeholder="8.8.8.8"
                  data-mt-ping-target required>
         </label>
-        <label>عدد الحزم (1-20)
+        <label>${hrT('عدد الحزم (1-20)')}
           <input type="number" name="count" min="1" max="20" value="4"
                  data-mt-ping-count>
         </label>
         <div class="mt-action-row">
-          <button type="submit">شغّل فحص الاتصال</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit">${hrT('شغّل فحص الاتصال')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const submit = actionFormEl.querySelector("button[type=submit]");
       submit.addEventListener("click", async (e) => {
         e.preventDefault();
         const target = actionFormEl.querySelector("[data-mt-ping-target]").value.trim();
-        if (!target) { writeOutput({ error: "أدخل عنوان الهدف" }, false); return; }
+        if (!target) { writeOutput({ error: hrT('أدخل عنوان الهدف') }, false); return; }
         const countRaw = actionFormEl.querySelector("[data-mt-ping-count]").value;
         const count = Math.max(1, Math.min(20, parseInt(countRaw, 10) || 4));
         submit.disabled = true;
@@ -1224,16 +1219,16 @@
   if (actionButtons.reboot) {
     actionButtons.reboot.addEventListener("click", () => {
       openForm("reboot", `
-        <label>سبب (اختياري — يُسجَّل في سجل التدقيق)
-          <input type="text" name="reason" placeholder="تعليق النظام" data-mt-reboot-reason>
+        <label>${hrT('سبب (اختياري — يُسجَّل في سجل التدقيق)')}
+          <input type="text" name="reason" placeholder="${hrT('تعليق النظام')}" data-mt-reboot-reason>
         </label>
         <label class="mt-action-confirm">
           <input type="checkbox" data-mt-reboot-confirm>
-          أؤكد إعادة تشغيل الراوتر — سيُقطع الاتصال لدقيقة
+          ${hrT('أؤكد إعادة تشغيل الراوتر — سيُقطع الاتصال لدقيقة')}
         </label>
         <div class="mt-action-row">
-          <button type="submit" disabled>إعادة التشغيل</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit" disabled>${hrT('إعادة التشغيل')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const cb = actionFormEl.querySelector("[data-mt-reboot-confirm]");
@@ -1256,21 +1251,21 @@
   if (actionButtons.identity) {
     actionButtons.identity.addEventListener("click", () => {
       openForm("identity", `
-        <label>الاسم الجديد (حروف لاتينية وأرقام ورموز النقطة والشرطة فقط، حتى 32 حرفًا)
+        <label>${hrT('الاسم الجديد (حروف لاتينية وأرقام ورموز النقطة والشرطة فقط، حتى 32 حرفًا)')}
           <input type="text" name="name" maxlength="32"
                  pattern="[A-Za-z0-9._\\-]{1,32}"
                  placeholder="r-01" data-mt-identity-name required>
         </label>
-        <label>سبب (اختياري)
-          <input type="text" name="reason" placeholder="توضيح اسم الجهاز" data-mt-identity-reason>
+        <label>${hrT('سبب (اختياري)')}
+          <input type="text" name="reason" placeholder="${hrT('توضيح اسم الجهاز')}" data-mt-identity-reason>
         </label>
         <label class="mt-action-confirm">
           <input type="checkbox" data-mt-identity-confirm>
-          أؤكد تغيير اسم الراوتر
+          ${hrT('أؤكد تغيير اسم الراوتر')}
         </label>
         <div class="mt-action-row">
-          <button type="submit" disabled>تغيير الاسم</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit" disabled>${hrT('تغيير الاسم')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const cb = actionFormEl.querySelector("[data-mt-identity-confirm]");
@@ -1280,7 +1275,7 @@
         e.preventDefault();
         if (!cb.checked) return;
         const name = actionFormEl.querySelector("[data-mt-identity-name]").value.trim();
-        if (!name) { writeOutput({ error: "أدخل الاسم الجديد" }, false); return; }
+        if (!name) { writeOutput({ error: hrT('أدخل الاسم الجديد') }, false); return; }
         const reason = actionFormEl.querySelector("[data-mt-identity-reason]").value.trim();
         submit.disabled = true;
         await postJson(
@@ -1296,24 +1291,24 @@
   if (actionButtons.traceroute) {
     actionButtons.traceroute.addEventListener("click", () => {
       openForm("traceroute", `
-        <label>الهدف
-          <input type="text" name="target" placeholder="8.8.8.8 أو example.com"
+        <label>${hrT('الهدف')}
+          <input type="text" name="target" placeholder="${hrT('8.8.8.8 أو example.com')}"
                  data-mt-trace-target required>
         </label>
-        <label>الحدّ الأقصى للقفزات (5-30)
+        <label>${hrT('الحدّ الأقصى للقفزات (5-30)')}
           <input type="number" name="max-hops" min="5" max="30" value="15"
                  data-mt-trace-hops>
         </label>
         <div class="mt-action-row">
-          <button type="submit">شغّل تتبّع المسار</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit">${hrT('شغّل تتبّع المسار')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const submit = actionFormEl.querySelector("button[type=submit]");
       submit.addEventListener("click", async (e) => {
         e.preventDefault();
         const target = actionFormEl.querySelector("[data-mt-trace-target]").value.trim();
-        if (!target) { writeOutput({ error: "أدخل عنوان الهدف" }, false); return; }
+        if (!target) { writeOutput({ error: hrT('أدخل عنوان الهدف') }, false); return; }
         const raw = actionFormEl.querySelector("[data-mt-trace-hops]").value;
         const maxHops = Math.max(5, Math.min(30, parseInt(raw, 10) || 15));
         submit.disabled = true;
@@ -1338,12 +1333,11 @@
     actionButtons["dns-flush"].addEventListener("click", () => {
       openForm("dns-flush", `
         <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
-          سنُفرغ كاش DNS على الراوتر. هذا غير مدمّر —
-          الراوتر سيستعلم عن الأسماء من جديد عند الطلب.
+          ${hrT('سنُفرغ كاش DNS على الراوتر. هذا غير مدمّر —\r\n          الراوتر سيستعلم عن الأسماء من جديد عند الطلب.')}
         </p>
         <div class="mt-action-row">
-          <button type="submit">مسح الآن</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit">${hrT('مسح الآن')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const submit = actionFormEl.querySelector("button[type=submit]");
@@ -1364,12 +1358,11 @@
     actionButtons["clock-sync"].addEventListener("click", () => {
       openForm("clock-sync", `
         <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
-          إعادة مزامنة الوقت من خادم NTP. مفيد عند الإقلاع البارد
-          أو لو ساعة الراوتر منحرفة.
+          ${hrT('إعادة مزامنة الوقت من خادم NTP. مفيد عند الإقلاع البارد\r\n          أو لو ساعة الراوتر منحرفة.')}
         </p>
         <div class="mt-action-row">
-          <button type="submit">مزامنة الآن</button>
-          <button type="button" class="mt-cancel">إلغاء</button>
+          <button type="submit">${hrT('مزامنة الآن')}</button>
+          <button type="button" class="mt-cancel">${hrT('إلغاء')}</button>
         </div>
       `);
       const submit = actionFormEl.querySelector("button[type=submit]");
@@ -1461,14 +1454,14 @@
       const running  = String(row["running"])  === "true";
       if (disabled) {
         return ['<span class="mt-iface-state mt-iface-state--off">',
-                'معطّلة</span>'].join("");
+                (hrT('معطّلة') + '</span>')].join("");
       }
       if (running) {
         return ['<span class="mt-iface-state mt-iface-state--up">',
-                'متصلة</span>'].join("");
+                (hrT('متصلة') + '</span>')].join("");
       }
       return ['<span class="mt-iface-state mt-iface-state--down">',
-              'غير متصلة</span>'].join("");
+              (hrT('غير متصلة') + '</span>')].join("");
     }
 
     function escapeText(v) {
@@ -1543,7 +1536,7 @@
         const { res, body } = await api(
           "/mikrotik/" + CFG.routerId + "/interfaces");
         if (!res.ok || !body || body.ok === false) {
-          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          setMsg(hrT('تعذّر التحميل (HTTP ') + res.status + ").");
           wrap.hidden = true;
           if (count) count.textContent = "—";
           return;
@@ -1551,14 +1544,14 @@
         const env = body.data || {};
         if (env.ok === false) {
           setMsg(env.error
-                 || "الراوتر لم يرد على /interface/print.");
+                 || hrT('الراوتر لم يرد على /interface/print.'));
           wrap.hidden = true;
           if (count) count.textContent = "—";
           return;
         }
         const list = Array.isArray(env.data) ? env.data : [];
         if (!list.length) {
-          setMsg("لا توجد واجهات معروضة.");
+          setMsg(hrT('لا توجد واجهات معروضة.'));
           wrap.hidden = true;
           if (count) count.textContent = "0";
           return;
@@ -1568,7 +1561,7 @@
         setMsg("");
         wrap.hidden = false;
       } catch (e) {
-        setMsg("خطأ في الشبكة: " + String(e));
+        setMsg(hrT('خطأ في الشبكة: ') + String(e));
         wrap.hidden = true;
       } finally {
         inflight = false;
@@ -1608,17 +1601,17 @@
       if (state === "on") {
         liveBtn.classList.add("is-active");
         liveBtn.setAttribute("aria-pressed", "true");
-        if (liveLbl) liveLbl.textContent = "إيقاف البث";
-        liveBtn.title = "البث الحي مُفعَّل — يُحدِّث كل ~ ثانية";
+        if (liveLbl) liveLbl.textContent = hrT('إيقاف البث');
+        liveBtn.title = hrT('البث الحي مُفعَّل — يُحدِّث كل ~ ثانية');
       } else if (state === "error") {
         liveBtn.classList.add("is-error");
         liveBtn.setAttribute("aria-pressed", "false");
-        if (liveLbl) liveLbl.textContent = "إعادة المحاولة";
-        liveBtn.title = "فشل البث الحي — اضغط لإعادة المحاولة";
+        if (liveLbl) liveLbl.textContent = hrT('إعادة المحاولة');
+        liveBtn.title = hrT('فشل البث الحي — اضغط لإعادة المحاولة');
       } else {
         liveBtn.setAttribute("aria-pressed", "false");
-        if (liveLbl) liveLbl.textContent = "تفعيل البث الحي";
-        liveBtn.title = "بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ";
+        if (liveLbl) liveLbl.textContent = hrT('تفعيل البث الحي');
+        liveBtn.title = hrT('بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ');
       }
     }
 
@@ -1752,7 +1745,7 @@
         const { res, body } = await api(
           "/mikrotik/" + CFG.routerId + spec.path);
         if (!res.ok || !body || body.ok === false) {
-          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          setMsg(hrT('تعذّر التحميل (HTTP ') + res.status + ").");
           wrap.hidden = true;
           if (count) count.textContent = "—";
           return;
@@ -1781,7 +1774,7 @@
         setMsg("");
         wrap.hidden = false;
       } catch (e) {
-        setMsg("خطأ في الشبكة: " + String(e));
+        setMsg(hrT('خطأ في الشبكة: ') + String(e));
         wrap.hidden = true;
       } finally {
         inflight = false;
@@ -1821,16 +1814,16 @@
     rowsSel: "[data-mt-ips-rows]",
     countSel: "[data-mt-ips-count]",
     refreshSel: "[data-mt-ips-refresh]",
-    emptyMsg: "لا توجد عناوين IP على هذا الراوتر.",
-    errorFallback: "الراوتر لم يرد على /ip/address/print.",
+    emptyMsg: hrT('لا توجد عناوين IP على هذا الراوتر.'),
+    errorFallback: hrT('الراوتر لم يرد على /ip/address/print.'),
     row: function (r) {
       const disabled = String(r["disabled"]) === "true";
       const dyn      = String(r["dynamic"])  === "true";
       const stateHtml = disabled
-        ? '<span class="mt-iface-state mt-iface-state--off">معطّل</span>'
+        ? ('<span class="mt-iface-state mt-iface-state--off">' + hrT('معطّل') + '</span>')
         : (dyn
-            ? '<span class="mt-iface-state mt-iface-state--down">ديناميكي</span>'
-            : '<span class="mt-iface-state mt-iface-state--up">ثابت</span>');
+            ? ('<span class="mt-iface-state mt-iface-state--down">' + hrT('ديناميكي') + '</span>')
+            : ('<span class="mt-iface-state mt-iface-state--up">' + hrT('ثابت') + '</span>'));
       return [
         '<tr>',
         '<td class="mt-iface-name">', escapeText(r.address || "—"), '</td>',
@@ -1876,28 +1869,28 @@
     }
 
     const evidenceLabels = {
-      address: "العنوان",
-      avg: "المتوسط",
-      best: "الأفضل",
-      count: "العدد",
-      host: "الوجهة",
-      interface: "الواجهة",
-      interfaces: "الواجهات",
-      last: "آخر قيمة",
-      loss: "الفقد",
-      mac: "عنوان MAC",
-      name: "الاسم",
-      port: "المنفذ",
-      reason: "السبب",
-      status: "الحالة",
-      total: "الإجمالي",
-      type: "النوع",
-      value: "القيمة",
-      worst: "الأسوأ",
+      address: hrT('العنوان'),
+      avg: hrT('المتوسط'),
+      best: hrT('الأفضل'),
+      count: hrT('العدد'),
+      host: hrT('الوجهة'),
+      interface: hrT('الواجهة'),
+      interfaces: hrT('الواجهات'),
+      last: hrT('آخر قيمة'),
+      loss: hrT('الفقد'),
+      mac: hrT('عنوان MAC'),
+      name: hrT('الاسم'),
+      port: hrT('المنفذ'),
+      reason: hrT('السبب'),
+      status: hrT('الحالة'),
+      total: hrT('الإجمالي'),
+      type: hrT('النوع'),
+      value: hrT('القيمة'),
+      worst: hrT('الأسوأ'),
     };
 
     function evidenceKeyLabel(key) {
-      return evidenceLabels[key] || "تفصيل";
+      return evidenceLabels[key] || hrT('تفصيل');
     }
 
     function evidenceValueText(value) {
@@ -1920,14 +1913,14 @@
           });
         if (parts.length) return parts.join(" · ");
       }
-      return "<strong>معلومة " + String(index + 1) + ":</strong> "
+      return ('<strong>' + hrT('معلومة') + ' ') + String(index + 1) + ":</strong> "
            + escapeText(evidenceValueText(item));
     }
 
     function evidenceHtml(ev) {
       if (!Array.isArray(ev) || !ev.length) return "";
       return ['<details class="mt-health-evidence">',
-              '<summary>تفاصيل الفحص (', String(ev.length), ')</summary>',
+              ('<summary>' + hrT('تفاصيل الفحص (')), String(ev.length), ')</summary>',
               '<ul class="mt-health-evidence-list">',
               ev.map((item, idx) => '<li>' + evidenceRowText(item, idx) + '</li>').join(""),
               '</ul>',
@@ -1936,22 +1929,22 @@
 
     function severityChip(sev) {
       if (sev === "critical")
-        return '<span class="mt-iface-state mt-iface-state--off">حرجة</span>';
+        return ('<span class="mt-iface-state mt-iface-state--off">' + hrT('حرجة') + '</span>');
       if (sev === "warning")
-        return '<span class="mt-iface-state mt-iface-state--down">تحذير</span>';
-      return '<span class="mt-iface-state mt-iface-state--up">سليمة</span>';
+        return ('<span class="mt-iface-state mt-iface-state--down">' + hrT('تحذير') + '</span>');
+      return ('<span class="mt-iface-state mt-iface-state--up">' + hrT('سليمة') + '</span>');
     }
 
     function render(report) {
       const signals = (report && report.signals) || [];
       const summary = (report && report.summary) || {};
-      if (critEl) critEl.textContent = (summary.critical || 0) + " حرجة";
-      if (warnEl) warnEl.textContent = (summary.warning  || 0) + " تحذير";
-      if (okEl)   okEl.textContent   = (summary.ok       || 0) + " سليمة";
+      if (critEl) critEl.textContent = (summary.critical || 0) + hrT(' حرجة');
+      if (warnEl) warnEl.textContent = (summary.warning  || 0) + hrT(' تحذير');
+      if (okEl)   okEl.textContent   = (summary.ok       || 0) + hrT(' سليمة');
 
       if (!signals.length) {
         list.innerHTML = "";
-        setMsg("لا توجد إشارات للفحص.");
+        setMsg(hrT('لا توجد إشارات للفحص.'));
         return;
       }
       list.innerHTML = signals.map(s => {
@@ -1980,17 +1973,17 @@
         const { res, body } = await api(
           "/mikrotik/" + CFG.routerId + "/health");
         if (!res.ok || !body || body.ok === false) {
-          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          setMsg(hrT('تعذّر التحميل (HTTP ') + res.status + ").");
           return;
         }
         const env = body.data || {};
         if (env.ok === false) {
-          setMsg(env.error || "فشل فحص الإشارات.");
+          setMsg(env.error || hrT('فشل فحص الإشارات.'));
           return;
         }
         render(env);
       } catch (e) {
-        setMsg("خطأ في الشبكة: " + String(e));
+        setMsg(hrT('خطأ في الشبكة: ') + String(e));
       } finally {
         inflight = false;
       }
@@ -2053,8 +2046,8 @@
       '<td>', escapeText(r.comment || ""), '</td>',
       '<td><button type="button" class="mt-row-disconnect"',
       ' data-mt-disconnect="hotspot"',
-      ' title="قطع الاتصال">',
-      '<i class="fa-solid fa-link-slash"></i> قطع',
+      hrT(' title="قطع الاتصال">'),
+      ('<i class="fa-solid fa-link-slash">' + '</i>' + ' ' + hrT('قطع')),
       '</button></td>',
       '</tr>',
     ].join("");
@@ -2071,8 +2064,8 @@
     rowsSel: "[data-mt-hotspot-cards-rows]",
     countSel: "[data-mt-hotspot-cards-count]",
     refreshSel: "[data-mt-hotspot-cards-refresh]",
-    emptyMsg: "لا توجد جلسات كروت نشطة الآن.",
-    errorFallback: "الراوتر لم يرد على /ip/hotspot/active.",
+    emptyMsg: hrT('لا توجد جلسات كروت نشطة الآن.'),
+    errorFallback: hrT('الراوتر لم يرد على /ip/hotspot/active.'),
     // Custom filter: bucket only card-pattern usernames into this
     // table. The Users table below filters the inverse so each
     // row appears in exactly one table.
@@ -2091,8 +2084,8 @@
     rowsSel: "[data-mt-hotspot-users-rows]",
     countSel: "[data-mt-hotspot-users-count]",
     refreshSel: "[data-mt-hotspot-users-refresh]",
-    emptyMsg: "لا توجد جلسات يوزرات نشطة الآن.",
-    errorFallback: "الراوتر لم يرد على /ip/hotspot/active.",
+    emptyMsg: hrT('لا توجد جلسات يوزرات نشطة الآن.'),
+    errorFallback: hrT('الراوتر لم يرد على /ip/hotspot/active.'),
     filter: function (r) { return !isCardUsername(r.user); },
     row: hotspotSessionRow,
   });
@@ -2108,8 +2101,8 @@
     rowsSel: "[data-mt-ppp-sessions-rows]",
     countSel: "[data-mt-ppp-sessions-count]",
     refreshSel: "[data-mt-ppp-sessions-refresh]",
-    emptyMsg: "لا توجد جلسات PPP نشطة الآن.",
-    errorFallback: "الراوتر لم يرد على /ppp/active.",
+    emptyMsg: hrT('لا توجد جلسات PPP نشطة الآن.'),
+    errorFallback: hrT('الراوتر لم يرد على /ppp/active.'),
     row: function (r) {
       const id   = String(r[".id"] || "");
       const name = String(r.name  || "");
@@ -2125,8 +2118,8 @@
         '<td>', escapeText(r.uptime || "—"), '</td>',
         '<td><button type="button" class="mt-row-disconnect"',
         ' data-mt-disconnect="ppp"',
-        ' title="قطع الاتصال">',
-        '<i class="fa-solid fa-link-slash"></i> قطع',
+        hrT(' title="قطع الاتصال">'),
+        ('<i class="fa-solid fa-link-slash">' + '</i>' + ' ' + hrT('قطع')),
         '</button></td>',
         '</tr>',
       ].join("");
@@ -2152,7 +2145,7 @@
     // visible the whole time.
     const label = user || id;
     /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
-    const _kmsg = `قطع اتصال «${label}»؟`;
+    const _kmsg = hrT('قطع اتصال «{label}»؟', {label});
     if (!(await (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _kmsg}) : Promise.resolve(window.confirm(_kmsg))))) return;
     btn.disabled = true;
     tr.style.opacity = "0.5";
@@ -2177,7 +2170,7 @@
       btn.disabled = false;
       tr.style.opacity = "1";
       btn.innerHTML = origHtml;
-      alert("تعذّر قطع الاتصال: " + (err && err.message || err));
+      alert(hrT('تعذّر قطع الاتصال: ') + (err && err.message || err));
     }
   });
 
@@ -2294,17 +2287,17 @@
         const { res, body } = await api(
           "/mikrotik/" + CFG.routerId + "/log?" + qs.toString());
         if (!res.ok || !body || body.ok === false) {
-          setMsg("تعذّر التحميل (HTTP " + res.status + ").");
+          setMsg(hrT('تعذّر التحميل (HTTP ') + res.status + ").");
           return;
         }
         const env = body.data || {};
         if (env.ok === false) {
-          setMsg(env.error || "الراوتر لم يرد على /log/print.");
+          setMsg(env.error || hrT('الراوتر لم يرد على /log/print.'));
           return;
         }
         const list = Array.isArray(env.data) ? env.data : [];
         if (!list.length) {
-          setMsg("لا توجد سطور تطابق الفلتر الحالي.");
+          setMsg(hrT('لا توجد سطور تطابق الفلتر الحالي.'));
           output.innerHTML = "";
           if (count) count.textContent = "0";
           updateSeverityStats([]);
@@ -2325,7 +2318,7 @@
         // Auto-scroll to bottom (newest entries).
         output.scrollTop = output.scrollHeight;
       } catch (e) {
-        setMsg("خطأ في الشبكة: " + String(e));
+        setMsg(hrT('خطأ في الشبكة: ') + String(e));
       } finally {
         inflight = false;
       }
@@ -2366,9 +2359,9 @@
     rowsSel: "[data-mt-neighbors-rows]",
     countSel: "[data-mt-neighbors-count]",
     refreshSel: "[data-mt-neighbors-refresh]",
-    emptyMsg: ("لم يكتشف الراوتر أيّ جيران بعد. "
-               + "تأكد من تفعيل MNDP/CDP/LLDP على الواجهة."),
-    errorFallback: "الراوتر لم يرد على /ip/neighbor/print.",
+    emptyMsg: (hrT('لم يكتشف الراوتر أيّ جيران بعد. ')
+               + hrT('تأكد من تفعيل MNDP/CDP/LLDP على الواجهة.')),
+    errorFallback: hrT('الراوتر لم يرد على /ip/neighbor/print.'),
     row: function (r) {
       // RouterOS exposes a `discovered-by` field listing the
       // protocols that saw this neighbor. Not all builds carry it,
@@ -2400,16 +2393,16 @@
     rowsSel: "[data-mt-routes-rows]",
     countSel: "[data-mt-routes-count]",
     refreshSel: "[data-mt-routes-refresh]",
-    emptyMsg: "لا توجد مسارات على هذا الراوتر.",
-    errorFallback: "الراوتر لم يرد على /ip/route/print.",
+    emptyMsg: hrT('لا توجد مسارات على هذا الراوتر.'),
+    errorFallback: hrT('الراوتر لم يرد على /ip/route/print.'),
     row: function (r) {
       const active   = String(r["active"])   === "true";
       const disabled = String(r["disabled"]) === "true";
       const stateHtml = disabled
-        ? '<span class="mt-iface-state mt-iface-state--off">معطّل</span>'
+        ? ('<span class="mt-iface-state mt-iface-state--off">' + hrT('معطّل') + '</span>')
         : (active
-            ? '<span class="mt-iface-state mt-iface-state--up">نشط</span>'
-            : '<span class="mt-iface-state mt-iface-state--down">خامل</span>');
+            ? ('<span class="mt-iface-state mt-iface-state--up">' + hrT('نشط') + '</span>')
+            : ('<span class="mt-iface-state mt-iface-state--down">' + hrT('خامل') + '</span>'));
       // RouterOS exposes a "static / dynamic / connect / dhcp / bgp"
       // family on every route — surface it so the operator can tell
       // a hand-built static route from one a DHCP lease installed.

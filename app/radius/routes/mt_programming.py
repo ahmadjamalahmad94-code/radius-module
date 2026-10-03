@@ -10,6 +10,7 @@ view here therefore renders the plan inside the same page with
 the apply button disabled and a hint pointing to Q2.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -228,13 +229,13 @@ def mt_program_plan(nas_id: int):
         # confirm.
         if ov and ov.backup_status == "missing":
             backup_warning_ar = (
-                "لا توجد نسخة احتياطية لهذا الراوتر. إن فشل "
+                _tr("لا توجد نسخة احتياطية لهذا الراوتر. إن فشل "
                 "التطبيق لن تستطيع الاستعادة. ينصح بأخذ نسخة "
-                "احتياطية قبل المتابعة.")
+                "احتياطية قبل المتابعة."))
         elif ov and ov.backup_status == "stale":
             backup_warning_ar = (
-                "آخر نسخة احتياطية قديمة — يُستحسن تحديثها "
-                "قبل أي تعديل.")
+                _tr("آخر نسخة احتياطية قديمة — يُستحسن تحديثها "
+                "قبل أي تعديل."))
     return render_template(
         "radius/mt_programming.html",
         nas=nas,
@@ -308,7 +309,7 @@ def mt_program_apply(nas_id: int):
         )
         if not safety.allowed:
             error = "؛ ".join(safety.blocking_reasons) or (
-                "العملية محظورة بسبب فحص السلامة.")
+                _tr("العملية محظورة بسبب فحص السلامة."))
             # Skip the rest — apply path won't run.
             return render_template(
                 "radius/mt_programming.html",
@@ -320,10 +321,10 @@ def mt_program_apply(nas_id: int):
 
     if plan is not None:
         if not confirmed:
-            error = "يجب تأكيد العملية قبل التطبيق."
+            error = _tr("يجب تأكيد العملية قبل التطبيق.")
         elif plan.risks:
-            error = ("لا يمكن التطبيق وعندنا مخاطر غير معالجة — "
-                     "صحّح المدخلات ثم أعد الفحص.")
+            error = (_tr("لا يمكن التطبيق وعندنا مخاطر غير معالجة — "
+                     "صحّح المدخلات ثم أعد الفحص."))
         else:
             client = _connect_client(nas)
             try:
@@ -331,7 +332,7 @@ def mt_program_apply(nas_id: int):
                 apply_result = mt_programming.apply_commands(
                     client, plan.commands)
             except Exception as e:  # noqa: BLE001
-                error = "تعذّر الاتصال بالراوتر: " + str(e)
+                error = N_("تعذّر الاتصال بالراوتر: ") + str(e)
             finally:
                 try:
                     client.close()
@@ -405,16 +406,16 @@ def mt_program_unprogram(nas_id: int):
     unprogram_result = None
 
     if kind not in {"hotspot", "pppoe"}:
-        error = "نوع البرمجة غير معروف."
+        error = _tr("نوع البرمجة غير معروف.")
     elif not confirmed:
-        error = "يجب تأكيد عملية الإزالة قبل تنفيذها."
+        error = _tr("يجب تأكيد عملية الإزالة قبل تنفيذها.")
     else:
         client = _connect_client(nas)
         try:
             client.connect()
             unprogram_result = mt_programming.unprogram(client, kind)
         except Exception as e:  # noqa: BLE001
-            error = "تعذّر الاتصال بالراوتر: " + str(e)
+            error = N_("تعذّر الاتصال بالراوتر: ") + str(e)
         finally:
             try:
                 client.close()

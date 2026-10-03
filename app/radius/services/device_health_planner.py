@@ -16,6 +16,7 @@ device_health_mikrotik and hands the lists in. That keeps this unit-testable
 with plain dicts and guarantees Phase 1/2 never mutate a router.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 from typing import Any, Mapping, Optional, Sequence
@@ -42,29 +43,29 @@ def compute_network(
     """
     raw = str(ip_address or "").strip()
     if not raw:
-        raise NetworkCalcError("عنوان IP مطلوب.")
+        raise NetworkCalcError(_tr("عنوان IP مطلوب."))
     try:
         ip = ipaddress.ip_address(raw)
     except ValueError as exc:
-        raise NetworkCalcError(f"عنوان IP غير صالح: {raw}") from exc
+        raise NetworkCalcError(_tr('عنوان IP غير صالح: %(raw)s', raw=raw)) from exc
     if not isinstance(ip, ipaddress.IPv4Address):
-        raise NetworkCalcError("يُدعم IPv4 فقط حاليًا.")
+        raise NetworkCalcError(_tr("يُدعم IPv4 فقط حاليًا."))
     try:
         prefix = int(subnet_prefix)
     except (TypeError, ValueError) as exc:
-        raise NetworkCalcError("بادئة الشبكة غير صالحة.") from exc
+        raise NetworkCalcError(_tr("بادئة الشبكة غير صالحة.")) from exc
     if not (1 <= prefix <= 32):
-        raise NetworkCalcError("بادئة الشبكة يجب أن تكون بين 1 و32.")
+        raise NetworkCalcError(_tr("بادئة الشبكة يجب أن تكون بين 1 و32."))
     try:
         octet = int(gateway_last_octet)
     except (TypeError, ValueError) as exc:
-        raise NetworkCalcError("آخر أوكتت للبوابة غير صالح.") from exc
+        raise NetworkCalcError(_tr("آخر أوكتت للبوابة غير صالح.")) from exc
 
     net = ipaddress.ip_network(f"{ip}/{prefix}", strict=False)
     gw_int = int(net.network_address) + octet
     if octet < 0 or gw_int > int(net.broadcast_address):
         raise NetworkCalcError(
-            f"آخر أوكتت للبوابة ({octet}) خارج نطاق الشبكة {net}.")
+            _tr('آخر أوكتت للبوابة (%(octet)s) خارج نطاق الشبكة %(net)s.', octet=octet, net=net))
     gateway = ipaddress.IPv4Address(gw_int)
     return {
         "ip_address":      str(ip),
@@ -128,7 +129,7 @@ def build_plan(
     iface = str(interface_name or "").strip()
     if not iface:
         return {"ok": False, "valid": False,
-                "error": "المدخل (interface) إلزامي.",
+                "error": _tr("المدخل (interface) إلزامي."),
                 "items": [], "warnings": [], "live": router_state is not None}
     try:
         net = compute_network(ip_address, subnet_prefix, gateway_last_octet)
@@ -139,7 +140,7 @@ def build_plan(
     warnings: list[str] = []
     if net["gateway_ip"] == net["ip_address"]:
         warnings.append(
-            "بوابة الراوتر تساوي عنوان الجهاز — اختر آخر أوكتت مختلفًا.")
+            N_("بوابة الراوتر تساوي عنوان الجهاز — اختر آخر أوكتت مختلفًا."))
 
     live = router_state is not None
     addresses = list((router_state or {}).get("addresses") or [])
@@ -166,13 +167,13 @@ def build_plan(
         addr_action = "already_present" if same_iface_net else "create"
         if other_ifaces:
             warnings.append(
-                "نفس الشبكة %s موجودة على مدخل آخر (%s) — غموض توجيه محتمل."
+                _tr("نفس الشبكة %s موجودة على مدخل آخر (%s) — غموض توجيه محتمل.")
                 % (net["network_cidr"], "، ".join(sorted(other_ifaces))))
 
     items: list[dict] = [{
         "kind": "ip_address",
         "action": addr_action,
-        "title": "عنوان IP/بوابة على المدخل",
+        "title": _tr("عنوان IP/بوابة على المدخل"),
         "address": net["gateway_address"],
         "interface": iface,
         "command": (
@@ -194,8 +195,8 @@ def build_plan(
         # لا تُعرض خطّةٌ سيرفضها الحارس عند التنفيذ — الأفضل أن يُقال السبب
         # الآن بدل «فشل التطبيق» بلا تفسير بعد الضغط.
         return {"ok": False, "valid": False,
-                "error": ("عنوان الجهاز غير صالح للتجاوز — يجب أن يكون عنوان "
-                          "مضيفٍ واحد لا شبكة."),
+                "error": (_tr("عنوان الجهاز غير صالح للتجاوز — يجب أن يكون عنوان "
+                          "مضيفٍ واحد لا شبكة.")),
                 "network": net, "items": [], "warnings": warnings, "live": live}
     if live:
         present = False
@@ -211,14 +212,14 @@ def build_plan(
     items.append({
         "kind": "ip_binding",
         "action": bind_action,
-        "title": "تجاوز Hotspot (IP-Binding) لجهاز التوزيع",
+        "title": _tr("تجاوز Hotspot (IP-Binding) لجهاز التوزيع"),
         "address": bind_addr,
         "binding_type": binding_type,
         "command": (
             f'/ip/hotspot/ip-binding/add address={bind_addr} '
             f'type={binding_type} comment="managed-by device-health"'),
-        "note": "عنوان الجهاز وحده — ربط الشبكة كلّها يفتح النت لكل من يضع "
-                "عنوانًا ثابتًا فيها.",
+        "note": _tr("عنوان الجهاز وحده — ربط الشبكة كلّها يفتح النت لكل من يضع "
+                "عنوانًا ثابتًا فيها."),
     })
 
     # ── /tool/netwatch ──
@@ -233,7 +234,7 @@ def build_plan(
     items.append({
         "kind": "netwatch",
         "action": nw_action,
-        "title": "مراقبة Netwatch لعنوان الجهاز",
+        "title": _tr("مراقبة Netwatch لعنوان الجهاز"),
         "host": net["ip_address"],
         "interval_sec": int(netwatch_interval_sec),
         "timeout_sec": int(netwatch_timeout_sec),

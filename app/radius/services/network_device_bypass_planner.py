@@ -17,6 +17,7 @@ per-step result dict and decides whether to surface the trap
 to the operator or just proceed.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 from typing import Any, Mapping, Optional
@@ -61,7 +62,7 @@ def apply_bypass(
     if not mac_addr or not ip_addr:
         return mac.MtResult(
             ok=False,
-            error="الجهاز يحتاج MAC + IP قبل التطبيق.",
+            error=N_("الجهاز يحتاج MAC + IP قبل التطبيق."),
         )
 
     def _work(client) -> dict[str, str]:

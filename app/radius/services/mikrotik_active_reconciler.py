@@ -38,6 +38,7 @@ Design notes
   than this service silently sending on stale data.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import os
@@ -56,11 +57,11 @@ ERR_MULTIPLE = "multiple_matching_sessions"
 
 # Arabic labels for the panel (surfaced via flash on the disconnect route).
 ERROR_LABELS_AR = {
-    ERR_SESSION_NOT_ACTIVE: "لا توجد جلسة نشطة على الراوتر لهذا المستخدم.",
-    ERR_SESSION_STALE: "بيانات الجلسة قديمة — أعد مصالحة الراوتر ثم حاول ثانيةً.",
-    ERR_MISSING_ATTRS: "تعذّر القطع: خصائص الجلسة (IP/MAC/Session-Id) غير متوفّرة.",
-    ERR_ROUTER_UNREACHABLE: "واجهة الراوتر (API) غير قابلة للوصول — تعذّرت المصالحة.",
-    ERR_MULTIPLE: "أكثر من جلسة مطابقة — حدّد الجلسة بدقّة (IP/MAC/Session-Id).",
+    ERR_SESSION_NOT_ACTIVE: N_("لا توجد جلسة نشطة على الراوتر لهذا المستخدم."),
+    ERR_SESSION_STALE: N_("بيانات الجلسة قديمة — أعد مصالحة الراوتر ثم حاول ثانيةً."),
+    ERR_MISSING_ATTRS: N_("تعذّر القطع: خصائص الجلسة (IP/MAC/Session-Id) غير متوفّرة."),
+    ERR_ROUTER_UNREACHABLE: N_("واجهة الراوتر (API) غير قابلة للوصول — تعذّرت المصالحة."),
+    ERR_MULTIPLE: N_("أكثر من جلسة مطابقة — حدّد الجلسة بدقّة (IP/MAC/Session-Id)."),
 }
 
 SOURCE_MIKROTIK_ACTIVE = "mikrotik_active"

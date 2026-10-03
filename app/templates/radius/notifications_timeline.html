@@ -6,11 +6,11 @@
 {% block page_title %}{{ _("سجل الإشعارات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('كل رسالة: ما أُرسِل، ما ينتظر الإرسال، وما سيُرسَل خلال أسبوع — لمن، ولماذا، وعلى أي قناة، ومتى، ونجاحها أو فشلها.') }}</span>{% endblock %}
 
-{% macro ch_label(c) %}{{ {'sms':'رسالة قصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'بريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':_('رسالة قصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('بريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
-  {%- set m = {'sent':('أُرسِلت','green'),'delivered':('سُلّمت','green'),'read':('قُرئت','green'),'queued':('بالانتظار','amber'),'pending':('بالانتظار','amber'),'skipped':('تُخطّيت','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set m = {'sent':(_('أُرسِلت'),'green'),'delivered':(_('سُلّمت'),'green'),'read':(_('قُرئت'),'green'),'queued':(_('بالانتظار'),'amber'),'pending':(_('بالانتظار'),'amber'),'skipped':(_('تُخطّيت'),'grey'),'failed':(_('فشلت'),'red'),'error':(_('خطأ'),'red')} -%}
   {%- set pair = m.get(s, (s if s else '—','grey')) -%}
   <span class="ntl-pill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
 {% endmacro %}
@@ -53,34 +53,34 @@
 
 {# ───── Unified hero: title + count KPIs ───── #}
 {% call hub.megahero(
-  "سجل الإشعارات",
-  subtitle="تتبّع كل رسالة عبر القنوات: أُرسِلت، تنتظر الإرسال، أو مجدولة خلال أسبوع (تذكيرات قرب انتهاء الاشتراك). لكل صف: المستلِم، السبب، القناة، الوقت، والنتيجة.",
+  _('سجل الإشعارات'),
+  subtitle=_('تتبّع كل رسالة عبر القنوات: أُرسِلت، تنتظر الإرسال، أو مجدولة خلال أسبوع (تذكيرات قرب انتهاء الاشتراك). لكل صف: المستلِم، السبب، القناة، الوقت، والنتيجة.'),
   icon="timeline",
   kpis=[
-    {'label': 'أُرسِلت',       'value': counts.sent,      'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'بالانتظار',     'value': counts.pending,   'icon': 'clock',        'variant': 'amber'},
-    {'label': 'فشلت',          'value': counts.failed,    'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'مجدولة (أسبوع)','value': counts.scheduled, 'icon': 'calendar-day', 'variant': 'brand'}
+    {'label': _('أُرسِلت'),       'value': counts.sent,      'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('بالانتظار'),     'value': counts.pending,   'icon': 'clock',        'variant': 'amber'},
+    {'label': _('فشلت'),          'value': counts.failed,    'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('مجدولة (أسبوع)'),'value': counts.scheduled, 'icon': 'calendar-day', 'variant': 'brand'}
   ]
 ) %}{% endcall %}
 
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا السجل؟",
-  intro="صفحة واحدة تجمع ماضي الرسائل وحاضرها ومستقبلها القريب.",
+  _('كيف تقرأ هذا السجل؟'),
+  intro=_('صفحة واحدة تجمع ماضي الرسائل وحاضرها ومستقبلها القريب.'),
   icon="circle-info",
   items=[
-    {'icon': 'circle-check', 'text': '«أُرسِلت / بالانتظار / فشلت» تأتي من سجل تسليم القنوات الفعلي (رسائل/واتساب/تلجرام…).'},
-    {'icon': 'calendar-day', 'text': '«المجدولة» تُحسب من تواريخ انتهاء الاشتراكات: تذكير قرب الانتهاء سيُرسَل تلقائيًّا في موعده.'},
-    {'icon': 'tower-broadcast', 'text': 'أعمدة القناة والسبب والمستلِم تُظهر لمن ولماذا وعلى أي قناة.'},
-    {'icon': 'circle-xmark', 'text': 'الرسائل الحاملة لكلمات المرور تُرسَل مباشرةً ولا تُسجَّل هنا (حمايةً للسرّ).'}
+    {'icon': 'circle-check', 'text': _('«أُرسِلت / بالانتظار / فشلت» تأتي من سجل تسليم القنوات الفعلي (رسائل/واتساب/تلجرام…).')},
+    {'icon': 'calendar-day', 'text': _('«المجدولة» تُحسب من تواريخ انتهاء الاشتراكات: تذكير قرب الانتهاء سيُرسَل تلقائيًّا في موعده.')},
+    {'icon': 'tower-broadcast', 'text': _('أعمدة القناة والسبب والمستلِم تُظهر لمن ولماذا وعلى أي قناة.')},
+    {'icon': 'circle-xmark', 'text': _('الرسائل الحاملة لكلمات المرور تُرسَل مباشرةً ولا تُسجَّل هنا (حمايةً للسرّ).')}
   ],
-  note="المجدولة تعتمد على تفعيل «تنبيه قرب الانتهاء» وقنواته من إعدادات الإشعارات."
+  note=_('المجدولة تعتمد على تفعيل «تنبيه قرب الانتهاء» وقنواته من إعدادات الإشعارات.')
 )) %}
 
   {# ═════════ 1) المجدولة القادمة (حتى أسبوع) ═════════ #}
-  {% call hub.section("مجدولة للإرسال — حتى " ~ within_days|string ~ " أيام", icon="calendar-day", meta=counts.scheduled|string + " رسالة", flush=True) %}
+  {% call hub.section(_('مجدولة للإرسال — حتى %(string)s أيام', string=within_days|string), icon="calendar-day", meta=counts.scheduled|string + _(' رسالة'), flush=True) %}
     {% if not scheduled.enabled %}
-      {{ hub.empty("تذكير «قرب انتهاء الاشتراك» غير مفعّل.", sub="فعّله وحدّد قنواته من «إشعارات المشتركين» ليظهر هنا ما سيُرسَل خلال الأسبوع القادم.", icon="bell-slash") }}
+      {{ hub.empty(_('تذكير «قرب انتهاء الاشتراك» غير مفعّل.'), sub=_('فعّله وحدّد قنواته من «إشعارات المشتركين» ليظهر هنا ما سيُرسَل خلال الأسبوع القادم.'), icon="bell-slash") }}
     {% elif scheduled['items'] %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('مجدولة للإرسال') }}" style="border:none;border-radius:0">
         <table class="hub-table">
@@ -122,13 +122,13 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا اشتراكات تنتهي خلال الأسبوع القادم.", sub="عندما يقترب اشتراك من الانتهاء سيظهر هنا التذكير المجدول قبل إرساله.", icon="calendar-check") }}
+      {{ hub.empty(_('لا اشتراكات تنتهي خلال الأسبوع القادم.'), sub=_('عندما يقترب اشتراك من الانتهاء سيظهر هنا التذكير المجدول قبل إرساله.'), icon="calendar-check") }}
     {% endif %}
   {% endcall %}
 
   {# ═════════ 2) سجل الإرسال الفعلي (أُرسِلت/بالانتظار/فشل) ═════════ #}
   {%- set _log = data.sent + data.pending + data.failed -%}
-  {% call hub.section("سجل الإرسال", icon="paper-plane", meta=_log|length|string + " عملية", flush=True) %}
+  {% call hub.section(_('سجل الإرسال'), icon="paper-plane", meta=_log|length|string + _(' عملية'), flush=True) %}
     {% if _log %}
       <div class="ntl-filter" id="ntl-filter" style="padding:2px 2px 12px">
         <span class="lbl">{{ _('تصفية:') }}</span>
@@ -171,7 +171,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا عمليات إرسال بعد.", sub="ستظهر هنا كل رسالة تُرسَل عبر القنوات (رسائل قصيرة/واتساب/تلجرام) من الإشعارات الحدثية أو الحملات.", icon="paper-plane") }}
+      {{ hub.empty(_('لا عمليات إرسال بعد.'), sub=_('ستظهر هنا كل رسالة تُرسَل عبر القنوات (رسائل قصيرة/واتساب/تلجرام) من الإشعارات الحدثية أو الحملات.'), icon="paper-plane") }}
     {% endif %}
   {% endcall %}
 

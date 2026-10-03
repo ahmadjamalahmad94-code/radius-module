@@ -19,6 +19,7 @@
 يمرّ فيه المالك تلقائيًّا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Iterable, Optional
 
@@ -26,21 +27,21 @@ from typing import Any, Iterable, Optional
 # (توثيق؛ الإنفاذ في جدولَي _PERM_GUARDED/_NAV_PERM بقيمة "__super__" وفي فحوص
 # المسارات. كل endpoint «__super__» غير مذكور في SUPER_DELEGABLE أدناه = مالك فقط.)
 OWNER_ONLY: dict[str, str] = {
-    "system_settings": "إعدادات النظام (متغيّرات البيئة والأسرار)",
-    "backups_*": "النسخ الاحتياطيّ والاستعادة (تحمل كل البيانات والأسرار)",
-    "finance_ledger_void": "إبطال قيد ماليّ",
-    "credit_dashboard / credit_recharge / سقوف ائتمان المدير": "شحن رصيد المدراء وسقوف الدَّين",
-    "data_reset_* / demo_cleanup_* / migration": "تصفير البيانات وترحيلها",
-    "cards_reconcile_accounting_*": "تسوية محاسبة البطاقات",
-    "tenants_*": "الشبكات (المستأجرون)",
-    "license_connect_* / license_file_config / system_update": "الترخيص والتحديث",
-    "sections_admin_*": "إدارة أقسام الواجهة",
-    "setup_wizard_page": "معالج الإعداد",
-    "payments_lab / collection_hub / payment_collection_*": "بوابات الدفع واعتماد التحصيل",
-    "vpn_accounts_* / wg_data_* / remote_device_access_* / mt_remote_*": "أنفاق الإدارة والوصول عن بُعد",
-    "tool_set_speeds / tool_maintenance / tool_general_adj / tool_test_auth": "أدوات الصيانة الجماعيّة",
-    "settings_rotate_store_key": "تدوير مفتاح المتجر",
-    "co_owner / is_super_admin": "منح/سحب الشراكة («شريك/مالك») ودور «مدير عام»",
+    "system_settings": N_("إعدادات النظام (متغيّرات البيئة والأسرار)"),
+    "backups_*": N_("النسخ الاحتياطيّ والاستعادة (تحمل كل البيانات والأسرار)"),
+    "finance_ledger_void": N_("إبطال قيد ماليّ"),
+    "credit_dashboard / credit_recharge / سقوف ائتمان المدير": N_("شحن رصيد المدراء وسقوف الدَّين"),
+    "data_reset_* / demo_cleanup_* / migration": N_("تصفير البيانات وترحيلها"),
+    "cards_reconcile_accounting_*": N_("تسوية محاسبة البطاقات"),
+    "tenants_*": N_("الشبكات (المستأجرون)"),
+    "license_connect_* / license_file_config / system_update": N_("الترخيص والتحديث"),
+    "sections_admin_*": N_("إدارة أقسام الواجهة"),
+    "setup_wizard_page": N_("معالج الإعداد"),
+    "payments_lab / collection_hub / payment_collection_*": N_("بوابات الدفع واعتماد التحصيل"),
+    "vpn_accounts_* / wg_data_* / remote_device_access_* / mt_remote_*": N_("أنفاق الإدارة والوصول عن بُعد"),
+    "tool_set_speeds / tool_maintenance / tool_general_adj / tool_test_auth": N_("أدوات الصيانة الجماعيّة"),
+    "settings_rotate_store_key": N_("تدوير مفتاح المتجر"),
+    "co_owner / is_super_admin": N_("منح/سحب الشراكة («شريك/مالك») ودور «مدير عام»"),
 }
 
 # ── endpointات «__super__» التي يصلها دور «مدير عام» عبر مفتاح RBAC ──
@@ -173,21 +174,21 @@ def assert_can_modify_admin(actor_id: Optional[int], target_id: int, *,
     is_self = actor_id is not None and int(actor_id) == tid
     if actor_id is not None and not is_self and is_original_owner(tid):
         if deleting:
-            raise OwnerGuardError("لا يمكن حذف المالك الأصليّ للشبكة.")
-        raise OwnerGuardError("حساب المالك الأصليّ محميّ — لا يعدّله إلّا صاحبه.")
+            raise OwnerGuardError(_tr("لا يمكن حذف المالك الأصليّ للشبكة."))
+        raise OwnerGuardError(_tr("حساب المالك الأصليّ محميّ — لا يعدّله إلّا صاحبه."))
     if (co_owner_change or super_change) and not actor_owner:
         raise OwnerGuardError(
-            "منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك.")
+            _tr("منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك."))
     if not actor_owner and not is_self and is_owner_like(tid):
-        raise OwnerGuardError("لا يمكنك تعديل حساب المالك أو الشريك.")
+        raise OwnerGuardError(_tr("لا يمكنك تعديل حساب المالك أو الشريك."))
     if new_role_id and not actor_owner:
         from ..db.repos import admins_repo
         if admins_repo.get_role(int(new_role_id)) is None:
-            raise OwnerGuardError("الدور المحدد غير موجود.")
+            raise OwnerGuardError(_tr("الدور المحدد غير موجود."))
         missing = sorted(_role_perms(int(new_role_id)) - _perms_of(int(actor_id)))
         if missing:
             raise OwnerGuardError(
-                "لا يمكنك إسناد دورٍ يحمل صلاحيات لا تملكها: " + "، ".join(missing[:6]))
+                _tr("لا يمكنك إسناد دورٍ يحمل صلاحيات لا تملكها: ") + "، ".join(missing[:6]))
 
 
 def assert_role_within_actor(actor_id: Optional[int], perms: Iterable[str]) -> None:
@@ -197,7 +198,7 @@ def assert_role_within_actor(actor_id: Optional[int], perms: Iterable[str]) -> N
     missing = sorted(set(perms or ()) - set(_perms_of(int(actor_id))))
     if missing:
         raise OwnerGuardError(
-            "لا يمكنك منح صلاحيات لا تملكها: " + "، ".join(missing[:6]))
+            _tr("لا يمكنك منح صلاحيات لا تملكها: ") + "، ".join(missing[:6]))
 
 
 def can_modify_admin(actor: Any, target: Any) -> bool:

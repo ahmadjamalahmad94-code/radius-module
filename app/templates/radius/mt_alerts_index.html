@@ -24,18 +24,18 @@
 
 {# ───── Merged hero: title + settings action + KPI strip + integrated filters ───── #}
 {% call hub.megahero(
-  "التنبيهات الذكية",
-  subtitle="كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.",
+  _('التنبيهات الذكية'),
+  subtitle=_('كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.'),
   icon="bell",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" data-sa-open>
       <i class="fa-solid fa-gear"></i> '|safe ~ _("إعدادات التنبيهات") ~ '
     </button>'|safe,
   kpis=[
-    {'label': 'حرجة',     'value': critical_count, 'icon': 'circle-exclamation', 'variant': 'red'},
-    {'label': 'تحذيرات',  'value': warning_count,  'icon': 'triangle-exclamation', 'variant': 'amber'},
-    {'label': 'معلومات',  'value': info_count,     'icon': 'circle-info', 'variant': 'blue'},
-    {'label': 'المعروض',  'value': rows|length,    'icon': 'list', 'variant': 'brand'},
+    {'label': _('حرجة'),     'value': critical_count, 'icon': 'circle-exclamation', 'variant': 'red'},
+    {'label': _('تحذيرات'),  'value': warning_count,  'icon': 'triangle-exclamation', 'variant': 'amber'},
+    {'label': _('معلومات'),  'value': info_count,     'icon': 'circle-info', 'variant': 'blue'},
+    {'label': _('المعروض'),  'value': rows|length,    'icon': 'list', 'variant': 'brand'},
   ],
   search_action=url_for('radius.mt_alerts_index')
 ) %}
@@ -44,7 +44,7 @@
     <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>{{ _('المغلقة') }}</option>
   </select>
   {# تسميات الشدة بالعربي بدل القيم الخام (info/warning/critical) #}
-  {% set severity_labels = {'critical': 'حرجة', 'warning': 'تحذير', 'info': 'معلومة'} %}
+  {% set severity_labels = {'critical': _('حرجة'), 'warning': _('تحذير'), 'info': _('معلومة')} %}
   <select class="hub-select" name="severity" data-mt-alerts-severity>
     <option value="">{{ _('كل الشدات') }}</option>
     {% for s in severities %}
@@ -53,30 +53,26 @@
   </select>
   <input class="hub-input" type="text" name="router_id" value="{{ filters.router_id or '' }}"
          placeholder="{{ _('راوتر (مثلا 42)') }}" data-mt-alerts-router>
-  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="magnifying-glass", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ الصفحة؟",
-  intro="ابدأ بالحرجة، ثم التحذيرات. التنبيه المغلق يظهر فقط عند اختيار الحالة المغلقة من الفلاتر.",
+  _('كيف تقرأ الصفحة؟'),
+  intro=_('ابدأ بالحرجة، ثم التحذيرات. التنبيه المغلق يظهر فقط عند اختيار الحالة المغلقة من الفلاتر.'),
   items=[
-    {'icon': 'circle-dot', 'text': 'الشدة تحدد أولوية التدخل، وليست مجرد لون.'},
-    {'icon': 'router',     'text': 'فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق.'},
-    {'icon': 'eye',        'text': 'زر التفاصيل يفتح الدليل الكامل لنفس التنبيه.'},
+    {'icon': 'circle-dot', 'text': _('الشدة تحدد أولوية التدخل، وليست مجرد لون.')},
+    {'icon': 'router',     'text': _('فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق.')},
+    {'icon': 'eye',        'text': _('زر التفاصيل يفتح الدليل الكامل لنفس التنبيه.')},
   ]
 )) %}
-  {% call hub.section("النتائج", icon="list-check",
-       meta=("المفتوحة" if filters.status == "open" else "المغلقة"), flush=True) %}
+  {% call hub.section(_('النتائج'), icon="list-check",
+       meta=(_('المفتوحة') if filters.status == "open" else _('المغلقة')), flush=True) %}
     {% if not rows %}
     <div class="hub-section-body" data-mt-alerts-empty style="line-height:1.9">
       <p style="font-weight:800;margin:0 0 6px;font-size:14px">{{ _('لا توجد تنبيهات حالياً.') }}</p>
       <p style="margin:0">
-        هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي،
-        حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا <strong>المراقبة
-        اللحظية لانقطاع الراوتر</strong> فتعتمد على وصول مقاييس الراوتر بشكل دوري؛
-        إذا لم يظهر الراوتر هنا، افتح إدارة الراوترات أو إعداد عميل المقاييس
-        للتحقق من حالة الإرسال.
+        {{ _('هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي، حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا') }} <strong>{{ _('المراقبة اللحظية لانقطاع الراوتر') }}</strong> {{ _('فتعتمد على وصول مقاييس الراوتر بشكل دوري؛ إذا لم يظهر الراوتر هنا، افتح إدارة الراوترات أو إعداد عميل المقاييس للتحقق من حالة الإرسال.') }}
       </p>
       <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
         {{ _('لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.') }}
@@ -110,16 +106,16 @@
             </td>
             <td>
               {% if a.severity == 'critical' %}
-              {{ hub.pill("حرجة", variant="red") }}
+              {{ hub.pill(_('حرجة'), variant="red") }}
               {% elif a.severity == 'warning' %}
-              {{ hub.pill("تحذير", variant="amber") }}
+              {{ hub.pill(_('تحذير'), variant="amber") }}
               {% else %}
-              {{ hub.pill("معلومة", variant="blue") }}
+              {{ hub.pill(_('معلومة'), variant="blue") }}
               {% endif %}
             </td>
             {# عمود «الراوتر» — اسم الجهاز الفعلي من خريطة router_names؛
                عند غياب الاسم نعرض «راوتر #رقم» بدل «#رقم» الخام. #}
-            <td class="small">{% if a.router_id %}{{ router_names.get(a.router_id, 'راوتر #' ~ a.router_id) }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+            <td class="small">{% if a.router_id %}{{ router_names.get(a.router_id, _('راوتر #%(router_id)s', router_id=a.router_id)) }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
             <td class="mono small">{{ a.rule }}</td>
             <td class="mono small">{{ a.last_seen|dt_local }}</td>
             <td>

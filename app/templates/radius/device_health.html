@@ -24,8 +24,8 @@
 {% block content %}
 
 {% set _type_labels = {
-  'ap':'نقطة وصول','router':'راوتر','link':'وصلة','unifi':'UniFi',
-  'litebeam':'LiteBeam','switch':'سويتش','server':'خادم','camera':'كاميرا','other':'أخرى'} %}
+  'ap':_('نقطة وصول'),'router':_('راوتر'),'link':_('وصلة'),'unifi':'UniFi',
+  'litebeam':'LiteBeam','switch':_('سويتش'),'server':_('خادم'),'camera':_('كاميرا'),'other':_('أخرى')} %}
 
 {%- set _kpis = [
   {'label': _('إجمالي الأجهزة'), 'value': counts.total,        'icon':'tower-broadcast','variant':'brand'},
@@ -163,10 +163,10 @@
             {% set _v = {'up':'green','down':'red','timeout':'red','unavailable':'red',
                          'high_latency':'amber',
                          'disabled':'grey','apply_failed':'red'}.get(d.status,'grey') %}
-            {% set _l = {'up':'متصل','down':'مفصول','timeout':'انتهت المهلة',
-                         'unavailable':'غير متاح — الراوتر مفصول',
-                         'high_latency':'بنج عالٍ','disabled':'معطّل',
-                         'apply_failed':'فشل التطبيق','unknown':'غير معروف'}.get(d.status, d.status) %}
+            {% set _l = {'up':_('متصل'),'down':_('مفصول'),'timeout':_('انتهت المهلة'),
+                         'unavailable':_('غير متاح — الراوتر مفصول'),
+                         'high_latency':_('بنج عالٍ'),'disabled':_('معطّل'),
+                         'apply_failed':_('فشل التطبيق'),'unknown':_('غير معروف')}.get(d.status, d.status) %}
             {{ hub.pill(_(_l), variant=_v) }}
           </td>
           <td class="mono dh-latency">{{ '%.1f ms'|format(d.last_latency_ms) if d.last_latency_ms is not none else '—' }}</td>

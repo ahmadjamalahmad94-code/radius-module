@@ -25,6 +25,7 @@ preview before committing.
 Pure functions. No Flask coupling.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import csv
 import io
@@ -141,8 +142,8 @@ def parse(file_bytes: bytes, filename: str) -> EngineResult:
 
     if fmt == "unknown":
         result.warnings.append(
-            "تعذّر التعرّف على نوع الملف. الأنواع المدعومة: "
-            "CSV / TSV / TXT / XLSX / PDF."
+            N_("تعذّر التعرّف على نوع الملف. الأنواع المدعومة: "
+            "CSV / TSV / TXT / XLSX / PDF.")
         )
         return result
 
@@ -152,12 +153,12 @@ def parse(file_bytes: bytes, filename: str) -> EngineResult:
         result.warnings.append(str(exc))
         return result
     except Exception as exc:  # noqa: BLE001 — unknown extractor failures
-        result.warnings.append(f"خطأ غير متوقّع أثناء قراءة الملف: {exc}")
+        result.warnings.append(_tr('خطأ غير متوقّع أثناء قراءة الملف: %(exc)s', exc=exc))
         return result
 
     result.sheet_names = sheet_names
     if not table:
-        result.warnings.append("الملف فارغ أو لا يحتوي على صفوف قابلة للقراءة.")
+        result.warnings.append(N_("الملف فارغ أو لا يحتوي على صفوف قابلة للقراءة."))
         return result
 
     cards, detected, info = detect_credentials(table)
@@ -184,7 +185,7 @@ def parse_text(text: str) -> EngineResult:
     raw = (text or "").strip()
     if not raw:
         result = EngineResult(fmt="csv")
-        result.warnings.append("النص فارغ.")
+        result.warnings.append(N_("النص فارغ."))
         return result
 
     table = _table_from_csv_text(raw.encode("utf-8"))
@@ -225,7 +226,7 @@ def parse_text(text: str) -> EngineResult:
         result.rows_skipped = info["rows_skipped"]
         result.warnings.extend(info["warnings"])
     else:
-        result.warnings.append("تعذّرت قراءة الصفوف من النص الملصوق.")
+        result.warnings.append(N_("تعذّرت قراءة الصفوف من النص الملصوق."))
     return result
 
 
@@ -308,10 +309,10 @@ def extract_table(file_bytes: bytes, fmt: str) -> tuple[list[list[str]], list[st
         return rows, [], hint
     if fmt == "xls-legacy":
         raise _EngineExtractionError(
-            "صيغة .xls القديمة غير مدعومة مباشرة. "
-            "افتح الملف في Excel واحفظه بصيغة .xlsx ثم أعد الرفع."
+            _tr("صيغة .xls القديمة غير مدعومة مباشرة. "
+            "افتح الملف في Excel واحفظه بصيغة .xlsx ثم أعد الرفع.")
         )
-    raise _EngineExtractionError("نوع ملف غير مدعوم.")
+    raise _EngineExtractionError(_tr("نوع ملف غير مدعوم."))
 
 
 # CSV / TSV / TXT --------------------------------------------------
@@ -399,14 +400,14 @@ def _table_from_xlsx(file_bytes: bytes) -> tuple[list[list[str]], list[str]]:
         from openpyxl import load_workbook
     except ImportError as exc:  # pragma: no cover — openpyxl is required
         raise _EngineExtractionError(
-            "مكتبة قراءة Excel غير مثبّتة على الخادم (openpyxl)."
+            _tr("مكتبة قراءة Excel غير مثبّتة على الخادم (openpyxl).")
         ) from exc
 
     try:
         wb = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
     except Exception as exc:  # noqa: BLE001
         raise _EngineExtractionError(
-            f"تعذّرت قراءة ملف Excel — تأكّد أنه ملف XLSX صحيح. ({exc})"
+            _tr('تعذّرت قراءة ملف Excel — تأكّد أنه ملف XLSX صحيح. (%(exc)s)', exc=exc)
         ) from exc
 
     rows: list[list[str]] = []
@@ -457,8 +458,8 @@ def _table_from_pdf(file_bytes: bytes) -> tuple[list[list[str]], str | None]:
         return rows, hint
 
     raise _EngineExtractionError(
-        "تعذّر استخراج محتوى PDF. ركّب pdfplumber أو pypdf على الخادم، "
-        "أو حوّل الملف إلى Excel/CSV."
+        _tr("تعذّر استخراج محتوى PDF. ركّب pdfplumber أو pypdf على الخادم، "
+        "أو حوّل الملف إلى Excel/CSV.")
     )
 
 
@@ -832,7 +833,7 @@ def _try_header_strategy(
     if user_idx is None and pass_idx is None:
         return None
     if user_idx is None:
-        warnings.append("لم يُعرَف عمود المستخدم — تم اختياره بأفضل تخمين.")
+        warnings.append(N_("لم يُعرَف عمود المستخدم — تم اختياره بأفضل تخمين."))
         # Pick the column that most often holds credential-shaped values
         # outside of the password column we already identified.
         scores = _score_columns(table[1:])
@@ -880,7 +881,7 @@ def _try_shape_strategy(
         if ratio < 0.30:
             pass_idx = None
             warnings.append(
-                "عمود كلمة المرور غير واضح — تم استيراد أسماء المستخدمين فقط."
+                N_("عمود كلمة المرور غير واضح — تم استيراد أسماء المستخدمين فقط.")
             )
 
     detected.strategy = "shape-score"
@@ -910,8 +911,8 @@ def _try_single_column_strategy(
     detected.username_index = 0
     detected.password_index = None
     warnings.append(
-        "لم يُكتشف ترتيب أعمدة واضح — تم استخدام أوّل عمود قابل للقراءة "
-        "كأسماء مستخدمين بدون كلمات مرور."
+        N_("لم يُكتشف ترتيب أعمدة واضح — تم استخدام أوّل عمود قابل للقراءة "
+        "كأسماء مستخدمين بدون كلمات مرور.")
     )
     cards: list[Card] = []
     for row in table:

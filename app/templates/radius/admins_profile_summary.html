@@ -50,8 +50,8 @@
 {# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
 <section class="hub-hero-shell">
 {{ hub.hero(
-  "ملخّص المدراء",
-  subtitle="جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول",
+  _('ملخّص المدراء'),
+  subtitle=_('جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول'),
   icon="id-card-clip",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.admins_new') + '">
@@ -63,23 +63,23 @@
   '|safe
 ) }}
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي المدراء", stats.total,     icon="users-gear",       variant="brand") }}
-  {{ hub.kpi("مفعَّلون",        stats.active,    icon="circle-check",     variant="green") }}
-  {{ hub.kpi("لديهم دور",       stats.with_role, icon="key",              variant="blue")  }}
-  {{ hub.kpi("سجّلوا دخولًا",   stats.with_login, icon="right-to-bracket", variant="amber") }}
-  {{ hub.kpi("صلاحيات النظام",  perms_count,     icon="shield-halved",    variant="red")   }}
+  {{ hub.kpi(_('إجمالي المدراء'), stats.total,     icon="users-gear",       variant="brand") }}
+  {{ hub.kpi(_('مفعَّلون'),        stats.active,    icon="circle-check",     variant="green") }}
+  {{ hub.kpi(_('لديهم دور'),       stats.with_role, icon="key",              variant="blue")  }}
+  {{ hub.kpi(_('سجّلوا دخولًا'),   stats.with_login, icon="right-to-bracket", variant="amber") }}
+  {{ hub.kpi(_('صلاحيات النظام'),  perms_count,     icon="shield-halved",    variant="red")   }}
 </div>
 </section>{# /hub-hero-shell #}
 
 {# ───── Table ───────────────────────────────────────────── #}
 {% if not admins %}
   {{ hub.empty(
-    "لا مدراء بعد",
-    sub="أضف أول مدير من زرّ «إضافة مدير» أعلى الصفحة.",
+    _('لا مدراء بعد'),
+    sub=_('أضف أول مدير من زرّ «إضافة مدير» أعلى الصفحة.'),
     icon="user-shield"
   ) }}
 {% else %}
-{% call hub.section("المدراء", icon="table-list", meta=(admins|length)|string + " مدير", flush=True) %}
+{% call hub.section(_('المدراء'), icon="table-list", meta=(admins|length)|string + _(' مدير'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
@@ -120,8 +120,8 @@
           <td class="mono small">{{ a.mobile or a.phone or '—' }}</td>
           <td class="mono small">{{ a.tags or '—' }}</td>
           <td>
-            {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            {% if a.enabled %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+            {% else %}{{ hub.pill(_('معطَّل'), variant="red") }}{% endif %}
           </td>
           <td class="mono small">{{ a.last_login_at|dt_local if a.last_login_at else '—' }}</td>
           <td class="mono small">{{ a.last_login_ip or '—' }}</td>

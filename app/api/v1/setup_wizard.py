@@ -6,6 +6,7 @@ state, phase planner catalogue, per-phase script preview, and diagnostics.
 Actual router apply operations stay behind their explicit guarded routes.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from typing import Any
@@ -182,14 +183,14 @@ def _phase_catalogue() -> list[dict[str, Any]]:
     return [
         {
             "phase": "internet",
-            "title_ar": "وصلة الإنترنت",
-            "description_ar": "تجهيز المنفذ الخارج سواء كان تلقائيًا أو ثابتًا أو عبر PPPoE.",
+            "title_ar": _tr("وصلة الإنترنت"),
+            "description_ar": _tr("تجهيز المنفذ الخارج سواء كان تلقائيًا أو ثابتًا أو عبر PPPoE."),
             "required_inputs": ["source_type"],
         },
         {
             "phase": "vpn_radius",
-            "title_ar": "الربط الآمن وخدمة الريدياس",
-            "description_ar": "تجهيز النفق الآمن وربط الراوتر بخادم الريدياس.",
+            "title_ar": _tr("الربط الآمن وخدمة الريدياس"),
+            "description_ar": _tr("تجهيز النفق الآمن وربط الراوتر بخادم الريدياس."),
             "required_inputs": [
                 "router_vpn_ip",
                 "vps_vpn_ip",
@@ -200,8 +201,8 @@ def _phase_catalogue() -> list[dict[str, Any]]:
         },
         {
             "phase": "hotspot",
-            "title_ar": "بوابة الدخول",
-            "description_ar": "تجهيز بوابة الدخول مع توزيع العناوين والمصادقة عبر الريدياس.",
+            "title_ar": _tr("بوابة الدخول"),
+            "description_ar": _tr("تجهيز بوابة الدخول مع توزيع العناوين والمصادقة عبر الريدياس."),
             "required_inputs": [
                 "selected_interfaces",
                 "subnet_base",
@@ -211,8 +212,8 @@ def _phase_catalogue() -> list[dict[str, Any]]:
         },
         {
             "phase": "broadband",
-            "title_ar": "اشتراكات PPPoE",
-            "description_ar": "تجهيز اشتراكات PPPoE مع مدى عناوين وتوجيه مقيّد.",
+            "title_ar": _tr("اشتراكات PPPoE"),
+            "description_ar": _tr("تجهيز اشتراكات PPPoE مع مدى عناوين وتوجيه مقيّد."),
             "required_inputs": [
                 "selected_interfaces",
                 "local_address",
@@ -221,26 +222,26 @@ def _phase_catalogue() -> list[dict[str, Any]]:
         },
         {
             "phase": "added_services",
-            "title_ar": "خدمات إضافية",
-            "description_ar": "مواقع مفتوحة، حجب مواقع، أو تغيير عنوان الخروج العام.",
+            "title_ar": _tr("خدمات إضافية"),
+            "description_ar": _tr("مواقع مفتوحة، حجب مواقع، أو تغيير عنوان الخروج العام."),
             "required_inputs": ["service_key"],
         },
     ]
 
 
 _ROUTER_SERVICE_TITLE_OVERRIDES = {
-    "hotspot": "بوابة الدخول",
-    "broadband": "اشتراكات PPPoE",
-    "block-sites": "حجب المواقع",
-    "open-sites": "المواقع المفتوحة",
-    "public-ip": "تغيير عنوان الخروج",
-    "remote-access": "الدخول الفني الآمن",
+    "hotspot": N_("بوابة الدخول"),
+    "broadband": N_("اشتراكات PPPoE"),
+    "block-sites": N_("حجب المواقع"),
+    "open-sites": N_("المواقع المفتوحة"),
+    "public-ip": N_("تغيير عنوان الخروج"),
+    "remote-access": N_("الدخول الفني الآمن"),
 }
 
 _ROUTER_SERVICE_STATUS_AR = {
-    "active": "مفعّلة",
-    "inactive": "غير مفعّلة",
-    "unknown": "غير معروف",
+    "active": N_("مفعّلة"),
+    "inactive": N_("غير مفعّلة"),
+    "unknown": N_("غير معروف"),
 }
 
 
@@ -329,7 +330,7 @@ def _diagnostics_for_codes(codes: list[str] | tuple[str, ...]) -> list[dict[str,
             result.append(
                 {
                     "code": str(code),
-                    "ar_explanation": "خطأ تشخيصي غير معروف.",
+                    "ar_explanation": N_("خطأ تشخيصي غير معروف."),
                     "severity": "error",
                 }
             )
@@ -352,14 +353,14 @@ def _visible_v3_error(exc: Exception) -> str:
     text = str(exc).strip()
     lowered = text.lower()
     if "router_name is required" in lowered:
-        return "اسم الراوتر مطلوب."
+        return N_("اسم الراوتر مطلوب.")
     if "router_name must be 64 chars or fewer" in lowered:
-        return "اسم الراوتر يجب أن يكون 64 حرفًا أو أقل."
+        return N_("اسم الراوتر يجب أن يكون 64 حرفًا أو أقل.")
     if "router_type must be" in lowered:
-        return "نوع الراوتر يجب أن يكون بوابة دخول أو اشتراكات أو مختلط."
+        return N_("نوع الراوتر يجب أن يكون بوابة دخول أو اشتراكات أو مختلط.")
     if "cannot" in lowered and "from state" in lowered:
-        return "حالة تشغيل المعالج لا تسمح بهذه الخطوة الآن."
-    return text if any("\u0600" <= ch <= "\u06ff" for ch in text) else "تعذر تنفيذ خطوة معالج الإعداد."
+        return N_("حالة تشغيل المعالج لا تسمح بهذه الخطوة الآن.")
+    return text if any("\u0600" <= ch <= "\u06ff" for ch in text) else N_("تعذر تنفيذ خطوة معالج الإعداد.")
 
 
 def _fail_v3(exc: Exception, *, status: int = 409, code: str = "setup_wizard_step_failed"):
@@ -383,7 +384,7 @@ def _public_script_result(result: dict[str, Any]) -> dict[str, Any]:
         "expires_at": result.get("expires_at") or "",
         "server_radius_provisioning": result.get("server_radius_provisioning") or {},
         "script_contains_sensitive_values": True,
-        "warning_ar": "هذا السكربت يحتوي أسرار تشغيلية داخلية. انسخه للراوتر فقط ولا ترسله لأي جهة غير موثوقة.",
+        "warning_ar": _tr("هذا السكربت يحتوي أسرار تشغيلية داخلية. انسخه للراوتر فقط ولا ترسله لأي جهة غير موثوقة."),
     }
 
 
@@ -441,7 +442,7 @@ def setup_wizard_overview():
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_overview_failed",
-            f"تعذر قراءة حالة معالج الإعداد: {exc}",
+            _tr('تعذر قراءة حالة معالج الإعداد: %(exc)s', exc=exc),
             status=500,
         )
     return ok(
@@ -456,7 +457,7 @@ def setup_wizard_overview():
                 "can_apply_server_peer": True,
                 "can_plan_phases": True,
                 "can_run_lifecycle": True,
-                "reason_ar": "التطبيق يستطيع قراءة الحالة، بدء تشغيل جديد، توليد خطط المراحل، وإكمال خطوات تشغيل الخادم والتسجيل. إرسال أوامر مباشرة للراوتر يبقى محميًا بخطوات معاينة واضحة.",
+                "reason_ar": _tr("التطبيق يستطيع قراءة الحالة، بدء تشغيل جديد، توليد خطط المراحل، وإكمال خطوات تشغيل الخادم والتسجيل. إرسال أوامر مباشرة للراوتر يبقى محميًا بخطوات معاينة واضحة."),
             },
         }
     )
@@ -468,7 +469,7 @@ def setup_wizard_health():
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_health_failed",
-            f"تعذر فحص صحة معالج الإعداد: {exc}",
+            _tr('تعذر فحص صحة معالج الإعداد: %(exc)s', exc=exc),
             status=500,
         )
 
@@ -479,7 +480,7 @@ def setup_wizard_server_readiness():
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_readiness_failed",
-            f"تعذر فحص جاهزية الخادم: {exc}",
+            _tr('تعذر فحص جاهزية الخادم: %(exc)s', exc=exc),
             status=500,
         )
 
@@ -492,7 +493,7 @@ def setup_wizard_runs_create():
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_run_failed",
-            f"تعذر إنشاء تشغيل جديد للمعالج: {exc}",
+            _tr('تعذر إنشاء تشغيل جديد للمعالج: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()}, status=201)
@@ -504,7 +505,7 @@ def setup_wizard_runs_state(run_id: int):
     except V3NotFound:
         return fail(
             "not_found",
-            "تشغيل معالج الإعداد غير موجود.",
+            _tr("تشغيل معالج الإعداد غير موجود."),
             status=404,
         )
     except V3Error as exc:
@@ -512,7 +513,7 @@ def setup_wizard_runs_state(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_state_failed",
-            f"تعذر قراءة حالة تشغيل المعالج: {exc}",
+            _tr('تعذر قراءة حالة تشغيل المعالج: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -528,7 +529,7 @@ def setup_wizard_router_info(run_id: int):
             router_type=str(body.get("router_type") or "hotspot"),
         )
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -536,7 +537,7 @@ def setup_wizard_router_info(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_router_info_failed",
-            f"تعذر حفظ بيانات الراوتر: {exc}",
+            _tr('تعذر حفظ بيانات الراوتر: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -554,13 +555,13 @@ def setup_wizard_generate_script(run_id: int):
     if not str(endpoint).strip():
         return fail(
             "missing_endpoint",
-            "عنوان الخادم العام غير مضبوط.",
+            _tr("عنوان الخادم العام غير مضبوط."),
             status=400,
         )
     if not str(pubkey).strip():
         return fail(
             "missing_server_pubkey",
-            "مفتاح WireGuard العام للخادم غير مضبوط.",
+            _tr("مفتاح WireGuard العام للخادم غير مضبوط."),
             status=400,
         )
     try:
@@ -573,7 +574,7 @@ def setup_wizard_generate_script(run_id: int):
             vps_endpoint_port=_int_body("vps_endpoint_port", 51820),
         )
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -581,7 +582,7 @@ def setup_wizard_generate_script(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_generate_script_failed",
-            f"تعذر توليد سكربت الربط: {exc}",
+            _tr('تعذر توليد سكربت الربط: %(exc)s', exc=exc),
             status=500,
         )
     return ok(_public_script_result(result))
@@ -597,7 +598,7 @@ def setup_wizard_submit_key(run_id: int):
             pasted_or_key=pasted,
         )
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -605,7 +606,7 @@ def setup_wizard_submit_key(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_submit_key_failed",
-            f"تعذر حفظ مفتاح الراوتر العام: {exc}",
+            _tr('تعذر حفظ مفتاح الراوتر العام: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -615,7 +616,7 @@ def setup_wizard_apply_server_peer(run_id: int):
     try:
         run = _svc().apply_server_peer(tenant_id=_tid(), run_id=run_id)
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -623,7 +624,7 @@ def setup_wizard_apply_server_peer(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_apply_peer_failed",
-            f"تعذر تطبيق peer على الخادم: {exc}",
+            _tr('تعذر تطبيق peer على الخادم: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -633,7 +634,7 @@ def setup_wizard_mark_handshake(run_id: int):
     try:
         run = _svc().mark_handshake_observed(tenant_id=_tid(), run_id=run_id)
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -641,7 +642,7 @@ def setup_wizard_mark_handshake(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_mark_handshake_failed",
-            f"تعذر تأكيد اتصال الراوتر: {exc}",
+            _tr('تعذر تأكيد اتصال الراوتر: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -657,7 +658,7 @@ def setup_wizard_register_router(run_id: int):
             api_password=str(body.get("api_password") or ""),
         )
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3InvalidState as exc:
         return _fail_v3(exc, code="invalid_state")
     except V3Error as exc:
@@ -665,7 +666,7 @@ def setup_wizard_register_router(run_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "setup_wizard_register_failed",
-            f"تعذر تسجيل الراوتر في النظام: {exc}",
+            _tr('تعذر تسجيل الراوتر في النظام: %(exc)s', exc=exc),
             status=500,
         )
     return ok({"run": run.to_dict()})
@@ -681,14 +682,14 @@ def setup_wizard_phase_plan(run_id: int, phase: str):
     if planner_cls is None:
         return fail(
             "unknown_phase",
-            "مرحلة المعالج غير معروفة.",
+            _tr("مرحلة المعالج غير معروفة."),
             status=400,
             details={"phase": phase_key, "allowed": sorted(_PHASE_PLANNERS)},
         )
     try:
         run = _svc().get_state(tenant_id=_tid(), run_id=run_id)
     except V3NotFound:
-        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+        return fail("not_found", _tr("تشغيل معالج الإعداد غير موجود."), status=404)
     except V3Error as exc:
         return fail("setup_wizard_state_failed", str(exc), status=409)
 
@@ -704,7 +705,7 @@ def setup_wizard_phase_plan(run_id: int, phase: str):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "planner_failed",
-            f"تعذر توليد خطة المرحلة: {exc}",
+            _tr('تعذر توليد خطة المرحلة: %(exc)s', exc=exc),
             status=500,
         )
 
@@ -754,7 +755,7 @@ def setup_wizard_router_services_status(router_id: int):
     except Exception as exc:  # noqa: BLE001
         return fail(
             "router_services_status_failed",
-            f"تعذّرت قراءة حالة خدمات الراوتر: {exc}",
+            _tr('تعذّرت قراءة حالة خدمات الراوتر: %(exc)s', exc=exc),
             status=500,
         )
 
@@ -762,9 +763,9 @@ def setup_wizard_router_services_status(router_id: int):
     if payload.get("ok") is True:
         return ok({"router_id": int(router_id), "services": services})
 
-    message = str(payload.get("error") or "تعذّرت قراءة حالة خدمات الراوتر.")
+    message = str(payload.get("error") or N_("تعذّرت قراءة حالة خدمات الراوتر."))
     if not any("\u0600" <= ch <= "\u06ff" for ch in message):
-        message = "تعذّرت قراءة حالة خدمات الراوتر."
+        message = _tr("تعذّرت قراءة حالة خدمات الراوتر.")
     return fail(
         str(payload.get("code") or "router_services_status_failed"),
         message,

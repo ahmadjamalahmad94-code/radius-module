@@ -15,6 +15,7 @@ This module performs NO MikroTik writes. Phase 3 will add a controlled apply
 path that reuses device_health_mikrotik's gated write helpers.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional
 
@@ -75,7 +76,7 @@ def list_with_routers(tenant_id: int, **filters: Any) -> dict:
 def _require_router(tenant_id: int, router_id: int):
     nas = nas_repo.get_nas(int(tenant_id), int(router_id))
     if not nas:
-        raise DeviceHealthError("الراوتر المُختار غير موجود.")
+        raise DeviceHealthError(_tr("الراوتر المُختار غير موجود."))
     return nas
 
 
@@ -86,20 +87,20 @@ def create_device(tenant_id: int, params: dict) -> dict:
     tid = int(tenant_id)
     router_id = _to_int(params.get("router_id"), 0)
     if not router_id:
-        raise DeviceHealthError("اختر الراوتر الذي يتبع له الجهاز.")
+        raise DeviceHealthError(_tr("اختر الراوتر الذي يتبع له الجهاز."))
     _require_router(tid, router_id)
 
     name = str(params.get("name") or "").strip()
     if not name:
-        raise DeviceHealthError("اسم الجهاز مطلوب.")
+        raise DeviceHealthError(_tr("اسم الجهاز مطلوب."))
 
     interface_name = str(params.get("interface_name") or "").strip()
     if not interface_name:
-        raise DeviceHealthError("المدخل (interface) إلزامي.")
+        raise DeviceHealthError(_tr("المدخل (interface) إلزامي."))
 
     ip_address = str(params.get("ip_address") or "").strip()
     if not ip_address:
-        raise DeviceHealthError("عنوان IP للجهاز مطلوب.")
+        raise DeviceHealthError(_tr("عنوان IP للجهاز مطلوب."))
 
     subnet_prefix = _to_int(params.get("subnet_prefix"), 24)
     gateway_last_octet = _to_int(params.get("gateway_last_octet"), 254)
@@ -114,8 +115,7 @@ def create_device(tenant_id: int, params: dict) -> dict:
     dup = repo.find_device_by_router_ip(tid, router_id, ip_address)
     if dup:
         raise DeviceHealthError(
-            "هذا الجهاز موجود مسبقًا على نفس المايكروتيك / السيرفر بنفس الـIP "
-            f"«{dup['name']}» (رقم {dup['id']})."
+            _tr('هذا الجهاز موجود مسبقًا على نفس المايكروتيك / السيرفر بنفس الـIP «%(name)s» (رقم %(id)s).', name=dup['name'], id=dup['id'])
         )
 
     # Duplicate prevention (2): same network range on the SAME (router +
@@ -125,7 +125,7 @@ def create_device(tenant_id: int, params: dict) -> dict:
         tid, router_id, interface_name, net["network_cidr"])
     if scope_dup:
         raise DeviceHealthError(
-            "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+            _tr("هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s).")
             % (net["network_cidr"], interface_name,
                scope_dup["name"], scope_dup["id"]))
 
@@ -158,7 +158,7 @@ def create_device(tenant_id: int, params: dict) -> dict:
                     if s["interface_name"] and s["interface_name"] != interface_name}
     if other_ifaces:
         warnings.append(
-            "نفس الشبكة %s مسجّلة على مدخل آخر (%s) — غموض توجيه محتمل."
+            _tr("نفس الشبكة %s مسجّلة على مدخل آخر (%s) — غموض توجيه محتمل.")
             % (net["network_cidr"], "، ".join(sorted(other_ifaces))))
 
     repo.upsert_scope(
@@ -174,7 +174,7 @@ def create_device(tenant_id: int, params: dict) -> dict:
     repo.add_event(
         tenant_id=tid, device_id=device_id, event_type="created",
         new_status="unknown",
-        message=f"تسجيل الجهاز «{name}» على {interface_name} ({ip_address}).",
+        message=_tr('تسجيل الجهاز «%(name)s» على %(interface_name)s (%(ip_address)s).', name=name, interface_name=interface_name, ip_address=ip_address),
     )
     return {"device_id": device_id, "network": net, "warnings": warnings}
 
@@ -186,7 +186,7 @@ def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
-        raise DeviceHealthError("الجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الجهاز غير موجود."))
 
     fields: dict[str, Any] = {}
     for key in ("name", "device_type", "location", "alert_channel",
@@ -220,7 +220,7 @@ def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
     )
     warnings: list[str] = []
     if "interface_name" in params and not interface_name:
-        raise DeviceHealthError("المدخل (interface) إلزامي.")
+        raise DeviceHealthError(_tr("المدخل (interface) إلزامي."))
     if net_changed:
         try:
             net = planner.compute_network(ip_address, subnet_prefix, gateway_last_octet)
@@ -231,15 +231,14 @@ def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
         dup = repo.find_device_by_router_ip(tid, target_router, net["ip_address"])
         if dup and dup["id"] != device["id"]:
             raise DeviceHealthError(
-                "جهاز آخر على نفس المايكروتيك / السيرفر يستخدم هذا الـIP "
-                f"«{dup['name']}» (رقم {dup['id']}).")
+                _tr('جهاز آخر على نفس المايكروتيك / السيرفر يستخدم هذا الـIP «%(name)s» (رقم %(id)s).', name=dup['name'], id=dup['id']))
         # Same range on the SAME (router + interface) as ANOTHER device → block.
         scope_dup = repo.find_device_by_scope(
             tid, target_router, interface_name, net["network_cidr"],
             exclude_id=device["id"])
         if scope_dup:
             raise DeviceHealthError(
-                "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+                _tr("هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s).")
                 % (net["network_cidr"], interface_name,
                    scope_dup["name"], scope_dup["id"]))
         fields.update({
@@ -272,7 +271,7 @@ def set_monitoring(tenant_id: int, device_id: int, enabled: bool) -> bool:
             tenant_id=int(tenant_id), device_id=int(device_id),
             event_type="updated",
             new_status=("unknown" if enabled else "disabled"),
-            message=("تم تفعيل المراقبة." if enabled else "تم إيقاف المراقبة."),
+            message=(N_("تم تفعيل المراقبة.") if enabled else N_("تم إيقاف المراقبة.")),
         )
     return ok
 
@@ -304,10 +303,10 @@ def live_plan(tenant_id: int, device_id: int) -> dict:
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
-        raise DeviceHealthError("الجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الجهاز غير موجود."))
     nas = nas_repo.get_nas(tid, device["router_id"])
     if not nas:
-        raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الراوتر المرتبط بالجهاز غير موجود."))
     from . import device_health_mikrotik as mt
     nas_dict = _nas_to_dict(nas)
     state = mt.read_router_state(nas_dict)
@@ -338,7 +337,7 @@ def list_router_interfaces(tenant_id: int, router_id: int) -> dict:
     tid = int(tenant_id)
     nas = nas_repo.get_nas(tid, int(router_id))
     if not nas:
-        raise DeviceHealthError("المايكروتيك / السيرفر غير موجود.")
+        raise DeviceHealthError(_tr("المايكروتيك / السيرفر غير موجود."))
     from . import port_script_services as pss
     from . import mikrotik_admin_client as mac
     rows = pss.discover_interfaces(_nas_to_dict(nas), mac.interface_list)
@@ -457,12 +456,12 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
-        raise DeviceHealthError("الجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الجهاز غير موجود."))
     if not device["ip_address"]:
-        raise DeviceHealthError("لا يمكن الفحص — IP الجهاز فارغ.")
+        raise DeviceHealthError(_tr("لا يمكن الفحص — IP الجهاز فارغ."))
     nas = nas_repo.get_nas(tid, device["router_id"])
     if not nas:
-        raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الراوتر المرتبط بالجهاز غير موجود."))
     from . import device_health_mikrotik as mt
     probe = probe_reachability(device, _nas_to_dict(nas), mt=mt)
     status, latency = probe["status"], probe["latency_ms"]
@@ -471,7 +470,7 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     repo.add_event(
         tenant_id=tid, device_id=int(device_id), event_type=status,
         previous_status=device["status"], new_status=status,
-        latency_ms=latency, message="فحص ping يدوي.")
+        latency_ms=latency, message=N_("فحص ping يدوي."))
     # f06-L10: `ok` is the REAL result — the device answered (up/high latency).
     # A failed probe (router unreachable → «unavailable», or device down) used
     # to answer ok:true next to its error text.
@@ -529,20 +528,20 @@ def apply_device(tenant_id: int, device_id: int,
 
     if not mt.live_apply_enabled(tid):
         if mt.env_force_disabled():
-            msg = ("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
-                   "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY).")
+            msg = (_tr("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
+                   "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY)."))
         else:
-            msg = ("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من اللوحة "
-                   "«تفعيل التطبيق الحي على الراوترات».")
+            msg = (_tr("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من اللوحة "
+                   "«تفعيل التطبيق الحي على الراوترات»."))
         return {"ok": False, "gated": True, "error": msg,
                 "applied": [], "already_present": [], "failed": []}
 
     device = repo.get_device(tid, int(device_id))
     if not device:
-        raise DeviceHealthError("الجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الجهاز غير موجود."))
     nas = nas_repo.get_nas(tid, device["router_id"])
     if not nas:
-        raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
+        raise DeviceHealthError(_tr("الراوتر المرتبط بالجهاز غير موجود."))
 
     wanted = set(actions) if actions else set(_APPLY_KINDS)
     nas_dict = _nas_to_dict(nas)
@@ -557,7 +556,7 @@ def apply_device(tenant_id: int, device_id: int,
         router_state=state, device_id=device["id"],
     )
     if not plan.get("valid"):
-        raise DeviceHealthError(plan.get("error") or "خطة غير صالحة.")
+        raise DeviceHealthError(plan.get("error") or _tr("خطة غير صالحة."))
 
     applied: list[str] = []
     already: list[str] = []
@@ -589,11 +588,11 @@ def apply_device(tenant_id: int, device_id: int,
                         status="apply_failed")
         repo.add_event(tenant_id=tid, device_id=device["id"],
                        event_type="apply_failed", new_status="apply_failed",
-                       message="فشل تطبيق بعض العناصر على الراوتر.")
+                       message=N_("فشل تطبيق بعض العناصر على الراوتر."))
     elif applied:
         repo.add_event(tenant_id=tid, device_id=device["id"],
                        event_type="updated", new_status=device["status"],
-                       message="تم تطبيق خطة الوصول على الراوتر.")
+                       message=N_("تم تطبيق خطة الوصول على الراوتر."))
 
     return {"ok": not failed, "gated": False, "applied": applied,
             "already_present": already, "failed": failed,
@@ -620,7 +619,7 @@ def _apply_one(mt, nas_dict, device, net, item):
             timeout_sec=device["netwatch_timeout_sec"],
             device_id=device["id"], live=True)
     from .device_health_mikrotik import mac
-    return mac.MtResult(ok=False, error=f"نوع غير معروف: {kind}")
+    return mac.MtResult(ok=False, error=_tr('نوع غير معروف: %(kind)s', kind=kind))
 
 
 def _record_apply_state(tid, device, net, kind, status, error, mikrotik_id=""):
@@ -688,15 +687,15 @@ def _to_int(value: Any, default: int) -> int:
 
 # f06-L10 — مدخلات الـAPI كانت تُبتلع: اسمٌ بـ500 حرف ⇒ 201،
 # monitoring_enabled:"maybe" ⇒ false صامتًا، subnet_prefix:"abc" ⇒ 24 صامتًا.
-_TEXT_LIMITS = {"name": ("اسم الجهاز", 100), "interface_name": ("المدخل (interface)", 64),
-                "location": ("الموقع", 255), "notes": ("الملاحظات", 1000),
-                "device_type": ("نوع الجهاز", 32), "alert_channel": ("قناة التنبيه", 32)}
-_INT_LIMITS = {"router_id": ("الراوتر", 0, 2**31 - 1),
-               "subnet_prefix": ("بادئة الشبكة", 1, 32),
-               "gateway_last_octet": ("آخر خانة للبوابة", 1, 254),
-               "ping_threshold_ms": ("حدّ زمن الاستجابة", 1, 60000),
-               "netwatch_interval_sec": ("فاصل المراقبة", 5, 86400),
-               "netwatch_timeout_sec": ("مهلة المراقبة", 1, 300)}
+_TEXT_LIMITS = {"name": (N_("اسم الجهاز"), 100), "interface_name": (N_("المدخل (interface)"), 64),
+                "location": (N_("الموقع"), 255), "notes": (N_("الملاحظات"), 1000),
+                "device_type": (N_("نوع الجهاز"), 32), "alert_channel": (N_("قناة التنبيه"), 32)}
+_INT_LIMITS = {"router_id": (N_("الراوتر"), 0, 2**31 - 1),
+               "subnet_prefix": (N_("بادئة الشبكة"), 1, 32),
+               "gateway_last_octet": (N_("آخر خانة للبوابة"), 1, 254),
+               "ping_threshold_ms": (N_("حدّ زمن الاستجابة"), 1, 60000),
+               "netwatch_interval_sec": (N_("فاصل المراقبة"), 5, 86400),
+               "netwatch_timeout_sec": (N_("مهلة المراقبة"), 1, 300)}
 _TRUE = ("1", "true", "yes", "on", "نعم")
 _FALSE = ("0", "false", "no", "off", "لا", "")
 
@@ -705,16 +704,16 @@ def validate_params(params: dict) -> None:
     """Reject malformed values with an Arabic DeviceHealthError (422) instead
     of silently falling back to defaults."""
     if not isinstance(params, dict):
-        raise DeviceHealthError("جسم الطلب يجب أن يكون كائن JSON.")
+        raise DeviceHealthError(_tr("جسم الطلب يجب أن يكون كائن JSON."))
     from ..core.numbers import NonFiniteNumber, finite_float
     for key, (label, limit) in _TEXT_LIMITS.items():
         val = params.get(key)
         if val is None:
             continue
         if isinstance(val, (dict, list, bool)):
-            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون نصًّا.")
+            raise DeviceHealthError(_tr('قيمة «%(label)s» يجب أن تكون نصًّا.', label=label))
         if len(str(val)) > limit:
-            raise DeviceHealthError(f"«{label}» طويل جدًا (الحد الأقصى {limit} حرفًا).")
+            raise DeviceHealthError(_tr('«%(label)s» طويل جدًا (الحد الأقصى %(limit)s حرفًا).', label=label, limit=limit))
     for key, (label, lo, hi) in _INT_LIMITS.items():
         val = params.get(key)
         if val is None or (isinstance(val, str) and not val.strip()):
@@ -724,15 +723,15 @@ def validate_params(params: dict) -> None:
                 raise NonFiniteNumber("bool")
             num = finite_float(val, field=key)
         except NonFiniteNumber:
-            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.") from None
+            raise DeviceHealthError(_tr('قيمة «%(label)s» يجب أن تكون عددًا صحيحًا.', label=label)) from None
         if not num.is_integer() or not lo <= int(num) <= hi:
-            raise DeviceHealthError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا بين {lo} و{hi}.")
+            raise DeviceHealthError(_tr('قيمة «%(label)s» يجب أن تكون عددًا صحيحًا بين %(lo)s و%(hi)s.', label=label, lo=lo, hi=hi))
     if "monitoring_enabled" in params:
         val = params.get("monitoring_enabled")
         if not (val is None or isinstance(val, bool)
                 or (isinstance(val, int) and val in (0, 1))
                 or str(val).strip().lower() in _TRUE + _FALSE):
-            raise DeviceHealthError("قيمة «المراقبة» يجب أن تكون true أو false.")
+            raise DeviceHealthError(_tr("قيمة «المراقبة» يجب أن تكون true أو false."))
 
 
 def _to_bool(value: Any, default: bool) -> bool:

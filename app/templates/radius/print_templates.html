@@ -550,15 +550,15 @@
      انتقلت لصفحة «الإحصائيات» المستقلة المرتبطة من زر الهيرو. ───── #}
   {%- set design_active = (preview or form_state) -%}
   {% set _hero_kpis = [
-    {'label': 'قوالب محفوظة',       'value': templates|length, 'icon': 'layer-group',       'variant': 'brand'},
-    {'label': 'حزم متاحة للتصدير',  'value': batches|length,   'icon': 'boxes-stacked',     'variant': 'blue'},
-    {'label': 'عمليات تصدير أخيرة', 'value': jobs|length,      'icon': 'clock-rotate-left', 'variant': 'green'},
-    {'label': 'وضع PDF',            'value': 'فعّال',          'icon': 'file-pdf',          'variant': 'amber'},
+    {'label': _('قوالب محفوظة'),       'value': templates|length, 'icon': 'layer-group',       'variant': 'brand'},
+    {'label': _('حزم متاحة للتصدير'),  'value': batches|length,   'icon': 'boxes-stacked',     'variant': 'blue'},
+    {'label': _('عمليات تصدير أخيرة'), 'value': jobs|length,      'icon': 'clock-rotate-left', 'variant': 'green'},
+    {'label': _('وضع PDF'),            'value': _('فعّال'),          'icon': 'file-pdf',          'variant': 'amber'},
   ] %}
   <section class="hub-hero-shell">
   {{ hub.megahero(
-    "غرفة عمليات تصميم وتصدير البطاقات",
-    subtitle="صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.",
+    _('غرفة عمليات تصميم وتصدير البطاقات'),
+    subtitle=_('صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.'),
     icon="wand-magic-sparkles",
     actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> '|safe ~ _("الإحصائيات") ~ '</a>'|safe if can_submit('radius.print_templates_stats', 'GET') else ''),
     kpis=_hero_kpis
@@ -598,7 +598,7 @@
             <select class="hub-select" data-export-batch-select>
               <option value="">{{ _('اختر حزمة بطاقات') }}</option>
               {% for b in batches %}
-                <option value="{{ b.id }}">{{ b.batch_code }} - {{ b.package_name or b.plan_name or 'حزمة' }} ({{ b.total_cards or b.generated or 0 }} بطاقة)</option>
+                <option value="{{ b.id }}">{{ b.batch_code }} - {{ b.package_name or b.plan_name or _('حزمة') }} ({{ b.total_cards or b.generated or 0 }} {{ _('بطاقة)') }}</option>
               {% endfor %}
             </select>
             <small>{{ _('يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات.') }}</small>
@@ -688,7 +688,7 @@
                      style="text-align:left">
             </label>
             <label class="pr-field">{{ _('السعر الظاهر') }}
-              <input class="hub-input" name="price_text" data-export-override placeholder="مثال: {{ cfg.currency }} 1.00">
+              <input class="hub-input" name="price_text" data-export-override placeholder="{{ _('مثال: %(currency)s 1.00', currency=cfg.currency) }}">
             </label>
             <label class="pr-field">{{ _('الصلاحية الظاهرة') }}
               <input class="hub-input" name="validity_text" data-export-override placeholder="{{ _('مثال: 4 ساعات') }}">
@@ -708,7 +708,7 @@
             </a>
             {% if can_submit('radius.print_templates_cleanup_fixtures', 'POST') %}<form method="POST"
                   action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
-                  onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
+                  onsubmit="return confirm({{ _('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟')|tojson|forceescape }});"
                   style="margin:0">
               <button type="submit" class="hub-btn"
                       title="{{ _('يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.') }}">
@@ -783,7 +783,7 @@
                       style="--thumb-a:{{ layout.gradient_start or '#0f172a' }};--thumb-b:{{ layout.gradient_end or '#22a7bd' }}">
                   <img class="pr-template-thumb-img"
                        src="{{ url_for('radius.print_templates_thumbnail', template_id=item.id) }}"
-                       alt="معاينة القالب {{ item.name }}"
+                       alt="{{ _('معاينة القالب %(name)s', name=item.name) }}"
                        loading="lazy" decoding="async"
                        onerror="this.closest('.pr-template-thumb').classList.add('is-broken')">
                   {% if layout.background_image_data_url %}<span class="pr-template-image-badge"><i class="fa-solid fa-image"></i> {{ _('صورة') }}</span>{% endif %}
@@ -799,7 +799,7 @@
                   {% if can_submit('radius.print_templates_export_pdf', 'GET') %}<a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
                     <i class="fa-solid fa-file-pdf"></i> {{ _('عينة') }}
                   </a>{% endif %}
-                  {% if can_submit('radius.print_templates_delete', 'POST') %}<form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
+                  {% if can_submit('radius.print_templates_delete', 'POST') %}<form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm({{ _('حذف هذا القالب؟')|tojson|forceescape }});">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
                     <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
                   </form>{% endif %}
@@ -826,7 +826,7 @@
      أو عند الوصول عبر ?edit_template / #designer. #}
   <details class="pr-designer-drawer" id="designer" {% if preview or form_state %}open{% endif %}>
     <summary class="pr-designer-summary">
-      <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب
+      <span><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('مصمم القوالب') }}
         {# شارة «معاينة مباشرة» انتقلت من رأس محرر القالب إلى شريط
            المصمم العلوي هنا — تبقى ظاهرة حتى والدرج مطوي. #}
         <span class="hub-pill hub-pill--blue">{{ _('معاينة مباشرة') }}</span>
@@ -890,9 +890,9 @@
             <label>
               <span>
                 <i class="fa-solid fa-signature"></i> {{ _('اسم القالب') }}
-                <span class="hub-hint" tabindex="0" data-hint="سمِّ القالب باسم واضح يميّزه في غرفة الطباعة وصفحة الإحصائيات — مثل اسم العرض أو الحزمة. يُحفظ مع التصميم ولا يظهر على البطاقة المطبوعة."><i class="fa-solid fa-info"></i></span>
+                <span class="hub-hint" tabindex="0" data-hint="{{ _('سمِّ القالب باسم واضح يميّزه في غرفة الطباعة وصفحة الإحصائيات — مثل اسم العرض أو الحزمة. يُحفظ مع التصميم ولا يظهر على البطاقة المطبوعة.') }}"><i class="fa-solid fa-info"></i></span>
               </span>
-              <input class="hub-input" name="name" required maxlength="120" value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="{{ _('مثال: بطاقات رمضان — 4 ساعات') }}">
+              <input class="hub-input" name="name" required maxlength="120" value="{{ fs.name or _('قالب حديث') }}" data-preview="templateName" placeholder="{{ _('مثال: بطاقات رمضان — 4 ساعات') }}">
             </label>
           </div>
 
@@ -912,14 +912,14 @@
                 <i class="fa-solid fa-image pr-design-source-ico"></i>
                 <span class="pr-design-source-text">
                   <span>{{ _('صورة مرفوعة') }}</span>
-                  <span class="hub-hint" tabindex="0" data-hint="نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط."><i class="fa-solid fa-info"></i></span>
+                  <span class="hub-hint" tabindex="0" data-hint="{{ _('نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط.') }}"><i class="fa-solid fa-info"></i></span>
                 </span>
               </button>
               <button class="pr-design-source-option{% if initial_bg_mode != 'image' %} is-selected{% endif %}" type="button" data-design-source-option="preset">
                 <i class="fa-solid fa-layer-group pr-design-source-ico"></i>
                 <span class="pr-design-source-text">
                   <span>{{ _('تصميم من النظام') }}</span>
-                  <span class="hub-hint" tabindex="0" data-hint="قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات."><i class="fa-solid fa-info"></i></span>
+                  <span class="hub-hint" tabindex="0" data-hint="{{ _('قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات.') }}"><i class="fa-solid fa-info"></i></span>
                 </span>
               </button>
             </div>
@@ -1175,9 +1175,9 @@
           <div class="pr-pane" data-pr-pane="content">
             <div class="pr-grid2">
               <label class="pr-field">{{ _('اسم الشبكة/العلامة') }}<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
-              <label class="pr-field">{{ _('عنوان البطاقة') }}<input class="hub-input" name="card_title" value="{{ fl.card_title or 'بطاقة إنترنت' }}" data-preview="title"></label>
+              <label class="pr-field">{{ _('عنوان البطاقة') }}<input class="hub-input" name="card_title" value="{{ fl.card_title or _('بطاقة إنترنت') }}" data-preview="title"></label>
               <label class="pr-field">{{ _('عنوان بوابة الدخول / DNS') }}<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
-              <label class="pr-field">{{ _('السعر') }}<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: {{ cfg.currency }} 1.00" data-preview="price"></label>
+              <label class="pr-field">{{ _('السعر') }}<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="{{ _('مثال: %(currency)s 1.00', currency=cfg.currency) }}" data-preview="price"></label>
               <label class="pr-field">{{ _('الصلاحية') }}<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="{{ _('مثال: 4 ساعات') }}" data-preview="validity"></label>
               <label class="pr-field">{{ _('نمط QR') }}
                 <select class="hub-select" name="qr_style"><option value="boxed" {% if (fl.qr_style or 'boxed') == 'boxed' %}selected{% endif %}>{{ _('مربع واضح') }}</option><option value="rounded" {% if fl.qr_style == 'rounded' %}selected{% endif %}>{{ _('ناعم') }}</option><option value="clean" {% if fl.qr_style == 'clean' %}selected{% endif %}>{{ _('بسيط') }}</option></select>
@@ -1206,19 +1206,19 @@
               <small class="pr-file-hint">{{ _('امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان') }}</small>
             </label>
             <label class="pr-field">{{ _('نص أسفل البطاقة') }}
-              <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية' }}" data-preview="footer">
+              <input class="hub-input" name="footer_text" value="{{ fl.footer_text or _('احتفظ ببيانات الدخول حتى انتهاء الصلاحية') }}" data-preview="footer">
             </label>
             <label class="pr-field">{{ _('تعليمات الاستخدام') }}
-              <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.' }}</textarea>
+              <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or _('استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.') }}</textarea>
             </label>
             <div class="pr-checks">
               {% for key,label,checked in [
-                ('show_brand','إظهار اسم الشبكة',true),('show_username','إظهار اسم المستخدم',true),
-                ('show_title','إظهار عنوان البطاقة',true),
-                ('show_password','إظهار كلمة المرور',true),('show_qr','إظهار QR',true),
-                ('show_price','إظهار السعر',false),('show_hotspot','إظهار العنوان',true),
-                ('show_validity','إظهار الصلاحية',true),('show_serial','إظهار الرقم التسلسلي',true),
-                ('show_guides','إظهار خطوط إرشاد',false),('bleed_marks','علامات قص في PDF',false)
+                ('show_brand',_('إظهار اسم الشبكة'),true),('show_username',_('إظهار اسم المستخدم'),true),
+                ('show_title',_('إظهار عنوان البطاقة'),true),
+                ('show_password',_('إظهار كلمة المرور'),true),('show_qr',_('إظهار QR'),true),
+                ('show_price',_('إظهار السعر'),false),('show_hotspot',_('إظهار العنوان'),true),
+                ('show_validity',_('إظهار الصلاحية'),true),('show_serial',_('إظهار الرقم التسلسلي'),true),
+                ('show_guides',_('إظهار خطوط إرشاد'),false),('bleed_marks',_('علامات قص في PDF'),false)
               ] %}
               {% set is_checked = fl[key] if key in fl else checked %}
               <label class="pr-check"><input type="checkbox" name="{{ key }}" value="1" {% if is_checked %}checked{% endif %} data-preview-toggle="{{ key }}"> {{ label }}<input type="hidden" name="{{ key }}" value="0"></label>
@@ -1235,9 +1235,9 @@
                   <small>{{ _('هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.') }}</small>
                 </div>
                 <div class="pr-grid3">
-                  {{ slider_field('عرض البطاقة', 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm', orig=(fl.card_width_mm or 85)) }}
-                  {{ slider_field('ارتفاع البطاقة', 'card_height_mm', fl.card_height_mm or 54, 35, 110, 0.1, 'mm', orig=(fl.card_height_mm or 54)) }}
-                  {{ slider_field('حجم خط عام احتياطي', 'font_size', fs.font_size or 12, 6, 40, 1, 'px', 'يستخدم فقط كقيمة احتياطية للقوالب القديمة.') }}
+                  {{ slider_field(_('عرض البطاقة'), 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm', orig=(fl.card_width_mm or 85)) }}
+                  {{ slider_field(_('ارتفاع البطاقة'), 'card_height_mm', fl.card_height_mm or 54, 35, 110, 0.1, 'mm', orig=(fl.card_height_mm or 54)) }}
+                  {{ slider_field(_('حجم خط عام احتياطي'), 'font_size', fs.font_size or 12, 6, 40, 1, 'px', _('يستخدم فقط كقيمة احتياطية للقوالب القديمة.')) }}
                 </div>
               </section>
             </div>
@@ -1276,9 +1276,9 @@
                   <small>{{ _('حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1', orig=(fs.username_x or 0)) }}
-                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1', orig=(fs.username_y or 0)) }}
-                  {{ slider_field('حجم خط اليوزر', 'username_font_size', _u_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.username_font_size else '1', orig=_u_orig) }}
+                  {{ slider_field(_('المكان أفقيًا'), 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.username_x else '1', orig=(fs.username_x or 0)) }}
+                  {{ slider_field(_('المكان عموديًا'), 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.username_y else '1', orig=(fs.username_y or 0)) }}
+                  {{ slider_field(_('حجم خط اليوزر'), 'username_font_size', _u_font, 0, 36, 0.5, 'pt', _('بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.'), auto='0' if fl.username_font_size else '1', orig=_u_orig) }}
                   <label class="pr-field">{{ _('لون اليوزر') }}<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
                   <label class="pr-field">{{ _('خلفية اليوزر') }}<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
                   {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
@@ -1292,14 +1292,14 @@
                   <small>{{ _('تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1', orig=(fs.password_x or 0)) }}
-                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1', orig=(fs.password_y or 0)) }}
-                  {{ slider_field('حجم خط الباسورد', 'password_font_size', _p_font, 0, 36, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.password_font_size else '1', orig=_p_orig) }}
+                  {{ slider_field(_('المكان أفقيًا'), 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.password_x else '1', orig=(fs.password_x or 0)) }}
+                  {{ slider_field(_('المكان عموديًا'), 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.password_y else '1', orig=(fs.password_y or 0)) }}
+                  {{ slider_field(_('حجم خط الباسورد'), 'password_font_size', _p_font, 0, 36, 0.5, 'pt', _('بالنقاط الطباعية مثل الوورد (12، 14…). القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.'), auto='0' if fl.password_font_size else '1', orig=_p_orig) }}
                   <label class="pr-field">{{ _('لون التسميات') }}<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
                   <label class="pr-field">{{ _('خلفية الباسورد') }}<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
                   {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> {{ _('إظهار خلفية الباسورد') }}<input type="hidden" name="password_surface_enabled" value="0"></label>
-                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', _l_font, 0, 20, 0.5, 'pt', 'بالنقاط الطباعية مثل الوورد. القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.', auto='0' if fl.credential_label_font_size else '1', orig=_l_orig) }}
+                  {{ slider_field(_('حجم تسميات USER/PASS'), 'credential_label_font_size', _l_font, 0, 20, 0.5, 'pt', _('بالنقاط الطباعية مثل الوورد. القيمة الحالية هي الحجم الفعلي على البطاقة المطبوعة بمقاسها.'), auto='0' if fl.credential_label_font_size else '1', orig=_l_orig) }}
                   {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> {{ _('تفعيل خلفيات النصوص') }}<input type="hidden" name="credential_background_enabled" value="0"></label>
                 </div>
@@ -1311,9 +1311,9 @@
                   <small>{{ _('مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.') }}</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_x else '1', orig=(fs.qr_x or 0)) }}
-                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_y else '1', orig=(fs.qr_y or 0)) }}
-                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 48, 0.5, '%', 'القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.', auto='0' if fl.qr_size_pct else '1', orig=(fl.qr_size_pct or 0)) }}
+                  {{ slider_field(_('المكان أفقيًا'), 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.qr_x else '1', orig=(fs.qr_x or 0)) }}
+                  {{ slider_field(_('المكان عموديًا'), 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', _('القيمة الحالية هي مكان العنصر الفعلي على البطاقة.'), auto='0' if fs.qr_y else '1', orig=(fs.qr_y or 0)) }}
+                  {{ slider_field(_('حجم QR'), 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 48, 0.5, '%', _('القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.'), auto='0' if fl.qr_size_pct else '1', orig=(fl.qr_size_pct or 0)) }}
                   <label class="pr-field">{{ _('لون QR') }}<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
                   <label class="pr-field">{{ _('خلفية QR') }}<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
                 </div>
@@ -1321,7 +1321,7 @@
             </div>
           </div>
 
-          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ 'تحديث القالب' if edit_template_id else 'حفظ القالب' }}</button>
+          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('تحديث القالب') if edit_template_id else _('حفظ القالب') }}</button>
         {% if not can_submit(('radius.print_templates_update' if edit_template_id else 'radius.print_templates_create')) %}</fieldset>{% endif %}</form>
       </div>
     </section>
@@ -1329,7 +1329,7 @@
     <section class="pr-panel pr-stage">
       <div class="pr-panel-head">
         <h3><i class="fa-solid fa-eye"></i> {{ _('معاينة البطاقة') }}</h3>
-        <span class="hub-pill hub-pill--green" data-preview-source-badge>{{ 'صورة مرفوعة' if initial_bg_mode == 'image' else 'تصميم من النظام' }}</span>
+        <span class="hub-pill hub-pill--green" data-preview-source-badge>{{ _('صورة مرفوعة') if initial_bg_mode == 'image' else _('تصميم من النظام') }}</span>
       </div>
       {# ── شريط أقسام المحرر: انتقل من عمود المحرر ليجلس فوق معاينة
          البطاقة مباشرة — يبقى ظاهرًا دائمًا مع اللوحة الملاصقة (sticky)
@@ -1513,34 +1513,34 @@
   };
   const localizedDefaults = {
     arabic: {
-      brand_name: 'هوب راديوس',
-      card_title: 'بطاقة إنترنت',
-      footer_text: 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
-      instructions_text: 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.',
+      brand_name: {{ _('هوب راديوس')|tojson }},
+      card_title: {{ _('بطاقة إنترنت')|tojson }},
+      footer_text: {{ _('احتفظ ببيانات الدخول حتى انتهاء الصلاحية')|tojson }},
+      instructions_text: {{ _('استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.')|tojson }},
     },
     english: {
       brand_name: 'HobeRadius',
-      card_title: 'بطاقة إنترنت',
-      footer_text: 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
-      instructions_text: 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.',
+      card_title: {{ _('بطاقة إنترنت')|tojson }},
+      footer_text: {{ _('احتفظ ببيانات الدخول حتى انتهاء الصلاحية')|tojson }},
+      instructions_text: {{ _('استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.')|tojson }},
     },
   };
   const defaultTextValues = {
-    brand_name: ['HobeRadius', 'HobeRadius Fiber', 'هوب راديوس', 'هوب راديوس فايبر'],
-    card_title: ['بطاقة إنترنت', 'كرت هوتسبوت', 'بطاقة مميزة', 'بطاقة دخول', 'دخول واي فاي', 'كرت سرعة', 'رمز دخول ذكي', 'دخول فايبر', 'كرت ذهبي', 'رمز دخول'],
+    brand_name: ['HobeRadius', 'HobeRadius Fiber', {{ _('هوب راديوس')|tojson }}, {{ _('هوب راديوس فايبر')|tojson }}],
+    card_title: [{{ _('بطاقة إنترنت')|tojson }}, {{ _('كرت هوتسبوت')|tojson }}, {{ _('بطاقة مميزة')|tojson }}, {{ _('بطاقة دخول')|tojson }}, {{ _('دخول واي فاي')|tojson }}, {{ _('كرت سرعة')|tojson }}, {{ _('رمز دخول ذكي')|tojson }}, {{ _('دخول فايبر')|tojson }}, {{ _('كرت ذهبي')|tojson }}, {{ _('رمز دخول')|tojson }}],
     footer_text: [
-      'احتفظ ببيانات الدخول حتى انتهاء الصلاحية',
-      'الدعم الفني متوفر من نقطة البيع',
-      'سرعة ثابتة وتجربة أفضل',
-      'استخدم اسم المستخدم وكلمة المرور مرة واحدة',
-      'امسح رمز QR أو أدخل البيانات يدويًا',
-      'سلّم هذه البطاقة للعميل بعد الدفع',
-      'امسح الرمز واتصل واستمتع بخدمة مستقرة',
-      'بطاقة دخول بسرعة عالية',
-      'احتفظ بهذه البطاقة حتى انتهاء الاشتراك',
-      'رمز دخول آمن لبوابة الهوتسبوت',
+      {{ _('احتفظ ببيانات الدخول حتى انتهاء الصلاحية')|tojson }},
+      {{ _('الدعم الفني متوفر من نقطة البيع')|tojson }},
+      {{ _('سرعة ثابتة وتجربة أفضل')|tojson }},
+      {{ _('استخدم اسم المستخدم وكلمة المرور مرة واحدة')|tojson }},
+      {{ _('امسح رمز QR أو أدخل البيانات يدويًا')|tojson }},
+      {{ _('سلّم هذه البطاقة للعميل بعد الدفع')|tojson }},
+      {{ _('امسح الرمز واتصل واستمتع بخدمة مستقرة')|tojson }},
+      {{ _('بطاقة دخول بسرعة عالية')|tojson }},
+      {{ _('احتفظ بهذه البطاقة حتى انتهاء الاشتراك')|tojson }},
+      {{ _('رمز دخول آمن لبوابة الهوتسبوت')|tojson }},
     ],
-    instructions_text: ['استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.'],
+    instructions_text: [{{ _('استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.')|tojson }}],
   };
   function setIfDefault(name, value){
     const field = form && form.querySelector(`[name="${name}"]`);
@@ -2776,7 +2776,7 @@
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
         const pct = Math.min(92, 18 + tick * 4);
         const stage = explain[Math.min(explain.length - 1, Math.floor(tick / 4))];
-        setExportProgress(2, pct, {{ _("جاري تجهيز ملف PDF...")|tojson }}, `${stage} · ${batchText} · ${elapsed}ث`);
+        setExportProgress(2, pct, {{ _("جاري تجهيز ملف PDF...")|tojson }}, ({{ _('{stage} · {batchText} · {elapsed}ث')|tojson }}.split('{stage}').join(stage).split('{batchText}').join(batchText).split('{elapsed}').join(elapsed)));
       }, 1000);
       try{
         setExportProgress(2, 18, {{ _("بدأ تجهيز ملف PDF...")|tojson }}, `${ {{ _("الخادم يجهز")|tojson }} } ${batchText}. ${ {{ _("لا تغلق الصفحة.")|tojson }} }`);
@@ -2827,7 +2827,7 @@
             ? ` · ${latestJob.rendered_cards}/${latestJob.total_cards} ${ {{ _("بطاقة")|tojson }} }`
             : '';
           const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-          setExportProgress(2, pct, latestJob.stage_label || {{ _("جاري تجهيز PDF...")|tojson }}, `${latestJob.message || ''}${rendered} · ${elapsed}ث`);
+          setExportProgress(2, pct, latestJob.stage_label || {{ _("جاري تجهيز PDF...")|tojson }}, ({{ _('{v}{rendered} · {elapsed}ث')|tojson }}.split('{v}').join(latestJob.message || '').split('{rendered}').join(rendered).split('{elapsed}').join(elapsed)));
           if(latestJob.status === 'success' && latestJob.download_ready) break;
           if(latestJob.status === 'failed') throw new Error(latestJob.message || {{ _("فشل تصدير PDF.")|tojson }});
         }
@@ -2853,7 +2853,7 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
         const seconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-        setExportProgress(3, 100, {{ _("تم تنزيل ملف PDF بنجاح.")|tojson }}, `${ {{ _("الحجم")|tojson }} } ${(blob.size / 1024 / 1024).toFixed(2)} MB · ${ {{ _("الوقت")|tojson }} } ${seconds}ث`);
+        setExportProgress(3, 100, {{ _("تم تنزيل ملف PDF بنجاح.")|tojson }}, ({{ _('{v} {v2} MB · {v3} {seconds}ث')|tojson }}.split('{v}').join({{ _("الحجم")|tojson }}).split('{v2}').join((blob.size / 1024 / 1024).toFixed(2)).split('{v3}').join({{ _("الوقت")|tojson }}).split('{seconds}').join(seconds)));
       }catch(err){
         setExportProgress(2, 100, {{ _("فشل تصدير PDF.")|tojson }}, (err && err.message) ? err.message : String(err));
       }finally{

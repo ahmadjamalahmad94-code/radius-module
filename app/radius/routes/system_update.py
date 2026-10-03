@@ -6,6 +6,7 @@ backup → update-to-latest → run-all-migrations → health-check → rollback
 module never runs docker/git/build — it only signals and reads markers.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (
     Blueprint, abort, flash, g, jsonify, redirect, render_template, request,
@@ -71,10 +72,10 @@ def system_update_check():
     if _wants_json():
         return jsonify({"ok": True, "state": state})
     if state.get("available"):
-        flash("يتوفّر تحديث جديد.", "success")
+        flash(_tr("يتوفّر تحديث جديد."), "success")
     elif state.get("ok"):
         # A SUCCESSFUL check with nothing newer = up-to-date, NOT a failure.
-        flash("لديك أحدث إصدار.", "info")
+        flash(_tr("لديك أحدث إصدار."), "info")
     else:
         # Genuine failure — surface the SPECIFIC reason so it's diagnosable.
         info = self_update.reason_info(state.get("reason"))
@@ -89,7 +90,7 @@ def system_update_request():
     state = self_update.get_cached_state(tid)
 
     if not state.get("available"):
-        return _fail("لا يوجد تحديث متاح.", 409)
+        return _fail(_tr("لا يوجد تحديث متاح."), 409)
 
     # Requested target: the client may echo the version it saw. We authorise
     # against the cached state's target_version — when the instance is below the
@@ -102,7 +103,7 @@ def system_update_request():
         requested = str(state.get("min_version") or target)
 
     if not requested:
-        return _fail("تعذّر تحديد الإصدار المطلوب.", 400)
+        return _fail(_tr("تعذّر تحديد الإصدار المطلوب."), 400)
 
     result = self_update.request_update(
         tid,
@@ -111,12 +112,12 @@ def system_update_request():
         actor=_actor(),
     )
     if not result.get("ok"):
-        return _fail("تعذّر إرسال طلب التحديث. تحقّق من إعداد وكيل التحديث على الخادم.", 500)
+        return _fail(_tr("تعذّر إرسال طلب التحديث. تحقّق من إعداد وكيل التحديث على الخادم."), 500)
 
     progress = self_update.get_progress(tid)
     if _wants_json():
         return jsonify({"ok": True, "request": result["request"], "progress": progress})
-    flash("تم إرسال طلب التحديث. جارٍ التحديث…", "success")
+    flash(_tr("تم إرسال طلب التحديث. جارٍ التحديث…"), "success")
     return redirect(url_for("radius.system_update"))
 
 

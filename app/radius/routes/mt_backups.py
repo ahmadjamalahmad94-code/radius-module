@@ -13,6 +13,7 @@ audited workflow not built in this commit. The planner shows a
 clear "ميزة التطبيق معطّلة حاليًا" reason.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import hashlib
 import os
@@ -91,8 +92,8 @@ def mt_backups_list(nas_id: int):
         "radius/mt_backups.html",
         nas=nas, backups=rows,
         restore_disabled_reason=(
-            "تطبيق الاستعادة مقفل حاليًا لحماية الراوتر. "
-            "يمكنك فحص الملف ومراجعة الخطة دون تنفيذ أي تغيير."
+            N_("تطبيق الاستعادة مقفل حاليًا لحماية الراوتر. "
+            "يمكنك فحص الملف ومراجعة الخطة دون تنفيذ أي تغيير.")
         ),
     )
 
@@ -105,7 +106,7 @@ def mt_backups_save(nas_id: int):
     if not nas:
         abort(404)
     if not nas.get("enabled"):
-        flash("الراوتر معطّل — لا يمكن أخذ نسخة احتياطية.", "error")
+        flash(_tr("الراوتر معطّل — لا يمكن أخذ نسخة احتياطية."), "error")
         return redirect(url_for("radius.mt_backups_list", nas_id=nas_id))
 
     actor = getattr(g, "admin_id", None)
@@ -148,14 +149,14 @@ def mt_backups_save(nas_id: int):
             status = "failed"
             # رسالة الخدمة عربية أصلاً (تشمل رفض الاسم من
             # _sanitize_backup_name)، فنعرضها كما هي للمستخدم.
-            error = getattr(result, "error", "") or "تعذّر إنشاء النسخة على الراوتر."
+            error = getattr(result, "error", "") or _tr("تعذّر إنشاء النسخة على الراوتر.")
             user_error = error
     except Exception as e:  # noqa: BLE001
         status = "failed"
         # نص الاستثناء خام (إنجليزي/تقني) → نسجّله للتدقيق فقط
         # ونعرض للمستخدم رسالة عربية عامة بدل الخطأ الخام.
         error = str(e)
-        user_error = "تعذّر الاتصال بالراوتر أو حفظ النسخة. تأكد من توفّر الجهاز وحاول مجددًا."
+        user_error = N_("تعذّر الاتصال بالراوتر أو حفظ النسخة. تأكد من توفّر الجهاز وحاول مجددًا.")
     finally:
         try:
             client.close()
@@ -188,9 +189,9 @@ def mt_backups_save(nas_id: int):
     )
 
     if status == "success":
-        flash("تم حفظ النسخة الاحتياطية على الراوتر.", "success")
+        flash(_tr("تم حفظ النسخة الاحتياطية على الراوتر."), "success")
     else:
-        flash(f"فشل حفظ النسخة الاحتياطية: {user_error or error}", "error")
+        flash(_tr('فشل حفظ النسخة الاحتياطية: %(error)s', error=user_error or error), "error")
     return redirect(url_for("radius.mt_backups_list", nas_id=nas_id))
 
 
@@ -210,10 +211,10 @@ def _restore_plan_rows(metadata: dict) -> list[dict]:
     if not metadata:
         return []
     labels = {
-        "filename": "اسم الملف",
-        "head_size_bytes": "حجم عينة الفحص",
-        "appears_binary": "نوع الملف",
-        "checksum_prefix": "بصمة الفحص",
+        "filename": N_("اسم الملف"),
+        "head_size_bytes": N_("حجم عينة الفحص"),
+        "appears_binary": N_("نوع الملف"),
+        "checksum_prefix": N_("بصمة الفحص"),
     }
     rows: list[dict] = []
     for key in ("filename", "head_size_bytes", "appears_binary", "checksum_prefix"):
@@ -221,9 +222,9 @@ def _restore_plan_rows(metadata: dict) -> list[dict]:
             continue
         value = metadata.get(key)
         if key == "appears_binary":
-            rendered = "ملف ثنائي" if value else "ملف نصي أو غير ثنائي"
+            rendered = N_("ملف ثنائي") if value else N_("ملف نصي أو غير ثنائي")
         elif key == "head_size_bytes":
-            rendered = f"{int(value or 0)} بايت"
+            rendered = _tr('%(v)s بايت', v=int(value or 0))
         else:
             rendered = str(value or "—")
         rows.append({"key": key, "label": labels[key], "value": rendered})
@@ -249,7 +250,7 @@ def mt_backups_restore_plan(nas_id: int):
     metadata = {}
     error = ""
     if upload is None:
-        error = "لم يتم اختيار ملف."
+        error = _tr("لم يتم اختيار ملف.")
     else:
         # Inspect: read first ~4 KB so we can show file shape
         # without ever applying it.
@@ -270,7 +271,7 @@ def mt_backups_restore_plan(nas_id: int):
         restore_plan_rows=_restore_plan_rows(metadata),
         restore_error=error,
         restore_disabled_reason=(
-            "هذه خطة فحص فقط — تطبيق الاستعادة مقفل لحماية الراوتر "
-            "ويتطلب موافقة تشغيلية منفصلة قبل التنفيذ."
+            N_("هذه خطة فحص فقط — تطبيق الاستعادة مقفل لحماية الراوتر "
+            "ويتطلب موافقة تشغيلية منفصلة قبل التنفيذ.")
         ),
     )

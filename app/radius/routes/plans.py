@@ -7,6 +7,7 @@ Hybrid storage:
     {general, subscription, advanced, mikrotik, notifications}.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 
@@ -147,7 +148,7 @@ def _i(name: str, default: int = 0) -> int:
             return int(value)
         from ..services.plans import plan_field_label
         raise RadiusValidationError(
-            f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمًا صحيحًا.")
+            _tr('قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا.', v=plan_field_label(name)))
 
 
 def _f(name: str, default: float = 0.0) -> float:
@@ -161,7 +162,7 @@ def _f(name: str, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         from ..services.plans import plan_field_label
         raise RadiusValidationError(
-            f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمًا صحيحًا منتهيًا.")
+            _tr('قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا منتهيًا.', v=plan_field_label(name)))
 
 
 def _b(name: str) -> bool:
@@ -459,7 +460,7 @@ def plans_create():
         return render_template("radius/plans_form.html",
             plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
             is_new=True, speed_rules_panel=None), 400
-    flash(f"تم إنشاء الباقة «{saved.name}».", "success")
+    flash(_tr('تم إنشاء الباقة «%(name)s».', name=saved.name), "success")
     return redirect(url_for("radius.plans_list"))
 
 
@@ -477,8 +478,8 @@ def plans_edit(plan_id: int):
             target_type="plan",
             plan_id=plan_id,
             return_to=request.path,
-            title="قواعد سرعة هذه الباقة",
-            help_text="أضف قواعد سرعة متغيرة لهذه الباقة حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة الباقة.",
+            title=N_("قواعد سرعة هذه الباقة"),
+            help_text=N_("أضف قواعد سرعة متغيرة لهذه الباقة حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة الباقة."),
         ))
 
 
@@ -492,7 +493,7 @@ def plans_update(plan_id: int):
                 target_type="plan",
                 plan_id=plan_id,
             )
-            flash("تم تنفيذ إجراء قواعد السرعة لهذه الباقة.", "success")
+            flash(_tr("تم تنفيذ إجراء قواعد السرعة لهذه الباقة."), "success")
         except RadiusError as e:
             flash(e.message, "error")
         return redirect(url_for("radius.plans_edit", plan_id=plan_id))
@@ -527,7 +528,7 @@ def plans_update(plan_id: int):
             _propagate_plan_split(plan_id, _new_split[0], _new_split[1])
         except Exception:  # noqa: BLE001 — التوريث لا يكسر حفظ العرض
             pass
-    flash(f"تم تحديث «{saved.name}».", "success")
+    flash(_tr('تم تحديث «%(name)s».', name=saved.name), "success")
     return redirect(url_for("radius.plans_list"))
 
 
@@ -544,7 +545,7 @@ def plans_clone(plan_id: int):
     except RadiusError as e:
         flash(e.message, "error")
         return redirect(url_for("radius.plans_list"))
-    flash(f"تم إنشاء نسخة «{saved.name}». يمكنك تعديلها الآن.", "success")
+    flash(_tr('تم إنشاء نسخة «%(name)s». يمكنك تعديلها الآن.', name=saved.name), "success")
     return redirect(url_for("radius.plans_edit", plan_id=saved.id))
 
 
@@ -586,7 +587,7 @@ def _propagate_plan_split(plan_id: int, ed: bool, eu: bool) -> None:
 def plans_delete(plan_id: int):
     try:
         get_plans_service().delete(actor=_actor(), plan_id=plan_id)
-        flash("تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات.", "success")
+        flash(_tr("تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات."), "success")
     except RadiusError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.plans_list"))

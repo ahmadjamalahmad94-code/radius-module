@@ -6,7 +6,7 @@
 {% block title %}{{ _("الفواتير") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}{{ _("الفواتير") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} فاتورة في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s فاتورة في النتائج', length=items|length) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -21,8 +21,8 @@
 
 {# ───── Merged hero: title + actions + KPI strip + integrated filter ───── #}
 {% call hub.megahero(
-  "الفواتير",
-  subtitle="إدارة كاملة لفواتير المشتركين — تحصيل، إيداع، استرجاع، تتبع الحالة في مكان واحد.",
+  _('الفواتير'),
+  subtitle=_('إدارة كاملة لفواتير المشتركين — تحصيل، إيداع، استرجاع، تتبع الحالة في مكان واحد.'),
   icon="file-invoice-dollar",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.inv_new') + '">
@@ -32,10 +32,10 @@
       <i class="fa-solid fa-scale-balanced"></i> '|safe ~ _("السجل المالي") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي القيمة', 'value': "%.2f"|format(stats.total or 0),   'icon': 'sack-dollar',  'variant': 'green'},
-    {'label': 'مدفوعة',        'value': "%.2f"|format(stats.paid or 0),    'icon': 'circle-check', 'variant': 'brand'},
-    {'label': 'معلَّقة',        'value': "%.2f"|format(stats.pending or 0), 'icon': 'clock',        'variant': 'amber'},
-    {'label': 'عدد الفواتير',  'value': stats.count or 0,                  'icon': 'receipt',      'variant': 'blue'},
+    {'label': _('إجمالي القيمة'), 'value': "%.2f"|format(stats.total or 0),   'icon': 'sack-dollar',  'variant': 'green'},
+    {'label': _('مدفوعة'),        'value': "%.2f"|format(stats.paid or 0),    'icon': 'circle-check', 'variant': 'brand'},
+    {'label': _('معلَّقة'),        'value': "%.2f"|format(stats.pending or 0), 'icon': 'clock',        'variant': 'amber'},
+    {'label': _('عدد الفواتير'),  'value': stats.count or 0,                  'icon': 'receipt',      'variant': 'blue'},
   ],
   search_action=url_for('radius.inv_list')
 ) %}
@@ -43,11 +43,11 @@
     <option value="">{{ _('كل الحالات') }}</option>
     {% for s in ['paid','pending','failed','refunded','canceled'] %}
       <option value="{{ s }}" {% if status==s %}selected{% endif %}>
-        {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلَّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+        {% if s == 'paid' %}{{ _('مدفوعة') }}{% elif s == 'pending' %}{{ _('معلَّقة') }}{% elif s == 'failed' %}{{ _('فشلت') }}{% elif s == 'refunded' %}{{ _('مسترجعة') }}{% elif s == 'canceled' %}{{ _('ملغاة') }}{% else %}{{ s }}{% endif %}
       </option>
     {% endfor %}
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة الموحّدة (أيقونات فقط مع tooltips) موصولة بـ window.hubTableExport عبر معالج أسفل الملف (ملاحظات #1 #2 #4 #8) #}
   {{ hub.btn("", icon="file-csv",   variant="secondary", size="sm", attrs='data-inv-export="csv"  title="CSV"   aria-label="CSV"') }}
@@ -58,17 +58,17 @@
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو حركة مالية على حساب مشترك — خصم، إيداع، إرجاع أو سحب. الحالة تخبرك بمصير الفاتورة.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو حركة مالية على حساب مشترك — خصم، إيداع، إرجاع أو سحب. الحالة تخبرك بمصير الفاتورة.'),
   items=[
-    {'icon': 'right-left',    'text': 'الاتجاه يميّز نوع الحركة: خصم، إيداع، إرجاع، سحب أو رصيد.'},
-    {'icon': 'circle-check',  'text': '«مدفوعة» تعني تحصيل مكتمل؛ «معلَّقة» تنتظر التأكيد.'},
-    {'icon': 'pen-to-square', 'text': 'عدّل حالة أي فاتورة مباشرة من عمود «تحديث الحالة».'},
-    {'icon': 'scale-balanced','text': 'القيم الإجمالية في الأعلى تلخّص ما حُصِّل وما لا يزال معلّقًا.'},
+    {'icon': 'right-left',    'text': _('الاتجاه يميّز نوع الحركة: خصم، إيداع، إرجاع، سحب أو رصيد.')},
+    {'icon': 'circle-check',  'text': _('«مدفوعة» تعني تحصيل مكتمل؛ «معلَّقة» تنتظر التأكيد.')},
+    {'icon': 'pen-to-square', 'text': _('عدّل حالة أي فاتورة مباشرة من عمود «تحديث الحالة».')},
+    {'icon': 'scale-balanced','text': _('القيم الإجمالية في الأعلى تلخّص ما حُصِّل وما لا يزال معلّقًا.')},
   ],
-  note="تغيير الحالة يؤثر على السجل المالي — راجع «السجل المالي» للتفاصيل الكاملة."
+  note=_('تغيير الحالة يؤثر على السجل المالي — راجع «السجل المالي» للتفاصيل الكاملة.')
 )) %}
-  {% call hub.section("قائمة الفواتير", icon="table-list", meta=items|length|string + " فاتورة", flush=True) %}
+  {% call hub.section(_('قائمة الفواتير'), icon="table-list", meta=items|length|string + _(' فاتورة'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -94,29 +94,29 @@
             <td class="mono">{{ i.username }}</td>
             <td>{{ i.plan_name or '—' }}</td>
             <td>
-              {% if i.direction == 'charge' %}{{ hub.pill("خصم", variant="blue") }}
-              {% elif i.direction == 'refund' %}{{ hub.pill("إرجاع", variant="amber") }}
-              {% elif i.direction == 'deposit' %}{{ hub.pill("إيداع", variant="green") }}
-              {% elif i.direction == 'withdraw' %}{{ hub.pill("سحب", variant="red") }}
-              {% elif i.direction == 'credit' %}{{ hub.pill("رصيد", variant="brand") }}
+              {% if i.direction == 'charge' %}{{ hub.pill(_('خصم'), variant="blue") }}
+              {% elif i.direction == 'refund' %}{{ hub.pill(_('إرجاع'), variant="amber") }}
+              {% elif i.direction == 'deposit' %}{{ hub.pill(_('إيداع'), variant="green") }}
+              {% elif i.direction == 'withdraw' %}{{ hub.pill(_('سحب'), variant="red") }}
+              {% elif i.direction == 'credit' %}{{ hub.pill(_('رصيد'), variant="brand") }}
               {% else %}{{ hub.pill(i.direction, variant="grey") }}{% endif %}
             </td>
             <td class="num"><strong>{{ i.amount|money }}</strong></td>
             <td class="small">
-              {% if i.payment_method == 'cash' %}نقدًا
-              {% elif i.payment_method == 'transfer' %}حوالة
-              {% elif i.payment_method == 'card' %}بطاقة
-              {% elif i.payment_method == 'online' %}إلكتروني
-              {% elif i.payment_method == 'manual' %}يدوي
+              {% if i.payment_method == 'cash' %}{{ _('نقدًا') }}
+              {% elif i.payment_method == 'transfer' %}{{ _('حوالة') }}
+              {% elif i.payment_method == 'card' %}{{ _('بطاقة') }}
+              {% elif i.payment_method == 'online' %}{{ _('إلكتروني') }}
+              {% elif i.payment_method == 'manual' %}{{ _('يدوي') }}
               {% else %}{{ i.payment_method }}{% endif %}
             </td>
             <td class="mono small">{{ i.created_at|dt_local if i.created_at else '—' }}</td>
             <td>
-              {% if i.status == 'paid' %}{{ hub.pill("مدفوعة", variant="green") }}
-              {% elif i.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}
-              {% elif i.status == 'failed' %}{{ hub.pill("فشلت", variant="red") }}
-              {% elif i.status == 'refunded' %}{{ hub.pill("مسترجعة", variant="blue") }}
-              {% elif i.status == 'canceled' %}{{ hub.pill("ملغاة", variant="grey") }}
+              {% if i.status == 'paid' %}{{ hub.pill(_('مدفوعة'), variant="green") }}
+              {% elif i.status == 'pending' %}{{ hub.pill(_('معلَّقة'), variant="amber") }}
+              {% elif i.status == 'failed' %}{{ hub.pill(_('فشلت'), variant="red") }}
+              {% elif i.status == 'refunded' %}{{ hub.pill(_('مسترجعة'), variant="blue") }}
+              {% elif i.status == 'canceled' %}{{ hub.pill(_('ملغاة'), variant="grey") }}
               {% else %}{{ hub.pill(i.status, variant="grey") }}{% endif %}
             </td>
             <td>
@@ -126,7 +126,7 @@
                 <select class="hub-select" name="status" style="font-size:11.5px;padding:4px 6px;min-width:auto">
                   {% for s in ['paid','pending','failed','refunded','canceled'] %}
                     <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>
-                      {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلَّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
+                      {% if s == 'paid' %}{{ _('مدفوعة') }}{% elif s == 'pending' %}{{ _('معلَّقة') }}{% elif s == 'failed' %}{{ _('فشلت') }}{% elif s == 'refunded' %}{{ _('مسترجعة') }}{% elif s == 'canceled' %}{{ _('ملغاة') }}{% else %}{{ s }}{% endif %}
                     </option>
                   {% endfor %}
                 </select>
@@ -144,8 +144,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا فواتير بهذه الفلترة",
-  sub="أنشئ فاتورة جديدة من زرّ «فاتورة جديدة» في الأعلى.",
+  _('لا فواتير بهذه الفلترة'),
+  sub=_('أنشئ فاتورة جديدة من زرّ «فاتورة جديدة» في الأعلى.'),
   icon="file-invoice-dollar"
 ) }}
 {% endif %}

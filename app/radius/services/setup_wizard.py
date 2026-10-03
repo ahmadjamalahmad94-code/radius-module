@@ -6,6 +6,7 @@ This service is intentionally state-only:
 - no script planning beyond storing generated previews
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from dataclasses import dataclass
@@ -549,10 +550,10 @@ class SetupWizardService:
             or ""
         ).strip():
             raise SetupWizardValidationError(
-                "عنوان الخادم العامّ غير مضبوط — أدخله في الحقل أو اضبط "
+                _tr("عنوان الخادم العامّ غير مضبوط — أدخله في الحقل أو اضبط "
                 "HOBERADIUS_WG_SERVER_ENDPOINT (أو HOBERADIUS_PUBLIC_IP) في بيئة "
                 "الخادم. لا عنوان افتراضيّ مثبّت عمدًا كي لا تُوجَّه الراوترات "
-                "لخادم خاطئ."
+                "لخادم خاطئ.")
             )
         reservation = self._router_provisioning.reserve_for_run(
             tenant_id=tenant_id,
@@ -1070,17 +1071,17 @@ class SetupWizardService:
         if not public_key:
             _step(
                 "extract_key", "failed",
-                "تعذّر العثور على public-key في المخرجات "
+                _tr("تعذّر العثور على public-key في المخرجات "
                 "الملصقة. تأكّد أنّك نسخت مخرجات "
-                "/interface wireguard print detail كاملةً.",
+                "/interface wireguard print detail كاملةً."),
             )
             return {
                 "ok":     False,
                 "stage":  "extract_key",
                 "steps":  steps,
                 "reason_ar":
-                    "تعذّر استخراج مفتاح الراوتر من النص "
-                    "الملصق.",
+                    _tr("تعذّر استخراج مفتاح الراوتر من النص "
+                    "الملصق."),
             }
         masked = (
             f"{public_key[:6]}...{public_key[-6:]}"
@@ -1088,7 +1089,7 @@ class SetupWizardService:
         )
         _step(
             "extract_key", "ok",
-            f"تمّ استخراج مفتاح الراوتر: {masked}",
+            _tr('تمّ استخراج مفتاح الراوتر: %(masked)s', masked=masked),
         )
 
         # Submit the key — promotes the prepared_peer to
@@ -1111,8 +1112,8 @@ class SetupWizardService:
             }
         _step(
             "register_key", "ok",
-            "تمّ تسجيل المفتاح في سجل peer (status="
-            "ready_to_apply).",
+            _tr("تمّ تسجيل المفتاح في سجل peer (status="
+            "ready_to_apply)."),
         )
 
         # Locate the peer + dry-run + apply + verify — same
@@ -1129,10 +1130,10 @@ class SetupWizardService:
                 "stage":  "locate_peer",
                 "steps":  steps,
                 "reason_ar":
-                    "تعذّر العثور على سجل peer الجاهز.",
+                    _tr("تعذّر العثور على سجل peer الجاهز."),
             }
         _step("locate_peer", "ok",
-              "تمّ العثور على سجل peer الجاهز.")
+              _tr("تمّ العثور على سجل peer الجاهز."))
 
         try:
             dr = self._server_wg_apply.dry_run(
@@ -1144,17 +1145,17 @@ class SetupWizardService:
             return {
                 "ok": False, "stage": "dry_run",
                 "steps": steps,
-                "reason_ar": "فشل توليد الخطّة.",
+                "reason_ar": _tr("فشل توليد الخطّة."),
             }
         if dr.get("status") != "ready":
             _step("dry_run", "failed",
-                  "خطّة التطبيق غير جاهزة.", dr)
+                  _tr("خطّة التطبيق غير جاهزة."), dr)
             return {
                 "ok": False, "stage": "dry_run",
                 "steps": steps,
-                "reason_ar": "تعذّر تجهيز الخطّة.",
+                "reason_ar": _tr("تعذّر تجهيز الخطّة."),
             }
-        _step("dry_run", "ok", "خطّة التطبيق جاهزة.")
+        _step("dry_run", "ok", _tr("خطّة التطبيق جاهزة."))
 
         try:
             applied = self._server_wg_apply.apply(
@@ -1170,7 +1171,7 @@ class SetupWizardService:
             return {
                 "ok": False, "stage": "apply",
                 "steps": steps,
-                "reason_ar": "فشل تطبيق إعداد peer على الخادم.",
+                "reason_ar": _tr("فشل تطبيق إعداد peer على الخادم."),
             }
         applied_status = str(applied.get("status") or "")
         if applied_status not in {
@@ -1181,10 +1182,10 @@ class SetupWizardService:
             return {
                 "ok": False, "stage": "apply",
                 "steps": steps,
-                "reason_ar": "لم يكتمل التطبيق بنجاح.",
+                "reason_ar": _tr("لم يكتمل التطبيق بنجاح."),
             }
         _step("apply", "ok",
-              "تمّ كتابة إعداد peer على الخادم.")
+              _tr("تمّ كتابة إعداد peer على الخادم."))
 
         _time.sleep(3)
         try:
@@ -1198,12 +1199,12 @@ class SetupWizardService:
             verified = applied
         if verified_status == "verified_handshake":
             _step("verify", "ok",
-                  "تمّ تأكيد الـ handshake.")
+                  _tr("تمّ تأكيد الـ handshake."))
         else:
             _step(
                 "verify", "pending",
-                "تمّ التطبيق — بانتظار أوّل handshake "
-                "(قد يستغرق 5-30 ثانية).",
+                _tr("تمّ التطبيق — بانتظار أوّل handshake "
+                "(قد يستغرق 5-30 ثانية)."),
             )
 
         return {
@@ -1214,9 +1215,9 @@ class SetupWizardService:
             "applied":      applied,
             "verified":     verified,
             "reason_ar":    (
-                "تمّ التجهيز بنجاح. الـ handshake مؤكَّد."
+                _tr("تمّ التجهيز بنجاح. الـ handshake مؤكَّد.")
                 if verified_status == "verified_handshake"
-                else "تمّ التطبيق. بانتظار تأكيد الـ handshake."
+                else _tr("تمّ التطبيق. بانتظار تأكيد الـ handshake.")
             ),
         }
 
@@ -1302,8 +1303,7 @@ class SetupWizardService:
             }
         _step(
             "auto_detect", "ok",
-            f"تمّ التقاط مفتاح الراوتر العام: "
-            f"{detected.get('auto_detected_from', {}).get('public_key_masked', '***')}",
+            _tr('تمّ التقاط مفتاح الراوتر العام: %(v)s', v=detected.get('auto_detected_from', {}).get('public_key_masked', '***')),
             detected,
         )
 
@@ -1320,10 +1320,10 @@ class SetupWizardService:
                 "stage":  "locate_peer",
                 "steps":  steps,
                 "reason_ar":
-                    "تعذّر العثور على سجل peer الجاهز لهذا المعالج.",
+                    _tr("تعذّر العثور على سجل peer الجاهز لهذا المعالج."),
             }
         _step("locate_peer", "ok",
-              "تمّ العثور على سجل peer الجاهز.",
+              _tr("تمّ العثور على سجل peer الجاهز."),
               {"prepared_peer_id": peer_id})
 
         # ─── Step 3: dry-run (validates plan + records intent)
@@ -1340,19 +1340,19 @@ class SetupWizardService:
                 "stage":  "dry_run",
                 "steps":  steps,
                 "reason_ar":
-                    "فشل توليد الخطّة قبل التطبيق.",
+                    _tr("فشل توليد الخطّة قبل التطبيق."),
             }
         if dr.get("status") != "ready":
             _step("dry_run", "failed",
-                  "خطّة التطبيق غير جاهزة.", dr)
+                  _tr("خطّة التطبيق غير جاهزة."), dr)
             return {
                 "ok":     False,
                 "stage":  "dry_run",
                 "steps":  steps,
                 "reason_ar":
-                    "تعذّر تجهيز الخطّة — راجع تفاصيل التشخيص.",
+                    _tr("تعذّر تجهيز الخطّة — راجع تفاصيل التشخيص."),
             }
-        _step("dry_run", "ok", "خطّة التطبيق جاهزة.")
+        _step("dry_run", "ok", _tr("خطّة التطبيق جاهزة."))
 
         # ─── Step 4: apply (write peer file → wg-reload) ───
         try:
@@ -1371,7 +1371,7 @@ class SetupWizardService:
                 "stage":  "apply",
                 "steps":  steps,
                 "reason_ar":
-                    "فشل تطبيق إعداد peer على الخادم.",
+                    _tr("فشل تطبيق إعداد peer على الخادم."),
             }
         applied_status = str(applied.get("status") or "")
         if applied_status not in {
@@ -1388,11 +1388,11 @@ class SetupWizardService:
                 "steps":  steps,
                 "applied": applied,
                 "reason_ar":
-                    "تمّت محاولة التطبيق لكن لم تكتمل بنجاح.",
+                    _tr("تمّت محاولة التطبيق لكن لم تكتمل بنجاح."),
             }
         _step("apply", "ok",
-              "تمّ كتابة إعداد peer على الخادم — wg-reload "
-              "سيُفعّله خلال ثانية واحدة.",
+              _tr("تمّ كتابة إعداد peer على الخادم — wg-reload "
+              "سيُفعّله خلال ثانية واحدة."),
               {"status": applied_status})
 
         # ─── Step 5: short wait + handshake re-verify ──────
@@ -1408,13 +1408,13 @@ class SetupWizardService:
             verified = applied
         if verified_status == "verified_handshake":
             _step("verify", "ok",
-                  "تمّ تأكيد الـ handshake بين الراوتر و VPS.")
+                  _tr("تمّ تأكيد الـ handshake بين الراوتر و VPS."))
         else:
             _step(
                 "verify",
                 "pending",
-                "تمّ التطبيق — بانتظار أوّل handshake من "
-                "الراوتر (قد يستغرق 5-30 ثانية).",
+                _tr("تمّ التطبيق — بانتظار أوّل handshake من "
+                "الراوتر (قد يستغرق 5-30 ثانية)."),
             )
 
         return {
@@ -1425,11 +1425,11 @@ class SetupWizardService:
             "applied":       applied,
             "verified":      verified,
             "reason_ar":     (
-                "تمّ التجهيز بنجاح. الـ handshake مؤكَّد."
+                _tr("تمّ التجهيز بنجاح. الـ handshake مؤكَّد.")
                 if verified_status == "verified_handshake"
                 else (
-                    "تمّ تجهيز peer على الخادم. بانتظار "
-                    "تأكيد الـ handshake — قد يستغرق ثوانٍ."
+                    _tr("تمّ تجهيز peer على الخادم. بانتظار "
+                    "تأكيد الـ handshake — قد يستغرق ثوانٍ.")
                 )
             ),
         }
@@ -1439,46 +1439,46 @@ class SetupWizardService:
         """Map machine codes to operator-friendly Arabic copy."""
         mapping = {
             "router_api_auth_failed":
-                "بيانات الدخول للراوتر غير صحيحة. تحقّق من "
-                "اسم المستخدم وكلمة المرور.",
+                N_("بيانات الدخول للراوتر غير صحيحة. تحقّق من "
+                "اسم المستخدم وكلمة المرور."),
             "router_api_connect_failed":
-                "تعذّر الاتصال بالراوتر. تحقّق من العنوان "
-                "وأنّ منفذ API مفتوح.",
+                N_("تعذّر الاتصال بالراوتر. تحقّق من العنوان "
+                "وأنّ منفذ API مفتوح."),
             "router_api_error":
-                "حدث خطأ من واجهة الراوتر.",
+                _tr("حدث خطأ من واجهة الراوتر."),
             "wireguard_interface_not_found_on_router":
-                "واجهة WireGuard `hr-wg` غير موجودة على "
-                "الراوتر. شغّل سكربت المعالج عليه أوّلاً.",
+                N_("واجهة WireGuard `hr-wg` غير موجودة على "
+                "الراوتر. شغّل سكربت المعالج عليه أوّلاً."),
             "wireguard_interface_has_no_public_key":
-                "الواجهة WireGuard موجودة لكن بلا مفتاح. "
-                "أعد إنشاءها.",
+                N_("الواجهة WireGuard موجودة لكن بلا مفتاح. "
+                "أعد إنشاءها."),
             "router_address is required for auto-detect":
-                "عنوان الراوتر مطلوب.",
+                N_("عنوان الراوتر مطلوب."),
             "api_user is required for auto-detect":
-                "اسم مستخدم API مطلوب.",
+                N_("اسم مستخدم API مطلوب."),
             "api_password is required for auto-detect":
-                "كلمة مرور API مطلوبة.",
+                N_("كلمة مرور API مطلوبة."),
             "Public key is already assigned to another router.":
-                "هذا المفتاح مسجَّل لراوتر آخر بالفعل. "
-                "ربّما تعمل على نفس الجهاز بمعرّف جديد.",
+                N_("هذا المفتاح مسجَّل لراوتر آخر بالفعل. "
+                "ربّما تعمل على نفس الجهاز بمعرّف جديد."),
             "server peer plan requires a peer that is "
             "ready_to_apply":
-                "سجل peer غير جاهز للتطبيق بعد — التقاط "
-                "المفتاح فشل.",
+                N_("سجل peer غير جاهز للتطبيق بعد — التقاط "
+                "المفتاح فشل."),
             "server_wg_peers_dir_unwritable":
-                "مجلّد nginx-streams على الخادم غير قابل "
+                N_("مجلّد nginx-streams على الخادم غير قابل "
                 "للكتابة. راجع صلاحيات /etc/hoberadius/"
-                "wg-peers.d.",
+                "wg-peers.d."),
             "missing_peer":
-                "لم يُسجَّل peer على الخادم بعد. أعد المحاولة.",
+                N_("لم يُسجَّل peer على الخادم بعد. أعد المحاولة."),
             "allowed_ip_mismatch":
-                "تمّت إضافة المفتاح لكن نطاق IPs المسموح "
-                "لا يطابق المتوقَّع.",
+                N_("تمّت إضافة المفتاح لكن نطاق IPs المسموح "
+                "لا يطابق المتوقَّع."),
         }
         for needle, ar in mapping.items():
             if needle in code:
                 return ar
-        return f"خطأ غير متوقَّع: {code}"
+        return _tr('خطأ غير متوقَّع: %(code)s', code=code)
 
     def server_peer_rollback(
         self, *, tenant_id: int, run_id: int, confirmation: str
@@ -1876,7 +1876,7 @@ class SetupWizardService:
         candidates: list[dict[str, Any]] = []
         for item in source:
             is_blocked = item.name in blocked
-            reason = "واجهة الإنترنت أو الربط الخاص مستبعدة للحماية" if is_blocked else "واجهة الشبكة الداخلية مرشحة للخدمة"
+            reason = _tr("واجهة الإنترنت أو الربط الخاص مستبعدة للحماية") if is_blocked else _tr("واجهة الشبكة الداخلية مرشحة للخدمة")
             candidates.append(
                 {
                     "name": item.name,

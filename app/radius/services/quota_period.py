@@ -24,6 +24,7 @@
 (الاستهلاك الكلّيّ، لا نوافذ) بلا كسر مصادقةٍ أو حفظ.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 import logging
@@ -223,7 +224,7 @@ def record_window_topup(sub, window: str, target: str, quota_mb: int,
     sid = getattr(sub, "id", None)
     if not sid:
         from ..core.errors import RadiusValidationError
-        raise RadiusValidationError("المشترك غير صالح.")
+        raise RadiusValidationError(_tr("المشترك غير صالح."))
     key = _local_bounds(tid, now)["day_key" if window == "daily" else "month_key"]
     state = get_state(tid, sid) or {}
     tops = dict(state.get("window_topups") or {})

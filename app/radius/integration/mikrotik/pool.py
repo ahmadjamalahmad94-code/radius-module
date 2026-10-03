@@ -10,6 +10,7 @@ MikroTik connection pool — connection واحد مُعاد الاستخدام �
 خيطًا واحدًا في كل لحظة، الباقون ينتظرون.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import threading
@@ -26,8 +27,8 @@ _LOG = logging.getLogger(__name__)
 # Surfaced (via _safe_dial) as «تعذر الاتصال: …» — a clean, instant
 # "offline" envelope instead of a worker-blocking connect timeout.
 _UNREACHABLE_MSG = (
-    "الراوتر غير متاح مؤقتًا — مُعلَّم غير قابل للوصول، "
-    "سيُعاد المحاولة تلقائيًا بعد قليل."
+    N_("الراوتر غير متاح مؤقتًا — مُعلَّم غير قابل للوصول، "
+    "سيُعاد المحاولة تلقائيًا بعد قليل.")
 )
 
 

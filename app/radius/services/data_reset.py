@@ -22,6 +22,7 @@ radusergroup/radacct بمفتاح (tenant_id, username). لذا عند حذف ف
 — فلا نمسّ حسابات نفق إدارة الراوتر (rtr-*) التي ليست في subscribers/cards.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import os
@@ -130,36 +131,36 @@ class DataResetService:
 
     def categories(self) -> list[Category]:
         return [
-            Category("notifications", "الإشعارات والسجلّات", "logs", True,
+            Category("notifications", N_("الإشعارات والسجلّات"), "logs", True,
                      "audit_log", DataResetService._wipe_notifications,
-                     hint="سجل التدقيق، الإشعارات، الرسائل، أحداث المخاطر."),
-            Category("sessions", "الجلسات والاستهلاك", "logs", True,
+                     hint=N_("سجل التدقيق، الإشعارات، الرسائل، أحداث المخاطر.")),
+            Category("sessions", N_("الجلسات والاستهلاك"), "logs", True,
                      "radacct", DataResetService._wipe_sessions,
-                     hint="سجلّات radacct/الجلسات والاستهلاك اليوميّ."),
-            Category("financial", "الحركات المالية والمحافظ", "money", True,
+                     hint=N_("سجلّات radacct/الجلسات والاستهلاك اليوميّ.")),
+            Category("financial", N_("الحركات المالية والمحافظ"), "money", True,
                      "wallet_transactions", DataResetService._wipe_financial,
-                     hint="المحافظ، القيود، الدفعات، السلف، الفواتير، التسويات."),
-            Category("cards", "الكروت والحِزم", "core", False,
+                     hint=N_("المحافظ، القيود، الدفعات، السلف، الفواتير، التسويات.")),
+            Category("cards", N_("الكروت والحِزم"), "core", False,
                      "cards", DataResetService._wipe_cards,
-                     hint="الكروت + حِزمها + متجر الكروت + العروض + القسائم."),
-            Category("subscribers", "المشتركون", "core", False,
+                     hint=N_("الكروت + حِزمها + متجر الكروت + العروض + القسائم.")),
+            Category("subscribers", N_("المشتركون"), "core", False,
                      "subscribers", DataResetService._wipe_subscribers,
-                     hint="المشتركون + حقولهم + مجموعاتهم + بصمات أجهزتهم + radius."),
-            Category("distributors", "الموزّعون", "core", False,
+                     hint=N_("المشتركون + حقولهم + مجموعاتهم + بصمات أجهزتهم + radius.")),
+            Category("distributors", N_("الموزّعون"), "core", False,
                      "distributors", DataResetService._wipe_distributors,
-                     hint="الموزّعون + دفاترهم + تخصيص الحِزم + سياساتهم."),
-            Category("plans", "العروض/الباقات والبروفايلات", "core", False,
+                     hint=N_("الموزّعون + دفاترهم + تخصيص الحِزم + سياساتهم.")),
+            Category("plans", N_("العروض/الباقات والبروفايلات"), "core", False,
                      "access_plans", DataResetService._wipe_plans,
-                     hint="الباقات + بروفايلات السرعة + الجداول + عروض الكروت."),
-            Category("nas", "NAS / عملاء الراديوس", "network", False,
+                     hint=N_("الباقات + بروفايلات السرعة + الجداول + عروض الكروت.")),
+            Category("nas", N_("NAS / عملاء الراديوس"), "network", False,
                      "nas", DataResetService._wipe_nas,
-                     hint="جدول nas (عملاء FreeRADIUS)."),
-            Category("routers", "السيرفرات / الراوترات والأسطول", "network", False,
+                     hint=N_("جدول nas (عملاء FreeRADIUS).")),
+            Category("routers", N_("السيرفرات / الراوترات والأسطول"), "network", False,
                      "nas_devices", DataResetService._wipe_routers,
-                     hint="الراوترات + لقطاتها + مقاييسها + الأنفاق + أجهزة الشبكة."),
-            Category("managers", "المدراء (عدا المالك)", "core", False,
+                     hint=N_("الراوترات + لقطاتها + مقاييسها + الأنفاق + أجهزة الشبكة.")),
+            Category("managers", N_("المدراء (عدا المالك)"), "core", False,
                      "admins", DataResetService._wipe_managers,
-                     hint="حسابات المدراء (لا يُحذف المالك ولا حسابك الحاليّ)."),
+                     hint=N_("حسابات المدراء (لا يُحذف المالك ولا حسابك الحاليّ).")),
         ]
 
     def category_map(self) -> dict[str, Category]:

@@ -10,6 +10,7 @@ deprecation notice now. The wizard at `/admin/radius/mt/setup`
 the supported replacements.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template, request, url_for,
@@ -103,7 +104,7 @@ def wh_settings():
         else:
             s = subs[0]
             webhooks_repo.upsert_sub(replace(s, target_url=target, secret=secret, enabled=enabled))
-        flash("تم الحفظ.", "success")
+        flash(_tr("تم الحفظ."), "success")
         return redirect(url_for("radius.wh_settings"))
     subs = webhooks_repo.list_subs(_tid())
     current = subs[0] if subs else None

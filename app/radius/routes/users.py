@@ -7,6 +7,7 @@ Hybrid storage:
     {mikrotik:{}, radius:{}, advanced:{}, notifications:{}}
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -1192,20 +1193,20 @@ def users_password(username: str):
     المشترك» here; every refusal is an Arabic 403, nothing is leaked."""
     from flask import jsonify
     if not _can_view_passwords():
-        return jsonify({"ok": False, "error": "لا تملك صلاحية «رؤية كلمة مرور المشترك».",
+        return jsonify({"ok": False, "error": _tr("لا تملك صلاحية «رؤية كلمة مرور المشترك»."),
                         "permission": "scope.view_passwords"}), 403
     try:
         sub = get_users_service().get(username)
     except RadiusError:
-        return jsonify({"ok": False, "error": "المشترك غير موجود."}), 404
+        return jsonify({"ok": False, "error": _tr("المشترك غير موجود.")}), 404
     resp = jsonify({"ok": True, "password": sub.password or ""})
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
 _EXPORT_STATUS_AR = {
-    "enabled": "فعّال", "expired": "منتهي", "disabled": "معطّل",
-    "suspended": "موقوف", "banned": "محظور", "pending": "معلّق",
+    "enabled": N_("فعّال"), "expired": N_("منتهي"), "disabled": N_("معطّل"),
+    "suspended": N_("موقوف"), "banned": N_("محظور"), "pending": N_("معلّق"),
 }
 _EXPORT_MAX_ROWS = 20000
 
@@ -1275,9 +1276,9 @@ def users_export():
     from ..services.sensitive_visibility import can_view_balance
     show_balance = bool(session.get("is_super_admin")) or can_view_balance(
         session.get("admin_id"), tenant_id=_tid())
-    columns = ["اسم المستخدم", "الاسم", "الجوال", "العرض", "الحالة",
-               *(["الرصيد"] if show_balance else []),
-               "تاريخ الانتهاء", "تاريخ الإضافة", "ملاحظات"]
+    columns = [N_("اسم المستخدم"), N_("الاسم"), N_("الجوال"), N_("العرض"), N_("الحالة"),
+               *([N_("الرصيد")] if show_balance else []),
+               N_("تاريخ الانتهاء"), N_("تاريخ الإضافة"), N_("ملاحظات")]
     rows = []
     for u in items:
         st = u.status or ""
@@ -1288,11 +1289,11 @@ def users_export():
             plans.get(u.plan_id, "") if u.plan_id else "",
             _EXPORT_STATUS_AR.get(st, st),
             *([f"{float(u.balance or 0):.2f}"] if show_balance else []),
-            to_local(u.expire_at, fmt="%Y-%m-%d %H:%M") if u.expire_at else "بدون انتهاء",
+            to_local(u.expire_at, fmt="%Y-%m-%d %H:%M") if u.expire_at else N_("بدون انتهاء"),
             to_local(u.created_at, fmt="%Y-%m-%d") if u.created_at else "",
             u.remark or "",
         ])
-    title = "قائمة المشتركين"
+    title = _tr("قائمة المشتركين")
     if fmt == "pdf":
         return Response(_build_pdf(title, columns, rows), mimetype="application/pdf",
                         headers={"Content-Disposition": _filename(title, "pdf")})
@@ -1335,10 +1336,10 @@ def _new_subscriber_speed_panel():
         "card_batch_id": None,
         "subscriber_group_id": None,
         "return_to": request.path if request else "",
-        "title": "قواعد السرعة",
+        "title": _tr("قواعد السرعة"),
         "help_text": (
-            "اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا "
-            "مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة."
+            _tr("اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا "
+            "مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة.")
         ),
         "rules": [],
         "presets": [],
@@ -1379,8 +1380,8 @@ def _existing_temp_duration(before) -> int:
         return 0
 
 
-TEMP_SPEED_ZERO_MSG = ("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
-                      "فلا تُفعَّل بها سرعة مؤقتة.")
+TEMP_SPEED_ZERO_MSG = (N_("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                      "فلا تُفعَّل بها سرعة مؤقتة."))
 
 
 def _check_temp_speed_form() -> None:
@@ -1436,7 +1437,7 @@ def _delegate_temp_speed(username: str, before) -> None:
                 tenant_id=_tid(), actor=_actor(), username=username)
     except ValueError as exc:
         # نُظهرها كـ«خطأ» صريح (لا «تحذير» خافت) حتى لا يمرّ فشل التثبيت بصمت.
-        flash(f"تعذّر تطبيق السرعة المؤقتة: {exc}", "error")
+        flash(_tr('تعذّر تطبيق السرعة المؤقتة: %(exc)s', exc=exc), "error")
     except Exception:  # noqa: BLE001 — temp-speed must never break the save
         import logging
         logging.getLogger(__name__).exception(
@@ -1454,13 +1455,13 @@ def users_temp_speed_cancel(username: str):
         from ..services.temp_speed import cancel_temp_speed
         result = cancel_temp_speed(tenant_id=_tid(), actor=_actor(), username=username)
         if result.get("reverted"):
-            flash(f"تم إلغاء السرعة المؤقتة لـ «{username}» وأُعيدت السرعة الطبيعية.", "success")
+            flash(_tr('تم إلغاء السرعة المؤقتة لـ «%(username)s» وأُعيدت السرعة الطبيعية.', username=username), "success")
         else:
-            flash("لا توجد سرعة مؤقتة فعّالة لهذا المشترك.", "warning")
+            flash(_tr("لا توجد سرعة مؤقتة فعّالة لهذا المشترك."), "warning")
     except Exception:  # noqa: BLE001 — الإلغاء يجب ألا يكسر الصفحة
         import logging
         logging.getLogger(__name__).exception("profile temp-speed cancel failed for %s", username)
-        flash("تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.", "error")
+        flash(_tr("تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى."), "error")
     return redirect(url_for("radius.users_profile", username=username))
 
 
@@ -1509,7 +1510,7 @@ def users_create():
         from ..services import manager_grants as _mg
         if _mg.subscriber_cap_blocked(session.get("admin_id"), tenant_id=_tid()):
             _cap = _mg.limit_value(session.get("admin_id"), "max_subscribers", tenant_id=_tid())
-            flash(f"بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين ({_cap}).", "error")
+            flash(_tr('بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).', cap=_cap), "error")
             plans = list(get_plans_service().list(limit=500))
             return render_template("radius/users_form.html",
                 sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
@@ -1543,9 +1544,9 @@ def users_create():
         if _raw_pw and not _raw_pw.strip():
             # «    » passed the browser minlength, was stripped to "" and the
             # account was created with an EMPTY password (re-test R01 N8).
-            raise RadiusValidationError("كلمة المرور لا تكون مسافات فقط.")
+            raise RadiusValidationError(_tr("كلمة المرور لا تكون مسافات فقط."))
         if not dto.password and not dto.login_without_password:
-            raise RadiusValidationError("كلمة المرور مطلوبة (4 أحرف على الأقل).")
+            raise RadiusValidationError(_tr("كلمة المرور مطلوبة (4 أحرف على الأقل)."))
         validate_new_password(dto.password)  # ≥ 4 — same rule as the API/app
         _check_temp_speed_form()
         saved = get_users_service().create(actor=_actor(), sub=dto)
@@ -1579,7 +1580,7 @@ def users_create():
         )
     except RadiusError as e:
         flash(
-            f"تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: {error_message_ar(e)}",
+            _tr('تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: %(v)s', v=error_message_ar(e)),
             "warning",
         )
     if not created_rules and (request.form.get("sr_starts_at_time") or "").strip():
@@ -1607,11 +1608,11 @@ def users_create():
             )
         except RadiusError as e:
             flash(
-                f"تم إنشاء المشترك لكن قاعدة السرعة فشلت: {error_message_ar(e)}",
+                _tr('تم إنشاء المشترك لكن قاعدة السرعة فشلت: %(v)s', v=error_message_ar(e)),
                 "warning",
             )
 
-    flash(f"تم إنشاء المستخدم «{saved.username}».", "success")
+    flash(_tr('تم إنشاء المستخدم «%(username)s».', username=saved.username), "success")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1766,12 +1767,12 @@ def users_profile(username: str):
     # خريطة محلّية لهذا القطاع فقط حتى لا يظهر مفتاح إنجليزي خام مثل
     # «plan_id=5 · amount=100». المجهول يُؤنسَن (شرطة سفليّة → مسافة).
     _payload_key_ar = {
-        "plan_id": "الباقة", "plan": "الباقة", "quota_mb": "الكوتة (م.بايت)",
-        "quota_target": "الكوتة المستهدفة", "amount": "المبلغ", "currency": "العملة",
-        "policy": "السياسة", "note": "ملاحظة", "notes": "ملاحظات", "reason": "السبب",
-        "status": "الحالة", "speed": "السرعة", "balance": "الرصيد",
-        "before": "قبل", "after": "بعد", "username": "المستخدم", "hours": "الساعات",
-        "days": "الأيام", "mac": "عنوان MAC", "ip": "عنوان IP",
+        "plan_id": N_("الباقة"), "plan": N_("الباقة"), "quota_mb": N_("الكوتة (م.بايت)"),
+        "quota_target": N_("الكوتة المستهدفة"), "amount": N_("المبلغ"), "currency": N_("العملة"),
+        "policy": N_("السياسة"), "note": _tr("ملاحظة"), "notes": _tr("ملاحظات"), "reason": _tr("السبب"),
+        "status": N_("الحالة"), "speed": N_("السرعة"), "balance": N_("الرصيد"),
+        "before": N_("قبل"), "after": N_("بعد"), "username": N_("المستخدم"), "hours": N_("الساعات"),
+        "days": N_("الأيام"), "mac": N_("عنوان MAC"), "ip": N_("عنوان IP"),
     }
 
     # Technical keys carried for the MikroTik-actions feed (router/CoA plumbing)
@@ -1814,35 +1815,34 @@ def users_profile(username: str):
 
     def _audit_event_title(action: str) -> str:
         labels = {
-            "create": "تم إنشاء الحساب",
-            "update": "تم تعديل الحساب",
-            "archive": "تم أرشفة الحساب",
-            "enable": "تم تفعيل الحساب",
-            "disable": "تم تعطيل الحساب",
-            "reset_password": "تم تغيير كلمة المرور",
-            "subscriber.daily_quota_reset": "استعادة الكوتة اليومية",
-            "subscriber.quota_topup": "إضافة كوتة",
-            "subscriber.cash_balance_add": "إضافة رصيد نقدي",
-            "subscriber.plan_change": "تغيير العرض",
-            "temporary_speed.apply": "تغيير السرعة المؤقتة",
-            "temporary_speed.revert": "انتهاء السرعة المؤقتة",
-            "bandwidth_schedule.engage": "تغيير السرعة (جدولة)",
-            "bandwidth_schedule.release": "انتهاء جدولة السرعة",
+            "create": N_("تم إنشاء الحساب"),
+            "update": N_("تم تعديل الحساب"),
+            "archive": N_("تم أرشفة الحساب"),
+            "enable": N_("تم تفعيل الحساب"),
+            "disable": N_("تم تعطيل الحساب"),
+            "reset_password": N_("تم تغيير كلمة المرور"),
+            "subscriber.daily_quota_reset": N_("استعادة الكوتة اليومية"),
+            "subscriber.quota_topup": N_("إضافة كوتة"),
+            "subscriber.cash_balance_add": N_("إضافة رصيد نقدي"),
+            "subscriber.plan_change": N_("تغيير العرض"),
+            "temporary_speed.apply": N_("تغيير السرعة المؤقتة"),
+            "temporary_speed.revert": N_("انتهاء السرعة المؤقتة"),
+            "bandwidth_schedule.engage": N_("تغيير السرعة (جدولة)"),
+            "bandwidth_schedule.release": N_("انتهاء جدولة السرعة"),
         }
-        return labels.get(action or "", action or "حدث إداري")
+        return labels.get(action or "", action or N_("حدث إداري"))
 
     activity_events: list[dict] = []
     open_session = next((r for r in session_rows if not r.get("acctstoptime")), None)
     if open_session:
         activity_events.append({
             "kind": "active",
-            "pill": "نشط",
+            "pill": N_("نشط"),
             "pill_class": "cc-pill-green",
             "dot_class": "green",
-            "title": "جلسة نشطة الآن",
+            "title": _tr("جلسة نشطة الآن"),
             "desc": (
-                f"الاتصال عبر {open_session.get('nasporttype') or open_session.get('servicetype') or '—'} "
-                f"من {open_session.get('callingstationid') or '—'}"
+                _tr('الاتصال عبر %(v)s من %(v2)s', v=open_session.get('nasporttype') or open_session.get('servicetype') or '—', v2=open_session.get('callingstationid') or '—')
             ),
             "at": open_session.get("acctupdatetime") or open_session.get("acctstarttime") or sub_obj.last_seen_at,
         })
@@ -1850,11 +1850,11 @@ def users_profile(username: str):
     if sub_obj.first_login_at:
         activity_events.append({
             "kind": "first_login",
-            "pill": "اتصال",
+            "pill": N_("اتصال"),
             "pill_class": "cc-pill-blue",
             "dot_class": "blue",
-            "title": "بداية الجلسة الأولى",
-            "desc": "تم الاتصال لأول مرة باستخدام هذا الحساب.",
+            "title": _tr("بداية الجلسة الأولى"),
+            "desc": _tr("تم الاتصال لأول مرة باستخدام هذا الحساب."),
             "at": sub_obj.first_login_at,
         })
 
@@ -1871,22 +1871,22 @@ def users_profile(username: str):
             details = " · ".join(preview)
         activity_events.append({
             "kind": "audit",
-            "pill": "إدارة",
+            "pill": N_("إدارة"),
             "pill_class": "cc-pill-purple",
             "dot_class": "amber" if (e.get("severity") == "warning") else "",
             "title": _audit_event_title(action),
-            "desc": details or ("نفّذها " + (e.get("actor") or "النظام")),
+            "desc": details or (_tr("نفّذها ") + (e.get("actor") or _tr("النظام"))),
             "at": e.get("created_at") or e.get("ts"),
             "actor": e.get("actor") or "",
         })
 
     activity_events.append({
         "kind": "created",
-        "pill": "إنشاء",
+        "pill": N_("إنشاء"),
         "pill_class": "cc-pill-purple",
         "dot_class": "",
-        "title": "تم إنشاء حساب المشترك",
-        "desc": f"تم إصدار الحساب باسم المستخدم {sub_obj.username}.",
+        "title": _tr("تم إنشاء حساب المشترك"),
+        "desc": _tr('تم إصدار الحساب باسم المستخدم %(username)s.', username=sub_obj.username),
         "at": sub_obj.created_at,
     })
 
@@ -1964,7 +1964,7 @@ def users_profile(username: str):
     used_bytes = (agg.get("dn") or 0) + (agg.get("up") or 0)
     used_mb    = used_bytes / (1024 * 1024)
     remaining_mb = max(0, quota_total_mb - used_mb) if quota_total_mb else 0
-    quota_label = "الكوتا الكلية"
+    quota_label = _tr("الكوتا الكلية")
     # مصدرٌ واحد مع الإنفاذ (quota_period): سقف الفترة الإجماليّ وإلّا كوتة
     # الباقة الشهريّة/اليوميّة — كانت باقة 100 GB شهريًّا تُعرض «0 MB» بالأحمر.
     try:
@@ -1975,7 +1975,7 @@ def users_profile(username: str):
             if _qs["period_used_mb"] is not None:
                 used_mb = _qs["period_used_mb"]
         else:
-            for _w, _lbl in (("monthly", "الكوتا الشهريّة"), ("daily", "الكوتا اليوميّة")):
+            for _w, _lbl in (("monthly", N_("الكوتا الشهريّة")), ("daily", N_("الكوتا اليوميّة"))):
                 _cap = _qs[_w]["combined"] or (_qs[_w]["download"] + _qs[_w]["upload"])
                 if _cap:
                     quota_total_mb, quota_label = _cap, _lbl
@@ -2083,7 +2083,7 @@ def subscriber_renewal_preview(subscriber_id: int):
         flash(str(exc), "error")
         return redirect(url_for("radius.subscriber_360", subscriber_id=subscriber_id))
     flash(
-        f"معاينة التجديد: {preview['earned_days']} يوم، بدون تطبيق مباشر على RADIUS.",
+        _tr('معاينة التجديد: %(earned_days)s يوم، بدون تطبيق مباشر على RADIUS.', earned_days=preview['earned_days']),
         "success",
     )
     return redirect(url_for("radius.subscriber_360", subscriber_id=subscriber_id))
@@ -2118,8 +2118,8 @@ def users_edit(username: str):
             plan_id=sub.plan_id,
             subscriber_username=username,
             return_to=request.path,
-            title="قواعد سرعة هذا المشترك",
-            help_text="هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.",
+            title=N_("قواعد سرعة هذا المشترك"),
+            help_text=N_("هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة."),
         ))
 
 
@@ -2247,10 +2247,9 @@ def _missing_subscriber_on_save(username: str):
     back = url_for("radius.users_list")
     if archived is not None and getattr(archived, "deleted_at", None):
         return status_notice(
-            409, "لم يُحفَظ التعديل",
-            f"المشترك «{username}» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — "
-            "لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.",
-            back_url=back, back_label="قائمة المشتركين", code="stale_deleted")
+            409, _tr("لم يُحفَظ التعديل"),
+            _tr('المشترك «%(username)s» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.', username=username),
+            back_url=back, back_label=N_("قائمة المشتركين"), code="stale_deleted")
     renamed_to = None
     try:
         from ..db.connection import db as _db
@@ -2271,16 +2270,14 @@ def _missing_subscriber_on_save(username: str):
         renamed_to = None
     if renamed_to:
         return status_notice(
-            409, "لم يُحفَظ التعديل",
-            f"أُعيدت تسمية المشترك «{username}» إلى «{renamed_to}» بعد فتح نموذج التعديل — "
-            "لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.",
+            409, _tr("لم يُحفَظ التعديل"),
+            _tr('أُعيدت تسمية المشترك «%(username)s» إلى «%(renamed_to)s» بعد فتح نموذج التعديل — لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.', username=username, renamed_to=renamed_to),
             back_url=url_for("radius.users_edit", username=renamed_to),
-            back_label="فتح النموذج الحاليّ", code="stale_renamed")
+            back_label=N_("فتح النموذج الحاليّ"), code="stale_renamed")
     return status_notice(
-        404, "المشترك غير موجود",
-        f"لا يوجد مشترك باسم «{username}» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. "
-        "لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).",
-        back_url=back, back_label="قائمة المشتركين", code="not_found")
+        404, _tr("المشترك غير موجود"),
+        _tr('لا يوجد مشترك باسم «%(username)s» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).', username=username),
+        back_url=back, back_label=N_("قائمة المشتركين"), code="not_found")
 
 
 def _as_really_submitted(dto, before, clear_expiry: bool):
@@ -2321,7 +2318,7 @@ def users_update(username: str):
                 plan_id=sub.plan_id,
                 subscriber_username=username,
             )
-            flash("تم تنفيذ إجراء قواعد السرعة لهذا المشترك.", "success")
+            flash(_tr("تم تنفيذ إجراء قواعد السرعة لهذا المشترك."), "success")
         except RadiusError as e:
             flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_edit", username=username))
@@ -2350,7 +2347,7 @@ def users_update(username: str):
                 flash(error_message_ar(e), "error")
                 return redirect(url_for("radius.users_edit", username=username))
             # بقيّة الحفظ تستهدف الاسم الجديد.
-            flash(f"تم تغيير اسم الدخول إلى «{posted_username}».", "success")
+            flash(_tr('تم تغيير اسم الدخول إلى «%(posted_username)s».', posted_username=posted_username), "success")
             username = posted_username
 
     before = None
@@ -2438,9 +2435,9 @@ def users_update(username: str):
     # Persist any JS-staged rule edits (bulk فعّل/عطّل, «تم», master
     # toggle, per-row enabled flips) — all in one redirect at the end.
     _sync_subscriber_rules(_tid(), _actor(), request.form, username)
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     if _locked_dropped:
-        flash("لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): "
+        flash(_tr("لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): ")
               + "، ".join(_locked_dropped), "warning")
     return redirect(url_for("radius.users_list"))
 
@@ -2448,7 +2445,7 @@ def users_update(username: str):
 def users_delete(username: str):
     try:
         get_users_service().delete(actor=_actor(), username=username)
-        flash("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.", "success")
+        flash(_tr("تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات."), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
@@ -2480,7 +2477,7 @@ def users_bulk_delete():
             usernames.append(name)
 
     if not usernames:
-        flash("لم يتم تحديد أي مشترك للحذف.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك للحذف."), "warning")
         return redirect(url_for("radius.users_list"))
 
     svc = get_users_service()
@@ -2497,12 +2494,12 @@ def users_bulk_delete():
             failed.append(name)
 
     if deleted:
-        flash(f"تم حذف {deleted} مشترك. يمكن الاستعادة من سلة المحذوفات.", "success")
+        flash(_tr('تم حذف %(deleted)s مشترك. يمكن الاستعادة من سلة المحذوفات.', deleted=deleted), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّر حذف {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّر حذف %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     if not deleted and not failed:
-        flash("لم يتم حذف أي مشترك.", "warning")
+        flash(_tr("لم يتم حذف أي مشترك."), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2511,10 +2508,10 @@ def users_toggle(username: str):
         u = get_users_service().get(username)
         if u.status == "enabled":
             get_users_service().disable(actor=_actor(), username=username)
-            flash("تم التعطيل.", "warning")
+            flash(_tr("تم التعطيل."), "warning")
         else:
             get_users_service().enable(actor=_actor(), username=username)
-            flash("تم التفعيل.", "success")
+            flash(_tr("تم التفعيل."), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
@@ -2540,7 +2537,7 @@ def users_toggle_bulk():
             usernames.append(name)
 
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لتغيير الحالة.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لتغيير الحالة."), "warning")
         return redirect(url_for("radius.users_list"))
 
     svc = get_users_service()
@@ -2564,13 +2561,13 @@ def users_toggle_bulk():
 
     if disabled_names:
         preview = "، ".join(disabled_names[:10]) + ("…" if len(disabled_names) > 10 else "")
-        flash(f"تم تعطيل {len(disabled_names)} مشترك: {preview}", "warning")
+        flash(_tr('تم تعطيل %(v)s مشترك: %(preview)s', v=len(disabled_names), preview=preview), "warning")
     if enabled_names:
         preview = "، ".join(enabled_names[:10]) + ("…" if len(enabled_names) > 10 else "")
-        flash(f"تم تفعيل {len(enabled_names)} مشترك: {preview}", "success")
+        flash(_tr('تم تفعيل %(v)s مشترك: %(preview)s', v=len(enabled_names), preview=preview), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّر تغيير حالة {len(failed)} مشترك: {preview}", "error")
+        flash(_tr('تعذّر تغيير حالة %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2608,7 +2605,7 @@ def users_extend(username: str):
     # 🔴 كانت المدّة 0/الفارغة/التاريخ الممسوح تُضيف دقيقة بصمت (الواجهة
     # ترسل max(1, …) والتاريخ الفارغ يسقط إلى وضع المدّة). الآن تُرفض مثل الـAPI.
     if "expire_at" in request.form and not (request.form.get("expire_at") or "").strip():
-        return _extend_refused("تاريخ الانتهاء مطلوب.")
+        return _extend_refused(N_("تاريخ الانتهاء مطلوب."))
     try:
         # وضعان في نموذجٍ واحد: «أضِف مدّة» و«عيِّن تاريخ الانتهاء». وجودُ
         # `expire_at` هو الفاصل — فلا يُقرأ `minutes` أصلًا في وضع التعيين.
@@ -2617,10 +2614,10 @@ def users_extend(username: str):
         if _exp is None:
             _raw_m = (request.form.get("minutes") or "").strip()
             if not _raw_m:
-                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
+                return _extend_refused(N_("المدّة يجب أن تكون أكبر من صفر."))
             m = int(_raw_m)
             if m <= 0:
-                return _extend_refused("المدّة يجب أن تكون أكبر من صفر.")
+                return _extend_refused(N_("المدّة يجب أن تكون أكبر من صفر."))
         charge_mode = (request.form.get("charge_mode") or "free").strip()
         amount = _form_float("amount", 0.0)
         # Spend gate (paid/debt) + extend_time/set_expiry — the SAME helper the
@@ -2631,21 +2628,21 @@ def users_extend(username: str):
             minutes=m, expire_at=_exp, charge_mode=charge_mode, amount=amount,
             currency=(request.form.get("currency") or default_currency()).strip(),
             notes=(request.form.get("notes") or "").strip())
-        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
         # المدّةُ تُعرض كما يفكّر بها المشغّل لا كما نُخزّنها: 90 دقيقة
         # تصير «ساعة ونصف» لا رقمًا يعدّه بنفسه. (الوحداتُ صارت
         # دقائق/ساعات/أيّامًا في الواجهة، فالرسالةُ بالدقائق تُربك.)
         from ..core.system_config import format_duration_days, to_local
         if _exp is not None:
-            flash(f"تم تعيين انتهاء الحساب: {to_local(_exp)} ({mode_label}).", "success")
+            flash(_tr('تم تعيين انتهاء الحساب: %(v)s (%(mode_label)s).', v=to_local(_exp), mode_label=mode_label), "success")
         else:
-            flash(f"تم تمديد الحساب {format_duration_days(m)} ({mode_label}).", "success")
+            flash(_tr('تم تمديد الحساب %(v)s (%(mode_label)s).', v=format_duration_days(m), mode_label=mode_label), "success")
     except RadiusError as e:
         # قبل ValueError: أخطاء السقوف (سنة/2100/100,000) ترث الاثنين —
         # رسالتها العربيّة الدقيقة لا الرسالة العامّة.
         return _extend_refused(error_message_ar(e))
     except (TypeError, ValueError, OverflowError):
-        return _extend_refused("قيمة المدّة أو تاريخ الانتهاء غير صحيحة")
+        return _extend_refused(N_("قيمة المدّة أو تاريخ الانتهاء غير صحيحة"))
     return redirect(url_for("radius.users_list"))
 
 
@@ -2659,7 +2656,7 @@ def users_extend_bulk():
     """
     usernames = _bulk_usernames()
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لإضافة الوقت.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لإضافة الوقت."), "warning")
         return redirect(url_for("radius.users_list"))
     try:
         # تعيينُ التاريخ جماعيًّا مقصودٌ ومفهوم: النهايةُ نفسُها للجميع (نهايةُ
@@ -2678,7 +2675,7 @@ def users_extend_bulk():
         flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_list"))
     except (TypeError, ValueError, OverflowError):
-        flash("قيمة المدّة أو تاريخ الانتهاء غير صحيحة", "error")
+        flash(_tr("قيمة المدّة أو تاريخ الانتهاء غير صحيحة"), "error")
         return redirect(url_for("radius.users_list"))
 
     charge_mode = (request.form.get("charge_mode") or "free").strip()
@@ -2730,16 +2727,16 @@ def users_extend_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
     if done:
         from ..core.system_config import format_duration_days, to_local
         if expire_at is not None:
-            flash(f"تم تعيين انتهاء {done} مشترك إلى {to_local(expire_at)} ({mode_label}).", "success")
+            flash(_tr('تم تعيين انتهاء %(done)s مشترك إلى %(v)s (%(mode_label)s).', done=done, v=to_local(expire_at), mode_label=mode_label), "success")
         else:
-            flash(f"تم تمديد {done} مشترك بمقدار {format_duration_days(minutes)} لكلٍّ منهم ({mode_label}).", "success")
+            flash(_tr('تم تمديد %(done)s مشترك بمقدار %(v)s لكلٍّ منهم (%(mode_label)s).', done=done, v=format_duration_days(minutes), mode_label=mode_label), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّر تمديد {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّر تمديد %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2758,19 +2755,19 @@ def users_change_plan(username: str):
         # المدّة بالأيام والساعات والدقائق (كانت «تعويض 0 يوم» لستّ ساعات).
         from ..services.users import _fmt_minutes_ar
         if debt > 0:
-            flash(f"تم تغيير العرض وتسجيل دين فرق السعر بقيمة {debt:.2f}.", "success")
+            flash(_tr('تم تغيير العرض وتسجيل دين فرق السعر بقيمة %(debt)s.', debt=format(debt, '.2f')), "success")
         elif delta > 0:
-            flash(f"تم تغيير العرض وتعويض {_fmt_minutes_ar(delta)} إضافيّة.", "success")
+            flash(_tr('تم تغيير العرض وتعويض %(v)s إضافيّة.', v=_fmt_minutes_ar(delta)), "success")
         elif delta < 0:
-            flash(f"تم تغيير العرض وإنقاص {_fmt_minutes_ar(abs(delta))}.", "warning")
+            flash(_tr('تم تغيير العرض وإنقاص %(v)s.', v=_fmt_minutes_ar(abs(delta))), "warning")
         else:
-            flash("تم تغيير العرض للمشترك.", "success")
+            flash(_tr("تم تغيير العرض للمشترك."), "success")
     except RadiusError as e:
         # قبل ValueError: أخطاء السقوف (NonFiniteNumber) ترث ValueError أيضًا
         # فكانت تُعرض «اختيار العرض غير صحيح» بدل سببها (سنة/2100/100,000).
         flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
-        flash("اختيار العرض غير صحيح.", "error")
+        flash(_tr("اختيار العرض غير صحيح."), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2783,8 +2780,8 @@ def users_send_sms(username: str):
             message=request.form.get("message") or "",
             channel=channel,
         )
-        label = "واتساب" if channel == "whatsapp" else "SMS"
-        flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
+        label = _tr("واتساب") if channel == "whatsapp" else "SMS"
+        flash(_tr('تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(v)s).', label=label, v=result.get('queued_count', 0)), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_list"))
@@ -2810,7 +2807,7 @@ def users_send_sms_bulk():
             usernames.append(name)
 
     if not usernames:
-        flash("لم يتم تحديد أي مشترك للإرسال.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك للإرسال."), "warning")
         return redirect(url_for("radius.users_list"))
 
     channel = (request.form.get("channel") or "sms").strip().lower()
@@ -2828,12 +2825,12 @@ def users_send_sms_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    label = "واتساب" if channel == "whatsapp" else "SMS"
+    label = _tr("واتساب") if channel == "whatsapp" else "SMS"
     if sent:
-        flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال لـ {sent} مشترك.", "success")
+        flash(_tr('تمت إضافة رسالة %(label)s إلى قائمة الإرسال لـ %(sent)s مشترك.', label=label, sent=sent), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّر الإرسال لـ {len(failed)} مشترك (غالبًا بلا رقم جوال): {preview}", "warning")
+        flash(_tr('تعذّر الإرسال لـ %(v)s مشترك (غالبًا بلا رقم جوال): %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2864,16 +2861,15 @@ def users_quota_reset_daily(username: str):
             currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
-        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
         if charge_mode in {"paid", "debt"}:
-            flash(f"تمت استعادة الكوتة اليومية ({mode_label}) بقيمة {amount:.2f}. "
-                  f"الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+            flash(_tr('تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.', mode_label=mode_label, amount=format(amount, '.2f'), v=format(float(saved.balance or 0), '.2f')), "success")
         else:
-            flash("تمت استعادة الكوتة اليومية للمشترك (مجانية).", "success")
+            flash(_tr("تمت استعادة الكوتة اليومية للمشترك (مجانية)."), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
-        flash("قيمة المبلغ غير صحيحة.", "error")
+        flash(_tr("قيمة المبلغ غير صحيحة."), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2886,13 +2882,13 @@ def users_quota_reset_daily_bulk():
     """
     usernames = _bulk_usernames()
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لاستعادة الكوتة.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لاستعادة الكوتة."), "warning")
         return redirect(url_for("radius.users_list"))
     charge_mode = (request.form.get("charge_mode") or "free").strip()
     try:
         amount = _form_float("amount", 0.0)
     except (TypeError, ValueError):
-        flash("قيمة المبلغ غير صحيحة.", "error")
+        flash(_tr("قيمة المبلغ غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     currency = default_currency()  # المحفظة بعملة النظام — لا عملة النموذج
     notes = (request.form.get("notes") or "").strip()
@@ -2916,16 +2912,15 @@ def users_quota_reset_daily_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
     if done:
-        flash(f"تمت استعادة الكوتة اليومية ({mode_label}) لـ {done} مشترك.", "success")
+        flash(_tr('تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.', mode_label=mode_label, done=done), "success")
     if skipped:
         preview = "، ".join(skipped[:10]) + ("…" if len(skipped) > 10 else "")
-        flash(f"تُخطّي {len(skipped)} مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ "
-              f"(لم يُحصَّل منهم شيء): {preview}", "info")
+        flash(_tr('تُخطّي %(v)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ (لم يُحصَّل منهم شيء): %(preview)s', v=len(skipped), preview=preview), "info")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّرت الاستعادة لـ {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّرت الاستعادة لـ %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2944,12 +2939,12 @@ def users_quota_topup(username: str):
             currency=default_currency(),  # المحفظة بعملة النظام — لا عملة النموذج
             notes=(request.form.get("notes") or "").strip(),
         )
-        mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
-        flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label}. الرصيد الحالي {float(saved.balance or 0):.2f}.", "success")
+        mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
+        flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.', quota_mb=quota_mb, mode_label=mode_label, v=format(float(saved.balance or 0), '.2f')), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     except (TypeError, ValueError):
-        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
+        flash(_tr("قيمة الكوتة أو المبلغ غير صحيحة."), "error")
     return redirect(url_for("radius.users_list"))
 
 
@@ -2962,13 +2957,13 @@ def users_quota_topup_bulk():
     """
     usernames = _bulk_usernames()
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لإضافة الكوتة.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لإضافة الكوتة."), "warning")
         return redirect(url_for("radius.users_list"))
     try:
         quota_mb = int(request.form.get("quota_mb") or 0)
         amount = _form_float("amount", 0.0)
     except (TypeError, ValueError):
-        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
+        flash(_tr("قيمة الكوتة أو المبلغ غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     quota_target = (request.form.get("quota_target") or "combined").strip()
     charge_mode = (request.form.get("charge_mode") or "free").strip()
@@ -2991,12 +2986,12 @@ def users_quota_topup_bulk():
         except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
             failed.append(name)
 
-    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    mode_label = {"free": N_("مجانية"), "paid": N_("مدفوعة"), "debt": N_("على الدين")}.get(charge_mode, charge_mode)
     if done:
-        flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label} لـ {done} مشترك (لكلٍّ منهم).", "success")
+        flash(_tr('تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).', quota_mb=quota_mb, mode_label=mode_label, done=done), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّرت إضافة الكوتة لـ {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّرت إضافة الكوتة لـ %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -3004,7 +2999,7 @@ def users_balance_add(username: str):
     try:
         amount = _form_float("amount")
     except (TypeError, ValueError):
-        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        flash(_tr("قيمة الرصيد النقدي غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     # Spend gate → preview the settled loans → credit the wallet (net) → settle /
     # write off the chosen loans: one shared helper, also run by the mobile API.
@@ -3021,14 +3016,14 @@ def users_balance_add(username: str):
         flash(error_message_ar(e), "error")
         return redirect(url_for("radius.users_list"))
     except (TypeError, ValueError):
-        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        flash(_tr("قيمة الرصيد النقدي غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     saved = _res["subscriber"]
     settled_done = _res["settled_done"]
     credited = _res["credited"]
-    note = f" بعد خصم {settled_done:.2f} لتسوية سلف" if settled_done > 0 else ""
+    note = _tr(' بعد خصم %(settled_done)s لتسوية سلف', settled_done=format(settled_done, '.2f')) if settled_done > 0 else ""
     flash(
-        f"تمت إضافة رصيد نقدي: {credited:.2f}{note}. الرصيد الحالي {float(saved.balance or 0):.2f}.",
+        _tr('تمت إضافة رصيد نقدي: %(credited)s%(note)s. الرصيد الحالي %(v)s.', credited=format(credited, '.2f'), note=note, v=format(float(saved.balance or 0), '.2f')),
         "success",
     )
     return redirect(url_for("radius.users_list"))
@@ -3044,14 +3039,14 @@ def users_balance_add_bulk():
     """
     usernames = _bulk_usernames()
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لإضافة الرصيد.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لإضافة الرصيد."), "warning")
         return redirect(url_for("radius.users_list"))
     try:
         amount = _form_float("amount")
         if amount <= 0:
             raise ValueError
     except (TypeError, ValueError):
-        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        flash(_tr("قيمة الرصيد النقدي غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
     currency = (request.form.get("currency") or default_currency()).strip()
     notes = (request.form.get("notes") or "").strip()
@@ -3072,8 +3067,8 @@ def users_balance_add_bulk():
             failed.append(name)
 
     if done:
-        flash(f"تمت إضافة رصيد نقدي {amount:.2f} لكل مشترك من {done} مشترك.", "success")
+        flash(_tr('تمت إضافة رصيد نقدي %(amount)s لكل مشترك من %(done)s مشترك.', amount=format(amount, '.2f'), done=done), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّرت إضافة الرصيد لـ {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّرت إضافة الرصيد لـ %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))

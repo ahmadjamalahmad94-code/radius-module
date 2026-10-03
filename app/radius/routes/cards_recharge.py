@@ -13,6 +13,7 @@ URL tree:
   POST /cards/recharge/<batch_id>/delete  → soft-delete a batch
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (
@@ -103,10 +104,10 @@ def cards_recharge_new():
             denominations.append({"value": v_num, "count": c_num})
 
     if not package_name:
-        flash("اسم الحزمة مطلوب.", "error")
+        flash(_tr("اسم الحزمة مطلوب."), "error")
         return _render_new(), 422
     if not denominations:
-        flash("أدخل فئة واحدة على الأقل بقيمة وعدد أكبر من صفر.", "error")
+        flash(_tr("أدخل فئة واحدة على الأقل بقيمة وعدد أكبر من صفر."), "error")
         return _render_new(), 422
 
     try:
@@ -125,8 +126,7 @@ def cards_recharge_new():
 
     batch = result["batch"]
     flash(
-        f"تم توليد {ar_count(result['inserted_count'], 'card')} شحن "
-        f"بإجمالي {result['total_value']:.2f} داخل «{batch.package_name}».",
+        _tr('تم توليد %(v)s شحن بإجمالي %(total_value)s داخل «%(package_name)s».', v=ar_count(result['inserted_count'], 'card'), total_value=format(result['total_value'], '.2f'), package_name=batch.package_name),
         "success",
     )
     return redirect(url_for("radius.cards_recharge_batch", batch_id=batch.id))
@@ -200,7 +200,7 @@ def cards_recharge_batch_delete(batch_id: int):
         actor=_actor(), batch_id=batch_id,
     )
     if ok:
-        flash("تم حذف حزمة الشحن.", "success")
+        flash(_tr("تم حذف حزمة الشحن."), "success")
     else:
-        flash("الحزمة غير موجودة أو غير قابلة للحذف.", "error")
+        flash(_tr("الحزمة غير موجودة أو غير قابلة للحذف."), "error")
     return redirect(url_for("radius.cards_recharge_list"))

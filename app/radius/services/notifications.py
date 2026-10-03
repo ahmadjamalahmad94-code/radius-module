@@ -10,6 +10,7 @@
 كل الدوال آمنة الفشل: لا تكسر أي صفحة أو دورة عامل.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import datetime as _dt
 import logging
@@ -118,8 +119,8 @@ def send_test_push(tenant_id: int, *, title: str = "", body: str = "") -> dict:
     fcm_disabled (لا اعتماد على لوحة التراخيص) · https_required/disabled/
     config_missing (الجسر غير مُهيّأ) · sent (نجح)."""
     resp = _forward_push(
-        title=title or "إشعار تجريبي من لوحة هوبراديوس",
-        body=body or "إن وصلك هذا الإشعار فدفع الجوال يعمل بنجاح ✅",
+        title=title or N_("إشعار تجريبي من لوحة هوبراديوس"),
+        body=body or N_("إن وصلك هذا الإشعار فدفع الجوال يعمل بنجاح ✅"),
         link="/admin/radius/notifications", ntype="system", mode="sync")
     # ردّ اللوحة المغلَّف: {ok, status, response:{ok,status,sent,failed,devices}}.
     inner = resp.get("response") if isinstance(resp, dict) else None
@@ -275,17 +276,17 @@ def _band_for(days_left: int) -> Optional[int]:
 def _countdown_copy(days_left: int, band: int, expiry: _dt.date) -> tuple:
     """يُرجع (severity, title, body) لإشعار العدّ التنازلي."""
     if days_left < 0:
-        return ("critical", "انتهى ترخيص اللوحة",
-                f"انتهى الترخيص بتاريخ {expiry.isoformat()} — جدّد لتفادي إيقاف اللوحة.")
+        return ("critical", N_("انتهى ترخيص اللوحة"),
+                _tr('انتهى الترخيص بتاريخ %(isoformat)s — جدّد لتفادي إيقاف اللوحة.', isoformat=expiry.isoformat()))
     if days_left == 0:
-        return ("critical", "ينتهي ترخيص اللوحة اليوم",
-                f"ينتهي الترخيص اليوم ({expiry.isoformat()}) — جدّد الآن.")
+        return ("critical", N_("ينتهي ترخيص اللوحة اليوم"),
+                _tr('ينتهي الترخيص اليوم (%(isoformat)s) — جدّد الآن.', isoformat=expiry.isoformat()))
     if days_left == 1:
-        return ("critical", "يتبقّى يوم واحد على انتهاء ترخيص اللوحة",
-                f"ينتهي الترخيص غدًا ({expiry.isoformat()}) — جدّد لتفادي الإيقاف.")
+        return ("critical", N_("يتبقّى يوم واحد على انتهاء ترخيص اللوحة"),
+                _tr('ينتهي الترخيص غدًا (%(isoformat)s) — جدّد لتفادي الإيقاف.', isoformat=expiry.isoformat()))
     sev = "warning" if band <= 3 else "info"
-    return (sev, f"يتبقّى {days_left} أيام على انتهاء ترخيص اللوحة",
-            f"ينتهي الترخيص بتاريخ {expiry.isoformat()} — يُنصح بالتجديد المبكّر.")
+    return (sev, _tr('يتبقّى %(days_left)s أيام على انتهاء ترخيص اللوحة', days_left=days_left),
+            _tr('ينتهي الترخيص بتاريخ %(isoformat)s — يُنصح بالتجديد المبكّر.', isoformat=expiry.isoformat()))
 
 
 def surface_license_countdown(tenant_id: int = 1,

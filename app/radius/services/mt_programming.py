@@ -15,6 +15,7 @@ Validation lives here, not in the route, so unit tests can
 stress every edge case without spinning up Flask.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -142,22 +143,22 @@ _HS_NAME_RE        = re.compile(r"^[A-Za-z0-9\-_]{1,24}$")
 def _validate_hotspot(spec: HotspotProgrammingSpec) -> ValidatedHotspot:
     iface = (spec.interface or "").strip()
     if not _INTERFACE_NAME_RE.match(iface):
-        raise ValueError("اسم الواجهة غير صالح.")
+        raise ValueError(_tr("اسم الواجهة غير صالح."))
     name = (spec.hotspot_name or "").strip()
     if not _HS_NAME_RE.match(name):
         raise ValueError(
-            "اسم الـ hotspot غير صالح (أحرف لاتينية وأرقام و-_ فقط، حتى 24).")
+            _tr("اسم الـ hotspot غير صالح (أحرف لاتينية وأرقام و-_ فقط، حتى 24)."))
 
     cidr_raw = (spec.cidr or "").strip()
     try:
         net = ipaddress.IPv4Network(cidr_raw, strict=False)
     except (ipaddress.AddressValueError, ipaddress.NetmaskValueError,
             ValueError):
-        raise ValueError("CIDR غير صالح. مثال: 192.168.10.0/24")
+        raise ValueError(_tr("CIDR غير صالح. مثال: 192.168.10.0/24"))
     if net.prefixlen >= 31:
-        raise ValueError("CIDR ضيّق جدًا — اختر /30 أو أوسع.")
+        raise ValueError(_tr("CIDR ضيّق جدًا — اختر /30 أو أوسع."))
     if net.is_loopback or net.is_link_local or net.is_multicast:
-        raise ValueError("نطاق العنوان لا يصلح لشبكة هوتسبوت.")
+        raise ValueError(_tr("نطاق العنوان لا يصلح لشبكة هوتسبوت."))
 
     hosts = list(net.hosts())
     gateway_raw = (spec.gateway or "").strip()
@@ -165,9 +166,9 @@ def _validate_hotspot(spec: HotspotProgrammingSpec) -> ValidatedHotspot:
         try:
             gw = ipaddress.IPv4Address(gateway_raw)
         except (ipaddress.AddressValueError, ValueError):
-            raise ValueError("Gateway غير صالح.")
+            raise ValueError(_tr("Gateway غير صالح."))
         if gw not in net:
-            raise ValueError("الـ gateway خارج نطاق CIDR.")
+            raise ValueError(_tr("الـ gateway خارج نطاق CIDR."))
     else:
         gw = hosts[0]
 
@@ -181,14 +182,14 @@ def _validate_hotspot(spec: HotspotProgrammingSpec) -> ValidatedHotspot:
         pool_start = ipaddress.IPv4Address(ps_raw) if ps_raw else pool_default_start
         pool_end   = ipaddress.IPv4Address(pe_raw) if pe_raw else pool_default_end
     except (ipaddress.AddressValueError, ValueError):
-        raise ValueError("بداية/نهاية الـ pool غير صالحة.")
+        raise ValueError(_tr("بداية/نهاية الـ pool غير صالحة."))
     if pool_start not in net or pool_end not in net:
-        raise ValueError("نطاق الـ pool خارج CIDR.")
+        raise ValueError(_tr("نطاق الـ pool خارج CIDR."))
     if int(pool_start) > int(pool_end):
-        raise ValueError("بداية الـ pool بعد نهايتها.")
+        raise ValueError(_tr("بداية الـ pool بعد نهايتها."))
     if gw == pool_start or gw == pool_end \
        or (int(pool_start) <= int(gw) <= int(pool_end)):
-        raise ValueError("الـ gateway داخل الـ pool — اختر pool لا يحويه.")
+        raise ValueError(_tr("الـ gateway داخل الـ pool — اختر pool لا يحويه."))
 
     dns_list = [s.strip() for s in (spec.dns_servers or "").split(",")
                 if s.strip()]
@@ -196,16 +197,16 @@ def _validate_hotspot(spec: HotspotProgrammingSpec) -> ValidatedHotspot:
         try:
             ipaddress.IPv4Address(s)
         except (ipaddress.AddressValueError, ValueError):
-            raise ValueError(f"DNS غير صالح: {s}")
+            raise ValueError(_tr('DNS غير صالح: %(s)s', s=s))
     if not dns_list:
         dns_list = ["8.8.8.8", "1.1.1.1"]
 
     lease = (spec.lease_time or "1h").strip()
     if not re.match(r"^\d+[smhdw]$", lease):
-        raise ValueError("lease-time غير صالح (مثال: 1h, 30m, 1d).")
+        raise ValueError(_tr("lease-time غير صالح (مثال: 1h, 30m, 1d)."))
     rate = (spec.rate_limit or "").strip()
     if rate and not re.match(r"^\d+[KMG]/\d+[KMG]$", rate):
-        raise ValueError("rate-limit غير صالح (مثال: 10M/10M).")
+        raise ValueError(_tr("rate-limit غير صالح (مثال: 10M/10M)."))
 
     return ValidatedHotspot(
         interface=iface, network=net, gateway=gw,
@@ -225,22 +226,22 @@ _PPP_SERVICE_RE = re.compile(r"^[A-Za-z0-9\-_]{1,24}$")
 def _validate_pppoe(spec: PppoeProgrammingSpec) -> ValidatedPppoe:
     iface = (spec.interface or "").strip()
     if not _INTERFACE_NAME_RE.match(iface):
-        raise ValueError("اسم الواجهة غير صالح.")
+        raise ValueError(_tr("اسم الواجهة غير صالح."))
 
     pname = (spec.profile_name or "").strip()
     if not _PPP_PROFILE_RE.match(pname):
-        raise ValueError("اسم الـ profile غير صالح.")
+        raise ValueError(_tr("اسم الـ profile غير صالح."))
     sname = (spec.service_name or "").strip()
     if not _PPP_SERVICE_RE.match(sname):
-        raise ValueError("اسم الخدمة (service-name) غير صالح.")
+        raise ValueError(_tr("اسم الخدمة (service-name) غير صالح."))
 
     try:
         net = ipaddress.IPv4Network((spec.cidr or "").strip(), strict=False)
     except (ipaddress.AddressValueError, ipaddress.NetmaskValueError,
             ValueError):
-        raise ValueError("CIDR غير صالح.")
+        raise ValueError(_tr("CIDR غير صالح."))
     if net.prefixlen >= 31 or net.is_loopback or net.is_link_local:
-        raise ValueError("نطاق العنوان لا يصلح لـ PPPoE.")
+        raise ValueError(_tr("نطاق العنوان لا يصلح لـ PPPoE."))
 
     hosts = list(net.hosts())
     local_raw = (spec.local_address or "").strip()
@@ -248,9 +249,9 @@ def _validate_pppoe(spec: PppoeProgrammingSpec) -> ValidatedPppoe:
         try:
             la = ipaddress.IPv4Address(local_raw)
         except (ipaddress.AddressValueError, ValueError):
-            raise ValueError("local-address غير صالح.")
+            raise ValueError(_tr("local-address غير صالح."))
         if la not in net:
-            raise ValueError("local-address خارج CIDR.")
+            raise ValueError(_tr("local-address خارج CIDR."))
     else:
         la = hosts[0]
 
@@ -260,13 +261,13 @@ def _validate_pppoe(spec: PppoeProgrammingSpec) -> ValidatedPppoe:
         ps = ipaddress.IPv4Address(spec.pool_start) if spec.pool_start else pstart_default
         pe = ipaddress.IPv4Address(spec.pool_end)   if spec.pool_end   else pend_default
     except (ipaddress.AddressValueError, ValueError):
-        raise ValueError("بداية/نهاية الـ pool غير صالحة.")
+        raise ValueError(_tr("بداية/نهاية الـ pool غير صالحة."))
     if ps not in net or pe not in net:
-        raise ValueError("نطاق الـ pool خارج CIDR.")
+        raise ValueError(_tr("نطاق الـ pool خارج CIDR."))
     if int(ps) > int(pe):
-        raise ValueError("بداية الـ pool بعد نهايتها.")
+        raise ValueError(_tr("بداية الـ pool بعد نهايتها."))
     if int(ps) <= int(la) <= int(pe):
-        raise ValueError("local-address داخل الـ pool.")
+        raise ValueError(_tr("local-address داخل الـ pool."))
 
     dns_list = [s.strip() for s in (spec.dns_servers or "").split(",")
                 if s.strip()]
@@ -274,7 +275,7 @@ def _validate_pppoe(spec: PppoeProgrammingSpec) -> ValidatedPppoe:
         try:
             ipaddress.IPv4Address(s)
         except (ipaddress.AddressValueError, ValueError):
-            raise ValueError(f"DNS غير صالح: {s}")
+            raise ValueError(_tr('DNS غير صالح: %(s)s', s=s))
     if not dns_list:
         dns_list = ["8.8.8.8", "1.1.1.1"]
 
@@ -332,13 +333,12 @@ def render_pppoe_script(v: ValidatedPppoe) -> str:
 
 def _pppoe_summary(v: ValidatedPppoe) -> list[str]:
     return [
-        f"إعداد PPPoE-server باسم profile «{v.profile_name}» على "
-        f"الواجهة {v.interface}.",
-        f"الـ service-name: {v.service_name}.",
-        f"الـ pool: {v.pool_start} → {v.pool_end} داخل {v.network}.",
+        _tr('إعداد PPPoE-server باسم profile «%(profile_name)s» على الواجهة %(interface)s.', profile_name=v.profile_name, interface=v.interface),
+        _tr('الـ service-name: %(service_name)s.', service_name=v.service_name),
+        _tr('الـ pool: %(pool_start)s → %(pool_end)s داخل %(network)s.', pool_start=v.pool_start, pool_end=v.pool_end, network=v.network),
         f"local-address: {v.local_address}.",
-        f"خوادم DNS: {', '.join(v.dns_servers)}.",
-        f"كل أمر يحمل comment={PPPOE_COMMENT}.",
+        _tr('خوادم DNS: %(v)s.', v=', '.join(v.dns_servers)),
+        _tr('كل أمر يحمل comment=%(PPPOE_COMMENT)s.', PPPOE_COMMENT=PPPOE_COMMENT),
     ]
 
 
@@ -356,7 +356,7 @@ def _pppoe_conflicts(
     )
     if iface_row is None:
         risks.append(
-            f"لم نجد الواجهة «{v.interface}» — البرمجة ستفشل.")
+            _tr('لم نجد الواجهة «%(interface)s» — البرمجة ستفشل.', interface=v.interface))
         return warnings, risks
 
     # S4.2 — same safety check as hotspot.
@@ -368,11 +368,11 @@ def _pppoe_conflicts(
     )
     if verdict.risk == safety.RISK_BLOCKED:
         risks.append(
-            f"الواجهة «{v.interface}» محظورة للبرمجة: "
+            _tr('الواجهة «%(interface)s» محظورة للبرمجة: ', interface=v.interface)
             + " · ".join(verdict.reasons))
     elif verdict.risk == safety.RISK_HIGH:
         risks.append(
-            f"الواجهة «{v.interface}» مصنّفة عالية الخطورة: "
+            _tr('الواجهة «%(interface)s» مصنّفة عالية الخطورة: ', interface=v.interface)
             + " · ".join(verdict.reasons))
     elif verdict.risk == safety.RISK_MEDIUM:
         warnings.extend(verdict.reasons)
@@ -557,18 +557,16 @@ def plan_hotspot(
 
 def _hotspot_summary(v: ValidatedHotspot) -> list[str]:
     items = [
-        f"إعداد hotspot باسم «{v.hotspot_name}» على الواجهة "
-        f"{v.interface}.",
-        f"عنوان الـ gateway: {v.gateway}/{v.network.prefixlen}.",
-        f"الـ pool: {v.pool_start} → {v.pool_end} داخل {v.network}.",
-        f"خوادم DNS: {', '.join(v.dns_servers)}.",
-        f"مدة الـ lease: {v.lease_time}.",
+        _tr('إعداد hotspot باسم «%(hotspot_name)s» على الواجهة %(interface)s.', hotspot_name=v.hotspot_name, interface=v.interface),
+        _tr('عنوان الـ gateway: %(gateway)s/%(prefixlen)s.', gateway=v.gateway, prefixlen=v.network.prefixlen),
+        _tr('الـ pool: %(pool_start)s → %(pool_end)s داخل %(network)s.', pool_start=v.pool_start, pool_end=v.pool_end, network=v.network),
+        _tr('خوادم DNS: %(v)s.', v=', '.join(v.dns_servers)),
+        _tr('مدة الـ lease: %(lease_time)s.', lease_time=v.lease_time),
     ]
     if v.rate_limit:
-        items.append(f"User profile rate-limit الافتراضي: {v.rate_limit}.")
+        items.append(_tr('User profile rate-limit الافتراضي: %(rate_limit)s.', rate_limit=v.rate_limit))
     items.append(
-        "كل أمر يحمل comment="
-        f"{HOTSPOT_COMMENT} لتسهيل التراجع عند الحاجة."
+        _tr('كل أمر يحمل comment=%(HOTSPOT_COMMENT)s لتسهيل التراجع عند الحاجة.', HOTSPOT_COMMENT=HOTSPOT_COMMENT)
     )
     return items
 
@@ -593,13 +591,11 @@ def _hotspot_conflicts(
     )
     if iface_row is None:
         risks.append(
-            f"لم نجد الواجهة «{v.interface}» على هذا الراوتر. "
-            "البرمجة ستفشل عند التطبيق.")
+            _tr('لم نجد الواجهة «%(interface)s» على هذا الراوتر. البرمجة ستفشل عند التطبيق.', interface=v.interface))
     else:
         if str(iface_row.get("disabled")) == "true":
             warnings.append(
-                f"الواجهة «{v.interface}» معطّلة الآن — الـ hotspot لن "
-                "يعمل حتى تفعّلها.")
+                _tr('الواجهة «%(interface)s» معطّلة الآن — الـ hotspot لن يعمل حتى تفعّلها.', interface=v.interface))
 
         # S4.2 — feed S4.1's classifier with whatever we have.
         # Missing routes is OK; the classifier just won't fire
@@ -612,11 +608,11 @@ def _hotspot_conflicts(
         )
         if verdict.risk == safety.RISK_BLOCKED:
             risks.append(
-                f"الواجهة «{v.interface}» محظورة للبرمجة: "
+                _tr('الواجهة «%(interface)s» محظورة للبرمجة: ', interface=v.interface)
                 + " · ".join(verdict.reasons))
         elif verdict.risk == safety.RISK_HIGH:
             risks.append(
-                f"الواجهة «{v.interface}» مصنّفة عالية الخطورة: "
+                _tr('الواجهة «%(interface)s» مصنّفة عالية الخطورة: ', interface=v.interface)
                 + " · ".join(verdict.reasons))
         elif verdict.risk == safety.RISK_MEDIUM:
             warnings.extend(verdict.reasons)
@@ -629,8 +625,7 @@ def _hotspot_conflicts(
     if same_iface:
         existing = ", ".join(a.get("address", "?") for a in same_iface)
         warnings.append(
-            f"الواجهة «{v.interface}» تحمل عناوين IP بالفعل: {existing}. "
-            "إضافة عنوان جديد قد يتعارض مع التوجيه.")
+            _tr('الواجهة «%(interface)s» تحمل عناوين IP بالفعل: %(existing)s. إضافة عنوان جديد قد يتعارض مع التوجيه.', interface=v.interface, existing=existing))
 
     # Overlap with any other subnet?
     for a in addresses:
@@ -644,8 +639,7 @@ def _hotspot_conflicts(
             continue
         if other.overlaps(v.network):
             risks.append(
-                f"الـ network {v.network} يتداخل مع {other} على الواجهة "
-                f"«{a.get('interface')}» — يجب اختيار CIDR مختلف.")
+                _tr('الـ network %(network)s يتداخل مع %(other)s على الواجهة «%(v)s» — يجب اختيار CIDR مختلف.', network=v.network, other=other, v=a.get('interface')))
 
     return warnings, risks
 
@@ -713,14 +707,14 @@ class ApplyResult:
             return ""
         if self.was_partial():
             return (
-                "تم تطبيق بعض الأوامر قبل أن يفشل أمر تالٍ. "
+                N_("تم تطبيق بعض الأوامر قبل أن يفشل أمر تالٍ. "
                 "الحالة جزئية وغير متّسقة — استخدم تراجع/Unprogram "
                 "لإزالة الكائنات التي حملت comment=hoberadius:* ثم "
-                "أعد التطبيق."
+                "أعد التطبيق.")
             )
         return (
-            "لم يُطبَّق أي أمر — يمكن إعادة المحاولة بعد تصحيح "
-            "السبب الموضّح في الخطأ أعلاه."
+            N_("لم يُطبَّق أي أمر — يمكن إعادة المحاولة بعد تصحيح "
+            "السبب الموضّح في الخطأ أعلاه.")
         )
 
 

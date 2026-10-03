@@ -8,6 +8,7 @@ for loading the policy, children, latest preview, and actor
 permissions, then calling `evaluate_for_preview(...)`.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
@@ -128,15 +129,15 @@ def evaluate_for_preview(
     # operator should be able to read at a glance.
     high_conflicts_ok = inputs.conflict_high_count == 0
     checklist = (
-        {"label": "السكربت forward موجود ومُولَّد بنجاح.",
+        {"label": _tr("السكربت forward موجود ومُولَّد بنجاح."),
          "status_ok": inputs.has_preview},
-        {"label": "سكربت rollback متاح.",
+        {"label": _tr("سكربت rollback متاح."),
          "status_ok": bool(inputs.rollback_available)},
-        {"label": "تحليل الأثر ليس في خانة critical.",
+        {"label": _tr("تحليل الأثر ليس في خانة critical."),
          "status_ok": inputs.impact_risk_level != "critical"},
-        {"label": "درجة السلامة فوق خط الخطر.",
+        {"label": _tr("درجة السلامة فوق خط الخطر."),
          "status_ok": inputs.health_grade != "dangerous"},
-        {"label": "لا تعارضات عالية الخطورة مع سياسات أخرى.",
+        {"label": _tr("لا تعارضات عالية الخطورة مع سياسات أخرى."),
          "status_ok": high_conflicts_ok},
     )
 
@@ -148,7 +149,7 @@ def evaluate_for_preview(
         apply_perm=apply_perm,
         apply_perm_label_ar=apply_perm,
         caveat_ar=(
-            "هذه شاشة معاينة وتحليل فقط. التنفيذ المباشر يتطلب صلاحية تطبيق منفصلة."
+            N_("هذه شاشة معاينة وتحليل فقط. التنفيذ المباشر يتطلب صلاحية تطبيق منفصلة.")
         ),
     )
 

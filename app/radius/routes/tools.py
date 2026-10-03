@@ -7,6 +7,7 @@ Tools — أدوات تشغيلية:
 - radius_log: عرض حيّ لـ radpostauth (آخر القرارات).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime, timedelta
 
@@ -59,7 +60,7 @@ def tool_set_speeds():
             flash(e.message, "error")
             return redirect(url_for("radius.tool_set_speeds"))
         if not plan_ids:
-            flash("اختر خطة واحدة على الأقل", "error")
+            flash(_tr("اختر خطة واحدة على الأقل"), "error")
             return redirect(url_for("radius.tool_set_speeds"))
         pending = []
         for pid in plan_ids:
@@ -69,9 +70,9 @@ def tool_set_speeds():
             if not p: continue
             try:
                 new_down = new_speed(p.speed_down_kbps, mult_down, set_down,
-                                     plan_name=p.name, direction="التنزيل")
+                                     plan_name=p.name, direction=N_("التنزيل"))
                 new_up = new_speed(p.speed_up_kbps, mult_up, set_up,
-                                   plan_name=p.name, direction="الرفع")
+                                   plan_name=p.name, direction=N_("الرفع"))
             except RadiusValidationError as e:
                 flash(e.message, "error")
                 return redirect(url_for("radius.tool_set_speeds"))
@@ -93,7 +94,7 @@ def tool_set_speeds():
                            payload={"mult_down": mult_down, "mult_up": mult_up,
                                     "set_down": set_down, "set_up": set_up,
                                     "changed": changed})
-        flash(f"تم تعديل سرعات {changed} باقة.", "success")
+        flash(_tr('تم تعديل سرعات %(changed)s باقة.', changed=changed), "success")
         return redirect(url_for("radius.tool_set_speeds"))
     plans = plans_repo.list_plans(_tid(), limit=500)
     return render_template("radius/tool_set_speeds.html", plans=plans)
@@ -143,7 +144,7 @@ def _send_maintenance_notice() -> None:
             idempotency_key=f"maint:{tid}:{run_id}:{sid}",
         ):
             sent += 1
-    flash(f"تم إرسال إشعار الصيانة عبر واتساب إلى {sent} مشترك (حسب التفعيل).", "success")
+    flash(_tr('تم إرسال إشعار الصيانة عبر واتساب إلى %(sent)s مشترك (حسب التفعيل).', sent=sent), "success")
 
 
 def tool_maintenance():
@@ -160,27 +161,27 @@ def tool_maintenance():
             if action == "purge_radacct":
                 cur = conn.execute("DELETE FROM radacct WHERE tenant_id = ? AND acctstoptime IS NOT NULL AND acctstoptime < ?",
                                     (_tid(), cutoff))
-                flash(f"تم حذف {cur.rowcount} صف accounting أقدم من {days} يوم.", "success")
+                flash(_tr('تم حذف %(rowcount)s صف accounting أقدم من %(days)s يوم.', rowcount=cur.rowcount, days=days), "success")
             elif action == "purge_sync_done":
                 cur = conn.execute("DELETE FROM sync_queue WHERE tenant_id = ? AND status='done' AND completed_at < ?",
                                     (_tid(), cutoff))
-                flash(f"تم حذف {cur.rowcount} job منتهي.", "success")
+                flash(_tr('تم حذف %(rowcount)s job منتهي.', rowcount=cur.rowcount), "success")
             elif action == "purge_audit":
                 cur = conn.execute("DELETE FROM audit_log WHERE tenant_id = ? AND created_at < ?",
                                     (_tid(), cutoff))
-                flash(f"تم حذف {cur.rowcount} سجل تدقيق أقدم من {days} يوم.", "success")
+                flash(_tr('تم حذف %(rowcount)s سجل تدقيق أقدم من %(days)s يوم.', rowcount=cur.rowcount, days=days), "success")
             elif action == "purge_failed_webhooks":
                 cur = conn.execute("DELETE FROM webhook_deliveries WHERE tenant_id = ? AND status='failed'",
                                     (_tid(),))
-                flash(f"تم حذف {cur.rowcount} delivery فاشلة.", "success")
+                flash(_tr('تم حذف %(rowcount)s delivery فاشلة.', rowcount=cur.rowcount), "success")
             elif action == "vacuum":
                 # vacuum خارج transaction
                 pass
             else:
-                flash("إجراء غير معروف", "error")
+                flash(_tr("إجراء غير معروف"), "error")
         if action == "vacuum":
             db().execute("VACUUM")
-            flash("VACUUM اكتمل.", "success")
+            flash(_tr("VACUUM اكتمل."), "success")
         return redirect(url_for("radius.tool_maintenance"))
 
     # إحصاءات
@@ -225,12 +226,12 @@ def tool_general_adj():
                                    form=request.form, preview=preview)
         result = ga.run(usernames, params, actor=_actor())
         success, fail = result["success"], result["failed"]
-        flash(f"تم على {success} مستخدم · فشل {fail}.", "success" if success else "warning")
+        flash(_tr('تم على %(success)s مستخدم · فشل %(fail)s.', success=success, fail=fail), "success" if success else "warning")
         failures = [i for i in result["items"] if not i["ok"]]
         if failures:
             shown = "، ".join(f"{i['username']}: {i['error']}" for i in failures[:10])
             more = "…" if len(failures) > 10 else ""
-            flash(f"الأسباب: {shown}{more}", "warning")
+            flash(_tr('الأسباب: %(shown)s%(more)s', shown=shown, more=more), "warning")
         return redirect(url_for("radius.tool_general_adj"))
     return render_template("radius/tool_general_adj.html")
 

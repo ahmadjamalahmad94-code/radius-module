@@ -5,6 +5,7 @@
 شريط الأعلى يُغذّى من topbar_notifications (سياق) ويربط كل عنصر لهدفه.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (Blueprint, flash, jsonify, redirect, render_template,
                    request, session, url_for)
@@ -53,16 +54,16 @@ def _humanize_rel(value, now: datetime | None = None) -> str:
     if secs < 0:
         secs = 0
     if secs < 60:
-        return "الآن"
+        return N_("الآن")
     mins = int(secs // 60)
     if mins < 60:
-        return "منذ " + _ar_unit(mins, "دقيقة", "دقيقتين", "دقائق", "دقيقة")
+        return _tr("منذ ") + _ar_unit(mins, N_("دقيقة"), N_("دقيقتين"), N_("دقائق"), N_("دقيقة"))
     hours = int(secs // 3600)
     if hours < 24:
-        return "منذ " + _ar_unit(hours, "ساعة", "ساعتين", "ساعات", "ساعة")
+        return _tr("منذ ") + _ar_unit(hours, N_("ساعة"), N_("ساعتين"), N_("ساعات"), N_("ساعة"))
     days = int(secs // 86400)
     if days <= 30:
-        return "منذ " + _ar_unit(days, "يوم", "يومين", "أيام", "يومًا")
+        return _tr("منذ ") + _ar_unit(days, N_("يوم"), N_("يومين"), N_("أيام"), N_("يومًا"))
     return to_local(value, fmt="%Y-%m-%d")
 
 
@@ -213,21 +214,19 @@ def notifications_test_push():
     res = notif_svc.send_test_push(_tid())
     reason = res.get("reason") or ""
     if res.get("ok"):
-        flash(f"تم تحويل الإشعار التجريبي للوحة التراخيص وإرساله إلى الأجهزة "
-              f"المُسجَّلة (نجح {res.get('sent', 0)}، فشل {res.get('failed', 0)}). "
-              f"تحقّق من جوّالك.", "success")
+        flash(_tr('تم تحويل الإشعار التجريبي للوحة التراخيص وإرساله إلى الأجهزة المُسجَّلة (نجح %(v)s، فشل %(v2)s). تحقّق من جوّالك.', v=res.get('sent', 0), v2=res.get('failed', 0)), "success")
     elif reason == "no_tokens":
-        flash("لا توجد أجهزة مُسجَّلة بعد. افتح التطبيق على جوّالك، سجّل "
-              "الدخول، واسمح بالإشعارات — ثم أعد المحاولة.", "error")
+        flash(_tr("لا توجد أجهزة مُسجَّلة بعد. افتح التطبيق على جوّالك، سجّل "
+              "الدخول، واسمح بالإشعارات — ثم أعد المحاولة."), "error")
     elif reason == "fcm_disabled":
-        flash("دفع الجوال غير مُفعَّل مركزيًّا (لم يُرفَع اعتماد Firebase في لوحة "
-              "التراخيص). أبلِغ المزوّد لتفعيله من إعدادات اللوحة.", "error")
+        flash(_tr("دفع الجوال غير مُفعَّل مركزيًّا (لم يُرفَع اعتماد Firebase في لوحة "
+              "التراخيص). أبلِغ المزوّد لتفعيله من إعدادات اللوحة."), "error")
     elif reason in ("https_required", "disabled", "config_missing", "unavailable",
                     "timeout"):
-        flash("تعذّر الوصول إلى لوحة التراخيص لتحويل الإشعار. تأكّد من تهيئة "
-              "ربط لوحة التراخيص ثم أعد المحاولة.", "error")
+        flash(_tr("تعذّر الوصول إلى لوحة التراخيص لتحويل الإشعار. تأكّد من تهيئة "
+              "ربط لوحة التراخيص ثم أعد المحاولة."), "error")
     else:
-        flash("تعذّر إرسال الإشعار التجريبي. حاول مرة أخرى.", "error")
+        flash(_tr("تعذّر إرسال الإشعار التجريبي. حاول مرة أخرى."), "error")
     return redirect(request.referrer or url_for("radius.notifications_center"))
 
 
@@ -254,9 +253,9 @@ def notification_read(notif_id: int):
         return redirect(url_for("radius.auth_login"))
     if not notifications_repo.mark_read(_tid(), notif_id, viewer=_viewer()) \
             and notifications_repo.get(_tid(), notif_id, viewer=_viewer()) is None:
-        flash("الإشعار غير موجود.", "error")
+        flash(_tr("الإشعار غير موجود."), "error")
         return redirect(url_for("radius.notifications_center"))
-    flash("تم تعليم الإشعار كمقروء.", "success")
+    flash(_tr("تم تعليم الإشعار كمقروء."), "success")
     return redirect(request.referrer or url_for("radius.notifications_center"))
 
 
@@ -265,7 +264,7 @@ def notifications_read_all():
         return redirect(url_for("radius.auth_login"))
     # F08 M2: only the notifications THIS admin can see, for him alone.
     n = notifications_repo.mark_all_read(_tid(), viewer=_viewer())
-    flash(f"تم تعليم {n} إشعارًا كمقروء." if n else "لا إشعارات غير مقروءة.",
+    flash(_tr('تم تعليم %(n)s إشعارًا كمقروء.', n=n) if n else _tr("لا إشعارات غير مقروءة."),
           "success" if n else "info")
     return redirect(request.referrer or url_for("radius.notifications_center"))
 
@@ -281,15 +280,15 @@ def notifications_contact():
     category = (request.form.get("category") or "general").strip()
     priority = (request.form.get("priority") or "normal").strip()
     if not subject:
-        flash("اكتب موضوع الرسالة أولًا.", "error")
+        flash(_tr("اكتب موضوع الرسالة أولًا."), "error")
         return redirect(url_for("radius.notifications_center"))
     result = ProviderCommsService().submit_ticket(
         _tid(), subject=subject, body=body, kind=kind, category=category,
         priority=priority, created_by=str(getattr(admin, "username", "") or ""))
     if result.get("bridge_status") == "sent":
-        flash("تم إرسال رسالتك إلى لوحة التراخيص.", "success")
+        flash(_tr("تم إرسال رسالتك إلى لوحة التراخيص."), "success")
     else:
-        flash("حُفظت رسالتك محلّيًّا وستُرسَل عند توفّر الاتصال باللوحة.", "info")
+        flash(_tr("حُفظت رسالتك محلّيًّا وستُرسَل عند توفّر الاتصال باللوحة."), "info")
     return redirect(url_for("radius.notifications_center"))
 
 
@@ -350,7 +349,7 @@ def _sounds_guard():
     perms = set(session.get("permissions") or [])
     if session.get("is_super_admin") or PERM_SETTINGS_EDIT in perms:
         return None
-    return jsonify({"ok": False, "message": "لا تملك صلاحية تعديل الإعدادات."}), 403
+    return jsonify({"ok": False, "message": _tr("لا تملك صلاحية تعديل الإعدادات.")}), 403
 
 
 def _author_guard():
@@ -359,20 +358,20 @@ def _author_guard():
     if session.get("is_super_admin"):
         return None
     return jsonify({"ok": False,
-                    "message": "الأصوات تُدار مركزيًّا — يمكنك اختيار الكلام "
-                               "أو النغمة فقط."}), 403
+                    "message": _tr("الأصوات تُدار مركزيًّا — يمكنك اختيار الكلام "
+                               "أو النغمة فقط.")}), 403
 
 
 def notification_sound_save():
     if not current_admin():
-        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+        return jsonify({"ok": False, "message": _tr("الجلسة منتهية.")}), 401
     denied = _author_guard()
     if denied:
         return denied
     from ..services import notification_sounds as snd
     f = request.files.get("sound")
     if not f or not f.filename:
-        return jsonify({"ok": False, "message": "لم يُرفَع أيّ ملفّ صوتيّ."}), 400
+        return jsonify({"ok": False, "message": _tr("لم يُرفَع أيّ ملفّ صوتيّ.")}), 400
     ok, message = snd.save_sound(
         _tid(), (request.form.get("sound_key") or "").strip(), f.read(),
         mime=(f.mimetype or "audio/mpeg"), filename=f.filename, origin="local")
@@ -381,7 +380,7 @@ def notification_sound_save():
 
 def notification_sound_clear():
     if not current_admin():
-        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+        return jsonify({"ok": False, "message": _tr("الجلسة منتهية.")}), 401
     denied = _author_guard()
     if denied:
         return denied
@@ -399,7 +398,7 @@ def notification_sound_mode():
     مكانها، فالعودة عنها بضغطةٍ لا برفعٍ من جديد.
     """
     if not current_admin():
-        return jsonify({"ok": False, "message": "الجلسة منتهية."}), 401
+        return jsonify({"ok": False, "message": _tr("الجلسة منتهية.")}), 401
     denied = _sounds_guard()
     if denied:
         return denied
@@ -408,6 +407,6 @@ def notification_sound_mode():
     return jsonify({
         "ok": True,
         "mode": value,
-        "message": ("الأصوات المسجَّلة مُفعَّلة." if value == snd.MODE_VOICE
-                    else "أُعيدت النغمة القديمة — الأصوات محفوظة ولم تُحذف."),
+        "message": (_tr("الأصوات المسجَّلة مُفعَّلة.") if value == snd.MODE_VOICE
+                    else _tr("أُعيدت النغمة القديمة — الأصوات محفوظة ولم تُحذف.")),
     })

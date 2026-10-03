@@ -1,5 +1,6 @@
 """Executive dashboard, reports, and immutable archive analytics."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -107,13 +108,13 @@ class DashboardReportsService:
 
     def report_catalog(self) -> list[dict[str, str]]:
         return [
-            {"key": "financial", "title": "التقارير المالية", "description": "إيرادات، دفعات، هامش، وديون", "url": "/admin/radius/reports/financial"},
-            {"key": "subscribers", "title": "تقارير المشتركين", "description": "حالة المشتركين ونشاط الدخول", "url": "/admin/radius/reports?section=subscribers"},
-            {"key": "cards", "title": "تقارير الكروت", "description": "المستخدمة وغير المستخدمة والمباعة", "url": "/admin/radius/reports/cards"},
-            {"key": "revenue", "title": "تقارير الإيرادات", "description": "مجاميع يومية وشهرية وسنوية", "url": "/admin/radius/reports/financial?type=yearly"},
-            {"key": "distributors", "title": "تقارير الموزعين", "description": "حصص وأرباح وحركة توزيع", "url": "/admin/radius/reports/distributors"},
-            {"key": "usage", "title": "تقارير الاستخدام", "description": "جلسات الشبكة وحالات الاتصال", "url": "/admin/radius/reports/sessions"},
-            {"key": "audit", "title": "تقارير التدقيق", "description": "أحداث النظام وعمليات المدراء", "url": "/admin/radius/events"},
+            {"key": "financial", "title": _tr("التقارير المالية"), "description": _tr("إيرادات، دفعات، هامش، وديون"), "url": "/admin/radius/reports/financial"},
+            {"key": "subscribers", "title": _tr("تقارير المشتركين"), "description": _tr("حالة المشتركين ونشاط الدخول"), "url": "/admin/radius/reports?section=subscribers"},
+            {"key": "cards", "title": _tr("تقارير الكروت"), "description": _tr("المستخدمة وغير المستخدمة والمباعة"), "url": "/admin/radius/reports/cards"},
+            {"key": "revenue", "title": _tr("تقارير الإيرادات"), "description": _tr("مجاميع يومية وشهرية وسنوية"), "url": "/admin/radius/reports/financial?type=yearly"},
+            {"key": "distributors", "title": _tr("تقارير الموزعين"), "description": _tr("حصص وأرباح وحركة توزيع"), "url": "/admin/radius/reports/distributors"},
+            {"key": "usage", "title": _tr("تقارير الاستخدام"), "description": _tr("جلسات الشبكة وحالات الاتصال"), "url": "/admin/radius/reports/sessions"},
+            {"key": "audit", "title": _tr("تقارير التدقيق"), "description": _tr("أحداث النظام وعمليات المدراء"), "url": "/admin/radius/events"},
         ]
 
     def report_data(self, report_type: str, *, date_from: str = "", date_to: str = "") -> dict[str, Any]:

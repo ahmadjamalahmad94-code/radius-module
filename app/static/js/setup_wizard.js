@@ -1,3 +1,4 @@
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   const root = document.querySelector("[data-setup-wizard-page]");
   if (!root) return;
@@ -19,24 +20,24 @@
 
   function setScript(text) {
     lastScript = text || "";
-    scriptPreview.textContent = lastScript || "-- لا يوجد سكربت بعد --";
+    scriptPreview.textContent = lastScript || hrT('-- لا يوجد سكربت بعد --');
   }
 
   const RESULT_LABELS = {
-    ok: "النتيجة",
-    error: "الخطأ",
-    message: "الرسالة",
-    code: "رمز الحالة",
-    status: "الحالة",
-    run_id: "رقم التشغيل",
-    step: "الخطوة",
-    timeline: "الخط الزمني",
-    operations: "العمليات",
-    health: "فحص الصحة",
-    summary: "الملخص",
-    verification: "التحقق",
-    support_bundle: "حزمة الدعم",
-    pilot_drill: "قائمة فحص التجربة",
+    ok: hrT('النتيجة'),
+    error: hrT('الخطأ'),
+    message: hrT('الرسالة'),
+    code: hrT('رمز الحالة'),
+    status: hrT('الحالة'),
+    run_id: hrT('رقم التشغيل'),
+    step: hrT('الخطوة'),
+    timeline: hrT('الخط الزمني'),
+    operations: hrT('العمليات'),
+    health: hrT('فحص الصحة'),
+    summary: hrT('الملخص'),
+    verification: hrT('التحقق'),
+    support_bundle: hrT('حزمة الدعم'),
+    pilot_drill: hrT('قائمة فحص التجربة'),
   };
 
   function resultLabel(key) {
@@ -44,25 +45,25 @@
   }
 
   function resultValue(value) {
-    if (value === true) return "نجح";
-    if (value === false) return "لم ينجح";
-    if (value == null || value === "") return "لا توجد قيمة";
+    if (value === true) return hrT('نجح');
+    if (value === false) return hrT('لم ينجح');
+    if (value == null || value === "") return hrT('لا توجد قيمة');
     if (Array.isArray(value)) {
-      if (!value.length) return "لا توجد عناصر";
+      if (!value.length) return hrT('لا توجد عناصر');
       if (value.every((item) => typeof item === "string")) return value.join("\n");
-      return `${value.length} عنصر`;
+      return hrT('{length} عنصر', {length: value.length});
     }
     if (typeof value === "object") {
       if (value.message || value.error || value.status || value.overall) {
         return String(value.message || value.error || value.status || value.overall);
       }
-      return "تفاصيل متاحة في البطاقات المرتبطة";
+      return hrT('تفاصيل متاحة في البطاقات المرتبطة');
     }
     return String(value);
   }
 
   function formatResult(payload) {
-    if (!payload || typeof payload !== "object") return String(payload || "لا توجد نتائج بعد");
+    if (!payload || typeof payload !== "object") return String(payload || hrT('لا توجد نتائج بعد'));
     const preferred = [
       "ok", "message", "error", "code", "status", "run_id", "step",
       "timeline", "verification", "health", "operations", "support_bundle",
@@ -71,7 +72,7 @@
       ...preferred.filter((key) => Object.prototype.hasOwnProperty.call(payload, key)),
       ...Object.keys(payload).filter((key) => !preferred.includes(key)).slice(0, 6),
     ];
-    if (!keys.length) return "لا توجد تفاصيل إضافية.";
+    if (!keys.length) return hrT('لا توجد تفاصيل إضافية.');
     return keys.map((key) => `${resultLabel(key)}: ${resultValue(payload[key])}`).join("\n");
   }
 
@@ -222,7 +223,7 @@
   }
 
   function requireRun() {
-    if (!currentRunId) throw new Error("ابدأ تشغيل جديد أولاً");
+    if (!currentRunId) throw new Error(hrT('ابدأ تشغيل جديد أولاً'));
   }
 
   function verificationBody(formSelector) {
@@ -365,11 +366,11 @@
 
   async function actionCopyScript() {
     if (!lastScript) {
-      setOutput({ ok: false, message: "لا يوجد سكربت لنسخه بعد" });
+      setOutput({ ok: false, message: hrT('لا يوجد سكربت لنسخه بعد') });
       return;
     }
     await navigator.clipboard.writeText(lastScript);
-    setOutput({ ok: true, message: "تم نسخ السكربت" });
+    setOutput({ ok: true, message: hrT('تم نسخ السكربت') });
   }
 
   async function actionDryRun() {
@@ -452,12 +453,12 @@
     const hasFailed = operations.some((op) => op.status === "failed");
     const snapshot = summary.latest_router_snapshot || null;
     const rows = [
-      `التجربة الجافة: ${hasDry ? "مكتملة" : "معلقة"}`,
-      `الجرد: ${snapshot ? "مكتمل - " + (snapshot.created_at || "") : "بانتظار التنفيذ"}`,
-      `محاولة التطبيق: ${hasApplied ? "تمت" : "محظورة أو لم تبدأ"}`,
-      `التحقق: ${(health.health && health.health.failed_verifications) ? "بحاجة إلى مراجعة" : "بانتظار التنفيذ أو سليم"}`,
-      `التراجع: ${hasRollback ? "متاح" : "غير متاح"}`,
-      `التحذيرات أو العمليات الفاشلة: ${hasFailed ? "بحاجة إلى مراجعة" : "لا يوجد شيء في الطابور"}`,
+      hrT('التجربة الجافة: {v}', {v: hasDry ? hrT('مكتملة') : hrT('معلقة')}),
+      hrT('الجرد: {v}', {v: snapshot ? hrT('مكتمل - ') + (snapshot.created_at || "") : hrT('بانتظار التنفيذ')}),
+      hrT('محاولة التطبيق: {v}', {v: hasApplied ? hrT('تمت') : hrT('محظورة أو لم تبدأ')}),
+      hrT('التحقق: {v}', {v: (health.health && health.health.failed_verifications) ? hrT('بحاجة إلى مراجعة') : hrT('بانتظار التنفيذ أو سليم')}),
+      hrT('التراجع: {v}', {v: hasRollback ? hrT('متاح') : hrT('غير متاح')}),
+      hrT('التحذيرات أو العمليات الفاشلة: {v}', {v: hasFailed ? hrT('بحاجة إلى مراجعة') : hrT('لا يوجد شيء في الطابور')}),
     ];
     if (labTimeline) {
       labTimeline.innerHTML = rows.map((row) => `<li>${row}</li>`).join("");

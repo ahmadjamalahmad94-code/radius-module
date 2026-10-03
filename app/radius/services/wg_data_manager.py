@@ -18,6 +18,7 @@
     HOBERADIUS_WG_DATA_LISTEN_PORT  — منفذ الاستماع (افتراضي: 51821)
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import base64
 import ipaddress
@@ -168,7 +169,7 @@ def init_service(
     يرفع ValueError إن كانت الخدمة مُهيَّأة مسبقًا.
     """
     if get_service(tenant_id):
-        raise ValueError("خدمة WireGuard البيانات مُهيَّأة مسبقًا لهذا الـ tenant.")
+        raise ValueError(_tr("خدمة WireGuard البيانات مُهيَّأة مسبقًا لهذا الـ tenant."))
 
     iface    = interface_name or _iface()
     port     = listen_port or _listen_port()
@@ -231,7 +232,7 @@ def _allocate_peer_ip(service_id: int, address_range: str) -> ipaddress.IPv4Addr
     for candidate in net.hosts():
         if candidate not in reserved:
             return candidate
-    raise RuntimeError(f"شبكة wg-data {net} ممتلئة — لا مزيد من العناوين")
+    raise RuntimeError(_tr('شبكة wg-data %(net)s ممتلئة — لا مزيد من العناوين', net=net))
 
 
 # ─── Peer file management ─────────────────────────────────────────
@@ -288,7 +289,7 @@ def render_client_config(
 ) -> str:
     ep_line = (
         f"Endpoint = {server_endpoint}\n" if server_endpoint
-        else "# Endpoint = <public-ip>:<port>  # اضبطه يدويًا\n"
+        else N_("# Endpoint = <public-ip>:<port>  # اضبطه يدويًا\n")
     )
     return (
         "[Interface]\n"
@@ -360,9 +361,9 @@ def add_peer(
     """
     svc = get_service(tenant_id)
     if not svc or svc["id"] != service_id:
-        raise ValueError("خدمة WireGuard غير موجودة.")
+        raise ValueError(_tr("خدمة WireGuard غير موجودة."))
     if svc["status"] != "active":
-        raise ValueError(f"الخدمة في حالة {svc['status']} — لا يمكن إضافة peers.")
+        raise ValueError(_tr('الخدمة في حالة %(status)s — لا يمكن إضافة peers.', status=svc['status']))
 
     active_count = _db().execute(
         "SELECT COUNT(*) AS c FROM wireguard_peer "
@@ -371,7 +372,7 @@ def add_peer(
     ).fetchone()["c"]
     max_p = svc["max_peers"]
     if max_p > 0 and active_count >= max_p:
-        raise ValueError(f"تجاوز الحد الأقصى للـ peers ({max_p}).")
+        raise ValueError(_tr('تجاوز الحد الأقصى للـ peers (%(max_p)s).', max_p=max_p))
 
     client_priv, client_pub = _generate_keypair()
     peer_ip = _allocate_peer_ip(service_id, svc["address_range"])
@@ -394,7 +395,7 @@ def add_peer(
         )
         peer_id = cur.lastrowid
         _audit(conn, tenant_id, "wireguard_peer", peer_id, "create",
-               f"أُضيف peer «{display_name or peer_ip_str}»")
+               _tr('أُضيف peer «%(peer_ip_str)s»', peer_ip_str=display_name or peer_ip_str))
 
     try:
         _write_peer_file(peer_id, client_pub, peer_ip_str)
@@ -431,7 +432,7 @@ def remove_peer(tenant_id: int, peer_id: int) -> bool:
             "UPDATE wireguard_peer SET status='revoked', updated_at=? WHERE id=?",
             (_now(), peer_id),
         )
-        _audit(conn, tenant_id, "wireguard_peer", peer_id, "delete", "peer محذوف")
+        _audit(conn, tenant_id, "wireguard_peer", peer_id, "delete", N_("peer محذوف"))
     _wg_remove_peer(row["public_key"], row["interface_name"])
     try:
         _remove_peer_file(peer_id)
@@ -454,7 +455,7 @@ def suspend_peer(tenant_id: int, peer_id: int) -> bool:
             "UPDATE wireguard_peer SET status='suspended', updated_at=? WHERE id=?",
             (_now(), peer_id),
         )
-        _audit(conn, tenant_id, "wireguard_peer", peer_id, "suspend", "peer موقوف")
+        _audit(conn, tenant_id, "wireguard_peer", peer_id, "suspend", N_("peer موقوف"))
     _wg_remove_peer(row["public_key"], row["interface_name"])
     try:
         _remove_peer_file(peer_id)
@@ -477,7 +478,7 @@ def activate_peer(tenant_id: int, peer_id: int) -> bool:
             "UPDATE wireguard_peer SET status='active', updated_at=? WHERE id=?",
             (_now(), peer_id),
         )
-        _audit(conn, tenant_id, "wireguard_peer", peer_id, "activate", "peer مُعاد تفعيله")
+        _audit(conn, tenant_id, "wireguard_peer", peer_id, "activate", N_("peer مُعاد تفعيله"))
     _wg_add_peer(row["public_key"], row["peer_address"], row["interface_name"])
     try:
         _write_peer_file(peer_id, row["public_key"], row["peer_address"])
@@ -496,7 +497,7 @@ def sync_quota(tenant_id: int) -> dict:
     """
     svc = get_service(tenant_id)
     if not svc:
-        return {"ok": False, "error": "لا توجد خدمة WireGuard مُهيَّأة"}
+        return {"ok": False, "error": _tr("لا توجد خدمة WireGuard مُهيَّأة")}
 
     iface = svc["interface_name"]
     result = _wg("show", iface, "transfer")

@@ -11,6 +11,7 @@ Opening the list runs a cheap DB-only refresh: an offline heartbeat sweep
 always reflects current state without a background worker.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template, request, url_for,
@@ -228,7 +229,7 @@ def mt_alerts_settings_save():
             usage_window=_window(f"r_{rid}_window"),
         )
 
-    flash("تم حفظ إعدادات التنبيهات الذكية.", "success")
+    flash(_tr("تم حفظ إعدادات التنبيهات الذكية."), "success")
     return redirect(url_for("radius.mt_alerts_index"))
 
 
@@ -281,15 +282,15 @@ def mt_loop_setup():
 
 # تسميات عربية مفهومة لقواعد التنبيه الآلية (auto.<type>)
 _RULE_LABELS_AR = {
-    "auto.router.disabled":  "الراوتر معطَّل",
-    "auto.snapshot.stale":   "اللقطة التشغيلية قديمة",
-    "auto.snapshot.failed":  "فشل أخذ اللقطة التشغيلية",
-    "auto.backup.missing":   "لا توجد نسخة احتياطية",
-    "auto.backup.stale":     "النسخة الاحتياطية قديمة",
-    "auto.alert.critical":   "إنذار حرج من الراوتر",
-    "auto.alert.warning":    "تحذير من الراوتر",
-    "auto.audit.failure":    "فشل عملية حديثة على الراوتر",
-    "auto.audit.partial":    "تطبيق جزئي لعملية على الراوتر",
+    "auto.router.disabled":  N_("الراوتر معطَّل"),
+    "auto.snapshot.stale":   N_("اللقطة التشغيلية قديمة"),
+    "auto.snapshot.failed":  N_("فشل أخذ اللقطة التشغيلية"),
+    "auto.backup.missing":   N_("لا توجد نسخة احتياطية"),
+    "auto.backup.stale":     N_("النسخة الاحتياطية قديمة"),
+    "auto.alert.critical":   N_("إنذار حرج من الراوتر"),
+    "auto.alert.warning":    N_("تحذير من الراوتر"),
+    "auto.audit.failure":    N_("فشل عملية حديثة على الراوتر"),
+    "auto.audit.partial":    N_("تطبيق جزئي لعملية على الراوتر"),
 }
 
 
@@ -341,7 +342,7 @@ def resource_alerts_save():
         "traffic_mbps": f.get("traffic_mbps"),
     }
     router_resource_monitor.set_thresholds(_tid(), values)
-    flash("حُفظت حدود تنبيهات الموارد.", "success")
+    flash(_tr("حُفظت حدود تنبيهات الموارد."), "success")
     return redirect(url_for("radius.resource_alerts_settings"))
 
 
@@ -355,5 +356,5 @@ def monitoring_periodic_save():
         "digest_enabled": f.get("digest_enabled") in ("1", "on", "true", "yes"),
         "digest_minutes": f.get("digest_minutes"),
     })
-    flash("حُفظت إعدادات الإشعارات الدوريّة.", "success")
+    flash(_tr("حُفظت إعدادات الإشعارات الدوريّة."), "success")
     return redirect(url_for("radius.resource_alerts_settings"))

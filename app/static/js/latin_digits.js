@@ -17,6 +17,7 @@
  *      للسيرفر يكون لاتينيًّا، فتتنظّف البيانات القديمة تدريجيًّا مع كل حفظ.
  * كلمات المرور لا تُلمَس (قيمتها سرّ يطابق ما في قاعدة الرديوس حرفيًّا).
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   'use strict';
   if (window.__hrLatinDigits) return;            // حُمِّل مرّتين؟ مرّة تكفي
@@ -54,24 +55,24 @@
   // step يُفرَض فقط إن كُتب صراحةً (غير any) — لا نحجب كسورًا في حقلٍ لم يحدّد خطوته.
   function numCheck(v, required, mn, mx, st) {
     v = String(v == null ? '' : v).replace(/^\s+|\s+$/g, '');
-    if (!v) return required ? 'هذا الحقل مطلوب.' : '';
-    if (!/^-?(\d+(\.\d*)?|\.\d+)$/.test(v)) return 'أدخل رقمًا صحيحًا.';
+    if (!v) return required ? hrT('هذا الحقل مطلوب.') : '';
+    if (!/^-?(\d+(\.\d*)?|\.\d+)$/.test(v)) return hrT('أدخل رقمًا صحيحًا.');
     var n = parseFloat(v);
-    if (mn !== null && mn !== undefined && mn !== '' && isFinite(+mn) && n < +mn) return 'القيمة يجب أن تكون ' + mn + ' أو أكثر.';
-    if (mx !== null && mx !== undefined && mx !== '' && isFinite(+mx) && n > +mx) return 'القيمة يجب أن تكون ' + mx + ' أو أقلّ.';
+    if (mn !== null && mn !== undefined && mn !== '' && isFinite(+mn) && n < +mn) return hrT('القيمة يجب أن تكون ') + mn + hrT(' أو أكثر.');
+    if (mx !== null && mx !== undefined && mx !== '' && isFinite(+mx) && n > +mx) return hrT('القيمة يجب أن تكون ') + mx + hrT(' أو أقلّ.');
     if (st && st !== 'any' && isFinite(+st) && +st > 0) {
       var base = (mn !== null && mn !== undefined && mn !== '' && isFinite(+mn)) ? +mn : 0;
       var k = (n - base) / (+st);
       if (Math.abs(k - Math.round(k)) > 1e-7) {
         return (+st >= 1 && Math.round(+st) === +st && base === Math.round(base))
-          ? 'أدخل عددًا صحيحًا بلا كسور.'
-          : ('القيمة يجب أن تكون من مضاعفات ' + st + '.');
+          ? hrT('أدخل عددًا صحيحًا بلا كسور.')
+          : (hrT('القيمة يجب أن تكون من مضاعفات ') + st + '.');
       }
     }
     return '';
   }
   /*</hr-num-clean>*/
-  var NUM_BAD_MSG = 'أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».';
+  var NUM_BAD_MSG = hrT('أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».');
   window.hrLatinDigits = toLatin;
   window.hrNumClean = numClean;
   window.hrNumSeps = numSeps;
@@ -161,8 +162,8 @@
   }
   function fmtMsg(el) {
     var v = String(el.value || '').trim(), f = FMT[el.getAttribute('data-hr-fmt')];
-    if (!v) return el.required ? 'هذا الحقل مطلوب.' : '';
-    return (f && !f.re.test(v)) ? ('الصيغة المطلوبة مثل: ' + f.ph) : '';
+    if (!v) return el.required ? hrT('هذا الحقل مطلوب.') : '';
+    return (f && !f.re.test(v)) ? (hrT('الصيغة المطلوبة مثل: ') + f.ph) : '';
   }
   document.addEventListener('input', function (e) {
     var t = e.target;

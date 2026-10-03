@@ -24,6 +24,7 @@ wake-up sleeps another interval. (`threading.Event.wait()`
 serialises us.)
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import socket
@@ -296,18 +297,14 @@ def _maybe_fire_alert(
     if prev_status != "down" and new_status == "down":
         events.append((
             "device_down",
-            f"{flag} <b>انقطع الاتصال</b> مع «{name}»\n"
-            f"IP: <code>{ip}</code>\n"
-            f"وقت الفحص: <code>{iso}</code>",
+            _tr('%(flag)s <b>انقطع الاتصال</b> مع «%(name)s»\nIP: <code>%(ip)s</code>\nوقت الفحص: <code>%(iso)s</code>', flag=flag, name=name, ip=ip, iso=iso),
         ))
     elif prev_status == "down" and new_status == "up":
         latency_str = (f"{latency_ms:.1f} ms"
                        if latency_ms is not None else "—")
         events.append((
             "device_up",
-            f"✅ <b>عاد الاتصال</b> مع «{name}»\n"
-            f"IP: <code>{ip}</code>\n"
-            f"البنج الآن: <code>{latency_str}</code>",
+            _tr('✅ <b>عاد الاتصال</b> مع «%(name)s»\nIP: <code>%(ip)s</code>\nالبنج الآن: <code>%(latency_str)s</code>', name=name, ip=ip, latency_str=latency_str),
         ))
 
     # High-latency event (additive — can fire even on the same
@@ -317,10 +314,7 @@ def _maybe_fire_alert(
             and latency_ms > HIGH_LATENCY_MS):
         events.append((
             "device_high_latency",
-            f"🐌 <b>البنج مرتفع</b> على «{name}»\n"
-            f"IP: <code>{ip}</code>\n"
-            f"البنج الحالي: <code>{latency_ms:.1f} ms</code>\n"
-            f"الحدّ المعتاد: <code>{HIGH_LATENCY_MS:.0f} ms</code>",
+            _tr('🐌 <b>البنج مرتفع</b> على «%(name)s»\nIP: <code>%(ip)s</code>\nالبنج الحالي: <code>%(latency_ms)s ms</code>\nالحدّ المعتاد: <code>%(HIGH_LATENCY_MS)s ms</code>', name=name, ip=ip, latency_ms=format(latency_ms, '.1f'), HIGH_LATENCY_MS=format(HIGH_LATENCY_MS, '.0f')),
         ))
 
     fired_anything = False

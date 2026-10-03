@@ -16,7 +16,7 @@
 {% block title %}{{ _("كل الخدمات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ _("كل الخدمات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ services|length }} خدمة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s خدمة', length=services|length) }}</span>{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -101,17 +101,15 @@
 
 <div class="hub-hero-shell">
 {{ hub.hero(
-  "كل الخدمات",
-  subtitle="فعّل أو رقِّ أيّ خدمة من مكان واحد. كل خدمة تَفتح نافذة تَجمع
-            مواصفاتها المطلوبة قبل إرسال الطلب — لا تفعيل أعمى. تُرسَل
-            المواصفات مع الطلب فيَراها المزوّد كما حُدِّدت.",
+  _('كل الخدمات'),
+  subtitle=_('فعّل أو رقِّ أيّ خدمة من مكان واحد. كل خدمة تَفتح نافذة تَجمع\n            مواصفاتها المطلوبة قبل إرسال الطلب — لا تفعيل أعمى. تُرسَل\n            المواصفات مع الطلب فيَراها المزوّد كما حُدِّدت.'),
   icon="layer-group"
 ) }}
 </div>
 
 {% if services %}
-{% call hub.section("الخدمات المتاحة", icon="layer-group",
-                    meta=services|length|string + " خدمة") %}
+{% call hub.section(_('الخدمات المتاحة'), icon="layer-group",
+                    meta=services|length|string + _(' خدمة')) %}
 <div class="svccat-grid" data-svccat-grid>
   {% for svc in services %}
   <div class="svccat-card{% if svc.paid %} svccat-card--paid{% endif %}"
@@ -160,8 +158,8 @@
 </div>
 {% endcall %}
 {% else %}
-  {{ hub.empty("لا توجد خدمات في الكتالوج بعد.",
-               sub="أضِف خدمة إلى service_specs.catalog() لتظهر هنا.",
+  {{ hub.empty(_('لا توجد خدمات في الكتالوج بعد.'),
+               sub=_('أضِف خدمة إلى service_specs.catalog() لتظهر هنا.'),
                icon="layer-group") }}
 {% endif %}
 

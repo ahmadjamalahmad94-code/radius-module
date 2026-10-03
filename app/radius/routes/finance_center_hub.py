@@ -6,6 +6,7 @@
 finance_center.py، والقراءة تتم عبر نفس خدمة FinanceCenterService.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, render_template, request, session
 
@@ -104,7 +105,7 @@ def _enrich_wallets_names(wallets: list[dict]) -> list[dict]:
         ot  = w.get("owner_type", "")
         oid = w.get("owner_id")
         if ot == "company":
-            w["owner_name"] = "الشركة"
+            w["owner_name"] = N_("الشركة")
         elif ot == "manager" and oid:
             w["owner_name"] = mgr_names.get(oid, "")
         elif ot == "distributor" and oid:
@@ -122,12 +123,12 @@ def finance_center_hub():
     svc = FinanceCenterService()
     tab = (request.args.get("tab") or "dashboard").strip()
     if tab not in _TABS:
-        flash("تم تجاهل تبويب مالي غير معروف.", "warning")
+        flash(_tr("تم تجاهل تبويب مالي غير معروف."), "warning")
         tab = "dashboard"
 
     loan_status = (request.args.get("status") or "").strip()
     if loan_status not in {"", "open", "settled", "voided"}:
-        flash("فلتر حالة السلف غير صالح.", "warning")
+        flash(_tr("فلتر حالة السلف غير صالح."), "warning")
         loan_status = ""
 
     tenant_id = _tid()
@@ -138,7 +139,7 @@ def finance_center_hub():
         loans = svc.loans(tenant_id=tenant_id, status=loan_status,
                           date_from=loan_from, date_to=loan_to)
     except Exception as exc:  # ReportDateError → رسالة عربيّة وعرض بلا فلترة تاريخ
-        flash(f"{getattr(exc, 'message', exc)} عُرضت السلف بلا فلترة تاريخ.", "warning")
+        flash(_tr('%(v)s عُرضت السلف بلا فلترة تاريخ.', v=getattr(exc, 'message', exc)), "warning")
         loan_from = loan_to = ""
         loans = svc.loans(tenant_id=tenant_id, status=loan_status)
     # حدّ مرتفع: تُحمَّل كل المحافظ (مئات) دفعةً واحدة حتى يعمل البحث الحيّ

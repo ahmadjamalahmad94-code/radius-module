@@ -66,53 +66,53 @@
 
 {% macro owner_label(owner_type) -%}
   {{ {
-    'company': 'الشركة',
-    'manager': 'مدير',
-    'distributor': 'موزع',
-    'subscriber': 'مشترك',
-    'card_user': 'مستخدم بطاقات'
-  }.get(owner_type, 'مالك') }}
+    'company': _('الشركة'),
+    'manager': _('مدير'),
+    'distributor': _('موزع'),
+    'subscriber': _('مشترك'),
+    'card_user': _('مستخدم بطاقات')
+  }.get(owner_type, _('مالك')) }}
 {%- endmacro %}
 
 {% macro tx_label(transaction_type) -%}
   {{ {
-    'credit': 'شحن',
-    'debit': 'خصم',
-    'transfer': 'تحويل',
-    'hold': 'حجز',
-    'release': 'فك حجز',
-    'reversal': 'عكس قيد'
-  }.get(transaction_type, 'حركة مالية') }}
+    'credit': _('شحن'),
+    'debit': _('خصم'),
+    'transfer': _('تحويل'),
+    'hold': _('حجز'),
+    'release': _('فك حجز'),
+    'reversal': _('عكس قيد')
+  }.get(transaction_type, _('حركة مالية')) }}
 {%- endmacro %}
 
 {# تعريب حالة المحفظة: القيم الخام (active/inactive…) لا يجب أن تظهر للمستخدم بالإنجليزية #}
 {% macro status_label(status) -%}
   {{ {
-    'active': 'نشط',
-    'inactive': 'معطّل',
-    'frozen': 'مجمّد',
-    'closed': 'مغلق',
-    'suspended': 'موقوف'
+    'active': _('نشط'),
+    'inactive': _('معطّل'),
+    'frozen': _('مجمّد'),
+    'closed': _('مغلق'),
+    'suspended': _('موقوف')
   }.get(status, status) }}
 {%- endmacro %}
 
 {% block content %}
 {# الهيرو الموحّد المدموج megahero بدل hero القديم — قاعدة التصميم: هيرو واحد فقط #}
-{{ hub.megahero("الخزائن والمحافظ", subtitle="إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.", icon="wallet") }}
+{{ hub.megahero(_('الخزائن والمحافظ'), subtitle=_('إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.'), icon="wallet") }}
 {% include "radius/_finance_nav.html" %}
 
-{% call hub.section("إنشاء محفظة", icon="circle-plus") %}
+{% call hub.section(_('إنشاء محفظة'), icon="circle-plus") %}
   {% if can_submit('radius.business_finance_wallets_create', 'POST') %}<form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     {# تلميح معرّب لقيم owner_type: القيمة المُرسَلة تبقى company افتراضيًا، والتلميح بالعربية للمستخدم #}
-    {{ hub.field("نوع المالك", "owner_type", "company", hint="الشركة / مدير / موزع / مشترك / مستخدم بطاقات") }}
-    {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغا لمحفظة الشركة") }}
-    {{ hub.field("العملة", "currency", cfg.currency) }}
-    {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
+    {{ hub.field(_('نوع المالك'), "owner_type", "company", hint=_('الشركة / مدير / موزع / مشترك / مستخدم بطاقات')) }}
+    {{ hub.field(_('رقم المالك'), "owner_id", "", type="number", hint=_('اتركه فارغا لمحفظة الشركة')) }}
+    {{ hub.field(_('العملة'), "currency", cfg.currency) }}
+    {{ hub.btn(_('إنشاء محفظة'), variant="primary", icon="plus", type="submit") }}
   </form>{% endif %}
 {% endcall %}
 
-{% call hub.section("قائمة المحافظ", icon="wallet", flush=True) %}
+{% call hub.section(_('قائمة المحافظ'), icon="wallet", flush=True) %}
   {% if wallets %}
   <div class="table-responsive hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
     <table class="table hub-table fw-table">
@@ -169,7 +169,7 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير/موزع.", icon="wallet") }}
+    {{ hub.empty(_('لا توجد محافظ بعد.'), sub=_('ابدأ بمحفظة الشركة أو محفظة مدير/موزع.'), icon="wallet") }}
   {% endif %}
 {% endcall %}
 <script>

@@ -44,7 +44,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import i18n_inventory as inv  # noqa: E402
 
 ROOT = inv.ROOT
-PY_COMPARE: list[str] = []
+PY_COMPARE_SUB: set = set()
+NO_COMPARE_GUARD = False
+PY_COMPARE_EQ: set = set()
 
 #: ملفّات «محتوى خارجيّ» (صفحات هوتسبوت، سكربتات راوتر، رسائل للمشتركين/تيليجرام،
 #: بطاقات/PDF مطبوعة): لغتها ليست لغة واجهة المدير ⇒ وسم N_ فقط (لا ترجمة فوريّة
@@ -93,6 +95,10 @@ def jinja_quote(s: str) -> str:
 
 
 def _ident_from(expr_src: str, used: set, fallback: str = "v") -> str:
+    # أزل مرشِّحات Jinja/الأقواس الخارجيّة: (x|safe) ⇒ x
+    expr_src = re.sub(r"\|\s*[A-Za-z_]+(\([^()]*\))?\s*\)?\s*$", "", expr_src.strip())
+    if re.match(r"^\(?\s*['\"]", expr_src):
+        expr_src = ""
     m = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(\s*\))?\s*$", expr_src.strip())
     name = ""
     if m:
@@ -121,21 +127,31 @@ def js_logic_texts(findings) -> set[str]:
     + عبارات التأكيد المكتوبة متعدّدة الكلمات التي يقارنها الخادم (بايثون)."""
     out = set()
     for f in findings:
-        if f.status == "ignored" and f.reason in ("compare", "key", "logic-arg") and                 f.ctx in ("js-str", "js-tpl"):
+        if f.status == "ignored" and f.reason in ("compare", "key", "logic-arg") and \
+                f.ctx in ("js-str", "js-tpl"):
             out.add(inv._norm_ws(f.text))
-        if f.kind == "py" and f.status == "ignored" and f.reason in ("compare", "typed-confirm")                 and " " in inv._norm_ws(f.text) and inv.has_letter(f.text):
+        # عبارة تأكيد مكتوبة: تُحمى فقط إن كانت متعدّدة الكلمات (لا تُعطِّل كلمة «حذف» العامّة)
+        if f.status == "ignored" and f.reason == "typed-confirm" and " " in inv._norm_ws(f.text):
+            out.add(inv._norm_ws(f.text))
+        # عبارة تأكيد يقارنها الخادم بمساواة (confirm != 'حذف البطاقة') ⇒ لا تُغلَّف في القوالب
+        if f.kind == "py" and f.status == "ignored" and (
+                f.reason == "typed-confirm" or (f.reason == "compare" and "cmp:eq" in f.flags)) \
+                and " " in inv._norm_ws(f.text) and inv.has_letter(f.text):
             out.add(inv._norm_ws(f.text))
     return out
 
 
-def py_compare_texts(findings) -> list[str]:
-    """نصوص يفحصها بايثون كمقارنة/احتواء (``'x' in msg``) — كل رسالة تحويها
-    لا تُترجَم فوريًّا (_tr) كي يبقى الفحص صحيحًا بكل اللغات؛ تُوسَم N_ فقط."""
-    out = set()
+def py_compare_texts(findings) -> tuple[set, set]:
+    """نصوص يفحصها بايثون: (احتواء ``'x' in msg``/startswith, مساواة ``== 'x'``).
+
+    رسالة تحوي نصّ احتواء، أو تساوي نصّ مساواة، لا تُترجَم فوريًّا (_tr) كي يبقى
+    الفحص صحيحًا بكل اللغات؛ تُوسَم N_ فقط (هويّة في بايثون)."""
+    sub, eq = set(), set()
     for f in findings:
-        if f.kind == "py" and f.status == "ignored" and f.reason in ("compare", "logic-arg")                 and len(inv.AR_LETTER.findall(f.text)) >= 3:
-            out.add(f.text.strip())
-    return sorted(out)
+        if f.kind == "py" and f.status == "ignored" and f.reason in ("compare", "logic-arg", "key") \
+                and len(inv.AR_LETTER.findall(f.text)) >= 3:
+            (sub if "cmp:sub" in f.flags else eq).add(f.text.strip())
+    return sub, eq
 
 
 # ═══════════════════════ بايثون ═══════════════════════
@@ -242,7 +258,7 @@ def _ensure_py_import(src: str, names: set[str]) -> str:
     if not names:
         return src
     nl = "\r\n" if "\r\n" in src else "\n"
-    m = re.search(r"^from app\.i18n_text import ([^\n\r]+)$", src, re.M)
+    m = re.search(r"^from app\.i18n_text import ([^\n\r]+?)(?=\r?$)", src, re.M)
     if m:
         have = {x.strip() for x in m.group(1).split(",")}
         allnames = sorted(have | names, key=lambda x: (x != "N_", x))
@@ -267,6 +283,57 @@ def _ensure_py_import(src: str, names: set[str]) -> str:
         stmt += "\r"
     lines.insert(insert_line, stmt)
     return "\n".join(lines)
+
+
+def upgrade_python(path: str, apply: bool, stats: dict) -> int:
+    """N_('…') في «مصرف رسالة» وقت الطلب ⇒ _tr('…') (حين لم يعد حارس المقارنة يمنعه)."""
+    import fnmatch
+    if any(fnmatch.fnmatch(inv._rel(path), pat) for pat in N_ONLY):
+        return 0
+    with open(path, encoding="utf-8", newline="") as fh:
+        src = fh.read()
+    if "N_(" not in src:
+        return 0
+    tree = ast.parse(src)
+    par = _py_parent_map(tree)
+    line_starts = [0]
+    for m in re.finditer("\n", src):
+        line_starts.append(m.end())
+    lines = src.split("\n")
+
+    def off(lineno, col):
+        line = lines[lineno - 1]
+        return line_starts[lineno - 1] + len(line.encode("utf-8")[:col].decode("utf-8", "ignore"))
+
+    edits = []
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "N_"
+                and len(n.args) == 1 and isinstance(n.args[0], ast.Constant)
+                and isinstance(n.args[0].value, str)):
+            continue
+        text = n.args[0].value
+        st, rs, flags, scope = inv._classify_py(n, par, set(), text)
+        if scope != "runtime" or st != "leak":
+            continue
+        f = inv.Finding("", n.lineno, "py", "py-str", text, st, rs, scope=scope, flags=flags)
+        if not _is_sink(n, par, f):
+            continue
+        if any(t in text for t in PY_COMPARE_SUB) or text.strip() in PY_COMPARE_EQ:
+            continue
+        a = off(n.func.lineno, n.func.col_offset)
+        edits.append((a, a + 2, "_tr"))
+    if not edits:
+        return 0
+    out = src
+    for a, b, rep in sorted(edits, key=lambda e: -e[0]):
+        out = out[:a] + rep + out[b:]
+    out = _ensure_py_import(out, {"_tr"})
+    ast.parse(out)
+    stats["upgraded"] = stats.get("upgraded", 0) + len(edits)
+    if apply:
+        with open(path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(out)
+    return len(edits)
 
 
 def wrap_python(path: str, logic: set[str], apply: bool, stats: dict) -> int:
@@ -317,7 +384,8 @@ def wrap_python(path: str, logic: set[str], apply: bool, stats: dict) -> int:
                 stats["skip:n-only-fstring"] = stats.get("skip:n-only-fstring", 0) + 1
                 continue
             sink = False
-        if sink and any(t in f.text for t in PY_COMPARE):
+        if sink and not NO_COMPARE_GUARD and (
+                any(t in f.text for t in PY_COMPARE_SUB) or f.text.strip() in PY_COMPARE_EQ):
             if isinstance(node, ast.JoinedStr):
                 stats["skip:compare-guard-fstring"] = stats.get("skip:compare-guard-fstring", 0) + 1
                 continue
@@ -475,6 +543,117 @@ def _js_tpl_to_call(src: str, tok: inv.JsTok, fn: str) -> str | None:
     return f"{fn}({js_quote(text)}, {{{', '.join(objs)}}})"
 
 
+_HTML_SPLIT = re.compile(r"(<[^<>]*>|&[a-zA-Z]+;|&#\d+;)")
+
+
+def _split_ws(t: str):
+    lead = len(t) - len(t.lstrip())
+    trail = len(t) - len(t.rstrip())
+    return t[:lead], t[lead:len(t) - trail], t[len(t) - trail:]
+
+
+def js_str_html_parts(text: str, wrap) -> str | None:
+    """نصّ سلسلة JS يحوي HTML ⇒ تعبير دمج يغلّف أجزاء النصّ العربيّة فقط.
+
+    wrap(core) يُعيد تعبير JS للنصّ المترجَم. يُعيد None إن لا شيء يُغلَّف."""
+    pieces = [x for x in _HTML_SPLIT.split(text) if x != ""]
+    out = []
+    changed = False
+    for piece in pieces:
+        if _HTML_SPLIT.fullmatch(piece) or not inv.has_letter(piece):
+            out.append(js_quote(piece))
+            continue
+        lead, core, trail = _split_ws(piece)
+        if lead:
+            out.append(js_quote(lead))
+        out.append(wrap(core))
+        changed = True
+        if trail:
+            out.append(js_quote(trail))
+    if not changed:
+        return None
+    return "(" + " + ".join(out) + ")"
+
+
+def js_tpl_html(src: str, tok: inv.JsTok, wrap_call) -> str | None:
+    """قالب حرفيّ بـ HTML ⇒ نفس القالب مع ${wrap('نصّ {a}', {a: expr})} لكل عقدة نصّ عربيّة.
+
+    wrap_call(msg, objs) يُعيد تعبير JS."""
+    # سلسلة عناصر: ('c', حرف) أو ('e', تعبير)
+    items = []
+    for kind, a, b in tok.parts:
+        if kind == "text":
+            raw = src[a:b]
+            if "{" in (js_unescape(raw) or "{") or "}" in (js_unescape(raw) or ""):
+                return None
+            # نحتفظ بالخام لإعادة البناء، والمفكوك للرسالة
+            i = 0
+            while i < len(raw):
+                if raw[i] == "\\":
+                    items.append(("c", raw[i:i + 2]))
+                    i += 2
+                    continue
+                items.append(("c", raw[i]))
+                i += 1
+        else:
+            expr = src[a:b].strip()
+            if not expr or "`" in expr or "\n" in expr:
+                return None
+            items.append(("e", expr))
+    # قسّم على الوسوم في الأحرف
+    joined = "".join(x[1] if x[0] == "c" else "\x00" for x in items)
+    exprs = [x[1] for x in items if x[0] == "e"]
+    segs = [x for x in _HTML_SPLIT.split(joined) if x != ""]
+    out = []
+    ei = 0
+    changed = False
+    for seg in segs:
+        n_e = seg.count("\x00")
+        seg_exprs = exprs[ei:ei + n_e]
+        ei += n_e
+        if _HTML_SPLIT.fullmatch(seg) or not inv.has_letter(seg.replace("\x00", "")):
+            # أعِد البناء كما هو
+            k = 0
+            buf = []
+            for ch in seg:
+                if ch == "\x00":
+                    buf.append("${" + seg_exprs[k] + "}")
+                    k += 1
+                else:
+                    buf.append(ch)
+            out.append("".join(buf))
+            continue
+        lead, core, trail = _split_ws(seg)
+        used: set = set()
+        seen: dict = {}
+        objs = []
+        msg = []
+        k = 0
+        for ch in core:
+            if ch == "\x00":
+                expr = seg_exprs[lead.count("\x00") + k]
+                k += 1
+                if expr in seen:
+                    name = seen[expr]
+                else:
+                    name = _ident_from(expr, used)
+                    seen[expr] = name
+                    objs.append(f"{name}: {expr}" if name != expr else name)
+                msg.append("{" + name + "}")
+            else:
+                msg.append(ch)
+        if "\x00" in lead or "\x00" in trail:
+            return None
+        text = js_unescape("".join(msg))
+        if text is None:
+            return None
+        out.append(lead + "${" + wrap_call(text, objs) + "}" + trail)
+        changed = True
+    if not changed:
+        return None
+    return "`" + "".join(out) + "`"
+
+
 def wrap_js(path: str, logic: set[str], apply: bool, stats: dict) -> int:
     with open(path, encoding="utf-8", newline="") as fh:
         src = fh.read()
@@ -499,10 +678,22 @@ def wrap_js(path: str, logic: set[str], apply: bool, stats: dict) -> int:
             if text is None:
                 stats["skip:escape"] = stats.get("skip:escape", 0) + 1
                 continue
+            if re.search(r"<[a-zA-Z/!]|&[a-zA-Z#0-9]+;", text):
+                rep = js_str_html_parts(text, lambda core: f"hrT({js_quote(core)})")
+                if rep is None:
+                    continue
+                edits.append((tok.start, tok.end, rep))
+                stats["hrT:html"] = stats.get("hrT:html", 0) + 1
+                continue
             edits.append((tok.start, tok.end, f"hrT({js_quote(text)})"))
             stats["hrT"] = stats.get("hrT", 0) + 1
         else:
             rep = _js_tpl_to_call(src, tok, "hrT")
+            if rep is None:
+                rep = js_tpl_html(src, tok, lambda msg, objs: f"hrT({js_quote(msg)}" +
+                                  (f", {{{', '.join(objs)}}})" if objs else ")"))
+                if rep is not None:
+                    stats["hrT:tpl-html"] = stats.get("hrT:tpl-html", 0) + 1
             if rep is None:
                 stats["skip:tpl-complex"] = stats.get("skip:tpl-complex", 0) + 1
                 continue
@@ -544,7 +735,7 @@ def _tpl_msg_with_vars(src: str, a: int, b: int, regions, used: set):
     seen = {}
     pos = a
     for kind, s, e, is_, ie in regions:
-        if e <= a or s >= b:
+        if kind == "data" or e <= a or s >= b:
             continue
         if s < a or e > b:
             return None
@@ -570,6 +761,119 @@ def _tpl_msg_with_vars(src: str, a: int, b: int, regions, used: set):
         pos = e
     parts.append(src[pos:b].replace("%", "%%"))
     return "".join(parts), kwargs
+
+
+_CHAIN_STOP_WORDS = {"if", "else", "and", "or", "not", "in", "is", "for", "recursive", "with",
+                     "without", "context", "import", "as", "set", "elif", "return"}
+_CHAIN_STOP_OPS = {",", "=", ":", "==", "!=", "<", ">", "<=", ">=", "?"}
+
+
+def _jinja_chain(src: str, inner_s: int, inner_e: int, tok_start: int):
+    """سلسلة دمج «~» حول سلسلة عربيّة ⇒ (start, end, msgid, kwargs) أو None.
+
+    "تجهيز «" ~ device.name ~ "» للإدارة" ⇒ _('تجهيز «%(name)s» للإدارة', name=device.name)."""
+    toks = inv.jinja_tokens(src, inner_s, inner_e)
+    idx = next((i for i, t in enumerate(toks) if t.start == tok_start), None)
+    if idx is None:
+        return None
+
+    def is_boundary(i):
+        t = toks[i]
+        return (t.type == "op" and t.value in _CHAIN_STOP_OPS) or                (t.type == "name" and t.value in _CHAIN_STOP_WORDS)
+
+    # يسارًا
+    depth = 0
+    a = idx
+    i = idx - 1
+    while i >= 0:
+        t = toks[i]
+        if t.type == "op" and t.value in ")]}":
+            depth += 1
+        elif t.type == "op" and t.value in "([{":
+            if depth == 0:
+                break
+            depth -= 1
+        elif depth == 0 and is_boundary(i):
+            break
+        a = i
+        i -= 1
+    depth = 0
+    b = idx
+    i = idx + 1
+    while i < len(toks):
+        t = toks[i]
+        if t.type == "op" and t.value in "([{":
+            depth += 1
+        elif t.type == "op" and t.value in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif depth == 0 and is_boundary(i):
+            break
+        b = i
+        i += 1
+    # قسّم على ~ في العمق 0 (أو على + إن كانت السلسلة كلّها + بلا ~: دمج نصوص)
+    ops_at0 = set()
+    depth = 0
+    for t in toks[a:b + 1]:
+        if t.type == "op" and t.value in "([{":
+            depth += 1
+        elif t.type == "op" and t.value in ")]}":
+            depth -= 1
+        elif depth == 0 and t.type == "op" and t.value in ("~", "+", "-", "*", "/", "%", "//", "**"):
+            ops_at0.add(t.value)
+    if "~" in ops_at0:
+        if ops_at0 - {"~"}:
+            return None   # خليط ~ مع حساب — يدويّ
+        sep = "~"
+    elif ops_at0 == {"+"}:
+        sep = "+"
+    else:
+        return None
+    operands = []
+    cur = []
+    depth = 0
+    for t in toks[a:b + 1]:
+        if t.type == "op" and t.value in "([{":
+            depth += 1
+        elif t.type == "op" and t.value in ")]}":
+            depth -= 1
+        if depth == 0 and t.type == "op" and t.value == sep:
+            operands.append(cur)
+            cur = []
+            continue
+        cur.append(t)
+    operands.append(cur)
+    if len(operands) < 2 or any(not o for o in operands):
+        return None
+    parts = []
+    kwargs = []
+    used: set = set()
+    seen = {}
+    has_ar = False
+    for o in operands:
+        if len(o) == 1 and o[0].type == "str":
+            txt = inv.jinja_str_value(o[0])
+            if not isinstance(txt, str) or re.search(r"<[a-zA-Z/!]", txt) or "%" in txt:
+                return None
+            has_ar = has_ar or inv.has_letter(txt)
+            parts.append(txt)
+            continue
+        if any(x.type == "str" and inv.has_arabic(inv.jinja_str_value(x) or "") for x in o):
+            return None
+        expr = src[o[0].start:o[-1].end]
+        if re.search(r"\b(_|gettext|ngettext)\s*\(", expr):
+            return None
+        if expr in seen:
+            name = seen[expr]
+        else:
+            name = _ident_from(expr, used)
+            seen[expr] = name
+            kwargs.append((name, expr))
+        parts.append(f"%({name})s")
+    if not has_ar:
+        return None
+    return toks[a].start, toks[b].end, "".join(parts), kwargs
 
 
 def _call_src(msgid: str, kwargs) -> str:
@@ -610,8 +914,14 @@ def wrap_template(path: str, logic: set[str], apply: bool, stats: dict) -> int:
                 stats["skip:jinja-html"] = stats.get("skip:jinja-html", 0) + 1
                 continue
             if "concat" in f.flags:
-                # الدمج مع سلسلة HTML حرفيّة في نفس التعبير ⇒ يدويّ
                 reg = next((r for r in regions if r[3] <= f.start < r[4]), None)
+                # سلسلة «~» نظيفة (لا HTML حرفيّ في أجزائها النصّيّة) ⇒ رسالة واحدة بنوائب
+                ch = _jinja_chain(src, reg[3], reg[4], f.start) if reg is not None else None
+                if ch is not None:
+                    cs, ce, msgid, kwargs = ch
+                    add(cs, ce, _call_src(msgid, kwargs), "jinja-chain")
+                    continue
+                # الدمج مع سلسلة HTML حرفيّة في نفس التعبير ⇒ يدويّ (مزلق دمج Markup)
                 if reg is None or re.search(r"['\"][^'\"]*<[a-zA-Z/!]", src[reg[3]:reg[4]]):
                     stats["skip:concat-html"] = stats.get("skip:concat-html", 0) + 1
                     continue
@@ -632,7 +942,7 @@ def wrap_template(path: str, logic: set[str], apply: bool, stats: dict) -> int:
                 pos = f.start
                 segs = []
                 for kind, s, e, is_, ie in regions:
-                    if e <= f.start or s >= f.end:
+                    if kind == "data" or e <= f.start or s >= f.end:
                         continue
                     segs.append((pos, s))
                     pos = e
@@ -708,6 +1018,20 @@ def wrap_template(path: str, logic: set[str], apply: bool, stats: dict) -> int:
                     stats["skip:attr-entity"] = stats.get("skip:attr-entity", 0) + 1
                     continue
                 filt = "|tojson|forceescape" if in_attr else "|tojson"
+                if re.search(r"<[a-zA-Z/!]|&[a-zA-Z#0-9]+;", text):
+                    if kwargs:
+                        stats["skip:js-html-vars"] = stats.get("skip:js-html-vars", 0) + 1
+                        continue
+                    rep = js_str_html_parts(
+                        text.replace("%%", "%"),
+                        lambda core: "{{ " + _call_src(core.replace("%", "%%"), []) + filt + " }}")
+                    if rep is None:
+                        continue
+                    if in_attr and '"' in rep:
+                        stats["skip:attr-quote"] = stats.get("skip:attr-quote", 0) + 1
+                        continue
+                    add(f.start, f.end, rep, "js-str-html")
+                    continue
                 add(f.start, f.end, "{{ " + _call_src(text, kwargs) + filt + " }}", "js-str")
                 continue
             # قالب حرفيّ داخل <script>: نصّ بلا Jinja فقط
@@ -770,15 +1094,22 @@ def main(argv=None) -> int:
     ap.add_argument("kind", choices=["py", "html", "js"])
     ap.add_argument("files", nargs="*")
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--upgrade", action="store_true", help="py: N_ في مصرف رسالة ⇒ _tr")
+    ap.add_argument("--no-compare-guard", action="store_true",
+                    help="py: تجاهل حارس المقارنة (بعد جعل موضع المقارنة مستقلًّا عن اللغة)")
     ap.add_argument("--exclude", action="append", default=[])
     args = ap.parse_args(argv)
     try:
         sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
     except Exception:  # noqa: BLE001
         pass
+    global NO_COMPARE_GUARD
+    NO_COMPARE_GUARD = bool(getattr(args, "no_compare_guard", False))
     findings, _skipped = inv.inventory(allow=True)
     logic = js_logic_texts(findings)
-    PY_COMPARE[:] = py_compare_texts(findings)
+    _sub, _eq = py_compare_texts(findings)
+    PY_COMPARE_SUB.update(_sub)
+    PY_COMPARE_EQ.update(_eq)
     srcs = [p for k, p in inv.iter_sources() if k == args.kind]
     if args.files:
         want = {inv._rel(f) for f in args.files}
@@ -791,7 +1122,10 @@ def main(argv=None) -> int:
         if inv.skipped_reason(rel) or any(fnmatch.fnmatch(rel, x) for x in args.exclude):
             continue
         fn = {"py": wrap_python, "html": wrap_template, "js": wrap_js}[args.kind]
-        n = fn(p, logic, args.apply, stats)
+        if args.upgrade and args.kind == "py":
+            n = upgrade_python(p, args.apply, stats)
+        else:
+            n = fn(p, logic, args.apply, stats)
         if n:
             total += n
     print(json.dumps({"edits": total, **stats}, ensure_ascii=False, indent=1))

@@ -32,6 +32,7 @@ Severity:
             should know it's already managed elsewhere).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
@@ -141,11 +142,11 @@ def _block_vs_allow(
             continue
         # Pair must be a block + an allow (any direction).
         if p.service == "web_block" and current_service == "walled_garden":
-            target_kind = "حظر"
-            peer_kind   = "إستثناء"
+            target_kind = N_("حظر")
+            peer_kind   = N_("إستثناء")
         elif p.service == "walled_garden" and current_service == "web_block":
-            target_kind = "إستثناء"
-            peer_kind   = "حظر"
+            target_kind = N_("إستثناء")
+            peer_kind   = N_("حظر")
         else:
             continue
         peer_values = {
@@ -163,13 +164,11 @@ def _block_vs_allow(
             policy_id=p.id, policy_name=p.name, service=p.service,
             severity=SEV_HIGH,
             reason_ar=(
-                f"الوجهات {sample} مُدرجة في «{peer_kind}» "
-                f"في السياسة الأخرى وفي «{target_kind}» هنا — "
-                "تعارض مباشر سيُلغي أحدهما الآخر."
+                _tr('الوجهات %(sample)s مُدرجة في «%(peer_kind)s» في السياسة الأخرى وفي «%(target_kind)s» هنا — تعارض مباشر سيُلغي أحدهما الآخر.', sample=sample, peer_kind=peer_kind, target_kind=target_kind)
             ),
             recommendation_ar=(
-                "احذف الوجهات المشتركة من إحدى السياستين قبل "
-                "التطبيق."
+                N_("احذف الوجهات المشتركة من إحدى السياستين قبل "
+                "التطبيق.")
             ),
         ))
     return out
@@ -197,11 +196,10 @@ def _duplicate_policy(
                 policy_id=p.id, policy_name=p.name, service=p.service,
                 severity=SEV_HIGH,
                 reason_ar=(
-                    f"سياسة أخرى بنفس المعرّف ({p.slug}) "
-                    "موجودة على نفس الراوتر."
+                    _tr('سياسة أخرى بنفس المعرّف (%(slug)s) موجودة على نفس الراوتر.', slug=p.slug)
                 ),
                 recommendation_ar=(
-                    "أعد تسمية إحدى السياستين قبل التطبيق."
+                    N_("أعد تسمية إحدى السياستين قبل التطبيق.")
                 ),
             ))
     return out
@@ -226,12 +224,12 @@ def _overlapping_router(
             policy_id=p.id, policy_name=p.name, service=p.service,
             severity=SEV_MEDIUM,
             reason_ar=(
-                "سياسة أخرى من نفس النوع تعمل على نفس الراوتر — "
-                "قد يتراكم تأثيرها."
+                N_("سياسة أخرى من نفس النوع تعمل على نفس الراوتر — "
+                "قد يتراكم تأثيرها.")
             ),
             recommendation_ar=(
-                "راجع السياسة الأخرى وتأكَّد من أن السلوك المركَّب "
-                "هو ما تريده."
+                N_("راجع السياسة الأخرى وتأكَّد من أن السلوك المركَّب "
+                "هو ما تريده.")
             ),
         ))
     return out
@@ -282,10 +280,10 @@ def _overlapping_targets(
             policy_id=p.id, policy_name=p.name, service=p.service,
             severity=SEV_LOW,
             reason_ar=(
-                f"الوجهات {sample} مدرجة أيضاً في السياسة الأخرى."
+                _tr('الوجهات %(sample)s مدرجة أيضاً في السياسة الأخرى.', sample=sample)
             ),
             recommendation_ar=(
-                "تأكَّد أن التكرار مقصود — أو احتفظ بمصدر واحد للحقيقة."
+                N_("تأكَّد أن التكرار مقصود — أو احتفظ بمصدر واحد للحقيقة.")
             ),
         ))
     return out
@@ -316,11 +314,10 @@ def _hotspot_profile_overlap(
                 service=p.service,
                 severity=SEV_MEDIUM,
                 reason_ar=(
-                    f"سياسة walled-garden أخرى تستهدف نفس "
-                    f"profile الـ Hotspot ({p_profile})."
+                    _tr('سياسة walled-garden أخرى تستهدف نفس profile الـ Hotspot (%(p_profile)s).', p_profile=p_profile)
                 ),
                 recommendation_ar=(
-                    "ادمج السياستين أو ميِّز الـ profile لكل سياسة."
+                    N_("ادمج السياستين أو ميِّز الـ profile لكل سياسة.")
                 ),
             ))
     return out

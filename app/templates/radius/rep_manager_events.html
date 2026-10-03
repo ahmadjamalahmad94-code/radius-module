@@ -16,7 +16,7 @@
 {% block title %}{{ _("أحداث المدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ _("أحداث المدراء") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s حدث', total=total) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الأحداث #}
@@ -36,15 +36,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="manager-events-hero">
 {% call hub.megahero(
-  "أحداث المدراء",
-  subtitle="السجل الرئيسي: كل عملية نفّذها مدير بشري عبر كل الأقسام (مشتركون، عروض، كروت، مايكروتيك، نسخ احتياطي…). قد يُعيد عرض صفوف تظهر أيضًا في السجلّات المتخصّصة.",
+  _('أحداث المدراء'),
+  subtitle=_('السجل الرئيسي: كل عملية نفّذها مدير بشري عبر كل الأقسام (مشتركون، عروض، كروت، مايكروتيك، نسخ احتياطي…). قد يُعيد عرض صفوف تظهر أيضًا في السجلّات المتخصّصة.'),
   icon="user-shield",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'list-check',  'variant': 'brand'},
-    {'label': 'المعروض',        'value': items|length, 'icon': 'table-list',  'variant': 'blue'},
-    {'label': 'مدراء مختلفون',  'value': _admins,      'icon': 'users-gear',  'variant': 'green'},
-    {'label': 'عمليات حذف',     'value': _deletes,     'icon': 'trash-can',   'variant': 'red'},
+    {'label': _('إجمالي المطابق'), 'value': total,        'icon': 'list-check',  'variant': 'brand'},
+    {'label': _('المعروض'),        'value': items|length, 'icon': 'table-list',  'variant': 'blue'},
+    {'label': _('مدراء مختلفون'),  'value': _admins,      'icon': 'users-gear',  'variant': 'green'},
+    {'label': _('عمليات حذف'),     'value': _deletes,     'icon': 'trash-can',   'variant': 'red'},
   ],
   search_action=url_for('radius.rep_manager_events')
 ) %}
@@ -80,20 +80,20 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to or filters.outcome or filters.manager or filters.page) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_events') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم المدير أو الإجراء أو معرّف الهدف، ونطاق التاريخ يعمل على وقت تسجيل الحدث. يُعرض حتى 500 حدث من الأحدث للأقدم، والبيانات من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق اسم المدير أو الإجراء أو معرّف الهدف، ونطاق التاريخ يعمل على وقت تسجيل الحدث. يُعرض حتى 500 حدث من الأحدث للأقدم، والبيانات من سجل التدقيق audit_log للقراءة فقط.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول الأحداث — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("سجل الأحداث", icon="table-list",
-                    meta=items|length|string + " حدث", flush=True) %}
+{% call hub.section(_('سجل الأحداث'), icon="table-list",
+                    meta=items|length|string + _(' حدث'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="manager_events" data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -151,8 +151,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا أحداث مدراء مطابقة",
-   sub="غيّر الفلاتر أو لم يسجّل المدراء أي عملية بعد.", icon="user-shield") }}
+{{ hub.empty(_('لا أحداث مدراء مطابقة'),
+   sub=_('غيّر الفلاتر أو لم يسجّل المدراء أي عملية بعد.'), icon="user-shield") }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

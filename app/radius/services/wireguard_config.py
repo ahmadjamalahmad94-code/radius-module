@@ -20,6 +20,7 @@ the router is the operator's job — keeps the radius admin away
 from any side-effect on host-level config.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import secrets
 import textwrap
@@ -190,9 +191,9 @@ def build_for_new_peer(
     note = (
         ""
         if router_public_key
-        else "بعد تشغيل block الراوتر، انسخ المفتاح العام الناتج "
+        else _tr("بعد تشغيل block الراوتر، انسخ المفتاح العام الناتج "
              "وألصقه في حقل vpn_public_key ثم احفظ — هذا يكمل "
-             "إعداد الـ peer على الخادم."
+             "إعداد الـ peer على الخادم.")
     )
     server_block = generate_server_block(
         nas_name=nas_name,

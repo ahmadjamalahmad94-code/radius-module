@@ -6,7 +6,7 @@
 {% block title %}{{ _("نطاقات عناوين الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ _("نطاقات عناوين الشبكة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} نطاق</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s نطاق', length=items|length) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -14,8 +14,8 @@
 
 {# ───── Merged hero: title + subtitle + actions + KPI strip ───── #}
 {{ hub.megahero(
-  "نطاقات عناوين الشبكة",
-  subtitle="إدارة نطاقات IP الموزَّعة من راوترات الراديوس للمشتركين — كل نطاق يحدّد العناوين التي تُمنح للأجهزة المتصلة.",
+  _('نطاقات عناوين الشبكة'),
+  subtitle=_('إدارة نطاقات IP الموزَّعة من راوترات الراديوس للمشتركين — كل نطاق يحدّد العناوين التي تُمنح للأجهزة المتصلة.'),
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.pool_new') + '">
@@ -25,26 +25,26 @@
       <i class="fa-solid fa-server"></i> '|safe ~ _("الأجهزة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي',    'value': items|length,                  'icon': 'network-wired', 'variant': 'brand'},
-    {'label': 'مرتبط بجهاز', 'value': _with_router,                  'icon': 'link',          'variant': 'green'},
-    {'label': 'بدون جهاز',   'value': items|length - _with_router,   'icon': 'link-slash',    'variant': 'amber'},
+    {'label': _('الإجمالي'),    'value': items|length,                  'icon': 'network-wired', 'variant': 'brand'},
+    {'label': _('مرتبط بجهاز'), 'value': _with_router,                  'icon': 'link',          'variant': 'green'},
+    {'label': _('بدون جهاز'),   'value': items|length - _with_router,   'icon': 'link-slash',    'variant': 'amber'},
   ]
 ) }}
 
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو نطاق عناوين IP يوزّعه الراوتر على المشتركين المتصلين به.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو نطاق عناوين IP يوزّعه الراوتر على المشتركين المتصلين به.'),
   items=[
-    {'icon': 'network-wired', 'text': 'النطاق هو مدى العناوين (range) التي تُمنح تلقائيًا للأجهزة عند الاتصال.'},
-    {'icon': 'location-dot',  'text': 'العنوان المحلي هو عنوان البوابة (gateway) داخل النطاق إن وُجد.'},
-    {'icon': 'server',        'text': 'اربط النطاق براوتر ليتولّى توزيع عناوينه؛ النطاق بلا جهاز لا يُستخدَم.'},
-    {'icon': 'pen',           'text': 'عدّل أو احذف أي نطاق من أزرار الإجراءات في نهاية الصف.'},
+    {'icon': 'network-wired', 'text': _('النطاق هو مدى العناوين (range) التي تُمنح تلقائيًا للأجهزة عند الاتصال.')},
+    {'icon': 'location-dot',  'text': _('العنوان المحلي هو عنوان البوابة (gateway) داخل النطاق إن وُجد.')},
+    {'icon': 'server',        'text': _('اربط النطاق براوتر ليتولّى توزيع عناوينه؛ النطاق بلا جهاز لا يُستخدَم.')},
+    {'icon': 'pen',           'text': _('عدّل أو احذف أي نطاق من أزرار الإجراءات في نهاية الصف.')},
   ],
-  note="حذف نطاق مستخدَم قد يقطع الاتصال عن المشتركين الذين يأخذون عناوينهم منه."
+  note=_('حذف نطاق مستخدَم قد يقطع الاتصال عن المشتركين الذين يأخذون عناوينهم منه.')
 )) %}
-  {% call hub.section("النطاقات", icon="table-list", meta=items|length|string + " نطاق", flush=True) %}
+  {% call hub.section(_('النطاقات'), icon="table-list", meta=items|length|string + _(' نطاق'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -80,7 +80,7 @@
                   <i class="fa-solid fa-pen"></i>
                 </a>{% endif %}
                 {% if can_submit('radius.pool_delete', 'POST') %}<form method="post" action="{{ url_for('radius.pool_delete', pid=p.id) }}"
-                      onsubmit="return confirm('حذف؟')" style="display:inline">
+                      onsubmit="return confirm({{ _('حذف؟')|tojson|forceescape }})" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
@@ -96,8 +96,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد نطاقات عناوين بعد",
-  sub="أضف أوّل نطاق IP من زرّ «إضافة نطاق» أعلى الصفحة لتبدأ تخصيص العناوين للمشتركين.",
+  _('لا توجد نطاقات عناوين بعد'),
+  sub=_('أضف أوّل نطاق IP من زرّ «إضافة نطاق» أعلى الصفحة لتبدأ تخصيص العناوين للمشتركين.'),
   icon="network-wired"
 ) }}
 {% endif %}

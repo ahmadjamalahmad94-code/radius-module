@@ -12,6 +12,7 @@
 مبدئية — راجع app/radius/services/port_script_services.py: REGISTRY.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import uuid
 
@@ -308,7 +309,7 @@ def _validate_lan_ports(nas: dict, ports: list[str]) -> tuple[list[str], str]:
             bad.append(p)
     if bad:
         return clean, (
-            "هذه الواجهات لا يُسمح بتطبيق الخدمة عليها (WAN/نفق): "
+            _tr("هذه الواجهات لا يُسمح بتطبيق الخدمة عليها (WAN/نفق): ")
             + ", ".join(bad)
         )
     return clean, ""
@@ -546,7 +547,7 @@ def _push_to_router(nas: dict, plan, comment: str):
         client.connect()
         return mtp.apply_commands(client, cmds), ""
     except Exception as e:  # noqa: BLE001
-        return None, f"تعذّر الاتصال بالراوتر أو تنفيذ السكربت: {e}"
+        return None, _tr('تعذّر الاتصال بالراوتر أو تنفيذ السكربت: %(e)s', e=e)
     finally:
         try:
             client.close()
@@ -602,11 +603,11 @@ def mt_port_services_apply(nas_id: int, slug: str):
         if service.is_placeholder:
             # بانتظار السكربت — لا شيء يُدفَع بعد.
             error = (
-                "هذه الخدمة بقالب مبدئي — أضِف سكربت المستخدم في قالب "
-                "الخدمة أولًا قبل التطبيق."
+                _tr("هذه الخدمة بقالب مبدئي — أضِف سكربت المستخدم في قالب "
+                "الخدمة أولًا قبل التطبيق.")
             )
         elif not confirmed:
-            error = "يجب تأكيد العملية قبل التطبيق."
+            error = _tr("يجب تأكيد العملية قبل التطبيق.")
         else:
             apply_result, error = _push_to_router(nas, plan, service.comment)
             if apply_result is not None and apply_result.ok:
@@ -615,7 +616,7 @@ def mt_port_services_apply(nas_id: int, slug: str):
                            ports=plan.selected_ports)
             elif apply_result is not None and not error:
                 error = (apply_result.error
-                         or "فشل تطبيق السكربت — راجع الخطوات أدناه.")
+                         or _tr("فشل تطبيق السكربت — راجع الخطوات أدناه."))
             _audit_push(nas_id, slug, action="apply",
                         ports=plan.selected_ports,
                         ok=bool(apply_result and apply_result.ok))
@@ -651,18 +652,18 @@ def mt_port_services_remove(nas_id: int, slug: str):
     if plan is not None:
         if service.is_placeholder:
             error = (
-                "هذه الخدمة بقالب مبدئي — أضِف سكربت الإزالة في قالب "
-                "الخدمة أولًا قبل التعطيل."
+                _tr("هذه الخدمة بقالب مبدئي — أضِف سكربت الإزالة في قالب "
+                "الخدمة أولًا قبل التعطيل.")
             )
         elif not confirmed:
-            error = "يجب تأكيد عملية الإزالة قبل تنفيذها."
+            error = _tr("يجب تأكيد عملية الإزالة قبل تنفيذها.")
         else:
             apply_result, error = _push_to_router(nas, plan, service.comment)
             if apply_result is not None and apply_result.ok:
                 _set_state(nas_id, slug, enabled=False, ports=[])
             elif apply_result is not None and not error:
                 error = (apply_result.error
-                         or "فشل تنفيذ سكربت الإزالة — راجع الخطوات أدناه.")
+                         or _tr("فشل تنفيذ سكربت الإزالة — راجع الخطوات أدناه."))
             _audit_push(nas_id, slug, action="remove",
                         ports=selected_ports,
                         ok=bool(apply_result and apply_result.ok))
@@ -740,11 +741,11 @@ def mt_port_services_apply_port(nas_id: int, slug: str):
     port = (request.form.get("port") or "").strip()
     remove = request.form.get("mode") == "remove"
     if not port:
-        return jsonify({"ok": False, "port": "", "error": "حدّد منفذًا."}), 400
+        return jsonify({"ok": False, "port": "", "error": _tr("حدّد منفذًا.")}), 400
     if service.is_placeholder:
         return jsonify({
             "ok": False, "port": port,
-            "error": "الخدمة بقالب مبدئي — لا سكربت يُدفَع بعد.",
+            "error": _tr("الخدمة بقالب مبدئي — لا سكربت يُدفَع بعد."),
         }), 400
     if not remove:
         _, lan_err = _validate_lan_ports(nas, [port])
@@ -758,7 +759,7 @@ def mt_port_services_apply_port(nas_id: int, slug: str):
     apply_result, error = _push_to_router(nas, plan, service.comment)
     ok = bool(apply_result and apply_result.ok and not error)
     if apply_result is not None and not apply_result.ok and not error:
-        error = apply_result.error or "فشل تنفيذ السكربت على الراوتر."
+        error = apply_result.error or _tr("فشل تنفيذ السكربت على الراوتر.")
 
     if ok:
         # تحديث الحالة تراكميًا: تركيب يضيف المنفذ، إزالة تحذفه.
@@ -780,7 +781,7 @@ def mt_port_services_apply_port(nas_id: int, slug: str):
         "ok": ok,
         "port": port,
         "mode": "remove" if remove else "apply",
-        "error": "" if ok else (error or "فشل غير معروف."),
+        "error": "" if ok else (error or _tr("فشل غير معروف.")),
         "steps": steps,
     })
 

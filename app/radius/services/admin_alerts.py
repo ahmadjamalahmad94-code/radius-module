@@ -15,6 +15,7 @@ feat/telegram-admin-alerts. مصدر واحد لكل «إشعارات الإدا
 تستخدم العيّنة لإرسال نموذج ومعاينة الشكل.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import re
@@ -58,420 +59,420 @@ GROUPS: list[tuple[str, str, str]] = [
 ALERTS: list[AlertSpec] = [
     # ── المشتركون ──────────────────────────────────────────────────────
     AlertSpec(
-        "subscriber_new", "subscribers", "إضافة مشترك جديد",
-        "يُرسل عند إنشاء مشترك جديد (services/users.UsersService.create).",
-        "🆕 <b>مشترك جديد</b>\n"
+        "subscriber_new", "subscribers", N_("إضافة مشترك جديد"),
+        N_("يُرسل عند إنشاء مشترك جديد (services/users.UsersService.create)."),
+        N_("🆕 <b>مشترك جديد</b>\n"
         "الاسم: {full_name}\n"
         "اسم المستخدم: <code>{username}</code>\n"
         "الباقة: {plan}\n"
         "الجوال: {mobile}\n"
-        "أضافه: {actor}",
-        {"full_name": "أحمد علي", "username": "ahmad99", "plan": "10 ميجا شهري",
-         "mobile": "0599123456", "actor": "المدير"},
+        "أضافه: {actor}"),
+        {"full_name": N_("أحمد علي"), "username": "ahmad99", "plan": N_("10 ميجا شهري"),
+         "mobile": "0599123456", "actor": N_("المدير")},
     ),
     AlertSpec(
-        "subscriber_edited", "subscribers", "تعديل بيانات مشترك",
-        "يُرسل عند تعديل بيانات مشترك قائم (UsersService.update).",
-        "✏️ <b>تعديل بيانات مشترك</b>\n"
+        "subscriber_edited", "subscribers", N_("تعديل بيانات مشترك"),
+        N_("يُرسل عند تعديل بيانات مشترك قائم (UsersService.update)."),
+        N_("✏️ <b>تعديل بيانات مشترك</b>\n"
         "اسم المستخدم: <code>{username}</code>\n"
         "الاسم: {full_name}\n"
         "غُيّر:\n{changed}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "full_name": "أحمد علي",
-         "changed": "• الباقة: ⁦10 ميجا → 20 ميجا⁩\n"
-                    "• الجوال: ⁦0599123456 → 0598765432⁩",
-         "actor": "المدير"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "full_name": N_("أحمد علي"),
+         "changed": N_("• الباقة: ⁦10 ميجا → 20 ميجا⁩\n"
+                    "• الجوال: ⁦0599123456 → 0598765432⁩"),
+         "actor": N_("المدير")},
     ),
     AlertSpec(
-        "loan_granted", "subscribers", "سلفة وقت",
-        "يُرسل عند منح سلفة وقت — من البوابة (customer_portals.submit_loan_request) "
-        "أو من الإدارة (accounting.create_loan).",
-        "💳 <b>سلفة وقت</b>\n"
+        "loan_granted", "subscribers", N_("سلفة وقت"),
+        N_("يُرسل عند منح سلفة وقت — من البوابة (customer_portals.submit_loan_request) "
+        "أو من الإدارة (accounting.create_loan)."),
+        N_("💳 <b>سلفة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المدة: {duration}\n"
         "القيمة: {amount}\n"
         "الحالة: {status}\n"
         "بواسطة: {actor}\n"
-        "السبب: {reason}",
-        {"username": "ahmad99", "duration": "يومان (2880 دقيقة)",
-         "amount": "75.00 ₪", "status": "مُسجَّلة (دين)", "actor": "المدير",
-         "reason": "طلب من البوابة"},
+        "السبب: {reason}"),
+        {"username": "ahmad99", "duration": N_("يومان (2880 دقيقة)"),
+         "amount": "75.00 ₪", "status": N_("مُسجَّلة (دين)"), "actor": N_("المدير"),
+         "reason": N_("طلب من البوابة")},
     ),
     AlertSpec(
-        "time_added", "subscribers", "إضافة/تمديد وقت",
-        "يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بأيّ نمط: "
-        "«مجاني» أو «مدفوع» أو «على الدين» — النوع والمبلغ في «النوع»).",
-        "⏱️ <b>إضافة وقت</b>\n"
+        "time_added", "subscribers", N_("إضافة/تمديد وقت"),
+        N_("يُرسل عند إضافة/تمديد وقت لمشترك من الإدارة (users.extend_time بأيّ نمط: "
+        "«مجاني» أو «مدفوع» أو «على الدين» — النوع والمبلغ في «النوع»)."),
+        N_("⏱️ <b>إضافة وقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الوقت المضاف: {duration}\n"
         "تاريخ الانتهاء الجديد: {new_expiry}\n"
         "النوع: {kind}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "duration": "يومان (2880 دقيقة)",
-         "new_expiry": "2026-07-01 12:00", "kind": "مجاني", "actor": "المدير"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "duration": N_("يومان (2880 دقيقة)"),
+         "new_expiry": "2026-07-01 12:00", "kind": N_("مجاني"), "actor": N_("المدير")},
     ),
     AlertSpec(
-        "credit_added", "subscribers", "إضافة رصيد",
-        "يُرسل عند إضافة رصيد نقديّ لمحفظة مشترك (users.add_cash_balance).",
-        "💵 <b>إضافة رصيد</b>\n"
+        "credit_added", "subscribers", N_("إضافة رصيد"),
+        N_("يُرسل عند إضافة رصيد نقديّ لمحفظة مشترك (users.add_cash_balance)."),
+        N_("💵 <b>إضافة رصيد</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المبلغ: {amount}\n"
         "الرصيد الجديد: {new_balance}\n"
-        "بواسطة: {actor}",
+        "بواسطة: {actor}"),
         {"username": "ahmad99", "amount": "50.00 ₪",
-         "new_balance": "120.00 ₪", "actor": "المدير"},
+         "new_balance": "120.00 ₪", "actor": N_("المدير")},
     ),
     AlertSpec(
-        "quota_added", "subscribers", "إضافة كوتا",
-        "يُرسل عند إضافة كوتا (سعة بيانات) لمشترك (users.add_quota).",
-        "📦 <b>إضافة كوتا</b>\n"
+        "quota_added", "subscribers", N_("إضافة كوتا"),
+        N_("يُرسل عند إضافة كوتا (سعة بيانات) لمشترك (users.add_quota)."),
+        N_("📦 <b>إضافة كوتا</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الكوتا المضافة: {quota}\n"
         "الإجمالي الجديد: {new_total}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "quota": "5120 م.ب",
-         "new_total": "15360 م.ب", "actor": "المدير"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "quota": N_("5120 م.ب"),
+         "new_total": N_("15360 م.ب"), "actor": N_("المدير")},
     ),
     AlertSpec(
-        "quota_restored", "subscribers", "استعادة كوتا",
-        "يُرسل عند استعادة/تصفير كوتا مشترك (users.reset_daily_quota).",
-        "♻️ <b>استعادة كوتا</b>\n"
+        "quota_restored", "subscribers", N_("استعادة كوتا"),
+        N_("يُرسل عند استعادة/تصفير كوتا مشترك (users.reset_daily_quota)."),
+        N_("♻️ <b>استعادة كوتا</b>\n"
         "المشترك: <code>{username}</code>\n"
         "التفاصيل: {detail}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "detail": "تصفير الاستهلاك اليومي",
-         "actor": "المدير"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "detail": N_("تصفير الاستهلاك اليومي"),
+         "actor": N_("المدير")},
     ),
     AlertSpec(
-        "speed_boost", "subscribers", "رفع سرعة مؤقت",
-        "يُرسل عند تطبيق سرعة مؤقتة على مشترك (temp_speed.apply_temp_speed).",
-        "🚀 <b>رفع سرعة مؤقت</b>\n"
+        "speed_boost", "subscribers", N_("رفع سرعة مؤقت"),
+        N_("يُرسل عند تطبيق سرعة مؤقتة على مشترك (temp_speed.apply_temp_speed)."),
+        N_("🚀 <b>رفع سرعة مؤقت</b>\n"
         "المشترك: <code>{username}</code>\n"
         "السرعة: {down}↓ / {up}↑ كbps\n"
         "المدة: {duration} دقيقة\n"
         "تنتهي: {ends_at}\n"
-        "بواسطة: {actor}",
+        "بواسطة: {actor}"),
         {"username": "ahmad99", "down": "20480", "up": "10240",
-         "duration": "60", "ends_at": "2026-06-16 21:00", "actor": "المدير"},
+         "duration": "60", "ends_at": "2026-06-16 21:00", "actor": N_("المدير")},
     ),
     AlertSpec(
-        "quota_exhausted", "subscribers", "انتهاء كوتة",
-        "يُرسل عند رفض الدخول بسبب نفاد الكوتة (policy_engine) أو فرض الانتهاء.",
-        "📉 <b>انتهاء كوتة</b>\n"
+        "quota_exhausted", "subscribers", N_("انتهاء كوتة"),
+        N_("يُرسل عند رفض الدخول بسبب نفاد الكوتة (policy_engine) أو فرض الانتهاء."),
+        N_("📉 <b>انتهاء كوتة</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المستهلَك: {used_mb} م.بايت من {quota_mb}\n"
-        "الباقة: {plan}",
+        "الباقة: {plan}"),
         {"username": "ahmad99", "used_mb": "10240", "quota_mb": "10240",
-         "plan": "10 جيجا شهري"},
+         "plan": N_("10 جيجا شهري")},
         default_enabled=False,
     ),
     AlertSpec(
-        "subscriber_expired", "subscribers", "انتهاء اشتراك",
-        "يُرسل عند انتهاء صلاحية اشتراك (expiry_enforcer).",
-        "⏳ <b>انتهاء اشتراك</b>\n"
+        "subscriber_expired", "subscribers", N_("انتهاء اشتراك"),
+        N_("يُرسل عند انتهاء صلاحية اشتراك (expiry_enforcer)."),
+        N_("⏳ <b>انتهاء اشتراك</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الاسم: {full_name}\n"
-        "انتهى: {expired_at}",
-        {"username": "ahmad99", "full_name": "أحمد علي", "expired_at": "2026-06-16"},
+        "انتهى: {expired_at}"),
+        {"username": "ahmad99", "full_name": N_("أحمد علي"), "expired_at": "2026-06-16"},
         default_enabled=False,
     ),
     AlertSpec(
-        "portal_message", "subscribers", "رسالة من بوابة المشترك",
-        "يُرسل عند إرسال مشترك رسالة/شكوى من بوابته تحتاج ردًّا "
-        "(customer_portals.submit_renewal_request، نوع support). يحمل رابط الردّ.",
-        "📨 <b>رسالة من بوابة المشترك</b>\n"
+        "portal_message", "subscribers", N_("رسالة من بوابة المشترك"),
+        N_("يُرسل عند إرسال مشترك رسالة/شكوى من بوابته تحتاج ردًّا "
+        "(customer_portals.submit_renewal_request، نوع support). يحمل رابط الردّ."),
+        N_("📨 <b>رسالة من بوابة المشترك</b>\n"
         "المشترك: <code>{username}</code>\n"
-        "الرسالة: {message}",
-        {"username": "ahmad99", "message": "الإنترنت بطيء منذ الصباح، أرجو المتابعة."},
+        "الرسالة: {message}"),
+        {"username": "ahmad99", "message": N_("الإنترنت بطيء منذ الصباح، أرجو المتابعة.")},
     ),
     # ── الشبكة والمايكروتيك ────────────────────────────────────────────
     AlertSpec(
-        "mikrotik_connection_problem", "network", "مشاكل اتصال المايكروتيك",
-        "يُرسل عند تعذّر الاتصال بجهاز المايكروتيك (API/الوصول).",
-        "🛑 <b>مشكلة اتصال مايكروتيك</b>\n"
+        "mikrotik_connection_problem", "network", N_("مشاكل اتصال المايكروتيك"),
+        N_("يُرسل عند تعذّر الاتصال بجهاز المايكروتيك (API/الوصول)."),
+        N_("🛑 <b>مشكلة اتصال مايكروتيك</b>\n"
         "الجهاز: {router}\n"
         "العنوان: <code>{address}</code>\n"
-        "الخطأ: {error}",
-        {"router": "MT-Main", "address": "10.0.0.1", "error": "انتهت المهلة (timeout)"},
+        "الخطأ: {error}"),
+        {"router": "MT-Main", "address": "10.0.0.1", "error": N_("انتهت المهلة (timeout)")},
     ),
     AlertSpec(
-        "network_disconnect", "network", "فصل شبكة / بنج سيّئ",
-        "يُرسل عند فصل جهاز شبكة أو ارتفاع زمن الاستجابة (device-health poller).",
-        "📡 <b>فصل/بنج سيّئ</b>\n"
+        "network_disconnect", "network", N_("فصل شبكة / بنج سيّئ"),
+        N_("يُرسل عند فصل جهاز شبكة أو ارتفاع زمن الاستجابة (device-health poller)."),
+        N_("📡 <b>فصل/بنج سيّئ</b>\n"
         "الجهاز: {device}\n"
         "العنوان: <code>{address}</code>\n"
         "الحالة: {status}\n"
-        "زمن الاستجابة: {latency_ms} مل.ثانية",
+        "زمن الاستجابة: {latency_ms} مل.ثانية"),
         {"device": "AP-Floor2", "address": "192.168.88.20", "status": "down",
          "latency_ms": "—"},
     ),
     AlertSpec(
-        "loop_detected", "network", "كشف لوب (Loop)",
-        "يُرسل عند اكتشاف لوب على منفذ/واجهة (loop probe / HR-LoopDetect).",
-        "🔁 <b>كشف لوب</b>\n"
+        "loop_detected", "network", N_("كشف لوب (Loop)"),
+        N_("يُرسل عند اكتشاف لوب على منفذ/واجهة (loop probe / HR-LoopDetect)."),
+        N_("🔁 <b>كشف لوب</b>\n"
         "الراوتر: {router}\n"
         "الواجهة: {interface}\n"
-        "التفاصيل: {details}",
-        {"router": "MT-Main", "interface": "ether5", "details": "تكرار MAC على المنفذ"},
+        "التفاصيل: {details}"),
+        {"router": "MT-Main", "interface": "ether5", "details": N_("تكرار MAC على المنفذ")},
     ),
     AlertSpec(
-        "device_health", "network", "تتبّع الراوترات والأكسس بوينت",
-        "صحة أجهزة الشبكة (هبوط/تعافٍ) — خدمة تتبّع الأجهزة (device_health_alerts).",
-        "💓 <b>تتبّع الأجهزة</b>\n"
+        "device_health", "network", N_("تتبّع الراوترات والأكسس بوينت"),
+        N_("صحة أجهزة الشبكة (هبوط/تعافٍ) — خدمة تتبّع الأجهزة (device_health_alerts)."),
+        N_("💓 <b>تتبّع الأجهزة</b>\n"
         "الجهاز: {device} ({device_type})\n"
         "العنوان: <code>{address}</code>\n"
         "الحالة: {status}\n"
-        "الراوتر: {router}",
+        "الراوتر: {router}"),
         {"device": "AP-Floor2", "device_type": "access_point",
-         "address": "192.168.88.20", "status": "تعافى (up)", "router": "MT-Main"},
+         "address": "192.168.88.20", "status": N_("تعافى (up)"), "router": "MT-Main"},
     ),
     # ── راوترات المشتركين (TR-069، وحدة «المعمل») ──────────────────────
     AlertSpec(
-        "router_device_offline", "routers", "راوتر مشترك انفصل عن ACS",
-        "يُرسل عند توقّف راوتر مشترك عن التبليغ لـ GenieACS أطول من العتبة "
-        "(tr069/alerts، الاكتشاف من مزامنة الأجهزة).",
-        "🔴 <b>راوتر مشترك مفصول</b>\n"
+        "router_device_offline", "routers", N_("راوتر مشترك انفصل عن ACS"),
+        N_("يُرسل عند توقّف راوتر مشترك عن التبليغ لـ GenieACS أطول من العتبة "
+        "(tr069/alerts، الاكتشاف من مزامنة الأجهزة)."),
+        N_("🔴 <b>راوتر مشترك مفصول</b>\n"
         "المشترك: <code>{user}</code>\n"
         "الطراز: {model}\n"
         "السيريال: <code>{serial}</code>\n"
-        "مفصول منذ: {minutes} دقيقة",
+        "مفصول منذ: {minutes} دقيقة"),
         {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
          "minutes": "12"},
     ),
     AlertSpec(
-        "router_device_online", "routers", "عودة راوتر مشترك",
-        "يُرسل عند عودة راوتر مشترك للتبليغ بعد انفصال (tr069/alerts).",
-        "✅ <b>عاد راوتر مشترك</b>\n"
+        "router_device_online", "routers", N_("عودة راوتر مشترك"),
+        N_("يُرسل عند عودة راوتر مشترك للتبليغ بعد انفصال (tr069/alerts)."),
+        N_("✅ <b>عاد راوتر مشترك</b>\n"
         "المشترك: <code>{user}</code>\n"
         "الطراز: {model}\n"
-        "السيريال: <code>{serial}</code>",
+        "السيريال: <code>{serial}</code>"),
         {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
          "minutes": "—"},
     ),
     AlertSpec(
-        "router_device_no_internet", "routers", "راوتر مشترك بلا إنترنت",
-        "يُرسل عندما يكون الراوتر متصلًا بـ ACS لكن حالة WAN/PPP «مفصولة» — أي "
-        "لا إنترنت خلفه (tr069/alerts). عطل مختلف عن انفصال الراوتر نفسه.",
-        "🌐 <b>راوتر مشترك بلا إنترنت</b>\n"
+        "router_device_no_internet", "routers", N_("راوتر مشترك بلا إنترنت"),
+        N_("يُرسل عندما يكون الراوتر متصلًا بـ ACS لكن حالة WAN/PPP «مفصولة» — أي "
+        "لا إنترنت خلفه (tr069/alerts). عطل مختلف عن انفصال الراوتر نفسه."),
+        N_("🌐 <b>راوتر مشترك بلا إنترنت</b>\n"
         "المشترك: <code>{user}</code>\n"
         "الطراز: {model}\n"
         "السيريال: <code>{serial}</code>\n"
-        "الراوتر يعمل لكن WAN/PPP بلا اتصال.",
+        "الراوتر يعمل لكن WAN/PPP بلا اتصال."),
         {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
          "minutes": "—"},
     ),
     AlertSpec(
-        "router_device_internet_back", "routers", "عودة إنترنت راوتر مشترك",
-        "يُرسل عند عودة اتصال WAN/PPP خلف راوتر مشترك بعد انقطاع (tr069/alerts).",
-        "🟢 <b>عاد إنترنت راوتر مشترك</b>\n"
+        "router_device_internet_back", "routers", N_("عودة إنترنت راوتر مشترك"),
+        N_("يُرسل عند عودة اتصال WAN/PPP خلف راوتر مشترك بعد انقطاع (tr069/alerts)."),
+        N_("🟢 <b>عاد إنترنت راوتر مشترك</b>\n"
         "المشترك: <code>{user}</code>\n"
         "الطراز: {model}\n"
-        "السيريال: <code>{serial}</code>",
+        "السيريال: <code>{serial}</code>"),
         {"user": "ahmad-home", "model": "MikroTik hAP", "serial": "ABC123",
          "minutes": "—"},
     ),
     # ── المال ──────────────────────────────────────────────────────────
     AlertSpec(
-        "payment_received", "finance", "دفعة/تحصيل",
-        "يُرسل عند تسجيل دفعة من مشترك (accounting.create_payment / collection).",
-        "💰 <b>دفعة جديدة</b>\n"
+        "payment_received", "finance", N_("دفعة/تحصيل"),
+        N_("يُرسل عند تسجيل دفعة من مشترك (accounting.create_payment / collection)."),
+        N_("💰 <b>دفعة جديدة</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المبلغ: {amount}\n"
         "الطريقة: {method}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "amount": "20.00 ₪", "method": "نقدًا",
-         "actor": "المحصّل"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "amount": "20.00 ₪", "method": N_("نقدًا"),
+         "actor": N_("المحصّل")},
     ),
     # ── الشبكة (إضافات smart_alerts) ───────────────────────────────────
     AlertSpec(
-        "router_offline", "network", "راوتر غير متصل",
-        "يُرسل عند توقّف راوتر عن دفع بياناته (smart_alerts.sweep_offline، "
-        "auto.router.offline). ⚑ يُرسل حاليًا عبر مسار smart_alerts المستقل.",
-        "🔌 <b>راوتر غير متصل</b>\n"
+        "router_offline", "network", N_("راوتر غير متصل"),
+        N_("يُرسل عند توقّف راوتر عن دفع بياناته (smart_alerts.sweep_offline، "
+        "auto.router.offline). ⚑ يُرسل حاليًا عبر مسار smart_alerts المستقل."),
+        N_("🔌 <b>راوتر غير متصل</b>\n"
         "الراوتر: {router}\n"
-        "آخر اتصال: منذ {minutes} دقيقة",
+        "آخر اتصال: منذ {minutes} دقيقة"),
         {"router": "MT-Main", "minutes": "12"},
     ),
     AlertSpec(
-        "router_high_traffic", "network", "حركة مرور مرتفعة على راوتر",
-        "يُرسل عند تجاوز ذروة السرعة الحدّ (smart_alerts، auto.router.high_traffic).",
-        "📈 <b>حركة مرور مرتفعة</b>\n"
+        "router_high_traffic", "network", N_("حركة مرور مرتفعة على راوتر"),
+        N_("يُرسل عند تجاوز ذروة السرعة الحدّ (smart_alerts، auto.router.high_traffic)."),
+        N_("📈 <b>حركة مرور مرتفعة</b>\n"
         "الراوتر: {router}\n"
-        "الذروة: {peak_mbps} م.بت/ث على {interface}",
+        "الذروة: {peak_mbps} م.بت/ث على {interface}"),
         {"router": "MT-Main", "peak_mbps": "920", "interface": "ether1"},
         default_enabled=False,
     ),
     AlertSpec(
-        "router_high_usage", "network", "استهلاك مرتفع على راوتر",
-        "يُرسل عند تجاوز الاستهلاك في النافذة الحدّ (smart_alerts، auto.router.high_usage).",
-        "📊 <b>استهلاك مرتفع</b>\n"
+        "router_high_usage", "network", N_("استهلاك مرتفع على راوتر"),
+        N_("يُرسل عند تجاوز الاستهلاك في النافذة الحدّ (smart_alerts، auto.router.high_usage)."),
+        N_("📊 <b>استهلاك مرتفع</b>\n"
         "الراوتر: {router}\n"
-        "الاستهلاك: {usage_gb} ج.بايت خلال {window}",
-        {"router": "MT-Main", "usage_gb": "350", "window": "اليوم"},
+        "الاستهلاك: {usage_gb} ج.بايت خلال {window}"),
+        {"router": "MT-Main", "usage_gb": "350", "window": N_("اليوم")},
         default_enabled=False,
     ),
     # ── المتجر والموزّعون ──────────────────────────────────────────────
     AlertSpec(
-        "store_registration", "store", "تسجيل عميل متجر جديد",
-        "يُرسل عند تسجيل مستخدم بطاقات ذاتيًّا (store_alerts.notify_registration).",
-        "🛒 <b>تسجيل متجر جديد</b>\n"
+        "store_registration", "store", N_("تسجيل عميل متجر جديد"),
+        N_("يُرسل عند تسجيل مستخدم بطاقات ذاتيًّا (store_alerts.notify_registration)."),
+        N_("🛒 <b>تسجيل متجر جديد</b>\n"
         "العميل: {name}\n"
-        "الجوال: {mobile}",
-        {"name": "سالم", "mobile": "0599000111"},
+        "الجوال: {mobile}"),
+        {"name": N_("سالم"), "mobile": "0599000111"},
     ),
     AlertSpec(
-        "store_deposit", "store", "طلب إيداع في المتجر",
-        "يُرسل عند طلب إيداع رصيد (store_alerts.notify_deposit) — بانتظار التأكيد.",
-        "💵 <b>طلب إيداع</b>\n"
-        "العميل: {name}\n"
-        "المبلغ: {amount} {currency}\n"
-        "رقم الطلب: <code>{request_id}</code>",
-        {"name": "سالم", "amount": "50.0", "currency": "₪", "request_id": "1042"},
-    ),
-    AlertSpec(
-        "store_withdrawal", "store", "طلب سحب من المتجر",
-        "يُرسل عند طلب سحب رصيد (store_alerts.notify_withdrawal) — بانتظار التأكيد.",
-        "🏧 <b>طلب سحب</b>\n"
+        "store_deposit", "store", N_("طلب إيداع في المتجر"),
+        N_("يُرسل عند طلب إيداع رصيد (store_alerts.notify_deposit) — بانتظار التأكيد."),
+        N_("💵 <b>طلب إيداع</b>\n"
         "العميل: {name}\n"
         "المبلغ: {amount} {currency}\n"
-        "رقم الطلب: <code>{request_id}</code>",
-        {"name": "سالم", "amount": "30.0", "currency": "₪", "request_id": "1043"},
+        "رقم الطلب: <code>{request_id}</code>"),
+        {"name": N_("سالم"), "amount": "50.0", "currency": "₪", "request_id": "1042"},
     ),
     AlertSpec(
-        "store_chat", "store", "رسالة دعم في المتجر",
-        "يُرسل مرّة عند فتح دور «بانتظار ردّ» في شات المتجر (بداية محادثة أو "
-        "عودة الزبون بعد ردّ الموظّف) — لا لكل رسالة (store_alerts.notify_chat).",
-        "💬 <b>رسالة دعم (متجر)</b>\n"
-        "العميل: {name}",
-        {"name": "سالم"},
+        "store_withdrawal", "store", N_("طلب سحب من المتجر"),
+        N_("يُرسل عند طلب سحب رصيد (store_alerts.notify_withdrawal) — بانتظار التأكيد."),
+        N_("🏧 <b>طلب سحب</b>\n"
+        "العميل: {name}\n"
+        "المبلغ: {amount} {currency}\n"
+        "رقم الطلب: <code>{request_id}</code>"),
+        {"name": N_("سالم"), "amount": "30.0", "currency": "₪", "request_id": "1043"},
     ),
     AlertSpec(
-        "store_chat_unanswered", "store", "رسالة دعم متأخّرة (بانتظار ردّ)",
-        "تذكير دوري: رسالة زبون في شات المتجر بقيت بلا ردّ ولا حالة «مُعالَجة» "
+        "store_chat", "store", N_("رسالة دعم في المتجر"),
+        N_("يُرسل مرّة عند فتح دور «بانتظار ردّ» في شات المتجر (بداية محادثة أو "
+        "عودة الزبون بعد ردّ الموظّف) — لا لكل رسالة (store_alerts.notify_chat)."),
+        N_("💬 <b>رسالة دعم (متجر)</b>\n"
+        "العميل: {name}"),
+        {"name": N_("سالم")},
+    ),
+    AlertSpec(
+        "store_chat_unanswered", "store", N_("رسالة دعم متأخّرة (بانتظار ردّ)"),
+        N_("تذكير دوري: رسالة زبون في شات المتجر بقيت بلا ردّ ولا حالة «مُعالَجة» "
         "أطول من العتبة (alerts.store_chat.unanswered_reminder_minutes، افتراضي "
-        "60) — store_chat_reminder_worker. يحمل رابط الردّ.",
-        "⏰ <b>رسالة دعم بانتظار ردّ</b>\n"
+        "60) — store_chat_reminder_worker. يحمل رابط الردّ."),
+        N_("⏰ <b>رسالة دعم بانتظار ردّ</b>\n"
         "العميل: {name}\n"
-        "بانتظار منذ: {since}",
-        {"name": "سالم", "since": "ساعة و٢٠ دقيقة"},
+        "بانتظار منذ: {since}"),
+        {"name": N_("سالم"), "since": N_("ساعة و٢٠ دقيقة")},
     ),
     # ── المال/العمليات (إضافات) ────────────────────────────────────────
     AlertSpec(
-        "payment_pending_review", "finance", "دفعة بانتظار المراجعة",
-        "يُرسل عند تحويل يدوي/دفعة تنتظر موافقة المدير (payment_review_queue). "
-        "⚑ موقع المُطلِق متابعة.",
-        "🧾 <b>دفعة بانتظار المراجعة</b>\n"
+        "payment_pending_review", "finance", N_("دفعة بانتظار المراجعة"),
+        N_("يُرسل عند تحويل يدوي/دفعة تنتظر موافقة المدير (payment_review_queue). "
+        "⚑ موقع المُطلِق متابعة."),
+        N_("🧾 <b>دفعة بانتظار المراجعة</b>\n"
         "المشترك: <code>{username}</code>\n"
         "المبلغ: {amount} {currency}\n"
-        "الطريقة: {method}",
-        {"username": "ahmad99", "amount": "20.0", "currency": "₪", "method": "تحويل بنكي"},
+        "الطريقة: {method}"),
+        {"username": "ahmad99", "amount": "20.0", "currency": "₪", "method": N_("تحويل بنكي")},
     ),
     AlertSpec(
-        "service_request_new", "finance", "طلب خدمة جديد",
-        "يُرسل عند طلب مشترك خدمة مدفوعة (service_requests).",
-        "🆕 <b>طلب خدمة</b>\n"
+        "service_request_new", "finance", N_("طلب خدمة جديد"),
+        N_("يُرسل عند طلب مشترك خدمة مدفوعة (service_requests)."),
+        N_("🆕 <b>طلب خدمة</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الخدمة: {service}\n"
-        "الحالة: {status}",
-        {"username": "ahmad99", "service": "IP ثابت", "status": "بانتظار الموافقة"},
+        "الحالة: {status}"),
+        {"username": "ahmad99", "service": N_("IP ثابت"), "status": N_("بانتظار الموافقة")},
     ),
     AlertSpec(
-        "service_request_approved", "finance", "اعتماد طلب خدمة",
-        "يُرسل عند الموافقة على طلب خدمة مدفوعة (service_requests).",
-        "✅ <b>اعتماد طلب خدمة</b>\n"
+        "service_request_approved", "finance", N_("اعتماد طلب خدمة"),
+        N_("يُرسل عند الموافقة على طلب خدمة مدفوعة (service_requests)."),
+        N_("✅ <b>اعتماد طلب خدمة</b>\n"
         "المشترك: <code>{username}</code>\n"
         "الخدمة: {service}\n"
-        "بواسطة: {actor}",
-        {"username": "ahmad99", "service": "IP ثابت", "actor": "المدير"},
+        "بواسطة: {actor}"),
+        {"username": "ahmad99", "service": N_("IP ثابت"), "actor": N_("المدير")},
     ),
     AlertSpec(
-        "card_batch_low", "finance", "حزمة بطاقات شارفت على النفاد",
-        "يُرسل عند قرب نفاد حزمة بطاقات (cards). ⚑ موقع المُطلِق متابعة.",
-        "🎟️ <b>حزمة بطاقات شارفت على النفاد</b>\n"
+        "card_batch_low", "finance", N_("حزمة بطاقات شارفت على النفاد"),
+        N_("يُرسل عند قرب نفاد حزمة بطاقات (cards). ⚑ موقع المُطلِق متابعة."),
+        N_("🎟️ <b>حزمة بطاقات شارفت على النفاد</b>\n"
         "الحزمة: {batch}\n"
-        "المتبقّي: {remaining} من {total}",
-        {"batch": "بطاقة 5 ساعات", "remaining": "8", "total": "200"},
+        "المتبقّي: {remaining} من {total}"),
+        {"batch": N_("بطاقة 5 ساعات"), "remaining": "8", "total": "200"},
         default_enabled=False,
     ),
     # ── الأمان ─────────────────────────────────────────────────────────
     AlertSpec(
-        "auto_block_triggered", "security", "حظر تلقائي (fail2ban)",
-        "يُرسل عند حظر IP/MAC تلقائيًّا بعد تكرار فشل الدخول "
-        "(access_control.register_failed_attempt).",
-        "🚫 <b>حظر تلقائي</b>\n"
+        "auto_block_triggered", "security", N_("حظر تلقائي (fail2ban)"),
+        N_("يُرسل عند حظر IP/MAC تلقائيًّا بعد تكرار فشل الدخول "
+        "(access_control.register_failed_attempt)."),
+        N_("🚫 <b>حظر تلقائي</b>\n"
         "النوع: {block_type}\n"
         "الهدف: <code>{target}</code>\n"
-        "السبب: {reason}",
-        {"block_type": "IP", "target": "3.3.3.3", "reason": "5 محاولات فاشلة خلال 300ث"},
+        "السبب: {reason}"),
+        {"block_type": "IP", "target": "3.3.3.3", "reason": N_("5 محاولات فاشلة خلال 300ث")},
     ),
     AlertSpec(
-        "access_suspended", "security", "تعليق وصول",
-        "يُرسل عند تطبيق «تعليق وصول» على نطاق (access_control / access_blocks).",
-        "⏸️ <b>تعليق وصول</b>\n"
+        "access_suspended", "security", N_("تعليق وصول"),
+        N_("يُرسل عند تطبيق «تعليق وصول» على نطاق (access_control / access_blocks)."),
+        N_("⏸️ <b>تعليق وصول</b>\n"
         "النطاق: {scope}\n"
         "الهدف: <code>{target}</code>\n"
-        "المدّة: {duration}",
-        {"scope": "مشترك", "target": "ahmad99", "duration": "دائم"},
+        "المدّة: {duration}"),
+        {"scope": N_("مشترك"), "target": "ahmad99", "duration": N_("دائم")},
         default_enabled=False,
     ),
     AlertSpec(
-        "mac_clone_detected", "security", "كشف استنساخ MAC",
-        "يُرسل عند رصد محاولة دخول من جهاز ببصمة مختلفة بنفس عنوان MAC "
-        "(anti_mac_clone). فعّال فقط عند تفعيل الميزة في إعداداتها.",
-        "🕵️ <b>كشف استنساخ MAC</b>\n"
+        "mac_clone_detected", "security", N_("كشف استنساخ MAC"),
+        N_("يُرسل عند رصد محاولة دخول من جهاز ببصمة مختلفة بنفس عنوان MAC "
+        "(anti_mac_clone). فعّال فقط عند تفعيل الميزة في إعداداتها."),
+        N_("🕵️ <b>كشف استنساخ MAC</b>\n"
         "المشترك: <code>{username}</code>\n"
         "العنوان: <code>{mac}</code>\n"
         "الثقة: {confidence}\n"
         "درجة الخطورة: {score}\n"
         "إشارات متباينة: {diverged}\n"
         "الراوتر: <code>{nas_ip}</code>\n"
-        "AP/SSID: <code>{called_station}</code>",
+        "AP/SSID: <code>{called_station}</code>"),
         {"username": "ahmad99", "mac": "AA:BB:CC:DD:EE:FF",
-         "confidence": "عالية", "score": "82",
-         "diverged": "نوع النظام، ماركة الجهاز",
+         "confidence": N_("عالية"), "score": "82",
+         "diverged": N_("نوع النظام، ماركة الجهاز"),
          "nas_ip": "10.0.0.1", "called_station": "0C:11:22:33:44:55"},
     ),
     AlertSpec(
-        "allow_mode_unknown_device", "security", "رفض نمط السماح",
-        "يُرسل عند رفض دخول بسبب «نمط السماح» (allow_mode): الجهاز غير "
-        "مسجّل ضمن السياسة، أو تجاوز الحدّ في نمط TOFU. الميزة OFF افتراضيًّا.",
-        "🛡️ <b>رفض نمط السماح</b>\n"
+        "allow_mode_unknown_device", "security", N_("رفض نمط السماح"),
+        N_("يُرسل عند رفض دخول بسبب «نمط السماح» (allow_mode): الجهاز غير "
+        "مسجّل ضمن السياسة، أو تجاوز الحدّ في نمط TOFU. الميزة OFF افتراضيًّا."),
+        N_("🛡️ <b>رفض نمط السماح</b>\n"
         "الحساب: <code>{username}</code>\n"
         "العنوان: <code>{mac}</code>\n"
         "النمط: {mode}\n"
         "السبب: {reason}\n"
-        "النطاق: {scope} (<code>{scope_id}</code>)",
+        "النطاق: {scope} (<code>{scope_id}</code>)"),
         {"username": "ahmad99", "mac": "AA:BB:CC:DD:EE:FF",
-         "mode": "manual", "reason": "جهاز غير مسجّل (manual)",
-         "scope": "حزمة بطاقات", "scope_id": "12"},
+         "mode": "manual", "reason": N_("جهاز غير مسجّل (manual)"),
+         "scope": N_("حزمة بطاقات"), "scope_id": "12"},
         default_enabled=False,
     ),
     # ── النظام (إضافات smart_alerts) ───────────────────────────────────
     AlertSpec(
-        "backup_stale", "system", "نسخة احتياطية قديمة",
-        "يُرسل عند تقادم آخر نسخة احتياطية (smart_alerts، auto.backup.stale). "
-        "⚑ مسار smart_alerts المستقل.",
-        "🗄️ <b>نسخة احتياطية قديمة</b>\n"
+        "backup_stale", "system", N_("نسخة احتياطية قديمة"),
+        N_("يُرسل عند تقادم آخر نسخة احتياطية (smart_alerts، auto.backup.stale). "
+        "⚑ مسار smart_alerts المستقل."),
+        N_("🗄️ <b>نسخة احتياطية قديمة</b>\n"
         "آخر نسخة: منذ {age}\n"
-        "الحدّ المسموح: {threshold}",
-        {"age": "8 أيام", "threshold": "3 أيام"},
+        "الحدّ المسموح: {threshold}"),
+        {"age": N_("8 أيام"), "threshold": N_("3 أيام")},
         default_enabled=False,
     ),
     AlertSpec(
-        "backup_failed", "system", "فشل نسخة احتياطية",
-        "يُرسل عند فشل عملية نسخ احتياطي. ⚑ موقع المُطلِق متابعة.",
-        "❌ <b>فشل نسخة احتياطية</b>\n"
+        "backup_failed", "system", N_("فشل نسخة احتياطية"),
+        N_("يُرسل عند فشل عملية نسخ احتياطي. ⚑ موقع المُطلِق متابعة."),
+        N_("❌ <b>فشل نسخة احتياطية</b>\n"
         "الوجهة: {target}\n"
-        "الخطأ: {error}",
-        {"target": "Google Drive", "error": "انتهت صلاحية المصادقة"},
+        "الخطأ: {error}"),
+        {"target": "Google Drive", "error": N_("انتهت صلاحية المصادقة")},
     ),
     AlertSpec(
-        "audit_failure", "system", "فشل في سجلّ التدقيق",
-        "يُرسل عند رصد فشل/شذوذ في التدقيق (smart_alerts، auto.audit.failure). "
-        "⚑ مسار smart_alerts المستقل.",
-        "🛡️ <b>تنبيه تدقيق</b>\n"
-        "التفاصيل: {details}",
-        {"details": "تكرار عمليات حسّاسة فاشلة"},
+        "audit_failure", "system", N_("فشل في سجلّ التدقيق"),
+        N_("يُرسل عند رصد فشل/شذوذ في التدقيق (smart_alerts، auto.audit.failure). "
+        "⚑ مسار smart_alerts المستقل."),
+        N_("🛡️ <b>تنبيه تدقيق</b>\n"
+        "التفاصيل: {details}"),
+        {"details": N_("تكرار عمليات حسّاسة فاشلة")},
         default_enabled=False,
     ),
 ]
@@ -753,7 +754,7 @@ def _action_line(key: str, context: dict | None) -> str:
     try:
         from .alert_links import action_link
         url = action_link(key, context or {})
-        return ("\n\n🔗 للتدخّل: " + url) if url else ""
+        return (N_("\n\n🔗 للتدخّل: ") + url) if url else ""
     except Exception:  # noqa: BLE001 — الرابط لا يكسر الإرسال أبدًا
         return ""
 
@@ -856,22 +857,22 @@ def dispatch(tenant_id: int, key: str, context: dict | None = None, *,
 
 # سبب فشل/حالة الدفع بالعربيّة (للعرض الواضح بدل رمز إنجليزيّ صامت).
 _PUSH_REASON_AR: dict[str, str] = {
-    "sent": "تم الإرسال",
-    "ok": "تم الإرسال",
-    "no_tokens": "لا أجهزة مُسجَّلة — افتح التطبيق على الجوّال، سجّل الدخول، واسمح بالإشعارات.",
-    "fcm_disabled": "الدفع غير مُفعَّل مركزيًّا (لم يُرفَع مفتاح Firebase في لوحة التراخيص).",
-    "https_required": "ربط لوحة التراخيص غير مُهيّأ (يلزم رابط HTTPS).",
-    "disabled": "ربط لوحة التراخيص غير مُفعَّل.",
-    "config_missing": "تهيئة ربط لوحة التراخيص ناقصة.",
-    "unavailable": "تعذّر الوصول إلى لوحة التراخيص.",
-    "timeout": "انتهت مهلة الاتصال بلوحة التراخيص.",
-    "forward_error": "تعذّر تحويل الدفع إلى لوحة التراخيص.",
+    "sent": N_("تم الإرسال"),
+    "ok": N_("تم الإرسال"),
+    "no_tokens": N_("لا أجهزة مُسجَّلة — افتح التطبيق على الجوّال، سجّل الدخول، واسمح بالإشعارات."),
+    "fcm_disabled": N_("الدفع غير مُفعَّل مركزيًّا (لم يُرفَع مفتاح Firebase في لوحة التراخيص)."),
+    "https_required": N_("ربط لوحة التراخيص غير مُهيّأ (يلزم رابط HTTPS)."),
+    "disabled": N_("ربط لوحة التراخيص غير مُفعَّل."),
+    "config_missing": N_("تهيئة ربط لوحة التراخيص ناقصة."),
+    "unavailable": N_("تعذّر الوصول إلى لوحة التراخيص."),
+    "timeout": N_("انتهت مهلة الاتصال بلوحة التراخيص."),
+    "forward_error": N_("تعذّر تحويل الدفع إلى لوحة التراخيص."),
 }
 
 
 def _push_reason_ar(reason: str) -> str:
     r = str(reason or "").strip()
-    return _PUSH_REASON_AR.get(r, r or "تعذّر الدفع.")
+    return _PUSH_REASON_AR.get(r, r or N_("تعذّر الدفع."))
 
 
 def send_test(tenant_id: int, key: str) -> dict:
@@ -897,7 +898,7 @@ def send_test(tenant_id: int, key: str) -> dict:
     """
     spec = _BY_KEY.get(key)
     if not spec:
-        return {"ok": False, "error": "تنبيه غير معروف.", "text": "",
+        return {"ok": False, "error": N_("تنبيه غير معروف."), "text": "",
                 "channels": {}}
     tid = int(tenant_id)
     chans = channels_for(tid, key)
@@ -924,7 +925,7 @@ def send_test(tenant_id: int, key: str) -> dict:
             "devices": int(pres.get("devices") or 0),
         }
         if not channels["push"]["ok"]:
-            errors.append("الدفع: " + channels["push"]["reason_text"])
+            errors.append(N_("الدفع: ") + channels["push"]["reason_text"])
 
     # ── ويندوز — اكتب صفّ المركز كي يَستطلعه تطبيق ويندوز ──
     if "windows" in chans:
@@ -939,27 +940,27 @@ def send_test(tenant_id: int, key: str) -> dict:
         except Exception as exc:  # noqa: BLE001
             channels["windows"] = {"ok": False, "reason": str(exc)[:120]}
         if not channels["windows"]["ok"]:
-            errors.append("ويندوز: تعذّرت كتابة المركز.")
+            errors.append(N_("ويندوز: تعذّرت كتابة المركز."))
 
     # ── تلجرام — كما اليوم، إن فُعِّلت القناة والبوت مضبوط ──
     if "telegram" in chans:
         if telegram_ready(tid):
-            ok, err = _send_now(tid, "🧪 (اختبار)\n" + text)
+            ok, err = _send_now(tid, N_("🧪 (اختبار)\n") + text)
             channels["telegram"] = {"ok": ok, "reason": err or ""}
             if not ok:
-                errors.append("تلجرام: " + (err or "فشل الإرسال"))
+                errors.append(N_("تلجرام: ") + (err or N_("فشل الإرسال")))
         else:
             channels["telegram"] = {"ok": False,
-                                    "reason": "بوت تلجرام غير مُفعَّل/مضبوط."}
-            errors.append("تلجرام: البوت غير مُفعَّل/مضبوط.")
+                                    "reason": N_("بوت تلجرام غير مُفعَّل/مضبوط.")}
+            errors.append(N_("تلجرام: البوت غير مُفعَّل/مضبوط."))
 
     # نجاح إجماليّ = نجحت قناة تسليم واحدة على الأقلّ. الجرس (bell) داخليّ
     # دائمًا فلا يُحتسَب قناة اختبار خارجيّة.
     deliver = [c for c in ("push", "windows", "telegram") if c in channels]
     if not deliver:
         return {"ok": False, "channels": channels, "text": text,
-                "error": "لا قناة تسليم مُفعَّلة لهذا الحدث "
-                         "(الجرس داخليّ فقط — فعّل دفع الجوال أو ويندوز أو تلجرام)."}
+                "error": N_("لا قناة تسليم مُفعَّلة لهذا الحدث "
+                         "(الجرس داخليّ فقط — فعّل دفع الجوال أو ويندوز أو تلجرام).")}
     any_ok = any(channels[c]["ok"] for c in deliver)
     return {"ok": any_ok, "channels": channels, "text": text,
             "error": "" if any_ok else " · ".join(errors)}
@@ -968,11 +969,11 @@ def send_test(tenant_id: int, key: str) -> dict:
 def test_connection(tenant_id: int) -> dict:
     """زر «اختبار الاتصال» العام — يرسل رسالة تحقّق ويُعيد النتيجة."""
     if not telegram_ready(int(tenant_id)):
-        return {"ok": False, "error": "أكمل توكن البوت ومعرّف المحادثة وفعّل الإشعارات."}
+        return {"ok": False, "error": N_("أكمل توكن البوت ومعرّف المحادثة وفعّل الإشعارات.")}
     ok, err = _send_now(
         int(tenant_id),
-        "✅ <b>اختبار اتصال HobeRadius</b>\n"
-        "إذا وصلتك هذه الرسالة فإعدادات بوت التلجرام صحيحة وستصلك التنبيهات.")
+        N_("✅ <b>اختبار اتصال HobeRadius</b>\n"
+        "إذا وصلتك هذه الرسالة فإعدادات بوت التلجرام صحيحة وستصلك التنبيهات."))
     return {"ok": ok, "error": err}
 
 
@@ -993,7 +994,7 @@ def public_description(text: str) -> str:
     L4). They are stripped for display; the spec text itself is unchanged."""
     s = str(text or "")
     s = re.sub(r"\s*⚑[^.]*\.?", "", s)
-    s = s.replace("نوع support", "نوع «دعم»")
+    s = s.replace("نوع support", N_("نوع «دعم»"))
     s = _CODE_TOKEN.sub("", s)
 
     def _paren(m: "re.Match") -> str:

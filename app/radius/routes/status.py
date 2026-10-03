@@ -8,6 +8,7 @@ routes للحالة التشغيلية: /admin/radius/_status + sync queue inspe
 نسخة ثانية هنا حتى لا يتصادم مساران على نفس العنوان.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import time
@@ -40,36 +41,39 @@ def register_status_routes(bp: Blueprint) -> None:
 
 
 _PAYLOAD_KEY_LABELS = {
-    "router_id": "الراوتر",
-    "job_id": "المهمة",
-    "status": "الحالة",
-    "result": "النتيجة",
-    "error": "الخطأ",
-    "message": "الرسالة",
-    "count": "العدد",
-    "changed": "العناصر المتغيرة",
-    "username": "اسم الدخول",
-    "plan_id": "الباقة",
-    "amount": "المبلغ",
-    "currency": "العملة",
-    "reference": "المرجع",
-    "reference_code": "رمز المرجع",
-    "interval_sec": "فترة التشغيل",
-    "threshold_sec": "حد الإغلاق",
-    "last_processed": "آخر عناصر تمت معالجتها",
-    "last_reaped": "آخر جلسات مغلقة",
-    "last_scanned": "آخر عناصر مفحوصة",
-    "last_reclaimed": "آخر عناصر مسترجعة",
-    "last_closed": "آخر جلسات مغلقة",
-    "last_routers_ok": "راوترات متصلة",
-    "last_routers_skipped": "راوترات متجاوزة",
-    "ok": "النتيجة",
-    "license_active": "الترخيص مفعل",
-    "capacity_snapshot_id": "لقطة الحدود",
-    "identity_ok": "مزامنة الهوية",
-    "identity_synced_count": "حسابات متزامنة",
-    "last_sessions_seen": "آخر جلسات مقروءة",
+    "router_id": N_("الراوتر"),
+    "job_id": N_("المهمة"),
+    "status": N_("الحالة"),
+    "result": N_("النتيجة"),
+    "error": N_("الخطأ"),
+    "message": N_("الرسالة"),
+    "count": N_("العدد"),
+    "changed": N_("العناصر المتغيرة"),
+    "username": N_("اسم الدخول"),
+    "plan_id": N_("الباقة"),
+    "amount": N_("المبلغ"),
+    "currency": N_("العملة"),
+    "reference": N_("المرجع"),
+    "reference_code": N_("رمز المرجع"),
+    "interval_sec": N_("فترة التشغيل"),
+    "threshold_sec": N_("حد الإغلاق"),
+    "last_processed": N_("آخر عناصر تمت معالجتها"),
+    "last_reaped": N_("آخر جلسات مغلقة"),
+    "last_scanned": N_("آخر عناصر مفحوصة"),
+    "last_reclaimed": N_("آخر عناصر مسترجعة"),
+    "last_closed": N_("آخر جلسات مغلقة"),
+    "last_routers_ok": N_("راوترات متصلة"),
+    "last_routers_skipped": N_("راوترات متجاوزة"),
+    "ok": N_("النتيجة"),
+    "license_active": N_("الترخيص مفعل"),
+    "capacity_snapshot_id": N_("لقطة الحدود"),
+    "identity_ok": N_("مزامنة الهوية"),
+    "identity_synced_count": N_("حسابات متزامنة"),
+    "last_sessions_seen": N_("آخر جلسات مقروءة"),
 }
+
+
+_NO_DETAILS = N_("لا توجد تفاصيل إضافية.")
 
 
 def _payload_summary(raw: object) -> str:
@@ -78,28 +82,28 @@ def _payload_summary(raw: object) -> str:
     except (TypeError, ValueError):
         payload = {}
     if not isinstance(payload, dict) or not payload:
-        return "لا توجد تفاصيل إضافية."
+        return _NO_DETAILS
 
     parts: list[str] = []
     for key, value in list(payload.items())[:4]:
         label = _PAYLOAD_KEY_LABELS.get(str(key), str(key).replace("_", " "))
         if isinstance(value, bool):
-            rendered = "نعم" if value else "لا"
+            rendered = N_("نعم") if value else N_("لا")
         elif value is None or value == "":
             rendered = "—"
         elif isinstance(value, (dict, list, tuple)):
-            rendered = "مجموعة بيانات"
+            rendered = N_("مجموعة بيانات")
         else:
             rendered = str(value)
         parts.append(f"{label}: {rendered}")
     if len(payload) > 4:
-        parts.append(f"{len(payload) - 4} حقل إضافي")
+        parts.append(_tr('%(v)s حقل إضافي', v=len(payload) - 4))
     return "، ".join(parts)
 
 
 def _worker_info_summary(raw: object) -> str:
     summary = _payload_summary(raw)
-    if summary == "لا توجد تفاصيل إضافية.":
+    if summary == _NO_DETAILS:
         return ""
     return summary
 
@@ -325,7 +329,7 @@ def sync_retry(job_id: int):
         )
         if cur.rowcount == 0:
             abort(404)
-    flash("أُعيدت المحاولة فورًا.", "success")
+    flash(_tr("أُعيدت المحاولة فورًا."), "success")
     return redirect(request.referrer or url_for("radius.sync_list"))
 
 
@@ -340,5 +344,5 @@ def sync_cancel(job_id: int):
         )
         if cur.rowcount == 0:
             abort(404)
-    flash("تم إلغاء المهمة.", "warning")
+    flash(_tr("تم إلغاء المهمة."), "warning")
     return redirect(request.referrer or url_for("radius.sync_list"))

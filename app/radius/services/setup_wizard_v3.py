@@ -40,6 +40,7 @@ Pure-Python module — no Flask coupling. The route layer thinly
 wraps the methods below.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import hashlib
 import json
@@ -162,14 +163,14 @@ class RunState:
 
 
 _STATE_AR = {
-    STATE_COLLECTING:           "جمع بيانات الراوتر",
-    STATE_PLANNING:             "تجهيز السكربت",
-    STATE_AWAITING_HANDSHAKE:   "بانتظار تشغيل السكربت",
-    STATE_APPLYING_SERVER_PEER: "تسجيل الراوتر على الخادم",
-    STATE_VERIFYING:            "التحقّق من الاتصال",
-    STATE_REGISTERING:          "تسجيل الراوتر في النظام",
-    STATE_COMPLETE:             "اكتمل ✓",
-    STATE_BLOCKED:              "متوقّف — يحتاج تدخّل",
+    STATE_COLLECTING:           N_("جمع بيانات الراوتر"),
+    STATE_PLANNING:             N_("تجهيز السكربت"),
+    STATE_AWAITING_HANDSHAKE:   N_("بانتظار تشغيل السكربت"),
+    STATE_APPLYING_SERVER_PEER: N_("تسجيل الراوتر على الخادم"),
+    STATE_VERIFYING:            N_("التحقّق من الاتصال"),
+    STATE_REGISTERING:          N_("تسجيل الراوتر في النظام"),
+    STATE_COMPLETE:             N_("اكتمل ✓"),
+    STATE_BLOCKED:              N_("متوقّف — يحتاج تدخّل"),
 }
 
 
@@ -470,8 +471,7 @@ class WizardV3Service:
         ).fetchone()
         if existing:
             raise V3Error(
-                f"اسم الراوتر «{name}» مستخدم من قبل في "
-                f"NAS. اختر اسماً آخر."
+                _tr('اسم الراوتر «%(name)s» مستخدم من قبل في NAS. اختر اسماً آخر.', name=name)
             )
         return self._repo.update_state(
             tenant_id=tenant_id, run_id=run_id,
@@ -622,9 +622,7 @@ class WizardV3Service:
                 run_id,
             )
             raise V3Error(
-                f"تعذّر كتابة إعداد RADIUS على الخادم: {exc}. "
-                f"لا يمكن المتابعة لأن الراوتر سيحصل على سرّ "
-                f"غير معروف على الخادم."
+                _tr('تعذّر كتابة إعداد RADIUS على الخادم: %(exc)s. لا يمكن المتابعة لأن الراوتر سيحصل على سرّ غير معروف على الخادم.', exc=exc)
             ) from exc
 
         return {
@@ -839,11 +837,11 @@ class WizardV3Service:
             f'/ip address remove [find where interface="hr-wg" and comment~"HOBERADIUS"]',
             f'/ip route remove [find where gateway="hr-wg" and comment~"HOBERADIUS"]',
             "",
-            "# Step 1.5 — NTP time sync (يمنع رفض مصافحة WireGuard بسبب ساعة قديمة:",
-            "# بعد انقطاع كهرباء طويل ترجع ساعة الراوتر للماضي فيرفض WG المصافحة",
-            "# (طابع زمنيّ قديم / anti-replay) ويظهر «فشل الاتصال» بلا سبب واضح. NTP",
-            "# يصحّح الوقت تلقائياً عند كل إقلاع ويمنع تكرار المشكلة. idempotent +",
-            "# متفرّع حسب إصدار RouterOS.",
+            N_("# Step 1.5 — NTP time sync (يمنع رفض مصافحة WireGuard بسبب ساعة قديمة:"),
+            N_("# بعد انقطاع كهرباء طويل ترجع ساعة الراوتر للماضي فيرفض WG المصافحة"),
+            N_("# (طابع زمنيّ قديم / anti-replay) ويظهر «فشل الاتصال» بلا سبب واضح. NTP"),
+            N_("# يصحّح الوقت تلقائياً عند كل إقلاع ويمنع تكرار المشكلة. idempotent +"),
+            N_("# متفرّع حسب إصدار RouterOS."),
             ":local rosVer [/system resource get version]",
             ':local rosMajor [:tonum [:pick $rosVer 0 [:find $rosVer "."]]]',
             ":if ($rosMajor >= 7) do={",
@@ -945,9 +943,9 @@ class WizardV3Service:
                 diagnostics=run.diagnostics + [{
                     "code": "PUBLIC_KEY_NOT_FOUND",
                     "ar":
-                        "تعذّر العثور على مفتاح WireGuard "
+                        N_("تعذّر العثور على مفتاح WireGuard "
                         "في النص الملصق. أعد لصق المخرجات "
-                        "كاملةً.",
+                        "كاملةً."),
                     "at": _now(),
                 }],
             )
@@ -989,8 +987,8 @@ class WizardV3Service:
                 diagnostics=run.diagnostics + [{
                     "code": "MISSING_PEER_INPUT",
                     "ar":
-                        "مدخلات الـ peer ناقصة — أعد "
-                        "السكربت وألصق المخرجات مجدّداً.",
+                        N_("مدخلات الـ peer ناقصة — أعد "
+                        "السكربت وألصق المخرجات مجدّداً."),
                     "at": _now(),
                 }],
             )
@@ -1012,8 +1010,7 @@ class WizardV3Service:
                 diagnostics=run.diagnostics + [{
                     "code": "PEERS_DIR_UNWRITABLE",
                     "ar":
-                        f"مجلّد wg-peers.d غير قابل للكتابة: "
-                        f"{exc}",
+                        _tr('مجلّد wg-peers.d غير قابل للكتابة: %(exc)s', exc=exc),
                     "at": _now(),
                 }],
             )
@@ -1035,7 +1032,7 @@ class WizardV3Service:
                 state=STATE_BLOCKED,
                 diagnostics=run.diagnostics + [{
                     "code": "PEER_FILE_WRITE_FAILED",
-                    "ar": f"تعذّرت كتابة ملف peer: {exc}",
+                    "ar": _tr('تعذّرت كتابة ملف peer: %(exc)s', exc=exc),
                     "at": _now(),
                 }],
             )
@@ -1105,7 +1102,7 @@ class WizardV3Service:
                 diagnostics=run.diagnostics + [{
                     "code": "MISSING_REGISTRATION_INPUT",
                     "ar":
-                        "بيانات تسجيل الراوتر ناقصة.",
+                        N_("بيانات تسجيل الراوتر ناقصة."),
                     "at": _now(),
                 }],
             )
@@ -1203,13 +1200,12 @@ class WizardV3Service:
                 if nas_id:
                     import logging
                     logging.getLogger(__name__).info(
-                        "v3 register: تبنّى الصفَّ القائم nas=%s للجولة %s",
+                        N_("v3 register: تبنّى الصفَّ القائم nas=%s للجولة %s"),
                         nas_id, run_id,
                     )
                 else:
                     ar_msg = (
-                        f"اسم الراوتر «{name}» مستخدم من قبل. "
-                        f"اختر اسماً مختلفاً واستأنف الإعداد."
+                        _tr('اسم الراوتر «%(name)s» مستخدم من قبل. اختر اسماً مختلفاً واستأنف الإعداد.', name=name)
                     )
             if not nas_id:
                 return self._repo.update_state(
@@ -1218,7 +1214,7 @@ class WizardV3Service:
                     diagnostics=run.diagnostics + [{
                         "code": "NAS_INSERT_FAILED",
                         "ar":
-                            f"تعذّر تسجيل الراوتر في NAS: {ar_msg}",
+                            _tr('تعذّر تسجيل الراوتر في NAS: %(ar_msg)s', ar_msg=ar_msg),
                         "at": _now(),
                     }],
                 )
@@ -1270,7 +1266,7 @@ class WizardV3Service:
             except Exception:  # noqa: BLE001 — لا يُسقط الإنهاء
                 import logging
                 logging.getLogger(__name__).exception(
-                    "v3 register: تعذّر ختمُ أعمدة النفق للجولة %s", run_id,
+                    N_("v3 register: تعذّر ختمُ أعمدة النفق للجولة %s"), run_id,
                 )
 
         # ── Surface the run in the fleet dashboard ─────────

@@ -5,6 +5,7 @@ AdminPanelClient.post_support_ticket (أفضل-جهد، لا يكسر عند ف�
 يُسقط إشعارًا محلّيًّا يؤكّد الإرسال فيظهر في مركز الإشعارات/الجرس.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 from typing import Any
@@ -51,13 +52,13 @@ class ProviderCommsService:
             tenant_id, msg_id, status=status, ref=ref)
 
         # إشعار محلّي يؤكّد الإرسال (يظهر في الجرس/المركز).
-        nbody = ("تم تسليم رسالتك إلى لوحة التراخيص."
+        nbody = (N_("تم تسليم رسالتك إلى لوحة التراخيص.")
                  if ok else
-                 "حُفظت رسالتك محلّيًّا وستُرسَل عند توفّر الاتصال باللوحة.")
+                 N_("حُفظت رسالتك محلّيًّا وستُرسَل عند توفّر الاتصال باللوحة."))
         nid = _notif.notify(
             tenant_id, type="support",
             severity="success" if ok else "warning",
-            title=f"طلب دعم: {subject}"[:120], body=nbody,
+            title=_tr('طلب دعم: %(subject)s', subject=subject)[:120], body=nbody,
             link="/admin/radius/notifications",
             dedup_key=f"provider_msg:{msg_id}", source="local")
 

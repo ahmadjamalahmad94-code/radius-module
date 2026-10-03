@@ -57,6 +57,7 @@ get bounced (`queue.Full`) — their browser will reopen the
 EventSource automatically.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 import logging
@@ -200,7 +201,7 @@ class _RouterStream:
             return
 
         if not result.ok:
-            self._set_status("down", error=result.error or "تعذر الاتصال")
+            self._set_status("down", error=result.error or N_("تعذر الاتصال"))
             return
 
         self._set_status("up")

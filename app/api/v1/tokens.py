@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 
@@ -15,7 +16,7 @@ from ..responses import fail, ok
 # Now: owner / super admin / unbound master credentials manage all tokens;
 # everyone else needs the web page's permission (``api.use``), sees and revokes
 # only the tokens they created, and cannot mint a scope their own token lacks.
-_OWN_ONLY_AR = "لا يمكنك إدارة توكن لم تُنشئه أنت."
+_OWN_ONLY_AR = N_("لا يمكنك إدارة توكن لم تُنشئه أنت.")
 
 
 def _manages_all() -> bool:
@@ -54,12 +55,12 @@ def _parse_expires_at(raw):
     if raw in (None, ""):
         return None
     if not isinstance(raw, str):
-        raise ValueError("تاريخ انتهاء التوكن يجب أن يكون نصًا بصيغة ISO.")
+        raise ValueError(_tr("تاريخ انتهاء التوكن يجب أن يكون نصًا بصيغة ISO."))
     try:
         # «Z»/إزاحة → UTC ساكن (كانت الإزاحة تُخزَّن واعية فتكسر المقارنات).
         return parse_iso_utc(raw, strict=True)
     except ValueError as exc:
-        raise ValueError("تاريخ انتهاء التوكن غير صالح. استخدم صيغة ISO.") from exc
+        raise ValueError(_tr("تاريخ انتهاء التوكن غير صالح. استخدم صيغة ISO.")) from exc
 
 
 def register(bp: Blueprint) -> None:
@@ -101,21 +102,21 @@ def tokens_create():
         body = {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "اسم التوكن مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم التوكن مطلوب."), status=422)
     if name.lower().startswith(api_tokens_repo.LOGIN_TOKEN_PREFIX):
-        return fail("validation_error", "هذا الاسم محجوز لجلسات تسجيل الدخول.", status=422)
+        return fail("validation_error", _tr("هذا الاسم محجوز لجلسات تسجيل الدخول."), status=422)
     scopes = body.get("scopes")
     if scopes is None:
         scopes = ["admin:full"]
     if not isinstance(scopes, list) or not all(isinstance(s, str) for s in scopes):
-        return fail("validation_error", "صلاحيات التوكن يجب أن تكون قائمة نصوص.", status=422)
+        return fail("validation_error", _tr("صلاحيات التوكن يجب أن تكون قائمة نصوص."), status=422)
     if not _manages_all():
         # never above the caller's own token: a subset of its scopes only.
         own = set(getattr(g, "api_token_scopes", []) or [])
         extra = sorted(set(scopes) - own)
         if extra or "*" in scopes:
             return fail("forbidden",
-                        "لا يمكنك إنشاء توكن بصلاحيات أعلى من صلاحياتك.",
+                        _tr("لا يمكنك إنشاء توكن بصلاحيات أعلى من صلاحياتك."),
                         status=403, details={"scopes": extra or ["*"]})
     try:
         expires_at = _parse_expires_at(body.get("expires_at"))
@@ -151,7 +152,7 @@ def tokens_revoke(token_id: int):
     if err is not None:
         return err
     if not existing:
-        return fail("not_found", "التوكن غير موجود.", status=404)
+        return fail("not_found", _tr("التوكن غير موجود."), status=404)
     if not _visible(existing):
         return fail("forbidden", _OWN_ONLY_AR, status=403)
     api_tokens_repo.revoke_token(_tid(), token_id)

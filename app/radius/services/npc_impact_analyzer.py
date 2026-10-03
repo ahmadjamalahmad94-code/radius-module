@@ -51,6 +51,7 @@ as the only explanation. The raw script is shown separately
 in the preview UI.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from dataclasses import dataclass, field
@@ -84,9 +85,9 @@ def _escalate(current: str, candidate: str) -> str:
 
 
 _SERVICE_LABELS_AR = {
-    "remote_access": "الوصول البعيد للراوتر",
-    "web_block":     "حظر المواقع",
-    "walled_garden": "الإستثناءات قبل تسجيل الدخول",
+    "remote_access": N_("الوصول البعيد للراوتر"),
+    "web_block":     N_("حظر المواقع"),
+    "walled_garden": N_("الإستثناءات قبل تسجيل الدخول"),
 }
 
 
@@ -227,8 +228,7 @@ def analyze(
     if render_error:
         risk = RISK_CRITICAL
         reasons.append(
-            f"رفض المُولِّد توليد السكربت لاحتوائه على بيانات "
-            f"حسّاسة: {render_error}"
+            _tr('رفض المُولِّد توليد السكربت لاحتوائه على بيانات حسّاسة: %(render_error)s', render_error=render_error)
         )
 
     fwd = rendered_forward or ""
@@ -238,29 +238,29 @@ def analyze(
     if _scan_blackhole(fwd):
         risk = _escalate(risk, RISK_HIGH)
         reasons.append(
-            "يحتوي السكربت على 0.0.0.0/0 — قد يقطع الإنترنت كاملاً."
+            N_("يحتوي السكربت على 0.0.0.0/0 — قد يقطع الإنترنت كاملاً.")
         )
 
     # 3) Input-chain changes.
     if _touches_input_chain(plan):
         risk = _escalate(risk, RISK_MEDIUM)
         reasons.append(
-            "السكربت يعدّل سلسلة input (الوصول الإداري للراوتر)."
+            N_("السكربت يعدّل سلسلة input (الوصول الإداري للراوتر).")
         )
 
     # 4) Forward-chain drop.
     if _has_forward_drop(plan):
         risk = _escalate(risk, RISK_MEDIUM)
         reasons.append(
-            "السكربت يحذف حركة forward — سيؤثر على المستخدمين."
+            N_("السكربت يحذف حركة forward — سيؤثر على المستخدمين.")
         )
 
     # 5) Unmanaged deletion pattern.
     if _unmanaged_remove_pattern(plan):
         risk = _escalate(risk, RISK_CRITICAL)
         reasons.append(
-            "هناك أمر حذف بدون البادئة المُدارة — قد يمسّ قواعد "
-            "لم نُنشئها (محظور بالفعل من قِبل المُولِّد)."
+            N_("هناك أمر حذف بدون البادئة المُدارة — قد يمسّ قواعد "
+            "لم نُنشئها (محظور بالفعل من قِبل المُولِّد).")
         )
 
     # 6) Missing rollback even though the forward has content.
@@ -268,14 +268,14 @@ def analyze(
     if fwd.strip() and not rollback_available:
         risk = _escalate(risk, RISK_HIGH)
         reasons.append(
-            "السكربت لا يحوي خطة تراجع — لن يكون التراجع التلقائي ممكنًا."
+            N_("السكربت لا يحوي خطة تراجع — لن يكون التراجع التلقائي ممكنًا.")
         )
 
     # 7) All-router targeting (caller flag).
     if all_routers_targeted:
         risk = _escalate(risk, RISK_HIGH)
         reasons.append(
-            "السياسة تستهدف كل الراوترات (نطاق واسع جداً)."
+            N_("السياسة تستهدف كل الراوترات (نطاق واسع جداً).")
         )
 
     # 8) Empty target list — only meaningful for the
@@ -284,8 +284,8 @@ def analyze(
     if policy_type in ("web_block", "walled_garden"):
         if target_count == 0:
             warnings.append(
-                "قائمة الوجهات/الإدخالات فارغة — السياسة لن تغيّر "
-                "شيئاً عند تطبيقها."
+                N_("قائمة الوجهات/الإدخالات فارغة — السياسة لن تغيّر "
+                "شيئاً عند تطبيقها.")
             )
 
     # 9) No-op plan messaging.
@@ -295,7 +295,7 @@ def analyze(
     if plan.blocking_errors:
         risk = _escalate(risk, RISK_CRITICAL)
         for be in plan.blocking_errors:
-            reasons.append(f"الخطّة مرفوضة: {be}")
+            reasons.append(_tr('الخطّة مرفوضة: %(be)s', be=be))
 
     # Affected router count — caller wins if it passes a hint.
     if affected_router_count is None:
@@ -308,26 +308,22 @@ def analyze(
 
     if render_error:
         summary_ar = (
-            f"تم رفض السكربت تلقائياً بسبب بيانات حسّاسة "
-            f"— لا يمكن المتابعة."
+            _tr('تم رفض السكربت تلقائياً بسبب بيانات حسّاسة — لا يمكن المتابعة.')
         )
         beginner = (
-            "النظام اكتشف أن السكربت يحوي بيانات يجب ألا تظهر "
+            N_("النظام اكتشف أن السكربت يحوي بيانات يجب ألا تظهر "
             "أبداً في ملف يُعرض على الشاشة (مثل كلمة سر أو "
             "مفتاح خاص). تم إيقاف توليد المعاينة كحماية. "
-            "هذا ليس خطأً منك — هذا حاجز أمان متعمَّد."
+            "هذا ليس خطأً منك — هذا حاجز أمان متعمَّد.")
         )
         technical = (
             f"render aborted with RenderSafetyError: "
             f"{render_error!r}"
         )
     elif is_no_op:
-        summary_ar = "السياسة لن تغيّر شيئاً حالياً."
+        summary_ar = _tr("السياسة لن تغيّر شيئاً حالياً.")
         beginner = (
-            f"معاينة سياسة «{policy.get('name') or '—'}» "
-            f"({svc_ar}) لا تحوي أوامر جديدة على الراوتر. "
-            "إذا كنت تتوقّع تغييراً، أضف بعض الإدخالات أو راجع "
-            "إعدادات السياسة ثم أعِد المعاينة."
+            _tr('معاينة سياسة «%(v)s» (%(svc_ar)s) لا تحوي أوامر جديدة على الراوتر. إذا كنت تتوقّع تغييراً، أضف بعض الإدخالات أو راجع إعدادات السياسة ثم أعِد المعاينة.', v=policy.get('name') or '—', svc_ar=svc_ar)
         )
         technical = (
             f"plan.total_commands=0 across all sections "
@@ -335,32 +331,29 @@ def analyze(
         )
     else:
         summary_ar = (
-            f"معاينة {svc_ar} — {plan.total_commands} أمر "
-            f"على {affected_router_count} راوتر."
+            _tr('معاينة %(svc_ar)s — %(total_commands)s أمر على %(affected_router_count)s راوتر.', svc_ar=svc_ar, total_commands=plan.total_commands, affected_router_count=affected_router_count)
         )
         beginner_lines = [
-            f"عند تطبيق هذه السياسة، سيقوم النظام بإضافة "
-            f"{plan.total_commands} أمر على راوتر "
-            f"{affected_router_count}."
+            _tr('عند تطبيق هذه السياسة، سيقوم النظام بإضافة %(total_commands)s أمر على راوتر %(affected_router_count)s.', total_commands=plan.total_commands, affected_router_count=affected_router_count)
         ]
         if policy_type == "remote_access":
             beginner_lines.append(
-                "ستفتح هذه السياسة منافذ إدارية على الراوتر "
+                N_("ستفتح هذه السياسة منافذ إدارية على الراوتر "
                 "(مثل Winbox أو WebFig)؛ تأكَّد من تحديد عناوين "
-                "مصدر أو وقت انتهاء لقفل الفتحة تلقائياً."
+                "مصدر أو وقت انتهاء لقفل الفتحة تلقائياً.")
             )
         elif policy_type == "web_block":
             beginner_lines.append(
-                "ستحجب هذه السياسة قائمة المواقع/العناوين "
-                "المحدَّدة عن المستخدمين خلف هذا الراوتر."
+                N_("ستحجب هذه السياسة قائمة المواقع/العناوين "
+                "المحدَّدة عن المستخدمين خلف هذا الراوتر.")
             )
         elif policy_type == "walled_garden":
             beginner_lines.append(
-                "ستسمح هذه السياسة بالوصول إلى الإدخالات المحدَّدة "
-                "قبل تسجيل الدخول في الـ Hotspot."
+                N_("ستسمح هذه السياسة بالوصول إلى الإدخالات المحدَّدة "
+                "قبل تسجيل الدخول في الـ Hotspot.")
             )
         if not reasons:
-            beginner_lines.append("لم يكتشف النظام أي مخاطر بارزة.")
+            beginner_lines.append(N_("لم يكتشف النظام أي مخاطر بارزة."))
         beginner = " ".join(beginner_lines)
         technical = (
             f"plan.total_commands={plan.total_commands}; "
@@ -368,10 +361,9 @@ def analyze(
         )
 
     rollback_explanation = (
-        "يمكن التراجع عبر سكربت rollback المُولَّد تلقائياً — "
-        f"يطابق التعليقات المُدارة فقط ({plan.comment_prefix})."
+        _tr('يمكن التراجع عبر سكربت rollback المُولَّد تلقائياً — يطابق التعليقات المُدارة فقط (%(comment_prefix)s).', comment_prefix=plan.comment_prefix)
         if rollback_available else
-        "لا يوجد سكربت تراجع — قد يحتاج التراجع إلى تدخّل يدوي."
+        N_("لا يوجد سكربت تراجع — قد يحتاج التراجع إلى تدخّل يدوي.")
     )
 
     return ImpactAnalysis(

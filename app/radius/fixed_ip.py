@@ -24,6 +24,7 @@ Access-Accept وعلى **كل** CHR، فيحصل المستخدم المتنقّ
   • الإلغاء فقط عند حذف المستخدم/تحرير صريح (لا churn يكسر «نفس الـ IP أبدًا»).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import hashlib
 import ipaddress
@@ -53,10 +54,10 @@ class FixedIpConfig:
     def network(self) -> ipaddress.IPv4Network:
         net = ipaddress.ip_network(self.supernet, strict=False)
         if not isinstance(net, ipaddress.IPv4Network):
-            raise RadiusValidationError("النطاق الثابت يجب أن يكون IPv4")
+            raise RadiusValidationError(_tr("النطاق الثابت يجب أن يكون IPv4"))
         if not (net.prefixlen <= self.customer_prefix <= 32):
             raise RadiusValidationError(
-                "customer_prefix خارج حدود الشبكة-الأمّ")
+                _tr("customer_prefix خارج حدود الشبكة-الأمّ"))
         return net
 
     def block_size(self) -> int:
@@ -113,7 +114,7 @@ def _usable_bounds(cfg: FixedIpConfig) -> tuple[int, int]:
     start, end = 2, size - 2
     if end < start:
         raise RadiusValidationError(
-            "شريحة العميل أصغر من أن تتّسع لمضيف واحد")
+            _tr("شريحة العميل أصغر من أن تتّسع لمضيف واحد"))
     return start, end
 
 
@@ -122,7 +123,7 @@ def customer_network(customer_id: int, cfg: Optional[FixedIpConfig] = None
     """شريحة العميل /N المشتقّة حتميًا من customer_id (10.<cust>.0.0/16)."""
     cfg = cfg or default_config()
     if customer_id is None or int(customer_id) < 0:
-        raise RadiusValidationError("customer_id غير صالح")
+        raise RadiusValidationError(_tr("customer_id غير صالح"))
     net = cfg.network()
     index = int(customer_id) % cfg.customer_count()
     base = int(net.network_address) + index * cfg.block_size()
@@ -167,7 +168,7 @@ def allocate_fixed_ip(username: str, customer_id: int,
     """
     username = (username or "").strip()
     if not username:
-        raise RadiusValidationError("username مطلوب")
+        raise RadiusValidationError(_tr("username مطلوب"))
     cfg = cfg or default_config()
     ensure_schema()
 
@@ -204,7 +205,7 @@ def allocate_fixed_ip(username: str, customer_id: int,
             continue
 
     raise FixedIpExhausted(
-        f"شريحة العميل {net} ممتلئة — لا عنوان حُرّ للمستخدم {username!r}")
+        _tr('شريحة العميل %(net)s ممتلئة — لا عنوان حُرّ للمستخدم %(username)s', net=net, username=repr(username)))
 
 
 def release_fixed_ip(username: str) -> bool:
@@ -226,18 +227,18 @@ def assign_specific_ip(username: str, framed_ip: str, customer_id: int) -> str:
     إن كان العنوان محجوزًا لمستخدم آخر (قيد UNIQUE) — إثبات «رفض التكرار»."""
     username = (username or "").strip()
     if not username:
-        raise RadiusValidationError("username مطلوب")
+        raise RadiusValidationError(_tr("username مطلوب"))
     try:
         ipaddress.IPv4Address(framed_ip)
     except (ipaddress.AddressValueError, ValueError):
-        raise RadiusValidationError(f"عنوان غير صالح: {framed_ip!r}")
+        raise RadiusValidationError(_tr('عنوان غير صالح: %(framed_ip)s', framed_ip=repr(framed_ip)))
     ensure_schema()
     existing = framed_ip_for(username)
     if existing is not None:
         if existing == framed_ip:
             return existing
         raise RadiusConflict(
-            f"للمستخدم {username!r} عنوان مختلف مخصَّص ({existing})")
+            _tr('للمستخدم %(username)s عنوان مختلف مخصَّص (%(existing)s)', username=repr(username), existing=existing))
     try:
         db().execute(
             "INSERT INTO fixed_ip_pool"
@@ -246,7 +247,7 @@ def assign_specific_ip(username: str, framed_ip: str, customer_id: int) -> str:
         )
     except sqlite3.IntegrityError:
         raise RadiusConflict(
-            f"العنوان {framed_ip} محجوز مسبقًا لمستخدم آخر")
+            _tr('العنوان %(framed_ip)s محجوز مسبقًا لمستخدم آخر', framed_ip=framed_ip))
     return framed_ip
 
 

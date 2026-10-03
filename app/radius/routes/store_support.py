@@ -12,6 +12,7 @@ WithdrawalRequestService) بحارس idempotency صارم — لا حركة ما
 flash + redirect، والتقاط أخطاء الخدمة + ValueError.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint,
@@ -219,7 +220,7 @@ def store_support_deposit_confirm(req_id: int):
             confirmed_amount=confirmed_amount,
             note=request.form.get("note") or "",
         )
-        flash("تم تأكيد طلب الشحن وإضافة الرصيد لمحفظة الزبون.", "success")
+        flash(_tr("تم تأكيد طلب الشحن وإضافة الرصيد لمحفظة الزبون."), "success")
     except (StoreDepositError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -228,7 +229,7 @@ def store_support_deposit_confirm(req_id: int):
 def store_support_deposit_reject(req_id: int):
     try:
         _deposits().reject(req_id, actor=_actor(), note=request.form.get("note") or "")
-        flash("تم رفض طلب الشحن.", "success")
+        flash(_tr("تم رفض طلب الشحن."), "success")
     except (StoreDepositError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -242,7 +243,7 @@ def store_support_withdrawal_confirm(req_id: int):
         _withdrawals().confirm(
             req_id, actor=_actor(), note=request.form.get("note") or ""
         )
-        flash("تم تأكيد تنفيذ السحب وخصم الرصيد من محفظة الزبون.", "success")
+        flash(_tr("تم تأكيد تنفيذ السحب وخصم الرصيد من محفظة الزبون."), "success")
     except (StoreWithdrawalError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -253,7 +254,7 @@ def store_support_withdrawal_reject(req_id: int):
         _withdrawals().reject(
             req_id, actor=_actor(), note=request.form.get("note") or ""
         )
-        flash("تم رفض طلب السحب.", "success")
+        flash(_tr("تم رفض طلب السحب."), "success")
     except (StoreWithdrawalError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -283,7 +284,7 @@ def store_support_payment_method_create():
             sort_order=int(request.form.get("sort_order") or 0),
             active=request.form.get("active"),
         )
-        flash("تمت إضافة قناة استلام جديدة.", "success")
+        flash(_tr("تمت إضافة قناة استلام جديدة."), "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -294,7 +295,7 @@ def store_support_payment_method_update(method_id: int):
     if (request.form.get("action") or "").strip().lower() == "delete":
         try:
             svc.delete_payment_method(method_id)
-            flash("تم حذف قناة الاستلام.", "success")
+            flash(_tr("تم حذف قناة الاستلام."), "success")
         except (StoreDepositError, ValueError) as exc:
             flash(_ar_err(exc), "error")
         return redirect(url_for("radius.store_support"))
@@ -317,7 +318,7 @@ def store_support_payment_method_update(method_id: int):
             fields["logo_image_path"] = save_store_image(
                 logo_upload, subdir="logo")["path"]
         svc.update_payment_method(method_id, **fields)
-        flash("تم تحديث قناة الاستلام.", "success")
+        flash(_tr("تم تحديث قناة الاستلام."), "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support"))
@@ -351,8 +352,8 @@ def store_support_chat_status(card_user_id: int):
     try:
         new = _chat().set_status(card_user_id=card_user_id, status=status,
                                  actor=_actor())
-        flash("تم وضع المحادثة كمُعالَجة." if new == "resolved"
-              else "أُعيد فتح المحادثة.", "success")
+        flash(_tr("تم وضع المحادثة كمُعالَجة.") if new == "resolved"
+              else _tr("أُعيد فتح المحادثة."), "success")
     except (StoreChatError, ValueError) as exc:
         flash(_ar_err(exc), "error")
     return redirect(url_for("radius.store_support", chat=card_user_id) + "#chat")

@@ -12,6 +12,7 @@ keeps the stored one (so a client that didn't fetch it can't wipe it),
 matching the web form's "blank = keep current".
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -100,7 +101,7 @@ def test_connection():
     if result.get("ok"):
         return ok({"sent": True})
     return fail("telegram_send_failed",
-                result.get("error") or "تعذّر الإرسال — تأكّد من بيانات البوت.",
+                result.get("error") or _tr("تعذّر الإرسال — تأكّد من بيانات البوت."),
                 status=502, details={"sent": False})
 
 
@@ -109,7 +110,7 @@ def toggle_alert(key: str):
     body: {enabled: bool}."""
     key = (key or "").strip()
     if not admin_alerts.get_spec(key):
-        return fail("not_found", "تنبيه غير معروف.", status=404)
+        return fail("not_found", _tr("تنبيه غير معروف."), status=404)
     body = request.get_json(silent=True) or {}
     enabled = bool(body.get("enabled"))
     admin_alerts.set_telegram(_tid(), key, enabled, by=int(getattr(g, "admin_id", 0) or 0))
@@ -121,11 +122,11 @@ def test_alert(key: str):
     النصّ المُصيَّر (يطابق admin_alerts.send_test)."""
     key = (key or "").strip()
     if not admin_alerts.get_spec(key):
-        return fail("not_found", "تنبيه غير معروف.", status=404)
+        return fail("not_found", _tr("تنبيه غير معروف."), status=404)
     result = admin_alerts.send_test(_tid(), key)
     payload = {"key": key, "sent": bool(result.get("ok")),
                "rendered": result.get("text") or ""}
     if result.get("ok"):
         return ok(payload)
-    return fail("telegram_send_failed", result.get("error") or "تعذّر الإرسال.",
+    return fail("telegram_send_failed", result.get("error") or _tr("تعذّر الإرسال."),
                 status=502, details=payload)

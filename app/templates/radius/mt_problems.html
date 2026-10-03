@@ -13,16 +13,16 @@
    مُعرّفة على مستوى الوحدة حتى تراها الماكروات أدناه (متغيرات block content
    لا تصل إلى نطاق الماكرو). #}
 {% set _type_labels = {
-  'router.offline':  'راوتر غير متصل',
-  'router.disabled': 'راوتر معطّل',
-  'snapshot.stale':  'بيانات قديمة',
-  'snapshot.failed': 'فشل قراءة الحالة',
-  'backup.missing':  'بلا نسخة احتياطية',
-  'backup.stale':    'نسخة احتياطية قديمة',
-  'alert.critical':  'تنبيه حرج',
-  'alert.warning':   'تنبيه تحذيري',
-  'audit.failure':   'عملية فاشلة',
-  'audit.partial':   'تطبيق جزئي'
+  'router.offline':  _('راوتر غير متصل'),
+  'router.disabled': _('راوتر معطّل'),
+  'snapshot.stale':  _('بيانات قديمة'),
+  'snapshot.failed': _('فشل قراءة الحالة'),
+  'backup.missing':  _('بلا نسخة احتياطية'),
+  'backup.stale':    _('نسخة احتياطية قديمة'),
+  'alert.critical':  _('تنبيه حرج'),
+  'alert.warning':   _('تنبيه تحذيري'),
+  'audit.failure':   _('عملية فاشلة'),
+  'audit.partial':   _('تطبيق جزئي')
 } %}
 
 {% macro problem_row(p) -%}
@@ -36,9 +36,9 @@
     <div class="hub-text-mute small" style="margin-top:4px;line-height:1.5">{{ p.explanation_ar }}</div>
   </td>
   <td>
-    {% if p.severity == 'critical' %}{{ hub.pill("حرجة", variant="red") }}
-    {% elif p.severity == 'warning' %}{{ hub.pill("تحذير", variant="amber") }}
-    {% else %}{{ hub.pill("معلومة", variant="brand") }}{% endif %}
+    {% if p.severity == 'critical' %}{{ hub.pill(_('حرجة'), variant="red") }}
+    {% elif p.severity == 'warning' %}{{ hub.pill(_('تحذير'), variant="amber") }}
+    {% else %}{{ hub.pill(_('معلومة'), variant="brand") }}{% endif %}
   </td>
   <td class="small">{{ _type_labels.get(p.type, p.type) }}</td>
   {# عمود «الراوتر» — اسم الجهاز الفعلي (router_name) بدل «#رقم» الخام #}
@@ -77,18 +77,18 @@
 
 {# ───── Merged hero: title + KPI strip + integrated filter form ───── #}
 {% call hub.megahero(
-  "مركز المشاكل التشغيلية",
-  subtitle="مشاكل تشغيلية مبنية على بيانات الراوترات والتنبيهات، وكل مشكلة مربوطة بالإجراء المناسب لمعالجتها بسرعة.",
+  _('مركز المشاكل التشغيلية'),
+  subtitle=_('مشاكل تشغيلية مبنية على بيانات الراوترات والتنبيهات، وكل مشكلة مربوطة بالإجراء المناسب لمعالجتها بسرعة.'),
   icon="screwdriver-wrench",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_problems_index') + '">
       <i class="fa-solid fa-rotate-left"></i> '|safe ~ _("إعادة ضبط") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'تحتاج إجراء الآن', 'value': now_problems|length,  'icon': 'circle-exclamation',   'variant': 'red'},
-    {'label': 'تحتاج انتباه',    'value': soon_problems|length, 'icon': 'triangle-exclamation', 'variant': 'amber'},
-    {'label': 'معلومات',          'value': info_problems|length, 'icon': 'circle-info',          'variant': 'brand'},
-    {'label': 'الإجمالي',         'value': total,                'icon': 'layer-group',          'variant': 'green'},
+    {'label': _('تحتاج إجراء الآن'), 'value': now_problems|length,  'icon': 'circle-exclamation',   'variant': 'red'},
+    {'label': _('تحتاج انتباه'),    'value': soon_problems|length, 'icon': 'triangle-exclamation', 'variant': 'amber'},
+    {'label': _('معلومات'),          'value': info_problems|length, 'icon': 'circle-info',          'variant': 'brand'},
+    {'label': _('الإجمالي'),         'value': total,                'icon': 'layer-group',          'variant': 'green'},
   ],
   search_action=url_for('radius.mt_problems_index')
 ) %}
@@ -106,47 +106,47 @@
   </select>
   <input class="hub-input grow" type="text" name="router_id" value="{{ filters.router_id or '' }}"
          placeholder="{{ _('رقم الراوتر مثلا 42') }}" data-mt-problems-filter-router>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
 {# ───── Main (carded tables per bucket) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "طريقة العمل",
-  intro="تعامل مع الصفحة كقائمة تشغيل يومية: الحرج أولاً، التحذير ثانياً، والمعلومات فقط للمراجعة.",
+  _('طريقة العمل'),
+  intro=_('تعامل مع الصفحة كقائمة تشغيل يومية: الحرج أولاً، التحذير ثانياً، والمعلومات فقط للمراجعة.'),
   icon="map-signs",
   items=[
-    {'icon': 'fire-flame-simple', 'text': 'قسم «الإجراء الآن» يعني أن المشكلة قد تؤثر على الخدمة.'},
-    {'icon': 'clock',             'text': 'قسم «الانتباه القريب» مناسب للصيانة الوقائية قبل التعطّل.'},
-    {'icon': 'link',              'text': 'كل زر إجراء مرتبط بالمسار الحقيقي المناسب للمشكلة.'},
+    {'icon': 'fire-flame-simple', 'text': _('قسم «الإجراء الآن» يعني أن المشكلة قد تؤثر على الخدمة.')},
+    {'icon': 'clock',             'text': _('قسم «الانتباه القريب» مناسب للصيانة الوقائية قبل التعطّل.')},
+    {'icon': 'link',              'text': _('كل زر إجراء مرتبط بالمسار الحقيقي المناسب للمشكلة.')},
   ]
 )) %}
 
   {% if total == 0 %}
   {{ hub.empty(
-    "لا توجد مشاكل تطابق هذه الفلاتر",
-    sub="جرّب إعادة الضبط أو توسيع نطاق الفلترة لعرض كل المشاكل.",
+    _('لا توجد مشاكل تطابق هذه الفلاتر'),
+    sub=_('جرّب إعادة الضبط أو توسيع نطاق الفلترة لعرض كل المشاكل.'),
     icon="circle-check"
   ) }}
   <span data-mt-problems-empty hidden>{{ _('لا توجد مشاكل تطابق هذه الفلاتر.') }}</span>
   {% endif %}
 
   {% if now_problems %}
-  {% call hub.section("يحتاج إجراء الآن", icon="circle-exclamation",
-       meta=now_problems|length|string + " حرجة", flush=True) %}
+  {% call hub.section(_('يحتاج إجراء الآن'), icon="circle-exclamation",
+       meta=now_problems|length|string + _(' حرجة'), flush=True) %}
     <div data-mt-problems-bucket="now">{{ problem_table(now_problems) }}</div>
   {% endcall %}
   {% endif %}
 
   {% if soon_problems %}
-  {% call hub.section("يحتاج انتباه اليوم", icon="triangle-exclamation",
-       meta=soon_problems|length|string + " تحذير", flush=True) %}
+  {% call hub.section(_('يحتاج انتباه اليوم'), icon="triangle-exclamation",
+       meta=soon_problems|length|string + _(' تحذير'), flush=True) %}
     <div data-mt-problems-bucket="soon">{{ problem_table(soon_problems) }}</div>
   {% endcall %}
   {% endif %}
 
   {% if info_problems %}
-  {% call hub.section("معلومات", icon="circle-info",
-       meta=info_problems|length|string + " معلومة", flush=True) %}
+  {% call hub.section(_('معلومات'), icon="circle-info",
+       meta=info_problems|length|string + _(' معلومة'), flush=True) %}
     <div data-mt-problems-bucket="info">{{ problem_table(info_problems) }}</div>
   {% endcall %}
   {% endif %}

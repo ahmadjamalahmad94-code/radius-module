@@ -9,6 +9,7 @@
 فشل الاستعلام (تُعيد خريطة فارغة).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from ..db.connection import db
 
@@ -37,7 +38,7 @@ def nas_name_map(tenant_id: int) -> dict[str, str]:
     return out
 
 
-def nas_label(value, name_map: dict[str, str], *, fallback: str = "غير معروف") -> str:
+def nas_label(value, name_map: dict[str, str], *, fallback: str = N_("غير معروف")) -> str:
     """«الاسم (القيمة)» إن طابقت القيمةُ جهازًا، وإلا القيمة الخام، وإلا fallback.
 
     value قد تكون IP (جلسات radacct) أو اسمًا/معرّفًا نصّيًا (radpostauth.nas).

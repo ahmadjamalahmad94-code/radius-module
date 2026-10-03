@@ -24,6 +24,7 @@ Message-Authenticator (RFC 5176 يلزمه):
   HMAC-MD5(packet_with_msg_auth_zeroed, secret) → 16 bytes
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import hashlib
 import hmac
@@ -201,7 +202,7 @@ def send_disconnect(*, nas_ip: str, nas_secret: str,
     /ip hotspot active). بدونها يُرجع NAK: "Radius with no ip provided".
     """
     if not username and not session_id:
-        raise ValueError("username أو session_id مطلوب")
+        raise ValueError(_tr("username أو session_id مطلوب"))
 
     secret = nas_secret.encode("utf-8")
     ident = identifier if identifier is not None else _sec.randbits(8)
@@ -235,7 +236,7 @@ def send_disconnect(*, nas_ip: str, nas_secret: str,
     except socket.timeout:
         _LOG.warning("CoA timeout to %s:%d", nas_ip, port)
         return CoaResult(ok=False, code=0, code_name="timeout",
-                          reply_message="NAS لم يستجب خلال %.1fs" % timeout)
+                          reply_message=_tr("NAS لم يستجب خلال %.1fs") % timeout)
     except OSError as e:
         _LOG.warning("CoA socket error to %s:%d — %s", nas_ip, port, e)
         return CoaResult(ok=False, code=0, code_name="socket_error",
@@ -311,7 +312,7 @@ def send_coa(*, nas_ip: str, nas_secret: str,
         resp, _ = sock.recvfrom(4096)
     except socket.timeout:
         return CoaResult(ok=False, code=0, code_name="timeout",
-                          reply_message="NAS لم يستجب")
+                          reply_message=N_("NAS لم يستجب"))
     except OSError as e:
         return CoaResult(ok=False, code=0, code_name="socket_error",
                           reply_message=str(e))
@@ -512,24 +513,24 @@ def _broadcast(label: str, results: list[CoaResult],
     """
     if not results and sessions_total == 0:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
-                          reply_message="لا جلسات نشطة")
+                          reply_message=N_("لا جلسات نشطة"))
     ok_count = sum(1 for r in results if r.ok)
     fail_count = len(results) - ok_count
     if fail_count == 0:
         name = "all_ok"
-        msg  = f"{label}: {ok_count} جلسة"
+        msg  = _tr('%(label)s: %(ok_count)s جلسة', label=label, ok_count=ok_count)
         ok   = True
     elif ok_count == 0:
         name = "all_failed"
-        msg  = f"{label} فشل على كل الجلسات ({fail_count})"
+        msg  = _tr('%(label)s فشل على كل الجلسات (%(fail_count)s)', label=label, fail_count=fail_count)
         ok   = False
         if all(r.code_name == "timeout" for r in results):
-            msg = f"{label}: الراوتر لا يستجيب (انتهت المهلة) — {fail_count} جلسة"
+            msg = _tr('%(label)s: الراوتر لا يستجيب (انتهت المهلة) — %(fail_count)s جلسة', label=label, fail_count=fail_count)
             return CoaResult(ok=False, code=0, code_name=name,
                              reply_message=msg, timed_out=True)
     else:
         name = "partial"
-        msg  = f"{label}: نجح {ok_count} وفشل {fail_count} من {len(results)}"
+        msg  = _tr('%(label)s: نجح %(ok_count)s وفشل %(fail_count)s من %(v)s', label=label, ok_count=ok_count, fail_count=fail_count, v=len(results))
         ok   = True   # treat partial as success (some sessions got it)
     return CoaResult(ok=ok, code=0, code_name=name, reply_message=msg)
 
@@ -554,19 +555,19 @@ CODE_ROUTER_NOT_CONFIGURED = "router_not_configured"
 # f06-L3: وصفٌ عربيّ لرموز نتيجة CoA — كانت رسائل الويب تُضمِّن الرمز الخام
 # («… لم يؤكّد تطبيق CoA (router_not_configured)»).
 _CODE_AR = {
-    CODE_ROUTER_NOT_CONFIGURED: "راوتر الجلسة معطّل أو بلا كلمة سرّ RADIUS",
-    "timeout": "لم يردّ الراوتر (انتهت المهلة)",
-    "socket_error": "تعذّر الإرسال إلى الراوتر",
-    "malformed": "ردّ غير صالح من الراوتر",
-    "no_active_session": "لا جلسة نشطة",
-    "empty_rate": "لا سرعة صالحة للإرسال",
-    "empty_timeout": "لا مهلة صالحة للإرسال",
-    "exception": "خطأ داخليّ أثناء الإرسال",
-    "no_coa": "لم يُرسَل أمر CoA",
-    "CoA-ACK": "أكّد الراوتر التطبيق",
-    "Disconnect-ACK": "أكّد الراوتر الفصل",
-    "CoA-NAK": "رفض الراوتر الأمر (CoA-NAK)",
-    "Disconnect-NAK": "رفض الراوتر الفصل (Disconnect-NAK)",
+    CODE_ROUTER_NOT_CONFIGURED: N_("راوتر الجلسة معطّل أو بلا كلمة سرّ RADIUS"),
+    "timeout": N_("لم يردّ الراوتر (انتهت المهلة)"),
+    "socket_error": N_("تعذّر الإرسال إلى الراوتر"),
+    "malformed": N_("ردّ غير صالح من الراوتر"),
+    "no_active_session": N_("لا جلسة نشطة"),
+    "empty_rate": N_("لا سرعة صالحة للإرسال"),
+    "empty_timeout": N_("لا مهلة صالحة للإرسال"),
+    "exception": N_("خطأ داخليّ أثناء الإرسال"),
+    "no_coa": N_("لم يُرسَل أمر CoA"),
+    "CoA-ACK": N_("أكّد الراوتر التطبيق"),
+    "Disconnect-ACK": N_("أكّد الراوتر الفصل"),
+    "CoA-NAK": N_("رفض الراوتر الأمر (CoA-NAK)"),
+    "Disconnect-NAK": N_("رفض الراوتر الفصل (Disconnect-NAK)"),
 }
 
 
@@ -577,8 +578,8 @@ def coa_code_ar(code: str) -> str:
     if c in _CODE_AR:
         return _CODE_AR[c]
     if c.startswith("unknown-code-"):
-        return "ردّ غير معروف من الراوتر"
-    return "تعذّر تأكيد التطبيق على الراوتر"
+        return N_("ردّ غير معروف من الراوتر")
+    return N_("تعذّر تأكيد التطبيق على الراوتر")
 
 
 def _unsignalable_open_session(tenant_id: int, username: str,
@@ -602,8 +603,7 @@ def _unsignalable_open_session(tenant_id: int, username: str,
     return CoaResult(
         ok=False, code=0, code_name=CODE_ROUTER_NOT_CONFIGURED,
         reply_message=(
-            f"الجلسة نشطة لكن راوترها ({nas_ip or 'غير معروف'}) معطّل أو بلا "
-            "كلمة سر RADIUS في «أجهزة الشبكة» — تعذّر إرسال الأمر إليه."))
+            _tr('الجلسة نشطة لكن راوترها (%(v)s) معطّل أو بلا كلمة سر RADIUS في «أجهزة الشبكة» — تعذّر إرسال الأمر إليه.', v=nas_ip or N_('غير معروف'))))
 
 
 def _reconcile_disconnect_enabled() -> bool:
@@ -683,7 +683,7 @@ def _disconnect_reconciled(tenant_id: int, username: str, *,
             ))
             for s in outcome.sessions
         )
-        return _broadcast("قطع الجلسات", results, len(outcome.sessions))
+        return _broadcast(N_("قطع الجلسات"), results, len(outcome.sessions))
 
     # No usable live target on the reachable routers.
     if outcome.any_router_unreachable:
@@ -720,7 +720,7 @@ def _disconnect_from_radacct(tenant_id: int, username: str, *,
             if unsignalable is not None:
                 return unsignalable
         return CoaResult(ok=False, code=0, code_name="no_active_session",
-                          reply_message=f"لا توجد جلسة نشطة لـ {username}.")
+                          reply_message=_tr('لا توجد جلسة نشطة لـ %(username)s.', username=username))
     results = _run_all(
         (lambda info=info: send_disconnect(
             nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
@@ -731,7 +731,7 @@ def _disconnect_from_radacct(tenant_id: int, username: str, *,
         ))
         for info in sessions
     )
-    return _broadcast("قطع الجلسات", results, len(sessions))
+    return _broadcast(N_("قطع الجلسات"), results, len(sessions))
 
 
 def change_user_rate(tenant_id: int, username: str, *,
@@ -752,12 +752,11 @@ def change_user_rate(tenant_id: int, username: str, *,
     """
     if not new_rate_limit or not new_rate_limit.strip():
         return CoaResult(ok=False, code=0, code_name="empty_rate",
-                          reply_message="rate فارغ — لا تغيير")
+                          reply_message=N_("rate فارغ — لا تغيير"))
     sessions = find_all_nas_for_sessions(tenant_id, username)
     if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
-                          reply_message=f"لا جلسة نشطة لـ {username} — "
-                                         "السرعة الجديدة ستُطبَّق على الجلسة التالية")
+                          reply_message=_tr('لا جلسة نشطة لـ %(username)s — السرعة الجديدة ستُطبَّق على الجلسة التالية', username=username))
     # Broadcast — push the rate change to every active session.
     results = _run_all(
         (lambda info=info: send_coa(
@@ -770,7 +769,7 @@ def change_user_rate(tenant_id: int, username: str, *,
         ))
         for info in sessions
     )
-    return _broadcast("تحديث السرعة", results, len(sessions))
+    return _broadcast(N_("تحديث السرعة"), results, len(sessions))
 
 
 def change_user_session_timeout(tenant_id: int, username: str,
@@ -791,12 +790,11 @@ def change_user_session_timeout(tenant_id: int, username: str,
     """
     if not session_timeout or int(session_timeout) <= 0:
         return CoaResult(ok=False, code=0, code_name="empty_timeout",
-                          reply_message="timeout غير صالح — لا تغيير")
+                          reply_message=N_("timeout غير صالح — لا تغيير"))
     sessions = find_all_nas_for_sessions(tenant_id, username)
     if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
-                          reply_message=f"لا جلسة نشطة لـ {username} — "
-                                         "الوقت الجديد سيُطبَّق على الجلسة التالية")
+                          reply_message=_tr('لا جلسة نشطة لـ %(username)s — الوقت الجديد سيُطبَّق على الجلسة التالية', username=username))
     results = [
         send_coa(
             nas_ip=info["nas_ip"], nas_secret=info["nas_secret"],
@@ -808,4 +806,4 @@ def change_user_session_timeout(tenant_id: int, username: str,
         )
         for info in sessions
     ]
-    return _broadcast("تحديث الوقت", results, len(sessions))
+    return _broadcast(N_("تحديث الوقت"), results, len(sessions))

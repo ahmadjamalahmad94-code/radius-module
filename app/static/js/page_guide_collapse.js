@@ -7,6 +7,7 @@
  * each one collapsible — COLLAPSED BY DEFAULT, expand on click.
  * State is remembered per panel title in localStorage.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   'use strict';
 
@@ -14,7 +15,7 @@
   //   "كيف …" (how to read/use/work), "ماذا تشاهد/ماذا …" (what you see),
   //   "ما وظيفة …" (what this page does), "شرح …", "دليل …".
   // These are explanation boxes; real page titles don't start this way.
-  var PREFIXES = ['كيف ', 'ماذا ', 'ما وظيفة', 'شرح ', 'دليل '];
+  var PREFIXES = [hrT('كيف '), hrT('ماذا '), hrT('ما وظيفة'), hrT('شرح '), hrT('دليل ')];
   function isGuideHeading(txt) {
     for (var i = 0; i < PREFIXES.length; i++) {
       if (txt.indexOf(PREFIXES[i]) === 0) return true;

@@ -17,6 +17,7 @@
    Copies always surface a design-system toast (window.UDS.toast) — never
    a native alert. RTL-page / LTR-code agnostic.
    ════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   if (window.__hcodeInit) return;
@@ -41,7 +42,7 @@
     if (!btn) return;
     var old = btn.innerHTML;
     btn.classList.add("is-ok");
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (btn.getAttribute("data-cc-ok") || "تم النسخ");
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + (btn.getAttribute("data-cc-ok") || hrT('تم النسخ'));
     setTimeout(function () { btn.innerHTML = old; btn.classList.remove("is-ok"); }, 1700);
   }
   function flashIcon(btn) {
@@ -51,7 +52,7 @@
     setTimeout(function () { i.className = old; }, 1400);
   }
   var MSG = (window.__hcodeMsg = window.__hcodeMsg || {
-    full: "نُسخ إلى الحافظة", section: "نُسخ القسم إلى الحافظة",
+    full: hrT('نُسخ إلى الحافظة'), section: hrT('نُسخ القسم إلى الحافظة'),
   });
 
   document.addEventListener("click", function (e) {

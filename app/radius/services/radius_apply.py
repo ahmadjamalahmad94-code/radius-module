@@ -4,6 +4,7 @@ Accounting decides entitlement. This module performs the operational account
 update through the same RadiusAdapter used by the web/API paths.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from dataclasses import replace
 from datetime import datetime, timedelta
@@ -36,9 +37,9 @@ def apply_activation_minutes(
     rule (a payment on a never-activated account without expiry activates it
     for the purchased period — the API/app «create then pay» flow)."""
     if not username:
-        raise RadiusValidationError("اسم المستخدم مطلوب.")
+        raise RadiusValidationError(_tr("اسم المستخدم مطلوب."))
     if minutes <= 0:
-        raise RadiusValidationError("المدّة يجب أن تكون أكبر من صفر.")
+        raise RadiusValidationError(_tr("المدّة يجب أن تكون أكبر من صفر."))
     # قرار المالك: أقصى إضافة في العمليّة الواحدة سنة (دفعة → دقائق، سلفة…).
     check_extend_minutes(minutes)
 
@@ -61,7 +62,7 @@ def apply_activation_minutes(
             "new_expire_at": None,
             "status": "skipped",
             "reason": "unlimited_subscriber",
-            "message": "المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته.",
+            "message": _tr("المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته."),
         }
     base = current_expire if current_expire and current_expire > now else now
     # فائضٌ/ما بعد 2100 ⇒ 422 (كان OverflowError ⇒ 500 «date value out of range»).

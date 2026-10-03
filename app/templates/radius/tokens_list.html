@@ -8,7 +8,7 @@
 {% block title %}{{ _("رموز الواجهة البرمجية") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ _("رموز الواجهة البرمجية") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} رمز</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s رمز', length=items|length) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -18,19 +18,19 @@
 
 {# ───── Merged hero: title + KPI strip (no search bar → plain call) ───── #}
 {{ hub.megahero(
-  "رموز الواجهة البرمجية",
-  subtitle="إدارة رموز الوصول للواجهة البرمجية: إنشاء، إلغاء، ومراجعة آخر استخدام. الرمز يُعرض مرة واحدة فقط عند إنشائه.",
+  _('رموز الواجهة البرمجية'),
+  subtitle=_('إدارة رموز الوصول للواجهة البرمجية: إنشاء، إلغاء، ومراجعة آخر استخدام. الرمز يُعرض مرة واحدة فقط عند إنشائه.'),
   icon="key",
   kpis=[
-    {'label': 'الإجمالي', 'value': _total,   'icon': 'key',          'variant': 'brand'},
-    {'label': 'نشطة',     'value': _active,  'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'ملغاة',    'value': _revoked, 'icon': 'ban',          'variant': 'red'},
+    {'label': _('الإجمالي'), 'value': _total,   'icon': 'key',          'variant': 'brand'},
+    {'label': _('نشطة'),     'value': _active,  'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('ملغاة'),    'value': _revoked, 'icon': 'ban',          'variant': 'red'},
   ]
 ) }}
 
 {# ───── One-shot new-token reveal (shown once, right after creation) ───── #}
 {% if new_plain %}
-{% call hub.section("تم إنشاء الرمز", icon="circle-check", meta="انسخه الآن") %}
+{% call hub.section(_('تم إنشاء الرمز'), icon="circle-check", meta=_('انسخه الآن')) %}
   <div class="uds-modal-warn" style="margin-bottom:12px;background:#ecfdf5;color:#14532d;border-color:#bbf7d0">
     <i class="fa-solid fa-circle-check"></i>
     <span>{{ _('تم إنشاء الرمز — انسخه الآن، لن يُعرض مجددًا. ضعه في مكان آمن مثل مدير كلمات المرور؛ إن فُقد اطلب رمزًا جديدًا.') }}</span>
@@ -45,23 +45,20 @@
 {% endif %}
 
 {# ───── فرض المصادقة المركزي (تشغيل تدريجي) ───── #}
-{% call hub.section("فرض المصادقة على الواجهة البرمجية", icon="shield-halved",
-                    meta=("مفعّل" if enforcement_on else "معطّل")) %}
+{% call hub.section(_('فرض المصادقة على الواجهة البرمجية'), icon="shield-halved",
+                    meta=(_('مفعّل') if enforcement_on else _('معطّل'))) %}
   <div class="uds-modal-warn" style="margin-bottom:12px;{{ 'background:#ecfdf5;color:#14532d;border-color:#bbf7d0' if enforcement_on else 'background:#fffbeb;color:#92400e;border-color:#fde68a' }}">
     <i class="fa-solid {{ 'fa-shield-check' if enforcement_on else 'fa-triangle-exclamation' }}"></i>
     <span>
       {% if enforcement_on %}
-        الفرض <strong>{{ _('مفعّل') }}</strong>: كل نقطة في الواجهة البرمجية (حتى النقاط غير المُدرجة هنا) تتطلّب
-        مفتاح API صحيح أو اعتماد أدمن، وإلا تُرفض بـ401.
+        {{ _('الفرض') }} <strong>{{ _('مفعّل') }}</strong>{{ _(': كل نقطة في الواجهة البرمجية (حتى النقاط غير المُدرجة هنا) تتطلّب مفتاح API صحيح أو اعتماد أدمن، وإلا تُرفض بـ401.') }}
       {% else %}
-        الفرض <strong>{{ _('معطّل') }}</strong> (الوضع الآمن للتدرّج): النقاط المحمية صراحةً تبقى محمية، لكن أي
-        نقطة أُضيفت دون حماية تبقى مفتوحة. <strong>{{ _('قبل التفعيل') }}</strong>: جهّز مفتاحًا، وحدّث تطبيقات
-        Flutter لترسل الترويسة، ثم فعّل الفرض — وإلا ستنقطع التطبيقات التي لا ترسل اعتمادًا.
+        {{ _('الفرض') }} <strong>{{ _('معطّل') }}</strong> {{ _('(الوضع الآمن للتدرّج): النقاط المحمية صراحةً تبقى محمية، لكن أي نقطة أُضيفت دون حماية تبقى مفتوحة.') }} <strong>{{ _('قبل التفعيل') }}</strong>{{ _(': جهّز مفتاحًا، وحدّث تطبيقات Flutter لترسل الترويسة، ثم فعّل الفرض — وإلا ستنقطع التطبيقات التي لا ترسل اعتمادًا.') }}
       {% endif %}
     </span>
   </div>
   {% if can_toggle_enforcement %}
-  {% set _enf_msg = 'تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.' %}
+  {% set _enf_msg = _('تعطيل الفرض المركزي؟') if enforcement_on else _('تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.') %}
   {% if can_submit('radius.tok_enforcement', 'POST') %}<form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0">
     <input type="hidden" name="enable" value="{{ '0' if enforcement_on else '1' }}">
     {% if enforcement_on %}
@@ -76,29 +73,29 @@
 {% endcall %}
 
 {# ───── Create-token form ───── #}
-{% call hub.section("إنشاء رمز جديد", icon="plus") %}
+{% call hub.section(_('إنشاء رمز جديد'), icon="plus") %}
   <form method="post" class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input class="hub-input grow" type="text" name="name"
            placeholder="{{ _('اسم الرمز الجديد (مثال: integration-prod)') }}" required style="flex:1;min-width:200px">
-    {{ hub.btn("إنشاء رمز", icon="plus", variant="primary", type="submit") }}
+    {{ hub.btn(_('إنشاء رمز'), icon="plus", variant="primary", type="submit") }}
   {% if not can_post_here() %}</fieldset>{% endif %}</form>
 {% endcall %}
 
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو رمز وصول للواجهة البرمجية (API token) يُستخدم لمصادقة الطلبات القادمة من أنظمتك الخارجية.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو رمز وصول للواجهة البرمجية (API token) يُستخدم لمصادقة الطلبات القادمة من أنظمتك الخارجية.'),
   items=[
-    {'icon': 'eye-slash',    'text': 'الرمز الكامل يُعرض مرة واحدة فقط عند الإنشاء؛ بعدها تظهر بصمته (آخر 12 خانة) فقط.'},
-    {'icon': 'circle-check', 'text': 'الرمز «النشط» صالح للمصادقة؛ «الملغى» يُرفض فورًا ولا يمكن استعادته.'},
-    {'icon': 'clock',        'text': 'عمود «آخر استخدام» يساعدك على رصد الرموز الخاملة لإلغائها.'},
-    {'icon': 'ban',          'text': 'الإلغاء فوري ونهائي — إن احتجت الوصول مجددًا أنشئ رمزًا جديدًا.'},
-    {'icon': 'user-lock',    'text': 'بديل للرمز: يمكن المصادقة على الواجهة البرمجية باسم مستخدم وكلمة مرور الأدمن مباشرةً (HTTP Basic) — استخدمه فوق HTTPS فقط.'},
+    {'icon': 'eye-slash',    'text': _('الرمز الكامل يُعرض مرة واحدة فقط عند الإنشاء؛ بعدها تظهر بصمته (آخر 12 خانة) فقط.')},
+    {'icon': 'circle-check', 'text': _('الرمز «النشط» صالح للمصادقة؛ «الملغى» يُرفض فورًا ولا يمكن استعادته.')},
+    {'icon': 'clock',        'text': _('عمود «آخر استخدام» يساعدك على رصد الرموز الخاملة لإلغائها.')},
+    {'icon': 'ban',          'text': _('الإلغاء فوري ونهائي — إن احتجت الوصول مجددًا أنشئ رمزًا جديدًا.')},
+    {'icon': 'user-lock',    'text': _('بديل للرمز: يمكن المصادقة على الواجهة البرمجية باسم مستخدم وكلمة مرور الأدمن مباشرةً (HTTP Basic) — استخدمه فوق HTTPS فقط.')},
   ],
-  note="احتفظ بأقل عدد ممكن من الرموز النشطة، وألغِ أي رمز لم يَعُد مستخدمًا لتقليل سطح الخطر. كل طلب بلا رمز صحيح أو اعتماد أدمن صحيح يُرفض بـ401."
+  note=_('احتفظ بأقل عدد ممكن من الرموز النشطة، وألغِ أي رمز لم يَعُد مستخدمًا لتقليل سطح الخطر. كل طلب بلا رمز صحيح أو اعتماد أدمن صحيح يُرفض بـ401.')
 )) %}
-  {% call hub.section("الرموز الموجودة", icon="table-list", meta=_total|string + " رمز", flush=True) %}
+  {% call hub.section(_('الرموز الموجودة'), icon="table-list", meta=_total|string + _(' رمز'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -120,9 +117,9 @@
             <td class="mono small">…{{ t.token_hash[-12:] }}</td>
             <td>
               {% if t.revoked %}
-                {{ hub.pill("ملغى", variant="red") }}
+                {{ hub.pill(_('ملغى'), variant="red") }}
               {% else %}
-                {{ hub.pill("نشط", variant="green") }}
+                {{ hub.pill(_('نشط'), variant="green") }}
               {% endif %}
             </td>
             <td class="mono small">{{ t.last_used_at|dt_local if t.last_used_at else '—' }}</td>
@@ -132,7 +129,7 @@
                 {% if can_submit('radius.tok_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
                       style="display:inline; margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
-                          data-confirm="إلغاء الرمز «{{ t.name|e }}»؟ لا يمكن استعادته.">
+                          data-confirm="{{ _('إلغاء الرمز «%(e)s»؟ لا يمكن استعادته.', e=t.name|e) }}">
                     <i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}
                   </button>
                 </form>{% endif %}
@@ -149,8 +146,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد رموز بعد",
-  sub="أنشئ أول رمز من النموذج بالأعلى. الرموز تستخدم لمصادقة طلبات الواجهة البرمجية.",
+  _('لا توجد رموز بعد'),
+  sub=_('أنشئ أول رمز من النموذج بالأعلى. الرموز تستخدم لمصادقة طلبات الواجهة البرمجية.'),
   icon="key"
 ) }}
 {% endif %}

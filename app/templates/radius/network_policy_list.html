@@ -10,13 +10,13 @@
 {% block title %}{{ page_title }} — {{ _("سياسات الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
 {% block page_title %}
-  {% if scoped_to_nas %}سياسات الراوتر — {{ scoped_to_nas.name }}
+  {% if scoped_to_nas %}{{ _('سياسات الراوتر —') }} {{ scoped_to_nas.name }}
   {% else %}{{ service.label_ar }}{% endif %}
 {% endblock %}
 {% block page_sub %}
   <span class="sub">
     {% if scoped_to_nas %}{{ service.label_ar }} · {{ scoped_to_nas.address }}
-    {% else %}مركز سياسات الشبكة{% endif %}
+    {% else %}{{ _('مركز سياسات الشبكة') }}{% endif %}
   </span>
 {% endblock %}
 
@@ -50,14 +50,14 @@
 {% endset %}
 
 {{ hub.megahero(
-  (("سياسات الراوتر — " ~ scoped_to_nas.name) if scoped_to_nas else service.label_ar),
-  subtitle="عرّف السياسات هنا وعاينها قبل أي تطبيق — هذه الصفحة لا تُصدر أوامر إلى الراوتر.",
+  ((_('سياسات الراوتر — %(name)s', name=scoped_to_nas.name)) if scoped_to_nas else service.label_ar),
+  subtitle=_('عرّف السياسات هنا وعاينها قبل أي تطبيق — هذه الصفحة لا تُصدر أوامر إلى الراوتر.'),
   icon=service.icon,
   actions_html=_actions,
   kpis=[
-    {'label': 'إجمالي السياسات', 'value': cards|length,        'icon': service.icon, 'variant': 'brand'},
-    {'label': 'مُفعَّلة',        'value': _ns.enabled,          'icon': 'toggle-on',  'variant': 'green'},
-    {'label': 'عوينت',          'value': _ns.previewed,         'icon': 'eye',        'variant': 'blue'},
+    {'label': _('إجمالي السياسات'), 'value': cards|length,        'icon': service.icon, 'variant': 'brand'},
+    {'label': _('مُفعَّلة'),        'value': _ns.enabled,          'icon': 'toggle-on',  'variant': 'green'},
+    {'label': _('عوينت'),          'value': _ns.previewed,         'icon': 'eye',        'variant': 'blue'},
   ]
 ) }}
 
@@ -80,25 +80,25 @@
 
 {% if not cards %}
   {{ hub.empty(
-    "لا توجد سياسات بعد لـ " ~ service.label_ar,
-    sub="ابدأ بإنشاء سياسة جديدة لمعاينة السكربت بالكامل قبل أي تطبيق على الراوتر.",
+    _('لا توجد سياسات بعد لـ %(label_ar)s', label_ar=service.label_ar),
+    sub=_('ابدأ بإنشاء سياسة جديدة لمعاينة السكربت بالكامل قبل أي تطبيق على الراوتر.'),
     icon="folder-open"
   ) }}
 {% else %}
 {# ───── الجدول الرئيسي + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه القائمة؟",
-  intro="كل صف سياسة محفوظة محليًا. المعاينة تولّد السكربت الكامل وتقييم الخطر دون لمس الراوتر.",
+  _('كيف تقرأ هذه القائمة؟'),
+  intro=_('كل صف سياسة محفوظة محليًا. المعاينة تولّد السكربت الكامل وتقييم الخطر دون لمس الراوتر.'),
   items=[
-    {'icon': 'eye',              'text': '«معاينة» تعرض ما سيُنفَّذ بالضبط + تقييم الخطر + سكربت التراجع.'},
-    {'icon': 'pen-to-square',    'text': '«تحرير» يغيّر بيانات السياسة؛ «نسخ» ينشئ نسخة مستقلّة منها.'},
-    {'icon': 'toggle-on',        'text': 'حالة السياسة (مُفعَّلة/موقوفة) لا تُطبَّق على الراوتر إلا بصلاحية التطبيق.'},
+    {'icon': 'eye',              'text': _('«معاينة» تعرض ما سيُنفَّذ بالضبط + تقييم الخطر + سكربت التراجع.')},
+    {'icon': 'pen-to-square',    'text': _('«تحرير» يغيّر بيانات السياسة؛ «نسخ» ينشئ نسخة مستقلّة منها.')},
+    {'icon': 'toggle-on',        'text': _('حالة السياسة (مُفعَّلة/موقوفة) لا تُطبَّق على الراوتر إلا بصلاحية التطبيق.')},
   ],
-  note="الحذف محلّي فقط — لا يُطبَّق على الراوتر ولا يلمس قواعده."
+  note=_('الحذف محلّي فقط — لا يُطبَّق على الراوتر ولا يلمس قواعده.')
 )) %}
-  {% call hub.section("السياسات", icon="table-list", meta=cards|length|string + " سياسة", flush=True) %}
+  {% call hub.section(_('السياسات'), icon="table-list", meta=cards|length|string + _(' سياسة'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
-         data-uds-export-title="سياسات {{ service.label_ar }}" style="border:none;border-radius:0">
+         data-uds-export-title="{{ _('سياسات %(label_ar)s', label_ar=service.label_ar) }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -122,8 +122,8 @@
             <td class="small">{{ c.router_name or '—' }}</td>
             <td>
               {{ npc.npc_status_pill(c.deployment_status) }}
-              {% if p.enabled %}{{ hub.pill("مُفعَّلة", variant="green", dot=False) }}
-              {% else %}{{ hub.pill("موقوفة", variant="grey", dot=False) }}{% endif %}
+              {% if p.enabled %}{{ hub.pill(_('مُفعَّلة'), variant="green", dot=False) }}
+              {% else %}{{ hub.pill(_('موقوفة'), variant="grey", dot=False) }}{% endif %}
             </td>
             <td>{{ npc.npc_risk_pill(c.risk) }}</td>
             <td class="num mono">{{ c.child_count or 0 }}</td>
@@ -149,7 +149,7 @@
                 </form>{% endif %}
                 {% if can_submit('radius.npc_', 'POST') %}<form class="npc-inline-form" method="POST"
                       action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
-                      onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
+                      onsubmit="return confirm({{ _('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)')|tojson|forceescape }});">
                   {{ csrf_token_input() | safe }}
                   <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit" title="{{ _('حذف') }}">
                     <i class="fa-regular fa-trash-can"></i>

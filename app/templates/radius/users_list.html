@@ -22,7 +22,7 @@
 {% block title %}{{ _("قائمة المشتركين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users"></i>{% endblock %}
 {% block page_title %}{{ _("المشتركون") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (stat_total if stat_total is defined else items|length)|ar_count('subscriber') }} في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s في النتائج', v=(stat_total if stat_total is defined else items|length)|ar_count('subscriber')) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -348,7 +348,7 @@
   [data-users-page] .dt-controls{ display:contents; }
   /* وسم «صفوف بالصفحة» قبل القائمة (uds-pager-size) */
   [data-users-page] .dt-controls::before{
-    content:"صفوف بالصفحة";
+    content:"{{ _('صفوف بالصفحة') }}";
     order:-2; margin-inline-end:4px; /* 4px + فجوة 4px = 8px مثل uds-pager-size */
     font-size:12px; color:var(--hub-text-soft, #475569); font-weight:800;
   }
@@ -667,17 +667,17 @@
      الخاص فيها»): الإجمالي=بلا فلتر · فعّال/معطّل/منتهي=فلتر الحالة ·
      متصل الآن=online=1 · ينتهي≤3أيام=attention. #}
   <div class="users-mega-hero-kpis">
-    {{ hub.kpi("الإجمالي",              _total,    icon="users",         variant="brand",
+    {{ hub.kpi(_('الإجمالي'),              _total,    icon="users",         variant="brand",
                href=url_for('radius.users_list')) }}
-    {{ hub.kpi("فعّال",                 _active,   icon="circle-check",  variant="green",
+    {{ hub.kpi(_('فعّال'),                 _active,   icon="circle-check",  variant="green",
                href=url_for('radius.users_list', status='enabled')) }}
-    {{ hub.kpi("معطّل",                 _disab,    icon="ban",           variant="red",
+    {{ hub.kpi(_('معطّل'),                 _disab,    icon="ban",           variant="red",
                href=url_for('radius.users_list', status='disabled')) }}
-    {{ hub.kpi("منتهي الاشتراك",        _expird,   icon="hourglass-end", variant="amber",
+    {{ hub.kpi(_('منتهي الاشتراك'),        _expird,   icon="hourglass-end", variant="amber",
                href=url_for('radius.users_list', status='expired')) }}
-    {{ hub.kpi("متصل الآن",             _online,   icon="wifi",          variant="green",
+    {{ hub.kpi(_('متصل الآن'),             _online,   icon="wifi",          variant="green",
                href=url_for('radius.users_list', online='1')) }}
-    {{ hub.kpi("ينتهي خلال 3 أيام",     _expiring, icon="hourglass-half", variant="blue",
+    {{ hub.kpi(_('ينتهي خلال 3 أيام'),     _expiring, icon="hourglass-half", variant="blue",
                href=url_for('radius.users_list', attention='expiring_3d')) }}
   </div>
 </div>
@@ -756,7 +756,7 @@
     <option value="hotspot" {% if access == 'hotspot' %}selected{% endif %}>{{ _('هوت سبوت') }}</option>
     <option value="broadband" {% if access == 'broadband' %}selected{% endif %}>{{ _('برود باند (PPPoE)') }}</option>
   </select>
-  {{ hub.btn("تطبيق",   icon="filter", variant="primary",   type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'),   icon="filter", variant="primary",   type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {# أزرار التصدير الثلاثة (أيقونات فقط): CSV محلي، Excel/PDF عبر
      /admin/radius/export/table — كلها عبر window.hubTableExport #}
@@ -766,7 +766,7 @@
   {{ hub.btn("", icon="file-excel", variant="secondary", size="sm", attrs='data-users-export="xlsx" title="Excel" aria-label="Excel"') }}
   {{ hub.btn("", icon="file-pdf",   variant="secondary", size="sm", attrs='data-users-export="pdf"  title="PDF"   aria-label="PDF"') }}
   {% endif %}
-  {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm", attrs='data-users-print') }}
+  {{ hub.btn(_('طباعة'), icon="print",      variant="ghost",     size="sm", attrs='data-users-print') }}
 </form>
 
 {# ── شريحة فلتر «ما يحتاج انتباه» النشط ─────────────────────
@@ -965,7 +965,7 @@
 {# ───── Subscribers Table ──────────────────────────────────── #}
 {% if items %}
 {% set _picker_meta %}
-{{ _total|string }} صف
+{{ _total|string }} {{ _('صف') }}
 <span class="col-picker-wrap" style="margin-inline-start:8px">
   <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-col-picker-toggle aria-haspopup="true" aria-expanded="false">
     <i class="fa-solid fa-table-columns"></i> {{ _('أعمدة') }}
@@ -973,7 +973,7 @@
   <div class="col-picker-panel" data-col-picker-panel hidden role="menu" aria-label="{{ _('اختيار الأعمدة') }}"></div>
 </span>
 {% endset %}
-{% call hub.section("قائمة المشتركين", icon="table-list", meta=_picker_meta, flush=True) %}
+{% call hub.section(_('قائمة المشتركين'), icon="table-list", meta=_picker_meta, flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
     {# ترقيم خادميّ: أُزيل data-paginated (كان يرسم كلّ الصفوف ثم يُخفيها بـJS —
        ثقل التحميل). الصفحة الآن تُصيّر page_size صفًّا فقط، والمُرقِّم أسفل الجدول. #}
@@ -1061,7 +1061,7 @@
           data-profile-url="{{ url_for('radius.users_profile', username=u.username) if can_submit('radius.users_profile', 'GET') else '' }}"
           data-edit-url="{{ url_for('radius.users_edit', username=u.username) if can_submit('radius.users_edit', 'GET') else '' }}"
           data-finance-url="{{ url_for('radius.users_finance', username=u.username) }}">
-          <td data-col="chk"><input type="checkbox" aria-label="تحديد {{ u.username }}" data-users-row-check></td>
+          <td data-col="chk"><input type="checkbox" aria-label="{{ _('تحديد %(username)s', username=u.username) }}" data-users-row-check></td>
           {# «#» = رقم الصفّ الظاهر لا معرّف قاعدة البيانات — المعرّفات لا يُعاد
              استخدامها بعد الحذف فتتضخّم (57 ألفًا لـ1590 مشتركًا). #}
           <td data-col="id"       data-sort-value="{{ loop.index }}" class="num mono">{{ loop.index }}</td>
@@ -1116,9 +1116,9 @@
             {% if u.card_batch_id %}
               {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link hr-entity-link--pill"
                  href="{{ url_for('radius.cards_of_batch', batch_id=u.card_batch_id) }}"
-                 title="حزمة الكرت رقم {{ u.card_batch_id }}">{% endif %}
+                 title="{{ _('حزمة الكرت رقم %(card_batch_id)s', card_batch_id=u.card_batch_id) }}">{% endif %}
                 <span class="hub-pill hub-pill--violet">
-                  <i class="fa-solid fa-id-card"></i> حزمة رقم {{ u.card_batch_id }}
+                  <i class="fa-solid fa-id-card"></i> {{ _('حزمة رقم %(card_batch_id)s', card_batch_id=u.card_batch_id) }}
                 </span>
               {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
@@ -1129,8 +1129,8 @@
             {% if _fp %}
               {# الاسم المقروء: اسم المضيف ثم العلامة ثم «جهاز غير معروف» — لا «—» خام؛
                  بصمة DHCP الخام (dhcp_class_id) تبقى في title بعنوان عربي للتتبّع #}
-              {% set _dev_name = _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else 'جهاز غير معروف') %}
-              <span class="hub-pill hub-pill--blue" title="بصمة الجهاز: {{ _fp.dhcp_class_id or '—' }}" style="border-color:#bfdbfe">
+              {% set _dev_name = _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else _('جهاز غير معروف')) %}
+              <span class="hub-pill hub-pill--blue" title="{{ _('بصمة الجهاز: %(v)s', v=_fp.dhcp_class_id or '—') }}" style="border-color:#bfdbfe">
                 <i class="fa-solid fa-mobile-screen"></i>
                 <span>{{ _dev_name }}</span>
                 {% if _fp.os_family %}<small style="opacity:.7">{{ _fp.os_family|capitalize }} {{ _fp.os_version or '' }}</small>{% endif %}
@@ -1138,11 +1138,11 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td data-col="status" data-sort-value="{{ u.status }}">
-            {% if u.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% elif u.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
-            {% elif u.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-            {% elif u.status == 'suspended' %}{{ hub.pill("موقوف", variant="grey") }}
-            {% elif u.status == 'pending' %}{{ hub.pill("قيد الانتظار", variant="grey") }}
+            {% if u.status == 'enabled' %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+            {% elif u.status == 'expired' %}{{ hub.pill(_('منتهٍ'), variant="amber") }}
+            {% elif u.status == 'disabled' %}{{ hub.pill(_('معطَّل'), variant="red") }}
+            {% elif u.status == 'suspended' %}{{ hub.pill(_('موقوف'), variant="grey") }}
+            {% elif u.status == 'pending' %}{{ hub.pill(_('قيد الانتظار'), variant="grey") }}
             {# لا تُعرَض حالة خام بالإنجليزية؛ الخام محفوظ في title وتُعرَّب عبر L.status #}
             {% else %}<span title="{{ u.status }}">{{ hub.pill(L.status(u.status), variant="grey") }}</span>{% endif %}
           </td>
@@ -1277,12 +1277,12 @@
                 {% if can_submit('radius.users_toggle', 'POST') %}<form method="post"{% if not _sa.get('status', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_toggle', username=u.username) }}">
                   <button type="submit" class="urow-item">
                     <i class="fa-solid fa-{{ 'pause' if u.status=='enabled' else 'play' }}"></i>
-                    {{ 'تعطيل المشترك' if u.status=='enabled' else 'تفعيل المشترك' }}
+                    {{ _('تعطيل المشترك') if u.status=='enabled' else _('تفعيل المشترك') }}
                   </button>
                 </form>{% endif %}
                 <div class="urow-sep"></div>
                 {% if can_submit('radius.users_delete', 'POST') %}<form method="post"{% if not _sa.get('delete', True) %} hidden data-perm-denied{% endif %} action="{{ url_for('radius.users_delete', username=u.username) }}"
-                      data-urow-confirm="أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
+                      data-urow-confirm="{{ _('أرشفة %(e)s؟ يمكن استعادته من سلة المحذوفات.', e=u.username|e) }}">
                   <button type="submit" class="urow-item urow-item--danger">
                     <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المشترك') }}
                   </button>
@@ -1357,8 +1357,8 @@
 {# حالة فارغة أنيقة: عنوان + سبب + زر CTA مباشر (ماكرو hub.empty لا يدعم زرًا) #}
 <div style="text-align:center">
   {{ hub.empty(
-    "اللوحة فارغة — لا مشتركين بهذه الفلترة",
-    sub="جرّب تخفيف معايير البحث، أو أنشئ مشتركًا جديدًا للبدء.",
+    _('اللوحة فارغة — لا مشتركين بهذه الفلترة'),
+    sub=_('جرّب تخفيف معايير البحث، أو أنشئ مشتركًا جديدًا للبدء.'),
     icon="users-slash"
   ) }}
   {% if (manager_can_write is not defined or manager_can_write('subscribers'))
@@ -1466,8 +1466,7 @@
           {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            المدة المحدَّدة تُضاف لكل مشترك على حدة (المدّة نفسُها لكلّ واحد)؛
-            وفي الوضع المدفوع/الدين تُحتسب القيمة تلقائيًا من سعر كل مشترك.
+            {{ _('المدة المحدَّدة تُضاف لكل مشترك على حدة (المدّة نفسُها لكلّ واحد)؛ وفي الوضع المدفوع/الدين تُحتسب القيمة تلقائيًا من سعر كل مشترك.') }}
           </div>
         </div>
         {# 🔴 كان الحقلُ «عدد الأيام» وحدَه — فلا سبيل لإضافة ساعةٍ أو نصفِها.
@@ -1633,8 +1632,7 @@
           </div>
         </div>
         <div class="usq-form-grid">
-          <label class="usq-field">حجم الكوتة
-            {{ unit_input_picker(name="quota_mb", value=0, kind="quota") }}
+          <label class="usq-field">{{ _('حجم الكوتة %(v)s', v=unit_input_picker(name="quota_mb", value=0, kind="quota")) }}
           </label>
           <label class="usq-field">{{ _('نوع الكوتة') }}
             <select class="hub-select" name="quota_target">
@@ -1826,8 +1824,7 @@
           {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            تُسجَّل دفعة بالمبلغ المُدخل لكل مشترك على حدة وتُطبَّق على حسابه
-            (المدة تُحتسب من سعر كل مشترك).
+            {{ _('تُسجَّل دفعة بالمبلغ المُدخل لكل مشترك على حدة وتُطبَّق على حسابه (المدة تُحتسب من سعر كل مشترك).') }}
           </div>
         </div>
         <div class="usq-form-grid">
@@ -1882,8 +1879,7 @@
           {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            المدة المحدَّدة تُمنح لكل مشترك على حدة؛ وفي وضع الدين تُحتسب
-            قيمة السلفة تلقائيًا من سعر كل مشترك.
+            {{ _('المدة المحدَّدة تُمنح لكل مشترك على حدة؛ وفي وضع الدين تُحتسب قيمة السلفة تلقائيًا من سعر كل مشترك.') }}
           </div>
         </div>
         <div class="usq-field wide">{{ _('نوع السلفة') }}
@@ -1949,9 +1945,7 @@
       <div class="ubulk-danger-note">
         <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
         <div>
-          {{ _('سيتم أرشفة') }} <strong><span data-users-bulk-count3>0</span> {{ _('مشترك') }}</strong> دفعة واحدة.
-          هذا إجراء حسّاس — يمكن استعادتهم من <strong>{{ _('سلة المحذوفات') }}</strong> عند الحاجة.
-          للتأكيد اكتب <strong>{{ _('أرشفة المشتركين') }}</strong> {{ _('في الحقل أدناه.') }}
+          {{ _('سيتم أرشفة') }} <strong><span data-users-bulk-count3>0</span> {{ _('مشترك') }}</strong> {{ _('دفعة واحدة. هذا إجراء حسّاس — يمكن استعادتهم من') }} <strong>{{ _('سلة المحذوفات') }}</strong> {{ _('عند الحاجة. للتأكيد اكتب') }} <strong>{{ _('أرشفة المشتركين') }}</strong> {{ _('في الحقل أدناه.') }}
         </div>
       </div>
       <ul class="ubulk-confirm-list" data-users-bulk-names></ul>

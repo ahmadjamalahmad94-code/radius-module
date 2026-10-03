@@ -5,6 +5,7 @@ URL prefix (under the radius blueprint): /admin/radius/subscriber-groups
 Pattern reference: SERVICES_COOKBOOK §15.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint, abort, flash, redirect, render_template, request, session,
@@ -107,9 +108,9 @@ def sg_new():
     return render_template(
         "radius/subscriber_groups_form.html",
         is_new=True, group=None, **opts,
-        all_days=[("sat","السبت"),("sun","الأحد"),("mon","الإثنين"),
-                  ("tue","الثلاثاء"),("wed","الأربعاء"),("thu","الخميس"),
-                  ("fri","الجمعة")],
+        all_days=[("sat",N_("السبت")),("sun",N_("الأحد")),("mon",N_("الإثنين")),
+                  ("tue",N_("الثلاثاء")),("wed",N_("الأربعاء")),("thu",N_("الخميس")),
+                  ("fri",N_("الجمعة"))],
     )
 
 
@@ -121,7 +122,7 @@ def sg_create():
     except RadiusError as e:
         flash(str(e), "error")
         return redirect(url_for("radius.subscriber_groups_new"))
-    flash(f"تم إنشاء مجموعة «{kwargs['name']}»", "success")
+    flash(_tr('تم إنشاء مجموعة «%(name)s»', name=kwargs['name']), "success")
     return redirect(url_for("radius.subscriber_groups_list"))
 
 
@@ -135,18 +136,18 @@ def sg_edit(gid: int):
         "radius/subscriber_groups_form.html",
         is_new=False, group=g, **opts,
         members=svc.members(tenant_id=_tid(), gid=gid, limit=200),
-        all_days=[("sat","السبت"),("sun","الأحد"),("mon","الإثنين"),
-                  ("tue","الثلاثاء"),("wed","الأربعاء"),("thu","الخميس"),
-                  ("fri","الجمعة")],
+        all_days=[("sat",N_("السبت")),("sun",N_("الأحد")),("mon",N_("الإثنين")),
+                  ("tue",N_("الثلاثاء")),("wed",N_("الأربعاء")),("thu",N_("الخميس")),
+                  ("fri",N_("الجمعة"))],
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
             target_type="subscriber_group",
             subscriber_group_id=gid,
             return_to=request.path,
-            title="قواعد سرعة المجموعة",
+            title=N_("قواعد سرعة المجموعة"),
             help_text=(
-                "كل قاعدة تطبق سرعة مختلفة في أوقات معينة على كل أعضاء "
-                "هذه المجموعة. الأولوية الأقل تفوز عند التداخل."
+                N_("كل قاعدة تطبق سرعة مختلفة في أوقات معينة على كل أعضاء "
+                "هذه المجموعة. الأولوية الأقل تفوز عند التداخل.")
             ),
         ),
     )
@@ -163,7 +164,7 @@ def sg_update(gid: int):
                 target_type="subscriber_group",
                 subscriber_group_id=gid,
             )
-            flash("تم تطبيق إجراء قاعدة السرعة.", "success")
+            flash(_tr("تم تطبيق إجراء قاعدة السرعة."), "success")
         except RadiusError as e:
             flash(str(e), "error")
         return redirect(url_for("radius.subscriber_groups_edit", gid=gid))
@@ -175,14 +176,14 @@ def sg_update(gid: int):
     except RadiusError as e:
         flash(str(e), "error")
         return redirect(url_for("radius.subscriber_groups_edit", gid=gid))
-    flash("تم حفظ تعديلات المجموعة.", "success")
+    flash(_tr("تم حفظ تعديلات المجموعة."), "success")
     return redirect(url_for("radius.subscriber_groups_list"))
 
 
 def sg_delete(gid: int):
     get_subscriber_groups_service().delete(
         actor=_actor(), tenant_id=_tid(), gid=gid)
-    flash("تم حذف المجموعة (تم فصل المشتركين عنها).", "info")
+    flash(_tr("تم حذف المجموعة (تم فصل المشتركين عنها)."), "info")
     return redirect(url_for("radius.subscriber_groups_list"))
 
 
@@ -192,7 +193,7 @@ def sg_disconnect_online(gid: int):
         abort(404)
     member_names = set(subscriber_groups_repo.list_member_usernames(_tid(), gid))
     if not member_names:
-        flash("لا يوجد أعضاء في هذه المجموعة.", "info")
+        flash(_tr("لا يوجد أعضاء في هذه المجموعة."), "info")
         return redirect(url_for("radius.subscriber_groups_list"))
 
     disconnected = 0
@@ -212,15 +213,15 @@ def sg_disconnect_online(gid: int):
             except RadiusError:
                 failed += 1
     except RadiusError as e:
-        flash(e.message or "تعذّر قراءة الجلسات المتصلة.", "error")
+        flash(e.message or _tr("تعذّر قراءة الجلسات المتصلة."), "error")
         return redirect(url_for("radius.subscriber_groups_list"))
 
     if disconnected:
-        flash(f"تم إرسال أمر فصل {disconnected} جلسة من مجموعة «{group['name']}».", "success")
+        flash(_tr('تم إرسال أمر فصل %(disconnected)s جلسة من مجموعة «%(name)s».', disconnected=disconnected, name=group['name']), "success")
     elif failed:
-        flash("تعذّر فصل جلسات المجموعة المتصلة.", "error")
+        flash(_tr("تعذّر فصل جلسات المجموعة المتصلة."), "error")
     else:
-        flash(f"لا توجد جلسات متصلة حالياً لمجموعة «{group['name']}».", "info")
+        flash(_tr('لا توجد جلسات متصلة حالياً لمجموعة «%(name)s».', name=group['name']), "info")
     return redirect(url_for("radius.subscriber_groups_list"))
 
 
@@ -230,7 +231,7 @@ def sg_quota_reset_daily(gid: int):
         abort(404)
     usernames = subscriber_groups_repo.list_member_usernames(_tid(), gid)
     if not usernames:
-        flash("لا يوجد أعضاء في هذه المجموعة.", "info")
+        flash(_tr("لا يوجد أعضاء في هذه المجموعة."), "info")
         return redirect(url_for("radius.subscriber_groups_list"))
 
     reset_count = 0
@@ -248,9 +249,9 @@ def sg_quota_reset_daily(gid: int):
             failed += 1
 
     if reset_count:
-        flash(f"تمت استعادة الكوتة اليومية لـ {reset_count} مشترك في مجموعة «{group['name']}».", "success")
+        flash(_tr('تمت استعادة الكوتة اليومية لـ %(reset_count)s مشترك في مجموعة «%(name)s».', reset_count=reset_count, name=group['name']), "success")
     if skipped:
-        flash(f"تُخطّي {skipped} مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ.", "info")
+        flash(_tr('تُخطّي %(skipped)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ.', skipped=skipped), "info")
     if failed:
-        flash(f"تعذّرت استعادة الكوتة لـ {failed} مشترك.", "error")
+        flash(_tr('تعذّرت استعادة الكوتة لـ %(failed)s مشترك.', failed=failed), "error")
     return redirect(url_for("radius.subscriber_groups_list"))

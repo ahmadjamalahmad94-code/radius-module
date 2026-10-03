@@ -9,6 +9,7 @@
 يُعيد استعمال هيكل الشِّل المُثبَت (دخول/CHAP/تبويبات CSS)؛ البَصمة z-index:-1
 خلفيّة، الشريط غير مُغطّى، العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -80,13 +81,13 @@ _DISH_ART = """
 
 _DISH_HERO = ("""
       <div class="pd-hero">
-        <div class="pd-frame">""" + _DISH_ART + """</div>
+        <div class="pd-frame">""" + _DISH_ART + N_("""</div>
         <div class="pd-cap">
           <div><b>أهلاً بك على مائدتنا</b><span>تصفّح القائمة واطلب — إنترنت سريع للضيوف</span></div>
           <div class="pd-badge"><span class="pd-dot"></span> مفتوح</div>
         </div>
       </div>
-""")
+"""))
 
 _DISH_STYLE = """
 <style id="hr-plated-dish">

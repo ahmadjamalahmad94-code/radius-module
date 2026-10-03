@@ -27,6 +27,7 @@ this layer can stay dumb — it just returns whatever the router
 says.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 
@@ -142,9 +143,7 @@ class LiveRouterStateReader:
             # نص الاستثناء الأصلي ({e}) لأن الاختبارات وسجلات الدعم
             # تحتاجه (مثال: "connection refused") بعد المقطع العربي.
             raise StateReadError(
-                f"تعذّر قراءة حالة الراوتر #{rid} (المسار "
-                f"{api_path}): {type(e).__name__}: {e} — تحقّق من "
-                "اتصال الراوتر واعتمادات API ثم أعد المحاولة."
+                _tr('تعذّر قراءة حالة الراوتر #%(rid)s (المسار %(api_path)s): %(v)s: %(e)s — تحقّق من اتصال الراوتر واعتمادات API ثم أعد المحاولة.', rid=rid, api_path=api_path, v=type(e).__name__, e=e)
             ) from e
 
         items: list[RouterItem] = []
@@ -169,8 +168,7 @@ class LiveRouterStateReader:
             # «لا توجد بيانات» الصريحة — لا يوجد راوتر بهذا المعرّف
             # أو معطّل. الـUI يعرضها بدل أن يظهر صفر صنفي زائف.
             raise StateReadError(
-                f"الراوتر #{router_id} غير موجود في «الراوترات» أو "
-                "غير مفعَّل — أضِف راوترًا وفعّله من قسم الراوترات."
+                _tr('الراوتر #%(router_id)s غير موجود في «الراوترات» أو غير مفعَّل — أضِف راوترًا وفعّله من قسم الراوترات.', router_id=router_id)
             )
         return LiveRouterExecutor._build_cfg(nas)
 

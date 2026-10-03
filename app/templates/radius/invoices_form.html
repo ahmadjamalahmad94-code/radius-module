@@ -23,8 +23,8 @@
         الآمن بدل + لتفادي مشاكل ربط السلاسل في Jinja2 ───── #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "فاتورة جديدة",
-  subtitle="أنشئ فاتورة للمشترك: اختر الباقة، حدّد المبلغ وطريقة الدفع، واعتمد حالتها.",
+  _('فاتورة جديدة'),
+  subtitle=_('أنشئ فاتورة للمشترك: اختر الباقة، حدّد المبلغ وطريقة الدفع، واعتمد حالتها.'),
   icon="file-invoice-dollar",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.inv_list') ~ '">
@@ -41,7 +41,7 @@
   {# توكن CSRF مطلوب: التطبيق يرفض أي POST بدونه (_csrf_check) #}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
-  {% call hub.section("معلومات الفاتورة", icon="file-pen") %}
+  {% call hub.section(_('معلومات الفاتورة'), icon="file-pen") %}
     {# hub-form-row يفرض التخطيط الشبكي وتوزيع الحقول بشكل صحيح ───── #}
     <div class="hub-form-row">
 
@@ -134,8 +134,8 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
-    {{ hub.btn("إنشاء الفاتورة", icon="floppy-disk", variant="primary", type="submit") }}
-    {% if can_submit('radius.inv_list', 'GET') %}{{ hub.btn("إلغاء", href=url_for('radius.inv_list'), variant="ghost") }}{% endif %}
+    {{ hub.btn(_('إنشاء الفاتورة'), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.inv_list', 'GET') %}{{ hub.btn(_('إلغاء'), href=url_for('radius.inv_list'), variant="ghost") }}{% endif %}
   </div>
 {% if not can_submit('radius.inv_create') %}</fieldset>{% endif %}</form>
 

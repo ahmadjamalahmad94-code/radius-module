@@ -3,6 +3,7 @@
 مُسجَّل على blueprint الرئيسي (radius) ضمن _register_all.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -58,7 +59,7 @@ def vpn_accounts_create():
     speed_mbps = request.form.get("speed_limit_mbps", type=int)
 
     if not alloc_id:
-        flash("اختر التخصيص أولًا.", "error")
+        flash(_tr("اختر التخصيص أولًا."), "error")
         return redirect(url_for("radius.vpn_accounts_list"))
 
     try:
@@ -71,7 +72,7 @@ def vpn_accounts_create():
             max_concurrent=max_concurrent,
             speed_limit_mbps=speed_mbps,
         )
-        flash(f"تم إنشاء الحساب «{result['username']}» بنجاح.", "success")
+        flash(_tr('تم إنشاء الحساب «%(username)s» بنجاح.', username=result['username']), "success")
     except ValueError as exc:
         flash(str(exc), "error")
 
@@ -83,7 +84,7 @@ def vpn_accounts_delete(account_id: int):
 
     tid = _tid()
     ok = delete_account(tid, account_id)
-    flash("تم حذف الحساب." if ok else "لم يُعثر على الحساب.", "success" if ok else "error")
+    flash(_tr("تم حذف الحساب.") if ok else _tr("لم يُعثر على الحساب."), "success" if ok else "error")
     return redirect(url_for("radius.vpn_accounts_list"))
 
 
@@ -92,7 +93,7 @@ def vpn_accounts_suspend(account_id: int):
 
     tid = _tid()
     ok = suspend_account(tid, account_id)
-    flash("تم تعطيل الحساب." if ok else "لم يُعثر على الحساب.", "success" if ok else "error")
+    flash(_tr("تم تعطيل الحساب.") if ok else _tr("لم يُعثر على الحساب."), "success" if ok else "error")
     return redirect(url_for("radius.vpn_accounts_list"))
 
 
@@ -101,7 +102,7 @@ def vpn_accounts_activate(account_id: int):
 
     tid = _tid()
     ok = activate_account(tid, account_id)
-    flash("تم تفعيل الحساب." if ok else "لم يُعثر على الحساب.", "success" if ok else "error")
+    flash(_tr("تم تفعيل الحساب.") if ok else _tr("لم يُعثر على الحساب."), "success" if ok else "error")
     return redirect(url_for("radius.vpn_accounts_list"))
 
 
@@ -113,10 +114,9 @@ def vpn_accounts_sync():
     result = sync(tid)
     if result.get("ok"):
         flash(
-            f"تمت المزامنة: {result['allocations_synced']} تخصيص محدَّث "
-            f"(الترخيص: {result.get('license_status', '?')}).",
+            _tr('تمت المزامنة: %(allocations_synced)s تخصيص محدَّث (الترخيص: %(v)s).', allocations_synced=result['allocations_synced'], v=result.get('license_status', '?')),
             "success",
         )
     else:
-        flash(f"فشلت المزامنة: {result.get('reason', 'خطأ غير معروف')}.", "error")
+        flash(_tr('فشلت المزامنة: %(v)s.', v=result.get('reason', N_('خطأ غير معروف'))), "error")
     return redirect(url_for("radius.vpn_accounts_list"))

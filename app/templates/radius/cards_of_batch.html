@@ -486,36 +486,36 @@
     {#- nowrap: رمزُ الحزمة وتاريخُ الإنشاء+الوقت وحدةٌ واحدة لا تلتفّ على سطرَين («B-20260925-» / «0001»،
         «2026-09-25» / «13:57»). Markup + ~ يُهرِّب الأجزاءَ النصّيّة (batch_code، الاسم) تلقائيًّا. #}
     {{ hub.megahero(
-      "كروت الحزمة " ~ ('<span style="white-space:nowrap">⁦'|safe) ~ batch.batch_code ~ ('⁩</span>'|safe),
-      subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
-               ~ " · أنشئت " ~ ('<span style="white-space:nowrap">'|safe) ~ (batch.created_at|dt_local if batch.created_at else '—') ~ ('</span>'|safe)
-               ~ " · " ~ (batch.created_by or 'بدون مدير')
-               ~ " · تحميل ⁦" ~ summary.download_label ~ "⁩ / رفع ⁦" ~ summary.upload_label ~ "⁩",
+      _('كروت الحزمة %(v)s%(batch_code)s%(v2)s', v=('<span style="white-space:nowrap">⁦'|safe), batch_code=batch.batch_code, v2=('⁩</span>'|safe)),
+      subtitle=(plan.name if plan else (batch.package_name or _('بدون عرض')))
+               ~ " · " ~ _('أنشئت %(date)s', date=('<span style="white-space:nowrap">'|safe ~ (batch.created_at|dt_local if batch.created_at else '—') ~ '</span>'|safe))
+               ~ " · " ~ (batch.created_by or _('بدون مدير'))
+               ~ " · " ~ _('تحميل %(down)s / رفع %(up)s', down=('⁦'|safe ~ summary.download_label ~ '⁩'|safe), up=('⁦'|safe ~ summary.upload_label ~ '⁩'|safe)),
       icon="id-card",
       actions_html=hero_actions,
       kpis=[
-        {'label': 'إجمالي الكروت', 'value': summary.total,        'icon': 'id-card',          'variant': 'brand'},
-        {'label': 'متصل',          'value': summary.online,       'icon': 'signal',           'variant': 'green'},
-        {'label': 'متاحة',         'value': summary.ready,        'icon': 'circle-check',     'variant': 'blue'},
-        {'label': 'مستخدمة غير متصلة', 'value': summary.used_offline, 'icon': 'circle-user',  'variant': 'blue'},
-        {'label': 'منتهية / موقوفة', 'value': summary.expired + summary.revoked, 'icon': 'ban', 'variant': 'red'},
+        {'label': _('إجمالي الكروت'), 'value': summary.total,        'icon': 'id-card',          'variant': 'brand'},
+        {'label': _('متصل'),          'value': summary.online,       'icon': 'signal',           'variant': 'green'},
+        {'label': _('متاحة'),         'value': summary.ready,        'icon': 'circle-check',     'variant': 'blue'},
+        {'label': _('مستخدمة غير متصلة'), 'value': summary.used_offline, 'icon': 'circle-user',  'variant': 'blue'},
+        {'label': _('منتهية / موقوفة'), 'value': summary.expired + summary.revoked, 'icon': 'ban', 'variant': 'red'},
       ]
     ) }}
     </section>{# /hub-hero-shell #}
 
     {% call hub.worklayout(aside_html=hub.helppanel(
-      "كيف تقرأ جدول الكروت؟",
-      intro="كل صف هو كرت داخل هذه الحزمة، يحمل اليوزر والباسورد وحالته ومؤشرات استهلاكه.",
+      _('كيف تقرأ جدول الكروت؟'),
+      intro=_('كل صف هو كرت داخل هذه الحزمة، يحمل اليوزر والباسورد وحالته ومؤشرات استهلاكه.'),
       items=[
-        {'icon': 'arrow-up-wide-short', 'text': 'اضغط على اسم أي عمود للترتيب تصاعديًا أو تنازليًا.'},
-        {'icon': 'table-columns',       'text': 'افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).'},
-        {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.'},
-        {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.'},
-        {'icon': 'ellipsis',            'text': ('أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة <span style="white-space:nowrap">(⁦10–100⁩).</span>'|safe)},
+        {'icon': 'arrow-up-wide-short', 'text': _('اضغط على اسم أي عمود للترتيب تصاعديًا أو تنازليًا.')},
+        {'icon': 'table-columns',       'text': _('افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).')},
+        {'icon': 'square-check',         'text': _('حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.')},
+        {'icon': 'file-csv',            'text': _('زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.')},
+        {'icon': 'ellipsis',            'text': _('أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة %(range)s.', range=('<span style="white-space:nowrap">(⁦10–100⁩)</span>'|safe))},
       ],
-      note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
+      note=_('مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة.')
     )) %}
-    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|ar_count('kart'), flush=True) %}
+    {% call hub.section(_('جدول الكروت'), icon="table-list", meta=summary.total|ar_count('kart'), flush=True) %}
       <div style="padding:14px 16px 0">
         {# fix2 (R05-N3): بحثٌ وترقيمٌ خادميّان — الصفحة تُصيّر صفحةً واحدة فقط
            (كانت تُصيّر كلّ البطاقات: 10,000 كرت = 52MB في 253ث). #}
@@ -590,22 +590,22 @@
           <thead>
             <tr>
               <th data-col="select" data-lock-column><input class="bc-check" type="checkbox" data-select-all aria-label="{{ _('تحديد الكل') }}"></th>
-              <th data-col="actions" data-label="إجراءات" data-lock-column>{{ _('إجراءات') }}</th>
-              <th data-col="card" data-label="الكرت" data-sort-key="username" data-sort-type="text">{{ _('الكرت') }}</th>
-              <th data-col="password" data-label="كلمة المرور" data-sort-key="password" data-sort-type="text" data-default-hidden>{{ _('كلمة المرور') }}</th>
-              <th data-col="status" data-label="الحالة" data-sort-key="status" data-sort-type="number">{{ _('الحالة') }}</th>
-              <th data-col="remaining" data-label="المتبقي" data-sort-key="remaining" data-sort-type="number">{{ _('المتبقي') }}</th>
-              <th data-col="connect" data-label="آخر اتصال" data-sort-key="last_connect" data-sort-type="date">{{ _('آخر اتصال') }}</th>
-              <th data-col="disconnect" data-label="آخر فصل" data-sort-key="last_disconnect" data-sort-type="date">{{ _('آخر فصل') }}</th>
-              <th data-col="download" data-label="تحميل" data-sort-key="download" data-sort-type="number">{{ _('تحميل') }}</th>
-              <th data-col="upload" data-label="رفع" data-sort-key="upload" data-sort-type="number">{{ _('رفع') }}</th>
-              <th data-col="sessions" data-label="الجلسات" data-sort-key="sessions" data-sort-type="number">{{ _('الجلسات') }}</th>
+              <th data-col="actions" data-label="{{ _('إجراءات') }}" data-lock-column>{{ _('إجراءات') }}</th>
+              <th data-col="card" data-label="{{ _('الكرت') }}" data-sort-key="username" data-sort-type="text">{{ _('الكرت') }}</th>
+              <th data-col="password" data-label="{{ _('كلمة المرور') }}" data-sort-key="password" data-sort-type="text" data-default-hidden>{{ _('كلمة المرور') }}</th>
+              <th data-col="status" data-label="{{ _('الحالة') }}" data-sort-key="status" data-sort-type="number">{{ _('الحالة') }}</th>
+              <th data-col="remaining" data-label="{{ _('المتبقي') }}" data-sort-key="remaining" data-sort-type="number">{{ _('المتبقي') }}</th>
+              <th data-col="connect" data-label="{{ _('آخر اتصال') }}" data-sort-key="last_connect" data-sort-type="date">{{ _('آخر اتصال') }}</th>
+              <th data-col="disconnect" data-label="{{ _('آخر فصل') }}" data-sort-key="last_disconnect" data-sort-type="date">{{ _('آخر فصل') }}</th>
+              <th data-col="download" data-label="{{ _('تحميل') }}" data-sort-key="download" data-sort-type="number">{{ _('تحميل') }}</th>
+              <th data-col="upload" data-label="{{ _('رفع') }}" data-sort-key="upload" data-sort-type="number">{{ _('رفع') }}</th>
+              <th data-col="sessions" data-label="{{ _('الجلسات') }}" data-sort-key="sessions" data-sort-type="number">{{ _('الجلسات') }}</th>
               <th data-col="mac" data-label="MAC" data-sort-key="mac" data-sort-type="text" data-default-hidden>MAC</th>
-              <th data-col="ip" data-label="العنوان / الجهاز" data-sort-key="ip" data-sort-type="text" data-default-hidden>{{ _('العنوان / الجهاز') }}</th>
-              <th data-col="speed" data-label="السرعة" data-sort-key="speed" data-sort-type="text" data-default-hidden>{{ _('السرعة') }}</th>
-              <th data-col="first" data-label="أول استخدام" data-sort-key="first_used" data-sort-type="date" data-default-hidden>{{ _('أول استخدام') }}</th>
-              <th data-col="expire" data-label="ينتهي" data-sort-key="expire" data-sort-type="date" data-default-hidden>{{ _('ينتهي') }}</th>
-              <th data-col="created" data-label="الإنشاء" data-sort-key="created" data-sort-type="date" data-default-hidden>{{ _('الإنشاء') }}</th>
+              <th data-col="ip" data-label="{{ _('العنوان / الجهاز') }}" data-sort-key="ip" data-sort-type="text" data-default-hidden>{{ _('العنوان / الجهاز') }}</th>
+              <th data-col="speed" data-label="{{ _('السرعة') }}" data-sort-key="speed" data-sort-type="text" data-default-hidden>{{ _('السرعة') }}</th>
+              <th data-col="first" data-label="{{ _('أول استخدام') }}" data-sort-key="first_used" data-sort-type="date" data-default-hidden>{{ _('أول استخدام') }}</th>
+              <th data-col="expire" data-label="{{ _('ينتهي') }}" data-sort-key="expire" data-sort-type="date" data-default-hidden>{{ _('ينتهي') }}</th>
+              <th data-col="created" data-label="{{ _('الإنشاء') }}" data-sort-key="created" data-sort-type="date" data-default-hidden>{{ _('الإنشاء') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -633,7 +633,7 @@
               data-sort-expire="{{ c.expire_at or '' }}"
               data-sort-created="{{ c.created_at or '' }}"
             >
-              <td data-col="select"><input class="bc-check" type="checkbox" name="card_ids" value="{{ c.id }}" data-row-select aria-label="تحديد {{ c.username }}"></td>
+              <td data-col="select"><input class="bc-check" type="checkbox" name="card_ids" value="{{ c.id }}" data-row-select aria-label="{{ _('تحديد %(username)s', username=c.username) }}"></td>
               <td data-col="actions">
                 <div class="bc-row-actions">
                   <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" title="{{ _('تعديل سريع') }}" data-edit-card><i class="fa-solid fa-pen"></i></button>
@@ -673,15 +673,15 @@
               <td data-col="remaining">
                 <div class="bc-flow">
                   <strong>{{ c.remaining_label }}</strong>
-                  <span class="bc-muted" style="unicode-bidi:plaintext">تم استخدام {{ c.total_time_label }}</span>
+                  <span class="bc-muted" style="unicode-bidi:plaintext">{{ _('تم استخدام %(total_time_label)s', total_time_label=c.total_time_label) }}</span>
                 </div>
               </td>
-              <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label|bidi_nums }}</strong><span class="bc-muted">آخر مشاهدة {{ c.last_seen_label|bidi_nums }}</span></div></td>
+              <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label|bidi_nums }}</strong><span class="bc-muted">{{ _('آخر مشاهدة %(bidi_nums)s', bidi_nums=c.last_seen_label|bidi_nums) }}</span></div></td>
               <td data-col="disconnect"><strong class="bc-mono">{{ c.last_disconnect_label|bidi_nums }}</strong></td>
-              <td data-col="download"><div class="bc-flow"><strong>{{ c.total_download_label }}</strong><span class="bc-muted">آخر {{ c.latest_download_label }}</span></div></td>
-              <td data-col="upload"><div class="bc-flow"><strong>{{ c.total_upload_label }}</strong><span class="bc-muted">آخر {{ c.latest_upload_label }}</span></div></td>
+              <td data-col="download"><div class="bc-flow"><strong>{{ c.total_download_label }}</strong><span class="bc-muted">{{ _('آخر %(latest_download_label)s', latest_download_label=c.latest_download_label) }}</span></div></td>
+              <td data-col="upload"><div class="bc-flow"><strong>{{ c.total_upload_label }}</strong><span class="bc-muted">{{ _('آخر %(latest_upload_label)s', latest_upload_label=c.latest_upload_label) }}</span></div></td>
               <td data-col="sessions"><div class="bc-flow"><strong>{{ c.sessions_count }}</strong><span class="bc-muted">{{ c.unique_macs }} MAC</span></div></td>
-              <td data-col="mac"><div class="bc-flow"><strong class="bc-mono">{{ c.latest_mac or c.used_by_mac or '—' }}</strong><span class="bc-muted">{{ c.locked_mac or 'بدون تثبيت' }}</span></div></td>
+              <td data-col="mac"><div class="bc-flow"><strong class="bc-mono">{{ c.latest_mac or c.used_by_mac or '—' }}</strong><span class="bc-muted">{{ c.locked_mac or _('بدون تثبيت') }}</span></div></td>
               <td data-col="ip"><div class="bc-flow"><strong class="bc-mono">{{ c.latest_framed_ip or '—' }}</strong><span class="bc-muted">{{ c.latest_nas_ip or '—' }}</span></div></td>
               <td data-col="speed"><strong>{{ c.speed_label }}</strong></td>
               <td data-col="first"><strong class="bc-mono">{{ c.first_used_label }}</strong></td>
@@ -733,7 +733,7 @@
     {% endcall %}
     {% endcall %}
   {% else %}
-    {{ hub.empty("الحزمة المطلوبة غير موجودة.", icon="layer-group") }}
+    {{ hub.empty(_('الحزمة المطلوبة غير موجودة.'), icon="layer-group") }}
   {% endif %}
 </div>
 

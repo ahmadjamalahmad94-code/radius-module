@@ -33,15 +33,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="speed-failures-hero">
 {% call hub.megahero(
-  "فشل تحديث السرعة",
-  subtitle="محاولات تغيير السرعة أو الباقة التي فشلت — من نفّذها وعلى مَن وما سبب الفشل.",
+  _('فشل تحديث السرعة'),
+  subtitle=_('محاولات تغيير السرعة أو الباقة التي فشلت — من نفّذها وعلى مَن وما سبب الفشل.'),
   icon="gauge-high",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق',  'value': total,        'icon': 'list-check',           'variant': 'brand'},
-    {'label': 'المعروض',         'value': items|length, 'icon': 'table-list',           'variant': 'blue'},
-    {'label': 'تحديثات جماعية',  'value': _bulk,        'icon': 'layer-group',          'variant': 'amber'},
-    {'label': 'أهداف متأثرة',    'value': _targets,     'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('إجمالي المطابق'),  'value': total,        'icon': 'list-check',           'variant': 'brand'},
+    {'label': _('المعروض'),         'value': items|length, 'icon': 'table-list',           'variant': 'blue'},
+    {'label': _('تحديثات جماعية'),  'value': _bulk,        'icon': 'layer-group',          'variant': 'amber'},
+    {'label': _('أهداف متأثرة'),    'value': _targets,     'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
   search_action=url_for('radius.rep_speed_failures')
 ) %}
@@ -52,20 +52,20 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_speed_failures') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق المنفّذ أو الإجراء أو معرّف الهدف أو نص الخطأ، ونطاق التاريخ يعمل على وقت العملية. تُعرض عمليات السرعة/الباقة الفاشلة فقط (حتى 300 عملية) من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق المنفّذ أو الإجراء أو معرّف الهدف أو نص الخطأ، ونطاق التاريخ يعمل على وقت العملية. تُعرض عمليات السرعة/الباقة الفاشلة فقط (حتى 300 عملية) من سجل التدقيق audit_log للقراءة فقط.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول العمليات الفاشلة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("العمليات الفاشلة", icon="table-list",
-                    meta=items|length|string + " عملية", flush=True) %}
+{% call hub.section(_('العمليات الفاشلة'), icon="table-list",
+                    meta=items|length|string + _(' عملية'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -89,7 +89,7 @@
           </td>
           <td><strong><bdi>{{ r.actor_label or r.actor or '—' }}</bdi></strong></td>
           {# الإجراء معرَّب في المسار — والقيمة الخام تبقى في title #}
-          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label or 'غير محدد', variant="amber", dot=False) }}</td>
+          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label or _('غير محدد'), variant="amber", dot=False) }}</td>
           <td>{{ r.target_display or '—' }}</td>
           <td class="small" title="{{ r.error_message or '' }}"
               style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
@@ -102,8 +102,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا عمليات سرعة فاشلة",
-   sub="كل عمليات تحديث السرعة والباقات نجحت — لا شيء يستدعي الانتباه.",
+{{ hub.empty(_('لا عمليات سرعة فاشلة'),
+   sub=_('كل عمليات تحديث السرعة والباقات نجحت — لا شيء يستدعي الانتباه.'),
    icon="circle-check") }}
 {% endif %}
 

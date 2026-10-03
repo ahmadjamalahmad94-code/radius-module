@@ -39,6 +39,7 @@ Access Control: الشريط الجانبي يُخفي والمتصفّح الم
 قسم مفتوح/مغلق أساسًا» على مستوى المستأجر كاملًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Iterable, Optional
 
@@ -54,10 +55,10 @@ SECTION_REGISTRY: dict[str, dict] = {
     # ── الأقسام «المخفية بالتعليق» في الشريط الجانبي والتي مساراتها بقيت
     #    مفتوحة قبل هذا الإصلاح (تدقيق المالك، يونيو 2026) ──
     "network_ops_legacy": {
-        "label": "عائلة شبكة العمليّات (التجريبية)",
-        "description": "بطاقات «تابع أجهزة الشبكة»/«مسح الشبكة»/«تنبيهات Telegram»"
+        "label": N_("عائلة شبكة العمليّات (التجريبية)"),
+        "description": N_("بطاقات «تابع أجهزة الشبكة»/«مسح الشبكة»/«تنبيهات Telegram»"
                        " — أُخفِيت مؤقتاً حتى اكتمال صقل التجربة. كانت مساراتها"
-                       " قابلة للوصول المباشر قبل هذا الإصلاح.",
+                       " قابلة للوصول المباشر قبل هذا الإصلاح."),
         "endpoints": (
             "network_devices_list",
             "network_ip_scan_page",
@@ -69,26 +70,26 @@ SECTION_REGISTRY: dict[str, dict] = {
         "default_disabled": False,
     },
     "dhcp_push": {
-        "label": "دفع بيانات التوزيع (DHCP push)",
-        "description": "البطاقة الجانبية أُزيلت بعد اعتماد نفق WireGuard المركزي."
+        "label": N_("دفع بيانات التوزيع (DHCP push)"),
+        "description": N_("البطاقة الجانبية أُزيلت بعد اعتماد نفق WireGuard المركزي."
                        " المسار /mt-push-setup يبقى مسجَّلًا، فاستخدم هذه البوابة"
-                       " لإغلاقه على غير السوبر.",
+                       " لإغلاقه على غير السوبر."),
         "endpoints": ("mt_push_setup",),
         "default_hidden": True,
         "default_disabled": False,
     },
     "engineering_setup": {
-        "label": "الإعداد الهندسي",
-        "description": "معالج /setup-wizard المتقدّم — يبقى super-only في RBAC،"
-                       " ويُغلق هنا للجميع إن أراد المالك سحبه نهائيًا.",
+        "label": N_("الإعداد الهندسي"),
+        "description": N_("معالج /setup-wizard المتقدّم — يبقى super-only في RBAC،"
+                       " ويُغلق هنا للجميع إن أراد المالك سحبه نهائيًا."),
         "endpoints": ("setup_wizard_page",),
         "default_hidden": True,
         "default_disabled": False,
     },
     "fleet_setup": {
-        "label": "إعداد أسطول الراوترات",
-        "description": "صفحات /setup-wizard/fleet — كانت مفتوحة بلا أيّ حارس قبل"
-                       " هذا الإصلاح.",
+        "label": N_("إعداد أسطول الراوترات"),
+        "description": N_("صفحات /setup-wizard/fleet — كانت مفتوحة بلا أيّ حارس قبل"
+                       " هذا الإصلاح."),
         "endpoints": (
             "setup_wizard_fleet_page",
             "setup_wizard_fleet_data",
@@ -102,9 +103,9 @@ SECTION_REGISTRY: dict[str, dict] = {
     # ── الأقسام الرئيسية في الشريط الجانبي ── (افتراضيًا ظاهرة وفعّالة،
     #    لكن المالك يستطيع تعطيل أيّها من واجهة الإدارة لاحقًا) ──
     "payments_lab": {
-        "label": "مختبر الدفع الإلكتروني (تجريبي)",
-        "description": "محاكاة كاملة لتدفّق الدفع قبل ربط البوّابات الفعلية."
-                       " مخفيّ افتراضيًا في النشر الإنتاجي.",
+        "label": N_("مختبر الدفع الإلكتروني (تجريبي)"),
+        "description": N_("محاكاة كاملة لتدفّق الدفع قبل ربط البوّابات الفعلية."
+                       " مخفيّ افتراضيًا في النشر الإنتاجي."),
         "endpoints": (
             "payments_lab",
             "pay_demo",
@@ -116,10 +117,10 @@ SECTION_REGISTRY: dict[str, dict] = {
         "default_disabled": False,
     },
     "store_support": {
-        "label": "دعم وطلبات المتجر",
-        "description": "تأكيد إيداع/سحب وحركة الشات — حركة مال حقيقية."
+        "label": N_("دعم وطلبات المتجر"),
+        "description": N_("تأكيد إيداع/سحب وحركة الشات — حركة مال حقيقية."
                        " RBAC يحرسها بـstore.review، وهذا القسم يُتيح تجميدها"
-                       " للمستأجر بأكمله عند الحاجة.",
+                       " للمستأجر بأكمله عند الحاجة."),
         "endpoints": (
             "store_support",
             "store_support_deposit_confirm",

@@ -1,4 +1,5 @@
 /* dashboard_table — ترقيم client-side خفيف يلتزم بمعيار HobeHub. */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -29,7 +30,7 @@
     function pageSizeNum() {
       return (size === ALL || !(size > 0) || !isFinite(size)) ? Math.max(1, rows.length) : size;
     }
-    function sizeLabel(s) { return s === ALL ? "الكل" : String(s); }
+    function sizeLabel(s) { return s === ALL ? hrT('الكل') : String(s); }
 
     var tbody = table.tBodies[0];
     if (!tbody) return;
@@ -43,11 +44,11 @@
       '<div class="dt-info"></div>' +
       '<div class="dt-controls">' +
         '<select class="dt-size"></select>' +
-        '<button data-act="first" title="الأولى">⏪</button>' +
-        '<button data-act="prev" title="السابقة">◀</button>' +
+        '<button data-act="first" title="' + hrT('الأولى') + '">⏪</button>' +
+        '<button data-act="prev" title="' + hrT('السابقة') + '">◀</button>' +
         '<span class="dt-pages"></span>' +
-        '<button data-act="next" title="التالية">▶</button>' +
-        '<button data-act="last" title="الأخيرة">⏩</button>' +
+        '<button data-act="next" title="' + hrT('التالية') + '">▶</button>' +
+        '<button data-act="last" title="' + hrT('الأخيرة') + '">⏩</button>' +
       '</div>';
     table.parentNode.insertBefore(pager, table.nextSibling);
 
@@ -70,8 +71,8 @@
       rows.forEach(function (r, i) { r.style.display = (i >= start && i < end) ? "" : "none"; });
 
       pager.querySelector(".dt-info").textContent =
-        total === 0 ? "لا نتائج"
-        : "عرض " + (start + 1) + " – " + end + " من " + total;
+        total === 0 ? hrT('لا نتائج')
+        : hrT('عرض ') + (start + 1) + " – " + end + hrT(' من ') + total;
 
       var pagesHtml = "";
       var win = 5; var from = Math.max(1, page - 2); var to = Math.min(pages, from + win - 1);
@@ -119,7 +120,7 @@
       headCells.forEach(function (th, ci) {
         if (!th.hasAttribute("data-sortable")) return;
         th.style.cursor = "pointer";
-        if (!th.title) th.title = "اضغط للترتيب تصاعديًّا/تنازليًّا";
+        if (!th.title) th.title = hrT('اضغط للترتيب تصاعديًّا/تنازليًّا');
         var ind = document.createElement("span");
         ind.className = "dt-sort-ind";
         ind.style.cssText = "margin-inline-start:5px;opacity:.55;font-size:10px";

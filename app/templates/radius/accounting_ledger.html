@@ -5,15 +5,15 @@
 {% block title %}{{ _("السجل المالي") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
 {% block page_title %}{{ _("السجل المالي") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} قيد في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s قيد في النتائج', length=items|length) }}</span>{% endblock %}
 
 {% block content %}
 
 {# هيرو موحّد (megahero): العنوان + الإجراء + معلومة السجل التراكمي في subtitle،
    وحزام الفلاتر مدموج داخل الهيرو عبر {% call %} (search block) — كتلة واحدة. #}
 {% call hub.megahero(
-  "السجل المالي",
-  subtitle="سجل تراكمي للقيود المالية — لا يتم حذف القيود؛ التصحيح بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.",
+  _('السجل المالي'),
+  subtitle=_('سجل تراكمي للقيود المالية — لا يتم حذف القيود؛ التصحيح بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.'),
   icon="scale-balanced",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.finance_reports') + '">
@@ -28,35 +28,35 @@
     <option value="">{{ _('كل أنواع القيود') }}</option>
     {% for t in ['payment','loan','settlement','void','reversal','correction'] %}
       <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
-        {% if t == 'payment' %}دفعة
-        {% elif t == 'loan' %}سلفة
-        {% elif t == 'settlement' %}تسوية
-        {% elif t == 'void' %}إلغاء
-        {% elif t == 'reversal' %}عكسي
-        {% elif t == 'correction' %}تصحيح
+        {% if t == 'payment' %}{{ _('دفعة') }}
+        {% elif t == 'loan' %}{{ _('سلفة') }}
+        {% elif t == 'settlement' %}{{ _('تسوية') }}
+        {% elif t == 'void' %}{{ _('إلغاء') }}
+        {% elif t == 'reversal' %}{{ _('عكسي') }}
+        {% elif t == 'correction' %}{{ _('تصحيح') }}
         {% else %}{{ t }}{% endif %}
       </option>
     {% endfor %}
   </select>
   <input class="hub-input" type="text" name="subscriber_id" value="{{ subscriber_id }}"
          placeholder="{{ _('رقم المستفيد...') }}" inputmode="numeric" style="max-width:180px">
-  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('فلترة'), icon="filter", variant="primary", type="submit", size="sm") }}
   {# زر «مسح» عبر href بدل onclick غير الآمن — أنظف وأسهل صيانة #}
-  {% if can_submit('radius.finance_ledger', 'GET') %}{{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+  {% if can_submit('radius.finance_ledger', 'GET') %}{{ hub.btn(_('مسح'), icon="rotate-left", variant="ghost", size="sm",
               href=url_for('radius.finance_ledger')) }}{% endif %}
 {% endcall %}
 
 {# تعريب أنواع القيود والمصادر — المعرّفات تبقى إنجليزية في القيم المرسلة فقط #}
 {% set type_ar = {
-  'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
-  'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
-  'invoice': 'فاتورة', 'refund': 'استرداد', 'adjustment': 'تعديل',
-  'collection': 'تحصيل', 'expense': 'مصروف'
+  'payment': _('دفعة'), 'loan': _('سلفة'), 'settlement': _('تسوية'),
+  'void': _('إلغاء'), 'reversal': _('عكسي'), 'correction': _('تصحيح'),
+  'invoice': _('فاتورة'), 'refund': _('استرداد'), 'adjustment': _('تعديل'),
+  'collection': _('تحصيل'), 'expense': _('مصروف')
 } %}
 
 <div data-testid="ledger-list">
 {% if items %}
-{% call hub.section("القيود", icon="table-list", meta=items|length|string + " قيد", flush=True) %}
+{% call hub.section(_('القيود'), icon="table-list", meta=items|length|string + _(' قيد'), flush=True) %}
   {# جدول بيانات موحّد uds-table: يفعّل شريط الأعمدة + الفرز + الترقيم + أزرار التصدير الثلاثة #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50" data-uds-export-title="{{ _('السجل المالي — القيود') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -84,14 +84,14 @@
             {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
           </td>
           <td>
-            {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
-            {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
+            {% if entry.direction == 'debit' %}{{ hub.pill(_('مدين'), variant="red") }}
+            {% elif entry.direction == 'credit' %}{{ hub.pill(_('دائن'), variant="green") }}
             {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
           </td>
           <td class="num mono"><strong>{{ entry.amount|money }}</strong></td>
           <td>
-            {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
-            {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
+            {% if entry.status == 'posted' %}{{ hub.pill(_('مرحَّل'), variant="green") }}
+            {% elif entry.status == 'void' %}{{ hub.pill(_('ملغى'), variant="grey") }}
             {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
           </td>
           <td class="small">{{ type_ar.get(entry.source_type, entry.source_type) if entry.source_type else '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
@@ -121,8 +121,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا قيود بهذه الفلترة",
-  sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر لعرض الكل.",
+  _('لا قيود بهذه الفلترة'),
+  sub=_('جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر لعرض الكل.'),
   icon="scale-balanced"
 ) }}
 {% endif %}

@@ -9,6 +9,7 @@
 وإرجاع مساره النسبي ورابطه ليخزّنهما المستدعي في جدوله.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import secrets
 from pathlib import Path
@@ -50,7 +51,7 @@ def _static_root() -> Path:
     from flask import current_app
     root = current_app.static_folder
     if not root:
-        raise StoreUploadError("تعذّر تحديد مجلد static.")
+        raise StoreUploadError(_tr("تعذّر تحديد مجلد static."))
     return Path(root)
 
 
@@ -63,16 +64,16 @@ def save_store_image(file_storage: Any, *, subdir: str,
               "url":  "/static/uploads/store/<subdir>/<rnd>.<ext>"}
     """
     if file_storage is None or not getattr(file_storage, "filename", ""):
-        raise StoreUploadError("لم تُرفق صورة.")
+        raise StoreUploadError(_tr("لم تُرفق صورة."))
     raw = file_storage.read(max_bytes + 1)
     if not raw:
-        raise StoreUploadError("الصورة فارغة أو غير قابلة للقراءة.")
+        raise StoreUploadError(_tr("الصورة فارغة أو غير قابلة للقراءة."))
     if len(raw) > max_bytes:
         raise StoreUploadError(
-            f"حجم الصورة يتجاوز {max_bytes // (1024 * 1024)}MB.")
+            _tr('حجم الصورة يتجاوز %(v)sMB.', v=max_bytes // (1024 * 1024)))
     ext = _sniff_ext(raw)
     if not ext:
-        raise StoreUploadError("الملف ليس صورة مدعومة (PNG/JPG/WEBP/GIF).")
+        raise StoreUploadError(_tr("الملف ليس صورة مدعومة (PNG/JPG/WEBP/GIF)."))
     sub = _safe_subdir(subdir)
     rel_dir = Path("uploads") / "store" / sub
     abs_dir = _static_root() / rel_dir

@@ -94,36 +94,36 @@
 {% block content %}
 {# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ── #}
 {% set category_labels = {
-  'general':         'عام',
-  'billing':         'الفواتير والدفع',
-  'connection':      'الاتصال والخدمة',
-  'hardware':        'الأجهزة والمعدّات',
-  'complaint':       'شكوى',
-  'service_request': 'طلب خدمة',
-  'network':         'الشبكة',
-  'installation':    'التركيب',
-  'account':         'الحساب',
-  'cards':           'الكروت',
-  'technical':       'دعم فنّي',
-  'support':         'دعم فنّي',
-  'payment':         'الدفع',
-  'internet':        'الإنترنت',
-  'speed':           'السرعة',
-  'other':           'أخرى'
+  'general':         _('عام'),
+  'billing':         _('الفواتير والدفع'),
+  'connection':      _('الاتصال والخدمة'),
+  'hardware':        _('الأجهزة والمعدّات'),
+  'complaint':       _('شكوى'),
+  'service_request': _('طلب خدمة'),
+  'network':         _('الشبكة'),
+  'installation':    _('التركيب'),
+  'account':         _('الحساب'),
+  'cards':           _('الكروت'),
+  'technical':       _('دعم فنّي'),
+  'support':         _('دعم فنّي'),
+  'payment':         _('الدفع'),
+  'internet':        _('الإنترنت'),
+  'speed':           _('السرعة'),
+  'other':           _('أخرى')
 } %}
 {% set _status_map = {
-  'open':        ('مفتوحة',      'amber'),
-  'pending':     ('معلَّقة',      'amber'),
-  'in_progress': ('قيد المعالجة', 'blue'),
-  'resolved':    ('محلولة',      'green'),
-  'closed':      ('مغلقة',       'grey')
+  'open':        (_('مفتوحة'),      'amber'),
+  'pending':     (_('معلَّقة'),      'amber'),
+  'in_progress': (_('قيد المعالجة'), 'blue'),
+  'resolved':    (_('محلولة'),      'green'),
+  'closed':      (_('مغلقة'),       'grey')
 } %}
 {% set _status = _status_map.get(ticket.status, (ticket.status, 'grey')) %}
 {% set _prio_map = {
-  'urgent': ('عاجلة',  'red'),
-  'high':   ('مرتفعة', 'amber'),
-  'normal': ('عادية',  'blue'),
-  'low':    ('منخفضة', 'grey')
+  'urgent': (_('عاجلة'),  'red'),
+  'high':   (_('مرتفعة'), 'amber'),
+  'normal': (_('عادية'),  'blue'),
+  'low':    (_('منخفضة'), 'grey')
 } %}
 {% set _prio = _prio_map.get(ticket.priority, (ticket.priority, 'grey')) %}
 
@@ -140,10 +140,10 @@
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الحالة',   'value': _status[0], 'icon': 'circle-dot', 'variant': _status[1]},
-    {'label': 'الأولوية', 'value': _prio[0],   'icon': 'flag',       'variant': _prio[1]},
-    {'label': 'الفئة',    'value': category_labels.get(ticket.category, ticket.category or '—'), 'icon': 'tag', 'variant': 'brand'},
-    {'label': 'المشترك',  'value': '#' ~ ticket.subscriber_id|string, 'icon': 'user', 'variant': 'blue'}
+    {'label': _('الحالة'),   'value': _status[0], 'icon': 'circle-dot', 'variant': _status[1]},
+    {'label': _('الأولوية'), 'value': _prio[0],   'icon': 'flag',       'variant': _prio[1]},
+    {'label': _('الفئة'),    'value': category_labels.get(ticket.category, ticket.category or '—'), 'icon': 'tag', 'variant': 'brand'},
+    {'label': _('المشترك'),  'value': '#' ~ ticket.subscriber_id|string, 'icon': 'user', 'variant': 'blue'}
   ],
   search_action=url_for('radius.tk_status', tid=ticket.id),
   search_method="post"
@@ -159,9 +159,9 @@
     <option value="resolved"    {% if ticket.status == 'resolved' %}selected{% endif %}>{{ _('محلولة') }}</option>
     <option value="closed"      {% if ticket.status == 'closed' %}selected{% endif %}>{{ _('مغلقة') }}</option>
   </select>
-  {{ hub.btn("تحديث الحالة", icon="check", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تحديث الحالة'), icon="check", variant="primary", type="submit", size="sm") }}
   <span class="hub-hint" tabindex="0"
-        data-hint="المسار المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. اختيار «مغلقة» يسجّل تاريخ الإغلاق تلقائيًا."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('المسار المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. اختيار «مغلقة» يسجّل تاريخ الإغلاق تلقائيًا.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -169,7 +169,7 @@
 <div class="tkv-layout">
 
   <div>{# ── العمود الرئيسي: المحادثة + صندوق الردّ اللاصق ── #}
-    {% call hub.section("المحادثة", icon="comments", meta=(replies|length + 1)|string + " رسالة") %}
+    {% call hub.section(_('المحادثة'), icon="comments", meta=(replies|length + 1)|string + _(' رسالة')) %}
       <div class="tkv-thread">
 
         {# الرسالة الأولى = نص التذكرة الأصلي من المشترك — مُعلَّمة كأصل الطلب #}
@@ -177,7 +177,7 @@
           <span class="tkv-ava" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
           <div class="tkv-bubble">
             <div class="tkv-meta">
-              <span class="tkv-who">المشترك #{{ ticket.subscriber_id }}</span>
+              <span class="tkv-who">{{ _('المشترك #%(subscriber_id)s', subscriber_id=ticket.subscriber_id) }}</span>
               <span class="tkv-tag">{{ _('مشترك') }}</span>
               <span class="tkv-origin-flag"><i class="fa-solid fa-star"></i> {{ _('نص التذكرة الأصلي') }}</span>
               <span class="tkv-when mono"><bdi dir="ltr">{{ ticket.created_at|dt_local if ticket.created_at else '' }}</bdi></span>
@@ -194,8 +194,8 @@
           </span>
           <div class="tkv-bubble">
             <div class="tkv-meta">
-              <span class="tkv-who">{{ 'فريق الدعم' if r.author_type == 'admin' else 'المشترك' }}</span>
-              <span class="tkv-tag">{{ 'إداري' if r.author_type == 'admin' else 'مشترك' }}</span>
+              <span class="tkv-who">{{ _('فريق الدعم') if r.author_type == 'admin' else _('المشترك') }}</span>
+              <span class="tkv-tag">{{ _('إداري') if r.author_type == 'admin' else _('مشترك') }}</span>
               <span class="tkv-when mono"><bdi dir="ltr">{{ r.created_at|dt_local if r.created_at else '' }}</bdi></span>
             </div>
             <div class="tkv-text">{{ r.body }}</div>
@@ -213,7 +213,7 @@
                   placeholder="{{ _('اكتب ردّك على المشترك...') }}"></textarea>
         <div class="tkv-composer-foot">
           <span class="tkv-composer-hint">{{ _('يظهر الردّ في سجلّ المحادثة باسم الإداري الحالي.') }}</span>
-          {{ hub.btn("إرسال الردّ", icon="paper-plane", variant="primary", type="submit") }}
+          {{ hub.btn(_('إرسال الردّ'), icon="paper-plane", variant="primary", type="submit") }}
         </div>
       </form>{% endif %}
     {% endcall %}
@@ -229,14 +229,14 @@
       </summary>
       <div class="tkv-aside-body">
         {{ hub.kv([
-          {'label': 'رقم التذكرة', 'value': '#' ~ ticket.id|string, 'mono': True},
-          {'label': 'الفئة',    'value': category_labels.get(ticket.category, ticket.category or '—')},
-          {'label': 'الأولوية', 'value': _prio[0]},
-          {'label': 'الحالة',   'value': _status[0]},
-          {'label': 'المشترك',  'value': '#' ~ ticket.subscriber_id|string, 'mono': True},
-          {'label': 'المسؤول',  'value': ('#' ~ ticket.assignee_admin_id|string) if ticket.assignee_admin_id else '—', 'mono': True},
-          {'label': 'أُنشئت',   'value': ticket.created_at|dt_local if ticket.created_at else '—', 'mono': True}
-        ] + ([{'label': 'أُغلقت', 'value': ticket.closed_at|date_local, 'mono': True}] if ticket.closed_at else [])) }}
+          {'label': _('رقم التذكرة'), 'value': '#' ~ ticket.id|string, 'mono': True},
+          {'label': _('الفئة'),    'value': category_labels.get(ticket.category, ticket.category or '—')},
+          {'label': _('الأولوية'), 'value': _prio[0]},
+          {'label': _('الحالة'),   'value': _status[0]},
+          {'label': _('المشترك'),  'value': '#' ~ ticket.subscriber_id|string, 'mono': True},
+          {'label': _('المسؤول'),  'value': ('#' ~ ticket.assignee_admin_id|string) if ticket.assignee_admin_id else '—', 'mono': True},
+          {'label': _('أُنشئت'),   'value': ticket.created_at|dt_local if ticket.created_at else '—', 'mono': True}
+        ] + ([{'label': _('أُغلقت'), 'value': ticket.closed_at|date_local, 'mono': True}] if ticket.closed_at else [])) }}
       </div>
     </details>
   </aside>

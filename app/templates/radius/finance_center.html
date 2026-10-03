@@ -11,15 +11,15 @@
 {# ───── Merged hero: title + subtitle + icon + actions + KPI strip ─────
    Collapses the old hub.hero + separate hub-kpi-grid band into ONE megahero. #}
 {{ hub.megahero(
-  "المركز المالي",
-  subtitle="نظرة تشغيلية على المال بدون حذف أو تعديل مباشر على سجلات النظام.",
+  _('المركز المالي'),
+  subtitle=_('نظرة تشغيلية على المال بدون حذف أو تعديل مباشر على سجلات النظام.'),
   icon="coins",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> '|safe ~ _("إدارة المحافظ") ~ '</a>'|safe if can_submit('radius.business_finance_wallets', 'GET') else ''),
   kpis=[
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'التحصيلات',        'value': summary.total_collections|money, 'icon': 'cash-register', 'variant': 'brand'},
-    {'label': 'أرصدة المحافظ',     'value': summary.wallet_balance|money,    'icon': 'wallet',        'variant': 'blue'},
-    {'label': 'الربح الصافي',      'value': summary.total_profit|money,      'icon': 'chart-line',    'variant': 'amber'},
+    {'label': _('إجمالي الإيرادات'), 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': _('التحصيلات'),        'value': summary.total_collections|money, 'icon': 'cash-register', 'variant': 'brand'},
+    {'label': _('أرصدة المحافظ'),     'value': summary.wallet_balance|money,    'icon': 'wallet',        'variant': 'blue'},
+    {'label': _('الربح الصافي'),      'value': summary.total_profit|money,      'icon': 'chart-line',    'variant': 'amber'},
   ]
 ) }}
 
@@ -30,32 +30,32 @@
 
 {# ───── Main (carded sections) + help panel on the LEFT (fills the width) ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "قواعد الأمان المالي",
-  intro="هذه اللوحة قراءة فقط — كل تغيّر فعلي يمرّ عبر الخدمة المالية ويُسجَّل كقيد وحدث قابلين للتتبع.",
+  _('قواعد الأمان المالي'),
+  intro=_('هذه اللوحة قراءة فقط — كل تغيّر فعلي يمرّ عبر الخدمة المالية ويُسجَّل كقيد وحدث قابلين للتتبع.'),
   icon="shield-halved",
   items=[
-    {'icon': 'ban',            'text': 'السجل المالي لا يدعم الحذف المباشر إطلاقًا.'},
-    {'icon': 'right-left',     'text': 'أي خصم أو شحن يمرّ عبر الخدمة المالية وينتج عنه قيد قابل للتتبع.'},
-    {'icon': 'clipboard-list', 'text': 'كل عملية تُنتج حدثًا مرجعيًا يمكن مراجعته لاحقًا.'},
+    {'icon': 'ban',            'text': _('السجل المالي لا يدعم الحذف المباشر إطلاقًا.')},
+    {'icon': 'right-left',     'text': _('أي خصم أو شحن يمرّ عبر الخدمة المالية وينتج عنه قيد قابل للتتبع.')},
+    {'icon': 'clipboard-list', 'text': _('كل عملية تُنتج حدثًا مرجعيًا يمكن مراجعته لاحقًا.')},
   ],
-  note="لإدارة المحافظ والشحن والخصم استخدم زر «إدارة المحافظ» في الأعلى."
+  note=_('لإدارة المحافظ والشحن والخصم استخدم زر «إدارة المحافظ» في الأعلى.')
 )) %}
 
-  {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
+  {% call hub.section(_('مؤشرات التشغيل المالي'), icon="gauge-high") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
-      {{ hub.tile("قيود دفتر الأستاذ", summary.ledger_entries, icon="book") }}
-      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt") }}
-      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar") }}
+      {{ hub.tile(_('عدد المحافظ'), summary.wallet_count, icon="wallet") }}
+      {{ hub.tile(_('قيود دفتر الأستاذ'), summary.ledger_entries, icon="book") }}
+      {{ hub.tile(_('سجلات الإيراد'), summary.revenue_records, icon="receipt") }}
+      {{ hub.tile(_('سلف مفتوحة'), summary.open_loan_count, icon="hand-holding-dollar") }}
     </div>
   {% endcall %}
 
-  {% call hub.section("حالة المشاركة والتسويات", icon="scale-balanced") %}
+  {% call hub.section(_('حالة المشاركة والتسويات'), icon="scale-balanced") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("حصص الموزعين", summary.distributor_shares, icon="people-arrows") }}
-      {{ hub.tile("إجمالي السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar") }}
-      {{ hub.tile("إجمالي الديون", summary.total_debts|money, icon="file-invoice-dollar") }}
-      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
+      {{ hub.tile(_('حصص الموزعين'), summary.distributor_shares, icon="people-arrows") }}
+      {{ hub.tile(_('إجمالي السلف المفتوحة'), summary.total_loans|money, icon="hand-holding-dollar") }}
+      {{ hub.tile(_('إجمالي الديون'), summary.total_debts|money, icon="file-invoice-dollar") }}
+      {{ hub.tile(_('إجمالي دفتر الأستاذ'), summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
 

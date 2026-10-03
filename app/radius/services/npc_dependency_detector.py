@@ -25,6 +25,7 @@ Output: DependencyAnalysis dataclass with two lists:
   * warnings_ar[]    — operator-facing notes.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -90,14 +91,14 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Google",
             impact_ar=(
-                "حظر/سماح google قد يؤثّر على Gmail و YouTube "
+                N_("حظر/سماح google قد يؤثّر على Gmail و YouTube "
                 "و Google Maps و Chrome وأي تطبيق يستخدم "
-                "googleapis.com — يفضّل التعامل مع الكل معاً."
+                "googleapis.com — يفضّل التعامل مع الكل معاً.")
             ),
             confidence=CONFIDENCE_CERTAIN,
             reason_ar=(
-                "نطاقات google التابعة لـ Alphabet مرتبطة "
-                "ببعضها في خوادم نفس المزوّد."
+                N_("نطاقات google التابعة لـ Alphabet مرتبطة "
+                "ببعضها في خوادم نفس المزوّد.")
             ),
             related_domains=(
                 "googleapis.com", "gstatic.com",
@@ -113,13 +114,13 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Firebase / Google Cloud",
             impact_ar=(
-                "حظر Firebase سيؤدي إلى تعطيل دفع الإشعارات "
-                "في كثير من تطبيقات الهاتف (FCM)."
+                N_("حظر Firebase سيؤدي إلى تعطيل دفع الإشعارات "
+                "في كثير من تطبيقات الهاتف (FCM).")
             ),
             confidence=CONFIDENCE_CERTAIN,
             reason_ar=(
-                "Firebase خدمة من Google؛ كثير من التطبيقات "
-                "تعتمد على googleapis.com كذلك."
+                N_("Firebase خدمة من Google؛ كثير من التطبيقات "
+                "تعتمد على googleapis.com كذلك.")
             ),
             related_domains=(
                 "googleapis.com", "gstatic.com",
@@ -135,14 +136,14 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Meta (Facebook / Instagram / WhatsApp)",
             impact_ar=(
-                "حظر facebook.com بدون فروعه قد يعطّل "
+                N_("حظر facebook.com بدون فروعه قد يعطّل "
                 "Messenger و Instagram جزئيّاً، فالـ CDN "
-                "مشترك (fbcdn.net / fbcdn.com)."
+                "مشترك (fbcdn.net / fbcdn.com).")
             ),
             confidence=CONFIDENCE_LIKELY,
             reason_ar=(
-                "Meta تستخدم بنية CDN موحَّدة عبر facebook / "
-                "instagram / messenger."
+                N_("Meta تستخدم بنية CDN موحَّدة عبر facebook / "
+                "instagram / messenger.")
             ),
             related_domains=(
                 "fbcdn.net", "fbcdn.com", "messenger.com",
@@ -158,13 +159,13 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="TikTok / ByteDance",
             impact_ar=(
-                "حظر tiktok.com لوحده لن يكفي — الفيديو يُحمَّل "
-                "عبر tiktokcdn و bytecdn و ttvnw."
+                N_("حظر tiktok.com لوحده لن يكفي — الفيديو يُحمَّل "
+                "عبر tiktokcdn و bytecdn و ttvnw.")
             ),
             confidence=CONFIDENCE_LIKELY,
             reason_ar=(
-                "البنية متعددة الـ CDN؛ حظر النطاق الرئيسي "
-                "وحده يترك معظم المحتوى متاحاً."
+                N_("البنية متعددة الـ CDN؛ حظر النطاق الرئيسي "
+                "وحده يترك معظم المحتوى متاحاً.")
             ),
             related_domains=(
                 "tiktokcdn.com", "tiktokv.com",
@@ -179,14 +180,14 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Cloudflare CDN",
             impact_ar=(
-                "حظر Cloudflare سيكسر آلاف المواقع التي "
+                N_("حظر Cloudflare سيكسر آلاف المواقع التي "
                 "تستخدمه كـ CDN عام (ليس مرتبطاً بمزوّد محتوى "
-                "واحد)."
+                "واحد).")
             ),
             confidence=CONFIDENCE_CERTAIN,
             reason_ar=(
-                "Cloudflare هي طبقة شبكة عابرة لكثير من "
-                "المواقع — تأثير الحظر واسع."
+                N_("Cloudflare هي طبقة شبكة عابرة لكثير من "
+                "المواقع — تأثير الحظر واسع.")
             ),
             related_domains=(
                 "cloudflareinsights.com",
@@ -200,13 +201,13 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Apple",
             impact_ar=(
-                "حظر apple.com سيؤثّر على iCloud و iMessage و"
-                " App Store و تحديثات نظام iOS / macOS."
+                N_("حظر apple.com سيؤثّر على iCloud و iMessage و"
+                " App Store و تحديثات نظام iOS / macOS.")
             ),
             confidence=CONFIDENCE_CERTAIN,
             reason_ar=(
-                "خدمات Apple موحَّدة في نفس مزوّد البنية "
-                "التحتية."
+                N_("خدمات Apple موحَّدة في نفس مزوّد البنية "
+                "التحتية.")
             ),
             related_domains=(
                 "icloud.com", "mzstatic.com",
@@ -222,15 +223,15 @@ _RULES: tuple[tuple[tuple[str, ...], Dependency], ...] = (
         Dependency(
             service_name="Microsoft / Office 365",
             impact_ar=(
-                "حظر microsoft.com لوحده لن يكفي — Office "
+                N_("حظر microsoft.com لوحده لن يكفي — Office "
                 "وExchange/Outlook و Teams تعتمد على "
                 "office365.com و microsoftonline.com و"
-                " azureedge.net."
+                " azureedge.net.")
             ),
             confidence=CONFIDENCE_LIKELY,
             reason_ar=(
-                "خدمات M365 موزَّعة على عدة نطاقات تابعة لـ "
-                "Microsoft."
+                N_("خدمات M365 موزَّعة على عدة نطاقات تابعة لـ "
+                "Microsoft.")
             ),
             related_domains=(
                 "office365.com", "outlook.office.com",
@@ -304,8 +305,8 @@ def analyze(
     warnings: list[str] = []
     if deps:
         warnings.append(
-            "هذه الاعتمادية قائمة على قائمة منسَّقة يدوياً — "
-            "قد تكون بعض النطاقات قديمة. راجعها قبل التطبيق."
+            N_("هذه الاعتمادية قائمة على قائمة منسَّقة يدوياً — "
+            "قد تكون بعض النطاقات قديمة. راجعها قبل التطبيق.")
         )
 
     return DependencyAnalysis(

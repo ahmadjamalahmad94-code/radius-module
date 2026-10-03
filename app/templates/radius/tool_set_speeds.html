@@ -7,12 +7,12 @@
 
 {% block content %}
 {{ hub.hero(
-  "تعديل سرعات الباقات (جماعي)",
-  subtitle="تعديل سرعة عدد من الباقات في عملية واحدة عبر مضاعف أو قيمة ثابتة.",
+  _('تعديل سرعات الباقات (جماعي)'),
+  subtitle=_('تعديل سرعة عدد من الباقات في عملية واحدة عبر مضاعف أو قيمة ثابتة.'),
   icon="gauge-high",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="set-speeds-form"
-            onclick="return confirm(\'تأكيد تعديل السرعات؟\')">
+            onclick="return confirm('|safe ~ (_('تأكيد تعديل السرعات؟')|tojson|forceescape) ~ ')">
       <i class="fa-solid fa-bolt"></i> '|safe ~ _("تطبيق") ~ '
     </button>
   '|safe
@@ -20,22 +20,22 @@
 
 {% set help_aside %}
   {% call hub.helppanel(
-       "كيف تعمل الأداة؟",
-       intro="حدّد الباقات المطلوبة ثم اختر طريقة التعديل: مضاعف نسبي أو قيمة ثابتة.",
+       _('كيف تعمل الأداة؟'),
+       intro=_('حدّد الباقات المطلوبة ثم اختر طريقة التعديل: مضاعف نسبي أو قيمة ثابتة.'),
        items=[
-         {'icon':'square-check', 'text':'اختر باقة واحدة على الأقل من الجدول.'},
-         {'icon':'xmark', 'text':'المضاعف 0.5 يُنصّف السرعة و2 يُضاعفها.'},
-         {'icon':'gauge-high', 'text':'القيمة الثابتة تتجاوز المضاعف إن وُضعت.'},
+         {'icon':'square-check', 'text':_('اختر باقة واحدة على الأقل من الجدول.')},
+         {'icon':'xmark', 'text':_('المضاعف 0.5 يُنصّف السرعة و2 يُضاعفها.')},
+         {'icon':'gauge-high', 'text':_('القيمة الثابتة تتجاوز المضاعف إن وُضعت.')},
        ],
        icon="circle-question",
-       note="يحدّث الحفظ سرعة الباقات المختارة، وتسري القيمة الجديدة على المشترك عند اتصاله التالي."
+       note=_('يحدّث الحفظ سرعة الباقات المختارة، وتسري القيمة الجديدة على المشترك عند اتصاله التالي.')
      ) %}{% endcall %}
 {% endset %}
 
 {% call hub.worklayout(aside_html=help_aside) %}
 <form method="post" id="set-speeds-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-  {% call hub.section("اختر الباقات", icon="layer-group", meta=(plans|length ~ ' باقة') if plans else '', flush=True) %}
+  {% call hub.section(_('اختر الباقات'), icon="layer-group", meta=(_('%(length)s باقة', length=plans|length)) if plans else '', flush=True) %}
     <div class="hub-table-wrap" style="border:none">
       <table class="hub-table" data-table>
         <thead>
@@ -69,7 +69,7 @@
 
   <div style="height:14px"></div>
 
-  {% call hub.section("عمليّة التعديل", icon="sliders") %}
+  {% call hub.section(_('عمليّة التعديل'), icon="sliders") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('مضاعفة التنزيل ×') }}</label>
@@ -93,9 +93,9 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:16px">
-    {{ hub.btn("تطبيق", icon="bolt", variant="primary", type="submit",
-                attrs='onclick="return confirm(\'تأكيد تعديل السرعات؟\')"') }}
-    {% if can_submit('radius.plans_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.plans_list')) }}{% endif %}
+    {{ hub.btn(_('تطبيق'), icon="bolt", variant="primary", type="submit",
+                attrs=_('onclick="return confirm(\'تأكيد تعديل السرعات؟\')"')) }}
+    {% if can_submit('radius.plans_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="ghost", href=url_for('radius.plans_list')) }}{% endif %}
   </div>
 {% if not can_post_here() %}</fieldset>{% endif %}</form>
 {% endcall %}

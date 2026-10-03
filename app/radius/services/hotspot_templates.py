@@ -18,6 +18,7 @@ constants means tests can iterate over it cleanly and the
 designer UI can list everything with one import.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 import json as _json
@@ -158,16 +159,16 @@ def _clean_field(it: dict, key: str, label: str) -> str:
 
 def validate_distributors_json(raw: str) -> str:
     """الموزعون: قائمة {name, phone, area} — يعيد JSON مُطبَّعًا."""
-    items = _parse_json_list(raw, "الموزعون")
+    items = _parse_json_list(raw, N_("الموزعون"))
     out = []
     for it in items:
-        name = _clean_field(it, "name", "الموزعون")
+        name = _clean_field(it, "name", N_("الموزعون"))
         if not name:
             continue  # صف فارغ من المصمّم — يُتجاهل بصمت
         out.append({
             "name": name,
-            "phone": _clean_field(it, "phone", "الموزعون"),
-            "area": _clean_field(it, "area", "الموزعون"),
+            "phone": _clean_field(it, "phone", N_("الموزعون")),
+            "area": _clean_field(it, "area", N_("الموزعون")),
         })
     return _json.dumps(out, ensure_ascii=False)
 
@@ -180,22 +181,22 @@ def validate_offers_json(raw: str) -> str:
     (featured/high/normal) — باقة النخبة / الباقة الذهبية /
     باقة الانطلاق. مفاتيح الفئات (tier) ثابتة في JSON — فقط
     التسميات العربية في الواجهة تغيّرت."""
-    items = _parse_json_list(raw, "العروض")
+    items = _parse_json_list(raw, N_("العروض"))
     out = []
     for it in items:
-        title = _clean_field(it, "title", "العروض")
+        title = _clean_field(it, "title", N_("العروض"))
         if not title:
             continue
-        tier = _clean_field(it, "tier", "العروض") or "normal"
+        tier = _clean_field(it, "tier", N_("العروض")) or "normal"
         if tier not in _OFFER_TIERS:
             raise ValueError(
-                "فئة العرض يجب أن تكون: باقة النخبة (featured) أو "
-                "الباقة الذهبية (high) أو باقة الانطلاق (normal).")
+                N_("فئة العرض يجب أن تكون: باقة النخبة (featured) أو "
+                "الباقة الذهبية (high) أو باقة الانطلاق (normal)."))
         out.append({
             "tier": tier,
             "title": title,
-            "price": _clean_field(it, "price", "العروض"),
-            "desc": _clean_field(it, "desc", "العروض"),
+            "price": _clean_field(it, "price", N_("العروض")),
+            "desc": _clean_field(it, "desc", N_("العروض")),
         })
     return _json.dumps(out, ensure_ascii=False)
 
@@ -366,43 +367,43 @@ _OFFERS_DEFAULT = _json.dumps([], ensure_ascii=False)
 
 
 TEMPLATE_VARIABLES: list[TemplateVariable] = [
-    TemplateVariable("TENANT_NAME",     "اسم المزوّد",
+    TemplateVariable("TENANT_NAME",     N_("اسم المزوّد"),
                      "Hoberadius WiFi", _BRAND_NAME_RE),
-    TemplateVariable("TENANT_LOGO_URL", "رابط الشعار",
+    TemplateVariable("TENANT_LOGO_URL", N_("رابط الشعار"),
                      "/img/logo.png",   _URL_RE),
-    TemplateVariable("WELCOME_TEXT",    "نص الترحيب",
-                     "مرحباً بك في شبكتنا — أدخل بياناتك للدخول",
+    TemplateVariable("WELCOME_TEXT",    N_("نص الترحيب"),
+                     N_("مرحباً بك في شبكتنا — أدخل بياناتك للدخول"),
                      _WELCOME_RE),
-    TemplateVariable("ACCENT_COLOR",    "اللون الرئيسي",
+    TemplateVariable("ACCENT_COLOR",    N_("اللون الرئيسي"),
                      "#2563EB", _HEX_COLOR_RE),
-    TemplateVariable("BG_COLOR",        "لون الخلفية",
+    TemplateVariable("BG_COLOR",        N_("لون الخلفية"),
                      "#F8FAFC", _HEX_COLOR_RE),
     # لون ثانوي (لمسة/تباين) — تستخدمه قوالب «Crimson Luxe» (قرمزي)
     # و«Gilded Hospitality» (ذهبي) وغيرها كلون CTA/زخرفة ثانٍ. القوالب
     # التي لا تذكره لا تتأثر.
-    TemplateVariable("ACCENT2_COLOR",   "اللون الثانوي",
+    TemplateVariable("ACCENT2_COLOR",   N_("اللون الثانوي"),
                      "#DC2626", _HEX_COLOR_RE),
     # رابط صورة خلفية اختياري — تستخدمه قوالب «Photo Backdrop» و«Crimson
     # Luxe» و«Gilded» و«Frost Glass» كخلفية CSS (فارغ = تدرّج بديل، بلا
     # أيقونة صورة مكسورة). يقبل http(s)/مسار/data-URL أو فراغ.
-    TemplateVariable("BG_PHOTO_URL",    "صورة الخلفية (اختياري)",
+    TemplateVariable("BG_PHOTO_URL",    N_("صورة الخلفية (اختياري)"),
                      "", _URL_OPT_RE),
     # رقم هاتف الدعم الفني — تستخدمه القوالب الاحترافية (عائلة
     # «التدرج الاحترافي») في بطاقة الدعم وزر الاتصال المباشر.
     # القوالب القديمة لا تحتويه فلا يتأثر استبدالها.
-    TemplateVariable("SUPPORT_PHONE",   "رقم الدعم الفني",
+    TemplateVariable("SUPPORT_PHONE",   N_("رقم الدعم الفني"),
                      "0599000000", _PHONE_RE),
     # رقم واتساب الدعم — يُحقن في صفحة المتجر (store.html) عند النشر
     # كقيمة {{SUPPORT_WHATSAPP}}؛ عنده يظهر زر واتساب «دعم وطلبات
     # الشحن/السحب». افتراضيه فارغ عمدًا: بلا رقم يبقى الزر مخفيًا،
     # فلا يظهر زر معطوب — يضبطه المدير من قسم «المتجر» في المصمّم.
-    TemplateVariable("SUPPORT_WHATSAPP", "رقم واتساب الدعم",
+    TemplateVariable("SUPPORT_WHATSAPP", N_("رقم واتساب الدعم"),
                      "", _PHONE_OPT_RE),
     # متجرك الإلكتروني — بوابة مستخدمي البطاقات (/portal/card):
     # دخول بالجوال وكلمة المرور، محفظة، شحن، وشراء بطاقات. عند
     # التفعيل تُظهر القوالب الداعمة زر «متجر البطاقات الإلكتروني»
     # يفتح STORE_URL من صفحة الهوت سبوت.
-    TemplateVariable("STORE_ENABLED",   "إضافة متجرك الإلكتروني",
+    TemplateVariable("STORE_ENABLED",   N_("إضافة متجرك الإلكتروني"),
                      "no", _YESNO_RE, kind="bool"),
     # STORE_URL يُحتسب تلقائيًا من إعداد network.radius_server_ip
     # عبر resolve_store_url() — المصمّم يحقن الرابط المحسوب كقيمة
@@ -410,21 +411,21 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # كتجاوز يدوي اختياري (قسم متقدم مطوي في الواجهة).
     # الافتراض فارغ عمدًا: لا قيمة وهمية مثل 192.168.88.2 — حتى يضبط
     # المشغّل IP الراديوس من الإعدادات أو يكتب رابطًا يدويًا.
-    TemplateVariable("STORE_URL",       "رابط المتجر (تجاوز يدوي اختياري)",
+    TemplateVariable("STORE_URL",       N_("رابط المتجر (تجاوز يدوي اختياري)"),
                      "", _URL_OPT_RE),
     # إظهار حقل كلمة المرور — عند "no" يُخفى الحقل ويُرسل النموذج
     # باسم المستخدم فقط (دخول MikroTik «يوزر فقط»). يعمل على كل
     # التصاميم عبر كتلة الإضافات المحقونة في render().
-    TemplateVariable("PASSWORD_FIELD",  "إظهار حقل كلمة المرور",
+    TemplateVariable("PASSWORD_FIELD",  N_("إظهار حقل كلمة المرور"),
                      "yes", _YESNO_RE, kind="bool"),
     # زر التجربة المجانية — رابط RouterOS القياسي:
     #   $(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)
     # (مستخدم التجربة = "T-" + عنوان MAC، حسب login.html الرسمي).
     # يتطلب تفعيل Trial في بروفايل سيرفر الهوت سبوت على الراوتر.
-    TemplateVariable("TRIAL_ENABLED",   "زر التجربة المجانية",
+    TemplateVariable("TRIAL_ENABLED",   N_("زر التجربة المجانية"),
                      "no", _YESNO_RE, kind="bool"),
-    TemplateVariable("TRIAL_TEXT",      "نص زر التجربة المجانية",
-                     "تجربة مجانية 10 دقائق", _TRIAL_TEXT_RE),
+    TemplateVariable("TRIAL_TEXT",      N_("نص زر التجربة المجانية"),
+                     N_("تجربة مجانية 10 دقائق"), _TRIAL_TEXT_RE),
     # «الجلسات المحفوظة» — خدمة تسهيل إعادة الاتصال (قرار المالك):
     # تحفظ آخر 5 بطاقات (اسم المستخدم + كلمة المرور) في localStorage
     # على جهاز الزبون، وتعرض قسم «الجلسات الأخيرة» بنقرة-واحدة-للدخول.
@@ -432,16 +433,16 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # كل تصاميم المكتبة والاحترافية عبر كتلة الإضافات في render()
     # (التصاميم التي لها قسم جلسات أصلي مثل fiber_glow تُكشف بصنف
     # التفعيل hr-saved-on فلا يتكرّر الحقن).
-    TemplateVariable("SAVED_SESSIONS_ENABLED", "حفظ الجلسات (آخر 5 بطاقات)",
+    TemplateVariable("SAVED_SESSIONS_ENABLED", N_("حفظ الجلسات (آخر 5 بطاقات)"),
                      "yes", _YESNO_RE, kind="bool"),
     # القوائم القابلة للتكرار — الموزعون والعروض. تُخزَّن كنص JSON
     # وتُحوَّل في render() إلى HTML آمن يحلّ محل
     # {{DISTRIBUTORS_HTML}} و {{OFFERS_HTML}} (وأشكاله) في القوالب
     # الداعمة. القوالب التي لا تحوي الـ placeholder لا تتأثر.
-    TemplateVariable("DISTRIBUTORS_JSON", "قائمة الموزعين",
+    TemplateVariable("DISTRIBUTORS_JSON", N_("قائمة الموزعين"),
                      _DISTRIBUTORS_DEFAULT, _ANY_RE,
                      kind="json", validator=validate_distributors_json),
-    TemplateVariable("OFFERS_JSON",       "قائمة العروض",
+    TemplateVariable("OFFERS_JSON",       N_("قائمة العروض"),
                      _OFFERS_DEFAULT, _ANY_RE,
                      kind="json", validator=validate_offers_json),
     # ── رَمز قِطاعيّ + علامة مائيّة لصفحة الـhotspot (يونيو 2026) ──
@@ -450,14 +451,14 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # الصَغير يَبقى toggle اختياريّ (MOTIF_BRAND_ICON_ENABLED).
     # SVG مُضَمَّن مُكتفٍ ذاتيًّا (walled-garden): تَعريف رَمز واحد +
     # إعادة استعمال عبر <use>. حَجم نَموذجي ~0.7KB إضافي (icon مُغلَق).
-    TemplateVariable("MOTIF_ICON",        "الرَمز القِطاعيّ",
+    TemplateVariable("MOTIF_ICON",        N_("الرَمز القِطاعيّ"),
                      "wifi", _MOTIF_KEY_RE),
     TemplateVariable("MOTIF_BRAND_ICON_ENABLED",
-                     "رَمز بِجانب الاسم (اختياريّ)",
+                     N_("رَمز بِجانب الاسم (اختياريّ)"),
                      "no", _YESNO_RE, kind="bool"),
-    TemplateVariable("MOTIF_WATERMARK_ENABLED", "علامة مائيّة قِطاعيّة",
+    TemplateVariable("MOTIF_WATERMARK_ENABLED", N_("علامة مائيّة قِطاعيّة"),
                      "yes", _YESNO_RE, kind="bool"),
-    TemplateVariable("MOTIF_WATERMARK_OPACITY", "شَفافيّة العَلامة المائيّة",
+    TemplateVariable("MOTIF_WATERMARK_OPACITY", N_("شَفافيّة العَلامة المائيّة"),
                      "0.30", _FLOAT_OPACITY_RE),
     # ── نصوص رقائق الميزات تحت البطل (٣ رقائق: عنوان + وصف لكلٍّ) ──
     # قابلة للتحرير من المصمّم (قسم «المحتوى»). الافتراضات لكل قالب =
@@ -465,15 +466,15 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # تُطبَّق في render() فقط عند CHIPS_MANAGED="1" (تجاوز سلطويّ): القيمة
     # المُرسَلة تَحلّ محلّ نصّ الرقاقة؛ ورقاقةٌ نُصّاها فارغان تُخفى نظيفًا.
     # القوالب التي لا رقائق فيها لا تتأثّر.
-    TemplateVariable("CHIP1_TITLE", "الرقاقة ١ — العنوان", "", _CHIP_TEXT_RE),
-    TemplateVariable("CHIP1_SUB",   "الرقاقة ١ — الوصف",   "", _CHIP_TEXT_RE),
-    TemplateVariable("CHIP2_TITLE", "الرقاقة ٢ — العنوان", "", _CHIP_TEXT_RE),
-    TemplateVariable("CHIP2_SUB",   "الرقاقة ٢ — الوصف",   "", _CHIP_TEXT_RE),
-    TemplateVariable("CHIP3_TITLE", "الرقاقة ٣ — العنوان", "", _CHIP_TEXT_RE),
-    TemplateVariable("CHIP3_SUB",   "الرقاقة ٣ — الوصف",   "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP1_TITLE", N_("الرقاقة ١ — العنوان"), "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP1_SUB",   N_("الرقاقة ١ — الوصف"),   "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP2_TITLE", N_("الرقاقة ٢ — العنوان"), "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP2_SUB",   N_("الرقاقة ٢ — الوصف"),   "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP3_TITLE", N_("الرقاقة ٣ — العنوان"), "", _CHIP_TEXT_RE),
+    TemplateVariable("CHIP3_SUB",   N_("الرقاقة ٣ — الوصف"),   "", _CHIP_TEXT_RE),
     # علامة داخليّة (لا تُعرَض كحقل) — المصمّم يرسلها "1" فتصبح قيم الرقائق
     # سلطويّة. غيابها (قالب قديم/نداء غير المصمّم) = إبقاء الافتراضات.
-    TemplateVariable("CHIPS_MANAGED", "إدارة الرقائق (داخليّ)", "",
+    TemplateVariable("CHIPS_MANAGED", N_("إدارة الرقائق (داخليّ)"), "",
                      _CHIPS_MANAGED_RE),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
@@ -967,343 +968,343 @@ from .hotspot_template_loyalty_clean import LOYALTY_CLEAN_HTML  # noqa: E402
 
 LIBRARY: list[LoginTemplate] = [
     LoginTemplate(
-        slug="live_portal", name_ar="البوابة الحيّة",
-        description_ar=("كونسول شبكة حيّ فاخر: خلفيّة فضائيّة داكنة، شريط "
+        slug="live_portal", name_ar=N_("البوابة الحيّة"),
+        description_ar=(N_("كونسول شبكة حيّ فاخر: خلفيّة فضائيّة داكنة، شريط "
                         "حالة حيّ متدفّق، ومِقياس إشارة/تدفّق نابض كبطلٍ "
-                        "للصفحة — تقنيّ وواثق، مع تبويبات ودعم CHAP."),
+                        "للصفحة — تقنيّ وواثق، مع تبويبات ودعم CHAP.")),
         html=LIVE_PORTAL_HTML,
         starter_vars={"ACCENT_COLOR": "#22D3EE", "BG_COLOR": "#0A1428"},
     ),
     LoginTemplate(
-        slug="neon_dark", name_ar="النيون الداكن",
-        description_ar=("أجواء جيمر/شبكة طاقة: خلفيّة شبه سوداء بشبكة دوائر "
+        slug="neon_dark", name_ar=N_("النيون الداكن"),
+        description_ar=(N_("أجواء جيمر/شبكة طاقة: خلفيّة شبه سوداء بشبكة دوائر "
                         "وأشعّة طاقة، نيون أخضر متوهّج، وحوافّ زاويّة — البطل "
-                        "HUD تصنيف اتصال (طاقة/استجابة/سرعة) مع دعم CHAP."),
+                        "HUD تصنيف اتصال (طاقة/استجابة/سرعة) مع دعم CHAP.")),
         html=NEON_DARK_HTML,
         starter_vars={"ACCENT_COLOR": "#4ADE80", "BG_COLOR": "#050B08"},
     ),
     LoginTemplate(
-        slug="morning_coffee", name_ar="قهوة الصباح",
-        description_ar=("مقهى صباحيّ دافئ فاخر: لوحة كريميّة/خوخيّة، فِنجان "
+        slug="morning_coffee", name_ar=N_("قهوة الصباح"),
+        description_ar=(N_("مقهى صباحيّ دافئ فاخر: لوحة كريميّة/خوخيّة، فِنجان "
                         "لاتيه ببخارٍ متصاعد ورسمة قلب على السطح كبطلٍ "
-                        "للصفحة — مريح ومُرحِّب، مع تبويبات ودعم CHAP."),
+                        "للصفحة — مريح ومُرحِّب، مع تبويبات ودعم CHAP.")),
         html=MORNING_COFFEE_HTML,
         starter_vars={"ACCENT_COLOR": "#A8612F", "BG_COLOR": "#FBEFE2"},
     ),
     LoginTemplate(
-        slug="espresso_lux", name_ar="البنّي الفاخر",
-        description_ar=("مقهى إسبريسو راقٍ: لوحة بنّيّة داكنة + ذهب، ورسمة "
+        slug="espresso_lux", name_ar=N_("البنّي الفاخر"),
+        description_ar=(N_("مقهى إسبريسو راقٍ: لوحة بنّيّة داكنة + ذهب، ورسمة "
                         "فِنجان إسبريسو مُضمَّنة بحافّة ذهبيّة وكريما وبخار "
-                        "وحبّات بُنّ كبطلٍ للصفحة — فخم ودافئ، مع دعم CHAP."),
+                        "وحبّات بُنّ كبطلٍ للصفحة — فخم ودافئ، مع دعم CHAP.")),
         html=ESPRESSO_LUX_HTML,
         starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#160E09"},
     ),
     LoginTemplate(
-        slug="soft_clay", name_ar="الكلاي الناعم",
-        description_ar=("كلايمورفيزم باستيليّ مرِح: لوحة باستيل ناعمة وأشكال "
+        slug="soft_clay", name_ar=N_("الكلاي الناعم"),
+        description_ar=(N_("كلايمورفيزم باستيليّ مرِح: لوحة باستيل ناعمة وأشكال "
                         "مُنتفخة بظلال طينيّة، ورسمة فِنجان قهوة مبتسم وكرواسون "
-                        "كبطلٍ للصفحة — لطيف ومبهج، مع دعم CHAP."),
+                        "كبطلٍ للصفحة — لطيف ومبهج، مع دعم CHAP.")),
         html=SOFT_CLAY_HTML,
         starter_vars={"ACCENT_COLOR": "#E8927C", "BG_COLOR": "#FCE7E2"},
     ),
     LoginTemplate(
-        slug="chalkboard", name_ar="اللوح الطباشيري",
-        description_ar=("لوح طباشير حِرفيّ بإطار خشبيّ: رسمة قهوة مرسومة باليد "
+        slug="chalkboard", name_ar=N_("اللوح الطباشيري"),
+        description_ar=(N_("لوح طباشير حِرفيّ بإطار خشبيّ: رسمة قهوة مرسومة باليد "
                         "بالطباشير مع بخار وزخارف وخطّ Coffee كبطلٍ للصفحة — "
-                        "أصيل ودافئ، مع دعم CHAP."),
+                        "أصيل ودافئ، مع دعم CHAP.")),
         html=CHALKBOARD_HTML,
         starter_vars={"ACCENT_COLOR": "#E8C07D", "BG_COLOR": "#222D27"},
     ),
     LoginTemplate(
-        slug="corporate_formal", name_ar="الأعمال الرسمي",
-        description_ar=("أعمال رسميّة موثوقة: لوحة أزرق-ثقة نظيفة، ورسمة أفق "
+        slug="corporate_formal", name_ar=N_("الأعمال الرسمي"),
+        description_ar=(N_("أعمال رسميّة موثوقة: لوحة أزرق-ثقة نظيفة، ورسمة أفق "
                         "مدينة أبراج زجاجيّة بنوافذ مضيئة وشارة ثقة كبطلٍ "
-                        "للصفحة — احترافيّ وآمن، مع دعم CHAP."),
+                        "للصفحة — احترافيّ وآمن، مع دعم CHAP.")),
         html=CORPORATE_FORMAL_HTML,
         starter_vars={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#EAF1FB"},
     ),
     LoginTemplate(
-        slug="royal_executive", name_ar="الليلي الملكي",
-        description_ar=("تنفيذيّ ليليّ فاخر: لوحة كحليّ عميق + ذهب، ورسمة شعار "
+        slug="royal_executive", name_ar=N_("الليلي الملكي"),
+        description_ar=(N_("تنفيذيّ ليليّ فاخر: لوحة كحليّ عميق + ذهب، ورسمة شعار "
                         "ذهبيّ (درع بإكليل غار وتاج وأبراج) كبطلٍ للصفحة — "
-                        "راقٍ ومهيب، مع دعم CHAP."),
+                        "راقٍ ومهيب، مع دعم CHAP.")),
         html=ROYAL_EXECUTIVE_HTML,
         starter_vars={"ACCENT_COLOR": "#D4AF37", "BG_COLOR": "#0A1730"},
     ),
     LoginTemplate(
-        slug="crimson_prestige", name_ar="القرمزي الفاخر",
-        description_ar=("راقٍ أسود + قرمزيّ: لوحة سوداء عميقة، ورسمة شعار "
+        slug="crimson_prestige", name_ar=N_("القرمزي الفاخر"),
+        description_ar=(N_("راقٍ أسود + قرمزيّ: لوحة سوداء عميقة، ورسمة شعار "
                         "هندسيّ مُسطَّح الأوجه بلمعة معدنيّة وشيفرون مركزيّ "
-                        "كبطلٍ للصفحة — جريء وفاخر، مع دعم CHAP."),
+                        "كبطلٍ للصفحة — جريء وفاخر، مع دعم CHAP.")),
         html=CRIMSON_PRESTIGE_HTML,
         starter_vars={"ACCENT_COLOR": "#DC2626", "BG_COLOR": "#120608"},
     ),
     LoginTemplate(
-        slug="corporate_white", name_ar="الأبيض المؤسسي",
-        description_ar=("أبيض مؤسّسيّ نظيف B2B: مساحات بيضاء واسعة وخطوط رفيعة، "
+        slug="corporate_white", name_ar=N_("الأبيض المؤسسي"),
+        description_ar=(N_("أبيض مؤسّسيّ نظيف B2B: مساحات بيضاء واسعة وخطوط رفيعة، "
                         "ورسمة خطّيّة (line-art) لمبنى مكاتب كبطلٍ للصفحة — "
-                        "هادئ وأنيق ويقوده الشعار، مع دعم CHAP."),
+                        "هادئ وأنيق ويقوده الشعار، مع دعم CHAP.")),
         html=CORPORATE_WHITE_HTML,
         starter_vars={"ACCENT_COLOR": "#111827", "BG_COLOR": "#F7F9FC"},
     ),
     LoginTemplate(
-        slug="mikrotik_classic", name_ar="المايكروتيك الكلاسيكي",
-        description_ar=("رسميّ كلاسيكيّ متوافق (الخيار الآمن): لوحة رماديّة-بيضاء "
+        slug="mikrotik_classic", name_ar=N_("المايكروتيك الكلاسيكي"),
+        description_ar=(N_("رسميّ كلاسيكيّ متوافق (الخيار الآمن): لوحة رماديّة-بيضاء "
                         "هادئة، ورسمة جهاز راوتر بهوائيَّين وموجات واي-فاي كبطلٍ "
-                        "للصفحة — نظيف وموثوق، مع دعم CHAP."),
+                        "للصفحة — نظيف وموثوق، مع دعم CHAP.")),
         html=MIKROTIK_CLASSIC_HTML,
         starter_vars={"ACCENT_COLOR": "#2D72D9", "BG_COLOR": "#EAEFF4"},
     ),
     LoginTemplate(
-        slug="store_gate", name_ar="بوابة المتجر",
-        description_ar=("طاقة تجزئة مرِحة: لوحة دافئة نابضة وشريط عروض متحرّك، "
+        slug="store_gate", name_ar=N_("بوابة المتجر"),
+        description_ar=(N_("طاقة تجزئة مرِحة: لوحة دافئة نابضة وشريط عروض متحرّك، "
                         "ورسمة واجهة متجر (مظلّة مخطّطة + لافتة + حقيبة تسوّق) "
-                        "كبطلٍ للصفحة — حيويّ وجاذب، مع دعم CHAP."),
+                        "كبطلٍ للصفحة — حيويّ وجاذب، مع دعم CHAP.")),
         html=STORE_GATE_HTML,
         starter_vars={"ACCENT_COLOR": "#F2542D", "BG_COLOR": "#FFEDE0"},
     ),
     LoginTemplate(
-        slug="frost_shop", name_ar="الزجاج الثلجي",
-        description_ar=("زجاج مُثلَّج بارد (glassmorphism) وأزرار أزرق ملكيّ، "
+        slug="frost_shop", name_ar=N_("الزجاج الثلجي"),
+        description_ar=(N_("زجاج مُثلَّج بارد (glassmorphism) وأزرار أزرق ملكيّ، "
                         "ورسمة واجهة متجر تُرى عبر زجاجٍ مُثلَّج مع بلّورات ثلج "
-                        "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP."),
+                        "كبطلٍ للصفحة — بارد وأنيق، مع دعم CHAP.")),
         html=FROST_SHOP_HTML,
         starter_vars={"ACCENT_COLOR": "#1D4ED8", "BG_COLOR": "#E6F1FC"},
     ),
     LoginTemplate(
-        slug="gilded_boutique", name_ar="البوتيك المذهّب",
-        description_ar=("بوتيك راقٍ مُذهّب: لوحة عاجيّة/ورديّة + لمسات ذهبيّة، "
+        slug="gilded_boutique", name_ar=N_("البوتيك المذهّب"),
+        description_ar=(N_("بوتيك راقٍ مُذهّب: لوحة عاجيّة/ورديّة + لمسات ذهبيّة، "
                         "ورسمة مانيكان فستان أنيق داخل قوسٍ ذهبيّ مع شرر كبطلٍ "
-                        "للصفحة — فاخر وأنيق، مع دعم CHAP."),
+                        "للصفحة — فاخر وأنيق، مع دعم CHAP.")),
         html=GILDED_BOUTIQUE_HTML,
         starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F6EADB"},
     ),
     LoginTemplate(
-        slug="mega_sale", name_ar="التخفيضات",
-        description_ar=("تخفيضات عالية الطاقة: لوحة نابضة + عدّاد تنازليّ حيّ، "
+        slug="mega_sale", name_ar=N_("التخفيضات"),
+        description_ar=(N_("تخفيضات عالية الطاقة: لوحة نابضة + عدّاد تنازليّ حيّ، "
                         "ورسمة عربة تسوّق مليئة بالحلويات وبطاقة «%» وقُصاصات "
-                        "احتفاليّة كبطلٍ للصفحة — حيويّ ومثير، مع دعم CHAP."),
+                        "احتفاليّة كبطلٍ للصفحة — حيويّ ومثير، مع دعم CHAP.")),
         html=MEGA_SALE_HTML,
         starter_vars={"ACCENT_COLOR": "#E11D48", "BG_COLOR": "#FFE7EE"},
     ),
     LoginTemplate(
-        slug="loyalty_clean", name_ar="البطاقة النظيفة",
-        description_ar=("متاجر يوميّة نظيفة + ولاء: لوحة محايدة بلمسة خضراء "
+        slug="loyalty_clean", name_ar=N_("البطاقة النظيفة"),
+        description_ar=(N_("متاجر يوميّة نظيفة + ولاء: لوحة محايدة بلمسة خضراء "
                         "هادئة، ورسمة بطاقة ولاء أنيقة (نقاط + صفّ أختام) ونجمات "
-                        "ومتجر صغير كبطلٍ للصفحة — نظيف وودود، مع دعم CHAP."),
+                        "ومتجر صغير كبطلٍ للصفحة — نظيف وودود، مع دعم CHAP.")),
         html=LOYALTY_CLEAN_HTML,
         starter_vars={"ACCENT_COLOR": "#0E8C7E", "BG_COLOR": "#EEF5F2"},
     ),
     LoginTemplate(
-        slug="frost_mesh", name_ar="الزجاج الجليدي",
-        description_ar=("زجاجيّة ضبابيّة فاتحة (glassmorphism) فوق شبكة باستيل "
+        slug="frost_mesh", name_ar=N_("الزجاج الجليدي"),
+        description_ar=(N_("زجاجيّة ضبابيّة فاتحة (glassmorphism) فوق شبكة باستيل "
                         "ناعمة: بطاقات شفّافة، حدود بيضاء، حلقة حالة هادئة — "
-                        "نظيف وهوائيّ ومريح للعين، مع دعم CHAP."),
+                        "نظيف وهوائيّ ومريح للعين، مع دعم CHAP.")),
         html=FROST_MESH_HTML,
         starter_vars={"ACCENT_COLOR": "#6366F1", "BG_COLOR": "#EEF4FF"},
     ),
     LoginTemplate(
-        slug="speed_dash", name_ar="لوحة القياس",
-        description_ar=("لوحة قياس غنيّة بالبيانات: عدّادان دائريّان "
+        slug="speed_dash", name_ar=N_("لوحة القياس"),
+        description_ar=(N_("لوحة قياس غنيّة بالبيانات: عدّادان دائريّان "
                         "(تحميل/رفع) وبطاقات IP/زمن الوصول/الإشارة/الحالة على "
-                        "خلفيّة صَلب داكنة — إحساس أجهزة قياس، مع دعم CHAP."),
+                        "خلفيّة صَلب داكنة — إحساس أجهزة قياس، مع دعم CHAP.")),
         html=SPEED_DASH_HTML,
         starter_vars={"ACCENT_COLOR": "#38BDF8", "BG_COLOR": "#0B1426"},
     ),
     LoginTemplate(
-        slug="blue_wave", name_ar="الموجة الزرقاء",
-        description_ar=("الافتراضيّ الودود: ترويسة موجة زرقاء متدرّجة بجُسيمات "
+        slug="blue_wave", name_ar=N_("الموجة الزرقاء"),
+        description_ar=(N_("الافتراضيّ الودود: ترويسة موجة زرقاء متدرّجة بجُسيمات "
                         "طافية تَحمل اسم الشبكة، تَعلو بطاقة دخول كبيرة بارزة "
-                        "في المنتصف على صفحة فاتحة نظيفة — مُرحِّب، مع دعم CHAP."),
+                        "في المنتصف على صفحة فاتحة نظيفة — مُرحِّب، مع دعم CHAP.")),
         html=BLUE_WAVE_HTML,
         starter_vars={"ACCENT_COLOR": "#3B82F6", "BG_COLOR": "#EEF5FF"},
     ),
     LoginTemplate(
-        slug="clean_desk", name_ar="المكتب النظيف",
-        description_ar=("مساحة عمل هادئة مُركّزة: رسمة مكتب نظيف مُضمَّنة "
+        slug="clean_desk", name_ar=N_("المكتب النظيف"),
+        description_ar=(N_("مساحة عمل هادئة مُركّزة: رسمة مكتب نظيف مُضمَّنة "
                         "(حاسوب محمول وقهوة ببخار ونبتة ودفتر) كبطلٍ للصفحة، "
-                        "بلوحة محايدة دافئة — أنيق وبسيط، مع دعم CHAP."),
+                        "بلوحة محايدة دافئة — أنيق وبسيط، مع دعم CHAP.")),
         html=CLEAN_DESK_HTML,
         starter_vars={"ACCENT_COLOR": "#B26E45", "BG_COLOR": "#F7F2EA"},
     ),
     LoginTemplate(
-        slug="blue_glass", name_ar="الزجاج الأزرق",
-        description_ar=("مكتب عصريّ خلف زجاج مُثلَج أزرق: رسمة نافذة تُطلّ على "
+        slug="blue_glass", name_ar=N_("الزجاج الأزرق"),
+        description_ar=(N_("مكتب عصريّ خلف زجاج مُثلَج أزرق: رسمة نافذة تُطلّ على "
                         "أفق مدينة بنوافذ متلألئة وشاشة عمل بلوحة بيانات كبطلٍ "
-                        "للصفحة — بارد وأنيق ومدينيّ، مع دعم CHAP."),
+                        "للصفحة — بارد وأنيق ومدينيّ، مع دعم CHAP.")),
         html=BLUE_GLASS_HTML,
         starter_vars={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#E6F1FB"},
     ),
     LoginTemplate(
-        slug="dev_grid", name_ar="الشبكة الرقمية",
-        description_ar=("أجواء مطوِّر: رسمة نافذة محرّر شيفرة مُضمَّنة بشيفرة "
+        slug="dev_grid", name_ar=N_("الشبكة الرقمية"),
+        description_ar=(N_("أجواء مطوِّر: رسمة نافذة محرّر شيفرة مُضمَّنة بشيفرة "
                         "مُلوّنة ومؤشّر وامض وطرفيّة، فوق شبكة نقطيّة خفيفة "
-                        "ولمسات أحاديّة المسافة — تقنيّ ومركّز، مع دعم CHAP."),
+                        "ولمسات أحاديّة المسافة — تقنيّ ومركّز، مع دعم CHAP.")),
         html=DEV_GRID_HTML,
         starter_vars={"ACCENT_COLOR": "#82AAFF", "BG_COLOR": "#0A0E17"},
     ),
     LoginTemplate(
-        slug="glow_card", name_ar="البطاقة المضيئة",
-        description_ar=("استوديو إبداعيّ على صَلب داكن بتوهّج دافئ: رسمة مكتب "
+        slug="glow_card", name_ar=N_("البطاقة المضيئة"),
+        description_ar=(N_("استوديو إبداعيّ على صَلب داكن بتوهّج دافئ: رسمة مكتب "
                         "مُضاء بمصباح ولوحة تصميم ملوّنة وكوب فُرَش كبطلٍ "
-                        "للصفحة — دافئ وملهِم، مع دعم CHAP."),
+                        "للصفحة — دافئ وملهِم، مع دعم CHAP.")),
         html=GLOW_CARD_HTML,
         starter_vars={"ACCENT_COLOR": "#F59E0B", "BG_COLOR": "#14111E"},
     ),
     # ── القسم ⑤ مؤسسة تعليمية (رسمات SVG مُضمَّنة كبطل) ──
     LoginTemplate(
-        slug="campus", name_ar="الحرم الجامعي",
-        description_ar=("حرم جامعيّ مُرحِّب: رسمة مبنى أكاديميّ كلاسيكيّ بأعمدة "
+        slug="campus", name_ar=N_("الحرم الجامعي"),
+        description_ar=(N_("حرم جامعيّ مُرحِّب: رسمة مبنى أكاديميّ كلاسيكيّ بأعمدة "
                         "وعَلَم وأشجار ومَمشى وشمس خلف بطاقة زجاجيّة كبطلٍ "
-                        "للصفحة — ودود وأكاديميّ، مع دعم CHAP."),
+                        "للصفحة — ودود وأكاديميّ، مع دعم CHAP.")),
         html=CAMPUS_HTML,
         starter_vars={"ACCENT_COLOR": "#1E40AF", "BG_COLOR": "#EAF4FD"},
     ),
     LoginTemplate(
-        slug="happy_school", name_ar="المدرسة المرحة",
-        description_ar=("للأطفال بألوان أساسيّة زاهية: تَميمة بُومة بقُبّعة "
+        slug="happy_school", name_ar=N_("المدرسة المرحة"),
+        description_ar=(N_("للأطفال بألوان أساسيّة زاهية: تَميمة بُومة بقُبّعة "
                         "تخرّج وعناصر مدرسيّة مرحة (نجمة/كتاب/قلم/تفّاحة) "
-                        "كبطلٍ للصفحة، بأشكال مستديرة — بهيج، مع دعم CHAP."),
+                        "كبطلٍ للصفحة، بأشكال مستديرة — بهيج، مع دعم CHAP.")),
         html=HAPPY_SCHOOL_HTML,
         starter_vars={"ACCENT_COLOR": "#3B82F6", "BG_COLOR": "#FFF7E6"},
     ),
     LoginTemplate(
-        slug="quiet_library", name_ar="المكتبة الهادئة",
-        description_ar=("هادئ ومريح بلوحة باستيل سماويّة وعناوين serif: رسمة "
+        slug="quiet_library", name_ar=N_("المكتبة الهادئة"),
+        description_ar=(N_("هادئ ومريح بلوحة باستيل سماويّة وعناوين serif: رسمة "
                         "رُكن قراءة (كُتب مُكدَّسة وكتاب مفتوح ومصباح وشاي ونبتة) "
-                        "كبطلٍ للصفحة — ساكن وأنيق، مع دعم CHAP."),
+                        "كبطلٍ للصفحة — ساكن وأنيق، مع دعم CHAP.")),
         html=QUIET_LIBRARY_HTML,
         starter_vars={"ACCENT_COLOR": "#4D7186", "BG_COLOR": "#EEF3F6"},
     ),
     LoginTemplate(
-        slug="academic_gate", name_ar="البوابة الأكاديمية",
-        description_ar=("مؤسّسيّ نظيف: رسمة بوابة أكاديميّة (عمودان وقوس وشعار "
+        slug="academic_gate", name_ar=N_("البوابة الأكاديمية"),
+        description_ar=(N_("مؤسّسيّ نظيف: رسمة بوابة أكاديميّة (عمودان وقوس وشعار "
                         "درع وقُبّعة تخرّج ومخطوطة شهادة) كبطلٍ، مع كتل جدول/"
-                        "إعلان — كُحليّ وذهبيّ رسميّ، مع دعم CHAP."),
+                        "إعلان — كُحليّ وذهبيّ رسميّ، مع دعم CHAP.")),
         html=ACADEMIC_GATE_HTML,
         starter_vars={"ACCENT_COLOR": "#1E3A5F", "BG_COLOR": "#F6F2E8"},
     ),
     # ── القسم ⑥ مطعم (رسمات SVG مُضمَّنة كبطل) ──
     LoginTemplate(
-        slug="plated_dish", name_ar="خلفية الطبق",
-        description_ar=("شهيّ ومتمحور حول الطعام: رسمة طبق مُقدَّم بأناقة "
+        slug="plated_dish", name_ar=N_("خلفية الطبق"),
+        description_ar=(N_("شهيّ ومتمحور حول الطعام: رسمة طبق مُقدَّم بأناقة "
                         "(سلمون على صلصة، أعشاب وطماطم وليمون وبخار) كبطلٍ "
-                        "وبطاقة دخول زجاجيّة — دافئ ومُشهٍّ، مع دعم CHAP."),
+                        "وبطاقة دخول زجاجيّة — دافئ ومُشهٍّ، مع دعم CHAP.")),
         html=PLATED_DISH_HTML,
         starter_vars={"ACCENT_COLOR": "#E2683C", "BG_COLOR": "#FBF1E8"},
     ),
     LoginTemplate(
-        slug="gilded_dining", name_ar="الضيافة المذهّبة",
-        description_ar=("فاخر عاجيّ/ذهبيّ: رسمة تقديم راقٍ (طبق بحافّة ذهبيّة "
+        slug="gilded_dining", name_ar=N_("الضيافة المذهّبة"),
+        description_ar=(N_("فاخر عاجيّ/ذهبيّ: رسمة تقديم راقٍ (طبق بحافّة ذهبيّة "
                         "وغطاء قُبّة فضّيّ بمقبض ذهبيّ وأدوات وزخارف) كبطلٍ — "
-                        "أنيق ومتّزن لفاخر المطاعم، مع دعم CHAP."),
+                        "أنيق ومتّزن لفاخر المطاعم، مع دعم CHAP.")),
         html=GILDED_DINING_HTML,
         starter_vars={"ACCENT_COLOR": "#C9A24B", "BG_COLOR": "#F8F3E8"},
     ),
     LoginTemplate(
-        slug="crimson_dining", name_ar="القرمزي الراقي",
-        description_ar=("عشاء أسود/قرمزيّ دراميّ: رسمة كأس نبيذ وشمعة مُضيئة "
+        slug="crimson_dining", name_ar=N_("القرمزي الراقي"),
+        description_ar=(N_("عشاء أسود/قرمزيّ دراميّ: رسمة كأس نبيذ وشمعة مُضيئة "
                         "بلهب متراقص وطبق أنيق كبطلٍ — راقٍ ومسائيّ لتجربة "
-                        "عشاء استثنائيّة، مع دعم CHAP."),
+                        "عشاء استثنائيّة، مع دعم CHAP.")),
         html=CRIMSON_DINING_HTML,
         starter_vars={"ACCENT_COLOR": "#B91C3C", "BG_COLOR": "#160A0D"},
     ),
     LoginTemplate(
-        slug="food_buddies", name_ar="تعاون الطعام",
-        description_ar=("كاجوال مرح: رسمة برغر مبتسم وبيتزا ومشروب وبطاطس "
+        slug="food_buddies", name_ar=N_("تعاون الطعام"),
+        description_ar=(N_("كاجوال مرح: رسمة برغر مبتسم وبيتزا ومشروب وبطاطس "
                         "بألوان دافئة وأشكال مستديرة كبطلٍ — ودود وعمليّ "
-                        "للمقاهي والمطاعم السريعة، مع دعم CHAP."),
+                        "للمقاهي والمطاعم السريعة، مع دعم CHAP.")),
         html=FOOD_BUDDIES_HTML,
         starter_vars={"ACCENT_COLOR": "#EF5B3C", "BG_COLOR": "#FFF3E0"},
     ),
     LoginTemplate(
-        slug="food_cobrand", name_ar="تعاون طعام",
-        description_ar=("كريميّ/خوخيّ دافئ: رسمة كو-براند — فنجان قهوة وطبق "
+        slug="food_cobrand", name_ar=N_("تعاون طعام"),
+        description_ar=(N_("كريميّ/خوخيّ دافئ: رسمة كو-براند — فنجان قهوة وطبق "
                         "برغر يتشاركان طاولةً وقلبٌ يربطهما كبطلٍ، بعمودين على "
                         "الحاسوب وبطاقات ميزات وشريط سفليّ — للمقاهي والمطاعم، "
-                        "مع دعم CHAP."),
+                        "مع دعم CHAP.")),
         html=FOOD_COBRAND_HTML,
         starter_vars={"ACCENT_COLOR": "#F97316", "BG_COLOR": "#FFF7ED"},
     ),
     LoginTemplate(
-        slug="menu_board", name_ar="قائمة QR",
-        description_ar=("خدمة سريعة: رسمة لوح قائمة بأسعار ورمز QR كبير وطبق "
+        slug="menu_board", name_ar=N_("قائمة QR"),
+        description_ar=(N_("خدمة سريعة: رسمة لوح قائمة بأسعار ورمز QR كبير وطبق "
                         "وشارة عرض كبطلٍ — جريء وعمليّ للطلب الذاتيّ، مع دعم "
-                        "CHAP."),
+                        "CHAP.")),
         html=MENU_BOARD_HTML,
         starter_vars={"ACCENT_COLOR": "#1F8A70", "BG_COLOR": "#F3F7F2"},
     ),
     LoginTemplate(
-        slug="gradient_pro", name_ar="التدرج الاحترافي",
-        description_ar=("تطبيق جوال كامل في صفحة واحدة: شاشة افتتاحية "
+        slug="gradient_pro", name_ar=N_("التدرج الاحترافي"),
+        description_ar=(N_("تطبيق جوال كامل في صفحة واحدة: شاشة افتتاحية "
                         "بالشعار، تبويبات (الباقات/الموزعون/الدعم)، وضع "
-                        "ليلي، فاحص شبكة، ودعم CHAP — تدرّج سماوي بنفسجي."),
+                        "ليلي، فاحص شبكة، ودعم CHAP — تدرّج سماوي بنفسجي.")),
         html=GRADIENT_PRO_HTML,
         starter_vars={"ACCENT_COLOR": "#4F46E5", "BG_COLOR": "#F0F9FF"},
     ),
     LoginTemplate(
-        slug="royal_night", name_ar="ليلي ملكي",
-        description_ar=("نفس هيكل «التدرج الاحترافي» بثيم نيلي ملكي داكن "
-                        "افتراضيًا مع لمسات ذهبية — مثالي لشبكات المساء."),
+        slug="royal_night", name_ar=N_("ليلي ملكي"),
+        description_ar=(N_("نفس هيكل «التدرج الاحترافي» بثيم نيلي ملكي داكن "
+                        "افتراضيًا مع لمسات ذهبية — مثالي لشبكات المساء.")),
         html=ROYAL_NIGHT_HTML,
         starter_vars={"ACCENT_COLOR": "#6D28D9", "BG_COLOR": "#F5F3FF"},
     ),
     LoginTemplate(
-        slug="emerald", name_ar="زمردي",
-        description_ar=("نفس هيكل «التدرج الاحترافي» بتدرّجات زمردية "
-                        "وفيروزية هادئة — مظهر طبيعي منعش."),
+        slug="emerald", name_ar=N_("زمردي"),
+        description_ar=(N_("نفس هيكل «التدرج الاحترافي» بتدرّجات زمردية "
+                        "وفيروزية هادئة — مظهر طبيعي منعش.")),
         html=EMERALD_HTML,
         starter_vars={"ACCENT_COLOR": "#0D9488", "BG_COLOR": "#ECFDF5"},
     ),
     LoginTemplate(
-        slug="aurora_store", name_ar="بوابة المتجر",
-        description_ar=("شريط أخبار متحرك، بطاقة دخول بأشكال زخرفية، "
+        slug="aurora_store", name_ar=N_("بوابة المتجر"),
+        description_ar=(N_("شريط أخبار متحرك، بطاقة دخول بأشكال زخرفية، "
                         "عرض باقات أفقي، زر متجر إلكتروني بارز وبطاقة "
-                        "دعم — مستوحى من صفحات الشبكات المميزة."),
+                        "دعم — مستوحى من صفحات الشبكات المميزة.")),
         html=AURORA_STORE_HTML,
         starter_vars={"STORE_ENABLED": "yes"},
     ),
     LoginTemplate(
-        slug="fiber_glow", name_ar="توهّج الألياف",
-        description_ar=("قشرة تطبيق جوال بهيدر داكن منحنٍ وخلفية جسيمات "
+        slug="fiber_glow", name_ar=N_("توهّج الألياف"),
+        description_ar=(N_("قشرة تطبيق جوال بهيدر داكن منحنٍ وخلفية جسيمات "
                         "حيّة وشريط أخبار، تعلوه بطاقة بيضاء طافية: ساعة "
                         "حيّة، كشف الجهاز، «آخر البطاقات» باسم المستخدم فقط، "
                         "نسخ رقم الدعم، ومتجر/تجربة اختياريان — مستوحى "
-                        "بهوية نظيفة من صفحات الألياف المميزة، ودعم CHAP."),
+                        "بهوية نظيفة من صفحات الألياف المميزة، ودعم CHAP.")),
         html=FIBER_GLOW_HTML,
         starter_vars={"ACCENT_COLOR": "#0891B2", "BG_COLOR": "#F6F8F8"},
     ),
     LoginTemplate(
-        slug="swift_login", name_ar="الدخول السريع",
-        description_ar=("بطاقة واحدة بحقول ضخمة وزر دخول مركزي مع "
+        slug="swift_login", name_ar=N_("الدخول السريع"),
+        description_ar=(N_("بطاقة واحدة بحقول ضخمة وزر دخول مركزي مع "
                         "شرائح سريعة (متجر / أسعار / دعم) وقائمة أسعار "
-                        "منبثقة — تجربة دخول خاطفة للجوال."),
+                        "منبثقة — تجربة دخول خاطفة للجوال.")),
         html=SWIFT_LOGIN_HTML,
     ),
     LoginTemplate(
-        slug="classic", name_ar="الكلاسيكي",
-        description_ar="صفحة بسيطة بصندوق مركزي وخلفية فاتحة.",
+        slug="classic", name_ar=N_("الكلاسيكي"),
+        description_ar=N_("صفحة بسيطة بصندوق مركزي وخلفية فاتحة."),
         html=_CLASSIC_HTML,
     ),
     LoginTemplate(
-        slug="card", name_ar="بطاقة",
-        description_ar="بطاقة بارزة فوق تدرّج لوني.",
+        slug="card", name_ar=N_("بطاقة"),
+        description_ar=N_("بطاقة بارزة فوق تدرّج لوني."),
         html=_CARD_HTML,
     ),
     LoginTemplate(
-        slug="dark", name_ar="ليلي",
-        description_ar="ثيم داكن مناسب للأماكن المنخفضة الإضاءة.",
+        slug="dark", name_ar=N_("ليلي"),
+        description_ar=N_("ثيم داكن مناسب للأماكن المنخفضة الإضاءة."),
         html=_DARK_HTML,
     ),
     LoginTemplate(
-        slug="minimal", name_ar="بسيط",
-        description_ar="بدون صندوق — حقول دون حواف.",
+        slug="minimal", name_ar=N_("بسيط"),
+        description_ar=N_("بدون صندوق — حقول دون حواف."),
         html=_MINIMAL_HTML,
     ),
     LoginTemplate(
-        slug="mikrotik", name_ar="MikroTik الرسمي",
-        description_ar=("قالب قريب من صفحة MikroTik الأصلية، مع دعم "
-                        "CHAP وتصميم عربي قابل للتخصيص."),
+        slug="mikrotik", name_ar=N_("MikroTik الرسمي"),
+        description_ar=(N_("قالب قريب من صفحة MikroTik الأصلية، مع دعم "
+                        "CHAP وتصميم عربي قابل للتخصيص.")),
         html=_MIKROTIK_HTML,
     ),
 ]
@@ -1479,21 +1480,21 @@ def validate_custom_template_html(html: str) -> None:
     """
     raw = html or ""
     if not raw.strip():
-        raise ValueError("الملف فارغ — ارفع صفحة HTML صالحة.")
+        raise ValueError(N_("الملف فارغ — ارفع صفحة HTML صالحة."))
     if len(raw.encode("utf-8")) > CUSTOM_TEMPLATE_MAX_BYTES:
         raise ValueError(
-            "حجم التصميم يتجاوز الحد المسموح (2 ميجابايت) — "
-            "صغّر الصور المضمّنة وأعد المحاولة.")
+            N_("حجم التصميم يتجاوز الحد المسموح (2 ميجابايت) — "
+            "صغّر الصور المضمّنة وأعد المحاولة."))
     missing = validate_routeros_placeholders(raw)
     if missing:
         raise ValueError(
-            "التصميم لا يصلح كصفحة هوت سبوت — تنقصه placeholders "
-            "ميكروتك الإجبارية: " + "، ".join(missing) + ". "
-            "بدونها لن يستطيع أي مشترك تسجيل الدخول.")
+            N_("التصميم لا يصلح كصفحة هوت سبوت — تنقصه placeholders "
+            "ميكروتك الإجبارية: ") + "، ".join(missing) + N_(". "
+            "بدونها لن يستطيع أي مشترك تسجيل الدخول."))
     if "</body>" not in raw:
         raise ValueError(
-            "التصميم بلا وسم ‎</body>‎ — أضِفه حتى يستطيع النظام "
-            "حقن إضافات الصفحة (الدخول التلقائي بالـ QR وغيرها).")
+            N_("التصميم بلا وسم ‎</body>‎ — أضِفه حتى يستطيع النظام "
+            "حقن إضافات الصفحة (الدخول التلقائي بالـ QR وغيرها)."))
 
 
 def resolve_template_html(slug: str, *,
@@ -1510,7 +1511,7 @@ def resolve_template_html(slug: str, *,
             int(tenant_id), custom_slug_id(slug))
         if not row:
             raise ValueError(f"تصميم خاص غير موجود: {slug!r}")
-        return (row.get("name") or "تصميم خاص", row.get("html") or "")
+        return (row.get("name") or N_("تصميم خاص"), row.get("html") or "")
     tmpl = TEMPLATES_BY_SLUG.get(slug)
     if tmpl is None:
         raise ValueError(f"قالب غير معروف: {slug!r}")
@@ -1705,8 +1706,8 @@ def _distributors_html(items: list[dict]) -> str:
     """صفوف الموزعين بصنف .distributor-card (عائلة التدرج
     الاحترافي) — اسم + منطقة + زر اتصال إن وُجد رقم."""
     if not items:
-        return ('<p style="font-size:11px;text-align:center;'
-                'opacity:.7;padding:10px;">لا يوجد موزعون بعد</p>')
+        return (N_('<p style="font-size:11px;text-align:center;'
+                'opacity:.7;padding:10px;">لا يوجد موزعون بعد</p>'))
     rows = []
     for it in items:
         phone = _esc(it.get("phone", ""))
@@ -1742,13 +1743,13 @@ def _offers_html(items: list[dict]) -> str:
         tier = it.get("tier", "normal")
         if tier == "featured":
             big.append(
-                '<div class="pkg-card-big">'
+                N_('<div class="pkg-card-big">'
                 '<div class="glow-blob gb-1"></div>'
                 '<div class="glow-blob gb-2"></div>'
                 '<div class="pkg-badge-top">⭐ النخبة</div>'
                 '<div class="pkg-header-row"><div>'
                 '<h2 style="font-size:20px;font-weight:800;'
-                'margin-bottom:2px;">' + title + "</h2>"
+                'margin-bottom:2px;">') + title + "</h2>"
                 '<p style="font-size:12px;opacity:0.9;">' + desc + "</p>"
                 "</div>"
                 '<div class="pkg-icon-circle">'
@@ -1780,8 +1781,8 @@ def _offers_html(items: list[dict]) -> str:
                 '<div class="s-price-val">' + price + "</div>"
                 "</div></div>")
     return "\n".join(big + med + small) or (
-        '<p style="font-size:11px;text-align:center;opacity:.7;'
-        'padding:10px;">لا توجد عروض بعد</p>')
+        N_('<p style="font-size:11px;text-align:center;opacity:.7;'
+        'padding:10px;">لا توجد عروض بعد</p>'))
 
 
 def _offers_row_html(items: list[dict]) -> str:
@@ -1795,7 +1796,7 @@ def _offers_row_html(items: list[dict]) -> str:
             '<div class="p-meta">' + _esc(it.get("desc", "")) + "</div>"
             "</div>")
     return "\n".join(rows) or (
-        '<div class="pkg"><div class="p-name">لا توجد عروض</div></div>')
+        N_('<div class="pkg"><div class="p-name">لا توجد عروض</div></div>'))
 
 
 def _offers_prices_html(items: list[dict]) -> str:
@@ -1809,7 +1810,7 @@ def _offers_prices_html(items: list[dict]) -> str:
         rows.append('<div class="pr-row"><span>' + label + "</span><b>"
                     + _esc(it.get("price", "")) + "</b></div>")
     return "\n".join(rows) or (
-        '<div class="pr-row"><span>لا توجد أسعار بعد</span></div>')
+        N_('<div class="pr-row"><span>لا توجد أسعار بعد</span></div>'))
 
 
 # الـ placeholders المشتقة من قوائم JSON — تُولَّد في render() ولا
@@ -1851,7 +1852,7 @@ _TRIAL_LINK_HREF = (
 def _addons_js(*, hide_password: bool, trial: bool,
                trial_text: str) -> str:
     parts = [
-        "\n<!-- HR add-ons: تجربة مجانية / إخفاء كلمة المرور -->\n",
+        N_("\n<!-- HR add-ons: تجربة مجانية / إخفاء كلمة المرور -->\n"),
         "<style>\n"
         # زر بارز بخلفية متدرجة خضراء وظل — كان شفافًا بإطار منقّط
         # فلا يكاد يُرى فوق الخلفيات المتدرجة (ملاحظة المستخدم).
@@ -1872,21 +1873,21 @@ def _addons_js(*, hide_password: bool, trial: bool,
     ]
     if hide_password:
         parts.append(
-            "  // إخفاء حقل كلمة المرور — دخول «يوزر فقط»:\n"
+            N_("  // إخفاء حقل كلمة المرور — دخول «يوزر فقط»:\n"
             "  // نخفي الحاوية (label/.field/.f/.qf/.field-group)\n"
             "  // ونزيل required ونفرّغ القيمة. مع CHAP يُهشَّر\n"
             "  // النص الفارغ بشكل صحيح فلا يتعطل doLogin().\n"
             "  if(f){var pi=f.elements['password'];\n"
             "    if(pi){pi.removeAttribute('required');pi.value='';\n"
             "      var box=pi.closest('label,.field,.f,.qf,.field-group')||pi;\n"
-            "      box.style.display='none';}}\n")
+            "      box.style.display='none';}}\n"))
     if trial:
         parts.append(
-            "  // زر التجربة المجانية — رابط RouterOS القياسي\n"
+            N_("  // زر التجربة المجانية — رابط RouterOS القياسي\n"
             "  // (يتطلب تفعيل Trial في بروفايل سيرفر الهوت سبوت).\n"
             "  if(f){var a=document.createElement('a');\n"
             "    a.className='hr-addon-trial';\n"
-            "    a.href='" + _TRIAL_LINK_HREF + "';\n"
+            "    a.href='") + _TRIAL_LINK_HREF + "';\n"
             "    a.textContent='" + trial_text + "';\n"
             "    f.insertAdjacentElement('afterend',a);}\n")
     parts.append("})();\n</script>\n")
@@ -2214,7 +2215,7 @@ _SPLASH_IDS = (
 # نص التحميل الذي نستهدفه في الأغطية مجهولة المعرّف بالتصاميم
 # المخصصة — لا يُلمَس إلا داخل عنصر يبدو غطاءً كامل الشاشة، فلا
 # تتأثر نصوص المحتوى العادي مثل «جاري التحليل…»/«جاري الاتصال…».
-_SPLASH_TEXT = "جاري التحميل"
+_SPLASH_TEXT = N_("جاري التحميل")
 
 
 def _find_matching_close(html: str, open_start: int,
@@ -2330,10 +2331,10 @@ _RESPONSIVE_CARD_SELECTORS = (
 )
 
 _RESPONSIVE_SAFETY_CSS = (
-    "<style id=\"hr-responsive-safety\">\n"
+    N_("<style id=\"hr-responsive-safety\">\n"
     "/* HobeRadius — شبكة أمان تجاوب صَفحة الدخول على الجوّال. */\n"
     "@media (max-width:600px){\n"
-    "  " + ",".join(_RESPONSIVE_CARD_SELECTORS) + "{\n"
+    "  ") + ",".join(_RESPONSIVE_CARD_SELECTORS) + N_("{\n"
     # calc(100% - 28px) يَملأ عَرض الحاوية ناقص هامِشَين (14px لكل جانب).
     # نَستعمل width صَريحًا (لا auto) لأن البطاقة عُنصر flex فـauto يُصغّرها
     # لعَرض المحتوى (كان سبب ظُهورها ~ثُلث الشاشة).
@@ -2347,7 +2348,7 @@ _RESPONSIVE_SAFETY_CSS = (
     "    min-height:44px!important;font-size:16px!important;\n"
     "  }\n"
     "}\n"
-    "</style>"
+    "</style>")
 )
 
 _VIEWPORT_META = ('<meta name="viewport" content="width=device-width, '
@@ -2823,8 +2824,8 @@ def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
     if not _verify_written(client, target_path, len(contents.encode("utf-8"))):
         raise _TransientWire(
             "verify",
-            _ProtocolError("الملف هَبَط مبتورًا (حجم أصغر من المتوقّع) — "
-                           "غالبًا انقطاعٌ صامت أثناء الرفع"))
+            _ProtocolError(N_("الملف هَبَط مبتورًا (حجم أصغر من المتوقّع) — "
+                           "غالبًا انقطاعٌ صامت أثناء الرفع")))
 
     return DeployResult(ok=True, path=target_path, bytes=len(contents))
 
@@ -2863,7 +2864,7 @@ def _put_file(client, target_path: str, contents: str, *,
                 _k, rmsg = classify_deploy_error(rce)
                 return DeployResult(
                     ok=False, path=target_path, bytes=len(contents),
-                    error="انقطع الاتصال وتعذّرت إعادة الاتصال: " + rmsg)
+                    error=N_("انقطع الاتصال وتعذّرت إعادة الاتصال: ") + rmsg)
     _kind, reason = classify_deploy_error(last.original if last else "")
     return DeployResult(
         ok=False, path=target_path, bytes=len(contents),
@@ -2951,8 +2952,8 @@ def _put_file_smart(client, target_path: str, contents: str, *,
             return api
         errs.append(f"API: {api.error}")
         hint = ("" if fetch else
-                " (فعّل عنوان خادم الراديوس ليسحب الراوتر الملف من اللوحة "
-                "عبر النفق، أو صغّر شعار التصميم)")
+                N_(" (فعّل عنوان خادم الراديوس ليسحب الراوتر الملف من اللوحة "
+                "عبر النفق، أو صغّر شعار التصميم)"))
         return DeployResult(
             ok=False, path=target_path, bytes=n,
             error=(f"تعذّر رفع ملف كبير ({n} بايت){hint} — "

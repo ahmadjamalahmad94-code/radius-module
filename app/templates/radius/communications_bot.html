@@ -53,14 +53,14 @@
 
 {# ───── ONE unified hero: title + subtitle + icon + KPI strip ───── #}
 {% call hub.megahero(
-  "بوت واتساب",
-  subtitle="فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.",
+  _('بوت واتساب'),
+  subtitle=_('فعّل البوت ليرد تلقائيًا على رسائل مشتركيك. الإعدادات جاهزة مسبقًا — كل ما عليك تفعيله وربط رابط الويب-هوك عند مزوّد واتساب.'),
   icon="robot",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("تحتاج مساعدة؟ افتح الدليل") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': 'حالة البوت', 'value': 'مفعّل' if config.enabled else 'متوقف', 'icon': 'power-off', 'variant': 'green' if config.enabled else 'grey', 'sub': 'الرد التلقائي'},
-    {'label': 'قناة واتساب', 'value': 'مهيأة' if wa_ok else 'غير مكتملة', 'icon': 'whatsapp', 'variant': 'green' if wa_ok else 'amber', 'sub': 'وسيلة الإرسال'},
-    {'label': 'أوامر البوت', 'value': config.commands|length, 'icon': 'list-check', 'variant': 'brand', 'sub': 'كلمة ← رد'}
+    {'label': _('حالة البوت'), 'value': _('مفعّل') if config.enabled else _('متوقف'), 'icon': 'power-off', 'variant': 'green' if config.enabled else 'grey', 'sub': _('الرد التلقائي')},
+    {'label': _('قناة واتساب'), 'value': _('مهيأة') if wa_ok else _('غير مكتملة'), 'icon': 'whatsapp', 'variant': 'green' if wa_ok else 'amber', 'sub': _('وسيلة الإرسال')},
+    {'label': _('أوامر البوت'), 'value': config.commands|length, 'icon': 'list-check', 'variant': 'brand', 'sub': _('كلمة ← رد')}
   ]
 ) %}
 {% endcall %}
@@ -69,26 +69,26 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف يعمل البوت؟",
-  intro="البوت يرد على مشتركيك عبر واتساب: يرسل المشترك كلمة (مثل «الرصيد») فيرد البوت ببياناته فورًا.",
+  _('كيف يعمل البوت؟'),
+  intro=_('البوت يرد على مشتركيك عبر واتساب: يرسل المشترك كلمة (مثل «الرصيد») فيرد البوت ببياناته فورًا.'),
   icon="circle-info",
   items=[
-    {'icon': 'power-off', 'text': 'فعّل الرد التلقائي من بطاقة «تشغيل البوت» — عند الإيقاف لا يرد على أي رسالة.'},
-    {'icon': 'link', 'text': 'انسخ رابط استقبال الرسائل وضعه عند مزوّد واتساب لتصل الرسائل الواردة للبوت.'},
-    {'icon': 'comment-dots', 'text': 'اضبط رسالة الترحيب والرد الافتراضي عند عدم فهم الطلب.'},
-    {'icon': 'list-check', 'text': 'أضف أوامر: كلمة يكتبها المشترك ← رد بمتغيّرات مثل {balance} و {exp}.'}
+    {'icon': 'power-off', 'text': _('فعّل الرد التلقائي من بطاقة «تشغيل البوت» — عند الإيقاف لا يرد على أي رسالة.')},
+    {'icon': 'link', 'text': _('انسخ رابط استقبال الرسائل وضعه عند مزوّد واتساب لتصل الرسائل الواردة للبوت.')},
+    {'icon': 'comment-dots', 'text': _('اضبط رسالة الترحيب والرد الافتراضي عند عدم فهم الطلب.')},
+    {'icon': 'list-check', 'text': _('أضف أوامر: كلمة يكتبها المشترك ← رد بمتغيّرات مثل {balance} و {exp}.')}
   ],
-  note="شرح كامل مصوّر خطوة بخطوة في «الدليل المصوّر» من الأعلى."
+  note=_('شرح كامل مصوّر خطوة بخطوة في «الدليل المصوّر» من الأعلى.')
 )) %}
 
 <form method="post" action="{{ url_for('radius.communications_bot') }}" data-testid="cbot-form">{% if not can_submit('radius.communications_bot') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
 
   {# ── 1) Enable toggle ── #}
-  {% call hub.section("تشغيل البوت", icon="power-off") %}
+  {% call hub.section(_('تشغيل البوت'), icon="power-off") %}
     <div class="hub-field">
       <label class="hub-field-label">{{ _('تفعيل الرد التلقائي على رسائل واتساب') }}</label>
-      {{ toggle_switch(name="enabled", checked=config.enabled, value="1", id="cbot-enabled", on_label="مفعّل", off_label="متوقف") }}
+      {{ toggle_switch(name="enabled", checked=config.enabled, value="1", id="cbot-enabled", on_label=_('مفعّل'), off_label=_('متوقف')) }}
       <div class="hub-field-hint">{{ _('عند الإيقاف لن يرد البوت على أي رسالة واردة (لا شيء يُرسَل). يمكنك تركه مفعّلًا دائمًا.') }}</div>
     </div>
 
@@ -101,8 +101,7 @@
       <div class="cbot-note warn" style="margin-top:12px">
         <i class="fa-solid fa-triangle-exclamation"></i>
         <div>
-          قناة واتساب غير مكتملة الضبط بعد. لكي يتمكّن البوت من إرسال الردود،
-          اضبط رابط الإرسال وفعّل القناة من
+          {{ _('قناة واتساب غير مكتملة الضبط بعد. لكي يتمكّن البوت من إرسال الردود، اضبط رابط الإرسال وفعّل القناة من') }}
           {% if can_submit('radius.communications_channels', 'GET') %}<a href="{{ url_for('radius.communications_channels') }}">{% endif %}{{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}.
         </div>
       </div>
@@ -110,7 +109,7 @@
   {% endcall %}
 
   {# ── 2) Incoming messages URL (read-only + copy) ── #}
-  {% call hub.section("رابط استقبال رسائل واتساب", icon="link", meta="انسخه وضعه عند مزوّد واتساب") %}
+  {% call hub.section(_('رابط استقبال رسائل واتساب'), icon="link", meta=_('انسخه وضعه عند مزوّد واتساب')) %}
     <div class="hub-field">
       <label class="hub-field-label">{{ _('عنوان استقبال الرسائل الواردة') }}</label>
       <div class="cbot-url">
@@ -120,14 +119,13 @@
         </button>
       </div>
       <div class="hub-field-hint">
-        ضع هذا الرابط في خانة استقبال الرسائل لدى مزوّد واتساب لديك. عند وصول رسالة من مشترك،
-        يستقبلها البوت ويرد عليها تلقائيًا. الرابط عام ولا يحتاج تسجيل دخول.
+        {{ _('ضع هذا الرابط في خانة استقبال الرسائل لدى مزوّد واتساب لديك. عند وصول رسالة من مشترك، يستقبلها البوت ويرد عليها تلقائيًا. الرابط عام ولا يحتاج تسجيل دخول.') }}
       </div>
     </div>
   {% endcall %}
 
   {# ── 3) Greeting + fallback ── #}
-  {% call hub.section("رسائل الترحيب والرد الافتراضي", icon="comment-dots") %}
+  {% call hub.section(_('رسائل الترحيب والرد الافتراضي'), icon="comment-dots") %}
     <div class="hub-field">
       <label class="hub-field-label" for="cbot-greeting">{{ _('رسالة الترحيب / القائمة') }}</label>
       <textarea class="hub-textarea" id="cbot-greeting" name="greeting" style="min-height:90px"
@@ -143,7 +141,7 @@
   {% endcall %}
 
   {# ── 4) Commands list ── #}
-  {% call hub.section("أوامر البوت (كلمة ← رد)", icon="list-check", meta="اكتب الكلمة التي يرسلها المشترك والرد المناسب") %}
+  {% call hub.section(_('أوامر البوت (كلمة ← رد)'), icon="list-check", meta=_('اكتب الكلمة التي يرسلها المشترك والرد المناسب')) %}
     <div class="hub-field" style="margin-bottom:13px">
       <label class="hub-field-label">{{ _('المتغيّرات المتاحة في الردود') }}</label>
       <div class="cbot-vars">
@@ -163,7 +161,7 @@
         </div>
         <div class="rp">
           <label>{{ _('الرد') }}</label>
-          <textarea class="hub-textarea" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}">{{ cmd.reply_template }}</textarea>
+          <textarea class="hub-textarea" name="cmd_reply" placeholder="{{ _('نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}') }}">{{ cmd.reply_template }}</textarea>
         </div>
         <div class="cbot-cmd-side">
           <label class="cbot-onoff">
@@ -184,7 +182,7 @@
 
   {# ── save ── #}
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px">
-    {{ hub.btn("حفظ إعدادات البوت", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn(_('حفظ إعدادات البوت'), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 {% if not can_submit('radius.communications_bot') %}</fieldset>{% endif %}</form>
 
@@ -199,7 +197,7 @@
     </div>
     <div class="rp">
       <label>{{ _('الرد') }}</label>
-      <textarea class="hub-textarea" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}"></textarea>
+      <textarea class="hub-textarea" name="cmd_reply" placeholder="{{ _('نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}') }}"></textarea>
     </div>
     <div class="cbot-cmd-side">
       <label class="cbot-onoff">

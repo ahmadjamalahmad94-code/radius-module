@@ -27,6 +27,7 @@ paid. الترحيل المحاسبي الحقيقي (AccountingService.create_p
 تجريبية في الحسابات.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import secrets
@@ -88,7 +89,7 @@ class MockWalletProvider(PaymentProvider):
     """
 
     key = "mock_wallet"
-    title = "محاكاة محفظة (جوال باي/بال باي ستايل)"
+    title = N_("محاكاة محفظة (جوال باي/بال باي ستايل)")
     is_mock = True
 
     MAX_OTP_ATTEMPTS = 3

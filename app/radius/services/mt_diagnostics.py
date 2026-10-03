@@ -18,6 +18,7 @@ Returns a list of dicts the diagnostics template can render directly.
 Never raises — every failure is captured as a structured result.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import socket
 import time
@@ -49,17 +50,17 @@ def _tcp_probe(host: str, port: int, timeout: float = TCP_TIMEOUT_SEC) -> dict[s
     except socket.timeout:
         return {"ok": False, "latency_ms": None,
                 "error": "timed_out",
-                "hint": "الراوتر غير قابل للوصول. تحقّق من الـ firewall "
-                        "والـ /ip service وأن الـ port forward صحيح."}
+                "hint": _tr("الراوتر غير قابل للوصول. تحقّق من الـ firewall "
+                        "والـ /ip service وأن الـ port forward صحيح.")}
     except ConnectionRefusedError:
         return {"ok": False, "latency_ms": None,
                 "error": "refused",
-                "hint": "الراوتر يرفض الاتصال على هذا البورت. "
-                        "غالباً MT API service معطّلة — فعّلها من /ip service."}
+                "hint": _tr("الراوتر يرفض الاتصال على هذا البورت. "
+                        "غالباً MT API service معطّلة — فعّلها من /ip service.")}
     except OSError as e:
         return {"ok": False, "latency_ms": None,
                 "error": str(e),
-                "hint": "خطأ شبكة — تحقّق من DNS / routing من الـ VPS."}
+                "hint": _tr("خطأ شبكة — تحقّق من DNS / routing من الـ VPS.")}
     lat = int((time.monotonic() - t0) * 1000)
     return {"ok": True, "latency_ms": lat, "error": "", "hint": ""}
 
@@ -85,9 +86,9 @@ def _read_ntp_status(client) -> dict[str, Any]:
             info["enabled"] = enabled
             if not enabled:
                 info["warning"] = (
-                    "NTP غير مفعّل على الراوتر — بعد أي إطفاء طويل قد ترجع "
+                    N_("NTP غير مفعّل على الراوتر — بعد أي إطفاء طويل قد ترجع "
                     "ساعته للماضي فيرفض WireGuard المصافحة ويظهر «فشل الاتصال». "
-                    "فعّله الآن وقاية: /system ntp client set enabled=yes mode=unicast"
+                    "فعّله الآن وقاية: /system ntp client set enabled=yes mode=unicast")
                 )
         try:
             crows = list(client.print_("/system/clock/print"))
@@ -128,13 +129,13 @@ def _api_probe(cfg: dict[str, Any]) -> dict[str, Any]:
     except AuthError as e:
         return {"ok": False, "latency_ms": None, "identity": "",
                 "error": str(e),
-                "hint": "اسم المستخدم أو كلمة المرور خطأ. تأكد من حساب MT "
-                        "API: /user print → الـ group must allow 'api'."}
+                "hint": _tr("اسم المستخدم أو كلمة المرور خطأ. تأكد من حساب MT "
+                        "API: /user print → الـ group must allow 'api'.")}
     except ConnectError as e:
         return {"ok": False, "latency_ms": None, "identity": "",
                 "error": str(e),
-                "hint": "وصلنا للـ TCP لكن فشل الـ login handshake. "
-                        "تحقق من TLS settings ومن أن API enabled على البورت."}
+                "hint": _tr("وصلنا للـ TCP لكن فشل الـ login handshake. "
+                        "تحقق من TLS settings ومن أن API enabled على البورت.")}
     except MikrotikError as e:
         return {"ok": False, "latency_ms": None, "identity": "",
                 "error": str(e), "hint": ""}
@@ -168,41 +169,41 @@ def _probable_causes(cfg: dict[str, Any]) -> list[dict[str, str]]:
     if mode == "vpn":
         causes.append({
             "icon": "clock",
-            "title": "ساعة الراوتر غير مضبوطة — WireGuard يرفض المصافحة القديمة",
-            "fix": "فعّل NTP ليضبط الوقت تلقائياً عند كل إقلاع: "
+            "title": _tr("ساعة الراوتر غير مضبوطة — WireGuard يرفض المصافحة القديمة"),
+            "fix": _tr("فعّل NTP ليضبط الوقت تلقائياً عند كل إقلاع: "
                    "/system ntp client set enabled=yes mode=unicast — أو اضبط "
                    "الوقت يدوياً الآن: /system clock set "
-                   "date=mmm/dd/yyyy time=hh:mm:ss",
+                   "date=mmm/dd/yyyy time=hh:mm:ss"),
         })
         causes.append({
             "icon": "arrows-rotate",
-            "title": "آي بي الراوتر العام تغيّر (endpoint النفق قديم)",
-            "fix": "حدّث عنوان endpoint للنفق أو فعّل DDNS؛ راجع "
-                   "/interface wireguard peers print detail",
+            "title": _tr("آي بي الراوتر العام تغيّر (endpoint النفق قديم)"),
+            "fix": _tr("حدّث عنوان endpoint للنفق أو فعّل DDNS؛ راجع "
+                   "/interface wireguard peers print detail"),
         })
         causes.append({
             "icon": "plug-circle-xmark",
-            "title": "النفق واقف أو منفذ WireGuard (UDP) محجوب",
-            "fix": "تأكّد من فتح منفذ UDP ومن persistent-keepalive؛ افحص آخر "
+            "title": _tr("النفق واقف أو منفذ WireGuard (UDP) محجوب"),
+            "fix": _tr("تأكّد من فتح منفذ UDP ومن persistent-keepalive؛ افحص آخر "
                    "مصافحة: /interface wireguard peers print detail "
-                   "(انظر last-handshake)",
+                   "(انظر last-handshake)"),
         })
     else:
         causes.append({
             "icon": "arrows-rotate",
-            "title": "عنوان الراوتر تغيّر",
-            "fix": "حدّث عنوان الراوتر في إعدادات الراوترات.",
+            "title": _tr("عنوان الراوتر تغيّر"),
+            "fix": _tr("حدّث عنوان الراوتر في إعدادات الراوترات."),
         })
         causes.append({
             "icon": "shield-halved",
-            "title": "الجدار الناري يحجب منفذ الـ API أو الخدمة معطّلة",
-            "fix": "افتح المنفذ من /ip firewall وفعّل الخدمة من /ip service "
-                   "(انظر أوامر الإصلاح أدناه).",
+            "title": _tr("الجدار الناري يحجب منفذ الـ API أو الخدمة معطّلة"),
+            "fix": _tr("افتح المنفذ من /ip firewall وفعّل الخدمة من /ip service "
+                   "(انظر أوامر الإصلاح أدناه)."),
         })
     causes.append({
         "icon": "power-off",
-        "title": "الراوتر مطفأ أو بلا إنترنت",
-        "fix": "تأكّد أن الراوتر يعمل ولديه اتصال إنترنت فعّال.",
+        "title": _tr("الراوتر مطفأ أو بلا إنترنت"),
+        "fix": _tr("تأكّد أن الراوتر يعمل ولديه اتصال إنترنت فعّال."),
     })
     return causes
 
@@ -298,7 +299,7 @@ def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
     }
     if not cfg["enabled"]:
         entry["status"] = "disabled"
-        entry["verdict"] = "الراوتر معطّل من الإعدادات — فعّله أولاً."
+        entry["verdict"] = N_("الراوتر معطّل من الإعدادات — فعّله أولاً.")
         return entry
 
     rid = cfg.get("id")
@@ -313,9 +314,9 @@ def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
         entry["status"]        = "tcp_failed"
         entry["breaker_open"]  = True
         entry["retry_in_sec"]  = int(round(st.get("retry_in_sec") or 0))
-        entry["hint"] = ("تخطّينا الفحص الحيّ مؤقّتاً لأن محاولة اتصال سابقة "
-                         "فشلت قبل ثوانٍ — يُعاد الفحص تلقائياً خلال لحظات.")
-        entry["verdict"] = "الراوتر غير قابل للوصول (آخر محاولة فشلت قبل ثوانٍ)."
+        entry["hint"] = (N_("تخطّينا الفحص الحيّ مؤقّتاً لأن محاولة اتصال سابقة "
+                         "فشلت قبل ثوانٍ — يُعاد الفحص تلقائياً خلال لحظات."))
+        entry["verdict"] = N_("الراوتر غير قابل للوصول (آخر محاولة فشلت قبل ثوانٍ).")
         entry["probable_causes"] = _probable_causes(cfg)
         return entry
 
@@ -325,7 +326,7 @@ def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
         reachability.record_failure(rid)
         entry["status"] = "tcp_failed"
         entry["hint"]    = entry["tcp"]["hint"]
-        entry["verdict"] = "الراوتر غير قابل للوصول — إليك الأسباب الأرجح وحلولها."
+        entry["verdict"] = N_("الراوتر غير قابل للوصول — إليك الأسباب الأرجح وحلولها.")
         entry["probable_causes"] = _probable_causes(cfg)
         return entry
 
@@ -336,12 +337,12 @@ def _diagnose_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
     if not entry["api"]["ok"]:
         entry["status"] = "api_failed"
         entry["hint"]    = entry["api"]["hint"] or ""
-        entry["verdict"] = "TCP وصل لكن API login فشل."
+        entry["verdict"] = N_("TCP وصل لكن API login فشل.")
         return entry
 
     entry["status"]  = "ok"
     entry["ntp"]     = entry["api"].get("ntp")
-    entry["verdict"] = f"الراوتر يستجيب — identity = {entry['api']['identity'] or 'غير معروف'}"
+    entry["verdict"] = _tr('الراوتر يستجيب — identity = %(v)s', v=entry['api']['identity'] or N_('غير معروف'))
     return entry
 
 

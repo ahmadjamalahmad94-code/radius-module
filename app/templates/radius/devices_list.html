@@ -8,12 +8,12 @@
    بصيغتها التجارية الصحيحة، وأنواع الخدمة تُعرَّب. #}
 {% set _vendor_labels = {
   'mikrotik': 'MikroTik', 'cisco': 'Cisco', 'huawei': 'Huawei',
-  'ubiquiti': 'Ubiquiti', 'other': 'أخرى'
+  'ubiquiti': 'Ubiquiti', 'other': _('أخرى')
 } %}
 {% set _nas_type_labels = {
-  'hotspot': 'بوابة دخول', 'pppoe': 'برودباند (PPPoE)', 'dhcp': 'DHCP',
-  'router': 'راوتر', 'ap': 'أكسس بوينت', 'switch': 'سويتش',
-  'firewall': 'جدار حماية', 'other': 'أخرى'
+  'hotspot': _('بوابة دخول'), 'pppoe': _('برودباند (PPPoE)'), 'dhcp': 'DHCP',
+  'router': _('راوتر'), 'ap': _('أكسس بوينت'), 'switch': _('سويتش'),
+  'firewall': _('جدار حماية'), 'other': _('أخرى')
 } %}
 
 {% block title %}{{ _("أجهزة الشبكة / NAS") }}{% endblock %}
@@ -22,7 +22,7 @@
 {% block page_sub %}
   <span class="sub">
     {{ items|length }}
-    {{ 'راوتر' if items|length != 2 else 'راوتران' }}
+    {{ _('راوتر') if items|length != 2 else _('راوتران') }}
   </span>
 {% endblock %}
 
@@ -39,18 +39,18 @@
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "أجهزة الشبكة / NAS",
-  subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات — كل أجهزة الشبكة التي تتصل بنظام الراديوس في مكان واحد.",
+  _('أجهزة الشبكة / NAS'),
+  subtitle=_('إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات — كل أجهزة الشبكة التي تتصل بنظام الراديوس في مكان واحد.'),
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.devices_new') + '">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة راوتر") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي',   'value': items|length, 'icon': 'server',       'variant': 'brand'},
-    {'label': 'مفعَّل',      'value': _enabled,     'icon': 'toggle-on',    'variant': 'green'},
-    {'label': 'متاح حاليًا', 'value': _reachable,   'icon': 'circle-check', 'variant': 'blue'},
-    {'label': 'غير متاح',   'value': _down,        'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('الإجمالي'),   'value': items|length, 'icon': 'server',       'variant': 'brand'},
+    {'label': _('مفعَّل'),      'value': _enabled,     'icon': 'toggle-on',    'variant': 'green'},
+    {'label': _('متاح حاليًا'), 'value': _reachable,   'icon': 'circle-check', 'variant': 'blue'},
+    {'label': _('غير متاح'),   'value': _down,        'icon': 'circle-xmark', 'variant': 'red'},
   ]
 ) %}
 {% endcall %}
@@ -58,16 +58,16 @@
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو جهاز شبكة (راوتر/موجِّه) يتصل بنظام الراديوس للمصادقة والمحاسبة.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو جهاز شبكة (راوتر/موجِّه) يتصل بنظام الراديوس للمصادقة والمحاسبة.'),
   items=[
-    {'icon': 'plug',         'text': 'العنوان والمنافذ تحدد كيف يتصل النظام بالجهاز للمصادقة والمحاسبة.'},
-    {'icon': 'circle-check', 'text': 'حالة آخر فحص تعرض ما إذا كان الجهاز متاحًا — استخدم زر الفحص لتحديثها.'},
-    {'icon': 'toggle-on',    'text': 'الجهاز المعطَّل يبقى محفوظًا لكنه لا يخدم طلبات الراديوس.'},
+    {'icon': 'plug',         'text': _('العنوان والمنافذ تحدد كيف يتصل النظام بالجهاز للمصادقة والمحاسبة.')},
+    {'icon': 'circle-check', 'text': _('حالة آخر فحص تعرض ما إذا كان الجهاز متاحًا — استخدم زر الفحص لتحديثها.')},
+    {'icon': 'toggle-on',    'text': _('الجهاز المعطَّل يبقى محفوظًا لكنه لا يخدم طلبات الراديوس.')},
   ],
-  note="الأرشفة لا تحذف الجهاز نهائيًا — يمكنك استعادته من سلة المحذوفات."
+  note=_('الأرشفة لا تحذف الجهاز نهائيًا — يمكنك استعادته من سلة المحذوفات.')
 )) %}
-  {% call hub.section("قائمة الأجهزة", icon="table-list", meta=items|length|string + " جهاز", flush=True) %}
+  {% call hub.section(_('قائمة الأجهزة'), icon="table-list", meta=items|length|string + _(' جهاز'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -106,14 +106,14 @@
             <td class="mono small">
               {{ d.auth_port }}/{{ d.acct_port }}
               <div class="hub-text-mute" style="font-size:11px">
-                قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}
+                {{ _('قطع الجلسة: %(coa_port)s · واجهة الربط: %(api_port)s', coa_port=d.coa_port, api_port=d.api_port) }}
               </div>
             </td>
             <td>
               {% set st = d.last_check_status or '' %}
-              {% if st == 'reachable' %}{{ hub.pill("متاح", variant="green") }}
-              {% elif st == 'timeout' %}{{ hub.pill("انتهت المهلة", variant="amber") }}
-              {% elif st == 'unreachable' %}{{ hub.pill("غير متاح", variant="red") }}
+              {% if st == 'reachable' %}{{ hub.pill(_('متاح'), variant="green") }}
+              {% elif st == 'timeout' %}{{ hub.pill(_('انتهت المهلة'), variant="amber") }}
+              {% elif st == 'unreachable' %}{{ hub.pill(_('غير متاح'), variant="red") }}
               {% else %}<span class="hub-text-mute">—</span>{% endif %}
               {% if d.last_check_at %}
                 <div class="hub-text-mono hub-text-mute" style="font-size:10.5px;margin-top:3px">
@@ -122,8 +122,8 @@
               {% endif %}
             </td>
             <td>
-              {% if d.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+              {% if d.enabled %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+              {% else %}{{ hub.pill(_('معطَّل'), variant="red") }}{% endif %}
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
@@ -142,7 +142,7 @@
                   <i class="fa-solid fa-pen"></i>
                 </a>{% endif %}
                 {% if can_submit('radius.devices_delete', 'POST') %}<form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
-                      onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
+                      onsubmit="return confirm({{ _('أرشفة «%(e)s»؟ يمكن استعادته من سلة المحذوفات.', e=d.name|e)|tojson|forceescape }});" style="display:inline">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
@@ -158,8 +158,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا أجهزة شبكة بعد",
-  sub="أضف أوّل موجِّه راديوس من زرّ «إضافة راوتر» أعلى الصفحة لتبدأ تشغيل الخدمة.",
+  _('لا أجهزة شبكة بعد'),
+  sub=_('أضف أوّل موجِّه راديوس من زرّ «إضافة راوتر» أعلى الصفحة لتبدأ تشغيل الخدمة.'),
   icon="server"
 ) }}
 {% endif %}

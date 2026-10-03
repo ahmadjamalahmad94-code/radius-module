@@ -12,8 +12,8 @@
 {% block content %}
 {# الهيرو الموحّد megahero بدل hub.hero القديم — نفس العنوان والوصف والأزرار #}
 {{ hub.megahero(
-  "مركز تحصيل الدفعات",
-  subtitle="إعدادات استقبال الدفعات عبر محفظة يدوية — مع مراجعة بشرية قبل اعتبار أي طلب مدفوعًا.",
+  _('مركز تحصيل الدفعات'),
+  subtitle=_('إعدادات استقبال الدفعات عبر محفظة يدوية — مع مراجعة بشرية قبل اعتبار أي طلب مدفوعًا.'),
   icon="wallet",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> '|safe ~ _("الطلبات") ~ '</a>
@@ -22,20 +22,19 @@
 ) }}
 
 {# قائمة العملات بأسماء عربية — مطابقة لنمط settings_page.html #}
-{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
+{% set currencies = [('JOD',_('دينار أردني')),('ILS',_('شيكل ₪')),('USD',_('دولار $')),('IQD',_('دينار عراقي')),('SAR',_('ريال سعودي')),('EGP',_('جنيه مصري')),('AED',_('درهم إماراتي')),('EUR',_('يورو €')),('TRY',_('ليرة تركية'))] %}
 
 <div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
             border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
             background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
   <i class="fa-solid fa-circle-info"></i>
-  رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا. المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا،
-  ويبقى التطبيق التلقائي معاينة بدون تنفيذ حتى يكتمل مسار تفعيل الخدمة.
+  {{ _('رقم المحفظة لتوجيه الدفع فقط، ولا يعني أن الدفع تم تلقائيًا. المراجعة اليدوية مطلوبة قبل اعتبار أي طلب مدفوعًا، ويبقى التطبيق التلقائي معاينة بدون تنفيذ حتى يكتمل مسار تفعيل الخدمة.') }}
 </div>
 
 <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {# توكن CSRF لحماية النموذج عند الإرسال POST #}
   {{ csrf_token_input() | safe }}
-  {% call hub.section("إعدادات المزوّد والمحفظة", icon="gear") %}
+  {% call hub.section(_('إعدادات المزوّد والمحفظة'), icon="gear") %}
     <label class="hub-field" style="margin-bottom:14px;display:flex;flex-direction:row;align-items:center;gap:9px">
       <input type="checkbox" name="enabled" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if settings and settings.enabled %}checked{% endif %}>
       <span class="hub-field-label" style="margin:0">{{ _('تفعيل تحصيل الدفعات') }}</span>
@@ -73,7 +72,7 @@
   {% endcall %}
 
   <div class="hub-grid-2">
-    {% call hub.section("التأكيد والحدود", icon="sliders") %}
+    {% call hub.section(_('التأكيد والحدود'), icon="sliders") %}
       <label class="hub-field">
         <span class="hub-field-label">{{ _('طريقة التأكيد') }}</span>
         <select class="hub-select" name="confirmation_mode">
@@ -93,7 +92,7 @@
       </label>
     {% endcall %}
 
-    {% call hub.section("المبالغ والأنواع المسموحة", icon="money-bill-wave") %}
+    {% call hub.section(_('المبالغ والأنواع المسموحة'), icon="money-bill-wave") %}
       <div class="hub-grid-2">
         <label class="hub-field">
           <span class="hub-field-label">{{ _('أقل مبلغ') }}</span>

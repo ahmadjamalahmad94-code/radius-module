@@ -43,7 +43,7 @@
 {{ npc.npc_dry_run_banner() }}
 
 {# ───── Aggregate per-service totals for the hero KPI strip ───── #}
-{% set _kpis = [{'label': 'الراوترات', 'value': routers|length,
+{% set _kpis = [{'label': _('الراوترات'), 'value': routers|length,
                  'icon': 'router', 'variant': 'brand'}] %}
 {% for s in services %}
   {%- set _ns = namespace(total=0) -%}
@@ -55,30 +55,30 @@
 {# ───── Merged hero: title + subtitle + KPI strip ───── #}
 {{ hub.megahero(
   page_title,
-  subtitle="اختر راوتراً لإدارة سياساته.",
+  subtitle=_('اختر راوتراً لإدارة سياساته.'),
   icon="shield-halved",
   kpis=_kpis
 ) }}
 
 {% if not routers %}
   {{ hub.empty(
-    "لا توجد راوترات في هذا المستأجر بعد.",
-    sub="أضف راوتراً من «أجهزة الشبكة» ثم ارجع إلى هذه الصفحة.",
+    _('لا توجد راوترات في هذا المستأجر بعد.'),
+    sub=_('أضف راوتراً من «أجهزة الشبكة» ثم ارجع إلى هذه الصفحة.'),
     icon="folder-open"
   ) }}
 {% else %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="السياسات تعمل على الراوتر مباشرة — لذلك اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('السياسات تعمل على الراوتر مباشرة — لذلك اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته.'),
   items=[
-    {'icon': 'router',       'text': 'كل صف هو راوتر مستقل، مع عدد سياسات كل خدمة عليه.'},
-    {'icon': 'layer-group',  'text': 'كل تبويب يعرض السياسات الخاصّة بذلك الراوتر فقط.'},
-    {'icon': 'arrow-pointer','text': 'اضغط «إدارة السياسات» للدخول إلى تبويبات سياسات الراوتر.'},
+    {'icon': 'router',       'text': _('كل صف هو راوتر مستقل، مع عدد سياسات كل خدمة عليه.')},
+    {'icon': 'layer-group',  'text': _('كل تبويب يعرض السياسات الخاصّة بذلك الراوتر فقط.')},
+    {'icon': 'arrow-pointer','text': _('اضغط «إدارة السياسات» للدخول إلى تبويبات سياسات الراوتر.')},
   ],
-  note="اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته."
+  note=_('اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته.')
 )) %}
-  {% call hub.section("الراوترات", icon="table-list", meta=routers|length|string + " راوتر", flush=True) %}
+  {% call hub.section(_('الراوترات'), icon="table-list", meta=routers|length|string + _(' راوتر'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>

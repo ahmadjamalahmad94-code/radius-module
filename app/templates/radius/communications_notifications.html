@@ -181,15 +181,15 @@
 
 {# ───── ONE unified hero: title + action + live-status KPI strip ───── #}
 {{ hub.megahero(
-  "الإشعارات الحدثية",
-  subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
+  _('الإشعارات الحدثية'),
+  subtitle=_('حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.'),
   icon="bolt",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': rules|length,                'icon': 'bell',       'variant': 'brand'},
-    {'label': 'مفعَّلة',        'value': _enabled,                    'icon': 'toggle-on',  'variant': 'green', 'sub': 'حدث مُفعّل'},
-    {'label': 'معطَّلة',        'value': rules|length - _enabled,     'icon': 'toggle-off', 'variant': 'amber'},
-    {'label': 'قنوات الإرسال',  'value': all_channels|length,         'icon': 'tower-broadcast', 'variant': 'blue', 'sub': 'متاحة للاختيار'}
+    {'label': _('إجمالي الأحداث'), 'value': rules|length,                'icon': 'bell',       'variant': 'brand'},
+    {'label': _('مفعَّلة'),        'value': _enabled,                    'icon': 'toggle-on',  'variant': 'green', 'sub': _('حدث مُفعّل')},
+    {'label': _('معطَّلة'),        'value': rules|length - _enabled,     'icon': 'toggle-off', 'variant': 'amber'},
+    {'label': _('قنوات الإرسال'),  'value': all_channels|length,         'icon': 'tower-broadcast', 'variant': 'blue', 'sub': _('متاحة للاختيار')}
   ]
 ) }}
 
@@ -200,37 +200,33 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل هذه الصفحة؟",
-  intro="كل بطاقة هي حدث في عملك — فعّله بالمفتاح ليبدأ إرسال رسالة تلقائية عند وقوعه.",
+  _('كيف تعمل هذه الصفحة؟'),
+  intro=_('كل بطاقة هي حدث في عملك — فعّله بالمفتاح ليبدأ إرسال رسالة تلقائية عند وقوعه.'),
   icon="circle-info",
   items=[
-    {'icon': 'toggle-on',     'text': 'فعّل الحدث بالمفتاح ليُفتح ويبدأ الإرسال التلقائي عند وقوعه.'},
-    {'icon': 'tower-broadcast','text': 'اختر القنوات (الرسائل القصيرة / واتساب / تلجرام) التي يُرسل عبرها الحدث.'},
-    {'icon': 'pen',           'text': 'عدّل نص الرسالة، وانقر أي متغيّر لإدراجه في موضع المؤشّر.'},
-    {'icon': 'floppy-disk',   'text': 'كل البطاقات تُحفظ دفعة واحدة بزر «حفظ كل الإعدادات».'}
+    {'icon': 'toggle-on',     'text': _('فعّل الحدث بالمفتاح ليُفتح ويبدأ الإرسال التلقائي عند وقوعه.')},
+    {'icon': 'tower-broadcast','text': _('اختر القنوات (الرسائل القصيرة / واتساب / تلجرام) التي يُرسل عبرها الحدث.')},
+    {'icon': 'pen',           'text': _('عدّل نص الرسالة، وانقر أي متغيّر لإدراجه في موضع المؤشّر.')},
+    {'icon': 'floppy-disk',   'text': _('كل البطاقات تُحفظ دفعة واحدة بزر «حفظ كل الإعدادات».')}
   ],
-  note="القنوات تُضبط من «قنوات الإرسال»، وتلجرام من «إعدادات تلجرام». للشرح المصوّر افتح «دليل وشروحات»."
+  note=_('القنوات تُضبط من «قنوات الإرسال»، وتلجرام من «إعدادات تلجرام». للشرح المصوّر افتح «دليل وشروحات».')
 )) %}
 
 <form method="post" action="{{ url_for('radius.communications_notifications') }}" class="cnf">{% if not can_submit('radius.communications_notifications') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() }}
 
-  {% call hub.section("كيف تعمل؟", icon="circle-info", flush=False) %}
+  {% call hub.section(_('كيف تعمل؟'), icon="circle-info", flush=False) %}
     <div class="cnf-note info">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
       <div>
-        فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت
-        (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة.
-        قنوات الرسائل القصيرة وواتساب تُضبط من
-        {% if can_submit('radius.communications_channels', 'GET') %}<a href="{{ url_for('radius.communications_channels') }}">{% endif %}{{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}،
-        وقناة تلجرام من
-        {% if can_submit('radius.network_telegram_settings', 'GET') %}<a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{% endif %}{{ _('إعدادات تلجرام') }}{% if can_submit('radius.network_telegram_settings', 'GET') %}</a>{% endif %}،
-        وللشرح المصوّر {% if can_submit('radius.communications_guide', 'GET') %}<a href="{{ url_for('radius.communications_guide') }}">{% endif %}{{ _('افتح الدليل') }}{% if can_submit('radius.communications_guide', 'GET') %}</a>{% endif %}.
+        {{ _('فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة. قنوات الرسائل القصيرة وواتساب تُضبط من') }}
+        {% if can_submit('radius.communications_channels', 'GET') %}<a href="{{ url_for('radius.communications_channels') }}">{% endif %}{{ _('قنوات الإرسال') }}{% if can_submit('radius.communications_channels', 'GET') %}</a>{% endif %}{{ _('، وقناة تلجرام من') }}
+        {% if can_submit('radius.network_telegram_settings', 'GET') %}<a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{% endif %}{{ _('إعدادات تلجرام') }}{% if can_submit('radius.network_telegram_settings', 'GET') %}</a>{% endif %}{{ _('، وللشرح المصوّر') }} {% if can_submit('radius.communications_guide', 'GET') %}<a href="{{ url_for('radius.communications_guide') }}">{% endif %}{{ _('افتح الدليل') }}{% if can_submit('radius.communications_guide', 'GET') %}</a>{% endif %}.
       </div>
     </div>
   {% endcall %}
 
-  {% call hub.section("الأحداث", icon="bell") %}
+  {% call hub.section(_('الأحداث'), icon="bell") %}
   {# قائمة البطاقات: مغلِّف صريح لـgap موحَّد بين البطاقات وبين
      ترويسات المجموعات. كل بطاقة جزيرة بصرية مستقلّة بحدّ وخلفية
      وحشوة واضحة — لا «حائط واحد ملزّق». #}
@@ -295,7 +291,7 @@
   </div>{# /cnf-list #}
 
   <div class="cnf-save">
-    {{ hub.btn("حفظ كل الإعدادات", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn(_('حفظ كل الإعدادات'), icon="floppy-disk", variant="primary", type="submit") }}
     <span class="hint">{{ _('يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.') }}</span>
   </div>
   {% endcall %}

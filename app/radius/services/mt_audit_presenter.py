@@ -15,6 +15,7 @@ Unknown action codes fall back to the raw action string with
 the actor + timestamp — never crash.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -63,75 +64,75 @@ def _template(action: str) -> tuple[str, str]:
     # Programming
     if action == "mt.programming.hotspot.apply":
         return (
-            "{actor} طبّق برمجة Hotspot على الراوتر",
-            "إعداد جديد لـ pool + DHCP + hotspot profile.",
+            N_("{actor} طبّق برمجة Hotspot على الراوتر"),
+            N_("إعداد جديد لـ pool + DHCP + hotspot profile."),
         )
     if action == "mt.programming.pppoe.apply":
         return (
-            "{actor} طبّق برمجة PPPoE-server على الراوتر",
-            "إعداد جديد لـ pool + PPP profile + PPPoE listener.",
+            N_("{actor} طبّق برمجة PPPoE-server على الراوتر"),
+            N_("إعداد جديد لـ pool + PPP profile + PPPoE listener."),
         )
     if action == "mt.programming.hotspot.unprogram":
         return (
-            "{actor} نفّذ تراجعًا (Unprogram) لـ Hotspot",
-            "أزال الكائنات التي تحمل comment=hoberadius:hs.",
+            N_("{actor} نفّذ تراجعًا (Unprogram) لـ Hotspot"),
+            N_("أزال الكائنات التي تحمل comment=hoberadius:hs."),
         )
     if action == "mt.programming.pppoe.unprogram":
         return (
-            "{actor} نفّذ تراجعًا (Unprogram) لـ PPPoE",
-            "أزال الكائنات التي تحمل comment=hoberadius:pppoe.",
+            N_("{actor} نفّذ تراجعًا (Unprogram) لـ PPPoE"),
+            N_("أزال الكائنات التي تحمل comment=hoberadius:pppoe."),
         )
 
     # Login designer
     if action == "mt.login_designer.deploy":
         return (
-            "{actor} رفع صفحة الدخول (login.html) إلى الراوتر",
-            "تم تحديث ملف hotspot/login.html.",
+            N_("{actor} رفع صفحة الدخول (login.html) إلى الراوتر"),
+            N_("تم تحديث ملف hotspot/login.html."),
         )
     if action == "mt.login_designer.save":
         return (
-            "{actor} حفظ تصميم صفحة الدخول",
-            "تغيُّر في القالب أو المتغيّرات — بدون رفع للراوتر.",
+            N_("{actor} حفظ تصميم صفحة الدخول"),
+            N_("تغيُّر في القالب أو المتغيّرات — بدون رفع للراوتر."),
         )
 
     # Backup
     if action == "mt.backup.save":
         return (
-            "{actor} حفظ نسخة احتياطية للراوتر",
-            "نسخة احتياطية ثنائية مسجَّلة في سجل النسخ.",
+            N_("{actor} حفظ نسخة احتياطية للراوتر"),
+            N_("نسخة احتياطية ثنائية مسجَّلة في سجل النسخ."),
         )
 
     # Devices / fleet ops
     if action in {"mt.devices.toggle", "mt.devices.enabled"}:
-        return ("{actor} فعّل/عطّل الراوتر", "")
+        return (N_("{actor} فعّل/عطّل الراوتر"), "")
     if action == "mt.devices.bulk_toggle":
-        return ("{actor} نفّذ تفعيلًا/تعطيلًا جماعيًا", "")
+        return (N_("{actor} نفّذ تفعيلًا/تعطيلًا جماعيًا"), "")
 
     # K-family mutations
     if action == "mt.hotspot.disconnect":
-        return ("{actor} قطع جلسة Hotspot", "")
+        return (N_("{actor} قطع جلسة Hotspot"), "")
     if action == "mt.ppp.disconnect":
-        return ("{actor} قطع جلسة PPP", "")
+        return (N_("{actor} قطع جلسة PPP"), "")
     if action == "mt.system.reboot":
-        return ("{actor} طلب إعادة تشغيل الراوتر", "")
+        return (N_("{actor} طلب إعادة تشغيل الراوتر"), "")
     if action == "mt.system.identity.set":
-        return ("{actor} عدّل اسم الراوتر (identity)", "")
+        return (N_("{actor} عدّل اسم الراوتر (identity)"), "")
     if action == "mt.system.backup.save":
-        return ("{actor} طلب /system/backup/save على الراوتر", "")
+        return (N_("{actor} طلب /system/backup/save على الراوتر"), "")
     if action.startswith("mt.tools."):
         # ping / traceroute / dns-resolve — informational.
-        return ("{actor} نفّذ أداة فحص شبكية", action)
+        return (N_("{actor} نفّذ أداة فحص شبكية"), action)
 
     # Fallback: show the raw code so unknown types are still
     # operator-readable without crashing.
-    return (f"{{actor}} نفّذ <code>{action}</code>", "")
+    return (_tr('{actor} نفّذ <code>%(action)s</code>', action=action), "")
 
 
 def _risk_label(severity: str) -> str:
     if severity == "critical":
-        return "حرج"
+        return N_("حرج")
     if severity == "warning":
-        return "تحذير"
+        return N_("تحذير")
     return ""
 
 
@@ -143,27 +144,27 @@ def _recovery_hint(action: str, result_status: str) -> str:
     r = (result_status or "").lower()
     if r == "partial":
         return (
-            "نفّذ Unprogram لإزالة الكائنات الجزئية ثم أعد "
-            "محاولة البرمجة بعد التحقق من سبب الفشل."
+            N_("نفّذ Unprogram لإزالة الكائنات الجزئية ثم أعد "
+            "محاولة البرمجة بعد التحقق من سبب الفشل.")
         )
     if r == "failed":
         if action.startswith("mt.programming."):
             return (
-                "افحص رسالة الخطأ في تفاصيل العملية، صحّح "
+                N_("افحص رسالة الخطأ في تفاصيل العملية، صحّح "
                 "المدخلات (CIDR / pool / interface) ثم أعد "
-                "التطبيق."
+                "التطبيق.")
             )
         if action == "mt.backup.save":
             return (
-                "تحقّق من اتصال الراوتر ومن صلاحيات /file على "
-                "حساب الـ API ثم أعد المحاولة."
+                N_("تحقّق من اتصال الراوتر ومن صلاحيات /file على "
+                "حساب الـ API ثم أعد المحاولة.")
             )
         if action == "mt.login_designer.deploy":
             return (
-                "تأكد من أن الـ hotspot package مفعَّل على "
-                "الراوتر، ثم أعد النشر."
+                N_("تأكد من أن الـ hotspot package مفعَّل على "
+                "الراوتر، ثم أعد النشر.")
             )
-        return "افتح تفاصيل العملية لمعرفة الخطأ الدقيق."
+        return N_("افتح تفاصيل العملية لمعرفة الخطأ الدقيق.")
     return ""
 
 

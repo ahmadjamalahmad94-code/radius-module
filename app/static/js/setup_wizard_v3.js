@@ -15,6 +15,7 @@
  *   POST /admin/radius/setup-wizard-v3/runs/<id>/mark-handshake
  *   POST /admin/radius/setup-wizard-v3/runs/<id>/register
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -107,7 +108,7 @@
     if (!btn) return;
     if (busy) {
       btn.dataset._origText = btn.textContent;
-      btn.textContent = busyText || "جارٍ المعالجة...";
+      btn.textContent = busyText || hrT('جارٍ المعالجة...');
       btn.disabled = true;
     } else {
       btn.textContent = btn.dataset._origText || btn.textContent;
@@ -161,12 +162,12 @@
   async function copyScript(target) {
     const text = state.scripts[target] || "";
     if (!text) {
-      toast("لا يوجد سكربت لنسخه بعد.", "error");
+      toast(hrT('لا يوجد سكربت لنسخه بعد.'), "error");
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast("تم النسخ، الصقه في شاشة أوامر الراوتر", "ok");
+      toast(hrT('تم النسخ، الصقه في شاشة أوامر الراوتر'), "ok");
     } catch (err) {
       // Fallback for older browsers
       const ta = document.createElement("textarea");
@@ -177,9 +178,9 @@
       ta.select();
       try {
         document.execCommand("copy");
-        toast("✅ تم النسخ", "ok");
+        toast(hrT('✅ تم النسخ'), "ok");
       } catch (e) {
-        toast("تعذّر النسخ — انسخ يدوياً من السكربت أدناه.", "error");
+        toast(hrT('تعذّر النسخ — انسخ يدوياً من السكربت أدناه.'), "error");
       }
       document.body.removeChild(ta);
     }
@@ -207,7 +208,7 @@
     const hint = root.querySelector("[data-swz-binding-hint]");
     if (hint) {
       hint.textContent =
-        "سيُولّد سكربت " + String(state.bindingType).toUpperCase() + " المناسب.";
+        hrT('سيُولّد سكربت ') + String(state.bindingType).toUpperCase() + hrT(' المناسب.');
     }
   }
 
@@ -295,7 +296,7 @@
   async function submitRouterInfo() {
     const name = getValue("[data-swz-router-name]");
     if (!name) {
-      toast("الرجاء إدخال اسم للراوتر.", "error");
+      toast(hrT('الرجاء إدخال اسم للراوتر.'), "error");
       return false;
     }
     const type = getChecked("router_type") || "hotspot";
@@ -361,7 +362,7 @@
       await ensureRun();
       const inputs = buildInternetInputs();
       if (!inputs) {
-        toast("اختر نوع الاتصال أوّلاً.", "error");
+        toast(hrT('اختر نوع الاتصال أوّلاً.'), "error");
         return;
       }
       const data = await api(
@@ -374,7 +375,7 @@
         const diags = data.diagnostics || [];
         const msg = diags.length
           ? diags.map((d) => `• ${d.ar_explanation || d.code}`).join("\n")
-          : "تعذّر توليد السكربت. تأكّد من المدخلات.";
+          : hrT('تعذّر توليد السكربت. تأكّد من المدخلات.');
         toast(msg, "error");
         return;
       }
@@ -389,9 +390,9 @@
       showScript("step2", plan.script);
       const nextBtn = root.querySelector('[data-swz-next="2"]');
       if (nextBtn) nextBtn.hidden = false;
-      toast("السكربت جاهز. انسخه والصقه في شاشة أوامر الراوتر.", "ok");
+      toast(hrT('السكربت جاهز. انسخه والصقه في شاشة أوامر الراوتر.'), "ok");
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -416,7 +417,7 @@
       // older callers used `script_body` — accept both.
       const scriptText = data.script || data.script_body;
       if (!scriptText) {
-        toast("تعذّر توليد سكربت الربط.", "error");
+        toast(hrT('تعذّر توليد سكربت الربط.'), "error");
         return;
       }
       showScript("step3", scriptText);
@@ -477,7 +478,7 @@
         // back here so the server can add the peer (handshake round-trip).
         if (pasteBox) pasteBox.hidden = false;
         if (submitBtn) submitBtn.hidden = false;
-        toast("سكربت الربط جاهز. الصقه في شاشة أوامر الراوتر ثم انسخ الإخراج هنا.", "ok");
+        toast(hrT('سكربت الربط جاهز. الصقه في شاشة أوامر الراوتر ثم انسخ الإخراج هنا.'), "ok");
       } else {
         // SSTP/PPTP: no key exchange — accel authed the router's account and
         // the run is already registered/complete. The operator just pastes the
@@ -485,13 +486,13 @@
         if (pasteBox) pasteBox.hidden = true;
         if (submitBtn) submitBtn.hidden = true;
         toast(
-          "سكربت " + String(state.bindingType).toUpperCase()
-          + " جاهز. الصقه في الراوتر — سيتّصل بالخادم تلقائيًّا ويكتمل الإعداد.",
+          hrT('سكربت ') + String(state.bindingType).toUpperCase()
+          + hrT(' جاهز. الصقه في الراوتر — سيتّصل بالخادم تلقائيًّا ويكتمل الإعداد.'),
           "ok",
         );
       }
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -502,7 +503,7 @@
     try {
       const output = getValue("[data-swz-step3-output]");
       if (!output) {
-        toast("الصق إخراج الراوتر أوّلاً.", "error");
+        toast(hrT('الصق إخراج الراوتر أوّلاً.'), "error");
         return;
       }
       await api(
@@ -517,11 +518,11 @@
         `/runs/${state.runId}/apply-server-peer`,
         {},
       );
-      toast("✅ تم إنشاء peer على الخادم.", "ok");
+      toast(hrT('✅ تم إنشاء peer على الخادم.'), "ok");
       showStep(4);
       startHandshakePolling();
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -559,16 +560,16 @@
           if (status) {
             status.innerHTML = `
               <div class="swz-verify-spinner" style="font-size:48px;animation:none">✅</div>
-              <strong>تم اكتشاف الاتصال!</strong>
+              <strong>${hrT('تم اكتشاف الاتصال!')}</strong>
               <p>
-                الـ tunnel شغّال — منفذ
+                ${hrT('الـ tunnel شغّال — منفذ')}
                 <code dir="ltr">${data.probe_port}</code>
-                مفتوح على
+                ${hrT('مفتوح على')}
                 <code dir="ltr">${data.router_vpn_ip}</code>
-                خلال ${data.latency_ms} ms.
+                ${hrT('خلال {latency_ms} ms.', {latency_ms: data.latency_ms})}
               </p>
               <p style="color:#10b981;font-weight:700;margin-top:8px">
-                ⏭️ نسجّل الراوتر ونفتح خدماته تلقائياً...
+                ${hrT('⏭️ نسجّل الراوتر ونفتح خدماته تلقائياً...')}
               </p>
             `;
           }
@@ -578,14 +579,14 @@
           // hint about what's likely blocking.
           if (status) {
             const hint = elapsed > 30
-              ? "إذا تأخّر أكثر من 60 ثانية، تأكّد من فتح UDP 51820 من جهة المزوّد."
-              : "تأكّد أن السكربت لُصق وأُفّذ بنجاح على الراوتر.";
+              ? hrT('إذا تأخّر أكثر من 60 ثانية، تأكّد من فتح UDP 51820 من جهة المزوّد.')
+              : hrT('تأكّد أن السكربت لُصق وأُفّذ بنجاح على الراوتر.');
             status.innerHTML = `
               <div class="swz-verify-spinner">⏳</div>
-              <strong>بانتظار اكتمال الاتصال... (${elapsed}s)</strong>
+              <strong>${hrT('بانتظار اكتمال الاتصال... ({elapsed}s)', {elapsed})}</strong>
               <p>${hint}</p>
               <p style="font-size:12px;color:#94a3b8;margin-top:6px">
-                آخر فحص: ${data.error || "غير متاح"}
+                ${hrT('آخر فحص: {v}', {v: data.error || hrT('غير متاح')})}
               </p>
             `;
           }
@@ -605,10 +606,10 @@
         "POST", `/runs/${state.runId}/mark-handshake`, {},
       );
       if (handshakePoll) clearInterval(handshakePoll);
-      toast("✅ تم تأكيد الاتصال يدوياً.", "ok");
+      toast(hrT('✅ تم تأكيد الاتصال يدوياً.'), "ok");
       await registerRouter(null);
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -618,7 +619,7 @@
 
   function renderDiscoveredInterfaces(interfaces) {
     if (!interfaces || !interfaces.length) {
-      toast("لم يُعثر على منافذ صالحة.", "error");
+      toast(hrT('لم يُعثر على منافذ صالحة.'), "error");
       return;
     }
     // Cache the result so any service card that opens later
@@ -632,7 +633,7 @@
     // explicitly opts in (don't auto-share with hotspot).
     renderGrid("[data-swz-bb-ifaces]", interfaces, false);
     toast(
-      `✅ تم اكتشاف ${interfaces.length} منفذ على الراوتر.`,
+      hrT('✅ تم اكتشاف {length} منفذ على الراوتر.', {length: interfaces.length}),
       "ok",
     );
   }
@@ -643,7 +644,7 @@
     grid.innerHTML = interfaces
       .map((it) => {
         const stateLabel = it.disabled
-          ? " · معطّل"
+          ? hrT(' · معطّل')
           : it.running ? " · ✓" : "";
         const checked = autoCheck && it.recommended ? "checked" : "";
         return `
@@ -672,7 +673,7 @@
   }
 
   async function applyServerRadius(btn) {
-    setBusy(btn, true, "جارٍ التطبيق على الخادم...");
+    setBusy(btn, true, hrT('جارٍ التطبيق على الخادم...'));
     try {
       const data = await api(
         "POST",
@@ -689,13 +690,13 @@
       );
       if (appliedNote) appliedNote.hidden = false;
       toast(
-        "تم ربط خدمة المصادقة بالخادم. سيُحمَّل خلال نحو 5 ثوانٍ.",
+        hrT('تم ربط خدمة المصادقة بالخادم. سيُحمَّل خلال نحو 5 ثوانٍ.'),
         "ok",
       );
     } catch (err) {
       toast(
-        "تعذّر التطبيق التلقائي: " + err.message + ". "
-        + "افتح (تفاصيل تقنيّة) لنسخ السطر يدوياً.",
+        hrT('تعذّر التطبيق التلقائي: ') + err.message + ". "
+        + hrT('افتح (تفاصيل تقنيّة) لنسخ السطر يدوياً.'),
         "error",
       );
     } finally {
@@ -734,9 +735,9 @@
       const haveCreds = state.apiUser && state.apiPassword;
       toast(
         haveCreds
-          ? "تم تعبئة بيانات API تلقائياً من سكربت الخطوة 3. "
-            + "اضغط الزر مرّة أخرى للاكتشاف."
-          : "أدخل بيانات API للراوتر ثم اضغط الزر مرّة أخرى.",
+          ? hrT('تم تعبئة بيانات API تلقائياً من سكربت الخطوة 3. ')
+            + hrT('اضغط الزر مرّة أخرى للاكتشاف.')
+          : hrT('أدخل بيانات API للراوتر ثم اضغط الزر مرّة أخرى.'),
         "info",
       );
       return;
@@ -757,7 +758,7 @@
       );
       renderDiscoveredInterfaces(data.interfaces);
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -779,7 +780,7 @@
       );
       renderDiscoveredInterfaces(data.interfaces);
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -810,8 +811,8 @@
       const routerVpnIp = (run && run.router_vpn_ip) || "";
       if (!routerVpnIp) {
         toast(
-          "أكمل الخطوة 3 (الربط بالخادم) أوّلاً — نحتاج "
-          + "إلى عنوان الربط الخاص للراوتر.",
+          hrT('أكمل الخطوة 3 (الربط بالخادم) أوّلاً — نحتاج ')
+          + hrT('إلى عنوان الربط الخاص للراوتر.'),
           "error",
         );
         return;
@@ -819,7 +820,7 @@
       const interfaces = collectHotspotInterfaces();
       if (!interfaces.length) {
         toast(
-          "اختر على الأقل منفذاً واحداً لبوابة دخول المشتركين.",
+          hrT('اختر على الأقل منفذاً واحداً لبوابة دخول المشتركين.'),
           "error",
         );
         return;
@@ -851,19 +852,19 @@
       );
       const plan = data.plan || {};
       if (!plan.can_apply) {
-        toast("تعذّر توليد سكربت بوابة الدخول. راجع المدخلات.", "error");
+        toast(hrT('تعذّر توليد سكربت بوابة الدخول. راجع المدخلات.'), "error");
         return;
       }
       showScript("hotspot", plan.script);
       const ifaceList = interfaces.join(", ");
       toast(
-        `✅ سكربت بوابة الدخول جاهز لـ ${interfaces.length} منفذ `
-        + `(${ifaceList}). ⚠️ السكربت سيحذف أي إعدادات بوابة دخول `
-        + `سابقة لـ HobeRadius على نفس المنافذ.`,
+        hrT('✅ سكربت بوابة الدخول جاهز لـ {length} منفذ ', {length: interfaces.length})
+        + hrT('({ifaceList}). ⚠️ السكربت سيحذف أي إعدادات بوابة دخول ', {ifaceList})
+        + hrT('سابقة لـ HobeRadius على نفس المنافذ.'),
         "ok",
       );
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -890,7 +891,7 @@
       const interfaces = collectBroadbandInterfaces();
       if (!interfaces.length) {
         toast(
-          "اختر على الأقل منفذاً واحداً لاشتراكات البرودباند.",
+          hrT('اختر على الأقل منفذاً واحداً لاشتراكات البرودباند.'),
           "error",
         );
         return;
@@ -911,17 +912,17 @@
       );
       const plan = data.plan || {};
       if (!plan.can_apply) {
-        toast("تعذّر توليد سكربت البرودباند. راجع المدخلات.", "error");
+        toast(hrT('تعذّر توليد سكربت البرودباند. راجع المدخلات.'), "error");
         return;
       }
       showScript("broadband", plan.script);
       toast(
-        `✅ سكربت البرودباند جاهز لـ ${interfaces.length} منفذ. `
-        + `⚠️ السكربت سيحذف أي إعدادات برودباند سابقة لـ HobeRadius.`,
+        hrT('✅ سكربت البرودباند جاهز لـ {length} منفذ. ', {length: interfaces.length})
+        + hrT('⚠️ السكربت سيحذف أي إعدادات برودباند سابقة لـ HobeRadius.'),
         "ok",
       );
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -938,7 +939,7 @@
         .map((s) => s.trim())
         .filter(Boolean);
       if (!domains.length) {
-        toast("أضف دومين واحد على الأقل.", "error");
+        toast(hrT('أضف دومين واحد على الأقل.'), "error");
         return;
       }
       const data = await api(
@@ -951,14 +952,14 @@
       );
       const plan = data.plan || {};
       if (!plan.can_apply) {
-        toast("تعذّر توليد السكربت.", "error");
+        toast(hrT('تعذّر توليد السكربت.'), "error");
         return;
       }
       const target = kind === "walled_garden" ? "wg" : "bs";
       showScript(target, plan.script);
-      toast("✅ السكربت جاهز.", "ok");
+      toast(hrT('✅ السكربت جاهز.'), "ok");
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -983,28 +984,28 @@
         const reason = diags.length
           ? diags[diags.length - 1].ar
             || diags[diags.length - 1].code
-            || "تعذّر التسجيل"
-          : "تعذّر التسجيل: بيانات التشغيل غير مكتملة";
-        toast("⛔ التسجيل فشل: " + reason, "error");
+            || hrT('تعذّر التسجيل')
+          : hrT('تعذّر التسجيل: بيانات التشغيل غير مكتملة');
+        toast(hrT('⛔ التسجيل فشل: ') + reason, "error");
         return;
       }
       if (run.v3_state && run.v3_state !== "COMPLETE") {
         toast(
-          "⚠️ التسجيل لم يكتمل."
-          + " راجع لوحة التشخيص أو ابدأ عملية جديدة.",
+          hrT('⚠️ التسجيل لم يكتمل.')
+          + hrT(' راجع لوحة التشخيص أو ابدأ عملية جديدة.'),
           "error",
         );
         return;
       }
-      toast("🎉 تم تسجيل الراوتر بنجاح! جاري فتح خدمات الراوتر...", "ok");
+      toast(hrT('🎉 تم تسجيل الراوتر بنجاح! جاري فتح خدمات الراوتر...'), "ok");
       const nasId = Number(run.nas_device_id || run.nas_id || run.router_id || 0);
       if (nasId > 0) {
         window.location.assign(`/admin/radius/mt/${nasId}/dashboard#tab-my-services`);
         return;
       }
-      toast("تم التسجيل لكن لم يرجع رقم الراوتر لفتح لوحة الخدمات.", "error");
+      toast(hrT('تم التسجيل لكن لم يرجع رقم الراوتر لفتح لوحة الخدمات.'), "error");
     } catch (err) {
-      toast("خطأ: " + err.message, "error");
+      toast(hrT('خطأ: ') + err.message, "error");
     } finally {
       setBusy(btn, false);
     }
@@ -1053,7 +1054,7 @@
           if (!(await submitRouterInfo())) return;
           showStep(2);
         } catch (err) {
-          toast("خطأ: " + err.message, "error");
+          toast(hrT('خطأ: ') + err.message, "error");
         }
         return;
       }

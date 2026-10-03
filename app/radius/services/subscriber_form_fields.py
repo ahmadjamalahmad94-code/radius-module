@@ -19,6 +19,7 @@
 الافتراضُ **ظاهر**: شبكةٌ لم يلمس صاحبُها الصفحةَ ترى نموذجَها كما كان.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 from typing import Iterable
@@ -58,51 +59,51 @@ def _f(key: str, label: str, sel: str = "", warn: str = "") -> dict:
 GROUPS: tuple[dict, ...] = (
     {
         "key": "account",
-        "label": "حساب الإنترنت",
+        "label": N_("حساب الإنترنت"),
         "icon": "fa-wifi",
         "fields": (
-            _f("login_without_password", "مفتاح «قسم كلمة المرور»",
+            _f("login_without_password", N_("مفتاح «قسم كلمة المرور»"),
                sel=".uf-field:has(#uf-lwp)"),
-            _f("password", "كلمة المرور",
-               warn="إخفاؤها يعني إنشاءَ مشتركين بلا كلمة مرور. لا تُخفِها "
-                    "إلّا إن كانت شبكتُك تعمل بالدخول بالاسم وحدَه."),
-            _f("status", "الحالة"),
-            _f("auto_renewal", "التجديد التلقائيّ"),
-            _f("service_type", "نوع الخدمة (هوت سبوت / برودباند)",
+            _f("password", N_("كلمة المرور"),
+               warn=N_("إخفاؤها يعني إنشاءَ مشتركين بلا كلمة مرور. لا تُخفِها "
+                    "إلّا إن كانت شبكتُك تعمل بالدخول بالاسم وحدَه.")),
+            _f("status", N_("الحالة")),
+            _f("auto_renewal", N_("التجديد التلقائيّ")),
+            _f("service_type", N_("نوع الخدمة (هوت سبوت / برودباند)"),
                sel='.uf-field:has([name="service_type"])'),
-            _f("manager_id", "المدير المسؤول"),
-            _f("group", "مجموعة المشترك"),
-            _f("expiry", "تاريخ وساعة انتهاء الاشتراك",
+            _f("manager_id", N_("المدير المسؤول")),
+            _f("group", N_("مجموعة المشترك")),
+            _f("expiry", N_("تاريخ وساعة انتهاء الاشتراك"),
                sel='.uf-field:has([name="expire_year"])',
-               warn="عند الإنشاء، تاريخٌ فارغٌ يجعل الحساب منتهيًا فورَ "
+               warn=N_("عند الإنشاء، تاريخٌ فارغٌ يجعل الحساب منتهيًا فورَ "
                     "إضافته. لا تُخفِ هذا الحقل إلّا إن كنتَ تضبط الانتهاءَ "
-                    "من مكانٍ آخر."),
-            _f("custom_price", "سعر مخصّص للمشترك"),
+                    "من مكانٍ آخر.")),
+            _f("custom_price", N_("سعر مخصّص للمشترك")),
         ),
     },
     {
         "key": "personal",
-        "label": "المعلومات الشخصية",
+        "label": N_("المعلومات الشخصية"),
         "icon": "fa-id-card",
         "fields": (
-            _f("name_third", "الاسم الثالث",
+            _f("name_third", N_("الاسم الثالث"),
                sel='.uf-field:has([data-name-part="third"])'),
-            _f("name_fourth", "الاسم الرابع",
+            _f("name_fourth", N_("الاسم الرابع"),
                sel='.uf-field:has([data-name-part="fourth"])'),
-            _f("email", "البريد الإلكترونيّ"),
-            _f("national_id", "الرقم الوطنيّ"),
-            _f("payment_method", "طريقة الدفع المفضّلة"),
-            _f("city", "المدينة"),
-            _f("district", "المنطقة / الحيّ"),
-            _f("remark", "الملاحظات"),
+            _f("email", N_("البريد الإلكترونيّ")),
+            _f("national_id", N_("الرقم الوطنيّ")),
+            _f("payment_method", N_("طريقة الدفع المفضّلة")),
+            _f("city", N_("المدينة")),
+            _f("district", N_("المنطقة / الحيّ")),
+            _f("remark", N_("الملاحظات")),
         ),
     },
     {
         "key": "speed",
-        "label": "السرعة",
+        "label": N_("السرعة"),
         "icon": "fa-gauge-high",
         "fields": (
-            _f("speed_rules", "قواعد السرعة المجدوَلة",
+            _f("speed_rules", N_("قواعد السرعة المجدوَلة"),
                sel="#uf-speed .uf-sub-head--sched, #uf-speed .sr2-panel"),
         ),
     },
@@ -111,17 +112,17 @@ GROUPS: tuple[dict, ...] = (
         # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
         # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
         "sel": '#uf-quota, .uf-side a[href="#uf-quota"]',
-        "label": "الحصة والوقت",
+        "label": N_("الحصة والوقت"),
         "icon": "fa-database",
         "fields": (
-            _f("combined_quota_mb", "كوتا إجماليّة (مدمجة)"),
-            _f("download_quota_mb", "كوتا التنزيل"),
-            _f("upload_quota_mb", "كوتا الرفع"),
-            _f("total_connection_time_min", "إجماليّ وقت الاتصال"),
-            _f("quota_limit_enabled", "تطبيق حدّ الكوتا"),
-            _f("connection_time_limit_enabled", "تطبيق حدّ وقت الاتصال"),
-            _f("daily_connection_time_min", "وقت الاتصال اليوميّ"),
-            _f("connection_schedule", "الأيّام والأوقات المسموحة",
+            _f("combined_quota_mb", N_("كوتا إجماليّة (مدمجة)")),
+            _f("download_quota_mb", N_("كوتا التنزيل")),
+            _f("upload_quota_mb", N_("كوتا الرفع")),
+            _f("total_connection_time_min", N_("إجماليّ وقت الاتصال")),
+            _f("quota_limit_enabled", N_("تطبيق حدّ الكوتا")),
+            _f("connection_time_limit_enabled", N_("تطبيق حدّ وقت الاتصال")),
+            _f("daily_connection_time_min", N_("وقت الاتصال اليوميّ")),
+            _f("connection_schedule", N_("الأيّام والأوقات المسموحة"),
                sel='.uf-field:has([name="connection_schedule"])'),
         ),
     },
@@ -130,20 +131,20 @@ GROUPS: tuple[dict, ...] = (
         # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
         # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
         "sel": '#uf-network, .uf-side a[href="#uf-network"]',
-        "label": "الشبكة وقيود الاتصال",
+        "label": N_("الشبكة وقيود الاتصال"),
         "icon": "fa-network-wired",
         "fields": (
-            _f("mac_lock", "قفل عناوين MAC", sel=".uf-mac-manager"),
-            _f("static_ip", "عنوان IP ثابت"),
-            _f("nas_ip_address", "عنوان IP لجهاز الشبكة"),
-            _f("service_name", "اسم الخدمة"),
-            _f("device_count", "عدد الأجهزة المسموحة"),
-            _f("equal_share_download", "تقسيم سرعة التنزيل على الأجهزة"),
-            _f("equal_share_upload", "تقسيم سرعة الرفع على الأجهزة"),
-            _f("device_limit_mode", "السلوك عند بلوغ حدّ الأجهزة"),
-            _f("primary_dns_ppp", "خادم DNS الأساسيّ (PPP)"),
-            _f("secondary_dns_ppp", "خادم DNS الثانويّ (PPP)"),
-            _f("nas_port_id", "منفذ جهاز الشبكة"),
+            _f("mac_lock", N_("قفل عناوين MAC"), sel=".uf-mac-manager"),
+            _f("static_ip", N_("عنوان IP ثابت")),
+            _f("nas_ip_address", N_("عنوان IP لجهاز الشبكة")),
+            _f("service_name", N_("اسم الخدمة")),
+            _f("device_count", N_("عدد الأجهزة المسموحة")),
+            _f("equal_share_download", N_("تقسيم سرعة التنزيل على الأجهزة")),
+            _f("equal_share_upload", N_("تقسيم سرعة الرفع على الأجهزة")),
+            _f("device_limit_mode", N_("السلوك عند بلوغ حدّ الأجهزة")),
+            _f("primary_dns_ppp", N_("خادم DNS الأساسيّ (PPP)")),
+            _f("secondary_dns_ppp", N_("خادم DNS الثانويّ (PPP)")),
+            _f("nas_port_id", N_("منفذ جهاز الشبكة")),
         ),
     },
     {
@@ -151,12 +152,12 @@ GROUPS: tuple[dict, ...] = (
         # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
         # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
         "sel": '#uf-pppoe, .uf-side a[href="#uf-pppoe"]',
-        "label": "البرودباند (PPPoE)",
+        "label": N_("البرودباند (PPPoE)"),
         "icon": "fa-ethernet",
         "fields": (
-            _f("pppoe_username", "اسم مستخدم البرودباند"),
-            _f("pppoe_password", "كلمة مرور البرودباند"),
-            _f("pppoe_ip", "عنوان IP للبرودباند"),
+            _f("pppoe_username", N_("اسم مستخدم البرودباند")),
+            _f("pppoe_password", N_("كلمة مرور البرودباند")),
+            _f("pppoe_ip", N_("عنوان IP للبرودباند")),
         ),
     },
     {
@@ -164,18 +165,18 @@ GROUPS: tuple[dict, ...] = (
         # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
         # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
         "sel": '#uf-advanced, .uf-side a[href="#uf-advanced"]',
-        "label": "إعدادات شبكة متقدّمة جدًّا",
+        "label": N_("إعدادات شبكة متقدّمة جدًّا"),
         "icon": "fa-sliders",
         "fields": (
-            _f("mikrotik_filter_chain", "سلسلة الفلترة (MikroTik)"),
-            _f("mikrotik_address_list", "قائمة العناوين (MikroTik)"),
-            _f("mikrotik_framed_route", "المسار الموجَّه (MikroTik)"),
-            _f("mikrotik_user_group", "مجموعة المستخدم (MikroTik)"),
-            _f("mikrotik_winbox_group", "مجموعة WinBox"),
-            _f("mikrotik_queue_priority", "أولويّة الطابور"),
-            _f("framed_pool", "مجمّع العناوين (Framed-Pool)"),
-            _f("acct_interim_interval_sec", "فترة تقارير المحاسبة"),
-            _f("ppp_attributes_extra", "خصائص PPP إضافيّة"),
+            _f("mikrotik_filter_chain", N_("سلسلة الفلترة (MikroTik)")),
+            _f("mikrotik_address_list", N_("قائمة العناوين (MikroTik)")),
+            _f("mikrotik_framed_route", N_("المسار الموجَّه (MikroTik)")),
+            _f("mikrotik_user_group", N_("مجموعة المستخدم (MikroTik)")),
+            _f("mikrotik_winbox_group", N_("مجموعة WinBox")),
+            _f("mikrotik_queue_priority", N_("أولويّة الطابور")),
+            _f("framed_pool", N_("مجمّع العناوين (Framed-Pool)")),
+            _f("acct_interim_interval_sec", N_("فترة تقارير المحاسبة")),
+            _f("ppp_attributes_extra", N_("خصائص PPP إضافيّة")),
         ),
     },
 )

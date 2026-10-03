@@ -19,6 +19,7 @@
 ورسائل المستخدم. كل شيء tenant-scoped. الإنفاذ هنا — ليس في الواجهة فقط.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import re
@@ -62,11 +63,11 @@ def layer_of(block_type: str) -> str:
 
 
 # رسائل المستخدم المهذّبة لطبقة «تعليق الوصول» (تُحمَل في Reply-Message).
-MSG_SUSPENDED = "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة"
-MSG_SUSPENDED_WINDOW = "لا يمكن تسجيل الدخول بهذا الوقت"
-MSG_SUSPENDED_UNTIL = "تسجيل الدخول معلّق مؤقتاً حتى إشعار لاحق"
+MSG_SUSPENDED = N_("تسجيل الدخول معلّق مؤقتاً — راجع الإدارة")
+MSG_SUSPENDED_WINDOW = N_("لا يمكن تسجيل الدخول بهذا الوقت")
+MSG_SUSPENDED_UNTIL = N_("تسجيل الدخول معلّق مؤقتاً حتى إشعار لاحق")
 # رسالة طبقة «الحظر» الأمني (عامّة).
-MSG_BLOCKED = "الدخول محظور حاليًا — راجع الإدارة"
+MSG_BLOCKED = N_("الدخول محظور حاليًا — راجع الإدارة")
 
 
 def user_message_for(block: dict) -> str:
@@ -341,14 +342,14 @@ def register_failed_attempt(tenant_id: int, *, ip: str = "", mac: str = "",
                 continue  # حظر فعّال موجود — لا نكرّر
             created = repo.create_block(
                 tenant_id=tenant_id, block_type=block_type, target=value,
-                reason=f"حظر تلقائي بعد {count} محاولة فاشلة خلال {window_sec}ث",
+                reason=_tr('حظر تلقائي بعد %(count)s محاولة فاشلة خلال %(window_sec)sث', count=count, window_sec=window_sec),
                 duration_mode="until", expires_at=expires_at, source="auto",
                 layer=LAYER_BLOCK)
             _LOG.warning("access_control: auto-blocked %s=%s after %d failures",
                          block_type, value, count)
             _tg(tenant_id, "auto_block_triggered",
                 {"block_type": block_type.upper(), "target": value,
-                 "reason": f"{count} محاولة فاشلة خلال {window_sec}ث"},
+                 "reason": _tr('%(count)s محاولة فاشلة خلال %(window_sec)sث', count=count, window_sec=window_sec)},
                 dedup_key=f"auto_block:{block_type}:{value}")
         return created
     except Exception:  # noqa: BLE001
@@ -388,35 +389,35 @@ def create_block_from_input(
     """يتحقّق من مدخلات نموذج الحظر ثم يُنشئه. يرفع ``AccessControlError``."""
     block_type = (block_type or "").strip()
     if block_type not in repo.BLOCK_TYPES:
-        raise AccessControlError("نطاق الحظر غير صالح.")
+        raise AccessControlError(_tr("نطاق الحظر غير صالح."))
     duration_mode = (duration_mode or "permanent").strip()
     if duration_mode not in repo.DURATION_MODES:
-        raise AccessControlError("نمط مدّة الحظر غير صالح.")
+        raise AccessControlError(_tr("نمط مدّة الحظر غير صالح."))
 
     target = (target or "").strip()
     if block_type in _SCOPES_ALL:
         target = ""  # النطاقات الشاملة لا تحمل هدفًا
     elif block_type in _SCOPES_NEED_TARGET:
         if not target:
-            raise AccessControlError("الهدف مطلوب لهذا النطاق.")
+            raise AccessControlError(_tr("الهدف مطلوب لهذا النطاق."))
         if block_type == "mac":
             target = normalize_mac(target)
             if not _MAC_RE.match(target):
-                raise AccessControlError("صيغة MAC غير صالحة (مثال: AA:BB:CC:DD:EE:FF).")
+                raise AccessControlError(_tr("صيغة MAC غير صالحة (مثال: AA:BB:CC:DD:EE:FF)."))
         elif block_type == "ip":
             if not _valid_ip_or_host(target):
-                raise AccessControlError("صيغة العنوان غير صالحة.")
+                raise AccessControlError(_tr("صيغة العنوان غير صالحة."))
         elif block_type in ("plan", "card_batch"):
             if not str(target).isdigit():
-                raise AccessControlError("المعرّف يجب أن يكون رقمًا.")
+                raise AccessControlError(_tr("المعرّف يجب أن يكون رقمًا."))
 
     if duration_mode == "daily_window":
         if _hm_to_minutes(window_start) is None or _hm_to_minutes(window_end) is None:
-            raise AccessControlError("نافذة الحظر اليومية تحتاج وقتي بداية ونهاية صحيحين (HH:MM).")
+            raise AccessControlError(_tr("نافذة الحظر اليومية تحتاج وقتي بداية ونهاية صحيحين (HH:MM)."))
     elif duration_mode == "until":
         parsed = parse_dt((expires_at or "").strip())
         if parsed is None:
-            raise AccessControlError("حدّد تاريخ/وقت انتهاء صالحًا.")
+            raise AccessControlError(_tr("حدّد تاريخ/وقت انتهاء صالحًا."))
         # المُدخَل من <input datetime-local> توقيت محلّي حائطي — نحوّله إلى
         # UTC (بطرح إزاحة المستأجر) ونُخزّنه موحّدًا (isoformat + Z) كي يطابق
         # الحظر التلقائي ومقارنة is_block_in_effect (التي تعمل بـUTC).
@@ -437,7 +438,7 @@ def create_block_from_input(
     # ليس «تعليقًا» ولا يولّد تنبيه auto_block (ذاك للتلقائي فقط).
     if layer_of(block_type) == LAYER_SUSPENSION:
         _duration = {
-            "permanent": "دائم", "until": "حتى تاريخ", "daily_window": "نافذة يومية",
+            "permanent": N_("دائم"), "until": N_("حتى تاريخ"), "daily_window": N_("نافذة يومية"),
         }.get(duration_mode, duration_mode)
         _tg(tenant_id, "access_suspended",
             {"scope": block_type, "target": target or "—", "duration": _duration},

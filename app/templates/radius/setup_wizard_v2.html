@@ -9,15 +9,15 @@
 <main class="swv2-page" dir="rtl" data-setup-wizard-v2>
   {{ csrf_token_input()|safe }}
   {{ hub.megahero(
-    "معالج إعداد HobeRadius",
-    subtitle="اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.",
+    _('معالج إعداد HobeRadius'),
+    subtitle=_('اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.'),
     icon="wand-magic-sparkles",
     actions_html='
       <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">'|safe ~ _("ابدأ الإعداد") ~ '</button>'|safe,
     kpis=[
-      {'label': 'التطبيق الحي', 'value': 'مغلق افتراضيًا', 'icon': 'shield-halved', 'variant': 'green'},
-      {'label': 'الوقت المتوقع', 'value': '⁦10–20⁩ دقيقة',   'icon': 'clock',         'variant': 'blue'},
-      {'label': 'كل سكربت',     'value': 'جاهز للنسخ',     'icon': 'terminal',      'variant': 'brand'}
+      {'label': _('التطبيق الحي'), 'value': _('مغلق افتراضيًا'), 'icon': 'shield-halved', 'variant': 'green'},
+      {'label': _('الوقت المتوقع'), 'value': _('\u206610–20\u2069 دقيقة'),   'icon': 'clock',         'variant': 'blue'},
+      {'label': _('كل سكربت'),     'value': _('جاهز للنسخ'),     'icon': 'terminal',      'variant': 'brand'}
     ]
   ) }}
 
@@ -527,10 +527,7 @@
             <span class="swv2-auto-finalize-badge">{{ _('🚀 إنهاء تلقائي') }}</span>
             <h3>{{ _('تجهيز الربط الكامل بضغطة واحدة') }}</h3>
             <p>
-              الراوتر خلف NAT أو الـ IP العامّ متغيّر؟ لا
-              مشكلة. ألصق مخرجات نفق الإدارة من الراوتر هنا
-              وسنقوم بكل البقيّة تلقائياً — استخراج المفتاح،
-              تسجيله على الخادم، والتحقّق من الـ handshake.
+              {{ _('الراوتر خلف NAT أو الـ IP العامّ متغيّر؟ لا مشكلة. ألصق مخرجات نفق الإدارة من الراوتر هنا وسنقوم بكل البقيّة تلقائياً — استخراج المفتاح، تسجيله على الخادم، والتحقّق من الـ handshake.') }}
             </p>
           </div>
 
@@ -567,8 +564,7 @@
       public-key="WTJh1BA2Poeo4CV+qRqONyH62nYk5Mr/AdmM+DWqw1s="'
               ></textarea>
               <small class="swv2-field-hint">
-                انسخ كل المخرجات كما هي — سنستخرج المفتاح
-                العامّ تلقائياً. لست بحاجة لتقليصها.
+                {{ _('انسخ كل المخرجات كما هي — سنستخرج المفتاح العامّ تلقائياً. لست بحاجة لتقليصها.') }}
               </small>
             </label>
           </div>

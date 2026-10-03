@@ -10,18 +10,18 @@
 
 {% macro fmt_bytes(n) -%}
   {%- set n = (n|int) -%}
-  {%- if n >= 1073741824 -%}{{ "%.2f"|format(n / 1073741824) }} غيغابايت
-  {%- elif n >= 1048576 -%}{{ "%.2f"|format(n / 1048576) }} ميغابايت
-  {%- elif n >= 1024 -%}{{ "%.1f"|format(n / 1024) }} كيلوبايت
-  {%- else -%}{{ "{:,}".format(n) }} بايت{%- endif -%}
+  {%- if n >= 1073741824 -%}{{ "%.2f"|format(n / 1073741824) }} {{ _('غيغابايت') }}
+  {%- elif n >= 1048576 -%}{{ "%.2f"|format(n / 1048576) }} {{ _('ميغابايت') }}
+  {%- elif n >= 1024 -%}{{ "%.1f"|format(n / 1024) }} {{ _('كيلوبايت') }}
+  {%- else -%}{{ "{:,}".format(n) }} {{ _('بايت') }}{%- endif -%}
 {%- endmacro %}
 
 {% macro fmt_secs(s) -%}
   {%- set s = (s|int) -%}
   {%- set h = (s // 3600) -%}{%- set m = ((s % 3600) // 60) -%}
-  {%- if h > 0 -%}{{ h }} ساعة و{{ m }} دقيقة
-  {%- elif m > 0 -%}{{ m }} دقيقة
-  {%- else -%}{{ s }} ثانية{%- endif -%}
+  {%- if h > 0 -%}{{ h }} {{ _('ساعة و') }}{{ m }} {{ _('دقيقة') }}
+  {%- elif m > 0 -%}{{ m }} {{ _('دقيقة') }}
+  {%- else -%}{{ s }} {{ _('ثانية') }}{%- endif -%}
 {%- endmacro %}
 
 {% block title %}{{ _("ملف المشترك 360 — Hobe Hub") }}{% endblock %}
@@ -34,23 +34,23 @@
 {# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
 <section class="hub-hero-shell">
 {{ hub.hero(
-  "ملف المشترك 360",
-  subtitle="نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.",
+  _('ملف المشترك 360'),
+  subtitle=_('نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.'),
   icon="user-shield",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع للمشتركين") ~ '</a>'|safe if can_submit('radius.users_list', 'GET') else '')
 ) }}
 <div class="hub-kpi-grid" data-testid="subscriber-360-kpis">
-  {{ hub.kpi("المشترك", sub.username, icon="user") }}
+  {{ hub.kpi(_('المشترك'), sub.username, icon="user") }}
   {# C2: الرصيد والماليّات محجوبة عن المدير غير المُصرَّح (can_see_balance) —
      القيمة لا تُصيَّر أصلًا في الاستجابة (server-side)، السوبر يَراها دائمًا. #}
   {% if manager_can_see is not defined or manager_can_see('can_see_balance') %}
-  {{ hub.kpi("رصيد المحفظة", financial.wallet_balance|money, icon="wallet", variant="blue") }}
-  {{ hub.kpi("إجمالي المدفوع", financial.total_paid|money, icon="cash-register", variant="green") }}
-  {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
+  {{ hub.kpi(_('رصيد المحفظة'), financial.wallet_balance|money, icon="wallet", variant="blue") }}
+  {{ hub.kpi(_('إجمالي المدفوع'), financial.total_paid|money, icon="cash-register", variant="green") }}
+  {{ hub.kpi(_('سلف مفتوحة'), financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
   {# الدين المفتوح = دين الرصيد السالب (تمديد/كوتة على الدين، فرق تغيير العرض) + متبقّي السلف. #}
-  {{ hub.kpi("دين مفتوح", (financial.open_debt_total or 0)|money, icon="file-invoice-dollar", variant=("red" if (financial.open_debt_total or 0) > 0 else "grey")) }}
+  {{ hub.kpi(_('دين مفتوح'), (financial.open_debt_total or 0)|money, icon="file-invoice-dollar", variant=("red" if (financial.open_debt_total or 0) > 0 else "grey")) }}
   {% else %}
-  {{ hub.kpi("الماليّات", "محجوب", icon="lock", variant="grey") }}
+  {{ hub.kpi(_('الماليّات'), _('محجوب'), icon="lock", variant="grey") }}
   {% endif %}
 </div>
 </section>{# /hub-hero-shell #}
@@ -70,16 +70,16 @@
 
 <div class="hub-grid hub-grid--2">
   <div id="overview"></div>
-  {% call hub.section("نظرة عامة", icon="circle-info") %}
+  {% call hub.section(_('نظرة عامة'), icon="circle-info") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("الحالة", L.ident(L.status(s360.overview.status), s360.overview.status), icon="signal") }}
-      {{ hub.tile("نوع الخدمة", L.ident(L.service_type(s360.overview.service_type), s360.overview.service_type), icon="network-wired") }}
-      {{ hub.tile("عدد الجلسات", "{:,}".format(s360.overview.session_count|int), icon="clock") }}
-      {{ hub.tile("الخطة", s360.plan.name if s360.plan else "بدون خطة", icon="layer-group") }}
+      {{ hub.tile(_('الحالة'), L.ident(L.status(s360.overview.status), s360.overview.status), icon="signal") }}
+      {{ hub.tile(_('نوع الخدمة'), L.ident(L.service_type(s360.overview.service_type), s360.overview.service_type), icon="network-wired") }}
+      {{ hub.tile(_('عدد الجلسات'), "{:,}".format(s360.overview.session_count|int), icon="clock") }}
+      {{ hub.tile(_('الخطة'), s360.plan.name if s360.plan else _('بدون خطة'), icon="layer-group") }}
     </div>
   {% endcall %}
 
-  {% call hub.section("معاينة التجديد الآمن", icon="calendar-check") %}
+  {% call hub.section(_('معاينة التجديد الآمن'), icon="calendar-check") %}
     {% if can_submit('radius.subscriber_renewal_preview', 'POST') %}<form method="post" action="{{ url_for('radius.subscriber_renewal_preview', subscriber_id=sub.id) }}" class="hub-form-grid" data-testid="renewal-preview-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('المبلغ المدفوع') }}
@@ -101,12 +101,12 @@
 </div>
 
 <div id="financial"></div>
-{% call hub.section("الملف المالي", icon="coins") %}
+{% call hub.section(_('الملف المالي'), icon="coins") %}
   <div class="hub-tile-grid">
-    {{ hub.tile("مدفوعات", financial.payments|length, icon="receipt") }}
-    {{ hub.tile("سلف", financial.loans|length, icon="hand-holding-dollar") }}
-    {{ hub.tile("خصومات", financial.discounts|length, icon="percent") }}
-    {{ hub.tile("قيود", financial.ledger|length, icon="book") }}
+    {{ hub.tile(_('مدفوعات'), financial.payments|length, icon="receipt") }}
+    {{ hub.tile(_('سلف'), financial.loans|length, icon="hand-holding-dollar") }}
+    {{ hub.tile(_('خصومات'), financial.discounts|length, icon="percent") }}
+    {{ hub.tile(_('قيود'), financial.ledger|length, icon="book") }}
   </div>
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="payments-table">
@@ -129,11 +129,11 @@
 
 <div class="hub-grid hub-grid--2">
   <div id="usage"></div>
-  {% call hub.section("الاستخدام والجلسات", icon="chart-simple") %}
+  {% call hub.section(_('الاستخدام والجلسات'), icon="chart-simple") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("إجمالي زمن الاستخدام", fmt_secs(s360.usage.total_seconds), icon="stopwatch") }}
-      {{ hub.tile("إجمالي التحميل", fmt_bytes(s360.usage.download_bytes), icon="download") }}
-      {{ hub.tile("إجمالي الرفع", fmt_bytes(s360.usage.upload_bytes), icon="upload") }}
+      {{ hub.tile(_('إجمالي زمن الاستخدام'), fmt_secs(s360.usage.total_seconds), icon="stopwatch") }}
+      {{ hub.tile(_('إجمالي التحميل'), fmt_bytes(s360.usage.download_bytes), icon="download") }}
+      {{ hub.tile(_('إجمالي الرفع'), fmt_bytes(s360.usage.upload_bytes), icon="upload") }}
     </div>
   {% endcall %}
 
@@ -143,26 +143,26 @@
   {% set dx = s360.diagnosis %}
   {# خريطة تعريب سبب الإنهاء الخام لقائمة آخر الجلسات (RADIUS القياسيّة). #}
   {% set _cz = {
-    'User-Request':'طلب المستخدم','Lost-Carrier':'انقطاع الاتصال','Lost-Service':'انقطاع الخدمة',
-    'Idle-Timeout':'مهلة خمول','Session-Timeout':'انتهاء مدة الجلسة','Admin-Reset':'إنهاء إداري',
-    'Admin-Reboot':'إعادة تشغيل إداريّة','NAS-Request':'طلب جهاز الشبكة','NAS-Reboot':'إعادة تشغيل الراوتر',
-    'NAS-Error':'خطأ جهاز الشبكة','Port-Error':'خطأ منفذ','Device-Limit-Replace':'استبدال (حدّ الأجهزة)',
-    'Admin-Force-Close':'إغلاق إجباريّ','Stale-Session-Timeout':'تنظيف جلسة خاملة',
-    'NAS-Lost-Session':'جلسة مفقودة','Reconciliation-Stale':'مصالحة الجلسات','Host-Request':'طلب المضيف',
-    'User-Error':'خطأ المستخدم'
+    'User-Request':_('طلب المستخدم'),'Lost-Carrier':_('انقطاع الاتصال'),'Lost-Service':_('انقطاع الخدمة'),
+    'Idle-Timeout':_('مهلة خمول'),'Session-Timeout':_('انتهاء مدة الجلسة'),'Admin-Reset':_('إنهاء إداري'),
+    'Admin-Reboot':_('إعادة تشغيل إداريّة'),'NAS-Request':_('طلب جهاز الشبكة'),'NAS-Reboot':_('إعادة تشغيل الراوتر'),
+    'NAS-Error':_('خطأ جهاز الشبكة'),'Port-Error':_('خطأ منفذ'),'Device-Limit-Replace':_('استبدال (حدّ الأجهزة)'),
+    'Admin-Force-Close':_('إغلاق إجباريّ'),'Stale-Session-Timeout':_('تنظيف جلسة خاملة'),
+    'NAS-Lost-Session':_('جلسة مفقودة'),'Reconciliation-Stale':_('مصالحة الجلسات'),'Host-Request':_('طلب المضيف'),
+    'User-Error':_('خطأ المستخدم')
   } %}
   <div id="diagnosis"></div>
-  {% call hub.section("تشخيص الانقطاع — من أين المشكلة؟", icon="stethoscope") %}
+  {% call hub.section(_('تشخيص الانقطاع — من أين المشكلة؟'), icon="stethoscope") %}
     {% if not dx or dx.total == 0 %}
-      {{ hub.empty("لا توجد جلسات مُنهاة بعد",
-          sub="يظهر التشخيص فور تسجيل جلسات مُنهاة (Acct-Stop) لهذا المشترك في radacct.",
+      {{ hub.empty(_('لا توجد جلسات مُنهاة بعد'),
+          sub=_('يظهر التشخيص فور تسجيل جلسات مُنهاة (Acct-Stop) لهذا المشترك في radacct.'),
           icon="stethoscope") }}
     {% else %}
       {# الحُكم الرئيسيّ = الدلو الأكبر #}
       <div class="dx-verdict dx-verdict--{{ dx.verdict.color }}">
         <span class="dx-verdict-icon"><i class="fa-solid fa-{{ dx.verdict.icon }}"></i></span>
         <div class="dx-verdict-body">
-          <div class="dx-verdict-head">الغالب على الانقطاع:
+          <div class="dx-verdict-head">{{ _('الغالب على الانقطاع:') }}
             <strong>{{ dx.verdict.label }}</strong>
             <span class="dx-verdict-pct">{{ dx.verdict.pct }}%</span></div>
           <div class="dx-verdict-hint">{{ dx.verdict.hint }}</div>
@@ -173,12 +173,11 @@
       <div class="dx-flags">
         {% if dx.flapping %}
         <span class="dx-flag dx-flag--warn"><i class="fa-solid fa-bolt"></i>
-          اتصال متذبذب: {{ dx.short_sessions }} من {{ dx.total }} جلسة أقصر من 3 دقائق
-          (متوسط المدّة {{ dx.avg_minutes }} دقيقة)</span>
+          {{ _('اتصال متذبذب: %(short_sessions)s من %(total)s جلسة أقصر من 3 دقائق (متوسط المدّة %(avg_minutes)s دقيقة)', short_sessions=dx.short_sessions, total=dx.total, avg_minutes=dx.avg_minutes) }}</span>
         {% endif %}
         {% if dx.panel_kicks %}
         <span class="dx-flag dx-flag--panel"><i class="fa-solid fa-server"></i>
-          اللوحة قطعت هذا المشترك {{ dx.panel_kicks }} مرّة (حدّ الأجهزة/إغلاق إجباريّ)</span>
+          {{ _('اللوحة قطعت هذا المشترك %(panel_kicks)s مرّة (حدّ الأجهزة/إغلاق إجباريّ)', panel_kicks=dx.panel_kicks) }}</span>
         {% endif %}
       </div>
       {% endif %}
@@ -196,7 +195,7 @@
 
       {# آخر الجلسات المُنهاة مع سببها (لقطة سريعة) — أوّل 8 جلسات لها وقت إنهاء. #}
       <div class="dx-recent">
-        <div class="dx-recent-head">آخر الجلسات المُنهاة</div>
+        <div class="dx-recent-head">{{ _('آخر الجلسات المُنهاة') }}</div>
         {% for s in (s360.usage.sessions | selectattr('acctstoptime') | list)[:8] %}
           {% set cz = s.acctterminatecause or '' %}
           <div class="dx-recent-row">
@@ -208,9 +207,8 @@
       </div>
 
       <p class="hub-note-text">
-        مبنيّ على آخر <strong>{{ dx.total }}</strong> جلسة مُنهاة · المصدر: عمود «سبب الإنهاء»
-        (Acct-Terminate-Cause) في radacct. للتفاصيل صفًّا صفًّا:
-        {% if can_submit('radius.rep_sessions', 'GET') %}<a href="{{ url_for('radius.rep_sessions', username=sub.username) }}">{% endif %}تقرير الجلسات لهذا المشترك{% if can_submit('radius.rep_sessions', 'GET') %}</a>{% endif %}.
+        {{ _('مبنيّ على آخر') }} <strong>{{ dx.total }}</strong> {{ _('جلسة مُنهاة · المصدر: عمود «سبب الإنهاء» (Acct-Terminate-Cause) في radacct. للتفاصيل صفًّا صفًّا:') }}
+        {% if can_submit('radius.rep_sessions', 'GET') %}<a href="{{ url_for('radius.rep_sessions', username=sub.username) }}">{% endif %}{{ _('تقرير الجلسات لهذا المشترك') }}{% if can_submit('radius.rep_sessions', 'GET') %}</a>{% endif %}.
       </p>
     {% endif %}
   {% endcall %}
@@ -268,17 +266,17 @@
   </style>
 
   <div id="services"></div>
-  {% call hub.section("الخدمات", icon="diagram-project") %}
+  {% call hub.section(_('الخدمات'), icon="diagram-project") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("مجموعة العناوين", s360.services.pool or "—", icon="water") }}
-      {{ hub.tile("عنوان ثابت", s360.services.static_ip or "—", icon="location-dot") }}
+      {{ hub.tile(_('مجموعة العناوين'), s360.services.pool or "—", icon="water") }}
+      {{ hub.tile(_('عنوان ثابت'), s360.services.static_ip or "—", icon="location-dot") }}
     </div>
   {% endcall %}
 </div>
 
 <div class="hub-grid hub-grid--2">
   <div id="devices"></div>
-  {% call hub.section("الأجهزة والعناوين", icon="laptop-code") %}
+  {% call hub.section(_('الأجهزة والعناوين'), icon="laptop-code") %}
     <div class="hub-list">
       {% for device in s360.devices %}
         <div class="hub-list-row">
@@ -286,13 +284,13 @@
           <span>{{ L.ident(L.device_source(device.source), device.source) }}</span>
         </div>
       {% else %}
-        {{ hub.empty("لا توجد أجهزة معروفة بعد", sub="ستظهر هنا عناوين MAC المربوطة بالمشترك أو المرصودة في جلساته.", icon="laptop") }}
+        {{ hub.empty(_('لا توجد أجهزة معروفة بعد'), sub=_('ستظهر هنا عناوين MAC المربوطة بالمشترك أو المرصودة في جلساته.'), icon="laptop") }}
       {% endfor %}
     </div>
   {% endcall %}
 
   <div id="login-events"></div>
-  {% call hub.section("محاولات الدخول", icon="right-to-bracket") %}
+  {% call hub.section(_('محاولات الدخول'), icon="right-to-bracket") %}
     <div class="hub-list">
       {% for event in s360.login_events %}
         <div class="hub-list-row">
@@ -300,14 +298,14 @@
           <span>{{ event.authdate }} · <bdi class="mono">{{ event.nas }}</bdi></span>
         </div>
       {% else %}
-        {{ hub.empty("لا توجد محاولات دخول مسجلة", sub="تظهر هنا محاولات المصادقة (قبول/رفض) فور تسجيلها.", icon="right-to-bracket") }}
+        {{ hub.empty(_('لا توجد محاولات دخول مسجلة'), sub=_('تظهر هنا محاولات المصادقة (قبول/رفض) فور تسجيلها.'), icon="right-to-bracket") }}
       {% endfor %}
     </div>
   {% endcall %}
 </div>
 
 <div id="timeline"></div>
-{% call hub.section("الخط الزمني", icon="timeline") %}
+{% call hub.section(_('الخط الزمني'), icon="timeline") %}
   <div class="hub-list" data-testid="subscriber-timeline">
     {% for item in s360.timeline %}
       {#- مصدر القيمة الخام بحسب نوع عنصر الخط الزمني: نوع قيد / مفتاح حدث / ردّ مصادقة / حالة -#}
@@ -320,23 +318,23 @@
         <span>{{ L.ident(_label, _raw) }}</span>
       </div>
     {% else %}
-      {{ hub.empty("اللوحة فارغة", sub="لا توجد أحداث كافية لبناء خط زمني بعد.", icon="timeline") }}
+      {{ hub.empty(_('اللوحة فارغة'), sub=_('لا توجد أحداث كافية لبناء خط زمني بعد.'), icon="timeline") }}
     {% endfor %}
   </div>
 {% endcall %}
 
 <div class="hub-grid hub-grid--2">
   <div id="messages"></div>
-  {% call hub.section("الرسائل", icon="message") %}
-    {{ hub.empty("لا توجد رسائل", sub="لم تُرسَل أو تُستلَم رسائل مرتبطة بهذا المشترك بعد.", icon="message") }}
+  {% call hub.section(_('الرسائل'), icon="message") %}
+    {{ hub.empty(_('لا توجد رسائل'), sub=_('لم تُرسَل أو تُستلَم رسائل مرتبطة بهذا المشترك بعد.'), icon="message") }}
   {% endcall %}
 
   <div id="notes"></div>
-  {% call hub.section("الملاحظات", icon="note-sticky") %}
+  {% call hub.section(_('الملاحظات'), icon="note-sticky") %}
     {% if s360.notes %}
       <p class="hub-note-text">{{ s360.notes }}</p>
     {% else %}
-      {{ hub.empty("لا توجد ملاحظات", sub="أضف ملاحظات هذا المشترك من صفحة التعديل.", icon="note-sticky") }}
+      {{ hub.empty(_('لا توجد ملاحظات'), sub=_('أضف ملاحظات هذا المشترك من صفحة التعديل.'), icon="note-sticky") }}
     {% endif %}
   {% endcall %}
 </div>

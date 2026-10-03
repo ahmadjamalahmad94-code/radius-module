@@ -1,5 +1,6 @@
 """Read-only operational reports used by Web and Flutter clients."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 from typing import Any
@@ -386,11 +387,11 @@ def _audit_rows(tenant_id: int, predicate: str, *, query: str,
 
 
 _MOVEMENT_LABELS = {
-    "payment_to_balance": "دفعة — إضافة للرصيد",
-    "payment_to_debt": "دفعة — خصم من الدين",
-    "debt_settle": "تسديد دين",
-    "on_account_credit": "رصيد على الحساب (دين)",
-    "settlement": "تسوية حساب",
+    "payment_to_balance": N_("دفعة — إضافة للرصيد"),
+    "payment_to_debt": N_("دفعة — خصم من الدين"),
+    "debt_settle": N_("تسديد دين"),
+    "on_account_credit": N_("رصيد على الحساب (دين)"),
+    "settlement": N_("تسوية حساب"),
 }
 
 def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int,

@@ -4,6 +4,7 @@ This module intentionally does not provide a real shell runner. The default
 runner is disabled, and tests can inject a mock runner to prove the contract.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 import re
@@ -302,7 +303,7 @@ class ServerWireGuardReadinessService:
                 "configured": False,
                 "checks": checks,
                 "diagnostics": [self._diag("server_wg_readiness_disabled")],
-                "next_action_ar": "فعّل فحص الجاهزية للبيئة المخبرية فقط عند الحاجة. لا يوجد أي فحص shell الآن.",
+                "next_action_ar": _tr("فعّل فحص الجاهزية للبيئة المخبرية فقط عند الحاجة. لا يوجد أي فحص shell الآن."),
             }
 
         interface = str(self.env.get(WG_INTERFACE_ENV) or "").strip()
@@ -433,21 +434,21 @@ class ServerWireGuardReadinessService:
     @staticmethod
     def _diag(code: str) -> dict[str, Any]:
         catalog = {
-            "server_wg_readiness_disabled": ("فحص جاهزية WireGuard معطل", "لم يتم تفعيل فحص الجاهزية القراءة فقط."),
-            "missing_wg_interface": ("اسم واجهة WireGuard غير مضبوط", "اضبط HOBERADIUS_WG_INTERFACE في بيئة المختبر."),
-            "missing_server_vpn_ip": ("IP الخادم داخل VPN غير مضبوط", "اضبط HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP."),
-            "missing_wg_listen_port": ("منفذ WireGuard غير مضبوط", "اضبط HOBERADIUS_WG_LISTEN_PORT."),
-            "missing_backup_dir": ("مجلد النسخ الاحتياطي غير مضبوط", "حدد مكان حفظ النسخ قبل أي تطبيق مخبري."),
-            "missing_rollback_strategy": ("استراتيجية rollback غير مضبوطة", "حدد آلية الرجوع قبل تمكين apply."),
-            "missing_command_timeout": ("مهلة الأوامر غير مضبوطة", "اضبط timeout قصير للأوامر القراءة فقط."),
-            "missing_interface_allowlist": ("قائمة الواجهات المسموحة غير مضبوطة", "حدد allowlist للواجهة المسموح فحصها."),
-            "wg_interface_not_allowlisted": ("واجهة WireGuard خارج allowlist", "لا تفحص أو تطبق على واجهة غير مصرح بها."),
-            "command_runner_disabled": ("مشغل الأوامر معطل", "هذا آمن افتراضيًا. لا توجد أوامر shell حقيقية."),
-            "wg_show_unreadable": ("تعذر قراءة wg show", "الصلاحيات أو runner غير جاهزة للفحص القراءة فقط."),
-            "wg_interface_missing": ("واجهة WireGuard غير موجودة", "تحقق من اسم الواجهة على VPS."),
-            "wg_listen_port_mismatch": ("منفذ WireGuard لا يطابق المتوقع", "راجع إعدادات الواجهة قبل أي تجربة."),
-            "server_vpn_ip_missing": ("IP الخادم غير موجود على الواجهة", "تحقق من ip addr show للواجهة."),
-            "ip_addr_unreadable": ("تعذر قراءة ip addr", "مشغل الأوامر أو صلاحيات القراءة غير جاهزة."),
+            "server_wg_readiness_disabled": (N_("فحص جاهزية WireGuard معطل"), N_("لم يتم تفعيل فحص الجاهزية القراءة فقط.")),
+            "missing_wg_interface": (N_("اسم واجهة WireGuard غير مضبوط"), N_("اضبط HOBERADIUS_WG_INTERFACE في بيئة المختبر.")),
+            "missing_server_vpn_ip": (N_("IP الخادم داخل VPN غير مضبوط"), N_("اضبط HOBERADIUS_SETUP_WIZARD_SERVER_VPN_IP.")),
+            "missing_wg_listen_port": (N_("منفذ WireGuard غير مضبوط"), N_("اضبط HOBERADIUS_WG_LISTEN_PORT.")),
+            "missing_backup_dir": (N_("مجلد النسخ الاحتياطي غير مضبوط"), N_("حدد مكان حفظ النسخ قبل أي تطبيق مخبري.")),
+            "missing_rollback_strategy": (N_("استراتيجية rollback غير مضبوطة"), N_("حدد آلية الرجوع قبل تمكين apply.")),
+            "missing_command_timeout": (N_("مهلة الأوامر غير مضبوطة"), N_("اضبط timeout قصير للأوامر القراءة فقط.")),
+            "missing_interface_allowlist": (N_("قائمة الواجهات المسموحة غير مضبوطة"), N_("حدد allowlist للواجهة المسموح فحصها.")),
+            "wg_interface_not_allowlisted": (N_("واجهة WireGuard خارج allowlist"), N_("لا تفحص أو تطبق على واجهة غير مصرح بها.")),
+            "command_runner_disabled": (N_("مشغل الأوامر معطل"), N_("هذا آمن افتراضيًا. لا توجد أوامر shell حقيقية.")),
+            "wg_show_unreadable": (N_("تعذر قراءة wg show"), N_("الصلاحيات أو runner غير جاهزة للفحص القراءة فقط.")),
+            "wg_interface_missing": (N_("واجهة WireGuard غير موجودة"), N_("تحقق من اسم الواجهة على VPS.")),
+            "wg_listen_port_mismatch": (N_("منفذ WireGuard لا يطابق المتوقع"), N_("راجع إعدادات الواجهة قبل أي تجربة.")),
+            "server_vpn_ip_missing": (N_("IP الخادم غير موجود على الواجهة"), N_("تحقق من ip addr show للواجهة.")),
+            "ip_addr_unreadable": (N_("تعذر قراءة ip addr"), N_("مشغل الأوامر أو صلاحيات القراءة غير جاهزة.")),
         }
         title, explanation = catalog.get(code, (code, code))
         return {"code": code, "arabic_title": title, "explanation_ar": explanation}
@@ -455,9 +456,9 @@ class ServerWireGuardReadinessService:
     @staticmethod
     def _next_action(status: str) -> str:
         if status == "ready":
-            return "البيئة تبدو جاهزة لفحص مخبري مضبوط، مع بقاء apply الحقيقي مغلقًا حتى يتم بناء adapter آمن."
+            return N_("البيئة تبدو جاهزة لفحص مخبري مضبوط، مع بقاء apply الحقيقي مغلقًا حتى يتم بناء adapter آمن.")
         if status == "partial":
-            return "أكمل عناصر السلامة الناقصة قبل أي تجربة apply مخبرية."
+            return N_("أكمل عناصر السلامة الناقصة قبل أي تجربة apply مخبرية.")
         if status == "disabled":
-            return "الفحص معطل افتراضيًا. فعّله فقط في المختبر عند الحاجة."
-        return "لا تنتقل إلى server peer apply قبل حل أسباب الحظر."
+            return N_("الفحص معطل افتراضيًا. فعّله فقط في المختبر عند الحاجة.")
+        return N_("لا تنتقل إلى server peer apply قبل حل أسباب الحظر.")

@@ -6,6 +6,7 @@ list goes through ``page_args``: limit clamped to ``1..maximum``, offset ≥ 0,
 non-numeric input → a 422 with an Arabic message (``PagingError``).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from flask import request
 
@@ -13,7 +14,7 @@ from flask import request
 class PagingError(ValueError):
     """Bad limit/offset — the view answers 422 with ``message``."""
 
-    message = "قيم limit و offset يجب أن تكون أرقامًا صحيحة."
+    message = N_("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
 
 
 def page_args(default: int = 100, maximum: int = 500) -> tuple[int, int]:

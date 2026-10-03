@@ -190,22 +190,22 @@
   </div>
 
   <div class="sg-hero-kpis">
-    {{ hub.kpi("عدد المجموعات", count, icon="people-group", variant="brand") }}
-    {{ hub.kpi("إجمالي الأعضاء", total_members, icon="users", variant="blue") }}
-    {{ hub.kpi("متصلون الآن", total_online, icon="wifi", variant="green") }}
-    {{ hub.kpi("إجمالي الاستهلاك", fmt_bytes(total_down + total_up), icon="chart-simple", variant="amber") }}
+    {{ hub.kpi(_('عدد المجموعات'), count, icon="people-group", variant="brand") }}
+    {{ hub.kpi(_('إجمالي الأعضاء'), total_members, icon="users", variant="blue") }}
+    {{ hub.kpi(_('متصلون الآن'), total_online, icon="wifi", variant="green") }}
+    {{ hub.kpi(_('إجمالي الاستهلاك'), fmt_bytes(total_down + total_up), icon="chart-simple", variant="amber") }}
   </div>
 </section>
 
 {% if not items %}
   {{ hub.empty(
-    "لا توجد مجموعات بعد",
-    sub="اضغط «إضافة مجموعة» لإنشاء أول مجموعة وربط الخدمات بها.",
+    _('لا توجد مجموعات بعد'),
+    sub=_('اضغط «إضافة مجموعة» لإنشاء أول مجموعة وربط الخدمات بها.'),
     icon="people-group"
   ) }}
 {% else %}
-  {% call hub.section("المجموعات", icon="table-list",
-                      meta=(items|length)|string + " مجموعة", flush=True) %}
+  {% call hub.section(_('المجموعات'), icon="table-list",
+                      meta=(items|length)|string + _(' مجموعة'), flush=True) %}
     {# جدول uds: فرز/تحكّم بالأعمدة/ترقيم/تصدير. حجم صفحة كبير حتى لا
        يتعارض ترقيم uds مع فلتر البحث (الذي يخفي الصفوف بـ display:none). #}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50"
@@ -229,7 +229,7 @@
           <tr data-sg-name="{{ ((g.name or '') ~ ' ' ~ (g.description or ''))|lower }}">
             <td class="sg-name">
               {% if can_submit('radius.subscriber_groups_edit', 'GET') %}<a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{% endif %}{{ g.name }}{% if can_submit('radius.subscriber_groups_edit', 'GET') %}</a>{% endif %}
-              <small>{{ g.description or 'بدون وصف' }}</small>
+              <small>{{ g.description or _('بدون وصف') }}</small>
             </td>
             <td>
               <div class="sg-stat">
@@ -251,21 +251,21 @@
             </td>
             <td>
               <div class="sg-pills">
-                {{ hub.pill("نشط " ~ g.enabled_members, variant="green") }}
-                {% if g.disabled_members %}{{ hub.pill("معطل " ~ g.disabled_members, variant="red") }}{% endif %}
-                {% if g.expired_members %}{{ hub.pill("منتهي " ~ g.expired_members, variant="amber") }}{% endif %}
+                {{ hub.pill(_('نشط %(enabled_members)s', enabled_members=g.enabled_members), variant="green") }}
+                {% if g.disabled_members %}{{ hub.pill(_('معطل %(disabled_members)s', disabled_members=g.disabled_members), variant="red") }}{% endif %}
+                {% if g.expired_members %}{{ hub.pill(_('منتهي %(expired_members)s', expired_members=g.expired_members), variant="amber") }}{% endif %}
               </div>
             </td>
             <td>
               <div class="sg-pills">
                 {% if g.bandwidth_schedule_id %}
-                  {{ hub.pill(g.bandwidth_schedule_name or "جدولة سرعة", variant="amber") }}
+                  {{ hub.pill(g.bandwidth_schedule_name or _('جدولة سرعة'), variant="amber") }}
                 {% endif %}
                 {% if g.default_plan_id %}
-                  {{ hub.pill(g.default_plan_name or "باقة افتراضية", variant="brand") }}
+                  {{ hub.pill(g.default_plan_name or _('باقة افتراضية'), variant="brand") }}
                 {% endif %}
                 {% if g.default_auto_renewal %}
-                  {{ hub.pill("تجديد تلقائي", variant="green") }}
+                  {{ hub.pill(_('تجديد تلقائي'), variant="green") }}
                 {% endif %}
                 {% if not g.bandwidth_schedule_id and not g.default_plan_id and not g.default_auto_renewal %}
                   <span class="hub-text-mute">—</span>
@@ -274,8 +274,8 @@
             </td>
             <td>
               <div class="sg-pills">
-                {% if g.temporary_speed_members %}{{ hub.pill("مؤقتة " ~ g.temporary_speed_members, variant="blue") }}{% endif %}
-                {% if g.custom_speed_members %}{{ hub.pill("خاصة " ~ g.custom_speed_members, variant="amber") }}{% endif %}
+                {% if g.temporary_speed_members %}{{ hub.pill(_('مؤقتة %(temporary_speed_members)s', temporary_speed_members=g.temporary_speed_members), variant="blue") }}{% endif %}
+                {% if g.custom_speed_members %}{{ hub.pill(_('خاصة %(custom_speed_members)s', custom_speed_members=g.custom_speed_members), variant="amber") }}{% endif %}
                 {% if not g.temporary_speed_members and not g.custom_speed_members %}
                   <span class="hub-text-mute">{{ _('العرض') }}</span>
                 {% endif %}
@@ -301,14 +301,14 @@
                 </a>{% endif %}
                 {% if can_submit('radius.subscriber_groups_quota_reset_daily', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_quota_reset_daily', gid=g.id) }}"
-                      onsubmit="return confirm('استعادة الكوتة اليومية لكل أعضاء مجموعة «{{ g.name|e }}»؟');">
+                      onsubmit="return confirm({{ _('استعادة الكوتة اليومية لكل أعضاء مجموعة «%(e)s»؟', e=g.name|e)|tojson|forceescape }});">
                   <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('استعادة الكوتة اليومية') }}">
                     <i class="fa-solid fa-rotate-left"></i>
                   </button>
                 </form>{% endif %}
                 {% if can_submit('radius.subscriber_groups_disconnect_online', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_disconnect_online', gid=g.id) }}"
-                      onsubmit="return confirm('فصل كل الجلسات المتصلة لمجموعة «{{ g.name|e }}»؟');">
+                      onsubmit="return confirm({{ _('فصل كل الجلسات المتصلة لمجموعة «%(e)s»؟', e=g.name|e)|tojson|forceescape }});">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('فصل المتصلين') }}">
                     <i class="fa-solid fa-scissors"></i>
                   </button>
@@ -319,7 +319,7 @@
                 </a>{% endif %}
                 {% if can_submit('radius.subscriber_groups_delete', 'POST') %}<form method="post"
                       action="{{ url_for('radius.subscriber_groups_delete', gid=g.id) }}"
-                      onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها ولن يتم حذفهم.');">
+                      onsubmit="return confirm({{ _('حذف المجموعة «%(e)s»؟ سيتم فصل %(members)s مشترك عنها ولن يتم حذفهم.', e=g.name|e, members=g.members)|tojson|forceescape }});">
                   <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>

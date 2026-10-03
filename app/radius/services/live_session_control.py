@@ -37,6 +37,7 @@ owner button. No retry-loop; one packet, one result. NAK / timeout are
 surfaced verbatim — there is never a fake-success path.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 import re
@@ -190,7 +191,7 @@ def _wrap(coa: CoaResult, *, action: str, session_type: str,
 def _no_session(action: str) -> LiveControlOutcome:
     return LiveControlOutcome(
         ok=False, code=0, code_name="no_active_session",
-        reply_message="لا توجد جلسة نشطة مطابقة",
+        reply_message=N_("لا توجد جلسة نشطة مطابقة"),
         session_type="", session_id="", nas_ip="",
         action=action, detail="no active radacct row matched",
     )

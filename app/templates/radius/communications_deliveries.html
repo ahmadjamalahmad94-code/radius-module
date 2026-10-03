@@ -6,29 +6,29 @@
 {% block page_title %}{{ _("سجل الإرسال") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.') }}</span>{% endblock %}
 
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('البريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
-  {%- set m = {'sent':('تم الإرسال','green'),'delivered':('تم التسليم','green'),'read':('مقروءة','green'),'queued':('بالطابور','amber'),'pending':('قيد الانتظار','amber'),'skipped':('تم التخطّي','grey'),'failed':('فشلت','red'),'error':('خطأ','red')} -%}
+  {%- set m = {'sent':(_('تم الإرسال'),'green'),'delivered':(_('تم التسليم'),'green'),'read':(_('مقروءة'),'green'),'queued':(_('بالطابور'),'amber'),'pending':(_('قيد الانتظار'),'amber'),'skipped':(_('تم التخطّي'),'grey'),'failed':(_('فشلت'),'red'),'error':(_('خطأ'),'red')} -%}
   {%- set pair = m.get(s, (s if s else '—','grey')) -%}
   <span class="cdl-pill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
 {% endmacro %}
 
 {% macro prov_label(p) -%}
 {%- set _pm = {
-  'null':           'طابور داخلي',
-  'generic_http':   'بوابة HTTP عامة',
-  'recording':      'مزوّد تسجيل',
-  'smtp':           'بريد SMTP',
-  'twilio':         'تويليو SMS',
-  'meta':           'ميتا واتساب',
-  'whatsapp_cloud': 'واتساب الرسمي',
-  'smpp':           'بوابة SMPP',
-  'telegram':       'تلجرام',
-  'push_fcm':       'إشعارات FCM',
-  'internal':       'داخلي',
+  'null':           _('طابور داخلي'),
+  'generic_http':   _('بوابة HTTP عامة'),
+  'recording':      _('مزوّد تسجيل'),
+  'smtp':           _('بريد SMTP'),
+  'twilio':         _('تويليو SMS'),
+  'meta':           _('ميتا واتساب'),
+  'whatsapp_cloud': _('واتساب الرسمي'),
+  'smpp':           _('بوابة SMPP'),
+  'telegram':       _('تلجرام'),
+  'push_fcm':       _('إشعارات FCM'),
+  'internal':       _('داخلي'),
 } -%}
-{{- _pm.get(p|string, 'مزوّد غير معروف') if p and p|string else '—' -}}
+{{- _pm.get(p|string, _('مزوّد غير معروف')) if p and p|string else '—' -}}
 {%- endmacro %}
 
 {% block head_extra %}
@@ -63,15 +63,15 @@
 
 {# ───── ONE unified hero: title + actions + delivery-count KPIs + integrated filters ───── #}
 {% call hub.megahero(
-  "سجل الإرسال",
-  subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط — تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.",
+  _('سجل الإرسال'),
+  subtitle=_('يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط — تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.'),
   icon="truck-fast",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': 'ناجحة',   'value': _sent,             'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'فاشلة',   'value': _failed,           'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'بالطابور','value': _queued,           'icon': 'clock',        'variant': 'amber'},
-    {'label': 'الإجمالي','value': deliveries|length, 'icon': 'list',         'variant': 'brand'}
+    {'label': _('ناجحة'),   'value': _sent,             'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('فاشلة'),   'value': _failed,           'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('بالطابور'),'value': _queued,           'icon': 'clock',        'variant': 'amber'},
+    {'label': _('الإجمالي'),'value': deliveries|length, 'icon': 'list',         'variant': 'brand'}
   ]
 ) %}
   {%- if deliveries %}
@@ -89,19 +89,19 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا السجل؟",
-  intro="هنا تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.",
+  _('كيف تقرأ هذا السجل؟'),
+  intro=_('هنا تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.'),
   icon="circle-info",
   items=[
-    {'icon': 'list', 'text': 'كل صف هو محاولة إرسال واحدة — الحالة تخبرك بنتيجة المزوّد.'},
-    {'icon': 'clock', 'text': 'القنوات غير المفعّلة تبقى رسائلها «بالطابور» دون إرسال خارجي.'},
-    {'icon': 'tower-broadcast', 'text': 'فعّل القنوات من «قنوات الإرسال» ليبدأ الإرسال الخارجي.'},
-    {'icon': 'circle-xmark', 'text': 'عمود الخطأ يعرض سبب الفشل كما ورد من المزوّد عند توفّره.'}
+    {'icon': 'list', 'text': _('كل صف هو محاولة إرسال واحدة — الحالة تخبرك بنتيجة المزوّد.')},
+    {'icon': 'clock', 'text': _('القنوات غير المفعّلة تبقى رسائلها «بالطابور» دون إرسال خارجي.')},
+    {'icon': 'tower-broadcast', 'text': _('فعّل القنوات من «قنوات الإرسال» ليبدأ الإرسال الخارجي.')},
+    {'icon': 'circle-xmark', 'text': _('عمود الخطأ يعرض سبب الفشل كما ورد من المزوّد عند توفّره.')}
   ],
-  note="استخدم أزرار التصفية في الأعلى لعرض الناجحة أو الفاشلة أو ما زال بالطابور فقط."
+  note=_('استخدم أزرار التصفية في الأعلى لعرض الناجحة أو الفاشلة أو ما زال بالطابور فقط.')
 )) %}
 
-  {% call hub.section("عمليات الإرسال", icon="truck-fast", meta=deliveries|length|string + " عملية", flush=True) %}
+  {% call hub.section(_('عمليات الإرسال'), icon="truck-fast", meta=deliveries|length|string + _(' عملية'), flush=True) %}
     {% if deliveries %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _("سجل الإرسال") }}" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="delivery-log-table">
@@ -132,7 +132,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا توجد عمليات إرسال بعد.", sub="ستظهر هنا كل رسالة تُرسل من المركز أو الإشعارات الحدثية.", icon="truck-fast") }}
+      {{ hub.empty(_('لا توجد عمليات إرسال بعد.'), sub=_('ستظهر هنا كل رسالة تُرسل من المركز أو الإشعارات الحدثية.'), icon="truck-fast") }}
     {% endif %}
   {% endcall %}
 

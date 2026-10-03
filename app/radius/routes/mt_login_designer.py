@@ -17,6 +17,7 @@ via `hotspot_templates.preview`) so a designer iframe can show a
 WYSIWYG view without ever calling the router.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import io
 import json
@@ -484,8 +485,8 @@ def _gallery(nas_id: int) -> list[dict]:
     for row in hotspot_designs_repo.list_custom_templates(_tid()):
         items.append({
             "slug": ht.CUSTOM_SLUG_PREFIX + str(row["id"]),
-            "name_ar": row.get("name") or "تصميم خاص",
-            "description_ar": ("تصميم خاص مرفوع — آخر تحديث "
+            "name_ar": row.get("name") or _tr("تصميم خاص"),
+            "description_ar": (_tr("تصميم خاص مرفوع — آخر تحديث ")
                                + str(row.get("updated_at") or "")[:16]
                                .replace("T", " ")),
             "is_custom": True,
@@ -503,29 +504,29 @@ def _gallery(nas_id: int) -> list[dict]:
 # التصاميم الموجودة؛ التصاميم الـ30 الفاخرة تأتي على موجات لاحقًا.)
 _TEMPLATE_SECTIONS = (
     # (key, label, icon, [slugs ضمن المكتبة — 4..5 لكل قسم])
-    ("general",    "شبكة عامة",      "wifi",
+    ("general",    N_("شبكة عامة"),      "wifi",
      # القسم ① مكتمل — 5 تصاميم فاخرة مُفرَدة (Phase 2 wave): #1 البوابة الحيّة،
      # #2 النيون الداكن، #3 الزجاج الجليدي، #4 لوحة القياس، #5 الموجة الزرقاء.
      ("live_portal", "neon_dark", "frost_mesh", "speed_dash", "blue_wave")),
-    ("cafe",       "كافي شوب",       "mug-hot",
+    ("cafe",       N_("كافي شوب"),       "mug-hot",
      # القسم ② مكتمل — 4 تصاميم قهوة فاخرة مُفرَدة (Phase 2): #1 قهوة الصباح،
      # #2 البنّي الفاخر، #3 الكلاي الناعم، #4 اللوح الطباشيري.
      ("morning_coffee", "espresso_lux", "soft_clay", "chalkboard", "food_cobrand")),
-    ("cowork",     "مساحة عمل حر",   "briefcase",
+    ("cowork",     N_("مساحة عمل حر"),   "briefcase",
      # القسم ③ مكتمل — 4 تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز):
      # #1 المكتب النظيف، #2 الزجاج الأزرق، #3 الشبكة الرقمية، #4 البطاقة المضيئة.
      ("clean_desk", "blue_glass", "dev_grid", "glow_card")),
-    ("company",    "شركة",           "building",
+    ("company",    N_("شركة"),           "building",
      # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 الأعمال الرسمي،
      # #2 الليلي الملكي، #3 القرمزي الفاخر، #4 الأبيض المؤسسي، #5 المايكروتيك الكلاسيكي.
      ("corporate_formal", "royal_executive", "crimson_prestige", "corporate_white", "mikrotik_classic")),
-    ("education",  "مؤسسة تعليمية",  "graduation-cap",
+    ("education",  N_("مؤسسة تعليمية"),  "graduation-cap",
      # القسم ⑤ مكتمل — 4 تصاميم برسمات SVG: الحرم/المدرسة/المكتبة/البوابة الأكاديمية.
      ("campus", "happy_school", "quiet_library", "academic_gate")),
-    ("restaurant", "مطعم",           "utensils",
+    ("restaurant", N_("مطعم"),           "utensils",
      # القسم ⑥ مكتمل — 5 تصاميم برسمات SVG: طبق/ضيافة مذهّبة/قرمزيّ راقٍ/كاجوال/قائمة QR.
      ("plated_dish", "gilded_dining", "crimson_dining", "food_buddies", "menu_board")),
-    ("retail",     "متاجر وتسوّق",   "bag-shopping",
+    ("retail",     N_("متاجر وتسوّق"),   "bag-shopping",
      # تصاميم برسمات SVG مُضمَّنة كبطل (الصور أحلى من الرموز): #1 بوابة المتجر،
      # #2 الزجاج الثلجي، #3 البوتيك المذهّب، #4 التخفيضات، #5 البطاقة النظيفة.
      ("store_gate", "frost_shop", "gilded_boutique", "mega_sale", "loyalty_clean")),
@@ -660,7 +661,7 @@ def mt_login_designer_save(nas_id: int):
     saved = False
     # _known_slug يقبل أيضًا التصاميم الخاصة المرفوعة custom:<id>.
     if not _known_slug(slug):
-        error = "قالب غير معروف."
+        error = _tr("قالب غير معروف.")
     else:
         try:
             safe = ht.validate_vars(values)
@@ -711,7 +712,7 @@ def mt_login_designer_gallery_apply(nas_id: int):
     resolved = hg.resolve(key, base_vars=current.get("variables") or {})
     if not resolved:
         return _render_designer(nas_id, nas, current,
-                                error="قالب المعرض غير معروف.")
+                                error=N_("قالب المعرض غير معروف."))
     slug, variables, addons = resolved
     # رابط متجر فارغ = التلقائي (نفس منطق الحفظ العادي).
     if not variables.get("STORE_URL"):
@@ -732,7 +733,7 @@ def mt_login_designer_gallery_apply(nas_id: int):
     design = {"template_slug": slug, "variables": safe, "addons": addons_cfg}
     return _render_designer(
         nas_id, nas, design, saved=True,
-        flash_ok=f"تم تحميل قالب «{hg.get(key).name_ar}» — عدّله ثم انشره.")
+        flash_ok=_tr('تم تحميل قالب «%(name_ar)s» — عدّله ثم انشره.', name_ar=hg.get(key).name_ar))
 
 
 def mt_login_designer_gallery_preview(nas_id: int, key: str):
@@ -836,14 +837,14 @@ def mt_login_designer_asset_upload(nas_id: int):
     f = request.files.get("asset_file")
     err = ""
     if kind not in assets.KINDS:
-        err = "نوع أصل غير مدعوم."
+        err = N_("نوع أصل غير مدعوم.")
     elif not f or not f.filename:
-        err = "اختر ملفًا للرفع."
+        err = N_("اختر ملفًا للرفع.")
     else:
         fname = _safe_asset_name(f.filename)
         ext = os.path.splitext(fname)[1].lower()
         if ext not in _ASSET_EXT[kind]:
-            err = "صيغة الملف غير مدعومة لهذا النوع."
+            err = N_("صيغة الملف غير مدعومة لهذا النوع.")
         else:
             data = f.read()
             try:
@@ -861,7 +862,7 @@ def mt_login_designer_asset_upload(nas_id: int):
         severity="info", result_status="success", router_id=int(nas_id),
         payload={"kind": kind})
     return _render_designer(nas_id, nas, design, saved=True,
-                            flash_ok="تم رفع الأصل — سيُرفع للراوتر عند النشر.")
+                            flash_ok=N_("تم رفع الأصل — سيُرفع للراوتر عند النشر."))
 
 
 def mt_login_designer_asset_delete(nas_id: int):
@@ -874,7 +875,7 @@ def mt_login_designer_asset_delete(nas_id: int):
     except (TypeError, ValueError):
         pass
     return _render_designer(nas_id, nas, _current_design(nas_id),
-                            flash_ok="حُذف الأصل.")
+                            flash_ok=N_("حُذف الأصل."))
 
 
 def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
@@ -883,11 +884,11 @@ def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
     أي ملف نجح وأيّها فشل دون أن يُفشل ذلك النشر كله."""
     parts = []
     if ok_names:
-        parts.append("تم رفع: login, "
+        parts.append(_tr("تم رفع: login, ")
                      + ", ".join(n.replace(".html", "")
                                  for n in ok_names))
     if fail_names:
-        parts.append("فشل: "
+        parts.append(_tr("فشل: ")
                      + ", ".join(n.replace(".html", "")
                                  for n in fail_names))
     return " | ".join(parts)
@@ -931,9 +932,9 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
 
     # ── التأكيد ──
     if not confirmed:
-        msg = "يجب تأكيد عملية النشر قبل تنفيذها."
+        msg = _tr("يجب تأكيد عملية النشر قبل تنفيذها.")
         yield {"type": "plan",
-               "steps": [{"key": "prepare", "label": "التحقّق والتأكيد"}]}
+               "steps": [{"key": "prepare", "label": _tr("التحقّق والتأكيد")}]}
         yield _deploy_step("prepare", "failed", msg)
         bundle["error"] = msg
         yield {"type": "done", "ok": False, "error": msg, "summary": ""}
@@ -945,7 +946,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     except ValueError as e:
         msg = str(e)
         yield {"type": "plan",
-               "steps": [{"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"}]}
+               "steps": [{"key": "prepare", "label": _tr("تجهيز ملفات التصميم والتحقّق")}]}
         yield _deploy_step("prepare", "failed", msg)
         bundle["error"] = msg
         yield {"type": "done", "ok": False, "error": msg, "summary": ""}
@@ -963,24 +964,24 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     # هيكل الخطوات المعروف مسبقًا — تعرضه الواجهة هيكلًا ساكنًا ثم
     # تحدّث كل خطوة عند وصول حدثها. خطوتا المتجر تظهران فقط عند تفعيله.
     steps = [
-        {"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"},
-        {"key": "connect", "label": "الاتصال بالراوتر"},
+        {"key": "prepare", "label": _tr("تجهيز ملفات التصميم والتحقّق")},
+        {"key": "connect", "label": _tr("الاتصال بالراوتر")},
     ]
     # خطوة «نزع الأصول» تخصّ مسار FTP فقط؛ مع السحب عبر النفق يُسحب
     # login.html كاملًا بلا تفكيك، فلا داعي لها.
     if ftp_cfg and not fetch_cfg:
         steps.append({"key": "assets",
-                      "label": "رفع أصول التصميم (الشعار) عبر FTP"})
+                      "label": _tr("رفع أصول التصميم (الشعار) عبر FTP")})
     steps += [
-        {"key": "login", "label": "رفع صفحة الدخول login.html"},
-        {"key": "errors", "label": "رفع رسائل الأخطاء errors.txt"},
+        {"key": "login", "label": _tr("رفع صفحة الدخول login.html")},
+        {"key": "errors", "label": _tr("رفع رسائل الأخطاء errors.txt")},
         {"key": "companions",
-         "label": "رفع الصفحات المرافقة (الحالة/الخروج/إعادة التوجيه)"},
+         "label": _tr("رفع الصفحات المرافقة (الحالة/الخروج/إعادة التوجيه)")},
     ]
     if store_enabled and store_api_base:
-        steps.append({"key": "store", "label": "رفع متجر الراوتر store.html"})
+        steps.append({"key": "store", "label": _tr("رفع متجر الراوتر store.html")})
         steps.append({"key": "walled_garden",
-                      "label": "تجهيز قائمة السماح (walled-garden)"})
+                      "label": _tr("تجهيز قائمة السماح (walled-garden)")})
     # ── إضافات المصمّم (P1/P2): خطوة صفحة ما بعد الدخول + نطاقات
     # walled-garden، تظهران فقط عند الحاجة الفعليّة. ──
     addons_cfg = ha.normalize_config(design.get("addons") or {})
@@ -991,18 +992,18 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     analytics_on = bool((addons_cfg.get("analytics") or {}).get("enabled"))
     if needs_redirect:
         steps.append({"key": "redirect",
-                      "label": "رفع صفحة ما بعد الدخول redirect.html"})
+                      "label": _tr("رفع صفحة ما بعد الدخول redirect.html")})
     if addon_hosts or analytics_on:
         steps.append({"key": "addon_walled_garden",
-                      "label": "فتح نطاقات/مضيف الإضافات (walled-garden)"})
+                      "label": _tr("فتح نطاقات/مضيف الإضافات (walled-garden)")})
     # أصول مستضافة (فيديو/خط) مرفوعة من المصمّم — تُرفع بجانب login.html.
     from ..db.repos import hotspot_assets_repo as _assets_repo
     router_assets = _assets_repo.list_assets(_tid(), nas_id)
     if router_assets:
         steps.append({"key": "assets_files",
-                      "label": f"رفع أصول مستضافة ({len(router_assets)})"})
+                      "label": _tr('رفع أصول مستضافة (%(v)s)', v=len(router_assets))})
     yield {"type": "plan", "steps": steps}
-    yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
+    yield _deploy_step("prepare", "ok", _tr("التصميم صالح والملفات جاهزة."))
 
     # ── حارس عنوان المتجر: عنوان راديوس فارغ/محلي لا تصله أجهزة
     # الزبائن — نرفض نشر المتجر برسالة واضحة بدل صفحة لا تعمل. لا
@@ -1019,10 +1020,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             return bundle
 
     # ── الاتصال بالراوتر ──
-    yield _deploy_step("connect", "running", "جارٍ فتح اتصال API بالراوتر…")
+    yield _deploy_step("connect", "running", _tr("جارٍ فتح اتصال API بالراوتر…"))
     client = _connect_client(nas_id)
     if client is None:
-        msg = "الراوتر غير موجود."
+        msg = _tr("الراوتر غير موجود.")
         yield _deploy_step("connect", "failed", msg)
         bundle["error"] = msg
         yield {"type": "done", "ok": False, "error": msg, "summary": ""}
@@ -1042,7 +1043,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     current = "connect"
     try:
         client.connect()
-        yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر.")
+        yield _deploy_step("connect", "ok", _tr("تم الاتصال بالراوتر."))
 
         # ── رفع login.html (نزع الأصول الكبيرة + API/FTP حسب الحجم) ──
         # on_retry/on_asset يُجمعان في قوائم لأن deploy_login يحجب أثناء
@@ -1051,8 +1052,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         current = "assets" if (ftp_cfg and not fetch_cfg) else "login"
         if ftp_cfg and not fetch_cfg:
             yield _deploy_step(
-                "assets", "running", "جارٍ نزع الشعار ورفعه عبر FTP…")
-        yield _deploy_step("login", "running", "جارٍ رفع صفحة الدخول…")
+                "assets", "running", _tr("جارٍ نزع الشعار ورفعه عبر FTP…"))
+        yield _deploy_step("login", "running", _tr("جارٍ رفع صفحة الدخول…"))
         _login_retries: list = []
         _assets_log: list = []  # (name, ok, nbytes)
         current = "login"
@@ -1070,39 +1071,36 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         if ftp_cfg and not fetch_cfg:
             if not _assets_log:
                 yield _deploy_step(
-                    "assets", "ok", "لا أصول كبيرة مضمّنة — الصفحة خفيفة.")
+                    "assets", "ok", _tr("لا أصول كبيرة مضمّنة — الصفحة خفيفة."))
             else:
                 _aok = [a for a in _assets_log if a[1]]
                 _afail = [a for a in _assets_log if not a[1]]
                 if _afail:
                     yield _deploy_step(
                         "assets", "failed",
-                        f"رُفع {len(_aok)}/{len(_assets_log)} أصل — البقية "
-                        "بقيت مضمّنة (FTP غير متاح؟).")
+                        _tr('رُفع %(v)s/%(v2)s أصل — البقية بقيت مضمّنة (FTP غير متاح؟).', v=len(_aok), v2=len(_assets_log)))
                 else:
                     _kb = sum(a[2] for a in _aok) // 1024
                     yield _deploy_step(
                         "assets", "ok",
-                        f"رُفع {len(_aok)} أصل ({_kb} ك.ب) عبر FTP — "
-                        "صغُر login.html.")
+                        _tr('رُفع %(v)s أصل (%(kb)s ك.ب) عبر FTP — صغُر login.html.', v=len(_aok), kb=_kb))
 
         if deploy_result and deploy_result.ok:
-            _via = ("السحب عبر النفق (/tool fetch)"
+            _via = (N_("السحب عبر النفق (/tool fetch)")
                     if deploy_result.via == "fetch"
-                    else ("FTP (رفع مجزّأ)" if deploy_result.via == "ftp"
+                    else (N_("FTP (رفع مجزّأ)") if deploy_result.via == "ftp"
                           else "API"))
-            _parts = (f"، {deploy_result.chunks} جزء"
+            _parts = (_tr('، %(chunks)s جزء', chunks=deploy_result.chunks)
                       if deploy_result.chunks else "")
-            _retry_note = (f"، نجح بعد {len(_login_retries)} إعادة محاولة"
+            _retry_note = (_tr('، نجح بعد %(v)s إعادة محاولة', v=len(_login_retries))
                            if _login_retries else "")
             yield _deploy_step(
                 "login", "ok",
-                f"رُفع {deploy_result.bytes} بايت عبر {_via}{_parts} إلى "
-                f"{deploy_result.path}{_retry_note}")
+                _tr('رُفع %(bytes)s بايت عبر %(via)s%(parts)s إلى %(path)s%(retry_note)s', bytes=deploy_result.bytes, via=_via, parts=_parts, path=deploy_result.path, retry_note=_retry_note))
 
             # ── errors.txt (فشله لا يُفشل النشر) ──
             current = "errors"
-            yield _deploy_step("errors", "running", "جارٍ رفع رسائل الأخطاء…")
+            yield _deploy_step("errors", "running", _tr("جارٍ رفع رسائل الأخطاء…"))
             try:
                 from ..db.repos import (
                     hotspot_error_messages_repo as _err_repo,
@@ -1115,15 +1113,15 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     client, build_errors_txt(_msgs, enabled=_en),
                     ftp=ftp_cfg, fetch=fetch_cfg)
                 if _er and _er.ok:
-                    yield _deploy_step("errors", "ok", "رُفع errors.txt.")
+                    yield _deploy_step("errors", "ok", _tr("رُفع errors.txt."))
                 else:
                     yield _deploy_step(
                         "errors", "failed",
-                        "تعذّر رفع errors.txt — لا يُفشل النشر.")
+                        _tr("تعذّر رفع errors.txt — لا يُفشل النشر."))
             except Exception:  # noqa: BLE001
                 yield _deploy_step(
                     "errors", "failed",
-                    "تعذّر رفع errors.txt — لا يُفشل النشر.")
+                    _tr("تعذّر رفع errors.txt — لا يُفشل النشر."))
 
             # ── الصفحات القياسية المرافقة (ملف بملف مع عدّاد) ──
             current = "companions"
@@ -1163,20 +1161,20 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 _cstatus = "ok" if not fail_names else "failed"
                 yield _deploy_step(
                     "companions", _cstatus,
-                    companion_summary or f"تم رفع {len(ok_names)}/{total}.")
+                    companion_summary or _tr('تم رفع %(v)s/%(total)s.', v=len(ok_names), total=total))
             except Exception:  # noqa: BLE001
                 companion_summary = ""
                 yield _deploy_step(
                     "companions", "failed",
-                    "تعذّر بناء الصفحات المرافقة — لا يُفشل نشر صفحة الدخول.")
+                    _tr("تعذّر بناء الصفحات المرافقة — لا يُفشل نشر صفحة الدخول."))
         else:
             # فشل رفع login.html — السبب الحقيقي من الراوتر (مثلًا صلاحية
             # ناقصة أو القرص ممتلئ). نُعلّم الخطوة فاشلة ونتخطّى الباقي.
             err = (deploy_result.error if deploy_result
-                   else "فشل رفع صفحة الدخول.")
+                   else N_("فشل رفع صفحة الدخول."))
             yield _deploy_step("login", "failed", err)
             for k in ("errors", "companions"):
-                yield _deploy_step(k, "skip", "تُخطّيت — فشل رفع صفحة الدخول.")
+                yield _deploy_step(k, "skip", _tr("تُخطّيت — فشل رفع صفحة الدخول."))
 
         # ── متجر الراوتر store.html + walled-garden ──
         if (store_enabled and store_api_base
@@ -1186,7 +1184,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             )
             from ..services.store_key import get_or_create_store_key
             current = "store"
-            yield _deploy_step("store", "running", "جارٍ رفع متجر الراوتر…")
+            yield _deploy_step("store", "running", _tr("جارٍ رفع متجر الراوتر…"))
             # store.html كبير أيضًا — يمرّ عبر نفس مسار الملفات الكبيرة
             # الآمن (نزع الأصول + API/FTP مجزّأ) فلا نداء ضخم يقطعه الراوتر.
             store_result = deploy_store(
@@ -1201,44 +1199,43 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 ftp=ftp_cfg, fetch=fetch_cfg,
             )
             if not store_result.ok:
-                error = ("نُشرت صفحة الدخول لكن رفع متجر الراوتر فشل: "
+                error = (_tr("نُشرت صفحة الدخول لكن رفع متجر الراوتر فشل: ")
                          + store_result.error)
                 yield _deploy_step("store", "failed", store_result.error)
                 yield _deploy_step(
-                    "walled_garden", "skip", "تُخطّيت — فشل رفع المتجر.")
+                    "walled_garden", "skip", _tr("تُخطّيت — فشل رفع المتجر."))
             else:
-                _svia = ("FTP (رفع مجزّأ)" if store_result.via == "ftp"
+                _svia = (N_("FTP (رفع مجزّأ)") if store_result.via == "ftp"
                          else "API")
-                _sparts = (f"، {store_result.chunks} جزء"
+                _sparts = (_tr('، %(chunks)s جزء', chunks=store_result.chunks)
                            if store_result.chunks else "")
-                _sasset = (f"، {store_result.assets} أصل منفصل"
+                _sasset = (_tr('، %(assets)s أصل منفصل', assets=store_result.assets)
                            if store_result.assets else "")
                 yield _deploy_step(
                     "store", "ok",
-                    f"رُفع {store_result.bytes} بايت عبر {_svia}{_sparts}"
-                    f"{_sasset} إلى {store_result.path}")
+                    _tr('رُفع %(bytes)s بايت عبر %(svia)s%(sparts)s%(sasset)s إلى %(path)s', bytes=store_result.bytes, svia=_svia, sparts=_sparts, sasset=_sasset, path=store_result.path))
                 current = "walled_garden"
                 yield _deploy_step(
-                    "walled_garden", "running", "جارٍ تجهيز قائمة السماح…")
+                    "walled_garden", "running", _tr("جارٍ تجهيز قائمة السماح…"))
                 wg_result = ensure_walled_garden(
                     client, api_base=store_api_base)
                 if wg_result and wg_result.ok:
                     yield _deploy_step(
                         "walled_garden", "ok",
-                        (f"أُضيفت {wg_result.added} قاعدة."
-                         if wg_result.added else "القواعد موجودة مسبقًا."))
+                        (_tr('أُضيفت %(added)s قاعدة.', added=wg_result.added)
+                         if wg_result.added else _tr("القواعد موجودة مسبقًا.")))
                 else:
                     yield _deploy_step(
                         "walled_garden", "failed",
                         (wg_result.error if wg_result else "")
-                        + " — انسخ أمر walled-garden يدويًا من الصفحة.")
+                        + _tr(" — انسخ أمر walled-garden يدويًا من الصفحة."))
 
         # ── إضافات المصمّم: صفحة ما بعد الدخول + نطاقات walled-garden ──
         # تُنفَّذ فقط بعد نجاح رفع login.html (الإضافات تكمّله).
         if deploy_result and deploy_result.ok and needs_redirect:
             current = "redirect"
             yield _deploy_step("redirect", "running",
-                               "جارٍ بناء ورفع صفحة ما بعد الدخول…")
+                               _tr("جارٍ بناء ورفع صفحة ما بعد الدخول…"))
             try:
                 from ..services import hotspot_surfaces as _sf
                 redirect_html = _sf.build_redirect_page(
@@ -1252,15 +1249,15 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 if _rr and _rr.ok:
                     yield _deploy_step(
                         "redirect", "ok",
-                        f"رُفعت redirect.html ({_rr.bytes} بايت).")
+                        _tr('رُفعت redirect.html (%(bytes)s بايت).', bytes=_rr.bytes))
                 else:
                     yield _deploy_step(
                         "redirect", "failed",
-                        "تعذّر رفع redirect.html — لا يُفشل النشر.")
+                        _tr("تعذّر رفع redirect.html — لا يُفشل النشر."))
             except Exception:  # noqa: BLE001
                 yield _deploy_step(
                     "redirect", "failed",
-                    "تعذّر بناء صفحة ما بعد الدخول — لا يُفشل النشر.")
+                    _tr("تعذّر بناء صفحة ما بعد الدخول — لا يُفشل النشر."))
 
         if deploy_result and deploy_result.ok and (addon_hosts or analytics_on):
             from ..services.hotspot_store_page import (
@@ -1268,23 +1265,23 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             )
             current = "addon_walled_garden"
             yield _deploy_step("addon_walled_garden", "running",
-                               "جارٍ فتح نطاقات/مضيف الإضافات…")
+                               _tr("جارٍ فتح نطاقات/مضيف الإضافات…"))
             parts = []
             ok_all = True
             if addon_hosts:
                 awg = ensure_walled_garden_hosts(client, hosts=addon_hosts)
                 ok_all = ok_all and bool(awg and awg.ok)
-                parts.append(f"نطاقات: +{awg.added}" if awg and awg.ok
-                             else "نطاقات: فشل")
+                parts.append(_tr('نطاقات: +%(added)s', added=awg.added) if awg and awg.ok
+                             else N_("نطاقات: فشل"))
             if analytics_on:
                 # مضيف اللوحة (IP الراديوس) بقاعدة IP — لبيكون التحليلات.
                 pwg = ensure_walled_garden(client, api_base=_auto_api_base())
                 ok_all = ok_all and bool(pwg and pwg.ok)
-                parts.append("مضيف التحليلات: مفتوح" if pwg and pwg.ok
-                             else "مضيف التحليلات: فشل")
+                parts.append(N_("مضيف التحليلات: مفتوح") if pwg and pwg.ok
+                             else N_("مضيف التحليلات: فشل"))
             yield _deploy_step(
                 "addon_walled_garden", "ok" if ok_all else "failed",
-                " | ".join(parts) or "تم.")
+                " | ".join(parts) or _tr("تم."))
 
         # ── رفع الأصول المستضافة (فيديو/خط) بجانب login.html — السحب عبر
         #    النفق أولًا (لا FTP) ثم FTP احتياطًا. ──
@@ -1293,8 +1290,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             if not fetch_cfg and not ftp_cfg:
                 yield _deploy_step(
                     "assets_files", "failed",
-                    "تعذّر رفع الأصول — لا قناة سحب عبر النفق ولا FTP. اضبط "
-                    "عنوان خادم الراديوس أو فعّل FTP، أو ارفع الملفات يدويًا.")
+                    _tr("تعذّر رفع الأصول — لا قناة سحب عبر النفق ولا FTP. اضبط "
+                    "عنوان خادم الراديوس أو فعّل FTP، أو ارفع الملفات يدويًا."))
             else:
                 from ..db.repos import hotspot_assets_repo as _ar
                 from ..services.hotspot_file_transfer import (
@@ -1339,8 +1336,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         f"{done + failed}/{len(router_assets)} — {a['filename']}")
                 yield _deploy_step(
                     "assets_files", "ok" if not failed else "failed",
-                    f"رُفع {done}/{len(router_assets)} أصلًا"
-                    + (f" — فشل {failed}" if failed else "."))
+                    _tr('رُفع %(done)s/%(v)s أصلًا', done=done, v=len(router_assets))
+                    + (_tr(' — فشل %(failed)s', failed=failed) if failed else "."))
     except Exception as e:  # noqa: BLE001
         # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
         # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
@@ -1490,9 +1487,9 @@ def mt_login_designer_preset_save(nas_id: int):
     error = ""
     flash_ok = ""
     if not name:
-        error = "اكتب اسمًا للقالب المحفوظ أولًا."
+        error = _tr("اكتب اسمًا للقالب المحفوظ أولًا.")
     elif not _known_slug(slug):
-        error = "قالب غير معروف."
+        error = _tr("قالب غير معروف.")
     else:
         try:
             safe = ht.validate_vars(values)
@@ -1504,7 +1501,7 @@ def mt_login_designer_preset_save(nas_id: int):
                 name=name, template_slug=slug, variables=safe,
             )
             values = safe
-            flash_ok = f"حُفظ القالب «{name}» في قوالبك المحفوظة."
+            flash_ok = _tr('حُفظ القالب «%(name)s» في قوالبك المحفوظة.', name=name)
             actor = _actor()
             get_audit_service().record(
                 actor=actor,
@@ -1536,7 +1533,7 @@ def mt_login_designer_preset_apply(nas_id: int):
     if not preset:
         return _render_designer(
             nas_id, nas, _current_design(nas_id),
-            error="القالب المحفوظ غير موجود.")
+            error=N_("القالب المحفوظ غير موجود."))
     slug = preset.get("template_slug") or "classic"
     if not _known_slug(slug):
         slug = "classic"
@@ -1563,7 +1560,7 @@ def mt_login_designer_preset_apply(nas_id: int):
     design = {"template_slug": slug, "variables": safe}
     return _render_designer(
         nas_id, nas, design, saved=True,
-        flash_ok=f"طُبّق القالب المحفوظ «{preset.get('name', '')}».")
+        flash_ok=_tr('طُبّق القالب المحفوظ «%(v)s».', v=preset.get('name', '')))
 
 
 def mt_login_designer_preset_delete(nas_id: int):
@@ -1578,7 +1575,7 @@ def mt_login_designer_preset_delete(nas_id: int):
     flash_ok = ""
     if preset:
         hotspot_designs_repo.delete_preset(_tid(), nas_id, preset_id)
-        flash_ok = f"حُذف القالب المحفوظ «{preset.get('name', '')}»."
+        flash_ok = _tr('حُذف القالب المحفوظ «%(v)s».', v=preset.get('name', ''))
     return _render_designer(
         nas_id, nas, _current_design(nas_id), flash_ok=flash_ok)
 
@@ -1745,7 +1742,7 @@ def mt_login_designer_download_zip(nas_id: int):
                 with open(font_path, "rb") as fh:
                     z.writestr(rel, fh.read())
         readme = (
-            "حزمة صفحة الهوت سبوت — HobeRadius\n"
+            _tr("حزمة صفحة الهوت سبوت — HobeRadius\n"
             "================================\n\n"
             "محتويات الحزمة (مجلد هوت سبوت كامل):\n"
             "  login.html    — صفحة الدخول (التصميم المختار).\n"
@@ -1758,11 +1755,11 @@ def mt_login_designer_download_zip(nas_id: int):
             "  rlogin.html   — إعادة توجيه «تسجيل الدخول مطلوب».\n"
             "  redirect.html — إعادة توجيه عامة.\n"
             "  radvert.html  — صفحة الإعلان/التحويل.\n"
-            "  errors.txt    — رسائل أخطاء الهوت سبوت بالعربية.\n"
-            + ("  store.html    — متجر البطاقات الإلكتروني.\n"
+            "  errors.txt    — رسائل أخطاء الهوت سبوت بالعربية.\n")
+            + (N_("  store.html    — متجر البطاقات الإلكتروني.\n")
                if store_html else "")
-            + "  fonts/        — خط المراعي (Almarai) إن لزم.\n"
-            + "  README.txt    — هذا الملف.\n\n"
+            + _tr("  fonts/        — خط المراعي (Almarai) إن لزم.\n")
+            + _tr("  README.txt    — هذا الملف.\n\n"
             "كل الصفحات بنفس هوية التصميم (الألوان/الشعار/الاسم/الخط)\n"
             "فتظهر متناسقة مع صفحة الدخول.\n\n"
             "طريقة الرفع اليدوي على الميكروتك:\n"
@@ -1778,18 +1775,18 @@ def mt_login_designer_download_zip(nas_id: int):
             "3) تأكد أن بروفايل سيرفر الهوت سبوت يستخدم\n"
             "   html-directory=hotspot.\n\n"
             "ملاحظة: placeholders بالشكل $(...) يملؤها RouterOS\n"
-            "تلقائيًا وقت الطلب — لا تعدّلها.\n")
+            "تلقائيًا وقت الطلب — لا تعدّلها.\n"))
         if store_html and wg_command:
             readme += (
-                "\nمهم — قائمة السماح (walled-garden) للمتجر:\n"
+                _tr("\nمهم — قائمة السماح (walled-garden) للمتجر:\n"
                 "===========================================\n"
                 "حتى يتصل متجر store.html بسيرفر الراديوس قبل تسجيل\n"
                 "دخول الزبائن للإنترنت، أضف قاعدة walled-garden على\n"
                 "الراوتر. انسخ هذا الأمر والصقه في Terminal — نفس\n"
                 "الصيغة تعمل في RouterOS v6 و v7:\n\n"
-                "  " + wg_command + "\n\n"
+                "  ") + wg_command + _tr("\n\n"
                 "(النشر المباشر من المصمّم يضيف هذه القاعدة تلقائيًا —\n"
-                "هذا الأمر يلزم فقط مع الرفع اليدوي.)\n")
+                "هذا الأمر يلزم فقط مع الرفع اليدوي.)\n"))
         z.writestr("README.txt", readme)
     buf.seek(0)
 
@@ -1818,14 +1815,14 @@ def mt_login_designer_custom_upload(nas_id: int):
     f = request.files.get("custom_file")
     name = (request.form.get("custom_name") or "").strip()[:40]
     if f is None or not (f.filename or "").strip():
-        error = "اختر ملف التصميم أولًا (HTML أو ZIP يحوي login.html)."
+        error = _tr("اختر ملف التصميم أولًا (HTML أو ZIP يحوي login.html).")
     else:
         # قراءة بسقف الحجم + 1 — لو تجاوزه الملف نرفض فورًا دون
         # تحميل ملف عملاق كاملًا في الذاكرة.
         raw = f.read(ht.CUSTOM_TEMPLATE_MAX_BYTES + 1)
         if len(raw) > ht.CUSTOM_TEMPLATE_MAX_BYTES:
-            error = ("حجم الملف يتجاوز الحد المسموح (2 ميجابايت) — "
-                     "صغّر الصور المضمّنة وأعد المحاولة.")
+            error = (_tr("حجم الملف يتجاوز الحد المسموح (2 ميجابايت) — "
+                     "صغّر الصور المضمّنة وأعد المحاولة."))
         else:
             html = ""
             fname = (f.filename or "").lower()
@@ -1841,20 +1838,20 @@ def mt_login_designer_custom_upload(nas_id: int):
                              if n.lower().rsplit("/", 1)[-1]
                              == "login.html"), None)
                         if entry is None:
-                            error = ("ملف ZIP لا يحوي login.html — "
+                            error = (_tr("ملف ZIP لا يحوي login.html — "
                                      "ضع صفحة الدخول باسم login.html "
-                                     "داخل الحزمة.")
+                                     "داخل الحزمة."))
                         else:
                             data = z.read(entry)
                             if len(data) > ht.CUSTOM_TEMPLATE_MAX_BYTES:
-                                error = ("حجم login.html داخل الحزمة "
+                                error = (_tr("حجم login.html داخل الحزمة "
                                          "يتجاوز الحد المسموح "
-                                         "(2 ميجابايت).")
+                                         "(2 ميجابايت)."))
                             else:
                                 html = data.decode("utf-8",
                                                    errors="replace")
                 except zipfile.BadZipFile:
-                    error = "ملف ZIP تالف — أعد ضغط الحزمة وحاول مجددًا."
+                    error = _tr("ملف ZIP تالف — أعد ضغط الحزمة وحاول مجددًا.")
             else:
                 html = raw.decode("utf-8", errors="replace")
 
@@ -1863,13 +1860,13 @@ def mt_login_designer_custom_upload(nas_id: int):
                 if not name:
                     stem = os.path.splitext(
                         os.path.basename(f.filename or ""))[0]
-                    name = (stem or "تصميم خاص")[:40]
+                    name = (stem or N_("تصميم خاص"))[:40]
                 # تعقيم الاسم: حروف/أرقام/مسافات/شرطة/نقطة وعربية فقط
                 # (نفس روح _BRAND_NAME_RE) — الاسم يدخل لاحقًا في
                 # سلاسل confirm() بالواجهة فلا نسمح بعلامات اقتباس.
                 name = re.sub(r"[^\w\s\-\.؀-ۿ]", "", name).strip()[:40]
                 if not name:
-                    name = "تصميم خاص"
+                    name = N_("تصميم خاص")
                 # حذف غطاء «جاري التحميل» نهائيًا من التصميم المرفوع
                 # قبل التخزين — فيُخزَّن نظيفًا وتُعرض الصفحة مباشرة.
                 # render() يحذفه أيضًا عند النشر (حماية مزدوجة للسجلات
@@ -1884,9 +1881,7 @@ def mt_login_designer_custom_upload(nas_id: int):
                 else:
                     new_id = hotspot_designs_repo.save_custom_template(
                         _tid(), name=name, html=html)
-                    flash_ok = (f"رُفع التصميم الخاص «{name}» — "
-                                "ستجده الآن في معرض التصاميم، اختره "
-                                "ثم احفظ وانشر كأي تصميم آخر.")
+                    flash_ok = (_tr('رُفع التصميم الخاص «%(name)s» — ستجده الآن في معرض التصاميم، اختره ثم احفظ وانشر كأي تصميم آخر.', name=name))
                     actor = _actor()
                     get_audit_service().record(
                         actor=actor,
@@ -1919,7 +1914,7 @@ def mt_login_designer_custom_delete(nas_id: int):
     flash_ok = ""
     if row:
         hotspot_designs_repo.delete_custom_template(_tid(), custom_id)
-        flash_ok = f"حُذف التصميم الخاص «{row.get('name', '')}»."
+        flash_ok = _tr('حُذف التصميم الخاص «%(v)s».', v=row.get('name', ''))
         actor = _actor()
         get_audit_service().record(
             actor=actor,

@@ -16,6 +16,7 @@ This module never touches DB / Flask / network — pure
 functions only. The orchestrator persists the result.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Mapping
 
@@ -141,19 +142,19 @@ class InternetPhasePlanner(PhasePlannerBase):
         source_type: str, payload: Mapping[str, Any],
     ) -> list[str]:
         notes: list[str] = [
-            "ألصق السكربت في MikroTik Terminal، ثم انتظر اكتمال "
-            "أوامر التحقّق في الأسفل قبل المتابعة.",
+            _tr("ألصق السكربت في MikroTik Terminal، ثم انتظر اكتمال "
+            "أوامر التحقّق في الأسفل قبل المتابعة."),
         ]
         if payload.get("add_default_route", True):
             notes.append(
-                "سيُضاف مسار افتراضي جديد. إذا كنت متّصلاً عبر "
+                N_("سيُضاف مسار افتراضي جديد. إذا كنت متّصلاً عبر "
                 "الإنترنت الحالي، استخدم Winbox على شبكة LAN "
-                "قبل اللصق."
+                "قبل اللصق.")
             )
         if source_type == "pppoe":
             notes.append(
-                "كلمة مرور PPPoE تظهر داخل السكربت — لا "
-                "تشاركه مع طرف خارجي."
+                N_("كلمة مرور PPPoE تظهر داخل السكربت — لا "
+                "تشاركه مع طرف خارجي.")
             )
         return notes
 

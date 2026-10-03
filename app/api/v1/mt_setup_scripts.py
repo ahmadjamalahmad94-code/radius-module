@@ -16,6 +16,7 @@ identical script. (The token VALUE is never returned — `api_tokens` stores onl
 hashes; the operator pastes the real token, same as the web page.)
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -63,9 +64,9 @@ def push_setup():
         "auth_header": "Authorization: Bearer <API_TOKEN>",
         "tokens": names,
         "suggested_token_name": suggested,
-        "note": "السكربت النهائي يُجمَّع من هذه المدخلات (نفس ما تفعله الصفحة): "
+        "note": _tr("السكربت النهائي يُجمَّع من هذه المدخلات (نفس ما تفعله الصفحة): "
                 "/system scheduler add … on-event=/tool fetch إلى ingest_url "
-                "بترويسة التوكن. التوكن يُدخله المشغّل (لا يُعاد من الخادم).",
+                "بترويسة التوكن. التوكن يُدخله المشغّل (لا يُعاد من الخادم)."),
     })
 
 
@@ -92,7 +93,7 @@ def metrics_setup():
         "tokens": names,
         "suggested_token_name": suggested,
         "routers": routers,
-        "note": "السكربت النهائي يُجمَّع من هذه المدخلات (نفس ما تفعله الصفحة): "
+        "note": _tr("السكربت النهائي يُجمَّع من هذه المدخلات (نفس ما تفعله الصفحة): "
                 "/system scheduler add … on-event=/tool fetch إلى ingest_url "
-                "(جسم interfaces rx/tx) بترويسة التوكن.",
+                "(جسم interfaces rx/tx) بترويسة التوكن."),
     })

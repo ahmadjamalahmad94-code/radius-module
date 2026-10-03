@@ -5,6 +5,7 @@
 عند النشر فتعمل ذاتيًّا بلا أي walled-garden (مستضافة على الراوتر).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from datetime import datetime
 from typing import Any
@@ -30,12 +31,12 @@ def save_asset(tenant_id: int, *, nas_id: int, kind: str, filename: str,
     """UPSERT أصل على (tenant, nas, filename). يرمي ValueError عند نوع
     مجهول أو تجاوز الحجم."""
     if kind not in KINDS:
-        raise ValueError("نوع أصل غير مدعوم.")
+        raise ValueError(_tr("نوع أصل غير مدعوم."))
     if not content:
-        raise ValueError("الملف فارغ.")
+        raise ValueError(_tr("الملف فارغ."))
     if len(content) > max_bytes(kind):
         raise ValueError(
-            f"حجم الملف يتجاوز الحدّ ({max_bytes(kind) // (1024 * 1024)}م.ب).")
+            _tr('حجم الملف يتجاوز الحدّ (%(v)sم.ب).', v=max_bytes(kind) // (1024 * 1024)))
     with transaction() as c:
         c.execute(
             "INSERT INTO hotspot_assets "

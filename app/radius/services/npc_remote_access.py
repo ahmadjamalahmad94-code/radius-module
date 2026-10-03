@@ -17,6 +17,7 @@ What this module owns:
     /caution-/danger- pill before the operator hits apply.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -46,15 +47,15 @@ class AdminService:
 # configured on customer MikroTik boxes — we treat it as
 # password-auth-by-default.
 SERVICES: tuple[AdminService, ...] = (
-    AdminService("winbox",        "ويـن‌بـوكس",   8291, "tcp", "high",
-                 "بروتوكول خاص بـ MikroTik؛ مقفل افتراضياً."),
+    AdminService("winbox",        N_("ويـن‌بـوكس"),   8291, "tcp", "high",
+                 N_("بروتوكول خاص بـ MikroTik؛ مقفل افتراضياً.")),
     AdminService("ssh",            "SSH",         22,   "tcp", "medium",
-                 "كلمة سرّ MikroTik القياسية تنطبق."),
+                 N_("كلمة سرّ MikroTik القياسية تنطبق.")),
     AdminService("api",            "API",         8728, "tcp", "high",
-                 "غير مشفّر — لا ينصح إلا داخل WG."),
+                 N_("غير مشفّر — لا ينصح إلا داخل WG.")),
     AdminService("api_ssl",        "API (SSL)",   8729, "tcp", "medium"),
     AdminService("webfig_http",    "WebFig HTTP", 80,   "tcp", "high",
-                 "غير مشفّر — لا ينصح."),
+                 N_("غير مشفّر — لا ينصح.")),
     AdminService("webfig_https",   "WebFig HTTPS",443,  "tcp", "low"),
 )
 
@@ -128,15 +129,15 @@ def validate_expires_at(
         return ExpiryValidation(
             ok=False,
             reason=(
-                "حدّد وقت انتهاء للوصول، أو فعّل قائمة عناوين "
-                "مصدر مقيّدة."
+                N_("حدّد وقت انتهاء للوصول، أو فعّل قائمة عناوين "
+                "مصدر مقيّدة.")
             ),
         )
     dt = _parse_iso(str(raw))
     if dt is None:
         return ExpiryValidation(
             ok=False,
-            reason="صيغة الوقت غير صالحة (ISO-8601 مطلوب).",
+            reason=N_("صيغة الوقت غير صالحة (ISO-8601 مطلوب)."),
         )
     now_utc = (now or datetime.now(timezone.utc))
     if now_utc.tzinfo is None:
@@ -147,8 +148,7 @@ def validate_expires_at(
         return ExpiryValidation(
             ok=False,
             reason=(
-                f"الانتهاء يجب أن يكون بعد "
-                f"{MIN_EXPIRY_MINUTES} دقائق على الأقل."
+                _tr('الانتهاء يجب أن يكون بعد %(MIN_EXPIRY_MINUTES)s دقائق على الأقل.', MIN_EXPIRY_MINUTES=MIN_EXPIRY_MINUTES)
             ),
             parsed=dt,
             ttl_minutes=minutes,
@@ -157,8 +157,7 @@ def validate_expires_at(
         return ExpiryValidation(
             ok=False,
             reason=(
-                f"الانتهاء لا يمكن أن يتجاوز "
-                f"{MAX_EXPIRY_HOURS // 24} يوماً."
+                _tr('الانتهاء لا يمكن أن يتجاوز %(v)s يوماً.', v=MAX_EXPIRY_HOURS // 24)
             ),
             parsed=dt,
             ttl_minutes=minutes,
@@ -196,8 +195,8 @@ def validate_source_address_list(raw: str) -> SourceValidation:
         return SourceValidation(
             ok=False,
             reason=(
-                "اسم قائمة العناوين يجب أن يحوي أحرفاً "
-                "إنجليزية أو أرقاماً أو شرطات فقط."
+                N_("اسم قائمة العناوين يجب أن يحوي أحرفاً "
+                "إنجليزية أو أرقاماً أو شرطات فقط.")
             ),
         )
     return SourceValidation(ok=True, cleaned=cleaned)
@@ -263,7 +262,7 @@ def assess_policy(
     blockers: list[str] = []
 
     if not enabled:
-        blockers.append("يجب اختيار خدمة واحدة على الأقل لفتحها.")
+        blockers.append(N_("يجب اختيار خدمة واحدة على الأقل لفتحها."))
 
     # Stack risks from each enabled service.
     risks: list[str] = []
@@ -283,21 +282,21 @@ def assess_policy(
     # The big rule: no source allowlist AND no expiry = no go.
     if not has_source and not has_expiry:
         blockers.append(
-            "يجب تحديد قائمة عناوين مصدر، أو وقت انتهاء، "
-            "أو كليهما."
+            N_("يجب تحديد قائمة عناوين مصدر، أو وقت انتهاء، "
+            "أو كليهما.")
         )
 
     # Soft warning: SSH + plain API on a public-source policy.
     if (allow_api or allow_webfig_http) and not has_source:
         warnings.append(
-            "تفعيل API أو WebFig HTTP بدون قائمة مصدر "
-            "يفتح المنفذ للإنترنت كاملاً."
+            N_("تفعيل API أو WebFig HTTP بدون قائمة مصدر "
+            "يفتح المنفذ للإنترنت كاملاً.")
         )
 
     # Source allowlist alone is OK but flag long expiries.
     if has_source and not has_expiry:
         warnings.append(
-            "لا يوجد وقت انتهاء — لن تُحذف القاعدة تلقائياً."
+            N_("لا يوجد وقت انتهاء — لن تُحذف القاعدة تلقائياً.")
         )
 
     risk = _max_risk(*risks) if risks else RISK_LOW

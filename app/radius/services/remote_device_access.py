@@ -45,6 +45,7 @@ Cron sweep is wired into network_device_monitor.tick() —
 same worker, same minute.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -86,7 +87,7 @@ def open_session(
     proto = protocol if protocol in remote_access_sessions_repo.ALLOWED_PROTOCOLS else "http"
     internal_ip = (device.get("ip_address") or "").strip()
     if not internal_ip:
-        return False, "الجهاز يحتاج IP محفوظ قبل فتح الجلسة.", None
+        return False, N_("الجهاز يحتاج IP محفوظ قبل فتح الجلسة."), None
     # Per-device default management_port wins; protocol default
     # is the fallback so an «http on 8080» AP still works.
     int_port = (int(device.get("management_port") or 0)
@@ -110,7 +111,7 @@ def open_session(
             int(device["id"]), preferred=pinned,
         )
     except ValueError as exc:
-        return False, f"تعذّر تخصيص منفذ خارجي: {exc}", None
+        return False, _tr('تعذّر تخصيص منفذ خارجي: %(exc)s', exc=exc), None
 
     # Insert the session FIRST so we have an id to embed in the
     # router comment. If the router push fails, mark the row
@@ -153,7 +154,7 @@ def open_session(
         remote_access_sessions_repo.mark_closed(
             session_id, status="failed",
         )
-        return False, f"فشل إنشاء NAT على الراوتر: {result.error}", None
+        return False, _tr('فشل إنشاء NAT على الراوتر: %(error)s', error=result.error), None
 
     # ── 2) Start the VPS-side TCP proxy ───────────────────────
     # Listens on 0.0.0.0:ext_port and relays each connection to
@@ -236,7 +237,7 @@ def close_session(
     remote_access_sessions_repo.mark_closed(session_id, status=status)
     if not result.ok:
         # Still successful from the DB side — surface the warning.
-        return True, f"تنبيه: لم يُتحقّق من حذف NAT (الراوتر: {result.error})."
+        return True, _tr('تنبيه: لم يُتحقّق من حذف NAT (الراوتر: %(error)s).', error=result.error)
     return True, ""
 
 

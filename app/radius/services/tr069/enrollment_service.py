@@ -5,6 +5,7 @@
 الـ CWMP الفريدة (tag) فيتحوّل الجهاز إلى active.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import hashlib
 import secrets
@@ -59,7 +60,7 @@ class Tr069EnrollmentService:
         return {
             "device_id": device_id,
             "enrollment_token": token,        # يُعرَض مرّة واحدة
-            "acs_url": config.cwmp_public_url() or "<ACS_URL — اضبط HOBERADIUS_GENIEACS_CWMP_URL>",
+            "acs_url": config.cwmp_public_url() or N_("<ACS_URL — اضبط HOBERADIUS_GENIEACS_CWMP_URL>"),
             "cwmp_username": cwmp_user,
             "cwmp_password": cwmp_pass,        # يُعرَض مرّة واحدة
             "connection_request_username": cr_user,

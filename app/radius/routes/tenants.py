@@ -1,5 +1,6 @@
 """routes إدارة الـ tenants — للأدمن super_admin بشكل أساسي."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
@@ -51,7 +52,7 @@ def tenants_create():
         return render_template("radius/tenants_form.html",
             tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=True), 400
-    flash(f"تم إنشاء Tenant «{saved.name}».", "success")
+    flash(_tr('تم إنشاء Tenant «%(name)s».', name=saved.name), "success")
     return redirect(url_for("radius.tenants_list"))
 
 
@@ -74,7 +75,7 @@ def tenants_update(tenant_id: int):
         return render_template("radius/tenants_form.html",
             tenant=t, tiers=TIER_KEYS, statuses=STATUS_KEYS,
             tier_limits=TIER_LIMITS, is_new=False), 400
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     return redirect(url_for("radius.tenants_list"))
 
 

@@ -15,7 +15,7 @@
 {% block title %}{{ _("أخطاء التحكم الفوري") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
 {% block page_title %}{{ _("أخطاء التحكم الفوري") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} مهمة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s مهمة', length=items|length) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المهام #}
@@ -28,12 +28,12 @@
 
 {# ── تعريب نوع الأمر وحالته (القيمة الأصلية تبقى في title) ── #}
 {% set kind_pills = {
-  'disconnect':     ('قطع الجلسة',        'amber'),
-  'reset_password': ('تغيير كلمة المرور', 'blue')
+  'disconnect':     (_('قطع الجلسة'),        'amber'),
+  'reset_password': (_('تغيير كلمة المرور'), 'blue')
 } %}
 {% set status_pills = {
-  'failed':   ('فشل نهائي',     'red'),
-  'retrying': ('إعادة محاولة',  'amber')
+  'failed':   (_('فشل نهائي'),     'red'),
+  'retrying': (_('إعادة محاولة'),  'amber')
 } %}
 
 {# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
@@ -44,15 +44,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="coa-failures-hero">
 {% call hub.megahero(
-  "أخطاء التحكم الفوري",
-  subtitle="أوامر قطع الجلسة أو تغيير كلمة المرور التي لم تصل للراوتر — مع سبب الفشل وزر إعادة المحاولة.",
+  _('أخطاء التحكم الفوري'),
+  subtitle=_('أوامر قطع الجلسة أو تغيير كلمة المرور التي لم تصل للراوتر — مع سبب الفشل وزر إعادة المحاولة.'),
   icon="plug-circle-xmark",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المهام',  'value': items|length, 'icon': 'layer-group',  'variant': 'brand'},
-    {'label': 'فشل نهائي',      'value': _failed,      'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'إعادة محاولة',   'value': _retrying,    'icon': 'rotate',       'variant': 'amber'},
-    {'label': 'مستخدمون متأثرون','value': _users,      'icon': 'users',        'variant': 'blue'},
+    {'label': _('إجمالي المهام'),  'value': items|length, 'icon': 'layer-group',  'variant': 'brand'},
+    {'label': _('فشل نهائي'),      'value': _failed,      'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('إعادة محاولة'),   'value': _retrying,    'icon': 'rotate',       'variant': 'amber'},
+    {'label': _('مستخدمون متأثرون'),'value': _users,      'icon': 'users',        'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_coa_failures')
 ) %}
@@ -63,20 +63,20 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_coa_failures') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق نوع الأمر أو حالته، ونطاق التاريخ يعمل على وقت إنشاء المهمة. «فشل نهائي» يعني استنفاد المحاولات، و«إعادة محاولة» يعني أن النظام ما زال يحاول. زر الإعادة يُرجِع المهمة لطابور المزامنة. يُعرض حتى 300 مهمة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق نوع الأمر أو حالته، ونطاق التاريخ يعمل على وقت إنشاء المهمة. «فشل نهائي» يعني استنفاد المحاولات، و«إعادة محاولة» يعني أن النظام ما زال يحاول. زر الإعادة يُرجِع المهمة لطابور المزامنة. يُعرض حتى 300 مهمة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول المهام الفاشلة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("المهام المتعثرة", icon="table-list",
-                    meta=items|length|string + " مهمة", flush=True) %}
+{% call hub.section(_('المهام المتعثرة'), icon="table-list",
+                    meta=items|length|string + _(' مهمة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -105,13 +105,13 @@
           <td title="{{ r.kind or '' }}">
             {% set _kp = kind_pills.get(r.kind) %}
             {% if _kp %}{{ hub.pill(_kp[0], variant=_kp[1], dot=False) }}
-            {% else %}{{ hub.pill(r.kind or 'غير محدد', variant="grey", dot=False) }}{% endif %}
+            {% else %}{{ hub.pill(r.kind or _('غير محدد'), variant="grey", dot=False) }}{% endif %}
           </td>
           <td><strong><bdi>{{ r.entity_key or '—' }}</bdi></strong></td>
           <td title="{{ r.status or '' }}">
             {% set _sp = status_pills.get(r.status) %}
             {% if _sp %}{{ hub.pill(_sp[0], variant=_sp[1]) }}
-            {% else %}{{ hub.pill(r.status or 'غير محددة', variant="grey") }}{% endif %}
+            {% else %}{{ hub.pill(r.status or _('غير محددة'), variant="grey") }}{% endif %}
           </td>
           <td class="num mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
@@ -136,8 +136,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا إخفاقات حاليًا",
-   sub="كل أوامر التحكم الفوري نجحت أو ما زالت قيد التنفيذ.", icon="circle-check") }}
+{{ hub.empty(_('لا إخفاقات حاليًا'),
+   sub=_('كل أوامر التحكم الفوري نجحت أو ما زالت قيد التنفيذ.'), icon="circle-check") }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

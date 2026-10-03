@@ -17,6 +17,7 @@ kill-switch is HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). Failures are per-user
 isolated and never raise to the caller.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import os
@@ -267,8 +268,8 @@ def _audit_schedule_speed_changes(tenant_id: int, schedule: dict, results: list,
         return
     action = "bandwidth_schedule.engage" if phase == "engage" else "bandwidth_schedule.release"
     sched_name = str(schedule.get("name") or schedule.get("id") or "").strip()
-    note = (f"جدولة تلقائية «{sched_name}»" if sched_name else "جدولة تلقائية") + (
-        " — بدء النافذة" if phase == "engage" else " — نهاية النافذة")
+    note = (_tr('جدولة تلقائية «%(sched_name)s»', sched_name=sched_name) if sched_name else _tr("جدولة تلقائية")) + (
+        _tr(" — بدء النافذة") if phase == "engage" else _tr(" — نهاية النافذة"))
     # `at` is the transition instant; a moment just before it reflects the
     # OPPOSITE phase (out-of-window on engage, in-window on release), so the
     # cascade there gives the honest «previous» rate for the old→new diff.
@@ -289,7 +290,7 @@ def _audit_schedule_speed_changes(tenant_id: int, schedule: dict, results: list,
                 continue                          # no real change this transition
             # Honest method: a direct rate-CoA, or a reauth-disconnect fallback.
             _method = str(res.get("method") or "")
-            _note = note + (" (عبر إعادة اتصال)" if _method == "reauth" else "")
+            _note = note + (_tr(" (عبر إعادة اتصال)") if _method == "reauth" else "")
             record_speed_change(
                 tenant_id=int(tenant_id), actor="system:scheduler",
                 username=username, action=action,

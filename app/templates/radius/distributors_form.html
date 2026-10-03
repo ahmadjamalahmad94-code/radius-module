@@ -6,7 +6,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% set _ds_title = "إضافة موزع" if is_new else "تعديل موزع" %}
+{% set _ds_title = _('إضافة موزع') if is_new else _('تعديل موزع') %}
 {% block title %}{{ _ds_title }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-{{ 'plus' if is_new else 'pen' }}"></i>{% endblock %}
 {% block page_title %}{{ _ds_title }}{% endblock %}
@@ -38,31 +38,31 @@
 
 {{ hub.hero(
   _ds_title,
-  subtitle="نطاق وصلاحيات تشغيلية — أنشئ حساب موزع يمكن ربط حزم كروت به عند الحاجة" if is_new
-           else "تعديل بيانات الموزع وصلاحياته ونطاقه — لا يؤثر على الحزم المربوطة",
+  subtitle=_('نطاق وصلاحيات تشغيلية — أنشئ حساب موزع يمكن ربط حزم كروت به عند الحاجة') if is_new
+           else _('تعديل بيانات الموزع وصلاحياته ونطاقه — لا يؤثر على الحزم المربوطة'),
   icon="user-plus" if is_new else "user-pen",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.distributors_list') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("الرجوع للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="ds-form">
-      <i class="fa-solid fa-floppy-disk"></i> '|safe + ("حفظ الموزع"|safe if is_new else "حفظ التعديلات"|safe) + '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe + (_('حفظ الموزع')|safe if is_new else _('حفظ التعديلات')|safe) + '
     </button>
   '|safe
 ) }}
 
 {% set help_aside %}
 {% call hub.helppanel(
-     "دليل بيانات الموزع",
-     intro="الموزع حساب تشغيلي يمكن ربط حزم كروت به ومتابعة جانبه المالي وصلاحياته.",
+     _('دليل بيانات الموزع'),
+     intro=_('الموزع حساب تشغيلي يمكن ربط حزم كروت به ومتابعة جانبه المالي وصلاحياته.'),
      items=[
-       {"icon": "id-card", "text": "اسم الدخول حقل إلزامي ويستخدم داخليًا للتتبع والربط."},
-       {"icon": "wallet", "text": "القيم المالية مرجعية للمتابعة وليست نظام فوترة كامل."},
-       {"icon": "shield-halved", "text": "الصلاحيات تُختار من القائمة بدل كتابة رموز تقنية."},
-       {"icon": "user-shield", "text": "نطاق البيانات الحالي: الحزم المعيّنة فقط — وسّعه من صفحة تفاصيل الموزع."}
+       {"icon": "id-card", "text": _('اسم الدخول حقل إلزامي ويستخدم داخليًا للتتبع والربط.')},
+       {"icon": "wallet", "text": _('القيم المالية مرجعية للمتابعة وليست نظام فوترة كامل.')},
+       {"icon": "shield-halved", "text": _('الصلاحيات تُختار من القائمة بدل كتابة رموز تقنية.')},
+       {"icon": "user-shield", "text": _('نطاق البيانات الحالي: الحزم المعيّنة فقط — وسّعه من صفحة تفاصيل الموزع.')}
      ],
      icon="circle-question",
-     note="تعديل بيانات الموزع لا يؤثر على الحزم المربوطة به مسبقًا."
+     note=_('تعديل بيانات الموزع لا يؤثر على الحزم المربوطة به مسبقًا.')
    ) %}{% endcall %}
 {% endset %}
 
@@ -70,7 +70,7 @@
 <form id="ds-form" method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">{% if not can_submit(('radius.distributors_create' if is_new else 'radius.distributors_update')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. Identity ─────────────────────── #}
-  {% call hub.section("بيانات الموزع", icon="id-card") %}
+  {% call hub.section(_('بيانات الموزع'), icon="id-card") %}
     <div class="ds-grid">
       <div class="ds-field">
         <label>{{ _('اسم الدخول') }} <span class="req">*</span></label>
@@ -133,7 +133,7 @@
   {% endcall %}
 
   {# ── 2. Finance ─────────────────────── #}
-  {% call hub.section("الجانب المالي", icon="wallet") %}
+  {% call hub.section(_('الجانب المالي'), icon="wallet") %}
     <div class="ds-grid">
       <div class="ds-field">
         <label>{{ _('حد الائتمان') }}</label>
@@ -171,7 +171,7 @@
   {% endcall %}
 
   {# ── 3. Permissions + scope (permission matrix → checkboxes) ───── #}
-  {% call hub.section("الصلاحيات ونطاق البيانات", icon="shield-halved") %}
+  {% call hub.section(_('الصلاحيات ونطاق البيانات'), icon="shield-halved") %}
     <div class="ds-grid">
       <div class="ds-field full">
         <label>{{ _('الصلاحيات') }}</label>
@@ -240,7 +240,7 @@
   {% endcall %}
 
   {# ── 4. Notes ─────────────────────── #}
-  {% call hub.section("ملاحظات", icon="note-sticky") %}
+  {% call hub.section(_('ملاحظات'), icon="note-sticky") %}
     <div class="ds-grid">
       <div class="ds-field full">
         <label>{{ _('ملاحظات داخلية') }}</label>
@@ -252,7 +252,7 @@
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     {% if can_submit('radius.distributors_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ الموزع" if is_new else "حفظ التعديلات" }}
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الموزع') if is_new else _('حفظ التعديلات') }}
     </button>
   </div>
 {% if not can_submit(('radius.distributors_create' if is_new else 'radius.distributors_update')) %}</fieldset>{% endif %}</form>

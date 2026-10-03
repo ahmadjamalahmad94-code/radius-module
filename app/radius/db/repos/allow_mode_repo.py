@@ -11,6 +11,7 @@
 المسارات الساخنة (auth) تُلتقط في طبقة الخدمة، لا هنا.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Optional
 
@@ -84,11 +85,11 @@ def upsert_policy(*, tenant_id: int, scope_type: str, scope_id: int,
                   by: int = 0) -> dict[str, Any]:
     """يُنشئ أو يُحدّث سياسة. يرفع ValueError لمدخلات غير صالحة."""
     if scope_type not in VALID_SCOPES:
-        raise ValueError(f"scope_type غير صالح: {scope_type}")
+        raise ValueError(_tr('scope_type غير صالح: %(scope_type)s', scope_type=scope_type))
     if mode not in VALID_MODES:
-        raise ValueError(f"mode غير صالح: {mode}")
+        raise ValueError(_tr('mode غير صالح: %(mode)s', mode=mode))
     if scope_id is None or int(scope_id) <= 0:
-        raise ValueError("scope_id مطلوب")
+        raise ValueError(_tr("scope_id مطلوب"))
     now = now_iso()
     tid = int(tenant_id)
     sid = int(scope_id)

@@ -37,6 +37,7 @@ This module is pure (string in → string out); the route layer gathers the
 params from nas_devices + radcheck/radreply + settings.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import ipaddress
 import re
@@ -103,11 +104,11 @@ class OnboardingParams:
         for entry in self.walled_garden:
             _safe_quoted(entry, field="walled_garden")
         if not self.tunnel_user.startswith("rtr-"):
-            raise OnboardingScriptError("tunnel_user يجب أن يبدأ بـrtr-")
+            raise OnboardingScriptError(N_("tunnel_user يجب أن يبدأ بـrtr-"))
         if not self.tunnel_password or len(self.tunnel_password) < 12:
-            raise OnboardingScriptError("كلمة مرور النفق ضعيفة/مفقودة")
+            raise OnboardingScriptError(N_("كلمة مرور النفق ضعيفة/مفقودة"))
         if not self.radius_secret or len(self.radius_secret) < 8:
-            raise OnboardingScriptError("سرّ RADIUS ضعيف/مفقود")
+            raise OnboardingScriptError(N_("سرّ RADIUS ضعيف/مفقود"))
 
 
 # ─── small builders ───────────────────────────────────────────────────────
@@ -218,9 +219,9 @@ def _section_tunnel(p: OnboardingParams) -> str:
             f'add-default-route=no comment="hr: SSTP mgmt to HobeRadius"',
             f'/interface sstp-client enable [find name="{iface}"]',
         ])
-        sstp_note = ("# RouterOS 6 legacy: أمر SSTP مبسّط (بلا "
+        sstp_note = (N_("# RouterOS 6 legacy: أمر SSTP مبسّط (بلا "
                      "verify-server-address-from-certificate / port / "
-                     "keepalive-timeout — يرفضها v6). | v6-compatible SSTP add.")
+                     "keepalive-timeout — يرفضها v6). | v6-compatible SSTP add."))
     else:
         # أسطرٌ قصيرةٌ للّصق (كان سطرًا واحدًا بـ325 حرفًا). يُنشأ **معطّلًا**
         # ثمّ تُضبط الخصائصُ ثمّ يُفعَّل: فـ
@@ -237,25 +238,25 @@ def _section_tunnel(p: OnboardingParams) -> str:
             f'keepalive-timeout=30 comment="hr: SSTP mgmt to HobeRadius"',
             f'/interface sstp-client enable [find name="{iface}"]',
         ])
-        sstp_note = ("# RouterOS 7: الأمر الكامل (verify-server-address-from-"
-                     "certificate=no إلزاميّ كيلا يرفّ النفق). | v7 full SSTP add.")
+        sstp_note = (N_("# RouterOS 7: الأمر الكامل (verify-server-address-from-"
+                     "certificate=no إلزاميّ كيلا يرفّ النفق). | v7 full SSTP add."))
 
     return "\n".join([
-        _hdr("١) نفق الإدارة SSTP — المسار الذي نُدير منه الراوتر",
+        _hdr(N_("١) نفق الإدارة SSTP — المسار الذي نُدير منه الراوتر"),
              "1) SSTP management tunnel — the path we manage the router over"),
-        "# Profile=default-encryption عمدًا (قرار المالك): تفعيل تشفير PPP/MPPE على",
-        "# مستوى البروفايل للتوافق/الأمان مع سلوك SSTP في مايكروتيك — قرار صريح؛ لا",
-        "# تُرجِعها إلى default. (سابقًا كان default تفاديًا لحادثة ccr4/ccr5؛ المالك",
-        "# اختار default-encryption صراحةً — لا تعكس القرار بلا موافقته.)",
+        N_("# Profile=default-encryption عمدًا (قرار المالك): تفعيل تشفير PPP/MPPE على"),
+        N_("# مستوى البروفايل للتوافق/الأمان مع سلوك SSTP في مايكروتيك — قرار صريح؛ لا"),
+        N_("# تُرجِعها إلى default. (سابقًا كان default تفاديًا لحادثة ccr4/ccr5؛ المالك"),
+        N_("# اختار default-encryption صراحةً — لا تعكس القرار بلا موافقته.)"),
         "# Profile=default-encryption intentionally (owner decision): PPP/MPPE",
         "# encryption ON at profile level — do NOT revert to default without the owner.",
-        "# verify-server-certificate=no: الشهادة قد تكون موقّعة ذاتيًّا (لا CA على الراوتر).",
-        "# verify-server-address-from-certificate=no: نتّصل بالـIP وشهادتنا CN=اسم",
-        "# لا IP، فلو بقي =yes (الافتراضي) تفشل إعادة التحقّق دوريًّا ويرفّ النفق.",
-        "# تنظيف سلطويّ قبل الإنشاء — مقصور على ما نملكه (لا نلمس VPN العميل):",
-        "#  • نُعطّل أيّ عميل SSTP آخر يتّصل بخادمنا نفسه (كيلا يتنازع عميلان على",
-        "#    حساب rtr-* نفسه). مقصور على connect-to=خادمنا، مع استثناء اسمنا المُدار.",
-        "#  • نُزيل عميل PPTP مُدارًا باسمنا متبقّيًا (لو هُيّئ الراوتر سابقًا عبر PPTP).",
+        N_("# verify-server-certificate=no: الشهادة قد تكون موقّعة ذاتيًّا (لا CA على الراوتر)."),
+        N_("# verify-server-address-from-certificate=no: نتّصل بالـIP وشهادتنا CN=اسم"),
+        N_("# لا IP، فلو بقي =yes (الافتراضي) تفشل إعادة التحقّق دوريًّا ويرفّ النفق."),
+        N_("# تنظيف سلطويّ قبل الإنشاء — مقصور على ما نملكه (لا نلمس VPN العميل):"),
+        N_("#  • نُعطّل أيّ عميل SSTP آخر يتّصل بخادمنا نفسه (كيلا يتنازع عميلان على"),
+        N_("#    حساب rtr-* نفسه). مقصور على connect-to=خادمنا، مع استثناء اسمنا المُدار."),
+        N_("#  • نُزيل عميل PPTP مُدارًا باسمنا متبقّيًا (لو هُيّئ الراوتر سابقًا عبر PPTP)."),
         "# Authoritative cleanup BEFORE we create ours — scoped to what WE own",
         "# (never the customer's unrelated VPNs):",
         "#  • disable any OTHER SSTP client dialing OUR server (so two clients can't",
@@ -272,9 +273,9 @@ def _section_tunnel(p: OnboardingParams) -> str:
         f'/interface sstp-client remove [find name="{iface}"]',
         sstp_note,
         sstp_add,
-        "# مسار صريح إلى خادم RADIUS عبر النفق (لا يعتمد على المسار الافتراضي).",
-        "# يُضاف فقط بعد وجود الواجهة hr-sstp-mgmt (بوّابته هي هذه الواجهة) —",
-        "# فلو فشل إنشاء العميل (كأمر v7 على راوتر v6) لا نُنشئ مسارًا يتيمًا.",
+        N_("# مسار صريح إلى خادم RADIUS عبر النفق (لا يعتمد على المسار الافتراضي)."),
+        N_("# يُضاف فقط بعد وجود الواجهة hr-sstp-mgmt (بوّابته هي هذه الواجهة) —"),
+        N_("# فلو فشل إنشاء العميل (كأمر v7 على راوتر v6) لا نُنشئ مسارًا يتيمًا."),
         "# Explicit route to our RADIUS over the tunnel (never via the default),",
         "# added ONLY after hr-sstp-mgmt exists (its gateway IS that interface).",
         (f':if ([:len [/interface sstp-client find name="{iface}"]] > 0) do={{ '
@@ -289,36 +290,36 @@ def _section_radius(p: OnboardingParams) -> str:
     radius_ip = _q(p.radius_ip, field="radius_ip")
     secret = _q(p.radius_secret, field="radius_secret")
     return "\n".join([
-        _hdr("٢) RADIUS — مصادقة الهوتسبوت و PPPoE والمحاسبة و CoA الوارد",
+        _hdr(N_("٢) RADIUS — مصادقة الهوتسبوت و PPPoE والمحاسبة و CoA الوارد"),
              "2) RADIUS — hotspot + PPPoE auth, accounting, and incoming CoA"),
-        "# السرّ فريد لهذا الراوتر (ليس ثابتًا مشتركًا). يُصادَق عبر النفق فقط.",
+        N_("# السرّ فريد لهذا الراوتر (ليس ثابتًا مشتركًا). يُصادَق عبر النفق فقط."),
         "# The secret is UNIQUE to this router (not a shared constant).",
-        "# سلطويّ: نُعطّل أيّ RADIUS موجود سلفًا (متبقٍّ أو لمنافس) كي لا يَعترض",
-        "# المصادقة — يستخدم الراوتر RADIUS الخاص بنا فقط. تعطيل (قابل للعكس) لا حذف.",
+        N_("# سلطويّ: نُعطّل أيّ RADIUS موجود سلفًا (متبقٍّ أو لمنافس) كي لا يَعترض"),
+        N_("# المصادقة — يستخدم الراوتر RADIUS الخاص بنا فقط. تعطيل (قابل للعكس) لا حذف."),
         "# Authoritative: DISABLE any RADIUS already on the router (leftover or a",
         "# competitor's) so it can't intercept auth — the router uses ONLY ours.",
         "# Guarded :foreach → never errors when there is none. Disable, not delete.",
         ":foreach r in=[/radius find] do={ /radius disable $r }",
-        "# ثم نزع مدخلنا الموسوم وإعادة إضافته (idempotent: إعادة اللصق لا تُكرّر).",
+        N_("# ثم نزع مدخلنا الموسوم وإعادة إضافته (idempotent: إعادة اللصق لا تُكرّر)."),
         "# Then remove our tagged entry and re-add it (idempotent; re-paste = no dup).",
         f'/radius remove [find comment="hr: HobeRadius RADIUS"]',
         f'/radius add address={radius_ip} secret="{secret}" '
         f'service=hotspot,ppp,login src-address={p.tunnel_ip} '
         f'timeout=3000ms comment="hr: HobeRadius RADIUS"',
         "",
-        "# MT96 — جردٌ قبل القلب. السطران التاليان يُحوّلان مصادقة الهوتسبوت",
-        "# وPPPoE إلى RADIUS. المستخدمون المحلّيّون في RouterOS يُفحَصون أوّلًا",
-        "# ثمّ يُسأل RADIUS، فلا يُفترَض أن ينقطع أحد — لكنّ «لا يُفترَض» ليست",
-        "# ضمانة على راوترٍ يخدم زبائن. لذلك نطبع ما هو قائمٌ قبل أن نمسّه:",
-        "# إن رأيت أعدادًا غير صفريّة فأنت تُعدّل راوترًا عاملًا لا جديدًا —",
-        "# راقب زبائنك بعد اللصق، وإن انقطعوا فأعِد: use-radius=no.",
-        ':put ("[hr] مستخدمو الهوتسبوت المحلّيّون: " . [:len [/ip hotspot user find]] . " | خوادم هوتسبوت: " . [:len [/ip hotspot find]] . " | أسرار PPP: " . [:len [/ppp secret find]])',
-        ':put ("[hr] use-radius للهوتسبوت قبل التغيير: " . [/ip hotspot profile get [find default=yes] use-radius])',
+        N_("# MT96 — جردٌ قبل القلب. السطران التاليان يُحوّلان مصادقة الهوتسبوت"),
+        N_("# وPPPoE إلى RADIUS. المستخدمون المحلّيّون في RouterOS يُفحَصون أوّلًا"),
+        N_("# ثمّ يُسأل RADIUS، فلا يُفترَض أن ينقطع أحد — لكنّ «لا يُفترَض» ليست"),
+        N_("# ضمانة على راوترٍ يخدم زبائن. لذلك نطبع ما هو قائمٌ قبل أن نمسّه:"),
+        N_("# إن رأيت أعدادًا غير صفريّة فأنت تُعدّل راوترًا عاملًا لا جديدًا —"),
+        N_("# راقب زبائنك بعد اللصق، وإن انقطعوا فأعِد: use-radius=no."),
+        N_(':put ("[hr] مستخدمو الهوتسبوت المحلّيّون: " . [:len [/ip hotspot user find]] . " | خوادم هوتسبوت: " . [:len [/ip hotspot find]] . " | أسرار PPP: " . [:len [/ppp secret find]])'),
+        N_(':put ("[hr] use-radius للهوتسبوت قبل التغيير: " . [/ip hotspot profile get [find default=yes] use-radius])'),
         "",
-        "# تفعيل استخدام RADIUS للهوتسبوت و PPPoE.",
+        N_("# تفعيل استخدام RADIUS للهوتسبوت و PPPoE."),
         "/ip hotspot profile set [find default=yes] use-radius=yes",
         "/ppp aaa set use-radius=yes accounting=yes interim-update=5m",
-        "# CoA/Disconnect الوارد على 3799 — إعداد عامّ (set سلطويّ) يَقبل فقط من خادمنا.",
+        N_("# CoA/Disconnect الوارد على 3799 — إعداد عامّ (set سلطويّ) يَقبل فقط من خادمنا."),
         "# Incoming CoA/Disconnect on 3799 — a global authoritative `set`; only our",
         "# server is accepted (enforced by the firewall input rule below).",
         f"/radius incoming set accept=yes port={int(p.coa_port)}",
@@ -344,7 +345,7 @@ def _section_pools(p: OnboardingParams) -> str:
     except (ValueError, OnboardingScriptError) as exc:
         raise OnboardingScriptError(f"مجمّع غير صالح: {exc}") from exc
     return "\n".join([
-        _hdr("٣) مجمّعات العناوين — الهوتسبوت و PPPoE (يُسنِدها RADIUS)",
+        _hdr(N_("٣) مجمّعات العناوين — الهوتسبوت و PPPoE (يُسنِدها RADIUS)"),
              "3) Address pools — hotspot + PPPoE (assigned by RADIUS)"),
         f'/ip pool remove [find name="hr-hotspot-pool"]',
         f'/ip pool add name="hr-hotspot-pool" ranges={hs} '
@@ -361,9 +362,9 @@ def _section_api_user(p: OnboardingParams) -> str:
     api_pw = _q(p.api_password, field="api_password")
     radius_ip = _q(p.radius_ip, field="radius_ip")
     return "\n".join([
-        _hdr("٤) مستخدم API مقصور على مصدر النفق وحده",
+        _hdr(N_("٤) مستخدم API مقصور على مصدر النفق وحده"),
              "4) API user locked to the tunnel source address only"),
-        "# يُسمح بهذا المستخدم فقط من عنوان خادمنا داخل النفق — لا وصول من الإنترنت.",
+        N_("# يُسمح بهذا المستخدم فقط من عنوان خادمنا داخل النفق — لا وصول من الإنترنت."),
         "# This user is allowed ONLY from our server's tunnel IP — never the internet.",
         f'/user remove [find name="{api_user}"]',
         f'/user add name="{api_user}" password="{api_pw}" group=full '
@@ -379,16 +380,16 @@ def _section_firewall(p: OnboardingParams) -> str:
     radius_ip = _q(p.radius_ip, field="radius_ip")
 
     lines: List[str] = [
-        _hdr("٥) الجدار الناريّ — الترتيب هو الأهمّ (مطابقة أوّل-تطابق من الأعلى)",
+        _hdr(N_("٥) الجدار الناريّ — الترتيب هو الأهمّ (مطابقة أوّل-تطابق من الأعلى)"),
              "5) Firewall — ORDER IS EVERYTHING (first-match, top-down)"),
-        "# المبدأ: مسار الإدارة (نفق SSTP + RADIUS) لا يُحجب أبدًا. قواعد السماح",
-        "# أوّلًا، ثم معالجة الانتهاء/الحدّ، ثم الافتراضات الآمنة. نُعيد بناء كتلتنا",
-        "# المُدارة (hr-fw:) ثم نرفعها إلى رأس كل سلسلة كي لا تُعاد ترتيبًا أو تُكرَّر.",
+        N_("# المبدأ: مسار الإدارة (نفق SSTP + RADIUS) لا يُحجب أبدًا. قواعد السماح"),
+        N_("# أوّلًا، ثم معالجة الانتهاء/الحدّ، ثم الافتراضات الآمنة. نُعيد بناء كتلتنا"),
+        N_("# المُدارة (hr-fw:) ثم نرفعها إلى رأس كل سلسلة كي لا تُعاد ترتيبًا أو تُكرَّر."),
         "# Principle: the mgmt path (SSTP + RADIUS) is NEVER blocked. Allow rules",
         "# first, then expiry/limit handling, then safe defaults. We rebuild our",
         "# managed (hr-fw:) block and lift it to the top of each chain.",
         "",
-        "# ─ قوائم العناوين | address-lists ─",
+        N_("# ─ قوائم العناوين | address-lists ─"),
         f'/ip firewall address-list remove [find list="{WALLED_GARDEN_LIST}" comment="hr-wg"]',
     ]
     # Walled-garden allow-list: our domains/IPs + always the RADIUS + SSTP
@@ -404,14 +405,14 @@ def _section_firewall(p: OnboardingParams) -> str:
             f'/ip firewall address-list add list="{WALLED_GARDEN_LIST}" '
             f'address={e} comment="hr-wg"')
     lines += [
-        "# قائمة المنتهين/المحدودين (hr-pool-expired) لا تُبذَر هنا عمدًا — يملؤها",
-        "# RADIUS ديناميكيًّا عبر Mikrotik-Address-List لكل مشترك منتهٍ. القاعدة",
-        "# أدناه تشير إليها بأمان حتى لو كانت فارغة (لا حجب لأحد قبل أن يضعه RADIUS).",
+        N_("# قائمة المنتهين/المحدودين (hr-pool-expired) لا تُبذَر هنا عمدًا — يملؤها"),
+        N_("# RADIUS ديناميكيًّا عبر Mikrotik-Address-List لكل مشترك منتهٍ. القاعدة"),
+        N_("# أدناه تشير إليها بأمان حتى لو كانت فارغة (لا حجب لأحد قبل أن يضعه RADIUS)."),
         "# the expired/limited pool is NOT seeded here — RADIUS fills it per expired",
         "# subscriber (Mikrotik-Address-List). The rule references it safely even",
         "# when empty (nobody is blocked until RADIUS lists them).",
         "",
-        "# ─ نزع كتلتنا المُدارة (إعادة اللصق لا تُكرّر) | drop our managed rules ─",
+        N_("# ─ نزع كتلتنا المُدارة (إعادة اللصق لا تُكرّر) | drop our managed rules ─"),
         f'/ip firewall filter remove [find comment~"^{FW_TAG}"]',
         "",
     ]
@@ -487,7 +488,7 @@ def _section_firewall(p: OnboardingParams) -> str:
 
     lines += [
         "",
-        "# ─ رفع كتلتنا إلى رأس كل سلسلة بالترتيب (الأولويّة المطلقة لمسار الإدارة) ─",
+        N_("# ─ رفع كتلتنا إلى رأس كل سلسلة بالترتيب (الأولويّة المطلقة لمسار الإدارة) ─"),
         "# ─ lift our block to the top of each chain, preserving order ─",
         # ONE console line: the :local MUST share the line with the :foreach that
         # uses $hrPos. RouterOS scopes a :local to its own console command, so a
@@ -515,20 +516,20 @@ def _section_block_redirect(p: OnboardingParams) -> str:
     host = _url_host(p.block_page_url)
     is_ipv4 = bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host))
     lines = [
-        _hdr("٦) إعادة توجيه المنتهين لصفحة «انتهى اشتراكك» (HTTP فقط)",
+        _hdr(N_("٦) إعادة توجيه المنتهين لصفحة «انتهى اشتراكك» (HTTP فقط)"),
              "6) Redirect expired users to the «subscription expired» page (HTTP only)"),
         f"# صفحة التجديد المُهيّأة | configured renew page: {url}",
         f'/ip firewall nat remove [find comment~"^{NAT_TAG}"]',
     ]
     if not p.block_page_url:
-        lines.append("# (لم تُضبط صفحة | no block page set — no redirect rule)")
+        lines.append(N_("# (لم تُضبط صفحة | no block page set — no redirect rule)"))
     elif not is_ipv4:
         # dst-nat to-addresses must be an IP. With a domain we cannot NAT, but
         # the host is already in the walled garden so the user can still open it.
         lines += [
             f"# مضيف الصفحة '{host}' ليس IPv4 — تعذّر dst-nat (يحتاج IP). الصفحة",
-            "# تبقى في الحديقة المسوّرة فيمكن للمشترك فتحها يدويًّا. اضبط الرابط",
-            "# بعنوان IP للحصول على إعادة التوجيه التلقائيّة.",
+            N_("# تبقى في الحديقة المسوّرة فيمكن للمشترك فتحها يدويًّا. اضبط الرابط"),
+            N_("# بعنوان IP للحصول على إعادة التوجيه التلقائيّة."),
             f"# block-page host '{host}' is not an IPv4 — dst-nat skipped (needs an",
             "# IP). The page stays walled-garden-reachable; set the URL to an IP",
             "# for automatic redirect.",
@@ -536,7 +537,7 @@ def _section_block_redirect(p: OnboardingParams) -> str:
     else:
         hq = _q(host, field="block_page_url")
         lines += [
-            "# إعادة توجيه HTTP(80) للمنتهين إلى صفحة التجديد. مُفعّل.",
+            N_("# إعادة توجيه HTTP(80) للمنتهين إلى صفحة التجديد. مُفعّل."),
             "# redirect expired HTTP(80) to the renew page. ENABLED.",
             f'/ip firewall nat add chain=dstnat protocol=tcp dst-port=80 '
             f'src-address-list="{EXPIRED_LIST}" action=dst-nat '
@@ -561,10 +562,10 @@ def _section_service_lockdown(p: OnboardingParams) -> str:
     # script); the WG subnet is appended so a re-paste never removes the
     # WireGuard management path. Identical block across every generator.
     return "\n".join([
-        _hdr("٧) تقليص الخدمات — أغلق ما لا نحتاجه، وقيّد الباقي بمصدر النفق",
+        _hdr(N_("٧) تقليص الخدمات — أغلق ما لا نحتاجه، وقيّد الباقي بمصدر النفق"),
              "7) Service lockdown — disable the unneeded, bind the rest to the tunnel"),
         "/ip service disable telnet,ftp,ssh,api-ssl",
-        "# الخدمات المُبقاة تُقصَر على بوّابتَي الإدارة: نفق SSTP وشبكة WireGuard.",
+        N_("# الخدمات المُبقاة تُقصَر على بوّابتَي الإدارة: نفق SSTP وشبكة WireGuard."),
         "# kept services bind to BOTH mgmt gateways: the SSTP tunnel + the WG subnet.",
         *mgmt_acl.service_lockdown_lines(sstp_gateway_ip=radius_ip),
     ])
@@ -628,23 +629,23 @@ def _section_self_heal(p: OnboardingParams) -> str:
         " :delay 3s; " + sc + " enable [" + sc + " find name=" + iface + "]}}}"
     )
     return "\n".join([
-        _hdr("٨) الإصلاح الذاتيّ — الشكل المُثبَت ميدانيًّا (run-by-name) الذي اعتمده المالك",
+        _hdr(N_("٨) الإصلاح الذاتيّ — الشكل المُثبَت ميدانيًّا (run-by-name) الذي اعتمده المالك"),
              "8) Self-heal — the field-verified run-by-name form the owner adopted"),
-        "# المنطق في /system script (كتلة {} حرفيّة: لا اقتباس متداخل، لا $، لا get)،",
-        "# والجدول/الـnetwatch ينادي الاسم فقط — لا هشاشة في أيّ قيمة مُخزَّنة تُعاد قراءتها.",
+        N_("# المنطق في /system script (كتلة {} حرفيّة: لا اقتباس متداخل، لا $، لا get)،"),
+        N_("# والجدول/الـnetwatch ينادي الاسم فقط — لا هشاشة في أيّ قيمة مُخزَّنة تُعاد قراءتها."),
         "# Logic lives in /system script (literal {} block: no nested quotes, no $,",
         "# no get); the scheduler/netwatch just run it by name — zero fragility in",
         "# any stored+reparsed value. Authoritative cleanup removes old objects first.",
         f'/system scheduler remove [find name={WATCHDOG_SCHED}]',
         f'/system script remove [find name={WATCHDOG_FN}]',
         f'/system script remove [find name={REHEAL_FN}]',
-        "# الجدول: يُفعّل العميل فقط إن كان معطّلًا — لا يَلمس واجهة شغّالة إطلاقًا.",
+        N_("# الجدول: يُفعّل العميل فقط إن كان معطّلًا — لا يَلمس واجهة شغّالة إطلاقًا."),
         "# Watchdog: enable the client only if disabled — never touches a running one.",
         f'/system script add name={WATCHDOG_FN} source={wd_src}',
         f'/system scheduler add name={WATCHDOG_SCHED} interval=2m start-time=startup '
         f'on-event="/system script run {WATCHDOG_FN}" '
         f'comment="hr: re-enable mgmt tunnel if disabled"',
-        "# netwatch: مهلة 5s (بليب لا يعني سقوطًا)؛ يُفعّل المعطّل أو يَرتدّ العالق فقط.",
+        N_("# netwatch: مهلة 5s (بليب لا يعني سقوطًا)؛ يُفعّل المعطّل أو يَرتدّ العالق فقط."),
         "# netwatch: 5s timeout (a blip is not a down); enable-if-disabled or",
         "# bounce-only-if-stuck (running=no). A running tunnel is never touched.",
         f'/system script add name={REHEAL_FN} source={rh_src}',
@@ -659,11 +660,11 @@ def _section_backup(p: OnboardingParams) -> str:
     """Auto-backup at the very end (binary + readable export)."""
     name = ascii_comment(f"hr-onboard-{p.router_id}", fallback="hr-onboard")
     return "\n".join([
-        _hdr("٩) نسخة احتياطيّة تلقائيّة في النهاية",
+        _hdr(N_("٩) نسخة احتياطيّة تلقائيّة في النهاية"),
              "9) Automatic backup at the end"),
         f'/system backup save name="{name}"',
         f'/export file="{name}"',
-        "# تمّت التهيئة — راجع لوحة HobeRadius للتأكّد من ظهور الراوتر «متصل».",
+        N_("# تمّت التهيئة — راجع لوحة HobeRadius للتأكّد من ظهور الراوتر «متصل»."),
         "# Onboarding done — check the HobeRadius panel for this router as «online».",
     ])
 
@@ -740,14 +741,14 @@ def split_sections(script: str) -> "List[dict]":
         i += 1
 
     if not starts:
-        return [{"title": "السكربت", "title_en": "Script",
+        return [{"title": N_("السكربت"), "title_en": "Script",
                  "start_line": 1, "body": script.rstrip("\n")}]
 
     sections: "List[dict]" = []
     first = starts[0][0]
     if first > 0:                       # leading banner block
         sections.append({
-            "title": "الترويسة", "title_en": "Banner", "start_line": 1,
+            "title": N_("الترويسة"), "title_en": "Banner", "start_line": 1,
             "body": "\n".join(lines[0:first]).rstrip("\n"),
         })
     for idx, (li, t_ar, t_en) in enumerate(starts):
@@ -778,39 +779,39 @@ def split_sections(script: str) -> "List[dict]":
 
 _SECTION_EXPLAIN = {
     "الترويسة":
-        "تعليقات افتتاحية تعرّف بالسكربت والراوتر — توثيق فقط، لا تُنفَّذ أوامر هنا.",
+        N_("تعليقات افتتاحية تعرّف بالسكربت والراوتر — توثيق فقط، لا تُنفَّذ أوامر هنا."),
     "١":
-        "ينشئ عميل نفق الإدارة (SSTP) الذي يصل الراوتر بخادم اللوحة عبر قناة "
+        N_("ينشئ عميل نفق الإدارة (SSTP) الذي يصل الراوتر بخادم اللوحة عبر قناة "
         "مشفّرة — هذا هو المسار الذي تُدار منه الراوتر عن بُعد. يضبط "
         "<code>verify-server-certificate=no</code> (الشهادة موقّعة ذاتيًّا) "
-        "و<code>keep-alive</code> ليبقى النفق حيًّا.",
+        "و<code>keep-alive</code> ليبقى النفق حيًّا."),
     "٢":
-        "يضيف خادم RADIUS لمصادقة مستخدمي الهوتسبوت وPPPoE، وتسجيل المحاسبة، "
+        N_("يضيف خادم RADIUS لمصادقة مستخدمي الهوتسبوت وPPPoE، وتسجيل المحاسبة، "
         "وقبول أوامر CoA الواردة (قطع/تعديل الجلسة لحظيًّا). يعطّل أيّ إعداد "
-        "RADIUS قديم متضارب أولًا حتى لا تتضاعف المصادر.",
+        "RADIUS قديم متضارب أولًا حتى لا تتضاعف المصادر."),
     "٣":
-        "يعرّف مجمّعات العناوين (نطاقات IP) التي يوزّعها الهوتسبوت وPPPoE — "
-        "RADIUS هو الذي يُسند كلّ مستخدم إلى المجمّع المناسب عند الدخول.",
+        N_("يعرّف مجمّعات العناوين (نطاقات IP) التي يوزّعها الهوتسبوت وPPPoE — "
+        "RADIUS هو الذي يُسند كلّ مستخدم إلى المجمّع المناسب عند الدخول."),
     "٤":
-        "ينشئ حساب API مقصورًا على مصدر النفق وحده؛ اللوحة تستخدمه لقراءة الحالة "
-        "وإدارة الراوتر، ولا يُقبَل هذا الحساب من أيّ عنوان آخر.",
+        N_("ينشئ حساب API مقصورًا على مصدر النفق وحده؛ اللوحة تستخدمه لقراءة الحالة "
+        "وإدارة الراوتر، ولا يُقبَل هذا الحساب من أيّ عنوان آخر."),
     "٥":
-        "قلب السكربت: قواعد الجدار الناريّ مرتّبة بعناية (السماح للجلسات القائمة "
+        N_("قلب السكربت: قواعد الجدار الناريّ مرتّبة بعناية (السماح للجلسات القائمة "
         "+ واجهة الإدارة + RADIUS + DNS + الحديقة المسوّرة) <b>قبل</b> أيّ رفض أو "
-        "توجيه. الترتيب «أوّل تطابق من الأعلى» يضمن ألّا يُحجَب مسار الإدارة أبدًا.",
+        "توجيه. الترتيب «أوّل تطابق من الأعلى» يضمن ألّا يُحجَب مسار الإدارة أبدًا."),
     "٦":
-        "يعيد توجيه مستخدمي الاشتراكات المنتهية إلى صفحة «انتهى اشتراكك» "
-        "(HTTP فقط) بدل قطعهم بصمت — تجربة أوضح للمشترك.",
+        N_("يعيد توجيه مستخدمي الاشتراكات المنتهية إلى صفحة «انتهى اشتراكك» "
+        "(HTTP فقط) بدل قطعهم بصمت — تجربة أوضح للمشترك."),
     "٧":
-        "يقلّص الخدمات: يُغلق خدمات RouterOS غير المستخدمة ويقيّد الباقي على "
-        "مصدر النفق — تقليل سطح الهجوم على الراوتر.",
+        N_("يقلّص الخدمات: يُغلق خدمات RouterOS غير المستخدمة ويقيّد الباقي على "
+        "مصدر النفق — تقليل سطح الهجوم على الراوتر."),
     "٨":
-        "الإصلاح الذاتيّ: يثبّت السكربت/الجدول الذي يعيد تفعيل نفق الإدارة "
+        N_("الإصلاح الذاتيّ: يثبّت السكربت/الجدول الذي يعيد تفعيل نفق الإدارة "
         "تلقائيًّا إن سقط (نمط run-by-name المُثبَت ميدانيًّا) فيبقى الراوتر قابلًا "
-        "للإدارة دون تدخّل يدويّ.",
+        "للإدارة دون تدخّل يدويّ."),
     "٩":
-        "يأخذ نسخة احتياطيّة كاملة من إعداد الراوتر في نهاية التنفيذ — نقطة رجوع "
-        "آمنة بعد التهيئة.",
+        N_("يأخذ نسخة احتياطيّة كاملة من إعداد الراوتر في نهاية التنفيذ — نقطة رجوع "
+        "آمنة بعد التهيئة."),
 }
 
 
@@ -818,7 +819,7 @@ def _explain_key(title: str) -> str:
     """Map a section title to its explanation key (banner or leading ordinal)."""
     t = (title or "").strip()
     if t.startswith("الترويسة"):
-        return "الترويسة"
+        return N_("الترويسة")
     return t[:1] if t[:1] in "١٢٣٤٥٦٧٨٩" else ""
 
 

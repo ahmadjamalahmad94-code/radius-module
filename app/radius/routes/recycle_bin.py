@@ -1,5 +1,6 @@
 """Web UI for soft-deleted operational records."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
@@ -20,12 +21,12 @@ _ENTITY_TABLES = {
 }
 
 _ENTITY_LABELS = {
-    "subscribers": "المستفيدون",
-    "plans": "الباقات",
-    "nas": "أجهزة الشبكة",
-    "admins": "المدراء",
-    "roles": "الأدوار",
-    "card_batches": "حزم البطاقات",
+    "subscribers": N_("المستفيدون"),
+    "plans": N_("الباقات"),
+    "nas": N_("أجهزة الشبكة"),
+    "admins": N_("المدراء"),
+    "roles": N_("الأدوار"),
+    "card_batches": N_("حزم البطاقات"),
 }
 
 
@@ -215,7 +216,7 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
             from .blueprint import _deny
             _deny(403, reason="permission", permission="")
             abort(403)
-        flash("نوع العنصر غير مدعوم في سلة المحذوفات.", "error")
+        flash(_tr("نوع العنصر غير مدعوم في سلة المحذوفات."), "error")
         return redirect(url_for("radius.recycle_bin"))
     denied = restore_denial(_ENTITY_TABLES[entity_type], entity_id, admin_id=aid,
                             is_owner=is_owner, perms=perms, tenant_id=_tid())
@@ -233,12 +234,12 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
         return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
     if restored:
         if entity_type == "nas":
-            flash("تمت استعادة الراوتر معطّلًا — راجع عنوانه وكلمة سرّ الرديوس "
-                  "ثم فعّله من صفحة الأجهزة.", "success")
+            flash(_tr("تمت استعادة الراوتر معطّلًا — راجع عنوانه وكلمة سرّ الرديوس "
+                  "ثم فعّله من صفحة الأجهزة."), "success")
         else:
-            flash("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا.", "success")
+            flash(_tr("تمت استعادة العنصر. راجعه قبل إعادة استخدامه تشغيليًا."), "success")
     else:
-        flash("تعذرت الاستعادة: العنصر غير موجود أو لم يعد مؤرشفًا.", "error")
+        flash(_tr("تعذرت الاستعادة: العنصر غير موجود أو لم يعد مؤرشفًا."), "error")
     return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
 
 
@@ -248,7 +249,7 @@ def recycle_bin_purge(entity_type: str, entity_id: int):
     for card batches (e.g. after a leak/theft the batch must be erased). The
     two-step flow (soft delete → purge) is deliberate for an irreversible op."""
     if entity_type != "card_batches":
-        flash("الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط.", "error")
+        flash(_tr("الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط."), "error")
         return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
     # only purge an item that is actually in the bin (soft-deleted first)
     row = db().execute(
@@ -257,12 +258,11 @@ def recycle_bin_purge(entity_type: str, entity_id: int):
         (_tid(), entity_id),
     ).fetchone()
     if not row:
-        flash("تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) ثمّ احذفها نهائيًّا.", "error")
+        flash(_tr("تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) ثمّ احذفها نهائيًّا."), "error")
         return redirect(url_for("radius.recycle_bin", entity_type=entity_type))
     summary = cards_repo.purge_batch(_tid(), entity_id)
     flash(
-        "تمّ الحذف النهائيّ بلا رجعة — "
-        f"بطاقات: {summary.get('cards', 0)} · حزمة: {summary.get('batch', 0)}.",
+        _tr('تمّ الحذف النهائيّ بلا رجعة — بطاقات: %(v)s · حزمة: %(v2)s.', v=summary.get('cards', 0), v2=summary.get('batch', 0)),
         "success",
     )
     return redirect(url_for("radius.recycle_bin", entity_type=entity_type))

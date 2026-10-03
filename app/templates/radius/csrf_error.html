@@ -7,7 +7,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>انتهت صلاحية الصفحة</title>
+  <title>{{ _('انتهت صلاحية الصفحة') }}</title>
   <style>
     :root{ color-scheme: light; }
     body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
@@ -27,13 +27,13 @@
 <body>
   <main class="csrf" data-testid="csrf-error">
     <div class="csrf-ico" aria-hidden="true">!</div>
-    <h1>انتهت صلاحية الصفحة</h1>
-    <p>لم يُحفَظ شيء: رمز الحماية في هذه الصفحة قديم (فُتحت الصفحة منذ وقت طويل أو من جلسة أخرى).</p>
-    <p>ارجع إلى النموذج — ستجد ما كتبته كما هو — ثم حدّث الصفحة وأعد الحفظ.</p>
+    <h1>{{ _('انتهت صلاحية الصفحة') }}</h1>
+    <p>{{ _('لم يُحفَظ شيء: رمز الحماية في هذه الصفحة قديم (فُتحت الصفحة منذ وقت طويل أو من جلسة أخرى).') }}</p>
+    <p>{{ _('ارجع إلى النموذج — ستجد ما كتبته كما هو — ثم حدّث الصفحة وأعد الحفظ.') }}</p>
     <script type="application/json" id="hr-refused-fields">{{ fields | tojson }}</script>
     <div class="csrf-acts">
-      <button type="button" class="csrf-btn" data-hr-back-to-form data-testid="csrf-back-to-form">العودة إلى النموذج — بياناتك محفوظة</button>
-      <a class="csrf-btn alt" href="{{ back_url or '/admin/radius/' }}">تحديث الصفحة</a>
+      <button type="button" class="csrf-btn" data-hr-back-to-form data-testid="csrf-back-to-form">{{ _('العودة إلى النموذج — بياناتك محفوظة') }}</button>
+      <a class="csrf-btn alt" href="{{ back_url or '/admin/radius/' }}">{{ _('تحديث الصفحة') }}</a>
     </div>
   </main>
   <script>

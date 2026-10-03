@@ -7,6 +7,7 @@ events center, event detail, risk flags, security view and investigations;
 write endpoints for running the risk rules and opening an investigation.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -99,7 +100,7 @@ def events_detail(event_id: int):
     try:
         event = svc.get_event(event_id)
     except EventsRiskError:
-        return fail("not_found", "الحدث غير موجود.", status=404)
+        return fail("not_found", _tr("الحدث غير موجود."), status=404)
     timeline = []
     if event.get("target_type") and event.get("target_id"):
         timeline = svc.entity_timeline(
@@ -142,15 +143,15 @@ def investigations_create():
     if err:
         return err
     try:
-        title = opt_text(body.get("title"), label="عنوان التحقيق", max_len=200)
-        severity = opt_text(body.get("severity"), label="الخطورة", max_len=20) or "warning"
-        entity_type = opt_text(body.get("entity_type"), label="نوع الكيان", max_len=60)
-        entity_id = opt_int(body.get("entity_id"), label="معرّف الكيان")
-        summary = opt_text(body.get("summary"), label="الملخّص", max_len=5000)
+        title = opt_text(body.get("title"), label=N_("عنوان التحقيق"), max_len=200)
+        severity = opt_text(body.get("severity"), label=N_("الخطورة"), max_len=20) or "warning"
+        entity_type = opt_text(body.get("entity_type"), label=N_("نوع الكيان"), max_len=60)
+        entity_id = opt_int(body.get("entity_id"), label=N_("معرّف الكيان"))
+        summary = opt_text(body.get("summary"), label=N_("الملخّص"), max_len=5000)
     except InputError as e:
         return fail("validation_error", e.message, status=422)
     if not title:
-        return fail("validation_error", "عنوان التحقيق مطلوب.", status=422)
+        return fail("validation_error", _tr("عنوان التحقيق مطلوب."), status=422)
     try:
         inv = _svc().create_investigation(
             title=title,

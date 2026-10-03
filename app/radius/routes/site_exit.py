@@ -21,6 +21,7 @@ policy_id) pair and refuses to operate outside that scope.
 404 for unknown router. 403 via the existing PERM_VIEW guard.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Optional
 
@@ -94,18 +95,16 @@ def _check_router_credentials(nas: dict) -> str:
     pwd  = (nas.get("api_password") or "")
     if not user or not pwd:
         return (
-            "بيانات اعتماد API للراوتر مفقودة. افتح صفحة الراوتر "
+            N_("بيانات اعتماد API للراوتر مفقودة. افتح صفحة الراوتر "
             "في «غرفة عمليات MikroTik» وأضف api_user و"
-            " api_password قبل التطبيق."
+            " api_password قبل التطبيق.")
         )
     # Common placeholders we've seen people leave by mistake.
     if user.lower() in {"admin", "test", "user"} and pwd in {
         "", "admin", "test", "password", "1234",
     }:
         return (
-            f"بيانات API تبدو placeholder (user={user!r}). "
-            "حدّث api_user/api_password بالقيم الحقيقية للراوتر "
-            "قبل التطبيق."
+            _tr('بيانات API تبدو placeholder (user=%(user)s). حدّث api_user/api_password بالقيم الحقيقية للراوتر قبل التطبيق.', user=repr(user))
         )
     return ""
 
@@ -115,44 +114,44 @@ def _check_router_credentials(nas: dict) -> str:
 
 GROUP_META: dict[str, dict] = {
     classifier.GROUP_SPEEDTEST_MEASUREMENT: {
-        "label_ar": "اختبارات السرعة",
-        "risk_ar":  "منخفض",
+        "label_ar": N_("اختبارات السرعة"),
+        "risk_ar":  N_("منخفض"),
         "default_enabled": True,
         "risky":   False,
     },
     classifier.GROUP_PUBLIC_IP_CHECKERS: {
-        "label_ar": "كاشفات الـ IP العام",
-        "risk_ar":  "منخفض",
+        "label_ar": N_("كاشفات الـ IP العام"),
+        "risk_ar":  N_("منخفض"),
         "default_enabled": True,
         "risky":   False,
     },
     classifier.GROUP_RAW_IP_TARGETS: {
-        "label_ar": "عناوين IP / CIDR مباشرة",
-        "risk_ar":  "متوسط",
+        "label_ar": N_("عناوين IP / CIDR مباشرة"),
+        "risk_ar":  N_("متوسط"),
         "default_enabled": True,
         "risky":   False,
     },
     classifier.GROUP_VPN_PROVIDER_PAGES: {
-        "label_ar": "صفحات مزوّدي VPN",
-        "risk_ar":  "مرتفع",
+        "label_ar": N_("صفحات مزوّدي VPN"),
+        "risk_ar":  N_("مرتفع"),
         "default_enabled": False,
         "risky":   True,
     },
     classifier.GROUP_NETWORK_DIAGNOSTICS: {
-        "label_ar": "أدوات التشخيص الشبكي",
-        "risk_ar":  "متوسط",
+        "label_ar": N_("أدوات التشخيص الشبكي"),
+        "risk_ar":  N_("متوسط"),
         "default_enabled": False,
         "risky":   True,
     },
     classifier.GROUP_GENERAL_PROBE_SITES: {
-        "label_ar": "مواقع فحص عامة (Google …)",
-        "risk_ar":  "مرتفع — قد يؤثر على CDNs",
+        "label_ar": N_("مواقع فحص عامة (Google …)"),
+        "risk_ar":  N_("مرتفع — قد يؤثر على CDNs"),
         "default_enabled": False,
         "risky":   True,
     },
     classifier.GROUP_MANUAL_REVIEW: {
-        "label_ar": "مراجعة يدوية",
-        "risk_ar":  "غير مصنّف — اقرأ أولاً",
+        "label_ar": N_("مراجعة يدوية"),
+        "risk_ar":  N_("غير مصنّف — اقرأ أولاً"),
         "default_enabled": False,
         "risky":   True,
     },
@@ -271,8 +270,8 @@ def _render_page(
         # Apply is intentionally disabled in VX2.4 — surface the
         # reason so the operator isn't confused by a dead button.
         apply_disabled_reason=(
-            "زر التطبيق سيُفعَّل بعد VX2.5/VX2.6 (فحص الأمان"
-            " والتأكيدات الصريحة)."
+            N_("زر التطبيق سيُفعَّل بعد VX2.5/VX2.6 (فحص الأمان"
+            " والتأكيدات الصريحة).")
         ),
     )
 
@@ -311,17 +310,17 @@ def site_exit_policy_create(nas_id: int):
     exit_node_id = (request.form.get("exit_node_id") or "").strip()
 
     if not name:
-        flash("اسم السياسة مطلوب.", "danger")
+        flash(_tr("اسم السياسة مطلوب."), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id))
     try:
         nid = int(exit_node_id)
     except (TypeError, ValueError):
-        flash("اختر عقدة VPS أولاً.", "danger")
+        flash(_tr("اختر عقدة VPS أولاً."), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id))
     if not nodes_repo.get_by_id(_tid(), nid):
-        flash("عقدة VPS غير معروفة.", "danger")
+        flash(_tr("عقدة VPS غير معروفة."), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id))
 
@@ -336,15 +335,15 @@ def site_exit_policy_create(nas_id: int):
             include_router_output=include_outp,
         )
     except ValueError as e:
-        flash(f"تعذّر إنشاء السياسة: {e}", "danger")
+        flash(_tr('تعذّر إنشاء السياسة: %(e)s', e=e), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id))
     except Exception:  # noqa: BLE001 — uniqueness collisions etc.
-        flash("سياسة باسم/مُعرّف مكرَّر.", "danger")
+        flash(_tr("سياسة باسم/مُعرّف مكرَّر."), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id))
 
-    flash("أُنشئت السياسة بنجاح.", "success")
+    flash(_tr("أُنشئت السياسة بنجاح."), "success")
     return redirect(url_for(
         "radius.site_exit_page", nas_id=nas_id, policy_id=pid))
 
@@ -367,10 +366,7 @@ def site_exit_import(nas_id: int, policy_id: int):
     return _render_page(
         nas=nas, policy=policy, import_result=result,
         notice=(
-            f"تم تحليل {result.total_parsed} سطرًا — "
-            f"مقبولة: {len(result.accepted)}، "
-            f"مكرّرة: {len(result.duplicates)}، "
-            f"غير صالحة: {len(result.invalid)}."
+            _tr('تم تحليل %(total_parsed)s سطرًا — مقبولة: %(v)s، مكرّرة: %(v2)s، غير صالحة: %(v3)s.', total_parsed=result.total_parsed, v=len(result.accepted), v2=len(result.duplicates), v3=len(result.invalid))
         ),
     )
 
@@ -395,7 +391,7 @@ def site_exit_load_preset(nas_id: int, policy_id: int):
     preset_key = (request.form.get("preset_key") or "").strip()
     preset = presets_svc.get_preset(preset_key)
     if not preset:
-        flash(f"preset غير معروف: {preset_key!r}", "danger")
+        flash(_tr('preset غير معروف: %(preset_key)s', preset_key=repr(preset_key)), "danger")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id,
             policy_id=policy_id))
@@ -407,10 +403,7 @@ def site_exit_load_preset(nas_id: int, policy_id: int):
         nas=nas, policy=policy,
         import_result=result,
         notice=(
-            f"تم تحميل preset «{preset.label_ar}» — "
-            f"حُلِّل {result.total_parsed} سطرًا، "
-            f"قُبل {len(result.accepted)}، "
-            f"رُفض {len(result.invalid)}."
+            _tr('تم تحميل preset «%(label_ar)s» — حُلِّل %(total_parsed)s سطرًا، قُبل %(v)s، رُفض %(v2)s.', label_ar=preset.label_ar, total_parsed=result.total_parsed, v=len(result.accepted), v2=len(result.invalid))
         ),
     )
 
@@ -485,16 +478,14 @@ def site_exit_targets_save(nas_id: int, policy_id: int):
             })
 
     if not candidates:
-        flash("لم تُحدَّد أهداف لحفظها.", "warning")
+        flash(_tr("لم تُحدَّد أهداف لحفظها."), "warning")
         return redirect(url_for(
             "radius.site_exit_page", nas_id=nas_id,
             policy_id=policy_id))
 
     out = targets_repo.add_many(int(policy_id), candidates)
     flash(
-        f"حُفظت الأهداف — مُدخلة: {out['inserted']}، "
-        f"محدَّثة: {out['updated']}، "
-        f"متجاهَلة: {out['skipped']}.",
+        _tr('حُفظت الأهداف — مُدخلة: %(inserted)s، محدَّثة: %(updated)s، متجاهَلة: %(skipped)s.', inserted=out['inserted'], updated=out['updated'], skipped=out['skipped']),
         "success",
     )
     return redirect(url_for(
@@ -644,8 +635,7 @@ def site_exit_apply(nas_id: int, policy_id: int):
             warnings=safety.warnings,
             required_confirmations=safety.required_confirmations,
             recommended_actions=tuple(safety.recommended_actions)
-                + (f"افتح /admin/radius/mt/{nas_id}/dashboard "
-                   "لتحديث بيانات اعتماد الراوتر",),
+                + (_tr('افتح /admin/radius/mt/%(nas_id)s/dashboard لتحديث بيانات اعتماد الراوتر', nas_id=nas_id),),
             backup_status=safety.backup_status,
             router_health=safety.router_health,
             vps_health=safety.vps_health,
@@ -701,7 +691,7 @@ def site_exit_apply(nas_id: int, policy_id: int):
                               if plan.can_apply else ""),
             rollback_script=(renderer.render_rollback_script(plan)
                               if plan.can_apply else ""),
-            error="تعذّر التطبيق — راجع الأسباب أعلاه.",
+            error=N_("تعذّر التطبيق — راجع الأسباب أعلاه."),
             notice=" / ".join(reasons),
         )
 
@@ -750,7 +740,7 @@ def site_exit_apply(nas_id: int, policy_id: int):
         apply_result = mt_programming.apply_commands(
             client, commands)
     except Exception as e:  # noqa: BLE001
-        error = f"تعذّر الاتصال بالراوتر: {e}"
+        error = _tr('تعذّر الاتصال بالراوتر: %(e)s', e=e)
     finally:
         try:
             client.close()
@@ -778,7 +768,7 @@ def site_exit_apply(nas_id: int, policy_id: int):
                 "script_version_id": script_id,
             },
         )
-        notice = "تم التطبيق بنجاح."
+        notice = N_("تم التطبيق بنجاح.")
     else:
         deployments_repo.record_apply_failure(
             tenant_id=_tid(), policy_id=int(policy_id),
@@ -809,7 +799,7 @@ def site_exit_apply(nas_id: int, policy_id: int):
             },
         )
         notice = (
-            "فشل التطبيق — راجع سجل العمليات والـ recovery plan."
+            N_("فشل التطبيق — راجع سجل العمليات والـ recovery plan.")
             if apply_result else error
         )
 
@@ -859,8 +849,8 @@ def site_exit_preview(nas_id: int, policy_id: int):
         forward_script=forward,
         rollback_script=rollback,
         notice=(
-            "أُنشئت معاينة جديدة."
+            N_("أُنشئت معاينة جديدة.")
             if plan.can_apply else
-            "تعذّر إنشاء معاينة — راجع رسائل المنع."
+            N_("تعذّر إنشاء معاينة — راجع رسائل المنع.")
         ),
     )

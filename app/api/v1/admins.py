@@ -17,6 +17,7 @@ Password handling:
   - `password_hash` is never returned by `_serialize`.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import functools
 from typing import Any
@@ -123,7 +124,7 @@ def _owner_target_protected(target) -> bool:
     return not can_modify_admin(int(getattr(g, "admin_id", 0)), target)
 
 
-_OWNER_PROTECTED_AR = "لا يمكن تعديل أو حذف حساب المالك إلا من قِبل المالك."
+_OWNER_PROTECTED_AR = N_("لا يمكن تعديل أو حذف حساب المالك إلا من قِبل المالك.")
 
 
 def _require_manage(view, perm: str = "admins.view"):
@@ -132,7 +133,7 @@ def _require_manage(view, perm: str = "admins.view"):
         if not _can_manage_admins(perm):
             return fail(
                 "forbidden",
-                f"إدارة حسابات المدراء والأدوار تتطلّب صلاحية ({perm}) أو صلاحيات المالك.",
+                _tr('إدارة حسابات المدراء والأدوار تتطلّب صلاحية (%(perm)s) أو صلاحيات المالك.', perm=perm),
                 status=403, details={"permission": perm},
             )
         return view(*a, **kw)
@@ -246,7 +247,7 @@ def _coerce_int(name: str, v: Any) -> int | None:
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"قيمة {name} يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة %(name)s يجب أن تكون رقمًا صحيحًا.', name=name))
 
 
 def admins_list():
@@ -257,7 +258,7 @@ def admins_list():
 def admins_get(admin_id: int):
     a = admins_repo.get_admin(admin_id)
     if not a:
-        return fail("not_found", f"admin {admin_id} غير موجود", status=404)
+        return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     return ok(_serialize_admin(a))
 
 
@@ -266,9 +267,9 @@ def admins_create():
     username = (body.get("username") or "").strip()
     password = body.get("password") or ""
     if not username:
-        return fail("validation_error", "username مطلوب", status=422)
+        return fail("validation_error", _tr("username مطلوب"), status=422)
     if not password:
-        return fail("validation_error", "password مطلوب", status=422)
+        return fail("validation_error", _tr("password مطلوب"), status=422)
     # optional role_id — omitted ⇒ the least-privileged role (viewer), never
     # super_admin (create_admin's default); an unknown id is refused.
     try:
@@ -276,7 +277,7 @@ def admins_create():
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     if role_id is not None and admins_repo.get_role(role_id) is None:
-        return fail("validation_error", "الدور المحدد غير موجود.", status=422)
+        return fail("validation_error", _tr("الدور المحدد غير موجود."), status=422)
     # «مدير عام» = إسناد دور super_admin (المالك/الشريك فقط).
     want_super = bool(body.get("is_super_admin"))
     want_co = bool(body.get("is_co_owner"))
@@ -288,7 +289,7 @@ def admins_create():
     actor = _actor_id()
     if (want_super or want_co) and actor is not None and not is_owner_like(actor):
         return fail("forbidden",
-                    "منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك.",
+                    _tr("منح صلاحيات المالك (شريك) أو «مدير عام» مقصورٌ على المالك أو الشريك."),
                     status=403, details={"reason": "owner_only"})
     try:
         r = admins_repo.get_role(int(role_id)) if role_id else None
@@ -325,14 +326,14 @@ def admins_create():
 def admins_patch(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
     if not existing:
-        return fail("not_found", f"admin {admin_id} غير موجود", status=404)
+        return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     if _owner_target_protected(existing):
         return fail("forbidden", _OWNER_PROTECTED_AR, status=403)
     body = request.get_json(silent=True)
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     changes: dict = {}
     for k in _ADMIN_STR_FIELDS:
         if k in body:
@@ -354,9 +355,9 @@ def admins_patch(admin_id: int):
         _super = bool(body.get("is_super_admin"))
         if role_id is None and not _super:
             return fail("validation_error",
-                        "الدور مطلوب — اختر دورًا موجودًا بدل إفراغه.", status=422)
+                        _tr("الدور مطلوب — اختر دورًا موجودًا بدل إفراغه."), status=422)
         if role_id is not None and admins_repo.get_role(role_id) is None:
-            return fail("validation_error", "الدور المحدد غير موجود.", status=422)
+            return fail("validation_error", _tr("الدور المحدد غير موجود."), status=422)
         changes["role_id"] = role_id
     if "password" in body and (body["password"] or "").strip():
         changes["password"] = str(body["password"])
@@ -388,7 +389,7 @@ def admins_patch(admin_id: int):
     except OwnerGuardError as exc:
         return _owner_guard_fail(exc)
     if co_change and not bool(body["is_co_owner"]) and admins_repo.is_original_owner(admin_id):
-        return fail("forbidden", "المالك الأصليّ ليس «شريكًا» يُسحَب — حسابه محميّ.",
+        return fail("forbidden", _tr("المالك الأصليّ ليس «شريكًا» يُسحَب — حسابه محميّ."),
                     status=403, details={"reason": "owner_protected"})
     try:
         if co_change:
@@ -397,7 +398,7 @@ def admins_patch(admin_id: int):
     except ValueError as exc:
         return fail("password_managed_by_license_admin", str(exc), status=409)
     if not admin:
-        return fail("not_found", "الحساب الإداري غير موجود.", status=404)
+        return fail("not_found", _tr("الحساب الإداري غير موجود."), status=404)
     _audit("update", "admin", str(admin_id), {"fields": list(changes.keys())})
     _notify_panel_of_admin_change()
     return ok(_serialize_admin(admin))
@@ -406,14 +407,14 @@ def admins_patch(admin_id: int):
 def admins_delete(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
     if not existing:
-        return fail("not_found", f"admin {admin_id} غير موجود", status=404)
+        return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     from ...radius.auth.owner import OwnerGuardError, assert_can_modify_admin
     try:
         assert_can_modify_admin(_actor_id(), admin_id, deleting=True)
     except OwnerGuardError as exc:
         return _owner_guard_fail(exc)
     if _actor_id() is not None and int(_actor_id()) == int(admin_id):
-        return fail("forbidden", "لا يمكنك حذف حسابك أنت.", status=403)
+        return fail("forbidden", _tr("لا يمكنك حذف حسابك أنت."), status=403)
     admins_repo.delete_admin(admin_id)
     _audit("archive", "admin", str(admin_id), {"username": existing.username})
     _notify_panel_of_admin_change(deleted_admin_id=admin_id)
@@ -430,7 +431,7 @@ def roles_list():
 def roles_get(role_id: int):
     r = admins_repo.get_role(role_id)
     if not r:
-        return fail("not_found", f"role {role_id} غير موجود", status=404)
+        return fail("not_found", _tr('role %(role_id)s غير موجود', role_id=role_id), status=404)
     return ok(_serialize_role(r))
 
 
@@ -438,7 +439,7 @@ def _validate_permissions(perms: Any) -> tuple[str, ...]:
     if perms is None:
         return ()
     if not isinstance(perms, (list, tuple)):
-        raise RadiusValidationError("الصلاحيات يجب أن تكون قائمة نصية.")
+        raise RadiusValidationError(_tr("الصلاحيات يجب أن تكون قائمة نصية."))
     out: list[str] = []
     valid = set(ALL_PERMISSIONS)
     bad: list[str] = []
@@ -450,8 +451,7 @@ def _validate_permissions(perms: Any) -> tuple[str, ...]:
             out.append(s)
     if bad:
         raise RadiusValidationError(
-            f"توجد صلاحيات غير معروفة: {bad}. "
-            "راجع GET /api/v1/permissions لقائمة الصلاحيات."
+            _tr('توجد صلاحيات غير معروفة: %(bad)s. راجع GET /api/v1/permissions لقائمة الصلاحيات.', bad=bad)
         )
     return tuple(dict.fromkeys(out))  # de-dup, preserve order
 
@@ -460,7 +460,7 @@ def roles_create():
     body = request.get_json(silent=True) or {}
     name = (body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "اسم الدور مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم الدور مطلوب."), status=422)
     try:
         perms = _validate_permissions(body.get("permissions"))
     except RadiusValidationError as e:
@@ -480,7 +480,7 @@ def roles_create():
         )
     except ValueError:
         # كان يُعرض نصُّ المبرمج الإنجليزيّ («role 'x' already exists») للمشغّل.
-        return fail("conflict", f"اسم الدور «{name}» مستخدم مسبقًا.", status=409)
+        return fail("conflict", _tr('اسم الدور «%(name)s» مستخدم مسبقًا.', name=name), status=409)
     _audit("create", "role", str(role.id),
            {"name": role.name, "perms_count": len(perms)})
     return ok(_serialize_role(role), status=201)
@@ -489,7 +489,7 @@ def roles_create():
 def roles_patch(role_id: int):
     existing = admins_repo.get_role(role_id)
     if not existing:
-        return fail("not_found", f"role {role_id} غير موجود", status=404)
+        return fail("not_found", _tr('role %(role_id)s غير موجود', role_id=role_id), status=404)
     body = request.get_json(silent=True) or {}
     changes: dict = {}
     for k in ("display_name", "description", "color"):
@@ -513,7 +513,7 @@ def roles_patch(role_id: int):
         changes["permissions"] = list(_merge_role_permissions(existing, changes["permissions"]))
     role = admins_repo.update_role(role_id, **changes)
     if not role:
-        return fail("not_found", "الدور غير موجود.", status=404)
+        return fail("not_found", _tr("الدور غير موجود."), status=404)
     _audit("update", "role", str(role_id), {"fields": list(changes.keys())})
     return ok(_serialize_role(role))
 
@@ -521,15 +521,15 @@ def roles_patch(role_id: int):
 def roles_delete(role_id: int):
     existing = admins_repo.get_role(role_id)
     if not existing:
-        return fail("not_found", f"role {role_id} غير موجود", status=404)
+        return fail("not_found", _tr('role %(role_id)s غير موجود', role_id=role_id), status=404)
     if existing.is_system:
         return fail("forbidden",
-                    "لا يمكن حذف دور نظامي", status=403)
+                    _tr("لا يمكن حذف دور نظامي"), status=403)
     # D22: دورٌ مُسنَد لمدراء لا يُحذف بصمت (كانوا يفقدون كل صلاحياتهم).
     in_use = admins_repo.role_usage_count(role_id)
     if in_use:
         return fail("role_in_use",
-                    f"لا يمكن حذف الدور: مُسنَد إلى {in_use} مدير. انقلهم لدورٍ آخر أوّلًا.",
+                    _tr('لا يمكن حذف الدور: مُسنَد إلى %(in_use)s مدير. انقلهم لدورٍ آخر أوّلًا.', in_use=in_use),
                     status=409, details={"admins_count": in_use})
     admins_repo.delete_role(role_id)
     _audit("archive", "role", str(role_id), {"name": existing.name})
@@ -541,16 +541,16 @@ def roles_delete(role_id: int):
 # Group permissions by their dotted-prefix so the Flutter editor can render
 # them in logical sections.
 _PERM_GROUPS_AR = {
-    "dashboard": "اللوحة",
-    "users": "المشتركون",
-    "cards": "الكروت",
-    "plans": "الباقات",
-    "nas": "أجهزة الشبكة",
-    "sessions": "الجلسات",
-    "admins": "المدراء",
-    "settings": "الإعدادات",
-    "audit": "سجل التدقيق",
-    "api": "الـ API",
+    "dashboard": N_("اللوحة"),
+    "users": N_("المشتركون"),
+    "cards": N_("الكروت"),
+    "plans": N_("الباقات"),
+    "nas": N_("أجهزة الشبكة"),
+    "sessions": N_("الجلسات"),
+    "admins": N_("المدراء"),
+    "settings": N_("الإعدادات"),
+    "audit": N_("سجل التدقيق"),
+    "api": N_("الـ API"),
 }
 
 

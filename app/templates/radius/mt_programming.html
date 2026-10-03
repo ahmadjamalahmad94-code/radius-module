@@ -18,7 +18,7 @@
 {% block title %}{{ _("برمجة الشبكة") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}{{ _("برمجة الشبكة على") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #%(v)s · %(address)s · مرحلة التخطيط', v=router_no(nas.id), address=nas.address) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -28,8 +28,8 @@
 
   {# ───── Unified hero: title + safety subtitle + kind tabs as actions ───── #}
   {{ hub.hero(
-    "برمجة الشبكة — " ~ nas.name,
-    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.",
+    _('برمجة الشبكة — %(name)s', name=nas.name),
+    subtitle=_('جهاز شبكة #%(id)s · %(address)s — هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.', id=nas.id, address=nas.address),
     icon="diagram-project",
     actions_html='
       <a class="hub-btn '|safe ~ ('hub-btn--primary'|safe if _kind == 'hotspot'|safe else 'hub-btn--secondary'|safe) ~ '"
@@ -53,20 +53,20 @@
 
   {# ───── Main (the programming form) + help panel on the LEFT ───── #}
   {% call hub.worklayout(aside_html=hub.helppanel(
-    "كيف تعمل هذه الصفحة؟",
-    intro="هذه أداة توليد سكربت الراوتر. تملأ الحقول، فيحلّل النظام حالة الراوتر الحالية ويُنتج خطة آمنة للمراجعة قبل أي تطبيق.",
+    _('كيف تعمل هذه الصفحة؟'),
+    intro=_('هذه أداة توليد سكربت الراوتر. تملأ الحقول، فيحلّل النظام حالة الراوتر الحالية ويُنتج خطة آمنة للمراجعة قبل أي تطبيق.'),
     items=[
-      {'icon': 'wifi',           'text': 'بوابة الدخول لشبكات الزبائن التي تتطلب تسجيل دخول عبر صفحة.'},
-      {'icon': 'plug',           'text': 'البرودباند لاشتراكات الإنترنت المنزلية والمكتبية.'},
-      {'icon': 'shield-halved',  'text': 'يُبرز النظام المخاطر والتعارضات قبل التطبيق — راجعها بعناية.'},
-      {'icon': 'floppy-disk',    'text': 'يُفضّل أخذ نسخة احتياطية للراوتر قبل أي تطبيق فعلي.'},
+      {'icon': 'wifi',           'text': _('بوابة الدخول لشبكات الزبائن التي تتطلب تسجيل دخول عبر صفحة.')},
+      {'icon': 'plug',           'text': _('البرودباند لاشتراكات الإنترنت المنزلية والمكتبية.')},
+      {'icon': 'shield-halved',  'text': _('يُبرز النظام المخاطر والتعارضات قبل التطبيق — راجعها بعناية.')},
+      {'icon': 'floppy-disk',    'text': _('يُفضّل أخذ نسخة احتياطية للراوتر قبل أي تطبيق فعلي.')},
     ],
-    note="زر التطبيق لا يعمل ما دامت هناك مخاطر غير مُعالَجة. عالجها أولًا ثم أكّد القراءة."
+    note=_('زر التطبيق لا يعمل ما دامت هناك مخاطر غير مُعالَجة. عالجها أولًا ثم أكّد القراءة.')
   )) %}
 
   {# ── Programming form card ── #}
   {% call hub.section(
-        ('إعداد خادم البرودباند' if _kind == 'pppoe' else 'إعداد بوابة الدخول'),
+        (_('إعداد خادم البرودباند') if _kind == 'pppoe' else _('إعداد بوابة الدخول')),
         icon=('plug' if _kind == 'pppoe' else 'network-wired')) %}
     <form class="hub-form" method="post"
           action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
@@ -172,7 +172,7 @@
   {% endcall %}
 
   {% if backup_warning_ar is defined and backup_warning_ar %}
-  {% call hub.section("تنبيه النسخ الاحتياطي", icon="floppy-disk") %}
+  {% call hub.section(_('تنبيه النسخ الاحتياطي'), icon="floppy-disk") %}
     <div data-mt-program-backup-warning
          style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:13px">
       <i class="fa-solid fa-floppy-disk"></i>
@@ -187,7 +187,7 @@
   {% endif %}
 
   {% if plan %}
-  {% call hub.section("السكربت المولّد", icon="file-code") %}
+  {% call hub.section(_('السكربت المولّد'), icon="file-code") %}
     <div data-mt-program-plan-card>
 
       {% if plan.risks %}
@@ -215,7 +215,7 @@
 
       {# O6 — Before/after preview, only when computed. #}
       {% if change_preview is defined and change_preview %}
-      {% call hub.section("معاينة التغييرات", icon="code-compare") %}
+      {% call hub.section(_('معاينة التغييرات'), icon="code-compare") %}
         <div data-mt-program-change-preview
              data-mt-preview-total="{{ change_preview.total_changes() }}">
           {% if change_preview.data_quality_warnings_ar %}
@@ -237,7 +237,7 @@
           {% endif %}
 
           {% if change_preview.items_to_add %}
-          <p style="margin:0 0 6px;font-weight:700">سيُضاف ({{ change_preview.items_to_add|length }}):</p>
+          <p style="margin:0 0 6px;font-weight:700">{{ _('سيُضاف (%(length)s):', length=change_preview.items_to_add|length) }}</p>
           <ul class="mt-program-summary"
               data-mt-preview-additions
               style="margin:0;padding-inline-start:24px;line-height:1.7">
@@ -271,8 +271,7 @@
           <input type="checkbox" name="confirm" value="1"
                  data-mt-program-confirm
                  {% if plan.risks %}disabled{% endif %}>
-          أُؤكّد قراءة التحذيرات وأرغب بتطبيق السكربت أعلاه على
-          هذا الراوتر.
+          {{ _('أُؤكّد قراءة التحذيرات وأرغب بتطبيق السكربت أعلاه على هذا الراوتر.') }}
         </label>
 
         <div>
@@ -291,12 +290,10 @@
   {% endif %}
 
   {# ── Q4 — Unprogram (rollback) ───────────────────────── #}
-  {% call hub.section("تراجع (إزالة برمجة سابقة)", icon="trash-can") %}
+  {% call hub.section(_('تراجع (إزالة برمجة سابقة)'), icon="trash-can") %}
     <div data-mt-program-unprogram-card>
       <p class="hub-text-mute" style="margin:0 0 12px;line-height:1.7">
-        يبحث عن كل الكائنات التي تحمل علامة hoberadius:{{ _kind }} على
-        الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء
-        من نقطة نظيفة.
+        {{ _('يبحث عن كل الكائنات التي تحمل علامة hoberadius:%(kind)s على الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء من نقطة نظيفة.', kind=_kind) }}
       </p>
       {% if can_submit('radius.mt_program_unprogram', 'POST') %}<form method="post"
             action="{{ url_for('radius.mt_program_unprogram', nas_id=nas.id) }}"
@@ -307,7 +304,7 @@
                style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px;cursor:pointer">
           <input type="checkbox" name="confirm" value="1"
                  data-mt-program-unprogram-confirm>
-          أُؤكّد إزالة كل كائنات hoberadius:{{ _kind }} من هذا الراوتر.
+          {{ _('أُؤكّد إزالة كل كائنات hoberadius:%(kind)s من هذا الراوتر.', kind=_kind) }}
         </label>
         <div>
           <button type="submit"
@@ -322,8 +319,8 @@
   {% endcall %}
 
   {% if unprogram_result %}
-  {% call hub.section("نتيجة الإزالة", icon=('circle-check' if unprogram_result.ok else 'circle-exclamation'),
-        meta=(unprogram_result.summary().removed|string ~ " مُزال · " ~ unprogram_result.summary().failed|string ~ " فشل")) %}
+  {% call hub.section(_('نتيجة الإزالة'), icon=('circle-check' if unprogram_result.ok else 'circle-exclamation'),
+        meta=(_('%(string)s مُزال · %(string2)s فشل', string=unprogram_result.summary().removed|string, string2=unprogram_result.summary().failed|string))) %}
     <div data-mt-program-unprogram-result>
       <span hidden data-mt-unprogram-removed>{{ unprogram_result.summary().removed }}</span>
       <span hidden data-mt-unprogram-failed>{{ unprogram_result.summary().failed }}</span>
@@ -340,7 +337,7 @@
           {% if step.ok %}
             <span style="color:#166534">{{ _('تمت الإزالة') }}</span>
           {% else %}
-            <span style="color:#991B1B">فشل — {{ step.error }}</span>
+            <span style="color:#991B1B">{{ _('فشل — %(error)s', error=step.error) }}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -350,8 +347,8 @@
   {% endif %}
 
   {% if apply_result %}
-  {% call hub.section("نتيجة التطبيق", icon=('circle-check' if apply_result.ok else 'circle-exclamation'),
-        meta=(apply_result.summary().applied|string ~ " مُطبَّقة · " ~ apply_result.summary().skipped|string ~ " متجاهَلة · " ~ apply_result.summary().failed|string ~ " فاشلة")) %}
+  {% call hub.section(_('نتيجة التطبيق'), icon=('circle-check' if apply_result.ok else 'circle-exclamation'),
+        meta=(_('%(string)s مُطبَّقة · %(string2)s متجاهَلة · %(string3)s فاشلة', string=apply_result.summary().applied|string, string2=apply_result.summary().skipped|string, string3=apply_result.summary().failed|string))) %}
     <div data-mt-program-apply-result
          data-mt-apply-status="{{ apply_result.result_status() }}">
       <span hidden data-mt-apply-applied>{{ apply_result.summary().applied }}</span>
@@ -374,11 +371,11 @@
         <li>
           <code>{{ step.path }}</code> ·
           {% if step.skipped %}
-            <span style="color:#92400E">متجاهَل ({{ step.skipped }})</span>
+            <span style="color:#92400E">{{ _('متجاهَل (%(skipped)s)', skipped=step.skipped) }}</span>
           {% elif step.ok %}
             <span style="color:#166534">{{ _('تم') }}</span>
           {% else %}
-            <span style="color:#991B1B">فشل — {{ step.error }}</span>
+            <span style="color:#991B1B">{{ _('فشل — %(error)s', error=step.error) }}</span>
           {% endif %}
         </li>
         {% endfor %}

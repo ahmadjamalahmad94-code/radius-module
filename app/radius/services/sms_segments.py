@@ -20,6 +20,7 @@ The JS counter (``static/js/sms_counter.js``) mirrors this exactly so the live
 UI and the server agree on the displayed cost.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass
 
@@ -117,19 +118,19 @@ def summary_ar(text: str) -> str:
          «٨٥ حرفًا · رسالتان (مقطعان) — تتجاوز الحدّ الموصى به (60)».
     """
     info = analyze(text)
-    parts = [f"{info.length} حرفًا", _segments_ar(info.segments)]
+    parts = [_tr('%(length)s حرفًا', length=info.length), _segments_ar(info.segments)]
     tag = "Unicode" if info.encoding == "unicode" else "GSM"
     line = " · ".join(parts) + f" ({tag})"
     if info.over_recommended:
-        line += f" — تتجاوز الحدّ الموصى به ({RECOMMENDED_MAX})"
+        line += _tr(' — تتجاوز الحدّ الموصى به (%(RECOMMENDED_MAX)s)', RECOMMENDED_MAX=RECOMMENDED_MAX)
     return line
 
 
 def _segments_ar(n: int) -> str:
     if n <= 0:
-        return "لا رسائل"
+        return N_("لا رسائل")
     if n == 1:
-        return "رسالة واحدة"
+        return N_("رسالة واحدة")
     if n == 2:
-        return "رسالتان (مقطعان)"
-    return f"{n} رسائل (مقاطع)"
+        return N_("رسالتان (مقطعان)")
+    return _tr('%(n)s رسائل (مقاطع)', n=n)

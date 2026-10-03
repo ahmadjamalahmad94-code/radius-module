@@ -24,6 +24,7 @@ Heuristic:
               without a canary first.)
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -74,9 +75,9 @@ def _has_input_chain(plan: ScriptPlan) -> bool:
 
 
 _NOTE_DEFAULT = (
-    "هذه أرقام تقديريّة بناءً على بيانات قاعدة البيانات "
+    N_("هذه أرقام تقديريّة بناءً على بيانات قاعدة البيانات "
     "المحليّة فقط — قد لا تعكس عدد المستخدمين المتّصلين فعلياً "
-    "في هذه اللحظة."
+    "في هذه اللحظة.")
 )
 
 
@@ -104,39 +105,39 @@ def analyze(
     if all_routers_targeted and forward_drop:
         bucket = BLAST_CRITICAL
         rec = (
-            "هذه السياسة قد تقطع الإنترنت لكل المستخدمين على كل "
+            N_("هذه السياسة قد تقطع الإنترنت لكل المستخدمين على كل "
             "الراوترات. لا تطبَّق مباشرة — اختبرها على راوتر واحد "
-            "ثم وسِّع التطبيق تدريجياً (canary)."
+            "ثم وسِّع التطبيق تدريجياً (canary).")
         )
     elif all_routers_targeted:
         bucket = BLAST_LARGE
         rec = (
-            "السياسة تستهدف كل الراوترات. ابدأ بتطبيقها على "
-            "راوتر واحد أوّلاً قبل التوسعة."
+            N_("السياسة تستهدف كل الراوترات. ابدأ بتطبيقها على "
+            "راوتر واحد أوّلاً قبل التوسعة.")
         )
     elif affected_router_count >= 5:
         bucket = BLAST_LARGE
         rec = (
-            "السياسة تستهدف عدداً كبيراً من الراوترات. خطِّط "
-            "للتطبيق على مراحل."
+            N_("السياسة تستهدف عدداً كبيراً من الراوترات. خطِّط "
+            "للتطبيق على مراحل.")
         )
     elif affected_router_count > 1 or forward_drop:
         bucket = BLAST_MEDIUM
         rec = (
-            "نطاق متوسط — راجع تأثير السياسة على المستخدمين "
-            "ضمن هذه الراوترات قبل التطبيق."
+            N_("نطاق متوسط — راجع تأثير السياسة على المستخدمين "
+            "ضمن هذه الراوترات قبل التطبيق.")
         )
     else:
         bucket = BLAST_SMALL
         rec = (
-            "نطاق ضيّق — التغيير محصور بهذا الراوتر فقط."
+            N_("نطاق ضيّق — التغيير محصور بهذا الراوتر فقط.")
         )
 
     # Append context lines to the recommendation.
     if input_touch and bucket != BLAST_SMALL:
         rec += (
-            " ملاحظة: السياسة تعدّل سلسلة input — تأكَّد من "
-            "بقاء قناة إدارية ثانية متاحة قبل التطبيق."
+            N_(" ملاحظة: السياسة تعدّل سلسلة input — تأكَّد من "
+            "بقاء قناة إدارية ثانية متاحة قبل التطبيق.")
         )
 
     return BlastRadius(

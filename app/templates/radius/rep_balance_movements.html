@@ -13,7 +13,7 @@
 {% block title %}{{ _("تحويلات الرصيد") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-left"></i>{% endblock %}
 {% block page_title %}{{ _("تحويلات الرصيد") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} حركة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s حركة', total=total) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الحركات #}
@@ -26,37 +26,37 @@
 
 {# ── تعريب أنواع القيود ومصادرها وحالاتها (القيمة الأصلية تبقى في title) ── #}
 {% set entry_labels = {
-  'wallet_credit': 'إضافة رصيد',
-  'wallet_debit':  'خصم رصيد',
-  'topup':         'تعبئة رصيد',
-  'loan':          'سلفة',
-  'payment':       'دفعة',
-  'card_purchase': 'شراء كرت',
-  'recharge':      'شحن',
-  'adjustment':    'تسوية',
-  'refund':        'استرداد',
-  'void':          'إبطال',
-  'settlement':    'تسوية حساب',
-  'writeoff':      'شطب دين',
-  'payment_to_balance': 'دفعة — إضافة للرصيد',
-  'payment_to_debt':    'دفعة — خصم من الدين',
-  'debt_settle':        'تسديد دين',
-  'on_account_credit':  'رصيد على الحساب (دين)'
+  'wallet_credit': _('إضافة رصيد'),
+  'wallet_debit':  _('خصم رصيد'),
+  'topup':         _('تعبئة رصيد'),
+  'loan':          _('سلفة'),
+  'payment':       _('دفعة'),
+  'card_purchase': _('شراء كرت'),
+  'recharge':      _('شحن'),
+  'adjustment':    _('تسوية'),
+  'refund':        _('استرداد'),
+  'void':          _('إبطال'),
+  'settlement':    _('تسوية حساب'),
+  'writeoff':      _('شطب دين'),
+  'payment_to_balance': _('دفعة — إضافة للرصيد'),
+  'payment_to_debt':    _('دفعة — خصم من الدين'),
+  'debt_settle':        _('تسديد دين'),
+  'on_account_credit':  _('رصيد على الحساب (دين)')
 } %}
 {% set source_labels = {
-  'subscriber':  'مشترك',
-  'manager':     'مدير',
-  'admin':       'مدير',
-  'distributor': 'موزّع',
-  'payment':     'دفع',
-  'card':        'كرت',
-  'system':      'النظام'
+  'subscriber':  _('مشترك'),
+  'manager':     _('مدير'),
+  'admin':       _('مدير'),
+  'distributor': _('موزّع'),
+  'payment':     _('دفع'),
+  'card':        _('كرت'),
+  'system':      _('النظام')
 } %}
 {% set status_pills = {
-  'posted':  ('مثبتة',        'green'),
-  'pending': ('قيد المراجعة', 'amber'),
-  'void':    ('ملغاة',        'red'),
-  'failed':  ('فاشلة',        'red')
+  'posted':  (_('مثبتة'),        'green'),
+  'pending': (_('قيد المراجعة'), 'amber'),
+  'void':    (_('ملغاة'),        'red'),
+  'failed':  (_('فاشلة'),        'red')
 } %}
 
 {# ── مؤشرات الإضافة/الخصم محسوبة من نفس `items` (بلا أي استعلام إضافي) ── #}
@@ -69,14 +69,14 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="balance-movements-hero">
 {% call hub.megahero(
-  "تحويلات الرصيد",
-  subtitle="كل حركة رصيد مالية — إضافة أو خصم — للمشتركين والمدراء والموزّعين في سجل واحد.",
+  _('تحويلات الرصيد'),
+  subtitle=_('كل حركة رصيد مالية — إضافة أو خصم — للمشتركين والمدراء والموزّعين في سجل واحد.'),
   icon="right-left",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الحركات',  'value': total,           'icon': 'right-left', 'variant': 'brand'},
-    {'label': 'إجمالي الإضافات', 'value': ns.credit|money, 'icon': 'arrow-up',   'variant': 'green'},
-    {'label': 'إجمالي الخصومات', 'value': ns.debit|money,  'icon': 'arrow-down', 'variant': 'red'},
+    {'label': _('إجمالي الحركات'),  'value': total,           'icon': 'right-left', 'variant': 'brand'},
+    {'label': _('إجمالي الإضافات'), 'value': ns.credit|money, 'icon': 'arrow-up',   'variant': 'green'},
+    {'label': _('إجمالي الخصومات'), 'value': ns.debit|money,  'icon': 'arrow-down', 'variant': 'red'},
   ],
   search_action=url_for('radius.rep_balance_movements')
 ) %}
@@ -87,13 +87,13 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {% if can_submit('radius.rep_balance_movements', 'GET') %}{{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {% if can_submit('radius.rep_balance_movements', 'GET') %}{{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                href=url_for('radius.rep_balance_movements')) }}{% endif %}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="السجل يدمج حركات الرصيد العامة (مشتركين/مدراء) مع حركات رصيد الموزّعين، مرتّبة من الأحدث. البحث يطابق الطرف أو المنفّذ أو نوع الحركة، ويُعرض حتى 500 حركة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('السجل يدمج حركات الرصيد العامة (مشتركين/مدراء) مع حركات رصيد الموزّعين، مرتّبة من الأحدث. البحث يطابق الطرف أو المنفّذ أو نوع الحركة، ويُعرض حتى 500 حركة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -123,8 +123,8 @@
 
 {% if items %}
 {# ───── جدول الحركات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("سجل حركات الرصيد", icon="table-list",
-                    meta=items|length|string + " حركة", flush=True) %}
+{% call hub.section(_('سجل حركات الرصيد'), icon="table-list",
+                    meta=items|length|string + _(' حركة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -152,11 +152,11 @@
           </td>
           {# القيمة الخام تبقى في title؛ أي نوع غير معروف يظهر «غير محدد» عربيًا — لا كود إنجليزي خام #}
           <td title="{{ r.entry_type or '' }}">
-            {{ entry_labels.get(r.entry_type, 'غير محدد') if r.entry_type else '—' }}
+            {{ entry_labels.get(r.entry_type, _('غير محدد')) if r.entry_type else '—' }}
           </td>
           <td>
-            {% if r.direction == 'credit' %}{{ hub.pill("إضافة", variant="green") }}
-            {% else %}{{ hub.pill("خصم", variant="red") }}{% endif %}
+            {% if r.direction == 'credit' %}{{ hub.pill(_('إضافة'), variant="green") }}
+            {% else %}{{ hub.pill(_('خصم'), variant="red") }}{% endif %}
           </td>
           {# Render in the SYSTEM currency (settings-driven `money` filter),
              matching the page KPIs above and the accounting-ledger view of
@@ -171,14 +171,14 @@
           <td>
             <span class="rep-src {% if r.scope == 'distributor' %}src-network{% else %}src-panel{% endif %}"
                   title="{{ r.source_type or '' }}">
-              {{ 'موزّع' if r.scope == 'distributor' else source_labels.get(r.source_type, 'عام') }}
+              {{ _('موزّع') if r.scope == 'distributor' else source_labels.get(r.source_type, _('عام')) }}
             </span>
           </td>
           <td>
             {% set _sp = status_pills.get(r.status) %}
             {% if _sp %}{{ hub.pill(_sp[0], variant=_sp[1]) }}
             {% elif r.status %}{{ hub.pill(r.status, variant="grey") }}
-            {% else %}{{ hub.pill("غير محددة", variant="grey") }}{% endif %}
+            {% else %}{{ hub.pill(_('غير محددة'), variant="grey") }}{% endif %}
           </td>
           <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
         </tr>
@@ -188,8 +188,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا حركات رصيد مطابقة",
-   sub="غيّر الفلاتر أو لا توجد حركات مسجّلة بعد.", icon="right-left") }}
+{{ hub.empty(_('لا حركات رصيد مطابقة'),
+   sub=_('غيّر الفلاتر أو لا توجد حركات مسجّلة بعد.'), icon="right-left") }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

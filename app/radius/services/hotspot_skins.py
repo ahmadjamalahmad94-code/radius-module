@@ -16,6 +16,7 @@
 لوحة المتصل، الإضافات الجديدة) فوق هذه الجلود، استجابةً لحجم الشاشة.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 # ── لبنات مشتركة تضمن placeholders المايكروتيك في كل جلد ──
 _ERR = '$(if error)<div class="hs-err">$(error)</div>$(endif)'
@@ -23,13 +24,13 @@ _HID = ('<input type="hidden" name="dst" value="$(link-orig)">'
         '<input type="hidden" name="popup" value="true">'
         '<input type="hidden" name="chap-id" value="$(chap-id)">'
         '<input type="hidden" name="chap-challenge" value="$(chap-challenge)">')
-_UF = ('<input class="hs-in" type="text" name="username" '
-       'placeholder="اسم المستخدم أو رمز البطاقة" required>')
-_PF = ('<input class="hs-in" type="password" name="password" '
-       'placeholder="كلمة المرور" required>')
+_UF = (N_('<input class="hs-in" type="text" name="username" '
+       'placeholder="اسم المستخدم أو رمز البطاقة" required>'))
+_PF = (N_('<input class="hs-in" type="password" name="password" '
+       'placeholder="كلمة المرور" required>'))
 
 
-def _form(fields: str, *, cls: str = "", btn: str = "دخول",
+def _form(fields: str, *, cls: str = "", btn: str = N_("دخول"),
           btn_cls: str = "hs-btn") -> str:
     return ('<form name="login" action="$(link-login-only)" method="post" '
             f'class="hs-form {cls}">' + _ERR + _HID + fields
@@ -122,7 +123,7 @@ def _food_cobrand() -> str:
     body = ('<div class="fc"><div class="fc-hero">' + wave + '</div>'
             '<div class="fc-body"><img class="hs-logo" src="{{TENANT_LOGO_URL}}" '
             'alt=""><h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>'
-            + _form(_UF + _PF, btn="ادخل واستمتع") + '</div></div>')
+            + _form(_UF + _PF, btn=N_("ادخل واستمتع")) + '</div></div>')
     return _doc(css, body)
 
 
@@ -155,9 +156,9 @@ def _crimson_luxe() -> str:
             '<div class="cl-form"><div class="cl-card">'
             '<div class="cl-emblem">★</div>'
             '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>'
-            + _form(_UF + _PF, btn="دخول الضيوف")
-            + '<a class="cl-staff" href="$(link-login-only)">دخول الموظّفين</a>'
-            '</div></div></div>')
+            + _form(_UF + _PF, btn=N_("دخول الضيوف"))
+            + N_('<a class="cl-staff" href="$(link-login-only)">دخول الموظّفين</a>'
+            '</div></div></div>'))
     return _doc(css, body)
 
 
@@ -187,7 +188,7 @@ def _gilded() -> str:
     body = ('<div class="gl"><div class="gl-photo"></div>'
             '<div class="gl-form"><div class="gl-emblem">۞</div>'
             '<div class="gl-fil"></div><h1>{{TENANT_NAME}}</h1>'
-            '<p>{{WELCOME_TEXT}}</p>' + _form(_UF + _PF, btn="تفضّل بالدخول")
+            '<p>{{WELCOME_TEXT}}</p>' + _form(_UF + _PF, btn=N_("تفضّل بالدخول"))
             + '<div class="gl-fil"></div></div></div>')
     return _doc(css, body)
 
@@ -211,10 +212,10 @@ def _soft_sky() -> str:
            ".ss .hs-in{border-radius:14px;background:#f8fbff}"
            ".ss .hs-btn{border-radius:999px;background:linear-gradient(90deg,"
            "#06b6d4,#22c55e)}")
-    body = ('<div class="ss-bar">{{WELCOME_TEXT}}</div>'
+    body = (N_('<div class="ss-bar">{{WELCOME_TEXT}}</div>'
             '<div class="ss"><img class="hs-logo" src="{{TENANT_LOGO_URL}}" alt="">'
-            '<h1>{{TENANT_NAME}}</h1><p>أدخل بياناتك للاتصال</p>'
-            + _form(_UF + _PF, btn="اتصال") + '</div>')
+            '<h1>{{TENANT_NAME}}</h1><p>أدخل بياناتك للاتصال</p>')
+            + _form(_UF + _PF, btn=N_("اتصال")) + '</div>')
     return _doc(css, body)
 
 
@@ -260,7 +261,7 @@ def _carrier_app() -> str:
             'alt=""><h1>{{TENANT_NAME}}</h1></div>'
             '<div class="ca-panel">'
             '<div class="ca-pane p-home"><p style="text-align:center;color:#64748b;'
-            'font-size:13px">{{WELCOME_TEXT}}</p>' + _form(_UF + _PF, btn="دخول")
+            'font-size:13px">{{WELCOME_TEXT}}</p>' + _form(_UF + _PF, btn=N_("دخول"))
             + '</div>'
             '<div class="ca-pane p-pkg"><div class="ca-muted">باقاتنا تظهر هنا — '
             'فعّل إضافة «درج الباقات» لعرضها.</div></div>'
@@ -299,12 +300,12 @@ def _tech_terminal() -> str:
            ".tt p{text-align:center;color:#7e9c8b;margin:0 0 16px;font-size:12.5px}"
            ".tt .hs-in{background:#0b1422;border-color:#1c2b3f;color:#cde3d6}"
            ".tt .hs-btn{background:linear-gradient(90deg,#16a34a,#22c55e)}")
-    body = ('<div class="tt-status"><span id="tt-clock" dir="ltr">--:--</span>'
+    body = (N_('<div class="tt-status"><span id="tt-clock" dir="ltr">--:--</span>'
             '<span>NETWORK ONLINE</span></div>'
             '<div class="tt"><div class="tt-net"><span class="tt-pill">مستقرّة</span>'
             '<span class="tt-pill">محميّة</span><span class="tt-pill">مشفّرة</span></div>'
-            '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>'
-            + _form(_UF + _PF, btn="اتصال آمن") + '</div>'
+            '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>')
+            + _form(_UF + _PF, btn=N_("اتصال آمن")) + '</div>'
             "<script>(function(){var e=document.getElementById('tt-clock');"
             "if(!e)return;function t(){var d=new Date();function p(n){return"
             "(n<10?'0':'')+n;}e.textContent=p(d.getHours())+':'+p(d.getMinutes())"
@@ -335,9 +336,9 @@ def _frost_glass() -> str:
     body = ('<div class="fg"><img class="hs-logo" src="{{TENANT_LOGO_URL}}" alt="">'
             '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>'
             + _form(_UF + _PF
-                    + '<label class="fg-row"><input type="checkbox" '
-                    'name="hr-remember"> تذكّرني على هذا الجهاز</label>',
-                    btn="دخول")
+                    + N_('<label class="fg-row"><input type="checkbox" '
+                    'name="hr-remember"> تذكّرني على هذا الجهاز</label>'),
+                    btn=N_("دخول"))
             + '</div>')
     return _doc(css, body)
 
@@ -363,12 +364,12 @@ def _telemetry() -> str:
            ".tc p{text-align:center;opacity:.9;margin:0 0 16px;font-size:13px}"
            ".tc .hs-in{background:rgba(255,255,255,.9);color:#0f172a}"
            ".tc .hs-btn{background:#0ea5e9}")
-    body = ('<div class="tc-strip"><span class="tc-dot"><i></i> مستقرّة</span>'
+    body = (N_('<div class="tc-strip"><span class="tc-dot"><i></i> مستقرّة</span>'
             '<span class="tc-dot"><i></i> محميّة</span>'
             '<span class="tc-dot"><i></i> مشفّرة</span></div>'
             '<div class="tc"><img class="hs-logo" src="{{TENANT_LOGO_URL}}" alt="">'
-            '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>'
-            + _form(_UF + _PF, btn="اتصال") + '</div>')
+            '<h1>{{TENANT_NAME}}</h1><p>{{WELCOME_TEXT}}</p>')
+            + _form(_UF + _PF, btn=N_("اتصال")) + '</div>')
     return _doc(css, body)
 
 

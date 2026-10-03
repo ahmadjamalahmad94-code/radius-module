@@ -11,6 +11,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -99,13 +100,13 @@ _GLOW_ART = """
 
 _GLOW_HERO = ("""
       <div class="gl-hero">
-        <div class="gl-frame">""" + _GLOW_ART + """</div>
+        <div class="gl-frame">""" + _GLOW_ART + N_("""</div>
         <div class="gl-cap">
           <div><b>استوديو الإبداع</b><span>اتصال يُلهم العمل — سريع وثابت ومضيء</span></div>
           <div class="gl-badge"><span class="gl-dot"></span> مضيء</div>
         </div>
       </div>
-""")
+"""))
 
 _GLOW_STYLE = """
 <style id="hr-glow-card">

@@ -5,6 +5,7 @@ included). Read endpoints query the cards repo directly via the same
 CardsStore helpers used by the web admin.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import csv
 import io
@@ -336,7 +337,7 @@ def _card_or_response(card_id: int):
 
     card = cards_repo.get_card(_tid(), card_id)
     if not card:
-        return None, fail("not_found", "الكرت غير موجود.", status=404)
+        return None, fail("not_found", _tr("الكرت غير موجود."), status=404)
     if not batch_in_scope(int(card.batch_id or 0)):
         return None, deny_out_of_scope()
     return card, None
@@ -552,15 +553,15 @@ def _field_int(body: dict, key: str, default, label: str):
     if raw is None or raw == "":
         return default
     if isinstance(raw, bool):
-        raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.")
+        raise RadiusValidationError(_tr('%(label)s يجب أن يكون عددًا صحيحًا.', label=label))
     if isinstance(raw, float):
         if not raw.is_integer():
-            raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.")
+            raise RadiusValidationError(_tr('%(label)s يجب أن يكون عددًا صحيحًا.', label=label))
         return int(raw)
     try:
         return int(str(raw).strip())
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{label} يجب أن يكون عددًا صحيحًا.") from None
+        raise RadiusValidationError(_tr('%(label)s يجب أن يكون عددًا صحيحًا.', label=label)) from None
 
 
 def _field_float(body: dict, key: str, default: float, label: str) -> float:
@@ -568,13 +569,13 @@ def _field_float(body: dict, key: str, default: float, label: str) -> float:
     if raw is None or raw == "":
         return default
     if isinstance(raw, bool):
-        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.")
+        raise RadiusValidationError(_tr('%(label)s يجب أن يكون رقمًا.', label=label))
     try:
         value = float(str(raw).strip())
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.") from None
+        raise RadiusValidationError(_tr('%(label)s يجب أن يكون رقمًا.', label=label)) from None
     if not math.isfinite(value):
-        raise RadiusValidationError(f"{label} يجب أن يكون رقمًا.")
+        raise RadiusValidationError(_tr('%(label)s يجب أن يكون رقمًا.', label=label))
     return value
 
 
@@ -589,7 +590,7 @@ def _field_bool(body: dict, key: str, default=None):
         return True
     if text in {"0", "false", "no", "off"}:
         return False
-    raise RadiusValidationError(f"قيمة «{key}» يجب أن تكون true أو false.")
+    raise RadiusValidationError(_tr('قيمة «%(key)s» يجب أن تكون true أو false.', key=key))
 
 
 # charset ↔ generation type (the service derives the charset from the type).
@@ -624,7 +625,7 @@ def _username_length_or_auto(body: dict) -> int:
     تلقائيًّا لبادئةٍ/لاحقةٍ/رقم حزمةٍ طويلة مع 4 خانات عشوائيّة (سقف 32) —
     بدل اسمٍ بخانةٍ واحدة (10 تركيبات) أو رفضِ طلبٍ لم يحدّد طولًا أصلًا."""
     if body.get("username_length") not in (None, ""):
-        return _field_int(body, "username_length", 8, "طول اسم المستخدم")
+        return _field_int(body, "username_length", 8, N_("طول اسم المستخدم"))
     fixed = (len("".join(str(body.get("username_prefix") or "").split()))
              + len("".join(str(body.get("username_suffix") or "").split()))
              + len("".join(str(body.get("prefix_or_suffix_value") or "").split())))
@@ -645,12 +646,12 @@ def _device_limit_mode(body: dict) -> str:
         return ""
     if not isinstance(raw, str):
         raise RadiusValidationError(
-            "قيمة «device_limit_mode» يجب أن تكون نصًّا: reject أو replace أو فارغة.")
+            _tr("قيمة «device_limit_mode» يجب أن تكون نصًّا: reject أو replace أو فارغة."))
     value = raw.strip().lower()
     if value not in _DEVICE_LIMIT_MODES:
         raise RadiusValidationError(
-            "قيمة «device_limit_mode» غير صحيحة — المسموح: reject أو replace أو فارغة "
-            "(اتبع الإعداد العام).")
+            _tr("قيمة «device_limit_mode» غير صحيحة — المسموح: reject أو replace أو فارغة "
+            "(اتبع الإعداد العام)."))
     return value
 
 
@@ -664,10 +665,10 @@ def _batch_owner(body: dict, *, default_manager_id: int = 0):
     if body.get("manager_id") in (None, ""):
         requested_manager = default_manager_id
     else:
-        requested_manager = _field_int(body, "manager_id", 0, "رقم المدير")
+        requested_manager = _field_int(body, "manager_id", 0, N_("رقم المدير"))
     raw_dist = body.get("distributor_id")
     dist = (None if raw_dist in (None, "", 0, "0")
-            else _field_int(body, "distributor_id", None, "رقم الموزّع"))
+            else _field_int(body, "distributor_id", None, N_("رقم الموزّع")))
     return resolve_batch_owner(
         tenant_id=_tid(), is_super=bool(token_bypasses_rbac()),
         caller_admin_id=admin_id(), requested_manager_id=requested_manager,
@@ -678,7 +679,7 @@ def _generate_kwargs(body: dict) -> dict:
     """Parse + type-check the generate body into CardsService kwargs.
     Honours the same fields as the web generator, incl. «رقم فقط»
     (login_without_password / password_length 0)."""
-    password_length = _field_int(body, "password_length", 6, "طول كلمة المرور")
+    password_length = _field_int(body, "password_length", 6, N_("طول كلمة المرور"))
     lwp = _field_bool(body, "login_without_password", None)
     if password_length == 0 and lwp is None:
         # «رقم فقط» كما في الويب: كلمة مرور بطول صفر = الدخول بالرقم وحده.
@@ -701,13 +702,13 @@ def _generate_kwargs(body: dict) -> dict:
         login_without_password=lwp,
         include_batch_number=bool(_field_bool(body, "include_batch_number", False)),
         random_generation_enabled=_field_bool(body, "random_generation_enabled", True) is not False,
-        time_value=_field_int(body, "time_value", 0, "مدّة البطاقة"),
+        time_value=_field_int(body, "time_value", 0, N_("مدّة البطاقة")),
         time_unit=str(body.get("time_unit") or "days").strip(),
-        device_count=_field_int(body, "device_count", 1, "عدد الأجهزة"),
+        device_count=_field_int(body, "device_count", 1, N_("عدد الأجهزة")),
         device_limit_mode=_device_limit_mode(body),
         duration_mode=str(body.get("duration_mode") or "time_unit"),
         validity_after_first_login_days=_field_int(
-            body, "validity_after_first_login_days", 0, "الصلاحية بعد أوّل دخول"),
+            body, "validity_after_first_login_days", 0, N_("الصلاحية بعد أوّل دخول")),
         count_by_seconds=bool(_field_bool(body, "count_by_seconds", False)),
         count_from_first_connect=_field_bool(body, "count_from_first_connect", True) is not False,
         on_quota_exhaust=str(body.get("on_quota_exhaust") or "stop").strip(),
@@ -718,10 +719,10 @@ def _generate_kwargs(body: dict) -> dict:
         switch_to_mac_on_connect=bool(_field_bool(body, "switch_to_mac_on_connect", False)),
         lock_to_mac_on_close=bool(_field_bool(body, "lock_to_mac_on_close", False)),
         phone_only_login=bool(_field_bool(body, "phone_only_login", False)),
-        price_per_card=_field_float(body, "price_per_card", 0.0, "سعر البطاقة"),
-        price_bulk=_field_float(body, "price_bulk", 0.0, "سعر الجملة"),
-        total_price=_field_float(body, "total_price", 0.0, "السعر الإجمالي"),
-        total_quota_mb=_field_int(body, "total_quota_mb", 0, "الكوتا"),
+        price_per_card=_field_float(body, "price_per_card", 0.0, N_("سعر البطاقة")),
+        price_bulk=_field_float(body, "price_bulk", 0.0, N_("سعر الجملة")),
+        total_price=_field_float(body, "total_price", 0.0, N_("السعر الإجمالي")),
+        total_quota_mb=_field_int(body, "total_quota_mb", 0, N_("الكوتا")),
         package_name=str(body.get("package_name") or "").strip(),
         service_name=str(body.get("service_name") or "").strip(),
         **dict(zip(("manager_id", "distributor_id"), _batch_owner(body))),
@@ -732,7 +733,7 @@ def _generate_kwargs(body: dict) -> dict:
 def _db_busy(exc: Exception):
     """SQLite still locked after busy_timeout → JSON 503 (retry), never HTML."""
     if isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower():
-        return fail("busy", "قاعدة البيانات مشغولة الآن — أعد المحاولة بعد لحظات.",
+        return fail("busy", _tr("قاعدة البيانات مشغولة الآن — أعد المحاولة بعد لحظات."),
                     status=503)
     return None
 
@@ -777,9 +778,9 @@ def _manager_cardgen_denial(kind: str):
     if kind == "generate":
         allowed = (manager_grants.action_permitted(aid, "cards.generate", tenant_id=_tid())
                    and manager_grants.full_batch_form_granted(aid, tenant_id=_tid()))
-        msg = ("التوليد المباشر غير مسموح لحسابك — ولّد البطاقات من العروض "
+        msg = (_tr("التوليد المباشر غير مسموح لحسابك — ولّد البطاقات من العروض "
                "المسعَّرة (تُخصم قيمتها من محفظتك)، أو اطلب من المالك منحك "
-               "«توليد بطاقات» صراحةً.")
+               "«توليد بطاقات» صراحةً."))
     else:
         from ...radius.services.manager_distributor_ops import ManagerDistributorOpsService
         try:
@@ -787,7 +788,7 @@ def _manager_cardgen_denial(kind: str):
                 entity_type="manager", entity_id=aid, permission="can_import_batches")
         except Exception:  # noqa: BLE001 — مغلقٌ عند الخطأ
             allowed = False
-        msg = "استيراد الحِزم غير مسموح لحسابك — اطلب من المالك صلاحية «استيراد الحِزم»."
+        msg = _tr("استيراد الحِزم غير مسموح لحسابك — اطلب من المالك صلاحية «استيراد الحِزم».")
     if allowed:
         return None
     return fail("forbidden", msg, status=403)
@@ -796,31 +797,30 @@ def _manager_cardgen_denial(kind: str):
 def cards_generate():
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "أرسل جسم الطلب كائن JSON.", status=422)
+        return fail("validation_error", _tr("أرسل جسم الطلب كائن JSON."), status=422)
     denied = _manager_cardgen_denial("generate")
     if denied is not None:
         return denied
     try:
-        plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
-        count = _field_int(body, "count", 1, "عدد الكروت")
+        plan_id = _field_int(body, "plan_id", None, N_("رقم الباقة"))
+        count = _field_int(body, "count", 1, N_("عدد الكروت"))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     if not plan_id or plan_id < 1:
-        return fail("validation_error", "plan_id مطلوب", status=422)
+        return fail("validation_error", _tr("plan_id مطلوب"), status=422)
     if count <= 0:
-        return fail("validation_error", "عدد الكروت يجب أن يكون 1 فأكثر.", status=422)
+        return fail("validation_error", _tr("عدد الكروت يجب أن يكون 1 فأكثر."), status=422)
     from app.radius.services.cards import hard_max_cards_per_batch
     _hard = hard_max_cards_per_batch(_tid())
     if count > _hard:
         return fail("validation_error",
-                    f"الحدّ الأقصى للدفعة الواحدة {_hard} بطاقة — "
-                    "قسّم الكمّية على أكثر من دفعة.", status=422)
+                    _tr('الحدّ الأقصى للدفعة الواحدة %(hard)s بطاقة — قسّم الكمّية على أكثر من دفعة.', hard=_hard), status=422)
     # نفس سقف اللوحة: إعداد الجهة cards.max_per_batch (0 = بلا حدّ).
     from app.radius.services.cards import max_cards_per_batch
     _cap = max_cards_per_batch(_tid())
     if _cap and count > _cap:
         return fail("validation_error",
-                    f"عدد الكروت يتجاوز الحدّ المضبوط ({_cap}).", status=422)
+                    _tr('عدد الكروت يتجاوز الحدّ المضبوط (%(cap)s).', cap=_cap), status=422)
     capacity = CapacityEnforcementService().check_cards_generate(
         tenant_id=_tid(),
         requested_count=count,
@@ -863,21 +863,21 @@ def cards_batches_import():
         return denied
     body = _body()
     try:
-        plan_id = _field_int(body, "plan_id", None, "رقم الباقة")
-        price_per_card = _field_float(body, "price_per_card", 0.0, "سعر البطاقة")
-        total_price = _field_float(body, "total_price", 0.0, "السعر الإجمالي")
+        plan_id = _field_int(body, "plan_id", None, N_("رقم الباقة"))
+        price_per_card = _field_float(body, "price_per_card", 0.0, N_("سعر البطاقة"))
+        total_price = _field_float(body, "total_price", 0.0, N_("السعر الإجمالي"))
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     if not plan_id:
-        return fail("validation_error", "plan_id مطلوب", status=422)
+        return fail("validation_error", _tr("plan_id مطلوب"), status=422)
     rows = _parse_import_cards(body)
     if not rows:
-        return fail("validation_error", "أدخل قائمة الكروت أو نص CSV.", status=422)
+        return fail("validation_error", _tr("أدخل قائمة الكروت أو نص CSV."), status=422)
     if len(rows) > 5000:
-        return fail("validation_error", "الحد الأقصى للاستيراد هو 5000 كرت.", status=422)
+        return fail("validation_error", _tr("الحد الأقصى للاستيراد هو 5000 كرت."), status=422)
     source_type = str(body.get("source_type") or "imported").strip().lower()
     if source_type not in {"imported", "external"}:
-        return fail("validation_error", "مصدر الكروت يجب أن يكون imported أو external.", status=422)
+        return fail("validation_error", _tr("مصدر الكروت يجب أن يكون imported أو external."), status=422)
     # fix2 (R05-N6): «imported» يُنشئ حسابات المصادقة دائمًا (الخادم يتجاهل
     # sync_to_radius=false) — لا بطاقاتٍ «متاحة» بلا حساب.
     sync_to_radius = source_type != "external"
@@ -963,7 +963,7 @@ def cards_batches_bulk():
     action = str(body.get("action") or body.get("bulk_action") or "").strip()
     raw_ids = body.get("batch_ids") or body.get("ids") or []
     if not isinstance(raw_ids, list):
-        return fail("validation_error", "قائمة الحزم يجب أن تكون مصفوفة.", status=422)
+        return fail("validation_error", _tr("قائمة الحزم يجب أن تكون مصفوفة."), status=422)
     batch_ids: list[int] = []
     for raw in raw_ids:
         try:
@@ -973,7 +973,7 @@ def cards_batches_bulk():
         if batch_id > 0 and batch_id not in batch_ids:
             batch_ids.append(batch_id)
     if not batch_ids:
-        return fail("validation_error", "اختر حزمة واحدة على الأقل.", status=422)
+        return fail("validation_error", _tr("اختر حزمة واحدة على الأقل."), status=422)
     for batch_id in batch_ids:
         if not batch_in_scope(batch_id):
             return deny_out_of_scope()
@@ -996,7 +996,7 @@ def cards_batches_bulk():
         elif action == "refresh":
             changed = 0
         else:
-            return fail("validation_error", "إجراء الحزم غير معروف.", status=422)
+            return fail("validation_error", _tr("إجراء الحزم غير معروف."), status=422)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok({
@@ -1030,11 +1030,11 @@ def cards_recharge_generate():
     package_name = str(body.get("package_name") or "").strip()
     denominations = _parse_recharge_denominations(body)
     if not package_name:
-        return fail("validation_error", "اسم حزمة الشحن مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم حزمة الشحن مطلوب."), status=422)
     if not denominations:
         return fail(
             "validation_error",
-            "أدخل فئة شحن واحدة على الأقل بقيمة وعدد أكبر من صفر.",
+            _tr("أدخل فئة شحن واحدة على الأقل بقيمة وعدد أكبر من صفر."),
             status=422,
         )
     from ...radius.services.cards import get_cards_service
@@ -1063,7 +1063,7 @@ def cards_recharge_get(batch_id: int):
     svc = get_cards_service()
     batch = svc.get_recharge_batch(batch_id)
     if not batch or _obj_value(batch, "deleted_at", None):
-        return fail("not_found", "حزمة الشحن غير موجودة.", status=404)
+        return fail("not_found", _tr("حزمة الشحن غير موجودة."), status=404)
     total_cards = svc.count_recharge_cards(batch_id)
     cards = svc.list_recharge_cards(batch_id, limit=limit, offset=offset)
     return ok({
@@ -1083,7 +1083,7 @@ def cards_recharge_cards(batch_id: int):
     svc = get_cards_service()
     batch = svc.get_recharge_batch(batch_id)
     if not batch or _obj_value(batch, "deleted_at", None):
-        return fail("not_found", "حزمة الشحن غير موجودة.", status=404)
+        return fail("not_found", _tr("حزمة الشحن غير موجودة."), status=404)
     total_cards = svc.count_recharge_cards(batch_id)
     cards = svc.list_recharge_cards(batch_id, limit=limit, offset=offset)
     return ok({
@@ -1104,7 +1104,7 @@ def cards_recharge_delete(batch_id: int):
         batch_id=batch_id,
     )
     if not deleted:
-        return fail("not_found", "حزمة الشحن غير موجودة أو محذوفة.", status=404)
+        return fail("not_found", _tr("حزمة الشحن غير موجودة أو محذوفة."), status=404)
     return ok({"deleted": True, "batch_id": batch_id})
 
 
@@ -1164,7 +1164,7 @@ def cards_batch_get(batch_id: int):
     from ...radius.db.repos import cards_repo
     batch = cards_repo.get_batch(_tid(), batch_id)
     if not batch:
-        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('حزمة الكروت رقم %(batch_id)s غير موجودة.', batch_id=batch_id), status=404)
     return ok(_serialize_batch(batch))
 
 
@@ -1174,7 +1174,7 @@ def cards_batch_update(batch_id: int):
     # «not json» / null used to become {} → 200 doing nothing.
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "بيانات الطلب يجب أن تكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("بيانات الطلب يجب أن تكون كائن JSON."), status=422)
     from ...radius.services.cards import get_cards_service
     from ...radius.db.repos import cards_repo
     try:
@@ -1184,7 +1184,7 @@ def cards_batch_update(batch_id: int):
         if "manager_id" in body or "distributor_id" in body:
             current = cards_repo.get_batch(_tid(), batch_id)
             if current is None:
-                return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.",
+                return fail("not_found", _tr('حزمة الكروت رقم %(batch_id)s غير موجودة.', batch_id=batch_id),
                             status=404)
             # نفس عزل التوليد: غير السوبر لا يَنسب الحزمة لغيره ولا يربطها
             # بموزّعٍ لا يتبع له؛ الغائب من المفتاحين يبقى كما هو.
@@ -1217,7 +1217,7 @@ def cards_batch_summary(batch_id: int):
     from ...radius.db.repos import cards_repo
     summary = cards_repo.batch_operational_summary(_tid(), batch_id)
     if not summary:
-        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('حزمة الكروت رقم %(batch_id)s غير موجودة.', batch_id=batch_id), status=404)
     return ok({"summary": summary})
 
 
@@ -1228,7 +1228,7 @@ def cards_of_batch(batch_id: int):
         limit = min(int(request.args.get("limit") or 200), 2000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     used = request.args.get("used")
     revoked = request.args.get("revoked")
     used_bool = None if used is None else used.lower() in ("1", "true", "yes")
@@ -1238,7 +1238,7 @@ def cards_of_batch(batch_id: int):
     if not batch_in_scope(batch_id):
         return deny_out_of_scope()
     if not cards_repo.get_batch(_tid(), batch_id):
-        return fail("not_found", f"حزمة الكروت رقم {batch_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('حزمة الكروت رقم %(batch_id)s غير موجودة.', batch_id=batch_id), status=404)
     items = cards_repo.list_cards(
         _tid(),
         batch_id=batch_id,
@@ -1308,7 +1308,7 @@ def cards_lock_mac(card_id: int):
         return response
     mac = str(_body().get("mac") or "").strip()[:64]
     if not mac:
-        return fail("validation_error", "عنوان MAC مطلوب.", status=422)
+        return fail("validation_error", _tr("عنوان MAC مطلوب."), status=422)
     from ...radius.services.cards import get_cards_service
     try:
         get_cards_service().lock_card_mac(actor=_actor(), card_id=card_id, mac=mac)
@@ -1361,7 +1361,7 @@ def cards_adjust_time(card_id: int):
     body = _body()
     if "delta_seconds" in body:
         try:
-            delta = _field_int(body, "delta_seconds", 0, "مقدار التعديل بالثواني")
+            delta = _field_int(body, "delta_seconds", 0, N_("مقدار التعديل بالثواني"))
         except RadiusValidationError as e:
             return _radius_error_response(e)
     else:
@@ -1369,17 +1369,17 @@ def cards_adjust_time(card_id: int):
         op = str(body.get("op") or "add").strip().lower()
         if unit not in _ADJUST_UNITS or op not in ("add", "subtract"):
             return fail("validation_error",
-                        "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم).",
+                        _tr("حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."),
                         status=422)
         try:
-            amount = _field_int(body, "amount", 0, "المدّة")
+            amount = _field_int(body, "amount", 0, N_("المدّة"))
         except RadiusValidationError as e:
             return _radius_error_response(e)
         if amount <= 0:
-            return fail("validation_error", "المدّة يجب أن تكون أكبر من صفر.", status=422)
+            return fail("validation_error", _tr("المدّة يجب أن تكون أكبر من صفر."), status=422)
         delta = amount * _ADJUST_UNITS[unit] * (-1 if op == "subtract" else 1)
     if not delta:
-        return fail("validation_error", "لا يوجد تعديل لتطبيقه.", status=422)
+        return fail("validation_error", _tr("لا يوجد تعديل لتطبيقه."), status=422)
     # f05-M2 + «الحدود»: سقف الإضافة في العمليّة الواحدة (limits.max_extend_days)
     # + 2100 — الحارس المشترك نفسه الذي يستعمله الويب (CardsService.adjust_card_time).
     from ...radius.services.cards import get_cards_service
@@ -1423,7 +1423,7 @@ def cards_disconnect(card_id: int):
         session_ids = [str(x).strip() for x in raw_ids if str(x).strip()][:100] or None
     else:
         return fail("validation_error",
-                    "«session_ids» يجب أن تكون قائمة معرّفات جلسات.", status=422)
+                    _tr("«session_ids» يجب أن تكون قائمة معرّفات جلسات."), status=422)
     from ...radius.services.cards import get_cards_service
     try:
         extra = {"session_ids": session_ids} if session_ids else {}
@@ -1447,7 +1447,7 @@ def cards_delete_permanent(card_id: int):
     if confirm != f"DELETE:{card.username}":
         return fail(
             "validation_error",
-            "للحذف النهائي اكتب DELETE: ثم اسم مستخدم الكرت.",
+            _tr("للحذف النهائي اكتب DELETE: ثم اسم مستخدم الكرت."),
             status=422,
         )
     from ...radius.services.cards import get_cards_service

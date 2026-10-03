@@ -23,6 +23,7 @@ Numeric score is 0..100. The score is for the UI bar; the
 at the top of the module — tweak there, not in templates.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -121,8 +122,8 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
     if ov is None:
         return HealthScore(
             state=STATE_UNKNOWN, score=50,
-            reasons=["لا توجد بيانات كافية للراوتر."],
-            recommended_action_ar="افتح صفحة الراوتر وحدِّث البيانات.",
+            reasons=[N_("لا توجد بيانات كافية للراوتر.")],
+            recommended_action_ar=N_("افتح صفحة الراوتر وحدِّث البيانات."),
             primary_signal="no_data",
         )
 
@@ -135,14 +136,14 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
     if not ov.enabled:
         state = STATE_OFFLINE
         score += _POINTS["disabled"]   # → 0
-        _add_reason(reasons, "الراوتر معطّل من الإعدادات.")
+        _add_reason(reasons, _tr("الراوتر معطّل من الإعدادات."))
         primary_signal = "disabled"
         return HealthScore(
             state=state, score=max(0, score),
             reasons=reasons,
             recommended_action_ar=(
-                "فعّل الراوتر من غرفة العمليات إذا كان يجب أن "
-                "يكون نشطًا."
+                N_("فعّل الراوتر من غرفة العمليات إذا كان يجب أن "
+                "يكون نشطًا.")
             ),
             primary_signal=primary_signal,
         )
@@ -152,13 +153,13 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
         state = _worse(state, STATE_OFFLINE)
         score += _POINTS["missing_snapshot"]
         _add_reason(reasons,
-                    "آخر محاولة لتحديث الـ snapshot فشلت.")
+                    _tr("آخر محاولة لتحديث الـ snapshot فشلت."))
         if not primary_signal:
             primary_signal = "snapshot_failed"
     elif ov.snapshot_status == "stale":
         state = _worse(state, STATE_ATTENTION)
         score += _POINTS["stale_snapshot"]
-        _add_reason(reasons, "بيانات الراوتر قديمة (snapshot stale).")
+        _add_reason(reasons, _tr("بيانات الراوتر قديمة (snapshot stale)."))
         if not primary_signal:
             primary_signal = "snapshot_stale"
     elif ov.snapshot_status == "unknown" and ov.last_audit_id is None:
@@ -166,7 +167,7 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
         state = _worse(state, STATE_UNKNOWN)
         score += _POINTS["missing_snapshot"]
         _add_reason(reasons,
-                    "راوتر جديد بلا بيانات تشغيلية بعد.")
+                    _tr("راوتر جديد بلا بيانات تشغيلية بعد."))
         if not primary_signal:
             primary_signal = "no_data"
 
@@ -177,7 +178,7 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
             -60, _POINTS["critical_alert"] * ov.active_alerts_critical)
         score += deduct
         _add_reason(reasons,
-                    f"{ov.active_alerts_critical} تنبيه حرج مفتوح.")
+                    _tr('%(active_alerts_critical)s تنبيه حرج مفتوح.', active_alerts_critical=ov.active_alerts_critical))
         if not primary_signal:
             primary_signal = "critical_alert"
 
@@ -186,7 +187,7 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
         state = _worse(state, STATE_ATTENTION)
         score += _POINTS["warning_alert"] * ov.active_alerts_warning
         _add_reason(reasons,
-                    f"{ov.active_alerts_warning} تنبيه تحذيري.")
+                    _tr('%(active_alerts_warning)s تنبيه تحذيري.', active_alerts_warning=ov.active_alerts_warning))
         if not primary_signal:
             primary_signal = "warning_alert"
 
@@ -194,13 +195,13 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
     if ov.backup_status == "missing":
         state = _worse(state, STATE_ATTENTION)
         score += _POINTS["missing_backup"]
-        _add_reason(reasons, "لا توجد نسخة احتياطية لهذا الراوتر.")
+        _add_reason(reasons, _tr("لا توجد نسخة احتياطية لهذا الراوتر."))
         if not primary_signal:
             primary_signal = "missing_backup"
     elif ov.backup_status == "stale":
         state = _worse(state, STATE_ATTENTION)
         score += _POINTS["stale_backup"]
-        _add_reason(reasons, "آخر نسخة احتياطية قديمة.")
+        _add_reason(reasons, _tr("آخر نسخة احتياطية قديمة."))
         if not primary_signal:
             primary_signal = "stale_backup"
 
@@ -209,7 +210,7 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
         state = _worse(state, STATE_ATTENTION)
         score += _POINTS["recent_failure"]
         _add_reason(reasons,
-                    f"آخر عملية فاشلة: {ov.last_failed_action}.")
+                    _tr('آخر عملية فاشلة: %(last_failed_action)s.', last_failed_action=ov.last_failed_action))
         if not primary_signal:
             primary_signal = "recent_failure"
 
@@ -219,8 +220,8 @@ def score_health(ov: RouterOverview | None) -> HealthScore:
         state = _worse(state, STATE_RISKY)
         score += _POINTS["partial_apply"]
         _add_reason(reasons,
-                    "آخر عملية برمجة طُبِّقت جزئيًا — حالة "
-                    "غير متّسقة.")
+                    _tr("آخر عملية برمجة طُبِّقت جزئيًا — حالة "
+                    "غير متّسقة."))
         if not primary_signal:
             primary_signal = "partial_apply"
 
@@ -240,28 +241,28 @@ def _recommend(primary_signal: str, state: str) -> str:
     """Single Arabic next-step. One per signal — the overview
     page's `suggested_actions` already gives the full list."""
     if state == STATE_HEALTHY:
-        return "الراوتر صحّي — لا إجراء مطلوب."
+        return N_("الراوتر صحّي — لا إجراء مطلوب.")
     if primary_signal == "disabled":
-        return "فعّل الراوتر من الإعدادات."
+        return N_("فعّل الراوتر من الإعدادات.")
     if primary_signal in {"snapshot_failed", "snapshot_stale"}:
-        return "شغّل تشخيصًا لتحديث snapshot الراوتر."
+        return N_("شغّل تشخيصًا لتحديث snapshot الراوتر.")
     if primary_signal == "no_data":
-        return "أنشئ snapshot أول عبر تشغيل تشخيص."
+        return N_("أنشئ snapshot أول عبر تشغيل تشخيص.")
     if primary_signal == "critical_alert":
-        return "افتح التنبيهات الحرجة وعالجها قبل أي تعديل."
+        return N_("افتح التنبيهات الحرجة وعالجها قبل أي تعديل.")
     if primary_signal == "warning_alert":
-        return "راجع التنبيهات المفتوحة."
+        return N_("راجع التنبيهات المفتوحة.")
     if primary_signal == "missing_backup":
-        return ("خذ نسخة احتياطية قبل أي تعديل خطر — لا توجد "
-                "نسخة سابقة.")
+        return (N_("خذ نسخة احتياطية قبل أي تعديل خطر — لا توجد "
+                "نسخة سابقة."))
     if primary_signal == "stale_backup":
-        return "خذ نسخة احتياطية محدّثة."
+        return N_("خذ نسخة احتياطية محدّثة.")
     if primary_signal == "recent_failure":
-        return "افحص تفاصيل آخر عملية فاشلة."
+        return N_("افحص تفاصيل آخر عملية فاشلة.")
     if primary_signal == "partial_apply":
-        return ("نفّذ تراجع/Unprogram للأوامر التي طُبِّقت قبل "
-                "إعادة المحاولة.")
-    return "راجع لوحة الراوتر للتفاصيل."
+        return (N_("نفّذ تراجع/Unprogram للأوامر التي طُبِّقت قبل "
+                "إعادة المحاولة."))
+    return N_("راجع لوحة الراوتر للتفاصيل.")
 
 
 __all__ = [

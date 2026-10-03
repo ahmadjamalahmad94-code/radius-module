@@ -8,51 +8,51 @@
 
 {# ───── قاموس تعريب حالات الدفع — يمنع ظهور قيم enum الإنجليزية الخام ───── #}
 {% set STATUS_AR = {
-  'pending': 'معلقة',
-  'proof_submitted': 'إثبات مُرسل',
-  'under_review': 'تحت المراجعة',
-  'paid': 'مدفوعة',
-  'rejected': 'مرفوضة',
-  'expired': 'منتهية',
-  'cancelled': 'ملغاة',
-  'failed': 'فشلت'
+  'pending': _('معلقة'),
+  'proof_submitted': _('إثبات مُرسل'),
+  'under_review': _('تحت المراجعة'),
+  'paid': _('مدفوعة'),
+  'rejected': _('مرفوضة'),
+  'expired': _('منتهية'),
+  'cancelled': _('ملغاة'),
+  'failed': _('فشلت')
 } %}
 
 {# ───── رسائل الفراغ المخصصة لكل قسم — تعكس نوع الفجوة بدل رسالة عامة ───── #}
 {% set EMPTY_AR = {
-  'paid_without_ledger': 'لا توجد دفعات مدفوعة بلا قيد مالي.',
-  'paid_not_applied': 'لا توجد دفعات مدفوعة غير مطبّقة.',
-  'expired_pending': 'لا توجد دفعات منتهية ومعلّقة.',
-  'duplicate_provider_transactions': 'لا توجد مخاطر تكرار لدى المزوّد.'
+  'paid_without_ledger': _('لا توجد دفعات مدفوعة بلا قيد مالي.'),
+  'paid_not_applied': _('لا توجد دفعات مدفوعة غير مطبّقة.'),
+  'expired_pending': _('لا توجد دفعات منتهية ومعلّقة.'),
+  'duplicate_provider_transactions': _('لا توجد مخاطر تكرار لدى المزوّد.')
 } %}
 
 {% block content %}
 {# ───── الهيرو الموحّد (megahero): يدمج العنوان + الإجراءات + شريط KPIs
        في كتلة .uds-hero واحدة بدل hub.hero القديم + hub-kpi-grid منفصل ───── #}
 {% call hub.megahero(
-  "مطابقة تحصيل الدفعات",
-  subtitle="فحص صحة التحصيل — اكتشاف الدفعات بلا قيد مالي، أو المدفوعة غير المطبقة، أو المنتهية والمعلّقة، أو تكرار المزوّد.",
+  _('مطابقة تحصيل الدفعات'),
+  subtitle=_('فحص صحة التحصيل — اكتشاف الدفعات بلا قيد مالي، أو المدفوعة غير المطبقة، أو المنتهية والمعلّقة، أو تكرار المزوّد.'),
   icon="scale-balanced",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> '|safe ~ _("كل الطلبات") ~ '</a>
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> '|safe ~ _("طابور المراجعة") ~ '</a>
   '|safe,
   kpis=[
-    {'label': 'مدفوع بلا قيد مالي',        'value': report.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
-    {'label': 'مدفوع غير مطبّق',           'value': report.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},
-    {'label': 'منتهٍ ومعلّق',              'value': report.counts.expired_pending,                'icon': 'hourglass-end',     'variant': 'blue'},
-    {'label': 'مخاطر تكرار لدى المزوّد',   'value': report.counts.duplicate_provider_transactions,'icon': 'clone',             'variant': 'brand'}
+    {'label': _('مدفوع بلا قيد مالي'),        'value': report.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
+    {'label': _('مدفوع غير مطبّق'),           'value': report.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},
+    {'label': _('منتهٍ ومعلّق'),              'value': report.counts.expired_pending,                'icon': 'hourglass-end',     'variant': 'blue'},
+    {'label': _('مخاطر تكرار لدى المزوّد'),   'value': report.counts.duplicate_provider_transactions,'icon': 'clone',             'variant': 'brand'}
   ]
 ) %}{% endcall %}
 
 {% for key, title, icon in [
-  ('paid_without_ledger', 'مدفوع بلا قيد مالي', 'file-circle-xmark'),
-  ('paid_not_applied', 'مدفوع غير مطبق', 'bolt'),
-  ('expired_pending', 'منتهي ومعلق', 'hourglass-end'),
-  ('duplicate_provider_transactions', 'مخاطر تكرار لدى المزوّد', 'clone')
+  ('paid_without_ledger', _('مدفوع بلا قيد مالي'), 'file-circle-xmark'),
+  ('paid_not_applied', _('مدفوع غير مطبق'), 'bolt'),
+  ('expired_pending', _('منتهي ومعلق'), 'hourglass-end'),
+  ('duplicate_provider_transactions', _('مخاطر تكرار لدى المزوّد'), 'clone')
 ] %}
 {% set rows = report[key] %}
-{% call hub.section(title, icon=icon, meta=(rows|length|string + " صف") if rows else "", flush=True) %}
+{% call hub.section(title, icon=icon, meta=(rows|length|string + _(' صف')) if rows else "", flush=True) %}
   {% if rows %}
   {# ───── جدول موحّد uds-table: يفعّل تلقائيًا شريط الأعمدة + الفرز + الترقيم
          + أزرار التصدير الثلاثة (CSV/XLSX/PDF) عبر hub_v2.css و uds_table.js ───── #}
@@ -83,7 +83,7 @@
   </div>
   {% else %}
   {# رسالة الفراغ ديناميكية تعكس نوع الفجوة لكل قسم بدل رسالة عامة #}
-  <div style="padding:6px 4px">{{ hub.empty(EMPTY_AR.get(key, "لا توجد فجوات في هذا القسم."), icon="circle-check") }}</div>
+  <div style="padding:6px 4px">{{ hub.empty(EMPTY_AR.get(key, _('لا توجد فجوات في هذا القسم.')), icon="circle-check") }}</div>
   {% endif %}
 {% endcall %}
 {% endfor %}

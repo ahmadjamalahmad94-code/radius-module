@@ -17,6 +17,7 @@
 store-support للقسم المناسب، أو صفحة الزبون) ليستخدمه عرض التنبيه.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 
@@ -93,8 +94,8 @@ def _card_user_mobile(tenant_id, card_user_id) -> str:
 
 def notify_registration(tenant_id, card_user_id, name):
     _open(tenant_id, RULE_REGISTRATION, f"{RULE_REGISTRATION}:{int(card_user_id)}",
-          f"مشترك بطاقات جديد: {name}", severity="info",
-          recommended_action_ar="افتح «مستخدمو البطاقات» لمراجعة الحساب الجديد.",
+          _tr('مشترك بطاقات جديد: %(name)s', name=name), severity="info",
+          recommended_action_ar=N_("افتح «مستخدمو البطاقات» لمراجعة الحساب الجديد."),
           link="/admin/radius/card-users")
     _tg(tenant_id, "store_registration",
         {"name": name or _card_user_name(tenant_id, card_user_id),
@@ -183,8 +184,8 @@ def notify_chat(tenant_id, card_user_id, name=""):
     # تنبيه اللوحة (جرس «التنبيهات المفتوحة») — يبقى تنبيهًا واحدًا للخيط
     # يتجدّد كما كان (dedup_key ثابت لكل زبون).
     _open(tenant_id, RULE_CHAT, f"{RULE_CHAT}:{int(card_user_id)}",
-          f"رسالة دعم جديدة من {nm}", severity="info",
-          recommended_action_ar="افتح محادثات الدعم في لوحة «دعم وطلبات المتجر».",
+          _tr('رسالة دعم جديدة من %(nm)s', nm=nm), severity="info",
+          recommended_action_ar=N_("افتح محادثات الدعم في لوحة «دعم وطلبات المتجر»."),
           link=f"{_SUPPORT}?chat={int(card_user_id)}#chat")
     # تلجرام: تنبيه واحد فقط عند **فتح دور «بانتظار ردّ»** (بداية محادثة أو
     # عودة الزبون بعد ردّ الموظّف) — لا لكل رسالة متتابعة في خيط منتظِر أصلًا.
@@ -208,8 +209,8 @@ def resolve_chat(tenant_id, card_user_id):
 def notify_deposit(tenant_id, request_id, amount, currency, name=""):
     who = f" — {name}" if name else ""
     _open(tenant_id, RULE_DEPOSIT, f"{RULE_DEPOSIT}:{int(request_id)}",
-          f"طلب شحن جديد: {amount} {currency}{who}", severity="warning",
-          recommended_action_ar="راجع الوصل وأكّد/ارفض من «طلبات الشحن».",
+          _tr('طلب شحن جديد: %(amount)s %(currency)s%(who)s', amount=amount, currency=currency, who=who), severity="warning",
+          recommended_action_ar=N_("راجع الوصل وأكّد/ارفض من «طلبات الشحن»."),
           link=f"{_SUPPORT}?tab=deposits")
     _tg(tenant_id, "store_deposit",
         {"name": name or "—", "amount": amount, "currency": currency,
@@ -226,8 +227,8 @@ def resolve_deposit(tenant_id, request_id):
 def notify_withdrawal(tenant_id, request_id, amount, currency, name=""):
     who = f" — {name}" if name else ""
     _open(tenant_id, RULE_WITHDRAWAL, f"{RULE_WITHDRAWAL}:{int(request_id)}",
-          f"طلب سحب جديد: {amount} {currency}{who}", severity="warning",
-          recommended_action_ar="نفّذ التحويل ثم أكّد/ارفض من «طلبات السحب».",
+          _tr('طلب سحب جديد: %(amount)s %(currency)s%(who)s', amount=amount, currency=currency, who=who), severity="warning",
+          recommended_action_ar=N_("نفّذ التحويل ثم أكّد/ارفض من «طلبات السحب»."),
           link=f"{_SUPPORT}?tab=withdrawals")
     _tg(tenant_id, "store_withdrawal",
         {"name": name or "—", "amount": amount, "currency": currency,

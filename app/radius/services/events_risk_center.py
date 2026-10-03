@@ -1,5 +1,6 @@
 """Events, investigation, risk, and fraud center foundations."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from collections import defaultdict
@@ -62,7 +63,7 @@ def _date_bound(value: Any, *, end: bool, tenant_id: int | None = None) -> str |
         try:
             date.fromisoformat(raw)
         except ValueError:
-            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+            raise EventsRiskError(_tr("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD."))
         start, stop = local_period_utc_range("daily", raw, tenant_id=tenant_id)
         return stop if end else start
     text = raw.replace(" ", "T")
@@ -71,13 +72,13 @@ def _date_bound(value: Any, *, end: bool, tenant_id: int | None = None) -> str |
         try:
             dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
         except ValueError:
-            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+            raise EventsRiskError(_tr("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD."))
         if dt.tzinfo is not None:
             dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
     else:
         dt = from_local(raw, tenant_id)
         if dt is None:
-            raise EventsRiskError("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD.")
+            raise EventsRiskError(_tr("صيغة التاريخ غير صحيحة — استخدم YYYY-MM-DD."))
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -202,11 +203,11 @@ def _make_entity_label(
     """
     t = (entity_type or "").lower().strip()
     if not t or t in ("system", "risk_engine"):
-        return "النظام"
+        return N_("النظام")
     if t in ("api_token", "api"):
-        return "واجهة برمجية"
+        return N_("واجهة برمجية")
     if t == "anonymous":
-        return "غير معروف"
+        return N_("غير معروف")
 
     # تحديد مجموعة الأسماء المناسبة
     if t in ("admin", "manager"):
@@ -498,12 +499,12 @@ class EventsRiskCenterService:
 
     # تعريب نوع مالك المحفظة في ملخص التنبيه (القيمة التقنية تبقى في entity_type)
     _OWNER_LABELS = {
-        "subscriber": "مشترك",
-        "user": "مشترك",
-        "distributor": "موزّع",
-        "manager": "مدير",
-        "admin": "مدير",
-        "tenant": "مستأجر",
+        "subscriber": N_("مشترك"),
+        "user": N_("مشترك"),
+        "distributor": N_("موزّع"),
+        "manager": N_("مدير"),
+        "admin": N_("مدير"),
+        "tenant": N_("مستأجر"),
     }
 
     def _detect_negative_wallets(self) -> list[dict[str, Any]]:
@@ -520,8 +521,7 @@ class EventsRiskCenterService:
                 "risk_score": 90,
                 # ملخص عربي للتنبيه — يظهر مباشرة في جدول مركز المخاطر
                 "summary": (
-                    f"محفظة {self._OWNER_LABELS.get(row['owner_type'], row['owner_type'])}"
-                    f" ‎#{row['owner_id']} برصيد سالب."
+                    _tr('محفظة %(v)s \u200e#%(owner_id)s برصيد سالب.', v=self._OWNER_LABELS.get(row['owner_type'], row['owner_type']), owner_id=row['owner_id'])
                 ),
                 "evidence": {"wallet_id": row["id"], "balance_minor": row["balance_minor"]},
             }
@@ -547,7 +547,7 @@ class EventsRiskCenterService:
                 "entity_id": row["target_id"] or row["actor_id"],
                 "risk_score": min(95, 40 + int(row["c"]) * 10),
                 # ملخص عربي للتنبيه
-                "summary": f"رُصدت محاولات دخول فاشلة متكررة (العدد: {row['c']}).",
+                "summary": _tr('رُصدت محاولات دخول فاشلة متكررة (العدد: %(c)s).', c=row['c']),
                 "evidence": {"count": int(row["c"] or 0)},
             }
             for row in rows
@@ -572,7 +572,7 @@ class EventsRiskCenterService:
                 "entity_id": row["target_id"],
                 "risk_score": min(90, 35 + int(row["c"]) * 10),
                 # ملخص عربي للتنبيه
-                "summary": f"رُصدت سلف متكررة لنفس المستفيد (العدد: {row['c']}).",
+                "summary": _tr('رُصدت سلف متكررة لنفس المستفيد (العدد: %(c)s).', c=row['c']),
                 "evidence": {"count": int(row["c"] or 0)},
             }
             for row in rows
@@ -595,7 +595,7 @@ class EventsRiskCenterService:
                 "entity_id": row["reference_id"],
                 "risk_score": 60,
                 # ملخص عربي للتنبيه
-                "summary": "خصم مسجّل على لقطة سعر يستوجب المراجعة.",
+                "summary": _tr("خصم مسجّل على لقطة سعر يستوجب المراجعة."),
                 "evidence": {"discount_amount_minor": row["discount_amount_minor"], "snapshot_id": row["id"]},
             }
             for row in rows
@@ -620,7 +620,7 @@ class EventsRiskCenterService:
                 "entity_id": row["source_id"],
                 "risk_score": 80,
                 # ملخص عربي للتنبيه
-                "summary": "سجل إيراد بمبلغ محصّل بلا قيد مطابق في الدفتر.",
+                "summary": _tr("سجل إيراد بمبلغ محصّل بلا قيد مطابق في الدفتر."),
                 "evidence": {"revenue_record_id": row["id"], "collected_amount_minor": row["collected_amount_minor"]},
             }
             for row in rows

@@ -19,6 +19,7 @@ resolved (المدير عالجها بلا ردّ نصّي).
   HOBERADIUS_PUBLIC_BASE_URL                  (اختياري — لبناء رابط الردّ)
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import os
@@ -91,10 +92,10 @@ def _humanize_since(delta: timedelta) -> str:
     days, rem = divmod(mins, 1440)
     hours, minutes = divmod(rem, 60)
     if days:
-        return f"{days} يوم" + (f" و{hours} ساعة" if hours else "")
+        return _tr('%(days)s يوم', days=days) + (_tr(' و%(hours)s ساعة', hours=hours) if hours else "")
     if hours:
-        return f"{hours} ساعة" + (f" و{minutes} دقيقة" if minutes else "")
-    return f"{minutes} دقيقة"
+        return _tr('%(hours)s ساعة', hours=hours) + (_tr(' و%(minutes)s دقيقة', minutes=minutes) if minutes else "")
+    return _tr('%(minutes)s دقيقة', minutes=minutes)
 
 
 def _unanswered_threads(tenant_id: int) -> list[tuple[int, str, str]]:

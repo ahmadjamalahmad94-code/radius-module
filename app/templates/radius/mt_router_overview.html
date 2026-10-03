@@ -28,7 +28,7 @@
 {% block title %}{{ _("نظرة عامة") }} — {{ ov.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
 {% block page_title %}{{ _("نظرة عامة على الراوتر") }} — {{ ov.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #%(nas_id)s · %(address)s', nas_id=ov.nas_id, address=ov.address) }}</span>{% endblock %}
 
 {% block content %}
 
@@ -41,43 +41,43 @@
 
   {# ───── Merged hero: title + subtitle + live KPI strip ───── #}
   {{ hub.megahero(
-    "نظرة عامة — " ~ ov.name,
-    subtitle="حالة الراوتر، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوات يجب اتّخاذها.",
+    _('نظرة عامة — %(name)s', name=ov.name),
+    subtitle=_('حالة الراوتر، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوات يجب اتّخاذها.'),
     icon="clipboard-check",
     kpis=[
       {
-        'label': 'حالة الاتصال',
-        'value': ('متصل' if ov.snapshot_status == 'fresh'
-                  else ('بيانات قديمة' if ov.snapshot_status == 'stale'
-                  else ('فشل الاتصال' if ov.snapshot_status == 'failed'
-                  else 'غير معروف'))),
+        'label': _('حالة الاتصال'),
+        'value': (_('متصل') if ov.snapshot_status == 'fresh'
+                  else (_('بيانات قديمة') if ov.snapshot_status == 'stale'
+                  else (_('فشل الاتصال') if ov.snapshot_status == 'failed'
+                  else _('غير معروف')))),
         'icon': 'signal',
         'variant': ('green' if ov.snapshot_status == 'fresh'
                     else ('amber' if ov.snapshot_status == 'stale' else 'grey')),
-        'sub': (('آخر نجاح: ' ~ ov.snapshot_last_success_at) if ov.snapshot_last_success_at else 'لا توجد بيانات'),
+        'sub': ((_('آخر نجاح: %(snapshot_last_success_at)s', snapshot_last_success_at=ov.snapshot_last_success_at)) if ov.snapshot_last_success_at else _('لا توجد بيانات')),
       },
       {
-        'label': 'التنبيهات النشطة',
+        'label': _('التنبيهات النشطة'),
         'value': ov.active_alerts_total,
         'icon': 'triangle-exclamation',
         'variant': ('brand' if ov.active_alerts_critical > 0
                     else ('amber' if ov.active_alerts_warning > 0 else 'green')),
-        'sub': (ov.active_alerts_critical|string ~ ' حرج · ' ~ ov.active_alerts_warning|string ~ ' تحذير'),
+        'sub': (_('%(string)s حرج · %(string2)s تحذير', string=ov.active_alerts_critical|string, string2=ov.active_alerts_warning|string)),
       },
       {
-        'label': 'آخر نسخة احتياطية',
-        'value': ('حديثة' if ov.backup_status == 'fresh'
-                  else ('قديمة' if ov.backup_status == 'stale'
-                  else ('لا توجد' if ov.backup_status == 'missing'
-                  else ('آخر محاولة فشلت' if ov.backup_status == 'failed'
-                  else 'غير معروفة')))),
+        'label': _('آخر نسخة احتياطية'),
+        'value': (_('حديثة') if ov.backup_status == 'fresh'
+                  else (_('قديمة') if ov.backup_status == 'stale'
+                  else (_('لا توجد') if ov.backup_status == 'missing'
+                  else (_('آخر محاولة فشلت') if ov.backup_status == 'failed'
+                  else _('غير معروفة'))))),
         'icon': 'floppy-disk',
         'variant': ('green' if ov.backup_status == 'fresh'
                     else ('amber' if ov.backup_status == 'stale' else 'grey')),
         'sub': (ov.last_backup_at if ov.last_backup_at else '—'),
       },
       {
-        'label': 'آخر نشاط مسجَّل',
+        'label': _('آخر نشاط مسجَّل'),
         'value': (ov.last_audit_action if ov.last_audit_action else '—'),
         'icon': 'clock-rotate-left',
         'variant': 'blue',
@@ -88,13 +88,13 @@
 
   {# ───── Main column + help panel on the LEFT ───── #}
   {% call hub.worklayout(aside_html=hub.helppanel(
-    "دليل القراءة",
-    intro="هذه نظرة واحدة سريعة على صحّة الراوتر: حالته، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوة يجب اتّخاذها.",
+    _('دليل القراءة'),
+    intro=_('هذه نظرة واحدة سريعة على صحّة الراوتر: حالته، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوة يجب اتّخاذها.'),
     icon="clipboard-check",
     items=[
-      {'icon': 'heart-pulse', 'text': 'درجة الصحة تلخّص حالة الراوتر في رقم واحد من 100.'},
-      {'icon': 'shield-halved', 'text': '«آمن للتعديل» يعني أنه لا توجد عملية حسّاسة جارية تمنع التغيير.'},
-      {'icon': 'list-check', 'text': 'الخطوات الموصى بها مرتّبة حسب الأهمية — ابدأ بالأعلى.'},
+      {'icon': 'heart-pulse', 'text': _('درجة الصحة تلخّص حالة الراوتر في رقم واحد من 100.')},
+      {'icon': 'shield-halved', 'text': _('«آمن للتعديل» يعني أنه لا توجد عملية حسّاسة جارية تمنع التغيير.')},
+      {'icon': 'list-check', 'text': _('الخطوات الموصى بها مرتّبة حسب الأهمية — ابدأ بالأعلى.')},
     ]
   )) %}
 
@@ -112,16 +112,16 @@
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         {% if health.state == 'healthy' %}
         <i class="fa-solid fa-heart-pulse"></i>
-        <strong>الراوتر صحّي — درجة الصحة {{ health.score }}/100</strong>
+        <strong>{{ _('الراوتر صحّي — درجة الصحة %(score)s/100', score=health.score) }}</strong>
         {% elif health.state == 'attention' %}
         <i class="fa-solid fa-circle-info"></i>
-        <strong>يحتاج انتباهًا — درجة الصحة {{ health.score }}/100</strong>
+        <strong>{{ _('يحتاج انتباهًا — درجة الصحة %(score)s/100', score=health.score) }}</strong>
         {% elif health.state == 'risky' %}
         <i class="fa-solid fa-shield-halved"></i>
-        <strong>خطر تشغيلي — درجة الصحة {{ health.score }}/100</strong>
+        <strong>{{ _('خطر تشغيلي — درجة الصحة %(score)s/100', score=health.score) }}</strong>
         {% elif health.state == 'offline' %}
         <i class="fa-solid fa-plug-circle-xmark"></i>
-        <strong>غير متصل — درجة الصحة {{ health.score }}/100</strong>
+        <strong>{{ _('غير متصل — درجة الصحة %(score)s/100', score=health.score) }}</strong>
         {% else %}
         <i class="fa-solid fa-question"></i>
         <strong>{{ _('الحالة غير معروفة — لا توجد بيانات كافية') }}</strong>
@@ -159,7 +159,7 @@
 
     {# ── Suggested actions ── #}
     {% if ov.suggested_actions %}
-    {% call hub.section("الخطوات الموصى بها", icon="list-check") %}
+    {% call hub.section(_('الخطوات الموصى بها'), icon="list-check") %}
       <div class="hub-actions" data-mt-overview-actions>
         {% for a in ov.suggested_actions %}
         {{ hub.action_card(
@@ -179,13 +179,13 @@
     {% endif %}
 
     {# ── Identity + connection details ── #}
-    {% call hub.section("هوية الراوتر", icon="circle-info") %}
+    {% call hub.section(_('هوية الراوتر'), icon="circle-info") %}
       {{ hub.kv([
-        {'label': 'الاسم', 'value': ov.name},
-        {'label': 'العنوان', 'value': ov.address, 'mono': True},
-        {'label': 'الحالة', 'value': ('مفعّل' if ov.enabled else 'معطّل')},
-        {'label': 'نوع الاتصال', 'value': ('نفق الإدارة' if ov.connection_mode == 'vpn'
-                                            else ('اتصال مباشر' if ov.connection_mode == 'direct'
+        {'label': _('الاسم'), 'value': ov.name},
+        {'label': _('العنوان'), 'value': ov.address, 'mono': True},
+        {'label': _('الحالة'), 'value': (_('مفعّل') if ov.enabled else _('معطّل'))},
+        {'label': _('نوع الاتصال'), 'value': (_('نفق الإدارة') if ov.connection_mode == 'vpn'
+                                            else (_('اتصال مباشر') if ov.connection_mode == 'direct'
                                             else (ov.connection_mode or '—')))},
       ]) }}
       {% if ov.vpn_peer_address %}
@@ -203,16 +203,16 @@
     {# ── Snapshot details (counters/resource) ── #}
     {% if ov.has_snapshot %}
     {% set _snap_meta =
-         ('حديث','green')      if ov.snapshot_status == 'fresh'  else
-         ('قديم','red')        if ov.snapshot_status == 'stale'  else
-         ('فشل','red')         if ov.snapshot_status == 'failed' else
-         ('غير معروف','grey') %}
-    {% call hub.section("آخر snapshot", icon="camera") %}
+         (_('حديث'),'green')      if ov.snapshot_status == 'fresh'  else
+         (_('قديم'),'red')        if ov.snapshot_status == 'stale'  else
+         (_('فشل'),'red')         if ov.snapshot_status == 'failed' else
+         (_('غير معروف'),'grey') %}
+    {% call hub.section(_('آخر snapshot'), icon="camera") %}
       <div data-mt-overview-snapshot>
         <div style="margin-bottom:14px">{{ hub.pill(_snap_meta[0], variant=_snap_meta[1]) }}</div>
         {% if ov.snapshot_last_error %}
         <p style="color:#991B1B"><i class="fa-solid fa-circle-exclamation"></i>
-          آخر خطأ: {{ ov.snapshot_last_error }}</p>
+          {{ _('آخر خطأ: %(snapshot_last_error)s', snapshot_last_error=ov.snapshot_last_error) }}</p>
         {% endif %}
         {% if ov.counter_rows %}
         <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
@@ -241,11 +241,11 @@
 
     {# ── Last failed / last danger (if any) ── #}
     {% if ov.last_failed_id or ov.last_danger_id %}
-    {% call hub.section("أحداث تستحق الانتباه", icon="clock-rotate-left") %}
+    {% call hub.section(_('أحداث تستحق الانتباه'), icon="clock-rotate-left") %}
       <ul class="mt-program-summary" data-mt-overview-recent-issues>
         {% if ov.last_failed_id %}
         <li>
-          {{ hub.pill("فشل", variant="red") }}
+          {{ hub.pill(_('فشل'), variant="red") }}
           <code style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">{{ ov.last_failed_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_failed_at }}</span>
           · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
@@ -254,7 +254,7 @@
         {% endif %}
         {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
         <li>
-          {{ hub.pill("حسّاسة", variant="amber") }}
+          {{ hub.pill(_('حسّاسة'), variant="amber") }}
           <code style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo')">{{ ov.last_danger_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_danger_at }}</span>
           · {% if can_submit('radius.audit_log_detail', 'GET') %}<a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
@@ -266,21 +266,21 @@
     {% endif %}
 
     {# ── Bottom links bar — full dashboards and centers ── #}
-    {% call hub.section("روابط مرتبطة", icon="link") %}
+    {% call hub.section(_('روابط مرتبطة'), icon="link") %}
       <div class="hub-actions">
-        {% if can_submit('radius.mt_dashboard', 'GET') %}{{ hub.action_card("لوحة الراوتر", sub="ملخص وتبويبات", icon="gauge-high",
+        {% if can_submit('radius.mt_dashboard', 'GET') %}{{ hub.action_card(_('لوحة الراوتر'), sub=_('ملخص وتبويبات'), icon="gauge-high",
             href=url_for('radius.mt_dashboard', nas_id=ov.nas_id),
             variant="brand", attrs='data-mt-overview-link="dashboard"') }}{% endif %}
-        {% if can_submit('radius.mt_audit_timeline', 'GET') %}{{ hub.action_card("سجلّ النشاط", sub="مقروء بشريًا", icon="timeline",
+        {% if can_submit('radius.mt_audit_timeline', 'GET') %}{{ hub.action_card(_('سجلّ النشاط'), sub=_('مقروء بشريًا'), icon="timeline",
             href=url_for('radius.mt_audit_timeline', nas_id=ov.nas_id),
             variant="brand", attrs='data-mt-overview-link="timeline"') }}{% endif %}
-        {% if can_submit('radius.audit_log_index', 'GET') %}{{ hub.action_card("سجل عمليات الراوتر", sub="سجل تفصيلي", icon="clipboard-list",
+        {% if can_submit('radius.audit_log_index', 'GET') %}{{ hub.action_card(_('سجل عمليات الراوتر'), sub=_('سجل تفصيلي'), icon="clipboard-list",
             href=url_for('radius.audit_log_index') ~ '?router_id=' ~ ov.nas_id,
             variant="brand", attrs='data-mt-overview-link="audit"') }}{% endif %}
-        {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.action_card("تنبيهات الراوتر", sub="مفلتر", icon="triangle-exclamation",
+        {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.action_card(_('تنبيهات الراوتر'), sub=_('مفلتر'), icon="triangle-exclamation",
             href=url_for('radius.mt_alerts_index') ~ '?router_id=' ~ ov.nas_id,
             variant="amber", attrs='data-mt-overview-link="alerts"') }}{% endif %}
-        {% if can_submit('radius.mt_backups_list', 'GET') %}{{ hub.action_card("النسخ الاحتياطية", sub="حفظ + فحص", icon="floppy-disk",
+        {% if can_submit('radius.mt_backups_list', 'GET') %}{{ hub.action_card(_('النسخ الاحتياطية'), sub=_('حفظ + فحص'), icon="floppy-disk",
             href=url_for('radius.mt_backups_list', nas_id=ov.nas_id),
             variant="brand", attrs='data-mt-overview-link="backups"') }}{% endif %}
       </div>

@@ -26,6 +26,7 @@ LAB-PENDING (مُجمَّعة هنا كمصدر وحيد):
   * شكل ``Filter-Id`` الدقيق — يعيش في ``accel_attributes.ACCEL_FILTER_ID_FORM``.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import re
 from dataclasses import dataclass
@@ -81,8 +82,8 @@ def _require_subdomain() -> str:
     host = client_subdomain()
     if not host:
         raise DataConnectionError(
-            "لم يُضبط النطاق الفرعي للعميل بعد. اضبط "
-            "HOBERADIUS_CLIENT_SUBDOMAIN في إعدادات النظام أولًا."
+            _tr("لم يُضبط النطاق الفرعي للعميل بعد. اضبط "
+            "HOBERADIUS_CLIENT_SUBDOMAIN في إعدادات النظام أولًا.")
         )
     return host
 
@@ -103,9 +104,9 @@ def _safe_quoted(value: str, *, field: str) -> str:
     """يتحقّق أن قيمة ستوضع بين اقتباسين لا تحوي محارف خطرة."""
     v = str(value or "")
     if _FORBIDDEN_IN_QUOTED.search(v):
-        raise DataConnectionError(f"قيمة غير صالحة للحقل {field!r} (محارف ممنوعة).")
+        raise DataConnectionError(_tr('قيمة غير صالحة للحقل %(field)s (محارف ممنوعة).', field=repr(field)))
     if not v.isascii():
-        raise DataConnectionError(f"قيمة الحقل {field!r} يجب أن تكون ASCII.")
+        raise DataConnectionError(_tr('قيمة الحقل %(field)s يجب أن تكون ASCII.', field=repr(field)))
     return v
 
 
@@ -252,7 +253,7 @@ def assert_no_leakage(script: str) -> None:
     for token in LEAKAGE_TOKENS:
         if token in low:
             raise DataConnectionError(
-                f"تسرّب عنوان/مفهوم داخلي في السكربت: {token!r}"
+                _tr('تسرّب عنوان/مفهوم داخلي في السكربت: %(token)s', token=repr(token))
             )
 
 

@@ -14,6 +14,7 @@ Three buckets for the operator's «سجل الإشعارات» page:
 Read-only. Never raises for a single bad row — the page must always render.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -30,8 +31,8 @@ _PENDING = ("queued", "pending", "skipped")
 # Fallback human reason from the stored notification_type when no explicit
 # reason/event was recorded on the row (older sends).
 _TYPE_REASON_AR = {
-    "manual": "رسالة يدوية",
-    "campaign": "حملة",
+    "manual": N_("رسالة يدوية"),
+    "campaign": N_("حملة"),
 }
 
 
@@ -148,7 +149,7 @@ def _scheduled_near_expiry(tenant_id: int, *, within_days: int) -> dict[str, Any
                                   or getattr(sub, "username", "") or "—"),
             "recipient_mobile": getattr(sub, "mobile", "") or "",
             "channels": channels,
-            "reason_label": "قرب انتهاء الاشتراك",
+            "reason_label": _tr("قرب انتهاء الاشتراك"),
             "body": body,
             "expire_at": exp,
             "expire_local": exp_str,

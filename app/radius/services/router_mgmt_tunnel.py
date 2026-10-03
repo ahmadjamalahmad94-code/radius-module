@@ -39,6 +39,7 @@ on ``nas_devices`` — written by the route layer (mirrors how the WG path
 writes nas_devices after :func:`wg_peer_manager.provision_peer`).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import ipaddress
 import logging
@@ -270,10 +271,10 @@ def load_config() -> MgmtTunnelConfig:
         pool = ipaddress.ip_network(pool_str, strict=False)
     except ValueError as exc:
         raise RouterMgmtTunnelError(
-            f"{MGMT_POOL_ENV}={pool_str!r} ليس شبكة IPv4 صالحة: {exc}"
+            _tr('%(MGMT_POOL_ENV)s=%(pool_str)s ليس شبكة IPv4 صالحة: %(exc)s', MGMT_POOL_ENV=MGMT_POOL_ENV, pool_str=repr(pool_str), exc=exc)
         ) from exc
     if not isinstance(pool, ipaddress.IPv4Network):
-        raise RouterMgmtTunnelError(f"مجمّع الإدارة يجب أن يكون IPv4، وصلنا {pool_str!r}")
+        raise RouterMgmtTunnelError(_tr('مجمّع الإدارة يجب أن يكون IPv4، وصلنا %(pool_str)s', pool_str=repr(pool_str)))
 
     server_ip_str = str(env_settings.env(MGMT_SERVER_IP_ENV, "") or "").strip()
     if not server_ip_str:
@@ -284,17 +285,15 @@ def load_config() -> MgmtTunnelConfig:
             server_ip = ipaddress.IPv4Address(server_ip_str)
         except ValueError as exc:
             raise RouterMgmtTunnelError(
-                f"{MGMT_SERVER_IP_ENV}={server_ip_str!r} ليس عنوان IPv4 صالحًا: {exc}"
+                _tr('%(MGMT_SERVER_IP_ENV)s=%(server_ip_str)s ليس عنوان IPv4 صالحًا: %(exc)s', MGMT_SERVER_IP_ENV=MGMT_SERVER_IP_ENV, server_ip_str=repr(server_ip_str), exc=exc)
             ) from exc
     if server_ip not in pool:
         raise RouterMgmtTunnelError(
-            f"عنوان خادم الإدارة {server_ip} خارج المجمّع {pool}"
+            _tr('عنوان خادم الإدارة %(server_ip)s خارج المجمّع %(pool)s', server_ip=server_ip, pool=pool)
         )
     if not accel_host:
         raise RouterMgmtTunnelError(
-            f"عنوان خادم SSTP غير مضبوط — اضبط {ACCEL_HOST_ENV} (أو "
-            f"{PANEL_PUBLIC_IP_ENV}) بعنوان هذا الخادم العامّ. لا عنوان افتراضيّ "
-            "مثبّت عمدًا كي لا تُوجَّه الراوترات لخادم خاطئ."
+            _tr('عنوان خادم SSTP غير مضبوط — اضبط %(ACCEL_HOST_ENV)s (أو %(PANEL_PUBLIC_IP_ENV)s) بعنوان هذا الخادم العامّ. لا عنوان افتراضيّ مثبّت عمدًا كي لا تُوجَّه الراوترات لخادم خاطئ.', ACCEL_HOST_ENV=ACCEL_HOST_ENV, PANEL_PUBLIC_IP_ENV=PANEL_PUBLIC_IP_ENV)
         )
     return MgmtTunnelConfig(
         accel_host=accel_host, sstp_port=sstp_port, pool=pool, server_ip=server_ip,
@@ -373,7 +372,7 @@ def allocate_tunnel_ip(
         if candidate not in reserved:
             return candidate
     raise RouterMgmtTunnelError(
-        f"مجمّع الإدارة {cfg.pool} ممتلئ — كل العناوين مُسنَدة"
+        _tr('مجمّع الإدارة %(pool)s ممتلئ — كل العناوين مُسنَدة', pool=cfg.pool)
     )
 
 
@@ -445,7 +444,7 @@ def provision_tunnel(
     transport = (transport or TRANSPORT_SSTP).strip().lower()
     if transport not in TRANSPORTS:
         raise RouterMgmtTunnelError(
-            f"نقل غير مدعوم: {transport!r} (المدعوم: {TRANSPORTS})"
+            _tr('نقل غير مدعوم: %(transport)s (المدعوم: %(TRANSPORTS)s)', transport=repr(transport), TRANSPORTS=TRANSPORTS)
         )
     cfg = cfg or load_config()
     slug = _slugify_router_name(router_name)
@@ -666,7 +665,7 @@ def ensure_tunnel_radius_user(
     """
     raw = (router_name_or_user or "").strip()
     if not raw:
-        raise RouterMgmtTunnelError("اسم الراوتر/المستخدم فارغ")
+        raise RouterMgmtTunnelError(_tr("اسم الراوتر/المستخدم فارغ"))
     username = raw if raw.startswith(TUNNEL_USER_PREFIX) else tunnel_username(raw)
     cfg = cfg or load_config()
 

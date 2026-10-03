@@ -3,31 +3,31 @@
 {% block title %}{{ _("مجموعة:") }} {{ grp.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}{{ grp.name }}{% endblock %}
-{% block page_sub %}<span class="sub">(مجموعة مشاركة #{{ grp.id }} · {{ members|length }} عضو)</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('(مجموعة مشاركة #%(id)s · %(length)s عضو)', id=grp.id, length=members|length) }}</span>{% endblock %}
 
 {% block content %}
 {# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
 <section class="hub-hero-shell">
 {{ hub.hero(
   grp.name,
-  subtitle="تفاصيل المجموعة وقائمة الأعضاء.",
+  subtitle=_('تفاصيل المجموعة وقائمة الأعضاء.'),
   icon="people-arrows"
 ) }}
 <div class="hub-kpi-grid">
-  {{ hub.kpi("الأعضاء", members|length, icon="users", variant="brand") }}
-  {{ hub.kpi("الكوتا المشتركة",
+  {{ hub.kpi(_('الأعضاء'), members|length, icon="users", variant="brand") }}
+  {{ hub.kpi(_('الكوتا المشتركة'),
              ("%.1f"|format(grp.shared_quota_mb/1024) ~ ' GB') if grp.shared_quota_mb else '∞',
              icon="database", variant="green") }}
-  {{ hub.kpi("السرعة (تنزيل/رفع)",
+  {{ hub.kpi(_('السرعة (تنزيل/رفع)'),
              (grp.shared_speed_down_kbps|string) ~ '/' ~ (grp.shared_speed_up_kbps|string) ~ ' Kbps',
              icon="gauge", variant="blue") }}
-  {{ hub.kpi("حد الأعضاء", grp.max_members or '∞', icon="user-plus", variant="grey") }}
+  {{ hub.kpi(_('حد الأعضاء'), grp.max_members or '∞', icon="user-plus", variant="grey") }}
 </div>
 </section>{# /hub-hero-shell #}
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px">
 
-  {% call hub.section("الأعضاء", icon="users", flush=True) %}
+  {% call hub.section(_('الأعضاء'), icon="users", flush=True) %}
     {% if members %}
       <div class="hub-table-wrap" style="border:none">
         <table class="hub-table">
@@ -50,7 +50,7 @@
               <td>
                 {% if can_submit('radius.sgrp_remove_member', 'POST') %}<form method="post"
                       action="{{ url_for('radius.sgrp_remove_member', gid=grp.id, sid=m.id) }}"
-                      onsubmit="return confirm('إزالة من المجموعة؟')"
+                      onsubmit="return confirm({{ _('إزالة من المجموعة؟')|tojson|forceescape }})"
                       style="display:inline;margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm">
                     <i class="fa-solid fa-user-minus"></i>
@@ -63,11 +63,11 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا يوجد أعضاء بعد.", icon="user-slash") }}
+      {{ hub.empty(_('لا يوجد أعضاء بعد.'), icon="user-slash") }}
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("إضافة عضو", icon="user-plus") %}
+  {% call hub.section(_('إضافة عضو'), icon="user-plus") %}
     {% if can_submit('radius.sgrp_add_member', 'POST') %}<form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المشترك') }}</label>
@@ -79,7 +79,7 @@
         </select>
       </div>
       <div style="margin-top:12px">
-        {{ hub.btn("أضف", icon="user-plus", variant="primary", size="sm", type="submit") }}
+        {{ hub.btn(_('أضف'), icon="user-plus", variant="primary", size="sm", type="submit") }}
       </div>
     </form>{% endif %}
   {% endcall %}
@@ -87,9 +87,9 @@
 </div>
 
 <div class="hub-flex-row" style="margin-top:16px">
-  {% if can_submit('radius.sgrp_edit', 'GET') %}{{ hub.btn("تعديل المجموعة", icon="pen", variant="secondary",
+  {% if can_submit('radius.sgrp_edit', 'GET') %}{{ hub.btn(_('تعديل المجموعة'), icon="pen", variant="secondary",
               href=url_for('radius.sgrp_edit', gid=grp.id)) }}{% endif %}
-  {% if can_submit('radius.sgrp_list', 'GET') %}{{ hub.btn("العودة للقائمة", icon="arrow-right-long", variant="ghost",
+  {% if can_submit('radius.sgrp_list', 'GET') %}{{ hub.btn(_('العودة للقائمة'), icon="arrow-right-long", variant="ghost",
               href=url_for('radius.sgrp_list')) }}{% endif %}
 </div>
 {% endblock %}

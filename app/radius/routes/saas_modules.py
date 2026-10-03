@@ -2,6 +2,7 @@
 routes للوحدات الجديدة: Bandwidth, IpPools, Vouchers, Invoices, Tickets, Services.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 from typing import Optional
@@ -170,21 +171,21 @@ def _bw_save(b, *, is_new: bool):
     """حفظٌ واحدٌ للإنشاءِ والتعديل مع تحقّقٍ عربيٍّ بدل 500."""
     if not b.name:
         return _form_error("radius/bandwidth_form.html",
-                           "اسم ملفّ السرعة مطلوب.", 400, item=b, is_new=is_new)
+                           _tr("اسم ملفّ السرعة مطلوب."), 400, item=b, is_new=is_new)
     try:
         bandwidth_repo.upsert(b)
     except Exception as exc:  # noqa: BLE001 — قيدُ قاعدةٍ ⇒ رسالةٌ لا انفجار
         kind = _integrity_kind(exc)
         if kind == "unique":
             return _form_error("radius/bandwidth_form.html",
-                               f"يوجد ملفُّ سرعةٍ باسم «{b.name}» — اختر اسمًا آخر.",
+                               _tr('يوجد ملفُّ سرعةٍ باسم «%(name)s» — اختر اسمًا آخر.', name=b.name),
                                409, item=b, is_new=is_new)
         if kind in ("foreign_key", "notnull"):
             return _form_error("radius/bandwidth_form.html",
-                               "بيانات الملفّ ناقصة أو تُشير إلى سجلٍّ غير موجود — "
-                               "راجع الحقول المطلوبة.", 400, item=b, is_new=is_new)
+                               _tr("بيانات الملفّ ناقصة أو تُشير إلى سجلٍّ غير موجود — "
+                               "راجع الحقول المطلوبة."), 400, item=b, is_new=is_new)
         raise
-    flash(f"تم إنشاء «{b.name}»." if is_new else f"تم تحديث «{b.name}».", "success")
+    flash(_tr('تم إنشاء «%(name)s».', name=b.name) if is_new else _tr('تم تحديث «%(name)s».', name=b.name), "success")
     return redirect(url_for("radius.bw_list"))
 
 
@@ -206,7 +207,7 @@ def bw_update(bw_id: int):
 
 def bw_delete(bw_id: int):
     bandwidth_repo.delete(_tid(), bw_id)
-    flash("تم الحذف.", "success")
+    flash(_tr("تم الحذف."), "success")
     return redirect(url_for("radius.bw_list"))
 
 
@@ -220,17 +221,16 @@ def bw_apply(bw_id: int):
     from ..services.bandwidth_apply import apply_profile_live
     res = apply_profile_live(_tid(), bw_id, actor=_actor())
     if not res.get("live_enabled"):
-        flash("التطبيق الحيّ مُعطَّل على هذه النسخة "
+        flash(_tr("التطبيق الحيّ مُعطَّل على هذه النسخة "
               "(HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). لم يُرسَل CoA. "
-              "ستُطبَّق السرعة عند إعادة مصادقة المشتركين.", "warning")
+              "ستُطبَّق السرعة عند إعادة مصادقة المشتركين."), "warning")
     elif res.get("applied"):
-        flash(f"تم تطبيق الملفّ حيًّا عبر CoA على {res['applied']}/{res['targets']} "
-              "جلسة نشطة.", "success")
+        flash(_tr('تم تطبيق الملفّ حيًّا عبر CoA على %(applied)s/%(targets)s جلسة نشطة.', applied=res['applied'], targets=res['targets']), "success")
     elif res.get("targets"):
-        flash("لا توجد جلسات نشطة مطابقة الآن — ستُطبَّق السرعة عند إعادة "
-              "المصادقة.", "warning")
+        flash(_tr("لا توجد جلسات نشطة مطابقة الآن — ستُطبَّق السرعة عند إعادة "
+              "المصادقة."), "warning")
     else:
-        flash("لا يوجد مشتركون على خطط تُشير لهذا الملفّ.", "warning")
+        flash(_tr("لا يوجد مشتركون على خطط تُشير لهذا الملفّ."), "warning")
     return redirect(url_for("radius.bw_list"))
 
 
@@ -260,7 +260,7 @@ def _pool_dto_from_form(existing: Optional[IpPool] = None) -> IpPool:
 
 def pool_create():
     pools_repo.upsert(_pool_dto_from_form())
-    flash("تم الإنشاء.", "success")
+    flash(_tr("تم الإنشاء."), "success")
     return redirect(url_for("radius.pool_list"))
 
 
@@ -275,13 +275,13 @@ def pool_update(pid: int):
     it = pools_repo.get(_tid(), pid)
     if not it: abort(404)
     pools_repo.upsert(_pool_dto_from_form(it))
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     return redirect(url_for("radius.pool_list"))
 
 
 def pool_delete(pid: int):
     pools_repo.delete(_tid(), pid)
-    flash("تم الحذف.", "success")
+    flash(_tr("تم الحذف."), "success")
     return redirect(url_for("radius.pool_list"))
 
 
@@ -303,13 +303,13 @@ def vch_generate():
             count = int(request.form.get("count") or 0)
             amount = strict_float(request.form.get("amount") or 0)
         except ValueError:
-            flash("قيم غير صحيحة", "error")
+            flash(_tr("قيم غير صحيحة"), "error")
             return redirect(url_for("radius.vch_generate"))
         if count <= 0 or amount <= 0:
-            flash("العدد والمبلغ مطلوبان وأكبر من صفر", "error")
+            flash(_tr("العدد والمبلغ مطلوبان وأكبر من صفر"), "error")
             return redirect(url_for("radius.vch_generate"))
         from ..core import limits
-        _msg = limits.amount_error(amount, "generic", label="قيمة القسيمة")
+        _msg = limits.amount_error(amount, "generic", label=N_("قيمة القسيمة"))
         if _msg:   # «الحدود» — نفس سقف /api/v1/vouchers
             flash(_msg, "error")
             return redirect(url_for("radius.vch_generate"))
@@ -320,12 +320,12 @@ def vch_generate():
             try:
                 plan_id = int(_raw_plan)
             except ValueError:
-                flash("معرّف الباقة يجب أن يكون رقمًا صحيحًا.", "error")
+                flash(_tr("معرّف الباقة يجب أن يكون رقمًا صحيحًا."), "error")
                 return redirect(url_for("radius.billing_hub", tab="vouchers"))
             if plan_id <= 0:
                 plan_id = None
             elif plans_repo.get_plan(_tid(), plan_id) is None:
-                flash("الباقة المحدّدة غير موجودة.", "error")
+                flash(_tr("الباقة المحدّدة غير موجودة."), "error")
                 return redirect(url_for("radius.billing_hub", tab="vouchers"))
         expire = _date("expire_at")
         # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
@@ -339,7 +339,7 @@ def vch_generate():
             generated_by=session.get("admin_id") or 0,
             code_length=code_length,
         )
-        flash(f"تم توليد {len(new_items)} كوبون.", "success")
+        flash(_tr('تم توليد %(v)s كوبون.', v=len(new_items)), "success")
         return redirect(url_for("radius.billing_hub", tab="vouchers", status="active"))
     # GET: the generate form now lives in a modal on the billing hub.
     return redirect(url_for("radius.billing_hub", tab="vouchers"))
@@ -353,37 +353,37 @@ def vch_redeem():
     code = (request.form.get("code") or "").strip()
     username = (request.form.get("username") or "").strip()
     if not code or not username:
-        flash("كود الكوبون والمشترك مطلوبان.", "error")
+        flash(_tr("كود الكوبون والمشترك مطلوبان."), "error")
         return back
 
     v = vouchers_repo.get_by_code(_tid(), code)
     if not v:
-        flash("الكوبون غير موجود — تأكد من الكود.", "error")
+        flash(_tr("الكوبون غير موجود — تأكد من الكود."), "error")
         return back
     if v.status == "used":
-        flash("هذا الكوبون استُخدم من قبل.", "error")
+        flash(_tr("هذا الكوبون استُخدم من قبل."), "error")
         return back
     if v.status != "active":
-        flash("هذا الكوبون ملغى ولا يمكن صرفه.", "error")
+        flash(_tr("هذا الكوبون ملغى ولا يمكن صرفه."), "error")
         return back
     # expire_at مُدخَلٌ بتوقيت اللوحة الحائطيّ ⇒ نقارنه بساعة اللوحة (zoneinfo).
     from ..core.system_config import local_now
     if v.expire_at and v.expire_at < local_now().replace(tzinfo=None):
-        flash("انتهت صلاحية هذا الكوبون.", "error")
+        flash(_tr("انتهت صلاحية هذا الكوبون."), "error")
         return back
     if float(v.amount or 0) <= 0:
-        flash("لا توجد قيمة صالحة لهذا الكوبون.", "error")
+        flash(_tr("لا توجد قيمة صالحة لهذا الكوبون."), "error")
         return back
 
     sub = subscribers_repo.get_subscriber(_tid(), username)
     if not sub:
-        flash("المشترك غير موجود.", "error")
+        flash(_tr("المشترك غير موجود."), "error")
         return back
 
     # تعليم الكوبون مستخدمًا أولًا وذريًا (يمنع الصرف المزدوج عند التزامن)،
     # ثم إضافة القيمة للرصيد. لو فشل الإيداع نعيد الكوبون نشطًا.
     if not vouchers_repo.mark_used(_tid(), v.id, subscriber_id=int(sub.id)):
-        flash("تم صرف هذا الكوبون للتو من جهة أخرى.", "error")
+        flash(_tr("تم صرف هذا الكوبون للتو من جهة أخرى."), "error")
         return back
     try:
         from ..services.users import get_users_service
@@ -391,7 +391,7 @@ def vch_redeem():
             actor=_actor(),
             username=sub.username,
             amount=float(v.amount),
-            notes=f"صرف كوبون {v.code}",
+            notes=_tr('صرف كوبون %(code)s', code=v.code),
         )
     except Exception as e:  # noqa: BLE001 — إعادة الكوبون نشطًا عند أي فشل في الإيداع
         from ..db.connection import transaction as _txn
@@ -400,12 +400,11 @@ def vch_redeem():
                 "UPDATE vouchers SET status='active', used_by_subscriber_id=NULL, used_at=NULL "
                 "WHERE tenant_id=? AND id=?", (_tid(), v.id))
         msg = getattr(e, "message", None) or str(e)
-        flash(f"تعذّر إضافة الرصيد — لم يُصرف الكوبون: {msg}", "error")
+        flash(_tr('تعذّر إضافة الرصيد — لم يُصرف الكوبون: %(msg)s', msg=msg), "error")
         return back
 
     flash(
-        f"تم صرف الكوبون {v.code} بقيمة {float(v.amount):.2f} للمشترك {sub.username}. "
-        f"الرصيد الحالي {float(saved.balance or 0):.2f}.",
+        _tr('تم صرف الكوبون %(code)s بقيمة %(v)s للمشترك %(username)s. الرصيد الحالي %(v2)s.', code=v.code, v=format(float(v.amount), '.2f'), username=sub.username, v2=format(float(saved.balance or 0), '.2f')),
         "success",
     )
     return redirect(url_for("radius.billing_hub", tab="vouchers", status="used"))
@@ -413,7 +412,7 @@ def vch_redeem():
 
 def vch_revoke(vid: int):
     vouchers_repo.revoke(_tid(), vid)
-    flash("تم الإلغاء.", "warning")
+    flash(_tr("تم الإلغاء."), "warning")
     return redirect(url_for("radius.vch_list"))
 
 
@@ -439,10 +438,10 @@ def inv_create():
     sub = next((s for s in _picker_subscribers(limit=10_000)
                 if s.id == sub_id), None)
     if not sub:
-        flash("اختر مشتركًا صحيحًا", "error")
+        flash(_tr("اختر مشتركًا صحيحًا"), "error")
         return redirect(url_for("radius.inv_new"))
     from ..core import limits
-    _msg = limits.amount_error(_f("amount"), "generic", label="قيمة الفاتورة")
+    _msg = limits.amount_error(_f("amount"), "generic", label=N_("قيمة الفاتورة"))
     if _msg:   # «الحدود» — نفس سقف /api/v1/invoices
         flash(_msg, "error")
         return redirect(url_for("radius.inv_new"))
@@ -470,7 +469,7 @@ def inv_create():
         note=(request.form.get("note") or "").strip(),
     )
     invoices_repo.create(inv)
-    flash(f"تم إنشاء فاتورة بقيمة {inv.amount} لـ {sub.username}.", "success")
+    flash(_tr('تم إنشاء فاتورة بقيمة %(amount)s لـ %(username)s.', amount=inv.amount, username=sub.username), "success")
     return redirect(url_for("radius.inv_list"))
 
 
@@ -478,7 +477,7 @@ def inv_status(iid: int):
     new_status = request.form.get("status") or "paid"
     note = request.form.get("note") or ""
     invoices_repo.update_status(_tid(), iid, new_status, note=note)
-    flash("تم تحديث الحالة.", "success")
+    flash(_tr("تم تحديث الحالة."), "success")
     return redirect(url_for("radius.inv_list"))
 
 
@@ -505,7 +504,7 @@ def tk_new():
 def tk_create():
     sub_id = _i("subscriber_id")
     if not sub_id:
-        flash("اختر مشتركًا", "error")
+        flash(_tr("اختر مشتركًا"), "error")
         return redirect(url_for("radius.tk_new"))
     # نفس تحقّق الـAPI: مشترك موجود في هذه الشبكة + عنوان غير فارغ ومحدود —
     # كان المعرّف الخاطئ ينتهي بخطأ FK = صفحة 500.
@@ -513,11 +512,11 @@ def tk_create():
     if not _db().execute(
             "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
             (_tid(), int(sub_id))).fetchone():
-        flash("المشترك غير موجود.", "error")
+        flash(_tr("المشترك غير موجود."), "error")
         return redirect(url_for("radius.tk_new"))
     _subject = (request.form.get("subject") or "").strip()
     if not _subject or len(_subject) > 200:
-        flash("أدخل عنوان التذكرة (حتى ٢٠٠ حرف).", "error")
+        flash(_tr("أدخل عنوان التذكرة (حتى ٢٠٠ حرف)."), "error")
         return redirect(url_for("radius.tk_new"))
     _priority = request.form.get("priority") or "normal"
     if _priority not in TICKET_PRIORITIES:
@@ -536,7 +535,7 @@ def tk_create():
         body=(request.form.get("body") or "").strip(),
     )
     saved = tickets_repo.create_ticket(t)
-    flash("تم إنشاء التذكرة.", "success")
+    flash(_tr("تم إنشاء التذكرة."), "success")
     return redirect(url_for("radius.tk_view", tid=saved.id))
 
 
@@ -551,21 +550,21 @@ def tk_reply(tid: int):
     from ..core.types_saas import TicketReply
     body = (request.form.get("body") or "").strip()
     if not body:
-        flash("الرد فارغ", "error")
+        flash(_tr("الرد فارغ"), "error")
         return redirect(url_for("radius.tk_view", tid=tid))
     tickets_repo.add_reply(TicketReply(
         id=None, ticket_id=tid, body=body,
         author_type="admin", author_id=session.get("admin_id") or 0,
         tenant_id=_tid(),
     ))
-    flash("تمت الإضافة.", "success")
+    flash(_tr("تمت الإضافة."), "success")
     return redirect(url_for("radius.tk_view", tid=tid))
 
 
 def tk_status(tid: int):
     new_status = request.form.get("status") or "open"
     if new_status not in TICKET_STATUSES:
-        flash("حالة التذكرة غير صحيحة.", "error")
+        flash(_tr("حالة التذكرة غير صحيحة."), "error")
         return redirect(url_for("radius.tk_view", tid=tid))
     ticket = tickets_repo.get_ticket(_tid(), tid)
     if not ticket:
@@ -575,7 +574,7 @@ def tk_status(tid: int):
     if error:
         flash(error, "error")
         return redirect(url_for("radius.tk_view", tid=tid))
-    flash("تم تحديث الحالة.", "success")
+    flash(_tr("تم تحديث الحالة."), "success")
     return redirect(url_for("radius.tk_view", tid=tid))
 
 
@@ -617,18 +616,18 @@ def _svc_dto(existing=None) -> Service:
 def _svc_save(item, *, is_new: bool):
     """NEW-9: تحقّقٌ عربيٌّ بدل `FOREIGN KEY constraint failed` → 500."""
     if not item.name:
-        return _form_error("radius/services_form.html", "اسم المعدّة مطلوب.", 400,
+        return _form_error("radius/services_form.html", _tr("اسم المعدّة مطلوب."), 400,
                            item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
     if not item.subscriber_id:
         return _form_error("radius/services_form.html",
-                           "اختر المشترك الذي تُسلَّم له المعدّة.", 400,
+                           _tr("اختر المشترك الذي تُسلَّم له المعدّة."), 400,
                            item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
     from ..db.connection import db as _db
     if not _db().execute(
             "SELECT 1 FROM subscribers WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL",
             (_tid(), int(item.subscriber_id))).fetchone():
         # zero-w3: مشتركُ شبكةٍ أخرى كان يمرّ (الـFK يفحص الوجود لا الشبكة).
-        return _form_error("radius/services_form.html", "المشترك المحدَّد غير موجود.", 400,
+        return _form_error("radius/services_form.html", _tr("المشترك المحدَّد غير موجود."), 400,
                            item=item, subs=_picker_subscribers(limit=500), is_new=is_new)
     try:
         services_repo.upsert(item)
@@ -636,16 +635,16 @@ def _svc_save(item, *, is_new: bool):
         kind = _integrity_kind(exc)
         if kind == "unique":
             return _form_error("radius/services_form.html",
-                               "يوجد سجلُّ معدّةٍ بنفس البيانات — راجع الرقم التسلسليّ.",
+                               _tr("يوجد سجلُّ معدّةٍ بنفس البيانات — راجع الرقم التسلسليّ."),
                                409, item=item, subs=_picker_subscribers(limit=500),
                                is_new=is_new)
         if kind in ("foreign_key", "notnull"):
             return _form_error("radius/services_form.html",
-                               "المشترك المحدَّد غير موجود، أو بياناتٌ مطلوبةٌ ناقصة.",
+                               _tr("المشترك المحدَّد غير موجود، أو بياناتٌ مطلوبةٌ ناقصة."),
                                400, item=item, subs=_picker_subscribers(limit=500),
                                is_new=is_new)
         raise
-    flash("تم الإضافة." if is_new else "تم التحديث.", "success")
+    flash(_tr("تم الإضافة.") if is_new else _tr("تم التحديث."), "success")
     return redirect(url_for("radius.svc_list"))
 
 
@@ -668,5 +667,5 @@ def svc_update(sid: int):
 
 def svc_delete(sid: int):
     services_repo.delete(_tid(), sid)
-    flash("تم الحذف.", "success")
+    flash(_tr("تم الحذف."), "success")
     return redirect(url_for("radius.svc_list"))

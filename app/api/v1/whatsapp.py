@@ -6,6 +6,7 @@ sending stay in the license panel, while radius-module only stores local
 per-event gates and calls the signed admin-panel bridge.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import time
 import uuid
@@ -18,21 +19,21 @@ from ..responses import fail, ok
 
 
 WHATSAPP_EVENTS: tuple[tuple[str, str], ...] = (
-    ("otp", "رمز التحقق عند الدخول"),
-    ("expiry", "تنبيه قرب انتهاء الاشتراك"),
-    ("quota", "تنبيه قرب نفاد الباقة"),
-    ("maintenance", "إشعارات الصيانة والانقطاع"),
-    ("password", "تغيير كلمة المرور"),
-    ("portal", "روابط ودعوات بوابة المشترك"),
+    ("otp", N_("رمز التحقق عند الدخول")),
+    ("expiry", N_("تنبيه قرب انتهاء الاشتراك")),
+    ("quota", N_("تنبيه قرب نفاد الباقة")),
+    ("maintenance", N_("إشعارات الصيانة والانقطاع")),
+    ("password", N_("تغيير كلمة المرور")),
+    ("portal", N_("روابط ودعوات بوابة المشترك")),
 )
 
 EVENT_HELP = {
-    "otp": "إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته.",
-    "expiry": "تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب.",
-    "quota": "تنبيه المشترك عندما تقترب باقته من النفاد.",
-    "maintenance": "إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول.",
-    "password": "إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه.",
-    "portal": "إرسال روابط الدخول والدعوات إلى بوابة المشترك.",
+    "otp": N_("إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته."),
+    "expiry": N_("تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب."),
+    "quota": N_("تنبيه المشترك عندما تقترب باقته من النفاد."),
+    "maintenance": N_("إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول."),
+    "password": N_("إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه."),
+    "portal": N_("إرسال روابط الدخول والدعوات إلى بوابة المشترك."),
 }
 
 PANEL_PORTAL_WHATSAPP_PATH = "/portal/whatsapp"
@@ -177,9 +178,9 @@ def whatsapp_state():
             "events": _event_payloads(toggles),
             "panel_portal_url": _panel_portal_url(),
             "principles": [
-                "لا يخزن الريدياس أي مفاتيح أو رموز من واتساب.",
-                "الإرسال الرسمي يتم عبر لوحة التراخيص فقط.",
-                "هذه المفاتيح تتحكم بما يُسمح للريدياس بطلبه من اللوحة.",
+                N_("لا يخزن الريدياس أي مفاتيح أو رموز من واتساب."),
+                N_("الإرسال الرسمي يتم عبر لوحة التراخيص فقط."),
+                N_("هذه المفاتيح تتحكم بما يُسمح للريدياس بطلبه من اللوحة."),
             ],
         }
     )
@@ -196,7 +197,7 @@ def whatsapp_settings_save():
     if unknown:
         return fail(
             "validation_error",
-            "يوجد نوع رسالة غير معروف.",
+            _tr("يوجد نوع رسالة غير معروف."),
             status=422,
             details={"unknown": unknown},
         )
@@ -216,7 +217,7 @@ def whatsapp_settings_save():
     return ok(
         {
             "events": _event_payloads(toggles),
-            "message": "تم حفظ إعدادات رسائل واتساب للمشتركين.",
+            "message": _tr("تم حفظ إعدادات رسائل واتساب للمشتركين."),
         }
     )
 
@@ -224,7 +225,7 @@ def whatsapp_settings_save():
 def whatsapp_test_send():
     phone = str(_body().get("recipient_phone") or "").strip()
     if not phone:
-        return fail("validation_error", "أدخل رقم هاتف لإرسال رسالة الاختبار.", status=422)
+        return fail("validation_error", _tr("أدخل رقم هاتف لإرسال رسالة الاختبار."), status=422)
 
     from ...radius.services.admin_panel_client import AdminPanelClient
 
@@ -240,14 +241,14 @@ def whatsapp_test_send():
         )
     except Exception:  # noqa: BLE001
         result = {"ok": False, "status": "unavailable"}
-    return _send_result(result, success_message="تم إرسال رسالة الاختبار عبر لوحة التراخيص.")
+    return _send_result(result, success_message=N_("تم إرسال رسالة الاختبار عبر لوحة التراخيص."))
 
 
 def whatsapp_cloud_test_send():
     data = _body()
     phone = str(data.get("recipient_phone") or "").strip()
     if not phone:
-        return fail("validation_error", "أدخل رقم هاتف لإرسال رسالة الاختبار.", status=422)
+        return fail("validation_error", _tr("أدخل رقم هاتف لإرسال رسالة الاختبار."), status=422)
 
     from ...radius.services.admin_panel_client import AdminPanelClient
 
@@ -261,9 +262,9 @@ def whatsapp_cloud_test_send():
         result = {"ok": False, "status": "unavailable"}
     panel = result.get("response") if isinstance(result.get("response"), dict) else {}
     if result.get("ok") and panel.get("ok"):
-        return ok({"message": "تم إرسال رسالة الاختبار عبر بيانات اللوحة.", "status": "sent"})
+        return ok({"message": _tr("تم إرسال رسالة الاختبار عبر بيانات اللوحة."), "status": "sent"})
     reason = panel.get("message_ar") or _status_label(result.get("status"))
-    return fail("whatsapp_send_failed", f"تعذّر إرسال رسالة الاختبار: {reason}.", status=502)
+    return fail("whatsapp_send_failed", _tr('تعذّر إرسال رسالة الاختبار: %(reason)s.', reason=reason), status=502)
 
 
 def _send_result(result: dict[str, Any], *, success_message: str):
@@ -271,28 +272,28 @@ def _send_result(result: dict[str, Any], *, success_message: str):
         return ok({"message": success_message, "status": _status_label(result.get("status"))})
     return fail(
         "whatsapp_send_failed",
-        f"تعذّر إرسال رسالة الاختبار: {_status_label(result.get('status'))}.",
+        _tr('تعذّر إرسال رسالة الاختبار: %(v)s.', v=_status_label(result.get('status'))),
         status=502,
     )
 
 
 def _onboarding_label(value: str, ok_status: bool) -> str:
     if not ok_status:
-        return "غير متوفّرة"
+        return N_("غير متوفّرة")
     return {
-        "connected": "متصل",
-        "not_connected": "غير متصل",
-        "needs_setup": "بحاجة إلى الإعداد",
-    }.get(value, "بحاجة إلى الإعداد")
+        "connected": N_("متصل"),
+        "not_connected": N_("غير متصل"),
+        "needs_setup": N_("بحاجة إلى الإعداد"),
+    }.get(value, N_("بحاجة إلى الإعداد"))
 
 
 def _status_label(status: object) -> str:
     return {
-        "success": "ناجح",
-        "sent": "تم الإرسال",
-        "queued": "في الطابور",
-        "unavailable": "غير متوفر",
-        "error": "خطأ",
-        "timeout": "انتهت المهلة",
-        "not_configured": "غير مهيأ",
-    }.get(str(status or "").strip(), "غير معروف")
+        "success": _tr("ناجح"),
+        "sent": N_("تم الإرسال"),
+        "queued": N_("في الطابور"),
+        "unavailable": N_("غير متوفر"),
+        "error": _tr("خطأ"),
+        "timeout": N_("انتهت المهلة"),
+        "not_configured": N_("غير مهيأ"),
+    }.get(str(status or "").strip(), N_("غير معروف"))

@@ -17,7 +17,7 @@
 {% block title %}{{ _("مركز الصلاحيات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ _("مركز الصلاحيات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total_admins|ar_count('admin') }} · {{ matrix.permissions|length }} صلاحية تشغيلية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s · %(length)s صلاحية تشغيلية', v=total_admins|ar_count('admin'), length=matrix.permissions|length) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -156,8 +156,8 @@
 
 {# ───── ONE merged hero: title + subtitle + icon + governance actions + KPIs ───── #}
 {% call hub.megahero(
-  "حوكمة صلاحيات الراوتر",
-  subtitle="قراءة واحدة واضحة لكل مدير وما يملكه فعلياً من صلاحيات الراوتر والخروج عبر الخادم وسياسات الشبكة. الصفحة للرقابة فقط، والتعديل يبقى من الأدوار والمدراء.",
+  _('حوكمة صلاحيات الراوتر'),
+  subtitle=_('قراءة واحدة واضحة لكل مدير وما يملكه فعلياً من صلاحيات الراوتر والخروج عبر الخادم وسياسات الشبكة. الصفحة للرقابة فقط، والتعديل يبقى من الأدوار والمدراء.'),
   icon="shield-halved",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.roles_list') ~ '">
@@ -167,10 +167,10 @@
       <i class="fa-solid fa-user-shield"></i> '|safe ~ _("إدارة المدراء") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'مدراء نشطون',        'value': total_admins,          'icon': 'users-gear',           'variant': 'brand'},
-    {'label': 'صلاحيات معرفة',      'value': matrix.permissions|length, 'icon': 'list-check',       'variant': 'brand'},
-    {'label': 'صلاحيات حساسة ممنوحة','value': summary.risky_grants,  'icon': 'triangle-exclamation', 'variant': 'amber'},
-    {'label': 'صلاحية كاملة',        'value': summary.super_admins,  'icon': 'crown',                'variant': 'green'},
+    {'label': _('مدراء نشطون'),        'value': total_admins,          'icon': 'users-gear',           'variant': 'brand'},
+    {'label': _('صلاحيات معرفة'),      'value': matrix.permissions|length, 'icon': 'list-check',       'variant': 'brand'},
+    {'label': _('صلاحيات حساسة ممنوحة'),'value': summary.risky_grants,  'icon': 'triangle-exclamation', 'variant': 'amber'},
+    {'label': _('صلاحية كاملة'),        'value': summary.super_admins,  'icon': 'crown',                'variant': 'green'},
   ]
 ) %}
   <strong data-mt-perm-total-admins hidden>{{ total_admins }}</strong>
@@ -178,19 +178,19 @@
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "طريقة القراءة",
-  intro="ابدأ من ملخص الهيرو ثم راقب الأعمدة الحمراء. أي صلاحية تطبيق أو استعادة أو إدارة تُعدّ حساسة وتحتاج مراجعة دور صاحبها. الصفحة للرقابة فقط.",
+  _('طريقة القراءة'),
+  intro=_('ابدأ من ملخص الهيرو ثم راقب الأعمدة الحمراء. أي صلاحية تطبيق أو استعادة أو إدارة تُعدّ حساسة وتحتاج مراجعة دور صاحبها. الصفحة للرقابة فقط.'),
   icon="compass",
   items=[
-    {'icon': 'crown', 'text': 'تاج ذهبي: يملك كل الصلاحيات بسبب دور المدير الكامل.'},
-    {'icon': 'check', 'text': 'صح بنفسجي: ممنوحة ضمنياً من صلاحية التحكم الكامل.'},
-    {'icon': 'check', 'text': 'صح أخضر: صلاحية موجودة في الدور مباشرة.'},
-    {'icon': 'minus', 'text': 'شرطة رمادية: غير ممنوحة.'},
+    {'icon': 'crown', 'text': _('تاج ذهبي: يملك كل الصلاحيات بسبب دور المدير الكامل.')},
+    {'icon': 'check', 'text': _('صح بنفسجي: ممنوحة ضمنياً من صلاحية التحكم الكامل.')},
+    {'icon': 'check', 'text': _('صح أخضر: صلاحية موجودة في الدور مباشرة.')},
+    {'icon': 'minus', 'text': _('شرطة رمادية: غير ممنوحة.')},
   ]
 )) %}
 
   {# ── Permission-group overview cards ── #}
-  {% call hub.section("مجموعات الصلاحيات", icon="layer-group") %}
+  {% call hub.section(_('مجموعات الصلاحيات'), icon="layer-group") %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
       {% for group in group_cards %}
       <div class="hub-tile">
@@ -200,8 +200,8 @@
         </div>
         <div class="hub-text-mute" style="font-size:12px;line-height:1.55;margin:6px 0 10px;min-height:34px">{{ group.description }}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          {{ hub.tile("صلاحيات", group.permission_count) }}
-          {{ hub.tile("منح فعلي", group.grant_count, variant="ok") }}
+          {{ hub.tile(_('صلاحيات'), group.permission_count) }}
+          {{ hub.tile(_('منح فعلي'), group.grant_count, variant="ok") }}
         </div>
       </div>
       {% endfor %}
@@ -209,9 +209,9 @@
   {% endcall %}
 
   {# ── The permission matrix (read-only marked grid; data-* hooks preserved) ── #}
-  {% call hub.section("مصفوفة المدراء والصلاحيات", icon="table-cells-large", meta="قراءة فقط") %}
+  {% call hub.section(_('مصفوفة المدراء والصلاحيات'), icon="table-cells-large", meta=_('قراءة فقط')) %}
     {% if not matrix.rows %}
-      {{ hub.empty("لا يوجد مدراء نشطون.", icon="user-slash") }}
+      {{ hub.empty(_('لا يوجد مدراء نشطون.'), icon="user-slash") }}
       <span data-mt-perm-empty hidden>{{ _('لا يوجد مدراء نشطون.') }}</span>
     {% else %}
     <div class="permx-table-wrap" style="direction:ltr">
@@ -241,7 +241,7 @@
               <div class="permx-role">
                 {% if r.full_name %}{{ r.full_name }}{% endif %}
                 {% if r.full_name and r.role_name %} · {% endif %}
-                {% if r.role_name %}{{ r.role_name }}{% else %}بدون دور{% endif %}
+                {% if r.role_name %}{{ r.role_name }}{% else %}{{ _('بدون دور') }}{% endif %}
               </div>
             </td>
             {% for p in matrix.permissions %}

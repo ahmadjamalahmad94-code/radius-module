@@ -7,7 +7,7 @@
 {% from "_partials/unit_input.html" import unit_input_picker %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% set title_ar = "إضافة عرض" if is_new else "تعديل: " + (plan.name or 'عرض') %}
+{% set title_ar = _('إضافة عرض') if is_new else _('تعديل: ') + (plan.name or _('عرض')) %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -277,7 +277,7 @@
 
 {{ hub.hero(
   title_ar,
-  subtitle="إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة",
+  subtitle=_('إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة'),
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.plans_list') + '">
@@ -352,7 +352,7 @@
             <select class="hub-select" name="plan_type">
               {% for t in plan_types %}
                 <option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>
-                  {% if t == 'time' %}وقت{% elif t == 'quota' %}حصة{% elif t == 'hybrid' %}وقت وحصة{% elif t == 'unlimited' %}غير محدود{% elif t == 'recurring' %}متجدد{% else %}{{ t }}{% endif %}
+                  {% if t == 'time' %}{{ _('وقت') }}{% elif t == 'quota' %}{{ _('حصة') }}{% elif t == 'hybrid' %}{{ _('وقت وحصة') }}{% elif t == 'unlimited' %}{{ _('غير محدود') }}{% elif t == 'recurring' %}{{ _('متجدد') }}{% else %}{{ t }}{% endif %}
                 </option>
               {% endfor %}
             </select>
@@ -544,7 +544,7 @@
             <select class="hub-select" name="quota_reset_strategy">
               {% for s in ['rolling','monthly','never'] %}
                 <option value="{{ s }}" {% if (plan.quota_reset_strategy or 'rolling') == s %}selected{% endif %}>
-                  {% if s == 'rolling' %}متجددة دوريًا{% elif s == 'monthly' %}شهرية ثابتة{% elif s == 'never' %}لا تتجدّد{% else %}{{ s }}{% endif %}
+                  {% if s == 'rolling' %}{{ _('متجددة دوريًا') }}{% elif s == 'monthly' %}{{ _('شهرية ثابتة') }}{% elif s == 'never' %}{{ _('لا تتجدّد') }}{% else %}{{ s }}{% endif %}
                 </option>
               {% endfor %}
             </select>
@@ -662,10 +662,10 @@
                   <input class="hub-input" type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}">
                   <div class="help">{{ _('كم يوم تبقى تذاكر/قسائم هذه الباقة صالحة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('المشترك يقدر يغيّر الباقة') }}</label>
-                  <div class="pl-chk">{{ toggle_switch(name="user_can_change_offer", checked=(plan.user_can_change_offer in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
+                  <div class="pl-chk">{{ toggle_switch(name="user_can_change_offer", checked=(plan.user_can_change_offer in [True,1,'1','t','true','on']), value="1", on_label=_('مسموح'), off_label=_('ممنوع')) }}</div>
                   <div class="help">{{ _('يسمح للمشترك بتبديل باقته بنفسه.') }}</div></div>
                 <div class="pl-field"><label>{{ _('المشترك يطلب تغيير') }}</label>
-                  <div class="pl-chk">{{ toggle_switch(name="user_can_request_offer_change", checked=(plan.user_can_request_offer_change in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
+                  <div class="pl-chk">{{ toggle_switch(name="user_can_request_offer_change", checked=(plan.user_can_request_offer_change in [True,1,'1','t','true','on']), value="1", on_label=_('مسموح'), off_label=_('ممنوع')) }}</div>
                   <div class="help">{{ _('يسمح للمشترك بإرسال طلب تغيير باقة للمشغّل.') }}</div></div>
                 <div class="pl-field"><label>{{ _('منع تغيير الاشتراك (مستخدم)') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="prevent_user_from_changing_subscription", checked=(plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on']), value="1") }}</div>
@@ -718,7 +718,7 @@
         <div class="pl-grid">
           <div class="pl-field"><label>{{ _('تنبيه قبل انتهاء الكوتا الشهرية') }}</label>
             <input class="hub-input" type="text" name="notify_before_quota_expiry" value="{{ plan.notify_before_quota_expiry or '' }}" placeholder="{{ _('نسبة أو ميجا') }}">
-            <div class="help">عتبة التنبيه قبل نفاد الكوتا الشهرية (مثل %10 أو 500MB).</div></div>
+            <div class="help">{{ _('عتبة التنبيه قبل نفاد الكوتا الشهرية (مثل %%10 أو 500MB).') }}</div></div>
           <div class="pl-field"><label>{{ _('تنبيه قبل انتهاء الكوتا اليومية') }}</label>
             <input class="hub-input" type="text" name="notify_before_daily_quota_expiry" value="{{ plan.notify_before_daily_quota_expiry or '' }}">
             <div class="help">{{ _('عتبة التنبيه قبل نفاد الكوتا اليومية.') }}</div></div>
@@ -821,7 +821,7 @@
             <input class="hub-input" type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}">
             <div class="help">{{ _('أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.') }}</div></div>
           <div class="pl-field"><label>{{ _('بطاقة مشتركة — جلسة واحدة فعّالة') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="shared_single_session", checked=plan.shared_single_session, value="1", on_label="مفعّل", off_label="معطّل") }}</div>
+            <div class="pl-chk">{{ toggle_switch(name="shared_single_session", checked=plan.shared_single_session, value="1", on_label=_('مفعّل'), off_label=_('معطّل')) }}</div>
             <div class="help">{{ _('جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).') }}</div></div>
           <div class="pl-field"><label>{{ _('ربط MAC') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_mac", checked=plan.bind_mac, value="1") }}</div>
@@ -861,7 +861,7 @@
                   <input class="hub-input" type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}">
                   <div class="help">{{ _('أقصى مدة يُسمح خلالها بالسلفة بالدقائق.') }}</div></div>
                 <div class="pl-field"><label>{{ _('تجاوز سرعة المستفيد') }}</label>
-                  <div class="pl-chk">{{ toggle_switch(name="speed_override_allowed", checked=plan.speed_override_allowed, value="1", on_label="مسموح", off_label="ممنوع") }}</div>
+                  <div class="pl-chk">{{ toggle_switch(name="speed_override_allowed", checked=plan.speed_override_allowed, value="1", on_label=_('مسموح'), off_label=_('ممنوع')) }}</div>
                   <div class="help">{{ _('يسمح لسرعة المشترك بتجاوز سرعة الباقة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('تفعيل MTU') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="enable_mtu", checked=(plan.enable_mtu in [True,1,'1','t','true','on']), value="1") }}</div>
@@ -941,7 +941,7 @@
     <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
       {% if can_submit('radius.plans_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">{{ _('إلغاء') }}</a>{% endif %}
       <button class="hub-btn hub-btn--primary" type="submit">
-        <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ العرض" if is_new else "حفظ التعديلات" }}
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ العرض') if is_new else _('حفظ التعديلات') }}
       </button>
     </div>
   {% if not can_submit(('radius.plans_update' if not is_new else 'radius.plans_create')) %}</fieldset>{% endif %}</form>

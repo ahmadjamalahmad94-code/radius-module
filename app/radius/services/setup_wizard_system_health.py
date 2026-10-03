@@ -34,6 +34,7 @@ Designed for two consumers:
    otherwise so off-the-shelf uptime checks alert.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import os
@@ -111,20 +112,19 @@ def check_db_migrations() -> dict:
                 missing_total.append(f"{table}.{col}")
         if missing_total:
             return _fail(
-                "مايجريشن قاعدة البيانات",
-                f"أعمدة ناقصة: {missing_total}",
+                _tr("مايجريشن قاعدة البيانات"),
+                _tr('أعمدة ناقصة: %(missing_total)s', missing_total=missing_total),
                 missing_columns=missing_total,
             )
         return _ok(
-            "مايجريشن قاعدة البيانات",
-            f"كل الأعمدة المطلوبة موجودة "
-            f"({scanned} عمود في {len(expected)} جدول)",
+            _tr("مايجريشن قاعدة البيانات"),
+            _tr('كل الأعمدة المطلوبة موجودة (%(scanned)s عمود في %(v)s جدول)', scanned=scanned, v=len(expected)),
             column_count=scanned,
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(
-            "مايجريشن قاعدة البيانات",
-            f"تعذّر فحص المايجريشن: {exc}",
+            _tr("مايجريشن قاعدة البيانات"),
+            _tr('تعذّر فحص المايجريشن: %(exc)s', exc=exc),
         )
 
 
@@ -144,14 +144,14 @@ def check_freeradius_responsive(
         s.sendto(b"\x00", (host, port))
         s.close()
         return _ok(
-            "FreeRADIUS يستلم",
-            f"المنفذ UDP {port} مفتوح على {host}",
+            _tr("FreeRADIUS يستلم"),
+            _tr('المنفذ UDP %(port)s مفتوح على %(host)s', port=port, host=host),
             host=host, port=port,
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(
-            "FreeRADIUS يستلم",
-            f"تعذّر الوصول إلى UDP {port} على {host}: {exc}",
+            _tr("FreeRADIUS يستلم"),
+            _tr('تعذّر الوصول إلى UDP %(port)s على %(host)s: %(exc)s', port=port, host=host, exc=exc),
             host=host, port=port,
         )
 
@@ -170,17 +170,15 @@ def check_wizard_clients_directory(
     )
     if not target_dir.is_dir():
         return _fail(
-            "مجلّد إعدادات RADIUS",
-            f"المجلّد {target_dir} غير موجود",
+            _tr("مجلّد إعدادات RADIUS"),
+            _tr('المجلّد %(target_dir)s غير موجود', target_dir=target_dir),
             path=str(target_dir),
         )
     placeholder = target_dir / "_placeholder.conf"
     if not placeholder.is_file():
         return _warn(
-            "مجلّد إعدادات RADIUS",
-            f"ملفّ _placeholder.conf مفقود — "
-            f"freeradius قد يفشل في الإقلاع إذا كان "
-            f"المجلّد فاضي",
+            _tr("مجلّد إعدادات RADIUS"),
+            _tr('ملفّ _placeholder.conf مفقود — freeradius قد يفشل في الإقلاع إذا كان المجلّد فاضي'),
             path=str(target_dir),
         )
     conf_files = [
@@ -188,8 +186,8 @@ def check_wizard_clients_directory(
         if p.is_file() and p.name.endswith(".conf")
     ]
     return _ok(
-        "مجلّد إعدادات RADIUS",
-        f"{len(conf_files)} ملفّ .conf موجود",
+        _tr("مجلّد إعدادات RADIUS"),
+        _tr('%(v)s ملفّ .conf موجود', v=len(conf_files)),
         path=str(target_dir),
         conf_files_count=len(conf_files),
     )
@@ -291,18 +289,15 @@ def check_wizard_invariants(
     issues = []
     if inv1_violations:
         issues.append(
-            f"INV-1 (سرّ مطابق): {len(inv1_violations)} "
-            f"run بدون ملفّ صحيح",
+            _tr('INV-1 (سرّ مطابق): %(v)s run بدون ملفّ صحيح', v=len(inv1_violations)),
         )
     if inv2_violations:
         issues.append(
-            f"INV-2 (لا ملفّات يتيمة): "
-            f"{len(inv2_violations)} ملفّ بدون run نشط",
+            _tr('INV-2 (لا ملفّات يتيمة): %(v)s ملفّ بدون run نشط', v=len(inv2_violations)),
         )
     if inv3_violations:
         issues.append(
-            f"INV-3 (IP فريد): {len(inv3_violations)} عنوان "
-            f"مكرّر بين ملفّات",
+            _tr('INV-3 (IP فريد): %(v)s عنوان مكرّر بين ملفّات', v=len(inv3_violations)),
         )
 
     evidence = {
@@ -318,15 +313,14 @@ def check_wizard_invariants(
         # next tick. Report as warn unless we have
         # data-loss-level violations.
         return _warn(
-            "ضمانات السرّ بين الراوتر والخادم",
-            "خلل سيُصلَح في تشغيل الـ reconciler القادم: "
+            _tr("ضمانات السرّ بين الراوتر والخادم"),
+            _tr("خلل سيُصلَح في تشغيل الـ reconciler القادم: ")
             + " · ".join(issues),
             **evidence,
         )
     return _ok(
-        "ضمانات السرّ بين الراوتر والخادم",
-        f"كل الراوترات النشطة ({len(active)}) مزامنة مع "
-        f"ملفّاتها على الخادم",
+        _tr("ضمانات السرّ بين الراوتر والخادم"),
+        _tr('كل الراوترات النشطة (%(v)s) مزامنة مع ملفّاتها على الخادم', v=len(active)),
         **evidence,
     )
 
@@ -382,11 +376,10 @@ def check_recent_reconciler_drift(
         info_total = sum(counts_info.values())
         if recent_total == 0:
             return _ok(
-                "استقرار مزامنة RADIUS",
-                f"لا drift خلال آخر ساعة"
+                _tr("استقرار مزامنة RADIUS"),
+                _tr('لا drift خلال آخر ساعة')
                 + (
-                    f" — تصحيحات أقدم في آخر "
-                    f"{hours_info}س: {info_total}"
+                    _tr(' — تصحيحات أقدم في آخر %(hours_info)sس: %(info_total)s', hours_info=hours_info, info_total=info_total)
                     if info_total else ""
                 ),
                 hours_warn=hours_warn,
@@ -396,10 +389,8 @@ def check_recent_reconciler_drift(
                 **counts_info,
             )
         return _warn(
-            "استقرار مزامنة RADIUS",
-            f"الـ reconciler صحّح {recent_total} عملية "
-            f"خلال آخر ساعة — يستحقّ التحقّق. "
-            f"إجمالي آخر {hours_info}س: {info_total}.",
+            _tr("استقرار مزامنة RADIUS"),
+            _tr('الـ reconciler صحّح %(recent_total)s عملية خلال آخر ساعة — يستحقّ التحقّق. إجمالي آخر %(hours_info)sس: %(info_total)s.', recent_total=recent_total, hours_info=hours_info, info_total=info_total),
             hours_warn=hours_warn,
             hours_info=hours_info,
             recent_total=recent_total,
@@ -408,8 +399,8 @@ def check_recent_reconciler_drift(
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(
-            "استقرار مزامنة RADIUS",
-            f"تعذّر قراءة audit_log: {exc}",
+            _tr("استقرار مزامنة RADIUS"),
+            _tr('تعذّر قراءة audit_log: %(exc)s', exc=exc),
         )
 
 
@@ -420,8 +411,8 @@ def check_wg_peers_dir(
     p = Path(path)
     if not p.is_dir():
         return _fail(
-            "مجلّد WireGuard peers",
-            f"المجلّد {path} غير موجود",
+            _tr("مجلّد WireGuard peers"),
+            _tr('المجلّد %(path)s غير موجود', path=path),
             path=path,
         )
     test_file = p / f".health_check_{int(time.time())}"
@@ -429,14 +420,14 @@ def check_wg_peers_dir(
         test_file.touch()
         test_file.unlink()
         return _ok(
-            "مجلّد WireGuard peers",
-            f"قابل للكتابة في {path}",
+            _tr("مجلّد WireGuard peers"),
+            _tr('قابل للكتابة في %(path)s', path=path),
             path=path,
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(
-            "مجلّد WireGuard peers",
-            f"غير قابل للكتابة في {path}: {exc}",
+            _tr("مجلّد WireGuard peers"),
+            _tr('غير قابل للكتابة في %(path)s: %(exc)s', path=path, exc=exc),
             path=path,
         )
 
@@ -460,8 +451,8 @@ def check_wizard_nas_secrets() -> dict:
         )
         if not rows:
             return _ok(
-                "أسرار RADIUS في NAS",
-                "لا توجد nas_devices مُدارة بالـ wizard بعد",
+                _tr("أسرار RADIUS في NAS"),
+                _tr("لا توجد nas_devices مُدارة بالـ wizard بعد"),
                 wizard_nas_count=0,
             )
         empty = [
@@ -474,22 +465,20 @@ def check_wizard_nas_secrets() -> dict:
         ]
         if empty:
             return _fail(
-                "أسرار RADIUS في NAS",
-                f"{len(empty)} راوتر بدون سرّ في nas_devices "
-                "— سيفشل disconnect / تغيير السرعة. "
-                "نفّذ recovery لإصلاح السرّ من state_json.",
+                _tr("أسرار RADIUS في NAS"),
+                _tr('%(v)s راوتر بدون سرّ في nas_devices — سيفشل disconnect / تغيير السرعة. نفّذ recovery لإصلاح السرّ من state_json.', v=len(empty)),
                 empty_nas=empty,
                 wizard_nas_count=len(rows),
             )
         return _ok(
-            "أسرار RADIUS في NAS",
-            f"كل الراوترات الـ {len(rows)} لديها سرّ صالح",
+            _tr("أسرار RADIUS في NAS"),
+            _tr('كل الراوترات الـ %(v)s لديها سرّ صالح', v=len(rows)),
             wizard_nas_count=len(rows),
         )
     except Exception as exc:  # noqa: BLE001
         return _fail(
-            "أسرار RADIUS في NAS",
-            f"تعذّر فحص NAS: {exc}",
+            _tr("أسرار RADIUS في NAS"),
+            _tr('تعذّر فحص NAS: %(exc)s', exc=exc),
         )
 
 
@@ -519,21 +508,19 @@ def check_clients_conf_no_wildcards() -> dict:
             text,
         ):
             return _fail(
-                "صيغة clients.conf",
-                f"عُثر على $INCLUDE wildcard في {candidate} "
-                "— سيؤدّي إلى crash-loop في FreeRADIUS 3.x. "
-                "استخدم directory form (/path/) بدلاً من *.conf.",
+                _tr("صيغة clients.conf"),
+                _tr('عُثر على $INCLUDE wildcard في %(candidate)s — سيؤدّي إلى crash-loop في FreeRADIUS 3.x. استخدم directory form (/path/) بدلاً من *.conf.', candidate=candidate),
                 source=candidate,
             )
         return _ok(
-            "صيغة clients.conf",
-            f"لا توجد wildcards غير مدعومة في {candidate}",
+            _tr("صيغة clients.conf"),
+            _tr('لا توجد wildcards غير مدعومة في %(candidate)s', candidate=candidate),
             source=candidate,
         )
     return _warn(
-        "صيغة clients.conf",
-        "تعذّر العثور على clients.conf للفحص "
-        "(لا يعني فشلاً — قد يكون داخل container آخر)",
+        _tr("صيغة clients.conf"),
+        _tr("تعذّر العثور على clients.conf للفحص "
+        "(لا يعني فشلاً — قد يكون داخل container آخر)"),
     )
 
 

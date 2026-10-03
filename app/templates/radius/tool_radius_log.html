@@ -18,8 +18,8 @@
 
 {# ───── Merged hero: title + subtitle + integrated interval control ───── #}
 {% call hub.megahero(
-  "سجل قرارات خدمة المصادقة الحيّ",
-  subtitle="آخر قرارات خدمة المصادقة من سجل الدخول — يتحدّث ذاتيًا.",
+  _('سجل قرارات خدمة المصادقة الحيّ'),
+  subtitle=_('آخر قرارات خدمة المصادقة من سجل الدخول — يتحدّث ذاتيًا.'),
   icon="rss"
 ) %}
   <select id="poll-int" class="hub-select grow" title="{{ _('معدّل التحديث') }}">
@@ -28,7 +28,7 @@
     <option value="10000">{{ _('كل 10 ثوانٍ') }}</option>
     <option value="0">{{ _('إيقاف التحديث') }}</option>
   </select>
-  {{ hub.btn("تحديث الآن", icon="rotate", variant="primary", type="button", size="sm",
+  {{ hub.btn(_('تحديث الآن'), icon="rotate", variant="primary", type="button", size="sm",
              attrs='id="refresh-now"') }}
   <span class="hub-spacer"></span>
   <span id="last-update" class="hub-text-mute" style="font-size:12.5px"></span>
@@ -36,17 +36,17 @@
 
 {# ───── Main (carded live table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا السجل؟",
-  intro="كل صف هو قرار مصادقة كتبته خدمة RADIUS بعد طلب دخول — قبولًا أو رفضًا — ويظهر فور وصوله.",
+  _('كيف تقرأ هذا السجل؟'),
+  intro=_('كل صف هو قرار مصادقة كتبته خدمة RADIUS بعد طلب دخول — قبولًا أو رفضًا — ويظهر فور وصوله.'),
   items=[
-    {'icon': 'bolt-lightning', 'text': 'القائمة تتحدّث ذاتيًا حسب الفاصل المختار في الأعلى؛ اختر «إيقاف» لتجميدها.'},
-    {'icon': 'circle-check',   'text': 'النتيجة «قبول» تعني نجاح المصادقة، و«رفض» تعني فشلها.'},
-    {'icon': 'server',         'text': 'جهاز الشبكة هو الـ NAS الذي أرسل طلب الدخول (راوتر/مجمّع).'},
-    {'icon': 'comment-dots',   'text': 'السبب يوضّح لماذا قُبل أو رُفض الطلب كما سجّلته الخدمة.'},
+    {'icon': 'bolt-lightning', 'text': _('القائمة تتحدّث ذاتيًا حسب الفاصل المختار في الأعلى؛ اختر «إيقاف» لتجميدها.')},
+    {'icon': 'circle-check',   'text': _('النتيجة «قبول» تعني نجاح المصادقة، و«رفض» تعني فشلها.')},
+    {'icon': 'server',         'text': _('جهاز الشبكة هو الـ NAS الذي أرسل طلب الدخول (راوتر/مجمّع).')},
+    {'icon': 'comment-dots',   'text': _('السبب يوضّح لماذا قُبل أو رُفض الطلب كما سجّلته الخدمة.')},
   ],
-  note="يُكتب هذا السجل من خدمة المصادقة بعد كل طلب دخول؛ هذه الصفحة للقراءة فقط."
+  note=_('يُكتب هذا السجل من خدمة المصادقة بعد كل طلب دخول؛ هذه الصفحة للقراءة فقط.')
 )) %}
-  {% call hub.section("آخر القرارات (radpostauth)", icon="bolt-lightning", flush=True) %}
+  {% call hub.section(_('آخر القرارات (radpostauth)'), icon="bolt-lightning", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>

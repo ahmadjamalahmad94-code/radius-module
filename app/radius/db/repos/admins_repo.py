@@ -1,5 +1,6 @@
 """Admins + Roles repo."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import hashlib
 import secrets
@@ -78,8 +79,8 @@ def ensure_default_roles() -> None:
     if (cur.fetchone()["c"] or 0) > 0:
         return
     _ROLE_DISPLAYS = {
-        "super_admin": "مدير عام", "operator": "مشغل",
-        "support": "دعم فني", "billing": "محاسبة", "viewer": "مشاهد",
+        "super_admin": N_("مدير عام"), "operator": N_("مشغل"),
+        "support": N_("دعم فني"), "billing": N_("محاسبة"), "viewer": N_("مشاهد"),
     }
     now = now_iso()
     with transaction() as conn:
@@ -555,7 +556,7 @@ def ensure_bootstrap_admin() -> None:
               or DEFAULT_ADMIN_PASSWORD)
         sa_role = get_role_by_name(ROLE_SUPER_ADMIN)
         create_admin(
-            username=user, password=pw, full_name="المدير العام",
+            username=user, password=pw, full_name=N_("المدير العام"),
             role_id=sa_role.id if sa_role else None, is_super_admin=True,
         )
         logging.getLogger(__name__).info(
@@ -571,7 +572,7 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
         password = changes.pop("password")
         if password:
             if is_managed_by_license_admin(admin_id):
-                raise ValueError("كلمة المرور تدار من لوحة التراخيص")
+                raise ValueError(_tr("كلمة المرور تدار من لوحة التراخيص"))
             changes["password_hash"] = hash_password(str(password))
     # RM-H6: add profile fields to allowed set
     allowed = ("password_hash", "full_name", "email", "mobile", "role_id",

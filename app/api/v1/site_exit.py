@@ -12,6 +12,7 @@ explicit follow-up (the web apply button is itself UI-gated today). The plan
 endpoint already returns the rollback script so the app can display it.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import dataclasses
 
@@ -89,7 +90,7 @@ def state(nas_id: int):
     """GET /site-exit/routers/<nas_id> — حالة الصفحة. ?policy_id لاختيار سياسة."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     policies = policies_repo.list_for_router(_tid(), int(nas["id"]))
     policy = policies[-1] if policies else None
     requested = request.args.get("policy_id")
@@ -109,7 +110,7 @@ def state(nas_id: int):
         "presets": _presets_json(),
         "group_meta": _group_meta(),
         "apply_disabled_reason": (
-            "زر التطبيق سيُفعَّل بعد فحص الأمان والتأكيدات الصريحة (متابعة)."),
+            _tr("زر التطبيق سيُفعَّل بعد فحص الأمان والتأكيدات الصريحة (متابعة).")),
     })
 
 
@@ -118,17 +119,17 @@ def create_policy(nas_id: int):
     site_exit_policy_create)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "اسم السياسة مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم السياسة مطلوب."), status=422)
     try:
         nid = int(body.get("exit_node_id"))
     except (TypeError, ValueError):
-        return fail("validation_error", "اختر عقدة VPS أولاً.", status=422)
+        return fail("validation_error", _tr("اختر عقدة VPS أولاً."), status=422)
     if not nodes_repo.get_by_id(_tid(), nid):
-        return fail("validation_error", "عقدة VPS غير معروفة.", status=422)
+        return fail("validation_error", _tr("عقدة VPS غير معروفة."), status=422)
     fail_mode = (str(body.get("fail_mode") or "").strip()
                  or policies_repo.FAIL_MODE_BLOCK_WHEN_VPS_DOWN)
     try:
@@ -139,9 +140,9 @@ def create_policy(nas_id: int):
             include_router_output=bool(body.get("include_router_output")),
         )
     except ValueError as exc:
-        return fail("validation_error", f"تعذّر إنشاء السياسة: {exc}", status=422)
+        return fail("validation_error", _tr('تعذّر إنشاء السياسة: %(exc)s', exc=exc), status=422)
     except Exception:  # noqa: BLE001 — uniqueness collisions etc.
-        return fail("conflict", "سياسة باسم/مُعرّف مكرَّر.", status=409)
+        return fail("conflict", _tr("سياسة باسم/مُعرّف مكرَّر."), status=409)
     return ok({"policy": policies_repo.get_by_id(_tid(), pid)}, status=201)
 
 
@@ -161,10 +162,10 @@ def plan(nas_id: int, policy_id: int):
     ?wan_interface_list اختياري (يطابق نموذج المعاينة)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     policy = _load_policy(int(nas["id"]), policy_id)
     if not policy:
-        return fail("not_found", "السياسة غير موجودة.", status=404)
+        return fail("not_found", _tr("السياسة غير موجودة."), status=404)
     exit_node = nodes_repo.get_by_id(_tid(), int(policy["exit_node_id"]))
     targets = targets_repo.list_for_policy(int(policy_id))
     wan = (request.args.get("wan_interface_list") or "").strip() or None

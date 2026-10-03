@@ -16,6 +16,7 @@ Design notes:
     HOBERADIUS_DEVICE_HEALTH_POLL so a disconnected router is never hammered.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import os
@@ -222,13 +223,13 @@ def _commit_status(tid, device, status, latency, summary, alert_fn) -> None:
 def _event_message(device, prev, status, latency) -> str:
     name = device.get("name") or f"#{device.get('id')}"
     if status in ("down", "timeout"):
-        return f"انقطع الاتصال مع «{name}»."
+        return _tr('انقطع الاتصال مع «%(name)s».', name=name)
     if status == "up" and prev in ("down", "timeout", "unknown"):
-        lat = f" — البنج {latency} ms" if latency is not None else ""
-        return f"عاد الاتصال مع «{name}»{lat}."
+        lat = _tr(' — البنج %(latency)s ms', latency=latency) if latency is not None else ""
+        return _tr('عاد الاتصال مع «%(name)s»%(lat)s.', name=name, lat=lat)
     if status == "high_latency":
-        return f"ارتفاع البنج على «{name}» ({latency} ms)."
-    return f"تغيّرت حالة «{name}» إلى {status}."
+        return _tr('ارتفاع البنج على «%(name)s» (%(latency)s ms).', name=name, latency=latency)
+    return _tr('تغيّرت حالة «%(name)s» إلى %(status)s.', name=name, status=status)
 
 
 def _default_alert_fn(**kwargs):

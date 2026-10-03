@@ -1,5 +1,6 @@
 """routes إدارة API Tokens."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
@@ -55,7 +56,7 @@ def tok_enforcement():
     """تفعيل/تعطيل الفرض المركزي لمصادقة الـAPI (تدريجي). super_admin فقط:
     قرار أمني نظام-عام قد يقطع تطبيقات Flutter التي لم تُحدَّث بعد."""
     if not is_super_admin():
-        flash("هذا الإجراء متاح لمدير النظام الأعلى فقط.", "danger")
+        flash(_tr("هذا الإجراء متاح لمدير النظام الأعلى فقط."), "danger")
         return redirect(url_for("radius.tok_list"))
     enable = (request.form.get("enable") or "").strip() == "1"
     tenants_repo.set_setting(
@@ -63,12 +64,12 @@ def tok_enforcement():
         by=session.get("admin_id") or 0,
     )
     if enable:
-        flash("تم تفعيل فرض المصادقة على كل نقاط الواجهة البرمجية. أي طلب بلا "
-              "مفتاح صحيح أو اعتماد أدمن سيُرفض الآن — تأكّد أن تطبيقاتك تُرسل الاعتماد.",
+        flash(_tr("تم تفعيل فرض المصادقة على كل نقاط الواجهة البرمجية. أي طلب بلا "
+              "مفتاح صحيح أو اعتماد أدمن سيُرفض الآن — تأكّد أن تطبيقاتك تُرسل الاعتماد."),
               "warning")
     else:
-        flash("تم تعطيل الفرض المركزي. النقاط المحمية صراحةً تبقى محمية؛ "
-              "النقاط غير المزخرفة تعود مفتوحة.", "info")
+        flash(_tr("تم تعطيل الفرض المركزي. النقاط المحمية صراحةً تبقى محمية؛ "
+              "النقاط غير المزخرفة تعود مفتوحة."), "info")
     return redirect(url_for("radius.tok_list"))
 
 
@@ -79,7 +80,7 @@ def tok_create():
         created_by=session.get("admin_id") or 0,
     )
     session["_new_token_plain"] = plain
-    flash(f"تم إنشاء رمز «{name}». انسخه الآن — لن يُعرض مرة أخرى.", "success")
+    flash(_tr('تم إنشاء رمز «%(name)s». انسخه الآن — لن يُعرض مرة أخرى.', name=name), "success")
     return redirect(url_for("radius.tok_list"))
 
 
@@ -87,8 +88,8 @@ def tok_revoke(tid: int):
     if _own_tokens_only():
         rec = next((t for t in api_tokens_repo.list_tokens(_tid()) if int(t["id"]) == int(tid)), None)
         if rec is None or not _is_mine(rec):
-            flash("لا يمكنك إلغاء رمز لم تُنشئه أنت.", "danger")
+            flash(_tr("لا يمكنك إلغاء رمز لم تُنشئه أنت."), "danger")
             return redirect(url_for("radius.tok_list"))
     api_tokens_repo.revoke_token(_tid(), tid)
-    flash("تم إلغاء الرمز.", "warning")
+    flash(_tr("تم إلغاء الرمز."), "warning")
     return redirect(url_for("radius.tok_list"))

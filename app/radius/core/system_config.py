@@ -4,6 +4,7 @@ control panel). Exposed to all templates as `cfg`, plus the `money` and
 `dt_local` Jinja filters so currency and time are unified everywhere.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import functools
 from datetime import date, datetime, timedelta, timezone, tzinfo
@@ -18,12 +19,12 @@ except Exception:  # pragma: no cover — defensive; stdlib import should succee
     ZoneInfo = None  # type: ignore[assignment]
 
 CURRENCY_SYMBOLS = {
-    "JOD": "د.أ", "ILS": "₪", "USD": "$", "IQD": "د.ع",
-    "SAR": "ر.س", "EGP": "ج.م", "AED": "د.إ", "EUR": "€", "TRY": "₺",
+    "JOD": N_("د.أ"), "ILS": "₪", "USD": "$", "IQD": N_("د.ع"),
+    "SAR": N_("ر.س"), "EGP": N_("ج.م"), "AED": N_("د.إ"), "EUR": "€", "TRY": "₺",
 }
 CURRENCY_NAMES = {
-    "JOD": "دينار أردني", "ILS": "شيكل", "USD": "دولار", "IQD": "دينار عراقي",
-    "SAR": "ريال سعودي", "EGP": "جنيه مصري", "AED": "درهم", "EUR": "يورو", "TRY": "ليرة",
+    "JOD": N_("دينار أردني"), "ILS": N_("شيكل"), "USD": N_("دولار"), "IQD": N_("دينار عراقي"),
+    "SAR": N_("ريال سعودي"), "EGP": N_("جنيه مصري"), "AED": N_("درهم"), "EUR": N_("يورو"), "TRY": N_("ليرة"),
 }
 
 _DEFAULTS = {
@@ -51,36 +52,36 @@ _DEFAULTS = {
 
 # قائمة العملات في صفحة الإعدادات — الشيكل أولًا (الافتراضيّ).
 CURRENCY_CHOICES = [
-    ("ILS", "شيكل ₪"), ("USD", "دولار أمريكي $"), ("JOD", "دينار أردني"),
-    ("EGP", "جنيه مصري"), ("IQD", "دينار عراقي"), ("SAR", "ريال سعودي"),
-    ("AED", "درهم إماراتي"), ("EUR", "يورو €"), ("TRY", "ليرة تركية"),
+    ("ILS", N_("شيكل ₪")), ("USD", N_("دولار أمريكي $")), ("JOD", N_("دينار أردني")),
+    ("EGP", N_("جنيه مصري")), ("IQD", N_("دينار عراقي")), ("SAR", N_("ريال سعودي")),
+    ("AED", N_("درهم إماراتي")), ("EUR", N_("يورو €")), ("TRY", N_("ليرة تركية")),
 ]
 
 # قائمة المناطق الزمنية (IANA) — فلسطين أولًا. لا نكتب إزاحةً ثابتة في التسمية
 # لمنطقةٍ لها توقيتٌ صيفيّ: الإزاحة الحاليّة تُعرض حيّةً بجانب المعاينة.
 PANEL_TIMEZONES = [
-    ("Asia/Gaza", "غزة (فلسطين)"),
-    ("Asia/Hebron", "الخليل (فلسطين)"),
-    ("Asia/Amman", "عمّان (الأردن)"),
-    ("Asia/Damascus", "دمشق (سوريا)"),
-    ("Asia/Beirut", "بيروت (لبنان)"),
-    ("Africa/Cairo", "القاهرة (مصر)"),
-    ("Asia/Baghdad", "بغداد (العراق)"),
-    ("Asia/Riyadh", "الرياض (السعودية)"),
-    ("Asia/Dubai", "دبي (الإمارات)"),
-    ("Asia/Tehran", "طهران (إيران)"),
-    ("Europe/Istanbul", "إسطنبول (تركيا)"),
-    ("UTC", "التوقيت العالمي UTC"),
+    ("Asia/Gaza", N_("غزة (فلسطين)")),
+    ("Asia/Hebron", N_("الخليل (فلسطين)")),
+    ("Asia/Amman", N_("عمّان (الأردن)")),
+    ("Asia/Damascus", N_("دمشق (سوريا)")),
+    ("Asia/Beirut", N_("بيروت (لبنان)")),
+    ("Africa/Cairo", N_("القاهرة (مصر)")),
+    ("Asia/Baghdad", N_("بغداد (العراق)")),
+    ("Asia/Riyadh", N_("الرياض (السعودية)")),
+    ("Asia/Dubai", N_("دبي (الإمارات)")),
+    ("Asia/Tehran", N_("طهران (إيران)")),
+    ("Europe/Istanbul", N_("إسطنبول (تركيا)")),
+    ("UTC", N_("التوقيت العالمي UTC")),
 ]
 PANEL_TIMEZONE_LABELS = dict(PANEL_TIMEZONES)
 
 # «المشترك الجديد بلا تاريخ انتهاء» — القيم المسموحة لـ
 # ``subscribers.create_without_expiry`` (الأولى = الافتراضيّ).
 CREATE_WITHOUT_EXPIRY_CHOICES = [
-    ("expired", "منتهٍ فورًا"),
-    ("unlimited", "بلا انتهاء"),
+    ("expired", N_("منتهٍ فورًا")),
+    ("unlimited", N_("بلا انتهاء")),
 ]
-CREATE_WITHOUT_EXPIRY_LABEL = "المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"
+CREATE_WITHOUT_EXPIRY_LABEL = N_("المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء")
 
 
 def create_without_expiry_mode(tenant_id: int | None = None) -> str:
@@ -399,9 +400,9 @@ def to_local_date(value: Any) -> str:
 LOCAL_TIME_RULE = {
     "ambiguous": "earlier",
     "nonexistent": "shift_forward",
-    "description_ar": ("وقتٌ محلّيّ يتكرّر (ليلة انتهاء التوقيت الصيفيّ) يُحتسب بظهوره "
+    "description_ar": (N_("وقتٌ محلّيّ يتكرّر (ليلة انتهاء التوقيت الصيفيّ) يُحتسب بظهوره "
                        "الأوّل — بإزاحة ما قبل التحوّل؛ ووقتٌ غير موجود (ليلة بدء "
-                       "الصيفيّ) يُقرأ بإزاحة ما قبل التحوّل فيقع بعد القفزة."),
+                       "الصيفيّ) يُقرأ بإزاحة ما قبل التحوّل فيقع بعد القفزة.")),
 }
 
 
@@ -565,34 +566,34 @@ def local_hhmm(tenant_id: int | None = None, when: Any = None) -> str:
 def _ar_days(n: int) -> str:
     """Arabic-correct day count: 1→يوم، 2→يومان، 3-10→أيام، 11+→يوم."""
     if n == 1:
-        return "يوم"
+        return N_("يوم")
     if n == 2:
-        return "يومان"
+        return N_("يومان")
     if 3 <= n <= 10:
-        return f"{n} أيام"
-    return f"{n} يوم"
+        return _tr('%(n)s أيام', n=n)
+    return _tr('%(n)s يوم', n=n)
 
 
 def _ar_hours(n: int) -> str:
     """Arabic-correct hour count: 1→ساعة، 2→ساعتان، 3-10→ساعات، 11+→ساعة."""
     if n == 1:
-        return "ساعة"
+        return N_("ساعة")
     if n == 2:
-        return "ساعتان"
+        return N_("ساعتان")
     if 3 <= n <= 10:
-        return f"{n} ساعات"
-    return f"{n} ساعة"
+        return _tr('%(n)s ساعات', n=n)
+    return _tr('%(n)s ساعة', n=n)
 
 
 def _ar_minutes(n: int) -> str:
     """Arabic-correct minute count: 1→دقيقة، 2→دقيقتان، 3-10→دقائق، 11+→دقيقة."""
     if n == 1:
-        return "دقيقة"
+        return N_("دقيقة")
     if n == 2:
-        return "دقيقتان"
+        return N_("دقيقتان")
     if 3 <= n <= 10:
-        return f"{n} دقائق"
-    return f"{n} دقيقة"
+        return _tr('%(n)s دقائق', n=n)
+    return _tr('%(n)s دقيقة', n=n)
 
 
 def format_duration_days(minutes: Any) -> str:
@@ -619,10 +620,10 @@ def format_duration_days(minutes: Any) -> str:
     mins = m % 60
     if days:
         if hours:
-            return f"{_ar_days(days)} و{_ar_hours(hours)}"
+            return _tr('%(v)s و%(v2)s', v=_ar_days(days), v2=_ar_hours(hours))
         return _ar_days(days)
     if hours:
         if mins:
-            return f"{_ar_hours(hours)} و{_ar_minutes(mins)}"
+            return _tr('%(v)s و%(v2)s', v=_ar_hours(hours), v2=_ar_minutes(mins))
         return _ar_hours(hours)
     return _ar_minutes(mins)

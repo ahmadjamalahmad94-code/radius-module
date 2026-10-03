@@ -4,7 +4,7 @@
 {% block title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}{{ _("نظرة سريعة - الكروت") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (cards.total or 0)|ar_count('kart') }} · {{ (cards.batches or 0)|ar_count('دفعة', 'دفعات', 'دفعةً') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ (cards.total or 0)|ar_count('kart') }} · {{ (cards.batches or 0)|ar_count(_('دفعة'), _('دفعات'), _('دفعةً')) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -659,7 +659,7 @@
    نستخدم ماكرو hub.megahero من نظام التصميم الموحّد (UDS) بدل هيرو مخصّص،
    ليطابق المرجع حرفيًا (.uds-hero + .uds-hero-kpis متساوية الارتفاع). #}
 {{ hub.megahero(
-  "نظرة سريعة — الكروت",
+  _('نظرة سريعة — الكروت'),
   subtitle=_("مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية."),
   icon="id-card",
   actions_html='
@@ -671,16 +671,16 @@
     </a>
   '|safe,
   kpis=[
-    {"label": "إجمالي الكروت", "value": cards.total or 0, "icon": "id-card", "variant": "brand"},
-    {"label": "متاح", "value": cards.available or 0, "icon": "box-open", "variant": "green"},
-    {"label": "مستخدم", "value": cards.used or 0, "icon": "circle-check", "variant": "blue"},
-    {"label": "منتهي / محظور", "value": ((cards.expired or 0)|string) ~ " / " ~ ((cards.revoked or 0)|string), "icon": "triangle-exclamation", "variant": "amber"},
-    {"label": "إيراد الشهر", "value": money_value(money.month), "icon": "coins", "variant": "brand", "sub": "تقديري من الكروت المستخدمة"}
+    {"label": _('إجمالي الكروت'), "value": cards.total or 0, "icon": "id-card", "variant": "brand"},
+    {"label": _('متاح'), "value": cards.available or 0, "icon": "box-open", "variant": "green"},
+    {"label": _('مستخدم'), "value": cards.used or 0, "icon": "circle-check", "variant": "blue"},
+    {"label": _('منتهي / محظور'), "value": ((cards.expired or 0)|string) ~ " / " ~ ((cards.revoked or 0)|string), "icon": "triangle-exclamation", "variant": "amber"},
+    {"label": _('إيراد الشهر'), "value": money_value(money.month), "icon": "coins", "variant": "brand", "sub": _('تقديري من الكروت المستخدمة')}
   ]
 ) }}
 
 <div id="co-sales-section">
-{% call hub.section("مبيعات الكروت", icon="receipt", meta="مطبوعة + إلكترونية") %}
+{% call hub.section(_('مبيعات الكروت'), icon="receipt", meta=_('مطبوعة + إلكترونية')) %}
   <div class="co-sales-board">
     <div class="co-sales-board-head">
       <div>
@@ -742,7 +742,7 @@
             {% set picker_kind = "year" %}
             {% set picker_value = sales.filters.yearly %}
           {% endif %}
-          <button class="co-sales-picker" type="button" title="اختيار {{ period.label }}" aria-label="اختيار {{ period.label }}" data-co-sales-param="{{ picker_param }}" data-co-sales-kind="{{ picker_kind }}" data-co-sales-value="{{ picker_value }}">
+          <button class="co-sales-picker" type="button" title="{{ _('اختيار %(label)s', label=period.label) }}" aria-label="{{ _('اختيار %(label)s', label=period.label) }}" data-co-sales-param="{{ picker_param }}" data-co-sales-kind="{{ picker_kind }}" data-co-sales-value="{{ picker_value }}">
             <i class="fa-solid fa-calendar-day"></i>
           </button>
         </div>
@@ -763,8 +763,8 @@
             <span class="co-sales-split-electronic" style="width:{{ electronic_pct }}%"></span>
           </div>
           <div class="co-sales-meta">
-            <span><i class="fa-solid fa-print"></i> مطبوعة <bdi dir="ltr">{{ sales.printed[key].count }} / {{ money_value(sales.printed[key].amount) }}</bdi></span>
-            <span><i class="fa-solid fa-wallet"></i> إلكترونية <bdi dir="ltr">{{ sales.electronic[key].count }} / {{ money_value(sales.electronic[key].amount) }}</bdi></span>
+            <span><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }} <bdi dir="ltr">{{ sales.printed[key].count }} / {{ money_value(sales.printed[key].amount) }}</bdi></span>
+            <span><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }} <bdi dir="ltr">{{ sales.electronic[key].count }} / {{ money_value(sales.electronic[key].amount) }}</bdi></span>
           </div>
         </div>
         <a class="co-sales-link" href="#sales-{{ key }}">
@@ -779,7 +779,7 @@
   <div class="co-sales-modal" id="sales-{{ key }}" role="dialog" aria-modal="true" aria-labelledby="sales-title-{{ key }}">
     <div class="co-sales-dialog">
       <div class="co-sales-dialog-head">
-        <h3 id="sales-title-{{ key }}">الكروت المباعة - {{ period.label }} ({{ period.range }})</h3>
+        <h3 id="sales-title-{{ key }}">{{ _('الكروت المباعة - %(label)s (%(range)s)', label=period.label, range=period.range) }}</h3>
         <a class="co-sales-close" href="#" aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></a>
       </div>
       {% if sales.details[key] %}
@@ -840,7 +840,7 @@
         </p>
       {% endif %}
       {% else %}
-        {{ hub.empty("لا توجد كروت مباعة لهذه الفترة", sub="عند بيع أو استخدام كروت ستظهر هنا مباشرة.", icon="receipt") }}
+        {{ hub.empty(_('لا توجد كروت مباعة لهذه الفترة'), sub=_('عند بيع أو استخدام كروت ستظهر هنا مباشرة.'), icon="receipt") }}
       {% endif %}
     </div>
   </div>
@@ -848,7 +848,7 @@
 {% endcall %}
 </div>
 
-{% call hub.section("تنبيهات مختصرة", icon="bell") %}
+{% call hub.section(_('تنبيهات مختصرة'), icon="bell") %}
     <div class="co-alerts">
       {% for alert in alerts %}
         {# التنبيه رابط: ينقل لصفحة المعالجة، مع سطر شرح تحت النص #}
@@ -865,7 +865,7 @@
     </div>
 {% endcall %}
 
-{% call hub.section("ملخص مخزون حزم البطاقات", icon="boxes-stacked") %}
+{% call hub.section(_('ملخص مخزون حزم البطاقات'), icon="boxes-stacked") %}
   {% set printed_packages = stock_packages.printed if stock_packages else [] %}
   {% set electronic_packages = stock_packages.electronic if stock_packages else [] %}
   {% if printed_packages or electronic_packages %}
@@ -946,12 +946,12 @@
       </div>
     </div>
   {% else %}
-    {{ hub.empty("لا يوجد مخزون بعد", sub="بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.", icon="box-open") }}
+    {{ hub.empty(_('لا يوجد مخزون بعد'), sub=_('بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.'), icon="box-open") }}
   {% endif %}
 {% endcall %}
 
 {% if recent_batches %}
-{% call hub.section("آخر 5 دفعات", icon="clock-rotate-left", meta=recent_batches|length|string, flush=True) %}
+{% call hub.section(_('آخر 5 دفعات'), icon="clock-rotate-left", meta=recent_batches|length|string, flush=True) %}
   {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -983,7 +983,7 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا توجد دفعات بعد", sub="هذه الصفحة ستبقى مختصرة وتعرض آخر الدفعات فقط بعد إنشائها.", icon="boxes-stacked") }}
+{{ hub.empty(_('لا توجد دفعات بعد'), sub=_('هذه الصفحة ستبقى مختصرة وتعرض آخر الدفعات فقط بعد إنشائها.'), icon="boxes-stacked") }}
 {% endif %}
 
 <script>

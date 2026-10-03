@@ -12,6 +12,7 @@ OpenAPI 3.1 spec — يُولَّد من حلقة عبر الـ url_map.
 نقاط مُخترَعة — أي راوت يُسجَّل تحت `api.v1.*` يظهر تلقائيًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import re
@@ -55,7 +56,7 @@ def _build_spec() -> dict:
         "openapi": "3.1.0",
         "info": {
             "title": "HobeRadius API",
-            "description": "REST API لإدارة المشتركين والباقات والبطاقات والجلسات. يستخدم Bearer token مع scope لكل tenant.",
+            "description": _tr("REST API لإدارة المشتركين والباقات والبطاقات والجلسات. يستخدم Bearer token مع scope لكل tenant."),
             "version": "0.1.0",
             "contact": {"name": "HobeRadius"},
         },
@@ -120,85 +121,85 @@ def openapi_json():
 # المذكورة هنا تأخذ عنوانًا مُولَّدًا تلقائيًا وأيقونة افتراضية، فلا تختفي
 # أي مجموعة جديدة — تظهر فورًا حتى قبل إضافتها للقاموس.
 _GROUP_INFO: dict[str, dict] = {
-    "health":          {"title": "الصحّة",                 "icon": "fa-heart-pulse",      "desc": "فحص حالة الخدمة. نقطة عامة لا تحتاج توكنًا — مفيدة لمراقبة التشغيل."},
-    "version":         {"title": "الإصدار",                "icon": "fa-tag",              "desc": "رقم إصدار الـ API. نقطة عامة لا تحتاج توكنًا."},
-    "_routes":         {"title": "استكشاف الراوتات",        "icon": "fa-sitemap",          "desc": "قائمة آليّة بكل النقاط المتاحة — يستخدمها HobeHub لاكتشاف ما هو متاح."},
-    "system":          {"title": "النظام والجسر",          "icon": "fa-server",           "desc": "حالة الخادم، التشخيصات، مهام المزامنة، والترخيص عبر جسر الإدارة."},
-    "accounts":        {"title": "المشتركون (الحسابات)",   "icon": "fa-users",            "desc": "إدارة حسابات المشتركين: إنشاء، تعديل، تفعيل/تعطيل، تغيير كلمة المرور، والاستخدام."},
-    "cards":           {"title": "البطاقات والحِزم",        "icon": "fa-id-card",          "desc": "توليد بطاقات الإنترنت، إدارة الحِزم، التصدير (CSV/Excel/PDF)، وعمليات البطاقة الواحدة."},
-    "hotspot":         {"title": "بوابة بطاقات الهوتسبوت",  "icon": "fa-wifi",             "desc": "نقاط بوابة المستخدم النهائي للبطاقات. تستخدم توكن بوابة خاصًّا (وليس توكن الإدارة)."},
-    "store":           {"title": "متجر البطاقات",           "icon": "fa-store",            "desc": "متجر الزبون: دخول، باقات، شراء، وشحن المحفظة. يستخدم توكنًا موقّعًا قصير العمر بعد الدخول."},
-    "profiles":        {"title": "الباقات (الخطط)",         "icon": "fa-layer-group",      "desc": "إدارة باقات الخدمة: السرعات، الحدود، والأسعار."},
-    "sessions":        {"title": "الجلسات النشطة",          "icon": "fa-tower-broadcast",  "desc": "عرض المتصلين الآن وقطع الجلسات."},
-    "accounting":      {"title": "المحاسبة والاستخدام",     "icon": "fa-chart-line",       "desc": "سجلات الاستخدام، الجلسات التاريخية، وفحص الحصص (quota)."},
-    "nas":             {"title": "أجهزة NAS",               "icon": "fa-network-wired",    "desc": "إدارة أجهزة الـ NAS (RADIUS clients): إضافة، تعديل، واختبار الاتصال."},
-    "network-devices": {"title": "أجهزة الشبكة",            "icon": "fa-ethernet",         "desc": "تسجيل أجهزة الشبكة وفحص اتصالها."},
-    "network-policy":  {"title": "سياسات الشبكة",           "icon": "fa-shield-halved",    "desc": "إدارة سياسات الشبكة والتحكّم بالنفاذ."},
-    "webhooks":        {"title": "الـ Webhooks",            "icon": "fa-bolt",             "desc": "إعداد الـ webhooks، اختبارها، ومتابعة سجل الإرسال."},
-    "mikrotik":        {"title": "مايكروتيك (الاتصال والتحكّم)", "icon": "fa-router",      "desc": "إعداد اتصالات مايكروتيك والتحكّم المباشر: الموارد، الواجهات، الطوابير، الجدار الناري، والأدوات."},
-    "internal":        {"title": "نقاط داخلية (FreeRADIUS)", "icon": "fa-lock",            "desc": "نقاط داخلية لخادم FreeRADIUS. محميّة بسرّ داخلي (X-Internal-Secret) لا بتوكن الإدارة."},
-    "invoices":        {"title": "الفواتير",                "icon": "fa-file-invoice",     "desc": "إنشاء الفواتير ومتابعة حالتها."},
-    "vouchers":        {"title": "القسائم",                 "icon": "fa-ticket",           "desc": "توليد القسائم وإلغاؤها."},
-    "payments":        {"title": "المدفوعات والتحصيل",       "icon": "fa-money-bill-wave",  "desc": "إعدادات التحصيل، طلبات الدفع، إثباتاتها، والمدفوعات. (المراجعة والاعتماد في مجموعة «إدارة المدفوعات»)."},
-    "admin":           {"title": "إدارة المدفوعات",         "icon": "fa-money-check-dollar","desc": "قوائم المراجعة والمصالحة واعتماد المدفوعات (نقاط إدارية)."},
-    "admins":          {"title": "المدراء",                 "icon": "fa-user-shield",      "desc": "إدارة حسابات المدراء."},
-    "roles":           {"title": "الأدوار",                 "icon": "fa-user-tag",         "desc": "إدارة الأدوار وصلاحياتها."},
-    "permissions":     {"title": "الصلاحيات",               "icon": "fa-key",              "desc": "كتالوج الصلاحيات المتاحة."},
-    "audit":           {"title": "سجل التدقيق",             "icon": "fa-clipboard-list",   "desc": "استعراض سجل عمليات النظام."},
-    "tokens":          {"title": "توكنات الـ API",          "icon": "fa-key",              "desc": "إنشاء توكنات الـ API وإلغاؤها وتحديد صلاحياتها."},
-    "settings":        {"title": "الإعدادات",               "icon": "fa-gear",             "desc": "قراءة وتحديث إعدادات النظام."},
-    "devices":         {"title": "بصمات الأجهزة",           "icon": "fa-mobile-screen",    "desc": "بصمات أجهزة المشتركين ومزامنتها."},
-    "communications":  {"title": "الاتصالات والرسائل",       "icon": "fa-comment-dots",     "desc": "الحملات وقوالب الرسائل والإرسال."},
-    "reports":         {"title": "التقارير",                "icon": "fa-chart-pie",        "desc": "تقارير متنوّعة بصيغ CSV/XLSX/PDF."},
-    "tickets":         {"title": "التذاكر (الدعم)",         "icon": "fa-headset",          "desc": "نظام تذاكر الدعم الفنّي."},
-    "tenants":         {"title": "المستأجرون",              "icon": "fa-building",         "desc": "إدارة المستأجرين (multi-tenancy)."},
-    "distributors":    {"title": "الموزّعون",               "icon": "fa-truck",            "desc": "إدارة الموزّعين."},
-    "loans":           {"title": "القروض",                  "icon": "fa-hand-holding-dollar","desc": "إدارة القروض المالية للمشتركين."},
-    "ledger":          {"title": "دفتر الأستاذ",            "icon": "fa-book",             "desc": "قيود دفتر الأستاذ المالي."},
-    "tools":           {"title": "أدوات",                   "icon": "fa-toolbox",          "desc": "أدوات مساعدة متنوّعة."},
-    "finance":            {"title": "المالية والمحافظ",      "icon": "fa-wallet",           "desc": "دفتر الأستاذ، الإيرادات، والمحافظ (إيداع/خصم/الحركات)."},
-    "business":           {"title": "ملخّص الأعمال",         "icon": "fa-briefcase",        "desc": "ملخّص مؤشّرات الأعمال العامّة."},
-    "events":             {"title": "الأحداث",              "icon": "fa-calendar-check",   "desc": "قراءة وتسجيل أحداث النظام."},
-    "pricing":            {"title": "التسعير",              "icon": "fa-tags",             "desc": "لقطات التسعير (snapshots) للباقات."},
-    "card-marketplace":   {"title": "سوق البطاقات",          "icon": "fa-store",            "desc": "باقات سوق البطاقات الإلكترونية."},
-    "card-users":         {"title": "مستخدمو البطاقات",      "icon": "fa-user-group",       "desc": "إدارة مستخدمي البطاقات في السوق."},
-    "customer-portals":   {"title": "بوابات العملاء",        "icon": "fa-window-maximize",  "desc": "إعدادات بوابات العملاء."},
-    "dashboard":          {"title": "لوحة التحكّم",          "icon": "fa-gauge-high",       "desc": "إحصائيات لوحة التحكّم السريعة."},
-    "lifecycle":          {"title": "دورة حياة الحسابات",    "icon": "fa-arrows-rotate",    "desc": "سياسات دورة حياة الحسابات: معاينة وتشغيل."},
-    "operational-reports":{"title": "التقارير التشغيلية",    "icon": "fa-clipboard",        "desc": "تقارير تشغيلية جاهزة."},
-    "pools":              {"title": "مجموعات العناوين (IP Pools)", "icon": "fa-layer-group", "desc": "إدارة مجموعات عناوين IP."},
-    "print-jobs":         {"title": "مهام الطباعة",          "icon": "fa-print",            "desc": "متابعة مهام الطباعة وتنزيل مخرجاتها."},
-    "print-templates":    {"title": "قوالب الطباعة",         "icon": "fa-file-lines",       "desc": "إدارة قوالب طباعة البطاقات."},
-    "recycle-bin":        {"title": "سلّة المحذوفات",        "icon": "fa-trash-can",        "desc": "استعراض واستعادة العناصر المحذوفة."},
-    "router-alerts":      {"title": "تنبيهات الراوترات",     "icon": "fa-triangle-exclamation","desc": "تنبيهات حالة الراوترات."},
-    "routers":            {"title": "استقبال بيانات الراوترات", "icon": "fa-tower-cell",    "desc": "استقبال مقاييس الراوترات وكشف الحلقات (ingest)."},
-    "service-requests":   {"title": "طلبات الخدمات",         "icon": "fa-clipboard-check",  "desc": "طلبات الخدمات الموحّدة."},
-    "services":           {"title": "الخدمات",              "icon": "fa-screwdriver-wrench","desc": "إدارة خدمات النظام (CRUD)."},
-    "share-groups":       {"title": "مجموعات المشاركة",      "icon": "fa-users-rectangle",  "desc": "مجموعات مشاركة الباقة بين المشتركين وأعضائها."},
-    "setup-wizard":       {"title": "معالج الإعداد",         "icon": "fa-wand-magic-sparkles","desc": "خطوات معالج الإعداد الأوّلي."},
-    "bandwidth-profiles": {"title": "ملفات السرعة",          "icon": "fa-gauge",            "desc": "إدارة ملفات حدود السرعة."},
-    "bandwidth-schedules":{"title": "جداول السرعة",          "icon": "fa-clock",            "desc": "جدولة تغيّر السرعات حسب الوقت."},
-    "backups":            {"title": "النسخ الاحتياطي",       "icon": "fa-database",          "desc": "حالة النسخ الاحتياطي وتشغيلها."},
-    "alerts":             {"title": "تنبيهات تيليجرام",       "icon": "fa-bell",              "desc": "إعداد بوت تيليجرام للتنبيهات، تفعيل/تعطيل كل تنبيه، واختبار الإرسال."},
-    "contracts":          {"title": "عقود الـ API",           "icon": "fa-file-contract",     "desc": "قائمة عقود نقاط الـ API (الشكل المتوقَّع للطلب والردّ) لمزامنة التطبيقات."},
-    "device-health":      {"title": "مراقبة حالة الأجهزة",    "icon": "fa-heart-pulse",       "desc": "أجهزة المراقبة بالـ ping: إضافة، تعديل، تفعيل/تعطيل، الأحداث والتنبيهات."},
-    "events-center":      {"title": "مركز الأحداث والمخاطر",  "icon": "fa-calendar-check",    "desc": "أحداث النظام، التحقيقات، أحداث الأمان، وتشغيل تقييم المخاطر."},
-    "network":            {"title": "تنبيهات الشبكة",         "icon": "fa-network-wired",     "desc": "إعداد تنبيهات تيليجرام الخاصّة بالشبكة واختبارها."},
-    "notifications":      {"title": "الإشعارات",             "icon": "fa-bell",              "desc": "قائمة الإشعارات، عدد غير المقروء، وتعليمها كمقروءة."},
-    "plans":              {"title": "خيارات الباقات",         "icon": "fa-layer-group",       "desc": "قائمة مختصرة بالباقات لاستخدامها في القوائم المنسدلة."},
-    "provider":           {"title": "منح المزوّد",            "icon": "fa-certificate",       "desc": "القدرات والخدمات الممنوحة من عقد المزوّد لهذه الشبكة."},
-    "site-exit":          {"title": "مخرج الموقع",            "icon": "fa-right-from-bracket","desc": "حالة مخرج الإنترنت لكل راوتر وسياساته وخطّة تطبيقها."},
-    "subscriber-groups":  {"title": "مجموعات المشتركين",      "icon": "fa-users-rectangle",   "desc": "إدارة مجموعات المشتركين: إنشاء، تعديل، حذف، قطع المتصلين، وتصفير الحصّة اليوميّة."},
-    "subscriber-portal":  {"title": "بوابة المشترك",          "icon": "fa-id-badge",          "desc": "نقاط بوابة المشترك: دخول، لوحة الحساب، وطلبات التجديد والسلفة."},
-    "whatsapp":           {"title": "واتساب",                "icon": "fa-comments",          "desc": "إعداد قناة واتساب (Cloud API والبوت) واختبار الإرسال."},
+    "health":          {"title": N_("الصحّة"),                 "icon": "fa-heart-pulse",      "desc": N_("فحص حالة الخدمة. نقطة عامة لا تحتاج توكنًا — مفيدة لمراقبة التشغيل.")},
+    "version":         {"title": N_("الإصدار"),                "icon": "fa-tag",              "desc": N_("رقم إصدار الـ API. نقطة عامة لا تحتاج توكنًا.")},
+    "_routes":         {"title": N_("استكشاف الراوتات"),        "icon": "fa-sitemap",          "desc": N_("قائمة آليّة بكل النقاط المتاحة — يستخدمها HobeHub لاكتشاف ما هو متاح.")},
+    "system":          {"title": N_("النظام والجسر"),          "icon": "fa-server",           "desc": N_("حالة الخادم، التشخيصات، مهام المزامنة، والترخيص عبر جسر الإدارة.")},
+    "accounts":        {"title": N_("المشتركون (الحسابات)"),   "icon": "fa-users",            "desc": N_("إدارة حسابات المشتركين: إنشاء، تعديل، تفعيل/تعطيل، تغيير كلمة المرور، والاستخدام.")},
+    "cards":           {"title": N_("البطاقات والحِزم"),        "icon": "fa-id-card",          "desc": N_("توليد بطاقات الإنترنت، إدارة الحِزم، التصدير (CSV/Excel/PDF)، وعمليات البطاقة الواحدة.")},
+    "hotspot":         {"title": N_("بوابة بطاقات الهوتسبوت"),  "icon": "fa-wifi",             "desc": N_("نقاط بوابة المستخدم النهائي للبطاقات. تستخدم توكن بوابة خاصًّا (وليس توكن الإدارة).")},
+    "store":           {"title": N_("متجر البطاقات"),           "icon": "fa-store",            "desc": N_("متجر الزبون: دخول، باقات، شراء، وشحن المحفظة. يستخدم توكنًا موقّعًا قصير العمر بعد الدخول.")},
+    "profiles":        {"title": N_("الباقات (الخطط)"),         "icon": "fa-layer-group",      "desc": N_("إدارة باقات الخدمة: السرعات، الحدود، والأسعار.")},
+    "sessions":        {"title": N_("الجلسات النشطة"),          "icon": "fa-tower-broadcast",  "desc": N_("عرض المتصلين الآن وقطع الجلسات.")},
+    "accounting":      {"title": N_("المحاسبة والاستخدام"),     "icon": "fa-chart-line",       "desc": N_("سجلات الاستخدام، الجلسات التاريخية، وفحص الحصص (quota).")},
+    "nas":             {"title": N_("أجهزة NAS"),               "icon": "fa-network-wired",    "desc": N_("إدارة أجهزة الـ NAS (RADIUS clients): إضافة، تعديل، واختبار الاتصال.")},
+    "network-devices": {"title": N_("أجهزة الشبكة"),            "icon": "fa-ethernet",         "desc": N_("تسجيل أجهزة الشبكة وفحص اتصالها.")},
+    "network-policy":  {"title": N_("سياسات الشبكة"),           "icon": "fa-shield-halved",    "desc": N_("إدارة سياسات الشبكة والتحكّم بالنفاذ.")},
+    "webhooks":        {"title": N_("الـ Webhooks"),            "icon": "fa-bolt",             "desc": N_("إعداد الـ webhooks، اختبارها، ومتابعة سجل الإرسال.")},
+    "mikrotik":        {"title": N_("مايكروتيك (الاتصال والتحكّم)"), "icon": "fa-router",      "desc": N_("إعداد اتصالات مايكروتيك والتحكّم المباشر: الموارد، الواجهات، الطوابير، الجدار الناري، والأدوات.")},
+    "internal":        {"title": N_("نقاط داخلية (FreeRADIUS)"), "icon": "fa-lock",            "desc": N_("نقاط داخلية لخادم FreeRADIUS. محميّة بسرّ داخلي (X-Internal-Secret) لا بتوكن الإدارة.")},
+    "invoices":        {"title": N_("الفواتير"),                "icon": "fa-file-invoice",     "desc": N_("إنشاء الفواتير ومتابعة حالتها.")},
+    "vouchers":        {"title": N_("القسائم"),                 "icon": "fa-ticket",           "desc": N_("توليد القسائم وإلغاؤها.")},
+    "payments":        {"title": N_("المدفوعات والتحصيل"),       "icon": "fa-money-bill-wave",  "desc": N_("إعدادات التحصيل، طلبات الدفع، إثباتاتها، والمدفوعات. (المراجعة والاعتماد في مجموعة «إدارة المدفوعات»).")},
+    "admin":           {"title": N_("إدارة المدفوعات"),         "icon": "fa-money-check-dollar","desc": N_("قوائم المراجعة والمصالحة واعتماد المدفوعات (نقاط إدارية).")},
+    "admins":          {"title": N_("المدراء"),                 "icon": "fa-user-shield",      "desc": N_("إدارة حسابات المدراء.")},
+    "roles":           {"title": N_("الأدوار"),                 "icon": "fa-user-tag",         "desc": N_("إدارة الأدوار وصلاحياتها.")},
+    "permissions":     {"title": N_("الصلاحيات"),               "icon": "fa-key",              "desc": N_("كتالوج الصلاحيات المتاحة.")},
+    "audit":           {"title": N_("سجل التدقيق"),             "icon": "fa-clipboard-list",   "desc": N_("استعراض سجل عمليات النظام.")},
+    "tokens":          {"title": N_("توكنات الـ API"),          "icon": "fa-key",              "desc": N_("إنشاء توكنات الـ API وإلغاؤها وتحديد صلاحياتها.")},
+    "settings":        {"title": N_("الإعدادات"),               "icon": "fa-gear",             "desc": N_("قراءة وتحديث إعدادات النظام.")},
+    "devices":         {"title": N_("بصمات الأجهزة"),           "icon": "fa-mobile-screen",    "desc": N_("بصمات أجهزة المشتركين ومزامنتها.")},
+    "communications":  {"title": N_("الاتصالات والرسائل"),       "icon": "fa-comment-dots",     "desc": N_("الحملات وقوالب الرسائل والإرسال.")},
+    "reports":         {"title": N_("التقارير"),                "icon": "fa-chart-pie",        "desc": N_("تقارير متنوّعة بصيغ CSV/XLSX/PDF.")},
+    "tickets":         {"title": N_("التذاكر (الدعم)"),         "icon": "fa-headset",          "desc": N_("نظام تذاكر الدعم الفنّي.")},
+    "tenants":         {"title": N_("المستأجرون"),              "icon": "fa-building",         "desc": N_("إدارة المستأجرين (multi-tenancy).")},
+    "distributors":    {"title": N_("الموزّعون"),               "icon": "fa-truck",            "desc": N_("إدارة الموزّعين.")},
+    "loans":           {"title": N_("القروض"),                  "icon": "fa-hand-holding-dollar","desc": N_("إدارة القروض المالية للمشتركين.")},
+    "ledger":          {"title": N_("دفتر الأستاذ"),            "icon": "fa-book",             "desc": N_("قيود دفتر الأستاذ المالي.")},
+    "tools":           {"title": N_("أدوات"),                   "icon": "fa-toolbox",          "desc": N_("أدوات مساعدة متنوّعة.")},
+    "finance":            {"title": N_("المالية والمحافظ"),      "icon": "fa-wallet",           "desc": N_("دفتر الأستاذ، الإيرادات، والمحافظ (إيداع/خصم/الحركات).")},
+    "business":           {"title": N_("ملخّص الأعمال"),         "icon": "fa-briefcase",        "desc": N_("ملخّص مؤشّرات الأعمال العامّة.")},
+    "events":             {"title": N_("الأحداث"),              "icon": "fa-calendar-check",   "desc": N_("قراءة وتسجيل أحداث النظام.")},
+    "pricing":            {"title": N_("التسعير"),              "icon": "fa-tags",             "desc": N_("لقطات التسعير (snapshots) للباقات.")},
+    "card-marketplace":   {"title": N_("سوق البطاقات"),          "icon": "fa-store",            "desc": N_("باقات سوق البطاقات الإلكترونية.")},
+    "card-users":         {"title": N_("مستخدمو البطاقات"),      "icon": "fa-user-group",       "desc": N_("إدارة مستخدمي البطاقات في السوق.")},
+    "customer-portals":   {"title": N_("بوابات العملاء"),        "icon": "fa-window-maximize",  "desc": N_("إعدادات بوابات العملاء.")},
+    "dashboard":          {"title": N_("لوحة التحكّم"),          "icon": "fa-gauge-high",       "desc": N_("إحصائيات لوحة التحكّم السريعة.")},
+    "lifecycle":          {"title": N_("دورة حياة الحسابات"),    "icon": "fa-arrows-rotate",    "desc": N_("سياسات دورة حياة الحسابات: معاينة وتشغيل.")},
+    "operational-reports":{"title": N_("التقارير التشغيلية"),    "icon": "fa-clipboard",        "desc": N_("تقارير تشغيلية جاهزة.")},
+    "pools":              {"title": N_("مجموعات العناوين (IP Pools)"), "icon": "fa-layer-group", "desc": N_("إدارة مجموعات عناوين IP.")},
+    "print-jobs":         {"title": N_("مهام الطباعة"),          "icon": "fa-print",            "desc": N_("متابعة مهام الطباعة وتنزيل مخرجاتها.")},
+    "print-templates":    {"title": N_("قوالب الطباعة"),         "icon": "fa-file-lines",       "desc": N_("إدارة قوالب طباعة البطاقات.")},
+    "recycle-bin":        {"title": N_("سلّة المحذوفات"),        "icon": "fa-trash-can",        "desc": N_("استعراض واستعادة العناصر المحذوفة.")},
+    "router-alerts":      {"title": N_("تنبيهات الراوترات"),     "icon": "fa-triangle-exclamation","desc": N_("تنبيهات حالة الراوترات.")},
+    "routers":            {"title": N_("استقبال بيانات الراوترات"), "icon": "fa-tower-cell",    "desc": N_("استقبال مقاييس الراوترات وكشف الحلقات (ingest).")},
+    "service-requests":   {"title": N_("طلبات الخدمات"),         "icon": "fa-clipboard-check",  "desc": N_("طلبات الخدمات الموحّدة.")},
+    "services":           {"title": N_("الخدمات"),              "icon": "fa-screwdriver-wrench","desc": N_("إدارة خدمات النظام (CRUD).")},
+    "share-groups":       {"title": N_("مجموعات المشاركة"),      "icon": "fa-users-rectangle",  "desc": N_("مجموعات مشاركة الباقة بين المشتركين وأعضائها.")},
+    "setup-wizard":       {"title": N_("معالج الإعداد"),         "icon": "fa-wand-magic-sparkles","desc": N_("خطوات معالج الإعداد الأوّلي.")},
+    "bandwidth-profiles": {"title": N_("ملفات السرعة"),          "icon": "fa-gauge",            "desc": N_("إدارة ملفات حدود السرعة.")},
+    "bandwidth-schedules":{"title": N_("جداول السرعة"),          "icon": "fa-clock",            "desc": N_("جدولة تغيّر السرعات حسب الوقت.")},
+    "backups":            {"title": N_("النسخ الاحتياطي"),       "icon": "fa-database",          "desc": N_("حالة النسخ الاحتياطي وتشغيلها.")},
+    "alerts":             {"title": N_("تنبيهات تيليجرام"),       "icon": "fa-bell",              "desc": N_("إعداد بوت تيليجرام للتنبيهات، تفعيل/تعطيل كل تنبيه، واختبار الإرسال.")},
+    "contracts":          {"title": N_("عقود الـ API"),           "icon": "fa-file-contract",     "desc": N_("قائمة عقود نقاط الـ API (الشكل المتوقَّع للطلب والردّ) لمزامنة التطبيقات.")},
+    "device-health":      {"title": N_("مراقبة حالة الأجهزة"),    "icon": "fa-heart-pulse",       "desc": N_("أجهزة المراقبة بالـ ping: إضافة، تعديل، تفعيل/تعطيل، الأحداث والتنبيهات.")},
+    "events-center":      {"title": N_("مركز الأحداث والمخاطر"),  "icon": "fa-calendar-check",    "desc": N_("أحداث النظام، التحقيقات، أحداث الأمان، وتشغيل تقييم المخاطر.")},
+    "network":            {"title": N_("تنبيهات الشبكة"),         "icon": "fa-network-wired",     "desc": N_("إعداد تنبيهات تيليجرام الخاصّة بالشبكة واختبارها.")},
+    "notifications":      {"title": N_("الإشعارات"),             "icon": "fa-bell",              "desc": N_("قائمة الإشعارات، عدد غير المقروء، وتعليمها كمقروءة.")},
+    "plans":              {"title": N_("خيارات الباقات"),         "icon": "fa-layer-group",       "desc": N_("قائمة مختصرة بالباقات لاستخدامها في القوائم المنسدلة.")},
+    "provider":           {"title": N_("منح المزوّد"),            "icon": "fa-certificate",       "desc": N_("القدرات والخدمات الممنوحة من عقد المزوّد لهذه الشبكة.")},
+    "site-exit":          {"title": N_("مخرج الموقع"),            "icon": "fa-right-from-bracket","desc": N_("حالة مخرج الإنترنت لكل راوتر وسياساته وخطّة تطبيقها.")},
+    "subscriber-groups":  {"title": N_("مجموعات المشتركين"),      "icon": "fa-users-rectangle",   "desc": N_("إدارة مجموعات المشتركين: إنشاء، تعديل، حذف، قطع المتصلين، وتصفير الحصّة اليوميّة.")},
+    "subscriber-portal":  {"title": N_("بوابة المشترك"),          "icon": "fa-id-badge",          "desc": N_("نقاط بوابة المشترك: دخول، لوحة الحساب، وطلبات التجديد والسلفة.")},
+    "whatsapp":           {"title": N_("واتساب"),                "icon": "fa-comments",          "desc": N_("إعداد قناة واتساب (Cloud API والبوت) واختبار الإرسال.")},
 }
 
 # المجموعات التي تستخدم توكنًا مختلفًا عن توكن الإدارة Bearer (ملاحظة تظهر
 # في رأس المجموعة لتوضيح آلية المصادقة الصحيحة لها).
 _GROUP_AUTH_NOTE: dict[str, str] = {
-    "hotspot":  "توكن بوابة خاص (بعد دخول البطاقة).",
-    "store":    "توكن متجر موقّع (بعد ‎/store/login‎).",
-    "internal": "سرّ داخلي عبر ترويسة X-Internal-Secret.",
+    "hotspot":  N_("توكن بوابة خاص (بعد دخول البطاقة)."),
+    "store":    N_("توكن متجر موقّع (بعد ‎/store/login‎)."),
+    "internal": N_("سرّ داخلي عبر ترويسة X-Internal-Secret."),
 }
 
 # ترتيب عرض المجموعات الأساسية أولًا، ثم البقية أبجديًّا.
@@ -210,33 +211,33 @@ _GROUP_ORDER = [
 
 # أفعال عربية مبسّطة للمقطع الأخير (action) في المسار.
 _ACTION_AR: dict[str, str] = {
-    "login": "تسجيل الدخول", "logout": "تسجيل الخروج", "me": "بيانات الحساب الحالي",
-    "ping": "فحص اتصال خفيف", "disconnect": "قطع الجلسة", "revoke": "إلغاء",
-    "enable": "تفعيل", "disable": "تعطيل", "test": "اختبار الاتصال",
-    "test-credentials": "اختبار بيانات اتصال", "retry": "إعادة المحاولة",
-    "cancel": "إلغاء", "generate": "توليد", "import": "استيراد",
-    "summary": "ملخّص", "usage": "الاستخدام", "reset_password": "تغيير كلمة المرور",
-    "extend_time": "تمديد المدة", "reset-usage": "تصفير الاستخدام",
-    "lock-mac": "قفل عنوان MAC", "unlock-mac": "فكّ قفل MAC", "check": "فحص الحالة",
-    "traceroute": "تتبّع المسار", "dns-resolve": "حلّ DNS", "reboot": "إعادة تشغيل",
-    "void": "إبطال", "approve": "اعتماد", "reject": "رفض", "proofs": "إثبات الدفع",
-    "instructions": "تعليمات الدفع", "status": "تحديث الحالة", "online": "المتصلون الآن",
-    "config": "الإعدادات", "deliveries": "سجل الإرسال", "sync": "المزامنة",
-    "reconcile": "مصالحة يدوية", "redeem": "شحن برصيد بطاقة", "purchase": "شراء",
-    "catalog": "الكتالوج", "my-cards": "بطاقاتي", "purchases": "سجل المشتريات",
-    "packages": "الباقات", "send-sms": "إرسال SMS", "events": "الأحداث",
-    "diagnostics": "تشخيصات", "ingest": "استيراد دفعة", "360": "ملف شامل (360°)",
-    "review-queue": "قائمة المراجعة", "reconciliation": "المصالحة",
-    "apply-service": "تطبيق الخدمة", "heartbeat": "نبض الجسر", "snapshot": "لقطة",
-    "poll": "استعلام الحالة", "save": "حفظ", "download": "تنزيل", "set": "تعيين",
-    "stream": "بثّ مباشر", "sse": "بثّ مباشر (SSE)", "traffic": "حركة المرور",
-    "resource": "موارد النظام", "overview": "نظرة عامة", "identity": "الهوية",
-    "export": "تصدير", "credit": "إيداع رصيد", "debit": "خصم رصيد",
-    "transactions": "سجل الحركات", "corrections": "تسويات", "preview": "معاينة",
-    "run": "تشغيل", "members": "الأعضاء", "snapshots": "اللقطات",
-    "policies": "السياسات", "revenue": "الإيرادات", "wallets": "المحافظ",
-    "ledger": "دفتر الأستاذ", "summary": "ملخّص", "permissions": "الصلاحيات",
-    "ingest": "استقبال دفعة بيانات", "loop": "كشف الحلقات", "metrics": "المقاييس",
+    "login": N_("تسجيل الدخول"), "logout": N_("تسجيل الخروج"), "me": N_("بيانات الحساب الحالي"),
+    "ping": N_("فحص اتصال خفيف"), "disconnect": N_("قطع الجلسة"), "revoke": N_("إلغاء"),
+    "enable": N_("تفعيل"), "disable": N_("تعطيل"), "test": N_("اختبار الاتصال"),
+    "test-credentials": N_("اختبار بيانات اتصال"), "retry": N_("إعادة المحاولة"),
+    "cancel": N_("إلغاء"), "generate": N_("توليد"), "import": N_("استيراد"),
+    "summary": N_("ملخّص"), "usage": N_("الاستخدام"), "reset_password": N_("تغيير كلمة المرور"),
+    "extend_time": N_("تمديد المدة"), "reset-usage": N_("تصفير الاستخدام"),
+    "lock-mac": N_("قفل عنوان MAC"), "unlock-mac": N_("فكّ قفل MAC"), "check": N_("فحص الحالة"),
+    "traceroute": N_("تتبّع المسار"), "dns-resolve": N_("حلّ DNS"), "reboot": N_("إعادة تشغيل"),
+    "void": N_("إبطال"), "approve": N_("اعتماد"), "reject": N_("رفض"), "proofs": N_("إثبات الدفع"),
+    "instructions": N_("تعليمات الدفع"), "status": N_("تحديث الحالة"), "online": N_("المتصلون الآن"),
+    "config": N_("الإعدادات"), "deliveries": N_("سجل الإرسال"), "sync": N_("المزامنة"),
+    "reconcile": N_("مصالحة يدوية"), "redeem": N_("شحن برصيد بطاقة"), "purchase": N_("شراء"),
+    "catalog": N_("الكتالوج"), "my-cards": N_("بطاقاتي"), "purchases": N_("سجل المشتريات"),
+    "packages": N_("الباقات"), "send-sms": N_("إرسال SMS"), "events": N_("الأحداث"),
+    "diagnostics": N_("تشخيصات"), "ingest": N_("استيراد دفعة"), "360": N_("ملف شامل (360°)"),
+    "review-queue": N_("قائمة المراجعة"), "reconciliation": N_("المصالحة"),
+    "apply-service": N_("تطبيق الخدمة"), "heartbeat": N_("نبض الجسر"), "snapshot": N_("لقطة"),
+    "poll": N_("استعلام الحالة"), "save": N_("حفظ"), "download": N_("تنزيل"), "set": N_("تعيين"),
+    "stream": N_("بثّ مباشر"), "sse": N_("بثّ مباشر (SSE)"), "traffic": N_("حركة المرور"),
+    "resource": N_("موارد النظام"), "overview": N_("نظرة عامة"), "identity": N_("الهوية"),
+    "export": N_("تصدير"), "credit": N_("إيداع رصيد"), "debit": N_("خصم رصيد"),
+    "transactions": N_("سجل الحركات"), "corrections": N_("تسويات"), "preview": N_("معاينة"),
+    "run": N_("تشغيل"), "members": N_("الأعضاء"), "snapshots": N_("اللقطات"),
+    "policies": N_("السياسات"), "revenue": N_("الإيرادات"), "wallets": N_("المحافظ"),
+    "ledger": N_("دفتر الأستاذ"), "summary": N_("ملخّص"), "permissions": N_("الصلاحيات"),
+    "ingest": N_("استقبال دفعة بيانات"), "loop": N_("كشف الحلقات"), "metrics": N_("المقاييس"),
 }
 
 # الأجزاء التي لا نعدّها "موردًا" عند اشتقاق العنوان (تظهر كأفعال أو امتدادات).
@@ -259,7 +260,7 @@ def _describe(method: str, path: str) -> str:
     """وصف عربي مبسّط مشتقّ من الطريقة + شكل المسار (لا اختراع — اشتقاق صرف)."""
     segs = [s for s in path.split("/") if s and s not in {"api", "v1"}]
     if not segs:
-        return "نقطة جذر"
+        return N_("نقطة جذر")
     last = segs[-1]
     is_param = last.startswith("{")
     # المقطع الأخير غير المتغيّر = الـ action المحتمل
@@ -272,10 +273,10 @@ def _describe(method: str, path: str) -> str:
             suffix = f" ({action.split('.')[-1].upper()})"
         return _ACTION_AR[base_action] + suffix
     if is_param:
-        return {"GET": "عرض التفاصيل", "PATCH": "تحديث", "PUT": "تحديث",
-                "DELETE": "حذف"}.get(method, "تنفيذ إجراء")
-    return {"GET": "جلب القائمة", "POST": "إنشاء جديد",
-            "PATCH": "تحديث", "PUT": "تحديث", "DELETE": "حذف"}.get(method, method)
+        return {"GET": N_("عرض التفاصيل"), "PATCH": N_("تحديث"), "PUT": N_("تحديث"),
+                "DELETE": N_("حذف")}.get(method, N_("تنفيذ إجراء"))
+    return {"GET": N_("جلب القائمة"), "POST": N_("إنشاء جديد"),
+            "PATCH": N_("تحديث"), "PUT": N_("تحديث"), "DELETE": N_("حذف")}.get(method, method)
 
 
 def _group_key(path: str) -> str:
@@ -339,7 +340,7 @@ def _build_groups(host: str) -> list[dict]:
                 "API docs: مجموعة بلا تعريب عربي: %r — أضِف مفتاحها إلى _GROUP_INFO.",
                 key,
             )
-            title = f"مجموعة غير مُعرّبة ({key})"
+            title = _tr('مجموعة غير مُعرّبة (%(key)s)', key=key)
             icon, desc = "fa-circle-question", ""
         groups.append({
             "key": key,
@@ -368,7 +369,7 @@ def _curl(method: str, path: str, host: str, mode: str) -> str:
         auth = ' \\\n  -H "X-Internal-Secret: $SECRET"'
     elif mode == "special":
         # توكن خاص بالمجموعة — لا نفترض صيغته؛ نشير للملاحظة بتعليق.
-        prefix = "# يتطلب توكنًا خاصًّا بهذه المجموعة (انظر ملاحظة المصادقة بالأعلى)\n"
+        prefix = N_("# يتطلب توكنًا خاصًّا بهذه المجموعة (انظر ملاحظة المصادقة بالأعلى)\n")
         auth = ""
     elif mode == "public":
         auth = ""

@@ -5,6 +5,7 @@ never accepts or stores plaintext passwords; it only applies password hashes
 and version metadata delivered over the signed HTTPS admin bridge.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import hashlib
 import hmac
@@ -229,7 +230,7 @@ class LicenseAdminIdentitySyncService:
         return {
             "ok": bool(sync_result.get("ok")),
             "status": "updated" if sync_result.get("ok") else sync_result.get("status", "sync_failed"),
-            "message": "تم تحديث كلمة المرور من لوحة التراخيص",
+            "message": _tr("تم تحديث كلمة المرور من لوحة التراخيص"),
             "panel_response": result.get("response") or {},
             "sync": sync_result,
         }

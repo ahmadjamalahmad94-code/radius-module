@@ -2,6 +2,7 @@
 routes للجلسات المباشرة (M3 — قراءة + disconnect واحد).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from dataclasses import replace
@@ -84,7 +85,7 @@ def _selected_online_pairs() -> list[tuple[str, str]]:
     session_ids = [s.strip() for s in request.form.getlist("session_id")]
     pairs = [(u, s) for u, s in zip(usernames, session_ids) if u and s]
     if not pairs:
-        raise RadiusError("حدد جلسة أولًا.")
+        raise RadiusError(_tr("حدد جلسة أولًا."))
     return pairs
 
 
@@ -92,7 +93,7 @@ def _selected_online_row(username: str | None = None, session_id: str | None = N
     if username is None or session_id is None:
         username, session_id = _selected_online_pairs()[0]
     if not username or not session_id:
-        raise RadiusError("حدد جلسة أولًا.")
+        raise RadiusError(_tr("حدد جلسة أولًا."))
 
     from ..db.connection import db
 
@@ -112,7 +113,7 @@ def _selected_online_row(username: str | None = None, session_id: str | None = N
         (_tid(), username, session_id),
     ).fetchone()
     if not row:
-        raise RadiusError("الجلسة المحددة غير متصلة الآن أو انتهت.")
+        raise RadiusError(_tr("الجلسة المحددة غير متصلة الآن أو انتهت."))
     return row
 
 
@@ -120,7 +121,7 @@ def _normalise_mac(raw: str) -> str:
     cleaned = (raw or "").strip().upper().replace("-", ":")
     hex_only = cleaned.replace(":", "")
     if len(hex_only) != 12 or any(c not in "0123456789ABCDEF" for c in hex_only):
-        raise RadiusError("عنوان MAC في الجلسة غير صالح.")
+        raise RadiusError(_tr("عنوان MAC في الجلسة غير صالح."))
     return ":".join(hex_only[i:i + 2] for i in range(0, 12, 2))
 
 
@@ -628,17 +629,16 @@ def online_reconcile():
     try:
         stats = session_reconciler.reconcile_now(_tid())
     except Exception as e:  # noqa: BLE001
-        flash(f"تعذّرت مصالحة الجلسات: {e}", "error")
+        flash(_tr('تعذّرت مصالحة الجلسات: %(e)s', e=e), "error")
         return _return_to_online()
     closed = int(stats.get("closed_total") or 0)
     if closed:
         flash(
-            f"تمّت المصالحة: أُغلقت {closed} جلسة يتيمة "
-            f"(حيّة: {stats.get('live_closed', 0)}، مهلة: {stats.get('interim_closed', 0)}).",
+            _tr('تمّت المصالحة: أُغلقت %(closed)s جلسة يتيمة (حيّة: %(v)s، مهلة: %(v2)s).', closed=closed, v=stats.get('live_closed', 0), v2=stats.get('interim_closed', 0)),
             "success",
         )
     else:
-        flash("تمّت المصالحة: لا جلسات يتيمة — العدّاد مطابق للجلسات الحيّة.",
+        flash(_tr("تمّت المصالحة: لا جلسات يتيمة — العدّاد مطابق للجلسات الحيّة."),
               "success")
     return _return_to_online()
 
@@ -655,7 +655,7 @@ def online_disconnect():
     if not pairs and usernames:
         pairs = [(u, None) for u in usernames if u]
     if not pairs:
-        flash("اسم المستخدم مطلوب", "error")
+        flash(_tr("اسم المستخدم مطلوب"), "error")
         return redirect(url_for("radius.online_list"))
 
     svc = get_online_sessions_service()
@@ -665,12 +665,12 @@ def online_disconnect():
             svc.disconnect(actor=_actor(), username=username, session_id=session_id)
             ok.append(username)
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or 'تعذّر قطع الجلسة'}")
+            failed.append(f"{username}: {e.message or N_('تعذّر قطع الجلسة')}")
     if ok:
         ok_names = "، ".join(ok)
         flash(
-            f"تم إرسال أمر قطع الجلسة لـ {ok[0]}." if len(ok) == 1
-            else f"تم إرسال أمر قطع الجلسة لـ {len(ok)} جلسات: {ok_names}.",
+            _tr('تم إرسال أمر قطع الجلسة لـ %(v)s.', v=ok[0]) if len(ok) == 1
+            else _tr('تم إرسال أمر قطع الجلسة لـ %(v)s جلسات: %(ok_names)s.', v=len(ok), ok_names=ok_names),
             "success",
         )
     if failed:
@@ -685,14 +685,14 @@ def online_disconnect():
             unreachable = []
         if unreachable:
             flash(
-                "الراوتر غير متصل — تعذّر الفصل ("
+                _tr("الراوتر غير متصل — تعذّر الفصل (")
                 + "، ".join(unreachable)
-                + "). استخدم «الإغلاق الإجباري» لإزالة الجلسة من العدّاد.",
+                + _tr("). استخدم «الإغلاق الإجباري» لإزالة الجلسة من العدّاد."),
                 "error",
             )
         else:
-            flash("تعذّر قطع بعض الجلسات — " + " | ".join(failed)
-                  + " — يمكنك «الإغلاق الإجباري» لإزالتها من العدّاد.", "error")
+            flash(_tr("تعذّر قطع بعض الجلسات — ") + " | ".join(failed)
+                  + _tr(" — يمكنك «الإغلاق الإجباري» لإزالتها من العدّاد."), "error")
     return _return_to_online()
 
 
@@ -712,7 +712,7 @@ def online_force_close():
     if not pairs and usernames:
         pairs = [(u, None) for u in usernames if u]
     if not pairs:
-        flash("اسم المستخدم مطلوب", "error")
+        flash(_tr("اسم المستخدم مطلوب"), "error")
         return redirect(url_for("radius.online_list"))
 
     from ..services import session_reconciler
@@ -735,15 +735,14 @@ def online_force_close():
                     payload={"session_id": session_id or "", "mode": "force_close"},
                 )
         except Exception as e:  # noqa: BLE001
-            flash(f"تعذّر الإغلاق الإجباري لـ {username}: {e}", "error")
+            flash(_tr('تعذّر الإغلاق الإجباري لـ %(username)s: %(e)s', username=username, e=e), "error")
     if closed_total:
         flash(
-            f"تمّ الإغلاق الإجباري: أُزيلت {closed_total} جلسة من العدّاد "
-            "(لم يُرسَل أمر فصل للراوتر).",
+            _tr('تمّ الإغلاق الإجباري: أُزيلت %(closed_total)s جلسة من العدّاد (لم يُرسَل أمر فصل للراوتر).', closed_total=closed_total),
             "success",
         )
     else:
-        flash("لا جلسة مفتوحة مطابقة — قد تكون أُغلقت سلفًا.", "info")
+        flash(_tr("لا جلسة مفتوحة مطابقة — قد تكون أُغلقت سلفًا."), "info")
     return _return_to_online()
 
 
@@ -752,7 +751,7 @@ def online_lock_mac():
     try:
         pairs = _selected_online_pairs()
     except RadiusError as e:
-        flash(e.message or "حدد جلسة أولًا.", "error")
+        flash(e.message or _tr("حدد جلسة أولًا."), "error")
         return _return_to_online()
 
     ok, failed = [], []
@@ -766,7 +765,7 @@ def online_lock_mac():
                 if not cards_repo.set_card_locked_mac(
                     _tid(), int(row["card_id"]), mac, actor=_actor()
                 ):
-                    raise RadiusError("تعذّر تثبيت MAC للبطاقة.")
+                    raise RadiusError(_tr("تعذّر تثبيت MAC للبطاقة."))
                 # zero-w1: same audit row as the subscriber path / cards checker.
                 from ..services.cards import get_cards_service
                 get_cards_service().audit_card_mac_lock(
@@ -780,16 +779,16 @@ def online_lock_mac():
                 svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac), base=sub)
             ok.append(f"{username} ({mac})")
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or 'تعذّر تثبيت MAC'}")
+            failed.append(f"{username}: {e.message or N_('تعذّر تثبيت MAC')}")
     if ok:
         ok_names = "، ".join(ok)
         flash(
-            f"تم تثبيت MAC على {ok[0]}." if len(ok) == 1
-            else f"تم تثبيت MAC على {len(ok)}: {ok_names}.",
+            _tr('تم تثبيت MAC على %(v)s.', v=ok[0]) if len(ok) == 1
+            else _tr('تم تثبيت MAC على %(v)s: %(ok_names)s.', v=len(ok), ok_names=ok_names),
             "success",
         )
     if failed:
-        flash("تعذّر تثبيت MAC للبعض — " + " | ".join(failed), "error")
+        flash(_tr("تعذّر تثبيت MAC للبعض — ") + " | ".join(failed), "error")
     return _return_to_online()
 
 
@@ -798,7 +797,7 @@ def online_lock_ip():
     try:
         pairs = _selected_online_pairs()
     except RadiusError as e:
-        flash(e.message or "حدد جلسة أولًا.", "error")
+        flash(e.message or _tr("حدد جلسة أولًا."), "error")
         return _return_to_online()
 
     ok, failed = [], []
@@ -806,14 +805,14 @@ def online_lock_ip():
         try:
             row = _selected_online_row(username, session_id)
             if row["card_id"]:
-                raise RadiusError("تثبيت IP متاح للمشتركين فقط.")
+                raise RadiusError(_tr("تثبيت IP متاح للمشتركين فقط."))
             ip = (row["framedipaddress"] or "").strip()
             if not ip:
-                raise RadiusError("لا يوجد IP على الجلسة المحددة.")
+                raise RadiusError(_tr("لا يوجد IP على الجلسة المحددة."))
             try:
                 ip_address(ip)
             except ValueError as exc:
-                raise RadiusError("عنوان IP في الجلسة غير صالح.") from exc
+                raise RadiusError(_tr("عنوان IP في الجلسة غير صالح.")) from exc
 
             from ..services.users import get_users_service
 
@@ -822,16 +821,16 @@ def online_lock_ip():
             svc.update(actor=_actor(), sub=replace(sub, static_ip=ip), base=sub)
             ok.append(f"{username} ({ip})")
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or 'تعذّر تثبيت IP'}")
+            failed.append(f"{username}: {e.message or N_('تعذّر تثبيت IP')}")
     if ok:
         ok_names = "، ".join(ok)
         flash(
-            f"تم تثبيت IP على {ok[0]}." if len(ok) == 1
-            else f"تم تثبيت IP على {len(ok)}: {ok_names}.",
+            _tr('تم تثبيت IP على %(v)s.', v=ok[0]) if len(ok) == 1
+            else _tr('تم تثبيت IP على %(v)s: %(ok_names)s.', v=len(ok), ok_names=ok_names),
             "success",
         )
     if failed:
-        flash("تعذّر تثبيت IP للبعض — " + " | ".join(failed), "error")
+        flash(_tr("تعذّر تثبيت IP للبعض — ") + " | ".join(failed), "error")
     return _return_to_online()
 
 
@@ -862,8 +861,8 @@ def _apply_temp_speed_request(force_mode: str | None):
                 tenant_id=_tid(),
                 actor=_actor(),
                 username=username,
-                down_kbps=parse_kbps(request.form.get("down_kbps"), "سرعة التنزيل"),
-                up_kbps=parse_kbps(request.form.get("up_kbps"), "سرعة الرفع"),
+                down_kbps=parse_kbps(request.form.get("down_kbps"), N_("سرعة التنزيل")),
+                up_kbps=parse_kbps(request.form.get("up_kbps"), N_("سرعة الرفع")),
                 duration_minutes=_dur,
                 force_mode=force_mode,
             )
@@ -881,41 +880,31 @@ def _apply_temp_speed_request(force_mode: str | None):
             # PoD path — the user is disconnected and reconnects with the new
             # rate from the DB. "no_active_session" here is benign.
             if ok:
-                flash(f"طُبِّقت السرعة المؤقتة ({result['rate']}) على {username} "
-                      f"بالفصل وإعادة الاتصال — سيعود بالسرعة الجديدة خلال ثوانٍ "
-                      f"(حتى {ends_local}).", "success")
+                flash(_tr('طُبِّقت السرعة المؤقتة (%(rate)s) على %(username)s بالفصل وإعادة الاتصال — سيعود بالسرعة الجديدة خلال ثوانٍ (حتى %(ends_local)s).', rate=result['rate'], username=username, ends_local=ends_local), "success")
             elif code == "no_active_session":
-                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
-                      f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.",
+                flash(_tr('حُفظت السرعة المؤقتة (%(rate)s) لـ %(username)s — لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا عند إعادة الاتصال.', rate=result['rate'], username=username),
                       "info")
             else:
                 from ..integration.radius_coa import coa_code_ar
-                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username}، "
-                      f"لكن تعذّر الفصل ({coa_code_ar(code)}) — تحقّق من اتصال الراوتر.",
+                flash(_tr('حُفظت السرعة المؤقتة (%(rate)s) لـ %(username)s، لكن تعذّر الفصل (%(v)s) — تحقّق من اتصال الراوتر.', rate=result['rate'], username=username, v=coa_code_ar(code)),
                       "warning")
         else:
             # live_coa (default) — a live rate change with NO disconnect.
             if ok:
-                flash(f"تم تطبيق السرعة المؤقتة ({result['rate']}) على {username} "
-                      f"مباشرةً عبر CoA — بدون فصل المستخدم (حتى {ends_local}).",
+                flash(_tr('تم تطبيق السرعة المؤقتة (%(rate)s) على %(username)s مباشرةً عبر CoA — بدون فصل المستخدم (حتى %(ends_local)s).', rate=result['rate'], username=username, ends_local=ends_local),
                       "success")
             elif code == "no_active_session":
-                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} — "
-                      f"لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا فور إعادة اتصاله.",
+                flash(_tr('حُفظت السرعة المؤقتة (%(rate)s) لـ %(username)s — لا جلسة نشطة الآن؛ ستُطبَّق تلقائيًا فور إعادة اتصاله.', rate=result['rate'], username=username),
                       "info")
             elif code == "empty_rate":
-                flash("لم تُحدَّد سرعة صالحة للإرسال.", "warning")
+                flash(_tr("لم تُحدَّد سرعة صالحة للإرسال."), "warning")
             else:
                 # CoA reached the router but was not confirmed. We do NOT
                 # disconnect automatically — offer the manual force button.
                 from ..integration.radius_coa import coa_code_ar
-                flash(f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
-                      f"{ends_local}، لكن الراوتر لم يؤكّد تطبيق CoA "
-                      f"({coa_code_ar(code)}). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم "
-                      f"زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: "
-                      f"المنفذ 3799 والـ secret).", "warning")
+                flash(_tr('حُفظت السرعة المؤقتة (%(rate)s) لـ %(username)s حتى %(ends_local)s، لكن الراوتر لم يؤكّد تطبيق CoA (%(v)s). لم يُفصل المستخدم. إن لم تتغيّر سرعته، استخدم زر «تطبيق بالفصل وإعادة الاتصال». (تحقّق أيضًا من CoA: المنفذ 3799 والـ secret).', rate=result['rate'], username=username, ends_local=ends_local, v=coa_code_ar(code)), "warning")
     except RadiusError as e:
-        flash(e.message or "تعذّر تطبيق السرعة المؤقتة", "error")
+        flash(e.message or _tr("تعذّر تطبيق السرعة المؤقتة"), "error")
     return _return_to_online()
 
 
@@ -948,12 +937,12 @@ def online_temp_speed_cancel():
         from ..services.temp_speed import cancel_temp_speed
         res = cancel_temp_speed(tenant_id=_tid(), actor=_actor(), username=username)
         if res.get("reverted"):
-            flash(f"تم إلغاء السرعة المؤقتة لـ {username} وإرجاعه لسرعته العادية فورًا.",
+            flash(_tr('تم إلغاء السرعة المؤقتة لـ %(username)s وإرجاعه لسرعته العادية فورًا.', username=username),
                   "success")
         else:
-            flash(f"لا توجد سرعة مؤقتة فعّالة لـ {username}.", "info")
+            flash(_tr('لا توجد سرعة مؤقتة فعّالة لـ %(username)s.', username=username), "info")
     except RadiusError as e:
-        flash(e.message or "تعذّر إلغاء السرعة المؤقتة", "error")
+        flash(e.message or _tr("تعذّر إلغاء السرعة المؤقتة"), "error")
     return _return_to_online()
 
 
@@ -1017,7 +1006,7 @@ def online_coa_set_ip():
     username, session_id = _coa_collect_session_args()
     new_ip = (request.form.get("new_ip") or "").strip()
     if not username or not new_ip:
-        flash("اسم المستخدم والـIP الجديد مطلوبان", "error")
+        flash(_tr("اسم المستخدم والـIP الجديد مطلوبان"), "error")
         return _return_to_online()
     try:
         out = change_ip_live(
@@ -1025,20 +1014,19 @@ def online_coa_set_ip():
             new_ip=new_ip, session_id=session_id,
         )
     except ValueError as e:
-        flash(f"قيمة غير صالحة: {e}", "error")
+        flash(_tr('قيمة غير صالحة: %(e)s', e=e), "error")
         return _return_to_online()
     # Gap capture — persist the live CoA outcome (router + result) to the
     # unified MikroTik-actions feed so it is complete going forward.
     _record_live(out, username=username, after={"framed_ip": new_ip})
     if out.ok:
         flash(
-            f"تم تغيير IP لـ {username} إلى {new_ip} على المايكروتيك/السيرفر "
-            f"{out.nas_ip} — {coa_code_ar(out.code_name)}.",
+            _tr('تم تغيير IP لـ %(username)s إلى %(new_ip)s على المايكروتيك/السيرفر %(nas_ip)s — %(v)s.', username=username, new_ip=new_ip, nas_ip=out.nas_ip, v=coa_code_ar(out.code_name)),
             "success",
         )
     else:
         flash(
-            f"فشل تغيير IP لـ {username}: {coa_code_ar(out.code_name)}"
+            _tr('فشل تغيير IP لـ %(username)s: %(v)s', username=username, v=coa_code_ar(out.code_name))
             + (f" — {out.reply_message}" if out.reply_message else "")
             + (f" ({out.detail})" if out.detail else ""),
             "error",
@@ -1056,10 +1044,10 @@ def online_coa_set_speed():
         rx = int((request.form.get("rx_kbps") or "0").strip())
         tx = int((request.form.get("tx_kbps") or "0").strip())
     except (TypeError, ValueError):
-        flash("سرعة التنزيل والرفع يجب أن تكونا أرقامًا صحيحة.", "error")
+        flash(_tr("سرعة التنزيل والرفع يجب أن تكونا أرقامًا صحيحة."), "error")
         return _return_to_online()
     if not username:
-        flash("اسم المستخدم مطلوب", "error")
+        flash(_tr("اسم المستخدم مطلوب"), "error")
         return _return_to_online()
     try:
         out = change_speed_live(
@@ -1067,7 +1055,7 @@ def online_coa_set_speed():
             rx_kbps=rx, tx_kbps=tx, session_id=session_id,
         )
     except ValueError as e:
-        flash(f"قيمة غير صالحة: {e}", "error")
+        flash(_tr('قيمة غير صالحة: %(e)s', e=e), "error")
         return _return_to_online()
     # Gap capture — persist the live speed-change outcome (router + from→to +
     # result). The «from» is the REAL current rate read before the push (or ""
@@ -1078,13 +1066,12 @@ def online_coa_set_speed():
                  after={"rate_limit": f"{tx}k/{rx}k"})
     if out.ok:
         flash(
-            f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "
-            f"— {coa_code_ar(out.code_name)}.",
+            _tr('تم تطبيق السرعة %(rx)sk/%(tx)sk على %(username)s (الجلسة %(session_id)s) — %(v)s.', rx=rx, tx=tx, username=username, session_id=out.session_id, v=coa_code_ar(out.code_name)),
             "success",
         )
     else:
         flash(
-            f"فشل تطبيق السرعة على {username}: {coa_code_ar(out.code_name)}"
+            _tr('فشل تطبيق السرعة على %(username)s: %(v)s', username=username, v=coa_code_ar(out.code_name))
             + (f" — {out.reply_message}" if out.reply_message else ""),
             "error",
         )

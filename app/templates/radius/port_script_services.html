@@ -143,13 +143,13 @@
    عند الزيارة العامّة (بلا slug) نُبقي العنوان الجامع «خدمات المنافذ».
    تصحيح المالك (يونيو 2026): العنوان السابق كان جامعًا دائمًا فيظنّ
    المشغّل أنه في صفحة عامّة بينما هو يُفعّل خدمة محدّدة. #}
-{% set _hdr_title = service.title if service else "خدمات المنافذ" %}
+{% set _hdr_title = service.title if service else _('خدمات المنافذ') %}
 {% set _hdr_icon  = service.icon  if service else "diagram-project" %}
 
 {% block title %}{{ _hdr_title }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ _hdr_icon }}"></i>{% endblock %}
 {% block page_title %}{{ _hdr_title }} {{ _("على") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }}{% if service %} · {{ service.description|truncate(120, true) }}{% else %} · توليد سكربت حسب المنافذ{% endif %}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #') }}{{ router_no(nas.id) }} · {{ nas.address }}{% if service %} · {{ service.description|truncate(120, true) }}{% else %} {{ _('· توليد سكربت حسب المنافذ') }}{% endif %}</span>{% endblock %}
 
 {% block content %}
 
@@ -160,13 +160,13 @@
   {% if service %}
   {{ hub.hero(
     service.title ~ " — " ~ nas.name,
-    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — " ~ service.description,
+    subtitle=_('جهاز شبكة #%(id)s · %(address)s — %(description)s', id=nas.id, address=nas.address, description=service.description),
     icon=service.icon
   ) }}
   {% else %}
   {{ hub.hero(
-    "خدمات المنافذ — " ~ nas.name,
-    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — اختر خدمة، حدّد المنافذ، فيولّد النظام سكربت الراوتر للمراجعة. التطبيق يبقى معطّلًا للقوالب المبدئية.",
+    _('خدمات المنافذ — %(name)s', name=nas.name),
+    subtitle=_('جهاز شبكة #%(id)s · %(address)s — اختر خدمة، حدّد المنافذ، فيولّد النظام سكربت الراوتر للمراجعة. التطبيق يبقى معطّلًا للقوالب المبدئية.', id=nas.id, address=nas.address),
     icon="diagram-project"
   ) }}
   {% endif %}
@@ -179,15 +179,15 @@
   {% endif %}
 
   {% call hub.worklayout(aside_html=hub.helppanel(
-    "كيف تعمل هذه الصفحة؟",
-    intro="هذه أداة عامة لتطبيق خدمات الراوتر المبنيّة على المنافذ. تختار الخدمة، يكتشف النظام منافذ الراوتر، تحدّد المنافذ المعنيّة، فيُولَّد سكربت RouterOS جاهز للمراجعة.",
+    _('كيف تعمل هذه الصفحة؟'),
+    intro=_('هذه أداة عامة لتطبيق خدمات الراوتر المبنيّة على المنافذ. تختار الخدمة، يكتشف النظام منافذ الراوتر، تحدّد المنافذ المعنيّة، فيُولَّد سكربت RouterOS جاهز للمراجعة.'),
     items=[
-      {'icon': 'tower-broadcast', 'text': 'منع بث البلوتوث والواي فاي على المنافذ المختارة.'},
-      {'icon': 'arrows-spin',     'text': 'تتبّع اللوب (Loop Detection) على المنافذ المختارة.'},
-      {'icon': 'plug',            'text': 'يكتشف النظام واجهات الراوتر تلقائيًا لاختيارها بنقرة.'},
-      {'icon': 'shield-halved',   'text': 'القوالب المبدئية تُعرض كتنبيه — التطبيق معطّل حتى يضاف السكربت الفعلي.'},
+      {'icon': 'tower-broadcast', 'text': _('منع بث البلوتوث والواي فاي على المنافذ المختارة.')},
+      {'icon': 'arrows-spin',     'text': _('تتبّع اللوب (Loop Detection) على المنافذ المختارة.')},
+      {'icon': 'plug',            'text': _('يكتشف النظام واجهات الراوتر تلقائيًا لاختيارها بنقرة.')},
+      {'icon': 'shield-halved',   'text': _('القوالب المبدئية تُعرض كتنبيه — التطبيق معطّل حتى يضاف السكربت الفعلي.')},
     ],
-    note="الخدمتان الحاليتان بقالب مبدئي — السكربت الفعلي يُضاف لاحقًا في مكان واحد."
+    note=_('الخدمتان الحاليتان بقالب مبدئي — السكربت الفعلي يُضاف لاحقًا في مكان واحد.')
   )) %}
 
   {# ── بطاقات اختيار الخدمة ──
@@ -195,7 +195,7 @@
      لوحة «خدماتي» برابط خدمة واحدة (slug=...) نخفي المُحدِّد تمامًا فتصير
      الصفحة صفحة خدمة واحدة مخصّصة — لا تجمع خدمتين ولا تُظهر غير خدمتها. #}
   {% if not service %}
-  {% call hub.section("اختر الخدمة", icon="layer-group") %}
+  {% call hub.section(_('اختر الخدمة'), icon="layer-group") %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px"
          data-pss-service-cards>
       {% for svc in services %}
@@ -218,7 +218,7 @@
           {% if _st_configured %}
           <span class="hub-badge" style="background:#DCFCE7;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px"
                 data-pss-state="enabled" data-pss-state-slug="{{ svc.slug }}">
-            <i class="fa-solid fa-circle-check"></i> مفعّلة · {{ _st.ports|join(', ') }}
+            <i class="fa-solid fa-circle-check"></i> {{ _('مفعّلة · %(v)s', v=_st.ports|join(', ')) }}
           </span>
           {% else %}
           <span class="hub-badge" style="background:#F1F5F9;color:#475569;font-size:11px;padding:2px 8px;border-radius:999px"
@@ -234,7 +234,7 @@
 
   {% if service %}
   {# ── نموذج اختيار المنافذ للخدمة المحددة ── #}
-  {% call hub.section("منافذ الخدمة — " ~ service.title, icon=service.icon) %}
+  {% call hub.section(_('منافذ الخدمة — %(title)s', title=service.title), icon=service.icon) %}
 
     {% if service.is_placeholder %}
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
@@ -437,7 +437,7 @@
        2) إعدادات الفحص الدوري — تفعيل + الفترة بالدقائق (poller).
        3) سجل الفحوصات — كم فحص جرى، متى، وماذا وجد كل واحد. #}
 
-  {% call hub.section("حالة منافذ كشف اللوب", icon="table-cells") %}
+  {% call hub.section(_('حالة منافذ كشف اللوب'), icon="table-cells") %}
     {% if not loop_table %}
     <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
          data-pss-loop-table-empty>
@@ -524,7 +524,7 @@
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("الفحص الدوري التلقائي", icon="clock") %}
+  {% call hub.section(_('الفحص الدوري التلقائي'), icon="clock") %}
     {% if can_submit('radius.mt_port_services_loop_settings', 'POST') %}<form class="hub-form" method="post" data-pss-loop-settings-form
           action="{{ url_for('radius.mt_port_services_loop_settings', nas_id=nas.id, slug=service.slug) }}"
           style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px">
@@ -550,7 +550,7 @@
     </div>
   {% endcall %}
 
-  {% call hub.section("سجل الفحوصات", icon="clock-rotate-left") %}
+  {% call hub.section(_('سجل الفحوصات'), icon="clock-rotate-left") %}
     {% if not loop_history %}
     <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
          data-pss-loop-history-empty>
@@ -638,7 +638,7 @@
 
   {% if loop_probes is not none %}
   {# ── نتيجة فحص اللوب الحيّة (قراءة /ip dhcp-client الموسومة) ── #}
-  {% call hub.section("نتيجة فحص اللوب", icon="magnifying-glass") %}
+  {% call hub.section(_('نتيجة فحص اللوب'), icon="magnifying-glass") %}
     <div data-pss-loop-result>
       {% if loop_error %}
       <div role="alert" style="display:flex;align-items:center;gap:8px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
@@ -661,7 +661,7 @@
           <div>
             <div style="font-weight:700">{{ p.message }}</div>
             <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">
-              <code>{{ p.iface }}</code> {{ _('· الحالة:') }} <code>{{ p.status or '—' }}</code>{% if p.gateway %} · البوابة: <code>{{ p.gateway }}</code>{% endif %}
+              <code>{{ p.iface }}</code> {{ _('· الحالة:') }} <code>{{ p.status or '—' }}</code>{% if p.gateway %} {{ _('· البوابة:') }} <code>{{ p.gateway }}</code>{% endif %}
             </div>
           </div>
         </div>
@@ -698,7 +698,7 @@
   {% endif %}
 
   {% if plan %}
-  {% call hub.section("السكربت المولّد — " ~ plan.title, icon="file-code") %}
+  {% call hub.section(_('السكربت المولّد — %(title)s', title=plan.title), icon="file-code") %}
     <div data-pss-plan-card>
 
       {% if plan.warnings %}
@@ -734,8 +734,8 @@
           <input type="checkbox" name="confirm" value="1"
                  data-pss-confirm
                  {% if plan.is_placeholder %}disabled{% endif %}>
-          {% if _is_remove %}أُؤكّد قراءة سكربت الإزالة وأرغب بتنفيذه على هذا الراوتر.
-          {% else %}أُؤكّد قراءة السكربت وأرغب بتطبيقه على هذا الراوتر.{% endif %}
+          {% if _is_remove %}{{ _('أُؤكّد قراءة سكربت الإزالة وأرغب بتنفيذه على هذا الراوتر.') }}
+          {% else %}{{ _('أُؤكّد قراءة السكربت وأرغب بتطبيقه على هذا الراوتر.') }}{% endif %}
         </label>
 
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -744,7 +744,7 @@
                   data-pss-apply
                   {% if plan.is_placeholder %}disabled title="{{ _('القالب مبدئي — أضِف السكربت الفعلي أولًا') }}"{% endif %}>
             <i class="fa-solid fa-{{ 'eraser' if _is_remove else 'bolt' }}"></i>
-            {% if _is_remove %}تنفيذ الإزالة على الراوتر{% else %}تطبيق على الراوتر{% endif %}
+            {% if _is_remove %}{{ _('تنفيذ الإزالة على الراوتر') }}{% else %}{{ _('تطبيق على الراوتر') }}{% endif %}
           </button>
           {% if plan.is_placeholder %}
           {# الشارة المطلوبة: زر الدفع معطّل ما دام القالب placeholder #}
@@ -783,11 +783,11 @@
   {% endif %}
 
   {% if apply_result %}
-  {% call hub.section("نتيجة التنفيذ على الراوتر", icon="circle-check") %}
+  {% call hub.section(_('نتيجة التنفيذ على الراوتر'), icon="circle-check") %}
     <div data-pss-apply-result>
       <ul class="mt-program-summary" style="margin:0;padding-inline-start:24px;line-height:1.7">
         {% for step in apply_result.steps %}
-        <li><code>{{ step.path }}</code> · {% if step.ok %}<span style="color:#166534">{{ _('تم') }}</span>{% else %}<span style="color:#991B1B">فشل — {{ step.error }}</span>{% endif %}</li>
+        <li><code>{{ step.path }}</code> · {% if step.ok %}<span style="color:#166534">{{ _('تم') }}</span>{% else %}<span style="color:#991B1B">{{ _('فشل — %(error)s', error=step.error) }}</span>{% endif %}</li>
         {% endfor %}
       </ul>
     </div>

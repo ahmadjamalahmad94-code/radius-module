@@ -54,6 +54,7 @@ K8 endpoints — files + backup + downloads + destructive actions:
   POST /api/v1/mikrotik/<id>/system/identity/set     (confirm=true required)
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import concurrent.futures
 import json
@@ -81,11 +82,11 @@ from ..responses import fail, ok
 
 
 _OP_PICKER_LABELS_AR: dict[str, str] = {
-    OP_PROGRAMMING_HOTSPOT: "برمجة بوابة الدخول",
-    OP_PROGRAMMING_PPPOE: "برمجة البرودباند",
-    OP_UNPROGRAMMING: "تراجع وإزالة برمجة",
-    OP_RESTORE: "استعادة من نسخة احتياطية",
-    OP_BACKUP_SAVE: "حفظ نسخة احتياطية",
+    OP_PROGRAMMING_HOTSPOT: N_("برمجة بوابة الدخول"),
+    OP_PROGRAMMING_PPPOE: N_("برمجة البرودباند"),
+    OP_UNPROGRAMMING: N_("تراجع وإزالة برمجة"),
+    OP_RESTORE: N_("استعادة من نسخة احتياطية"),
+    OP_BACKUP_SAVE: N_("حفظ نسخة احتياطية"),
 }
 
 
@@ -403,7 +404,7 @@ def _guided_operation_choices() -> list[dict]:
 def mt_system_resource(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_resource(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -411,7 +412,7 @@ def mt_system_resource(nas_id: int):
 def mt_system_health(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_health(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -419,7 +420,7 @@ def mt_system_health(nas_id: int):
 def mt_system_identity(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_identity(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -427,7 +428,7 @@ def mt_system_identity(nas_id: int):
 def mt_system_clock(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_clock(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -435,7 +436,7 @@ def mt_system_clock(nas_id: int):
 def mt_system_routerboard(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_routerboard(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -453,7 +454,7 @@ def mt_system_overview(nas_id: int):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
 
     fetchers = {
         "resource": mac.system_resource,
@@ -502,7 +503,7 @@ def mt_system_overview(nas_id: int):
 def mt_interfaces(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.interface_list(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -510,7 +511,7 @@ def mt_interfaces(nas_id: int):
 def mt_interface_traffic(nas_id: int, name: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.interface_traffic(nas, name)
     payload = _envelope(result, router_id=nas_id)
     payload["interface"] = name
@@ -520,7 +521,7 @@ def mt_interface_traffic(nas_id: int, name: str):
 def mt_ip_addresses(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.ip_addresses(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -528,7 +529,7 @@ def mt_ip_addresses(nas_id: int):
 def mt_ip_neighbors(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.ip_neighbors(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -541,7 +542,7 @@ def mt_router_health(nas_id: int):
     from ...radius.services import mt_health
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     report = mt_health.scan_router(nas)
     report["router_id"] = nas_id
     return ok(report)
@@ -550,7 +551,7 @@ def mt_router_health(nas_id: int):
 def mt_ip_routes(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.ip_routes(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -561,7 +562,7 @@ def mt_ip_routes(nas_id: int):
 def mt_hotspot_active(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.hotspot_active(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -569,7 +570,7 @@ def mt_hotspot_active(nas_id: int):
 def mt_ppp_active(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.ppp_active(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -608,7 +609,7 @@ def _audit_mutation(
 def mt_hotspot_disconnect(nas_id: int, session_id: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.disconnect_hotspot_session(nas, session_id)
     _audit_mutation(
         nas_id=nas_id, action="mt.hotspot.disconnect",
@@ -622,7 +623,7 @@ def mt_hotspot_disconnect(nas_id: int, session_id: str):
 def mt_ppp_disconnect(nas_id: int, session_id: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.disconnect_ppp_session(nas, session_id)
     _audit_mutation(
         nas_id=nas_id, action="mt.ppp.disconnect",
@@ -639,7 +640,7 @@ def mt_ppp_disconnect(nas_id: int, session_id: str):
 def mt_queues_simple_list(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.queue_simple_list(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -647,10 +648,10 @@ def mt_queues_simple_list(nas_id: int):
 def mt_queues_simple_set(nas_id: int, queue_id: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"), status=400)
     result = mac.queue_simple_set(nas, queue_id, body)
     _audit_mutation(
         nas_id=nas_id, action="mt.queue.simple.set",
@@ -667,14 +668,14 @@ def mt_queues_simple_set(nas_id: int, queue_id: str):
 def mt_firewall_filter(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     return ok(_envelope(mac.firewall_filter(nas), router_id=nas_id))
 
 
 def mt_firewall_nat(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     return ok(_envelope(mac.firewall_nat(nas), router_id=nas_id))
 
 
@@ -687,14 +688,14 @@ def mt_address_lists(nas_id: int):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
 
     if request.method == "GET":
         return ok(_envelope(mac.address_list_list(nas), router_id=nas_id))
 
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"), status=400)
     result = mac.address_list_add(
         nas,
         list_name=str(body.get("list") or ""),
@@ -713,7 +714,7 @@ def mt_address_lists(nas_id: int):
 def mt_address_list_remove(nas_id: int, entry_id: str):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.address_list_remove(nas, entry_id)
     _audit_mutation(
         nas_id=nas_id, action="mt.firewall.address_list.remove",
@@ -741,7 +742,7 @@ def mt_log_tail(nas_id: int):
     comma-separated string)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     topics_raw = request.args.get("topics") or ""
     topics = [t for t in topics_raw.split(",") if t.strip()]
     limit = _parse_limit(request.args.get("limit"))
@@ -765,7 +766,7 @@ def _tool_body() -> dict:
 def mt_tool_ping(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = _tool_body()
     target = str(body.get("target") or "")
     count = int(body.get("count") or 4)
@@ -783,7 +784,7 @@ def mt_tool_ping(nas_id: int):
 def mt_tool_traceroute(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = _tool_body()
     target = str(body.get("target") or "")
     count = int(body.get("count") or 1)
@@ -801,7 +802,7 @@ def mt_tool_traceroute(nas_id: int):
 def mt_tool_dns_resolve(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = _tool_body()
     name = str(body.get("name") or "")
     server = str(body.get("server") or "")
@@ -836,7 +837,7 @@ def _require_confirm(body: dict):
     if body.get("confirm") is not True:
         return fail(
             "confirm_required",
-            'هذه العملية حسّاسة — مرّر "confirm": true في الجسم',
+            _tr('هذه العملية حسّاسة — مرّر "confirm": true في الجسم'),
             status=409,
         )
     return None
@@ -845,7 +846,7 @@ def _require_confirm(body: dict):
 def mt_files_list(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     return ok(_envelope(mac.file_list(nas), router_id=nas_id))
 
 
@@ -866,10 +867,10 @@ def mt_system_backup_save(nas_id: int):
 
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"), status=400)
     name = str(body.get("name") or "").strip() or _default_backup_name()
     notes_in = str(body.get("notes") or "").strip()
 
@@ -934,7 +935,7 @@ def mt_file_download(nas_id: int, filename: str):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     safe_name = (filename or "").strip()
     if (
         not safe_name
@@ -944,7 +945,7 @@ def mt_file_download(nas_id: int, filename: str):
     ):
         return fail(
             "invalid_filename",
-            "اسم الملف غير صالح",
+            _tr("اسم الملف غير صالح"),
             status=400,
         )
     try:
@@ -980,10 +981,10 @@ def mt_file_download(nas_id: int, filename: str):
 def mt_system_reboot(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"), status=400)
     guard = _require_confirm(body)
     if guard is not None:
         return guard
@@ -1010,7 +1011,7 @@ def mt_counters(nas_id: int):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = counters_svc.counters_for_nas(nas)
     return ok(_envelope(result, router_id=nas_id))
 
@@ -1031,7 +1032,7 @@ def mt_guided_assistant(nas_id: int):
         operation=operation,
     )
     if checklist is None:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     payload = checklist.to_dict()
     payload["operation_choices"] = _guided_operation_choices()
     payload["blocking_count"] = len(checklist.blocking_steps())
@@ -1042,10 +1043,10 @@ def mt_guided_assistant(nas_id: int):
 def mt_system_identity_set(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object", status=400)
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"), status=400)
     guard = _require_confirm(body)
     if guard is not None:
         return guard
@@ -1068,7 +1069,7 @@ def mt_system_ntp_sync(nas_id: int):
     clock + ntp client state."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.system_ntp_sync(nas)
     _audit_mutation(
         nas_id=nas_id, action="mt.system.ntp.sync",
@@ -1082,7 +1083,7 @@ def mt_ip_dns_cache_flush(nas_id: int):
     future lookups just re-fetch from upstream. No confirm required."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     result = mac.ip_dns_cache_flush(nas)
     _audit_mutation(
         nas_id=nas_id, action="mt.ip.dns.cache.flush",
@@ -1101,7 +1102,7 @@ def mt_backups_list(nas_id: int):
     from app.radius.db.repos import router_backups_repo as repo
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     rows = repo.list_for_router(_tid(), nas_id, limit=100)
     # Strip heavy / sensitive columns from the list view.
     pruned = []
@@ -1133,10 +1134,10 @@ def mt_backup_manifest(nas_id: int, backup_id: int):
     from app.radius.db.repos import router_backups_repo as repo
 
     if not _load_nas(nas_id):
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     row = repo.get_by_id(_tid(), backup_id)
     if not row or int(row.get("router_id") or 0) != int(nas_id):
-        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+        return fail("not_found", _tr("النسخة الاحتياطية غير موجودة"),
                     status=404)
     try:
         manifest = _json.loads(row.get("manifest_json") or "{}")
@@ -1173,23 +1174,23 @@ def mt_backup_restore(nas_id: int, backup_id: int):
     from app.radius.db.repos import router_backups_repo as repo
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return fail("bad_request", "الجسم يجب أن يكون JSON object",
+        return fail("bad_request", _tr("الجسم يجب أن يكون JSON object"),
                     status=400)
     guard = _require_confirm(body)
     if guard is not None:
         return guard
     row = repo.get_by_id(_tid(), backup_id)
     if not row or int(row.get("router_id") or 0) != int(nas_id):
-        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+        return fail("not_found", _tr("النسخة الاحتياطية غير موجودة"),
                     status=404)
     router_filename = (row.get("router_filename")
                        or row.get("filename") or "").strip()
     if not router_filename:
         return fail("bad_state",
-                    "لا يوجد اسم ملف صالح للنسخة الاحتياطية",
+                    _tr("لا يوجد اسم ملف صالح للنسخة الاحتياطية"),
                     status=409)
 
     # Phase A: rely on the file still being on the router. If it's
@@ -1198,8 +1199,8 @@ def mt_backup_restore(nas_id: int, backup_id: int):
     if (row.get("router_status") or "on_router") != "on_router":
         return fail(
             "blob_not_pushable",
-            "هذه النسخة محفوظة فقط في HobeRadius — استعادة الملف "
-            "تحتاج رفعه إلى الراوتر أولاً (ميزة قيد التطوير).",
+            _tr("هذه النسخة محفوظة فقط في HobeRadius — استعادة الملف "
+            "تحتاج رفعه إلى الراوتر أولاً (ميزة قيد التطوير)."),
             status=501,
         )
 
@@ -1225,7 +1226,7 @@ def mt_backup_restore(nas_id: int, backup_id: int):
             target_id=router_filename,
             result=type("R", (), {"ok": False, "error": str(exc)})(),
         )
-        return fail("restore_failed", f"فشل التحميل: {exc}", status=502)
+        return fail("restore_failed", _tr('فشل التحميل: %(exc)s', exc=exc), status=502)
 
     actor = (getattr(g, "actor", "") or "").strip() or "operator"
     repo.mark_restored(_tid(), backup_id, by=actor,
@@ -1241,8 +1242,8 @@ def mt_backup_restore(nas_id: int, backup_id: int):
         "backup_id":       backup_id,
         "router_filename": router_filename,
         "message": (
-            "تم إرسال أمر استعادة النسخة. الراوتر سيُعيد التشغيل "
-            "تلقائياً خلال دقيقة لتطبيق الاستعادة."
+            _tr("تم إرسال أمر استعادة النسخة. الراوتر سيُعيد التشغيل "
+            "تلقائياً خلال دقيقة لتطبيق الاستعادة.")
         ),
     })
 
@@ -1252,10 +1253,10 @@ def mt_backup_delete(nas_id: int, backup_id: int):
     NOT touched — operator removes that via Winbox if desired."""
     from app.radius.db.repos import router_backups_repo as repo
     if not _load_nas(nas_id):
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     row = repo.get_by_id(_tid(), backup_id)
     if not row or int(row.get("router_id") or 0) != int(nas_id):
-        return fail("not_found", "النسخة الاحتياطية غير موجودة",
+        return fail("not_found", _tr("النسخة الاحتياطية غير موجودة"),
                     status=404)
     repo.delete(_tid(), backup_id)
     _audit_mutation(
@@ -1287,7 +1288,7 @@ def mt_interface_sse(nas_id: int, name: str):
     """
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
 
     def gen():
         for sample in mac.stream_interface_samples(nas, name):
@@ -1348,7 +1349,7 @@ def mt_interfaces_stream(nas_id: int):
 
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
 
     stream = _get_stream(nas)
 

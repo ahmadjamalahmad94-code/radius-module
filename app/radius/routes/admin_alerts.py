@@ -10,6 +10,7 @@
   * services.telegram_notifier (النقل)
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (Blueprint, flash, g, jsonify, redirect, render_template,
                    request, session, url_for)
@@ -89,11 +90,11 @@ def save_bot():
     tg_repo.upsert(tenant_id=tid, bot_token=token, chat_id=chat_id,
                    enabled=enabled, thread_id=thread_id)
     if enabled and token and chat_id:
-        flash("حُفظت بيانات البوت. الإشعارات مفعّلة.", "success")
+        flash(_tr("حُفظت بيانات البوت. الإشعارات مفعّلة."), "success")
     elif enabled:
-        flash("حُفظت البيانات — أكمل التوكن ومعرّف المحادثة لتعمل الإشعارات.", "warning")
+        flash(_tr("حُفظت البيانات — أكمل التوكن ومعرّف المحادثة لتعمل الإشعارات."), "warning")
     else:
-        flash("حُفظت البيانات. الإشعارات معطّلة حاليًا.", "info")
+        flash(_tr("حُفظت البيانات. الإشعارات معطّلة حاليًا."), "info")
     return redirect(url_for("radius.admin_alerts_page"))
 
 
@@ -103,8 +104,8 @@ def test_connection():
     if request.headers.get("X-Requested-With") or request.is_json \
             or request.headers.get("X-CSRFToken"):
         return jsonify(result)
-    flash("✅ نجح إرسال الاختبار — افحص محادثة تلجرام."
-          if result["ok"] else f"فشل الإرسال: {result.get('error') or '—'}",
+    flash(_tr("✅ نجح إرسال الاختبار — افحص محادثة تلجرام.")
+          if result["ok"] else _tr('فشل الإرسال: %(v)s', v=result.get('error') or '—'),
           "success" if result["ok"] else "error")
     return redirect(url_for("radius.admin_alerts_page"))
 
@@ -113,7 +114,7 @@ def toggle_alert():
     """تفعيل/تعطيل تنبيه واحد — AJAX."""
     key = (request.form.get("key") or "").strip()
     if not admin_alerts.get_spec(key):
-        return jsonify({"ok": False, "error": "تنبيه غير معروف."}), 404
+        return jsonify({"ok": False, "error": _tr("تنبيه غير معروف.")}), 404
     enabled = (request.form.get("enabled") or "") in ("1", "on", "true", "yes")
     admin_alerts.set_telegram(_tid(), key, enabled, by=_admin_id())
     return jsonify({"ok": True, "key": key, "enabled": enabled})
@@ -123,7 +124,7 @@ def test_alert():
     """زر اختبار تنبيه — يرسل نموذجًا ويُعيد النتيجة + نص القالب المُصيَّر."""
     key = (request.form.get("key") or "").strip()
     if not admin_alerts.get_spec(key):
-        return jsonify({"ok": False, "error": "تنبيه غير معروف."}), 404
+        return jsonify({"ok": False, "error": _tr("تنبيه غير معروف.")}), 404
     return jsonify(admin_alerts.send_test(_tid(), key))
 
 

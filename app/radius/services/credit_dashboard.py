@@ -18,6 +18,7 @@ business_events) أو دفاتر الدين القائمة — فيظهر في �
 تجميلية: كل عمود حقيقي ومربوط.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -179,7 +180,7 @@ class CreditDashboardService:
         ``payment_status`` (paid|debt) في وصف الحركة كي تظهر صحيحة في الحركات
         والمحاسبة. يُرجع معرّف حركة المحفظة."""
         wallet = self.ops.wallet_for(entity_type=entity_type, entity_id=entity_id)
-        status_ar = "دين" if payment_status == "debt" else "مدفوع"
+        status_ar = _tr("دين") if payment_status == "debt" else _tr("مدفوع")
         res = self.wallets.credit(
             tenant_id=self.tenant_id, wallet_id=int(wallet["id"]),
             amount=minor_to_money(minor), actor_type="admin", actor_id=actor_id,
@@ -200,14 +201,14 @@ class CreditDashboardService:
         try:
             amount_minor = money_to_minor(amount)
         except Exception as exc:  # noqa: BLE001
-            raise CreditDashboardError("المبلغ غير صالح") from exc
+            raise CreditDashboardError(_tr("المبلغ غير صالح")) from exc
         if amount_minor <= 0:
-            raise CreditDashboardError("المبلغ يجب أن يكون أكبر من صفر.")
+            raise CreditDashboardError(_tr("المبلغ يجب أن يكون أكبر من صفر."))
         # «الحدود»: شحن الموزّع ⇒ «أقصى إضافة رصيد/دفعة للموزّع»، والمدير ⇒ العامّ.
         from ..core import limits
         _msg = limits.amount_error(amount_minor / 100.0,
                                    "distributor" if etype == "distributor" else "generic",
-                                   label="المبلغ", tenant_id=self.tenant_id)
+                                   label=N_("المبلغ"), tenant_id=self.tenant_id)
         if _msg:
             raise CreditDashboardError(_msg)
         method = (method or "cash").strip()[:40] or "cash"
@@ -223,13 +224,13 @@ class CreditDashboardService:
 
         if etype == "manager":
             if admins_repo.get_admin(entity_id) is None:
-                raise CreditDashboardError("المدير غير موجود.")
+                raise CreditDashboardError(_tr("المدير غير موجود."))
             if on_account:
                 # رصيد على الحساب: يُضاف للمحفظة للاستخدام *و* يُسجَّل ديناً على المدير.
                 debt_recorded_minor = self.credit.record_debt(
                     entity_id, amount_minor, actor=actor,
                     reference_type="on_account_credit",
-                    notes=note or "رصيد على الحساب (دين)",
+                    notes=note or N_("رصيد على الحساب (دين)"),
                 )
                 credited_minor = amount_minor
                 tx_id = self._credit_wallet(
@@ -238,7 +239,7 @@ class CreditDashboardService:
             else:
                 settled_minor = self.credit.settle_debt(
                     entity_id, amount_minor, actor=actor,
-                    reference_type="owner_recharge", notes=note or "شحن رصيد من المالك",
+                    reference_type="owner_recharge", notes=note or N_("شحن رصيد من المالك"),
                 )
                 remainder = amount_minor - settled_minor
                 if remainder > 0:
@@ -248,7 +249,7 @@ class CreditDashboardService:
                         actor_id=actor_id, method=method, note=note, payment_status=payment_status)
         else:  # distributor
             if not operations_repo.get_distributor(self.tenant_id, entity_id):
-                raise CreditDashboardError("الموزّع غير موجود.")
+                raise CreditDashboardError(_tr("الموزّع غير موجود."))
             if on_account:
                 # رصيد على الحساب: debit في دفتر الموزّع يرفع debt_balance، والرصيد
                 # القابل للصرف يُضاف للمحفظة (المسار المدقَّق نفسه).
@@ -256,7 +257,7 @@ class CreditDashboardService:
                     self.tenant_id, entity_id, entry_type="on_account_credit",
                     direction="debit", amount=float(minor_to_money(amount_minor)),
                     currency=default_currency(), actor=actor,
-                    notes=note or "رصيد على الحساب (دين)", related_type="owner_recharge",
+                    notes=note or N_("رصيد على الحساب (دين)"), related_type="owner_recharge",
                 )
                 debt_recorded_minor = amount_minor
                 credited_minor = amount_minor
@@ -267,7 +268,7 @@ class CreditDashboardService:
                 entry = operations_repo.settle_distributor_debt(
                     self.tenant_id, entity_id, amount=minor_to_money(amount_minor),
                     currency=default_currency(), actor=actor,
-                    notes=note or "شحن رصيد من المالك", related_type="owner_recharge",
+                    notes=note or N_("شحن رصيد من المالك"), related_type="owner_recharge",
                 )
                 settled_minor = money_to_minor(entry.get("settled") or 0)
                 remainder = amount_minor - settled_minor
@@ -297,5 +298,5 @@ class CreditDashboardService:
     def _entity_type(entity_type: str) -> str:
         etype = str(entity_type or "").strip().lower()
         if etype not in {"manager", "distributor"}:
-            raise CreditDashboardError("نوع المشغّل غير معروف.")
+            raise CreditDashboardError(_tr("نوع المشغّل غير معروف."))
         return etype

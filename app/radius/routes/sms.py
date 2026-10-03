@@ -11,6 +11,7 @@ and MASKED in the UI. The real sends/balance checks go through the clean
 ``services/tweetsms.py`` adapter. Secrets are never logged.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -84,9 +85,9 @@ def sms_save():
             sender=sender,
             enabled=enabled,
         )
-        flash("تم حفظ إعدادات ربط SMS (TweetSMS).", "success")
+        flash(_tr("تم حفظ إعدادات ربط SMS (TweetSMS)."), "success")
     except Exception:  # noqa: BLE001 — settings must never 500 the page
-        flash("تعذّر حفظ الإعدادات. حاول مرة أخرى.", "error")
+        flash(_tr("تعذّر حفظ الإعدادات. حاول مرة أخرى."), "error")
     return redirect(url_for("radius.sms"))
 
 
@@ -97,9 +98,9 @@ def sms_balance():
     result = tweetsms.check_balance(_tid())
     if result.get("ok"):
         balance = result.get("balance")
-        flash(f"رصيد TweetSMS الحالي: {balance}.", "success")
+        flash(_tr('رصيد TweetSMS الحالي: %(balance)s.', balance=balance), "success")
     else:
-        flash(f"تعذّر جلب الرصيد: {result.get('error_ar') or 'خطأ غير معروف.'}", "error")
+        flash(_tr('تعذّر جلب الرصيد: %(v)s', v=result.get('error_ar') or N_('خطأ غير معروف.')), "error")
     return redirect(url_for("radius.sms"))
 
 
@@ -110,9 +111,9 @@ def sms_test():
 
     phone = (request.form.get("recipient_phone") or "").strip()
     if not phone:
-        flash("أدخل رقم هاتف لإرسال رسالة الاختبار.", "error")
+        flash(_tr("أدخل رقم هاتف لإرسال رسالة الاختبار."), "error")
         return redirect(url_for("radius.sms"))
-    message = (request.form.get("message") or "").strip() or "رسالة اختبار من نظام HobeRadius عبر TweetSMS."
+    message = (request.form.get("message") or "").strip() or _tr("رسالة اختبار من نظام HobeRadius عبر TweetSMS.")
 
     from ..services import sms_segments
     cost = sms_segments.summary_ar(message)
@@ -121,16 +122,16 @@ def sms_test():
     if result.get("ok"):
         first = (result.get("results") or [{}])[0]
         sms_id = first.get("sms_id") or ""
-        suffix = f" مُعرّف الرسالة: {sms_id}." if sms_id else ""
+        suffix = _tr(' مُعرّف الرسالة: %(sms_id)s.', sms_id=sms_id) if sms_id else ""
         seg = result.get("segments") or {}
         if seg.get("segments", 1) > 1:
-            flash(f"تم إرسال رسالة الاختبار ({cost}) — حُسبت {seg.get('segments')} رسائل SMS. اختصر النص لتوفير التكلفة.{suffix}", "warning")
+            flash(_tr('تم إرسال رسالة الاختبار (%(cost)s) — حُسبت %(v)s رسائل SMS. اختصر النص لتوفير التكلفة.%(suffix)s', cost=cost, v=seg.get('segments'), suffix=suffix), "warning")
         else:
-            flash(f"تم إرسال رسالة الاختبار بنجاح ({cost}).{suffix}", "success")
+            flash(_tr('تم إرسال رسالة الاختبار بنجاح (%(cost)s).%(suffix)s', cost=cost, suffix=suffix), "success")
     else:
         reason = result.get("error_ar") or ""
         if not reason:
             first = (result.get("results") or [{}])[0]
-            reason = first.get("message_ar") or "فشل الإرسال."
-        flash(f"تعذّر إرسال رسالة الاختبار: {reason}", "error")
+            reason = first.get("message_ar") or _tr("فشل الإرسال.")
+        flash(_tr('تعذّر إرسال رسالة الاختبار: %(reason)s', reason=reason), "error")
     return redirect(url_for("radius.sms"))

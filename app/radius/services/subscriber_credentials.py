@@ -25,6 +25,7 @@ NEVER raises into the caller; a missing mobile / unconnected account / dead
 gateway comes back as a result dict with an Arabic message.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 from typing import Any
@@ -34,22 +35,22 @@ _LOG = logging.getLogger(__name__)
 # The short credentials body. Concise Arabic labels keep a typical user/pass
 # within one ~60-char Unicode SMS segment. ONLY this body ever carries the
 # password — and ONLY over SMS/WhatsApp, to the subscriber's own number.
-CREDENTIALS_SMS_TEMPLATE = "المستخدم: {username} كلمة المرور: {password}"
+CREDENTIALS_SMS_TEMPLATE = N_("المستخدم: {username} كلمة المرور: {password}")
 
 # WhatsApp isn't billed per 60-char segment, so it can carry a friendlier,
 # multi-line body. Still the ONLY WhatsApp body that ever carries the password,
 # and it goes DIRECT to the subscriber's own number (never into a delivery log).
 CREDENTIALS_WA_TEMPLATE = (
-    "مرحبًا 👋\n"
+    N_("مرحبًا 👋\n"
     "تم إنشاء حسابك بنجاح.\n"
     "اسم المستخدم: {username}\n"
-    "كلمة المرور: {password}"
+    "كلمة المرور: {password}")
 )
 
 # Clear, reusable Arabic errors (exact strings the subscribers page expects).
-ERR_NO_MOBILE = "لا يوجد رقم جوال للمشترك"
-ERR_NOT_CONNECTED = "اربط حساب SMS أولاً"
-ERR_WA_NOT_CONNECTED = "اضبط قناة واتساب أولاً"
+ERR_NO_MOBILE = N_("لا يوجد رقم جوال للمشترك")
+ERR_NOT_CONNECTED = N_("اربط حساب SMS أولاً")
+ERR_WA_NOT_CONNECTED = N_("اضبط قناة واتساب أولاً")
 
 
 def build_body(username: str, password: str) -> str:
@@ -154,7 +155,7 @@ def send(tenant_id: int, subscriber, *, actor: str = "") -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 — adapter is defensive, but be safe
         _audit(tid, actor, username, ok=False, reason="send_error",
                segments=segments, code="")
-        return _result(False, error_ar=f"تعذّر الإرسال: {exc}", reason="send_error",
+        return _result(False, error_ar=_tr('تعذّر الإرسال: %(exc)s', exc=exc), reason="send_error",
                        segments=segments)
 
     ok = bool(outcome.get("ok"))
@@ -163,7 +164,7 @@ def send(tenant_id: int, subscriber, *, actor: str = "") -> dict[str, Any]:
     # Prefer the adapter's accurate per-send segment info when present.
     segments = outcome.get("segments") or segments
     error_ar = "" if ok else (outcome.get("error_ar") or first.get("message_ar")
-                              or "فشل الإرسال عبر TweetSMS.")
+                              or _tr("فشل الإرسال عبر TweetSMS."))
     _audit(tid, actor, username, ok=ok, reason=("sent" if ok else "send_failed"),
            segments=segments, code=code)
     return _result(ok, error_ar=error_ar, reason=("sent" if ok else "send_failed"),
@@ -205,9 +206,9 @@ def send_whatsapp(tenant_id: int, subscriber, *, actor: str = "") -> dict[str, A
     except Exception as exc:  # noqa: BLE001 — provider is defensive, but be safe
         _audit(tid, actor, username, ok=False, reason="send_error",
                segments={}, code="", channel="whatsapp")
-        return _result(False, error_ar=f"تعذّر الإرسال: {exc}", reason="send_error")
+        return _result(False, error_ar=_tr('تعذّر الإرسال: %(exc)s', exc=exc), reason="send_error")
 
-    error_ar = "" if ok else (err or "فشل الإرسال عبر واتساب.")
+    error_ar = "" if ok else (err or _tr("فشل الإرسال عبر واتساب."))
     _audit(tid, actor, username, ok=ok, reason=("sent" if ok else "send_failed"),
            segments={}, code="", channel="whatsapp")
     return _result(ok, error_ar=error_ar, reason=("sent" if ok else "send_failed"),

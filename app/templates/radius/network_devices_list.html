@@ -11,7 +11,7 @@
 {% block title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}{{ _("تابع أجهزة الشبكة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (devices|length)|ar_count('device') }} في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s في النتائج', v=(devices|length)|ar_count('device')) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <style>
@@ -30,35 +30,35 @@
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
 {{ hub.megahero(
-  "تابع أجهزة الشبكة",
-  subtitle="أضف الراوترات والأكسس بوينتات والسويتشات والكاميرات التي تريد مراقبتها. الجهاز المهم يظهر في لوحة المتابعة ويمكن تشغيل تنبيهاته من إعدادات المراقبة.",
+  _('تابع أجهزة الشبكة'),
+  subtitle=_('أضف الراوترات والأكسس بوينتات والسويتشات والكاميرات التي تريد مراقبتها. الجهاز المهم يظهر في لوحة المتابعة ويمكن تشغيل تنبيهاته من إعدادات المراقبة.'),
   icon="wifi",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.network_devices_new') + '">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة جهاز") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي',     'value': devices|length, 'icon': 'wifi',         'variant': 'brand'},
-    {'label': 'متّصل',        'value': _up,            'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'غير متّصل',    'value': _down,          'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'تحت المراقبة', 'value': _watched,       'icon': 'eye',          'variant': 'blue'},
+    {'label': _('الإجمالي'),     'value': devices|length, 'icon': 'wifi',         'variant': 'brand'},
+    {'label': _('متّصل'),        'value': _up,            'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('غير متّصل'),    'value': _down,          'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('تحت المراقبة'), 'value': _watched,       'icon': 'eye',          'variant': 'blue'},
   ]
 ) }}
 
 {% if devices %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو جهاز شبكة مسجَّل (راوتر فرعي، أكسس بوينت، سويتش، كاميرا، NVR...) متاح للمراقبة والإدارة من هنا.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('كل صف هو جهاز شبكة مسجَّل (راوتر فرعي، أكسس بوينت، سويتش، كاميرا، NVR...) متاح للمراقبة والإدارة من هنا.'),
   items=[
-    {'icon': 'circle-check', 'text': 'الحالة تُحدَّث بزر «فحص»: متّصل / غير متّصل / غير مفحوص — مع زمن الاستجابة بالـ ms.'},
-    {'icon': 'link',         'text': 'زر «تجهيز» يضبط DHCP lease و IP-binding و address-list للجهاز.'},
-    {'icon': 'key',          'text': 'زر «فتح عن بُعد» يفتح جلسة وصول مؤقّتة (TTL) للجهاز.'},
-    {'icon': 'triangle-exclamation', 'text': 'الجهاز المُعلَّم «مهم» يظهر في لوحة المتابعة وتُفعَّل تنبيهاته.'},
+    {'icon': 'circle-check', 'text': _('الحالة تُحدَّث بزر «فحص»: متّصل / غير متّصل / غير مفحوص — مع زمن الاستجابة بالـ ms.')},
+    {'icon': 'link',         'text': _('زر «تجهيز» يضبط DHCP lease و IP-binding و address-list للجهاز.')},
+    {'icon': 'key',          'text': _('زر «فتح عن بُعد» يفتح جلسة وصول مؤقّتة (TTL) للجهاز.')},
+    {'icon': 'triangle-exclamation', 'text': _('الجهاز المُعلَّم «مهم» يظهر في لوحة المتابعة وتُفعَّل تنبيهاته.')},
   ],
-  note="حذف الجهاز يزيله من قائمة المراقبة — تأكّد قبل التأكيد."
+  note=_('حذف الجهاز يزيله من قائمة المراقبة — تأكّد قبل التأكيد.')
 )) %}
-  {% call hub.section("قائمة الأجهزة", icon="table-list", meta=devices|length|string + " جهاز", flush=True) %}
+  {% call hub.section(_('قائمة الأجهزة'), icon="table-list", meta=devices|length|string + _(' جهاز'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -89,13 +89,13 @@
             </td>
             <td>
               {% set type_labels = {
-                'ap': 'أكسس بوينت',
-                'router': 'راوتر',
-                'switch': 'سويتش',
-                'camera': 'كاميرا',
+                'ap': _('أكسس بوينت'),
+                'router': _('راوتر'),
+                'switch': _('سويتش'),
+                'camera': _('كاميرا'),
                 'nvr': 'NVR',
-                'server': 'سيرفر',
-                'other': 'أخرى'
+                'server': _('سيرفر'),
+                'other': _('أخرى')
               } %}
               {{ type_labels.get(d.device_type, d.device_type) }}
             </td>
@@ -106,7 +106,7 @@
               {% if d.last_status == 'up' %}
                 <span class="hr-chip" style="background:#DCFCE7;color:#166534;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
                   <i class="fa-solid fa-circle-check" style="font-size:9px"></i>
-                  متّصل
+                  {{ _('متّصل') }}
                   {% if d.last_latency_ms is not none %}
                     <span dir="ltr" style="margin-inline-start:4px;font-family:monospace,'Cairo'">
                       ({{ "%.1f"|format(d.last_latency_ms) }} ms)
@@ -156,7 +156,7 @@
                 </a>{% endif %}
                 {% if can_submit('radius.network_devices_delete', 'POST') %}<form action="{{ url_for('radius.network_devices_delete', device_id=d.id) }}"
                       method="post" style="display:inline"
-                      onsubmit="return confirm('هل تريد حذف الجهاز «{{ d.name|e }}»؟');">
+                      onsubmit="return confirm({{ _('هل تريد حذف الجهاز «%(e)s»؟', e=d.name|e)|tojson|forceescape }});">
                   {{ csrf_token_input() | safe }}
                   <button type="submit"
                           class="hub-btn hub-btn--danger hub-btn--icon nd-act"
@@ -175,8 +175,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد أجهزة مسجَّلة",
-  sub="ابدأ بإضافة جهاز (راوتر فرعي، أكسس بوينت، سويتش، كاميرا، NVR...) من زرّ «إضافة جهاز» في الأعلى ليصبح متاحًا للمراقبة والإدارة.",
+  _('لا توجد أجهزة مسجَّلة'),
+  sub=_('ابدأ بإضافة جهاز (راوتر فرعي، أكسس بوينت، سويتش، كاميرا، NVR...) من زرّ «إضافة جهاز» في الأعلى ليصبح متاحًا للمراقبة والإدارة.'),
   icon="wifi"
 ) }}
 {% endif %}

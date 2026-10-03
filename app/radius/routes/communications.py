@@ -1,5 +1,6 @@
 """Notification and campaign web routes."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
@@ -29,7 +30,7 @@ def _tid() -> int:
 
 
 def _actor() -> str:
-    return session.get("admin_name") or session.get("admin_user") or "غير معروف"
+    return session.get("admin_name") or session.get("admin_user") or N_("غير معروف")
 
 
 def _admin_id() -> int:
@@ -185,7 +186,7 @@ def communications_templates():
                 actor=_actor(),
                 overwrite=bool(request.form.get("overwrite")),
             )
-            flash("تم حفظ قالب الرسالة.", "success")
+            flash(_tr("تم حفظ قالب الرسالة."), "success")
         except NotificationCampaignError as exc:
             flash(str(exc), "error")
         return redirect(url_for("radius.communications_templates"))
@@ -207,7 +208,7 @@ def communications_send():
                     message=request.form.get("message") or "",
                     actor=_actor(),
                 )
-                flash(f"تمت إضافة {result['queued_count']} رسالة إلى قائمة الإرسال.", "success")
+                flash(_tr('تمت إضافة %(queued_count)s رسالة إلى قائمة الإرسال.', queued_count=result['queued_count']), "success")
                 return redirect(url_for("radius.communications_deliveries"))
         except NotificationCampaignError as exc:
             flash(str(exc), "error")
@@ -235,7 +236,7 @@ def communications_campaigns():
                 actions=actions,
                 actor=_actor(),
             )
-            flash("تم تجهيز معاينة الحملة. لم يتم إرسال أي رسالة خارجية.", "success")
+            flash(_tr("تم تجهيز معاينة الحملة. لم يتم إرسال أي رسالة خارجية."), "success")
         except (NotificationCampaignError, ValueError) as exc:
             flash(str(exc), "error")
     return render_template(
@@ -267,7 +268,7 @@ def communications_audience():
                 actor=_actor(),
             )
             preview = svc.preview_audience(filters)
-            flash("تم حفظ شريحة الجمهور.", "success")
+            flash(_tr("تم حفظ شريحة الجمهور."), "success")
         except NotificationCampaignError as exc:
             flash(str(exc), "error")
     return render_template(
@@ -284,7 +285,7 @@ def communications_channels():
     if request.method == "POST":
         channel = (request.form.get("channel") or "").strip().lower()
         if channel not in comms_providers.HTTP_CHANNELS:
-            flash("قناة غير مدعومة.", "error")
+            flash(_tr("قناة غير مدعومة."), "error")
             return redirect(url_for("radius.communications_channels"))
         try:
             comms_providers.save_channel_config(
@@ -299,9 +300,9 @@ def communications_channels():
                 },
                 by=_admin_id(),
             )
-            flash("تم حفظ إعدادات القناة.", "success")
+            flash(_tr("تم حفظ إعدادات القناة."), "success")
         except Exception:  # noqa: BLE001 — settings must never 500 the page
-            flash("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى.", "error")
+            flash(_tr("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى."), "error")
         return redirect(url_for("radius.communications_channels"))
 
     channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
@@ -323,18 +324,18 @@ def communications_channels_test():
     tid = _tid()
     channel = (request.form.get("channel") or "").strip().lower()
     phone = (request.form.get("phone") or "").strip()
-    message = (request.form.get("message") or "").strip() or "رسالة اختبار من مركز التواصل."
+    message = (request.form.get("message") or "").strip() or _tr("رسالة اختبار من مركز التواصل.")
 
     if channel not in comms_providers.HTTP_CHANNELS:
-        return jsonify({"ok": False, "status": "error", "message": "قناة غير مدعومة."}), 400
+        return jsonify({"ok": False, "status": "error", "message": _tr("قناة غير مدعومة.")}), 400
     if not phone:
-        return jsonify({"ok": False, "status": "error", "message": "أدخل رقم هاتف للاختبار."}), 400
+        return jsonify({"ok": False, "status": "error", "message": _tr("أدخل رقم هاتف للاختبار.")}), 400
 
     config = comms_providers.load_channel_config(tid, channel)
     if not config.get("enabled"):
-        return jsonify({"ok": False, "status": "skipped", "message": "القناة متوقفة. فعّلها أولًا ثم احفظ الإعدادات."})
+        return jsonify({"ok": False, "status": "skipped", "message": _tr("القناة متوقفة. فعّلها أولًا ثم احفظ الإعدادات.")})
     if "{phone}" not in (config.get("send_url_template") or ""):
-        return jsonify({"ok": False, "status": "skipped", "message": "اضبط رابط إرسال يحتوي على {phone} أولًا."})
+        return jsonify({"ok": False, "status": "skipped", "message": _tr("اضبط رابط إرسال يحتوي على {phone} أولًا.")})
 
     outcome = comms_providers.http_send(
         template=config["send_url_template"],
@@ -350,9 +351,9 @@ def communications_channels_test():
         "status": "sent" if outcome.ok else "failed",
         "http_status": outcome.status_code,
         "message": (
-            "تم إرسال رسالة الاختبار بنجاح."
+            _tr("تم إرسال رسالة الاختبار بنجاح.")
             if outcome.ok
-            else (outcome.error or "فشل إرسال رسالة الاختبار.")
+            else (outcome.error or _tr("فشل إرسال رسالة الاختبار."))
         ),
         "response_excerpt": outcome.body_excerpt,
     })
@@ -377,9 +378,9 @@ def communications_bot_settings():
                 },
                 by=_admin_id(),
             )
-            flash("تم حفظ إعدادات بوت واتساب.", "success")
+            flash(_tr("تم حفظ إعدادات بوت واتساب."), "success")
         except Exception:  # noqa: BLE001 — settings must never 500 the page
-            flash("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى.", "error")
+            flash(_tr("تعذّر حفظ الإعدادات. راجع البيانات وحاول مرة أخرى."), "error")
         return redirect(url_for("radius.communications_bot"))
 
     config = comms_bot.load_bot_config(tid)
@@ -426,8 +427,8 @@ def communications_notifications():
 # Arabic labels + icons for the three channels, used by the settings template.
 NOTIF_CHANNEL_LABELS = {
     "sms": ("SMS", "comment-sms"),
-    "whatsapp": ("واتساب", "whatsapp"),
-    "telegram": ("تلجرام", "telegram"),
+    "whatsapp": (N_("واتساب"), "whatsapp"),
+    "telegram": (N_("تلجرام"), "telegram"),
 }
 
 

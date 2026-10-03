@@ -2,6 +2,7 @@
  * Client-side filtering + CRUD over the JSON API. CSRF via X-CSRFToken header
  * (these routes live under /admin/… so the global guard enforces it).
  * NO live MikroTik mutation: «معاينة الخطة»/«مزامنة»/«فحص» are read-only. */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -25,7 +26,7 @@
       opts.body = JSON.stringify(body);
     }
     return fetch(url, opts).then(function (r) {
-      return r.json().catch(function () { return { ok: false, error: "استجابة غير صالحة" }; })
+      return r.json().catch(function () { return { ok: false, error: hrT('استجابة غير صالحة') }; })
         .then(function (data) { return { status: r.status, data: data }; });
     });
   }
@@ -44,10 +45,10 @@
 
   /* ── status pill + live row update (shared by per-row check + Check-All) ── */
   var STATUS_META = {
-    up: { v: "green", label: "متصل" }, down: { v: "red", label: "مفصول" },
-    timeout: { v: "red", label: "انتهت المهلة" }, high_latency: { v: "amber", label: "بنج عالٍ" },
-    disabled: { v: "grey", label: "معطّل" }, apply_failed: { v: "red", label: "فشل التطبيق" },
-    unknown: { v: "grey", label: "غير معروف" }
+    up: { v: "green", label: hrT('متصل') }, down: { v: "red", label: hrT('مفصول') },
+    timeout: { v: "red", label: hrT('انتهت المهلة') }, high_latency: { v: "amber", label: hrT('بنج عالٍ') },
+    disabled: { v: "grey", label: hrT('معطّل') }, apply_failed: { v: "red", label: hrT('فشل التطبيق') },
+    unknown: { v: "grey", label: hrT('غير معروف') }
   };
   function statusPillHTML(status) {
     var m = STATUS_META[status] || STATUS_META.unknown;
@@ -59,7 +60,7 @@
     if (!row) return;
     row.classList.add("is-checking");
     var st = row.querySelector(".dh-status");
-    if (st) st.innerHTML = '<span class="dh-checking"><i class="fa-solid fa-spinner fa-spin"></i> يفحص…</span>';
+    if (st) st.innerHTML = ('<span class="dh-checking">' + '<i class="fa-solid fa-spinner fa-spin">' + '</i>' + ' ' + hrT('يفحص…') + '</span>');
     var lat = row.querySelector(".dh-latency");
     if (lat) lat.classList.add("dh-checking");
   }
@@ -72,7 +73,7 @@
     var lat = row.querySelector(".dh-latency");
     if (lat) { lat.classList.remove("dh-checking"); lat.textContent = (latency != null) ? (latency + " ms") : "—"; }
     var chk = row.querySelector(".dh-checked");
-    if (chk) chk.textContent = "الآن";
+    if (chk) chk.textContent = hrT('الآن');
     row.setAttribute("data-status", status);
     try {
       var d = JSON.parse(row.getAttribute("data-json"));
@@ -96,7 +97,7 @@
     progEl.classList.remove("is-done");
     progEl.classList.toggle("is-indeterminate", !!indeterminate);
     if (progBar) progBar.style.width = indeterminate ? "" : "0%";
-    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-satellite-dish fa-fade"></i> جارٍ فحص الكل…';
+    if (progLabel) progLabel.innerHTML = ('<i class="fa-solid fa-satellite-dish fa-fade">' + '</i>' + ' ' + hrT('جارٍ فحص الكل…'));
     if (progCount) progCount.textContent = "";
   }
   function progUpdate(index, total, deviceName) {
@@ -104,7 +105,7 @@
     progEl.classList.remove("is-indeterminate");
     var pct = total ? Math.round(index / total * 100) : 0;
     if (progBar) progBar.style.width = pct + "%";
-    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-satellite-dish fa-fade"></i> يفحص: ' + esc(deviceName || "");
+    if (progLabel) progLabel.innerHTML = ('<i class="fa-solid fa-satellite-dish fa-fade">' + '</i>' + ' ' + hrT('يفحص:') + ' ') + esc(deviceName || "");
     if (progCount) progCount.textContent = index + " / " + total;
   }
   function progDone(summary) {
@@ -113,10 +114,10 @@
     progEl.classList.add("is-done");
     if (progBar) progBar.style.width = "100%";
     var s = summary || {};
-    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-circle-check"></i> اكتمل';
-    if (progCount) progCount.textContent = "متصل " + (s.up || 0) + " · مفصول " + (s.down || 0) +
-      (s.high_latency ? (" · بنج عالٍ " + s.high_latency) : "") +
-      (s.unknown ? (" · غير معروف " + s.unknown) : "");
+    if (progLabel) progLabel.innerHTML = ('<i class="fa-solid fa-circle-check">' + '</i>' + ' ' + hrT('اكتمل'));
+    if (progCount) progCount.textContent = hrT('متصل ') + (s.up || 0) + hrT(' · مفصول ') + (s.down || 0) +
+      (s.high_latency ? (hrT(' · بنج عالٍ ') + s.high_latency) : "") +
+      (s.unknown ? (hrT(' · غير معروف ') + s.unknown) : "");
     setTimeout(function () { if (progEl) progEl.hidden = true; }, 6000);
   }
 
@@ -129,17 +130,17 @@
       updateRowStatus(rowById(ev.device_id), ev.status, ev.latency_ms);
     } else if (ev.type === "done") {
       progDone(ev.summary);
-      toast("اكتمل الفحص.", "success");
+      toast(hrT('اكتمل الفحص.'), "success");
       refreshChecks();  // السجل والإحصائيات يلتقطان الدورة الجديدة فورًا
     } else if (ev.type === "error") {
       if (progEl) progEl.hidden = true;
-      toast(ev.error || "تعذّر الفحص", "error");
+      toast(ev.error || hrT('تعذّر الفحص'), "error");
     }
   }
 
   function streamPollAll(btn) {
     var orig = btn ? btn.innerHTML : "";
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الفحص…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = ('<i class="fa-solid fa-spinner fa-spin">' + '</i>' + ' ' + hrT('جارٍ الفحص…')); }
     progShow(true);
     fetch(CFG.pollStreamUrl, {
       method: "POST", credentials: "same-origin",
@@ -172,8 +173,8 @@
       request(CFG.pollUrl || ((CFG.base || "") + "/api/poll"), "POST", {}).then(function (res) {
         if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         var d = res.data || {};
-        if (d.ok) { progDone(d.summary); refreshChecks(); toast("اكتمل الفحص.", "success"); setTimeout(function () { location.reload(); }, 1200); }
-        else { if (progEl) progEl.hidden = true; toast("تعذّر الفحص", "error"); }
+        if (d.ok) { progDone(d.summary); refreshChecks(); toast(hrT('اكتمل الفحص.'), "success"); setTimeout(function () { location.reload(); }, 1200); }
+        else { if (progEl) progEl.hidden = true; toast(hrT('تعذّر الفحص'), "error"); }
       });
     });
   }
@@ -217,19 +218,19 @@
           var strip = document.getElementById("dh-liveapply");
           if (strip) strip.classList.toggle("is-on", !!d.enabled);
           if (d.enabled && d.effective === false) {
-            toast("حُفظ التفعيل، لكنه مُعطَّل قسريًّا من إعداد الخادم.", "info");
+            toast(hrT('حُفظ التفعيل، لكنه مُعطَّل قسريًّا من إعداد الخادم.'), "info");
           } else if (d.enabled) {
-            toast("⚠️ التطبيق الحي مُفعّل — سيكتب النظام على الراوترات الحقيقية عند الضغط «تطبيق».", "info");
+            toast(hrT('⚠️ التطبيق الحي مُفعّل — سيكتب النظام على الراوترات الحقيقية عند الضغط «تطبيق».'), "info");
           } else {
-            toast("أُطفئ التطبيق الحي — وضع المعاينة (dry-run) فقط.", "success");
+            toast(hrT('أُطفئ التطبيق الحي — وضع المعاينة (dry-run) فقط.'), "success");
           }
         } else {
           liveToggle.checked = !on;
-          toast((d && d.error) || "تعذّر حفظ الإعداد", "error");
+          toast((d && d.error) || hrT('تعذّر حفظ الإعداد'), "error");
         }
       }).catch(function () {
         liveToggle.disabled = false; liveToggle.checked = !on;
-        toast("تعذّر حفظ الإعداد", "error");
+        toast(hrT('تعذّر حفظ الإعداد'), "error");
       });
     });
   }
@@ -247,14 +248,14 @@
     form.querySelector("[name=device_id]").value = "";
     var err = $("#dh-form-error"); if (err) { err.hidden = true; err.textContent = ""; }
     var prev = $("#dh-plan-preview"); if (prev) prev.innerHTML = "";
-    var t = modalTitle(); if (t) t.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> إضافة جهاز';
+    var t = modalTitle(); if (t) t.innerHTML = ('<i class="fa-solid fa-tower-broadcast">' + '</i>' + ' ' + hrT('إضافة جهاز'));
     ifaceUseFreeText();  // each open starts as free-text until a router is picked
   }
 
   function fillForm(d) {
     if (!form) return;
     resetForm();
-    var t = modalTitle(); if (t) t.innerHTML = '<i class="fa-solid fa-pen"></i> تعديل: ' + (d.name || "");
+    var t = modalTitle(); if (t) t.innerHTML = ('<i class="fa-solid fa-pen">' + '</i>' + ' ' + hrT('تعديل:') + ' ') + (d.name || "");
     var map = ["device_id:id", "name", "device_type", "router_id", "interface_name",
       "ip_address", "location", "subnet_prefix", "gateway_last_octet",
       "ping_threshold_ms", "netwatch_interval_sec", "netwatch_timeout_sec", "alert_channel"];
@@ -294,17 +295,17 @@
         if (res.data && res.data.ok) {
           if (res.data.warnings && res.data.warnings.length) toast(res.data.warnings[0], "info");
           if (id) {
-            toast("تم حفظ التعديلات.", "success");
+            toast(hrT('تم حفظ التعديلات.'), "success");
             setTimeout(function () { location.reload(); }, 500);
             return;
           }
           // إضافة جديدة: لا نكتفي بالتسجيل — نركّب الإعدادات على
           // المايكروتيك فورًا مع تقدم لكل أمر (الأمر الفعلي + نتيجته).
-          toast("أُضيف الجهاز — جارٍ تركيب الإعدادات على المايكروتيك…", "success");
+          toast(hrT('أُضيف الجهاز — جارٍ تركيب الإعدادات على المايكروتيك…'), "success");
           var dev = res.data.device || {};
           runInstallSequence(dev.id);
         } else {
-          var emsg = (res.data && res.data.error) || "تعذّر الحفظ.";
+          var emsg = (res.data && res.data.error) || hrT('تعذّر الحفظ.');
           // Design-system toast for the block (e.g. duplicate range on the same
           // interface) + keep the inline error box. Never a native alert.
           toast(emsg, "error");
@@ -321,9 +322,9 @@
      ماذا نجح، ماذا كان موجودًا، وماذا فشل ولماذا. البوابة المقفلة
      (التطبيق الحي مُطفأ) تُعرض قفلًا واضحًا بدل فشل صامت. */
   var INSTALL_KIND_LABELS = {
-    ip_address: "عنوان البوابة على المدخل",
-    ip_binding: "تجاوز Hotspot للشبكة",
-    netwatch: "مراقبة Netwatch للجهاز"
+    ip_address: hrT('عنوان البوابة على المدخل'),
+    ip_binding: hrT('تجاوز Hotspot للشبكة'),
+    netwatch: hrT('مراقبة Netwatch للجهاز')
   };
 
   function renderInstallSummary(ok, text) {
@@ -357,14 +358,14 @@
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
     items.innerHTML = '<div class="dh-plan-net"><i class="fa-solid fa-spinner fa-spin"></i> ' +
-      'جارٍ قراءة حالة المايكروتيك وبناء خطة التركيب…</div>';
+      (hrT('جارٍ قراءة حالة المايكروتيك وبناء خطة التركيب…') + '</div>');
     request(api("/" + deviceId + "/sync"), "POST").then(function (res) {
       var d = res.data || {};
       if (!d.ok || !d.plan || !d.plan.valid) {
         items.innerHTML = "";
         renderInstallSummary(false,
-          (d.error || "تعذّر قراءة المايكروتيك الآن.") +
-          " الجهاز سُجّل — استخدم زر «مزامنة» في صفّ الجهاز لاحقًا لتركيب الإعدادات.");
+          (d.error || hrT('تعذّر قراءة المايكروتيك الآن.')) +
+          hrT(' الجهاز سُجّل — استخدم زر «مزامنة» في صفّ الجهاز لاحقًا لتركيب الإعدادات.'));
         return;
       }
       var kinds = d.plan.items || [];
@@ -402,16 +403,16 @@
         if (!queue.length) {
           if (gatedAll) {
             renderInstallSummary(false,
-              "الجهاز سُجّل لكن لم يُدفع شيء للمايكروتيك: «التطبيق الحي على الراوترات» مُطفأ. " +
-              "فعّل المفتاح أعلى الصفحة ثم اضغط «مزامنة» في صفّ الجهاز لتركيب الإعدادات.");
+              hrT('الجهاز سُجّل لكن لم يُدفع شيء للمايكروتيك: «التطبيق الحي على الراوترات» مُطفأ. ') +
+              hrT('فعّل المفتاح أعلى الصفحة ثم اضغط «مزامنة» في صفّ الجهاز لتركيب الإعدادات.'));
           } else if (failures.length) {
             renderInstallSummary(false,
-              "اكتمل التركيب مع أخطاء: نجح " + applied + " · موجود مسبقًا " + present +
-              " · فشل " + failures.length + " — راجع الأسباب أعلاه ثم أعد «مزامنة».");
+              hrT('اكتمل التركيب مع أخطاء: نجح ') + applied + hrT(' · موجود مسبقًا ') + present +
+              hrT(' · فشل ') + failures.length + hrT(' — راجع الأسباب أعلاه ثم أعد «مزامنة».'));
           } else {
             renderInstallSummary(true,
-              "اكتمل التركيب على المايكروتيك: أُضيف " + applied + " عنصر · " +
-              present + " كان موجودًا مسبقًا.");
+              hrT('اكتمل التركيب على المايكروتيك: أُضيف ') + applied + hrT(' عنصر · ') +
+              present + hrT(' كان موجودًا مسبقًا.'));
           }
           return;
         }
@@ -419,40 +420,40 @@
         var row = rows[it.kind];
         if (it.action === "already_present") {
           present++;
-          finish(row, "fa-circle-check", "#16A34A", "موجود مسبقًا على المايكروتيك");
+          finish(row, "fa-circle-check", "#16A34A", hrT('موجود مسبقًا على المايكروتيك'));
           return;
         }
         if (gatedAll) {
-          finish(row, "fa-lock", "#D97706", "لم يُدفع — التطبيق الحي مُطفأ");
+          finish(row, "fa-lock", "#D97706", hrT('لم يُدفع — التطبيق الحي مُطفأ'));
           return;
         }
         var st = row.querySelector("[data-st]");
         var msg = row.querySelector("[data-msg]");
         if (st) st.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color:#6366F1"></i>';
-        if (msg) msg.textContent = "جارٍ الدفع للمايكروتيك…";
+        if (msg) msg.textContent = hrT('جارٍ الدفع للمايكروتيك…');
         request(api("/" + deviceId + "/apply"), "POST", { actions: [it.kind] }).then(function (r) {
           var a = r.data || {};
           if (a.gated) {
             gatedAll = true;
-            finish(row, "fa-lock", "#D97706", "لم يُدفع — التطبيق الحي مُطفأ");
+            finish(row, "fa-lock", "#D97706", hrT('لم يُدفع — التطبيق الحي مُطفأ'));
             return;
           }
           if ((a.applied || []).indexOf(it.kind) !== -1) {
             applied++;
-            finish(row, "fa-circle-check", "#16A34A", "تم الدفع للمايكروتيك");
+            finish(row, "fa-circle-check", "#16A34A", hrT('تم الدفع للمايكروتيك'));
             return;
           }
           if ((a.already_present || []).indexOf(it.kind) !== -1) {
             present++;
-            finish(row, "fa-circle-check", "#16A34A", "موجود مسبقًا على المايكروتيك");
+            finish(row, "fa-circle-check", "#16A34A", hrT('موجود مسبقًا على المايكروتيك'));
             return;
           }
-          var fmsg = ((a.failed || [])[0] || {}).error || a.error || "فشل غير معروف";
+          var fmsg = ((a.failed || [])[0] || {}).error || a.error || hrT('فشل غير معروف');
           failures.push(it.kind);
-          finish(row, "fa-circle-xmark", "#DC2626", "فشل: " + fmsg);
+          finish(row, "fa-circle-xmark", "#DC2626", hrT('فشل: ') + fmsg);
         }).catch(function () {
           failures.push(it.kind);
-          finish(row, "fa-circle-xmark", "#DC2626", "تعذّر الاتصال بالخادم");
+          finish(row, "fa-circle-xmark", "#DC2626", hrT('تعذّر الاتصال بالخادم'));
         });
       }
       if (count) count.textContent = "0 / " + kinds.length;
@@ -471,24 +472,24 @@
         pollSave.disabled = false;
         var d = res.data || {};
         if (d.ok) {
-          toast(d.enabled ? ("الفحص الدوري مفعّل — كل " + d.minutes + " دقيقة.")
-                          : "أُوقف الفحص الدوري.", "success");
+          toast(d.enabled ? (hrT('الفحص الدوري مفعّل — كل ') + d.minutes + hrT(' دقيقة.'))
+                          : hrT('أُوقف الفحص الدوري.'), "success");
         } else {
-          toast((d && d.error) || "تعذّر حفظ الإعداد", "error");
+          toast((d && d.error) || hrT('تعذّر حفظ الإعداد'), "error");
         }
       }).catch(function () {
         pollSave.disabled = false;
-        toast("تعذّر حفظ الإعداد", "error");
+        toast(hrT('تعذّر حفظ الإعداد'), "error");
       });
     });
   }
 
   /* ── سجل الفحوصات: تحديث حي بعد «فحص الكل» + نافذة التفاصيل ── */
   function checkResultPill(c) {
-    if (!c.ok) return '<span class="hub-pill hub-pill--red">تعذّر الفحص</span>';
-    if (c.down_count) return '<span class="hub-pill hub-pill--red">انقطاعات</span>';
-    if (c.high_latency) return '<span class="hub-pill hub-pill--amber">بنج عالٍ</span>';
-    return '<span class="hub-pill hub-pill--green">سليم</span>';
+    if (!c.ok) return ('<span class="hub-pill hub-pill--red">' + hrT('تعذّر الفحص') + '</span>');
+    if (c.down_count) return ('<span class="hub-pill hub-pill--red">' + hrT('انقطاعات') + '</span>');
+    if (c.high_latency) return ('<span class="hub-pill hub-pill--amber">' + hrT('بنج عالٍ') + '</span>');
+    return ('<span class="hub-pill hub-pill--green">' + hrT('سليم') + '</span>');
   }
 
   function renderChecks(checks) {
@@ -498,8 +499,8 @@
     if (empty) empty.hidden = checks.length > 0;
     body.innerHTML = checks.map(function (c) {
       var src = c.source === "poller"
-        ? '<span class="hub-pill hub-pill--brand">دوري</span>'
-        : '<span class="hub-pill hub-pill--grey">يدوي</span>';
+        ? ('<span class="hub-pill hub-pill--brand">' + hrT('دوري') + '</span>')
+        : ('<span class="hub-pill hub-pill--grey">' + hrT('يدوي') + '</span>');
       return '<tr data-dh-check="' + c.id + '">' +
         '<td class="mono" style="direction:ltr;font-size:12px">' + esc((c.created_at || "").slice(0, 16).replace("T", " ")) + '</td>' +
         '<td>' + src + '</td>' +
@@ -512,7 +513,7 @@
         '<td>' + checkResultPill(c) + '</td>' +
         '<td><button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-dh-check-details' +
         " data-details='" + esc(JSON.stringify(c.details || [])) + "'>" +
-        '<i class="fa-solid fa-list"></i> المزيد</button></td></tr>';
+        ('<i class="fa-solid fa-list">' + '</i>' + ' ' + hrT('المزيد') + '</button>' + '</td>' + '</tr>');
     }).join("");
   }
 
@@ -544,7 +545,7 @@
     var body = $("#dh-check-body");
     if (!modal || !body) return;
     if (!details.length) {
-      body.innerHTML = '<div class="dh-empty-mini">لا تفاصيل لهذه الدورة.</div>';
+      body.innerHTML = ('<div class="dh-empty-mini">' + hrT('لا تفاصيل لهذه الدورة.') + '</div>');
     } else {
       var html = '<ul class="dh-timeline">';
       details.forEach(function (d) {
@@ -607,7 +608,7 @@
     var cur = current || (ifaceInput ? ifaceInput.value : "") || "";
     ifaceSelect.innerHTML = "";
     var ph = document.createElement("option");
-    ph.value = ""; ph.textContent = "اختر المدخل…"; ifaceSelect.appendChild(ph);
+    ph.value = ""; ph.textContent = hrT('اختر المدخل…'); ifaceSelect.appendChild(ph);
     var matched = false;
     list.forEach(function (n) {
       var o = document.createElement("option");
@@ -617,32 +618,32 @@
     });
     if (cur && !matched) {  // keep a saved value even if it's now filtered out
       var o2 = document.createElement("option");
-      o2.value = cur; o2.textContent = cur + " (محفوظ)"; o2.selected = true;
+      o2.value = cur; o2.textContent = cur + hrT(' (محفوظ)'); o2.selected = true;
       ifaceSelect.appendChild(o2);
     }
     ifaceSelect.hidden = false; ifaceSelect.setAttribute("name", "interface_name"); ifaceSelect.required = true;
     if (ifaceInput) { ifaceInput.hidden = true; ifaceInput.removeAttribute("name"); ifaceInput.required = false; ifaceInput.value = ""; }
-    if (ifaceHint) ifaceHint.textContent = "مداخل هذا المايكروتيك / السيرفر (مداخل دخول النت والأنفاق مستبعدة).";
+    if (ifaceHint) ifaceHint.textContent = hrT('مداخل هذا المايكروتيك / السيرفر (مداخل دخول النت والأنفاق مستبعدة).');
     ifaceSelect.onchange = schedulePreview;
   }
 
   function loadInterfaces(routerId, current) {
     if (!CFG.ifacesUrl) { ifaceUseFreeText(); return; }
     if (!routerId) { ifaceUseFreeText(); return; }
-    if (ifaceHint) ifaceHint.textContent = "جارٍ جلب مداخل المايكروتيك / السيرفر…";
+    if (ifaceHint) ifaceHint.textContent = hrT('جارٍ جلب مداخل المايكروتيك / السيرفر…');
     fetch(CFG.ifacesUrl + "?router_id=" + encodeURIComponent(routerId), { credentials: "same-origin" })
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res && res.ok && res.online && res.interfaces && res.interfaces.length) {
           ifaceUseSelect(res.interfaces, current);
         } else if (res && res.ok && res.online) {
-          ifaceUseFreeText("لا توجد مداخل LAN صالحة على هذا المايكروتيك / السيرفر — اكتب الاسم يدويًا.");
+          ifaceUseFreeText(hrT('لا توجد مداخل LAN صالحة على هذا المايكروتيك / السيرفر — اكتب الاسم يدويًا.'));
         } else {
-          ifaceUseFreeText("تعذّر جلب المداخل (المايكروتيك / السيرفر غير متصل) — اكتب اسم المدخل يدويًا.");
+          ifaceUseFreeText(hrT('تعذّر جلب المداخل (المايكروتيك / السيرفر غير متصل) — اكتب اسم المدخل يدويًا.'));
         }
         schedulePreview();
       })
-      .catch(function () { ifaceUseFreeText("تعذّر جلب المداخل — اكتب اسم المدخل يدويًا."); });
+      .catch(function () { ifaceUseFreeText(hrT('تعذّر جلب المداخل — اكتب اسم المدخل يدويًا.')); });
   }
 
   if (form) {
@@ -652,24 +653,24 @@
 
   /* ── plan rendering ── */
   function actionMeta(action) {
-    if (action === "already_present") return { cls: "is-present", ic: "fa-circle-check", color: "#16A34A", label: "موجود مسبقًا", variant: "green" };
-    if (action === "create") return { cls: "is-create", ic: "fa-circle-plus", color: "#6366F1", label: "سيُضاف", variant: "brand" };
-    return { cls: "is-planned", ic: "fa-circle-dot", color: "#94A3B8", label: "مُخطّط", variant: "grey" };
+    if (action === "already_present") return { cls: "is-present", ic: "fa-circle-check", color: "#16A34A", label: hrT('موجود مسبقًا'), variant: "green" };
+    if (action === "create") return { cls: "is-create", ic: "fa-circle-plus", color: "#6366F1", label: hrT('سيُضاف'), variant: "brand" };
+    return { cls: "is-planned", ic: "fa-circle-dot", color: "#94A3B8", label: hrT('مُخطّط'), variant: "grey" };
   }
 
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
 
   function renderPlan(plan, compact) {
     if (!plan) return "";
-    if (!plan.valid) return '<div class="dh-plan-warn">' + esc(plan.error || "خطة غير صالحة") + '</div>';
+    if (!plan.valid) return '<div class="dh-plan-warn">' + esc(plan.error || hrT('خطة غير صالحة')) + '</div>';
     var html = "";
     if (plan.network && !compact) {
       var n = plan.network;
-      html += '<div class="dh-plan-net">الشبكة: <code>' + esc(n.network_cidr) +
-        '</code> · البوابة: <code>' + esc(n.gateway_address) + '</code></div>';
+      html += ('<div class="dh-plan-net">' + hrT('الشبكة:') + ' ' + '<code>') + esc(n.network_cidr) +
+        ('</code>' + ' ' + hrT('· البوابة:') + ' ' + '<code>') + esc(n.gateway_address) + '</code></div>';
     } else if (plan.network) {
-      html += '<div class="dh-plan-net">الشبكة <code>' + esc(plan.network.network_cidr) +
-        '</code> · البوابة <code>' + esc(plan.network.gateway_address) + '</code></div>';
+      html += ('<div class="dh-plan-net">' + hrT('الشبكة') + ' ' + '<code>') + esc(plan.network.network_cidr) +
+        ('</code>' + ' ' + hrT('· البوابة') + ' ' + '<code>') + esc(plan.network.gateway_address) + '</code></div>';
     }
     (plan.items || []).forEach(function (it) {
       var m = actionMeta(it.action);
@@ -684,7 +685,7 @@
     });
     if (!plan.live) {
       html += '<div class="dh-plan-warn" style="background:#F1F5F9;color:#475569;border-color:#E2E8F0">' +
-        'معاينة محسوبة — اضغط «مزامنة» للتحقق من حالة المايكروتيك / السيرفر الفعلية.</div>';
+        (hrT('معاينة محسوبة — اضغط «مزامنة» للتحقق من حالة المايكروتيك / السيرفر الفعلية.') + '</div>');
     }
     return html;
   }
@@ -726,7 +727,7 @@
       var qs = "?interface=" + encodeURIComponent(d.interface_name) + "&ip=" + encodeURIComponent(d.ip_address) +
         "&subnet_prefix=" + encodeURIComponent(d.subnet_prefix) +
         "&gateway_last_octet=" + encodeURIComponent(d.gateway_last_octet);
-      openPlanModal('<div class="dh-plan-net">جارٍ الحساب…</div>');
+      openPlanModal(('<div class="dh-plan-net">' + hrT('جارٍ الحساب…') + '</div>'));
       fetch(PLAN + qs, { credentials: "same-origin" }).then(function (r) { return r.json(); })
         .then(function (res) { openPlanModal(renderPlan(res.plan, false)); });
       return;
@@ -734,19 +735,19 @@
 
     if (btn.hasAttribute("data-dh-sync")) {
       var id = rowData(btn).d.id;
-      openPlanModal('<div class="dh-plan-net">جارٍ قراءة المايكروتيك / السيرفر…</div>');
+      openPlanModal(('<div class="dh-plan-net">' + hrT('جارٍ قراءة المايكروتيك / السيرفر…') + '</div>'));
       request(api("/" + id + "/sync"), "POST").then(function (res) {
         if (res.data && res.data.ok) {
           var extra = res.data.router_state_ok ? "" :
-            '<div class="dh-plan-warn">تعذّر قراءة بعض موارد المايكروتيك / السيرفر — الخطة تقديرية.</div>';
+            ('<div class="dh-plan-warn">' + hrT('تعذّر قراءة بعض موارد المايكروتيك / السيرفر — الخطة تقديرية.') + '</div>');
           var hasCreate = (res.data.plan.items || []).some(function (it) { return it.action === "create"; });
           var applyBtn = hasCreate ?
             '<div class="dh-plan-apply"><button class="hub-btn hub-btn--primary" data-dh-apply data-id="' + id +
-            '"><i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على المايكروتيك / السيرفر</button>' +
-            '<span class="dh-apply-hint">يتطلّب تفعيل التطبيق الحيّ — لا يحذف أي إعداد قائم.</span></div>' : "";
+            ('">' + '<i class="fa-solid fa-cloud-arrow-up">' + '</i>' + ' ' + hrT('تطبيق العناصر المفقودة على المايكروتيك / السيرفر') + '</button>') +
+            ('<span class="dh-apply-hint">' + hrT('يتطلّب تفعيل التطبيق الحيّ — لا يحذف أي إعداد قائم.') + '</span>' + '</div>') : "";
           openPlanModal(extra + renderPlan(res.data.plan, false) + applyBtn);
         } else {
-          openPlanModal('<div class="dh-plan-warn">' + esc((res.data && res.data.error) || "تعذّرت المزامنة") + '</div>');
+          openPlanModal('<div class="dh-plan-warn">' + esc((res.data && res.data.error) || hrT('تعذّرت المزامنة')) + '</div>');
         }
       });
       return;
@@ -755,22 +756,22 @@
     if (btn.hasAttribute("data-dh-apply")) {
       var aid = btn.getAttribute("data-id");
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التطبيق…';
+      btn.innerHTML = ('<i class="fa-solid fa-spinner fa-spin">' + '</i>' + ' ' + hrT('جارٍ التطبيق…'));
       request(api("/" + aid + "/apply"), "POST", {}).then(function (res) {
         var d = res.data || {};
         if (d.gated) {
-          toast("التطبيق الحيّ معطّل — فعّل HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY.", "info");
-          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على المايكروتيك / السيرفر';
+          toast(hrT('التطبيق الحيّ معطّل — فعّل HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY.'), "info");
+          btn.disabled = false; btn.innerHTML = ('<i class="fa-solid fa-cloud-arrow-up">' + '</i>' + ' ' + hrT('تطبيق العناصر المفقودة على المايكروتيك / السيرفر'));
           return;
         }
         if (d.ok) {
-          toast("تم التطبيق: " + (d.applied || []).length + " عنصر.", "success");
+          toast(hrT('تم التطبيق: ') + (d.applied || []).length + hrT(' عنصر.'), "success");
           setTimeout(function () { location.reload(); }, 900);
         } else {
           var msg = (d.failed && d.failed.length) ? d.failed.map(function (f) { return f.kind + ": " + f.error; }).join(" · ")
-            : (d.error || "تعذّر التطبيق");
+            : (d.error || hrT('تعذّر التطبيق'));
           toast(msg, "error");
-          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> إعادة المحاولة';
+          btn.disabled = false; btn.innerHTML = ('<i class="fa-solid fa-cloud-arrow-up">' + '</i>' + ' ' + hrT('إعادة المحاولة'));
         }
       });
       return;
@@ -791,16 +792,16 @@
           updateRowStatus(prow, d.status, d.latency_ms);  // live row update, no reload
           var lab = (STATUS_META[d.status] || {}).label || d.status;
           var lat = d.latency_ms != null ? (d.latency_ms + " ms") : "—";
-          var msg = "النتيجة: " + lab + " · " + lat + (d.ok || !d.error ? "" : " — " + d.error);
+          var msg = hrT('النتيجة: ') + lab + " · " + lat + (d.ok || !d.error ? "" : " — " + d.error);
           toast(msg, d.ok ? "success" : (d.status === "unavailable" ? "error" : "info"));
         } else {
           updateRowStatus(prow, pinfo.d.status, pinfo.d.last_latency_ms);  // restore
-          toast(d.error || "تعذّر الفحص", "error");
+          toast(d.error || hrT('تعذّر الفحص'), "error");
         }
       }).catch(function () {
         btn.disabled = false; btn.innerHTML = pico;
         updateRowStatus(prow, pinfo.d.status, pinfo.d.last_latency_ms);
-        toast("تعذّر الفحص", "error");
+        toast(hrT('تعذّر الفحص'), "error");
       });
       return;
     }
@@ -810,7 +811,7 @@
       var enabled = btn.getAttribute("data-enabled") === "1";
       request(api("/" + tid + (enabled ? "/disable" : "/enable")), "POST").then(function (res) {
         if (res.data && res.data.ok) location.reload();
-        else toast((res.data && res.data.error) || "تعذّر التغيير", "error");
+        else toast((res.data && res.data.error) || hrT('تعذّر التغيير'), "error");
       });
       return;
     }
@@ -838,13 +839,13 @@
 
     if (btn.hasAttribute("data-dh-delete")) {
       var info = rowData(btn);
-      var _dmsg = "حذف الجهاز «" + (info.d.name || "") + "»؟";
+      var _dmsg = hrT('حذف الجهاز «') + (info.d.name || "") + "»؟";
       /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
       (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _dmsg}) : Promise.resolve(window.confirm(_dmsg))).then(function (yes) {
         if (!yes) return;
         request(api("/" + info.d.id + "/delete"), "POST").then(function (res) {
-          if (res.data && res.data.ok) { info.row.remove(); toast("حُذف الجهاز.", "success"); applyFilters(); }
-          else toast((res.data && res.data.error) || "تعذّر الحذف", "error");
+          if (res.data && res.data.ok) { info.row.remove(); toast(hrT('حُذف الجهاز.'), "success"); applyFilters(); }
+          else toast((res.data && res.data.error) || hrT('تعذّر الحذف'), "error");
         });
       });
       return;
@@ -853,15 +854,15 @@
 
   /* ── event history + alerts modal ── */
   var EVENT_LABELS = {
-    up: "متصل", down: "مفصول", timeout: "انتهت المهلة", high_latency: "بنج عالٍ",
-    unknown: "غير معروف", disabled: "معطّل", apply_failed: "فشل التطبيق",
-    created: "تسجيل", updated: "تحديث", recovered: "تعافى", recovery: "تعافى"
+    up: hrT('متصل'), down: hrT('مفصول'), timeout: hrT('انتهت المهلة'), high_latency: hrT('بنج عالٍ'),
+    unknown: hrT('غير معروف'), disabled: hrT('معطّل'), apply_failed: hrT('فشل التطبيق'),
+    created: hrT('تسجيل'), updated: hrT('تحديث'), recovered: hrT('تعافى'), recovery: hrT('تعافى')
   };
   var EVENT_COLOR = {
     up: "#16A34A", recovery: "#16A34A", down: "#DC2626", timeout: "#DC2626",
     high_latency: "#D97706", apply_failed: "#DC2626", created: "#6366F1", updated: "#6366F1"
   };
-  var ALERT_STATUS = { sent: "أُرسل", skipped: "مُتجاوز (تهدئة)", failed: "فشل الإرسال" };
+  var ALERT_STATUS = { sent: hrT('أُرسل'), skipped: hrT('مُتجاوز (تهدئة)'), failed: hrT('فشل الإرسال') };
 
   function openEventsModal(d) {
     var modal = $("#dh-events-modal");
@@ -869,7 +870,7 @@
     modal.setAttribute("data-device-id", d.id);
     $all(".dh-tab", modal).forEach(function (t) { t.classList.toggle("is-active", t.getAttribute("data-dh-tab") === "events"); });
     var head = modal.querySelector(".uds-modal-head h3");
-    if (head) head.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> سجل «' + esc(d.name || "") + '»';
+    if (head) head.innerHTML = ('<i class="fa-solid fa-clock-rotate-left">' + '</i>' + ' ' + hrT('سجل «')) + esc(d.name || "") + '»';
     modal.hidden = false; modal.classList.add("is-open");
     loadEventsTab(d.id, "events");
   }
@@ -877,17 +878,17 @@
   function loadEventsTab(deviceId, tab) {
     var body = $("#dh-events-body");
     if (!body) return;
-    body.innerHTML = '<div class="dh-plan-net">جارٍ التحميل…</div>';
+    body.innerHTML = ('<div class="dh-plan-net">' + hrT('جارٍ التحميل…') + '</div>');
     var url = api("/" + deviceId + "/" + (tab === "alerts" ? "alerts" : "events"));
     fetch(url, { credentials: "same-origin" }).then(function (r) { return r.json(); })
       .then(function (res) {
         if (tab === "alerts") body.innerHTML = renderAlerts(res.alerts || []);
         else body.innerHTML = renderEvents(res.events || []);
-      }).catch(function () { body.innerHTML = '<div class="dh-plan-warn">تعذّر التحميل</div>'; });
+      }).catch(function () { body.innerHTML = ('<div class="dh-plan-warn">' + hrT('تعذّر التحميل') + '</div>'); });
   }
 
   function renderEvents(events) {
-    if (!events.length) return '<div class="dh-empty-mini">لا أحداث بعد.</div>';
+    if (!events.length) return ('<div class="dh-empty-mini">' + hrT('لا أحداث بعد.') + '</div>');
     var html = '<ul class="dh-timeline">';
     events.forEach(function (e) {
       var color = EVENT_COLOR[e.event_type] || "#94A3B8";
@@ -902,7 +903,7 @@
   }
 
   function renderAlerts(alerts) {
-    if (!alerts.length) return '<div class="dh-empty-mini">لا تنبيهات بعد.</div>';
+    if (!alerts.length) return ('<div class="dh-empty-mini">' + hrT('لا تنبيهات بعد.') + '</div>');
     var html = '<ul class="dh-timeline">';
     alerts.forEach(function (a) {
       var color = a.status === "sent" ? "#16A34A" : a.status === "failed" ? "#DC2626" : "#94A3B8";

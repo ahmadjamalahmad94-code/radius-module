@@ -125,21 +125,21 @@
    (آمنة تلقائيًا) ثم تُمرَّر إلى actions_html الذي يطبع |safe، فتظهر أزرارًا
    حقيقية لا نصًّا خامًا. نصوص حرفية (يطابق أسلوب البطل) بلا {{ _() }} داخل نصّ. #}
 {% set _ac_actions %}
-<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-suspension"><i class="fa-solid fa-clock"></i> تعليق الوصول</a>
-<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-block"><i class="fa-solid fa-shield-halved"></i> الحظر الأمني</a>
-<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#allow-mode"><i class="fa-solid fa-check-double"></i> نمط السماح</a>
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-suspension"><i class="fa-solid fa-clock"></i> {{ _('تعليق الوصول') }}</a>
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#sec-block"><i class="fa-solid fa-shield-halved"></i> {{ _('الحظر الأمني') }}</a>
+<a class="hub-btn hub-btn--secondary hub-btn--sm" href="#allow-mode"><i class="fa-solid fa-check-double"></i> {{ _('نمط السماح') }}</a>
 {% endset %}
 
 {{ hub.megahero(
-  "التحكم بالدخول",
-  subtitle="طبقتان: «تعليق الوصول» يحكم متى/هل يُسمح للمشترك بالدخول (جدولة وتعليق مؤقت برسالة مهذّبة) — و«الحظر» الأمني لعناوين IP/MAC يدويًا وتلقائيًا عند تكرار الفشل. الإنفاذ وقت المصادقة على الخادم.",
+  _('التحكم بالدخول'),
+  subtitle=_('طبقتان: «تعليق الوصول» يحكم متى/هل يُسمح للمشترك بالدخول (جدولة وتعليق مؤقت برسالة مهذّبة) — و«الحظر» الأمني لعناوين IP/MAC يدويًا وتلقائيًا عند تكرار الفشل. الإنفاذ وقت المصادقة على الخادم.'),
   icon="user-lock",
   actions_html=_ac_actions,
   kpis=[
-    {'label': 'تعليق فعّال',   'value': _sus_active, 'icon': 'clock',        'variant': 'amber'},
-    {'label': 'حظر فعّال',     'value': _blk_active, 'icon': 'ban',          'variant': 'red'},
-    {'label': 'حظر تلقائي',    'value': _auto,       'icon': 'robot',        'variant': 'brand'},
-    {'label': 'سياسات سماح',   'value': _am_active,  'icon': 'check-double',  'variant': 'green'},
+    {'label': _('تعليق فعّال'),   'value': _sus_active, 'icon': 'clock',        'variant': 'amber'},
+    {'label': _('حظر فعّال'),     'value': _blk_active, 'icon': 'ban',          'variant': 'red'},
+    {'label': _('حظر تلقائي'),    'value': _auto,       'icon': 'robot',        'variant': 'brand'},
+    {'label': _('سياسات سماح'),   'value': _am_active,  'icon': 'check-double',  'variant': 'green'},
   ]
 ) }}
 
@@ -147,7 +147,7 @@
    الطبقة A — «تعليق الوصول»
    ════════════════════════════════════════════════════════════════════ #}
 <a id="sec-suspension"></a>
-{% call hub.section("تعليق الوصول", icon="clock", meta="الطبقة A · متى/هل يُسمح بالدخول") %}
+{% call hub.section(_('تعليق الوصول'), icon="clock", meta=_('الطبقة A · متى/هل يُسمح بالدخول')) %}
   <p class="ac-lead">
     <i class="fa-solid fa-circle-info"></i>
     <span>{{ _('يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ') }}<b>{{ _('ليس حظرًا أمنيًا') }}</b>{{ _(' — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب.') }}</span>
@@ -197,7 +197,7 @@
       </div>
     </div>
     <div class="ac-actions">
-      {{ hub.btn("تعليق الوصول", variant="primary", icon="clock", type="submit") }}
+      {{ hub.btn(_('تعليق الوصول'), variant="primary", icon="clock", type="submit") }}
     </div>
   </form>{% endif %}
 
@@ -219,12 +219,12 @@
             {% else %}{{ _('دائم') }}{% endif %}
           </td>
           <td class="small">{{ b.reason or '—' }}</td>
-          <td>{{ hub.pill('فعّال', variant='amber') if b.active else hub.pill('مرفوع', variant='green') }}</td>
+          <td>{{ hub.pill(_('فعّال'), variant='amber') if b.active else hub.pill(_('مرفوع'), variant='green') }}</td>
           <td>
             {% if b.active %}
             {% if can_submit('radius.access_control_clear_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع التعليق عن هذا النطاق؟">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="{{ _('رفع التعليق عن هذا النطاق؟') }}">
                 <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
               </button>
             </form>{% endif %}
@@ -244,11 +244,11 @@
    الطبقة B — «حظر» أمني (IP/MAC + تلقائي + MAC عشوائي)
    ════════════════════════════════════════════════════════════════════ #}
 <a id="sec-block"></a>
-{% call hub.section("إعدادات الحظر الأمني", icon="shield-halved", meta="الطبقة B · MAC عشوائي + fail2ban") %}
+{% call hub.section(_('إعدادات الحظر الأمني'), icon="shield-halved", meta=_('الطبقة B · MAC عشوائي + fail2ban')) %}
   <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">{% if not can_submit('radius.access_control_save_settings') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
-    {% call hub.fieldset("منع عناوين MAC العشوائية (الخصوصية)", icon="user-secret") %}
+    {% call hub.fieldset(_('منع عناوين MAC العشوائية (الخصوصية)'), icon="user-secret") %}
       <div class="ac-toggles">
         <div class="ac-toggle-row">
           {{ toggle_switch(name='security.block_random_mac_subscribers',
@@ -273,7 +273,7 @@
 
     <hr class="ac-divider">
 
-    {% call hub.fieldset("الحظر التلقائي عند تكرار الفشل (fail2ban)", icon="robot") %}
+    {% call hub.fieldset(_('الحظر التلقائي عند تكرار الفشل (fail2ban)'), icon="robot") %}
       <div class="ac-toggles" style="margin-bottom:14px">
         <div class="ac-toggle-row is-primary">
           {{ toggle_switch(name=ac_keys.enabled,
@@ -314,12 +314,12 @@
       <span>{{ _('ملاحظة: عند المصادقة لا يتوفّر إلا عنوان IP الراوتر (NAS) لا جهاز العميل — لذا «حظر IP» قد يحظر كل من خلف الراوتر. «MAC» أدقّ لتمييز الجهاز.') }}</span>
     </p>
     <div class="ac-actions">
-      {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+      {{ hub.btn(_('حفظ الإعدادات'), variant="primary", icon="floppy-disk", type="submit") }}
     </div>
   {% if not can_submit('radius.access_control_save_settings') %}</fieldset>{% endif %}</form>
 {% endcall %}
 
-{% call hub.section("حظر IP / MAC يدويًا", icon="ban", meta="إدخال يدويّ لعنوان واحد") %}
+{% call hub.section(_('حظر IP / MAC يدويًا'), icon="ban", meta=_('إدخال يدويّ لعنوان واحد')) %}
   {% if can_submit('radius.access_control_add_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="blk-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="ac-grid">
@@ -362,7 +362,7 @@
       </div>
     </div>
     <div class="ac-actions">
-      {{ hub.btn("حظر", variant="primary", icon="ban", type="submit") }}
+      {{ hub.btn(_('حظر'), variant="primary", icon="ban", type="submit") }}
     </div>
   </form>{% endif %}
 
@@ -384,13 +384,13 @@
             {% else %}{{ _('دائم') }}{% endif %}
           </td>
           <td class="small">{{ b.reason or '—' }}</td>
-          <td>{{ hub.pill('تلقائي', variant='amber') if b.source == 'auto' else hub.pill('يدوي', variant='grey') }}</td>
-          <td>{{ hub.pill('فعّال', variant='red') if b.active else hub.pill('مرفوع', variant='green') }}</td>
+          <td>{{ hub.pill(_('تلقائي'), variant='amber') if b.source == 'auto' else hub.pill(_('يدوي'), variant='grey') }}</td>
+          <td>{{ hub.pill(_('فعّال'), variant='red') if b.active else hub.pill(_('مرفوع'), variant='green') }}</td>
           <td>
             {% if b.active %}
             {% if can_submit('radius.access_control_clear_block', 'POST') %}<form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع هذا الحظر؟">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="{{ _('رفع هذا الحظر؟') }}">
                 <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
               </button>
             </form>{% endif %}
@@ -412,8 +412,8 @@
    تطبيق اختياري — بدون سياسة = السلوك الطبيعي.
    ════════════════════════════════════════════════════════════════════ #}
 <a id="allow-mode"></a>
-{% call hub.section("نمط السماح", icon="check-double",
-                     meta="مكمّل عكسي · اختياري لكل عرض/حزمة") %}
+{% call hub.section(_('نمط السماح'), icon="check-double",
+                     meta=_('مكمّل عكسي · اختياري لكل عرض/حزمة')) %}
   <p class="ac-lead">
     <i class="fa-solid fa-shield-check"></i>
     <span>{{ _('عكس قائمة الحظر: «نمط السماح» يقصر الدخول على أجهزة معروفة بدل منع أجهزة محدّدة. ثلاثة أنماط: ') }}
@@ -477,7 +477,7 @@
       </div>
     </div>
     <div class="ac-actions">
-      {{ hub.btn("حفظ السياسة", variant="primary", icon="floppy-disk", type="submit") }}
+      {{ hub.btn(_('حفظ السياسة'), variant="primary", icon="floppy-disk", type="submit") }}
     </div>
   {% if not can_submit('radius.access_control_allow_mode_upsert') %}</fieldset>{% endif %}</form>
 
@@ -497,7 +497,7 @@
       <tbody>
         {% for p in am_policies %}
         <tr data-policy-id="{{ p.id }}">
-          <td class="small">{{ 'حزمة بطاقات' if p.scope_type == 'card_batch' else 'عرض/باقة' }}</td>
+          <td class="small">{{ _('حزمة بطاقات') if p.scope_type == 'card_batch' else _('عرض/باقة') }}</td>
           <td class="small">{{ p.scope_name }}</td>
           <td>
             {% if p.mode == 'tofu' %}{{ hub.pill('TOFU', variant='brand') }}
@@ -507,8 +507,8 @@
           <td class="small mono">{{ p.max_devices if p.mode == 'tofu' else '—' }}</td>
           <td class="small mono">{{ p.devices|length }}</td>
           <td>
-            {% if p.active %}{{ hub.pill('فعّال', variant='green') }}
-            {% else %}{{ hub.pill('معلَّق', variant='gray') }}{% endif %}
+            {% if p.active %}{{ hub.pill(_('فعّال'), variant='green') }}
+            {% else %}{{ hub.pill(_('معلَّق'), variant='gray') }}{% endif %}
           </td>
           <td class="small">{{ p.note or '—' }}</td>
           <td>
@@ -526,7 +526,7 @@
                   style="display:inline;margin:0">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
-                      data-confirm="حذف السياسة وكل أجهزتها؟">
+                      data-confirm="{{ _('حذف السياسة وكل أجهزتها؟') }}">
                 <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
               </button>
             </form>{% endif %}
@@ -558,7 +558,7 @@
                     <label class="hub-field-label">{{ _('وصف (اختياري)') }}</label>
                     <input class="hub-input" type="text" name="label" maxlength="120" placeholder="{{ _('مثل: جهاز كاشير #1') }}">
                   </div>
-                  {{ hub.btn("إضافة جهاز", variant="secondary", icon="plus", type="submit", size="sm") }}
+                  {{ hub.btn(_('إضافة جهاز'), variant="secondary", icon="plus", type="submit", size="sm") }}
                 </form>{% endif %}
                 {% if p.devices %}
                 <div class="hub-table-wrap">
@@ -571,11 +571,11 @@
                   <tbody>
                     {% for d in p.devices %}
                     <tr>
-                      <td class="mono small">{{ d.username or '— (مشترك)' }}</td>
+                      <td class="mono small">{{ d.username or _('— (مشترك)') }}</td>
                       <td class="mono small">{{ d.mac }}</td>
                       <td class="small">
-                        {% if d.source == 'auto' %}{{ hub.pill('تلقائي', variant='brand') }}
-                        {% else %}{{ hub.pill('يدوي', variant='gray') }}{% endif %}
+                        {% if d.source == 'auto' %}{{ hub.pill(_('تلقائي'), variant='brand') }}
+                        {% else %}{{ hub.pill(_('يدوي'), variant='gray') }}{% endif %}
                       </td>
                       <td class="small">{{ d.label or '—' }}</td>
                       <td class="small mono">
@@ -588,7 +588,7 @@
                               style="display:inline;margin:0">
                           <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                           <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
-                                  data-confirm="حذف هذا الجهاز من القائمة؟">
+                                  data-confirm="{{ _('حذف هذا الجهاز من القائمة؟') }}">
                             <i class="fa-solid fa-trash"></i>
                           </button>
                         </form>{% endif %}

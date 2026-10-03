@@ -6,7 +6,7 @@
      {{ rf.bar('radius.rep_login_status', filters, show_date=False, extra_html=...) }}
    يعتمد على كلاسات hub-filterbar / hub-input / hub-btn الموجودة في النظام.
    ═══════════════════════════════════════════════════════════════════════ #}
-{% macro bar(endpoint, filters, show_date=True, q_placeholder="بحث…", extra_html="") -%}
+{% macro bar(endpoint, filters, show_date=True, q_placeholder=_('بحث…'), extra_html="") -%}
 <form method="get" action="{{ url_for(endpoint) }}" class="hub-filterbar">
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}" placeholder="{{ q_placeholder }}">

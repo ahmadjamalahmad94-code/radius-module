@@ -26,6 +26,7 @@
   • invalid    — لا username صالح (يُستبعَد من الاستيراد).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional
@@ -223,27 +224,27 @@ def build_preview(tenant_id: int, import_type: str,
 
         if not cand.username:
             preview.rows.append(PreviewRow(cand, status=ROW_INVALID,
-                                           note="بلا اسم مستخدم — يُستبعَد"))
+                                           note=N_("بلا اسم مستخدم — يُستبعَد")))
             continue
 
         # تكرار داخل الدفعة نفسها (نفس الاسم مرّتين في الراوتر).
         if cand.username in seen_usernames:
             preview.rows.append(PreviewRow(cand, status=ROW_DUPLICATE,
-                                           note="مكرّر داخل الدفعة"))
+                                           note=N_("مكرّر داخل الدفعة")))
             continue
         seen_usernames.add(cand.username)
 
         existing = subscribers_repo.get_subscriber(tenant_id, cand.username)
         if existing is not None:
             preview.rows.append(PreviewRow(cand, status=ROW_DUPLICATE,
-                                           note="موجود مسبقًا"))
+                                           note=N_("موجود مسبقًا")))
         else:
-            note = "" if pstatus == PLAN_MATCHED else "بروفايل غير مربوط بخطّة"
+            note = "" if pstatus == PLAN_MATCHED else _tr("بروفايل غير مربوط بخطّة")
             preview.rows.append(PreviewRow(cand, status=ROW_NEW, note=note))
 
     if preview.unmapped_profiles:
         preview.warnings.append(
-            "بروفايلات بلا خطّة مطابقة: " + "، ".join(preview.unmapped_profiles))
+            _tr("بروفايلات بلا خطّة مطابقة: ") + "، ".join(preview.unmapped_profiles))
     return preview
 
 

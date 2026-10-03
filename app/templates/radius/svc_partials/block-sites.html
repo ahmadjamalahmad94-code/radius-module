@@ -4,8 +4,7 @@
    Uses AddedServicesPhasePlanner with service_key="block_sites". #}
 <h2>{{ _('حجب المواقع') }}</h2>
 <p class="swsvf-pane-sub">
-  اكتب قائمة الـ domains المراد منع الوصول إليها من شبكة الراوتر — domain
-  في كل سطر. سيتم إنشاء قائمة عناوين + قاعدة جدار حماية تمنع الحركة لها.
+  {{ _('اكتب قائمة الـ domains المراد منع الوصول إليها من شبكة الراوتر — domain في كل سطر. سيتم إنشاء قائمة عناوين + قاعدة جدار حماية تمنع الحركة لها.') }}
 </p>
 
 <style>
@@ -31,11 +30,8 @@
 <div class="swbl-section">
   <div class="swbl-section-title">{{ _('قائمة المواقع المحجوبة') }}</div>
   <p class="swbl-help">
-    {{ _('اكتب domain في كل سطر، مثل') }} <code>facebook.com</code> {{ _('أو') }} <code>twitter.com</code>.
-    لا تكتب <code>https://</code> {{ _('أو') }} <code>www.</code> {{ _('— فقط اسم النطاق.') }}<br>
-    <strong>{{ _('ملاحظة:') }}</strong> {{ _('هذه القائمة') }} <strong>{{ _('الكاملة') }}</strong> — ما تُرسله
-    يحلّ محلّ ما كان موجوداً سابقاً. لإضافة موقع جديد: احتفظ بالقديم واكتب
-    الجديد تحته. لحذف موقع: امسحه من القائمة.
+    {{ _('اكتب domain في كل سطر، مثل') }} <code>facebook.com</code> {{ _('أو') }} <code>twitter.com</code>{{ _('. لا تكتب') }} <code>https://</code> {{ _('أو') }} <code>www.</code> {{ _('— فقط اسم النطاق.') }}<br>
+    <strong>{{ _('ملاحظة:') }}</strong> {{ _('هذه القائمة') }} <strong>{{ _('الكاملة') }}</strong> {{ _('— ما تُرسله يحلّ محلّ ما كان موجوداً سابقاً. لإضافة موقع جديد: احتفظ بالقديم واكتب الجديد تحته. لحذف موقع: امسحه من القائمة.') }}
   </p>
   <div class="swbl-loading" data-swbl-loading hidden style="color:var(--swsvf-mute);font-size:12px;margin-bottom:8px">
     <i class="fa-solid fa-spinner fa-spin"></i>

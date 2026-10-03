@@ -8,6 +8,7 @@ MikrotikClient — اتصال TCP/TLS، login، وإرسال/استقبال جم
         mt.run("/ip/hotspot/user/add", {"name":"u1","password":"x","profile":"default"})
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -137,7 +138,7 @@ class MikrotikClient:
                 raw = ctx.wrap_socket(raw, server_hostname=self.host if self.verify_tls else None)
             except ssl.SSLError as e:
                 raw.close()
-                raise ConnectError(f"فشل TLS handshake: {e}") from e
+                raise ConnectError(_tr('فشل TLS handshake: %(e)s', e=e)) from e
 
         raw.settimeout(self.timeout)
         self._sock = raw
@@ -188,22 +189,22 @@ class MikrotikClient:
         for r in replies:
             if r["reply"] == "!done":
                 return
-        raise AuthError("login: لم يصلنا !done")
+        raise AuthError(_tr("login: لم يصلنا !done"))
 
     # ─────────────── low-level I/O ───────────────
 
     def _send(self, words: list[str | bytes]) -> None:
         if self._stream is None:
-            raise ConnectError("الاتصال مغلق")
+            raise ConnectError(N_("الاتصال مغلق"))
         data = encode_sentence(words)
         try:
             self._stream.write(data)
         except OSError as e:
-            raise ConnectError(f"فشل الإرسال: {e}") from e
+            raise ConnectError(_tr('فشل الإرسال: %(e)s', e=e)) from e
 
     def _read_byte(self) -> int:
         if self._stream is None:
-            raise ConnectError("الاتصال مغلق")
+            raise ConnectError(N_("الاتصال مغلق"))
         try:
             b = self._stream.read(1)
         except OSError as e:  # TimeoutError / reset mid-reply
@@ -211,9 +212,9 @@ class MikrotikClient:
             # not an «unexpected error» (callers log ConnectError as a
             # one-line warning; a raw TimeoutError printed a full traceback
             # on every sweep of an unreachable router — client21 GR3).
-            raise ConnectError(f"انقطع الاتصال أثناء القراءة: {e}") from e
+            raise ConnectError(_tr('انقطع الاتصال أثناء القراءة: %(e)s', e=e)) from e
         if not b:
-            raise ProtocolError("EOF — الراوتر أغلق الاتصال")
+            raise ProtocolError(N_("EOF — الراوتر أغلق الاتصال"))
         return b[0]
 
     def _recv_sentence(self) -> dict:
@@ -242,7 +243,7 @@ class MikrotikClient:
                 elif rep == "!done":
                     break
                 elif rep is None:
-                    raise ProtocolError(f"جملة بلا reply: {s}")
+                    raise ProtocolError(_tr('جملة بلا reply: %(s)s', s=s))
             if trap:
                 cat_str = trap["attrs"].get("category")
                 cat = int(cat_str) if cat_str and cat_str.isdigit() else None

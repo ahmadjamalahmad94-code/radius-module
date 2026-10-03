@@ -8,6 +8,7 @@
 محصّن بالكامل: لا يرفع — أي فشل شبكة/تحليل يُسجَّل ويتابع.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 import logging
@@ -119,7 +120,7 @@ def process_queued_actions(tenant_id: int, client: GenieAcsClient | None = None,
         device = tr069_repo.get_device(tenant_id, act["device_id"])
         if not device or not device.get("acs_device_id"):
             tr069_repo.update_action(aid, status="failed", failed_at=_now(),
-                                     error_message="الجهاز غير مُسجَّل في GenieACS")
+                                     error_message=N_("الجهاز غير مُسجَّل في GenieACS"))
             continue
         try:
             payload = json.loads(act.get("request_payload") or "{}")
@@ -138,7 +139,7 @@ def process_queued_actions(tenant_id: int, client: GenieAcsClient | None = None,
         if task is None:
             tr069_repo.update_action(aid, status="failed", failed_at=_now(),
                                      error_code="unsupported",
-                                     error_message="الأمر غير مدعوم لهذا الموديل")
+                                     error_message=N_("الأمر غير مدعوم لهذا الموديل"))
             continue
         res = client.create_task(device["acs_device_id"], task, connection_request=True)
         if res.ok:
@@ -150,7 +151,7 @@ def process_queued_actions(tenant_id: int, client: GenieAcsClient | None = None,
         else:
             # لو الجهاز offline: يبقى Task في GenieACS ويُنفَّذ عند أوّل Inform.
             tr069_repo.update_action(aid, status="waiting_for_inform", sent_at=_now(),
-                                     error_message=res.error or "بانتظار اتصال الراوتر")
+                                     error_message=res.error or N_("بانتظار اتصال الراوتر"))
         # لا نُخزّن الأسرار: نمسح _secret من request_payload بعد الإرسال.
         tr069_repo.update_action(aid, request_payload=json.dumps(
             {"params": payload.get("params", {})}))

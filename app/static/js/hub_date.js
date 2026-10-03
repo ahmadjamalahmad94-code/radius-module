@@ -20,6 +20,7 @@
 
    استثناء: input[data-native-date] يُترك على تقويم المتصفح الأصلي.
    ════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   if (window.__hubDateInit) return;
@@ -32,11 +33,11 @@
 
   /* أسماء الأشهر الشامية + رقم الشهر الميلادي يُعرض صغيرًا بجانبها */
   var MONTHS = [
-    "كانون الثاني", "شباط", "آذار", "نيسان", "أيار", "حزيران",
-    "تموز", "آب", "أيلول", "تشرين الأول", "تشرين الثاني", "كانون الأول"
+    hrT('كانون الثاني'), hrT('شباط'), hrT('آذار'), hrT('نيسان'), hrT('أيار'), hrT('حزيران'),
+    hrT('تموز'), hrT('آب'), hrT('أيلول'), hrT('تشرين الأول'), hrT('تشرين الثاني'), hrT('كانون الأول')
   ];
   /* اختصارات أيام الأسبوع — الأسبوع يبدأ بالأحد (getDay()===0) */
-  var WEEKDAYS = ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"];
+  var WEEKDAYS = [hrT('أحد'), hrT('إثن'), hrT('ثلا'), hrT('أرب'), hrT('خمي'), hrT('جمع'), hrT('سبت')];
 
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
 
@@ -97,7 +98,7 @@
     var panel = document.createElement("div");
     panel.className = "hbdate-panel";
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "اختيار التاريخ");
+    panel.setAttribute("aria-label", hrT('اختيار التاريخ'));
     panel.hidden = true;
 
     /* حالة العرض الحالية للوحة (الشهر/السنة المعروضان + الوقت المؤقت) */
@@ -125,7 +126,7 @@
         labelSpan.classList.remove("is-placeholder");
       } else {
         labelSpan.textContent = inp.getAttribute("data-placeholder") ||
-          (withTime ? "اختر التاريخ والوقت" : "اختر التاريخ");
+          (withTime ? hrT('اختر التاريخ والوقت') : hrT('اختر التاريخ'));
         labelSpan.classList.add("is-placeholder");
       }
     }
@@ -151,8 +152,8 @@
       head.className = "hbdate-head";
 
       // بالواجهة RTL: «السابق» يتجه يمينًا (chevron-right) و«التالي» يسارًا
-      var prevBtn = navBtn("fa-chevron-right", "الشهر السابق", -1);
-      var nextBtn = navBtn("fa-chevron-left", "الشهر التالي", +1);
+      var prevBtn = navBtn("fa-chevron-right", hrT('الشهر السابق'), -1);
+      var nextBtn = navBtn("fa-chevron-left", hrT('الشهر التالي'), +1);
 
       var title = document.createElement("div");
       title.className = "hbdate-title";
@@ -165,11 +166,11 @@
       // منتقي السنة: زرّا ± حول رقم السنة — أبسط وأسرع من قائمة طويلة
       var yearBox = document.createElement("div");
       yearBox.className = "hbdate-year";
-      var yDown = smallBtn("fa-minus", "سنة أقل");
+      var yDown = smallBtn("fa-minus", hrT('سنة أقل'));
       var yLabel = document.createElement("span");
       yLabel.className = "hbdate-year-num";
       yLabel.textContent = String(view.y);
-      var yUp = smallBtn("fa-plus", "سنة أكثر");
+      var yUp = smallBtn("fa-plus", hrT('سنة أكثر'));
       yDown.addEventListener("click", function () { view.y--; build(); });
       yUp.addEventListener("click", function () { view.y++; build(); });
       yearBox.appendChild(yDown);
@@ -244,7 +245,7 @@
         trow.className = "hbdate-time";
         trow.innerHTML =
           '<i class="fa-regular fa-clock"></i>' +
-          '<span class="hbdate-time-label">الوقت</span>';
+          ('<span class="hbdate-time-label">' + hrT('الوقت') + '</span>');
         var hhIn = timeInput(23, timeState.hh);
         var sep = document.createElement("span");
         sep.className = "hbdate-time-sep";
@@ -277,7 +278,7 @@
       var todayBtn = document.createElement("button");
       todayBtn.type = "button";
       todayBtn.className = "hbdate-foot-btn hbdate-today-btn";
-      todayBtn.innerHTML = '<i class="fa-solid fa-calendar-day"></i> اليوم';
+      todayBtn.innerHTML = ('<i class="fa-solid fa-calendar-day">' + '</i>' + ' ' + hrT('اليوم'));
       todayBtn.addEventListener("click", function () {
         var n = new Date();
         if (!inRange(n.getFullYear(), n.getMonth() + 1, n.getDate())) return;
@@ -290,7 +291,7 @@
       var clearBtn = document.createElement("button");
       clearBtn.type = "button";
       clearBtn.className = "hbdate-foot-btn hbdate-clear-btn";
-      clearBtn.innerHTML = '<i class="fa-regular fa-circle-xmark"></i> مسح';
+      clearBtn.innerHTML = ('<i class="fa-regular fa-circle-xmark">' + '</i>' + ' ' + hrT('مسح'));
       clearBtn.addEventListener("click", function () {
         inp.value = "";
         inp.dispatchEvent(new Event("input", { bubbles: true }));
@@ -305,7 +306,7 @@
         var okBtn = document.createElement("button");
         okBtn.type = "button";
         okBtn.className = "hbdate-foot-btn hbdate-ok-btn";
-        okBtn.innerHTML = '<i class="fa-solid fa-check"></i> تم';
+        okBtn.innerHTML = ('<i class="fa-solid fa-check">' + '</i>' + ' ' + hrT('تم'));
         okBtn.addEventListener("click", function () {
           closeOpen();
           trigger.focus();

@@ -5,6 +5,7 @@ does not mutate existing accounting tables, and stores new money amounts as
 integer minor units to avoid floating-point drift.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -63,20 +64,20 @@ def money_to_minor(amount: Any) -> int:
 # f05-M5: ترجمةٌ واحدة لرسائل Business OS الإنجليزيّة (كانت في business_os API
 # وحده، فتسرّبت «amount must be numeric» عبر محفظة مستخدم الكروت).
 BUSINESS_ERROR_AR = {
-    "amount must be numeric": "المبلغ يجب أن يكون رقمًا صحيحًا.",
-    "unknown event category": "تصنيف الحدث غير معروف.",
-    "unknown event severity": "درجة الحدث غير معروفة.",
-    "event_key is required": "مفتاح الحدث مطلوب.",
-    "unknown ledger entry_type": "نوع قيد الدفتر غير معروف.",
-    "debit_account is required": "حساب المدين مطلوب.",
-    "credit_account is required": "حساب الدائن مطلوب.",
-    "unknown wallet owner_type": "نوع صاحب المحفظة غير معروف.",
-    "owner_id is required for this wallet owner_type": "معرّف صاحب المحفظة مطلوب لهذا النوع.",
-    "unsupported wallet transaction": "حركة المحفظة غير مدعومة.",
-    "wallet not found": "المحفظة غير موجودة.",
-    "wallet balance cannot go negative": "رصيد المحفظة لا يمكن أن يصبح سالبًا.",
-    "reference_type is required": "نوع المرجع مطلوب.",
-    "prices cannot be negative": "الأسعار لا يمكن أن تكون سالبة.",
+    "amount must be numeric": N_("المبلغ يجب أن يكون رقمًا صحيحًا."),
+    "unknown event category": N_("تصنيف الحدث غير معروف."),
+    "unknown event severity": N_("درجة الحدث غير معروفة."),
+    "event_key is required": N_("مفتاح الحدث مطلوب."),
+    "unknown ledger entry_type": N_("نوع قيد الدفتر غير معروف."),
+    "debit_account is required": N_("حساب المدين مطلوب."),
+    "credit_account is required": N_("حساب الدائن مطلوب."),
+    "unknown wallet owner_type": N_("نوع صاحب المحفظة غير معروف."),
+    "owner_id is required for this wallet owner_type": N_("معرّف صاحب المحفظة مطلوب لهذا النوع."),
+    "unsupported wallet transaction": N_("حركة المحفظة غير مدعومة."),
+    "wallet not found": N_("المحفظة غير موجودة."),
+    "wallet balance cannot go negative": N_("رصيد المحفظة لا يمكن أن يصبح سالبًا."),
+    "reference_type is required": N_("نوع المرجع مطلوب."),
+    "prices cannot be negative": N_("الأسعار لا يمكن أن تكون سالبة."),
 }
 
 
@@ -87,7 +88,7 @@ def arabic_business_error(raw: str) -> str:
         return BUSINESS_ERROR_AR[raw]
     if raw.endswith(" must be positive"):
         field = raw.removesuffix(" must be positive")
-        return f"قيمة {field} يجب أن تكون أكبر من صفر."
+        return _tr('قيمة %(field)s يجب أن تكون أكبر من صفر.', field=field)
     return raw
 
 
@@ -110,23 +111,23 @@ def _json(value: dict[str, Any] | None) -> str:
 # app's «العمليات التجارية» table showed `cash`, `wallet:4`, `distributor #1`).
 # The raw fields stay unchanged; `*_label` fields are added next to them.
 _LEDGER_ACCOUNT_AR = {
-    "cash": "الصندوق (نقدًا)",
-    "revenue": "الإيرادات",
-    "card_inventory_cost": "تكلفة مخزون البطاقات",
-    "card_marketplace_revenue": "إيراد سوق البطاقات",
-    "discounts": "الخصومات",
-    "receivables": "الذمم المدينة",
+    "cash": N_("الصندوق (نقدًا)"),
+    "revenue": N_("الإيرادات"),
+    "card_inventory_cost": N_("تكلفة مخزون البطاقات"),
+    "card_marketplace_revenue": N_("إيراد سوق البطاقات"),
+    "discounts": N_("الخصومات"),
+    "receivables": N_("الذمم المدينة"),
 }
 _LEDGER_OWNER_AR = {
-    "manager": "المدير", "admin": "المدير", "card_user": "مستخدم البطاقات",
-    "subscriber": "المشترك", "distributor": "الموزّع", "provider": "المزوّد",
-    "company": "الشركة", "tenant": "الشبكة",
+    "manager": N_("المدير"), "admin": N_("المدير"), "card_user": N_("مستخدم البطاقات"),
+    "subscriber": N_("المشترك"), "distributor": N_("الموزّع"), "provider": N_("المزوّد"),
+    "company": N_("الشركة"), "tenant": N_("الشبكة"),
 }
 _LEDGER_TARGET_AR = {
-    "subscriber": "مشترك", "card": "بطاقة", "card_user": "مستخدم بطاقات",
-    "distributor": "موزّع", "manager": "مدير", "admin": "مدير",
-    "wallet": "محفظة", "batch": "حزمة", "card_batch": "حزمة", "plan": "باقة",
-    "payment": "دفعة", "loan": "سلفة", "invoice": "فاتورة",
+    "subscriber": N_("مشترك"), "card": N_("بطاقة"), "card_user": N_("مستخدم بطاقات"),
+    "distributor": N_("موزّع"), "manager": N_("مدير"), "admin": N_("مدير"),
+    "wallet": N_("محفظة"), "batch": N_("حزمة"), "card_batch": N_("حزمة"), "plan": N_("باقة"),
+    "payment": N_("دفعة"), "loan": N_("سلفة"), "invoice": N_("فاتورة"),
 }
 
 
@@ -139,11 +140,11 @@ def ledger_account_label(account: Any) -> str:
     parts = raw.split(":")
     if parts[0] == "wallet":
         if len(parts) == 2 and parts[1]:
-            return f"محفظة #{parts[1]}"
+            return _tr('محفظة #%(v)s', v=parts[1])
         if len(parts) >= 3:
             owner = _LEDGER_OWNER_AR.get(parts[1], parts[1])
-            return f"محفظة {owner} #{parts[2]}"
-        return "محفظة"
+            return _tr('محفظة %(owner)s #%(v)s', owner=owner, v=parts[2])
+        return N_("محفظة")
     if len(parts) == 2 and parts[0] in _LEDGER_TARGET_AR:
         return f"{_LEDGER_TARGET_AR[parts[0]]} #{parts[1]}"
     return raw

@@ -21,6 +21,7 @@ Adding a new preset = drop a new `PRESETS[<key>]` entry. No DB
 migration, no route changes.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass
 
@@ -365,21 +366,21 @@ add address=whatismyip.com list=smoke
 PRESETS: dict[str, PresetMeta] = {
     "karamspeed": PresetMeta(
         key="karamspeed",
-        label_ar="karamspeed — قائمة Speedtest وأدوات فحص IP (~310 وجهة)",
+        label_ar=N_("karamspeed — قائمة Speedtest وأدوات فحص IP (~310 وجهة)"),
         description_ar=(
-            "القائمة الكاملة لخوادم speedtest الإقليمية في"
+            N_("القائمة الكاملة لخوادم speedtest الإقليمية في"
             " آسيا + كاشفات الـ IP العام + بعض الـ IPs الخام."
-            " مناسبة لتثبيت VPN قياس السرعة."
+            " مناسبة لتثبيت VPN قياس السرعة.")
         ),
         target_count=310,
         body=_KARAMSPEED_BODY,
     ),
     "smoke": PresetMeta(
         key="smoke",
-        label_ar="اختبار سريع (3 وجهات)",
+        label_ar=N_("اختبار سريع (3 وجهات)"),
         description_ar=(
-            "ثلاث وجهات فقط: 1.1.1.1 / ifconfig.co / whatismyip.com."
-            " يكفي للتحقق أن النفق يعمل end-to-end."
+            N_("ثلاث وجهات فقط: 1.1.1.1 / ifconfig.co / whatismyip.com."
+            " يكفي للتحقق أن النفق يعمل end-to-end.")
         ),
         target_count=3,
         body=_MINIMAL_SMOKE_BODY,

@@ -3,7 +3,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% set title_ar = "إضافة جهاز شبكة" if is_new else "تعديل: " + (device.name or 'جهاز') %}
+{% set title_ar = _('إضافة جهاز شبكة') if is_new else _('تعديل: ') + (device.name or _('جهاز')) %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -12,30 +12,30 @@
 
 {{ hub.hero(
   title_ar,
-  subtitle="إعدادات أجهزة الشبكة: العنوان، المنافذ، المصادقة، والمراقبة الدورية",
+  subtitle=_('إعدادات أجهزة الشبكة: العنوان، المنافذ، المصادقة، والمراقبة الدورية'),
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.devices_list') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
-      <i class="fa-solid fa-floppy-disk"></i> '|safe + ("حفظ الجهاز"|safe if is_new else "حفظ التعديلات"|safe) + '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe + (_('حفظ الجهاز')|safe if is_new else _('حفظ التعديلات')|safe) + '
     </button>
   '|safe
 ) }}
 
 {% set help_aside %}
 {% call hub.helppanel(
-  "عن أجهزة الشبكة",
-  intro="جهاز الشبكة (NAS/راوتر) هو نقطة الوصول التي يصادق عليها الريدياس. عرّف عنوانه ومفتاحه المشترك لتبدأ المصادقة والمحاسبة.",
+  _('عن أجهزة الشبكة'),
+  intro=_('جهاز الشبكة (NAS/راوتر) هو نقطة الوصول التي يصادق عليها الريدياس. عرّف عنوانه ومفتاحه المشترك لتبدأ المصادقة والمحاسبة.'),
   icon="network-wired",
   items=[
-    {"icon": "key", "text": "المفتاح المشترك يجب أن يطابق تمامًا ما هو مضبوط على جهاز الشبكة نفسه."},
-    {"icon": "plug", "text": "المنافذ القياسية: 1812 للمصادقة، 1813 للمحاسبة، 3799 لقطع الجلسة (CoA)."},
-    {"icon": "heart-pulse", "text": "المراقبة الدورية تفحص اتصال الجهاز وتحدّث حالته في القائمة."},
-    {"icon": "toggle-on", "text": "أوقف الجهاز لتعطيله مؤقتًا دون حذف إعداداته."}
+    {"icon": "key", "text": _('المفتاح المشترك يجب أن يطابق تمامًا ما هو مضبوط على جهاز الشبكة نفسه.')},
+    {"icon": "plug", "text": _('المنافذ القياسية: 1812 للمصادقة، 1813 للمحاسبة، 3799 لقطع الجلسة (CoA).')},
+    {"icon": "heart-pulse", "text": _('المراقبة الدورية تفحص اتصال الجهاز وتحدّث حالته في القائمة.')},
+    {"icon": "toggle-on", "text": _('أوقف الجهاز لتعطيله مؤقتًا دون حذف إعداداته.')}
   ],
-  note="بيانات وصول الراوتر تُستخدم لإدارة الجهاز عبر واجهة الربط، وتُحفظ بأمان."
+  note=_('بيانات وصول الراوتر تُستخدم لإدارة الجهاز عبر واجهة الربط، وتُحفظ بأمان.')
 ) %}{% endcall %}
 {% endset %}
 
@@ -44,7 +44,7 @@
       action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">{% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية والشبكة ─────────────────────── #}
-  {% call hub.section("الهوية والشبكة", icon="network-wired") %}
+  {% call hub.section(_('الهوية والشبكة'), icon="network-wired") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الاسم') }} <span class="req">*</span></label>
@@ -115,11 +115,11 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('المراقبة الدورية') }}</label>
-        {{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label="مفعَّلة", off_label="معطَّلة") }}
+        {{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label=_('مفعَّلة'), off_label=_('معطَّلة')) }}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('إلزام رسالة التحقق') }}</label>
-        {{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label="إلزامي", off_label="اختياري") }}
+        {{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label=_('إلزامي'), off_label=_('اختياري')) }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">{{ _('الوصف') }}</label>
@@ -129,7 +129,7 @@
   {% endcall %}
 
   {# ── 2. المنافذ ─────────────────────────────────── #}
-  {% call hub.section("المنافذ", icon="plug") %}
+  {% call hub.section(_('المنافذ'), icon="plug") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('منفذ المصادقة') }}</label>
@@ -163,7 +163,7 @@
   {% endcall %}
 
   {# ── 3. الوصول والمراقبة ────────────────────────────── #}
-  {% call hub.section("وصول الراوتر والمراقبة", icon="key") %}
+  {% call hub.section(_('وصول الراوتر والمراقبة'), icon="key") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('اسم مستخدم الراوتر') }}</label>
@@ -190,13 +190,13 @@
 
   {# ── 4. Last health check ─────────────────────── #}
   {% if not is_new and device.last_check_at %}
-  {% call hub.section("آخر فحص اتصال", icon="heart-pulse") %}
+  {% call hub.section(_('آخر فحص اتصال'), icon="heart-pulse") %}
     <div class="hub-flex-row" style="gap:14px">
       <span>
-        الحالة:
+        {{ _('الحالة:') }}
         {% set _ok = device.last_check_status in ('ok', 'success', 'pass') %}
-        {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
-        {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
+        {% if _ok %}{{ hub.pill(_('ناجح'), variant="green") }}
+        {% else %}{{ hub.pill(device.last_check_status or _('غير معروف'), variant="amber") }}{% endif %}
       </span>
       <span>{{ _('الوقت:') }} <span class="hub-text-mono"><bdi dir="ltr">{{ device.last_check_at }}</bdi></span></span>
     </div>
@@ -207,8 +207,8 @@
   {% endif %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
-    {% if can_submit('radius.devices_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}{% endif %}
-    {{ hub.btn(("حفظ الجهاز" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.devices_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="secondary", href=url_for('radius.devices_list')) }}{% endif %}
+    {{ hub.btn((_('حفظ الجهاز') if is_new else _('حفظ التعديلات')), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 {% if not can_submit(('radius.devices_update' if not is_new else 'radius.devices_create')) %}</fieldset>{% endif %}</form>
 {% endcall %}

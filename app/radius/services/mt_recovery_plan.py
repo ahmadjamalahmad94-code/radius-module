@@ -9,6 +9,7 @@ No automation. No rollback executor. The plan tells the
 operator WHAT to do; doing it is still manual.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict, dataclass, field
 from typing import Any
@@ -60,43 +61,42 @@ def _suggested_steps(action: str, result_status: str) -> list[str]:
         if action.startswith("mt.programming."):
             kind = action.split(".")[2]   # hotspot / pppoe
             steps.append(
-                "افتح صفحة برمجة الشبكة على الراوتر.")
+                N_("افتح صفحة برمجة الشبكة على الراوتر."))
             steps.append(
-                f"اضغط زر التراجع/Unprogram لإزالة كل الكائنات "
-                f"التي حملت comment=hoberadius:{kind}.")
+                _tr('اضغط زر التراجع/Unprogram لإزالة كل الكائنات التي حملت comment=hoberadius:%(kind)s.', kind=kind))
             steps.append(
-                "أعد فحص الواجهة + الـ CIDR + الـ pool في "
-                "النموذج، ثم أعد التطبيق.")
+                N_("أعد فحص الواجهة + الـ CIDR + الـ pool في "
+                "النموذج، ثم أعد التطبيق."))
             steps.append(
-                "تحقّق من سجل العمليات بعد إعادة التطبيق.")
+                N_("تحقّق من سجل العمليات بعد إعادة التطبيق."))
         else:
-            steps.append("افتح تفاصيل العملية في سجل العمليات.")
-            steps.append("صحّح المسبب الموضّح في رسالة الخطأ.")
-            steps.append("أعد المحاولة.")
+            steps.append(N_("افتح تفاصيل العملية في سجل العمليات."))
+            steps.append(N_("صحّح المسبب الموضّح في رسالة الخطأ."))
+            steps.append(N_("أعد المحاولة."))
     elif r == "failed":
         if action.startswith("mt.programming."):
             steps.append(
-                "افتح تفاصيل العملية + رسالة الخطأ.")
+                N_("افتح تفاصيل العملية + رسالة الخطأ."))
             steps.append(
-                "تأكد من أن الراوتر متصل (تشغيل تشخيص).")
+                N_("تأكد من أن الراوتر متصل (تشغيل تشخيص)."))
             steps.append(
-                "صحّح المدخلات (interface / CIDR / pool / "
-                "gateway) قبل إعادة التطبيق.")
+                N_("صحّح المدخلات (interface / CIDR / pool / "
+                "gateway) قبل إعادة التطبيق."))
         elif action == "mt.backup.save":
             steps.append(
-                "تأكّد من اتصال الراوتر + صلاحيات /file لحساب "
-                "الـ API.")
-            steps.append("جرّب أخذ النسخة من /admin/radius/mt/"
-                          "<id>/backups مرة أخرى.")
+                N_("تأكّد من اتصال الراوتر + صلاحيات /file لحساب "
+                "الـ API."))
+            steps.append(N_("جرّب أخذ النسخة من /admin/radius/mt/"
+                          "<id>/backups مرة أخرى."))
         elif action == "mt.login_designer.deploy":
             steps.append(
-                "تأكّد من أن الـ hotspot package مفعَّل على "
-                "الراوتر.")
-            steps.append("أعد محاولة النشر.")
+                N_("تأكّد من أن الـ hotspot package مفعَّل على "
+                "الراوتر."))
+            steps.append(N_("أعد محاولة النشر."))
         else:
-            steps.append("افتح تفاصيل العملية للحصول على رسالة "
-                          "الخطأ الدقيقة.")
-            steps.append("صحّح السبب وأعد المحاولة.")
+            steps.append(N_("افتح تفاصيل العملية للحصول على رسالة "
+                          "الخطأ الدقيقة."))
+            steps.append(N_("صحّح السبب وأعد المحاولة."))
     return steps
 
 
@@ -104,13 +104,13 @@ def _what_changed_summary(action: str, result_status: str) -> str:
     r = (result_status or "").lower()
     if r == "partial":
         if action.startswith("mt.programming."):
-            return ("بعض أوامر البرمجة طُبِّقت على الراوتر "
+            return (N_("بعض أوامر البرمجة طُبِّقت على الراوتر "
                     "والبعض الآخر فشل — الراوتر في حالة جزئية "
-                    "غير متّسقة.")
-        return "العملية اكتملت جزئيًا."
+                    "غير متّسقة."))
+        return N_("العملية اكتملت جزئيًا.")
     if r == "failed":
-        return ("العملية فشلت قبل تطبيق أي تغيير دائم. "
-                "الراوتر يجب أن يكون في حالته الأصلية.")
+        return (N_("العملية فشلت قبل تطبيق أي تغيير دائم. "
+                "الراوتر يجب أن يكون في حالته الأصلية."))
     return "—"
 
 
@@ -158,8 +158,8 @@ def build_plan(*, tenant_id: int, audit_id: int) -> RecoveryPlan | None:
         except Exception:  # noqa: BLE001
             related_job = None
 
-    risk_label = "حرج" if severity == "critical" \
-                  else ("تحذير" if severity == "warning" else "")
+    risk_label = _tr("حرج") if severity == "critical" \
+                  else (_tr("تحذير") if severity == "warning" else "")
 
     return RecoveryPlan(
         audit_id=int(row.get("id") or 0),

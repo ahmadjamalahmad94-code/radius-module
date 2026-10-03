@@ -5,6 +5,7 @@ and Site Exit planners. It does not apply scripts, mutate routers, or
 invent duplicate networking logic.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, replace
 from typing import Any, Iterable
@@ -57,9 +58,9 @@ class AddedServicesCatalog:
         return [
             AddedService(
                 key="anti_sharing",
-                title_ar="منع مشاركة الاتصال",
+                title_ar=N_("منع مشاركة الاتصال"),
                 description_ar=(
-                    "هذه الخدمة تحتاج محرك كشف مستقر قبل إدخالها في معالج الإعداد."
+                    N_("هذه الخدمة تحتاج محرك كشف مستقر قبل إدخالها في معالج الإعداد.")
                 ),
                 risk_level="high",
                 status="not_supported_yet",
@@ -70,9 +71,9 @@ class AddedServicesCatalog:
             ),
             AddedService(
                 key="walled_garden",
-                title_ar="مواقع مفتوحة بدون تسجيل دخول",
+                title_ar=N_("مواقع مفتوحة بدون تسجيل دخول"),
                 description_ar=(
-                    "يسمح بمواقع محددة قبل تسجيل دخول Hotspot عبر مخطط NPC الحالي."
+                    N_("يسمح بمواقع محددة قبل تسجيل دخول Hotspot عبر مخطط NPC الحالي.")
                 ),
                 risk_level="medium",
                 status="partial",
@@ -83,9 +84,9 @@ class AddedServicesCatalog:
             ),
             AddedService(
                 key="block_sites",
-                title_ar="حجب مواقع",
+                title_ar=N_("حجب مواقع"),
                 description_ar=(
-                    "يخطط لحجب وجهات محددة عبر مخطط NPC web-block الحالي."
+                    N_("يخطط لحجب وجهات محددة عبر مخطط NPC web-block الحالي.")
                 ),
                 risk_level="medium",
                 status="partial",
@@ -96,8 +97,8 @@ class AddedServicesCatalog:
             ),
             AddedService(
                 key="web_block",
-                title_ar="حجب مواقع",
-                description_ar="Alias قديم لخدمة block_sites للحفاظ على التوافق.",
+                title_ar=N_("حجب مواقع"),
+                description_ar=N_("Alias قديم لخدمة block_sites للحفاظ على التوافق."),
                 risk_level="medium",
                 status="partial",
                 required_inputs=["domains"],
@@ -107,9 +108,9 @@ class AddedServicesCatalog:
             ),
             AddedService(
                 key="site_exit_public_ip",
-                title_ar="تغيير Public IP / Site Exit",
+                title_ar=N_("تغيير Public IP / Site Exit"),
                 description_ar=(
-                    "يخطط لتوجيه وجهات مختارة عبر نفق VPS باستخدام VX2 الحالي."
+                    N_("يخطط لتوجيه وجهات مختارة عبر نفق VPS باستخدام VX2 الحالي.")
                 ),
                 risk_level="high",
                 status="partial",
@@ -120,8 +121,8 @@ class AddedServicesCatalog:
             ),
             AddedService(
                 key="site_exit",
-                title_ar="تغيير Public IP / Site Exit",
-                description_ar="Alias قديم لخدمة site_exit_public_ip للحفاظ على التوافق.",
+                title_ar=N_("تغيير Public IP / Site Exit"),
+                description_ar=N_("Alias قديم لخدمة site_exit_public_ip للحفاظ على التوافق."),
                 risk_level="high",
                 status="partial",
                 required_inputs=["destinations", "wireguard_interface_name"],
@@ -213,8 +214,8 @@ class AddedServicesPlanner:
                 "diagnostics": [
                     {
                         "code": "missing_inputs",
-                        "arabic_title": "مدخلات ناقصة",
-                        "explanation_ar": "أكمل الحقول المطلوبة قبل توليد الخطة.",
+                        "arabic_title": _tr("مدخلات ناقصة"),
+                        "explanation_ar": _tr("أكمل الحقول المطلوبة قبل توليد الخطة."),
                     }
                 ],
             }
@@ -270,9 +271,9 @@ class AddedServicesPlanner:
             "diagnostics": [
                 {
                     "code": "manual_verification_required",
-                    "arabic_title": "التحقق يدوي في هذه المرحلة",
+                    "arabic_title": _tr("التحقق يدوي في هذه المرحلة"),
                     "explanation_ar": (
-                        "راجع أوامر التحقق الخاصة بالخدمة بعد تنفيذ السكربت يدويًا أو عبر مسار المختبر المحروس."
+                        _tr("راجع أوامر التحقق الخاصة بالخدمة بعد تنفيذ السكربت يدويًا أو عبر مسار المختبر المحروس.")
                     ),
                 }
             ],
@@ -435,14 +436,14 @@ class AddedServicesPlanner:
             "plan_status": "not_supported_yet",
             "supported": False,
             "script_preview": "",
-            "warnings": ["هذه الخدمة تحتاج تفعيلًا أو مخططًا آمنًا قبل التنفيذ."],
+            "warnings": [_tr("هذه الخدمة تحتاج تفعيلًا أو مخططًا آمنًا قبل التنفيذ.")],
             "validation_commands": [],
-            "rollback_notes": "لا يوجد rollback لأن الخدمة غير مدعومة في هذا المسار.",
+            "rollback_notes": N_("لا يوجد rollback لأن الخدمة غير مدعومة في هذا المسار."),
             "diagnostics": [
                 {
                     "code": "not_supported_yet",
-                    "arabic_title": "غير مدعومة حاليًا",
-                    "explanation_ar": "لن يتم توليد سكربت وهمي لهذه الخدمة.",
+                    "arabic_title": _tr("غير مدعومة حاليًا"),
+                    "explanation_ar": _tr("لن يتم توليد سكربت وهمي لهذه الخدمة."),
                 }
             ],
         }

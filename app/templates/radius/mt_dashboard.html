@@ -6,7 +6,7 @@
 {% block title %}{{ _("لوحة الراوتر") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-router"></i>{% endblock %}
 {% block page_title %}{{ _("لوحة الراوتر") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #%(v)s · %(address)s', v=router_no(nas.id), address=nas.address) }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -1705,8 +1705,8 @@ body.mt-modal-open{overflow:hidden}
      فوق النفق (العامل الخلفي). «غير متوفّر» حيث لا حسّاس (الحرارة على CHR). ── #}
   {% set _th = resource_thresholds or {} %}
   {% macro _bps(v) -%}
-    {%- if v is none -%}—{%- elif v >= 1000000 -%}{{ (v/1000000)|round(1) }} ميغابت/ث
-    {%- elif v >= 1000 -%}{{ (v/1000)|round(0)|int }} كيلوبت/ث{%- else -%}{{ v|int }} بت/ث{%- endif -%}
+    {%- if v is none -%}—{%- elif v >= 1000000 -%}{{ (v/1000000)|round(1) }} {{ _('ميغابت/ث') }}
+    {%- elif v >= 1000 -%}{{ (v/1000)|round(0)|int }} {{ _('كيلوبت/ث') }}{%- else -%}{{ v|int }} {{ _('بت/ث') }}{%- endif -%}
   {%- endmacro %}
   <section class="mt-card mt-metrics-card" data-mt-resource>
     <header class="mt-card-head">
@@ -1729,8 +1729,8 @@ body.mt-modal-open{overflow:hidden}
         <div class="mt-metric{% if resource and resource.temperature_c is not none and resource.temperature_c > _th.get('temp_c',70) %} is-breach{% endif %}">
           <span class="mt-metric-ic"><i class="fa-solid fa-temperature-half"></i></span>
           <div><span class="mt-metric-label">{{ _('حرارة المعالج') }}</span>
-          <span class="mt-metric-val">{% if resource and resource.temperature_c is not none %}{{ resource.temperature_c }}°م{% else %}{{ _('غير متوفر') }}{% endif %}</span>
-          <span class="mt-metric-sub">{% if resource and resource.temperature_c is none %}{{ _('لا حسّاس') }}{% else %}{{ _('الحدّ') }} {{ _th.get('temp_c',70)|int }}°م{% endif %}</span></div>
+          <span class="mt-metric-val">{% if resource and resource.temperature_c is not none %}{{ resource.temperature_c }}{{ _('°م') }}{% else %}{{ _('غير متوفر') }}{% endif %}</span>
+          <span class="mt-metric-sub">{% if resource and resource.temperature_c is none %}{{ _('لا حسّاس') }}{% else %}{{ _('الحدّ') }} {{ _th.get('temp_c',70)|int }}{{ _('°م') }}{% endif %}</span></div>
         </div>
         {# الذاكرة #}
         <div class="mt-metric{% if resource and resource.mem_used_pct is not none and resource.mem_used_pct > _th.get('ram_pct',90) %} is-breach{% endif %}">
@@ -1752,7 +1752,7 @@ body.mt-modal-open{overflow:hidden}
           <span class="mt-metric-ic"><i class="fa-solid fa-arrows-up-down"></i></span>
           <div><span class="mt-metric-label">{{ _('حركة الإنترنت') }}</span>
           <span class="mt-metric-val" dir="ltr" style="font-size:13px">{% if resource and resource.traffic_in_bps is not none %}↓ {{ _bps(resource.traffic_in_bps) }} · ↑ {{ _bps(resource.traffic_out_bps) }}{% else %}{{ _('غير متوفر') }}{% endif %}</span>
-          <span class="mt-metric-sub">{% if _th.get('traffic_mbps',0)|int > 0 %}{{ _('الحدّ') }} {{ _th.get('traffic_mbps')|int }} ميغابت/ث{% else %}{{ _('بلا حدّ') }}{% endif %}</span></div>
+          <span class="mt-metric-sub">{% if _th.get('traffic_mbps',0)|int > 0 %}{{ _('الحدّ') }} {{ _th.get('traffic_mbps')|int }} {{ _('ميغابت/ث') }}{% else %}{{ _('بلا حدّ') }}{% endif %}</span></div>
         </div>
       </div>
       {% if resource and resource.board_name %}
@@ -1925,8 +1925,7 @@ body.mt-modal-open{overflow:hidden}
       </span>
       <h3>{{ _('واجهات الراوتر — حالة وحركة لحظيّة') }}</h3>
       <p>
-        كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
-        وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
+        {{ _('كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.') }}
       </p>
       {# Live-bridge toggle. OFF by default — the polled 5 s
          refresh handles the common case. When ON, the dashboard
@@ -2013,8 +2012,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('عناوين IP المُخصَّصة على الراوتر') }}</h3>
         <p>
-          كل عنوان شبكي مربوط بواجهة — ثابت أو متغيّر، مع
-          نطاق الشبكة والتعليق. مفيد لتتبّع البرمجة قبل أيّ تغيير.
+          {{ _('كل عنوان شبكي مربوط بواجهة — ثابت أو متغيّر، مع نطاق الشبكة والتعليق. مفيد لتتبّع البرمجة قبل أيّ تغيير.') }}
         </p>
       
     </div>
@@ -2079,8 +2077,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('جدول التوجيه — أين تذهب الحزم') }}</h3>
         <p>
-          كل مسار مع الوجهة والبوابة وجدول التوجيه.
-          هنا تشوف مسارات «تغيير عنوان التصفح العام» وأي مسار يدوي.
+          {{ _('كل مسار مع الوجهة والبوابة وجدول التوجيه. هنا تشوف مسارات «تغيير عنوان التصفح العام» وأي مسار يدوي.') }}
         </p>
       
     </div>
@@ -2146,8 +2143,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('الأجهزة المكتشَفة على الشبكة') }}</h3>
         <p>
-          الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر
-          MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.
+          {{ _('الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.') }}
         </p>
       
     </div>
@@ -2178,9 +2174,7 @@ body.mt-modal-open{overflow:hidden}
         <i class="fa-solid fa-info"></i>
       </span>
       <div>
-        {{ _('قائمة الجيران تأتي من') }} <code>/ip/neighbor</code> وتعتمد على
-        رسائل MNDP/CDP/LLDP من الأجهزة المجاورة. التغييرات قد تتأخّر
-        دقيقة أو أكثر بين الإشارات.
+        {{ _('قائمة الجيران تأتي من') }} <code>/ip/neighbor</code> {{ _('وتعتمد على رسائل MNDP/CDP/LLDP من الأجهزة المجاورة. التغييرات قد تتأخّر دقيقة أو أكثر بين الإشارات.') }}
       </div>
     </div>
 
@@ -2226,8 +2220,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('سجلّ أحداث الراوتر الحيّ') }}</h3>
         <p>
-          آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
-          حسب الموضوع باستخدام الأزرار أدناه لتركّز نظرك.
+          {{ _('آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ حسب الموضوع باستخدام الأزرار أدناه لتركّز نظرك.') }}
         </p>
       
     </div>
@@ -2252,15 +2245,15 @@ body.mt-modal-open{overflow:hidden}
         <div class="mt-logs-topics" data-mt-logs-topics
              aria-label="{{ _('فلتر بالموضوع') }}">
           {% for slug, label in [
-            ('',         'الكلّ'),
-            ('error',    'أخطاء'),
-            ('warning',  'تحذيرات'),
-            ('critical', 'حرجة'),
-            ('info',     'معلومات'),
-            ('system',   'نظام'),
-            ('firewall', 'جدار حماية'),
-            ('account',  'محاسبة'),
-            ('hotspot',  'هوتسبوت'),
+            ('',         _('الكلّ')),
+            ('error',    _('أخطاء')),
+            ('warning',  _('تحذيرات')),
+            ('critical', _('حرجة')),
+            ('info',     _('معلومات')),
+            ('system',   _('نظام')),
+            ('firewall', _('جدار حماية')),
+            ('account',  _('محاسبة')),
+            ('hotspot',  _('هوتسبوت')),
             ('dhcp',     'DHCP'),
           ] %}
           <button type="button" class="mt-logs-topic
@@ -2325,8 +2318,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('المتصلون الآن على الراوتر') }}</h3>
         <p>
-          جلسات بوابة الدخول — كروت ويوزرات منفصلة — وجلسات البرودباند.
-          كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
+          {{ _('جلسات بوابة الدخول — كروت ويوزرات منفصلة — وجلسات البرودباند. كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.') }}
         </p>
       
     </div>
@@ -2492,8 +2484,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>{{ _('إشارات خطر + صحّة الراوتر') }}</h3>
         <p>
-          فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي
-          العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …
+          {{ _('فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …') }}
         </p>
       
     </div>
@@ -2552,8 +2543,7 @@ body.mt-modal-open{overflow:hidden}
       </header>
       <div class="mt-card-body">
         <p class="mt-tab-hint">
-          فحص محلي يعتمد على الردود المُخزّنة من
-          /interface و /ip/address — لا يُضيف ضغطًا على الراوتر.
+          {{ _('فحص محلي يعتمد على الردود المُخزّنة من /interface و /ip/address — لا يُضيف ضغطًا على الراوتر.') }}
         </p>
         <p class="mt-empty" data-mt-health-msg>{{ _('جارٍ التحميل…') }}</p>
         <ul class="mt-health-list" data-mt-health-list></ul>
@@ -2593,8 +2583,7 @@ body.mt-modal-open{overflow:hidden}
       <div class="rh-svc-head">
         <div class="rh-svc-head-text">
           <h4>{{ _('كل الخدمات') }}</h4>
-          <p>كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها.
-             النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.</p>
+          <p>{{ _('كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها. النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.') }}</p>
         </div>
         {# زر تحديث صغير واحد بزاوية القسم — يعيد فحص حالة الخدمات. #}
         <button type="button" class="rh-svc-refresh" data-rh-inv-refresh
@@ -2702,7 +2691,7 @@ body.mt-modal-open{overflow:hidden}
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='bt_wifi_block') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-tower-broadcast"></i></span>
           <h5 class="np-svc-title">
-            منع البث (بلوتوث/واي فاي)
+            {{ _('منع البث (بلوتوث/واي فاي)') }}
             {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
           <span class="np-svc-status-dot is-unknown"
@@ -2738,7 +2727,7 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">
             {{ _('تتبّع اللوب') }}
             <span class="rh-svc-loop is-unknown" data-rh-loop-badge
-                  data-saved-label="{{ 'مَضبوطة' if _loop_configured else 'بلا مداخل' }}">—</span>
+                  data-saved-label="{{ _('مَضبوطة') if _loop_configured else _('بلا مداخل') }}">—</span>
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
@@ -3265,15 +3254,15 @@ body.mt-modal-open{overflow:hidden}
 .rh-inventory .np-svc-status-dot.is-active{
   background:#DCFCE7;color:#15803D;box-shadow:none;
 }
-.rh-inventory .np-svc-status-dot.is-active::after{content:"مفعّلة"}
+.rh-inventory .np-svc-status-dot.is-active::after{content:"{{ _('مفعّلة') }}"}
 .rh-inventory .np-svc-status-dot.is-inactive{
   background:#F1F5F9;color:#94A3B8;box-shadow:none;
 }
-.rh-inventory .np-svc-status-dot.is-inactive::after{content:"غير مفعّلة"}
+.rh-inventory .np-svc-status-dot.is-inactive::after{content:"{{ _('غير مفعّلة') }}"}
 .rh-inventory .np-svc-status-dot.is-tool{
   background:#EDE9FE;color:#5B21B6;box-shadow:none;
 }
-.rh-inventory .np-svc-status-dot.is-tool::after{content:"أداة"}
+.rh-inventory .np-svc-status-dot.is-tool::after{content:"{{ _('أداة') }}"}
 /* شارة العنوان في بطاقة اللوب صارت تكرارًا حرفيًا لشارة الحالة
    الجديدة — تُخفى بصريًا (JS يحدّثها كما هو بلا كسر). */
 .rh-inventory .rh-svc-loop{display:none}

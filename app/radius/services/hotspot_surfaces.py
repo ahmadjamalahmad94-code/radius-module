@@ -17,6 +17,7 @@
 الحالي عاملًا حرفيًّا عندما لا توجد إضافات مفعّلة.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -119,7 +120,7 @@ def build_redirect_page(
         ctx.update(extra_ctx)
     cfg = _ad.normalize_config(addons_cfg or {})
     widgets = _ad.render_postlogin_widgets(cfg, ctx)
-    name = _esc(ctx["tenant_name"] or "شبكتنا")
+    name = _esc(ctx["tenant_name"] or N_("شبكتنا"))
     accent = _esc(ctx["accent"])
     bg = _esc(ctx["bg"])
     logo = _ad.safe_url(ctx["logo"]) or (
@@ -218,11 +219,11 @@ def build_redirect_page(
         '<div class="hr-hero">'
         + logo_html
         + f"<h1>{name}</h1>"
-        '<div class="hr-illus" aria-hidden="false">' + illus + "</div>"
+        '<div class="hr-illus" aria-hidden="false">' + illus + N_("</div>"
         '<div class="hr-ok">✓ تم الاتصال بالإنترنت</div>'
         '<div class="hr-goto">جارٍ تحويلك إلى صفحة حالة جلستك…</div>'
         '<a class="hr-go" href="status.html">عرض حالة جلستي الآن</a>'
-        "</div>"
+        "</div>")
         + widgets
         + "<script>setTimeout(function(){location.href='status.html';},6000);"
         "</script>"

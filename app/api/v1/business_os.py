@@ -1,5 +1,6 @@
 """Business OS API contracts for finance, events, pricing, and summary."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -76,20 +77,20 @@ def _limit(default: int = 100, maximum: int = 500) -> int:
 
 
 _ERROR_TRANSLATIONS = {
-    "amount must be numeric": "المبلغ يجب أن يكون رقمًا صحيحًا.",
-    "unknown event category": "تصنيف الحدث غير معروف.",
-    "unknown event severity": "درجة الحدث غير معروفة.",
-    "event_key is required": "مفتاح الحدث مطلوب.",
-    "unknown ledger entry_type": "نوع قيد الدفتر غير معروف.",
-    "debit_account is required": "حساب المدين مطلوب.",
-    "credit_account is required": "حساب الدائن مطلوب.",
-    "unknown wallet owner_type": "نوع صاحب المحفظة غير معروف.",
-    "owner_id is required for this wallet owner_type": "معرّف صاحب المحفظة مطلوب لهذا النوع.",
-    "unsupported wallet transaction": "حركة المحفظة غير مدعومة.",
-    "wallet not found": "المحفظة غير موجودة.",
-    "wallet balance cannot go negative": "رصيد المحفظة لا يمكن أن يصبح سالبًا.",
-    "reference_type is required": "نوع المرجع مطلوب.",
-    "prices cannot be negative": "الأسعار لا يمكن أن تكون سالبة.",
+    "amount must be numeric": N_("المبلغ يجب أن يكون رقمًا صحيحًا."),
+    "unknown event category": N_("تصنيف الحدث غير معروف."),
+    "unknown event severity": N_("درجة الحدث غير معروفة."),
+    "event_key is required": N_("مفتاح الحدث مطلوب."),
+    "unknown ledger entry_type": N_("نوع قيد الدفتر غير معروف."),
+    "debit_account is required": N_("حساب المدين مطلوب."),
+    "credit_account is required": N_("حساب الدائن مطلوب."),
+    "unknown wallet owner_type": N_("نوع صاحب المحفظة غير معروف."),
+    "owner_id is required for this wallet owner_type": N_("معرّف صاحب المحفظة مطلوب لهذا النوع."),
+    "unsupported wallet transaction": N_("حركة المحفظة غير مدعومة."),
+    "wallet not found": N_("المحفظة غير موجودة."),
+    "wallet balance cannot go negative": N_("رصيد المحفظة لا يمكن أن يصبح سالبًا."),
+    "reference_type is required": N_("نوع المرجع مطلوب."),
+    "prices cannot be negative": N_("الأسعار لا يمكن أن تكون سالبة."),
 }
 
 
@@ -129,7 +130,7 @@ def wallets_create():
     from ...radius.core.settings_validation import currency_codes
     if _wallet_currency(data.get("currency")) not in currency_codes():
         return fail("validation_error",
-                    "العملة غير مدعومة — اختر من: " + "، ".join(currency_codes()) + ".",
+                    _tr("العملة غير مدعومة — اختر من: ") + "، ".join(currency_codes()) + ".",
                     status=422, details={"field": "currency"})
     try:
         wallet = WalletService().create_wallet(
@@ -147,7 +148,7 @@ def wallets_create():
 def wallets_detail(wallet_id: int):
     wallet = WalletService().get_wallet(tenant_id=_tid(), wallet_id=wallet_id)
     if not wallet:
-        return fail("not_found", "المحفظة غير موجودة.", status=404)
+        return fail("not_found", _tr("المحفظة غير موجودة."), status=404)
     return ok({"wallet": wallet})
 
 
@@ -179,16 +180,16 @@ def _safety_gate(action: str, amount: Any = None):
         decision = SafetyGateService().check(action, permissions=_gate_permissions(),
                                              amount=amount)
     except ValueError:
-        return None, fail("validation_error", "المبلغ يجب أن يكون رقمًا صحيحًا.",
+        return None, fail("validation_error", _tr("المبلغ يجب أن يكون رقمًا صحيحًا."),
                           status=422, details={"field": "amount"})
     if decision.missing_permission:
         return None, fail("forbidden",
-                          "لا تملك صلاحية خصم المحفظة." if action == "wallet.debit"
-                          else "لا تملك صلاحية شحن المحفظة.",
+                          _tr("لا تملك صلاحية خصم المحفظة.") if action == "wallet.debit"
+                          else _tr("لا تملك صلاحية شحن المحفظة."),
                           status=403, details={"missing_permission": decision.missing_permission})
     if not decision.allowed:
         return None, fail("limit_exceeded",
-                          "تم منع الخصم: المبلغ يتجاوز حدّ الأمان للخصم الواحد.",
+                          _tr("تم منع الخصم: المبلغ يتجاوز حدّ الأمان للخصم الواحد."),
                           status=422, details={"violations": list(decision.violations)})
     return decision, None
 
@@ -300,7 +301,7 @@ def revenue_list():
     try:
         offset = max(int(request.args.get("offset") or 0), 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة offset يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة offset يجب أن تكون رقمًا صحيحًا."), status=422)
     items = revenue_items(_tid(), limit=limit, offset=offset)
     totals = accounting_repo.subscriber_payment_totals(_tid())
     rev = accounting_repo.revenue_summary(_tid())
@@ -331,9 +332,9 @@ def events_list():
     category = (request.args.get("category") or "").strip()
     severity = (request.args.get("severity") or "").strip()
     if category and category not in _EVENT_CATEGORIES:
-        return fail("validation_error", "تصنيف الحدث غير معروف.", status=422)
+        return fail("validation_error", _tr("تصنيف الحدث غير معروف."), status=422)
     if severity and severity not in _EVENT_SEVERITIES:
-        return fail("validation_error", "درجة الحدث غير معروفة.", status=422)
+        return fail("validation_error", _tr("درجة الحدث غير معروفة."), status=422)
     try:
         offset = opt_int(request.args.get("offset"), label="offset", minimum=0) or 0
         before_id = opt_int(request.args.get("before_id"), label="before_id", minimum=1)
@@ -361,13 +362,13 @@ def events_record():
     # {"actor_type":"system"} يزوّر سجلّ التدقيق ليبدو حدث نظام.
     actor_type, actor_id = _actor()
     try:
-        category = opt_text(data.get("category"), label="تصنيف الحدث", max_len=40)
-        severity = opt_text(data.get("severity"), label="درجة الحدث", max_len=20) or "info"
-        event_key = opt_text(data.get("event_key"), label="مفتاح الحدث", max_len=120)
-        message = opt_text(data.get("message"), label="نص الحدث", max_len=2000)
-        target_type = opt_text(data.get("target_type"), label="نوع الهدف", max_len=60)
-        target_id = opt_int(data.get("target_id"), label="معرّف الهدف")
-        correlation_id = opt_text(data.get("correlation_id"), label="معرّف الترابط", max_len=120)
+        category = opt_text(data.get("category"), label=N_("تصنيف الحدث"), max_len=40)
+        severity = opt_text(data.get("severity"), label=N_("درجة الحدث"), max_len=20) or "info"
+        event_key = opt_text(data.get("event_key"), label=N_("مفتاح الحدث"), max_len=120)
+        message = opt_text(data.get("message"), label=N_("نص الحدث"), max_len=2000)
+        target_type = opt_text(data.get("target_type"), label=N_("نوع الهدف"), max_len=60)
+        target_id = opt_int(data.get("target_id"), label=N_("معرّف الهدف"))
+        correlation_id = opt_text(data.get("correlation_id"), label=N_("معرّف الترابط"), max_len=120)
     except InputError as e:
         return fail("validation_error", e.message, status=422)
     try:
@@ -394,7 +395,7 @@ def price_snapshots_list():
     try:
         package_id_int = int(package_id) if package_id else None
     except ValueError:
-        return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف الباقة يجب أن يكون رقمًا صحيحًا."), status=422)
     items = PricingSnapshotService().list_snapshots(
         tenant_id=_tid(),
         reference_type=(request.args.get("reference_type") or "").strip(),

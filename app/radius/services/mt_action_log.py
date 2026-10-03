@@ -13,6 +13,7 @@ Fail-safe: recording never raises (the underlying audit service swallows its
 own errors); a logging hiccup can never break a live control action.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional
 
@@ -138,11 +139,11 @@ def record_speed_change(*, tenant_id: int, actor: str, username: str,
         # for the MikroTik-actions feed's own formatter.
         try:
             from .mikrotik_actions import _fmt_speed_value
-            frm = _fmt_speed_value(old_rate) or "غير معروف"
+            frm = _fmt_speed_value(old_rate) or N_("غير معروف")
             to = _fmt_speed_value(new_rate) or ""
         except Exception:  # noqa: BLE001
-            frm, to = (old_rate or "غير معروف"), (new_rate or "")
-        payload: dict = {"speed": f"من {frm} إلى {to}" if to else frm}
+            frm, to = (old_rate or N_("غير معروف")), (new_rate or "")
+        payload: dict = {"speed": _tr('من %(frm)s إلى %(to)s', frm=frm, to=to) if to else frm}
         # Real subject name for the feed — cards use all-digit usernames the
         # feed's label heuristic would mis-render as an entity id «مشترك #123».
         if username:

@@ -4,6 +4,7 @@ This slice intentionally archives operational records instead of deleting them.
 Financial tables remain append-only and are not exposed here.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Callable
 
@@ -221,7 +222,7 @@ def recycle_bin_list():
     tables = [_SUPPORTED.get(requested)] if requested else sorted(set(_SUPPORTED.values()))
     tables = [t for t in tables if t]
     if requested and not tables:
-        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+        return fail("validation_error", _tr("نوع السجل غير مدعوم."), status=422)
     from ...radius.services.recycle_restore_policy import table_visible
     _owner, _perms, _aid = _viewer()
     tables = [t for t in tables if table_visible(t, is_owner=_owner, perms=_perms)]
@@ -239,7 +240,7 @@ def recycle_bin_list():
 def recycle_bin_archive(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
-        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+        return fail("validation_error", _tr("نوع السجل غير مدعوم."), status=422)
     body = request.get_json(silent=True) or {}
     reason = str(body.get("reason") or "")[:300]
     if table == "access_plans":
@@ -250,21 +251,21 @@ def recycle_bin_archive(entity_type: str, entity_id: int):
             # تحميه الآن، لكنّ المشغّلَ يجب أن يعرف ما يفعل).
             return fail(
                 "plan_in_use",
-                "الباقة عليها %(b)d حزمة و%(c)d بطاقة و%(s)d مشترك — انقلْهم "
-                "إلى باقةٍ أخرى قبل أرشفتها." % {
+                _tr("الباقة عليها %(b)d حزمة و%(c)d بطاقة و%(s)d مشترك — انقلْهم "
+                "إلى باقةٍ أخرى قبل أرشفتها.") % {
                     "b": refs["batches"], "c": refs["cards"],
                     "s": refs["subscribers"]},
                 status=409)
     changed = _archive_handler(table)(entity_id, reason)
     if not changed:
-        return fail("not_found", "السجل غير موجود أو مؤرشف مسبقًا.", status=404)
+        return fail("not_found", _tr("السجل غير موجود أو مؤرشف مسبقًا."), status=404)
     return ok({"entity_type": table, "id": entity_id, "archived": True})
 
 
 def recycle_bin_restore(entity_type: str, entity_id: int):
     table = _SUPPORTED.get(entity_type)
     if not table:
-        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+        return fail("validation_error", _tr("نوع السجل غير مدعوم."), status=422)
     # fix3 (F01 F4): same per-entity rule as the web (one policy module).
     from ...radius.services.recycle_restore_policy import restore_denial
     _owner, _perms, _aid = _viewer()
@@ -283,7 +284,7 @@ def recycle_bin_restore(entity_type: str, entity_id: int):
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
     if not changed:
-        return fail("not_found", "السجل غير موجود أو ليس مؤرشفًا.", status=404)
+        return fail("not_found", _tr("السجل غير موجود أو ليس مؤرشفًا."), status=404)
     return ok({"entity_type": table, "id": entity_id, "restored": True})
 
 
@@ -295,10 +296,10 @@ def recycle_bin_purge(entity_type: str, entity_id: int):
     which is always a 404 — this is the real action behind that button."""
     table = _SUPPORTED.get(entity_type)
     if not table:
-        return fail("validation_error", "نوع السجل غير مدعوم.", status=422)
+        return fail("validation_error", _tr("نوع السجل غير مدعوم."), status=422)
     if table != "card_batches":
         return fail("validation_error",
-                    "الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط.", status=422)
+                    _tr("الحذف النهائيّ مدعوم حاليًّا لحزم البطاقات فقط."), status=422)
     row = db().execute(
         "SELECT id, batch_code FROM card_batches WHERE tenant_id = ? AND id = ? "
         "AND deleted_at IS NOT NULL",
@@ -306,8 +307,8 @@ def recycle_bin_purge(entity_type: str, entity_id: int):
     ).fetchone()
     if not row:
         return fail("not_found",
-                    "تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) "
-                    "ثمّ احذفها نهائيًّا.", status=404)
+                    _tr("تعذّر الحذف النهائيّ: احذف الحزمة أوّلًا (تظهر في السلّة) "
+                    "ثمّ احذفها نهائيًّا."), status=404)
     summary = cards_repo.purge_batch(_tid(), entity_id)
     try:
         from ...radius.services.audit import get_audit_service

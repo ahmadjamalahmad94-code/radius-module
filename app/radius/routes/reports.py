@@ -3,6 +3,7 @@ Reports — قراءات تحليلية مبنية على جداولنا (radacc
 sync_queue, webhook_deliveries). كلها read-only، tenant-scoped.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 
@@ -24,7 +25,7 @@ def _svc() -> DashboardReportsService:
 
 
 def _actor() -> str:
-    return session.get("admin_name") or session.get("admin_user") or "غير معروف"
+    return session.get("admin_name") or session.get("admin_user") or N_("غير معروف")
 
 
 # خرائط محلّيّة أُبقيت لتوافق رجعي مع callsites أخرى داخل هذا الملف،
@@ -32,105 +33,105 @@ def _actor() -> str:
 # تَملك خريطة دقيقة موسّعة (90+ مفتاحًا) + مُركِّب verb+noun تلقائي.
 # الفصل هنا (خرائط محلّيّة، عبور خدمي) يُبقي الـimport محصورًا داخل الدوال.
 _ACTION_LABELS = {
-    "create": "إنشاء",
-    "update": "تعديل",
-    "delete": "حذف",
-    "disable": "تعطيل",
-    "enable": "تفعيل",
-    "extend_time": "إضافة وقت / تمديد",
-    "change_plan": "تجديد / تغيير الباقة",
-    "archive": "أرشفة",
-    "reset_password": "إعادة تعيين كلمة المرور",
-    "bulk_set_speeds": "تحديث جماعي للسرعات",
-    "temporary_speed.apply": "فتح سرعة",
-    "temporary_speed.revert": "إرجاع السرعة",
-    "subscriber.cash_balance_add": "إضافة رصيد",
-    "subscriber.quota_topup": "إضافة كوتة",
-    "subscriber.daily_quota_reset": "تصفير الكوتة اليوميّة",
-    "subscriber.debt_settled_from_payment": "تسوية دين من دفعة",
-    "notification.manual_queued": "رسالة يدوية",
-    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
-    "payment_collection.request_approved": "اعتماد طلب دفع",
-    "payment_collection.request_rejected": "رفض طلب دفع",
+    "create": N_("إنشاء"),
+    "update": N_("تعديل"),
+    "delete": N_("حذف"),
+    "disable": N_("تعطيل"),
+    "enable": N_("تفعيل"),
+    "extend_time": N_("إضافة وقت / تمديد"),
+    "change_plan": N_("تجديد / تغيير الباقة"),
+    "archive": N_("أرشفة"),
+    "reset_password": N_("إعادة تعيين كلمة المرور"),
+    "bulk_set_speeds": N_("تحديث جماعي للسرعات"),
+    "temporary_speed.apply": N_("فتح سرعة"),
+    "temporary_speed.revert": N_("إرجاع السرعة"),
+    "subscriber.cash_balance_add": N_("إضافة رصيد"),
+    "subscriber.quota_topup": N_("إضافة كوتة"),
+    "subscriber.daily_quota_reset": N_("تصفير الكوتة اليوميّة"),
+    "subscriber.debt_settled_from_payment": N_("تسوية دين من دفعة"),
+    "notification.manual_queued": N_("رسالة يدوية"),
+    "payment_collection.settings_saved": N_("حفظ إعدادات التحصيل"),
+    "payment_collection.request_approved": N_("اعتماد طلب دفع"),
+    "payment_collection.request_rejected": N_("رفض طلب دفع"),
 }
 
 # قيَم الحالة/النتيجة الخام (enum) → عربيّ مفهوم — لا نعرض «ok/failed» أبدًا.
 _STATUS_AR_DETAIL = {
-    "ok": "ناجحة", "success": "ناجحة", "succeeded": "ناجحة", "done": "تمّت",
-    "completed": "تمّت", "verified": "ناجحة ومُتحقَّقة", "applied": "طُبّقت",
-    "failed": "فاشلة", "error": "فاشلة", "aborted": "أُلغيت",
-    "cancelled": "أُلغيت", "canceled": "أُلغيت", "pending": "قيد الانتظار",
-    "planned": "مُجدوَلة", "partial": "جزئيّة", "retrying": "يُعاد المحاولة",
-    "skipped": "متجاوَزة",
+    "ok": N_("ناجحة"), "success": N_("ناجحة"), "succeeded": N_("ناجحة"), "done": N_("تمّت"),
+    "completed": N_("تمّت"), "verified": N_("ناجحة ومُتحقَّقة"), "applied": N_("طُبّقت"),
+    "failed": N_("فاشلة"), "error": N_("فاشلة"), "aborted": N_("أُلغيت"),
+    "cancelled": N_("أُلغيت"), "canceled": N_("أُلغيت"), "pending": N_("قيد الانتظار"),
+    "planned": N_("مُجدوَلة"), "partial": N_("جزئيّة"), "retrying": N_("يُعاد المحاولة"),
+    "skipped": N_("متجاوَزة"),
 }
 
 # لاحقة الفاعل الآليّ system:<x> → عربيّ مفهوم (لا مصطلح إنجليزيّ في «الفاعل»).
 _SYSTEM_ACTOR_AR = {
-    "backup-scheduler": "مجدول النسخ الاحتياطي",
-    "temp-speed": "السرعة المؤقتة",
-    "notifications": "الإشعارات",
-    "policy-reconciler": "مُصالِح السياسات",
-    "log-retention": "الاحتفاظ بالسجلّات",
-    "lifecycle": "دورة الحياة",
+    "backup-scheduler": N_("مجدول النسخ الاحتياطي"),
+    "temp-speed": N_("السرعة المؤقتة"),
+    "notifications": N_("الإشعارات"),
+    "policy-reconciler": N_("مُصالِح السياسات"),
+    "log-retention": N_("الاحتفاظ بالسجلّات"),
+    "lifecycle": N_("دورة الحياة"),
 }
 
 _TARGET_LABELS = {
-    "user": "مشترك",
-    "subscriber": "مشترك",
-    "card": "كرت",
-    "plan": "باقة",
-    "admin": "مدير",
-    "manager": "مدير",
-    "distributor": "موزّع",
-    "notification_campaign": "حملة رسائل",
-    "payment_request": "طلب دفع",
-    "router": "راوتر",
-    "nas": "جهاز شبكة",
-    "service": "خدمة",
+    "user": N_("مشترك"),
+    "subscriber": N_("مشترك"),
+    "card": N_("كرت"),
+    "plan": N_("باقة"),
+    "admin": N_("مدير"),
+    "manager": N_("مدير"),
+    "distributor": N_("موزّع"),
+    "notification_campaign": N_("حملة رسائل"),
+    "payment_request": N_("طلب دفع"),
+    "router": N_("راوتر"),
+    "nas": N_("جهاز شبكة"),
+    "service": N_("خدمة"),
     # كيانات كانت تتسرّب خامًا في عمود «الكيان»
-    "backup_retention": "الاحتفاظ بالنسخ الاحتياطية",
-    "backup_job": "مهمّة نسخ احتياطي",
-    "backup_file": "ملف نسخة احتياطية",
-    "login_template": "قالب صفحة الدخول",
-    "hotspot_design": "تصميم صفحة الدخول",
+    "backup_retention": N_("الاحتفاظ بالنسخ الاحتياطية"),
+    "backup_job": N_("مهمّة نسخ احتياطي"),
+    "backup_file": N_("ملف نسخة احتياطية"),
+    "login_template": N_("قالب صفحة الدخول"),
+    "hotspot_design": N_("تصميم صفحة الدخول"),
     # دُفعات البطاقات وطباعتها
-    "card_batch":            "دفعة بطاقات",
-    "card batch":            "دفعة بطاقات",
-    "card_print_template":   "قالب طباعة بطاقات",
+    "card_batch":            N_("دفعة بطاقات"),
+    "card batch":            N_("دفعة بطاقات"),
+    "card_print_template":   N_("قالب طباعة بطاقات"),
     # سياسات الوصول
-    "access_control":        "ضبط الوصول",
-    "allow_mode_policy":     "سياسة وضع السماح",
-    "allow_mode_device":     "جهاز وضع السماح",
-    "site_exit_policy":      "سياسة الخروج",
-    "mac_clone_binding":     "ربط استنساخ العنوان",
+    "access_control":        N_("ضبط الوصول"),
+    "allow_mode_policy":     N_("سياسة وضع السماح"),
+    "allow_mode_device":     N_("جهاز وضع السماح"),
+    "site_exit_policy":      N_("سياسة الخروج"),
+    "mac_clone_binding":     N_("ربط استنساخ العنوان"),
     # الترخيص والجسر
-    "license_admin_bridge":  "جسر إدارة الترخيص",
-    "license_service":       "خدمة الترخيص",
+    "license_admin_bridge":  N_("جسر إدارة الترخيص"),
+    "license_service":       N_("خدمة الترخيص"),
     # الشبكة
-    "bandwidth_profile":     "ملف عرض النطاق",
-    "bandwidth_schedule":    "جدول السرعات",
-    "network_device_monitor_device": "جهاز مراقبة الشبكة",
+    "bandwidth_profile":     N_("ملف عرض النطاق"),
+    "bandwidth_schedule":    N_("جدول السرعات"),
+    "network_device_monitor_device": N_("جهاز مراقبة الشبكة"),
     # الإعدادات
-    "settings":              "إعدادات",
-    "system_settings":       "إعدادات النظام",
+    "settings":              N_("إعدادات"),
+    "system_settings":       N_("إعدادات النظام"),
     # الخدمات والبنية
-    "service_request":       "طلب خدمة",
-    "share_group":           "مجموعة مشاركة",
-    "subscriber_group":      "مجموعة مشتركين",
-    "mikrotik_nas":          "راوتر MikroTik",
-    "tenant":                "مستأجر",
-    "session":               "جلسة",
-    "card_user":             "مستخدم بطاقة",
-    "role":                  "دور",
-    "wallet":                "محفظة",
-    "ledger":                "قيد مالي",
-    "loan":                  "سلفة",
-    "payment":               "دفعة",
-    "ticket":                "تذكرة",
-    "setup_wizard_fleet":    "أسطول معالج الإعداد",
-    "router_provisioning_registry": "سجل تجهيز الراوترات",
-    "wizard_clients_conf":   "إعداد عملاء المعالج",
-    "db_retention":          "الاحتفاظ بقاعدة البيانات",
+    "service_request":       N_("طلب خدمة"),
+    "share_group":           N_("مجموعة مشاركة"),
+    "subscriber_group":      N_("مجموعة مشتركين"),
+    "mikrotik_nas":          N_("راوتر MikroTik"),
+    "tenant":                N_("مستأجر"),
+    "session":               N_("جلسة"),
+    "card_user":             N_("مستخدم بطاقة"),
+    "role":                  N_("دور"),
+    "wallet":                N_("محفظة"),
+    "ledger":                N_("قيد مالي"),
+    "loan":                  N_("سلفة"),
+    "payment":               N_("دفعة"),
+    "ticket":                N_("تذكرة"),
+    "setup_wizard_fleet":    N_("أسطول معالج الإعداد"),
+    "router_provisioning_registry": N_("سجل تجهيز الراوترات"),
+    "wizard_clients_conf":   N_("إعداد عملاء المعالج"),
+    "db_retention":          N_("الاحتفاظ بقاعدة البيانات"),
 }
 
 
@@ -141,7 +142,7 @@ def _display_action(action: str) -> str:
     إنجليزي يَخرج أبدًا — كل مسار يَسقط على عربيّ مفهوم."""
     action = (action or "").strip()
     if not action:
-        return "غير محدد"
+        return N_("غير محدد")
     if action in _ACTION_LABELS:
         return _ACTION_LABELS[action]
     try:
@@ -170,7 +171,7 @@ def _display_target_type(target_type: str) -> str:
     if raw in _TARGET_LABELS:
         return _TARGET_LABELS[raw]
     # تأنيس أخير: snake_case → عربيّ مكسور أحرفًا بدل عرض المفتاح خامًا.
-    return raw.replace("_", " ").strip() or "كيان"
+    return raw.replace("_", " ").strip() or N_("كيان")
 
 
 def _display_target(target_type: str, target_id: object) -> str:
@@ -189,17 +190,17 @@ def _display_actor(actor: str, token_names: "dict[int, str] | None" = None) -> s
     """
     actor = (actor or "").strip()
     if not actor:
-        return "غير معروف"
+        return N_("غير معروف")
     if actor == "system":
-        return "النظام"
+        return N_("النظام")
     if actor == "ui":
         # سياق واجهة بلا جلسة مدير (تلقائيّ) — عنصر نائب واضح لا رمز خام.
-        return "عملية واجهة (تلقائي)"
+        return N_("عملية واجهة (تلقائي)")
     if actor.startswith("system:"):
         # مهمّة مجدولة مُسمّاة: system:backup-scheduler → «النظام: مجدول النسخ»
         suffix = actor.split(":", 1)[1].strip()
         tail = _SYSTEM_ACTOR_AR.get(suffix) or suffix.replace("-", " ").replace("_", " ")
-        return f"النظام: {tail}" if tail else "النظام"
+        return _tr('النظام: %(tail)s', tail=tail) if tail else N_("النظام")
     if actor.startswith("api-token"):
         # api-token:N أو api-token-N أو api-token (بلا معرّف)
         token_id = ""
@@ -213,23 +214,23 @@ def _display_actor(actor: str, token_names: "dict[int, str] | None" = None) -> s
         if token_id:
             name = (token_names or {}).get(int(token_id)) if token_id.isdigit() else None
             if name:
-                return f"مفتاح: {name}"
-            return f"مفتاح ربط #{token_id}"
-        return "مفتاح ربط"
+                return _tr('مفتاح: %(name)s', name=name)
+            return _tr('مفتاح ربط #%(token_id)s', token_id=token_id)
+        return N_("مفتاح ربط")
     return actor
 
 
 _SOURCE_LABELS: dict[str, str] = {
-    "ui":        "الواجهة",
-    "web":       "الواجهة",
-    "api":       "واجهة برمجية",
-    "system":    "النظام",
-    "scheduler": "المجدوِل",
-    "cron":      "المجدوِل",
-    "unknown":   "غير معروف",
-    "cli":       "سطر الأوامر",
-    "portal":    "البوابة",
-    "admin":     "لوحة الإدارة",
+    "ui":        N_("الواجهة"),
+    "web":       N_("الواجهة"),
+    "api":       N_("واجهة برمجية"),
+    "system":    N_("النظام"),
+    "scheduler": N_("المجدوِل"),
+    "cron":      N_("المجدوِل"),
+    "unknown":   N_("غير معروف"),
+    "cli":       N_("سطر الأوامر"),
+    "portal":    N_("البوابة"),
+    "admin":     N_("لوحة الإدارة"),
 }
 
 
@@ -262,15 +263,15 @@ def _payload_summary(row_or_raw: object) -> str:
     if not data:
         return ""
     keys = {
-        "username": "المستخدم",
-        "plan": "الباقة",
-        "plan_id": "رقم الباقة",
-        "status": "الحالة",
-        "amount": "المبلغ",
-        "channel": "القناة",
-        "count": "العدد",
-        "name": "الاسم",
-        "filename": "الملف",
+        "username": N_("المستخدم"),
+        "plan": N_("الباقة"),
+        "plan_id": N_("رقم الباقة"),
+        "status": N_("الحالة"),
+        "amount": N_("المبلغ"),
+        "channel": N_("القناة"),
+        "count": N_("العدد"),
+        "name": N_("الاسم"),
+        "filename": N_("الملف"),
     }
     bits = []
     for key, label in keys.items():
@@ -335,7 +336,7 @@ def _change_items(before: dict, after: dict, *, limit: int = 8) -> list[dict]:
 def _diff_lines(before: dict, after: dict, *, limit: int = 6) -> list[str]:
     """«الحقل: من X إلى Y» لكلّ حقل تغيّر — نصّ التوافق الخلفيّ المُدمَج في عمود
     «التفاصيل». يشتقّ من `_change_items` (مصدر موحَّد)."""
-    return [f"{c['label']}: من {c['old']} إلى {c['new']}"
+    return [_tr('%(label)s: من %(old)s إلى %(new)s', label=c['label'], old=c['old'], new=c['new'])
             for c in _change_items(before, after, limit=limit)]
 
 
@@ -373,19 +374,19 @@ def _build_manager_event_detail(row: dict) -> str:
     # ── تسجيل الدخول/الخروج ──
     if action in ("auth_login", "login.success", "login.save", "auth_login.save"):
         if ip:
-            return f"دخل من IP: {ip}"
-        return "تسجيل دخول ناجح"
+            return _tr('دخل من IP: %(ip)s', ip=ip)
+        return N_("تسجيل دخول ناجح")
 
     if action in ("auth_login_failed", "login.failed"):
         username = _v("username", "user")
         if username:
-            bits.append(f"المستخدم: {username}")
+            bits.append(_tr('المستخدم: %(username)s', username=username))
         if ip:
             bits.append(f"IP: {ip}")
-        return "، ".join(bits) if bits else "محاولة دخول فاشلة"
+        return "، ".join(bits) if bits else N_("محاولة دخول فاشلة")
 
     if action in ("auth_logout", "logout"):
-        return f"تسجيل خروج من IP: {ip}" if ip else "تسجيل خروج"
+        return _tr('تسجيل خروج من IP: %(ip)s', ip=ip) if ip else N_("تسجيل خروج")
 
     # ── النسخ الاحتياطية — ملخّص عربيّ مفهوم (لا «ملف: <رقم داخليّ>») ──
     if "backup" in action:
@@ -396,22 +397,22 @@ def _build_manager_event_detail(row: dict) -> str:
         n_removed = (len(removed) if isinstance(removed, list)
                      else (int(removed) if str(removed).isdigit() else None))
         if "prune" in action or "pruned" in action or n_removed is not None:
-            return (f"تنظيف النسخ الاحتياطية — حُذف {n_removed} ملفًّا"
-                    if n_removed else "تنظيف النسخ الاحتياطية القديمة")
+            return (_tr('تنظيف النسخ الاحتياطية — حُذف %(n_removed)s ملفًّا', n_removed=n_removed)
+                    if n_removed else N_("تنظيف النسخ الاحتياطية القديمة"))
         if "restore" in action:
-            base = "استعادة نسخة احتياطية"
+            base = N_("استعادة نسخة احتياطية")
             return f"{base} — {status_ar}" if status_ar else base
         if "deleted" in action:
-            return f"حذف ملف نسخة احتياطية{(' — ' + filename) if filename else ''}"
+            return _tr('حذف ملف نسخة احتياطية%(v)s', v=' — ' + filename if filename else '')
         if "import" in action or "upload" in action:
-            return f"استيراد نسخة احتياطية{(' — ' + filename) if filename else ''}"
+            return _tr('استيراد نسخة احتياطية%(v)s', v=' — ' + filename if filename else '')
         # تشغيل نسخة (مجدولة/يدويّة) — الحالة + الاسم إن وُجدا.
-        base = "تشغيل نسخة احتياطية" if ("run" in action or "save" in action) else "نسخة احتياطية"
+        base = N_("تشغيل نسخة احتياطية") if ("run" in action or "save" in action) else N_("نسخة احتياطية")
         parts = [base]
         if status_ar:
             parts.append(status_ar)
         elif merged.get("verified") is True:
-            parts.append("ناجحة ومُتحقَّقة")
+            parts.append(N_("ناجحة ومُتحقَّقة"))
         if filename:
             parts.append(filename)
         return " — ".join(parts)
@@ -420,9 +421,9 @@ def _build_manager_event_detail(row: dict) -> str:
     if "card_print_template" in action or "print_template" in action:
         name = _v("name", "label", "template_name")
         if name:
-            return f"قالب: {name}"
+            return _tr('قالب: %(name)s', name=name)
         if target_id:
-            return f"قالب #{target_id}"
+            return _tr('قالب #%(target_id)s', target_id=target_id)
         return ""
 
     # ── جدولة عرض النطاق ──
@@ -433,13 +434,13 @@ def _build_manager_event_detail(row: dict) -> str:
         if name:
             bits.append(name)
         if start and end:
-            bits.append(f"من {start} إلى {end}")
+            bits.append(_tr('من %(start)s إلى %(end)s', start=start, end=end))
         elif start:
-            bits.append(f"من {start}")
+            bits.append(_tr('من %(start)s', start=start))
         if bits:
             return "، ".join(bits)
         if target_id:
-            return f"جدولة #{target_id}"
+            return _tr('جدولة #%(target_id)s', target_id=target_id)
         return ""
 
     # ── خدمات المنافذ (mt.port_services.*) ──
@@ -447,27 +448,27 @@ def _build_manager_event_detail(row: dict) -> str:
         device = _v("device", "nas", "router", "router_name", "nas_name")
         ports = _v("ports", "selected_ports")
         if device:
-            bits.append(f"جهاز: {device}")
+            bits.append(_tr('جهاز: %(device)s', device=device))
         if ports:
-            bits.append(f"منافذ: {ports}")
+            bits.append(_tr('منافذ: %(ports)s', ports=ports))
         if bits:
             return "، ".join(bits)
         if target_id:
-            return f"جهاز #{target_id}"
+            return _tr('جهاز #%(target_id)s', target_id=target_id)
         return ""
 
     # ── المشتركون ──
     if action.startswith("subscriber.") or (row.get("target_type") or "") in ("user", "subscriber"):
         username = _v("username", "user", "subscriber")
-        head = (f"مشترك: {username}" if username
-                else (f"مشترك #{target_id}" if target_id else ""))
+        head = (_tr('مشترك: %(username)s', username=username) if username
+                else (_tr('مشترك #%(target_id)s', target_id=target_id) if target_id else ""))
         if diff:                                  # «الحقل: من X إلى Y»
             return (f"{head} — " if head else "") + " · ".join(diff)
         plan = _v("plan", "plan_name", "new_plan")
         if head:
             bits.append(head)
         if plan:
-            bits.append(f"باقة: {plan}")
+            bits.append(_tr('باقة: %(plan)s', plan=plan))
         if bits:
             return "، ".join(bits)
         return ""
@@ -479,38 +480,38 @@ def _build_manager_event_detail(row: dict) -> str:
         if name:
             bits.append(name)
         if count:
-            bits.append(f"عدد: {count}")
+            bits.append(_tr('عدد: %(count)s', count=count))
         if bits:
             return "، ".join(bits)
         if target_id:
-            return f"دفعة #{target_id}"
+            return _tr('دفعة #%(target_id)s', target_id=target_id)
         return ""
 
     # ── البطاقات الفردية ──
     if action.startswith("card."):
         username = _v("username", "card", "card_id")
         if username:
-            return f"بطاقة: {username}"
+            return _tr('بطاقة: %(username)s', username=username)
         if target_id:
-            return f"بطاقة #{target_id}"
+            return _tr('بطاقة #%(target_id)s', target_id=target_id)
         return ""
 
     # ── الإعدادات ──
     if "settings" in action:
         keys_changed = _v("keys", "fields", "changed_keys")
         if keys_changed:
-            return f"مفاتيح: {keys_changed}"
+            return _tr('مفاتيح: %(keys_changed)s', keys_changed=keys_changed)
         if target_id:
-            return f"إعداد #{target_id}"
+            return _tr('إعداد #%(target_id)s', target_id=target_id)
         return ""
 
     # ── الصلاحيات والأدوار ──
     if "role" in action or "permissions" in action:
         role = _v("role", "role_name", "name")
         if role:
-            return f"دور: {role}"
+            return _tr('دور: %(role)s', role=role)
         if target_id:
-            return f"دور #{target_id}"
+            return _tr('دور #%(target_id)s', target_id=target_id)
         return ""
 
     # ── المدراء ──
@@ -518,9 +519,9 @@ def _build_manager_event_detail(row: dict) -> str:
             (row.get("target_type") or "") in ("admin", "manager"):
         username = _v("username", "name")
         if username:
-            return f"مدير: {username}"
+            return _tr('مدير: %(username)s', username=username)
         if target_id:
-            return f"مدير #{target_id}"
+            return _tr('مدير #%(target_id)s', target_id=target_id)
         return ""
 
     # ── عام: أيّ تعديل يحمل فرق before/after → «الحقل: من X إلى Y» ──
@@ -535,7 +536,7 @@ def _build_manager_event_detail(row: dict) -> str:
         bits.append(name)
     status = _v("status", "result")
     if status:                                    # enum خام → عربيّ مفهوم
-        bits.append(f"الحالة: {_STATUS_AR_DETAIL.get(status.lower(), status)}")
+        bits.append(_tr('الحالة: %(v)s', v=_STATUS_AR_DETAIL.get(status.lower(), status)))
     if bits:
         return "، ".join(bits)
 
@@ -589,7 +590,7 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
                 f"SELECT id, full_name, username FROM admins WHERE id IN ({qs})",
                 list(numeric_actors)).fetchall():
                 admin_names[int(a["id"])] = (a["full_name"] or a["username"]
-                                             or f"مدير #{a['id']}")
+                                             or _tr('مدير #%(id)s', id=a['id']))
         if login_actors:
             qs = ", ".join("?" for _ in login_actors)
             for a in db().execute(
@@ -604,7 +605,7 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         _actor_raw = str(row.get("actor") or "").strip()
         row["actor_login"] = ""
         if _actor_raw.isdigit():
-            row["actor_label"] = admin_names.get(int(_actor_raw), f"مدير #{_actor_raw}")
+            row["actor_label"] = admin_names.get(int(_actor_raw), _tr('مدير #%(actor_raw)s', actor_raw=_actor_raw))
         elif _actor_raw in login_names:
             row["actor_label"] = login_names[_actor_raw]
             # الاسم التسجيليّ الخام كسطرٍ ثانويّ خافت (لا يَتصدّر ولا يَتذبذب).
@@ -635,7 +636,7 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         row["payload_summary"] = "" if _d == "—" else _d
         # تعريب مصدر الحدث (source / actor_source)
         src = str(row.get("source") or row.get("actor_source") or "")
-        row["source_label"] = _SOURCE_LABELS.get(src.lower(), src or "الواجهة")
+        row["source_label"] = _SOURCE_LABELS.get(src.lower(), src or N_("الواجهة"))
         # ── صفوف مُعترِض نشاط المدير (هجرة 161): الصفحة/النتيجة/الطريقة/الهدف ──
         _decorate_activity_row(row)
     return rows
@@ -646,8 +647,8 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
 # الملوّنة هي الأساس والرمز يَنزل لسطر ثانويّ خافت (راجع rep_manager_events.html).
 #   نجح=أخضر · فشل=أحمر · حظر=كهرمانيّ (مميَّز عن الأحمر) · زيارة=أزرق · بلا أثر=رماديّ.
 _OUTCOME_AR: dict[str, str] = {
-    "visit": "زيارة", "success": "نجح", "noop": "بلا أثر",
-    "failed": "فشل", "blocked": "حظر",
+    "visit": N_("زيارة"), "success": N_("نجح"), "noop": N_("بلا أثر"),
+    "failed": N_("فشل"), "blocked": N_("حظر"),
 }
 _OUTCOME_VARIANT: dict[str, str] = {
     "visit": "blue", "success": "green", "noop": "gray",
@@ -724,7 +725,7 @@ def _decorate_activity_row(row: dict) -> None:
     outcome = _effective_outcome(row)
     row["outcome"] = outcome
     # كلمة عربيّة ملوّنة دائمًا موجودة (لا شارة فارغة، لا رمز عارٍ كأساس).
-    row["outcome_label"] = _OUTCOME_AR.get(outcome, "نجح")
+    row["outcome_label"] = _OUTCOME_AR.get(outcome, N_("نجح"))
     row["outcome_variant"] = _OUTCOME_VARIANT.get(outcome, "green")
     row["http_method"] = str(row.get("http_method") or "").upper()
     # سطر تقنيّ ثانويّ خافت (الطريقة · الرمز) — للتشخيص لا للعرض الأساسيّ.
@@ -1122,15 +1123,15 @@ def reports_summary_json():
 
 
 def reports_financial():
-    return _report_page("financial", "التقارير المالية")
+    return _report_page("financial", N_("التقارير المالية"))
 
 
 def reports_cards():
-    return _report_page("cards", "تقارير الكروت")
+    return _report_page("cards", N_("تقارير الكروت"))
 
 
 def reports_distributors():
-    return _report_page("distributors", "تقارير الموزعين")
+    return _report_page("distributors", N_("تقارير الموزعين"))
 
 
 def _report_page(report_type: str, title: str):
@@ -1165,7 +1166,7 @@ def reports_archive_create():
     # his own subscribers would store a partial «network» snapshot.
     from ..services.subscriber_scope import current_scope_admin_id
     if current_scope_admin_id(tenant_id=_tid()) is not None:
-        flash("إنشاء أرشيف تقارير الشبكة يتطلّب «عرض كل المشتركين».", "error")
+        flash(_tr("إنشاء أرشيف تقارير الشبكة يتطلّب «عرض كل المشتركين»."), "error")
         return redirect(url_for("radius.reports_archive"))
     archive = _svc().create_archive_snapshot(
         archive_type=request.form.get("archive_type") or "yearly",
@@ -1174,7 +1175,7 @@ def reports_archive_create():
         actor=_actor(),
     )
     flash(
-        "تم إنشاء نسخة أرشيف جديدة." if archive.get("created") else "نسخة الأرشيف موجودة مسبقًا، وتم الحفاظ عليها بدون تغيير.",
+        _tr("تم إنشاء نسخة أرشيف جديدة.") if archive.get("created") else _tr("نسخة الأرشيف موجودة مسبقًا، وتم الحفاظ عليها بدون تغيير."),
         "success",
     )
     return redirect(url_for("radius.reports_archive"))
@@ -1212,7 +1213,7 @@ def _args() -> dict:
         try:
             local_bounds(f["date_from"], f["date_to"], _tid())
         except ReportDateError as exc:
-            flash(f"{exc.message} عُرضت النتائج بلا فلترة تاريخ.", "warning")
+            flash(_tr('%(message)s عُرضت النتائج بلا فلترة تاريخ.', message=exc.message), "warning")
             f["date_from"] = f["date_to"] = ""
     return f
 
@@ -1369,40 +1370,40 @@ def rep_login_status():
 # detail_endpoint يربط بطاقة القسم في الصفحة الرئيسية بصفحته المخصّصة.
 _LOGIN_STATES_KINDS = {
     "subscriber": {
-        "title": "حالات دخول المشتركين",
+        "title": N_("حالات دخول المشتركين"),
         "icon": "user",
-        "subtitle": "محاولات مصادقة المشتركين عبر شبكة RADIUS (Access-Accept/Reject) — جهاز الشبكة وسبب الفشل.",
-        "search_ph": "بحث (اسم المشترك / جهاز الشبكة)…",
+        "subtitle": N_("محاولات مصادقة المشتركين عبر شبكة RADIUS (Access-Accept/Reject) — جهاز الشبكة وسبب الفشل."),
+        "search_ph": N_("بحث (اسم المشترك / جهاز الشبكة)…"),
         "detail_endpoint": "radius.rep_login_states_subscribers",
     },
     "card": {
-        "title": "حالات دخول البطاقات",
+        "title": N_("حالات دخول البطاقات"),
         "icon": "ticket",
-        "subtitle": "محاولات مصادقة البطاقات عبر شبكة RADIUS — عنوان الجهاز وجهاز الشبكة وسبب الفشل.",
-        "search_ph": "بحث (اسم البطاقة / عنوان الجهاز / جهاز الشبكة)…",
+        "subtitle": N_("محاولات مصادقة البطاقات عبر شبكة RADIUS — عنوان الجهاز وجهاز الشبكة وسبب الفشل."),
+        "search_ph": N_("بحث (اسم البطاقة / عنوان الجهاز / جهاز الشبكة)…"),
         "detail_endpoint": "radius.rep_login_states_cards",
     },
     "sub_portal": {
-        "title": "حالات بوابة المشتركين",
+        "title": N_("حالات بوابة المشتركين"),
         "icon": "door-open",
-        "subtitle": "محاولات دخول المشتركين عبر بوابة المشتركين على الويب — عنوان الشبكة والمتصفح والجهاز.",
-        "search_ph": "بحث (اسم المشترك / عنوان الشبكة)…",
+        "subtitle": N_("محاولات دخول المشتركين عبر بوابة المشتركين على الويب — عنوان الشبكة والمتصفح والجهاز."),
+        "search_ph": N_("بحث (اسم المشترك / عنوان الشبكة)…"),
         "detail_endpoint": "radius.rep_login_states_sub_portal",
         "actor": "subscriber",
     },
     "card_store": {
-        "title": "حالات بوابة متجر البطاقات",
+        "title": N_("حالات بوابة متجر البطاقات"),
         "icon": "store",
-        "subtitle": "محاولات دخول وتسجيل العملاء عبر متجر البطاقات (تطبيق المتجر) — بالجوال وعنوان الشبكة.",
-        "search_ph": "بحث (رقم الجوال / عنوان الشبكة)…",
+        "subtitle": N_("محاولات دخول وتسجيل العملاء عبر متجر البطاقات (تطبيق المتجر) — بالجوال وعنوان الشبكة."),
+        "search_ph": N_("بحث (رقم الجوال / عنوان الشبكة)…"),
         "detail_endpoint": "radius.rep_login_states_card_store",
         "actor": "card",
     },
     "admin": {
-        "title": "حالات دخول المدراء",
+        "title": N_("حالات دخول المدراء"),
         "icon": "user-shield",
-        "subtitle": "كل محاولات دخول المدراء إلى لوحة الإدارة — نجاحًا وفشلًا، مع عنوان الشبكة والمتصفح والجهاز.",
-        "search_ph": "بحث (اسم المدير / عنوان الشبكة)…",
+        "subtitle": N_("كل محاولات دخول المدراء إلى لوحة الإدارة — نجاحًا وفشلًا، مع عنوان الشبكة والمتصفح والجهاز."),
+        "search_ph": N_("بحث (اسم المدير / عنوان الشبكة)…"),
         "detail_endpoint": "radius.rep_login_states_admin",
     },
 }
@@ -1768,29 +1769,29 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
             mob = (cu.get("mobile") or "").strip()
             if name and mob:
                 return f"{name} ({mob})"
-            return name or mob or ("عميل #%s" % cu.get("id"))
+            return name or mob or (_tr("عميل #%s") % cu.get("id"))
         # لا حلّ: أظهر الجوّال (نصّ) إن وُجد، وإلا عنصر نائب واضح لا رقمًا وحيدًا.
         if actor and not actor.isdigit():
             return actor
         _id = actor if actor.isdigit() else (tgt if tgt.isdigit() else "")
-        return ("عميل #%s" % _id) if _id else "غير معروف"
+        return (_tr("عميل #%s") % _id) if _id else N_("غير معروف")
 
     # تسميات عربية لكل نوع حدث
     _ACTION_AR = {
-        "auth_login":              "دخول",
-        "auth_login_failed":       "دخول فاشل",
-        "card_issued":             "إصدار بطاقة",
-        "store.register":          "تسجيل",
-        "store.register_failed":   "تسجيل فاشل",
-        "store.logout":            "خروج",
-        "store.purchase":          "شراء",
-        "store.purchase_failed":   "شراء فاشل",
-        "store.card_redeem":       "شحن بطاقة",
-        "store.card_redeem_failed":"شحن بطاقة فاشل",
-        "store.deposit":           "إيداع",
-        "store.deposit_failed":    "إيداع فاشل",
-        "store.withdrawal":        "سحب",
-        "store.withdrawal_failed": "سحب فاشل",
+        "auth_login":              N_("دخول"),
+        "auth_login_failed":       N_("دخول فاشل"),
+        "card_issued":             N_("إصدار بطاقة"),
+        "store.register":          N_("تسجيل"),
+        "store.register_failed":   N_("تسجيل فاشل"),
+        "store.logout":            N_("خروج"),
+        "store.purchase":          N_("شراء"),
+        "store.purchase_failed":   N_("شراء فاشل"),
+        "store.card_redeem":       N_("شحن بطاقة"),
+        "store.card_redeem_failed":N_("شحن بطاقة فاشل"),
+        "store.deposit":           N_("إيداع"),
+        "store.deposit_failed":    N_("إيداع فاشل"),
+        "store.withdrawal":        N_("سحب"),
+        "store.withdrawal_failed": N_("سحب فاشل"),
     }
     _FAIL_ACTIONS = {
         "auth_login_failed", "store.register_failed", "store.purchase_failed",
@@ -1809,7 +1810,7 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
 
         if action in _FAIL_ACTIONS:
             r["login_ok"] = False
-            r["result_label"] = _ACTION_AR.get(action, "فاشل")
+            r["result_label"] = _ACTION_AR.get(action, N_("فاشل"))
             r["result_reason"] = reason_label(str(r.get("error_message") or ""))
             if action in ("store.purchase_failed", "store.card_redeem_failed"):
                 _pkg = str(pl.get("package_name") or pl.get("card_number") or "").strip()
@@ -1819,7 +1820,7 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
 
         if action == "card_issued":
             r["login_ok"] = False
-            r["result_label"] = "إصدار بطاقة"
+            r["result_label"] = N_("إصدار بطاقة")
             r["result_reason"] = ""
             _pkg = str(pl.get("package_name") or "").strip()
             _cu = str(pl.get("card_username") or "").strip()
@@ -1827,69 +1828,69 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
             _cur = str(pl.get("currency") or "").strip()
             bits = []
             if _pkg:
-                bits.append(f"العرض: {_pkg}")
+                bits.append(_tr('العرض: %(pkg)s', pkg=_pkg))
             if _cu:
-                bits.append(f"البطاقة: {_cu}")
+                bits.append(_tr('البطاقة: %(cu)s', cu=_cu))
             if _amt:
-                bits.append(f"المبلغ: {_amt} {_cur}".strip())
+                bits.append(_tr('المبلغ: %(amt)s %(cur)s', amt=_amt, cur=_cur).strip())
             if bits:
                 r["detail_display"] = " · ".join(bits)
             continue
 
         if action == "store.purchase":
             r["login_ok"] = True
-            r["result_label"] = "شراء"
+            r["result_label"] = N_("شراء")
             r["result_reason"] = ""
             _pkg = str(pl.get("package_name") or "").strip()
             _cu = str(pl.get("card_username") or "").strip()
             _amt = str(pl.get("amount") or "").strip()
             bits = []
             if _pkg:
-                bits.append(f"العرض: {_pkg}")
+                bits.append(_tr('العرض: %(pkg)s', pkg=_pkg))
             if _cu:
-                bits.append(f"البطاقة: {_cu}")
+                bits.append(_tr('البطاقة: %(cu)s', cu=_cu))
             if _amt:
-                bits.append(f"المبلغ: {_amt}")
+                bits.append(_tr('المبلغ: %(amt)s', amt=_amt))
             if bits:
                 r["detail_display"] = " · ".join(bits)
             continue
 
         if action == "store.card_redeem":
             r["login_ok"] = True
-            r["result_label"] = "شحن بطاقة"
+            r["result_label"] = N_("شحن بطاقة")
             r["result_reason"] = ""
             _amt = str(pl.get("amount") or "").strip()
             _cn = str(pl.get("card_number") or "").strip()
             bits = []
             if _cn:
-                bits.append(f"البطاقة: {_cn}")
+                bits.append(_tr('البطاقة: %(cn)s', cn=_cn))
             if _amt:
-                bits.append(f"المبلغ: {_amt}")
+                bits.append(_tr('المبلغ: %(amt)s', amt=_amt))
             if bits:
                 r["detail_display"] = " · ".join(bits)
             continue
 
         if action in ("store.deposit", "store.withdrawal"):
             r["login_ok"] = True
-            r["result_label"] = "إيداع" if action == "store.deposit" else "سحب"
+            r["result_label"] = N_("إيداع") if action == "store.deposit" else N_("سحب")
             r["result_reason"] = ""
             _amt = str(pl.get("amount") or "").strip()
             _mth = str(pl.get("method") or "").strip()
             _pee = str(pl.get("payee_name") or "").strip()
             bits = []
             if _amt:
-                bits.append(f"المبلغ: {_amt}")
+                bits.append(_tr('المبلغ: %(amt)s', amt=_amt))
             if _mth:
-                bits.append(f"الطريقة: {_mth}")
+                bits.append(_tr('الطريقة: %(mth)s', mth=_mth))
             if _pee:
-                bits.append(f"المستفيد: {_pee}")
+                bits.append(_tr('المستفيد: %(pee)s', pee=_pee))
             if bits:
                 r["detail_display"] = " · ".join(bits)
             continue
 
         if action == "store.register":
             r["login_ok"] = True
-            r["result_label"] = "تسجيل"
+            r["result_label"] = N_("تسجيل")
             r["result_reason"] = ""
             _dn = str(pl.get("display_name") or "").strip()
             if _dn:
@@ -1898,14 +1899,14 @@ def _decorate_card_store_rows(rows: list[dict]) -> list[dict]:
 
         if action == "store.logout":
             r["login_ok"] = True
-            r["result_label"] = "خروج"
+            r["result_label"] = N_("خروج")
             r["result_reason"] = ""
             continue
 
         # auth_login / auth_login_failed (الأصلي) + أي نوع غير معروف
         ok_ = action == "auth_login"
         r["login_ok"] = ok_
-        r["result_label"] = "دخول ناجح" if ok_ else "محاولة فاشلة"
+        r["result_label"] = N_("دخول ناجح") if ok_ else N_("محاولة فاشلة")
         r["result_reason"] = "" if ok_ else reason_label(str(r.get("error_message") or ""))
     return rows
 

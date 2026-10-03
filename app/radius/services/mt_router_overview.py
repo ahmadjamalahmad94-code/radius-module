@@ -18,6 +18,7 @@ When a data source is missing, the corresponding field carries
 honest, not fatal.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -218,12 +219,12 @@ def _first(rows: list[dict], **filters) -> dict | None:
 
 
 _COUNTER_LABELS = {
-    "hotspot_active": "جلسات Hotspot النشطة",
-    "ppp_active": "جلسات PPP النشطة",
-    "rx_bytes_total": "إجمالي التحميل المستلم",
-    "tx_bytes_total": "إجمالي الرفع المرسل",
-    "last_seen_age_sec": "عمر آخر قراءة",
-    "fetched_at": "وقت القراءة",
+    "hotspot_active": N_("جلسات Hotspot النشطة"),
+    "ppp_active": N_("جلسات PPP النشطة"),
+    "rx_bytes_total": N_("إجمالي التحميل المستلم"),
+    "tx_bytes_total": N_("إجمالي الرفع المرسل"),
+    "last_seen_age_sec": N_("عمر آخر قراءة"),
+    "fetched_at": N_("وقت القراءة"),
 }
 
 
@@ -231,8 +232,8 @@ def _format_bytes(value: Any) -> str:
     try:
         size = float(value)
     except (TypeError, ValueError):
-        return "0 بايت"
-    units = ["بايت", "KB", "MB", "GB", "TB"]
+        return N_("0 بايت")
+    units = [N_("بايت"), "KB", "MB", "GB", "TB"]
     idx = 0
     while size >= 1024 and idx < len(units) - 1:
         size /= 1024
@@ -244,12 +245,12 @@ def _format_bytes(value: Any) -> str:
 
 def _format_counter_value(key: str, value: Any) -> str:
     if value is None or value == "":
-        return "لا توجد قراءة"
+        return N_("لا توجد قراءة")
     if key.endswith("_bytes_total"):
         return _format_bytes(value)
     if key == "last_seen_age_sec":
         try:
-            return f"{int(value)} ثانية"
+            return _tr('%(v)s ثانية', v=int(value))
         except (TypeError, ValueError):
             return str(value)
     if key == "fetched_at":
@@ -259,9 +260,9 @@ def _format_counter_value(key: str, value: Any) -> str:
         except (TypeError, ValueError, OSError):
             return str(value)
     if isinstance(value, bool):
-        return "نعم" if value else "لا"
+        return N_("نعم") if value else N_("لا")
     if isinstance(value, (dict, list, tuple)):
-        return "مجموعة بيانات"
+        return N_("مجموعة بيانات")
     return str(value)
 
 
@@ -322,24 +323,24 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
     safe = True
     if not nas.get("enabled"):
         safe = False
-        safety_reasons.append("الراوتر معطّل من الإعدادات.")
+        safety_reasons.append(N_("الراوتر معطّل من الإعدادات."))
     if counts["critical"] > 0:
         safe = False
         safety_reasons.append(
-            f"يوجد {counts['critical']} تنبيه حرج مفتوح.")
+            _tr('يوجد %(critical)s تنبيه حرج مفتوح.', critical=counts['critical']))
     if snap_status == "failed":
         safe = False
         safety_reasons.append(
-            "آخر محاولة لتحديث الـ snapshot فشلت — "
-            "اتصال الراوتر غير مؤكَّد.")
+            N_("آخر محاولة لتحديث الـ snapshot فشلت — "
+            "اتصال الراوتر غير مؤكَّد."))
     elif snap_status == "unknown":
         safety_reasons.append(
-            "لا توجد بيانات snapshot حديثة لهذا الراوتر.")
+            N_("لا توجد بيانات snapshot حديثة لهذا الراوتر."))
         # Not auto-unsafe — operator may have just enabled it.
     if backup_status == "missing":
         safety_reasons.append(
-            "لا توجد نسخة احتياطية لهذا الراوتر — يُستحسن "
-            "أخذ نسخة قبل أي تعديل خطر.")
+            N_("لا توجد نسخة احتياطية لهذا الراوتر — يُستحسن "
+            "أخذ نسخة قبل أي تعديل خطر."))
         # Not auto-unsafe — but a strong recommendation.
 
     # ── Suggested next actions
@@ -348,14 +349,14 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
         # Run a diagnostics job to refresh.
         actions.append(SuggestedAction(
             code="refresh_diagnostics",
-            label_ar="شغّل تشخيصًا الآن",
+            label_ar=N_("شغّل تشخيصًا الآن"),
             href=f"/admin/radius/jobs/diagnostics/{nas_id}",
             severity="info" if snap_status == "stale" else "warning",
         ))
     if backup_status in {"missing", "stale"}:
         actions.append(SuggestedAction(
             code="take_backup",
-            label_ar="خذ نسخة احتياطية",
+            label_ar=N_("خذ نسخة احتياطية"),
             href=f"/admin/radius/mt/{nas_id}/backups",
             severity=("warning" if backup_status == "missing"
                       else "info"),
@@ -363,7 +364,7 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
     if counts["critical"] > 0:
         actions.append(SuggestedAction(
             code="review_alerts",
-            label_ar="راجع التنبيهات الحرجة",
+            label_ar=N_("راجع التنبيهات الحرجة"),
             href=f"/admin/radius/alerts?router_id={nas_id}"
                  "&severity=critical",
             severity="critical",
@@ -371,7 +372,7 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
     if last_failed:
         actions.append(SuggestedAction(
             code="review_last_failure",
-            label_ar="افحص آخر عملية فاشلة",
+            label_ar=N_("افحص آخر عملية فاشلة"),
             href=f"/admin/radius/audit/{last_failed.get('id')}",
             severity="warning",
         ))
@@ -379,7 +380,7 @@ def build_overview(*, tenant_id: int, nas_id: int) -> RouterOverview | None:
     if not actions:
         actions.append(SuggestedAction(
             code="open_dashboard",
-            label_ar="افتح لوحة الراوتر",
+            label_ar=N_("افتح لوحة الراوتر"),
             href=f"/admin/radius/mt/{nas_id}/dashboard",
             severity="info",
         ))

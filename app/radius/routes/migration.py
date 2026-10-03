@@ -16,6 +16,7 @@ method. الملف الخام يبقى خادميًّا؛ التحليل يُع�
 ببيانات المتصفّح، ولا تجول كلمات المرور للواجهة).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -122,7 +123,7 @@ def migration_analyze():
     _require_owner()
     f = request.files.get("file")
     if f is None or not f.filename:
-        return jsonify({"ok": False, "error": "لم يُرفَع أيّ ملف."}), 400
+        return jsonify({"ok": False, "error": _tr("لم يُرفَع أيّ ملف.")}), 400
 
     from ..services.migration import engine
     from ..db.repos import migration_jobs_repo
@@ -136,14 +137,13 @@ def migration_analyze():
         _safe_unlink(path)
         _mb = _MAX_UPLOAD // (1024 * 1024)
         return jsonify({"ok": False, "status": "too_large",
-                        "error": (f"الملفّ أكبر من الحدّ المسموح ({_mb}MB). "
-                                  "ارفع النسخة المضغوطة .gz أو تفريغًا أصغر.")}), 413
+                        "error": (_tr('الملفّ أكبر من الحدّ المسموح (%(mb)sMB). ارفع النسخة المضغوطة .gz أو تفريغًا أصغر.', mb=_mb))}), 413
     except OSError as exc:
         _safe_unlink(path)
-        return jsonify({"ok": False, "error": f"تعذّر حفظ الملف: {exc}"}), 500
+        return jsonify({"ok": False, "error": _tr('تعذّر حفظ الملف: %(exc)s', exc=exc)}), 500
     if size == 0:
         _safe_unlink(path)
-        return jsonify({"ok": False, "error": "الملف فارغ."}), 400
+        return jsonify({"ok": False, "error": _tr("الملف فارغ.")}), 400
 
     # التحليل خلفيًّا: يعود فورًا؛ الواجهة تستطلع /migrate/analyze_status لعرض
     # المرحلة الحيّة (قراءة/فحص بنية+عدّ/تصنيف) مع تفاصيل وأعداد متزايدة —
@@ -184,7 +184,7 @@ def migration_analyze():
                 _LOG.exception("migration analyze worker failed")
                 migration_jobs_repo.set_report(
                     tid, token,
-                    {"status": "failed", "error": f"تعذّر تحليل الملف: {exc}"},
+                    {"status": "failed", "error": _tr('تعذّر تحليل الملف: %(exc)s', exc=exc)},
                     status="failed")
 
     threading.Thread(target=_worker, name=f"migrate-analyze-{token[:8]}",
@@ -199,7 +199,7 @@ def migration_analyze_status():
     from ..db.repos import migration_jobs_repo
     job = migration_jobs_repo.get_by_token(_tid(), token)
     if not job:
-        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+        return jsonify({"ok": False, "error": _tr("المهمّة غير موجودة.")}), 404
     status = job.get("status") or ""
     if status == "analyzing":
         prog = migration_jobs_repo.parsed_report(job).get("progress", {})
@@ -244,10 +244,10 @@ def migration_plan():
     from ..db.repos import migration_jobs_repo
     job = migration_jobs_repo.get_by_token(_tid(), token)
     if not job:
-        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+        return jsonify({"ok": False, "error": _tr("المهمّة غير موجودة.")}), 404
     path = job.get("file_path") or ""
     if not path or not os.path.exists(path):
-        return jsonify({"ok": False, "error": "تعذّر قراءة الملف المصدر."}), 410
+        return jsonify({"ok": False, "error": _tr("تعذّر قراءة الملف المصدر.")}), 410
 
     from ..services.migration import engine
     res = engine.analyze_path(path, job.get("filename") or "")
@@ -272,12 +272,12 @@ def migration_commit():
     tid = _tid()
     job = migration_jobs_repo.get_by_token(tid, token)
     if not job:
-        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+        return jsonify({"ok": False, "error": _tr("المهمّة غير موجودة.")}), 404
     if job.get("status") == "running":
         return jsonify({"ok": True, "running": True, "token": token})
     path = job.get("file_path") or ""
     if not path or not os.path.exists(path):
-        return jsonify({"ok": False, "error": "تعذّر قراءة الملف المصدر."}), 410
+        return jsonify({"ok": False, "error": _tr("تعذّر قراءة الملف المصدر.")}), 410
 
     filename = job.get("filename") or ""
     actor = _actor()
@@ -337,17 +337,16 @@ def migration_commit():
                         migration_jobs_repo.set_report(
                             tid, token,
                             {"status": "failed",
-                             "error": "تعذّر إنشاء نسخة احتياطيّة — أُلغي "
-                                      f"التنفيذ ولم يتغيّر شيء: {bexc}"},
+                             "error": _tr('تعذّر إنشاء نسخة احتياطيّة — أُلغي التنفيذ ولم يتغيّر شيء: %(bexc)s', bexc=bexc)},
                             status="failed")
                         return
                     if not bk.get("verified"):
-                        _m = (bk.get("run") or {}).get("message") or "فشل التحقّق."
+                        _m = (bk.get("run") or {}).get("message") or N_("فشل التحقّق.")
                         migration_jobs_repo.set_report(
                             tid, token,
                             {"status": "failed",
-                             "error": "تعذّر إنشاء نسخة احتياطيّة موثوقة — "
-                                      "أُلغي التنفيذ ولم يتغيّر شيء. " + _m},
+                             "error": _tr("تعذّر إنشاء نسخة احتياطيّة موثوقة — "
+                                      "أُلغي التنفيذ ولم يتغيّر شيء. ") + _m},
                             status="failed")
                         return
                     backup_name = os.path.basename(
@@ -366,7 +365,7 @@ def migration_commit():
                 _LOG.exception("migration commit worker failed")
                 migration_jobs_repo.set_report(
                     tid, token,
-                    {"status": "failed", "error": f"تعذّر التنفيذ: {exc}"},
+                    {"status": "failed", "error": _tr('تعذّر التنفيذ: %(exc)s', exc=exc)},
                     status="failed")
 
     threading.Thread(target=_worker, name=f"migrate-commit-{token[:8]}",
@@ -381,7 +380,7 @@ def migration_commit_status():
     from ..db.repos import migration_jobs_repo
     job = migration_jobs_repo.get_by_token(_tid(), token)
     if not job:
-        return jsonify({"ok": False, "error": "المهمّة غير موجودة."}), 404
+        return jsonify({"ok": False, "error": _tr("المهمّة غير موجودة.")}), 404
     status = job.get("status") or ""
     data = migration_jobs_repo.parsed_report(job)
     if status == "running":

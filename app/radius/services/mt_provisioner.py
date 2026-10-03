@@ -24,6 +24,7 @@ that ever leaves this server is the freshly generated, randomly
 generated `hr-` user (rotatable at any time).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 import secrets
@@ -340,7 +341,7 @@ def render_wg_block(
     )
 
 
-_WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) — FULLY IDEMPOTENT ────────
+_WG_BLOCK_TEMPLATE_V7 = N_("""# ── HobeRadius WireGuard tunnel (RouterOS 7+) — FULLY IDEMPOTENT ────────
 # Re-paste this block any number of times: it converges to exactly ONE clean
 # state. It first WIPES every object it owns (our firewall rule + ALL peers and
 # addresses on the interface — this also clears the setup wizard's peer) and
@@ -397,7 +398,7 @@ _WG_BLOCK_TEMPLATE_V7 = """# ── HobeRadius WireGuard tunnel (RouterOS 7+) �
 /ip firewall filter add chain=input in-interface={wg_iface} src-address={allowed_subnet} \\
     action=accept comment="hr-wg-mgmt"
 /ip firewall filter move [find comment="hr-wg-mgmt"] destination=0
-"""
+""")
 
 
 # ─── Script templates ────────────────────────────────────────────

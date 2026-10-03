@@ -43,8 +43,8 @@
 {# ───── الصدفة الموحّدة: هيرو + KPI + فلترة في كتلة واحدة ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "كل الكروت",
-  subtitle="عرض كل الكروت المولّدة عبر الدفعات — تصفية حسب الحالة والدفعة، وبحث مباشر باليوزر. الأرقام بالأعلى لكامل النطاق الحالي وليس للصفحة فقط.",
+  _('كل الكروت'),
+  subtitle=_('عرض كل الكروت المولّدة عبر الدفعات — تصفية حسب الحالة والدفعة، وبحث مباشر باليوزر. الأرقام بالأعلى لكامل النطاق الحالي وليس للصفحة فقط.'),
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.cards_generate') + '">
@@ -57,11 +57,11 @@
       <i class="fa-solid fa-magnifying-glass"></i> '|safe ~ _("فحص بطاقة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الإجمالي', 'value': status_counts.total,     'icon': 'id-card',       'variant': 'brand'},
-    {'label': 'متاحة',    'value': status_counts.available, 'icon': 'circle-check',  'variant': 'green'},
-    {'label': 'مستخدمة',  'value': status_counts.used,      'icon': 'circle-user',   'variant': 'blue'},
-    {'label': 'منتهية',   'value': status_counts.expired,   'icon': 'hourglass-end', 'variant': 'amber'},
-    {'label': 'محظورة',   'value': status_counts.revoked,   'icon': 'ban',           'variant': 'red'},
+    {'label': _('الإجمالي'), 'value': status_counts.total,     'icon': 'id-card',       'variant': 'brand'},
+    {'label': _('متاحة'),    'value': status_counts.available, 'icon': 'circle-check',  'variant': 'green'},
+    {'label': _('مستخدمة'),  'value': status_counts.used,      'icon': 'circle-user',   'variant': 'blue'},
+    {'label': _('منتهية'),   'value': status_counts.expired,   'icon': 'hourglass-end', 'variant': 'amber'},
+    {'label': _('محظورة'),   'value': status_counts.revoked,   'icon': 'ban',           'variant': 'red'},
   ],
   search_action=url_for('radius.cards_list')
 ) %}
@@ -88,12 +88,12 @@
   </select>
   <select class="hub-select" name="per_page" aria-label="{{ _('عدد النتائج بالصفحة') }}">
     {% for n in [25, 50, 100] %}
-      <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
+      <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ _('%(n)s/صفحة', n=n) }}</option>
     {% endfor %}
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if _filtered %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                 attrs='onclick="window.location=' + "'" + url_for('radius.cards_list') + "'" + '"') }}
   {% endif %}
 {% endcall %}
@@ -101,18 +101,18 @@
 
 {# ───── تخطيط العمل: المحتوى + لوحة شرح قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ قائمة الكروت؟",
-  intro="كل صف هو كرت مولّد ضمن دفعة، يحمل اليوزر والباسورد وحالته وتفاصيل استخدامه.",
+  _('كيف تقرأ قائمة الكروت؟'),
+  intro=_('كل صف هو كرت مولّد ضمن دفعة، يحمل اليوزر والباسورد وحالته وتفاصيل استخدامه.'),
   items=[
-    {'icon': 'filter',     'text': 'فلاتر الأعلى تعمل على كامل النطاق: الحالة، الدفعة، وبحث مباشر باليوزر. الأرقام في الهيرو لكامل النطاق لا للصفحة.'},
-    {'icon': 'circle-info', 'text': 'الحالة معرّبة (متاحة / مستخدمة / منتهية / محظورة)؛ مرّر المؤشر فوق الحالة لرؤية القيمة الخام.'},
-    {'icon': 'arrow-up-wide-short', 'text': 'اضغط رأس أي عمود للترتيب تصاعديًا أو تنازليًا، وزر «الأعمدة» لإظهار/إخفاء أعمدة.'},
-    {'icon': 'ban',        'text': 'زر الإلغاء يوقف الكرت نهائيًا بعد تأكيد؛ لا يظهر للكروت المحظورة سلفًا.'},
+    {'icon': 'filter',     'text': _('فلاتر الأعلى تعمل على كامل النطاق: الحالة، الدفعة، وبحث مباشر باليوزر. الأرقام في الهيرو لكامل النطاق لا للصفحة.')},
+    {'icon': 'circle-info', 'text': _('الحالة معرّبة (متاحة / مستخدمة / منتهية / محظورة)؛ مرّر المؤشر فوق الحالة لرؤية القيمة الخام.')},
+    {'icon': 'arrow-up-wide-short', 'text': _('اضغط رأس أي عمود للترتيب تصاعديًا أو تنازليًا، وزر «الأعمدة» لإظهار/إخفاء أعمدة.')},
+    {'icon': 'ban',        'text': _('زر الإلغاء يوقف الكرت نهائيًا بعد تأكيد؛ لا يظهر للكروت المحظورة سلفًا.')},
   ],
-  note="الترقيم يبقى على الخادم: استخدم منتقي «النتائج بالصفحة» وأزرار التنقل أسفل الجدول."
+  note=_('الترقيم يبقى على الخادم: استخدم منتقي «النتائج بالصفحة» وأزرار التنقل أسفل الجدول.')
 )) %}
 {% if items %}
-{% call hub.section("الكروت", icon="table-list", meta=(total|ar_count('card')) ~ " — صفحة " + page|string + " من " + pages_count|string, flush=True) %}
+{% call hub.section(_('الكروت'), icon="table-list", meta=(total|ar_count('card')) ~ _(' — صفحة ') + page|string + _(' من ') + pages_count|string, flush=True) %}
   {# ترقيم الصفحات يبقى على الخادم (per_page ≤ 100). data-uds-page-size=100
      = سقف per_page حتى لا يقسم مُرقِّم uds صفحة الخادم — نستفيد من الفرز
      واختيار الأعمدة دون تعارض بين المُرقِّمين. #}
@@ -161,10 +161,10 @@
           </td>
           <td>
             {# الحالة معرّبة + القيمة الخام (enum) متاحة في title لمن يحتاج المرجع التقني #}
-            {% if c.revoked %}<span title="revoked">{{ hub.pill("محظورة", variant="red") }}</span>
-            {% elif _expired %}<span title="expired">{{ hub.pill("منتهية", variant="amber") }}</span>
-            {% elif c.used %}<span title="used">{{ hub.pill("مستخدمة", variant="blue") }}</span>
-            {% else %}<span title="available">{{ hub.pill("متاحة", variant="green") }}</span>{% endif %}
+            {% if c.revoked %}<span title="revoked">{{ hub.pill(_('محظورة'), variant="red") }}</span>
+            {% elif _expired %}<span title="expired">{{ hub.pill(_('منتهية'), variant="amber") }}</span>
+            {% elif c.used %}<span title="used">{{ hub.pill(_('مستخدمة'), variant="blue") }}</span>
+            {% else %}<span title="available">{{ hub.pill(_('متاحة'), variant="green") }}</span>{% endif %}
           </td>
           <td class="mono small"><bdi dir="ltr">{{ c.first_used_at|dt_local if c.first_used_at else '—' }}</bdi></td>
           <td class="mono small">{% if c.used_by_mac %}<bdi dir="ltr">{{ c.used_by_mac|upper }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
@@ -172,7 +172,7 @@
           <td>
             {% if not c.revoked %}
             {% if can_submit('radius.cards_revoke', 'POST') %}<form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
-                  onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
+                  onsubmit="return confirm({{ _('إلغاء البطاقة %(username)s؟', username=c.username)|tojson|forceescape }});" style="display:inline">
               <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء البطاقة') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
@@ -218,8 +218,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا كروت تطابق الفلتر" if _filtered else "لا كروت بعد",
-  sub="جرّب تخفيف معايير البحث أو تغيير الحالة." if _filtered else "ولّد دفعة جديدة من زرّ «توليد كروت» أعلى الصفحة.",
+  _('لا كروت تطابق الفلتر') if _filtered else _('لا كروت بعد'),
+  sub=_('جرّب تخفيف معايير البحث أو تغيير الحالة.') if _filtered else _('ولّد دفعة جديدة من زرّ «توليد كروت» أعلى الصفحة.'),
   icon="id-card"
 ) }}
 {% endif %}

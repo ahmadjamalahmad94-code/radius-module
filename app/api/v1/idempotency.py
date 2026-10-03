@@ -18,6 +18,7 @@ the same key with a different body or for another subscriber → 422
 lives in ``radius/services/idempotency`` so the web forms use it too.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import functools
 
@@ -61,7 +62,7 @@ def idempotent(view):
         key = _raw_key()
         if len(key) > _MAX_KEY:
             # A 5,000-char key used to be accepted (silently truncated).
-            return fail("validation_error", _idem.TOO_LONG_AR, status=422)
+            return fail("validation_error", _tr(_idem.TOO_LONG_MSG, n=_idem.MAX_KEY), status=422)
         if not key or _is_dry_run():
             # معاينةٌ لا تكتب شيئًا فلا تحجز المفتاح — وإلّا أعاد التنفيذُ
             # الحقيقيّ بالمفتاح نفسه نتيجةَ المعاينة بدل أن يُنفَّذ.
@@ -85,7 +86,7 @@ def idempotent(view):
             return replay
         if state == _idem.IN_PROGRESS:
             return fail("idempotency_in_progress",
-                        "طلبٌ بنفس مفتاح التكرار قيد التنفيذ — انتظر نتيجته ولا تُعِد الإرسال.",
+                        _tr("طلبٌ بنفس مفتاح التكرار قيد التنفيذ — انتظر نتيجته ولا تُعِد الإرسال."),
                         status=409)
         try:
             response = make_response(view(*args, **kwargs))

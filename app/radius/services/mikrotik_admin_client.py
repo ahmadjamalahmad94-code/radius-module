@@ -25,6 +25,7 @@ The existing low-level wire client (`MikrotikClient`) and pool
 adapter, not a rewrite.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -181,7 +182,7 @@ def _connect_error_text(exc: BaseException) -> str:
     text = str(exc)
     if text.startswith("تعذّر الاتصال") or "غير متاح" in text:
         return text
-    return f"تعذر الاتصال بالراوتر: {text}"
+    return _tr('تعذر الاتصال بالراوتر: %(text)s', text=text)
 
 
 def _safe_dial(
@@ -204,7 +205,7 @@ def _safe_dial(
     if not descriptor["address"]:
         return MtResult(
             ok=False,
-            error="عنوان الراوتر غير محدد",
+            error=N_("عنوان الراوتر غير محدد"),
             took_ms=0,
             dialed_address="",
             mode=descriptor["mode"],
@@ -229,7 +230,7 @@ def _safe_dial(
         )
         return MtResult(
             ok=False,
-            error=f"فشل تسجيل الدخول: {exc}",
+            error=_tr('فشل تسجيل الدخول: %(exc)s', exc=exc),
             took_ms=int((time.perf_counter() - started) * 1000),
             dialed_address=descriptor["address"],
             mode=descriptor["mode"],
@@ -249,19 +250,19 @@ def _safe_dial(
     except MikrotikTrap as exc:
         return MtResult(
             ok=False,
-            error=f"رفض الراوتر العملية: {exc}",
+            error=_tr('رفض الراوتر العملية: %(exc)s', exc=exc),
             took_ms=int((time.perf_counter() - started) * 1000),
             dialed_address=descriptor["address"],
             mode=descriptor["mode"],
         )
     except (MikrotikError, OSError) as exc:
         if isinstance(exc, socket.timeout) or "timed out" in str(exc).lower():
-            msg = ("انتهت مهلة انتظار الراوتر — قد تكون العملية أبطأ من المتوقّع "
-                   "(جرّب مجدّدًا أو زِد مهلة الـAPI للراوتر)")
+            msg = (_tr("انتهت مهلة انتظار الراوتر — قد تكون العملية أبطأ من المتوقّع "
+                   "(جرّب مجدّدًا أو زِد مهلة الـAPI للراوتر)"))
         elif isinstance(exc, OSError):
-            msg = f"تعذّر الاتصال بالراوتر — {os_error_reason_ar(exc)}"
+            msg = _tr('تعذّر الاتصال بالراوتر — %(v)s', v=os_error_reason_ar(exc))
         else:
-            msg = f"خطأ في الاتصال: {exc}"
+            msg = _tr('خطأ في الاتصال: %(exc)s', exc=exc)
         return MtResult(
             ok=False,
             error=msg,
@@ -275,7 +276,7 @@ def _safe_dial(
         if exc_name == "AuthError":
             return MtResult(
                 ok=False,
-                error=f"فشل تسجيل الدخول: {exc}",
+                error=_tr('فشل تسجيل الدخول: %(exc)s', exc=exc),
                 took_ms=int((time.perf_counter() - started) * 1000),
                 dialed_address=descriptor["address"],
                 mode=descriptor["mode"],
@@ -283,7 +284,7 @@ def _safe_dial(
         if exc_name == "ConnectError":
             return MtResult(
                 ok=False,
-                error=f"تعذر الاتصال: {exc}",
+                error=_tr('تعذر الاتصال: %(exc)s', exc=exc),
                 took_ms=int((time.perf_counter() - started) * 1000),
                 dialed_address=descriptor["address"],
                 mode=descriptor["mode"],
@@ -291,14 +292,14 @@ def _safe_dial(
         if exc_name == "MikrotikTrap":
             return MtResult(
                 ok=False,
-                error=f"رفض الراوتر العملية: {exc}",
+                error=_tr('رفض الراوتر العملية: %(exc)s', exc=exc),
                 took_ms=int((time.perf_counter() - started) * 1000),
                 dialed_address=descriptor["address"],
                 mode=descriptor["mode"],
             )
         return MtResult(
             ok=False,
-            error=f"خطأ في الاتصال: {exc}",
+            error=_tr('خطأ في الاتصال: %(exc)s', exc=exc),
             took_ms=int((time.perf_counter() - started) * 1000),
             dialed_address=descriptor["address"],
             mode=descriptor["mode"],
@@ -537,7 +538,7 @@ def interface_traffic(nas: Mapping[str, Any], name: str) -> MtResult:
     """
     iface = (name or "").strip()
     if not iface:
-        return MtResult(ok=False, error="اسم الواجهة غير محدد")
+        return MtResult(ok=False, error=N_("اسم الواجهة غير محدد"))
 
     def work(client):
         rows = client.run(
@@ -664,7 +665,7 @@ def _coerce_queue_attr(key: str, value: Any) -> str:
             return "yes"
         if text in {"no", "false", "0"}:
             return "no"
-        raise ValueError("disabled يجب أن يكون true/false")
+        raise ValueError(_tr("disabled يجب أن يكون true/false"))
     if value is None:
         return ""
     return str(value)
@@ -681,15 +682,15 @@ def queue_simple_set(
     """
     qid = (queue_id or "").strip()
     if not qid:
-        return MtResult(ok=False, error="معرّف الطابور غير محدد")
+        return MtResult(ok=False, error=N_("معرّف الطابور غير محدد"))
     if not attrs:
-        return MtResult(ok=False, error="لا توجد حقول للتحديث")
+        return MtResult(ok=False, error=N_("لا توجد حقول للتحديث"))
 
     rejected = [k for k in attrs if k not in QUEUE_SIMPLE_EDITABLE]
     if rejected:
         return MtResult(
             ok=False,
-            error=f"حقول غير مسموح بتعديلها: {', '.join(rejected)}",
+            error=_tr('حقول غير مسموح بتعديلها: %(v)s', v=', '.join(rejected)),
         )
 
     try:
@@ -755,9 +756,9 @@ def address_list_add(
     name = (list_name or "").strip()
     addr = (address or "").strip()
     if not name:
-        return MtResult(ok=False, error="اسم القائمة غير محدد")
+        return MtResult(ok=False, error=N_("اسم القائمة غير محدد"))
     if not addr:
-        return MtResult(ok=False, error="العنوان غير محدد")
+        return MtResult(ok=False, error=N_("العنوان غير محدد"))
     attrs: dict = {"list": name, "address": addr}
     if comment:
         attrs["comment"] = str(comment)
@@ -787,7 +788,7 @@ def firewall_nat_add(
     ch = (chain or "").strip()
     act = (action or "").strip()
     if not ch or not act:
-        return MtResult(ok=False, error="chain/action غير محدّدين")
+        return MtResult(ok=False, error=N_("chain/action غير محدّدين"))
     attrs: dict = {"chain": ch, "action": act}
     if to_addresses:
         attrs["to-addresses"] = str(to_addresses).strip()
@@ -815,10 +816,10 @@ def firewall_nat_remove_by_comment(
     re-applying never piles up duplicate src-nat rules."""
     want = str(comment or "").strip()
     if not want:
-        return MtResult(ok=False, error="تعليق غير محدّد")
+        return MtResult(ok=False, error=N_("تعليق غير محدّد"))
     listed = firewall_nat(nas)
     if not listed.ok:
-        return MtResult(ok=False, error=listed.error or "تعذّرت قراءة قواعد NAT")
+        return MtResult(ok=False, error=listed.error or N_("تعذّرت قراءة قواعد NAT"))
     ids = [str(r.get(".id") or "").strip()
            for r in (listed.data or [])
            if str(r.get("comment") or "").strip() == want and r.get(".id")]
@@ -832,7 +833,7 @@ def firewall_nat_remove_by_comment(
             invalidate=("firewall/nat",),
         )
         if not res.ok:
-            return MtResult(ok=False, error=res.error or "تعذّر حذف قاعدة NAT")
+            return MtResult(ok=False, error=res.error or N_("تعذّر حذف قاعدة NAT"))
         removed += 1
     return MtResult(ok=True, data={"removed": removed})
 
@@ -843,7 +844,7 @@ def address_list_remove(
     """`/ip/firewall/address-list/remove .id=<id>`."""
     eid = (entry_id or "").strip()
     if not eid:
-        return MtResult(ok=False, error="معرّف المدخل غير محدد")
+        return MtResult(ok=False, error=N_("معرّف المدخل غير محدد"))
     return _run_mutation(
         nas,
         operation="firewall/address-list/remove",
@@ -916,7 +917,7 @@ def tool_ping(
     per packet plus a summary row."""
     addr = (target or "").strip()
     if not addr:
-        return MtResult(ok=False, error="عنوان الهدف غير محدد")
+        return MtResult(ok=False, error=N_("عنوان الهدف غير محدد"))
     n = max(1, min(int(count or 1), PING_MAX_COUNT))
 
     def work(client):
@@ -932,7 +933,7 @@ def tool_traceroute(
     """`/tool/traceroute address=<t> count=<n>` — one row per hop."""
     addr = (target or "").strip()
     if not addr:
-        return MtResult(ok=False, error="عنوان الهدف غير محدد")
+        return MtResult(ok=False, error=N_("عنوان الهدف غير محدد"))
     n = max(1, min(int(count or 1), TRACEROUTE_MAX_COUNT))
 
     def work(client):
@@ -965,7 +966,7 @@ def tool_dns_resolve(
     """
     target = (name or "").strip()
     if not target:
-        return MtResult(ok=False, error="اسم النطاق غير محدد")
+        return MtResult(ok=False, error=N_("اسم النطاق غير محدد"))
     attrs: dict = {"name": target}
     srv = (server or "").strip()
     if srv:
@@ -1050,7 +1051,7 @@ def disconnect_hotspot_session(
     """
     sid = (session_id or "").strip()
     if not sid:
-        return MtResult(ok=False, error="معرّف الجلسة غير محدد")
+        return MtResult(ok=False, error=N_("معرّف الجلسة غير محدد"))
     return _run_mutation(
         nas,
         operation="hotspot/active/remove",
@@ -1068,7 +1069,7 @@ def disconnect_ppp_session(
     session. Same shape as the hotspot variant."""
     sid = (session_id or "").strip()
     if not sid:
-        return MtResult(ok=False, error="معرّف الجلسة غير محدد")
+        return MtResult(ok=False, error=N_("معرّف الجلسة غير محدد"))
     return _run_mutation(
         nas,
         operation="ppp/active/remove",
@@ -1096,14 +1097,14 @@ def _sanitize_backup_name(raw: str) -> str:
     `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` allowlist."""
     name = (raw or "").strip()
     if not name:
-        raise ValueError("اسم النسخة مطلوب")
+        raise ValueError(_tr("اسم النسخة مطلوب"))
     if "/" in name or "\\" in name or ".." in name:
-        raise ValueError("اسم النسخة يحتوي على رموز ممنوعة")
+        raise ValueError(_tr("اسم النسخة يحتوي على رموز ممنوعة"))
     if any(ord(c) < 32 or ord(c) == 127 for c in name):
-        raise ValueError("اسم النسخة يحتوي على رموز تحكم")
+        raise ValueError(_tr("اسم النسخة يحتوي على رموز تحكم"))
     if not _BACKUP_NAME_RE.match(name):
         raise ValueError(
-            "اسم النسخة يجب أن يبدأ بحرف/رقم ويحوي [A-Za-z0-9._-] فقط"
+            _tr("اسم النسخة يجب أن يبدأ بحرف/رقم ويحوي [A-Za-z0-9._-] فقط")
         )
     return name
 
@@ -1119,14 +1120,14 @@ def _sanitize_identity(raw: str) -> str:
     here gives the operator an Arabic message instead of a trap."""
     name = (raw or "").strip()
     if not name:
-        raise ValueError("اسم الراوتر مطلوب")
+        raise ValueError(_tr("اسم الراوتر مطلوب"))
     if len(name) > _IDENTITY_MAX_LEN:
-        raise ValueError(f"اسم الراوتر أطول من {_IDENTITY_MAX_LEN} حرفًا")
+        raise ValueError(_tr('اسم الراوتر أطول من %(IDENTITY_MAX_LEN)s حرفًا', IDENTITY_MAX_LEN=_IDENTITY_MAX_LEN))
     if any(ord(c) < 32 or ord(c) == 127 for c in name):
-        raise ValueError("اسم الراوتر يحتوي على رموز تحكم")
+        raise ValueError(_tr("اسم الراوتر يحتوي على رموز تحكم"))
     if not _IDENTITY_RE.match(name):
         raise ValueError(
-            "اسم الراوتر يجب أن يحوي [A-Za-z0-9._-] فقط"
+            _tr("اسم الراوتر يجب أن يحوي [A-Za-z0-9._-] فقط")
         )
     return name
 
@@ -1298,15 +1299,14 @@ def file_download_stream(
     cfg = _build_router_cfg(nas)
     host = str(cfg.get("host") or "").strip()
     if not host:
-        raise FileDownloadNotSupported("عنوان الراوتر غير محدد لتنزيل الملف.")
+        raise FileDownloadNotSupported(_tr("عنوان الراوتر غير محدد لتنزيل الملف."))
     ftp_port = int(nas.get("ftp_port") or 21)
     try:
         ftp = _ftp_connect(host, ftp_port, cfg.get("username", ""),
                            cfg.get("password", ""), FTP_TIMEOUT_SEC)
     except Exception as exc:  # noqa: BLE001 - normalise every dial error
         raise FileDownloadError(
-            f"تعذّر الاتصال بخدمة FTP على الراوتر ({host}:{ftp_port}). "
-            f"تأكّد أن خدمة FTP مفعّلة وأن صلاحية المستخدم تتضمّن ftp. ({exc})"
+            _tr('تعذّر الاتصال بخدمة FTP على الراوتر (%(host)s:%(ftp_port)s). تأكّد أن خدمة FTP مفعّلة وأن صلاحية المستخدم تتضمّن ftp. (%(exc)s)', host=host, ftp_port=ftp_port, exc=exc)
         ) from exc
 
     buf = tempfile.SpooledTemporaryFile(max_size=_FTP_SPOOL_MAX)
@@ -1319,7 +1319,7 @@ def file_download_stream(
         except Exception:  # noqa: BLE001
             pass
         raise FileDownloadError(
-            f"تعذّر تنزيل «{filename}» — الملف غير موجود أو الوصول مرفوض. ({exc})"
+            _tr('تعذّر تنزيل «%(filename)s» — الملف غير موجود أو الوصول مرفوض. (%(exc)s)', filename=filename, exc=exc)
         ) from exc
     except Exception as exc:  # noqa: BLE001
         buf.close()
@@ -1327,7 +1327,7 @@ def file_download_stream(
             ftp.quit()
         except Exception:  # noqa: BLE001
             pass
-        raise FileDownloadError(f"انقطع تنزيل الملف من الراوتر. ({exc})") from exc
+        raise FileDownloadError(_tr('انقطع تنزيل الملف من الراوتر. (%(exc)s)', exc=exc)) from exc
     finally:
         try:
             ftp.quit()
@@ -1427,7 +1427,7 @@ def stream_interface_samples(
     """
     iface = (name or "").strip()
     if not iface:
-        yield MtResult(ok=False, error="اسم الواجهة غير محدد")
+        yield MtResult(ok=False, error=N_("اسم الواجهة غير محدد"))
         return
 
     def _work(client):

@@ -1,5 +1,6 @@
 """Self-scoped subscriber and card user portal routes."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (Blueprint, Response, flash, redirect, render_template,
                    request, session, url_for)
@@ -130,7 +131,7 @@ def subscriber_login():
             from ..services.login_events import record_login_event
             record_login_event(actor_type="subscriber", username=request.form.get("username") or "",
                                success=False, reason="bad_password", tenant_id=1)
-            flash("بيانات دخول المشترك غير صحيحة.", "error")
+            flash(_tr("بيانات دخول المشترك غير صحيحة."), "error")
             return render_template("radius/portal_subscriber_login.html"), 401
         from ..services.login_events import record_login_event
         record_login_event(actor_type="subscriber", username=subscriber.get("username") or _u,
@@ -144,7 +145,7 @@ def subscriber_login():
 
 def subscriber_logout():
     session.pop("portal_subscriber_id", None)
-    flash("تم تسجيل الخروج من بوابة المشترك.", "info")
+    flash(_tr("تم تسجيل الخروج من بوابة المشترك."), "info")
     return redirect(url_for("portal.subscriber_login"))
 
 
@@ -185,7 +186,7 @@ def subscriber_telegram_connect_start():
     """يبدأ نافذة ربط تيليجرام للمشترك المسجَّل. JSON (لا 500)."""
     subscriber_id = session.get("portal_subscriber_id")
     if not subscriber_id:
-        return {"ok": False, "error": "الجلسة منتهية."}, 401
+        return {"ok": False, "error": _tr("الجلسة منتهية.")}, 401
     from flask import jsonify
     from ..services import telegram_connect
     res = telegram_connect.start_link(
@@ -197,7 +198,7 @@ def subscriber_telegram_connect_poll():
     """استطلاع التقاط chat_id للمشترك — يُستدعى كل ~2ث أثناء النافذة. JSON."""
     subscriber_id = session.get("portal_subscriber_id")
     if not subscriber_id:
-        return {"ok": False, "error": "الجلسة منتهية."}, 401
+        return {"ok": False, "error": _tr("الجلسة منتهية.")}, 401
     from flask import jsonify
     from ..services import telegram_connect
     res = telegram_connect.poll_link(
@@ -220,7 +221,7 @@ def subscriber_data_connection():
     if not subscriber_id:
         return redirect(url_for("portal.subscriber_login"))
     if not _portal_flag("portal.allow_data_connection"):
-        return _portal_denied("ميزة «اتصال بيانات» غير مُفعَّلة في بوابة المشترك حاليًا.")
+        return _portal_denied(N_("ميزة «اتصال بيانات» غير مُفعَّلة في بوابة المشترك حاليًا."))
     from ..services import data_connection as dc
     from ..services import data_connection_provision as dcp
     try:
@@ -238,7 +239,7 @@ def subscriber_data_connection():
             "target_host": result.target_host,
             "speed_kbit": result.speed_kbit,
         }
-        flash("تم إنشاء الاتصال. انسخ السكربت أو نزّله والصقه في المايكروتيك.", "success")
+        flash(_tr("تم إنشاء الاتصال. انسخ السكربت أو نزّله والصقه في المايكروتيك."), "success")
     except dc.DataConnectionError as exc:
         session.pop("dc_last", None)
         flash(str(exc), "error")
@@ -252,7 +253,7 @@ def subscriber_data_connection_download():
         return redirect(url_for("portal.subscriber_login"))
     last = session.get("dc_last")
     if not isinstance(last, dict) or not last.get("script"):
-        flash("لا يوجد سكربت لتنزيله. أنشئ الاتصال أولًا.", "error")
+        flash(_tr("لا يوجد سكربت لتنزيله. أنشئ الاتصال أولًا."), "error")
         return redirect(url_for("portal.subscriber_home") + "#pane-data")
     filename = str(last.get("filename") or "hobe-data.rsc")
     return Response(
@@ -270,14 +271,14 @@ def subscriber_loan_request():
     # الطلب بـ403 حتى لو استُدعي المسار مباشرة بالـURL (النموذج مخفي
     # أصلًا في البوابة).
     if not _portal_flag("portal.allow_loan_request"):
-        return _portal_denied("طلب سلفة الوقت غير مُفعَّل في بوابة المشترك حاليًا.")
+        return _portal_denied(N_("طلب سلفة الوقت غير مُفعَّل في بوابة المشترك حاليًا."))
     try:
         result = _svc().submit_loan_request(
             subscriber_id=int(subscriber_id),
             requested_minutes=int(request.form.get("requested_minutes") or 0),
             reason=request.form.get("reason") or "",
         )
-        flash(f"تم تسجيل طلب السلفة. الحالة: {_portal_status_label(result['status'])}", "success")
+        flash(_tr('تم تسجيل طلب السلفة. الحالة: %(v)s', v=_portal_status_label(result['status'])), "success")
     except (RadiusValidationError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.subscriber_home"))
@@ -294,14 +295,14 @@ def subscriber_renewal_request():
     is_support = reason.lstrip().startswith("[شكوى]")
     if is_support:
         if not _portal_flag("portal.show_support"):
-            return _portal_denied("قسم الدعم/الشكاوى غير مُفعَّل في بوابة المشترك حاليًا.")
+            return _portal_denied(N_("قسم الدعم/الشكاوى غير مُفعَّل في بوابة المشترك حاليًا."))
     elif not _portal_flag("portal.allow_renewal_request"):
-        return _portal_denied("طلب التجديد غير مُفعَّل في بوابة المشترك حاليًا.")
+        return _portal_denied(N_("طلب التجديد غير مُفعَّل في بوابة المشترك حاليًا."))
     result = _svc().submit_renewal_request(
         subscriber_id=int(subscriber_id),
         reason=reason,
     )
-    flash(f"تم تسجيل الطلب. الحالة: {_portal_status_label(result['status'])}", "success")
+    flash(_tr('تم تسجيل الطلب. الحالة: %(v)s', v=_portal_status_label(result['status'])), "success")
     return redirect(url_for("portal.subscriber_home"))
 
 
@@ -317,7 +318,7 @@ def card_login():
             from ..services.login_events import record_login_event
             record_login_event(actor_type="card", username=request.form.get("mobile") or "",
                                success=False, reason="bad_password", tenant_id=1)
-            flash("رقم الجوال أو كلمة المرور غير صحيحة.", "error")
+            flash(_tr("رقم الجوال أو كلمة المرور غير صحيحة."), "error")
             return render_template("radius/portal_card_login.html"), 401
         from ..services.login_events import record_login_event
         record_login_event(actor_type="card", username=str(card_user.get("mobile") or _mob),
@@ -331,7 +332,7 @@ def card_login():
 
 def card_logout():
     session.pop("portal_card_user_id", None)
-    flash("تم تسجيل الخروج من بوابة الكروت.", "info")
+    flash(_tr("تم تسجيل الخروج من بوابة الكروت."), "info")
     return redirect(url_for("portal.card_login"))
 
 
@@ -365,7 +366,7 @@ def card_purchase():
             card_user_id=int(card_user_id),
             package_id=int(request.form.get("package_id") or 0),
         )
-        flash(f"تم شراء الكرت رقم #{purchase['id']}.", "success")
+        flash(_tr('تم شراء الكرت رقم #%(id)s.', id=purchase['id']), "success")
     except (ValueError, RadiusValidationError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.card_home"))
@@ -373,11 +374,11 @@ def card_purchase():
 
 def _portal_status_label(status: str) -> str:
     return {
-        "pending": "بانتظار المراجعة",
-        "auto_approved": "معتمد تلقائيًا",
-        "requires_approval": "يحتاج موافقة",
-        "rejected": "مرفوض",
-    }.get(str(status or ""), str(status or "غير معروف"))
+        "pending": N_("بانتظار المراجعة"),
+        "auto_approved": N_("معتمد تلقائيًا"),
+        "requires_approval": N_("يحتاج موافقة"),
+        "rejected": N_("مرفوض"),
+    }.get(str(status or ""), str(status or N_("غير معروف")))
 
 
 # ── بوابة الموزّع — «فحص كروت» للقراءة فقط ─────────────────────────────
@@ -426,7 +427,7 @@ def distributor_login():
                 reason=("no_permission" if (ok and not allowed) else "bad_password"),
                 tenant_id=1, attempted_password=password,
             )
-            flash("بيانات الدخول غير صحيحة أو صلاحية «فحص كروت» غير مفعّلة.", "error")
+            flash(_tr("بيانات الدخول غير صحيحة أو صلاحية «فحص كروت» غير مفعّلة."), "error")
             return render_template("radius/portal_distributor_login.html"), 401
         record_login_event(actor_type="distributor", username=name,
                            success=True, actor_id=row.get("id"), tenant_id=1)
@@ -442,7 +443,7 @@ def distributor_login():
 
 def distributor_logout():
     session.pop("portal_distributor_id", None)
-    flash("تم تسجيل الخروج من بوابة الموزّع.", "info")
+    flash(_tr("تم تسجيل الخروج من بوابة الموزّع."), "info")
     return redirect(url_for("portal.distributor_login"))
 
 
@@ -456,7 +457,7 @@ def distributor_home():
     error = ""
     if query:
         if len(query) > 128:
-            error = "أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا."
+            error = _tr("أدخل رقم بطاقة أو اسم دخول لا يتجاوز 128 حرفًا.")
         else:
             from ..services.card_checker import check_card
             try:
@@ -466,7 +467,7 @@ def distributor_home():
                 logging.getLogger(__name__).exception(
                     "distributor portal: check_card raised for query=%r", query
                 )
-                error = "حدث خطأ داخلي أثناء الفحص. حاول مجددًا أو راجع المزوّد."
+                error = _tr("حدث خطأ داخلي أثناء الفحص. حاول مجددًا أو راجع المزوّد.")
                 full = None
             if full is not None:
                 if full.get("exists") and not _distributor_scope_allows(distributor, full):
@@ -578,7 +579,7 @@ def _distributor_devices(macs: list) -> list:
             name = (dev.get("label") or dev.get("vendor") or "").strip()
         out.append({
             "mac_masked": _mask_mac(mac),
-            "name": name or "جهاز غير معروف",
+            "name": name or N_("جهاز غير معروف"),
             "vendor": (dev.get("vendor") or "").strip(),
             "icon": dev.get("icon") or "mobile-screen-button",
             "is_random_mac": bool(dev.get("is_random_mac")),
@@ -599,7 +600,7 @@ def card_redeem():
             card_number=request.form.get("card_number") or "",
             card_password=request.form.get("card_password") or "",
         )
-        flash(f"تم شحن الرصيد بقيمة {result['amount']:.2f}.", "success")
+        flash(_tr('تم شحن الرصيد بقيمة %(amount)s.', amount=format(result['amount'], '.2f')), "success")
     except (ValueError, RadiusValidationError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("portal.card_home"))
@@ -622,9 +623,9 @@ def subscription_expired():
 
     username = (request.args.get("u") or request.args.get("user") or "").strip()
     ctx = {
-        "title":   _s("HOBERADIUS_BLOCK_PAGE_TITLE", "انتهى اشتراكك"),
+        "title":   _s("HOBERADIUS_BLOCK_PAGE_TITLE", N_("انتهى اشتراكك")),
         "message": _s("HOBERADIUS_BLOCK_PAGE_MESSAGE",
-                      "انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة."),
+                      N_("انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة.")),
         "renewal_link": _s("HOBERADIUS_BLOCK_PAGE_RENEWAL_LINK"),
         "phone":        _s("HOBERADIUS_BLOCK_PAGE_CONTACT_PHONE"),
         "whatsapp":     _s("HOBERADIUS_BLOCK_PAGE_CONTACT_WHATSAPP"),

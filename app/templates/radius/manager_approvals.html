@@ -6,7 +6,7 @@
 {% block page_title %}{{ _('طلبات بانتظار موافقة المالك') }}{% endblock %}
 
 {% block content %}
-{% call hub.section("الطلبات المعلّقة", icon="clipboard-check") %}
+{% call hub.section(_('الطلبات المعلّقة'), icon="clipboard-check") %}
   {% if pending %}
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="approvals-table">
@@ -40,7 +40,7 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد طلبات بانتظار الموافقة.", icon="clipboard-check") }}
+    {{ hub.empty(_('لا توجد طلبات بانتظار الموافقة.'), icon="clipboard-check") }}
   {% endif %}
 {% endcall %}
 {% endblock %}

@@ -17,28 +17,28 @@
    الدفتر المالي احتياطًا، ونرجع القيمة الخام إن لم تُعرَّف بدل إخفائها. #}
 {% macro revenue_source_label(source_type) -%}
   {{ {
-    'card_batch':          'حزمة بطاقات',
-    'card_user_purchase':  'شراء مستخدم',
-    'card_sale':           'بيع بطاقات',
-    'subscriber_payment':  'دفعة مشترك',
-    'invoice':             'فاتورة',
-    'voucher':             'كوبون',
-    'manual':              'تسجيل يدوي'
-  }.get(source_type, source_type or 'مصدر مالي') }}
+    'card_batch':          _('حزمة بطاقات'),
+    'card_user_purchase':  _('شراء مستخدم'),
+    'card_sale':           _('بيع بطاقات'),
+    'subscriber_payment':  _('دفعة مشترك'),
+    'invoice':             _('فاتورة'),
+    'voucher':             _('كوبون'),
+    'manual':              _('تسجيل يدوي')
+  }.get(source_type, source_type or _('مصدر مالي')) }}
 {%- endmacro %}
 
 {% block content %}
 {# ───── الهيرو الموحّد (megahero): عنوان + KPIs + حزام بحث فوري في كتلة .uds-hero واحدة ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "الإيرادات",
-  subtitle="عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.",
+  _('الإيرادات'),
+  subtitle=_('عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.'),
   icon="coins",
   kpis=[
-    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,   'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'الربح الصافي',     'value': summary.total_profit|money,    'icon': 'chart-line',    'variant': 'amber'},
-    {'label': 'سجلات الإيراد',    'value': summary.revenue_records,       'icon': 'receipt',       'variant': 'blue'},
-    {'label': 'حصص الموزعين',     'value': summary.distributor_shares,    'icon': 'people-arrows', 'variant': 'brand'},
+    {'label': _('إجمالي الإيرادات'), 'value': summary.total_revenue|money,   'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': _('الربح الصافي'),     'value': summary.total_profit|money,    'icon': 'chart-line',    'variant': 'amber'},
+    {'label': _('سجلات الإيراد'),    'value': summary.revenue_records,       'icon': 'receipt',       'variant': 'blue'},
+    {'label': _('حصص الموزعين'),     'value': summary.distributor_shares,    'icon': 'people-arrows', 'variant': 'brand'},
   ]
 ) %}
   {# بحث فوري في المتصفح (المصدر/المعرّف/التاريخ) — يفلتر الجدول مباشرة دون إرسال للخادم #}
@@ -48,7 +48,7 @@
 </section>{# /hub-hero-shell #}
 {% include "radius/_finance_nav.html" %}
 
-{% call hub.section("سجلات الإيرادات", icon="receipt", flush=True) %}
+{% call hub.section(_('سجلات الإيرادات'), icon="receipt", flush=True) %}
   {% if revenue %}
   {# جدول uds موحّد: فرز + ترقيم + تصدير — مع عنوان تصدير صريح لملفات CSV/XLSX/PDF #}
   <div class="table-responsive hub-table-wrap uds-table-wrap" id="rev-table" data-uds-table
@@ -70,7 +70,7 @@
         <tr>
           <td>{{ item.id }}</td>
           {# المصدر معرَّب بالكامل بالاسم الحقيقي (يُبنى في الخدمة) — الخام في title للتتبّع فقط #}
-          <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or 'مصدر إيراد آخر' }}</td>
+          <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or _('مصدر إيراد آخر') }}</td>
           <td>{{ item.original_price|money }}</td>
           <td>{{ item.collected|money }}</td>
           <td>{{ item.wholesale_cost|money }}</td>
@@ -82,7 +82,7 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية.", icon="receipt") }}
+    {{ hub.empty(_('لا توجد سجلات إيراد بعد.'), sub=_('سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية.'), icon="receipt") }}
   {% endif %}
 {% endcall %}
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

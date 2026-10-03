@@ -3,7 +3,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% set ttl = "إضافة نطاق عناوين" if is_new else "تعديل نطاق عناوين" %}
+{% set ttl = _('إضافة نطاق عناوين') if is_new else _('تعديل نطاق عناوين') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
@@ -25,9 +25,9 @@
 
 {{ hub.hero(
   ttl,
-  subtitle=("أضف نطاق IP جديد ليُوزَّع من راوتر الراديوس على المشتركين."
+  subtitle=(_('أضف نطاق IP جديد ليُوزَّع من راوتر الراديوس على المشتركين.')
             if is_new else
-            "حدِّث بيانات النطاق — تأكد من توافق العنوان المحلي مع الراوتر المختار."),
+            _('حدِّث بيانات النطاق — تأكد من توافق العنوان المحلي مع الراوتر المختار.')),
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.pool_list') + '">
@@ -38,16 +38,16 @@
 
 {% set help_aside %}
 {% call hub.helppanel(
-     "دليل نطاق العناوين",
-     intro="نطاق العناوين يحدد مجموعة عناوين IP التي يوزّعها الراوتر على المشتركين.",
+     _('دليل نطاق العناوين'),
+     intro=_('نطاق العناوين يحدد مجموعة عناوين IP التي يوزّعها الراوتر على المشتركين.'),
      items=[
-       {"icon": "id-badge", "text": "الاسم: معرّف فريد للنطاق يظهر في القوائم والربط."},
-       {"icon": "network-wired", "text": "النطاق: مدى العناوين بصيغة start-end أو CIDR."},
-       {"icon": "house", "text": "العنوان المحلي: بوّابة (Gateway) المشتركين داخل هذا النطاق."},
-       {"icon": "server", "text": "الراوتر: اربط النطاق بجهاز محدّد لتقييد توزيعه."}
+       {"icon": "id-badge", "text": _('الاسم: معرّف فريد للنطاق يظهر في القوائم والربط.')},
+       {"icon": "network-wired", "text": _('النطاق: مدى العناوين بصيغة start-end أو CIDR.')},
+       {"icon": "house", "text": _('العنوان المحلي: بوّابة (Gateway) المشتركين داخل هذا النطاق.')},
+       {"icon": "server", "text": _('الراوتر: اربط النطاق بجهاز محدّد لتقييد توزيعه.')}
      ],
      icon="circle-question",
-     note="تأكد من توافق العنوان المحلي مع شبكة النطاق والراوتر المختار."
+     note=_('تأكد من توافق العنوان المحلي مع شبكة النطاق والراوتر المختار.')
    ) %}{% endcall %}
 {% endset %}
 
@@ -55,7 +55,7 @@
 {% if can_submit(('radius.pool_update' if not is_new else 'radius.pool_create'), 'POST') %}<form method="post"
       action="{{ url_for('radius.pool_update', pid=item.id) if not is_new else url_for('radius.pool_create') }}">
 
-  {% call hub.section("معطيات النطاق", icon="circle-info") %}
+  {% call hub.section(_('معطيات النطاق'), icon="circle-info") %}
     <div class="pf-grid">
       <div class="pf-field">
         <label>{{ _('الاسم') }} <span class="req">*</span></label>
@@ -91,7 +91,7 @@
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     {% if can_submit('radius.pool_list', 'GET') %}<a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.pool_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "حفظ التعديلات" }}
+      <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') if is_new else _('حفظ التعديلات') }}
     </button>
   </div>
 </form>{% endif %}

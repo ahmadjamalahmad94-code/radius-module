@@ -10,6 +10,7 @@ Now each entity type needs its own key, and the manager's scope applies:
 * admins, roles → owner / co-owner only.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Iterable, Optional
 
@@ -21,7 +22,7 @@ RESTORE_PERMISSION = {
 }
 OWNER_ONLY_TABLES = frozenset({"admins", "roles"})
 
-_OWNER_ONLY_AR = "استعادة المدراء والأدوار مقصورة على المالك أو الشريك."
+_OWNER_ONLY_AR = N_("استعادة المدراء والأدوار مقصورة على المالك أو الشريك.")
 
 
 def table_visible(table: str, *, is_owner: bool, perms: Iterable[str]) -> bool:
@@ -44,7 +45,7 @@ def restore_denial(table: str, entity_id: int, *, admin_id: Optional[int],
         return {"message": _OWNER_ONLY_AR, "permission": "", "reason": "owner_only"}
     need = RESTORE_PERMISSION.get(table)
     if not need:
-        return {"message": "نوع العنصر غير مدعوم في سلة المحذوفات.", "permission": "",
+        return {"message": _tr("نوع العنصر غير مدعوم في سلة المحذوفات."), "permission": "",
                 "reason": "unsupported"}
     if need not in set(perms or ()):
         try:
@@ -52,7 +53,7 @@ def restore_denial(table: str, entity_id: int, *, admin_id: Optional[int],
             label = permission_label(need)
         except Exception:  # noqa: BLE001
             label = need
-        return {"message": f"تنقصك الصلاحية: {label} — لازمة لاستعادة هذا النوع.",
+        return {"message": _tr('تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع.', label=label),
                 "permission": need, "reason": "permission"}
     if table == "subscribers":
         from .subscriber_scope import OUT_OF_SCOPE_AR, subscriber_accessible

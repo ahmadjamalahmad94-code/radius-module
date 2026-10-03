@@ -21,6 +21,7 @@
   - كل كتابات DB ضمن transaction مستقل لكل كيان.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import subprocess
@@ -115,7 +116,7 @@ def _expire_allocations(tenant_id: int, results: dict[str, int], dry_run: bool) 
                     (now_iso, alloc_id),
                 )
                 _audit_conn(conn, tenant_id, "allocation_mirror", alloc_id,
-                            "expire", "انتهت صلاحية التخصيص تلقائيًا")
+                            "expire", _tr("انتهت صلاحية التخصيص تلقائيًا"))
 
                 conn.execute(
                     """UPDATE vpn_account SET status='expired', updated_at=?
@@ -128,7 +129,7 @@ def _expire_allocations(tenant_id: int, results: dict[str, int], dry_run: bool) 
                 if actual:
                     _audit_conn(conn, tenant_id, "allocation_mirror", alloc_id,
                                 "cascade_expire",
-                                f"تعطيل {actual} حساب VPN بسبب انتهاء التخصيص")
+                                _tr('تعطيل %(actual)s حساب VPN بسبب انتهاء التخصيص', actual=actual))
 
             results["allocations_expired"] += 1
             results["vpn_accounts_expired"] += actual
@@ -186,7 +187,7 @@ def _enforce_wg_peer_quotas(tenant_id: int, results: dict[str, int], dry_run: bo
                 )
                 _audit_conn(conn, tenant_id, "wireguard_peer", peer_id,
                             "quota_exceeded",
-                            "تجاوز الـ peer حد النقل — تعطيل تلقائي")
+                            _tr("تجاوز الـ peer حد النقل — تعطيل تلقائي"))
 
             _wg_remove(pub_key, iface)
 
@@ -258,9 +259,7 @@ def _enforce_wg_service_quota(tenant_id: int, results: dict[str, int], dry_run: 
             _audit_conn(
                 conn, tenant_id, "wireguard_data_service", svc_id,
                 "quota_exceeded",
-                f"الخدمة تجاوزت الكوتا "
-                f"({(svc_row['quota_bytes_used'] or 0) // 1_048_576} MB / "
-                f"{(svc_row['transfer_limit_bytes'] or 0) // 1_048_576} MB)",
+                _tr('الخدمة تجاوزت الكوتا (%(v)s MB / %(v2)s MB)', v=(svc_row['quota_bytes_used'] or 0) // 1048576, v2=(svc_row['transfer_limit_bytes'] or 0) // 1048576),
             )
 
         results["wg_service_quota_exceeded"] += 1
@@ -318,7 +317,7 @@ def _reset_new_period_quotas(tenant_id: int, results: dict[str, int], dry_run: b
                     (current, now_iso, peer_id),
                 )
                 _audit_conn(conn, tenant_id, "wireguard_peer", peer_id,
-                            "activate", "إعادة تفعيل تلقائية — بداية فترة كوتا جديدة")
+                            "activate", _tr("إعادة تفعيل تلقائية — بداية فترة كوتا جديدة"))
 
             # إعادة إضافة الـ peer live
             try:
@@ -371,7 +370,7 @@ def _reset_new_period_quotas(tenant_id: int, results: dict[str, int], dry_run: b
                     (current, now_iso, svc_id),
                 )
                 _audit_conn(conn, tenant_id, "wireguard_data_service", svc_id,
-                            "activate", "إعادة تفعيل تلقائية — بداية فترة كوتا جديدة")
+                            "activate", _tr("إعادة تفعيل تلقائية — بداية فترة كوتا جديدة"))
             results["wg_service_reactivated"] = results.get("wg_service_reactivated", 0) + 1
 
         except Exception as exc:  # noqa: BLE001

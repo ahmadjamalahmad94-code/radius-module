@@ -13,7 +13,7 @@
 {% block title %}{{ _("سجل إجراءات المايكروتيك") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ _("سجل إجراءات المايكروتيك") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ matched }} إجراء</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(matched)s إجراء', matched=matched) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -28,15 +28,15 @@
 {# ───── صدفة الهيرو: عنوان + سطر تعريفي + مؤشرات القسم النشط + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="mt-actions-hero">
 {% call hub.megahero(
-  "سجل إجراءات المايكروتيك",
-  subtitle="متابعة الفحص — كل إجراء بين اللوحة والراوترات في خلاصة واحدة: الراوتر (الاسم و IP)، المشترك/البطاقة، نوع الإجراء، التفاصيل من→إلى، والنتيجة نجاح/فشل. اختر قسمًا من الأعلى لتصفية النوع، و«الفشل» يجمع كل ما فشل.",
+  _('سجل إجراءات المايكروتيك'),
+  subtitle=_('متابعة الفحص — كل إجراء بين اللوحة والراوترات في خلاصة واحدة: الراوتر (الاسم و IP)، المشترك/البطاقة، نوع الإجراء، التفاصيل من→إلى، والنتيجة نجاح/فشل. اختر قسمًا من الأعلى لتصفية النوع، و«الفشل» يجمع كل ما فشل.'),
   icon="network-wired",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي القسم',  'value': stats.total,   'icon': 'list-check',           'variant': 'brand'},
-    {'label': 'نجاح',          'value': stats.ok,      'icon': 'circle-check',         'variant': 'green'},
-    {'label': 'فشل',           'value': stats.fail,    'icon': 'circle-xmark',         'variant': 'red'},
-    {'label': 'قيد الانتظار',  'value': stats.pending, 'icon': 'clock',                'variant': 'amber'},
+    {'label': _('إجمالي القسم'),  'value': stats.total,   'icon': 'list-check',           'variant': 'brand'},
+    {'label': _('نجاح'),          'value': stats.ok,      'icon': 'circle-check',         'variant': 'green'},
+    {'label': _('فشل'),           'value': stats.fail,    'icon': 'circle-xmark',         'variant': 'red'},
+    {'label': _('قيد الانتظار'),  'value': stats.pending, 'icon': 'clock',                'variant': 'amber'},
   ],
   search_action=url_for('radius.rep_mikrotik_actions')
 ) %}
@@ -49,13 +49,13 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_mikrotik_actions', section=active) + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="الخلاصة تُوحّد ثلاثة مصادر للقراءة فقط: سجل التدقيق (audit_log) لتغييرات السرعة/الباقة وأوامر الفصل ودفع الإعداد ونتائجها، وسجل مصادقة الشبكة (radpostauth) لحركات الدخول، وطابور المزامنة (sync_queue) للأوامر المُجدوَلة. الراوتر يُحلّ إلى اسمه و IP دائمًا."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('الخلاصة تُوحّد ثلاثة مصادر للقراءة فقط: سجل التدقيق (audit_log) لتغييرات السرعة/الباقة وأوامر الفصل ودفع الإعداد ونتائجها، وسجل مصادقة الشبكة (radpostauth) لحركات الدخول، وطابور المزامنة (sync_queue) للأوامر المُجدوَلة. الراوتر يُحلّ إلى اسمه و IP دائمًا.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -107,8 +107,8 @@
 </nav>
 
 {% if rows %}
-{% call hub.section("الإجراءات", icon="list-check",
-                    meta=shown|string + " من " + matched|string, flush=True) %}
+{% call hub.section(_('الإجراءات'), icon="list-check",
+                    meta=shown|string + _(' من ') + matched|string, flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -148,15 +148,15 @@
             {% else %}—{% endif %}
           </td>
           <td><strong><bdi>{{ (r.subject if (r.subject|lower) not in ('unknown','none','null','-') else _('غير معروف')) if r.subject else '—' }}</bdi></strong></td>
-          <td>{{ hub.pill(r.action_label or 'غير محدد', variant=_typevar, dot=False) }}</td>
+          <td>{{ hub.pill(r.action_label or _('غير محدد'), variant=_typevar, dot=False) }}</td>
           <td class="small" title="{{ r.detail or '' }}"
               style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             <bdi class="{% if r.tone %}rep-reason rep-tone-{{ r.tone }}{% endif %}">{{ r.detail or '—' }}</bdi>
           </td>
           <td>
-            {% if r.ok is true %}{{ hub.pill('نجاح', variant="green") }}
-            {% elif r.ok is false %}{{ hub.pill('فشل', variant="red") }}
-            {% else %}{{ hub.pill('قيد الانتظار', variant="amber") }}{% endif %}
+            {% if r.ok is true %}{{ hub.pill(_('نجاح'), variant="green") }}
+            {% elif r.ok is false %}{{ hub.pill(_('فشل'), variant="red") }}
+            {% else %}{{ hub.pill(_('قيد الانتظار'), variant="amber") }}{% endif %}
           </td>
           <td class="small" title="{{ r.error or '' }}"
               style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
@@ -169,8 +169,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا إجراءات في هذا القسم",
-   sub="لم تُسجَّل إجراءات مطابقة للقسم والفلاتر المحدّدة خلال المدّة.",
+{{ hub.empty(_('لا إجراءات في هذا القسم'),
+   sub=_('لم تُسجَّل إجراءات مطابقة للقسم والفلاتر المحدّدة خلال المدّة.'),
    icon="inbox") }}
 {% endif %}
 

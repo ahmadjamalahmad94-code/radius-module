@@ -13,6 +13,7 @@ accepted by all /api/v1/* endpoints via the existing Bearer-auth middleware.
 Subsequent calls /api/admin/me + /api/admin/logout consume the issued token.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from datetime import datetime, timedelta
@@ -203,7 +204,7 @@ def admin_login():
     password = body.get("password") or ""
     if not username or not password:
         return fail("validation_error",
-                    "username + password مطلوبان", status=422)
+                    _tr("username + password مطلوبان"), status=422)
 
     ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
     # brute-force brake: N failures / window for this username from this
@@ -216,13 +217,13 @@ def admin_login():
     if not admin:
         login_throttle.register_failure("admin_login", username)
         return fail("unauthorized",
-                    "بيانات الدخول غير صحيحة", status=401)
+                    _tr("بيانات الدخول غير صحيحة"), status=401)
     login_throttle.register_success("admin_login", username)
 
     tenant_id = _pick_tenant(admin)
     if tenant_id is None:
         return fail("forbidden",
-                    "لا تملك صلاحية على أي tenant", status=403)
+                    _tr("لا تملك صلاحية على أي tenant"), status=403)
 
     ttl_hours = _token_ttl_hours()
     expires_at = (datetime.utcnow() + timedelta(hours=ttl_hours)) if ttl_hours > 0 else None
@@ -253,7 +254,7 @@ def admin_me():
     admin = _current_admin_from_token()
     if admin is None:
         return fail("unauthorized",
-                    "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
+                    _tr("هذا المسار يتطلب تسجيل دخول إداري من التطبيق."),
                     status=401)
     perms = _effective_permissions(admin)
     from ..radius.core.system_config import effective_system_settings
@@ -275,13 +276,13 @@ def admin_password():
     admin = _current_admin_from_token()
     if admin is None:
         return fail("unauthorized",
-                    "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
+                    _tr("هذا المسار يتطلب تسجيل دخول إداري من التطبيق."),
                     status=401)
 
     body = request.get_json(silent=True)
     if body is not None and not isinstance(body, dict):
         # [1] / "x" كان يُسقط .get() = HTML 500.
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     body = body or {}
     current_password = str(body.get("current_password") or "")
     new_password = str(body.get("new_password") or "")
@@ -290,7 +291,7 @@ def admin_password():
     if not current_password or not new_password or not confirm_password:
         return fail(
             "validation_error",
-            "كلمة المرور الحالية والجديدة وتأكيدها مطلوبة.",
+            _tr("كلمة المرور الحالية والجديدة وتأكيدها مطلوبة."),
             status=422,
         )
     _pw_key = f"id:{int(admin.id or 0)}"
@@ -302,20 +303,20 @@ def admin_password():
         login_throttle.register_failure("admin_password", _pw_key)
         return fail(
             "invalid_current_password",
-            "كلمة المرور الحالية غير صحيحة.",
+            _tr("كلمة المرور الحالية غير صحيحة."),
             status=422,
         )
     login_throttle.register_success("admin_password", _pw_key)
     if len(new_password) < 8:
         return fail(
             "validation_error",
-            "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.",
+            _tr("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل."),
             status=422,
         )
     if new_password != confirm_password:
         return fail(
             "validation_error",
-            "تأكيد كلمة المرور غير مطابق.",
+            _tr("تأكيد كلمة المرور غير مطابق."),
             status=422,
         )
     if new_password == current_password:
@@ -323,7 +324,7 @@ def admin_password():
         # (and revoked the other sessions for nothing).
         return fail(
             "validation_error",
-            "كلمة المرور الجديدة يجب أن تختلف عن الحالية.",
+            _tr("كلمة المرور الجديدة يجب أن تختلف عن الحالية."),
             status=422,
         )
 
@@ -339,7 +340,7 @@ def admin_password():
             error = result.get("error") if isinstance(result.get("error"), dict) else {}
             return fail(
                 str(error.get("code") or result.get("status") or "license_admin_password_change_failed"),
-                str(error.get("message") or "تعذر تحديث كلمة المرور عبر لوحة التراخيص."),
+                str(error.get("message") or N_("تعذر تحديث كلمة المرور عبر لوحة التراخيص.")),
                 status=502,
             )
         # update_admin() is bypassed on this path — revoke the other app
@@ -352,7 +353,7 @@ def admin_password():
         return ok({
             "updated": True,
             "source": "license_admin",
-            "message": "تم تحديث كلمة المرور من لوحة التراخيص.",
+            "message": _tr("تم تحديث كلمة المرور من لوحة التراخيص."),
         })
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
@@ -363,7 +364,7 @@ def admin_password():
     return ok({
         "updated": True,
         "source": "local",
-        "message": "تم تحديث كلمة المرور المحلية.",
+        "message": _tr("تم تحديث كلمة المرور المحلية."),
     })
 
 

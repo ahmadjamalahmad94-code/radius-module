@@ -27,6 +27,7 @@ Returns a normalised list:
     ]
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 import re
@@ -104,16 +105,15 @@ def discover_via_api(
             rows = list(mt.print_("/interface/print"))
     except AuthError as exc:
         raise InterfaceDiscoveryError(
-            f"كلمة مرور API غير صحيحة: {exc}",
+            _tr('كلمة مرور API غير صحيحة: %(exc)s', exc=exc),
         ) from exc
     except ConnectError as exc:
         raise InterfaceDiscoveryError(
-            f"تعذّر الاتصال بالراوتر عبر VPN ({router_vpn_ip}). "
-            f"تأكّد أن handshake نجح في الخطوة 4: {exc}",
+            _tr('تعذّر الاتصال بالراوتر عبر VPN (%(router_vpn_ip)s). تأكّد أن handshake نجح في الخطوة 4: %(exc)s', router_vpn_ip=router_vpn_ip, exc=exc),
         ) from exc
     except MikrotikError as exc:
         raise InterfaceDiscoveryError(
-            f"خطأ من الراوتر: {exc}",
+            _tr('خطأ من الراوتر: %(exc)s', exc=exc),
         ) from exc
 
     return _normalise_rows(rows)
@@ -136,7 +136,7 @@ def discover_via_paste(pasted_output: str) -> list[dict[str, Any]]:
     MikroTik Terminal."""
     if not pasted_output or not pasted_output.strip():
         raise InterfaceDiscoveryError(
-            "الإخراج المُلصق فارغ",
+            _tr("الإخراج المُلصق فارغ"),
         )
     rows = []
     for m in _PASTE_ROW_RE.finditer(pasted_output):
@@ -160,8 +160,8 @@ def discover_via_paste(pasted_output: str) -> list[dict[str, Any]]:
             })
     if not rows:
         raise InterfaceDiscoveryError(
-            "لم أتمكّن من تحليل الإخراج. تأكّد من لصق نتيجة "
-            "/interface print كاملةً من MikroTik Terminal.",
+            _tr("لم أتمكّن من تحليل الإخراج. تأكّد من لصق نتيجة "
+            "/interface print كاملةً من MikroTik Terminal."),
         )
     return _normalise_rows(rows)
 

@@ -8,6 +8,7 @@ MikroTik API binary protocol — encode/decode.
 المراجع: https://help.mikrotik.com/docs/spaces/ROS/pages/47579160/API
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Callable, List
 
@@ -57,7 +58,7 @@ def decode_length(read_byte: Callable[[], int]) -> int:
         b1, b2, b3, b4 = read_byte(), read_byte(), read_byte(), read_byte()
         return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4
     # 0xF8..0xFF محجوزة — يجب قطع الاتصال
-    raise ProtocolError(f"reserved control byte 0x{b0:02x} — يجب قفل الاتصال")
+    raise ProtocolError(_tr('reserved control byte 0x%(b0)s — يجب قفل الاتصال', b0=format(b0, '02x')))
 
 
 # ────────────────────────── الكلمات ──────────────────────────

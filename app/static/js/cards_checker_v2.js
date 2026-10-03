@@ -1,5 +1,6 @@
 /* Card Checker v2 progressive enhancement.
    The page remains fully server-rendered when JavaScript is unavailable. */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   'use strict';
 
@@ -48,7 +49,7 @@
       const label = document.querySelector('[data-cc-mode-text]');
       if (label) {
         label.textContent =
-          mode === 'simple' ? 'المستوى البسيط' : 'المستوى المتقدّم';
+          mode === 'simple' ? hrT('المستوى البسيط') : hrT('المستوى المتقدّم');
       }
       try { localStorage.setItem(MODE_KEY, mode); } catch (_e) {}
     }
@@ -146,8 +147,8 @@
       resultEl.innerHTML = `
         <div class="cc-state cc-state-error">
           <div class="cc-state-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-          <h2>تعذر جلب بيانات البطاقة</h2>
-          <div class="cc-state-hint">${escapeHtml(error.message || 'خطأ غير معروف')}</div>
+          <h2>${hrT('تعذر جلب بيانات البطاقة')}</h2>
+          <div class="cc-state-hint">${escapeHtml(error.message || hrT('خطأ غير معروف'))}</div>
         </div>`;
     } finally {
       inflightFetch = null;
@@ -225,7 +226,7 @@
       const content = banner.querySelector('div');
       if (content) {
         content.textContent =
-          'انتهت الجلسة. آخر ظهور: ' + (card.last_seen_at || '-');
+          hrT('انتهت الجلسة. آخر ظهور: ') + (card.last_seen_at || '-');
       }
       cancelLivePoll();
     }

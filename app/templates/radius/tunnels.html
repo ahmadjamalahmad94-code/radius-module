@@ -28,13 +28,13 @@
 
 {% set help_aside %}
 {{ hub.helppanel(
-  "كيف تعمل الأنفاق؟",
-  intro="لوحة التراخيص هي مصدر الحقيقة لأنفاق CHR. من هنا تطلب نفقًا أو تستعرض الأنفاق فقط.",
+  _('كيف تعمل الأنفاق؟'),
+  intro=_('لوحة التراخيص هي مصدر الحقيقة لأنفاق CHR. من هنا تطلب نفقًا أو تستعرض الأنفاق فقط.'),
   items=[
-    "طلب النفق يستلم اسم مستخدم وكلمة مرور SSTP تُعرض مرة واحدة للحقن المحلي ولا تُخزَّن.",
-    "المزامنة تلتقط الأنفاق (حتى اليدوية PPTP/L2TP/IPsec) وتؤكّدها للوحة.",
-    "النفق الملغى يُحذف محليًا، والموقوف يُعطَّل محليًا.",
-    "لا تُولَّد بيانات اعتماد CHR في لوحة العميل ولا تُحفظ أي أسرار نفق خام.",
+    _('طلب النفق يستلم اسم مستخدم وكلمة مرور SSTP تُعرض مرة واحدة للحقن المحلي ولا تُخزَّن.'),
+    _('المزامنة تلتقط الأنفاق (حتى اليدوية PPTP/L2TP/IPsec) وتؤكّدها للوحة.'),
+    _('النفق الملغى يُحذف محليًا، والموقوف يُعطَّل محليًا.'),
+    _('لا تُولَّد بيانات اعتماد CHR في لوحة العميل ولا تُحفظ أي أسرار نفق خام.'),
   ],
   icon="circle-info",
 ) }}
@@ -44,7 +44,7 @@
 {% call hub.worklayout(aside_html=help_aside) %}
 
   {% if revealed %}
-    {% call hub.section("بيانات دخول النفق — تُعرض مرة واحدة", icon="key") %}
+    {% call hub.section(_('بيانات دخول النفق — تُعرض مرة واحدة'), icon="key") %}
       <p style="margin:0 0 8px; color:var(--hub-text-soft); font-size:13.5px;">
         {{ _('انسخ هذه البيانات الآن واحقنها في إعداد النفق على الراوتر. لن تُعرض مجددًا ولا تُخزَّن في اللوحة.') }}
       </p>
@@ -58,7 +58,7 @@
     {% endcall %}
   {% endif %}
 
-  {% call hub.section("طلب نفق جديد", icon="circle-plus") %}
+  {% call hub.section(_('طلب نفق جديد'), icon="circle-plus") %}
     {% if not bridge_ready %}
       <div class="hcode-callout hcode-callout--warn" style="margin:0">
         <span class="hcode-callout-ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
@@ -88,16 +88,16 @@
           <input class="hub-input ltr" name="router_id" maxlength="40" placeholder="nas id">
         </div>
         <div class="full" style="display:flex; gap:8px; flex-wrap:wrap;">
-          {{ hub.btn("طلب النفق", variant="primary", icon="paper-plane", type="submit") }}
+          {{ hub.btn(_('طلب النفق'), variant="primary", icon="paper-plane", type="submit") }}
         </div>
       </form>{% endif %}
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("الأنفاق الحالية", icon="list", meta=(tunnels|length ~ ' نفق') if tunnels else '') %}
+  {% call hub.section(_('الأنفاق الحالية'), icon="list", meta=(_('%(length)s نفق', length=tunnels|length)) if tunnels else '') %}
     {% if can_submit('radius.tunnels_sync', 'POST') %}<form method="post" action="{{ url_for('radius.tunnels_sync') }}" style="margin:0 0 12px;">
       {{ csrf_token_input() }}
-      {{ hub.btn("مزامنة الآن", variant="ghost", icon="rotate", type="submit", attrs=("disabled" if not bridge_ready else "")) }}
+      {{ hub.btn(_('مزامنة الآن'), variant="ghost", icon="rotate", type="submit", attrs=("disabled" if not bridge_ready else "")) }}
     </form>{% endif %}
     {% if tunnels %}
       <div class="hub-table-wrap">
@@ -114,13 +114,13 @@
                 <td class="tn-mono">{{ t.remote_name }}</td>
                 <td class="tn-mono">{{ t.tunnel_type|upper }}</td>
                 <td>
-                  {% if t.status == 'active' %}{{ hub.pill("فعّال", variant="green") }}
-                  {% elif t.status == 'suspended' %}{{ hub.pill("موقوف", variant="amber") }}
+                  {% if t.status == 'active' %}{{ hub.pill(_('فعّال'), variant="green") }}
+                  {% elif t.status == 'suspended' %}{{ hub.pill(_('موقوف'), variant="amber") }}
                   {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
                 </td>
                 <td class="tn-mono">{{ t.username or '—' }}</td>
                 <td class="tn-mono">{{ t.remote_address or '—' }}</td>
-                <td>{% if t.acked %}{{ hub.pill("مؤكَّد", variant="blue", dot=False) }}{% else %}{{ hub.pill("بانتظار", variant="grey", dot=False) }}{% endif %}</td>
+                <td>{% if t.acked %}{{ hub.pill(_('مؤكَّد'), variant="blue", dot=False) }}{% else %}{{ hub.pill(_('بانتظار'), variant="grey", dot=False) }}{% endif %}</td>
                 <td class="tn-mono">{{ t.secret_ref or '—' }}</td>
               </tr>
             {% endfor %}
@@ -128,7 +128,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا توجد أنفاق بعد", sub="اطلب نفقًا جديدًا أو اضغط مزامنة لالتقاط الأنفاق من لوحة التراخيص.", icon="network-wired") }}
+      {{ hub.empty(_('لا توجد أنفاق بعد'), sub=_('اطلب نفقًا جديدًا أو اضغط مزامنة لالتقاط الأنفاق من لوحة التراخيص.'), icon="network-wired") }}
     {% endif %}
   {% endcall %}
 

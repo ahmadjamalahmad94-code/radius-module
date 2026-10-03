@@ -13,6 +13,7 @@
      حِزم موزّعه والحِزم المُسنَدة إليه.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Optional
 
@@ -105,7 +106,7 @@ def batch_accessible(batch_id, admin_id: Optional[int] = None, *, tenant_id: int
     return row is not None
 
 
-OUT_OF_SCOPE_BATCH_AR = "هذه الحزمة ليست ضمن نطاقك (حزم مدير أو موزّع آخر)."
+OUT_OF_SCOPE_BATCH_AR = N_("هذه الحزمة ليست ضمن نطاقك (حزم مدير أو موزّع آخر).")
 
 
 def resolve_batch_owner(*, tenant_id: int, is_super: bool, caller_admin_id,
@@ -127,13 +128,13 @@ def resolve_batch_owner(*, tenant_id: int, is_super: bool, caller_admin_id,
     if dist_id:
         dist = operations_repo.get_distributor(int(tenant_id), dist_id)
         if not dist:
-            raise RadiusValidationError("الموزع المحدد غير موجود.")
+            raise RadiusValidationError(_tr("الموزع المحدد غير موجود."))
         owner = int(dist.get("admin_id") or 0)
         if is_super:
             if eff_manager and owner and owner != eff_manager:
-                raise RadiusValidationError("هذا الموزع لا يتبع المدير المختار.")
+                raise RadiusValidationError(_tr("هذا الموزع لا يتبع المدير المختار."))
         elif owner != eff_manager:
-            raise RadiusValidationError("لا تملك صلاحية على هذا الموزع.")
+            raise RadiusValidationError(_tr("لا تملك صلاحية على هذا الموزع."))
     return eff_manager, dist_id
 
 __all__ = ["can_view_all_card_batches", "batch_scope_admin_id", "batch_scope_clause",

@@ -24,6 +24,7 @@ We're cautious by design: when in doubt, we don't say "low" —
 we say "unknown" and let the operator confirm.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import os
@@ -185,30 +186,29 @@ def classify_interface(
     # (1) WireGuard / management interface — BLOCKED.
     if _is_wireguard_interface(iface):
         verdict = _worse(verdict, RISK_BLOCKED)
-        reasons.append("هذه واجهة WireGuard أو إدارة — لا يجوز "
-                       "إعادة برمجتها لأنها قناة وصولنا للراوتر.")
+        reasons.append(N_("هذه واجهة WireGuard أو إدارة — لا يجوز "
+                       "إعادة برمجتها لأنها قناة وصولنا للراوتر."))
     if _has_wg_subnet_address(addresses, name, wg_subnet):
         verdict = _worse(verdict, RISK_BLOCKED)
         reasons.append(
-            f"الواجهة تحمل عنوانًا داخل شبكة الإدارة "
-            f"({wg_subnet}) — قطعها سيُنهي اتصالنا بالراوتر."
+            _tr('الواجهة تحمل عنوانًا داخل شبكة الإدارة (%(wg_subnet)s) — قطعها سيُنهي اتصالنا بالراوتر.', wg_subnet=wg_subnet)
         )
 
     # (2) Carries the default route — almost certainly WAN.
     if _carries_default_route(name, routes):
         verdict = _worse(verdict, RISK_HIGH)
-        reasons.append("الواجهة تحمل المسار الافتراضي — هي مزوّد "
-                       "الإنترنت (WAN).")
+        reasons.append(N_("الواجهة تحمل المسار الافتراضي — هي مزوّد "
+                       "الإنترنت (WAN)."))
 
     # (3) Name says WAN/uplink/internet — high suspicion.
     if _name_hits(name, _NAME_FRAGMENTS_WAN):
         verdict = _worse(verdict, RISK_HIGH)
-        reasons.append("اسم الواجهة يوحي بأنها WAN.")
+        reasons.append(N_("اسم الواجهة يوحي بأنها WAN."))
 
     # (4) Operator labelled it as management — block.
     if _comment_says_management(iface.get("comment") or ""):
         verdict = _worse(verdict, RISK_BLOCKED)
-        reasons.append("تعليق الواجهة يصفها كأداة إدارة.")
+        reasons.append(N_("تعليق الواجهة يصفها كأداة إدارة."))
 
     # (5) Otherwise: if we have a useful signal that it's a
     # plain LAN-style port (ether without default route, no
@@ -223,8 +223,8 @@ def classify_interface(
         )
         if t in {"ether", "vlan", "bridge"} and not has_addr_on_iface:
             verdict = RISK_LOW
-            reasons.append("واجهة محلية بلا عنوان مُعطى — "
-                           "مرشّحة مقبولة للبرمجة.")
+            reasons.append(N_("واجهة محلية بلا عنوان مُعطى — "
+                           "مرشّحة مقبولة للبرمجة."))
 
     return InterfaceRisk(interface=name or "?", risk=verdict,
                           reasons=reasons)

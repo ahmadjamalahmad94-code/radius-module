@@ -1,5 +1,6 @@
 """Lifecycle retention policy API."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -55,14 +56,14 @@ def lifecycle_policy(policy_id: int):
     except lifecycle.LifecycleValidationError as exc:
         return _validation_error(exc)
     if not policy:
-        return fail("not_found", "السياسة غير موجودة.", status=404)
+        return fail("not_found", _tr("السياسة غير موجودة."), status=404)
     return ok(policy)
 
 
 def lifecycle_policy_disable(policy_id: int):
     policy = lifecycle.disable_policy(_tid(), policy_id, actor=_actor())
     if not policy:
-        return fail("not_found", "السياسة غير موجودة.", status=404)
+        return fail("not_found", _tr("السياسة غير موجودة."), status=404)
     return ok(policy)
 
 

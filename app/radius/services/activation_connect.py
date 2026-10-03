@@ -21,6 +21,7 @@ NEVER_ACTIVATED — للاختبار الكامل لدورة remove → pending 
     حقل واحد وإعادة المحاولة بدون كتابة كل شيء من الأوّل.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 import logging
@@ -69,29 +70,29 @@ def _validate_url(raw: str) -> tuple[bool, str]:
     """يُرجع (صالح، رسالة-خطأ-عربية-إن-وُجد). يَقبل http/https فقط؛ يَرفض
     عناوين IP محلّية بلا host واضح."""
     if not raw or not isinstance(raw, str):
-        return False, "أدخل رابط لوحة المزوّد (مثل https://hoberadius.com)."
+        return False, N_("أدخل رابط لوحة المزوّد (مثل https://hoberadius.com).")
     s = raw.strip()
     if not s.lower().startswith(("http://", "https://")):
-        return False, "الرابط يجب أن يبدأ بـhttps:// (أو http:// لاختبار محلّي)."
+        return False, N_("الرابط يجب أن يبدأ بـhttps:// (أو http:// لاختبار محلّي).")
     try:
         parsed = urlparse(s)
     except (TypeError, ValueError):
-        return False, "صيغة الرابط غير صحيحة."
+        return False, N_("صيغة الرابط غير صحيحة.")
     if not parsed.netloc:
-        return False, "الرابط يفتقد اسم المضيف (host)."
+        return False, N_("الرابط يفتقد اسم المضيف (host).")
     if " " in s:
-        return False, "الرابط لا يجوز أن يحوي مسافات."
+        return False, N_("الرابط لا يجوز أن يحوي مسافات.")
     return True, ""
 
 
 def _validate_license_key(raw: str) -> tuple[bool, str]:
     if not raw or not isinstance(raw, str):
-        return False, "أدخل مفتاح الترخيص من صفحة العميل في لوحة المزوّد."
+        return False, N_("أدخل مفتاح الترخيص من صفحة العميل في لوحة المزوّد.")
     s = raw.strip()
     if len(s) < 8:
-        return False, "مفتاح الترخيص قصير جدًّا — انسخه كاملًا من لوحة المزوّد."
+        return False, N_("مفتاح الترخيص قصير جدًّا — انسخه كاملًا من لوحة المزوّد.")
     if len(s) > 256:
-        return False, "مفتاح الترخيص طويل بشكل غير معقول — تأكّد أنّك نَسختَ مفتاحًا واحدًا فقط."
+        return False, N_("مفتاح الترخيص طويل بشكل غير معقول — تأكّد أنّك نَسختَ مفتاحًا واحدًا فقط.")
     return True, ""
 
 
@@ -176,7 +177,7 @@ def link_and_activate(tenant_id: int, *, base_url: str,
     except Exception:  # noqa: BLE001
         _LOG.exception("activation_connect: failed to persist bridge config")
         return ActivationResult(ok=False, code="save_failed",
-                                 message_ar="تعذّر حفظ إعدادات الربط في قاعدة البيانات.",
+                                 message_ar=N_("تعذّر حفظ إعدادات الربط في قاعدة البيانات."),
                                  details={})
 
     # (3+4) جلب اللقطات
@@ -205,26 +206,25 @@ def link_and_activate(tenant_id: int, *, base_url: str,
         _LOG.exception("activation_connect: sync raised")
         return ActivationResult(
             ok=False, code="sync_exception",
-            message_ar=("الإعدادات حُفظت لكن تعذّر الاتصال بلوحة المزوّد: "
-                        f"{str(exc)[:200]}. تأكّد من الرابط والشبكة وأعد المحاولة."),
+            message_ar=(_tr('الإعدادات حُفظت لكن تعذّر الاتصال بلوحة المزوّد: %(v)s. تأكّد من الرابط والشبكة وأعد المحاولة.', v=str(exc)[:200])),
             details={"exception": str(exc)[:500]},
         )
 
     if license_ok or capacity_ok:
         return ActivationResult(
             ok=True, code="activated",
-            message_ar=("تمّ الربط وتفعيل النسخة. اللوحة جاهزة للاستخدام."
+            message_ar=(N_("تمّ الربط وتفعيل النسخة. اللوحة جاهزة للاستخدام.")
                          if (license_ok and capacity_ok)
-                         else "تمّ الربط جزئيًّا — تَزامُن واحد نَجح. "
-                              "اضغط «مزامنة الآن» لإعادة المحاولة على الباقي."),
+                         else N_("تمّ الربط جزئيًّا — تَزامُن واحد نَجح. "
+                              "اضغط «مزامنة الآن» لإعادة المحاولة على الباقي.")),
             details={"license_ok": license_ok, "capacity_ok": capacity_ok},
         )
 
     # كل التزامنات فشلت — الإعدادات محفوظة للمحاولة التالية
     return ActivationResult(
         ok=False, code="sync_failed",
-        message_ar=("الإعدادات حُفظت لكن لوحة المزوّد لم تَستجب. "
-                     "راجع الرابط ومفتاح الترخيص ثم اضغط «إعادة المحاولة»."),
+        message_ar=(N_("الإعدادات حُفظت لكن لوحة المزوّد لم تَستجب. "
+                     "راجع الرابط ومفتاح الترخيص ثم اضغط «إعادة المحاولة».")),
         details={"errors": sync_errors},
     )
 
@@ -242,21 +242,20 @@ def sync_now(tenant_id: int) -> ActivationResult:
         cap = client.fetch_capacity_contract(tenant_id=int(tenant_id))
     except Exception as exc:  # noqa: BLE001
         return ActivationResult(ok=False, code="sync_exception",
-                                 message_ar=("تعذّر الاتصال بلوحة المزوّد: "
-                                              f"{str(exc)[:200]}."),
+                                 message_ar=(_tr('تعذّر الاتصال بلوحة المزوّد: %(v)s.', v=str(exc)[:200])),
                                  details={"exception": str(exc)[:500]})
     license_ok = bool(lic.get("ok"))
     capacity_ok = bool(cap.get("ok"))
     if license_ok or capacity_ok:
         return ActivationResult(
             ok=True, code="synced",
-            message_ar=("تمّت المزامنة بنجاح."
+            message_ar=(N_("تمّت المزامنة بنجاح.")
                          if (license_ok and capacity_ok)
-                         else "نَجحت مزامنة واحدة — أعد المحاولة لاستكمال الثانية."),
+                         else N_("نَجحت مزامنة واحدة — أعد المحاولة لاستكمال الثانية.")),
             details={"license_ok": license_ok, "capacity_ok": capacity_ok},
         )
     return ActivationResult(ok=False, code="sync_failed",
-                             message_ar="لوحة المزوّد لم تَستجب. تأكّد من الرابط والمفتاح والشبكة.",
+                             message_ar=N_("لوحة المزوّد لم تَستجب. تأكّد من الرابط والمفتاح والشبكة."),
                              details={"license": _short_err(lic.get("error")),
                                        "capacity": _short_err(cap.get("error"))})
 
@@ -287,7 +286,7 @@ def reset_link(tenant_id: int, *, by: int = 0,
     except Exception:  # noqa: BLE001
         _LOG.exception("activation_connect.reset: settings wipe failed")
         return ActivationResult(ok=False, code="reset_settings_failed",
-                                 message_ar="تعذّر مسح إعدادات الربط من قاعدة البيانات.",
+                                 message_ar=N_("تعذّر مسح إعدادات الربط من قاعدة البيانات."),
                                  details={})
 
     deleted_snapshots = 0
@@ -302,7 +301,7 @@ def reset_link(tenant_id: int, *, by: int = 0,
         except Exception:  # noqa: BLE001
             _LOG.exception("activation_connect.reset: snapshot wipe failed")
             return ActivationResult(ok=False, code="reset_snapshots_failed",
-                                     message_ar="مُسحت الإعدادات لكن تعذّر حذف اللقطات. أعد المحاولة.",
+                                     message_ar=N_("مُسحت الإعدادات لكن تعذّر حذف اللقطات. أعد المحاولة."),
                                      details={"cleared_settings": cleared_settings})
 
     # نَحذف cache lifecycle/grant على الـrequest الحالي (الـg memoization)
@@ -317,9 +316,7 @@ def reset_link(tenant_id: int, *, by: int = 0,
 
     return ActivationResult(
         ok=True, code="reset_done",
-        message_ar=(f"تم فكّ الربط. مُسح {ar_count(len(cleared_settings), 'setting')} "
-                     f"و{deleted_snapshots} لقطة. النسخة الآن في حالة "
-                     "«بانتظار التفعيل» — تَستطيع البدء من جديد."),
+        message_ar=(_tr('تم فكّ الربط. مُسح %(v)s و%(deleted_snapshots)s لقطة. النسخة الآن في حالة «بانتظار التفعيل» — تَستطيع البدء من جديد.', v=ar_count(len(cleared_settings), 'setting'), deleted_snapshots=deleted_snapshots)),
         details={"cleared_settings": cleared_settings,
                   "deleted_snapshots": deleted_snapshots},
     )
@@ -354,22 +351,22 @@ def activation_state(tenant_id: int) -> dict:
 
         # الـphase مُشتقّة من حالة الـlifecycle:
         phase = "pending"
-        phase_ar = "بانتظار التفعيل"
+        phase_ar = _tr("بانتظار التفعيل")
         if decision.state.value == "active":
             phase = "active"
-            phase_ar = "مفعّل ✓"
+            phase_ar = _tr("مفعّل ✓")
         elif decision.state.value == "expired":
             phase = "expired"
-            phase_ar = "منتهي — يحتاج تجديد"
+            phase_ar = _tr("منتهي — يحتاج تجديد")
         elif decision.state.value in ("sync_outage_in_grace",
                                         "sync_outage_beyond_grace"):
             phase = "sync_outage"
-            phase_ar = ("انقطاع تزامن مؤقّت (ضمن سماحية)"
+            phase_ar = (_tr("انقطاع تزامن مؤقّت (ضمن سماحية)")
                          if decision.state.value == "sync_outage_in_grace"
-                         else "انقطاع تزامن طويل — مقفل")
+                         else _tr("انقطاع تزامن طويل — مقفل"))
         elif has_config and not has_snap:
             phase = "linked_syncing"
-            phase_ar = "تمّ الربط، بانتظار أوّل تزامن…"
+            phase_ar = _tr("تمّ الربط، بانتظار أوّل تزامن…")
         return {
             "phase":         phase,
             "phase_ar":      phase_ar,
@@ -385,7 +382,7 @@ def activation_state(tenant_id: int) -> dict:
         }
     except Exception:  # noqa: BLE001
         _LOG.exception("activation_state failed")
-        return {"phase": "pending", "phase_ar": "بانتظار التفعيل",
+        return {"phase": "pending", "phase_ar": _tr("بانتظار التفعيل"),
                 "license_state": "never_activated", "license_reason": "error",
                 "blocks_panel": True, "has_config": False, "has_snapshot": False,
                 "expires_at": None, "fetched_at": None, "env_overrides": [],

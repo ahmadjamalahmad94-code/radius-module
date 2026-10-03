@@ -14,6 +14,7 @@
 ``except RadiusError`` — بلا تغيير في هيكل المعالجة.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import math
@@ -41,25 +42,25 @@ MONEY_MAX = 1_000_000_000.0
 ACTION_AMOUNT_MAX = 100_000.0
 EXTEND_MAX_DAYS = 365
 EXTEND_MAX_MINUTES = EXTEND_MAX_DAYS * 1440
-EXTEND_TOO_LONG_AR = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر"
+EXTEND_TOO_LONG_AR = N_("أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر")
 EXPIRY_LIMIT = datetime(2101, 1, 1)
-EXPIRY_TOO_FAR_AR = "المدة الناتجة تتجاوز الحدّ المسموح."
+EXPIRY_TOO_FAR_AR = N_("المدة الناتجة تتجاوز الحدّ المسموح.")
 
 _FIELD_AR = {
-    "amount": "المبلغ",
-    "balance": "الرصيد",
-    "price": "السعر",
-    "custom_price": "السعر الخاص",
-    "discount_amount": "الخصم",
-    "credit_limit": "حدّ الائتمان",
-    "quota_mb": "الكوتة",
-    "minutes": "المدّة",
-    "hours": "الساعات",
-    "days": "الأيام",
-    "loan_settled_total": "مجموع تسوية السلف",
-    "balance_settled_total": "مجموع تسوية الدين",
-    "duration_minutes": "المدّة بالدقائق",
-    "plan_id": "العرض",
+    "amount": N_("المبلغ"),
+    "balance": N_("الرصيد"),
+    "price": N_("السعر"),
+    "custom_price": N_("السعر الخاص"),
+    "discount_amount": N_("الخصم"),
+    "credit_limit": N_("حدّ الائتمان"),
+    "quota_mb": N_("الكوتة"),
+    "minutes": N_("المدّة"),
+    "hours": N_("الساعات"),
+    "days": N_("الأيام"),
+    "loan_settled_total": N_("مجموع تسوية السلف"),
+    "balance_settled_total": N_("مجموع تسوية الدين"),
+    "duration_minutes": N_("المدّة بالدقائق"),
+    "plan_id": N_("العرض"),
 }
 
 _MISSING = object()
@@ -129,22 +130,22 @@ def finite_float(value: Any, *, field: str = "amount", min: Optional[float] = No
     if value is None or (isinstance(value, str) and not value.strip()):
         if default is not _MISSING:
             return default
-        raise NonFiniteNumber(f"قيمة «{label}» مطلوبة.", details={"field": field})
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» مطلوبة.', label=label), details={"field": field})
     if isinstance(value, bool):
-        raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.", details={"field": field})
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب أن تكون رقمًا.', label=label), details={"field": field})
     try:
         out = float(normalize_number_text(value))
     except (TypeError, ValueError, OverflowError):
-        raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب أن تكون رقمًا.', label=label),
                               details={"field": field}) from None
     if not math.isfinite(out):
-        raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا منتهيًا صالحًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب أن تكون رقمًا منتهيًا صالحًا.', label=label),
                               details={"field": field})
     if min is not None and out < min:
-        raise NonFiniteNumber(f"قيمة «{label}» يجب ألّا تقلّ عن {_fmt(min)}.",
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب ألّا تقلّ عن %(v)s.', label=label, v=_fmt(min)),
                               details={"field": field})
     if max is not None and out > max:
-        raise NonFiniteNumber(f"قيمة «{label}» يجب ألّا تزيد عن {_fmt(max)}.",
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب ألّا تزيد عن %(v)s.', label=label, v=_fmt(max)),
                               details={"field": field})
     return out
 
@@ -156,8 +157,8 @@ def strict_float(value: Any, field: str = "") -> float:
     ``except (TypeError, ValueError)`` الموجودة تعالجها كقيمةٍ خاطئة."""
     out = float(normalize_number_text(value))
     if not math.isfinite(out) or abs(out) > MONEY_MAX * 1000:
-        label = field_label(field) if field else "الرقم"
-        raise NonFiniteNumber(f"قيمة «{label}» يجب أن تكون رقمًا منتهيًا صالحًا.",
+        label = field_label(field) if field else _tr("الرقم")
+        raise NonFiniteNumber(_tr('قيمة «%(label)s» يجب أن تكون رقمًا منتهيًا صالحًا.', label=label),
                               details={"field": field} if field else None)
     return out
 
@@ -178,7 +179,7 @@ def finite_int(value: Any, *, field: str, min: Optional[int] = None,
     if not isinstance(out, float):
         return out
     if not out.is_integer():
-        raise NonFiniteNumber(f"قيمة «{field_label(field)}» يجب أن تكون عددًا صحيحًا.",
+        raise NonFiniteNumber(_tr('قيمة «%(v)s» يجب أن تكون عددًا صحيحًا.', v=field_label(field)),
                               details={"field": field})
     return int(out)
 
@@ -277,7 +278,7 @@ def check_create_expiry(expire_at: Optional[datetime],
 # خصمٌ من وقت بطاقة: لا معنى لـ«سنة» فيه (خصمٌ أكبر من المتبقّي يُنهيها)، لكن
 # رقمًا فلكيًّا يُفيض timedelta (500) — سقفٌ عاقل برسالةٍ عربيّة.
 DEDUCT_MAX_SECONDS = 3650 * 86400
-DEDUCT_TOO_LONG_AR = "مقدار الخصم يتجاوز الحدّ المسموح (3650 يومًا)."
+DEDUCT_TOO_LONG_AR = N_("مقدار الخصم يتجاوز الحدّ المسموح (3650 يومًا).")
 
 
 def check_time_delta_seconds(seconds: int) -> int:

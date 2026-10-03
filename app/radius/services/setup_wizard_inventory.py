@@ -1,5 +1,6 @@
 """Read-only router inventory snapshots and risk analysis for setup wizard."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import ipaddress
 import json
@@ -217,7 +218,7 @@ class RouterRiskAnalyzer:
                 "code": "subnet_overlap",
                 "candidate": item["candidate"],
                 "existing": item["existing"],
-                "message_ar": "الشبكة المرشحة تتداخل مع شبكة موجودة على الراوتر",
+                "message_ar": _tr("الشبكة المرشحة تتداخل مع شبكة موجودة على الراوتر"),
             })
         return {
             "wan_interface": wan,

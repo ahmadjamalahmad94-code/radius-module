@@ -28,6 +28,7 @@ The planner is fully pure — no DB calls, no network. Callers
 fetch policy/node/targets via the repo layer and hand them in.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
@@ -45,10 +46,10 @@ COMMENT_TAG = "HOBE_VX2_SITE_EXIT"
 # Operator-facing FastTrack advisory — emitted on every plan.
 # Localized in Arabic to match the rest of the operator UI.
 FASTTRACK_WARNING_AR = (
-    "FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، فينفذ "
+    N_("FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، فينفذ "
     "المسار عبر الـ WAN الأصلي بدل نفق VPS. استبعد عناوين "
     "الـ address-list هذه من FastTrack يدويًا، أو تأكَّد أنّ "
-    "قاعدة FastTrack تأتي بعد قاعدة الـ mangle الخاصة بـ VX2."
+    "قاعدة FastTrack تأتي بعد قاعدة الـ mangle الخاصة بـ VX2.")
 )
 
 
@@ -503,10 +504,10 @@ def build_plan(
     # RouterOS syntax.
     connection_flush_ops: list[PlanCommand] = []
     warnings.append(
-        "الاتصالات الجارية مسبقًا قبل التطبيق قد تستمرّ على المسار "
+        N_("الاتصالات الجارية مسبقًا قبل التطبيق قد تستمرّ على المسار "
         "القديم لبضع دقائق. لتسريع التحوّل: أعِد تشغيل الجهاز "
         "على شبكة العميل، أو امسح يدويًا "
-        "`/ip firewall connection` للوجهات المحدّدة."
+        "`/ip firewall connection` للوجهات المحدّدة.")
     )
 
     # ── NAT — src-nat on the WireGuard interface ──

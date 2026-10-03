@@ -7,6 +7,7 @@
     return not_implemented("accounts.create")
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import uuid
 from typing import Any, Optional
@@ -54,7 +55,7 @@ def fail(code: str, message: str = "", *, status: int = 400, details: Optional[d
 def not_implemented(operation: str):
     return fail(
         "not_implemented",
-        f"العملية {operation!r} مُسجَّلة كـ contract لكن منطقها لم يكتمل بعد.",
+        _tr('العملية %(operation)s مُسجَّلة كـ contract لكن منطقها لم يكتمل بعد.', operation=repr(operation)),
         status=501,
         details={"operation": operation},
     )

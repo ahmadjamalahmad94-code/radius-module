@@ -5,16 +5,16 @@
    حالة العقد/الصحة، حالة الحدث، وشدّة الحدث — أي قيمة غير معروفة تُعرض
    كما هي مع الإبقاء على الخام في title لتسهيل التشخيص. #}
 {% set STATUS_AR = {
-  'active':'فعّال', 'valid':'سارٍ', 'enabled':'مفعّل', 'ok':'سليم',
-  'grace':'فترة سماح', 'warning':'تحذير', 'pending':'قيد الانتظار',
-  'degraded':'متدهور', 'stale':'قديم', 'blocked':'محظور',
-  'expired':'منتهٍ', 'denied':'مرفوض', 'failed':'فشل',
-  'success':'ناجح', 'completed':'مكتمل', 'recorded':'مسجّل',
-  'error':'خطأ', 'not_configured':'غير مهيّأ',
-  'unknown':'غير معروف', 'unavailable':'غير متاح'
+  'active':_('فعّال'), 'valid':_('سارٍ'), 'enabled':_('مفعّل'), 'ok':_('سليم'),
+  'grace':_('فترة سماح'), 'warning':_('تحذير'), 'pending':_('قيد الانتظار'),
+  'degraded':_('متدهور'), 'stale':_('قديم'), 'blocked':_('محظور'),
+  'expired':_('منتهٍ'), 'denied':_('مرفوض'), 'failed':_('فشل'),
+  'success':_('ناجح'), 'completed':_('مكتمل'), 'recorded':_('مسجّل'),
+  'error':_('خطأ'), 'not_configured':_('غير مهيّأ'),
+  'unknown':_('غير معروف'), 'unavailable':_('غير متاح')
 } %}
 {% set SEVERITY_AR = {
-  'info':'معلومة', 'warning':'تحذير', 'error':'خطأ', 'critical':'حرج'
+  'info':_('معلومة'), 'warning':_('تحذير'), 'error':_('خطأ'), 'critical':_('حرج')
 } %}
 
 {% block title %}{{ _("جسر الإدارة — Hobe Hub") }}{% endblock %}
@@ -213,20 +213,20 @@
     <div class="ab-hero-kpis">
       {# الحالة الخام تُعرّب عبر STATUS_AR مع الإبقاء على القيمة الأصلية للتشخيص #}
       {% set _cap_kpi = capacity.status or 'unknown' %}
-      {{ hub.kpi("حالة عقد السعة", STATUS_AR.get(_cap_kpi, _cap_kpi),
+      {{ hub.kpi(_('حالة عقد السعة'), STATUS_AR.get(_cap_kpi, _cap_kpi),
                  icon="gauge-high", variant="brand") }}
-      {{ hub.kpi("أحداث الجسر", events.total or 0,
+      {{ hub.kpi(_('أحداث الجسر'), events.total or 0,
                  icon="list-check", variant="blue") }}
       {% set _hb_kpi = heartbeat.status or 'unknown' %}
-      {{ hub.kpi("الصحة المحلية", STATUS_AR.get(_hb_kpi, _hb_kpi),
+      {{ hub.kpi(_('الصحة المحلية'), STATUS_AR.get(_hb_kpi, _hb_kpi),
                  icon="heart-pulse", variant="green") }}
-      {{ hub.kpi("وضع التنفيذ", "قراءة فقط",
+      {{ hub.kpi(_('وضع التنفيذ'), _('قراءة فقط'),
                  icon="shield-halved", variant="amber") }}
     </div>
   </section>
 
   {# ───── Explanation card ──────────────────────────────────── #}
-  {% call hub.section("ماذا تشاهد في هذه الصفحة؟", icon="circle-question") %}
+  {% call hub.section(_('ماذا تشاهد في هذه الصفحة؟'), icon="circle-question") %}
     <ol class="ab-help">
       <li><strong>{{ _('الحالة العامة.') }}</strong> {{ _('الأربع تايلات أعلى الصفحة تعطي صورة سريعة عن السعة والأحداث والصحة ووضع التنفيذ.') }}</li>
       <li><strong>{{ _('المسارات المتاحة.') }}</strong> {{ _('كل مسار في الجسر له بطاقة منفصلة بأيقونة وحالة وملاحظة توضّح ما يفعله — وما لا يفعله.') }}</li>
@@ -236,7 +236,7 @@
   {% endcall %}
 
   {# ───── Path cards grid ──────────────────────────────────── #}
-  {% call hub.section("المسارات المتاحة في الجسر", icon="diagram-project") %}
+  {% call hub.section(_('المسارات المتاحة في الجسر'), icon="diagram-project") %}
     <div class="ab-paths">
       {% for card in bridge_cards %}
         <div class="ab-path" data-admin-bridge-card="{{ card.title }}">
@@ -263,7 +263,7 @@
             {% if can_open(card.action_url) %}<a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ card.action_url }}"
                style="margin-top:8px;display:inline-flex">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              {{ card.action_label or 'فتح' }}
+              {{ card.action_label or _('فتح') }}
             </a>{% endif %}
             {% endif %}
           </div>
@@ -275,14 +275,14 @@
   {# ───── Local capacity + recent events ───────────────────── #}
   <div class="ab-grid-2">
 
-    {% call hub.section("حالة السعة المحلية", icon="gauge-high") %}
+    {% call hub.section(_('حالة السعة المحلية'), icon="gauge-high") %}
       {% set _cap_status = capacity.contract.status
                           if capacity.contract is defined and capacity.contract.status is defined
                           else capacity.status %}
       <div class="ab-state-line">
         <span class="ab-state-label">{{ _('الحالة الحالية') }}</span>
         {# تُعرض بالعربي عبر STATUS_AR والقيمة الخام تبقى في title للتشخيص #}
-        {% set _cap_ar = STATUS_AR.get(_cap_status, _cap_status) or 'غير معروف' %}
+        {% set _cap_ar = STATUS_AR.get(_cap_status, _cap_status) or _('غير معروف') %}
         {% if _cap_status in ['active','ok','enabled','valid'] %}
           <span class="hub-pill hub-pill--green" title="{{ _cap_status }}"><span class="dot"></span>{{ _cap_ar }}</span>
         {% elif _cap_status in ['expired','denied','failed','blocked'] %}
@@ -310,7 +310,7 @@
       {% endif %}
     {% endcall %}
 
-    {% call hub.section("آخر أحداث الجسر", icon="list-check") %}
+    {% call hub.section(_('آخر أحداث الجسر'), icon="list-check") %}
       {% if events.latest %}
         <div class="ab-events">
           {% for event in events.latest[:5] %}
@@ -338,8 +338,8 @@
         </div>
       {% else %}
         {{ hub.empty(
-          "لا توجد أحداث جسر محلية بعد.",
-          sub="سيظهر السجل هنا بعد تشغيل مسارات الجسر الموثّقة.",
+          _('لا توجد أحداث جسر محلية بعد.'),
+          sub=_('سيظهر السجل هنا بعد تشغيل مسارات الجسر الموثّقة.'),
           icon="list-check"
         ) }}
       {% endif %}

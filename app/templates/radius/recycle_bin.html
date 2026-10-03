@@ -54,14 +54,14 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة النوع ───── #}
 <section class="hub-hero-shell" data-testid="recycle-bin-hero">
 {% call hub.megahero(
-  "سلة المحذوفات",
-  subtitle="الحذف هنا أرشفة قابلة للاستعادة، والحذف النهائيّ متاح لحزم البطاقات فقط — السجلات المالية لا تظهر لأنها تُصحَّح بقيود عكسية.",
+  _('سلة المحذوفات'),
+  subtitle=_('الحذف هنا أرشفة قابلة للاستعادة، والحذف النهائيّ متاح لحزم البطاقات فقط — السجلات المالية لا تظهر لأنها تُصحَّح بقيود عكسية.'),
   icon="box-archive",
   kpis=[
-    {'label': 'إجمالي المؤرشف',   'value': _total,       'icon': 'layer-group',    'variant': 'brand'},
-    {'label': 'في النتائج',       'value': items|length, 'icon': 'list',           'variant': 'blue'},
-    {'label': 'قابلة للاستعادة',  'value': _restorable,  'icon': 'rotate-left',    'variant': 'green'},
-    {'label': 'انتهى احتفاظها',   'value': _expired,     'icon': 'hourglass-end',  'variant': 'amber'},
+    {'label': _('إجمالي المؤرشف'),   'value': _total,       'icon': 'layer-group',    'variant': 'brand'},
+    {'label': _('في النتائج'),       'value': items|length, 'icon': 'list',           'variant': 'blue'},
+    {'label': _('قابلة للاستعادة'),  'value': _restorable,  'icon': 'rotate-left',    'variant': 'green'},
+    {'label': _('انتهى احتفاظها'),   'value': _expired,     'icon': 'hourglass-end',  'variant': 'amber'},
   ]
 ) %}
   {# حزام فلترة النوع — نفس العقد: GET ?entity_type=… إلى نفس المسار #}
@@ -88,14 +88,14 @@
   {% endfor %}
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
-        data-hint="الأرشفة قد تكون يدوية أو تلقائية بموجب سياسة احتفاظ. عند انتهاء مدة الاحتفاظ يُعطَّل زر الاستعادة. راجع أي عنصر مستعاد قبل إعادة استخدامه تشغيليًا."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('الأرشفة قد تكون يدوية أو تلقائية بموجب سياسة احتفاظ. عند انتهاء مدة الاحتفاظ يُعطَّل زر الاستعادة. راجع أي عنصر مستعاد قبل إعادة استخدامه تشغيليًا.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول العناصر المؤرشفة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("العناصر المؤرشفة", icon="table-list",
-                    meta=items|length|string ~ " عنصر", flush=True) %}
+{% call hub.section(_('العناصر المؤرشفة'), icon="table-list",
+                    meta=_('%(string)s عنصر', string=items|length|string), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        data-uds-export-title="{{ _('سلة المحذوفات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -124,8 +124,8 @@
           {# الحالة قبل الأرشفة — حبوب ملوّنة مع احتواء أي قيمة مجهولة #}
           <td>
             {% set _st = (item.status or '')|string|lower %}
-            {% if _st in ['enabled', 'active'] %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% elif _st in ['disabled', 'inactive'] %}{{ hub.pill("معطَّل", variant="red") }}
+            {% if _st in ['enabled', 'active'] %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+            {% elif _st in ['disabled', 'inactive'] %}{{ hub.pill(_('معطَّل'), variant="red") }}
             {% elif _st %}{{ hub.pill(item.status_label or _st, variant="grey") }}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
@@ -133,9 +133,9 @@
           {# مصدر الأرشفة: تلقائية بموجب سياسة، أو يدوية من مشغّل #}
           <td>
             {% if item.archive_source == 'auto' %}
-              {{ hub.pill("تلقائية", variant="blue") }}
+              {{ hub.pill(_('تلقائية'), variant="blue") }}
             {% else %}
-              {{ hub.pill("يدوية", variant="grey") }}
+              {{ hub.pill(_('يدوية'), variant="grey") }}
             {% endif %}
             {% if item.archive_policy_id %}
               <div class="mono small hub-text-mute">{{ _('سياسة') }} <bdi dir="ltr">#{{ item.archive_policy_id }}</bdi></div>
@@ -145,12 +145,12 @@
             {% if item.retention_expires_at %}<bdi dir="ltr">{{ item.retention_expires_at|date_local }}</bdi>
             {% else %}<span class="hub-text-mute">{{ _('غير محدد') }}</span>{% endif %}
             {% if item.retention_expired %}
-              <div>{{ hub.pill("انتهى الاحتفاظ", variant="amber", dot=False) }}</div>
+              <div>{{ hub.pill(_('انتهى الاحتفاظ'), variant="amber", dot=False) }}</div>
             {% endif %}
           </td>
           <td>{{ item.deleted_by_label or item.deleted_by or '—' }}</td>
           <td class="hub-text-mute" style="max-width:300px;font-size:12.5px;line-height:1.7">
-            {{ item.delete_reason or 'لم يُسجَّل سبب.' }}
+            {{ item.delete_reason or _('لم يُسجَّل سبب.') }}
           </td>
           <td>
             {# الاستعادة عبر مودال تأكيد عائم — نفس مسار POST تمامًا #}
@@ -188,8 +188,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا عناصر مؤرشفة" ~ (" من نوع «" ~ entity_labels.get(selected, selected) ~ "»" if selected else ""),
-  sub="عند أرشفة مستفيد أو باقة أو جهاز شبكة أو مدير يظهر هنا جاهزًا للاستعادة.",
+  _('لا عناصر مؤرشفة') ~ (_(' من نوع «%(v)s»', v=entity_labels.get(selected, selected)) if selected else ""),
+  sub=_('عند أرشفة مستفيد أو باقة أو جهاز شبكة أو مدير يظهر هنا جاهزًا للاستعادة.'),
   icon="box-open"
 ) }}
 {% endif %}
@@ -201,7 +201,7 @@
     <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-rotate-left"></i> {{ _("استعادة العنصر") }}</button>
   </form>
 {% endset %}
-{% call hub.modal("rbRestoreModal", "تأكيد الاستعادة", icon="rotate-left", size="sm",
+{% call hub.modal("rbRestoreModal", _('تأكيد الاستعادة'), icon="rotate-left", size="sm",
    footer_html=_rb_restore_foot) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>

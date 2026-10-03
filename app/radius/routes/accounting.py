@@ -1,5 +1,6 @@
 """Web admin accounting screens for payments, loans, and ledger."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 
@@ -207,8 +208,8 @@ def users_payment_create(username: str):
         amount_f = 0.0
     if amount_f <= 0:
         if _wants_json():
-            return jsonify({"ok": False, "error": "قيمة الدفعة غير صحيحة."}), 400
-        flash("قيمة الدفعة غير صحيحة.", "error")
+            return jsonify({"ok": False, "error": _tr("قيمة الدفعة غير صحيحة.")}), 400
+        flash(_tr("قيمة الدفعة غير صحيحة."), "error")
         return redirect(_back_or(url_for("radius.users_finance", username=username)))
     # Three shared phases (services/subscriber_actions — the mobile API runs the
     # same ones): preview the settled loans + negative-balance debt (read-only)
@@ -244,7 +245,7 @@ def users_payment_create(username: str):
         return redirect(_back_or(url_for("radius.users_finance", username=username)))
     except Exception as e:  # noqa: BLE001 — surface the real reason, don't 500 silently
         current_app.logger.exception("payment create failed for %s", username)
-        reason = f"خطأ غير متوقع أثناء تسجيل الدفعة: {e}"
+        reason = _tr('خطأ غير متوقع أثناء تسجيل الدفعة: %(e)s', e=e)
         if _wants_json():
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
@@ -267,14 +268,14 @@ def users_payment_create_bulk():
     """
     usernames = _bulk_usernames()
     if not usernames:
-        flash("لم يتم تحديد أي مشترك لتسجيل الدفعة.", "warning")
+        flash(_tr("لم يتم تحديد أي مشترك لتسجيل الدفعة."), "warning")
         return redirect(url_for("radius.users_list"))
     try:
         amount_f = strict_float(_field("amount") or 0)
     except (TypeError, ValueError):
         amount_f = 0.0
     if amount_f <= 0:
-        flash("قيمة الدفعة غير صحيحة.", "error")
+        flash(_tr("قيمة الدفعة غير صحيحة."), "error")
         return redirect(url_for("radius.users_list"))
 
     svc = _svc()
@@ -302,12 +303,12 @@ def users_payment_create_bulk():
             failed.append(name)
 
     if done and _truthy("dry_run"):
-        flash(f"معاينة فقط — لم تُسجَّل أيّ دفعة ({done} مشترك صالح للدفعة).", "warning")
+        flash(_tr('معاينة فقط — لم تُسجَّل أيّ دفعة (%(done)s مشترك صالح للدفعة).', done=done), "warning")
     elif done:
-        flash(f"تم تسجيل دفعة {amount_f:.2f} لكل مشترك من {done} مشترك وتطبيقها على حساباتهم.", "success")
+        flash(_tr('تم تسجيل دفعة %(amount_f)s لكل مشترك من %(done)s مشترك وتطبيقها على حساباتهم.', amount_f=format(amount_f, '.2f'), done=done), "success")
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        flash(f"تعذّر تسجيل الدفعة لـ {len(failed)} مشترك: {preview}", "warning")
+        flash(_tr('تعذّر تسجيل الدفعة لـ %(v)s مشترك: %(preview)s', v=len(failed), preview=preview), "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -345,7 +346,7 @@ def users_loan_create(username: str):
         return redirect(_back_or(url_for("radius.users_finance", username=username)))
     except Exception as e:  # noqa: BLE001 — never swallow the reason; the operator must see it
         current_app.logger.exception("loan create failed for %s", username)
-        reason = f"خطأ غير متوقع أثناء منح السلفة: {e}"
+        reason = _tr('خطأ غير متوقع أثناء منح السلفة: %(e)s', e=e)
         if _wants_json():
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
@@ -375,8 +376,8 @@ def users_loan_create_bulk():
     usernames = _bulk_usernames()
     if not usernames:
         if _wants_json():
-            return jsonify({"ok": False, "error": "لم يتم تحديد أي مشترك لمنح السلفة."}), 400
-        flash("لم يتم تحديد أي مشترك لمنح السلفة.", "warning")
+            return jsonify({"ok": False, "error": _tr("لم يتم تحديد أي مشترك لمنح السلفة.")}), 400
+        flash(_tr("لم يتم تحديد أي مشترك لمنح السلفة."), "warning")
         return redirect(url_for("radius.users_list"))
 
     svc = _svc()
@@ -409,11 +410,11 @@ def users_loan_create_bulk():
 
     parts = []
     if done:
-        parts.append(f"تم تسجيل السلفة لـ {done} مشترك (المدة لكلٍّ منهم).")
+        parts.append(_tr('تم تسجيل السلفة لـ %(done)s مشترك (المدة لكلٍّ منهم).', done=done))
     if failed:
         preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
-        parts.append(f"تعذّر المنح لـ {len(failed)} مشترك: {preview}")
-    msg = " ".join(parts) or "لم يتم منح أي سلفة."
+        parts.append(_tr('تعذّر المنح لـ %(v)s مشترك: %(preview)s', v=len(failed), preview=preview))
+    msg = " ".join(parts) or _tr("لم يتم منح أي سلفة.")
     if _wants_json():
         if done:
             return jsonify({"ok": True, "message": msg})
@@ -436,10 +437,10 @@ def users_loan_settle(username: str, loan_id: int):
         # The loan must belong to the subscriber in the URL (was: any loan id).
         out = _svc().settle_loan(loan_id, body, actor=_actor(), subscriber_id=sub.id)
         if out.get("loan_status") == "open":
-            flash(f"تمت تسوية جزئيّة — المتبقّي على السلفة {float(out.get('loan_outstanding') or 0):.2f}.",
+            flash(_tr('تمت تسوية جزئيّة — المتبقّي على السلفة %(v)s.', v=format(float(out.get('loan_outstanding') or 0), '.2f')),
                   "success")
         else:
-            flash("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا.", "success")
+            flash(_tr("تمت تسوية السلفة مع بقاء السجل المالي محفوظًا."), "success")
     except RadiusError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.users_finance", username=username))
@@ -478,25 +479,25 @@ def finance_ledger_void():
             actor=_actor(),
             reason=_field("reason"),
         )
-        flash(f"تم إنشاء قيد عكسي للقيد #{entry['reversal_of_entry_id']}.", "success")
+        flash(_tr('تم إنشاء قيد عكسي للقيد #%(reversal_of_entry_id)s.', reversal_of_entry_id=entry['reversal_of_entry_id']), "success")
     except RadiusError as e:
         # 409 «معكوس مسبقًا» / 422 «لا يُعكس قيدٌ عكسيّ» / 404 — رسالة المشغّل.
         flash(error_message_ar(e), "error")
     except ValueError:
-        flash("معرّف القيد غير صحيح.", "error")
+        flash(_tr("معرّف القيد غير صحيح."), "error")
     return redirect(url_for("radius.accounting_hub", tab="ledger"))
 
 
 _REPORTS = {
-    "daily": "مبيعات يومية",
-    "monthly": "مبيعات شهرية",
-    "yearly": "مبيعات سنوية",
-    "subscriber_payments": "دفعات المستفيدين",
-    "loans": "السلف",
-    "activations": "التفعيلات",
-    "card_sales": "مبيعات الكروت",
-    "profit_loss": "ربح / خسارة",
-    "distributor_debts": "ديون الموزعين",
+    "daily": N_("مبيعات يومية"),
+    "monthly": N_("مبيعات شهرية"),
+    "yearly": N_("مبيعات سنوية"),
+    "subscriber_payments": N_("دفعات المستفيدين"),
+    "loans": N_("السلف"),
+    "activations": N_("التفعيلات"),
+    "card_sales": N_("مبيعات الكروت"),
+    "profit_loss": N_("ربح / خسارة"),
+    "distributor_debts": N_("ديون الموزعين"),
 }
 
 
@@ -594,7 +595,7 @@ def _snapshot_date(name: str) -> str:
         from datetime import date
         date.fromisoformat(raw)
     except (TypeError, ValueError):
-        raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+        raise RadiusValidationError(_tr("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم."))
     return raw
 
 
@@ -608,7 +609,7 @@ def finance_reports_snapshot():
         date_from = _snapshot_date("date_from")
         date_to = _snapshot_date("date_to")
         if date_from and date_to and date_from > date_to:
-            raise RadiusValidationError("تاريخ «من» يجب أن يسبق تاريخ «إلى».")
+            raise RadiusValidationError(_tr("تاريخ «من» يجب أن يسبق تاريخ «إلى»."))
         snapshot = _svc().create_report_snapshot(
             report_type=report_type,
             actor=_actor(),
@@ -617,8 +618,8 @@ def finance_reports_snapshot():
             note=_field("note"),
             parameters={"web_route": "finance_reports"},
         )
-        rng = f" للفترة {date_from or '…'} ← {date_to or '…'}" if (date_from or date_to) else ""
-        flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}{rng}.", "success")
+        rng = _tr(' للفترة %(v)s ← %(v2)s', v=date_from or '…', v2=date_to or '…') if (date_from or date_to) else ""
+        flash(_tr('تم حفظ لقطة ثابتة للتقرير #%(id)s%(rng)s.', id=snapshot['id'], rng=rng), "success")
     except RadiusValidationError as e:
         flash(error_message_ar(e), "error")
     return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))

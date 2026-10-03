@@ -1,10 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}لوحة المتابعة{% endblock %}
-{% block page_title %}لوحة المتابعة والصحة{% endblock %}
+{% block title %}{{ _('لوحة المتابعة') }}{% endblock %}
+{% block page_title %}{{ _('لوحة المتابعة والصحة') }}{% endblock %}
 {% block crumbs %}
-  <span>الإدارة</span>
+  <span>{{ _('الإدارة') }}</span>
   <i class="fa-solid fa-chevron-left"></i>
-  <span>المتابعة</span>
+  <span>{{ _('المتابعة') }}</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -74,16 +74,15 @@
 <div class="page-header">
   <span class="overall-badge {{ stats.overall_health }}">
     <span class="overall-dot"></span>
-    {% if stats.overall_health == 'ok' %}النظام سليم
-    {% elif stats.overall_health == 'warning' %}تحذير
-    {% elif stats.overall_health == 'critical' %}حرج — يلزم التدخل
-    {% else %}غير معروف{% endif %}
+    {% if stats.overall_health == 'ok' %}{{ _('النظام سليم') }}
+    {% elif stats.overall_health == 'warning' %}{{ _('تحذير') }}
+    {% elif stats.overall_health == 'critical' %}{{ _('حرج — يلزم التدخل') }}
+    {% else %}{{ _('غير معروف') }}{% endif %}
   </span>
   <span class="refresh-meta">
     <i class="fa-solid fa-clock"></i>
-    آخر تحديث: {{ stats.generated_at|dt_local if stats.generated_at else "—" }}
-    &nbsp;·&nbsp;
-    <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">تحديث</a>
+    {{ _('آخر تحديث: %(v)s &nbsp;·&nbsp;', v=stats.generated_at|dt_local if stats.generated_at else "—") }}
+    <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">{{ _('تحديث') }}</a>
   </span>
 </div>
 
@@ -91,7 +90,7 @@
 <div class="kpi-grid">
   {# حالة الترخيص #}
   <div class="kpi-card">
-    <div class="kpi-label">الترخيص</div>
+    <div class="kpi-label">{{ _('الترخيص') }}</div>
     <div class="kpi-value" style="font-size:16px">
       {% if stats.license %}
         {{ stats.license.plan_name or '—' }}
@@ -103,18 +102,18 @@
           ● {{ stats.license.license_status }}
         </span>
       {% else %}
-        <span style="color:#9ca3af">لا توجد بيانات</span>
+        <span style="color:#9ca3af">{{ _('لا توجد بيانات') }}</span>
       {% endif %}
     </div>
   </div>
 
   {# إجمالي حسابات VPN #}
   <div class="kpi-card">
-    <div class="kpi-label">حسابات VPN النشطة</div>
+    <div class="kpi-label">{{ _('حسابات VPN النشطة') }}</div>
     <div class="kpi-value">{{ stats.totals.total_accounts }}</div>
     <div class="kpi-sub">
       {% set total_max = stats.vpn_allocations | sum(attribute='max_accounts') %}
-      {% if total_max > 0 %}حد: {{ total_max }}{% else %}بلا حد مُحدَّد{% endif %}
+      {% if total_max > 0 %}{{ _('حد:') }} {{ total_max }}{% else %}{{ _('بلا حد مُحدَّد') }}{% endif %}
     </div>
   </div>
 
@@ -124,23 +123,23 @@
     <div class="kpi-value">{{ stats.totals.total_peers }}</div>
     <div class="kpi-sub">
       {% if stats.wg_service and stats.wg_service.max_peers > 0 %}
-        حد: {{ stats.wg_service.max_peers }}
-      {% else %}بلا حد مُحدَّد{% endif %}
+        {{ _('حد:') }} {{ stats.wg_service.max_peers }}
+      {% else %}{{ _('بلا حد مُحدَّد') }}{% endif %}
     </div>
   </div>
 
   {# كوتا WireGuard #}
   <div class="kpi-card">
-    <div class="kpi-label">كوتا WireGuard</div>
+    <div class="kpi-label">{{ _('كوتا WireGuard') }}</div>
     <div class="kpi-value" style="font-size:20px">{{ '%.1f'|format(stats.totals.total_quota_mb) }}</div>
-    <div class="kpi-sub">ميغابايت مستخدم هذا الشهر</div>
+    <div class="kpi-sub">{{ _('ميغابايت مستخدم هذا الشهر') }}</div>
   </div>
 </div>
 
 {# ─── فحوصات الصحة ─── #}
 <div class="section-title">
   <i class="fa-solid fa-stethoscope" style="margin-left:6px"></i>
-  فحوصات الصحة
+  {{ _('فحوصات الصحة') }}
 </div>
 <div class="health-grid" style="margin-bottom:24px">
   {% for check in stats.health_checks %}
@@ -154,7 +153,7 @@
   {% endfor %}
   {% if not stats.health_checks %}
   <div class="health-card unknown" style="grid-column:1/-1;text-align:center;color:var(--d-text-muted)">
-    لا توجد فحوصات صحة متاحة بعد.
+    {{ _('لا توجد فحوصات صحة متاحة بعد.') }}
   </div>
   {% endif %}
 </div>
@@ -163,25 +162,25 @@
 {% if stats.vpn_allocations %}
 <div class="section-title">
   <i class="fa-solid fa-gauge-high" style="margin-left:6px"></i>
-  سعة تخصيصات VPN
+  {{ _('سعة تخصيصات VPN') }}
 </div>
 <div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;overflow:hidden;margin-bottom:22px">
   <table class="table table-hover alloc-table" style="margin:0">
     <thead>
       <tr>
-        <th>الخدمة</th>
+        <th>{{ _('الخدمة') }}</th>
         <th>CHR / VPS</th>
-        <th>الحالة</th>
-        <th style="min-width:180px">السعة</th>
-        <th>حسابات نشطة</th>
-        <th>الصحة</th>
+        <th>{{ _('الحالة') }}</th>
+        <th style="min-width:180px">{{ _('السعة') }}</th>
+        <th>{{ _('حسابات نشطة') }}</th>
+        <th>{{ _('الصحة') }}</th>
       </tr>
     </thead>
     <tbody>
     {% for a in stats.vpn_allocations %}
     <tr>
       <td><span class="svc-badge">{{ a.service_type }}</span></td>
-      <td style="font-size:12px">{{ a.chr_node_name or 'VPS محلي' }}</td>
+      <td style="font-size:12px">{{ a.chr_node_name or _('VPS محلي') }}</td>
       <td>
         <span class="status-dot {{ 'ok' if a.status == 'active' else 'warning' if a.status == 'pending' else 'critical' }}"></span>
         {{ a.status }}
@@ -196,7 +195,7 @@
             <span style="white-space:nowrap">{{ a.capacity_pct or 0 }}%</span>
           </div>
         {% else %}
-          <span style="font-size:11px;color:var(--d-text-muted)">بلا حد</span>
+          <span style="font-size:11px;color:var(--d-text-muted)">{{ _('بلا حد') }}</span>
         {% endif %}
       </td>
       <td>
@@ -207,10 +206,10 @@
       </td>
       <td>
         <span class="status-dot {{ a.health_status }}"></span>
-        {% if a.health_status == 'ok' %}سليم
-        {% elif a.health_status == 'warning' %}تحذير
-        {% elif a.health_status == 'critical' %}حرج
-        {% else %}غير معروف{% endif %}
+        {% if a.health_status == 'ok' %}{{ _('سليم') }}
+        {% elif a.health_status == 'warning' %}{{ _('تحذير') }}
+        {% elif a.health_status == 'critical' %}{{ _('حرج') }}
+        {% else %}{{ _('غير معروف') }}{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -224,23 +223,23 @@
 {% set wg = stats.wg_service %}
 <div class="section-title">
   <i class="fa-solid fa-shield-halved" style="margin-left:6px"></i>
-  خدمة WireGuard البيانات
+  {{ _('خدمة WireGuard البيانات') }}
 </div>
 <div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:16px 20px;margin-bottom:22px">
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
     <div>
-      <div class="kpi-label">الواجهة</div>
+      <div class="kpi-label">{{ _('الواجهة') }}</div>
       <code>{{ wg.interface_name }}</code>
     </div>
     <div>
-      <div class="kpi-label">الـ Peers</div>
+      <div class="kpi-label">{{ _('الـ Peers') }}</div>
       <strong>{{ wg.active_peers }}</strong>
       {% if wg.max_peers > 0 %}
         <span style="color:var(--d-text-muted);font-size:12px"> / {{ wg.max_peers }}</span>
       {% endif %}
     </div>
     <div>
-      <div class="kpi-label">سعة الـ Peers</div>
+      <div class="kpi-label">{{ _('سعة الـ Peers') }}</div>
       {% if wg.max_peers > 0 %}
         <div class="cap-bar-bg" style="margin-top:4px">
           <div class="cap-bar-fill {{ wg.health_status }}"
@@ -248,20 +247,20 @@
         </div>
         <div style="font-size:11px;margin-top:3px">{{ wg.capacity_pct or 0 }}%</div>
       {% else %}
-        <span style="font-size:11px;color:var(--d-text-muted)">بلا حد</span>
+        <span style="font-size:11px;color:var(--d-text-muted)">{{ _('بلا حد') }}</span>
       {% endif %}
     </div>
     <div>
-      <div class="kpi-label">الكوتا المستخدمة</div>
+      <div class="kpi-label">{{ _('الكوتا المستخدمة') }}</div>
       <strong>{{ '%.1f'|format((wg.quota_bytes_used or 0) / 1048576) }}</strong> MB
     </div>
     <div>
-      <div class="kpi-label">الصحة</div>
+      <div class="kpi-label">{{ _('الصحة') }}</div>
       <span class="status-dot {{ wg.health_status }}"></span>
-      {% if wg.health_status == 'ok' %}سليم
-      {% elif wg.health_status == 'warning' %}تحذير
-      {% elif wg.health_status == 'critical' %}حرج
-      {% else %}غير معروف{% endif %}
+      {% if wg.health_status == 'ok' %}{{ _('سليم') }}
+      {% elif wg.health_status == 'warning' %}{{ _('تحذير') }}
+      {% elif wg.health_status == 'critical' %}{{ _('حرج') }}
+      {% else %}{{ _('غير معروف') }}{% endif %}
     </div>
   </div>
 </div>
@@ -269,11 +268,11 @@
 
 {# ─── مفتاح السياسة ─── #}
 <div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--d-text-muted)">
-  <strong style="color:var(--d-text)">سياسة السعة:</strong>
+  <strong style="color:var(--d-text)">{{ _('سياسة السعة:') }}</strong>
   &nbsp;
-  <span style="color:#22c55e">● أقل من 70%</span> — مفتوح &nbsp;|&nbsp;
-  <span style="color:#f59e0b">● <bdi dir="ltr">70–85%</bdi></span> — تحذير، التخصيصات مقيَّدة &nbsp;|&nbsp;
-  <span style="color:#ef4444">● أكثر من 85%</span> — مغلق، لا تخصيصات جديدة
+  <span style="color:#22c55e">{{ _('● أقل من 70%%') }}</span> {{ _('— مفتوح &nbsp;|&nbsp;') }}
+  <span style="color:#f59e0b">● <bdi dir="ltr">70–85%</bdi></span> {{ _('— تحذير، التخصيصات مقيَّدة &nbsp;|&nbsp;') }}
+  <span style="color:#ef4444">{{ _('● أكثر من 85%%') }}</span> {{ _('— مغلق، لا تخصيصات جديدة') }}
 </div>
 
 {% endblock %}

@@ -20,7 +20,7 @@
 {# ───── Merged hero: identity + actions + financial KPI strip ───── #}
 {{ hub.megahero(
   distributor.display_name or distributor.name,
-  subtitle="ملف موزع وتشغيل الحزم — معلومات تشغيلية وإجراءات الربط والتسويات.",
+  subtitle=_('ملف موزع وتشغيل الحزم — معلومات تشغيلية وإجراءات الربط والتسويات.'),
   icon="people-arrows",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.distributors_edit', distributor_id=distributor.id) ~ '">
@@ -31,26 +31,26 @@
     </a>
   '|safe,
   kpis=[
-    {'label': 'حزم مربوطة',  'value': summary.assigned_batches,        'icon': 'layer-group',        'variant': 'brand'},
-    {'label': 'الرصيد',      'value': (summary.balance or 0)|money,     'icon': 'wallet',             'variant': 'green'},
-    {'label': 'الدين',       'value': (summary.debt_balance or 0)|money,'icon': 'hand-holding-dollar','variant': 'amber'},
-    {'label': 'حد الائتمان', 'value': (summary.credit_limit or 0)|money,'icon': 'gauge-high',         'variant': 'blue'},
+    {'label': _('حزم مربوطة'),  'value': summary.assigned_batches,        'icon': 'layer-group',        'variant': 'brand'},
+    {'label': _('الرصيد'),      'value': (summary.balance or 0)|money,     'icon': 'wallet',             'variant': 'green'},
+    {'label': _('الدين'),       'value': (summary.debt_balance or 0)|money,'icon': 'hand-holding-dollar','variant': 'amber'},
+    {'label': _('حد الائتمان'), 'value': (summary.credit_limit or 0)|money,'icon': 'gauge-high',         'variant': 'blue'},
   ]
 ) }}
 
 {# ───── Main: assigned-batches table · operational forms on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "بيانات ونطاق الموزع",
-  intro="ملف الموزّع يجمع هويته وصلاحياته ونطاقه، ونماذج الربط والتسوية المالية.",
+  _('بيانات ونطاق الموزع'),
+  intro=_('ملف الموزّع يجمع هويته وصلاحياته ونطاقه، ونماذج الربط والتسوية المالية.'),
   items=[
-    {'icon': 'id-card',     'text': 'راجع اسم الدخول والحالة والتواصل والصلاحيات والنطاق أدناه.'},
-    {'icon': 'link',        'text': 'نموذج «ربط حزمة كروت» يضيف الحزمة إلى نطاق هذا الموزّع.'},
-    {'icon': 'receipt',     'text': 'نموذج «التسوية المالية» يسجّل حركة موزّع دون استبدال المحاسبة.'},
+    {'icon': 'id-card',     'text': _('راجع اسم الدخول والحالة والتواصل والصلاحيات والنطاق أدناه.')},
+    {'icon': 'link',        'text': _('نموذج «ربط حزمة كروت» يضيف الحزمة إلى نطاق هذا الموزّع.')},
+    {'icon': 'receipt',     'text': _('نموذج «التسوية المالية» يسجّل حركة موزّع دون استبدال المحاسبة.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل ربط أو تسوية يمر بمنطق الموزّعين الأصلي دون تغيير."
+  note=_('هذه واجهة عرض موحّدة — كل ربط أو تسوية يمر بمنطق الموزّعين الأصلي دون تغيير.')
 )) %}
 
-  {% call hub.section("بيانات ونطاق الموزع", icon="id-card") %}
+  {% call hub.section(_('بيانات ونطاق الموزع'), icon="id-card") %}
     <dl class="uds-kv">
       <div class="uds-kv-row">
         <span class="uds-kv-label">{{ _('اسم الدخول') }}</span>
@@ -59,10 +59,10 @@
       <div class="uds-kv-row">
         <span class="uds-kv-label">{{ _('الحالة') }}</span>
         <span class="uds-kv-value">
-          {% if distributor.status == 'active' %}{{ hub.pill("مفعَّل", variant="green") }}
-          {% elif distributor.status == 'blocked' %}{{ hub.pill("محظور", variant="red") }}
-          {% elif distributor.status == 'inactive' %}{{ hub.pill("متوقّف", variant="grey") }}
-          {% else %}{{ hub.pill(distributor.status or 'غير معروف', variant="amber") }}{% endif %}
+          {% if distributor.status == 'active' %}{{ hub.pill(_('مفعَّل'), variant="green") }}
+          {% elif distributor.status == 'blocked' %}{{ hub.pill(_('محظور'), variant="red") }}
+          {% elif distributor.status == 'inactive' %}{{ hub.pill(_('متوقّف'), variant="grey") }}
+          {% else %}{{ hub.pill(distributor.status or _('غير معروف'), variant="amber") }}{% endif %}
         </span>
       </div>
       <div class="uds-kv-row">
@@ -89,9 +89,9 @@
         <span class="uds-kv-label">{{ _('النطاق') }}</span>
         <span class="uds-kv-value">
           {% if (distributor.scope_json or {}).card_batches == 'assigned' %}
-            {{ hub.pill("الحزم المربوطة فقط", variant="blue", dot=False) }}
+            {{ hub.pill(_('الحزم المربوطة فقط'), variant="blue", dot=False) }}
           {% else %}
-            {{ hub.pill((distributor.scope_json or {}).card_batches or 'مخصص', variant="grey", dot=False) }}
+            {{ hub.pill((distributor.scope_json or {}).card_batches or _('مخصص'), variant="grey", dot=False) }}
           {% endif %}
         </span>
       </div>
@@ -106,8 +106,8 @@
   {% endcall %}
 
   {% if assigned_batches %}
-    {% call hub.section("الحزم المربوطة", icon="layer-group",
-                        meta=(assigned_batches|length|string ~ " حزمة"), flush=True) %}
+    {% call hub.section(_('الحزم المربوطة'), icon="layer-group",
+                        meta=(_('%(string)s حزمة', string=assigned_batches|length|string)), flush=True) %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
            style="border:none;border-radius:0">
         <table class="hub-table">
@@ -132,9 +132,9 @@
               <td class="num">{{ b.count }}</td>
               <td class="num">{{ b.used }}</td>
               <td>
-                {% if b.status == 'active' %}{{ hub.pill("نشطة", variant="green") }}
-                {% elif b.status == 'used' %}{{ hub.pill("مستهلكة", variant="grey") }}
-                {% else %}{{ hub.pill(b.status or 'غير معروف', variant="brand", dot=False) }}{% endif %}
+                {% if b.status == 'active' %}{{ hub.pill(_('نشطة'), variant="green") }}
+                {% elif b.status == 'used' %}{{ hub.pill(_('مستهلكة'), variant="grey") }}
+                {% else %}{{ hub.pill(b.status or _('غير معروف'), variant="brand", dot=False) }}{% endif %}
               </td>
               <td class="num mono small">{{ b.assigned_at|dt_local if b.assigned_at else '—' }}</td>
               <td class="small">{{ b.assignment_notes or '—' }}</td>
@@ -146,13 +146,13 @@
     {% endcall %}
   {% else %}
     {{ hub.empty(
-      "لا توجد حزم مربوطة بعد",
-      sub="استخدم نموذج «ربط حزمة كروت» على اليسار لربط أول حزمة بهذا الموزع.",
+      _('لا توجد حزم مربوطة بعد'),
+      sub=_('استخدم نموذج «ربط حزمة كروت» على اليسار لربط أول حزمة بهذا الموزع.'),
       icon="layer-group"
     ) }}
   {% endif %}
 
-  {% call hub.section("ربط حزمة كروت", icon="link") %}
+  {% call hub.section(_('ربط حزمة كروت'), icon="link") %}
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">{{ _('بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع.') }}</p>
     {% if can_submit('radius.distributors_assign_batch', 'POST') %}<form class="dd-form" method="post"
           action="{{ url_for('radius.distributors_assign_batch', distributor_id=distributor.id) }}">
@@ -161,7 +161,7 @@
         <select class="hub-select" name="batch_id" required>
           <option value="">{{ _('— اختر حزمة —') }}</option>
           {% for b in available_batches %}
-            <option value="{{ b.id }}">{{ b.batch_code }} — {{ b.package_name or 'بدون اسم' }}</option>
+            <option value="{{ b.id }}">{{ b.batch_code }} — {{ b.package_name or _('بدون اسم') }}</option>
           {% endfor %}
         </select>
       </div>
@@ -176,7 +176,7 @@
     </form>{% endif %}
   {% endcall %}
 
-  {% call hub.section("تسوية مالية يدوية", icon="receipt") %}
+  {% call hub.section(_('تسوية مالية يدوية'), icon="receipt") %}
     <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">{{ _('تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.') }}</p>
     {% if can_submit('radius.distributors_settle', 'POST') %}<form class="dd-form" method="post"
           action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">

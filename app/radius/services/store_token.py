@@ -19,6 +19,7 @@
 في قاعدة البيانات أصلًا.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import os
 from typing import Any
@@ -93,20 +94,20 @@ def verify_store_token(token: str) -> dict[str, Any]:
     """
     raw = str(token or "").strip()
     if not raw:
-        raise StoreTokenError("token_missing", "سجّل الدخول أولاً.")
+        raise StoreTokenError("token_missing", _tr("سجّل الدخول أولاً."))
     try:
         data = _serializer().loads(raw, max_age=token_ttl_seconds())
     except SignatureExpired:
         raise StoreTokenError(
-            "token_expired", "انتهت الجلسة — سجّل الدخول من جديد."
+            "token_expired", _tr("انتهت الجلسة — سجّل الدخول من جديد.")
         ) from None
     except BadSignature:
         raise StoreTokenError(
-            "token_invalid", "جلسة غير صالحة — سجّل الدخول من جديد."
+            "token_invalid", _tr("جلسة غير صالحة — سجّل الدخول من جديد.")
         ) from None
     if not isinstance(data, dict) or "cu" not in data:
         raise StoreTokenError(
-            "token_invalid", "جلسة غير صالحة — سجّل الدخول من جديد."
+            "token_invalid", _tr("جلسة غير صالحة — سجّل الدخول من جديد.")
         )
     return {
         "card_user_id": int(data.get("cu") or 0),

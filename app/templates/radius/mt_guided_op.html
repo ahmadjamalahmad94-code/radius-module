@@ -34,32 +34,32 @@
 
   {# ───── Merged hero: title + safety subtitle + readiness KPI strip ───── #}
   {% call hub.megahero(
-    "مساعد العمليات",
-    subtitle="قائمة فحص قبل تشغيل عملية حساسة — تجميعة لكل تنبيهات O2/O5/O7/O8 الخاصة بـ«" ~ checklist.operation_label_ar ~ "».",
+    _('مساعد العمليات'),
+    subtitle=_('قائمة فحص قبل تشغيل عملية حساسة — تجميعة لكل تنبيهات O2/O5/O7/O8 الخاصة بـ«%(operation_label_ar)s».', operation_label_ar=checklist.operation_label_ar),
     icon="list-check",
     kpis=[
-      {'label': 'مكتملة',  'value': _n_ok,       'icon': 'circle-check',        'variant': 'green'},
-      {'label': 'تنبيهات', 'value': _n_warn,     'icon': 'triangle-exclamation','variant': 'amber'},
-      {'label': 'مانعة',   'value': _n_blocking, 'icon': 'ban',                 'variant': 'red'},
-      {'label': 'معلومات', 'value': _n_info,     'icon': 'circle-info',         'variant': 'brand'},
+      {'label': _('مكتملة'),  'value': _n_ok,       'icon': 'circle-check',        'variant': 'green'},
+      {'label': _('تنبيهات'), 'value': _n_warn,     'icon': 'triangle-exclamation','variant': 'amber'},
+      {'label': _('مانعة'),   'value': _n_blocking, 'icon': 'ban',                 'variant': 'red'},
+      {'label': _('معلومات'), 'value': _n_info,     'icon': 'circle-info',         'variant': 'brand'},
     ]
   ) %}{% endcall %}
 
   {# ───── Main column + help panel on the LEFT ───── #}
   {% call hub.worklayout(aside_html=hub.helppanel(
-    "كيف تقرأ القائمة",
-    intro="اقرأ من الأعلى للأسفل. كل خطوة تُظهر حالتها وسببًا من سطر واحد. الخطوات المانعة تُعطّل زر المتابعة حتى تُحَل.",
+    _('كيف تقرأ القائمة'),
+    intro=_('اقرأ من الأعلى للأسفل. كل خطوة تُظهر حالتها وسببًا من سطر واحد. الخطوات المانعة تُعطّل زر المتابعة حتى تُحَل.'),
     icon="clipboard-check",
     items=[
-      {'icon': 'circle-check',         'text': 'مكتملة: هذه الخطوة جاهزة ولا تحتاج إجراءً.'},
-      {'icon': 'triangle-exclamation', 'text': 'تنبيه: لا يمنع المتابعة لكنه يستحق المراجعة.'},
-      {'icon': 'ban',                  'text': 'مانعة: يجب حلّها قبل تنفيذ العملية.'},
-      {'icon': 'arrow-up-right-from-square', 'text': 'زر «افتح» ينقلك للصفحة التي تعالج الخطوة.'},
+      {'icon': 'circle-check',         'text': _('مكتملة: هذه الخطوة جاهزة ولا تحتاج إجراءً.')},
+      {'icon': 'triangle-exclamation', 'text': _('تنبيه: لا يمنع المتابعة لكنه يستحق المراجعة.')},
+      {'icon': 'ban',                  'text': _('مانعة: يجب حلّها قبل تنفيذ العملية.')},
+      {'icon': 'arrow-up-right-from-square', 'text': _('زر «افتح» ينقلك للصفحة التي تعالج الخطوة.')},
     ]
   )) %}
 
   {# ── Operation picker ── #}
-  {% call hub.section("اختر العملية", icon="screwdriver-wrench") %}
+  {% call hub.section(_('اختر العملية'), icon="screwdriver-wrench") %}
     <form method="get" class="hub-form" data-mt-guided-op-form>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
         <div class="hub-field">
@@ -85,9 +85,9 @@
 
   {# ── Checklist ── #}
   {% call hub.section(
-        "قائمة الفحص — " ~ checklist.operation_label_ar,
+        _('قائمة الفحص — %(operation_label_ar)s', operation_label_ar=checklist.operation_label_ar),
         icon="clipboard-check",
-        meta=(checklist.can_proceed and "جاهزة للتنفيذ") or "مُعطّلة بسبب مشكلة") %}
+        meta=(checklist.can_proceed and _('جاهزة للتنفيذ')) or _('مُعطّلة بسبب مشكلة')) %}
     <div style="margin-bottom:14px">
       {% if checklist.can_proceed %}
       <span class="hub-pill hub-pill--green" data-mt-guided-status>
@@ -139,8 +139,7 @@
       <p data-mt-guided-blocked
          style="display:flex;align-items:center;gap:8px;margin:0;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px">
         <i class="fa-solid fa-ban"></i>
-        لا يمكن المتابعة قبل حل {{ checklist.blocking_steps() | length }}
-        مشكلة موضّحة أعلاه.
+        {{ _('لا يمكن المتابعة قبل حل %(length)s مشكلة موضّحة أعلاه.', length=checklist.blocking_steps() | length) }}
       </p>
       {% else %}
       {% if can_open(checklist.apply_href) %}<a class="hub-btn hub-btn--primary"

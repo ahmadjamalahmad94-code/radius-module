@@ -25,16 +25,16 @@
 
 {# ───── ONE unified hero: title + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "بناء الجمهور",
-  subtitle="أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.",
+  _('بناء الجمهور'),
+  subtitle=_('أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.'),
   icon="users-viewfinder",
   actions_html=(
     ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> '|safe ~ _("إرسال رسالة") ~ '</a>'|safe if can_submit('radius.communications_send', 'GET') else '')
     ~ ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else '')
   ),
   kpis=[
-    {'label': 'الشرائح المحفوظة', 'value': segments|length, 'icon': 'layer-group', 'variant': 'brand', 'sub': 'شريحة قابلة لإعادة الاستخدام'},
-    {'label': 'في المعاينة الحالية', 'value': preview|length, 'icon': 'eye', 'variant': 'green' if preview else 'grey', 'sub': 'مستلم بعد آخر حفظ'}
+    {'label': _('الشرائح المحفوظة'), 'value': segments|length, 'icon': 'layer-group', 'variant': 'brand', 'sub': _('شريحة قابلة لإعادة الاستخدام')},
+    {'label': _('في المعاينة الحالية'), 'value': preview|length, 'icon': 'eye', 'variant': 'green' if preview else 'grey', 'sub': _('مستلم بعد آخر حفظ')}
   ]
 ) %}
 {% endcall %}
@@ -43,20 +43,20 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "ما هذه الصفحة؟",
-  intro="الشريحة هي تعريف محفوظ لجمهور (مَن يستلم) — تحفظه مرة وتعيد استخدامه في الإرسال والحملات دون كشف بيانات المزوّد.",
+  _('ما هذه الصفحة؟'),
+  intro=_('الشريحة هي تعريف محفوظ لجمهور (مَن يستلم) — تحفظه مرة وتعيد استخدامه في الإرسال والحملات دون كشف بيانات المزوّد.'),
   icon="circle-info",
   items=[
-    {'icon': 'bullseye', 'text': '«الهدف» يحدّد فئة المستلمين: المشتركون، مستخدمو البطاقات، المدراء، الموزعون، أو الشركة.'},
-    {'icon': 'hashtag', 'text': '«أرقام المستلمين» تقصُر الشريحة على أرقام محدّدة (افصل بفاصلة)، و«رقم المدير» يستهدف مديرًا بعينه.'},
-    {'icon': 'eye', 'text': '«حفظ ومعاينة» يحفظ الشريحة ثم يعرض من سيستلمها — المعاينة لا ترسل شيئًا.'},
-    {'icon': 'rotate', 'text': 'الشرائح المحفوظة قابلة لإعادة الاستخدام من شاشة الإرسال والحملات.'}
+    {'icon': 'bullseye', 'text': _('«الهدف» يحدّد فئة المستلمين: المشتركون، مستخدمو البطاقات، المدراء، الموزعون، أو الشركة.')},
+    {'icon': 'hashtag', 'text': _('«أرقام المستلمين» تقصُر الشريحة على أرقام محدّدة (افصل بفاصلة)، و«رقم المدير» يستهدف مديرًا بعينه.')},
+    {'icon': 'eye', 'text': _('«حفظ ومعاينة» يحفظ الشريحة ثم يعرض من سيستلمها — المعاينة لا ترسل شيئًا.')},
+    {'icon': 'rotate', 'text': _('الشرائح المحفوظة قابلة لإعادة الاستخدام من شاشة الإرسال والحملات.')}
   ],
-  note="لإرسال موجّه لشريحة محدّدة افتح «إرسال رسالة» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات»."
+  note=_('لإرسال موجّه لشريحة محدّدة افتح «إرسال رسالة» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات».')
 )) %}
 
   {# ════════ CREATE SEGMENT ════════ #}
-  {% call hub.section("إنشاء شريحة", icon="users-viewfinder") %}
+  {% call hub.section(_('إنشاء شريحة'), icon="users-viewfinder") %}
     <form method="post" class="caud-form" data-testid="audience-segment-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
@@ -112,7 +112,7 @@
   {% endcall %}
 
   {# ════════ SEGMENTS + PREVIEW ════════ #}
-  {% call hub.section("الشرائح المحفوظة", icon="list", meta=segments|length|string ~ " شريحة", flush=True) %}
+  {% call hub.section(_('الشرائح المحفوظة'), icon="list", meta=_('%(string)s شريحة', string=segments|length|string), flush=True) %}
     {% if segments %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="audience-segments-table">
@@ -129,11 +129,11 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا توجد شرائح بعد.", sub="أنشئ أول شريحة من النموذج بالأعلى لإعادة استخدامها في الإرسال والحملات.", icon="layer-group") }}
+      {{ hub.empty(_('لا توجد شرائح بعد.'), sub=_('أنشئ أول شريحة من النموذج بالأعلى لإعادة استخدامها في الإرسال والحملات.'), icon="layer-group") }}
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("المعاينة", icon="eye", meta=preview|length|string ~ " مستلم", flush=True) %}
+  {% call hub.section(_('المعاينة'), icon="eye", meta=_('%(string)s مستلم', string=preview|length|string), flush=True) %}
     {% if preview %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
@@ -150,7 +150,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("احفظ شريحة لمعاينة جمهورها.", sub="بعد «حفظ ومعاينة» ستظهر هنا قائمة من سيستلم الرسائل.", icon="eye") }}
+      {{ hub.empty(_('احفظ شريحة لمعاينة جمهورها.'), sub=_('بعد «حفظ ومعاينة» ستظهر هنا قائمة من سيستلم الرسائل.'), icon="eye") }}
     {% endif %}
   {% endcall %}
 

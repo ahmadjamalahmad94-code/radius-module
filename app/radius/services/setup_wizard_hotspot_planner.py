@@ -1,5 +1,6 @@
 """SW4 hotspot bootstrap planner (preview-only)."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import re
@@ -148,7 +149,7 @@ class HotspotBootstrapPlanner:
         for iface in selected_interfaces:
             if iface in blocked_set:
                 raise SetupWizardValidationError(
-                    f"الواجهة '{iface}' مستبعدة للحماية ولا يمكن استخدامها للهوتسبوت"
+                    _tr("الواجهة '%(iface)s' مستبعدة للحماية ولا يمكن استخدامها للهوتسبوت", iface=iface)
                 )
 
         blocked_networks = [
@@ -355,7 +356,7 @@ class HotspotBootstrapPlanner:
             validation_commands=validation_commands,
             warnings=[
                 "Preview only. Copy to MikroTik manually.",
-                "واجهات الإنترنت والربط الخاص تبقى مستبعدة من الاختيار.",
+                N_("واجهات الإنترنت والربط الخاص تبقى مستبعدة من الاختيار."),
                 "Each selected port receives its own Hotspot /24 network.",
             ],
             generated_objects=generated_objects,

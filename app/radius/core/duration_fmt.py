@@ -18,6 +18,7 @@ service and template that shows a compact session time / uptime should format
 through here so the unit letters stay consistent.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 # Canonical Latin unit letters. Keep unambiguous: month is "mo" (not "m",
 # which is minute); second is "s"; day is "d"; hour is "h"; minute is "m".
@@ -96,17 +97,17 @@ def fmt_remaining_ar(seconds) -> str:
     كلمةٍ عربيّة لا ينقلب بالاتّجاه، فلا حاجة لعزل."""
     s = max(0, int(seconds or 0))
     if s < 60:
-        return "أقل من دقيقة"
+        return N_("أقل من دقيقة")
     d, rem = divmod(s, 86400)
     h, rem = divmod(rem, 3600)
     m = rem // 60
-    units = [(d, ('يوم', 'يومان', 'أيام', 'يومًا')),
-             (h, ('ساعة', 'ساعتان', 'ساعات', 'ساعة')),
-             (m, ('دقيقة', 'دقيقتان', 'دقائق', 'دقيقة'))]
+    units = [(d, (N_('يوم'), N_('يومان'), N_('أيام'), N_('يومًا'))),
+             (h, (N_('ساعة'), N_('ساعتان'), N_('ساعات'), N_('ساعة'))),
+             (m, (N_('دقيقة'), N_('دقيقتان'), N_('دقائق'), N_('دقيقة')))]
     # «2 ساعتان» ركيك: المثنّى يُقرأ وحده («ساعتان»، «يومان»، «دقيقتان»).
     parts = [(_ar_plural(n, *w) if n == 2 else f"{n} {_ar_plural(n, *w)}")
              for n, w in units if n]
-    return " و".join(parts[:2])
+    return _tr(" و").join(parts[:2])
 
 
 def fmt_compact_ar(seconds) -> str:
@@ -116,7 +117,7 @@ def fmt_compact_ar(seconds) -> str:
     Arabic WORD never bidi-flips, so no LTR isolate is needed."""
     s = max(0, int(seconds or 0))
     if s < 60:
-        return "0 دقيقة"
+        return N_("0 دقيقة")
     return fmt_remaining_ar(s)
 
 
@@ -127,9 +128,9 @@ def fmt_duration_ar(seconds) -> str:
     session keeps its seconds («45 ثانية») instead of «0 دقيقة»; 0 → «0 دقيقة»."""
     s = max(0, int(seconds or 0))
     if s <= 0:
-        return "0 دقيقة"
+        return N_("0 دقيقة")
     if s < 60:
-        w = _ar_plural(s, "ثانية", "ثانيتان", "ثوانٍ", "ثانية")
+        w = _ar_plural(s, N_("ثانية"), N_("ثانيتان"), N_("ثوانٍ"), N_("ثانية"))
         return w if s == 2 else f"{s} {w}"
     return fmt_compact_ar(s)
 
@@ -162,21 +163,21 @@ def fmt_base_time_ar(seconds) -> tuple[str, bool]:
     h, rem = divmod(rem, 3600)
     m, sec = divmod(rem, 60)
     if d and not (h or m or sec):
-        return f"{d} {_ar_plural(d, 'يوم', 'يومان', 'أيام', 'يومًا')}", False
+        return f"{d} {_ar_plural(d, N_('يوم'), N_('يومان'), N_('أيام'), N_('يومًا'))}", False
     if h and not (d or m or sec):
-        return f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}", False
+        return f"{h} {_ar_plural(h, N_('ساعة'), N_('ساعتان'), N_('ساعات'), N_('ساعة'))}", False
     if m and not (d or h or sec):
-        return f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}", False
+        return f"{m} {_ar_plural(m, N_('دقيقة'), N_('دقيقتان'), N_('دقائق'), N_('دقيقة'))}", False
     # Mixed budget → full Arabic words joined by «و» («1 يوم و3 ساعات و45
     # دقيقة»). The Latin «1d 3h 45m» token reached the card checker as raw
     # English (re-test R13 L4); a digit next to an Arabic WORD never flips.
     parts = []
     if d:
-        parts.append(f"{d} {_ar_plural(d, 'يوم', 'يومان', 'أيام', 'يومًا')}")
+        parts.append(f"{d} {_ar_plural(d, N_('يوم'), N_('يومان'), N_('أيام'), N_('يومًا'))}")
     if h:
-        parts.append(f"{h} {_ar_plural(h, 'ساعة', 'ساعتان', 'ساعات', 'ساعة')}")
+        parts.append(f"{h} {_ar_plural(h, N_('ساعة'), N_('ساعتان'), N_('ساعات'), N_('ساعة'))}")
     if m:
-        parts.append(f"{m} {_ar_plural(m, 'دقيقة', 'دقيقتان', 'دقائق', 'دقيقة')}")
+        parts.append(f"{m} {_ar_plural(m, N_('دقيقة'), N_('دقيقتان'), N_('دقائق'), N_('دقيقة'))}")
     if sec:
-        parts.append(f"{sec} {_ar_plural(sec, 'ثانية', 'ثانيتان', 'ثوانٍ', 'ثانية')}")
-    return " و".join(parts), False
+        parts.append(f"{sec} {_ar_plural(sec, N_('ثانية'), N_('ثانيتان'), N_('ثوانٍ'), N_('ثانية'))}")
+    return _tr(" و").join(parts), False

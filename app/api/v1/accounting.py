@@ -1,5 +1,6 @@
 """Accounting endpoints — REAL: from radacct table."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict
 
@@ -27,9 +28,9 @@ def _ts_row(row):
 
 _EVENT_ERRORS_AR = {
     "unsupported or missing accounting status_type":
-        "نوع حدث المحاسبة (status_type) مفقود أو غير مدعوم.",
-    "acct_session_id is required": "معرّف الجلسة (acct_session_id) مطلوب.",
-    "nas_ip_address is required": "عنوان الراوتر (nas_ip_address) مطلوب.",
+        N_("نوع حدث المحاسبة (status_type) مفقود أو غير مدعوم."),
+    "acct_session_id is required": N_("معرّف الجلسة (acct_session_id) مطلوب."),
+    "nas_ip_address is required": N_("عنوان الراوتر (nas_ip_address) مطلوب."),
 }
 
 
@@ -40,7 +41,7 @@ def _event_error_ar(message: str) -> str:
     if msg.startswith("unsupported accounting status type"):
         return _EVENT_ERRORS_AR["unsupported or missing accounting status_type"]
     if not msg or msg.isascii():
-        return "بيانات حدث المحاسبة غير صالحة."
+        return N_("بيانات حدث المحاسبة غير صالحة.")
     return msg
 
 
@@ -80,7 +81,7 @@ def accounting_list():
         limit = min(int(request.args.get("limit") or 50), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     username = request.args.get("username")
     scope = _scope()
     if username and scope is not None:
@@ -112,7 +113,7 @@ def accounting_event_ingest():
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     try:
         result = AccountingEventsService().ingest(tenant_id=_tid(), payload=body)
     except ValueError as exc:
@@ -131,13 +132,13 @@ def accounting_online():
     try:
         limit = int(request.args.get("limit") or 100)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة limit يجب أن تكون رقمًا صحيحًا."), status=422)
     try:
         offset = int(request.args.get("offset") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة offset يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة offset يجب أن تكون رقمًا صحيحًا."), status=422)
     if limit < 1 or limit > 1000 or offset < 0:
-        return fail("validation_error", "limit بين 1 و1000، و offset لا يكون سالبًا.", status=422)
+        return fail("validation_error", _tr("limit بين 1 و1000، و offset لا يكون سالبًا."), status=422)
     svc = AccountingEventsService()
     scope = _scope()
     total = svc.count_online(tenant_id=_tid(), scope=scope)
@@ -159,7 +160,7 @@ def accounting_sessions_history():
     try:
         limit = min(max(int(request.args.get("limit") or 100), 1), 500)
     except ValueError:
-        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة limit يجب أن تكون رقمًا صحيحًا."), status=422)
     items = AccountingEventsService().list_history(tenant_id=_tid(), limit=limit,
                                                    scope=_scope())
     items = [_ts_row(r) for r in items]
@@ -172,7 +173,7 @@ def accounting_session_detail(session_id: str):
     item = AccountingEventsService().session_detail(tenant_id=_tid(), session_id=session_id,
                                                     scope=_scope())
     if not item:
-        return fail("not_found", "جلسة المحاسبة غير موجودة.", status=404)
+        return fail("not_found", _tr("جلسة المحاسبة غير موجودة."), status=404)
     return ok({"item": _ts_row(item)})
 
 
@@ -220,14 +221,14 @@ def accounting_quota_check():
     body = request.get_json(silent=True) or {}
     username = str(body.get("username") or "").strip()
     if not username:
-        return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم المستخدم مطلوب."), status=422)
     from ..access_control import deny_out_of_scope, subscriber_in_scope
     if not subscriber_in_scope(username=username):
         return deny_out_of_scope()
     try:
         limit_bytes = int(body.get("limit_bytes") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيمة limit_bytes يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة limit_bytes يجب أن تكون رقمًا صحيحًا."), status=422)
     window = "monthly" if body.get("window") == "monthly" else "daily"
     result = UsageCountersService().quota_decision(
         tenant_id=_tid(),

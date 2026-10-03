@@ -1,5 +1,6 @@
 """Card batches + Cards repo."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import sqlite3
 import secrets
@@ -1236,13 +1237,9 @@ class CardUsernameSpaceExhausted(ValueError):
     def message_ar(self) -> str:
         affix = ""
         if self.prefix or self.suffix:
-            affix = f" مع البادئة/اللاحقة «{self.prefix}…{self.suffix}»"
+            affix = _tr(' مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»', prefix=self.prefix, suffix=self.suffix)
         return (
-            f"لا تكفي الأرقام لتوليد {self.requested} بطاقة بطول {self.username_length}"
-            f"{affix}: يبقى {self.random_digits} خانة عشوائيّة فقط "
-            f"({self.space} تركيبة، المتاح منها الآن {self.available}). "
-            f"أقصى عدد ممكن بهذه الإعدادات هو {self.available} — "
-            "زِد طول اسم المستخدم أو غيّر البادئة."
+            _tr('لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول %(username_length)s%(affix)s: يبقى %(random_digits)s خانة عشوائيّة فقط (%(space)s تركيبة، المتاح منها الآن %(available)s). أقصى عدد ممكن بهذه الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة.', requested=self.requested, username_length=self.username_length, affix=affix, random_digits=self.random_digits, space=self.space, available=self.available)
         )
 
 

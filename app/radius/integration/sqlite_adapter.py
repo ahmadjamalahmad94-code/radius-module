@@ -6,6 +6,7 @@ SqliteAdapter — RadiusAdapter مدعوم بـ SQLite + MikroTik live integrati
 - disconnect: enqueue (يُنفّذ خلال ثوانٍ من sync_worker).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import replace
@@ -62,7 +63,7 @@ class SqliteAdapter(RadiusAdapter):
         d = nas_repo.get_nas(_tid(), nas_id)
         if not d:
             from ..core.errors import RadiusNotFound
-            raise RadiusNotFound(f"NAS {nas_id} غير موجود")
+            raise RadiusNotFound(_tr('NAS %(nas_id)s غير موجود', nas_id=nas_id))
         return d
 
     def upsert_nas(self, device: NasDevice) -> NasDevice:
@@ -113,7 +114,7 @@ class SqliteAdapter(RadiusAdapter):
         p = plans_repo.get_plan(_tid(), profile_id)
         if not p:
             from ..core.errors import RadiusNotFound
-            raise RadiusNotFound(f"الباقة {profile_id} غير موجودة.")
+            raise RadiusNotFound(_tr('الباقة %(profile_id)s غير موجودة.', profile_id=profile_id))
         return p
 
     def upsert_profile(self, profile: AccessPlan) -> AccessPlan:
@@ -195,7 +196,7 @@ class SqliteAdapter(RadiusAdapter):
         s = subscribers_repo.get_subscriber(_tid(), username)
         if not s:
             from ..core.errors import RadiusNotFound
-            raise RadiusNotFound(f"account {username!r} غير موجود")
+            raise RadiusNotFound(_tr('account %(username)s غير موجود', username=repr(username)))
         return s
 
     def upsert_account(self, account: Subscriber, *, only_fields=None) -> Subscriber:
@@ -271,7 +272,7 @@ class SqliteAdapter(RadiusAdapter):
         if subscribers_repo.username_exists(tenant_id, new_username):
             from ..core.errors import RadiusValidationError
             raise RadiusValidationError(
-                f"اسم الدخول «{new_username}» مستخدَم بالفعل لمشترك أو بطاقة أخرى.")
+                _tr('اسم الدخول «%(new_username)s» مستخدَم بالفعل لمشترك أو بطاقة أخرى.', new_username=new_username))
 
         had_live = self._has_open_session(tenant_id, old_username)
         if had_live and disconnect:
@@ -481,11 +482,11 @@ class SqliteAdapter(RadiusAdapter):
                         else "no_active_session")
                 raise RadiusConflict(
                     res.reply_message if code == "router_not_configured"
-                    else f"لا توجد جلسة نشطة لـ {username}.",
+                    else _tr('لا توجد جلسة نشطة لـ %(username)s.', username=username),
                     details={"code": code, "coa_code": res.code_name},
                 )
             raise RadiusError(
-                res.reply_message or f"تعذّر قطع {username} ({res.code_name})",
+                res.reply_message or _tr('تعذّر قطع %(username)s (%(code_name)s)', username=username, code_name=res.code_name),
                 details={"code": "disconnect_failed", "coa_code": res.code_name},
             )
         _LOG.info("Disconnect ok for %s: code=%s ids=%s",

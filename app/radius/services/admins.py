@@ -1,5 +1,6 @@
 """AdminsService — مدراء + أدوار + صلاحيات."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Optional
 
@@ -29,7 +30,7 @@ class AdminsService:
                      email: str = "", mobile: str = "", role_id: Optional[int] = None,
                      enabled: bool = True) -> Admin:
         if not username or not password:
-            raise RadiusValidationError("username + password مطلوبان")
+            raise RadiusValidationError(_tr("username + password مطلوبان"))
         if role_id is None:
             # نموذج الويب بلا دور → الأقلّ صلاحيةً، لا super_admin (افتراض المستودع).
             from ..db.repos import admins_repo as _ar

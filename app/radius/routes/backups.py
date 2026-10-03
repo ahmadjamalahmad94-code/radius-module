@@ -1,6 +1,7 @@
 """Web UI for operational backups: local backup, upload to the license panel,
 download, and a heavily-gated in-app restore."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from ..core import env_settings
@@ -64,10 +65,10 @@ def _backup_service_state(tid: int) -> dict:
         return {
             "enabled": bool(svc.get("enabled")),
             "status": str(svc.get("status") or "disabled"),
-            "name": "النسخ الاحتياطي السحابي",
+            "name": N_("النسخ الاحتياطي السحابي"),
         }
     except Exception:  # noqa: BLE001 — never break the page on contract read
-        return {"enabled": False, "status": "unknown", "name": "النسخ الاحتياطي السحابي"}
+        return {"enabled": False, "status": "unknown", "name": N_("النسخ الاحتياطي السحابي")}
 
 
 def backups():
@@ -119,12 +120,12 @@ def backups_prune_logs():
         return jsonify(result)
     if deleted:
         flash(
-            f"تم تنظيف السجلّات: حُذف {deleted} سجلًّا قديمًا"
-            + (f" واستُرجع {reclaimed_mb} م.ب من مساحة قاعدة البيانات." if reclaimed_mb else "."),
+            _tr('تم تنظيف السجلّات: حُذف %(deleted)s سجلًّا قديمًا', deleted=deleted)
+            + (_tr(' واستُرجع %(reclaimed_mb)s م.ب من مساحة قاعدة البيانات.', reclaimed_mb=reclaimed_mb) if reclaimed_mb else "."),
             "success",
         )
     else:
-        flash("لا توجد سجلّات قديمة لحذفها — قاعدة البيانات ضمن نافذة الاحتفاظ.", "info")
+        flash(_tr("لا توجد سجلّات قديمة لحذفها — قاعدة البيانات ضمن نافذة الاحتفاظ."), "info")
     return redirect(url_for("radius.backups"))
 
 
@@ -132,15 +133,15 @@ def backups_upload_computer():
     """Accept a backup file uploaded from the user's computer → store locally."""
     f = request.files.get("backup_file")
     if not f or not f.filename:
-        flash("اختر ملف نسخة بصيغة .sqlite3 أو .sqlite3.gz للرفع.", "error")
+        flash(_tr("اختر ملف نسخة بصيغة .sqlite3 أو .sqlite3.gz للرفع."), "error")
         return redirect(url_for("radius.backups"))
     low = str(f.filename).lower()
     if not (low.endswith(".sqlite3") or low.endswith(".sqlite3.gz")):
-        flash("صيغة الملف يجب أن تكون .sqlite3 أو .sqlite3.gz", "error")
+        flash(_tr("صيغة الملف يجب أن تكون .sqlite3 أو .sqlite3.gz"), "error")
         return redirect(url_for("radius.backups"))
     result = get_operations_service().import_uploaded_backup(
         tenant_id=_tid(), actor=_actor(), fileobj=f, filename=f.filename)
-    flash(result.get("message") or ("تم الرفع." if result.get("ok") else "تعذّر الرفع."),
+    flash(result.get("message") or (_tr("تم الرفع.") if result.get("ok") else _tr("تعذّر الرفع.")),
           "success" if result.get("ok") else "error")
     return redirect(url_for("radius.backups"))
 
@@ -150,11 +151,11 @@ def backups_schedule():
     enabled = (request.form.get("enabled") or "").strip().lower() in {"1", "true", "yes", "on"}
     interval = (request.form.get("interval") or "daily").strip()
     sched = get_operations_service().set_backup_schedule(tenant_id=_tid(), enabled=enabled, interval=interval)
-    labels = {"6h": "كل 6 ساعات", "12h": "كل 12 ساعة", "daily": "يوميًا", "weekly": "أسبوعيًا"}
+    labels = {"6h": N_("كل 6 ساعات"), "12h": N_("كل 12 ساعة"), "daily": N_("يوميًا"), "weekly": N_("أسبوعيًا")}
     if sched["enabled"]:
-        flash(f"تم تفعيل الجدولة التلقائية ({labels.get(sched['interval'], sched['interval'])}).", "success")
+        flash(_tr('تم تفعيل الجدولة التلقائية (%(v)s).', v=labels.get(sched['interval'], sched['interval'])), "success")
     else:
-        flash("تم إيقاف الجدولة التلقائية.", "info")
+        flash(_tr("تم إيقاف الجدولة التلقائية."), "info")
     return redirect(url_for("radius.backups"))
 
 
@@ -170,9 +171,9 @@ def backups_run():
     lean = not _wants_full_archive()
     result = get_operations_service().run_local_backup(tenant_id=_tid(), actor=_actor(), lean=lean)
     if result.get("verified"):
-        flash("تم إنشاء نسخة احتياطية محلية والتحقق منها.", "success")
+        flash(_tr("تم إنشاء نسخة احتياطية محلية والتحقق منها."), "success")
     else:
-        message = result.get("run", {}).get("message") or "تعذر التحقق من النسخة الاحتياطية."
+        message = result.get("run", {}).get("message") or _tr("تعذر التحقق من النسخة الاحتياطية.")
         flash(message, "error")
     return redirect(url_for("radius.backups"))
 
@@ -180,7 +181,7 @@ def backups_run():
 def backups_upload_panel():
     """Upload the latest local backup (with content) to the license panel."""
     if not _backup_service_state(_tid()).get("enabled"):
-        flash("خدمة النسخ على لوحة التراخيص غير مفعّلة. أرسل «طلب تفعيل» أولاً (خدمة مدفوعة).", "error")
+        flash(_tr("خدمة النسخ على لوحة التراخيص غير مفعّلة. أرسل «طلب تفعيل» أولاً (خدمة مدفوعة)."), "error")
         return redirect(url_for("radius.backups"))
     from ..services.license_admin_backup_upload import BackupUploadService
 
@@ -192,18 +193,18 @@ def backups_upload_panel():
     if result.get("ok") and not result.get("dry_run"):
         content_included = bool((result.get("payload") or {}).get("content_included"))
         if content_included:
-            flash("تم رفع النسخة الاحتياطية (بالملف الكامل) إلى لوحة التراخيص وتخزينها في ملف العميل.", "success")
+            flash(_tr("تم رفع النسخة الاحتياطية (بالملف الكامل) إلى لوحة التراخيص وتخزينها في ملف العميل."), "success")
         else:
             reason = (result.get("payload") or {}).get("content_omitted_reason") or ""
             if reason == "content_too_large":
-                hint = "حجم النسخة يتجاوز الحد المسموح للرفع."
+                hint = _tr("حجم النسخة يتجاوز الحد المسموح للرفع.")
             elif reason == "backup_file_missing":
-                hint = "تعذّر العثور على ملف النسخة محليًا."
+                hint = _tr("تعذّر العثور على ملف النسخة محليًا.")
             else:
-                hint = "تم تسجيل البيانات الوصفية فقط."
-            flash(f"تم تسجيل النسخة في ملف العميل بلوحة التراخيص. {hint}", "warning")
+                hint = _tr("تم تسجيل البيانات الوصفية فقط.")
+            flash(_tr('تم تسجيل النسخة في ملف العميل بلوحة التراخيص. %(hint)s', hint=hint), "warning")
     elif result.get("status") == "no_backup_found":
-        flash("لا توجد نسخة محلية ناجحة لرفعها. شغّل نسخة محلية أولاً.", "error")
+        flash(_tr("لا توجد نسخة محلية ناجحة لرفعها. شغّل نسخة محلية أولاً."), "error")
     else:
         from ..services.license_admin_backup_upload import friendly_panel_backup_error
         flash(friendly_panel_backup_error(result), "error")
@@ -214,7 +215,7 @@ def backups_gdrive_save():
     """احفظ بيانات عميل جوجل اللازمة لربط درايف."""
     from ..services import google_drive as gd
     gd.save_client(_tid(), request.form.get("client_id") or "", request.form.get("client_secret") or "")
-    flash("تم حفظ بيانات جوجل. اضغط «ربط جوجل درايف» للبدء.", "success")
+    flash(_tr("تم حفظ بيانات جوجل. اضغط «ربط جوجل درايف» للبدء."), "success")
     return redirect(url_for("radius.backups"))
 
 
@@ -224,13 +225,13 @@ def backups_gdrive_start():
     result = gd.start_device_flow(_tid())
     if not result.get("ok"):
         if result.get("error") == "not_configured":
-            flash("أدخل معرّف العميل وسر العميل من جوجل أولاً.", "error")
+            flash(_tr("أدخل معرّف العميل وسر العميل من جوجل أولاً."), "error")
         else:
-            flash(f"تعذّر بدء الربط مع جوجل: {result.get('error')} {result.get('detail','')}", "error")
+            flash(_tr('تعذّر بدء الربط مع جوجل: %(v)s %(v2)s', v=result.get('error'), v2=result.get('detail', '')), "error")
         return redirect(url_for("radius.backups"))
     # show the pairing instructions on the backups page
     flash(
-        f"افتح {result['verification_url']} وأدخل الرمز: {result['user_code']} ثم اضغط «تحقّقت، أكمل الربط».",
+        _tr('افتح %(verification_url)s وأدخل الرمز: %(user_code)s ثم اضغط «تحقّقت، أكمل الربط».', verification_url=result['verification_url'], user_code=result['user_code']),
         "info",
     )
     session["gdrive_pairing"] = {"user_code": result["user_code"], "url": result["verification_url"]}
@@ -245,11 +246,11 @@ def backups_gdrive_poll():
         return jsonify(result)
     if result.get("ok"):
         session.pop("gdrive_pairing", None)
-        flash(f"تم ربط جوجل درايف بنجاح ({result.get('email') or ''}). ستُرفع نسخك إلى درايفك تلقائيًا.", "success")
+        flash(_tr('تم ربط جوجل درايف بنجاح (%(v)s). ستُرفع نسخك إلى درايفك تلقائيًا.', v=result.get('email') or ''), "success")
     elif result.get("pending"):
-        flash("لم يكتمل التفويض بعد. أكمل الموافقة على google.com/device ثم أعد المحاولة.", "warning")
+        flash(_tr("لم يكتمل التفويض بعد. أكمل الموافقة على google.com/device ثم أعد المحاولة."), "warning")
     else:
-        flash(f"تعذّر إكمال الربط: {result.get('error')} {result.get('detail','')}", "error")
+        flash(_tr('تعذّر إكمال الربط: %(v)s %(v2)s', v=result.get('error'), v2=result.get('detail', '')), "error")
     return redirect(url_for("radius.backups"))
 
 
@@ -257,7 +258,7 @@ def backups_gdrive_disconnect():
     from ..services import google_drive as gd
     gd.disconnect(_tid())
     session.pop("gdrive_pairing", None)
-    flash("تم فصل جوجل درايف.", "info")
+    flash(_tr("تم فصل جوجل درايف."), "info")
     return redirect(url_for("radius.backups"))
 
 
@@ -269,7 +270,7 @@ def backups_content(name: str):
 def backups_download(name: str):
     path = get_operations_service().resolve_local_backup_path(name=name)
     if not path:
-        flash("ملف النسخة غير موجود.", "error")
+        flash(_tr("ملف النسخة غير موجود."), "error")
         return redirect(url_for("radius.backups"))
     # Carry the correct content-type so the browser/CDN treats it as a gzip
     # archive (not text) — matters for the compressed .sqlite3.gz backups.
@@ -287,24 +288,24 @@ def backups_restore():
         return redirect(url_for("radius.backups"))
 
     if not _restore_enabled():
-        return _fail("الاستعادة داخل التطبيق معطّلة على هذا الخادم.", "restore_disabled")
+        return _fail(_tr("الاستعادة داخل التطبيق معطّلة على هذا الخادم."), "restore_disabled")
     if (request.form.get("ack") or "").strip() != "1":
-        return _fail("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية.", "ack")
+        return _fail(_tr("يجب الإقرار بأن الاستعادة ستستبدل قاعدة البيانات الحالية."), "ack")
     confirm_value = (request.form.get("confirm") or "").strip()
     if confirm_value != "استعادة النسخة" and confirm_value.upper() != "RESTORE":
-        return _fail("لإتمام الاستعادة يجب كتابة عبارة التأكيد بشكل صحيح.", "confirm")
+        return _fail(_tr("لإتمام الاستعادة يجب كتابة عبارة التأكيد بشكل صحيح."), "confirm")
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().restore_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
     if ajax:
         ok = bool(result.get("ok"))
         # synthesize the staged steps the operation performed for the progress UI
         steps = [
-            {"key": "snapshot", "label": "نسخة احترازية قبل الاستعادة", "status": "success" if ok else ("success" if result.get("code") not in {"not_found", "restore_disabled"} else "failed"), "message": "تم أخذ نسخة احترازية." if ok else ""},
-            {"key": "apply", "label": "استبدال قاعدة البيانات", "status": "success" if ok else "failed", "message": result.get("message") or ("تمت الاستعادة." if ok else "فشلت الاستعادة.")},
-            {"key": "verify", "label": "التحقق", "status": "success" if ok else "skipped", "message": "تم التحقق من القاعدة المستعادة." if ok else ""},
+            {"key": "snapshot", "label": _tr("نسخة احترازية قبل الاستعادة"), "status": "success" if ok else ("success" if result.get("code") not in {"not_found", "restore_disabled"} else "failed"), "message": _tr("تم أخذ نسخة احترازية.") if ok else ""},
+            {"key": "apply", "label": _tr("استبدال قاعدة البيانات"), "status": "success" if ok else "failed", "message": result.get("message") or (_tr("تمت الاستعادة.") if ok else _tr("فشلت الاستعادة."))},
+            {"key": "verify", "label": _tr("التحقق"), "status": "success" if ok else "skipped", "message": _tr("تم التحقق من القاعدة المستعادة.") if ok else ""},
         ]
-        return jsonify({"ok": ok, "message": result.get("message") or ("تمت الاستعادة بنجاح." if ok else "تعذّرت الاستعادة."), "steps": steps})
-    flash(result.get("message") or ("تمت الاستعادة بنجاح." if result.get("ok") else "تعذّرت الاستعادة."),
+        return jsonify({"ok": ok, "message": result.get("message") or (_tr("تمت الاستعادة بنجاح.") if ok else _tr("تعذّرت الاستعادة.")), "steps": steps})
+    flash(result.get("message") or (_tr("تمت الاستعادة بنجاح.") if result.get("ok") else _tr("تعذّرت الاستعادة.")),
           "success" if result.get("ok") else "error")
     return redirect(url_for("radius.backups"))
 
@@ -313,12 +314,12 @@ def backups_delete():
     """Delete a single local backup file behind an explicit typed confirmation."""
     confirm_value = (request.form.get("confirm") or "").strip()
     if confirm_value != "حذف النسخة" and confirm_value.upper() != "DELETE":
-        flash("لحذف النسخة يجب كتابة عبارة التأكيد بشكل صحيح.", "error")
+        flash(_tr("لحذف النسخة يجب كتابة عبارة التأكيد بشكل صحيح."), "error")
         return redirect(url_for("radius.backups"))
     name = (request.form.get("name") or "").strip()
     result = get_operations_service().delete_local_backup(tenant_id=_tid(), actor=_actor(), name=name)
     flash(
-        result.get("message") or ("تم الحذف." if result.get("ok") else "تعذّر الحذف."),
+        result.get("message") or (_tr("تم الحذف.") if result.get("ok") else _tr("تعذّر الحذف.")),
         "success" if result.get("ok") else "error",
     )
     return redirect(url_for("radius.backups"))
@@ -330,13 +331,13 @@ def backups_settings():
     try:
         value = int(raw)
     except ValueError:
-        flash("أدخل عددًا صحيحًا لحدّ عدد النسخ.", "error")
+        flash(_tr("أدخل عددًا صحيحًا لحدّ عدد النسخ."), "error")
         return redirect(url_for("radius.backups"))
     svc = get_operations_service()
     saved = svc.set_backup_max_count(tenant_id=_tid(), value=value)
     removed = svc.prune_local_backups_by_count(tenant_id=_tid(), max_count=saved)
     if removed:
-        flash(f"تم ضبط حدّ النسخ إلى {saved}، وحُذفت {len(removed)} نسخة قديمة زائدة.", "success")
+        flash(_tr('تم ضبط حدّ النسخ إلى %(saved)s، وحُذفت %(v)s نسخة قديمة زائدة.', saved=saved, v=len(removed)), "success")
     else:
-        flash(f"تم ضبط حدّ النسخ إلى {saved} نسخة.", "success")
+        flash(_tr('تم ضبط حدّ النسخ إلى %(saved)s نسخة.', saved=saved), "success")
     return redirect(url_for("radius.backups"))

@@ -19,6 +19,7 @@ hh:mm:ss». الساعة تُستخرج من كليهما بـ substr(col,12,2).
 كل جدول، والمقارنة معجميّة (نفس نمط reports.py/live_sessions.py).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import datetime as _dt
 from typing import Optional
@@ -32,9 +33,9 @@ MODES = ("unique", "all", "failed")
 DEFAULT_MODE = "unique"
 
 MODE_LABELS = {
-    "unique": "جلسات فريدة",
-    "all": "كل الجلسات الناجحة",
-    "failed": "كل المحاولات الفاشلة",
+    "unique": N_("جلسات فريدة"),
+    "all": N_("كل الجلسات الناجحة"),
+    "failed": N_("كل المحاولات الفاشلة"),
 }
 
 
@@ -111,8 +112,8 @@ def stats(tenant_id: int, *, mode: str = DEFAULT_MODE,
         "donut": result["donut"],
         "hourly": hourly,
         "empty": result["count"] == 0,
-        "count_label": ("محاولة فاشلة" if mode == "failed"
-                        else ("جلسة فريدة" if mode == "unique" else "جلسة")),
+        "count_label": (_tr("محاولة فاشلة") if mode == "failed"
+                        else (_tr("جلسة فريدة") if mode == "unique" else _tr("جلسة"))),
     }
 
 

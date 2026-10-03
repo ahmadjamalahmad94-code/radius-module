@@ -15,6 +15,7 @@
   • التغيير يسري فورًا (قراءةٌ من الإعدادات في كلّ طلب، بلا ذاكرة مؤقّتة).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import math
 from dataclasses import dataclass
@@ -41,39 +42,39 @@ class LimitSpec:
 
 SPECS: tuple[LimitSpec, ...] = (
     LimitSpec("limits.max_extend_days",
-              "أقصى عدد أيام تفعيل/تمديد في العملية الواحدة",
-              "يسري على: التمديد بمدّة، قفزة تعيين تاريخ الانتهاء، الدفعة المحوَّلة وقتًا، "
+              N_("أقصى عدد أيام تفعيل/تمديد في العملية الواحدة"),
+              N_("يسري على: التمديد بمدّة، قفزة تعيين تاريخ الانتهاء، الدفعة المحوَّلة وقتًا، "
               "السلف، التمديد الجماعيّ، تعويض تغيير العرض، إضافة وقت للبطاقة، وتاريخ "
-              "الانتهاء عند إنشاء مشترك. التكرار مسموح.",
+              "الانتهاء عند إنشاء مشترك. التكرار مسموح."),
               365, TECH_MAX_EXTEND_DAYS, "days"),
     LimitSpec("limits.max_subscriber_payment",
-              "أقصى دفعة نقدية للمشترك في العملية الواحدة",
-              "يشمل الدفعة، ومبلغ التمديد المدفوع/على الدين، ودين تغيير العرض، وشراء "
-              "الكوتة واستعادة الكوتة اليوميّة.",
+              N_("أقصى دفعة نقدية للمشترك في العملية الواحدة"),
+              N_("يشمل الدفعة، ومبلغ التمديد المدفوع/على الدين، ودين تغيير العرض، وشراء "
+              "الكوتة واستعادة الكوتة اليوميّة."),
               100_000, TECH_MONEY_MAX, "money"),
     LimitSpec("limits.max_subscriber_balance_add",
-              "أقصى إضافة رصيد للمشترك",
-              "«إضافة رصيد نقديّ» لمحفظة المشترك في العملية الواحدة.",
+              N_("أقصى إضافة رصيد للمشترك"),
+              N_("«إضافة رصيد نقديّ» لمحفظة المشترك في العملية الواحدة."),
               100_000, TECH_MONEY_MAX, "money"),
     LimitSpec("limits.max_distributor_balance_add",
-              "أقصى إضافة رصيد/دفعة للموزّع",
-              "شحن رصيد الموزّع، ودفعاته وتسوياته في العملية الواحدة.",
+              N_("أقصى إضافة رصيد/دفعة للموزّع"),
+              N_("شحن رصيد الموزّع، ودفعاته وتسوياته في العملية الواحدة."),
               100_000, TECH_MONEY_MAX, "money"),
     LimitSpec("limits.max_loan_amount",
-              "أقصى مبلغ سلفة",
-              "قيمة سلفة المشترك (دين) في العملية الواحدة.",
+              N_("أقصى مبلغ سلفة"),
+              N_("قيمة سلفة المشترك (دين) في العملية الواحدة."),
               100_000, TECH_MONEY_MAX, "money"),
     LimitSpec("limits.max_amount_generic",
-              "أقصى مبلغ لباقي المدخلات الماليّة",
-              "محفظة مستخدمي الكروت، سعر باقة المتجر، القسائم، الفواتير.",
+              N_("أقصى مبلغ لباقي المدخلات الماليّة"),
+              N_("محفظة مستخدمي الكروت، سعر باقة المتجر، القسائم، الفواتير."),
               100_000, TECH_MONEY_MAX, "money"),
     LimitSpec("limits.max_expiry_year",
-              "آخر سنة مسموحة لتاريخ الانتهاء",
-              "لا يُقبل أيّ تاريخ انتهاء بعد نهاية هذه السنة (الحدّ التقنيّ 2100).",
+              N_("آخر سنة مسموحة لتاريخ الانتهاء"),
+              N_("لا يُقبل أيّ تاريخ انتهاء بعد نهاية هذه السنة (الحدّ التقنيّ 2100)."),
               TECH_MAX_EXPIRY_YEAR, TECH_MAX_EXPIRY_YEAR, "year", allow_unlimited=False),
     LimitSpec("limits.max_cards_per_batch",
-              "أقصى عدد بطاقات في الحزمة الواحدة",
-              "توليد بطاقات في دفعةٍ واحدة (الحدّ التقنيّ 100,000).",
+              N_("أقصى عدد بطاقات في الحزمة الواحدة"),
+              N_("توليد بطاقات في دفعةٍ واحدة (الحدّ التقنيّ 100,000)."),
               10_000, TECH_MAX_CARDS_PER_BATCH, "count"),
 )
 _BY_KEY = {s.key: s for s in SPECS}
@@ -88,7 +89,7 @@ MONEY_KINDS = {
     "generic": "limits.max_amount_generic",
 }
 
-EXTEND_OWNER_PHRASE = "أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر"
+EXTEND_OWNER_PHRASE = N_("أقصى تمديد في المرة الواحدة سنة — كرّر التمديد إن احتجت أكثر")
 
 
 def spec(key_or_name: str) -> LimitSpec:
@@ -186,35 +187,32 @@ def max_cards_per_batch(tenant_id: Optional[int] = None) -> int:
 def days_ar(n: int) -> str:
     n = int(n)
     if n == 1:
-        return "يومًا واحدًا"
+        return N_("يومًا واحدًا")
     if n == 2:
-        return "يومين"
+        return N_("يومين")
     if 3 <= n <= 10:
-        return f"{n} أيام"
-    return f"{n} يومًا"
+        return _tr('%(n)s أيام', n=n)
+    return _tr('%(n)s يومًا', n=n)
 
 
 def extend_too_long_msg(tenant_id: Optional[int] = None) -> str:
     """رسالة سقف التمديد بالقيمة المضبوطة؛ 365 ⇒ عبارة المالك حرفيًّا."""
     if is_unlimited("limits.max_extend_days", tenant_id):
-        return (f"أقصى تمديد في المرة الواحدة {days_ar(TECH_MAX_EXTEND_DAYS)} (الحدّ التقنيّ) "
-                "— كرّر التمديد إن احتجت أكثر")
+        return (_tr('أقصى تمديد في المرة الواحدة %(v)s (الحدّ التقنيّ) — كرّر التمديد إن احتجت أكثر', v=days_ar(TECH_MAX_EXTEND_DAYS)))
     days = max_extend_days(tenant_id)
     if days == 365:
         return EXTEND_OWNER_PHRASE
-    return f"أقصى تمديد في المرة الواحدة {days_ar(days)} — كرّر التمديد إن احتجت أكثر"
+    return _tr('أقصى تمديد في المرة الواحدة %(v)s — كرّر التمديد إن احتجت أكثر', v=days_ar(days))
 
 
 def create_too_long_msg(tenant_id: Optional[int] = None) -> str:
     days = max_extend_days(tenant_id)
-    span = "سنة" if days == 365 else days_ar(days)
-    return (f"أقصى مدّة عند إنشاء المشترك {span} من الآن — أنشئه بهذه المدّة ثم "
-            "مدّد إن احتجت أكثر.")
+    span = N_("سنة") if days == 365 else days_ar(days)
+    return (_tr('أقصى مدّة عند إنشاء المشترك %(span)s من الآن — أنشئه بهذه المدّة ثم مدّد إن احتجت أكثر.', span=span))
 
 
 def expiry_too_far_msg(tenant_id: Optional[int] = None) -> str:
-    return (f"المدة الناتجة تتجاوز الحدّ المسموح. (آخر تاريخ انتهاء مسموح: نهاية سنة "
-            f"{max_expiry_year(tenant_id)})")
+    return (_tr('المدة الناتجة تتجاوز الحدّ المسموح. (آخر تاريخ انتهاء مسموح: نهاية سنة %(v)s)', v=max_expiry_year(tenant_id)))
 
 
 def money_cap(kind: str = "generic", tenant_id: Optional[int] = None) -> float:
@@ -225,7 +223,7 @@ def fmt_amount(v: float) -> str:
     return str(int(v)) if float(v).is_integer() else f"{v:.2f}"
 
 
-def amount_error(amount: Any, kind: str = "generic", *, label: str = "المبلغ",
+def amount_error(amount: Any, kind: str = "generic", *, label: str = N_("المبلغ"),
                  tenant_id: Optional[int] = None) -> Optional[str]:
     """نصّ الرفض إن تجاوز ``amount`` سقف نوعه، وإلّا None (للخدمات التي ترمي
     صنف خطئها الخاصّ)."""
@@ -237,8 +235,7 @@ def amount_error(amount: Any, kind: str = "generic", *, label: str = "المبل
         return None
     cap = money_cap(kind, tenant_id)
     if a > cap + 1e-9:
-        return (f"قيمة «{label}» تتجاوز الحدّ الأقصى للعملية الواحدة "
-                f"({fmt_amount(cap)}).")
+        return (_tr('قيمة «%(label)s» تتجاوز الحدّ الأقصى للعملية الواحدة (%(v)s).', label=label, v=fmt_amount(cap)))
     return None
 
 
@@ -249,35 +246,34 @@ def validate_setting(key: str, raw: Any) -> str:
     if key.endswith(".unlimited"):
         base = key[: -len(".unlimited")]
         if base not in _BY_KEY or not _BY_KEY[base].allow_unlimited:
-            raise ValueError("مفتاح «بلا حدّ» غير معروف.")
+            raise ValueError(_tr("مفتاح «بلا حدّ» غير معروف."))
         v = str(raw or "").strip().lower()
         return "1" if v in {"1", "true", "yes", "on"} else "0"
     s = _BY_KEY.get(key)
     if s is None:
-        raise ValueError("مفتاح حدٍّ غير معروف.")
+        raise ValueError(_tr("مفتاح حدٍّ غير معروف."))
     text = "" if raw is None else str(raw).strip()
     if not text:
-        raise ValueError(f"«{s.label}» مطلوب — القيمة الفارغة أو الصفر غير مقبولة "
-                         "(للإلغاء استخدم مفتاح «بلا حدّ»)." if s.allow_unlimited else
-                         f"«{s.label}» مطلوب.")
+        raise ValueError(_tr('«%(label)s» مطلوب — القيمة الفارغة أو الصفر غير مقبولة (للإلغاء استخدم مفتاح «بلا حدّ»).', label=s.label) if s.allow_unlimited else
+                         _tr('«%(label)s» مطلوب.', label=s.label))
     try:
         from .numbers import normalize_number_text
         v = float(normalize_number_text(text))
     except (TypeError, ValueError):
-        raise ValueError(f"«{s.label}» يجب أن يكون رقمًا.") from None
+        raise ValueError(_tr('«%(label)s» يجب أن يكون رقمًا.', label=s.label)) from None
     if not math.isfinite(v) or v <= 0:
-        raise ValueError(f"«{s.label}» يجب أن يكون أكبر من صفر"
-                         + (" (للإلغاء استخدم مفتاح «بلا حدّ»)." if s.allow_unlimited else "."))
+        raise ValueError(_tr('«%(label)s» يجب أن يكون أكبر من صفر', label=s.label)
+                         + (_tr(" (للإلغاء استخدم مفتاح «بلا حدّ»).") if s.allow_unlimited else "."))
     if s.kind == "year":
         lo = datetime.utcnow().year + 1
         if not v.is_integer() or not lo <= v <= TECH_MAX_EXPIRY_YEAR:
-            raise ValueError(f"«{s.label}» سنةٌ بين {lo} و{TECH_MAX_EXPIRY_YEAR}.")
+            raise ValueError(_tr('«%(label)s» سنةٌ بين %(lo)s و%(TECH_MAX_EXPIRY_YEAR)s.', label=s.label, lo=lo, TECH_MAX_EXPIRY_YEAR=TECH_MAX_EXPIRY_YEAR))
         return str(int(v))
     if s.kind in ("days", "count"):
         if not v.is_integer():
-            raise ValueError(f"«{s.label}» يجب أن يكون عددًا صحيحًا.")
+            raise ValueError(_tr('«%(label)s» يجب أن يكون عددًا صحيحًا.', label=s.label))
     if v > s.tech_max:
-        raise ValueError(f"«{s.label}» أكبر من الحدّ التقنيّ ({fmt_amount(s.tech_max)}).")
+        raise ValueError(_tr('«%(label)s» أكبر من الحدّ التقنيّ (%(v)s).', label=s.label, v=fmt_amount(s.tech_max)))
     if s.kind == "money":
         return fmt_amount(round(v, 2))
     return str(int(v))

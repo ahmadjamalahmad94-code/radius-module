@@ -11,6 +11,7 @@ web page and ``/api/v1/backups/*`` now read through this module, so the two
 surfaces cannot disagree again.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -37,15 +38,15 @@ def panel_google_drive_status() -> dict[str, Any]:
     connected = bool(resp.get("connected"))
     if connected:
         status = "connected"
-        message = ("جوجل درايف مربوط من بوابة العميل — تُحوَّل النسخ المرفوعة "
-                   "إلى لوحة التراخيص إلى درايفك تلقائيًّا.")
+        message = (_tr("جوجل درايف مربوط من بوابة العميل — تُحوَّل النسخ المرفوعة "
+                   "إلى لوحة التراخيص إلى درايفك تلقائيًّا."))
     elif answered:
         status = "not_connected"
-        message = "جوجل درايف غير مربوط — اربطه من بوابة العميل."
+        message = _tr("جوجل درايف غير مربوط — اربطه من بوابة العميل.")
     else:
         status = "not_configured"
-        message = ("جوجل درايف غير مفعل حاليًا — تعذّرت قراءة حالته من لوحة "
-                   "التراخيص. يُربط من بوابة العميل.")
+        message = (_tr("جوجل درايف غير مفعل حاليًا — تعذّرت قراءة حالته من لوحة "
+                   "التراخيص. يُربط من بوابة العميل."))
     return {
         "configured": answered,
         "connected": connected,
@@ -74,16 +75,16 @@ def portal_sso_link() -> dict[str, Any]:
         result = AdminPanelClient().request_portal_sso()
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "status": "error",
-                "message": f"تعذّر فتح بوابة العميل: {exc}"}
+                "message": _tr('تعذّر فتح بوابة العميل: %(exc)s', exc=exc)}
     if not result.get("ok"):
         err = result.get("error") or {}
         msg = str(err.get("message") or "").strip() if isinstance(err, dict) else ""
         return {"ok": False, "status": str(result.get("status") or "unavailable"),
-                "message": msg or "تعذّر فتح بوابة العميل: لوحة التراخيص غير متاحة."}
+                "message": msg or N_("تعذّر فتح بوابة العميل: لوحة التراخيص غير متاحة.")}
     inner = result.get("response") or {}
     url = str(inner.get("sso_url") or "")
     if url:
         return {"ok": True, "url": url}
     reason = str(inner.get("message") or "").strip()
     return {"ok": False, "status": str(inner.get("status") or result.get("status") or ""),
-            "message": reason or "تعذّر فتح بوابة العميل: لم يصل رابط الدخول."}
+            "message": reason or _tr("تعذّر فتح بوابة العميل: لم يصل رابط الدخول.")}

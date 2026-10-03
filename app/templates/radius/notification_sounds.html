@@ -198,13 +198,13 @@
     if (CSRF) fd.append('_csrf_token', CSRF);   // اسم الحقل في هذا التطبيق
     return fetch(url, {method: 'POST', body: fd, credentials: 'same-origin',
                        headers: CSRF ? {'X-CSRFToken': CSRF} : {}})
-      .then(function (r) { return r.json().catch(function () { return {ok: false, message: 'ردٌّ غير مفهوم من الخادم.'}; }); });
+      .then(function (r) { return r.json().catch(function () { return {ok: false, message: {{ _('ردٌّ غير مفهوم من الخادم.')|tojson }}}; }); });
   }
 
   function say(row, text, ok) {
     var el = row.querySelector('[data-sound-state]');
     if (el) el.innerHTML = '<span class="snd-badge snd-badge--' + (ok ? 'local' : 'none') + '">'
-      + (ok ? 'محلّيّ' : 'تنبيه') + '</span>' + text;
+      + (ok ? {{ _('محلّيّ')|tojson }} : {{ _('تنبيه')|tojson }}) + '</span>' + text;
   }
 
   function upload(row, blob, filename) {
@@ -230,7 +230,7 @@
       // معاينةٌ من الخادم نفسه الذي سيُشغّله الجرس — لا من الملفّ المحلّيّ،
       // كي تسمع ما سيصلك فعلًا لا ما اخترتَه للتوّ.
       var a = new Audio(AUDIO + '?event=' + encodeURIComponent(row.getAttribute('data-key')) + '&_=' + Date.now());
-      a.play().catch(function () { say(row, 'لا صوت مخصّص لهذا الحدث بعد.', false); });
+      a.play().catch(function () { say(row, {{ _('لا صوت مخصّص لهذا الحدث بعد.')|tojson }}, false); });
       return;
     }
 
@@ -256,13 +256,13 @@
 
     // ① مكتوم من الجرس؟ هذا أشيع سببٍ للصمت التامّ، ولا شيء يُظهره.
     if (localStorage.getItem('hr_notif_sound') === '0') {
-      say('🔇 صوت الإشعارات مكتومٌ من جرس الأعلى. أُلغي الكتم الآن…');
+      say({{ _('🔇 صوت الإشعارات مكتومٌ من جرس الأعلى. أُلغي الكتم الآن…')|tojson }});
       localStorage.setItem('hr_notif_sound', '1');
     }
 
     // ② سياق الصوت: تُنشئه المتصفّحات موقوفًا حتى أوّل نقرة.
     var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) { say('❌ متصفّحك لا يدعم تشغيل الصوت.'); return; }
+    if (!AC) { say({{ _('❌ متصفّحك لا يدعم تشغيل الصوت.')|tojson }}); return; }
     var ctx = new AC();
     var go = (ctx.state === 'suspended') ? ctx.resume() : Promise.resolve();
 
@@ -273,8 +273,8 @@
         .then(function (r) {
           if (r.status === 404) {
             tone(ctx);
-            say('🔔 سمعتَ النغمة الافتراضيّة — ولا صوت مسجَّل بعد. '
-                + 'إن لم تسمع شيئًا فالمشكلة في مكبّر الصوت أو إذن المتصفّح.');
+            say({{ _('🔔 سمعتَ النغمة الافتراضيّة — ولا صوت مسجَّل بعد. ')|tojson }}
+                + {{ _('إن لم تسمع شيئًا فالمشكلة في مكبّر الصوت أو إذن المتصفّح.')|tojson }});
             throw 0;
           }
           if (!r.ok) throw 0;
@@ -284,8 +284,8 @@
           ctx.decodeAudioData(ab, function (buf) {
             var s = ctx.createBufferSource();
             s.buffer = buf; s.connect(ctx.destination); s.start(0);
-            say('✅ سمعتَ الصوت المسجَّل — كلّ شيء سليم.');
-          }, function () { tone(ctx); say('⚠️ الملفّ غير مقروء — شُغّلت النغمة بدلًا منه.'); });
+            say({{ _('✅ سمعتَ الصوت المسجَّل — كلّ شيء سليم.')|tojson }});
+          }, function () { tone(ctx); say({{ _('⚠️ الملفّ غير مقروء — شُغّلت النغمة بدلًا منه.')|tojson }}); });
         });
     }).catch(function () {});
   });
@@ -335,7 +335,7 @@
     if (active && active.row === row) { stopRecord(); return; }
     if (active) stopRecord();
     if (!navigator.mediaDevices || !window.MediaRecorder) {
-      say(row, 'المتصفّح لا يدعم التسجيل — ارفع ملفًّا بدلًا منه.', false);
+      say(row, {{ _('المتصفّح لا يدعم التسجيل — ارفع ملفًّا بدلًا منه.')|tojson }}, false);
       return;
     }
     navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
@@ -346,15 +346,15 @@
         stream.getTracks().forEach(function (t) { t.stop(); });
         var blob = new Blob(chunks, {type: rec.mimeType || 'audio/webm'});
         var ext = (blob.type.indexOf('ogg') >= 0) ? 'ogg' : 'webm';
-        upload(row, blob, 'تسجيل.' + ext);
+        upload(row, blob, {{ _('تسجيل.')|tojson }} + ext);
       };
       rec.start();
       active = {rec: rec, row: row, btn: btn};
       btn.classList.add('is-recording');
-      btn.innerHTML = '<i class="fa-solid fa-stop"></i> إيقاف';
-      say(row, 'جارٍ التسجيل… تكلّم ثمّ اضغط «إيقاف».', false);
+      btn.innerHTML = ('<i class="fa-solid fa-stop">' + '</i>' + ' ' + {{ _('إيقاف')|tojson }});
+      say(row, {{ _('جارٍ التسجيل… تكلّم ثمّ اضغط «إيقاف».')|tojson }}, false);
     }).catch(function () {
-      say(row, 'تعذّر الوصول للميكروفون (اسمح للإذن أو ارفع ملفًّا).', false);
+      say(row, {{ _('تعذّر الوصول للميكروفون (اسمح للإذن أو ارفع ملفًّا).')|tojson }}, false);
     });
   }
 
@@ -362,7 +362,7 @@
     if (!active) return;
     try { active.rec.stop(); } catch (e) {}
     active.btn.classList.remove('is-recording');
-    active.btn.innerHTML = '<i class="fa-solid fa-microphone"></i> تسجيل';
+    active.btn.innerHTML = ('<i class="fa-solid fa-microphone">' + '</i>' + ' ' + {{ _('تسجيل')|tojson }});
     active = null;
   }
 })();

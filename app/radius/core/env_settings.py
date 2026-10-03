@@ -10,6 +10,7 @@
 نقطة دخول واحدة للقراءة:  env_settings.env(NAME, default)  — بديل مطابق لـ os.environ.get.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import base64
 import hashlib
@@ -38,242 +39,242 @@ class Setting:
 # ── السجلّ: المفاتيح المُرحّلة من env إلى الواجهة (مجموعة قطاع الجرد) ──────────
 REGISTRY: list[Setting] = [
     # الشبكة والوصول العام
-    Setting("HOBERADIUS_PUBLIC_IP", "network", "عنوان IP العام للخادم",
-            help="يُستخدم في روابط المتجر والهوتسبوت ونقاط النفق."),
-    Setting("HOBERADIUS_PUBLIC_HOST", "network", "المضيف العام (host/domain)",
-            help="اسم النطاق أو المضيف العام الذي يصل عبره العملاء."),
-    Setting("HOBERADIUS_PUBLIC_URL", "network", "الرابط العام الكامل",
-            help="مثل https://panel.example.com — يُستخدم في الإشعارات وnetwatch."),
-    Setting("HOBERADIUS_WG_SUBNET", "network", "شبكة WireGuard الفرعية",
-            help="نطاق عناوين النفق.", default="10.10.0.0/24"),
-    Setting("HOBERADIUS_HOTSPOT_LOGIN_URL", "network", "رابط دخول الهوتسبوت",
-            help="صفحة تسجيل الدخول الخارجية للهوتسبوت."),
+    Setting("HOBERADIUS_PUBLIC_IP", "network", N_("عنوان IP العام للخادم"),
+            help=N_("يُستخدم في روابط المتجر والهوتسبوت ونقاط النفق.")),
+    Setting("HOBERADIUS_PUBLIC_HOST", "network", N_("المضيف العام (host/domain)"),
+            help=N_("اسم النطاق أو المضيف العام الذي يصل عبره العملاء.")),
+    Setting("HOBERADIUS_PUBLIC_URL", "network", N_("الرابط العام الكامل"),
+            help=N_("مثل https://panel.example.com — يُستخدم في الإشعارات وnetwatch.")),
+    Setting("HOBERADIUS_WG_SUBNET", "network", N_("شبكة WireGuard الفرعية"),
+            help=N_("نطاق عناوين النفق."), default="10.10.0.0/24"),
+    Setting("HOBERADIUS_HOTSPOT_LOGIN_URL", "network", N_("رابط دخول الهوتسبوت"),
+            help=N_("صفحة تسجيل الدخول الخارجية للهوتسبوت.")),
 
     # «اتصال بيانات» (feat/data-connection-oneclick) — الهدف الوحيد لكل
     # سكربتات اتصال المشترك. تُنشئه لوحة التراخيص لاحقًا عبر Cloudflare؛
     # حتى ذلك الحين يضبطه المالك يدويًا. LAB-PENDING.
-    Setting("HOBERADIUS_CLIENT_SUBDOMAIN", "network", "نطاق اتصال البيانات للعميل",
-            help="مثل client7.hoberadius.com — وجهة سكربتات «اتصال بيانات». "
-                 "فارغ = الميزة قيد التهيئة."),
-    Setting("HOBERADIUS_DATA_WG_POOL", "network", "مجمّع WireGuard لاتصال البيانات",
-            help="نطاق عناوين أقران بيانات v7 (مستقلّ عن نفق الإدارة).",
+    Setting("HOBERADIUS_CLIENT_SUBDOMAIN", "network", N_("نطاق اتصال البيانات للعميل"),
+            help=N_("مثل client7.hoberadius.com — وجهة سكربتات «اتصال بيانات». "
+                 "فارغ = الميزة قيد التهيئة.")),
+    Setting("HOBERADIUS_DATA_WG_POOL", "network", N_("مجمّع WireGuard لاتصال البيانات"),
+            help=N_("نطاق عناوين أقران بيانات v7 (مستقلّ عن نفق الإدارة)."),
             default="10.60.0.0/24"),
-    Setting("HOBERADIUS_DATA_WG_PORT", "network", "منفذ WireGuard لاتصال البيانات",
+    Setting("HOBERADIUS_DATA_WG_PORT", "network", N_("منفذ WireGuard لاتصال البيانات"),
             kind="int", default="51821",
-            help="منفذ استماع WG للبيانات على الـVPS (غير منفذ الإدارة). LAB-PENDING."),
-    Setting("HOBERADIUS_DATA_WG_PUBKEY", "network", "المفتاح العام لخادم WG (بيانات)",
-            help="مفتاح عام (ليس سرًّا) يدخل في كل سكربت WG. LAB-PENDING."),
+            help=N_("منفذ استماع WG للبيانات على الـVPS (غير منفذ الإدارة). LAB-PENDING.")),
+    Setting("HOBERADIUS_DATA_WG_PUBKEY", "network", N_("المفتاح العام لخادم WG (بيانات)"),
+            help=N_("مفتاح عام (ليس سرًّا) يدخل في كل سكربت WG. LAB-PENDING.")),
 
     # نفق إدارة الإصدار 6 (SSTP/PPTP عبر accel-ppp)
-    Setting("HOBERADIUS_ACCEL_SERVER_HOST", "network", "عنوان خادم accel (نفق إدارة v6)",
-            help="عنوان VPS الذي تتّصل به راوترات الإصدار 6 عبر SSTP/PPTP "
+    Setting("HOBERADIUS_ACCEL_SERVER_HOST", "network", N_("عنوان خادم accel (نفق إدارة v6)"),
+            help=N_("عنوان VPS الذي تتّصل به راوترات الإصدار 6 عبر SSTP/PPTP "
                  "(نفق الإدارة). مثل 203.0.113.10. فارغ = يُشتقّ من العنوان "
-                 "العام للخادم (HOBERADIUS_PUBLIC_IP) وقت التزويد."),
-    Setting("HOBERADIUS_ACCEL_SSTP_PORT", "network", "منفذ SSTP لنفق إدارة v6",
-            kind="int", default="443", help="منفذ خادم accel للـSSTP (TCP)."),
-    Setting("HOBERADIUS_MGMT_TUNNEL_POOL", "network", "مجمّع IP لنفق إدارة v6",
-            help="نطاق العناوين الداخلية الثابتة لراوترات الإصدار 6 على accel "
-                 "(غير نفق WireGuard).", default="10.50.0.0/24"),
-    Setting("HOBERADIUS_MGMT_TUNNEL_SERVER_IP", "network", "عنوان الخادم داخل نفق إدارة v6",
-            help="عنوان الخادم داخل مجمّع الإدارة (ما يطلبه الراوتر للمصادقة عبر "
-                 "النفق). فارغ = أوّل عنوان في المجمّع."),
+                 "العام للخادم (HOBERADIUS_PUBLIC_IP) وقت التزويد.")),
+    Setting("HOBERADIUS_ACCEL_SSTP_PORT", "network", N_("منفذ SSTP لنفق إدارة v6"),
+            kind="int", default="443", help=N_("منفذ خادم accel للـSSTP (TCP).")),
+    Setting("HOBERADIUS_MGMT_TUNNEL_POOL", "network", N_("مجمّع IP لنفق إدارة v6"),
+            help=N_("نطاق العناوين الداخلية الثابتة لراوترات الإصدار 6 على accel "
+                 "(غير نفق WireGuard)."), default="10.50.0.0/24"),
+    Setting("HOBERADIUS_MGMT_TUNNEL_SERVER_IP", "network", N_("عنوان الخادم داخل نفق إدارة v6"),
+            help=N_("عنوان الخادم داخل مجمّع الإدارة (ما يطلبه الراوتر للمصادقة عبر "
+                 "النفق). فارغ = أوّل عنوان في المجمّع.")),
     Setting("HOBERADIUS_MGMT_TUNNEL_RATE_MBPS", "network",
-            "حدّ سرعة نفق الإدارة (Mbps) — منع إساءة الاستخدام", kind="int",
+            N_("حدّ سرعة نفق الإدارة (Mbps) — منع إساءة الاستخدام"), kind="int",
             default="10",
-            help="سقف منخفض لكل جلسة نفق إدارة (SSTP/PPTP/WireGuard) يكفي "
+            help=N_("سقف منخفض لكل جلسة نفق إدارة (SSTP/PPTP/WireGuard) يكفي "
                  "RADIUS/CoA/WinBox/API لكنه يجعل تمرير بيانات الإنترنت عديم "
                  "الفائدة (منع سرقة الباقة/تجاوز الفوترة). يُطبَّق على SSTP/PPTP "
                  "عبر accel shaper + RADIUS Filter-Id تلقائيًّا، وعلى WireGuard "
                  "عبر tc على المضيف. 0 = تعطيل (غير مُستحسن). يُعاد بناء "
-                 "/etc/accel-ppp.conf عند تغييره."),
-    Setting("HOBERADIUS_ACCEL_RADIUS_SERVER", "network", "خادم RADIUS لـaccel (نفق v6)",
-            help="عنوان FreeRADIUS الذي يصادق عليه accel حسابات نفق SSTP/PPTP. "
-                 "افتراضي 127.0.0.1 (نشر VPS واحد).", default="127.0.0.1"),
-    Setting("HOBERADIUS_ACCEL_RADIUS_SECRET", "network", "سرّ RADIUS المحلّي لـaccel",
+                 "/etc/accel-ppp.conf عند تغييره.")),
+    Setting("HOBERADIUS_ACCEL_RADIUS_SERVER", "network", N_("خادم RADIUS لـaccel (نفق v6)"),
+            help=N_("عنوان FreeRADIUS الذي يصادق عليه accel حسابات نفق SSTP/PPTP. "
+                 "افتراضي 127.0.0.1 (نشر VPS واحد)."), default="127.0.0.1"),
+    Setting("HOBERADIUS_ACCEL_RADIUS_SECRET", "network", N_("سرّ RADIUS المحلّي لـaccel"),
             kind="secret",
-            help="السرّ المشترك بين accel-ppp وFreeRADIUS المحلّي (حركة localhost). "
-                 "يُكتب في /etc/accel-ppp.conf المولّد. يُخزَّن مشفّرًا."),
-    Setting("HOBERADIUS_ACCEL_SSL_PEMFILE", "network", "شهادة SSTP الموقّعة ذاتيًّا (مسار)",
-            help="مسار ملف الشهادة (cert) لمستمع SSTP TLS. المثبّت يولّدها إن غابت.",
+            help=N_("السرّ المشترك بين accel-ppp وFreeRADIUS المحلّي (حركة localhost). "
+                 "يُكتب في /etc/accel-ppp.conf المولّد. يُخزَّن مشفّرًا.")),
+    Setting("HOBERADIUS_ACCEL_SSL_PEMFILE", "network", N_("شهادة SSTP الموقّعة ذاتيًّا (مسار)"),
+            help=N_("مسار ملف الشهادة (cert) لمستمع SSTP TLS. المثبّت يولّدها إن غابت."),
             default="/etc/accel-ppp/accel-selfsigned.pem"),
-    Setting("HOBERADIUS_ACCEL_SSL_KEYFILE", "network", "مفتاح شهادة SSTP الخاص (مسار)",
-            help="مسار ملف المفتاح الخاص (key) المنفصل لـSSTP — accel يحتاج "
-                 "ssl-keyfile مستقلًّا. فارغ = بجوار الشهادة بامتداد .key."),
+    Setting("HOBERADIUS_ACCEL_SSL_KEYFILE", "network", N_("مفتاح شهادة SSTP الخاص (مسار)"),
+            help=N_("مسار ملف المفتاح الخاص (key) المنفصل لـSSTP — accel يحتاج "
+                 "ssl-keyfile مستقلًّا. فارغ = بجوار الشهادة بامتداد .key.")),
 
     # سكربت تهيئة الراوتر (Generate onboarding script)
-    Setting("HOBERADIUS_WALLED_GARDEN", "network", "الحديقة المسوّرة (نطاقات/عناوين، CSV)",
-            help="قائمة السماح في جدار الراوتر الناريّ — نطاقاتنا/عناويننا التي "
+    Setting("HOBERADIUS_WALLED_GARDEN", "network", N_("الحديقة المسوّرة (نطاقات/عناوين، CSV)"),
+            help=N_("قائمة السماح في جدار الراوتر الناريّ — نطاقاتنا/عناويننا التي "
                  "تبقى مفتوحة دائمًا (صفحة التجديد، خوادمنا). RADIUS وخادم SSTP "
-                 "يُضافان تلقائيًّا. مفصولة بفواصل."),
-    Setting("HOBERADIUS_BLOCK_PAGE_URL", "network", "رابط صفحة «انتهى اشتراكك»",
-            help="الرابط العام الكامل لصفحة انتهاء الاشتراك التي يُعاد توجيه "
+                 "يُضافان تلقائيًّا. مفصولة بفواصل.")),
+    Setting("HOBERADIUS_BLOCK_PAGE_URL", "network", N_("رابط صفحة «انتهى اشتراكك»"),
+            help=N_("الرابط العام الكامل لصفحة انتهاء الاشتراك التي يُعاد توجيه "
                  "المنتهين إليها (مثل http://VPS_IP/p/expired). يُضاف تلقائيًّا "
                  "للحديقة المسوّرة وتُوجَّه إليه قاعدة NAT في سكربت التهيئة. "
-                 "فارغ = لا إعادة توجيه (يبقى المنتهي محجوبًا فقط). HTTP لا HTTPS."),
+                 "فارغ = لا إعادة توجيه (يبقى المنتهي محجوبًا فقط). HTTP لا HTTPS.")),
     Setting("HOBERADIUS_EXPIRED_CAPTIVE_ENABLED", "network",
-            "صفحة تجديد للمنتهين «انتهى اشتراكك» (بدل الرفض) — الافتراضي: مُطفأ",
+            N_("صفحة تجديد للمنتهين «انتهى اشتراكك» (بدل الرفض) — الافتراضي: مُطفأ"),
             kind="bool", default="0",
-            note="مُطفأ = المنتهي يُرفض كليًّا (Access-Reject). لا تُفعّله إلّا "
-                 "لو أردت بوّابة تجديد أسيرة.",
-            help="الافتراضي: مُطفأ — المشترك المنتهي (كرت/PPPoE/هوتسبوت) يُرفض "
+            note=N_("مُطفأ = المنتهي يُرفض كليًّا (Access-Reject). لا تُفعّله إلّا "
+                 "لو أردت بوّابة تجديد أسيرة."),
+            help=N_("الافتراضي: مُطفأ — المشترك المنتهي (كرت/PPPoE/هوتسبوت) يُرفض "
                  "اتّصاله كليًّا (Access-Reject) بلا أيّ جلسة (لا دخول لخمس دقائق "
                  "ثمّ فصل). عند التفعيل يدويًّا: المنتهي يتّصل لكنه يُوضَع في قائمة "
                  "المنتهين (الجدار يَحصره بالحديقة المسوّرة فيرى صفحة التجديد "
                  "لدقائق) — خيار مقصود لمن يريد بوّابة تجديد بدل الرفض. تجاوزُ "
-                 "الواجهة (هذا التبديل) يَغلب متغيّر البيئة."),
-    Setting("HOBERADIUS_EXPIRED_POOL_NAME", "network", "اسم قائمة المنتهين (address-list)",
+                 "الواجهة (هذا التبديل) يَغلب متغيّر البيئة.")),
+    Setting("HOBERADIUS_EXPIRED_POOL_NAME", "network", N_("اسم قائمة المنتهين (address-list)"),
             default="hr-pool-expired",
-            help="اسم الـaddress-list الذي يضع RADIUS المنتهين فيه — يجب أن "
-                 "يطابق سكربت التهيئة (الافتراضي hr-pool-expired)."),
-    Setting("HOBERADIUS_BLOCK_PAGE_TITLE", "network", "عنوان صفحة الانتهاء",
-            default="انتهى اشتراكك",
-            help="العنوان البارز في صفحة «انتهى اشتراكك»."),
-    Setting("HOBERADIUS_BLOCK_PAGE_MESSAGE", "network", "نصّ صفحة الانتهاء",
-            default="انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة.",
-            help="الرسالة التي تظهر للمشترك المنتهي."),
-    Setting("HOBERADIUS_BLOCK_PAGE_RENEWAL_LINK", "network", "رابط التجديد (زر)",
-            help="رابط يضغطه المشترك للتجديد (بوابة دفع/واتساب/صفحتك). فارغ = "
-                 "يُخفى الزر."),
-    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_PHONE", "network", "هاتف التواصل للتجديد",
-            help="رقم هاتف يظهر في صفحة الانتهاء للتجديد/الدعم."),
-    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_WHATSAPP", "network", "واتساب التواصل للتجديد",
-            help="رقم واتساب (دوليّ، مثل 9627xxxxxxx) — يظهر كزرّ واتساب."),
-    Setting("HOBERADIUS_BLOCK_PAGE_LOGO_URL", "network", "رابط شعار صفحة الانتهاء",
-            help="رابط صورة شعارك (اختياري). فارغ = شعار افتراضي نصّيّ."),
+            help=N_("اسم الـaddress-list الذي يضع RADIUS المنتهين فيه — يجب أن "
+                 "يطابق سكربت التهيئة (الافتراضي hr-pool-expired).")),
+    Setting("HOBERADIUS_BLOCK_PAGE_TITLE", "network", N_("عنوان صفحة الانتهاء"),
+            default=N_("انتهى اشتراكك"),
+            help=N_("العنوان البارز في صفحة «انتهى اشتراكك».")),
+    Setting("HOBERADIUS_BLOCK_PAGE_MESSAGE", "network", N_("نصّ صفحة الانتهاء"),
+            default=N_("انتهت صلاحية اشتراكك. جدّد الآن لاستعادة الخدمة."),
+            help=N_("الرسالة التي تظهر للمشترك المنتهي.")),
+    Setting("HOBERADIUS_BLOCK_PAGE_RENEWAL_LINK", "network", N_("رابط التجديد (زر)"),
+            help=N_("رابط يضغطه المشترك للتجديد (بوابة دفع/واتساب/صفحتك). فارغ = "
+                 "يُخفى الزر.")),
+    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_PHONE", "network", N_("هاتف التواصل للتجديد"),
+            help=N_("رقم هاتف يظهر في صفحة الانتهاء للتجديد/الدعم.")),
+    Setting("HOBERADIUS_BLOCK_PAGE_CONTACT_WHATSAPP", "network", N_("واتساب التواصل للتجديد"),
+            help=N_("رقم واتساب (دوليّ، مثل 9627xxxxxxx) — يظهر كزرّ واتساب.")),
+    Setting("HOBERADIUS_BLOCK_PAGE_LOGO_URL", "network", N_("رابط شعار صفحة الانتهاء"),
+            help=N_("رابط صورة شعارك (اختياري). فارغ = شعار افتراضي نصّيّ.")),
     Setting("HOBERADIUS_CAPTIVE_REDIRECT_ENABLED", "network",
-            "إعادة توجيه captive تلقائيّة لصفحة الانتهاء", kind="bool", default="0",
-            help="عند التفعيل: أي طلب HTTP يصل للوحة بمضيف غريب (حركة منتهٍ "
+            N_("إعادة توجيه captive تلقائيّة لصفحة الانتهاء"), kind="bool", default="0",
+            help=N_("عند التفعيل: أي طلب HTTP يصل للوحة بمضيف غريب (حركة منتهٍ "
                  "أُعيد توجيهها بـNAT) يُحوَّل لصفحة «انتهى اشتراكك» — فينبثق "
                  "متصفّح الـcaptive تلقائيًّا. **اضبط HOBERADIUS_PUBLIC_IP/HOST "
-                 "أولًا** كي لا يُحوَّل وصولك للوحة. افتراضيًّا مُطفأ (آمن)."),
-    Setting("HOBERADIUS_HOTSPOT_POOL", "network", "مجمّع عناوين الهوتسبوت",
-            help="نطاق عناوين عملاء الهوتسبوت في سكربت التهيئة.",
+                 "أولًا** كي لا يُحوَّل وصولك للوحة. افتراضيًّا مُطفأ (آمن).")),
+    Setting("HOBERADIUS_HOTSPOT_POOL", "network", N_("مجمّع عناوين الهوتسبوت"),
+            help=N_("نطاق عناوين عملاء الهوتسبوت في سكربت التهيئة."),
             default="10.5.50.0/24"),
-    Setting("HOBERADIUS_PPPOE_POOL", "network", "مجمّع عناوين PPPoE",
-            help="نطاق عناوين عملاء PPPoE في سكربت التهيئة.",
+    Setting("HOBERADIUS_PPPOE_POOL", "network", N_("مجمّع عناوين PPPoE"),
+            help=N_("نطاق عناوين عملاء PPPoE في سكربت التهيئة."),
             default="10.5.60.0/24"),
 
     # الوصول البعيد لـWinBox عبر النفق (Open WinBox)
     Setting("HOBERADIUS_REMOTE_ACCESS_ENABLED", "network",
-            "تفعيل «فتح WinBox» (وصول بعيد عبر النفق)", kind="bool", default="1",
-            help="يتيح فتح منفذ مُدار من PANEL_PUBLIC_IP إلى WinBox الراوتر عبر "
+            N_("تفعيل «فتح WinBox» (وصول بعيد عبر النفق)"), kind="bool", default="1",
+            help=N_("يتيح فتح منفذ مُدار من PANEL_PUBLIC_IP إلى WinBox الراوتر عبر "
                  "النفق ومُؤقّتًا، متاحًا من أي مكان افتراضيًّا (الحارس كلمة مرور "
-                 "WinBox) أو مقيّدًا على IP/CIDR اختياريًّا."),
+                 "WinBox) أو مقيّدًا على IP/CIDR اختياريًّا.")),
     Setting("HOBERADIUS_REMOTE_ACCESS_TTL_MIN", "network",
-            "مهلة جلسة الوصول البعيد (دقائق)", kind="int", default="20",
-            help="تُغلق الجلسة تلقائيًّا بعد هذه المدّة (2–1440). الافتراضي 20 — "
-                 "WinBox لا يُترك مكشوفًا."),
+            N_("مهلة جلسة الوصول البعيد (دقائق)"), kind="int", default="20",
+            help=N_("تُغلق الجلسة تلقائيًّا بعد هذه المدّة (2–1440). الافتراضي 20 — "
+                 "WinBox لا يُترك مكشوفًا.")),
     Setting("HOBERADIUS_REMOTE_ACCESS_ALWAYS_ON", "network",
-            "وضع الوصول الدائم الافتراضيّ (بلا انتهاء) — للمالك", kind="bool",
+            N_("وضع الوصول الدائم الافتراضيّ (بلا انتهاء) — للمالك"), kind="bool",
             default="0",
-            help="الافتراضيّ العامّ لكل فتح: عند التفعيل تبقى كل الجلسات مفتوحة بلا "
+            help=N_("الافتراضيّ العامّ لكل فتح: عند التفعيل تبقى كل الجلسات مفتوحة بلا "
                  "مهلة تلقائيّة (لا تُغلق وحدها). الأفضل إبقاؤه مُطفأ واستخدام "
                  "«وصول دائم» لكل راوتر على حدة من صفحة نفق الراوتر — مع كلمة مرور "
-                 "WinBox قويّة، أو ضبط «مصدر مسموح» ثابت. الافتراضي مُطفأ."),
+                 "WinBox قويّة، أو ضبط «مصدر مسموح» ثابت. الافتراضي مُطفأ.")),
 
     # نفق WireGuard
-    Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",
-            help="عنوان الخادم داخل نفق الإدارة.", default="10.10.0.1"),
-    Setting("HOBERADIUS_WG_SERVER_ENDPOINT", "wireguard", "نقطة نهاية الخادم (endpoint)",
-            help="host:port الذي تتصل عليه الراوترات."),
-    Setting("HOBERADIUS_WG_SERVER_PUBKEY", "wireguard", "المفتاح العام لخادم WireGuard",
-            help="مفتاح عام (ليس سرّيًا) تستخدمه الأقران للاتصال."),
+    Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", N_("عنوان IP لخادم WireGuard"),
+            help=N_("عنوان الخادم داخل نفق الإدارة."), default="10.10.0.1"),
+    Setting("HOBERADIUS_WG_SERVER_ENDPOINT", "wireguard", N_("نقطة نهاية الخادم (endpoint)"),
+            help=N_("host:port الذي تتصل عليه الراوترات.")),
+    Setting("HOBERADIUS_WG_SERVER_PUBKEY", "wireguard", N_("المفتاح العام لخادم WireGuard"),
+            help=N_("مفتاح عام (ليس سرّيًا) تستخدمه الأقران للاتصال.")),
 
     # اتصال مايكروتيك الافتراضي
-    Setting("MIKROTIK_HOST", "mikrotik", "عنوان المايكروتيك الافتراضي"),
-    Setting("MIKROTIK_NAME", "mikrotik", "اسم الجهاز", default="default"),
-    Setting("MIKROTIK_USER", "mikrotik", "اسم المستخدم", default="admin"),
-    Setting("MIKROTIK_PASSWORD", "mikrotik", "كلمة المرور", kind="secret",
-            help="تُخزَّن مشفّرة وتُعرض مُقنّعة."),
-    Setting("MIKROTIK_PORT", "mikrotik", "المنفذ", kind="int", default="0",
-            help="0 = تلقائي (8728 عادي / 8729 مع TLS)."),
-    Setting("MIKROTIK_TLS", "mikrotik", "استخدام TLS", kind="bool"),
-    Setting("MIKROTIK_TLS_VERIFY", "mikrotik", "التحقق من شهادة TLS", kind="bool", default="1"),
-    Setting("MIKROTIK_TIMEOUT", "mikrotik", "مهلة الاتصال (ثانية)", kind="int", default="10"),
+    Setting("MIKROTIK_HOST", "mikrotik", N_("عنوان المايكروتيك الافتراضي")),
+    Setting("MIKROTIK_NAME", "mikrotik", N_("اسم الجهاز"), default="default"),
+    Setting("MIKROTIK_USER", "mikrotik", N_("اسم المستخدم"), default="admin"),
+    Setting("MIKROTIK_PASSWORD", "mikrotik", N_("كلمة المرور"), kind="secret",
+            help=N_("تُخزَّن مشفّرة وتُعرض مُقنّعة.")),
+    Setting("MIKROTIK_PORT", "mikrotik", N_("المنفذ"), kind="int", default="0",
+            help=N_("0 = تلقائي (8728 عادي / 8729 مع TLS).")),
+    Setting("MIKROTIK_TLS", "mikrotik", N_("استخدام TLS"), kind="bool"),
+    Setting("MIKROTIK_TLS_VERIFY", "mikrotik", N_("التحقق من شهادة TLS"), kind="bool", default="1"),
+    Setting("MIKROTIK_TIMEOUT", "mikrotik", N_("مهلة الاتصال (ثانية)"), kind="int", default="10"),
 
     # نمط RADIUS
-    Setting("RADIUS_MODE", "radius", "نمط مُحوِّل RADIUS", kind="select",
+    Setting("RADIUS_MODE", "radius", N_("نمط مُحوِّل RADIUS"), kind="select",
             default="sqlite",
-            options=[("sqlite", "قاعدة بيانات (إنتاج)"),
-                     ("direct", "مايكروتيك مباشر (API)"),
-                     ("manual", "ذاكرة (اختبار/تطوير)")],
-            note="يأخذ مفعوله عند إعادة تشغيل الخدمة (المُحوِّل يُهيَّأ مرّة عند الإقلاع)."),
+            options=[("sqlite", N_("قاعدة بيانات (إنتاج)")),
+                     ("direct", N_("مايكروتيك مباشر (API)")),
+                     ("manual", N_("ذاكرة (اختبار/تطوير)"))],
+            note=N_("يأخذ مفعوله عند إعادة تشغيل الخدمة (المُحوِّل يُهيَّأ مرّة عند الإقلاع).")),
     # نمط تطبيق السرعة المؤقتة على الجلسة الحيّة
     Setting("HOBERADIUS_TEMP_SPEED_APPLY_MODE", "radius",
-            "نمط تطبيق السرعة المؤقتة", kind="select", default="live_coa",
-            options=[("live_coa", "تغيير حيّ عبر CoA — بلا فصل (الافتراضي)"),
-                     ("disconnect_reauth", "فصل وإعادة اتصال (PoD)")],
-            help="live_coa: يُرسل CoA-Request فقط فتتغيّر السرعة فورًا دون فصل "
+            N_("نمط تطبيق السرعة المؤقتة"), kind="select", default="live_coa",
+            options=[("live_coa", N_("تغيير حيّ عبر CoA — بلا فصل (الافتراضي)")),
+                     ("disconnect_reauth", N_("فصل وإعادة اتصال (PoD)"))],
+            help=N_("live_coa: يُرسل CoA-Request فقط فتتغيّر السرعة فورًا دون فصل "
                  "المستخدم. disconnect_reauth: يفصل الجلسة فتُعاد المصادقة "
                  "بالسرعة الجديدة — للراوترات التي لا تُطبّق تغيير السرعة عبر "
                  "CoA. الافتراضي live_coa؛ ويبقى زر «تطبيق بالفصل وإعادة "
-                 "الاتصال» متاحًا يدويًا في صفحة المتصلين عند فشل CoA."),
+                 "الاتصال» متاحًا يدويًا في صفحة المتصلين عند فشل CoA.")),
 
     # النسخ الاحتياطي والاستعادة
-    Setting("HOBERADIUS_BACKUP_DIR", "backups", "مجلّد النسخ الاحتياطية",
+    Setting("HOBERADIUS_BACKUP_DIR", "backups", N_("مجلّد النسخ الاحتياطية"),
             default="/tmp/hr-backups"),
-    Setting("HOBERADIUS_BACKUP_RETENTION_DAYS", "backups", "أيام الاحتفاظ بالنسخ",
+    Setting("HOBERADIUS_BACKUP_RETENTION_DAYS", "backups", N_("أيام الاحتفاظ بالنسخ"),
             kind="int", default="30"),
-    Setting("HOBERADIUS_BACKUP_MAX_COUNT", "backups", "أقصى عدد نسخ محفوظة",
+    Setting("HOBERADIUS_BACKUP_MAX_COUNT", "backups", N_("أقصى عدد نسخ محفوظة"),
             kind="int", default="10"),
-    Setting("HOBERADIUS_BACKUP_GZIP", "backups", "ضغط النسخ الاحتياطية (gzip)",
+    Setting("HOBERADIUS_BACKUP_GZIP", "backups", N_("ضغط النسخ الاحتياطية (gzip)"),
             kind="bool", default="1",
-            help="عند التفعيل (الافتراضي) تُحفَظ النسخة مضغوطة بصيغة .sqlite3.gz "
+            help=N_("عند التفعيل (الافتراضي) تُحفَظ النسخة مضغوطة بصيغة .sqlite3.gz "
                  "فتصغر مساحتها كثيرًا وتُرفع أسرع للوحة/درايف. الاستعادة تقبل "
                  "النسخ المضغوطة والقديمة (.sqlite3) معًا. أطفئه لو احتجت ملف "
-                 ".sqlite3 خامًّا يُفتح مباشرة بلا فكّ ضغط."),
-    Setting("HOBERADIUS_BACKUP_GZIP_LEVEL", "backups", "مستوى ضغط gzip (1–9)",
+                 ".sqlite3 خامًّا يُفتح مباشرة بلا فكّ ضغط.")),
+    Setting("HOBERADIUS_BACKUP_GZIP_LEVEL", "backups", N_("مستوى ضغط gzip (1–9)"),
             kind="int", default="6",
-            help="1 أسرع/أكبر، 9 أبطأ/أصغر. الافتراضي 6 توازن جيّد."),
-    Setting("HOBERADIUS_LOCAL_RESTORE_DISABLED", "backups", "تعطيل الاستعادة المحلية",
-            kind="bool", help="عند التفعيل يُمنع زر/مسار الاستعادة المحلية."),
+            help=N_("1 أسرع/أكبر، 9 أبطأ/أصغر. الافتراضي 6 توازن جيّد.")),
+    Setting("HOBERADIUS_LOCAL_RESTORE_DISABLED", "backups", N_("تعطيل الاستعادة المحلية"),
+            kind="bool", help=N_("عند التفعيل يُمنع زر/مسار الاستعادة المحلية.")),
     Setting("HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED", "backups",
-            "السماح بتطبيق استعادة قاعدة البيانات", kind="bool",
-            help="عملية تدميرية — تبقى معطّلة افتراضيًا للحماية."),
+            N_("السماح بتطبيق استعادة قاعدة البيانات"), kind="bool",
+            help=N_("عملية تدميرية — تبقى معطّلة افتراضيًا للحماية.")),
     Setting("HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_DISABLED", "backups",
-            "تعطيل رفع محتوى النسخ للوحة", kind="bool"),
+            N_("تعطيل رفع محتوى النسخ للوحة"), kind="bool"),
     Setting("HOBERADIUS_ADMIN_BACKUP_CONTENT_MAX_BYTES", "backups",
-            "أقصى حجم لمحتوى النسخة المرفوعة (بايت)", kind="int"),
+            N_("أقصى حجم لمحتوى النسخة المرفوعة (بايت)"), kind="int"),
 
     # صحة الأجهزة
     Setting("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY", "device_health",
-            "تفعيل التطبيق الحيّ لصحة الأجهزة", kind="bool",
-            help="يسمح بكتابة التغييرات فعليًا على المايكروتيك."),
+            N_("تفعيل التطبيق الحيّ لصحة الأجهزة"), kind="bool",
+            help=N_("يسمح بكتابة التغييرات فعليًا على المايكروتيك.")),
     Setting("HOBERADIUS_DEVICE_HEALTH_POLL", "device_health",
-            "تفعيل الاستطلاع الدوري الخلفي", kind="bool"),
+            N_("تفعيل الاستطلاع الدوري الخلفي"), kind="bool"),
 
     # التحصيل
     Setting("HOBERADIUS_COLLECTION_FORCE_OPEN", "collection",
-            "فتح قسم التحصيل قسريًا", kind="bool",
-            help="للاختبار: يفتح التحصيل قبل ربط بوابة دفع حقيقية."),
+            N_("فتح قسم التحصيل قسريًا"), kind="bool",
+            help=N_("للاختبار: يفتح التحصيل قبل ربط بوابة دفع حقيقية.")),
 
     # جسر اللوحة والمزامنة
     Setting("HOBERADIUS_ADMIN_RUNTIME_CONTRACT_SYNC", "bridge",
-            "مزامنة عقد التشغيل وقت التشغيل", kind="bool"),
+            N_("مزامنة عقد التشغيل وقت التشغيل"), kind="bool"),
     Setting("HOBERADIUS_ADMIN_IDENTITY_SYNC_ENABLED", "bridge",
-            "تفعيل مزامنة الهوية", kind="bool"),
+            N_("تفعيل مزامنة الهوية"), kind="bool"),
     Setting("HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN", "bridge",
-            "مزامنة الهوية عند تسجيل الدخول", kind="bool"),
+            N_("مزامنة الهوية عند تسجيل الدخول"), kind="bool"),
     Setting("HOBERADIUS_ADMIN_BRIDGE_WORKER", "bridge",
-            "تفعيل عامل الجسر الخلفي", kind="bool"),
+            N_("تفعيل عامل الجسر الخلفي"), kind="bool"),
     Setting("HOBERADIUS_SERVER_FINGERPRINT", "bridge",
-            "بصمة الخادم", kind="secret"),
+            N_("بصمة الخادم"), kind="secret"),
     Setting("HOBERADIUS_INSTANCE_FINGERPRINT", "bridge",
-            "بصمة النسخة (instance)", kind="secret"),
+            N_("بصمة النسخة (instance)"), kind="secret"),
 
     # الواجهة البرمجية
-    Setting("HOBERADIUS_API_TOKENS", "api", "توكنات الواجهة البرمجية (CSV)",
-            kind="secret", help="قائمة مفصولة بفواصل — تُخزَّن مشفّرة."),
+    Setting("HOBERADIUS_API_TOKENS", "api", N_("توكنات الواجهة البرمجية (CSV)"),
+            kind="secret", help=N_("قائمة مفصولة بفواصل — تُخزَّن مشفّرة.")),
 
     # رابط الباقات والتسعير (lockout CTA)
     # يَظهر زرٌّ بارز «اعرض الباقات / جدّد اشتراكك» في صفحتي الترخيص:
     # «فعّل الترخيص» و «الترخيص منتهي». الرابط من العقد إن وُجد، وإلّا
     # من هذا الإعداد، وإلّا الافتراضي. أي تحديث لا يَتطلّب إعادة نشر.
     Setting("HOBERADIUS_PRICING_URL", "license",
-            "رابط الباقات والتسعير (lockout CTA)",
-            help="يُستعمل في صفحتي «فعّل الترخيص» و«الترخيص منتهي» كزرّ بارز "
+            N_("رابط الباقات والتسعير (lockout CTA)"),
+            help=N_("يُستعمل في صفحتي «فعّل الترخيص» و«الترخيص منتهي» كزرّ بارز "
                  "للمالك ليفتح صفحة المزوّد ويختار باقة/يجدّد. القيمة في "
-                 "العقد (capacity_contract.pricing_url) تتقدّم لو وُجدت.",
+                 "العقد (capacity_contract.pricing_url) تتقدّم لو وُجدت."),
             default="https://hoberadius.com/pricing"),
 ]
 
@@ -282,13 +283,13 @@ _BY_KEY: dict[str, Setting] = {s.key: s for s in REGISTRY}
 # ترتيب وعناوين المجموعات في الواجهة
 GROUPS: list[tuple[str, str, str]] = [
     ("network",       "الشبكة والوصول العام",     "globe"),
-    ("wireguard",     "نفق WireGuard",            "shield-halved"),
+    ("wireguard",     N_("نفق WireGuard"),            "shield-halved"),
     ("mikrotik",      "اتصال مايكروتيك الافتراضي", "server"),
-    ("radius",        "نمط RADIUS",               "network-wired"),
+    ("radius",        N_("نمط RADIUS"),               "network-wired"),
     ("backups",       "النسخ الاحتياطي والاستعادة", "database"),
-    ("device_health", "صحة الأجهزة",              "heart-pulse"),
-    ("collection",    "التحصيل",                  "money-bill-transfer"),
-    ("bridge",        "جسر اللوحة والمزامنة",     "tower-broadcast"),
+    ("device_health", N_("صحة الأجهزة"),              "heart-pulse"),
+    ("collection",    N_("التحصيل"),                  "money-bill-transfer"),
+    ("bridge",        N_("جسر اللوحة والمزامنة"),     "tower-broadcast"),
     ("api",           "الواجهة البرمجية",         "plug"),
     ("license",       "الترخيص والباقات",         "key"),
 ]

@@ -9,6 +9,7 @@
 للتنفيذ عند الاعتماد — لا مسار مالٍ موازٍ.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from typing import Any, Optional
@@ -65,7 +66,7 @@ def get(approval_id: int, *, tenant_id: int = 1) -> dict[str, Any]:
         (_tid(tenant_id), int(approval_id)),
     ).fetchone()
     if not row:
-        raise ApprovalError("طلب الاعتماد غير موجود.")
+        raise ApprovalError(_tr("طلب الاعتماد غير موجود."))
     out = row_to_dict(row)
     try:
         out["payload"] = json.loads(out.get("payload_json") or "{}")
@@ -100,10 +101,10 @@ def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[st
     مُقرَّرًا سلفًا أو بلا مُنفّذ."""
     ap = get(approval_id, tenant_id=tenant_id)
     if ap["status"] != "pending":
-        raise ApprovalError("الطلب مُقرَّر سلفًا.")
+        raise ApprovalError(_tr("الطلب مُقرَّر سلفًا."))
     executor = _EXECUTORS.get(ap["action_key"])
     if not executor:
-        raise ApprovalError("لا يوجد مُنفّذ لهذا النوع.")
+        raise ApprovalError(_tr("لا يوجد مُنفّذ لهذا النوع."))
     # 🔴 «اعتماد» الطلب نفسه ٨ مرّات بالتوازي أنشأ ٤ سلف: الحالة كانت تُفحص ثم
     # يُنفَّذ ثم تُعلَّم. الآن **يُحجز** الطلب أوّلًا بتحديثٍ مشروط (pending →
     # approved) — واحدٌ فقط يفوز بالصفّ وينفّذ، والباقون «مُقرَّر سلفًا».
@@ -113,7 +114,7 @@ def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[st
         (now_iso(), int(decided_by or 0), _tid(tenant_id), int(approval_id)),
     )
     if claim.rowcount != 1:
-        raise ApprovalError("الطلب مُقرَّر سلفًا.")
+        raise ApprovalError(_tr("الطلب مُقرَّر سلفًا."))
     try:
         result = executor(ap.get("payload") or {}, tenant_id=tenant_id,
                           actor=f"owner_approved:{decided_by}")
@@ -132,14 +133,14 @@ def approve(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[st
 def reject(approval_id: int, *, decided_by: int, tenant_id: int = 1) -> dict[str, Any]:
     ap = get(approval_id, tenant_id=tenant_id)
     if ap["status"] != "pending":
-        raise ApprovalError("الطلب مُقرَّر سلفًا.")
+        raise ApprovalError(_tr("الطلب مُقرَّر سلفًا."))
     claim = db().execute(
         "UPDATE manager_pending_approvals SET status='rejected', decided_at=?, decided_by=? "
         "WHERE tenant_id=? AND id=? AND status='pending'",
         (now_iso(), int(decided_by or 0), _tid(tenant_id), int(approval_id)),
     )
     if claim.rowcount != 1:
-        raise ApprovalError("الطلب مُقرَّر سلفًا.")
+        raise ApprovalError(_tr("الطلب مُقرَّر سلفًا."))
     return get(approval_id, tenant_id=tenant_id)
 
 

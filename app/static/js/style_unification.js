@@ -23,6 +23,7 @@
    The script is idempotent (re-loading a partial template doesn't double
    bind) and silent — never throws into a page.
    ══════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
   if (window.__udsStyleUnifyInit) return;
@@ -88,7 +89,7 @@
   // the layout (data-confirm intercept). Here we expose an async API for
   // explicit JS calls without rebuilding the markup.
   UDS.confirm = function (opts) {
-    var message = (opts && opts.message) || (opts && opts.msg) || "هل تريد المتابعة؟";
+    var message = (opts && opts.message) || (opts && opts.msg) || hrT('هل تريد المتابعة؟');
     return new Promise(function (resolve) {
       var ov = document.getElementById("cfmModal");
       if (!ov) {

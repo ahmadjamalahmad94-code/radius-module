@@ -1,5 +1,6 @@
 """Current admin account surface."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -35,18 +36,18 @@ def account_password():
         return redirect(url_for("radius.account"))
     if not admins_repo.verify_password(current_password, admin.password_hash):
         login_throttle.register_failure("admin_password", _pw_key)
-        flash("كلمة المرور الحالية غير صحيحة.", "error")
+        flash(_tr("كلمة المرور الحالية غير صحيحة."), "error")
         return redirect(url_for("radius.account"))
     login_throttle.register_success("admin_password", _pw_key)
     if len(new_password) < 8:
-        flash("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.", "error")
+        flash(_tr("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل."), "error")
         return redirect(url_for("radius.account"))
     if new_password != confirm_password:
-        flash("تأكيد كلمة المرور غير مطابق.", "error")
+        flash(_tr("تأكيد كلمة المرور غير مطابق."), "error")
         return redirect(url_for("radius.account"))
     if new_password == current_password:
         # same rule as POST /api/admin/password (re-test R08 NEW-3)
-        flash("كلمة المرور الجديدة يجب أن تختلف عن الحالية.", "error")
+        flash(_tr("كلمة المرور الجديدة يجب أن تختلف عن الحالية."), "error")
         return redirect(url_for("radius.account"))
 
     if admin.managed_by_license_admin:
@@ -64,12 +65,12 @@ def account_password():
             except Exception:  # noqa: BLE001
                 pass
             clear_current_admin()
-            flash("تم تحديث كلمة المرور من لوحة التراخيص، وتم تسجيل الخروج من "
-                  "كل الأجهزة. سجّل الدخول بكلمتك الجديدة.", "success")
+            flash(_tr("تم تحديث كلمة المرور من لوحة التراخيص، وتم تسجيل الخروج من "
+                  "كل الأجهزة. سجّل الدخول بكلمتك الجديدة."), "success")
             return redirect(url_for("radius.auth_login"))
         else:
             error = result.get("error") if isinstance(result.get("error"), dict) else {}
-            flash(error.get("message") or "تعذر تحديث كلمة المرور عبر لوحة التراخيص.", "error")
+            flash(error.get("message") or _tr("تعذر تحديث كلمة المرور عبر لوحة التراخيص."), "error")
         return redirect(url_for("radius.account"))
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
@@ -79,6 +80,6 @@ def account_password():
     # قرار المالك: أي تغيير لكلمة المرور يطرد كل الجلسات المفتوحة على الحساب
     # (كل الأجهزة، بما فيها هذه) — update_admin زاد ختم الجلسة فعلًا.
     clear_current_admin()
-    flash("تم تحديث كلمة المرور، وتم تسجيل الخروج من كل الأجهزة. "
-          "سجّل الدخول بكلمتك الجديدة.", "success")
+    flash(_tr("تم تحديث كلمة المرور، وتم تسجيل الخروج من كل الأجهزة. "
+          "سجّل الدخول بكلمتك الجديدة."), "success")
     return redirect(url_for("radius.auth_login"))

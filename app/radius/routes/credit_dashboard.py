@@ -6,6 +6,7 @@
 الحارس الصريح أدناه طبقة دفاع ثانية مستقلّة.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (
     Blueprint, abort, flash, redirect, render_template, request, session, url_for,
@@ -67,13 +68,13 @@ def credit_recharge(entity_type: str, entity_id: int):
         debt = result["debt_recorded"]
         if result["payment_status"] == "debt":
             # رصيد على الحساب: أُضيف للرصيد للاستخدام وسُجِّل ديناً على المشغّل.
-            flash(f"تم منح رصيد على الحساب {credited} وتسجيله ديناً على المشغّل.", "success")
+            flash(_tr('تم منح رصيد على الحساب %(credited)s وتسجيله ديناً على المشغّل.', credited=credited), "success")
         elif float(settled) > 0 and float(credited) > 0:
-            flash(f"تم الشحن: سُدّد دين {settled} وأُضيف للرصيد {credited}.", "success")
+            flash(_tr('تم الشحن: سُدّد دين %(settled)s وأُضيف للرصيد %(credited)s.', settled=settled, credited=credited), "success")
         elif float(settled) > 0:
-            flash(f"تم تسديد دين بقيمة {settled}.", "success")
+            flash(_tr('تم تسديد دين بقيمة %(settled)s.', settled=settled), "success")
         else:
-            flash(f"تمت إضافة {credited} إلى الرصيد.", "success")
+            flash(_tr('تمت إضافة %(credited)s إلى الرصيد.', credited=credited), "success")
     except CreditDashboardError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.credit_dashboard"))

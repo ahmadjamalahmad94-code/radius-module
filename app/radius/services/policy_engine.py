@@ -19,6 +19,7 @@ Policy Engine — قرارات Accept/Reject الديناميكية لـ RADIUS 
 - ok=False → reason + message للمستخدم
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import hashlib
 import hmac as _hmac
@@ -63,49 +64,49 @@ class AuthDecision:
 
 # الرسائل العربية (Reply-Message)
 _MSG = {
-    "user_not_found":    "اسم المستخدم غير موجود",
-    "password_wrong":    "كلمة المرور غير صحيحة",
-    "disabled":          "الحساب معطَّل — راجع الإدارة",
-    "expired":           "انتهت صلاحية الاشتراك",
-    "outside_hours":     "خارج أوقات الدوام المسموحة",
-    "outside_days":      "خارج أيام الدوام المسموحة",
+    "user_not_found":    N_("اسم المستخدم غير موجود"),
+    "password_wrong":    N_("كلمة المرور غير صحيحة"),
+    "disabled":          N_("الحساب معطَّل — راجع الإدارة"),
+    "expired":           N_("انتهت صلاحية الاشتراك"),
+    "outside_hours":     N_("خارج أوقات الدوام المسموحة"),
+    "outside_days":      N_("خارج أيام الدوام المسموحة"),
     # «جدول الاتصال» الخاصّ بالمشترك (connection_schedule/working_days) — يَتجاوز
     # جدول الباقة حين يُضبَط. رسالة واحدة تَجمع اليوم/الساعة (الجدول الموحَّد).
-    "outside_schedule":  "خارج أوقات/أيام الدوام المسموحة لهذا الحساب",
+    "outside_schedule":  N_("خارج أوقات/أيام الدوام المسموحة لهذا الحساب"),
     # «ساعات العرض» (offer_hours) — نافذة توفّر العرض اليوميّة. خارجها = رفض
     # صريح عند التفويض ونفس السبب في المُصالِح الحيّ (CoA).
-    "out_of_window":     "خارج وقت السماح",
-    "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
+    "out_of_window":     N_("خارج وقت السماح"),
+    "quota_exhausted":   N_("نفدت الكوتا — يلزم تجديد"),
     # «العدّ بالثواني» (count_by_seconds — نمط رصيد الاستخدام Mode A): نفاد
     # رصيد ثواني الاستخدام التراكميّ للبطاقة.
-    "card_time_exhausted": "انتهى رصيد وقت الاستخدام لهذه البطاقة",
+    "card_time_exhausted": N_("انتهى رصيد وقت الاستخدام لهذه البطاقة"),
     # «حدود وقت الاتصال» الخاصّة بالمشترك (total/daily_connection_time_min).
-    "time_total_exhausted": "انتهى إجمالي وقت الاتصال المسموح لهذا الحساب",
-    "time_daily_exhausted": "انتهى وقت الاتصال المسموح لهذا اليوم — حاول غدًا",
-    "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
-    "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
-    "concurrent_limit":  "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب",
+    "time_total_exhausted": N_("انتهى إجمالي وقت الاتصال المسموح لهذا الحساب"),
+    "time_daily_exhausted": N_("انتهى وقت الاتصال المسموح لهذا اليوم — حاول غدًا"),
+    "mac_mismatch":      N_("هذا الجهاز غير مصرَّح بالدخول لهذا الحساب"),
+    "random_mac_blocked": N_("هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة"),
+    "concurrent_limit":  N_("بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب"),
     # «تعليق الوصول» (الطبقة A): رسالة مهذّبة موجّهة للمستخدم.
-    "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
+    "access_suspended":   N_("تسجيل الدخول معلّق مؤقتاً — راجع الإدارة"),
     # «حظر» أمني (الطبقة B): IP/MAC.
-    "access_blocked":     "الدخول محظور حاليًا — راجع الإدارة",
+    "access_blocked":     N_("الدخول محظور حاليًا — راجع الإدارة"),
     # «منع استنساخ MAC» (anti-mac-clone): جهاز مختلف بنفس MAC.
-    "mac_clone_detected": "تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض",
+    "mac_clone_detected": N_("تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض"),
     # نمط step-up: رفض أوّل لإجبار إعادة كتابة كلمة المرور كتأكيد على
     # «هذا جهازي الجديد». المحاولة الثانية بنفس البصمة الحيّة ضمن النافذة
     # تُعامَل كتأكيد قانوني → سماح + إعادة ربط.
-    "stepup_required":    "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد",
+    "stepup_required":    N_("هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد"),
     # «نمط السماح» (allow-mode):
-    "allow_mode_unknown_device": "هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة",
-    "allow_mode_at_capacity":    "تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة",
-    "allow_mode_bind_failed":    "تعذّر ربط هذا الجهاز — تواصل مع الإدارة",
+    "allow_mode_unknown_device": N_("هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة"),
+    "allow_mode_at_capacity":    N_("تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة"),
+    "allow_mode_bind_failed":    N_("تعذّر ربط هذا الجهاز — تواصل مع الإدارة"),
     # سقف «اكتف» — العدد الإجمالي للجلسات المتزامنة المتصلة الآن (cards +
     # subscribers + PPPoE + hotspot) عند سقف الباقة من المزوّد. يَرفض
     # الجلسة الجديدة فقط (المُعاد المصادقة لمستخدم قائم لا يُحتَسَب).
-    "provider_active_cap": "تم بلوغ الحدّ الأقصى للمتصلين المتزامنين لباقتك — انتظر انتهاء جلسة أو رقّ باقتك",
-    "ok_welcome":        "أهلًا بك",
-    "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
-    "ok_card_time_left": "أهلًا بك — الوقت المتبقّي في بطاقتك:",
+    "provider_active_cap": N_("تم بلوغ الحدّ الأقصى للمتصلين المتزامنين لباقتك — انتظر انتهاء جلسة أو رقّ باقتك"),
+    "ok_welcome":        N_("أهلًا بك"),
+    "ok_expires_soon":   N_("اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع"),
+    "ok_card_time_left": N_("أهلًا بك — الوقت المتبقّي في بطاقتك:"),
 }
 
 # fail2ban — قائمة سماح: العدّاد التلقائي يُحسب **فقط** على فشل المصادقة
@@ -289,12 +290,12 @@ def _check_expiry_captive(sub: Subscriber) -> Optional[AuthDecision]:
         return _reject("expired")
     return AuthDecision(
         ok=True, reason="expired_captive",
-        message=_MSG.get("expired", "انتهى الاشتراك"),
+        message=_MSG.get("expired", N_("انتهى الاشتراك")),
         reply_attrs={
             "Mikrotik-Address-List": _expired_pool_name(),
             # short re-auth window so a renewal takes effect within minutes
             "Session-Timeout": "300",
-            "Reply-Message": _MSG.get("expired", "انتهى الاشتراك"),
+            "Reply-Message": _MSG.get("expired", N_("انتهى الاشتراك")),
         },
     )
 
@@ -442,8 +443,8 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
             pass
         return None
     return _reject("quota_exhausted", extra_message={
-        "daily": " (الكوتة اليوميّة — تتجدّد غدًا)",
-        "monthly": " (الكوتة الشهريّة — تتجدّد الشهر القادم)",
+        "daily": N_(" (الكوتة اليوميّة — تتجدّد غدًا)"),
+        "monthly": N_(" (الكوتة الشهريّة — تتجدّد الشهر القادم)"),
     }.get(which, ""))
 
 
@@ -1943,12 +1944,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
             "Rate-Limit: الراوتر سيطبّق ملفّه الافتراضيّ (مفتوح غالبًا). "
             "اضبط سرعةَ الباقة أو علّمها «بلا حدّ» صراحةً.",
             sub.username, getattr(plan, "id", None),
-            getattr(plan, "name", "لا باقة"))
+            getattr(plan, "name", N_("لا باقة")))
     return out
 
 
 def _reject(reason: str, *, extra_message: str = "") -> AuthDecision:
-    msg = _MSG.get(reason, "غير مصرَّح") + extra_message
+    msg = _MSG.get(reason, N_("غير مصرَّح")) + extra_message
     return AuthDecision(ok=False, reason=reason, message=msg,
                          reply_attrs={"Reply-Message": msg})
 

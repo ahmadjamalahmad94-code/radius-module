@@ -14,7 +14,7 @@
 {% block title %}{{ meta.title }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ meta.icon }}"></i>{% endblock %}
 {% block page_title %}{{ meta.title }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ matched }} محاولة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(matched)s محاولة', matched=matched) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المحاولات #}
@@ -81,11 +81,11 @@
   icon=meta.icon,
   actions_html=_report_jump,
   kpis=[
-    {'label': 'محاولات اليوم', 'value': stats.today,      'icon': 'calendar-day', 'variant': 'brand',
-     'sub': 'من إجمالي ' ~ matched ~ ' محاولة مطابقة'},
-    {'label': 'ناجحة',         'value': stats.ok,         'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'فاشلة',         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'جهات فريدة',    'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
+    {'label': _('محاولات اليوم'), 'value': stats.today,      'icon': 'calendar-day', 'variant': 'brand',
+     'sub': _('من إجمالي %(matched)s محاولة مطابقة', matched=matched)},
+    {'label': _('ناجحة'),         'value': stats.ok,         'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('فاشلة'),         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('جهات فريدة'),    'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
   ],
   search_action=url_for(self_endpoint)
 ) %}
@@ -110,20 +110,20 @@
          value="{{ filters.date_from }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters.result or filters.source or filters.q or filters.date_from or filters.date_to %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for(self_endpoint) + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="هذه الصفحة مفروزة بدقة على {{ meta.title }} فقط — الفرز يتم في قاعدة البيانات نفسها. البحث يطابق الاسم أو عنوان الشبكة أو عنوان الجهاز أو جهاز الشبكة، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى 600 محاولة من الأحدث للأقدم، والبيانات للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('هذه الصفحة مفروزة بدقة على %(title)s فقط — الفرز يتم في قاعدة البيانات نفسها. البحث يطابق الاسم أو عنوان الشبكة أو عنوان الجهاز أو جهاز الشبكة، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى 600 محاولة من الأحدث للأقدم، والبيانات للقراءة فقط.', title=meta.title) }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if rows %}
 {# ───── جدول المحاولات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("سجل المحاولات", icon="table-list",
-                    meta=(shown|string) ~ (" من " ~ matched|string if matched > shown else " محاولة"), flush=True) %}
+{% call hub.section(_('سجل المحاولات'), icon="table-list",
+                    meta=(shown|string) ~ (_(' من %(string)s', string=matched|string) if matched > shown else _(' محاولة')), flush=True) %}
   {% if session.get('is_super_admin') %}
   {# تنويه السياسة — يظهر للمدير الرئيسي فقط بجانب عمود «النتيجة» #}
   <div class="ls-pw-note" data-testid="attempted-pw-note">
@@ -157,8 +157,8 @@
           </td>
           <td><strong><bdi>{{ r.username if (r.username and (r.username|lower) not in ('unknown','none','null','-')) else _('غير معروف') }}</bdi></strong></td>
           <td>
-            {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
-            {% else %}{{ hub.pill("فشل", variant="red") }}{% endif %}
+            {% if r.success %}{{ hub.pill(_('نجاح'), variant="green") }}
+            {% else %}{{ hub.pill(_('فشل'), variant="red") }}{% endif %}
           </td>
           {# السبب معرّب في عموده المستقلّ — والقيمة الخام تبقى في title
              للمراجعة الفنية. النجاح/بلا سبب = شرطة.
@@ -188,7 +188,7 @@
               {% if r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
               {% elif r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
               {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
-              {{ source_labels.get(r.source, 'غير محدد') if r.source else '—' }}
+              {{ source_labels.get(r.source, _('غير محدد')) if r.source else '—' }}
             </span>
           </td>
           {% endif %}
@@ -206,7 +206,7 @@
               {% elif r.os or r.browser %}<i class="fa-solid fa-desktop"></i>
               {% else %}<i class="fa-solid fa-wifi"></i>{% endif %}
               <div>
-                <span class="rep-primary">{{ r.os or 'جهاز شبكة' }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
+                <span class="rep-primary">{{ r.os or _('جهاز شبكة') }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
                 {% if r.mac %}<span class="rep-sub rep-mono">{{ _('عنوان الجهاز:') }} <bdi>{{ r.mac }}</bdi></span>{% endif %}
               </div>
             </div>
@@ -219,8 +219,8 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا توجد محاولات مطابقة في " + meta.title,
-   sub="غيّر الفلاتر أو انتظر أول محاولة دخول لتظهر هنا.", icon=meta.icon) }}
+{{ hub.empty(_('لا توجد محاولات مطابقة في ') + meta.title,
+   sub=_('غيّر الفلاتر أو انتظر أول محاولة دخول لتظهر هنا.'), icon=meta.icon) }}
 {% endif %}
 
 {# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}

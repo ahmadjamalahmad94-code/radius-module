@@ -12,6 +12,7 @@
 مرّتين لا يغيّر شيئًا في الثانية). عمليّة واحدة في المرّة (قفل).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import os
@@ -89,11 +90,11 @@ def reconcile_apply():
     confirm = str(payload.get("confirm") or "").strip()
     if confirm != CONFIRM_WORD:
         return jsonify({"ok": False, "code": "confirm",
-                        "message": f"للمتابعة اكتب كلمة التأكيد «{CONFIRM_WORD}» بالضبط."}), 200
+                        "message": _tr('للمتابعة اكتب كلمة التأكيد «%(CONFIRM_WORD)s» بالضبط.', CONFIRM_WORD=CONFIRM_WORD)}), 200
 
     if not _RECONCILE_LOCK.acquire(blocking=False):
         return jsonify({"ok": False, "code": "busy",
-                        "message": "هناك عمليّة مطابقة جارية بالفعل. انتظر انتهاءها."}), 200
+                        "message": _tr("هناك عمليّة مطابقة جارية بالفعل. انتظر انتهاءها.")}), 200
     try:
         t = _tid()
         actor = _actor()
@@ -105,14 +106,14 @@ def reconcile_apply():
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("reconcile backup crashed")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة — أُلغيت المطابقة "
-                                       "ولم يتغيّر شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة — أُلغيت المطابقة "
+                                       "ولم يتغيّر شيء."),
                             "detail": str(exc)}), 200
         if not bk.get("verified"):
-            msg = (bk.get("run") or {}).get("message") or "فشل التحقّق من النسخة."
+            msg = (bk.get("run") or {}).get("message") or _tr("فشل التحقّق من النسخة.")
             return jsonify({"ok": False, "code": "backup_failed",
-                            "message": "تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغيت "
-                                       "المطابقة ولم يتغيّر شيء.",
+                            "message": _tr("تعذّر إنشاء نسخة احتياطيّة موثوقة — أُلغيت "
+                                       "المطابقة ولم يتغيّر شيء."),
                             "detail": msg}), 200
         backup_name = os.path.basename((bk.get("run") or {}).get("path") or "")
 
@@ -123,7 +124,7 @@ def reconcile_apply():
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("reconcile apply failed")
             return jsonify({"ok": False, "code": "error", "backup": backup_name,
-                            "message": f"تعذّرت المطابقة — راجع السجلّ. {exc}",
+                            "message": _tr('تعذّرت المطابقة — راجع السجلّ. %(exc)s', exc=exc),
                             "detail": str(exc)}), 200
 
         # ── (3) تدقيق ──
@@ -139,7 +140,7 @@ def reconcile_apply():
             pass
         report["ok"] = True
         report["backup"] = backup_name
-        report["message"] = "تمّت المطابقة بنجاح."
+        report["message"] = N_("تمّت المطابقة بنجاح.")
         return jsonify(report)
     finally:
         _RECONCILE_LOCK.release()

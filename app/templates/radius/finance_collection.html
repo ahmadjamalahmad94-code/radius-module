@@ -55,17 +55,17 @@
    القيم الخام تطابق payments_repo.PAYMENT_STATUSES / PAYMENT_PURPOSES،
    ولا تُستخدم للإرسال (الإرسال يبقى بالقيمة الخام). #}
 {% set _status_ar = {
-  'pending': 'قيد الانتظار', 'proof_submitted': 'إثبات مُرسَل',
-  'under_review': 'قيد المراجعة', 'paid': 'مدفوع', 'rejected': 'مرفوض',
-  'expired': 'منتهٍ', 'cancelled': 'ملغى', 'failed': 'فشل'
+  'pending': _('قيد الانتظار'), 'proof_submitted': _('إثبات مُرسَل'),
+  'under_review': _('قيد المراجعة'), 'paid': _('مدفوع'), 'rejected': _('مرفوض'),
+  'expired': _('منتهٍ'), 'cancelled': _('ملغى'), 'failed': _('فشل')
 } %}
 {% set _purpose_ar = {
-  'card_purchase': 'شراء كروت', 'monthly_subscription': 'اشتراك شهري',
-  'subscriber_renewal': 'تجديد مشترك', 'quota_topup': 'شحن باقة',
-  'time_extension': 'تمديد وقت', 'distributor_payment': 'دفعة موزّع',
-  'loan_settlement': 'تسوية دين'
+  'card_purchase': _('شراء كروت'), 'monthly_subscription': _('اشتراك شهري'),
+  'subscriber_renewal': _('تجديد مشترك'), 'quota_topup': _('شحن باقة'),
+  'time_extension': _('تمديد وقت'), 'distributor_payment': _('دفعة موزّع'),
+  'loan_settlement': _('تسوية دين')
 } %}
-{% set _payer_ar = {'subscriber': 'مشترك', 'distributor': 'موزّع'} %}
+{% set _payer_ar = {'subscriber': _('مشترك'), 'distributor': _('موزّع')} %}
 
 {# ═══════════ شريط التجميد — القسم مجمّد حتى ربط بوابة دفع حقيقية ═══════════
    يظهر عندما يكون frozen=True (انظر collection_frozen في finance_collection.py).
@@ -76,9 +76,9 @@
   <div class="fc-freeze-body">
     <p class="fc-freeze-title"><i class="fa-solid fa-lock" style="font-size:12px"></i> {{ _('قسم التحصيل مجمّد') }} <span class="fc-freeze-pill"><i class="fa-solid fa-snowflake"></i> {{ _('مجمّد') }}</span></p>
     {# تعريب اسم المزوّد ضمن الجملة العربية مع إبقاء الاسم الأصلي بين قوسين #}
-    <p class="fc-freeze-text">لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل جَوّال باي (Jawwal Pay)). الإعدادات تبقى متاحة للتحضير.
+    <p class="fc-freeze-text">{{ _('لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل جَوّال باي (Jawwal Pay)). الإعدادات تبقى متاحة للتحضير.') }}
       {% if endpoint_exists is defined and endpoint_exists('radius.payments_lab') %}
-      جرّب تجربة الدفع كاملةً الآن (محاكاة بلا مال حقيقي) من
+      {{ _('جرّب تجربة الدفع كاملةً الآن (محاكاة بلا مال حقيقي) من') }}
       {% if can_submit('radius.payments_lab', 'GET') %}<a href="{{ url_for('radius.payments_lab') }}" style="color:#6D28D9;font-weight:900">{% endif %}{{ _('مختبر الدفع الإلكتروني') }} <i class="fa-solid fa-flask" style="font-size:11px"></i>{% if can_submit('radius.payments_lab', 'GET') %}</a>{% endif %}.
       {% endif %}
     </p>
@@ -92,15 +92,15 @@
    strip surfaces the reconciliation health counts — the core collection
    signals — on every tab. No backend/route change: same tab/status args.     #}
 {% set _kpis = [
-  {'label': 'مدفوع بلا قيد مالي', 'value': reconciliation.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
-  {'label': 'مدفوع غير مطبّق',    'value': reconciliation.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},
-  {'label': 'منتهٍ ومعلّق',       'value': reconciliation.counts.expired_pending,                'icon': 'hourglass-end',     'variant': 'blue'},
-  {'label': 'تكرار لدى المزوّد',  'value': reconciliation.counts.duplicate_provider_transactions,'icon': 'clone',             'variant': 'brand'},
+  {'label': _('مدفوع بلا قيد مالي'), 'value': reconciliation.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
+  {'label': _('مدفوع غير مطبّق'),    'value': reconciliation.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},
+  {'label': _('منتهٍ ومعلّق'),       'value': reconciliation.counts.expired_pending,                'icon': 'hourglass-end',     'variant': 'blue'},
+  {'label': _('تكرار لدى المزوّد'),  'value': reconciliation.counts.duplicate_provider_transactions,'icon': 'clone',             'variant': 'brand'},
 ] %}
 
 {% call hub.megahero(
-  "التحصيل والمدفوعات",
-  subtitle="تابع طلبات الدفع وراجع الإثباتات وطابق التحصيل من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق دفع أو محاسبة.",
+  _('التحصيل والمدفوعات'),
+  subtitle=_('تابع طلبات الدفع وراجع الإثباتات وطابق التحصيل من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق دفع أو محاسبة.'),
   icon="money-bill-transfer",
   actions_html='
     <nav class="fc-tabs">
@@ -119,26 +119,26 @@
     {% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %} title="{{ s }}">{{ _status_ar.get(s, s) }}</option>{% endfor %}
   </select>
   <span class="hub-spacer"></span>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% else %}
-  <span class="hub-text-mute" style="font-weight:700">لوحة {{ 'المراجعة' if tab == 'review' else 'المطابقة' }} — استخدم تبويب «طلبات الدفع» للتصفية.</span>
+  <span class="hub-text-mute" style="font-weight:700">{{ _('لوحة') }} {{ _('المراجعة') if tab == 'review' else _('المطابقة') }} {{ _('— استخدم تبويب «طلبات الدفع» للتصفية.') }}</span>
   {% endif %}
 {% endcall %}
 
 {# ═══════════════ TAB: REQUESTS (also the background for the settings modal) ═══════════════ #}
 {% if tab in ('requests', 'settings') %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ طلبات الدفع؟",
-  intro="كل صف هو طلب دفع من مشترك أو موزّع. الحالة تخبرك أين وصل الطلب في مسار التحصيل، والمرجع يربطه بحركة المزوّد.",
+  _('كيف تقرأ طلبات الدفع؟'),
+  intro=_('كل صف هو طلب دفع من مشترك أو موزّع. الحالة تخبرك أين وصل الطلب في مسار التحصيل، والمرجع يربطه بحركة المزوّد.'),
   items=[
-    {'icon': 'filter',        'text': 'استخدم مرشّح الحالة بالأعلى لعرض دفعة محددة من الطلبات.'},
-    {'icon': 'clipboard-check','text': '«قيد المراجعة» و«إثبات مُرسَل» بانتظار قرارك، و«مدفوع» مكتمل.'},
-    {'icon': 'hashtag',       'text': 'المرجع هو رمز يربط الطلب بحركة المزوّد للمطابقة لاحقًا.'},
-    {'icon': 'arrow-left',    'text': 'زر «تفاصيل» يفتح صفحة الطلب للاعتماد أو الرفض أو تطبيق الخدمة.'},
+    {'icon': 'filter',        'text': _('استخدم مرشّح الحالة بالأعلى لعرض دفعة محددة من الطلبات.')},
+    {'icon': 'clipboard-check','text': _('«قيد المراجعة» و«إثبات مُرسَل» بانتظار قرارك، و«مدفوع» مكتمل.')},
+    {'icon': 'hashtag',       'text': _('المرجع هو رمز يربط الطلب بحركة المزوّد للمطابقة لاحقًا.')},
+    {'icon': 'arrow-left',    'text': _('زر «تفاصيل» يفتح صفحة الطلب للاعتماد أو الرفض أو تطبيق الخدمة.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل قرار يمر بمنطق الدفع الأصلي على صفحة الطلب دون تغيير."
+  note=_('هذه واجهة عرض موحّدة — كل قرار يمر بمنطق الدفع الأصلي على صفحة الطلب دون تغيير.')
 )) %}
-  {% call hub.section("طلبات الدفع", icon="file-invoice-dollar", meta=(requests_list|length|string + " طلب") if requests_list else "", flush=True) %}
+  {% call hub.section(_('طلبات الدفع'), icon="file-invoice-dollar", meta=(requests_list|length|string + _(' طلب')) if requests_list else "", flush=True) %}
     {% if requests_list %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="{{ _('طلبات الدفع') }}" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -171,7 +171,7 @@
       </table>
     </div>
     {% else %}
-    {{ hub.empty("لا توجد طلبات دفع.", icon="file-invoice-dollar") }}
+    {{ hub.empty(_('لا توجد طلبات دفع.'), icon="file-invoice-dollar") }}
     {% endif %}
   {% endcall %}
 {% endcall %}
@@ -180,16 +180,16 @@
 {# ═══════════════ TAB: REVIEW ═══════════════ #}
 {% if tab == 'review' %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل قائمة المراجعة؟",
-  intro="هنا تظهر الدفعات التي تحتاج قرارًا منك: المشترك أرسل إثبات الدفع وينتظر الاعتماد أو الرفض.",
+  _('كيف تعمل قائمة المراجعة؟'),
+  intro=_('هنا تظهر الدفعات التي تحتاج قرارًا منك: المشترك أرسل إثبات الدفع وينتظر الاعتماد أو الرفض.'),
   items=[
-    {'icon': 'magnifying-glass', 'text': 'زر «مراجعة» يفتح صفحة الطلب لرؤية الإثبات واتخاذ القرار.'},
-    {'icon': 'circle-check',     'text': 'اعتماد الطلب يطبّق الخدمة، والرفض يُعيد الطلب لصاحبه.'},
-    {'icon': 'hashtag',          'text': 'المرجع يساعدك على مطابقة الدفعة مع حركة المزوّد.'},
+    {'icon': 'magnifying-glass', 'text': _('زر «مراجعة» يفتح صفحة الطلب لرؤية الإثبات واتخاذ القرار.')},
+    {'icon': 'circle-check',     'text': _('اعتماد الطلب يطبّق الخدمة، والرفض يُعيد الطلب لصاحبه.')},
+    {'icon': 'hashtag',          'text': _('المرجع يساعدك على مطابقة الدفعة مع حركة المزوّد.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل اعتماد أو رفض يمر بمنطق الدفع الأصلي دون تغيير."
+  note=_('هذه واجهة عرض موحّدة — كل اعتماد أو رفض يمر بمنطق الدفع الأصلي دون تغيير.')
 )) %}
-  {% call hub.section("قائمة المراجعة", icon="clipboard-check", meta=(review_list|length|string + " بانتظار المراجعة") if review_list else "", flush=True) %}
+  {% call hub.section(_('قائمة المراجعة'), icon="clipboard-check", meta=(review_list|length|string + _(' بانتظار المراجعة')) if review_list else "", flush=True) %}
     {% if review_list %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="{{ _('قائمة المراجعة') }}" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -216,7 +216,7 @@
               {# مجمّد: زر المراجعة معطّل مع شرح — لا قرارات دفع قبل ربط بوابة #}
               <span style="display:inline-flex;align-items:center;gap:6px">
                 <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}</button>
-                <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
+                <span class="hub-hint" tabindex="0" data-hint="{{ _('مجمّد حتى ربط بوابة دفع') }}"><i class="fa-solid fa-snowflake"></i></span>
               </span>
               {% else %}
               {% if can_submit('radius.payment_collection_request_detail', 'GET') %}<a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}</a>{% endif %}
@@ -228,7 +228,7 @@
       </table>
     </div>
     {% else %}
-    {{ hub.empty("لا توجد دفعات بانتظار المراجعة.", sub="كل الطلبات تمت مراجعتها.", icon="clipboard-check") }}
+    {{ hub.empty(_('لا توجد دفعات بانتظار المراجعة.'), sub=_('كل الطلبات تمت مراجعتها.'), icon="clipboard-check") }}
     {% endif %}
   {% endcall %}
 {% endcall %}
@@ -237,18 +237,18 @@
 {# ═══════════════ TAB: RECONCILIATION ═══════════════ #}
 {% if tab == 'reconciliation' %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ المطابقة؟",
-  intro="هذه اللوحة تكشف الفجوات بين الدفعات المُحصَّلة والقيود المالية. كل بطاقة بالأعلى تعدّ حالات تحتاج معالجة.",
+  _('كيف تقرأ المطابقة؟'),
+  intro=_('هذه اللوحة تكشف الفجوات بين الدفعات المُحصَّلة والقيود المالية. كل بطاقة بالأعلى تعدّ حالات تحتاج معالجة.'),
   items=[
-    {'icon': 'file-circle-xmark', 'text': '«مدفوع بلا قيد مالي»: وصلت الدفعة لكن لم يُسجَّل لها قيد.'},
-    {'icon': 'bolt',              'text': '«مدفوع غير مطبّق»: تم الدفع لكن لم تُفعَّل الخدمة بعد.'},
-    {'icon': 'clone',             'text': '«تكرار لدى المزوّد»: حركة مكرّرة قد تشير إلى دفع مزدوج.'},
-    {'icon': 'circle-check',      'text': 'كل الأرقام صفر = لا فجوات. أي رقم أكبر يحتاج فتح الطلب لمعالجته.'},
+    {'icon': 'file-circle-xmark', 'text': _('«مدفوع بلا قيد مالي»: وصلت الدفعة لكن لم يُسجَّل لها قيد.')},
+    {'icon': 'bolt',              'text': _('«مدفوع غير مطبّق»: تم الدفع لكن لم تُفعَّل الخدمة بعد.')},
+    {'icon': 'clone',             'text': _('«تكرار لدى المزوّد»: حركة مكرّرة قد تشير إلى دفع مزدوج.')},
+    {'icon': 'circle-check',      'text': _('كل الأرقام صفر = لا فجوات. أي رقم أكبر يحتاج فتح الطلب لمعالجته.')},
   ],
-  note="هذه واجهة عرض موحّدة — تكشف الفجوات فقط ولا تغيّر أي قيد أو حركة دفع."
+  note=_('هذه واجهة عرض موحّدة — تكشف الفجوات فقط ولا تغيّر أي قيد أو حركة دفع.')
 )) %}
-  {% call hub.section("المطابقة والتدقيق", icon="scale-balanced") %}
-    {{ hub.empty("الأرقام في شريط المؤشرات بالأعلى تلخّص حالة المطابقة. كل قيمة صفر تعني عدم وجود فجوات.", sub="افتح صفحة الطلب من تبويب «طلبات الدفع» لمعالجة أي حالة.", icon="scale-balanced") }}
+  {% call hub.section(_('المطابقة والتدقيق'), icon="scale-balanced") %}
+    {{ hub.empty(_('الأرقام في شريط المؤشرات بالأعلى تلخّص حالة المطابقة. كل قيمة صفر تعني عدم وجود فجوات.'), sub=_('افتح صفحة الطلب من تبويب «طلبات الدفع» لمعالجة أي حالة.'), icon="scale-balanced") }}
   {% endcall %}
 {% endcall %}
 {% endif %}
@@ -260,7 +260,7 @@
     <div class="fc-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fc-form-grid">
-        <label class="span2 fc-toggle-row">{{ toggle_switch(name="enabled", checked=(settings and settings.enabled), show_label=False) }} تفعيل تحصيل الدفعات</label>
+        <label class="span2 fc-toggle-row">{{ _('%(v)s تفعيل تحصيل الدفعات', v=toggle_switch(name="enabled", checked=(settings and settings.enabled), show_label=False)) }}</label>
         <label>{{ _('المزوّد') }}
           <select class="hub-select" name="provider">
             <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>{{ _('محفظة يدوية') }}</option>
@@ -268,10 +268,10 @@
             <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>{{ _('جَوّال باي (Jawwal Pay) — غير مفعّل') }}</option>
           </select>
         </label>
-        <label>العملة
+        <label>{{ _('العملة') }}
           {# قائمة العملات الكاملة؛ الافتراضي المحدَّد = عملة المستأجر الحالية
              (cfg.currency) لا قيمة مثبّتة. value يبقى الكود الخام كما يعتمده الـPOST. #}
-          {% set _currency_names = {'JOD':'دينار أردني','ILS':'شيكل','USD':'دولار','IQD':'دينار عراقي','SAR':'ريال سعودي','EGP':'جنيه مصري','AED':'درهم إماراتي','EUR':'يورو','TRY':'ليرة تركية'} %}
+          {% set _currency_names = {'JOD':_('دينار أردني'),'ILS':_('شيكل'),'USD':_('دولار'),'IQD':_('دينار عراقي'),'SAR':_('ريال سعودي'),'EGP':_('جنيه مصري'),'AED':_('درهم إماراتي'),'EUR':_('يورو'),'TRY':_('ليرة تركية')} %}
           <select class="hub-select" name="currency">
             {# parity-b: only what the server accepts (payments_repo.CURRENCIES) —
                the other codes were offered and then refused («currency»). #}
@@ -289,9 +289,9 @@
         <label>{{ _('مهلة الطلب (دقائق)') }}<input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
         <label>{{ _('أقل مبلغ') }}<input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
         <label>{{ _('أعلى مبلغ') }}<input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
-        <label class="fc-toggle-row">{{ toggle_switch(name="allow_cards", checked=(not settings or settings.allow_cards), show_label=False) }} السماح بشراء الكروت</label>
-        <label class="fc-toggle-row">{{ toggle_switch(name="allow_monthly_subscriptions", checked=(not settings or settings.allow_monthly_subscriptions), show_label=False) }} الاشتراكات الشهرية</label>
-        <label class="span2 fc-toggle-row">{{ toggle_switch(name="allow_distributor_payments", checked=(settings and settings.allow_distributor_payments), show_label=False) }} مدفوعات الموزعين</label>
+        <label class="fc-toggle-row">{{ _('%(v)s السماح بشراء الكروت', v=toggle_switch(name="allow_cards", checked=(not settings or settings.allow_cards), show_label=False)) }}</label>
+        <label class="fc-toggle-row">{{ _('%(v)s الاشتراكات الشهرية', v=toggle_switch(name="allow_monthly_subscriptions", checked=(not settings or settings.allow_monthly_subscriptions), show_label=False)) }}</label>
+        <label class="span2 fc-toggle-row">{{ _('%(v)s مدفوعات الموزعين', v=toggle_switch(name="allow_distributor_payments", checked=(settings and settings.allow_distributor_payments), show_label=False)) }}</label>
       </div>
     </div>
     <div class="fc-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('حفظ الإعدادات') }}</button></div>

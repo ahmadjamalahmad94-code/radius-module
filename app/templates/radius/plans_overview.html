@@ -96,14 +96,14 @@
 
 {% block content %}
 
-{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
+{% set TYPE_AR = {'time':_('وقت'),'quota':_('كوتا'),'hybrid':_('مدمج'),'unlimited':_('غير محدود'),'recurring':_('متكرر')} %}
 {% set TYPE_IC = {'time':'clock','quota':'database','hybrid':'layer-group','unlimited':'infinity','recurring':'rotate'} %}
 
 {# ───── الصدفة الموحّدة: هيرو + KPI صف واحد ───── #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "نظرة عامة — الباقات",
-  subtitle="لوحة أداء العروض: عدد الباقات وتوزيعها حسب النوع، المشتركون الموزَّعون عليها، التسعير، والإيراد التقديري — كل الأرقام حيّة من قاعدة البيانات.",
+  _('نظرة عامة — الباقات'),
+  subtitle=_('لوحة أداء العروض: عدد الباقات وتوزيعها حسب النوع، المشتركون الموزَّعون عليها، التسعير، والإيراد التقديري — كل الأرقام حيّة من قاعدة البيانات.'),
   icon="chart-pie",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.plans_new') + '">
@@ -113,21 +113,21 @@
       <i class="fa-solid fa-list"></i> '|safe ~ _("قائمة العروض") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'إجمالي الباقات',        'value': total_plans or 0,        'icon': 'tags',         'variant': 'brand',
-     'sub': (unused_plans or 0)|string + ' بلا مشتركين'},
-    {'label': 'المفعَّلة',              'value': enabled_plans or 0,      'icon': 'circle-check', 'variant': 'green',
-     'sub': ((total_plans or 0) - (enabled_plans or 0))|string + ' معطَّلة'},
-    {'label': 'متوسط السعر',           'value': (avg_price or 0)|money,  'icon': 'coins',        'variant': 'amber',
+    {'label': _('إجمالي الباقات'),        'value': total_plans or 0,        'icon': 'tags',         'variant': 'brand',
+     'sub': _('%(v)s بلا مشتركين', v=(unused_plans or 0)|string)},
+    {'label': _('المفعَّلة'),              'value': enabled_plans or 0,      'icon': 'circle-check', 'variant': 'green',
+     'sub': _('%(v)s معطَّلة', v=((total_plans or 0) - (enabled_plans or 0))|string)},
+    {'label': _('متوسط السعر'),           'value': (avg_price or 0)|money,  'icon': 'coins',        'variant': 'amber',
      'sub': '⁦' + (min_price or 0)|money + ' → ' + (max_price or 0)|money + '⁩'},
-    {'label': 'المشتركون الموزَّعون',  'value': assigned_subs or 0,      'icon': 'users',        'variant': 'blue'},
-    {'label': 'تقدير الإيراد',         'value': (revenue_estimate or 0)|money, 'icon': 'sack-dollar', 'variant': 'green',
-     'sub': 'مشتركون مفعَّلون × سعر باقتهم'},
+    {'label': _('المشتركون الموزَّعون'),  'value': assigned_subs or 0,      'icon': 'users',        'variant': 'blue'},
+    {'label': _('تقدير الإيراد'),         'value': (revenue_estimate or 0)|money, 'icon': 'sack-dollar', 'variant': 'green',
+     'sub': _('مشتركون مفعَّلون × سعر باقتهم')},
   ]
 ) }}
 </section>{# /hub-hero-shell #}
 
 {# ───── توزيع الباقات حسب النوع — مسارات بنمط نظرة المشتركين ───── #}
-{% call hub.section("توزيع الباقات حسب النوع", icon="layer-group", meta=(by_type_rows|length|string) + " نوع") %}
+{% call hub.section(_('توزيع الباقات حسب النوع'), icon="layer-group", meta=(by_type_rows|length|string) + _(' نوع')) %}
   {% if by_type_rows %}
   <div class="po-board">
     {% for r in by_type_rows %}
@@ -147,12 +147,12 @@
     {% endfor %}
   </div>
   {% else %}
-    {{ hub.empty("لا بيانات بعد", sub="أنشئ باقات لتظهر توزيعاتها هنا.", icon="layer-group") }}
+    {{ hub.empty(_('لا بيانات بعد'), sub=_('أنشئ باقات لتظهر توزيعاتها هنا.'), icon="layer-group") }}
   {% endif %}
 {% endcall %}
 
 {# ───── أكثر الباقات اشتراكًا — جدول uds موحّد بمواصفات كاملة ───── #}
-{% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta=(top|length|string) + " باقة", flush=True) %}
+{% call hub.section(_('أكثر الباقات اشتراكًا'), icon="trophy", meta=(top|length|string) + _(' باقة'), flush=True) %}
   {% if top %}
   {% set _max_subs = top|map(attribute='subscribers_count')|max %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -185,8 +185,8 @@
           </td>
           <td>{{ hub.pill(TYPE_AR.get(r.plan_type, r.plan_type or '—'), variant="brand", dot=False) }}</td>
           <td>
-            {% if r.enabled %}{{ hub.pill("مفعَّلة", variant="green") }}
-            {% else %}{{ hub.pill("معطَّلة", variant="amber") }}{% endif %}
+            {% if r.enabled %}{{ hub.pill(_('مفعَّلة'), variant="green") }}
+            {% else %}{{ hub.pill(_('معطَّلة'), variant="amber") }}{% endif %}
           </td>
           <td class="mono small">
             {% if r.speed_down_kbps or r.speed_up_kbps %}
@@ -198,7 +198,7 @@
             {% else %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="mono small">
-            {% if r.validity_days %}<bdi dir="ltr">{{ r.validity_days }}</bdi> يوم
+            {% if r.validity_days %}<bdi dir="ltr">{{ r.validity_days }}</bdi> {{ _('يوم') }}
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td class="num"><strong><bdi dir="ltr">{{ r.price|money }}</bdi></strong></td>
@@ -220,14 +220,14 @@
     </table>
   </div>
   {% else %}
-    <div style="padding:18px">{{ hub.empty("لا باقات بعد", sub="أنشئ أول باقة من زرّ «إضافة عرض» أعلى الصفحة.", icon="tags") }}</div>
+    <div style="padding:18px">{{ hub.empty(_('لا باقات بعد'), sub=_('أنشئ أول باقة من زرّ «إضافة عرض» أعلى الصفحة.'), icon="tags") }}</div>
   {% endif %}
 {% endcall %}
 
 {# ───── الأسفل: آخر الباقات + ملخّص التسعير والصحّة (شبكة متساوية) ───── #}
 <div class="po-bottom">
 
-  {% call hub.section("آخر الباقات المُنشأة", icon="clock-rotate-left", meta=(recent|length|string) + " باقة") %}
+  {% call hub.section(_('آخر الباقات المُنشأة'), icon="clock-rotate-left", meta=(recent|length|string) + _(' باقة')) %}
     {% if recent %}
     <div class="po-recent">
       {% for r in recent %}
@@ -237,26 +237,26 @@
           {% if can_submit('radius.plans_edit', 'GET') %}<a href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">{% endif %}{{ r.name }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}
         </span>
         {{ hub.pill(TYPE_AR.get(r.plan_type, r.plan_type or '—'), variant="brand", dot=False) }}
-        {% if r.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
-        {% else %}{{ hub.pill("معطَّلة", variant="amber", dot=False) }}{% endif %}
+        {% if r.enabled %}{{ hub.pill(_('مفعَّلة'), variant="green", dot=False) }}
+        {% else %}{{ hub.pill(_('معطَّلة'), variant="amber", dot=False) }}{% endif %}
         <strong class="mono"><bdi dir="ltr">{{ r.price|money }}</bdi></strong>
       </div>
       {% endfor %}
     </div>
     {% else %}
-      {{ hub.empty("لا باقات بعد", icon="clock-rotate-left") }}
+      {{ hub.empty(_('لا باقات بعد'), icon="clock-rotate-left") }}
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("ملخّص التسعير وصحّة الباقات", icon="scale-balanced") %}
+  {% call hub.section(_('ملخّص التسعير وصحّة الباقات'), icon="scale-balanced") %}
     {{ hub.kv([
-      {'label':'متوسط سعر الباقة',          'value': (avg_price or 0)|money, 'mono': True},
-      {'label':'أرخص باقة',                  'value': (min_price or 0)|money, 'mono': True},
-      {'label':'أغلى باقة',                  'value': (max_price or 0)|money, 'mono': True},
-      {'label':'تقدير الإيراد الشهري',       'value': (revenue_estimate or 0)|money, 'mono': True},
-      {'label':'مشتركون موزَّعون على باقات', 'value': assigned_subs or 0, 'mono': True},
-      {'label':'باقات بلا مشتركين',          'value': unused_plans or 0, 'mono': True},
-      {'label':'باقات معطَّلة',              'value': (total_plans or 0) - (enabled_plans or 0), 'mono': True},
+      {'label':_('متوسط سعر الباقة'),          'value': (avg_price or 0)|money, 'mono': True},
+      {'label':_('أرخص باقة'),                  'value': (min_price or 0)|money, 'mono': True},
+      {'label':_('أغلى باقة'),                  'value': (max_price or 0)|money, 'mono': True},
+      {'label':_('تقدير الإيراد الشهري'),       'value': (revenue_estimate or 0)|money, 'mono': True},
+      {'label':_('مشتركون موزَّعون على باقات'), 'value': assigned_subs or 0, 'mono': True},
+      {'label':_('باقات بلا مشتركين'),          'value': unused_plans or 0, 'mono': True},
+      {'label':_('باقات معطَّلة'),              'value': (total_plans or 0) - (enabled_plans or 0), 'mono': True},
     ]) }}
     {% if unused_plans %}
     <div class="uds-help-note" style="margin-top:12px">

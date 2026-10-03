@@ -16,6 +16,7 @@ and updates `last_status`. Sprint 2 will replace it with a
 cron job and add the check-history table.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import socket
 import time
@@ -145,15 +146,15 @@ def network_devices_create():
     tenant_id = _tid()
     router_id = _i("router_id", 0)
     if not router_id:
-        flash("اختر الراوتر الذي يتبع له الجهاز.", "danger")
+        flash(_tr("اختر الراوتر الذي يتبع له الجهاز."), "danger")
         return redirect(url_for("radius.network_devices_new"))
     # Guard — make sure the router belongs to this tenant.
     if not nas_repo.get_nas(tenant_id, router_id):
-        flash("الراوتر المُختار غير موجود.", "danger")
+        flash(_tr("الراوتر المُختار غير موجود."), "danger")
         return redirect(url_for("radius.network_devices_new"))
     name = _s("name")
     if not name:
-        flash("اسم الجهاز مطلوب.", "danger")
+        flash(_tr("اسم الجهاز مطلوب."), "danger")
         return redirect(url_for("radius.network_devices_new"))
     new_id = network_devices_repo.create(
         tenant_id=tenant_id,
@@ -169,7 +170,7 @@ def network_devices_create():
         watch_enabled=_b("watch_enabled"),
         alert_enabled=_b("alert_enabled"),
     )
-    flash(f"أُضيف الجهاز «{name}» (رقم {new_id}).", "success")
+    flash(_tr('أُضيف الجهاز «%(name)s» (رقم %(new_id)s).', name=name, new_id=new_id), "success")
     return redirect(url_for("radius.network_devices_list"))
 
 
@@ -196,7 +197,7 @@ def network_devices_update(device_id: int):
     new_router_id = _i("router_id", device["router_id"])
     if new_router_id != device["router_id"]:
         if not nas_repo.get_nas(tenant_id, new_router_id):
-            flash("الراوتر المُختار غير موجود.", "danger")
+            flash(_tr("الراوتر المُختار غير موجود."), "danger")
             return redirect(url_for(
                 "radius.network_devices_edit", device_id=device_id,
             ))
@@ -213,7 +214,7 @@ def network_devices_update(device_id: int):
         "alert_enabled":   _b("alert_enabled"),
     }
     if not fields["name"]:
-        flash("اسم الجهاز مطلوب.", "danger")
+        flash(_tr("اسم الجهاز مطلوب."), "danger")
         return redirect(url_for(
             "radius.network_devices_edit", device_id=device_id,
         ))
@@ -230,7 +231,7 @@ def network_devices_update(device_id: int):
                 (new_router_id, now_iso(), tenant_id, device_id),
             )
     network_devices_repo.update(tenant_id, device_id, **fields)
-    flash("تم حفظ التعديلات.", "success")
+    flash(_tr("تم حفظ التعديلات."), "success")
     return redirect(url_for("radius.network_devices_list"))
 
 
@@ -240,7 +241,7 @@ def network_devices_delete(device_id: int):
     if not device:
         abort(404)
     network_devices_repo.delete(tenant_id, device_id)
-    flash(f"حُذف الجهاز «{device['name']}».", "success")
+    flash(_tr('حُذف الجهاز «%(name)s».', name=device['name']), "success")
     return redirect(url_for("radius.network_devices_list"))
 
 
@@ -257,7 +258,7 @@ def network_devices_check(device_id: int):
     ip = device["ip_address"]
     port = device["management_port"]
     if not ip:
-        flash("لا يمكن الفحص — IP الجهاز فارغ.", "danger")
+        flash(_tr("لا يمكن الفحص — IP الجهاز فارغ."), "danger")
         return redirect(url_for("radius.network_devices_list"))
     status, latency_ms = _tcp_probe(ip, port)
     network_devices_repo.set_last_check(
@@ -268,12 +269,12 @@ def network_devices_check(device_id: int):
     )
     if status == "up":
         flash(
-            f"الجهاز «{device['name']}» يستجيب — {latency_ms:.1f} ms",
+            _tr('الجهاز «%(name)s» يستجيب — %(latency_ms)s ms', name=device['name'], latency_ms=format(latency_ms, '.1f')),
             "success",
         )
     else:
         flash(
-            f"تعذّر الوصول للجهاز «{device['name']}» — لا يوجد ردّ على {ip}:{port}",
+            _tr('تعذّر الوصول للجهاز «%(name)s» — لا يوجد ردّ على %(ip)s:%(port)s', name=device['name'], ip=ip, port=port),
             "warning",
         )
     return redirect(url_for("radius.network_devices_list"))

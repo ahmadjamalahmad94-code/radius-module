@@ -10,6 +10,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -101,13 +102,13 @@ _LIB_ART = """
 
 _LIB_HERO = ("""
       <div class="ql-hero">
-        <div class="ql-frame">""" + _LIB_ART + """</div>
+        <div class="ql-frame">""" + _LIB_ART + N_("""</div>
         <div class="ql-cap">
           <div><b>رُكن القراءة</b><span>اتصال هادئ وموثوق للمطالعة والبحث</span></div>
           <div class="ql-badge"><span class="ql-dot"></span> متّصل</div>
         </div>
       </div>
-""")
+"""))
 
 _LIB_STYLE = ("""
 <style id="hr-quiet-library">
@@ -119,7 +120,7 @@ body{ -webkit-font-smoothing:antialiased; }
 .top-system-bar{ background:var(--top-bar-bg); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border-bottom:1px solid var(--border-color); padding:11px 18px; position:sticky; top:0; z-index:30; }
 .top-system-bar .ip-info{ color:var(--text-sub); font-size:11.5px; font-weight:700; }
-.top-system-bar .brand-mini{ color:var(--text-main); font-weight:900; font-family:""" + _SERIF + """; }
+.top-system-bar .brand-mini{ color:var(--text-main); font-weight:900; font-family:""" + _SERIF + N_("""; }
 .connection-dot{ background:var(--pulse-color); animation:qlPing 2.2s ease-out infinite; }
 
 /* ===== البطل ===== */
@@ -128,7 +129,7 @@ body{ -webkit-font-smoothing:antialiased; }
 .ql-frame{ position:relative; width:100%; height:188px; overflow:hidden; border-bottom:1px solid var(--border-color); }
 .ql-art{ position:absolute; inset:0; width:100%; height:100%; display:block; }
 .ql-cap{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px; }
-.ql-cap b{ display:block; font-size:16px; color:var(--text-main); font-weight:800; font-family:""" + _SERIF + """; }
+.ql-cap b{ display:block; font-size:16px; color:var(--text-main); font-weight:800; font-family:""") + _SERIF + N_("""; }
 .ql-cap span{ font-size:11.5px; color:var(--text-sub); font-weight:600; }
 .ql-badge{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; font-size:11.5px;
   font-weight:800; color:#4B7A4F; background:#EBF3EC; border:1px solid #CFE3D1;
@@ -137,7 +138,7 @@ body{ -webkit-font-smoothing:antialiased; }
 
 /* ===== الترحيب (عناوين serif) ===== */
 .header{ margin:2px 0 10px; }
-.greeting h2{ color:var(--text-main); font-size:18px; font-weight:800; font-family:""" + _SERIF + """; }
+.greeting h2{ color:var(--text-main); font-size:18px; font-weight:800; font-family:""") + _SERIF + N_("""; }
 .greeting h2 span{ color:var(--primary-accent); }
 .greeting p{ color:var(--text-sub); font-size:12.5px; margin-top:2px; }
 .date-time-pills{ margin-bottom:14px; }
@@ -151,7 +152,7 @@ body{ -webkit-font-smoothing:antialiased; }
   box-shadow:var(--box-shadow); color:var(--text-main); min-height:auto; }
 .unified-gradient-card .icon-box{ background:linear-gradient(135deg, var(--primary-accent), #436276); color:#fff; }
 .unified-gradient-card .top-arrow{ background:rgba(70,98,118,0.09); color:var(--primary-accent); }
-.card-header h3{ color:var(--text-main); font-family:""" + _SERIF + """; }
+.card-header h3{ color:var(--text-main); font-family:""") + _SERIF + N_("""; }
 .card-header p{ color:var(--text-sub) !important; }
 .field-label{ color:var(--text-sub); }
 .custom-input{ background:#F5F3EC; border:1px solid rgba(70,98,118,0.16);
@@ -165,7 +166,7 @@ body{ -webkit-font-smoothing:antialiased; }
 
 /* ===== بقيّة البطاقات ===== */
 .network-about-footer{ background:#fff; border:1px solid var(--border-color); }
-.footer-title{ color:var(--primary-accent); font-family:""" + _SERIF + """; }
+.footer-title{ color:var(--primary-accent); font-family:""") + _SERIF + """; }
 .footer-desc,.footer-copyright{ color:var(--text-sub); }
 .section-title h3{ color:var(--text-main); font-family:""" + _SERIF + """; } .section-title span{ color:var(--primary-accent); }
 

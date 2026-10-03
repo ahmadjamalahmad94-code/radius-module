@@ -10,6 +10,7 @@
  * lands. A failed call paints the status pill red with the
  * envelope's `error` text in the title attribute (for tooltip).
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -45,7 +46,7 @@
             const pill = row.querySelector("[data-mt-row-status]");
             const lbl  = row.querySelector("[data-mt-row-status-label]");
             if (pill) pill.setAttribute("data-mt-state", "ok");
-            if (lbl)  lbl.textContent = "متصل";
+            if (lbl)  lbl.textContent = hrT('متصل');
           }
         });
         const card = document.querySelector('[data-mt-fleet="connected"]');
@@ -68,8 +69,8 @@
     note.className = "hub-pill hub-pill--amber";
     note.style.margin = "10px 0";
     note.textContent =
-      "رمز واجهة الربط غير مهيّأ — لن تتحدّث الأعمدة الحيّة. " +
-      "اضبط رمز واجهة الربط في إعدادات البيئة.";
+      hrT('رمز واجهة الربط غير مهيّأ — لن تتحدّث الأعمدة الحيّة. ') +
+      hrT('اضبط رمز واجهة الربط في إعدادات البيئة.');
     table.parentNode.insertBefore(note, table);
     return;
   }
@@ -162,7 +163,7 @@
     // يُخفَّض إلى «غير متصل» مهما فشل استطلاع الـAPI (قد يكون RADIUS-only أو
     // بلا API token). الـAPI يُرقّيه/يُفصّله فقط، لا يُسقطه.
     if (row.dataset.mtRadacctOnline === "1" && state === "error") {
-      state = "ok"; label = "متصل";
+      state = "ok"; label = hrT('متصل');
     }
     const pill  = row.querySelector("[data-mt-row-status]");
     const text  = row.querySelector("[data-mt-row-status-label]");
@@ -182,7 +183,7 @@
     const pill   = row.querySelector("[data-mt-mgmt-label]");
     const isUp   = live === "connected";
     const tone   = isUp ? "green" : "red";
-    const label  = isUp ? "نفق فعّال" : "النفق متوقف";
+    const label  = isUp ? hrT('نفق فعّال') : hrT('النفق متوقف');
     if (shield) {
       _HINT_TONES.forEach(t => shield.classList.remove("mt-sys-hint--" + t));
       shield.classList.add("mt-sys-hint--" + tone);
@@ -220,12 +221,12 @@
       try { body = await res.json(); } catch (_) { body = null; }
     } catch (e) {
       const timedOut = e && e.name === "AbortError";
-      setStatus(row, "error", timedOut ? "غير متصل" : "خطأ شبكة");
+      setStatus(row, "error", timedOut ? hrT('غير متصل') : hrT('خطأ شبكة'));
       const pill = row.querySelector("[data-mt-row-status]");
-      if (pill) pill.title = timedOut ? "انتهت مهلة الفحص (12 ثانية)" : String(e);
+      if (pill) pill.title = timedOut ? hrT('انتهت مهلة الفحص (12 ثانية)') : String(e);
       setMgmt(row, "down", timedOut
-        ? "لا استجابة حيّة من الراوتر عبر نفق الإدارة (انتهت مهلة الفحص)."
-        : "تعذّر الوصول إلى الراوتر عبر نفق الإدارة (خطأ شبكة).");
+        ? hrT('لا استجابة حيّة من الراوتر عبر نفق الإدارة (انتهت مهلة الفحص).')
+        : hrT('تعذّر الوصول إلى الراوتر عبر نفق الإدارة (خطأ شبكة).'));
       return;
     } finally {
       if (timer) window.clearTimeout(timer);
@@ -235,11 +236,11 @@
       const msg = (body && body.error && body.error.message)
         ? body.error.message
         : ("HTTP " + res.status);
-      setStatus(row, "error", "غير متصل");
+      setStatus(row, "error", hrT('غير متصل'));
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = msg;
       setMgmt(row, "down",
-        "لا استجابة حيّة من الراوتر عبر نفق الإدارة الآن (" + msg + ").");
+        hrT('لا استجابة حيّة من الراوتر عبر نفق الإدارة الآن (') + msg + ").");
       return;
     }
 
@@ -261,17 +262,17 @@
     setText("[data-mt-row-tx]",      bytesHuman(d.tx_bytes_total));
 
     if (env.ok) {
-      setStatus(row, "ok", "متصل");
+      setStatus(row, "ok", hrT('متصل'));
       setMgmt(row, "connected",
-        "نفق الإدارة فعّال — اللوحة تتواصل مع الراوتر الآن (حركة حيّة عبر النفق).");
+        hrT('نفق الإدارة فعّال — اللوحة تتواصل مع الراوتر الآن (حركة حيّة عبر النفق).'));
     } else {
-      setStatus(row, "partial", "جزئي");
+      setStatus(row, "partial", hrT('جزئي'));
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = env.error || "";
       // استجابة جزئية = وصلنا الراوتر فعلًا عبر النفق ⇒ النفق فعّال
       // (نقص في بعض القيم فقط)، فلا نعرض «متوقف» ونتناقض مع العمود.
       setMgmt(row, "connected",
-        "نفق الإدارة فعّال — وصلت اللوحة إلى الراوتر عبر النفق (استجابة جزئية للعدّادات).");
+        hrT('نفق الإدارة فعّال — وصلت اللوحة إلى الراوتر عبر النفق (استجابة جزئية للعدّادات).'));
     }
   }
 

@@ -1,10 +1,10 @@
 {% extends "admin/_admin_layout.html" %}
-{% block title %}WireGuard بيانات{% endblock %}
-{% block page_title %}واجهة WireGuard البيانات (wg-data){% endblock %}
+{% block title %}{{ _('WireGuard بيانات') }}{% endblock %}
+{% block page_title %}{{ _('واجهة WireGuard البيانات (wg-data)') }}{% endblock %}
 {% block crumbs %}
-  <span>الإدارة</span>
+  <span>{{ _('الإدارة') }}</span>
   <i class="fa-solid fa-chevron-left"></i>
-  <span>WireGuard البيانات</span>
+  <span>{{ _('WireGuard البيانات') }}</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -48,11 +48,11 @@
 <div class="one-time-alert">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
     <i class="fa-solid fa-triangle-exclamation" style="color:#b45309;font-size:18px"></i>
-    <strong style="color:#92400e">احفظ هذا الإعداد الآن — لن يظهر مرةً أخرى!</strong>
+    <strong style="color:#92400e">{{ _('احفظ هذا الإعداد الآن — لن يظهر مرةً أخرى!') }}</strong>
     <button class="btn btn-sm btn-warning copy-btn" style="margin-right:auto"
             onclick="navigator.clipboard.writeText(document.getElementById('cfg-text').textContent)
-                     .then(()=>{this.textContent='✓ تم النسخ'})">
-      نسخ الإعداد
+                     .then(()=>{this.textContent={{ _('✓ تم النسخ')|tojson|forceescape }}})">
+      {{ _('نسخ الإعداد') }}
     </button>
   </div>
   <div style="font-size:13px;color:#78350f;margin-bottom:4px">
@@ -76,17 +76,17 @@
     {% if can_submit('radius.wg_data_sync_quota', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_sync_quota') }}" style="display:inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-sm btn-outline-secondary">
-        <i class="fa-solid fa-arrow-rotate-right"></i> تحديث الكوتا
+        <i class="fa-solid fa-arrow-rotate-right"></i> {{ _('تحديث الكوتا') }}
       </button>
     </form>{% endif %}
   </div>
   <div class="kpi-row">
     <div class="kpi">
-      <div class="kpi-label">المنفذ</div>
+      <div class="kpi-label">{{ _('المنفذ') }}</div>
       <div class="kpi-value">{{ svc.listen_port }}</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">الشبكة</div>
+      <div class="kpi-label">{{ _('الشبكة') }}</div>
       <div class="kpi-value" style="font-size:14px">{{ svc.address_range }}</div>
     </div>
     <div class="kpi">
@@ -96,14 +96,14 @@
       </div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">الـ Peers</div>
+      <div class="kpi-label">{{ _('الـ Peers') }}</div>
       <div class="kpi-value">
         {{ peers|length }}
         {% if svc.max_peers > 0 %}<span style="font-size:13px;font-weight:400"> / {{ svc.max_peers }}</span>{% endif %}
       </div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">الكوتا المستخدمة</div>
+      <div class="kpi-label">{{ _('الكوتا المستخدمة') }}</div>
       <div class="kpi-value" style="font-size:14px">
         {{ '%.1f'|format(svc.quota_bytes_used / 1048576) }} MB
       </div>
@@ -116,26 +116,26 @@
 {# ─────────────── قائمة الـ peers ─────────────── #}
 <div>
   <h3 style="font-size:15px;margin-bottom:12px">
-    الـ Peers
+    {{ _('الـ Peers') }}
     <span style="font-weight:400;color:var(--d-text-muted)">({{ peers|length }})</span>
   </h3>
 
   {% if not peers %}
   <div style="padding:40px;text-align:center;color:var(--d-text-muted);font-size:14px">
     <i class="fa-solid fa-network-wired" style="font-size:28px;margin-bottom:10px;display:block"></i>
-    لا يوجد peers بعد. أضف أول peer من النموذج على اليمين.
+    {{ _('لا يوجد peers بعد. أضف أول peer من النموذج على اليمين.') }}
   </div>
   {% else %}
   <div style="overflow-x:auto">
     <table class="table table-hover peer-table">
       <thead>
         <tr>
-          <th>الاسم / IP</th>
+          <th>{{ _('الاسم / IP') }}</th>
           <th>Public Key</th>
-          <th>السرعة</th>
-          <th>الكوتا</th>
-          <th>آخر اتصال</th>
-          <th>الحالة</th>
+          <th>{{ _('السرعة') }}</th>
+          <th>{{ _('الكوتا') }}</th>
+          <th>{{ _('آخر اتصال') }}</th>
+          <th>{{ _('الحالة') }}</th>
           <th></th>
         </tr>
       </thead>
@@ -154,9 +154,9 @@
         <td style="font-size:11px">{{ peer.last_handshake_at or '—' }}</td>
         <td>
           <span class="wg-badge {{ peer.status }}">
-            {% if peer.status == 'active' %}نشط
-            {% elif peer.status == 'suspended' %}موقوف
-            {% elif peer.status == 'quota_exceeded' %}كوتا منتهية
+            {% if peer.status == 'active' %}{{ _('نشط') }}
+            {% elif peer.status == 'suspended' %}{{ _('موقوف') }}
+            {% elif peer.status == 'quota_exceeded' %}{{ _('كوتا منتهية') }}
             {% else %}{{ peer.status }}{% endif %}
           </span>
         </td>
@@ -167,7 +167,7 @@
                   action="{{ url_for('radius.wg_data_suspend_peer', peer_id=peer.id) }}"
                   style="display:inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-sm btn-outline-warning" title="تعطيل">
+              <button class="btn btn-sm btn-outline-warning" title="{{ _('تعطيل') }}">
                 <i class="fa-solid fa-pause"></i>
               </button>
             </form>{% endif %}
@@ -176,7 +176,7 @@
                   action="{{ url_for('radius.wg_data_activate_peer', peer_id=peer.id) }}"
                   style="display:inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-sm btn-outline-success" title="تفعيل">
+              <button class="btn btn-sm btn-outline-success" title="{{ _('تفعيل') }}">
                 <i class="fa-solid fa-play"></i>
               </button>
             </form>{% endif %}
@@ -184,9 +184,9 @@
             {% if can_submit('radius.wg_data_remove_peer', 'POST') %}<form method="post"
                   action="{{ url_for('radius.wg_data_remove_peer', peer_id=peer.id) }}"
                   style="display:inline"
-                  onsubmit="return confirm('إلغاء peer «{{ peer.display_name or peer.peer_address }}» نهائيًا؟')">
+                  onsubmit="return confirm({{ _('إلغاء peer «%(peer_address)s» نهائيًا؟', peer_address=peer.display_name or peer.peer_address)|tojson|forceescape }})">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-sm btn-outline-danger" title="حذف">
+              <button class="btn btn-sm btn-outline-danger" title="{{ _('حذف') }}">
                 <i class="fa-solid fa-trash"></i>
               </button>
             </form>{% endif %}
@@ -203,39 +203,39 @@
 {# ─────────────── نموذج إضافة peer ─────────────── #}
 <div>
   <div class="info-card">
-    <h3 style="font-size:15px;margin:0 0 16px">إضافة peer جديد</h3>
+    <h3 style="font-size:15px;margin:0 0 16px">{{ _('إضافة peer جديد') }}</h3>
     {% if can_submit('radius.wg_data_add_peer', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_add_peer') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
-        <label class="form-label" style="font-size:13px">الاسم للعرض</label>
+        <label class="form-label" style="font-size:13px">{{ _('الاسم للعرض') }}</label>
         <input type="text" name="display_name" class="form-control form-control-sm"
-               placeholder="مثال: هاتف أحمد">
+               placeholder="{{ _('مثال: هاتف أحمد') }}">
       </div>
       <div class="mb-3">
-        <label class="form-label" style="font-size:13px">ملاحظات</label>
+        <label class="form-label" style="font-size:13px">{{ _('ملاحظات') }}</label>
         <input type="text" name="notes" class="form-control form-control-sm"
-               placeholder="اختياري">
+               placeholder="{{ _('اختياري') }}">
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px">
         <div class="mb-3">
-          <label class="form-label" style="font-size:13px">حد السرعة (Mbps)</label>
+          <label class="form-label" style="font-size:13px">{{ _('حد السرعة (Mbps)') }}</label>
           <input type="number" name="speed_limit_mbps" class="form-control form-control-sm"
-                 placeholder="بلا حد" min="1">
+                 placeholder="{{ _('بلا حد') }}" min="1">
         </div>
         <div class="mb-3">
-          <label class="form-label" style="font-size:13px">حد التراسل (MB)</label>
+          <label class="form-label" style="font-size:13px">{{ _('حد التراسل (MB)') }}</label>
           <input type="number" name="transfer_limit_bytes" class="form-control form-control-sm"
-                 placeholder="بلا حد" min="1">
-          <div style="font-size:10px;color:var(--d-text-muted);margin-top:2px">أدخل بالميغابايت</div>
+                 placeholder="{{ _('بلا حد') }}" min="1">
+          <div style="font-size:10px;color:var(--d-text-muted);margin-top:2px">{{ _('أدخل بالميغابايت') }}</div>
         </div>
       </div>
       <button type="submit" class="btn btn-primary btn-sm w-100">
-        <i class="fa-solid fa-plus"></i> إضافة peer وتوليد الإعداد
+        <i class="fa-solid fa-plus"></i> {{ _('إضافة peer وتوليد الإعداد') }}
       </button>
     </form>{% endif %}
     <div style="margin-top:12px;font-size:11px;color:var(--d-text-muted)">
       <i class="fa-solid fa-circle-info"></i>
-      سيُوَلَّد keypair جديد — احفظ إعداد الـ client فور ظهوره.
+      {{ _('سيُوَلَّد keypair جديد — احفظ إعداد الـ client فور ظهوره.') }}
     </div>
   </div>
 </div>
@@ -245,44 +245,44 @@
 {# ─────────────── نموذج التهيئة الأولى ─────────────── #}
 <div style="max-width:540px;margin:40px auto">
   <div class="info-card">
-    <h2 style="font-size:17px;margin:0 0 6px">تهيئة خدمة WireGuard البيانات</h2>
+    <h2 style="font-size:17px;margin:0 0 6px">{{ _('تهيئة خدمة WireGuard البيانات') }}</h2>
     <p style="font-size:13px;color:var(--d-text-muted);margin-bottom:20px">
-      سيُوَلَّد keypair جديد. Private key يُكتب إلى الملف المحدد ولا يُحفظ في قاعدة البيانات.
+      {{ _('سيُوَلَّد keypair جديد. Private key يُكتب إلى الملف المحدد ولا يُحفظ في قاعدة البيانات.') }}
     </p>
     {% if can_submit('radius.wg_data_init', 'POST') %}<form method="post" action="{{ url_for('radius.wg_data_init') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       {% if allocations %}
       <div class="mb-3">
-        <label class="form-label" style="font-size:13px">التخصيص المرتبط</label>
+        <label class="form-label" style="font-size:13px">{{ _('التخصيص المرتبط') }}</label>
         <select name="allocation_mirror_id" class="form-select form-select-sm">
-          <option value="">بدون تخصيص (يدوي)</option>
+          <option value="">{{ _('بدون تخصيص (يدوي)') }}</option>
           {% for a in allocations %}
-          <option value="{{ a.id }}">{{ a.service_type }} — {{ a.chr_node_name or 'VPS محلي' }} ({{ a.max_peers }} peers)</option>
+          <option value="{{ a.id }}">{{ a.service_type }} — {{ a.chr_node_name or _('VPS محلي') }} ({{ a.max_peers }} peers)</option>
           {% endfor %}
         </select>
       </div>
       {% endif %}
 
       <div class="mb-3">
-        <label class="form-label" style="font-size:13px">اسم الواجهة</label>
+        <label class="form-label" style="font-size:13px">{{ _('اسم الواجهة') }}</label>
         <input type="text" name="interface_name" class="form-control form-control-sm"
                value="wg-data" style="direction:ltr">
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:10px">
         <div class="mb-3">
-          <label class="form-label" style="font-size:13px">المنفذ</label>
+          <label class="form-label" style="font-size:13px">{{ _('المنفذ') }}</label>
           <input type="number" name="listen_port" class="form-control form-control-sm"
                  value="51821" min="1024" max="65535">
         </div>
         <div class="mb-3">
-          <label class="form-label" style="font-size:13px">نطاق العناوين</label>
+          <label class="form-label" style="font-size:13px">{{ _('نطاق العناوين') }}</label>
           <input type="text" name="address_range" class="form-control form-control-sm"
                  value="10.100.0.0/24" style="direction:ltr">
         </div>
       </div>
       <button type="submit" class="btn btn-primary w-100">
-        <i class="fa-solid fa-key"></i> تهيئة وتوليد المفاتيح
+        <i class="fa-solid fa-key"></i> {{ _('تهيئة وتوليد المفاتيح') }}
       </button>
     </form>{% endif %}
   </div>

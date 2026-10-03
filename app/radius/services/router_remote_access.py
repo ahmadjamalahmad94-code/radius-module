@@ -40,6 +40,7 @@ tunnel gateway and never the WAN:
     and silently closes WinBox) before re-adding one clean set.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import logging
@@ -170,7 +171,7 @@ def _valid_ip(value: str) -> str:
     try:
         return str(ipaddress.ip_address(str(value or "").strip()))
     except ValueError as exc:
-        raise RemoteAccessError(f"عنوان IP غير صالح: {value!r}") from exc
+        raise RemoteAccessError(_tr('عنوان IP غير صالح: %(value)s', value=repr(value))) from exc
 
 
 def _valid_source(value: str) -> str:
@@ -187,7 +188,7 @@ def _valid_source(value: str) -> str:
         net = ipaddress.ip_network(raw, strict=False)    # CIDR range
         return str(net)
     except ValueError as exc:
-        raise RemoteAccessError(f"مصدر غير صالح (IP أو CIDR): {value!r}") from exc
+        raise RemoteAccessError(_tr('مصدر غير صالح (IP أو CIDR): %(value)s', value=repr(value))) from exc
 
 
 def _is_wg_managed(r: dict) -> bool:
@@ -224,21 +225,21 @@ def router_tunnel_ip(tenant_id: int, router_id: int) -> str:
         "  AND (deleted_at IS NULL OR deleted_at='')",
         (int(router_id), int(tenant_id))).fetchone()
     if not row:
-        raise RemoteAccessError("الراوتر غير موجود")
+        raise RemoteAccessError(_tr("الراوتر غير موجود"))
     r = dict(row)
     if _is_wg_managed(r):
         # WG: the router's own /32 inside the WG subnet. management_remote_address
         # is an SSTP-only column, so it is deliberately NOT consulted here.
         order = ("vpn_peer_address", "address")
-        hint = "أعِد إنشاء اتصال WireGuard (صفحة «اتصالات WireGuard») أولًا"
+        hint = _tr("أعِد إنشاء اتصال WireGuard (صفحة «اتصالات WireGuard») أولًا")
     else:
         order = ("management_remote_address", "vpn_peer_address", "address")
-        hint = "أعِد إعداد نفق SSTP أولًا"
+        hint = _tr("أعِد إعداد نفق SSTP أولًا")
     for key in order:
         v = str(r.get(key) or "").strip()
         if v:
             return v
-    raise RemoteAccessError(f"لا عنوان نفق لهذا الراوتر — {hint}")
+    raise RemoteAccessError(_tr('لا عنوان نفق لهذا الراوتر — %(hint)s', hint=hint))
 
 
 # ─── nginx-stream config generation (restriction optional) ───────────────────
@@ -344,10 +345,10 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
     the global ``HOBERADIUS_REMOTE_ACCESS_ALWAYS_ON`` setting.
     """
     if not enabled():
-        raise RemoteAccessError("الوصول البعيد مُعطّل في الإعدادات")
+        raise RemoteAccessError(_tr("الوصول البعيد مُعطّل في الإعدادات"))
     service = (service or "winbox").strip().lower()
     if service not in SERVICE_PORTS:
-        raise RemoteAccessError(f"خدمة غير مدعومة: {service!r}")
+        raise RemoteAccessError(_tr('خدمة غير مدعومة: %(service)s', service=repr(service)))
     # Destination port on the ROUTER side (the proxy_pass target). Defaults to
     # the service's standard port (WinBox 8291). An operator overrides it when
     # the customer moved WinBox to a custom port ON the router (e.g. 4444) — the
@@ -361,9 +362,9 @@ def open_session(*, tenant_id: int, router_id: int, source_ip: str,
         try:
             eff_dst = int(dst_port)
         except (TypeError, ValueError):
-            raise RemoteAccessError("رقم منفذ غير صالح")
+            raise RemoteAccessError(_tr("رقم منفذ غير صالح"))
         if not (1 <= eff_dst <= 65535):
-            raise RemoteAccessError("رقم المنفذ يجب أن يكون بين 1 و65535")
+            raise RemoteAccessError(_tr("رقم المنفذ يجب أن يكون بين 1 و65535"))
     tip = router_tunnel_ip(tenant_id, router_id)
     _valid_ip(tip)  # the persisted tunnel IP must be a real IP
 
@@ -465,7 +466,7 @@ def source_label(session: dict) -> str:
     """Human label for the «مقفول على» line: «من أي مكان» when unrestricted,
     otherwise the locked IP/CIDR verbatim."""
     if is_unrestricted(session):
-        return "من أي مكان"
+        return N_("من أي مكان")
     return str(session.get("source_ip") or "")
 
 

@@ -1,5 +1,6 @@
 """CHR lab-mode policy checks for guarded setup wizard execution."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from datetime import datetime, timezone
 from typing import Any
@@ -40,24 +41,24 @@ class SetupWizardLabPolicyEngine:
         warnings: list[dict[str, Any]] = []
 
         if normalized not in ALLOWED_LAB_STEPS:
-            blocking.append(_reason("multiple_steps_requested", "يسمح بتطبيق خطوة مختبرية واحدة محددة فقط."))
+            blocking.append(_reason("multiple_steps_requested", _tr("يسمح بتطبيق خطوة مختبرية واحدة محددة فقط.")))
         if not live_apply_enabled():
-            blocking.append(_reason("feature_flag_disabled", "خيار التطبيق الفعلي في معالج الإعداد غير مفعّل."))
+            blocking.append(_reason("feature_flag_disabled", _tr("خيار التطبيق الفعلي في معالج الإعداد غير مفعّل.")))
         if not lab_mode_enabled():
-            blocking.append(_reason("lab_mode_disabled", "وضع المختبر في معالج الإعداد غير مفعّل."))
+            blocking.append(_reason("lab_mode_disabled", _tr("وضع المختبر في معالج الإعداد غير مفعّل.")))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة."))
+            blocking.append(_reason("inventory_missing", _tr("لقطة جرد الراوتر مطلوبة.")))
         elif _snapshot_is_stale(str(snapshot.get("created_at") or ""), self.snapshot_max_age_seconds):
-            blocking.append(_reason("stale_snapshot", "لقطة جرد الراوتر قديمة وتحتاج تحديثًا."))
+            blocking.append(_reason("stale_snapshot", _tr("لقطة جرد الراوتر قديمة وتحتاج تحديثًا.")))
 
         if not operations:
-            blocking.append(_reason("no_dry_run", "طابور التجربة الجافة مطلوب قبل التطبيق."))
+            blocking.append(_reason("no_dry_run", _tr("طابور التجربة الجافة مطلوب قبل التطبيق.")))
         elif not all(op.get("status") == OP_STATUS_DRY_RUN_READY for op in operations):
-            blocking.append(_reason("no_dry_run", "كل العمليات يجب أن تكون جاهزة كمعاينة بدون تنفيذ قبل تطبيق المختبر."))
+            blocking.append(_reason("no_dry_run", _tr("كل العمليات يجب أن تكون جاهزة كمعاينة بدون تنفيذ قبل تطبيق المختبر.")))
 
         rollback_ops = [op for op in operations if str(op.get("rollback_command") or "").strip()]
         if require_rollback and not rollback_ops:
-            blocking.append(_reason("rollback_missing", "معاينة التراجع مطلوبة قبل تطبيق المختبر."))
+            blocking.append(_reason("rollback_missing", _tr("معاينة التراجع مطلوبة قبل تطبيق المختبر.")))
 
         step_input = dict((script_step or {}).get("input_json") or {})
         if snapshot:
@@ -70,13 +71,13 @@ class SetupWizardLabPolicyEngine:
             selected = _selected_interfaces(step_input)
             excluded = set(risk.get("excluded_interfaces") or [])
             if selected & excluded:
-                blocking.append(_reason("wan_interface_risk", "الواجهات المختارة تتضمن واجهة إنترنت أو ربط خاص."))
+                blocking.append(_reason("wan_interface_risk", _tr("الواجهات المختارة تتضمن واجهة إنترنت أو ربط خاص.")))
             if risk.get("subnet_overlaps"):
-                blocking.append(_reason("subnet_conflict", "الشبكة المرشحة تتداخل مع جرد الراوتر."))
+                blocking.append(_reason("subnet_conflict", _tr("الشبكة المرشحة تتداخل مع جرد الراوتر.")))
             if normalized in {"vpn", "hotspot", "broadband"} and "hr-wg" in excluded and normalized == "vpn":
-                warnings.append({"code": "vpn_conflict", "message_ar": "واجهة الربط الخاص موجودة مسبقًا في الجرد."})
+                warnings.append({"code": "vpn_conflict", "message_ar": _tr("واجهة الربط الخاص موجودة مسبقًا في الجرد.")})
             if int(risk.get("existing_nat_count") or 0) > 0:
-                warnings.append({"code": "duplicate_nat", "message_ar": "توجد قواعد ترجمة عناوين حالية وتحتاج مراجعة يدوية."})
+                warnings.append({"code": "duplicate_nat", "message_ar": _tr("توجد قواعد ترجمة عناوين حالية وتحتاج مراجعة يدوية.")})
 
         return {
             "allowed": not blocking,
@@ -86,9 +87,9 @@ class SetupWizardLabPolicyEngine:
             "live_apply_enabled": live_apply_enabled(),
             "lab_mode_enabled": lab_mode_enabled(),
             "next_action_ar": (
-                "ممنوع التنفيذ المخبري قبل معالجة أسباب الحظر."
+                _tr("ممنوع التنفيذ المخبري قبل معالجة أسباب الحظر.")
                 if blocking
-                else "مسموح مخبريًا بخطوة واحدة فقط، ثم يجب تنفيذ التحقق مباشرة."
+                else _tr("مسموح مخبريًا بخطوة واحدة فقط، ثم يجب تنفيذ التحقق مباشرة.")
             ),
         }
 
@@ -104,21 +105,21 @@ class SetupWizardLabPolicyEngine:
         blocking: list[dict[str, str]] = []
         warnings: list[dict[str, Any]] = []
         if normalized not in ALLOWED_LAB_STEPS:
-            blocking.append(_reason("multiple_steps_requested", "يسمح بالتراجع عن خطوة مختبرية واحدة محددة فقط."))
+            blocking.append(_reason("multiple_steps_requested", _tr("يسمح بالتراجع عن خطوة مختبرية واحدة محددة فقط.")))
         if not live_apply_enabled():
-            blocking.append(_reason("feature_flag_disabled", "خيار التطبيق الفعلي في معالج الإعداد غير مفعّل."))
+            blocking.append(_reason("feature_flag_disabled", _tr("خيار التطبيق الفعلي في معالج الإعداد غير مفعّل.")))
         if not lab_mode_enabled():
-            blocking.append(_reason("lab_mode_disabled", "وضع المختبر في معالج الإعداد غير مفعّل."))
+            blocking.append(_reason("lab_mode_disabled", _tr("وضع المختبر في معالج الإعداد غير مفعّل.")))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة."))
+            blocking.append(_reason("inventory_missing", _tr("لقطة جرد الراوتر مطلوبة.")))
         elif _snapshot_is_stale(str(snapshot.get("created_at") or ""), self.snapshot_max_age_seconds):
-            blocking.append(_reason("stale_snapshot", "لقطة جرد الراوتر قديمة وتحتاج تحديثًا."))
+            blocking.append(_reason("stale_snapshot", _tr("لقطة جرد الراوتر قديمة وتحتاج تحديثًا.")))
         applied_with_rollback = [
             op for op in operations
             if op.get("status") == "applied" and str(op.get("rollback_command") or "").strip()
         ]
         if not applied_with_rollback:
-            blocking.append(_reason("rollback_missing", "تدريب التراجع يحتاج عمليات مطبقة وموسومة."))
+            blocking.append(_reason("rollback_missing", _tr("تدريب التراجع يحتاج عمليات مطبقة وموسومة.")))
         if snapshot:
             risk = self.risk_analyzer.analyze(
                 snapshot=snapshot,
@@ -133,9 +134,9 @@ class SetupWizardLabPolicyEngine:
             "live_apply_enabled": live_apply_enabled(),
             "lab_mode_enabled": lab_mode_enabled(),
             "next_action_ar": (
-                "ممنوع rollback المخبري قبل توفر snapshot وعمليات مطبقة ذات tag."
+                _tr("ممنوع rollback المخبري قبل توفر snapshot وعمليات مطبقة ذات tag.")
                 if blocking
-                else "مسموح rollback مخبري لعمليات مطبقة وموسومة فقط، ثم يجب التحقق مباشرة."
+                else _tr("مسموح rollback مخبري لعمليات مطبقة وموسومة فقط، ثم يجب التحقق مباشرة.")
             ),
         }
 

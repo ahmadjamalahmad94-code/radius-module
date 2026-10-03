@@ -53,10 +53,10 @@
   {%- set d = s // 86400 -%}
   {%- set h = (s % 86400) // 3600 -%}
   {%- set m = (s % 3600) // 60 -%}
-  {%- if d > 0 -%}{{ d }} يوم {{ h }} ساعة
-  {%- elif h > 0 -%}{{ h }} ساعة {{ m }} دقيقة
-  {%- elif m > 0 -%}{{ m }} دقيقة
-  {%- else -%}{{ s }} ثانية
+  {%- if d > 0 -%}{{ d }} {{ _('يوم') }} {{ h }} {{ _('ساعة') }}
+  {%- elif h > 0 -%}{{ h }} {{ _('ساعة') }} {{ m }} {{ _('دقيقة') }}
+  {%- elif m > 0 -%}{{ m }} {{ _('دقيقة') }}
+  {%- else -%}{{ s }} {{ _('ثانية') }}
   {%- endif -%}
 {%- endmacro %}
 
@@ -69,7 +69,7 @@
    (calendar-validity) shows «حسب الصلاحية» rather than 0. #}
 {% macro base_time(seconds) -%}
   {%- set _bt = fmt_base_time_ar(seconds) -%}
-  {%- if not _bt[0] -%}حسب الصلاحية
+  {%- if not _bt[0] -%}{{ _('حسب الصلاحية') }}
   {%- elif _bt[1] -%}<bdi dir="ltr">{{ _bt[0] }}</bdi>
   {%- else -%}{{ _bt[0] }}
   {%- endif -%}
@@ -124,7 +124,7 @@
 {% macro device_badge(device) -%}
   {% if device and device.label %}
   <span class="cc-device" data-cat="{{ device.category }}"
-        title="{{ device.vendor }} — ثقة {{ device.confidence }}">
+        title="{{ _('%(vendor)s — ثقة %(confidence)s', vendor=device.vendor, confidence=device.confidence) }}">
     <span class="cc-device-icon"><i class="fa-solid fa-{{ device.icon }}"></i></span>
     {{ device.label }}
   </span>
@@ -377,7 +377,7 @@
   </div>
 
   <div class="cc-card-bottom">
-    <span><i class="fa-regular fa-calendar"></i>تم إصدارها: {{ dt(card.created_at) }}</span>
+    <span><i class="fa-regular fa-calendar"></i>{{ _('تم إصدارها: %(v)s', v=dt(card.created_at)) }}</span>
     {# MAC removed from the bottom strip — visible in the info panel
        beside the hero and in the wide sessions table below. #}
   </div>
@@ -401,7 +401,7 @@
   {%- set k = (kbps or 0)|int -%}
   {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
   {%- elif k > 0 -%}{{ k }} Kbps
-  {%- else -%}غير محدود
+  {%- else -%}{{ _('غير محدود') }}
   {%- endif -%}
 {%- endmacro %}
 
@@ -444,17 +444,17 @@
   {% if result and result.exists %}
     {% set _hs = result.accounting_summary or {} %}
     {% set _x = _hero_kpis.extend([
-      {'label': 'الجلسات',          'value': _hs.sessions_count or 0,
+      {'label': _('الجلسات'),          'value': _hs.sessions_count or 0,
        'icon': 'wave-square',       'variant': 'brand'},
-      {'label': 'أجهزة متّصلة الآن', 'value': _hs.online_sessions or 0,
+      {'label': _('أجهزة متّصلة الآن'), 'value': _hs.online_sessions or 0,
        'icon': 'laptop',            'variant': 'blue'},
-      {'label': 'وقت البطاقة',       'value': base_time(result.accounting_budget_seconds),
+      {'label': _('وقت البطاقة'),       'value': base_time(result.accounting_budget_seconds),
        'icon': 'hourglass-start',   'variant': 'brand'},
-      {'label': 'الوقت المستخدم',    'value': duration(_hs.total_session_seconds or 0),
+      {'label': _('الوقت المستخدم'),    'value': duration(_hs.total_session_seconds or 0),
        'icon': 'stopwatch',         'variant': 'purple'},
-      {'label': 'الوقت المتبقّي',    'value': duration(result.remaining_seconds or 0),
+      {'label': _('الوقت المتبقّي'),    'value': duration(result.remaining_seconds or 0),
        'icon': 'clock',             'variant': 'amber'},
-      {'label': 'إجمالي الاستهلاك',  'value': bytes_size((_hs.total_upload_bytes or 0) + (_hs.total_download_bytes or 0)),
+      {'label': _('إجمالي الاستهلاك'),  'value': bytes_size((_hs.total_upload_bytes or 0) + (_hs.total_download_bytes or 0)),
        'icon': 'gauge-high',        'variant': 'green'},
     ]) %}
   {% endif %}
@@ -467,8 +467,8 @@
      لا تغيير على أي خطاف JS (#cc-search-form / .cc-mode-toggle …). #}
   <section class="hub-hero-shell cc-hero-shell">
   {{ hub.megahero(
-       "مركز عمليات البطاقة",
-       subtitle="فحص بطاقة العميل وإدارة جلساتها وأجهزتها لحظيًّا.",
+       _('مركز عمليات البطاقة'),
+       subtitle=_('فحص بطاقة العميل وإدارة جلساتها وأجهزتها لحظيًّا.'),
        icon="satellite-dish",
        kpis=_hero_kpis,
        actions_html='
@@ -545,7 +545,7 @@
   {% elif result and not result.exists %}
     <div class="cc-state cc-state-empty">
       <div class="cc-state-icon"><i class="fa-solid fa-magnifying-glass-minus"></i></div>
-      <h2>لم نَجد بطاقة باسم «{{ query }}»</h2>
+      <h2>{{ _('لم نَجد بطاقة باسم «%(query)s»', query=query) }}</h2>
       <div class="cc-state-hint">{{ _('تأكّد من الرقم أو الاسم.') }}</div>
     </div>
 
@@ -634,26 +634,26 @@
       {% set has_time = (p.duration_minutes or 0) > 0 %}
       {% set has_data = quota_total_mb > 0 %}
       {% if card.accounting_mode == 'from_first_connect' %}
-        {% set accounting_label = 'تبدأ من أول اتصال' %}
+        {% set accounting_label = _('تبدأ من أول اتصال') %}
         {% if card.started_at %}
-          {% set accounting_sub = 'يجري العدّ التنازليّ' %}
+          {% set accounting_sub = _('يجري العدّ التنازليّ') %}
         {% elif card.accounting_budget_seconds %}
-          {% set accounting_sub = 'الميزانية: ' + duration(card.accounting_budget_seconds) %}
+          {% set accounting_sub = _('الميزانية: ') + duration(card.accounting_budget_seconds) %}
         {% else %}
-          {% set accounting_sub = 'بانتظار أول اتصال' %}
+          {% set accounting_sub = _('بانتظار أول اتصال') %}
         {% endif %}
       {% else %}
-        {% set accounting_label = 'بالثانية' %}
+        {% set accounting_label = _('بالثانية') %}
         {% if card.started_at %}
-          {% set accounting_sub = 'الوقت يجري الآن' %}
+          {% set accounting_sub = _('الوقت يجري الآن') %}
         {% elif has_time and has_data %}
-          {% set accounting_sub = (p.duration_minutes|string + ' دقيقة + ' + quota_total_mb|string + ' MB') %}
+          {% set accounting_sub = (p.duration_minutes|string + _(' دقيقة + ') + quota_total_mb|string + ' MB') %}
         {% elif has_time %}
-          {% set accounting_sub = (p.duration_minutes|string + ' دقيقة') %}
+          {% set accounting_sub = (p.duration_minutes|string + _(' دقيقة')) %}
         {% elif has_data %}
           {% set accounting_sub = (quota_total_mb|string + ' MB') %}
         {% else %}
-          {% set accounting_sub = 'بانتظار التفعيل' %}
+          {% set accounting_sub = _('بانتظار التفعيل') %}
         {% endif %}
       {% endif %}
       <div class="cc-metrics cc-metrics-2rows" data-cc-section="stats">
@@ -663,31 +663,31 @@
            show twice. This grid keeps only the DETAILS not in the strip: unique
            MAC count · accounting method · the up/down breakdown · quota. Six
            tiles → a clean 3×2 (see .cc-metrics-2rows in CSS). #}
-        {{ metric('ماكات فريدة',       s.unique_macs or 0,
+        {{ metric(_('ماكات فريدة'),       s.unique_macs or 0,
                   'fingerprint',  'cyan',
-                  'استخدمت البطاقة',
+                  _('استخدمت البطاقة'),
                   'stats.unique_macs') }}
-        {{ metric('طريقة الاحتساب',    accounting_label,
+        {{ metric(_('طريقة الاحتساب'),    accounting_label,
                   'sliders',      'purple',
                   accounting_sub,
                   'stats.accounting_method') }}
-        {{ metric('إجمالي التنزيل',    bytes_size(s.total_download_bytes or 0),
+        {{ metric(_('إجمالي التنزيل'),    bytes_size(s.total_download_bytes or 0),
                   'arrow-down',   'cyan',
-                  'مجموع كل الجلسات',
+                  _('مجموع كل الجلسات'),
                   'stats.total_download') }}
-        {{ metric('إجمالي الرفع',      bytes_size(s.total_upload_bytes or 0),
+        {{ metric(_('إجمالي الرفع'),      bytes_size(s.total_upload_bytes or 0),
                   'arrow-up',     'amber',
-                  'مجموع كل الجلسات',
+                  _('مجموع كل الجلسات'),
                   'stats.total_upload') }}
-        {{ metric('الكوتة المتبقّية',
-                  (remaining_mb|string + ' MB') if quota_total_mb > 0 else 'بلا حد',
+        {{ metric(_('الكوتة المتبقّية'),
+                  (remaining_mb|string + ' MB') if quota_total_mb > 0 else _('بلا حد'),
                   'database',     'teal',
-                  ('من ' + quota_total_mb|string + ' MB') if quota_total_mb > 0 else 'بدون قيد',
+                  (_('من ') + quota_total_mb|string + ' MB') if quota_total_mb > 0 else _('بدون قيد'),
                   'stats.remaining_quota') }}
-        {{ metric('الكوتة الكلّية',
-                  (quota_total_mb|string + ' MB') if quota_total_mb > 0 else 'بلا حد',
+        {{ metric(_('الكوتة الكلّية'),
+                  (quota_total_mb|string + ' MB') if quota_total_mb > 0 else _('بلا حد'),
                   'gauge',        'grey',
-                  'حسب الباقة',
+                  _('حسب الباقة'),
                   'stats.total_quota') }}
       </div>
 
@@ -763,8 +763,8 @@
                       {{ _('جلسة نشطة الآن') }}
                     </div>
                     <div class="cc-tl-desc">
-                      الاتصال عبر {{ (card.current_device or {}).connection or '—' }}
-                      من {{ card.mac_address or '—' }}
+                      {{ _('الاتصال عبر') }} {{ (card.current_device or {}).connection or '—' }}
+                      {{ _('من') }} {{ card.mac_address or '—' }}
                     </div>
                   </div>
                 </div>
@@ -795,7 +795,7 @@
                       {{ _('تم إنشاء البطاقة') }}
                     </div>
                     <div class="cc-tl-desc">
-                      تم إصدار البطاقة ضمن الحزمة {{ (card.batch or {}).batch_code or '—' }}
+                      {{ _('تم إصدار البطاقة ضمن الحزمة') }} {{ (card.batch or {}).batch_code or '—' }}
                     </div>
                   </div>
                 </div>
@@ -814,7 +814,7 @@
           <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
           <span class="cc-section-head-title">{{ _('آخر الجلسات') }}</span>
           <span class="cc-section-head-link" style="cursor:default">
-            {{ s.latest_sessions|length if s.latest_sessions else 0 }} جلسة
+            {{ _('%(v)s جلسة', v=s.latest_sessions|length if s.latest_sessions else 0) }}
           </span>
           {# DHCP refresh — pulls /ip/dhcp-server/lease/print on demand
              so the "الجهاز / النظام" column populates without waiting
@@ -940,7 +940,7 @@
             <div class="cc-sessions-foot" data-cc-sessions-foot>
               <div class="cc-sessions-foot-left">
                 <label class="cc-sessions-foot-label">
-                  صفوف:
+                  {{ _('صفوف:') }}
                   {# hub-select: يلفّه hub_select.js كقائمة hbsel منسّقة موحّدة.
                      الـ JS المخصّص للترقيم يقرأ .value ويستمع لحدث change اللذَين
                      يبقيهما الـ hbsel متزامنَيْن، فلا يتأثّر السلوك. #}
@@ -976,7 +976,7 @@
           </div>
           {% else %}
           {# حالة فارغة موحّدة (hub.empty) بدل سطر النص العاري #}
-          {{ hub.empty('لا جلسات بعد', sub='لم تُسجَّل أي جلسة لهذه البطاقة حتى الآن.', icon='clock-rotate-left') }}
+          {{ hub.empty(_('لا جلسات بعد'), sub=_('لم تُسجَّل أي جلسة لهذه البطاقة حتى الآن.'), icon='clock-rotate-left') }}
           {% endif %}
         </div>
       </section>
@@ -1021,7 +1021,7 @@
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('قطع الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} {{ _('متّصل الآن') }}{% else %}{{ _('لا أجهزة الآن') }}{% endif %}
                   </div>
                 </div>
               </button>
@@ -1030,13 +1030,13 @@
             {% if can_submit('radius.cards_checker', 'POST') %}<form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر."{% endif %}
+              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="{{ _('لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر.') }}"{% endif %}
                       data-cc-op="reset-usage"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
-                        icon:'warn', title:'إعادة ضبط الاستخدام',
-                        body:'سيتم تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong> ' +
-                             'وعدّاد البطاقة يبدأ من جديد عند أول اتصال.',
-                        confirmText:'إعادة الضبط',
+                        icon:'warn', title:{{ _('إعادة ضبط الاستخدام')|tojson|forceescape }},
+                        body:{{ _('سيتم تصفير الوقت المستهلَك لـ %(user)s', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe))|tojson|forceescape }} + ' ' +
+                             {{ _('وعدّاد البطاقة يبدأ من جديد عند أول اتصال.')|tojson|forceescape }},
+                        confirmText:{{ _('إعادة الضبط')|tojson|forceescape }},
                         onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon cyan"><i class="fa-solid fa-rotate-right"></i></span>
@@ -1200,7 +1200,7 @@
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="set-speed"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.speedForm({
-                        title:'تغيير السرعة',
+                        title:{{ _('تغيير السرعة')|tojson|forceescape }},
                         currentDown: {{ card.card_speed_down_kbps or 0 }},
                         currentUp:   {{ card.card_speed_up_kbps   or 0 }},
                         onConfirm: function(down, up){
@@ -1224,10 +1224,10 @@
               {{ hidden_ops(card, query) }}
               <button class="cc-action" type="button" data-cc-op="disable-enable"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
-                        icon:'success', title:'إعادة تفعيل البطاقة',
-                        body:'سيتم إعادة تفعيل البطاقة <strong>{{ card.username }}</strong> ' +
-                             'واستعادة الوقت المتبقي الذي تم تجميده عند التعطيل.',
-                        confirmText:'تفعيل',
+                        icon:'success', title:{{ _('إعادة تفعيل البطاقة')|tojson|forceescape }},
+                        body:{{ _('سيتم إعادة تفعيل البطاقة %(user)s', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe))|tojson|forceescape }} + ' ' +
+                             {{ _('واستعادة الوقت المتبقي الذي تم تجميده عند التعطيل.')|tojson|forceescape }},
+                        confirmText:{{ _('تفعيل')|tojson|forceescape }},
                         onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon green"><i class="fa-solid fa-circle-check"></i></span>
@@ -1242,15 +1242,15 @@
               <input type="hidden" name="op" value="disable">
               <input type="hidden" name="reason" data-cc-disable-reason>
               {{ hidden_ops(card, query) }}
-              <button class="cc-action{% if not ops.can_disable %} is-inert{% endif %}" type="button" {% if not ops.can_disable %}data-cc-inert="لا يمكن تعطيل هذه البطاقة في حالتها الحاليّة."{% endif %}
+              <button class="cc-action{% if not ops.can_disable %} is-inert{% endif %}" type="button" {% if not ops.can_disable %}data-cc-inert="{{ _('لا يمكن تعطيل هذه البطاقة في حالتها الحاليّة.') }}"{% endif %}
                       data-cc-op="disable-enable"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.reasonForm({
-                        icon:'warn', title:'تعطيل البطاقة',
-                        body:'سيتم إيقاف البطاقة <strong>{{ card.username }}</strong> مؤقتاً. ' +
-                             '<strong>{{ _('سيتم تجميد الوقت المتبقي') }}</strong> ' +
-                             'بحيث لا ينقص أثناء التعطيل ويعود نفسه عند إعادة التفعيل.',
-                        label:'سبب التعطيل (اختياري)',
-                        confirmText:'تعطيل',
+                        icon:'warn', title:{{ _('تعطيل البطاقة')|tojson|forceescape }},
+                        body:{{ _('سيتم إيقاف البطاقة %(user)s مؤقتاً.', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe))|tojson|forceescape }} + ' ' +
+                             '<strong>' + {{ _('سيتم تجميد الوقت المتبقي')|tojson|forceescape }} + '</strong> ' +
+                             {{ _('بحيث لا ينقص أثناء التعطيل ويعود نفسه عند إعادة التفعيل.')|tojson|forceescape }},
+                        label:{{ _('سبب التعطيل (اختياري)')|tojson|forceescape }},
+                        confirmText:{{ _('تعطيل')|tojson|forceescape }},
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-disable-reason]').value = reason || '';
@@ -1275,14 +1275,13 @@
               <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-danger" type="button"
-                      {% if not ops.can_delete_permanently %}data-cc-inert="لا تملك صلاحية الحذف النهائيّ لهذه البطاقة."{% endif %}
+                      {% if not ops.can_delete_permanently %}data-cc-inert="{{ _('لا تملك صلاحية الحذف النهائيّ لهذه البطاقة.') }}"{% endif %}
                       data-cc-op="delete"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.softDelete({
-                        title:'نقل البطاقة إلى المحذوفات',
-                        body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
-                             '<strong>{{ _('سلة المحذوفات') }}</strong> ولن تستطيع الاتصال. ' +
-                             'يمكنك استعادتها عند الحاجة من شاشة سلة المحذوفات.',
-                        label:'سبب الحذف (اختياري)',
+                        title:{{ _('نقل البطاقة إلى المحذوفات')|tojson|forceescape }},
+                        body:{{ _('البطاقة %(user)s سيتم نقلها إلى %(bin)s ولن تستطيع الاتصال.', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe), bin=('<strong>'|safe ~ _('سلة المحذوفات') ~ '</strong>'|safe))|tojson|forceescape }} + ' ' +
+                             {{ _('يمكنك استعادتها عند الحاجة من شاشة سلة المحذوفات.')|tojson|forceescape }},
+                        label:{{ _('سبب الحذف (اختياري)')|tojson|forceescape }},
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
@@ -1312,10 +1311,10 @@
 
       {# 4 essential metrics #}
       <div class="cc-metrics" style="margin-top:16px" data-cc-section="stats-simple">
-        {{ metric('الجلسات',         s.sessions_count or 0,    'wave-square', 'purple', '', 'stats.sessions_count') }}
-        {{ metric('الأجهزة المتّصلة', s.unique_macs or 0,       'laptop',      'cyan',   '', 'stats.unique_macs') }}
-        {{ metric('الوقت المتبقّي',  duration(card.remaining_seconds or 0), 'clock', 'amber', '', 'remaining_seconds') }}
-        {{ metric('الاستهلاك',       bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)), 'gauge-high', 'green', '', 'stats.total_traffic') }}
+        {{ metric(_('الجلسات'),         s.sessions_count or 0,    'wave-square', 'purple', '', 'stats.sessions_count') }}
+        {{ metric(_('الأجهزة المتّصلة'), s.unique_macs or 0,       'laptop',      'cyan',   '', 'stats.unique_macs') }}
+        {{ metric(_('الوقت المتبقّي'),  duration(card.remaining_seconds or 0), 'clock', 'amber', '', 'remaining_seconds') }}
+        {{ metric(_('الاستهلاك'),       bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)), 'gauge-high', 'green', '', 'stats.total_traffic') }}
       </div>
 
       {# Latest activity + current device #}
@@ -1328,12 +1327,12 @@
           <div class="cc-section-body">
             <div style="display:flex;flex-direction:column;gap:8px">
               <span class="cc-pill cc-pill-green" style="align-self:flex-start">
-                <span class="dot"></span>{{ 'اتصال ناجح' if card.active_session else 'آخر اتصال' }}
+                <span class="dot"></span>{{ _('اتصال ناجح') if card.active_session else _('آخر اتصال') }}
               </span>
               <div style="font-family:ui-monospace,Consolas,monospace,'Cairo';font-size:18px;font-weight:700;color:var(--hr-navy-900)">
                 {{ dt(card.last_seen_at) }}
               </div>
-              <div class="cc-sub" style="font-size:12.5px">تم الاتصال {% if card.active_session %}بنجاح{% else %}آخر مرة{% endif %}</div>
+              <div class="cc-sub" style="font-size:12.5px">{{ _('تم الاتصال') }} {% if card.active_session %}{{ _('بنجاح') }}{% else %}{{ _('آخر مرة') }}{% endif %}</div>
             </div>
           </div>
         </section>
@@ -1348,7 +1347,7 @@
             <div class="cc-device-card">
               <div class="cc-device-card-body">
                 <div class="cc-device-card-title">
-                  {{ d.label or (d.connection or 'غير معروف') }}
+                  {{ d.label or (d.connection or _('غير معروف')) }}
                   {% if card.active_session %}<span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشطة الآن') }}</span>{% endif %}
                 </div>
                 <dl class="cc-device-card-attrs">
@@ -1386,12 +1385,12 @@
             {% if can_submit('radius.cards_checker', 'POST') %}<form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="reset-usage-simple">
               <input type="hidden" name="op" value="reset_usage">
               {{ hidden_ops(card, query) }}
-              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر."{% endif %}
+              <button class="cc-action{% if not ops.can_reset_usage %} is-inert{% endif %}" type="button" {% if not ops.can_reset_usage %}data-cc-inert="{{ _('لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر.') }}"{% endif %}
                       data-cc-op="reset-usage"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.confirm({
-                        icon:'warn', title:'إعادة ضبط الاستخدام',
-                        body:'تصفير الوقت المستهلَك لـ <strong>{{ card.username }}</strong>.',
-                        confirmText:'إعادة الضبط',
+                        icon:'warn', title:{{ _('إعادة ضبط الاستخدام')|tojson|forceescape }},
+                        body:{{ _('تصفير الوقت المستهلَك لـ %(user)s.', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe))|tojson|forceescape }},
+                        confirmText:{{ _('إعادة الضبط')|tojson|forceescape }},
                         onConfirm: function(){ window.hbGuardedSubmit(ccBtn.closest('form')); }
                       });">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
@@ -1434,14 +1433,14 @@
               <input type="hidden" name="session_ids" data-cc-disc-field>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-soft-red" type="button"
-                      {% if not ops.can_disconnect %}data-cc-inert="لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع."{% endif %}
+                      {% if not ops.can_disconnect %}data-cc-inert="{{ _('لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع.') }}"{% endif %}
                       data-cc-op="disconnect"
                       data-cc-active-sessions="{{ _active_sessions | tojson|forceescape }}">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
                   <div class="cc-action-title">{{ _('فصل الجلسة') }}</div>
                   <div class="cc-action-sub">
-                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} متّصل الآن{% else %}لا أجهزة الآن{% endif %}
+                    {% if _active_sessions %}{{ (_active_sessions|length)|ar_count('device') }} {{ _('متّصل الآن') }}{% else %}{{ _('لا أجهزة الآن') }}{% endif %}
                   </div>
                 </div>
               </button>
@@ -1455,13 +1454,12 @@
               <input type="hidden" name="reason" data-cc-delete-reason>
               {{ hidden_ops(card, query) }}
               <button class="cc-action cc-action-danger" type="button"
-                      {% if not ops.can_delete_permanently %}data-cc-inert="لا تملك صلاحية الحذف النهائيّ لهذه البطاقة."{% endif %}
+                      {% if not ops.can_delete_permanently %}data-cc-inert="{{ _('لا تملك صلاحية الحذف النهائيّ لهذه البطاقة.') }}"{% endif %}
                       data-cc-op="delete"
                       onclick="var ccBtn=this; window.ccModal && window.ccModal.softDelete({
-                        title:'نقل البطاقة إلى المحذوفات',
-                        body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
-                             '<strong>{{ _('سلة المحذوفات') }}</strong> ويمكنك استعادتها عند الحاجة.',
-                        label:'سبب الحذف (اختياري)',
+                        title:{{ _('نقل البطاقة إلى المحذوفات')|tojson|forceescape }},
+                        body:{{ _('البطاقة %(user)s سيتم نقلها إلى %(bin)s ويمكنك استعادتها عند الحاجة.', user=('<strong>'|safe ~ card.username ~ '</strong>'|safe), bin=('<strong>'|safe ~ _('سلة المحذوفات') ~ '</strong>'|safe))|tojson|forceescape }},
+                        label:{{ _('سبب الحذف (اختياري)')|tojson|forceescape }},
                         onConfirm: function(reason){
                           var f = ccBtn.closest('form');
                           f.querySelector('[data-cc-delete-reason]').value = reason || '';
@@ -1910,8 +1908,7 @@
               aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="cc-modal-sub">
-      التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة).
-      إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.
+      {{ _('التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.') }}
     </div>
 
     <div class="cc-modal-section-label">{{ _('العملية') }}</div>
@@ -2110,8 +2107,8 @@
       e.stopPropagation();
       var msg = b.getAttribute('data-cc-inert') || '';
       if (window.ccModal && window.ccModal.confirm) {
-        window.ccModal.confirm({ icon: 'info', title: 'غير متاح الآن',
-                                 body: msg, confirmText: 'حسنًا' });
+        window.ccModal.confirm({ icon: 'info', title: {{ _('غير متاح الآن')|tojson }},
+                                 body: msg, confirmText: {{ _('حسنًا')|tojson }} });
       } else {
         alert(msg);            // ارتدادٌ لا يعتمد على أيّ شيء
       }
@@ -2153,7 +2150,7 @@
     btns.forEach(function(btn){
       btn.addEventListener('click', function(){
         // الخامل يُعالَج في مرحلة capture أعلاه، فلا حاجة لحارسٍ صامت هنا.
-        if (!window.ccModal) { alert('تعذّر فتح النافذة — حدّث الصفحة.'); return; }
+        if (!window.ccModal) { alert({{ _('تعذّر فتح النافذة — حدّث الصفحة.')|tojson }}); return; }
         var sessions = fromAttribute(btn);
         if (!sessions.length) sessions = fromDom();
         if (!sessions.length){

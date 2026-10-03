@@ -15,6 +15,7 @@
 محصّن: أيّ خطأ يُسقط الفحص (سماح) كي لا نكسر الـauth أبدًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 from dataclasses import dataclass, field
@@ -42,9 +43,9 @@ class Verdict:
 
 
 MSG_UNKNOWN_DEVICE = (
-    "هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة")
+    N_("هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة"))
 MSG_AT_CAPACITY = (
-    "تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة")
+    N_("تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة"))
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -140,7 +141,7 @@ def evaluate(tenant_id: int, *,
             new_dev = allow_mode_repo.add_device(
                 policy_id=policy_id, username=username or "",
                 mac=norm_mac, source="auto",
-                label=f"تلقائي · {username or '—'}", by=int(by))
+                label=_tr('تلقائي · %(v)s', v=username or '—'), by=int(by))
             if new_dev:
                 allow_mode_repo.touch_device(int(new_dev["id"]))
                 return Verdict(action="allow", reason="tofu_bind",
@@ -182,7 +183,7 @@ def apply_decision(tenant_id: int, *, username: str, mac: str,
             "mac": norm_mac or "—",
             "mode": verdict.mode or "—",
             "reason": _ar_reason(verdict.reason),
-            "scope":  "حزمة بطاقات" if card_batch_id else "عرض/باقة",
+            "scope":  N_("حزمة بطاقات") if card_batch_id else N_("عرض/باقة"),
             "scope_id": str(card_batch_id or plan_id or "—"),
         }
         dispatch(int(tenant_id), "allow_mode_unknown_device", ctx,
@@ -193,9 +194,9 @@ def apply_decision(tenant_id: int, *, username: str, mac: str,
 
 def _ar_reason(code: str) -> str:
     return {
-        "allow_mode_unknown_device": "جهاز غير مسجّل (manual)",
-        "allow_mode_at_capacity":    "تم الوصول للحدّ الأقصى للأجهزة (tofu)",
-        "allow_mode_bind_failed":    "فشل ربط الجهاز تلقائيًّا",
+        "allow_mode_unknown_device": N_("جهاز غير مسجّل (manual)"),
+        "allow_mode_at_capacity":    N_("تم الوصول للحدّ الأقصى للأجهزة (tofu)"),
+        "allow_mode_bind_failed":    N_("فشل ربط الجهاز تلقائيًّا"),
     }.get(code, code or "")
 
 

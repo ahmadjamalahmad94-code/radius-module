@@ -4,7 +4,7 @@
 {% block title %}{{ _("طلبات الدفع") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-receipt"></i>{% endblock %}
 {% block page_title %}{{ _("طلبات الدفع") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} طلب</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s طلب', length=items|length) }}</span>{% endblock %}
 
 {# نظام الجداول/النوافذ الموحّد — يلزم لرسم .uds-hero و.uds-table بشكل صحيح #}
 {% block head_extra %}
@@ -15,42 +15,42 @@
 {# ───── قواميس الترجمة العربية لقيم الحالات/الأغراض/أنواع الدافعين ─────
    تُستعمل في حزام الفلترة وفي الجدول لمنع ظهور القيم الإنجليزية الخام. #}
 {% set STATUS_AR = {
-  'pending': 'معلقة',
-  'proof_submitted': 'إثبات مُرسل',
-  'under_review': 'تحت المراجعة',
-  'paid': 'مدفوعة',
-  'rejected': 'مرفوضة',
-  'expired': 'منتهية',
-  'cancelled': 'ملغاة',
-  'failed': 'فشلت'
+  'pending': _('معلقة'),
+  'proof_submitted': _('إثبات مُرسل'),
+  'under_review': _('تحت المراجعة'),
+  'paid': _('مدفوعة'),
+  'rejected': _('مرفوضة'),
+  'expired': _('منتهية'),
+  'cancelled': _('ملغاة'),
+  'failed': _('فشلت')
 } %}
 {% set PURPOSE_AR = {
-  'card_purchase': 'شراء بطاقة',
-  'monthly_subscription': 'اشتراك شهري',
-  'subscriber_renewal': 'تجديد مشترك',
-  'quota_topup': 'إعادة تعبئة الحصة',
-  'time_extension': 'تمديد المدة',
-  'distributor_payment': 'دفع الموزع',
-  'loan_settlement': 'تسوية قرض'
+  'card_purchase': _('شراء بطاقة'),
+  'monthly_subscription': _('اشتراك شهري'),
+  'subscriber_renewal': _('تجديد مشترك'),
+  'quota_topup': _('إعادة تعبئة الحصة'),
+  'time_extension': _('تمديد المدة'),
+  'distributor_payment': _('دفع الموزع'),
+  'loan_settlement': _('تسوية قرض')
 } %}
 {% set PAYER_AR = {
-  'subscriber': 'مشترك',
-  'card_user': 'مستخدم بطاقة',
-  'distributor': 'موزع',
-  'manager': 'مدير',
-  'guest': 'زائر'
+  'subscriber': _('مشترك'),
+  'card_user': _('مستخدم بطاقة'),
+  'distributor': _('موزع'),
+  'manager': _('مدير'),
+  'guest': _('زائر')
 } %}
 
 {# شارة الحالة — تترجم كل القيم للعربية بدل تمرير الإنجليزية الخام #}
 {% macro st_pill(s) -%}
-  {%- if s == 'paid' -%}{{ hub.pill("مدفوعة", variant="green") }}
-  {%- elif s == 'under_review' -%}{{ hub.pill("تحت المراجعة", variant="amber") }}
-  {%- elif s == 'proof_submitted' -%}{{ hub.pill("إثبات مُرسل", variant="amber") }}
-  {%- elif s == 'rejected' -%}{{ hub.pill("مرفوضة", variant="red") }}
-  {%- elif s == 'failed' -%}{{ hub.pill("فشلت", variant="red") }}
-  {%- elif s == 'expired' -%}{{ hub.pill("منتهية", variant="grey") }}
-  {%- elif s == 'cancelled' -%}{{ hub.pill("ملغاة", variant="grey") }}
-  {%- else -%}{{ hub.pill("معلقة", variant="brand", dot=False) }}{%- endif -%}
+  {%- if s == 'paid' -%}{{ hub.pill(_('مدفوعة'), variant="green") }}
+  {%- elif s == 'under_review' -%}{{ hub.pill(_('تحت المراجعة'), variant="amber") }}
+  {%- elif s == 'proof_submitted' -%}{{ hub.pill(_('إثبات مُرسل'), variant="amber") }}
+  {%- elif s == 'rejected' -%}{{ hub.pill(_('مرفوضة'), variant="red") }}
+  {%- elif s == 'failed' -%}{{ hub.pill(_('فشلت'), variant="red") }}
+  {%- elif s == 'expired' -%}{{ hub.pill(_('منتهية'), variant="grey") }}
+  {%- elif s == 'cancelled' -%}{{ hub.pill(_('ملغاة'), variant="grey") }}
+  {%- else -%}{{ hub.pill(_('معلقة'), variant="brand", dot=False) }}{%- endif -%}
 {%- endmacro %}
 
 {% block content %}
@@ -63,8 +63,8 @@
 {# ───── الهيرو الموحّد المدموج: عنوان + أزرار + KPI صف واحد + حزام فلترة مدمج ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "طلبات الدفع",
-  subtitle="طلبات تحصيل الدفعات عبر المحفظة اليدوية — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
+  _('طلبات الدفع'),
+  subtitle=_('طلبات تحصيل الدفعات عبر المحفظة اليدوية — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.'),
   icon="receipt",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> '|safe ~ _("طابور المراجعة") ~ '</a>
@@ -72,10 +72,10 @@
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_settings') ~ '"><i class="fa-solid fa-gear"></i> '|safe ~ _("الإعدادات") ~ '</a>
   '|safe,
   kpis=[
-    {'label': 'إجمالي الطلبات',  'value': items|length, 'icon': 'receipt',         'variant': 'brand'},
-    {'label': 'بانتظار المراجعة', 'value': _review,      'icon': 'clipboard-check', 'variant': 'amber'},
-    {'label': 'معلّقة',           'value': _pending,     'icon': 'hourglass-half',  'variant': 'blue'},
-    {'label': 'مدفوعة',           'value': _paid,        'icon': 'circle-check',    'variant': 'green'},
+    {'label': _('إجمالي الطلبات'),  'value': items|length, 'icon': 'receipt',         'variant': 'brand'},
+    {'label': _('بانتظار المراجعة'), 'value': _review,      'icon': 'clipboard-check', 'variant': 'amber'},
+    {'label': _('معلّقة'),           'value': _pending,     'icon': 'hourglass-half',  'variant': 'blue'},
+    {'label': _('مدفوعة'),           'value': _paid,        'icon': 'circle-check',    'variant': 'green'},
   ],
   search_action=url_for('radius.payment_collection_requests'),
   search_method="get"
@@ -96,12 +96,12 @@
   </select>
   <input class="hub-input" name="payer_type" placeholder="{{ _('نوع الدافع') }}" value="{{ payer_type }}">
   <span class="hub-spacer" style="flex:1"></span>
-  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('فلترة'), icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
-{% call hub.section("الطلبات", icon="table-list", meta=items|length|string + " طلب", flush=True) %}
+{% call hub.section(_('الطلبات'), icon="table-list", meta=items|length|string + _(' طلب'), flush=True) %}
   {# جدول uds موحّد: شريط أعمدة + فرز + ترقيم + تصدير CSV/XLSX/PDF تلقائيًا #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="pay-requests" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -141,8 +141,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد طلبات دفع بعد",
-  sub="ستظهر هنا طلبات تحصيل الدفعات الواردة من البطاقات والاشتراكات ودفعات الموزعين.",
+  _('لا توجد طلبات دفع بعد'),
+  sub=_('ستظهر هنا طلبات تحصيل الدفعات الواردة من البطاقات والاشتراكات ودفعات الموزعين.'),
   icon="receipt"
 ) }}
 {% endif %}

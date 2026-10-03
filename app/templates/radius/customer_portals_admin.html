@@ -47,13 +47,13 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
 <section class="hub-hero-shell" data-testid="customer-portals-hero">
 {% call hub.megahero(
-  "بوابات العملاء",
-  subtitle="مساعد تنقل إداري فقط — يفتح مداخل العملاء الموجودة في نافذة جديدة دون أي تسجيل دخول أو تغيير في الإعدادات.",
+  _('بوابات العملاء'),
+  subtitle=_('مساعد تنقل إداري فقط — يفتح مداخل العملاء الموجودة في نافذة جديدة دون أي تسجيل دخول أو تغيير في الإعدادات.'),
   icon="door-open",
   kpis=[
-    {'label': 'البوابات المتاحة', 'value': 2,       'icon': 'door-open', 'variant': 'brand'},
-    {'label': 'بوابة المشترك',    'value': 'متاحة', 'icon': 'user',      'variant': 'green'},
-    {'label': 'بوابة الكروت',     'value': 'متاحة', 'icon': 'id-card',   'variant': 'blue'},
+    {'label': _('البوابات المتاحة'), 'value': 2,       'icon': 'door-open', 'variant': 'brand'},
+    {'label': _('بوابة المشترك'),    'value': _('متاحة'), 'icon': 'user',      'variant': 'green'},
+    {'label': _('بوابة الكروت'),     'value': _('متاحة'), 'icon': 'id-card',   'variant': 'blue'},
   ]
 ) %}
   {# حزام إيضاح بدل البحث: الصفحة بلا فلاتر — سطر واحد + تلميح #}
@@ -62,24 +62,24 @@
     {{ _('المصادقة والمنطق التجاري يبقيان داخل صفحات البوابة الأصلية — هذه الصفحة لا تنفّذ شراءً ولا طلبًا ولا تجديدًا.') }}
   </span>
   <span class="hub-hint" tabindex="0"
-        data-hint="كل بطاقة بالأسفل تفتح صفحة دخول البوابة في نافذة جديدة. يسجّل العميل دخوله بنفسه هناك كالمعتاد."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('كل بطاقة بالأسفل تفتح صفحة دخول البوابة في نافذة جديدة. يسجّل العميل دخوله بنفسه هناك كالمعتاد.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {# ───── مداخل البوابات: بطاقتا دخول فقط — بلا أي أقسام إضافية ───── #}
-{% call hub.section("مداخل البوابات", icon="door-open") %}
+{% call hub.section(_('مداخل البوابات'), icon="door-open") %}
   <div class="hub-grid hub-grid--2">
     {% if can_submit('radius.portal_subscriber_login', 'GET') %}{{ hub.action_card(
-      "بوابة المشترك",
-      sub="تسجيل دخول المشترك لعرض الاشتراك والاستخدام والطلبات والمدفوعات.",
+      _('بوابة المشترك'),
+      sub=_('تسجيل دخول المشترك لعرض الاشتراك والاستخدام والطلبات والمدفوعات.'),
       icon="user",
       href=url_for('radius.portal_subscriber_login'),
       variant="brand",
       attrs='target="_blank" rel="noopener" data-testid="portal-subscriber-entry"'
     ) }}{% endif %}
     {% if can_submit('radius.portal_card_login', 'GET') %}{{ hub.action_card(
-      "بوابة مستخدم البطاقة",
-      sub="تسجيل دخول صاحب البطاقة إلى واجهة الشراء الذاتية الموجودة.",
+      _('بوابة مستخدم البطاقة'),
+      sub=_('تسجيل دخول صاحب البطاقة إلى واجهة الشراء الذاتية الموجودة.'),
       icon="id-card",
       href=url_for('radius.portal_card_login'),
       variant="blue",

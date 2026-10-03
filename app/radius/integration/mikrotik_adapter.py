@@ -14,6 +14,7 @@ MikrotikAdapter — يربط RadiusAdapter ABC بـ MikrotikClient.
   حقل `comment` الـ MT كـ key=value pairs ثم نُحلّلها.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import replace
@@ -66,7 +67,7 @@ class MikrotikAdapter(RadiusAdapter):
     def _primary(self) -> MikrotikConfig:
         cfg = self._store.primary()
         if not cfg:
-            raise AdapterUnavailable("لا يوجد اتصال MikroTik مضبوط")
+            raise AdapterUnavailable(_tr("لا يوجد اتصال MikroTik مضبوط"))
         return cfg
 
     def _enabled(self) -> list[MikrotikConfig]:
@@ -83,9 +84,9 @@ class MikrotikAdapter(RadiusAdapter):
             c.connect()
             return c
         except AuthError as e:
-            raise RadiusAdapterError(f"فشل تسجيل الدخول لـ {cfg.host}: {e}") from e
+            raise RadiusAdapterError(_tr('فشل تسجيل الدخول لـ %(host)s: %(e)s', host=cfg.host, e=e)) from e
         except ConnectError as e:
-            raise AdapterUnavailable(f"تعذّر الاتصال بـ {cfg.host}: {e}") from e
+            raise AdapterUnavailable(_tr('تعذّر الاتصال بـ %(host)s: %(e)s', host=cfg.host, e=e)) from e
 
     # ─────────────── settings / health ───────────────
 
@@ -121,7 +122,7 @@ class MikrotikAdapter(RadiusAdapter):
     def get_nas(self, nas_id: int) -> NasDevice:
         cfg = self._store.get(nas_id)
         if not cfg:
-            raise RadiusNotFound(f"NAS {nas_id} غير موجود")
+            raise RadiusNotFound(_tr('NAS %(nas_id)s غير موجود', nas_id=nas_id))
         return _cfg_to_nas(cfg)
 
     def upsert_nas(self, device: NasDevice) -> NasDevice:
@@ -130,7 +131,7 @@ class MikrotikAdapter(RadiusAdapter):
         else:
             saved = self._store.update(device.id, **_nas_to_cfg_dict(device))
             if not saved:
-                raise RadiusNotFound(f"NAS {device.id} غير موجود")
+                raise RadiusNotFound(_tr('NAS %(id)s غير موجود', id=device.id))
         return _cfg_to_nas(saved)
 
     def delete_nas(self, nas_id: int) -> None:
@@ -149,7 +150,7 @@ class MikrotikAdapter(RadiusAdapter):
         for p in items:
             if p.id == profile_id:
                 return p
-        raise RadiusNotFound(f"profile {profile_id} غير موجود")
+        raise RadiusNotFound(_tr('profile %(profile_id)s غير موجود', profile_id=profile_id))
 
     def upsert_profile(self, profile: AccessProfile) -> AccessProfile:
         attrs = _profile_to_mt(profile)
@@ -257,11 +258,11 @@ class MikrotikAdapter(RadiusAdapter):
             for r in c.print_("/ip/hotspot/user/print",
                               queries=[f"?name={username}"]):
                 return _row_to_subscriber(r)
-        raise RadiusNotFound(f"account {username!r} غير موجود")
+        raise RadiusNotFound(_tr('account %(username)s غير موجود', username=repr(username)))
 
     def upsert_account(self, account: RadiusAccount) -> RadiusAccount:
         if not account.username or not account.password:
-            raise RadiusValidationError("username + password مطلوبان")
+            raise RadiusValidationError(_tr("username + password مطلوبان"))
         attrs = _subscriber_to_mt(account)
         with self._open(self._primary()) as c:
             existing_id = _user_mt_id(c, account.username)
@@ -276,14 +277,14 @@ class MikrotikAdapter(RadiusAdapter):
         with self._open(self._primary()) as c:
             mt_id = _user_mt_id(c, username)
             if mt_id is None:
-                raise RadiusNotFound(f"account {username!r} غير موجود")
+                raise RadiusNotFound(_tr('account %(username)s غير موجود', username=repr(username)))
             c.run("/ip/hotspot/user/remove", {".id": mt_id})
 
     def reset_password(self, username: str, new_password: str) -> None:
         with self._open(self._primary()) as c:
             mt_id = _user_mt_id(c, username)
             if mt_id is None:
-                raise RadiusNotFound(f"account {username!r} غير موجود")
+                raise RadiusNotFound(_tr('account %(username)s غير موجود', username=repr(username)))
             c.run("/ip/hotspot/user/set", {".id": mt_id, "password": new_password})
 
     # ─────────────── Sessions ───────────────
@@ -318,7 +319,7 @@ class MikrotikAdapter(RadiusAdapter):
                         return
             except MikrotikError:
                 continue
-        raise RadiusNotFound(f"جلسة {username!r} غير موجودة")
+        raise RadiusNotFound(_tr('جلسة %(username)s غير موجودة', username=repr(username)))
 
     # ─────────────── Accounting / Policies (stubs لاحقًا) ───────────────
 
@@ -330,7 +331,7 @@ class MikrotikAdapter(RadiusAdapter):
         return []
 
     def upsert_policy(self, policy: RadiusPolicy) -> RadiusPolicy:
-        raise RadiusValidationError("policies غير مدعومة في MikroTik adapter بعد")
+        raise RadiusValidationError(_tr("policies غير مدعومة في MikroTik adapter بعد"))
 
     def delete_policy(self, policy_id: int) -> None:
         return None

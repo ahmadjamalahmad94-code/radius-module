@@ -11,6 +11,7 @@ All mutations are audited via the existing RadiusAuditService with
 Arabic summaries.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime, timezone
 from typing import Optional
@@ -72,10 +73,10 @@ def _today() -> str:
 
 def _status_for(remaining: float, threshold: Optional[float]) -> str:
     if remaining <= 0:
-        return "نفد"
+        return N_("نفد")
     if threshold is not None and threshold > 0 and remaining <= threshold:
-        return "منخفض"
-    return "متوفر"
+        return N_("منخفض")
+    return N_("متوفر")
 
 
 class CompanyInventoryService:
@@ -97,9 +98,9 @@ class CompanyInventoryService:
         low_stock_threshold=None,
         notes: str = "",
     ) -> dict:
-        name = _require_text(name, "اسم الصنف مطلوب.", max_len=120)
+        name = _require_text(name, N_("اسم الصنف مطلوب."), max_len=120)
         if repo.get_item_by_name(tenant_id=tenant_id, name=name):
-            raise CompanyInventoryError("هذا الصنف موجود مسبقًا.")
+            raise CompanyInventoryError(_tr("هذا الصنف موجود مسبقًا."))
         threshold = _parse_optional_number(low_stock_threshold)
         if threshold is not None and threshold < 0:
             threshold = None
@@ -116,21 +117,21 @@ class CompanyInventoryService:
             action="company_inventory.item.create",
             target_type="company_inventory_item",
             target_id=str(item.get("id")),
-            payload={"summary": f"تم إنشاء صنف مخزون: {name}", "name": name},
+            payload={"summary": _tr('تم إنشاء صنف مخزون: %(name)s', name=name), "name": name},
         )
         return item
 
     def deactivate_item(self, *, tenant_id: int, actor: str, item_id: int) -> None:
         item = repo.get_item(tenant_id=tenant_id, item_id=item_id)
         if not item:
-            raise CompanyInventoryError("الصنف غير موجود.")
+            raise CompanyInventoryError(_tr("الصنف غير موجود."))
         repo.set_item_active(tenant_id=tenant_id, item_id=item_id, is_active=False)
         self._audit.record(
             actor=actor,
             action="company_inventory.item.deactivate",
             target_type="company_inventory_item",
             target_id=str(item_id),
-            payload={"summary": f"تم تعطيل صنف: {item.get('name')}"},
+            payload={"summary": _tr('تم تعطيل صنف: %(v)s', v=item.get('name'))},
         )
 
     def _resolve_item(self, *, tenant_id: int, item_id=None, item_name: str = "",
@@ -141,9 +142,9 @@ class CompanyInventoryService:
         if item_id:
             item = repo.get_item(tenant_id=tenant_id, item_id=int(item_id))
             if not item:
-                raise CompanyInventoryError("الصنف غير موجود.")
+                raise CompanyInventoryError(_tr("الصنف غير موجود."))
             return item
-        name = _require_text(item_name, "اختر صنفًا أو أدخل اسم صنف جديد.",
+        name = _require_text(item_name, N_("اختر صنفًا أو أدخل اسم صنف جديد."),
                              max_len=120)
         existing = repo.get_item_by_name(tenant_id=tenant_id, name=name)
         if existing:
@@ -172,7 +173,7 @@ class CompanyInventoryService:
         notes: str = "",
         created_by_admin_id: Optional[int] = None,
     ) -> dict:
-        qty = _parse_positive(quantity, "أدخل كمية صحيحة أكبر من صفر.")
+        qty = _parse_positive(quantity, N_("أدخل كمية صحيحة أكبر من صفر."))
         item = self._resolve_item(
             tenant_id=tenant_id, item_id=item_id, item_name=item_name,
             category=category, unit=unit, actor=actor,
@@ -198,8 +199,7 @@ class CompanyInventoryService:
             target_type="company_inventory_item",
             target_id=str(item["id"]),
             payload={
-                "summary": f"وارد مخزون: {qty:g} {item.get('unit') or ''} "
-                           f"من {item.get('name')}",
+                "summary": _tr('وارد مخزون: %(qty)s %(v)s من %(v2)s', qty=format(qty, 'g'), v=item.get('unit') or '', v2=item.get('name')),
                 "quantity": qty,
                 "total_cost": total,
             },
@@ -225,14 +225,13 @@ class CompanyInventoryService:
     ) -> dict:
         item = repo.get_item(tenant_id=tenant_id, item_id=int(item_id))
         if not item:
-            raise CompanyInventoryError("الصنف غير موجود.")
-        qty = _parse_positive(quantity, "أدخل كمية صحيحة أكبر من صفر.")
+            raise CompanyInventoryError(_tr("الصنف غير موجود."))
+        qty = _parse_positive(quantity, N_("أدخل كمية صحيحة أكبر من صفر."))
         remaining = repo.remaining_for_item(tenant_id=tenant_id, item_id=int(item_id))
         if qty > remaining:
             unit = item.get("unit") or ""
             raise CompanyInventoryError(
-                f"الكمية المطلوبة غير متوفرة في المخزون. "
-                f"المتبقي الحالي: {remaining:g} {unit}."
+                _tr('الكمية المطلوبة غير متوفرة في المخزون. المتبقي الحالي: %(remaining)s %(unit)s.', remaining=format(remaining, 'g'), unit=unit)
             )
         cust_id = None
         if related_customer_id not in (None, ""):
@@ -259,8 +258,7 @@ class CompanyInventoryService:
             target_type="company_inventory_item",
             target_id=str(item_id),
             payload={
-                "summary": f"صرف مخزون: {qty:g} {item.get('unit') or ''} "
-                           f"من {item.get('name')}",
+                "summary": _tr('صرف مخزون: %(qty)s %(v)s من %(v2)s', qty=format(qty, 'g'), v=item.get('unit') or '', v2=item.get('name')),
                 "quantity": qty,
                 "remaining_after": remaining - qty,
             },
@@ -284,8 +282,8 @@ class CompanyInventoryService:
         notes: str = "",
         created_by_admin_id: Optional[int] = None,
     ) -> dict:
-        title = _require_text(title, "عنوان المصروف مطلوب.", max_len=160)
-        amt = _parse_positive(amount, "أدخل مبلغًا صحيحًا أكبر من صفر.")
+        title = _require_text(title, N_("عنوان المصروف مطلوب."), max_len=160)
+        amt = _parse_positive(amount, N_("أدخل مبلغًا صحيحًا أكبر من صفر."))
         expense = repo.add_expense(
             tenant_id=tenant_id,
             title=title,
@@ -303,7 +301,7 @@ class CompanyInventoryService:
             action="company_expense.add",
             target_type="company_expense",
             target_id=str(expense.get("id")),
-            payload={"summary": f"مصروف شركة: {title} ({amt:g})", "amount": amt},
+            payload={"summary": _tr('مصروف شركة: %(title)s (%(amt)s)', title=title, amt=format(amt, 'g')), "amount": amt},
         )
         return expense
 

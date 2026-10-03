@@ -29,17 +29,17 @@
 
 {# ───── Merged hero: title + actions + KPI strip + integrated router picker ───── #}
 {% call hub.megahero(
-  "مسح الشبكة",
-  subtitle="اكتشف الأجهزة داخل شبكة الراوتر المختار. لا نرسل أي حزم استكشاف نشطة — فقط نقرأ من جداول الراوتر الموجودة (ARP / DHCP / Neighbors).",
+  _('مسح الشبكة'),
+  subtitle=_('اكتشف الأجهزة داخل شبكة الراوتر المختار. لا نرسل أي حزم استكشاف نشطة — فقط نقرأ من جداول الراوتر الموجودة (ARP / DHCP / Neighbors).'),
   icon="radar",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.network_devices_list') + '">
       <i class="fa-solid fa-eye"></i> '|safe ~ _("سجلّ الأجهزة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'أجهزة مكتشَفة', 'value': _total,          'icon': 'network-wired', 'variant': 'brand'},
-    {'label': 'مُسجَّلة',       'value': _known,          'icon': 'circle-check',  'variant': 'green'},
-    {'label': 'جديدة',         'value': _total - _known, 'icon': 'circle-plus',   'variant': 'amber'},
+    {'label': _('أجهزة مكتشَفة'), 'value': _total,          'icon': 'network-wired', 'variant': 'brand'},
+    {'label': _('مُسجَّلة'),       'value': _known,          'icon': 'circle-check',  'variant': 'green'},
+    {'label': _('جديدة'),         'value': _total - _known, 'icon': 'circle-plus',   'variant': 'amber'},
   ],
   search_action=url_for('radius.network_ip_scan_page'),
   search_method="post"
@@ -54,7 +54,7 @@
       </option>
     {% endfor %}
   </select>
-  {{ hub.btn("ابدأ المسح", icon="radar", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('ابدأ المسح'), icon="radar", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
 {% if scan_error %}
@@ -68,22 +68,22 @@
 
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="نقرأ الأجهزة الظاهرة على الراوتر المختار من جداوله الحاليّة فقط — قراءة سلبيّة بلا أي مسح نشط للشبكة.",
+  _('كيف تقرأ هذه الصفحة؟'),
+  intro=_('نقرأ الأجهزة الظاهرة على الراوتر المختار من جداوله الحاليّة فقط — قراءة سلبيّة بلا أي مسح نشط للشبكة.'),
   icon="radar",
   items=[
-    {'icon': 'network-wired', 'text': 'كل صف هو جهاز رآه الراوتر عبر ARP أو DHCP أو الجيران (Neighbors).'},
-    {'icon': 'circle-check',  'text': '«مُسجَّل» يعني أن عنوان IP موجود مسبقاً في سجلّ أجهزة الشبكة.'},
-    {'icon': 'circle-plus',   'text': '«أضف للمتابعة» يُنشئ الجهاز في السجلّ مع تفعيل المراقبة مباشرةً.'},
-    {'icon': 'tag',           'text': 'يُستخدم اسم المضيف (إن وُجد) كاسم مبدئي — يمكنك تعديله لاحقاً.'},
+    {'icon': 'network-wired', 'text': _('كل صف هو جهاز رآه الراوتر عبر ARP أو DHCP أو الجيران (Neighbors).')},
+    {'icon': 'circle-check',  'text': _('«مُسجَّل» يعني أن عنوان IP موجود مسبقاً في سجلّ أجهزة الشبكة.')},
+    {'icon': 'circle-plus',   'text': _('«أضف للمتابعة» يُنشئ الجهاز في السجلّ مع تفعيل المراقبة مباشرةً.')},
+    {'icon': 'tag',           'text': _('يُستخدم اسم المضيف (إن وُجد) كاسم مبدئي — يمكنك تعديله لاحقاً.')},
   ],
-  note="هذه الصفحة لا تُعدِّل الراوتر — لا تُرسل حزم استكشاف ولا تُغيِّر أي إعداد."
+  note=_('هذه الصفحة لا تُعدِّل الراوتر — لا تُرسل حزم استكشاف ولا تُغيِّر أي إعداد.')
 )) %}
-  {% call hub.section("نتائج المسح على «" + selected_router_name + "»", icon="table-list", meta=scan_rows|length|string + " جهاز", flush=True) %}
+  {% call hub.section(_('نتائج المسح على «') + selected_router_name + "»", icon="table-list", meta=scan_rows|length|string + _(' جهاز'), flush=True) %}
     {% if not scan_rows %}
       {{ hub.empty(
-        "لا أجهزة مرئيّة",
-        sub="لا توجد أجهزة ظاهرة على هذا الراوتر حالياً.",
+        _('لا أجهزة مرئيّة'),
+        sub=_('لا توجد أجهزة ظاهرة على هذا الراوتر حالياً.'),
         icon="network-wired"
       ) }}
     {% else %}
@@ -119,7 +119,7 @@
             </td>
             <td>
               {% if row.ip in known_ips %}
-                {{ hub.pill("مُسجَّل", variant="green") }}
+                {{ hub.pill(_('مُسجَّل'), variant="green") }}
               {% else %}
                 <span class="hub-text-mute" style="font-size:12px">{{ _('جديد') }}</span>
               {% endif %}
@@ -153,8 +153,8 @@
 
 {% elif not scan_error %}
 {{ hub.empty(
-  "اختر راوترًا لبدء المسح",
-  sub="اختر راوترًا من الأعلى واضغط «ابدأ المسح» لرؤية الأجهزة في شبكته.",
+  _('اختر راوترًا لبدء المسح'),
+  sub=_('اختر راوترًا من الأعلى واضغط «ابدأ المسح» لرؤية الأجهزة في شبكته.'),
   icon="radar"
 ) }}
 {% endif %}

@@ -6,6 +6,7 @@ Read-only — reuses `audit_repo.recent` + `mt_audit_presenter.present_many`
 (same Arabic-presented entries the web shows).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -33,7 +34,7 @@ def timeline(nas_id: int):
         (int(nas_id), _tid()),
     ).fetchone()
     if not row:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     try:
         limit = min(max(int(request.args.get("limit") or 200), 1), 500)
     except (TypeError, ValueError):

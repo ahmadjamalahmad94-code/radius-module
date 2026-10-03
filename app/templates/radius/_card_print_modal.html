@@ -175,13 +175,13 @@
             {% for t in print_templates %}
               <button type="button" class="batch-template-option"
                       data-template-id="{{ t.id }}"
-                      data-template-name="{{ (t.name or 'قالب')|e }}"
+                      data-template-name="{{ (t.name or _('قالب'))|e }}"
                       data-template-thumb="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}"
                       data-job-url="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}"
                       {% if t.id == default_print_template_id %}data-default-template="1"{% endif %}>
                 <span class="batch-template-option__thumb"><img class="pt-thumb-img" loading="lazy" decoding="async" src="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}" alt=""></span>
-                <strong>{{ t.name or 'قالب بدون اسم' }}</strong>
-                <small>{{ t.preset or 'قالب محفوظ' }}</small>
+                <strong>{{ t.name or _('قالب بدون اسم') }}</strong>
+                <small>{{ t.preset or _('قالب محفوظ') }}</small>
               </button>
             {% endfor %}
           </div>

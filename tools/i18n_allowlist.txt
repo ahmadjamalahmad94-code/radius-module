@@ -1,0 +1,34 @@
+# قائمة السماح لحارس i18n — نصوص عربيّة تبقى غير مُغلَّفة عمدًا.
+# يقرؤها tools/i18n_inventory.py واختبار tests/test_i18n_no_leak_guard.py.
+#
+# الصيغة: ثلاثة حقول مفصولة بـ « | » (مسافة-شَرطة-مسافة) أو بـ TAB:
+#   مسار (glob)  |  النصّ حرفيًّا، أو ^بادئة، أو * للملف كلّه  |  السبب
+# كل سطر يجب أن يحمل سببًا واضحًا. لا تُضِف هنا نصّ واجهة عاديًّا — غلّفه بدلًا من ذلك
+# (انظر I18N.md «القائمة الشاملة»).
+
+# ─────────────── محتوى خارجيّ: لغته ليست لغة واجهة المدير ───────────────
+# تسميات هذه الملفّات التي تظهر في اللوحة (اسم القالب/الوصف/الحقول) مُغلَّفة بـ N_()؛
+# المتبقّي هنا هو جسم المحتوى المُولَّد نفسه.
+app/radius/services/hotspot_*.py | * | صفحات الهوتسبوت (HTML/CSS/JS) تُرفَع إلى راوتر MikroTik ويراها المشترك — لا تتبع لغة جلسة المدير.
+app/radius/services/router_onboarding_script.py | * | نصّ سكربت RouterOS يُلصَق/يُنفَّذ على الراوتر.
+app/radius/services/ip_change_script.py | * | نصّ سكربت RouterOS يُلصَق/يُنفَّذ على الراوتر.
+app/radius/services/notifications_engine.py | * | قوالب رسائل SMS/واتساب للمشتركين (تُنسَّق بـ .format) — محتوى لا واجهة.
+app/radius/services/comms_bot.py | * | ردود بوت المشتركين (تيليجرام/واتساب) — محتوى لا واجهة.
+app/radius/services/admin_alerts.py | * | قوالب تنبيهات تيليجرام (HTML لتيليجرام) — محتوى رسائل لا واجهة.
+app/radius/services/monitoring_digest.py | * | نصّ تقرير المراقبة الدوريّ المُرسَل لتيليجرام — محتوى رسائل.
+app/radius/services/card_template_gallery.py | * | محتوى بطاقات مطبوعة للمشتركين (قوالب تصميم).
+app/radius/services/card_renderer.py | * | رسم البطاقات/PDF المطبوعة (تشكيل عربيّ للخطوط) — محتوى مطبوع.
+app/radius/services/pdf_theme.py | * | تقارير PDF المطبوعة (تشكيل عربيّ للخطوط) — محتوى مطبوع.
+app/templates/radius/communications_templates.html | ^مرحبًا {name} | قالب رسالة جاهز للمشتركين (يُدرَج في محرّر الرسالة) — محتوى لا واجهة.
+app/templates/radius/communications_templates.html | ^تم تجديد اشتراكك | قالب رسالة جاهز للمشتركين — محتوى لا واجهة.
+app/templates/radius/communications_templates.html | ^عزيزنا المشترك | قالب رسالة جاهز للمشتركين — محتوى لا واجهة.
+app/templates/radius/users_list.html | ^أهلاً {username} | قالب SMS جاهز للمشتركين — محتوى لا واجهة.
+app/templates/radius/users_list.html | ^عزيزنا {username} | قالب SMS جاهز للمشتركين — محتوى لا واجهة.
+app/templates/radius/users_list.html | ^تم استلام دفعتك | قالب SMS جاهز للمشتركين — محتوى لا واجهة.
+app/templates/radius/users_list.html | ^إشعار صيانة | قالب SMS جاهز للمشتركين — محتوى لا واجهة.
+
+# ─────────────── نصوص يقرؤها الكود (ترجمتها تكسر منطقًا) ───────────────
+app/radius/i18n.py | العربية | اسم اللغة بلغتها (endonym) في مبدّل اللغة — لا يُترجَم أبدًا.
+app/radius/integration/mikrotik/client.py | ^تعذّر الاتصال بالراوتر | نصّ ConnectError يُطابَق نصّيًّا لاحقًا (mikrotik_admin_client._connect_error_text ومصنِّف أخطاء رفع الهوتسبوت) — ترجمته تكسر التصنيف.
+app/templates/radius/portal_subscriber.html | [شكوى] | علامة بروتوكول يطابقها الخادم (customer_portals) في بداية سبب الطلب — يجب أن تبقى حرفيّة بكل اللغات.
+* | قاعدة سرعة | الاسم الافتراضيّ لقاعدة السرعة؛ JS في _speed_rules_panel.html يقارن data.name بهذا النصّ الحرفيّ.

@@ -1,5 +1,6 @@
 """routes الـ auth: login/logout."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -34,7 +35,7 @@ def auth_login():
             record_login_event(actor_type="admin", username=username, success=False,
                                reason="bad_password", tenant_id=DEFAULT_TENANT_ID,
                                attempted_password=password)
-            flash("بيانات الدخول غير صحيحة.", "error")
+            flash(_tr("بيانات الدخول غير صحيحة."), "error")
             return render_template("radius/login.html", username=username), 401
         login_throttle.register_success("admin_login", username)
         # اختيار tenant — أولوية: tenants_for_admin → default
@@ -54,7 +55,7 @@ def auth_login():
         set_current_admin(admin, tenant_id=tenants[0].id)
         record_login_event(actor_type="admin", username=admin.username, success=True,
                            actor_id=admin.id, tenant_id=tenants[0].id)
-        flash(f"أهلًا {admin.full_name or admin.username}", "success")
+        flash(_tr('أهلًا %(username)s', username=admin.full_name or admin.username), "success")
         nxt = request.args.get("next") or url_for("radius.dashboard")
         return redirect(nxt)
 
@@ -80,7 +81,7 @@ def _maybe_sync_license_admin_identity() -> None:
 
 def auth_logout():
     clear_current_admin()
-    flash("تم تسجيل الخروج.", "info")
+    flash(_tr("تم تسجيل الخروج."), "info")
     return redirect(url_for("radius.auth_login"))
 
 
@@ -96,9 +97,9 @@ def auth_switch_tenant():
         return redirect(request.referrer or url_for("radius.dashboard"))
     allowed = {t.id for t in admin_tenants()}
     if new_tid not in allowed:
-        flash("لا تملك صلاحية على هذا الـ Tenant.", "error")
+        flash(_tr("لا تملك صلاحية على هذا الـ Tenant."), "error")
         return redirect(request.referrer or url_for("radius.dashboard"))
     session["tenant_id"] = new_tid
     t = TenantsStore.instance().get(new_tid)
-    flash(f"تم التبديل إلى: {t.display_name or t.name}", "success")
+    flash(_tr('تم التبديل إلى: %(name)s', name=t.display_name or t.name), "success")
     return redirect(request.referrer or url_for("radius.dashboard"))

@@ -1,5 +1,6 @@
 """Operations Center and dry-run Speed Control Center routes."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 
@@ -62,7 +63,7 @@ def _schedule_context() -> dict:
             sub.username: (sub.full_name or sub.username) for sub in subscribers
         },
         "batch_names": {
-            batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or 'بدون اسم'}"
+            batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or N_('بدون اسم')}"
             for batch in batches
         },
         "live_apply_enabled": live_apply_enabled,
@@ -92,12 +93,10 @@ def _speed_control_page(template: str, redirect_endpoint: str):
                 _coa = result.get("coa") or {}
                 _hit = f"{int(_coa.get('applied') or 0)}/{int(_coa.get('targets') or 0)}"
                 if result.get("reset"):
-                    flash(f"أُعيدت السرعة للوضع الطبيعي (100%). طُبِّق على {_hit} جلسة متصلة، "
-                          f"والجلسات الجديدة تعود لسرعتها الأصليّة.", "success")
+                    flash(_tr('أُعيدت السرعة للوضع الطبيعي (100%%). طُبِّق على %(hit)s جلسة متصلة، والجلسات الجديدة تعود لسرعتها الأصليّة.', hit=_hit), "success")
                 else:
                     _pct = int(round(float(result.get("multiplier") or 1.0) * 100))
-                    flash(f"طُبِّقت «{result.get('label')}» ({_pct}%) حيًّا: CoA على {_hit} جلسة "
-                          f"متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.", "success")
+                    flash(_tr('طُبِّقت «%(v)s» (%(pct)s%%) حيًّا: CoA على %(hit)s جلسة متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.', v=result.get('label'), pct=_pct, hit=_hit), "success")
                 return redirect(url_for(redirect_endpoint, policy_id=result["policy"]["id"]))
             if request.form.get("save_policy") == "1":
                 policy = svc.save_speed_policy(
@@ -110,7 +109,7 @@ def _speed_control_page(template: str, redirect_endpoint: str):
                     mode=mode,
                     actor=_actor(),
                 )
-                flash("تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.", "success")
+                flash(_tr("تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA."), "success")
                 return redirect(url_for(redirect_endpoint, policy_id=policy["id"]))
             preview = svc.speed_preview(
                 preset=preset, multiplier=multiplier, profile_ids=profile_ids, overrides=overrides

@@ -12,6 +12,7 @@ What lives here:
     state independently of the deployments repo's literals.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from dataclasses import dataclass
@@ -118,24 +119,23 @@ def validate_name(raw: str) -> NameValidation:
     inline alongside the form."""
     if raw is None:
         return NameValidation(
-            ok=False, reason="الاسم مطلوب.",
+            ok=False, reason=N_("الاسم مطلوب."),
         )
     cleaned = str(raw).strip()
     if not cleaned:
         return NameValidation(
-            ok=False, reason="الاسم لا يمكن أن يكون فارغاً.",
+            ok=False, reason=N_("الاسم لا يمكن أن يكون فارغاً."),
         )
     if not _NAME_HAS_VISIBLE.search(cleaned):
         return NameValidation(
             ok=False,
-            reason="الاسم يجب أن يحوي حرفاً ظاهراً واحداً على الأقل.",
+            reason=N_("الاسم يجب أن يحوي حرفاً ظاهراً واحداً على الأقل."),
         )
     if len(cleaned) > MAX_NAME_LEN:
         return NameValidation(
             ok=False,
             reason=(
-                f"طول الاسم أكبر من المسموح "
-                f"({MAX_NAME_LEN} حرفاً)."
+                _tr('طول الاسم أكبر من المسموح (%(MAX_NAME_LEN)s حرفاً).', MAX_NAME_LEN=MAX_NAME_LEN)
             ),
             cleaned=cleaned[:MAX_NAME_LEN],
         )
@@ -171,21 +171,21 @@ def category_label(category: str) -> str:
 
 
 _CATEGORY_LABELS = {
-    "tiktok":         "تيك توك",
-    "instagram":      "إنستغرام",
-    "facebook":       "فيسبوك",
-    "twitter":        "تويتر / X",
-    "youtube":        "يوتيوب",
-    "gambling":       "مواقع المراهنات",
-    "adult":          "محتوى للبالغين",
-    "torrent":        "تطبيقات التورنت",
-    "gaming":         "ألعاب",
-    "streaming":      "بث مباشر",
-    "ads":            "إعلانات",
-    "speedtest":      "اختبار السرعة",
-    "ip_checkers":    "كاشفات الـ IP",
-    "vpn_providers":  "مزوّدو VPN",
-    "custom":         "مخصّص",
+    "tiktok":         N_("تيك توك"),
+    "instagram":      N_("إنستغرام"),
+    "facebook":       N_("فيسبوك"),
+    "twitter":        N_("تويتر / X"),
+    "youtube":        N_("يوتيوب"),
+    "gambling":       N_("مواقع المراهنات"),
+    "adult":          N_("محتوى للبالغين"),
+    "torrent":        N_("تطبيقات التورنت"),
+    "gaming":         N_("ألعاب"),
+    "streaming":      N_("بث مباشر"),
+    "ads":            N_("إعلانات"),
+    "speedtest":      N_("اختبار السرعة"),
+    "ip_checkers":    N_("كاشفات الـ IP"),
+    "vpn_providers":  N_("مزوّدو VPN"),
+    "custom":         N_("مخصّص"),
 }
 
 

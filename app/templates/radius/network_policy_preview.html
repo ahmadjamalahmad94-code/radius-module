@@ -581,23 +581,23 @@
 {% set b = intelligence.blast %}
 
 {%- set _grade_ar -%}
-  {% if h.grade == 'excellent' %}ممتازة
-  {% elif h.grade == 'good' %}جيدة
-  {% elif h.grade == 'caution' %}تحتاج حذراً
-  {% elif h.grade == 'risky' %}محفوفة بالمخاطر
-  {% else %}تحتاج إعادة تخطيط{% endif %}
+  {% if h.grade == 'excellent' %}{{ _('ممتازة') }}
+  {% elif h.grade == 'good' %}{{ _('جيدة') }}
+  {% elif h.grade == 'caution' %}{{ _('تحتاج حذراً') }}
+  {% elif h.grade == 'risky' %}{{ _('محفوفة بالمخاطر') }}
+  {% else %}{{ _('تحتاج إعادة تخطيط') }}{% endif %}
 {%- endset -%}
 {%- set _grade_variant = ({'excellent':'green','good':'green','caution':'amber','risky':'red','dangerous':'red'}).get(h.grade, 'brand') -%}
 
-{%- if risk == 'critical' %}{% set _risk_ar = 'حرج' %}{% set _risk_variant = 'red' %}
-{%- elif risk == 'high' %}{% set _risk_ar = 'مرتفع' %}{% set _risk_variant = 'red' %}
-{%- elif risk == 'medium' %}{% set _risk_ar = 'متوسط' %}{% set _risk_variant = 'amber' %}
-{%- else %}{% set _risk_ar = 'منخفض' %}{% set _risk_variant = 'green' %}{% endif -%}
+{%- if risk == 'critical' %}{% set _risk_ar = _('حرج') %}{% set _risk_variant = 'red' %}
+{%- elif risk == 'high' %}{% set _risk_ar = _('مرتفع') %}{% set _risk_variant = 'red' %}
+{%- elif risk == 'medium' %}{% set _risk_ar = _('متوسط') %}{% set _risk_variant = 'amber' %}
+{%- else %}{% set _risk_ar = _('منخفض') %}{% set _risk_variant = 'green' %}{% endif -%}
 
-{%- if b.blast_radius == 'small' %}{% set _blast_ar = 'نطاق ضيّق' %}{% set _blast_variant = 'green' %}
-{%- elif b.blast_radius == 'medium' %}{% set _blast_ar = 'متوسّط' %}{% set _blast_variant = 'amber' %}
-{%- elif b.blast_radius == 'large' %}{% set _blast_ar = 'واسع' %}{% set _blast_variant = 'red' %}
-{%- else %}{% set _blast_ar = 'حرج' %}{% set _blast_variant = 'red' %}{% endif -%}
+{%- if b.blast_radius == 'small' %}{% set _blast_ar = _('نطاق ضيّق') %}{% set _blast_variant = 'green' %}
+{%- elif b.blast_radius == 'medium' %}{% set _blast_ar = _('متوسّط') %}{% set _blast_variant = 'amber' %}
+{%- elif b.blast_radius == 'large' %}{% set _blast_ar = _('واسع') %}{% set _blast_variant = 'red' %}
+{%- else %}{% set _blast_ar = _('حرج') %}{% set _blast_variant = 'red' %}{% endif -%}
 
 {% set _actions %}
   {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
@@ -621,14 +621,14 @@
 
 {{ hub.megahero(
   policy.name,
-  subtitle=service.label_ar ~ " · " ~ router_name ~ " — معاينة استشاريّة فقط، لم تُطبَّق على الراوتر.",
+  subtitle=_('%(label_ar)s · %(router_name)s — معاينة استشاريّة فقط، لم تُطبَّق على الراوتر.', label_ar=service.label_ar, router_name=router_name),
   icon=service.icon,
   actions_html=_actions,
   kpis=[
-    {'label': 'صحّة الخطّة', 'value': h.score ~ '/100', 'sub': _grade_ar|trim, 'icon': 'heart-pulse', 'variant': _grade_variant},
-    {'label': 'مستوى الخطر', 'value': _risk_ar, 'icon': 'triangle-exclamation', 'variant': _risk_variant},
-    {'label': 'نطاق التأثير', 'value': _blast_ar, 'sub': b.affected_router_count ~ ' راوتر', 'icon': 'users-viewfinder', 'variant': _blast_variant},
-    {'label': 'حالة الخطّة', 'value': ('سليمة' if plan.can_apply else 'محظورة'), 'icon': ('circle-check' if plan.can_apply else 'ban'), 'variant': ('green' if plan.can_apply else 'red')},
+    {'label': _('صحّة الخطّة'), 'value': h.score ~ '/100', 'sub': _grade_ar|trim, 'icon': 'heart-pulse', 'variant': _grade_variant},
+    {'label': _('مستوى الخطر'), 'value': _risk_ar, 'icon': 'triangle-exclamation', 'variant': _risk_variant},
+    {'label': _('نطاق التأثير'), 'value': _blast_ar, 'sub': _('%(affected_router_count)s راوتر', affected_router_count=b.affected_router_count), 'icon': 'users-viewfinder', 'variant': _blast_variant},
+    {'label': _('حالة الخطّة'), 'value': (_('سليمة') if plan.can_apply else _('محظورة')), 'icon': ('circle-check' if plan.can_apply else 'ban'), 'variant': ('green' if plan.can_apply else 'red')},
   ]
 ) }}
 
@@ -638,7 +638,7 @@
 <div class="npc-int-grid">
 
   {# ════════════════ SECTION 1 — Decision summary ════════════════ #}
-  {% call hub.section("خلاصة القرار", icon="gauge-high") %}
+  {% call hub.section(_('خلاصة القرار'), icon="gauge-high") %}
     <div data-test="npc-hero">
       <div style="display:flex; gap:8px; flex-wrap:wrap;
                   margin-bottom:12px;">
@@ -689,9 +689,9 @@
       </div>
 
       {{ hub.kv(rows=[
-        {'label': 'الخدمة', 'value': service.label_ar},
-        {'label': 'المُعرّف (slug)', 'value': policy.slug, 'mono': True},
-        {'label': 'الراوتر', 'value': router_name},
+        {'label': _('الخدمة'), 'value': service.label_ar},
+        {'label': _('المُعرّف (slug)'), 'value': policy.slug, 'mono': True},
+        {'label': _('الراوتر'), 'value': router_name},
       ]) }}
 
       <p class="npc-hero-explain" data-test="npc-health-score">
@@ -705,7 +705,7 @@
 
   {# ════════════════ SECTION 1b — Execution Readiness ════════ #}
   {% set rdy = intelligence.readiness %}
-  {% call hub.section("جاهزيّة التنفيذ", icon="list-check") %}
+  {% call hub.section(_('جاهزيّة التنفيذ'), icon="list-check") %}
     <div data-test="npc-section-readiness">
     <div style="display:flex; margin-bottom:14px;">
       {% if rdy.ready_for_future_apply %}
@@ -834,15 +834,15 @@
 
         {% set CONFIRM_LABELS = {
           'confirm_large_blast_radius':
-            'أؤكّد أن النطاق واسع وأنّني قرأت تأثيراته.',
+            _('أؤكّد أن النطاق واسع وأنّني قرأت تأثيراته.'),
           'confirm_firewall_drop':
-            'أؤكّد أن السياسة تحذف حركة forward (drop).',
+            _('أؤكّد أن السياسة تحذف حركة forward (drop).'),
           'confirm_all_router_scope':
-            'أؤكّد أن السياسة تستهدف كل الراوترات.',
+            _('أؤكّد أن السياسة تستهدف كل الراوترات.'),
           'confirm_dependency_impact':
-            'أؤكّد أنّني راجعت قائمة الخدمات التي قد تتأثّر.',
+            _('أؤكّد أنّني راجعت قائمة الخدمات التي قد تتأثّر.'),
           'confirm_canary_bypass':
-            'أؤكّد تخطّي المرحلة التدريجية (canary).'
+            _('أؤكّد تخطّي المرحلة التدريجية (canary).')
         } %}
 
         {% if rdy.required_confirmations %}
@@ -916,8 +916,7 @@
                   text-align:center;"
            data-test="npc-future-apply-placeholder">
         <i class="fa-solid fa-lock"></i>
-        لا تملك صلاحية {{ rdy.apply_perm_label_ar }} —
-        التنفيذ غير متاح.
+        {{ _('لا تملك صلاحية %(apply_perm_label_ar)s — التنفيذ غير متاح.', apply_perm_label_ar=rdy.apply_perm_label_ar) }}
       </div>
     {% endif %}
 
@@ -932,24 +931,23 @@
 
   {# ═══════════ SECTION 1c — Access URLs (remote-access) ═══════ #}
   {% if intelligence.access_urls %}
-  {% call hub.section("روابط الوصول إلى الراوتر بعد التطبيق", icon="link") %}
+  {% call hub.section(_('روابط الوصول إلى الراوتر بعد التطبيق'), icon="link") %}
     <div data-test="npc-section-access-urls">
     <p style="margin:0 0 14px; color:#6b7280;
               font-size:13px;">
-      هذه هي العناوين التي ستستخدمها للاتصال بالراوتر بعد
-      الضغط على «تطبيق آمن».
+      {{ _('هذه هي العناوين التي ستستخدمها للاتصال بالراوتر بعد الضغط على «تطبيق آمن».') }}
       {% if policy.source_address_list %}
-        الوصول مسموح فقط من العناوين الموجودة في قائمة
+        {{ _('الوصول مسموح فقط من العناوين الموجودة في قائمة') }}
         <code style="background:#F3F4F6; padding:1px 6px;
                      border-radius:4px; font-size:12px;">
           {{ policy.source_address_list }}
         </code>
-        على الراوتر.
+        {{ _('على الراوتر.') }}
       {% endif %}
       {% if policy.expires_at %}
-        صالح حتى
+        {{ _('صالح حتى') }}
         <strong>{{ policy.expires_at|dt_local }}</strong>
-        ثم يُغلَق تلقائياً.
+        {{ _('ثم يُغلَق تلقائياً.') }}
       {% endif %}
     </p>
 
@@ -995,7 +993,7 @@
         <button type="button"
                 onclick="navigator.clipboard
                          .writeText('{{ ep.clipboard }}');
-                         this.textContent='تم النسخ';"
+                         this.textContent={{ _('تم النسخ')|tojson|forceescape }};"
                 style="background:#F0FDF4; color:#047857;
                        border:1px solid #BBF7D0;
                        padding:6px 12px; border-radius:8px;
@@ -1012,13 +1010,11 @@
 
   {# ════════ SECTION 1d — Remote (via-VPS) Access URLs ════════ #}
   {% if intelligence.remote_access_urls %}
-  {% call hub.section("روابط الوصول من خارج الشبكة عبر خادم الربط", icon="globe") %}
+  {% call hub.section(_('روابط الوصول من خارج الشبكة عبر خادم الربط'), icon="globe") %}
     <div data-test="npc-section-remote-access-urls">
     <p style="margin:0 0 14px; color:#6b7280;
               font-size:13px;">
-      {{ _('هذه روابط') }} <strong>{{ _('عامّة') }}</strong> تمرّ عبر خادم الربط الذي يحوّل
-      الاتصال إلى الراوتر عبر النفق الآمن. تعمل من أيّ مكان في
-      العالم — مفيدة حين تكون خارج الشبكة المحلّية للراوتر.
+      {{ _('هذه روابط') }} <strong>{{ _('عامّة') }}</strong> {{ _('تمرّ عبر خادم الربط الذي يحوّل الاتصال إلى الراوتر عبر النفق الآمن. تعمل من أيّ مكان في العالم — مفيدة حين تكون خارج الشبكة المحلّية للراوتر.') }}
     </p>
 
     <div style="display:grid; gap:10px;"
@@ -1063,7 +1059,7 @@
         <button type="button"
                 onclick="navigator.clipboard
                          .writeText('{{ ep.clipboard }}');
-                         this.textContent='تم النسخ';"
+                         this.textContent={{ _('تم النسخ')|tojson|forceescape }};"
                 style="background:#EEF2FF; color:#3730A3;
                        border:1px solid #A5B4FC;
                        padding:6px 12px; border-radius:8px;
@@ -1080,13 +1076,10 @@
                 border-radius:8px; font-size:12px;
                 color:#78350F;">
       <i class="fa-solid fa-shield-halved"></i>
-      {{ _('⚠️ هذه الروابط') }} <strong>{{ _('متاحة على الإنترنت العامّ') }}</strong>.
-      تأكّد من أنّ:
+      {{ _('⚠️ هذه الروابط') }} <strong>{{ _('متاحة على الإنترنت العامّ') }}</strong>{{ _('. تأكّد من أنّ:') }}
       <ul style="margin:6px 0 0 18px; padding:0;">
         <li>{{ _('كلمة مرور الراوتر قوية ولم تتسرّب.') }}</li>
-        <li>قائمة العناوين المسموحة على الراوتر
-          ({{ policy.source_address_list or 'غير محدّدة' }})
-          تشمل عنوان خادم الربط وواجهة النفق حتى يعمل التحويل.</li>
+        <li>{{ _('قائمة العناوين المسموحة على الراوتر (') }}{{ policy.source_address_list or _('غير محدّدة') }}{{ _(') تشمل عنوان خادم الربط وواجهة النفق حتى يعمل التحويل.') }}</li>
         <li>{{ _('صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً.') }}</li>
       </ul>
     </div>
@@ -1232,10 +1225,10 @@
       {% endif %}
       <div class="npc-blast-tile">
         <span class="npc-blast-sev npc-blast-sev-{{ b.blast_radius }}">
-          {% if b.blast_radius == 'small' %}نطاق ضيّق
-          {% elif b.blast_radius == 'medium' %}متوسّط
-          {% elif b.blast_radius == 'large' %}واسع
-          {% else %}حرج{% endif %}
+          {% if b.blast_radius == 'small' %}{{ _('نطاق ضيّق') }}
+          {% elif b.blast_radius == 'medium' %}{{ _('متوسّط') }}
+          {% elif b.blast_radius == 'large' %}{{ _('واسع') }}
+          {% else %}{{ _('حرج') }}{% endif %}
         </span>
         <div class="l" style="margin-top:6px;">{{ _('نطاق التأثير') }}</div>
       </div>
@@ -1334,9 +1327,9 @@
               {{ dep.service_name }}
               <span class="npc-dep-conf npc-dep-conf-{{ dep.confidence }}"
                     data-test="npc-dep-confidence">
-                {% if dep.confidence == 'certain' %}مؤكَّد
-                {% elif dep.confidence == 'likely' %}مرجَّح
-                {% else %}محتمل{% endif %}
+                {% if dep.confidence == 'certain' %}{{ _('مؤكَّد') }}
+                {% elif dep.confidence == 'likely' %}{{ _('مرجَّح') }}
+                {% else %}{{ _('محتمل') }}{% endif %}
               </span>
             </div>
             <div class="npc-dep-impact">
@@ -1389,9 +1382,9 @@
           </div>
           <div class="npc-rec-meta">
             <span class="hub-pill hub-pill--grey">
-              {% if rec.confidence == 'high' %}عالية
-              {% elif rec.confidence == 'medium' %}متوسطة
-              {% else %}محدودة{% endif %}
+              {% if rec.confidence == 'high' %}{{ _('عالية') }}
+              {% elif rec.confidence == 'medium' %}{{ _('متوسطة') }}
+              {% else %}{{ _('محدودة') }}{% endif %}
             </span>
           </div>
         </div>
@@ -1413,10 +1406,10 @@
       <i class="fa-solid fa-circle-info"></i>
       {{ _('اقتراح فقط — لا يتم تنفيذ أي شيء تلقائياً.') }}
       <span style="margin-inline-start:auto; font-weight:700;">
-        {% if cn.recommended_strategy == 'full' %}تطبيق مباشر
-        {% elif cn.recommended_strategy == 'staged' %}تطبيق على مرحلتين
-        {% elif cn.recommended_strategy == 'canary' %}Canary تدريجي
-        {% else %}إيقاف وإعادة تخطيط{% endif %}
+        {% if cn.recommended_strategy == 'full' %}{{ _('تطبيق مباشر') }}
+        {% elif cn.recommended_strategy == 'staged' %}{{ _('تطبيق على مرحلتين') }}
+        {% elif cn.recommended_strategy == 'canary' %}{{ _('Canary تدريجي') }}
+        {% else %}{{ _('إيقاف وإعادة تخطيط') }}{% endif %}
       </span>
     </div>
 
@@ -1436,8 +1429,7 @@
     <div class="npc-canary-note">
       <i class="fa-regular fa-clock"
          style="color:#6b7280;"></i>
-      الوقت المقترح بين كل مرحلة:
-      {{ cn.wait_time_recommendation_ar }}
+      {{ _('الوقت المقترح بين كل مرحلة: %(wait_time_recommendation_ar)s', wait_time_recommendation_ar=cn.wait_time_recommendation_ar) }}
     </div>
   </div>
 
@@ -1496,7 +1488,7 @@
                         color:#6B5AED; font-weight:700;
                         font-size:13px; margin-bottom:10px;">
           <i class="fa-regular fa-rectangle-list"></i>
-          إظهار/إخفاء قائمة المصطلحات ({{ g|length }})
+          {{ _('إظهار/إخفاء قائمة المصطلحات (%(length)s)', length=g|length) }}
         </summary>
         <div class="npc-glossary" style="margin-top:10px;">
           {% for item in g %}
@@ -1546,8 +1538,7 @@
       {{ _('سكربت الراوتر (للمتقدّمين)') }}
       <span style="margin-inline-start:10px; color:#6b7280;
                    font-size:12px; font-weight:500;">
-        {{ summary.command_count }} سطر فعّال ·
-        hash: {{ script_hash[:12] }}…
+        {{ _('%(command_count)s سطر فعّال · hash: %(v)s…', command_count=summary.command_count, v=script_hash[:12]) }}
       </span>
     </summary>
 
@@ -1562,9 +1553,7 @@
       {% elif not forward_script %}
         <div style="color:#6b7280; font-size:13px;
                     padding:8px 0;">
-          لا يمكن توليد السكربت في حالته الحاليّة. عالج
-          المشاكل الموضَّحة أعلاه ثم اضغط
-          «توليد المعاينة».
+          {{ _('لا يمكن توليد السكربت في حالته الحاليّة. عالج المشاكل الموضَّحة أعلاه ثم اضغط «توليد المعاينة».') }}
         </div>
       {% else %}
         <div style="display:flex; gap:6px; align-items:center;
@@ -1575,7 +1564,7 @@
           <span style="margin-inline-start:auto;
                        display:flex; gap:6px;">
             <button class="hub-btn hub-btn--secondary" type="button"
-              onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';">
+              onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText={{ _('تم النسخ ✓')|tojson|forceescape }};">
               <i class="fa-regular fa-clipboard"></i>
               {{ _('نسخ') }}
             </button>
@@ -1598,7 +1587,7 @@
             </strong>
             <span style="margin-inline-start:auto;">
               <button class="hub-btn hub-btn--secondary" type="button"
-                onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
+                onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText={{ _('تم النسخ ✓')|tojson|forceescape }};">
                 <i class="fa-regular fa-clipboard"></i>
                 {{ _('نسخ') }}
               </button>
@@ -1669,7 +1658,6 @@
 <div style="margin-top:18px; color:#6b7280; font-size:12.5px;">
   <i class="fa-solid fa-shield-halved"
      style="color:#6B5AED;"></i>
-  تذكير: هذه الصفحة لا تتّصل بالراوتر. كل ما تراه
-  هو تحليل ومعاينة فقط. التطبيق المباشر يتطلب صلاحية تطبيق منفصلة.
+  {{ _('تذكير: هذه الصفحة لا تتّصل بالراوتر. كل ما تراه هو تحليل ومعاينة فقط. التطبيق المباشر يتطلب صلاحية تطبيق منفصلة.') }}
 </div>
 {% endblock %}

@@ -24,7 +24,7 @@
 {% block title %}{{ _("مصمّم صفحة الدخول") }} — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-palette"></i>{% endblock %}
 {% block page_title %}{{ _("مصمّم صفحة الدخول") }} {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ router_no(nas.id) }} · {{ nas.address }} · تصميم صفحة دخول المشتركين</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('جهاز شبكة #%(v)s · %(address)s · تصميم صفحة دخول المشتركين', v=router_no(nas.id), address=nas.address) }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_login_designer.css') }}">
@@ -354,10 +354,10 @@
 
 {# ── تسمية عربية مختصرة لحالة آخر نشر (من سجل الأحداث) ── #}
 {% if last_deploy %}
-  {% set _dep_label = 'ناجح' if last_deploy.result_status == 'success' else 'فشل' %}
+  {% set _dep_label = _('ناجح') if last_deploy.result_status == 'success' else _('فشل') %}
   {% set _dep_variant = 'green' if last_deploy.result_status == 'success' else 'red' %}
 {% else %}
-  {% set _dep_label = 'لم يُنشر بعد' %}
+  {% set _dep_label = _('لم يُنشر بعد') %}
   {% set _dep_variant = 'amber' %}
 {% endif %}
 {# القالب النشط من المكتبة — وقيمة slug آمنة (من الكتالوج فقط، لا من النموذج) #}
@@ -375,14 +375,14 @@
   {# ───── صدفة الهيرو الموحّدة: عنوان + غرض + KPI بصف واحد + زر الرجوع ───── #}
   <section class="hub-hero-shell" data-testid="login-designer-hero">
   {{ hub.megahero(
-    "مصمّم صفحة الدخول — " ~ nas.name,
-    subtitle="اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.",
+    _('مصمّم صفحة الدخول — %(name)s', name=nas.name),
+    subtitle=_('اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.'),
     icon="palette",
-    actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>'|safe if can_submit('radius.mt_dashboard', 'GET') else ''),
+    actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _('رجوع لصفحة الراوتر') ~ '</a>'|safe if can_submit('radius.mt_dashboard', 'GET') else ''),
     kpis=[
-      {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
-      {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
-      {'label': 'حالة النشر الأخيرة', 'value': _dep_label, 'icon': 'cloud-arrow-up', 'variant': _dep_variant,
+      {'label': _('عدد التصاميم'), 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
+      {'label': _('التصميم المعتمد حاليًا'), 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
+      {'label': _('حالة النشر الأخيرة'), 'value': _dep_label, 'icon': 'cloud-arrow-up', 'variant': _dep_variant,
        'sub': (last_deploy.created_at|dt_local if last_deploy and last_deploy.created_at else '')}
     ]
   ) }}
@@ -419,14 +419,11 @@
        واحد. شريط تبويبات أعلى = مُرشِّح نوع المنشأة؛ قسمٌ واحد فقط ظاهر في
        كل مرّة (لا تتكدّس الأقسام فوق بعضها)، 4–5 تصاميم لكل قسم. الاختيار
        يَضبط template_slug (الشكل/التخطيط) والمعاينة تتحدّث فورًا. #}
-    {% call hub.section("التصاميم", icon="table-cells-large",
-                        meta="① اختر تصميمًا") %}
+    {% call hub.section(_('التصاميم'), icon="table-cells-large",
+                        meta=_('① اختر تصميمًا')) %}
       <p class="mtld-lead">
-        <strong>اختر تصميمًا يناسب نوع نشاطك</strong> من تبويبات الأعلى — التصميم
-        يُحدّد الشكل والتخطيط. ثم تُعيد تلوينه وخطوطه في «② الألوان والخطوط»
-        وتُحرّر محتواه (إعلان/عرض/…) في «③ الإضافات» بالأسفل. انقر أيّ بطاقة
-        لاختيارها والمعاينة الكبيرة تتحدّث فورًا.
-        <span class="hub-hint" tabindex="0" data-hint="المصغّرات تُحمَّل من نقطة المعاينة نفسها التي يستخدمها الراوتر، فما تراه هنا هو ما سيراه المشترك فعلًا."><i class="fa-solid fa-info"></i></span>
+        <strong>{{ _('اختر تصميمًا يناسب نوع نشاطك') }}</strong> {{ _('من تبويبات الأعلى — التصميم يُحدّد الشكل والتخطيط. ثم تُعيد تلوينه وخطوطه في «② الألوان والخطوط» وتُحرّر محتواه (إعلان/عرض/…) في «③ الإضافات» بالأسفل. انقر أيّ بطاقة لاختيارها والمعاينة الكبيرة تتحدّث فورًا.') }}
+        <span class="hub-hint" tabindex="0" data-hint="{{ _('المصغّرات تُحمَّل من نقطة المعاينة نفسها التي يستخدمها الراوتر، فما تراه هنا هو ما سيراه المشترك فعلًا.') }}"><i class="fa-solid fa-info"></i></span>
       </p>
       {# شريط تبويبات أنواع المنشآت — أفقيّ، قابل للتمرير، قسمٌ واحد ظاهر #}
       <div class="mtld-gtabs" role="tablist" data-mtld-gtabs
@@ -510,8 +507,8 @@
     <div class="mtld-work">
 
       {# عمود الحقول — ② الألوان والخطوط والإعدادات (إعادة تلوين التصميم) #}
-      {% call hub.section("② تخصيص التصميم — الألوان والخطوط", icon="sliders",
-                          meta="معاينة فورية") %}
+      {% call hub.section(_('② تخصيص التصميم — الألوان والخطوط'), icon="sliders",
+                          meta=_('معاينة فورية')) %}
 
         {# ── شريط الأقسام (تبويبات): قسم واحد ظاهر في كل مرة.
            الإخفاء عرضي فقط (display) — كل الحقول تبقى في DOM
@@ -593,9 +590,8 @@
           {% if v.slug == 'ACCENT_COLOR' %}
           <div class="mtld-field mtld-colors-note" data-mtld-sec="identity">
             <p class="mtld-lead" style="margin:0">
-              <i class="fa-solid fa-palette"></i> <strong>② الألوان والخطوط.</strong>
-              هنا تُعيد تلوين التصميم المُختار وضبط خطوطه فقط — لا يبدّل ذلك
-              التصميم ولا الإضافات (تُحرَّر في «③ الإضافات»).
+              <i class="fa-solid fa-palette"></i> <strong>{{ _('② الألوان والخطوط.') }}</strong>
+              {{ _('هنا تُعيد تلوين التصميم المُختار وضبط خطوطه فقط — لا يبدّل ذلك التصميم ولا الإضافات (تُحرَّر في «③ الإضافات»).') }}
             </p>
           </div>
           {% endif %}
@@ -609,7 +605,7 @@
                      class="mtld-color-swatch"
                      value="{{ _val }}"
                      data-mtld-color-for="{{ v.slug }}"
-                     aria-label="منتقي {{ v.label_ar }}">
+                     aria-label="{{ _('منتقي %(label_ar)s', label_ar=v.label_ar) }}">
               <input type="text" class="hub-input mtld-color-text"
                      id="mtld-var-{{ v.slug }}"
                      name="{{ v.slug }}"
@@ -661,15 +657,15 @@
                بدل حقل نص. نفس الاسم/القيمة (yes/no) في مسار الحفظ فتمرّ
                عبر validate_vars كالمعتاد. تسميات الخيارات لكل مفتاح: #}
             {% if v.slug == 'STORE_ENABLED' %}
-              {% set _opt_no, _opt_yes = 'إيقاف — بدون زر المتجر', 'تفعيل — أظهر زر المتجر' %}
+              {% set _opt_no, _opt_yes = _('إيقاف — بدون زر المتجر'), _('تفعيل — أظهر زر المتجر') %}
             {% elif v.slug == 'TRIAL_ENABLED' %}
-              {% set _opt_no, _opt_yes = 'إيقاف — بدون زر التجربة', 'تفعيل — أظهر زر التجربة المجانية' %}
+              {% set _opt_no, _opt_yes = _('إيقاف — بدون زر التجربة'), _('تفعيل — أظهر زر التجربة المجانية') %}
             {% elif v.slug == 'PASSWORD_FIELD' %}
-              {% set _opt_no, _opt_yes = 'إخفاء — دخول باسم المستخدم فقط', 'إظهار — اسم مستخدم وكلمة مرور' %}
+              {% set _opt_no, _opt_yes = _('إخفاء — دخول باسم المستخدم فقط'), _('إظهار — اسم مستخدم وكلمة مرور') %}
             {% elif v.slug == 'SAVED_SESSIONS_ENABLED' %}
-              {% set _opt_no, _opt_yes = 'إيقاف — لا تُحفظ الجلسات', 'تفعيل — احفظ آخر 5 بطاقات' %}
+              {% set _opt_no, _opt_yes = _('إيقاف — لا تُحفظ الجلسات'), _('تفعيل — احفظ آخر 5 بطاقات') %}
             {% else %}
-              {% set _opt_no, _opt_yes = 'إيقاف', 'تفعيل' %}
+              {% set _opt_no, _opt_yes = _('إيقاف'), _('تفعيل') %}
             {% endif %}
             <select class="hub-input"
                     id="mtld-var-{{ v.slug }}"
@@ -717,13 +713,10 @@
               <details>
                 <summary>
                   <i class="fa-solid fa-shield-halved"></i>
-                  قائمة السماح (walled-garden) — النشر المباشر يضيفها
-                  تلقائيًا؛ مع الرفع اليدوي (ZIP) انسخ الأمر
+                  {{ _('قائمة السماح (walled-garden) — النشر المباشر يضيفها تلقائيًا؛ مع الرفع اليدوي (ZIP) انسخ الأمر') }}
                 </summary>
                 <div class="mtld-store-auto-hint">
-                  حتى يتصل المتجر بسيرفر الراديوس قبل تسجيل دخول
-                  الزبائن، الصق هذا الأمر في طرفيّة الراوتر (نفس
-                  الصيغة في RouterOS v6 و v7):
+                  {{ _('حتى يتصل المتجر بسيرفر الراديوس قبل تسجيل دخول الزبائن، الصق هذا الأمر في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):') }}
                 </div>
                 <pre dir="ltr" class="mtld-cmd">{{ wg_command }}</pre>
               </details>
@@ -732,8 +725,7 @@
             {% if not radius_ip_configured %}
             <div class="mtld-store-warn">
               <i class="fa-solid fa-triangle-exclamation"></i>
-              حدد «عنوان IP سيرفر الراديوس» في الإعدادات (تبويب متقدم)
-              حتى يعرف تصميم المتجر المستقل أين يجد الـ API —
+              {{ _('حدد «عنوان IP سيرفر الراديوس» في الإعدادات (تبويب متقدم) حتى يعرف تصميم المتجر المستقل أين يجد الـ API —') }}
               <a href="{{ url_for('radius.settings_page') }}#tab=advanced">{{ _('فتح الإعدادات') }}</a>
             </div>
             {% endif %}
@@ -765,7 +757,7 @@
             <button type="button" class="hub-btn hub-btn--secondary mtld-json-add"
                     data-mtld-json-add="{{ v.slug }}">
               <i class="fa-solid fa-plus"></i>
-              {{ 'أضف موزعًا' if v.slug == 'DISTRIBUTORS_JSON' else 'أضف عرضًا' }}
+              {{ _('أضف موزعًا') if v.slug == 'DISTRIBUTORS_JSON' else _('أضف عرضًا') }}
             </button>
             {% elif v.slug == 'MOTIF_ICON' %}
             {# ── الرَمز القِطاعيّ: قائمة منسدلة مُخصّصة تُظهر عَيّنة كل
@@ -812,89 +804,47 @@
             {% endif %}
             <div class="mtld-field-help">
               {%- if v.slug == 'TENANT_NAME' -%}
-                اسم شبكتك كما سيظهر بأعلى صفحة الدخول.
+                {{ _('اسم شبكتك كما سيظهر بأعلى صفحة الدخول.') }}
               {%- elif v.slug == 'TENANT_LOGO_URL' -%}
-                ارفع صورة الشعار من جهازك — تُصغَّر تلقائيًا (~256px) وتُضمَّن
-                داخل الصفحة نفسها فلا تحتاج رفع ملف إضافي للراوتر.
+                {{ _('ارفع صورة الشعار من جهازك — تُصغَّر تلقائيًا (~256px) وتُضمَّن داخل الصفحة نفسها فلا تحتاج رفع ملف إضافي للراوتر.') }}
               {%- elif v.slug == 'WELCOME_TEXT' -%}
-                جملة ترحيبية قصيرة تظهر تحت الاسم (حتى 160 حرفًا).
+                {{ _('جملة ترحيبية قصيرة تظهر تحت الاسم (حتى 160 حرفًا).') }}
               {%- elif v.slug == 'ACCENT_COLOR' -%}
-                لون الأزرار والعناوين — صيغة hex مثل ‎#2563EB.
+                {{ _('لون الأزرار والعناوين — صيغة hex مثل \u200e#2563EB.') }}
               {%- elif v.slug == 'BG_COLOR' -%}
-                لون خلفية الصفحة — صيغة hex مثل ‎#F8FAFC.
+                {{ _('لون خلفية الصفحة — صيغة hex مثل \u200e#F8FAFC.') }}
               {%- elif v.slug == 'SUPPORT_PHONE' -%}
-                رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.
+                {{ _('رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.') }}
               {%- elif v.slug == 'SUPPORT_WHATSAPP' -%}
-                رقم واتساب الدعم — يُحقن في صفحة المتجر عند <strong>{{ _('النشر') }}</strong>،
-                فيظهر زر واتساب «دعم وطلبات الشحن/السحب» للزبون. اتركه فارغًا
-                ليبقى الزر مخفيًا. اكتب الرقم بصيغة دولية (مثل ‎+9665…).
+                {{ _('رقم واتساب الدعم — يُحقن في صفحة المتجر عند') }} <strong>{{ _('النشر') }}</strong>{{ _('، فيظهر زر واتساب «دعم وطلبات الشحن/السحب» للزبون. اتركه فارغًا ليبقى الزر مخفيًا. اكتب الرقم بصيغة دولية (مثل \u200e+9665…).') }}
               {%- elif v.slug == 'STORE_ENABLED' -%}
-                عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة
-                الدخول، وعند <strong>{{ _('النشر') }}</strong> تُرفع صفحة متجر كاملة
-                (store.html) إلى الراوتر بجانب صفحة الدخول تلقائيًا —
-                المتجر يعمل من الراوتر نفسه (دخول بالجوال وكلمة المرور،
-                محفظة، شحن بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر
-                الـ API فقط. <strong>{{ _('مهم:') }}</strong> أضف عنوان IP سيرفر
-                الراديوس إلى walled-garden في الهوت سبوت حتى يعمل المتجر
-                قبل تسجيل الدخول.
+                {{ _('عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة الدخول، وعند') }} <strong>{{ _('النشر') }}</strong> {{ _('تُرفع صفحة متجر كاملة (store.html) إلى الراوتر بجانب صفحة الدخول تلقائيًا — المتجر يعمل من الراوتر نفسه (دخول بالجوال وكلمة المرور، محفظة، شحن بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر الـ API فقط.') }} <strong>{{ _('مهم:') }}</strong> {{ _('أضف عنوان IP سيرفر الراديوس إلى walled-garden في الهوت سبوت حتى يعمل المتجر قبل تسجيل الدخول.') }}
               {%- elif v.slug == 'STORE_URL' -%}
-                زر المتجر يفتح <strong>{{ _('التصميم المستقل') }}</strong> المرفوع
-                على الراوتر (store.html) — صفحة كاملة بأربعة تبويبات
-                تستدعي API الراديوس فقط. العنوان أعلاه ليس رابط الزر؛
-                هو قاعدة الـ API التي تُحقن داخل store.html ويُبنى من
-                «عنوان IP سيرفر الراديوس» في الإعدادات. لا تكتب شيئًا
-                في «خيارات متقدمة» إلا إذا أردت توجيه الزر لرابط مختلف
-                كليًا. تذكّر إضافة عنوان السيرفر إلى walled-garden في
-                الهوت سبوت حتى يتصل المتجر بالـ API.
+                {{ _('زر المتجر يفتح') }} <strong>{{ _('التصميم المستقل') }}</strong> {{ _('المرفوع على الراوتر (store.html) — صفحة كاملة بأربعة تبويبات تستدعي API الراديوس فقط. العنوان أعلاه ليس رابط الزر؛ هو قاعدة الـ API التي تُحقن داخل store.html ويُبنى من «عنوان IP سيرفر الراديوس» في الإعدادات. لا تكتب شيئًا في «خيارات متقدمة» إلا إذا أردت توجيه الزر لرابط مختلف كليًا. تذكّر إضافة عنوان السيرفر إلى walled-garden في الهوت سبوت حتى يتصل المتجر بالـ API.') }}
               {%- elif v.slug == 'PASSWORD_FIELD' -%}
-                عند الإخفاء يدخل المشترك باسم المستخدم فقط — مناسب
-                لبطاقات «يوزر فقط». يعمل على كل التصاميم.
+                {{ _('عند الإخفاء يدخل المشترك باسم المستخدم فقط — مناسب لبطاقات «يوزر فقط». يعمل على كل التصاميم.') }}
               {%- elif v.slug == 'TRIAL_ENABLED' -%}
-                يضيف زر تجربة مجانية أسفل نموذج الدخول في أي تصميم —
-                يستخدم آلية MikroTik القياسية (مستخدم T-‏MAC).
-                <strong>{{ _('مهم:') }}</strong> فعّل Trial في بروفايل سيرفر
-                الهوت سبوت على الراوتر وإلا سيرفض الدخول.
+                {{ _('يضيف زر تجربة مجانية أسفل نموذج الدخول في أي تصميم — يستخدم آلية MikroTik القياسية (مستخدم T-\u200fMAC).') }}
+                <strong>{{ _('مهم:') }}</strong> {{ _('فعّل Trial في بروفايل سيرفر الهوت سبوت على الراوتر وإلا سيرفض الدخول.') }}
               {%- elif v.slug == 'TRIAL_TEXT' -%}
-                النص الظاهر على زر التجربة — مثال: «تجربة مجانية 10
-                دقائق» (حتى 60 حرفًا، بلا وسوم).
+                {{ _('النص الظاهر على زر التجربة — مثال: «تجربة مجانية 10 دقائق» (حتى 60 حرفًا، بلا وسوم).') }}
               {%- elif v.slug == 'SAVED_SESSIONS_ENABLED' -%}
-                عند التفعيل يحفظ المتصفح آخر 5 بطاقات (اسم المستخدم وكلمة
-                المرور) على جهاز الزبون ويعرض قسم «الجلسات الأخيرة» بنقرة
-                واحدة لإعادة الاتصال. يعمل على كل التصاميم.
+                {{ _('عند التفعيل يحفظ المتصفح آخر 5 بطاقات (اسم المستخدم وكلمة المرور) على جهاز الزبون ويعرض قسم «الجلسات الأخيرة» بنقرة واحدة لإعادة الاتصال. يعمل على كل التصاميم.') }}
               {%- elif v.slug == 'DISTRIBUTORS_JSON' -%}
-                نقاط بيع البطاقات — تظهر في تبويب «الموزعون» بتصاميم
-                عائلة التدرج الاحترافي. أضف اسم المحل ورقم الهاتف
-                والمنطقة لكل موزع.
+                {{ _('نقاط بيع البطاقات — تظهر في تبويب «الموزعون» بتصاميم عائلة التدرج الاحترافي. أضف اسم المحل ورقم الهاتف والمنطقة لكل موزع.') }}
               {%- elif v.slug == 'OFFERS_JSON' -%}
-                باقاتك وأسعارك — تظهر في قسم الباقات/الأسعار بالتصاميم
-                الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة
-                كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة
-                الانطلاق (صغيرة).
+                {{ _('باقاتك وأسعارك — تظهر في قسم الباقات/الأسعار بالتصاميم الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة الانطلاق (صغيرة).') }}
               {%- elif v.slug.startswith('CHIP') -%}
                 {{ _('نص رقاقة ميزة تظهر أسفل صورة التصميم (حتى 60 حرفًا). اتركه فارغًا — مع إفراغ شريكه في نفس الرقاقة — لإخفاء الرقاقة كاملة.') }}
               {%- elif v.slug == 'MOTIF_ICON' -%}
-                «بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في
-                الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف
-                المحتوى. اختَر القِطاع من القائمة أعلاه (تُظهر عَيّنة كل
-                أيقونة — نَفس الرَمز الذي يَظهر فِعلًا على الصَفحة — بِجانب
-                اسمها): مَقهى، مَطعم، عيادة، مَتجر، شَبكة، فندق، صالون، جيم،
-                مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو <code>لا شيء</code>
-                للإيقاف الكامل. القَوالب الجَالاريّة تَختار القِطاع
-                افتراضيًّا حسب نَوع المُنشأة.
+                {{ _('«بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف المحتوى. اختَر القِطاع من القائمة أعلاه (تُظهر عَيّنة كل أيقونة — نَفس الرَمز الذي يَظهر فِعلًا على الصَفحة — بِجانب اسمها): مَقهى، مَطعم، عيادة، مَتجر، شَبكة، فندق، صالون، جيم، مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو') }} <code>{{ _('لا شيء') }}</code>
+                {{ _('للإيقاف الكامل. القَوالب الجَالاريّة تَختار القِطاع افتراضيًّا حسب نَوع المُنشأة.') }}
               {%- elif v.slug == 'MOTIF_BRAND_ICON_ENABLED' -%}
-                رَمز قِطاعيّ صَغير في الزاوية بِجانب الاسم — *مَوقوف
-                افتراضيًّا* (طَلب المالك: «دفش ومبالغ فيه»). فَعِّله
-                لو فضّلت تَأكيدًا بَصريًّا إضافيًّا. الـwatermark
-                الهَامِسة وحدها تُوصِل بَصمة القِطاع بأناقة.
+                {{ _('رَمز قِطاعيّ صَغير في الزاوية بِجانب الاسم — *مَوقوف افتراضيًّا* (طَلب المالك: «دفش ومبالغ فيه»). فَعِّله لو فضّلت تَأكيدًا بَصريًّا إضافيًّا. الـwatermark الهَامِسة وحدها تُوصِل بَصمة القِطاع بأناقة.') }}
               {%- elif v.slug == 'MOTIF_WATERMARK_ENABLED' -%}
-                عَلامة مائيّة هَامِسة (رَمز خَلفيّ بشَفافيّة مُنخفضة) —
-                «بَصمة» المُنشأة بأناقة بلا إزعاج للقَراءة. عَطّلها
-                لصَفحة دخول مُجَرَّدة تَمامًا.
+                {{ _('عَلامة مائيّة هَامِسة (رَمز خَلفيّ بشَفافيّة مُنخفضة) — «بَصمة» المُنشأة بأناقة بلا إزعاج للقَراءة. عَطّلها لصَفحة دخول مُجَرَّدة تَمامًا.') }}
               {%- elif v.slug == 'MOTIF_WATERMARK_OPACITY' -%}
-                شَفافيّة الخَلفيّة النَمطيّة — قيمة عَشريّة من 0 إلى 0.40
-                (افتراضي 0.30 = 30٪، النَمط واضح كَخَلفيّة قِطاعيّة).
-                نَموذج الدخول opaque فَوقها فلا تَتأثّر القَراءة.
-                0.10 = هامِسة، 0.40 = أبرز. الحَدّ 0.40 يَمنع الفَوضى.
+                {{ _('شَفافيّة الخَلفيّة النَمطيّة — قيمة عَشريّة من 0 إلى 0.40 (افتراضي 0.30 = 30٪، النَمط واضح كَخَلفيّة قِطاعيّة). نَموذج الدخول opaque فَوقها فلا تَتأثّر القَراءة. 0.10 = هامِسة، 0.40 = أبرز. الحَدّ 0.40 يَمنع الفَوضى.') }}
               {%- endif -%}
             </div>
           </div>
@@ -918,9 +868,7 @@
             </button>{% endif %}
           </div>
           <div class="mtld-field-help">
-            يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في
-            «قوالب محفوظة» لإعادة استخدامها لاحقًا — قائمة القوالب
-            المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.
+            {{ _('يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في «قوالب محفوظة» لإعادة استخدامها لاحقًا — قائمة القوالب المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.') }}
           </div>
         </div>
 
@@ -933,12 +881,10 @@
          (إعلان/عرض/عجلة حظّ/مواقيت…). #}
       <div class="mtld-field mtld-addons-section">
         <h3 class="mtld-addons-title">
-          <i class="fa-solid fa-puzzle-piece"></i> ③ الإضافات — محتوى التصميم
+          <i class="fa-solid fa-puzzle-piece"></i> {{ _('③ الإضافات — محتوى التصميم') }}
         </h3>
         <div class="mtld-field-help">
-          هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت
-          الندوة… فعّل ما يناسب نشاطك (كلٌّ مستقل). «قبل الدخول» يُخبَز في الصفحة
-          ويعمل بلا إنترنت، و«بعد الدخول» يظهر بعد الاتصال.
+          {{ _('هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت الندوة… فعّل ما يناسب نشاطك (كلٌّ مستقل). «قبل الدخول» يُخبَز في الصفحة ويعمل بلا إنترنت، و«بعد الدخول» يظهر بعد الاتصال.') }}
         </div>
         <input type="hidden" name="addons_json" id="mtld-addons-json"
                value="{{ addons_config|tojson|forceescape }}">
@@ -976,9 +922,9 @@
                 </label>
                 <span class="mtld-addon-name">
                   <i class="fa-solid fa-{{ spec.icon }}"></i> {{ spec.label_ar }}
-                  {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">قبل الدخول</span>
-                  {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">بعد الدخول</span>
-                  {% else %}<span class="mtld-addon-tag both">قبل وبعد</span>{% endif %}
+                  {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">{{ _('قبل الدخول') }}</span>
+                  {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">{{ _('بعد الدخول') }}</span>
+                  {% else %}<span class="mtld-addon-tag both">{{ _('قبل وبعد') }}</span>{% endif %}
                 </span>
                 {% if spec.fields %}<i class="fa-solid fa-chevron-down mtld-addon-chevron" aria-hidden="true"></i>{% endif %}
               </div>
@@ -1041,16 +987,14 @@
             <i class="fa-solid fa-file-zipper"></i> {{ _('تحميل الحزمة (ZIP)') }}
           </button>{% endif %}
           <span class="mtld-save-note">
-            الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر.
-            تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم)
-            جاهزة للرفع اليدوي عبر Winbox → Files.
+            {{ _('الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر. تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم) جاهزة للرفع اليدوي عبر Winbox → Files.') }}
           </span>
         </div>
       {% endcall %}
 
       {# عمود المعاينة الكبيرة — إطار جوال مثبّت يتحدّث مع كل تعديل #}
       <aside class="mtld-preview-col">
-        {% call hub.section("معاينة حيّة", icon="eye",
+        {% call hub.section(_('معاينة حيّة'), icon="eye",
                             meta=('<code class="mtld-slug" data-mt-designer-active-slug>' ~ _active_slug ~ '</code>')|safe) %}
           <div class="mtld-phone">
             <span class="mtld-phone-notch"></span>
@@ -1081,39 +1025,37 @@
      نُقلت إلى هنا (أسفل مسار العمل) كي يبقى التسلسل العلويّ نظيفًا:
      حُزمة جاهزة ① → معرض التصاميم ② → الألوان والحقول ③. تُرفع وتُخزَّن
      وتُرسَل للراوتر عند النشر فتعمل ذاتيًّا بلا إنترنت. #}
-  {% call hub.section("الأصول المستضافة (فيديو/خط)", icon="folder-open", meta="رفع · متقدّم") %}
+  {% call hub.section(_('الأصول المستضافة (فيديو/خط)'), icon="folder-open", meta=_('رفع · متقدّم')) %}
     <p class="mtld-lead">
-      ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا
-      إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في
-      إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.
+      {{ _('ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.') }}
     </p>
     <div class="mtld-asset-grid">
       {% if can_submit('radius.mt_login_designer_asset_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="video">
-        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
+        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> {{ _('رفع فيديو') }}</label>
         <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> {{ _('رفع الفيديو') }}</button>
       </form>{% endif %}
       {% if can_submit('radius.mt_login_designer_asset_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
             action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
             class="mtld-asset-up">
         <input type="hidden" name="kind" value="font">
-        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
+        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> {{ _('رفع خط') }}</label>
         <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
-        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> {{ _('رفع الخط') }}</button>
       </form>{% endif %}
     </div>
     {% if router_assets %}
     <table class="mtld-asset-table">
-      <thead><tr><th>النوع</th><th>اسم الملف</th><th>الحجم</th><th></th></tr></thead>
+      <thead><tr><th>{{ _('النوع') }}</th><th>{{ _('اسم الملف') }}</th><th>{{ _('الحجم') }}</th><th></th></tr></thead>
       <tbody>
         {% for a in router_assets %}
         <tr>
-          <td>{{ 'فيديو' if a.kind == 'video' else 'خط' }}</td>
+          <td>{{ _('فيديو') if a.kind == 'video' else _('خط') }}</td>
           <td dir="ltr">{{ a.filename }}</td>
-          <td>{{ (a.size_bytes // 1024) }} ك.ب</td>
+          <td>{{ _('%(v)s ك.ب', v=(a.size_bytes // 1024)) }}</td>
           <td>
             {% if can_submit('radius.mt_login_designer_asset_delete', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
               <input type="hidden" name="asset_id" value="{{ a.id }}">
@@ -1125,17 +1067,16 @@
       </tbody>
     </table>
     {% else %}
-    <div class="mtld-field-help">لا أصول مرفوعة بعد.</div>
+    <div class="mtld-field-help">{{ _('لا أصول مرفوعة بعد.') }}</div>
     {% endif %}
   {% endcall %}
 
   {# ════ قوالب محفوظة: مكتبة مصغّرة لهذا الراوتر — تطبيق/حذف ════ #}
   {% if presets %}
-  {% call hub.section("قوالب محفوظة", icon="bookmark",
-                      meta=(presets|length|string) ~ " قالبًا") %}
+  {% call hub.section(_('قوالب محفوظة'), icon="bookmark",
+                      meta=_('%(v)s قالبًا', v=(presets|length|string))) %}
     <p class="mtld-lead">
-      مجموعات قيم حفظتها سابقًا لهذا الراوتر — «تطبيق» يجعلها التصميم
-      الحالي فورًا (يُحفظ مباشرة) ويملأ النموذج بقيمها.
+      {{ _('مجموعات قيم حفظتها سابقًا لهذا الراوتر — «تطبيق» يجعلها التصميم الحالي فورًا (يُحفظ مباشرة) ويملأ النموذج بقيمها.') }}
     </p>
     <div class="mtld-presets">
       {% for p in presets %}
@@ -1144,8 +1085,7 @@
         <div class="mtld-preset-row-main">
           <strong>{{ p.name }}</strong>
           <span class="mtld-save-note mtld-preset-note-block">
-            تصميم: {{ (library | selectattr('slug', 'equalto', p.template_slug) | map(attribute='name_ar') | first) or p.template_slug }}
-            · آخر تحديث {{ p.updated_at|dt_local }}
+            {{ _('تصميم: %(template_slug)s · آخر تحديث %(dt_local)s', template_slug=(library | selectattr('slug', 'equalto', p.template_slug) | map(attribute='name_ar') | first) or p.template_slug, dt_local=p.updated_at|dt_local) }}
           </span>
         </div>
         {% if can_submit('radius.mt_login_designer_preset_apply', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_preset_apply', nas_id=nas.id) }}">
@@ -1159,7 +1099,7 @@
         {% if can_submit('radius.mt_login_designer_preset_delete', 'POST') %}<form method="post" action="{{ url_for('radius.mt_login_designer_preset_delete', nas_id=nas.id) }}">
           <input type="hidden" name="preset_id" value="{{ p.id }}">
           <button type="button" class="hub-btn hub-btn--secondary"
-                  title="{{ _('حذف القالب المحفوظ') }}" aria-label="حذف القالب المحفوظ «{{ p.name }}»"
+                  title="{{ _('حذف القالب المحفوظ') }}" aria-label="{{ _('حذف القالب المحفوظ «%(name)s»', name=p.name) }}"
                   data-mtld-preset-del data-mtld-preset-name="{{ p.name }}">
             <i class="fa-solid fa-trash"></i>
           </button>
@@ -1171,13 +1111,12 @@
   {% endif %}
 
   {# ════ رفع تصميم خاص: HTML أو ZIP يحوي login.html — يُفحص ويُضاف للمعرض ════ #}
-  {% call hub.section("رفع تصميم خاص", icon="upload") %}
+  {% call hub.section(_('رفع تصميم خاص'), icon="upload") %}
     <p class="mtld-lead">
       {{ _('عندك صفحة هوت سبوت جاهزة من مصمّم خارجي؟ ارفعها هنا (ملف') }}
       <code dir="ltr">.html</code> {{ _('مباشرة أو حزمة') }} <code dir="ltr">.zip</code>
-      {{ _('تحوي') }} <code dir="ltr">login.html</code>) وستظهر في معرض التصاميم
-      بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.
-      <span class="hub-hint" tabindex="0" data-hint="يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم &lt;/body&gt;، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص {{ '{{TENANT_NAME}}' }} وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي."><i class="fa-solid fa-info"></i></span>
+      {{ _('تحوي') }} <code dir="ltr">login.html</code>{{ _(') وستظهر في معرض التصاميم بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.') }}
+      <span class="hub-hint" tabindex="0" data-hint="{{ _('يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم %(body)s، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص %(var)s وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي.', body='</body>', var='{{TENANT_NAME}}') }}"><i class="fa-solid fa-info"></i></span>
     </p>
     {% if can_submit('radius.mt_login_designer_custom_upload', 'POST') %}<form method="post" enctype="multipart/form-data"
           action="{{ url_for('radius.mt_login_designer_custom_upload', nas_id=nas.id) }}"
@@ -1212,14 +1151,11 @@
       </button>
     </form>{% endif %}
     <div class="mtld-field-help mtld-field-help--gap">
-      شروط القبول: وجود placeholders ميكروتك الإجبارية
-      (<code dir="ltr">$(link-login-only)</code>{{ _('،') }}
+      {{ _('شروط القبول: وجود placeholders ميكروتك الإجبارية (') }}<code dir="ltr">$(link-login-only)</code>{{ _('،') }}
       <code dir="ltr">$(chap-id)</code>{{ _('،') }}
       <code dir="ltr">$(chap-challenge)</code>{{ _('،') }}
       <code dir="ltr">$(error)</code>{{ _(') ووسم') }}
-      <code dir="ltr">&lt;/body&gt;</code>، وحجم حتى 2 ميجابايت.
-      الرفع بنفس الاسم يحدّث التصميم الموجود. التصميم متاح لكل
-      راوترات حسابك.
+      <code dir="ltr">&lt;/body&gt;</code>{{ _('، وحجم حتى 2 ميجابايت. الرفع بنفس الاسم يحدّث التصميم الموجود. التصميم متاح لكل راوترات حسابك.') }}
     </div>
   {% endcall %}
 
@@ -1236,13 +1172,13 @@
         action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
         data-mt-designer-deploy-form
         data-mt-deploy-stream-url="{{ url_for('radius.mt_login_designer_deploy_stream', nas_id=nas.id) }}">{% if not can_submit('radius.mt_login_designer_deploy') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
-    {% call hub.section("النشر على الراوتر", icon="cloud-arrow-up") %}
+    {% call hub.section(_('النشر على الراوتر'), icon="cloud-arrow-up") %}
       <div class="mtld-deploy">
         <div class="mtld-deploy-text">
           <p class="mtld-lead">
             {{ _('النشر يرفع ملف صفحة الدخول') }} <code dir="ltr">login.html</code> {{ _('بالتصميم') }}
             <strong>{{ _('المحفوظ') }}</strong> {{ _('حاليًا إلى مجلد البوابة على الراوتر.') }}
-            <span class="hub-hint" tabindex="0" data-hint="يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة. التعديلات غير المحفوظة لا تُنشر — احفظ أولًا. كل محاولة نشر تُسجَّل في سجل الأحداث."><i class="fa-solid fa-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة. التعديلات غير المحفوظة لا تُنشر — احفظ أولًا. كل محاولة نشر تُسجَّل في سجل الأحداث.') }}"><i class="fa-solid fa-info"></i></span>
           </p>
           <label class="mtld-confirm">
             <input type="checkbox" name="confirm" value="1"
@@ -1277,7 +1213,7 @@
         <i class="fa-solid fa-{{ 'circle-check' if deploy_result.ok else 'circle-exclamation' }}"></i>
         <div>
           {% if deploy_result.ok %}
-          <strong>{{ _('تم النشر بنجاح') }}</strong> — رُفع {{ deploy_result.bytes }} بايت إلى
+          <strong>{{ _('تم النشر بنجاح') }}</strong> {{ _('— رُفع %(bytes)s بايت إلى', bytes=deploy_result.bytes) }}
           <code dir="ltr">{{ deploy_result.path }}</code>
           {% else %}
           <strong>{{ _('فشل النشر') }}</strong> {{ _('— المسار') }} <code dir="ltr">{{ deploy_result.path }}</code>
@@ -1295,9 +1231,9 @@
         <i class="fa-solid fa-{{ 'store' if store_result.ok else 'circle-exclamation' }}"></i>
         <div>
           {% if store_result.ok %}
-          <strong>{{ _('رُفع متجر الراوتر') }}</strong> — {{ store_result.bytes }} بايت إلى
+          <strong>{{ _('رُفع متجر الراوتر') }}</strong> {{ _('— %(bytes)s بايت إلى', bytes=store_result.bytes) }}
           <code dir="ltr">{{ store_result.path }}</code>
-          {{ _('— زر المتجر في صفحة الدخول يفتح الآن') }} <code dir="ltr">store.html</code> من الراوتر مباشرة.
+          {{ _('— زر المتجر في صفحة الدخول يفتح الآن') }} <code dir="ltr">store.html</code> {{ _('من الراوتر مباشرة.') }}
           {% else %}
           <strong>{{ _('فشل رفع متجر الراوتر') }}</strong> {{ _('— المسار') }} <code dir="ltr">{{ store_result.path }}</code>
           {% if store_result.error %}<br><span class="mtld-err-msg">{{ store_result.error }}</span>{% endif %}
@@ -1316,16 +1252,11 @@
         <div>
           {% if wg_result.ok %}
           <strong>{{ _('قائمة السماح (walled-garden) جاهزة') }}</strong> —
-          {% if wg_result.added %}أُضيفت {{ wg_result.added }} قاعدة جديدة
-          باتجاه سيرفر الراديوس{% else %}القواعد موجودة مسبقًا — لم
-          يتغير شيء{% endif %}. أجهزة الزبائن تستطيع الآن فتح المتجر
-          قبل تسجيل دخول الإنترنت.
+          {% if wg_result.added %}{{ _('أُضيفت') }} {{ wg_result.added }} {{ _('قاعدة جديدة باتجاه سيرفر الراديوس') }}{% else %}{{ _('القواعد موجودة مسبقًا — لم يتغير شيء') }}{% endif %}{{ _('. أجهزة الزبائن تستطيع الآن فتح المتجر قبل تسجيل دخول الإنترنت.') }}
           {% else %}
           <strong>{{ _('تعذّر تجهيز walled-garden آليًا') }}</strong>
           {% if wg_result.error %}<br><span class="mtld-err-msg">{{ wg_result.error }}</span>{% endif %}
-          <br><span class="mtld-deploy-hint-sm">بدون هذه القاعدة لن يصل المتجر
-          لسيرفر الراديوس قبل تسجيل الدخول. انسخ الأمر التالي والصقه في
-          طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):</span>
+          <br><span class="mtld-deploy-hint-sm">{{ _('بدون هذه القاعدة لن يصل المتجر لسيرفر الراديوس قبل تسجيل الدخول. انسخ الأمر التالي والصقه في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):') }}</span>
           <pre dir="ltr" class="mtld-cmd">{{ wg_result.command or wg_command }}</pre>
           {% endif %}
         </div>
@@ -1343,20 +1274,15 @@
       <details class="mtld-loop-note">
         <summary><i class="fa-solid fa-circle-question"></i> {{ _('راوترك يكرّر «Download FAILED: 401»؟ (لوب الجلب القديم)') }}</summary>
         <p>
-          {{ _('هذا النشر يرفع الملفات بدفع API مباشر (') }}<code dir="ltr">/file/add</code>) — لا
-          يطلب من الراوتر جلبها، فلا 401 ولا لوب منه. إن كان راوترك يكرّر
-          الخطأ فالسبب جدولة قديمة تجلب الملفات عبر <code dir="ltr">/tool fetch</code>
-          {{ _('من نقطة محمية بجلسة أدمن (و') }}<code dir="ltr">/tool fetch</code> لا يرسل
-          الكوكي → 401). أوقفها بحذف المجدول والسكربت من الراوتر:
+          {{ _('هذا النشر يرفع الملفات بدفع API مباشر (') }}<code dir="ltr">/file/add</code>{{ _(') — لا يطلب من الراوتر جلبها، فلا 401 ولا لوب منه. إن كان راوترك يكرّر الخطأ فالسبب جدولة قديمة تجلب الملفات عبر') }} <code dir="ltr">/tool fetch</code>
+          {{ _('من نقطة محمية بجلسة أدمن (و') }}<code dir="ltr">/tool fetch</code> {{ _('لا يرسل الكوكي → 401). أوقفها بحذف المجدول والسكربت من الراوتر:') }}
         </p>
         <pre dir="ltr" class="mtld-cmd">/system scheduler print where name~"hotspot"
 /system scheduler remove [find name~"hotspot"]
 /system script remove [find name~"hotspot"]
 /file remove [find name="hotspot.rsc"]</pre>
         <p>
-          {{ _('راجع ناتج') }} <code dir="ltr">print</code> أولًا للتأكد أنها فعلًا جدولة الجلب
-          القديمة قبل الحذف، ثم أعد النشر من هنا — تكفي طريقة الدفع المباشر
-          وحدها ولا حاجة لأي <code dir="ltr">/tool fetch</code>.
+          {{ _('راجع ناتج') }} <code dir="ltr">print</code> {{ _('أولًا للتأكد أنها فعلًا جدولة الجلب القديمة قبل الحذف، ثم أعد النشر من هنا — تكفي طريقة الدفع المباشر وحدها ولا حاجة لأي') }} <code dir="ltr">/tool fetch</code>.
         </p>
       </details>
 
@@ -1369,17 +1295,11 @@
         <summary><i class="fa-solid fa-circle-question"></i> {{ _('«فشل الرفع: Connection reset» المتكرر؟ (ملف كبير على API)') }}</summary>
         <p>
           {{ _('إن كان شعار التصميم صورة كبيرة مضمّنة، يصير') }} <code dir="ltr">login.html</code>
-          ضخمًا فتقطع بعض إصدارات RouterOS نداء API الواحد
-          (<code dir="ltr">Connection reset</code>) — وهذا فشل ثابت لا تحلّه إعادة
-          المحاولة وحدها. الحل المُطبّق تلقائيًا: نزع الشعار لملف منفصل ورفعه
-          عبر <code dir="ltr">FTP</code> {{ _('(فيصغر') }} <code dir="ltr">login.html</code>)،
-          وتحويل أي ملف كبير إلى رفع <code dir="ltr">FTP</code> مجزّأ. يتطلّب ذلك
-          خدمة FTP مفعّلة على الراوتر — فعّلها بهذا الأمر إن لزم:
+          {{ _('ضخمًا فتقطع بعض إصدارات RouterOS نداء API الواحد (') }}<code dir="ltr">Connection reset</code>{{ _(') — وهذا فشل ثابت لا تحلّه إعادة المحاولة وحدها. الحل المُطبّق تلقائيًا: نزع الشعار لملف منفصل ورفعه عبر') }} <code dir="ltr">FTP</code> {{ _('(فيصغر') }} <code dir="ltr">login.html</code>{{ _(')، وتحويل أي ملف كبير إلى رفع') }} <code dir="ltr">FTP</code> {{ _('مجزّأ. يتطلّب ذلك خدمة FTP مفعّلة على الراوتر — فعّلها بهذا الأمر إن لزم:') }}
         </p>
         <pre dir="ltr" class="mtld-cmd">/ip service enable ftp</pre>
         <p>
-          إن ظهر «الملف كبير على API وFTP غير متاح» فعّل الخدمة أعلاه، أو
-          صغّر صورة الشعار، ثم اضغط «إعادة المحاولة».
+          {{ _('إن ظهر «الملف كبير على API وFTP غير متاح» فعّل الخدمة أعلاه، أو صغّر صورة الشعار، ثم اضغط «إعادة المحاولة».') }}
         </p>
       </details>
     {% endcall %}

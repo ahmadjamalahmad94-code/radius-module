@@ -15,14 +15,14 @@
 <input type="hidden" id="an-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 {% set _total = groups|map(attribute='items')|map('length')|sum %}
 {{ hub.megahero(
-  "إشعارات الإدارة",
-  subtitle="كل حدث إداري يصل دائمًا إلى جرس الإشعارات والمركز الموحّد. اختر لكل حدث القنوات الإضافية: تلجرام، دفع الجوال (تطبيق أندرويد)، وويندوز (تطبيق سطح المكتب).",
+  _('إشعارات الإدارة'),
+  subtitle=_('كل حدث إداري يصل دائمًا إلى جرس الإشعارات والمركز الموحّد. اختر لكل حدث القنوات الإضافية: تلجرام، دفع الجوال (تطبيق أندرويد)، وويندوز (تطبيق سطح المكتب).'),
   icon="bell",
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': _total, 'icon': 'list', 'variant': 'brand'},
-    {'label': 'تلجرام', 'value': ('جاهز' if telegram_ready else 'غير مضبوط'), 'icon': 'paper-plane', 'variant': ('green' if telegram_ready else 'amber')},
-    {'label': 'دفع الجوال', 'value': ('جاهز' if push_ready else 'غير مهيّأ'), 'icon': 'mobile-screen', 'variant': ('green' if push_ready else 'amber')},
-    {'label': 'الجرس', 'value': 'دائمًا', 'icon': 'bell', 'variant': 'green'}
+    {'label': _('إجمالي الأحداث'), 'value': _total, 'icon': 'list', 'variant': 'brand'},
+    {'label': _('تلجرام'), 'value': (_('جاهز') if telegram_ready else _('غير مضبوط')), 'icon': 'paper-plane', 'variant': ('green' if telegram_ready else 'amber')},
+    {'label': _('دفع الجوال'), 'value': (_('جاهز') if push_ready else _('غير مهيّأ')), 'icon': 'mobile-screen', 'variant': ('green' if push_ready else 'amber')},
+    {'label': _('الجرس'), 'value': _('دائمًا'), 'icon': 'bell', 'variant': 'green'}
   ]
 ) }}
 
@@ -47,11 +47,11 @@
   <span><i class="fa-solid fa-desktop"></i> {{ _('ويندوز: تطبيق سطح المكتب يَستطلع مركز الإشعارات') }}</span>
 </div>
 
-{% set _ch_label = {'bell':'الجرس','telegram':'تلجرام','whatsapp':'واتساب','sms':'SMS','push':'دفع الجوال','windows':'ويندوز'} %}
+{% set _ch_label = {'bell':_('الجرس'),'telegram':_('تلجرام'),'whatsapp':_('واتساب'),'sms':'SMS','push':_('دفع الجوال'),'windows':_('ويندوز')} %}
 {% set _ch_icon = {'bell':'bell','telegram':'paper-plane','whatsapp':'whatsapp','sms':'comment-sms','push':'mobile-screen','windows':'desktop'} %}
 
 {% for grp in groups %}
-{% call hub.section(grp.label, icon=grp.icon, meta=(grp['items']|length ~ " حدث")) %}
+{% call hub.section(grp.label, icon=grp.icon, meta=(_('%(length)s حدث', length=grp['items']|length))) %}
   <div class="an-list">
     {% for it in grp['items'] %}
     <div class="an-row" data-an-key="{{ it.key }}">

@@ -4,6 +4,7 @@ The ledger path intentionally has no delete helper. Voids and corrections are
 stored as new rows so reports can reconstruct history.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime
 from typing import Any, Optional
@@ -168,17 +169,17 @@ def create_ledger_entry(conn, *, tenant_id: int, entry_type: str, amount: float,
 # قيد ولا قيد مُلغًى يترك حدثًا). الهدف = المشترك (target_type=subscriber) كي
 # يظهر في خطّه الزمنيّ بمركز الأحداث. فشل الإدراج لا يُسقط القيد أبدًا.
 _LEDGER_EVENT_MESSAGES = {
-    "payment": "دفعة",
-    "time_extension": "تمديد وقت مدفوع",
-    "loan": "سلفة",
-    "debt": "دين",
-    "settlement": "تسوية سلفة",
-    "debt_settlement": "تسديد دين",
-    "writeoff": "إعفاء من سلفة",
-    "void": "إلغاء قيد",
-    "cash_balance": "حركة رصيد نقديّ",
-    "quota_topup": "شحن كوتا",
-    "on_account_credit": "رصيد مقدَّم",
+    "payment": N_("دفعة"),
+    "time_extension": N_("تمديد وقت مدفوع"),
+    "loan": N_("سلفة"),
+    "debt": N_("دين"),
+    "settlement": N_("تسوية سلفة"),
+    "debt_settlement": N_("تسديد دين"),
+    "writeoff": N_("إعفاء من سلفة"),
+    "void": N_("إلغاء قيد"),
+    "cash_balance": N_("حركة رصيد نقديّ"),
+    "quota_topup": N_("شحن كوتا"),
+    "on_account_credit": N_("رصيد مقدَّم"),
 }
 
 
@@ -424,7 +425,7 @@ def void_settlement(*, tenant_id: int, settlement_id: int, actor: str,
             (tenant_id, int(settlement_id)),
         )
         if claim.rowcount != 1:
-            raise RadiusConflict("هذه التسوية مُلغاة مسبقًا.")
+            raise RadiusConflict(_tr("هذه التسوية مُلغاة مسبقًا."))
         row = dict(conn.execute(
             "SELECT * FROM settlement_entries WHERE tenant_id = ? AND id = ?",
             (tenant_id, int(settlement_id)),
@@ -504,12 +505,12 @@ def void_payment(*, tenant_id: int, payment: dict, actor: str,
             (tenant_id, payment["id"]),
         )
         if cur.rowcount != 1:
-            raise RadiusConflict("الدفعة مُلغاة مسبقًا.")
+            raise RadiusConflict(_tr("الدفعة مُلغاة مسبقًا."))
         if conn.execute(
             "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
             "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, int(ledger_id)),
         ).fetchone():
-            raise RadiusConflict("قيد هذه الدفعة معكوسٌ مسبقًا من الدفتر.")
+            raise RadiusConflict(_tr("قيد هذه الدفعة معكوسٌ مسبقًا من الدفتر."))
         void_id = create_ledger_entry(
             conn,
             tenant_id=tenant_id,
@@ -725,7 +726,7 @@ def settle_loan(*, tenant_id: int, loan: dict, amount: float, currency: str,
         )
         if claim.rowcount != 1:
             raise RadiusConflict(
-                "السلفة ليست مفتوحة أو المبلغ يتجاوز المتبقّي عليها.")
+                _tr("السلفة ليست مفتوحة أو المبلغ يتجاوز المتبقّي عليها."))
         cur = conn.execute(
             """
             INSERT INTO settlement_entries(
@@ -789,7 +790,7 @@ def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
             (now_iso(), tenant_id, loan["id"]),
         )
         if claim.rowcount != 1:
-            raise RadiusConflict("السلفة ليست مفتوحة.")
+            raise RadiusConflict(_tr("السلفة ليست مفتوحة."))
         # المسامحة تشطب **المتبقّي** فقط — ما سُدِّد جزئيًّا قبلها يبقى مُسدَّدًا.
         settled = conn.execute(
             "SELECT COALESCE(SUM(amount), 0) FROM settlement_entries "
@@ -811,7 +812,7 @@ def writeoff_loan(*, tenant_id: int, loan: dict, currency: str, created_by: str,
             source_id=loan["id"],
             related_type="loan",
             related_id=loan["id"],
-            notes=notes or "مسامحة سلفة",
+            notes=notes or N_("مسامحة سلفة"),
             metadata=metadata or {"action": "writeoff"},
         )
     out = get_loan(tenant_id, loan["id"]) or {}
@@ -861,12 +862,12 @@ def void_ledger_entry(*, tenant_id: int, entry_id: int, actor: str,
             return None
         original = dict(row)
         if is_reversal_entry(original):
-            raise RadiusValidationError("لا يمكن عكس قيدٍ عكسيّ.")
+            raise RadiusValidationError(_tr("لا يمكن عكس قيدٍ عكسيّ."))
         if conn.execute(
             "SELECT 1 FROM accounting_ledger_entries WHERE tenant_id = ? "
             "AND reversal_of_entry_id = ? LIMIT 1", (tenant_id, entry_id),
         ).fetchone():
-            raise RadiusConflict("هذا القيد معكوسٌ (مُلغى) مسبقًا.")
+            raise RadiusConflict(_tr("هذا القيد معكوسٌ (مُلغى) مسبقًا."))
         amount = -float(original["amount"] or 0)
         new_id = create_ledger_entry(
             conn,

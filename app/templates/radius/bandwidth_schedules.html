@@ -52,29 +52,29 @@
 
 {# ───── Merged hero: title + subtitle + KPI strip ───── #}
 {{ hub.megahero(
-  "جدولة السرعات",
-  subtitle="خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على خدمة المصادقة.",
+  _('جدولة السرعات'),
+  subtitle=_('خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على خدمة المصادقة.'),
   icon="clock",
   kpis=[
-    {'label': 'إجمالي الجداول', 'value': schedules|length if schedules else 0, 'icon': 'clock',      'variant': 'brand'},
-    {'label': 'مفعَّلة',        'value': _enabled,                              'icon': 'toggle-on',  'variant': 'green'},
-    {'label': 'معطَّلة',        'value': (schedules|length if schedules else 0) - _enabled, 'icon': 'toggle-off', 'variant': 'amber'},
+    {'label': _('إجمالي الجداول'), 'value': schedules|length if schedules else 0, 'icon': 'clock',      'variant': 'brand'},
+    {'label': _('مفعَّلة'),        'value': _enabled,                              'icon': 'toggle-on',  'variant': 'green'},
+    {'label': _('معطَّلة'),        'value': (schedules|length if schedules else 0) - _enabled, 'icon': 'toggle-off', 'variant': 'amber'},
   ]
 ) }}
 
 {# ───── Main (form + table cards) + help panel on the LEFT ───── #}
 {% set help_aside %}
 {% call hub.helppanel(
-     "كيف تعمل هذه الصفحة؟",
-     intro="تحفظ هذه الصفحة جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا يغيّر السرعة فعليًا على خدمة المصادقة، بل يعرض نتيجة مراجعة آمنة للمشغل.",
+     _('كيف تعمل هذه الصفحة؟'),
+     intro=_('تحفظ هذه الصفحة جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا يغيّر السرعة فعليًا على خدمة المصادقة، بل يعرض نتيجة مراجعة آمنة للمشغل.'),
      items=[
-       {"icon": "layer-group", "text": "نطاق القاعدة: قاعدة المشترك أو باقة الكروت تتقدم على قاعدة العرض."},
-       {"icon": "clock",       "text": "الوقت: تُطبّق القاعدة بين «من الساعة» و«إلى الساعة»."},
-       {"icon": "gauge-high",  "text": "السرعة و CIR: اكتب القيمة ثم اختر الوحدة (kbps أو Mbps)."},
-       {"icon": "arrow-rotate-left", "text": "طريقة الرجوع: تحدد ماذا يحدث بعد انتهاء وقت الجدول."}
+       {"icon": "layer-group", "text": _('نطاق القاعدة: قاعدة المشترك أو باقة الكروت تتقدم على قاعدة العرض.')},
+       {"icon": "clock",       "text": _('الوقت: تُطبّق القاعدة بين «من الساعة» و«إلى الساعة».')},
+       {"icon": "gauge-high",  "text": _('السرعة و CIR: اكتب القيمة ثم اختر الوحدة (kbps أو Mbps).')},
+       {"icon": "arrow-rotate-left", "text": _('طريقة الرجوع: تحدد ماذا يحدث بعد انتهاء وقت الجدول.')}
      ],
      icon="circle-question",
-     note="زر «فحص الجاهزية» لا يطبّق على خدمة المصادقة — يعرض مراجعة آمنة فقط."
+     note=_('زر «فحص الجاهزية» لا يطبّق على خدمة المصادقة — يعرض مراجعة آمنة فقط.')
    ) %}{% endcall %}
 {% endset %}
 
@@ -140,7 +140,7 @@
         <select class="hub-select" name="card_batch_id" id="bs-card-batch-id">
           <option value="">{{ _('— اختر دفعة كروت —') }}</option>
           {% for batch in batches %}
-            <option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or 'بدون اسم' }}</option>
+            <option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or _('بدون اسم') }}</option>
           {% endfor %}
         </select>
         <span class="bs-help">{{ _('تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض.') }}</span>
@@ -154,34 +154,28 @@
 
       <div class="bs-row">
         <label class="fld">
-          من الساعة
-          {{ time_picker_circular(name="starts_at_time", value="") }}
+          {{ _('من الساعة %(v)s', v=time_picker_circular(name="starts_at_time", value="")) }}
         </label>
         <label class="fld">
-          إلى الساعة
-          {{ time_picker_circular(name="ends_at_time", value="") }}
+          {{ _('إلى الساعة %(v)s', v=time_picker_circular(name="ends_at_time", value="")) }}
         </label>
       </div>
 
       <div class="bs-row">
         <label class="fld">
-          سرعة التنزيل
-          {{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+          {{ _('سرعة التنزيل %(v)s', v=unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"])) }}
         </label>
         <label class="fld">
-          سرعة الرفع
-          {{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+          {{ _('سرعة الرفع %(v)s', v=unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"])) }}
         </label>
       </div>
 
       <div class="bs-row">
         <label class="fld">
-          CIR تنزيل
-          {{ unit_input_picker(name="cir_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+          {{ _('CIR تنزيل %(v)s', v=unit_input_picker(name="cir_down_kbps", value=0, kind="speed", units=["kbps","Mbps"])) }}
         </label>
         <label class="fld">
-          CIR رفع
-          {{ unit_input_picker(name="cir_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+          {{ _('CIR رفع %(v)s', v=unit_input_picker(name="cir_up_kbps", value=0, kind="speed", units=["kbps","Mbps"])) }}
         </label>
       </div>
 
@@ -215,8 +209,8 @@
   </div>{# /bsm-modal #}
 
   {% if schedules %}
-    {% call hub.section("الجداول الحالية", icon="table-list",
-                        meta=schedules|length|string + " جدول", flush=True) %}
+    {% call hub.section(_('الجداول الحالية'), icon="table-list",
+                        meta=schedules|length|string + _(' جدول'), flush=True) %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead>
@@ -239,15 +233,15 @@
               </td>
               <td class="small">
                 {% if item.get('target_type') == 'subscriber' %}
-                  {{ hub.pill("مشترك", variant="blue", dot=False) }}
+                  {{ hub.pill(_('مشترك'), variant="blue", dot=False) }}
                   <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ item.get('subscriber_username') }}</div>
                 {% elif item.get('target_type') == 'card_batch' %}
-                  {{ hub.pill("كروت", variant="amber", dot=False) }}
+                  {{ hub.pill(_('كروت'), variant="amber", dot=False) }}
                   <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}</div>
                 {% else %}
-                  {{ hub.pill("عرض", variant="brand", dot=False) }}
+                  {{ hub.pill(_('عرض'), variant="brand", dot=False) }}
                 {% endif %}
-                <div class="hub-text-mute small">أولوية {{ item.get('priority') or 100 }}</div>
+                <div class="hub-text-mute small">{{ _('أولوية %(v)s', v=item.get('priority') or 100) }}</div>
               </td>
               <td class="small">{{ plan_names.get(item.get('plan_id'), '—') }}</td>
               <td class="mono small" style="white-space:nowrap" dir="ltr">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
@@ -262,9 +256,9 @@
               </td>
               <td>
                 {% if item.get('enabled') %}
-                  {{ hub.pill("مفعَّل", variant="green") }}
+                  {{ hub.pill(_('مفعَّل'), variant="green") }}
                 {% else %}
-                  {{ hub.pill("معطَّل", variant="grey") }}
+                  {{ hub.pill(_('معطَّل'), variant="grey") }}
                 {% endif %}
               </td>
               <td>
@@ -287,7 +281,7 @@
                   </form>{% endif %}
                 </div>
                 <div class="small" style="margin-top:5px">
-                  {{ hub.pill("فحص الجاهزية لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
+                  {{ hub.pill(_('فحص الجاهزية لا يطبق على خدمة المصادقة'), variant="amber", dot=False) }}
                 </div>
               </td>
             </tr>
@@ -320,34 +314,28 @@
 
           <div class="bs-row">
             <label class="fld">
-              من الساعة
-              {{ time_picker_circular(name="starts_at_time", value=item.get('starts_at_time') or "") }}
+              {{ _('من الساعة %(v)s', v=time_picker_circular(name="starts_at_time", value=item.get('starts_at_time') or "")) }}
             </label>
             <label class="fld">
-              إلى الساعة
-              {{ time_picker_circular(name="ends_at_time", value=item.get('ends_at_time') or "") }}
+              {{ _('إلى الساعة %(v)s', v=time_picker_circular(name="ends_at_time", value=item.get('ends_at_time') or "")) }}
             </label>
           </div>
 
           <div class="bs-row">
             <label class="fld">
-              سرعة التنزيل
-              {{ unit_input_picker(name="speed_down_kbps", value=item.get('speed_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+              {{ _('سرعة التنزيل %(v)s', v=unit_input_picker(name="speed_down_kbps", value=item.get('speed_down_kbps') or 0, kind="speed", units=["kbps","Mbps"])) }}
             </label>
             <label class="fld">
-              سرعة الرفع
-              {{ unit_input_picker(name="speed_up_kbps", value=item.get('speed_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+              {{ _('سرعة الرفع %(v)s', v=unit_input_picker(name="speed_up_kbps", value=item.get('speed_up_kbps') or 0, kind="speed", units=["kbps","Mbps"])) }}
             </label>
           </div>
 
           <div class="bs-row">
             <label class="fld">
-              CIR تنزيل
-              {{ unit_input_picker(name="cir_down_kbps", value=item.get('cir_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+              {{ _('CIR تنزيل %(v)s', v=unit_input_picker(name="cir_down_kbps", value=item.get('cir_down_kbps') or 0, kind="speed", units=["kbps","Mbps"])) }}
             </label>
             <label class="fld">
-              CIR رفع
-              {{ unit_input_picker(name="cir_up_kbps", value=item.get('cir_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}
+              {{ _('CIR رفع %(v)s', v=unit_input_picker(name="cir_up_kbps", value=item.get('cir_up_kbps') or 0, kind="speed", units=["kbps","Mbps"])) }}
             </label>
           </div>
 
@@ -382,8 +370,8 @@
     {% endfor %}
   {% else %}
     {{ hub.empty(
-      "لا توجد جداول سرعة بعد",
-      sub="اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة الزمنية.",
+      _('لا توجد جداول سرعة بعد'),
+      sub=_('اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة الزمنية.'),
       icon="clock"
     ) }}
   {% endif %}

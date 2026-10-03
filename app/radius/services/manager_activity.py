@@ -7,6 +7,7 @@
   • rate_daily = {action_key: N}  (0/غياب = بلا حدّ)
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from datetime import datetime
 from typing import Optional
@@ -141,9 +142,9 @@ def spend_block_reason(admin_id: Optional[int], add_minor: int, *, tenant_id: in
     daily_cap = _cap_minor("spend_cap_daily")
     monthly_cap = _cap_minor("spend_cap_monthly")
     if daily_cap > 0 and spend_today(int(admin_id), tenant_id=tenant_id) + add_minor > daily_cap:
-        return "يتجاوز سقف الإنفاق اليوميّ المسموح لك."
+        return N_("يتجاوز سقف الإنفاق اليوميّ المسموح لك.")
     if monthly_cap > 0 and spend_month(int(admin_id), tenant_id=tenant_id) + add_minor > monthly_cap:
-        return "يتجاوز سقف الإنفاق الشهريّ المسموح لك."
+        return N_("يتجاوز سقف الإنفاق الشهريّ المسموح لك.")
     return None
 
 

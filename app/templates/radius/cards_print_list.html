@@ -9,7 +9,7 @@
 {% block title %}{{ _("بطاقات الطباعة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-print"></i>{% endblock %}
 {% block page_title %}{{ _("بطاقات الطباعة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total|ar_count('batch') }} طباعة · لا تسمح بتسجيل الدخول</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s طباعة · لا تسمح بتسجيل الدخول', v=total|ar_count('batch')) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -315,8 +315,8 @@
 
 {# ───── الهيرو المدموج الموحّد: العنوان + الوصف + الإجراء + شريط KPIs بصف واحد ── #}
 {% call hub.megahero(
-  "بطاقات الطباعة",
-  subtitle="استورد ملفات الكروت الجاهزة (Excel · CSV · PDF) وحوّلها إلى ملفات طباعة احترافية. هذه البطاقات لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول.",
+  _('بطاقات الطباعة'),
+  subtitle=_('استورد ملفات الكروت الجاهزة (Excel · CSV · PDF) وحوّلها إلى ملفات طباعة احترافية. هذه البطاقات لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول.'),
   icon="print",
   actions_html=(
     '<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.cards_print_quick') ~ '">'|safe
@@ -325,23 +325,23 @@
     ~ '<i class="fa-solid fa-file-import"></i> '|safe ~ _("استيراد دفعة جديدة") ~ '</a>'|safe if can_submit('radius.cards_print_new', 'GET') else '')
   ),
   kpis=[
-    {'label': 'إجمالي الحزم',      'value': total,          'icon': 'layer-group',   'variant': 'brand', 'sub': 'حزمة طباعة محفوظة'},
-    {'label': 'معروضة في الصفحة',  'value': batches|length, 'icon': 'boxes-stacked', 'variant': 'blue',  'sub': 'جاهزة للطباعة'},
-    {'label': 'حالة النظام',       'value': 'متصل',         'icon': 'circle-check',  'variant': 'green', 'sub': 'المحرّك وقوالب الطباعة جاهزة'},
+    {'label': _('إجمالي الحزم'),      'value': total,          'icon': 'layer-group',   'variant': 'brand', 'sub': _('حزمة طباعة محفوظة')},
+    {'label': _('معروضة في الصفحة'),  'value': batches|length, 'icon': 'boxes-stacked', 'variant': 'blue',  'sub': _('جاهزة للطباعة')},
+    {'label': _('حالة النظام'),       'value': _('متصل'),         'icon': 'circle-check',  'variant': 'green', 'sub': _('المحرّك وقوالب الطباعة جاهزة')},
   ]
 ) %}{% endcall %}
 
 {# ── Batches ─────────────────────────────────────────── #}
-{% call hub.section("الحزم المحفوظة", icon="layer-group", meta=batches|length ~ " حزمة") %}
+{% call hub.section(_('الحزم المحفوظة'), icon="layer-group", meta=_('%(length)s حزمة', length=batches|length)) %}
 
   {% if not batches %}
     {{ hub.empty(
-      "لا توجد حزم طباعة بعد",
-      sub="ارفع ملفك الأول وسيستخرج المحرّك الذكي البطاقات تلقائياً، ثم اختر قالباً للطباعة.",
+      _('لا توجد حزم طباعة بعد'),
+      sub=_('ارفع ملفك الأول وسيستخرج المحرّك الذكي البطاقات تلقائياً، ثم اختر قالباً للطباعة.'),
       icon="print"
     ) }}
     <div style="text-align:center;margin-top:12px">
-      {% if can_submit('radius.cards_print_new', 'GET') %}{{ hub.btn("أنشئ أوّل حزمة", icon="bolt", href=url_for('radius.cards_print_new'), variant="primary") }}{% endif %}
+      {% if can_submit('radius.cards_print_new', 'GET') %}{{ hub.btn(_('أنشئ أوّل حزمة'), icon="bolt", href=url_for('radius.cards_print_new'), variant="primary") }}{% endif %}
     </div>
 
   {% else %}
@@ -371,9 +371,9 @@
         <div class="pc-card-head">
           <div style="flex:1;min-width:0">
             <span class="pc-card-num">#{{ b.id }}</span>
-            <div class="pc-card-title">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</div>
+            <div class="pc-card-title">{{ b.package_name or b.batch_code or _('حزمة بلا اسم') }}</div>
           </div>
-          {{ hub.pill("طباعة", variant="blue", dot=False) }}
+          {{ hub.pill(_('طباعة'), variant="blue", dot=False) }}
         </div>
         <div class="pc-card-stats">
           <div class="pc-stat"><div class="k">{{ _('عدد') }}</div><div class="v">{{ b.card_count or 0 }}</div></div>
@@ -402,7 +402,7 @@
                 data-print-batch
                 data-batch-id="{{ b.id }}"
                 data-batch-code="{{ b.batch_code or '' }}"
-                data-batch-name="{{ (b.package_name or b.batch_code or ('حزمة #' ~ b.id))|e }}"
+                data-batch-name="{{ (b.package_name or b.batch_code or (_('حزمة #%(id)s', id=b.id)))|e }}"
                 data-batch-total="{{ b.card_count or 0 }}">
           <i class="fa-solid fa-print" aria-hidden="true"></i>
         </button>
@@ -412,8 +412,8 @@
               style="display:inline-flex;margin:0"
               data-confirm-form
               data-confirm-title="{{ _('حذف حزمة الطباعة') }}"
-              data-confirm-msg="هل تريد حذف الحزمة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
-              data-confirm-ok="نعم، احذف">
+              data-confirm-msg="{{ _('هل تريد حذف الحزمة «%(e)s»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع.', e=(b.package_name or ('#' ~ b.id))|e) }}"
+              data-confirm-ok="{{ _('نعم، احذف') }}">
           {{ csrf_token_input() | safe }}
           <button type="submit" class="pc-act pc-act--delete" title="{{ _('حذف') }}"
                   aria-label="{{ _('حذف الحزمة') }}">
@@ -445,7 +445,7 @@
         <tr>
           <td><strong style="color:#0f172a">#{{ b.id }}</strong></td>
           <td>
-            <strong style="color:#0f172a">{{ b.package_name or b.batch_code or 'حزمة بلا اسم' }}</strong>
+            <strong style="color:#0f172a">{{ b.package_name or b.batch_code or _('حزمة بلا اسم') }}</strong>
             {% if b.notes %}<br><small style="color:#64748b">{{ b.notes[:60] }}</small>{% endif %}
           </td>
           <td style="font-variant-numeric:tabular-nums"><strong>{{ b.card_count or 0 }}</strong></td>
@@ -468,7 +468,7 @@
                       data-print-batch
                       data-batch-id="{{ b.id }}"
                       data-batch-code="{{ b.batch_code or '' }}"
-                      data-batch-name="{{ (b.package_name or b.batch_code or ('حزمة #' ~ b.id))|e }}"
+                      data-batch-name="{{ (b.package_name or b.batch_code or (_('حزمة #%(id)s', id=b.id)))|e }}"
                       data-batch-total="{{ b.card_count or 0 }}">
                 <i class="fa-solid fa-print" aria-hidden="true"></i>
               </button>
@@ -477,8 +477,8 @@
                     style="display:inline-flex;margin:0"
                     data-confirm-form
               data-confirm-title="{{ _('حذف حزمة الطباعة') }}"
-              data-confirm-msg="سيتم حذف الحزمة وكل بطاقاتها. هذا الإجراء لا يمكن التراجع عنه."
-              data-confirm-ok="نعم، احذف">
+              data-confirm-msg="{{ _('سيتم حذف الحزمة وكل بطاقاتها. هذا الإجراء لا يمكن التراجع عنه.') }}"
+              data-confirm-ok="{{ _('نعم، احذف') }}">
                 {{ csrf_token_input() | safe }}
                 <button type="submit" class="pc-act pc-act--delete" title="{{ _('حذف') }}"
                         aria-label="{{ _('حذف الحزمة') }}">

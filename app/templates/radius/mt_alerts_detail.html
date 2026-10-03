@@ -25,25 +25,25 @@
 
 {# ── خرائط الخطورة/الحالة (ألوان التوكنز: critical=#EF4444, warning=#F59E0B, info=#3D8DD6) ── #}
 {% if alert.severity == 'critical' %}
-  {% set sev_label = 'حرجة' %}{% set sev_variant = 'red' %}
+  {% set sev_label = _('حرجة') %}{% set sev_variant = 'red' %}
   {% set sev_color = '#EF4444' %}{% set sev_soft = '#FEE2E2' %}
   {% set sev_icon = 'circle-exclamation' %}
 {% elif alert.severity == 'warning' %}
-  {% set sev_label = 'تحذير' %}{% set sev_variant = 'amber' %}
+  {% set sev_label = _('تحذير') %}{% set sev_variant = 'amber' %}
   {% set sev_color = '#F59E0B' %}{% set sev_soft = '#FEF3C7' %}
   {% set sev_icon = 'triangle-exclamation' %}
 {% else %}
-  {% set sev_label = 'معلومة' %}{% set sev_variant = 'blue' %}
+  {% set sev_label = _('معلومة') %}{% set sev_variant = 'blue' %}
   {% set sev_color = '#3D8DD6' %}{% set sev_soft = '#DBEAFE' %}
   {% set sev_icon = 'circle-info' %}
 {% endif %}
 
 {% if alert.status == 'open' %}
-  {% set st_label = 'مفتوح' %}{% set st_variant = 'red' if alert.severity == 'critical' else 'amber' %}
+  {% set st_label = _('مفتوح') %}{% set st_variant = 'red' if alert.severity == 'critical' else 'amber' %}
 {% elif alert.status == 'resolved' %}
-  {% set st_label = 'مغلق' %}{% set st_variant = 'green' %}
+  {% set st_label = _('مغلق') %}{% set st_variant = 'green' %}
 {% elif alert.status == 'silenced' %}
-  {% set st_label = 'مكتوم' %}{% set st_variant = 'grey' %}
+  {% set st_label = _('مكتوم') %}{% set st_variant = 'grey' %}
 {% else %}
   {% set st_label = alert.status or '—' %}{% set st_variant = 'grey' %}
 {% endif %}
@@ -56,11 +56,11 @@
 {# ── مساعد: عرض قيمة دليل بشكل مقروء (يحافظ على سلوك القالب القديم) ── #}
 {% macro readable_value(value) -%}
   {%- if value is mapping -%}
-    <span class="hub-text-mute">مجموعة بيانات — {{ value|length }} بند</span>
+    <span class="hub-text-mute">{{ _('مجموعة بيانات — %(length)s بند', length=value|length) }}</span>
   {%- elif value is sequence and value is not string -%}
-    <span class="hub-text-mute">قائمة — {{ value|length }} بند</span>
+    <span class="hub-text-mute">{{ _('قائمة — %(length)s بند', length=value|length) }}</span>
   {%- elif value is boolean -%}
-    {{ 'نعم' if value else 'لا' }}
+    {{ _('نعم') if value else _('لا') }}
   {%- elif value is none -%}
     —
   {%- else -%}
@@ -131,46 +131,46 @@
         {# القاعدة بالعربي المفهوم، والكود الخام كتفصيل صغير #}
         <span><i class="fa-solid fa-shield-halved"></i>{{ rule_label or alert.rule }}</span>
         {% if alert.router_id %}
-        <span><i class="fa-solid fa-tower-broadcast"></i>{{ router_name or ('راوتر #' ~ alert.router_id) }}</span>
+        <span><i class="fa-solid fa-tower-broadcast"></i>{{ router_name or (_('راوتر #%(router_id)s', router_id=alert.router_id)) }}</span>
         {% endif %}
-        <span><i class="fa-solid fa-clock"></i>آخر رصد: {{ fmt_dt(alert.last_seen) }}</span>
+        <span><i class="fa-solid fa-clock"></i>{{ _('آخر رصد: %(v)s', v=fmt_dt(alert.last_seen)) }}</span>
       </div>
     </div>
     <div class="alrt-actions">
-      {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
+      {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn(_('العودة للقائمة'), href=url_for('radius.mt_alerts_index'),
                  icon="arrow-right", variant="ghost") }}{% endif %}
     </div>
   </div>
 
   {# ── شريط KPI داخل الشل: الخطورة / الحالة / الجهاز / وقت الإطلاق ── #}
   <div class="hub-kpi-grid">
-    {{ hub.kpi("الخطورة", sev_label, icon=sev_icon, variant=sev_variant) }}
-    {{ hub.kpi("الحالة", st_label, icon="flag", variant=st_variant) }}
-    {{ hub.kpi("الجهاز / المصدر",
-               (router_name or ('راوتر #' ~ alert.router_id)) if alert.router_id else 'النظام',
+    {{ hub.kpi(_('الخطورة'), sev_label, icon=sev_icon, variant=sev_variant) }}
+    {{ hub.kpi(_('الحالة'), st_label, icon="flag", variant=st_variant) }}
+    {{ hub.kpi(_('الجهاز / المصدر'),
+               (router_name or (_('راوتر #%(router_id)s', router_id=alert.router_id))) if alert.router_id else _('النظام'),
                icon="tower-broadcast", variant="brand",
                sub=(rule_label or alert.rule)) }}
-    {{ hub.kpi("وقت الإطلاق", fmt_dt(alert.first_seen), icon="clock",
-               variant="blue", sub="آخر رصد: " ~ (alert.last_seen|dt_local)) }}
+    {{ hub.kpi(_('وقت الإطلاق'), fmt_dt(alert.first_seen), icon="clock",
+               variant="blue", sub=_('آخر رصد: %(v)s', v=(alert.last_seen|dt_local))) }}
   </div>
 
 </section>{# /hub-hero-shell #}
 
 
 {# ═══ 2. تفاصيل التنبيه — صفوف مفتاح/قيمة ═══ #}
-{% call hub.section("تفاصيل التنبيه", icon="circle-info", meta=sev_label) %}
+{% call hub.section(_('تفاصيل التنبيه'), icon="circle-info", meta=sev_label) %}
   {% set summary_rows = [] %}
-  {% set _x = summary_rows.append({'label': 'رقم التنبيه', 'value': '#' ~ alert.id, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': _('رقم التنبيه'), 'value': '#' ~ alert.id, 'mono': True}) %}
   {% if alert.router_id %}
-    {% set _x = summary_rows.append({'label': 'الراوتر', 'value': (router_name ~ ' (#' ~ alert.router_id ~ ')') if router_name else ('#' ~ alert.router_id), 'mono': False}) %}
+    {% set _x = summary_rows.append({'label': _('الراوتر'), 'value': (router_name ~ ' (#' ~ alert.router_id ~ ')') if router_name else ('#' ~ alert.router_id), 'mono': False}) %}
   {% endif %}
-  {% set _x = summary_rows.append({'label': 'القاعدة', 'value': (rule_label ~ ' — ' ~ alert.rule) if rule_label else alert.rule, 'mono': False}) %}
-  {% set _x = summary_rows.append({'label': 'الخطورة', 'value': sev_label}) %}
-  {% set _x = summary_rows.append({'label': 'الحالة', 'value': st_label}) %}
-  {% set _x = summary_rows.append({'label': 'أول رصد (وقت الإطلاق)', 'value': alert.first_seen|dt_local, 'mono': True}) %}
-  {% set _x = summary_rows.append({'label': 'آخر رصد', 'value': alert.last_seen|dt_local, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': _('القاعدة'), 'value': (rule_label ~ ' — ' ~ alert.rule) if rule_label else alert.rule, 'mono': False}) %}
+  {% set _x = summary_rows.append({'label': _('الخطورة'), 'value': sev_label}) %}
+  {% set _x = summary_rows.append({'label': _('الحالة'), 'value': st_label}) %}
+  {% set _x = summary_rows.append({'label': _('أول رصد (وقت الإطلاق)'), 'value': alert.first_seen|dt_local, 'mono': True}) %}
+  {% set _x = summary_rows.append({'label': _('آخر رصد'), 'value': alert.last_seen|dt_local, 'mono': True}) %}
   {% if alert.resolved_at %}
-    {% set _x = summary_rows.append({'label': 'أُغلِق في', 'value': alert.resolved_at|dt_local, 'mono': True}) %}
+    {% set _x = summary_rows.append({'label': _('أُغلِق في'), 'value': alert.resolved_at|dt_local, 'mono': True}) %}
   {% endif %}
   <div data-mt-alert-meta>{{ hub.kv(summary_rows) }}</div>
 {% endcall %}
@@ -178,7 +178,7 @@
 
 {# ═══ 3. الشرح (الرسالة/الوصف) ═══ #}
 {% if alert.explanation_ar %}
-{% call hub.section("الشرح", icon="comment") %}
+{% call hub.section(_('الشرح'), icon="comment") %}
   <p class="alrt-prose" data-mt-alert-explanation>{{ alert.explanation_ar }}</p>
 {% endcall %}
 {% endif %}
@@ -186,7 +186,7 @@
 
 {# ═══ 4. الإجراء المُقترح ═══ #}
 {% if alert.recommended_action_ar %}
-{% call hub.section("الإجراء المُقترح", icon="lightbulb") %}
+{% call hub.section(_('الإجراء المُقترح'), icon="lightbulb") %}
   <p class="alrt-prose" data-mt-alert-action>{{ alert.recommended_action_ar }}</p>
 {% endcall %}
 {% endif %}
@@ -197,8 +197,8 @@
    • قائمة   → جدول موحّد مرقّم
    • قيمة مفردة → فقرة                                            #}
 {% if alert.evidence %}
-{% call hub.section("الدليل", icon="microscope",
-     meta=(alert.evidence|length ~ ' بند') if (alert.evidence is mapping or (alert.evidence is sequence and alert.evidence is not string)) else '',
+{% call hub.section(_('الدليل'), icon="microscope",
+     meta=(_('%(length)s بند', length=alert.evidence|length)) if (alert.evidence is mapping or (alert.evidence is sequence and alert.evidence is not string)) else '',
      flush=(alert.evidence is mapping or (alert.evidence is sequence and alert.evidence is not string))) %}
   <div data-mt-alert-evidence>
     {% if alert.evidence is mapping %}
@@ -251,7 +251,7 @@
 
 {# ═══ 6. شريط الإجراءات السفلي (نفس الرابط الموجود أصلًا — لا نماذج جديدة) ═══ #}
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-  {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn("العودة للقائمة", href=url_for('radius.mt_alerts_index'),
+  {% if can_submit('radius.mt_alerts_index', 'GET') %}{{ hub.btn(_('العودة للقائمة'), href=url_for('radius.mt_alerts_index'),
              icon="arrow-right", variant="ghost") }}{% endif %}
 </div>
 

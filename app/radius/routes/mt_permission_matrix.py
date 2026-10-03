@@ -1,5 +1,6 @@
 """Read-only permission governance page."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 from flask import Blueprint, render_template
 
@@ -17,34 +18,34 @@ def register_mt_permission_matrix_routes(bp: Blueprint) -> None:
 
 
 _PERM_LABELS_AR: dict[str, str] = {
-    "mikrotik.view": "عرض",
-    "mikrotik.diagnostics": "تشخيص",
-    "mikrotik.manage": "إدارة",
-    "mikrotik.program": "برمجة",
-    "mikrotik.deploy_login": "نشر صفحة الدخول",
-    "mikrotik.rollback": "تراجع",
-    "mikrotik.backup": "نسخ احتياطي",
-    "mikrotik.restore": "استعادة",
-    "mikrotik.audit.view": "سجل العمليات",
-    "mikrotik.admin": "تحكم كامل",
-    "site_exit.view": "عرض خروج الإنترنت عبر VPS",
-    "site_exit.manage": "إدارة خروج الإنترنت عبر VPS",
-    "site_exit.preview": "معاينة خروج الإنترنت عبر VPS",
-    "site_exit.apply": "تطبيق خروج الإنترنت عبر VPS",
-    "site_exit.override_backup_warning": "تجاوز تحذير النسخ",
-    "site_exit.enable_risky_groups": "تفعيل مجموعات خطرة",
-    "npc.remote_access.view": "عرض الوصول",
-    "npc.remote_access.manage": "إدارة الوصول",
-    "npc.remote_access.preview": "معاينة الوصول",
-    "npc.remote_access.apply": "تطبيق الوصول",
-    "npc.web_block.view": "عرض الحظر",
-    "npc.web_block.manage": "إدارة الحظر",
-    "npc.web_block.preview": "معاينة الحظر",
-    "npc.web_block.apply": "تطبيق الحظر",
-    "npc.walled_garden.view": "عرض Walled Garden",
-    "npc.walled_garden.manage": "إدارة Walled Garden",
-    "npc.walled_garden.preview": "معاينة Walled Garden",
-    "npc.walled_garden.apply": "تطبيق Walled Garden",
+    "mikrotik.view": N_("عرض"),
+    "mikrotik.diagnostics": N_("تشخيص"),
+    "mikrotik.manage": N_("إدارة"),
+    "mikrotik.program": N_("برمجة"),
+    "mikrotik.deploy_login": N_("نشر صفحة الدخول"),
+    "mikrotik.rollback": N_("تراجع"),
+    "mikrotik.backup": N_("نسخ احتياطي"),
+    "mikrotik.restore": N_("استعادة"),
+    "mikrotik.audit.view": N_("سجل العمليات"),
+    "mikrotik.admin": N_("تحكم كامل"),
+    "site_exit.view": N_("عرض خروج الإنترنت عبر VPS"),
+    "site_exit.manage": N_("إدارة خروج الإنترنت عبر VPS"),
+    "site_exit.preview": N_("معاينة خروج الإنترنت عبر VPS"),
+    "site_exit.apply": N_("تطبيق خروج الإنترنت عبر VPS"),
+    "site_exit.override_backup_warning": N_("تجاوز تحذير النسخ"),
+    "site_exit.enable_risky_groups": N_("تفعيل مجموعات خطرة"),
+    "npc.remote_access.view": N_("عرض الوصول"),
+    "npc.remote_access.manage": N_("إدارة الوصول"),
+    "npc.remote_access.preview": N_("معاينة الوصول"),
+    "npc.remote_access.apply": N_("تطبيق الوصول"),
+    "npc.web_block.view": N_("عرض الحظر"),
+    "npc.web_block.manage": N_("إدارة الحظر"),
+    "npc.web_block.preview": N_("معاينة الحظر"),
+    "npc.web_block.apply": N_("تطبيق الحظر"),
+    "npc.walled_garden.view": N_("عرض Walled Garden"),
+    "npc.walled_garden.manage": N_("إدارة Walled Garden"),
+    "npc.walled_garden.preview": N_("معاينة Walled Garden"),
+    "npc.walled_garden.apply": N_("تطبيق Walled Garden"),
     # أُزيل: licensing.view/manage — لوحة التراخيص حوكمة مركزية للمالك.
 }
 
@@ -64,9 +65,9 @@ _RISKY_PERMS = {
 _PERM_GROUPS = (
     (
         "core",
-        "صلاحيات الراوتر",
+        N_("صلاحيات الراوتر"),
         "router",
-        "القراءة والتشخيص والتشغيل اليومي",
+        N_("القراءة والتشخيص والتشغيل اليومي"),
         (
             "mikrotik.view",
             "mikrotik.diagnostics",
@@ -82,9 +83,9 @@ _PERM_GROUPS = (
     ),
     (
         "exit",
-        "خروج الإنترنت عبر VPS",
+        N_("خروج الإنترنت عبر VPS"),
         "route",
-        "تحويل مواقع مختارة عبر الخادم",
+        N_("تحويل مواقع مختارة عبر الخادم"),
         (
             "site_exit.view",
             "site_exit.manage",
@@ -96,9 +97,9 @@ _PERM_GROUPS = (
     ),
     (
         "npc",
-        "سياسات الشبكة",
+        N_("سياسات الشبكة"),
         "shield-halved",
-        "الوصول والحظر والـ Walled Garden",
+        N_("الوصول والحظر والـ Walled Garden"),
         (
             "npc.remote_access.view",
             "npc.remote_access.manage",

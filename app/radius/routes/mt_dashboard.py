@@ -9,6 +9,7 @@ In K9.1 the page renders the KPI strip + empty placeholders for
 the K9.2/K9.3 panels — those are filled in subsequent commits.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import os
@@ -40,9 +41,9 @@ def _service_label(slug: str) -> str:
     """عنوان عربي قصير للخدمة المدفوعة المعروفة (يستخدم في الـpayload
     ورسالة الحدث). يقع على الـslug الخامّ إن لم نعرف الخدمة."""
     labels = {
-        "public-ip": "تغيير عنوان التصفح العام (Public)",
-        "bt_wifi_block": "منع بث البلوتوث والواي فاي",
-        "loop_detect": "تتبّع اللوب",
+        "public-ip": N_("تغيير عنوان التصفح العام (Public)"),
+        "bt_wifi_block": N_("منع بث البلوتوث والواي فاي"),
+        "loop_detect": N_("تتبّع اللوب"),
     }
     return labels.get(slug, slug)
 
@@ -109,20 +110,20 @@ def mt_service_request(nas_id: int):
         (nas_id, _tid()),
     ).fetchone()
     if not row:
-        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+        return jsonify({"ok": False, "error": _tr("الراوتر غير موجود")}), 404
     nas = dict(row)
 
     body = request.get_json(silent=True) or {}
     slug = str(body.get("slug") or "").strip().lower()
     if not _SLUG_RE.match(slug):
-        return jsonify({"ok": False, "error": "معرّف الخدمة غير صالح"}), 400
+        return jsonify({"ok": False, "error": _tr("معرّف الخدمة غير صالح")}), 400
     try:
         mb = int(body.get("mb") or 0)
     except (TypeError, ValueError):
         mb = 0
     if mb <= 0 or mb > 1_048_576:
         return jsonify({"ok": False,
-                        "error": "الكمّيّة المطلوبة (ميغابايت) يجب أن تكون موجبة"}), 400
+                        "error": _tr("الكمّيّة المطلوبة (ميغابايت) يجب أن تكون موجبة")}), 400
     message = str(body.get("message") or "").strip()[:1000]
 
     label = _service_label(slug)
@@ -146,7 +147,7 @@ def mt_service_request(nas_id: int):
         )
     except Exception as e:  # noqa: BLE001
         return jsonify({"ok": False,
-                        "error": f"تعذّر حفظ الطلب: {e}"}), 500
+                        "error": _tr('تعذّر حفظ الطلب: %(e)s', e=e)}), 500
 
     get_audit_service().record(
         actor=str(getattr(g, "admin_id", None) or "ui"),
@@ -190,7 +191,7 @@ def mt_active_sessions(nas_id: int):
         (nas_id, _tid()),
     ).fetchone()
     if not row:
-        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+        return jsonify({"ok": False, "error": _tr("الراوتر غير موجود")}), 404
     nas = dict(row)
     try:
         from ..services import live_sessions

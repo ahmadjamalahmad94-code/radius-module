@@ -13,6 +13,7 @@
 بنية داخليّة ولا توكِن قالب خام).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, jsonify, render_template, request
 
@@ -61,10 +62,10 @@ def ipchange_script():
     prov = ipc.provision(tid)
     if not prov:
         return jsonify({"ok": False,
-                        "error": "لم تصل بيانات التزويد بعد."}), 409
+                        "error": _tr("لم تصل بيانات التزويد بعد.")}), 409
     if not prov.get("server_ip"):
         return jsonify({"ok": False,
-                        "error": "IP الخادم غير متوفّر في بيانات التزويد."}), 409
+                        "error": _tr("IP الخادم غير متوفّر في بيانات التزويد.")}), 409
     exclude_video = str(request.args.get("exclude_video") or "").strip() in ("1", "true", "on", "yes")
     try:
         out = ics.generate(
@@ -89,7 +90,7 @@ def ipchange_push():
     tid = _tid()
     latest = ipc.latest_request(tid)
     if not latest:
-        return jsonify({"ok": False, "error": "لا يوجد طلب لإرساله."}), 404
+        return jsonify({"ok": False, "error": _tr("لا يوجد طلب لإرساله.")}), 404
     spec = latest.get("spec") or {}
     push = ipc.push_request(spec.get("requested_speed_mbps"))
     ipc.mark_pushed(latest.get("_key"), push)

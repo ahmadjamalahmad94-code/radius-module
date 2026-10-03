@@ -3,7 +3,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% set title_ar = "إضافة مدير" if is_new else "تعديل: " + (admin.username or 'مدير') %}
+{% set title_ar = _('إضافة مدير') if is_new else _('تعديل: ') + (admin.username or _('مدير')) %}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -12,30 +12,30 @@
 
 {{ hub.hero(
   title_ar,
-  subtitle="حساب مدير في نظام الراديوس — الهوية، كلمة المرور، الدور، الملف الشخصي",
+  subtitle=_('حساب مدير في نظام الراديوس — الهوية، كلمة المرور، الدور، الملف الشخصي'),
   icon="user-shield",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.admins_list') + '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="ad-form">
-      <i class="fa-solid fa-floppy-disk"></i> '|safe + ("إنشاء المدير"|safe if is_new else "حفظ التعديلات"|safe) + '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe + (_('إنشاء المدير')|safe if is_new else _('حفظ التعديلات')|safe) + '
     </button>
   '|safe
 ) }}
 
 {% set help_aside %}
 {% call hub.helppanel(
-  "عن حساب المدير",
-  intro="حساب المدير يمنح صاحبه الدخول إلى لوحة الراديوس. الدور هو ما يحدّد الصلاحيات الفعلية لكل مدير.",
+  _('عن حساب المدير'),
+  intro=_('حساب المدير يمنح صاحبه الدخول إلى لوحة الراديوس. الدور هو ما يحدّد الصلاحيات الفعلية لكل مدير.'),
   icon="user-shield",
   items=[
-    {"icon": "user", "text": "اسم المستخدم يُثبَّت عند الإنشاء ولا يمكن تعديله لاحقًا."},
-    {"icon": "key", "text": "كلمة المرور تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ."},
-    {"icon": "id-badge", "text": "الدور يحدّد الصلاحيات الفعلية — اختر دورًا مناسبًا أو اتركه بدون دور."},
-    {"icon": "toggle-on", "text": "أوقف الحالة لتعطيل دخول المدير مؤقتًا دون حذف حسابه."}
+    {"icon": "user", "text": _('اسم المستخدم يُثبَّت عند الإنشاء ولا يمكن تعديله لاحقًا.')},
+    {"icon": "key", "text": _('كلمة المرور تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ.')},
+    {"icon": "id-badge", "text": _('الدور يحدّد الصلاحيات الفعلية — اختر دورًا مناسبًا أو اتركه بدون دور.')},
+    {"icon": "toggle-on", "text": _('أوقف الحالة لتعطيل دخول المدير مؤقتًا دون حذف حسابه.')}
   ],
-  note="عند التعديل، اترك حقل كلمة المرور فارغًا للإبقاء على كلمة المرور الحالية."
+  note=_('عند التعديل، اترك حقل كلمة المرور فارغًا للإبقاء على كلمة المرور الحالية.')
 ) %}{% endcall %}
 {% endset %}
 
@@ -44,13 +44,13 @@
       action="{{ url_for('radius.admins_update', admin_id=admin.id) if not is_new else url_for('radius.admins_create') }}">{% if not can_submit(('radius.admins_update' if not is_new else 'radius.admins_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. الهوية والدور ─────────────────────── #}
-  {% call hub.section("الهوية والدور", icon="user-shield") %}
+  {% call hub.section(_('الهوية والدور'), icon="user-shield") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('اسم المستخدم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
                value="{{ admin.username if admin else '' }}" placeholder="admin">
-        <div class="hub-field-hint">{% if is_new %}لن يمكن تغييره بعد الإنشاء.{% else %}لا يمكن تعديله.{% endif %}</div>
+        <div class="hub-field-hint">{% if is_new %}{{ _('لن يمكن تغييره بعد الإنشاء.') }}{% else %}{{ _('لا يمكن تعديله.') }}{% endif %}</div>
       </div>
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الاسم الكامل') }}</label>
@@ -78,12 +78,12 @@
   {% endcall %}
 
   {# ── 2. التحقق من الدخول ───────────────────────── #}
-  {% call hub.section("التحقق من الدخول", icon="key") %}
+  {% call hub.section(_('التحقق من الدخول'), icon="key") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
+        <label class="hub-field-label">{{ _('كلمة المرور') }} {% if is_new %}<span class="req">*</span>{% endif %}</label>
         <input class="hub-input" type="password" name="password" autocomplete="new-password" {% if is_new %}required{% endif %}
-               placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
+               placeholder="{{ _('اتركها فارغة لعدم التغيير') if not is_new else _('كلمة مرور قوية') }}">
         <div class="hub-field-hint">{{ _('تُحفظ مشفّرة. لا تظهر كنص واضح بعد الحفظ.') }}</div>
       </div>
       {% if not is_new and admin and admin.last_login_at %}
@@ -102,7 +102,7 @@
   {% endcall %}
 
   {# ── 3. معلومات الاتصال والملف الشخصي ────────────────── #}
-  {% call hub.section("معلومات الاتصال والملف الشخصي", icon="id-card") %}
+  {% call hub.section(_('معلومات الاتصال والملف الشخصي'), icon="id-card") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('البريد الإلكتروني') }}</label>
@@ -136,7 +136,7 @@
        • سوبر يوزر = دور «مدير عام»: كل الصلاحيات غير المقصورة على المالك.
        • شريك/مالك = كل صلاحيات المالك بلا استثناء. المالك الأصليّ محميّ. #}
   {% if can_grant_owner %}
-  {% call hub.section("مستوى الوصول", icon="crown") %}
+  {% call hub.section(_('مستوى الوصول'), icon="crown") %}
     <input type="hidden" name="access_level_present" value="1">
     <div class="hub-form-row">
       <div class="hub-field" data-testid="admin-super-user">
@@ -168,8 +168,8 @@
        يُكلّف مالًا. السوبر يرفع السقوف تدريجيًّا. مُنفَّذ خادميًّا (POST من
        غير سوبر يُردّ 403). #}
   {% if session.get('is_super_admin') and admin %}
-  {% call hub.section("حدود الائتمان المالي (دين/سلف)", icon="scale-balanced",
-       meta="السوبر فقط — مدير جديد يبدأ بثقة صفر") %}
+  {% call hub.section(_('حدود الائتمان المالي (دين/سلف)'), icon="scale-balanced",
+       meta=_('السوبر فقط — مدير جديد يبدأ بثقة صفر')) %}
     <input type="hidden" name="credit_caps_present" value="1">
     <div class="hub-form-row">
       <div class="hub-field">
@@ -197,8 +197,8 @@
   {% endif %}
 
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
-    {% if can_submit('radius.admins_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.admins_list')) }}{% endif %}
-    {{ hub.btn(("إنشاء المدير" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.admins_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="secondary", href=url_for('radius.admins_list')) }}{% endif %}
+    {{ hub.btn((_('إنشاء المدير') if is_new else _('حفظ التعديلات')), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 {% if not can_submit(('radius.admins_update' if not is_new else 'radius.admins_create')) %}</fieldset>{% endif %}</form>
 {% endcall %}

@@ -14,6 +14,7 @@ Design notes:
     (the operator installs the agent once, like «دفع DHCP»).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -135,7 +136,7 @@ def _notify(tenant_id: int, text: str) -> None:
     try:
         from . import notifications as _notif
         lines = [ln for ln in str(text or "").splitlines() if ln.strip()]
-        title = (lines[0] if lines else "تنبيه شبكة")[:120]
+        title = (lines[0] if lines else _tr("تنبيه شبكة"))[:120]
         body = "\n".join(lines[1:])[:500]
         _notif.notify(int(tenant_id), type="system", severity="warning",
                       title=title, body=body, source="local",
@@ -198,11 +199,10 @@ def sweep_offline(tenant_id: int) -> dict[str, int]:
             alerts_repo.open(
                 tenant_id=tenant_id, rule=_OFFLINE_RULE, dedup_key=dedup,
                 router_id=rid, severity="critical",
-                title_ar=f"الراوتر «{name}» مفصول",
-                explanation_ar=(f"لم يصل أي تحديث من الراوتر منذ {int(age)} دقيقة "
-                                f"(الحدّ {after} دقيقة)."),
-                recommended_action_ar=("تأكّد من اتصال الراوتر بالإنترنت والكهرباء، "
-                                       "ثم من أن سكربت دفع المقاييس ما زال يعمل."),
+                title_ar=_tr('الراوتر «%(name)s» مفصول', name=name),
+                explanation_ar=(_tr('لم يصل أي تحديث من الراوتر منذ %(v)s دقيقة (الحدّ %(after)s دقيقة).', v=int(age), after=after)),
+                recommended_action_ar=(N_("تأكّد من اتصال الراوتر بالإنترنت والكهرباء، "
+                                       "ثم من أن سكربت دفع المقاييس ما زال يعمل.")),
                 evidence={"last_push_at": pushed_at, "age_minutes": round(age, 1),
                           "threshold_min": after},
             )
@@ -210,7 +210,7 @@ def sweep_offline(tenant_id: int) -> dict[str, int]:
             if glob["telegram"]:
                 _notify(
                     tenant_id,
-                    f"تنبيه حرج: الراوتر «{name}» مفصول منذ {int(age)} دقيقة.",
+                    _tr('تنبيه حرج: الراوتر «%(name)s» مفصول منذ %(v)s دقيقة.', name=name, v=int(age)),
                 )
         else:
             if alerts_repo.resolve(tenant_id, dedup):
@@ -234,7 +234,7 @@ def on_push(tenant_id: int, router_id: int) -> None:
 # ── Phase 2: high-traffic + high-usage detectors ───────────────────
 _TRAFFIC_RULE = "auto.router.high_traffic"
 _USAGE_RULE = "auto.router.high_usage"
-_WINDOW_LABEL = {"day": "آخر ٢٤ ساعة", "month": "آخر ٣٠ يومًا"}
+_WINDOW_LABEL = {"day": N_("آخر ٢٤ ساعة"), "month": N_("آخر ٣٠ يومًا")}
 _WINDOW_MINUTES = {"day": 24 * 60, "month": 30 * 24 * 60}
 
 
@@ -324,17 +324,15 @@ def evaluate_push(tenant_id: int, router_id: int,
             alerts_repo.open(
                 tenant_id=tenant_id, rule=_TRAFFIC_RULE, dedup_key=dedup,
                 router_id=router_id, severity="warning",
-                title_ar=f"ترافيك عالٍ على «{name}»",
-                explanation_ar=(f"بلغ المعدّل {mbps:.1f} ميجابت/ث على الواجهة "
-                                f"{iface} (الحدّ {limit:.0f} ميجابت/ث)."),
-                recommended_action_ar="راجع استهلاك المشتركين/الخدمات على هذا الراوتر.",
+                title_ar=_tr('ترافيك عالٍ على «%(name)s»', name=name),
+                explanation_ar=(_tr('بلغ المعدّل %(mbps)s ميجابت/ث على الواجهة %(iface)s (الحدّ %(limit)s ميجابت/ث).', mbps=format(mbps, '.1f'), iface=iface, limit=format(limit, '.0f'))),
+                recommended_action_ar=N_("راجع استهلاك المشتركين/الخدمات على هذا الراوتر."),
                 evidence={"peak_mbps": round(mbps, 2), "interface": iface,
                           "threshold_mbps": limit},
             )
             result["high_traffic"] = "opened"
             if glob["telegram"]:
-                _notify(tenant_id, f"تنبيه: ترافيك عالٍ على «{name}» "
-                                   f"({mbps:.0f} ميجابت/ث).")
+                _notify(tenant_id, _tr('تنبيه: ترافيك عالٍ على «%(name)s» (%(mbps)s ميجابت/ث).', name=name, mbps=format(mbps, '.0f')))
         elif mbps is not None and limit > 0:
             if alerts_repo.resolve(tenant_id, dedup):
                 result["high_traffic"] = "resolved"
@@ -350,17 +348,15 @@ def evaluate_push(tenant_id: int, router_id: int,
             alerts_repo.open(
                 tenant_id=tenant_id, rule=_USAGE_RULE, dedup_key=dedup,
                 router_id=router_id, severity="warning",
-                title_ar=f"استهلاك عالٍ على «{name}»",
-                explanation_ar=(f"بلغ الاستهلاك {gb:.1f} جيجابايت خلال {label} "
-                                f"(الحدّ {limit:.0f} جيجابايت)."),
-                recommended_action_ar="راجع حصص المشتركين أو احتمال تسريب/استخدام غير طبيعي.",
+                title_ar=_tr('استهلاك عالٍ على «%(name)s»', name=name),
+                explanation_ar=(_tr('بلغ الاستهلاك %(gb)s جيجابايت خلال %(label)s (الحدّ %(limit)s جيجابايت).', gb=format(gb, '.1f'), label=label, limit=format(limit, '.0f'))),
+                recommended_action_ar=N_("راجع حصص المشتركين أو احتمال تسريب/استخدام غير طبيعي."),
                 evidence={"usage_gb": round(gb, 2), "window": window,
                           "threshold_gb": limit},
             )
             result["high_usage"] = "opened"
             if glob["telegram"]:
-                _notify(tenant_id, f"تنبيه: استهلاك عالٍ على «{name}» "
-                                   f"({gb:.0f} جيجابايت / {label}).")
+                _notify(tenant_id, _tr('تنبيه: استهلاك عالٍ على «%(name)s» (%(gb)s جيجابايت / %(label)s).', name=name, gb=format(gb, '.0f'), label=label))
         elif gb is not None and limit > 0:
             if alerts_repo.resolve(tenant_id, dedup):
                 result["high_usage"] = "resolved"
@@ -401,19 +397,16 @@ def evaluate_loops(tenant_id: int, router_id: int,
             alerts_repo.open(
                 tenant_id=tenant_id, rule=_LOOP_RULE, dedup_key=dedup,
                 router_id=router_id, severity="critical",
-                title_ar=f"حلقة (لوب) على المنفذ «{iface}» في «{name}»",
-                explanation_ar=(f"حصل المنفذ {iface} على إيجار DHCP ({lease}) من "
-                                f"{server} — وجود إيجار على هذا المنفذ يدلّ على "
-                                f"حلقة تُعيد الشبكة على نفسها (لوب)."),
-                recommended_action_ar=("افصل الكبل/المنفذ المزدوج وتحقّق من توصيلات "
-                                       "السويتش لإزالة الحلقة."),
+                title_ar=_tr('حلقة (لوب) على المنفذ «%(iface)s» في «%(name)s»', iface=iface, name=name),
+                explanation_ar=(_tr('حصل المنفذ %(iface)s على إيجار DHCP (%(lease)s) من %(server)s — وجود إيجار على هذا المنفذ يدلّ على حلقة تُعيد الشبكة على نفسها (لوب).', iface=iface, lease=lease, server=server)),
+                recommended_action_ar=(N_("افصل الكبل/المنفذ المزدوج وتحقّق من توصيلات "
+                                       "السويتش لإزالة الحلقة.")),
                 evidence={"interface": iface, "lease_ip": lease,
                           "server_ip": server, "status": p.get("last_status")},
             )
             result[iface] = "opened"
             if glob["telegram"]:
-                _notify(tenant_id, f"تنبيه حرج: حلقة (لوب) على المنفذ «{iface}» "
-                                   f"في «{name}» — IP {lease}.")
+                _notify(tenant_id, _tr('تنبيه حرج: حلقة (لوب) على المنفذ «%(iface)s» في «%(name)s» — IP %(lease)s.', iface=iface, name=name, lease=lease))
         else:
             if alerts_repo.resolve(tenant_id, dedup):
                 result[iface] = "resolved"

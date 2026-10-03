@@ -10,6 +10,7 @@ reachability check against `api_port` with a 2s timeout, then records the
 result via `nas_repo.record_check`.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import socket
@@ -70,13 +71,13 @@ _INT_DEFAULTS = {
     "api_port": 8728, "ssh_port": 22,
 }
 _INT_LABELS = {
-    "ports": "عدد المنافذ", "auth_port": "منفذ المصادقة",
-    "acct_port": "منفذ المحاسبة", "coa_port": "منفذ CoA",
-    "api_port": "منفذ API", "ssh_port": "منفذ SSH",
+    "ports": N_("عدد المنافذ"), "auth_port": N_("منفذ المصادقة"),
+    "acct_port": N_("منفذ المحاسبة"), "coa_port": N_("منفذ CoA"),
+    "api_port": N_("منفذ API"), "ssh_port": N_("منفذ SSH"),
 }
 _BOOL_LABELS = {
-    "api_use_tls": "API عبر TLS", "monitoring_enabled": "المراقبة",
-    "enabled": "التفعيل",
+    "api_use_tls": N_("API عبر TLS"), "monitoring_enabled": N_("المراقبة"),
+    "enabled": N_("التفعيل"),
     "require_message_authenticator": "Message-Authenticator",
 }
 
@@ -95,7 +96,7 @@ def _coerce_str(name: str, v: Any) -> str:
     if name == "metadata" and isinstance(v, (dict, list)):
         return json.dumps(v, ensure_ascii=False)
     if isinstance(v, (dict, list, tuple)):
-        raise RadiusValidationError(f"قيمة «{name}» يجب أن تكون نصًّا.")
+        raise RadiusValidationError(_tr('قيمة «%(name)s» يجب أن تكون نصًّا.', name=name))
     return str(v)
 
 
@@ -117,8 +118,7 @@ def _apply_body(device: NasDevice, body: dict) -> NasDevice:
         changes["vendor"] = changes["vendor"].strip().lower() or "mikrotik"
         if changes["vendor"] not in _VALID_VENDORS:
             raise RadiusValidationError(
-                f"نوع الجهاز غير معروف: «{changes['vendor'][:40]}». "
-                f"المسموح: {'، '.join(sorted(_VALID_VENDORS))}."
+                _tr('نوع الجهاز غير معروف: «%(v)s». المسموح: %(v2)s.', v=changes['vendor'][:40], v2='، '.join(sorted(_VALID_VENDORS)))
             )
     if "nas_type" in changes:
         changes["nas_type"] = changes["nas_type"].strip().lower()
@@ -129,7 +129,7 @@ def _apply_body(device: NasDevice, body: dict) -> NasDevice:
         _major = _rv.split(".", 1)[0] if _rv else ""
         if _major not in ("", "6", "7"):
             raise RadiusValidationError(
-                f"إصدار RouterOS غير مدعوم: «{_rv[:16]}». المسموح: 6 أو 7.")
+                _tr('إصدار RouterOS غير مدعوم: «%(v)s». المسموح: 6 أو 7.', v=_rv[:16]))
         changes["ros_version"] = _major
     return replace(device, **changes)
 
@@ -190,7 +190,7 @@ def nas_list():
         limit = min(max(int(request.args.get("limit") or 100), 1), 500)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     items = _svc().list(limit=limit, offset=offset)
     return ok({"items": [_serialize(d) for d in items], "count": len(items)})
 
@@ -198,13 +198,13 @@ def nas_list():
 def nas_create():
     body = _json_body()
     if body is None:
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     name = body.get("name")
     address = body.get("address")
     if not isinstance(name, str) or not name.strip():
-        return fail("validation_error", "اسم الراوتر مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم الراوتر مطلوب."), status=422)
     if not isinstance(address, str) or not address.strip():
-        return fail("validation_error", "عنوان الراوتر مطلوب.", status=422)
+        return fail("validation_error", _tr("عنوان الراوتر مطلوب."), status=422)
     name, address = name.strip(), address.strip()
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
@@ -245,7 +245,7 @@ def nas_get(nas_id: int):
     try:
         device = _svc().get(nas_id)
     except RadiusNotFound:
-        return fail("not_found", f"الراوتر {nas_id} غير موجود.", status=404)
+        return fail("not_found", _tr('الراوتر %(nas_id)s غير موجود.', nas_id=nas_id), status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok(_serialize(device))
@@ -256,12 +256,12 @@ def nas_patch(nas_id: int):
     # التعديل يتطلّب كائن JSON صريحًا (ولو `{}`).
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     svc = _svc()
     try:
         existing = svc.get(nas_id)
     except RadiusNotFound:
-        return fail("not_found", f"الراوتر {nas_id} غير موجود.", status=404)
+        return fail("not_found", _tr('الراوتر %(nas_id)s غير موجود.', nas_id=nas_id), status=404)
     try:
         new_device = _apply_body(existing, body)
     except RadiusValidationError as e:
@@ -283,7 +283,7 @@ def nas_delete(nas_id: int):
     try:
         _svc().get(nas_id)
     except RadiusNotFound:
-        return fail("not_found", f"الراوتر {nas_id} غير موجود.", status=404)
+        return fail("not_found", _tr('الراوتر %(nas_id)s غير موجود.', nas_id=nas_id), status=404)
     try:
         _svc().delete(actor=_actor(), nas_id=nas_id)
     except RadiusError as e:
@@ -302,7 +302,7 @@ def nas_test(nas_id: int):
     try:
         device = _svc().get(nas_id)
     except RadiusNotFound:
-        return fail("not_found", f"الراوتر {nas_id} غير موجود.", status=404)
+        return fail("not_found", _tr('الراوتر %(nas_id)s غير موجود.', nas_id=nas_id), status=404)
 
     ip = device.address
     try:
@@ -316,7 +316,7 @@ def nas_test(nas_id: int):
     start = time.monotonic()
     if not (1 <= port <= 65535):
         status = "unreachable"
-        message = f"منفذ API غير صالح ({port}) — عدّل إعدادات الراوتر."
+        message = _tr('منفذ API غير صالح (%(port)s) — عدّل إعدادات الراوتر.', port=port)
     else:
         from ...radius.services.devices import probe_nas_tcp
         status, message = probe_nas_tcp(ip, port)

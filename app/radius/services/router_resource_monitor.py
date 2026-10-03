@@ -16,6 +16,7 @@ dispatch (تلجرام قانوني + جرس دائماً، بلا بوّابة 
 الراوتر + الوصف + قيمة المقياس + الوقت.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import datetime as _dt
 import logging
@@ -216,23 +217,23 @@ def _value_line(metric: str, value, thresholds: dict) -> str:
     from .device_health_alerts import isolate as _i
     if metric == "cpu":
         val, lim = _i(f"{value}%"), _i(f"{int(thresholds['cpu_pct'])}%")
-        return f"📊 المعالج: {val} (الحدّ {lim})"
+        return _tr('📊 المعالج: %(val)s (الحدّ %(lim)s)', val=val, lim=lim)
     if metric == "temp":
-        val, lim = _i(f"{value}°م"), _i(f"{int(thresholds['temp_c'])}°م")
-        return f"📊 الحرارة: {val} (الحدّ {lim})"
+        val, lim = _i(_tr('%(value)s°م', value=value)), _i(_tr('%(v)s°م', v=int(thresholds['temp_c'])))
+        return _tr('📊 الحرارة: %(val)s (الحدّ %(lim)s)', val=val, lim=lim)
     if metric == "ram":
         val, lim = _i(f"{value}%"), _i(f"{int(thresholds['ram_pct'])}%")
-        return f"📊 الذاكرة المستخدمة: {val} (الحدّ {lim})"
+        return _tr('📊 الذاكرة المستخدمة: %(val)s (الحدّ %(lim)s)', val=val, lim=lim)
     if metric == "disk":
         # يُعرَض «مستخدم» في كل مكان (اللوحة + التنبيه) بدل خلط حرّ/مستخدم.
         # العتبة المكافئة: حرّ < X%  ⇔  مستخدم > (100−X)%.
         used = round(100.0 - float(value), 1)
         val, lim = _i(f"{used}%"), _i(f"{100 - int(thresholds['disk_free_pct'])}%")
-        return f"📊 القرص المستخدم: {val} (الحدّ {lim})"
+        return _tr('📊 القرص المستخدم: %(val)s (الحدّ %(lim)s)', val=val, lim=lim)
     if metric == "traffic":
-        val = _i(f"{round(float(value), 1)} ميغابت/ث")
+        val = _i(_tr('%(v)s ميغابت/ث', v=round(float(value), 1)))
         lim = _i(int(thresholds["traffic_mbps"]))
-        return f"📊 الحركة: {val} (الحدّ {lim})"
+        return _tr('📊 الحركة: %(val)s (الحدّ %(lim)s)', val=val, lim=lim)
     return str(value)
 
 

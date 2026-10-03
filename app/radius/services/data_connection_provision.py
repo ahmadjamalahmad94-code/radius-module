@@ -12,6 +12,7 @@ feat/data-connection-oneclick. نقطة الدخول الوحيدة من الم�
 سكربت هو النطاق الفرعي للعميل. حارس التسرّب يُفحص قبل التسليم.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import dataclasses
 
@@ -33,10 +34,10 @@ def _load_subscriber(tenant_id: int, subscriber_id: int) -> Subscriber:
         (int(tenant_id), int(subscriber_id)),
     ).fetchone()
     if not row:
-        raise dc.DataConnectionError("المشترك غير موجود.")
+        raise dc.DataConnectionError(_tr("المشترك غير موجود."))
     sub = subscribers_repo.get_subscriber(int(tenant_id), row["username"])
     if not sub:
-        raise dc.DataConnectionError("المشترك غير موجود.")
+        raise dc.DataConnectionError(_tr("المشترك غير موجود."))
     return sub
 
 
@@ -53,9 +54,9 @@ def provision_data_connection(
     try:
         version = int(version)
     except (TypeError, ValueError):
-        raise dc.DataConnectionError("إصدار غير صالح.")
+        raise dc.DataConnectionError(_tr("إصدار غير صالح."))
     if version not in SUPPORTED_VERSIONS:
-        raise dc.DataConnectionError("الإصدار المدعوم 6 أو 7 فقط.")
+        raise dc.DataConnectionError(_tr("الإصدار المدعوم 6 أو 7 فقط."))
 
     host = dc._require_subdomain()
     sub = _load_subscriber(tenant_id, subscriber_id)
@@ -84,7 +85,7 @@ def provision_data_connection(
     # ── v6 → SSTP / PPTP عبر accel-ppp (transport=vps_accel) ─────────
     proto = (protocol or "").strip().lower()
     if proto not in V6_PROTOCOLS:
-        raise dc.DataConnectionError("اختر بروتوكول SSTP أو PPTP للإصدار 6.")
+        raise dc.DataConnectionError(_tr("اختر بروتوكول SSTP أو PPTP للإصدار 6."))
 
     # حساب accel-ppp: اضبط النقل ثم اكتب reply الراديوس (Filter-Id 5M فقط).
     subscribers_repo.set_data_transport(int(tenant_id), sub.username, "vps_accel")

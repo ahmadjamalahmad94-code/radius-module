@@ -4,6 +4,7 @@
 (owner_admin_id) أو غير مربوطة بعد. التحقّق يقع في الخدمة لا في القالب.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Any
 
@@ -126,13 +127,13 @@ class Tr069DeviceService:
         }
 
 
-_STATUS_AR = {"pending": "بانتظار التسجيل", "active": "مُسجَّل", "disabled": "معطّل",
-              "archived": "مؤرشف"}
-_ACTION_AR = {"reboot": "إعادة تشغيل", "refresh": "تحديث البيانات",
-              "change_wifi": "تغيير Wi-Fi", "change_pppoe": "تغيير PPPoE",
-              "factory_reset": "ضبط المصنع", "firmware_upgrade": "تحديث Firmware",
-              "connection_request": "طلب اتصال"}
-_ACTION_STATUS_AR = {"pending": "بالانتظار", "queued": "بالطابور", "sent": "أُرسِل",
-                     "waiting_for_inform": "بانتظار الجهاز", "acknowledged": "مُستلَم",
-                     "completed": "اكتمل", "failed": "فشل", "expired": "منتهٍ",
-                     "cancelled": "أُلغي"}
+_STATUS_AR = {"pending": N_("بانتظار التسجيل"), "active": N_("مُسجَّل"), "disabled": N_("معطّل"),
+              "archived": N_("مؤرشف")}
+_ACTION_AR = {"reboot": N_("إعادة تشغيل"), "refresh": N_("تحديث البيانات"),
+              "change_wifi": N_("تغيير Wi-Fi"), "change_pppoe": N_("تغيير PPPoE"),
+              "factory_reset": N_("ضبط المصنع"), "firmware_upgrade": N_("تحديث Firmware"),
+              "connection_request": N_("طلب اتصال")}
+_ACTION_STATUS_AR = {"pending": N_("بالانتظار"), "queued": N_("بالطابور"), "sent": N_("أُرسِل"),
+                     "waiting_for_inform": N_("بانتظار الجهاز"), "acknowledged": N_("مُستلَم"),
+                     "completed": N_("اكتمل"), "failed": N_("فشل"), "expired": N_("منتهٍ"),
+                     "cancelled": N_("أُلغي")}

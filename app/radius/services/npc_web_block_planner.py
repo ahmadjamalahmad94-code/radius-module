@@ -29,6 +29,7 @@ Safety contract:
     UI shows them in the preview pane without applying.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Iterable, Optional
 
@@ -160,13 +161,13 @@ def plan(
     if not address_list_ops:
         if fail_open:
             warnings.append(
-                "لا توجد وجهات نشطة — السياسة بدون أثر "
-                "(fail-open)."
+                N_("لا توجد وجهات نشطة — السياسة بدون أثر "
+                "(fail-open).")
             )
         else:
             warnings.append(
-                "لا توجد وجهات نشطة — رفضنا توليد قاعدة "
-                "drop-default لتفادي قطع كامل الإنترنت."
+                N_("لا توجد وجهات نشطة — رفضنا توليد قاعدة "
+                "drop-default لتفادي قطع كامل الإنترنت.")
             )
 
     notes = tuple(skipped_notes)

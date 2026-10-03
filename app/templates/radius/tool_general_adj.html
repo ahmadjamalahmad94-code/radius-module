@@ -6,14 +6,14 @@
 
 {% block content %}
 {{ hub.hero(
-  "عمليات جماعية على المشتركين",
-  subtitle="تعطيل أو تفعيل أو تمديد أو إعادة تعيين كلمة المرور لقائمة مستخدمين دفعة واحدة.",
+  _('عمليات جماعية على المشتركين'),
+  subtitle=_('تعطيل أو تفعيل أو تمديد أو إعادة تعيين كلمة المرور لقائمة مستخدمين دفعة واحدة.'),
   icon="layer-group"
 ) }}
 
 <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-  {% call hub.section("قائمة المستخدمين", icon="users") %}
+  {% call hub.section(_('قائمة المستخدمين'), icon="users") %}
     <div class="hub-field">
       <label class="hub-field-label">{{ _('أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)') }}</label>
       <textarea class="hub-textarea mono"
@@ -25,7 +25,7 @@
 
   <div style="height:14px"></div>
 
-  {% call hub.section("العملية", icon="bolt") %}
+  {% call hub.section(_('العملية'), icon="bolt") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الإجراء') }}</label>
@@ -58,15 +58,15 @@
     <button class="hub-btn hub-btn--secondary" type="submit" name="dry_run" value="1" data-ga-preview>
       <i class="fa-solid fa-eye"></i> {{ _('معاينة بدون تنفيذ') }}
     </button>
-    {{ hub.btn("نفّذ", icon="bolt", variant="primary", type="submit",
-                attrs='onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"') }}
-    {% if can_submit('radius.users_list', 'GET') %}{{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.users_list')) }}{% endif %}
+    {{ hub.btn(_('نفّذ'), icon="bolt", variant="primary", type="submit",
+                attrs=_('onclick="return confirm(\'تأكيد التطبيق على القائمة؟\')"')) }}
+    {% if can_submit('radius.users_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="ghost", href=url_for('radius.users_list')) }}{% endif %}
   </div>
 {% if not can_post_here() %}</fieldset>{% endif %}</form>
 
 {% if preview %}
 <div style="height:14px"></div>
-{% call hub.section("المعاينة — لم يُنفَّذ شيء", icon="eye") %}
+{% call hub.section(_('المعاينة — لم يُنفَّذ شيء'), icon="eye") %}
   <p data-ga-preview-summary>
     {{ preview.action_label }}:
     {{ _('سينجح على') }} <b>{{ preview.would_succeed }}</b>

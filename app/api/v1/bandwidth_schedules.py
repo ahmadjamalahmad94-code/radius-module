@@ -1,5 +1,6 @@
 """Time-based bandwidth schedule API foundation."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -58,7 +59,7 @@ def _apply_source_schedule(body: dict) -> dict:
         return body
     merged = {k: src.get(k) for k in _COPY_FIELDS if src.get(k) is not None}
     merged["name"] = (str(body.get("name") or "").strip()
-                      or f"نسخة من {src.get('name') or 'جدول محفوظ'}")
+                      or _tr('نسخة من %(v)s', v=src.get('name') or N_('جدول محفوظ')))
     merged["metadata"] = {
         "copied_from_schedule_id": sid,
         "copied_from_target_type": src.get("target_type"),
@@ -116,7 +117,7 @@ def bandwidth_schedules_list():
         limit = min(int(request.args.get("limit") or 200), 1000)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "معرّفات الخطة والحزمة وقيم الترقيم يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("معرّفات الخطة والحزمة وقيم الترقيم يجب أن تكون أرقامًا صحيحة."), status=422)
     items = _svc().list_bandwidth_schedules(
         tenant_id=_tid(),
         plan_id=plan_id,
@@ -175,7 +176,7 @@ def _as_bool(value):
 def bandwidth_schedules_get(schedule_id: int):
     item = _svc().get_bandwidth_schedule(tenant_id=_tid(), schedule_id=schedule_id)
     if not item:
-        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("جدول السرعة غير موجود."), status=404)
     return ok({"schedule": item})
 
 
@@ -184,10 +185,10 @@ def bandwidth_schedules_update(schedule_id: int):
     كاملًا؛ التطبيق قد يرسل حقلًا واحدًا). نفس خدمة/تحقّق صفحة الويب."""
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "أرسل حقول التعديل ككائن JSON.", status=422)
+        return fail("validation_error", _tr("أرسل حقول التعديل ككائن JSON."), status=422)
     current = _svc().get_bandwidth_schedule(tenant_id=_tid(), schedule_id=schedule_id)
     if not current:
-        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("جدول السرعة غير موجود."), status=404)
     body = _normalise_days(dict(body))
     data = {k: current.get(k) for k in _EDIT_FIELDS}
     for key in _EDIT_FIELDS:
@@ -195,7 +196,7 @@ def bandwidth_schedules_update(schedule_id: int):
             data[key] = body[key]
     enabled = _as_bool(data.get("enabled"))
     if enabled is None:
-        return fail("validation_error", "قيمة «مفعّل» غير صالحة.", status=422)
+        return fail("validation_error", _tr("قيمة «مفعّل» غير صالحة."), status=422)
     data["enabled"] = enabled
     try:
         schedule = _svc().update_bandwidth_schedule(
@@ -213,12 +214,12 @@ def bandwidth_schedules_set_enabled(schedule_id: int):
     body = request.get_json(silent=True) or {}
     enabled = _as_bool(body.get("enabled")) if "enabled" in body else None
     if enabled is None:
-        return fail("validation_error", "حدّد enabled (true/false).", status=422)
+        return fail("validation_error", _tr("حدّد enabled (true/false)."), status=422)
     try:
         schedule = _svc().set_bandwidth_schedule_enabled(
             tenant_id=_tid(), actor=_actor(), schedule_id=schedule_id, enabled=enabled)
     except RadiusNotFound:
-        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("جدول السرعة غير موجود."), status=404)
     return ok({"schedule": schedule})
 
 
@@ -227,7 +228,7 @@ def bandwidth_schedules_delete(schedule_id: int):
         _svc().delete_bandwidth_schedule(
             tenant_id=_tid(), actor=_actor(), schedule_id=schedule_id)
     except RadiusNotFound:
-        return fail("not_found", "جدول السرعة غير موجود.", status=404)
+        return fail("not_found", _tr("جدول السرعة غير موجود."), status=404)
     return ok({"deleted": True, "id": schedule_id})
 
 
@@ -238,7 +239,7 @@ def bandwidth_schedules_effective():
         card_batch_raw = request.args.get("card_batch_id")
         card_batch_id = int(card_batch_raw) if card_batch_raw else None
     except ValueError:
-        return fail("validation_error", "معرّف الخطة ومعرّف حزمة الكروت يجب أن يكونا أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("معرّف الخطة ومعرّف حزمة الكروت يجب أن يكونا أرقامًا صحيحة."), status=422)
     result = _svc().resolve_effective_bandwidth_schedule(
         tenant_id=_tid(),
         subscriber_username=request.args.get("subscriber_username")

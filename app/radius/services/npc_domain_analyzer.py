@@ -25,6 +25,7 @@ chokepoint where bad inputs get rejected with operator-facing
 Arabic reasons.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import ipaddress
 import re
@@ -43,15 +44,15 @@ KIND_INVALID = "invalid"
 
 # Operator-facing Arabic reason codes — used by the UI to
 # display "why was this line rejected?" next to the input.
-REASON_EMPTY              = "السطر فارغ."
-REASON_HAS_WILDCARD       = "العلامة النجمية غير مدعومة هنا."
-REASON_IPV6_UNSUPPORTED   = "العناوين IPv6 غير مدعومة بعد."
+REASON_EMPTY              = N_("السطر فارغ.")
+REASON_HAS_WILDCARD       = N_("العلامة النجمية غير مدعومة هنا.")
+REASON_IPV6_UNSUPPORTED   = N_("العناوين IPv6 غير مدعومة بعد.")
 REASON_PRIVATE_RFC1918    = (
-    "هذا العنوان من شبكة محلية خاصة "
-    "(يحجبه قد يقطع الشبكة الداخلية)."
+    N_("هذا العنوان من شبكة محلية خاصة "
+    "(يحجبه قد يقطع الشبكة الداخلية).")
 )
-REASON_BLACKHOLE_CIDR     = "حظر 0.0.0.0/0 محظور — يقطع الإنترنت كاملاً."
-REASON_BAD_DOMAIN         = "ليس عنواناً صالحاً (نطاق/IP/CIDR)."
+REASON_BLACKHOLE_CIDR     = N_("حظر 0.0.0.0/0 محظور — يقطع الإنترنت كاملاً.")
+REASON_BAD_DOMAIN         = N_("ليس عنواناً صالحاً (نطاق/IP/CIDR).")
 REASON_OK                 = ""
 
 

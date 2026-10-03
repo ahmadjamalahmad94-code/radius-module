@@ -10,6 +10,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -90,13 +91,13 @@ _CAMPUS_ART = """
 
 _CAMPUS_HERO = ("""
       <div class="cm-hero">
-        <div class="cm-frame">""" + _CAMPUS_ART + """</div>
+        <div class="cm-frame">""" + _CAMPUS_ART + N_("""</div>
         <div class="cm-cap">
           <div><b>أهلاً بك في الحرم</b><span>إنترنت سريع للطلاب والكوادر — تَعلَّم واتّصل</span></div>
           <div class="cm-badge"><span class="cm-dot"></span> متّصل</div>
         </div>
       </div>
-""")
+"""))
 
 _CAMPUS_STYLE = """
 <style id="hr-campus">

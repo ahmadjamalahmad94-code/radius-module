@@ -1,5 +1,6 @@
 """Card Checker API endpoint."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -34,16 +35,16 @@ def cards_check():
     raw_id = (request.args.get("card_id") or "").strip()
     if raw_id:
         if not raw_id.isdigit():
-            return fail("validation_error", "معرّف البطاقة (card_id) يجب أن يكون رقمًا صحيحًا.",
+            return fail("validation_error", _tr("معرّف البطاقة (card_id) يجب أن يكون رقمًا صحيحًا."),
                         status=422)
         card = check_card(_tid(), query or f"id:{raw_id}", card_id=int(raw_id))
         return _scoped(card)
     if not query:
-        return fail("validation_error", "عبارة البحث مطلوبة.", status=422)
+        return fail("validation_error", _tr("عبارة البحث مطلوبة."), status=422)
     if len(query) > _MAX_QUERY_LENGTH:
         return fail(
             "validation_error",
-            f"عبارة البحث يجب ألا تتجاوز {_MAX_QUERY_LENGTH} حرفًا.",
+            _tr('عبارة البحث يجب ألا تتجاوز %(MAX_QUERY_LENGTH)s حرفًا.', MAX_QUERY_LENGTH=_MAX_QUERY_LENGTH),
             status=422,
         )
     card = check_card(_tid(), query)

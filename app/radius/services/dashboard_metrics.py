@@ -9,6 +9,7 @@ DashboardMetricsService — مجموعة helpers تُجمّع KPIs الـ Dashbo
 - متعدد الـ tenant: يقرأ tenant_id من Flask `g` كباقي الخدمات.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import time
 from typing import Optional
@@ -118,7 +119,7 @@ def get_online_count(tenant_id: Optional[int] = None) -> int:
 # ────────────────────────────────────────────────────────────────
 # 3. Cards section
 # ────────────────────────────────────────────────────────────────
-_ELECTRONIC_BATCH_FILTER = """
+_ELECTRONIC_BATCH_FILTER = N_("""
         LOWER(COALESCE(b.metadata, '')) NOT LIKE '%printed%'
         AND (
             LOWER(COALESCE(b.metadata, '')) LIKE '%electronic%'
@@ -128,7 +129,7 @@ _ELECTRONIC_BATCH_FILTER = """
             OR COALESCE(b.package_name, '') LIKE '%إلكترون%'
             OR COALESCE(b.package_name, '') LIKE '%الكترون%'
         )
-    """
+    """)
 
 
 def card_batch_dashboard_summary(tenant_id: int) -> dict:

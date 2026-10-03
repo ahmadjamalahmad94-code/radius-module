@@ -32,13 +32,13 @@
   {# ───── صدفة الهيرو الموحّدة ───── #}
   <section class="hub-hero-shell" data-testid="hotspot-errors-hero">
   {{ hub.megahero(
-    "رسائل أخطاء الهوتسبوت",
-    subtitle="عدّل النصوص العربية التي تظهر للمشترك مكان رسالة الخطأ على صفحة الدخول. تُرفع تلقائيًا إلى الراوتر (errors.txt) عند نشر صفحة الدخول من مصمّم أي راوتر.",
+    _('رسائل أخطاء الهوتسبوت'),
+    subtitle=_('عدّل النصوص العربية التي تظهر للمشترك مكان رسالة الخطأ على صفحة الدخول. تُرفع تلقائيًا إلى الراوتر (errors.txt) عند نشر صفحة الدخول من مصمّم أي راوتر.'),
     icon="triangle-exclamation",
     kpis=[
-      {'label': 'عدد الرسائل', 'value': rows|length, 'icon': 'list-check', 'variant': 'blue'},
-      {'label': 'رسائل معدّلة عن الافتراضي', 'value': _custom_count, 'icon': 'pen', 'variant': 'brand'},
-      {'label': 'صيغة الملف', 'value': 'errors.txt', 'icon': 'file-lines', 'variant': 'slate'}
+      {'label': _('عدد الرسائل'), 'value': rows|length, 'icon': 'list-check', 'variant': 'blue'},
+      {'label': _('رسائل معدّلة عن الافتراضي'), 'value': _custom_count, 'icon': 'pen', 'variant': 'brand'},
+      {'label': _('صيغة الملف'), 'value': 'errors.txt', 'icon': 'file-lines', 'variant': 'slate'}
     ]
   ) }}
   </section>
@@ -68,17 +68,16 @@
     {{ csrf_token_input() | safe }}
     {% if not _he_can_save %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
-    {% call hub.section("نصوص رسائل الأخطاء", icon="list-check",
-                        meta=(rows|length|string) ~ " رسالة") %}
+    {% call hub.section(_('نصوص رسائل الأخطاء'), icon="list-check",
+                        meta=_('%(v)s رسالة', v=(rows|length|string))) %}
       <p class="he-lead">
-        لكل خطأ يحدث على صفحة الهوت سبوت نصّ يُعرض للمشترك. عدّل النص العربي كما تشاء،
-        أو عطّل أي رسالة لترك النص الأصلي المدمج في الراوتر.
-        <span class="hub-hint" tabindex="0" data-hint="يمكنك استخدام متغيّرات يملؤها الراوتر وقت العرض: $(error-orig) نص الخطأ الأصلي، $(ip) عنوان الجهاز، $(username) اسم المستخدم."><i class="fa-solid fa-info"></i></span>
+        {{ _('لكل خطأ يحدث على صفحة الهوت سبوت نصّ يُعرض للمشترك. عدّل النص العربي كما تشاء، أو عطّل أي رسالة لترك النص الأصلي المدمج في الراوتر.') }}
+        <span class="hub-hint" tabindex="0" data-hint="{{ _('يمكنك استخدام متغيّرات يملؤها الراوتر وقت العرض: $(error-orig) نص الخطأ الأصلي، $(ip) عنوان الجهاز، $(username) اسم المستخدم.') }}"><i class="fa-solid fa-info"></i></span>
       </p>
       <p class="he-vars">
-        متغيّرات متاحة داخل النص:
+        {{ _('متغيّرات متاحة داخل النص:') }}
         {% for v in allowed_vars %}<bdi class="he-var">{{ v }}</bdi>{% if not loop.last %} · {% endif %}{% endfor %}
-        — يملؤها الراوتر تلقائيًا وقت العرض.
+        {{ _('— يملؤها الراوتر تلقائيًا وقت العرض.') }}
       </p>
 
       <div class="he-table-scroll">
@@ -158,7 +157,7 @@
 
 {# ───── مودال تأكيد «استعادة الكل» العائم الموحّد (بدل confirm) ───── #}
 {% if _he_can_reset %}
-{% call hub.modal("heResetAllModal", "استعادة كل الرسائل", icon="rotate-left", size="sm",
+{% call hub.modal("heResetAllModal", _('استعادة كل الرسائل'), icon="rotate-left", size="sm",
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("إلغاء") ~ '</button>'|safe) %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>

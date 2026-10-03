@@ -24,9 +24,9 @@
 {% block page_sub %}<span class="sub">{{ _('تفعيل وضبط الإرسال الفعلي عبر الرسائل القصيرة وواتساب من خلال رابط مزوّد خارجي.') }}</span>{% endblock %}
 
 {# ── تسميات عربية للقناة ونمط التشغيل ── #}
-{% macro ch_label(ch) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب'}.get(ch, 'قناة غير معروفة') }}{% endmacro %}
+{% macro ch_label(ch) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب')}.get(ch, _('قناة غير معروفة')) }}{% endmacro %}
 {% macro ch_icon(ch) %}{{ {'sms':'comment-sms','whatsapp':'whatsapp'}.get(ch, 'paper-plane') }}{% endmacro %}
-{% macro mode_label(m) %}{{ {'self_api':'ربط مباشر من العميل'}.get(m, 'غير محدد') }}{% endmacro %}
+{% macro mode_label(m) %}{{ {'self_api':_('ربط مباشر من العميل')}.get(m, _('غير محدد')) }}{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
@@ -103,19 +103,19 @@
    صف البحث ذو عدسة التكبير إطلاقًا. #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "قنوات الإرسال",
-  subtitle="اربط رابط مزوّدك وفعّل القناة ليتحول الإرسال من الطابور إلى إرسال فعلي.",
+  _('قنوات الإرسال'),
+  subtitle=_('اربط رابط مزوّدك وفعّل القناة ليتحول الإرسال من الطابور إلى إرسال فعلي.'),
   icon="tower-broadcast",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': 'حالة الرسائل القصيرة', 'value': ('مفعّلة' if _sms and _sms.enabled else 'متوقفة'),
+    {'label': _('حالة الرسائل القصيرة'), 'value': (_('مفعّلة') if _sms and _sms.enabled else _('متوقفة')),
      'icon': 'comment-sms', 'variant': ('green' if _sms and _sms.enabled else 'grey'),
-     'sub': ('جاهزة للإرسال' if _sms and _sms.active else 'غير مكتملة الضبط')},
-    {'label': 'نمط الرسائل القصيرة', 'value': (mode_label(_sms.mode) if _sms else '—'), 'icon': 'sliders', 'variant': 'blue'},
-    {'label': 'حالة واتساب', 'value': ('مفعّلة' if _wa and _wa.enabled else 'متوقفة'),
+     'sub': (_('جاهزة للإرسال') if _sms and _sms.active else _('غير مكتملة الضبط'))},
+    {'label': _('نمط الرسائل القصيرة'), 'value': (mode_label(_sms.mode) if _sms else '—'), 'icon': 'sliders', 'variant': 'blue'},
+    {'label': _('حالة واتساب'), 'value': (_('مفعّلة') if _wa and _wa.enabled else _('متوقفة')),
      'icon': 'whatsapp', 'variant': ('green' if _wa and _wa.enabled else 'grey'),
-     'sub': ('جاهزة للإرسال' if _wa and _wa.active else 'غير مكتملة الضبط')},
-    {'label': 'نمط واتساب', 'value': (mode_label(_wa.mode) if _wa else '—'), 'icon': 'sliders', 'variant': 'blue'}
+     'sub': (_('جاهزة للإرسال') if _wa and _wa.active else _('غير مكتملة الضبط'))},
+    {'label': _('نمط واتساب'), 'value': (mode_label(_wa.mode) if _wa else '—'), 'icon': 'sliders', 'variant': 'blue'}
   ]
 ) }}
 </section>{# /hub-hero-shell #}
@@ -124,16 +124,16 @@
 
 {# ───── تخطيط العمل: بطاقات القنوات + لوحة مساعدة قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تفعّل الإرسال؟",
-  intro="لتفعيل الإرسال الفعلي: انسخ رابط الإرسال من مزوّدك، ألصقه في القناة المناسبة، فعّل القناة، ثم جرّب «إرسال اختبار».",
+  _('كيف تفعّل الإرسال؟'),
+  intro=_('لتفعيل الإرسال الفعلي: انسخ رابط الإرسال من مزوّدك، ألصقه في القناة المناسبة، فعّل القناة، ثم جرّب «إرسال اختبار».'),
   icon="circle-info",
   items=[
-    {'icon': 'link', 'text': 'ضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة داخل الرابط — يُرمّزان تلقائيًا.'},
-    {'icon': 'toggle-on', 'text': 'فعّل القناة لتتحول رسائلها من الطابور إلى إرسال خارجي فعلي.'},
-    {'icon': 'flask', 'text': 'احفظ الإعدادات أولًا ثم استخدم «إرسال اختبار» للتأكد من عمل الرابط.'},
-    {'icon': 'wallet', 'text': 'في نمط الرصيد المخصص يظهر الرصيد المتبقّي لكل قناة بجانب اسمها.'}
+    {'icon': 'link', 'text': _('ضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة داخل الرابط — يُرمّزان تلقائيًا.')},
+    {'icon': 'toggle-on', 'text': _('فعّل القناة لتتحول رسائلها من الطابور إلى إرسال خارجي فعلي.')},
+    {'icon': 'flask', 'text': _('احفظ الإعدادات أولًا ثم استخدم «إرسال اختبار» للتأكد من عمل الرابط.')},
+    {'icon': 'wallet', 'text': _('في نمط الرصيد المخصص يظهر الرصيد المتبقّي لكل قناة بجانب اسمها.')}
   ],
-  note="لشرح مصوّر كامل لربط الرسائل القصيرة وواتساب، افتح «دليل وشروحات» من الأعلى."
+  note=_('لشرح مصوّر كامل لربط الرسائل القصيرة وواتساب، افتح «دليل وشروحات» من الأعلى.')
 )) %}
 
   {# ── بطاقة إعداد لكل قناة (نموذج الحفظ الأصلي بلا أي تغيير في الحقول) ── #}
@@ -142,7 +142,7 @@
   {% call hub.section(
     ch_label(ch),
     icon=ch_icon(ch),
-    meta="إرسال عبر رابط ويب عام من مزوّد الخدمة"
+    meta=_('إرسال عبر رابط ويب عام من مزوّد الخدمة')
   ) %}
     <div class="cch-card" data-testid="channel-{{ ch }}">
       {# صف شارات الحالة: التفعيل + النمط + الرصيد (إن وجد).
@@ -163,7 +163,7 @@
         <div class="hub-field">
           <label>{{ _('تفعيل الإرسال الفعلي عبر هذه القناة') }}</label>
           {{ toggle_switch(name="enabled", checked=st.enabled, value="1", id="enabled-" ~ ch,
-                           on_label="مفعّل — إرسال خارجي فعلي", off_label="متوقف — يبقى بالطابور") }}
+                           on_label=_('مفعّل — إرسال خارجي فعلي'), off_label=_('متوقف — يبقى بالطابور')) }}
           <div class="hub-field-hint">{{ _('عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.') }}</div>
         </div>
 
@@ -173,7 +173,7 @@
         <div class="hub-form-row">
           <div class="hub-field">
             <label for="mode-{{ ch }}">{{ _('نمط التشغيل') }}
-              <span class="hub-hint" tabindex="0" data-hint="«ربط مباشر من العميل»: تستخدم رابط مزوّدك الخاص بلا حدود. «رصيد مخصص من الإدارة»: يُخصم من رصيد رسائل تمنحه الإدارة لكل قناة."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('«ربط مباشر من العميل»: تستخدم رابط مزوّدك الخاص بلا حدود. «رصيد مخصص من الإدارة»: يُخصم من رصيد رسائل تمنحه الإدارة لكل قناة.') }}"><i class="fa-solid fa-info"></i></span>
             </label>
             <select class="hub-select" id="mode-{{ ch }}" name="mode">
               {% for m in modes %}
@@ -183,7 +183,7 @@
           </div>
           <div class="hub-field">
             <label for="method-{{ ch }}">{{ _('طريقة الطلب') }}
-              <span class="hub-hint" tabindex="0" data-hint="«تمرير البيانات داخل الرابط»: يضع الرقم والنص في الرابط نفسه. «إرسال البيانات كنموذج»: يرسلها في جسم الطلب — اختر ما يطلبه مزوّدك."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('«تمرير البيانات داخل الرابط»: يضع الرقم والنص في الرابط نفسه. «إرسال البيانات كنموذج»: يرسلها في جسم الطلب — اختر ما يطلبه مزوّدك.') }}"><i class="fa-solid fa-info"></i></span>
             </label>
             <select class="hub-select" id="method-{{ ch }}" name="http_method">
               <option value="GET" {{ 'selected' if cfg.http_method == 'GET' else '' }}>{{ _('تمرير البيانات داخل الرابط') }}</option>
@@ -194,14 +194,13 @@
 
         <div class="hub-field">
           <label for="url-{{ ch }}">{{ _('قالب رابط الإرسال') }}
-            <span class="hub-hint" tabindex="0" data-hint="الصق رابط الإرسال من مزوّدك، وضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة. النظام يستبدلهما ويرمّزهما تلقائيًا عند كل إرسال."><i class="fa-solid fa-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('الصق رابط الإرسال من مزوّدك، وضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة. النظام يستبدلهما ويرمّزهما تلقائيًا عند كل إرسال.') }}"><i class="fa-solid fa-info"></i></span>
           </label>
           <input class="hub-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
                  value="{{ cfg.send_url_template }}"
                  placeholder="{{ _('ضع رابط الإرسال من المزوّد هنا') }}">
           <div class="hub-field-hint cch-hint">
-            {{ _('استخدم') }} <code>{phone}</code> {{ _('لموضع رقم الهاتف و') }} <code>{msg}</code> لموضع نص الرسالة. يتم ترميزهما تلقائيًا.
-            يمكن أن يحتوي الرابط على مفتاح المزوّد ضمنه إذا كان المزوّد يطلب ذلك.
+            {{ _('استخدم') }} <code>{phone}</code> {{ _('لموضع رقم الهاتف و') }} <code>{msg}</code> {{ _('لموضع نص الرسالة. يتم ترميزهما تلقائيًا. يمكن أن يحتوي الرابط على مفتاح المزوّد ضمنه إذا كان المزوّد يطلب ذلك.') }}
           </div>
         </div>
 

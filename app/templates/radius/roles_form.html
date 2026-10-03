@@ -21,7 +21,7 @@
 {% import "_partials/hub.html" as hub %}
 {% import "radius/_perm_labels.html" as pl %}
 
-{% set title_ar = "إضافة دور جديد" if is_new else "تعديل الدور: " ~ (role.display_name or role.name or '') %}
+{% set title_ar = _('إضافة دور جديد') if is_new else _('تعديل الدور: %(v)s', v=(role.display_name or role.name or '')) %}
 {% set selected = (role.permissions if role else ())|list %}
 
 {% block title %}{{ title_ar }} — {{ _("هوب ريديوس") }}{% endblock %}
@@ -230,23 +230,23 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 <section class="hub-hero-shell" data-testid="roles-form-hero">
 {% call hub.megahero(
   title_ar,
-  subtitle=("عرّف اسم الدور ولونه ثم اختر صلاحياته — يُمنح الدور للمشرفين لاحقًا من شاشة المدراء." if is_new
-            else "عدّل الاسم الظاهر واللون والصلاحيات — الاسم الداخلي مفتاح ثابت لا يتغيّر بعد الإنشاء."),
+  subtitle=(_('عرّف اسم الدور ولونه ثم اختر صلاحياته — يُمنح الدور للمشرفين لاحقًا من شاشة المدراء.') if is_new
+            else _('عدّل الاسم الظاهر واللون والصلاحيات — الاسم الداخلي مفتاح ثابت لا يتغيّر بعد الإنشاء.')),
   icon="key",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="role-form">
-      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ ("إنشاء الدور"|safe if is_new else "حفظ التعديلات"|safe) ~ '
+      <i class="fa-solid fa-floppy-disk"></i> '|safe ~ (_('إنشاء الدور')|safe if is_new else _('حفظ التعديلات')|safe) ~ '
     </button>
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.roles_list') ~ '">
       <i class="fa-solid fa-arrow-right"></i> '|safe ~ _("العودة للقائمة") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'الصلاحيات المتاحة', 'value': perms|length,    'icon': 'list-check',    'variant': 'blue'},
-    {'label': 'المختارة الآن',     'value': ('<span id="perm-count-kpi">' ~ selected|length|string ~ '</span>')|safe,
+    {'label': _('الصلاحيات المتاحة'), 'value': perms|length,    'icon': 'list-check',    'variant': 'blue'},
+    {'label': _('المختارة الآن'),     'value': ('<span id="perm-count-kpi">' ~ selected|length|string ~ '</span>')|safe,
                                    'icon': 'square-check',   'variant': 'brand'},
-    {'label': 'المجموعات',         'value': groups|length if groups else 1,
+    {'label': _('المجموعات'),         'value': groups|length if groups else 1,
                                    'icon': 'folder-tree',    'variant': 'green'},
-    {'label': 'نوع الدور',         'value': ('نظام' if (role and role.is_system) else 'مخصّص'),
+    {'label': _('نوع الدور'),         'value': (_('نظام') if (role and role.is_system) else _('مخصّص')),
                                    'icon': ('lock' if (role and role.is_system) else 'user-pen'),
                                    'variant': ('amber' if (role and role.is_system) else 'grey')},
   ]
@@ -257,7 +257,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
   </span>
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
-        data-hint="كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
@@ -288,7 +288,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       action="{{ url_for('radius.roles_create') if is_new else url_for('radius.roles_save', role_id=role.id) }}">{% set _role_ro = (not can_submit(('radius.roles_create' if is_new else 'radius.roles_save'))) or save_blocked_by_delegation %}{% if _role_ro %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {% if save_blocked_by_delegation %}{{ _('للعرض فقط — هذا الدور يحمل صلاحيات لا تملكها، فلا يمكنك حفظه.') }}{% else %}{{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}{% endif %}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ───── قسم الهوية: الاسم الداخلي / الظاهر / اللون / الوصف ───── #}
-  {% call hub.section("هوية الدور", icon="id-card") %}
+  {% call hub.section(_('هوية الدور'), icon="id-card") %}
     <div class="hub-form-row">
       <div class="hub-field">
         <label class="hub-field-label">{{ _('الاسم الداخلي') }} <span style="color:var(--hub-red)">*</span></label>
@@ -317,8 +317,8 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
   {% endcall %}
 
   {# ───── قسم الصلاحيات: مجموعات بعناوين عربية + مفاتيح mono ───── #}
-  {% call hub.section("الصلاحيات", icon="shield-halved",
-       meta=('<span id="perm-count">' ~ selected|length|string ~ '</span> / ' ~ perms|length|string ~ ' مختارة')|safe) %}
+  {% call hub.section(_('الصلاحيات'), icon="shield-halved",
+       meta=_('%(sel)s / %(total)s مختارة', sel=('<span id="perm-count">'|safe ~ selected|length|string ~ '</span>'|safe), total=perms|length)) %}
     {% if groups %}
       {% for grp, plist in groups.items() %}
       {# هوية المجموعة البصرية (أيقونة + ألوان) من GROUP_META المشترك #}
@@ -370,8 +370,8 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 
   {# أزرار الحفظ السفلية — نفس الإجراء، تكرار مريح أسفل النموذج الطويل #}
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
-    {% if can_submit('radius.roles_list', 'GET') %}{{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.roles_list')) }}{% endif %}
-    {{ hub.btn(("إنشاء الدور" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
+    {% if can_submit('radius.roles_list', 'GET') %}{{ hub.btn(_('إلغاء'), variant="secondary", href=url_for('radius.roles_list')) }}{% endif %}
+    {{ hub.btn((_('إنشاء الدور') if is_new else _('حفظ التعديلات')), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 {% if _role_ro %}</fieldset>{% endif %}</form>
 
@@ -397,7 +397,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
         action="{{ url_for('radius.roles_grants_save', role_id=role.id) }}">{% if _rg_ro %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {% if role_is_super %}{{ _('للعرض فقط — دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك، فأساسُ منوحاته لا يُطبَّق. لحجب شيءٍ عن مديرٍ بهذا الدور اضبط «ممنوع» من صفحته (التجاوز الفرديّ يَغلب).') }}{% else %}{{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}{% endif %}</div><fieldset disabled class="hr-readonly">{% endif %}
     {{ csrf_token_input() | safe }}
 
-    {% call hub.section("نطاق الرؤية والإشراف", icon="eye") %}
+    {% call hub.section(_('نطاق الرؤية والإشراف'), icon="eye") %}
       <p class="rg-note hub-text-mute">
         {{ _('رؤية بيانات حسّاسة (كل المشتركين/الحزم/كلمات السر/الماليّات). الافتراض محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور.') }}
       </p>
@@ -411,7 +411,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       </div>
     {% endcall %}
 
-    {% call hub.section("الأفعال المسموح بها", icon="bolt") %}
+    {% call hub.section(_('الأفعال المسموح بها'), icon="bolt") %}
       <p class="rg-note hub-text-mute">
         {{ _('كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.') }}
       </p>
@@ -431,7 +431,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     {% endcall %}
 
     {% if derived_catalog %}
-    {% call hub.section("تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات", icon="code-branch") %}
+    {% call hub.section(_('تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات'), icon="code-branch") %}
       <p class="rg-note hub-text-mute">
         {{ _('بعض المفاتيح في مصفوفة الصلاحيات أعلاه تمنح أكثر من فعل (مثل store.review: تأكيد الإيداع + تأكيد السحب، و online.disconnect: قطع الجلسة + الإغلاق الإجباريّ). «حسب المفتاح» = يتبع المفتاح • «ممنوع» يُطفئ هذا الفعل وحده لكل مدراء الدور • «مسموح» لا يتخطّى مفتاحًا غير ممنوح. ويمكن تجاوز أيّ صفّ لمديرٍ بعينه من صفحته.') }}
       </p>
@@ -465,13 +465,13 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       {% endfor %}
     {% endcall %}
     {% elif role_is_super %}
-    {% call hub.section("تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات", icon="code-branch") %}
+    {% call hub.section(_('تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات'), icon="code-branch") %}
       <p class="rg-note hub-text-mute">{{ _('دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك — لا تقسيم على الدور؛ اضبط «ممنوع» لمديرٍ بعينه من صفحته.') }}</p>
     {% endcall %}
     {% endif %}
 
     {% if section_catalog %}
-    {% call hub.section("وصول الأقسام", icon="table-columns") %}
+    {% call hub.section(_('وصول الأقسام'), icon="table-columns") %}
       <p class="rg-note hub-text-mute">
         {{ _('مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا. يَرثه كل مدير بهذا الدور.') }}
       </p>
@@ -500,7 +500,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
     {% endif %}
 
     <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
-      {{ hub.btn("حفظ أساس الدور", icon="floppy-disk", variant="primary", type="submit") }}
+      {{ hub.btn(_('حفظ أساس الدور'), icon="floppy-disk", variant="primary", type="submit") }}
     </div>
   {% if _rg_ro %}</fieldset>{% endif %}</form>
 </div>

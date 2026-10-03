@@ -11,6 +11,7 @@ view + the changes view so both surfaces can show the same
 endpoint list.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Mapping
 
@@ -54,14 +55,14 @@ def compute_access_urls(
         port = _DEFAULTS["winbox"]
         out.append({
             "service":     "winbox",
-            "service_ar":  "وينبوكس (Winbox)",
+            "service_ar":  _tr("وينبوكس (Winbox)"),
             "host":        host,
             "port":        port,
             "url":         f"{host}:{port}",
             "clipboard":   f"{host}:{port}",
             "hint_ar":     (
-                "افتح برنامج Winbox ثم أدخل العنوان "
-                "والمنفذ كما هما."
+                _tr("افتح برنامج Winbox ثم أدخل العنوان "
+                "والمنفذ كما هما.")
             ),
         })
 
@@ -70,14 +71,14 @@ def compute_access_urls(
         url = f"https://{host}/"
         out.append({
             "service":     "webfig_https",
-            "service_ar":  "ويب-فيغ آمن (HTTPS)",
+            "service_ar":  _tr("ويب-فيغ آمن (HTTPS)"),
             "host":        host,
             "port":        port,
             "url":         url,
             "clipboard":   url,
             "hint_ar":     (
-                "افتح الرابط في المتصفّح. إذا حذّر المتصفّح من "
-                "الشهادة، الراوتر يستخدم شهادة موقّعة ذاتياً."
+                _tr("افتح الرابط في المتصفّح. إذا حذّر المتصفّح من "
+                "الشهادة، الراوتر يستخدم شهادة موقّعة ذاتياً.")
             ),
         })
 
@@ -86,14 +87,14 @@ def compute_access_urls(
         url = f"http://{host}/"
         out.append({
             "service":     "webfig_http",
-            "service_ar":  "ويب-فيغ (HTTP)",
+            "service_ar":  _tr("ويب-فيغ (HTTP)"),
             "host":        host,
             "port":        port,
             "url":         url,
             "clipboard":   url,
             "hint_ar":     (
-                "اتصال غير مشفّر — يُفضَّل HTTPS إذا كانت "
-                "الشبكة عامّة."
+                _tr("اتصال غير مشفّر — يُفضَّل HTTPS إذا كانت "
+                "الشبكة عامّة.")
             ),
         })
 
@@ -110,8 +111,8 @@ def compute_access_urls(
                 else f"ssh admin@{host}"
             ),
             "hint_ar":     (
-                "استخدم اسم المستخدم الخاصّ بك على الراوتر "
-                "(غالباً admin)."
+                _tr("استخدم اسم المستخدم الخاصّ بك على الراوتر "
+                "(غالباً admin).")
             ),
         })
 
@@ -125,8 +126,8 @@ def compute_access_urls(
             "url":         f"{host}:{port}",
             "clipboard":   f"{host}:{port}",
             "hint_ar":     (
-                "للتطبيقات التي تتصل عبر MikroTik API "
-                "(منفذ TLS)."
+                _tr("للتطبيقات التي تتصل عبر MikroTik API "
+                "(منفذ TLS).")
             ),
         })
 
@@ -140,8 +141,8 @@ def compute_access_urls(
             "url":         f"{host}:{port}",
             "clipboard":   f"{host}:{port}",
             "hint_ar":     (
-                "اتصال API غير مشفّر — يُفضَّل API-SSL على "
-                "الشبكات العامّة."
+                _tr("اتصال API غير مشفّر — يُفضَّل API-SSL على "
+                "الشبكات العامّة.")
             ),
         })
 
@@ -193,15 +194,15 @@ def compute_remote_access_urls(
 
     if policy.get("allow_winbox"):
         _emit(
-            "winbox", "وينبوكس (Winbox) — من خارج الشبكة",
-            "افتح Winbox وأدخل عنوان VPS مع الـ port المعطى.",
+            "winbox", _tr("وينبوكس (Winbox) — من خارج الشبكة"),
+            _tr("افتح Winbox وأدخل عنوان VPS مع الـ port المعطى."),
             lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
         )
     if policy.get("allow_webfig_https"):
         _emit(
             "webfig_https",
-            "ويب-فيغ آمن (HTTPS) — من خارج الشبكة",
-            "افتح الرابط في المتصفّح من أي مكان.",
+            _tr("ويب-فيغ آمن (HTTPS) — من خارج الشبكة"),
+            _tr("افتح الرابط في المتصفّح من أي مكان."),
             lambda h, p: (
                 f"https://{h}:{p}/",
                 f"https://{h}:{p}/",
@@ -210,8 +211,8 @@ def compute_remote_access_urls(
     if policy.get("allow_webfig_http"):
         _emit(
             "webfig_http",
-            "ويب-فيغ (HTTP) — من خارج الشبكة",
-            "اتصال غير مشفّر — يُفضَّل HTTPS.",
+            _tr("ويب-فيغ (HTTP) — من خارج الشبكة"),
+            _tr("اتصال غير مشفّر — يُفضَّل HTTPS."),
             lambda h, p: (
                 f"http://{h}:{p}/",
                 f"http://{h}:{p}/",
@@ -219,8 +220,8 @@ def compute_remote_access_urls(
         )
     if policy.get("allow_ssh"):
         _emit(
-            "ssh", "SSH — من خارج الشبكة",
-            "استخدم اسم المستخدم على الراوتر.",
+            "ssh", _tr("SSH — من خارج الشبكة"),
+            _tr("استخدم اسم المستخدم على الراوتر."),
             lambda h, p: (
                 f"{h}:{p}",
                 f"ssh -p {p} admin@{h}",
@@ -229,14 +230,14 @@ def compute_remote_access_urls(
     if policy.get("allow_api_ssl"):
         _emit(
             "api_ssl",
-            "MikroTik API — TLS — من خارج الشبكة",
-            "للتطبيقات التي تتصل عبر MikroTik API (TLS).",
+            _tr("MikroTik API — TLS — من خارج الشبكة"),
+            _tr("للتطبيقات التي تتصل عبر MikroTik API (TLS)."),
             lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
         )
     if policy.get("allow_api"):
         _emit(
-            "api", "MikroTik API — من خارج الشبكة",
-            "API غير مشفّر — يُفضَّل API-SSL.",
+            "api", _tr("MikroTik API — من خارج الشبكة"),
+            _tr("API غير مشفّر — يُفضَّل API-SSL."),
             lambda h, p: (f"{h}:{p}", f"{h}:{p}"),
         )
 

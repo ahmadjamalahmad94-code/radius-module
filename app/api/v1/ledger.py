@@ -1,5 +1,6 @@
 """Accounting ledger API."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -46,7 +47,7 @@ def ledger_list():
             offset=offset,
         )
     except (PagingError, ValueError):
-        return fail("validation_error", "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة."), status=422)
     except RadiusValidationError as e:
         return fail("validation_error", getattr(e, "message", str(e)), status=422)
     return ok({"items": items, "count": len(items)})
@@ -72,14 +73,14 @@ def ledger_void():
         entry_id = finite_int(body.get("entry_id") or 0, field="entry_id",
                               min=0, max=2**63 - 1)
         if entry_id <= 0:
-            raise RadiusValidationError("معرّف القيد مطلوب.")
+            raise RadiusValidationError(_tr("معرّف القيد مطلوب."))
         entry = service_from_context().void_ledger(
             entry_id=entry_id,
             actor=_actor(),
             reason=str(body.get("reason") or "")[:500],
         )
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف القيد يجب أن يكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("معرّف القيد يجب أن يكون رقمًا صحيحًا."), status=422)
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     except RadiusConflict as e:

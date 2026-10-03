@@ -30,6 +30,7 @@ Safety contract:
     model.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Iterable, Optional
 
@@ -152,7 +153,7 @@ def plan(
     warnings: list[str] = []
     if not walled_garden_ops:
         warnings.append(
-            "لا توجد إدخالات نشطة — السياسة بدون أثر."
+            N_("لا توجد إدخالات نشطة — السياسة بدون أثر.")
         )
 
     return ScriptPlan(

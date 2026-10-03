@@ -61,44 +61,42 @@
   <div>
     <p class="pl-demo-title"><i class="fa-solid fa-circle-exclamation"></i> {{ _('وضع تجريبي — محاكاة') }}</p>
     <p class="pl-demo-text">
-      هذا المختبر يحاكي تدفق الدفع الإلكتروني كاملًا (اختيار → محفظة → رمز تحقق → إيصال) بلا أي حركة مالية حقيقية
-      وبلا ترحيل إلى دفتر القيود. عند توقيع اتفاقية مع مزوّد (جوال باي / إي-سداد / بنك فلسطين / بال باي / لحظة)
-      تُستبدل المحاكاة بالبوابة الفعلية بنفس الواجهة — والترحيل المالي يتم حينها تلقائيًا عبر النظام المحاسبي.
+      {{ _('هذا المختبر يحاكي تدفق الدفع الإلكتروني كاملًا (اختيار → محفظة → رمز تحقق → إيصال) بلا أي حركة مالية حقيقية وبلا ترحيل إلى دفتر القيود. عند توقيع اتفاقية مع مزوّد (جوال باي / إي-سداد / بنك فلسطين / بال باي / لحظة) تُستبدل المحاكاة بالبوابة الفعلية بنفس الواجهة — والترحيل المالي يتم حينها تلقائيًا عبر النظام المحاسبي.') }}
     </p>
   </div>
 </div>
 
 {{ hub.megahero(
-    "مختبر الدفع الإلكتروني",
-    subtitle="جرّب تجربة الدفع التي سيراها عملاؤك — اليوم بالمحاكاة، وغدًا بالبوابات الحقيقية",
+    _('مختبر الدفع الإلكتروني'),
+    subtitle=_('جرّب تجربة الدفع التي سيراها عملاؤك — اليوم بالمحاكاة، وغدًا بالبوابات الحقيقية'),
     icon="flask-vial",
-    actions_html=hub.btn("فتح صفحة الدفع التجريبية", href=url_for('radius.pay_demo'),
+    actions_html=hub.btn(_('فتح صفحة الدفع التجريبية'), href=url_for('radius.pay_demo'),
                          icon="up-right-from-square", variant="primary",
                          attrs='target="_blank" rel="noopener"'),
     kpis=[
-      {"label": "إجمالي الجلسات", "value": total, "icon": "layer-group", "variant": "brand"},
-      {"label": "مدفوعة (محاكاة)", "value": counts.get('paid', 0), "icon": "circle-check", "variant": "green"},
-      {"label": "بانتظار الرمز", "value": counts.get('otp_sent', 0) + counts.get('pending', 0), "icon": "hourglass-half", "variant": "amber"},
-      {"label": "فاشلة / منتهية", "value": counts.get('failed', 0) + counts.get('expired', 0), "icon": "circle-xmark", "variant": "red"},
+      {"label": _('إجمالي الجلسات'), "value": total, "icon": "layer-group", "variant": "brand"},
+      {"label": _('مدفوعة (محاكاة)'), "value": counts.get('paid', 0), "icon": "circle-check", "variant": "green"},
+      {"label": _('بانتظار الرمز'), "value": counts.get('otp_sent', 0) + counts.get('pending', 0), "icon": "hourglass-half", "variant": "amber"},
+      {"label": _('فاشلة / منتهية'), "value": counts.get('failed', 0) + counts.get('expired', 0), "icon": "circle-xmark", "variant": "red"},
     ]) }}
 
 {% set _aside %}
 {{ hub.helppanel(
-    "كيف يعمل المختبر؟",
-    intro="محاكاة أمينة لتجربة محافظ الدفع الفلسطينية (جوال باي/بال باي ستايل):",
+    _('كيف يعمل المختبر؟'),
+    intro=_('محاكاة أمينة لتجربة محافظ الدفع الفلسطينية (جوال باي/بال باي ستايل):'),
     items=[
-      {"icon": "1", "text": "افتح «صفحة الدفع التجريبية» واختر عنصرًا (فاتورة أو بطاقة) ووسيلة الدفع."},
-      {"icon": "2", "text": "يولّد النظام رمز تحقق من 6 أرقام بصلاحية 5 دقائق — يظهر هنا في الجدول بدل SMS."},
-      {"icon": "3", "text": "أدخل الرمز في صفحة الدفع: صحيح = مدفوعة، 3 محاولات خاطئة = فاشلة، 5 دقائق = منتهية."},
-      {"icon": "4", "text": "زر «محاكاة webhook» يحاكي إشعار «تم الدفع» القادم من خادم المزوّد لجلسة منتظرة."},
+      {"icon": "1", "text": _('افتح «صفحة الدفع التجريبية» واختر عنصرًا (فاتورة أو بطاقة) ووسيلة الدفع.')},
+      {"icon": "2", "text": _('يولّد النظام رمز تحقق من 6 أرقام بصلاحية 5 دقائق — يظهر هنا في الجدول بدل SMS.')},
+      {"icon": "3", "text": _('أدخل الرمز في صفحة الدفع: صحيح = مدفوعة، 3 محاولات خاطئة = فاشلة، 5 دقائق = منتهية.')},
+      {"icon": "4", "text": _('زر «محاكاة webhook» يحاكي إشعار «تم الدفع» القادم من خادم المزوّد لجلسة منتظرة.')},
     ],
-    note="الرموز مكشوفة هنا لأن هذا وضع تجريبي فقط — مع المزوّد الحقيقي تُرسل عبر SMS ولا يراها أحد.") }}
+    note=_('الرموز مكشوفة هنا لأن هذا وضع تجريبي فقط — مع المزوّد الحقيقي تُرسل عبر SMS ولا يراها أحد.')) }}
 {% endset %}
 
 {% call hub.worklayout(aside_html=_aside) %}
 
   {# ═══ جدول الجلسات ═══ #}
-  {% call hub.section("جلسات الدفع التجريبية", icon="receipt", meta=(total ~ " جلسة")) %}
+  {% call hub.section(_('جلسات الدفع التجريبية'), icon="receipt", meta=(_('%(total)s جلسة', total=total))) %}
     {% if checkouts %}
     <div class="uds-table-wrap" data-uds-table data-uds-page-size="25"
          data-uds-export-title="{{ _('جلسات الدفع التجريبية') }}">
@@ -124,10 +122,10 @@
           <tr>
             <td>{{ c.id }}</td>
             <td><bdi dir="ltr" class="pl-mono">{{ c.reference }}</bdi></td>
-            <td>{{ item.get('title') or 'غير محدد' }}{% if c.subscriber_username %}<br><small class="pl-muted">{{ c.subscriber_username }}</small>{% endif %}</td>
+            <td>{{ item.get('title') or _('غير محدد') }}{% if c.subscriber_username %}<br><small class="pl-muted">{{ c.subscriber_username }}</small>{% endif %}</td>
             <td>
               {% set ui = meta.get('ui_provider') or '' %}
-              {% set ui_ar = {'jawwalpay': 'جوال باي', 'palpay': 'بال باي', 'esadad': 'إي-سداد'} %}
+              {% set ui_ar = {'jawwalpay': _('جوال باي'), 'palpay': _('بال باي'), 'esadad': _('إي-سداد')} %}
               {% if ui %}<span title="{{ ui }}">{{ ui_ar.get(ui, ui) }}</span>
               {%- else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}
             </td>
@@ -136,11 +134,11 @@
             <td><b>{{ (c.amount_minor / 100)|money }}</b></td>
             {# الحالة بالعربي مع إبقاء القيمة الخام في title (قاعدة عرض enums) #}
             <td title="{{ c.status }}">
-              {% if c.status == 'paid' %}{{ hub.pill('مدفوعة (محاكاة)', 'green') }}
-              {% elif c.status == 'otp_sent' %}{{ hub.pill('بانتظار الرمز', 'amber') }}
-              {% elif c.status == 'pending' %}{{ hub.pill('قيد الإنشاء', 'grey') }}
-              {% elif c.status == 'expired' %}{{ hub.pill('منتهية', 'grey') }}
-              {% else %}{{ hub.pill('فاشلة', 'red') }}{% endif %}
+              {% if c.status == 'paid' %}{{ hub.pill(_('مدفوعة (محاكاة)'), 'green') }}
+              {% elif c.status == 'otp_sent' %}{{ hub.pill(_('بانتظار الرمز'), 'amber') }}
+              {% elif c.status == 'pending' %}{{ hub.pill(_('قيد الإنشاء'), 'grey') }}
+              {% elif c.status == 'expired' %}{{ hub.pill(_('منتهية'), 'grey') }}
+              {% else %}{{ hub.pill(_('فاشلة'), 'red') }}{% endif %}
             </td>
             <td>
               {% if c.status in ('pending', 'otp_sent') and meta.get('demo_otp') %}
@@ -154,32 +152,30 @@
       </table>
     </div>
     {% else %}
-      {{ hub.empty("لا جلسات بعد", sub="افتح صفحة الدفع التجريبية وجرّب أول عملية — ستظهر هنا فورًا مع رمز التحقق.", icon="flask") }}
+      {{ hub.empty(_('لا جلسات بعد'), sub=_('افتح صفحة الدفع التجريبية وجرّب أول عملية — ستظهر هنا فورًا مع رمز التحقق.'), icon="flask") }}
     {% endif %}
   {% endcall %}
 
   {# ═══ محاكاة webhook ═══ #}
-  {% call hub.section("محاكاة إشعار webhook", icon="tower-broadcast",
-                      meta="«تم الدفع» من جهة المزوّد") %}
+  {% call hub.section(_('محاكاة إشعار webhook'), icon="tower-broadcast",
+                      meta=_('«تم الدفع» من جهة المزوّد')) %}
     <p class="pl-section-desc">
-      المزوّدون الحقيقيون يؤكدون الدفع بإشعار خادم-لخادم (webhook) موقَّع. هذا الزر يحاكي وصول
-      الإشعار لجلسة منتظرة (بانتظار الرمز أو قيد الإنشاء) ويعلّمها مدفوعة — بلا رمز تحقق.
+      {{ _('المزوّدون الحقيقيون يؤكدون الدفع بإشعار خادم-لخادم (webhook) موقَّع. هذا الزر يحاكي وصول الإشعار لجلسة منتظرة (بانتظار الرمز أو قيد الإنشاء) ويعلّمها مدفوعة — بلا رمز تحقق.') }}
     </p>
     {% if can_submit('radius.payments_lab_webhook', 'POST') %}<form class="pl-webhook-form" method="post" action="{{ url_for('radius.payments_lab_webhook') }}">
       {# توكن CSRF: نموذج POST يفشل بخطأ 400 في before_request بدونه #}
       {{ csrf_token_input() | safe }}
       <input type="text" name="reference" placeholder="{{ _('مرجع الجلسة — مثال: CHK-1A2B3C4D5E') }}" required
              aria-label="{{ _('مرجع جلسة الدفع') }}" class="pl-mono">
-      {{ hub.btn("محاكاة webhook", icon="bolt", variant="secondary", type="submit", size="sm") }}
+      {{ hub.btn(_('محاكاة webhook'), icon="bolt", variant="secondary", type="submit", size="sm") }}
     </form>{% endif %}
   {% endcall %}
 
   {# ═══ اعتمادات المزوّدين الحقيقيين — معطّلة حتى توقيع الاتفاقيات ═══ #}
-  {% call hub.section("اعتمادات البوابات الحقيقية", icon="key",
-                      meta="تُفعَّل بعد توقيع الاتفاقيات") %}
+  {% call hub.section(_('اعتمادات البوابات الحقيقية'), icon="key",
+                      meta=_('تُفعَّل بعد توقيع الاتفاقيات')) %}
     <p class="pl-section-desc">
-      عند توقيع اتفاقية مع أي مزوّد، تُدخَل مفاتيحه هنا ويُسجَّل المزوّد في طبقة الدفع
-      (<bdi dir="ltr">payment_providers</bdi>{{ _(') — صفحة الدفع نفسها لا تتغيّر. حتى ذلك الحين تبقى الحقول معطّلة.') }}
+      {{ _('عند توقيع اتفاقية مع أي مزوّد، تُدخَل مفاتيحه هنا ويُسجَّل المزوّد في طبقة الدفع (') }}<bdi dir="ltr">payment_providers</bdi>{{ _(') — صفحة الدفع نفسها لا تتغيّر. حتى ذلك الحين تبقى الحقول معطّلة.') }}
     </p>
     <div class="pl-cred-grid">
       {% for rp in real_providers %}
@@ -192,8 +188,8 @@
            في معظمه؛ اسم الحقل اللاتيني القصير يُقرأ ضمن السياق العربي بلا كسر.
            تعريب أسماء الحقول نفسها يتطلب تعديل المسار — مرفوع في pending. #}
         {% for f in rp.fields %}
-        <input type="text" disabled aria-label="{{ f }} — يُفعَّل بعد توقيع الاتفاقية"
-               placeholder="{{ f }} — بعد توقيع الاتفاقية">
+        <input type="text" disabled aria-label="{{ _('%(f)s — يُفعَّل بعد توقيع الاتفاقية', f=f) }}"
+               placeholder="{{ _('%(f)s — بعد توقيع الاتفاقية', f=f) }}">
         {% endfor %}
       </div>
       {% endfor %}

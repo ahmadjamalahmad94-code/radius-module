@@ -17,6 +17,7 @@ To honour the "never log phone numbers / message bodies at INFO" rule, this
 module logs nothing about recipients or message content.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import time
 import uuid
@@ -27,12 +28,12 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 # a tenant_settings key ``whatsapp.send.<event>`` (default OFF). These are pure
 # radius-side gates — they carry NO Meta secrets.
 WHATSAPP_EVENTS: tuple[tuple[str, str], ...] = (
-    ("otp", "رمز التحقق (OTP) عند الدخول"),
-    ("expiry", "تنبيه قرب انتهاء الاشتراك"),
-    ("quota", "تنبيه قرب نفاد الباقة"),
-    ("maintenance", "إشعارات الصيانة والانقطاع"),
-    ("password", "تغيير كلمة المرور"),
-    ("portal", "روابط ودعوات بوابة المشترك"),
+    ("otp", N_("رمز التحقق (OTP) عند الدخول")),
+    ("expiry", N_("تنبيه قرب انتهاء الاشتراك")),
+    ("quota", N_("تنبيه قرب نفاد الباقة")),
+    ("maintenance", N_("إشعارات الصيانة والانقطاع")),
+    ("password", N_("تغيير كلمة المرور")),
+    ("portal", N_("روابط ودعوات بوابة المشترك")),
 )
 
 # Where the operator manages the actual Meta connection — on the panel portal.
@@ -170,9 +171,9 @@ def whatsapp_settings():
         for key, _label in WHATSAPP_EVENTS:
             value = "1" if request.form.get(f"send_{key}") else "0"
             tenants_repo.set_setting(tid, _setting_key(key), value, by=_admin_id())
-        flash("تم حفظ إعدادات رسائل واتساب للمشتركين.", "success")
+        flash(_tr("تم حفظ إعدادات رسائل واتساب للمشتركين."), "success")
     except Exception:  # noqa: BLE001 — settings must never 500 the page
-        flash("تعذّر حفظ الإعدادات. حاول مرة أخرى.", "error")
+        flash(_tr("تعذّر حفظ الإعدادات. حاول مرة أخرى."), "error")
     return redirect(url_for("radius.whatsapp"))
 
 
@@ -184,7 +185,7 @@ def whatsapp_test():
     """
     phone = (request.form.get("recipient_phone") or "").strip()
     if not phone:
-        flash("أدخل رقم هاتف لإرسال رسالة الاختبار.", "error")
+        flash(_tr("أدخل رقم هاتف لإرسال رسالة الاختبار."), "error")
         return redirect(url_for("radius.whatsapp"))
 
     # Stable-ish key: tenant + phone + coarse minute bucket → resending within
@@ -204,11 +205,10 @@ def whatsapp_test():
 
     status = _status_label(result.get("status"))
     if result.get("ok"):
-        flash(f"تم إرسال رسالة الاختبار عبر لوحة التراخيص. الحالة: {status}.", "success")
+        flash(_tr('تم إرسال رسالة الاختبار عبر لوحة التراخيص. الحالة: %(status)s.', status=status), "success")
     else:
         flash(
-            f"تعذّر إرسال رسالة الاختبار: {status}. "
-            "تأكد من ربط واتساب وتفعيل الجسر في صفحة «ترخيص النظام» ثم أعد المحاولة.",
+            _tr('تعذّر إرسال رسالة الاختبار: %(status)s. تأكد من ربط واتساب وتفعيل الجسر في صفحة «ترخيص النظام» ثم أعد المحاولة.', status=status),
             "error",
         )
     return redirect(url_for("radius.whatsapp"))
@@ -224,7 +224,7 @@ def whatsapp_cloud_test():
     """
     phone = (request.form.get("recipient_phone") or "").strip()
     if not phone:
-        flash("أدخل رقم هاتف لإرسال رسالة الاختبار.", "error")
+        flash(_tr("أدخل رقم هاتف لإرسال رسالة الاختبار."), "error")
         return redirect(url_for("radius.whatsapp"))
     template_name = (request.form.get("template_name") or "").strip()
     language = (request.form.get("language") or "").strip()
@@ -243,10 +243,10 @@ def whatsapp_cloud_test():
     # succeeded AND the panel reported ok.
     panel = result.get("response") if isinstance(result.get("response"), dict) else {}
     if result.get("ok") and panel.get("ok"):
-        flash("تم إرسال رسالة الاختبار عبر بيانات اللوحة (Cloud API). تحقّق من واتساب المستلم.", "success")
+        flash(_tr("تم إرسال رسالة الاختبار عبر بيانات اللوحة (Cloud API). تحقّق من واتساب المستلم."), "success")
     else:
         reason = panel.get("message_ar") or _status_label(result.get("status"))
-        flash("تعذّر إرسال رسالة الاختبار: " + str(reason), "error")
+        flash(_tr("تعذّر إرسال رسالة الاختبار: ") + str(reason), "error")
     return redirect(url_for("radius.whatsapp"))
 
 

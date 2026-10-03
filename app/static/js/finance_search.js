@@ -19,6 +19,7 @@
 
    Must load AFTER uds_table.js so `__udsApi` already exists.
    ════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   if (window.__fcSearchInit) return;
   window.__fcSearchInit = true;
@@ -28,9 +29,9 @@
       .toLowerCase()
       .replace(/ـ/g, "")                 // tatweel ـ
       .replace(/[ً-ْ]/g, "")        // harakat / diacritics
-      .replace(/[أإآٱ]/g, "ا") // أ إ آ ٱ → ا
-      .replace(/ى/g, "ي")           // ى → ي
-      .replace(/ة/g, "ه")           // ة → ه
+      .replace(/[أإآٱ]/g, hrT('ا')) // أ إ آ ٱ → ا
+      .replace(/ى/g, hrT('ي'))           // ى → ي
+      .replace(/ة/g, hrT('ه'))           // ة → ه
       .replace(/[٫٬،]/g, " ")  // arabic decimal/thousands/comma
       .replace(/\s+/g, " ")
       .trim();
@@ -104,7 +105,7 @@
         if (!tokens.length) {
           countEl.textContent = "";
         } else {
-          countEl.textContent = totalMatches + " نتيجة من " + totalRows;
+          countEl.textContent = totalMatches + hrT(' نتيجة من ') + totalRows;
         }
       }
       input.classList.toggle("fc-search--empty", !!tokens.length && totalMatches === 0);

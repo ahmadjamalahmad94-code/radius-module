@@ -6,7 +6,7 @@
 {% block page_title %}{{ _("قوالب الرسائل") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.') }}</span>{% endblock %}
 
-{% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
+{% macro ch_label(c) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('البريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
@@ -53,14 +53,14 @@
 
 {# ───── ONE unified hero: title + subtitle + icon + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "قوالب الرسائل",
-  subtitle="يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.",
+  _('قوالب الرسائل'),
+  subtitle=_('يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.'),
   icon="file-lines",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': 'إجمالي القوالب', 'value': _total,    'icon': 'file-lines', 'variant': 'brand'},
-    {'label': 'مفعَّلة',        'value': _active,   'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'القنوات',        'value': _channels, 'icon': 'tower-broadcast', 'variant': 'blue'},
+    {'label': _('إجمالي القوالب'), 'value': _total,    'icon': 'file-lines', 'variant': 'brand'},
+    {'label': _('مفعَّلة'),        'value': _active,   'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('القنوات'),        'value': _channels, 'icon': 'tower-broadcast', 'variant': 'blue'},
   ]
 ) %}
 {% endcall %}
@@ -69,19 +69,19 @@
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل القوالب؟",
-  intro="أنشئ قوالب جاهزة لإعادة استخدامها في الإرسال اليدوي. استعن بالنماذج الجاهزة كنقطة بداية — اضغط أي نموذج ليملأ الحقول، ثم عدّله واحفظه.",
+  _('كيف تعمل القوالب؟'),
+  intro=_('أنشئ قوالب جاهزة لإعادة استخدامها في الإرسال اليدوي. استعن بالنماذج الجاهزة كنقطة بداية — اضغط أي نموذج ليملأ الحقول، ثم عدّله واحفظه.'),
   icon="circle-info",
   items=[
-    {'icon': 'wand-magic-sparkles', 'text': 'النماذج الجاهزة تملأ النموذج بضغطة واحدة لتبدأ بسرعة.'},
-    {'icon': 'code',  'text': 'المتغيّرات مثل {name} تُملأ تلقائيًا عند الإرسال — أدرجها بالضغط على أزرار المتغيّرات.'},
-    {'icon': 'tower-broadcast', 'text': 'لكل قالب قناة (واتساب، رسائل قصيرة، داخلية…) تحدّد وسيلة الإيصال.'},
-    {'icon': 'circle-check', 'text': 'القالب المفعَّل جاهز للاستخدام في صفحة الإرسال.'}
+    {'icon': 'wand-magic-sparkles', 'text': _('النماذج الجاهزة تملأ النموذج بضغطة واحدة لتبدأ بسرعة.')},
+    {'icon': 'code',  'text': _('المتغيّرات مثل {name} تُملأ تلقائيًا عند الإرسال — أدرجها بالضغط على أزرار المتغيّرات.')},
+    {'icon': 'tower-broadcast', 'text': _('لكل قالب قناة (واتساب، رسائل قصيرة، داخلية…) تحدّد وسيلة الإيصال.')},
+    {'icon': 'circle-check', 'text': _('القالب المفعَّل جاهز للاستخدام في صفحة الإرسال.')}
   ],
-  note="معرّف القالب فريد بالإنجليزية بدون مسافات، ويُستخدم لاستدعاء القالب لاحقًا."
+  note=_('معرّف القالب فريد بالإنجليزية بدون مسافات، ويُستخدم لاستدعاء القالب لاحقًا.')
 )) %}
 
-  {% call hub.section("نماذج جاهزة للبدء السريع", icon="wand-magic-sparkles", meta="اضغط لملء النموذج") %}
+  {% call hub.section(_('نماذج جاهزة للبدء السريع'), icon="wand-magic-sparkles", meta=_('اضغط لملء النموذج')) %}
     <div class="ctpl-seed" id="ctpl-seed">
       <button type="button" class="ctpl-seed-chip" data-seed
         data-key="welcome" data-title="{{ _('ترحيب بمشترك جديد') }}" data-channel="whatsapp" data-vars="name, username, prof"
@@ -90,7 +90,7 @@
 
       <button type="button" class="ctpl-seed-chip" data-seed
         data-key="renewal-reminder" data-title="{{ _('تذكير بقرب الانتهاء') }}" data-channel="sms" data-vars="username, exp"
-        data-body="اشتراك {username} ينتهي {exp}. جدّد الآن.">
+        data-body="{{ _('اشتراك {username} ينتهي {exp}. جدّد الآن.') }}">
         <i class="fa-solid fa-clock"></i> {{ _('تذكير بقرب الانتهاء') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
@@ -100,7 +100,7 @@
 
       <button type="button" class="ctpl-seed-chip" data-seed
         data-key="recharge-confirm" data-title="{{ _('تأكيد شحن رصيد') }}" data-channel="sms" data-vars="amount, balance"
-        data-body="تم شحن {amount}. رصيدك: {balance}.">
+        data-body="{{ _('تم شحن {amount}. رصيدك: {balance}.') }}">
         <i class="fa-solid fa-wallet"></i> {{ _('تأكيد شحن رصيد') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
@@ -115,7 +115,7 @@
     </div>
   {% endcall %}
 
-  {% call hub.section("إنشاء أو تحديث قالب", icon="pen-to-square") %}
+  {% call hub.section(_('إنشاء أو تحديث قالب'), icon="pen-to-square") %}
     <form method="post" class="ctpl-form" data-testid="notification-template-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="ctpl-row">
@@ -179,7 +179,7 @@
     {% if not can_post_here() %}</fieldset>{% endif %}</form>
   {% endcall %}
 
-  {% call hub.section("القوالب", icon="file-lines", meta=(templates|length ~ " قالب"), flush=True) %}
+  {% call hub.section(_('القوالب'), icon="file-lines", meta=(_('%(length)s قالب', length=templates|length)), flush=True) %}
     {% if templates %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="notification-templates-table">
@@ -202,7 +202,7 @@
         </table>
       </div>
     {% else %}
-      {{ hub.empty("لا توجد قوالب بعد.", sub="اضغط أحد «النماذج الجاهزة» بالأعلى لإنشاء أول قالب بسرعة.", icon="file-lines") }}
+      {{ hub.empty(_('لا توجد قوالب بعد.'), sub=_('اضغط أحد «النماذج الجاهزة» بالأعلى لإنشاء أول قالب بسرعة.'), icon="file-lines") }}
     {% endif %}
   {% endcall %}
 

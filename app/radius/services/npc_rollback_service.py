@@ -19,6 +19,7 @@ blindly if project convention says otherwise." Reusing
 `.apply` keeps the perm catalogue tight.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from dataclasses import dataclass, field
@@ -134,7 +135,7 @@ def request_rollback(
         return RollbackResult(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
-            reason_ar="صلاحية التراجع مفقودة لدى المستخدم.",
+            reason_ar=N_("صلاحية التراجع مفقودة لدى المستخدم."),
         )
 
     # 2. Tenant + existence
@@ -143,7 +144,7 @@ def request_rollback(
         return RollbackResult(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
-            reason_ar="change_set غير موجود لهذا المستأجر.",
+            reason_ar=N_("change_set غير موجود لهذا المستأجر."),
         )
     if original["service"] != service \
             or int(original["policy_id"]) != int(policy_id):
@@ -151,7 +152,7 @@ def request_rollback(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
             reason_ar=(
-                "change_set لا يطابق السياسة المطلوبة."
+                N_("change_set لا يطابق السياسة المطلوبة.")
             ),
         )
 
@@ -162,8 +163,8 @@ def request_rollback(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
             reason_ar=(
-                "العنصر المطلوب ليس تنفيذ apply — لا يمكن "
-                "التراجع عنه."
+                N_("العنصر المطلوب ليس تنفيذ apply — لا يمكن "
+                "التراجع عنه.")
             ),
         )
     if original["status"] not in (
@@ -174,8 +175,8 @@ def request_rollback(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
             reason_ar=(
-                "حالة التنفيذ لا تسمح بالتراجع — أعد المحاولة "
-                "بعد الانتهاء."
+                N_("حالة التنفيذ لا تسمح بالتراجع — أعد المحاولة "
+                "بعد الانتهاء.")
             ),
         )
 
@@ -193,7 +194,7 @@ def request_rollback(
             ok=False, change_set_id=0,
             status=cs_repo.STATUS_FAILED,
             reason_ar=(
-                "لا يوجد هدف ناجح للتراجع عنه."
+                N_("لا يوجد هدف ناجح للتراجع عنه.")
             ),
         )
 
@@ -207,8 +208,7 @@ def request_rollback(
                 ok=False, change_set_id=0,
                 status=cs_repo.STATUS_ROLLBACK_FAILED,
                 reason_ar=(
-                    "سكربت التراجع غير آمن — رُفض تلقائياً: "
-                    f"{e}"
+                    _tr('سكربت التراجع غير آمن — رُفض تلقائياً: %(e)s', e=e)
                 ),
             )
 
@@ -335,11 +335,11 @@ def request_rollback(
         status=agg,
         targets=tuple(rb_targets),
         reason_ar=(
-            "تم التراجع بنجاح على كل الراوترات."
+            N_("تم التراجع بنجاح على كل الراوترات.")
             if agg == cs_repo.STATUS_ROLLED_BACK else
-            "تراجع جزئي — راجع نتائج كل راوتر."
+            N_("تراجع جزئي — راجع نتائج كل راوتر.")
             if agg == cs_repo.STATUS_PARTIALLY_ROLLED_BACK else
-            "تعذّر التراجع — راجع الأخطاء."
+            N_("تعذّر التراجع — راجع الأخطاء.")
         ),
     )
 

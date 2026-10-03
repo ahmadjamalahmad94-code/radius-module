@@ -23,6 +23,7 @@ worker can call them from its own thread. Tenant isolation is enforced on every
 query.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import logging
@@ -278,15 +279,15 @@ _UNIT_MINUTES = {
 
 def _number(raw: Any, label: str, *, integer: bool) -> float:
     if isinstance(raw, bool) or isinstance(raw, (list, dict, tuple)):
-        raise ValueError(f"«{label}» يجب أن يكون رقمًا.")
+        raise ValueError(_tr('«%(label)s» يجب أن يكون رقمًا.', label=label))
     try:
         val = float(str(raw).strip())
     except (TypeError, ValueError):
-        raise ValueError(f"«{label}» يجب أن يكون رقمًا.") from None
+        raise ValueError(_tr('«%(label)s» يجب أن يكون رقمًا.', label=label)) from None
     if val != val or val in (float("inf"), float("-inf")) or val < 0:
-        raise ValueError(f"«{label}» يجب أن يكون رقمًا موجبًا.")
+        raise ValueError(_tr('«%(label)s» يجب أن يكون رقمًا موجبًا.', label=label))
     if integer and not val.is_integer():
-        raise ValueError(f"«{label}» يجب أن يكون رقمًا صحيحًا.")
+        raise ValueError(_tr('«%(label)s» يجب أن يكون رقمًا صحيحًا.', label=label))
     return val
 
 
@@ -296,7 +297,7 @@ def parse_kbps(raw: Any, label: str) -> int:
         return 0
     val = _number(raw, label, integer=False)
     if val > _MAX_KBPS:
-        raise ValueError("السرعة المدخلة كبيرة جدًا")
+        raise ValueError(_tr("السرعة المدخلة كبيرة جدًا"))
     return int(val)
 
 
@@ -306,18 +307,18 @@ def parse_duration_minutes(*, duration_minutes: Any = None, duration: Any = None
     ``unit`` (minutes|hours|days, Arabic too). Unknown unit → ValueError."""
     if duration_minutes is not None and not (
             isinstance(duration_minutes, str) and not duration_minutes.strip()):
-        dm = int(min(_number(duration_minutes, "المدة بالدقائق", integer=True), 10**7))
+        dm = int(min(_number(duration_minutes, N_("المدة بالدقائق"), integer=True), 10**7))
         if dm:
             return dm
     dur = 0
     if duration is not None and not (isinstance(duration, str) and not duration.strip()):
-        dur = int(min(_number(duration, "المدة", integer=True), 10**7))
+        dur = int(min(_number(duration, N_("المدة"), integer=True), 10**7))
     # f06-L3: رسائل عربيّة بالكامل (كانت «minutes أو hours أو days»).
     if unit is not None and not isinstance(unit, str):
-        raise ValueError("وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام.")
+        raise ValueError(_tr("وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام."))
     mult = _UNIT_MINUTES.get(str(unit or "minutes").strip().lower())
     if mult is None:
-        raise ValueError("وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام.")
+        raise ValueError(_tr("وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام."))
     return dur * mult
 
 
@@ -329,8 +330,8 @@ def require_speed_account(tenant_id: int, username: str) -> None:
         "SELECT 1 FROM subscribers WHERE tenant_id = ? AND username = ? "
         "AND deleted_at IS NULL LIMIT 1", (int(tenant_id), username)).fetchone()
     if not row:
-        raise RadiusError("هذا الكرت بلا حساب سرعة (كرت مستورد أو من المتجر) — "
-                          "السرعة المؤقتة غير متاحة له.")
+        raise RadiusError(N_("هذا الكرت بلا حساب سرعة (كرت مستورد أو من المتجر) — "
+                          "السرعة المؤقتة غير متاحة له."))
 
 
 def apply_temp_speed(
@@ -360,7 +361,7 @@ def apply_temp_speed(
     """
     username = (username or "").strip()
     if not username:
-        raise ValueError("اسم المستخدم مطلوب")
+        raise ValueError(_tr("اسم المستخدم مطلوب"))
     down_kbps, up_kbps = int(down_kbps or 0), int(up_kbps or 0)
     duration_minutes = int(duration_minutes or 0)
     # «0 = غير محدود» على أي اتجاه (يطابق المرجع): MikroTik يعامل 0 كـ unlimited
@@ -369,14 +370,14 @@ def apply_temp_speed(
     # F08-L: 0/0 = «بلا تقييد» في الاتجاهين — سرعةٌ مؤقتة بلا سرعة لا معنى لها
     # (كانت تُفعَّل علَمًا بلا سرعة ولا نهاية). ويب/API/تطبيق عبر هذه الخدمة.
     if down_kbps <= 0 and up_kbps <= 0:
-        raise ValueError("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
-                         "فلا تُفعَّل بها سرعة مؤقتة.")
+        raise ValueError(_tr("السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» "
+                         "فلا تُفعَّل بها سرعة مؤقتة."))
     if (down_kbps and down_kbps < _MIN_KBPS) or (up_kbps and up_kbps < _MIN_KBPS):
-        raise ValueError(f"السرعة يجب أن تكون 0 (غير محدود) أو {_MIN_KBPS} كيلوبت فأكثر")
+        raise ValueError(_tr('السرعة يجب أن تكون 0 (غير محدود) أو %(MIN_KBPS)s كيلوبت فأكثر', MIN_KBPS=_MIN_KBPS))
     if down_kbps > _MAX_KBPS or up_kbps > _MAX_KBPS:
-        raise ValueError("السرعة المدخلة كبيرة جدًا")
+        raise ValueError(_tr("السرعة المدخلة كبيرة جدًا"))
     if duration_minutes < _MIN_MINUTES or duration_minutes > _MAX_MINUTES:
-        raise ValueError(f"المدة يجب أن تكون بين {_MIN_MINUTES} و{_MAX_MINUTES} دقيقة")
+        raise ValueError(_tr('المدة يجب أن تكون بين %(MIN_MINUTES)s و%(MAX_MINUTES)s دقيقة', MIN_MINUTES=_MIN_MINUTES, MAX_MINUTES=_MAX_MINUTES))
 
     now = now or _utcnow()
     row = db().execute(
@@ -390,7 +391,7 @@ def apply_temp_speed(
         (int(tenant_id), username),
     ).fetchone()
     if not row:
-        raise ValueError("المشترك غير موجود")
+        raise ValueError(_tr("المشترك غير موجود"))
 
     meta = _parse_meta(row["metadata"])
     prev_custom = bool(row["custom_speed"])
@@ -514,8 +515,8 @@ def apply_temp_speed(
             username=username, action="temporary_speed.apply",
             old_rate=_before_rate, new_rate=rate,
             ok=bool(_coa.get("ok")),
-            note=f"سرعة مؤقتة يدويّة لمدة {duration_minutes} دقيقة"
-                 + (" (فصل وإعادة اتصال)" if mode == MODE_DISCONNECT_REAUTH else ""),
+            note=_tr('سرعة مؤقتة يدويّة لمدة %(duration_minutes)s دقيقة', duration_minutes=duration_minutes)
+                 + (N_(" (فصل وإعادة اتصال)") if mode == MODE_DISCONNECT_REAUTH else ""),
             error="" if _coa.get("ok") else (_coa.get("code") or ""),
         )
     except Exception:  # noqa: BLE001 — audit must never break the action
@@ -613,7 +614,7 @@ def _revert_one(tenant_id: int, row: Any, now: datetime, *, actor: str) -> bool:
             username=username, action="temporary_speed.revert",
             old_rate=_throttled, new_rate=restore_rate,
             ok=(coa is None) or bool(_c.get("ok")),
-            note="انتهاء/إلغاء السرعة المؤقتة",
+            note=N_("انتهاء/إلغاء السرعة المؤقتة"),
             error="" if ((coa is None) or _c.get("ok")) else (_c.get("code") or ""),
         )
     except Exception:  # noqa: BLE001

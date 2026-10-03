@@ -23,6 +23,7 @@
  * نخفيها هنا لأنّ بعضها تشخيصٌ مفيد (أخطاء RouterOS مثلًا).
  * window.hrErrMsg(payload, fallback) متاحةٌ للقوالب: أفضل رسالة عربيّة أو البديل.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   'use strict';
   if (window.__hrAjaxErrors) return;
@@ -51,7 +52,7 @@
     return '';
   }
   function hrErrMsg(p, fallback) {
-    var fb = hrIsStr(fallback) ? fallback : 'تعذّر تنفيذ العملية.';
+    var fb = hrIsStr(fallback) ? fallback : hrT('تعذّر تنفيذ العملية.');
     if (typeof p === 'string') return hrIsAr(p) ? p : fb;
     return hrArabicIn(p) || fb;
   }
@@ -112,7 +113,7 @@
   // نفسِه (TypeError) ورسالةٍ عربيّة؛ AbortError ورفضُ الخادم لا يُمسّان.
   var F = window.fetch;
   if (typeof F === 'function' && !F.__hrNetAr) {
-    var NET_AR = 'تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.';
+    var NET_AR = hrT('تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.');
     var fw = function (input, init) {
       return F.apply(this, arguments).catch(function (e) {
         if (e && e.name === 'TypeError') {

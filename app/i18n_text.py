@@ -15,7 +15,7 @@
 """
 from __future__ import annotations
 
-__all__ = ["_tr", "N_", "LStr", "translate_marked", "translate_text"]
+__all__ = ["_tr", "_l", "N_", "LStr", "translate_marked", "translate_text"]
 
 
 class LStr(str):
@@ -43,8 +43,19 @@ def _translations():
 
 
 def _active() -> bool:
-    """هل لغة الطلب الحالي غير العربيّة؟ (لا ترجمة إطلاقًا بالعربيّة)."""
+    """هل لغة الطلب الحالي غير العربيّة؟ (لا ترجمة إطلاقًا بالعربيّة).
+
+    خارج سياق طلب HTTP (عامل خلفيّ، إقلاع، بذر) ⇒ لا ترجمة: يبقى العربيّ كما
+    كان، ولا نستدعي get_locale (كي لا تُخزَّن لغة على ``g`` المشترك)."""
     try:
+        from flask import has_request_context
+        if not has_request_context():
+            return False
+        # الجلسة لم تُفتح بعد (مثلًا تسلسل كوكي الجلسة نفسه عبر app.json) ⇒ لا
+        # نحسم اللغة الآن، وإلا خُزّنت «ar» على g قبل قراءة session['locale'].
+        from flask.globals import request_ctx
+        if getattr(request_ctx, "session", None) is None:
+            return False
         from flask_babel import get_locale
         loc = get_locale()
         return loc is not None and str(loc).split("_")[0].lower() != "ar"
@@ -87,12 +98,19 @@ def _tr(__s, /, **kw):  # noqa: N807
             return src
 
 
+def _l(__s, /, **kw):  # noqa: N807
+    """نسخة كسولة من ``_tr`` لثوابت الوحدة المركّبة (``'%(label)s — بلا حدّ'``):
+    تُعيد ``LazyString`` يُترجَم ويُنسَّق لحظة تحويله إلى نصّ (عرض/JSON)."""
+    from flask_babel.speaklater import LazyString
+    return LazyString(_tr, __s, **kw)
+
+
 def translate_marked(obj, _t=None):
     """يُعيد نسخة من ``obj`` تُستبدَل فيها كل ``LStr`` بترجمتها (للـ JSON).
 
-    بالعربيّة يُعيد ``obj`` نفسه دون مشي."""
+    بالعربيّة (أو بلا أيّ LStr) يُعيد ``obj`` نفسه."""
     if _t is None:
-        if not _active():
+        if not _has_lstr(obj) or not _active():
             return obj
         _t = _translations()
         if _t is None:
@@ -101,13 +119,28 @@ def translate_marked(obj, _t=None):
     if tp is LStr:
         return translate_text(obj, _t)
     if tp is dict:
-        # المفاتيح لا تُترجَم أبدًا (معرّفات يقرؤها الكود).
-        return {k: translate_marked(v, _t) for k, v in obj.items()}
+        # المفاتيح العاديّة لا تُترجَم أبدًا (معرّفات يقرؤها الكود)؛ فقط مفتاح LStr
+        # (تسمية عرض وُسمت صراحةً بـ N_() مثل جداول «تسمية: قيمة»).
+        return {(translate_text(k, _t) if type(k) is LStr else k): translate_marked(v, _t)
+                for k, v in obj.items()}
     if tp is list:
         return [translate_marked(v, _t) for v in obj]
     if tp is tuple:
         return tuple(translate_marked(v, _t) for v in obj)
     return obj
+
+
+def _has_lstr(obj, _depth: int = 0) -> bool:
+    tp = type(obj)
+    if tp is LStr:
+        return True
+    if _depth > 50:
+        return False
+    if tp is dict:
+        return any(_has_lstr(v, _depth + 1) for v in obj.values())
+    if tp is list or tp is tuple:
+        return any(_has_lstr(v, _depth + 1) for v in obj)
+    return False
 
 
 def jinja_finalize(value):

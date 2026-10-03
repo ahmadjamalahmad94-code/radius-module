@@ -59,37 +59,37 @@
 {# ───── Merged hero: title + re-scan action + live KPI summary strip.
         القيم تبدأ «—» وتتحدّث حيًّا مع وصول كل بطاقة. ───── #}
 {% call hub.megahero(
-  "تشخيص اتصال الراوترات",
-  subtitle="فحص حيّ لكل راوتر: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل. تُحمَّل كل بطاقة على حدة فلا يُعطّل راوتر مُعطَّل الصفحة كلّها.",
+  _('تشخيص اتصال الراوترات'),
+  subtitle=_('فحص حيّ لكل راوتر: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل. تُحمَّل كل بطاقة على حدة فلا يُعطّل راوتر مُعطَّل الصفحة كلّها.'),
   icon="wave-square",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-diag-rescan>
       <i class="fa-solid fa-arrows-rotate"></i> '|safe ~ _("إعادة الفحص الآن") ~ '
     </button>'|safe,
   kpis=[
-    {'label': 'يعمل',           'value': '—', 'icon': 'circle-check',      'variant': 'green'},
-    {'label': 'المنفذ مغلق',    'value': '—', 'icon': 'plug-circle-xmark', 'variant': 'red'},
-    {'label': 'فشل واجهة الربط', 'value': '—', 'icon': 'key',              'variant': 'amber'},
-    {'label': 'معطّل',          'value': '—', 'icon': 'circle-pause',      'variant': 'brand'},
-    {'label': 'المجموع',        'value': targets|length, 'icon': 'layer-group', 'variant': 'brand'},
+    {'label': _('يعمل'),           'value': '—', 'icon': 'circle-check',      'variant': 'green'},
+    {'label': _('المنفذ مغلق'),    'value': '—', 'icon': 'plug-circle-xmark', 'variant': 'red'},
+    {'label': _('فشل واجهة الربط'), 'value': '—', 'icon': 'key',              'variant': 'amber'},
+    {'label': _('معطّل'),          'value': '—', 'icon': 'circle-pause',      'variant': 'brand'},
+    {'label': _('المجموع'),        'value': targets|length, 'icon': 'layer-group', 'variant': 'brand'},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "دليل القراءة",
-  intro="هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط. كل بطاقة تُفحص لحظة فتح الصفحة وبضغط «إعادة الفحص».",
+  _('دليل القراءة'),
+  intro=_('هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط. كل بطاقة تُفحص لحظة فتح الصفحة وبضغط «إعادة الفحص».'),
   icon="clipboard-check",
   items=[
-    {'icon': 'plug', 'text': 'فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.'},
-    {'icon': 'key',  'text': 'فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.'},
-    {'icon': 'copy', 'text': 'أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.'},
-    {'icon': 'bolt', 'text': 'الفحص لكل راوتر مستقلّ بمهلة قصيرة — راوتر مُطفأ لا يُجمّد الصفحة.'},
+    {'icon': 'plug', 'text': _('فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.')},
+    {'icon': 'key',  'text': _('فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.')},
+    {'icon': 'copy', 'text': _('أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.')},
+    {'icon': 'bolt', 'text': _('الفحص لكل راوتر مستقلّ بمهلة قصيرة — راوتر مُطفأ لا يُجمّد الصفحة.')},
   ]
 )) %}
 
   {# ── Current-scan meta card ── #}
-  {% call hub.section("الفحص الحالي", icon="rotate") %}
+  {% call hub.section(_('الفحص الحالي'), icon="rotate") %}
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center">
       <span class="hub-text-mute">{{ _('IP الخادم كما ظهر للطلب') }}</span>
       <code style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo');background:var(--hub-bg-soft,#f1f5f9);padding:3px 9px;border-radius:8px;font-size:13px">{{ vps_ip }}</code>
@@ -99,8 +99,8 @@
 
   {% if not targets %}
   {{ hub.empty(
-    "لا يوجد أي راوتر معرّف",
-    sub="لا يوجد أي راوتر على هذا الـ tenant. أضف راوتر من إعدادات الراوترات أو من أجهزة الشبكة.",
+    _('لا يوجد أي راوتر معرّف'),
+    sub=_('لا يوجد أي راوتر على هذا الـ tenant. أضف راوتر من إعدادات الراوترات أو من أجهزة الشبكة.'),
     icon="router"
   ) }}
   <div class="hub-flex-row" style="gap:8px;justify-content:center;margin-top:-8px">

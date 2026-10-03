@@ -229,9 +229,7 @@
       </div>
 
       <div class="apidoc-intro">
-        <b>{{ _('شو هو الـ API؟') }}</b> هو الباب البرمجي الذي تتصل عبره التطبيقات (تطبيق الأندرويد، سطح المكتب،
-        أو أي نظام خارجي) مع HobeRadius مباشرةً بدل واجهة الموقع — لتقرأ البيانات أو تنفّذ العمليات
-        آليًّا. كل طلب يُرسَل بصيغة <code class="mono">JSON</code> {{ _('ويُرجع ردًّا موحّدًا') }}
+        <b>{{ _('شو هو الـ API؟') }}</b> {{ _('هو الباب البرمجي الذي تتصل عبره التطبيقات (تطبيق الأندرويد، سطح المكتب، أو أي نظام خارجي) مع HobeRadius مباشرةً بدل واجهة الموقع — لتقرأ البيانات أو تنفّذ العمليات آليًّا. كل طلب يُرسَل بصيغة') }} <code class="mono">JSON</code> {{ _('ويُرجع ردًّا موحّدًا') }}
         <code class="mono">{ ok, data, meta }</code> {{ _('(أو') }} <code class="mono">{ ok:false, error, meta }</code> {{ _('عند الخطأ).') }}
       </div>
 
@@ -263,8 +261,7 @@
           <button class="apidoc-copy" data-copy="Authorization: Bearer &lt;your-token&gt;">{{ _('نسخ') }}</button>
           <pre>Authorization: Bearer &lt;your-token&gt;</pre>
         </div>
-        <p>{{ _('تُنشئ التوكنات وتُدار من مجموعة') }} <b>{{ _('توكنات الـ API') }}</b> {{ _('أدناه (‎') }}<code class="mono">/api/v1/tokens</code>‎).
-        لطلبات البثّ المباشر <code class="mono">EventSource (SSE)</code> {{ _('فقط، يمكن تمرير التوكن عبر') }}
+        <p>{{ _('تُنشئ التوكنات وتُدار من مجموعة') }} <b>{{ _('توكنات الـ API') }}</b> {{ _('أدناه (‎') }}<code class="mono">/api/v1/tokens</code>{{ _('\u200e). لطلبات البثّ المباشر') }} <code class="mono">EventSource (SSE)</code> {{ _('فقط، يمكن تمرير التوكن عبر') }}
         <code class="mono">?api_token=…</code> {{ _('في الرابط (طلبات GET حصرًا).') }}</p>
         <p style="margin-bottom:0">{{ _('عند انتهاء صلاحية التوكن يُرجع الخادم') }} <code class="mono">401</code> {{ _('برمز') }}
         <code class="mono">token_expired</code>{{ _('. وقد يُفعّل المشغّل حدًّا للطلبات فيُرجع') }}

@@ -60,23 +60,23 @@
    No backend/route change — the same `tab` / `status` query args drive it.     #}
 {% if tab == 'invoices' %}
   {% set _kpis = [
-    {'label': 'إجمالي الفواتير', 'value': inv_stats.total|money, 'icon': 'file-invoice-dollar', 'variant': 'brand'},
-    {'label': 'المدفوعة',        'value': inv_stats.paid|money,  'icon': 'circle-check',         'variant': 'green'},
-    {'label': 'المعلّقة',        'value': inv_stats.pending|money,'icon': 'clock',               'variant': 'amber'},
-    {'label': 'عدد الفواتير',    'value': inv_stats.count,        'icon': 'hashtag',             'variant': 'blue'},
+    {'label': _('إجمالي الفواتير'), 'value': inv_stats.total|money, 'icon': 'file-invoice-dollar', 'variant': 'brand'},
+    {'label': _('المدفوعة'),        'value': inv_stats.paid|money,  'icon': 'circle-check',         'variant': 'green'},
+    {'label': _('المعلّقة'),        'value': inv_stats.pending|money,'icon': 'clock',               'variant': 'amber'},
+    {'label': _('عدد الفواتير'),    'value': inv_stats.count,        'icon': 'hashtag',             'variant': 'blue'},
   ] %}
 {% else %}
   {% set _kpis = [
-    {'label': 'القيمة الإجمالية', 'value': vch_stats.total_amount|money, 'icon': 'sack-dollar',  'variant': 'brand'},
-    {'label': 'نشطة',            'value': vch_stats.active,             'icon': 'ticket',        'variant': 'green'},
-    {'label': 'مستخدمة',         'value': vch_stats.used,               'icon': 'circle-check',  'variant': 'blue'},
-    {'label': 'ملغاة',           'value': vch_stats.revoked,            'icon': 'ban',           'variant': 'amber'},
+    {'label': _('القيمة الإجمالية'), 'value': vch_stats.total_amount|money, 'icon': 'sack-dollar',  'variant': 'brand'},
+    {'label': _('نشطة'),            'value': vch_stats.active,             'icon': 'ticket',        'variant': 'green'},
+    {'label': _('مستخدمة'),         'value': vch_stats.used,               'icon': 'circle-check',  'variant': 'blue'},
+    {'label': _('ملغاة'),           'value': vch_stats.revoked,            'icon': 'ban',           'variant': 'amber'},
   ] %}
 {% endif %}
 
 {% call hub.megahero(
-  "الفواتير والكوبونات",
-  subtitle="أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.",
+  _('الفواتير والكوبونات'),
+  subtitle=_('أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.'),
   icon="file-invoice-dollar",
   actions_html='
     <nav class="fb-tabs">
@@ -110,17 +110,17 @@
 {# ═══════════════ TAB: INVOICES ═══════════════ #}
 {% if tab == 'invoices' %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ الفواتير؟",
-  intro="كل صف فاتورة مرتبطة بمشترك. الاتجاه يحدد طبيعة الحركة المالية، والحالة تخبرك إن كانت محصّلة أم لا.",
+  _('كيف تقرأ الفواتير؟'),
+  intro=_('كل صف فاتورة مرتبطة بمشترك. الاتجاه يحدد طبيعة الحركة المالية، والحالة تخبرك إن كانت محصّلة أم لا.'),
   items=[
-    {'icon': 'right-left',    'text': 'الاتجاه: تحصيل / إرجاع / إيداع / سحب / رصيد — يحدّد أثر الحركة على الحساب.'},
-    {'icon': 'circle-check',  'text': '«مدفوعة» تعني وصول المبلغ، و«معلّقة» بانتظار التحصيل، و«فشلت» لم تكتمل.'},
-    {'icon': 'filter',        'text': 'استخدم مرشّحات الحالة بالأعلى لعرض دفعة محددة من الفواتير.'},
-    {'icon': 'plus',          'text': 'زر «فاتورة جديدة» يصدر فاتورة لمشترك دون مغادرة الصفحة.'},
+    {'icon': 'right-left',    'text': _('الاتجاه: تحصيل / إرجاع / إيداع / سحب / رصيد — يحدّد أثر الحركة على الحساب.')},
+    {'icon': 'circle-check',  'text': _('«مدفوعة» تعني وصول المبلغ، و«معلّقة» بانتظار التحصيل، و«فشلت» لم تكتمل.')},
+    {'icon': 'filter',        'text': _('استخدم مرشّحات الحالة بالأعلى لعرض دفعة محددة من الفواتير.')},
+    {'icon': 'plus',          'text': _('زر «فاتورة جديدة» يصدر فاتورة لمشترك دون مغادرة الصفحة.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل إصدار فاتورة يمر بمنطق الفوترة الأصلي دون تغيير."
+  note=_('هذه واجهة عرض موحّدة — كل إصدار فاتورة يمر بمنطق الفوترة الأصلي دون تغيير.')
 )) %}
-  {% call hub.section("الفواتير", icon="file-invoice", meta=(invoices|length|string + " فاتورة") if invoices else "", flush=True) %}
+  {% call hub.section(_('الفواتير'), icon="file-invoice", meta=(invoices|length|string + _(' فاتورة')) if invoices else "", flush=True) %}
     {% if invoices %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('الفواتير') }}" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -138,9 +138,9 @@
         </thead>
         {# قواميس تعريب قيم enum الخام القادمة من قاعدة البيانات — تطابق
            خيارات مودال الإصدار. القيمة الخام تبقى في title للمراجعة الفنية. #}
-        {% set _dir_ar = {'charge': 'تحصيل', 'refund': 'إرجاع', 'deposit': 'إيداع', 'withdraw': 'سحب', 'credit': 'رصيد'} %}
-        {% set _pm_ar = {'cash': 'نقدًا', 'transfer': 'حوالة', 'card': 'بطاقة', 'online': 'دفع إلكتروني', 'manual': 'يدوي'} %}
-        {% set _inv_status_ar = {'paid': 'مدفوعة', 'pending': 'معلَّقة', 'failed': 'فشلت'} %}
+        {% set _dir_ar = {'charge': _('تحصيل'), 'refund': _('إرجاع'), 'deposit': _('إيداع'), 'withdraw': _('سحب'), 'credit': _('رصيد')} %}
+        {% set _pm_ar = {'cash': _('نقدًا'), 'transfer': _('حوالة'), 'card': _('بطاقة'), 'online': _('دفع إلكتروني'), 'manual': _('يدوي')} %}
+        {% set _inv_status_ar = {'paid': _('مدفوعة'), 'pending': _('معلَّقة'), 'failed': _('فشلت')} %}
         <tbody>
           {% for i in invoices %}
           <tr>
@@ -161,7 +161,7 @@
       </table>
     </div>
     {% else %}
-    {{ hub.empty("لا توجد فواتير بعد.", sub="اضغط «فاتورة جديدة» لإصدار أول فاتورة.", icon="file-invoice") }}
+    {{ hub.empty(_('لا توجد فواتير بعد.'), sub=_('اضغط «فاتورة جديدة» لإصدار أول فاتورة.'), icon="file-invoice") }}
     {% endif %}
   {% endcall %}
 {% endcall %}
@@ -170,17 +170,17 @@
 {# ═══════════════ TAB: VOUCHERS ═══════════════ #}
 {% if tab == 'vouchers' %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ الكوبونات؟",
-  intro="كل كوبون هو رمز شحن بقيمة محددة. حالته تتغير من «نشط» إلى «مستخدم» عند الاستهلاك، أو «ملغى» عند الإيقاف.",
+  _('كيف تقرأ الكوبونات؟'),
+  intro=_('كل كوبون هو رمز شحن بقيمة محددة. حالته تتغير من «نشط» إلى «مستخدم» عند الاستهلاك، أو «ملغى» عند الإيقاف.'),
   items=[
-    {'icon': 'ticket',        'text': 'الكود هو الرمز الذي يدخله المشترك أو الموزع لشحن القيمة.'},
-    {'icon': 'sack-dollar',   'text': 'القيمة هي المبلغ الذي يضاف عند تفعيل الكوبون.'},
-    {'icon': 'ban',           'text': 'إلغاء الكوبون يوقفه نهائيًا ويمنع استخدامه — لا يمكن التراجع.'},
-    {'icon': 'plus',          'text': 'زر «توليد كوبونات» ينشئ دفعة كاملة دفعة واحدة.'},
+    {'icon': 'ticket',        'text': _('الكود هو الرمز الذي يدخله المشترك أو الموزع لشحن القيمة.')},
+    {'icon': 'sack-dollar',   'text': _('القيمة هي المبلغ الذي يضاف عند تفعيل الكوبون.')},
+    {'icon': 'ban',           'text': _('إلغاء الكوبون يوقفه نهائيًا ويمنع استخدامه — لا يمكن التراجع.')},
+    {'icon': 'plus',          'text': _('زر «توليد كوبونات» ينشئ دفعة كاملة دفعة واحدة.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل توليد أو إلغاء يمر بمنطق الكوبونات الأصلي دون تغيير."
+  note=_('هذه واجهة عرض موحّدة — كل توليد أو إلغاء يمر بمنطق الكوبونات الأصلي دون تغيير.')
 )) %}
-  {% call hub.section("الكوبونات", icon="ticket", meta=(vouchers|length|string + " كوبون") if vouchers else "", flush=True) %}
+  {% call hub.section(_('الكوبونات'), icon="ticket", meta=(vouchers|length|string + _(' كوبون')) if vouchers else "", flush=True) %}
     {% if vouchers %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('الكوبونات') }}" style="border:none;border-radius:0">
       <table class="hub-table">
@@ -201,7 +201,7 @@
             <td class="num">{{ v.amount|money }}</td>
             <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
             {# الحالة معرّبة — والقيمة الخام تبقى في title للمراجعة الفنية #}
-            {% set _vch_status_ar = {'active': 'نشطة', 'used': 'مستخدمة', 'revoked': 'ملغاة', 'expired': 'منتهية'} %}
+            {% set _vch_status_ar = {'active': _('نشطة'), 'used': _('مستخدمة'), 'revoked': _('ملغاة'), 'expired': _('منتهية')} %}
             {% set _vch_status_variant = {'active': 'green', 'used': 'blue', 'revoked': 'red', 'expired': 'grey'} %}
             <td><span title="{{ v.status }}">{{ hub.pill(_vch_status_ar.get(v.status, v.status), variant=_vch_status_variant.get(v.status, 'grey')) }}</span></td>
             <td class="small hub-text-mute">{{ v.expire_at|date_local if v.expire_at else "—" }}</td>
@@ -220,14 +220,14 @@
       </table>
     </div>
     {% else %}
-    {{ hub.empty("لا توجد كوبونات بعد.", sub="اضغط «توليد كوبونات» لإنشاء دفعة.", icon="ticket") }}
+    {{ hub.empty(_('لا توجد كوبونات بعد.'), sub=_('اضغط «توليد كوبونات» لإنشاء دفعة.'), icon="ticket") }}
     {% endif %}
   {% endcall %}
 {% endcall %}
 
 {# Revoke confirmation — unified modal replaces the inline confirm(). The form
    posts to the unchanged radius.vch_revoke endpoint; action is set per-row. #}
-{% call hub.modal("vchRevokeModal", "تأكيد إلغاء الكوبون", icon="ban", size="sm",
+{% call hub.modal("vchRevokeModal", _('تأكيد إلغاء الكوبون'), icon="ban", size="sm",
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>'|safe ~ _("تراجع") ~ '</button>'|safe
      ~ '<form method="post" data-vch-revoke-form style="display:inline;margin:0">'|safe
      ~ '<input type="hidden" name="_csrf_token" value="'|safe ~ (csrf_token() if csrf_token is defined else '') ~ '">'|safe

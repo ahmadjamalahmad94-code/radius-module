@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -67,16 +68,16 @@ def settings_get():
 def settings_patch():
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):  # [1] / "x" → .get() was a 500 (R08 NEW-4)
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     settings = body.get("settings", body)
     if not isinstance(settings, dict):
-        return fail("validation_error", "الإعدادات يجب أن تكون كائنًا.", status=422)
+        return fail("validation_error", _tr("الإعدادات يجب أن تكون كائنًا."), status=422)
     catalog = _catalog()
     unknown = sorted(str(k) for k in settings if str(k) not in catalog)
     if unknown:
         return fail(
             "validation_error",
-            "مفتاح إعداد غير معروف.",
+            _tr("مفتاح إعداد غير معروف."),
             status=422,
             details={"unknown": unknown},
         )
@@ -89,13 +90,13 @@ def settings_patch():
         sval = "" if value is None else str(value).strip()
         if skey == "billing.timezone" and sval and not is_valid_timezone(sval):
             return fail("validation_error",
-                        "المنطقة الزمنية غير معروفة — استخدم اسم IANA مثل Asia/Gaza.",
+                        _tr("المنطقة الزمنية غير معروفة — استخدم اسم IANA مثل Asia/Gaza."),
                         status=422, details={"field": skey})
         if skey == "subscribers.create_without_expiry":
             sval = sval.lower()
             if sval and sval not in ("expired", "unlimited"):
                 return fail("validation_error",
-                            "القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء).",
+                            _tr("القيمة يجب أن تكون expired (منتهٍ فورًا) أو unlimited (بلا انتهاء)."),
                             status=422, details={"field": skey})
         if skey.startswith("limits."):
             # «الحدود» — نفس تحقّق صفحة الإعدادات (core.limits.validate_setting).

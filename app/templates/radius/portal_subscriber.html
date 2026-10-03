@@ -218,11 +218,11 @@
 
 {# ── status → UDS variant + label, computed once ── #}
 {% if st == 'expired' %}
-  {% set status_variant = 'red' %}{% set status_label = 'منتهٍ' %}
+  {% set status_variant = 'red' %}{% set status_label = _('منتهٍ') %}
 {% elif st in ['disabled','suspended'] %}
-  {% set status_variant = 'amber' %}{% set status_label = 'موقوف' %}
+  {% set status_variant = 'amber' %}{% set status_label = _('موقوف') %}
 {% else %}
-  {% set status_variant = 'green' %}{% set status_label = 'نشط' %}
+  {% set status_variant = 'green' %}{% set status_label = _('نشط') %}
 {% endif %}
 
 <main class="wrap" data-testid="subscriber-portal-home">
@@ -233,7 +233,7 @@
       <div class="brand-mark">HR</div>
       <div>
         <div class="brand-title">{{ dashboard.subscriber.full_name or dashboard.subscriber.username }}</div>
-        <div class="brand-sub">بوابة المشترك · {{ dashboard.subscriber.username }}</div>
+        <div class="brand-sub">{{ _('بوابة المشترك · %(username)s', username=dashboard.subscriber.username) }}</div>
       </div>
     </div>
     <a class="logout-link" href="{{ url_for('radius.portal_subscriber_logout') }}">
@@ -248,26 +248,26 @@
   {# الاسم يظهر في العنوان وفي الشريط العلوي معًا، فلا نكرّره كـKPI؛
      نعرض بدله «اسم المستخدم» (معرّف الدخول) كحقيقة مميّزة ومفيدة. #}
   {% set _kpis = [
-    {'label': 'اسم المستخدم', 'value': dashboard.subscriber.username,
+    {'label': _('اسم المستخدم'), 'value': dashboard.subscriber.username,
                               'icon': 'id-card',  'variant': 'brand'},
-    {'label': 'حالة الاشتراك','value': status_label,
+    {'label': _('حالة الاشتراك'),'value': status_label,
                               'icon': ('circle-xmark' if status_variant=='red' else ('circle-pause' if status_variant=='amber' else 'circle-check')),
                               'variant': status_variant},
   ] %}
   {% if dashboard.plan and dashboard.plan.name %}
-    {% set _kpis = _kpis + [{'label': 'الباقة', 'value': dashboard.plan.name, 'icon': 'cubes', 'variant': 'brand'}] %}
+    {% set _kpis = _kpis + [{'label': _('الباقة'), 'value': dashboard.plan.name, 'icon': 'cubes', 'variant': 'brand'}] %}
   {% endif %}
   {% if rem is not none %}
     {% set _kpis = _kpis + [{
-        'label': 'المدة المتبقية',
-        'value': (('انتهى منذ ' ~ (-rem) ~ ' يوم') if rem < 0 else (rem ~ ' يوم')),
+        'label': _('المدة المتبقية'),
+        'value': ((_('انتهى منذ %(v)s يوم', v=(-rem))) if rem < 0 else (_('%(rem)s يوم', rem=rem))),
         'icon': 'hourglass-half',
         'variant': ('red' if rem < 0 else ('amber' if rem <= 7 else 'green'))
       }] %}
   {% endif %}
   {{ hub.megahero(
-       "مرحبًا، " ~ (dashboard.subscriber.full_name or dashboard.subscriber.username),
-       subtitle="هنا كل ما يخص اشتراكك: استهلاكك، جلساتك، فواتيرك، وطلبات التجديد والسلف — بشكل مبسّط وواضح.",
+       _('مرحبًا، %(v)s', v=(dashboard.subscriber.full_name or dashboard.subscriber.username)),
+       subtitle=_('هنا كل ما يخص اشتراكك: استهلاكك، جلساتك، فواتيرك، وطلبات التجديد والسلف — بشكل مبسّط وواضح.'),
        icon="circle-user",
        kpis=_kpis
   ) }}
@@ -287,21 +287,21 @@
   <section class="pane is-active" data-pane="overview" id="pane-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
 
     <div class="hub-kpi-grid">
-      {{ hub.kpi("إجمالي التحميل", fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
-      {{ hub.kpi("إجمالي الرفع",   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
-      {{ hub.kpi("إجمالي الاستخدام", fmt_bytes(total_bytes),        icon="database", variant="brand") }}
-      {{ hub.kpi("عدد الجلسات",    dashboard.sessions|length,       icon="wifi",     variant="green") }}
+      {{ hub.kpi(_('إجمالي التحميل'), fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
+      {{ hub.kpi(_('إجمالي الرفع'),   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
+      {{ hub.kpi(_('إجمالي الاستخدام'), fmt_bytes(total_bytes),        icon="database", variant="brand") }}
+      {{ hub.kpi(_('عدد الجلسات'),    dashboard.sessions|length,       icon="wifi",     variant="green") }}
     </div>
 
     <div class="grid-2">
       {# Subscription summary #}
-      {% call hub.section("حالة الاشتراك", icon="calendar-check") %}
+      {% call hub.section(_('حالة الاشتراك'), icon="calendar-check") %}
         <p class="card-intro">{{ _('يوضّح هذا القسم المدة المتبقية على اشتراكك وتاريخ انتهائه.') }}</p>
         {{ hub.kv([
-          {'label': 'الحالة', 'value': status_label},
-          {'label': 'ينتهي في', 'value': (sub.expire_at or '—')[:16], 'mono': True},
-          {'label': 'الأيام المتبقية',
-           'value': ('غير محدد' if rem is none else (('انتهى منذ ' ~ (-rem) ~ ' يوم') if rem < 0 else (rem ~ ' يوم')))},
+          {'label': _('الحالة'), 'value': status_label},
+          {'label': _('ينتهي في'), 'value': (sub.expire_at or '—')[:16], 'mono': True},
+          {'label': _('الأيام المتبقية'),
+           'value': (_('غير محدد') if rem is none else ((_('انتهى منذ %(v)s يوم', v=(-rem))) if rem < 0 else (_('%(rem)s يوم', rem=rem))))},
         ]) }}
         {% if rem is not none and rem >= 0 %}
           {% set pct = (rem / 30 * 100) if rem <= 30 else 100 %}
@@ -309,26 +309,26 @@
             <span style="width:{{ pct }}%"></span>
           </div>
           <p class="card-intro" style="margin:8px 0 0">
-            {% if rem <= 3 %}اشتراكك على وشك الانتهاء — جدّد الآن لتجنّب الانقطاع.
-            {% elif rem <= 7 %}اقترب موعد التجديد. يمكنك التجديد من تبويب «الطلبات والدعم».
-            {% else %}اشتراكك سارٍ. التجديد متاح في أي وقت.{% endif %}
+            {% if rem <= 3 %}{{ _('اشتراكك على وشك الانتهاء — جدّد الآن لتجنّب الانقطاع.') }}
+            {% elif rem <= 7 %}{{ _('اقترب موعد التجديد. يمكنك التجديد من تبويب «الطلبات والدعم».') }}
+            {% else %}{{ _('اشتراكك سارٍ. التجديد متاح في أي وقت.') }}{% endif %}
           </p>
         {% endif %}
       {% endcall %}
 
       {# Alerts preview #}
-      {% call hub.section("تنبيهات وتحذيرات", icon="bell", meta=dashboard.notifications|length|string) %}
+      {% call hub.section(_('تنبيهات وتحذيرات'), icon="bell", meta=dashboard.notifications|length|string) %}
         <div style="display:grid;gap:10px">
           {% if rem is not none and rem < 0 %}
             <div class="note danger"><i class="fa-solid fa-circle-exclamation"></i>
               <span>{{ _('انتهى اشتراكك. بعض الخدمات معطّلة حتى التجديد.') }}</span></div>
           {% elif rem is not none and rem <= 3 %}
             <div class="note warn"><i class="fa-solid fa-triangle-exclamation"></i>
-              <span>باقي {{ rem }} يوم على انتهاء الاشتراك.</span></div>
+              <span>{{ _('باقي %(rem)s يوم على انتهاء الاشتراك.', rem=rem) }}</span></div>
           {% endif %}
           {% if dashboard.debt and dashboard.debt > 0 %}
             <div class="note warn"><i class="fa-solid fa-money-bill-trend-up"></i>
-              <span>عليك دين بقيمة {{ dashboard.debt|money }}. يُفضّل تسويته مع الدفعة القادمة.</span></div>
+              <span>{{ _('عليك دين بقيمة %(money)s. يُفضّل تسويته مع الدفعة القادمة.', money=dashboard.debt|money) }}</span></div>
           {% endif %}
           {% for ev in dashboard.notifications[:5] %}
             {% set sev = (ev.severity or 'info')|lower %}
@@ -349,23 +349,23 @@
   {# ════════════ الملف الشخصي ════════════ #}
   <section class="pane" data-pane="profile" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" tabindex="0">
     <div class="grid-2">
-      {% call hub.section("بياناتي", icon="id-card") %}
+      {% call hub.section(_('بياناتي'), icon="id-card") %}
         <p class="card-intro">{{ _('معلومات حسابك الأساسية كما هي مسجّلة لدى مزوّد الخدمة.') }}</p>
         {{ hub.kv([
-          {'label': 'الاسم', 'value': (dashboard.subscriber.full_name or '—')},
-          {'label': 'اسم المستخدم', 'value': dashboard.subscriber.username, 'mono': True},
-          {'label': 'الجوال', 'value': (dashboard.subscriber.mobile or '—'), 'mono': True},
-          {'label': 'الحالة', 'value': status_label},
+          {'label': _('الاسم'), 'value': (dashboard.subscriber.full_name or '—')},
+          {'label': _('اسم المستخدم'), 'value': dashboard.subscriber.username, 'mono': True},
+          {'label': _('الجوال'), 'value': (dashboard.subscriber.mobile or '—'), 'mono': True},
+          {'label': _('الحالة'), 'value': status_label},
         ]) }}
       {% endcall %}
 
-      {% call hub.section("الباقة", icon="cubes") %}
+      {% call hub.section(_('الباقة'), icon="cubes") %}
         <p class="card-intro">{{ _('تفاصيل الباقة المرتبطة باشتراكك الحالي.') }}</p>
         {{ hub.kv([
-          {'label': 'اسم الباقة', 'value': (dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—')},
-          {'label': 'السعر', 'value': (dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—')},
-          {'label': 'ينتهي في', 'value': (sub.expire_at or '—')[:16], 'mono': True},
-          {'label': 'المتبقي', 'value': ('—' if rem is none else ('منتهٍ' if rem < 0 else (rem ~ ' يوم')))},
+          {'label': _('اسم الباقة'), 'value': (dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—')},
+          {'label': _('السعر'), 'value': (dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—')},
+          {'label': _('ينتهي في'), 'value': (sub.expire_at or '—')[:16], 'mono': True},
+          {'label': _('المتبقي'), 'value': ('—' if rem is none else (_('منتهٍ') if rem < 0 else (_('%(rem)s يوم', rem=rem))))},
         ]) }}
       {% endcall %}
     </div>
@@ -374,7 +374,7 @@
        يظهر فقط إن هيّأ المزوّد بوت التنبيهات. المشترك يضغط «اربط تيليجرام» →
        يمسح QR / يفتح الرابط → يضغط START → نلتقط chat_id على ملفه تلقائيًّا. #}
     {% if tg_connect and tg_connect.has_token %}
-    {% call hub.section("إشعارات تيليجرام", icon="telegram") %}
+    {% call hub.section(_('إشعارات تيليجرام'), icon="telegram") %}
       <p class="card-intro">{{ _('اربط حساب تيليجرام لتصلك إشعاراتك (التجديد، قرب الانتهاء، الفواتير) على هاتفك. اضغط الزر ثم START داخل تيليجرام — دون نسخ أي معرّف.') }}</p>
       <input type="hidden" id="sptg-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
@@ -423,14 +423,14 @@
   {% if pf.show_usage %}
   <section class="pane" data-pane="usage" id="pane-usage" role="tabpanel" aria-labelledby="tab-usage" tabindex="0">
     <div class="hub-kpi-grid">
-      {{ hub.kpi("إجمالي التحميل", fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
-      {{ hub.kpi("إجمالي الرفع",   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
-      {{ hub.kpi("إجمالي الاستخدام", fmt_bytes(total_bytes),        icon="database", variant="brand") }}
-      {{ hub.kpi("إجمالي وقت الاتصال", fmt_secs(usage.session_seconds), icon="clock", variant="green") }}
+      {{ hub.kpi(_('إجمالي التحميل'), fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
+      {{ hub.kpi(_('إجمالي الرفع'),   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
+      {{ hub.kpi(_('إجمالي الاستخدام'), fmt_bytes(total_bytes),        icon="database", variant="brand") }}
+      {{ hub.kpi(_('إجمالي وقت الاتصال'), fmt_secs(usage.session_seconds), icon="clock", variant="green") }}
     </div>
 
     {% if pf.show_sessions %}
-    {% call hub.section("سجل الجلسات بالتفصيل", icon="clock-rotate-left", meta=(dashboard.sessions|length|string ~ " جلسة"), flush=True) %}
+    {% call hub.section(_('سجل الجلسات بالتفصيل'), icon="clock-rotate-left", meta=(_('%(string)s جلسة', string=dashboard.sessions|length|string)), flush=True) %}
       {% if dashboard.sessions %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table uds-table" data-testid="subscriber-sessions-table">
@@ -448,7 +448,7 @@
               <td class="mono">{{ s.nasipaddress or '—' }}</td>
               <td class="mono">{{ s.framedipaddress or '—' }}</td>
               <td class="mono">{{ (s.acctstarttime or '—')[:16] }}</td>
-              <td>{% if s.acctstoptime %}<span class="mono">{{ s.acctstoptime[:16] }}</span>{% else %}{{ hub.pill("متصل الآن", variant="green") }}{% endif %}</td>
+              <td>{% if s.acctstoptime %}<span class="mono">{{ s.acctstoptime[:16] }}</span>{% else %}{{ hub.pill(_('متصل الآن'), variant="green") }}{% endif %}</td>
               <td class="num">{{ fmt_secs(s.acctsessiontime) }}</td>
               <td class="num mono">{{ fmt_bytes(s.acctoutputoctets) }}</td>
               <td class="num mono">{{ fmt_bytes(s.acctinputoctets) }}</td>
@@ -458,7 +458,7 @@
         </table>
       </div>
       {% else %}
-        {{ hub.empty("لا توجد جلسات بعد", sub="ستظهر جلساتك هنا فور اتصالك بالشبكة.", icon="clock-rotate-left") }}
+        {{ hub.empty(_('لا توجد جلسات بعد'), sub=_('ستظهر جلساتك هنا فور اتصالك بالشبكة.'), icon="clock-rotate-left") }}
       {% endif %}
     {% endcall %}
     {% endif %}{# /pf.show_sessions #}
@@ -469,17 +469,17 @@
   {% if pf.show_invoices %}
   <section class="pane" data-pane="billing" id="pane-billing" role="tabpanel" aria-labelledby="tab-billing" tabindex="0">
     <div class="hub-kpi-grid">
-      {{ hub.kpi("رصيد المحفظة",
+      {{ hub.kpi(_('رصيد المحفظة'),
                  (dashboard.wallet.balance|money if dashboard.wallet and dashboard.wallet.balance is defined else '0.00'),
                  icon="wallet", variant="green") }}
-      {{ hub.kpi("الدين المستحق", (dashboard.debt or 0)|money,
+      {{ hub.kpi(_('الدين المستحق'), (dashboard.debt or 0)|money,
                  icon="money-bill-trend-up",
                  variant=('red' if dashboard.debt and dashboard.debt > 0 else 'brand')) }}
-      {{ hub.kpi("عدد الفواتير", dashboard.payments|length, icon="receipt", variant="blue") }}
-      {{ hub.kpi("السلف", dashboard.loans|length, icon="hand-holding-dollar", variant="amber") }}
+      {{ hub.kpi(_('عدد الفواتير'), dashboard.payments|length, icon="receipt", variant="blue") }}
+      {{ hub.kpi(_('السلف'), dashboard.loans|length, icon="hand-holding-dollar", variant="amber") }}
     </div>
 
-    {% call hub.section("الفواتير", icon="receipt", meta=dashboard.payments|length|string, flush=True) %}
+    {% call hub.section(_('الفواتير'), icon="receipt", meta=dashboard.payments|length|string, flush=True) %}
       {% if dashboard.payments %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table uds-table">
@@ -491,13 +491,13 @@
               <td class="num mono">{{ p.amount|money if p.amount is defined else '—' }}</td>
               <td>
                 {% set ps = (p.status or '')|lower %}
-                {% if ps in ['paid','completed'] %}{{ hub.pill("مدفوعة", variant="green") }}
-                {% elif ps in ['unpaid','pending','open'] %}{{ hub.pill("غير مدفوعة", variant="amber") }}
-                {% elif ps in ['partial','partially_paid'] %}{{ hub.pill("مدفوعة جزئياً", variant="amber") }}
-                {% elif ps in ['cancelled','canceled','void'] %}{{ hub.pill("ملغاة", variant="grey") }}
-                {% elif ps in ['refunded'] %}{{ hub.pill("مستردّة", variant="grey") }}
+                {% if ps in ['paid','completed'] %}{{ hub.pill(_('مدفوعة'), variant="green") }}
+                {% elif ps in ['unpaid','pending','open'] %}{{ hub.pill(_('غير مدفوعة'), variant="amber") }}
+                {% elif ps in ['partial','partially_paid'] %}{{ hub.pill(_('مدفوعة جزئياً'), variant="amber") }}
+                {% elif ps in ['cancelled','canceled','void'] %}{{ hub.pill(_('ملغاة'), variant="grey") }}
+                {% elif ps in ['refunded'] %}{{ hub.pill(_('مستردّة'), variant="grey") }}
                 {# أي حالة غير معروفة: نعرض «غير محددة» معرّبة مع حفظ الخام في title #}
-                {% elif ps %}<span title="{{ p.status }}">{{ hub.pill("غير محددة", variant="grey") }}</span>
+                {% elif ps %}<span title="{{ p.status }}">{{ hub.pill(_('غير محددة'), variant="grey") }}</span>
                 {% else %}<span class="kv-empty">{{ _('غير محددة') }}</span>{% endif %}
               </td>
               <td class="mono">{{ p.created_at|dt_local if p.created_at else '—' }}</td>
@@ -507,11 +507,11 @@
         </table>
       </div>
       {% else %}
-        {{ hub.empty("لا توجد فواتير بعد", icon="receipt") }}
+        {{ hub.empty(_('لا توجد فواتير بعد'), icon="receipt") }}
       {% endif %}
     {% endcall %}
 
-    {% call hub.section("السلف", icon="hand-holding-dollar", meta=dashboard.loans|length|string, flush=True) %}
+    {% call hub.section(_('السلف'), icon="hand-holding-dollar", meta=dashboard.loans|length|string, flush=True) %}
       {% if dashboard.loans %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table uds-table">
@@ -524,11 +524,11 @@
               <td class="num mono">{{ l.amount|money if l.amount is defined else '—' }}</td>
               <td>
                 {% set ls = (l.status or '')|lower %}
-                {% if ls == 'open' %}{{ hub.pill("مفتوحة", variant="blue") }}
-                {% elif ls in ['settled','closed','paid'] %}{{ hub.pill("مسدّدة", variant="green") }}
-                {% elif ls in ['rejected','cancelled','canceled'] %}{{ hub.pill("ملغاة", variant="grey") }}
+                {% if ls == 'open' %}{{ hub.pill(_('مفتوحة'), variant="blue") }}
+                {% elif ls in ['settled','closed','paid'] %}{{ hub.pill(_('مسدّدة'), variant="green") }}
+                {% elif ls in ['rejected','cancelled','canceled'] %}{{ hub.pill(_('ملغاة'), variant="grey") }}
                 {# أي حالة غير معروفة: «غير محددة» معرّبة مع حفظ الخام في title #}
-                {% elif ls %}<span title="{{ l.status }}">{{ hub.pill("غير محددة", variant="grey") }}</span>
+                {% elif ls %}<span title="{{ l.status }}">{{ hub.pill(_('غير محددة'), variant="grey") }}</span>
                 {% else %}<span class="kv-empty">{{ _('غير محددة') }}</span>{% endif %}
               </td>
               <td>{{ l.reason or '—' }}</td>
@@ -538,7 +538,7 @@
         </table>
       </div>
       {% else %}
-        {{ hub.empty("لا توجد سلف", icon="hand-holding-dollar") }}
+        {{ hub.empty(_('لا توجد سلف'), icon="hand-holding-dollar") }}
       {% endif %}
     {% endcall %}
   </section>
@@ -553,11 +553,11 @@
 
       {# Renewal — portal.allow_renewal_request #}
       {% if pf.allow_renewal_request %}
-      {% call hub.section("تجديد الاشتراك", icon="rotate") %}
+      {% call hub.section(_('تجديد الاشتراك'), icon="rotate") %}
         <p class="card-intro">{{ _('أرسل طلب تجديد لاشتراكك. سيراجعه فريق الدعم ويفعّله حسب باقتك.') }}</p>
         {% if rem is not none and rem <= 7 %}
           <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-triangle-exclamation"></i>
-            <span>{% if rem < 0 %}اشتراكك منتهٍ{% else %}باقي {{ rem }} يوم{% endif %} — التجديد مُوصى به الآن.</span></div>
+            <span>{% if rem < 0 %}{{ _('اشتراكك منتهٍ') }}{% else %}{{ _('باقي') }} {{ rem }} {{ _('يوم') }}{% endif %} {{ _('— التجديد مُوصى به الآن.') }}</span></div>
         {% endif %}
         <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
               data-testid="subscriber-renewal-request-form">
@@ -566,20 +566,20 @@
             <label>{{ _('ملاحظة (اختياري)') }}</label>
             <textarea name="reason" placeholder="{{ _('أي تفاصيل تساعد الدعم في تجديد اشتراكك') }}"></textarea>
           </div>
-          {{ hub.btn("إرسال طلب التجديد", variant="primary", icon="paper-plane", type="submit") }}
+          {{ hub.btn(_('إرسال طلب التجديد'), variant="primary", icon="paper-plane", type="submit") }}
         </form>
       {% endcall %}
       {% endif %}{# /pf.allow_renewal_request #}
 
       {# Loan — portal.allow_loan_request #}
       {% if pf.allow_loan_request %}
-      {% call hub.section("طلب سلفة وقت", icon="hand-holding-dollar") %}
+      {% call hub.section(_('طلب سلفة وقت'), icon="hand-holding-dollar") %}
         {% if policy.enabled %}
           <div class="note ok" style="margin-bottom:12px"><i class="fa-solid fa-bolt"></i>
             <span>{{ _('السلفة التلقائية مفعّلة. حتى') }} <strong>{{ fmt_mins(policy.allowed_minutes) }}</strong> {{ _('تُعتمد فوراً دون انتظار.') }}</span></div>
         {% else %}
           <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-clock"></i>
-            <span>{{ policy.reason or 'السلفة التلقائية غير متاحة لباقتك حالياً — سيُرسَل طلبك للمراجعة اليدوية.' }}</span></div>
+            <span>{{ policy.reason or _('السلفة التلقائية غير متاحة لباقتك حالياً — سيُرسَل طلبك للمراجعة اليدوية.') }}</span></div>
         {% endif %}
         <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}"
               data-testid="subscriber-loan-request-form">
@@ -599,7 +599,7 @@
             <textarea name="reason" placeholder="{{ _('سبب طلب السلفة') }}"></textarea>
           </div>
           {{ hub.btn(
-               ('طلب سلفة فورية' if policy.enabled else 'إرسال طلب للمراجعة'),
+               (_('طلب سلفة فورية') if policy.enabled else _('إرسال طلب للمراجعة')),
                variant="primary",
                icon=('bolt' if policy.enabled else 'paper-plane'),
                type="submit") }}
@@ -613,16 +613,16 @@
        renewal-request channel (reason field) with a clear [شكوى]
        prefix; no dedicated backend. #}
     {% if pf.show_support %}
-    {% call hub.section("تقديم شكوى أو طلب دعم", icon="headset") %}
+    {% call hub.section(_('تقديم شكوى أو طلب دعم'), icon="headset") %}
       <p class="card-intro">{{ _('صف مشكلتك أو استفسارك وسيصل إلى فريق الدعم لمتابعته.') }}</p>
       <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
-            onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='{{ _('[شكوى]') }}'+r.value; }">
+            onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='[شكوى]'+r.value; }">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="field">
           <label>{{ _('تفاصيل الشكوى أو الطلب') }} <span style="color:var(--err)">*</span></label>
           <textarea name="reason" required placeholder="{{ _('اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ') }}"></textarea>
         </div>
-        {{ hub.btn("إرسال للدعم", variant="secondary", icon="paper-plane", type="submit") }}
+        {{ hub.btn(_('إرسال للدعم'), variant="secondary", icon="paper-plane", type="submit") }}
       </form>
     {% endcall %}
     {% endif %}{# /pf.show_support #}
@@ -650,7 +650,7 @@
       {% endfor %}
     {% endwith %}
 
-    {% call hub.section("ربط مايكروتيك جديد", icon="network-wired") %}
+    {% call hub.section(_('ربط مايكروتيك جديد'), icon="network-wired") %}
       <p class="card-intro">
         {{ _('اربط مايكروتيك جديدًا بضغطة واحدة. اختر إصدار جهازك واضغط الزر، ثم انسخ السكربت أو نزّله والصقه في طرفية المايكروتيك.') }}
         <strong>{{ _('السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع.') }}</strong>
@@ -690,12 +690,12 @@
           {{ _('الإصدار 7 يستخدم WireGuard تلقائيًا (أحدث وأسرع).') }}
         </p>
 
-        {{ hub.btn("إنشاء الاتصال", variant="primary", icon="bolt", type="submit") }}
+        {{ hub.btn(_('إنشاء الاتصال'), variant="primary", icon="bolt", type="submit") }}
       </form>
     {% endcall %}
 
     {% if dc_result and dc_result.script %}
-    {% call hub.section("سكربت الاتصال جاهز", icon="file-code") %}
+    {% call hub.section(_('سكربت الاتصال جاهز'), icon="file-code") %}
       <p class="card-intro" data-testid="dc-result-meta">
         {{ _('الإصدار') }}: <strong>{{ dc_result.version }}</strong> ·
         {{ _('البروتوكول') }}: <strong>{{ dc_result.protocol|upper }}</strong> ·

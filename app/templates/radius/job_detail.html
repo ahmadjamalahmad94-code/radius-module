@@ -14,11 +14,11 @@
 
 {% macro readable_value(value) -%}
   {%- if value is mapping -%}
-    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+    <span class="sub">{{ _('مجموعة بيانات — %(length)s بند', length=value|length) }}</span>
   {%- elif value is sequence and value is not string -%}
-    <span class="sub">قائمة — {{ value|length }} بند</span>
+    <span class="sub">{{ _('قائمة — %(length)s بند', length=value|length) }}</span>
   {%- elif value is boolean -%}
-    {{ 'نعم' if value else 'لا' }}
+    {{ _('نعم') if value else _('لا') }}
   {%- elif value is none -%}
     —
   {%- else -%}
@@ -38,7 +38,7 @@
     {% elif data is sequence and data is not string %}
       <ul class="mt-program-summary">
         {% for value in data %}
-        <li>بند {{ loop.index }}: {{ readable_value(value) }}</li>
+        <li>{{ _('بند %(index)s: %(v)s', index=loop.index, v=readable_value(value)) }}</li>
         {% endfor %}
       </ul>
     {% else %}
@@ -52,8 +52,8 @@
 <section class="mt-dashboard" data-mt-job-detail data-mt-job-id="{{ job.id }}">
 
   {{ hub.hero(
-    "مهمة #" ~ job.id,
-    subtitle="نوع: " ~ job.type ~ " · الحالة الحالية: " ~ job.status,
+    _('مهمة #%(id)s', id=job.id),
+    subtitle=_('نوع: %(type)s · الحالة الحالية: %(status)s', type=job.type, status=job.status),
     icon="list-check",
   ) }}
 
@@ -79,7 +79,7 @@
         <li>{{ _('التقدم:') }} <strong>{{ job.progress }}%</strong>
           {% if job.current_step %}— {{ job.current_step }}{% endif %}
         </li>
-        {% if job.router_id %}<li>الراوتر: #{{ job.router_id }}</li>{% endif %}
+        {% if job.router_id %}<li>{{ _('الراوتر: #%(router_id)s', router_id=job.router_id) }}</li>{% endif %}
         <li>{{ _('أُنشئت:') }} <code>{{ job.created_at|dt_local }}</code></li>
         {% if job.started_at %}<li>{{ _('بدأت:') }} <code>{{ job.started_at|dt_local }}</code></li>{% endif %}
         {% if job.finished_at %}<li>{{ _('انتهت:') }} <code>{{ job.finished_at|dt_local }}</code></li>{% endif %}
@@ -94,11 +94,11 @@
       {% endif %}
 
       {% if job.result %}
-      {{ readable_panel('تفاصيل النتيجة', job.result, 'data-mt-job-result') }}
+      {{ readable_panel(_('تفاصيل النتيجة'), job.result, 'data-mt-job-result') }}
       {% endif %}
 
       {% if job.payload %}
-      {{ readable_panel('محتوى المهمة', job.payload, 'data-mt-job-payload') }}
+      {{ readable_panel(_('محتوى المهمة'), job.payload, 'data-mt-job-payload') }}
       {% endif %}
     </div>
   </section>

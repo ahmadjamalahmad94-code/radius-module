@@ -1,5 +1,6 @@
 """Read models for the Business OS Finance Center web screens."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -45,19 +46,19 @@ def _real_sum(table: str, column: str, where: str = "tenant_id=?", params: tuple
 # اليدوي/الاختبارات) إضافةً للقيم القديمة المحتملة — حتى لا يسقط أي مفتاح
 # كنص إنجليزي خام. أي مفتاح غير معروف يُعرض كوصف عربي عام لا بالإنجليزية.
 _REVENUE_SOURCE_LABELS: dict[str, str] = {
-    "card_user_purchase": "شراء بطاقة",
-    "card_batch": "دفعة بطاقات",
-    "card_sale": "بيع بطاقات",
-    "manual_sale": "مبيعة يدوية",
-    "manual": "تسجيل يدوي",
-    "subscriber_payment": "دفعة مشترك",
-    "payment": "دفعة",
-    "renewal": "تجديد اشتراك",
-    "invoice": "فاتورة",
-    "voucher": "كوبون",
-    "topup": "شحن رصيد",
-    "subscriber_quota_topup": "شحن رصيد",
-    "wallet": "محفظة",
+    "card_user_purchase": N_("شراء بطاقة"),
+    "card_batch": N_("دفعة بطاقات"),
+    "card_sale": N_("بيع بطاقات"),
+    "manual_sale": N_("مبيعة يدوية"),
+    "manual": N_("تسجيل يدوي"),
+    "subscriber_payment": N_("دفعة مشترك"),
+    "payment": N_("دفعة"),
+    "renewal": N_("تجديد اشتراك"),
+    "invoice": N_("فاتورة"),
+    "voucher": N_("كوبون"),
+    "topup": N_("شحن رصيد"),
+    "subscriber_quota_topup": N_("شحن رصيد"),
+    "wallet": N_("محفظة"),
 }
 
 
@@ -118,7 +119,7 @@ def revenue_source_display(source_type: str, source_id: Any, tenant_id: int) -> 
         return base
     if name:
         return name
-    return "مصدر إيراد آخر"
+    return N_("مصدر إيراد آخر")
 
 
 def revenue_items(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
@@ -155,7 +156,7 @@ def revenue_items(tenant_id: int, *, limit: int = 200, offset: int = 0) -> list[
                          "ledger_entry_id": int(pay["id"])},
             "created_at": pay.get("created_at"),
             "collected": amount,
-            "source_display": ("دفعة مشترك — " + username) if username else "دفعة مشترك",
+            "source_display": (_tr("دفعة مشترك — ") + username) if username else N_("دفعة مشترك"),
         })
     # fix3 (F02 H2): card-store revenue records carry no subscriber — a manager
     # without «عرض كل المشتركين» sees only his own subscribers' payments.

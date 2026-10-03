@@ -10,6 +10,7 @@
 خوخيّة/برتقاليّة كريميّة. فكتور مُكتفٍ ذاتيًّا بلا روابط خارجيّة (آمن دون
 إنترنت). العلامة ديناميكيّة {{TENANT_NAME}} واللون الأساسيّ {{ACCENT_COLOR}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -79,13 +80,13 @@ _FC_ART = """
 
 _FC_HERO = ("""
       <div class="fcb-hero">
-        <div class="fcb-frame">""" + _FC_ART + """</div>
+        <div class="fcb-frame">""" + _FC_ART + N_("""</div>
         <div class="fcb-cap">
           <div><b>معًا ألذّ</b><span>اتصل بالواي‑فاي واستمتع بالضيافة</span></div>
           <div class="fcb-badge"><span class="fcb-dot"></span> مفتوح</div>
         </div>
       </div>
-""")
+"""))
 
 _FC_STYLE = """
 <style id="hr-food-cobrand">

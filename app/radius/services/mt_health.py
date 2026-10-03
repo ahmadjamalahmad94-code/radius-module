@@ -21,6 +21,7 @@ diagnostics tab is cheap to refresh.
 Returns: { ok, signals: [Signal], summary: {critical, warning, ok} }
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import ipaddress
 from typing import Any, Iterable, Mapping
@@ -77,13 +78,13 @@ def check_duplicate_macs(interfaces: list[dict]) -> dict[str, Any]:
     if not dupes:
         return _signal(
             "duplicate_macs", SEVERITY_OK,
-            "لا توجد عناوين MAC مكرّرة على الواجهات الفيزيائية.",
+            _tr("لا توجد عناوين MAC مكرّرة على الواجهات الفيزيائية."),
         )
     evidence = [{"mac": mac, "interfaces": names}
                 for mac, names in dupes.items()]
     return _signal(
         "duplicate_macs", SEVERITY_CRITICAL,
-        f"تم رصد {len(dupes)} عنوان MAC مكرّر — تحقّق من الكونفغ.",
+        _tr('تم رصد %(v)s عنوان MAC مكرّر — تحقّق من الكونفغ.', v=len(dupes)),
         evidence,
     )
 
@@ -101,11 +102,11 @@ def check_loop_protect(interfaces: list[dict]) -> dict[str, Any]:
     if not tripped:
         return _signal(
             "loop_protect", SEVERITY_OK,
-            "لا يوجد loop-protect مفعّل بسبب اكتشاف حلقة.",
+            _tr("لا يوجد loop-protect مفعّل بسبب اكتشاف حلقة."),
         )
     return _signal(
         "loop_protect", SEVERITY_CRITICAL,
-        f"اكتُشفت حلقة على {len(tripped)} واجهة — RouterOS أوقفها تلقائيًا.",
+        _tr('اكتُشفت حلقة على %(v)s واجهة — RouterOS أوقفها تلقائيًا.', v=len(tripped)),
         [{"interface": n} for n in tripped],
     )
 
@@ -149,12 +150,11 @@ def check_subnet_overlap(addresses: list[dict]) -> dict[str, Any]:
     if not dups:
         return _signal(
             "subnet_overlap", SEVERITY_OK,
-            "لا توجد نطاقات IP مكرّرة على نفس الواجهة.",
+            _tr("لا توجد نطاقات IP مكرّرة على نفس الواجهة."),
         )
     return _signal(
         "subnet_overlap", SEVERITY_WARNING,
-        f"{len(dups)} نطاق مكرّر على نفس الواجهة "
-        "(نفس المدى مُضاف أكثر من مرّة لواجهة واحدة).",
+        _tr('%(v)s نطاق مكرّر على نفس الواجهة (نفس المدى مُضاف أكثر من مرّة لواجهة واحدة).', v=len(dups)),
         dups,
     )
 
@@ -184,13 +184,13 @@ def check_interface_flapping(interfaces: list[dict]) -> dict[str, Any]:
     if not flappers:
         return _signal(
             "flapping", SEVERITY_OK,
-            "لا توجد واجهات بعدّاد link-downs مرتفع.",
+            _tr("لا توجد واجهات بعدّاد link-downs مرتفع."),
         )
     # Sort worst-first so the most-flapping port shows on top.
     flappers.sort(key=lambda f: -f["link_downs"])
     return _signal(
         "flapping", SEVERITY_WARNING,
-        f"{len(flappers)} واجهة بعدّاد link-downs > 10.",
+        _tr('%(v)s واجهة بعدّاد link-downs > 10.', v=len(flappers)),
         flappers,
     )
 

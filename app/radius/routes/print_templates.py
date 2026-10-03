@@ -1,5 +1,6 @@
 """Web UI for card print template operations room."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import base64
 import binascii
@@ -142,7 +143,7 @@ def _float(name: str, default: float = 0) -> float:
     except (TypeError, ValueError):
         from ..services.operations import _label_ar
         raise RadiusValidationError(
-            f"قيمة {_label_ar(name)} يجب أن تكون رقمية.") from None
+            _tr('قيمة %(v)s يجب أن تكون رقمية.', v=_label_ar(name))) from None
 
 
 # علامة بصرية محايدة تُستخدم بدل سلاسل وهمية مثل «SAMPLE» / «CARD1234»
@@ -254,12 +255,12 @@ def _save_optimized_png(image: Image.Image) -> bytes:
 
 def _optimize_background_image(raw: bytes, filename: str, mime: str) -> dict:
     if len(raw) > _BACKGROUND_INPUT_MAX_BYTES:
-        raise RadiusError("حجم صورة الخلفية كبير جدًا. ارفع صورة حتى 8MB وسيقوم النظام بضغطها تلقائيًا.")
+        raise RadiusError(_tr("حجم صورة الخلفية كبير جدًا. ارفع صورة حتى 8MB وسيقوم النظام بضغطها تلقائيًا."))
     try:
         image = Image.open(BytesIO(raw))
         image.load()
     except (UnidentifiedImageError, OSError) as exc:
-        raise RadiusError("تعذّر قراءة صورة الخلفية. استخدم PNG أو JPG أو WEBP.") from exc
+        raise RadiusError(_tr("تعذّر قراءة صورة الخلفية. استخدم PNG أو JPG أو WEBP.")) from exc
 
     try:
         orientation = int(image.getexif().get(0x0112, 1) or 1)
@@ -268,7 +269,7 @@ def _optimize_background_image(raw: bytes, filename: str, mime: str) -> dict:
     image = ImageOps.exif_transpose(image)
     width, height = image.size
     if width <= 0 or height <= 0 or (width * height) > 36_000_000:
-        raise RadiusError("أبعاد صورة الخلفية كبيرة جدًا. استخدم صورة أصغر من 36MP.")
+        raise RadiusError(_tr("أبعاد صورة الخلفية كبيرة جدًا. استخدم صورة أصغر من 36MP."))
 
     # a07 F10-2: a JPEG that is ALREADY within budget (our own earlier output,
     # sent back on every quick re-save) is kept byte-for-byte — re-encoding it
@@ -331,11 +332,11 @@ def _background_from_data_url() -> dict:
     if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
         # (fix2 F10.4) a GIF was dropped silently (saved with the preset
         # background, 201) while /background answered 422 — same answer now.
-        raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+        raise RadiusValidationError(_tr("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP."))
     try:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as exc:
-        raise RadiusError("تعذّر حفظ صورة الخلفية من المعاينة. اختر الصورة مرة أخرى.") from exc
+        raise RadiusError(_tr("تعذّر حفظ صورة الخلفية من المعاينة. اختر الصورة مرة أخرى.")) from exc
     if not raw:
         return {}
     filename = request.form.get("background_image_name") or "card-background"
@@ -349,7 +350,7 @@ def _uploaded_background(*, allow_data_url: bool = True) -> dict:
         if raw:
             mime = (upload.mimetype or "").lower()
             if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
-                raise RadiusError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+                raise RadiusError(_tr("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP."))
             return _optimize_background_image(raw, upload.filename, mime)
     # Drag/drop and live-preview flows keep the bitmap in a hidden data URL.
     # Persist that exact preview image too, otherwise the user sees it in the
@@ -373,7 +374,7 @@ def _logo_from_data_url() -> dict:
     try:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as exc:
-        raise RadiusError("تعذّر حفظ الشعار من المعاينة. اختر الصورة مرة أخرى.") from exc
+        raise RadiusError(_tr("تعذّر حفظ الشعار من المعاينة. اختر الصورة مرة أخرى.")) from exc
     if not raw:
         return {}
     filename = request.form.get("logo_image_name") or "card-logo"
@@ -392,7 +393,7 @@ def _uploaded_logo(*, allow_data_url: bool = True) -> dict:
         if raw:
             mime = (upload.mimetype or "").lower()
             if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
-                raise RadiusError("نوع الشعار غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+                raise RadiusError(_tr("نوع الشعار غير مدعوم. استخدم PNG أو JPG أو WEBP."))
             optimized = _optimize_background_image(raw, upload.filename, mime)
             return {
                 "logo_image_data_url": optimized["background_image_data_url"],
@@ -463,7 +464,7 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "text_direction": text_direction,
         "credential_label_language": label_language,
         "brand_name": request.form.get("brand_name") or "HobeRadius",
-        "card_title": request.form.get("card_title") or "بطاقة إنترنت",
+        "card_title": request.form.get("card_title") or _tr("بطاقة إنترنت"),
         "footer_text": request.form.get("footer_text") or "",
         "hotspot_address": request.form.get("hotspot_address") or "",
         # رابط الدخول التلقائي للهوت سبوت — عند تعبئته يصبح رمز QR
@@ -759,11 +760,11 @@ def _batch_id_from_request() -> int | None:
     try:
         return int(batch_id_raw) if batch_id_raw else None
     except ValueError as exc:
-        raise RadiusValidationError("معرّف الحزمة غير صحيح.") from exc
+        raise RadiusValidationError(_tr("معرّف الحزمة غير صحيح.")) from exc
 
 
 def _yes_no(value: object) -> str:
-    return "نعم" if bool(value) else "لا"
+    return N_("نعم") if bool(value) else N_("لا")
 
 
 def _preview_rows(preview: dict | None) -> list[dict]:
@@ -781,8 +782,8 @@ def _preview_rows(preview: dict | None) -> list[dict]:
     enabled_caps = [
         label
         for key, label in (
-            ("sample_pdf", "PDF عينة"),
-            ("batch_pdf", "PDF دفعة"),
+            ("sample_pdf", N_("PDF عينة")),
+            ("batch_pdf", N_("PDF دفعة")),
             ("csv", "CSV"),
             ("excel", "Excel"),
             ("png", "PNG"),
@@ -792,27 +793,27 @@ def _preview_rows(preview: dict | None) -> list[dict]:
 
     return [
         {
-            "label": "محرك المعاينة",
-            "value": "معاينة البطاقة المرئية"
+            "label": _tr("محرك المعاينة"),
+            "value": N_("معاينة البطاقة المرئية")
             if data.get("renderer") == "visual_card_preview"
-            else str(data.get("renderer") or "غير محدد"),
+            else str(data.get("renderer") or N_("غير محدد")),
         },
         {
-            "label": "عدد البطاقات في الصفحة",
-            "value": str(data.get("cards_per_page") or "غير محدد"),
+            "label": _tr("عدد البطاقات في الصفحة"),
+            "value": str(data.get("cards_per_page") or N_("غير محدد")),
         },
-        {"label": "دعم QR", "value": _yes_no(data.get("qr_supported"))},
+        {"label": _tr("دعم QR"), "value": _yes_no(data.get("qr_supported"))},
         {
-            "label": "مقاس البطاقة",
+            "label": _tr("مقاس البطاقة"),
             "value": (
-                f"{card.get('width_mm') or '؟'} × {card.get('height_mm') or '؟'} مم"
+                _tr('%(v)s × %(v2)s مم', v=card.get('width_mm') or '؟', v2=card.get('height_mm') or '؟')
             ),
         },
-        {"label": "اسم الشبكة/العلامة", "value": str(design.get("brand_name") or "—")},
-        {"label": "عنوان البطاقة", "value": str(design.get("card_title") or "—")},
-        {"label": "نمط التصميم", "value": str(design.get("preset") or "—")},
-        {"label": "عينة اسم المستخدم", "value": str(sample.get("username") or "—")},
-        {"label": "مخرجات متاحة", "value": "، ".join(enabled_caps) if enabled_caps else "لا توجد"},
+        {"label": _tr("اسم الشبكة/العلامة"), "value": str(design.get("brand_name") or "—")},
+        {"label": _tr("عنوان البطاقة"), "value": str(design.get("card_title") or "—")},
+        {"label": _tr("نمط التصميم"), "value": str(design.get("preset") or "—")},
+        {"label": _tr("عينة اسم المستخدم"), "value": str(sample.get("username") or "—")},
+        {"label": _tr("مخرجات متاحة"), "value": "، ".join(enabled_caps) if enabled_caps else N_("لا توجد")},
     ]
 
 
@@ -1019,7 +1020,7 @@ def print_templates_create():
             actor=_actor(),
             data=payload,
         )
-        flash("تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية.", "success")
+        flash(_tr("تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
         _back = _quick_error_redirect(0)
@@ -1096,7 +1097,7 @@ def print_templates_update(template_id: int):
             template_id=template_id,
             data=payload,
         )
-        flash("تم تحديث قالب التصميم.", "success")
+        flash(_tr("تم تحديث قالب التصميم."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
         _back = _quick_error_redirect(int(template_id))
@@ -1186,7 +1187,7 @@ def _designer_svg_response():
             try:
                 strict_float(raw)
             except (TypeError, ValueError) as exc:
-                raise RadiusValidationError("قيمة موضع العنصر يجب أن تكون رقمية.") from exc
+                raise RadiusValidationError(_tr("قيمة موضع العنصر يجب أن تكون رقمية.")) from exc
     try:
         quick_tid = int(request.form.get("quick_template_id") or 0)
     except ValueError:
@@ -1287,16 +1288,16 @@ def print_templates_preview_fragment(template_id: int):
         batch_id = int(batch_id_raw) if batch_id_raw else None
     except ValueError:
         batch_id = None
-        error = "معرّف الحزمة غير صحيح."
+        error = _tr("معرّف الحزمة غير صحيح.")
 
     if template is None:
-        error = error or "القالب غير موجود."
+        error = error or _tr("القالب غير موجود.")
     elif batch_id is not None:
         try:
             cards_service = get_cards_service()
             batch_obj = cards_service._store.get_batch(batch_id)
             if batch_obj is None:
-                error = "الحزمة غير موجودة."
+                error = _tr("الحزمة غير موجودة.")
             else:
                 # CardBatch is a dataclass; the template only reads a few
                 # attributes so we expose it as a dict for simpler Jinja.
@@ -1310,7 +1311,7 @@ def print_templates_preview_fragment(template_id: int):
         except RadiusError as exc:
             error = exc.message
         except Exception as exc:  # pragma: no cover — defensive
-            error = str(exc) or "تعذّر جلب بطاقات الحزمة."
+            error = str(exc) or _tr("تعذّر جلب بطاقات الحزمة.")
 
     overrides = {
         key: (request.args.get(key) or "").strip()
@@ -1360,7 +1361,7 @@ def print_templates_delete(template_id: int):
             actor=_actor(),
             template_id=template_id,
         )
-        flash("تم حذف القالب.", "success")
+        flash(_tr("تم حذف القالب."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     next_url = request.form.get("next") or url_for("radius.print_templates")
@@ -1374,7 +1375,7 @@ def print_templates_set_default(template_id: int):
             actor=_actor(),
             template_id=template_id,
         )
-        flash("تم اعتماد هذا القالب كقالب افتراضي.", "success")
+        flash(_tr("تم اعتماد هذا القالب كقالب افتراضي."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     next_url = request.form.get("next") or (
@@ -1394,11 +1395,11 @@ def print_templates_cleanup_fixtures():
         return redirect(url_for("radius.print_templates"))
     if purged:
         flash(
-            f"تم تنظيف {len(purged)} قالب اختبار من القائمة.",
+            _tr('تم تنظيف %(v)s قالب اختبار من القائمة.', v=len(purged)),
             "success",
         )
     else:
-        flash("لا توجد قوالب اختبار للتنظيف.", "info")
+        flash(_tr("لا توجد قوالب اختبار للتنظيف."), "info")
     next_url = request.form.get("next") or url_for("radius.print_templates")
     return redirect(next_url)
 

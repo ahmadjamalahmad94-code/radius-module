@@ -18,6 +18,7 @@
    Blank/checkbox headers are auto-excluded from both.
    All existing row markup, links and actions are preserved.
    ════════════════════════════════════════════════════════════════════ */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   if (window.__udsTableInit) return;
   window.__udsTableInit = true;
@@ -127,7 +128,7 @@
       form.appendChild(inp);
     };
     add("_csrf_token", csrfToken());
-    add("title", title || "تصدير جدول");
+    add("title", title || hrT('تصدير جدول'));
     add("fmt", fmt);
     add("columns", JSON.stringify(data.columns));
     add("rows", JSON.stringify(data.rows));
@@ -221,7 +222,7 @@
     colBtn.setAttribute("data-uds-menu-trigger", "");
     colBtn.setAttribute("data-uds-menu-target", uid + "-cols");
     colBtn.setAttribute("aria-haspopup", "true");
-    colBtn.innerHTML = '<i class="fa-solid fa-table-columns"></i> أعمدة';
+    colBtn.innerHTML = ('<i class="fa-solid fa-table-columns">' + '</i>' + ' ' + hrT('أعمدة'));
 
     var colMenu = document.createElement("div");
     colMenu.className = "uds-menu uds-table-colsmenu";
@@ -261,7 +262,7 @@
       var card = wrap.closest(".hub-card, .hub-panel, section");
       var h = card && card.querySelector("h1,h2,h3,.hub-card-title,.hub-section-title");
       var label = h ? (h.textContent || "").replace(/\s+/g, " ").trim() : "";
-      return label || (document.title || "تصدير جدول").split("—")[0].trim();
+      return label || (document.title || hrT('تصدير جدول')).split("—")[0].trim();
     }
     colWrap.appendChild(buildExportButtons(
       function () { return table; },
@@ -287,7 +288,7 @@
     pager.className = "uds-table-pager";
     var sizeWrap = document.createElement("div");
     sizeWrap.className = "uds-pager-size";
-    sizeWrap.appendChild(document.createTextNode("صفوف بالصفحة"));
+    sizeWrap.appendChild(document.createTextNode(hrT('صفوف بالصفحة')));
     var sizeSel = document.createElement("select");
     sizes.forEach(function (s) {
       var o = document.createElement("option");
@@ -375,10 +376,10 @@
         r.style.display = show ? "" : "none";
         if (show) { r.classList.toggle("uds-rowalt", vis % 2 === 1); vis++; }
       });
-      meta.textContent = total + " صف";
+      meta.textContent = total + hrT(' صف');
       // U+2066/U+2069 (LRI/PDI): بدونهما ينعكس المدى الرقميّ داخل سياق RTL
       // فيصير «25–1» بدل «1–25» (بلاغ D9).
-      info.textContent = total ? "⁦" + (start + 1) + "–" + end + "⁩" + " من " + total : "0";
+      info.textContent = total ? "⁦" + (start + 1) + "–" + end + "⁩" + hrT(' من ') + total : "0";
 
       nav.innerHTML = "";
       // RTL: «previous» points right (chevron-right), «next» points left.

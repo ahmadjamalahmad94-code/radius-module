@@ -1,5 +1,6 @@
 """System operations API for Flutter/Web parity."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, g, request
 
@@ -190,7 +191,7 @@ def system_sync_retry(job_id: int):
             (now_iso(), tenant_id, job_id),
         )
         if cur.rowcount == 0:
-            return fail("not_found", "مهمة المزامنة غير موجودة.", status=404)
+            return fail("not_found", _tr("مهمة المزامنة غير موجودة."), status=404)
     return ok({"job": _job(tenant_id, job_id), "action": "retry"})
 
 
@@ -206,7 +207,7 @@ def system_sync_cancel(job_id: int):
             (tenant_id, job_id),
         )
         if cur.rowcount == 0:
-            return fail("not_found", "مهمة المزامنة غير موجودة أو لا يمكن إلغاؤها.", status=404)
+            return fail("not_found", _tr("مهمة المزامنة غير موجودة أو لا يمكن إلغاؤها."), status=404)
     return ok({"job": _job(tenant_id, job_id), "action": "cancel"})
 
 
@@ -216,7 +217,7 @@ def system_reconcile():
 
         stats = mt_reconciler.reconcile_once()
     except Exception as exc:  # noqa: BLE001
-        return fail("reconcile_failed", f"تعذرت المصالحة: {exc}", status=500)
+        return fail("reconcile_failed", _tr('تعذرت المصالحة: %(exc)s', exc=exc), status=500)
     return ok({"stats": stats})
 
 
@@ -479,14 +480,14 @@ def system_admin_bridge_restore_apply(reference: str):
 
 def _restore_block_message(code: str) -> str:
     return {
-        "local_snapshot_required": "أنشئ نسخة وقاية محلّية قبل أي استعادة.",
-        "checksum_not_verified": "لم يُتحقّق من بصمة ملف النسخة المرشّحة بعد.",
+        "local_snapshot_required": N_("أنشئ نسخة وقاية محلّية قبل أي استعادة."),
+        "checksum_not_verified": N_("لم يُتحقّق من بصمة ملف النسخة المرشّحة بعد."),
         "destructive_restore_disabled": (
-            "تطبيق الاستعادة المدمّرة مقفل — فعّل العلم "
-            "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED من إعدادات النظام أولًا."),
-        "candidate_missing": "ملف النسخة المرشّحة غير موجود على القرص.",
-        "candidate_corrupt": "ملف النسخة المرشّحة ليس قاعدة SQLite صالحة.",
-    }.get(code, "تعذّر تطبيق الاستعادة.")
+            N_("تطبيق الاستعادة المدمّرة مقفل — فعّل العلم "
+            "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED من إعدادات النظام أولًا.")),
+        "candidate_missing": N_("ملف النسخة المرشّحة غير موجود على القرص."),
+        "candidate_corrupt": N_("ملف النسخة المرشّحة ليس قاعدة SQLite صالحة."),
+    }.get(code, N_("تعذّر تطبيق الاستعادة."))
 
 
 def system_admin_bridge_service_activations_poll():

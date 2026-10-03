@@ -9,6 +9,7 @@
 فيديو سبلاش مستضاف، رسوم SVG متحرّكة، ومحتوى مجدول زمنيًّا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 import re as _re
@@ -42,11 +43,11 @@ def _frag_custom_css(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="custom_css", category=CAT_THEME, label_ar="CSS مخصّص (متقدّم)",
-    desc_ar="ألصق CSS خاصًّا يُحقن في الصفحة — للمصمّم المتقدّم؛ يُنقّى من أي وسوم HTML.",
+    key="custom_css", category=CAT_THEME, label_ar=N_("CSS مخصّص (متقدّم)"),
+    desc_ar=N_("ألصق CSS خاصًّا يُحقن في الصفحة — للمصمّم المتقدّم؛ يُنقّى من أي وسوم HTML."),
     surface=SURFACE_PRELOGIN, icon="code", server_side=True,
     fields=(
-        AddonField(key="css", label_ar="كود CSS", kind="textarea", max_len=4000,
+        AddonField(key="css", label_ar=N_("كود CSS"), kind="textarea", max_len=4000,
                    placeholder="body{letter-spacing:.2px} .btn{border-radius:20px}"),
     ),
     pre_fragment=_frag_custom_css))
@@ -82,11 +83,11 @@ def _frag_font(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="font_picker", category=CAT_THEME, label_ar="منتقي الخطوط",
-    desc_ar="اختر خطّ الصفحة من مجموعات آمنة أوفلاين، أو «خط علامتك» المرفوع من قسم الأصول.",
+    key="font_picker", category=CAT_THEME, label_ar=N_("منتقي الخطوط"),
+    desc_ar=N_("اختر خطّ الصفحة من مجموعات آمنة أوفلاين، أو «خط علامتك» المرفوع من قسم الأصول."),
     surface=SURFACE_PRELOGIN, icon="font", server_side=True,
     fields=(
-        AddonField(key="family", label_ar="الخط", kind="select",
+        AddonField(key="family", label_ar=N_("الخط"), kind="select",
                    default="almarai", options=(
                        ("almarai", "المراعي (مرفق)"), ("system", "خط النظام"),
                        ("rounded", "مدوّر"), ("serif", "رقعة/Serif"),
@@ -118,8 +119,8 @@ def _frag_a11y(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="accessibility_mode", category=CAT_CONTENT, label_ar="وضع الوصول",
-    desc_ar="زر يكبّر النص ويرفع التباين ويُبرز الروابط — يُحفظ تفضيل الزبون. أوفلاين.",
+    key="accessibility_mode", category=CAT_CONTENT, label_ar=N_("وضع الوصول"),
+    desc_ar=N_("زر يكبّر النص ويرفع التباين ويُبرز الروابط — يُحفظ تفضيل الزبون. أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="universal-access", server_side=True,
     pre_fragment=_frag_a11y))
 
@@ -128,8 +129,8 @@ register(AddonSpec(
 # 4) اختبار A/B لزر الدعوة (engagement، pre) — مجموعة ثابتة لكل زائر
 # ════════════════════════════════════════════════════════════════
 def _frag_ab(cfg: dict, ctx: dict) -> str:
-    a = _jstr(cfg.get("text_a") or "تسجيل الدخول")
-    b = _jstr(cfg.get("text_b") or "ابدأ الآن")
+    a = _jstr(cfg.get("text_a") or N_("تسجيل الدخول"))
+    b = _jstr(cfg.get("text_b") or N_("ابدأ الآن"))
     ca = _esc(cfg.get("color_a") or ctx.get("accent", "#2563EB"))
     cb = _esc(cfg.get("color_b") or "#16a34a")
     return (
@@ -146,14 +147,14 @@ def _frag_ab(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="ab_testing", category=CAT_ENGAGEMENT, label_ar="اختبار A/B لزر الدعوة",
-    desc_ar="يعرض نصًّا/لونًا مختلفًا لزر الدخول لكل زائر (مجموعة ثابتة) لقياس الأفضل — أوفلاين.",
+    key="ab_testing", category=CAT_ENGAGEMENT, label_ar=N_("اختبار A/B لزر الدعوة"),
+    desc_ar=N_("يعرض نصًّا/لونًا مختلفًا لزر الدخول لكل زائر (مجموعة ثابتة) لقياس الأفضل — أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="flask", server_side=True,
     fields=(
-        AddonField(key="text_a", label_ar="نص المجموعة A", default="تسجيل الدخول", max_len=30),
-        AddonField(key="text_b", label_ar="نص المجموعة B", default="ابدأ الآن", max_len=30),
-        AddonField(key="color_a", label_ar="لون A", kind="color", default="#2563EB"),
-        AddonField(key="color_b", label_ar="لون B", kind="color", default="#16a34a"),
+        AddonField(key="text_a", label_ar=N_("نص المجموعة A"), default=N_("تسجيل الدخول"), max_len=30),
+        AddonField(key="text_b", label_ar=N_("نص المجموعة B"), default=N_("ابدأ الآن"), max_len=30),
+        AddonField(key="color_a", label_ar=N_("لون A"), kind="color", default="#2563EB"),
+        AddonField(key="color_b", label_ar=N_("لون B"), kind="color", default="#16a34a"),
     ),
     pre_fragment=_frag_ab))
 
@@ -185,13 +186,13 @@ def _analytics_js(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="analytics", category=CAT_ENGAGEMENT, label_ar="تحليلات الصفحة",
-    desc_ar="يقيس الانطباعات والاتصالات والنقرات (محليًّا دائمًا، ويُرسلها لنقطة قياسك إن ضبطتها).",
+    key="analytics", category=CAT_ENGAGEMENT, label_ar=N_("تحليلات الصفحة"),
+    desc_ar=N_("يقيس الانطباعات والاتصالات والنقرات (محليًّا دائمًا، ويُرسلها لنقطة قياسك إن ضبطتها)."),
     surface=SURFACE_BOTH, icon="chart-line",
     fields=(
-        AddonField(key="vertical", label_ar="وسم النشاط (للتقارير)", max_len=30,
+        AddonField(key="vertical", label_ar=N_("وسم النشاط (للتقارير)"), max_len=30,
                    placeholder="cafe-downtown"),
-        AddonField(key="endpoint", label_ar="نقطة القياس (beacon، اختياري)", kind="url",
+        AddonField(key="endpoint", label_ar=N_("نقطة القياس (beacon، اختياري)"), kind="url",
                    placeholder="https://analytics.example.com/collect"),
     ),
     pre_fragment=_analytics_js,
@@ -211,14 +212,14 @@ def _frag_video_splash(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="video_splash", category=CAT_CONTENT, label_ar="فيديو سبلاش مستضاف",
-    desc_ar="فيديو ترويجي مستضاف على الراوتر يُشغَّل صامتًا تلقائيًّا (يعمل أوفلاين).",
+    key="video_splash", category=CAT_CONTENT, label_ar=N_("فيديو سبلاش مستضاف"),
+    desc_ar=N_("فيديو ترويجي مستضاف على الراوتر يُشغَّل صامتًا تلقائيًّا (يعمل أوفلاين)."),
     surface=SURFACE_PRELOGIN, icon="clapperboard", server_side=True,
     fields=(
-        AddonField(key="video_file", label_ar="اسم ملف الفيديو على الراوتر",
+        AddonField(key="video_file", label_ar=N_("اسم ملف الفيديو على الراوتر"),
                    default="splash.mp4", max_len=40,
-                   help_ar="ارفع الفيديو بجانب login.html (مثل hotspot/splash.mp4)."),
-        AddonField(key="loop", label_ar="تكرار", kind="select", default="yes",
+                   help_ar=N_("ارفع الفيديو بجانب login.html (مثل hotspot/splash.mp4).")),
+        AddonField(key="loop", label_ar=N_("تكرار"), kind="select", default="yes",
                    options=(("yes", "نعم"), ("no", "لا"))),
     ),
     pre_fragment=_frag_video_splash))
@@ -263,11 +264,11 @@ def _frag_svg(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="animated_svg", category=CAT_THEME, label_ar="رسوم SVG متحرّكة",
-    desc_ar="زخرفة متحرّكة (موجات/نبضة واي‑فاي/كتلة) بلون علامتك — SVG/CSS نقيّ أوفلاين.",
+    key="animated_svg", category=CAT_THEME, label_ar=N_("رسوم SVG متحرّكة"),
+    desc_ar=N_("زخرفة متحرّكة (موجات/نبضة واي‑فاي/كتلة) بلون علامتك — SVG/CSS نقيّ أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="bezier-curve", server_side=True,
     fields=(
-        AddonField(key="shape", label_ar="الشكل", kind="select", default="waves",
+        AddonField(key="shape", label_ar=N_("الشكل"), kind="select", default="waves",
                    options=(("waves", "موجات"), ("wifi", "نبضة واي‑فاي"),
                             ("blob", "كتلة عضوية"))),
     ),
@@ -298,15 +299,15 @@ def _frag_scheduled(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="scheduled_content", category=CAT_CONTENT, label_ar="محتوى مجدول زمنيًّا",
-    desc_ar="رسالة تظهر فقط ضمن نافذة ساعات (مثل «ساعة سعيدة») — تُحسب من ساعة الجهاز، أوفلاين.",
+    key="scheduled_content", category=CAT_CONTENT, label_ar=N_("محتوى مجدول زمنيًّا"),
+    desc_ar=N_("رسالة تظهر فقط ضمن نافذة ساعات (مثل «ساعة سعيدة») — تُحسب من ساعة الجهاز، أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="clock-rotate-left", server_side=True,
     fields=(
-        AddonField(key="message", label_ar="الرسالة", max_len=120,
-                   placeholder="ساعة سعيدة: قهوتك علينا ٤–٦م"),
-        AddonField(key="start_hour", label_ar="من ساعة (0–23)", kind="number",
+        AddonField(key="message", label_ar=N_("الرسالة"), max_len=120,
+                   placeholder=N_("ساعة سعيدة: قهوتك علينا ٤–٦م")),
+        AddonField(key="start_hour", label_ar=N_("من ساعة (0–23)"), kind="number",
                    default="16", min_num=0, max_num=23),
-        AddonField(key="end_hour", label_ar="إلى ساعة (0–24)", kind="number",
+        AddonField(key="end_hour", label_ar=N_("إلى ساعة (0–24)"), kind="number",
                    default="18", min_num=0, max_num=24),
     ),
     pre_fragment=_frag_scheduled))

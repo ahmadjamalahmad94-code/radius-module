@@ -14,6 +14,7 @@ Standalone Flask app لاستضافة وحدة RADIUS بشكل مستقل.
 عند الدمج في HobeHub: انسخ `app/radius/` كما هو، وأهمِل هذا الملف.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import os
 import re as _re
@@ -89,8 +90,7 @@ def create_app() -> Flask:
             return _jsonify({
                 "ok": False,
                 "status": "too_large",
-                "error": (f"الملفّ أكبر من الحدّ المسموح ({_max_mb}MB). ارفع "
-                          "النسخة المضغوطة .gz (أصغر بكثير) أو تفريغًا أصغر."),
+                "error": (_tr('الملفّ أكبر من الحدّ المسموح (%(max_mb)sMB). ارفع النسخة المضغوطة .gz (أصغر بكثير) أو تفريغًا أصغر.', max_mb=_max_mb)),
             }), 413
         return exc  # صفحة HTML الافتراضيّة لبقيّة المسارات.
 
@@ -1238,7 +1238,7 @@ def _install_stubs(app: Flask) -> None:
         def _dur_ar(seconds):
             s = max(0, int(seconds or 0))
             h, m = s // 3600, (s % 3600) // 60
-            return f"{h} ساعة و{m} دقيقة" if h else f"{m} دقيقة"
+            return _tr('%(h)s ساعة و%(m)s دقيقة', h=h, m=m) if h else _tr('%(m)s دقيقة', m=m)
     app.jinja_env.filters["dur_ar"] = _dur_ar
     # Reports / profile / portal: the same words, but a sub-minute session keeps
     # its seconds («45 ثانية») — fix3 integration.
@@ -1422,7 +1422,7 @@ def _install_stubs(app: Flask) -> None:
         """F08-L: فشل رمز الحماية — JSON عربيّ لطلبات AJAX (fetch/XHR بأيّ
         جسم)، وصفحة عربيّة منسّقة للتصفّح تحفظ ما كُتب (كانت نصًّا خامًا)."""
         from flask import request, jsonify as _jsonify, render_template as _rt
-        msg = "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى."
+        msg = _tr("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.")
         accept = request.headers.get("Accept") or ""
         wants_json = (
             request.is_json
@@ -1458,8 +1458,8 @@ def _install_stubs(app: Flask) -> None:
             return _rt("radius/csrf_error.html", fields=fields,
                        back_url=back), 400
         except Exception:  # noqa: BLE001 — never 500 over a CSRF refusal
-            return ('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
-                    "<h1>انتهت صلاحية الصفحة</h1><p>" + msg + "</p></html>",
+            return (_tr('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
+                    "<h1>انتهت صلاحية الصفحة</h1><p>") + msg + "</p></html>",
                     400, {"Content-Type": "text/html; charset=utf-8"})
 
     # حقن _csrf_token في كل <form method="post"> تلقائيًا
@@ -1508,10 +1508,10 @@ def _install_stubs(app: Flask) -> None:
         r"""<(?:button|input)\b[^>]*\bform\s*=\s*["']?([A-Za-z0-9_:.\-]+)["']?[^>]*>""",
         re.IGNORECASE)
     _READONLY_NOTE = (
-        '<p data-hr-readonly-note="1" style="margin:0 0 10px;padding:8px 12px;'
+        _tr('<p data-hr-readonly-note="1" style="margin:0 0 10px;padding:8px 12px;'
         'border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid '
         '#fed7aa;font-size:13px;line-height:1.6">'
-        'عرضٌ فقط — لا تملك صلاحيّةَ الحفظ على هذا النموذج.</p>')
+        'عرضٌ فقط — لا تملك صلاحيّةَ الحفظ على هذا النموذج.</p>'))
 
     def _form_endpoint(action: str) -> str | None:
         """اسمُ endpoint الذي يستقبل POST هذا النموذج، أو None إن تعذّر."""

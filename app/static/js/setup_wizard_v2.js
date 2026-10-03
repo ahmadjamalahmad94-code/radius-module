@@ -1,3 +1,4 @@
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -68,73 +69,73 @@
   function friendlyWizardError(message) {
     const raw = String(message || "").trim();
     const lower = raw.toLowerCase();
-    if (!raw) return "حدث خطأ غير واضح. أعد المحاولة أو ارجع خطوة واحدة.";
+    if (!raw) return hrT('حدث خطأ غير واضح. أعد المحاولة أو ارجع خطوة واحدة.');
     if (lower.includes("vpn/radius verification is required first")) {
-      return "لم يكتمل فحص ربط الراوتر بالخادم بعد. ارجع إلى خطوة تحقق الربط، الصق مخرجات الراوتر، ثم اضغط تحليل المخرجات.";
+      return hrT('لم يكتمل فحص ربط الراوتر بالخادم بعد. ارجع إلى خطوة تحقق الربط، الصق مخرجات الراوتر، ثم اضغط تحليل المخرجات.');
     }
     if (lower.includes("generated script is required before dry-run")) {
-      return "ولّد السكربت أولًا قبل تشغيل المراجعة الجافة.";
+      return hrT('ولّد السكربت أولًا قبل تشغيل المراجعة الجافة.');
     }
     if (lower.includes("internet verification is required first")) {
-      return "أكمل فحص الإنترنت أولًا قبل المتابعة.";
+      return hrT('أكمل فحص الإنترنت أولًا قبل المتابعة.');
     }
     if (lower.includes("router public key is required")) {
-      return "لم نلتقط مفتاح الراوتر بعد. الصق مخرجات نفق الإدارة من الراوتر في خطوة تحقق الربط.";
+      return hrT('لم نلتقط مفتاح الراوتر بعد. الصق مخرجات نفق الإدارة من الراوتر في خطوة تحقق الربط.');
     }
     if (lower.includes("duplicate wireguard public key")) {
-      return "هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح نفق الإدارة. إذا كان فحص الوصول والمصافحة ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.";
+      return hrT('هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح نفق الإدارة. إذا كان فحص الوصول والمصافحة ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.');
     }
     if (lower.includes("duplicate wireguard allowed ip")) {
-      return "عنوان الربط الخاص هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.";
+      return hrT('عنوان الربط الخاص هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.');
     }
     if (lower.includes("dry_run_required")) {
-      return "يجب تجهيز خطة آمنة أولًا قبل محاولة الربط على الخادم.";
+      return hrT('يجب تجهيز خطة آمنة أولًا قبل محاولة الربط على الخادم.');
     }
     if (lower.includes("server_wg_real_apply_flags_disabled")) {
-      return "التجهيز الحقيقي على الخادم غير مفعّل إلا في وضع المختبر الداخلي. إذا كان ping ناجحًا يمكنك المتابعة بدون هذه الخطوة.";
+      return hrT('التجهيز الحقيقي على الخادم غير مفعّل إلا في وضع المختبر الداخلي. إذا كان ping ناجحًا يمكنك المتابعة بدون هذه الخطوة.');
     }
     if (lower.includes("server_wg_readiness_not_ready")) {
-      return "الخادم غير جاهز لتنفيذ الربط من داخل النظام الآن. تحقق من جاهزية نفق الإدارة أو تابع إذا كان الربط يعمل فعلًا.";
+      return hrT('الخادم غير جاهز لتنفيذ الربط من داخل النظام الآن. تحقق من جاهزية نفق الإدارة أو تابع إذا كان الربط يعمل فعلًا.');
     }
     if (lower.includes("at least one") && lower.includes("interface")) {
-      return "اختر منفذ شبكة واحدًا على الأقل قبل توليد السكربت.";
+      return hrT('اختر منفذ شبكة واحدًا على الأقل قبل توليد السكربت.');
     }
     return raw;
   }
 
   const summaryLabels = {
-    add_default_route: "إضافة المسار الافتراضي",
-    address_cidr: "العنوان",
-    address_mode: "طريقة العنوان",
-    all_required_for_apply: "جاهز للتطبيق المختبري",
-    checks: "الفحوص",
-    computed: "القيم المحسوبة",
-    current_state: "مرحلة الراوتر",
-    destinations: "الوجهات",
-    dns_servers: "خوادم DNS",
-    domains: "النطاقات",
-    flags: "الأعلام",
-    generated_objects: "العناصر التي سيجهزها السكربت",
-    gateway: "البوابة",
-    health_score: "درجة الصحة",
-    interface: "الواجهة",
-    masked_sensitive_values: "القيم الحساسة المخفية",
-    mode: "الوضع",
-    nat_enabled: "تفعيل NAT",
-    peer: "بيانات الربط",
-    plan_status: "حالة الخطة",
-    prepared_wireguard_peer: "ربط نفق الإدارة",
-    recommendation_ar: "التوصية",
-    rollback_notes: "ملاحظات الرجوع",
-    router_provisioning: "بيانات الراوتر المحجوزة",
-    selected_interfaces: "المنافذ المختارة",
-    selected_wan_interface: "منفذ الإنترنت",
-    service_key: "الخدمة",
-    source_type: "مصدر الإنترنت",
-    status: "الحالة",
-    use_peer_dns: "استخدام DNS من المزود",
-    warnings: "التحذيرات",
-    wireguard_peer_name: "اسم ربط نفق الإدارة",
+    add_default_route: hrT('إضافة المسار الافتراضي'),
+    address_cidr: hrT('العنوان'),
+    address_mode: hrT('طريقة العنوان'),
+    all_required_for_apply: hrT('جاهز للتطبيق المختبري'),
+    checks: hrT('الفحوص'),
+    computed: hrT('القيم المحسوبة'),
+    current_state: hrT('مرحلة الراوتر'),
+    destinations: hrT('الوجهات'),
+    dns_servers: hrT('خوادم DNS'),
+    domains: hrT('النطاقات'),
+    flags: hrT('الأعلام'),
+    generated_objects: hrT('العناصر التي سيجهزها السكربت'),
+    gateway: hrT('البوابة'),
+    health_score: hrT('درجة الصحة'),
+    interface: hrT('الواجهة'),
+    masked_sensitive_values: hrT('القيم الحساسة المخفية'),
+    mode: hrT('الوضع'),
+    nat_enabled: hrT('تفعيل NAT'),
+    peer: hrT('بيانات الربط'),
+    plan_status: hrT('حالة الخطة'),
+    prepared_wireguard_peer: hrT('ربط نفق الإدارة'),
+    recommendation_ar: hrT('التوصية'),
+    rollback_notes: hrT('ملاحظات الرجوع'),
+    router_provisioning: hrT('بيانات الراوتر المحجوزة'),
+    selected_interfaces: hrT('المنافذ المختارة'),
+    selected_wan_interface: hrT('منفذ الإنترنت'),
+    service_key: hrT('الخدمة'),
+    source_type: hrT('مصدر الإنترنت'),
+    status: hrT('الحالة'),
+    use_peer_dns: hrT('استخدام DNS من المزود'),
+    warnings: hrT('التحذيرات'),
+    wireguard_peer_name: hrT('اسم ربط نفق الإدارة'),
   };
 
   function escapeHtml(text) {
@@ -147,56 +148,56 @@
   }
 
   function summaryLabel(key) {
-    return summaryLabels[key] || "تفصيل";
+    return summaryLabels[key] || hrT('تفصيل');
   }
 
   function statusText(value) {
     const key = String(value == null ? "" : value).toLowerCase();
     const map = {
-      applied: "مطبقة",
-      block_sites: "حجب مواقع",
-      broadband: "برودباند",
-      clean_resume: "جاهز للاستكمال",
-      disabled: "معطل",
-      dhcp: "أخذ عنوان تلقائي",
-      dry_run_ready: "جاهزة للمراجعة الجافة",
-      failed: "فشل",
-      false: "لا",
-      hotspot: "هوتسبوت",
-      not_supported: "غير مدعومة",
-      partial: "جزئية",
-      pppoe: "اتصال PPPoE",
-      preview: "معاينة",
-      ready: "جاهزة",
-      reserved: "محجوزة",
-      script_generated: "تم توليد السكربت",
-      site_exit_public_ip: "تغيير عنوان الخروج",
-      static: "عنوان ثابت",
-      success: "ناجحة",
-      supported: "مدعومة",
-      true: "نعم",
-      vlan: "شبكة VLAN",
-      warning: "تحذير",
-      walled_garden: "مواقع مفتوحة قبل تسجيل الدخول",
+      applied: hrT('مطبقة'),
+      block_sites: hrT('حجب مواقع'),
+      broadband: hrT('برودباند'),
+      clean_resume: hrT('جاهز للاستكمال'),
+      disabled: hrT('معطل'),
+      dhcp: hrT('أخذ عنوان تلقائي'),
+      dry_run_ready: hrT('جاهزة للمراجعة الجافة'),
+      failed: hrT('فشل'),
+      false: hrT('لا'),
+      hotspot: hrT('هوتسبوت'),
+      not_supported: hrT('غير مدعومة'),
+      partial: hrT('جزئية'),
+      pppoe: hrT('اتصال PPPoE'),
+      preview: hrT('معاينة'),
+      ready: hrT('جاهزة'),
+      reserved: hrT('محجوزة'),
+      script_generated: hrT('تم توليد السكربت'),
+      site_exit_public_ip: hrT('تغيير عنوان الخروج'),
+      static: hrT('عنوان ثابت'),
+      success: hrT('ناجحة'),
+      supported: hrT('مدعومة'),
+      true: hrT('نعم'),
+      vlan: hrT('شبكة VLAN'),
+      warning: hrT('تحذير'),
+      walled_garden: hrT('مواقع مفتوحة قبل تسجيل الدخول'),
     };
     return map[key] || String(value == null || value === "" ? "—" : value);
   }
 
   function summaryValue(value, depth) {
-    if (typeof value === "boolean") return value ? "نعم" : "لا";
+    if (typeof value === "boolean") return value ? hrT('نعم') : hrT('لا');
     if (typeof value === "number") return String(value);
     if (typeof value === "string") return statusText(value);
     if (Array.isArray(value)) {
-      if (!value.length) return "لا يوجد";
+      if (!value.length) return hrT('لا يوجد');
       const primitive = value.every((item) => item == null || ["string", "number", "boolean"].includes(typeof item));
       if (primitive) return value.map((item) => statusText(item)).join("، ");
-      return `${value.length} عنصر`;
+      return hrT('{length} عنصر', {length: value.length});
     }
     if (value && typeof value === "object") {
       const entries = Object.entries(value)
         .filter(([key, inner]) => !/script|command|password|secret|private/i.test(key) && inner != null && inner !== "")
         .slice(0, depth > 0 ? 4 : 6);
-      if (!entries.length) return "متوفر";
+      if (!entries.length) return hrT('متوفر');
       return entries.map(([key, inner]) => `${summaryLabel(key)}: ${summaryValue(inner, depth + 1)}`).join("، ");
     }
     return "—";
@@ -210,8 +211,8 @@
       .slice(0, 10);
     const items = rows.length ? rows.map(([key, value]) => {
       return `<li><b>${escapeHtml(summaryLabel(key))}</b><span>${escapeHtml(summaryValue(value, 0))}</span></li>`;
-    }).join("") : '<li><b>الحالة</b><span>لا توجد تفاصيل إضافية.</span></li>';
-    target.innerHTML = `<strong>${escapeHtml(title || "ملخص")}</strong><ul>${items}</ul>`;
+    }).join("") : ('<li>' + '<b>' + hrT('الحالة') + '</b>' + '<span>' + hrT('لا توجد تفاصيل إضافية.') + '</span>' + '</li>');
+    target.innerHTML = `<strong>${escapeHtml(title || hrT('ملخص'))}</strong><ul>${items}</ul>`;
   }
 
   async function getJson(url) {
@@ -239,14 +240,14 @@
         const card = document.createElement("div");
         card.className = "swv2-diagnostic-card";
         const title = document.createElement("strong");
-        title.textContent = problem.title_ar || problem.code || "ملاحظة";
+        title.textContent = problem.title_ar || problem.code || hrT('ملاحظة');
         const body = document.createElement("span");
         body.textContent = problem.explanation_ar || "";
         card.append(title, body);
         recoveryProblems.appendChild(card);
       });
     }
-    writeSummaryBox(recoveryJson, recovery || {}, "ملخص التعافي");
+    writeSummaryBox(recoveryJson, recovery || {}, hrT('ملخص التعافي'));
   }
 
   async function checkRecovery() {
@@ -271,7 +272,7 @@
       mode: "manual_contract",
       checks: {},
     });
-    writeSummaryBox(recoveryJson, data || {}, "نتيجة إعادة التحقق");
+    writeSummaryBox(recoveryJson, data || {}, hrT('نتيجة إعادة التحقق'));
     await checkRecovery();
   }
 
@@ -280,7 +281,7 @@
     const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/regenerate-script`, {
       step_key: "vpn_radius",
     });
-    writeSummaryBox(recoveryJson, data || {}, "نتيجة إعادة توليد السكربت");
+    writeSummaryBox(recoveryJson, data || {}, hrT('نتيجة إعادة توليد السكربت'));
     await checkRecovery();
   }
 
@@ -291,7 +292,7 @@
       step_key: stepNames[current] || "current_step",
       reason,
     });
-    writeSummaryBox(recoveryJson, data || {}, "تسجيل التخلي عن الخطوة");
+    writeSummaryBox(recoveryJson, data || {}, hrT('تسجيل التخلي عن الخطوة'));
   }
 
   async function retireRecoveryRouter() {
@@ -300,7 +301,7 @@
     const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/recovery/retire-router`, {
       reason,
     });
-    writeSummaryBox(recoveryJson, data || {}, "إيقاف الراوتر من مسار الإعداد");
+    writeSummaryBox(recoveryJson, data || {}, hrT('إيقاف الراوتر من مسار الإعداد'));
     await checkRecovery();
   }
 
@@ -308,7 +309,7 @@
     if (currentRunId) return currentRunId;
     const data = await postJson("/admin/radius/setup-wizard/runs", {});
     currentRunId = Number(data.run && data.run.id) || 0;
-    if (!currentRunId) throw new Error("تعذر إنشاء جلسة إعداد جديدة.");
+    if (!currentRunId) throw new Error(hrT('تعذر إنشاء جلسة إعداد جديدة.'));
     // Expose to sibling IIFEs (the one-button auto-finalize
     // handler at the bottom of this file reads it).
     try { window.__swv2CurrentRunId = currentRunId; } catch (_) {}
@@ -414,7 +415,7 @@
 
   function renderInternetPlan(plan, request) {
     if (internetScript) {
-      internetScript.textContent = plan.script_text || "-- لم يرجع الخادم سكربت --";
+      internetScript.textContent = plan.script_text || hrT('-- لم يرجع الخادم سكربت --');
     }
     if (internetPlanJson) {
       writeSummaryBox(internetPlanJson, {
@@ -423,9 +424,9 @@
         warnings: plan.warnings || [],
         generated_objects: plan.generated_objects || [],
         masked_sensitive_values: plan.masked_sensitive_values || {},
-      }, "ملخص سكربت الإنترنت");
+      }, hrT('ملخص سكربت الإنترنت'));
     }
-    setScriptLoading(`تم توليد سكربت ${request.source_type} من المحرك الحقيقي.`);
+    setScriptLoading(hrT('تم توليد سكربت {source_type} من المحرك الحقيقي.', {source_type: request.source_type}));
   }
 
   async function generateInternetScript(force) {
@@ -434,21 +435,21 @@
     if (!force && internetPlanSignature === nextSignature && internetScript?.textContent.trim()) {
       return;
     }
-    setScriptLoading("جاري تجهيز السكربت من محرك HobeRadius...");
+    setScriptLoading(hrT('جاري تجهيز السكربت من محرك HobeRadius...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-internet-script`, request);
       internetPlanSignature = nextSignature;
       renderInternetPlan(data.plan || {}, request);
     } catch (error) {
-      setScriptLoading(`فشل توليد السكربت: ${error.message}`);
+      setScriptLoading(hrT('فشل توليد السكربت: {message}', {message: error.message}));
       if (internetScript) internetScript.textContent = `-- ${error.message} --`;
     }
   }
 
   function buildVpnPayload() {
     return {
-      router_label: value("vpn_router_label", "راوتر جديد"),
+      router_label: value("vpn_router_label", hrT('راوتر جديد')),
       router_identity: value("vpn_router_identity", ""),
       // احتياطٌ فارغ — لا عنوانَ زبونٍ افتراضًا (انظر setup_wizard.js)
       vps_public_endpoint: value("vpn_vps_endpoint", ""),
@@ -466,7 +467,7 @@
     const lifecycle = plan.provisioning_lifecycle || {};
     const peer = plan.prepared_wireguard_peer || lifecycle.prepared_wireguard_peer || {};
     if (vpnScript) {
-      vpnScript.textContent = plan.script_text || "-- لم يرجع سكربت الربط والمصادقة --";
+      vpnScript.textContent = plan.script_text || hrT('-- لم يرجع سكربت الربط والمصادقة --');
     }
     if (vpnPlanJson) {
       writeSummaryBox(vpnPlanJson, {
@@ -474,7 +475,7 @@
         warnings: plan.warnings || [],
         generated_objects: plan.generated_objects || [],
         masked_sensitive_values: plan.masked_sensitive_values || {},
-      }, "ملخص الربط والمصادقة");
+      }, hrT('ملخص الربط والمصادقة'));
     }
     writeProvisioningValue("router_vpn_ip", provisioning.router_vpn_ip);
     writeProvisioningValue("server_vpn_ip", provisioning.server_vpn_ip);
@@ -486,19 +487,19 @@
     writeProvisioningValue("peer_status", peer.status || "waiting_router_key");
     if (routerKeyStatus) {
       routerKeyStatus.textContent = peer.status === "ready_to_apply"
-        ? "تم التقاط مفتاح الربط وتجهيز خطة السيرفر."
-        : "بعد تنفيذ السكربت، الصق المخرجات في خطوة التحقق وسنلتقط مفتاح الربط تلقائيًا.";
+        ? hrT('تم التقاط مفتاح الربط وتجهيز خطة السيرفر.')
+        : hrT('بعد تنفيذ السكربت، الصق المخرجات في خطوة التحقق وسنلتقط مفتاح الربط تلقائيًا.');
     }
     const warnings = plan.warnings || [];
     const missingServerKey = warnings.some((item) => String(item || "").includes("HOBERADIUS_WG_SERVER_PUBKEY"));
     setVpnScriptLoading(missingServerKey
-      ? "مفتاح الخادم غير مضبوط؛ لن يتم إنشاء الربط حتى تضبط إعدادات نفق الإدارة على الخادم."
-      : "تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.");
+      ? hrT('مفتاح الخادم غير مضبوط؛ لن يتم إنشاء الربط حتى تضبط إعدادات نفق الإدارة على الخادم.')
+      : hrT('تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.'));
   }
 
   async function generateVpnRadiusScript(force) {
     if (vpnPlanGenerated && !force && vpnScript?.textContent.trim()) return;
-    setVpnScriptLoading("جاري حجز IP وبيانات ربط فريدة للراوتر...");
+    setVpnScriptLoading(hrT('جاري حجز IP وبيانات ربط فريدة للراوتر...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-vpn-radius-script`, {
@@ -507,7 +508,7 @@
       vpnPlanGenerated = true;
       renderVpnPlan(data.plan || {});
     } catch (error) {
-      setVpnScriptLoading(`فشل توليد سكربت الربط والمصادقة: ${error.message}`);
+      setVpnScriptLoading(hrT('فشل توليد سكربت الربط والمصادقة: {message}', {message: error.message}));
       if (vpnScript) vpnScript.textContent = `-- ${error.message} --`;
     }
   }
@@ -568,14 +569,14 @@
     const input = page.querySelector("[data-swv2-router-public-key]");
     const publicKey = String(publicKeyOverride || (input ? input.value : "") || "").trim();
     if (!publicKey) {
-      if (routerKeyStatus) routerKeyStatus.textContent = "لا تحتاج لإدخال مفتاح الآن. الصق مخرجات سكربت الربط في خطوة التحقق.";
+      if (routerKeyStatus) routerKeyStatus.textContent = hrT('لا تحتاج لإدخال مفتاح الآن. الصق مخرجات سكربت الربط في خطوة التحقق.');
       return;
     }
     if (routerPublicKeySubmitted && !retrying) return;
     if (!vpnPlanGenerated) {
       await generateVpnRadiusScript(true);
     }
-    if (routerKeyStatus) routerKeyStatus.textContent = "جاري التقاط مفتاح الربط وتجهيز الخطة...";
+    if (routerKeyStatus) routerKeyStatus.textContent = hrT('جاري التقاط مفتاح الربط وتجهيز الخطة...');
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/router-public-key`, {
@@ -587,7 +588,7 @@
       writeProvisioningValue("peer_status", peer.status || "ready_to_apply");
       routerPublicKeySubmitted = true;
       if (routerKeyStatus) {
-        routerKeyStatus.textContent = `تم التقاط مفتاح الربط: ${peer.router_public_key_masked || "***"}`;
+        routerKeyStatus.textContent = hrT('تم التقاط مفتاح الربط: {v}', {v: peer.router_public_key_masked || "***"});
       }
       dryRunServerPeer();
     } catch (error) {
@@ -597,7 +598,7 @@
         return submitRouterPublicKey(publicKey, true);
       }
       if (routerKeyStatus) {
-        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. أعد لصق مخرجات الراوتر التي تحتوي على المفتاح العام.";
+        routerKeyStatus.textContent = hrT('لم نتمكن من تجهيز مفتاح الربط تلقائيًا. أعد لصق مخرجات الراوتر التي تحتوي على المفتاح العام.');
       }
     }
   }
@@ -611,17 +612,17 @@
         const warnings = Array.isArray(value.warnings) && value.warnings.length
           ? ` · ${value.warnings.join(" · ")}`
           : "";
-        serverPeerResult.textContent = `تم تجهيز خطة الربط على الخادم داخل HobeRadius${warnings}`;
+        serverPeerResult.textContent = hrT('تم تجهيز خطة الربط على الخادم داخل HobeRadius{warnings}', {warnings});
       } else {
         serverPeerResult.textContent = value?.status
-          ? `حالة تجهيز الربط على الخادم: ${value.status}`
-          : "لم يتم تجهيز خطة الربط على الخادم بعد.";
+          ? hrT('حالة تجهيز الربط على الخادم: {status}', {status: value.status})
+          : hrT('لم يتم تجهيز خطة الربط على الخادم بعد.');
       }
     }
     if (serverPeerSimple && command) {
       serverPeerSimple.hidden = false;
       if (serverPeerStatus) {
-        serverPeerStatus.textContent = "تم تجهيز خطة الخادم. اضغط تجهيز الربط على الخادم لإكمال الخطوة من داخل HobeRadius.";
+        serverPeerStatus.textContent = hrT('تم تجهيز خطة الخادم. اضغط تجهيز الربط على الخادم لإكمال الخطوة من داخل HobeRadius.');
       }
     } else if (serverPeerSimple && typeof value === "string" && value.includes("تعذر")) {
       serverPeerSimple.hidden = false;
@@ -634,18 +635,18 @@
   function markServerPeerAlreadyConnected() {
     if (serverPeerSimple) serverPeerSimple.hidden = true;
     if (serverPeerStatus) {
-      serverPeerStatus.textContent = "تم تأكيد الربط من مخرجات الراوتر. لا تحتاج دخول خادم الربط أو خطوة خادم إضافية الآن.";
+      serverPeerStatus.textContent = hrT('تم تأكيد الربط من مخرجات الراوتر. لا تحتاج دخول خادم الربط أو خطوة خادم إضافية الآن.');
     }
     if (serverPeerResult) {
-      serverPeerResult.textContent = "تم تأكيد الربط عبر ping/handshake. أكمل للخطوة التالية.";
+      serverPeerResult.textContent = hrT('تم تأكيد الربط عبر ping/handshake. أكمل للخطوة التالية.');
     }
   }
 
   function readinessLabel(status) {
-    if (status === "success" || status === "ready") return "جاهز";
-    if (status === "warning" || status === "partial") return "ناقص";
-    if (status === "disabled") return "معطل";
-    return "محظور للأمان";
+    if (status === "success" || status === "ready") return hrT('جاهز');
+    if (status === "warning" || status === "partial") return hrT('ناقص');
+    if (status === "disabled") return hrT('معطل');
+    return hrT('محظور للأمان');
   }
 
   function updateReadinessCards(readiness) {
@@ -663,12 +664,12 @@
     if (applyButton) {
       const enabled = readiness?.status === "ready" && readiness?.flags?.all_required_for_apply === true;
       applyButton.disabled = !enabled;
-      applyButton.textContent = enabled ? "تطبيق مختبري" : "تطبيق مختبري مغلق";
+      applyButton.textContent = enabled ? hrT('تطبيق مختبري') : hrT('تطبيق مختبري مغلق');
     }
   }
 
   async function checkServerWgReadiness() {
-    if (serverWgReadinessResult) serverWgReadinessResult.textContent = "جاري فحص الجاهزية القراءة فقط...";
+    if (serverWgReadinessResult) serverWgReadinessResult.textContent = hrT('جاري فحص الجاهزية القراءة فقط...');
     try {
       const res = await fetch("/admin/radius/setup-wizard/server-wg/readiness", {
         headers: { "X-CSRFToken": token() },
@@ -677,15 +678,15 @@
       if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
       updateReadinessCards(data.readiness || {});
       if (serverWgReadinessResult) {
-        writeSummaryBox(serverWgReadinessResult, data.readiness || {}, "ملخص جاهزية الخادم");
+        writeSummaryBox(serverWgReadinessResult, data.readiness || {}, hrT('ملخص جاهزية الخادم'));
       }
     } catch (error) {
-      if (serverWgReadinessResult) serverWgReadinessResult.textContent = `تعذر فحص الجاهزية: ${error.message}`;
+      if (serverWgReadinessResult) serverWgReadinessResult.textContent = hrT('تعذر فحص الجاهزية: {message}', {message: error.message});
     }
   }
 
   async function dryRunServerPeer() {
-    writeServerPeerResult("جاري إنشاء معاينة تنفيذ لخطة server peer...");
+    writeServerPeerResult(hrT('جاري إنشاء معاينة تنفيذ لخطة server peer...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
@@ -696,13 +697,13 @@
         warnings: data.plan?.warnings || [],
       });
     } catch (error) {
-      writeServerPeerResult(`تعذر إنشاء التجربة الجافة: ${error.message}`);
+      writeServerPeerResult(hrT('تعذر إنشاء التجربة الجافة: {message}', {message: error.message}));
     }
   }
 
   async function verifyServerPeer() {
     const output = page.querySelector("[data-swv2-server-peer-output]");
-    writeServerPeerResult("جاري تحليل wg show...");
+    writeServerPeerResult(hrT('جاري تحليل wg show...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/verify`, {
@@ -713,7 +714,7 @@
         writeProvisioningValue("lifecycle_state", "vpn_verified");
       }
     } catch (error) {
-      writeServerPeerResult(`تعذر التحقق: ${error.message}`);
+      writeServerPeerResult(hrT('تعذر التحقق: {message}', {message: error.message}));
     }
   }
 
@@ -749,13 +750,13 @@
     writePeerHealthValue("tx", formatBytes(peer.tx_bytes), status);
     writePeerHealthValue("recommendation", health?.recommendation_ar || "--", status);
     if (serverPeerHealthResult) {
-      writeSummaryBox(serverPeerHealthResult, health || {}, "ملخص صحة الربط");
+      writeSummaryBox(serverPeerHealthResult, health || {}, hrT('ملخص صحة الربط'));
     }
   }
 
   async function checkServerPeerHealth() {
     const output = page.querySelector("[data-swv2-server-peer-output]");
-    if (serverPeerHealthResult) serverPeerHealthResult.textContent = "جاري فحص صحة الربط...";
+    if (serverPeerHealthResult) serverPeerHealthResult.textContent = hrT('جاري فحص صحة الربط...');
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/health`, {
@@ -766,7 +767,7 @@
       renderPeerHealth({
         status: "unknown",
         health_score: 0,
-        recommendation_ar: `تعذر فحص صحة peer: ${error.message}`,
+        recommendation_ar: hrT('تعذر فحص صحة peer: {message}', {message: error.message}),
         diagnostics: [{ code: "health_request_failed", explanation_ar: error.message }],
       });
     }
@@ -778,7 +779,7 @@
   }
 
   async function applyServerPeer(confirmationOverride) {
-    writeServerPeerResult("جاري تجهيز الربط على الخادم عبر المسار المحروس...");
+    writeServerPeerResult(hrT('جاري تجهيز الربط على الخادم عبر المسار المحروس...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/apply`, {
@@ -787,28 +788,28 @@
       writeServerPeerResult(data);
       if (serverPeerStatus) {
         serverPeerStatus.textContent = data.status === "applied_no_handshake"
-          ? "تمت إضافة Peer على الخادم. انتظر handshake ثم أعد التحقق."
-          : "تم تجهيز الربط على الخادم بنجاح.";
+          ? hrT('تمت إضافة Peer على الخادم. انتظر handshake ثم أعد التحقق.')
+          : hrT('تم تجهيز الربط على الخادم بنجاح.');
       }
       const rollbackButton = page.querySelector("[data-swv2-server-peer-rollback]");
       if (rollbackButton && data.status !== "failed_verification") rollbackButton.disabled = false;
     } catch (error) {
       const message = friendlyWizardError(error.message);
-      writeServerPeerResult(`تعذر تجهيز الربط على الخادم: ${message}`);
+      writeServerPeerResult(hrT('تعذر تجهيز الربط على الخادم: {message}', {message}));
       if (serverPeerStatus) serverPeerStatus.textContent = message;
     }
   }
 
   async function simpleApplyServerPeer() {
     if (serverPeerStatus) {
-      serverPeerStatus.textContent = "جاري تجهيز خطة آمنة ثم تنفيذ الربط على الخادم...";
+      serverPeerStatus.textContent = hrT('جاري تجهيز خطة آمنة ثم تنفيذ الربط على الخادم...');
     }
     try {
       const runId = await ensureRun();
       await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/dry-run`, {});
     } catch (error) {
       const message = friendlyWizardError(error.message);
-      writeServerPeerResult(`تعذر تجهيز خطة الخادم: ${message}`);
+      writeServerPeerResult(hrT('تعذر تجهيز خطة الخادم: {message}', {message}));
       if (serverPeerStatus) serverPeerStatus.textContent = message;
       return;
     }
@@ -816,7 +817,7 @@
   }
 
   async function rollbackServerPeer() {
-    writeServerPeerResult("جاري طلب rollback drill...");
+    writeServerPeerResult(hrT('جاري طلب rollback drill...'));
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/server-peer/rollback`, {
@@ -824,7 +825,7 @@
       });
       writeServerPeerResult(data);
     } catch (error) {
-      writeServerPeerResult(`تم حظر rollback: ${error.message}`);
+      writeServerPeerResult(hrT('تم حظر rollback: {message}', {message: error.message}));
     }
   }
 
@@ -840,8 +841,8 @@
     const lockNote = page.querySelector("[data-swv2-service-lock]");
     if (lockNote) {
       lockNote.textContent = locked
-        ? "مقفلة حتى ينجح تحقق الربط والمصادقة."
-        : "تم فتح اختيار الخدمات. اختر المسار المناسب.";
+        ? hrT('مقفلة حتى ينجح تحقق الربط والمصادقة.')
+        : hrT('تم فتح اختيار الخدمات. اختر المسار المناسب.');
       lockNote.classList.toggle("is-unlocked", !locked);
     }
     page.querySelectorAll("[data-service-path]").forEach((card) => {
@@ -860,12 +861,12 @@
     const label = page.querySelector("[data-swv2-selected-service]");
     if (label) {
       const names = {
-        hotspot: "تم اختيار الهوتسبوت.",
-        broadband: "تم اختيار البرودباند.",
-        both: "تم اختيار الهوتسبوت ثم البرودباند بالتتابع.",
-        skip: "تم تخطي الخدمات الآن.",
+        hotspot: hrT('تم اختيار الهوتسبوت.'),
+        broadband: hrT('تم اختيار البرودباند.'),
+        both: hrT('تم اختيار الهوتسبوت ثم البرودباند بالتتابع.'),
+        skip: hrT('تم تخطي الخدمات الآن.'),
       };
-      label.textContent = names[selectedServicePath] || "لم يتم اختيار مسار بعد.";
+      label.textContent = names[selectedServicePath] || hrT('لم يتم اختيار مسار بعد.');
     }
     updateServiceCards();
     if (selectedServicePath === "skip") {
@@ -890,8 +891,8 @@
       button.className = `swv2-interface-card ${unsafe ? "is-disabled" : "is-recommended"} ${selectedInterfaces.includes(name) ? "is-selected" : ""}`;
       button.dataset.interfaceName = name;
       button.disabled = unsafe;
-      const state = item.running === false ? "غير نشط" : "متصل";
-      const reason = unsafe ? (item.reason_ar || item.reason || "مستبعد لحماية واجهة الإنترنت أو الربط الخاص") : (item.reason_ar || item.reason || "واجهة الشبكة الداخلية مرشحة للخدمة");
+      const state = item.running === false ? hrT('غير نشط') : hrT('متصل');
+      const reason = unsafe ? (item.reason_ar || item.reason || hrT('مستبعد لحماية واجهة الإنترنت أو الربط الخاص')) : (item.reason_ar || item.reason || hrT('واجهة الشبكة الداخلية مرشحة للخدمة'));
       button.innerHTML = `<strong>${name}</strong><span>${item.kind || "ether"} · ${state}</span><small>${reason}</small>`;
       container.appendChild(button);
     });
@@ -905,9 +906,9 @@
       running: true,
       safe: idx !== 0,
       excluded: idx === 0,
-      reason_ar: idx === 0 ? "مستبعد عادة لأنه منفذ الإنترنت WAN" : "واجهة LAN مرشحة للخدمة",
+      reason_ar: idx === 0 ? hrT('مستبعد عادة لأنه منفذ الإنترنت WAN') : hrT('واجهة LAN مرشحة للخدمة'),
     }));
-    rows.push({ name: "hr-wg", kind: "wireguard", running: true, safe: false, excluded: true, reason_ar: "مستبعد لأنه نفق الإدارة للربط الخاص" });
+    rows.push({ name: "hr-wg", kind: "wireguard", running: true, safe: false, excluded: true, reason_ar: hrT('مستبعد لأنه نفق الإدارة للربط الخاص') });
     return rows;
   }
 
@@ -952,10 +953,10 @@
     const summary = page.querySelector("[data-swv2-interface-summary]");
     if (!summary) return;
     if (!selectedInterfaces.length) {
-      summary.textContent = "اختر منفذًا واحدًا أو أكثر. يمكنك تحديد عدة منافذ LAN للخدمة نفسها.";
+      summary.textContent = hrT('اختر منفذًا واحدًا أو أكثر. يمكنك تحديد عدة منافذ LAN للخدمة نفسها.');
       return;
     }
-    summary.textContent = `تم اختيار ${selectedInterfaces.length} منفذ: ${selectedInterfaces.join(", ")}`;
+    summary.textContent = hrT('تم اختيار {length} منفذ: {v}', {length: selectedInterfaces.length, v: selectedInterfaces.join(", ")});
   }
 
   function setServiceMode(service, mode) {
@@ -989,19 +990,19 @@
     const status = page.querySelector(`[data-swv2-service-status="${service}"]`);
     const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
     if (script) script.textContent = plan.script_text || "-- no script returned --";
-    if (status) status.textContent = `تم توليد سكربت ${service} من المحرك الحقيقي.`;
+    if (status) status.textContent = hrT('تم توليد سكربت {service} من المحرك الحقيقي.', {service});
     if (details) {
       writeSummaryBox(details, {
         computed: plan.computed || {},
         warnings: plan.warnings || [],
         generated_objects: plan.generated_objects || [],
-      }, `ملخص ${service}`);
+      }, hrT('ملخص {service}', {service}));
     }
   }
 
   async function generateServiceScript(service) {
     const status = page.querySelector(`[data-swv2-service-status="${service}"]`);
-    if (status) status.textContent = "جاري توليد السكربت...";
+    if (status) status.textContent = hrT('جاري توليد السكربت...');
     try {
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/generate-${service}-script`, {
@@ -1013,8 +1014,8 @@
       renderServicePlan(service, servicePlans[service]);
     } catch (error) {
       const message = friendlyWizardError(error.message);
-      if (status) status.textContent = `تعذر توليد السكربت: ${message}`;
-      renderServiceDiagnostics(service, null, "لا يمكن توليد السكربت الآن", message);
+      if (status) status.textContent = hrT('تعذر توليد السكربت: {message}', {message});
+      renderServiceDiagnostics(service, null, hrT('لا يمكن توليد السكربت الآن'), message);
     }
   }
 
@@ -1027,8 +1028,8 @@
     card.className = `swv2-diagnostic-card ${ok ? "is-success" : "is-failed"}`;
     const title = document.createElement("strong");
     const body = document.createElement("span");
-    title.textContent = ok ? `تم تجهيز ${service} بنجاح` : failedMessage;
-    body.textContent = ok ? "راجع الملخص والتفاصيل المتقدمة قبل التنفيذ اليدوي." : (failedBody || "راجع التحذيرات أو ألصق مخرجات أوضح للتحقق.");
+    title.textContent = ok ? hrT('تم تجهيز {service} بنجاح', {service}) : failedMessage;
+    body.textContent = ok ? hrT('راجع الملخص والتفاصيل المتقدمة قبل التنفيذ اليدوي.') : (failedBody || hrT('راجع التحذيرات أو ألصق مخرجات أوضح للتحقق.'));
     card.append(title, body);
     target.appendChild(card);
   }
@@ -1036,16 +1037,16 @@
   async function dryRunService(service) {
     try {
       if (!servicePlans[service]) {
-        renderServiceDiagnostics(service, null, "المراجعة الجافة غير جاهزة", "ولّد السكربت أولًا، ثم شغّل المراجعة الجافة.");
+        renderServiceDiagnostics(service, null, hrT('المراجعة الجافة غير جاهزة'), hrT('ولّد السكربت أولًا، ثم شغّل المراجعة الجافة.'));
         return;
       }
       const runId = await ensureRun();
       const data = await postJson(`/admin/radius/setup-wizard/runs/${runId}/dry-run/${service}`, {});
-      renderServiceDiagnostics(service, { status: data.status }, "تعذر إنشاء التجربة الجافة");
+      renderServiceDiagnostics(service, { status: data.status }, hrT('تعذر إنشاء التجربة الجافة'));
       const details = page.querySelector(`[data-swv2-service-json="${service}"]`);
-      writeSummaryBox(details, data, `نتيجة المراجعة الجافة ${service}`);
+      writeSummaryBox(details, data, hrT('نتيجة المراجعة الجافة {service}', {service}));
     } catch (error) {
-      renderServiceDiagnostics(service, null, "المراجعة الجافة غير جاهزة", friendlyWizardError(error.message));
+      renderServiceDiagnostics(service, null, hrT('المراجعة الجافة غير جاهزة'), friendlyWizardError(error.message));
     }
   }
 
@@ -1057,9 +1058,9 @@
         mode: "pasted_output",
         output: output ? output.value : "",
       });
-      renderServiceDiagnostics(service, data, `لم يكتمل تحقق ${service}`);
+      renderServiceDiagnostics(service, data, hrT('لم يكتمل تحقق {service}', {service}));
     } catch (error) {
-      renderServiceDiagnostics(service, null, `تعذر التحقق: ${error.message}`);
+      renderServiceDiagnostics(service, null, hrT('تعذر التحقق: {message}', {message: error.message}));
     }
   }
 
@@ -1072,10 +1073,10 @@
     card.className = `swv2-diagnostic-card ${ok ? "is-success" : "is-failed"}`;
     const title = document.createElement("strong");
     const body = document.createElement("span");
-    title.textContent = ok ? "تم تجهيز خطة الخدمة" : fallbackTitle;
+    title.textContent = ok ? hrT('تم تجهيز خطة الخدمة') : fallbackTitle;
     body.textContent = ok
-      ? "الخطة معاينة آمنة فقط وتستخدم المحركات الموجودة."
-      : "الخدمة غير مدعومة أو تحتاج مدخلات إضافية.";
+      ? hrT('الخطة معاينة آمنة فقط وتستخدم المحركات الموجودة.')
+      : hrT('الخدمة غير مدعومة أو تحتاج مدخلات إضافية.');
     card.append(title, body);
     target.appendChild(card);
   }
@@ -1115,8 +1116,8 @@
     if (status) {
       status.textContent = `${plan.service_key || selectedAddedService} · ${plan.plan_status || plan.status || "preview"}`;
     }
-    writeSummaryBox(details, data, "ملخص الخدمة الإضافية");
-    renderAddedDiagnostics(plan, "لم تكتمل خطة الخدمة");
+    writeSummaryBox(details, data, hrT('ملخص الخدمة الإضافية'));
+    renderAddedDiagnostics(plan, hrT('لم تكتمل خطة الخدمة'));
   }
 
   async function loadAddedServicesCatalog() {
@@ -1124,14 +1125,14 @@
       const data = await getJson("/admin/radius/setup-wizard/added-services/catalog");
       addedServicesCatalog = data;
       const details = page.querySelector("[data-swv2-added-json]");
-      writeSummaryBox(details, data, "كتالوج الخدمات الإضافية");
+      writeSummaryBox(details, data, hrT('كتالوج الخدمات الإضافية'));
       Object.values(data.services || {}).forEach(() => {});
       (data.services || []).forEach((service) => {
         const badge = page.querySelector(`[data-added-status="${service.key}"]`);
-        if (badge) badge.textContent = service.status ? statusText(service.status) : (service.supported ? "مدعومة" : "غير مدعومة");
+        if (badge) badge.textContent = service.status ? statusText(service.status) : (service.supported ? hrT('مدعومة') : hrT('غير مدعومة'));
       });
     } catch (error) {
-      renderAddedDiagnostics(null, `تعذر تحميل الكتالوج: ${error.message}`);
+      renderAddedDiagnostics(null, hrT('تعذر تحميل الكتالوج: {message}', {message: error.message}));
     }
   }
 
@@ -1145,7 +1146,7 @@
       });
       renderAddedPlan(data);
     } catch (error) {
-      renderAddedDiagnostics(null, `تعذر توليد الخطة: ${error.message}`);
+      renderAddedDiagnostics(null, hrT('تعذر توليد الخطة: {message}', {message: error.message}));
     }
   }
 
@@ -1160,7 +1161,7 @@
       });
       renderAddedPlan(data);
     } catch (error) {
-      renderAddedDiagnostics(null, `التجربة الجافة محظورة: ${error.message}`);
+      renderAddedDiagnostics(null, hrT('التجربة الجافة محظورة: {message}', {message: error.message}));
     }
   }
 
@@ -1172,7 +1173,7 @@
       });
       renderAddedPlan(data);
     } catch (error) {
-      renderAddedDiagnostics(null, `تعذر جلب إرشادات التحقق: ${error.message}`);
+      renderAddedDiagnostics(null, hrT('تعذر جلب إرشادات التحقق: {message}', {message: error.message}));
     }
   }
 
@@ -1208,7 +1209,7 @@
     });
     if (count) count.textContent = `${current + 1} / ${steps.length}`;
     if (prev) prev.disabled = current === 0;
-    if (next) next.textContent = current === steps.length - 1 ? "إنهاء" : "التالي";
+    if (next) next.textContent = current === steps.length - 1 ? hrT('إنهاء') : hrT('التالي');
 
     if (stepNames[current] === "internet-script") {
       generateInternetScript(false);
@@ -1237,12 +1238,12 @@
     if (!target) return;
     const text = (target.innerText || target.textContent || "").trimEnd();
     if (!text) {
-      flashButton(button, "لا يوجد نص");
+      flashButton(button, hrT('لا يوجد نص'));
       return;
     }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(
-        () => flashButton(button, "تم النسخ"),
+        () => flashButton(button, hrT('تم النسخ')),
         () => fallbackCopy(text, button)
       );
       return;
@@ -1262,9 +1263,9 @@
     area.select();
     try {
       const copied = document.execCommand("copy");
-      flashButton(button, copied ? "تم النسخ" : "تعذر النسخ");
+      flashButton(button, copied ? hrT('تم النسخ') : hrT('تعذر النسخ'));
     } catch (_) {
-      flashButton(button, "تعذر النسخ");
+      flashButton(button, hrT('تعذر النسخ'));
     } finally {
       area.remove();
     }
@@ -1290,12 +1291,12 @@
       });
       const backendOk = Boolean(data.gate_unlocked || data.status === "success");
       if (!backendOk && kind === "vpn") {
-        lastVerificationNotice = data.next_action_ar || "وصل ping من الراوتر إلى الخادم، لكن HobeRadius لم يؤكد بعد ping العكسي من الخادم إلى الراوتر.";
+        lastVerificationNotice = data.next_action_ar || hrT('وصل ping من الراوتر إلى الخادم، لكن HobeRadius لم يؤكد بعد ping العكسي من الخادم إلى الراوتر.');
       }
       return backendOk;
     } catch (error) {
       if (kind === "vpn") {
-        lastVerificationNotice = friendlyWizardError(error.message) || "تعذر فحص الربط من جهة HobeRadius.";
+        lastVerificationNotice = friendlyWizardError(error.message) || hrT('تعذر فحص الربط من جهة HobeRadius.');
       }
       return false;
     }
@@ -1335,16 +1336,16 @@
     const title = document.createElement("strong");
     const body = document.createElement("span");
     if (ok) {
-      title.textContent = kind === "vpn" ? "تم رصد إشارات الربط بنجاح" : "نتيجة الإنترنت ناجحة";
-      body.textContent = "المخرجات تحتوي على مؤشرات نجاح واضحة. أكمل للخطوة التالية.";
+      title.textContent = kind === "vpn" ? hrT('تم رصد إشارات الربط بنجاح') : hrT('نتيجة الإنترنت ناجحة');
+      body.textContent = hrT('المخرجات تحتوي على مؤشرات نجاح واضحة. أكمل للخطوة التالية.');
       if (success) success.hidden = false;
       if (kind === "vpn") markServerPeerAlreadyConnected();
       unlockNextStep(kind);
     } else {
-      title.textContent = kind === "vpn" ? "لم تكتمل إشارات الربط" : "تعذر تأكيد الإنترنت";
+      title.textContent = kind === "vpn" ? hrT('لم تكتمل إشارات الربط') : hrT('تعذر تأكيد الإنترنت');
       body.textContent = kind === "vpn"
-        ? (lastVerificationNotice || "الصق مخرجات سكربت الربط أو نتيجة handshake/ping. سنلتقط مفتاح الربط تلقائيًا إن كان موجودًا.")
-        : "راجع مخرجات ping. يكفي وصول رد واحد من الإنترنت للمتابعة، لكن انقطاع كامل أو no route يحتاج فحص الواجهة.";
+        ? (lastVerificationNotice || hrT('الصق مخرجات سكربت الربط أو نتيجة handshake/ping. سنلتقط مفتاح الربط تلقائيًا إن كان موجودًا.'))
+        : hrT('راجع مخرجات ping. يكفي وصول رد واحد من الإنترنت للمتابعة، لكن انقطاع كامل أو no route يحتاج فحص الواجهة.');
     }
     card.append(title, body);
     diagnostics.appendChild(card);
@@ -1507,11 +1508,11 @@
     row.className = "swv2-finalize-step swv2-finalize-step--" + cls;
     const icon = ok ? "✓" : failed ? "✗" : "⋯";
     const name = {
-      "auto_detect": "اكتشاف مفتاح الراوتر",
-      "locate_peer": "تحديد سجل peer",
-      "dry_run":     "توليد الخطّة",
-      "apply":       "كتابة الـ peer على الخادم",
-      "verify":      "التحقّق من handshake",
+      "auto_detect": hrT('اكتشاف مفتاح الراوتر'),
+      "locate_peer": hrT('تحديد سجل peer'),
+      "dry_run":     hrT('توليد الخطّة'),
+      "apply":       hrT('كتابة الـ peer على الخادم'),
+      "verify":      hrT('التحقّق من handshake'),
     }[step.step] || step.step;
     row.innerHTML =
       `<span class="swv2-finalize-step__icon">${icon}</span>` +
@@ -1528,13 +1529,13 @@
     let html;
     if (data.ok && data.final_status === "verified_handshake") {
       cls = "ok";
-      html = `🎉 ${data.reason_ar || "تمّ التجهيز بنجاح."}`;
+      html = `🎉 ${data.reason_ar || hrT('تمّ التجهيز بنجاح.')}`;
     } else if (data.ok) {
       cls = "pending";
-      html = `⏳ ${data.reason_ar || "تمّ التطبيق. بانتظار التأكيد."}`;
+      html = `⏳ ${data.reason_ar || hrT('تمّ التطبيق. بانتظار التأكيد.')}`;
     } else {
       cls = "failed";
-      html = `❌ ${data.reason_ar || "تعذّر التجهيز."}`;
+      html = `❌ ${data.reason_ar || hrT('تعذّر التجهيز.')}`;
     }
     resultBox.className =
       "swv2-auto-finalize-result swv2-auto-finalize-result--" + cls;
@@ -1568,7 +1569,7 @@
         resultBox.className =
           "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
         resultBox.innerHTML =
-          "❌ ألصق مخرجات /interface wireguard print detail أوّلاً.";
+          hrT('❌ ألصق مخرجات /interface wireguard print detail أوّلاً.');
         return;
       }
       body = { pasted_output: pasted };
@@ -1583,7 +1584,7 @@
         resultBox.className =
           "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
         resultBox.innerHTML =
-          "❌ املأ عنوان الراوتر واسم المستخدم وكلمة المرور أوّلاً.";
+          hrT('❌ املأ عنوان الراوتر واسم المستخدم وكلمة المرور أوّلاً.');
         return;
       }
       body = {
@@ -1604,7 +1605,7 @@
       resultBox.className =
         "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
       resultBox.innerHTML =
-        "❌ لا يوجد wizard run نشط. ابدأ المعالج من البداية.";
+        hrT('❌ لا يوجد wizard run نشط. ابدأ المعالج من البداية.');
       return;
     }
 
@@ -1644,7 +1645,7 @@
       resultBox.className =
         "swv2-auto-finalize-result swv2-auto-finalize-result--failed";
       resultBox.innerHTML =
-        `❌ خطأ في الاتصال: ${err && err.message ? err.message : err}`;
+        hrT('❌ خطأ في الاتصال: {err}', {err: err && err.message ? err.message : err});
     } finally {
       btn.disabled = false;
       spinner.hidden = true;

@@ -14,7 +14,7 @@
 {% block title %}{{ _("فشل دخول الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}{{ _("فشل دخول الشبكة") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} محاولة فاشلة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s محاولة فاشلة', total=total) }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المحاولات #}
@@ -27,21 +27,21 @@
 
 {# ── تعريب ردود المصادقة وأسباب الرفض — القيمة الخام تبقى في title ── #}
 {% set REPLY_AR = {
-  'Access-Reject':    'رفض',
-  'Access-Challenge': 'تحقّق إضافي',
-  'Accounting-Response': 'ردّ محاسبة',
+  'Access-Reject':    _('رفض'),
+  'Access-Challenge': _('تحقّق إضافي'),
+  'Accounting-Response': _('ردّ محاسبة'),
 } %}
 {% set REASON_AR = {
-  'expired':         'اشتراك منتهٍ',
-  'disabled':        'حساب معطّل',
-  'no_plan':         'بدون باقة',
-  'out_of_schedule': 'خارج وقت السماح',
-  'mac_locked':      'عنوان الجهاز غير مطابق',
-  'quota_exceeded':  'تجاوز الحصة',
-  'concurrency':     'تجاوز عدد الأجهزة',
-  'bad_password':    'كلمة مرور خاطئة',
-  'unknown_user':    'مستخدم غير معروف',
-  'not_found':       'غير موجود',
+  'expired':         _('اشتراك منتهٍ'),
+  'disabled':        _('حساب معطّل'),
+  'no_plan':         _('بدون باقة'),
+  'out_of_schedule': _('خارج وقت السماح'),
+  'mac_locked':      _('عنوان الجهاز غير مطابق'),
+  'quota_exceeded':  _('تجاوز الحصة'),
+  'concurrency':     _('تجاوز عدد الأجهزة'),
+  'bad_password':    _('كلمة مرور خاطئة'),
+  'unknown_user':    _('مستخدم غير معروف'),
+  'not_found':       _('غير موجود'),
 } %}
 
 {# ── مؤشرات مشتقة من نفس المعطيات (بلا أي استعلام إضافي في القالب) ── #}
@@ -57,16 +57,16 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="failed-logins-hero">
 {% call hub.megahero(
-  "فشل دخول الشبكة",
-  subtitle="كل محاولة اتصال بالشبكة رُفضت — من رفضها (جهاز الشبكة)، ولماذا، ومتى. تُجمع مباشرة من سجل المصادقة.",
+  _('فشل دخول الشبكة'),
+  subtitle=_('كل محاولة اتصال بالشبكة رُفضت — من رفضها (جهاز الشبكة)، ولماذا، ومتى. تُجمع مباشرة من سجل المصادقة.'),
   icon="triangle-exclamation",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق',     'value': total,       'icon': 'triangle-exclamation', 'variant': 'brand',
-     'sub': 'يُعرض حتى ' ~ limit ~ ' من الأحدث'},
-    {'label': 'آخر 24 ساعة',        'value': last24,      'icon': 'clock',        'variant': 'red'},
-    {'label': 'مستخدمون متأثرون',   'value': _uniq_users, 'icon': 'users',        'variant': 'amber'},
-    {'label': 'أجهزة شبكة',         'value': _uniq_nas,   'icon': 'network-wired','variant': 'blue'},
+    {'label': _('إجمالي المطابق'),     'value': total,       'icon': 'triangle-exclamation', 'variant': 'brand',
+     'sub': _('يُعرض حتى %(limit)s من الأحدث', limit=limit)},
+    {'label': _('آخر 24 ساعة'),        'value': last24,      'icon': 'clock',        'variant': 'red'},
+    {'label': _('مستخدمون متأثرون'),   'value': _uniq_users, 'icon': 'users',        'variant': 'amber'},
+    {'label': _('أجهزة شبكة'),         'value': _uniq_nas,   'icon': 'network-wired','variant': 'blue'},
   ],
   search_action=url_for('radius.rep_failed_logins')
 ) %}
@@ -77,20 +77,20 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_failed_logins') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم المستخدم أو جهاز الشبكة أو رمز السبب، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى {{ limit }} محاولة من الأحدث للأقدم، والبيانات للقراءة فقط من جدول radpostauth."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق اسم المستخدم أو جهاز الشبكة أو رمز السبب، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى %(limit)s محاولة من الأحدث للأقدم، والبيانات للقراءة فقط من جدول radpostauth.', limit=limit) }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول المحاولات الفاشلة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("سجل المحاولات الفاشلة", icon="table-list",
-                    meta=(items|length|string) ~ (" من " ~ total if total > items|length else " محاولة"), flush=True) %}
+{% call hub.section(_('سجل المحاولات الفاشلة'), icon="table-list",
+                    meta=(items|length|string) ~ (_(' من %(total)s', total=total) if total > items|length else _(' محاولة')), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -116,7 +116,7 @@
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title للمراجعة الفنية #}
-          <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, 'رفض غير معروف') if r.reply else '—', variant="red") }}</span></td>
+          <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, _('رفض غير معروف')) if r.reply else '—', variant="red") }}</span></td>
           {# السبب معرّب عبر الخريطة الموحّدة (login_events.reason_label) المحقونة
              في المسار كـ reason_ar — أي رمز غير معروف يُؤنَّس، لا snake_case خام.
              الرمز الخام يبقى في title للمراجعة الفنية. #}
@@ -137,8 +137,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا محاولات فاشلة مطابقة",
-  sub="إمّا أن الشبكة هادئة ولم يُرفض أحد بعد، أو أن الفلاتر ضيّقة — جرّب توسيعها.",
+  _('لا محاولات فاشلة مطابقة'),
+  sub=_('إمّا أن الشبكة هادئة ولم يُرفض أحد بعد، أو أن الفلاتر ضيّقة — جرّب توسيعها.'),
   icon="shield-halved"
 ) }}
 {% endif %}

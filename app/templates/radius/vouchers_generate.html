@@ -9,8 +9,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "توليد دفعة كوبونات",
-  subtitle="إنشاء دفعة كوبونات بقيمة محددة وربطها اختياريًا بباقة وتاريخ انتهاء",
+  _('توليد دفعة كوبونات'),
+  subtitle=_('إنشاء دفعة كوبونات بقيمة محددة وربطها اختياريًا بباقة وتاريخ انتهاء'),
   icon="wand-magic-sparkles",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.vch_list') + '">
@@ -20,7 +20,7 @@
 ) }}
 
 <form method="post">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
-  {% call hub.section("معطيات الدفعة", icon="sliders") %}
+  {% call hub.section(_('معطيات الدفعة'), icon="sliders") %}
     <div class="hub-form">
       <div class="hub-field">
         <label class="hub-field-label" for="hub-f-count">{{ _('عدد الكوبونات') }} <span class="req">*</span></label>
@@ -65,8 +65,8 @@
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
-    {{ hub.btn("توليد الكوبونات", icon="wand-magic-sparkles", variant="primary", type="submit") }}
-    {% if can_submit('radius.vch_list', 'GET') %}{{ hub.btn("إلغاء", href=url_for('radius.vch_list'), variant="secondary") }}{% endif %}
+    {{ hub.btn(_('توليد الكوبونات'), icon="wand-magic-sparkles", variant="primary", type="submit") }}
+    {% if can_submit('radius.vch_list', 'GET') %}{{ hub.btn(_('إلغاء'), href=url_for('radius.vch_list'), variant="secondary") }}{% endif %}
   </div>
 {% if not can_post_here() %}</fieldset>{% endif %}</form>
 

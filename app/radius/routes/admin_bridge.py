@@ -1,5 +1,6 @@
 """Read-only admin page for the local V40 bridge status surface."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 from typing import Any, Callable
@@ -57,7 +58,7 @@ def license_file_portal_sso():
     if not result.get("ok"):
         # Transport-level failure (timeout / disabled / config / network).
         status = _sync_status_label(result.get("status"))
-        flash(f"تعذّر فتح بوابة العميل: {status}.", "error")
+        flash(_tr('تعذّر فتح بوابة العميل: %(status)s.', status=status), "error")
         return redirect(url_for("radius.license_file"))
 
     response = _inner
@@ -71,7 +72,7 @@ def license_file_portal_sso():
     reason = str(response.get("message") or "").strip()
     if not reason:
         status = response.get("status") or result.get("status")
-        reason = f"تعذّر فتح بوابة العميل: {_sync_status_label(status)}."
+        reason = _tr('تعذّر فتح بوابة العميل: %(v)s.', v=_sync_status_label(status))
     current_app.logger.warning("portal-sso: no SSO link returned — %s", reason)
     flash(reason, "error")
     return redirect(url_for("radius.license_file"))
@@ -137,64 +138,64 @@ def admin_bridge():
 
     bridge_cards = [
         {
-            "title": "حالة السعة",
+            "title": _tr("حالة السعة"),
             "icon": "gauge-high",
-            "status": "جاهز لمراجعة الربط",
-            "note": "قراءة محلية فقط من آخر عقد سعة محفوظ.",
+            "status": N_("جاهز لمراجعة الربط"),
+            "note": _tr("قراءة محلية فقط من آخر عقد سعة محفوظ."),
         },
         {
-            "title": "تقارير الاستخدام",
+            "title": _tr("تقارير الاستخدام"),
             "icon": "chart-simple",
-            "status": "وضع جاف",
-            "note": "تجهيز وقياس محلي بدون إرسال تلقائي من هذه الصفحة.",
+            "status": N_("وضع جاف"),
+            "note": _tr("تجهيز وقياس محلي بدون إرسال تلقائي من هذه الصفحة."),
         },
         {
-            "title": "نبضات الصحة",
+            "title": _tr("نبضات الصحة"),
             "icon": "heart-pulse",
-            "status": "يحتاج تأكيد عقود الإدارة",
-            "note": "يعرض حالة محلية ولا ينفذ POST أو اتصال بعيد.",
+            "status": N_("يحتاج تأكيد عقود الإدارة"),
+            "note": _tr("يعرض حالة محلية ولا ينفذ POST أو اتصال بعيد."),
         },
         {
-            "title": "النسخ الاحتياطي",
+            "title": _tr("النسخ الاحتياطي"),
             "icon": "database",
-            "status": "مفعّل",
-            "note": "نسخ محلّي + رفع إلى جوجل درايف من صفحة «النسخ الاحتياطي».",
+            "status": N_("مفعّل"),
+            "note": _tr("نسخ محلّي + رفع إلى جوجل درايف من صفحة «النسخ الاحتياطي»."),
             "action_url": url_for("radius.backups") if _endpoint_exists("radius.backups") else "",
-            "action_label": "إدارة النسخ الاحتياطي",
+            "action_label": _tr("إدارة النسخ الاحتياطي"),
         },
         {
-            "title": "طلبات الاستعادة",
+            "title": _tr("طلبات الاستعادة"),
             "icon": "clock-rotate-left",
-            "status": ("جاهز للتطبيق" if _restore_apply_enabled() else "بانتظار تفعيلك"),
+            "status": (N_("جاهز للتطبيق") if _restore_apply_enabled() else N_("بانتظار تفعيلك")),
             "note": (
-                "الاستعادة الفعلية تستبدل قاعدة البيانات بعد نسخة وقاية + تحقّق "
-                "بصمة. التطبيق المباشر مفعّل."
+                _tr("الاستعادة الفعلية تستبدل قاعدة البيانات بعد نسخة وقاية + تحقّق "
+                "بصمة. التطبيق المباشر مفعّل.")
                 if _restore_apply_enabled() else
-                "الاستعادة الفعلية جاهزة لكنها مقفلة بعلم الأمان "
-                "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED — فعّله من إعدادات النظام."),
+                _tr("الاستعادة الفعلية جاهزة لكنها مقفلة بعلم الأمان "
+                "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED — فعّله من إعدادات النظام.")),
         },
         {
-            "title": "تفعيل الخدمات وتغيير Public IP",
+            "title": _tr("تفعيل الخدمات وتغيير Public IP"),
             "icon": "toggle-on",
-            "status": ("جاهز للتطبيق" if _public_ip_apply_enabled() else "بانتظار تفعيلك"),
+            "status": (N_("جاهز للتطبيق") if _public_ip_apply_enabled() else N_("بانتظار تفعيلك")),
             "note": (
-                "تغيير عنوان الإنترنت العام يطبّق قاعدة src-nat موسومة على الراوتر. "
-                "التطبيق المباشر مفعّل."
+                _tr("تغيير عنوان الإنترنت العام يطبّق قاعدة src-nat موسومة على الراوتر. "
+                "التطبيق المباشر مفعّل.")
                 if _public_ip_apply_enabled() else
-                "التطبيق المباشر مقفل بعلم الأمان "
-                "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED — فعّله من إعدادات النظام."),
+                _tr("التطبيق المباشر مقفل بعلم الأمان "
+                "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED — فعّله من إعدادات النظام.")),
         },
         {
-            "title": "سجل أحداث الجسر",
+            "title": _tr("سجل أحداث الجسر"),
             "icon": "list-check",
-            "status": "جاهز لمراجعة الربط",
-            "note": "عرض أحداث محلية مقنعة بدون أسرار.",
+            "status": N_("جاهز لمراجعة الربط"),
+            "note": _tr("عرض أحداث محلية مقنعة بدون أسرار."),
         },
         {
-            "title": "أحداث المحاسبة",
+            "title": _tr("أحداث المحاسبة"),
             "icon": "receipt",
-            "status": "وضع جاف",
-            "note": "عدادات وكوتة استشارية فقط، بلا تغيير RADIUS مباشر.",
+            "status": N_("وضع جاف"),
+            "note": _tr("عدادات وكوتة استشارية فقط، بلا تغيير RADIUS مباشر."),
         },
     ]
 
@@ -277,10 +278,10 @@ def license_file_config():
     worker_enabled = bool(request.form.get("worker_enabled"))
 
     if base_url and not base_url.lower().startswith(("http://", "https://")):
-        flash("رابط لوحة التراخيص يجب أن يبدأ باتصال ويب صحيح.", "error")
+        flash(_tr("رابط لوحة التراخيص يجب أن يبدأ باتصال ويب صحيح."), "error")
         return redirect(url_for("radius.license_file"))
     if base_url.lower().startswith("http://") and request.form.get("identity_sync_enabled"):
-        flash("مزامنة الهوية وكلمات المرور تحتاج رابطًا آمنًا للوحة التراخيص.", "error")
+        flash(_tr("مزامنة الهوية وكلمات المرور تحتاج رابطًا آمنًا للوحة التراخيص."), "error")
         return redirect(url_for("radius.license_file"))
 
     updates = {
@@ -295,7 +296,7 @@ def license_file_config():
     if license_key:
         updates["license_admin_bridge.license_key"] = license_key
     elif not config.license_key:
-        flash("انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص ثم الصقه هنا.", "error")
+        flash(_tr("انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص ثم الصقه هنا."), "error")
         return redirect(url_for("radius.license_file"))
 
     # ── change detection with SEMANTIC equivalence ─────────────────
@@ -338,9 +339,9 @@ def license_file_config():
             target_id=str(tenant_id),
             payload={"changed": changed},
         )
-        flash("تم حفظ بيانات الربط. شغّل المزامنة الآن ليأخذ الريدياس الترخيص والصلاحيات من لوحة التراخيص.", "success")
+        flash(_tr("تم حفظ بيانات الربط. شغّل المزامنة الآن ليأخذ الريدياس الترخيص والصلاحيات من لوحة التراخيص."), "success")
     else:
-        flash("لا توجد تغييرات في بيانات الربط.", "info")
+        flash(_tr("لا توجد تغييرات في بيانات الربط."), "info")
 
     # ── env-override diagnostic ────────────────────────────────────
     # The display reads ``config.enabled`` via ``bridge_flag``, which
@@ -353,10 +354,10 @@ def license_file_config():
     env_raw = (os.environ.get("HOBERADIUS_ADMIN_BRIDGE_ENABLED") or "").strip()
     if bridge_wanted_on and env_raw and env_raw.lower() not in {"1", "true", "yes", "on"}:
         flash(
-            "تنبيه: متغيّر البيئة HOBERADIUS_ADMIN_BRIDGE_ENABLED="
-            + env_raw + " يَفرض إيقاف الجسر بعد الحفظ ويَتجاوز إعداد "
+            _tr("تنبيه: متغيّر البيئة HOBERADIUS_ADMIN_BRIDGE_ENABLED=")
+            + env_raw + _tr(" يَفرض إيقاف الجسر بعد الحفظ ويَتجاوز إعداد "
             "قاعدة البيانات. احذف هذا المتغيّر أو اضبطه على 1 وأعد "
-            "تشغيل الخدمة.", "error",
+            "تشغيل الخدمة."), "error",
         )
 
     # ── worker auto-start (simple-flow semantics) ──────────────────
@@ -370,7 +371,7 @@ def license_file_config():
 
             start_admin_bridge_sync_worker()
         except Exception:  # noqa: BLE001
-            flash("تم الحفظ، لكن تعذّر تشغيل عامل المزامنة الآن. أعد تحميل الصفحة أو راجع حالة الخدمة.", "error")
+            flash(_tr("تم الحفظ، لكن تعذّر تشغيل عامل المزامنة الآن. أعد تحميل الصفحة أو راجع حالة الخدمة."), "error")
     return redirect(url_for("radius.license_file"))
 
 
@@ -382,11 +383,11 @@ def license_file_service_request():
     from ..db.repos import audit_repo
     from ..services.admin_panel_client import AdminPanelClient
 
-    service_name = (request.form.get("service_name") or "خدمة").strip()[:160]
+    service_name = (request.form.get("service_name") or N_("خدمة")).strip()[:160]
     service_key = (request.form.get("service_key") or service_name).strip()[:80]
     note = (request.form.get("note") or "").strip()[:500]
     if not service_key:
-        flash("لم يتم تحديد الخدمة المطلوبة.", "error")
+        flash(_tr("لم يتم تحديد الخدمة المطلوبة."), "error")
         return redirect(url_for("radius.license_file"))
     audit_repo.record(
         tenant_id=tenant_id,
@@ -399,17 +400,17 @@ def license_file_service_request():
     result = AdminPanelClient().post_customer_service_request(
         service_key=service_key,
         request_type="activation",
-        notes=note or f"طلب تفعيل من صفحة ترخيص النظام في الريدياس: {service_name}",
+        notes=note or _tr('طلب تفعيل من صفحة ترخيص النظام في الريدياس: %(service_name)s', service_name=service_name),
     )
     if result.get("ok"):
         response = result.get("response") or {}
         service_request = response.get("service_request") if isinstance(response, dict) else {}
         reference = service_request.get("reference") if isinstance(service_request, dict) else ""
-        suffix = f" رقم الطلب: {reference}" if reference else ""
-        flash(f"تم إرسال طلب تفعيل «{service_name}» إلى لوحة التراخيص.{suffix} ستتم مراجعته وتحديث عقدك عند الموافقة.", "success")
+        suffix = _tr(' رقم الطلب: %(reference)s', reference=reference) if reference else ""
+        flash(_tr('تم إرسال طلب تفعيل «%(service_name)s» إلى لوحة التراخيص.%(suffix)s ستتم مراجعته وتحديث عقدك عند الموافقة.', service_name=service_name, suffix=suffix), "success")
     else:
         status = _sync_status_label(result.get("status"))
-        flash(f"تعذر إرسال الطلب إلى لوحة التراخيص: {status}. تأكد من رابط HTTPS وسر الربط ثم أعد المحاولة.", "error")
+        flash(_tr('تعذر إرسال الطلب إلى لوحة التراخيص: %(status)s. تأكد من رابط HTTPS وسر الربط ثم أعد المحاولة.', status=status), "error")
     return redirect(url_for("radius.license_file"))
 
 
@@ -423,9 +424,9 @@ def license_file_sync():
         result = LicenseAdminRuntimeSyncService().sync_once(tenant_id=tenant_id)
         runtime_ok = bool(result.get("ok"))
         flash(
-            "تمت مزامنة عقد التشغيل."
+            _tr("تمت مزامنة عقد التشغيل.")
             if runtime_ok
-            else f"تعذرت مزامنة عقد التشغيل: {_sync_status_label(result.get('status'))}",
+            else _tr('تعذرت مزامنة عقد التشغيل: %(v)s', v=_sync_status_label(result.get('status'))),
             "success" if runtime_ok else "error",
         )
     if action in {"identity", "both"}:
@@ -433,9 +434,9 @@ def license_file_sync():
 
         result = LicenseAdminIdentitySyncService().sync_once(tenant_id=tenant_id)
         flash(
-            "تمت مزامنة الهوية."
+            _tr("تمت مزامنة الهوية.")
             if result.get("ok")
-            else f"تعذرت مزامنة الهوية: {_sync_status_label(result.get('status'))}",
+            else _tr('تعذرت مزامنة الهوية: %(v)s', v=_sync_status_label(result.get('status'))),
             "success" if result.get("ok") else "error",
         )
 
@@ -454,15 +455,15 @@ def license_file_sync():
             if hb.get("ok") and hb.get("provisioned"):
                 masked = hb.get("provisioned_secret_masked") or ""
                 flash(
-                    "تم توفير مثيل RADIUS تلقائيًّا في لوحة التراخيص "
-                    "وحفظ السرّ المُولَّد محلّيًّا (مقنَّع: " + masked + ").",
+                    _tr("تم توفير مثيل RADIUS تلقائيًّا في لوحة التراخيص "
+                    "وحفظ السرّ المُولَّد محلّيًّا (مقنَّع: ") + masked + ").",
                     "success",
                 )
             elif not hb.get("ok"):
                 flash(
-                    "تَعذَّر إرسال نَبضة المزامنة للوحة التراخيص: "
-                    + _sync_status_label(hb.get("status")) + ". المثيل قد "
-                    "لا يظهر تلقائيًّا في لوحة الراديوس.",
+                    _tr("تَعذَّر إرسال نَبضة المزامنة للوحة التراخيص: ")
+                    + _sync_status_label(hb.get("status")) + _tr(". المثيل قد "
+                    "لا يظهر تلقائيًّا في لوحة الراديوس."),
                     "info",
                 )
         except Exception:  # noqa: BLE001
@@ -481,43 +482,43 @@ def _bridge_flag(env_name: str, setting_key: str) -> bool:
 def _sync_status_label(status: Any) -> str:
     labels = {
         # ── success statuses (shouldn't appear as errors, but handle defensively) ──
-        "ok":       "تمت المزامنة",
-        "active":   "الترخيص نشط",
-        "valid":    "الترخيص صالح",
-        "healthy":  "الجسر يعمل بشكل سليم",
-        "grace":    "الترخيص في فترة السماح — يُرجى التجديد قريبًا",
+        "ok":       N_("تمت المزامنة"),
+        "active":   N_("الترخيص نشط"),
+        "valid":    N_("الترخيص صالح"),
+        "healthy":  N_("الجسر يعمل بشكل سليم"),
+        "grace":    N_("الترخيص في فترة السماح — يُرجى التجديد قريبًا"),
         # ── error statuses ──
-        "blocked":             "الترخيص محظور",
-        "config_missing":      "إعدادات الربط غير مكتملة",
+        "blocked":             N_("الترخيص محظور"),
+        "config_missing":      N_("إعدادات الربط غير مكتملة"),
         # NEW (يونيو 2026) — لوحة التراخيص أرجعت 403 + reason=customer_pending
         # لأنّ بطاقة العميل في اللوحة لم تُفعَّل بعد. نُظهر الرسالة الواضحة
         # التي يَطلبها المالك بدل «403 raw» المُربك. الإصلاح في صفحة العميل
         # في لوحة التراخيص نفسها — ليس في الريدياس.
-        "customer_pending":    "حساب العميل غير مفعّل بعد في لوحة التراخيص — فعّله من صفحة العميل هناك ثم أعد المحاولة.",
-        "customer_inactive":   "حساب العميل غير مفعّل في لوحة التراخيص — فعّله من صفحة العميل ثم أعد المحاولة.",
-        "disabled":            "الجسر غير مفعّل",
-        "denied":              "فشل التحقق من مفتاح الترخيص أو سر الربط",
-        "unauthorized":        "مفتاح الترخيص مرفوض من لوحة التراخيص — تحقّق من نسخه كاملاً",
-        "expired":             "الترخيص منتهي",
-        "fingerprint_denied":  "بصمة الخادم غير مسموحة",
-        "https_required":      "الاتصال الآمن (HTTPS) مطلوب",
-        "inactive":            "الترخيص غير نشط",
-        "invalid_payload":     "رد لوحة التراخيص غير مكتمل أو تنسيقه غير متوقع",
-        "invalid_request":     "طلب المزامنة غير مكتمل",
-        "local_account":       "الحساب محلي ولا يُدار عبر لوحة التراخيص",
-        "no_user":             "لا يوجد مستخدم لبوابة العميل بعد — أنشئ مستخدم بوابة لهذا العميل في لوحة التراخيص (أو اطلب منه التسجيل) ثم أعد المحاولة.",
-        "not_found":           "لم يتم العثور على الترخيص",
-        "rate_limited":        "تم تجاوز عدد الطلبات المسموح — حاول بعد قليل",
-        "revoked":             "الترخيص ملغي",
-        "suspended":           "الترخيص موقوف",
-        "timeout":             "انتهت مهلة الاتصال بلوحة التراخيص",
-        "unavailable":         "لوحة التراخيص غير متاحة الآن",
-        "unknown":             "حالة غير معروفة",
+        "customer_pending":    N_("حساب العميل غير مفعّل بعد في لوحة التراخيص — فعّله من صفحة العميل هناك ثم أعد المحاولة."),
+        "customer_inactive":   N_("حساب العميل غير مفعّل في لوحة التراخيص — فعّله من صفحة العميل ثم أعد المحاولة."),
+        "disabled":            N_("الجسر غير مفعّل"),
+        "denied":              N_("فشل التحقق من مفتاح الترخيص أو سر الربط"),
+        "unauthorized":        N_("مفتاح الترخيص مرفوض من لوحة التراخيص — تحقّق من نسخه كاملاً"),
+        "expired":             N_("الترخيص منتهي"),
+        "fingerprint_denied":  N_("بصمة الخادم غير مسموحة"),
+        "https_required":      N_("الاتصال الآمن (HTTPS) مطلوب"),
+        "inactive":            N_("الترخيص غير نشط"),
+        "invalid_payload":     N_("رد لوحة التراخيص غير مكتمل أو تنسيقه غير متوقع"),
+        "invalid_request":     N_("طلب المزامنة غير مكتمل"),
+        "local_account":       N_("الحساب محلي ولا يُدار عبر لوحة التراخيص"),
+        "no_user":             N_("لا يوجد مستخدم لبوابة العميل بعد — أنشئ مستخدم بوابة لهذا العميل في لوحة التراخيص (أو اطلب منه التسجيل) ثم أعد المحاولة."),
+        "not_found":           N_("لم يتم العثور على الترخيص"),
+        "rate_limited":        N_("تم تجاوز عدد الطلبات المسموح — حاول بعد قليل"),
+        "revoked":             N_("الترخيص ملغي"),
+        "suspended":           N_("الترخيص موقوف"),
+        "timeout":             N_("انتهت مهلة الاتصال بلوحة التراخيص"),
+        "unavailable":         N_("لوحة التراخيص غير متاحة الآن"),
+        "unknown":             N_("حالة غير معروفة"),
     }
     raw = str(status or "unknown").strip().lower()
     if raw in labels:
         return labels[raw]
-    return "حالة غير معروفة من لوحة التراخيص"
+    return N_("حالة غير معروفة من لوحة التراخيص")
 
 
 # ── REMOVED 2026-06-11 ───────────────────────────────────────────────────────

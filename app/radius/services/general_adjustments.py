@@ -14,6 +14,7 @@ real run then reported raw English per-user errors («minutes»). Now:
 * ``run()`` executes and reports Arabic per-user errors.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from datetime import datetime, timedelta
 from typing import Any
@@ -28,10 +29,10 @@ MAX_USERNAMES = 500
 # real run refused. Read per request: limits.max_extend_minutes().
 
 _ACTION_LABELS = {
-    "disable": "تعطيل",
-    "enable": "تفعيل",
-    "extend": "إضافة وقت",
-    "reset_password": "تغيير كلمة المرور",
+    "disable": N_("تعطيل"),
+    "enable": N_("تفعيل"),
+    "extend": N_("إضافة وقت"),
+    "reset_password": N_("تغيير كلمة المرور"),
 }
 
 
@@ -60,12 +61,12 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
     raises ``RadiusValidationError`` (Arabic)."""
     act = str(action or "").strip()
     if act not in ACTIONS:
-        raise RadiusValidationError("إجراء التعديل غير معروف.")
+        raise RadiusValidationError(_tr("إجراء التعديل غير معروف."))
     if not usernames:
-        raise RadiusValidationError("أدخل اسم مستخدم واحدًا على الأقل.")
+        raise RadiusValidationError(_tr("أدخل اسم مستخدم واحدًا على الأقل."))
     if len(usernames) > MAX_USERNAMES:
         raise RadiusValidationError(
-            f"عدد أسماء المستخدمين كبير جدًا لطلب واحد (الحدّ {MAX_USERNAMES}).")
+            _tr('عدد أسماء المستخدمين كبير جدًا لطلب واحد (الحدّ %(MAX_USERNAMES)s).', MAX_USERNAMES=MAX_USERNAMES))
     params: dict[str, Any] = {"action": act}
     if act == "extend":
         if isinstance(minutes, bool):
@@ -73,9 +74,9 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
         try:
             mins = int(str(minutes).strip()) if minutes not in (None, "") else 0
         except (TypeError, ValueError):
-            raise RadiusValidationError("عدد الدقائق يجب أن يكون رقمًا صحيحًا.") from None
+            raise RadiusValidationError(_tr("عدد الدقائق يجب أن يكون رقمًا صحيحًا.")) from None
         if mins <= 0:
-            raise RadiusValidationError("أدخل عدد الدقائق المراد إضافتها (أكبر من صفر).")
+            raise RadiusValidationError(_tr("أدخل عدد الدقائق المراد إضافتها (أكبر من صفر)."))
         if mins > limits.max_extend_minutes():
             # F03 N4: the owner's per-operation rule, up front (422) — the
             # preview listed +416 days as «ok» and the real run then failed
@@ -85,7 +86,7 @@ def validate_request(action: Any, usernames: list[str], *, minutes: Any = None,
     if act == "reset_password":
         pw = "" if new_password is None else str(new_password)
         if not pw.strip():
-            raise RadiusValidationError("كلمة المرور الجديدة مطلوبة.")
+            raise RadiusValidationError(_tr("كلمة المرور الجديدة مطلوبة."))
         from .users import validate_new_password
         validate_new_password(pw)
         params["new_password"] = pw
@@ -119,16 +120,16 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
         row = rows.get(name)
         if row is None:
             items.append({"username": name, "ok": False, "status": "not_found",
-                          "error": "المستخدم غير موجود."})
+                          "error": _tr("المستخدم غير موجود.")})
             continue
         item: dict[str, Any] = {"username": name, "ok": True, "status": "ok",
                                 "current_status": row.get("status")}
         if act == "disable" and row.get("status") == "disabled":
             item["status"] = "no_change"
-            item["note"] = "معطّل مسبقًا."
+            item["note"] = N_("معطّل مسبقًا.")
         elif act == "enable" and row.get("status") == "enabled":
             item["status"] = "no_change"
-            item["note"] = "مفعّل مسبقًا."
+            item["note"] = N_("مفعّل مسبقًا.")
         elif act == "extend":
             cur = parse_dt(row.get("expire_at")) if row.get("expire_at") else None
             if cur is not None and cur.tzinfo is not None:
@@ -164,10 +165,10 @@ def plan(tenant_id: int, usernames: list[str], params: dict) -> dict:
 
 def _error_text(exc: Exception) -> str:
     if isinstance(exc, RadiusNotFound):
-        return "المستخدم غير موجود."
+        return N_("المستخدم غير موجود.")
     if isinstance(exc, RadiusError):
         return getattr(exc, "message", None) or str(exc)
-    return "تعذّر تنفيذ الإجراء على هذا المستخدم."
+    return N_("تعذّر تنفيذ الإجراء على هذا المستخدم.")
 
 
 def run(usernames: list[str], params: dict, *, actor: str) -> dict:

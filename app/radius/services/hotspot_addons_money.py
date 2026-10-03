@@ -6,6 +6,7 @@
 مؤقّتًا ثم تعيد تمكينه (لا تكسر تسجيل الدخول أبدًا).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -37,7 +38,7 @@ def _frag_sponsor(cfg: dict, ctx: dict) -> str:
     if not img:
         return ""
     click = safe_url(cfg.get("click_url", ""))
-    label = _esc(cfg.get("label") or "إعلان")
+    label = _esc(cfg.get("label") or N_("إعلان"))
     inner = (f'<img src="{_esc(img)}" alt="{label}" '
              'style="width:100%;display:block;border-radius:12px">')
     if click:
@@ -52,14 +53,14 @@ def _frag_sponsor(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="sponsor_banner", category=CAT_MONETIZATION, label_ar="لافتة راعٍ",
-    desc_ar="لافتة إعلانية (صورة قابلة للنقر مع تتبّع) قبل الدخول — نطاقاتها تُفتح تلقائيًّا.",
+    key="sponsor_banner", category=CAT_MONETIZATION, label_ar=N_("لافتة راعٍ"),
+    desc_ar=N_("لافتة إعلانية (صورة قابلة للنقر مع تتبّع) قبل الدخول — نطاقاتها تُفتح تلقائيًّا."),
     surface=SURFACE_PRELOGIN, icon="rectangle-ad",
     fields=(
-        AddonField(key="label", label_ar="وسم الإعلان", default="إعلان", max_len=24),
-        AddonField(key="image_url", label_ar="رابط صورة اللافتة", kind="url",
+        AddonField(key="label", label_ar=N_("وسم الإعلان"), default=N_("إعلان"), max_len=24),
+        AddonField(key="image_url", label_ar=N_("رابط صورة اللافتة"), kind="url",
                    placeholder="https://cdn.example.com/ad.jpg"),
-        AddonField(key="click_url", label_ar="رابط النقر (اختياري)", kind="url"),
+        AddonField(key="click_url", label_ar=N_("رابط النقر (اختياري)"), kind="url"),
     ),
     pre_fragment=_frag_sponsor))
 
@@ -85,21 +86,21 @@ def _frag_watch_ad(cfg: dict, ctx: dict) -> str:
         "<script>(function(){var v=document.getElementById('hr-ad-v');"
         + _DISABLE_SUBMIT +
         "function go(){" + _ENABLE_SUBMIT +
-        "var n=document.getElementById('hr-ad-note');if(n)n.textContent='يمكنك الدخول الآن.';}"
-        "if(!v){go();return;}v.addEventListener('ended',go);"
+        N_("var n=document.getElementById('hr-ad-note');if(n)n.textContent='يمكنك الدخول الآن.';}"
+        "if(!v){go();return;}v.addEventListener('ended',go);")
         + (f"setTimeout(go,{skip*1000});" if skip > 0 else "") +
         "})();</script>")
 
 
 register(AddonSpec(
-    key="watch_ad", category=CAT_MONETIZATION, label_ar="شاهد إعلانًا للدخول",
-    desc_ar="فيديو إعلاني مستضاف على الراوتر (يعمل أوفلاين) يبوّب زر الدخول حتى انتهائه/مدّة التخطّي.",
+    key="watch_ad", category=CAT_MONETIZATION, label_ar=N_("شاهد إعلانًا للدخول"),
+    desc_ar=N_("فيديو إعلاني مستضاف على الراوتر (يعمل أوفلاين) يبوّب زر الدخول حتى انتهائه/مدّة التخطّي."),
     surface=SURFACE_PRELOGIN, icon="film", server_side=True,
     fields=(
-        AddonField(key="video_file", label_ar="اسم ملف الفيديو على الراوتر",
+        AddonField(key="video_file", label_ar=N_("اسم ملف الفيديو على الراوتر"),
                    default="ad.mp4", max_len=40,
-                   help_ar="ارفع الفيديو بجانب login.html (مثل hotspot/ad.mp4)."),
-        AddonField(key="skip_after", label_ar="السماح بالتخطّي بعد (ثوانٍ، 0=لا)",
+                   help_ar=N_("ارفع الفيديو بجانب login.html (مثل hotspot/ad.mp4).")),
+        AddonField(key="skip_after", label_ar=N_("السماح بالتخطّي بعد (ثوانٍ، 0=لا)"),
                    kind="number", default="0", min_num=0, max_num=120),
     ),
     pre_fragment=_frag_watch_ad))
@@ -109,15 +110,15 @@ register(AddonSpec(
 # 3) نموذج جمع بيانات + موافقة (login — يبوّب الدخول حتى الموافقة)
 # ════════════════════════════════════════════════════════════════
 def _frag_data_collect(cfg: dict, ctx: dict) -> str:
-    consent = _esc(cfg.get("consent_text") or "أوافق على استلام العروض والرسائل التسويقية.")
+    consent = _esc(cfg.get("consent_text") or N_("أوافق على استلام العروض والرسائل التسويقية."))
     want_email = cfg.get("ask_email", "yes") == "yes"
     want_phone = cfg.get("ask_phone", "yes") == "yes"
     accent = _esc(ctx.get("accent", "#2563EB"))
-    fields = '<input class="hr-dc-f" placeholder="الاسم" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">'
+    fields = N_('<input class="hr-dc-f" placeholder="الاسم" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">')
     if want_email:
-        fields += '<input class="hr-dc-f" type="email" placeholder="البريد" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">'
+        fields += N_('<input class="hr-dc-f" type="email" placeholder="البريد" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">')
     if want_phone:
-        fields += '<input class="hr-dc-f" type="tel" placeholder="الجوال" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">'
+        fields += N_('<input class="hr-dc-f" type="tel" placeholder="الجوال" style="width:100%;margin:4px 0;padding:9px;border:1px solid #e2e8f0;border-radius:8px">')
     return (
         f'<div class="hr-dc" style="margin:12px auto;max-width:420px;text-align:right;'
         f'border:1px solid #e6eaf2;border-radius:12px;padding:12px;background:#fff">'
@@ -140,16 +141,16 @@ def _frag_data_collect(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="data_collection", category=CAT_MONETIZATION, label_ar="نموذج جمع بيانات",
-    desc_ar="حقول (اسم/بريد/جوال) + موافقة صريحة تبوّب زر الدخول حتى تُملأ — تُحفظ محليًّا على جهاز الزبون.",
+    key="data_collection", category=CAT_MONETIZATION, label_ar=N_("نموذج جمع بيانات"),
+    desc_ar=N_("حقول (اسم/بريد/جوال) + موافقة صريحة تبوّب زر الدخول حتى تُملأ — تُحفظ محليًّا على جهاز الزبون."),
     surface=SURFACE_PRELOGIN, icon="address-card", server_side=True,
     fields=(
-        AddonField(key="ask_email", label_ar="طلب البريد", kind="select",
+        AddonField(key="ask_email", label_ar=N_("طلب البريد"), kind="select",
                    default="yes", options=(("yes", "نعم"), ("no", "لا"))),
-        AddonField(key="ask_phone", label_ar="طلب الجوال", kind="select",
+        AddonField(key="ask_phone", label_ar=N_("طلب الجوال"), kind="select",
                    default="yes", options=(("yes", "نعم"), ("no", "لا"))),
-        AddonField(key="consent_text", label_ar="نص الموافقة", max_len=160,
-                   default="أوافق على استلام العروض والرسائل التسويقية."),
+        AddonField(key="consent_text", label_ar=N_("نص الموافقة"), max_len=160,
+                   default=N_("أوافق على استلام العروض والرسائل التسويقية.")),
     ),
     pre_fragment=_frag_data_collect))
 
@@ -161,7 +162,7 @@ def _widget_coupon(cfg: dict, ctx: dict) -> str:
     code = _esc(cfg.get("code") or "")
     if not code:
         return ""
-    desc = _esc(cfg.get("desc") or "كوبون خصم خاص بك")
+    desc = _esc(cfg.get("desc") or N_("كوبون خصم خاص بك"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     return (
         f'<div style="font-weight:700;margin-bottom:6px">{desc}</div>'
@@ -170,17 +171,17 @@ def _widget_coupon(cfg: dict, ctx: dict) -> str:
         f'<b id="hr-coupon" style="font-size:18px;letter-spacing:1px">{code}</b>'
         '<button onclick="try{navigator.clipboard.writeText('
         "document.getElementById('hr-coupon').textContent);this.textContent='تم'"
-        '}catch(e){}" style="border:0;background:' + accent + ';color:#fff;'
-        'border-radius:8px;padding:6px 10px;cursor:pointer">نسخ</button></div>')
+        '}catch(e){}" style="border:0;background:' + accent + N_(';color:#fff;'
+        'border-radius:8px;padding:6px 10px;cursor:pointer">نسخ</button></div>'))
 
 
 register(AddonSpec(
-    key="coupons", category=CAT_MONETIZATION, label_ar="كوبون خصم",
-    desc_ar="كود خصم مع زرّ نسخ على صفحة ما بعد الدخول.",
+    key="coupons", category=CAT_MONETIZATION, label_ar=N_("كوبون خصم"),
+    desc_ar=N_("كود خصم مع زرّ نسخ على صفحة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN, icon="ticket",
     fields=(
-        AddonField(key="desc", label_ar="الوصف", default="كوبون خصم خاص بك", max_len=80),
-        AddonField(key="code", label_ar="كود الكوبون", max_len=40),
+        AddonField(key="desc", label_ar=N_("الوصف"), default=N_("كوبون خصم خاص بك"), max_len=80),
+        AddonField(key="code", label_ar=N_("كود الكوبون"), max_len=40),
     ),
     post_widget=_widget_coupon))
 
@@ -190,7 +191,7 @@ register(AddonSpec(
 # ════════════════════════════════════════════════════════════════
 def _widget_loyalty(cfg: dict, ctx: dict) -> str:
     join = safe_url(cfg.get("join_url", ""))
-    msg = _esc(cfg.get("message") or "انضم لبرنامج الولاء واكسب نقاطًا مع كل زيارة!")
+    msg = _esc(cfg.get("message") or N_("انضم لبرنامج الولاء واكسب نقاطًا مع كل زيارة!"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     btn = (f'<a href="{_esc(join)}" target="_blank" rel="noopener" '
            f'style="display:inline-block;margin-top:8px;padding:9px 18px;'
@@ -200,13 +201,13 @@ def _widget_loyalty(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="loyalty", category=CAT_MONETIZATION, label_ar="برنامج ولاء",
-    desc_ar="بطاقة تدعو الزبون للانضمام لبرنامج الولاء (رابطه يُفتح تلقائيًّا).",
+    key="loyalty", category=CAT_MONETIZATION, label_ar=N_("برنامج ولاء"),
+    desc_ar=N_("بطاقة تدعو الزبون للانضمام لبرنامج الولاء (رابطه يُفتح تلقائيًّا)."),
     surface=SURFACE_POSTLOGIN, icon="star",
     fields=(
-        AddonField(key="message", label_ar="الرسالة", max_len=160,
-                   default="انضم لبرنامج الولاء واكسب نقاطًا مع كل زيارة!"),
-        AddonField(key="join_url", label_ar="رابط الانضمام", kind="url"),
+        AddonField(key="message", label_ar=N_("الرسالة"), max_len=160,
+                   default=N_("انضم لبرنامج الولاء واكسب نقاطًا مع كل زيارة!")),
+        AddonField(key="join_url", label_ar=N_("رابط الانضمام"), kind="url"),
     ),
     post_widget=_widget_loyalty))
 
@@ -215,8 +216,8 @@ register(AddonSpec(
 # 6) ترقية الباقة (pre — لافتة تسويق الباقات المدفوعة + رابط المتجر)
 # ════════════════════════════════════════════════════════════════
 def _frag_upsell(cfg: dict, ctx: dict) -> str:
-    title = _esc(cfg.get("title") or "ارتقِ لباقة أسرع")
-    sub = _esc(cfg.get("subtitle") or "سرعة أعلى وبلا حدود — اشترك الآن")
+    title = _esc(cfg.get("title") or N_("ارتقِ لباقة أسرع"))
+    sub = _esc(cfg.get("subtitle") or N_("سرعة أعلى وبلا حدود — اشترك الآن"))
     url = safe_url(cfg.get("store_url", ""))
     accent = _esc(ctx.get("accent", "#2563EB"))
     btn = (f'<a href="{_esc(url)}" style="display:inline-block;margin-top:8px;'
@@ -232,13 +233,13 @@ def _frag_upsell(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="tier_upsell", category=CAT_MONETIZATION, label_ar="ترقية الباقة",
-    desc_ar="لافتة تسويق الباقات المدفوعة مع رابط المتجر — قبل الدخول.",
+    key="tier_upsell", category=CAT_MONETIZATION, label_ar=N_("ترقية الباقة"),
+    desc_ar=N_("لافتة تسويق الباقات المدفوعة مع رابط المتجر — قبل الدخول."),
     surface=SURFACE_PRELOGIN, icon="arrow-up-right-dots",
     fields=(
-        AddonField(key="title", label_ar="العنوان", default="ارتقِ لباقة أسرع", max_len=60),
-        AddonField(key="subtitle", label_ar="السطر الفرعي", max_len=80,
-                   default="سرعة أعلى وبلا حدود — اشترك الآن"),
-        AddonField(key="store_url", label_ar="رابط المتجر/الباقات", kind="url"),
+        AddonField(key="title", label_ar=N_("العنوان"), default=N_("ارتقِ لباقة أسرع"), max_len=60),
+        AddonField(key="subtitle", label_ar=N_("السطر الفرعي"), max_len=80,
+                   default=N_("سرعة أعلى وبلا حدود — اشترك الآن")),
+        AddonField(key="store_url", label_ar=N_("رابط المتجر/الباقات"), kind="url"),
     ),
     pre_fragment=_frag_upsell))

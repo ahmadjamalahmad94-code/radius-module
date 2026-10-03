@@ -18,30 +18,30 @@
 
 {# ───── Merged hero: title + subtitle + token/router KPIs ───── #}
 {% call hub.megahero(
-  "إعداد دفع مقاييس الراوتر",
-  subtitle="سكربت يُلصق مرة واحدة على الراوتر، وبعدها يرسل حالة الواجهات وعدادات النقل إلى الخادم كل دقيقتين.",
+  _('إعداد دفع مقاييس الراوتر'),
+  subtitle=_('سكربت يُلصق مرة واحدة على الراوتر، وبعدها يرسل حالة الواجهات وعدادات النقل إلى الخادم كل دقيقتين.'),
   icon="gauge-high",
   kpis=[
-    {'label': 'رموز ربط مفعلة', 'value': tokens|length,   'icon': 'key',    'variant': ('green' if tokens else 'amber')},
-    {'label': 'راوترات مسجلة',  'value': routers|length,   'icon': 'router', 'variant': ('brand' if routers else 'amber')},
+    {'label': _('رموز ربط مفعلة'), 'value': tokens|length,   'icon': 'key',    'variant': ('green' if tokens else 'amber')},
+    {'label': _('راوترات مسجلة'),  'value': routers|length,   'icon': 'router', 'variant': ('brand' if routers else 'amber')},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "الفكرة باختصار",
-  intro="التنبيهات الذكية تحتاج بيانات حيّة من الراوتر. وبما أن الراوتر غالبًا خلف شبكة داخلية ولا يستطيع الخادم الوصول إليه مباشرة، يعكس النظام الاتجاه: الراوتر هو الذي يرسل المقاييس للخادم.",
+  _('الفكرة باختصار'),
+  intro=_('التنبيهات الذكية تحتاج بيانات حيّة من الراوتر. وبما أن الراوتر غالبًا خلف شبكة داخلية ولا يستطيع الخادم الوصول إليه مباشرة، يعكس النظام الاتجاه: الراوتر هو الذي يرسل المقاييس للخادم.'),
   icon="lightbulb",
   items=[
-    {'icon': 'clock-rotate-left', 'text': 'الراوتر يرسل المقاييس كل دقيقتين تلقائيًا بعد لصق السكربت مرة واحدة.'},
-    {'icon': 'plug-circle-xmark', 'text': 'إذا توقف الإرسال بعد المدة المحددة، يفتح النظام تنبيهًا واضحًا بأن الراوتر مفصول.'},
-    {'icon': 'key',               'text': 'تحتاج رمز ربط مفعل واحد على الأقل ليصادق الراوتر نفسه عند الإرسال.'},
+    {'icon': 'clock-rotate-left', 'text': _('الراوتر يرسل المقاييس كل دقيقتين تلقائيًا بعد لصق السكربت مرة واحدة.')},
+    {'icon': 'plug-circle-xmark', 'text': _('إذا توقف الإرسال بعد المدة المحددة، يفتح النظام تنبيهًا واضحًا بأن الراوتر مفصول.')},
+    {'icon': 'key',               'text': _('تحتاج رمز ربط مفعل واحد على الأقل ليصادق الراوتر نفسه عند الإرسال.')},
   ],
-  note="غيّر عنوان الخادم أو الرمز هنا ليتحدّث السكربت الناتج فورًا قبل نسخه."
+  note=_('غيّر عنوان الخادم أو الرمز هنا ليتحدّث السكربت الناتج فورًا قبل نسخه.')
 )) %}
 
   {% if not tokens %}
-  {% call hub.section("تنبيه: لا يوجد رمز ربط مفعل", icon="triangle-exclamation") %}
+  {% call hub.section(_('تنبيه: لا يوجد رمز ربط مفعل'), icon="triangle-exclamation") %}
     <div class="hub-text-mute" style="font-size:13.5px;line-height:1.9">
       {{ _('لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من') }}
       {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener"
@@ -52,7 +52,7 @@
   {% endif %}
 
   {# ── Generation inputs ── #}
-  {% call hub.section("بيانات التوليد", icon="screwdriver-wrench") %}
+  {% call hub.section(_('بيانات التوليد'), icon="screwdriver-wrench") %}
     <div class="hub-field">
       <label class="hub-field-label" for="mx-router">{{ _('الراوتر') }}</label>
       <select class="hub-select" id="mx-router">
@@ -73,14 +73,14 @@
       <input class="hub-input" type="text" id="mx-token" value="" autocomplete="off" dir="ltr"
              placeholder="{{ _('الصق رمز الربط من شاشة إدارة الرموز') }}">
       <div class="hub-field-hint">
-        {{ _('لديك') }} <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
+        {{ _('لديك') }} <strong>{{ tokens|length }}</strong> {{ _('رمز مفعل') }}{% if suggested_token_name %}{{ _('، مثل:') }} <strong>{{ suggested_token_name }}</strong>{% endif %}.
         {% if can_submit('radius.tok_list', 'GET') %}<a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">{% endif %}{{ _('إدارة الرموز') }}{% if can_submit('radius.tok_list', 'GET') %}</a>{% endif %}
       </div>
     </div>
   {% endcall %}
 
   {# ── Steps ── #}
-  {% call hub.section("خطوات التطبيق", icon="list-ol") %}
+  {% call hub.section(_('خطوات التطبيق'), icon="list-ol") %}
     <ol style="margin:0;padding-inline-start:20px;font-size:13.5px;line-height:2;color:var(--hub-text,#1f2937)">
       <li>{{ _('اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.') }}</li>
       <li>{{ _('انسخ السكربت الناتج من الصندوق التالي.') }}</li>
@@ -90,13 +90,13 @@
   {% endcall %}
 
   {# ── Generated router script (clipboard JS hook preserved) ── #}
-  {% call hub.section("سكربت الراوتر", icon="code") %}
+  {% call hub.section(_('سكربت الراوتر'), icon="code") %}
     {{ cc.code_shell('mx-script-body', title=_('السكربت الكامل (يُلصق مرة واحدة)'),
                      copy_label=_('نسخ السكربت'), body=_('جاري توليد السكربت...')) }}
   {% endcall %}
 
   {# ── Quick test command ── #}
-  {% call hub.section("اختبار سريع قبل الجدولة", icon="vial") %}
+  {% call hub.section(_('اختبار سريع قبل الجدولة'), icon="vial") %}
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
       {{ _('انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.') }}
     </p>
@@ -105,7 +105,7 @@
   {% endcall %}
 
   {# ── Stop pushing metrics ── #}
-  {% call hub.section("إيقاف دفع المقاييس من الراوتر", icon="broom") %}
+  {% call hub.section(_('إيقاف دفع المقاييس من الراوتر'), icon="broom") %}
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
       {{ _('استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.') }}
     </p>

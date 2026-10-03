@@ -39,6 +39,7 @@ Spec grammar (a value of ``API_PERMISSIONS``; a dict maps HTTP method → spec):
 endpoint is neither mapped nor allow-listed.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional, Union
 
@@ -50,9 +51,9 @@ Spec = Union[str, dict]
 
 SUPER = "__super__"
 
-_DENIED_AR = "ليس لديك صلاحية لتنفيذ هذا الإجراء."
-_UNMAPPED_AR = ("هذه النقطة غير مربوطة بصلاحية بعد — متاحة للمالك فقط. "
-                "راجع المالك.")
+_DENIED_AR = N_("ليس لديك صلاحية لتنفيذ هذا الإجراء.")
+_UNMAPPED_AR = (N_("هذه النقطة غير مربوطة بصلاحية بعد — متاحة للمالك فقط. "
+                "راجع المالك."))
 
 # ─────────────────────────────────────────────────────────────────────────
 # Endpoints that need an authenticated admin but no permission key: they only
@@ -720,15 +721,15 @@ def decide(name: str, method: str, admin, *, tenant_id: int) -> Optional[int]:
 #: (set-speeds / test-auth / maintenance / general adjustments are owner-only).
 TOOLS: dict[str, tuple[str, str, str, str]] = {
     "set_speeds": ("v1.tools_set_speeds", "POST", "/api/v1/tools/set-speeds",
-                   "ضبط السرعات جماعيًّا"),
+                   N_("ضبط السرعات جماعيًّا")),
     "general_adjustments": ("v1.tools_general_adjustments", "POST",
-                            "/api/v1/tools/general-adjustments", "تعديلات عامّة جماعيّة"),
+                            "/api/v1/tools/general-adjustments", N_("تعديلات عامّة جماعيّة")),
     "test_auth": ("v1.tools_test_auth", "POST", "/api/v1/tools/test-auth",
-                  "اختبار المصادقة"),
+                  N_("اختبار المصادقة")),
     "radius_log": ("v1.tools_radius_log", "GET", "/api/v1/tools/radius-log",
-                   "سجلّ الراديوس"),
+                   N_("سجلّ الراديوس")),
     "maintenance": ("v1.tools_maintenance_preview", "POST",
-                    "/api/v1/tools/maintenance/preview", "الصيانة الجماعيّة"),
+                    "/api/v1/tools/maintenance/preview", N_("الصيانة الجماعيّة")),
 }
 
 
@@ -798,7 +799,7 @@ def api_permission_denial():
     if spec:
         details["requires"] = spec
     if code == 429:
-        return fail("rate_limited", "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
+        return fail("rate_limited", _tr("بلغت الحدّ اليوميّ المسموح لهذا الإجراء."),
                     status=429, details=details)
     # fix3 (D24 / F01 F23): say WHY — a locked/hidden section, the missing
     # action or key — in Arabic (the key itself stays in details.permission).
@@ -815,10 +816,10 @@ def api_permission_denial():
             from ..radius.services.permission_labels import rbac_keys_label
             details["reason"] = "permission"
             details["permission"] = spec
-            message = f"تنقصك الصلاحية: {rbac_keys_label(spec)}."
+            message = _tr('تنقصك الصلاحية: %(v)s.', v=rbac_keys_label(spec))
         elif spec == SUPER:
             details["reason"] = "owner_only"
-            message = "هذا الإجراء مقصور على المالك أو الشريك."
+            message = _tr("هذا الإجراء مقصور على المالك أو الشريك.")
     except Exception:  # noqa: BLE001 — the generic text stays
         pass
     return fail("forbidden", message, status=403, details=details)

@@ -1,5 +1,6 @@
 """Backup readiness endpoints."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -70,7 +71,7 @@ def backups_run_all():
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
     full = _wants_full_archive(body)
     result = _svc().run_full_backup(tenant_id=_tid(), actor=_actor(), lean=not full)
     return ok({"ok": bool(result.get("ok")), "mode": "full" if full else "lean",
@@ -84,7 +85,7 @@ def backups_google_drive_portal_link():
     res = portal_sso_link()
     if res.get("ok"):
         return ok({"url": res["url"]})
-    return fail("portal_unavailable", res.get("message") or "تعذّر فتح بوابة العميل.",
+    return fail("portal_unavailable", res.get("message") or _tr("تعذّر فتح بوابة العميل."),
                 status=502, details={"status": res.get("status") or ""})
 
 
@@ -110,8 +111,8 @@ def backups_google_drive_connect():
     if not gd.is_configured(tid):
         return fail(
             "needs_configuration",
-            "بانتظار تفعيلك: احفظ Google OAuth client_id و client_secret من "
-            "صفحة النسخ الاحتياطي أولًا، ثم ابدأ الربط.",
+            _tr("بانتظار تفعيلك: احفظ Google OAuth client_id و client_secret من "
+            "صفحة النسخ الاحتياطي أولًا، ثم ابدأ الربط."),
             status=409,
             details={"domain": "backups", "operation": "google_drive_connect",
                      "required": ["google_drive.client_id", "google_drive.client_secret"]},
@@ -119,7 +120,7 @@ def backups_google_drive_connect():
     result = gd.start_device_flow(tid)
     if not result.get("ok"):
         return fail("device_start_failed",
-                    result.get("detail") or "تعذّر بدء ربط جوجل درايف.",
+                    result.get("detail") or _tr("تعذّر بدء ربط جوجل درايف."),
                     status=502, details={"error": result.get("error")})
     return ok({
         "user_code": result.get("user_code"),

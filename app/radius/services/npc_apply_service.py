@@ -25,6 +25,7 @@ Flow:
       → return result envelope
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
@@ -317,11 +318,11 @@ def request_apply(
         blockers=(),
         warnings=readiness.decision.warnings,
         reason_ar=(
-            "تم تنفيذ السياسة بنجاح على كل الراوترات."
+            N_("تم تنفيذ السياسة بنجاح على كل الراوترات.")
             if agg == cs_repo.STATUS_SUCCEEDED else
-            "تنفيذ جزئي — راجع نتائج كل راوتر."
+            N_("تنفيذ جزئي — راجع نتائج كل راوتر.")
             if agg == cs_repo.STATUS_PARTIALLY_SUCCEEDED else
-            "تعذّر التنفيذ على أي راوتر — راجع الأخطاء."
+            N_("تعذّر التنفيذ على أي راوتر — راجع الأخطاء.")
         ),
     )
 

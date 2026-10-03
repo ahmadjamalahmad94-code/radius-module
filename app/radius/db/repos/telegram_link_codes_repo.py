@@ -13,6 +13,7 @@
 تُكنَس كسولًا. الرمز من أبجديّة غير ملتبسة لتفادي الخلط البصري في الرابط/المسح.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import secrets
 from datetime import timedelta
@@ -78,7 +79,7 @@ def create_code(
     """يولّد رمز ربط جديدًا. يُبطل أيّ رمز معلّق سابق لنفس النطاق/المشترك كي
     يبقى رمز نشط واحد فقط (يمنع التباس استطلاعين متزامنين)."""
     if scope not in ("admin", "subscriber"):
-        raise ValueError("scope غير صالح")
+        raise ValueError(_tr("scope غير صالح"))
     now = parse_dt(now_iso())
     created = now_iso()
     expires = (now + timedelta(seconds=int(ttl_sec))).isoformat() + "Z" if now else ""
@@ -100,7 +101,7 @@ def create_code(
                 code = cand
                 break
         if not code:  # احتمال شبه معدوم
-            raise RuntimeError("تعذّر توليد رمز فريد")
+            raise RuntimeError(_tr("تعذّر توليد رمز فريد"))
         conn.execute(
             "INSERT INTO telegram_link_codes ("
             "  code, tenant_id, target, subscriber_id, status,"

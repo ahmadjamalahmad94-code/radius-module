@@ -24,27 +24,27 @@
 
 {# ── تسميات عربية لقيم العرض والصحة الخام (تُستخدم في KPIs والشرائح) ── #}
 {% set _show_labels = {
-  'all': 'الكل', 'offline': 'غير المتصلين', 'warnings': 'تحتاج انتباه', 'vpn': 'نفق الإدارة'
+  'all': _('الكل'), 'offline': _('غير المتصلين'), 'warnings': _('تحتاج انتباه'), 'vpn': _('نفق الإدارة')
 } %}
 {% set _health_labels = {
-  'all': 'الكل', 'healthy': 'سليم', 'attention': 'يحتاج انتباه',
-  'risky': 'خطر', 'offline': 'غير متصل', 'unknown': 'غير معروف'
+  'all': _('الكل'), 'healthy': _('سليم'), 'attention': _('يحتاج انتباه'),
+  'risky': _('خطر'), 'offline': _('غير متصل'), 'unknown': _('غير معروف')
 } %}
 
 <section data-mt-topology-page>
 
 {# ───── Merged hero: title + KPI strip + integrated filter form ───── #}
 {% call hub.megahero(
-  "خريطة الشبكة",
-  subtitle="عرض تشغيلي لخادم الربط والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.",
+  _('خريطة الشبكة'),
+  subtitle=_('عرض تشغيلي لخادم الربط والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.'),
   icon="network-wired",
   search_action=url_for('radius.mt_topology'),
   search_method="get",
   kpis=[
-    {'label': 'كل الراوترات', 'value': total_count,    'icon': 'server',      'variant': 'brand'},
-    {'label': 'المعروض',      'value': filtered_count,  'icon': 'eye',         'variant': 'green'},
-    {'label': 'طريقة العرض',  'value': _show_labels.get(show, show),     'icon': 'sliders',     'variant': 'brand'},
-    {'label': 'الصحة',        'value': _health_labels.get(health, health), 'icon': 'gauge-high',  'variant': 'brand'},
+    {'label': _('كل الراوترات'), 'value': total_count,    'icon': 'server',      'variant': 'brand'},
+    {'label': _('المعروض'),      'value': filtered_count,  'icon': 'eye',         'variant': 'green'},
+    {'label': _('طريقة العرض'),  'value': _show_labels.get(show, show),     'icon': 'sliders',     'variant': 'brand'},
+    {'label': _('الصحة'),        'value': _health_labels.get(health, health), 'icon': 'gauge-high',  'variant': 'brand'},
   ]
 ) %}
   <span class="hub-field">
@@ -69,29 +69,29 @@
   </span>
   <input class="hub-input grow" type="text" name="q" value="{{ q }}"
          placeholder="{{ _('اسم الراوتر أو العنوان') }}" data-mt-topology-search>
-  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm",
+  {{ hub.btn(_('تطبيق'), icon="magnifying-glass", variant="primary", type="submit", size="sm",
              attrs='data-mt-topology-submit') }}
-  {% if can_submit('radius.mt_topology', 'GET') %}{{ hub.btn("إعادة ضبط", href=url_for('radius.mt_topology'), icon="rotate-left",
+  {% if can_submit('radius.mt_topology', 'GET') %}{{ hub.btn(_('إعادة ضبط'), href=url_for('radius.mt_topology'), icon="rotate-left",
              variant="secondary", size="sm", attrs='data-mt-topology-clear') }}{% endif %}
 {% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "قراءة الخريطة ومعاني الشارات",
-  intro="حالة الاتصال حقيقيّة: تُشتقّ من جلسات RADIUS الحيّة (radacct) أو من آخر فحص لنفق الإدارة — نفس مصدر لوحة الراوتر وقائمة المتصلين، فلا يظهر «غير معروف» لراوتر يعمل فعلاً.",
+  _('قراءة الخريطة ومعاني الشارات'),
+  intro=_('حالة الاتصال حقيقيّة: تُشتقّ من جلسات RADIUS الحيّة (radacct) أو من آخر فحص لنفق الإدارة — نفس مصدر لوحة الراوتر وقائمة المتصلين، فلا يظهر «غير معروف» لراوتر يعمل فعلاً.'),
   icon="route",
   items=[
-    {'icon': 'server',          'text': 'خادم الربط هو مركز الشبكة ومرجع كل علاقة.'},
-    {'icon': 'circle-check',    'text': '«متصل»: الراوتر يمرّر RADIUS الآن أو نجح آخر فحص لنفقه.'},
-    {'icon': 'circle-xmark',    'text': '«غير متصل»: فشل آخر فحص لنفق الإدارة في الوصول إليه.'},
-    {'icon': 'circle-question', 'text': '«لم يُفحص بعد»: لا جلسة RADIUS ولا فحص نفق حتى الآن (ليس عطلاً).'},
-    {'icon': 'shield-halved',   'text': '«نفق الإدارة»: يُدار عبر اتصال WireGuard/SSTP مشفّر (مقابل «مباشر»).'},
-    {'icon': 'gauge-high',      'text': 'شارة الصحة («سليم/يحتاج انتباه/خطر») تقييمٌ للنسخ والتنبيهات — مستقلّ عن الاتصال.'},
+    {'icon': 'server',          'text': _('خادم الربط هو مركز الشبكة ومرجع كل علاقة.')},
+    {'icon': 'circle-check',    'text': _('«متصل»: الراوتر يمرّر RADIUS الآن أو نجح آخر فحص لنفقه.')},
+    {'icon': 'circle-xmark',    'text': _('«غير متصل»: فشل آخر فحص لنفق الإدارة في الوصول إليه.')},
+    {'icon': 'circle-question', 'text': _('«لم يُفحص بعد»: لا جلسة RADIUS ولا فحص نفق حتى الآن (ليس عطلاً).')},
+    {'icon': 'shield-halved',   'text': _('«نفق الإدارة»: يُدار عبر اتصال WireGuard/SSTP مشفّر (مقابل «مباشر»).')},
+    {'icon': 'gauge-high',      'text': _('شارة الصحة («سليم/يحتاج انتباه/خطر») تقييمٌ للنسخ والتنبيهات — مستقلّ عن الاتصال.')},
   ]
 )) %}
 
   {# ── Server node: the heart of the network ── #}
-  {% call hub.section("خادم الربط", icon="server") %}
+  {% call hub.section(_('خادم الربط'), icon="server") %}
     <div class="opsx-router opsx-router--server" data-mt-topology-server>
       <div class="opsx-router-top">
         <span class="opsx-router-icon"><i class="fa-solid fa-server"></i></span>
@@ -105,12 +105,12 @@
   {% endcall %}
 
   {# ── Active nodes: the router-card grid (topology visualization, unchanged) ── #}
-  {% call hub.section("العقد النشطة", icon="diagram-project",
+  {% call hub.section(_('العقد النشطة'), icon="diagram-project",
                       meta=filtered_count ~ ' / ' ~ total_count) %}
     {% if not routers %}
     {{ hub.empty(
-      "لا يوجد راوتر يطابق هذه الفلاتر.",
-      sub="جرّب تغيير الفلاتر أو إعادة الضبط.",
+      _('لا يوجد راوتر يطابق هذه الفلاتر.'),
+      sub=_('جرّب تغيير الفلاتر أو إعادة الضبط.'),
       icon="router"
     ) }}
     <span hidden data-mt-topology-empty></span>
@@ -134,17 +134,17 @@
           </span>
           <div>
             <span class="opsx-router-name">{{ r.label }}</span>
-            <span class="opsx-router-sub" style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo');white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{% if r.address %}{{ r.address }}{% else %}بدون عنوان{% endif %}</span>
+            <span class="opsx-router-sub" style="font-family:var(--hub-mono,ui-monospace,monospace,'Cairo');white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{% if r.address %}{{ r.address }}{% else %}{{ _('بدون عنوان') }}{% endif %}</span>
           </div>
         </div>
         <div class="opsx-row-meta">
           {# الاتصال الحقيقيّ — من جلسات RADIUS الحيّة أو فحص النفق المخزّن #}
           {% set _conn_src = r.meta.get('conn_source') if r.meta else '' %}
-          {% set _conn_tip = ('متصل الآن — جلسة RADIUS حيّة عبر الراوتر' if _conn_src == 'radacct'
-                  else 'متصل — آخر فحص لنفق الإدارة كان ناجحًا' if (r.status == 'online' and _conn_src == 'tunnel_probe')
-                  else 'غير متصل — تعذّر الوصول عبر نفق الإدارة في آخر فحص' if r.status == 'offline'
-                  else 'معطّل من إعدادات الراوتر' if r.status == 'disabled'
-                  else 'لم تَرِد بعد أي إشارة اتصال (لا جلسة RADIUS ولا فحص نفق)') %}
+          {% set _conn_tip = (_('متصل الآن — جلسة RADIUS حيّة عبر الراوتر') if _conn_src == 'radacct'
+                  else _('متصل — آخر فحص لنفق الإدارة كان ناجحًا') if (r.status == 'online' and _conn_src == 'tunnel_probe')
+                  else _('غير متصل — تعذّر الوصول عبر نفق الإدارة في آخر فحص') if r.status == 'offline'
+                  else _('معطّل من إعدادات الراوتر') if r.status == 'disabled'
+                  else _('لم تَرِد بعد أي إشارة اتصال (لا جلسة RADIUS ولا فحص نفق)')) %}
           {% if r.status == 'online' %}
           <span class="opsx-chip opsx-chip--ok" title="{{ _conn_tip }}"><i class="fa-solid fa-circle-check" style="font-size:9px"></i> {{ _('متصل') }}</span>
           {% elif r.status == 'offline' %}

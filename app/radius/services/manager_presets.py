@@ -8,6 +8,7 @@
 وأدوات manager_grants (لا نظام موازٍ).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from typing import Any, Optional
@@ -45,7 +46,7 @@ def get_preset(preset_id: int, *, tenant_id: int = 1) -> dict[str, Any]:
         (_tid(tenant_id), int(preset_id)),
     ).fetchone()
     if not row:
-        raise ManagerPresetError("القالب غير موجود.")
+        raise ManagerPresetError(_tr("القالب غير موجود."))
     return row_to_dict(row)
 
 
@@ -67,13 +68,13 @@ def create_preset(name: str, *, tenant_id: int = 1, source_manager_id: Optional[
     وإلّا يُنشئ قالبًا فارغًا (أساس مقيَّد)."""
     clean = (name or "").strip()
     if not clean:
-        raise ManagerPresetError("اسم القالب مطلوب.")
+        raise ManagerPresetError(_tr("اسم القالب مطلوب."))
     exists = db().execute(
         "SELECT 1 FROM manager_permission_presets WHERE tenant_id=? AND name=?",
         (_tid(tenant_id), clean),
     ).fetchone()
     if exists:
-        raise ManagerPresetError("يوجد قالبٌ بهذا الاسم.")
+        raise ManagerPresetError(_tr("يوجد قالبٌ بهذا الاسم."))
     cols = (_manager_grant_cols(source_manager_id, tenant_id)
             if source_manager_id else {c: "{}" for c in _GRANT_COLS})
     now = now_iso()
@@ -89,7 +90,7 @@ def create_preset(name: str, *, tenant_id: int = 1, source_manager_id: Optional[
 def rename_preset(preset_id: int, name: str, *, tenant_id: int = 1) -> dict[str, Any]:
     clean = (name or "").strip()
     if not clean:
-        raise ManagerPresetError("اسم القالب مطلوب.")
+        raise ManagerPresetError(_tr("اسم القالب مطلوب."))
     get_preset(preset_id, tenant_id=tenant_id)  # existence
     db().execute(
         "UPDATE manager_permission_presets SET name=?, updated_at=? WHERE tenant_id=? AND id=?",

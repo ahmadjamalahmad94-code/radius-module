@@ -20,6 +20,7 @@ The key is the same in every process (username + client IP); each install —
 and each test file — has its own DB, so nothing leaks between them.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import math
 import os
@@ -94,8 +95,7 @@ def register_success(kind: str, username: str, ip: str | None = None) -> None:
 
 def locked_message(seconds: int) -> str:
     minutes = max(1, int(math.ceil(seconds / 60)))
-    return (f"تم تجاوز عدد محاولات الدخول الفاشلة المسموح. "
-            f"حاول مجددًا بعد {minutes} دقيقة.")
+    return (_tr('تم تجاوز عدد محاولات الدخول الفاشلة المسموح. حاول مجددًا بعد %(minutes)s دقيقة.', minutes=minutes))
 
 
 def reset_for_tests() -> None:

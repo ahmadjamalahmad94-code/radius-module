@@ -7,6 +7,7 @@ map to diagnostic codes from the catalogue:
 No DB / Flask / network — pure functions only.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Mapping
 
@@ -100,10 +101,10 @@ class HotspotPhasePlanner(PhasePlannerBase):
 
         tag = self.comment_prefix(run_id=run_id, step="hotspot")
         notes = [
-            "ألصق السكربت في MikroTik Terminal بعد إغلاق "
-            "أي جلسة hotspot قائمة على نفس المنفذ.",
-            "ستحصل كل واجهة محدّدة على شبكة /24 مستقلّة وعلى "
-            "خادم DHCP خاص بها.",
+            _tr("ألصق السكربت في MikroTik Terminal بعد إغلاق "
+            "أي جلسة hotspot قائمة على نفس المنفذ."),
+            _tr("ستحصل كل واجهة محدّدة على شبكة /24 مستقلّة وعلى "
+            "خادم DHCP خاص بها."),
         ]
         return PhasePlanResult(
             phase=self.PHASE,

@@ -13,9 +13,9 @@
 
 {# ───── ماكرو ترجمة حالة السلفة: يحوّل القيمة الخام من قاعدة البيانات إلى عربية ───── #}
 {% macro loan_status_label(s) -%}
-{%- if s == "open" -%}مفتوحة
-{%- elif s == "settled" -%}مسددة
-{%- elif s == "voided" -%}ملغاة
+{%- if s == "open" -%}{{ _('مفتوحة') }}
+{%- elif s == "settled" -%}{{ _('مسددة') }}
+{%- elif s == "voided" -%}{{ _('ملغاة') }}
 {%- else -%}{{ s }}
 {%- endif -%}
 {%- endmacro %}
@@ -23,14 +23,14 @@
 {% block content %}
 {# ───── الميجاهيرو الموحّد: يدمج العنوان + KPIs + حزام الفلترة في كتلة واحدة بدل ثلاث كتل ───── #}
 {% call hub.megahero(
-  "السلف",
-  subtitle="عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على خدمة المصادقة.",
+  _('السلف'),
+  subtitle=_('عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على خدمة المصادقة.'),
   icon="hand-holding-dollar",
   kpis=[
-    {'label': 'عدد السلف',            'value': summary.loan_count,                 'icon': 'list',                'variant': 'blue'},
-    {'label': 'سلف مفتوحة',           'value': summary.open_loan_count,            'icon': 'hourglass-half',      'variant': 'amber'},
-    {'label': 'قيمة السلف المفتوحة',  'value': summary.total_loans|money,          'icon': 'hand-holding-dollar', 'variant': 'brand'},
-    {'label': 'التحصيلات',            'value': summary.total_collections|money,    'icon': 'cash-register',       'variant': 'green'},
+    {'label': _('عدد السلف'),            'value': summary.loan_count,                 'icon': 'list',                'variant': 'blue'},
+    {'label': _('سلف مفتوحة'),           'value': summary.open_loan_count,            'icon': 'hourglass-half',      'variant': 'amber'},
+    {'label': _('قيمة السلف المفتوحة'),  'value': summary.total_loans|money,          'icon': 'hand-holding-dollar', 'variant': 'brand'},
+    {'label': _('التحصيلات'),            'value': summary.total_collections|money,    'icon': 'cash-register',       'variant': 'green'},
   ],
   search_action=url_for('radius.business_finance_loans')
 ) %}
@@ -41,11 +41,11 @@
     <option value="settled" {% if status == "settled" %}selected{% endif %}>{{ _('مسددة') }}</option>
     <option value="voided" {% if status == "voided" %}selected{% endif %}>{{ _('ملغاة') }}</option>
   </select>
-  {{ hub.btn("تطبيق الفلتر", variant="primary", icon="filter", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق الفلتر'), variant="primary", icon="filter", type="submit", size="sm") }}
 {% endcall %}
 {% include "radius/_finance_nav.html" %}
 
-{% call hub.section("قائمة السلف", icon="list", flush=True) %}
+{% call hub.section(_('قائمة السلف'), icon="list", flush=True) %}
   {% if loans %}
   <div class="table-responsive hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
     <table class="table hub-table">
@@ -78,7 +78,7 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="ستظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
+    {{ hub.empty(_('لا توجد سلف ضمن هذا الفلتر.'), sub=_('ستظهر السلف المسجلة من صفحة المشترك المالية هنا.'), icon="hand-holding-dollar") }}
   {% endif %}
 {% endcall %}
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

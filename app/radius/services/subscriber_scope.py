@@ -15,6 +15,7 @@
      — مشتركو الحِزم المُسنَدة إليه.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Iterable, Optional
 
@@ -290,7 +291,7 @@ def filter_accessible(usernames: Iterable[str], admin_id: Optional[int] = None, 
             if subscriber_accessible(admin_id, username=u, tenant_id=tenant_id)]
 
 
-OUT_OF_SCOPE_AR = "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر)."
+OUT_OF_SCOPE_AR = N_("هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر).")
 
 __all__ = ["can_view_all_subscribers", "scope_admin_id", "owner_scope_clause",
            "subscriber_accessible", "filter_accessible", "OUT_OF_SCOPE_AR",

@@ -7,6 +7,7 @@ and adds the tagged src-nat rule (add-only). With the flag off it returns a
 clear «بانتظار تفعيلك» envelope — never a silent no-op.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 import os
@@ -51,10 +52,10 @@ class PublicIpChangeDryRunAdapter:
                     "error": {
                         "code": LIVE_APPLY_CODE,
                         "message": (
-                            "بانتظار تفعيلك: التطبيق الفعلي لتغيير عنوان الإنترنت "
+                            _tr("بانتظار تفعيلك: التطبيق الفعلي لتغيير عنوان الإنترنت "
                             "العام مقفل. فعّل العلم "
                             "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED من "
-                            "إعدادات النظام لتمكين التطبيق المباشر على الراوتر."),
+                            "إعدادات النظام لتمكين التطبيق المباشر على الراوتر.")),
                     },
                     "warnings": validation["warnings"],
                 }
@@ -111,7 +112,7 @@ class PublicIpChangeDryRunAdapter:
             return {
                 "status": "failed", "supported": True, "dry_run": False,
                 "error": {"code": "invalid_router_id",
-                          "message": "معرّف الراوتر غير صالح."},
+                          "message": _tr("معرّف الراوتر غير صالح.")},
                 "warnings": warnings,
             }
         row = db().execute(
@@ -123,7 +124,7 @@ class PublicIpChangeDryRunAdapter:
             return {
                 "status": "failed", "supported": True, "dry_run": False,
                 "error": {"code": "router_not_found",
-                          "message": "الراوتر غير موجود لهذا المستأجر."},
+                          "message": _tr("الراوتر غير موجود لهذا المستأجر.")},
                 "warnings": warnings,
             }
         tag = f"HOBERADIUS_ADMIN_BRIDGE:public-ip-change:{job.get('reference') or 'pending'}"
@@ -135,7 +136,7 @@ class PublicIpChangeDryRunAdapter:
             return {
                 "status": "failed", "supported": True, "dry_run": False,
                 "error": {"code": "live_apply_failed",
-                          "message": prune.error or "تعذّر تنظيف قاعدة NAT السابقة."},
+                          "message": prune.error or _tr("تعذّر تنظيف قاعدة NAT السابقة.")},
                 "warnings": warnings,
             }
         result = mac.firewall_nat_add(
@@ -164,7 +165,7 @@ class PublicIpChangeDryRunAdapter:
         return {
             "status": "failed", "supported": True, "dry_run": False,
             "error": {"code": "live_apply_failed",
-                      "message": result.error or "تعذّر تطبيق التغيير على الراوتر."},
+                      "message": result.error or _tr("تعذّر تطبيق التغيير على الراوتر.")},
             "warnings": warnings,
         }
 
@@ -196,7 +197,7 @@ def validate_public_ip_change_payload(payload: dict[str, Any]) -> dict[str, Any]
             if parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_multicast:
                 warnings.append("requested_public_ip is not globally routable")
         except ValueError:
-            errors["requested_public_ip"] = "عنوان الإنترنت المطلوب يجب أن يكون عنوانًا صحيحًا"
+            errors["requested_public_ip"] = N_("عنوان الإنترنت المطلوب يجب أن يكون عنوانًا صحيحًا")
 
     router_type = str(payload.get("router_type") or "mikrotik").strip().lower()
     if router_type not in {"mikrotik", "routeros"}:
@@ -208,7 +209,7 @@ def validate_public_ip_change_payload(payload: dict[str, Any]) -> dict[str, Any]
 
     method = str(payload.get("method") or "srcnat_to_addresses").strip().lower()
     if method not in {"srcnat_to_addresses", "site_exit_nat"}:
-        errors["method"] = "طريقة تغيير عنوان الإنترنت غير مدعومة"
+        errors["method"] = N_("طريقة تغيير عنوان الإنترنت غير مدعومة")
 
     normalized = {
         "router_id": router_id,

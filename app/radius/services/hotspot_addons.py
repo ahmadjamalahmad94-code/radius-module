@@ -39,6 +39,7 @@ walled-garden) مع حفنة إضافات مرجعية تثبت كل آلية. �
 عرّف AddonSpec وسجّله — لا تغيير في المحرّك.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 import json as _json
@@ -61,11 +62,11 @@ CAT_LOGIN = "login"
 CAT_ENGAGEMENT = "engagement"
 
 CATEGORY_LABELS: dict[str, str] = {
-    CAT_CONTENT: "المحتوى",
-    CAT_MONETIZATION: "الربح والتسويق",
-    CAT_THEME: "الثيمات والمظهر",
-    CAT_LOGIN: "أنماط الدخول",
-    CAT_ENGAGEMENT: "التفاعل والولاء",
+    CAT_CONTENT: N_("المحتوى"),
+    CAT_MONETIZATION: N_("الربح والتسويق"),
+    CAT_THEME: N_("الثيمات والمظهر"),
+    CAT_LOGIN: N_("أنماط الدخول"),
+    CAT_ENGAGEMENT: N_("التفاعل والولاء"),
 }
 # ترتيب عرض التصنيفات في المصمّم.
 CATEGORY_ORDER: tuple[str, ...] = (
@@ -359,15 +360,15 @@ def _frag_live_clock(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="live_clock",
     category=CAT_CONTENT,
-    label_ar="ساعة حيّة",
-    desc_ar="ساعة رقمية تعمل لحظيًّا على صفحة الدخول — بلا إنترنت.",
+    label_ar=N_("ساعة حيّة"),
+    desc_ar=N_("ساعة رقمية تعمل لحظيًّا على صفحة الدخول — بلا إنترنت."),
     surface=SURFACE_PRELOGIN,
     icon="clock",
     server_side=True,
     fields=(
-        AddonField(key="format", label_ar="صيغة الوقت", kind="select",
+        AddonField(key="format", label_ar=N_("صيغة الوقت"), kind="select",
                    default="24h",
-                   options=(("24h", "٢٤ ساعة"), ("12h", "١٢ ساعة (AM/PM)"))),
+                   options=(("24h", N_("٢٤ ساعة")), ("12h", N_("١٢ ساعة (AM/PM)")))),
     ),
     pre_fragment=_frag_live_clock,
 ))
@@ -375,7 +376,7 @@ register(AddonSpec(
 
 # ── 2) لوحة إعلانات (محتوى، pre، مخبوزة خادميًّا) ──
 def _frag_announcements(cfg: dict, ctx: dict) -> str:
-    title = _esc(cfg.get("title") or "إعلانات")
+    title = _esc(cfg.get("title") or N_("إعلانات"))
     body = _esc(cfg.get("body") or "")
     if not body:
         return ""
@@ -396,16 +397,16 @@ def _frag_announcements(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="announcements",
     category=CAT_CONTENT,
-    label_ar="لوحة إعلانات",
-    desc_ar="إعلانات تُخبَز داخل الصفحة وتظهر فورًا قبل الدخول (سطر لكل نقطة).",
+    label_ar=N_("لوحة إعلانات"),
+    desc_ar=N_("إعلانات تُخبَز داخل الصفحة وتظهر فورًا قبل الدخول (سطر لكل نقطة)."),
     surface=SURFACE_PRELOGIN,
     icon="bullhorn",
     server_side=True,
     fields=(
-        AddonField(key="title", label_ar="العنوان", default="إعلانات",
+        AddonField(key="title", label_ar=N_("العنوان"), default=N_("إعلانات"),
                    max_len=60),
-        AddonField(key="body", label_ar="النص (سطر لكل نقطة)", kind="textarea",
-                   placeholder="ساعات العمل ٨ص–١٢م\nصيانة الجمعة ٢ظهرًا",
+        AddonField(key="body", label_ar=N_("النص (سطر لكل نقطة)"), kind="textarea",
+                   placeholder=N_("ساعات العمل ٨ص–١٢م\nصيانة الجمعة ٢ظهرًا"),
                    max_len=1000),
     ),
     pre_fragment=_frag_announcements,
@@ -428,14 +429,14 @@ def _emergency_html(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="emergency_notice",
     category=CAT_CONTENT,
-    label_ar="إشعار طوارئ",
-    desc_ar="شريط أحمر عاجل أعلى الصفحة — قبل الدخول وبعده.",
+    label_ar=N_("إشعار طوارئ"),
+    desc_ar=N_("شريط أحمر عاجل أعلى الصفحة — قبل الدخول وبعده."),
     surface=SURFACE_BOTH,
     icon="triangle-exclamation",
     server_side=True,
     fields=(
-        AddonField(key="text", label_ar="نص الإشعار", kind="text",
-                   placeholder="انقطاع مجدول للصيانة الليلة ١٢–٢ص", max_len=160),
+        AddonField(key="text", label_ar=N_("نص الإشعار"), kind="text",
+                   placeholder=N_("انقطاع مجدول للصيانة الليلة ١٢–٢ص"), max_len=160),
     ),
     pre_fragment=_emergency_html,
     post_widget=_emergency_html,
@@ -466,26 +467,26 @@ def _widget_social(cfg: dict, ctx: dict) -> str:
             f"{_esc(label)}</a>")
     if not btns:
         return ""
-    return ('<h3 style="margin:6px 0;font-size:15px">تابعنا</h3>'
-            '<div style="display:flex;flex-wrap:wrap;justify-content:center">'
+    return (N_('<h3 style="margin:6px 0;font-size:15px">تابعنا</h3>'
+            '<div style="display:flex;flex-wrap:wrap;justify-content:center">')
             + "".join(btns) + "</div>")
 
 
 register(AddonSpec(
     key="social_links",
     category=CAT_ENGAGEMENT,
-    label_ar="روابط التواصل",
-    desc_ar="أزرار صفحاتك (فيسبوك/إنستغرام/واتساب/تلجرام) على صفحة ما بعد الدخول.",
+    label_ar=N_("روابط التواصل"),
+    desc_ar=N_("أزرار صفحاتك (فيسبوك/إنستغرام/واتساب/تلجرام) على صفحة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN,
     icon="share-nodes",
     walled_garden_domains=tuple(dom for _k, _l, dom, _a in _SOCIAL),
     fields=(
-        AddonField(key="facebook", label_ar="رابط فيسبوك", kind="url",
+        AddonField(key="facebook", label_ar=N_("رابط فيسبوك"), kind="url",
                    placeholder="https://facebook.com/yourpage"),
-        AddonField(key="instagram", label_ar="رابط إنستغرام", kind="url"),
-        AddonField(key="whatsapp", label_ar="رابط واتساب", kind="url",
+        AddonField(key="instagram", label_ar=N_("رابط إنستغرام"), kind="url"),
+        AddonField(key="whatsapp", label_ar=N_("رابط واتساب"), kind="url",
                    placeholder="https://wa.me/9665XXXXXXXX"),
-        AddonField(key="telegram", label_ar="رابط تلجرام", kind="url"),
+        AddonField(key="telegram", label_ar=N_("رابط تلجرام"), kind="url"),
     ),
     post_widget=_widget_social,
 ))
@@ -498,7 +499,7 @@ def _frag_countdown(cfg: dict, ctx: dict) -> str:
     except (TypeError, ValueError):
         secs = 10
     secs = max(1, min(600, secs))
-    label = _esc(cfg.get("label") or "يبدأ الوصول خلال")
+    label = _esc(cfg.get("label") or N_("يبدأ الوصول خلال"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     return (
         '<div class="hr-countdown" style="text-align:center;margin:12px auto;'
@@ -515,16 +516,16 @@ def _frag_countdown(cfg: dict, ctx: dict) -> str:
 register(AddonSpec(
     key="countdown_access",
     category=CAT_ENGAGEMENT,
-    label_ar="مؤقّت الوصول",
-    desc_ar="عدّ تنازلي قصير قبل تفعيل زر الدخول — يعمل بلا إنترنت.",
+    label_ar=N_("مؤقّت الوصول"),
+    desc_ar=N_("عدّ تنازلي قصير قبل تفعيل زر الدخول — يعمل بلا إنترنت."),
     surface=SURFACE_PRELOGIN,
     icon="hourglass-half",
     server_side=True,
     fields=(
-        AddonField(key="seconds", label_ar="عدد الثواني", kind="number",
+        AddonField(key="seconds", label_ar=N_("عدد الثواني"), kind="number",
                    default="10", min_num=1, max_num=600),
-        AddonField(key="label", label_ar="النص قبل العدّاد",
-                   default="يبدأ الوصول خلال", max_len=40),
+        AddonField(key="label", label_ar=N_("النص قبل العدّاد"),
+                   default=N_("يبدأ الوصول خلال"), max_len=40),
     ),
     pre_fragment=_frag_countdown,
 ))

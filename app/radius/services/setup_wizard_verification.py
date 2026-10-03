@@ -1,5 +1,6 @@
 """Wave B: setup wizard read-only verification engine."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 import re
@@ -282,220 +283,220 @@ class RadiusReadOnlyProbe:
 class SetupDiagnosticsService:
     _MAP: dict[str, dict[str, Any]] = {
         "internet_ping_failed": {
-            "arabic_title": "فشل اختبار الإنترنت",
-            "explanation_ar": "الراوتر لم يتمكن من الوصول إلى 8.8.8.8.",
-            "likely_causes": ["المسار الافتراضي غير صحيح", "واجهة WAN غير مفعلة", "مزود الخدمة لا يمرر الحركة"],
-            "suggested_fixes": ["تحقق من default route", "تحقق من عنوان WAN والبوابة", "نفذ ping من الراوتر يدويًا"],
+            "arabic_title": N_("فشل اختبار الإنترنت"),
+            "explanation_ar": N_("الراوتر لم يتمكن من الوصول إلى 8.8.8.8."),
+            "likely_causes": [N_("المسار الافتراضي غير صحيح"), N_("واجهة WAN غير مفعلة"), N_("مزود الخدمة لا يمرر الحركة")],
+            "suggested_fixes": [N_("تحقق من default route"), N_("تحقق من عنوان WAN والبوابة"), N_("نفذ ping من الراوتر يدويًا")],
             "commands_to_inspect": ["/ip route print detail", "/tool ping 8.8.8.8 count=5"],
         },
         "dns_failed": {
-            "arabic_title": "فشل DNS",
-            "explanation_ar": "الراوتر لا يحل أسماء النطاقات كما هو متوقع.",
-            "likely_causes": ["DNS غير مضبوط", "DNS مزود الخدمة لا يستجيب"],
-            "suggested_fixes": ["حدد DNS موثوق مثل 1.1.1.1 و 8.8.8.8", "أعد الفحص بعد ضبط DNS"],
+            "arabic_title": N_("فشل DNS"),
+            "explanation_ar": N_("الراوتر لا يحل أسماء النطاقات كما هو متوقع."),
+            "likely_causes": [N_("DNS غير مضبوط"), N_("DNS مزود الخدمة لا يستجيب")],
+            "suggested_fixes": [N_("حدد DNS موثوق مثل 1.1.1.1 و 8.8.8.8"), N_("أعد الفحص بعد ضبط DNS")],
             "commands_to_inspect": ["/ip dns print detail", "/tool ping cloudflare.com count=5"],
         },
         "default_route_missing": {
-            "arabic_title": "المسار الافتراضي غير موجود",
-            "explanation_ar": "لم يتم العثور على default route مع البوابة المطلوبة.",
-            "likely_causes": ["لم يُطبق جزء route من السكربت", "gateway غير صحيح"],
-            "suggested_fixes": ["راجع سكربت الإنترنت", "تحقق من gateway وdistance"],
+            "arabic_title": N_("المسار الافتراضي غير موجود"),
+            "explanation_ar": N_("لم يتم العثور على default route مع البوابة المطلوبة."),
+            "likely_causes": [N_("لم يُطبق جزء route من السكربت"), N_("gateway غير صحيح")],
+            "suggested_fixes": [N_("راجع سكربت الإنترنت"), N_("تحقق من gateway وdistance")],
             "commands_to_inspect": ["/ip route print detail where dst-address=0.0.0.0/0"],
         },
         "nat_missing": {
-            "arabic_title": "قاعدة NAT غير موجودة",
-            "explanation_ar": "لم يتم العثور على قاعدة masquerade مخصصة لواجهة الرفع.",
-            "likely_causes": ["تعطيل NAT في النموذج", "فشل تطبيق القاعدة"],
-            "suggested_fixes": ["فعّل NAT في النموذج أو أعد تطبيق السكربت"],
+            "arabic_title": N_("قاعدة NAT غير موجودة"),
+            "explanation_ar": N_("لم يتم العثور على قاعدة masquerade مخصصة لواجهة الرفع."),
+            "likely_causes": [N_("تعطيل NAT في النموذج"), N_("فشل تطبيق القاعدة")],
+            "suggested_fixes": [N_("فعّل NAT في النموذج أو أعد تطبيق السكربت")],
             "commands_to_inspect": ["/ip firewall nat print detail"],
         },
         "uplink_interface_missing": {
-            "arabic_title": "واجهة الرفع غير موجودة",
-            "explanation_ar": "الواجهة المحددة في الإعدادات غير موجودة على الراوتر.",
-            "likely_causes": ["اسم واجهة خاطئ", "تغير اسم الواجهة"],
-            "suggested_fixes": ["استخدم نفس اسم الواجهة من /interface print"],
+            "arabic_title": N_("واجهة الرفع غير موجودة"),
+            "explanation_ar": N_("الواجهة المحددة في الإعدادات غير موجودة على الراوتر."),
+            "likely_causes": [N_("اسم واجهة خاطئ"), N_("تغير اسم الواجهة")],
+            "suggested_fixes": [N_("استخدم نفس اسم الواجهة من /interface print")],
             "commands_to_inspect": ["/interface print detail"],
         },
         "probe_unavailable": {
-            "arabic_title": "وضع الفحص المباشر غير متاح",
-            "explanation_ar": "لا يوجد موصل قراءة مباشر للراوتر/الخادم في هذا البيئة.",
-            "likely_causes": ["لم يتم تفعيل probe adapter", "بيئة الاختبار لا تملك اتصالاً حيًا"],
-            "suggested_fixes": ["استخدم وضع تحليل المخرجات الملصقة", "هيئ probe adapter في بيئة التشغيل"],
+            "arabic_title": N_("وضع الفحص المباشر غير متاح"),
+            "explanation_ar": N_("لا يوجد موصل قراءة مباشر للراوتر/الخادم في هذا البيئة."),
+            "likely_causes": [N_("لم يتم تفعيل probe adapter"), N_("بيئة الاختبار لا تملك اتصالاً حيًا")],
+            "suggested_fixes": [N_("استخدم وضع تحليل المخرجات الملصقة"), N_("هيئ probe adapter في بيئة التشغيل")],
             "commands_to_inspect": [],
         },
         "vpn_not_handshaking": {
-            "arabic_title": "نفق VPN لا يصافح",
-            "explanation_ar": "لا توجد مصافحة WireGuard حديثة بين الراوتر والخادم.",
-            "likely_causes": ["Public key أو endpoint خاطئ", "UDP محجوب"],
-            "suggested_fixes": ["راجع peer keys", "تحقق من منفذ UDP في الجدار الناري"],
+            "arabic_title": N_("نفق VPN لا يصافح"),
+            "explanation_ar": N_("لا توجد مصافحة WireGuard حديثة بين الراوتر والخادم."),
+            "likely_causes": [N_("Public key أو endpoint خاطئ"), N_("UDP محجوب")],
+            "suggested_fixes": [N_("راجع peer keys"), N_("تحقق من منفذ UDP في الجدار الناري")],
             "commands_to_inspect": ["wg show", "/interface wireguard peers print detail"],
         },
         "wrong_public_endpoint": {
-            "arabic_title": "عنوان endpoint غير صحيح",
-            "explanation_ar": "عنوان الخادم العام أو المنفذ لا يطابق الخطة.",
-            "likely_causes": ["IP VPS تغير", "المنفذ غير مطابق"],
-            "suggested_fixes": ["حدث endpoint في الراوتر", "أكد المنفذ على الطرفين"],
+            "arabic_title": N_("عنوان endpoint غير صحيح"),
+            "explanation_ar": N_("عنوان الخادم العام أو المنفذ لا يطابق الخطة."),
+            "likely_causes": [N_("IP VPS تغير"), N_("المنفذ غير مطابق")],
+            "suggested_fixes": [N_("حدث endpoint في الراوتر"), N_("أكد المنفذ على الطرفين")],
             "commands_to_inspect": ["/interface wireguard peers print detail", "wg show"],
         },
         "firewall_blocking_udp": {
-            "arabic_title": "الجدار الناري يحجب UDP",
-            "explanation_ar": "حزم WireGuard لا تمر بسبب قواعد الحماية.",
-            "likely_causes": ["قاعدة DROP قبل allow", "مزود الخدمة يحجب المنفذ"],
-            "suggested_fixes": ["أضف allow للمنفذ", "اختبر منفذ UDP بديل"],
+            "arabic_title": N_("الجدار الناري يحجب UDP"),
+            "explanation_ar": N_("حزم WireGuard لا تمر بسبب قواعد الحماية."),
+            "likely_causes": [N_("قاعدة DROP قبل allow"), N_("مزود الخدمة يحجب المنفذ")],
+            "suggested_fixes": [N_("أضف allow للمنفذ"), N_("اختبر منفذ UDP بديل")],
             "commands_to_inspect": ["/ip firewall filter print stats", "iptables -S"],
         },
         "wrong_allowed_address": {
-            "arabic_title": "Allowed Address غير مطابق",
-            "explanation_ar": "شبكات allowed-address لا تطابق شبكة النفق المقصودة.",
-            "likely_causes": ["قيمة too narrow", "CIDR غير صحيح"],
-            "suggested_fixes": ["طابق allowed-address مع خطة النفق"],
+            "arabic_title": N_("Allowed Address غير مطابق"),
+            "explanation_ar": N_("شبكات allowed-address لا تطابق شبكة النفق المقصودة."),
+            "likely_causes": [N_("قيمة too narrow"), N_("CIDR غير صحيح")],
+            "suggested_fixes": [N_("طابق allowed-address مع خطة النفق")],
             "commands_to_inspect": ["/interface wireguard peers print detail"],
         },
         "server_allowed_ip_mismatch": {
-            "arabic_title": "عنوان الراوتر على الخادم غير مطابق",
-            "explanation_ar": "تم رصد WireGuard peer على الخادم، لكن allowed-ips لا يساوي عنوان الراوتر المحجوز في HobeRadius.",
-            "likely_causes": ["إعادة محاولة قديمة استخدمت IP سابق", "Peer موجود على الخادم بقيمة allowed-ips قديمة"],
-            "suggested_fixes": ["اضغط إصلاح الربط على الخادم", "تأكد أن allowed-ips يساوي عنوان الراوتر المحجوز /32"],
+            "arabic_title": N_("عنوان الراوتر على الخادم غير مطابق"),
+            "explanation_ar": N_("تم رصد WireGuard peer على الخادم، لكن allowed-ips لا يساوي عنوان الراوتر المحجوز في HobeRadius."),
+            "likely_causes": [N_("إعادة محاولة قديمة استخدمت IP سابق"), N_("Peer موجود على الخادم بقيمة allowed-ips قديمة")],
+            "suggested_fixes": [N_("اضغط إصلاح الربط على الخادم"), N_("تأكد أن allowed-ips يساوي عنوان الراوتر المحجوز /32")],
             "commands_to_inspect": ["wg show"],
         },
         "router_vpn_ip_mismatch": {
-            "arabic_title": "عنوان الراوتر في MikroTik غير مطابق للحجز",
-            "explanation_ar": "مخرجات MikroTik تعرض عنوان ربط خاص مختلفًا عن العنوان المحجوز لهذا الراوتر في HobeRadius.",
-            "likely_causes": ["سكربت قديم تم نسخه", "إعداد WireGuard سابق لم يتم تحديثه"],
-            "suggested_fixes": ["أعد توليد سكربت الربط من نفس الجولة", "راجع address على واجهة WireGuard"],
+            "arabic_title": N_("عنوان الراوتر في MikroTik غير مطابق للحجز"),
+            "explanation_ar": N_("مخرجات MikroTik تعرض عنوان ربط خاص مختلفًا عن العنوان المحجوز لهذا الراوتر في HobeRadius."),
+            "likely_causes": [N_("سكربت قديم تم نسخه"), N_("إعداد WireGuard سابق لم يتم تحديثه")],
+            "suggested_fixes": [N_("أعد توليد سكربت الربط من نفس الجولة"), N_("راجع address على واجهة WireGuard")],
             "commands_to_inspect": ["/ip address print detail where interface=hr-wg"],
         },
         "route_missing": {
-            "arabic_title": "مسار مطلوب غير موجود",
-            "explanation_ar": "مسار الشبكات المطلوبة للنفق أو RADIUS غير موجود.",
-            "likely_causes": ["route لم يُطبق", "gateway غير صحيح"],
-            "suggested_fixes": ["أعد تطبيق جزء route", "تحقق من gateway on-link"],
+            "arabic_title": N_("مسار مطلوب غير موجود"),
+            "explanation_ar": N_("مسار الشبكات المطلوبة للنفق أو RADIUS غير موجود."),
+            "likely_causes": [N_("route لم يُطبق"), N_("gateway غير صحيح")],
+            "suggested_fixes": [N_("أعد تطبيق جزء route"), N_("تحقق من gateway on-link")],
             "commands_to_inspect": ["/ip route print detail"],
         },
         "radius_secret_mismatch": {
-            "arabic_title": "سر RADIUS غير متطابق",
-            "explanation_ar": "secret على الراوتر لا يطابق secret في الخادم.",
-            "likely_causes": ["نسخ secret خاطئ", "وجود إعداد أقدم"],
-            "suggested_fixes": ["طابق secret بدقة", "استخدم تعليق HOBERADIUS_SETUP لتحديد الإدخال الصحيح"],
+            "arabic_title": N_("سر RADIUS غير متطابق"),
+            "explanation_ar": N_("secret على الراوتر لا يطابق secret في الخادم."),
+            "likely_causes": [N_("نسخ secret خاطئ"), N_("وجود إعداد أقدم")],
+            "suggested_fixes": [N_("طابق secret بدقة"), N_("استخدم تعليق HOBERADIUS_SETUP لتحديد الإدخال الصحيح")],
             "commands_to_inspect": ["/radius print detail"],
         },
         "radius_server_unreachable": {
-            "arabic_title": "خادم RADIUS غير قابل للوصول",
-            "explanation_ar": "الراوتر لا يصل لخادم RADIUS عبر المسار الحالي.",
-            "likely_causes": ["VPN غير فعال", "المنافذ 1812/1813 محجوبة"],
-            "suggested_fixes": ["تحقق من ping بين النفق", "افحص الجدار الناري على VPS"],
+            "arabic_title": N_("خادم RADIUS غير قابل للوصول"),
+            "explanation_ar": N_("الراوتر لا يصل لخادم RADIUS عبر المسار الحالي."),
+            "likely_causes": [N_("VPN غير فعال"), N_("المنافذ 1812/1813 محجوبة")],
+            "suggested_fixes": [N_("تحقق من ping بين النفق"), N_("افحص الجدار الناري على VPS")],
             "commands_to_inspect": ["/tool ping 10.10.0.1 count=5", "ss -ulpn | grep 1812"],
         },
         "api_login_failed": {
-            "arabic_title": "فشل تسجيل دخول API",
-            "explanation_ar": "تعذر الدخول إلى MikroTik API بالمستخدم المخطط.",
-            "likely_causes": ["بيانات دخول خاطئة", "الخدمة مغلقة", "صلاحيات غير كافية"],
-            "suggested_fixes": ["تحقق من user/service api", "استخدم مستخدم API مخصص للمعالج"],
+            "arabic_title": N_("فشل تسجيل دخول API"),
+            "explanation_ar": N_("تعذر الدخول إلى MikroTik API بالمستخدم المخطط."),
+            "likely_causes": [N_("بيانات دخول خاطئة"), N_("الخدمة مغلقة"), N_("صلاحيات غير كافية")],
+            "suggested_fixes": [N_("تحقق من user/service api"), N_("استخدم مستخدم API مخصص للمعالج")],
             "commands_to_inspect": ["/ip service print", "/user print detail"],
         },
         "api_user_missing": {
-            "arabic_title": "مستخدم API غير موجود",
-            "explanation_ar": "لم يظهر المستخدم المخطط ضمن قائمة المستخدمين.",
-            "likely_causes": ["لم يُنشأ المستخدم", "اسم مختلف عن المخطط"],
-            "suggested_fixes": ["راجع مخرجات /user print", "أعد تنفيذ جزء API من السكربت"],
+            "arabic_title": N_("مستخدم API غير موجود"),
+            "explanation_ar": N_("لم يظهر المستخدم المخطط ضمن قائمة المستخدمين."),
+            "likely_causes": [N_("لم يُنشأ المستخدم"), N_("اسم مختلف عن المخطط")],
+            "suggested_fixes": [N_("راجع مخرجات /user print"), N_("أعد تنفيذ جزء API من السكربت")],
             "commands_to_inspect": ["/user print detail"],
         },
         "router_dns_issue": {
-            "arabic_title": "مشكلة DNS على الراوتر",
-            "explanation_ar": "الراوتر لا يحل النطاقات بالشكل الصحيح.",
-            "likely_causes": ["إعداد DNS ناقص", "خوادم DNS غير متاحة"],
-            "suggested_fixes": ["ضبط DNS موثوق", "تحقق من allow-remote-requests عند الحاجة"],
+            "arabic_title": N_("مشكلة DNS على الراوتر"),
+            "explanation_ar": N_("الراوتر لا يحل النطاقات بالشكل الصحيح."),
+            "likely_causes": [N_("إعداد DNS ناقص"), N_("خوادم DNS غير متاحة")],
+            "suggested_fixes": [N_("ضبط DNS موثوق"), N_("تحقق من allow-remote-requests عند الحاجة")],
             "commands_to_inspect": ["/ip dns print", "/tool ping cloudflare.com count=3"],
         },
         "router_time_issue": {
-            "arabic_title": "وقت الراوتر غير صحيح",
-            "explanation_ar": "انحراف وقت النظام قد يسبب أخطاء اتصال/مصادقة.",
-            "likely_causes": ["NTP غير مفعّل", "timezone خاطئة"],
-            "suggested_fixes": ["فعّل NTP", "تأكد من timezone الصحيحة"],
+            "arabic_title": N_("وقت الراوتر غير صحيح"),
+            "explanation_ar": N_("انحراف وقت النظام قد يسبب أخطاء اتصال/مصادقة."),
+            "likely_causes": [N_("NTP غير مفعّل"), N_("timezone خاطئة")],
+            "suggested_fixes": [N_("فعّل NTP"), N_("تأكد من timezone الصحيحة")],
             "commands_to_inspect": ["/system clock print", "/system ntp client print"],
         },
         "duplicate_config_conflict": {
-            "arabic_title": "تعارض إعدادات مكررة",
-            "explanation_ar": "تم العثور على إعدادات أقدم قد تتعارض مع خطة المعالج.",
-            "likely_causes": ["بقايا إعدادات قديمة", "تعليقات غير موحدة"],
-            "suggested_fixes": ["راجع العناصر المتكررة قبل المتابعة"],
+            "arabic_title": N_("تعارض إعدادات مكررة"),
+            "explanation_ar": N_("تم العثور على إعدادات أقدم قد تتعارض مع خطة المعالج."),
+            "likely_causes": [N_("بقايا إعدادات قديمة"), N_("تعليقات غير موحدة")],
+            "suggested_fixes": [N_("راجع العناصر المتكررة قبل المتابعة")],
             "commands_to_inspect": ["/interface wireguard print detail", "/radius print detail"],
         },
         "management_interface_conflict": {
-            "arabic_title": "تعارض مع واجهة الإدارة",
-            "explanation_ar": "الواجهة المحددة قد تكون واجهة دخول الإدارة الحالية.",
-            "likely_causes": ["اختيار interface إدارة كـ uplink"],
-            "suggested_fixes": ["استخدم منفذ WAN الصحيح", "نفذ التعديلات من جلسة محلية آمنة"],
+            "arabic_title": N_("تعارض مع واجهة الإدارة"),
+            "explanation_ar": N_("الواجهة المحددة قد تكون واجهة دخول الإدارة الحالية."),
+            "likely_causes": [N_("اختيار interface إدارة كـ uplink")],
+            "suggested_fixes": [N_("استخدم منفذ WAN الصحيح"), N_("نفذ التعديلات من جلسة محلية آمنة")],
             "commands_to_inspect": ["/ip address print", "/interface print detail"],
         },
         "hotspot_server_missing": {
-            "arabic_title": "خادم Hotspot غير موجود",
-            "explanation_ar": "لم يتم العثور على hotspot server متوقع في الراوتر.",
-            "likely_causes": ["فشل تطبيق سكربت Hotspot", "اسم الخادم مختلف"],
-            "suggested_fixes": ["تحقق من أسماء الخوادم", "أعد تطبيق سكربت Hotspot"],
+            "arabic_title": N_("خادم Hotspot غير موجود"),
+            "explanation_ar": N_("لم يتم العثور على hotspot server متوقع في الراوتر."),
+            "likely_causes": [N_("فشل تطبيق سكربت Hotspot"), N_("اسم الخادم مختلف")],
+            "suggested_fixes": [N_("تحقق من أسماء الخوادم"), N_("أعد تطبيق سكربت Hotspot")],
             "commands_to_inspect": ["/ip hotspot print detail"],
         },
         "hotspot_radius_disabled": {
-            "arabic_title": "RADIUS غير مفعّل على Hotspot",
-            "explanation_ar": "خادم Hotspot موجود لكن use-radius غير مفعّل.",
-            "likely_causes": ["تم تعطيل use-radius", "تطبيق ناقص للسكربت"],
-            "suggested_fixes": ["فعّل use-radius على السيرفر"],
+            "arabic_title": N_("RADIUS غير مفعّل على Hotspot"),
+            "explanation_ar": N_("خادم Hotspot موجود لكن use-radius غير مفعّل."),
+            "likely_causes": [N_("تم تعطيل use-radius"), N_("تطبيق ناقص للسكربت")],
+            "suggested_fixes": [N_("فعّل use-radius على السيرفر")],
             "commands_to_inspect": ["/ip hotspot profile print detail"],
         },
         "hotspot_pool_missing": {
-            "arabic_title": "Pool الـ Hotspot غير موجود",
-            "explanation_ar": "لم يتم العثور على pool مستخدم من إعدادات Hotspot.",
-            "likely_causes": ["اسم pool خاطئ", "pool غير مُنشأ"],
-            "suggested_fixes": ["راجع pool name في السكربت"],
+            "arabic_title": N_("Pool الـ Hotspot غير موجود"),
+            "explanation_ar": N_("لم يتم العثور على pool مستخدم من إعدادات Hotspot."),
+            "likely_causes": [N_("اسم pool خاطئ"), N_("pool غير مُنشأ")],
+            "suggested_fixes": [N_("راجع pool name في السكربت")],
             "commands_to_inspect": ["/ip pool print detail"],
         },
         "hotspot_nat_missing": {
-            "arabic_title": "NAT Hotspot غير موجود",
-            "explanation_ar": "لا توجد قاعدة NAT متوقعة لشبكة Hotspot.",
-            "likely_causes": ["nat_enabled=false", "القاعدة لم تُطبق"],
-            "suggested_fixes": ["أضف/طبّق قاعدة NAT المخصصة للشبكة"],
+            "arabic_title": N_("NAT Hotspot غير موجود"),
+            "explanation_ar": N_("لا توجد قاعدة NAT متوقعة لشبكة Hotspot."),
+            "likely_causes": ["nat_enabled=false", N_("القاعدة لم تُطبق")],
+            "suggested_fixes": [N_("أضف/طبّق قاعدة NAT المخصصة للشبكة")],
             "commands_to_inspect": ["/ip firewall nat print detail"],
         },
         "hotspot_interface_missing": {
-            "arabic_title": "واجهة Hotspot غير متوفرة",
-            "explanation_ar": "الواجهة المختارة لـ Hotspot غير موجودة أو غير فعالة.",
-            "likely_causes": ["واجهة خاطئة", "لم يتم إضافتها للـ bridge"],
-            "suggested_fixes": ["تحقق من bridge ports والواجهة"],
+            "arabic_title": N_("واجهة Hotspot غير متوفرة"),
+            "explanation_ar": N_("الواجهة المختارة لـ Hotspot غير موجودة أو غير فعالة."),
+            "likely_causes": [N_("واجهة خاطئة"), N_("لم يتم إضافتها للـ bridge")],
+            "suggested_fixes": [N_("تحقق من bridge ports والواجهة")],
             "commands_to_inspect": ["/interface print detail", "/interface bridge port print detail"],
         },
         "pppoe_service_missing": {
-            "arabic_title": "خدمة PPPoE غير موجودة",
-            "explanation_ar": "لم يتم العثور على pppoe-server service متوقع.",
-            "likely_causes": ["لم يُطبق سكربت Broadband", "اسم الخدمة مختلف"],
-            "suggested_fixes": ["راجع service name", "أعد تطبيق السكربت"],
+            "arabic_title": N_("خدمة PPPoE غير موجودة"),
+            "explanation_ar": N_("لم يتم العثور على pppoe-server service متوقع."),
+            "likely_causes": [N_("لم يُطبق سكربت Broadband"), N_("اسم الخدمة مختلف")],
+            "suggested_fixes": [N_("راجع service name"), N_("أعد تطبيق السكربت")],
             "commands_to_inspect": ["/interface pppoe-server server print detail"],
         },
         "ppp_profile_missing": {
-            "arabic_title": "PPP Profile غير موجود",
-            "explanation_ar": "لم يتم العثور على profile المطلوب لخدمة PPPoE.",
-            "likely_causes": ["profile name خاطئ", "فشل إنشاء profile"],
-            "suggested_fixes": ["تحقق من profile name في السكربت"],
+            "arabic_title": N_("PPP Profile غير موجود"),
+            "explanation_ar": N_("لم يتم العثور على profile المطلوب لخدمة PPPoE."),
+            "likely_causes": [N_("profile name خاطئ"), N_("فشل إنشاء profile")],
+            "suggested_fixes": [N_("تحقق من profile name في السكربت")],
             "commands_to_inspect": ["/ppp profile print detail"],
         },
         "broadband_pool_missing": {
-            "arabic_title": "Pool الـ Broadband غير موجود",
-            "explanation_ar": "لم يتم العثور على remote pool لخدمة PPPoE.",
-            "likely_causes": ["pool غير موجود", "اسم pool مختلف"],
-            "suggested_fixes": ["راجع pool settings وأعد الفحص"],
+            "arabic_title": N_("Pool الـ Broadband غير موجود"),
+            "explanation_ar": N_("لم يتم العثور على remote pool لخدمة PPPoE."),
+            "likely_causes": [N_("pool غير موجود"), N_("اسم pool مختلف")],
+            "suggested_fixes": [N_("راجع pool settings وأعد الفحص")],
             "commands_to_inspect": ["/ip pool print detail"],
         },
         "broadband_nat_missing": {
-            "arabic_title": "NAT Broadband غير موجود",
-            "explanation_ar": "لا توجد قاعدة NAT مخصصة لحركة شبكة Broadband.",
-            "likely_causes": ["nat_enabled=false", "فشل إضافة القاعدة"],
-            "suggested_fixes": ["أعد تطبيق قاعدة NAT المقيدة بالشبكة"],
+            "arabic_title": N_("NAT Broadband غير موجود"),
+            "explanation_ar": N_("لا توجد قاعدة NAT مخصصة لحركة شبكة Broadband."),
+            "likely_causes": ["nat_enabled=false", N_("فشل إضافة القاعدة")],
+            "suggested_fixes": [N_("أعد تطبيق قاعدة NAT المقيدة بالشبكة")],
             "commands_to_inspect": ["/ip firewall nat print detail"],
         },
         "ppp_radius_disabled": {
-            "arabic_title": "RADIUS غير مفعّل لخدمة PPP",
-            "explanation_ar": "خدمات PPP موجودة لكن خيار use-radius غير مفعّل.",
-            "likely_causes": ["إعداد PPP AAA غير مكتمل"],
-            "suggested_fixes": ["فعّل use-radius في PPP AAA"],
+            "arabic_title": N_("RADIUS غير مفعّل لخدمة PPP"),
+            "explanation_ar": N_("خدمات PPP موجودة لكن خيار use-radius غير مفعّل."),
+            "likely_causes": [N_("إعداد PPP AAA غير مكتمل")],
+            "suggested_fixes": [N_("فعّل use-radius في PPP AAA")],
             "commands_to_inspect": ["/ppp aaa print detail"],
         },
     }
@@ -505,10 +506,10 @@ class SetupDiagnosticsService:
         if not payload:
             return {
                 "code": code,
-                "arabic_title": "تشخيص غير معروف",
-                "explanation_ar": "لم يتم العثور على وصف لهذا الخطأ.",
-                "likely_causes": ["بيانات غير كافية"],
-                "suggested_fixes": ["أعد الفحص مع مخرجات أوضح"],
+                "arabic_title": _tr("تشخيص غير معروف"),
+                "explanation_ar": _tr("لم يتم العثور على وصف لهذا الخطأ."),
+                "likely_causes": [N_("بيانات غير كافية")],
+                "suggested_fixes": [_tr("أعد الفحص مع مخرجات أوضح")],
                 "commands_to_inspect": [],
             }
         return {"code": code, **payload}
@@ -519,12 +520,12 @@ class SetupDiagnosticsService:
 
 def _details_for_status(status: str) -> str:
     if status == "success":
-        return "تم التحقق بنجاح."
+        return N_("تم التحقق بنجاح.")
     if status == "failed":
-        return "فشل الفحص، راجع التشخيص."
+        return N_("فشل الفحص، راجع التشخيص.")
     if status == "blocked":
-        return "هذا الفحص محجوب حتى استكمال الخطوات السابقة."
-    return "بانتظار التنفيذ والفحص."
+        return N_("هذا الفحص محجوب حتى استكمال الخطوات السابقة.")
+    return N_("بانتظار التنفيذ والفحص.")
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:
@@ -673,13 +674,13 @@ class SetupVerificationService:
     """Read-only verification engine + status-card contract."""
 
     _TITLES = {
-        "vpn_tunnel": "نفق VPN",
-        "vps_ping": "Ping من الراوتر إلى VPS",
-        "router_ping": "Ping من VPS إلى الراوتر",
-        "radius_reachable": "وصول RADIUS",
-        "api_login": "تسجيل API",
-        "hotspot_ready": "جاهزية Hotspot",
-        "broadband_ready": "جاهزية Broadband",
+        "vpn_tunnel": N_("نفق VPN"),
+        "vps_ping": N_("Ping من الراوتر إلى VPS"),
+        "router_ping": N_("Ping من VPS إلى الراوتر"),
+        "radius_reachable": N_("وصول RADIUS"),
+        "api_login": N_("تسجيل API"),
+        "hotspot_ready": N_("جاهزية Hotspot"),
+        "broadband_ready": N_("جاهزية Broadband"),
     }
 
     def __init__(
@@ -749,11 +750,11 @@ class SetupVerificationService:
                 diagnostic_codes.append("internet_ping_failed")
             if requires_dns:
                 dns_ok = _has_ping_success(output, "cloudflare.com") or ("cloudflare.com" in output.lower() and "timeout" not in output.lower())
-                checks.append(_check("dns_resolution", "فحص DNS", CHECK_SUCCESS if dns_ok else CHECK_FAILED))
+                checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SUCCESS if dns_ok else CHECK_FAILED))
                 if not dns_ok:
                     diagnostic_codes.append("dns_failed")
             else:
-                checks.append(_check("dns_resolution", "فحص DNS", CHECK_SKIPPED))
+                checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SKIPPED))
         elif mode == "manual_contract":
             ping_ok = _as_bool(manual_checks.get("ping_8_8_8_8"), False)
             checks.append(_check("ping_8_8_8_8", "Ping 8.8.8.8", CHECK_SUCCESS if ping_ok else CHECK_FAILED))
@@ -761,11 +762,11 @@ class SetupVerificationService:
                 diagnostic_codes.append("internet_ping_failed")
             if requires_dns:
                 dns_ok = _as_bool(manual_checks.get("dns_resolution"), False)
-                checks.append(_check("dns_resolution", "فحص DNS", CHECK_SUCCESS if dns_ok else CHECK_FAILED))
+                checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SUCCESS if dns_ok else CHECK_FAILED))
                 if not dns_ok:
                     diagnostic_codes.append("dns_failed")
             else:
-                checks.append(_check("dns_resolution", "فحص DNS", CHECK_SKIPPED))
+                checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SKIPPED))
         else:
             try:
                 interfaces = self.router_probe.get_interfaces()
@@ -786,17 +787,17 @@ class SetupVerificationService:
                 iface_ok = True
                 if selected_iface:
                     iface_ok = any(str(item.get("name") or "") == selected_iface for item in interfaces)
-                checks.append(_check("selected_uplink_present", "وجود واجهة الرفع", CHECK_SUCCESS if iface_ok else CHECK_FAILED))
+                checks.append(_check("selected_uplink_present", _tr("وجود واجهة الرفع"), CHECK_SUCCESS if iface_ok else CHECK_FAILED))
                 if not iface_ok:
                     diagnostic_codes.append("uplink_interface_missing")
 
                 if expects_default_route:
                     route_ok = any(str(item.get("dst-address") or item.get("dst_address") or "") in {"0.0.0.0/0", "::/0"} for item in routes)
-                    checks.append(_check("default_route_present", "وجود default route", CHECK_SUCCESS if route_ok else CHECK_FAILED))
+                    checks.append(_check("default_route_present", _tr("وجود default route"), CHECK_SUCCESS if route_ok else CHECK_FAILED))
                     if not route_ok:
                         diagnostic_codes.append("default_route_missing")
                 else:
-                    checks.append(_check("default_route_present", "وجود default route", CHECK_SKIPPED))
+                    checks.append(_check("default_route_present", _tr("وجود default route"), CHECK_SKIPPED))
 
                 if nat_enabled:
                     nat_ok = any(
@@ -808,25 +809,25 @@ class SetupVerificationService:
                         )
                         for item in nat_rules
                     )
-                    checks.append(_check("nat_rule_present", "وجود NAT", CHECK_SUCCESS if nat_ok else CHECK_FAILED))
+                    checks.append(_check("nat_rule_present", _tr("وجود NAT"), CHECK_SUCCESS if nat_ok else CHECK_FAILED))
                     if not nat_ok:
                         diagnostic_codes.append("nat_missing")
                 else:
-                    checks.append(_check("nat_rule_present", "وجود NAT", CHECK_SKIPPED))
+                    checks.append(_check("nat_rule_present", _tr("وجود NAT"), CHECK_SKIPPED))
 
                 if requires_dns:
                     dns_probe = self.router_probe.get_dns()
                     dns_ok = bool(dns_probe.get("servers") or dns_probe.get("server"))
-                    checks.append(_check("dns_resolution", "فحص DNS", CHECK_SUCCESS if dns_ok else CHECK_FAILED))
+                    checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SUCCESS if dns_ok else CHECK_FAILED))
                     if not dns_ok:
                         diagnostic_codes.append("dns_failed")
                 else:
-                    checks.append(_check("dns_resolution", "فحص DNS", CHECK_SKIPPED))
+                    checks.append(_check("dns_resolution", _tr("فحص DNS"), CHECK_SKIPPED))
             except ProbeUnavailableError:
-                checks.append(_check("probe", "فحص مباشر", CHECK_BLOCKED, "موصل الفحص غير متاح"))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_BLOCKED, N_("موصل الفحص غير متاح")))
                 diagnostic_codes.append("probe_unavailable")
             except Exception as exc:  # pragma: no cover - safety net
-                checks.append(_check("probe", "فحص مباشر", CHECK_FAILED, str(exc)))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_FAILED, str(exc)))
                 diagnostic_codes.append("probe_unavailable")
 
         required = {"ping_8_8_8_8"}
@@ -838,7 +839,7 @@ class SetupVerificationService:
             overall_status = VERIFY_STATUS_PARTIAL
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
-        next_action = "تم التحقق من الإنترنت بنجاح. يمكنك الانتقال لخطوة الربط والمصادقة." if gate_unlocked else "راجع التشخيص ثم أعد المحاولة أو استخدم وضع تحليل المخرجات."
+        next_action = _tr("تم التحقق من الإنترنت بنجاح. يمكنك الانتقال لخطوة الربط والمصادقة.") if gate_unlocked else _tr("راجع التشخيص ثم أعد المحاولة أو استخدم وضع تحليل المخرجات.")
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,
@@ -909,21 +910,21 @@ class SetupVerificationService:
 
             checks.extend(
                 [
-                    _check("vpn_tunnel", "حالة نفق VPN", CHECK_SUCCESS if vpn_ok else CHECK_FAILED),
-                    _check("router_ping_vps", "Ping الراوتر إلى VPS", CHECK_SUCCESS if router_ping_ok else CHECK_FAILED),
-                    _check("vps_ping_router", "Ping VPS إلى الراوتر", CHECK_SUCCESS if vps_ping_ok else CHECK_FAILED),
-                    _check("radius_reachable", "وصول RADIUS", CHECK_SUCCESS if radius_ok else CHECK_FAILED),
-                    _check("api_login", "تسجيل API", CHECK_SUCCESS if api_ok else CHECK_FAILED),
+                    _check("vpn_tunnel", _tr("حالة نفق VPN"), CHECK_SUCCESS if vpn_ok else CHECK_FAILED),
+                    _check("router_ping_vps", _tr("Ping الراوتر إلى VPS"), CHECK_SUCCESS if router_ping_ok else CHECK_FAILED),
+                    _check("vps_ping_router", _tr("Ping VPS إلى الراوتر"), CHECK_SUCCESS if vps_ping_ok else CHECK_FAILED),
+                    _check("radius_reachable", _tr("وصول RADIUS"), CHECK_SUCCESS if radius_ok else CHECK_FAILED),
+                    _check("api_login", _tr("تسجيل API"), CHECK_SUCCESS if api_ok else CHECK_FAILED),
                 ]
             )
         elif mode == "manual_contract":
             checks.extend(
                 [
-                    _check("vpn_tunnel", "حالة نفق VPN", CHECK_SUCCESS if _as_bool(manual_checks.get("vpn_tunnel")) else CHECK_FAILED),
-                    _check("router_ping_vps", "Ping الراوتر إلى VPS", CHECK_SUCCESS if _as_bool(manual_checks.get("router_ping_vps")) else CHECK_FAILED),
-                    _check("vps_ping_router", "Ping VPS إلى الراوتر", CHECK_SUCCESS if _as_bool(manual_checks.get("vps_ping_router")) else CHECK_FAILED),
-                    _check("radius_reachable", "وصول RADIUS", CHECK_SUCCESS if _as_bool(manual_checks.get("radius_reachable")) else CHECK_FAILED),
-                    _check("api_login", "تسجيل API", CHECK_SUCCESS if _as_bool(manual_checks.get("api_login")) else CHECK_FAILED),
+                    _check("vpn_tunnel", _tr("حالة نفق VPN"), CHECK_SUCCESS if _as_bool(manual_checks.get("vpn_tunnel")) else CHECK_FAILED),
+                    _check("router_ping_vps", _tr("Ping الراوتر إلى VPS"), CHECK_SUCCESS if _as_bool(manual_checks.get("router_ping_vps")) else CHECK_FAILED),
+                    _check("vps_ping_router", _tr("Ping VPS إلى الراوتر"), CHECK_SUCCESS if _as_bool(manual_checks.get("vps_ping_router")) else CHECK_FAILED),
+                    _check("radius_reachable", _tr("وصول RADIUS"), CHECK_SUCCESS if _as_bool(manual_checks.get("radius_reachable")) else CHECK_FAILED),
+                    _check("api_login", _tr("تسجيل API"), CHECK_SUCCESS if _as_bool(manual_checks.get("api_login")) else CHECK_FAILED),
                 ]
             )
         else:
@@ -949,20 +950,20 @@ class SetupVerificationService:
 
                 checks.extend(
                     [
-                        _check("vpn_tunnel", "حالة نفق VPN", CHECK_SUCCESS if vpn_ok else CHECK_FAILED),
-                        _check("router_ping_vps", "Ping الراوتر إلى VPS", CHECK_SUCCESS if router_ping_ok else CHECK_FAILED),
-                        _check("vps_ping_router", "Ping VPS إلى الراوتر", CHECK_SUCCESS if vps_ping_ok else CHECK_FAILED),
-                        _check("radius_reachable", "وصول RADIUS", CHECK_SUCCESS if radius_ok else CHECK_FAILED),
-                        _check("api_login", "تسجيل API", CHECK_SUCCESS if api_ok else CHECK_FAILED),
-                        _check("generated_api_user_present", "وجود مستخدم API المخطط", CHECK_SUCCESS if api_user_present else CHECK_FAILED),
-                        _check("radius_entry_present", "وجود إدخال RADIUS", CHECK_SUCCESS if radius_ok else CHECK_FAILED),
+                        _check("vpn_tunnel", _tr("حالة نفق VPN"), CHECK_SUCCESS if vpn_ok else CHECK_FAILED),
+                        _check("router_ping_vps", _tr("Ping الراوتر إلى VPS"), CHECK_SUCCESS if router_ping_ok else CHECK_FAILED),
+                        _check("vps_ping_router", _tr("Ping VPS إلى الراوتر"), CHECK_SUCCESS if vps_ping_ok else CHECK_FAILED),
+                        _check("radius_reachable", _tr("وصول RADIUS"), CHECK_SUCCESS if radius_ok else CHECK_FAILED),
+                        _check("api_login", _tr("تسجيل API"), CHECK_SUCCESS if api_ok else CHECK_FAILED),
+                        _check("generated_api_user_present", _tr("وجود مستخدم API المخطط"), CHECK_SUCCESS if api_user_present else CHECK_FAILED),
+                        _check("radius_entry_present", _tr("وجود إدخال RADIUS"), CHECK_SUCCESS if radius_ok else CHECK_FAILED),
                     ]
                 )
             except ProbeUnavailableError:
-                checks.append(_check("probe", "فحص مباشر", CHECK_BLOCKED, "موصل الفحص غير متاح"))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_BLOCKED, N_("موصل الفحص غير متاح")))
                 diagnostic_codes.append("probe_unavailable")
             except Exception as exc:  # pragma: no cover
-                checks.append(_check("probe", "فحص مباشر", CHECK_FAILED, str(exc)))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_FAILED, str(exc)))
                 diagnostic_codes.append("probe_unavailable")
 
         consistency_required: set[str] = set()
@@ -975,7 +976,7 @@ class SetupVerificationService:
                 checks.append(
                     _check(
                         "router_vpn_ip_consistency",
-                        "تطابق عنوان الراوتر المحجوز",
+                        _tr("تطابق عنوان الراوتر المحجوز"),
                         CHECK_SUCCESS if router_ip_ok else CHECK_FAILED,
                     )
                 )
@@ -1010,7 +1011,7 @@ class SetupVerificationService:
                 checks.append(
                     _check(
                         "server_allowed_ips_consistency",
-                        "تطابق عنوان الراوتر على الخادم",
+                        _tr("تطابق عنوان الراوتر على الخادم"),
                         CHECK_SUCCESS if server_allowed_ok else CHECK_FAILED,
                     )
                 )
@@ -1022,7 +1023,7 @@ class SetupVerificationService:
                 checks.append(
                     _check(
                         "server_allowed_ips_consistency",
-                        "تطابق عنوان الراوتر على الخادم",
+                        _tr("تطابق عنوان الراوتر على الخادم"),
                         CHECK_SKIPPED,
                         str(peer_probe.get("code") or "server peer probe unavailable"),
                     )
@@ -1051,9 +1052,9 @@ class SetupVerificationService:
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
         if server_allowed_mismatch:
-            next_action = "تم اكتشاف اتصال WireGuard، لكن عنوان الراوتر على الخادم غير مطابق. اضغط إصلاح الربط على الخادم."
+            next_action = _tr("تم اكتشاف اتصال WireGuard، لكن عنوان الراوتر على الخادم غير مطابق. اضغط إصلاح الربط على الخادم.")
         else:
-            next_action = "تم تحقق الربط والمصادقة بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وخدمات الهوتسبوت أو البرودباند." if gate_unlocked else "راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق."
+            next_action = _tr("تم تحقق الربط والمصادقة بنجاح. يمكنك الانتقال لواجهة اختيار الواجهات وخدمات الهوتسبوت أو البرودباند.") if gate_unlocked else _tr("راجع التشخيص. يمكنك لصق مخرجات الفحص من MikroTik للحصول على نتيجة أدق.")
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,
@@ -1101,21 +1102,21 @@ class SetupVerificationService:
                 pool_ok = any(str(item.get("address-pool") or item.get("address_pool") or "").strip() for item in hs_servers)
                 nat_ok = any(str(item.get("chain") or "").lower() == "srcnat" and str(item.get("action") or "").lower() == "masquerade" for item in nat_rules)
             except ProbeUnavailableError:
-                checks.append(_check("probe", "فحص مباشر", CHECK_BLOCKED, "موصل الفحص غير متاح"))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_BLOCKED, N_("موصل الفحص غير متاح")))
                 diagnostic_codes.append("probe_unavailable")
                 server_ok = radius_ok = pool_ok = nat_ok = False
             except Exception as exc:  # pragma: no cover
-                checks.append(_check("probe", "فحص مباشر", CHECK_FAILED, str(exc)))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_FAILED, str(exc)))
                 server_ok = radius_ok = pool_ok = nat_ok = False
 
         checks.extend(
             [
-                _check("hotspot_server_present", "وجود Hotspot Server", CHECK_SUCCESS if server_ok else CHECK_FAILED),
-                _check("hotspot_profile_present", "وجود Hotspot Profile", CHECK_SUCCESS if server_ok else CHECK_FAILED),
-                _check("radius_enabled", "تفعيل RADIUS", CHECK_SUCCESS if radius_ok else CHECK_FAILED),
-                _check("hotspot_pool_present", "وجود Pool", CHECK_SUCCESS if pool_ok else CHECK_FAILED),
-                _check("hotspot_address_present", "وجود عنوان الشبكة", CHECK_SUCCESS if server_ok else CHECK_FAILED),
-                _check("hotspot_nat_present", "وجود NAT", CHECK_SUCCESS if nat_ok else CHECK_FAILED),
+                _check("hotspot_server_present", _tr("وجود Hotspot Server"), CHECK_SUCCESS if server_ok else CHECK_FAILED),
+                _check("hotspot_profile_present", _tr("وجود Hotspot Profile"), CHECK_SUCCESS if server_ok else CHECK_FAILED),
+                _check("radius_enabled", _tr("تفعيل RADIUS"), CHECK_SUCCESS if radius_ok else CHECK_FAILED),
+                _check("hotspot_pool_present", _tr("وجود Pool"), CHECK_SUCCESS if pool_ok else CHECK_FAILED),
+                _check("hotspot_address_present", _tr("وجود عنوان الشبكة"), CHECK_SUCCESS if server_ok else CHECK_FAILED),
+                _check("hotspot_nat_present", _tr("وجود NAT"), CHECK_SUCCESS if nat_ok else CHECK_FAILED),
             ]
         )
         if not server_ok:
@@ -1134,7 +1135,7 @@ class SetupVerificationService:
             overall_status = VERIFY_STATUS_BLOCKED
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
-        next_action = "Hotspot جاهز بحسب نتائج الفحص." if gate_unlocked else "Hotspot غير مكتمل. راجع التشخيص وأعد الفحص."
+        next_action = _tr("Hotspot جاهز بحسب نتائج الفحص.") if gate_unlocked else _tr("Hotspot غير مكتمل. راجع التشخيص وأعد الفحص.")
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,
@@ -1185,20 +1186,20 @@ class SetupVerificationService:
                 radius_ok = any(_as_bool(item.get("use-radius"), False) or _as_bool(item.get("use_radius"), False) for item in pppoe_servers)
                 nat_ok = any(str(item.get("chain") or "").lower() == "srcnat" and str(item.get("action") or "").lower() == "masquerade" for item in nat_rules)
             except ProbeUnavailableError:
-                checks.append(_check("probe", "فحص مباشر", CHECK_BLOCKED, "موصل الفحص غير متاح"))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_BLOCKED, N_("موصل الفحص غير متاح")))
                 diagnostic_codes.append("probe_unavailable")
                 service_ok = profile_ok = pool_ok = radius_ok = nat_ok = False
             except Exception as exc:  # pragma: no cover
-                checks.append(_check("probe", "فحص مباشر", CHECK_FAILED, str(exc)))
+                checks.append(_check("probe", _tr("فحص مباشر"), CHECK_FAILED, str(exc)))
                 service_ok = profile_ok = pool_ok = radius_ok = nat_ok = False
 
         checks.extend(
             [
-                _check("pppoe_service_present", "وجود خدمة PPPoE", CHECK_SUCCESS if service_ok else CHECK_FAILED),
-                _check("ppp_profile_present", "وجود PPP Profile", CHECK_SUCCESS if profile_ok else CHECK_FAILED),
-                _check("remote_pool_present", "وجود Remote Pool", CHECK_SUCCESS if pool_ok else CHECK_FAILED),
-                _check("radius_enabled", "تفعيل RADIUS", CHECK_SUCCESS if radius_ok else CHECK_FAILED),
-                _check("broadband_nat_present", "وجود NAT", CHECK_SUCCESS if nat_ok else CHECK_FAILED),
+                _check("pppoe_service_present", _tr("وجود خدمة PPPoE"), CHECK_SUCCESS if service_ok else CHECK_FAILED),
+                _check("ppp_profile_present", _tr("وجود PPP Profile"), CHECK_SUCCESS if profile_ok else CHECK_FAILED),
+                _check("remote_pool_present", _tr("وجود Remote Pool"), CHECK_SUCCESS if pool_ok else CHECK_FAILED),
+                _check("radius_enabled", _tr("تفعيل RADIUS"), CHECK_SUCCESS if radius_ok else CHECK_FAILED),
+                _check("broadband_nat_present", _tr("وجود NAT"), CHECK_SUCCESS if nat_ok else CHECK_FAILED),
             ]
         )
 
@@ -1220,7 +1221,7 @@ class SetupVerificationService:
             overall_status = VERIFY_STATUS_BLOCKED
         duration_ms = int((time.perf_counter() - started) * 1000)
         diagnostics = [self.diagnostics.get_diagnostic(code) for code in dict.fromkeys(diagnostic_codes)]
-        next_action = "Broadband جاهز بحسب نتائج الفحص." if gate_unlocked else "Broadband غير مكتمل. راجع التشخيص وأعد الفحص."
+        next_action = _tr("Broadband جاهز بحسب نتائج الفحص.") if gate_unlocked else _tr("Broadband غير مكتمل. راجع التشخيص وأعد الفحص.")
         return VerificationResult(
             overall_status=overall_status,
             checks=checks,

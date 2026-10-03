@@ -16,6 +16,7 @@
 كلّ القيم تُطبَّع إلى نصوص. الدوال خالصة (لا Flask/DB).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import csv
 import gzip
@@ -99,7 +100,7 @@ def introspect_path(path: str, filename: str = "", *, progress_cb=None) -> Sourc
             head = fh.read(8)
     except OSError as exc:
         ds = SourceDataset(fmt="unknown")
-        ds.warnings.append(f"تعذّر فتح الملف: {exc}")
+        ds.warnings.append(_tr('تعذّر فتح الملف: %(exc)s', exc=exc))
         return ds
     is_gz = head[:2] == b"\x1f\x8b"
     if is_gz and fn.lower().endswith(".gz"):
@@ -120,7 +121,7 @@ def introspect_path(path: str, filename: str = "", *, progress_cb=None) -> Sourc
                 _consume_sql_statements(_iter_sql_statements(_read_chunks(stream)),
                                         ds, progress_cb=progress_cb)
         except Exception as exc:  # noqa: BLE001
-            ds.warnings.append(f"خطأ أثناء قراءة تفريغ SQL: {exc}")
+            ds.warnings.append(_tr('خطأ أثناء قراءة تفريغ SQL: %(exc)s', exc=exc))
         ds.tables = [t for t in ds.tables if t.columns or t.rows]
         return ds
 
@@ -172,13 +173,13 @@ def introspect(file_bytes: bytes, filename: str = "", *,
             _from_mikrotik(file_bytes, ds)
         elif fmt == "xls-legacy":
             ds.warnings.append(
-                "صيغة .xls القديمة غير مدعومة — احفظ الملف بصيغة .xlsx ثم أعد الرفع.")
+                N_("صيغة .xls القديمة غير مدعومة — احفظ الملف بصيغة .xlsx ثم أعد الرفع."))
         else:
             ds.warnings.append(
-                "تعذّر التعرّف على نوع الملف. المدعوم: قاعدة SQLite، تفريغ SQL، "
-                "Excel/CSV، PDF جدوليّ، تصدير MikroTik (.rsc).")
+                N_("تعذّر التعرّف على نوع الملف. المدعوم: قاعدة SQLite، تفريغ SQL، "
+                "Excel/CSV، PDF جدوليّ، تصدير MikroTik (.rsc)."))
     except Exception as exc:  # noqa: BLE001 — لا نُسقط التحليل على عطل مُستخرِج
-        ds.warnings.append(f"خطأ أثناء قراءة المصدر: {exc}")
+        ds.warnings.append(_tr('خطأ أثناء قراءة المصدر: %(exc)s', exc=exc))
     # تنظيف: أسقط الجداول الفارغة تمامًا (بلا أعمدة وبلا صفوف).
     ds.tables = [t for t in ds.tables if t.columns or t.rows]
     return ds
@@ -247,7 +248,7 @@ def _rows_to_table(name: str, grid: list[list[str]], origin: str,
     for r in data_rows[:MAX_ROWS_PER_TABLE]:
         rows.append({columns[i]: (r[i] if i < len(r) else "") for i in range(width)})
     if len(data_rows) > MAX_ROWS_PER_TABLE:
-        note = (note + " ").strip() + f"(اقتُصرت إلى {MAX_ROWS_PER_TABLE} صفًّا)"
+        note = (note + " ").strip() + _tr('(اقتُصرت إلى %(MAX_ROWS_PER_TABLE)s صفًّا)', MAX_ROWS_PER_TABLE=MAX_ROWS_PER_TABLE)
     return SourceTable(name=name, columns=columns, rows=rows, origin=origin, note=note)
 
 
@@ -278,14 +279,14 @@ def _from_sqlite_path(path: str, ds: SourceDataset) -> None:
         conn = sqlite3.connect(uri, uri=True)
         conn.row_factory = sqlite3.Row
     except sqlite3.Error as exc:
-        ds.warnings.append(f"ملف ليس قاعدة SQLite صالحة: {exc}")
+        ds.warnings.append(_tr('ملف ليس قاعدة SQLite صالحة: %(exc)s', exc=exc))
         return
     try:
         names = [r[0] for r in conn.execute(
             "SELECT name FROM sqlite_master WHERE type IN ('table','view') "
             "AND name NOT LIKE 'sqlite_%' ORDER BY name").fetchall()]
         if not names:
-            ds.warnings.append("قاعدة SQLite لا تحتوي جداول قابلة للقراءة.")
+            ds.warnings.append(N_("قاعدة SQLite لا تحتوي جداول قابلة للقراءة."))
         for tname in names:
             try:
                 cols = [r["name"] for r in conn.execute(
@@ -301,9 +302,9 @@ def _from_sqlite_path(path: str, ds: SourceDataset) -> None:
                 ds.tables.append(SourceTable(
                     name=tname, columns=cols, rows=rows, origin="sqlite"))
             except sqlite3.Error as exc:
-                ds.warnings.append(f"تعذّرت قراءة الجدول «{tname}»: {exc}")
+                ds.warnings.append(_tr('تعذّرت قراءة الجدول «%(tname)s»: %(exc)s', tname=tname, exc=exc))
     except sqlite3.Error as exc:
-        ds.warnings.append(f"تعذّر فحص قاعدة SQLite: {exc}")
+        ds.warnings.append(_tr('تعذّر فحص قاعدة SQLite: %(exc)s', exc=exc))
     finally:
         conn.close()
 
@@ -589,7 +590,7 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset, *, progress_cb=None) -
         for r in rows:
             if len(t.rows) >= MAX_ROWS_PER_TABLE:
                 capped.add(key)
-                t.note = f"(اقتُصرت إلى {MAX_ROWS_PER_TABLE} صفًّا)"
+                t.note = _tr('(اقتُصرت إلى %(MAX_ROWS_PER_TABLE)s صفًّا)', MAX_ROWS_PER_TABLE=MAX_ROWS_PER_TABLE)
                 break
             # وسّع الأعمدة إن لزم.
             if len(r) > len(t.columns):
@@ -608,7 +609,7 @@ def _consume_sql_statements(stmt_iter, ds: SourceDataset, *, progress_cb=None) -
 
     if not any(t.rows for t in ds.tables):
         ds.warnings.append(
-            "لم يُعثَر على صفوف INSERT قابلة للقراءة (عُرِضت بنية الجداول فقط).")
+            N_("لم يُعثَر على صفوف INSERT قابلة للقراءة (عُرِضت بنية الجداول فقط)."))
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -630,8 +631,8 @@ def _from_xlsx(file_bytes: bytes, ds: SourceDataset) -> None:
                 ds.tables.append(t)
     if not ds.tables:
         ds.warnings.append(
-            "تعذّرت قراءة أوراق Excel (حتى عبر المسار البديل). "
-            "احفظ الملف بصيغة CSV وأعد الرفع.")
+            N_("تعذّرت قراءة أوراق Excel (حتى عبر المسار البديل). "
+            "احفظ الملف بصيغة CSV وأعد الرفع."))
 
 
 def _xlsx_via_openpyxl(file_bytes: bytes, ds: SourceDataset) -> bool:
@@ -824,7 +825,7 @@ def _xlsx_cell(value) -> str:
 def _from_csv(file_bytes: bytes, ds: SourceDataset, filename: str) -> None:
     text = _decode_text(file_bytes).replace("\r\n", "\n").replace("\r", "\n").strip()
     if not text:
-        ds.warnings.append("الملف فارغ.")
+        ds.warnings.append(N_("الملف فارغ."))
         return
     sample = "\n".join(text.split("\n")[:20])
     delimiter = ","
@@ -840,7 +841,7 @@ def _from_csv(file_bytes: bytes, ds: SourceDataset, filename: str) -> None:
     if t.columns or t.rows:
         ds.tables.append(t)
     else:
-        ds.warnings.append("تعذّرت قراءة صفوف من ملف CSV.")
+        ds.warnings.append(N_("تعذّرت قراءة صفوف من ملف CSV."))
 
 
 def _best_delimiter(sample: str) -> str:
@@ -867,7 +868,7 @@ def _from_pdf(file_bytes: bytes, ds: SourceDataset) -> None:
     try:
         import pdfplumber  # type: ignore
     except ImportError:
-        ds.warnings.append("مكتبة قراءة PDF غير مثبّتة على الخادم (pdfplumber).")
+        ds.warnings.append(N_("مكتبة قراءة PDF غير مثبّتة على الخادم (pdfplumber)."))
         return
     n_table = 0
     try:
@@ -884,11 +885,11 @@ def _from_pdf(file_bytes: bytes, ds: SourceDataset) -> None:
                         ds.tables.append(t)
                         n_table += 1
     except Exception as exc:  # noqa: BLE001
-        ds.warnings.append(f"تعذّر استخراج جداول PDF: {exc}")
+        ds.warnings.append(_tr('تعذّر استخراج جداول PDF: %(exc)s', exc=exc))
     if not ds.tables:
         ds.warnings.append(
-            "لم تُستخرَج جداول من PDF — قد لا يكون جدوليًّا. حوّله إلى Excel/CSV "
-            "للحصول على نتيجة أدقّ.")
+            N_("لم تُستخرَج جداول من PDF — قد لا يكون جدوليًّا. حوّله إلى Excel/CSV "
+            "للحصول على نتيجة أدقّ."))
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -959,7 +960,7 @@ def _from_mikrotik(file_bytes: bytes, ds: SourceDataset) -> None:
 
     if not buckets:
         ds.warnings.append(
-            "لم يُعثَر على ‎/ppp secret أو /ip hotspot user في تصدير MikroTik.")
+            N_("لم يُعثَر على ‎/ppp secret أو /ip hotspot user في تصدير MikroTik."))
         return
 
     for bkey in order:

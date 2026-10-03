@@ -18,6 +18,7 @@ Dedup rules (per device, per alert type):
 what Phase 5 actually guarantees.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _l, _tr
 
 import logging
 from datetime import datetime, timezone
@@ -61,25 +62,25 @@ _ENGINE_KEY = {
 # 📶 البنج / 🕒 الوقت) يُضيفها `format_alert_message` باتساق، وكلّ رمز LTR
 # (IP/وقت/أرقام) معزول بـFSI…PDI ليُعرَض صحيحًا داخل العربيّة RTL.
 _HEADING = {
-    "down":           "🔴 «{name}» — انقطع الاتصال",
-    "unavailable":    "📵 «{name}» — غير متاح",
-    "recovery":       "✅ «{name}» — عاد الاتصال",
-    "high_latency":   "🐌 «{name}» — بنج عالٍ",
-    "router_offline": "🔴 «{name}» — الراوتر غير متصل",
-    "router_online":  "🟢 «{name}» — عاد اتصال الراوتر",
+    "down":           N_("🔴 «{name}» — انقطع الاتصال"),
+    "unavailable":    N_("📵 «{name}» — غير متاح"),
+    "recovery":       N_("✅ «{name}» — عاد الاتصال"),
+    "high_latency":   N_("🐌 «{name}» — بنج عالٍ"),
+    "router_offline": N_("🔴 «{name}» — الراوتر غير متصل"),
+    "router_online":  N_("🟢 «{name}» — عاد اتصال الراوتر"),
 }
 
 # Panel (bell) title + severity per alert kind.
 _PANEL_TITLE = {
-    "down":           "انقطاع اتصال: {name}",
-    "unavailable":    "غير متاح (الراوتر مفصول): {name}",
-    "recovery":       "عاد الاتصال: {name}",
-    "high_latency":   "ارتفاع بنج: {name}",
-    "router_offline": "راوتر غير متصل: {name}",
-    "router_online":  "عاد الراوتر: {name}",
-    "reminder_down":       "ما زال مفصولًا: {name}",
-    "fleet_digest_ok":     "الفحص الدوري: كل شيء سليم",
-    "fleet_digest_issues": "الفحص الدوري: ملاحظات",
+    "down":           N_("انقطاع اتصال: {name}"),
+    "unavailable":    N_("غير متاح (الراوتر مفصول): {name}"),
+    "recovery":       N_("عاد الاتصال: {name}"),
+    "high_latency":   N_("ارتفاع بنج: {name}"),
+    "router_offline": N_("راوتر غير متصل: {name}"),
+    "router_online":  N_("عاد الراوتر: {name}"),
+    "reminder_down":       N_("ما زال مفصولًا: {name}"),
+    "fleet_digest_ok":     N_("الفحص الدوري: كل شيء سليم"),
+    "fleet_digest_issues": N_("الفحص الدوري: ملاحظات"),
 }
 # MT90 — نوع التنبيه ← مفتاح صوت الحدث. `type="system"` وحده لا يُميّز
 # «راوتر غير متصل» من «عاد الراوتر» من «الفحص الدوريّ»، والمالك يريد لكلٍّ
@@ -132,20 +133,20 @@ _SEVERITY = {
 # عبور العتبة (res_<m>_high) + العودة تحتها (res_<m>_ok)، تُبنى آليّاً كي تبقى
 # الترويسات/العناوين متّسقة عربيًّا مع باقي التنبيهات. القرص بإطار «استخدام»
 # (مستخدم%) كي يتطابق مع اللوحة — لا خلط حرّ/مستخدم. الحرارة = حرارة المعالج.
-_RES_LABEL = {"cpu": "المعالج", "temp": "حرارة المعالج", "ram": "الذاكرة",
-              "disk": "استخدام القرص", "traffic": "حركة الإنترنت"}
+_RES_LABEL = {"cpu": N_("المعالج"), "temp": N_("حرارة المعالج"), "ram": N_("الذاكرة"),
+              "disk": N_("استخدام القرص"), "traffic": N_("حركة الإنترنت")}
 _RES_HIGH_HEAD = {
-    "cpu": "🔥 «{name}» — ارتفاع حمل المعالج",
-    "temp": "🌡️ «{name}» — ارتفاع حرارة المعالج",
-    "ram": "🧠 «{name}» — ارتفاع استهلاك الذاكرة",
-    "disk": "💽 «{name}» — ارتفاع استخدام القرص",
-    "traffic": "📈 «{name}» — ارتفاع حركة الإنترنت",
+    "cpu": N_("🔥 «{name}» — ارتفاع حمل المعالج"),
+    "temp": N_("🌡️ «{name}» — ارتفاع حرارة المعالج"),
+    "ram": N_("🧠 «{name}» — ارتفاع استهلاك الذاكرة"),
+    "disk": N_("💽 «{name}» — ارتفاع استخدام القرص"),
+    "traffic": N_("📈 «{name}» — ارتفاع حركة الإنترنت"),
 }
 for _m, _lbl in _RES_LABEL.items():
     _HEADING[f"res_{_m}_high"] = _RES_HIGH_HEAD[_m]
-    _HEADING[f"res_{_m}_ok"] = f"✅ «{{name}}» — عاد {_lbl} لطبيعته"
-    _PANEL_TITLE[f"res_{_m}_high"] = f"تنبيه {_lbl}: {{name}}"
-    _PANEL_TITLE[f"res_{_m}_ok"] = f"عاد {_lbl}: {{name}}"
+    _HEADING[f"res_{_m}_ok"] = _l("✅ «{name}» — عاد %(lbl)s لطبيعته", lbl=_lbl)
+    _PANEL_TITLE[f"res_{_m}_high"] = _l("تنبيه %(lbl)s: {name}", lbl=_lbl)
+    _PANEL_TITLE[f"res_{_m}_ok"] = _l("عاد %(lbl)s: {name}", lbl=_lbl)
     _SEVERITY[f"res_{_m}_high"] = "critical" if _m in ("temp", "disk") else "warning"
     _SEVERITY[f"res_{_m}_ok"] = "success"
 
@@ -175,16 +176,16 @@ def format_alert_message(alert_type: str, *, name: str, ip: str = "",
     head = _HEADING.get(alert_type, "ℹ️ «{name}»").format(name=name)
     lines = [head]
     if reason:
-        lines.append(f"⚠️ السبب: {reason}")
+        lines.append(_tr('⚠️ السبب: %(reason)s', reason=reason))
     if value:
         lines.append(value)                       # سطر المقياس (معزول داخليًّا)
     if ip:
-        lines.append(f"📍 العنوان: {isolate(ip)}")
+        lines.append(_tr('📍 العنوان: %(v)s', v=isolate(ip)))
     if description:
-        lines.append(f"📝 الوصف: {description}")
+        lines.append(_tr('📝 الوصف: %(description)s', description=description))
     if ping:
-        lines.append(f"📶 البنج: {isolate(ping)}")
-    lines.append(f"🕒 الوقت: {isolate(when or _now_human())}")
+        lines.append(_tr('📶 البنج: %(v)s', v=isolate(ping)))
+    lines.append(_tr('🕒 الوقت: %(v)s', v=isolate(when or _now_human())))
     return "\n".join(lines)
 
 
@@ -247,13 +248,13 @@ def evaluate_and_dispatch(
     if new_status == "unavailable" \
             and int(device.get("consecutive_down_count") or 0) >= DOWN_AFTER_N:
         # «السبب» يُسمّي الراوتر الأمّ المفصول — أوضح من «غير متاح» وحدها.
-        reason = "الراوتر الأمّ مفصول"
+        reason = _tr("الراوتر الأمّ مفصول")
         try:
             from ..db.repos import nas_repo
             _r = nas_repo.get_nas(tid, int(device.get("router_id") or 0))
             _rn = (getattr(_r, "name", "") if _r else "") or ""
             if _rn:
-                reason = f"الراوتر «{_rn}» مفصول"
+                reason = _tr('الراوتر «%(rn)s» مفصول', rn=_rn)
         except Exception:  # noqa: BLE001 — السبب تحسين، لا يكسر التنبيه
             pass
         pending.append(("unavailable", format_alert_message(
@@ -313,9 +314,9 @@ def _panel_write(tenant_id: int, *, title: str, body: str, severity: str,
     حتى لو لم تُسلَّم أي قناة خارجية («لا إسقاط صامت»). عند تعذّر تلجرام
     بسبب عدم التهيئة، نُلحق تلميح التفعيل بالنص. لا يرفع استثناء أبداً."""
     if not delivered and reason == "telegram_not_configured":
-        body += ("\n\n🔕 لم يصل إشعار فوري على جوالك لأن «تنبيهات تلجرام» غير "
+        body += (_tr("\n\n🔕 لم يصل إشعار فوري على جوالك لأن «تنبيهات تلجرام» غير "
                  "مُفعّلة. فعّلها من: الإعدادات ← تنبيهات تلجرام، ليصلك انقطاع/"
-                 "عودة الأجهزة فورًا.")
+                 "عودة الأجهزة فورًا."))
     try:
         from . import notifications as panel
         # dedup_key فارغ عمدًا: المُستدعي يضمن عدم التكرار (cooldown للأجهزة،

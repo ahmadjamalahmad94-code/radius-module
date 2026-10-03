@@ -3,6 +3,7 @@
 مُسجَّل على blueprint الرئيسي (radius) ضمن _register_all.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -81,14 +82,13 @@ def wg_data_init():
         )
         key_path = svc.pop("private_key_written_to", "?")
         flash(
-            f"تمت التهيئة. Private key محفوظ في: {key_path} — "
-            "احتفظ بنسخة احتياطية منه الآن!",
+            _tr('تمت التهيئة. Private key محفوظ في: %(key_path)s — احتفظ بنسخة احتياطية منه الآن!', key_path=key_path),
             "success",
         )
     except ValueError as exc:
         flash(str(exc), "error")
     except OSError as exc:
-        flash(f"خطأ في الكتابة إلى الملف: {exc}", "error")
+        flash(_tr('خطأ في الكتابة إلى الملف: %(exc)s', exc=exc), "error")
 
     return redirect(url_for("radius.wg_data_dashboard"))
 
@@ -99,7 +99,7 @@ def wg_data_add_peer():
     tid = _tid()
     svc = get_service(tid)
     if not svc:
-        flash("هيّئ خدمة WireGuard أولًا.", "error")
+        flash(_tr("هيّئ خدمة WireGuard أولًا."), "error")
         return redirect(url_for("radius.wg_data_dashboard"))
 
     display_name    = (request.form.get("display_name") or "").strip()
@@ -128,7 +128,7 @@ def wg_data_remove_peer(peer_id: int):
     from ..services.wg_data_manager import remove_peer
 
     ok = remove_peer(_tid(), peer_id)
-    flash("تم حذف الـ peer." if ok else "لم يُعثر على الـ peer.", "success" if ok else "error")
+    flash(_tr("تم حذف الـ peer.") if ok else _tr("لم يُعثر على الـ peer."), "success" if ok else "error")
     return redirect(url_for("radius.wg_data_dashboard"))
 
 
@@ -136,7 +136,7 @@ def wg_data_suspend_peer(peer_id: int):
     from ..services.wg_data_manager import suspend_peer
 
     ok = suspend_peer(_tid(), peer_id)
-    flash("تم تعطيل الـ peer." if ok else "الـ peer غير نشط أو غير موجود.", "success" if ok else "error")
+    flash(_tr("تم تعطيل الـ peer.") if ok else _tr("الـ peer غير نشط أو غير موجود."), "success" if ok else "error")
     return redirect(url_for("radius.wg_data_dashboard"))
 
 
@@ -144,7 +144,7 @@ def wg_data_activate_peer(peer_id: int):
     from ..services.wg_data_manager import activate_peer
 
     ok = activate_peer(_tid(), peer_id)
-    flash("تم إعادة تفعيل الـ peer." if ok else "الـ peer غير موقوف أو غير موجود.", "success" if ok else "error")
+    flash(_tr("تم إعادة تفعيل الـ peer.") if ok else _tr("الـ peer غير موقوف أو غير موجود."), "success" if ok else "error")
     return redirect(url_for("radius.wg_data_dashboard"))
 
 
@@ -155,10 +155,9 @@ def wg_data_sync_quota():
     if result.get("ok"):
         total_mb = result["total_bytes"] / 1_048_576
         flash(
-            f"تم تحديث الكوتا: {result['peers_updated']} peer — "
-            f"إجمالي {total_mb:.1f} MB.",
+            _tr('تم تحديث الكوتا: %(peers_updated)s peer — إجمالي %(total_mb)s MB.', peers_updated=result['peers_updated'], total_mb=format(total_mb, '.1f')),
             "success",
         )
     else:
-        flash(f"فشل تحديث الكوتا: {result.get('error', '?')}", "error")
+        flash(_tr('فشل تحديث الكوتا: %(v)s', v=result.get('error', '?')), "error")
     return redirect(url_for("radius.wg_data_dashboard"))

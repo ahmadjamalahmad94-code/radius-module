@@ -8,6 +8,7 @@ The client is deliberately passive:
 - all HTTP I/O is opt-in and mockable
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import logging
@@ -673,7 +674,7 @@ class AdminPanelClient:
             return {
                 "ok": False,
                 "status": "https_required",
-                "error": {"code": "https_required", "message": "طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS."},
+                "error": {"code": "https_required", "message": _tr("طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS.")},
             }
         payload = self._license_check_payload({
             "service_key": str(service_key or "").strip(),
@@ -696,7 +697,7 @@ class AdminPanelClient:
                 "ok": False,
                 "status": "https_required",
                 "error": {"code": "https_required",
-                          "message": "طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS."},
+                          "message": _tr("طلبات الخدمات تتطلب رابط لوحة تراخيص آمن HTTPS.")},
             }
         payload = self._license_check_payload({
             "service_type": "ip_change",
@@ -1061,7 +1062,7 @@ class AdminPanelClient:
         """Ask the panel for a short-lived SSO link into the customer portal."""
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {"ok": False, "status": "https_required",
-                    "error": {"code": "https_required", "message": "الدخول الموحّد يتطلب رابط لوحة آمن HTTPS."}}
+                    "error": {"code": "https_required", "message": _tr("الدخول الموحّد يتطلب رابط لوحة آمن HTTPS.")}}
         payload = self._license_check_payload()
         return self._post_bridge_payload(path=PORTAL_SSO_PATH, payload=payload)
 
@@ -1084,7 +1085,7 @@ class AdminPanelClient:
         """
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {"ok": False, "status": "https_required",
-                    "error": {"code": "https_required", "message": "طلب النفق يتطلب رابط لوحة آمن HTTPS."}}
+                    "error": {"code": "https_required", "message": _tr("طلب النفق يتطلب رابط لوحة آمن HTTPS.")}}
         return self._post_bridge_payload(
             path=VPN_TUNNEL_REQUEST_PATH,
             payload=self._license_check_payload({
@@ -1140,7 +1141,7 @@ class AdminPanelClient:
         if not str(self.config.base_url or "").lower().startswith("https://"):
             return {"ok": False, "status": "https_required",
                     "error": {"code": "https_required",
-                              "message": "تقرير المدراء يتطلب رابط لوحة آمن HTTPS."}}
+                              "message": _tr("تقرير المدراء يتطلب رابط لوحة آمن HTTPS.")}}
         admins_list = list(admins or [])
         if not admins_list:
             # A full-snapshot with an empty list would delete every admin from
@@ -1148,7 +1149,7 @@ class AdminPanelClient:
             # primary/local admin (invariant of admins-report v2).
             return {"ok": False, "status": "empty_admins",
                     "error": {"code": "empty_admins",
-                              "message": "قائمة المدراء فارغة — رفض التقرير حماية من حذف جماعي غير مقصود."}}
+                              "message": _tr("قائمة المدراء فارغة — رفض التقرير حماية من حذف جماعي غير مقصود.")}}
         return self._post_bridge_payload(
             path=ADMINS_REPORT_PATH,
             payload=self._license_check_payload({

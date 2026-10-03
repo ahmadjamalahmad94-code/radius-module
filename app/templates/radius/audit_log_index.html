@@ -51,15 +51,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="audit-log-hero" data-audit-log-page>
 {% call hub.megahero(
-  "سجل التدقيق",
-  subtitle="سجلّ كامل لكل العمليات الحساسة — مَن نفّذها، على أي هدف، وما نتيجتها. ابدأ بالحرج والفاشل، وافتح «التفاصيل» لترى ما الذي تغيّر بالضبط.",
+  _('سجل التدقيق'),
+  subtitle=_('سجلّ كامل لكل العمليات الحساسة — مَن نفّذها، على أي هدف، وما نتيجتها. ابدأ بالحرج والفاشل، وافتح «التفاصيل» لترى ما الذي تغيّر بالضبط.'),
   icon="shield-halved",
   kpis=[
-    {'label': 'إجمالي السجل',  'value': summary.total,    'icon': 'list-check',           'variant': 'brand',
-     'sub': 'يُعرض حتى 200 من الأحدث'},
-    {'label': 'عمليات حرجة',   'value': summary.critical, 'icon': 'triangle-exclamation', 'variant': 'red'},
-    {'label': 'تحذيرات',       'value': summary.warnings, 'icon': 'circle-exclamation',   'variant': 'amber'},
-    {'label': 'نجحت',          'value': summary.success,  'icon': 'circle-check',         'variant': 'green'},
+    {'label': _('إجمالي السجل'),  'value': summary.total,    'icon': 'list-check',           'variant': 'brand',
+     'sub': _('يُعرض حتى 200 من الأحدث')},
+    {'label': _('عمليات حرجة'),   'value': summary.critical, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('تحذيرات'),       'value': summary.warnings, 'icon': 'circle-exclamation',   'variant': 'amber'},
+    {'label': _('نجحت'),          'value': summary.success,  'icon': 'circle-check',         'variant': 'green'},
   ],
   search_action=url_for('radius.audit_log_index')
 ) %}
@@ -84,20 +84,20 @@
       <option value="{{ r }}" {% if filters.result_status == r %}selected{% endif %}>{{ result_labels.get(r, r) }}</option>
     {% endfor %}
   </select>
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if summary.active_filters %}
-    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('إعادة ضبط'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.audit_log_index') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم المنفّذ أو الهدف أو رمز الإجراء، و«رمز الإجراء» يقبل جزءًا من الكود الفني (مثل mt.backup). تُعرض حتى 200 عملية من الأحدث للأقدم، والأسرار تُحجب تلقائيًا عند الكتابة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يطابق اسم المنفّذ أو الهدف أو رمز الإجراء، و«رمز الإجراء» يقبل جزءًا من الكود الفني (مثل mt.backup). تُعرض حتى 200 عملية من الأحدث للأقدم، والأسرار تُحجب تلقائيًا عند الكتابة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if rows %}
 {# ───── جدول السجل — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("العمليات الأخيرة", icon="clock-rotate-left",
-                    meta=(rows|length|string) ~ " عملية" ~ ((" — " ~ summary.active_filters ~ " فلتر نشط") if summary.active_filters else ""),
+{% call hub.section(_('العمليات الأخيرة'), icon="clock-rotate-left",
+                    meta=(rows|length|string) ~ _(' عملية') ~ ((_(' — %(active_filters)s فلتر نشط', active_filters=summary.active_filters)) if summary.active_filters else ""),
                     flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
@@ -123,7 +123,7 @@
           <td class="mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ts %}{{ _ts[:10] }} <span style="color:var(--hub-text-mute)">{{ _ts[11:16] }}</span>{% else %}—{% endif %}
           </td>
-          <td title="{{ r.actor or '' }}"><strong><bdi>{{ r.actor|actor_name if r.actor else 'غير محدد' }}</bdi></strong></td>
+          <td title="{{ r.actor or '' }}"><strong><bdi>{{ r.actor|actor_name if r.actor else _('غير محدد') }}</bdi></strong></td>
           {# الإجراء معرّب من المسار — الكود الفني الخام يبقى في title للمراجعة #}
           <td><span class="audit-action" title="{{ r.action or '' }}">{{ r.action_label }}</span></td>
           {# الهدف معرّب «مشترك (user1034)» — النوع والمعرّف الخام في title #}
@@ -152,7 +152,7 @@
               <div class="audit-summary" title="{{ r.details_label }}"
                    data-audit-details><bdi>{{ r.details_label }}</bdi></div>
             {% endif %}
-            {% if can_submit('radius.audit_log_detail', 'GET') %}{{ hub.btn("التفاصيل", href=url_for('radius.audit_log_detail', audit_id=r.id),
+            {% if can_submit('radius.audit_log_detail', 'GET') %}{{ hub.btn(_('التفاصيل'), href=url_for('radius.audit_log_detail', audit_id=r.id),
                        variant="ghost", icon="eye", size="sm") }}{% endif %}
           </td>
         </tr>
@@ -165,8 +165,8 @@
 {# data-audit-empty: خطّاف اختبار الحالة الفارغة (S2.2) — سمة إضافية لا تمسّ التصميم #}
 <div data-audit-empty>
 {{ hub.empty(
-  "لا توجد عمليات تطابق الفلاتر الحالية",
-  sub="خفّف شروط البحث أو امسح الفلاتر لعرض السجل الكامل — وإن كان النظام جديدًا فالسجل يمتلئ مع أول العمليات الحساسة.",
+  _('لا توجد عمليات تطابق الفلاتر الحالية'),
+  sub=_('خفّف شروط البحث أو امسح الفلاتر لعرض السجل الكامل — وإن كان النظام جديدًا فالسجل يمتلئ مع أول العمليات الحساسة.'),
   icon="clock-rotate-left"
 ) }}
 </div>

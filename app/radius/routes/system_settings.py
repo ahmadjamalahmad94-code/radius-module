@@ -4,6 +4,7 @@
 مقصورة على المدير الرئيسي/السوبر (إعدادات على مستوى النسخة/النشر).
 الأسرار تُخزَّن مشفّرة وتُعرض مُقنّعة (لا تغادر القيمة الخادم)."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (abort, flash, redirect, render_template, request,
                    session, url_for)
@@ -36,7 +37,7 @@ def system_settings_page():
                 # سرّ: حقل فارغ = إبقاء القيمة الحالية؛ صندوق المسح = حذف التجاوز
                 if request.form.get("clear__" + s.key):
                     env_settings.clear_value(s.key)
-                    changed.append(s.key + " (مُسح)")
+                    changed.append(s.key + _tr(" (مُسح)"))
                     continue
                 raw = (request.form.get(field) or "").strip()
                 if raw:
@@ -58,8 +59,8 @@ def system_settings_page():
             tenant_id=DEFAULT_TENANT_ID, actor=actor,
             action="system_settings_update", target_type="system_settings",
             target_id="env", payload={"changed": changed})
-        flash("حُفظت إعدادات النظام. بعض المفاتيح (مثل نمط RADIUS) تأخذ مفعولها "
-              "بعد إعادة تشغيل الخدمة.", "success")
+        flash(_tr("حُفظت إعدادات النظام. بعض المفاتيح (مثل نمط RADIUS) تأخذ مفعولها "
+              "بعد إعادة تشغيل الخدمة."), "success")
         return redirect(url_for("radius.system_settings_page"))
 
     return render_template("radius/system_settings.html",

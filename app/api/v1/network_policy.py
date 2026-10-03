@@ -20,6 +20,7 @@ the existing `RadiusAuditService` so the audit timeline picks
 up NPC activity automatically.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Callable, Optional
 
@@ -330,7 +331,7 @@ def _duplicate_policy(service: str, policy: dict) -> dict:
         new_id = ra_repo.create(
             tenant_id=_tid(),
             router_id=int(policy["router_id"]),
-            name=f"{policy['name']} (نسخة)",
+            name=_tr('%(name)s (نسخة)', name=policy['name']),
             slug=copy_slug,
             allow_winbox=bool(policy.get("allow_winbox")),
             allow_ssh=bool(policy.get("allow_ssh")),
@@ -347,7 +348,7 @@ def _duplicate_policy(service: str, policy: dict) -> dict:
         new_id = wb_repo.create_policy(
             tenant_id=_tid(),
             router_id=int(policy["router_id"]),
-            name=f"{policy['name']} (نسخة)",
+            name=_tr('%(name)s (نسخة)', name=policy['name']),
             slug=copy_slug,
             scope=str(policy.get("scope") or wb_repo.SCOPE_ALL_USERS),
             schedule_id=str(policy.get("schedule_id") or ""),
@@ -358,7 +359,7 @@ def _duplicate_policy(service: str, policy: dict) -> dict:
         new_id = wg_repo.create_policy(
             tenant_id=_tid(),
             router_id=int(policy["router_id"]),
-            name=f"{policy['name']} (نسخة)",
+            name=_tr('%(name)s (نسخة)', name=policy['name']),
             slug=copy_slug,
             hotspot_profile=str(policy.get("hotspot_profile") or ""),
             enabled=bool(policy.get("enabled")),
@@ -551,7 +552,7 @@ def ra_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
+                        _tr("معرّف الراوتر يجب أن يكون رقمًا صحيحًا."), status=422)
         rows = ra_repo.list_for_router(_tid(), rid)
     else:
         rows = ra_repo.list_for_tenant(_tid())
@@ -566,10 +567,10 @@ def ra_create():
     name = (body.get("name") or "").strip()
     router_id = body.get("router_id")
     if not name:
-        return fail("validation_error", "name مطلوب",
+        return fail("validation_error", _tr("name مطلوب"),
                     status=422)
     if router_id is None:
-        return fail("validation_error", "router_id مطلوب",
+        return fail("validation_error", _tr("router_id مطلوب"),
                     status=422)
     try:
         pid = ra_repo.create(
@@ -604,7 +605,7 @@ def ra_get(policy_id: int):
     row = ra_repo.get_by_id(_tid(), policy_id)
     if not row:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     return ok(_serialize_remote(row))
 
 
@@ -612,7 +613,7 @@ def ra_patch(policy_id: int):
     existing = ra_repo.get_by_id(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     body = _body()
     try:
         updated = ra_repo.update(_tid(), policy_id, **body)
@@ -631,7 +632,7 @@ def ra_delete(policy_id: int):
     existing = ra_repo.get_by_id(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     ra_repo.delete(_tid(), policy_id)
     _emit_audit(
         service=nc.SERVICE_REMOTE_ACCESS,
@@ -646,7 +647,7 @@ def ra_preview(policy_id: int):
     row = ra_repo.get_by_id(_tid(), policy_id)
     if not row:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     plan = ra_planner.plan(row)
     return _finalize_preview(
         service=nc.SERVICE_REMOTE_ACCESS,
@@ -669,7 +670,7 @@ def wb_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
+                        _tr("معرّف الراوتر يجب أن يكون رقمًا صحيحًا."), status=422)
         rows = wb_repo.list_policies_for_router(_tid(), rid)
     else:
         rows = wb_repo.list_policies_for_tenant(_tid())
@@ -684,10 +685,10 @@ def wb_create():
     name = (body.get("name") or "").strip()
     router_id = body.get("router_id")
     if not name:
-        return fail("validation_error", "name مطلوب",
+        return fail("validation_error", _tr("name مطلوب"),
                     status=422)
     if router_id is None:
-        return fail("validation_error", "router_id مطلوب",
+        return fail("validation_error", _tr("router_id مطلوب"),
                     status=422)
     try:
         pid = wb_repo.create_policy(
@@ -715,7 +716,7 @@ def wb_get(policy_id: int):
     row = wb_repo.get_policy(_tid(), policy_id)
     if not row:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     return ok(_serialize_block(row))
 
 
@@ -723,7 +724,7 @@ def wb_patch(policy_id: int):
     existing = wb_repo.get_policy(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     try:
         updated = wb_repo.update_policy(
             _tid(), policy_id, **_body())
@@ -742,7 +743,7 @@ def wb_delete(policy_id: int):
     existing = wb_repo.get_policy(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     wb_repo.delete_policy(_tid(), policy_id)
     _emit_audit(
         service=nc.SERVICE_WEB_BLOCK,
@@ -757,7 +758,7 @@ def wb_target_list(policy_id: int):
     policy = wb_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     rows = wb_repo.list_targets(policy_id)
     return ok({
         "items": [_serialize_target(r) for r in rows],
@@ -770,7 +771,7 @@ def wb_target_add(policy_id: int):
     policy = wb_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     body = _body()
     # parity-c: the same analyzer as the web form (routes/network_policy.py)
     # — «https://Site.com/x» picked as «domain» in the app was stored and
@@ -780,7 +781,7 @@ def wb_target_add(policy_id: int):
     raw_value = str(body.get("value") or "").strip()
     entry = analyzer.analyze_line(raw_value)
     if entry.kind == analyzer.KIND_INVALID:
-        return fail("validation_error", f"تعذّر القبول: {entry.reason}",
+        return fail("validation_error", _tr('تعذّر القبول: %(reason)s', reason=entry.reason),
                     status=422)
     try:
         tid = wb_repo.add_target(
@@ -810,11 +811,11 @@ def wb_target_delete(policy_id: int, target_id: int):
     policy = wb_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     target = wb_repo.get_target(target_id)
     if not target or int(target["policy_id"]) != policy_id:
         return fail("not_found",
-                    f"target {target_id} غير موجود", status=404)
+                    _tr('target %(target_id)s غير موجود', target_id=target_id), status=404)
     wb_repo.delete_target(target_id)
     _emit_audit(
         service=nc.SERVICE_WEB_BLOCK,
@@ -830,7 +831,7 @@ def wb_preview(policy_id: int):
     policy = wb_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     targets = wb_repo.list_targets(policy_id)
     plan = wb_planner.plan(policy, targets)
     return _finalize_preview(
@@ -854,7 +855,7 @@ def wg_list():
             rid = int(router_id)
         except ValueError:
             return fail("validation_error",
-                        "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.", status=422)
+                        _tr("معرّف الراوتر يجب أن يكون رقمًا صحيحًا."), status=422)
         rows = wg_repo.list_policies_for_router(_tid(), rid)
     else:
         rows = wg_repo.list_policies_for_tenant(_tid())
@@ -869,10 +870,10 @@ def wg_create():
     name = (body.get("name") or "").strip()
     router_id = body.get("router_id")
     if not name:
-        return fail("validation_error", "name مطلوب",
+        return fail("validation_error", _tr("name مطلوب"),
                     status=422)
     if router_id is None:
-        return fail("validation_error", "router_id مطلوب",
+        return fail("validation_error", _tr("router_id مطلوب"),
                     status=422)
     try:
         pid = wg_repo.create_policy(
@@ -897,7 +898,7 @@ def wg_get(policy_id: int):
     row = wg_repo.get_policy(_tid(), policy_id)
     if not row:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     return ok(_serialize_garden(row))
 
 
@@ -905,7 +906,7 @@ def wg_patch(policy_id: int):
     existing = wg_repo.get_policy(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     try:
         updated = wg_repo.update_policy(
             _tid(), policy_id, **_body())
@@ -924,7 +925,7 @@ def wg_delete(policy_id: int):
     existing = wg_repo.get_policy(_tid(), policy_id)
     if not existing:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     wg_repo.delete_policy(_tid(), policy_id)
     _emit_audit(
         service=nc.SERVICE_WALLED_GARDEN,
@@ -939,7 +940,7 @@ def wg_entry_list(policy_id: int):
     policy = wg_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     rows = wg_repo.list_entries(policy_id)
     return ok({
         "items": [_serialize_target(r) for r in rows],
@@ -952,7 +953,7 @@ def wg_entry_add(policy_id: int):
     policy = wg_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     body = _body()
     try:
         eid = wg_repo.add_entry(
@@ -983,11 +984,11 @@ def wg_entry_delete(policy_id: int, entry_id: int):
     policy = wg_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     entry = wg_repo.get_entry(entry_id)
     if not entry or int(entry["policy_id"]) != policy_id:
         return fail("not_found",
-                    f"entry {entry_id} غير موجود", status=404)
+                    _tr('entry %(entry_id)s غير موجود', entry_id=entry_id), status=404)
     wg_repo.delete_entry(entry_id)
     _emit_audit(
         service=nc.SERVICE_WALLED_GARDEN,
@@ -1003,7 +1004,7 @@ def wg_preview(policy_id: int):
     policy = wg_repo.get_policy(_tid(), policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     entries = wg_repo.list_entries(policy_id)
     plan = wg_planner.plan(policy, entries)
     return _finalize_preview(
@@ -1081,14 +1082,14 @@ def _api_script(service: str, policy_id: int):
     rendered = _render_policy(service, policy_id)
     if not rendered:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     policy, _children, _plan, forward, _rollback, render_error = rendered
     if render_error:
         return fail("render_unsafe", render_error, status=422)
     if not forward:
         return fail(
             "empty_script",
-            "لا يوجد سكربت قابل للتنزيل. راجع المعاينة أولًا.",
+            _tr("لا يوجد سكربت قابل للتنزيل. راجع المعاينة أولًا."),
             status=422,
         )
     slug = _slug_for_service(service)
@@ -1107,7 +1108,7 @@ def _api_changes(service: str, policy_id: int):
     policy = _policy_row(service, policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     rows = cs_repo.list_for_policy(
         _tid(), service=service, policy_id=int(policy_id),
     )
@@ -1123,7 +1124,7 @@ def _api_apply(service: str, policy_id: int):
     rendered = _render_policy(service, policy_id)
     if not rendered:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     policy, children, plan, forward, rollback, render_error = rendered
     intelligence = _policy_intelligence(
         service=service,
@@ -1158,7 +1159,7 @@ def _api_apply(service: str, policy_id: int):
     if execution_mode not in cs_repo.ALLOWED_MODES:
         return fail(
             "validation_error",
-            "وضع التنفيذ غير صالح.",
+            _tr("وضع التنفيذ غير صالح."),
             status=422,
         )
     result = apply_svc.request_apply(
@@ -1209,7 +1210,7 @@ def _api_rollback(service: str, policy_id: int, change_set_id: int):
     policy = _policy_row(service, policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     result = rollback_svc.request_rollback(
         tenant_id=_tid(),
         service=service,
@@ -1230,7 +1231,7 @@ def _api_duplicate(service: str, policy_id: int):
     policy = _policy_row(service, policy_id)
     if not policy:
         return fail("not_found",
-                    f"policy {policy_id} غير موجود", status=404)
+                    _tr('policy %(policy_id)s غير موجود', policy_id=policy_id), status=404)
     try:
         created = _duplicate_policy(service, policy)
     except ValueError as e:

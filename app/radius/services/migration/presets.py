@@ -50,6 +50,7 @@ adv_dbq…). عُكِس مخطّطها من دمب حقيقيّ (103 جداول)
 ────────────────────────────────────────────────────────────────────────
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from .sections import norm_key
 
@@ -89,10 +90,10 @@ def recognize(dataset) -> str:
 
 
 _LABELS = {
-    "adv_hotspot": "لوحة هوتسبوت/RADIUS تجاريّة (نمط adv) — تصنيف حتميّ "
-                   "(is_card يفصل الكروت، والمدراء الرقميّون يُحَلّون)",
-    "freeradius": "قاعدة FreeRADIUS (radcheck/radusergroup)",
-    "mikrotik": "تصدير MikroTik RouterOS",
+    "adv_hotspot": N_("لوحة هوتسبوت/RADIUS تجاريّة (نمط adv) — تصنيف حتميّ "
+                   "(is_card يفصل الكروت، والمدراء الرقميّون يُحَلّون)"),
+    "freeradius": N_("قاعدة FreeRADIUS (radcheck/radusergroup)"),
+    "mikrotik": N_("تصدير MikroTik RouterOS"),
 }
 
 

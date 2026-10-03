@@ -11,7 +11,7 @@
 {% block title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("أسعار العروض للمدراء") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ (admins|length)|ar_count('admin') }} × {{ plans|length }} عرض</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(v)s × %(length)s عرض', v=(admins|length)|ar_count('admin'), length=plans|length) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -63,8 +63,8 @@
 
 {# ───── Hero موحّد: العنوان + الإجراءات + شريط KPI ───── #}
 {{ hub.megahero(
-  "أسعار العروض للمدراء",
-  subtitle="سعر خاص لكل (مدير × عرض) حسب الاتفاق — يتجاوز سعر العرض الرسمي عند تفعيل/تجديد مشتركي ذلك المدير. الحقل الفارغ يعني السعر الافتراضي.",
+  _('أسعار العروض للمدراء'),
+  subtitle=_('سعر خاص لكل (مدير × عرض) حسب الاتفاق — يتجاوز سعر العرض الرسمي عند تفعيل/تجديد مشتركي ذلك المدير. الحقل الفارغ يعني السعر الافتراضي.'),
   icon="tags",
   actions_html='
     <button type="button" class="hub-btn hub-btn--danger" data-fcw-open="reset-all"'|safe
@@ -75,39 +75,39 @@
       <i class="fa-solid fa-user-shield"></i> '|safe ~ _("المدراء") ~ '
     </a>'|safe,
   kpis=[
-    {'label': 'عدد المدراء',        'value': admins|length,   'icon': 'users',       'variant': 'brand'},
-    {'label': 'عروض بأسعار خاصة',  'value': overrides_count,  'icon': 'tags',        'variant': 'green'},
-    {'label': 'مدراء باتفاق خاص',  'value': _admins_with,     'icon': 'handshake',   'variant': 'blue'},
-    {'label': 'آخر تعديل',          'value': (last_update|dt_local if last_update else '—'), 'icon': 'clock', 'variant': 'amber'},
+    {'label': _('عدد المدراء'),        'value': admins|length,   'icon': 'users',       'variant': 'brand'},
+    {'label': _('عروض بأسعار خاصة'),  'value': overrides_count,  'icon': 'tags',        'variant': 'green'},
+    {'label': _('مدراء باتفاق خاص'),  'value': _admins_with,     'icon': 'handshake',   'variant': 'blue'},
+    {'label': _('آخر تعديل'),          'value': (last_update|dt_local if last_update else '—'), 'icon': 'clock', 'variant': 'amber'},
   ]
 ) }}
 
 {% if admins and plans %}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل أسعار المدراء؟",
-  intro="كل صف هو مدير — افتح «تعديل» لتحديد سعر خاص لكل عرض حسب اتفاقك معه.",
+  _('كيف تعمل أسعار المدراء؟'),
+  intro=_('كل صف هو مدير — افتح «تعديل» لتحديد سعر خاص لكل عرض حسب اتفاقك معه.'),
   items=[
-    {'icon': 'tags',        'text': 'السعر الخاص يحلّ مكان سعر العرض الرسمي عند تسعير تفعيل/تجديد مشتركي هذا المدير.'},
-    {'icon': 'user-pen',    'text': 'السعر المخصّص للمشترك نفسه (custom_price) يبقى الأقوى — فهو الأخصّ.'},
-    {'icon': 'eraser',      'text': 'الحقل الفارغ في نافذة التعديل = «استخدم السعر الافتراضي» — الحفظ يمسح التجاوز.'},
-    {'icon': 'rotate-left', 'text': '«استعادة» تعيد مديرًا واحدًا لكل الأسعار الرسمية؛ «استعادة الكل» تمسح كل الاتفاقات.'},
+    {'icon': 'tags',        'text': _('السعر الخاص يحلّ مكان سعر العرض الرسمي عند تسعير تفعيل/تجديد مشتركي هذا المدير.')},
+    {'icon': 'user-pen',    'text': _('السعر المخصّص للمشترك نفسه (custom_price) يبقى الأقوى — فهو الأخصّ.')},
+    {'icon': 'eraser',      'text': _('الحقل الفارغ في نافذة التعديل = «استخدم السعر الافتراضي» — الحفظ يمسح التجاوز.')},
+    {'icon': 'rotate-left', 'text': _('«استعادة» تعيد مديرًا واحدًا لكل الأسعار الرسمية؛ «استعادة الكل» تمسح كل الاتفاقات.')},
   ],
-  note="التغيير يسري على العمليات الجديدة فقط — المدفوعات والقيود السابقة لا تُعاد تسعيرتها."
+  note=_('التغيير يسري على العمليات الجديدة فقط — المدفوعات والقيود السابقة لا تُعاد تسعيرتها.')
 )) %}
-  {% call hub.section("المدراء وأسعارهم الخاصة", icon="table-list", meta=admins|length|string + " مدير", flush=True) %}
+  {% call hub.section(_('المدراء وأسعارهم الخاصة'), icon="table-list", meta=admins|length|string + _(' مدير'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
             <th>{{ _('المدير') }}
-              <span class="hub-hint" tabindex="0" data-hint="حساب المدير كما هو في صفحة «المدراء» — التسعير يطبَّق على المشتركين التابعين له (manager_id)."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('حساب المدير كما هو في صفحة «المدراء» — التسعير يطبَّق على المشتركين التابعين له (manager_id).') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('عدد الأسعار الخاصة') }}
-              <span class="hub-hint" tabindex="0" data-hint="كم عرضًا له سعر متفق عليه يخالف السعر الرسمي — صفر يعني أن المدير يدفع الأسعار الافتراضية."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('كم عرضًا له سعر متفق عليه يخالف السعر الرسمي — صفر يعني أن المدير يدفع الأسعار الافتراضية.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th data-uds-nosort>{{ _('أمثلة') }}
-              <span class="hub-hint" tabindex="0" data-hint="حتى ثلاثة من أسعاره الخاصة (اسم العرض ← السعر) — افتح «تعديل» لرؤية القائمة الكاملة."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('حتى ثلاثة من أسعاره الخاصة (اسم العرض ← السعر) — افتح «تعديل» لرؤية القائمة الكاملة.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('آخر تحديث') }}</th>
             <th style="width:170px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
@@ -122,7 +122,7 @@
             <td>
               <span style="font-weight:800;color:var(--hub-brand-ink)">{{ a.full_name or a.username }}</span>
               {% if a.full_name %}<span class="hub-text-mute mono small" style="margin-inline-start:6px">{{ a.username }}</span>{% endif %}
-              {% if not a.enabled %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+              {% if not a.enabled %}{{ hub.pill(_('معطَّل'), variant="red") }}{% endif %}
             </td>
             <td>
               <span class="apx-count{{ ' is-zero' if not ov }}">
@@ -161,8 +161,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا مدراء أو لا عروض بعد",
-  sub="أضف المدراء من صفحة «المدراء» والعروض من صفحة «العروض» أولًا، ثم عُد هنا لضبط الأسعار الخاصة.",
+  _('لا مدراء أو لا عروض بعد'),
+  sub=_('أضف المدراء من صفحة «المدراء» والعروض من صفحة «العروض» أولًا، ثم عُد هنا لضبط الأسعار الخاصة.'),
   icon="tags"
 ) }}
 {% endif %}
@@ -180,7 +180,7 @@
       <div class="fcw-head">
         <h3 id="fcw-apx-{{ a.id }}-title">
           <i class="fa-solid fa-tags"></i>
-          أسعار العروض — {{ a.full_name or a.username }}
+          {{ _('أسعار العروض — %(username)s', username=a.full_name or a.username) }}
         </h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -194,13 +194,13 @@
             <tr>
               <th>{{ _('العرض') }}</th>
               <th>{{ _('السعر الأساسي') }}
-                <span class="hub-hint" tabindex="0" data-hint="السعر الرسمي للعرض كما في صفحة «العروض» — يُستخدم لكل من لا اتفاق خاصًّا له."><i class="fa-solid fa-info"></i></span>
+                <span class="hub-hint" tabindex="0" data-hint="{{ _('السعر الرسمي للعرض كما في صفحة «العروض» — يُستخدم لكل من لا اتفاق خاصًّا له.') }}"><i class="fa-solid fa-info"></i></span>
               </th>
               <th>{{ _('السعر الخاص') }}
-                <span class="hub-hint" tabindex="0" data-hint="السعر المتفق عليه مع هذا المدير — يحلّ مكان السعر الأساسي عند تفعيل/تجديد مشتركيه بهذا العرض."><i class="fa-solid fa-info"></i></span>
+                <span class="hub-hint" tabindex="0" data-hint="{{ _('السعر المتفق عليه مع هذا المدير — يحلّ مكان السعر الأساسي عند تفعيل/تجديد مشتركيه بهذا العرض.') }}"><i class="fa-solid fa-info"></i></span>
               </th>
               <th>{{ _('أنشئ بواسطة') }}
-                <span class="hub-hint" tabindex="0" data-hint="آخر مشغّل عدّل هذا السعر الخاص ومتى — فارغ إن لم يكن للعرض سعر خاص."><i class="fa-solid fa-info"></i></span>
+                <span class="hub-hint" tabindex="0" data-hint="{{ _('آخر مشغّل عدّل هذا السعر الخاص ومتى — فارغ إن لم يكن للعرض سعر خاص.') }}"><i class="fa-solid fa-info"></i></span>
               </th>
             </tr>
           </thead>
@@ -210,7 +210,7 @@
             <tr>
               <td>
                 <span style="font-weight:800">{{ p.name }}</span>
-                {% if not p.enabled %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+                {% if not p.enabled %}{{ hub.pill(_('معطَّل'), variant="red") }}{% endif %}
               </td>
               <td class="apx-base mono">{{ '%.2f'|format(p.price or 0) }} {{ p.currency or '' }}</td>
               <td>
@@ -255,7 +255,7 @@
       </div>
       <div class="fcw-body">
         <p style="margin:0;font-weight:700;color:var(--hub-text,#0f172a)">
-          {{ _('سيُمسح') }} <b>{{ ov|length }}</b> سعرًا خاصًا للمدير «{{ a.full_name or a.username }}»، ويعود لكل الأسعار الرسمية للعروض.
+          {{ _('سيُمسح') }} <b>{{ ov|length }}</b> {{ _('سعرًا خاصًا للمدير «%(username)s»، ويعود لكل الأسعار الرسمية للعروض.', username=a.full_name or a.username) }}
         </p>
         <p class="hub-field-hint" style="margin:0">
           {{ _('لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.') }}

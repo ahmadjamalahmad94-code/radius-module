@@ -12,7 +12,7 @@
 {% block title %}{{ _("حالات تسجيل الدخول") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-to-bracket"></i>{% endblock %}
 {% block page_title %}{{ _("حالات تسجيل الدخول") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ totals.total }} محاولة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(total)s محاولة', total=totals.total) }}</span>{% endblock %}
 
 {% block content %}
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
@@ -21,15 +21,15 @@
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
 <section class="hub-hero-shell ls-hero" data-testid="login-states-hero">
 {{ hub.megahero(
-  "حالات تسجيل الدخول",
-  subtitle="فصل كامل لحالات الدخول حسب الفاعل — مدراء، مشتركون، كروت. اختر القسم لترى سجلًا مفروزًا بدقة مع عنوان الشبكة وعنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+  _('حالات تسجيل الدخول'),
+  subtitle=_('فصل كامل لحالات الدخول حسب الفاعل — مدراء، مشتركون، كروت. اختر القسم لترى سجلًا مفروزًا بدقة مع عنوان الشبكة وعنوان الجهاز وجهاز الشبكة وسبب الفشل.'),
   icon="right-to-bracket",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المحاولات', 'value': totals.total, 'icon': 'right-to-bracket', 'variant': 'brand'},
-    {'label': 'ناجحة',            'value': totals.ok,    'icon': 'circle-check',     'variant': 'green'},
-    {'label': 'فاشلة',            'value': totals.fail,  'icon': 'circle-xmark',     'variant': 'red'},
-    {'label': 'محاولات اليوم',    'value': totals.today, 'icon': 'calendar-day',     'variant': 'blue'},
+    {'label': _('إجمالي المحاولات'), 'value': totals.total, 'icon': 'right-to-bracket', 'variant': 'brand'},
+    {'label': _('ناجحة'),            'value': totals.ok,    'icon': 'circle-check',     'variant': 'green'},
+    {'label': _('فاشلة'),            'value': totals.fail,  'icon': 'circle-xmark',     'variant': 'red'},
+    {'label': _('محاولات اليوم'),    'value': totals.today, 'icon': 'calendar-day',     'variant': 'blue'},
   ]
 ) }}
 </section>{# /hub-hero-shell #}
@@ -92,11 +92,9 @@
 </div>
 
 {# سطر توضيحي بسيط أسفل البطاقات — يشرح مصادر البيانات بلا تعقيد #}
-{% call hub.section("من أين تأتي البيانات؟", icon="circle-info") %}
+{% call hub.section(_('من أين تأتي البيانات؟'), icon="circle-info") %}
   <div class="ls-card-sub" style="font-size:13px">
-    دخول المدراء يُلتقط من لوحة الإدارة، ودخول المشتركين من بوابة المشتركين ومن
-    شبكة المصادقة، ودخول الكروت من شبكة المصادقة والبوابة. كل سجل يحفظ عنوان الشبكة
-    وعنوان الجهاز وجهاز الشبكة حيثما توفّرت — والبيانات للقراءة فقط.
+    {{ _('دخول المدراء يُلتقط من لوحة الإدارة، ودخول المشتركين من بوابة المشتركين ومن شبكة المصادقة، ودخول الكروت من شبكة المصادقة والبوابة. كل سجل يحفظ عنوان الشبكة وعنوان الجهاز وجهاز الشبكة حيثما توفّرت — والبيانات للقراءة فقط.') }}
   </div>
 {% endcall %}
 {% endblock %}

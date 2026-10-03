@@ -16,8 +16,8 @@
 {% block title %}{{ page_title }} — {{ _("مركز سياسات الشبكة") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
 {% block page_title %}
-  {% if policy %}تحرير سياسة — {{ service.label_ar }}
-  {% else %}سياسة جديدة — {{ service.label_ar }}{% endif %}
+  {% if policy %}{{ _('تحرير سياسة —') }} {{ service.label_ar }}
+  {% else %}{{ _('سياسة جديدة —') }} {{ service.label_ar }}{% endif %}
 {% endblock %}
 {% block page_sub %}
   <span class="sub">{{ _('معاينة فقط — لم يُطبَّق على الراوتر') }}</span>
@@ -44,8 +44,8 @@
   {% endif %}
 {% endset %}
 {{ hub.hero(
-  ("تحرير سياسة — " ~ service.label_ar) if policy else ("سياسة جديدة — " ~ service.label_ar),
-  subtitle="معاينة فقط — لا يُطبَّق على الراوتر. عرّف السياسة هنا، ثم ولّد المعاينة لرؤية ما سيُنفَّذ بالضبط.",
+  (_('تحرير سياسة — %(label_ar)s', label_ar=service.label_ar)) if policy else (_('سياسة جديدة — %(label_ar)s', label_ar=service.label_ar)),
+  subtitle=_('معاينة فقط — لا يُطبَّق على الراوتر. عرّف السياسة هنا، ثم ولّد المعاينة لرؤية ما سيُنفَّذ بالضبط.'),
   icon=service.icon,
   actions_html=_actions
 ) }}
@@ -68,7 +68,7 @@
 
     {# ════════════ Left: policy fields ════════════ #}
     <div>
-      {% call hub.section("بيانات السياسة", icon="pen-to-square") %}
+      {% call hub.section(_('بيانات السياسة'), icon="pen-to-square") %}
 
         <div class="hub-field">
           <label class="hub-field-label" for="name">{{ _('الاسم') }}</label>
@@ -83,8 +83,7 @@
             <input class="hub-input" type="text" disabled
                    value="{{ policy.router_id }}">
             <span class="hub-field-hint">
-              الراوتر لا يُغيَّر بعد الإنشاء — أنشئ سياسة جديدة
-              لاستهداف راوتر آخر.
+              {{ _('الراوتر لا يُغيَّر بعد الإنشاء — أنشئ سياسة جديدة لاستهداف راوتر آخر.') }}
             </span>
           {% else %}
             <select class="hub-select" name="router_id" id="router_id" required>
@@ -109,21 +108,21 @@
       {# ─── Service-specific fields ─── #}
 
       {% if service.key == 'remote_access' %}
-        {% call hub.section("الخدمات التي ستُفتح للوصول إلى الراوتر", icon="toggle-on") %}
+        {% call hub.section(_('الخدمات التي ستُفتح للوصول إلى الراوتر'), icon="toggle-on") %}
           {% set toggles = [
-              ('allow_winbox',       'برنامج الإدارة (TCP 8291)', 'مرتفع'),
-              ('allow_ssh',          'الوصول الآمن (TCP 22)',      'متوسط'),
-              ('allow_api',          'واجهة الربط غير المشفّرة (TCP 8728)', 'مرتفع'),
-              ('allow_api_ssl',      'واجهة الربط المشفّرة (TCP 8729)', 'متوسط'),
-              ('allow_webfig_http',  'واجهة الويب غير المشفّرة (80)', 'مرتفع'),
-              ('allow_webfig_https', 'واجهة الويب الآمنة (443)', 'منخفض'),
+              ('allow_winbox',       _('برنامج الإدارة (TCP 8291)'), _('مرتفع')),
+              ('allow_ssh',          _('الوصول الآمن (TCP 22)'),      _('متوسط')),
+              ('allow_api',          _('واجهة الربط غير المشفّرة (TCP 8728)'), _('مرتفع')),
+              ('allow_api_ssl',      _('واجهة الربط المشفّرة (TCP 8729)'), _('متوسط')),
+              ('allow_webfig_http',  _('واجهة الويب غير المشفّرة (80)'), _('مرتفع')),
+              ('allow_webfig_https', _('واجهة الويب الآمنة (443)'), _('منخفض')),
           ] %}
           {% for key, label, risk in toggles %}
             {% set _checked = (policy and policy[key]) or (not policy and key in ('allow_winbox','allow_webfig_https')) %}
             <div class="uds-toggle-row">
               <div class="uds-toggle-row-text">
                 <span class="uds-toggle-row-label">{{ label }}</span>
-                <span class="uds-toggle-row-meta">خطر: {{ risk }}</span>
+                <span class="uds-toggle-row-meta">{{ _('خطر: %(risk)s', risk=risk) }}</span>
               </div>
               {{ toggle_switch(name=key, id=key, checked=_checked) }}
             </div>
@@ -138,8 +137,7 @@
                    placeholder="{{ _('مثلاً: ops-bastion') }}"
                    value="{{ policy.source_address_list if policy else '' }}">
             <span class="hub-field-hint">
-              اسم address-list داخل الراوتر يحوي IP المسؤولين فقط.
-              تركها فارغة يعني السماح من أي مصدر — يُلزِم وقت انتهاء.
+              {{ _('اسم address-list داخل الراوتر يحوي IP المسؤولين فقط. تركها فارغة يعني السماح من أي مصدر — يُلزِم وقت انتهاء.') }}
             </span>
           </div>
 
@@ -151,8 +149,7 @@
                    placeholder="2026-06-01T12:00:00Z"
                    value="{{ policy.expires_at if policy else '' }}">
             <span class="hub-field-hint">
-              اختياري — لكن إن لم تحدّد قائمة مصدر، فالانتهاء
-              مطلوب. الحد الأقصى: 30 يوماً.
+              {{ _('اختياري — لكن إن لم تحدّد قائمة مصدر، فالانتهاء مطلوب. الحد الأقصى: 30 يوماً.') }}
             </span>
           </div>
 
@@ -165,7 +162,7 @@
         {% endcall %}
 
       {% elif service.key == 'web_block' %}
-        {% call hub.section("إعدادات الحظر", icon="ban") %}
+        {% call hub.section(_('إعدادات الحظر'), icon="ban") %}
           <div class="hub-field">
             <label class="hub-field-label" for="scope">{{ _('نطاق التطبيق') }}</label>
             <select class="hub-select" name="scope" id="scope">
@@ -197,7 +194,7 @@
         {% endcall %}
 
       {% elif service.key == 'walled_garden' %}
-        {% call hub.section("إعدادات الاستثناء", icon="shield-halved") %}
+        {% call hub.section(_('إعدادات الاستثناء'), icon="shield-halved") %}
           <div class="hub-field">
             <label class="hub-field-label" for="hotspot_profile">
               {{ _('اسم سيرفر الهوتسبوت (اختياري)') }}
@@ -210,14 +207,13 @@
               {# parity-c: the planner emits this as «server=» on
                  /ip hotspot walled-garden — a hotspot SERVER name, not a
                  profile (the old label said «ملف»). #}
-              اسم سيرفر الهوتسبوت في الراوتر (/ip hotspot) لتقييد الاستثناء عليه؛
-              تركها فارغة = كل السيرفرات.
+              {{ _('اسم سيرفر الهوتسبوت في الراوتر (/ip hotspot) لتقييد الاستثناء عليه؛ تركها فارغة = كل السيرفرات.') }}
             </span>
           </div>
         {% endcall %}
       {% endif %}
 
-      {% call hub.section("الحالة والحفظ", icon="floppy-disk") %}
+      {% call hub.section(_('الحالة والحفظ'), icon="floppy-disk") %}
         {% set _enabled_checked = (policy.enabled if policy else True) %}
         <div class="uds-toggle-row">
           <div class="uds-toggle-row-text">
@@ -229,7 +225,7 @@
         <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
           <button class="hub-btn hub-btn--primary" type="submit">
             <i class="fa-regular fa-floppy-disk"></i>
-            حفظ {% if not policy %}والمتابعة للمعاينة{% endif %}
+            {{ _('حفظ') }} {% if not policy %}{{ _('والمتابعة للمعاينة') }}{% endif %}
           </button>
           {% if can_submit('radius.npc_', 'GET') %}<a class="hub-btn hub-btn--secondary"
              href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
@@ -243,24 +239,24 @@
     {# ════════════ Right: preview hint + children ════════════ #}
     <div>
       {{ hub.helppanel(
-        "المعاينة بدون تنفيذ",
-        intro="بعد الحفظ، اضغط «توليد المعاينة» لرؤية ما سيحدث — دون أي اتصال بالراوتر.",
+        _('المعاينة بدون تنفيذ'),
+        intro=_('بعد الحفظ، اضغط «توليد المعاينة» لرؤية ما سيحدث — دون أي اتصال بالراوتر.'),
         icon="eye",
         items=[
-          {'icon': 'terminal',         'text': 'ما الذي سيُنفَّذ على الراوتر بالضبط (بلغة عربية).'},
-          {'icon': 'file-code',        'text': 'السكربت الكامل بصيغة الراوتر (.rsc).'},
-          {'icon': 'rotate-left',      'text': 'سكربت التراجع (rollback) المُولَّد تلقائياً.'},
-          {'icon': 'gauge-high',       'text': 'تقييم الخطر (منخفض / متوسط / مرتفع).'},
-          {'icon': 'triangle-exclamation', 'text': 'التحذيرات والقواعد التي ستظل سليمة بلا تعديل.'},
+          {'icon': 'terminal',         'text': _('ما الذي سيُنفَّذ على الراوتر بالضبط (بلغة عربية).')},
+          {'icon': 'file-code',        'text': _('السكربت الكامل بصيغة الراوتر (.rsc).')},
+          {'icon': 'rotate-left',      'text': _('سكربت التراجع (rollback) المُولَّد تلقائياً.')},
+          {'icon': 'gauge-high',       'text': _('تقييم الخطر (منخفض / متوسط / مرتفع).')},
+          {'icon': 'triangle-exclamation', 'text': _('التحذيرات والقواعد التي ستظل سليمة بلا تعديل.')},
         ],
-        note="هذه الصفحة لا تتّصل بالراوتر — لا تُنشأ قواعد حقيقية، لا تُعدَّل خدمات، لا يُرسل CoA."
+        note=_('هذه الصفحة لا تتّصل بالراوتر — لا تُنشأ قواعد حقيقية، لا تُعدَّل خدمات، لا يُرسل CoA.')
       ) }}
 
       {# ─── Children panel (web_block + walled_garden) ─── #}
       {% if policy
             and service.key in ('web_block','walled_garden') %}
         {% set _children_title %}
-          {% if service.key == 'web_block' %}وجهات الحظر{% else %}إدخالات الإستثناء{% endif %}
+          {% if service.key == 'web_block' %}{{ _('وجهات الحظر') }}{% else %}{{ _('إدخالات الإستثناء') }}{% endif %}
         {% endset %}
         <div style="margin-top:16px;">
         {% call hub.section(_children_title|trim, icon="rectangle-list", meta=("(" ~ children|length ~ ")")) %}

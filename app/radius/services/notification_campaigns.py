@@ -5,6 +5,7 @@ state without sending SMS/WhatsApp/Telegram/email traffic or storing external
 provider secrets.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 import re
@@ -16,8 +17,8 @@ from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import EventService
 
 
-NO_RECIPIENTS_SELECTED = "لم يتم اختيار أي مستلم"
-INVALID_RECIPIENT_IDS = "معرّفات المستلمين غير صالحة"
+NO_RECIPIENTS_SELECTED = N_("لم يتم اختيار أي مستلم")
+INVALID_RECIPIENT_IDS = N_("معرّفات المستلمين غير صالحة")
 
 
 class NotificationCampaignError(ValueError):
@@ -27,17 +28,17 @@ class NotificationCampaignError(ValueError):
 class NotificationTemplateExists(NotificationCampaignError):
     """A template with this key already exists (create without overwrite)."""
 
-    MESSAGE = "يوجد قالب بهذا المفتاح مسبقًا — اختر مفتاحًا آخر أو فعّل «استبدال القالب الموجود»."
+    MESSAGE = N_("يوجد قالب بهذا المفتاح مسبقًا — اختر مفتاحًا آخر أو فعّل «استبدال القالب الموجود».")
 
 
 CHANNELS = {"internal", "sms", "whatsapp", "telegram", "email", "push"}
 RECIPIENT_TYPES = {"subscriber", "card_user", "manager", "distributor", "company"}
 _RECIPIENT_TYPE_AR: dict[str, str] = {
-    "subscriber": "مشترك",
-    "card_user": "مستخدم بطاقة",
-    "manager": "مدير",
-    "distributor": "موزّع",
-    "company": "شركة",
+    "subscriber": N_("مشترك"),
+    "card_user": N_("مستخدم بطاقة"),
+    "manager": N_("مدير"),
+    "distributor": N_("موزّع"),
+    "company": N_("شركة"),
 }
 
 
@@ -350,7 +351,7 @@ class NotificationCampaignService:
             tenant_id=self.tenant_id,
             category="notification",
             event_key="notification.manual_queued",
-            message="تمت إضافة رسالة يدوية إلى قائمة الإرسال",
+            message=N_("تمت إضافة رسالة يدوية إلى قائمة الإرسال"),
             actor_type="admin",
             target_type="notification_campaign",
             metadata={"count": len(queued), "channel": _channel(channel)},
@@ -781,10 +782,10 @@ class NotificationCampaignService:
     # Arabic label per delivery status (raw «skipped» reached the app's
     # «التواصل» screen — re-test R11 L-2). `status` itself is unchanged.
     _DELIVERY_STATUS_AR = {
-        "queued": "في الطابور", "pending": "بالانتظار", "sent": "تم الإرسال",
-        "delivered": "تم التسليم", "read": "مقروء", "failed": "فشل",
-        "skipped": "تم التخطّي", "dry_run_ready": "معاينة جاهزة",
-        "cancelled": "ملغاة",
+        "queued": N_("في الطابور"), "pending": N_("بالانتظار"), "sent": N_("تم الإرسال"),
+        "delivered": N_("تم التسليم"), "read": N_("مقروء"), "failed": N_("فشل"),
+        "skipped": N_("تم التخطّي"), "dry_run_ready": N_("معاينة جاهزة"),
+        "cancelled": N_("ملغاة"),
     }
 
     def _delivery_row(self, row: dict[str, Any]) -> dict[str, Any]:

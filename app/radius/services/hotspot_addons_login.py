@@ -6,6 +6,7 @@
 لا تكسر نموذج المايكروتيك: الحقن قبل </body> وعمليات DOM دفاعيّة.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -29,7 +30,7 @@ def _jstr(s: object) -> str:
 def _frag_one_tap(cfg: dict, ctx: dict) -> str:
     user = _jstr(cfg.get("free_user") or "")
     pw = _jstr(cfg.get("free_pass") or "")
-    label = _esc(cfg.get("label") or "اتصل بضغطة")
+    label = _esc(cfg.get("label") or N_("اتصل بضغطة"))
     accent = _esc(ctx.get("accent", "#2563EB"))
     if user == '""':
         return ""
@@ -47,13 +48,13 @@ def _frag_one_tap(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="one_tap", category=CAT_LOGIN, label_ar="دخول بضغطة «اتصل»",
-    desc_ar="زر كبير يملأ حساب الوصول الحرّ ويُرسل النموذج فورًا — للشبكات المفتوحة.",
+    key="one_tap", category=CAT_LOGIN, label_ar=N_("دخول بضغطة «اتصل»"),
+    desc_ar=N_("زر كبير يملأ حساب الوصول الحرّ ويُرسل النموذج فورًا — للشبكات المفتوحة."),
     surface=SURFACE_PRELOGIN, icon="bolt", server_side=True,
     fields=(
-        AddonField(key="label", label_ar="نص الزر", default="اتصل بضغطة", max_len=30),
-        AddonField(key="free_user", label_ar="اسم مستخدم الوصول الحرّ", max_len=40),
-        AddonField(key="free_pass", label_ar="كلمة المرور (إن لزم)", max_len=40),
+        AddonField(key="label", label_ar=N_("نص الزر"), default=N_("اتصل بضغطة"), max_len=30),
+        AddonField(key="free_user", label_ar=N_("اسم مستخدم الوصول الحرّ"), max_len=40),
+        AddonField(key="free_pass", label_ar=N_("كلمة المرور (إن لزم)"), max_len=40),
     ),
     pre_fragment=_frag_one_tap))
 
@@ -82,14 +83,14 @@ def _frag_social_login(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="social_login", category=CAT_LOGIN, label_ar="تسجيل دخول اجتماعي",
-    desc_ar="أزرار دخول عبر جوجل/فيسبوك/آبل (توجيه لمزوّد مصادقتك؛ نطاقاته تُفتح تلقائيًّا).",
+    key="social_login", category=CAT_LOGIN, label_ar=N_("تسجيل دخول اجتماعي"),
+    desc_ar=N_("أزرار دخول عبر جوجل/فيسبوك/آبل (توجيه لمزوّد مصادقتك؛ نطاقاته تُفتح تلقائيًّا)."),
     surface=SURFACE_PRELOGIN, icon="right-to-bracket",
     walled_garden_domains=tuple(d for _k, d, _l in _SOC),
     fields=(
-        AddonField(key="google", label_ar="رابط مصادقة جوجل", kind="url"),
-        AddonField(key="facebook", label_ar="رابط مصادقة فيسبوك", kind="url"),
-        AddonField(key="apple", label_ar="رابط مصادقة آبل", kind="url"),
+        AddonField(key="google", label_ar=N_("رابط مصادقة جوجل"), kind="url"),
+        AddonField(key="facebook", label_ar=N_("رابط مصادقة فيسبوك"), kind="url"),
+        AddonField(key="apple", label_ar=N_("رابط مصادقة آبل"), kind="url"),
     ),
     pre_fragment=_frag_social_login))
 
@@ -116,19 +117,19 @@ def _frag_sms_otp(cfg: dict, ctx: dict) -> str:
         "if(!s)return;s.addEventListener('click',function(){"
         "if(!p.value.trim()){m.textContent='أدخل رقم الجوال.';return;}"
         "m.textContent='جارٍ إرسال الرمز…';"
-        "var x=new XMLHttpRequest();x.open('POST'," + _jstr(req) + ");"
+        "var x=new XMLHttpRequest();x.open('POST'," + _jstr(req) + N_(");"
         "x.setRequestHeader('Content-Type','application/x-www-form-urlencoded');"
         "x.onreadystatechange=function(){if(x.readyState===4){"
         "m.textContent=(x.status>=200&&x.status<300)?'أُرسل الرمز إلى جوالك — أدخله في حقل كلمة المرور.':'تعذّر الإرسال، حاول مجددًا.';}};"
-        "x.send('phone='+encodeURIComponent(p.value));});})();</script>")
+        "x.send('phone='+encodeURIComponent(p.value));});})();</script>"))
 
 
 register(AddonSpec(
-    key="sms_otp", category=CAT_LOGIN, label_ar="رمز تحقّق SMS",
-    desc_ar="طلب رمز تحقّق على الجوال ثم إدخاله — يطلب الرمز من نقطة نهايتك (تُفتح تلقائيًّا).",
+    key="sms_otp", category=CAT_LOGIN, label_ar=N_("رمز تحقّق SMS"),
+    desc_ar=N_("طلب رمز تحقّق على الجوال ثم إدخاله — يطلب الرمز من نقطة نهايتك (تُفتح تلقائيًّا)."),
     surface=SURFACE_PRELOGIN, icon="comment-sms",
     fields=(
-        AddonField(key="request_url", label_ar="رابط طلب الرمز (POST)", kind="url",
+        AddonField(key="request_url", label_ar=N_("رابط طلب الرمز (POST)"), kind="url",
                    placeholder="https://api.example.com/otp/request"),
     ),
     pre_fragment=_frag_sms_otp))
@@ -138,7 +139,7 @@ register(AddonSpec(
 # 4) كرت خدش (pre — طبقة خدش canvas تكشف حقل الرمز)
 # ════════════════════════════════════════════════════════════════
 def _frag_scratch(cfg: dict, ctx: dict) -> str:
-    label = _esc(cfg.get("label") or "اخدش لكشف حقل الرمز")
+    label = _esc(cfg.get("label") or N_("اخدش لكشف حقل الرمز"))
     accent = ctx.get("accent", "#2563EB")
     return (
         '<div class="hr-scratch" style="position:relative;margin:10px 0;height:54px;'
@@ -164,12 +165,12 @@ def _frag_scratch(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="voucher_scratch", category=CAT_LOGIN, label_ar="كرت خدش",
-    desc_ar="طبقة خدش تفاعليّة (canvas) فوق منطقة الرمز — تجربة كرت خدش، تعمل أوفلاين.",
+    key="voucher_scratch", category=CAT_LOGIN, label_ar=N_("كرت خدش"),
+    desc_ar=N_("طبقة خدش تفاعليّة (canvas) فوق منطقة الرمز — تجربة كرت خدش، تعمل أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="eraser", server_side=True,
     fields=(
-        AddonField(key="label", label_ar="النص أسفل الكرت",
-                   default="اخدش لكشف حقل الرمز", max_len=60),
+        AddonField(key="label", label_ar=N_("النص أسفل الكرت"),
+                   default=N_("اخدش لكشف حقل الرمز"), max_len=60),
     ),
     pre_fragment=_frag_scratch))
 
@@ -199,8 +200,8 @@ def _frag_multilang(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="multilang", category=CAT_LOGIN, label_ar="مبدّل اللغة",
-    desc_ar="أزرار AR/EN/FR/TR تبدّل تسميات الحقول والاتجاه فورًا — أوفلاين.",
+    key="multilang", category=CAT_LOGIN, label_ar=N_("مبدّل اللغة"),
+    desc_ar=N_("أزرار AR/EN/FR/TR تبدّل تسميات الحقول والاتجاه فورًا — أوفلاين."),
     surface=SURFACE_PRELOGIN, icon="language", server_side=True,
     pre_fragment=_frag_multilang))
 
@@ -209,7 +210,7 @@ register(AddonSpec(
 # 6) موافقة الشروط (pre — checkbox يبوّب الدخول + رابط الشروط)
 # ════════════════════════════════════════════════════════════════
 def _frag_tos(cfg: dict, ctx: dict) -> str:
-    text = _esc(cfg.get("text") or "أوافق على شروط الاستخدام")
+    text = _esc(cfg.get("text") or N_("أوافق على شروط الاستخدام"))
     url = safe_url(cfg.get("url", ""))
     link = (f' <a href="{_esc(url)}" target="_blank" rel="noopener">(الشروط)</a>'
             if url else "")
@@ -224,13 +225,13 @@ def _frag_tos(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="tos_consent", category=CAT_LOGIN, label_ar="موافقة الشروط",
-    desc_ar="مربّع موافقة على الشروط يبوّب زر الدخول حتى التأشير، مع رابط الشروط.",
+    key="tos_consent", category=CAT_LOGIN, label_ar=N_("موافقة الشروط"),
+    desc_ar=N_("مربّع موافقة على الشروط يبوّب زر الدخول حتى التأشير، مع رابط الشروط."),
     surface=SURFACE_PRELOGIN, icon="file-contract", server_side=True,
     fields=(
-        AddonField(key="text", label_ar="نص الموافقة",
-                   default="أوافق على شروط الاستخدام", max_len=120),
-        AddonField(key="url", label_ar="رابط الشروط (اختياري)", kind="url"),
+        AddonField(key="text", label_ar=N_("نص الموافقة"),
+                   default=N_("أوافق على شروط الاستخدام"), max_len=120),
+        AddonField(key="url", label_ar=N_("رابط الشروط (اختياري)"), kind="url"),
     ),
     pre_fragment=_frag_tos))
 
@@ -251,7 +252,7 @@ def _frag_returning(cfg: dict, ctx: dict) -> str:
 
 
 register(AddonSpec(
-    key="returning_user", category=CAT_LOGIN, label_ar="تذكّر المستخدم العائد",
-    desc_ar="يحفظ آخر اسم مستخدم على جهاز الزبون ويعبّئه تلقائيًّا (يحترم ربط بصمة الجهاز).",
+    key="returning_user", category=CAT_LOGIN, label_ar=N_("تذكّر المستخدم العائد"),
+    desc_ar=N_("يحفظ آخر اسم مستخدم على جهاز الزبون ويعبّئه تلقائيًّا (يحترم ربط بصمة الجهاز)."),
     surface=SURFACE_PRELOGIN, icon="user-clock", server_side=True,
     pre_fragment=_frag_returning))

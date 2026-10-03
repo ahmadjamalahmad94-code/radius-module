@@ -301,7 +301,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   {# ─── Service header ─── #}
   {{ hub.hero(
     card.title_ar,
-    subtitle=card.subtitle_ar ~ (" · الراوتر «" ~ router.name ~ "»" if router else ""),
+    subtitle=card.subtitle_ar ~ (_(' · الراوتر «%(name)s»', name=router.name) if router else ""),
     icon=card.icon
   ) }}
 
@@ -365,8 +365,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   <section class="swsvf-pane" data-swsvf-pane="preview" hidden>
     <h2>{{ _('معاينة ما سيُطبَّق على الراوتر') }}</h2>
     <p class="swsvf-pane-sub">
-      راجع بنود التغيير بلغة بسيطة قبل الإرسال. لا يوجد أي تأثير على الراوتر
-      حتى تضغط «إرسال للراوتر».
+      {{ _('راجع بنود التغيير بلغة بسيطة قبل الإرسال. لا يوجد أي تأثير على الراوتر حتى تضغط «إرسال للراوتر».') }}
     </p>
     <ul class="swsvf-preview-list" data-swsvf-preview-list>
       <li class="swsvf-preview-empty">{{ _('جارٍ تحضير المعاينة…') }}</li>
@@ -444,8 +443,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   <section class="swsvf-pane" data-swsvf-pane="verify" hidden>
     <h2>{{ _('التحقّق من نجاح الإعداد') }}</h2>
     <p class="swsvf-pane-sub">
-      نفحص الراوتر فحصاً حقيقياً للتأكّد أنّ الخدمة تعمل فعلاً. لا تُسجَّل
-      كـ «مكتملة» إلّا بعد أن تنجح كل النقاط أدناه.
+      {{ _('نفحص الراوتر فحصاً حقيقياً للتأكّد أنّ الخدمة تعمل فعلاً. لا تُسجَّل كـ «مكتملة» إلّا بعد أن تنجح كل النقاط أدناه.') }}
     </p>
     <ul class="swsvf-verify-list" data-swsvf-verify-list>
       <li data-status="pending">
@@ -481,8 +479,7 @@ li[data-status="pending"] .swsvf-verify-icon{
     <div class="swsvf-modal-card">
       <h3>{{ _('إيقاف هذه الخدمة؟') }}</h3>
       <p>
-        سيتم حذف كل الإعدادات التي أُضيفت لهذه الخدمة على الراوتر.
-        المستخدمون المرتبطون بها قد يفقدون الاتصال فوراً.
+        {{ _('سيتم حذف كل الإعدادات التي أُضيفت لهذه الخدمة على الراوتر. المستخدمون المرتبطون بها قد يفقدون الاتصال فوراً.') }}
       </p>
       <div class="swsvf-modal-actions">
         <button type="button" class="swsvf-btn" data-swsvf-revoke-cancel>

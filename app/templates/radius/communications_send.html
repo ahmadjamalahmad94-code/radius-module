@@ -28,8 +28,8 @@
 
 {% block content %}
 {{ hub.hero(
-  "إرسال رسالة",
-  subtitle="تُحفظ الرسائل في الطابور بشكل افتراضي، ولا يتم الإرسال عبر مزوّد خارجي إلا بعد تفعيل القناة من الإعدادات.",
+  _('إرسال رسالة'),
+  subtitle=_('تُحفظ الرسائل في الطابور بشكل افتراضي، ولا يتم الإرسال عبر مزوّد خارجي إلا بعد تفعيل القناة من الإعدادات.'),
   icon="paper-plane",
   actions_html=(
     ('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_channels') ~ '"><i class="fa-solid fa-tower-broadcast"></i> '|safe ~ _("قنوات الإرسال") ~ '</a>'|safe if can_submit('radius.communications_channels', 'GET') else '')
@@ -39,19 +39,19 @@
 {% include "radius/communications_nav.html" %}
 
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف ترسل رسالة؟",
-  intro="اختر الجمهور والقناة، اكتب الرسالة، ثم عاين الجمهور قبل إضافتها للطابور.",
+  _('كيف ترسل رسالة؟'),
+  intro=_('اختر الجمهور والقناة، اكتب الرسالة، ثم عاين الجمهور قبل إضافتها للطابور.'),
   icon="circle-info",
   items=[
-    {'icon': 'users', 'text': 'اختر فئة المستلمين من «الهدف» — و«مشتركون محددون» يستخدم حقل الأرقام.'},
-    {'icon': 'tower-broadcast', 'text': '«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي؛ بقية القنوات تتطلب تفعيلها.'},
-    {'icon': 'code', 'text': 'المتغيّرات مثل {username} تُملأ ببيانات كل مشترك عند الإرسال.'},
-    {'icon': 'eye', 'text': '«معاينة الجمهور» لا ترسل شيئًا — تعرض من سيستلم فقط قبل الإضافة للطابور.'}
+    {'icon': 'users', 'text': _('اختر فئة المستلمين من «الهدف» — و«مشتركون محددون» يستخدم حقل الأرقام.')},
+    {'icon': 'tower-broadcast', 'text': _('«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي؛ بقية القنوات تتطلب تفعيلها.')},
+    {'icon': 'code', 'text': _('المتغيّرات مثل {username} تُملأ ببيانات كل مشترك عند الإرسال.')},
+    {'icon': 'eye', 'text': _('«معاينة الجمهور» لا ترسل شيئًا — تعرض من سيستلم فقط قبل الإضافة للطابور.')}
   ],
-  note="لضبط القنوات افتح «قنوات الإرسال» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات»."
+  note=_('لضبط القنوات افتح «قنوات الإرسال» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات».')
 )) %}
 
-  {% call hub.section("الجمهور والرسالة", icon="paper-plane") %}
+  {% call hub.section(_('الجمهور والرسالة'), icon="paper-plane") %}
     <form method="post" class="csnd-form" data-testid="manual-message-form">{% if not can_post_here() %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
@@ -127,7 +127,7 @@
   {% endcall %}
 
   {% if preview %}
-    {% call hub.section("معاينة الجمهور", icon="users", meta=(preview|length ~ " مستلم"), flush=True) %}
+    {% call hub.section(_('معاينة الجمهور'), icon="users", meta=(_('%(length)s مستلم', length=preview|length)), flush=True) %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
         <table class="hub-table" data-testid="audience-preview-table">
           <thead><tr><th>{{ _('النوع') }}</th><th>{{ _('الرقم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('العنوان') }}</th></tr></thead>

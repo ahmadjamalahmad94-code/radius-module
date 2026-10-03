@@ -10,6 +10,7 @@
 مضغوطة) — تطابق العربيّة والإنجليزيّة معًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 from dataclasses import dataclass, field
@@ -112,7 +113,7 @@ VT_USERNAME = "username"
 
 SECTIONS: tuple[Section, ...] = (
     Section(
-        key=SEC_ROLES, label_ar="الصلاحيات / الأدوار", natural_key="name",
+        key=SEC_ROLES, label_ar=N_("الصلاحيات / الأدوار"), natural_key="name",
         depends_rank=1,
         table_hints=("roles", "role", "groups", "usergroups", "user_groups",
                      "permissions", "acl", "security_group", "radgroupcheck",
@@ -127,7 +128,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_MANAGERS, label_ar="المدراء", natural_key="username",
+        key=SEC_MANAGERS, label_ar=N_("المدراء"), natural_key="username",
         depends_rank=2,
         table_hints=("admins", "admin", "managers", "manager", "operators",
                      "operator", "staff", "a_s_manager", "a_s_man_users",
@@ -156,7 +157,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_DISTRIBUTORS, label_ar="الموزّعون", natural_key="name",
+        key=SEC_DISTRIBUTORS, label_ar=N_("الموزّعون"), natural_key="name",
         depends_rank=3,
         table_hints=("distributors", "distributor", "resellers", "reseller",
                      "agents", "agent", "dealers", "dealer", "vendors",
@@ -184,7 +185,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_PLANS, label_ar="العروض / الباقات", natural_key="name",
+        key=SEC_PLANS, label_ar=N_("العروض / الباقات"), natural_key="name",
         depends_rank=4,
         table_hints=("plans", "plan", "profiles", "profile", "packages", "package",
                      "offers", "offer", "tariffs", "tariff", "products", "product",
@@ -227,7 +228,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_BATCHES, label_ar="حِزم الكروت", natural_key="name",
+        key=SEC_BATCHES, label_ar=N_("حِزم الكروت"), natural_key="name",
         depends_rank=5,
         table_hints=("batches", "batch", "card_batches", "voucher_batches",
                      "series_cards", "list_cards", "rep_cards",
@@ -245,7 +246,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_SUBSCRIBERS, label_ar="المشتركون", natural_key="username",
+        key=SEC_SUBSCRIBERS, label_ar=N_("المشتركون"), natural_key="username",
         depends_rank=6,
         table_hints=("subscribers", "subscriber", "users", "user", "accounts",
                      "account", "customers", "customer", "clients", "client",
@@ -344,7 +345,7 @@ SECTIONS: tuple[Section, ...] = (
         ),
     ),
     Section(
-        key=SEC_CARDS, label_ar="الكروت / القسائم", natural_key="username",
+        key=SEC_CARDS, label_ar=N_("الكروت / القسائم"), natural_key="username",
         depends_rank=7,
         table_hints=("cards", "card", "vouchers", "voucher", "tickets", "ticket",
                      "pins", "pin", "card_users", "cards_phone", "converted_cards",

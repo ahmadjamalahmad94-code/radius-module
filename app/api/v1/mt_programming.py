@@ -13,6 +13,7 @@ PERM_PROGRAM for plan/apply and PERM_ROLLBACK for unprogram). Tenant-scoped.
 Destructive endpoints require `confirm: true` in the body.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import dataclasses
 from typing import Any
@@ -159,7 +160,7 @@ def program_get(nas_id: int):
     (الواجهات/العناوين) لبناء النموذج. حالة الراوتر أفضل-جهد (فارغة إن تعذّر)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     kind = (request.args.get("kind") or "hotspot").strip().lower()
     if kind not in ("hotspot", "pppoe"):
         kind = "hotspot"
@@ -177,11 +178,11 @@ def program_plan(nas_id: int):
     التغيير + تحذير النسخ الاحتياطي (يطابق mt_program_plan)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     form = _read_form(request.get_json(silent=True) or {})
     plan, error = _plan_from_form(nas, form)
     if plan is None:
-        return fail("validation_error", error or "تعذّر توليد الخطّة.", status=422)
+        return fail("validation_error", error or _tr("تعذّر توليد الخطّة."), status=422)
 
     change_preview = None
     backup_warning_ar = ""
@@ -194,10 +195,10 @@ def program_plan(nas_id: int):
                               existing_interfaces=ifaces, existing_addresses=addrs)
         change_preview = cpv.to_dict() if hasattr(cpv, "to_dict") else None
         if ov and ov.backup_status == "missing":
-            backup_warning_ar = ("لا توجد نسخة احتياطية لهذا الراوتر. إن فشل "
-                                 "التطبيق لن تستطيع الاستعادة. يُنصح بأخذ نسخة قبل المتابعة.")
+            backup_warning_ar = (_tr("لا توجد نسخة احتياطية لهذا الراوتر. إن فشل "
+                                 "التطبيق لن تستطيع الاستعادة. يُنصح بأخذ نسخة قبل المتابعة."))
         elif ov and ov.backup_status == "stale":
-            backup_warning_ar = "آخر نسخة احتياطية قديمة — يُستحسن تحديثها قبل أي تعديل."
+            backup_warning_ar = _tr("آخر نسخة احتياطية قديمة — يُستحسن تحديثها قبل أي تعديل.")
     except Exception:  # noqa: BLE001 — المعاينة ثانوية، لا تكسر الخطّة
         pass
 
@@ -210,13 +211,13 @@ def program_apply(nas_id: int):
     تحقّق المواصفة + فحص السلامة + بوّابة المخاطر ثم ينفّذ ويدوّن (يطابق الويب)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     form = _read_form(body)
     confirmed = bool(body.get("confirm"))
     plan, error = _plan_from_form(nas, form)
     if plan is None:
-        return fail("validation_error", error or "تعذّر توليد الخطّة.", status=422)
+        return fail("validation_error", error or _tr("تعذّر توليد الخطّة."), status=422)
 
     # فحص السلامة (advisory + blocking) — نفس مسار الويب، محصّن.
     safety = None
@@ -229,18 +230,18 @@ def program_apply(nas_id: int):
                              override_admin=bool(body.get("override_admin")))
         if not safety.allowed:
             return fail("safety_blocked",
-                        "؛ ".join(safety.blocking_reasons) or "محظور بفحص السلامة.",
+                        "؛ ".join(safety.blocking_reasons) or _tr("محظور بفحص السلامة."),
                         status=409, details={"safety": safety.to_dict(),
                                              "plan": _plan_dict(plan)})
     except Exception:  # noqa: BLE001
         safety = None
 
     if not confirmed:
-        return fail("confirm_required", "يجب تأكيد العملية قبل التطبيق (confirm).",
+        return fail("confirm_required", _tr("يجب تأكيد العملية قبل التطبيق (confirm)."),
                     status=400, details={"plan": _plan_dict(plan)})
     if plan.risks:
         return fail("has_risks",
-                    "لا يمكن التطبيق وعندنا مخاطر غير معالجة — صحّح المدخلات.",
+                    _tr("لا يمكن التطبيق وعندنا مخاطر غير معالجة — صحّح المدخلات."),
                     status=422, details={"plan": _plan_dict(plan)})
 
     apply_result = None
@@ -249,7 +250,7 @@ def program_apply(nas_id: int):
         client.connect()
         apply_result = prog.apply_commands(client, plan.commands)
     except Exception as e:  # noqa: BLE001
-        error = "تعذّر الاتصال بالراوتر: " + str(e)
+        error = N_("تعذّر الاتصال بالراوتر: ") + str(e)
     finally:
         try:
             client.close()
@@ -279,7 +280,7 @@ def program_apply(nas_id: int):
         pass
 
     if not apply_result:
-        return fail("router_error", error or "فشل التطبيق.", status=502,
+        return fail("router_error", error or _tr("فشل التطبيق."), status=502,
                     details={"plan": _plan_dict(plan),
                              "safety": safety.to_dict() if safety else None})
     return ok({"plan": _plan_dict(plan), "apply_result": _result_dict(apply_result),
@@ -291,13 +292,13 @@ def program_unprogram(nas_id: int):
     مدمّر؛ يتطلّب confirm + kind صالح (يطابق mt_program_unprogram)."""
     nas = _load_nas(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود"), status=404)
     body = request.get_json(silent=True) or {}
     kind = str(body.get("kind") or "").strip().lower()
     if kind not in ("hotspot", "pppoe"):
-        return fail("validation_error", "نوع البرمجة غير معروف.", status=422)
+        return fail("validation_error", _tr("نوع البرمجة غير معروف."), status=422)
     if not bool(body.get("confirm")):
-        return fail("confirm_required", "يجب تأكيد عملية الإزالة (confirm).", status=400)
+        return fail("confirm_required", _tr("يجب تأكيد عملية الإزالة (confirm)."), status=400)
 
     result = None
     error = ""
@@ -306,7 +307,7 @@ def program_unprogram(nas_id: int):
         client.connect()
         result = prog.unprogram(client, kind)
     except Exception as e:  # noqa: BLE001
-        error = "تعذّر الاتصال بالراوتر: " + str(e)
+        error = N_("تعذّر الاتصال بالراوتر: ") + str(e)
     finally:
         try:
             client.close()
@@ -332,5 +333,5 @@ def program_unprogram(nas_id: int):
         pass
 
     if not result:
-        return fail("router_error", error or "فشلت الإزالة.", status=502)
+        return fail("router_error", error or _tr("فشلت الإزالة."), status=502)
     return ok({"unprogram_result": _result_dict(result)})

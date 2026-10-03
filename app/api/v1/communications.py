@@ -1,5 +1,6 @@
 """Communications and campaigns JSON API."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -115,15 +116,15 @@ def _http_channel(value: Any) -> str:
 
 def _channel_label(value: str) -> str:
     return {
-        "sms": "الرسائل القصيرة",
-        "whatsapp": "واتساب",
-    }.get(str(value or ""), "قناة غير معروفة")
+        "sms": N_("الرسائل القصيرة"),
+        "whatsapp": N_("واتساب"),
+    }.get(str(value or ""), N_("قناة غير معروفة"))
 
 
 def _mode_label(value: str) -> str:
     return {
-        "self_api": "ربط مباشر من العميل",
-    }.get(str(value or ""), "غير محدد")
+        "self_api": N_("ربط مباشر من العميل"),
+    }.get(str(value or ""), N_("غير محدد"))
 
 
 def _channel_payload(channel: str) -> dict[str, Any]:
@@ -152,16 +153,16 @@ def _validation_error(exc: Exception):
 
 def _safe_message(text: str) -> str:
     return {
-        "unsupported channel": "القناة غير مدعومة.",
-        "unsupported recipient type": "نوع المستلم غير مدعوم.",
-        "unsupported audience target": "الجمهور المحدد غير مدعوم.",
-        "template not found": "القالب غير موجود.",
-        "notification not found": "الرسالة غير موجودة.",
-        "delivery not found": "عملية الإرسال غير موجودة.",
-        "key required": "أدخل مفتاحًا واضحًا.",
-        NO_RECIPIENTS_SELECTED: "لم يتم اختيار أي مستلم.",
-        INVALID_RECIPIENT_IDS: "معرّفات المستلمين غير صالحة.",
-    }.get(text, "تعذر تنفيذ طلب التواصل. راجع البيانات وحاول مرة أخرى.")
+        "unsupported channel": N_("القناة غير مدعومة."),
+        "unsupported recipient type": N_("نوع المستلم غير مدعوم."),
+        "unsupported audience target": N_("الجمهور المحدد غير مدعوم."),
+        "template not found": N_("القالب غير موجود."),
+        "notification not found": N_("الرسالة غير موجودة."),
+        "delivery not found": N_("عملية الإرسال غير موجودة."),
+        "key required": N_("أدخل مفتاحًا واضحًا."),
+        NO_RECIPIENTS_SELECTED: N_("لم يتم اختيار أي مستلم."),
+        INVALID_RECIPIENT_IDS: N_("معرّفات المستلمين غير صالحة."),
+    }.get(text, N_("تعذر تنفيذ طلب التواصل. راجع البيانات وحاول مرة أخرى."))
 
 
 def summary():
@@ -232,10 +233,10 @@ def send_manual():
     data = _body()
     channel = str(data.get("channel") or "internal").strip()
     if channel not in CHANNELS:
-        return fail("validation_error", "القناة غير مدعومة.", status=422)
+        return fail("validation_error", _tr("القناة غير مدعومة."), status=422)
     message = str(data.get("message") or "").strip()
     if not message:
-        return fail("validation_error", "أدخل نص الرسالة.", status=422)
+        return fail("validation_error", _tr("أدخل نص الرسالة."), status=422)
     try:
         result = _svc().send_manual(
             audience=_audience(data.get("audience") if isinstance(data.get("audience"), dict) else data),
@@ -299,14 +300,14 @@ def channel_save(channel: str):
     data = _body()
     mode = str(data.get("mode") or comms_providers.DEFAULT_MODE).strip().lower()
     if mode not in comms_providers.CHANNEL_MODES:
-        return fail("validation_error", "نمط تشغيل القناة غير مدعوم.", status=422)
+        return fail("validation_error", _tr("نمط تشغيل القناة غير مدعوم."), status=422)
 
     send_url = str(data.get("send_url_template") or "").strip()
     balance_url = str(data.get("balance_url") or "").strip()
     if len(send_url) > 2000 or len(balance_url) > 2000:
         return fail(
             "validation_error",
-            "رابط القناة طويل جدًا. اختصر الرابط أو استخدم رابطًا صالحًا من المزود.",
+            _tr("رابط القناة طويل جدًا. اختصر الرابط أو استخدم رابطًا صالحًا من المزود."),
             status=422,
         )
 

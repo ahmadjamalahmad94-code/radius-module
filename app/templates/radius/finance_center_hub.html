@@ -9,59 +9,59 @@
 
 {% macro owner_label(owner_type) -%}
   {{ {
-    'company': 'الشركة',
-    'manager': 'مدير',
-    'distributor': 'موزّع',
-    'subscriber': 'مشترك',
-    'card_user': 'مستخدم بطاقات'
-  }.get(owner_type, 'مالك') }}
+    'company': _('الشركة'),
+    'manager': _('مدير'),
+    'distributor': _('موزّع'),
+    'subscriber': _('مشترك'),
+    'card_user': _('مستخدم بطاقات')
+  }.get(owner_type, _('مالك')) }}
 {%- endmacro %}
 
 {% macro tx_label(transaction_type) -%}
   {{ {
-    'credit': 'شحن',
-    'debit': 'خصم',
-    'transfer': 'تحويل',
-    'hold': 'حجز',
-    'release': 'فك حجز',
-    'reversal': 'عكس قيد'
-  }.get(transaction_type, 'حركة مالية') }}
+    'credit': _('شحن'),
+    'debit': _('خصم'),
+    'transfer': _('تحويل'),
+    'hold': _('حجز'),
+    'release': _('فك حجز'),
+    'reversal': _('عكس قيد')
+  }.get(transaction_type, _('حركة مالية')) }}
 {%- endmacro %}
 
 {% macro source_label(source_type) -%}
   {{ {
-    'subscriber_payment': 'دفعة مشترك',
-    'card_sale': 'بيع بطاقات',
-    'invoice': 'فاتورة',
-    'voucher': 'كوبون',
-    'manual': 'تسجيل يدوي'
-  }.get(source_type, source_type or 'مصدر مالي') }}
+    'subscriber_payment': _('دفعة مشترك'),
+    'card_sale': _('بيع بطاقات'),
+    'invoice': _('فاتورة'),
+    'voucher': _('كوبون'),
+    'manual': _('تسجيل يدوي')
+  }.get(source_type, source_type or _('مصدر مالي')) }}
 {%- endmacro %}
 
 {% macro wallet_status_label(status) -%}
   {{ {
-    'active': 'نشطة',
-    'frozen': 'مجمّدة',
-    'closed': 'مغلقة',
-    'suspended': 'موقوفة'
-  }.get(status, status or 'غير محددة') }}
+    'active': _('نشطة'),
+    'frozen': _('مجمّدة'),
+    'closed': _('مغلقة'),
+    'suspended': _('موقوفة')
+  }.get(status, status or _('غير محددة')) }}
 {%- endmacro %}
 
 {% macro loan_status_label(status) -%}
   {{ {
-    'open': 'مفتوحة',
-    'settled': 'مسددة',
-    'voided': 'ملغاة'
-  }.get(status, status or 'غير محددة') }}
+    'open': _('مفتوحة'),
+    'settled': _('مسددة'),
+    'voided': _('ملغاة')
+  }.get(status, status or _('غير محددة')) }}
 {%- endmacro %}
 
 {% macro approval_label(status) -%}
   {{ {
-    'approved': 'معتمدة',
-    'pending': 'بانتظار الاعتماد',
-    'not_required': 'لا يلزم اعتماد',
-    'rejected': 'مرفوضة'
-  }.get(status, status or 'غير محددة') }}
+    'approved': _('معتمدة'),
+    'pending': _('بانتظار الاعتماد'),
+    'not_required': _('لا يلزم اعتماد'),
+    'rejected': _('مرفوضة')
+  }.get(status, status or _('غير محددة')) }}
 {%- endmacro %}
 
 {# شريط بحث رئيسي للقسم: يفلتر كل جداول uds داخل نطاقه حيًّا (finance_search.js).
@@ -178,33 +178,33 @@
 {# ───── Per-tab KPI sets folded into the single megahero ───── #}
 {% if tab == 'wallets' %}
   {% set _hero_kpis = [
-    {'label': 'عدد المحافظ',   'value': summary.wallet_count,            'icon': 'wallet',        'variant': 'blue'},
-    {'label': 'أرصدة المحافظ', 'value': summary.wallet_balance|money,    'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'قيود الأستاذ',  'value': summary.ledger_entries,          'icon': 'book',          'variant': 'brand'},
-    {'label': 'إجمالي الأستاذ','value': summary.ledger_total|money,       'icon': 'book-open',     'variant': 'amber'},
+    {'label': _('عدد المحافظ'),   'value': summary.wallet_count,            'icon': 'wallet',        'variant': 'blue'},
+    {'label': _('أرصدة المحافظ'), 'value': summary.wallet_balance|money,    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': _('قيود الأستاذ'),  'value': summary.ledger_entries,          'icon': 'book',          'variant': 'brand'},
+    {'label': _('إجمالي الأستاذ'),'value': summary.ledger_total|money,       'icon': 'book-open',     'variant': 'amber'},
   ] %}
 {% elif tab == 'revenue' %}
   {# الإيراد/الربح من دفعات الدفتر + سجلّات الكروت (مصدر /api/v1/finance/revenue)،
      ولكلّ عملة رقمها — لا ILS+USD+EUR مجموعةً بعلامة عملة النظام. #}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',   'variant': 'green'},
-    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',    'variant': 'amber'},
-    {'label': 'سجلات الإيراد',    'value': summary.revenue_records,        'icon': 'receipt',       'variant': 'blue'},
-    {'label': 'حصص الموزعين',     'value': summary.distributor_shares|money,'icon': 'people-arrows','variant': 'brand'},
+    {'label': _('إجمالي الإيرادات'), 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': _('الربح الصافي'),     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',    'variant': 'amber'},
+    {'label': _('سجلات الإيراد'),    'value': summary.revenue_records,        'icon': 'receipt',       'variant': 'blue'},
+    {'label': _('حصص الموزعين'),     'value': summary.distributor_shares|money,'icon': 'people-arrows','variant': 'brand'},
   ] %}
 {% elif tab == 'loans_debts' %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الديون', 'value': debts.by_currency|money_multi('outstanding', debts.total), 'icon': 'file-invoice-dollar', 'variant': 'amber'},
-    {'label': 'عدد الذمم',     'value': debts['count'] or 0,      'icon': 'list-ol',             'variant': 'blue'},
-    {'label': 'عدد السلف',     'value': summary.loan_count,       'icon': 'list',                'variant': 'brand'},
-    {'label': 'سلف مفتوحة',    'value': summary.open_loan_count,  'icon': 'hourglass-half',      'variant': 'green'},
+    {'label': _('إجمالي الديون'), 'value': debts.by_currency|money_multi('outstanding', debts.total), 'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': _('عدد الذمم'),     'value': debts['count'] or 0,      'icon': 'list-ol',             'variant': 'blue'},
+    {'label': _('عدد السلف'),     'value': summary.loan_count,       'icon': 'list',                'variant': 'brand'},
+    {'label': _('سلف مفتوحة'),    'value': summary.open_loan_count,  'icon': 'hourglass-half',      'variant': 'green'},
   ] %}
 {% else %}
   {% set _hero_kpis = [
-    {'label': 'إجمالي الإيرادات', 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',  'variant': 'green'},
-    {'label': 'التحصيلات',        'value': summary.revenue_by_currency|money_multi('payments', summary.total_collections),'icon': 'cash-register','variant': 'brand'},
-    {'label': 'أرصدة المحافظ',    'value': summary.wallet_balance|money,   'icon': 'wallet',       'variant': 'blue'},
-    {'label': 'الربح الصافي',     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',   'variant': 'amber'},
+    {'label': _('إجمالي الإيرادات'), 'value': summary.revenue_by_currency|money_multi('revenue', summary.total_revenue),    'icon': 'sack-dollar',  'variant': 'green'},
+    {'label': _('التحصيلات'),        'value': summary.revenue_by_currency|money_multi('payments', summary.total_collections),'icon': 'cash-register','variant': 'brand'},
+    {'label': _('أرصدة المحافظ'),    'value': summary.wallet_balance|money,   'icon': 'wallet',       'variant': 'blue'},
+    {'label': _('الربح الصافي'),     'value': summary.revenue_by_currency|money_multi('profit', summary.total_profit),     'icon': 'chart-line',   'variant': 'amber'},
   ] %}
 {% endif %}
 
@@ -214,8 +214,8 @@
 <section class="hub-hero-shell">
 {% if tab == 'loans_debts' %}
 {% call hub.megahero(
-  "المركز المالي",
-  subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
+  _('المركز المالي'),
+  subtitle=_('واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.'),
   icon="coins",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis,
@@ -232,12 +232,12 @@
   {# F03-N9: نطاق تاريخ إنشاء السلفة (يوم اللوحة المحلّيّ) #}
   <label class="fc-date-lbl">{{ _('من') }} <input class="hub-input" type="date" name="date_from" value="{{ loan_from or '' }}" aria-label="{{ _('من تاريخ') }}"></label>
   <label class="fc-date-lbl">{{ _('إلى') }} <input class="hub-input" type="date" name="date_to" value="{{ loan_to or '' }}" aria-label="{{ _('إلى تاريخ') }}"></label>
-  {{ hub.btn("تطبيق الفلتر", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق الفلتر'), icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 {% else %}
 {{ hub.megahero(
-  "المركز المالي",
-  subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
+  _('المركز المالي'),
+  subtitle=_('واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.'),
   icon="coins",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> '|safe ~ _("السجل المحاسبي") ~ '</a>'|safe if can_submit('radius.accounting_hub', 'GET') else ''),
   kpis=_hero_kpis
@@ -259,29 +259,29 @@
   .fc-tiles-2 > *{ min-width:0; }
 </style>
 <div class="hub-grid hub-grid--2">
-  {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
+  {% call hub.section(_('مؤشرات التشغيل المالي'), icon="gauge-high") %}
     <div class="fc-tiles-2">
-      {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
-      {{ hub.tile("قيود دفتر الأستاذ", summary.ledger_entries, icon="book") }}
+      {{ hub.tile(_('عدد المحافظ'), summary.wallet_count, icon="wallet") }}
+      {{ hub.tile(_('قيود دفتر الأستاذ'), summary.ledger_entries, icon="book") }}
       {# إيراد = أخضر فاتح، سلف/خصوم = أحمر فاتح حسب قاعدة الألوان الدلالية #}
-      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="green") }}
-      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar", variant="red") }}
+      {{ hub.tile(_('سجلات الإيراد'), summary.revenue_records, icon="receipt", variant="green") }}
+      {{ hub.tile(_('سلف مفتوحة'), summary.open_loan_count, icon="hand-holding-dollar", variant="red") }}
     </div>
   {% endcall %}
 
-  {% call hub.section("المشاركة والتسويات", icon="scale-balanced") %}
+  {% call hub.section(_('المشاركة والتسويات'), icon="scale-balanced") %}
     <div class="fc-tiles-2">
       {# حصص الموزعين إيراد = أخضر، السلف والديون خصوم = أحمر #}
-      {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="green") }}
+      {{ hub.tile(_('حصص الموزعين'), summary.distributor_shares|money, icon="people-arrows", variant="green") }}
       {# المتبقّي على السلف المفتوحة (بعد التسويات الجزئيّة) لا قيمتها الأصليّة #}
-      {{ hub.tile("قيمة السلف المفتوحة", summary.loans_by_currency|money_multi('outstanding', summary.total_loans), icon="hand-holding-dollar", variant="red") }}
-      {{ hub.tile("إجمالي الديون", debts.by_currency|money_multi('outstanding', debts.total), icon="file-invoice-dollar", variant="red") }}
-      {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
+      {{ hub.tile(_('قيمة السلف المفتوحة'), summary.loans_by_currency|money_multi('outstanding', summary.total_loans), icon="hand-holding-dollar", variant="red") }}
+      {{ hub.tile(_('إجمالي الديون'), debts.by_currency|money_multi('outstanding', debts.total), icon="file-invoice-dollar", variant="red") }}
+      {{ hub.tile(_('إجمالي دفتر الأستاذ'), summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
 </div>
 
-{% call hub.section("قاعدة الأمان المالي", icon="shield-halved") %}
+{% call hub.section(_('قاعدة الأمان المالي'), icon="shield-halved") %}
   <div class="hub-empty" style="text-align:initial">
     <div class="hub-empty-msg">{{ _('لا يوجد حذف مباشر للحركات المالية.') }}</div>
     <div class="hub-empty-sub">{{ _('أي شحن أو خصم يمر عبر المسار الأصلي ويترك قيدًا قابلًا للمراجعة، لذلك تبقى الأرقام قابلة للتدقيق.') }}</div>
@@ -370,41 +370,41 @@
 {% endmacro %}
 
 {% if not wallets %}
-  {% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", flush=True) %}
-    {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
+  {% call hub.section(_('قائمة الخزائن والمحافظ'), icon="wallet", flush=True) %}
+    {{ hub.empty(_('لا توجد محافظ بعد.'), sub=_('ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.'), icon="wallet") }}
   {% endcall %}
 {% else %}
-  {{ section_search("ابحث في المحافظ: الاسم، الرقم، الرصيد، الحالة…", "fc-wallets-scope", "fc-wallets-count") }}
+  {{ section_search(_('ابحث في المحافظ: الاسم، الرقم، الرصيد، الحالة…'), "fc-wallets-scope", "fc-wallets-count") }}
   <div id="fc-wallets-scope" data-fc-section>
   {# ── 1) قسم المشتركون / مستخدمو البطاقات ── #}
   <section data-fw-group="subscribers">
-  {% call hub.section("المشتركون ومستخدمو البطاقات", icon="users", meta=(subs_wallets|length|string + " محفظة"), flush=True) %}
+  {% call hub.section(_('المشتركون ومستخدمو البطاقات'), icon="users", meta=(subs_wallets|length|string + _(' محفظة')), flush=True) %}
     {% if subs_wallets %}
       {{ wallets_table(subs_wallets) }}
     {% else %}
-      {{ hub.empty("لا توجد محافظ لمشتركين أو مستخدمي بطاقات بعد.", sub="ستظهر هنا أي محفظة جديدة لمشترك أو مستخدم بطاقات.", icon="users") }}
+      {{ hub.empty(_('لا توجد محافظ لمشتركين أو مستخدمي بطاقات بعد.'), sub=_('ستظهر هنا أي محفظة جديدة لمشترك أو مستخدم بطاقات.'), icon="users") }}
     {% endif %}
   {% endcall %}
   </section>
 
   {# ── 2) قسم المدراء (يشمل محافظ الشركة الداخلية إن وُجدت) ── #}
   <section data-fw-group="managers">
-  {% call hub.section("المدراء", icon="user-shield", meta=(mgr_wallets|length|string + " محفظة"), flush=True) %}
+  {% call hub.section(_('المدراء'), icon="user-shield", meta=(mgr_wallets|length|string + _(' محفظة')), flush=True) %}
     {% if mgr_wallets %}
       {{ wallets_table(mgr_wallets) }}
     {% else %}
-      {{ hub.empty("لا توجد محافظ مدراء بعد.", sub="محافظ المدراء وخزائن الشركة تظهر هنا.", icon="user-shield") }}
+      {{ hub.empty(_('لا توجد محافظ مدراء بعد.'), sub=_('محافظ المدراء وخزائن الشركة تظهر هنا.'), icon="user-shield") }}
     {% endif %}
   {% endcall %}
   </section>
 
   {# ── 3) قسم الموزّعون ── #}
   <section data-fw-group="distributors">
-  {% call hub.section("الموزّعون", icon="people-arrows", meta=(dist_wallets|length|string + " محفظة"), flush=True) %}
+  {% call hub.section(_('الموزّعون'), icon="people-arrows", meta=(dist_wallets|length|string + _(' محفظة')), flush=True) %}
     {% if dist_wallets %}
       {{ wallets_table(dist_wallets) }}
     {% else %}
-      {{ hub.empty("لا توجد محافظ موزّعين بعد.", sub="عند تعيين موزّعين سيظهر لكل منهم محفظته هنا.", icon="people-arrows") }}
+      {{ hub.empty(_('لا توجد محافظ موزّعين بعد.'), sub=_('عند تعيين موزّعين سيظهر لكل منهم محفظته هنا.'), icon="people-arrows") }}
     {% endif %}
   {% endcall %}
   </section>
@@ -434,7 +434,7 @@
           </select>
           <span class="hub-field-hint">{{ _('اختر الجهة التي ستتبع لها المحفظة.') }}</span>
         </label>
-        {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
+        {{ hub.field(_('رقم المالك'), "owner_id", "", type="number", hint=_('اتركه فارغًا لمحفظة الشركة.')) }}
         <label class="hub-field">
           <span class="hub-field-label">{{ _('العملة') }}</span>
           {# الافتراضيّ = عملة المستأجر المضبوطة في الإعدادات (لا ثابت ILS). #}
@@ -482,9 +482,9 @@
 {% endif %}
 
 {% if tab == 'revenue' %}
-{% if revenue %}{{ section_search("ابحث في الإيرادات: المصدر، المبلغ، التاريخ…", "fc-revenue-scope", "fc-revenue-count") }}{% endif %}
+{% if revenue %}{{ section_search(_('ابحث في الإيرادات: المصدر، المبلغ، التاريخ…'), "fc-revenue-scope", "fc-revenue-count") }}{% endif %}
 <div id="fc-revenue-scope" data-fc-section>
-{% call hub.section("سجلات الإيرادات", icon="receipt", meta=(revenue|length|string + " سجل"), flush=True) %}
+{% call hub.section(_('سجلات الإيرادات'), icon="receipt", meta=(revenue|length|string + _(' سجل')), flush=True) %}
   {% if revenue %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -504,9 +504,9 @@
         <tr>
           <td class="num mono">{{ item.id }}</td>
           {# المصدر معرَّب بالكامل بالاسم الحقيقي (يُبنى في الخدمة) — الخام في title للتتبّع فقط #}
-          <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or 'مصدر إيراد آخر' }}</td>
+          <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or _('مصدر إيراد آخر') }}</td>
           <td class="num">{{ item.original_price|money(item.currency) }}</td>
-          <td class="num">{{ item.collected|money(item.currency) }}{% if item.status == 'voided' %} {{ hub.pill("ملغاة", variant="grey") }}{% endif %}</td>
+          <td class="num">{{ item.collected|money(item.currency) }}{% if item.status == 'voided' %} {{ hub.pill(_('ملغاة'), variant="grey") }}{% endif %}</td>
           <td class="num">{{ item.wholesale_cost|money(item.currency) }}</td>
           <td class="num"><strong>{{ item.net_profit|money(item.currency) }}</strong></td>
           <td class="mono small">{{ item.created_at|dt_local }}</td>
@@ -516,16 +516,16 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="ستظهر هنا سجلات البيع والتحصيل عند تسجيل العمليات المالية.", icon="receipt") }}
+    {{ hub.empty(_('لا توجد سجلات إيراد بعد.'), sub=_('ستظهر هنا سجلات البيع والتحصيل عند تسجيل العمليات المالية.'), icon="receipt") }}
   {% endif %}
 {% endcall %}
 </div>{# /#fc-revenue-scope #}
 {% endif %}
 
 {% if tab == 'loans_debts' %}
-{% if debts['items'] or loans %}{{ section_search("ابحث في الذمم والسلف: المشترك، المبلغ، السبب، الحالة…", "fc-loans-scope", "fc-loans-count") }}{% endif %}
+{% if debts['items'] or loans %}{{ section_search(_('ابحث في الذمم والسلف: المشترك، المبلغ، السبب، الحالة…'), "fc-loans-scope", "fc-loans-count") }}{% endif %}
 <div id="fc-loans-scope" data-fc-section>
-{% call hub.section("الذمم المفتوحة", icon="file-invoice-dollar", meta=(debts['count']|string + " ذمة"), flush=True) %}
+{% call hub.section(_('الذمم المفتوحة'), icon="file-invoice-dollar", meta=(debts['count']|string + _(' ذمة')), flush=True) %}
   {% if debts['items'] %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="20" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -556,11 +556,11 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد ذمم مفتوحة.", sub="أي سلفة مفتوحة وغير مسددة تظهر هنا كدين مستحق.", icon="file-invoice-dollar") }}
+    {{ hub.empty(_('لا توجد ذمم مفتوحة.'), sub=_('أي سلفة مفتوحة وغير مسددة تظهر هنا كدين مستحق.'), icon="file-invoice-dollar") }}
   {% endif %}
 {% endcall %}
 
-{% call hub.section("قائمة السلف", icon="hand-holding-dollar", meta=(loans|length|string + " سلفة"), flush=True) %}
+{% call hub.section(_('قائمة السلف'), icon="hand-holding-dollar", meta=(loans|length|string + _(' سلفة')), flush=True) %}
   {% if loans %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -594,7 +594,7 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="تظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
+    {{ hub.empty(_('لا توجد سلف ضمن هذا الفلتر.'), sub=_('تظهر السلف المسجلة من صفحة المشترك المالية هنا.'), icon="hand-holding-dollar") }}
   {% endif %}
 {% endcall %}
 </div>{# /#fc-loans-scope #}

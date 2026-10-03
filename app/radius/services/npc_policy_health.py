@@ -41,6 +41,7 @@ The score is clamped to [0, 100]. Grades:
   dangerous  < 30
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -121,30 +122,30 @@ def compute(
     if impact.risk_level == "critical":
         score -= 60
         negatives.append(
-            "تحليل الأثر يصنّف هذه السياسة كـ critical."
+            N_("تحليل الأثر يصنّف هذه السياسة كـ critical.")
         )
     elif impact.risk_level == "high":
         score -= 35
         negatives.append(
-            "تحليل الأثر يصنّف هذه السياسة كـ high."
+            N_("تحليل الأثر يصنّف هذه السياسة كـ high.")
         )
     elif impact.risk_level == "medium":
         score -= 15
         negatives.append(
-            "تحليل الأثر يصنّف هذه السياسة كـ medium."
+            N_("تحليل الأثر يصنّف هذه السياسة كـ medium.")
         )
     else:
-        positives.append("تحليل الأثر يصنّف الخطّة كـ low.")
+        positives.append(N_("تحليل الأثر يصنّف الخطّة كـ low."))
 
     # ── Rollback availability ────────────────────────────
     if rollback_available is None:
         rollback_available = impact.rollback_available
     if rollback_available:
-        positives.append("سكربت rollback متاح ومرجعنا انعكاسي.")
+        positives.append(N_("سكربت rollback متاح ومرجعنا انعكاسي."))
     else:
         score -= 25
         negatives.append(
-            "لا يوجد سكربت rollback — التراجع سيتطلّب تدخّلاً يدوياً."
+            N_("لا يوجد سكربت rollback — التراجع سيتطلّب تدخّلاً يدوياً.")
         )
 
     # ── Conflicts ────────────────────────────────────────
@@ -156,31 +157,29 @@ def compute(
         else:
             score -= 2
         negatives.append(
-            f"تم اكتشاف {len(conflicts.conflicts)} تعارض(ات) "
-            f"مع سياسات أخرى — مستوى الخطر "
-            f"{conflicts.severity}."
+            _tr('تم اكتشاف %(v)s تعارض(ات) مع سياسات أخرى — مستوى الخطر %(severity)s.', v=len(conflicts.conflicts), severity=conflicts.severity)
         )
     else:
-        positives.append("لا تعارض مع السياسات الأخرى.")
+        positives.append(N_("لا تعارض مع السياسات الأخرى."))
 
     # ── Blast radius ─────────────────────────────────────
     if blast.blast_radius == "critical":
         score -= 30
-        negatives.append("نطاق التأثير حرج (critical).")
+        negatives.append(N_("نطاق التأثير حرج (critical)."))
     elif blast.blast_radius == "large":
         score -= 18
-        negatives.append("نطاق التأثير واسع (large).")
+        negatives.append(N_("نطاق التأثير واسع (large)."))
     elif blast.blast_radius == "medium":
         score -= 7
-        negatives.append("نطاق التأثير متوسّط.")
+        negatives.append(N_("نطاق التأثير متوسّط."))
     else:
-        positives.append("نطاق التأثير ضيّق.")
+        positives.append(N_("نطاق التأثير ضيّق."))
 
     # ── Single-router bonus ──────────────────────────────
     if blast.affected_router_count == 1 \
             and blast.blast_radius == "small":
         score += 5
-        positives.append("التأثير محدود براوتر واحد فقط.")
+        positives.append(N_("التأثير محدود براوتر واحد فقط."))
 
     # ── Dependencies ─────────────────────────────────────
     if dependencies.dependencies:
@@ -194,16 +193,16 @@ def compute(
         ):
             score += 3
             positives.append(
-                "كل التبعيّات معروفة بثقة عالية."
+                N_("كل التبعيّات معروفة بثقة عالية.")
             )
         negatives.append(
-            "هناك تبعيّات قد تحتاج مراجعة قبل التطبيق."
+            N_("هناك تبعيّات قد تحتاج مراجعة قبل التطبيق.")
         )
 
     # ── Canary recommendation (optional from caller) ─────
     if canary_recommended:
         positives.append(
-            "هناك توصية بالتطبيق التدريجي (canary)."
+            N_("هناك توصية بالتطبيق التدريجي (canary).")
         )
 
     # ── Clamp ───────────────────────────────────────────
@@ -214,8 +213,7 @@ def compute(
 
     grade = _grade_for(score)
     reasoning = (
-        f"الدرجة {score}/100 — {grade}. هذه قيمة استشارية فقط "
-        "وليست بديلاً عن مراجعة المسؤول البشري قبل التطبيق."
+        _tr('الدرجة %(score)s/100 — %(grade)s. هذه قيمة استشارية فقط وليست بديلاً عن مراجعة المسؤول البشري قبل التطبيق.', score=score, grade=grade)
     )
 
     return HealthScore(

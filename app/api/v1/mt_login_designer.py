@@ -12,6 +12,7 @@ preview (renders HTML), deploy (+stream, FTP upload to router, gated by
 PERM_DEPLOY_LOGIN), download.zip, custom-template upload, font serving.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -57,7 +58,7 @@ def state(nas_id: int):
     القوالب المحفوظة + آخر نشر)."""
     nas = _nas_or_404(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     return ok({
         "nas": {"id": nas.get("id"), "name": nas.get("name"),
                 "address": nas.get("address")},
@@ -79,7 +80,7 @@ def _validate_and_collect(body: dict):
     if not values.get("STORE_URL"):
         values["STORE_URL"] = web._auto_store_url()
     if not web._known_slug(slug):
-        raise ValueError("قالب غير معروف.")
+        raise ValueError(_tr("قالب غير معروف."))
     return slug, ht.validate_vars(values)
 
 
@@ -87,7 +88,7 @@ def save(nas_id: int):
     """POST /save — حفظ التصميم (template_slug + variables). لا يلمس الراوتر."""
     nas = _nas_or_404(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     try:
         slug, safe = _validate_and_collect(request.get_json(silent=True) or {})
     except ValueError as exc:
@@ -100,11 +101,11 @@ def preset_save(nas_id: int):
     """POST /presets — حفظ القالب الحالي باسم (UPSERT)."""
     nas = _nas_or_404(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()[:40]
     if not name:
-        return fail("validation_error", "اكتب اسمًا للقالب المحفوظ.", status=422)
+        return fail("validation_error", _tr("اكتب اسمًا للقالب المحفوظ."), status=422)
     try:
         slug, safe = _validate_and_collect(body)
     except ValueError as exc:
@@ -119,10 +120,10 @@ def preset_apply(nas_id: int, preset_id: int):
     """POST /presets/<id>/apply — تطبيق قالب محفوظ (يصبح التصميم الحالي)."""
     nas = _nas_or_404(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     preset = hotspot_designs_repo.get_preset(_tid(), nas_id, int(preset_id))
     if not preset:
-        return fail("not_found", "القالب المحفوظ غير موجود.", status=404)
+        return fail("not_found", _tr("القالب المحفوظ غير موجود."), status=404)
     slug = preset.get("template_slug") or "classic"
     variables = preset.get("variables") or {}
     hotspot_designs_repo.save_design(_tid(), nas_id, template_slug=slug, variables=variables)
@@ -133,8 +134,8 @@ def preset_delete(nas_id: int, preset_id: int):
     """DELETE /presets/<id> — حذف قالب محفوظ."""
     nas = _nas_or_404(nas_id)
     if not nas:
-        return fail("not_found", "الراوتر غير موجود.", status=404)
+        return fail("not_found", _tr("الراوتر غير موجود."), status=404)
     if not hotspot_designs_repo.get_preset(_tid(), nas_id, int(preset_id)):
-        return fail("not_found", "القالب المحفوظ غير موجود.", status=404)
+        return fail("not_found", _tr("القالب المحفوظ غير موجود."), status=404)
     hotspot_designs_repo.delete_preset(_tid(), nas_id, int(preset_id))
     return ok({"id": preset_id, "deleted": True})

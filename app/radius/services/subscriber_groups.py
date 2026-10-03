@@ -6,6 +6,7 @@ adds tenant scoping, validation, and audit-trail entries.
 Pattern reference: SERVICES_COOKBOOK §15.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Optional
 
@@ -32,10 +33,10 @@ class SubscriberGroupsService:
                connection_schedule: str = "") -> dict:
         name = (name or "").strip()
         if not name:
-            raise RadiusValidationError("اسم المجموعة مطلوب")
+            raise RadiusValidationError(_tr("اسم المجموعة مطلوب"))
         if subscriber_groups_repo.get_by_name(tenant_id, name):
             raise RadiusValidationError(
-                f"اسم المجموعة «{name}» مستخدم مسبقًا في هذا الـ tenant.")
+                _tr('اسم المجموعة «%(name)s» مستخدم مسبقًا في هذا الـ tenant.', name=name))
         gid = subscriber_groups_repo.create(
             tenant_id=tenant_id, name=name, description=description,
             bandwidth_schedule_id=bandwidth_schedule_id,
@@ -55,13 +56,13 @@ class SubscriberGroupsService:
                **changes) -> Optional[dict]:
         current = subscriber_groups_repo.get(tenant_id, gid)
         if not current:
-            raise RadiusValidationError("المجموعة غير موجودة")
+            raise RadiusValidationError(_tr("المجموعة غير موجودة"))
         new_name = (changes.get("name") or "").strip()
         if new_name and new_name != current["name"]:
             clash = subscriber_groups_repo.get_by_name(tenant_id, new_name)
             if clash and clash["id"] != gid:
                 raise RadiusValidationError(
-                    f"اسم المجموعة «{new_name}» مستخدم مسبقًا.")
+                    _tr('اسم المجموعة «%(new_name)s» مستخدم مسبقًا.', new_name=new_name))
             changes["name"] = new_name
         updated = subscriber_groups_repo.update(tenant_id, gid, **changes)
         self._audit.record(

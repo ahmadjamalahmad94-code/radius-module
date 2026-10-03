@@ -22,6 +22,7 @@ MikroTik-offered ``ECDHE-RSA-AES256-GCM-SHA384`` to be chosen. Pinning the old
 bad values is what broke negotiation.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import os
 import shutil
@@ -147,16 +148,16 @@ def export_env_lines() -> list[str]:
 #: Ordered health-check identifiers, each with an Arabic label + the gap it
 #: guards. The installer runs the live probes; the panel renders the results.
 HEALTH_CHECKS = [
-    ("port_443_free", "منفذ {port} يخدم accel SSTP",
-     "مستخدَم من accel للاستماع (لا يملكه nginx/شيء آخر)."),
-    ("dev_ppp", "‎/dev/ppp / نواة PPP",
-     "نواة PPP محمّلة (ppp_generic/ppp_async/ppp_synctty/ppp_mppe) على المضيف."),
-    ("accel_running", "خدمة accel-ppp تعمل", ""),
-    ("listener_443", "مستمع SSTP نشط على {port}", ""),
-    ("tls_handshake", "مصافحة TLS تنجح",
-     "تفاوض ناجح (ECDHE-RSA-AES256-GCM-SHA384)."),
-    ("radius_localhost", "سرّ RADIUS المحلّي صحيح", ""),
-    ("test_user_auth", "اختبار دخول مستخدم نفق ينجح", ""),
+    ("port_443_free", N_("منفذ {port} يخدم accel SSTP"),
+     N_("مستخدَم من accel للاستماع (لا يملكه nginx/شيء آخر).")),
+    ("dev_ppp", N_("‎/dev/ppp / نواة PPP"),
+     N_("نواة PPP محمّلة (ppp_generic/ppp_async/ppp_synctty/ppp_mppe) على المضيف.")),
+    ("accel_running", N_("خدمة accel-ppp تعمل"), ""),
+    ("listener_443", N_("مستمع SSTP نشط على {port}"), ""),
+    ("tls_handshake", N_("مصافحة TLS تنجح"),
+     N_("تفاوض ناجح (ECDHE-RSA-AES256-GCM-SHA384).")),
+    ("radius_localhost", N_("سرّ RADIUS المحلّي صحيح"), ""),
+    ("test_user_auth", N_("اختبار دخول مستخدم نفق ينجح"), ""),
 ]
 
 
@@ -181,10 +182,10 @@ def _tcp_port_owner_free(port: int, host: str = "0.0.0.0") -> HealthResult:
         # connect_ex==0 → something is listening (port NOT free for accel).
         if res == 0:
             return HealthResult("port_443_free", False,
-                                f"منفذ {port} مشغول — حرّره (nginx/docker) لـaccel SSTP")
-        return HealthResult("port_443_free", True, f"منفذ {port} متاح")
+                                _tr('منفذ %(port)s مشغول — حرّره (nginx/docker) لـaccel SSTP', port=port))
+        return HealthResult("port_443_free", True, _tr('منفذ %(port)s متاح', port=port))
     except OSError as exc:
-        return HealthResult("port_443_free", None, f"تعذّر الفحص: {exc}")
+        return HealthResult("port_443_free", None, _tr('تعذّر الفحص: %(exc)s', exc=exc))
 
 
 def _in_container() -> bool:
@@ -218,11 +219,11 @@ def _probe_sstp_endpoint(host: str, port: int,
     chain; we only care that the TLS layer answers."""
     host = (host or "").strip()
     if not host:
-        return EndpointProbe(None, None, "عنوان accel (HOBERADIUS_ACCEL_SERVER_HOST) غير مضبوط")
+        return EndpointProbe(None, None, N_("عنوان accel (HOBERADIUS_ACCEL_SERVER_HOST) غير مضبوط"))
     try:
         sock = socket.create_connection((host, int(port)), timeout=timeout)
     except OSError as exc:
-        return EndpointProbe(False, None, f"تعذّر الاتصال بـ{host}:{port} ({exc})")
+        return EndpointProbe(False, None, _tr('تعذّر الاتصال بـ%(host)s:%(port)s (%(exc)s)', host=host, port=port, exc=exc))
     try:
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -230,10 +231,10 @@ def _probe_sstp_endpoint(host: str, port: int,
         with ctx.wrap_socket(sock, server_hostname=None) as tls:
             tls.settimeout(timeout)
             tls.do_handshake()
-        return EndpointProbe(True, True, f"{host}:{port} يستجيب + مصافحة TLS ناجحة")
+        return EndpointProbe(True, True, _tr('%(host)s:%(port)s يستجيب + مصافحة TLS ناجحة', host=host, port=port))
     except (ssl.SSLError, OSError) as exc:
         return EndpointProbe(True, False,
-                             f"{host}:{port} مفتوح لكن مصافحة TLS فشلت ({exc})")
+                             _tr('%(host)s:%(port)s مفتوح لكن مصافحة TLS فشلت (%(exc)s)', host=host, port=port, exc=exc))
     finally:
         try:
             sock.close()
@@ -263,7 +264,7 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
     in_container = _in_container()
     endpoint = _probe_sstp_endpoint(accel_host, port)
     sstp_up = endpoint.tcp_ok is True
-    host_label = (accel_host or "").strip() or "المضيف"
+    host_label = (accel_host or "").strip() or _tr("المضيف")
     results: list[HealthResult] = []
 
     # 1) port 443 — coherent with a working SSTP: if the endpoint is up, 443 is
@@ -271,10 +272,10 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
     #    meaningless (accel binds the host), so don't present it as a problem.
     if sstp_up:
         results.append(HealthResult("port_443_free", True,
-                                    f"منفذ {port} مستخدَم من accel — مستمع SSTP حيّ على {host_label}"))
+                                    _tr('منفذ %(port)s مستخدَم من accel — مستمع SSTP حيّ على %(host_label)s', port=port, host_label=host_label)))
     elif in_container:
         results.append(HealthResult("port_443_free", None,
-                                    f"يُفحص على المضيف؛ accel يستمع على {port} هناك لا داخل الحاوية"))
+                                    _tr('يُفحص على المضيف؛ accel يستمع على %(port)s هناك لا داخل الحاوية', port=port)))
     else:
         # Host deployment, endpoint down → genuine local availability check.
         results.append(_tcp_port_owner_free(port))
@@ -282,20 +283,19 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
     # 2) /dev/ppp — only the HOST has it. In a container infer from the live
     #    endpoint (a working SSTP session → PPP is fine) or skip-with-reason.
     if Path("/dev/ppp").exists():
-        results.append(HealthResult("dev_ppp", True, "/dev/ppp موجود"))
+        results.append(HealthResult("dev_ppp", True, N_("/dev/ppp موجود")))
     elif in_container:
         if sstp_up:
             results.append(HealthResult("dev_ppp", True,
-                                        f"نفق SSTP حيّ على {host_label}:{port} → نواة PPP سليمة على المضيف "
-                                        "(‎/dev/ppp يُفحص هناك لا داخل الحاوية)"))
+                                        _tr('نفق SSTP حيّ على %(host_label)s:%(port)s → نواة PPP سليمة على المضيف (\u200e/dev/ppp يُفحص هناك لا داخل الحاوية)', host_label=host_label, port=port)))
         else:
             results.append(HealthResult("dev_ppp", None,
-                                        "accel-ppp يعمل على المضيف؛ /dev/ppp يُفحص على المضيف لا داخل الحاوية"))
+                                        N_("accel-ppp يعمل على المضيف؛ /dev/ppp يُفحص على المضيف لا داخل الحاوية")))
     elif Path("/dev").exists():
         results.append(HealthResult("dev_ppp", False,
-                                    "/dev/ppp مفقود — حمّل وحدات نواة PPP"))
+                                    N_("/dev/ppp مفقود — حمّل وحدات نواة PPP")))
     else:
-        results.append(HealthResult("dev_ppp", None, "غير لينكس — تُخطّى"))
+        results.append(HealthResult("dev_ppp", None, N_("غير لينكس — تُخطّى")))
 
     # 3) accel-ppp running — the process lives on the host (invisible to the
     #    container). Infer from the endpoint when containerised; else inspect
@@ -303,42 +303,42 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
     if in_container:
         if sstp_up:
             results.append(HealthResult("accel_running", True,
-                                        f"accel-ppp يعمل على المضيف — مستمع SSTP حيّ على {host_label}:{port}"))
+                                        _tr('accel-ppp يعمل على المضيف — مستمع SSTP حيّ على %(host_label)s:%(port)s', host_label=host_label, port=port)))
         else:
             results.append(HealthResult("accel_running", None,
-                                        "يعمل على المضيف — يُفحص هناك (الحاوية لا ترى عمليات المضيف)"))
+                                        N_("يعمل على المضيف — يُفحص هناك (الحاوية لا ترى عمليات المضيف)")))
     else:
         local = _probe_accel_running()
         if local.ok is not True and sstp_up:
             local = HealthResult("accel_running", True,
-                                 f"مستمع SSTP حيّ على {host_label}:{port}")
+                                 _tr('مستمع SSTP حيّ على %(host_label)s:%(port)s', host_label=host_label, port=port))
         results.append(local)
 
     # 4) listener on the SSTP port — the public endpoint probe IS the truth.
     if endpoint.tcp_ok is True:
         results.append(HealthResult("listener_443", True,
-                                    f"مستمع SSTP نشط على {host_label}:{port}"))
+                                    _tr('مستمع SSTP نشط على %(host_label)s:%(port)s', host_label=host_label, port=port)))
     elif endpoint.tcp_ok is False:
         if in_container:
             results.append(HealthResult("listener_443", False,
-                                        f"لا استجابة من {host_label}:{port} — accel غير مُقلع على المضيف؟ ({endpoint.detail})"))
+                                        _tr('لا استجابة من %(host_label)s:%(port)s — accel غير مُقلع على المضيف؟ (%(detail)s)', host_label=host_label, port=port, detail=endpoint.detail)))
         else:
             # Host deployment: fall back to a local listener check.
             local = _tcp_port_owner_free(port)
             if local.ok is False:           # something IS listening locally
                 results.append(HealthResult("listener_443", True,
-                                            f"مستمع نشط على {port} (محلّي)"))
+                                            _tr('مستمع نشط على %(port)s (محلّي)', port=port)))
             else:
                 results.append(HealthResult("listener_443", False,
-                                            f"لا مستمع على {port} — accel غير مُقلع؟"))
+                                            _tr('لا مستمع على %(port)s — accel غير مُقلع؟', port=port)))
     else:
         results.append(HealthResult("listener_443", None,
-                                    f"تعذّر فحص المستمع: {endpoint.detail}"))
+                                    _tr('تعذّر فحص المستمع: %(detail)s', detail=endpoint.detail)))
 
     # 5) TLS handshake — folded into the same endpoint probe (real ECDHE TLS).
     if endpoint.tls_ok is True:
         results.append(HealthResult("tls_handshake", True,
-                                    f"مصافحة TLS ناجحة على {host_label}:{port}"))
+                                    _tr('مصافحة TLS ناجحة على %(host_label)s:%(port)s', host_label=host_label, port=port)))
     elif endpoint.tls_ok is False:
         # MT75 — «فشل مصافحة TLS» تشخيصٌ مضلِّل حين يكون السبب رفضًا من
         # accel قبل التشفير: يُسقط الاتّصال فيَرى الفاحص EOF مفاجئًا
@@ -349,16 +349,16 @@ def run_health_checks(params: Optional[AccelConfigParams] = None,
                                     _tls_failure_reason(host_label, port, endpoint.detail)))
     else:
         results.append(HealthResult("tls_handshake", None,
-                                    "يُفحص عبر المثبّت (openssl s_client)"))
+                                    N_("يُفحص عبر المثبّت (openssl s_client)")))
 
     # 6) RADIUS localhost secret — config presence check (real probe is radtest
     #    in the installer).
     results.append(HealthResult("radius_localhost", None,
-                                "يُفحص عبر المثبّت (radtest)"))
+                                N_("يُفحص عبر المثبّت (radtest)")))
 
     # 7) test-user auth — installer runs radtest -t mschap.
     results.append(HealthResult("test_user_auth", None,
-                                "يُفحص عبر المثبّت (radtest -t mschap)"))
+                                N_("يُفحص عبر المثبّت (radtest -t mschap)")))
 
     return [r.to_dict() for r in results]
 
@@ -386,7 +386,7 @@ def _tls_failure_reason(host_label: str, port: int, detail: str) -> str:
     accel يُسقط الاتّصال قبل التشفير في حالاتٍ عدّة (أشهرها رفض العنوان)،
     فيَرى الفاحص EOF مفاجئًا ويَنسبه إلى TLS — فيَذهب المشغّل يفتّش في
     الشهادة بلا طائل. نقرأ آخر أسطر السجلّ ونُظهر السبب والإجراء."""
-    base = f"TCP متصل لكن مصافحة TLS فشلت على {host_label}:{port}"
+    base = _tr('TCP متصل لكن مصافحة TLS فشلت على %(host_label)s:%(port)s', host_label=host_label, port=port)
     try:
         import os
         for path in _ACCEL_LOG_PATHS:
@@ -398,7 +398,7 @@ def _tls_failure_reason(host_label: str, port: int, detail: str) -> str:
                 tail = fh.read().decode("utf-8", "replace").lower()
             for needle, why, action in _TLS_LOG_HINTS:
                 if needle in tail:
-                    return f"{base} — ⚠️ السبب الحقيقيّ: {why}. الإجراء: {action}."
+                    return _tr('%(base)s — ⚠️ السبب الحقيقيّ: %(why)s. الإجراء: %(action)s.', base=base, why=why, action=action)
             break
     except Exception:  # noqa: BLE001 — الفاحص لا يَنهار لتعذّر قراءة سجلّ
         pass
@@ -415,7 +415,7 @@ def _probe_accel_running() -> HealthResult:
                                  capture_output=True, timeout=5)
             ok = out.returncode == 0
             return HealthResult("accel_running", ok,
-                                "accel-ppp يعمل" if ok else "accel-cmd فشل")
+                                N_("accel-ppp يعمل") if ok else N_("accel-cmd فشل"))
         except (OSError, subprocess.SubprocessError) as exc:
             return HealthResult("accel_running", False, f"accel-cmd: {exc}")
     pgrep = shutil.which("pgrep")
@@ -425,10 +425,10 @@ def _probe_accel_running() -> HealthResult:
                                  capture_output=True, timeout=5)
             ok = out.returncode == 0
             return HealthResult("accel_running", ok,
-                                "accel-pppd حيّ" if ok else "العملية غير موجودة")
+                                N_("accel-pppd حيّ") if ok else N_("العملية غير موجودة"))
         except (OSError, subprocess.SubprocessError) as exc:
             return HealthResult("accel_running", None, f"pgrep: {exc}")
-    return HealthResult("accel_running", None, "أدوات الفحص غير متوفّرة — تُخطّى")
+    return HealthResult("accel_running", None, N_("أدوات الفحص غير متوفّرة — تُخطّى"))
 
 
 __all__ = [

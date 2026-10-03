@@ -5,6 +5,7 @@ by checking prerequisites and producing a checklist; it never applies router
 configuration.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any
 
@@ -60,15 +61,15 @@ class SetupWizardPilotDrillService:
         selected_step = step_index.get(SCRIPT_STEPS[normalized_step]) or {}
 
         if internet_step.get("status") != "generated":
-            blocking.append(_reason("internet_script_missing", "يجب توليد معاينة سكربت الإنترنت أولًا."))
+            blocking.append(_reason("internet_script_missing", _tr("يجب توليد معاينة سكربت الإنترنت أولًا.")))
         if vpn_step.get("status") != "generated":
-            blocking.append(_reason("vpn_radius_script_missing", "يجب توليد معاينة سكربت الربط والمصادقة أولًا."))
+            blocking.append(_reason("vpn_radius_script_missing", _tr("يجب توليد معاينة سكربت الربط والمصادقة أولًا.")))
         if not snapshot:
-            blocking.append(_reason("inventory_missing", "لقطة جرد الراوتر مطلوبة قبل التدريب الداخلي."))
+            blocking.append(_reason("inventory_missing", _tr("لقطة جرد الراوتر مطلوبة قبل التدريب الداخلي.")))
         if not operations:
-            blocking.append(_reason("dry_run_missing", "عمليات التجربة الجافة مطلوبة للخطوة المحددة."))
+            blocking.append(_reason("dry_run_missing", _tr("عمليات التجربة الجافة مطلوبة للخطوة المحددة.")))
         elif not any(op.get("status") == OP_STATUS_DRY_RUN_READY for op in operations):
-            blocking.append(_reason("dry_run_not_ready", "الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة."))
+            blocking.append(_reason("dry_run_not_ready", _tr("الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة.")))
 
         step_input = dict(selected_step.get("input_json") or {})
         if snapshot:
@@ -89,14 +90,14 @@ class SetupWizardPilotDrillService:
                 blocking.append(
                     _reason(
                         "subnet_overlap",
-                        f"الشبكة المرشحة {overlap.get('candidate')} تتداخل مع {overlap.get('existing')}.",
+                        _tr('الشبكة المرشحة %(v)s تتداخل مع %(v2)s.', v=overlap.get('candidate'), v2=overlap.get('existing')),
                     )
                 )
             if int(risk_report.get("existing_nat_count") or 0) > 0:
                 risks.append(
                     {
                         "code": "existing_nat_detected",
-                        "message_ar": "تم العثور على قواعد ترجمة عناوين حالية؛ راجع العمليات المحددة بعناية.",
+                        "message_ar": _tr("تم العثور على قواعد ترجمة عناوين حالية؛ راجع العمليات المحددة بعناية."),
                     }
                 )
 
@@ -120,17 +121,17 @@ class SetupWizardPilotDrillService:
             "failed_operation_count": len(failed_ops),
             "verification_commands": list(selected_step.get("validation_commands_json") or []),
             "required_manual_confirmations": [
-                "تم أخذ نسخة احتياطية وتصدير للراوتر",
-                "تم تأكيد وجود وصول خارجي للطوارئ",
-                "تم التحقق من واجهة الإنترنت",
-                "تمت مراجعة خطة التراجع",
-                "يبقى التطبيق الفعلي متوقفًا إلا داخل مختبر مضبوط",
+                N_("تم أخذ نسخة احتياطية وتصدير للراوتر"),
+                N_("تم تأكيد وجود وصول خارجي للطوارئ"),
+                N_("تم التحقق من واجهة الإنترنت"),
+                N_("تمت مراجعة خطة التراجع"),
+                N_("يبقى التطبيق الفعلي متوقفًا إلا داخل مختبر مضبوط"),
             ],
             "live_apply_enabled": live_apply_enabled(),
             "next_safe_action_ar": (
-                "راجع القائمة ثم نفذ dry-run فقط."
+                _tr("راجع القائمة ثم نفذ dry-run فقط.")
                 if blocking
-                else "جاهز لتدريب داخلي مضبوط: راجع النسخة الاحتياطية وخطة الرجوع قبل أي تفعيل مخبري."
+                else _tr("جاهز لتدريب داخلي مضبوط: راجع النسخة الاحتياطية وخطة الرجوع قبل أي تفعيل مخبري.")
             ),
         }
 
@@ -172,7 +173,7 @@ def _append_interface_blocks(
         blocking.append(
             _reason(
                 "blocked_interface_selected",
-                f"الواجهة {iface} مستثناة لأنها واجهة إنترنت أو ربط خاص ولا يجوز استخدامها.",
+                _tr('الواجهة %(iface)s مستثناة لأنها واجهة إنترنت أو ربط خاص ولا يجوز استخدامها.', iface=iface),
             )
         )
 
@@ -190,11 +191,11 @@ def _checklist(
     *, operation_count: int, rollback_available: bool, validation_commands: list[str]
 ) -> list[dict[str, Any]]:
     return [
-        {"key": "backup", "label_ar": "خذ نسخة احتياطية وتصديرًا للراوتر قبل أي تجربة.", "required": True},
-        {"key": "oob", "label_ar": "أكد وجود دخول خارجي أو منفذ تحكم خارج مسار الإنترنت.", "required": True},
-        {"key": "wan", "label_ar": "راجع واجهة الإنترنت ولا تستخدمها لخدمات الهوتسبوت أو البرودباند.", "required": True},
-        {"key": "ops", "label_ar": f"راجع عدد العمليات المتوقع: {operation_count}.", "required": True},
-        {"key": "rollback", "label_ar": "راجع خطة الرجوع والعمليات الموسومة فقط.", "required": True, "available": rollback_available},
-        {"key": "validation", "label_ar": "جهز أوامر التحقق بعد التنفيذ المخبري.", "required": True, "commands": validation_commands},
-        {"key": "flag", "label_ar": "اترك التطبيق الفعلي مطفأ إلا في مختبر راوتر افتراضي مضبوط.", "required": True},
+        {"key": "backup", "label_ar": _tr("خذ نسخة احتياطية وتصديرًا للراوتر قبل أي تجربة."), "required": True},
+        {"key": "oob", "label_ar": _tr("أكد وجود دخول خارجي أو منفذ تحكم خارج مسار الإنترنت."), "required": True},
+        {"key": "wan", "label_ar": _tr("راجع واجهة الإنترنت ولا تستخدمها لخدمات الهوتسبوت أو البرودباند."), "required": True},
+        {"key": "ops", "label_ar": _tr('راجع عدد العمليات المتوقع: %(operation_count)s.', operation_count=operation_count), "required": True},
+        {"key": "rollback", "label_ar": _tr("راجع خطة الرجوع والعمليات الموسومة فقط."), "required": True, "available": rollback_available},
+        {"key": "validation", "label_ar": _tr("جهز أوامر التحقق بعد التنفيذ المخبري."), "required": True, "commands": validation_commands},
+        {"key": "flag", "label_ar": _tr("اترك التطبيق الفعلي مطفأ إلا في مختبر راوتر افتراضي مضبوط."), "required": True},
     ]

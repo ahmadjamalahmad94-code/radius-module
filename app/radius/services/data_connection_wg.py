@@ -23,6 +23,7 @@ feat/data-connection-oneclick. يُولّد زوج مفاتيح للعميل، �
 ═══════════════════════════════════════════════════════════════════════════
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import ipaddress
 from dataclasses import dataclass
@@ -56,7 +57,7 @@ def data_wg_pool() -> ipaddress.IPv4Network:
     try:
         return ipaddress.ip_network(raw.strip(), strict=False)
     except ValueError as exc:
-        raise dc.DataConnectionError(f"مجمّع WG غير صالح: {raw!r}") from exc
+        raise dc.DataConnectionError(_tr('مجمّع WG غير صالح: %(raw)s', raw=repr(raw))) from exc
 
 
 def data_wg_port() -> int:
@@ -94,7 +95,7 @@ def allocate_pool_ip(tenant_id: int) -> str:
             continue
         if str(ip) not in used:
             return str(ip)
-    raise dc.DataConnectionError("نفد مجمّع عناوين WG لاتصال البيانات.")
+    raise dc.DataConnectionError(_tr("نفد مجمّع عناوين WG لاتصال البيانات."))
 
 
 def apply_peer_queue(peer_id: int, assigned_ip: str) -> bool:
@@ -143,8 +144,8 @@ def provision_data_wg_peer(*, tenant_id: int, subscriber_id: int,
     server_pub = data_wg_server_pubkey()
     if not server_pub:
         raise dc.DataConnectionError(
-            "لم يُضبط المفتاح العام لخادم WireGuard للبيانات بعد "
-            "(HOBERADIUS_DATA_WG_PUBKEY)."
+            _tr("لم يُضبط المفتاح العام لخادم WireGuard للبيانات بعد "
+            "(HOBERADIUS_DATA_WG_PUBKEY).")
         )
     priv, pub = generate_keypair()
     assigned_ip = allocate_pool_ip(tenant_id)

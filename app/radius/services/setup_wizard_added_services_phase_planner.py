@@ -12,6 +12,7 @@ unsupported services map to
 No DB / Flask / network — pure functions only.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Mapping
 
@@ -96,9 +97,9 @@ class AddedServicesPhasePlanner(PhasePlannerBase):
                     "added_services_module_not_available",
                 ),
                 notes=(
-                    "الخدمة المختارة غير مدعومة في هذا "
+                    N_("الخدمة المختارة غير مدعومة في هذا "
                     "الإصدار. اختر خدمة أخرى أو تخطّ هذه "
-                    "المرحلة.",
+                    "المرحلة."),
                 ),
             )
 
@@ -128,10 +129,10 @@ class AddedServicesPhasePlanner(PhasePlannerBase):
             for c in (legacy_result.get("validation_commands") or [])
         ]
         notes = [
-            "ألصق السكربت في MikroTik Terminal بعد التحقّق "
-            "من القائمة في الواجهة.",
-            "الخدمات الإضافية تستخدم محرّك NPC الحالي — لا "
-            "حاجة لإعادة تنفيذ سياسات قائمة.",
+            _tr("ألصق السكربت في MikroTik Terminal بعد التحقّق "
+            "من القائمة في الواجهة."),
+            _tr("الخدمات الإضافية تستخدم محرّك NPC الحالي — لا "
+            "حاجة لإعادة تنفيذ سياسات قائمة."),
         ]
         return PhasePlanResult(
             phase=self.PHASE,

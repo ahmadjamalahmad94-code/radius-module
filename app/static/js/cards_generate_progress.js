@@ -1,3 +1,4 @@
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -15,19 +16,19 @@
       '<div class="card-generate-progress__backdrop"></div>',
       '<section class="card-generate-progress__panel" role="status" aria-live="polite">',
       '  <div class="card-generate-progress__icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>',
-      '  <h3>إنشاء الحزمة</h3>',
-      '  <p data-progress-message>تجهيز طلب التوليد...</p>',
+      ('  ' + '<h3>' + hrT('إنشاء الحزمة') + '</h3>'),
+      ('  ' + '<p data-progress-message>' + hrT('تجهيز طلب التوليد...') + '</p>'),
       '  <div class="card-generate-progress__bar"><span data-progress-bar></span></div>',
       '  <div class="card-generate-progress__meta">',
-      '    <span data-progress-phase>بدء</span>',
+      ('    ' + '<span data-progress-phase>' + hrT('بدء') + '</span>'),
       '    <strong data-progress-count>0 / 0</strong>',
       '  </div>',
-      '  <small data-progress-hint>لا تغلق الصفحة حتى يكتمل إنشاء البطاقات.</small>',
+      ('  ' + '<small data-progress-hint>' + hrT('لا تغلق الصفحة حتى يكتمل إنشاء البطاقات.') + '</small>'),
       // MT84 — زرّ إغلاق يظهر **عند الخطأ فقط**: قبل هذا كانت النافذة بلا أيّ
       // مخرج، فإذا فشل التوليد بقيت الحجب فوق الصفحة وتعلّق اللوحة كلّها
       // ولا حيلة إلا إعادة التحميل. يبقى مخفيًّا أثناء العمل كي لا يُغري
       // المشغّل بإغلاق عمليّةٍ جارية.
-      '  <button type="button" class="card-generate-progress__close" data-progress-close hidden>إغلاق</button>',
+      ('  ' + '<button type="button" class="card-generate-progress__close" data-progress-close hidden>' + hrT('إغلاق') + '</button>'),
       '</section>'
     ].join("");
     document.body.appendChild(panel);
@@ -56,15 +57,15 @@
 
   function phaseLabel(phase) {
     return {
-      queued: "بالانتظار",
-      validating: "فحص",
-      preparing: "تجهيز",
-      batch: "إنشاء الحزمة",
-      generating: "توليد البطاقات",
-      syncing: "تجهيز خدمة المصادقة",
-      done: "اكتمل",
-      error: "خطأ"
-    }[phase] || "جارٍ العمل";
+      queued: hrT('بالانتظار'),
+      validating: hrT('فحص'),
+      preparing: hrT('تجهيز'),
+      batch: hrT('إنشاء الحزمة'),
+      generating: hrT('توليد البطاقات'),
+      syncing: hrT('تجهيز خدمة المصادقة'),
+      done: hrT('اكتمل'),
+      error: hrT('خطأ')
+    }[phase] || hrT('جارٍ العمل');
   }
 
   function updatePanel(data) {
@@ -73,7 +74,7 @@
     var total = Number(data.total || 0);
     var current = Number(data.current || data.generated || 0);
     var pct = total > 0 ? Math.max(4, Math.min(100, Math.round((current / total) * 100))) : 8;
-    panel.querySelector("[data-progress-message]").textContent = data.message || "جارٍ إنشاء البطاقات...";
+    panel.querySelector("[data-progress-message]").textContent = data.message || hrT('جارٍ إنشاء البطاقات...');
     panel.querySelector("[data-progress-phase]").textContent = phaseLabel(data.phase || data.status);
     panel.querySelector("[data-progress-count]").textContent = current + " / " + total;
     panel.querySelector("[data-progress-bar]").style.width = pct + "%";
@@ -82,12 +83,12 @@
     if (closeBtn) closeBtn.hidden = (data.status !== "error");
     if (data.status === "error") {
       panel.classList.add("is-error");
-      hint.textContent = "لم يكتمل التوليد. راجع الرسالة ثم حاول مرة أخرى.";
+      hint.textContent = hrT('لم يكتمل التوليد. راجع الرسالة ثم حاول مرة أخرى.');
     } else if (Date.now() - lastUpdateAt > 15000 && data.status === "running") {
-      hint.textContent = "التوليد ما زال يعمل. إذا بقيت هذه الحالة طويلًا افحص الاتصال أو سجل الخادم.";
+      hint.textContent = hrT('التوليد ما زال يعمل. إذا بقيت هذه الحالة طويلًا افحص الاتصال أو سجل الخادم.');
     } else {
       panel.classList.remove("is-error");
-      hint.textContent = "لا تغلق الصفحة حتى يكتمل إنشاء البطاقات.";
+      hint.textContent = hrT('لا تغلق الصفحة حتى يكتمل إنشاء البطاقات.');
     }
   }
 
@@ -116,7 +117,7 @@
       phase: "error",
       current: 0,
       total: 0,
-      message: error && error.message ? error.message : "تعذر متابعة حالة التوليد."
+      message: error && error.message ? error.message : hrT('تعذر متابعة حالة التوليد.')
     });
     if (busyForm) setBusy(busyForm, false);
     busyForm = null;
@@ -127,7 +128,7 @@
     busyForm = form;
     setBusy(form, true);
     lastUpdateAt = Date.now();
-    updatePanel({ status: "queued", phase: "queued", current: 0, total: Number(form.elements.count && form.elements.count.value) || 0, message: "إرسال طلب التوليد..." });
+    updatePanel({ status: "queued", phase: "queued", current: 0, total: Number(form.elements.count && form.elements.count.value) || 0, message: hrT('إرسال طلب التوليد...') });
     var res = await fetch(form.dataset.progressStartUrl, {
       method: "POST",
       body: new FormData(form),
@@ -135,7 +136,7 @@
     });
     var data = await res.json();
     if (!res.ok || data.ok === false) {
-      throw new Error(data.error || data.message || "تعذر بدء التوليد.");
+      throw new Error(data.error || data.message || hrT('تعذر بدء التوليد.'));
     }
     var statusUrl = form.dataset.progressStatusUrl.replace("__JOB_ID__", data.job_id);
     poll(statusUrl).catch(handleError);
@@ -152,9 +153,9 @@
     var name = (el.package_name && el.package_name.value || "").trim();
     var len = (el.username_length && el.username_length.value) || "";
     var pre = (el.username_prefix && el.username_prefix.value || "").trim();
-    var lines = ["توليد " + ((window.UDS && UDS.arCount) ? UDS.arCount(count, "بطاقة", "بطاقات", "بطاقةً") : (count + " بطاقة")) + (plan ? " على الباقة «" + plan + "»" : "") + "؟"];
-    if (name) lines.push("اسم الحزمة: " + name);
-    if (len) lines.push("طول اسم الدخول: " + len + (pre ? " · البادئة: " + pre : ""));
+    var lines = [hrT('توليد ') + ((window.UDS && UDS.arCount) ? UDS.arCount(count, hrT('بطاقة'), hrT('بطاقات'), hrT('بطاقةً')) : (count + hrT(' بطاقة'))) + (plan ? hrT(' على الباقة «') + plan + "»" : "") + "؟"];
+    if (name) lines.push(hrT('اسم الحزمة: ') + name);
+    if (len) lines.push(hrT('طول اسم الدخول: ') + len + (pre ? hrT(' · البادئة: ') + pre : ""));
     return lines.join("\n");
   }
 

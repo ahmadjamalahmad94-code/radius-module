@@ -15,6 +15,7 @@
 واتساب→/whatsapp/settings، SMS→/communications/channels، الويبهوك→/webhooks.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint, flash, g, jsonify, redirect, render_template, request,
@@ -142,7 +143,7 @@ def admin_notifications_set_channels():
     """يضبط قنوات حدث إدارة واحد (JSON). الجرس دائمًا مُفعَّل."""
     key = (request.form.get("key") or "").strip()
     if not admin_alerts.get_spec(key):
-        return jsonify({"ok": False, "error": "حدث غير معروف."}), 404
+        return jsonify({"ok": False, "error": _tr("حدث غير معروف.")}), 404
     # القنوات المُرسَلة (قائمة)؛ نتجاهل غير المعروفة، والجرس يُضاف دائمًا.
     raw = request.form.getlist("channels") or []
     if not raw:
@@ -159,7 +160,7 @@ def admin_notifications_set_channels():
 # قنوات المشترك في الواجهة (تيليجرام أولًا = الأساس بلا مفاتيح). نُخفي قنوات
 # الأحداث التشغيليّة (الشبكة) عن هذه الصفحة — مخصّصة لأحداث المشترك.
 _SUB_CHANNELS = ("telegram", "whatsapp", "sms")
-_SUB_CHANNEL_LABELS = {"telegram": "تيليجرام", "whatsapp": "واتساب", "sms": "SMS"}
+_SUB_CHANNEL_LABELS = {"telegram": N_("تيليجرام"), "whatsapp": N_("واتساب"), "sms": "SMS"}
 # مجموعات أحداث المشترك (نستبعد network التشغيليّة). «store» = حركات متجر
 # البطاقات الإلكتروني (شحن/سحب/شراء) — قسم مخصّص يصل المشتري.
 _SUB_GROUPS = ("subscribers", "billing", "store")
@@ -191,9 +192,9 @@ def subscriber_notifications():
         sub_keys = [k for k, ev in ne.EVENTS.items() if ev.group in _SUB_GROUPS]
         try:
             ne.save_rules(tid, _notif_values_from_form(), by=_by(), only_keys=sub_keys)
-            flash("تم حفظ إعدادات إشعارات المشتركين.", "success")
+            flash(_tr("تم حفظ إعدادات إشعارات المشتركين."), "success")
         except Exception:  # noqa: BLE001
-            flash("تعذّر حفظ الإعدادات. حاول مرة أخرى.", "error")
+            flash(_tr("تعذّر حفظ الإعدادات. حاول مرة أخرى."), "error")
         return redirect(url_for("radius.subscriber_notifications"))
 
     telegram = tenant_telegram_settings_repo.get(tid) or {}

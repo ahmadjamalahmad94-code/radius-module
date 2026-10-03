@@ -9,6 +9,7 @@
 يُعيد استعمال هيكل الشِّل المُثبَت (دخول/CHAP/تبويبات CSS)؛ البَصمة z-index:-1
 خلفيّة، الشريط غير مُغطّى، العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -82,13 +83,13 @@ _CRIM_ART = """
 
 _CRIM_HERO = ("""
       <div class="cr-hero">
-        <div class="cr-frame">""" + _CRIM_ART + """</div>
+        <div class="cr-frame">""" + _CRIM_ART + N_("""</div>
         <div class="cr-cap">
           <div><b>أمسية لا تُنسى</b><span>اتصال راقٍ وسريع لتجربة عشاء استثنائيّة</span></div>
           <div class="cr-badge"><span class="cr-dot"></span> مفتوح مساءً</div>
         </div>
       </div>
-""")
+"""))
 
 _CRIM_STYLE = """
 <style id="hr-crimson-dining">

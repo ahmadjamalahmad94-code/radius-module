@@ -4,6 +4,7 @@ The service creates local card records and Business OS financial records only.
 It does not call live RADIUS, MikroTik, or provisioning adapters.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import re
@@ -93,18 +94,18 @@ def market_money_minor(value: Any, *, label: str, allow_zero: bool,
     try:
         amount = finite_float(value, field="amount")
     except NonFiniteNumber:
-        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون رقمًا صالحًا.") from None
+        raise CardMarketplaceError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صالحًا.', label=label)) from None
     if amount < 0 or (amount == 0 and not allow_zero):
         raise CardMarketplaceError(
-            f"قيمة «{label}» يجب أن تكون أكبر من صفر." if not allow_zero
-            else f"قيمة «{label}» لا يمكن أن تكون سالبة.")
+            _tr('قيمة «%(label)s» يجب أن تكون أكبر من صفر.', label=label) if not allow_zero
+            else _tr('قيمة «%(label)s» لا يمكن أن تكون سالبة.', label=label))
     cap_msg = limits.amount_error(amount, "generic", label=label, tenant_id=tenant_id)
     if cap_msg:
         raise CardMarketplaceError(cap_msg)
     try:
         return money_to_minor(amount)
     except BusinessOSValidationError:
-        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون رقمًا صالحًا.") from None
+        raise CardMarketplaceError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صالحًا.', label=label)) from None
 
 
 def int_input(value: Any, *, label: str, default: int = 0, minimum: int = 0,
@@ -117,12 +118,12 @@ def int_input(value: Any, *, label: str, default: int = 0, minimum: int = 0,
     try:
         out = finite_float(value, field="amount")
     except NonFiniteNumber:
-        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.") from None
+        raise CardMarketplaceError(_tr('قيمة «%(label)s» يجب أن تكون عددًا صحيحًا.', label=label)) from None
     if not out.is_integer():
-        raise CardMarketplaceError(f"قيمة «{label}» يجب أن تكون عددًا صحيحًا.")
+        raise CardMarketplaceError(_tr('قيمة «%(label)s» يجب أن تكون عددًا صحيحًا.', label=label))
     n = int(out)
     if n < minimum or (maximum is not None and n > maximum):
-        raise CardMarketplaceError(f"قيمة «{label}» خارج النطاق المسموح.")
+        raise CardMarketplaceError(_tr('قيمة «%(label)s» خارج النطاق المسموح.', label=label))
     return n
 
 
@@ -136,7 +137,7 @@ def arabic_error_message(exc: BaseException) -> str:
     translated = arabic_business_error(raw)
     if translated != raw:
         return translated
-    return "قيمة غير صالحة — تحقّق من الحقول المُدخلة."
+    return N_("قيمة غير صالحة — تحقّق من الحقول المُدخلة.")
 
 
 def _json(value: dict[str, Any] | None) -> str:
@@ -183,13 +184,13 @@ class CardUsersMarketplaceService:
     ) -> dict[str, Any]:
         name = str(display_name or "").strip()
         if not name:
-            raise CardMarketplaceError("اسم مستخدم الكروت مطلوب.")
+            raise CardMarketplaceError(_tr("اسم مستخدم الكروت مطلوب."))
         if len(name) > 120:
-            raise CardMarketplaceError("اسم مستخدم الكروت طويل جدًا (الحدّ 120 حرفًا).")
+            raise CardMarketplaceError(_tr("اسم مستخدم الكروت طويل جدًا (الحدّ 120 حرفًا)."))
         # a06 LOW-6: «ab» was accepted on create while «تغيير كلمة المرور»
         # (set_card_user_password) and the web form require 4 — one rule.
         if str(password or "").strip() and len(str(password).strip()) < 4:
-            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
+            raise CardMarketplaceError(_tr("كلمة المرور يجب أن تكون 4 أحرف على الأقل."))
         now = now_iso()
         password_hash = ""
         password_set_at = None
@@ -225,7 +226,7 @@ class CardUsersMarketplaceService:
             # (ux_card_users_active_mobile، الترحيل 110) — يلتقط سباق
             # التسجيل المتزامن ذرّيًا. رسالة عربية ودّية بدل خطأ خام.
             raise CardMarketplaceError(
-                "رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر."
+                _tr("رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر.")
             ) from exc
         self.wallets.create_wallet(
             tenant_id=self.tenant_id,
@@ -236,7 +237,7 @@ class CardUsersMarketplaceService:
             tenant_id=self.tenant_id,
             category="card",
             event_key="card_user.created",
-            message="تم إنشاء حساب مستخدم كروت.",
+            message=N_("تم إنشاء حساب مستخدم كروت."),
             target_type="card_user",
             target_id=card_user_id,
         )
@@ -293,16 +294,16 @@ class CardUsersMarketplaceService:
         name = str(display_name or "").strip()
         if len(name.split()) < 2:
             raise CardMarketplaceError(
-                "الاسم الثلاثي مطلوب — اكتب اسمك واسم أبيك وجدّك."
+                _tr("الاسم الثلاثي مطلوب — اكتب اسمك واسم أبيك وجدّك.")
             )
         phone = self.normalize_mobile(mobile)
         if not phone:
-            raise CardMarketplaceError("رقم الجوال غير صالح — أدخل أرقامًا فقط.")
+            raise CardMarketplaceError(_tr("رقم الجوال غير صالح — أدخل أرقامًا فقط."))
         if len(str(password or "").strip()) < 4:
-            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
+            raise CardMarketplaceError(_tr("كلمة المرور يجب أن تكون 4 أحرف على الأقل."))
         if self.mobile_exists(phone):
             raise CardMarketplaceError(
-                "رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر."
+                _tr("رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر.")
             )
         self_registered = (source == "store")
         user = self.create_card_user(
@@ -316,8 +317,8 @@ class CardUsersMarketplaceService:
             category="card",
             event_key="card_user.self_registered" if self_registered
             else "card_user.admin_registered",
-            message="سجّل زبون حسابًا جديدًا من المتجر." if self_registered
-            else "أنشأ موظف حساب مستفيد بطاقات من اللوحة.",
+            message=N_("سجّل زبون حسابًا جديدًا من المتجر.") if self_registered
+            else N_("أنشأ موظف حساب مستفيد بطاقات من اللوحة."),
             target_type="card_user",
             target_id=int(user["id"]),
             metadata={"mobile": phone, "source": source},
@@ -350,7 +351,7 @@ class CardUsersMarketplaceService:
     ) -> dict[str, Any]:
         raw = str(password or "").strip()
         if len(raw) < 4:
-            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
+            raise CardMarketplaceError(_tr("كلمة المرور يجب أن تكون 4 أحرف على الأقل."))
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
@@ -368,12 +369,12 @@ class CardUsersMarketplaceService:
                 ),
             )
             if cur.rowcount <= 0:
-                raise CardMarketplaceError("مستخدم الكروت غير موجود.")
+                raise CardMarketplaceError(N_("مستخدم الكروت غير موجود."))
         self.events.record_event(
             tenant_id=self.tenant_id,
             category="card",
             event_key="card_user.password_updated",
-            message="تم تحديث كلمة مرور بوابة الكروت.",
+            message=N_("تم تحديث كلمة مرور بوابة الكروت."),
             target_type="card_user",
             target_id=int(card_user_id),
         )
@@ -398,7 +399,7 @@ class CardUsersMarketplaceService:
         رسالة عربية ودّية بدل خطأ خام."""
         target = str(status or "").strip().lower()
         if target not in ("active", "disabled", "archived"):
-            raise CardMarketplaceError("حالة غير صالحة.")
+            raise CardMarketplaceError(_tr("حالة غير صالحة."))
         current = self.get_card_user(card_user_id)  # وجود + عزل المستأجر
         if target == "active":
             mobile = str(current.get("mobile") or "")
@@ -410,7 +411,7 @@ class CardUsersMarketplaceService:
                 ).fetchone()
                 if clash:
                     raise CardMarketplaceError(
-                        "تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن."
+                        _tr("تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن.")
                     )
         now = now_iso()
         try:
@@ -420,15 +421,15 @@ class CardUsersMarketplaceService:
                     (target, now, self.tenant_id, int(card_user_id)),
                 )
                 if cur.rowcount <= 0:
-                    raise CardMarketplaceError("مستخدم الكروت غير موجود.")
+                    raise CardMarketplaceError(N_("مستخدم الكروت غير موجود."))
         except sqlite3.IntegrityError as exc:
             raise CardMarketplaceError(
-                "تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن."
+                _tr("تعذّرت الاستعادة — رقم الجوال يستخدمه حساب نشط آخر الآن.")
             ) from exc
         event_key, message = {
-            "archived": ("card_user.archived", "تم حذف حساب مستخدم المتجر (قابل للاستعادة)."),
-            "disabled": ("card_user.disabled", "تم تعطيل حساب مستخدم المتجر."),
-            "active":   ("card_user.restored", "تمت استعادة حساب مستخدم المتجر."),
+            "archived": ("card_user.archived", N_("تم حذف حساب مستخدم المتجر (قابل للاستعادة).")),
+            "disabled": ("card_user.disabled", N_("تم تعطيل حساب مستخدم المتجر.")),
+            "active":   ("card_user.restored", N_("تمت استعادة حساب مستخدم المتجر.")),
         }[target]
         self.events.record_event(
             tenant_id=self.tenant_id,
@@ -457,7 +458,7 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(card_user_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("مستخدم الكروت غير موجود.")
+            raise CardMarketplaceError(N_("مستخدم الكروت غير موجود."))
         return _row(row)
 
     def create_package(
@@ -479,17 +480,17 @@ class CardUsersMarketplaceService:
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
-            raise CardMarketplaceError("اسم الباقة مطلوب.")
+            raise CardMarketplaceError(_tr("اسم الباقة مطلوب."))
         mode = self._resolve_sale_mode(sale_mode)
         # Status «الحالة» — active (فعّال, sellable) by default; a paused
         # (موقوف) offer is created hidden from the buyer portal until enabled.
         active_flag = 0 if str(active).strip().lower() in {"0", "false", "no", "off", ""} else 1
         # صفر مسموح: باقة سوق مجّانيّة (يُصدَر الكرت للمستفيد بلا خصم من محفظته).
         # السالب مرفوض، وسقف «الحدود» (f05-M5 + fix3-moneyquota).
-        price_minor = market_money_minor(price, label="سعر الباقة", allow_zero=True,
+        price_minor = market_money_minor(price, label=N_("سعر الباقة"), allow_zero=True,
                                          tenant_id=self.tenant_id)
         if not self._plan_exists(plan_id):
-            raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
+            raise CardMarketplaceError(_tr("الباقة الأساسية غير موجودة."))
         meta = dict(metadata or {})
         color = str(card_color or meta.get("card_color") or "#14b8a6").strip()
         if not color.startswith("#") or len(color) not in {4, 7}:
@@ -555,12 +556,12 @@ class CardUsersMarketplaceService:
         """
         existing = self.get_package(int(package_id))   # raises if missing
         if not str(name or "").strip():
-            raise CardMarketplaceError("اسم الباقة مطلوب.")
+            raise CardMarketplaceError(_tr("اسم الباقة مطلوب."))
         # صفر مسموح: باقة سوق مجّانيّة. السالب مرفوض، وسقف «الحدود» (f05-M5 + fix3-moneyquota).
-        price_minor = market_money_minor(price, label="سعر الباقة", allow_zero=True,
+        price_minor = market_money_minor(price, label=N_("سعر الباقة"), allow_zero=True,
                                          tenant_id=self.tenant_id)
         if not self._plan_exists(plan_id):
-            raise CardMarketplaceError("الباقة الأساسية غير موجودة.")
+            raise CardMarketplaceError(_tr("الباقة الأساسية غير موجودة."))
 
         # Preserve the existing metadata — crucially the LOCKED card_format — and
         # only update the cosmetic colour (kept as-is when not provided).
@@ -610,7 +611,7 @@ class CardUsersMarketplaceService:
         except sqlite3.IntegrityError as exc:
             # UNIQUE(tenant_id, name) — another offer already uses this name.
             if "UNIQUE" in str(exc) or "unique" in str(exc):
-                raise CardMarketplaceError("يوجد عرض آخر بنفس الاسم.") from exc
+                raise CardMarketplaceError(_tr("يوجد عرض آخر بنفس الاسم.")) from exc
             raise
         return self.get_package(int(package_id))
 
@@ -625,7 +626,7 @@ class CardUsersMarketplaceService:
         existing = self.get_package(int(package_id))   # raises if missing/deleted
         orig_name = str(existing.get("name") or "")
         now = now_iso()
-        freed = (orig_name[:80] + " [محذوف #" + str(int(package_id)) + "]")
+        freed = (orig_name[:80] + _tr(" [محذوف #") + str(int(package_id)) + "]")
         with transaction() as conn:
             conn.execute(
                 "UPDATE card_marketplace_packages "
@@ -669,7 +670,7 @@ class CardUsersMarketplaceService:
     def set_default_sale_mode(self, sale_mode: str) -> str:
         mode = str(sale_mode or "").strip().lower()
         if mode not in VALID_SALE_MODES:
-            raise CardMarketplaceError("نمط البيع غير صالح.")
+            raise CardMarketplaceError(_tr("نمط البيع غير صالح."))
         from ..db.repos import tenants_repo
         tenants_repo.set_setting(self.tenant_id, _DEFAULT_SALE_MODE_KEY, mode)
         return mode
@@ -677,7 +678,7 @@ class CardUsersMarketplaceService:
     def set_package_sale_mode(self, package_id: int, sale_mode: str) -> dict[str, Any]:
         mode = str(sale_mode or "").strip().lower()
         if mode not in VALID_SALE_MODES:
-            raise CardMarketplaceError("نمط البيع غير صالح.")
+            raise CardMarketplaceError(_tr("نمط البيع غير صالح."))
         self.get_package(package_id)  # ownership / existence (tenant-scoped)
         db().execute(
             "UPDATE card_marketplace_packages SET sale_mode=?, updated_at=? WHERE tenant_id=? AND id=?",
@@ -716,16 +717,16 @@ class CardUsersMarketplaceService:
                     continue
                 upload_rows.append({"username": u, "password": str((c or {}).get("password") or "").strip()})
             if not upload_rows:
-                raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
+                raise CardMarketplaceError(_tr("لا توجد بطاقات صالحة للإضافة إلى المخزون."))
             if len(upload_rows) > 5000:
-                raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+                raise CardMarketplaceError(_tr("الحد الأقصى 5000 بطاقة في الدفعة الواحدة."))
             requested = len(upload_rows)
         else:
             requested = int(count or 0)
             if requested <= 0:
-                raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
+                raise CardMarketplaceError(_tr("لا توجد بطاقات صالحة للإضافة إلى المخزون."))
             if requested > 5000:
-                raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+                raise CardMarketplaceError(_tr("الحد الأقصى 5000 بطاقة في الدفعة الواحدة."))
         now = now_iso()
         plan_id = int(package["plan_id"])
         code = f"INV-{int(package_id)}-{now.replace(':', '').replace('.', '')[-8:]}"
@@ -821,7 +822,7 @@ class CardUsersMarketplaceService:
                 (self.tenant_id, package_id),
             ).fetchone()
             if not row:
-                raise CardMarketplaceError("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري.")
+                raise CardMarketplaceError(_tr("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري."))
             card_id = int(row["id"])
             claimed = conn.execute(
                 "UPDATE cards SET purchase_id = -1 WHERE tenant_id=? AND id=? AND purchase_id IS NULL",
@@ -829,7 +830,7 @@ class CardUsersMarketplaceService:
             )
             if claimed.rowcount != 1:
                 # lost the race to another buyer — surface as out-of-stock retry
-                raise CardMarketplaceError("تعذّر حجز البطاقة، حاول مرة أخرى.")
+                raise CardMarketplaceError(_tr("تعذّر حجز البطاقة، حاول مرة أخرى."))
             conn.execute(
                 "UPDATE card_marketplace_packages SET inventory_sold = inventory_sold + 1, "
                 "updated_at=? WHERE tenant_id=? AND id=?",
@@ -925,12 +926,12 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(package_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("باقة السوق غير موجودة.")
+            raise CardMarketplaceError(_tr("باقة السوق غير موجودة."))
         return _row(row)
 
     def recharge_wallet(self, *, card_user_id: int, amount: Any, actor: str = "system") -> dict[str, Any]:
         # f05-M5: مبلغ شحن المحفظة ≤ سقف «الحدود» (الافتراض 100,000) وموجب — ويب/API/لوحة الموزّع معًا.
-        amount_minor = market_money_minor(amount, label="مبلغ الشحن", allow_zero=False,
+        amount_minor = market_money_minor(amount, label=N_("مبلغ الشحن"), allow_zero=False,
                                           tenant_id=self.tenant_id)
         wallet = self._wallet_for_card_user(card_user_id)
         credit = self.wallets.credit(
@@ -940,7 +941,7 @@ class CardUsersMarketplaceService:
             actor_type="admin",
             actor_id=None,
             reference_type="card_user_recharge",
-            notes=f"شحن محفظة مستخدم الكروت بواسطة {actor}",
+            notes=_tr('شحن محفظة مستخدم الكروت بواسطة %(actor)s', actor=actor),
         )
         # إشعار حركة «شحن رصيد» للمشتري (لا يكسر الشحن إن فشل).
         try:
@@ -964,17 +965,17 @@ class CardUsersMarketplaceService:
         card_user = self.get_card_user(card_user_id)
         package = self.get_package(package_id)
         if not int(package.get("active") or 0):
-            raise CardMarketplaceError("باقة السوق غير مفعلة.")
+            raise CardMarketplaceError(_tr("باقة السوق غير مفعلة."))
         wallet = self._wallet_for_card_user(card_user_id)
         price_minor = int(package["price_minor"])
         # باقة مجّانيّة (سعر = 0): يُصدَر الكرت للمستفيد بلا خصم/حركة محفظة ولا قيد
         # مالي. المسار المدفوع يبقى كما هو تمامًا.
         is_free = price_minor <= 0
         if int(wallet.get("balance_minor") or 0) < price_minor:
-            raise CardMarketplaceError("رصيد المحفظة غير كاف.")
+            raise CardMarketplaceError(N_("رصيد المحفظة غير كاف."))
         mode = self._resolve_sale_mode(package.get("sale_mode"))
         if mode == "inventory" and self._inventory_remaining(package) <= 0:
-            raise CardMarketplaceError("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري.")
+            raise CardMarketplaceError(_tr("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري."))
 
         # (1) Take payment FIRST. No card exists yet, so a failure here can never
         #     orphan a card. The finance services each commit independently, so
@@ -991,7 +992,7 @@ class CardUsersMarketplaceService:
                 actor_type="card_user",
                 actor_id=int(card_user_id),
                 reference_type="card_marketplace_purchase",
-                notes=f"شراء من سوق الكروت بواسطة {actor}",
+                notes=_tr('شراء من سوق الكروت بواسطة %(actor)s', actor=actor),
                 metadata={"package_id": int(package_id), "sale_mode": mode},
             )
 
@@ -1069,7 +1070,7 @@ class CardUsersMarketplaceService:
                 tenant_id=self.tenant_id,
                 category="card",
                 event_key="card_user.card_purchased",
-                message="اشترى مستخدم الكروت بطاقة من السوق.",
+                message=N_("اشترى مستخدم الكروت بطاقة من السوق."),
                 actor_type="card_user",
                 actor_id=int(card_user_id),
                 target_type="card_user",
@@ -1094,7 +1095,7 @@ class CardUsersMarketplaceService:
                         actor_type="card_user",
                         actor_id=int(card_user_id),
                         reference_type="card_marketplace_refund",
-                        notes="استرجاع تلقائي: تعذّر إتمام عملية الشراء",
+                        notes=N_("استرجاع تلقائي: تعذّر إتمام عملية الشراء"),
                         metadata={"package_id": int(package_id)},
                     )
                 except Exception:  # noqa: BLE001 — best-effort refund
@@ -1158,7 +1159,7 @@ class CardUsersMarketplaceService:
             (self.tenant_id, int(purchase_id)),
         ).fetchone()
         if not row:
-            raise CardMarketplaceError("عملية الشراء غير موجودة.")
+            raise CardMarketplaceError(_tr("عملية الشراء غير موجودة."))
         return _row(row)
 
     def list_purchases(self, *, card_user_id: int | None = None, limit: int = 100) -> list[dict[str, Any]]:
@@ -1287,15 +1288,15 @@ class CardUsersMarketplaceService:
             # حالة دقيقة بالعربية: ملغاة → منتهية → مستخدمة → مباعة → بالمخزون.
             expire_at = str(item.get("expire_at") or "").replace(" ", "T")
             if int(item.get("revoked") or 0):
-                item["status_ar"] = "ملغاة"
+                item["status_ar"] = N_("ملغاة")
             elif expire_at and expire_at[:19] < now[:19]:
-                item["status_ar"] = "منتهية"
+                item["status_ar"] = N_("منتهية")
             elif int(item.get("used") or 0):
-                item["status_ar"] = "مستخدمة"
+                item["status_ar"] = N_("مستخدمة")
             elif item.get("sold_at") or int(item.get("purchase_id") or 0) > 0:
-                item["status_ar"] = "مباعة"
+                item["status_ar"] = N_("مباعة")
             else:
-                item["status_ar"] = "بالمخزون"
+                item["status_ar"] = N_("بالمخزون")
             items.append(item)
         return {
             "package": package,
@@ -1362,7 +1363,7 @@ class CardUsersMarketplaceService:
             "messages": [
                 {
                     "status": "event_recorded",
-                    "message": "تم تسجيل إشعار العملية في سجل الأحداث. إرسال الرسائل الفعلي يحتاج مزود رسائل مفعّل.",
+                    "message": _tr("تم تسجيل إشعار العملية في سجل الأحداث. إرسال الرسائل الفعلي يحتاج مزود رسائل مفعّل."),
                 }
             ],
             "events": events,
@@ -1416,7 +1417,7 @@ class CardUsersMarketplaceService:
             ).fetchone()
             if not sub and not card:
                 return candidate
-        raise CardMarketplaceError("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى.")
+        raise CardMarketplaceError(_tr("تعذّر توليد اسم مستخدم فريد، حاول مرة أخرى."))
 
     @staticmethod
     def _card_format(package: dict[str, Any]) -> dict[str, Any]:
@@ -1456,7 +1457,7 @@ class CardUsersMarketplaceService:
         code = self._store_batch_code(int(package["id"]))
         duration_min = self._offer_duration_minutes(package)
         fmt = self._card_format(package)   # charset + username/password lengths
-        name = f"{str(package.get('name') or 'بطاقة')} — سوق إلكتروني"
+        name = _tr('%(v)s — سوق إلكتروني', v=str(package.get('name') or N_('بطاقة')))
         meta = _json({
             "source": "card_marketplace",
             "electronic": True,
@@ -1624,7 +1625,7 @@ class CardUsersMarketplaceService:
                 _json(
                     {
                         "message_delivery": "event_recorded",
-                        "message_ar": "تم تسجيل إشعار العملية في سجل الأحداث.",
+                        "message_ar": _tr("تم تسجيل إشعار العملية في سجل الأحداث."),
                     }
                 ),
                 now_iso(),

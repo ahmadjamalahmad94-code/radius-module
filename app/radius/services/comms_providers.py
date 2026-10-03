@@ -19,6 +19,7 @@ Phase 1 — the full send URL (which may itself embed a token/api-key) lives in
 ``send_url_template``.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 import urllib.error
@@ -208,7 +209,7 @@ def http_send(
     """
     full_url = build_send_url(template, phone=phone, message=message)
     if not full_url or not full_url.lower().startswith(("http://", "https://")):
-        return HttpSendOutcome(ok=False, error="رابط الإرسال غير صالح (يجب أن يبدأ بـ http/https).", final_url=full_url)
+        return HttpSendOutcome(ok=False, error=N_("رابط الإرسال غير صالح (يجب أن يبدأ بـ http/https)."), final_url=full_url)
     # SEC H2 — the SMS gateway URL is tenant-supplied; block SSRF to internal /
     # metadata hosts (a public gateway never resolves to a private IP).
     from app.radius.core.ssrf_guard import SSRFBlocked, assert_public_url
@@ -217,7 +218,7 @@ def http_send(
     except SSRFBlocked:
         return HttpSendOutcome(
             ok=False,
-            error="رابط الإرسال يشير إلى عنوان داخليّ/غير عامّ — مرفوض لأسباب أمنيّة.",
+            error=N_("رابط الإرسال يشير إلى عنوان داخليّ/غير عامّ — مرفوض لأسباب أمنيّة."),
             final_url=full_url)
 
     verb = _method(method)
@@ -242,7 +243,7 @@ def http_send(
                 ok=ok,
                 status_code=status,
                 body_excerpt=excerpt,
-                error="" if ok else f"رد غير ناجح من المزود (HTTP {status}).",
+                error="" if ok else _tr('رد غير ناجح من المزود (HTTP %(status)s).', status=status),
                 final_url=full_url,
             )
     except urllib.error.HTTPError as exc:  # noqa: PERF203
@@ -255,15 +256,15 @@ def http_send(
             ok=False,
             status_code=int(getattr(exc, "code", 0) or 0),
             body_excerpt=excerpt,
-            error=f"رد خطأ من المزود (HTTP {getattr(exc, 'code', '?')}).",
+            error=_tr('رد خطأ من المزود (HTTP %(v)s).', v=getattr(exc, 'code', '?')),
             final_url=full_url,
         )
     except urllib.error.URLError as exc:
-        return HttpSendOutcome(ok=False, error=f"تعذّر الاتصال بالمزود: {_reason(exc)}", final_url=full_url)
+        return HttpSendOutcome(ok=False, error=_tr('تعذّر الاتصال بالمزود: %(v)s', v=_reason(exc)), final_url=full_url)
     except TimeoutError:
-        return HttpSendOutcome(ok=False, error="انتهت مهلة الاتصال بالمزود.", final_url=full_url)
+        return HttpSendOutcome(ok=False, error=N_("انتهت مهلة الاتصال بالمزود."), final_url=full_url)
     except Exception as exc:  # noqa: BLE001 — providers must never raise
-        return HttpSendOutcome(ok=False, error=f"خطأ غير متوقع أثناء الإرسال: {exc}", final_url=full_url)
+        return HttpSendOutcome(ok=False, error=_tr('خطأ غير متوقع أثناء الإرسال: %(exc)s', exc=exc), final_url=full_url)
 
 
 def _reason(exc: urllib.error.URLError) -> str:
@@ -299,12 +300,12 @@ def direct_send(tenant_id: int, channel: str, phone: str, message: str) -> tuple
     tid = int(tenant_id or 1)
     number = str(phone or "").strip()
     if not number:
-        return False, "لا يوجد رقم هاتف للمستلم."
+        return False, N_("لا يوجد رقم هاتف للمستلم.")
     try:
         ch = _channel(channel)
         cfg = load_channel_config(tid, ch)
         if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
-            return False, f"قناة {ch} غير مهيأة للإرسال."
+            return False, _tr('قناة %(ch)s غير مهيأة للإرسال.', ch=ch)
         out = http_send(
             template=cfg["send_url_template"],
             method=cfg.get("http_method") or DEFAULT_METHOD,
@@ -312,9 +313,9 @@ def direct_send(tenant_id: int, channel: str, phone: str, message: str) -> tuple
             phone=normalize_msisdn(number, tenant_dial_code(tid)),
             message=message,
         )
-        return bool(out.ok), ("" if out.ok else (out.error or "فشل الإرسال."))
+        return bool(out.ok), ("" if out.ok else (out.error or N_("فشل الإرسال.")))
     except Exception as exc:  # noqa: BLE001 — providers must never raise
-        return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"
+        return False, _tr('خطأ غير متوقع أثناء الإرسال: %(exc)s', exc=exc)
 
 
 class GenericHttpProvider(NotificationProvider):
@@ -351,14 +352,14 @@ class GenericHttpProvider(NotificationProvider):
             return ProviderResult(
                 status="skipped",
                 provider_key=self.provider_key,
-                error_message="القناة متوقفة — تم الاحتفاظ بالرسالة في الطابور فقط.",
+                error_message=N_("القناة متوقفة — تم الاحتفاظ بالرسالة في الطابور فقط."),
                 result={"external_send": False, "reason": "channel_disabled", "mode": mode},
             )
         if "{phone}" not in template:
             return ProviderResult(
                 status="skipped",
                 provider_key=self.provider_key,
-                error_message="لم يتم ضبط رابط إرسال صالح لهذه القناة.",
+                error_message=N_("لم يتم ضبط رابط إرسال صالح لهذه القناة."),
                 result={"external_send": False, "reason": "no_url", "mode": mode},
             )
 
@@ -367,7 +368,7 @@ class GenericHttpProvider(NotificationProvider):
             return ProviderResult(
                 status="failed",
                 provider_key=self.provider_key,
-                error_message="لا يوجد رقم هاتف للمستلم.",
+                error_message=N_("لا يوجد رقم هاتف للمستلم."),
                 result={"external_send": False, "reason": "no_recipient_phone", "mode": mode},
             )
 
@@ -402,7 +403,7 @@ class GenericHttpProvider(NotificationProvider):
         return ProviderResult(
             status="failed",
             provider_key=self.provider_key,
-            error_message=outcome.error or "فشل الإرسال عبر المزود.",
+            error_message=outcome.error or N_("فشل الإرسال عبر المزود."),
             result=result_payload,
         )
 

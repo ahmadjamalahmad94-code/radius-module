@@ -14,6 +14,7 @@ login_events — تتبّع موحّد لحالات تسجيل الدخول (ن�
 كله read-only و tenant-scoped. record_login_event() محصّنة — لا تكسر الدخول أبدًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Any
 
@@ -67,8 +68,8 @@ def _pw_fields(*, success: bool, source: str, raw: str, when: str,
     return {"attempted_password": val, "pw_status": "shown"}
 
 
-ACTOR_LABELS = {"admin": "مدير", "subscriber": "مشترك", "card": "كرت"}
-SOURCE_LABELS = {"panel": "لوحة الإدارة", "portal": "بوابة المشتركين", "network": "شبكة المصادقة"}
+ACTOR_LABELS = {"admin": N_("مدير"), "subscriber": N_("مشترك"), "card": N_("كرت")}
+SOURCE_LABELS = {"panel": N_("لوحة الإدارة"), "portal": N_("بوابة المشتركين"), "network": N_("شبكة المصادقة")}
 
 # ───────────── خريطة أسباب رفض الدخول → عربي (مصدر موحّد) ─────────────
 # المصدر الأساسي للرموز: policy_engine._reject(reason) الذي يكتب الرمز في
@@ -78,49 +79,49 @@ SOURCE_LABELS = {"panel": "لوحة الإدارة", "portal": "بوابة ال�
 # آمن عبر reason_label() (لا snake_case خام أبدًا).
 REASON_LABELS = {
     # رموز policy_engine._MSG (مسار المصادقة الحالي)
-    "user_not_found":     "اسم المستخدم غير موجود",
-    "password_wrong":     "كلمة المرور غير صحيحة",
-    "disabled":           "الحساب معطَّل",
-    "expired":            "انتهت صلاحية الاشتراك",
-    "outside_hours":      "خارج أوقات الدوام المسموحة",
-    "outside_days":       "خارج أيام الدوام المسموحة",
-    "quota_exhausted":    "نفدت الكوتا — يلزم تجديد",
-    "mac_mismatch":       "عنوان الجهاز (MAC) غير مطابق",
-    "random_mac_blocked": "عنوان MAC عشوائي/خاص ممنوع",
-    "concurrent_limit":   "تجاوز الحد الأقصى للجلسات المتزامنة",
+    "user_not_found":     N_("اسم المستخدم غير موجود"),
+    "password_wrong":     N_("كلمة المرور غير صحيحة"),
+    "disabled":           N_("الحساب معطَّل"),
+    "expired":            N_("انتهت صلاحية الاشتراك"),
+    "outside_hours":      N_("خارج أوقات الدوام المسموحة"),
+    "outside_days":       N_("خارج أيام الدوام المسموحة"),
+    "quota_exhausted":    N_("نفدت الكوتا — يلزم تجديد"),
+    "mac_mismatch":       N_("عنوان الجهاز (MAC) غير مطابق"),
+    "random_mac_blocked": N_("عنوان MAC عشوائي/خاص ممنوع"),
+    "concurrent_limit":   N_("تجاوز الحد الأقصى للجلسات المتزامنة"),
     # رموز policy_engine الإضافية (كانت تظهر إنجليزيّة خامًا في «السبب»)
-    "time_daily_exhausted": "انتهى الوقت اليومي",
-    "time_total_exhausted": "انتهى إجمالي الوقت المسموح",
-    "card_time_exhausted":  "انتهى وقت البطاقة",
-    "provider_active_cap":  "بلغ سقف الجلسات المتزامنة للمزوّد",
-    "access_blocked":       "الوصول محظور",
-    "access_suspended":     "الحساب موقوف",
-    "mac_clone_detected":   "اكتشاف تكرار عنوان الجهاز (استنساخ MAC)",
-    "stepup_required":      "مطلوب تحقّق إضافيّ",
-    "allow_mode_at_capacity":    "بلغ السعة القصوى (وضع السماح)",
-    "allow_mode_bind_failed":    "تعذّر ربط الجهاز (وضع السماح)",
-    "allow_mode_unknown_device": "جهاز غير معروف (وضع السماح)",
+    "time_daily_exhausted": N_("انتهى الوقت اليومي"),
+    "time_total_exhausted": N_("انتهى إجمالي الوقت المسموح"),
+    "card_time_exhausted":  N_("انتهى وقت البطاقة"),
+    "provider_active_cap":  N_("بلغ سقف الجلسات المتزامنة للمزوّد"),
+    "access_blocked":       N_("الوصول محظور"),
+    "access_suspended":     N_("الحساب موقوف"),
+    "mac_clone_detected":   N_("اكتشاف تكرار عنوان الجهاز (استنساخ MAC)"),
+    "stepup_required":      N_("مطلوب تحقّق إضافيّ"),
+    "allow_mode_at_capacity":    N_("بلغ السعة القصوى (وضع السماح)"),
+    "allow_mode_bind_failed":    N_("تعذّر ربط الجهاز (وضع السماح)"),
+    "allow_mode_unknown_device": N_("جهاز غير معروف (وضع السماح)"),
     # مرادفات/رموز تاريخية قد تبقى في صفوف radpostauth قديمة
-    "bad_password":       "كلمة مرور خاطئة",
-    "password_mismatch":  "كلمة المرور غير صحيحة",
-    "unknown_user":       "مستخدم غير معروف",
-    "user_mismatch":      "عدم تطابق المستخدم",
-    "not_found":          "غير موجود",
-    "account_disabled":   "حساب موقوف",
-    "account_expired":    "انتهت صلاحية الحساب",
-    "no_plan":            "بدون باقة",
-    "out_of_schedule":    "خارج وقت السماح",
-    "outside_schedule":   "خارج وقت السماح",
-    "out_of_window":      "خارج وقت السماح",
-    "mac_locked":         "عنوان الجهاز غير مطابق",
-    "quota_exceeded":     "تجاوز الحصة",
-    "concurrency":        "تجاوز عدد الأجهزة المتزامنة",
-    "concurrent":         "تجاوز عدد الأجهزة المتزامنة",
-    "no_active":          "لا جلسة نشطة",
-    "no_active_session":  "لا جلسة نشطة",
-    "shared_blocked":     "مشاركة الحساب ممنوعة",
-    "reject":             "مرفوض",
-    "rejected":           "مرفوض",
+    "bad_password":       N_("كلمة مرور خاطئة"),
+    "password_mismatch":  N_("كلمة المرور غير صحيحة"),
+    "unknown_user":       N_("مستخدم غير معروف"),
+    "user_mismatch":      N_("عدم تطابق المستخدم"),
+    "not_found":          N_("غير موجود"),
+    "account_disabled":   N_("حساب موقوف"),
+    "account_expired":    N_("انتهت صلاحية الحساب"),
+    "no_plan":            N_("بدون باقة"),
+    "out_of_schedule":    N_("خارج وقت السماح"),
+    "outside_schedule":   N_("خارج وقت السماح"),
+    "out_of_window":      N_("خارج وقت السماح"),
+    "mac_locked":         N_("عنوان الجهاز غير مطابق"),
+    "quota_exceeded":     N_("تجاوز الحصة"),
+    "concurrency":        N_("تجاوز عدد الأجهزة المتزامنة"),
+    "concurrent":         N_("تجاوز عدد الأجهزة المتزامنة"),
+    "no_active":          N_("لا جلسة نشطة"),
+    "no_active_session":  N_("لا جلسة نشطة"),
+    "shared_blocked":     N_("مشاركة الحساب ممنوعة"),
+    "reject":             N_("مرفوض"),
+    "rejected":           N_("مرفوض"),
 }
 
 
@@ -217,43 +218,43 @@ def parse_user_agent(ua: str) -> tuple[str, str, str]:
         return "", "", ""
 
     if "windows" in low:
-        os_name = "ويندوز"
+        os_name = N_("ويندوز")
     elif "android" in low:
-        os_name = "أندرويد"
+        os_name = N_("أندرويد")
     elif "iphone" in low or "ipad" in low or "ipod" in low:
-        os_name = "آيفون/آيباد"
+        os_name = N_("آيفون/آيباد")
     elif "mac os x" in low or "macintosh" in low:
-        os_name = "ماك"
+        os_name = N_("ماك")
     elif "cros" in low:
-        os_name = "كروم أو إس"
+        os_name = N_("كروم أو إس")
     elif "linux" in low:
-        os_name = "لينكس"
+        os_name = N_("لينكس")
     else:
-        os_name = "غير معروف"
+        os_name = N_("غير معروف")
 
     if "edg" in low:
-        browser = "إيدج"
+        browser = N_("إيدج")
     elif "opr/" in low or "opera" in low:
-        browser = "أوبرا"
+        browser = N_("أوبرا")
     elif "samsungbrowser" in low:
-        browser = "سامسونج إنترنت"
+        browser = N_("سامسونج إنترنت")
     elif "firefox/" in low or "fxios" in low:
-        browser = "فايرفوكس"
+        browser = N_("فايرفوكس")
     elif "chrome/" in low or "crios" in low:
-        browser = "كروم"
+        browser = N_("كروم")
     elif "safari/" in low and "version/" in low:
-        browser = "سفاري"
+        browser = N_("سفاري")
     elif "curl" in low or "wget" in low or "python-requests" in low or "httpx" in low:
-        browser = "أداة/سكربت"
+        browser = N_("أداة/سكربت")
     else:
-        browser = "غير معروف"
+        browser = N_("غير معروف")
 
     if "ipad" in low or ("tablet" in low and "mobile" not in low):
-        device = "جهاز لوحي"
+        device = N_("جهاز لوحي")
     elif "mobi" in low or "iphone" in low or "android" in low:
-        device = "موبايل"
+        device = N_("موبايل")
     else:
-        device = "حاسوب"
+        device = N_("حاسوب")
     return os_name, browser, device
 
 

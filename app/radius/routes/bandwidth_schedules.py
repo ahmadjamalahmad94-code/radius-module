@@ -1,5 +1,6 @@
 """Web UI for time-based bandwidth schedules."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
@@ -96,7 +97,7 @@ def _payload_from_saved_schedule(base: dict) -> dict:
         return base
 
     copied = {
-        "name": request.form.get("name") or f"نسخة من {source.get('name') or 'جدول محفوظ'}",
+        "name": request.form.get("name") or _tr('نسخة من %(v)s', v=source.get('name') or N_('جدول محفوظ')),
         "target_type": base.get("target_type"),
         "plan_id": base.get("plan_id"),
         "subscriber_username": base.get("subscriber_username"),
@@ -154,7 +155,7 @@ def bandwidth_schedules():
         batches=batches,
         plan_names={plan.id: plan.name for plan in plans},
         subscriber_names={sub.username: (sub.full_name or sub.username) for sub in subscribers},
-        batch_names={batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or 'بدون اسم'}" for batch in batches},
+        batch_names={batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or N_('بدون اسم')}" for batch in batches},
         apply_result=None,
     )
 
@@ -167,7 +168,7 @@ def bandwidth_schedules_create():
             actor=_actor(),
             data=payload,
         )
-        flash("تم حفظ جدول السرعة. التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة.", "success")
+        flash(_tr("تم حفظ جدول السرعة. التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(_safe_return_url())
@@ -181,7 +182,7 @@ def bandwidth_schedules_update(schedule_id: int):
             schedule_id=schedule_id,
             data=_payload(),
         )
-        flash("تم تحديث جدول السرعة.", "success")
+        flash(_tr("تم تحديث جدول السرعة."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(_safe_return_url())
@@ -194,7 +195,7 @@ def bandwidth_schedules_delete(schedule_id: int):
             actor=_actor(),
             schedule_id=schedule_id,
         )
-        flash("تم حذف جدول السرعة.", "success")
+        flash(_tr("تم حذف جدول السرعة."), "success")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(_safe_return_url())
@@ -217,18 +218,18 @@ def bandwidth_schedules_apply(schedule_id: int):
             applied = result.get("applied_count")
             target = result.get("target_count")
             if applied is not None and target is not None:
-                flash(f"تم تطبيق الجدول حيًّا عبر CoA على {applied}/{target} جلسة نشطة.", "success")
+                flash(_tr('تم تطبيق الجدول حيًّا عبر CoA على %(applied)s/%(target)s جلسة نشطة.', applied=applied, target=target), "success")
             else:
-                flash("تم تطبيق الجدول على RADIUS عبر CoA.", "success")
+                flash(_tr("تم تطبيق الجدول على RADIUS عبر CoA."), "success")
         elif result.get("live_requested") and not result.get("live_enabled"):
-            flash("التطبيق الحيّ المباشر مُعطَّل على هذه النسخة "
+            flash(_tr("التطبيق الحيّ المباشر مُعطَّل على هذه النسخة "
                   "(HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). تم تنفيذ فحص جاهزية "
-                  "فقط دون أي تغيير على الشبكة.", "warning")
+                  "فقط دون أي تغيير على الشبكة."), "warning")
         elif result.get("live_requested") and result.get("live_enabled"):
-            flash("لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق "
-                  "السرعة على الجلسة التالية عند إعادة المصادقة.", "warning")
+            flash(_tr("لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق "
+                  "السرعة على الجلسة التالية عند إعادة المصادقة."), "warning")
         else:
-            flash("تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS.", "warning")
+            flash(_tr("تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS."), "warning")
     except RadiusError as exc:
         flash(exc.message, "error")
     return redirect(_safe_return_url())

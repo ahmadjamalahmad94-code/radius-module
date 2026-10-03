@@ -8,11 +8,11 @@
 
 {% macro readable_value(value) -%}
   {%- if value is mapping -%}
-    <span class="sub">مجموعة بيانات — {{ value|length }} بند</span>
+    <span class="sub">{{ _('مجموعة بيانات — %(length)s بند', length=value|length) }}</span>
   {%- elif value is sequence and value is not string -%}
-    <span class="sub">قائمة — {{ value|length }} بند</span>
+    <span class="sub">{{ _('قائمة — %(length)s بند', length=value|length) }}</span>
   {%- elif value is boolean -%}
-    {{ 'نعم' if value else 'لا' }}
+    {{ _('نعم') if value else _('لا') }}
   {%- elif value is none -%}
     —
   {%- else -%}
@@ -34,7 +34,7 @@
     <dl class="audit-facts">
       {% for value in data %}
       <div>
-        <dt>بند {{ loop.index }}</dt>
+        <dt>{{ _('بند %(index)s', index=loop.index) }}</dt>
         <dd>{{ readable_value(value) }}</dd>
       </div>
       {% endfor %}
@@ -104,7 +104,7 @@
       <dl class="audit-facts" data-audit-detail-meta>
         <div>
           <dt>{{ _('الفاعل') }}</dt>
-          <dd title="{{ entry.actor or '' }}">{{ entry.actor|actor_name if entry.actor else "غير محدد" }}</dd>
+          <dd title="{{ entry.actor or '' }}">{{ entry.actor|actor_name if entry.actor else _('غير محدد') }}</dd>
         </div>
         <div>
           <dt>{{ _('الهدف') }}</dt>

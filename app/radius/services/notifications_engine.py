@@ -26,6 +26,7 @@ subscriber, an unconfigured channel or a flaky gateway can never break the
 business flow that fired the event — every failure is swallowed and logged.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import logging
 from dataclasses import dataclass, field
@@ -73,8 +74,8 @@ _EVENTS: tuple[EventDef, ...] = (
     # ── subscriber lifecycle ──────────────────────────────────────────
     EventDef(
         key="subscriber_created",
-        label="إنشاء مشترك جديد",
-        template="مرحبًا {name} 👋\nتم إنشاء حسابك بنجاح.\nاسم المستخدم: {username}\nالباقة: {prof}",
+        label=N_("إنشاء مشترك جديد"),
+        template=N_("مرحبًا {name} 👋\nتم إنشاء حسابك بنجاح.\nاسم المستخدم: {username}\nالباقة: {prof}"),
         channels=("sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
@@ -89,17 +90,17 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="subscriber_activated",
-        label="تفعيل الاشتراك",
+        label=N_("تفعيل الاشتراك"),
         # SMS-bearing → قالب قصير (≤60 حرفًا) للحفاظ على رسالة SMS واحدة.
-        template="تم تفعيل اشتراكك. ينتهي بتاريخ {exp}.",
+        template=N_("تم تفعيل اشتراكك. ينتهي بتاريخ {exp}."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
     ),
     EventDef(
         key="near_expiry",
-        label="تنبيه قرب الانتهاء (التحصيل)",
-        template="اشتراكك ينتهي خلال {days} يوم ({exp}). جدّد الآن.",
+        label=N_("تنبيه قرب الانتهاء (التحصيل)"),
+        template=N_("اشتراكك ينتهي خلال {days} يوم ({exp}). جدّد الآن."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         has_days_before=True,
@@ -108,24 +109,24 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="subscriber_expired",
-        label="انتهاء الاشتراك",
-        template="انتهى اشتراكك. جدّد الآن لاستعادة الخدمة.",
+        label=N_("انتهاء الاشتراك"),
+        template=N_("انتهى اشتراكك. جدّد الآن لاستعادة الخدمة."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=True,
     ),
     EventDef(
         key="subscriber_renewed",
-        label="تجديد الاشتراك",
-        template="تم تجديد اشتراكك. ينتهي بتاريخ {exp}.",
+        label=N_("تجديد الاشتراك"),
+        template=N_("تم تجديد اشتراكك. ينتهي بتاريخ {exp}."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
     ),
     EventDef(
         key="plan_changed",
-        label="تغيير الباقة",
-        template="تم تغيير باقتك 🔄\nمن: {old_prof}\nإلى: {prof}\nتاريخ الانتهاء: {exp}",
+        label=N_("تغيير الباقة"),
+        template=N_("تم تغيير باقتك 🔄\nمن: {old_prof}\nإلى: {prof}\nتاريخ الانتهاء: {exp}"),
         channels=("telegram", "whatsapp"),
         group="subscribers",
         extra_vars=("old_prof",),
@@ -133,24 +134,24 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="subscriber_disabled",
-        label="إيقاف/تعليق الخدمة",
-        template="تم إيقاف خدمتك مؤقتًا. للاستفسار تواصل مع الدعم.",
+        label=N_("إيقاف/تعليق الخدمة"),
+        template=N_("تم إيقاف خدمتك مؤقتًا. للاستفسار تواصل مع الدعم."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
     ),
     EventDef(
         key="subscriber_reactivated",
-        label="إعادة تفعيل الخدمة",
-        template="تمت إعادة تفعيل خدمتك. أهلًا بعودتك {name}.",
+        label=N_("إعادة تفعيل الخدمة"),
+        template=N_("تمت إعادة تفعيل خدمتك. أهلًا بعودتك {name}."),
         channels=("telegram", "sms", "whatsapp"),
         group="subscribers",
         default_enabled=False,
     ),
     EventDef(
         key="quota_threshold",
-        label="بلوغ حد الاستهلاك",
-        template="تنبيه 📊\nوصل استهلاك «{username}» إلى {percent}% من الباقة.\nالمتبقّي: {remain_quota}",
+        label=N_("بلوغ حد الاستهلاك"),
+        template=N_("تنبيه 📊\nوصل استهلاك «{username}» إلى {percent}% من الباقة.\nالمتبقّي: {remain_quota}"),
         channels=("whatsapp",),
         group="subscribers",
         extra_vars=("percent",),
@@ -158,8 +159,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="login_new_device",
-        label="دخول من جهاز جديد",
-        template="تنبيه أمان 🔐\nتم تسجيل دخول حساب «{username}» من جهاز جديد.\nالجهاز: {device}",
+        label=N_("دخول من جهاز جديد"),
+        template=N_("تنبيه أمان 🔐\nتم تسجيل دخول حساب «{username}» من جهاز جديد.\nالجهاز: {device}"),
         channels=("whatsapp",),
         group="subscribers",
         extra_vars=("device",),
@@ -168,8 +169,8 @@ _EVENTS: tuple[EventDef, ...] = (
     # ── billing / wallet ──────────────────────────────────────────────
     EventDef(
         key="recharge_added",
-        label="إضافة شحن",
-        template="تم شحن {amount}. رصيدك الحالي: {balance}.",
+        label=N_("إضافة شحن"),
+        template=N_("تم شحن {amount}. رصيدك الحالي: {balance}."),
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -177,8 +178,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="balance_deposit",
-        label="إيداع رصيد",
-        template="تم إيداع {amount} في محفظتك. رصيدك: {balance}.",
+        label=N_("إيداع رصيد"),
+        template=N_("تم إيداع {amount} في محفظتك. رصيدك: {balance}."),
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -186,8 +187,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="balance_withdraw",
-        label="سحب رصيد",
-        template="تم سحب {amount} من محفظتك. رصيدك: {balance}.",
+        label=N_("سحب رصيد"),
+        template=N_("تم سحب {amount} من محفظتك. رصيدك: {balance}."),
         channels=("sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -195,8 +196,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="payment_received",
-        label="استلام دفعة",
-        template="تم استلام دفعتك ({amount}). شكرًا لك.",
+        label=N_("استلام دفعة"),
+        template=N_("تم استلام دفعتك ({amount}). شكرًا لك."),
         channels=("telegram", "sms", "whatsapp"),
         group="billing",
         extra_vars=("amount",),
@@ -209,12 +210,12 @@ _EVENTS: tuple[EventDef, ...] = (
     # :mod:`app.radius.services.store_movement_notifications`.
     EventDef(
         key="store_account_created",
-        label="إنشاء حساب مستفيد",
+        label=N_("إنشاء حساب مستفيد"),
         # SMS/واتساب يرسلان بيانات الدخول (اسم المستخدم = رقم الجوال +
         # كلمة المرور) مباشرة بلا تسجيل — انظر sends_account_credentials.
         # يُطلق من register_card_user (إضافة الموظف من اللوحة والتسجيل
         # الذاتي من المتجر معًا).
-        template="مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك.",
+        template=N_("مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك."),
         channels=("sms", "whatsapp"),
         group="store",
         extra_vars=("name", "username"),
@@ -225,8 +226,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="store_balance_recharge",
-        label="شحن رصيد المتجر",
-        template="تم شحن محفظتك بمبلغ {amount}. رصيدك الحالي: {balance}.",
+        label=N_("شحن رصيد المتجر"),
+        template=N_("تم شحن محفظتك بمبلغ {amount}. رصيدك الحالي: {balance}."),
         channels=("sms", "whatsapp"),
         group="store",
         extra_vars=("amount", "balance"),
@@ -234,8 +235,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="store_balance_withdraw",
-        label="سحب رصيد المتجر",
-        template="تم سحب {amount} من محفظتك. رصيدك الحالي: {balance}.",
+        label=N_("سحب رصيد المتجر"),
+        template=N_("تم سحب {amount} من محفظتك. رصيدك الحالي: {balance}."),
         channels=("sms", "whatsapp"),
         group="store",
         extra_vars=("amount", "balance"),
@@ -243,11 +244,11 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="store_cards_purchased",
-        label="شراء بطاقات من المتجر",
+        label=N_("شراء بطاقات من المتجر"),
         # Telegram gets this password-free body; the SMS and WhatsApp channels
         # each send the purchased card login(s) instead (sends_card_credentials
         # below) — direct to the buyer's number, never into the delivery log.
-        template="تم شراء {count} بطاقة بمبلغ {amount}. التفاصيل على رقمك.",
+        template=N_("تم شراء {count} بطاقة بمبلغ {amount}. التفاصيل على رقمك."),
         channels=("sms", "whatsapp"),
         group="store",
         extra_vars=("count", "amount"),
@@ -257,8 +258,8 @@ _EVENTS: tuple[EventDef, ...] = (
     # ── network / infrastructure (operator-facing, via Telegram) ───────
     EventDef(
         key="router_down",
-        label="انقطاع راوتر/جهاز",
-        template="🚨 انقطع الاتصال مع «{device}»\nالعنوان: {ip}\nالوقت: {time}",
+        label=N_("انقطاع راوتر/جهاز"),
+        template=N_("🚨 انقطع الاتصال مع «{device}»\nالعنوان: {ip}\nالوقت: {time}"),
         channels=("telegram",),
         group="network",
         extra_vars=("device", "ip", "time"),
@@ -266,8 +267,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="router_up",
-        label="عودة راوتر/جهاز",
-        template="✅ عاد الاتصال مع «{device}»\nالعنوان: {ip}\nالبنج: {latency}",
+        label=N_("عودة راوتر/جهاز"),
+        template=N_("✅ عاد الاتصال مع «{device}»\nالعنوان: {ip}\nالبنج: {latency}"),
         channels=("telegram",),
         group="network",
         extra_vars=("device", "ip", "latency"),
@@ -275,8 +276,8 @@ _EVENTS: tuple[EventDef, ...] = (
     ),
     EventDef(
         key="network_high_latency",
-        label="ارتفاع زمن الاستجابة (بنج)",
-        template="🐌 ارتفاع البنج على «{device}»\nالعنوان: {ip}\nالبنج الحالي: {latency}",
+        label=N_("ارتفاع زمن الاستجابة (بنج)"),
+        template=N_("🐌 ارتفاع البنج على «{device}»\nالعنوان: {ip}\nالبنج الحالي: {latency}"),
         channels=("telegram",),
         group="network",
         extra_vars=("device", "ip", "latency"),
@@ -290,10 +291,10 @@ EVENT_KEYS: tuple[str, ...] = tuple(EVENTS.keys())
 
 # UI groups (ordered) → Arabic group titles.
 GROUP_LABELS: dict[str, str] = {
-    "subscribers": "أحداث المشتركين",
-    "billing": "المالية والمحفظة",
-    "store": "إشعارات متجر البطاقات الإلكتروني",
-    "network": "الشبكة والأجهزة",
+    "subscribers": N_("أحداث المشتركين"),
+    "billing": N_("المالية والمحفظة"),
+    "store": N_("إشعارات متجر البطاقات الإلكتروني"),
+    "network": N_("الشبكة والأجهزة"),
 }
 
 # Default days_before for the dunning (near_expiry) reminder.
@@ -589,7 +590,7 @@ def notify_event(
                         from . import telegram_notifier
                         ok, err = telegram_notifier.send_to_chat(tid, sub_chat_id, message)
                     else:
-                        ok, err = False, "تيليجرام غير مرتبط لهذا المشترك"
+                        ok, err = False, N_("تيليجرام غير مرتبط لهذا المشترك")
                 else:
                     ok, err = _send_telegram(tid, message)
             elif channel == "sms" and rule.event.sends_account_credentials:
@@ -763,14 +764,14 @@ def _send_store_sms(tenant_id: int, subscriber, message: str) -> tuple[bool, str
     try:
         phone = _subscriber_phone(subscriber)
         if not phone:
-            return False, "لا يوجد رقم جوال للمشتري"
+            return False, N_("لا يوجد رقم جوال للمشتري")
         from . import tweetsms
 
         if not tweetsms.is_connected(int(tenant_id or 1)):
-            return False, "اربط حساب SMS أولاً"
+            return False, N_("اربط حساب SMS أولاً")
         out = tweetsms.send_sms(int(tenant_id or 1), phone, message)
         ok = bool(out.get("ok"))
-        return ok, ("" if ok else (out.get("error_ar") or "فشل الإرسال عبر TweetSMS."))
+        return ok, ("" if ok else (out.get("error_ar") or N_("فشل الإرسال عبر TweetSMS.")))
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ غير متوقع أثناء إرسال SMS المتجر: {exc}"
 
@@ -782,7 +783,7 @@ def _send_telegram(tenant_id: int, message: str) -> tuple[bool, str]:
 
         ok, err = telegram_notifier.send_to_tenant(int(tenant_id or 1), message)
         # An empty error string with ok=False means "not configured / disabled".
-        return bool(ok), (err or ("telegram غير مهيأ" if not ok else ""))
+        return bool(ok), (err or (N_("telegram غير مهيأ") if not ok else ""))
     except Exception as exc:  # noqa: BLE001
         return False, f"خطأ في إرسال telegram: {exc}"
 
@@ -832,9 +833,9 @@ def _send_http_channel(
             if status in ("queued", "skipped"):
                 # Provider degraded gracefully (channel off / unconfigured).
                 err = str((result.get("delivery") or {}).get("error_message") or "")
-                return False, (err or "القناة غير مهيأة — تم التسجيل فقط.")
+                return False, (err or N_("القناة غير مهيأة — تم التسجيل فقط."))
             # failed (e.g. no phone on the recipient)
-            err = str((result.get("delivery") or {}).get("error_message") or "فشل الإرسال.")
+            err = str((result.get("delivery") or {}).get("error_message") or N_("فشل الإرسال."))
             return False, err
         except Exception as exc:  # noqa: BLE001 — fall through to direct send
             _LOG.debug("[notif] campaign dispatch failed, trying direct: %s", exc)

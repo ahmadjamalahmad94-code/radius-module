@@ -10,6 +10,7 @@ as either a dict or a JSON string and stored as a string. The response
 serialiser parses metadata back to a dict so Flutter doesn't have to.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from dataclasses import asdict, replace
@@ -101,18 +102,18 @@ def _normalize_metadata(raw) -> str:
         try:
             parsed = json.loads(raw)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError("بيانات metadata ليست JSON صالحًا.")
+            raise RadiusValidationError(_tr("بيانات metadata ليست JSON صالحًا."))
         if not isinstance(parsed, (dict, list)):
             raise RadiusValidationError(
-                "بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.")
+                _tr("بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON."))
         return raw
     if isinstance(raw, (dict, list)):
         try:
             return json.dumps(raw, ensure_ascii=False)
         except (TypeError, ValueError) as e:
-            raise RadiusValidationError("تعذّر تحويل metadata إلى JSON.")
+            raise RadiusValidationError(_tr("تعذّر تحويل metadata إلى JSON."))
     raise RadiusValidationError(
-        f"metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع {type(raw).__name__}.")
+        _tr('metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.', v=type(raw).__name__))
 
 
 def _coerce_int(name: str, v: Any) -> int:
@@ -125,16 +126,16 @@ def _coerce_int(name: str, v: Any) -> int:
     if v in (None, ""):
         return 0
     if isinstance(v, bool) or isinstance(v, (dict, list, tuple)):
-        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
     if isinstance(v, float):
         if v != v or v in (float("inf"), float("-inf")) or not v.is_integer():
-            raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+            raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
     try:
         out = int(v if not isinstance(v, str) else v.strip())
     except (TypeError, ValueError, OverflowError):
-        raise RadiusValidationError(f"قيمة «{label}» يجب أن تكون رقمًا صحيحًا.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.', label=label))
     if abs(out) > PLAN_INT_MAX:
-        raise RadiusValidationError(f"قيمة «{label}» أكبر من المسموح.")
+        raise RadiusValidationError(_tr('قيمة «%(label)s» أكبر من المسموح.', label=label))
     return out
 
 
@@ -145,13 +146,13 @@ def _coerce_float(name: str, v: Any) -> float:
     if v in (None, ""):
         return 0.0
     if isinstance(v, bool):
-        raise RadiusValidationError(f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمية.")
+        raise RadiusValidationError(_tr('قيمة «%(v)s» يجب أن تكون رقمية.', v=plan_field_label(name)))
     try:
         return strict_float(v, name) + 0.0  # ‎-0.0 → 0.0
     except NonFiniteNumber:
         raise
     except (TypeError, ValueError):
-        raise RadiusValidationError(f"قيمة «{plan_field_label(name)}» يجب أن تكون رقمية.")
+        raise RadiusValidationError(_tr('قيمة «%(v)s» يجب أن تكون رقمية.', v=plan_field_label(name)))
 
 
 def _coerce_days(v: Any) -> tuple[str, ...]:
@@ -164,12 +165,12 @@ def _coerce_days(v: Any) -> tuple[str, ...]:
     elif isinstance(v, (list, tuple)):
         parts = [str(p).strip().lower() for p in v if str(p).strip()]
     else:
-        raise RadiusValidationError("الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.")
+        raise RadiusValidationError(_tr("الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل."))
     bad = [p for p in parts if p not in _VALID_DAYS]
     if bad:
         raise RadiusValidationError(
-            "الأيام المسموحة تحتوي قيمًا غير صحيحة: " + "، ".join(str(b) for b in bad)
-            + " (المسموح: sun, mon, tue, wed, thu, fri, sat).")
+            _tr("الأيام المسموحة تحتوي قيمًا غير صحيحة: ") + "، ".join(str(b) for b in bad)
+            + _tr(" (المسموح: sun, mon, tue, wed, thu, fri, sat)."))
     # de-dup, preserve canonical order
     canonical_order = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
     seen = set(parts)
@@ -184,13 +185,13 @@ def _coerce_router_ids(v: Any) -> tuple[int, ...]:
     elif isinstance(v, (list, tuple)):
         parts = [str(p).strip() for p in v if str(p).strip() != ""]
     else:
-        raise RadiusValidationError("أرقام الراوترات يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.")
+        raise RadiusValidationError(_tr("أرقام الراوترات يجب أن تكون قائمة أو نصًا مفصولًا بفواصل."))
     out = []
     for p in parts:
         try:
             out.append(int(p))
         except (TypeError, ValueError):
-            raise RadiusValidationError(f"قيمة غير رقمية في أرقام الراوترات: {p!r}")
+            raise RadiusValidationError(_tr('قيمة غير رقمية في أرقام الراوترات: %(p)s', p=repr(p)))
     return tuple(out)
 
 
@@ -213,8 +214,8 @@ def _apply_body(plan: AccessPlan, body: dict) -> AccessPlan:
         # the enforced caps are quota_total_mb / quota_daily_mb / quota_monthly_mb
         # (+ per-direction). An unchanged stored value (old rows) passes.
         raise RadiusValidationError(
-            "حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» "
-            "للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb).")
+            _tr("حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» "
+            "للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb)."))
     for k in _FLOAT_FIELDS:
         if k in body:
             changes[k] = _coerce_float(k, body[k])
@@ -257,16 +258,16 @@ def _coerce_connection_schedule(v: Any) -> str:
         return ""
     if not isinstance(v, (str, dict)):
         raise RadiusValidationError(
-            "«الأيام والأوقات المسموحة» (connection_schedule) يجب أن تكون كائن JSON "
-            "بالشكل {\"windows\": [...]}.")
+            _tr("«الأيام والأوقات المسموحة» (connection_schedule) يجب أن تكون كائن JSON "
+            "بالشكل {\"windows\": [...]}."))
     try:
         return serialize(v)
     except AccessScheduleError as e:
         raise RadiusValidationError(
-            f"«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة: {e}")
+            _tr('«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة: %(e)s', e=e))
     except (TypeError, ValueError, AttributeError):
         raise RadiusValidationError(
-            "«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة.")
+            _tr("«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة."))
 
 
 def _serialize(plan: AccessPlan) -> dict:
@@ -369,7 +370,7 @@ def profiles_get(profile_id: int):
     try:
         plan = _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('الباقة %(profile_id)s غير موجودة.', profile_id=profile_id), status=404)
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     return ok(_serialize(plan))
@@ -381,7 +382,7 @@ def profiles_create():
     if err is not None:
         return err
     if not isinstance(body.get("name"), str) or not body["name"].strip():
-        return fail("validation_error", "اسم الباقة مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم الباقة مطلوب."), status=422)
     capacity = CapacityEnforcementService().check_create(
         tenant_id=_tid(),
         feature_key="profiles",
@@ -419,7 +420,7 @@ def profiles_patch(profile_id: int):
     try:
         existing = _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('الباقة %(profile_id)s غير موجودة.', profile_id=profile_id), status=404)
     try:
         new_plan = _apply_body(existing, body)
     except RadiusValidationError as e:
@@ -439,7 +440,7 @@ def profiles_delete(profile_id: int):
     try:
         _svc().get(profile_id)
     except RadiusNotFound:
-        return fail("not_found", f"الباقة {profile_id} غير موجودة.", status=404)
+        return fail("not_found", _tr('الباقة %(profile_id)s غير موجودة.', profile_id=profile_id), status=404)
     try:
         _svc().delete(actor=_actor(), plan_id=profile_id)
     except RadiusConflict as e:

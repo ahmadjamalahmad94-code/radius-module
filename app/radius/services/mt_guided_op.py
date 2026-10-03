@@ -29,6 +29,7 @@ never mutates state, never contacts a router, never triggers a
 job. It just composes existing reads.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -61,11 +62,11 @@ ALL_OPERATIONS: tuple[str, ...] = (
 )
 
 _OP_LABELS_AR: dict[str, str] = {
-    OP_PROGRAMMING_HOTSPOT: "برمجة Hotspot",
-    OP_PROGRAMMING_PPPOE:   "برمجة PPPoE",
-    OP_UNPROGRAMMING:       "تراجع/Unprogram",
-    OP_RESTORE:             "استعادة من نسخة",
-    OP_BACKUP_SAVE:         "حفظ نسخة احتياطية",
+    OP_PROGRAMMING_HOTSPOT: N_("برمجة Hotspot"),
+    OP_PROGRAMMING_PPPOE:   N_("برمجة PPPoE"),
+    OP_UNPROGRAMMING:       N_("تراجع/Unprogram"),
+    OP_RESTORE:             N_("استعادة من نسخة"),
+    OP_BACKUP_SAVE:         N_("حفظ نسخة احتياطية"),
 }
 
 _OP_REQUIRED_PERM: dict[str, str] = {
@@ -130,18 +131,18 @@ def _step_health(ov) -> Step:
     hs = score_health(ov)
     href = f"/admin/radius/mt/{ov.nas_id}/overview"
     if hs.state == STATE_HEALTHY:
-        return Step("health", "صحة الراوتر", STEP_OK,
-                    "الحالة سليمة.", href)
+        return Step("health", N_("صحة الراوتر"), STEP_OK,
+                    N_("الحالة سليمة."), href)
     if hs.state == STATE_OFFLINE:
-        return Step("health", "صحة الراوتر", STEP_BLOCKING,
-                    "الراوتر غير متصل — لا يمكن متابعة عملية حية.",
+        return Step("health", N_("صحة الراوتر"), STEP_BLOCKING,
+                    N_("الراوتر غير متصل — لا يمكن متابعة عملية حية."),
                     href)
     if hs.state == STATE_RISKY:
-        return Step("health", "صحة الراوتر", STEP_WARNING,
-                    f"صحة منخفضة (نقاط: {hs.score}). راجع المشاكل أولاً.",
+        return Step("health", N_("صحة الراوتر"), STEP_WARNING,
+                    _tr('صحة منخفضة (نقاط: %(score)s). راجع المشاكل أولاً.', score=hs.score),
                     href)
-    return Step("health", "صحة الراوتر", STEP_INFO,
-                f"الحالة: {hs.state} (نقاط: {hs.score}).", href)
+    return Step("health", N_("صحة الراوتر"), STEP_INFO,
+                _tr('الحالة: %(state)s (نقاط: %(score)s).', state=hs.state, score=hs.score), href)
 
 
 def _step_safety(*, tenant_id, nas_id, admin,
@@ -154,19 +155,19 @@ def _step_safety(*, tenant_id, nas_id, admin,
     href = f"/admin/radius/mt/{nas_id}/overview"
     if not sc.allowed:
         return Step(
-            "safety", "فحص ما قبل التنفيذ", STEP_BLOCKING,
+            "safety", N_("فحص ما قبل التنفيذ"), STEP_BLOCKING,
             sc.blocking_reasons[0] if sc.blocking_reasons
-            else "ممنوع.", href,
+            else N_("ممنوع."), href,
         )
     if sc.severity == "warning":
         return Step(
-            "safety", "فحص ما قبل التنفيذ", STEP_WARNING,
+            "safety", N_("فحص ما قبل التنفيذ"), STEP_WARNING,
             (sc.warnings[0] if sc.warnings
-             else "تحذير قبل التنفيذ."), href,
+             else N_("تحذير قبل التنفيذ.")), href,
         )
     return Step(
-        "safety", "فحص ما قبل التنفيذ", STEP_OK,
-        "السلامة جاهزة للتنفيذ.", href,
+        "safety", N_("فحص ما قبل التنفيذ"), STEP_OK,
+        N_("السلامة جاهزة للتنفيذ."), href,
     )
 
 
@@ -179,11 +180,11 @@ def _step_backup(*, tenant_id, nas_id, operation) -> Step:
         # Backup-save itself is the step that creates the
         # backup — missing backup isn't blocking for it.
         if operation == OP_BACKUP_SAVE:
-            return Step("backup", "النسخة الاحتياطية", STEP_INFO,
-                        "لا توجد نسخة سابقة — ستكون هذه أول واحدة.",
+            return Step("backup", N_("النسخة الاحتياطية"), STEP_INFO,
+                        N_("لا توجد نسخة سابقة — ستكون هذه أول واحدة."),
                         href)
-        return Step("backup", "النسخة الاحتياطية", STEP_BLOCKING,
-                    "لا توجد نسخة احتياطية — خذ واحدة قبل المتابعة.",
+        return Step("backup", N_("النسخة الاحتياطية"), STEP_BLOCKING,
+                    N_("لا توجد نسخة احتياطية — خذ واحدة قبل المتابعة."),
                     href)
     # Compare age vs BACKUP_FRESH_SEC.
     from datetime import datetime, timezone
@@ -194,11 +195,11 @@ def _step_backup(*, tenant_id, nas_id, operation) -> Step:
     except Exception:  # noqa: BLE001
         age = 1e9
     if age <= BACKUP_FRESH_SEC:
-        return Step("backup", "النسخة الاحتياطية", STEP_OK,
-                    f"يوجد نسخة حديثة: {last.get('filename') or ''}.",
+        return Step("backup", N_("النسخة الاحتياطية"), STEP_OK,
+                    _tr('يوجد نسخة حديثة: %(v)s.', v=last.get('filename') or ''),
                     href)
-    return Step("backup", "النسخة الاحتياطية", STEP_WARNING,
-                "النسخة الأخيرة قديمة — يُستحسن أخذ نسخة جديدة.",
+    return Step("backup", N_("النسخة الاحتياطية"), STEP_WARNING,
+                N_("النسخة الأخيرة قديمة — يُستحسن أخذ نسخة جديدة."),
                 href)
 
 
@@ -211,19 +212,19 @@ def _step_recent_failure(*, tenant_id, nas_id) -> Step:
                 if (r.get("result_status") or "")
                 in {"failed", "partial"}), None)
     if not bad:
-        return Step("recent_failure", "آخر العمليات", STEP_OK,
-                    "لا توجد عملية فاشلة قريبة.", href)
+        return Step("recent_failure", N_("آخر العمليات"), STEP_OK,
+                    N_("لا توجد عملية فاشلة قريبة."), href)
     rid = bad.get("id")
     recovery = (f"/admin/radius/recovery/{rid}" if rid else href)
-    return Step("recent_failure", "آخر العمليات", STEP_WARNING,
-                "العملية السابقة فشلت/جزئية — راجع خطة التعافي قبل المتابعة.",
+    return Step("recent_failure", N_("آخر العمليات"), STEP_WARNING,
+                N_("العملية السابقة فشلت/جزئية — راجع خطة التعافي قبل المتابعة."),
                 recovery)
 
 
 def _step_apply_link(*, nas_id, operation) -> Step:
     """Pointer to where the operator actually runs the op."""
-    label_ar = "المتابعة للتنفيذ"
-    detail_ar = "افتح صفحة العملية الفعلية بعد التحقق من الخطوات."
+    label_ar = _tr("المتابعة للتنفيذ")
+    detail_ar = _tr("افتح صفحة العملية الفعلية بعد التحقق من الخطوات.")
     if operation in (OP_PROGRAMMING_HOTSPOT,
                       OP_PROGRAMMING_PPPOE):
         href = f"/admin/radius/mt/{nas_id}/program"

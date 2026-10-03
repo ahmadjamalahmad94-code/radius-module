@@ -71,56 +71,56 @@
        _row_hint   سطر يشرح ما يعدّه مؤشر الصفوف بالضبط
        _total_hint سطر يشرح ما يجمعه مؤشر الإجمالي بالضبط #}
   {% set _row_unit = {
-    'daily': 'أيام', 'monthly': 'أشهر', 'yearly': 'سنوات',
-    'subscriber_payments': 'مستفيدون', 'loans': 'حالات سلف',
-    'activations': 'مستخدمون', 'card_sales': 'حزم بطاقات',
-    'profit_loss': 'ملخص واحد', 'distributor_debts': 'موزعون',
+    'daily': _('أيام'), 'monthly': _('أشهر'), 'yearly': _('سنوات'),
+    'subscriber_payments': _('مستفيدون'), 'loans': _('حالات سلف'),
+    'activations': _('مستخدمون'), 'card_sales': _('حزم بطاقات'),
+    'profit_loss': _('ملخص واحد'), 'distributor_debts': _('موزعون'),
   } %}
   {% set _row_hint = {
-    'daily': 'كل صف = يوم له دفعات مرحَّلة (آخر 60 يومًا بحركة)',
-    'monthly': 'كل صف = شهر له دفعات مرحَّلة',
-    'yearly': 'كل صف = سنة لها دفعات مرحَّلة',
-    'subscriber_payments': 'مستفيدون دفعوا فعلًا — مَن أُلغيت كلُّ دفعاته يظهر بشارة «ملغاة» ولا يُعَدّ',
-    'loans': 'كل صف = حالة سلفة (مفتوحة/مسددة/معدومة…)',
-    'activations': 'كل صف = مستخدم فعّل وقتًا عبر الدفع',
-    'card_sales': 'كل صف = حزمة بطاقات بيعت منها بطاقات',
-    'profit_loss': 'صف واحد: المحصَّل مقابل المصروفات',
-    'distributor_debts': 'كل صف = موزع نشِط وأرصدته',
+    'daily': _('كل صف = يوم له دفعات مرحَّلة (آخر 60 يومًا بحركة)'),
+    'monthly': _('كل صف = شهر له دفعات مرحَّلة'),
+    'yearly': _('كل صف = سنة لها دفعات مرحَّلة'),
+    'subscriber_payments': _('مستفيدون دفعوا فعلًا — مَن أُلغيت كلُّ دفعاته يظهر بشارة «ملغاة» ولا يُعَدّ'),
+    'loans': _('كل صف = حالة سلفة (مفتوحة/مسددة/معدومة…)'),
+    'activations': _('كل صف = مستخدم فعّل وقتًا عبر الدفع'),
+    'card_sales': _('كل صف = حزمة بطاقات بيعت منها بطاقات'),
+    'profit_loss': _('صف واحد: المحصَّل مقابل المصروفات'),
+    'distributor_debts': _('كل صف = موزع نشِط وأرصدته'),
   } %}
   {% set _total_hint = {
-    'daily': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
-    'monthly': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
-    'yearly': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
-    'subscriber_payments': 'مجموع ما دفعه كل المستفيدين معًا',
-    'loans': 'مجموع مبالغ السلف بكل حالاتها',
-    'activations': 'لا عمود مبالغ هنا — التقرير يَعُدّ التفعيلات والدقائق',
-    'card_sales': 'مجموع مبيعات البطاقات المرحَّلة لكل الحزم',
-    'profit_loss': 'لا إجمالي مفرد — راجع أعمدة الإيرادات/المصروفات/الصافي',
-    'distributor_debts': 'لا إجمالي مفرد — راجع أعمدة رصيد الدين والرصيد',
+    'daily': _('مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)'),
+    'monthly': _('مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)'),
+    'yearly': _('مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)'),
+    'subscriber_payments': _('مجموع ما دفعه كل المستفيدين معًا'),
+    'loans': _('مجموع مبالغ السلف بكل حالاتها'),
+    'activations': _('لا عمود مبالغ هنا — التقرير يَعُدّ التفعيلات والدقائق'),
+    'card_sales': _('مجموع مبيعات البطاقات المرحَّلة لكل الحزم'),
+    'profit_loss': _('لا إجمالي مفرد — راجع أعمدة الإيرادات/المصروفات/الصافي'),
+    'distributor_debts': _('لا إجمالي مفرد — راجع أعمدة رصيد الدين والرصيد'),
   } %}
   {# KPIs خاصة بتبويب التقارير — تسميات محدّدة + سطر إيضاح لكل مؤشر
      يشرح بالضبط ما يَعُدّه للتقرير المختار (طلب المستخدم: «عدد شو؟ شو تفاصيلهم؟») #}
   {% set _rep_total = report_items|sum(attribute='total') if (report_items and 'total' in report_items[0]) else none %}
   {% set _kpis = [
-    {'label': 'نوع التقرير',   'value': report_label,              'icon': 'chart-line',  'variant': 'brand',
-     'sub': 'يُبنى من نفس قيود السجل المالي'},
-    {'label': 'صفوف التقرير (' ~ _row_unit.get(report_type, 'صفوف') ~ ')',
+    {'label': _('نوع التقرير'),   'value': report_label,              'icon': 'chart-line',  'variant': 'brand',
+     'sub': _('يُبنى من نفس قيود السجل المالي')},
+    {'label': _('صفوف التقرير (') ~ _row_unit.get(report_type, _('صفوف')) ~ ')',
      'value': ((report_items|rejectattr('voided')|list|length) if report_type == 'subscriber_payments'
                else report_items|length), 'icon': 'table-list', 'variant': 'blue',
      'sub': _row_hint.get(report_type, '')},
-    {'label': 'إجمالي عمود «الإجمالي»',
+    {'label': _('إجمالي عمود «الإجمالي»'),
      'value': (report_total_by_currency|money_multi if report_total_by_currency
                else (_rep_total|money if _rep_total is not none else '—')), 'icon': 'coins', 'variant': 'green',
      'sub': _total_hint.get(report_type, '')},
-    {'label': 'لقطات محفوظة لهذا النوع',  'value': snapshots|length if snapshots else 0, 'icon': 'box-archive', 'variant': 'amber',
-     'sub': 'نسخ مجمّدة بزر «حفظ لقطة ثابتة» (آخر 10)'},
+    {'label': _('لقطات محفوظة لهذا النوع'),  'value': snapshots|length if snapshots else 0, 'icon': 'box-archive', 'variant': 'amber',
+     'sub': _('نسخ مجمّدة بزر «حفظ لقطة ثابتة» (آخر 10)')},
   ] %}
 {% else %}
   {% set _kpis = [
-    {'label': 'عدد القيود',    'value': ledger_kpis.count,       'icon': 'table-list',          'variant': 'brand'},
-    {'label': 'دفعات',         'value': ledger_kpis.payments,    'icon': 'hand-holding-dollar', 'variant': 'green'},
-    {'label': 'سلف',           'value': ledger_kpis.loans,       'icon': 'clock-rotate-left',   'variant': 'amber'},
-    {'label': 'قيود تصحيحية',  'value': ledger_kpis.corrections, 'icon': 'rotate-left',         'variant': 'red'},
+    {'label': _('عدد القيود'),    'value': ledger_kpis.count,       'icon': 'table-list',          'variant': 'brand'},
+    {'label': _('دفعات'),         'value': ledger_kpis.payments,    'icon': 'hand-holding-dollar', 'variant': 'green'},
+    {'label': _('سلف'),           'value': ledger_kpis.loans,       'icon': 'clock-rotate-left',   'variant': 'amber'},
+    {'label': _('قيود تصحيحية'),  'value': ledger_kpis.corrections, 'icon': 'rotate-left',         'variant': 'red'},
   ] %}
 {% endif %}
 
@@ -128,8 +128,8 @@
         (hub-hero-shell) بفواصل داخلية ناعمة بدل كروت متفرقة. ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "السجل والتقارير المحاسبية",
-  subtitle="تابع دفتر القيود المالية والتقارير من مكان واحد. واجهة موحّدة — السجل تراكمي (لا حذف) والتقارير تُبنى من نفس القيود.",
+  _('السجل والتقارير المحاسبية'),
+  subtitle=_('تابع دفتر القيود المالية والتقارير من مكان واحد. واجهة موحّدة — السجل تراكمي (لا حذف) والتقارير تُبنى من نفس القيود.'),
   icon="scale-balanced",
   kpis=_kpis
 ) %}
@@ -141,7 +141,7 @@
       <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('عرض التقرير'), icon="chart-line", variant="primary", type="submit", size="sm") }}
   {% else %}
   <input type="hidden" name="tab" value="ledger">
   {# hub-select يفعّل منتقي القوائم الموحّد hbsel (hub_select.js) #}
@@ -149,15 +149,15 @@
     <option value="">{{ _('كل أنواع القيود') }}</option>
     {% for t in entry_types %}
       <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
-        {% if t == 'payment' %}دفعة{% elif t == 'loan' %}سلفة{% elif t == 'settlement' %}تسوية
-        {% elif t == 'void' %}إلغاء{% elif t == 'reversal' %}عكسي{% elif t == 'correction' %}تصحيح
+        {% if t == 'payment' %}{{ _('دفعة') }}{% elif t == 'loan' %}{{ _('سلفة') }}{% elif t == 'settlement' %}{{ _('تسوية') }}
+        {% elif t == 'void' %}{{ _('إلغاء') }}{% elif t == 'reversal' %}{{ _('عكسي') }}{% elif t == 'correction' %}{{ _('تصحيح') }}
         {% else %}{{ t }}{% endif %}
       </option>
     {% endfor %}
   </select>
   <input class="hub-input grow" type="text" name="subscriber_id" value="{{ subscriber_id }}"
          placeholder="{{ _('رقم المستفيد...') }}" inputmode="numeric">
-  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('فلترة'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% endif %}
 {% endcall %}
 
@@ -173,19 +173,19 @@
      مطوي افتراضيًا كعمود نحيف بجانب الجدول، وينفتح بالضغط عند الحاجة.
      بطلب المستخدم: «بدي توضيح شو هما القيود، لشو بنستخدمهم، كل حركة شو بتأثر». #}
   {% call hub.worklayout(aside_html=hub.helppanel(
-    "ما هي القيود؟ (شرح مبسّط)",
+    _('ما هي القيود؟ (شرح مبسّط)'),
     icon="circle-question",
-    intro="القيد ببساطة = سطر تسجيل لأي حركة فلوس. كل ما صار شي بالمال (دفعة، سلفة، تسوية…) ينكتب سطر جديد هون — ولا شي ينحذف أبدًا.",
+    intro=_('القيد ببساطة = سطر تسجيل لأي حركة فلوس. كل ما صار شي بالمال (دفعة، سلفة، تسوية…) ينكتب سطر جديد هون — ولا شي ينحذف أبدًا.'),
     items=[
-      {'icon': 'hand-holding-dollar', 'text': 'دفعة: المشترك دفع مصاري → قيد «دائن» يزيد رصيده/مدته. هذا أكثر قيد رح تشوفه.'},
-      {'icon': 'clock-rotate-left',   'text': 'سلفة: أعطينا المشترك مدة قبل ما يدفع → صار عليه دين مسجَّل بقيد.'},
-      {'icon': 'scale-balanced',      'text': 'تسوية: المشترك سدّد سلفته → قيد يقفل الدين ويصفّيه. السلفة الأصلية تبقى ظاهرة بالسجل.'},
-      {'icon': 'rotate-left',         'text': 'إلغاء / عكسي: غلطنا بقيد؟ ما منحذفه — منعمل قيد معاكس يصفّر أثره، والأصل يبقى موجود للمراجعة.'},
-      {'icon': 'chart-line',          'text': 'كل التقارير المالية (يومية/شهرية/سنوية…) مبنية من هالقيود نفسها — فإذا فهمت القيود فهمت كل الأرقام.'},
+      {'icon': 'hand-holding-dollar', 'text': _('دفعة: المشترك دفع مصاري → قيد «دائن» يزيد رصيده/مدته. هذا أكثر قيد رح تشوفه.')},
+      {'icon': 'clock-rotate-left',   'text': _('سلفة: أعطينا المشترك مدة قبل ما يدفع → صار عليه دين مسجَّل بقيد.')},
+      {'icon': 'scale-balanced',      'text': _('تسوية: المشترك سدّد سلفته → قيد يقفل الدين ويصفّيه. السلفة الأصلية تبقى ظاهرة بالسجل.')},
+      {'icon': 'rotate-left',         'text': _('إلغاء / عكسي: غلطنا بقيد؟ ما منحذفه — منعمل قيد معاكس يصفّر أثره، والأصل يبقى موجود للمراجعة.')},
+      {'icon': 'chart-line',          'text': _('كل التقارير المالية (يومية/شهرية/سنوية…) مبنية من هالقيود نفسها — فإذا فهمت القيود فهمت كل الأرقام.')},
     ],
-    note="القاعدة الذهبية: السجل تراكمي — التصحيح دائمًا بقيد جديد معاكس، وليس بحذف أو تعديل قيد قديم. هيك تبقى الأرقام قابلة للتدقيق دائمًا."
+    note=_('القاعدة الذهبية: السجل تراكمي — التصحيح دائمًا بقيد جديد معاكس، وليس بحذف أو تعديل قيد قديم. هيك تبقى الأرقام قابلة للتدقيق دائمًا.')
   )) %}
-  {% call hub.section("القيود", icon="table-list", meta=(ledger_items|length|string + " قيد") if ledger_items else "", flush=True) %}
+  {% call hub.section(_('القيود'), icon="table-list", meta=(ledger_items|length|string + _(' قيد')) if ledger_items else "", flush=True) %}
     {% if ledger_items %}
     {# uds-table-wrap فقط (بلا hub-table-wrap) فلا حدود/زوايا مزدوجة داخل القسم
        flush — استغنينا عن أنماط style المضمّنة بإسقاط فئة hub-table-wrap. #}
@@ -203,7 +203,7 @@
             <th data-uds-nosort>{{ _('ملاحظات') }}</th>
             <th>{{ _('التاريخ') }}</th>
             <th data-uds-nosort data-uds-nocol style="width:230px">{{ _('عكس القيد') }}
-              <span class="hub-hint" tabindex="0" data-hint="عكس القيد لا يحذف القيد الأصلي — يُنشئ قيدًا جديدًا معاكسًا له يصفّر أثره على الأرقام، ويبقى الاثنان ظاهرين في السجل للمراجعة. اكتب سبب التصحيح ثم اضغط زر السهم."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="{{ _('عكس القيد لا يحذف القيد الأصلي — يُنشئ قيدًا جديدًا معاكسًا له يصفّر أثره على الأرقام، ويبقى الاثنان ظاهرين في السجل للمراجعة. اكتب سبب التصحيح ثم اضغط زر السهم.') }}"><i class="fa-solid fa-info"></i></span>
             </th>
           </tr>
         </thead>
@@ -216,72 +216,72 @@
              في الدفتر (راجع accounting_repo/users/payments/cards). أي مفتاح
              غير معروف يسقط لعبارة عربية عامة لا للمعرّف الإنجليزي الخام. #}
           {% set _type_labels = {
-            'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
-            'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
-            'payment_void': 'إلغاء دفعة', 'loan_writeoff': 'إعدام سلفة',
-            'ledger_void': 'عكس قيد', 'card_sale': 'بيع بطاقة',
-            'invoice': 'فاتورة', 'refund': 'استرداد', 'discount': 'خصم',
-            'adjustment': 'تعديل', 'topup': 'شحن رصيد',
-            'debt': 'دين', 'debt_settlement': 'تسوية دين',
-            'cash_balance': 'رصيد نقدي', 'quota_topup': 'شحن كوتة',
-            'time_extension': 'تمديد وقت', 'wallet_recharge': 'شحن محفظة',
-            'writeoff': 'إعدام دين', 'batch_creation': 'إنشاء دفعة بطاقات',
+            'payment': _('دفعة'), 'loan': _('سلفة'), 'settlement': _('تسوية'),
+            'void': _('إلغاء'), 'reversal': _('عكسي'), 'correction': _('تصحيح'),
+            'payment_void': _('إلغاء دفعة'), 'loan_writeoff': _('إعدام سلفة'),
+            'ledger_void': _('عكس قيد'), 'card_sale': _('بيع بطاقة'),
+            'invoice': _('فاتورة'), 'refund': _('استرداد'), 'discount': _('خصم'),
+            'adjustment': _('تعديل'), 'topup': _('شحن رصيد'),
+            'debt': _('دين'), 'debt_settlement': _('تسوية دين'),
+            'cash_balance': _('رصيد نقدي'), 'quota_topup': _('شحن كوتة'),
+            'time_extension': _('تمديد وقت'), 'wallet_recharge': _('شحن محفظة'),
+            'writeoff': _('إعدام دين'), 'batch_creation': _('إنشاء دفعة بطاقات'),
           } %}
           {# خريطة «المصدر» (source_type) — مستقلّة تمامًا عن النوع لأن مفاتيحها
              مختلفة (subscriber_time_extension, subscriber_quota_topup, ...).
              كانت تُعرَّب خطأً بخريطة النوع فتتسرّب إنجليزية خام. كاملة لكل
              القيم المكتوبة كمصدر، وأي مفتاح مجهول يسقط لعبارة عربية عامة. #}
           {% set _source_labels = {
-            'payment': 'دفعة', 'payment_void': 'إلغاء دفعة',
-            'payment_balance_settlement': 'تسوية رصيد دفعة',
-            'payment_collection_request': 'طلب تحصيل دفعة',
-            'loan': 'سلفة', 'loan_writeoff': 'إعدام سلفة',
-            'settlement': 'تسوية', 'ledger_void': 'عكس قيد',
-            'card_sale': 'بيع بطاقة',
-            'subscriber_time_extension': 'تمديد وقت المشترك',
-            'subscriber_quota_topup': 'شحن كوتة المشترك',
-            'subscriber_plan_change': 'تغيير عرض المشترك',
-            'subscriber_daily_quota_reset': 'تصفير الكوتة اليومية',
-            'subscriber_cash_balance': 'رصيد نقدي للمشترك',
-            'external': 'مصدر خارجي',
+            'payment': _('دفعة'), 'payment_void': _('إلغاء دفعة'),
+            'payment_balance_settlement': _('تسوية رصيد دفعة'),
+            'payment_collection_request': _('طلب تحصيل دفعة'),
+            'loan': _('سلفة'), 'loan_writeoff': _('إعدام سلفة'),
+            'settlement': _('تسوية'), 'ledger_void': _('عكس قيد'),
+            'card_sale': _('بيع بطاقة'),
+            'subscriber_time_extension': _('تمديد وقت المشترك'),
+            'subscriber_quota_topup': _('شحن كوتة المشترك'),
+            'subscriber_plan_change': _('تغيير عرض المشترك'),
+            'subscriber_daily_quota_reset': _('تصفير الكوتة اليومية'),
+            'subscriber_cash_balance': _('رصيد نقدي للمشترك'),
+            'external': _('مصدر خارجي'),
           } %}
           {# تلميح لكل نوع قيد يشرح أثره على الرصيد — يظهر بالوقوف على الشارة
              (title) فيفهم الموظف «هالحركة شو بتأثر» دون مغادرة الجدول. #}
           {% set _type_effects = {
-            'payment': 'دفعة: المشترك دفع — قيد دائن يزيد رصيده/مدته.',
-            'loan': 'سلفة: مدة مُنحت قبل الدفع — دين مسجَّل على المشترك حتى يسدده.',
-            'settlement': 'تسوية: سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى بالسجل.',
-            'void': 'إلغاء: قيد معاكس يصفّر أثر قيد سابق — الأصل لا يُحذف ويبقى ظاهرًا.',
-            'reversal': 'عكسي: قيد بعكس اتجاه قيد سابق يلغي أثره على الأرقام دون حذفه.',
-            'correction': 'تصحيح: قيد جديد يعدّل خطأ سابقًا — التعديل بالإضافة لا بالمحو.',
-            'refund': 'استرداد: إرجاع مبلغ للمشترك — ينقص ما حصّلناه منه.',
-            'discount': 'خصم: تخفيض على المبلغ المستحق — ينقص ما يدفعه المشترك.',
-            'adjustment': 'تعديل: تصويب يدوي للرصيد بقيد موثّق.',
-            'topup': 'شحن رصيد: إضافة مبلغ لرصيد المشترك.',
-            'invoice': 'فاتورة: مبلغ مستحق على المشترك حتى يُدفع.',
+            'payment': _('دفعة: المشترك دفع — قيد دائن يزيد رصيده/مدته.'),
+            'loan': _('سلفة: مدة مُنحت قبل الدفع — دين مسجَّل على المشترك حتى يسدده.'),
+            'settlement': _('تسوية: سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى بالسجل.'),
+            'void': _('إلغاء: قيد معاكس يصفّر أثر قيد سابق — الأصل لا يُحذف ويبقى ظاهرًا.'),
+            'reversal': _('عكسي: قيد بعكس اتجاه قيد سابق يلغي أثره على الأرقام دون حذفه.'),
+            'correction': _('تصحيح: قيد جديد يعدّل خطأ سابقًا — التعديل بالإضافة لا بالمحو.'),
+            'refund': _('استرداد: إرجاع مبلغ للمشترك — ينقص ما حصّلناه منه.'),
+            'discount': _('خصم: تخفيض على المبلغ المستحق — ينقص ما يدفعه المشترك.'),
+            'adjustment': _('تعديل: تصويب يدوي للرصيد بقيد موثّق.'),
+            'topup': _('شحن رصيد: إضافة مبلغ لرصيد المشترك.'),
+            'invoice': _('فاتورة: مبلغ مستحق على المشترك حتى يُدفع.'),
           } %}
           {% for entry in ledger_items %}
           <tr>
             <td class="num mono">{{ entry.id }}</td>
             {# النوع: شارة عربية دائمًا — المفاتيح المجهولة تسقط لـ«قيد مالي» لا للخام #}
-            <td><span title="{{ _type_effects.get(entry.entry_type, 'قيد مالي مسجَّل في الدفتر التراكمي.') }}">{{ hub.pill(_type_labels.get(entry.entry_type, 'قيد مالي'), variant="brand", dot=False) }}</span></td>
+            <td><span title="{{ _type_effects.get(entry.entry_type, _('قيد مالي مسجَّل في الدفتر التراكمي.')) }}">{{ hub.pill(_type_labels.get(entry.entry_type, _('قيد مالي')), variant="brand", dot=False) }}</span></td>
             {# المستفيد: الاسم الحقيقي فقط (الاسم الكامل أو اسم المستخدم) — بلا «#رقم» خام #}
             <td>{{ entry.display_name or '—' }}</td>
             <td>
-              {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
-              {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
-              {% else %}{{ hub.pill("غير محدّد", variant="grey") }}{% endif %}
+              {% if entry.direction == 'debit' %}{{ hub.pill(_('مدين'), variant="red") }}
+              {% elif entry.direction == 'credit' %}{{ hub.pill(_('دائن'), variant="green") }}
+              {% else %}{{ hub.pill(_('غير محدّد'), variant="grey") }}{% endif %}
             </td>
             <td class="num mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr"><strong>{{ entry.amount|money }}</strong></td>
             <td>
-              {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
-              {% elif entry.status in ['void','voided'] %}{{ hub.pill("ملغى", variant="grey") }}
-              {% elif entry.status == 'pending' %}{{ hub.pill("معلّق", variant="amber") }}
-              {% else %}{{ hub.pill("غير محدّد", variant="amber") }}{% endif %}
+              {% if entry.status == 'posted' %}{{ hub.pill(_('مرحَّل'), variant="green") }}
+              {% elif entry.status in ['void','voided'] %}{{ hub.pill(_('ملغى'), variant="grey") }}
+              {% elif entry.status == 'pending' %}{{ hub.pill(_('معلّق'), variant="amber") }}
+              {% else %}{{ hub.pill(_('غير محدّد'), variant="amber") }}{% endif %}
             </td>
             {# المصدر: عبارة عربية واضحة من خريطة المصادر المستقلّة — بلا معرّف
                تقني خام ولا «#رقم». المفتاح المجهول يسقط لـ«مصدر آخر». #}
-            <td class="small">{% if entry.source_type %}{{ _source_labels.get(entry.source_type, 'مصدر آخر') }}{% else %}—{% endif %}</td>
+            <td class="small">{% if entry.source_type %}{{ _source_labels.get(entry.source_type, _('مصدر آخر')) }}{% else %}—{% endif %}</td>
             <td class="small">{{ entry.notes or '—' }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ entry.created_at|dt_local }}</td>
             <td>
@@ -303,7 +303,7 @@
       </table>
     </div>
     {% else %}
-    {{ hub.empty("لا قيود بهذه الفلترة", sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر.", icon="scale-balanced") }}
+    {{ hub.empty(_('لا قيود بهذه الفلترة'), sub=_('جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر.'), icon="scale-balanced") }}
     {% endif %}
   {% endcall %}
   {% endcall %}{# /worklayout — جدول القيود + لوحة «ما هي القيود؟» الجانبية #}
@@ -313,7 +313,7 @@
 {% if tab == 'reports' %}
 {# لوحة المساعدة الجانبية أُزيلت — كانت تظهر كنص خام مشوّه أسفل الجدول #}
   {# قسم واحد: شريط أدوات مدمج (تصدير + لقطة) فوق الجدول بدل قسم مستقل فاضي #}
-  {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + " صف") if report_items else "", flush=True) %}
+  {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + _(' صف')) if report_items else "", flush=True) %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;
                 padding:10px 16px;border-bottom:1px solid var(--hub-border-soft)">
       {% if can_submit('radius.finance_reports_export_csv', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>{% endif %}
@@ -329,15 +329,15 @@
     {% if report_items %}
       {# تعريب رؤوس الأعمدة + تنسيق القيم المالية — بدل أسماء الحقول الخام #}
       {% set col_labels = {
-        'period': 'الفترة', 'day': 'اليوم', 'count': 'العدد', 'total': 'الإجمالي',
-        'amount': 'المبلغ', 'minutes': 'الدقائق', 'still_open': 'سلف مفتوحة',
-        'username': 'المستخدم', 'subscriber_id': 'رقم المستفيد', 'balance': 'الرصيد',
-        'entry_type': 'النوع', 'direction': 'الاتجاه', 'status': 'الحالة',
-        'currency': 'العملة', 'created_at': 'التاريخ', 'notes': 'ملاحظات',
-        'bytes_in': 'رفع (بايت)', 'bytes_out': 'تنزيل (بايت)', 'sessions': 'الجلسات',
-        'gb': 'جيجابايت', 'plan': 'الباقة', 'plan_name': 'الباقة',
-        'earned_minutes': 'الدقائق المكتسبة', 'method': 'طريقة الدفع',
-        'outstanding': 'المتبقي', 'paid': 'المدفوع', 'discount_amount': 'الخصم',
+        'period': _('الفترة'), 'day': _('اليوم'), 'count': _('العدد'), 'total': _('الإجمالي'),
+        'amount': _('المبلغ'), 'minutes': _('الدقائق'), 'still_open': _('سلف مفتوحة'),
+        'username': _('المستخدم'), 'subscriber_id': _('رقم المستفيد'), 'balance': _('الرصيد'),
+        'entry_type': _('النوع'), 'direction': _('الاتجاه'), 'status': _('الحالة'),
+        'currency': _('العملة'), 'created_at': _('التاريخ'), 'notes': _('ملاحظات'),
+        'bytes_in': _('رفع (بايت)'), 'bytes_out': _('تنزيل (بايت)'), 'sessions': _('الجلسات'),
+        'gb': _('جيجابايت'), 'plan': _('الباقة'), 'plan_name': _('الباقة'),
+        'earned_minutes': _('الدقائق المكتسبة'), 'method': _('طريقة الدفع'),
+        'outstanding': _('المتبقي'), 'paid': _('المدفوع'), 'discount_amount': _('الخصم'),
       } %}
       {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid', 'discount_amount',
                            'credits', 'debits', 'net', 'avg_amount', 'debt_balance', 'credit_limit',
@@ -377,28 +377,28 @@
          سطر واحد لكل نوع (بمفاتيح كتالوج _REPORTS نفسها) يشرح ما يعنيه
          كل عمود في هذا التقرير تحديدًا — بدل ترك القارئ يخمّن. #}
       {% set _col_notes = {
-        'daily': '«الفترة» = اليوم (سنة-شهر-يوم) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك اليوم • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
-        'monthly': '«الفترة» = الشهر (سنة-شهر) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك الشهر • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
-        'yearly': '«الفترة» = السنة • «العدد» = عدد عمليات الدفع المرحَّلة في تلك السنة • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
-        'subscriber_payments': '«رقم المستفيد/المستخدم» = هوية الدافع • «العدد» = كم عملية دفع سجّلها • «الإجمالي» = مجموع ما دفعه • «آخر حركة» = تاريخ آخر دفعة له.',
-        'loans': 'كل صف حالة سلف: «الحالة» (مفتوحة/مسددة/معدومة…) • «العدد» = عدد السلف بتلك الحالة • «الإجمالي» = مجموع مبالغها • «الدقائق» = مجموع دقائق الاستخدام الممنوحة بها.',
-        'activations': '«المستخدم/رقم المستفيد» = صاحب التفعيل • «عدد التفعيلات» = كم مرة فعّل عبر دفعة مرحَّلة • «الدقائق المكتسبة» = صافي الدقائق بعد خصم الإلغاءات.',
-        'card_sales': '«رقم الحزمة» = حزمة البطاقات المصدر • «العدد» = عدد البطاقات المبيعة منها (دفعات مرحَّلة) • «الإجمالي» = مجموع قيمتها.',
-        'profit_loss': 'صف ملخّص واحد: «الإيرادات» = الدفعات المحصَّلة فعلًا (بعد خصم الإلغاء) + مبيعات الكروت • «المصروفات» = مصروفات الشركة المسجّلة • «الصافي» = الفرق بينهما. حركات محفظة المشترك (ديون تغيير العرض/التمديد، السلف، شراء الكوتة أو الوقت من الرصيد، إيداع الرصيد) لا تُحسب إيرادًا ولا مصروفًا.',
-        'distributor_debts': 'كل صف موزع نشِط: «رصيد الدين» = ما عليه للشركة • «الرصيد» = رصيده المتاح • «سقف الائتمان» = الحد المسموح به للدين.',
+        'daily': _('«الفترة» = اليوم (سنة-شهر-يوم) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك اليوم • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.'),
+        'monthly': _('«الفترة» = الشهر (سنة-شهر) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك الشهر • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.'),
+        'yearly': _('«الفترة» = السنة • «العدد» = عدد عمليات الدفع المرحَّلة في تلك السنة • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.'),
+        'subscriber_payments': _('«رقم المستفيد/المستخدم» = هوية الدافع • «العدد» = كم عملية دفع سجّلها • «الإجمالي» = مجموع ما دفعه • «آخر حركة» = تاريخ آخر دفعة له.'),
+        'loans': _('كل صف حالة سلف: «الحالة» (مفتوحة/مسددة/معدومة…) • «العدد» = عدد السلف بتلك الحالة • «الإجمالي» = مجموع مبالغها • «الدقائق» = مجموع دقائق الاستخدام الممنوحة بها.'),
+        'activations': _('«المستخدم/رقم المستفيد» = صاحب التفعيل • «عدد التفعيلات» = كم مرة فعّل عبر دفعة مرحَّلة • «الدقائق المكتسبة» = صافي الدقائق بعد خصم الإلغاءات.'),
+        'card_sales': _('«رقم الحزمة» = حزمة البطاقات المصدر • «العدد» = عدد البطاقات المبيعة منها (دفعات مرحَّلة) • «الإجمالي» = مجموع قيمتها.'),
+        'profit_loss': _('صف ملخّص واحد: «الإيرادات» = الدفعات المحصَّلة فعلًا (بعد خصم الإلغاء) + مبيعات الكروت • «المصروفات» = مصروفات الشركة المسجّلة • «الصافي» = الفرق بينهما. حركات محفظة المشترك (ديون تغيير العرض/التمديد، السلف، شراء الكوتة أو الوقت من الرصيد، إيداع الرصيد) لا تُحسب إيرادًا ولا مصروفًا.'),
+        'distributor_debts': _('كل صف موزع نشِط: «رصيد الدين» = ما عليه للشركة • «الرصيد» = رصيده المتاح • «سقف الائتمان» = الحد المسموح به للدين.'),
       } %}
       <div class="hub-text-soft" style="padding:10px 16px;border-top:1px solid var(--hub-border-soft);font-size:12px;line-height:1.9">
         <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
-        <strong>دليل قراءة أعمدة «{{ report_label }}»:</strong>
-        {{ _col_notes.get(report_type, 'كل عمود يحمل تسميته العربية في رأس الجدول.') }}
+        <strong>{{ _('دليل قراءة أعمدة «%(report_label)s»:', report_label=report_label) }}</strong>
+        {{ _col_notes.get(report_type, _('كل عمود يحمل تسميته العربية في رأس الجدول.')) }}
       </div>
     {% else %}
-      {{ hub.empty("لا توجد بيانات لهذا التقرير بعد", sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.", icon="chart-simple") }}
+      {{ hub.empty(_('لا توجد بيانات لهذا التقرير بعد'), sub=_('جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.'), icon="chart-simple") }}
     {% endif %}
   {% endcall %}
 
   {% if snapshots %}
-  {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
+  {% call hub.section(_('آخر اللقطات الثابتة'), icon="box-archive", meta=snapshots|length|string + _(' لقطة'), flush=True) %}
     {# uds-table-wrap فقط (بلا hub-table-wrap وبلا أنماط مضمّنة) #}
     <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('اللقطات الثابتة') }}">
       <table class="uds-table">
@@ -406,7 +406,7 @@
           <th class="num">#</th>
           <th>{{ _('النوع') }}</th>
           <th>{{ _('الفترة (من–إلى)') }}
-            <span class="hub-hint" tabindex="0" data-hint="النطاق الذي اختير في نافذة حفظ اللقطة. اللقطات القديمة المحفوظة بلا نطاق تظهر «كامل التقرير»."><i class="fa-solid fa-info"></i></span>
+            <span class="hub-hint" tabindex="0" data-hint="{{ _('النطاق الذي اختير في نافذة حفظ اللقطة. اللقطات القديمة المحفوظة بلا نطاق تظهر «كامل التقرير».') }}"><i class="fa-solid fa-info"></i></span>
           </th>
           <th class="num">{{ _('عدد الصفوف') }}</th>
           <th class="num">{{ _('الإجمالي') }}</th>
@@ -462,7 +462,7 @@
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="report_type" value="{{ report_type }}">
       <div class="fcw-head">
-        <h3 id="fcw-snapshot-title"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة — {{ report_label }}</h3>
+        <h3 id="fcw-snapshot-title"><i class="fa-solid fa-lock"></i> {{ _('حفظ لقطة ثابتة — %(report_label)s', report_label=report_label) }}</h3>
         <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
@@ -485,8 +485,7 @@
         </label>
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
-          تُفلتر صفوف «{{ report_label }}» بالنطاق المختار ثم تُجمَّد كما هي — لا تتأثر بأي حركة لاحقة.
-          ترك الحقلين فارغين يحفظ التقرير كاملًا (السلوك السابق نفسه).
+          {{ _('تُفلتر صفوف «%(report_label)s» بالنطاق المختار ثم تُجمَّد كما هي — لا تتأثر بأي حركة لاحقة. ترك الحقلين فارغين يحفظ التقرير كاملًا (السلوك السابق نفسه).', report_label=report_label) }}
         </div>
       </div>
       <div class="fcw-foot">

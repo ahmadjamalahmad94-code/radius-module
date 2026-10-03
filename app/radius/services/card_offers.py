@@ -13,6 +13,7 @@ Visibility is enforced here (not just in templates): :meth:`list_offers`,
 allow-list. The super-admin always has full access.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional
 
@@ -52,15 +53,15 @@ def _require_plan(tenant_id: int, plan_id: Any) -> int:
     try:
         pid = int(plan_id or 0)
     except (TypeError, ValueError) as exc:
-        raise CardOfferError("اختر باقة صحيحة للعرض.") from exc
+        raise CardOfferError(_tr("اختر باقة صحيحة للعرض.")) from exc
     if pid <= 0:
-        raise CardOfferError("الباقة مطلوبة — اختر باقة جاهزة للعرض.")
+        raise CardOfferError(_tr("الباقة مطلوبة — اختر باقة جاهزة للعرض."))
     row = db().execute(
         "SELECT 1 FROM access_plans WHERE tenant_id=? AND id=?",
         (int(tenant_id), pid),
     ).fetchone()
     if not row:
-        raise CardOfferError("الباقة المختارة غير موجودة.")
+        raise CardOfferError(_tr("الباقة المختارة غير موجودة."))
     return pid
 
 
@@ -96,7 +97,7 @@ class CardOffersService:
             "wholesale": minor_to_money(g("wholesale_minor")),
             "selling": minor_to_money(g("selling_minor")),
             "currency": (g("currency") or "").strip(),
-            "active": "مفعّل" if int(g("active") or 0) else "معطّل",
+            "active": N_("مفعّل") if int(g("active") or 0) else N_("معطّل"),
             "device_count": int(g("device_count") or 0),
             "notes": (g("notes") or "").strip(),
         }
@@ -108,7 +109,7 @@ class CardOffersService:
             (self.tenant_id, int(offer_id)),
         ).fetchone()
         if not row:
-            raise CardOfferError("العرض غير موجود.")
+            raise CardOfferError(_tr("العرض غير موجود."))
         offer = row_to_dict(row)
         offer["visible_admin_ids"] = self.visibility_admin_ids(int(offer_id))
         offer["margin_minor"] = max(0, int(offer["selling_minor"] or 0) - int(offer["wholesale_minor"] or 0))
@@ -139,9 +140,9 @@ class CardOffersService:
         (→ 403 at the route) if the offer isn't shared with this sub-admin."""
         offer = self.get_offer(offer_id)
         if not is_super and not self.is_visible_to(offer_id, admin_id=admin_id, is_super=False):
-            raise CardOfferVisibilityError("هذا العرض غير متاح لك.")
+            raise CardOfferVisibilityError(N_("هذا العرض غير متاح لك."))
         if not is_super and not int(offer.get("active") or 0):
-            raise CardOfferVisibilityError("هذا العرض غير متاح لك.")
+            raise CardOfferVisibilityError(N_("هذا العرض غير متاح لك."))
         return offer
 
     def list_offers(self, *, admin_id: Optional[int], is_super: bool, include_inactive: bool = False) -> list[dict[str, Any]]:
@@ -197,7 +198,7 @@ class CardOffersService:
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
-            raise CardOfferError("اسم العرض مطلوب.")
+            raise CardOfferError(_tr("اسم العرض مطلوب."))
         device_limit_mode = _norm_device_limit_mode(device_limit_mode)
         device_count = max(0, int(device_count or 0))
         eq_down = 1 if equal_share_download else 0
@@ -206,11 +207,11 @@ class CardOffersService:
         plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
         if duration_minutes <= 0:
-            raise CardOfferError("مدّة العرض يجب أن تكون أكبر من صفر.")
+            raise CardOfferError(_tr("مدّة العرض يجب أن تكون أكبر من صفر."))
         wholesale_minor = money_to_minor(wholesale)
         selling_minor = money_to_minor(selling)
         if selling_minor < wholesale_minor:
-            raise CardOfferError("سعر البيع يجب ألا يقلّ عن سعر الجملة.")
+            raise CardOfferError(_tr("سعر البيع يجب ألا يقلّ عن سعر الجملة."))
         now = now_iso()
         with transaction() as conn:
             cur = conn.execute(
@@ -252,14 +253,14 @@ class CardOffersService:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
         if not new_name:
-            raise CardOfferError("اسم العرض مطلوب.")
+            raise CardOfferError(_tr("اسم العرض مطلوب."))
         new_duration = offer["duration_minutes"] if duration_minutes is None else int(duration_minutes or 0)
         if new_duration <= 0:
-            raise CardOfferError("مدّة العرض يجب أن تكون أكبر من صفر.")
+            raise CardOfferError(_tr("مدّة العرض يجب أن تكون أكبر من صفر."))
         new_wholesale = offer["wholesale_minor"] if wholesale is None else money_to_minor(wholesale)
         new_selling = offer["selling_minor"] if selling is None else money_to_minor(selling)
         if new_selling < new_wholesale:
-            raise CardOfferError("سعر البيع يجب ألا يقلّ عن سعر الجملة.")
+            raise CardOfferError(_tr("سعر البيع يجب ألا يقلّ عن سعر الجملة."))
         # Plan stays REQUIRED: keep the current one, or validate a replacement.
         new_plan = offer["plan_id"] if plan_id == "__keep__" else _require_plan(self.tenant_id, plan_id)
         new_currency = offer["currency"] if currency is None else (currency or default_currency())
@@ -345,8 +346,7 @@ class CardOffersService:
             return {"wallet_id": int(wallet["id"]), "charged_minor": 0, "balance_minor": balance}
         if balance < total_minor:
             raise CardOfferBalanceError(
-                f"الرصيد غير كافٍ لتوليد الحزمة. المطلوب: {minor_to_money(total_minor)} "
-                f"— الحالي: {minor_to_money(balance)}."
+                _tr('الرصيد غير كافٍ لتوليد الحزمة. المطلوب: %(v)s — الحالي: %(v2)s.', v=minor_to_money(total_minor), v2=minor_to_money(balance))
             )
         tx = self.wallets.debit(
             tenant_id=self.tenant_id,
@@ -356,7 +356,7 @@ class CardOffersService:
             reference_id=int(offer["id"]),
             actor_type="manager",
             actor_id=int(admin_id),
-            notes=f"توليد حزمة من العرض «{offer.get('name')}» ({count} بطاقة)",
+            notes=_tr('توليد حزمة من العرض «%(v)s» (%(count)s بطاقة)', v=offer.get('name'), count=count),
             metadata={"offer_id": int(offer["id"]), "count": int(count)},
         )
         after_wallet = tx.get("wallet") or {}

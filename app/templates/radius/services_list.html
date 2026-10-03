@@ -49,18 +49,18 @@
 {% block content %}
 {# ── خرائط التعريب الثابتة لقيم النوع والحالة القادمة من قاعدة البيانات ── #}
 {% set type_labels = {
-  'router':  'راوتر',
+  'router':  _('راوتر'),
   'onu':     'ONU',
-  'modem':   'مودم',
-  'cable':   'كبل',
-  'antenna': 'هوائي',
-  'other':   'أخرى'
+  'modem':   _('مودم'),
+  'cable':   _('كبل'),
+  'antenna': _('هوائي'),
+  'other':   _('أخرى')
 } %}
 {% set status_map = {
-  'given':    ('مسلَّمة', 'green'),
-  'returned': ('مرتجعة',  'blue'),
-  'lost':     ('مفقودة',  'red'),
-  'damaged':  ('متضرّرة', 'amber')
+  'given':    (_('مسلَّمة'), 'green'),
+  'returned': (_('مرتجعة'),  'blue'),
+  'lost':     (_('مفقودة'),  'red'),
+  'damaged':  (_('متضرّرة'), 'amber')
 } %}
 
 {# عدّادات الحالة من النتائج الحالية (بلا استعلامات إضافية) #}
@@ -72,31 +72,31 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام بحث فوري ───── #}
 <section class="hub-hero-shell">
 {% call hub.megahero(
-  "الخدمات والمعدّات",
-  subtitle="سجلّ المعدّات المُسلَّمة للمشتركين — راوترات وأجهزة وملحقات — مع حالتها وإيجارها الشهري.",
+  _('الخدمات والمعدّات'),
+  subtitle=_('سجلّ المعدّات المُسلَّمة للمشتركين — راوترات وأجهزة وملحقات — مع حالتها وإيجارها الشهري.'),
   icon="toolbox",
   actions_html='
     <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="service-create">
       <i class="fa-solid fa-plus"></i> '|safe ~ _("إضافة معدّة") ~ '
     </button>'|safe,
   kpis=[
-    {'label': 'الإجمالي',      'value': items|length,     'icon': 'layer-group',          'variant': 'brand'},
-    {'label': 'مسلَّمة',       'value': _given,           'icon': 'handshake',            'variant': 'green'},
-    {'label': 'مرتجعة',        'value': _returned,        'icon': 'rotate-left',          'variant': 'blue'},
-    {'label': 'مفقودة/تالفة',  'value': _lost + _damaged, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': _('الإجمالي'),      'value': items|length,     'icon': 'layer-group',          'variant': 'brand'},
+    {'label': _('مسلَّمة'),       'value': _given,           'icon': 'handshake',            'variant': 'green'},
+    {'label': _('مرتجعة'),        'value': _returned,        'icon': 'rotate-left',          'variant': 'blue'},
+    {'label': _('مفقودة/تالفة'),  'value': _lost + _damaged, 'icon': 'triangle-exclamation', 'variant': 'red'},
   ]
 ) %}
   {# بحث فوري في المتصفح (الاسم/السيريال/MAC/المشترك) — لا يرسل للخادم #}
   <input class="hub-input grow" type="search" id="svc-q" autocomplete="off"
          placeholder="{{ _('بحث فوري بالاسم أو السيريال أو MAC...') }}">
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يفلتر الجدول فورًا دون إعادة تحميل. «مسلَّمة» = بحوزة المشترك الآن، و«مرتجعة» = عادت إليك — المفقودة والتالفة تبقى مسجَّلة للمحاسبة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('البحث يفلتر الجدول فورًا دون إعادة تحميل. «مسلَّمة» = بحوزة المشترك الآن، و«مرتجعة» = عادت إليك — المفقودة والتالفة تبقى مسجَّلة للمحاسبة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {% if items %}
 {# ───── جدول المعدّات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("قائمة المعدّات", icon="table-list", meta=items|length|string + " معدّة", flush=True) %}
+{% call hub.section(_('قائمة المعدّات'), icon="table-list", meta=items|length|string + _(' معدّة'), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" id="svc-table" data-uds-table data-uds-page-size="25"
        data-uds-export-title="{{ _('المعدات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
@@ -152,8 +152,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا معدّات مسجَّلة بعد",
-  sub="سجِّل أول معدّة من زرّ «إضافة معدّة» أعلى الصفحة.",
+  _('لا معدّات مسجَّلة بعد'),
+  sub=_('سجِّل أول معدّة من زرّ «إضافة معدّة» أعلى الصفحة.'),
   icon="toolbox"
 ) }}
 {% endif %}
@@ -267,8 +267,7 @@
     </div>
     <div class="fcw-body">
       <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
-        {{ _('سيُحذف سجل المعدّة') }} <strong id="svc-del-name" style="color:var(--hub-red-ink)">—</strong> نهائيًا
-        ولا يمكن استرجاعه. هل أنت متأكد؟
+        {{ _('سيُحذف سجل المعدّة') }} <strong id="svc-del-name" style="color:var(--hub-red-ink)">—</strong> {{ _('نهائيًا ولا يمكن استرجاعه. هل أنت متأكد؟') }}
       </div>
     </div>
     <div class="fcw-foot">

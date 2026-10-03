@@ -5,6 +5,7 @@
 يُسجَّل في audit_log.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import secrets
 from typing import Any
@@ -45,15 +46,15 @@ class Tr069ActionService:
               viewer_admin_id: int | None = None, can_view_all: bool = True) -> dict[str, Any]:
         action_type = str(action_type or "").strip()
         if action_type not in _SAFE_ACTIONS and action_type not in _DANGEROUS:
-            raise Tr069ActionError(f"فعل غير معروف: {action_type}")
+            raise Tr069ActionError(_tr('فعل غير معروف: %(action_type)s', action_type=action_type))
 
         device = tr069_repo.get_device(self.tenant_id, device_id)
         if not device:
-            raise Tr069ActionError("الجهاز غير موجود.")
+            raise Tr069ActionError(_tr("الجهاز غير موجود."))
         if not can_view_all and device.get("owner_admin_id") not in (None, viewer_admin_id):
-            raise Tr069ActionError("لا تملك صلاحيّة على هذا الجهاز.")
+            raise Tr069ActionError(_tr("لا تملك صلاحيّة على هذا الجهاز."))
         if str(device.get("status")) != "active":
-            raise Tr069ActionError("الجهاز غير مُسجَّل بعد (بانتظار أوّل اتصال).")
+            raise Tr069ActionError(_tr("الجهاز غير مُسجَّل بعد (بانتظار أوّل اتصال)."))
 
         params = dict(params or {})
         safe = self._safe_summary(action_type, params)
@@ -84,24 +85,24 @@ class Tr069ActionService:
 
     def _safe_summary(self, action_type: str, params: dict) -> str:
         if action_type == "reboot":
-            return "إعادة تشغيل الراوتر"
+            return N_("إعادة تشغيل الراوتر")
         if action_type == "refresh":
-            return "تحديث بيانات الجهاز من الراوتر"
+            return N_("تحديث بيانات الجهاز من الراوتر")
         if action_type == "connection_request":
-            return "طلب اتصال فوريّ من الراوتر"
+            return N_("طلب اتصال فوريّ من الراوتر")
         if action_type == "change_wifi":
             ssid = params.get("ssid")
             bits = []
             if ssid:
-                bits.append(f"اسم Wi-Fi ← «{ssid}»")
+                bits.append(_tr('اسم Wi-Fi ← «%(ssid)s»', ssid=ssid))
             if params.get("password"):
-                bits.append("كلمة مرور Wi-Fi (مخفيّة)")
-            return "تغيير Wi-Fi: " + (" · ".join(bits) or "—")
+                bits.append(N_("كلمة مرور Wi-Fi (مخفيّة)"))
+            return _tr("تغيير Wi-Fi: ") + (" · ".join(bits) or "—")
         if action_type == "change_pppoe":
             u = params.get("username")
-            return f"تغيير PPPoE" + (f" — المستخدم ← «{u}»" if u else "")
+            return _tr('تغيير PPPoE') + (_tr(' — المستخدم ← «%(u)s»', u=u) if u else "")
         if action_type == "factory_reset":
-            return "⚠ إعادة ضبط المصنع"
+            return N_("⚠ إعادة ضبط المصنع")
         if action_type == "firmware_upgrade":
-            return f"⚠ تحديث Firmware إلى {params.get('version') or '—'}"
+            return _tr('⚠ تحديث Firmware إلى %(v)s', v=params.get('version') or '—')
         return action_type

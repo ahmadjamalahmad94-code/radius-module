@@ -115,20 +115,20 @@
 
 {# ── هيرو واحد مدمج: عنوان + شرح + إجراءات + شريط KPI ── #}
 {{ hub.megahero(
-  "معالج إضافة راوتر",
-  subtitle="اكتب الاسم واختر إصدار النظام — هوبي راديوس يولّد المستخدم وكلمات المرور وسكربت RouterOS الكامل تلقائيًّا، جاهزًا للّصق.",
+  _('معالج إضافة راوتر'),
+  subtitle=_('اكتب الاسم واختر إصدار النظام — هوبي راديوس يولّد المستخدم وكلمات المرور وسكربت RouterOS الكامل تلقائيًّا، جاهزًا للّصق.'),
   icon="magic-wand-sparkles",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.mt_operations') + '">
       <i class="fa-solid fa-server"></i> '|safe ~ _("غرفة العمليات") ~ '
     </a>'|safe,
   kpis=[
-    {"label": "تُولَّد آليًّا", "value": "كل البيانات", "icon": "shield-halved", "variant": "brand",
-     "sub": "مستخدم + كلمات مرور + سر مشترك"},
-    {"label": "السكربت", "value": "جاهز للنسخ", "icon": "code", "variant": "green",
-     "sub": "بقيم مُولَّدة فعليًّا"},
-    {"label": "الإصدار 7", "value": "نفق تلقائي", "icon": "shield-virus", "variant": "violet",
-     "sub": "بلا حاجة لعنوان عام"}
+    {"label": _('تُولَّد آليًّا'), "value": _('كل البيانات'), "icon": "shield-halved", "variant": "brand",
+     "sub": _('مستخدم + كلمات مرور + سر مشترك')},
+    {"label": _('السكربت'), "value": _('جاهز للنسخ'), "icon": "code", "variant": "green",
+     "sub": _('بقيم مُولَّدة فعليًّا')},
+    {"label": _('الإصدار 7'), "value": _('نفق تلقائي'), "icon": "shield-virus", "variant": "violet",
+     "sub": _('بلا حاجة لعنوان عام')}
   ]
 ) }}
 
@@ -138,17 +138,17 @@
    إعداد نفق إدارة SSTP لراوتر الإصدار 6. #}
 {% set help_aside %}
 {% call hub.helppanel(
-     "دليل المعالج",
-     intro="هذا المعالج ينشئ راوتر MikroTik جديدًا داخل النظام ويولّد له سكربت إعداد كامل.",
+     _('دليل المعالج'),
+     intro=_('هذا المعالج ينشئ راوتر MikroTik جديدًا داخل النظام ويولّد له سكربت إعداد كامل.'),
      items=[
-       {"icon": "id-badge", "text": "اسم الراوتر: معرّف يظهر في لوحة الإدارة فقط."},
-       {"icon": "shield-halved", "text": "العنوان يُسنَد تلقائيًّا: نفق الإدارة يمنح الراوتر عنوانًا داخليًّا ثابتًا ويُخزَّن تلقائيًّا — لا حاجة لكتابته."},
-       {"icon": "code-branch", "text": "الإصدار 7: نفق إدارة WireGuard يُولَّد تلقائيًّا."},
-       {"icon": "network-wired", "text": "الإصدار 6: نفق إدارة SSTP (افتراضي) أو PPTP عبر خادم accel."},
-       {"icon": "server", "text": "عنوان السيرفر: ما يراه الراوتر كخادم مصادقة — يُكتشف تلقائيًّا وقابل للتعديل."}
+       {"icon": "id-badge", "text": _('اسم الراوتر: معرّف يظهر في لوحة الإدارة فقط.')},
+       {"icon": "shield-halved", "text": _('العنوان يُسنَد تلقائيًّا: نفق الإدارة يمنح الراوتر عنوانًا داخليًّا ثابتًا ويُخزَّن تلقائيًّا — لا حاجة لكتابته.')},
+       {"icon": "code-branch", "text": _('الإصدار 7: نفق إدارة WireGuard يُولَّد تلقائيًّا.')},
+       {"icon": "network-wired", "text": _('الإصدار 6: نفق إدارة SSTP (افتراضي) أو PPTP عبر خادم accel.')},
+       {"icon": "server", "text": _('عنوان السيرفر: ما يراه الراوتر كخادم مصادقة — يُكتشف تلقائيًّا وقابل للتعديل.')}
      ],
      icon="circle-question",
-     note="بعد الحفظ تنسخ السكربت وتلصقه في شاشة أوامر الراوتر — يتّصل خلال ثوانٍ."
+     note=_('بعد الحفظ تنسخ السكربت وتلصقه في شاشة أوامر الراوتر — يتّصل خلال ثوانٍ.')
    ) %}{% endcall %}
 {% endset %}
 
@@ -158,12 +158,12 @@
   {{ csrf_token_input() | safe }}
 
   {# ── القسم 1: هوية الراوتر ── #}
-  {% call hub.section("هوية الراوتر", icon="server") %}
+  {% call hub.section(_('هوية الراوتر'), icon="server") %}
     <div class="mtw-grid">
       <div class="mtw-field">
         <span class="mtw-label">
           {{ _('اسم الراوتر') }} <span class="req">*</span>
-          <span class="hub-hint" tabindex="0" data-hint="معرّف يظهر في لوحة الإدارة فقط — لا يُرسَل للراوتر."><i class="fa-solid fa-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('معرّف يظهر في لوحة الإدارة فقط — لا يُرسَل للراوتر.') }}"><i class="fa-solid fa-info"></i></span>
         </span>
         <input class="hub-input" type="text" name="name" required maxlength="64"
                placeholder="{{ _('مثال: MT-Office') }}" autofocus>
@@ -172,7 +172,7 @@
       <div class="mtw-field full">
         <span class="mtw-label">
           {{ _('إصدار نظام الراوتر') }} <span class="req">*</span>
-          <span class="hub-hint" tabindex="0" data-hint="إذا غير متأكّد اختر 7. السكربت يطلع جاهزًا للنسخ بعد الحفظ."><i class="fa-solid fa-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('إذا غير متأكّد اختر 7. السكربت يطلع جاهزًا للنسخ بعد الحفظ.') }}"><i class="fa-solid fa-info"></i></span>
         </span>
         <div class="mtw-vers">
           {% for v in ros_versions %}
@@ -181,8 +181,8 @@
                      {% if v == '7' %}checked{% endif %} required>
               <span class="mtw-ver-ic"><i class="fa-solid fa-{{ 'shield-virus' if v == '7' else 'network-wired' }}"></i></span>
               <span>
-                <span class="mtw-ver-tt">الإصدار {{ v }}.x</span>
-                <span class="mtw-ver-sb">{{ 'WireGuard (موصى به) أو SSTP' if v == '7' else 'نفق إدارة SSTP / PPTP' }}</span>
+                <span class="mtw-ver-tt">{{ _('الإصدار %(v)s.x', v=v) }}</span>
+                <span class="mtw-ver-sb">{{ _('WireGuard (موصى به) أو SSTP') if v == '7' else _('نفق إدارة SSTP / PPTP') }}</span>
               </span>
             </label>
           {% endfor %}
@@ -192,7 +192,7 @@
       <div class="mtw-field full">
         <span class="mtw-label">
           {{ _('عنوان السيرفر (كما يراه الراوتر)') }}
-          <span class="hub-hint" tabindex="0" data-hint="يُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا (مثل عنوان الربط الداخلي)."><i class="fa-solid fa-info"></i></span>
+          <span class="hub-hint" tabindex="0" data-hint="{{ _('يُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا (مثل عنوان الربط الداخلي).') }}"><i class="fa-solid fa-info"></i></span>
         </span>
         <input class="hub-input mono" type="text" name="server_ip" value="{{ default_server_ip }}"
                placeholder="{{ _('مثال: 203.0.113.10') }}" maxlength="128">
@@ -202,7 +202,7 @@
 
   {# ── القسم 2أ: استراتيجية ربط الإصدار 7 (يظهر فقط عند اختيار الإصدار 7) ── #}
   <div data-mt-v7-strategy hidden>
-  {% call hub.section("استراتيجية ربط الإصدار 7", icon="diagram-project") %}
+  {% call hub.section(_('استراتيجية ربط الإصدار 7'), icon="diagram-project") %}
     <p class="mtw-card-p" style="margin-top:0">
       {{ _('الإصدار 7 يدعم WireGuard (الأحدث والأسرع، عبر UDP) وأيضًا SSTP كبديل حين يُحجَب WireGuard أو منفذ UDP على الشبكة. كلاهما يمنح الراوتر عنوانًا داخليًّا ثابتًا للمصادقة وتغيير السرعة والفصل (CoA).') }}
     </p>
@@ -235,7 +235,7 @@
 
   {# ── القسم 2ب: استراتيجية ربط الإصدار 6 (يظهر فقط عند اختيار الإصدار 6) ── #}
   <div data-mt-v6-strategy hidden>
-  {% call hub.section("استراتيجية ربط الإصدار 6", icon="diagram-project") %}
+  {% call hub.section(_('استراتيجية ربط الإصدار 6'), icon="diagram-project") %}
     <p class="mtw-card-p" style="margin-top:0">
       {{ _('الإصدار 6 لا يدعم WireGuard. نفق الإدارة (SSTP/PPTP) يمنح الراوتر عنوانًا داخليًّا ثابتًا عبر خادم accel، فيصله الخادم دائمًا للمصادقة وتغيير السرعة والفصل (CoA).') }}
     </p>

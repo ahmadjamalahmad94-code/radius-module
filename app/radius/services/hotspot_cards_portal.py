@@ -5,6 +5,7 @@ authentication, catalog decisions, wallet debit, ledger entries, card issuance,
 and SMS attempt logging.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 from ..core.system_config import default_currency
 
 import hashlib
@@ -104,17 +105,17 @@ def _duration_label(minutes: int) -> str:
         return ""
     if minutes % 1440 == 0:
         days = minutes // 1440
-        return _ar_count(days, "يوم واحد", "يومان", "أيام", "يوماً")
+        return _ar_count(days, N_("يوم واحد"), N_("يومان"), N_("أيام"), N_("يوماً"))
     if minutes % 60 == 0:
         hours = minutes // 60
-        return _ar_count(hours, "ساعة واحدة", "ساعتان", "ساعات", "ساعة")
-    return _ar_count(minutes, "دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة")
+        return _ar_count(hours, N_("ساعة واحدة"), N_("ساعتان"), N_("ساعات"), N_("ساعة"))
+    return _ar_count(minutes, N_("دقيقة واحدة"), N_("دقيقتان"), N_("دقائق"), N_("دقيقة"))
 
 
 def _quota_label(megabytes: int) -> str:
     megabytes = int(megabytes or 0)
     if megabytes <= 0:
-        return "غير محددة"
+        return N_("غير محددة")
     if megabytes % 1024 == 0:
         return f"{megabytes // 1024} GB"
     return f"{megabytes} MB"

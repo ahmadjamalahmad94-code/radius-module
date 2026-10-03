@@ -13,6 +13,7 @@
 لا تكتب في DB سوى عبر الخدمة (set_settings / repo) — للتدقيق الموحَّد.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 from ..core.ar_text import ar_count  # F08-L: جمعٌ عربيّ صحيح للأعداد
 
 from flask import (Blueprint, flash, g, jsonify, redirect, render_template,
@@ -143,9 +144,9 @@ def save_settings():
                           target_type="settings",
                           target_id=",".join(changed),
                           payload={"changed": changed})
-        flash(f"تم حفظ {ar_count(len(changed), 'setting')} لميزة «منع استنساخ MAC».", "success")
+        flash(_tr('تم حفظ %(v)s لميزة «منع استنساخ MAC».', v=ar_count(len(changed), 'setting')), "success")
     else:
-        flash("لا تغييرات.", "info")
+        flash(_tr("لا تغييرات."), "info")
     return redirect(url_for("radius.anti_mac_clone_page"))
 
 
@@ -160,15 +161,15 @@ def binding_action(binding_id: int, action: str):
 
     if action == "delete":
         success = mac_clone_repo.delete_binding(tid, int(binding_id))
-        verb = "حذف"
+        verb = N_("حذف")
     elif action in ("suspend", "active", "superseded"):
         success = mac_clone_repo.set_binding_status(
             tid, int(binding_id),
             "suspended" if action == "suspend" else action)
-        verb = {"suspend": "تعليق", "active": "تفعيل",
-                "superseded": "وسم كمستبدَل"}[action]
+        verb = {"suspend": N_("تعليق"), "active": N_("تفعيل"),
+                "superseded": N_("وسم كمستبدَل")}[action]
     else:
-        flash("إجراء غير معروف.", "error")
+        flash(_tr("إجراء غير معروف."), "error")
         return redirect(url_for("radius.anti_mac_clone_page"))
 
     if success:
@@ -177,9 +178,9 @@ def binding_action(binding_id: int, action: str):
                           target_type="mac_clone_binding",
                           target_id=str(binding_id),
                           payload={"action": action})
-        flash(f"تم {verb} الارتباط.", "success")
+        flash(_tr('تم %(verb)s الارتباط.', verb=verb), "success")
     else:
-        flash("الارتباط غير موجود أو سبق إجراؤه.", "info")
+        flash(_tr("الارتباط غير موجود أو سبق إجراؤه."), "info")
     return redirect(url_for("radius.anti_mac_clone_page"))
 
 

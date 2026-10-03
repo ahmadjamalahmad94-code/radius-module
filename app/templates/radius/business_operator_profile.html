@@ -14,8 +14,8 @@
 {% block page_sub %}<span class="sub">{{ _('المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.') }}</span>{% endblock %}
 
 {% macro op_status(value) -%}
-  {%- if value in ['active','enabled','ok','completed','success'] -%}{{ hub.pill("مفعَّل", variant="green") }}
-  {%- elif value in ['blocked','suspended','failed','error'] -%}{{ hub.pill("متوقّف", variant="red") }}
+  {%- if value in ['active','enabled','ok','completed','success'] -%}{{ hub.pill(_('مفعَّل'), variant="green") }}
+  {%- elif value in ['blocked','suspended','failed','error'] -%}{{ hub.pill(_('متوقّف'), variant="red") }}
   {%- elif value in ['pending','warning'] -%}{{ hub.pill(value, variant="amber") }}
   {%- elif value -%}{{ hub.pill(value, variant="grey") }}
   {%- else -%}<span class="hub-text-mute">—</span>{%- endif -%}
@@ -88,32 +88,32 @@
 {# ───── Merged hero: title + action + wallet/scope KPI strip ───── #}
 {{ hub.megahero(
   label,
-  subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
+  subtitle=_('ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.'),
   icon="id-card-clip",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> '|safe ~ _("المشغلون") ~ '</a>'|safe if can_submit('radius.business_operators', 'GET') else ''),
   kpis=[
-    {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
-    {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
-    {'label': 'صافي الهامش',  'value': profile.profit.net_margin|money,       'icon': 'chart-line',      'variant': 'amber'},
-    {'label': 'نقاط الثقة',   'value': profile.score.trust_score,             'icon': 'shield-heart'},
+    {'label': _('رصيد المحفظة'), 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
+    {'label': _('حد الائتمان'),  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
+    {'label': _('صافي الهامش'),  'value': profile.profit.net_margin|money,       'icon': 'chart-line',      'variant': 'amber'},
+    {'label': _('نقاط الثقة'),   'value': profile.score.trust_score,             'icon': 'shield-heart'},
   ]
 ) }}
 
 {# ───── Work layout: main column + help aside on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا الملف",
-  intro="ملف المشغّل يجمع محفظته وصلاحياته وحدوده ونطاق مشتركيه وبطاقاته وتتبّع أرباحه في مكان واحد.",
+  _('كيف تقرأ هذا الملف'),
+  intro=_('ملف المشغّل يجمع محفظته وصلاحياته وحدوده ونطاق مشتركيه وبطاقاته وتتبّع أرباحه في مكان واحد.'),
   items=[
-    {'icon': 'wallet',         'text': 'اشحن المحفظة لزيادة الرصيد المتاح للمشغّل.'},
-    {'icon': 'sliders',        'text': 'الصلاحيات والحدود تضبط ما يمكن للمشغّل فعله.'},
-    {'icon': 'chart-simple',   'text': 'تتبّع الأرباح يوضّح حصص المدير والشركة.'},
-    {'icon': 'circle-info',    'text': 'الجداول تعرض المشتركين والحزم والأحداث ضمن النطاق.'},
+    {'icon': 'wallet',         'text': _('اشحن المحفظة لزيادة الرصيد المتاح للمشغّل.')},
+    {'icon': 'sliders',        'text': _('الصلاحيات والحدود تضبط ما يمكن للمشغّل فعله.')},
+    {'icon': 'chart-simple',   'text': _('تتبّع الأرباح يوضّح حصص المدير والشركة.')},
+    {'icon': 'circle-info',    'text': _('الجداول تعرض المشتركين والحزم والأحداث ضمن النطاق.')},
   ],
-  note="هذه الصفحة تسجّل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام."
+  note=_('هذه الصفحة تسجّل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.')
 )) %}
 
 <div class="hub-grid-1-1">
-  {% call hub.section("شحن المحفظة", icon="wallet") %}
+  {% call hub.section(_('شحن المحفظة'), icon="wallet") %}
     {% if can_submit('radius.business_operator_recharge', 'POST') %}<form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label class="op-field"><span>{{ _('المبلغ') }}</span>
@@ -132,7 +132,7 @@
   {% endcall %}
 
   {% if profile.entity_type == 'manager' %}
-  {% call hub.section("قوالب الصلاحيات", icon="clone") %}
+  {% call hub.section(_('قوالب الصلاحيات'), icon="clone") %}
     <div class="op-form" data-testid="presets-panel" style="gap:16px">
       <div class="hub-text-mute" style="font-size:11.5px;font-weight:600;line-height:1.9">
         {{ _('احفظ منوحات هذا المدير كقالب مُسمّى، أو طبّق قالبًا جاهزًا عليه بضغطة — ثم عدّل يدويًّا.') }}
@@ -179,7 +179,7 @@
   {% endcall %}
   {% endif %}
 
-  {% call hub.section("الصلاحيات والحدود", icon="sliders") %}
+  {% call hub.section(_('الصلاحيات والحدود'), icon="sliders") %}
     {% if mgr_role %}
     <div class="op-inherit-banner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;
          padding:11px 14px;margin-bottom:14px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:12px">
@@ -420,17 +420,17 @@
   {% endcall %}
 </div>
 
-{% call hub.section("تتبع الأرباح", icon="chart-simple") %}
+{% call hub.section(_('تتبع الأرباح'), icon="chart-simple") %}
   <div class="hub-kpi-grid" data-testid="operator-profit-summary">
-    {{ hub.kpi("السعر الأصلي", profile.profit.original_price|money, icon="tag") }}
-    {{ hub.kpi("تكلفة الجملة", profile.profit.wholesale_cost|money, icon="receipt") }}
-    {{ hub.kpi("حصة المدير", profile.profit.manager_share|money, icon="hand-holding-dollar", variant="green") }}
-    {{ hub.kpi("حصة الشركة", profile.profit.company_share|money, icon="building", variant="blue") }}
+    {{ hub.kpi(_('السعر الأصلي'), profile.profit.original_price|money, icon="tag") }}
+    {{ hub.kpi(_('تكلفة الجملة'), profile.profit.wholesale_cost|money, icon="receipt") }}
+    {{ hub.kpi(_('حصة المدير'), profile.profit.manager_share|money, icon="hand-holding-dollar", variant="green") }}
+    {{ hub.kpi(_('حصة الشركة'), profile.profit.company_share|money, icon="building", variant="blue") }}
   </div>
 {% endcall %}
 
 <div class="hub-grid-1-1">
-  {% call hub.section("المشتركون ضمن النطاق", icon="users", meta=(profile.subscribers|length|string ~ " مشترك") if profile.subscribers else "", flush=True) %}
+  {% call hub.section(_('المشتركون ضمن النطاق'), icon="users", meta=(_('%(string)s مشترك', string=profile.subscribers|length|string)) if profile.subscribers else "", flush=True) %}
     {% if profile.subscribers %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-subscribers"
@@ -444,11 +444,11 @@
       </table>
     </div>
     {% else %}
-      {{ hub.empty("لا يوجد مشتركون ضمن هذا النطاق.", icon="users") }}
+      {{ hub.empty(_('لا يوجد مشتركون ضمن هذا النطاق.'), icon="users") }}
     {% endif %}
   {% endcall %}
 
-  {% call hub.section("حزم الكروت ضمن النطاق", icon="layer-group", meta=(profile.batches|length|string ~ " حزمة") if profile.batches else "", flush=True) %}
+  {% call hub.section(_('حزم الكروت ضمن النطاق'), icon="layer-group", meta=(_('%(string)s حزمة', string=profile.batches|length|string)) if profile.batches else "", flush=True) %}
     {% if profile.batches %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-batches"
@@ -462,12 +462,12 @@
       </table>
     </div>
     {% else %}
-      {{ hub.empty("لا توجد حزم كروت ضمن هذا النطاق.", icon="layer-group") }}
+      {{ hub.empty(_('لا توجد حزم كروت ضمن هذا النطاق.'), icon="layer-group") }}
     {% endif %}
   {% endcall %}
 </div>
 
-{% call hub.section("الأحداث والعمليات", icon="timeline", flush=True) %}
+{% call hub.section(_('الأحداث والعمليات'), icon="timeline", flush=True) %}
   {% if profile.operations or profile.events %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="operator-events"
@@ -475,16 +475,16 @@
       <thead><tr><th>{{ _('النوع') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('تاريخ الإنشاء') }}</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
-          <tr><td>{{ hub.pill("عملية", variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at|dt_local }}</td></tr>
+          <tr><td>{{ hub.pill(_('عملية'), variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at|dt_local }}</td></tr>
         {% endfor %}
         {% for event in profile.events %}
-          <tr><td>{{ hub.pill("حدث", variant="blue", dot=False) }}</td><td class="mono">{{ event.event_key }}</td><td>{{ op_status(event.severity) }}</td><td class="mono small">{{ event.created_at|dt_local }}</td></tr>
+          <tr><td>{{ hub.pill(_('حدث'), variant="blue", dot=False) }}</td><td class="mono">{{ event.event_key }}</td><td>{{ op_status(event.severity) }}</td><td class="mono small">{{ event.created_at|dt_local }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا توجد أحداث بعد.", icon="timeline") }}
+    {{ hub.empty(_('لا توجد أحداث بعد.'), icon="timeline") }}
   {% endif %}
 {% endcall %}
 

@@ -7,6 +7,7 @@ the web page, and exposes the same guarded operator workflows for LAN
 discovery and trusted-device bypass setup.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import socket
 import time
@@ -19,19 +20,19 @@ from ..responses import fail, ok
 
 
 _TYPE_LABELS = {
-    "ap": "نقطة وصول",
-    "router": "راوتر",
-    "switch": "سويتش",
-    "camera": "كاميرا",
-    "nvr": "مسجل كاميرات",
-    "server": "خادم",
-    "other": "جهاز آخر",
+    "ap": N_("نقطة وصول"),
+    "router": N_("راوتر"),
+    "switch": N_("سويتش"),
+    "camera": N_("كاميرا"),
+    "nvr": N_("مسجل كاميرات"),
+    "server": N_("خادم"),
+    "other": N_("جهاز آخر"),
 }
 
 _STATUS_LABELS = {
-    "up": "يستجيب",
-    "down": "لا يستجيب",
-    "unknown": "غير مفحوص",
+    "up": N_("يستجيب"),
+    "down": N_("لا يستجيب"),
+    "unknown": N_("غير مفحوص"),
 }
 
 
@@ -225,7 +226,7 @@ def _serialize(row: dict, routers: dict[int, dict] | None = None) -> dict:
         "router_address": router.get("address", ""),
         "name": row.get("name") or "",
         "device_type": device_type,
-        "device_type_label": _TYPE_LABELS.get(device_type, "جهاز آخر"),
+        "device_type_label": _TYPE_LABELS.get(device_type, N_("جهاز آخر")),
         "ip_address": row.get("ip_address") or "",
         "mac_address": row.get("mac_address") or "",
         "location": row.get("location") or "",
@@ -235,7 +236,7 @@ def _serialize(row: dict, routers: dict[int, dict] | None = None) -> dict:
         "watch_enabled": bool(row.get("watch_enabled")),
         "alert_enabled": bool(row.get("alert_enabled")),
         "last_status": status,
-        "last_status_label": _STATUS_LABELS.get(status, "غير مفحوص"),
+        "last_status_label": _STATUS_LABELS.get(status, N_("غير مفحوص")),
         "last_checked_at": row.get("last_checked_at") or "",
         "last_latency_ms": row.get("last_latency_ms"),
         "created_at": row.get("created_at") or "",
@@ -258,17 +259,17 @@ def _summary(items: list[dict]) -> dict:
 
 
 _REMOTE_PROTOCOL_LABELS = {
-    "http": "واجهة الويب العادية",
-    "https": "واجهة الويب الآمنة",
+    "http": N_("واجهة الويب العادية"),
+    "https": N_("واجهة الويب الآمنة"),
     "winbox": "Winbox",
     "ssh": "SSH",
 }
 
 _REMOTE_STATUS_LABELS = {
-    "active": "نشطة",
-    "expired": "منتهية",
-    "closed": "مغلقة",
-    "failed": "فشلت",
+    "active": N_("نشطة"),
+    "expired": N_("منتهية"),
+    "closed": N_("مغلقة"),
+    "failed": N_("فشلت"),
 }
 
 
@@ -300,7 +301,7 @@ def _remote_session_payload(session: dict, public_host: str = "") -> dict:
         "public_endpoint": public_endpoint,
         "public_url": public_url,
         "status": status,
-        "status_label": _REMOTE_STATUS_LABELS.get(status, "غير محددة"),
+        "status_label": _REMOTE_STATUS_LABELS.get(status, N_("غير محددة")),
         "created_at": session.get("created_at") or "",
         "expires_at": session.get("expires_at") or "",
         "closed_at": session.get("closed_at") or "",
@@ -348,11 +349,11 @@ def _remote_access_payload(
             for key in ("http", "https", "winbox", "ssh")
         ],
         "ttl_options": [
-            {"minutes": 15, "label": "15 دقيقة"},
-            {"minutes": 30, "label": "30 دقيقة"},
-            {"minutes": 60, "label": "ساعة"},
-            {"minutes": 120, "label": "ساعتان"},
-            {"minutes": 240, "label": "4 ساعات"},
+            {"minutes": 15, "label": _tr("15 دقيقة")},
+            {"minutes": 30, "label": _tr("30 دقيقة")},
+            {"minutes": 60, "label": _tr("ساعة")},
+            {"minutes": 120, "label": _tr("ساعتان")},
+            {"minutes": 240, "label": _tr("4 ساعات")},
         ],
         "message": message,
         "warning": warning,
@@ -428,7 +429,7 @@ def network_devices_get(device_id: int):
     tenant_id = _tid()
     item = network_devices_repo.get_by_id(tenant_id, device_id)
     if not item:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     return ok({"device": _serialize(item, _router_map(tenant_id))})
 
 
@@ -440,11 +441,11 @@ def network_devices_create():
     router_id = _int_or_none(body.get("router_id"))
     name = str(body.get("name") or "").strip()
     if not router_id:
-        return fail("validation_error", "اختر الراوتر التابع له الجهاز.", status=422)
+        return fail("validation_error", _tr("اختر الراوتر التابع له الجهاز."), status=422)
     if not _router_exists(tenant_id, router_id):
-        return fail("validation_error", "الراوتر المختار غير موجود.", status=422)
+        return fail("validation_error", _tr("الراوتر المختار غير موجود."), status=422)
     if not name:
-        return fail("validation_error", "اسم الجهاز مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم الجهاز مطلوب."), status=422)
 
     new_id = network_devices_repo.create(
         tenant_id=tenant_id,
@@ -472,18 +473,18 @@ def network_devices_patch(device_id: int):
     tenant_id = _tid()
     item = network_devices_repo.get_by_id(tenant_id, device_id)
     if not item:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
 
     body = _body()
     if "router_id" in body:
         router_id = _int_or_none(body.get("router_id"))
         if not router_id:
-            return fail("validation_error", "اختر الراوتر التابع له الجهاز.", status=422)
+            return fail("validation_error", _tr("اختر الراوتر التابع له الجهاز."), status=422)
         # parity-c: like the web edit, only a CHANGED router must exist — a
         # device whose router was archived could not be saved from the app
         # at all (it always sends its current router_id).
         if router_id != item["router_id"] and not _router_exists(tenant_id, router_id):
-            return fail("validation_error", "الراوتر المختار غير موجود.", status=422)
+            return fail("validation_error", _tr("الراوتر المختار غير موجود."), status=422)
         if router_id != item["router_id"]:
             with transaction() as conn:
                 conn.execute(
@@ -494,7 +495,7 @@ def network_devices_patch(device_id: int):
 
     fields = _editable_fields(body)
     if "name" in fields and not str(fields["name"] or "").strip():
-        return fail("validation_error", "اسم الجهاز مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم الجهاز مطلوب."), status=422)
     if fields:
         network_devices_repo.update(tenant_id, device_id, **fields)
 
@@ -507,7 +508,7 @@ def network_devices_delete(device_id: int):
 
     tenant_id = _tid()
     if not network_devices_repo.get_by_id(tenant_id, device_id):
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     deleted = network_devices_repo.delete(tenant_id, device_id)
     return ok({"deleted": device_id, "removed": bool(deleted)})
 
@@ -518,10 +519,10 @@ def network_devices_check(device_id: int):
     tenant_id = _tid()
     item = network_devices_repo.get_by_id(tenant_id, device_id)
     if not item:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     ip = item.get("ip_address") or ""
     if not ip:
-        return fail("validation_error", "عنوان IP للجهاز فارغ.", status=422)
+        return fail("validation_error", _tr("عنوان IP للجهاز فارغ."), status=422)
 
     status, latency_ms = _tcp_probe(ip, int(item.get("management_port") or 80))
     network_devices_repo.set_last_check(
@@ -531,9 +532,9 @@ def network_devices_check(device_id: int):
         latency_ms=latency_ms,
     )
     message = (
-        "الجهاز يستجيب."
+        _tr("الجهاز يستجيب.")
         if status == "up"
-        else "تعذر الوصول إلى الجهاز من الخادم."
+        else _tr("تعذر الوصول إلى الجهاز من الخادم.")
     )
     updated = network_devices_repo.get_by_id(tenant_id, device_id)
     return ok(
@@ -555,13 +556,13 @@ def network_devices_scan_router():
     router_id = _int_or_none(_body().get("router_id")) or 0
     nas_dc = _load_router(tenant_id, router_id)
     if not nas_dc:
-        return fail("validation_error", "اختر راوترًا موجودًا قبل فحص الشبكة.", status=422)
+        return fail("validation_error", _tr("اختر راوترًا موجودًا قبل فحص الشبكة."), status=422)
 
     result = network_ip_scan.scan_router(_nas_to_runtime_dict(nas_dc))
     if not result.ok:
         return fail(
             "router_scan_failed",
-            result.error or "تعذر فحص الشبكة من الراوتر المحدد.",
+            result.error or _tr("تعذر فحص الشبكة من الراوتر المحدد."),
             status=502,
         )
 
@@ -612,13 +613,13 @@ def network_devices_scan_add():
     router_id = _int_or_none(body.get("router_id")) or 0
     nas_dc = _load_router(tenant_id, router_id)
     if not nas_dc:
-        return fail("validation_error", "اختر راوترًا موجودًا قبل إضافة الجهاز.", status=422)
+        return fail("validation_error", _tr("اختر راوترًا موجودًا قبل إضافة الجهاز."), status=422)
 
     ip = str(body.get("ip") or "").strip()
     if not ip:
-        return fail("validation_error", "عنوان الجهاز مطلوب.", status=422)
+        return fail("validation_error", _tr("عنوان الجهاز مطلوب."), status=422)
     hostname = str(body.get("hostname") or "").strip()
-    name = str(body.get("name") or "").strip() or hostname or f"جهاز {ip}"
+    name = str(body.get("name") or "").strip() or hostname or _tr('جهاز %(ip)s', ip=ip)
 
     new_id = network_devices_repo.create(
         tenant_id=tenant_id,
@@ -639,9 +640,9 @@ def network_devices_bypass_state(device_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
 
     result = bypass.list_dhcp_servers(_nas_to_runtime_dict(nas_dc))
     dhcp_servers = result.data if result.ok and isinstance(result.data, list) else []
@@ -651,7 +652,7 @@ def network_devices_bypass_state(device_id: int):
             "router": _router_payload(nas_dc),
             "dhcp_servers": dhcp_servers,
             "ready": bool(device.get("mac_address") and device.get("ip_address")),
-            "dhcp_error": "" if result.ok else (result.error or "تعذر قراءة خوادم DHCP من الراوتر."),
+            "dhcp_error": "" if result.ok else (result.error or _tr("تعذر قراءة خوادم DHCP من الراوتر.")),
             "address_list_name": bypass.ADDRESS_LIST_NAME,
         }
     )
@@ -663,20 +664,20 @@ def network_devices_bypass_apply(device_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
     if not device.get("mac_address") or not device.get("ip_address"):
         return fail(
             "validation_error",
-            "احفظ عنوان IP والعنوان الفيزيائي للجهاز قبل تجهيز التجاوز.",
+            _tr("احفظ عنوان IP والعنوان الفيزيائي للجهاز قبل تجهيز التجاوز."),
             status=422,
         )
 
     body = _body()
     dhcp_server_name = str(body.get("dhcp_server_name") or "").strip()
     if not dhcp_server_name:
-        return fail("validation_error", "اختر خادم DHCP من الراوتر.", status=422)
+        return fail("validation_error", _tr("اختر خادم DHCP من الراوتر."), status=422)
 
     result = bypass.apply_bypass(
         nas=_nas_to_runtime_dict(nas_dc),
@@ -688,14 +689,14 @@ def network_devices_bypass_apply(device_id: int):
     if not result.ok:
         return fail(
             "device_bypass_failed",
-            result.error or "تعذر تجهيز الجهاز على الراوتر.",
+            result.error or _tr("تعذر تجهيز الجهاز على الراوتر."),
             status=502,
         )
     return ok(
         {
             "device": _serialize(device, _router_map(tenant_id)),
             "steps": result.data or {},
-            "message": "تم تجهيز الجهاز على الراوتر.",
+            "message": _tr("تم تجهيز الجهاز على الراوتر."),
         }
     )
 
@@ -706,9 +707,9 @@ def network_devices_bypass_remove(device_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
 
     result = bypass.remove_bypass(
         nas=_nas_to_runtime_dict(nas_dc),
@@ -717,7 +718,7 @@ def network_devices_bypass_remove(device_id: int):
     if not result.ok:
         return fail(
             "device_bypass_remove_failed",
-            result.error or "تعذر إزالة تجهيز الجهاز من الراوتر.",
+            result.error or _tr("تعذر إزالة تجهيز الجهاز من الراوتر."),
             status=502,
         )
     removed = result.data if isinstance(result.data, dict) else {}
@@ -727,7 +728,7 @@ def network_devices_bypass_remove(device_id: int):
             "device": _serialize(device, _router_map(tenant_id)),
             "removed": removed,
             "total_removed": total,
-            "message": f"تمت إزالة {total} قاعدة من الراوتر.",
+            "message": _tr('تمت إزالة %(total)s قاعدة من الراوتر.', total=total),
         }
     )
 
@@ -736,9 +737,9 @@ def network_devices_remote_access_state(device_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
     return ok(_remote_access_payload(
         tenant_id=tenant_id,
         device=device,
@@ -753,13 +754,13 @@ def network_devices_remote_access_open(device_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
     if not str(device.get("ip_address") or "").strip():
         return fail(
             "validation_error",
-            "احفظ عنوان IP للجهاز قبل فتح جلسة وصول بعيدة.",
+            _tr("احفظ عنوان IP للجهاز قبل فتح جلسة وصول بعيدة."),
             status=422,
         )
 
@@ -768,7 +769,7 @@ def network_devices_remote_access_open(device_id: int):
     if protocol not in remote_access_sessions_repo.ALLOWED_PROTOCOLS:
         return fail(
             "validation_error",
-            "البروتوكول المطلوب غير مدعوم.",
+            _tr("البروتوكول المطلوب غير مدعوم."),
             status=422,
         )
     try:
@@ -776,7 +777,7 @@ def network_devices_remote_access_open(device_id: int):
     except (TypeError, ValueError):
         return fail(
             "validation_error",
-            "مدة الجلسة يجب أن تكون رقمًا بالدقائق.",
+            _tr("مدة الجلسة يجب أن تكون رقمًا بالدقائق."),
             status=422,
         )
     ttl_minutes = max(5, min(ttl_minutes, 240))
@@ -794,7 +795,7 @@ def network_devices_remote_access_open(device_id: int):
     if not opened or not session:
         return fail(
             "remote_access_failed",
-            error or "تعذر فتح جلسة الوصول البعيد.",
+            error or _tr("تعذر فتح جلسة الوصول البعيد."),
             status=502,
         )
 
@@ -802,7 +803,7 @@ def network_devices_remote_access_open(device_id: int):
         tenant_id=tenant_id,
         device=device,
         nas_dc=nas_dc,
-        message="تم فتح جلسة الوصول البعيد.",
+        message=N_("تم فتح جلسة الوصول البعيد."),
     )
     payload["session"] = _remote_session_payload(
         session,
@@ -818,18 +819,18 @@ def network_devices_remote_access_close(device_id: int, session_id: int):
     tenant_id = _tid()
     device, nas_dc = _load_device_router(tenant_id, device_id)
     if not device:
-        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+        return fail("not_found", _tr("جهاز الشبكة غير موجود."), status=404)
     if not nas_dc:
-        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+        return fail("not_found", _tr("راوتر الجهاز غير موجود."), status=404)
     session = remote_access_sessions_repo.get(tenant_id, session_id)
     if not session or int(session.get("device_id") or 0) != int(device_id):
-        return fail("not_found", "جلسة الوصول البعيد غير موجودة.", status=404)
+        return fail("not_found", _tr("جلسة الوصول البعيد غير موجودة."), status=404)
     if session.get("status") != "active":
         return ok(_remote_access_payload(
             tenant_id=tenant_id,
             device=device,
             nas_dc=nas_dc,
-            message="الجلسة مغلقة بالفعل.",
+            message=N_("الجلسة مغلقة بالفعل."),
         ))
 
     _ok, warning = remote_device_access.close_session(
@@ -841,7 +842,7 @@ def network_devices_remote_access_close(device_id: int, session_id: int):
         tenant_id=tenant_id,
         device=device,
         nas_dc=nas_dc,
-        message="تم إغلاق جلسة الوصول البعيد.",
+        message=N_("تم إغلاق جلسة الوصول البعيد."),
         warning=warning or "",
     ))
 

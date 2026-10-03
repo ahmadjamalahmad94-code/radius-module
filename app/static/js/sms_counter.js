@@ -18,6 +18,7 @@
  *                                     channel isn't SMS the counter stays muted.
  * The script self-attaches on DOMContentLoaded and is idempotent.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -63,10 +64,10 @@
   }
 
   function segmentsAr(n) {
-    if (n <= 0) return "لا رسائل";
-    if (n === 1) return "رسالة واحدة";
-    if (n === 2) return "رسالتان (مقطعان)";
-    return n + " رسائل (مقاطع)";
+    if (n <= 0) return hrT('لا رسائل');
+    if (n === 1) return hrT('رسالة واحدة');
+    if (n === 2) return hrT('رسالتان (مقطعان)');
+    return n + hrT(' رسائل (مقاطع)');
   }
 
   function injectStyles() {
@@ -98,7 +99,7 @@
     wrap.innerHTML =
       '<div class="smsc-row">' +
         '<span class="smsc-count"><b class="smsc-len">0</b> / <span class="smsc-limit"></span> ' +
-          '<span class="smsc-unit">حرف</span></span>' +
+          ('<span class="smsc-unit">' + hrT('حرف') + '</span>' + '</span>') +
         '<span class="smsc-seg"></span>' +
         '<span class="smsc-enc"></span>' +
       '</div>' +
@@ -141,12 +142,12 @@
 
       if (multi) {
         warnEl.hidden = false;
-        warnEl.textContent = "تنبيه: الرسالة ستُرسَل كـ " + segmentsAr(info.segments) +
-          " — أي بتكلفة " + info.segments + " رسائل SMS. اختصرها إلى " + limit + " حرفًا أو أقل.";
+        warnEl.textContent = hrT('تنبيه: الرسالة ستُرسَل كـ ') + segmentsAr(info.segments) +
+          hrT(' — أي بتكلفة ') + info.segments + hrT(' رسائل SMS. اختصرها إلى ') + limit + hrT(' حرفًا أو أقل.');
       } else if (over) {
         warnEl.hidden = false;
-        warnEl.textContent = "الرسالة تتجاوز الحدّ الموصى به (" + limit +
-          " حرفًا). قد تتحوّل إلى أكثر من رسالة وتزيد التكلفة — يُفضّل اختصارها.";
+        warnEl.textContent = hrT('الرسالة تتجاوز الحدّ الموصى به (') + limit +
+          hrT(' حرفًا). قد تتحوّل إلى أكثر من رسالة وتزيد التكلفة — يُفضّل اختصارها.');
       } else {
         warnEl.hidden = true;
         warnEl.textContent = "";

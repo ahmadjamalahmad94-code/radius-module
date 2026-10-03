@@ -22,6 +22,7 @@ the row: raw action keys are Arabic-labelled, enum statuses are Arabic,
 router ids resolve to «name / ip», and unknown reason codes are humanized.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Any, Optional
 
@@ -42,35 +43,35 @@ CAT_CONFIG = "config"
 # Section tabs across the top of the page (order = display order). Each is a
 # category filter except «all» (everything) and «fail» (status filter).
 SECTIONS: list[dict[str, str]] = [
-    {"key": "all",            "label": "الكل",                    "icon": "layer-group"},
-    {"key": CAT_LOGIN,        "label": "الدخول",                  "icon": "right-to-bracket"},
-    {"key": CAT_DISCONNECT,   "label": "الفصل",                   "icon": "plug-circle-xmark"},
-    {"key": CAT_SPEED,        "label": "تغيير السرعة",            "icon": "gauge-high"},
-    {"key": CAT_PLAN,         "label": "تحديث الباقة",            "icon": "box-open"},
-    {"key": CAT_RESET,        "label": "إعادة تعيين كلمة السر",   "icon": "key"},
-    {"key": CAT_CONFIG,       "label": "دفع الإعداد",             "icon": "cloud-arrow-up"},
-    {"key": "fail",           "label": "الفشل",                   "icon": "triangle-exclamation"},
+    {"key": "all",            "label": N_("الكل"),                    "icon": "layer-group"},
+    {"key": CAT_LOGIN,        "label": N_("الدخول"),                  "icon": "right-to-bracket"},
+    {"key": CAT_DISCONNECT,   "label": N_("الفصل"),                   "icon": "plug-circle-xmark"},
+    {"key": CAT_SPEED,        "label": N_("تغيير السرعة"),            "icon": "gauge-high"},
+    {"key": CAT_PLAN,         "label": N_("تحديث الباقة"),            "icon": "box-open"},
+    {"key": CAT_RESET,        "label": N_("إعادة تعيين كلمة السر"),   "icon": "key"},
+    {"key": CAT_CONFIG,       "label": N_("دفع الإعداد"),             "icon": "cloud-arrow-up"},
+    {"key": "fail",           "label": N_("الفشل"),                   "icon": "triangle-exclamation"},
 ]
 _SECTION_KEYS = {s["key"] for s in SECTIONS}
 
 # Specific action-key overrides (exact match wins over the substring rules).
 # Value = (category, arabic_label). Labels stay tight and concrete.
 _ACTION_OVERRIDES: dict[str, tuple[str, str]] = {
-    "disconnect":            (CAT_DISCONNECT, "فصل جلسة (قطع اتصال)"),
-    "card.disconnect":       (CAT_DISCONNECT, "فصل جلسة بطاقة"),
-    "mt.coa.disconnect":     (CAT_DISCONNECT, "فصل جلسة (CoA)"),
-    "mt.coa.set_speed":      (CAT_SPEED,      "تغيير السرعة (تطبيق حيّ)"),
-    "card.set_speed":        (CAT_SPEED,      "تغيير سرعة البطاقة"),
-    "bulk_set_speeds":       (CAT_SPEED,      "تغيير سرعة كل العروض"),
-    "temporary_speed.apply": (CAT_SPEED,      "تغيير السرعة (مؤقتة)"),
-    "temporary_speed.revert":(CAT_SPEED,      "إرجاع السرعة العادية"),
-    "bandwidth_schedule.engage":  (CAT_SPEED, "تغيير السرعة (جدولة تلقائية)"),
-    "bandwidth_schedule.release": (CAT_SPEED, "إرجاع السرعة (نهاية الجدولة)"),
-    "set_speed":             (CAT_SPEED,      "تغيير السرعة"),
-    "reset_password":        (CAT_RESET,      "إعادة تعيين كلمة السر"),
-    "card.adjust_time":      (CAT_PLAN,       "تعديل وقت البطاقة"),
-    "card.reset_usage":      (CAT_PLAN,       "تصفير استهلاك البطاقة"),
-    "mt.coa.set_ip":         (CAT_CONFIG,     "تغيير IP الجلسة"),
+    "disconnect":            (CAT_DISCONNECT, N_("فصل جلسة (قطع اتصال)")),
+    "card.disconnect":       (CAT_DISCONNECT, N_("فصل جلسة بطاقة")),
+    "mt.coa.disconnect":     (CAT_DISCONNECT, N_("فصل جلسة (CoA)")),
+    "mt.coa.set_speed":      (CAT_SPEED,      N_("تغيير السرعة (تطبيق حيّ)")),
+    "card.set_speed":        (CAT_SPEED,      N_("تغيير سرعة البطاقة")),
+    "bulk_set_speeds":       (CAT_SPEED,      N_("تغيير سرعة كل العروض")),
+    "temporary_speed.apply": (CAT_SPEED,      N_("تغيير السرعة (مؤقتة)")),
+    "temporary_speed.revert":(CAT_SPEED,      N_("إرجاع السرعة العادية")),
+    "bandwidth_schedule.engage":  (CAT_SPEED, N_("تغيير السرعة (جدولة تلقائية)")),
+    "bandwidth_schedule.release": (CAT_SPEED, N_("إرجاع السرعة (نهاية الجدولة)")),
+    "set_speed":             (CAT_SPEED,      N_("تغيير السرعة")),
+    "reset_password":        (CAT_RESET,      N_("إعادة تعيين كلمة السر")),
+    "card.adjust_time":      (CAT_PLAN,       N_("تعديل وقت البطاقة")),
+    "card.reset_usage":      (CAT_PLAN,       N_("تصفير استهلاك البطاقة")),
+    "mt.coa.set_ip":         (CAT_CONFIG,     N_("تغيير IP الجلسة")),
 }
 
 
@@ -134,7 +135,7 @@ _STATUS_OK = {"ok", "success", "succeeded", "done", "completed", "applied",
 _STATUS_FAIL = {"failed", "error", "fail", "aborted", "nak", "timeout"}
 _STATUS_PENDING = {"queued", "syncing", "retrying", "pending", "planned"}
 
-_STATUS_LABEL = {True: "نجاح", False: "فشل", None: "قيد الانتظار"}
+_STATUS_LABEL = {True: N_("نجاح"), False: N_("فشل"), None: N_("قيد الانتظار")}
 
 
 def _norm_status(raw: str) -> Optional[bool]:
@@ -166,10 +167,10 @@ def _kbps_to_ar(kbps: int) -> str:
     if kbps <= 0:
         return ""
     if kbps < 1024:
-        return f"{kbps} كيلو"
+        return _tr('%(kbps)s كيلو', kbps=kbps)
     mbps = kbps / 1024
     txt = f"{mbps:.0f}" if abs(mbps - round(mbps)) < 0.05 else f"{mbps:.1f}"
-    return f"{txt} ميجا"
+    return _tr('%(txt)s ميجا', txt=txt)
 
 
 def _fmt_speed_value(raw) -> str:
@@ -212,8 +213,8 @@ def _speed_detail(before: dict, after: dict, payload: dict) -> str:
     to = _fmt_speed_value(_rate(after) or _rate(payload))
     if not to:
         return ""
-    frm = _fmt_speed_value(_rate(before)) or "غير معروف"
-    return f"السرعة: من {frm} إلى {to}"
+    frm = _fmt_speed_value(_rate(before)) or N_("غير معروف")
+    return _tr('السرعة: من %(frm)s إلى %(to)s', frm=frm, to=to)
 
 
 # ═══════════════════ disconnect reason → Arabic ═══════════════════
@@ -222,91 +223,91 @@ def _speed_detail(before: dict, after: dict, payload: dict) -> str:
 # to a clear Arabic label — no raw code ever reaches the «التفاصيل» column.
 DISCONNECT_REASON_AR: dict[str, str] = {
     # manual
-    "manual": "فصل يدوي من المدير", "admin": "فصل يدوي من المدير",
+    "manual": N_("فصل يدوي من المدير"), "admin": N_("فصل يدوي من المدير"),
     # another device / concurrency (owner: «دخول جهاز آخر»)
-    "device_limit_exceeded": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
-    "concurrent_limit": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
-    "concurrent": "دخول جهاز آخر (تجاوز حدّ الأجهزة)",
-    "another_device": "دخول جهاز آخر", "replace": "دخول جهاز آخر",
-    "shared_session": "دخول جهاز آخر (حساب مشترك)",
+    "device_limit_exceeded": N_("دخول جهاز آخر (تجاوز حدّ الأجهزة)"),
+    "concurrent_limit": N_("دخول جهاز آخر (تجاوز حدّ الأجهزة)"),
+    "concurrent": N_("دخول جهاز آخر (تجاوز حدّ الأجهزة)"),
+    "another_device": N_("دخول جهاز آخر"), "replace": N_("دخول جهاز آخر"),
+    "shared_session": N_("دخول جهاز آخر (حساب مشترك)"),
     # time / quota
-    "session_timeout": "انتهاء وقت الجلسة", "conn_time": "انتهاء وقت الاتصال",
-    "card_time": "انتهاء وقت البطاقة", "time_expired": "انتهاء الوقت",
-    "quota_exhausted": "انتهاء الكوتا", "quota_exceeded": "انتهاء الكوتا",
-    "quota": "انتهاء الكوتا",
+    "session_timeout": N_("انتهاء وقت الجلسة"), "conn_time": N_("انتهاء وقت الاتصال"),
+    "card_time": N_("انتهاء وقت البطاقة"), "time_expired": N_("انتهاء الوقت"),
+    "quota_exhausted": N_("انتهاء الكوتا"), "quota_exceeded": N_("انتهاء الكوتا"),
+    "quota": N_("انتهاء الكوتا"),
     # policy_engine reject codes (a save-hook eviction carries these as reason —
     # otherwise they'd humanize to raw English like «time daily exhausted»)
-    "time_daily_exhausted": "انتهى الوقت اليومي",
-    "time_total_exhausted": "انتهى إجمالي الوقت المسموح",
-    "card_time_exhausted": "انتهى وقت البطاقة",
-    "provider_active_cap": "بلغ سقف الجلسات المتزامنة للمزوّد",
-    "access_blocked": "الوصول محظور", "access_suspended": "الحساب موقوف",
-    "mac_clone_detected": "اكتشاف تكرار عنوان الجهاز (استنساخ MAC)",
-    "stepup_required": "مطلوب تحقّق إضافيّ",
+    "time_daily_exhausted": N_("انتهى الوقت اليومي"),
+    "time_total_exhausted": N_("انتهى إجمالي الوقت المسموح"),
+    "card_time_exhausted": N_("انتهى وقت البطاقة"),
+    "provider_active_cap": N_("بلغ سقف الجلسات المتزامنة للمزوّد"),
+    "access_blocked": N_("الوصول محظور"), "access_suspended": N_("الحساب موقوف"),
+    "mac_clone_detected": N_("اكتشاف تكرار عنوان الجهاز (استنساخ MAC)"),
+    "stepup_required": N_("مطلوب تحقّق إضافيّ"),
     # expiry / status
-    "expired": "انتهاء صلاحية البطاقة/الاشتراك",
-    "expiry": "انتهاء صلاحية البطاقة/الاشتراك",
-    "disabled": "تعطيل الحساب", "status": "تعطيل الحساب",
-    "user_deleted": "حُذف المستخدم",
+    "expired": N_("انتهاء صلاحية البطاقة/الاشتراك"),
+    "expiry": N_("انتهاء صلاحية البطاقة/الاشتراك"),
+    "disabled": N_("تعطيل الحساب"), "status": N_("تعطيل الحساب"),
+    "user_deleted": N_("حُذف المستخدم"),
     # schedule
-    "outside_hours": "خارج ساعات الدوام", "outside_days": "خارج أيام الدوام",
-    "schedule": "خارج وقت الدوام", "out_of_schedule": "خارج وقت الدوام",
+    "outside_hours": N_("خارج ساعات الدوام"), "outside_days": N_("خارج أيام الدوام"),
+    "schedule": N_("خارج وقت الدوام"), "out_of_schedule": N_("خارج وقت الدوام"),
     # active-session schedule-window enforcer (authorize reject reason
     # `outside_schedule` + the periodic sweep reason `out_of_window`) — the
     # window closed while the session was live, so it's CoA-disconnected.
-    "out_of_window": "خارج وقت السماح", "outside_schedule": "خارج وقت السماح",
+    "out_of_window": N_("خارج وقت السماح"), "outside_schedule": N_("خارج وقت السماح"),
     # mac / policy
-    "mac_mismatch": "عنوان الجهاز (MAC) غير مطابق",
-    "mac": "عنوان الجهاز (MAC) غير مطابق",
-    "random_mac_blocked": "عنوان MAC عشوائي ممنوع",
-    "blocks": "حظر الوصول", "access_block": "حظر الوصول",
-    "policy": "مخالفة سياسة الشبكة",
+    "mac_mismatch": N_("عنوان الجهاز (MAC) غير مطابق"),
+    "mac": N_("عنوان الجهاز (MAC) غير مطابق"),
+    "random_mac_blocked": N_("عنوان MAC عشوائي ممنوع"),
+    "blocks": N_("حظر الوصول"), "access_block": N_("حظر الوصول"),
+    "policy": N_("مخالفة سياسة الشبكة"),
     # save-driven reconcile
-    "plan_update": "تغيير الباقة", "batch_update": "تعديل الحزمة",
-    "save": "إعادة مطابقة بعد حفظ",
+    "plan_update": N_("تغيير الباقة"), "batch_update": N_("تعديل الحزمة"),
+    "save": N_("إعادة مطابقة بعد حفظ"),
     # shared-card previous-session eviction (accounting-start)
-    "shared_session_kick": "فصل الجلسات السابقة (حساب مشترك)",
+    "shared_session_kick": N_("فصل الجلسات السابقة (حساب مشترك)"),
     # card-batch flag: close other sessions on this card's disconnect
-    "card_batch_close": "إغلاق جلسات الحساب (إعداد الحزمة)",
+    "card_batch_close": N_("إغلاق جلسات الحساب (إعداد الحزمة)"),
     # anti-MAC-clone concurrent-device kick
-    "mac_clone": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
-    "anti_mac_clone": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
-    "concurrent_device_detected": "اكتشاف جهاز متزامن مريب (تعدّد MAC)",
+    "mac_clone": N_("اكتشاف جهاز متزامن مريب (تعدّد MAC)"),
+    "anti_mac_clone": N_("اكتشاف جهاز متزامن مريب (تعدّد MAC)"),
+    "concurrent_device_detected": N_("اكتشاف جهاز متزامن مريب (تعدّد MAC)"),
     # temp-speed disconnect-reauth (kick to force a re-auth that returns the
     # new rate on routers that ignore rate-CoA)
-    "temp_speed_reauth": "إعادة مصادقة لتطبيق السرعة",
+    "temp_speed_reauth": N_("إعادة مصادقة لتطبيق السرعة"),
     # stale-session reconciler (DB-only close) — raw CAUSE_* constants + codes
-    "stale_session": "تسوية جلسة معلّقة (بلا نشاط)",
-    "Stale-Session-Timeout": "تسوية جلسة معلّقة (بلا نشاط)",
-    "nas_lost": "فقدان اتصال الجلسة من الراوتر",
-    "NAS-Lost-Session": "فقدان اتصال الجلسة من الراوتر",
-    "Reconciliation-Stale": "تسوية جلسة معلّقة (مصالحة يدويّة)",
-    "Admin-Force-Close": "إغلاق إجباريّ من المدير",
-    "force_close": "إغلاق إجباريّ من المدير",
+    "stale_session": N_("تسوية جلسة معلّقة (بلا نشاط)"),
+    "Stale-Session-Timeout": N_("تسوية جلسة معلّقة (بلا نشاط)"),
+    "nas_lost": N_("فقدان اتصال الجلسة من الراوتر"),
+    "NAS-Lost-Session": N_("فقدان اتصال الجلسة من الراوتر"),
+    "Reconciliation-Stale": N_("تسوية جلسة معلّقة (مصالحة يدويّة)"),
+    "Admin-Force-Close": N_("إغلاق إجباريّ من المدير"),
+    "force_close": N_("إغلاق إجباريّ من المدير"),
     # honest label when the drop did NOT originate from us (router/network side)
-    "external": "فصل من الشبكة/الراوتر (غير صادر منّا)",
-    "router": "فصل من الشبكة/الراوتر (غير صادر منّا)",
-    "network": "فصل من الشبكة/الراوتر (غير صادر منّا)",
+    "external": N_("فصل من الشبكة/الراوتر (غير صادر منّا)"),
+    "router": N_("فصل من الشبكة/الراوتر (غير صادر منّا)"),
+    "network": N_("فصل من الشبكة/الراوتر (غير صادر منّا)"),
     # ── RADIUS Acct-Terminate-Cause values (RFC 2866) written to radacct by
     # the NAS/router — the ONLY record for passive/router-terminated ends
     # (card time-budget & subscriber time exhaustion self-terminate here). ──
-    "Session-Timeout": "انتهاء الوقت المسموح", "session-timeout": "انتهاء الوقت المسموح",
-    "Idle-Timeout": "انقطاع لخمول (لا نشاط)", "idle-timeout": "انقطاع لخمول (لا نشاط)",
-    "Device-Limit-Replace": "دخول جهاز آخر (استبدال الأقدم)",
-    "Admin-Reset": "إعادة ضبط إداريّة (فصل)",
-    "NAS-Request": "طلب الراوتر (فصل)",
-    "NAS-Reboot": "إعادة تشغيل الراوتر",
-    "NAS-Error": "خطأ في الراوتر",
-    "Port-Error": "خطأ منفذ الراوتر",
-    "Lost-Carrier": "فقدان الإشارة (Carrier)",
-    "Lost-Service": "فقدان الخدمة",
-    "Port-Preempted": "استُبق المنفذ",
-    "Port-Suspended": "عُلّق المنفذ",
+    "Session-Timeout": N_("انتهاء الوقت المسموح"), "session-timeout": N_("انتهاء الوقت المسموح"),
+    "Idle-Timeout": N_("انقطاع لخمول (لا نشاط)"), "idle-timeout": N_("انقطاع لخمول (لا نشاط)"),
+    "Device-Limit-Replace": N_("دخول جهاز آخر (استبدال الأقدم)"),
+    "Admin-Reset": N_("إعادة ضبط إداريّة (فصل)"),
+    "NAS-Request": N_("طلب الراوتر (فصل)"),
+    "NAS-Reboot": N_("إعادة تشغيل الراوتر"),
+    "NAS-Error": N_("خطأ في الراوتر"),
+    "Port-Error": N_("خطأ منفذ الراوتر"),
+    "Lost-Carrier": N_("فقدان الإشارة (Carrier)"),
+    "Lost-Service": N_("فقدان الخدمة"),
+    "Port-Preempted": N_("استُبق المنفذ"),
+    "Port-Suspended": N_("عُلّق المنفذ"),
 }
 
 # honest fallback when a disconnect row carries no reason at all (legacy rows
 # or a path we don't instrument): NOT «—», NOT a fabricated cause.
-_DISCONNECT_REASON_UNKNOWN = "سبب غير مُسجَّل"
+_DISCONNECT_REASON_UNKNOWN = N_("سبب غير مُسجَّل")
 
 
 # ═══════════════════ reason/detail color tone ═══════════════════
@@ -455,7 +456,7 @@ def _detail_from_change(before: dict, after: dict, *, limit: int = 4) -> str:
                 n = _val_ar(k, nv) if callable(_val_ar) else str(nv)
             except Exception:  # noqa: BLE001
                 o, n = str(ov), str(nv)
-        bits.append(f"{label}: من {o or '—'} إلى {n or '—'}")
+        bits.append(_tr('%(label)s: من %(v)s إلى %(v2)s', label=label, v=o or '—', v2=n or '—'))
         if len(bits) >= limit:
             break
     return "، ".join(bits)
@@ -474,10 +475,10 @@ def _detail_from_payload(payload: dict) -> str:
     ]
     for ko, kn, lbl in pairs:
         if payload.get(ko) not in (None, "") or payload.get(kn) not in (None, ""):
-            return f"{lbl}: من {payload.get(ko) or '—'} إلى {payload.get(kn) or '—'}"
+            return _tr('%(lbl)s: من %(v)s إلى %(v2)s', lbl=lbl, v=payload.get(ko) or '—', v2=payload.get(kn) or '—')
     # single-value pushes (no "from"): show the pushed value plainly
-    for k, lbl in (("rate", "السرعة"), ("new_framed_ip", "IP الجديد"),
-                   ("session_timeout", "مهلة الجلسة"), ("count", "عدد الجلسات")):
+    for k, lbl in (("rate", N_("السرعة")), ("new_framed_ip", N_("IP الجديد")),
+                   ("session_timeout", N_("مهلة الجلسة")), ("count", N_("عدد الجلسات"))):
         v = payload.get(k)
         if v not in (None, ""):
             return f"{lbl}: {v}"
@@ -588,7 +589,7 @@ def _login_rows(tid: int, date_from: str, date_to: str,
         out.append({
             "when": r.get("when") or "",
             "category": CAT_LOGIN,
-            "action_label": "تسجيل الدخول" if r.get("success") else "محاولة دخول فاشلة",
+            "action_label": _tr("تسجيل الدخول") if r.get("success") else _tr("محاولة دخول فاشلة"),
             "router_name": router_name, "router_ip": router_ip,
             "subject": str(r.get("username") or "—"),
             "detail": r.get("reason") or "",
@@ -631,13 +632,13 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
     except Exception:  # noqa: BLE001
         return []
     kind_meta = {
-        "subscriber_upsert": (CAT_CONFIG,     "دفع بيانات المشترك"),
-        "config_push":       (CAT_CONFIG,     "دفع إعداد"),
+        "subscriber_upsert": (CAT_CONFIG,     N_("دفع بيانات المشترك")),
+        "config_push":       (CAT_CONFIG,     N_("دفع إعداد")),
     }
     out: list[dict] = []
     for r in raw:
         r = dict(r)
-        cat, label = kind_meta.get(str(r.get("kind") or ""), (CAT_CONFIG, "دفع إعداد"))
+        cat, label = kind_meta.get(str(r.get("kind") or ""), (CAT_CONFIG, N_("دفع إعداد")))
         rid = r.get("router_id") or r.get("last_router_id")
         router = _resolve_router(rid, "", rmap, rip)
         # A config-push that never resolved a TARGET router never reached a
@@ -672,13 +673,13 @@ def _queue_rows(tid: int, date_from: str, date_to: str,
 # نوع البيانات الي اندفعت»). Non-router metadata (username/email/remark) is
 # deliberately absent so a name/email edit never becomes the headline.
 _CONFIG_FIELD_AR: dict[str, str] = {
-    "profile_name": "الباقة/البروفايل", "plan_id": "الباقة/البروفايل",
-    "rate_limit": "السرعة (Rate-Limit)", "speed_down_kbps": "السرعة (Rate-Limit)",
-    "speed_up_kbps": "السرعة (Rate-Limit)",
-    "static_ip": "عنوان IP", "framed_ip": "عنوان IP",
-    "mac_lock": "قفل MAC", "password": "كلمة السر",
-    "status": "حالة التفعيل", "schedule": "جدول الاتصال",
-    "session_timeout_sec": "مهلة الجلسة", "address_pool": "مجمّع العناوين",
+    "profile_name": N_("الباقة/البروفايل"), "plan_id": N_("الباقة/البروفايل"),
+    "rate_limit": N_("السرعة (Rate-Limit)"), "speed_down_kbps": N_("السرعة (Rate-Limit)"),
+    "speed_up_kbps": N_("السرعة (Rate-Limit)"),
+    "static_ip": N_("عنوان IP"), "framed_ip": N_("عنوان IP"),
+    "mac_lock": N_("قفل MAC"), "password": N_("كلمة السر"),
+    "status": N_("حالة التفعيل"), "schedule": N_("جدول الاتصال"),
+    "session_timeout_sec": N_("مهلة الجلسة"), "address_pool": N_("مجمّع العناوين"),
 }
 
 
@@ -700,7 +701,7 @@ def _config_push_detail(payload: dict) -> str:
     if not seen:
         return ""
     # subscriber_upsert carries the whole snapshot → frame it as a full push
-    head = "دفع بيانات المشترك" if "username" in payload else "دفع إعداد"
+    head = N_("دفع بيانات المشترك") if "username" in payload else N_("دفع إعداد")
     return f"{head}: " + "، ".join(seen)
 
 
@@ -729,8 +730,8 @@ def _resolve_router(router_id, nas_ip, rmap: dict, rip: dict) -> dict:
     return {"name": "", "ip": ""}
 
 
-_TARGET_AR = {"user": "مشترك", "subscriber": "مشترك", "card": "كرت",
-              "plan": "باقة", "session": "جلسة", "admin": "مدير"}
+_TARGET_AR = {"user": N_("مشترك"), "subscriber": N_("مشترك"), "card": N_("كرت"),
+              "plan": N_("باقة"), "session": N_("جلسة"), "admin": N_("مدير")}
 
 
 def _subject_label(target_type, target_id, actor) -> str:
@@ -742,7 +743,7 @@ def _subject_label(target_type, target_id, actor) -> str:
         return tid_val
     if tt in ("session", "card", "user", "subscriber") and tid_val:
         # numeric id with a known entity type — label it, don't show a bare id
-        return f"{_TARGET_AR.get(tt, 'كيان')} #{tid_val}"
+        return f"{_TARGET_AR.get(tt, N_('كيان'))} #{tid_val}"
     a = str(actor or "").strip()
     if a and not a.isdigit() and a not in ("system", "ui"):
         return a
@@ -850,7 +851,7 @@ def _radacct_disconnect_rows(tid: int, date_from: str, date_to: str,
         out.append({
             "when": r.get("acctstoptime") or "",
             "category": CAT_DISCONNECT,
-            "action_label": "فصل جلسة (قطع اتصال)",
+            "action_label": _tr("فصل جلسة (قطع اتصال)"),
             "router_name": hit["name"] if hit else "",
             "router_ip": hit["address"] if hit else (nas if _looks_ip(nas) else ""),
             "subject": str(r.get("username") or "—"),

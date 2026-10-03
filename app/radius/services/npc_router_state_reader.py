@@ -30,6 +30,7 @@ deterministic `source_id`. The capture service composes
 these into a snapshot via the existing `npc_snapshots_repo`.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from dataclasses import dataclass
 from typing import Iterable, Protocol
@@ -117,10 +118,10 @@ class NullStateReader:
     «لا توجد بيانات حيّة — اتصل بالراوتر أو راجع الإعدادات»."""
 
     _ERR = (
-        "لا توجد بيانات حيّة من الراوتر: قارئ الحالة غير مفعّل في "
+        N_("لا توجد بيانات حيّة من الراوتر: قارئ الحالة غير مفعّل في "
         "هذه البيئة (kill-switch HOBERADIUS_NPC_DISABLE_LIVE=1). "
         "لا يمكن إنشاء لقطة قبل التطبيق ولا التطبيق نفسه. اطلب من "
-        "المشغّل إزالة المفتاح أو راجع إعدادات الـNPC."
+        "المشغّل إزالة المفتاح أو راجع إعدادات الـNPC.")
     )
 
     def read_firewall_filters(self, router_id: int):

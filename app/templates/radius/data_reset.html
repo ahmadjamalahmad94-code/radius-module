@@ -291,7 +291,7 @@
       method:'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json','X-CSRFToken':CSRF,'X-Requested-With':'XMLHttpRequest'},
       body: JSON.stringify(body)
-    }).then(function(r){ return r.json().catch(function(){ return {ok:false, message:'خطأ في الخادم'}; }); });
+    }).then(function(r){ return r.json().catch(function(){ return {ok:false, message:{{ _('خطأ في الخادم')|tojson }}}; }); });
   }
 
   var modal = $('dr-modal'), sumBox = $('dr-sum'), confirmIn = $('dr-confirm'), goBtn = $('dr-go');
@@ -308,7 +308,7 @@
     reviewBtn.disabled = true;
     postJSON(URL_SUMMARY, {keys: sel}).then(function(j){
       reviewBtn.disabled = false;
-      if(!j.ok){ alert(j.message || 'تعذّر جلب الملخّص'); return; }
+      if(!j.ok){ alert(j.message || {{ _('تعذّر جلب الملخّص')|tojson }}); return; }
       var html = '';
       j.categories.forEach(function(c){
         html += '<div class="dr-sum-row"><b>'+c.label+'</b><span class="dr-sum-n">'+fmt(c.count)+'</span></div>';
@@ -349,7 +349,7 @@
     }).catch(function(){
       BUSY = false;
       $('dr-prog').classList.remove('is-on');
-      renderReport({ok:false, message:'تعذّر الاتصال بالخادم.'});
+      renderReport({ok:false, message:{{ _('تعذّر الاتصال بالخادم.')|tojson }}});
     });
   });
 
@@ -360,7 +360,7 @@
       ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 8v5M12 16h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/></svg>';
     var head = '<div class="dr-report-head '+okCls+'"><span class="ic">'+icon+'</span><div>';
-    head += '<b>'+ (j.message || (j.ok ? 'تم.' : 'تعذّر التصفير.')) +'</b>';
+    head += '<b>'+ (j.message || (j.ok ? {{ _('تم.')|tojson }} : {{ _('تعذّر التصفير.')|tojson }})) +'</b>';
     if(j.backup){ head += '<div>'+{{ _("نسخة احتياطيّة قبل التصفير:")|tojson }}+' <span class="dr-backup">'+j.backup+'</span></div>'; }
     if(j.detail && !j.ok){ head += '<div style="opacity:.75">'+j.detail+'</div>'; }
     head += '</div></div>';

@@ -8,6 +8,7 @@ SQLite connection manager — thread-safe، WAL mode، Foreign Keys ON، row_fac
     rows = db().execute("SELECT * FROM ...").fetchall()
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import functools
 import logging
@@ -55,7 +56,7 @@ def _reject_non_finite_float(value: float) -> float:
     if math.isfinite(value):
         return value
     from ..core.numbers import NonFiniteNumber
-    raise NonFiniteNumber("لا يمكن حفظ رقم غير منتهٍ (Infinity/NaN).")
+    raise NonFiniteNumber(_tr("لا يمكن حفظ رقم غير منتهٍ (Infinity/NaN)."))
 
 
 sqlite3.register_adapter(float, _reject_non_finite_float)

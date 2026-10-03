@@ -1,5 +1,6 @@
 """Operational foundation repositories for distributors and ISP workflows."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 from datetime import datetime
 from typing import Any, Optional
@@ -1170,15 +1171,15 @@ def list_print_jobs(tenant_id: int, *, limit: int = 50, offset: int = 0) -> list
     return [_hydrate_json_fields(_row(r), "metadata_json") for r in rows]
 
 
-_BACKUP_NEVER_RUN_AR = "لم تُشغَّل أيّ نسخة احتياطيّة محلّيّة بعد."
+_BACKUP_NEVER_RUN_AR = N_("لم تُشغَّل أيّ نسخة احتياطيّة محلّيّة بعد.")
 # Arabic labels for backup job / run statuses (the raw `never_run` and the
 # English «No local backup has been run yet.» reached the web and the app —
 # re-test R11 L-2 / R13 L4). The raw `last_status` / `status` codes stay.
 BACKUP_STATUS_LABELS_AR = {
-    "never_run": "لم تُشغَّل بعد", "success": "ناجحة", "ok": "ناجحة",
-    "failed": "فاشلة", "error": "خطأ", "dry_run": "تجريبية",
-    "uploaded": "مرفوعة", "timeout": "انتهت المهلة",
-    "metadata_only": "بيانات وصفية", "running": "قيد التشغيل",
+    "never_run": N_("لم تُشغَّل بعد"), "success": N_("ناجحة"), "ok": N_("ناجحة"),
+    "failed": N_("فاشلة"), "error": N_("خطأ"), "dry_run": N_("تجريبية"),
+    "uploaded": N_("مرفوعة"), "timeout": N_("انتهت المهلة"),
+    "metadata_only": N_("بيانات وصفية"), "running": N_("قيد التشغيل"),
 }
 _BACKUP_MESSAGES_AR = {
     "No local backup has been run yet.": _BACKUP_NEVER_RUN_AR,

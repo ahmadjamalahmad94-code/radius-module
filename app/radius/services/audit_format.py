@@ -24,6 +24,7 @@
      (الجلسة + النتيجة).
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import re
 from typing import Any, Iterable, Mapping, Sequence
@@ -36,145 +37,145 @@ from typing import Any, Iterable, Mapping, Sequence
 
 ACTION_LABELS: dict[str, str] = {
     # ── MikroTik برمجة وإدارة ────────────────────────────────
-    "mt.programming.hotspot.apply": "تطبيق إعدادات Hotspot",
-    "mt.programming.hotspot.unprogram": "إزالة إعدادات Hotspot",
-    "mt.programming.ppp.apply": "تطبيق إعدادات PPPoE",
-    "mt.programming.ppp.unprogram": "إزالة إعدادات PPPoE",
-    "mt.programming.interface.apply": "تعديل واجهة الراوتر",
-    "mt.programming.bandwidth.apply": "تطبيق سرعة على المايكروتيك",
-    "mt.deploy": "نشر إعدادات على المايكروتيك",
-    "mt.apply": "تطبيق إعداد على المايكروتيك",
-    "mt.toggle": "تبديل حالة المايكروتيك",
-    "mt.identity.set": "تعديل اسم المايكروتيك",
-    "mt.reboot": "إعادة تشغيل المايكروتيك",
-    "mt.clock.sync": "مزامنة ساعة المايكروتيك",
-    "mt.dns.flush": "تفريغ كاش DNS على المايكروتيك",
-    "mt.ping": "اختبار اتصال (ping) من المايكروتيك",
-    "mt.traceroute": "تتبّع المسار من المايكروتيك",
-    "mt.x": "عملية مايكروتيك",  # placeholder صريح لاختبارات سابقة
+    "mt.programming.hotspot.apply": N_("تطبيق إعدادات Hotspot"),
+    "mt.programming.hotspot.unprogram": N_("إزالة إعدادات Hotspot"),
+    "mt.programming.ppp.apply": N_("تطبيق إعدادات PPPoE"),
+    "mt.programming.ppp.unprogram": N_("إزالة إعدادات PPPoE"),
+    "mt.programming.interface.apply": N_("تعديل واجهة الراوتر"),
+    "mt.programming.bandwidth.apply": N_("تطبيق سرعة على المايكروتيك"),
+    "mt.deploy": N_("نشر إعدادات على المايكروتيك"),
+    "mt.apply": N_("تطبيق إعداد على المايكروتيك"),
+    "mt.toggle": N_("تبديل حالة المايكروتيك"),
+    "mt.identity.set": N_("تعديل اسم المايكروتيك"),
+    "mt.reboot": N_("إعادة تشغيل المايكروتيك"),
+    "mt.clock.sync": N_("مزامنة ساعة المايكروتيك"),
+    "mt.dns.flush": N_("تفريغ كاش DNS على المايكروتيك"),
+    "mt.ping": N_("اختبار اتصال (ping) من المايكروتيك"),
+    "mt.traceroute": N_("تتبّع المسار من المايكروتيك"),
+    "mt.x": N_("عملية مايكروتيك"),  # placeholder صريح لاختبارات سابقة
     # ── النسخ الاحتياطية ─────────────────────────────────────
-    "mt.backup.create": "إنشاء نسخة احتياطية",
-    "mt.backup.run": "تشغيل نسخة احتياطية",
-    "mt.backup.download": "تنزيل نسخة احتياطية",
-    "mt.backup.restore": "استعادة من نسخة احتياطية",
-    "mt.backup.delete": "حذف نسخة احتياطية",
+    "mt.backup.create": N_("إنشاء نسخة احتياطية"),
+    "mt.backup.run": N_("تشغيل نسخة احتياطية"),
+    "mt.backup.download": N_("تنزيل نسخة احتياطية"),
+    "mt.backup.restore": N_("استعادة من نسخة احتياطية"),
+    "mt.backup.delete": N_("حذف نسخة احتياطية"),
     # ── خدمات المنافذ (loop_detect / bt_wifi_block) ──────────
-    "mt.port_services.bt_wifi_block.plan": "معاينة سكربت منع مشاركة البلوتوث/الواي فاي",
-    "mt.port_services.bt_wifi_block.apply": "تفعيل منع مشاركة البلوتوث/الواي فاي",
-    "mt.port_services.bt_wifi_block.remove": "إزالة منع مشاركة البلوتوث/الواي فاي",
-    "mt.port_services.loop_detect.plan": "معاينة سكربت تتبّع اللوب",
-    "mt.port_services.loop_detect.apply": "تفعيل تتبّع اللوب",
-    "mt.port_services.loop_detect.remove": "إزالة تتبّع اللوب",
-    "mt.port_services.loop_detect.loop_check": "فحص اللوب الحيّ",
+    "mt.port_services.bt_wifi_block.plan": N_("معاينة سكربت منع مشاركة البلوتوث/الواي فاي"),
+    "mt.port_services.bt_wifi_block.apply": N_("تفعيل منع مشاركة البلوتوث/الواي فاي"),
+    "mt.port_services.bt_wifi_block.remove": N_("إزالة منع مشاركة البلوتوث/الواي فاي"),
+    "mt.port_services.loop_detect.plan": N_("معاينة سكربت تتبّع اللوب"),
+    "mt.port_services.loop_detect.apply": N_("تفعيل تتبّع اللوب"),
+    "mt.port_services.loop_detect.remove": N_("إزالة تتبّع اللوب"),
+    "mt.port_services.loop_detect.loop_check": N_("فحص اللوب الحيّ"),
     # ── الاتصال / API / النفق ───────────────────────────────
-    "mt.connection.test": "اختبار اتصال المايكروتيك",
-    "mt.connection.set": "ضبط اتصال المايكروتيك",
-    "mt.tunnel.start": "تشغيل نفق المايكروتيك",
-    "mt.tunnel.stop": "إيقاف نفق المايكروتيك",
-    "mt.tunnel.toggle": "تبديل نفق المايكروتيك",
+    "mt.connection.test": N_("اختبار اتصال المايكروتيك"),
+    "mt.connection.set": N_("ضبط اتصال المايكروتيك"),
+    "mt.tunnel.start": N_("تشغيل نفق المايكروتيك"),
+    "mt.tunnel.stop": N_("إيقاف نفق المايكروتيك"),
+    "mt.tunnel.toggle": N_("تبديل نفق المايكروتيك"),
     # ── جلسات RADIUS و CoA ──────────────────────────────────
-    "radius.coa.disconnect": "قطع جلسة عبر CoA",
-    "radius.coa.update": "تحديث جلسة عبر CoA",
-    "radius.session.disconnect": "قطع جلسة RADIUS",
-    "radius.apply": "تطبيق سياسة RADIUS",
+    "radius.coa.disconnect": N_("قطع جلسة عبر CoA"),
+    "radius.coa.update": N_("تحديث جلسة عبر CoA"),
+    "radius.session.disconnect": N_("قطع جلسة RADIUS"),
+    "radius.apply": N_("تطبيق سياسة RADIUS"),
     # ── المشتركون والكروت ──────────────────────────────────
-    "subscriber.cash_balance_add": "إضافة رصيد نقدي للمشترك",
-    "subscriber.debt_settled_from_payment": "تسوية دين من دفعة",
-    "subscriber.payment": "تسجيل دفعة نقدية",
-    "subscriber.loan": "منح سلفة",
-    "subscriber.quota_reset": "استعادة الكوتة اليومية",
-    "subscriber.extend_time": "إضافة وقت للمشترك",
-    "subscriber.set_speed": "ضبط سرعة المشترك",
-    "subscriber.disconnect": "قطع جلسة مشترك",
-    "subscriber.disable": "تعطيل مشترك",
-    "subscriber.enable": "تفعيل مشترك",
-    "subscriber.delete": "حذف مشترك",
-    "subscriber.create": "إنشاء مشترك",
-    "change_plan": "تغيير عرض المشترك",
+    "subscriber.cash_balance_add": N_("إضافة رصيد نقدي للمشترك"),
+    "subscriber.debt_settled_from_payment": N_("تسوية دين من دفعة"),
+    "subscriber.payment": N_("تسجيل دفعة نقدية"),
+    "subscriber.loan": N_("منح سلفة"),
+    "subscriber.quota_reset": N_("استعادة الكوتة اليومية"),
+    "subscriber.extend_time": N_("إضافة وقت للمشترك"),
+    "subscriber.set_speed": N_("ضبط سرعة المشترك"),
+    "subscriber.disconnect": N_("قطع جلسة مشترك"),
+    "subscriber.disable": N_("تعطيل مشترك"),
+    "subscriber.enable": N_("تفعيل مشترك"),
+    "subscriber.delete": N_("حذف مشترك"),
+    "subscriber.create": N_("إنشاء مشترك"),
+    "change_plan": N_("تغيير عرض المشترك"),
     # ── الإداريون والصلاحيات ────────────────────────────────
-    "admin.login": "تسجيل دخول مدير",
-    "admin.login_failed": "محاولة دخول فاشلة",
-    "admin.logout": "خروج مدير",
-    "admin.create": "إنشاء حساب مدير",
-    "admin.update": "تعديل حساب مدير",
-    "admin.delete": "حذف حساب مدير",
-    "admin.password_change": "تغيير كلمة مرور مدير",
-    "role_permissions": "تعديل صلاحيات دور",
-    "settings_update": "تحديث إعدادات النظام",
+    "admin.login": N_("تسجيل دخول مدير"),
+    "admin.login_failed": N_("محاولة دخول فاشلة"),
+    "admin.logout": N_("خروج مدير"),
+    "admin.create": N_("إنشاء حساب مدير"),
+    "admin.update": N_("تعديل حساب مدير"),
+    "admin.delete": N_("حذف حساب مدير"),
+    "admin.password_change": N_("تغيير كلمة مرور مدير"),
+    "role_permissions": N_("تعديل صلاحيات دور"),
+    "settings_update": N_("تحديث إعدادات النظام"),
     # ── النسخ / الترخيص / إعداد ─────────────────────────────
-    "setup_wizard.run.create": "بدء معالج إعداد جديد",
-    "setup_wizard.run.complete": "إكمال معالج الإعداد",
-    "license.apply": "تطبيق ترخيص",
-    "license.revoke": "سحب ترخيص",
+    "setup_wizard.run.create": N_("بدء معالج إعداد جديد"),
+    "setup_wizard.run.complete": N_("إكمال معالج الإعداد"),
+    "license.apply": N_("تطبيق ترخيص"),
+    "license.revoke": N_("سحب ترخيص"),
     # ── البطاقات (services/cards.py تكتب هذه الأفعال نصًّا حرفيًّا) ─────
     # نُدرجها هنا للدقة بدل تركها للمُركِّب العام؛ يَستفيد منها تقرير
     # «رسائل واجهة الربط» مباشرةً لأنّ سرّ المفاتيح أعمال CRUD على البطاقة.
-    "card.enable": "تفعيل البطاقة",
-    "card.disable": "تعطيل البطاقة",
-    "card.disconnect": "قطع جلسة البطاقة",
-    "card.lock_mac": "تثبيت ماك على البطاقة",
-    "card.unlock_mac": "فكّ تثبيت ماك البطاقة",
-    "card.reset_usage": "تصفير استخدام البطاقة",
-    "card.soft_delete": "أرشفة البطاقة",
-    "card.delete_permanent": "حذف نهائي للبطاقة",
+    "card.enable": N_("تفعيل البطاقة"),
+    "card.disable": N_("تعطيل البطاقة"),
+    "card.disconnect": N_("قطع جلسة البطاقة"),
+    "card.lock_mac": N_("تثبيت ماك على البطاقة"),
+    "card.unlock_mac": N_("فكّ تثبيت ماك البطاقة"),
+    "card.reset_usage": N_("تصفير استخدام البطاقة"),
+    "card.soft_delete": N_("أرشفة البطاقة"),
+    "card.delete_permanent": N_("حذف نهائي للبطاقة"),
     # ── النسخ الاحتياطية الإضافية ───────────────────────────
-    "backup.uploaded_import": "استيراد نسخة احتياطية مرفوعة",
+    "backup.uploaded_import": N_("استيراد نسخة احتياطية مرفوعة"),
     # ── أفعال CRUD عامّة (target_type يَحمل الكيان في عمود مستقل) ──
     # تَمنع سقوط «extend_time» إلى ذيلٍ خام في تقرير الرسائل.
-    "extend_time": "تمديد الوقت",
+    "extend_time": N_("تمديد الوقت"),
     # ── حملات الإشعارات والاتصالات ────────────────────────────
     # المُركِّب لا يَستطيع تَكوينها لأنّ «manual» و«queued» ليستا verb/noun
     # في خرائطنا، فيَبقى ذيلٌ إنجليزي. نُدرجها بمفاتيحها الكاملة.
-    "notification.manual_queued": "رسالة يدويّة مُجدوَلة",
-    "notification.campaign_queued": "حملة رسائل مُجدوَلة",
-    "notification.send": "إرسال رسالة",
-    "notification.cancel": "إلغاء رسالة",
+    "notification.manual_queued": N_("رسالة يدويّة مُجدوَلة"),
+    "notification.campaign_queued": N_("حملة رسائل مُجدوَلة"),
+    "notification.send": N_("إرسال رسالة"),
+    "notification.cancel": N_("إلغاء رسالة"),
     # ── التحصيل والمدفوعات ────────────────────────────────────
-    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
-    "payment_collection.request_approved": "اعتماد طلب دفع",
-    "payment_collection.request_rejected": "رفض طلب دفع",
+    "payment_collection.settings_saved": N_("حفظ إعدادات التحصيل"),
+    "payment_collection.request_approved": N_("اعتماد طلب دفع"),
+    "payment_collection.request_rejected": N_("رفض طلب دفع"),
     # ── المهام الجماعية ──────────────────────────────────────
-    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "bulk_set_speeds": N_("تحديث جماعي للسرعات"),
     # ── إعادة تعيين كلمة المرور ──────────────────────────────
-    "reset_password": "إعادة تعيين كلمة المرور",
+    "reset_password": N_("إعادة تعيين كلمة المرور"),
 }
 
 
 # ─── 2) مُركِّب فعل + اسم تلقائي للمفاتيح غير المعرّفة ───────────────
 
 _VERB_LABELS: dict[str, str] = {
-    "create": "إنشاء", "add": "إضافة", "new": "إنشاء", "update": "تعديل",
-    "edit": "تعديل", "set": "ضبط", "delete": "حذف", "remove": "حذف",
-    "disable": "تعطيل", "enable": "تفعيل", "apply": "تطبيق", "deploy": "نشر",
-    "toggle": "تبديل", "settle": "تسوية", "settled": "تسوية", "void": "إلغاء",
-    "reset": "تصفير", "extend": "تمديد", "renew": "تجديد", "change": "تغيير",
-    "login": "تسجيل دخول", "logout": "تسجيل خروج", "send": "إرسال",
-    "import": "استيراد", "export": "تصدير", "freeze": "تجميد", "unfreeze": "فكّ التجميد",
-    "writeoff": "مسامحة", "refund": "استرجاع", "archive": "أرشفة",
-    "restore": "استعادة", "assign": "إسناد", "grant": "منح", "revoke": "سحب",
-    "rename": "إعادة تسمية", "move": "نقل", "sync": "مزامنة", "run": "تشغيل",
-    "plan": "معاينة", "check": "فحص", "test": "اختبار", "stop": "إيقاف",
-    "start": "تشغيل", "flush": "تفريغ", "ping": "اختبار وصول",
-    "traceroute": "تتبّع مسار", "reboot": "إعادة تشغيل",
-    "disconnect": "قطع", "purchase": "شراء", "purchased": "شراء",
+    "create": N_("إنشاء"), "add": N_("إضافة"), "new": N_("إنشاء"), "update": N_("تعديل"),
+    "edit": N_("تعديل"), "set": N_("ضبط"), "delete": N_("حذف"), "remove": N_("حذف"),
+    "disable": N_("تعطيل"), "enable": N_("تفعيل"), "apply": N_("تطبيق"), "deploy": N_("نشر"),
+    "toggle": N_("تبديل"), "settle": N_("تسوية"), "settled": N_("تسوية"), "void": N_("إلغاء"),
+    "reset": N_("تصفير"), "extend": N_("تمديد"), "renew": N_("تجديد"), "change": N_("تغيير"),
+    "login": N_("تسجيل دخول"), "logout": N_("تسجيل خروج"), "send": N_("إرسال"),
+    "import": N_("استيراد"), "export": N_("تصدير"), "freeze": N_("تجميد"), "unfreeze": N_("فكّ التجميد"),
+    "writeoff": N_("مسامحة"), "refund": N_("استرجاع"), "archive": N_("أرشفة"),
+    "restore": N_("استعادة"), "assign": N_("إسناد"), "grant": N_("منح"), "revoke": N_("سحب"),
+    "rename": N_("إعادة تسمية"), "move": N_("نقل"), "sync": N_("مزامنة"), "run": N_("تشغيل"),
+    "plan": N_("معاينة"), "check": N_("فحص"), "test": N_("اختبار"), "stop": N_("إيقاف"),
+    "start": N_("تشغيل"), "flush": N_("تفريغ"), "ping": N_("اختبار وصول"),
+    "traceroute": N_("تتبّع مسار"), "reboot": N_("إعادة تشغيل"),
+    "disconnect": N_("قطع"), "purchase": N_("شراء"), "purchased": N_("شراء"),
 }
 
 _NOUN_LABELS: dict[str, str] = {
-    "balance": "رصيد", "debt": "دين", "loan": "سلفة", "payment": "دفعة",
-    "subscriber": "مشترك", "user": "مشترك", "card": "بطاقة", "cards": "بطاقات",
-    "plan": "عرض", "quota": "كوتة", "time": "وقت", "speed": "سرعة",
-    "mt": "المايكروتيك", "router": "المايكروتيك", "nas": "المايكروتيك",
-    "device": "جهاز", "backup": "نسخة احتياطية", "ticket": "تذكرة",
-    "admin": "مدير", "distributor": "موزّع", "role": "دور",
-    "session": "جلسة", "password": "كلمة المرور", "ledger": "قيد مالي",
-    "interface": "واجهة", "hotspot": "Hotspot", "ppp": "PPPoE",
-    "tunnel": "نفق", "connection": "اتصال", "license": "ترخيص",
-    "identity": "اسم النظام", "dns": "DNS", "clock": "ساعة",
-    "port_services": "خدمات المنافذ",
-    "bt_wifi_block": "منع مشاركة البلوتوث/الواي فاي",
-    "loop_detect": "تتبّع اللوب",
-    "loop_check": "فحص اللوب",
-    "bandwidth": "سرعة",
+    "balance": N_("رصيد"), "debt": N_("دين"), "loan": N_("سلفة"), "payment": N_("دفعة"),
+    "subscriber": N_("مشترك"), "user": N_("مشترك"), "card": N_("بطاقة"), "cards": N_("بطاقات"),
+    "plan": N_("عرض"), "quota": N_("كوتة"), "time": N_("وقت"), "speed": N_("سرعة"),
+    "mt": N_("المايكروتيك"), "router": N_("المايكروتيك"), "nas": N_("المايكروتيك"),
+    "device": N_("جهاز"), "backup": N_("نسخة احتياطية"), "ticket": N_("تذكرة"),
+    "admin": N_("مدير"), "distributor": N_("موزّع"), "role": N_("دور"),
+    "session": N_("جلسة"), "password": N_("كلمة المرور"), "ledger": N_("قيد مالي"),
+    "interface": N_("واجهة"), "hotspot": "Hotspot", "ppp": "PPPoE",
+    "tunnel": N_("نفق"), "connection": N_("اتصال"), "license": N_("ترخيص"),
+    "identity": N_("اسم النظام"), "dns": "DNS", "clock": N_("ساعة"),
+    "port_services": N_("خدمات المنافذ"),
+    "bt_wifi_block": N_("منع مشاركة البلوتوث/الواي فاي"),
+    "loop_detect": N_("تتبّع اللوب"),
+    "loop_check": N_("فحص اللوب"),
+    "bandwidth": N_("سرعة"),
 }
 
 
@@ -193,7 +194,7 @@ def action_label(action: str | None) -> str:
     """
     raw = (action or "").strip()
     if not raw:
-        return "عملية"
+        return N_("عملية")
     if raw in ACTION_LABELS:
         return ACTION_LABELS[raw]
     parts = raw.replace("-", "_").split(".")
@@ -226,9 +227,9 @@ def action_label(action: str | None) -> str:
     if noun:
         # «إجراء {noun}» أوضح وأقصر من «عملية على {noun}» — وتفهمها
         # العين فورًا (إجراء بطاقة، إجراء نفق، إجراء جلسة…).
-        return f"إجراء {noun}"
+        return _tr('إجراء %(noun)s', noun=noun)
     # أخير: تأنيس آخر مقطع (يحوّل foo_bar → "foo bar").
-    return _humanize(raw) or "عملية"
+    return _humanize(raw) or N_("عملية")
 
 
 # ─── 3) محلِّل أسماء الأهداف والراوترات (دفعة واحدة) ──────────────
@@ -352,63 +353,63 @@ def resolve_target_names(rows: Sequence[Mapping[str, Any]],
 # عناوين عربيّة لنوع الهدف — حين لا نجد اسمًا فعليًّا نعرض النوع
 # العربي مع المعرّف («المايكروتيك #17»).
 TARGET_TYPE_AR: dict[str, str] = {
-    "manager_activity": "نشاط مدير",
-    "router": "المايكروتيك", "nas": "المايكروتيك",
-    "nas_device": "المايكروتيك", "mikrotik_nas": "المايكروتيك",
-    "mikrotik": "المايكروتيك",
-    "device": "الجهاز",
-    "user": "مشترك", "subscriber": "مشترك",
-    "card_user": "مستخدم بطاقة", "card_users": "مستخدم بطاقة",
-    "hotspot_card_user": "مستخدم بطاقة",
-    "card": "بطاقة",
-    "plan": "عرض", "offer": "عرض",
-    "loan": "سلفة", "payment": "دفعة",
-    "admin": "مدير", "manager": "مدير", "operator": "مشغّل",
-    "admins": "مدير",
-    "distributor": "موزّع", "role": "دور",
-    "ticket": "تذكرة", "backup": "نسخة احتياطية",
-    "backup_job": "مهمة نسخ احتياطي", "backup_file": "ملف نسخة احتياطية",
-    "backup_retention": "الاحتفاظ بالنسخ الاحتياطية",
-    "login_template": "قالب صفحة الدخول", "hotspot_design": "تصميم صفحة الدخول",
-    "ledger": "قيد مالي", "session": "جلسة",
-    "system": "النظام", "tenant": "مستأجر",
+    "manager_activity": N_("نشاط مدير"),
+    "router": N_("المايكروتيك"), "nas": N_("المايكروتيك"),
+    "nas_device": N_("المايكروتيك"), "mikrotik_nas": N_("المايكروتيك"),
+    "mikrotik": N_("المايكروتيك"),
+    "device": N_("الجهاز"),
+    "user": N_("مشترك"), "subscriber": N_("مشترك"),
+    "card_user": N_("مستخدم بطاقة"), "card_users": N_("مستخدم بطاقة"),
+    "hotspot_card_user": N_("مستخدم بطاقة"),
+    "card": N_("بطاقة"),
+    "plan": N_("عرض"), "offer": N_("عرض"),
+    "loan": N_("سلفة"), "payment": N_("دفعة"),
+    "admin": N_("مدير"), "manager": N_("مدير"), "operator": N_("مشغّل"),
+    "admins": N_("مدير"),
+    "distributor": N_("موزّع"), "role": N_("دور"),
+    "ticket": N_("تذكرة"), "backup": N_("نسخة احتياطية"),
+    "backup_job": N_("مهمة نسخ احتياطي"), "backup_file": N_("ملف نسخة احتياطية"),
+    "backup_retention": N_("الاحتفاظ بالنسخ الاحتياطية"),
+    "login_template": N_("قالب صفحة الدخول"), "hotspot_design": N_("تصميم صفحة الدخول"),
+    "ledger": N_("قيد مالي"), "session": N_("جلسة"),
+    "system": N_("النظام"), "tenant": N_("مستأجر"),
     # أنواع كانت ناقصة في الخريطة العامّة ـ تَستخدمها API/services في
     # حقل `target_type` بحيث كانت تظهر خامًا في تقرير الرسائل قبل الدمج.
-    "service": "خدمة", "tunnel": "نفق",
-    "notification_campaign": "حملة رسائل",
-    "payment_request": "طلب دفع",
-    "loan": "سلفة", "payment": "دفعة",
-    "ip_pool": "نطاق عناوين", "pool": "نطاق عناوين",
-    "voucher": "كوبون", "invoice": "فاتورة",
-    "webhook": "إشعار ربط", "token": "مفتاح واجهة", "api_token": "مفتاح واجهة",
-    "interface": "واجهة", "bandwidth_schedule": "جدول السرعات",
-    "subscriber_group": "مجموعة مشتركين", "share_group": "مجموعة مشاركة",
+    "service": N_("خدمة"), "tunnel": N_("نفق"),
+    "notification_campaign": N_("حملة رسائل"),
+    "payment_request": N_("طلب دفع"),
+    "loan": N_("سلفة"), "payment": N_("دفعة"),
+    "ip_pool": N_("نطاق عناوين"), "pool": N_("نطاق عناوين"),
+    "voucher": N_("كوبون"), "invoice": N_("فاتورة"),
+    "webhook": N_("إشعار ربط"), "token": N_("مفتاح واجهة"), "api_token": N_("مفتاح واجهة"),
+    "interface": N_("واجهة"), "bandwidth_schedule": N_("جدول السرعات"),
+    "subscriber_group": N_("مجموعة مشتركين"), "share_group": N_("مجموعة مشاركة"),
     # دُفعات البطاقات وطباعتها — القيم المخزّنة خامًا تُحوَّل هنا
-    "card_batch":  "دفعة بطاقات",
-    "card batch":  "دفعة بطاقات",   # بيانات قديمة بمسافة بدل شرطة سفلية
-    "card_print_template": "قالب طباعة بطاقات",
+    "card_batch":  N_("دفعة بطاقات"),
+    "card batch":  N_("دفعة بطاقات"),   # بيانات قديمة بمسافة بدل شرطة سفلية
+    "card_print_template": N_("قالب طباعة بطاقات"),
     # الوصول والسياسات
-    "access_control":       "ضبط الوصول",
-    "allow_mode_policy":    "سياسة وضع السماح",
-    "allow_mode_device":    "جهاز وضع السماح",
-    "site_exit_policy":     "سياسة الخروج",
-    "mac_clone_binding":    "ربط استنساخ العنوان",
+    "access_control":       N_("ضبط الوصول"),
+    "allow_mode_policy":    N_("سياسة وضع السماح"),
+    "allow_mode_device":    N_("جهاز وضع السماح"),
+    "site_exit_policy":     N_("سياسة الخروج"),
+    "mac_clone_binding":    N_("ربط استنساخ العنوان"),
     # الترخيص والجسر
-    "license_admin_bridge": "جسر إدارة الترخيص",
-    "license_service":      "خدمة الترخيص",
+    "license_admin_bridge": N_("جسر إدارة الترخيص"),
+    "license_service":      N_("خدمة الترخيص"),
     # الشبكة والجهاز
-    "bandwidth_profile":    "ملف عرض النطاق",
-    "network_device_monitor_device": "جهاز مراقبة الشبكة",
+    "bandwidth_profile":    N_("ملف عرض النطاق"),
+    "network_device_monitor_device": N_("جهاز مراقبة الشبكة"),
     # الإعدادات
-    "settings":             "إعدادات",
-    "system_settings":      "إعدادات النظام",
+    "settings":             N_("إعدادات"),
+    "system_settings":      N_("إعدادات النظام"),
     # الخدمات
-    "service_request":      "طلب خدمة",
+    "service_request":      N_("طلب خدمة"),
     # المعالج والبنية التحتية
-    "setup_wizard_fleet":            "أسطول معالج الإعداد",
-    "router_provisioning_registry":  "سجل تجهيز الراوترات",
-    "wizard_clients_conf":           "إعداد عملاء المعالج",
-    "db_retention":                  "الاحتفاظ بقاعدة البيانات",
+    "setup_wizard_fleet":            N_("أسطول معالج الإعداد"),
+    "router_provisioning_registry":  N_("سجل تجهيز الراوترات"),
+    "wizard_clients_conf":           N_("إعداد عملاء المعالج"),
+    "db_retention":                  N_("الاحتفاظ بقاعدة البيانات"),
 }
 
 
@@ -439,61 +440,61 @@ def target_label_for(target_type: str | None, target_id: Any,
 
 # ترجمة مفاتيح JSON الشائعة إلى عربي للعرض السريع.
 _PAYLOAD_KEY_AR: dict[str, str] = {
-    "ports": "المنافذ", "ok": "النتيجة", "ifaces": "الواجهات",
-    "interface": "الواجهة", "iface": "الواجهة",
-    "amount": "المبلغ", "currency": "العملة",
-    "balance": "الرصيد", "before": "قبل", "after": "بعد",
-    "speed": "السرعة", "session_id": "الجلسة", "session": "الجلسة",
-    "username": "المستخدم", "user": "المستخدم", "actor": "المنفّذ",
-    "login_username": "اسم الدخول",
-    "router_id": "الراوتر", "nas_id": "الراوتر",
-    "filename": "الملف", "size": "الحجم", "comment": "تعليق",
-    "reason": "السبب", "error": "خطأ", "status": "الحالة",
-    "slug": "الخدمة", "service": "الخدمة", "result": "النتيجة",
-    "count": "العدد", "duration": "المدة",
-    "before_plan": "العرض السابق", "after_plan": "العرض الجديد",
-    "card_id": "البطاقة", "ip": "العنوان", "mac": "MAC",
+    "ports": N_("المنافذ"), "ok": N_("النتيجة"), "ifaces": N_("الواجهات"),
+    "interface": N_("الواجهة"), "iface": N_("الواجهة"),
+    "amount": N_("المبلغ"), "currency": N_("العملة"),
+    "balance": N_("الرصيد"), "before": N_("قبل"), "after": N_("بعد"),
+    "speed": N_("السرعة"), "session_id": N_("الجلسة"), "session": N_("الجلسة"),
+    "username": N_("المستخدم"), "user": N_("المستخدم"), "actor": N_("المنفّذ"),
+    "login_username": N_("اسم الدخول"),
+    "router_id": N_("الراوتر"), "nas_id": N_("الراوتر"),
+    "filename": N_("الملف"), "size": N_("الحجم"), "comment": N_("تعليق"),
+    "reason": N_("السبب"), "error": N_("خطأ"), "status": N_("الحالة"),
+    "slug": N_("الخدمة"), "service": N_("الخدمة"), "result": N_("النتيجة"),
+    "count": N_("العدد"), "duration": N_("المدة"),
+    "before_plan": N_("العرض السابق"), "after_plan": N_("العرض الجديد"),
+    "card_id": N_("البطاقة"), "ip": N_("العنوان"), "mac": "MAC",
     # مفاتيح حمولة شائعة كانت تتسرّب خامًا في عمود «التفاصيل»
-    "kind": "النوع", "actor_type": "نوع المنفّذ", "entity_type": "نوع الكيان",
-    "event": "الحدث", "event_type": "نوع الحدث", "source": "المصدر",
-    "direction": "الاتجاه", "scope": "النطاق", "field": "الحقل",
-    "value": "القيمة", "old": "السابق", "new": "الجديد",
-    "from": "من", "to": "إلى", "name": "الاسم", "plan": "العرض",
-    "plan_id": "العرض", "method": "الطريقة", "type": "النوع",
+    "kind": N_("النوع"), "actor_type": N_("نوع المنفّذ"), "entity_type": N_("نوع الكيان"),
+    "event": N_("الحدث"), "event_type": N_("نوع الحدث"), "source": N_("المصدر"),
+    "direction": N_("الاتجاه"), "scope": N_("النطاق"), "field": N_("الحقل"),
+    "value": N_("القيمة"), "old": N_("السابق"), "new": N_("الجديد"),
+    "from": N_("من"), "to": N_("إلى"), "name": N_("الاسم"), "plan": N_("العرض"),
+    "plan_id": N_("العرض"), "method": N_("الطريقة"), "type": N_("النوع"),
     # حقول قالب صفحة الدخول (mt_login_designer) — كانت تظهر خامًا في الفرق
-    "template_slug": "قالب الدخول", "variables": "متغيّرات القالب",
-    "offer": "العرض", "offer_id": "العرض", "verified": "مُتحقَّق منها",
-    "removed": "المحذوفة", "retention_days": "أيّام الاحتفاظ", "max_count": "الحدّ الأقصى",
+    "template_slug": N_("قالب الدخول"), "variables": N_("متغيّرات القالب"),
+    "offer": N_("العرض"), "offer_id": N_("العرض"), "verified": N_("مُتحقَّق منها"),
+    "removed": N_("المحذوفة"), "retention_days": N_("أيّام الاحتفاظ"), "max_count": N_("الحدّ الأقصى"),
     # حقول لقطة تعديل المشترك (سجل التغييرات «من X إلى Y»)
-    "full_name": "الاسم", "mobile": "الجوال",
-    "download_speed_kbps": "سرعة التنزيل (ك.ب/ث)",
-    "upload_speed_kbps": "سرعة الرفع (ك.ب/ث)",
-    "quota_total_mb": "الكوتا (م.ب)", "device_limit": "حدّ الأجهزة",
-    "mac_lock": "قفل MAC", "expire_at": "تاريخ الانتهاء",
-    "static_ip": "عنوان IP", "password": "كلمة المرور",
-    "connection_days": "أيّام الاتصال", "expiry": "تاريخ الانتهاء",
+    "full_name": N_("الاسم"), "mobile": N_("الجوال"),
+    "download_speed_kbps": N_("سرعة التنزيل (ك.ب/ث)"),
+    "upload_speed_kbps": N_("سرعة الرفع (ك.ب/ث)"),
+    "quota_total_mb": N_("الكوتا (م.ب)"), "device_limit": N_("حدّ الأجهزة"),
+    "mac_lock": N_("قفل MAC"), "expire_at": N_("تاريخ الانتهاء"),
+    "static_ip": N_("عنوان IP"), "password": N_("كلمة المرور"),
+    "connection_days": N_("أيّام الاتصال"), "expiry": N_("تاريخ الانتهاء"),
     # حقول لقطة تعديل العرض (card_offers): «كان X ← صار Y»
-    "wholesale": "سعر الجملة", "selling": "سعر البيع", "active": "الحالة",
+    "wholesale": N_("سعر الجملة"), "selling": N_("سعر البيع"), "active": N_("الحالة"),
     # حقول لقطة تعديل العرض/الباقة
-    "speed_down_kbps": "سرعة التنزيل (ك.ب/ث)",
-    "speed_up_kbps": "سرعة الرفع (ك.ب/ث)",
-    "duration_minutes": "المدّة (دقائق)", "validity_days": "الصلاحية (أيّام)",
-    "price": "السعر", "max_daily_minutes": "الحدّ اليوميّ (دقائق)",
+    "speed_down_kbps": N_("سرعة التنزيل (ك.ب/ث)"),
+    "speed_up_kbps": N_("سرعة الرفع (ك.ب/ث)"),
+    "duration_minutes": N_("المدّة (دقائق)"), "validity_days": N_("الصلاحية (أيّام)"),
+    "price": N_("السعر"), "max_daily_minutes": N_("الحدّ اليوميّ (دقائق)"),
     # حقول لقطة تعديل دفعة الكروت (سجل التغييرات «كان X ← صار Y»)
-    "package_name": "اسم الدفعة", "total_quota_mb": "الكوتا (م.ب)",
-    "price_per_card": "سعر البطاقة", "price_bulk": "السعر بالجملة",
-    "validity_after_first_login_days": "الصلاحية بعد أول دخول (أيّام)",
-    "duration": "المدّة", "device_count": "عدد الأجهزة",
-    "on_quota_exhaust": "عند نفاد الكوتا", "service_name": "اسم الخدمة",
-    "notes": "ملاحظات",
+    "package_name": N_("اسم الدفعة"), "total_quota_mb": N_("الكوتا (م.ب)"),
+    "price_per_card": N_("سعر البطاقة"), "price_bulk": N_("السعر بالجملة"),
+    "validity_after_first_login_days": N_("الصلاحية بعد أول دخول (أيّام)"),
+    "duration": N_("المدّة"), "device_count": N_("عدد الأجهزة"),
+    "on_quota_exhaust": N_("عند نفاد الكوتا"), "service_name": N_("اسم الخدمة"),
+    "notes": N_("ملاحظات"),
     # حمولةُ نشاطِ المدير (manager_activity_audit) — كانت تظهر «page: … · action ar:
     # … · login: admin · params: …» في عمودِ التفاصيل بسجلّ التدقيق (r6ui)
-    "page": "الصفحة", "action_ar": "العملية", "login": "المستخدم",
-    "params": "المُعطيات", "entity_name": "الكيان", "entity_id": "رقم الكيان",
+    "page": N_("الصفحة"), "action_ar": N_("العملية"), "login": N_("المستخدم"),
+    "params": N_("المُعطيات"), "entity_name": N_("الكيان"), "entity_id": N_("رقم الكيان"),
 }
 
 # قيم منطقية → عربي.
-_BOOL_AR = {True: "نعم", False: "لا"}
+_BOOL_AR = {True: N_("نعم"), False: N_("لا")}
 
 # مفاتيح قيمتها enum إنجليزية تُترجم (دون لمس القيم التقنية كـ slug/currency).
 _ENUM_KEYS = {"kind", "actor_type", "entity_type", "event", "event_type",
@@ -502,17 +503,17 @@ _ENUM_KEYS = {"kind", "actor_type", "entity_type", "event", "event_type",
 # قيم enum شائعة → عربي. أي قيمة snake_case غير مُدرَجة تُؤنَّس (بلا شرطة سفلية)
 # فلا يظهر كود إنجليزي خام في العمود.
 _ENUM_VALUE_AR: dict[str, str] = {
-    "login_event": "حدث دخول", "login": "دخول", "logout": "خروج",
-    "first_login": "أول دخول", "active": "نشط", "created": "إنشاء",
-    "updated": "تحديث", "deleted": "حذف", "audit": "تدقيق",
-    "admin": "مدير", "manager": "مدير", "subscriber": "مشترك",
-    "distributor": "موزّع", "card": "بطاقة", "card_user": "مستخدم بطاقة",
-    "system": "النظام", "network": "الشبكة", "panel": "اللوحة", "web": "الويب",
-    "disconnect": "قطع اتصال", "reset_password": "تغيير كلمة المرور",
-    "subscriber_upsert": "تحديث مشترك", "subscriber_delete": "حذف مشترك",
-    "plan_upsert": "تحديث عرض", "plan_delete": "حذف عرض",
-    "pool_upsert": "تحديث مجمّع", "credit": "إضافة", "debit": "خصم",
-    "success": "نجاح", "failed": "فشل", "pending": "قيد الانتظار",
+    "login_event": N_("حدث دخول"), "login": N_("دخول"), "logout": N_("خروج"),
+    "first_login": N_("أول دخول"), "active": N_("نشط"), "created": N_("إنشاء"),
+    "updated": N_("تحديث"), "deleted": N_("حذف"), "audit": N_("تدقيق"),
+    "admin": N_("مدير"), "manager": N_("مدير"), "subscriber": N_("مشترك"),
+    "distributor": N_("موزّع"), "card": N_("بطاقة"), "card_user": N_("مستخدم بطاقة"),
+    "system": N_("النظام"), "network": N_("الشبكة"), "panel": N_("اللوحة"), "web": N_("الويب"),
+    "disconnect": N_("قطع اتصال"), "reset_password": N_("تغيير كلمة المرور"),
+    "subscriber_upsert": N_("تحديث مشترك"), "subscriber_delete": N_("حذف مشترك"),
+    "plan_upsert": N_("تحديث عرض"), "plan_delete": N_("حذف عرض"),
+    "pool_upsert": N_("تحديث مجمّع"), "credit": N_("إضافة"), "debit": N_("خصم"),
+    "success": N_("نجاح"), "failed": N_("فشل"), "pending": N_("قيد الانتظار"),
 }
 
 
@@ -633,26 +634,26 @@ def format_payload(action: str | None,
     # نمط خدمات المنافذ: ports + ok + slug/result
     if "ports" in p or "port_services" in act or "loop_detect" in act \
             or "bt_wifi_block" in act:
-        _push("ports", "المنافذ")
-        _push("slug", "الخدمة")
-        _push("result", "النتيجة")
-        _push("ok", "النتيجة")
+        _push("ports", _tr("المنافذ"))
+        _push("slug", _tr("الخدمة"))
+        _push("result", _tr("النتيجة"))
+        _push("ok", _tr("النتيجة"))
     # دفعات/مالية
     elif "amount" in p:
-        _push("amount", "المبلغ")
-        _push("currency", "العملة")
-        _push("reason", "السبب")
+        _push("amount", _tr("المبلغ"))
+        _push("currency", _tr("العملة"))
+        _push("reason", _tr("السبب"))
     # نسخ احتياطية
     elif "filename" in p or "size" in p:
-        _push("filename", "الملف")
-        _push("size", "الحجم")
-        _push("status", "الحالة")
+        _push("filename", _tr("الملف"))
+        _push("size", _tr("الحجم"))
+        _push("status", _tr("الحالة"))
     # عمليات قطع الجلسات/CoA
     elif "session_id" in p or "session" in p:
-        _push("session_id", "الجلسة")
-        _push("session", "الجلسة")
-        _push("username", "المستخدم")
-        _push("result", "النتيجة")
+        _push("session_id", _tr("الجلسة"))
+        _push("session", _tr("الجلسة"))
+        _push("username", _tr("المستخدم"))
+        _push("result", _tr("النتيجة"))
 
     # أيّ مفاتيح متبقّية ذات قيمة — أوّل 4 على الأكثر، للحفاظ على
     # سطر مقروء وعدم اجترار الكامل (الجدول له صفحة تفاصيل).

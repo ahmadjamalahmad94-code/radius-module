@@ -1,5 +1,6 @@
 """Share Groups routes — مجموعات مشاركة الباندويث."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
 
@@ -57,13 +58,13 @@ def sgrp_new():
 def sgrp_create():
     d = _form()
     if not d["name"]:
-        flash("الاسم مطلوب", "error")
+        flash(_tr("الاسم مطلوب"), "error")
         return redirect(url_for("radius.sgrp_new"))
     gid = share_groups_repo.create(tenant_id=_tid(), **d)
     audit_repo.record(tenant_id=_tid(), actor=_actor(), action="create",
                        target_type="share_group", target_id=str(gid),
                        payload={"name": d["name"]})
-    flash(f"تم إنشاء مجموعة «{d['name']}».", "success")
+    flash(_tr('تم إنشاء مجموعة «%(name)s».', name=d['name']), "success")
     return redirect(url_for("radius.sgrp_view", gid=gid))
 
 
@@ -92,7 +93,7 @@ def sgrp_update(gid: int):
     share_groups_repo.update(_tid(), gid, **_form())
     audit_repo.record(tenant_id=_tid(), actor=_actor(), action="update",
                        target_type="share_group", target_id=str(gid))
-    flash("تم التحديث.", "success")
+    flash(_tr("تم التحديث."), "success")
     return redirect(url_for("radius.sgrp_view", gid=gid))
 
 
@@ -100,7 +101,7 @@ def sgrp_delete(gid: int):
     share_groups_repo.delete(_tid(), gid)
     audit_repo.record(tenant_id=_tid(), actor=_actor(), action="delete",
                        target_type="share_group", target_id=str(gid))
-    flash("تم الحذف.", "warning")
+    flash(_tr("تم الحذف."), "warning")
     return redirect(url_for("radius.sgrp_list"))
 
 
@@ -109,18 +110,18 @@ def sgrp_add_member(gid: int):
     try: sid = int(request.form.get("subscriber_id") or 0)
     except ValueError: sid = 0
     if not sid:
-        flash("اختر مشتركًا", "error")
+        flash(_tr("اختر مشتركًا"), "error")
         return redirect(url_for("radius.sgrp_view", gid=gid))
     share_groups_repo.add_member(_tid(), gid, sid)
     audit_repo.record(tenant_id=_tid(), actor=_actor(), action="add_member",
                        target_type="share_group", target_id=str(gid),
                        payload={"subscriber_id": sid})
-    flash("تمت الإضافة.", "success")
+    flash(_tr("تمت الإضافة."), "success")
     return redirect(url_for("radius.sgrp_view", gid=gid))
 
 
 def sgrp_remove_member(gid: int, sid: int):
     if not share_groups_repo.get(_tid(), gid): abort(404)  # SEC H8 — own-tenant only
     share_groups_repo.remove_member(_tid(), gid, sid)
-    flash("تمت الإزالة.", "warning")
+    flash(_tr("تمت الإزالة."), "warning")
     return redirect(url_for("radius.sgrp_view", gid=gid))

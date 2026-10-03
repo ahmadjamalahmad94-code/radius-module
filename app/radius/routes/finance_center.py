@@ -1,5 +1,6 @@
 """Business OS Finance Center web routes."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -110,7 +111,7 @@ def finance_wallet_create():
             currency=_field("currency") or default_currency(),
             metadata={"source": "finance_center"},
         )
-        flash("تم إنشاء المحفظة المالية.", "success")
+        flash(_tr("تم إنشاء المحفظة المالية."), "success")
     except (BusinessOSValidationError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.finance_center_hub", tab="wallets"))
@@ -118,7 +119,7 @@ def finance_wallet_create():
 
 def finance_wallet_credit(wallet_id: int):
     if not _can_wallet_credit():
-        flash("لا تملك صلاحية شحن المحفظة.", "error")
+        flash(_tr("لا تملك صلاحية شحن المحفظة."), "error")
         return redirect(url_for("radius.finance_center_hub", tab="wallets"))
     try:
         WalletService().credit(
@@ -131,7 +132,7 @@ def finance_wallet_credit(wallet_id: int):
             notes=_field("notes"),
             metadata={"source": "finance_center"},
         )
-        flash("تم شحن المحفظة وتسجيل القيد المالي.", "success")
+        flash(_tr("تم شحن المحفظة وتسجيل القيد المالي."), "success")
     except BusinessOSValidationError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.finance_center_hub", tab="wallets"))
@@ -141,7 +142,7 @@ def finance_wallet_debit(wallet_id: int):
     amount = _field("amount")
     gate = SafetyGateService().check("wallet.debit", permissions=_permissions(), amount=amount)
     if not gate.allowed:
-        flash("تم منع الخصم بسبب الصلاحيات أو حدود الأمان.", "error")
+        flash(_tr("تم منع الخصم بسبب الصلاحيات أو حدود الأمان."), "error")
         return redirect(url_for("radius.finance_center_hub", tab="wallets"))
     try:
         WalletService().debit(
@@ -154,7 +155,7 @@ def finance_wallet_debit(wallet_id: int):
             notes=_field("notes"),
             metadata={"source": "finance_center", "requires_approval": gate.requires_approval},
         )
-        flash("تم خصم المبلغ وتسجيل القيد المالي.", "success")
+        flash(_tr("تم خصم المبلغ وتسجيل القيد المالي."), "success")
     except BusinessOSValidationError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.finance_center_hub", tab="wallets"))

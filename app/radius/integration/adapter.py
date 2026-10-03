@@ -16,6 +16,7 @@ RadiusAdapter — العقد بين وحدة RADIUS داخل HobeHub وأي back
 - كل ميثود يحتمل الفشل يرفع RadiusAdapterError أو من أحفاده.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional, Sequence
@@ -161,7 +162,7 @@ class RadiusAdapter(ABC):
         the default declines so unsupported modes fail loudly rather than
         silently leave a half-renamed account."""
         from ..core.errors import RadiusValidationError
-        raise RadiusValidationError("تغيير اسم الدخول غير مدعوم في هذا الوضع.")
+        raise RadiusValidationError(_tr("تغيير اسم الدخول غير مدعوم في هذا الوضع."))
 
 
 # ─────────────── Factory ───────────────
@@ -182,7 +183,6 @@ def get_adapter(mode: str, **kwargs) -> RadiusAdapter:
     """
     if mode not in _REGISTRY:
         raise RadiusConfigError(
-            f"no adapter registered for mode={mode!r}. "
-            f"تحقق من تحميل integration/{mode}_adapter.py"
+            _tr('no adapter registered for mode=%(mode)s. تحقق من تحميل integration/%(mode2)s_adapter.py', mode=repr(mode), mode2=mode)
         )
     return _REGISTRY[mode](**kwargs)

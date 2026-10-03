@@ -3,6 +3,7 @@ endpoints إدارة اتصالات MikroTik + اختبار الـ connectivity.
 يتيح لباقي البيئات (HobeHub, …) فحص حالة الـ MTs برمجيًا.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import asdict
 
@@ -49,7 +50,7 @@ def mt_add():
     required = ("host", "username", "password")
     missing = [k for k in required if not body.get(k)]
     if missing:
-        return fail("validation_error", f"حقول مفقودة: {missing}",
+        return fail("validation_error", _tr('حقول مفقودة: %(missing)s', missing=missing),
                     status=422, details={"missing": missing})
     cfg = MikrotikConfig(
         id=None,
@@ -71,7 +72,7 @@ def mt_update(cfg_id: int):
     body = request.get_json(silent=True) or {}
     saved = _store().update(cfg_id, **body)
     if not saved:
-        return fail("not_found", f"mt {cfg_id} غير موجود", status=404)
+        return fail("not_found", _tr('mt %(cfg_id)s غير موجود', cfg_id=cfg_id), status=404)
     return ok(_safe(saved))
 
 
@@ -83,7 +84,7 @@ def mt_delete(cfg_id: int):
 def mt_test(cfg_id: int):
     cfg = _store().get(cfg_id)
     if not cfg:
-        return fail("not_found", f"mt {cfg_id} غير موجود", status=404)
+        return fail("not_found", _tr('mt %(cfg_id)s غير موجود', cfg_id=cfg_id), status=404)
     return _do_test(cfg.host, cfg.port, cfg.username, cfg.password,
                     cfg.use_tls, cfg.verify_tls, cfg.timeout_sec)
 
@@ -94,13 +95,13 @@ def mt_test_creds():
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return fail("validation_error", "جسم الطلب يجب أن يكون كائن JSON.", status=422)
-    labels = {"host": "العنوان", "username": "اسم المستخدم", "password": "كلمة السر"}
+        return fail("validation_error", _tr("جسم الطلب يجب أن يكون كائن JSON."), status=422)
+    labels = {"host": N_("العنوان"), "username": N_("اسم المستخدم"), "password": N_("كلمة السر")}
     missing = [labels[k] for k in labels if not body.get(k)]
     if missing:
-        return fail("validation_error", f"حقول مطلوبة: {'، '.join(missing)}.", status=422)
+        return fail("validation_error", _tr('حقول مطلوبة: %(v)s.', v='، '.join(missing)), status=422)
     if not all(isinstance(body[k], str) for k in labels):
-        return fail("validation_error", "العنوان واسم المستخدم وكلمة السر يجب أن تكون نصوصًا.",
+        return fail("validation_error", _tr("العنوان واسم المستخدم وكلمة السر يجب أن تكون نصوصًا."),
                     status=422)
     # Stress A08: «port: "abc"», «timeout_sec: "abc"» or a 5,000-char host gave
     # a raw HTML 500. Strict intake → 422 (Arabic); TLS defaults to 8729.
@@ -110,10 +111,10 @@ def mt_test_creds():
     try:
         host = normalize_nas_address(body["host"])
         use_tls = parse_strict_bool(body.get("use_tls", False), label="TLS")
-        verify_tls = parse_strict_bool(body.get("verify_tls", True), label="التحقق من الشهادة")
-        port = parse_ranged_int(body.get("port"), label="المنفذ", minimum=1, maximum=65535,
+        verify_tls = parse_strict_bool(body.get("verify_tls", True), label=N_("التحقق من الشهادة"))
+        port = parse_ranged_int(body.get("port"), label=N_("المنفذ"), minimum=1, maximum=65535,
                                 default=8729 if use_tls else 8728)
-        timeout = parse_ranged_int(body.get("timeout_sec"), label="المهلة", minimum=1,
+        timeout = parse_ranged_int(body.get("timeout_sec"), label=N_("المهلة"), minimum=1,
                                    maximum=30, default=10)
     except RadiusValidationError as e:
         return fail("validation_error", e.message, status=422)
@@ -139,11 +140,11 @@ def _do_test(host, port, user, pw, tls, verify, timeout):
                 "resource": resource[0] if resource else {},
             })
     except AuthError as e:
-        return fail("auth_error", "رفض الراوتر تسجيل الدخول — تحقّق من اسم المستخدم وكلمة السر.",
+        return fail("auth_error", _tr("رفض الراوتر تسجيل الدخول — تحقّق من اسم المستخدم وكلمة السر."),
                     status=401, details={"detail": str(e)[:300]})
     except ConnectError as e:
-        return fail("connect_error", "تعذّر الاتصال بالراوتر — تحقّق من العنوان والمنفذ وأن خدمة API مفعّلة.",
+        return fail("connect_error", N_("تعذّر الاتصال بالراوتر — تحقّق من العنوان والمنفذ وأن خدمة API مفعّلة."),
                     status=502, details={"detail": str(e)[:300]})
     except MikrotikError as e:
-        return fail("mikrotik_error", "ردّ الراوتر بخطأ أثناء الاختبار.",
+        return fail("mikrotik_error", _tr("ردّ الراوتر بخطأ أثناء الاختبار."),
                     status=502, details={"detail": str(e)[:300]})

@@ -1,5 +1,6 @@
 """Distributor / scoped manager operational API foundation."""
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -55,7 +56,7 @@ def _out_of_scope(distributor_id: int, *, allow_self: bool = False):
         return None
     if allow_self and int(dist.get("login_admin_id") or 0) == me:
         return None
-    return fail("forbidden", "هذا الموزّع ليس ضمن نطاقك (موزّع مديرٍ آخر).",
+    return fail("forbidden", _tr("هذا الموزّع ليس ضمن نطاقك (موزّع مديرٍ آخر)."),
                 status=403, details={"reason": "out_of_scope"})
 
 
@@ -81,9 +82,9 @@ def _scope_value(raw):
         try:
             raw = json.loads(raw)
         except ValueError:
-            raise RadiusValidationError("نطاق البيانات غير صالح.") from None
+            raise RadiusValidationError(_tr("نطاق البيانات غير صالح.")) from None
     if not isinstance(raw, dict):
-        raise RadiusValidationError("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا.")
+        raise RadiusValidationError(_tr("نطاق البيانات يجب أن يكون كائن إعدادات صحيحًا."))
     return raw
 
 
@@ -97,9 +98,9 @@ def _body_scope(body: dict):
 
 def _check_portal_password(value) -> None:
     if value is not None and not isinstance(value, str):
-        raise RadiusValidationError("كلمة مرور بوابة الفحص يجب أن تكون نصًّا.")
+        raise RadiusValidationError(_tr("كلمة مرور بوابة الفحص يجب أن تكون نصًّا."))
     if isinstance(value, str) and len(value.strip()) > 120:
-        raise RadiusValidationError("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا).")
+        raise RadiusValidationError(_tr("كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا)."))
 
 
 def register(bp: Blueprint) -> None:
@@ -131,7 +132,7 @@ def _page_args(default_limit: int = 200) -> tuple[int, int]:
         limit = max(1, min(int(request.args.get("limit") or default_limit), 1000))
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        raise RadiusValidationError("قيم limit و offset يجب أن تكون أرقامًا صحيحة.")
+        raise RadiusValidationError(_tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."))
     return limit, offset
 
 
@@ -178,7 +179,7 @@ def distributors_create():
     # like the web route.
     if not _can_manage_distributors():
         return fail("forbidden",
-                    "لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.",
+                    _tr("لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها."),
                     status=403)
     body, err = json_object()
     if err:
@@ -218,7 +219,7 @@ def distributors_update(distributor_id: int):
     والملخّص. الغائب يبقى كما هو؛ balance/debt_balance لا يُكتبان أبدًا."""
     if not _can_manage_distributors():
         return fail("forbidden",
-                    "لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها.",
+                    _tr("لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها."),
                     status=403)
     denied = _out_of_scope(distributor_id)
     if denied is not None:
@@ -239,8 +240,8 @@ def distributors_update(distributor_id: int):
             if not same:
                 return fail(
                     "validation_error",
-                    "الرصيد والدين لا يُعدَّلان من هنا — استخدم حركات التسوية/الدفع "
-                    "(/distributors/<id>/settle).", status=422,
+                    _tr("الرصيد والدين لا يُعدَّلان من هنا — استخدم حركات التسوية/الدفع "
+                    "(/distributors/<id>/settle)."), status=422,
                     details={"field": money})
     data = {
         "name": existing.get("name") or "",

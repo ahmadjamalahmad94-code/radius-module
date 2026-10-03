@@ -10,15 +10,15 @@
   <div class="dx-empty">
     <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
     <div>
-      <strong>لا توجد جلسات مُنهاة بعد</strong>
-      <p>يظهر التشخيص فور تسجيل جلسات مُنهاة (Acct-Stop) لهذا المشترك.</p>
+      <strong>{{ _('لا توجد جلسات مُنهاة بعد') }}</strong>
+      <p>{{ _('يظهر التشخيص فور تسجيل جلسات مُنهاة (Acct-Stop) لهذا المشترك.') }}</p>
     </div>
   </div>
 {% else %}
   <div class="dx-verdict dx-verdict--{{ dx.verdict.color }}">
     <span class="dx-verdict-icon"><i class="fa-solid fa-{{ dx.verdict.icon }}"></i></span>
     <div class="dx-verdict-body">
-      <div class="dx-verdict-head">الغالب على الانقطاع:
+      <div class="dx-verdict-head">{{ _('الغالب على الانقطاع:') }}
         <strong>{{ dx.verdict.label }}</strong>
         <span class="dx-verdict-pct">{{ dx.verdict.pct }}%</span></div>
       <div class="dx-verdict-hint">{{ dx.verdict.hint }}</div>
@@ -29,12 +29,11 @@
   <div class="dx-flags">
     {% if dx.flapping %}
     <span class="dx-flag dx-flag--warn"><i class="fa-solid fa-bolt"></i>
-      اتصال متذبذب: {{ dx.short_sessions }} من {{ dx.total }} جلسة أقصر من 3 دقائق
-      (متوسط المدّة {{ dx.avg_minutes }} دقيقة)</span>
+      {{ _('اتصال متذبذب: %(short_sessions)s من %(total)s جلسة أقصر من 3 دقائق (متوسط المدّة %(avg_minutes)s دقيقة)', short_sessions=dx.short_sessions, total=dx.total, avg_minutes=dx.avg_minutes) }}</span>
     {% endif %}
     {% if dx.panel_kicks %}
     <span class="dx-flag dx-flag--panel"><i class="fa-solid fa-server"></i>
-      اللوحة قطعت هذا المشترك {{ dx.panel_kicks }} مرّة (حدّ الأجهزة/إغلاق إجباريّ)</span>
+      {{ _('اللوحة قطعت هذا المشترك %(panel_kicks)s مرّة (حدّ الأجهزة/إغلاق إجباريّ)', panel_kicks=dx.panel_kicks) }}</span>
     {% endif %}
   </div>
   {% endif %}
@@ -50,7 +49,7 @@
   </div>
 
   <div class="dx-recent">
-    <div class="dx-recent-head">آخر الجلسات المُنهاة</div>
+    <div class="dx-recent-head">{{ _('آخر الجلسات المُنهاة') }}</div>
     {% for r in dx.recent %}
     <div class="dx-recent-row">
       <span class="dx-recent-cause">{{ r.cause_ar }}</span>
@@ -61,9 +60,8 @@
   </div>
 
   <p class="dx-note">
-    مبنيّ على آخر <strong>{{ dx.total }}</strong> جلسة مُنهاة · المصدر: «سبب الإنهاء»
-    (Acct-Terminate-Cause) في radacct.{% if sessions_url %}
-    للتفاصيل صفًّا صفًّا: {% if can_open(sessions_url) %}<a href="{{ sessions_url }}">{% endif %}تقرير الجلسات لهذا المشترك{% if can_open(sessions_url) %}</a>{% endif %}.{% endif %}
+    {{ _('مبنيّ على آخر') }} <strong>{{ dx.total }}</strong> {{ _('جلسة مُنهاة · المصدر: «سبب الإنهاء» (Acct-Terminate-Cause) في radacct.') }}{% if sessions_url %}
+    {{ _('للتفاصيل صفًّا صفًّا:') }} {% if can_open(sessions_url) %}<a href="{{ sessions_url }}">{% endif %}{{ _('تقرير الجلسات لهذا المشترك') }}{% if can_open(sessions_url) %}</a>{% endif %}.{% endif %}
   </p>
 {% endif %}
 

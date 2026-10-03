@@ -6,6 +6,7 @@ This endpoint surfaces the same `audit_log` table the web admin reads at
 target_type so the Flutter screen can paginate cleanly.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 
@@ -50,7 +51,7 @@ def audit_list():
     try:
         limit = min(int(request.args.get("limit") or 200), 1000)
     except ValueError:
-        return fail("validation_error", "قيمة limit يجب أن تكون رقمًا صحيحًا.", status=422)
+        return fail("validation_error", _tr("قيمة limit يجب أن تكون رقمًا صحيحًا."), status=422)
 
     actor = (request.args.get("actor") or "").strip().lower()
     action = (request.args.get("action") or "").strip().lower()

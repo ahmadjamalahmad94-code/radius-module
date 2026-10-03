@@ -11,6 +11,7 @@
 يعملان؛ المظهر خاصّ به. البَصمة z-index:-1 خلفيّة، الشريط غير مُغطّى،
 العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -88,13 +89,13 @@ _DESK_ART = """
 
 _DESK_HERO = ("""
       <div class="cd-hero">
-        <div class="cd-frame">""" + _DESK_ART + """</div>
+        <div class="cd-frame">""" + _DESK_ART + N_("""</div>
         <div class="cd-cap">
           <div><b>مساحة عملك جاهزة</b><span>اتصال هادئ ومستقرّ للعمل والتركيز</span></div>
           <div class="cd-badge"><span class="cd-dot"></span> متّصل</div>
         </div>
       </div>
-""")
+"""))
 
 _DESK_STYLE = """
 <style id="hr-clean-desk">

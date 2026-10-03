@@ -15,6 +15,7 @@ dicts, so each caller renders the outcome its own way while the database
 effects stay identical.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -105,7 +106,7 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
     if charge_mode in ("paid", "debt"):
         blocked = manager_spend_block(caller, amount, kind="renew",
                                       reference_type="subscriber_renew",
-                                      notes=f"تجديد المشترك {username}")
+                                      notes=_tr('تجديد المشترك %(username)s', username=username))
         if blocked:
             raise SpendBlocked(blocked)
     svc = get_users_service()
@@ -174,7 +175,7 @@ def add_subscriber_balance(caller: ActionCaller, username: str, *, amount: float
     settled_total = round(sum(i["amount"] for i in loan_plan if i["action"] == "settle"), 2)
     blocked = manager_spend_block(caller, amount, kind="subscriber_balance",
                                   reference_type="subscriber_balance",
-                                  notes=f"رصيد للمشترك {username}")
+                                  notes=_tr('رصيد للمشترك %(username)s', username=username))
     if blocked:
         raise SpendBlocked(blocked)
     saved = get_users_service().add_cash_balance(
@@ -300,23 +301,22 @@ def payment_record(caller: ActionCaller, username: str, plan: dict) -> tuple[dic
 def payment_message(payment: dict, settled_done: float, debt_done: float) -> tuple[str, str]:
     """The operator message (+ flash category) for a recorded payment."""
     result = payment.get("activation_result") or {}
-    settle_note = f" وتسوية سلف بقيمة {settled_done:.2f}" if settled_done > 0 else ""
-    debt_note = f" وسداد دين بقيمة {debt_done:.2f}" if debt_done > 0 else ""
+    settle_note = _tr(' وتسوية سلف بقيمة %(settled_done)s', settled_done=format(settled_done, '.2f')) if settled_done > 0 else ""
+    debt_note = _tr(' وسداد دين بقيمة %(debt_done)s', debt_done=format(debt_done, '.2f')) if debt_done > 0 else ""
     extra = f"{settle_note}{debt_note}"
     if payment.get("dry_run") and not payment.get("id"):
         minutes = int(payment.get("earned_minutes") or 0)
-        return (f"معاينة فقط — لم تُسجَّل أيّ دفعة ولم يتغيّر الحساب "
-                f"(كانت ستضيف {minutes} دقيقة).", "warning")
+        return (_tr('معاينة فقط — لم تُسجَّل أيّ دفعة ولم يتغيّر الحساب (كانت ستضيف %(minutes)s دقيقة).', minutes=minutes), "warning")
     if result.get("dry_run"):
-        return f"تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS{extra}.", "warning"
+        return _tr('تم تسجيل الدفعة كمعاينة بدون تطبيق على RADIUS%(extra)s.', extra=extra), "warning"
     if result.get("applied_to_radius"):
-        return f"تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب{extra}.", "success"
-    return f"تم تسجيل الدفعة في السجل المالي{extra}.", "success"
+        return _tr('تم تسجيل الدفعة وتطبيق مدة الاستحقاق على الحساب%(extra)s.', extra=extra), "success"
+    return _tr('تم تسجيل الدفعة في السجل المالي%(extra)s.', extra=extra), "success"
 
 
 # ─────────────── loan (سلفة) ───────────────
 
-LOAN_PENDING_MESSAGE = "طلب السلفة بانتظار موافقة المالك (تجاوز العتبة)."
+LOAN_PENDING_MESSAGE = N_("طلب السلفة بانتظار موافقة المالك (تجاوز العتبة).")
 
 
 def loan_gate(caller: ActionCaller, username: str, body: dict) -> dict | None:
@@ -349,13 +349,13 @@ def loan_gate(caller: ActionCaller, username: str, body: dict) -> dict | None:
         if _ap.needs_approval(caller.admin_id, _amt_minor, tenant_id=caller.tenant_id):
             _ap.enqueue(int(caller.admin_id or 0), "subscriber.loan",
                         amount_minor=_amt_minor, payload=body,
-                        summary=f"سلفة {amount} للمشترك {username}",
+                        summary=_tr('سلفة %(amount)s للمشترك %(username)s', amount=amount, username=username),
                         tenant_id=caller.tenant_id)
             return {"pending_approval": True, "message": LOAN_PENDING_MESSAGE}
     # Manager advances (سلف) gate: funded via wallet/debt AND bounded by the
     # manager's loan cap. A zero-trust manager is BLOCKED ("لا يوجد رصيد كافٍ").
     blocked = manager_advance_block(caller, amount, reference_type="subscriber_loan",
-                                    notes=f"سلفة للمشترك {username}")
+                                    notes=_tr('سلفة للمشترك %(username)s', username=username))
     if blocked:
         raise SpendBlocked(blocked)
     return None
@@ -368,16 +368,16 @@ def loan_create(caller: ActionCaller, body: dict) -> tuple[dict, str]:
     loan = service_from_context().create_loan(body, actor=caller.actor)
     result = loan.get("activation_result") or {}
     if loan.get("dry_run") and not loan.get("id"):
-        msg = "معاينة فقط — لم تُسجَّل أيّ سلفة ولم يتغيّر الحساب."
+        msg = _tr("معاينة فقط — لم تُسجَّل أيّ سلفة ولم يتغيّر الحساب.")
     elif result.get("reason") == "unlimited_subscriber":
-        msg = ("تم تسجيل السلفة. المشترك بلا تاريخ انتهاء (غير محدود) فلم تُفرض "
-               "عليه نهاية ولم يتغيّر وقته.")
+        msg = (_tr("تم تسجيل السلفة. المشترك بلا تاريخ انتهاء (غير محدود) فلم تُفرض "
+               "عليه نهاية ولم يتغيّر وقته."))
     elif result.get("dry_run"):
-        msg = "تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS."
+        msg = _tr("تم تسجيل السلفة كمعاينة بدون تطبيق على RADIUS.")
     elif result.get("applied_to_radius"):
-        msg = "تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة."
+        msg = _tr("تم تسجيل السلفة وتطبيق نافذة التفعيل المؤقتة.")
     else:
-        msg = "تم تسجيل السلفة بدون تطبيق فوري على RADIUS."
+        msg = _tr("تم تسجيل السلفة بدون تطبيق فوري على RADIUS.")
     return loan, msg
 
 
@@ -405,12 +405,12 @@ def send_credentials(caller: ActionCaller, username: str) -> tuple[dict, int]:
 
     sub = subscribers_repo.get_subscriber(caller.tenant_id, username)
     if not sub:
-        return {"ok": False, "error": "المشترك غير موجود."}, 404
+        return {"ok": False, "error": _tr("المشترك غير موجود.")}, 404
 
     res = subscriber_credentials.send(caller.tenant_id, sub, actor=caller.actor)
     seg = res.get("segments") or {}
     if res.get("ok"):
-        msg = "تم إرسال بيانات الدخول للمشترك عبر SMS ✅"
+        msg = _tr("تم إرسال بيانات الدخول للمشترك عبر SMS ✅")
         if seg.get("summary_ar"):
             msg += f" ({seg['summary_ar']})"
         return {"ok": True, "message": msg, "segments": seg}, 200
@@ -418,7 +418,7 @@ def send_credentials(caller: ActionCaller, username: str) -> tuple[dict, int]:
     # the page surfaces the Arabic reason inline without a hard HTTP error.
     return {
         "ok": False,
-        "error": res.get("error_ar") or "تعذّر إرسال بيانات الدخول.",
+        "error": res.get("error_ar") or _tr("تعذّر إرسال بيانات الدخول."),
         "reason": res.get("reason") or "failed",
         "segments": seg,
     }, 200
@@ -445,14 +445,14 @@ def username_rename_locked(caller: ActionCaller) -> bool:
 # Same five buttons as «قوالب جاهزة» in radius/users_list.html (a test keeps
 # the two in sync). {username} {plan} {expire} are filled per subscriber.
 MESSAGE_TEMPLATES: tuple[dict[str, Any], ...] = (
-    {"key": "welcome", "label": "ترحيب",
-     "text": "أهلاً {username} 👋 تم تفعيل اشتراكك بنجاح. نشكر ثقتك بنا، وأي استفسار نحن بخدمتك."},
-    {"key": "expiry_reminder", "label": "تذكير انتهاء",
-     "text": "عزيزنا {username}، اشتراكك ({plan}) ينتهي بتاريخ {expire}. يُرجى التجديد لتفادي انقطاع الخدمة."},
-    {"key": "payment_confirmation", "label": "تأكيد دفعة",
-     "text": "تم استلام دفعتك وتجديد اشتراكك بنجاح ✅ شكرًا لك."},
-    {"key": "payment_reminder", "label": "تذكير سداد",
-     "text": "عزيزنا {username}، لديكم مستحقات على الاشتراك. يُرجى المراجعة لتسوية الحساب. شكرًا."},
-    {"key": "maintenance", "label": "صيانة",
-     "text": "إشعار صيانة: سنعمل على تحسين الشبكة وقد تنقطع الخدمة مؤقتًا. نعتذر عن الإزعاج."},
+    {"key": "welcome", "label": N_("ترحيب"),
+     "text": N_("أهلاً {username} 👋 تم تفعيل اشتراكك بنجاح. نشكر ثقتك بنا، وأي استفسار نحن بخدمتك.")},
+    {"key": "expiry_reminder", "label": N_("تذكير انتهاء"),
+     "text": N_("عزيزنا {username}، اشتراكك ({plan}) ينتهي بتاريخ {expire}. يُرجى التجديد لتفادي انقطاع الخدمة.")},
+    {"key": "payment_confirmation", "label": N_("تأكيد دفعة"),
+     "text": N_("تم استلام دفعتك وتجديد اشتراكك بنجاح ✅ شكرًا لك.")},
+    {"key": "payment_reminder", "label": N_("تذكير سداد"),
+     "text": N_("عزيزنا {username}، لديكم مستحقات على الاشتراك. يُرجى المراجعة لتسوية الحساب. شكرًا.")},
+    {"key": "maintenance", "label": N_("صيانة"),
+     "text": N_("إشعار صيانة: سنعمل على تحسين الشبكة وقد تنقطع الخدمة مؤقتًا. نعتذر عن الإزعاج.")},
 )

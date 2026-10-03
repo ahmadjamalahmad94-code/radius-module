@@ -82,8 +82,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "توليد دفعة شحن",
-  subtitle="حدّد فئة (قيمة) وعدد بطاقاتها. يمكنك إضافة فئات متعدّدة في نفس الدفعة. عند الحفظ تُولَّد رموز فريدة جاهزة للبيع.",
+  _('توليد دفعة شحن'),
+  subtitle=_('حدّد فئة (قيمة) وعدد بطاقاتها. يمكنك إضافة فئات متعدّدة في نفس الدفعة. عند الحفظ تُولَّد رموز فريدة جاهزة للبيع.'),
   icon="bolt",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_recharge_list') + '">
@@ -93,16 +93,16 @@
 ) }}
 
 {% set help_aside = hub.helppanel(
-  "كيف تعمل دفعة الشحن",
-  intro="كل صف يمثّل فئة من بطاقات الشحن. أضف فئات متعدّدة لتكوين دفعة واحدة بقيم مختلفة.",
+  _('كيف تعمل دفعة الشحن'),
+  intro=_('كل صف يمثّل فئة من بطاقات الشحن. أضف فئات متعدّدة لتكوين دفعة واحدة بقيم مختلفة.'),
   icon="compass",
   items=[
-    {'icon': 'box-archive', 'text': 'اسم الحزمة يظهر في القائمة وتقارير المبيعات'},
-    {'icon': 'layer-group', 'text': 'لكل فئة: القيمة × عدد البطاقات'},
-    {'icon': 'calculator',  'text': 'الإجمالي والقيمة الكلية تُحسب تلقائيًا'},
-    {'icon': 'bolt',        'text': 'عند الحفظ تُولَّد رموز فريدة جاهزة للبيع'},
+    {'icon': 'box-archive', 'text': _('اسم الحزمة يظهر في القائمة وتقارير المبيعات')},
+    {'icon': 'layer-group', 'text': _('لكل فئة: القيمة × عدد البطاقات')},
+    {'icon': 'calculator',  'text': _('الإجمالي والقيمة الكلية تُحسب تلقائيًا')},
+    {'icon': 'bolt',        'text': _('عند الحفظ تُولَّد رموز فريدة جاهزة للبيع')},
   ],
-  note="مثال: 100×5 + 50×10 + 20×20 = 170 بطاقة بإجمالي قيمة 1,100."
+  note=_('مثال: 100×5 + 50×10 + 20×20 = 170 بطاقة بإجمالي قيمة 1,100.')
 ) %}
 
 <div class="rc-form">
@@ -110,7 +110,7 @@
 <form method="post" action="{{ url_for('radius.cards_recharge_new') }}">{% if not can_submit('radius.cards_recharge_new') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   {{ csrf_token_input() | safe }}
 
-  {% call hub.section("بيانات الحزمة", icon="box-archive") %}
+  {% call hub.section(_('بيانات الحزمة'), icon="box-archive") %}
     <div class="hub-field">
       <label class="hub-field-label" for="package_name">{{ _('اسم الحزمة') }} <span class="req">*</span></label>
       <input class="hub-input" id="package_name" name="package_name" required maxlength="120"
@@ -127,7 +127,7 @@
     </div>
   {% endcall %}
 
-  {% call hub.section("الفئات والكميات", icon="layer-group", meta="اختر الفئات وعدد البطاقات") %}
+  {% call hub.section(_('الفئات والكميات'), icon="layer-group", meta=_('اختر الفئات وعدد البطاقات')) %}
     <p class="rc-tip">
       {{ _('كل صف يمثّل فئة من بطاقات الشحن. مثلاً:') }} <strong>100 × 5</strong> +
       <strong>50 × 10</strong> + <strong>20 × 20</strong> {{ _('= 170 بطاقة بإجمالي قيمة') }} <strong>1,100</strong>.
@@ -177,7 +177,7 @@
   {% endcall %}
 
   <div class="rc-actions">
-    {% if can_submit('radius.cards_recharge_list', 'GET') %}{{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}{% endif %}
+    {% if can_submit('radius.cards_recharge_list', 'GET') %}{{ hub.btn(_('إلغاء'), icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}{% endif %}
     <button type="submit" class="hub-btn hub-btn--primary">
       <i class="fa-solid fa-bolt" aria-hidden="true"></i> {{ _('ولّد البطاقات') }}
     </button>

@@ -316,7 +316,7 @@
         <span class="phone-ic"><i class="fa-solid fa-comment-sms"></i></span>
         <b>{{ _('أدخل رمز التحقق') }}</b>
         <p>
-          {{ _('أرسلنا رمزًا من 6 أرقام إلى') }} <bdi dir="ltr">{{ checkout.phone or 'محفظتك' }}</bdi>
+          {{ _('أرسلنا رمزًا من 6 أرقام إلى') }} <bdi dir="ltr">{{ checkout.phone or _('محفظتك') }}</bdi>
           {{ _('عبر') }} <b style="color:{{ checkout.ui_provider.tone }}">{{ checkout.ui_provider.title }}</b>
           <br><span style="color:var(--demo-amber-deep);font-size:11px"><i class="fa-solid fa-flask" aria-hidden="true"></i>
           {{ _('وضع تجريبي: الرمز يظهر في «مختبر الدفع الإلكتروني» في لوحة الإدارة.') }}</span>
@@ -334,7 +334,7 @@
           {% for i in range(1, 7) %}
           <input type="text" name="d{{ i }}" maxlength="1" inputmode="numeric"
                  autocomplete="{{ 'one-time-code' if loop.first else 'off' }}"
-                 aria-label="الرقم {{ i }} من رمز التحقق"
+                 aria-label="{{ _('الرقم %(i)s من رمز التحقق', i=i) }}"
                  pattern="[0-9]" {% if loop.first %}autofocus{% endif %}>
           {% endfor %}
         </div>
@@ -461,8 +461,7 @@
 
         <div class="note-real">
           <i class="fa-solid fa-circle-info" style="margin-top:3px"></i>
-          <span>هذه عملية محاكاة — لم يُرحَّل أي مبلغ إلى الحسابات. في الوضع الحقيقي
-          سيتم ترحيل الدفعة تلقائيًا إلى سجل المشترك ودفتر القيود فور تأكيد البوابة.</span>
+          <span>{{ _('هذه عملية محاكاة — لم يُرحَّل أي مبلغ إلى الحسابات. في الوضع الحقيقي سيتم ترحيل الدفعة تلقائيًا إلى سجل المشترك ودفتر القيود فور تأكيد البوابة.') }}</span>
         </div>
 
         {% if can_submit('radius.pay_demo', 'GET') %}<a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}">

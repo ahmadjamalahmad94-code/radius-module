@@ -10,49 +10,50 @@
 error_message_ar(e))`` في الـAPI.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 from typing import Any
 
 SERVICE_MSG_AR: dict[str, str] = {
-    "amount must be > 0": "المبلغ يجب أن يكون أكبر من صفر.",
-    "minutes > 0 required": "المدّة يجب أن تكون أكبر من صفر.",
-    "expire_at required": "تاريخ الانتهاء مطلوب.",
-    "unknown extend charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown quota charge mode": "طريقة الإضافة غير معروفة.",
-    "unknown reset charge mode": "طريقة الاستعادة غير معروفة.",
-    "quota_mb must be > 0": "حجم الكوتة يجب أن يكون أكبر من صفر.",
-    "unknown quota target": "نوع الكوتة غير معروف.",
-    "plan_id required": "اختر العرض الجديد.",
-    "unknown plan change policy": "طريقة تغيير العرض غير معروفة.",
-    "selected plan is not cheaper": "العرض المختار ليس أرخص من الحالي.",
-    "selected plan is not more expensive": "العرض المختار ليس أغلى من الحالي.",
+    "amount must be > 0": N_("المبلغ يجب أن يكون أكبر من صفر."),
+    "minutes > 0 required": N_("المدّة يجب أن تكون أكبر من صفر."),
+    "expire_at required": N_("تاريخ الانتهاء مطلوب."),
+    "unknown extend charge mode": N_("طريقة الإضافة غير معروفة."),
+    "unknown quota charge mode": N_("طريقة الإضافة غير معروفة."),
+    "unknown reset charge mode": N_("طريقة الاستعادة غير معروفة."),
+    "quota_mb must be > 0": N_("حجم الكوتة يجب أن يكون أكبر من صفر."),
+    "unknown quota target": N_("نوع الكوتة غير معروف."),
+    "plan_id required": N_("اختر العرض الجديد."),
+    "unknown plan change policy": N_("طريقة تغيير العرض غير معروفة."),
+    "selected plan is not cheaper": N_("العرض المختار ليس أرخص من الحالي."),
+    "selected plan is not more expensive": N_("العرض المختار ليس أغلى من الحالي."),
     "plan price and duration are required for this option":
-        "هذا الخيار يتطلّب سعرًا ومدّة للعرضين.",
-    "unsupported message channel": "قناة الإرسال غير مدعومة.",
-    "message required": "نص الرسالة مطلوب.",
-    "subscriber mobile is empty": "لا يوجد رقم جوال لهذا المشترك.",
-    "subscriber id required": "المشترك غير صالح.",
+        N_("هذا الخيار يتطلّب سعرًا ومدّة للعرضين."),
+    "unsupported message channel": N_("قناة الإرسال غير مدعومة."),
+    "message required": N_("نص الرسالة مطلوب."),
+    "subscriber mobile is empty": N_("لا يوجد رقم جوال لهذا المشترك."),
+    "subscriber id required": N_("المشترك غير صالح."),
     "rounding_mode must be floor, ceil, or nearest":
-        "طريقة التقريب غير معروفة (floor أو ceil أو nearest).",
-    "unsupported report type": "نوع التقرير غير مدعوم.",
-    "report snapshot not found": "اللقطة غير موجودة.",
-    "username required for RADIUS apply": "اسم المستخدم مطلوب.",
-    "minutes must be > 0 for RADIUS apply": "المدّة يجب أن تكون أكبر من صفر.",
-    "name is required": "الاسم مطلوب.",
-    "plan_id is required": "اختر العرض.",
-    "subscriber_username is required": "اسم المشترك مطلوب.",
-    "subscriber has no plan_id; set plan_id first": "المشترك بلا عرض — حدّد العرض أولًا.",
+        N_("طريقة التقريب غير معروفة (floor أو ceil أو nearest)."),
+    "unsupported report type": N_("نوع التقرير غير مدعوم."),
+    "report snapshot not found": N_("اللقطة غير موجودة."),
+    "username required for RADIUS apply": N_("اسم المستخدم مطلوب."),
+    "minutes must be > 0 for RADIUS apply": N_("المدّة يجب أن تكون أكبر من صفر."),
+    "name is required": N_("الاسم مطلوب."),
+    "plan_id is required": N_("اختر العرض."),
+    "subscriber_username is required": N_("اسم المشترك مطلوب."),
+    "subscriber has no plan_id; set plan_id first": N_("المشترك بلا عرض — حدّد العرض أولًا."),
 }
 
 # رسائل ``_to_float``/``_to_int`` القديمة ذات الحقل المتغيّر:
 #   «amount must be >= 0.01» / «hours must be an integer» / «custom_price must be a number»
 _FIELD_PATTERNS = (
-    (re.compile(r"^(\w+) must be >= (-?[\d.]+)$"), "قيمة «{f}» يجب ألّا تقلّ عن {n}."),
-    (re.compile(r"^(\w+) must be > (-?[\d.]+)$"), "قيمة «{f}» يجب أن تكون أكبر من {n}."),
-    (re.compile(r"^(\w+) must be an integer$"), "قيمة «{f}» يجب أن تكون عددًا صحيحًا."),
-    (re.compile(r"^(\w+) must be a number$"), "قيمة «{f}» يجب أن تكون رقمًا."),
-    (re.compile(r"^(\w+) (?:is )?required$"), "قيمة «{f}» مطلوبة."),
+    (re.compile(r"^(\w+) must be >= (-?[\d.]+)$"), N_("قيمة «{f}» يجب ألّا تقلّ عن {n}.")),
+    (re.compile(r"^(\w+) must be > (-?[\d.]+)$"), N_("قيمة «{f}» يجب أن تكون أكبر من {n}.")),
+    (re.compile(r"^(\w+) must be an integer$"), N_("قيمة «{f}» يجب أن تكون عددًا صحيحًا.")),
+    (re.compile(r"^(\w+) must be a number$"), N_("قيمة «{f}» يجب أن تكون رقمًا.")),
+    (re.compile(r"^(\w+) (?:is )?required$"), N_("قيمة «{f}» مطلوبة.")),
 )
 
 

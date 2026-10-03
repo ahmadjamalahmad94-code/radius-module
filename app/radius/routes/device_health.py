@@ -16,6 +16,7 @@ CSRF: these live under /admin/… (not /api/…) so the global guard enforces
 CSRF on every POST/PATCH — the page JS sends the X-CSRFToken header.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from typing import Any
@@ -184,7 +185,7 @@ def _device_missing(device_id: int):
     /api/v1/device-health per-device endpoints."""
     if repo.get_device(_tid(), int(device_id)):
         return None
-    return jsonify({"ok": False, "error": "الجهاز غير موجود."}), 404
+    return jsonify({"ok": False, "error": _tr("الجهاز غير موجود.")}), 404
 
 
 def device_health_api_update(device_id: int):
@@ -222,7 +223,7 @@ def device_health_api_enable(device_id: int):
     tenant_id = _tid()
     ok = svc.set_monitoring(tenant_id, device_id, True)
     if not ok:
-        return jsonify({"ok": False, "error": "الجهاز غير موجود."}), 404
+        return jsonify({"ok": False, "error": _tr("الجهاز غير موجود.")}), 404
     return jsonify({"ok": True, "device": repo.get_device(tenant_id, device_id)})
 
 
@@ -230,7 +231,7 @@ def device_health_api_disable(device_id: int):
     tenant_id = _tid()
     ok = svc.set_monitoring(tenant_id, device_id, False)
     if not ok:
-        return jsonify({"ok": False, "error": "الجهاز غير موجود."}), 404
+        return jsonify({"ok": False, "error": _tr("الجهاز غير موجود.")}), 404
     return jsonify({"ok": True, "device": repo.get_device(tenant_id, device_id)})
 
 
@@ -238,7 +239,7 @@ def device_health_api_delete(device_id: int):
     tenant_id = _tid()
     ok = svc.delete_device(tenant_id, device_id, actor=_actor())
     if not ok:
-        return jsonify({"ok": False, "error": "الجهاز غير موجود."}), 404
+        return jsonify({"ok": False, "error": _tr("الجهاز غير موجود.")}), 404
     return jsonify({"ok": True})
 
 

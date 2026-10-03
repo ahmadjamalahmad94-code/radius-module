@@ -8,6 +8,7 @@ Mirrors two read-only MikroTik ops pages:
 Reuses the same services (no router contact, no duplicated logic).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -59,5 +60,5 @@ def recovery_plan(audit_id: int):
     mt_recovery_plan). 404 إن لم توجد خطة لهذا السجلّ."""
     plan = build_plan(tenant_id=_tid(), audit_id=int(audit_id))
     if plan is None:
-        return fail("not_found", "لا توجد خطة تعافٍ لهذا السجلّ.", status=404)
+        return fail("not_found", _tr("لا توجد خطة تعافٍ لهذا السجلّ."), status=404)
     return ok({"plan": plan.to_dict()})

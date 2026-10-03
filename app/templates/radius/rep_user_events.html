@@ -11,7 +11,7 @@
 {% block title %}{{ _("أحداث المستخدمين") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
 {% block page_title %}{{ _("أحداث النظام (المستخدمون)") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} حدث</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s حدث', length=items|length) }}</span>{% endblock %}
 
 {% block content %}
 {# سجل التغييرات الحقليّة (كان X ← صار Y) — تنسيق المكوّن المشترك (مرّة واحدة) #}
@@ -21,12 +21,12 @@
 
 {# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
 {% call hub.megahero(
-  "أحداث المستخدمين",
-  subtitle="دورة حياة المشترك — إنشاء/تعطيل/تفعيل/تجديد/حذف. (تعديلات الحقول والباقات في «تغييرات الباقات والملفات».)",
+  _('أحداث المستخدمين'),
+  subtitle=_('دورة حياة المشترك — إنشاء/تعطيل/تفعيل/تجديد/حذف. (تعديلات الحقول والباقات في «تغييرات الباقات والملفات».)'),
   icon="users-rectangle",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'users-rectangle', 'variant': 'brand'},
+    {'label': _('إجمالي الأحداث'), 'value': total, 'icon': 'users-rectangle', 'variant': 'brand'},
   ],
   search_action=url_for('radius.rep_user_events')
 ) %}
@@ -37,9 +37,9 @@
          value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn(_('مسح'), icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_user_events') + "'" + '"') }}
   {% endif %}
 {% endcall %}
@@ -47,18 +47,18 @@
 {% if items %}
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو حدث يخصّ مشتركًا — مرتبًا حسب الأحدث أولًا.",
+  _('كيف تقرأ هذا التقرير؟'),
+  intro=_('كل صف هو حدث يخصّ مشتركًا — مرتبًا حسب الأحدث أولًا.'),
   items=[
-    {'icon': 'user-gear',          'text': '«المنفّذ» هو المدير أو النظام الذي قام بالإجراء.'},
-    {'icon': 'bolt',               'text': '«الفعل» هو نوع العملية — إنشاء، تعديل، تعطيل، تمديد، أو حذف.'},
-    {'icon': 'user',               'text': '«المستخدم» هو المشترك الذي طاله الإجراء.'},
-    {'icon': 'circle-info',        'text': '«التفاصيل» ملخص مختصر — مرّر فوقه لرؤية النص الكامل.'},
+    {'icon': 'user-gear',          'text': _('«المنفّذ» هو المدير أو النظام الذي قام بالإجراء.')},
+    {'icon': 'bolt',               'text': _('«الفعل» هو نوع العملية — إنشاء، تعديل، تعطيل، تمديد، أو حذف.')},
+    {'icon': 'user',               'text': _('«المستخدم» هو المشترك الذي طاله الإجراء.')},
+    {'icon': 'circle-info',        'text': _('«التفاصيل» ملخص مختصر — مرّر فوقه لرؤية النص الكامل.')},
   ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log."
+  note=_('هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log.')
 )) %}
-  {% call hub.section("سجل الأحداث", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
+  {% call hub.section(_('سجل الأحداث'), icon="table-list",
+                      meta=items|length|string + _(' صف'), flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-persist="user_events" data-uds-page-size="25"
          style="border:none;border-radius:0">
       <table class="hub-table">
@@ -99,8 +99,8 @@
   {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا أحداث مستخدمين بعد",
-   sub="غيّر الفلاتر أو لا توجد أحداث مستخدمين بعد.", icon="users-rectangle") }}
+{{ hub.empty(_('لا أحداث مستخدمين بعد'),
+   sub=_('غيّر الفلاتر أو لا توجد أحداث مستخدمين بعد.'), icon="users-rectangle") }}
 {% endif %}
 {# F08-L: ترقيم خادميّ — ما بعد أوّل دفعة من النتائج #}
 {% from "_partials/list_pager.html" import list_pager with context %}

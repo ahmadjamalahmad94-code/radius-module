@@ -7,6 +7,7 @@ failures map to catalogue diagnostic codes:
 No DB / Flask / network — pure functions only.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from typing import Any, Mapping
 
@@ -105,10 +106,10 @@ class BroadbandPhasePlanner(PhasePlannerBase):
 
         tag = self.comment_prefix(run_id=run_id, step="broadband")
         notes = [
-            "ألصق السكربت في MikroTik Terminal بعد التأكّد من "
-            "إقفال أي خادم PPPoE قائم على نفس الواجهة.",
-            "النطاق المُخصّص للعملاء البعيدين معزول عبر NAT "
-            "مقيّد بـ src-address لذلك النطاق فقط.",
+            _tr("ألصق السكربت في MikroTik Terminal بعد التأكّد من "
+            "إقفال أي خادم PPPoE قائم على نفس الواجهة."),
+            _tr("النطاق المُخصّص للعملاء البعيدين معزول عبر NAT "
+            "مقيّد بـ src-address لذلك النطاق فقط."),
         ]
         return PhasePlanResult(
             phase=self.PHASE,

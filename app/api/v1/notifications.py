@@ -14,6 +14,7 @@ Endpoints:
     POST /notifications/read-all        mark all read
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -75,7 +76,7 @@ def list_notifications():
     if raw_before not in (None, ""):
         before_id = _clamp(raw_before, 1, 2**62, None)
         if before_id is None:
-            return fail("validation_error", "قيمة before_id يجب أن تكون رقمًا صحيحًا.", status=422)
+            return fail("validation_error", _tr("قيمة before_id يجب أن تكون رقمًا صحيحًا."), status=422)
     viewer = _viewer()
     rows = notifications_repo.list_for(
         tid, unread_only=unread_only, limit=limit + 1, offset=offset,
@@ -102,7 +103,7 @@ def get_notification(notif_id: int):
     """GET /notifications/<id> — single notification."""
     notif = notifications_repo.get(_tid(), int(notif_id), viewer=_viewer())
     if not notif:
-        return fail("not_found", "الإشعار غير موجود.", status=404)
+        return fail("not_found", _tr("الإشعار غير موجود."), status=404)
     return ok(notif)
 
 
@@ -111,7 +112,7 @@ def mark_read(notif_id: int):
     tid = _tid()
     viewer = _viewer()
     if not notifications_repo.get(tid, int(notif_id), viewer=viewer):
-        return fail("not_found", "الإشعار غير موجود.", status=404)
+        return fail("not_found", _tr("الإشعار غير موجود."), status=404)
     notifications_repo.mark_read(tid, int(notif_id), viewer=viewer)
     return ok({"id": int(notif_id),
                "unread_count": notifications_repo.unread_count(tid, viewer=viewer)})

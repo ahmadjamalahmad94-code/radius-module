@@ -24,8 +24,7 @@
   <section class="mt-card">
     <div class="mt-card-body">
       <p>
-        إذا كنت تظنّ أن هذه الصلاحية يجب أن تكون متاحة لحسابك،
-        تواصَل مع مدير النظام لإضافتها إلى دورك.
+        {{ _('إذا كنت تظنّ أن هذه الصلاحية يجب أن تكون متاحة لحسابك، تواصَل مع مدير النظام لإضافتها إلى دورك.') }}
       </p>
       <div class="mt-program-actions">
         <a class="mt-mini-btn" href="{{ url_for('radius.dashboard') if request.endpoint else '/admin/radius/' }}">

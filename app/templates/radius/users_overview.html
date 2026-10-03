@@ -14,8 +14,8 @@
 {# ───── الصدفة الموحّدة: هيرو + شريطا KPI بفواصل ناعمة بدل ثلاث كتل ───── #}
 <section class="hub-hero-shell">
 {{ hub.hero(
-  "نظرة عامة — المشتركين",
-  subtitle="إحصاءات سريعة عن قاعدة المشتركين — الحالات، الأنواع، والاستهلاك الإجمالي",
+  _('نظرة عامة — المشتركين'),
+  subtitle=_('إحصاءات سريعة عن قاعدة المشتركين — الحالات، الأنواع، والاستهلاك الإجمالي'),
   icon="chart-pie",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.users_list') + '">
@@ -25,25 +25,25 @@
 ) }}
 
 <div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي المشتركين", total,                              icon="users",         variant="brand") }}
-  {{ hub.kpi("مفعَّل",            by_status.get('enabled', 0),         icon="circle-check",  variant="green") }}
-  {{ hub.kpi("منتهي الصلاحية",   by_status.get('expired', 0),         icon="clock",         variant="amber") }}
-  {{ hub.kpi("معطَّل",            by_status.get('disabled', 0),        icon="ban",           variant="red") }}
+  {{ hub.kpi(_('إجمالي المشتركين'), total,                              icon="users",         variant="brand") }}
+  {{ hub.kpi(_('مفعَّل'),            by_status.get('enabled', 0),         icon="circle-check",  variant="green") }}
+  {{ hub.kpi(_('منتهي الصلاحية'),   by_status.get('expired', 0),         icon="clock",         variant="amber") }}
+  {{ hub.kpi(_('معطَّل'),            by_status.get('disabled', 0),        icon="ban",           variant="red") }}
 </div>
 
 <div class="hub-kpi-grid">
   {# bytes_in = Σ acctinputoctets = رفع، bytes_out = Σ acctoutputoctets = تنزيل — RFC 2866 #}
-  {{ hub.kpi("تنزيل إجمالي", "%.1f GB"|format(bytes_out/1073741824), icon="download",      variant="blue") }}
-  {{ hub.kpi("رفع إجمالي",   "%.1f GB"|format(bytes_in/1073741824),  icon="upload",        variant="blue") }}
-  {{ hub.kpi("مستفيد",       by_type.get('subscriber', 0),           icon="user",          variant="green") }}
-  {{ hub.kpi("بطاقة دخول",   by_type.get('card', 0),                 icon="id-card",       variant="brand") }}
+  {{ hub.kpi(_('تنزيل إجمالي'), "%.1f GB"|format(bytes_out/1073741824), icon="download",      variant="blue") }}
+  {{ hub.kpi(_('رفع إجمالي'),   "%.1f GB"|format(bytes_in/1073741824),  icon="upload",        variant="blue") }}
+  {{ hub.kpi(_('مستفيد'),       by_type.get('subscriber', 0),           icon="user",          variant="green") }}
+  {{ hub.kpi(_('بطاقة دخول'),   by_type.get('card', 0),                 icon="id-card",       variant="brand") }}
 </div>
 </section>{# /hub-hero-shell #}
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:var(--hub-gap-section)">
   <div>
     {% if last_created %}
-      {% call hub.section("آخر المستخدمين المُضافين", icon="user-plus",
+      {% call hub.section(_('آخر المستخدمين المُضافين'), icon="user-plus",
                           meta=last_created|length|string, flush=True) %}
         <div class="hub-table-wrap" style="border:none;border-radius:0">
           <table class="hub-table">
@@ -77,15 +77,15 @@
         </div>
       {% endcall %}
     {% else %}
-      {% call hub.section("آخر المستخدمين المُضافين", icon="user-plus") %}
-        {{ hub.empty("لا مستخدمين بعد", icon="user") }}
+      {% call hub.section(_('آخر المستخدمين المُضافين'), icon="user-plus") %}
+        {{ hub.empty(_('لا مستخدمين بعد'), icon="user") }}
       {% endcall %}
     {% endif %}
   </div>
 
   <div>
     {% if expiring_soon %}
-      {% call hub.section("تنتهي خلال 7 أيام", icon="hourglass-half",
+      {% call hub.section(_('تنتهي خلال 7 أيام'), icon="hourglass-half",
                           meta=expiring_soon|length|string, flush=True) %}
         <div class="hub-table-wrap" style="border:none;border-radius:0">
           <table class="hub-table">
@@ -111,8 +111,8 @@
         </div>
       {% endcall %}
     {% else %}
-      {% call hub.section("تنتهي خلال 7 أيام", icon="hourglass-half") %}
-        {{ hub.empty("لا انتهاءات قريبة", sub="جميع المشتركين خارج نافذة الأيام السبعة.", icon="circle-check") }}
+      {% call hub.section(_('تنتهي خلال 7 أيام'), icon="hourglass-half") %}
+        {{ hub.empty(_('لا انتهاءات قريبة'), sub=_('جميع المشتركين خارج نافذة الأيام السبعة.'), icon="circle-check") }}
       {% endcall %}
     {% endif %}
   </div>

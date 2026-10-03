@@ -6,6 +6,7 @@
    All calculations are client-side previews; nothing touches a router until an
    explicit dry-run policy is saved on the server.
    ========================================================================== */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -186,7 +187,7 @@
     var base = enabled.reduce(function (s, p) { return s + p.down + p.up; }, 0);
     var eff = enabled.reduce(function (s, p) { return s + (p.down + p.up) * (p.uni / 100); }, 0);
     var note = $("[data-impact-note]");
-    if (note) note.innerHTML = "سيتم تطبيق <b>" + Math.round(state.globalUni) + "%</b> على <b>" + enabled.length + "</b> باقات.";
+    if (note) note.innerHTML = (hrT('سيتم تطبيق') + ' ' + '<b>') + Math.round(state.globalUni) + ('%' + '</b>' + ' ' + hrT('على') + ' ' + '<b>') + enabled.length + ('</b>' + ' ' + hrT('باقات.'));
     setText("[data-impact-base]", mb(base) + " Mb");
     setText("[data-impact-eff]", mb(eff) + " Mb");
     var delta = eff - base;
@@ -239,7 +240,7 @@
     if (enable) enable.addEventListener("change", function () {
       p.enabled = enable.checked;
       p.el.classList.toggle("is-off", !p.enabled);
-      if (p.statusEl) p.statusEl.textContent = p.enabled ? "مفعّل" : "متوقّف";
+      if (p.statusEl) p.statusEl.textContent = p.enabled ? hrT('مفعّل') : hrT('متوقّف');
       recompute();
     });
 
@@ -275,9 +276,9 @@
     // KPI card differences
     var avg2 = $("[data-kpi-avg2-card]"); if (avg2) avg2.hidden = mode !== "separate";
     var unc = $("[data-kpi-uncontrolled-card]"); if (unc) unc.hidden = mode !== "unified";
-    setText("[data-kpi-avg-label]", mode === "separate" ? "متوسط التحميل الحالي" : "متوسط النسبة الحالية");
+    setText("[data-kpi-avg-label]", mode === "separate" ? hrT('متوسط التحميل الحالي') : hrT('متوسط النسبة الحالية'));
     var ctrlLabel = $(".spdx-kpi--green .spdx-kpi__label");
-    if (ctrlLabel) ctrlLabel.textContent = mode === "separate" ? "الباقات المتأثرة" : "المتحكَّم بها";
+    if (ctrlLabel) ctrlLabel.textContent = mode === "separate" ? hrT('الباقات المتأثرة') : hrT('المتحكَّم بها');
     // re-render sliders that just became visible
     requestAnimationFrame(function () { sliders.forEach(function (s) { s.render(); }); recompute(); });
   }
@@ -299,7 +300,7 @@
     recompute();
   }
 
-  bindClick("[data-action='restore-all']", function () { restoreAll(); toast("تمت استعادة جميع الباقات إلى السرعة الأصلية."); });
+  bindClick("[data-action='restore-all']", function () { restoreAll(); toast(hrT('تمت استعادة جميع الباقات إلى السرعة الأصلية.')); });
   bindClick("[data-action='refresh']", function (btn) {
     btn.classList.add("is-spinning");
     setTimeout(function () { btn.classList.remove("is-spinning"); }, 600);
@@ -310,16 +311,16 @@
     if (state.mode === "unified") {
       var base = enabled.reduce(function (s, p) { return s + p.down; }, 0);
       var eff = enabled.reduce(function (s, p) { return s + p.down * (p.uni / 100); }, 0);
-      toast("معاينة آمنة: " + enabled.length + " باقات ستُقيَّد من " + mb(base) + " إلى " + mb(eff) + " ميجابت — بدون أي تنفيذ على الراوترات.");
+      toast(hrT('معاينة آمنة: ') + enabled.length + hrT(' باقات ستُقيَّد من ') + mb(base) + hrT(' إلى ') + mb(eff) + hrT(' ميجابت — بدون أي تنفيذ على الراوترات.'));
     } else {
-      toast("معاينة آمنة: " + enabled.length + " باقات — متوسط التحميل " +
-        Math.round(avg(enabled.map(function (p) { return p.dn; }))) + "% والرفع " +
-        Math.round(avg(enabled.map(function (p) { return p.upp; }))) + "% — بدون تنفيذ مباشر.");
+      toast(hrT('معاينة آمنة: ') + enabled.length + hrT(' باقات — متوسط التحميل ') +
+        Math.round(avg(enabled.map(function (p) { return p.dn; }))) + hrT('% والرفع ') +
+        Math.round(avg(enabled.map(function (p) { return p.upp; }))) + hrT('% — بدون تنفيذ مباشر.'));
     }
   });
   bindClick("[data-action='save']", function () { save(false); });
   bindClick("[data-action='apply']", function () {
-    var _amsg = "تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟";
+    var _amsg = hrT('تطبيق هذا الوضع حيًّا الآن على كلّ المتصلين (CoA) وعلى كلّ اتصال جديد؟');
     /* F08-L: مودال التأكيد الموحّد بدل confirm() الأصليّ */
     (window.UDS && window.UDS.confirm ? window.UDS.confirm({message: _amsg}) : Promise.resolve(window.confirm(_amsg))).then(function (yes) { if (yes) save(true); });
   });
@@ -357,7 +358,7 @@
     form.elements["multiplier"].value = (clamp(rep, 0, 300) / 100).toFixed(3);
     form.elements["preset"].value = "normal";
     form.elements["policy_key"].value = "ui-" + state.mode + "-" + Math.round(performance.now());
-    form.elements["title"].value = (state.mode === "unified" ? "تحكّم موحّد" : "تحكّم منفصل") + " — مراقبة الباندويث";
+    form.elements["title"].value = (state.mode === "unified" ? hrT('تحكّم موحّد') : hrT('تحكّم منفصل')) + hrT(' — مراقبة الباندويث');
     if (form.elements["apply"]) form.elements["apply"].value = applyLive ? "1" : "";
     if (form.elements["save_policy"]) form.elements["save_policy"].value = applyLive ? "0" : "1";
     form.submit();

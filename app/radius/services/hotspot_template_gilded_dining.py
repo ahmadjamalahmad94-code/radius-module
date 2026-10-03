@@ -9,6 +9,7 @@
 يُعيد استعمال هيكل الشِّل المُثبَت (دخول/CHAP/تبويبات CSS)؛ البَصمة z-index:-1
 خلفيّة، الشريط غير مُغطّى، العلامة ديناميكيّة {{TENANT_NAME}}."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 import re
 
@@ -81,13 +82,13 @@ _GILD_ART = """
 
 _GILD_HERO = ("""
       <div class="gd-hero">
-        <div class="gd-frame">""" + _GILD_ART + """</div>
+        <div class="gd-frame">""" + _GILD_ART + N_("""</div>
         <div class="gd-cap">
           <div><b>تجربة ضيافة راقية</b><span>اتصال أنيق وسريع لضيوف المطعم</span></div>
           <div class="gd-badge"><span class="gd-dot"></span> نُرحّب بكم</div>
         </div>
       </div>
-""")
+"""))
 
 _GILD_STYLE = """
 <style id="hr-gilded-dining">

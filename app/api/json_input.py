@@ -11,6 +11,7 @@ Usage::
         return err
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import math
 from typing import Any
@@ -19,7 +20,7 @@ from flask import request
 
 from .responses import fail
 
-NOT_OBJECT_MESSAGE = "جسم الطلب يجب أن يكون كائن JSON (مفاتيح وقيم)."
+NOT_OBJECT_MESSAGE = N_("جسم الطلب يجب أن يكون كائن JSON (مفاتيح وقيم).")
 
 
 class InputError(ValueError):
@@ -95,19 +96,19 @@ def opt_int(value: Any, *, label: str, minimum: int | None = None,
     if value in (None, ""):
         return None
     if isinstance(value, bool) or isinstance(value, (dict, list, tuple)):
-        raise InputError(f"قيمة {label} يجب أن تكون رقمًا صحيحًا.")
+        raise InputError(_tr('قيمة %(label)s يجب أن تكون رقمًا صحيحًا.', label=label))
     if isinstance(value, float):
         if not math.isfinite(value) or not value.is_integer():
-            raise InputError(f"قيمة {label} يجب أن تكون رقمًا صحيحًا.")
+            raise InputError(_tr('قيمة %(label)s يجب أن تكون رقمًا صحيحًا.', label=label))
         value = int(value)
     try:
         number = int(str(value).strip())
     except (TypeError, ValueError):
-        raise InputError(f"قيمة {label} يجب أن تكون رقمًا صحيحًا.")
+        raise InputError(_tr('قيمة %(label)s يجب أن تكون رقمًا صحيحًا.', label=label))
     if minimum is not None and number < minimum:
-        raise InputError(f"قيمة {label} يجب ألا تقل عن {minimum}.")
+        raise InputError(_tr('قيمة %(label)s يجب ألا تقل عن %(minimum)s.', label=label, minimum=minimum))
     if maximum is not None and number > maximum:
-        raise InputError(f"قيمة {label} أكبر من المسموح.")
+        raise InputError(_tr('قيمة %(label)s أكبر من المسموح.', label=label))
     return number
 
 
@@ -118,8 +119,8 @@ def opt_text(value: Any, *, label: str, max_len: int | None = None,
     if value is None:
         return default
     if isinstance(value, bool) or isinstance(value, (dict, list, tuple)):
-        raise InputError(f"قيمة {label} يجب أن تكون نصًا.")
+        raise InputError(_tr('قيمة %(label)s يجب أن تكون نصًا.', label=label))
     text = str(value).strip()
     if max_len is not None and len(text) > max_len:
-        raise InputError(f"{label} أطول من المسموح ({max_len} حرفًا كحدّ أقصى).")
+        raise InputError(_tr('%(label)s أطول من المسموح (%(max_len)s حرفًا كحدّ أقصى).', label=label, max_len=max_len))
     return text

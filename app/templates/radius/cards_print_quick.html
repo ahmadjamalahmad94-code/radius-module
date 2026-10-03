@@ -621,7 +621,7 @@
           {method:'POST', body:fd, headers:{'Accept':'application/json'}})
       .then(r => r.json())
       .then(p => {
-        if(!p.ok) throw new Error((p.error && p.error.message) || 'فشل بدء التصدير');
+        if(!p.ok) throw new Error((p.error && p.error.message) || {{ _('فشل بدء التصدير')|tojson }});
         function poll(){
           fetch(p.status_url).then(r => r.json()).then(st => {
             const j = st.job || st;
@@ -644,7 +644,7 @@
         }
         poll();
       })
-      .catch(e => { title.textContent = e.message || 'خطأ'; box.classList.add('is-on'); });
+      .catch(e => { title.textContent = e.message || {{ _('خطأ')|tojson }}; box.classList.add('is-on'); });
   }
   if(autoExport && tplId && batchSel.value){ runExport(); }
 })();

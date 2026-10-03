@@ -17,14 +17,14 @@
 {% import "radius/_subs_labels.html" as L %}
 
 {# adapter mode → Arabic label (the raw «sqlite» used to be shown — R13 L4) #}
-{% set mode_label = {"manual": "يدوي", "mikrotik": "مايكروتك", "direct": "مايكروتك مباشر",
-                      "sqlite": "الرديوس المحلّي"}.get(settings.mode, "الرديوس المحلّي") %}
+{% set mode_label = {"manual": _('يدوي'), "mikrotik": _('مايكروتك'), "direct": _('مايكروتك مباشر'),
+                      "sqlite": _('الرديوس المحلّي')}.get(settings.mode, _('الرديوس المحلّي')) %}
 
 {% block title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wifi"></i>{% endblock %}
 {% block page_title %}{{ _("المتصلون الآن") }}{% endblock %}
 {% set online_total = total_count if total_count is defined else items|length %}
-{% block page_sub %}<span class="sub">{{ online_total }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(online_total)s جلسة · الوضع %(mode_label)s', online_total=online_total, mode_label=mode_label) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -458,7 +458,7 @@
       <span class="ol-hero-icon"><i class="fa-solid fa-wifi"></i></span>
       <div>
         <h1 class="ol-hero-title">{{ _('المتصلون الآن') }}</h1>
-        <div class="ol-hero-sub">الجلسات الحيّة على الشبكة — {{ "كروت" if filter_type == "card" else "مشتركون" }} — وضع التشغيل: {{ mode_label }}</div>
+        <div class="ol-hero-sub">{{ _('الجلسات الحيّة على الشبكة —') }} {{ _('كروت') if filter_type == "card" else _('مشتركون') }} {{ _('— وضع التشغيل:') }} {{ mode_label }}</div>
       </div>
     </div>
     <div class="ol-hero-actions">
@@ -535,9 +535,9 @@
 
   {# KPI strip — comes right after the title #}
   <div class="ol-hero-kpis">
-    {{ hub.kpi("جلسات نشطة", online_total, icon="wifi",        variant="green") }}
-    {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
-    {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
+    {{ hub.kpi(_('جلسات نشطة'), online_total, icon="wifi",        variant="green") }}
+    {{ hub.kpi(_('تنزيل (MB)'), "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
+    {{ hub.kpi(_('رفع (MB)'),   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
   </div>
 
   {# Filters — labelled pill dropdowns, below the stats (not a bar) #}
@@ -615,7 +615,7 @@
 <div class="hub-section" style="margin-bottom:14px;border-color:var(--hub-red-soft)">
   <div class="hub-section-body" style="display:flex;gap:10px;align-items:center;background:var(--hub-red-soft);color:var(--hub-red-ink)">
     <i class="fa-solid fa-triangle-exclamation"></i>
-    <div>تعذّر تحميل الجلسات: {{ error }}</div>
+    <div>{{ _('تعذّر تحميل الجلسات: %(error)s', error=error) }}</div>
   </div>
 </div>
 {% endif %}
@@ -696,26 +696,26 @@
       {# أسماء الأعمدة هنا يجب أن تطابق رؤوس الجدول حرفيًا حتى لا يربك المشغّل
          (التبديل يخفي العمود حسب data-col المطابق). #}
       {% for key, label in [
-        ("select", "تحديد"),
+        ("select", _('تحديد')),
         ("rownum", "#"),
-        ("name", "الاسم"),
-        ("login", "اسم الدخول"),
-        ("plan", "العرض"),
-        ("ip", "عنوان IP"),
-        ("nas", "جهاز الشبكة"),
-        ("device", "نوع الجهاز"),
-        ("down_speed", "سرعة العرض"),
-        ("up_speed", "السرعة الحالية"),
-        ("speed_state", "حالة السرعة"),
-        ("duration", "وقت الجلسة"),
-        ("daily_used", "وقت اليوم"),
-        ("download", "تنزيل"),
-        ("upload", "رفع"),
-        ("mac", "عنوان MAC"),
-        ("manager", "المدير"),
-        ("service", "معرف الخدمة"),
-        ("port", "منفذ الاتصال"),
-        ("actions", "إجراءات")
+        ("name", _('الاسم')),
+        ("login", _('اسم الدخول')),
+        ("plan", _('العرض')),
+        ("ip", _('عنوان IP')),
+        ("nas", _('جهاز الشبكة')),
+        ("device", _('نوع الجهاز')),
+        ("down_speed", _('سرعة العرض')),
+        ("up_speed", _('السرعة الحالية')),
+        ("speed_state", _('حالة السرعة')),
+        ("duration", _('وقت الجلسة')),
+        ("daily_used", _('وقت اليوم')),
+        ("download", _('تنزيل')),
+        ("upload", _('رفع')),
+        ("mac", _('عنوان MAC')),
+        ("manager", _('المدير')),
+        ("service", _('معرف الخدمة')),
+        ("port", _('منفذ الاتصال')),
+        ("actions", _('إجراءات'))
       ] %}
         <label class="online-col-option">
           <input type="checkbox" data-col-choice="{{ key }}" checked>
@@ -726,8 +726,8 @@
   </div>
 </div>
 
-{% call hub.section("الجلسات", icon="table-list",
-                    meta=online_total|string + " صف", flush=True) %}
+{% call hub.section(_('الجلسات'), icon="table-list",
+                    meta=online_total|string + _(' صف'), flush=True) %}
   <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
     {# f06-L1: الصفحة مرقّمة خادميًّا (عدد الصفوف في الصفحة + صفحة N/M) — مُرقِّمٌ ثانٍ
        في المتصفّح فوق صفوف الصفحة كان يقول «1–50 من 100» و602 متّصلًا. لا مُرقِّم
@@ -781,7 +781,7 @@
             data-has-custom-speed="{{ 1 if s.has_custom_speed else 0 }}">
           <td class="online-select-cell" data-col="select">
             {# تحديد متعدد: checkbox بدل radio حتى يمكن اختيار أكثر من جلسة معًا #}
-            <input type="checkbox" name="online_session_select" aria-label="تحديد {{ s.username }}">
+            <input type="checkbox" name="online_session_select" aria-label="{{ _('تحديد %(username)s', username=s.username) }}">
           </td>
           <td class="num mono" data-col="rownum">{{ loop.index }}</td>
           {# «الاسم» = الاسم المعروض فقط؛ «اسم الدخول» = اليوزر في عموده المستقلّ
@@ -873,7 +873,7 @@
           <td data-col="speed_state">
             {% if _temp_active %}
               <span class="online-speed-pill is-temp"
-                    title="{% if _temp_state and _temp_state.ends_at %}ينتهي: {{ _temp_state.ends_at }}{% else %}مؤقتة بدون وقت نهاية مسجّل{% endif %}">
+                    title="{% if _temp_state and _temp_state.ends_at %}{{ _('ينتهي: %(at)s', at=_temp_state.ends_at) }}{% else %}{{ _('مؤقتة بدون وقت نهاية مسجّل') }}{% endif %}">
                 <i class="fa-solid fa-clock"></i>
                 <span>{{ _('مؤقتة') }}</span>
                 {% if _temp_state and _temp_state.remaining_seconds is not none %}
@@ -939,7 +939,7 @@
                 <input type="hidden" name="username" value="{{ s.username }}">
                 <input type="hidden" name="session_id" value="{{ s.session_id }}">
                 <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('فصل الاتصال عبر الراوتر (CoA Disconnect)') }}"
-                        data-confirm="قطع جلسة «{{ s.username|e }}»؟">
+                        data-confirm="{{ _('قطع جلسة «%(e)s»؟', e=s.username|e) }}">
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>{% endif %}
@@ -955,7 +955,7 @@
                 <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm"
                         title="{{ _('إغلاق محاسبيّ في الراديوس — يُزيل الجلسة من العدّاد حين يتعذّر الفصل (راوتر منقطع)') }}"
                         {% if _reachable is false %}style="background:#fef3c7;color:#b45309;border-color:#f6d99f"{% endif %}
-                        data-confirm="إغلاق إجباري لجلسة «{{ s.username|e }}»؟ يُزيلها من العدّاد دون إرسال أمر فصل للراوتر.">
+                        data-confirm="{{ _('إغلاق إجباري لجلسة «%(e)s»؟ يُزيلها من العدّاد دون إرسال أمر فصل للراوتر.', e=s.username|e) }}">
                   <i class="fa-solid fa-broom"></i>
                 </button>
               </form>{% endif %}
@@ -1030,16 +1030,16 @@
 {# الحالة الحيّة هي المصدر: الراوتر غير قابل للوصول فلا نُظهر متصلين لا يمكن
    التحقّق منهم — نُظهر «غير متصل» بدل قائمة فارغة عاديّة أو جلسات شبحيّة. #}
 {{ hub.empty(
-  "الراوتر غير متصل",
-  sub="تعذّر الوصول للراوتر فلا يمكن التحقّق من المتصلين الآن — لا تُعرَض جلسات غير مؤكَّدة. ستظهر القائمة تلقائيًّا فور عودة الاتصال." +
-       (" راوترات غير متصلة: " + (unreachable_routers|join('، ')) if unreachable_routers else ""),
+  _('الراوتر غير متصل'),
+  sub=_('تعذّر الوصول للراوتر فلا يمكن التحقّق من المتصلين الآن — لا تُعرَض جلسات غير مؤكَّدة. ستظهر القائمة تلقائيًّا فور عودة الاتصال.') +
+       (_(' راوترات غير متصلة: ') + (unreachable_routers|join('، ')) if unreachable_routers else ""),
   icon="plug-circle-xmark"
 ) }}
 {% else %}
 {{ hub.empty(
-  "لا جلسات مباشرة",
-  sub="لا أحد متصل حاليًا" + (" بنوع «كروت»." if filter_type == "card" else ".") +
-       (" تأكّد أن مزوّد المصادقة يعمل بوضع الربط الفعلي." if settings.mode == "manual" else ""),
+  _('لا جلسات مباشرة'),
+  sub=_('لا أحد متصل حاليًا') + (_(' بنوع «كروت».') if filter_type == "card" else ".") +
+       (_(' تأكّد أن مزوّد المصادقة يعمل بوضع الربط الفعلي.') if settings.mode == "manual" else ""),
   icon="wifi"
 ) }}
 {% endif %}
@@ -1755,11 +1755,11 @@
     if (arr.length){
       if (names) names.textContent = arr.join('، ');
       if (banner) banner.hidden = false;
-      setChip('warn', 'راوترات غير متصلة: ' + arr.join('، '),
+      setChip('warn', {{ _('راوترات غير متصلة: ')|tojson }} + arr.join('، '),
               'fa-solid fa-plug-circle-xmark');
     } else {
       if (banner) banner.hidden = true;
-      setChip('ok', 'كل الراوترات متصلة', 'fa-solid fa-circle-check');
+      setChip('ok', {{ _('كل الراوترات متصلة')|tojson }}, 'fa-solid fa-circle-check');
     }
   }
 
@@ -1780,7 +1780,7 @@
       // فشل الاستطلاع (مهلة/شبكة): لا نُبدّل حالة معروفة زوراً — نُبقي المؤشّر
       // كما هو (وإن كان لا يزال «جارٍ الفحص» نُبيّن تعذّر الفحص بهدوء).
       if (chip && chip.getAttribute('data-state') === 'loading'){
-        setChip('loading', 'تعذّر فحص حالة الراوترات — سيُعاد المحاولة',
+        setChip('loading', {{ _('تعذّر فحص حالة الراوترات — سيُعاد المحاولة')|tojson }},
                 'fa-solid fa-circle-notch fa-spin');
       }
     });

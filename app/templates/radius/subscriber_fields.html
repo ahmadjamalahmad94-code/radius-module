@@ -138,7 +138,7 @@
       <div>
         {{ toggle_switch(name="visible", checked=r.on, value=r.key,
                          id="df-" ~ r.key,
-                         on_label="ظاهر", off_label="مخفيّ") }}
+                         on_label=_('ظاهر'), off_label=_('مخفيّ')) }}
       </div>
     </div>
     {% endfor %}

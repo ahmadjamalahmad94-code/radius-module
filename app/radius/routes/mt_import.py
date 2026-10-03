@@ -13,6 +13,7 @@
 خادمِيًّا (لا نُرسل الكلمات للمتصفّح ونستعيدها). اعتماد الراوتر يبقى خادمِيًّا.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, abort, g, jsonify, request, session
 
@@ -83,10 +84,10 @@ def mt_import_preview(nas_id: int):
     itype = _import_type()
     if itype in _USERMANAGER:
         return jsonify({"ok": False, "not_implemented": True,
-                        "error": "استيراد «User-Manager» غير مدعوم بعد."}), 400
+                        "error": _tr("استيراد «User-Manager» غير مدعوم بعد.")}), 400
     nas = _load_nas(nas_id)
     if not nas:
-        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+        return jsonify({"ok": False, "error": _tr("الراوتر غير موجود")}), 404
 
     from ..services import mt_import_fetch as fetcher
     from ..services import mt_import_service as mapper
@@ -111,10 +112,10 @@ def mt_import_run(nas_id: int):
     itype = _import_type()
     if itype in _USERMANAGER:
         return jsonify({"ok": False, "not_implemented": True,
-                        "error": "استيراد «User-Manager» غير مدعوم بعد."}), 400
+                        "error": _tr("استيراد «User-Manager» غير مدعوم بعد.")}), 400
     nas = _load_nas(nas_id)
     if not nas:
-        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+        return jsonify({"ok": False, "error": _tr("الراوتر غير موجود")}), 404
 
     from ..services import mt_import_fetch as fetcher
     from ..services import mt_import_runner as runner
@@ -143,7 +144,7 @@ def mt_import_run(nas_id: int):
 def mt_import_logs(nas_id: int):
     nas = _load_nas(nas_id)
     if not nas:
-        return jsonify({"ok": False, "error": "الراوتر غير موجود"}), 404
+        return jsonify({"ok": False, "error": _tr("الراوتر غير موجود")}), 404
     from ..db.repos import mikrotik_import_logs_repo as logs
     rows = logs.list_for_tenant(_tid(), nas_id=nas_id, limit=20)
     return jsonify({"ok": True, "logs": rows})

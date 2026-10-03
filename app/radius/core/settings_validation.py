@@ -9,6 +9,7 @@ reads as OFF, or CSS in ``branding.primary_color``. ``clean_setting`` returns
 the normalised value or raises ``ValueError`` with an Arabic message.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import re
 
@@ -45,48 +46,48 @@ def clean_setting(key: str, raw) -> str:
             return "1"
         if low in _FALSE:
             return "0"
-        raise ValueError("قيمة غير صالحة — مفعّل (1) أو معطّل (0).")
+        raise ValueError(_tr("قيمة غير صالحة — مفعّل (1) أو معطّل (0)."))
     if key == "billing.currency":
         val = val.upper()
         if val and val not in currency_codes():
-            raise ValueError("العملة غير مدعومة — اختر من: " + "، ".join(currency_codes()) + ".")
+            raise ValueError(_tr("العملة غير مدعومة — اختر من: ") + "، ".join(currency_codes()) + ".")
         return val
     if key == "branding.primary_color":
         if val and not _HEX_COLOR.fullmatch(val):
-            raise ValueError("اللون غير صالح — استخدم صيغة ‎#RRGGBB مثل ‎#2BAACC.")
+            raise ValueError(_tr("اللون غير صالح — استخدم صيغة ‎#RRGGBB مثل ‎#2BAACC."))
         return val
     if key == "comms.country_dial_code" and val:
         digits = val.lstrip("+").replace(" ", "")
         if not digits.isdigit() or not (1 <= len(digits) <= 4):
-            raise ValueError("مفتاح الدولة غير صالح — استخدم الصيغة الدولية مثل ‎+970 أو ‎+962.")
+            raise ValueError(_tr("مفتاح الدولة غير صالح — استخدم الصيغة الدولية مثل ‎+970 أو ‎+962."))
         return "+" + digits
     if key == "network.radius_server_ip" and val:
         host = val.removeprefix("http://").removeprefix("https://").rstrip("/")
         if not _HOST.fullmatch(host):
-            raise ValueError("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف.")
+            raise ValueError(_tr("عنوان IP سيرفر الراديوس غير صالح — اكتب IP مثل ‎10.10.0.1 أو اسم مضيف."))
         return host
     if key in ("device_limit.subscribers.mode", "device_limit.cards.mode"):
         val = val.lower()
         if val not in ("reject", "replace"):
-            raise ValueError("السلوك يجب أن يكون reject (رفض الجهاز الجديد) أو replace (استبدال الأقدم).")
+            raise ValueError(_tr("السلوك يجب أن يكون reject (رفض الجهاز الجديد) أو replace (استبدال الأقدم)."))
         return val
     if key in ("device_limit.subscribers.count", "device_limit.cards.count"):
         try:
             n = int(val)
         except ValueError:
-            raise ValueError("عدد الأجهزة يجب أن يكون عددًا صحيحًا ≥ 1.") from None
+            raise ValueError(_tr("عدد الأجهزة يجب أن يكون عددًا صحيحًا ≥ 1.")) from None
         if n < 1:
-            raise ValueError("عدد الأجهزة يجب أن يكون عددًا صحيحًا ≥ 1.")
+            raise ValueError(_tr("عدد الأجهزة يجب أن يكون عددًا صحيحًا ≥ 1."))
         return str(n)
     if key == "security.unauthorized_ui":
         val = val.lower()
         if val not in ("freeze", "hide"):
-            raise ValueError("القيمة يجب أن تكون freeze (تجميد) أو hide (إخفاء).")
+            raise ValueError(_tr("القيمة يجب أن تكون freeze (تجميد) أو hide (إخفاء)."))
         return val
     if key == "billing.timezone_offset" and val:
         try:
             float(val)
         except ValueError:
-            raise ValueError("الإزاحة الزمنيّة رقمٌ بالساعات مثل 2 أو 3.") from None
+            raise ValueError(_tr("الإزاحة الزمنيّة رقمٌ بالساعات مثل 2 أو 3.")) from None
         return val
     return val

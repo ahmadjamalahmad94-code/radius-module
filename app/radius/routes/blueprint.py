@@ -1,5 +1,6 @@
 """factory رئيسية لـ radius blueprint — يضم كل الأقسام + الـ auth + health/readiness."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from pathlib import Path
 
@@ -444,7 +445,7 @@ def _install_global_login_guard(bp: Blueprint) -> None:
         # حمى: غير مسجَّل = إعادة توجيه لـ login
         if not current_admin_id():
             from flask import redirect, url_for, flash
-            flash("سجّل الدخول للمتابعة.", "warning")
+            flash(_tr("سجّل الدخول للمتابعة."), "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
         # الجلسة كوكي موقَّع عند المتصفّح: حذف الحساب أو تعطيله أو تغيير كلمة
         # مروره لا يُنهيها من تلقاء نفسه. نتحقّق خادميًّا كل طلب — وإلّا بقي
@@ -454,7 +455,7 @@ def _install_global_login_guard(bp: Blueprint) -> None:
         if not session_still_valid():
             from flask import flash, redirect, url_for
             clear_current_admin()
-            flash("انتهت صلاحية جلستك. سجّل الدخول من جديد.", "warning")
+            flash(_tr("انتهت صلاحية جلستك. سجّل الدخول من جديد."), "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
         # D05: صلاحيات الدور/علَم المالك تُعاد قراءتها فور تغيّرها (ختم authz).
         from ..auth.session_helpers import refresh_authz_if_stale
@@ -467,7 +468,7 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             _a = current_admin()
             if _a is not None and getattr(_a, "must_change_password", False):
                 from flask import redirect, url_for, flash
-                flash("لأمانك، يجب تغيير كلمة المرور قبل المتابعة.", "warning")
+                flash(_tr("لأمانك، يجب تغيير كلمة المرور قبل المتابعة."), "warning")
                 return redirect(url_for("radius.account"))
         return None
 
@@ -1332,15 +1333,15 @@ def _deny(code: int, *, permission: str = "", reason: str = "") -> int:
 
 # D24: أسماء عربيّة لأسباب الرفض (تظهر في صفحة 403 وتفاصيل JSON).
 _DENIAL_REASON_AR = {
-    "section_blocked": "هذا القسم مُعطَّل على هذه النسخة.",
-    "section_hidden": "هذا القسم مخفيّ عن حسابك.",
-    "section_locked": "هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.",
-    "action": "الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة",
-    "bulk": "العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).",
-    "rate": "بلغت الحدّ اليوميّ المسموح لهذا الإجراء.",
-    "owner_only": "هذا الإجراء مقصور على المالك أو الشريك.",
-    "out_of_scope": "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».",
-    "permission": "تنقصك الصلاحية",
+    "section_blocked": N_("هذا القسم مُعطَّل على هذه النسخة."),
+    "section_hidden": N_("هذا القسم مخفيّ عن حسابك."),
+    "section_locked": N_("هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف."),
+    "action": N_("الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة"),
+    "bulk": N_("العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops)."),
+    "rate": N_("بلغت الحدّ اليوميّ المسموح لهذا الإجراء."),
+    "owner_only": N_("هذا الإجراء مقصور على المالك أو الشريك."),
+    "out_of_scope": N_("هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين»."),
+    "permission": N_("تنقصك الصلاحية"),
 }
 
 
@@ -1757,8 +1758,8 @@ def _install_error_handlers(bp: Blueprint) -> None:
     from flask import jsonify, render_template
 
     # Owner-approved wording — keep in sync with radius/forbidden_403.html.
-    _MSG = "ليس لديك صلاحية الوصول إلى هذه الصفحة"
-    _SUB = "إذا كنت تتوقع أن هذا خلل، راجع الإدارة."
+    _MSG = _tr("ليس لديك صلاحية الوصول إلى هذه الصفحة")
+    _SUB = N_("إذا كنت تتوقع أن هذا خلل، راجع الإدارة.")
 
     @bp.errorhandler(403)
     def _friendly_forbidden(err):  # noqa: ANN001
@@ -1782,7 +1783,7 @@ def _install_error_handlers(bp: Blueprint) -> None:
         if request.method == "POST":
             try:
                 from .users import rerender_refused_form
-                msg = "لم يُحفَظ: " + (detail or _MSG) + " — بياناتك باقية في النموذج."
+                msg = _tr("لم يُحفَظ: ") + (detail or _MSG) + _tr(" — بياناتك باقية في النموذج.")
                 page = rerender_refused_form(msg)
                 if page is not None:
                     return page
@@ -1800,8 +1801,8 @@ def _install_error_handlers(bp: Blueprint) -> None:
                                    refused_fields=refused_fields), 403
         except Exception:  # noqa: BLE001 — never 500 the operator over chrome
             return (
-                '<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'
-                "403 — ممنوع</h1><p dir=\"rtl\">" + _MSG + "</p>"
+                _tr('<h1 dir="rtl" lang="ar" style="font-family:sans-serif">'
+                "403 — ممنوع</h1><p dir=\"rtl\">") + _MSG + "</p>"
                 '<p dir="rtl">' + _SUB + "</p>",
                 403,
                 {"Content-Type": "text/html; charset=utf-8"},

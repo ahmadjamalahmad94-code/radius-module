@@ -5,6 +5,7 @@
 والتسجيل في سجلّ التدقيق فقط.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import (
     Blueprint, flash, redirect, render_template, request, session, url_for,
@@ -41,10 +42,10 @@ def subscriber_fields():
                 action="subscriber_fields_update", target_type="settings",
                 target_id="subscriber_form.fields",
                 payload={"hidden": list(sff.hidden_keys(tenant_id))})
-            flash("حُفظت إعداداتُ ظهور الحقول (%d تغييرًا). تسري فورًا على "
-                  "نموذجَي إضافة وتعديل المشترك." % changed, "success")
+            flash(_tr("حُفظت إعداداتُ ظهور الحقول (%d تغييرًا). تسري فورًا على "
+                  "نموذجَي إضافة وتعديل المشترك.") % changed, "success")
         else:
-            flash("لا تغييرات.", "info")
+            flash(_tr("لا تغييرات."), "info")
         return redirect(url_for("radius.subscriber_fields"))
 
     vis = sff.visibility(tenant_id)

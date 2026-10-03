@@ -28,6 +28,7 @@ Design rules honoured here:
   * Secrets are never logged.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import logging
 import urllib.error
@@ -53,15 +54,15 @@ _RESPONSE_EXCERPT_LIMIT = 400
 # ── خريطة الأكواد → رسالة عربية واضحة للمستخدم ──────────────────────────────
 # success (1) و حالات لكل رقم (-2/-999/u) + أخطاء على مستوى الطلب (-100…-116).
 _ARABIC_ERRORS: dict[str, str] = {
-    "1": "تم الإرسال بنجاح",
-    "-2": "رقم غير صالح أو دولة غير مدعومة",
-    "-999": "فشل لدى المزوّد",
-    "u": "حالة غير معروفة من المزوّد",
-    "-100": "بيانات ناقصة في الطلب",
-    "-110": "بيانات الدخول خاطئة (مفتاح API أو اسم المستخدم/كلمة المرور)",
-    "-113": "الرصيد غير كافٍ",
-    "-115": "اسم المرسل غير متاح",
-    "-116": "اسم المرسل غير صالح",
+    "1": N_("تم الإرسال بنجاح"),
+    "-2": N_("رقم غير صالح أو دولة غير مدعومة"),
+    "-999": N_("فشل لدى المزوّد"),
+    "u": N_("حالة غير معروفة من المزوّد"),
+    "-100": N_("بيانات ناقصة في الطلب"),
+    "-110": N_("بيانات الدخول خاطئة (مفتاح API أو اسم المستخدم/كلمة المرور)"),
+    "-113": N_("الرصيد غير كافٍ"),
+    "-115": N_("اسم المرسل غير متاح"),
+    "-116": N_("اسم المرسل غير صالح"),
 }
 
 # أكواد تعني فشلًا على مستوى الطلب كلّه (مصادقة/رصيد/مرسِل) لا رقمًا بعينه.
@@ -73,7 +74,7 @@ _SUCCESS_CODE = "1"
 def arabic_for_code(code: str) -> str:
     """Map a TweetSMS result/error code to a clear Arabic message. Unknown
     codes fall back to a generic provider-failure message (never empty)."""
-    return _ARABIC_ERRORS.get(str(code or "").strip(), "فشل غير معروف لدى المزوّد")
+    return _ARABIC_ERRORS.get(str(code or "").strip(), N_("فشل غير معروف لدى المزوّد"))
 
 
 def is_success_code(code: str) -> bool:
@@ -142,7 +143,7 @@ def build_balance_url(*, api_key: str = "", username: str = "", password: str = 
 def _http_get(url: str, timeout: float = _TIMEOUT_SECONDS) -> tuple[bool, int, str, str]:
     """Perform one GET. Never raises. Returns (ok, status, text, error_ar)."""
     if not url.lower().startswith("https://"):
-        return False, 0, "", "رابط المزوّد غير صالح."
+        return False, 0, "", N_("رابط المزوّد غير صالح.")
     try:
         req = urllib.request.Request(url, method="GET")
         req.add_header("User-Agent", "HobeRadius-SMS/1.0")
@@ -150,16 +151,16 @@ def _http_get(url: str, timeout: float = _TIMEOUT_SECONDS) -> tuple[bool, int, s
             status = int(getattr(resp, "status", 0) or resp.getcode() or 0)
             raw = resp.read(4096)
             text = raw.decode("utf-8", errors="replace").strip()
-            return (200 <= status < 300), status, text, ("" if 200 <= status < 300 else f"رد غير ناجح من المزوّد (HTTP {status}).")
+            return (200 <= status < 300), status, text, ("" if 200 <= status < 300 else _tr('رد غير ناجح من المزوّد (HTTP %(status)s).', status=status))
     except urllib.error.HTTPError as exc:
-        return False, int(getattr(exc, "code", 0) or 0), "", f"رد خطأ من المزوّد (HTTP {getattr(exc, 'code', '?')})."
+        return False, int(getattr(exc, "code", 0) or 0), "", _tr('رد خطأ من المزوّد (HTTP %(v)s).', v=getattr(exc, 'code', '?'))
     except urllib.error.URLError as exc:
         reason = getattr(exc, "reason", None)
-        return False, 0, "", f"تعذّر الاتصال بالمزوّد: {reason if reason is not None else exc}"
+        return False, 0, "", _tr('تعذّر الاتصال بالمزوّد: %(exc)s', exc=reason if reason is not None else exc)
     except TimeoutError:
-        return False, 0, "", "انتهت مهلة الاتصال بالمزوّد."
+        return False, 0, "", N_("انتهت مهلة الاتصال بالمزوّد.")
     except Exception as exc:  # noqa: BLE001 — adapter must never raise
-        return False, 0, "", f"خطأ غير متوقع أثناء الاتصال بالمزوّد: {exc}"
+        return False, 0, "", _tr('خطأ غير متوقع أثناء الاتصال بالمزوّد: %(exc)s', exc=exc)
 
 
 def parse_send_response(text: str, recipients: list[str] | None = None) -> list[dict[str, Any]]:
@@ -219,7 +220,7 @@ def parse_balance_response(text: str) -> dict[str, Any]:
     try:
         balance = float(cleaned)
     except (TypeError, ValueError):
-        return {"ok": False, "balance": None, "error_ar": "تعذّر قراءة الرصيد من ردّ المزوّد.", "raw": raw[:_RESPONSE_EXCERPT_LIMIT]}
+        return {"ok": False, "balance": None, "error_ar": _tr("تعذّر قراءة الرصيد من ردّ المزوّد."), "raw": raw[:_RESPONSE_EXCERPT_LIMIT]}
     return {"ok": True, "balance": balance, "error_ar": "", "raw": raw[:_RESPONSE_EXCERPT_LIMIT]}
 
 
@@ -248,18 +249,18 @@ def send_sms(tenant_id: int, to: str | list[str], message: str) -> dict[str, Any
     from ..db.repos import tenant_sms_settings_repo
 
     if not cfg or not cfg.get("enabled"):
-        return {"ok": False, "results": [], "error_ar": "قناة SMS غير مُفعّلة. اربط حساب TweetSMS أولًا.", "raw": "", "sent_count": 0}
+        return {"ok": False, "results": [], "error_ar": _tr("قناة SMS غير مُفعّلة. اربط حساب TweetSMS أولًا."), "raw": "", "sent_count": 0}
     if not tenant_sms_settings_repo.has_credentials(cfg):
-        return {"ok": False, "results": [], "error_ar": "لم يتم ضبط بيانات الدخول (مفتاح API أو اسم المستخدم/كلمة المرور).", "raw": "", "sent_count": 0}
+        return {"ok": False, "results": [], "error_ar": _tr("لم يتم ضبط بيانات الدخول (مفتاح API أو اسم المستخدم/كلمة المرور)."), "raw": "", "sent_count": 0}
     sender = (cfg.get("sender") or "").strip()
     if not sender:
-        return {"ok": False, "results": [], "error_ar": "اسم المرسل غير مضبوط.", "raw": "", "sent_count": 0}
+        return {"ok": False, "results": [], "error_ar": _tr("اسم المرسل غير مضبوط."), "raw": "", "sent_count": 0}
 
     dial = tenant_dial_code(int(tenant_id or 1))
     raw_list = to if isinstance(to, (list, tuple)) else [to]
     recipients = [r for r in (normalize_recipient(x, dial) for x in raw_list) if r]
     if not recipients:
-        return {"ok": False, "results": [], "error_ar": "لا يوجد رقم هاتف صالح للمستلم.", "raw": "", "sent_count": 0}
+        return {"ok": False, "results": [], "error_ar": _tr("لا يوجد رقم هاتف صالح للمستلم."), "raw": "", "sent_count": 0}
 
     # ── حساب طول الرسالة وعدد مقاطع SMS (التكلفة الحقيقية) قبل الإرسال ──
     # كل مقطع رسالة مدفوع؛ نُرفقه بالنتيجة ونُسجّل تحذيرًا عند تعدّد المقاطع كي
@@ -288,7 +289,7 @@ def send_sms(tenant_id: int, to: str | list[str], message: str) -> dict[str, Any
         "recommended_max": seg.recommended_max,
     }
     if not ok_http:
-        return {"ok": False, "results": [], "error_ar": http_err or "فشل الاتصال بالمزوّد.",
+        return {"ok": False, "results": [], "error_ar": http_err or _tr("فشل الاتصال بالمزوّد."),
                 "raw": "", "sent_count": 0, "segments": seg_info}
 
     results = parse_send_response(text, recipients)
@@ -313,7 +314,7 @@ def check_balance(tenant_id: int) -> dict[str, Any]:
     from ..db.repos import tenant_sms_settings_repo
 
     if not cfg or not tenant_sms_settings_repo.has_credentials(cfg):
-        return {"ok": False, "balance": None, "error_ar": "لم يتم ضبط بيانات الدخول لحساب TweetSMS.", "raw": ""}
+        return {"ok": False, "balance": None, "error_ar": _tr("لم يتم ضبط بيانات الدخول لحساب TweetSMS."), "raw": ""}
 
     url = build_balance_url(
         api_key=cfg.get("api_key") or "",
@@ -322,7 +323,7 @@ def check_balance(tenant_id: int) -> dict[str, Any]:
     )
     ok_http, _status, text, http_err = _http_get(url)
     if not ok_http:
-        return {"ok": False, "balance": None, "error_ar": http_err or "فشل الاتصال بالمزوّد.", "raw": ""}
+        return {"ok": False, "balance": None, "error_ar": http_err or _tr("فشل الاتصال بالمزوّد."), "raw": ""}
     return parse_balance_response(text)
 
 
@@ -382,7 +383,7 @@ class TweetSmsProvider(NotificationProvider):
             return ProviderResult(
                 status="skipped",
                 provider_key=self.provider_key,
-                error_message="لم يتم ربط حساب TweetSMS — تم الاحتفاظ بالرسالة في الطابور فقط.",
+                error_message=N_("لم يتم ربط حساب TweetSMS — تم الاحتفاظ بالرسالة في الطابور فقط."),
                 result={"external_send": False, "reason": "not_connected", "channel": "sms"},
             )
         phone = self._phone(delivery, notification)
@@ -390,7 +391,7 @@ class TweetSmsProvider(NotificationProvider):
             return ProviderResult(
                 status="failed",
                 provider_key=self.provider_key,
-                error_message="لا يوجد رقم هاتف للمستلم.",
+                error_message=N_("لا يوجد رقم هاتف للمستلم."),
                 result={"external_send": False, "reason": "no_recipient_phone", "channel": "sms"},
             )
         message = str((notification or {}).get("body") or "")
@@ -415,6 +416,6 @@ class TweetSmsProvider(NotificationProvider):
         return ProviderResult(
             status="failed",
             provider_key=self.provider_key,
-            error_message=outcome.get("error_ar") or first.get("message_ar") or "فشل الإرسال عبر TweetSMS.",
+            error_message=outcome.get("error_ar") or first.get("message_ar") or N_("فشل الإرسال عبر TweetSMS."),
             result=result_payload,
         )

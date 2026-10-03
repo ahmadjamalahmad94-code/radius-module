@@ -6,6 +6,7 @@
 وتفاصيل الطلب والاعتماد/الرفض/تطبيق الخدمة تبقى على صفحاتها الأصلية.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import os
 from ..core import env_settings
@@ -87,7 +88,7 @@ def collection_hub():
             tid, status=status, purpose=purpose, payer_type=payer_type
         )
     except ValueError as exc:
-        flash(f"فلتر غير صالح: {exc}", "warning")
+        flash(_tr('فلتر غير صالح: %(exc)s', exc=exc), "warning")
         requests_list = []
 
     settings = PaymentSettingsRepository().get(tid)

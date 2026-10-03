@@ -10,6 +10,7 @@
  *   .urow-item (المشتركون) · .urow-actions>a (زرّ 360°) · .online-mini-actions a/button
  *   (المتصلون) · وأيّ عنصر تعلّمه data-rowctx-item.
  */
+var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = Object.prototype.hasOwnProperty.call(d, s) ? d[s] : s; if (o) { for (var k in o) { t = String(t).split('{' + k + '}').join(o[k]); } } return t; };  // i18n — انظر I18N.md
 (function () {
   "use strict";
 
@@ -102,14 +103,14 @@
       var cb = document.createElement("button");
       cb.type = "button";
       cb.className = "rowctx-item";
-      cb.innerHTML = '<i class="fa-solid fa-copy"></i><span>نسخ «' +
+      cb.innerHTML = ('<i class="fa-solid fa-copy">' + '</i>' + '<span>' + hrT('نسخ «')) +
         shown.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "»</span>";
       cb.addEventListener("click", function (ev) {
         ev.preventDefault();
         copyText(copyVal);
         // إشعار خاطف بأنّ النسخ تمّ (بدل الإغلاق الصامت).
         var sp = cb.querySelector("span");
-        if (sp) sp.textContent = "نُسخت ✓";
+        if (sp) sp.textContent = hrT('نُسخت ✓');
         setTimeout(close, 420);
       });
       m.appendChild(cb);

@@ -11,15 +11,15 @@
 {% block title %}{{ _("خطة استعادة — عملية #") }}{{ plan.audit_id }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-life-ring"></i>{% endblock %}
 {% block page_title %}{{ _("خطة استعادة — عملية #") }}{{ plan.audit_id }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ plan.operation }} · {{ plan.result_status or 'بدون' }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ plan.operation }} · {{ plan.result_status or _('بدون') }}</span>{% endblock %}
 
 {% block content %}
 
 {# Status pill text/variant — same logic as the legacy mt-iface-state badge. #}
 {% set _status_meta =
-     ('فشل','red')                                  if plan.result_status == 'failed'  else
-     ('جزئي','amber')                               if plan.result_status == 'partial' else
-     ((plan.risk_label_ar or 'حسّاسة'),'amber') %}
+     (_('فشل'),'red')                                  if plan.result_status == 'failed'  else
+     (_('جزئي'),'amber')                               if plan.result_status == 'partial' else
+     ((plan.risk_label_ar or _('حسّاسة')),'amber') %}
 
 <section class="mt-dashboard" data-mt-recovery-plan
          data-mt-recovery-audit-id="{{ plan.audit_id }}"
@@ -27,39 +27,39 @@
 
 {# ───── Merged hero: title + subtitle + status KPI strip ───── #}
 {% call hub.megahero(
-  "خطة استعادة — عملية #" ~ plan.audit_id,
+  _('خطة استعادة — عملية #%(audit_id)s', audit_id=plan.audit_id),
   subtitle=plan.operation ~ " · " ~ (plan.result_status or '—'),
   icon="life-ring",
   kpis=[
-    {'label': 'الحالة',  'value': _status_meta[0],                  'icon': 'triangle-exclamation', 'variant': _status_meta[1]},
-    {'label': 'الإجراء', 'value': plan.operation,                   'icon': 'gear',                 'variant': 'brand'},
-    {'label': 'الفاعل',  'value': plan.actor,                       'icon': 'user',                 'variant': 'brand'},
-    {'label': 'الراوتر', 'value': ('#' ~ plan.router_id) if plan.router_id else '—', 'icon': 'router', 'variant': 'brand'},
+    {'label': _('الحالة'),  'value': _status_meta[0],                  'icon': 'triangle-exclamation', 'variant': _status_meta[1]},
+    {'label': _('الإجراء'), 'value': plan.operation,                   'icon': 'gear',                 'variant': 'brand'},
+    {'label': _('الفاعل'),  'value': plan.actor,                       'icon': 'user',                 'variant': 'brand'},
+    {'label': _('الراوتر'), 'value': ('#' ~ plan.router_id) if plan.router_id else '—', 'icon': 'router', 'variant': 'brand'},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الخطة",
-  intro="هذه خطة استشاريّة لاستعادة الوضع بعد عملية حسّاسة. التراجع التلقائي غير مفعّل — الخطوات تُنفّذ يدوياً.",
+  _('كيف تقرأ هذه الخطة'),
+  intro=_('هذه خطة استشاريّة لاستعادة الوضع بعد عملية حسّاسة. التراجع التلقائي غير مفعّل — الخطوات تُنفّذ يدوياً.'),
   icon="clipboard-check",
   items=[
-    {'icon': 'list-check',         'text': 'اتبع الخطوات الموصى بها بالترتيب المعروض.'},
-    {'icon': 'floppy-disk',        'text': 'أقرب نسخة احتياطية قبل العملية تساعدك على الرجوع لحالة سليمة.'},
-    {'icon': 'clipboard-list',     'text': 'سجل العملية التفصيلي يوضّح ما الذي تغيّر بالضبط.'},
+    {'icon': 'list-check',         'text': _('اتبع الخطوات الموصى بها بالترتيب المعروض.')},
+    {'icon': 'floppy-disk',        'text': _('أقرب نسخة احتياطية قبل العملية تساعدك على الرجوع لحالة سليمة.')},
+    {'icon': 'clipboard-list',     'text': _('سجل العملية التفصيلي يوضّح ما الذي تغيّر بالضبط.')},
   ],
-  note="هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة."
+  note=_('هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة.')
 )) %}
 
   {# ── Operation summary ── #}
-  {% call hub.section("ملخّص العملية", icon="circle-info", meta=_status_meta[0]) %}
+  {% call hub.section(_('ملخّص العملية'), icon="circle-info", meta=_status_meta[0]) %}
     <div data-mt-recovery-meta>
       {{ hub.kv([
-        {'label': 'الإجراء', 'value': plan.operation,            'mono': True},
-        {'label': 'الفاعل',  'value': plan.actor},
+        {'label': _('الإجراء'), 'value': plan.operation,            'mono': True},
+        {'label': _('الفاعل'),  'value': plan.actor},
       ]
-      + ([{'label': 'الراوتر', 'value': '#' ~ plan.router_id, 'mono': True}] if plan.router_id else [])
-      + [{'label': 'الوقت', 'value': plan.timestamp|dt_local, 'mono': True}]) }}
+      + ([{'label': _('الراوتر'), 'value': '#' ~ plan.router_id, 'mono': True}] if plan.router_id else [])
+      + [{'label': _('الوقت'), 'value': plan.timestamp|dt_local, 'mono': True}]) }}
     </div>
     {% if plan.what_changed_ar %}
     <div class="hub-empty" data-mt-recovery-what-changed
@@ -73,7 +73,7 @@
 
   {# ── Recommended recovery steps ── #}
   {% if plan.suggested_steps_ar %}
-  {% call hub.section("خطوات الاستعادة الموصى بها", icon="list-check") %}
+  {% call hub.section(_('خطوات الاستعادة الموصى بها'), icon="list-check") %}
     <div data-mt-recovery-steps>
       <ol class="uds-kv" style="display:block;list-style:decimal;padding-inline-start:24px;margin:0">
         {% for s in plan.suggested_steps_ar %}
@@ -89,12 +89,12 @@
 
   {# ── Nearest backup before the operation ── #}
   {% if plan.nearest_backup %}
-  {% call hub.section("أقرب نسخة احتياطية قبل العملية", icon="floppy-disk") %}
+  {% call hub.section(_('أقرب نسخة احتياطية قبل العملية'), icon="floppy-disk") %}
     <div data-mt-recovery-nearest-backup>
       {{ hub.kv([
-        {'label': 'الملف',        'value': plan.nearest_backup.filename,            'mono': True},
-        {'label': 'تاريخ الإنشاء','value': plan.nearest_backup.created_at|dt_local, 'mono': True},
-        {'label': 'السبب',        'value': plan.nearest_backup.reason,             'mono': True},
+        {'label': _('الملف'),        'value': plan.nearest_backup.filename,            'mono': True},
+        {'label': _('تاريخ الإنشاء'),'value': plan.nearest_backup.created_at|dt_local, 'mono': True},
+        {'label': _('السبب'),        'value': plan.nearest_backup.reason,             'mono': True},
       ]) }}
       <div class="hub-flex-row" style="margin-top:14px">
         {% if can_submit('radius.mt_backups_list', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
@@ -109,10 +109,10 @@
 
   {# ── Related job ── #}
   {% if plan.related_job %}
-  {% call hub.section("مهمة مرتبطة", icon="list-check") %}
+  {% call hub.section(_('مهمة مرتبطة'), icon="list-check") %}
     <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap"
          data-mt-recovery-related-job>
-      <span class="hub-text-mute">المهمة #{{ plan.related_job.id }}</span>
+      <span class="hub-text-mute">{{ _('المهمة #%(id)s', id=plan.related_job.id) }}</span>
       {% if can_submit('radius.jobs_show', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
          data-mt-recovery-job-link>
@@ -123,7 +123,7 @@
   {% endif %}
 
   {# ── Footer actions ── #}
-  {% call hub.section("روابط ذات صلة", icon="link") %}
+  {% call hub.section(_('روابط ذات صلة'), icon="link") %}
     <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
       {% if can_submit('radius.audit_log_detail', 'GET') %}<a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">

@@ -37,6 +37,7 @@ Returned dict (stable contract — used by templates and tests):
     }
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from typing import Optional
 
@@ -287,7 +288,7 @@ def _decode_connection(nas_port_type: Optional[str]) -> str:
     if "wireless" in t or "wifi" in t or "802.11" in t:
         return "Wi-Fi 802.11"
     if "ethernet" in t or "wired" in t:
-        return "Ethernet (سلكي)"
+        return N_("Ethernet (سلكي)")
     if "ppp" in t:
         return "PPP"
     if "isdn" in t:
@@ -327,18 +328,18 @@ def infer_device(mac: Optional[str],
     ci = _connect_info_lower(connect_info)
 
     if not norm:
-        return _device(mac="", vendor="غير معروف", category="unknown",
-                        label="غير معروف", icon="circle-question",
+        return _device(mac="", vendor=N_("غير معروف"), category="unknown",
+                        label=N_("غير معروف"), icon="circle-question",
                         connection=connection, confidence="low")
 
     if _is_random_mac(norm):
         # randomized MAC → iOS 14+ / Android 10+ privacy feature
-        guess = "iPhone أو أندرويد حديث"
+        guess = N_("iPhone أو أندرويد حديث")
         if "android" in ci:
-            guess = "جوال أندرويد (MAC عشوائي)"
+            guess = N_("جوال أندرويد (MAC عشوائي)")
         elif "iphone" in ci or "ios" in ci:
-            guess = "iPhone (MAC عشوائي)"
-        return _device(mac=norm, vendor="MAC عشوائي",
+            guess = N_("iPhone (MAC عشوائي)")
+        return _device(mac=norm, vendor=N_("MAC عشوائي"),
                         category="phone-random",
                         label=guess, icon="mobile-screen",
                         connection=connection, confidence="medium",
@@ -349,9 +350,9 @@ def infer_device(mac: Optional[str],
     if not vendor:
         # try the first 2 octets as a last-ditch heuristic
         # (some vendors have many sub-OUIs not in our table)
-        return _device(mac=norm, vendor="غير معروف",
+        return _device(mac=norm, vendor=N_("غير معروف"),
                         category="unknown",
-                        label="جهاز غير معروف",
+                        label=N_("جهاز غير معروف"),
                         icon="circle-question",
                         connection=connection, confidence="low")
 
@@ -365,10 +366,10 @@ def infer_device(mac: Optional[str],
                 label, icon = "MacBook", "laptop"
                 category = "laptop"
             else:
-                label, icon = "iPhone أو iPad", "mobile-screen"
+                label, icon = N_("iPhone أو iPad"), "mobile-screen"
                 category = "phone-ios"
         else:
-            label, icon = "Mac (سلكي)", "desktop"
+            label, icon = N_("Mac (سلكي)"), "desktop"
             category = "desktop"
         return _device(mac=norm, vendor=vendor, category=category,
                         label=label, icon=icon, connection=connection,
@@ -376,7 +377,7 @@ def infer_device(mac: Optional[str],
 
     # ─── Android phones ───
     if vendor in _PHONE_VENDORS:
-        label = f"جوال أندرويد · {vendor}"
+        label = _tr('جوال أندرويد · %(vendor)s', vendor=vendor)
         return _device(mac=norm, vendor=vendor, category="phone-android",
                         label=label, icon="mobile-screen-button",
                         connection=connection, confidence="high")
@@ -386,11 +387,11 @@ def infer_device(mac: Optional[str],
         # NIC vendor + wireless → laptop; ethernet → desktop or laptop
         is_wifi = "wi-fi" in connection.lower() or "wireless" in connection.lower()
         if is_wifi:
-            label = f"لابتوب ({vendor} Wi-Fi)"
+            label = _tr('لابتوب (%(vendor)s Wi-Fi)', vendor=vendor)
             icon, category = "laptop", "laptop"
             conf = "medium"
         else:
-            label = f"كمبيوتر ({vendor})"
+            label = _tr('كمبيوتر (%(vendor)s)', vendor=vendor)
             icon, category = "desktop", "desktop"
             conf = "low"
         return _device(mac=norm, vendor=vendor, category=category,
@@ -400,7 +401,7 @@ def infer_device(mac: Optional[str],
     # ─── Branded laptops ───
     if vendor in _LAPTOP_OEMS:
         return _device(mac=norm, vendor=vendor, category="laptop",
-                        label=f"لابتوب {vendor}", icon="laptop",
+                        label=_tr('لابتوب %(vendor)s', vendor=vendor), icon="laptop",
                         connection=connection, confidence="high")
 
     # ─── Consoles ───
@@ -412,19 +413,19 @@ def infer_device(mac: Optional[str],
     # ─── Routers / network gear (our own infrastructure, usually) ───
     if vendor in _ROUTER_VENDORS:
         return _device(mac=norm, vendor=vendor, category="router",
-                        label=f"شبكة · {vendor}", icon="network-wired",
+                        label=_tr('شبكة · %(vendor)s', vendor=vendor), icon="network-wired",
                         connection=connection, confidence="high")
 
     # ─── Smart TVs ───
     if vendor in _TV_VENDORS:
         return _device(mac=norm, vendor=vendor, category="tv",
-                        label=f"تلفاز · {vendor}", icon="tv",
+                        label=_tr('تلفاز · %(vendor)s', vendor=vendor), icon="tv",
                         connection=connection, confidence="high")
 
     # ─── IoT ───
     if vendor in _IOT_VENDORS:
         return _device(mac=norm, vendor=vendor, category="iot",
-                        label=f"جهاز ذكي · {vendor}", icon="house-signal",
+                        label=_tr('جهاز ذكي · %(vendor)s', vendor=vendor), icon="house-signal",
                         connection=connection, confidence="medium")
 
     # Generic vendor — known OUI but no category mapping

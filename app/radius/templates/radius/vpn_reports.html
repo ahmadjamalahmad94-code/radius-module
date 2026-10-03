@@ -1,9 +1,9 @@
 {# F08-L (F01-F20): كان يمدّ "radius/layout.html" غير الموجود → 500
    TemplateNotFound حتى للمالك. التخطيط الموحّد للوحة هو admin/_admin_layout. #}
 {% extends "admin/_admin_layout.html" %}
-{% block title %}تقارير الخدمات — VPN & WireGuard{% endblock %}
-{% block page_title %}تقارير الخدمات{% endblock %}
-{% block page_subtitle %}حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV{% endblock %}
+{% block title %}{{ _('تقارير الخدمات — VPN & WireGuard') }}{% endblock %}
+{% block page_title %}{{ _('تقارير الخدمات') }}{% endblock %}
+{% block page_subtitle %}{{ _('حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV') }}{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -46,25 +46,25 @@
 
 {% block content %}
 <div class="hub-page-head" style="margin-bottom:14px">
-  <h1 class="hub-page-title" style="margin:0 0 4px">تقارير الخدمات</h1>
-  <p class="hub-text-mute" style="margin:0">حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV</p>
+  <h1 class="hub-page-title" style="margin:0 0 4px">{{ _('تقارير الخدمات') }}</h1>
+  <p class="hub-text-mute" style="margin:0">{{ _('حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV') }}</p>
 </div>
 
 {# ── فلاتر مشتركة ── #}
 <form method="get" class="filter-bar">
-  <label>الحالة</label>
+  <label>{{ _('الحالة') }}</label>
   <select name="status" class="hub-input">
-    <option value="">— الكل —</option>
-    <option value="active"   {% if status_filter=='active'   %}selected{% endif %}>نشط</option>
-    <option value="expired"  {% if status_filter=='expired'  %}selected{% endif %}>منتهي</option>
-    <option value="suspended"{% if status_filter=='suspended'%}selected{% endif %}>معلق</option>
-    <option value="revoked"  {% if status_filter=='revoked'  %}selected{% endif %}>ملغي</option>
-    <option value="quota_exceeded" {% if status_filter=='quota_exceeded'%}selected{% endif %}>تجاوز الكوتا</option>
+    <option value="">{{ _('— الكل —') }}</option>
+    <option value="active"   {% if status_filter=='active'   %}selected{% endif %}>{{ _('نشط') }}</option>
+    <option value="expired"  {% if status_filter=='expired'  %}selected{% endif %}>{{ _('منتهي') }}</option>
+    <option value="suspended"{% if status_filter=='suspended'%}selected{% endif %}>{{ _('معلق') }}</option>
+    <option value="revoked"  {% if status_filter=='revoked'  %}selected{% endif %}>{{ _('ملغي') }}</option>
+    <option value="quota_exceeded" {% if status_filter=='quota_exceeded'%}selected{% endif %}>{{ _('تجاوز الكوتا') }}</option>
   </select>
 
-  <label>التخصيص</label>
+  <label>{{ _('التخصيص') }}</label>
   <select name="allocation_id" class="hub-input">
-    <option value="">— الكل —</option>
+    <option value="">{{ _('— الكل —') }}</option>
     {% for a in allocations %}
       <option value="{{ a.id }}" {% if allocation_filter == a.id %}selected{% endif %}>
         #{{ a.id }} — {{ a.service_type }}
@@ -72,29 +72,29 @@
     {% endfor %}
   </select>
 
-  <label>نوع الحدث (سجل)</label>
+  <label>{{ _('نوع الحدث (سجل)') }}</label>
   <select name="entity_type" class="hub-input">
-    <option value="">— الكل —</option>
+    <option value="">{{ _('— الكل —') }}</option>
     {% for et in ['allocation_mirror','vpn_account','wireguard_peer','wireguard_data_service'] %}
       <option value="{{ et }}" {% if audit_type_filter==et %}selected{% endif %}>{{ et }}</option>
     {% endfor %}
   </select>
 
-  <label>الحد</label>
+  <label>{{ _('الحد') }}</label>
   <input type="number" name="limit" class="hub-input" value="{{ limit }}" min="50" max="1000" style="width:80px">
 
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
-    <i class="fa-solid fa-filter"></i> تطبيق
+    <i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}
   </button>
   {% if can_submit('radius.vpn_service_reports', 'GET') %}<a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
-    <i class="fa-solid fa-rotate"></i> إعادة تعيين
+    <i class="fa-solid fa-rotate"></i> {{ _('إعادة تعيين') }}
   </a>{% endif %}
 </form>
 
 {# ── تبويبات ── #}
 <div class="rep-tabs" id="repTabs">
   <div class="rep-tab active" data-pane="pane-vpn">
-    <i class="fa-solid fa-shield-halved"></i> حسابات VPN
+    <i class="fa-solid fa-shield-halved"></i> {{ _('حسابات VPN') }}
     <span class="badge badge-blue" style="font-size:11px">{{ vpn_accounts|length }}</span>
   </div>
   <div class="rep-tab" data-pane="pane-wg">
@@ -102,7 +102,7 @@
     <span class="badge badge-blue" style="font-size:11px">{{ wg_peers|length }}</span>
   </div>
   <div class="rep-tab" data-pane="pane-audit">
-    <i class="fa-solid fa-scroll"></i> سجل التدقيق
+    <i class="fa-solid fa-scroll"></i> {{ _('سجل التدقيق') }}
     <span class="badge badge-blue" style="font-size:11px">{{ audit_log|length }}</span>
   </div>
 </div>
@@ -113,37 +113,37 @@
     <div class="stat-chips">
       <div class="stat-chip info">
         <span class="sv">{{ vpn_totals.total }}</span>
-        إجمالي
+        {{ _('إجمالي') }}
       </div>
       <div class="stat-chip ok">
         <span class="sv">{{ vpn_totals.active }}</span>
-        نشط
+        {{ _('نشط') }}
       </div>
       <div class="stat-chip err">
         <span class="sv">{{ vpn_totals.expired }}</span>
-        منتهي
+        {{ _('منتهي') }}
       </div>
     </div>
     {% if can_submit('radius.vpn_reports_export_accounts', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
        class="export-btn">
-      <i class="fa-solid fa-download"></i> تحميل CSV
+      <i class="fa-solid fa-download"></i> {{ _('تحميل CSV') }}
     </a>{% endif %}
   </div>
 
   {% if not vpn_accounts %}
-    <p class="hub-empty">لا توجد حسابات VPN مطابقة للفلتر الحالي.</p>
+    <p class="hub-empty">{{ _('لا توجد حسابات VPN مطابقة للفلتر الحالي.') }}</p>
   {% else %}
   <div style="overflow-x:auto">
     <table class="hub-table">
       <thead>
         <tr>
           <th>#</th>
-          <th>المستخدم</th>
+          <th>{{ _('المستخدم') }}</th>
           <th>Realm</th>
-          <th>الحالة</th>
-          <th>نوع الخدمة</th>
-          <th>تاريخ الانتهاء</th>
-          <th>تاريخ الإنشاء</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('نوع الخدمة') }}</th>
+          <th>{{ _('تاريخ الانتهاء') }}</th>
+          <th>{{ _('تاريخ الإنشاء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -154,10 +154,10 @@
         <td class="mono ltr" style="font-size:11px">{{ r.realm or '—' }}</td>
         <td>
           <span class="dot {{ r.status }}"></span>
-          {% if r.status == 'active' %}<span class="badge badge-green">نشط</span>
-          {% elif r.status == 'expired' %}<span class="badge badge-red">منتهي</span>
-          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">معلق</span>
-          {% elif r.status == 'revoked' %}<span class="badge badge-gray">ملغي</span>
+          {% if r.status == 'active' %}<span class="badge badge-green">{{ _('نشط') }}</span>
+          {% elif r.status == 'expired' %}<span class="badge badge-red">{{ _('منتهي') }}</span>
+          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">{{ _('معلق') }}</span>
+          {% elif r.status == 'revoked' %}<span class="badge badge-gray">{{ _('ملغي') }}</span>
           {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
         </td>
         <td>
@@ -189,20 +189,20 @@
     <div class="stat-chips">
       <div class="stat-chip info">
         <span class="sv">{{ wg_totals.total }}</span>
-        إجمالي
+        {{ _('إجمالي') }}
       </div>
       <div class="stat-chip ok">
         <span class="sv">{{ wg_totals.active }}</span>
-        نشط
+        {{ _('نشط') }}
       </div>
       <div class="stat-chip err">
         <span class="sv">{{ wg_totals.quota_exceeded }}</span>
-        تجاوز الكوتا
+        {{ _('تجاوز الكوتا') }}
       </div>
     </div>
     {% if can_submit('radius.vpn_reports_export_wg_peers', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
        class="export-btn">
-      <i class="fa-solid fa-download"></i> تحميل CSV
+      <i class="fa-solid fa-download"></i> {{ _('تحميل CSV') }}
     </a>{% endif %}
   </div>
 
@@ -211,10 +211,10 @@
               padding:10px 14px;background:var(--hub-card-bg);
               border:1px solid var(--hub-border);border-radius:8px;font-size:12px">
     <span><i class="fa-solid fa-network-wired" style="color:var(--hub-accent)"></i>
-      الواجهة: <strong class="mono ltr">{{ wg_svc.interface_name }}</strong></span>
-    <span>الحالة: <strong>{{ wg_svc.status }}</strong></span>
+      {{ _('الواجهة:') }} <strong class="mono ltr">{{ wg_svc.interface_name }}</strong></span>
+    <span>{{ _('الحالة:') }} <strong>{{ wg_svc.status }}</strong></span>
     {% if wg_svc.transfer_limit_bytes %}
-    <span>كوتا الخدمة:
+    <span>{{ _('كوتا الخدمة:') }}
       <strong>{{ (wg_svc.quota_bytes_used or 0) // (1024**2) }} MB</strong>
       / {{ wg_svc.transfer_limit_bytes // (1024**3) }} GB
     </span>
@@ -224,21 +224,21 @@
   {% endif %}
 
   {% if not wg_peers %}
-    <p class="hub-empty">لا توجد WireGuard peers مطابقة للفلتر الحالي.</p>
+    <p class="hub-empty">{{ _('لا توجد WireGuard peers مطابقة للفلتر الحالي.') }}</p>
   {% else %}
   <div style="overflow-x:auto">
     <table class="hub-table">
       <thead>
         <tr>
           <th>#</th>
-          <th>الاسم</th>
+          <th>{{ _('الاسم') }}</th>
           <th>IP</th>
-          <th>الحالة</th>
-          <th>السرعة</th>
-          <th>الكوتا (استخدام / حد)</th>
-          <th>الفترة</th>
-          <th>آخر اتصال</th>
-          <th>تاريخ الإنشاء</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('السرعة') }}</th>
+          <th>{{ _('الكوتا (استخدام / حد)') }}</th>
+          <th>{{ _('الفترة') }}</th>
+          <th>{{ _('آخر اتصال') }}</th>
+          <th>{{ _('تاريخ الإنشاء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -251,10 +251,10 @@
         <td class="mono ltr" style="font-size:11px">{{ r.peer_address or '—' }}</td>
         <td>
           <span class="dot {{ r.status }}"></span>
-          {% if r.status == 'active' %}<span class="badge badge-green">نشط</span>
-          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">معلق</span>
-          {% elif r.status == 'revoked' %}<span class="badge badge-gray">ملغي</span>
-          {% elif r.status == 'quota_exceeded' %}<span class="badge badge-red">تجاوز الكوتا</span>
+          {% if r.status == 'active' %}<span class="badge badge-green">{{ _('نشط') }}</span>
+          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">{{ _('معلق') }}</span>
+          {% elif r.status == 'revoked' %}<span class="badge badge-gray">{{ _('ملغي') }}</span>
+          {% elif r.status == 'quota_exceeded' %}<span class="badge badge-red">{{ _('تجاوز الكوتا') }}</span>
           {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
         </td>
         <td style="font-size:12px">
@@ -298,29 +298,29 @@
     <div class="stat-chips">
       <div class="stat-chip info">
         <span class="sv">{{ audit_log|length }}</span>
-        سجل
+        {{ _('سجل') }}
       </div>
     </div>
     {% if can_submit('radius.vpn_reports_export_audit', 'GET') %}<a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
        class="export-btn">
-      <i class="fa-solid fa-download"></i> تحميل CSV
+      <i class="fa-solid fa-download"></i> {{ _('تحميل CSV') }}
     </a>{% endif %}
   </div>
 
   {% if not audit_log %}
-    <p class="hub-empty">لا توجد سجلات تدقيق مطابقة للفلتر الحالي.</p>
+    <p class="hub-empty">{{ _('لا توجد سجلات تدقيق مطابقة للفلتر الحالي.') }}</p>
   {% else %}
   <div style="overflow-x:auto">
     <table class="hub-table">
       <thead>
         <tr>
           <th>#</th>
-          <th>نوع الكيان</th>
-          <th>ID الكيان</th>
-          <th>الحدث</th>
-          <th>المنفّذ</th>
-          <th>الوصف</th>
-          <th>التوقيت</th>
+          <th>{{ _('نوع الكيان') }}</th>
+          <th>{{ _('ID الكيان') }}</th>
+          <th>{{ _('الحدث') }}</th>
+          <th>{{ _('المنفّذ') }}</th>
+          <th>{{ _('الوصف') }}</th>
+          <th>{{ _('التوقيت') }}</th>
         </tr>
       </thead>
       <tbody>

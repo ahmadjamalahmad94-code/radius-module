@@ -33,6 +33,7 @@ KEY matches a forbidden-prefix list, replacing the value with
 that slips past the scrubber.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import logging
 from dataclasses import dataclass
@@ -227,8 +228,8 @@ def _summarise_redaction(keys: list[str]) -> str:
         return ""
     unique = sorted({k.lower() for k in keys})
     sample = ", ".join(unique[:3])
-    more = f" (+{len(unique) - 3} أخرى)" if len(unique) > 3 else ""
-    return f"تم حجب حقول حسّاسة: {sample}{more}"
+    more = _tr(' (+%(v)s أخرى)', v=len(unique) - 3) if len(unique) > 3 else ""
+    return _tr('تم حجب حقول حسّاسة: %(sample)s%(more)s', sample=sample, more=more)
 
 
 __all__ = [

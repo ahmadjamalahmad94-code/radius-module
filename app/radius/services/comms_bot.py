@@ -27,6 +27,7 @@ Config keys (``comms.bot.*``):
   * ``commands``           JSON list of ``{keyword, reply_template, enabled}``
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import json
 import re
@@ -50,56 +51,56 @@ def _settings_key(field: str) -> str:
 # ── sensible Arabic defaults (so the bot works immediately) ───────────
 # Greeting doubles as the "menu" — it lists what the customer can ask for.
 DEFAULT_GREETING = (
-    "👋 أهلًا بك في خدمة الاشتراك الذاتي.\n"
+    N_("👋 أهلًا بك في خدمة الاشتراك الذاتي.\n"
     "أرسل إحدى الكلمات التالية للحصول على معلوماتك:\n"
     "• معلومات الحساب\n"
     "• الرصيد\n"
     "• الباقة\n"
-    "• تجديد"
+    "• تجديد")
 )
 
 DEFAULT_FALLBACK = (
-    "لم أفهم طلبك 🤔\n"
+    N_("لم أفهم طلبك 🤔\n"
     "أرسل «معلومات الحساب» أو «الرصيد» أو «الباقة» أو «تجديد».\n"
-    "أرسل «القائمة» لعرض كل الخيارات."
+    "أرسل «القائمة» لعرض كل الخيارات.")
 )
 
 # A few ready-to-use commands. Each reply uses Phase-2 variables that are
 # substituted from the subscriber's record at send time.
 DEFAULT_COMMANDS: list[dict[str, Any]] = [
     {
-        "keyword": "معلومات الحساب",
+        "keyword": N_("معلومات الحساب"),
         "reply_template": (
-            "📄 معلومات حسابك:\n"
+            N_("📄 معلومات حسابك:\n"
             "المستخدم: {username}\n"
             "الباقة: {prof}\n"
             "الحالة: {status}\n"
             "تاريخ الانتهاء: {exp}\n"
-            "الرصيد: {balance}"
+            "الرصيد: {balance}")
         ),
         "enabled": True,
     },
     {
-        "keyword": "الرصيد",
-        "reply_template": "💰 رصيدك الحالي: {balance}",
+        "keyword": N_("الرصيد"),
+        "reply_template": N_("💰 رصيدك الحالي: {balance}"),
         "enabled": True,
     },
     {
-        "keyword": "الباقة",
+        "keyword": N_("الباقة"),
         "reply_template": (
-            "📦 باقتك: {prof}\n"
+            N_("📦 باقتك: {prof}\n"
             "السرعة: ↓ {down_speed} / ↑ {up_speed}\n"
-            "تنتهي في: {exp}"
+            "تنتهي في: {exp}")
         ),
         "enabled": True,
     },
     {
-        "keyword": "تجديد",
+        "keyword": N_("تجديد"),
         "reply_template": (
-            "🔄 لتجديد اشتراكك تواصل مع خدمة العملاء.\n"
+            N_("🔄 لتجديد اشتراكك تواصل مع خدمة العملاء.\n"
             "باقتك الحالية: {prof}\n"
             "تنتهي في: {exp}\n"
-            "رصيدك: {balance}"
+            "رصيدك: {balance}")
         ),
         "enabled": True,
     },
@@ -333,7 +334,7 @@ def build_context(tenant_id: int, subscriber) -> dict[str, str]:
         except (TypeError, ValueError):
             return "—"
         if mb <= 0:
-            return "غير محدود"
+            return N_("غير محدود")
         if mb >= 1024:
             gb = mb / 1024
             return (f"{gb:.0f}" if gb.is_integer() else f"{gb:.1f}") + " GB"
@@ -551,11 +552,11 @@ def _send_whatsapp(tenant_id: int, phone: str, message: str) -> tuple[bool, str]
     provider's ``http_send`` reports an invalid-URL failure (no network hit).
     """
     if not (message or "").strip():
-        return False, "رد فارغ — لم يتم الإرسال."
+        return False, N_("رد فارغ — لم يتم الإرسال.")
     try:
         cfg = comms_providers.load_channel_config(tenant_id, BOT_CHANNEL)
         if not cfg.get("enabled") or "{phone}" not in (cfg.get("send_url_template") or ""):
-            return False, "قناة واتساب غير مهيأة للإرسال."
+            return False, N_("قناة واتساب غير مهيأة للإرسال.")
         outcome = comms_providers.http_send(
             template=cfg["send_url_template"],
             method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
@@ -565,6 +566,6 @@ def _send_whatsapp(tenant_id: int, phone: str, message: str) -> tuple[bool, str]
             ),
             message=message,
         )
-        return bool(outcome.ok), ("" if outcome.ok else (outcome.error or "فشل الإرسال."))
+        return bool(outcome.ok), ("" if outcome.ok else (outcome.error or N_("فشل الإرسال.")))
     except Exception as exc:  # noqa: BLE001 — sending must never break the webhook
         return False, f"خطأ غير متوقع أثناء الإرسال: {exc}"

@@ -43,9 +43,9 @@
 {# حبّة حالة المشغّل #}
 {% macro op_status(value) -%}
   {%- set v = (value or '')|string|lower -%}
-  {%- if v in ['active','enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
-  {%- elif v in ['blocked','suspended'] -%}{{ hub.pill("محظور", variant="red") }}
-  {%- elif v in ['inactive','disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
+  {%- if v in ['active','enabled'] -%}{{ hub.pill(_('مفعَّل'), variant="green") }}
+  {%- elif v in ['blocked','suspended'] -%}{{ hub.pill(_('محظور'), variant="red") }}
+  {%- elif v in ['inactive','disabled'] -%}{{ hub.pill(_('متوقّف'), variant="grey") }}
   {%- elif v -%}{{ hub.pill(v, variant="amber") }}
   {%- else -%}<span class="cr-na">—</span>{%- endif -%}
 {%- endmacro %}
@@ -56,7 +56,7 @@
   <td class="num mono"><bdi dir="ltr">{{ row.id }}</bdi></td>
   <td style="font-weight:700">
     {{ row.name }}
-    {%- if row.is_owner %} {{ hub.pill("المزوّد", variant="brand", dot=False) }}{% endif %}
+    {%- if row.is_owner %} {{ hub.pill(_('المزوّد'), variant="brand", dot=False) }}{% endif %}
   </td>
   <td>{{ op_status(row.status) }}</td>
   <td class="num"><span class="cr-money is-bal" data-uds-sort="{{ row.balance_minor }}">{{ row.balance|money }}</span></td>
@@ -73,13 +73,13 @@
   </td>
   <td>
     {%- if row.is_owner -%}<span class="cr-na">{{ _('غير محدود') }}</span>
-    {%- elif row.debt_cap_enabled -%}{{ row.debt_cap|money }} {{ hub.pill("مُفعَّل", variant="green", dot=False) }}
-    {%- else -%}<span class="cr-na">—</span> {{ hub.pill("موقوف", variant="grey", dot=False) }}{%- endif -%}
+    {%- elif row.debt_cap_enabled -%}{{ row.debt_cap|money }} {{ hub.pill(_('مُفعَّل'), variant="green", dot=False) }}
+    {%- else -%}<span class="cr-na">—</span> {{ hub.pill(_('موقوف'), variant="grey", dot=False) }}{%- endif -%}
   </td>
   <td>
     {%- if not row.has_loans -%}<span class="cr-na">—</span>
-    {%- elif row.loan_cap_enabled -%}{{ row.loan_cap|money }} {{ hub.pill("مُفعَّل", variant="green", dot=False) }}
-    {%- else -%}{{ hub.pill("موقوف", variant="grey", dot=False) }}{%- endif -%}
+    {%- elif row.loan_cap_enabled -%}{{ row.loan_cap|money }} {{ hub.pill(_('مُفعَّل'), variant="green", dot=False) }}
+    {%- else -%}{{ hub.pill(_('موقوف'), variant="grey", dot=False) }}{%- endif -%}
   </td>
   <td class="small">
     {%- if row.last_recharge -%}
@@ -144,54 +144,54 @@
 
 {# ───── الهيرو + إجماليّات شاملة (المدراء + الموزّعون) ───── #}
 {{ hub.megahero(
-  "شحن الرصيد",
-  subtitle="نظرة المالك الكاملة على محافظ المدراء والموزّعين وديونهم وسلفهم — اشحن أيّ مشغّل مباشرةً، ويُسدَّد دينه أولًا تلقائيًّا.",
+  _('شحن الرصيد'),
+  subtitle=_('نظرة المالك الكاملة على محافظ المدراء والموزّعين وديونهم وسلفهم — اشحن أيّ مشغّل مباشرةً، ويُسدَّد دينه أولًا تلقائيًّا.'),
   icon="wallet",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-user-tie"></i> '|safe ~ _("ملفات المشغّلين") ~ '</a>'|safe if can_submit('radius.business_operators', 'GET') else ''),
   kpis=[
-    {'label': 'إجمالي الأرصدة',      'value': d.grand_totals.balance|money, 'icon': 'sack-dollar',     'variant': 'green'},
-    {'label': 'إجمالي الديون المستحقة','value': d.grand_totals.debt|money,   'icon': 'file-invoice-dollar','variant': 'red'},
-    {'label': 'إجمالي السلف',        'value': d.grand_totals.loans|money,   'icon': 'hand-holding-dollar','variant': 'amber'},
-    {'label': 'عدد المشغّلين',       'value': d.manager_totals.count + d.distributor_totals.count, 'icon': 'users-gear', 'variant': 'blue'},
+    {'label': _('إجمالي الأرصدة'),      'value': d.grand_totals.balance|money, 'icon': 'sack-dollar',     'variant': 'green'},
+    {'label': _('إجمالي الديون المستحقة'),'value': d.grand_totals.debt|money,   'icon': 'file-invoice-dollar','variant': 'red'},
+    {'label': _('إجمالي السلف'),        'value': d.grand_totals.loans|money,   'icon': 'hand-holding-dollar','variant': 'amber'},
+    {'label': _('عدد المشغّلين'),       'value': d.manager_totals.count + d.distributor_totals.count, 'icon': 'users-gear', 'variant': 'blue'},
   ]
 ) }}
 
 <div class="cr-stack">
 
 {# ───── المدراء ───── #}
-{% call hub.section("المدراء", icon="users-gear",
-                    meta=(d.managers|length|string ~ " مدير") if d.managers else "", flush=True) %}
+{% call hub.section(_('المدراء'), icon="users-gear",
+                    meta=(_('%(string)s مدير', string=d.managers|length|string)) if d.managers else "", flush=True) %}
   <div class="hub-kpi-grid" style="margin-bottom:14px">
-    {{ hub.kpi("أرصدة المدراء", d.manager_totals.balance|money, icon="sack-dollar", variant="green") }}
-    {{ hub.kpi("ديون المدراء", d.manager_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
-    {{ hub.kpi("سلف المدراء", d.manager_totals.loans|money, icon="hand-holding-dollar", variant="amber") }}
+    {{ hub.kpi(_('أرصدة المدراء'), d.manager_totals.balance|money, icon="sack-dollar", variant="green") }}
+    {{ hub.kpi(_('ديون المدراء'), d.manager_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
+    {{ hub.kpi(_('سلف المدراء'), d.manager_totals.loans|money, icon="hand-holding-dollar", variant="amber") }}
   </div>
   {% if d.managers %}
     {{ op_table(d.managers, d.manager_totals, d.currency, "credit-managers-table") }}
   {% else %}
-    {{ hub.empty("لا يوجد مدراء بعد", sub="أنشئ المدراء من قسم «المدراء والموزعون».", icon="users-gear") }}
+    {{ hub.empty(_('لا يوجد مدراء بعد'), sub=_('أنشئ المدراء من قسم «المدراء والموزعون».'), icon="users-gear") }}
   {% endif %}
 {% endcall %}
 
 {# ───── الموزّعون ───── #}
-{% call hub.section("الموزعون", icon="people-carry-box",
-                    meta=(d.distributors|length|string ~ " موزع") if d.distributors else "", flush=True) %}
+{% call hub.section(_('الموزعون'), icon="people-carry-box",
+                    meta=(_('%(string)s موزع', string=d.distributors|length|string)) if d.distributors else "", flush=True) %}
   <div class="hub-kpi-grid" style="margin-bottom:14px">
-    {{ hub.kpi("أرصدة الموزّعين", d.distributor_totals.balance|money, icon="sack-dollar", variant="green") }}
-    {{ hub.kpi("ديون الموزّعين", d.distributor_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
-    {{ hub.kpi("عدد الموزّعين", d.distributor_totals.count, icon="people-carry-box", variant="blue") }}
+    {{ hub.kpi(_('أرصدة الموزّعين'), d.distributor_totals.balance|money, icon="sack-dollar", variant="green") }}
+    {{ hub.kpi(_('ديون الموزّعين'), d.distributor_totals.debt|money, icon="file-invoice-dollar", variant="red") }}
+    {{ hub.kpi(_('عدد الموزّعين'), d.distributor_totals.count, icon="people-carry-box", variant="blue") }}
   </div>
   {% if d.distributors %}
     {{ op_table(d.distributors, d.distributor_totals, d.currency, "credit-distributors-table") }}
   {% else %}
-    {{ hub.empty("لا يوجد موزعون بعد", sub="أنشئ الموزعين من قسم «الموزعون».", icon="people-carry-box") }}
+    {{ hub.empty(_('لا يوجد موزعون بعد'), sub=_('أنشئ الموزعين من قسم «الموزعون».'), icon="people-carry-box") }}
   {% endif %}
 {% endcall %}
 
 </div>{# /cr-stack #}
 
 {# ───── نافذة الشحن الموحّدة (تُملأ ديناميكيًّا لكل صف) ───── #}
-{% call hub.modal("cr-recharge-modal", "شحن رصيد مشغّل", icon="wallet") %}
+{% call hub.modal("cr-recharge-modal", _('شحن رصيد مشغّل'), icon="wallet") %}
   <form method="post" id="cr-recharge-form" action="" class="cr-form" data-testid="credit-recharge-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="cr-target">

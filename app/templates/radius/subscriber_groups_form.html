@@ -9,7 +9,7 @@
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {%- set is_new = (group is none) -%}
-{%- set title_ar = "إضافة مجموعة مشتركين" if is_new else ("تعديل: " + group.name) -%}
+{%- set title_ar = _('إضافة مجموعة مشتركين') if is_new else (_('تعديل: ') + group.name) -%}
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-group"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
@@ -55,7 +55,7 @@
 
 {{ hub.hero(
   title_ar,
-  subtitle=("ربط خدمات مشتركة بمجموعة من المشتركين." if is_new else "تعديل بيانات وخدمات المجموعة."),
+  subtitle=(_('ربط خدمات مشتركة بمجموعة من المشتركين.') if is_new else _('تعديل بيانات وخدمات المجموعة.')),
   icon="people-group",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.subscriber_groups_list') + '">
@@ -68,7 +68,7 @@
       action="{{ url_for('radius.subscriber_groups_update', gid=group.id) if not is_new else url_for('radius.subscriber_groups_create') }}">{% if not can_submit(('radius.subscriber_groups_update' if not is_new else 'radius.subscriber_groups_create')) %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
 
   {# ── 1. Identity ─────────────────────────────────────── #}
-  {% call hub.section("الهويّة", icon="id-card") %}
+  {% call hub.section(_('الهويّة'), icon="id-card") %}
     <div class="hub-form-row">
       <div class="sgf-field">
         <label>{{ _('اسم المجموعة') }} <span style="color:var(--hub-red)">*</span></label>
@@ -87,7 +87,7 @@
   {% endcall %}
 
   {# ── 2. Services ─────────────────────────────────────── #}
-  {% call hub.section("الخدمات المُطبَّقة على أعضاء المجموعة", icon="layer-group") %}
+  {% call hub.section(_('الخدمات المُطبَّقة على أعضاء المجموعة'), icon="layer-group") %}
     <div class="hub-form-row">
       <div class="sgf-field">
         <label>{{ _('جدولة السرعة') }}</label>
@@ -123,7 +123,7 @@
     <div class="hub-form-row" style="margin-top: var(--hub-gap-md)">
       <div class="sgf-field">
         <label>{{ _('التجديد التلقائي') }}</label>
-        {{ toggle_switch(name="default_auto_renewal", checked=(not group or group.default_auto_renewal), value="1", on_label="تفعيل التجديد التلقائي افتراضيًا للأعضاء", off_label="بدون تجديد تلقائي") }}
+        {{ toggle_switch(name="default_auto_renewal", checked=(not group or group.default_auto_renewal), value="1", on_label=_('تفعيل التجديد التلقائي افتراضيًا للأعضاء'), off_label=_('بدون تجديد تلقائي')) }}
       </div>
 
       <div class="sgf-field" style="grid-column: 1 / -1">
@@ -148,8 +148,8 @@
 
   {# ── 3. Members preview (edit only) ──────────────────── #}
   {% if not is_new and members %}
-    {% call hub.section("الأعضاء", icon="users",
-                        meta=(members|length)|string + " عضو", flush=True) %}
+    {% call hub.section(_('الأعضاء'), icon="users",
+                        meta=(members|length)|string + _(' عضو'), flush=True) %}
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr><th>{{ _('اسم المستخدم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('الجوّال') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
@@ -183,7 +183,7 @@
        href="{{ url_for('radius.subscriber_groups_list') }}">{{ _('إلغاء') }}</a>{% endif %}
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i>
-      {{ "إنشاء المجموعة" if is_new else "حفظ التعديلات" }}
+      {{ _('إنشاء المجموعة') if is_new else _('حفظ التعديلات') }}
     </button>
   </div>
 {% if not can_submit(('radius.subscriber_groups_update' if not is_new else 'radius.subscriber_groups_create')) %}</fieldset>{% endif %}</form>

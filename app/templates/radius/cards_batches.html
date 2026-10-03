@@ -8,7 +8,7 @@
 {% block title %}{{ _("إدارة البطاقات والحزم") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ _("إدارة البطاقات والحزم") }}{% endblock %}
-{% block page_sub %}<span class="sub">مركز بطاقات مؤقتة: {{ total }} حزمة، صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('مركز بطاقات مؤقتة: %(total)s حزمة، صفحة %(page)s من %(pages_count)s', total=total, page=page, pages_count=pages_count) }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -174,9 +174,9 @@
      • باقةٌ بلا مدّة استعمال (أسبوعيّ/شهريّ) ⇒ تُعرض **صلاحيتها** بالأيّام
        بدل «—» الذي كان يُوهم أنّ البطاقة بلا مدة. #}
 {% macro human_minutes(m) -%}
-  {%- if m % 1440 == 0 -%}{{ num(m // 1440) }} يوم
-  {%- elif m % 60 == 0 -%}{{ num(m // 60) }} ساعة
-  {%- else -%}{{ num(m) }} دقيقة{%- endif -%}
+  {%- if m % 1440 == 0 -%}{{ num(m // 1440) }} {{ _('يوم') }}
+  {%- elif m % 60 == 0 -%}{{ num(m // 60) }} {{ _('ساعة') }}
+  {%- else -%}{{ num(m) }} {{ _('دقيقة') }}{%- endif -%}
 {%- endmacro %}
 
 {% macro duration_label(b) -%}
@@ -185,15 +185,15 @@
   {%- if not value and b.plan_duration_minutes -%}
     {{ human_minutes(b.plan_duration_minutes) }}
   {%- elif not value and b.plan_validity_days -%}
-    {{ num(b.plan_validity_days) }} يوم
+    {{ num(b.plan_validity_days) }} {{ _('يوم') }}
   {%- elif value -%}
     {#- المسافة صريحة: «-%}» كان يقصّها فيخرج «4ساعة» بدل «4 ساعة». -#}
     {{ num(value) }}{{ ' ' }}
-    {%- if unit in ['minute','minutes','min','mins'] -%} دقيقة
-    {%- elif unit in ['hour','hours','hr','hrs'] -%} ساعة
-    {%- elif unit in ['day','days'] -%} يوم
-    {%- elif unit in ['week','weeks'] -%} أسبوع
-    {%- elif unit in ['month','months'] -%} شهر
+    {%- if unit in ['minute','minutes','min','mins'] -%} {{ _('دقيقة') }}
+    {%- elif unit in ['hour','hours','hr','hrs'] -%} {{ _('ساعة') }}
+    {%- elif unit in ['day','days'] -%} {{ _('يوم') }}
+    {%- elif unit in ['week','weeks'] -%} {{ _('أسبوع') }}
+    {%- elif unit in ['month','months'] -%} {{ _('شهر') }}
     {%- else -%} {{ b.time_unit or b.duration_unit or '' }}
     {%- endif -%}
   {%- else -%}
@@ -236,22 +236,22 @@
   {%- set q = b.total_quota_mb or b.plan_quota_total_mb or 0 -%}
   {%- if q and q >= 1024 -%}{{ "%.1f"|format(q / 1024) }} GB
   {%- elif q -%}{{ num(q) }} MB
-  {%- else -%}بدون كوتة
+  {%- else -%}{{ _('بدون كوتة') }}
   {%- endif -%}
 {%- endmacro %}
 
 {% macro accounting_label(b) -%}
-  {%- if b.count_by_seconds -%}بالثانية
-  {%- else -%}بالمدة
+  {%- if b.count_by_seconds -%}{{ _('بالثانية') }}
+  {%- else -%}{{ _('بالمدة') }}
   {%- endif -%}
-  {%- if b.count_from_first_connect -%} / من أول اتصال{%- endif -%}
+  {%- if b.count_from_first_connect -%} {{ _('/ من أول اتصال') }}{%- endif -%}
 {%- endmacro %}
 
 {% macro quota_exhaust_label(value) -%}
   {%- set action = value or 'stop' -%}
-  {%- if action == 'stop' -%}إيقاف
-  {%- elif action == 'reduce_speed' -%}تخفيض السرعة
-  {%- elif action == 'notify' -%}تنبيه فقط
+  {%- if action == 'stop' -%}{{ _('إيقاف') }}
+  {%- elif action == 'reduce_speed' -%}{{ _('تخفيض السرعة') }}
+  {%- elif action == 'notify' -%}{{ _('تنبيه فقط') }}
   {%- else -%}{{ action }}
   {%- endif -%}
 {%- endmacro %}
@@ -379,7 +379,7 @@
        الموحّد أسفل الجدول/البطاقات (نفس قاعدة جداول uds). #}
     <select name="per_page" aria-label="{{ _('عدد النتائج') }}" hidden style="display:none">
       {% for n in [10, 20, 50, 100] %}
-        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
+        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ _('%(n)s/صفحة', n=n) }}</option>
       {% endfor %}
     </select>
     <button class="batch-btn batch-btn--primary" type="submit">
@@ -440,7 +440,7 @@
               <div>
                 <div class="batch-card__title-row">
                   <h2>{% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                         title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or b.plan_name or 'حزمة بطاقات مؤقتة')|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}</h2>
+                         title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or b.plan_name or _('حزمة بطاقات مؤقتة'))|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}</h2>
                   {% if is_featured %}<span class="batch-featured">{{ _('مميزة') }}</span>{% endif %}
                 </div>
                 <p class="batch-card__code">
@@ -452,26 +452,26 @@
             </header>
 
             <div class="batch-card__chips">
-              <span><i class="fa-regular fa-clock"></i> مدة البطاقة: {{ duration_label(b) }}</span>
-              <span><i class="fa-solid fa-mobile-screen"></i> جهاز {{ b.device_count or 1 }}</span>
+              <span><i class="fa-regular fa-clock"></i> {{ _('مدة البطاقة: %(v)s', v=duration_label(b)) }}</span>
+              <span><i class="fa-solid fa-mobile-screen"></i> {{ _('جهاز %(v)s', v=b.device_count or 1) }}</span>
               {% if b.total_quota_mb or b.plan_quota_total_mb %}
                 <span><i class="fa-solid fa-database"></i> {{ num(b.total_quota_mb or b.plan_quota_total_mb) }} MB</span>
               {% endif %}
             </div>
 
             <div class="batch-card__stats">
-              {{ metric("العدد", num(total_cards), "ticket") }}
-              {{ metric("متصلة الآن", num(active_now), "signal") }}
-              {{ metric("مستخدمة", num(used_count), "check") }}
-              {{ metric("متاحة للاستخدام", num(ready_count), "circle-plus") }}
-              {{ metric("منتهية", num(expired_count), "hourglass-end") }}
-              {{ metric("مستخدمة غير متصلة", num(idle_used), "moon") }}
+              {{ metric(_('العدد'), num(total_cards), "ticket") }}
+              {{ metric(_('متصلة الآن'), num(active_now), "signal") }}
+              {{ metric(_('مستخدمة'), num(used_count), "check") }}
+              {{ metric(_('متاحة للاستخدام'), num(ready_count), "circle-plus") }}
+              {{ metric(_('منتهية'), num(expired_count), "hourglass-end") }}
+              {{ metric(_('مستخدمة غير متصلة'), num(idle_used), "moon") }}
             </div>
 
             <div class="batch-card__progress">
               <div>
-                <span>{{ "%.0f"|format(progress_pct) }}% مستخدم</span>
-                <span>متبقي للتفعيل {{ num(remaining_count) }}</span>
+                <span>{{ "%.0f"|format(progress_pct) }}{{ _('%% مستخدم') }}</span>
+                <span>{{ _('متبقي للتفعيل %(v)s', v=num(remaining_count)) }}</span>
               </div>
               <div class="batch-progress" aria-label="{{ _('استهلاك الحزمة') }}">
                 <span style="width: {{ [progress_pct, 100]|min }}%"></span>
@@ -481,7 +481,7 @@
             <dl class="batch-card__meta">
               <div><dt>{{ _('المدير') }}</dt><dd>{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '—' }}</dd></div>
               <div><dt>{{ _('الموزع') }}</dt><dd>{{ b.distributor_display_name or b.distributor_name or '—' }}</dd></div>
-              <div><dt>{{ _('الأسعار') }}</dt><dd class="batch-price-pair"><span>بيع {{ money(unit_price) }}</span><small>جملة {{ money(b.price_bulk or 0) }}</small></dd></div>
+              <div><dt>{{ _('الأسعار') }}</dt><dd class="batch-price-pair"><span>{{ _('بيع %(v)s', v=money(unit_price)) }}</span><small>{{ _('جملة %(v)s', v=money(b.price_bulk or 0)) }}</small></dd></div>
               <div><dt>{{ _('تاريخ الإنشاء') }}</dt><dd><bdi dir="ltr">{{ b.created_at|dt_local if b.created_at else '—' }}</bdi></dd></div>
             </dl>
 
@@ -556,7 +556,7 @@
         </div>
         {% set _cstart = (page - 1) * per_page + 1 %}
         {% set _cend = [page * per_page, total] | min %}
-        <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _cstart }}–{{ _cend }}</bdi> من <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
+        <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _cstart }}–{{ _cend }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
         <div class="uds-pager-nav">
           {% set base_args_cards = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
                                     'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
@@ -624,25 +624,25 @@
           <table class="hub-table bops-table" data-smart-table data-table-key="cards-batches">
             <thead>
               <tr>
-                <th style="width:38px" data-column-key="select" data-column-label="تحديد" data-sort-disabled><input id="select-all-batches" type="checkbox" aria-label="{{ _('تحديد الكل') }}"></th>
+                <th style="width:38px" data-column-key="select" data-column-label="{{ _('تحديد') }}" data-sort-disabled><input id="select-all-batches" type="checkbox" aria-label="{{ _('تحديد الكل') }}"></th>
                 <th style="width:72px" data-column-key="id" data-column-label="#" data-sort-type="number">#</th>
-                <th data-column-key="batch" data-column-label="الحزمة">{{ _('الحزمة') }}</th>
-                <th data-column-key="plan" data-column-label="الأجهزة" data-sort-type="number">{{ _('الأجهزة') }}</th>
-                <th data-column-key="duration" data-column-label="مدة البطاقة" data-sort-type="number">{{ _('مدة البطاقة') }}</th>
-                <th data-column-key="cards" data-column-label="الكروت" data-sort-type="number">{{ _('الكروت') }}</th>
-                <th data-column-key="usage" data-column-label="الاستخدام" data-column-optional data-sort-type="number">{{ _('الاستخدام') }}</th>
-                <th data-column-key="created" data-column-label="تاريخ الإنشاء" data-column-optional data-sort-type="date">{{ _('تاريخ الإنشاء') }}</th>
-                <th data-column-key="validity_after_first_login" data-column-label="صلاحية بعد أول اتصال" data-column-optional data-sort-type="number">{{ _('صلاحية بعد أول اتصال') }}</th>
-                <th data-column-key="batch_expire" data-column-label="نهاية الحزمة" data-column-optional data-sort-type="date">{{ _('نهاية الحزمة') }}</th>
-                <th data-column-key="service_name" data-column-label="الخدمة" data-column-optional>{{ _('الخدمة') }}</th>
-                <th data-column-key="quota" data-column-label="الكوتة" data-column-optional data-sort-type="number">{{ _('الكوتة') }}</th>
-                <th data-column-key="accounting" data-column-label="المحاسبة" data-column-optional>{{ _('المحاسبة') }}</th>
-                <th data-column-key="quota_exhaust" data-column-label="عند انتهاء الكوتة" data-column-optional>{{ _('انتهاء الكوتة') }}</th>
-                <th data-column-key="price" data-column-label="الأسعار" data-sort-type="number">{{ _('الأسعار') }}</th>
-                <th data-column-key="manager" data-column-label="المدير">{{ _('المدير') }}</th>
-                <th data-column-key="distributor" data-column-label="الموزع">{{ _('الموزع') }}</th>
-                <th data-column-key="status" data-column-label="الحالة">{{ _('الحالة') }}</th>
-                <th style="width:132px" data-column-key="actions" data-column-label="إجراءات" data-sort-disabled>{{ _('إجراءات') }}</th>
+                <th data-column-key="batch" data-column-label="{{ _('الحزمة') }}">{{ _('الحزمة') }}</th>
+                <th data-column-key="plan" data-column-label="{{ _('الأجهزة') }}" data-sort-type="number">{{ _('الأجهزة') }}</th>
+                <th data-column-key="duration" data-column-label="{{ _('مدة البطاقة') }}" data-sort-type="number">{{ _('مدة البطاقة') }}</th>
+                <th data-column-key="cards" data-column-label="{{ _('الكروت') }}" data-sort-type="number">{{ _('الكروت') }}</th>
+                <th data-column-key="usage" data-column-label="{{ _('الاستخدام') }}" data-column-optional data-sort-type="number">{{ _('الاستخدام') }}</th>
+                <th data-column-key="created" data-column-label="{{ _('تاريخ الإنشاء') }}" data-column-optional data-sort-type="date">{{ _('تاريخ الإنشاء') }}</th>
+                <th data-column-key="validity_after_first_login" data-column-label="{{ _('صلاحية بعد أول اتصال') }}" data-column-optional data-sort-type="number">{{ _('صلاحية بعد أول اتصال') }}</th>
+                <th data-column-key="batch_expire" data-column-label="{{ _('نهاية الحزمة') }}" data-column-optional data-sort-type="date">{{ _('نهاية الحزمة') }}</th>
+                <th data-column-key="service_name" data-column-label="{{ _('الخدمة') }}" data-column-optional>{{ _('الخدمة') }}</th>
+                <th data-column-key="quota" data-column-label="{{ _('الكوتة') }}" data-column-optional data-sort-type="number">{{ _('الكوتة') }}</th>
+                <th data-column-key="accounting" data-column-label="{{ _('المحاسبة') }}" data-column-optional>{{ _('المحاسبة') }}</th>
+                <th data-column-key="quota_exhaust" data-column-label="{{ _('عند انتهاء الكوتة') }}" data-column-optional>{{ _('انتهاء الكوتة') }}</th>
+                <th data-column-key="price" data-column-label="{{ _('الأسعار') }}" data-sort-type="number">{{ _('الأسعار') }}</th>
+                <th data-column-key="manager" data-column-label="{{ _('المدير') }}">{{ _('المدير') }}</th>
+                <th data-column-key="distributor" data-column-label="{{ _('الموزع') }}">{{ _('الموزع') }}</th>
+                <th data-column-key="status" data-column-label="{{ _('الحالة') }}">{{ _('الحالة') }}</th>
+                <th style="width:132px" data-column-key="actions" data-column-label="{{ _('إجراءات') }}" data-sort-disabled>{{ _('إجراءات') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -662,12 +662,12 @@
                       <bdi>{{ b.batch_code }}</bdi>
                     {% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                     {% if can_submit('radius.cards_of_batch', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}"
-                       title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or 'بدون اسم مخصص')|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
+                       title="{{ _('عرض بطاقات الحزمة') }}">{% endif %}{{ (b.package_name or b.service_name or _('بدون اسم مخصص'))|bidi_nums }}{% if can_submit('radius.cards_of_batch', 'GET') %}</a>{% endif %}
                   </div>
                 </td>
                 <td data-column-key="plan" data-sort-value="{{ b.device_count or 1 }}">
                   <div class="bops-stack">
-                    {{ hub.pill((b.device_count or 1)|string + ' جهاز', variant="grey", dot=False) }}
+                    {{ hub.pill((b.device_count or 1)|string + _(' جهاز'), variant="grey", dot=False) }}
                   </div>
                 </td>
                 <td data-column-key="duration" data-sort-value="{{ b.duration_minutes or b.validity_minutes or 0 }}">
@@ -684,17 +684,17 @@
                 <td data-column-key="usage" data-sort-value="{{ pct }}">
                   <div class="bops-progress">
                     {{ hub.progress(pct) }}
-                    <span>{{ "%.0f"|format(pct) }}% مستخدم</span>
+                    <span>{{ "%.0f"|format(pct) }}{{ _('%% مستخدم') }}</span>
                   </div>
                 </td>
                 <td data-column-key="created" data-sort-value="{{ b.created_at or '' }}">{{ short_date(b.created_at) }}</td>
-                <td data-column-key="validity_after_first_login" data-sort-value="{{ b.validity_after_first_login_days or 0 }}">{% if b.validity_after_first_login_days %}{{ num(b.validity_after_first_login_days) }} يوم{% else %}—{% endif %}</td>
+                <td data-column-key="validity_after_first_login" data-sort-value="{{ b.validity_after_first_login_days or 0 }}">{% if b.validity_after_first_login_days %}{{ num(b.validity_after_first_login_days) }} {{ _('يوم') }}{% else %}—{% endif %}</td>
                 <td data-column-key="batch_expire" data-sort-value="{{ b.expire_at or '' }}">{{ short_date(b.expire_at) }}</td>
                 <td data-column-key="service_name" data-sort-value="{{ b.service_name or '' }}">{{ b.service_name or '—' }}</td>
                 <td data-column-key="quota" data-sort-value="{{ b.total_quota_mb or b.plan_quota_total_mb or 0 }}">{{ quota_label(b) }}</td>
                 <td data-column-key="accounting" data-sort-value="{{ accounting_label(b) }}">{{ accounting_label(b) }}</td>
                 <td data-column-key="quota_exhaust" data-sort-value="{{ quota_exhaust_label(b.on_quota_exhaust) }}">{{ quota_exhaust_label(b.on_quota_exhaust) }}</td>
-                <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>بيع {{ money(unit_price) }}</strong><span class="bops-muted">جملة {{ money(b.price_bulk or 0) }}</span></td>
+                <td data-column-key="price" data-sort-value="{{ unit_price }}"><strong>{{ _('بيع %(v)s', v=money(unit_price)) }}</strong><span class="bops-muted">{{ _('جملة %(v)s', v=money(b.price_bulk or 0)) }}</span></td>
                 <td data-column-key="manager" data-sort-value="{{ ((b.manager_display_name or b.created_by or b.manager_id or '')|actor_name if (b.manager_display_name or b.created_by or b.manager_id) else '') or '' }}">
                   {% if is_super and b.manager_id %}
                     {% if can_submit('radius.admins_edit', 'GET') %}<a class="hr-entity-link" href="{{ url_for('radius.admins_edit', admin_id=b.manager_id) }}"
@@ -794,7 +794,7 @@
           </div>
           {% set _start = (page - 1) * per_page + 1 %}
           {% set _end = [page * per_page, total] | min %}
-          <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _start }}–{{ _end }}</bdi> من <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
+          <div class="uds-pager-info">{% if total %}<bdi dir="ltr">{{ _start }}–{{ _end }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ total }}</bdi>{% else %}0{% endif %}</div>
           <div class="uds-pager-nav">
             {% set base_args = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
                                 'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
@@ -824,7 +824,7 @@
         </div>
       </section>
       {% else %}
-        {{ hub.empty("لا توجد حزم مطابقة للفلاتر الحالية", sub="جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.", icon="layer-group") }}
+        {{ hub.empty(_('لا توجد حزم مطابقة للفلاتر الحالية'), sub=_('جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.'), icon="layer-group") }}
       {% endif %}
   </section>
 </section>

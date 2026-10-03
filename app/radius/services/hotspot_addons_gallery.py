@@ -6,6 +6,7 @@ _load_catalogs. كلها مطفأة افتراضيًّا إلا تحسينًا �
 فقط)، السطح pre مخبوز/أوفلاين ما لم يحتَج موردًا خارجيًّا.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import html as _html
 
@@ -60,8 +61,8 @@ def _f_tabbar(cfg, ctx):
 
 
 register(AddonSpec(
-    key="tab_bar_nav", category=CAT_LOGIN, label_ar="شريط تبويب سفلي",
-    desc_ar="شريط تنقّل سفلي ثابت (الرئيسية/الباقات/نقاط البيع) بإحساس تطبيق المشغّل.",
+    key="tab_bar_nav", category=CAT_LOGIN, label_ar=N_("شريط تبويب سفلي"),
+    desc_ar=N_("شريط تنقّل سفلي ثابت (الرئيسية/الباقات/نقاط البيع) بإحساس تطبيق المشغّل."),
     surface=SURFACE_PRELOGIN, icon="table-columns", server_side=True,
     pre_fragment=_f_tabbar))
 
@@ -81,8 +82,8 @@ def _f_dealers(cfg, ctx):
         name = _esc(parts[0] if parts else "")
         phone = _esc(parts[1]) if len(parts) > 1 else ""
         addr = _esc(parts[2]) if len(parts) > 2 else ""
-        badge = ('<span style="background:#dcfce7;color:#047857;font-size:10px;'
-                 'font-weight:800;padding:2px 7px;border-radius:999px">نقطة رئيسية ✓</span>'
+        badge = (N_('<span style="background:#dcfce7;color:#047857;font-size:10px;'
+                 'font-weight:800;padding:2px 7px;border-radius:999px">نقطة رئيسية ✓</span>')
                  if i == 0 else "")
         call = (f'<a href="tel:{phone}" style="color:{a};font-weight:800;'
                 f'text-decoration:none">اتصال</a>' if phone else "")
@@ -105,15 +106,15 @@ def _f_dealers(cfg, ctx):
 
 
 register(AddonSpec(
-    key="dealers_directory", category=CAT_CONTENT, label_ar="دليل نقاط البيع",
-    desc_ar="قائمة موزّعين/نقاط بيع (اسم|هاتف|عنوان لكل سطر) مع اتصال بنقرة وشارة النقطة الرئيسية وشعارات الدفع.",
+    key="dealers_directory", category=CAT_CONTENT, label_ar=N_("دليل نقاط البيع"),
+    desc_ar=N_("قائمة موزّعين/نقاط بيع (اسم|هاتف|عنوان لكل سطر) مع اتصال بنقرة وشارة النقطة الرئيسية وشعارات الدفع."),
     surface=SURFACE_PRELOGIN, icon="map-location-dot", server_side=True,
     fields=(
-        AddonField(key="dealers", label_ar="النقاط (اسم|هاتف|عنوان لكل سطر)",
+        AddonField(key="dealers", label_ar=N_("النقاط (اسم|هاتف|عنوان لكل سطر)"),
                    kind="textarea", max_len=1000,
-                   placeholder="المركز الرئيسي|0590000000|شارع الحمراء\nفرع الشمال|0591111111|حي الزهور"),
-        AddonField(key="payments", label_ar="مزوّدو الدفع (مفصولة بفواصل)",
-                   max_len=160, placeholder="بطاقة، محفظة رقمية، تحويل"),
+                   placeholder=N_("المركز الرئيسي|0590000000|شارع الحمراء\nفرع الشمال|0591111111|حي الزهور")),
+        AddonField(key="payments", label_ar=N_("مزوّدو الدفع (مفصولة بفواصل)"),
+                   max_len=160, placeholder=N_("بطاقة، محفظة رقمية، تحويل")),
     ),
     pre_fragment=_f_dealers))
 
@@ -136,10 +137,10 @@ def _f_cobrand(cfg, ctx):
 
 
 register(AddonSpec(
-    key="cobrand_dual_logo", category=CAT_THEME, label_ar="شعاران (تعاون)",
-    desc_ar="عرض شعار شريك ثانٍ بجانب شعارك (تعاون علامتين) — نطاقه يُفتح تلقائيًّا.",
+    key="cobrand_dual_logo", category=CAT_THEME, label_ar=N_("شعاران (تعاون)"),
+    desc_ar=N_("عرض شعار شريك ثانٍ بجانب شعارك (تعاون علامتين) — نطاقه يُفتح تلقائيًّا."),
     surface=SURFACE_PRELOGIN, icon="handshake",
-    fields=(AddonField(key="logo2_url", label_ar="رابط الشعار الثاني", kind="url"),),
+    fields=(AddonField(key="logo2_url", label_ar=N_("رابط الشعار الثاني"), kind="url"),),
     pre_fragment=_f_cobrand))
 
 
@@ -161,8 +162,8 @@ def _f_datetime(cfg, ctx):
 
 
 register(AddonSpec(
-    key="datetime_greeting", category=CAT_CONTENT, label_ar="تاريخ/وقت + تحية",
-    desc_ar="ختم تاريخ ووقت حيّ مع تحية تتغيّر حسب الوقت — يُحسب من ساعة الجهاز.",
+    key="datetime_greeting", category=CAT_CONTENT, label_ar=N_("تاريخ/وقت + تحية"),
+    desc_ar=N_("ختم تاريخ ووقت حيّ مع تحية تتغيّر حسب الوقت — يُحسب من ساعة الجهاز."),
     surface=SURFACE_PRELOGIN, icon="clock", server_side=True,
     pre_fragment=_f_datetime))
 
@@ -183,10 +184,10 @@ def _f_rating(cfg, ctx):
 
 
 register(AddonSpec(
-    key="rating_badge", category=CAT_CONTENT, label_ar="تقييم + شارة موثّق",
-    desc_ar="صفّ نجوم تقييم وشارة «موثّق» أعلى البطاقة.",
+    key="rating_badge", category=CAT_CONTENT, label_ar=N_("تقييم + شارة موثّق"),
+    desc_ar=N_("صفّ نجوم تقييم وشارة «موثّق» أعلى البطاقة."),
     surface=SURFACE_PRELOGIN, icon="star", server_side=True,
-    fields=(AddonField(key="stars", label_ar="عدد النجوم (0–5)", kind="number",
+    fields=(AddonField(key="stars", label_ar=N_("عدد النجوم (0–5)"), kind="number",
                        default="5", min_num=0, max_num=5),),
     pre_fragment=_f_rating))
 
@@ -205,11 +206,11 @@ def _f_quota(cfg, ctx):
 
 
 register(AddonSpec(
-    key="quota_alert", category=CAT_CONTENT, label_ar="تنبيه استنفاد الباقة",
-    desc_ar="شريط تنبيه داخل الصفحة عند نفاد الباقة/الرصيد.",
+    key="quota_alert", category=CAT_CONTENT, label_ar=N_("تنبيه استنفاد الباقة"),
+    desc_ar=N_("شريط تنبيه داخل الصفحة عند نفاد الباقة/الرصيد."),
     surface=SURFACE_PRELOGIN, icon="gauge", server_side=True,
-    fields=(AddonField(key="text", label_ar="نص التنبيه", max_len=140,
-                       placeholder="انتهت باقتك — جدّد للمتابعة"),),
+    fields=(AddonField(key="text", label_ar=N_("نص التنبيه"), max_len=140,
+                       placeholder=N_("انتهت باقتك — جدّد للمتابعة")),),
     pre_fragment=_f_quota))
 
 
@@ -217,17 +218,17 @@ register(AddonSpec(
 # 7) رابط دخول الموظّفين
 # ════════════════════════════════════════════════════════════════
 def _f_staff(cfg, ctx):
-    label = _esc(cfg.get("label") or "دخول الموظّفين")
+    label = _esc(cfg.get("label") or N_("دخول الموظّفين"))
     return ('<div style="text-align:center;margin-top:10px">'
             f'<a href="$(link-login-only)" style="font-size:12px;color:#64748b;'
             f'text-decoration:underline">{label}</a></div>')
 
 
 register(AddonSpec(
-    key="staff_login_link", category=CAT_LOGIN, label_ar="رابط دخول الموظّفين",
-    desc_ar="رابط منفصل لدخول الموظّفين أسفل نموذج دخول الضيوف.",
+    key="staff_login_link", category=CAT_LOGIN, label_ar=N_("رابط دخول الموظّفين"),
+    desc_ar=N_("رابط منفصل لدخول الموظّفين أسفل نموذج دخول الضيوف."),
     surface=SURFACE_PRELOGIN, icon="user-shield", server_side=True,
-    fields=(AddonField(key="label", label_ar="نص الرابط", default="دخول الموظّفين",
+    fields=(AddonField(key="label", label_ar=N_("نص الرابط"), default=N_("دخول الموظّفين"),
                        max_len=40),),
     pre_fragment=_f_staff))
 
@@ -248,8 +249,8 @@ def _f_eye(cfg, ctx):
 
 
 register(AddonSpec(
-    key="password_eye", category=CAT_LOGIN, label_ar="إظهار/إخفاء كلمة المرور",
-    desc_ar="زرّ عين لإظهار كلمة المرور أو إخفائها — تحسين أساسي موصى به.",
+    key="password_eye", category=CAT_LOGIN, label_ar=N_("إظهار/إخفاء كلمة المرور"),
+    desc_ar=N_("زرّ عين لإظهار كلمة المرور أو إخفائها — تحسين أساسي موصى به."),
     # مطفأة افتراضيًّا للحفاظ على ضمان «بلا إضافات = ناتج مطابق» (أي
     # default_on يكسر التطابق)؛ موصى بتفعيلها من المصمّم.
     surface=SURFACE_PRELOGIN, icon="eye", server_side=True, default_on=False,
@@ -274,8 +275,8 @@ def _f_remember(cfg, ctx):
 
 
 register(AddonSpec(
-    key="remember_me", category=CAT_LOGIN, label_ar="تذكّرني + طمأنة التشفير",
-    desc_ar="مربّع «تذكّرني» يحفظ الاسم على الجهاز + عبارة طمأنة «اتصالك آمن ومشفّر».",
+    key="remember_me", category=CAT_LOGIN, label_ar=N_("تذكّرني + طمأنة التشفير"),
+    desc_ar=N_("مربّع «تذكّرني» يحفظ الاسم على الجهاز + عبارة طمأنة «اتصالك آمن ومشفّر»."),
     surface=SURFACE_PRELOGIN, icon="lock", server_side=True,
     pre_fragment=_f_remember))
 
@@ -292,13 +293,13 @@ def _f_netstrip(cfg, ctx):
                 'border:1px solid #a7f3d0;border-radius:999px;padding:3px 10px">'
                 '<i style="width:7px;height:7px;border-radius:50%;background:#10b981;'
                 'display:inline-block;animation:hrpulse 1.4s infinite"></i>' + lbl + '</span>'
-                for lbl in ("مستقرّة", "محميّة", "مشفّرة"))
+                for lbl in (N_("مستقرّة"), N_("محميّة"), N_("مشفّرة")))
             + '</div><style>@keyframes hrpulse{50%{opacity:.3}}</style>')
 
 
 register(AddonSpec(
-    key="network_status_strip", category=CAT_CONTENT, label_ar="شريط حالة الشبكة",
-    desc_ar="شرائح حيّة (مستقرّة/محميّة/مشفّرة) بنقاط نابضة.",
+    key="network_status_strip", category=CAT_CONTENT, label_ar=N_("شريط حالة الشبكة"),
+    desc_ar=N_("شرائح حيّة (مستقرّة/محميّة/مشفّرة) بنقاط نابضة."),
     surface=SURFACE_PRELOGIN, icon="signal", server_side=True,
     pre_fragment=_f_netstrip))
 
@@ -346,8 +347,8 @@ def _f_recent(cfg, ctx):
 
 
 register(AddonSpec(
-    key="recent_cards", category=CAT_LOGIN, label_ar="البطاقات الأخيرة (استئناف)",
-    desc_ar="حفظ آخر البطاقات على الجهاز وورقة سفلية لاستئناف الدخول بنقرة + مسح + حالة فارغة.",
+    key="recent_cards", category=CAT_LOGIN, label_ar=N_("البطاقات الأخيرة (استئناف)"),
+    desc_ar=N_("حفظ آخر البطاقات على الجهاز وورقة سفلية لاستئناف الدخول بنقرة + مسح + حالة فارغة."),
     surface=SURFACE_PRELOGIN, icon="bookmark", server_side=True,
     pre_fragment=_f_recent))
 
@@ -371,8 +372,8 @@ def _f_device(cfg, ctx):
 
 
 register(AddonSpec(
-    key="device_readout", category=CAT_CONTENT, label_ar="قراءة الجهاز والإشارة",
-    desc_ar="عرض نظام التشغيل المكتشَف وأعمدة جودة الإشارة.",
+    key="device_readout", category=CAT_CONTENT, label_ar=N_("قراءة الجهاز والإشارة"),
+    desc_ar=N_("عرض نظام التشغيل المكتشَف وأعمدة جودة الإشارة."),
     surface=SURFACE_PRELOGIN, icon="mobile-screen", server_side=True,
     pre_fragment=_f_device))
 
@@ -391,11 +392,11 @@ def _f_expiry(cfg, ctx):
 
 
 register(AddonSpec(
-    key="expiry_alert", category=CAT_CONTENT, label_ar="تنبيه انتهاء الاشتراك",
-    desc_ar="شريط جرس بقرب انتهاء الاشتراك (مختلف عن الشريط المتحرّك).",
+    key="expiry_alert", category=CAT_CONTENT, label_ar=N_("تنبيه انتهاء الاشتراك"),
+    desc_ar=N_("شريط جرس بقرب انتهاء الاشتراك (مختلف عن الشريط المتحرّك)."),
     surface=SURFACE_BOTH, icon="bell",
-    fields=(AddonField(key="text", label_ar="نص التنبيه", max_len=140,
-                       placeholder="ينتهي اشتراكك خلال 3 أيام"),),
+    fields=(AddonField(key="text", label_ar=N_("نص التنبيه"), max_len=140,
+                       placeholder=N_("ينتهي اشتراكك خلال 3 أيام")),),
     pre_fragment=_f_expiry, post_widget=_f_expiry))
 
 
@@ -421,10 +422,10 @@ def _f_support(cfg, ctx):
 
 
 register(AddonSpec(
-    key="support_card", category=CAT_CONTENT, label_ar="بطاقة دعم 24/7",
-    desc_ar="بطاقة دعم باتصال مباشر (tel:) وزرّ نسخ الرقم (toast).",
+    key="support_card", category=CAT_CONTENT, label_ar=N_("بطاقة دعم 24/7"),
+    desc_ar=N_("بطاقة دعم باتصال مباشر (tel:) وزرّ نسخ الرقم (toast)."),
     surface=SURFACE_BOTH, icon="headset",
-    fields=(AddonField(key="phone", label_ar="رقم الدعم", max_len=24,
+    fields=(AddonField(key="phone", label_ar=N_("رقم الدعم"), max_len=24,
                        placeholder="0590000000"),),
     pre_fragment=_f_support, post_widget=_f_support))
 
@@ -436,7 +437,7 @@ def _f_buycard(cfg, ctx):
     url = safe_url(cfg.get("url", ""))
     if not url:
         return ""
-    label = _esc(cfg.get("label") or "اشترِ بطاقة")
+    label = _esc(cfg.get("label") or N_("اشترِ بطاقة"))
     a = _esc(ctx.get("accent", "#2563EB"))
     return (f'<div style="text-align:center;margin:8px 0"><a href="{_esc(url)}" '
             f'target="_blank" rel="noopener" style="display:inline-block;background:'
@@ -445,12 +446,12 @@ def _f_buycard(cfg, ctx):
 
 
 register(AddonSpec(
-    key="buy_card_cta", category=CAT_MONETIZATION, label_ar="زر شراء بطاقة",
-    desc_ar="زرّ شراء/شحن عبر محفظة أو مزوّد دفع خارجي (رابط قابل للضبط؛ نطاقه يُفتح تلقائيًّا).",
+    key="buy_card_cta", category=CAT_MONETIZATION, label_ar=N_("زر شراء بطاقة"),
+    desc_ar=N_("زرّ شراء/شحن عبر محفظة أو مزوّد دفع خارجي (رابط قابل للضبط؛ نطاقه يُفتح تلقائيًّا)."),
     surface=SURFACE_BOTH, icon="wallet",
     fields=(
-        AddonField(key="label", label_ar="نص الزر", default="اشترِ بطاقة", max_len=40),
-        AddonField(key="url", label_ar="رابط الدفع/المحفظة", kind="url"),
+        AddonField(key="label", label_ar=N_("نص الزر"), default=N_("اشترِ بطاقة"), max_len=40),
+        AddonField(key="url", label_ar=N_("رابط الدفع/المحفظة"), kind="url"),
     ),
     pre_fragment=_f_buycard, post_widget=_f_buycard))
 
@@ -480,8 +481,8 @@ def _f_throughput(cfg, ctx):
 
 
 register(AddonSpec(
-    key="throughput_bars", category=CAT_ENGAGEMENT, label_ar="أشرطة سرعة حيّة",
-    desc_ar="أشرطة تنزيل/رفع متحرّكة بنِسَب على شاشة ما بعد الدخول.",
+    key="throughput_bars", category=CAT_ENGAGEMENT, label_ar=N_("أشرطة سرعة حيّة"),
+    desc_ar=N_("أشرطة تنزيل/رفع متحرّكة بنِسَب على شاشة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN, icon="gauge-high",
     post_widget=_f_throughput))
 
@@ -502,8 +503,8 @@ def _f_refresh(cfg, ctx):
 # ملاحظة: $(link-logout) يظهر فقط في ودجت ما بعد الدخول المستضافة على
 # اللوحة، حيث لا يُفعَّل حارس placeholders؛ ومع ذلك نُبقيه ضمن المسموح.
 register(AddonSpec(
-    key="refresh_session", category=CAT_ENGAGEMENT, label_ar="تحديث الجلسة + خروج",
-    desc_ar="زرّ تحديث يدوي للجلسة بجانب زرّ الخروج على شاشة المتصل.",
+    key="refresh_session", category=CAT_ENGAGEMENT, label_ar=N_("تحديث الجلسة + خروج"),
+    desc_ar=N_("زرّ تحديث يدوي للجلسة بجانب زرّ الخروج على شاشة المتصل."),
     surface=SURFACE_POSTLOGIN, icon="rotate",
     post_widget=_f_refresh))
 
@@ -526,8 +527,8 @@ def _f_onlinechip(cfg, ctx):
 
 
 register(AddonSpec(
-    key="online_chip", category=CAT_CONTENT, label_ar="شريحة متصل/غير متصل",
-    desc_ar="شريحة حالة اتصال حيّة في الهيدر بنقطة لونية.",
+    key="online_chip", category=CAT_CONTENT, label_ar=N_("شريحة متصل/غير متصل"),
+    desc_ar=N_("شريحة حالة اتصال حيّة في الهيدر بنقطة لونية."),
     surface=SURFACE_PRELOGIN, icon="wifi", server_side=True,
     pre_fragment=_f_onlinechip))
 
@@ -544,10 +545,10 @@ def _f_manualredir(cfg, ctx):
 
 
 register(AddonSpec(
-    key="manual_redirect", category=CAT_ENGAGEMENT, label_ar="رابط تحويل احتياطي",
-    desc_ar="رابط تحويل يدوي احتياطي على شاشة النجاح/التحويل (نطاقه يُفتح تلقائيًّا).",
+    key="manual_redirect", category=CAT_ENGAGEMENT, label_ar=N_("رابط تحويل احتياطي"),
+    desc_ar=N_("رابط تحويل يدوي احتياطي على شاشة النجاح/التحويل (نطاقه يُفتح تلقائيًّا)."),
     surface=SURFACE_POSTLOGIN, icon="link",
-    fields=(AddonField(key="url", label_ar="رابط التحويل", kind="url"),),
+    fields=(AddonField(key="url", label_ar=N_("رابط التحويل"), kind="url"),),
     post_widget=_f_manualredir))
 
 
@@ -558,7 +559,7 @@ def _f_ribbon(cfg, ctx):
     title = _esc(cfg.get("title") or "")
     if not title:
         return ""
-    ribbon = _esc(cfg.get("ribbon") or "الأكثر طلبًا")
+    ribbon = _esc(cfg.get("ribbon") or N_("الأكثر طلبًا"))
     art = safe_url(cfg.get("art_url", ""))
     a = _esc(ctx.get("accent", "#2563EB"))
     art_html = (f'<img src="{_esc(art)}" alt="" style="max-height:60px;'
@@ -573,14 +574,14 @@ def _f_ribbon(cfg, ctx):
 
 
 register(AddonSpec(
-    key="package_ribbons", category=CAT_MONETIZATION, label_ar="شارة أفضل باقة",
-    desc_ar="بطاقة باقة مميَّزة بشريط «الأكثر طلبًا/أفضل قيمة» مع خانة صورة اختيارية.",
+    key="package_ribbons", category=CAT_MONETIZATION, label_ar=N_("شارة أفضل باقة"),
+    desc_ar=N_("بطاقة باقة مميَّزة بشريط «الأكثر طلبًا/أفضل قيمة» مع خانة صورة اختيارية."),
     surface=SURFACE_PRELOGIN, icon="ribbon",
     fields=(
-        AddonField(key="title", label_ar="عنوان الباقة", max_len=60,
-                   placeholder="باقة 50 جيجا"),
-        AddonField(key="ribbon", label_ar="نص الشريط", default="الأكثر طلبًا", max_len=30),
-        AddonField(key="art_url", label_ar="صورة/فنّ (اختياري)", kind="url"),
+        AddonField(key="title", label_ar=N_("عنوان الباقة"), max_len=60,
+                   placeholder=N_("باقة 50 جيجا")),
+        AddonField(key="ribbon", label_ar=N_("نص الشريط"), default=N_("الأكثر طلبًا"), max_len=30),
+        AddonField(key="art_url", label_ar=N_("صورة/فنّ (اختياري)"), kind="url"),
     ),
     pre_fragment=_f_ribbon))
 
@@ -612,8 +613,8 @@ def _f_logoutconfirm(cfg, ctx):
 
 
 register(AddonSpec(
-    key="logout_confirm", category=CAT_ENGAGEMENT, label_ar="تأكيد الخروج",
-    desc_ar="ورقة سفلية لتأكيد إنهاء الجلسة (بلا تنبيه أصلي).",
+    key="logout_confirm", category=CAT_ENGAGEMENT, label_ar=N_("تأكيد الخروج"),
+    desc_ar=N_("ورقة سفلية لتأكيد إنهاء الجلسة (بلا تنبيه أصلي)."),
     surface=SURFACE_POSTLOGIN, icon="right-from-bracket",
     post_widget=_f_logoutconfirm))
 
@@ -632,8 +633,8 @@ def _f_ornament(cfg, ctx):
 
 
 register(AddonSpec(
-    key="ornamental_divider", category=CAT_THEME, label_ar="زخرفة فاصلة فاخرة",
-    desc_ar="طبقة زخرفة/فاصل أنيق للمظهر الفاخر.",
+    key="ornamental_divider", category=CAT_THEME, label_ar=N_("زخرفة فاصلة فاخرة"),
+    desc_ar=N_("طبقة زخرفة/فاصل أنيق للمظهر الفاخر."),
     surface=SURFACE_PRELOGIN, icon="gem", server_side=True,
     pre_fragment=_f_ornament))
 
@@ -658,10 +659,10 @@ def _f_counttile(cfg, ctx):
 
 
 register(AddonSpec(
-    key="countdown_tile", category=CAT_ENGAGEMENT, label_ar="بلاطة الوقت المتبقّي",
-    desc_ar="عدّاد تنازلي للوقت المتبقّي على لوحة المتصل.",
+    key="countdown_tile", category=CAT_ENGAGEMENT, label_ar=N_("بلاطة الوقت المتبقّي"),
+    desc_ar=N_("عدّاد تنازلي للوقت المتبقّي على لوحة المتصل."),
     surface=SURFACE_POSTLOGIN, icon="hourglass-half",
-    fields=(AddonField(key="minutes", label_ar="الدقائق", kind="number",
+    fields=(AddonField(key="minutes", label_ar=N_("الدقائق"), kind="number",
                        default="60", min_num=1, max_num=10080),),
     post_widget=_f_counttile))
 
@@ -670,16 +671,16 @@ register(AddonSpec(
 # 24) لوحة إحصاءات المتصل (MAC/IP/مدة/رصيد/سرعة)
 # ════════════════════════════════════════════════════════════════
 def _f_macdash(cfg, ctx):
-    cells = [("المدة", "hr-d-dur", "—"), ("الرصيد", "hr-d-bal", "—"),
-             ("تنزيل", "hr-d-dn", "—"), ("رفع", "hr-d-up", "—"),
+    cells = [(N_("المدة"), "hr-d-dur", "—"), (N_("الرصيد"), "hr-d-bal", "—"),
+             (N_("تنزيل"), "hr-d-dn", "—"), (N_("رفع"), "hr-d-up", "—"),
              ("MAC", "hr-d-mac", "—"), ("IP", "hr-d-ip", "—")]
     grid = "".join(
         '<div style="background:#f8fafc;border:1px solid #e6eaf2;border-radius:10px;'
         f'padding:10px;text-align:center"><div style="font-size:11px;color:#64748b">'
         f'{lbl}</div><div id="{cid}" dir="ltr" style="font-weight:800;font-size:13px">'
         f'{val}</div></div>' for lbl, cid, val in cells)
-    return ('<h3 style="margin:4px 0">حالة الاتصال</h3>'
-            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    return (N_('<h3 style="margin:4px 0">حالة الاتصال</h3>'
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">')
             + grid + '</div>'
             "<script>(function(){function q(k){try{return new URLSearchParams("
             "location.search).get(k)||'';}catch(e){return'';}}var m={'hr-d-mac':q('mac'),"
@@ -691,8 +692,8 @@ def _f_macdash(cfg, ctx):
 
 
 register(AddonSpec(
-    key="mac_dashboard", category=CAT_ENGAGEMENT, label_ar="لوحة إحصاءات المتصل",
-    desc_ar="شبكة بلاطات (مدة/رصيد/تنزيل/رفع/MAC/IP) على شاشة ما بعد الدخول.",
+    key="mac_dashboard", category=CAT_ENGAGEMENT, label_ar=N_("لوحة إحصاءات المتصل"),
+    desc_ar=N_("شبكة بلاطات (مدة/رصيد/تنزيل/رفع/MAC/IP) على شاشة ما بعد الدخول."),
     surface=SURFACE_POSTLOGIN, icon="table-cells",
     post_widget=_f_macdash))
 
@@ -721,12 +722,12 @@ def _f_venuefooter(cfg, ctx):
 
 
 register(AddonSpec(
-    key="venue_footer", category=CAT_CONTENT, label_ar="تذييل تواصل المكان",
-    desc_ar="تذييل ثابت بعنوان المكان واتصال بنقرة وشعار/جملة تعريفية.",
+    key="venue_footer", category=CAT_CONTENT, label_ar=N_("تذييل تواصل المكان"),
+    desc_ar=N_("تذييل ثابت بعنوان المكان واتصال بنقرة وشعار/جملة تعريفية."),
     surface=SURFACE_BOTH, icon="location-dot",
     fields=(
-        AddonField(key="address", label_ar="العنوان", max_len=120),
-        AddonField(key="phone", label_ar="الهاتف", max_len=24),
-        AddonField(key="tagline", label_ar="جملة تعريفية", max_len=80),
+        AddonField(key="address", label_ar=N_("العنوان"), max_len=120),
+        AddonField(key="phone", label_ar=N_("الهاتف"), max_len=24),
+        AddonField(key="tagline", label_ar=N_("جملة تعريفية"), max_len=80),
     ),
     pre_fragment=_f_venuefooter, post_widget=_f_venuefooter))

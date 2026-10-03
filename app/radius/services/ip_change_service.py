@@ -15,6 +15,7 @@
 لا منطق مايكروتيك هنا (حقن سكربت «تغيير الـIP» بضغطة = مرحلة لاحقة).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import json
 from typing import Any, Optional
@@ -217,7 +218,7 @@ def push_request(requested_speed_mbps: Any) -> dict[str, Any]:
     try:
         mbps = int(requested_speed_mbps)
     except (TypeError, ValueError):
-        return {"ok": False, "status": "invalid", "message": "سرعة غير صالحة."}
+        return {"ok": False, "status": "invalid", "message": _tr("سرعة غير صالحة.")}
     try:
         from .admin_panel_client import AdminPanelClient
         res = AdminPanelClient().post_ip_change_request(requested_speed_mbps=mbps)

@@ -33,9 +33,9 @@
 {# ── حبّة حالة المشغّل: تعريب القيم المعروفة واحتواء أي قيمة مجهولة ── #}
 {% macro op_status(value) -%}
   {%- set v = (value or '')|string|lower -%}
-  {%- if v in ['active', 'enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
-  {%- elif v in ['blocked', 'suspended'] -%}{{ hub.pill("محظور", variant="red") }}
-  {%- elif v in ['inactive', 'disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
+  {%- if v in ['active', 'enabled'] -%}{{ hub.pill(_('مفعَّل'), variant="green") }}
+  {%- elif v in ['blocked', 'suspended'] -%}{{ hub.pill(_('محظور'), variant="red") }}
+  {%- elif v in ['inactive', 'disabled'] -%}{{ hub.pill(_('متوقّف'), variant="grey") }}
   {%- elif v -%}{{ hub.pill(v, variant="amber") }}
   {%- else -%}<span class="hub-text-mute">—</span>
   {%- endif -%}
@@ -52,15 +52,15 @@
 {# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
 <section class="hub-hero-shell" data-testid="business-operators-hero">
 {% call hub.megahero(
-  "المدراء والموزعون",
-  subtitle="محافظ المشغّلين وصلاحياتهم وحدودهم — افتح ملف أي مشغّل لضبط السياسة وشحن المحفظة ومتابعة الأرباح.",
+  _('المدراء والموزعون'),
+  subtitle=_('محافظ المشغّلين وصلاحياتهم وحدودهم — افتح ملف أي مشغّل لضبط السياسة وشحن المحفظة ومتابعة الأرباح.'),
   icon="user-tie",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> '|safe ~ _("المحافظ المالية") ~ '</a>'|safe if can_submit('radius.business_finance_wallets', 'GET') else ''),
   kpis=[
-    {'label': 'المدراء',        'value': managers|length,           'icon': 'users-gear',       'variant': 'blue'},
-    {'label': 'الموزعون',       'value': distributors|length,       'icon': 'people-carry-box', 'variant': 'green'},
-    {'label': 'مفعَّل الآن',     'value': _active,                   'icon': 'circle-check',     'variant': 'brand'},
-    {'label': 'غير مفعَّل',      'value': _all|length - _active,     'icon': 'circle-pause',     'variant': 'amber'},
+    {'label': _('المدراء'),        'value': managers|length,           'icon': 'users-gear',       'variant': 'blue'},
+    {'label': _('الموزعون'),       'value': distributors|length,       'icon': 'people-carry-box', 'variant': 'green'},
+    {'label': _('مفعَّل الآن'),     'value': _active,                   'icon': 'circle-check',     'variant': 'brand'},
+    {'label': _('غير مفعَّل'),      'value': _all|length - _active,     'icon': 'circle-pause',     'variant': 'amber'},
   ]
 ) %}
   {# لا فلاتر خادمية في هذا المسار — الفرز والترقيم والتصدير من الجدولين مباشرة #}
@@ -69,13 +69,13 @@
     {{ _('التطبيق المباشر للسياسات متوقف حاليًا — تُحفظ كأساس قابل للتوسعة لاحقًا.') }}
   </span>
   <span class="hub-hint" tabindex="0"
-        data-hint="المدراء يديرون النظام ضمن صلاحياتهم؛ الموزّعون يبيعون ويشحنون ضمن محافظهم ونطاقهم. من ملف المشغّل تضبط الصلاحيات والحدود وتشحن المحفظة."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('المدراء يديرون النظام ضمن صلاحياتهم؛ الموزّعون يبيعون ويشحنون ضمن محافظهم ونطاقهم. من ملف المشغّل تضبط الصلاحيات والحدود وتشحن المحفظة.') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
 {# ───── جدول المدراء — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("المدراء", icon="users-gear",
-                    meta=(managers|length|string ~ " مدير") if managers else "", flush=True) %}
+{% call hub.section(_('المدراء'), icon="users-gear",
+                    meta=(_('%(string)s مدير', string=managers|length|string)) if managers else "", flush=True) %}
   {% if managers %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('المدراء') }}" style="border:none;border-radius:0">
@@ -108,15 +108,15 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا يوجد مدراء بعد",
-                 sub="أنشئ المدراء من تبويب «المدراء» في شريط القسم أعلاه.",
+    {{ hub.empty(_('لا يوجد مدراء بعد'),
+                 sub=_('أنشئ المدراء من تبويب «المدراء» في شريط القسم أعلاه.'),
                  icon="users-gear") }}
   {% endif %}
 {% endcall %}
 
 {# ───── جدول الموزعين — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("الموزعون", icon="people-carry-box",
-                    meta=(distributors|length|string ~ " موزع") if distributors else "", flush=True) %}
+{% call hub.section(_('الموزعون'), icon="people-carry-box",
+                    meta=(_('%(string)s موزع', string=distributors|length|string)) if distributors else "", flush=True) %}
   {% if distributors %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
        data-uds-export-title="{{ _('الموزعون') }}" style="border:none;border-radius:0">
@@ -147,8 +147,8 @@
     </table>
   </div>
   {% else %}
-    {{ hub.empty("لا يوجد موزعون بعد",
-                 sub="أنشئ الموزعين من تبويب «الموزعون» في شريط القسم أعلاه.",
+    {{ hub.empty(_('لا يوجد موزعون بعد'),
+                 sub=_('أنشئ الموزعين من تبويب «الموزعون» في شريط القسم أعلاه.'),
                  icon="people-carry-box") }}
   {% endif %}
 {% endcall %}

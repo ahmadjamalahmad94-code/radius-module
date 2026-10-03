@@ -4,6 +4,7 @@ These endpoints are public self-service APIs. They intentionally do not depend
 on the admin API token or an admin browser session.
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 import functools
 import hashlib
@@ -217,7 +218,7 @@ def login():
             password=str(body.get("password") or ""),
         )
     except PortalAuthError:
-        return _json_error("invalid_credentials", "بيانات الدخول غير صحيحة.", 401)
+        return _json_error("invalid_credentials", _tr("بيانات الدخول غير صحيحة."), 401)
     token = _issue_token(tenant_id=_tenant_id(), subscriber=subscriber)
     return _json_result(
         {
@@ -263,7 +264,7 @@ def request_detail(request_id: int):
     subscriber = _current_subscriber()
     item = CustomerPortalService(tenant_id=_tenant_id()).get_subscriber_request(int(subscriber["id"]), int(request_id))
     if not item:
-        return _json_error("request_not_found", "الطلب غير موجود.", 404)
+        return _json_error("request_not_found", _tr("الطلب غير موجود."), 404)
     return _json_result({"ok": True, "item": item})
 
 
@@ -277,7 +278,7 @@ def loan_request():
             reason=str(body.get("reason") or ""),
         )
     except (RadiusValidationError, ValueError) as exc:
-        return _json_error("validation_error", str(exc) or "قيمة الطلب غير صحيحة.", 400)
+        return _json_error("validation_error", str(exc) or _tr("قيمة الطلب غير صحيحة."), 400)
     return _json_result({"ok": True, "request": result}, 201)
 
 

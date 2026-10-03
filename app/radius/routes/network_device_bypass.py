@@ -5,6 +5,7 @@
   POST /admin/radius/network/devices/<id>/bypass/remove  — cleanup
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template,
@@ -52,9 +53,9 @@ def register_network_device_bypass_routes(bp: Blueprint) -> None:
 FEATURE_SUSPENDED = True
 
 _SUSPENDED_MSG = (
-    "ميزة «إعفاء الجهاز من الهوت سبوت» معلَّقة. الإعفاء يَمنح الجهاز نتًا "
+    N_("ميزة «إعفاء الجهاز من الهوت سبوت» معلَّقة. الإعفاء يَمنح الجهاز نتًا "
     "بلا تسجيل دخول وبلا محاسبة، ولا يظهر في التقارير — فعُلِّقت بقرار "
-    "المالك. لإعفاء جهازٍ اكتب الربط يدويًّا من الراوتر بعنوانه وحده."
+    "المالك. لإعفاء جهازٍ اكتب الربط يدويًّا من الراوتر بعنوانه وحده.")
 )
 
 
@@ -133,7 +134,7 @@ def network_device_bypass_apply(device_id: int):
     device, nas = _load_pair(device_id)
     if not device["mac_address"] or not device["ip_address"]:
         flash(
-            "هذا الجهاز يحتاج MAC + IP محفوظَين في الـ Registry قبل التطبيق.",
+            _tr("هذا الجهاز يحتاج MAC + IP محفوظَين في الـ Registry قبل التطبيق."),
             "danger",
         )
         return redirect(url_for(
@@ -143,7 +144,7 @@ def network_device_bypass_apply(device_id: int):
     bypass_hotspot = request.form.get("bypass_hotspot", "") in ("1", "on", "true")
     add_to_address_list = request.form.get("add_to_address_list", "") in ("1", "on", "true")
     if not dhcp_server_name:
-        flash("اختر اسم DHCP server على الراوتر.", "danger")
+        flash(_tr("اختر اسم DHCP server على الراوتر."), "danger")
         return redirect(url_for(
             "radius.network_device_bypass_form", device_id=device_id,
         ))
@@ -155,7 +156,7 @@ def network_device_bypass_apply(device_id: int):
         add_to_address_list=add_to_address_list,
     )
     if not result.ok:
-        flash(f"فشل الاتصال بالراوتر: {result.error}", "danger")
+        flash(_tr('فشل الاتصال بالراوتر: %(error)s', error=result.error), "danger")
         return redirect(url_for(
             "radius.network_device_bypass_form", device_id=device_id,
         ))
@@ -173,7 +174,7 @@ def network_device_bypass_apply(device_id: int):
         if key in steps:
             parts.append(f"{label}: {steps[key]}")
     flash(
-        f"تم تنفيذ التجهيز على «{device['name']}» — {' | '.join(parts)}",
+        _tr('تم تنفيذ التجهيز على «%(name)s» — %(v)s', name=device['name'], v=' | '.join(parts)),
         "success",
     )
     return redirect(url_for("radius.network_devices_list"))
@@ -183,12 +184,12 @@ def network_device_bypass_remove(device_id: int):
     device, nas = _load_pair(device_id)
     result = bypass.remove_bypass(nas=nas, device_id=device_id)
     if not result.ok:
-        flash(f"فشل الاتصال بالراوتر: {result.error}", "danger")
+        flash(_tr('فشل الاتصال بالراوتر: %(error)s', error=result.error), "danger")
     else:
         removed = result.data or {}
         total = sum(removed.values()) if isinstance(removed, dict) else 0
         flash(
-            f"حُذف التجهيز عن «{device['name']}» — تم إزالة {total} سطر من الراوتر.",
+            _tr('حُذف التجهيز عن «%(name)s» — تم إزالة %(total)s سطر من الراوتر.', name=device['name'], total=total),
             "success",
         )
     return redirect(url_for("radius.network_devices_list"))

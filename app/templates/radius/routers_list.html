@@ -44,23 +44,23 @@
 
 {% block content %}
 {% call hub.megahero(
-  "إدارة الراوترات",
-  subtitle="راوترات مشتركيك عن بُعد عبر TR-069/GenieACS — الحالة، البيانات، وأوامر آمنة. وحدة تحت التجريب.",
+  _('إدارة الراوترات'),
+  subtitle=_('راوترات مشتركيك عن بُعد عبر TR-069/GenieACS — الحالة، البيانات، وأوامر آمنة. وحدة تحت التجريب.'),
   icon="network-wired",
   actions_html=(
     '<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.routers_setup') ~ '"><i class="fa-solid fa-tower-broadcast"></i> '|safe ~ _("إعداد تلقائيّ") ~ '</a> '|safe
     ~ ('<a class="hub-btn hub-btn--primary" href="'|safe ~ url_for('radius.routers_enroll') ~ '"><i class="fa-solid fa-plus"></i> '|safe ~ _("تسجيل راوتر") ~ '</a>'|safe if can_submit('radius.routers_enroll', 'GET') else '')),
   kpis=[
-    {'label':'الإجمالي','value':counts.total or 0,'icon':'network-wired','variant':'brand'},
-    {'label':'متصل','value':counts.online or 0,'icon':'wifi','variant':'green'},
-    {'label':'غير مربوط','value':counts.unassigned or 0,'icon':'link-slash','variant':'amber'},
-    {'label':'بلا إنترنت','value':counts.no_internet or 0,'icon':'globe','variant':'red'},
-    {'label':'بانتظار التسجيل','value':counts.pending or 0,'icon':'clock','variant':'amber'}
+    {'label':_('الإجمالي'),'value':counts.total or 0,'icon':'network-wired','variant':'brand'},
+    {'label':_('متصل'),'value':counts.online or 0,'icon':'wifi','variant':'green'},
+    {'label':_('غير مربوط'),'value':counts.unassigned or 0,'icon':'link-slash','variant':'amber'},
+    {'label':_('بلا إنترنت'),'value':counts.no_internet or 0,'icon':'globe','variant':'red'},
+    {'label':_('بانتظار التسجيل'),'value':counts.pending or 0,'icon':'clock','variant':'amber'}
   ]
 ) %}
   <input class="hub-input grow" type="text" name="q" value="{{ q }}"
          placeholder="{{ _('بحث: مستخدم/سيريال/موديل/IP/MAC') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {{ hub.btn(_('تطبيق'), icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 2px 14px">
@@ -70,7 +70,7 @@
 </div>
 
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 14px">
-  {% for key, lbl in [('','الكل'),('unassigned','غير مربوط'),('active','مُسجَّل'),('pending','بانتظار التسجيل')] %}
+  {% for key, lbl in [('',_('الكل')),('unassigned',_('غير مربوط')),('active',_('مُسجَّل')),('pending',_('بانتظار التسجيل'))] %}
     {% if can_submit('radius.routers_list', 'GET') %}<a class="rtr-chip {{ 'on' if status==key else '' }}" href="{{ url_for('radius.routers_list', status=key, q=q) }}">{{ _(lbl) }}</a>{% endif %}
   {% endfor %}
 </div>
@@ -108,7 +108,7 @@
     </table>
   </div>
 {% else %}
-  {{ hub.empty("لا راوترات بعد", sub="سجّل أوّل راوتر لمشترك ليظهر هنا بمجرّد اتصاله بـ GenieACS.", icon="network-wired") }}
+  {{ hub.empty(_('لا راوترات بعد'), sub=_('سجّل أوّل راوتر لمشترك ليظهر هنا بمجرّد اتصاله بـ GenieACS.'), icon="network-wired") }}
 {% endif %}
 {% if items %}<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>{% endif %}
 

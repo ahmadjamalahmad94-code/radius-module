@@ -4,7 +4,7 @@
 {% block title %}{{ _("طابور مراجعة الدفعات") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clipboard-check"></i>{% endblock %}
 {% block page_title %}{{ _("طابور مراجعة الدفعات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} إثبات بانتظار المراجعة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('%(length)s إثبات بانتظار المراجعة', length=items|length) }}</span>{% endblock %}
 
 {# نظام الجداول/النوافذ الموحّد — يلزم لرسم .uds-hero و.uds-table بشكل صحيح #}
 {% block head_extra %}
@@ -16,21 +16,21 @@
    إلى hub.pill (مطابِقة لـ st_pill في payment_collection_requests.html). #}
 {# تعريب الغرض — مطابِق لقاموس payment_collection_requests.html لمنع enum خام #}
 {% set PURPOSE_AR = {
-  'card_purchase': 'شراء بطاقة', 'monthly_subscription': 'اشتراك شهري',
-  'subscriber_renewal': 'تجديد مشترك', 'quota_topup': 'إعادة تعبئة الحصة',
-  'time_extension': 'تمديد المدة', 'distributor_payment': 'دفع الموزع',
-  'loan_settlement': 'تسوية قرض'
+  'card_purchase': _('شراء بطاقة'), 'monthly_subscription': _('اشتراك شهري'),
+  'subscriber_renewal': _('تجديد مشترك'), 'quota_topup': _('إعادة تعبئة الحصة'),
+  'time_extension': _('تمديد المدة'), 'distributor_payment': _('دفع الموزع'),
+  'loan_settlement': _('تسوية قرض')
 } %}
 
 {% macro st_pill(s) -%}
-  {%- if s == 'paid' -%}{{ hub.pill("مدفوعة", variant="green") }}
-  {%- elif s == 'under_review' -%}{{ hub.pill("تحت المراجعة", variant="amber") }}
-  {%- elif s == 'proof_submitted' -%}{{ hub.pill("إثبات مُرسل", variant="amber") }}
-  {%- elif s == 'rejected' -%}{{ hub.pill("مرفوضة", variant="red") }}
-  {%- elif s == 'failed' -%}{{ hub.pill("فشلت", variant="red") }}
-  {%- elif s == 'expired' -%}{{ hub.pill("منتهية", variant="grey") }}
-  {%- elif s == 'cancelled' -%}{{ hub.pill("ملغاة", variant="grey") }}
-  {%- else -%}{{ hub.pill("معلقة", variant="brand", dot=False) }}{%- endif -%}
+  {%- if s == 'paid' -%}{{ hub.pill(_('مدفوعة'), variant="green") }}
+  {%- elif s == 'under_review' -%}{{ hub.pill(_('تحت المراجعة'), variant="amber") }}
+  {%- elif s == 'proof_submitted' -%}{{ hub.pill(_('إثبات مُرسل'), variant="amber") }}
+  {%- elif s == 'rejected' -%}{{ hub.pill(_('مرفوضة'), variant="red") }}
+  {%- elif s == 'failed' -%}{{ hub.pill(_('فشلت'), variant="red") }}
+  {%- elif s == 'expired' -%}{{ hub.pill(_('منتهية'), variant="grey") }}
+  {%- elif s == 'cancelled' -%}{{ hub.pill(_('ملغاة'), variant="grey") }}
+  {%- else -%}{{ hub.pill(_('معلقة'), variant="brand", dot=False) }}{%- endif -%}
 {%- endmacro %}
 
 {% block content %}
@@ -38,15 +38,15 @@
    استُبدل المسار القديم (hub.hero + hub-kpi-grid منفصل) بـ megahero لدمجهما. ───── #}
 <section class="hub-hero-shell">
 {{ hub.megahero(
-  "طابور مراجعة الدفعات",
-  subtitle="مراجعة يدوية لإثباتات الدفع — اعتماد الإثبات يعلّم الطلب كمدفوع ويسجل حركة يدوية.",
+  _('طابور مراجعة الدفعات'),
+  subtitle=_('مراجعة يدوية لإثباتات الدفع — اعتماد الإثبات يعلّم الطلب كمدفوع ويسجل حركة يدوية.'),
   icon="clipboard-check",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> '|safe ~ _("كل الطلبات") ~ '</a>
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> '|safe ~ _("المطابقة") ~ '</a>
   '|safe,
   kpis=[
-    {'label': 'بانتظار المراجعة', 'value': items|length, 'icon': 'clipboard-check', 'variant': 'amber'},
+    {'label': _('بانتظار المراجعة'), 'value': items|length, 'icon': 'clipboard-check', 'variant': 'amber'},
   ]
 ) }}
 </section>{# /hub-hero-shell #}
@@ -59,7 +59,7 @@
 </div>
 
 {% if items %}
-{% call hub.section("الإثباتات بانتظار المراجعة", icon="table-list", meta=items|length|string + " إثبات", flush=True) %}
+{% call hub.section(_('الإثباتات بانتظار المراجعة'), icon="table-list", meta=items|length|string + _(' إثبات'), flush=True) %}
   {# جدول بيانات موحّد: uds-table-wrap + data-uds-table يفعّل الفرز والترقيم وأزرار التصدير #}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table style="border:none;border-radius:0">
     <table class="hub-table">
@@ -96,8 +96,8 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد إثباتات بانتظار المراجعة",
-  sub="عند إرسال المشتركين لإثباتات الدفع ستظهر هنا للمراجعة اليدوية.",
+  _('لا توجد إثباتات بانتظار المراجعة'),
+  sub=_('عند إرسال المشتركين لإثباتات الدفع ستظهر هنا للمراجعة اليدوية.'),
   icon="clipboard-check"
 ) }}
 {% endif %}

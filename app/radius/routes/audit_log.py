@@ -10,6 +10,7 @@ directly without further masking — the "***" lands at the
 boundary, not in the view layer.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 import json
 
@@ -24,37 +25,37 @@ from ..services.mt_permissions import (
 )
 
 _SEVERITY_LABELS = {
-    "info": "معلومة",
-    "warning": "تحذير",
-    "critical": "حرجة",
+    "info": N_("معلومة"),
+    "warning": N_("تحذير"),
+    "critical": N_("حرجة"),
 }
 
 _RESULT_LABELS = {
-    "success": "نجحت",
-    "failed": "فشلت",
-    "partial": "جزئية",
-    "cancelled": "ملغاة",
+    "success": N_("نجحت"),
+    "failed": N_("فشلت"),
+    "partial": N_("جزئية"),
+    "cancelled": N_("ملغاة"),
     # نتائجُ يكتبها نشاطُ المدير وخدماتٌ أخرى — كانت تظهر خامّةً («visit») في حبّة النتيجة
-    "visit": "زيارة", "blocked": "محجوبة", "sent": "أُرسلت", "started": "بدأت",
-    "reconciled": "طوبقت", "recovered": "استُعيدت", "pending": "قيد الانتظار",
+    "visit": N_("زيارة"), "blocked": N_("محجوبة"), "sent": N_("أُرسلت"), "started": N_("بدأت"),
+    "reconciled": N_("طوبقت"), "recovered": N_("استُعيدت"), "pending": N_("قيد الانتظار"),
 }
 
 # High-value exact labels — read better than the auto-composer below.
 _ACTION_LABELS = {
-    "mt.programming.hotspot.apply": "تطبيق إعدادات Hotspot",
-    "mt.programming.ppp.apply": "تطبيق إعدادات PPPoE",
-    "mt.programming.interface.apply": "تعديل واجهة الراوتر",
-    "mt.backup.create": "إنشاء نسخة احتياطية",
-    "mt.deploy": "نشر إعدادات على الراوتر",
-    "mt.apply": "تطبيق إعداد على الراوتر",
-    "mt.toggle": "تبديل حالة الراوتر",
-    "change_plan": "تغيير عرض المشترك",
-    "subscriber.cash_balance_add": "إضافة رصيد نقدي",
-    "subscriber.debt_settled_from_payment": "تسوية دين من دفعة",
-    "subscriber.payment": "تسجيل دفعة نقدية",
-    "subscriber.loan": "منح سلفة",
-    "subscriber.quota_reset": "استعادة الكوتة اليومية",
-    "subscriber.extend_time": "إضافة وقت للمشترك",
+    "mt.programming.hotspot.apply": N_("تطبيق إعدادات Hotspot"),
+    "mt.programming.ppp.apply": N_("تطبيق إعدادات PPPoE"),
+    "mt.programming.interface.apply": N_("تعديل واجهة الراوتر"),
+    "mt.backup.create": N_("إنشاء نسخة احتياطية"),
+    "mt.deploy": N_("نشر إعدادات على الراوتر"),
+    "mt.apply": N_("تطبيق إعداد على الراوتر"),
+    "mt.toggle": N_("تبديل حالة الراوتر"),
+    "change_plan": N_("تغيير عرض المشترك"),
+    "subscriber.cash_balance_add": N_("إضافة رصيد نقدي"),
+    "subscriber.debt_settled_from_payment": N_("تسوية دين من دفعة"),
+    "subscriber.payment": N_("تسجيل دفعة نقدية"),
+    "subscriber.loan": N_("منح سلفة"),
+    "subscriber.quota_reset": N_("استعادة الكوتة اليومية"),
+    "subscriber.extend_time": N_("إضافة وقت للمشترك"),
 }
 
 # Auto-composer vocabulary — turns an unmapped action code like
@@ -62,33 +63,33 @@ _ACTION_LABELS = {
 # leaking the raw English tail. Verb comes from the last segment's tokens,
 # noun from the nearest known token (last segment wins over the prefix).
 _VERB_LABELS = {
-    "create": "إنشاء", "add": "إضافة", "new": "إنشاء", "update": "تعديل",
-    "edit": "تعديل", "set": "ضبط", "delete": "حذف", "remove": "حذف",
-    "disable": "تعطيل", "enable": "تفعيل", "apply": "تطبيق", "deploy": "نشر",
-    "toggle": "تبديل", "settle": "تسوية", "settled": "تسوية", "void": "إلغاء",
-    "reset": "تصفير", "extend": "تمديد", "renew": "تجديد", "change": "تغيير",
-    "login": "تسجيل دخول", "logout": "تسجيل خروج", "send": "إرسال",
-    "import": "استيراد", "export": "تصدير", "freeze": "تجميد", "unfreeze": "فكّ التجميد",
-    "writeoff": "مسامحة", "refund": "استرجاع", "archive": "أرشفة",
-    "restore": "استعادة", "assign": "إسناد", "grant": "منح", "revoke": "سحب",
-    "rename": "إعادة تسمية", "move": "نقل", "sync": "مزامنة", "run": "تشغيل",
+    "create": N_("إنشاء"), "add": N_("إضافة"), "new": N_("إنشاء"), "update": N_("تعديل"),
+    "edit": N_("تعديل"), "set": N_("ضبط"), "delete": N_("حذف"), "remove": N_("حذف"),
+    "disable": N_("تعطيل"), "enable": N_("تفعيل"), "apply": N_("تطبيق"), "deploy": N_("نشر"),
+    "toggle": N_("تبديل"), "settle": N_("تسوية"), "settled": N_("تسوية"), "void": N_("إلغاء"),
+    "reset": N_("تصفير"), "extend": N_("تمديد"), "renew": N_("تجديد"), "change": N_("تغيير"),
+    "login": N_("تسجيل دخول"), "logout": N_("تسجيل خروج"), "send": N_("إرسال"),
+    "import": N_("استيراد"), "export": N_("تصدير"), "freeze": N_("تجميد"), "unfreeze": N_("فكّ التجميد"),
+    "writeoff": N_("مسامحة"), "refund": N_("استرجاع"), "archive": N_("أرشفة"),
+    "restore": N_("استعادة"), "assign": N_("إسناد"), "grant": N_("منح"), "revoke": N_("سحب"),
+    "rename": N_("إعادة تسمية"), "move": N_("نقل"), "sync": N_("مزامنة"), "run": N_("تشغيل"),
 }
 _NOUN_LABELS = {
-    "balance": "رصيد", "debt": "دين", "loan": "سلفة", "payment": "دفعة",
-    "subscriber": "مشترك", "user": "مشترك", "card": "بطاقة", "cards": "بطاقات",
-    "plan": "عرض", "quota": "كوتة", "time": "وقت", "speed": "سرعة",
-    "mt": "راوتر", "router": "راوتر", "nas": "راوتر", "device": "جهاز",
-    "backup": "نسخة احتياطية", "ticket": "تذكرة", "admin": "مدير",
-    "distributor": "موزّع", "role": "دور", "session": "جلسة", "password": "كلمة المرور",
-    "ledger": "قيد مالي", "interface": "واجهة", "hotspot": "Hotspot", "ppp": "PPPoE",
+    "balance": N_("رصيد"), "debt": N_("دين"), "loan": N_("سلفة"), "payment": N_("دفعة"),
+    "subscriber": N_("مشترك"), "user": N_("مشترك"), "card": N_("بطاقة"), "cards": N_("بطاقات"),
+    "plan": N_("عرض"), "quota": N_("كوتة"), "time": N_("وقت"), "speed": N_("سرعة"),
+    "mt": N_("راوتر"), "router": N_("راوتر"), "nas": N_("راوتر"), "device": N_("جهاز"),
+    "backup": N_("نسخة احتياطية"), "ticket": N_("تذكرة"), "admin": N_("مدير"),
+    "distributor": N_("موزّع"), "role": N_("دور"), "session": N_("جلسة"), "password": N_("كلمة المرور"),
+    "ledger": N_("قيد مالي"), "interface": N_("واجهة"), "hotspot": "Hotspot", "ppp": "PPPoE",
 }
 
 # Target type → Arabic, so the row reads «مشترك (user1034)» not «user#5».
 _TARGET_TYPE_LABELS = {
-    "user": "مشترك", "subscriber": "مشترك", "card": "بطاقة", "plan": "عرض",
-    "loan": "سلفة", "payment": "دفعة", "router": "راوتر", "nas": "راوتر",
-    "device": "جهاز", "admin": "مدير", "distributor": "موزّع", "role": "دور",
-    "ticket": "تذكرة", "backup": "نسخة احتياطية", "ledger": "قيد مالي",
+    "user": N_("مشترك"), "subscriber": N_("مشترك"), "card": N_("بطاقة"), "plan": N_("عرض"),
+    "loan": N_("سلفة"), "payment": N_("دفعة"), "router": N_("راوتر"), "nas": N_("راوتر"),
+    "device": N_("جهاز"), "admin": N_("مدير"), "distributor": N_("موزّع"), "role": N_("دور"),
+    "ticket": N_("تذكرة"), "backup": N_("نسخة احتياطية"), "ledger": N_("قيد مالي"),
 }
 
 
@@ -177,7 +178,7 @@ def _decorate_row(row: dict, *,
     if router_name:
         router_label = router_name
     elif rid_int is not None:
-        router_label = f"المايكروتيك #{rid_int}"
+        router_label = _tr('المايكروتيك #%(rid_int)s', rid_int=rid_int)
     else:
         router_label = ""
     return {
@@ -189,7 +190,7 @@ def _decorate_row(row: dict, *,
         "severity_label": _SEVERITY_LABELS.get(severity, severity),
         "severity_tone": _tone_for_severity(severity),
         "result_label": _RESULT_LABELS.get(
-            result_status, result_status or "غير محددة"),
+            result_status, result_status or N_("غير محددة")),
         "result_tone": _tone_for_result(result_status),
         "target_label": _target_label(
             row.get("target_type"), row.get("target_id"),

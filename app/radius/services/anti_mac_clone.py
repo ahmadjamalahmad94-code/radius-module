@@ -17,6 +17,7 @@ Option-60 (class id) + Hostname + User-Agent (إن وُجد) + النموذجي 
 لا تكسر مسار الـauth أبدًا: كل استثناء يُلتقط ويُسقط الفحص (= سماح).
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 import hashlib
 import logging
@@ -431,8 +432,8 @@ class Verdict:
     coa_kick: list[tuple[str, str]] = field(default_factory=list)
 
 
-MSG_CLONE = "تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض"
-MSG_STEPUP = "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد"
+MSG_CLONE = N_("تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض")
+MSG_STEPUP = N_("هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد")
 
 
 def _confidence_min(tenant_id: int) -> str:
@@ -750,23 +751,23 @@ def apply_decision(tenant_id: int, *, username: str,
 
 
 def _ar_confidence(c: str) -> str:
-    return {"low": "منخفضة", "medium": "متوسطة", "high": "عالية"}.get(c or "", c or "")
+    return {"low": N_("منخفضة"), "medium": N_("متوسطة"), "high": N_("عالية")}.get(c or "", c or "")
 
 
 # تسميات عربية لمفاتيح إشارات البصمة — للعرض البشري فقط (نصّ التنبيه/الحدث).
 # المفاتيح الخام تبقى كما هي في signals وسجلّ الأحداث (لا تُترجَم عند التخزين).
 _SIGNAL_LABELS = {
-    "os_family": "نوع النظام",
-    "device_brand": "ماركة الجهاز",
-    "device_model": "الموديل",
-    "dhcp_class_id": "بصمة DHCP",
-    "hostname": "اسم الجهاز",
-    "ua_hash": "بصمة المتصفح",
-    "vendor_oui": "مُصنّع MAC",
-    "nas_ip": "IP الراوتر",
-    "called_station": "نقطة الوصول",
-    "nas_port": "منفذ الراوتر",
-    "nas_port_type": "نوع المنفذ",
+    "os_family": N_("نوع النظام"),
+    "device_brand": N_("ماركة الجهاز"),
+    "device_model": N_("الموديل"),
+    "dhcp_class_id": N_("بصمة DHCP"),
+    "hostname": N_("اسم الجهاز"),
+    "ua_hash": N_("بصمة المتصفح"),
+    "vendor_oui": N_("مُصنّع MAC"),
+    "nas_ip": N_("IP الراوتر"),
+    "called_station": N_("نقطة الوصول"),
+    "nas_port": N_("منفذ الراوتر"),
+    "nas_port_type": N_("نوع المنفذ"),
 }
 
 

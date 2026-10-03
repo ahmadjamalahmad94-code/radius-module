@@ -9,6 +9,7 @@ This module is wire-aware (calls mac.*); the repo + UI layers
 stay pure.
 """
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Any
 
@@ -57,7 +58,7 @@ def refresh_one(
         # 'disabled' rather than 'never seen'.
         router_snapshots_repo.save_failure(
             tenant_id=tenant_id, router_id=rid,
-            error="الراوتر معطّل — لم نحاول الاتصال.",
+            error=N_("الراوتر معطّل — لم نحاول الاتصال."),
             source="cached",
         )
         return {"router_id": rid, "ok": False,

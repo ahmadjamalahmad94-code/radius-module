@@ -1,5 +1,6 @@
 """Card print template API foundation."""
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from flask import Blueprint, Response, g, render_template, request
 
@@ -154,7 +155,7 @@ def _get_template_or_404(template_id: int):
     from ...radius.db.repos import operations_repo
     row = operations_repo.get_print_template(_tid(), template_id)
     if not row:
-        return None, fail("not_found", "قالب الطباعة غير موجود.", status=404)
+        return None, fail("not_found", _tr("قالب الطباعة غير موجود."), status=404)
     return row, None
 
 
@@ -163,7 +164,7 @@ def print_templates_list():
         limit = int(request.args.get("limit") or 200)
         offset = int(request.args.get("offset") or 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     limit = min(max(limit, 1), 1000)
     offset = max(offset, 0)
     items = _svc().list_print_templates(tenant_id=_tid(), limit=limit, offset=offset)
@@ -193,12 +194,12 @@ def print_templates_background_image(template_id: int):
     layout = row.get("layout_json") if isinstance(row.get("layout_json"), dict) else {}
     url = str(layout.get("background_image_data_url") or "")
     if not url.startswith("data:image/") or ";base64," not in url:
-        return fail("not_found", "لا توجد صورة خلفيّة لهذا القالب.", status=404)
+        return fail("not_found", _tr("لا توجد صورة خلفيّة لهذا القالب."), status=404)
     head, encoded = url.split(";base64,", 1)
     try:
         raw = base64.b64decode(encoded)
     except (binascii.Error, ValueError):
-        return fail("not_found", "تعذّر قراءة صورة الخلفيّة المخزّنة.", status=404)
+        return fail("not_found", _tr("تعذّر قراءة صورة الخلفيّة المخزّنة."), status=404)
     etag = hashlib.sha1(raw).hexdigest()
     if request.headers.get("If-None-Match", "").strip('"') == etag:
         return Response(status=304)
@@ -320,7 +321,7 @@ def print_jobs_list():
         limit = min(int(request.args.get("limit") or 50), 200)
         offset = max(int(request.args.get("offset") or 0), 0)
     except ValueError:
-        return fail("validation_error", "قيم limit و offset يجب أن تكون أرقامًا صحيحة.", status=422)
+        return fail("validation_error", _tr("قيم limit و offset يجب أن تكون أرقامًا صحيحة."), status=422)
     items = _svc().list_print_jobs(tenant_id=_tid(), limit=limit, offset=offset)
     return ok({"items": items, "count": len(items)})
 
@@ -390,16 +391,16 @@ def print_templates_preview_fragment(template_id: int):
         batch_id = int(batch_id_raw) if batch_id_raw else None
     except ValueError:
         batch_id = None
-        error = "معرّف الحزمة غير صحيح."
+        error = _tr("معرّف الحزمة غير صحيح.")
 
     if template is None:
-        error = error or "القالب غير موجود."
+        error = error or _tr("القالب غير موجود.")
     elif batch_id is not None:
         try:
             cards_service = get_cards_service()
             batch_obj = cards_service._store.get_batch(batch_id)
             if batch_obj is None:
-                error = "الحزمة غير موجودة."
+                error = _tr("الحزمة غير موجودة.")
             else:
                 batch = {
                     "id": getattr(batch_obj, "id", batch_id),
@@ -411,7 +412,7 @@ def print_templates_preview_fragment(template_id: int):
         except RadiusError as exc:
             error = exc.message
         except Exception as exc:  # pragma: no cover - defensive
-            error = str(exc) or "تعذّر جلب بطاقات الحزمة."
+            error = str(exc) or _tr("تعذّر جلب بطاقات الحزمة.")
 
     overrides = {
         key: (request.args.get(key) or "").strip()
@@ -462,7 +463,7 @@ def _export_request_payload() -> tuple[dict, int | None, dict, dict]:
     try:
         batch_id_int = int(batch_id) if batch_id not in (None, "") else None
     except (TypeError, ValueError) as exc:
-        raise RadiusValidationError("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.") from exc
+        raise RadiusValidationError(_tr("معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا.")) from exc
 
     print_settings = {}
     if isinstance(body.get("print_settings"), dict):
@@ -549,7 +550,7 @@ def print_jobs_get(job_id: int):
 
 
 def _print_job_not_found(job_ref: str = ""):
-    return fail("not_found", "مهمة الطباعة غير موجودة.", status=404)
+    return fail("not_found", _tr("مهمة الطباعة غير موجودة."), status=404)
 
 
 def _duplicate_name(e: RadiusError):
@@ -611,11 +612,11 @@ def _optimize_data_url(data_url: str, name: str) -> dict:
     mime_part, encoded = data_url.split(";base64,", 1)
     mime = mime_part.removeprefix("data:").lower()
     if mime not in _BACKGROUND_MIMES:
-        raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+        raise RadiusValidationError(_tr("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP."))
     try:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as exc:
-        raise RadiusValidationError("تعذّر قراءة صورة الخلفية.") from exc
+        raise RadiusValidationError(_tr("تعذّر قراءة صورة الخلفية.")) from exc
     if not raw:
         return {}
     return _optimize_background_image(raw, name or "card-background", mime)
@@ -637,7 +638,7 @@ def _optimize_body_backgrounds(body: dict) -> None:
         mime = url.split(";", 1)[0].removeprefix("data:").lower()
         if mime not in _BACKGROUND_MIMES:
             # (fix2 F10.4) same answer as /background and quick-save.
-            raise RadiusValidationError("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+            raise RadiusValidationError(_tr("نوع الصورة غير مدعوم. استخدم PNG أو JPG أو WEBP."))
         try:
             optimized = _optimize_data_url(url, str(target.get("background_image_name") or ""))
         except RadiusError:
@@ -658,7 +659,7 @@ def print_templates_background():
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
     if not optimized:
-        return fail("validation_error", "أرسل صورة PNG أو JPG أو WEBP.", status=422)
+        return fail("validation_error", _tr("أرسل صورة PNG أو JPG أو WEBP."), status=422)
     return ok({"background": optimized})
 
 
@@ -709,7 +710,7 @@ def print_templates_preview_pdf():
     except RadiusError as e:
         return fail("internal_error", e.message, status=500)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيم المعاينة غير صالحة.", status=422)
+        return fail("validation_error", _tr("قيم المعاينة غير صالحة."), status=422)
     resp = Response(payload, mimetype="application/pdf")
     resp.headers["Cache-Control"] = "no-store, max-age=0"
     # (fix2 N1/N7) where the renderer actually put the username/password/QR
@@ -728,7 +729,7 @@ def _template_and_batch_ids(body: dict):
         batch_raw = body.get("batch_id")
         batch_id = int(batch_raw) if batch_raw not in (None, "", 0, "0") else None
     except (TypeError, ValueError, OverflowError):
-        return None, fail("validation_error", "معرّف القالب أو الحزمة يجب أن يكون رقمًا.", status=422)
+        return None, fail("validation_error", _tr("معرّف القالب أو الحزمة يجب أن يكون رقمًا."), status=422)
     return (template_id, batch_id), None
 
 
@@ -755,7 +756,7 @@ def print_templates_last_settings_put():
     )
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
-        return fail("validation_error", "أرسل الإعدادات ككائن JSON.", status=422)
+        return fail("validation_error", _tr("أرسل الإعدادات ككائن JSON."), status=422)
     clean = {k: body[k] for k in _PRINT_SETTING_KEYS if k in body}
     if clean:
         from ...radius.services.operations import validate_print_settings
@@ -835,7 +836,7 @@ def print_templates_quick_save():
     try:
         template_id = int(body.get("template_id") or 0) or None
     except (TypeError, ValueError):
-        return fail("validation_error", "معرّف القالب يجب أن يكون رقمًا.", status=422)
+        return fail("validation_error", _tr("معرّف القالب يجب أن يكون رقمًا."), status=422)
     settings = body.get("print_settings") if isinstance(body.get("print_settings"), dict) else {}
     clean = {k: settings[k] for k in _PRINT_SETTING_KEYS if k in settings}
     if clean:
@@ -904,7 +905,7 @@ def print_templates_quick_elements():
     except RadiusError as e:
         return fail("validation_error", e.message, status=422)
     except (TypeError, ValueError):
-        return fail("validation_error", "قيم التصميم غير صالحة.", status=422)
+        return fail("validation_error", _tr("قيم التصميم غير صالحة."), status=422)
     return ok(_elements_payload(template, batch_id))
 
 
@@ -986,7 +987,7 @@ def _elements_payload(template: dict, batch_id) -> dict:
     notes = []
     if any(a.get("element") == "qr" and a.get("action") in ("moved", "resized")
            for a in model.get("adjustments") or []):
-        notes.append("نُقل رمز QR (أو صُغّر) كي لا يغطّي اسم المستخدم أو كلمة المرور.")
+        notes.append(N_("نُقل رمز QR (أو صُغّر) كي لا يغطّي اسم المستخدم أو كلمة المرور."))
     return {
         "card": {"width_mm": round(w_mm, 2), "height_mm": round(h_mm, 2)},
         "elements": elements,

@@ -4,6 +4,7 @@ This module implements automatic archiving only. It does not hard-delete data
 and it never calls RADIUS, MikroTik, CoA, or disconnect paths.
 """
 from __future__ import annotations
+from app.i18n_text import N_, _tr
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -38,7 +39,7 @@ def _utc_now() -> datetime:
 
 def _delta(value: int, unit: str) -> timedelta:
     if value < 0:
-        raise LifecycleValidationError("مدة السياسة لا يمكن أن تكون سالبة.")
+        raise LifecycleValidationError(_tr("مدة السياسة لا يمكن أن تكون سالبة."))
     if unit == "minutes":
         return timedelta(minutes=value)
     if unit == "hours":
@@ -47,7 +48,7 @@ def _delta(value: int, unit: str) -> timedelta:
         return timedelta(days=value)
     if unit == "months":
         return timedelta(days=value * 30)
-    raise LifecycleValidationError("وحدة المدة غير مدعومة.")
+    raise LifecycleValidationError(_tr("وحدة المدة غير مدعومة."))
 
 
 def _iso(dt: datetime) -> str:
@@ -85,9 +86,9 @@ def validate_policy_payload(payload: dict[str, Any], *, partial: bool = False) -
             try:
                 value = int(value)
             except (TypeError, ValueError) as exc:
-                raise LifecycleValidationError("قيمة المدة يجب أن تكون رقمًا صحيحًا.") from exc
+                raise LifecycleValidationError(_tr("قيمة المدة يجب أن تكون رقمًا صحيحًا.")) from exc
             if value < 0:
-                raise LifecycleValidationError("قيمة المدة لا يمكن أن تكون سالبة.")
+                raise LifecycleValidationError(_tr("قيمة المدة لا يمكن أن تكون سالبة."))
         elif key == "enabled":
             value = 1 if _normalise_bool(value) else 0
         elif isinstance(value, str):
@@ -99,15 +100,15 @@ def validate_policy_payload(payload: dict[str, Any], *, partial: bool = False) -
     retention_unit = data.get("retention_unit")
     action = data.get("action")
     if entity and entity not in ALLOWED_ENTITIES:
-        raise LifecycleValidationError("نوع العنصر غير مدعوم.")
+        raise LifecycleValidationError(_tr("نوع العنصر غير مدعوم."))
     if trigger and trigger not in ALLOWED_TRIGGERS:
-        raise LifecycleValidationError("شرط الأرشفة غير مدعوم.")
+        raise LifecycleValidationError(_tr("شرط الأرشفة غير مدعوم."))
     if delay_unit and delay_unit not in ALLOWED_UNITS:
-        raise LifecycleValidationError("وحدة التأخير غير مدعومة.")
+        raise LifecycleValidationError(_tr("وحدة التأخير غير مدعومة."))
     if retention_unit and retention_unit not in ALLOWED_UNITS:
-        raise LifecycleValidationError("وحدة الاحتفاظ غير مدعومة.")
+        raise LifecycleValidationError(_tr("وحدة الاحتفاظ غير مدعومة."))
     if action and action != ACTION_ARCHIVE:
-        raise LifecycleValidationError("النسخة الحالية تدعم الأرشفة فقط.")
+        raise LifecycleValidationError(_tr("النسخة الحالية تدعم الأرشفة فقط."))
     return data
 
 
@@ -223,7 +224,7 @@ def run(tenant_id: int, *, actor: str = "system:lifecycle", limit: int = 500) ->
             continue
         cutoff = _cutoff_for(policy)
         retention = _retention_for(policy)
-        reason = f"أرشفة تلقائية حسب السياسة #{policy.get('id')}"
+        reason = _tr('أرشفة تلقائية حسب السياسة #%(v)s', v=policy.get('id'))
         if policy.get("entity_type") == ENTITY_CARD:
             candidates = lifecycle_repo.due_cards(tenant_id, cutoff, limit=limit)
             entity_type = ENTITY_CARD
@@ -334,13 +335,13 @@ def run(tenant_id: int, *, actor: str = "system:lifecycle", limit: int = 500) ->
 # The raw status («deleted»), actor («adapter», «system», «api-token:23») and
 # the English API archive reason reached the page (re-test R13 L4).
 _RECYCLE_STATUS_AR = {
-    "enabled": "مفعَّل", "active": "مفعَّل", "disabled": "معطَّل",
-    "inactive": "معطَّل", "deleted": "محذوف (في السلّة)", "archived": "مؤرشف",
-    "expired": "منتهي", "suspended": "موقوف", "banned": "محظور",
-    "revoked": "ملغاة", "used": "مستخدمة", "available": "متاحة",
+    "enabled": N_("مفعَّل"), "active": N_("مفعَّل"), "disabled": N_("معطَّل"),
+    "inactive": N_("معطَّل"), "deleted": N_("محذوف (في السلّة)"), "archived": N_("مؤرشف"),
+    "expired": N_("منتهي"), "suspended": N_("موقوف"), "banned": N_("محظور"),
+    "revoked": N_("ملغاة"), "used": N_("مستخدمة"), "available": N_("متاحة"),
 }
 _RECYCLE_REASON_AR = {
-    "Archived from card batch operations API": "أُرشفت عبر واجهة API لعمليات الحزم.",
+    "Archived from card batch operations API": N_("أُرشفت عبر واجهة API لعمليات الحزم."),
 }
 
 
@@ -349,12 +350,12 @@ def recycle_actor_label(actor: Any) -> str:
     if not a:
         return "—"
     if a in ("adapter", "system", "worker", "scheduler"):
-        return "النظام"
+        return N_("النظام")
     if a.startswith("api-token:"):
         tok = a.split(":", 1)[1].strip()
-        return f"واجهة API (رمز #{tok})" if tok and tok != "env" else "واجهة API"
+        return _tr('واجهة API (رمز #%(tok)s)', tok=tok) if tok and tok != "env" else N_("واجهة API")
     if a == "anonymous":
-        return "غير معروف"
+        return N_("غير معروف")
     return a
 
 

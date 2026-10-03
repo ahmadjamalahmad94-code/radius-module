@@ -1,5 +1,6 @@
 """Tickets + replies repo."""
 from __future__ import annotations
+from app.i18n_text import N_
 
 from typing import Optional
 
@@ -97,19 +98,19 @@ SERVICE_REQUEST_TERMINAL = ("closed", "resolved")
 # service-request flow (/service-requests). Created from the generic form it
 # was a request without its data — the decision worked, but status edits 409'd.
 TICKET_CREATE_CATEGORIES: dict[str, str] = {
-    "general": "عام",
-    "billing": "الفواتير والدفع",
-    "connection": "الاتصال والخدمة",
-    "hardware": "الأجهزة والمعدّات",
-    "complaint": "شكوى",
+    "general": N_("عام"),
+    "billing": N_("الفواتير والدفع"),
+    "connection": N_("الاتصال والخدمة"),
+    "hardware": N_("الأجهزة والمعدّات"),
+    "complaint": N_("شكوى"),
 }
 
 
 def generic_create_category_error(category: str) -> Optional[str]:
     """رسالة رفضٍ عربيّة إن كان التصنيف ممنوعًا في الإنشاء العامّ، وإلّا None."""
     if str(category or "").strip().lower() == SERVICE_REQUEST_CATEGORY:
-        return ("«طلب خدمة» لا يُنشأ من نموذج التذكرة العامّ — استخدم «طلب خدمة» "
-                "من صفحة طلبات الخدمات حتى تُحفظ بياناته.")
+        return (N_("«طلب خدمة» لا يُنشأ من نموذج التذكرة العامّ — استخدم «طلب خدمة» "
+                "من صفحة طلبات الخدمات حتى تُحفظ بياناته."))
     return None
 
 
@@ -118,11 +119,11 @@ def service_request_status_error(ticket: Ticket, new_status: str) -> Optional[st
     if (ticket.category or "") != SERVICE_REQUEST_CATEGORY or new_status == ticket.status:
         return None
     if ticket.status in SERVICE_REQUEST_TERMINAL:
-        return "تم البتّ في هذا الطلب وإغلاقه مسبقًا — لا يمكن تغيير حالته."
+        return N_("تم البتّ في هذا الطلب وإغلاقه مسبقًا — لا يمكن تغيير حالته.")
     if new_status in SERVICE_REQUEST_TERMINAL:
         return None
-    return ("حالة طلب الخدمة تتغيّر عبر «قرار الإدارة» فقط "
-            "(موافقة / رفض / فتح تجريبي / طلب دفع).")
+    return (N_("حالة طلب الخدمة تتغيّر عبر «قرار الإدارة» فقط "
+            "(موافقة / رفض / فتح تجريبي / طلب دفع)."))
 
 
 def change_status(tenant_id: int, ticket: Ticket, new_status: str) -> Optional[str]:
@@ -143,7 +144,7 @@ def change_status(tenant_id: int, ticket: Ticket, new_status: str) -> Optional[s
                                           expected_status=version[0],
                                           expected_version=version[1],
                                           new_status=new_status)):
-        return "تغيّرت حالة الطلب للتوّ — حدّث الصفحة وراجع حالته."
+        return N_("تغيّرت حالة الطلب للتوّ — حدّث الصفحة وراجع حالته.")
     return None
 
 

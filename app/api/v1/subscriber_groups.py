@@ -10,6 +10,7 @@ users services the web route uses. No web behavior changes. Auth = the v1
 ``require_api_token`` (the API auth model; the web equivalent is users.view).
 """
 from __future__ import annotations
+from app.i18n_text import _tr
 
 from flask import Blueprint, g, request
 
@@ -76,7 +77,7 @@ def get_group(gid: int):
     svc = get_subscriber_groups_service()
     group = svc.get(tenant_id=_tid(), gid=gid)
     if not group:
-        return fail("not_found", "المجموعة غير موجودة.", status=404)
+        return fail("not_found", _tr("المجموعة غير موجودة."), status=404)
     return ok({"group": group, "members": svc.members(tenant_id=_tid(), gid=gid, limit=200)})
 
 
@@ -85,7 +86,7 @@ def create_group():
     body = request.get_json(silent=True) or {}
     name = str(body.get("name") or "").strip()
     if not name:
-        return fail("validation_error", "اسم المجموعة مطلوب.", status=422)
+        return fail("validation_error", _tr("اسم المجموعة مطلوب."), status=422)
     try:
         group = get_subscriber_groups_service().create(
             actor=_actor(), tenant_id=_tid(), **_payload(body))
@@ -99,7 +100,7 @@ def patch_group(gid: int):
     المتعلّق بقواعد السرعة في sg_update)."""
     svc = get_subscriber_groups_service()
     if not svc.get(tenant_id=_tid(), gid=gid):
-        return fail("not_found", "المجموعة غير موجودة.", status=404)
+        return fail("not_found", _tr("المجموعة غير موجودة."), status=404)
     body = request.get_json(silent=True) or {}
     try:
         updated = svc.update(actor=_actor(), tenant_id=_tid(), gid=gid, **_payload(body))
@@ -119,7 +120,7 @@ def disconnect_online(gid: int):
     لأعضاء المجموعة (يطابق sg_disconnect_online)."""
     group = subscriber_groups_repo.get(_tid(), gid)
     if not group:
-        return fail("not_found", "المجموعة غير موجودة.", status=404)
+        return fail("not_found", _tr("المجموعة غير موجودة."), status=404)
     member_names = set(subscriber_groups_repo.list_member_usernames(_tid(), gid))
     if not member_names:
         return ok({"group_id": gid, "disconnected": 0, "failed": 0, "members": 0})
@@ -136,7 +137,7 @@ def disconnect_online(gid: int):
             except RadiusError:
                 failed += 1
     except RadiusError as exc:
-        return fail("upstream_error", exc.message or "تعذّر قراءة الجلسات المتصلة.", status=502)
+        return fail("upstream_error", exc.message or _tr("تعذّر قراءة الجلسات المتصلة."), status=502)
     return ok({"group_id": gid, "disconnected": disconnected, "failed": failed,
                "members": len(member_names)})
 
@@ -146,7 +147,7 @@ def quota_reset_daily(gid: int):
     لأعضاء المجموعة (يطابق sg_quota_reset_daily)."""
     group = subscriber_groups_repo.get(_tid(), gid)
     if not group:
-        return fail("not_found", "المجموعة غير موجودة.", status=404)
+        return fail("not_found", _tr("المجموعة غير موجودة."), status=404)
     usernames = subscriber_groups_repo.list_member_usernames(_tid(), gid)
     if not usernames:
         return ok({"group_id": gid, "reset": 0, "failed": 0})

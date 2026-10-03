@@ -144,8 +144,8 @@
 {% block content %}
 
 {{ hub.hero(
-  "إنشاء حزمة بطاقات",
-  subtitle="الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.",
+  _('إنشاء حزمة بطاقات'),
+  subtitle=_('الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.'),
   icon="wand-magic-sparkles",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
@@ -165,14 +165,14 @@
   {%- if q <= 0 -%}{{ _('بلا كوتا') }}{%- elif q % 1024 == 0 -%}{{ q // 1024 }} {{ _('جيجا') }}{%- else -%}{{ q }} {{ _('ميجا') }}{%- endif -%}
 {%- endmacro -%}
 {% set mgr_help = hub.helppanel(
-  "كيف تُولّد البطاقات",
-  intro="اختر عرضًا جاهزًا حدّده المالك — خطّته وسرعته وصلاحيته وسعره كلها مقفلة. أنت تختار الكمية وموزّعك فقط، وتُخصم تكلفة الجملة من محفظتك عند التوليد.",
+  _('كيف تُولّد البطاقات'),
+  intro=_('اختر عرضًا جاهزًا حدّده المالك — خطّته وسرعته وصلاحيته وسعره كلها مقفلة. أنت تختار الكمية وموزّعك فقط، وتُخصم تكلفة الجملة من محفظتك عند التوليد.'),
   icon="compass",
   items=[
-    {'icon': 'gift',          'text': 'العرض يحدّد الخطّة والسرعة والصلاحية والسعر.'},
-    {'icon': 'hashtag',       'text': 'أنت تختار عدد البطاقات فقط.'},
-    {'icon': 'people-arrows', 'text': 'اختر موزّعك للمحاسبة وتقارير «أيّ حزمة لأيّ موزّع».'},
-    {'icon': 'wallet',        'text': 'تُخصم تكلفة الجملة من محفظتك ضمن حدّ دَيْنك.'},
+    {'icon': 'gift',          'text': _('العرض يحدّد الخطّة والسرعة والصلاحية والسعر.')},
+    {'icon': 'hashtag',       'text': _('أنت تختار عدد البطاقات فقط.')},
+    {'icon': 'people-arrows', 'text': _('اختر موزّعك للمحاسبة وتقارير «أيّ حزمة لأيّ موزّع».')},
+    {'icon': 'wallet',        'text': _('تُخصم تكلفة الجملة من محفظتك ضمن حدّ دَيْنك.')},
   ]
 ) %}
 <div class="cg-form">
@@ -260,7 +260,7 @@
   </section>
 </form>
 {% else %}
-  {{ hub.empty("لا عروض متاحة لك بعد", sub="اطلب من المالك مشاركة عرضٍ معك لتولّد منه البطاقات.", icon="gift") }}
+  {{ hub.empty(_('لا عروض متاحة لك بعد'), sub=_('اطلب من المالك مشاركة عرضٍ معك لتولّد منه البطاقات.'), icon="gift") }}
 {% endif %}
 {% endcall %}{# /.worklayout #}
 </div>{# /.cg-form #}
@@ -323,15 +323,15 @@
 {% else %}
 
 {% set help_aside = hub.helppanel(
-  "أقسام النموذج",
-  intro="ابدأ ببيانات الحزمة والعرض. افتح الأقسام المتقدمة فقط عند الحاجة لتخصيص الوقت والسرعة وسلوك الكرت.",
+  _('أقسام النموذج'),
+  intro=_('ابدأ ببيانات الحزمة والعرض. افتح الأقسام المتقدمة فقط عند الحاجة لتخصيص الوقت والسرعة وسلوك الكرت.'),
   icon="compass",
   items=[
-    {'icon': 'box',         'text': 'بيانات الحزمة'},
-    {'icon': 'dice',        'text': 'توليد البطاقات'},
-    {'icon': 'clock',       'text': 'الصلاحية والوقت'},
-    {'icon': 'gauge-high',  'text': 'السرعة المجدولة'},
-    {'icon': 'sliders',     'text': 'سلوك الكوتا وخيارات إضافية'},
+    {'icon': 'box',         'text': _('بيانات الحزمة')},
+    {'icon': 'dice',        'text': _('توليد البطاقات')},
+    {'icon': 'clock',       'text': _('الصلاحية والوقت')},
+    {'icon': 'gauge-high',  'text': _('السرعة المجدولة')},
+    {'icon': 'sliders',     'text': _('سلوك الكوتا وخيارات إضافية')},
   ]
 ) %}
 
@@ -364,8 +364,8 @@
         <div class="cg-field full"><label>{{ _('نوع الحزمة') }} <span class="req">*</span></label>
           {% set bt = form.get('batch_type') or 'printed' %}
           {{ hub.cardselect("batch_type", [
-              {'value': 'printed',    'title': 'مطبوعة',   'sub': 'حزمة للطباعة ونقاط البيع', 'icon': 'print'},
-              {'value': 'electronic', 'title': 'إلكترونية', 'sub': 'حزمة للبيع الإلكتروني',   'icon': 'wallet'},
+              {'value': 'printed',    'title': _('مطبوعة'),   'sub': _('حزمة للطباعة ونقاط البيع'), 'icon': 'print'},
+              {'value': 'electronic', 'title': _('إلكترونية'), 'sub': _('حزمة للبيع الإلكتروني'),   'icon': 'wallet'},
             ], value=bt) }}
         </div>
         <div class="cg-field"><label>{{ _('اسم الحزمة') }}</label>
@@ -473,8 +473,8 @@
         <div class="cg-field full"><label>{{ _('قسم كلمة المرور') }}</label>
           <div class="cg-chk">
             {{ toggle_switch(name="login_without_password", checked=(form.get('login_without_password', lwp_default|default(false)) in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lwp",
-                             on_label="معطَّل: بلا كلمات مرور — الدخول برقم البطاقة وحدَه",
-                             off_label="مفعَّل: تُولَّد كلمةُ مرورٍ لكلّ بطاقة") }}
+                             on_label=_('معطَّل: بلا كلمات مرور — الدخول برقم البطاقة وحدَه'),
+                             off_label=_('مفعَّل: تُولَّد كلمةُ مرورٍ لكلّ بطاقة')) }}
           </div>
           <div class="help">{{ _('عطّله لشبكة تبيع «رقمًا فقط»: لا تُولَّد كلمات مرور إطلاقًا ولا تظهر في الجدول أو الطباعة، والدخول برقم البطاقة وحده. فعّله لتخرج كل بطاقة بكلمة مرور تُطلب عند الدخول.') }}</div></div>
         <div class="cg-field" data-pw-field><label>{{ _('طول كلمة المرور') }}</label>
@@ -573,7 +573,7 @@
           <div class="help">{{ _('تنتهي البطاقة بعد هذا العدد من الأيام من أول دخول. 0 = بلا حد.') }}</div></div>
         <div class="cg-field"><label>{{ _('العدّ من أول اتصال') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label="مفعَّل: المدة تبدأ من أول دخول (نمط B)", off_label="معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)") }}
+            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label=_('مفعَّل: المدة تبدأ من أول دخول (نمط B)'), off_label=_('معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)')) }}
           </div>
           <div class="help">{{ _('يحدّد نمط المدة: عند التفعيل تُحسب المدة كعدّ تنازلي من أول دخول؛ وعند التعطيل تكون رصيد ثوانٍ استخدام يُستهلك فقط أثناء الاتصال.') }}</div></div>
         <div class="cg-field"><label>{{ _('العدّ بالثواني') }}</label>
@@ -625,12 +625,12 @@
           <div class="help">{{ _('يجدّد البطاقة تلقائيًا عند انتهائها بعد أول استخدام.') }}</div></div>
         <div class="cg-field"><label>{{ _('تحويل إلى حالة طالب') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="transfer_to_student_status_on_connect", checked=form.get('transfer_to_student_status_on_connect'), value="1", id="ts", on_label="عند الاتصال", off_label="معطَّل") }}
+            {{ toggle_switch(name="transfer_to_student_status_on_connect", checked=form.get('transfer_to_student_status_on_connect'), value="1", id="ts", on_label=_('عند الاتصال'), off_label=_('معطَّل')) }}
           </div>
           <div class="help">{{ _('يحوّل البطاقة لحالة «طالب» تلقائيًا عند أول اتصال.') }}</div></div>
         <div class="cg-field"><label>{{ _('إغلاق جلسة المستخدم') }}</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="close_user_session_on_disconnect", checked=form.get('close_user_session_on_disconnect'), value="1", id="cus", on_label="عند الفصل", off_label="معطَّل") }}
+            {{ toggle_switch(name="close_user_session_on_disconnect", checked=form.get('close_user_session_on_disconnect'), value="1", id="cus", on_label=_('عند الفصل'), off_label=_('معطَّل')) }}
           </div>
           <div class="help">{{ _('ينهي جلسة المستخدم نهائيًا عند انقطاع الاتصال.') }}</div></div>
         <div class="cg-field"><label>{{ _('ربط MAC عند الاتصال') }}</label>

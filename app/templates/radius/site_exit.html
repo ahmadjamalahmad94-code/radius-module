@@ -168,8 +168,8 @@
          data-mt-site-exit-policy="{{ policy.id if policy else '' }}">
 
   {{ hub.hero(
-    "توجيه مواقع عبر خادم الربط",
-    subtitle="إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط، وليس كل الحركة.",
+    _('توجيه مواقع عبر خادم الربط'),
+    subtitle=_('إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط، وليس كل الحركة.'),
     icon="route",
   ) }}
 
@@ -288,11 +288,11 @@
   <section class="mt-card" data-mt-site-exit-policy-card>
     <header class="mt-card-head">
       <h3><i class="fa-solid fa-pen-to-square"></i>
-        {% if policy %}السياسة الحالية{% else %}سياسة جديدة{% endif %}
+        {% if policy %}{{ _('السياسة الحالية') }}{% else %}{{ _('سياسة جديدة') }}{% endif %}
       </h3>
       {% if policies %}
       <span class="mt-card-meta" data-mt-site-exit-policies-count>
-        {{ policies | length }} سياسة على هذا الراوتر
+        {{ _('%(length)s سياسة على هذا الراوتر', length=policies | length) }}
       </span>
       {% endif %}
     </header>
@@ -300,8 +300,7 @@
       {% if policy %}
       <p>
         <strong>{{ policy.name }}</strong>
-        — <code>{{ policy.slug }}</code> ·
-        وضع الفشل: <code>{{ policy.fail_mode }}</code>
+        — <code>{{ policy.slug }}</code> {{ _('· وضع الفشل:') }} <code>{{ policy.fail_mode }}</code>
       </p>
       <form method="get" style="display:inline">
         <input type="hidden" name="policy_id" value="">
@@ -385,9 +384,7 @@
             action="{{ url_for('radius.site_exit_import',
                                nas_id=nas.id, policy_id=policy.id) }}">
         <p class="vx2-empty" style="font-size:12.5px">
-          {{ _('الصق محتوى ملف بصيغة') }} <code>/ip firewall address-list</code> —
-          سنقوم بالتحقق والتصنيف بدون أي كتابة على الراوتر.
-          أو اختر قائمة جاهزة من الأزرار أعلاه.
+          {{ _('الصق محتوى ملف بصيغة') }} <code>/ip firewall address-list</code> {{ _('— سنقوم بالتحقق والتصنيف بدون أي كتابة على الراوتر. أو اختر قائمة جاهزة من الأزرار أعلاه.') }}
         </p>
         <textarea name="seed_text" rows="8"
                   style="width:100%;font-family:ui-monospace,monospace,'Cairo';font-size:12.5px"
@@ -429,7 +426,7 @@
 
         {% if import_result.invalid %}
         <details style="margin-top:10px">
-          <summary><strong>الأسطر المرفوضة ({{ import_result.invalid | length }}) — اضغط للعرض</strong></summary>
+          <summary><strong>{{ _('الأسطر المرفوضة (%(length)s) — اضغط للعرض', length=import_result.invalid | length) }}</strong></summary>
           <ul class="vx2-import-invalid-list">
             {% for inv in import_result.invalid %}
             <li><code>{{ inv.value }}</code> — {{ inv.reason }}</li>
@@ -462,8 +459,7 @@
                   <span class="vx2-empty">({{ group_name }})</span>
                   <br>
                   <span class="vx2-empty" style="font-size:12px">
-                    العدد: {{ count }} ·
-                    المخاطر:
+                    {{ _('العدد: %(count)s · المخاطر:', count=count) }}
                     <span class="{% if 'منخفض' in meta.risk_ar %}vx2-risk-low
                                  {% elif 'متوسط' in meta.risk_ar %}vx2-risk-mid
                                  {% else %}vx2-risk-high{% endif %}">
@@ -585,8 +581,7 @@
       {% if not preview_plan or not preview_plan.can_apply %}
       <div class="vx2-warning" data-mt-site-exit-apply-disabled>
         <i class="fa-solid fa-lock"></i>
-        ولّد معاينة ناجحة أولًا (بدون أخطاء مُعطِّلة) قبل
-        أن يصبح التطبيق ممكناً.
+        {{ _('ولّد معاينة ناجحة أولًا (بدون أخطاء مُعطِّلة) قبل أن يصبح التطبيق ممكناً.') }}
       </div>
       <button class="mt-action-btn" disabled
               data-mt-site-exit-apply-button
@@ -602,8 +597,7 @@
 
         <p style="margin-top:0;color:#cc1f1f;font-weight:600">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          عملية تنفّذ تعديلاً مباشراً على الراوتر — راجع
-          السكربتات أعلاه ثم وافق على التأكيدات الخمسة:
+          {{ _('عملية تنفّذ تعديلاً مباشراً على الراوتر — راجع السكربتات أعلاه ثم وافق على التأكيدات الخمسة:') }}
         </p>
 
         <div data-mt-site-exit-confirmations
@@ -614,31 +608,27 @@
           <label style="display:flex;gap:8px;align-items:flex-start">
             <input type="checkbox" name="confirm_preview_seen"
                    value="1" required>
-            <span>قرأتُ المعاينة الكاملة وفهمت كل الأوامر
-              المُولَّدة.</span>
+            <span>{{ _('قرأتُ المعاينة الكاملة وفهمت كل الأوامر المُولَّدة.') }}</span>
           </label>
 
           <label style="display:flex;gap:8px;align-items:flex-start">
             <input type="checkbox" name="confirm_backup_status"
                    value="1" required>
-            <span>تحقّقتُ من توفّر نسخة احتياطية حديثة على
-              الراوتر، أو أقبل المخاطرة الموثّقة.</span>
+            <span>{{ _('تحقّقتُ من توفّر نسخة احتياطية حديثة على الراوتر، أو أقبل المخاطرة الموثّقة.') }}</span>
           </label>
 
           <label style="display:flex;gap:8px;align-items:flex-start">
             <input type="checkbox"
                    name="confirm_vps_exit_understood"
                    value="1" required>
-            <span>أفهم أنّ ترافيك الوجهات المختارة سيخرج عبر
-              العنوان العام لخادم الربط، وليس عنوان الراوتر.</span>
+            <span>{{ _('أفهم أنّ ترافيك الوجهات المختارة سيخرج عبر العنوان العام لخادم الربط، وليس عنوان الراوتر.') }}</span>
           </label>
 
           <label style="display:flex;gap:8px;align-items:flex-start">
             <input type="checkbox"
                    name="confirm_fail_mode_understood"
                    value="1" required>
-            <span>أفهم سلوك وضع الفشل المختار
-              (<code>{{ policy.fail_mode }}</code>).</span>
+            <span>{{ _('أفهم سلوك وضع الفشل المختار (') }}<code>{{ policy.fail_mode }}</code>).</span>
           </label>
 
           <label style="display:flex;gap:8px;align-items:flex-start">
@@ -646,8 +636,7 @@
                    name="confirm_selected_sites_only"
                    value="1" required>
             <span>{{ _('تأكّدتُ أنّ هذه السياسة') }} <strong>{{ _('لا') }}</strong>
-              تُوجِّه كل ترافيك الإنترنت — فقط الوجهات
-              الموجودة في address-list المُدارة.</span>
+              {{ _('تُوجِّه كل ترافيك الإنترنت — فقط الوجهات الموجودة في address-list المُدارة.') }}</span>
           </label>
         </div>
 
@@ -657,8 +646,7 @@
             <label style="display:flex;gap:8px;align-items:flex-start">
               <input type="checkbox"
                      name="override_backup_warning" value="1">
-              <span>تجاهل تحذير النسخة الاحتياطية المفقودة/
-                القديمة (يتطلّب صلاحية
+              <span>{{ _('تجاهل تحذير النسخة الاحتياطية المفقودة/ القديمة (يتطلّب صلاحية') }}
                 <code>site_exit.override_backup_warning</code>).</span>
             </label>
             <label class="mt-program-field" style="margin-top:8px">
@@ -699,8 +687,7 @@
         <li>
           <span class="vx2-step-num">1</span>
           <strong>{{ _('تحقّق من عقدة الخروج') }}</strong>
-          — لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق
-          interface مطابق للراوتر.
+          {{ _('— لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق interface مطابق للراوتر.') }}
         </li>
         <li>
           <span class="vx2-step-num">2</span>
@@ -710,15 +697,12 @@
         </li>
         <li>
           <span class="vx2-step-num">3</span>
-          <strong>{{ _('حمّل قائمة جاهزة') }}</strong> (مثل karamspeed)
-          أو الصق قائمتك في textarea الاستيراد، اضغط
+          <strong>{{ _('حمّل قائمة جاهزة') }}</strong> {{ _('(مثل karamspeed) أو الصق قائمتك في textarea الاستيراد، اضغط') }}
           <code>{{ _('تحليل') }}</code>.
         </li>
         <li>
           <span class="vx2-step-num">4</span>
-          <strong>{{ _('اختر المجموعات') }}</strong> — اترك الافتراضي
-          الآمن (speedtest + public-ip-checkers + raw-ips)،
-          ثم اضغط <code>{{ _('حفظ الأهداف المختارة') }}</code>.
+          <strong>{{ _('اختر المجموعات') }}</strong> {{ _('— اترك الافتراضي الآمن (speedtest + public-ip-checkers + raw-ips)، ثم اضغط') }} <code>{{ _('حفظ الأهداف المختارة') }}</code>.
         </li>
         <li>
           <span class="vx2-step-num">5</span>
@@ -739,21 +723,17 @@
         <li>
           <span class="vx2-step-num">8</span>
           <strong>{{ _('اضغط الزر الأحمر') }}</strong>
-          — التطبيق ينفّذ السكربت عبر واجهة ربط الراوتر
-          (لا تحتاج وصولاً آمناً منفصلاً).
+          {{ _('— التطبيق ينفّذ السكربت عبر واجهة ربط الراوتر (لا تحتاج وصولاً آمناً منفصلاً).') }}
         </li>
       </ol>
 
       <div class="vx2-tip">
-        <strong>{{ _('💡 نصيحة:') }}</strong> {{ _('أزرار') }} <em>{{ _('نسخ') }}</em> على
-        السكربتات تنسخ الكل بنقرة. الصق في
+        <strong>{{ _('💡 نصيحة:') }}</strong> {{ _('أزرار') }} <em>{{ _('نسخ') }}</em> {{ _('على السكربتات تنسخ الكل بنقرة. الصق في') }}
         <code>/file/edit</code> {{ _('أو في terminal الراوتر.') }}
       </div>
 
       <div class="vx2-tip" style="background:rgba(204,31,31,0.08);border-color:#cc1f1f">
-        <strong>{{ _('⚠️ هام:') }}</strong> خذ نسخة احتياطية من الراوتر
-        قبل التطبيق. ولو فشل التطبيق، افتح <code>سجل
-        العمليات</code> {{ _('لمعرفة السبب.') }}
+        <strong>{{ _('⚠️ هام:') }}</strong> {{ _('خذ نسخة احتياطية من الراوتر قبل التطبيق. ولو فشل التطبيق، افتح') }} <code>{{ _('سجل العمليات') }}</code> {{ _('لمعرفة السبب.') }}
       </div>
     </aside>
 
