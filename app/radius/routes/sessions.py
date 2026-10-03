@@ -665,7 +665,7 @@ def online_disconnect():
             svc.disconnect(actor=_actor(), username=username, session_id=session_id)
             ok.append(username)
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or N_('تعذّر قطع الجلسة')}")
+            failed.append(username + ": " + (e.message or _tr('تعذّر قطع الجلسة')))
     if ok:
         ok_names = "، ".join(ok)
         flash(
@@ -779,7 +779,7 @@ def online_lock_mac():
                 svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac), base=sub)
             ok.append(f"{username} ({mac})")
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or N_('تعذّر تثبيت MAC')}")
+            failed.append(username + ": " + (e.message or _tr('تعذّر تثبيت MAC')))
     if ok:
         ok_names = "، ".join(ok)
         flash(
@@ -821,7 +821,7 @@ def online_lock_ip():
             svc.update(actor=_actor(), sub=replace(sub, static_ip=ip), base=sub)
             ok.append(f"{username} ({ip})")
         except RadiusError as e:
-            failed.append(f"{username}: {e.message or N_('تعذّر تثبيت IP')}")
+            failed.append(username + ": " + (e.message or _tr('تعذّر تثبيت IP')))
     if ok:
         ok_names = "، ".join(ok)
         flash(

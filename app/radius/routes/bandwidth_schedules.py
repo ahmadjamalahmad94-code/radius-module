@@ -155,7 +155,7 @@ def bandwidth_schedules():
         batches=batches,
         plan_names={plan.id: plan.name for plan in plans},
         subscriber_names={sub.username: (sub.full_name or sub.username) for sub in subscribers},
-        batch_names={batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or N_('بدون اسم')}" for batch in batches},
+        batch_names={batch.id: f"{batch.batch_code} - " + (batch.package_name or batch.service_name or _tr('بدون اسم')) for batch in batches},
         apply_result=None,
     )
 

@@ -163,21 +163,21 @@ def fmt_base_time_ar(seconds) -> tuple[str, bool]:
     h, rem = divmod(rem, 3600)
     m, sec = divmod(rem, 60)
     if d and not (h or m or sec):
-        return f"{d} {_ar_plural(d, N_('يوم'), N_('يومان'), N_('أيام'), N_('يومًا'))}", False
+        return str(d) + " " + _ar_plural(d, _tr('يوم'), _tr('يومان'), _tr('أيام'), _tr('يومًا')), False
     if h and not (d or m or sec):
-        return f"{h} {_ar_plural(h, N_('ساعة'), N_('ساعتان'), N_('ساعات'), N_('ساعة'))}", False
+        return str(h) + " " + _ar_plural(h, _tr('ساعة'), _tr('ساعتان'), _tr('ساعات'), _tr('ساعة')), False
     if m and not (d or h or sec):
-        return f"{m} {_ar_plural(m, N_('دقيقة'), N_('دقيقتان'), N_('دقائق'), N_('دقيقة'))}", False
+        return str(m) + " " + _ar_plural(m, _tr('دقيقة'), _tr('دقيقتان'), _tr('دقائق'), _tr('دقيقة')), False
     # Mixed budget → full Arabic words joined by «و» («1 يوم و3 ساعات و45
     # دقيقة»). The Latin «1d 3h 45m» token reached the card checker as raw
     # English (re-test R13 L4); a digit next to an Arabic WORD never flips.
     parts = []
     if d:
-        parts.append(f"{d} {_ar_plural(d, N_('يوم'), N_('يومان'), N_('أيام'), N_('يومًا'))}")
+        parts.append(str(d) + " " + _ar_plural(d, _tr('يوم'), _tr('يومان'), _tr('أيام'), _tr('يومًا')))
     if h:
-        parts.append(f"{h} {_ar_plural(h, N_('ساعة'), N_('ساعتان'), N_('ساعات'), N_('ساعة'))}")
+        parts.append(str(h) + " " + _ar_plural(h, _tr('ساعة'), _tr('ساعتان'), _tr('ساعات'), _tr('ساعة')))
     if m:
-        parts.append(f"{m} {_ar_plural(m, N_('دقيقة'), N_('دقيقتان'), N_('دقائق'), N_('دقيقة'))}")
+        parts.append(str(m) + " " + _ar_plural(m, _tr('دقيقة'), _tr('دقيقتان'), _tr('دقائق'), _tr('دقيقة')))
     if sec:
-        parts.append(f"{sec} {_ar_plural(sec, N_('ثانية'), N_('ثانيتان'), N_('ثوانٍ'), N_('ثانية'))}")
+        parts.append(str(sec) + " " + _ar_plural(sec, _tr('ثانية'), _tr('ثانيتان'), _tr('ثوانٍ'), _tr('ثانية')))
     return _tr(" و").join(parts), False

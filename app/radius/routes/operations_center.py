@@ -63,7 +63,7 @@ def _schedule_context() -> dict:
             sub.username: (sub.full_name or sub.username) for sub in subscribers
         },
         "batch_names": {
-            batch.id: f"{batch.batch_code} - {batch.package_name or batch.service_name or N_('بدون اسم')}"
+            batch.id: f"{batch.batch_code} - " + (batch.package_name or batch.service_name or _tr('بدون اسم'))
             for batch in batches
         },
         "live_apply_enabled": live_apply_enabled,

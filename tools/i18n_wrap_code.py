@@ -375,6 +375,9 @@ def wrap_python(path: str, logic: set[str], apply: bool, stats: dict) -> int:
             stats["skip:no-node"] = stats.get("skip:no-node", 0) + 1
             continue
         seg = src[f.start:f.end]
+        if "in-fstring" in f.flags:
+            stats["skip:in-fstring"] = stats.get("skip:in-fstring", 0) + 1
+            continue
         if "html" in f.flags and len(f.text) > 400:
             stats["skip:big-html"] = stats.get("skip:big-html", 0) + 1
             continue
@@ -647,6 +650,7 @@ def js_tpl_html(src: str, tok: inv.JsTok, wrap_call) -> str | None:
         text = js_unescape("".join(msg))
         if text is None:
             return None
+        text = re.sub(r"\s+", " ", text)   # عقدة نصّ HTML: المسافات غير مهمّة
         out.append(lead + "${" + wrap_call(text, objs) + "}" + trail)
         changed = True
     if not changed:

@@ -47,6 +47,7 @@ def _matrix(data: str, ecc: str):
 
 def _placeholder_svg(box: int, quiet: int, dark: str, light: str) -> str:
     """لوحة بديلة أنيقة عند غياب مولّد QR — لا انهيار، والزرّ يبقى البديل."""
+    hint = html.escape(_tr("استخدم الزرّ بالأسفل"))
     dim = (25 + quiet * 2) * box
     cx = dim / 2
     return (
@@ -58,7 +59,7 @@ def _placeholder_svg(box: int, quiet: int, dark: str, light: str) -> str:
         f'fill="{dark}">✈</text>'
         f'<text x="{cx}" y="{cx+dim*0.16:.0f}" text-anchor="middle" '
         f'font-family="Cairo,sans-serif" font-size="{dim*0.045:.0f}" fill="{dark}">'
-        f'{html.escape(_tr("استخدم الزرّ بالأسفل"))}</text>'
+        f'{hint}</text>'
         f'</svg>'
     )
 

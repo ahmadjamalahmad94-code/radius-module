@@ -16,8 +16,6 @@ app/radius/services/notifications_engine.py | * | قوالب رسائل SMS/وا
 app/radius/services/comms_bot.py | * | ردود بوت المشتركين (تيليجرام/واتساب) — محتوى لا واجهة.
 app/radius/services/admin_alerts.py | * | قوالب تنبيهات تيليجرام (HTML لتيليجرام) — محتوى رسائل لا واجهة.
 app/radius/services/monitoring_digest.py | * | نصّ تقرير المراقبة الدوريّ المُرسَل لتيليجرام — محتوى رسائل.
-app/radius/services/card_template_gallery.py | * | محتوى بطاقات مطبوعة للمشتركين (قوالب تصميم).
-app/radius/services/card_renderer.py | * | رسم البطاقات/PDF المطبوعة (تشكيل عربيّ للخطوط) — محتوى مطبوع.
 app/radius/services/pdf_theme.py | * | تقارير PDF المطبوعة (تشكيل عربيّ للخطوط) — محتوى مطبوع.
 app/templates/radius/communications_templates.html | ^مرحبًا {name} | قالب رسالة جاهز للمشتركين (يُدرَج في محرّر الرسالة) — محتوى لا واجهة.
 app/templates/radius/communications_templates.html | ^تم تجديد اشتراكك | قالب رسالة جاهز للمشتركين — محتوى لا واجهة.

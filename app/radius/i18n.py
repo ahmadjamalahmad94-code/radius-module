@@ -146,26 +146,19 @@ _JS_MSGIDS: frozenset[str] | None = None
 
 
 def _js_msgids() -> frozenset[str]:
-    """كل msgid ملفوف بـ ``hrT('…')`` في ``app/static/js/*.js`` (يُحسب مرّة)."""
+    """كل msgid ملفوف بـ ``hrT('…')`` في ``app/static/js`` — من
+    ``translations/js_msgids.json`` الذي يولّده ``tools/i18n_master.py sync``."""
     global _JS_MSGIDS
     if _JS_MSGIDS is None:
+        import json
         import os
-        from babel.messages.extract import extract_javascript
-        root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "static", "js")
-        ids: set[str] = set()
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                            "translations", "js_msgids.json")
         try:
-            for fn in sorted(os.listdir(root)):
-                if not fn.endswith(".js"):
-                    continue
-                with open(os.path.join(root, fn), "rb") as fh:
-                    for _ln, _fn, msg, _c in extract_javascript(
-                            fh, {"hrT": None}, [], {"encoding": "utf-8"}):
-                        if isinstance(msg, str) and msg:
-                            ids.add(msg)
+            with open(path, encoding="utf-8") as fh:
+                _JS_MSGIDS = frozenset(x for x in json.load(fh) if isinstance(x, str) and x)
         except Exception:  # noqa: BLE001 — لا ترجمة JS خير من صفحة مكسورة
-            pass
-        _JS_MSGIDS = frozenset(ids)
+            _JS_MSGIDS = frozenset()
     return _JS_MSGIDS
 
 

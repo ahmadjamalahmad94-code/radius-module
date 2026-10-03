@@ -743,7 +743,7 @@ def _subject_label(target_type, target_id, actor) -> str:
         return tid_val
     if tt in ("session", "card", "user", "subscriber") and tid_val:
         # numeric id with a known entity type — label it, don't show a bare id
-        return f"{_TARGET_AR.get(tt, N_('كيان'))} #{tid_val}"
+        return _tr('%(label)s #%(id)s', label=_TARGET_AR.get(tt, N_('كيان')), id=tid_val)
     a = str(actor or "").strip()
     if a and not a.isdigit() and a not in ("system", "ui"):
         return a

@@ -745,7 +745,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
       return head(hrT('Ping إلى {v}', {v: target || "—"}), "/tools/ping") + body(`
         ${tableHtml}
         <div class="mt-action-result-summary">
-          ${hrT('مُرسَل:')} <strong>${sent}</strong> ${hrT('·\r\n          مُستلَم:')} <strong>${recv}</strong> ${hrT('·\r\n          فاقد:')} <strong>${loss}%</strong> ${hrT('·\r\n          متوسط:')} <strong>${safeHtml(avgRtt)}</strong> ${hrT('·\r\n          أدنى:')} <strong>${safeHtml(minRtt)}</strong> ${hrT('·\r\n          أعلى:')} <strong>${safeHtml(maxRtt)}</strong>
+          ${hrT('مُرسَل:')} <strong>${sent}</strong> ${hrT('· مُستلَم:')} <strong>${recv}</strong> ${hrT('· فاقد:')} <strong>${loss}%</strong> ${hrT('· متوسط:')} <strong>${safeHtml(avgRtt)}</strong> ${hrT('· أدنى:')} <strong>${safeHtml(minRtt)}</strong> ${hrT('· أعلى:')} <strong>${safeHtml(maxRtt)}</strong>
         </div>
       `);
     }
@@ -899,7 +899,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
       if (!ok) return head(hrT('فشل إعادة التشغيل'), "/system/reboot") + failBody();
       return head(hrT('تمت إعادة التشغيل'), "/system/reboot") + body(`
         <div class="mt-action-result-summary">
-          ${hrT('الراوتر يُعيد التشغيل الآن. سيُقطع الاتصال لدقيقة تقريباً.\r\n          أعد تحميل الصفحة بعد دقيقة.')}
+          ${hrT('الراوتر يُعيد التشغيل الآن. سيُقطع الاتصال لدقيقة تقريباً. أعد تحميل الصفحة بعد دقيقة.')}
         </div>
       `);
     }
@@ -1333,7 +1333,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     actionButtons["dns-flush"].addEventListener("click", () => {
       openForm("dns-flush", `
         <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
-          ${hrT('سنُفرغ كاش DNS على الراوتر. هذا غير مدمّر —\r\n          الراوتر سيستعلم عن الأسماء من جديد عند الطلب.')}
+          ${hrT('سنُفرغ كاش DNS على الراوتر. هذا غير مدمّر — الراوتر سيستعلم عن الأسماء من جديد عند الطلب.')}
         </p>
         <div class="mt-action-row">
           <button type="submit">${hrT('مسح الآن')}</button>
@@ -1358,7 +1358,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     actionButtons["clock-sync"].addEventListener("click", () => {
       openForm("clock-sync", `
         <p style="margin:0 0 12px;color:#475569;font-size:13px;line-height:1.6">
-          ${hrT('إعادة مزامنة الوقت من خادم NTP. مفيد عند الإقلاع البارد\r\n          أو لو ساعة الراوتر منحرفة.')}
+          ${hrT('إعادة مزامنة الوقت من خادم NTP. مفيد عند الإقلاع البارد أو لو ساعة الراوتر منحرفة.')}
         </p>
         <div class="mt-action-row">
           <button type="submit">${hrT('مزامنة الآن')}</button>
@@ -2046,7 +2046,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
       '<td>', escapeText(r.comment || ""), '</td>',
       '<td><button type="button" class="mt-row-disconnect"',
       ' data-mt-disconnect="hotspot"',
-      hrT(' title="قطع الاتصال">'),
+      ' title="' + hrT('قطع الاتصال') + '">',
       ('<i class="fa-solid fa-link-slash">' + '</i>' + ' ' + hrT('قطع')),
       '</button></td>',
       '</tr>',
@@ -2118,7 +2118,7 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
         '<td>', escapeText(r.uptime || "—"), '</td>',
         '<td><button type="button" class="mt-row-disconnect"',
         ' data-mt-disconnect="ppp"',
-        hrT(' title="قطع الاتصال">'),
+        ' title="' + hrT('قطع الاتصال') + '">',
         ('<i class="fa-solid fa-link-slash">' + '</i>' + ' ' + hrT('قطع')),
         '</button></td>',
         '</tr>',

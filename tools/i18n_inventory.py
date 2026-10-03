@@ -928,8 +928,11 @@ def py_fstring_text(node: ast.JoinedStr) -> str:
 
 def scan_python(path: str, src: str) -> list[Finding]:
     rel = _rel(path)
+    import warnings
     try:
-        tree = ast.parse(src)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")   # تحذيرات هروب في الكود الممسوح ليست شأننا
+            tree = ast.parse(src)
     except SyntaxError:
         return []
     parent: dict = {}
@@ -1018,6 +1021,13 @@ def _classify_py(node, parent, docs, text):
             is_arg = child in p.args or any(child is kw.value for kw in p.keywords)
             if is_arg:
                 if name in PY_TRANS and (child in p.args):
+                    # داخل تعبير f-string: مُستخرِج Babel لا يراه ⇒ لن يدخل الكتالوج
+                    anc = parent.get(p)
+                    while anc is not None:
+                        if isinstance(anc, ast.FormattedValue):
+                            flags.append("in-fstring")
+                            return "leak", "", flags, scope
+                        anc = parent.get(anc)
                     return "wrapped", "", flags, scope
                 if _is_log_call(p):
                     return "ignored", "log", flags, scope
