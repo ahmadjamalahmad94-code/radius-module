@@ -374,7 +374,10 @@ def test_changes_page_shows_rollback_button_for_eligible(
     assert 'data-test="npc-cs-rollback-form"' in html
     assert 'data-test="npc-cs-rollback-btn"' in html
     # Confirmation copy from the brief.
-    assert "سيتم التراجع فقط عن التغييرات التي أنشأها النظام" in html
+    # (النصّ مُغلَّف للترجمة ويُبثّ عبر |tojson فقد يظهر بهروب \uXXXX داخل onsubmit)
+    import json as _json
+    _copy = "سيتم التراجع فقط عن التغييرات التي أنشأها النظام"
+    assert _copy in html or _json.dumps(_copy)[1:-1] in html
 
 
 def test_changes_page_hides_rollback_for_failed_set(

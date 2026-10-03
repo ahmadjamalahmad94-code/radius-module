@@ -304,11 +304,11 @@ msgstr ""
 msgid " أو "
 msgstr ""
 
-#: app/static/js/latin_digits.js:62
+#: app/static/js/latin_digits.js:64
 msgid " أو أقلّ."
 msgstr ""
 
-#: app/static/js/latin_digits.js:61
+#: app/static/js/latin_digits.js:63
 msgid " أو أكثر."
 msgstr ""
 
@@ -10911,11 +10911,11 @@ msgstr ""
 msgid "أدخل رقم هاتف للاختبار."
 msgstr ""
 
-#: app/static/js/latin_digits.js:75 app/templates/_partials/unit_input.html:167
+#: app/static/js/latin_digits.js:77 app/templates/_partials/unit_input.html:167
 msgid "أدخل رقمًا صحيحًا فقط — لا حروف ولا «e»."
 msgstr ""
 
-#: app/static/js/latin_digits.js:59
+#: app/static/js/latin_digits.js:61
 msgid "أدخل رقمًا صحيحًا."
 msgstr ""
 
@@ -10948,7 +10948,7 @@ msgstr ""
 msgid "أدخل عدد الدقائق المراد إضافتها (أكبر من صفر)."
 msgstr ""
 
-#: app/static/js/latin_digits.js:68
+#: app/static/js/latin_digits.js:70
 msgid "أدخل عددًا صحيحًا بلا كسور."
 msgstr ""
 
@@ -11670,8 +11670,7 @@ msgid "أسفل الجدول منتقي عدد الصفوف (10 / 25 / 50 / 100 
 msgstr ""
 
 #: app/templates/radius/cards_of_batch.html:514
-#, python-format
-msgid "أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة %(range)s."
+msgid "أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة"
 msgstr ""
 
 #: app/templates/radius/docs_users_overview.html:708
@@ -13163,13 +13162,9 @@ msgstr ""
 msgid "أنشئ نسخة وقاية محلّية قبل أي استعادة."
 msgstr ""
 
+#: app/templates/radius/cards_of_batch.html:491
 #: app/templates/radius/payments_lab.html:114
 msgid "أنشئت"
-msgstr ""
-
-#: app/templates/radius/cards_of_batch.html:491
-#, python-format
-msgid "أنشئت %(date)s"
 msgstr ""
 
 #: app/templates/radius/accounting_reports.html:64
@@ -35263,7 +35258,7 @@ msgstr ""
 msgid "الصيغة"
 msgstr ""
 
-#: app/static/js/latin_digits.js:166
+#: app/static/js/latin_digits.js:168
 msgid "الصيغة المطلوبة مثل: "
 msgstr ""
 
@@ -37337,7 +37332,7 @@ msgstr ""
 msgid "القيمة وعدد الكوبونات يحدّدان"
 msgstr ""
 
-#: app/static/js/latin_digits.js:61 app/static/js/latin_digits.js:62
+#: app/static/js/latin_digits.js:63 app/static/js/latin_digits.js:64
 msgid "القيمة يجب أن تكون "
 msgstr ""
 
@@ -37349,7 +37344,7 @@ msgstr ""
 msgid "القيمة يجب أن تكون freeze (تجميد) أو hide (إخفاء)."
 msgstr ""
 
-#: app/static/js/latin_digits.js:69
+#: app/static/js/latin_digits.js:71
 msgid "القيمة يجب أن تكون من مضاعفات "
 msgstr ""
 
@@ -53015,7 +53010,7 @@ msgstr ""
 msgid "تعذّر الاتصال بالخادم"
 msgstr ""
 
-#: app/static/js/hr_ajax_errors.js:116
+#: app/static/js/hr_ajax_errors.js:118
 #: app/templates/radius/system_update.html:495
 msgid "تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة."
 msgstr ""
@@ -53830,7 +53825,7 @@ msgstr ""
 msgid "تعذّر تنفيذ العملية على الراوتر."
 msgstr ""
 
-#: app/static/js/hr_ajax_errors.js:55
+#: app/static/js/hr_ajax_errors.js:57
 #: app/templates/radius/recharge_panel.html:760
 msgid "تعذّر تنفيذ العملية."
 msgstr ""
@@ -110844,7 +110839,7 @@ msgstr ""
 msgid "هذا الحساب هو المالك الأصليّ للشبكة — محميّ، لا يُعدَّل مستواه ولا يُحذف."
 msgstr ""
 
-#: app/static/js/latin_digits.js:58 app/static/js/latin_digits.js:165
+#: app/static/js/latin_digits.js:60 app/static/js/latin_digits.js:167
 msgid "هذا الحقل مطلوب."
 msgstr ""
 

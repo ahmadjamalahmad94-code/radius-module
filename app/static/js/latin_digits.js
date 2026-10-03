@@ -29,6 +29,8 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
   /*<hr-num-clean>*/
   // ⚠️ هذه الكتلة تُستخرَج وتُشغَّل حرفيًّا في tests/test_web_arabic_number_input.py
   // (cscript/JScript) — أبقِها ES3 نقيّة (var/function، بلا DOM).
+  // i18n: hrT العامّة في المتصفّح؛ وبديل هويّة ES3 حين تُشغَّل الكتلة وحدها (اختبار cscript).
+  var hrT = (typeof window !== 'undefined' && window.hrT) || function (s, o) { if (o) { for (var k in o) { s = String(s).split('{' + k + '}').join(o[k]); } } return s; };
   var RX = /[٠-٩۰-۹]/;    // فحص (بلا /g — لا lastIndex): عربيّة-هنديّة + فارسيّة
   var RXG = /[٠-٩۰-۹]/g;  // استبدال
   // 🔴 فواصل الأرقام العربيّة (R12 N1): لوحة الجوّال العربيّة تكتب الفاصلة

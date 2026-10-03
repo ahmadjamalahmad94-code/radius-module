@@ -488,7 +488,7 @@
     {{ hub.megahero(
       _('كروت الحزمة %(v)s%(batch_code)s%(v2)s', v=('<span style="white-space:nowrap">⁦'|safe), batch_code=batch.batch_code, v2=('⁩</span>'|safe)),
       subtitle=(plan.name if plan else (batch.package_name or _('بدون عرض')))
-               ~ " · " ~ _('أنشئت %(date)s', date=('<span style="white-space:nowrap">'|safe ~ (batch.created_at|dt_local if batch.created_at else '—') ~ '</span>'|safe))
+               ~ " · " ~ _('أنشئت') ~ " " ~ ('<span style="white-space:nowrap">'|safe) ~ (batch.created_at|dt_local if batch.created_at else '—') ~ ('</span>'|safe)
                ~ " · " ~ (batch.created_by or _('بدون مدير'))
                ~ " · " ~ _('تحميل %(down)s / رفع %(up)s', down=('⁦'|safe ~ summary.download_label ~ '⁩'|safe), up=('⁦'|safe ~ summary.upload_label ~ '⁩'|safe)),
       icon="id-card",
@@ -511,7 +511,7 @@
         {'icon': 'table-columns',       'text': _('افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).')},
         {'icon': 'square-check',         'text': _('حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.')},
         {'icon': 'file-csv',            'text': _('زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.')},
-        {'icon': 'ellipsis',            'text': _('أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة %(range)s.', range=('<span style="white-space:nowrap">(⁦10–100⁩)</span>'|safe))},
+        {'icon': 'ellipsis',            'text': (_('أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة') ~ ' ' ~ ('<span style="white-space:nowrap">(⁦10–100⁩).</span>'|safe))},
       ],
       note=_('مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة.')
     )) %}

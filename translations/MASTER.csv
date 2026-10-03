@@ -9021,8 +9021,8 @@ WireGuard البيانات,,,,,,"missing: en,fr,tr,es",app/radius/templates/radi
 ي,,,,,,"missing: en,fr,tr,es",app/static/js/finance_search.js:33
 ه,,,,,,"missing: en,fr,tr,es",app/static/js/finance_search.js:34
  نتيجة من ,,,,,,"missing: en,fr,tr,es",app/static/js/finance_search.js:108
-تعذّر تنفيذ العملية.,,Failed to perform the operation.,Échec de l'exécution de l'opération.,İşlem gerçekleştirilemedi.,No se pudo realizar la operación.,ok,app/static/js/hr_ajax_errors.js:55
-تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/static/js/hr_ajax_errors.js:116
+تعذّر تنفيذ العملية.,,Failed to perform the operation.,Échec de l'exécution de l'opération.,İşlem gerçekleştirilemedi.,No se pudo realizar la operación.,ok,app/static/js/hr_ajax_errors.js:57
+تعذّر الاتصال بالخادم — تحقّق من الشبكة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/static/js/hr_ajax_errors.js:118
 آذار,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:36
 أيار,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:36
 حزيران,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:36
@@ -9052,15 +9052,15 @@ WireGuard البيانات,,,,,,"missing: en,fr,tr,es",app/radius/templates/radi
 الوقت,,Time,Heure,Zaman,Hora,ok,app/static/js/hub_date.js:248
 تم,,Done,Terminé,Tamamlandı,Hecho,ok,app/static/js/hub_date.js:309
 بحث...,,,,,,"missing: en,fr,tr,es",app/static/js/hub_select.js:77
-هذا الحقل مطلوب.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:58
-أدخل رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:59
- أو أكثر.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:61
-القيمة يجب أن تكون ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:61
- أو أقلّ.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:62
-أدخل عددًا صحيحًا بلا كسور.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:68
-القيمة يجب أن تكون من مضاعفات ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:69
-أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:75
-الصيغة المطلوبة مثل: ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:166
+هذا الحقل مطلوب.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:60
+أدخل رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:61
+ أو أكثر.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:63
+القيمة يجب أن تكون ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:63
+ أو أقلّ.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:64
+أدخل عددًا صحيحًا بلا كسور.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:70
+القيمة يجب أن تكون من مضاعفات ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:71
+أدخل رقمًا صحيحًا فقط — لا حروف ولا «e».,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:77
+الصيغة المطلوبة مثل: ,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:168
 لا يوجد رمز واجهة الربط مُهيَّأ,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:98
 اضبط رمز واجهة الربط في إعدادات البيئة ثم أعد تحميل الصفحة.,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:99
 بُني ,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:187
@@ -11893,7 +11893,7 @@ Excel,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:467
 CSV,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:472
 كروت الحزمة %(v)s%(batch_code)s%(v2)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:489
 بدون عرض,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:490
-أنشئت %(date)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:491
+أنشئت,,Created,Créé,Oluşturuldu,Creado,ok,app/templates/radius/cards_of_batch.html:491
 بدون مدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:492
 تحميل %(down)s / رفع %(up)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:493
 منتهية / موقوفة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:501
@@ -11903,7 +11903,7 @@ CSV,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:472
 افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:511
 حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:512
 زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:513
-أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة %(range)s.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:514
+أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:514
 مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:516
 جدول الكروت,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:518
 بحث في كروت الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch.html:524
@@ -20906,7 +20906,6 @@ HobeRadius · مختبر الدفع الإلكتروني,,HobeRadius · Online P
 الرموز مكشوفة هنا لأن هذا وضع تجريبي فقط — مع المزوّد الحقيقي تُرسل عبر SMS ولا يراها أحد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:93
 %(total)s جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:99
 جلسات الدفع التجريبية,,Test payment sessions,Sessions de paiement de test,Deneme ödeme oturumları,Sesiones de pago de prueba,ok,app/templates/radius/payments_lab.html:99
-أنشئت,,Created,Créé,Oluşturuldu,Creado,ok,app/templates/radius/payments_lab.html:114
 قيد الإنشاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:139
 افتح صفحة الدفع التجريبية وجرّب أول عملية — ستظهر هنا فورًا مع رمز التحقق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:155
 محاكاة إشعار webhook,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:160
