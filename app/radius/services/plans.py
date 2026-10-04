@@ -114,6 +114,14 @@ class PlansService:
                 plan_id=int(saved.id), reason="plan_update")
         except Exception:  # noqa: BLE001 — الإنفاذ لا يكسر الحفظ أبدًا
             pass
+        # وتغيّرُ السرعة يصل الجلسات الحيّة فورًا (CoA) لا عند إعادة الاتّصال.
+        try:
+            from . import bandwidth_apply
+            if bandwidth_apply.plan_speed_changed(existing, saved):
+                bandwidth_apply.push_plan_speed_live(
+                    int(getattr(saved, "tenant_id", 0) or 1), int(saved.id))
+        except Exception:  # noqa: BLE001
+            pass
         return saved
 
     def delete(self, *, actor: str, plan_id: int) -> None:

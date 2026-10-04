@@ -172,6 +172,69 @@ def propagate_plan_split(tenant_id: int, plan_id: int,
     return names
 
 
+_PLAN_SPEED_FIELDS = (
+    "speed_down_kbps", "speed_up_kbps", "bandwidth_id", "speed_unlimited",
+    "burst_enabled", "burst_down_kbps", "burst_up_kbps", "burst_threshold_kbps",
+    "burst_time_sec", "burst_raw",
+)
+
+
+def plan_speed_changed(before, after) -> bool:
+    """هل تغيّر شيءٌ يدخل في سطر سرعة العرض؟ (لا قبل ⇒ لا تغيير يُدفع.)"""
+    if before is None or after is None:
+        return False
+    return any(getattr(before, f, None) != getattr(after, f, None)
+               for f in _PLAN_SPEED_FIELDS)
+
+
+def online_usernames_on_plan(tenant_id: int, plan_id: int) -> list[str]:
+    """الحسابات المتّصلة الآن (جلسة مفتوحة في radacct) على هذا العرض —
+    مشتركون ومرايا البطاقات وبطاقات تحمل plan_id مباشرة."""
+    from ..db.connection import db
+    rows = db().execute(
+        """
+        SELECT DISTINCT r.username AS username
+          FROM radacct r
+         WHERE r.tenant_id = ? AND r.acctstoptime IS NULL
+           AND (r.username IN (SELECT username FROM subscribers
+                                WHERE tenant_id = ? AND plan_id = ?)
+                OR r.username IN (SELECT username FROM cards
+                                   WHERE tenant_id = ? AND plan_id = ?))
+        """,
+        (int(tenant_id), int(tenant_id), int(plan_id),
+         int(tenant_id), int(plan_id)),
+    ).fetchall()
+    return [str(r["username"]) for r in rows if r["username"]]
+
+
+def push_plan_speed_live(tenant_id: int, plan_id: int, *,
+                         background: bool = True) -> list[str]:
+    """🔴 المحترف 2026-10-03: «عدّلت سرعة العرض ما تطبّقت ع الميكروتك».
+    حفظ العرض كان يُعيد فحص الأيام/الكوتا فقط، والجلسات الحيّة تبقى على
+    السرعة القديمة حتى تعيد الاتصال. الآن: CoA بالسرعة الفعّالة لكل متّصل
+    على العرض. ``effective_rate_limit`` يحترم السرعة المؤقّتة/الخاصّة فلا
+    يُسقطها."""
+    try:
+        names = online_usernames_on_plan(tenant_id, plan_id)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("plan-speed: online lookup failed")
+        return []
+    if not names:
+        return []
+
+    def _go():
+        try:
+            apply_users_effective(int(tenant_id), names)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("plan-speed CoA push failed")
+    if background:
+        import threading
+        threading.Thread(target=_go, name="plan-speed-live", daemon=True).start()
+    else:
+        _go()
+    return names
+
+
 def _usernames_on_profile(tenant_id: int, bw_id: int, *, limit: int = 2000) -> list[str]:
     """Active subscribers whose plan references this bandwidth profile."""
     from ..db.connection import db
