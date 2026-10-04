@@ -193,8 +193,9 @@ def _token_admin_active(admin_id: int) -> bool:
 def _resolve_admin_tenant(admin) -> Optional[int]:
     """يحدّد tenant الأدمن لمصادقة Basic **دون أثر جانبي** (لا ينشئ عضوية).
 
-    - super_admin: DEFAULT_TENANT_ID افتراضيًا، أو قيمة `X-Tenant-Id`
-      الرقمية إن مُرِّرت (يسمح للمالك بالعمل على أي tenant مباشرة).
+    - المالك/الشريك (is_owner_like): DEFAULT_TENANT_ID افتراضيًا، أو قيمة
+      `X-Tenant-Id` الرقمية إن مُرِّرت (يعمل على أي tenant مباشرة).
+    - غيره: `X-Tenant-Id` يُقبل فقط إن كان عضوًا في ذلك الـtenant.
     - غيره: أول عضوية tenant له؛ بلا أي عضوية → None (يُرفض الدخول).
 
     لا نُكرّر منطق bootstrap الموجود في تسجيل الدخول (admin_auth._pick_tenant)
@@ -204,18 +205,30 @@ def _resolve_admin_tenant(admin) -> Optional[int]:
         from app.radius.core.tenant import DEFAULT_TENANT_ID
     except Exception:  # noqa: BLE001
         DEFAULT_TENANT_ID = 1
-    if getattr(admin, "is_super_admin", False):
-        hdr = (request.headers.get("X-Tenant-Id") or "").strip()
-        if hdr.isdigit():
-            return int(hdr)
-        return DEFAULT_TENANT_ID
+    hdr = (request.headers.get("X-Tenant-Id") or "").strip()
+    # Security 2026-10-04: ``X-Tenant-Id`` picks ANY tenant only for the owner /
+    # co-owner (``is_owner_like`` — the raw ``is_super_admin`` flag is not
+    # owner-level). Anyone else may only pick a tenant he is a member of.
+    try:
+        from app.radius.auth.owner import is_owner_like
+        owner = bool(is_owner_like(admin))
+    except Exception:  # noqa: BLE001 — never grant on an error
+        owner = False
+    if owner:
+        return int(hdr) if hdr.isdigit() else DEFAULT_TENANT_ID
     try:
         from app.radius.stores.tenants_store import TenantsStore
         tenants = TenantsStore.instance().tenants_for_admin(int(admin.id))
     except Exception:  # noqa: BLE001
         tenants = []
+    if hdr.isdigit() and any(int(t.id) == int(hdr) for t in tenants):
+        return int(hdr)
     if tenants:
         return tenants[0].id
+    if getattr(admin, "is_super_admin", False):
+        # legacy: a flagged admin with no membership row lands on the default
+        # tenant (as before) — but can no longer jump to another via header.
+        return DEFAULT_TENANT_ID
     return None
 
 
@@ -372,7 +385,19 @@ def enforce_api_auth():
     # p01/D06 — central permission guard: every authenticated endpoint maps to
     # its web decision (deny unmapped by default); owner/co-owner and unbound
     # integration credentials bypass. See app/api/permission_guard.py.
-    from .permission_guard import api_permission_denial
+    # The authenticated tenant wins over any header-resolved ``g.tenant``
+    # (tenant_resolver ran first and may have honoured ``X-Tenant``).
+    try:
+        from app.radius.stores.tenants_store import TenantsStore
+        g.tenant = TenantsStore.instance().get(int(tenant_id)) or getattr(g, "tenant", None)
+    except Exception:  # noqa: BLE001
+        pass
+    from .permission_guard import api_permission_denial, token_scope_denial
+    # Token scopes only NARROW (read-only → no writes); the admin's own
+    # permissions are still checked right after.
+    denied = token_scope_denial()
+    if denied is not None:
+        return denied
     denied = api_permission_denial()
     if denied is not None:
         return denied

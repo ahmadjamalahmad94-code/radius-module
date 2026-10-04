@@ -30990,7 +30990,7 @@ msgstr ""
 msgid "الحساب الإداري المرتبط بهذا التوكن غير موجود أو معطّل."
 msgstr ""
 
-#: app/api/auth.py:327
+#: app/api/auth.py:340
 msgid "الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد."
 msgstr ""
 
@@ -43439,7 +43439,7 @@ msgstr ""
 msgid "انتهت صلاحية الصفحة"
 msgstr ""
 
-#: app/api/auth.py:314
+#: app/api/auth.py:327
 msgid "انتهت صلاحية الـ token — سجّل دخول مجددًا"
 msgstr ""
 
@@ -46390,7 +46390,7 @@ msgstr ""
 msgid "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب"
 msgstr ""
 
-#: app/api/access_control.py:179 app/api/permission_guard.py:802
+#: app/api/access_control.py:179 app/api/permission_guard.py:862
 #: app/api/v1/loans.py:52 app/api/v1/subscriber_actions.py:182
 #: app/radius/routes/blueprint.py:1341
 msgid "بلغت الحدّ اليوميّ المسموح لهذا الإجراء."
@@ -48573,7 +48573,7 @@ msgstr ""
 msgid "تجاوز يدوي متقدم"
 msgstr ""
 
-#: app/api/auth.py:362
+#: app/api/auth.py:375
 #, python-format
 msgid "تجاوزت الحد (%(rpm)s req/min)"
 msgstr ""
@@ -59971,7 +59971,7 @@ msgstr ""
 msgid "تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع."
 msgstr ""
 
-#: app/api/permission_guard.py:819
+#: app/api/permission_guard.py:879
 #, python-format
 msgid "تنقصك الصلاحية: %(v)s."
 msgstr ""
@@ -60201,8 +60201,12 @@ msgstr ""
 msgid "توكن بوابة خاص (بعد دخول البطاقة)."
 msgstr ""
 
-#: app/api/auth.py:307 app/radius/services/telegram_connect.py:92
+#: app/api/auth.py:320 app/radius/services/telegram_connect.py:92
 msgid "توكن غير صالح"
+msgstr ""
+
+#: app/api/permission_guard.py:827
+msgid "توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read)."
 msgstr ""
 
 #: app/api/openapi.py:201
@@ -101981,7 +101985,7 @@ msgstr ""
 msgid "مصادقة ACS (اختياريّة، مضبوطة)"
 msgstr ""
 
-#: app/api/auth.py:346
+#: app/api/auth.py:359
 msgid ""
 "مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> أو X-API-Key) أو "
 "اعتماد أدمن (Basic بيوزر/باس الأدمن)."
@@ -110744,7 +110748,7 @@ msgstr ""
 msgid "هذا الإجراء متاح لمدير النظام الأعلى فقط."
 msgstr ""
 
-#: app/api/permission_guard.py:822 app/radius/routes/blueprint.py:1342
+#: app/api/permission_guard.py:882 app/radius/routes/blueprint.py:1342
 msgid "هذا الإجراء مقصور على المالك أو الشريك."
 msgstr ""
 
@@ -110794,6 +110798,10 @@ msgstr ""
 msgid ""
 "هذا التقرير يكمّله تقارير أخرى في القسم نفسه: «حالات الدخول» (محاولات "
 "المصادقة)، «الدخول الفاشل»، و«سجل العناوين الفيزيائية MAC» — لكلٍّ غرضه."
+msgstr ""
+
+#: app/api/permission_guard.py:820
+msgid "هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل."
 msgstr ""
 
 #: app/radius/services/anti_mac_clone.py:436
