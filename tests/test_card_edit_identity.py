@@ -200,14 +200,17 @@ def _started_card(coa=None):
 def test_rename_and_password_take_effect_in_radius_auth(app_ctx, coa):
     c = _started_card()
     old, old_pw = c.username, c.password
+    # lowercase typed ⇒ stored lowercase (the case is kept as typed — owner
+    # 2026-10-05; see the «case preserved» section below for mixed case).
     res = _svc().update_card_identity(actor="admin", card_id=c.id,
-                                      username="ZX-777001", password="Np4455")
+                                      username="zx-777001", password="Np4455")
     assert res["renamed"] and res["password_changed"]
-    assert res["username"] == "zx-777001"          # stored lowercase like generation
+    assert res["username"] == "zx-777001"
 
     # NEW number + NEW password → Access-Accept (the rlm_rest decision)
     assert _auth("zx-777001", "Np4455").ok
-    # what the customer types as printed (upper case) still works
+    # an all-lowercase number still accepts what the customer types in upper
+    # case (the lowercase fallback of policy_engine.authorize)
     assert _auth("ZX-777001", "Np4455").ok
     # OLD number is gone, with either password
     d = _auth(old, old_pw)
@@ -751,3 +754,152 @@ def test_web_batch_row_edit_identity(app_ctx, coa):
     assert r.status_code in (302, 303)
     assert _card(c.id).password == "RowPw88" and _card(c.id).username == c.username
     assert _auth(c.username, "RowPw88").ok
+
+
+# ════════════════════════════════════════════════════════════════════════
+# (9) Owner decision 2026-10-05 — CASE PRESERVED: a number typed with Latin
+#     letters is stored exactly as typed and login needs the same case; the
+#     lowercase fallback still serves all-lowercase (generated/imported)
+#     numbers; uniqueness stays case-insensitive.
+# ════════════════════════════════════════════════════════════════════════
+def _post_internal(app_ctx, user, pw):
+    r = app_ctx.test_client().post("/api/v1/internal/auth", json={
+        "User-Name": user, "User-Password": pw, "NAS-IP-Address": "10.0.0.1",
+        "Calling-Station-Id": MAC})
+    return (r.get_json() or {}).get("control:Auth-Type")
+
+
+def test_case_preserved_auth_table(app_ctx, coa):
+    """stored × typed → accept/reject, through the real authorize path and the
+    HTTP endpoint FreeRADIUS rlm_rest posts to."""
+    _b, cards = _gen(count=3)
+    mixed, lower, digits = cards
+    _svc().update_card_identity(actor="admin", card_id=mixed.id, username="Ahmad1")
+    _svc().update_card_identity(actor="admin", card_id=lower.id, username="sami22")
+    # stored EXACTLY as typed — the card AND its auth mirror
+    assert _card(mixed.id).username == "Ahmad1"
+    assert _count("subscribers", "username", "Ahmad1") == 1
+    assert _count("subscribers", "username", "ahmad1") == 0
+
+    table = [
+        # (typed, password, expected accept)
+        ("Ahmad1", mixed.password, True),
+        ("ahmad1", mixed.password, False),     # different case → rejected
+        ("AHMAD1", mixed.password, False),
+        ("aHMAD1", mixed.password, False),
+        ("sami22", lower.password, True),
+        ("SAMI22", lower.password, True),      # lowercase fallback kept
+        ("Sami22", lower.password, True),
+        (digits.username, digits.password, True),
+    ]
+    for typed, pw, want in table:
+        d = _auth(typed, pw)
+        assert d.ok is want, (typed, d.reason)
+        if not want:
+            assert d.reason == "user_not_found", (typed, d.reason)
+        assert (_post_internal(app_ctx, typed, pw) == "Accept") is want, typed
+    # uniqueness is case-INSENSITIVE: «Ahmad1» exists ⇒ refuse «ahmad1», and
+    # «sami22» exists ⇒ refuse «Sami22» (no look-alike duplicates)
+    from app.radius.core.errors import RadiusConflict
+    for taken in ("ahmad1", "AHMAD1", "Sami22", "SAMI22"):
+        with pytest.raises(RadiusConflict):
+            _svc().update_card_identity(actor="admin", card_id=digits.id, username=taken)
+    assert _card(digits.id).username == digits.username
+    # radius_username whitespace normalisation still applies (rlm_rest trims)
+    assert _post_internal(app_ctx, " Ahmad1 ", mixed.password) == "Accept"
+    assert _post_internal(app_ctx, "ahmad1 ", mixed.password) == "Reject"
+    assert _post_internal(app_ctx, "SAMI22 ", lower.password) == "Accept"
+
+
+def test_case_preserved_subscriber_path_unaffected(app_ctx, coa):
+    """PPPoE/hotspot subscribers: exact match only, never the card fallback."""
+    _b, cards = _gen(count=1)
+    _svc().update_card_identity(actor="admin", card_id=cards[0].id, username="Card7x")
+    from app.radius.core.types import Subscriber
+    from app.radius.db.repos import subscribers_repo
+    subscribers_repo.upsert_subscriber(Subscriber(
+        id=None, username="Rami88", password="pppPw1", tenant_id=TID,
+        plan_id=cards[0].plan_id, user_type="subscriber", status="enabled"))
+    assert _auth("Rami88", "pppPw1").ok
+    assert not _auth("rami88", "pppPw1").ok
+    assert not _auth("RAMI88", "pppPw1").ok
+    assert _auth("Card7x", cards[0].password).ok
+    assert not _auth("card7x", cards[0].password).ok
+
+
+def test_case_only_rename_of_the_same_card(app_ctx, coa):
+    _b, cards = _gen(count=1)
+    c = cards[0]
+    _svc().update_card_identity(actor="admin", card_id=c.id, username="ahmad1")
+    res = _svc().update_card_identity(actor="admin", card_id=c.id, username="Ahmad1")
+    assert res["renamed"] and res["old_username"] == "ahmad1"
+    assert _card(c.id).username == "Ahmad1"
+    assert _auth("Ahmad1", c.password).ok
+    assert not _auth("ahmad1", c.password).ok
+
+
+@pytest.mark.parametrize("first,second", [("Ahmad1", "ahmad1"), ("Ahmad1", "AHMAD1"),
+                                          ("Bob22", "BOB22")])
+def test_uniqueness_stays_case_insensitive(app_ctx, coa, first, second):
+    from app.radius.core.errors import RadiusConflict
+    _b, cards = _gen()
+    a, b = cards
+    _svc().update_card_identity(actor="admin", card_id=a.id, username=first)
+    assert _card(a.id).username == first                 # kept as typed
+    with pytest.raises(RadiusConflict):
+        _svc().update_card_identity(actor="admin", card_id=b.id, username=second)
+    assert _card(b.id).username == b.username
+
+
+def test_case_preserved_unique_against_subscribers(app_ctx, coa):
+    from app.radius.core.errors import RadiusConflict
+    from app.radius.core.types import Subscriber
+    from app.radius.db.repos import subscribers_repo
+    _b, cards = _gen(count=1)
+    subscribers_repo.upsert_subscriber(Subscriber(
+        id=None, username="nour5", password="x12345", tenant_id=TID,
+        plan_id=cards[0].plan_id, user_type="subscriber", status="enabled"))
+    with pytest.raises(RadiusConflict):
+        _svc().update_card_identity(actor="admin", card_id=cards[0].id, username="Nour5")
+    _svc().update_card_identity(actor="admin", card_id=cards[0].id, username="Nour6")
+    assert _card(cards[0].id).username == "Nour6"
+
+
+def test_api_patch_keeps_the_case(app_ctx, coa):
+    _b, cards = _gen()
+    c = cards[0]
+    r = app_ctx.test_client().patch(f"/api/v1/cards/{c.id}", json={"username": "Ahmad1"},
+                                    headers=_bearer(_owner_id()))
+    assert r.status_code == 200, r.get_data(as_text=True)
+    data = r.get_json()["data"]
+    assert data["username"] == "Ahmad1" and data["item"]["username"] == "Ahmad1"
+    assert _auth("Ahmad1", c.password).ok
+    assert not _auth("ahmad1", c.password).ok
+    r = app_ctx.test_client().patch(f"/api/v1/cards/{cards[1].id}",
+                                    json={"username": "AHMAD1"},
+                                    headers=_bearer(_owner_id()))
+    assert r.status_code == 409
+
+
+def test_web_checker_keeps_the_case_and_warns(app_ctx, coa):
+    batch, cards = _gen()
+    c = cards[0]
+    cl = app_ctx.test_client()
+    _web_login(cl, _owner_id(), owner=True)
+    r = cl.post("/admin/radius/cards/checker", data={
+        "op": "edit_identity", "card_id": c.id, "username": c.username,
+        "query": c.username, "new_username": "Ahmad1", "new_password": "",
+        "_csrf_token": "tok"})
+    assert r.status_code in (302, 303)
+    assert _card(c.id).username == "Ahmad1"
+    warn = "انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط"
+    page = cl.get("/admin/radius/cards/checker?query=Ahmad1").get_data(as_text=True)
+    import json as _json
+    # the checker dialog is built in JS: the text arrives through |tojson
+    assert "data-id-case-warn" in page
+    assert warn in page or _json.dumps(warn) in page
+    # a case-only edit is a change in the dialog too (no lowercase compare)
+    assert "nu.toLowerCase() !== curUser.toLowerCase()" not in page
+    page = cl.get(f"/admin/radius/cards/batches/{batch.id}/cards").get_data(as_text=True)
+    assert "data-id-case-warn" in page and warn in page
+    assert "nu.toLowerCase() !== cur.u.toLowerCase()" not in page

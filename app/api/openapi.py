@@ -44,7 +44,7 @@ _OP_DETAILS: dict = {
             "content": {"application/json": {"schema": {
                 "type": "object",
                 "properties": {
-                    "username": {"type": "string", "description": "A-Za-z0-9._@- , 3-64; stored lowercase; Arabic digits accepted"},
+                    "username": {"type": "string", "description": "A-Za-z0-9._@- , 3-64; stored exactly as typed (upper/lower case kept, login must match the case; uniqueness is case-insensitive); Arabic digits accepted"},
                     "password": {"type": "string", "description": "<= 64, no spaces; refused for login-without-password batches"},
                 },
             }}},

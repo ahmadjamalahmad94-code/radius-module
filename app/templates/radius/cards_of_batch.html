@@ -810,8 +810,10 @@
     <strong>{{ _('تعديل بيانات الكرت') }}</strong>
     <small style="opacity:.75">{{ _('عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. يبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة.') }}</small>
     <label>{{ _('رقم الكرت') }}
-      <input class="hub-input" type="text" dir="ltr" maxlength="64" autocomplete="off" data-id-user style="width:100%">
+      <input class="hub-input" type="text" dir="ltr" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" data-id-user style="width:100%">
     </label>
+    {# قرار المالك 2026-10-05: الرقم يُحفظ بحالة أحرفه والدخول يلزمه نفسها. #}
+    <div data-id-case-warn role="alert" hidden style="padding:6px 8px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:.85em">{{ _('انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط') }}</div>
     <label>{{ _('كلمة المرور') }}
       <input class="hub-input" type="text" dir="ltr" maxlength="64" autocomplete="off" data-id-pw style="width:100%"
              {% if batch.login_without_password %}disabled placeholder="{{ _('حزمة «رقم فقط» — بلا كلمة مرور') }}"{% else %}placeholder="{{ _('اتركها فارغة إن لم تُرد تغييرها') }}"{% endif %}>
@@ -833,16 +835,20 @@
   var u = dlg.querySelector('[data-id-user]'), p = dlg.querySelector('[data-id-pw]');
   var uo = dlg.querySelector('[data-id-user-out]'), po = dlg.querySelector('[data-id-pw-out]');
   var save = dlg.querySelector('[data-id-save]');
+  var warn = dlg.querySelector('[data-id-case-warn]');
   var cur = {u:'', p:''};
   function digits(v){ return String(v == null ? '' : v)
     .replace(/[\u0660-\u0669]/g, function(c){ return String(c.charCodeAt(0) - 0x0660); })
     .replace(/[\u06F0-\u06F9]/g, function(c){ return String(c.charCodeAt(0) - 0x06F0); }); }
   function vals(){
     var nu = digits(u.value).trim(), np = p.disabled ? '' : digits(p.value).trim();
-    return {u: (nu && nu.toLowerCase() !== cur.u.toLowerCase()) ? nu : '',
+    return {u: (nu && nu !== cur.u) ? nu : '',  // الحالة محفوظة ⇒ تغييرها تغيير
             p: (np && np !== cur.p) ? np : ''};
   }
-  function refresh(){ var v = vals(); save.disabled = !(v.u || v.p); }
+  function refresh(){
+    var v = vals(); save.disabled = !(v.u || v.p);
+    if (warn) warn.hidden = !/[A-Za-z]/.test(digits(u.value));
+  }
   u.addEventListener('input', refresh); p.addEventListener('input', refresh);
   dlg.querySelector('[data-id-cancel]').addEventListener('click', function(){ dlg.close(); });
   f.addEventListener('submit', function(e){

@@ -1418,8 +1418,8 @@ live_coa: يُرسل CoA-Request فقط فتتغيّر السرعة فورًا �
 scope_type غير صالح: %(scope_type)s,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:88
 mode غير صالح: %(mode)s,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:90
 scope_id مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:92
- مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1240
-لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول %(username_length)s%(affix)s: يبقى %(random_digits)s خانة عشوائيّة فقط (%(space)s تركيبة، المتاح منها الآن %(available)s). أقصى عدد ممكن بهذه الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1242
+ مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1250
+لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول %(username_length)s%(affix)s: يبقى %(random_digits)s خانة عشوائيّة فقط (%(space)s تركيبة، المتاح منها الآن %(available)s). أقصى عدد ممكن بهذه الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1252
 نوع أصل غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:34
 الملف فارغ.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:36
 حجم الملف يتجاوز الحدّ (%(v)sم.ب).,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:39
@@ -4161,11 +4161,11 @@ IP الراوتر,,,,,,"missing: en,fr,tr,es",app/radius/services/anti_mac_clone
 تعذّر فتح بوابة العميل: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:78
 تعذّر فتح بوابة العميل: لوحة التراخيص غير متاحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:83
 تعذّر فتح بوابة العميل: لم يصل رابط الدخول.,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:90
-جدولة تلقائية,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:334
-جدولة تلقائية «%(sched_name)s»,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:334
- — بدء النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:335
- — نهاية النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:335
- (عبر إعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:356
+جدولة تلقائية,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:389
+جدولة تلقائية «%(sched_name)s»,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:389
+ — بدء النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:390
+ — نهاية النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:390
+ (عبر إعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:411
 «%(label)s» يجب أن يكون رقمًا موجبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:30
 «%(label)s» كبير جدًا (الحد الأقصى %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:32
 «%(label)s» يجب أن يكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:40
@@ -4370,81 +4370,81 @@ Pillow بدون دعم Raqm: نص الـPDF العربي سيُرسم بخط ن�
 %(label)s طويلة جدًّا (%(v)s محرفًا) — الحدّ %(USERNAME_AFFIX_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:160
 %(label)s تقبل حروفًا لاتينيّة وأرقامًا والرموز _ - . @ فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:163
 %(label)s يجب أن يكون رقمًا بين 0 و%(PRICE_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:173
-الباقة رقم %(plan_id)s غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:365
-رقم الباقة يجب أن يكون عددًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:367
-طول اسم المستخدم يجب أن يكون بين 1 و%(USERNAME_LENGTH_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:378
-طول كلمة المرور يجب أن يكون بين 1 و%(PASSWORD_LENGTH_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:381
-طول كلمة المرور 0 يعني بطاقات «رقم فقط» — فعّل login_without_password أو اختر طولًا من 1 فأكثر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:384
-مدّة البطاقة لا تكون سالبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:387
-وحدة المدّة غير معروفة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:390
-عدد الأجهزة يجب أن يكون بين 0 و%(DEVICE_COUNT_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:393
-قيمة «عند نفاد الكوتا» غير معروفة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:396
-فحص الإعدادات ومنع التكرار,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:514
-عدد البطاقات يجب أن يكون 1 فأكثر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:516
-عدد البطاقات في الدفعة الواحدة يتجاوز الحدّ المضبوط (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:525
-تجهيز الحزمة وربط العرض,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:534
-بادئة اسم المستخدم,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:651
-لاحقة اسم المستخدم,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:652
-توليد أسماء فريدة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:729
-تجهيز حسابات RADIUS,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:742
-طلبٌ مكرّر — أُعيدت الحزمة المنشأة سابقًا دون تكرار,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:757
-تم إنشاء الحزمة %(batch_code)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:759
-تم تجهيز %(v)s من %(v)s حساب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:762
-اكتمل إنشاء الحزمة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:769
-تم تجهيز %(done)s من %(total)s حساب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:787
-⚠️ %(v)s بلا حساب مصادقة — أعد المزامنة من صفحة الحزمة قبل بيعها,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:796
-أدخل قائمة الكروت المراد استيرادها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:900
-لا توجد بطاقات صالحة للاستيراد — كلّها مكرّرة أو غير صالحة، فلم تُنشأ أيّ حزمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:914
-ملف خارجي,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:930
-ملف مستورد,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:930
-لا توجد كروت للاستيراد.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1145
-لا يوجد plan في النظام — أنشئ باقة واحدة على الأقل قبل استيراد بطاقات الطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1152
-بطاقات طباعة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1160
-لا توجد فئات للتوليد.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1347
-قيمة أو عدد غير صالح: %(d)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1355
-قيمة الفئة خارج النطاق المسموح (حتى %(PRICE_MAX)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1362
-الحد الأقصى 5000 بطاقة في الدفعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1364
-كل الفئات قيمتها صفر — أدخل فئة واحدة على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1370
-لا يوجد plan في النظام — أنشئ باقة واحدة قبل توليد بطاقات الشحن.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1387
-حقول بنية الكروت مقفلة بعد التوليد ولا يمكن تغييرها: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1640
- — الكروت مولّدة/مطبوعة بالفعل.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1642
-اسم الحزمة مطلوب — لا يمكن حفظه فارغًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1648
-اسم الحزمة طويل جدًّا — الحدّ 160 محرفًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1650
-حالة الحزمة غير صالحة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1655
- (الحذف من «نقل للسلّة»).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1657
-%(label)s لا يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1676
-الموزّع المحدّد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1695
-metadata يجب أن يكون كائن JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1706
-تاريخ الانتهاء غير صالح — استعمل صيغة ISO مثل 2026-12-31T23:59:00.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1711
-دفعة الكروت غير موجودة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1762
-الباقة المرتبطة مطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1839
-تعذر تعديل دفعة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1849
-هذه البطاقة ضمن حزمة مؤرشفة (في سلّة المحذوفات) — استعد الحزمة أولًا ثم فعّلها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1920
-تعذر تفعيل البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1923
-تعذر تعطيل البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1959
-تعذر نقل البطاقة إلى سلة المحذوفات,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2000
-MAC مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2033
-عنوان MAC غير صالح: %(m)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2038
-تعذر تثبيت MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2044
-تعذر إلغاء تثبيت MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2108
-تعذر تصفير استخدام البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2114
-البطاقة بلا اسم دخول,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2147
-تعذّر تغيير كلمة مرور البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2181
-البطاقة في سلة المحذوفات — استرجعها أولًا ثم عدّل بياناتها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2240
-رقم الكرت مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2247
-الاسم مستخدم: «%(u)s» رقمُ بطاقةٍ أو اسمُ مشتركٍ آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2255
-لا تُقبل قيم سالبة للسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2361
-يجب تحديد قيمتي التنزيل والرفع معًا (أو تصفير الاثنين لإلغاء التخصيص).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2365
-لم يتم العثور على البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2372
-لا يوجد تعديل لتطبيقه,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2453
-تعذّر تعديل وقت البطاقة — لم تُعثر عليها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2476
-تعذر حذف البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2529
-مُستنفدة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2612
-محذوفة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2613
-هذه البطاقة من حزمة «رقم فقط» (بلا كلمة مرور): تُصادَق برقمها وحده، فتغيير كلمة المرور لا أثر له. لإغلاق تسريبٍ غيّر «رقم الكرت» نفسه.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2653
-البادئة «rtr-» محجوزة لحسابات إدارة الراوترات.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2672
-كلمة المرور أطول من 64 حرفًا,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2677
-كلمة المرور لا تقبل مسافات,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2680
+الباقة رقم %(plan_id)s غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:379
+رقم الباقة يجب أن يكون عددًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:381
+طول اسم المستخدم يجب أن يكون بين 1 و%(USERNAME_LENGTH_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:392
+طول كلمة المرور يجب أن يكون بين 1 و%(PASSWORD_LENGTH_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:395
+طول كلمة المرور 0 يعني بطاقات «رقم فقط» — فعّل login_without_password أو اختر طولًا من 1 فأكثر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:398
+مدّة البطاقة لا تكون سالبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:401
+وحدة المدّة غير معروفة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:404
+عدد الأجهزة يجب أن يكون بين 0 و%(DEVICE_COUNT_MAX)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:407
+قيمة «عند نفاد الكوتا» غير معروفة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:410
+فحص الإعدادات ومنع التكرار,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:528
+عدد البطاقات يجب أن يكون 1 فأكثر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:530
+عدد البطاقات في الدفعة الواحدة يتجاوز الحدّ المضبوط (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:539
+تجهيز الحزمة وربط العرض,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:548
+بادئة اسم المستخدم,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:665
+لاحقة اسم المستخدم,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:666
+توليد أسماء فريدة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:743
+تجهيز حسابات RADIUS,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:756
+طلبٌ مكرّر — أُعيدت الحزمة المنشأة سابقًا دون تكرار,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:771
+تم إنشاء الحزمة %(batch_code)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:773
+تم تجهيز %(v)s من %(v)s حساب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:776
+اكتمل إنشاء الحزمة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:783
+تم تجهيز %(done)s من %(total)s حساب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:801
+⚠️ %(v)s بلا حساب مصادقة — أعد المزامنة من صفحة الحزمة قبل بيعها,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:810
+أدخل قائمة الكروت المراد استيرادها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:914
+لا توجد بطاقات صالحة للاستيراد — كلّها مكرّرة أو غير صالحة، فلم تُنشأ أيّ حزمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:928
+ملف خارجي,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:944
+ملف مستورد,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:944
+لا توجد كروت للاستيراد.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1159
+لا يوجد plan في النظام — أنشئ باقة واحدة على الأقل قبل استيراد بطاقات الطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1166
+بطاقات طباعة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1174
+لا توجد فئات للتوليد.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1361
+قيمة أو عدد غير صالح: %(d)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1369
+قيمة الفئة خارج النطاق المسموح (حتى %(PRICE_MAX)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1376
+الحد الأقصى 5000 بطاقة في الدفعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1378
+كل الفئات قيمتها صفر — أدخل فئة واحدة على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1384
+لا يوجد plan في النظام — أنشئ باقة واحدة قبل توليد بطاقات الشحن.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1401
+حقول بنية الكروت مقفلة بعد التوليد ولا يمكن تغييرها: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1654
+ — الكروت مولّدة/مطبوعة بالفعل.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1656
+اسم الحزمة مطلوب — لا يمكن حفظه فارغًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1662
+اسم الحزمة طويل جدًّا — الحدّ 160 محرفًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1664
+حالة الحزمة غير صالحة — المسموح: ,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1669
+ (الحذف من «نقل للسلّة»).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1671
+%(label)s لا يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1690
+الموزّع المحدّد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1709
+metadata يجب أن يكون كائن JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1720
+تاريخ الانتهاء غير صالح — استعمل صيغة ISO مثل 2026-12-31T23:59:00.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1725
+دفعة الكروت غير موجودة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1790
+الباقة المرتبطة مطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1867
+تعذر تعديل دفعة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1877
+هذه البطاقة ضمن حزمة مؤرشفة (في سلّة المحذوفات) — استعد الحزمة أولًا ثم فعّلها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1994
+تعذر تفعيل البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:1997
+تعذر تعطيل البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2033
+تعذر نقل البطاقة إلى سلة المحذوفات,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2074
+MAC مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2107
+عنوان MAC غير صالح: %(m)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2112
+تعذر تثبيت MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2118
+تعذر إلغاء تثبيت MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2182
+تعذر تصفير استخدام البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2188
+البطاقة بلا اسم دخول,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2221
+تعذّر تغيير كلمة مرور البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2255
+البطاقة في سلة المحذوفات — استرجعها أولًا ثم عدّل بياناتها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2315
+رقم الكرت مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2322
+الاسم مستخدم: «%(u)s» رقمُ بطاقةٍ أو اسمُ مشتركٍ آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2330
+لا تُقبل قيم سالبة للسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2436
+يجب تحديد قيمتي التنزيل والرفع معًا (أو تصفير الاثنين لإلغاء التخصيص).,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2440
+لم يتم العثور على البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2447
+لا يوجد تعديل لتطبيقه,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2528
+تعذّر تعديل وقت البطاقة — لم تُعثر عليها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2551
+تعذر حذف البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2604
+مُستنفدة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2687
+محذوفة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2688
+هذه البطاقة من حزمة «رقم فقط» (بلا كلمة مرور): تُصادَق برقمها وحده، فتغيير كلمة المرور لا أثر له. لإغلاق تسريبٍ غيّر «رقم الكرت» نفسه.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2728
+البادئة «rtr-» محجوزة لحسابات إدارة الراوترات.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2751
+كلمة المرور أطول من 64 حرفًا,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2756
+كلمة المرور لا تقبل مسافات,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2759
 تعذّر التعرّف على نوع الملف. الأنواع المدعومة: CSV / TSV / TXT / XLSX / PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards_import_engine.py:145
 خطأ غير متوقّع أثناء قراءة الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/cards_import_engine.py:156
 الملف فارغ أو لا يحتوي على صفوف قابلة للقراءة.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards_import_engine.py:161
@@ -7432,72 +7432,72 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 الموزعين,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:88
 صلاحية,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:124
  - نسخة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:18
-تعديل الباقة يتطلّب معرّفها.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:92
-لا يمكن حذف الباقة: عليها %(s)d مشترك و%(b)d حزمة و%(c)d بطاقة — انقلهم إلى باقةٍ أخرى أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:135
-اسم الباقة أطول من المسموح (%(PLAN_NAME_MAX)s حرفًا كحدّ أقصى).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:195
-اسم الباقة «%(name)s» مستخدم مسبقًا لباقة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:205
- (مؤرشفة #%(v)s),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:208
-أيّام الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:220
-الصلاحية,,Validity,Validité,Geçerlilik,Validez,ok,app/radius/services/plans.py:220
-الكوتة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:221
-الكوتة اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:221
-الكوتة الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:222
-كوتة التنزيل اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:223
-كوتة الرفع اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:224
-الكوتة اليوميّة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:225
-كوتة التنزيل الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:226
-كوتة الرفع الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:227
-الكوتة الشهريّة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:228
-الحدّ اليوميّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:237
-الحدّ الأسبوعيّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:238
-الحدّ الشهريّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:239
-مهلة الخمول,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:241
-حجم البيانات,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:242
-سرعة الدفعة (رفع),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:245
-سرعة الدفعة (تنزيل),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:246
-عتبة الدفعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:247
-زمن الدفعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:248
-السرعة المضمونة (تنزيل),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:249
-السرعة المضمونة (رفع),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:250
-عدد الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:251
-رقم VLAN,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:252
-عدد الأجهزة المسموحة,,Number of allowed devices,Nombre d'appareils autorisés,İzin verilen cihaz sayısı,Número de dispositivos permitidos,ok,app/radius/services/plans.py:253
-الأولويّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:254
-عدد مرّات الاستهلاك,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:255
-صلاحية التذكرة بالأيام,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:256
-حدّ ساعات العمل,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:257
-الحدّ الأقصى لدقائق السلفة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:258
-ساعة البداية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:270
-ساعة النهاية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:271
-ساعات العرض — من,,Display hours — from,Heures d'affichage — de,Görüntüleme saatleri — başlangıç,Horas de visualización — desde,ok,app/radius/services/plans.py:272
-ساعات العرض — إلى,,Display hours — to,Heures d'affichage — à,Görüntüleme saatleri — bitiş,Horas de visualización — hasta,ok,app/radius/services/plans.py:273
-اسم الباقة,,Package name,Nom du forfait,Paket adı,Nombre del paquete,ok,app/radius/services/plans.py:285
-تفعيل الباقة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:285
-ربط MAC,,MAC binding,Liaison MAC,MAC bağlama,Vinculación MAC,ok,app/radius/services/plans.py:285
-ربط IP,,IP Binding,Liaison IP,IP Bağlama,Enlace IP,ok,app/radius/services/plans.py:286
-فرض عنوان MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:286
-التجديد التلقائيّ,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:287
-الدفع المسبق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:287
-التحكّم بالسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:288
-الدفعة (Burst),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:288
-استخدام مرّة واحدة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:289
-الليل المفتوح,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:289
-هوت سبوت,,Hotspot,Hotspot,Hotspot,Hotspot,ok,app/radius/services/plans.py:290
-بلا حدّ للسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:291
-تجاوز السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:291
-جلسة واحدة فعّالة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:292
-ملفّ السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:292
-نوع الخدمة «%(raw)s» غير معروف (المسموح: Hotspot / PPPoE / Both).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:340
-نوع الباقة غير معروف (المسموح: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:388
-%(label)s لا يمكن أن يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:398
-قيمة «%(label)s» أكبر من المسموح (الحدّ %(cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:411
-«الأولويّة» رقمٌ من %(PRIORITY_MIN)s إلى %(PRIORITY_MAX)s (%(PRIORITY_MIN)s = الأعلى في القوائم والمتجر).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:416
-لون الباقة يجب أن يكون رمزًا مثل ‎#2BAACC‎.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:420
-«%(label)s» يجب أن تكون ساعةً صحيحة بصيغة HH:MM (00:00–23:59)، والقيمة «%(raw)s» غير صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:425
-السرعة لا يمكن أن تكون سالبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:427
-السرعة مطلوبة (تنزيل ورفع) — أو علّم «بلا حدّ للسرعة» صراحةً إن كانت الباقة مفتوحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:433
-عدد الجلسات المتزامنة يجب أن يكون 1 على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:436
-الحدّ الأقصى لدقائق السلفة لا يمكن أن يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:439
+تعديل الباقة يتطلّب معرّفها.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:113
+لا يمكن حذف الباقة: عليها %(s)d مشترك و%(b)d حزمة و%(c)d بطاقة — انقلهم إلى باقةٍ أخرى أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:160
+اسم الباقة أطول من المسموح (%(PLAN_NAME_MAX)s حرفًا كحدّ أقصى).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:220
+اسم الباقة «%(name)s» مستخدم مسبقًا لباقة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:230
+ (مؤرشفة #%(v)s),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:233
+أيّام الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:245
+الصلاحية,,Validity,Validité,Geçerlilik,Validez,ok,app/radius/services/plans.py:245
+الكوتة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:246
+الكوتة اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:246
+الكوتة الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:247
+كوتة التنزيل اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:248
+كوتة الرفع اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:249
+الكوتة اليوميّة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:250
+كوتة التنزيل الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:251
+كوتة الرفع الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:252
+الكوتة الشهريّة الإجماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:253
+الحدّ اليوميّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:262
+الحدّ الأسبوعيّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:263
+الحدّ الشهريّ للدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:264
+مهلة الخمول,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:266
+حجم البيانات,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:267
+سرعة الدفعة (رفع),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:270
+سرعة الدفعة (تنزيل),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:271
+عتبة الدفعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:272
+زمن الدفعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:273
+السرعة المضمونة (تنزيل),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:274
+السرعة المضمونة (رفع),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:275
+عدد الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:276
+رقم VLAN,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:277
+عدد الأجهزة المسموحة,,Number of allowed devices,Nombre d'appareils autorisés,İzin verilen cihaz sayısı,Número de dispositivos permitidos,ok,app/radius/services/plans.py:278
+الأولويّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:279
+عدد مرّات الاستهلاك,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:280
+صلاحية التذكرة بالأيام,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:281
+حدّ ساعات العمل,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:282
+الحدّ الأقصى لدقائق السلفة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:283
+ساعة البداية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:295
+ساعة النهاية,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:296
+ساعات العرض — من,,Display hours — from,Heures d'affichage — de,Görüntüleme saatleri — başlangıç,Horas de visualización — desde,ok,app/radius/services/plans.py:297
+ساعات العرض — إلى,,Display hours — to,Heures d'affichage — à,Görüntüleme saatleri — bitiş,Horas de visualización — hasta,ok,app/radius/services/plans.py:298
+اسم الباقة,,Package name,Nom du forfait,Paket adı,Nombre del paquete,ok,app/radius/services/plans.py:310
+تفعيل الباقة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:310
+ربط MAC,,MAC binding,Liaison MAC,MAC bağlama,Vinculación MAC,ok,app/radius/services/plans.py:310
+ربط IP,,IP Binding,Liaison IP,IP Bağlama,Enlace IP,ok,app/radius/services/plans.py:311
+فرض عنوان MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:311
+التجديد التلقائيّ,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:312
+الدفع المسبق,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:312
+التحكّم بالسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:313
+الدفعة (Burst),,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:313
+استخدام مرّة واحدة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:314
+الليل المفتوح,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:314
+هوت سبوت,,Hotspot,Hotspot,Hotspot,Hotspot,ok,app/radius/services/plans.py:315
+بلا حدّ للسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:316
+تجاوز السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:316
+جلسة واحدة فعّالة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:317
+ملفّ السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:317
+نوع الخدمة «%(raw)s» غير معروف (المسموح: Hotspot / PPPoE / Both).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:365
+نوع الباقة غير معروف (المسموح: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:413
+%(label)s لا يمكن أن يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:423
+قيمة «%(label)s» أكبر من المسموح (الحدّ %(cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:436
+«الأولويّة» رقمٌ من %(PRIORITY_MIN)s إلى %(PRIORITY_MAX)s (%(PRIORITY_MIN)s = الأعلى في القوائم والمتجر).,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:441
+لون الباقة يجب أن يكون رمزًا مثل ‎#2BAACC‎.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:445
+«%(label)s» يجب أن تكون ساعةً صحيحة بصيغة HH:MM (00:00–23:59)، والقيمة «%(raw)s» غير صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:450
+السرعة لا يمكن أن تكون سالبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:452
+السرعة مطلوبة (تنزيل ورفع) — أو علّم «بلا حدّ للسرعة» صراحةً إن كانت الباقة مفتوحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:458
+عدد الجلسات المتزامنة يجب أن يكون 1 على الأقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:461
+الحدّ الأقصى لدقائق السلفة لا يمكن أن يكون سالبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:464
 الحساب معطَّل — راجع الإدارة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:69
 خارج أوقات/أيام الدوام المسموحة لهذا الحساب,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:75
 انتهى رصيد وقت الاستخدام لهذه البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:82
@@ -7514,8 +7514,8 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 انتهى الاشتراك,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:293
  (الكوتة اليوميّة — تتجدّد غدًا),,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:446
  (الكوتة الشهريّة — تتجدّد الشهر القادم),,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:447
-لا باقة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1947
-غير مصرَّح,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1952
+لا باقة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1963
+غير مصرَّح,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1968
 يثبّت TTL=1 على الترافيك الخارج من المنافذ المختارة (قاعدة mangle في postrouting)، فيمنع مشاركة الإنترنت عبر البلوتوث/الواي فاي خلف جهاز الزبون. كل قاعدة تحمل وسم HR-AntiShare لتسهيل الإزالة.,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:230
 # === Hoberadius — منع بث البلوتوث والواي فاي (تفعيل) ===,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:243
 # الخدمة: bt_wifi_block — تثبيت TTL=1 لمنع المشاركة.,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:244
@@ -8615,18 +8615,18 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 تعذّر التحقّق من البوت.,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:180
 انتهت نافذة الربط — أعد المحاولة.,,The linking window has expired — try again.,La fenêtre de liaison a expiré — réessayez.,Bağlama penceresi sona erdi — tekrar deneyin.,La ventana de vinculación ha expirado — inténtelo de nuevo.,ok,app/radius/services/telegram_connect.py:301
 لا يوجد توكن بوت.,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:307
-السرعة المدخلة كبيرة جدًا,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:300
-المدة بالدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:310
-وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:318
-وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:321
-هذا الكرت بلا حساب سرعة (كرت مستورد أو من المتجر) — السرعة المؤقتة غير متاحة له.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:333
-السرعة يجب أن تكون 0 (غير محدود) أو %(MIN_KBPS)s كيلوبت فأكثر,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:376
-المدة يجب أن تكون بين %(MIN_MINUTES)s و%(MAX_MINUTES)s دقيقة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:380
-سرعة مؤقتة يدويّة لمدة %(duration_minutes)s دقيقة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:518
- (فصل وإعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:519
-انتهاء/إلغاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:617
-غير متصل الآن,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:630
-لا — ستُطبَّق عند الاتصال التالي,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:631
+السرعة المدخلة كبيرة جدًا,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:370
+المدة بالدقائق,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:380
+وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:388
+وحدة المدة غير معروفة — المسموح: دقائق أو ساعات أو أيام.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:391
+هذا الكرت بلا حساب سرعة (كرت مستورد أو من المتجر) — السرعة المؤقتة غير متاحة له.,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:403
+السرعة يجب أن تكون 0 (غير محدود) أو %(MIN_KBPS)s كيلوبت فأكثر,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:446
+المدة يجب أن تكون بين %(MIN_MINUTES)s و%(MAX_MINUTES)s دقيقة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:450
+سرعة مؤقتة يدويّة لمدة %(duration_minutes)s دقيقة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:588
+ (فصل وإعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:589
+انتهاء/إلغاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:687
+غير متصل الآن,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:700
+لا — ستُطبَّق عند الاتصال التالي,,,,,,"missing: en,fr,tr,es",app/radius/services/temp_speed.py:701
 slug + name مطلوبان,,,,,,"missing: en,fr,tr,es",app/radius/services/tenants.py:27
 plan_tier غير معروف: %(plan_tier)s,,,,,,"missing: en,fr,tr,es",app/radius/services/tenants.py:29
 plan_tier غير معروف,,,,,,"missing: en,fr,tr,es",app/radius/services/tenants.py:38
@@ -11660,71 +11660,72 @@ MAC الحالي,,Current MAC,MAC actuelle,Mevcut MAC,MAC actual,ok,app/template
 البطاقة %(user)s سيتم نقلها إلى %(bin)s ويمكنك استعادتها عند الحاجة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1501
 يمكنك استعادتها من السلة,,You can restore it from the bin,Vous pouvez la restaurer depuis la corbeille,Onu çöp kutusundan geri alabilirsiniz,Puede restaurarla desde la papelera,ok,app/templates/radius/cards_checker_v2.html:1512
 حسناً,,OK,OK,Tamam,Aceptar,ok,app/templates/radius/cards_checker_v2.html:1578
-حزمة «رقم فقط» — بلا كلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1644
-اتركها فارغة إن لم تُرد تغييرها,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1645
-لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1673
-رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1675
-كلمة المرور لا تقبل مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1677
-مثال: انتهت صلاحية البطاقة,,Example: the card has expired,Exemple : la carte a expiré,Örnek: kartın süresi doldu,Ejemplo: la tarjeta ha caducado,ok,app/templates/radius/cards_checker_v2.html:1689
-من سجل جلسات البطاقة,,From the card's session log,Depuis le journal des sessions de la carte,Kartın oturum kaydından,Del registro de sesiones de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1731
-لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.,,No previous record for this card — enter the addresses below manually.,Aucun enregistrement antérieur pour cette carte — saisissez les adresses ci-dessous manuellement.,Bu kart için önceki kayıt yok — aşağıdaki adresleri elle girin.,No hay registro previo para esta tarjeta — escriba las direcciones a continuación manualmente.,ok,app/templates/radius/cards_checker_v2.html:1746
-أكثر من MAC,,More than one MAC,Plus d'une MAC,Birden fazla MAC,Más de una MAC,ok,app/templates/radius/cards_checker_v2.html:1750
-يمكنك اختيار,,You can choose,Vous pouvez choisir,Seçebilirsiniz,Puedes elegir,ok,app/templates/radius/cards_checker_v2.html:1750
-من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).,,"From the session log, or add custom addresses (separate them with a comma or a new line).","Depuis le journal des sessions, ou ajoutez des adresses personnalisées (séparez-les par une virgule ou une nouvelle ligne).",Oturum kaydından veya özel adresler ekleyin (virgül ya da yeni satırla ayırın).,"Del registro de sesiones, o añada direcciones personalizadas (sepárelas con una coma o un salto de línea).",ok,app/templates/radius/cards_checker_v2.html:1751
-من سجل البطاقة,,From the card log,Depuis le journal de la carte,Kart kaydından,Del registro de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1752
-— أو —,,— or —,— ou —,— veya —,— o —,ok,app/templates/radius/cards_checker_v2.html:1754
-عناوين مخصّصة (اختياري),,Custom addresses (optional),Adresses personnalisées (facultatif),Özel adresler (isteğe bağlı),Direcciones personalizadas (opcional),ok,app/templates/radius/cards_checker_v2.html:1756
-سيتم قفل البطاقة على,,The card will be locked to,La carte sera verrouillée sur,Kart şuna kilitlenecek,La tarjeta se bloqueará en,ok,app/templates/radius/cards_checker_v2.html:1798
-عنوان:,,Address:,Adresse :,Adres:,Dirección:,ok,app/templates/radius/cards_checker_v2.html:1798
-اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.,,Select at least one address from the list or type it manually.,Sélectionnez au moins une adresse dans la liste ou saisissez-la manuellement.,Listeden en az bir adres seçin veya manuel olarak yazın.,Seleccione al menos una dirección de la lista o escríbala manualmente.,ok,app/templates/radius/cards_checker_v2.html:1817
-الصيغة: AA:BB:CC:DD:EE:FF,,Format: AA:BB:CC:DD:EE:FF,Format : AA:BB:CC:DD:EE:FF,Biçim: AA:BB:CC:DD:EE:FF,Formato: AA:BB:CC:DD:EE:FF,ok,app/templates/radius/cards_checker_v2.html:1824
-عنوان MAC غير صالح:,,Invalid MAC address:,Adresse MAC invalide :,Geçersiz MAC adresi:,Dirección MAC no válida:,ok,app/templates/radius/cards_checker_v2.html:1824
-اتركها,,Leave it,Laisser vide,Boş bırak,Déjalo,ok,app/templates/radius/cards_checker_v2.html:1843
-في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.,,in both fields to clear the customization and revert to the package speed.,dans les deux champs pour annuler la personnalisation et revenir à la vitesse du forfait.,özelleştirmeyi kaldırıp paket hızına dönmek için her iki alana.,en ambos campos para anular la personalización y volver a la velocidad del paquete.,ok,app/templates/radius/cards_checker_v2.html:1844
-التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/cards_checker_v2.html:1847
-مثال: 4096,,Example: 4096,Exemple : 4096,Örnek: 4096,Ejemplo: 4096,ok,app/templates/radius/cards_checker_v2.html:1848
-الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/cards_checker_v2.html:1851
-مثال: 2048,,Example: 2048,Exemple : 2048,Örnek: 2048,Ejemplo: 2048,ok,app/templates/radius/cards_checker_v2.html:1852
-قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.,,Speed values must be non-negative integers.,Les valeurs de vitesse doivent être des entiers non négatifs.,Hız değerleri negatif olmayan tam sayılar olmalıdır.,Los valores de velocidad deben ser enteros no negativos.,ok,app/templates/radius/cards_checker_v2.html:1869
-يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).,,Both values must be set together (or zero both to cancel the assignment).,Les deux valeurs doivent être définies ensemble (ou mettre les deux à zéro pour annuler l'attribution).,Her iki değer birlikte belirlenmelidir (veya atamayı iptal etmek için ikisini de sıfırlayın).,Ambos valores deben establecerse juntos (o poner ambos a cero para cancelar la asignación).,ok,app/templates/radius/cards_checker_v2.html:1872
-س ,,h ,h ,sa ,h ,ok,app/templates/radius/cards_checker_v2.html:1892
-لا أجهزة متّصلة الآن.,,No devices connected now.,Aucun appareil connecté pour le moment.,Şu anda bağlı cihaz yok.,No hay dispositivos conectados ahora.,ok,app/templates/radius/cards_checker_v2.html:1920
-اختر الأجهزة التي تريد قطعها.,,Select the devices you want to disconnect.,Sélectionnez les appareils que vous souhaitez déconnecter.,Bağlantısını kesmek istediğiniz cihazları seçin.,Seleccione los dispositivos que desea desconectar.,ok,app/templates/radius/cards_checker_v2.html:1925
-الباقي يبقى متّصل,,The rest stay connected,Le reste reste connecté,Geri kalanı bağlı kalır,El resto permanece conectado,ok,app/templates/radius/cards_checker_v2.html:1925
-دون مساس.,,Untouched.,Sans modification.,Dokunulmadan.,Sin afectar.,ok,app/templates/radius/cards_checker_v2.html:1925
-سيتم قطع,,Will be disconnected,Sera coupé,Kesilecek,Se cortará,ok,app/templates/radius/cards_checker_v2.html:1961
-جلسة الآن.,,Session now.,Session maintenant.,Şimdi oturum.,Sesión ahora.,ok,app/templates/radius/cards_checker_v2.html:1962
-اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».,,"Select at least one device, or click «Select All».","Sélectionnez au moins un appareil, ou cliquez sur «Tout sélectionner».",En az bir cihaz seçin veya «Tümünü Seç»e tıklayın.,"Seleccione al menos un dispositivo, o haga clic en «Seleccionar todo».",ok,app/templates/radius/cards_checker_v2.html:1977
-التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2013
-الوحدة,,Unit,Unité,Birim,Unidad,ok,app/templates/radius/cards_checker_v2.html:2026
-المقدار,,Amount,Montant,Miktar,Cantidad,ok,app/templates/radius/cards_checker_v2.html:2033
-مثال: 30,,Example: 30,Exemple : 30,Örnek: 30,Ejemplo: 30,ok,app/templates/radius/cards_checker_v2.html:2035
-إلى وقت البطاقة.,,To the voucher's time.,Au temps du coupon.,Kuponun süresine.,Al tiempo del cupón.,ok,app/templates/radius/cards_checker_v2.html:2038
-وقت البطاقة.,,Card time.,Durée de la carte.,Kart süresi.,Tiempo de la tarjeta.,ok,app/templates/radius/cards_checker_v2.html:2112
-تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2160
-غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2212
-حسنًا,,OK,OK,Tamam,OK,ok,app/templates/radius/cards_checker_v2.html:2213
-تعذّر فتح النافذة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2255
-تُستبدل كلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2298
-في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2299
-كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2300
-اتركها فارغة ليولّدها النظام بنمط الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2301
-تغيير وقطع الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2302
-عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2343
-البطاقة مقفولة حالياً على,,The card is currently locked to,La carte est actuellement verrouillée sur,Kart şu anda şuna kilitli:,La tarjeta está actualmente bloqueada en,ok,app/templates/radius/cards_checker_v2.html:2443
-عنوان,,Address,Adresse,Adres,Dirección,ok,app/templates/radius/cards_checker_v2.html:2444
-ماذا تريد أن تفعل؟,,What do you want to do?,Que voulez-vous faire ?,Ne yapmak istiyorsunuz?,¿Qué quieres hacer?,ok,app/templates/radius/cards_checker_v2.html:2444
-تعديل القائمة,,Edit the list,Modifier la liste,Listeyi düzenle,Editar la lista,ok,app/templates/radius/cards_checker_v2.html:2445
-تعديل قفل MAC,,Edit MAC lock,Modifier le verrouillage MAC,MAC kilidini düzenle,Editar bloqueo MAC,ok,app/templates/radius/cards_checker_v2.html:2452
-مقفول حاليًا,,Currently locked,Actuellement verrouillé,Şu anda kilitli,Actualmente bloqueado,ok,app/templates/radius/cards_checker_v2.html:2456
-فك القفل تماماً,,Unlock completely,Déverrouiller complètement,Tamamen kilidini aç,Desbloquear por completo,ok,app/templates/radius/cards_checker_v2.html:2476
-ث,,s,s,sn,s,ok,app/templates/radius/cards_checker_v2.html:2579
-د ,,m ,min ,dk ,min ,ok,app/templates/radius/cards_checker_v2.html:2579
-محدّث الآن,,Updated now,Mis à jour à l'instant,Şimdi güncellendi,Actualizado ahora,ok,app/templates/radius/cards_checker_v2.html:2652
-تحديث منذ,,Updated since,Mis à jour depuis,Şu zamandır güncellendi,Actualizado hace,ok,app/templates/radius/cards_checker_v2.html:2653
-قديم —,,Old —,Ancien —,Eski —,Antiguo —,ok,app/templates/radius/cards_checker_v2.html:2654
-تعذّر إظهار كلمة المرور,,Failed to show the password,Échec de l'affichage du mot de passe,Parola gösterilemedi,No se pudo mostrar la contraseña,ok,app/templates/radius/cards_checker_v2.html:2729
-إخفاء كلمة المرور,,Hide password,Masquer le mot de passe,Parolayı gizle,Ocultar contraseña,ok,app/templates/radius/cards_checker_v2.html:2788
+انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1643
+حزمة «رقم فقط» — بلا كلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1648
+اتركها فارغة إن لم تُرد تغييرها,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1649
+لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1680
+رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1682
+كلمة المرور لا تقبل مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1684
+مثال: انتهت صلاحية البطاقة,,Example: the card has expired,Exemple : la carte a expiré,Örnek: kartın süresi doldu,Ejemplo: la tarjeta ha caducado,ok,app/templates/radius/cards_checker_v2.html:1696
+من سجل جلسات البطاقة,,From the card's session log,Depuis le journal des sessions de la carte,Kartın oturum kaydından,Del registro de sesiones de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1738
+لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.,,No previous record for this card — enter the addresses below manually.,Aucun enregistrement antérieur pour cette carte — saisissez les adresses ci-dessous manuellement.,Bu kart için önceki kayıt yok — aşağıdaki adresleri elle girin.,No hay registro previo para esta tarjeta — escriba las direcciones a continuación manualmente.,ok,app/templates/radius/cards_checker_v2.html:1753
+أكثر من MAC,,More than one MAC,Plus d'une MAC,Birden fazla MAC,Más de una MAC,ok,app/templates/radius/cards_checker_v2.html:1757
+يمكنك اختيار,,You can choose,Vous pouvez choisir,Seçebilirsiniz,Puedes elegir,ok,app/templates/radius/cards_checker_v2.html:1757
+من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).,,"From the session log, or add custom addresses (separate them with a comma or a new line).","Depuis le journal des sessions, ou ajoutez des adresses personnalisées (séparez-les par une virgule ou une nouvelle ligne).",Oturum kaydından veya özel adresler ekleyin (virgül ya da yeni satırla ayırın).,"Del registro de sesiones, o añada direcciones personalizadas (sepárelas con una coma o un salto de línea).",ok,app/templates/radius/cards_checker_v2.html:1758
+من سجل البطاقة,,From the card log,Depuis le journal de la carte,Kart kaydından,Del registro de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1759
+— أو —,,— or —,— ou —,— veya —,— o —,ok,app/templates/radius/cards_checker_v2.html:1761
+عناوين مخصّصة (اختياري),,Custom addresses (optional),Adresses personnalisées (facultatif),Özel adresler (isteğe bağlı),Direcciones personalizadas (opcional),ok,app/templates/radius/cards_checker_v2.html:1763
+سيتم قفل البطاقة على,,The card will be locked to,La carte sera verrouillée sur,Kart şuna kilitlenecek,La tarjeta se bloqueará en,ok,app/templates/radius/cards_checker_v2.html:1805
+عنوان:,,Address:,Adresse :,Adres:,Dirección:,ok,app/templates/radius/cards_checker_v2.html:1805
+اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.,,Select at least one address from the list or type it manually.,Sélectionnez au moins une adresse dans la liste ou saisissez-la manuellement.,Listeden en az bir adres seçin veya manuel olarak yazın.,Seleccione al menos una dirección de la lista o escríbala manualmente.,ok,app/templates/radius/cards_checker_v2.html:1824
+الصيغة: AA:BB:CC:DD:EE:FF,,Format: AA:BB:CC:DD:EE:FF,Format : AA:BB:CC:DD:EE:FF,Biçim: AA:BB:CC:DD:EE:FF,Formato: AA:BB:CC:DD:EE:FF,ok,app/templates/radius/cards_checker_v2.html:1831
+عنوان MAC غير صالح:,,Invalid MAC address:,Adresse MAC invalide :,Geçersiz MAC adresi:,Dirección MAC no válida:,ok,app/templates/radius/cards_checker_v2.html:1831
+اتركها,,Leave it,Laisser vide,Boş bırak,Déjalo,ok,app/templates/radius/cards_checker_v2.html:1850
+في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.,,in both fields to clear the customization and revert to the package speed.,dans les deux champs pour annuler la personnalisation et revenir à la vitesse du forfait.,özelleştirmeyi kaldırıp paket hızına dönmek için her iki alana.,en ambos campos para anular la personalización y volver a la velocidad del paquete.,ok,app/templates/radius/cards_checker_v2.html:1851
+التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/cards_checker_v2.html:1854
+مثال: 4096,,Example: 4096,Exemple : 4096,Örnek: 4096,Ejemplo: 4096,ok,app/templates/radius/cards_checker_v2.html:1855
+الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/cards_checker_v2.html:1858
+مثال: 2048,,Example: 2048,Exemple : 2048,Örnek: 2048,Ejemplo: 2048,ok,app/templates/radius/cards_checker_v2.html:1859
+قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.,,Speed values must be non-negative integers.,Les valeurs de vitesse doivent être des entiers non négatifs.,Hız değerleri negatif olmayan tam sayılar olmalıdır.,Los valores de velocidad deben ser enteros no negativos.,ok,app/templates/radius/cards_checker_v2.html:1876
+يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).,,Both values must be set together (or zero both to cancel the assignment).,Les deux valeurs doivent être définies ensemble (ou mettre les deux à zéro pour annuler l'attribution).,Her iki değer birlikte belirlenmelidir (veya atamayı iptal etmek için ikisini de sıfırlayın).,Ambos valores deben establecerse juntos (o poner ambos a cero para cancelar la asignación).,ok,app/templates/radius/cards_checker_v2.html:1879
+س ,,h ,h ,sa ,h ,ok,app/templates/radius/cards_checker_v2.html:1899
+لا أجهزة متّصلة الآن.,,No devices connected now.,Aucun appareil connecté pour le moment.,Şu anda bağlı cihaz yok.,No hay dispositivos conectados ahora.,ok,app/templates/radius/cards_checker_v2.html:1927
+اختر الأجهزة التي تريد قطعها.,,Select the devices you want to disconnect.,Sélectionnez les appareils que vous souhaitez déconnecter.,Bağlantısını kesmek istediğiniz cihazları seçin.,Seleccione los dispositivos que desea desconectar.,ok,app/templates/radius/cards_checker_v2.html:1932
+الباقي يبقى متّصل,,The rest stay connected,Le reste reste connecté,Geri kalanı bağlı kalır,El resto permanece conectado,ok,app/templates/radius/cards_checker_v2.html:1932
+دون مساس.,,Untouched.,Sans modification.,Dokunulmadan.,Sin afectar.,ok,app/templates/radius/cards_checker_v2.html:1932
+سيتم قطع,,Will be disconnected,Sera coupé,Kesilecek,Se cortará,ok,app/templates/radius/cards_checker_v2.html:1968
+جلسة الآن.,,Session now.,Session maintenant.,Şimdi oturum.,Sesión ahora.,ok,app/templates/radius/cards_checker_v2.html:1969
+اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».,,"Select at least one device, or click «Select All».","Sélectionnez au moins un appareil, ou cliquez sur «Tout sélectionner».",En az bir cihaz seçin veya «Tümünü Seç»e tıklayın.,"Seleccione al menos un dispositivo, o haga clic en «Seleccionar todo».",ok,app/templates/radius/cards_checker_v2.html:1984
+التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2020
+الوحدة,,Unit,Unité,Birim,Unidad,ok,app/templates/radius/cards_checker_v2.html:2033
+المقدار,,Amount,Montant,Miktar,Cantidad,ok,app/templates/radius/cards_checker_v2.html:2040
+مثال: 30,,Example: 30,Exemple : 30,Örnek: 30,Ejemplo: 30,ok,app/templates/radius/cards_checker_v2.html:2042
+إلى وقت البطاقة.,,To the voucher's time.,Au temps du coupon.,Kuponun süresine.,Al tiempo del cupón.,ok,app/templates/radius/cards_checker_v2.html:2045
+وقت البطاقة.,,Card time.,Durée de la carte.,Kart süresi.,Tiempo de la tarjeta.,ok,app/templates/radius/cards_checker_v2.html:2119
+تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2167
+غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2219
+حسنًا,,OK,OK,Tamam,OK,ok,app/templates/radius/cards_checker_v2.html:2220
+تعذّر فتح النافذة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2262
+تُستبدل كلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2305
+في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2306
+كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2307
+اتركها فارغة ليولّدها النظام بنمط الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2308
+تغيير وقطع الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2309
+عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2350
+البطاقة مقفولة حالياً على,,The card is currently locked to,La carte est actuellement verrouillée sur,Kart şu anda şuna kilitli:,La tarjeta está actualmente bloqueada en,ok,app/templates/radius/cards_checker_v2.html:2450
+عنوان,,Address,Adresse,Adres,Dirección,ok,app/templates/radius/cards_checker_v2.html:2451
+ماذا تريد أن تفعل؟,,What do you want to do?,Que voulez-vous faire ?,Ne yapmak istiyorsunuz?,¿Qué quieres hacer?,ok,app/templates/radius/cards_checker_v2.html:2451
+تعديل القائمة,,Edit the list,Modifier la liste,Listeyi düzenle,Editar la lista,ok,app/templates/radius/cards_checker_v2.html:2452
+تعديل قفل MAC,,Edit MAC lock,Modifier le verrouillage MAC,MAC kilidini düzenle,Editar bloqueo MAC,ok,app/templates/radius/cards_checker_v2.html:2459
+مقفول حاليًا,,Currently locked,Actuellement verrouillé,Şu anda kilitli,Actualmente bloqueado,ok,app/templates/radius/cards_checker_v2.html:2463
+فك القفل تماماً,,Unlock completely,Déverrouiller complètement,Tamamen kilidini aç,Desbloquear por completo,ok,app/templates/radius/cards_checker_v2.html:2483
+ث,,s,s,sn,s,ok,app/templates/radius/cards_checker_v2.html:2586
+د ,,m ,min ,dk ,min ,ok,app/templates/radius/cards_checker_v2.html:2586
+محدّث الآن,,Updated now,Mis à jour à l'instant,Şimdi güncellendi,Actualizado ahora,ok,app/templates/radius/cards_checker_v2.html:2659
+تحديث منذ,,Updated since,Mis à jour depuis,Şu zamandır güncellendi,Actualizado hace,ok,app/templates/radius/cards_checker_v2.html:2660
+قديم —,,Old —,Ancien —,Eski —,Antiguo —,ok,app/templates/radius/cards_checker_v2.html:2661
+تعذّر إظهار كلمة المرور,,Failed to show the password,Échec de l'affichage du mot de passe,Parola gösterilemedi,No se pudo mostrar la contraseña,ok,app/templates/radius/cards_checker_v2.html:2736
+إخفاء كلمة المرور,,Hide password,Masquer le mot de passe,Parolayı gizle,Ocultar contraseña,ok,app/templates/radius/cards_checker_v2.html:2795
 إنشاء كروت,,Create cards,Créer des cartes,Kart oluştur,Crear tarjetas,ok,app/templates/radius/cards_generate.html:12
 الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:148
 العودة للحزم,,Back to batches,Retour aux lots,Partilere dön,Volver a los lotes,ok,app/templates/radius/cards_generate.html:152
