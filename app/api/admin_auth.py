@@ -179,10 +179,13 @@ def _distributor_fields(a) -> dict:
 
 
 def _pick_tenant(admin) -> Optional[int]:
-    """Same precedence as the web login: super_admin → all; else memberships;
-    else default tenant bootstrap on first login."""
+    """Same precedence as the web login: owner-level (owner / co-owner) → all;
+    else memberships; else default tenant bootstrap on first login.
+
+    Security B-06: the raw ``is_super_admin`` flag («مدير عام») no longer
+    lands in the first tenant on the server — it follows memberships."""
     store = TenantsStore.instance()
-    if admin.is_super_admin or admins_repo.is_primary_owner(admin.id):
+    if admins_repo.is_primary_owner(admin.id):
         tenants = store.list()
     else:
         tenants = store.tenants_for_admin(admin.id)

@@ -40,7 +40,12 @@ def auth_login():
         login_throttle.register_success("admin_login", username)
         # اختيار tenant — أولوية: tenants_for_admin → default
         store = TenantsStore.instance()
-        if getattr(admin, "is_super_admin", False):
+        # Security B-06: only owner-level accounts (owner / co-owner, read from
+        # the DB) may land in any tenant. The raw ``is_super_admin`` flag
+        # («مدير عام» role) used to pick the FIRST tenant on the server here,
+        # even one he is not a member of.
+        from ..auth.owner import is_owner_like
+        if is_owner_like(admin):
             tenants = store.list()
         else:
             tenants = store.tenants_for_admin(admin.id)

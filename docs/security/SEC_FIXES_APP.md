@@ -34,3 +34,35 @@ store-token call, legacy no-key mode, `/store/admin/*` untouched, hook-order ind
 A client that sent *another tenant's* key together with `X-Tenant` is now refused (that was the hole).
 
 **Migration impact:** none. **Rollback:** revert the commit.
+
+---
+
+## B-06 — raw `is_super_admin` («مدير عام») logs into the first tenant on the server
+
+**Reproduced?** Yes. A raw-flag admin who is a member of tenant B only logged into **tenant 1** on both
+paths (web `POST /admin/radius/login` → `session["tenant_id"]=1`; app `POST /api/admin/login` →
+`tenant_id=1` and an `admin:full` token bound to tenant 1). 4 tests failed before the fix
+(`assert 1 == 2`).
+
+**Fix:** `app/radius/routes/auth.py` (web) and `app/api/admin_auth.py::_pick_tenant` (app): only
+owner-level accounts (`is_owner_like` / `admins_repo.is_primary_owner`: licence-panel owner set,
+original owner, co-owner — read from the DB) get `store.list()`; everyone else, including the raw
+flag, uses `tenants_for_admin()` (active memberships). The bootstrap for an admin with **no**
+membership (→ default tenant) is unchanged.
+
+**Tests:** `tests/test_sec_b06_login_tenant_pick.py` (7): web + app reproducers; cross-tenant (two
+raw-flag admins in B and C each land in their own tenant on both paths, and the minted token row is
+bound to that tenant); multi-membership; owner and co-owner unchanged; no-membership bootstrap unchanged.
+
+**Behaviour change:** a «مدير عام» who is not owner/co-owner lands in his first active membership
+instead of the server's lowest tenant id. On single-tenant servers (the whole current fleet per the
+fleet notes) there is no visible change.
+
+**Residual (not changed, needs OWNER DECISION):** an admin with **no** membership row is still
+bootstrapped into the default tenant (tenant 1) at first login, and gets a membership there. On
+mainline nothing else creates memberships (admins created on `/admins` have none), so this bootstrap
+is how every new admin gets a tenant today. On a real multi-tenant server it means "any admin without
+a membership joins tenant 1". Restricting it requires an admin-creation flow that writes memberships
+first.
+
+**Migration impact:** none. **Rollback:** revert the commit.
