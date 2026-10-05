@@ -106,16 +106,32 @@ def _check_internal_secret(body: dict | None = None) -> bool:
     return False
 
 
-def _resolve_tenant_id(body: dict) -> int:
-    """يحدّد tenant_id من NAS-IP-Address (الـ NAS مرتبط بـ tenant)."""
-    nas_ip = body.get("NAS-IP-Address") or body.get("nas_ip_address") or ""
-    if not nas_ip:
-        return 1
-    from app.radius.db.connection import db
-    row = db().execute(
-        "SELECT tenant_id FROM nas_devices WHERE address = ? AND enabled = 1 LIMIT 1",
-        (nas_ip,)).fetchone()
-    return int(row["tenant_id"]) if row else 1
+def _packet_source(body: dict) -> str:
+    """The address the packet came FROM (FreeRADIUS Packet-Src-IP-Address).
+
+    B-14: this — not the in-packet NAS-IP-Address — decides the tenant.
+    FreeRADIUS answers only registered clients whose shared secret matched,
+    so the source address identifies the router; NAS-IP-Address is written by
+    the router itself. NAS-IP-Address is used only when the source is absent
+    (an rlm_rest config older than this fix)."""
+    src = str(body.get("Packet-Src-IP-Address")
+              or body.get("packet_src_ip_address") or "").strip()
+    if src:
+        return src
+    return str(body.get("NAS-IP-Address") or body.get("nas_ip_address") or "").strip()
+
+
+def _resolve_source_tenant(body: dict):
+    """B-14: the tenant that owns the router that sent this packet, or an
+    unattributed result (``tenant_id is None``) — never a tenant-1 default.
+    See app/radius/services/nas_tenant.py for the rule."""
+    from app.radius.services.nas_tenant import resolve_source_tenant
+    return resolve_source_tenant(_packet_source(body))
+
+
+def _resolve_tenant_id(body: dict) -> int | None:
+    """Back-compat wrapper: the owning tenant id, or None (do not attribute)."""
+    return _resolve_source_tenant(body).tenant_id
 
 
 def internal_auth():
@@ -134,6 +150,35 @@ def internal_auth():
         return str(body.get(k) or body.get(k.lower()) or
                     body.get(k.replace("-", "_")) or default).strip()
 
+    # B-14: a router no tenant can be given (multi-network server, source
+    # address unknown or claimed by two tenants) is REJECTED and recorded in
+    # the operator-only quarantine — it is never evaluated against, nor logged
+    # into, tenant 1. (Single-network servers always resolve to their only
+    # tenant, exactly as before.)
+    try:
+        owner = _resolve_source_tenant(body)
+    except Exception as exc:  # noqa: BLE001
+        from app.radius.db.connection import is_lock_error
+        if is_lock_error(exc):
+            _LOG.warning("internal_auth: database busy resolving the NAS "
+                         "tenant — no decision (503): %s", exc)
+            return jsonify({"error": "busy"}), 503
+        _LOG.exception("internal_auth: NAS tenant resolution failed — Reject")
+        return jsonify({"control:Auth-Type": "Reject",
+                        "reply:Reply-Message": "Internal error — try again"}), 200
+    if not owner.attributed:
+        from app.radius.services.nas_tenant import quarantine_auth
+        quarantine_auth(source_ip=owner.source_ip,
+                        nas_ip_attr=g("NAS-IP-Address"),
+                        username=g("User-Name"),
+                        calling_station_id=g("Calling-Station-Id"),
+                        reason=owner.reason)
+        _LOG.warning("internal_auth: REJECT user=%r — router %s belongs to no "
+                     "single tenant (%s); recorded in radius_unattributed",
+                     g("User-Name"), owner.source_ip or "?", owner.reason)
+        return jsonify({"control:Auth-Type": "Reject",
+                        "reply:Reply-Message": "Unknown NAS"}), 200
+
     from app.radius.services.policy_engine import AuthRequest, authorize
     try:
         req = AuthRequest(
@@ -141,7 +186,7 @@ def internal_auth():
             password=g("User-Password"),
             chap_password=g("CHAP-Password"),
             chap_challenge=g("CHAP-Challenge"),
-            tenant_id=_resolve_tenant_id(body),
+            tenant_id=int(owner.tenant_id),
             calling_station_id=g("Calling-Station-Id"),
             called_station_id=g("Called-Station-Id"),
             nas_ip=g("NAS-IP-Address"),
@@ -275,6 +320,10 @@ def internal_postauth():
         return jsonify({"ok": True, "noop": True}), 200
     try:
         tenant_id = _resolve_tenant_id(body)
+        if tenant_id is None:
+            # B-14: no single owning tenant → no tenant's webhooks receive it.
+            return jsonify({"ok": True, "noop": True,
+                            "reason": "unattributed_nas"}), 200
         from app.webhooks.dispatcher import dispatch_event
         event = "session.authorized" if "Accept" in reply_code else "session.rejected"
         dispatch_event(event, {

@@ -37,6 +37,9 @@ rest {
         # ـ نُمرّر CHAP-Password + CHAP-Challenge أيضًا لأن MikroTik hotspot
         # يستخدم HTTP-CHAP افتراضيًا، فـ %{User-Password} يكون فارغًا.
         # سياسة التحقّق (PAP vs CHAP) تُنفَّذ داخل /api/v1/internal/auth.
+        # B-14: Packet-Src-IP-Address (the UDP source FreeRADIUS verified the
+        # client secret for) decides the tenant — not NAS-IP-Address, which
+        # the router writes itself (app/radius/services/nas_tenant.py).
         data     = '{ \
             "_internal_secret": "__HR_INTERNAL_SECRET__", \
             "User-Name": "%{User-Name}", \
@@ -46,6 +49,7 @@ rest {
             "Calling-Station-Id": "%{Calling-Station-Id}", \
             "Called-Station-Id": "%{Called-Station-Id}", \
             "NAS-IP-Address": "%{NAS-IP-Address}", \
+            "Packet-Src-IP-Address": "%{Packet-Src-IP-Address}", \
             "NAS-Port-Type": "%{NAS-Port-Type}", \
             "Framed-IP-Address": "%{Framed-IP-Address}" \
         }'
@@ -70,7 +74,8 @@ rest {
             "_internal_secret": "__HR_INTERNAL_SECRET__", \
             "User-Name": "%{User-Name}", \
             "reply_code": "%{reply:Packet-Type}", \
-            "NAS-IP-Address": "%{NAS-IP-Address}" \
+            "NAS-IP-Address": "%{NAS-IP-Address}", \
+            "Packet-Src-IP-Address": "%{Packet-Src-IP-Address}" \
         }'
         tls = ${..tls}
         timeout = 3.0

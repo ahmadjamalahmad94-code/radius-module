@@ -78,6 +78,8 @@ _RULES: tuple[_Rule, ...] = (
     _Rule("radacct", ("acctstoptime",), 90,
           "acctstoptime IS NOT NULL AND acctstoptime != ''"),
     _Rule("radpostauth", ("authdate",), 30),
+    # B-14 quarantine: RADIUS packets no single tenant owns (operator-only).
+    _Rule("radius_unattributed", ("last_seen",), 30),
     # Business event stream + admin audit trail.
     _Rule("business_events", ("created_at",), 180),
     # Manager-activity PAGE VISITS (migration 161: is_visit=1) are high-volume
