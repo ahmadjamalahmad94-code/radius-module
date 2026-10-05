@@ -141,3 +141,50 @@ still 403.
 
 **Migration impact:** none. **Rollback:** revert the commit (or keep `HOBERADIUS_DIAG_ENABLED` unset,
 which is the default and makes the endpoint return 403 regardless).
+
+---
+
+## B-13 — admin accounts are server-global (list / get / edit / delete)
+
+**Reproduced?** Yes — and the "cross-tenant edit/delete" part that the review left SUSPECTED is
+**confirmed**. 8 tests failed before the fix: a tenant-B manager with `admins.view/edit/delete`
+- saw tenant A's admins in `GET /api/v1/admins` and on the web `/admin/radius/admins` page;
+- read a tenant-A admin by id (`GET /api/v1/admins/<id>` → 200, web `/admins/<id>/edit` → 200);
+- **modified** a tenant-A admin (`PATCH /api/v1/admins/<id>` → 200);
+- an unbound DB token of tenant B also listed everyone;
+- an admin created by the tenant-B manager had no membership, so it showed up in tenant A's list and
+  was bootstrapped into tenant 1 at first login.
+
+**Fix:**
+- `admins_repo.admin_ids_in_tenant(tid)` / `admin_in_tenant(aid, tid)`: an admin belongs to a tenant
+  through an **active** `tenant_memberships` row; in the default tenant (1) admins with no active
+  membership anywhere also belong (exactly the accounts the login bootstrap attaches to tenant 1 — this
+  keeps single-tenant servers unchanged).
+- API `app/api/v1/admins.py`: `admins_list` filtered; `admins_get/patch/delete` return **404** for an
+  admin outside the caller's tenant. Server-wide callers: owner / co-owner behind the token, env
+  tokens, and unbound DB tokens only with `HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE=1` (B-07).
+- Web `app/radius/routes/admins.py`: `admins_list` and `admins_profile_summary` filtered;
+  `admins_edit/update/delete` → 404 outside the tenant. Server-wide: owner / co-owner (`is_owner_like`).
+  «مدير عام» is tenant-scoped.
+- Create (API and web): the new admin gets an active membership in the creator's current tenant, so it
+  stays visible to its creator and lands in that tenant at first login (closes the B-06 residual for
+  admins created after this change).
+
+**Tests:** `tests/test_sec_b13_admin_list_scope.py` (10): API list/get/patch/delete and web
+list/edit/update/delete scoped (tenant-A admin unchanged afterwards); **cross-tenant symmetric**
+(managers of A and B each see only their side; `X-Tenant`/`X-Tenant-Id` do not widen it); unbound
+token of B scoped; created-by-B admin stays in B (and app login lands in B); owner still sees everyone;
+membership-less legacy admins still listed in the default tenant.
+
+**Behaviour change:** on multi-tenant servers a non-owner manager only sees/manages admins of his
+current tenant. Single-tenant servers: no change (every admin is in tenant 1, either by membership or
+by having none). Roles (`/roles`) remain server-global (not changed here).
+
+**Migration impact:** none (no schema change). Existing admins without membership keep appearing in
+tenant 1 only. **OWNER DECISION** for multi-tenant servers: decide which tenant each existing
+membership-less admin belongs to and insert memberships (read-only check:
+`SELECT id, username FROM admins a WHERE deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM
+tenant_memberships m WHERE m.admin_id=a.id AND m.status='active');`).
+
+**Rollback:** revert the commit. Memberships created for new admins by the fixed create path are
+harmless after a revert (they match what the login bootstrap would have done on a single-tenant server).

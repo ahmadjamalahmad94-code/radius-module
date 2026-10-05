@@ -63,6 +63,47 @@ def _actor_id():
     return int(aid) if aid else None
 
 
+def _scope_tenant():
+    """Security B-13: tenant the panel admin list is limited to, or ``None``
+    for the owner / co-owner (server-wide). Everyone else — «مدير عام»
+    included — sees only admins of his current tenant."""
+    from ..auth.owner import is_owner_like
+    aid = _actor_id()
+    if aid and is_owner_like(aid):
+        return None
+    from flask import g
+    return int(session.get("tenant_id") or getattr(g, "tenant_id", 1) or 1)
+
+
+def _scoped(admins):
+    scope = _scope_tenant()
+    if scope is None:
+        return list(admins)
+    allowed = admins_repo.admin_ids_in_tenant(scope)
+    return [a for a in admins if int(a.id) in allowed]
+
+
+def _require_in_scope(admin_id: int) -> None:
+    scope = _scope_tenant()
+    if scope is not None and not admins_repo.admin_in_tenant(int(admin_id), scope):
+        abort(404)
+
+
+def _join_creator_tenant(admin) -> None:
+    """Security B-13: a new admin joins the creator's current tenant."""
+    try:
+        from ..core.tenant import TenantMembership
+        from ..db.repos import tenants_repo
+        from flask import g
+        tid = int(session.get("tenant_id") or getattr(g, "tenant_id", 1) or 1)
+        tenants_repo.add_membership(TenantMembership(
+            id=None, tenant_id=tid, admin_id=int(admin.id),
+            role_id=getattr(admin, "role_id", None), status="active",
+            invited_by=int(_actor_id() or 0)))
+    except Exception:  # noqa: BLE001 — never fail the create on this
+        pass
+
+
 def _super_role_id():
     from ..core.constants import ROLE_SUPER_ADMIN
     r = admins_repo.get_role_by_name(ROLE_SUPER_ADMIN)
@@ -132,7 +173,7 @@ def _form_perms(*, role=None):
 
 def admins_list():
     svc = get_admins_service()
-    admins = svc.list_admins()
+    admins = _scoped(svc.list_admins())
     roles_seq = svc.list_roles()
     roles = {r.id: r for r in roles_seq}
     return render_template(
@@ -213,6 +254,7 @@ def admins_create():
             admins_repo.update_admin(a.id, is_super_admin=True)
         if want_co:
             admins_repo.set_co_owner(a.id, True)
+        _join_creator_tenant(a)
     except (ValueError, RadiusError) as e:
         flash(str(e), "error")
         return render_template("radius/admins_form.html",
@@ -228,6 +270,7 @@ def admins_edit(admin_id: int):
     svc = get_admins_service()
     a = svc.get_admin(admin_id)
     if not a: abort(404)
+    _require_in_scope(admin_id)
     return render_template("radius/admins_form.html", admin=a,
                            roles=_roles_for_actor(svc.list_roles()), is_new=False,
                            can_grant_owner=_can_grant_owner(),
@@ -236,6 +279,7 @@ def admins_edit(admin_id: int):
 
 
 def admins_update(admin_id: int):
+    _require_in_scope(admin_id)
     svc = get_admins_service()
     changes = {}
     for k in ("full_name","email","mobile",
@@ -318,6 +362,7 @@ def admins_update(admin_id: int):
 
 
 def admins_delete(admin_id: int):
+    _require_in_scope(admin_id)
     from ..auth.owner import OwnerGuardError, assert_can_modify_admin
     try:
         assert_can_modify_admin(_actor_id(), admin_id, deleting=True)
@@ -371,7 +416,7 @@ def roles_update(role_id: int):
 def admins_profile_summary():
     """صفحة ملخّص قراءة فقط لكل المدراء."""
     svc = get_admins_service()
-    admins = svc.list_admins()
+    admins = _scoped(svc.list_admins())
     roles = {r.id: r for r in svc.list_roles()}
     perms = svc.all_permissions()
     total = len(admins)
