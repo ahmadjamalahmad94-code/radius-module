@@ -13,9 +13,9 @@ from app.i18n_text import N_, _tr
 
 import json
 import os
-from ..core import env_settings
 import re
 import time
+from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, g, jsonify, render_template, request
 
@@ -48,23 +48,72 @@ def _service_label(slug: str) -> str:
     return labels.get(slug, slug)
 
 
-def _ui_api_token() -> str:
-    """The token the dashboard JS uses to call /api/v1/*.
+# SEC F-1 — the browser never receives an env token (HOBERADIUS_API_TOKENS is
+# unbound and owner-level). It gets a short-lived DB token minted for the
+# LOGGED-IN admin and the session tenant instead, so /api/v1 applies that
+# admin's own permissions and tenant (same model as the app's /api/admin/login
+# tokens). The ``login:`` prefix makes password change / disable revoke it
+# (api_tokens_repo.revoke_admin_tokens), and a deleted/disabled admin's tokens
+# are refused at auth time anyway. One token is cached per web session, so page
+# views do not pile up api_tokens rows.
+_UI_TOKEN_TTL = timedelta(hours=8)
+_UI_TOKEN_MIN_LEFT = timedelta(minutes=30)
+_UI_TOKEN_SESSION_KEY = "_mt_ui_api_token"
 
-    Mirrors the env-token logic in `app.api.auth._allowed_env_tokens`
-    so the UI's calls succeed in the same dev / prod modes as a
-    curl smoke test would. In production an operator MUST set
-    `HOBERADIUS_API_TOKENS` (CSV); otherwise the UI receives an
-    empty token and the JS surfaces an "auth not configured" error
-    instead of silently failing.
-    """
-    raw = (env_settings.env("HOBERADIUS_API_TOKENS") or "").strip()
-    if raw:
-        return raw.split(",", 1)[0].strip()
-    env = (env_settings.env("HOBERADIUS_ENV") or env_settings.env("FLASK_ENV") or "").lower()
-    if env in {"prod", "production"}:
+
+def _ui_api_token() -> str:
+    """Short-lived, admin- and tenant-bound token for the dashboard JS.
+
+    Empty string when there is no logged-in admin (the JS then shows its
+    "auth not configured" state instead of calling the API)."""
+    from flask import session
+
+    from ..db.repos import api_tokens_repo
+
+    try:
+        admin_id = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        admin_id = 0
+    if admin_id <= 0:
         return ""
-    return "dev-token-please-change"
+    tenant_id = _tid()
+    now = datetime.utcnow()
+
+    cached = session.get(_UI_TOKEN_SESSION_KEY)
+    if isinstance(cached, dict):
+        plain = str(cached.get("t") or "")
+        try:
+            exp = datetime.fromisoformat(str(cached.get("exp") or ""))
+        except ValueError:
+            exp = now
+        if (plain and int(cached.get("a") or 0) == admin_id
+                and int(cached.get("tn") or 0) == int(tenant_id)
+                and exp - now > _UI_TOKEN_MIN_LEFT):
+            try:
+                rec = api_tokens_repo.resolve_by_plain(plain)
+            except Exception:  # noqa: BLE001
+                rec = None
+            if rec and int(rec.get("created_by") or 0) == admin_id                     and int(rec.get("tenant_id") or 0) == int(tenant_id):
+                return plain
+
+    username = str(session.get("admin_user") or admin_id)[:40]
+    expires_at = now + _UI_TOKEN_TTL
+    try:
+        _rec, plain = api_tokens_repo.create_token(
+            tenant_id=int(tenant_id),
+            name=f"{api_tokens_repo.LOGIN_TOKEN_PREFIX}ui-mt:{username}:"
+                 f"{now.strftime('%Y%m%dT%H%M%S')}",
+            scopes=["admin:full"],     # narrows nothing; the admin's perms apply
+            created_by=admin_id,
+            expires_at=expires_at,
+        )
+    except Exception:  # noqa: BLE001 — never break the page on a token write
+        return ""
+    session[_UI_TOKEN_SESSION_KEY] = {
+        "t": plain, "a": admin_id, "tn": int(tenant_id),
+        "exp": expires_at.isoformat(),
+    }
+    return plain
 
 
 def register_mt_dashboard_routes(bp: Blueprint) -> None:
