@@ -619,6 +619,19 @@ def _revert_one(tenant_id: int, row: Any, now: datetime, *, actor: str) -> bool:
         )
     except Exception:  # noqa: BLE001
         _LOG.exception("temp-speed revert audit failed for %s", username)
+
+    # المالك 2026-10-05: «خلص الوقت المؤقت وما جاب إشعار» — جرس + جوال.
+    try:
+        from .admin_alerts import dispatch
+        _ok = (coa is None) or bool(_coa_summary(coa).get("ok"))
+        dispatch(int(tenant_id), "speed_boost_ended", {
+            "username": username, "rate": restore_rate or "—",
+            "applied": N_("نعم") if (coa is not None and _ok) else (
+                N_("غير متصل الآن") if coa is None or getattr(coa, "code_name", "") == "no_active_session"
+                else N_("لا — ستُطبَّق عند الاتصال التالي")),
+        }, dedup_key=f"{username}:ended:{now.isoformat(timespec='seconds')}")
+    except Exception:  # noqa: BLE001
+        pass
     return True
 
 

@@ -156,6 +156,15 @@ ALERTS: list[AlertSpec] = [
          "duration": "60", "ends_at": "2026-06-16 21:00", "actor": N_("المدير")},
     ),
     AlertSpec(
+        "speed_boost_ended", "subscribers", N_("انتهاء السرعة المؤقتة"),
+        N_("يُرسل عند انتهاء أو إلغاء سرعة مؤقتة ورجوع الحساب لسرعته (temp_speed)."),
+        N_("⏱️ <b>انتهت السرعة المؤقتة</b>\n"
+        "الحساب: <code>{username}</code>\n"
+        "رجعت السرعة إلى: {rate}\n"
+        "تطبيق مباشر على الراوتر: {applied}"),
+        {"username": "79876297", "rate": "2048k/2048k", "applied": N_("نعم")},
+    ),
+    AlertSpec(
         "quota_exhausted", "subscribers", N_("انتهاء كوتة"),
         N_("يُرسل عند رفض الدخول بسبب نفاد الكوتة (policy_engine) أو فرض الانتهاء."),
         N_("📉 <b>انتهاء كوتة</b>\n"

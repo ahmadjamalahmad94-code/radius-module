@@ -753,6 +753,14 @@ def change_user_rate(tenant_id: int, username: str, *,
     if not new_rate_limit or not new_rate_limit.strip():
         return CoaResult(ok=False, code=0, code_name="empty_rate",
                           reply_message=N_("rate فارغ — لا تغيير"))
+    # 🔴 client20 2026-10-05: «سرعة مؤقتة» لكرت هوت سبوت ⇒ CoA بمفاتيح radacct
+    #    رُفض (الراوتر لا يعرف ذلك Acct-Session-Id) ⇒ سقط على الفصل فطُرد الكرت
+    #    لصفحة الدخول. الفصل نفسه ينجح لأنّه يسأل الراوتر أوّلًا عن الجلسة
+    #    الحيّة. الآن تغيير السرعة يسأل الراوتر أوّلًا بنفس الطريقة.
+    if _reconcile_disconnect_enabled():
+        reconciled = _rate_reconciled(tenant_id, username, new_rate_limit)
+        if reconciled is not None:
+            return reconciled
     sessions = find_all_nas_for_sessions(tenant_id, username)
     if not sessions:
         return CoaResult(ok=False, code=0, code_name="no_active_session",
@@ -770,6 +778,35 @@ def change_user_rate(tenant_id: int, username: str, *,
         for info in sessions
     )
     return _broadcast(N_("تحديث السرعة"), results, len(sessions))
+
+
+def _rate_reconciled(tenant_id: int, username: str,
+                     new_rate_limit: str) -> Optional[CoaResult]:
+    """Reconcile-first rate CoA (same live-target resolution as disconnect).
+    ``None`` ⇒ no API-capable router / nothing usable ⇒ legacy radacct path."""
+    try:
+        from ..services.mikrotik_active_reconciler import MikroTikActiveSessionReconciler
+        outcome = MikroTikActiveSessionReconciler(tenant_id).resolve_disconnect_targets(username)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("rate reconcile failed for %s — falling back", username)
+        return None
+    if outcome.routers_queried == 0 or outcome.error or not outcome.sessions:
+        return None
+    results = _run_all(
+        (lambda s=s: send_coa(
+            nas_ip=s.coa_dial_ip, nas_secret=s.nas_secret,
+            username=s.username, session_id=s.acct_session_id,
+            framed_ip=s.framed_ip_address,
+            calling_station_id=s.calling_station_id,
+            new_rate_limit=new_rate_limit,
+            port=s.coa_port,
+        ))
+        for s in outcome.sessions
+    )
+    res = _broadcast(N_("تحديث السرعة"), results, len(outcome.sessions))
+    if res.ok:
+        return res
+    return None   # let the radacct path try its keys too before giving up
 
 
 def change_user_session_timeout(tenant_id: int, username: str,
