@@ -188,3 +188,41 @@ tenant_memberships m WHERE m.admin_id=a.id AND m.status='active');`).
 
 **Rollback:** revert the commit. Memberships created for new admins by the fixed create path are
 harmless after a revert (they match what the login bootstrap would have done on a single-tenant server).
+
+---
+
+## Not fixed here (and why)
+
+| ID | Reason |
+|---|---|
+| B-14 FreeRADIUS `tenant_id=1`, B-22 licence-panel `owner_admins` | Owned by other work streams (out of scope). |
+| B-09 hotspot analytics `?t=` | Integrity-only, low. A real fix needs a signed per-tenant token in the published hotspot pages (redeploy of every router page), not an app-only change. |
+| B-10 / B-11 | Default-tenant behaviour, not a leak. |
+| B-12 weak `FLASK_SECRET` outside production | SUSPECTED / configuration — server audit (`DEPLOYMENT_CHECKLIST` step 2). Related: outside production `app/api/auth.py` also accepts a built-in dev fallback API token as an env (owner-level) token. |
+| B-23 hosting branch | Different branch; needs its own port. |
+| B-24 `read` scope method-based | SUSPECTED; behaviour change, owner decision. |
+| B-25 token in `HANDOFF_2026-05-20.md` | Not a code fix: the token must be **revoked** on every server (by hash). Editing the file does not remove it from git history. OWNER ACTION. |
+
+## Owner decisions (summary)
+
+1. **B-07:** keep `HOBERADIUS_ALLOW_UNBOUND_TOKEN_MINT` and `HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE`
+   off (default) unless an audited integration with an **unbound DB token** needs them.
+2. **B-06 / B-13:** on multi-tenant servers, assign memberships to existing admins that have none
+   (they stay in tenant 1 by default, and are bootstrapped there at login).
+
+## Test runs (local, temporary SQLite only)
+
+- Each reproducer was run **before** its fix and failed: B-04 1 (latent hook-order test), B-06 4,
+  B-07 4, B-08 3, B-13 8 failures; after each fix the module passes (B-04 7, B-06 7, B-07 15, B-08 5,
+  B-13 10).
+- Related modules per fix (store, login/owner/super-admin, tokens/permission guard/backups, internal
+  auth, admins/roles/manager grants): all pass.
+- **Full suite on this branch (`c9877a11`), one pytest process per file:** 894 files —
+  **10063 passed, 11 skipped, 2 failed**. The 2 failures are
+  `tests/test_i18n_no_leak_guard.py::{test_inventory_wrapped_literals_reach_catalog,
+  test_every_wrapped_msgid_is_in_catalog}` — **pre-existing** on `agent/sec-integration` (same 2 fail
+  there; missing catalogue entries for `services/temp_speed.py` and `services/admin_alerts.py`). This
+  branch adds no new missing msgid (B-07 reuses an existing message).
+- Note: in one combined multi-module run, a few `test_operations_foundation.py` /
+  `test_api_customer_contracts.py` tests failed; they pass on their own and in the per-file full run
+  (order-dependent, not caused by these changes).
