@@ -1921,6 +1921,33 @@ class CardsService:
             realigned["started"] = int(_restamp.get("changed") or 0)
             realigned["expired_now"] = int(_restamp.get("expired_now") or 0)
             realigned["restamp"] = _restamp
+        # 🔑 المالك 2026-10-05 «السرعة تنتقل مع الحزمة»: البطاقات البادئة
+        #    انتقلت مع الحزمة إلى الباقة الجديدة (cards_repo.update_batch) —
+        #    فالجلسات الحيّة تأخذ سرعتها الآن بـCoA (خلفيًّا، لا يعطّل الحفظ)،
+        #    والسرعة المؤقّتة النشِطة تعود عند انتهائها إلى سرعة الباقة الجديدة.
+        if "plan_id" in changes and int(changes["plan_id"] or 0) != int(batch.plan_id or 0):
+            try:
+                from ..db.connection import db as _db
+                from .temp_speed import retarget_restore_to_plan
+                retarget_restore_to_plan(self._store_tenant_id(), [
+                    r["username"] for r in _db().execute(
+                        "SELECT username FROM cards WHERE tenant_id = ? AND batch_id = ?"
+                        " AND plan_id = ?", (self._store_tenant_id(), int(batch_id),
+                                             int(changes["plan_id"]))).fetchall()])
+            except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجلها
+                import logging
+                logging.getLogger(__name__).warning(
+                    "temp-speed restore retarget failed for batch=%s", batch_id,
+                    exc_info=True)
+            try:
+                from .bandwidth_apply import push_batch_speed_live
+                realigned = dict(realigned)
+                realigned["speed_pushed"] = len(
+                    push_batch_speed_live(self._store_tenant_id(), int(batch_id)))
+            except Exception:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).warning(
+                    "push_batch_speed_live failed for batch=%s", batch_id, exc_info=True)
         self._last_realign = realigned
         # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
         # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).

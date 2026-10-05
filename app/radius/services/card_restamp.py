@@ -30,9 +30,10 @@ _materialize_first_login_validity``):
   usage balance). A cap of 0 = no calendar end.
 * neither flag (legacy third state): the batch window + extra, no plan.
 
-«Budget plan» = the BATCH's plan, falling back to the card's own: a used card
-keeps its old ``plan_id`` (speed) after the batch moves, but its duration now
-comes from the batch's plan — the same source the checker reads.
+«Budget plan» = the BATCH's plan, falling back to the card's own — the same
+source the checker reads. (Since the owner decision of 2026-10-05 a started
+card also moves its ``plan_id`` — hence its SPEED — with the batch;
+``cards_repo.update_batch`` + ``bandwidth_apply.push_batch_speed_live``.)
 
 Drift (time the operator added OUTSIDE the budget) is carried, never wiped:
 ``drift = old expire_at − (first_used_at + OLD budget)``.

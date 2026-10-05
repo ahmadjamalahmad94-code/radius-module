@@ -62,7 +62,7 @@ def live(monkeypatch):
     except ImportError:          # the pre-fix tree (proof run): nothing to inline
         card_restamp = None
 
-    calls = {"timeout": [], "disconnect": []}
+    calls = {"timeout": [], "disconnect": [], "rate": []}
 
     class _Res:
         def __init__(self, ok):
@@ -79,7 +79,17 @@ def live(monkeypatch):
         calls["disconnect"].append(username)
         return _Res(True)
 
+    def _rate(tenant_id, username, *, new_rate_limit):
+        calls["rate"].append((username, new_rate_limit))
+        return _Res(True)
+
     monkeypatch.setattr(radius_coa, "change_user_session_timeout", _timeout)
+    monkeypatch.setattr(radius_coa, "change_user_rate", _rate)
+    from app.radius.services import bandwidth_apply
+    # the batch-speed push runs in the background — inline here (absent on
+    # the pre-fix tree, hence raising=False)
+    monkeypatch.setattr(bandwidth_apply, "_spawn_bg", lambda fn, name: fn(),
+                        raising=False)
     monkeypatch.setattr(radius_coa, "disconnect_user", _disconnect)
     if card_restamp is not None:
         monkeypatch.setattr(card_restamp, "_spawn", lambda fn: fn())
@@ -487,3 +497,120 @@ def test_grant_on_a_plan_budget_card_extends_from_the_plan_window(app, live):
         assert mirror == exp
         assert abs(res["remaining_after"] - 15 * 3600) < 10, res
         assert _authorize(card).ok
+
+
+# ═══ 9. owner 2026-10-05 «السرعة تنتقل مع الحزمة» ═══════════════════════
+# Replaces the old a06-M8 rule («used cards keep the plan they were sold on»):
+# when a batch moves to another plan, the cards that ALREADY started move too —
+# cards.plan_id AND the subscribers mirror — so they get the new plan's SPEED
+# as well as its duration; online sessions get the new rate by the
+# reconcile-first rate CoA. Revoked/deleted cards are untouched; a temporary
+# speed is kept.
+
+def _speed_plan(name: str, minutes: int, down: int, up: int) -> int:
+    pid = _plan(name, minutes)
+    _db().execute("UPDATE access_plans SET speed_down_kbps=?, speed_up_kbps=? WHERE id=?",
+                  (down, up, pid))
+    return pid
+
+
+def _plan_rate(pid: int) -> str:
+    from app.radius.db.repos import plans_repo
+    from app.radius.services.bandwidth_rate import plan_rate_limit
+    return plan_rate_limit(plans_repo.get_plan(1, pid, include_deleted=True))
+
+
+def _plans_of(username: str):
+    card = _db().execute("SELECT plan_id FROM cards WHERE username=?",
+                         (username,)).fetchone()[0]
+    mirror = _db().execute("SELECT plan_id FROM subscribers WHERE username=?",
+                           (username,)).fetchone()[0]
+    return int(card), int(mirror)
+
+
+def _speed_scenario():
+    """started+online · unstarted · started+revoked · started+online+temp speed."""
+    slow = _speed_plan("2 ميجا", 960, 2048, 1024)
+    fast = _speed_plan("8 ميجا", 960, 8192, 4096)
+    bid, cards = _imported_batch(slow, count=4)
+    started, unstarted, revoked, temp = cards
+    for c in (started, revoked, temp):
+        _first_login(c["username"])
+        _age(c["username"], 0.5)
+    for c in (started, temp):
+        _open_session(c["username"])
+    _db().execute("UPDATE cards SET revoked=1 WHERE id=?", (revoked["id"],))
+    _db().commit()
+    from app.radius.services import temp_speed
+    temp_speed.apply_temp_speed(tenant_id=1, actor="owner", username=temp["username"],
+                                down_kbps=512, up_kbps=256, duration_minutes=60)
+    return slow, fast, bid, started, unstarted, revoked, temp
+
+
+def _assert_moved(live, slow, fast, started, unstarted, revoked, temp):
+    new_rate = _plan_rate(fast)
+    assert new_rate and new_rate != _plan_rate(slow)
+    # started card: card AND auth mirror on the new plan → the new speed
+    assert _plans_of(started["username"]) == (fast, fast)
+    d = _authorize(started)
+    assert d.ok, d
+    assert d.reply_attrs.get("Mikrotik-Rate-Limit") == new_rate
+    # its live session got the new rate by CoA (background, run inline here)
+    assert (started["username"], new_rate) in live["rate"], live["rate"]
+    # unstarted card: on the new plan too
+    assert _plans_of(unstarted["username"]) == (fast, fast)
+    assert _authorize(unstarted).reply_attrs.get("Mikrotik-Rate-Limit") == new_rate
+    # revoked card: untouched
+    assert _plans_of(revoked["username"]) == (slow, slow)
+    # temp speed kept: on the new plan, but auth + CoA keep the temp rate
+    assert _plans_of(temp["username"]) == (fast, fast)
+    assert _authorize(temp).reply_attrs.get("Mikrotik-Rate-Limit") == "256k/512k"
+    assert all(rate == "256k/512k" for u, rate in live["rate"] if u == temp["username"])
+    # …and when the temp window ends it restores the NEW plan's rate
+    import json as _json
+    meta = _json.loads(_db().execute("SELECT metadata FROM subscribers WHERE username=?",
+                                     (temp["username"],)).fetchone()[0] or "{}")
+    assert meta.get("temporary_speed_restore_rate") == new_rate
+
+
+def test_batch_moved_by_web_edit_moves_started_cards_and_their_speed(app, live):
+    with app.app_context():
+        slow, fast, bid, started, unstarted, revoked, temp = _speed_scenario()
+        live["rate"].clear()
+    # the web form re-sends the structure; count must match the batch (4)
+    res = _web_edit(app, bid, plan_id=fast, count=4)
+    assert res.status_code in (302, 303), res.data[:400]
+    with app.app_context():
+        _assert_moved(live, slow, fast, started, unstarted, revoked, temp)
+
+
+def test_batch_moved_by_api_patch_moves_started_cards_and_their_speed(app, live):
+    with app.app_context():
+        slow, fast, bid, started, unstarted, revoked, temp = _speed_scenario()
+        live["rate"].clear()
+    res = app.test_client().patch(f"/api/v1/cards/batches/{bid}", headers=AUTH,
+                                  json={"plan_id": fast})
+    assert res.status_code == 200, res.get_json()
+    with app.app_context():
+        _assert_moved(live, slow, fast, started, unstarted, revoked, temp)
+
+
+def test_speed_push_never_blocks_the_save(app, live, monkeypatch):
+    """The rate CoA runs in the background: a slow/broken router never fails
+    or delays the batch save."""
+    with app.app_context():
+        slow = _speed_plan("2 ميجا", 960, 2048, 1024)
+        fast = _speed_plan("8 ميجا", 960, 8192, 4096)
+        bid, cards = _imported_batch(slow)
+        _first_login(cards[0]["username"])
+        _open_session(cards[0]["username"])
+        from app.radius.services import bandwidth_apply
+        spawned = []
+        monkeypatch.setattr(bandwidth_apply, "_spawn_bg",
+                            lambda fn, name: spawned.append(name))
+        from app.radius.services.cards import get_cards_service
+        get_cards_service().update_batch(actor="owner", batch_id=bid,
+                                         data={"plan_id": fast})
+        assert spawned == ["batch-speed-live"]
+        assert live["rate"] == []            # nothing sent on the request thread
+        assert _plans_of(cards[0]["username"]) == (fast, fast)

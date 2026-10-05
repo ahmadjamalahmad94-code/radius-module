@@ -889,15 +889,22 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
             new_plan_id = int(filtered["plan_id"] or 0)
             # Every UNUSED card follows the batch — a disabled (revoked) one
             # too, or it comes back on the old plan when re-enabled (a06 M8).
-            # Used cards keep the plan they were sold/started on.
+            # 🔑 Owner decision 2026-10-05 («السرعة تنتقل مع الحزمة»): cards
+            #    that ALREADY STARTED follow the batch as well — the new plan's
+            #    SPEED, not only its duration (card_restamp). This replaces the
+            #    old a06-M8 rule «used cards keep the plan they were sold on».
+            #    A started card that is revoked or deleted is left untouched.
             conn.execute(
                 """
                 UPDATE cards
                 SET plan_id = ?
-                WHERE tenant_id = ? AND batch_id = ? AND used = 0
+                WHERE tenant_id = ? AND batch_id = ?
+                  AND (used = 0
+                       OR (COALESCE(revoked, 0) = 0 AND deleted_at IS NULL))
                 """,
                 (new_plan_id, tenant_id, batch_id),
             )
+            # The auth mirror follows its card (whatever moved above).
             conn.execute(
                 """
                 UPDATE subscribers
@@ -905,10 +912,13 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
                 WHERE tenant_id = ?
                   AND card_batch_id = ?
                   AND user_type = 'card'
-                  AND first_login_at IS NULL
                   AND deleted_at IS NULL
+                  AND username IN (SELECT username FROM cards
+                                    WHERE tenant_id = ? AND batch_id = ?
+                                      AND plan_id = ?)
                 """,
-                (new_plan_id, tenant_id, batch_id),
+                (new_plan_id, tenant_id, batch_id,
+                 tenant_id, batch_id, new_plan_id),
             )
     return get_batch(tenant_id, batch_id)
 

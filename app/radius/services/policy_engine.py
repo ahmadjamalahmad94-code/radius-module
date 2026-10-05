@@ -1075,6 +1075,18 @@ def _card_to_subscriber(card: Card) -> Subscriber:
     """
     has_speed_override = (card.card_speed_down_kbps > 0
                            and card.card_speed_up_kbps > 0)
+    speed_down = card.card_speed_down_kbps if has_speed_override else 0
+    speed_up = card.card_speed_up_kbps if has_speed_override else 0
+    # سرعةٌ مؤقّتةٌ نشِطة على مرآة الكرت (temp_speed يكتبها هناك) تغلب تجاوزَ
+    # الكرت الدائم — وإلّا أسقطها أوّلُ إعادة مصادقة (المالك 2026-10-05).
+    try:
+        from .temp_speed import active_temp_kbps
+        _temp = active_temp_kbps(card.tenant_id, card.username)
+    except Exception:  # noqa: BLE001
+        _temp = None
+    if _temp:
+        has_speed_override = True
+        speed_down, speed_up = _temp
     # حدّ الأجهزة للبطاقة — تسلسل الوراثة (الأخصّ يَغلب):
     #   تجاوز البطاقة الفرديّة (cards.*) → إعداد الحزمة (card_batches.*) →
     #   [إعداد العرض مطبوعٌ في الحزمة وقت التوليد] → الافتراض العام للكروت
@@ -1147,8 +1159,8 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         mac_lock=card.locked_mac or None,
         # ── Per-card speed override (migration 024) ──
         bandwidth_control_enabled=has_speed_override,
-        download_speed_kbps=card.card_speed_down_kbps if has_speed_override else 0,
-        upload_speed_kbps=card.card_speed_up_kbps   if has_speed_override else 0,
+        download_speed_kbps=speed_down,
+        upload_speed_kbps=speed_up,
         # كوتا + استهلاك البطاقة (انظر أعلاه): سقف الدفعة يَغلب الباقة حين يُضبَط.
         combined_quota_mb=batch_quota_mb,
         quota_limit_enabled=bool(batch_quota_mb),

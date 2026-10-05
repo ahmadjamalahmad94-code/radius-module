@@ -235,6 +235,61 @@ def push_plan_speed_live(tenant_id: int, plan_id: int, *,
     return names
 
 
+def _spawn_bg(fn, name: str) -> None:
+    """Fire-and-forget thread (tests monkeypatch this to run inline)."""
+    import threading
+    threading.Thread(target=fn, name=name, daemon=True).start()
+
+
+def online_cards_of_batch(tenant_id: int, batch_id: int) -> list[str]:
+    """Live (open radacct) sessions of the batch's cards that can authenticate
+    — not revoked, not deleted."""
+    from ..db.connection import db
+    rows = db().execute(
+        """
+        SELECT DISTINCT r.username AS username
+          FROM radacct r
+          JOIN cards c ON c.tenant_id = r.tenant_id AND c.username = r.username
+         WHERE r.tenant_id = ? AND r.acctstoptime IS NULL
+           AND c.batch_id = ? AND COALESCE(c.revoked, 0) = 0
+           AND c.deleted_at IS NULL
+        """,
+        (int(tenant_id), int(batch_id)),
+    ).fetchall()
+    return [str(r["username"]) for r in rows if r["username"]]
+
+
+def push_batch_speed_live(tenant_id: int, batch_id: int, *,
+                          background: bool = True) -> list[str]:
+    """🔑 Owner 2026-10-05 «السرعة تنتقل مع الحزمة»: a batch moved to another
+    plan moves its started cards too — their live sessions get the new plan's
+    rate now, by the reconcile-first rate CoA (``apply_users_effective`` →
+    ``radius_coa.change_user_rate``). ``effective_rate_limit`` keeps a card's
+    own/temporary speed and an active schedule, so those are re-sent as is.
+    Background by default — never blocks the save, never raises."""
+    try:
+        names = online_cards_of_batch(tenant_id, batch_id)
+    except Exception:  # noqa: BLE001
+        _LOG.exception("batch-speed: online lookup failed")
+        return []
+    if not names:
+        return []
+
+    def _go():
+        try:
+            apply_users_effective(int(tenant_id), names)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("batch-speed CoA push failed")
+    if background:
+        try:
+            _spawn_bg(_go, "batch-speed-live")
+        except Exception:  # noqa: BLE001
+            _LOG.exception("batch-speed: could not spawn the live push")
+    else:
+        _go()
+    return names
+
+
 def _usernames_on_profile(tenant_id: int, bw_id: int, *, limit: int = 2000) -> list[str]:
     """Active subscribers whose plan references this bandwidth profile."""
     from ..db.connection import db

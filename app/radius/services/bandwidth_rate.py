@@ -286,7 +286,14 @@ def _card_effective_rate_limit(tenant_id: int, card, *, at=None) -> str:
     else:
         down = int(getattr(card, "card_speed_down_kbps", 0) or 0)
         up = int(getattr(card, "card_speed_up_kbps", 0) or 0)
-        if down and up:                       # per-card override wins over plan
+        try:
+            from .temp_speed import active_temp_kbps
+            temp = active_temp_kbps(tenant_id, getattr(card, "username", "") or "")
+        except Exception:  # noqa: BLE001
+            temp = None
+        if temp:                              # an active temp speed (on its mirror)
+            result = f"{temp[1]}k/{temp[0]}k"
+        elif down and up:                     # per-card override wins over plan
             result = f"{up}k/{down}k"
         elif plan:
             result = plan_rate_limit(plan) or ""
