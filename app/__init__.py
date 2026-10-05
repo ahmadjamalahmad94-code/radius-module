@@ -29,8 +29,9 @@ def create_app() -> Flask:
     configure_logging()
 
     app = Flask(__name__, template_folder="templates", static_folder="static")
-    _WEAK_SECRETS = {"", "dev-secret-change-me", "change-this-secret",
-                     "replace-with-a-long-random-secret-at-least-32-bytes"}
+    # SEC F-3 — weak = empty, a historical default, placeholder wording, or
+    # ANY value from a shipped example/template env file (app/secret_policy.py).
+    from .secret_policy import is_weak_secret
     _flask_secret = os.environ.get("FLASK_SECRET", "dev-secret-change-me")
     _env = (os.environ.get("HOBERADIUS_ENV") or os.environ.get("FLASK_ENV") or "").strip().lower()
     _is_prod_boot = _env in {"prod", "production"}
@@ -38,11 +39,12 @@ def create_app() -> Flask:
     # at-rest encryption keys are derived. Refuse to boot in production on the
     # shipped default (fail-closed, mirrors the admin panel); warn otherwise so
     # the exposure is visible in dev.
-    if _flask_secret in _WEAK_SECRETS:
+    if is_weak_secret(_flask_secret):
         if _is_prod_boot:
             raise RuntimeError(
                 "Production (HOBERADIUS_ENV=production) requires a strong "
-                "FLASK_SECRET — the shipped default is not allowed.")
+                "FLASK_SECRET — the shipped default / an example-file "
+                "placeholder is not allowed.")
         import logging as _logging
         _logging.getLogger("app").warning(
             "FLASK_SECRET is the insecure default — set a strong random value; "
