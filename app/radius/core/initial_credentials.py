@@ -36,7 +36,17 @@ def is_production() -> bool:
 
 
 def is_known_default(password: str | None) -> bool:
-    return str(password or "").strip().lower() in KNOWN_DEFAULT_PASSWORDS
+    """Public password: one of KNOWN_DEFAULT_PASSWORDS, or anything SEC F-3's
+    secret policy calls weak (placeholder wording such as ``change-me`` /
+    ``replace-with-…``, or ANY value printed in a shipped env template) — so
+    the bootstrap password and FLASK_SECRET share one definition of "known"."""
+    if str(password or "").strip().lower() in KNOWN_DEFAULT_PASSWORDS:
+        return True
+    try:
+        from app.secret_policy import is_weak_secret
+    except Exception:  # noqa: BLE001 — policy module absent: keep the list check
+        return False
+    return is_weak_secret(password)
 
 
 def generate_password() -> str:

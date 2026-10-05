@@ -153,3 +153,17 @@ def test_dev_bootstrap_keeps_default(monkeypatch):
     app, tmp = _boot(monkeypatch, prod=False, no_seed=True)
     assert _verify(app, "admin", "123456789")
     assert not os.path.exists(_creds_file(tmp))
+
+
+# ─────────────── merge-sim: F-5 × F-3 share one "known secret" rule ───────────────
+@pytest.mark.parametrize("pw", [
+    "change-me-to-32-random-bytes-please",      # deploy/.env.example placeholder
+    "replace-with-a-long-random-flask-secret",  # .env.example placeholder
+    "ChangeMe2026",                             # placeholder wording
+])
+def test_production_template_or_placeholder_bootstrap_pass_is_replaced(monkeypatch, pw):
+    app, tmp = _boot(monkeypatch, prod=True, no_seed=True,
+                     HOBERADIUS_BOOTSTRAP_ADMIN_PASS=pw)
+    assert not _verify(app, "admin", pw)
+    assert _verify(app, "admin", _creds(tmp)["admin"])
+    assert _must_change(app, "admin")
