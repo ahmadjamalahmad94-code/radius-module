@@ -554,11 +554,24 @@ def ensure_bootstrap_admin() -> None:
                 or DEFAULT_ADMIN_USERNAME).strip() or DEFAULT_ADMIN_USERNAME
         pw = (os.environ.get("HOBERADIUS_BOOTSTRAP_ADMIN_PASS")
               or DEFAULT_ADMIN_PASSWORD)
+        # SEC F-5 — production never boots with a public password (the
+        # 123456789 default is printed in deploy/.env.example): unless the
+        # operator set a non-default HOBERADIUS_BOOTSTRAP_ADMIN_PASS, use a
+        # random one-time password, force a change at first login and write it
+        # to the owner-only credentials file next to the DB (never logged).
+        from app.radius.core import initial_credentials as _ic
+        one_time = _ic.is_production() and _ic.is_known_default(pw)
+        if one_time:
+            pw = _ic.generate_password()
         sa_role = get_role_by_name(ROLE_SUPER_ADMIN)
-        create_admin(
+        created = create_admin(
             username=user, password=pw, full_name=N_("المدير العام"),
             role_id=sa_role.id if sa_role else None, is_super_admin=True,
         )
+        if one_time:
+            update_admin(int(created.id), must_change_password=1)
+            _ic.record(user, pw, source="bootstrap")
+            return
         logging.getLogger(__name__).info(
             "bootstrap admin created (username=%s) — change the password after "
             "first login", user)
