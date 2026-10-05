@@ -250,10 +250,15 @@ def test_unbound_token_without_explicit_full_flag_is_refused(app, client):
     assert r.status_code == 403, (r.status_code, r.get_json())
 
 
-def test_unbound_token_flagged_full_keeps_behaviour(app, client):
+def test_unbound_token_flagged_full_keeps_behaviour(app, client, monkeypatch):
     _owner(app)
     h = _token(app, admin_id=0, scopes=["admin:full"])
     assert client.get("/api/v1/tokens", headers=h).status_code == 200
+    # B-07 (tests/test_sec_b07_unbound_tokens.py): minting by an unbound token
+    # is refused by default and restored only by the owner's opt-in setting.
+    r = client.post("/api/v1/tokens", json={"name": "integration"}, headers=h)
+    assert r.status_code == 403, r.get_json()
+    monkeypatch.setenv("HOBERADIUS_ALLOW_UNBOUND_TOKEN_MINT", "1")
     r = client.post("/api/v1/tokens", json={"name": "integration"}, headers=h)
     assert r.status_code in (200, 201), r.get_json()
 

@@ -392,10 +392,16 @@ def enforce_api_auth():
         g.tenant = TenantsStore.instance().get(int(tenant_id)) or getattr(g, "tenant", None)
     except Exception:  # noqa: BLE001
         pass
-    from .permission_guard import api_permission_denial, token_scope_denial
+    from .permission_guard import (
+        api_permission_denial, token_scope_denial, unbound_token_denial,
+    )
     # Token scopes only NARROW (read-only → no writes); the admin's own
     # permissions are still checked right after.
     denied = token_scope_denial()
+    if denied is not None:
+        return denied
+    # B-07: unbound DB tokens neither mint tokens nor reach server-wide APIs.
+    denied = unbound_token_denial()
     if denied is not None:
         return denied
     denied = api_permission_denial()
