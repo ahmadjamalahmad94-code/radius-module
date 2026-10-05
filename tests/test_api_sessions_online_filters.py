@@ -117,6 +117,8 @@ def test_sessions_online_can_filter_subscribers_and_cards(app, client):
     assert card["user_type"] == "card"
     assert card["card_id"] == 901
     assert card["card_batch_id"] == 901
+    # owner 2026-10-05: the tile shows «كرت · هوت سبوت (Cards)»
+    assert card["card_batch_name"] == "Cards"
     assert card["nas_ip_address"] == "10.20.30.1"
     assert card["framed_ip_address"] == "192.168.10.11"
     assert card["calling_station_id"] == "AA:BB:CC:00:00:02"

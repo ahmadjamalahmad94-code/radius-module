@@ -171,12 +171,17 @@ def _lookup_accounts(usernames) -> tuple[dict, dict]:
         chunk = names[i:i + _IN_CHUNK]
         ph = ",".join("?" for _ in chunk)
         for r in db().execute(
-            f"SELECT id, username, batch_id, expire_at, revoked FROM cards "
-            f" WHERE tenant_id = ? AND username IN ({ph}) ORDER BY id",
+            f"SELECT c.id, c.username, c.batch_id, c.expire_at, c.revoked,"
+            f"       COALESCE(NULLIF(TRIM(b.package_name), ''), b.batch_code, '')"
+            f"         AS batch_name"
+            f"  FROM cards c LEFT JOIN card_batches b"
+            f"    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id"
+            f" WHERE c.tenant_id = ? AND c.username IN ({ph}) ORDER BY c.id",
             (_tid(), *chunk),
         ).fetchall():
             cards.setdefault(r["username"], {
                 "id": r["id"], "batch_id": r["batch_id"],
+                "batch_name": r["batch_name"] or "",
                 "expire_at": _naive_utc(parse_dt(r["expire_at"])),
                 "revoked": bool(r["revoked"]),
             })
@@ -214,6 +219,8 @@ def _enrich_session(item: dict, accounts: tuple[dict, dict] | None = None) -> di
     item["subscriber_id"] = sub["id"] if sub else None
     item["card_id"] = card["id"] if card else None
     item["card_batch_id"] = card["batch_id"] if card else None
+    # «كرت · هوت سبوت (حزمة علاء)» على بلاطة المتصلين (المالك 2026-10-05).
+    item["card_batch_name"] = (card.get("batch_name") or "") if card else ""
     item["user_type"] = "card" if is_card else "subscriber"
     item["user_type_label"] = N_("بطاقة") if is_card else N_("مشترك")
     # «هوت سبوت / برود باند» — مصدرٌ واحد (services/access_type.py)
