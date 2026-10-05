@@ -232,10 +232,13 @@ def _materialize_first_login_validity(tenant_id: int, username: str,
     if card.expire_at:  # سبق التثبيت/التعيين — لا نَدوسه
         return
     plan = None
-    if card.plan_id:
+    # «باقة الميزانية» = باقةُ الحزمة ثمّ باقةُ البطاقة — نفسُ مصدر الفاحص
+    # وإعادة الختم (card_restamp) فلا تُختم بطاقةٌ بمدّةٍ ويُعرض غيرُها.
+    _budget_plan_id = getattr(batch, "plan_id", None) or card.plan_id
+    if _budget_plan_id:
         try:
             from ..db.repos import plans_repo
-            plan = plans_repo.get_plan(tenant_id, card.plan_id)
+            plan = plans_repo.get_plan(tenant_id, _budget_plan_id)
         except Exception:  # noqa: BLE001
             plan = None
     budget = card_accounting.budget_seconds(

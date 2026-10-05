@@ -214,6 +214,20 @@ def _batch_window_seconds(batch) -> int:
     })
 
 
+def _batch_time_snapshot(batch) -> dict:
+    """حقولُ الحزمة التي تُحدّد نافذةَ بطاقاتها — لقطةُ «قبل» لإعادة الختم."""
+    return {
+        "time_value": getattr(batch, "time_value", 0),
+        "time_unit": getattr(batch, "time_unit", "") or "days",
+        "validity_after_first_login_days":
+            getattr(batch, "validity_after_first_login_days", 0),
+        "count_by_seconds": int(bool(getattr(batch, "count_by_seconds", False))),
+        "count_from_first_connect":
+            int(bool(getattr(batch, "count_from_first_connect", True))),
+        "plan_id": getattr(batch, "plan_id", None),
+    }
+
+
 CARDS_MAX_PER_BATCH_KEY = "cards.max_per_batch"
 
 
@@ -1756,6 +1770,20 @@ class CardsService:
         else:
             changes["time_value"], changes["time_unit"] = 0, cur_tu
 
+    def _plan_budget_snapshot(self, plan_id) -> dict:
+        """مدّتا باقةٍ (‏duration_minutes/validity_days) قبل التعديل — لقياس ما
+        أضافه المشغّل خارج الميزانية عند إعادة الختم. {} إن تعذّرت."""
+        if not plan_id:
+            return {}
+        try:
+            plan = self._adapter.get_profile(int(plan_id))
+        except Exception:  # noqa: BLE001
+            plan = None
+        if not plan:
+            return {}
+        return {"duration_minutes": int(getattr(plan, "duration_minutes", 0) or 0),
+                "validity_days": int(getattr(plan, "validity_days", 0) or 0)}
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
@@ -1857,23 +1885,42 @@ class CardsService:
         # 🔴 وتغييرُ **النمط** تغييرٌ في المعنى لا في الرقم — يُطلق المطابقةَ
         #    مثلَ المدّة تمامًا. بدونه يقلب المشغّلُ الحزمةَ عبر الـAPI فتبقى
         #    بطاقاتُها المبدوءةُ على ختمها القديم: الحزمةُ بنمطٍ والبطاقاتُ بآخر.
-        if any(k in changes for k in
+        _time_touched = any(k in changes for k in
                ("time_value", "time_unit", "validity_after_first_login_days",
-                "count_by_seconds", "count_from_first_connect")):
+                "count_by_seconds", "count_from_first_connect"))
+        if _time_touched:
             try:
                 _by_seconds = (bool(getattr(updated, "count_by_seconds", False))
                                and not bool(getattr(
                                    updated, "count_from_first_connect", True)))
+                # البطاقاتُ التي لم تبدأ فقط — التي بدأت لـ card_restamp أدناه.
                 realigned = cards_repo.realign_batch_card_windows(
                     self._store_tenant_id(), int(batch_id),
                     window_seconds=_batch_window_seconds(updated),
                     clear_started_when_zero=_by_seconds,
+                    include_started=False,
                 )
             except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجل المواءمة
                 import logging
                 logging.getLogger(__name__).warning(
                     "realign_batch_card_windows failed for batch=%s",
                     batch_id, exc_info=True)
+        # 🔑 قرارُ المالك («أ»، client20 · 2026-10-05): البطاقاتُ التي **بدأت**
+        #    تأخذ المدّة الجديدة محسوبةً من أوّل دخولها — ومنها نقلُ الحزمة إلى
+        #    باقةٍ أخرى (كانت 77821145 مختومةً ساعةً على «ساعة» فيقطعها
+        #    الرّاديوس والفاحصُ يعدها بـ«16 ساعة»). الدالّة idempotent فتُصلح
+        #    أيضًا ختمًا قديمًا عند إعادة الحفظ، ولا تلمس ما أضافه المشغّل.
+        if _time_touched or "plan_id" in changes:
+            from .card_restamp import restamp_started_cards
+            _restamp = restamp_started_cards(
+                self._store_tenant_id(), batch_id=int(batch_id),
+                previous_batch=_batch_time_snapshot(batch),
+                previous_plan=self._plan_budget_snapshot(batch.plan_id),
+                reason="batch_update", actor=actor)
+            realigned = dict(realigned)
+            realigned["started"] = int(_restamp.get("changed") or 0)
+            realigned["expired_now"] = int(_restamp.get("expired_now") or 0)
+            realigned["restamp"] = _restamp
         self._last_realign = realigned
         # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
         # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).
