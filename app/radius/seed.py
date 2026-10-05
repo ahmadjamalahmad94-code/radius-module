@@ -124,11 +124,19 @@ def _seed_tenant_and_admins() -> None:
     if admins_repo.list_admins():
         return
 
+    # SEC F-5 — production never gets admin/admin or operator/operator: random
+    # one-time passwords, forced change at first login, written to the
+    # owner-only credentials file (never logged). Dev/test keep the defaults.
+    from .core import initial_credentials as _ic
+    prod = _ic.is_production()
+    sa_pw = _ic.generate_password() if prod else "admin"
+    op_pw = _ic.generate_password() if prod else "operator"
+
     sa_role = admins_repo.get_role_by_name(ROLE_SUPER_ADMIN)
     op_role = admins_repo.get_role_by_name("operator")
     sa = admins_repo.create_admin(
         username="admin",
-        password="admin",
+        password=sa_pw,
         full_name="المدير العام",
         email="admin@hoberadius.local",
         role_id=sa_role.id if sa_role else None,
@@ -136,7 +144,7 @@ def _seed_tenant_and_admins() -> None:
     )
     op = admins_repo.create_admin(
         username="operator",
-        password="operator",
+        password=op_pw,
         full_name="مشغل تجريبي",
         email="op@hoberadius.local",
         role_id=op_role.id if op_role else None,
@@ -150,6 +158,10 @@ def _seed_tenant_and_admins() -> None:
             status="active",
         )
     )
+    if prod:
+        for a, pw in ((sa, sa_pw), (op, op_pw)):
+            admins_repo.update_admin(int(a.id), must_change_password=1)
+            _ic.record(a.username, pw, source="demo-seed")
 
 
 def _seed_nas() -> None:
