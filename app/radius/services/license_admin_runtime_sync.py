@@ -7,6 +7,7 @@ SSH, gateway writes, WireGuard changes, MikroTik changes, or tc changes.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.radius.services.admin_panel_client import (
@@ -18,6 +19,8 @@ from app.radius.services.admin_panel_client import (
     bridge_flag,
     sanitize_bridge_payload,
 )
+
+_LOG = logging.getLogger(__name__)
 
 ACTIVE_LICENSE_STATUSES = {"active", "valid", "ok", "healthy", "grace"}
 BLOCKING_LICENSE_STATUSES = {
@@ -201,7 +204,10 @@ class LicenseAdminRuntimeSyncService:
 
         contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else payload
         license_info = contract.get("license") if isinstance(contract.get("license"), dict) else {}
-        owner_admins = apply_owner_admins_designation(contract.get("owner_admins"))
+        owner_admins = self._apply_signed_owner_admins(
+            contract.get("owner_admins"),
+            contract_result.get("_raw_response"),
+        )
         return {
             "ok": True,
             "status": payload.get("status") or license_info.get("status") or "unknown",
@@ -212,6 +218,34 @@ class LicenseAdminRuntimeSyncService:
             "services": sanitize_bridge_payload(contract.get("services") or {}),
             "owner_admins": owner_admins,
         }
+
+    def _apply_signed_owner_admins(self, owner_admins: Any, raw_response: Any) -> list[str]:
+        """SEC B-22 — apply the ``owner_admins`` designation ONLY when the
+        runtime-contract response carries a ``_bridge_sig`` we can reproduce
+        with our OWN licence key (same canonical HMAC as identity-sync, SEC C1).
+
+        The signature covers the whole body, so it is verified over the RAW
+        response (the stored snapshot masks license_key / bridge_token and would
+        never verify). Unsigned, foreign-key or tampered lists are refused: the
+        current designation is kept (or the min-id fallback stays in force) and
+        a warning is logged. Absent / empty lists are a no-op as before."""
+        if not isinstance(owner_admins, list) or not any(
+                str(k or "").strip() for k in owner_admins):
+            return []
+        from app.radius.services.license_admin_identity_sync import (
+            _bridge_signature_valid,
+        )
+        if not (isinstance(raw_response, dict)
+                and _bridge_signature_valid(raw_response, self.config.license_key)):
+            reason = ("signature missing" if not isinstance(raw_response, dict)
+                      or not raw_response.get("_bridge_sig") else "signature invalid")
+            _LOG.warning(
+                "runtime-contract: owner_admins designation (%d key(s)) REFUSED — "
+                "%s; keeping the current owner set. Either the panel predates the "
+                "B-22 signing change or the response did not come from our "
+                "licence panel.", len(owner_admins), reason)
+            return []
+        return apply_owner_admins_designation(owner_admins)
 
     def _derived_capacity_source_url(self) -> str:
         base = self.config.base_url.rstrip("/") if self.config.base_url else ""
