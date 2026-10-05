@@ -271,7 +271,10 @@ def install_store_key_guard(app) -> None:
         from ...radius.services.store_key import (
             STORE_KEY_HEADER, verify_store_key,
         )
-        tid = int(getattr(g, "tenant_id", 1) or 1)
+        # Security B-04: verify against the tenant the store handlers will
+        # actually use (_tid(): the signed store token's tenant, else 1) —
+        # NEVER g.tenant_id, which an anonymous ``X-Tenant`` header may set.
+        tid = _store_key_tenant()
         if not verify_store_key(request.headers.get(STORE_KEY_HEADER, ""), tid):
             return fail(
                 "store_key_invalid",
@@ -318,6 +321,22 @@ def _require_store_token(view):
 
 def _tid() -> int:
     return int(getattr(g, "store_tenant_id", 1))
+
+
+def _store_key_tenant() -> int:
+    """Tenant whose store key guards this request (B-04).
+
+    Mirrors what the handlers use: a valid store token → its signed tenant
+    (``_require_store_token`` → ``_tid()``); otherwise tenant 1, which is
+    hard-coded in the public register/login handlers. Client headers
+    (``X-Tenant``) play no part."""
+    tok = _extract_store_token()
+    if tok:
+        try:
+            return int(verify_store_token(tok)["tenant_id"] or 1)
+        except StoreTokenError:
+            pass
+    return 1
 
 
 def _cuid() -> int:
