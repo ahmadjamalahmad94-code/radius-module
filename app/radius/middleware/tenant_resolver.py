@@ -58,13 +58,41 @@ def install_tenant_resolver(app: Flask) -> None:
         }
 
 
+def _header_tenant_allowed(store: TenantsStore, tenant) -> bool:
+    """Security 2026-10-04: may this request switch to ``tenant`` via the
+    ``X-Tenant`` header?
+
+    * No logged-in panel admin (anonymous / public store, which verifies a
+      per-tenant store key; API calls, whose tenant is then overwritten by the
+      authenticated credential in ``app/api/auth.enforce_api_auth``) → yes,
+      unchanged.
+    * A logged-in admin → only the owner / co-owner (``is_owner_like``) or a
+      member of that tenant — the same rule as the topbar switcher
+      (``routes/auth.auth_switch_tenant``). Fail closed on any error.
+    """
+    aid = session.get("admin_id")
+    if not aid:
+        return True
+    try:
+        if int(tenant.id) == int(session.get("tenant_id") or 0):
+            return True
+        from ..auth.owner import is_owner_like
+        if is_owner_like(int(aid)):
+            return True
+        return any(int(t.id) == int(tenant.id)
+                   for t in store.tenants_for_admin(int(aid)))
+    except Exception:  # noqa: BLE001
+        _LOG.warning("X-Tenant membership check failed; header ignored")
+        return False
+
+
 def _resolve_from_request(store: TenantsStore):
     """يُرجع Tenant أو None."""
     # 1. X-Tenant header (API + UI override)
     slug = (request.headers.get("X-Tenant") or "").strip()
     if slug:
         t = store.get_by_slug(slug)
-        if t:
+        if t and _header_tenant_allowed(store, t):
             return t
 
     # 2. session (admin UI)

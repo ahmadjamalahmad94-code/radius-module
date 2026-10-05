@@ -21,11 +21,11 @@ username + password مطلوبان,,,,,,"missing: en,fr,tr,es",app/api/admin_aut
 تعذر تحديث كلمة المرور عبر لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/api/admin_auth.py:343
 تم تحديث كلمة المرور من لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/api/admin_auth.py:356
 تم تحديث كلمة المرور المحلية.,,,,,,"missing: en,fr,tr,es",app/api/admin_auth.py:367
-توكن غير صالح,,,,,,"missing: en,fr,tr,es",app/api/auth.py:307
-انتهت صلاحية الـ token — سجّل دخول مجددًا,,,,,,"missing: en,fr,tr,es",app/api/auth.py:314
-الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/api/auth.py:327
-مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> أو X-API-Key) أو اعتماد أدمن (Basic بيوزر/باس الأدمن).,,,,,,"missing: en,fr,tr,es",app/api/auth.py:346
-تجاوزت الحد (%(rpm)s req/min),,,,,,"missing: en,fr,tr,es",app/api/auth.py:362
+توكن غير صالح,,,,,,"missing: en,fr,tr,es",app/api/auth.py:320
+انتهت صلاحية الـ token — سجّل دخول مجددًا,,,,,,"missing: en,fr,tr,es",app/api/auth.py:327
+الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/api/auth.py:340
+مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> أو X-API-Key) أو اعتماد أدمن (Basic بيوزر/باس الأدمن).,,,,,,"missing: en,fr,tr,es",app/api/auth.py:359
+تجاوزت الحد (%(rpm)s req/min),,,,,,"missing: en,fr,tr,es",app/api/auth.py:375
 الخادم مشغول الآن، أعد المحاولة بعد لحظات.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:32
 حدث خطأ غير متوقع في الخادم. أعد المحاولة، وإن تكرّر فأبلغ الدعم الفنّي.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:33
 المسار أو السجلّ المطلوب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:75
@@ -272,8 +272,10 @@ REST API لإدارة المشتركين والباقات والبطاقات و�
 اختبار المصادقة,,Authentication test,Test d'authentification,Kimlik doğrulama testi,Prueba de autenticación,ok,app/api/permission_guard.py:728
 سجلّ الراديوس,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:730
 الصيانة الجماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:732
-تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:819
-هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:822
+هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:820
+توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read).,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:827
+تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:879
+هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:882
 العملية %(operation)s مُسجَّلة كـ contract لكن منطقها لم يكتمل بعد.,,,,,,"missing: en,fr,tr,es",app/api/responses.py:58
 نوع حدث المحاسبة (status_type) مفقود أو غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:31
 معرّف الجلسة (acct_session_id) مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:32

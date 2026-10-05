@@ -770,6 +770,66 @@ def owner_only_tools() -> list[str]:
     return out
 
 
+# ───────────────────── token scopes (narrow only) ─────────────────────
+#: Scopes that leave the token unrestricted (still subject to the bound
+#: admin's permissions below — a scope never WIDENS what the admin may do).
+FULL_SCOPES = frozenset({"admin:full", "*"})
+#: Scopes that allow mutating methods.
+WRITE_SCOPES = FULL_SCOPES | {"write", "admin:write"}
+#: Scopes that allow reads only (GET/HEAD/OPTIONS).
+READ_SCOPES = frozenset({"read", "readonly", "read-only", "read_only",
+                         "api:read", "admin:read"})
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+#: A read-only token may still end its own session.
+_SCOPE_EXEMPT = frozenset({"admin_logout"})
+
+
+def token_scope_denial():
+    """Enforce the DB token's stored ``scopes`` (security 2026-10-04).
+
+    The scopes were stored but never enforced: a token minted with
+    ``["read"]`` could still create tokens, credit wallets, etc. Rules (DB
+    tokens only — env tokens and HTTP Basic are unchanged):
+
+      * any ``WRITE_SCOPES`` member → every method (admin permissions still
+        apply through ``api_permission_denial``);
+      * only ``READ_SCOPES`` → safe methods only, else 403;
+      * a token BOUND to an admin with no read-only marker (empty list — the
+        web «رموز API» page mints these — or permission-like scopes such as
+        ``cards.view``) → legacy: every method, the admin's permissions
+        decide (a scope never widens them);
+      * an UNBOUND token (``created_by`` = 0) keeps its unscoped integration
+        behaviour ONLY when explicitly flagged ``admin:full`` / ``*`` (or
+        ``write``); with a read scope → reads only; empty / unknown scopes →
+        403.
+    Returns an error response or ``None``."""
+    if getattr(g, "api_token_id", None) is None:
+        return None                     # env token / HTTP Basic — unchanged
+    ep = request.endpoint or ""
+    name = ep[4:] if ep.startswith("api.") else ep
+    scopes = {str(s).strip().lower() for s in (getattr(g, "api_token_scopes", None) or [])
+              if str(s).strip()}
+    method = _method()
+    bound = int(getattr(g, "admin_id", 0) or 0) > 0
+    if scopes & WRITE_SCOPES:
+        return None
+    if scopes & READ_SCOPES:
+        if method in _SAFE_METHODS or name in _SCOPE_EXEMPT:
+            return None
+        return fail("forbidden",
+                    _tr("هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل."),
+                    status=403,
+                    details={"reason": "token_scope", "required": "write",
+                             "endpoint": name})
+    if bound:
+        return None                     # legacy bound token — admin perms decide
+    return fail("forbidden",
+                _tr("توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read)."),
+                status=403,
+                details={"reason": "token_scope", "required": "admin:full",
+                         "endpoint": name})
+
+
 def api_permission_denial():
     """Called by ``enforce_api_auth`` once the credential is accepted.
     Returns an error response, or ``None`` to let the request through."""
@@ -826,4 +886,4 @@ def api_permission_denial():
 
 
 __all__ = ["API_PERMISSIONS", "API_AUTH_ONLY", "API_PUBLIC", "SUPER", "decide",
-           "api_permission_denial", "TOOLS", "tool_permissions", "owner_only_tools"]
+           "api_permission_denial", "token_scope_denial", "TOOLS", "tool_permissions", "owner_only_tools"]
