@@ -250,14 +250,44 @@ def _coerce_int(name: str, v: Any) -> int | None:
         raise RadiusValidationError(_tr('قيمة %(name)s يجب أن تكون رقمًا صحيحًا.', name=name))
 
 
+def _scope_tenant() -> int | None:
+    """Security B-13: the tenant the caller's admin list is limited to, or
+    ``None`` for server-wide callers — the owner / co-owner behind the token,
+    an env (operator) token, or an unbound DB token only when the owner opted
+    in with ``HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE`` (B-07)."""
+    aid = int(getattr(g, "admin_id", 0) or 0)
+    if aid <= 0:
+        if getattr(g, "api_token_id", None) is None:
+            return None                       # env token / operator
+        from ..permission_guard import _env_flag
+        if _env_flag("HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE"):
+            return None
+        return _tid()
+    from ...radius.auth.owner import is_owner_like
+    return None if is_owner_like(aid) else _tid()
+
+
+def _in_scope(admin_id: int) -> bool:
+    scope = _scope_tenant()
+    return scope is None or admins_repo.admin_in_tenant(int(admin_id), scope)
+
+
+def _not_found(admin_id: int):
+    return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
+
+
 def admins_list():
     items = admins_repo.list_admins()
+    scope = _scope_tenant()
+    if scope is not None:
+        allowed = admins_repo.admin_ids_in_tenant(scope)
+        items = [a for a in items if int(a.id) in allowed]
     return ok({"items": [_serialize_admin(a) for a in items], "count": len(items)})
 
 
 def admins_get(admin_id: int):
     a = admins_repo.get_admin(admin_id)
-    if not a:
+    if not a or not _in_scope(admin_id):
         return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     return ok(_serialize_admin(a))
 
@@ -317,15 +347,31 @@ def admins_create():
     if want_co:
         admins_repo.set_co_owner(admin.id, True)
         admin = admins_repo.get_admin(admin.id)
+    _join_creator_tenant(admin)
     # audit (same shape as web)
     _audit("create", "admin", str(admin.id), {"username": admin.username})
     _notify_panel_of_admin_change()
     return ok(_serialize_admin(admin), status=201)
 
 
+def _join_creator_tenant(admin) -> None:
+    """Security B-13: a new admin joins the creator's tenant (else he has no
+    membership, is listed only in the default tenant and is bootstrapped
+    there at first login)."""
+    try:
+        from ...radius.core.tenant import TenantMembership
+        from ...radius.db.repos import tenants_repo
+        tenants_repo.add_membership(TenantMembership(
+            id=None, tenant_id=_tid(), admin_id=int(admin.id),
+            role_id=getattr(admin, "role_id", None), status="active",
+            invited_by=int(getattr(g, "admin_id", 0) or 0)))
+    except Exception:  # noqa: BLE001 — never fail the create on this
+        pass
+
+
 def admins_patch(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
-    if not existing:
+    if not existing or not _in_scope(admin_id):
         return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     if _owner_target_protected(existing):
         return fail("forbidden", _OWNER_PROTECTED_AR, status=403)
@@ -406,7 +452,7 @@ def admins_patch(admin_id: int):
 
 def admins_delete(admin_id: int):
     existing = admins_repo.get_admin(admin_id)
-    if not existing:
+    if not existing or not _in_scope(admin_id):
         return fail("not_found", _tr('admin %(admin_id)s غير موجود', admin_id=admin_id), status=404)
     from ...radius.auth.owner import OwnerGuardError, assert_can_modify_admin
     try:

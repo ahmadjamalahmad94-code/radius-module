@@ -196,11 +196,13 @@ def internal_auth():
 def internal_diag():
     """Endpoint تشخيصي يكشف عن مسار البحث + قرار policy_engine بلا
     اعتماد على X-Internal-Secret. يُمكَّن فقط لو HOBERADIUS_DIAG_ENABLED=1.
+    (B-08: صار يتطلّب X-Internal-Secret أيضًا — انظر الفحص أدناه.)
 
     الاستخدام من VPS:
       docker exec hoberadius curl -s -X POST \\
         http://localhost:8000/api/v1/internal/_diag \\
         -H 'Content-Type: application/json' \\
+        -H "X-Internal-Secret: $HOBERADIUS_INTERNAL_SECRET" \\
         -d '{"username":"user1000","password":"123456","tenant_id":1}'
 
     يعيد JSON يحوي:
@@ -213,6 +215,16 @@ def internal_diag():
                                   "restart hoberadius"}), 403
 
     body = request.get_json(silent=True) or {}
+    # Security B-08: this endpoint answers "does user X exist in tenant T and
+    # is password P accepted" — a password/existence oracle across tenants.
+    # It now needs the internal secret (header ``X-Internal-Secret`` or body
+    # ``_internal_secret``, same as FreeRADIUS), and a secret MUST be
+    # configured: no dev "accept without secret" fallback here.
+    if not (os.environ.get("HOBERADIUS_INTERNAL_SECRET") or "").strip():
+        return jsonify({"error": "diag requires HOBERADIUS_INTERNAL_SECRET"}), 403
+    if not isinstance(body, dict) or not _check_internal_secret(body):
+        return jsonify({"error": "secret_mismatch"}), 401
+    body.pop("_internal_secret", None)
     username = (body.get("username") or "").strip()
     password = (body.get("password") or "")
     tenant_id = int(body.get("tenant_id") or 1)

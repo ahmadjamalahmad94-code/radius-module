@@ -830,6 +830,54 @@ def token_scope_denial():
                          "endpoint": name})
 
 
+#: Security B-07 — API endpoints that act on OTHER tenants / the whole
+#: server (every tenant row, the whole-database backups). An unbound DB token
+#: is bound to ONE tenant (``api_tokens.tenant_id``) and must not reach them.
+_SERVER_WIDE_PREFIXES = ("v1.tenants_", "v1.backups_")
+#: Security B-07 — minting endpoints refused to unbound DB tokens.
+_MINT_ENDPOINTS = frozenset({"v1.tokens_create"})
+
+
+def _env_flag(name: str) -> bool:
+    import os
+    return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def unbound_token_denial():
+    """Security B-07: limits for UNBOUND DB tokens (``created_by`` = 0).
+
+    * they cannot mint tokens (a leaked token would otherwise perpetuate
+      itself with any scope, ``*`` included) — opt-out:
+      ``HOBERADIUS_ALLOW_UNBOUND_TOKEN_MINT=1``;
+    * they cannot reach server-wide endpoints (``tenants_*``, ``backups_*``)
+      — opt-out: ``HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE=1``.
+
+    Env tokens (``api_token_id is None``), HTTP Basic and tokens bound to an
+    admin are untouched. Returns an error response or ``None``."""
+    if getattr(g, "api_token_id", None) is None:
+        return None
+    if int(getattr(g, "admin_id", 0) or 0) > 0:
+        return None
+    ep = request.endpoint or ""
+    name = ep[4:] if ep.startswith("api.") else ep
+    if name in _MINT_ENDPOINTS and not _env_flag("HOBERADIUS_ALLOW_UNBOUND_TOKEN_MINT"):
+        return fail("forbidden",
+                    # existing catalogue msgid (no new i18n entry needed);
+                    # details.reason says why.
+                    _tr("هذا الإجراء مقصور على المالك أو الشريك."),
+                    status=403,
+                    details={"reason": "unbound_token", "endpoint": name})
+    if name.startswith(_SERVER_WIDE_PREFIXES) and not _env_flag(
+            "HOBERADIUS_ALLOW_UNBOUND_TOKEN_SERVER_WIDE"):
+        return fail("forbidden",
+                    # existing catalogue msgid (no new i18n entry needed);
+                    # details.reason says why.
+                    _tr("هذا الإجراء مقصور على المالك أو الشريك."),
+                    status=403,
+                    details={"reason": "unbound_token", "endpoint": name})
+    return None
+
+
 def api_permission_denial():
     """Called by ``enforce_api_auth`` once the credential is accepted.
     Returns an error response, or ``None`` to let the request through."""
@@ -886,4 +934,4 @@ def api_permission_denial():
 
 
 __all__ = ["API_PERMISSIONS", "API_AUTH_ONLY", "API_PUBLIC", "SUPER", "decide",
-           "api_permission_denial", "token_scope_denial", "TOOLS", "tool_permissions", "owner_only_tools"]
+           "api_permission_denial", "token_scope_denial", "unbound_token_denial", "TOOLS", "tool_permissions", "owner_only_tools"]

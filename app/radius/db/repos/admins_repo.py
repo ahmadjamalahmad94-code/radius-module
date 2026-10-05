@@ -198,6 +198,32 @@ def list_admins(*, include_deleted: bool = False) -> list[Admin]:
     return [_row_to_admin(r) for r in cur.fetchall()]
 
 
+def admin_ids_in_tenant(tenant_id: int) -> set[int]:
+    """Security B-13: ids of admins that belong to ``tenant_id``.
+
+    ``admins`` has no ``tenant_id``; tenancy is ``tenant_memberships``. An
+    admin belongs to a tenant with an ACTIVE membership there. In the default
+    tenant (1) admins with no active membership anywhere also belong — the
+    login bootstrap attaches exactly those to the default tenant (legacy
+    single-tenant accounts, never-logged-in admins)."""
+    tid = int(tenant_id)
+    rows = db().execute(
+        "SELECT admin_id FROM tenant_memberships WHERE tenant_id=? AND status='active'",
+        (tid,)).fetchall()
+    ids = {int(r[0]) for r in rows}
+    if tid == 1:
+        rows = db().execute(
+            "SELECT a.id FROM admins a WHERE NOT EXISTS (SELECT 1 FROM tenant_memberships m"
+            " WHERE m.admin_id=a.id AND m.status='active')").fetchall()
+        ids |= {int(r[0]) for r in rows}
+    return ids
+
+
+def admin_in_tenant(admin_id: int, tenant_id: int) -> bool:
+    """``admin_id`` belongs to ``tenant_id`` (see ``admin_ids_in_tenant``)."""
+    return int(admin_id) in admin_ids_in_tenant(int(tenant_id))
+
+
 def primary_admin_id() -> Optional[int]:
     """أصغر معرّف admin غير محذوف = «المدير الرئيسي» (المالك).
 
