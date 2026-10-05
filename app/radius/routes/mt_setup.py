@@ -464,7 +464,8 @@ def mt_operations():
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
     # عدّاد «متصل» يبدأ مجهولًا (None → «—») ويُحدّثه AJAX بعد التحميل.
     radacct_connected_count = None
-    # O2 — pass an api_token so the per-row counter poll JS can
+    # O2 + SEC F-1 — pass a short-lived admin-bound api_token (never an env
+    # token) so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without
     # needing a separate session-bridging step.
     from .mt_dashboard import _ui_api_token   # internal helper reuse
