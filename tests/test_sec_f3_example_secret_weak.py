@@ -110,6 +110,8 @@ def test_secret_placeholders_are_weak_without_the_template_files():
             if not m:
                 continue
             v = m.group(3).strip().strip('"').strip("'")
+            if m.group(1).endswith("FILE") or v.startswith("/"):
+                continue                      # a path to a key file, not a secret
             if v and not is_weak_secret(v, include_templates=False):
                 bad.append((f.name, m.group(1), v))
     assert not bad, bad
