@@ -1071,6 +1071,26 @@
                 </div>
               </button>
             </form>{% endif %}
+            {# card-edit-identity (المالك 2026-10-05): «تعديل بيانات الكرت» —
+               رقم الكرت و/أو كلمة المرور كما يكتبهما المشغّل حرفيًّا. الخانة
+               الفارغة أو غير المتغيّرة تبقى كما هي، ولا توليد هنا أبدًا. #}
+            {% if can_submit('radius.cards_checker', 'POST') %}<form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="edit-identity">
+              <input type="hidden" name="op" value="edit_identity">
+              <input type="hidden" name="new_username" data-cc-newuser-field>
+              <input type="hidden" name="new_password" data-cc-newpw-field>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button"
+                      data-cc-op="edit-identity"
+                      data-cc-card-id="{{ card.id }}"
+                      data-cc-username="{{ card.username }}"
+                      data-cc-passwordless="{{ '1' if card.login_without_password else '0' }}">
+                <span class="cc-action-icon blue"><i class="fa-solid fa-pen-to-square"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">{{ _('تعديل بيانات الكرت') }}</div>
+                  <div class="cc-action-sub">{{ _('رقم الكرت و/أو كلمة المرور') }}</div>
+                </div>
+              </button>
+            </form>{% endif %}
 
             {% if card.locked_mac %}
             {# Locked-state action — when card is already locked, we offer
@@ -1418,6 +1438,26 @@
                 </div>
               </button>
             </form>{% endif %}
+            {# card-edit-identity (المالك 2026-10-05): «تعديل بيانات الكرت» —
+               رقم الكرت و/أو كلمة المرور كما يكتبهما المشغّل حرفيًّا. الخانة
+               الفارغة أو غير المتغيّرة تبقى كما هي، ولا توليد هنا أبدًا. #}
+            {% if can_submit('radius.cards_checker', 'POST') %}<form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="edit-identity-simple">
+              <input type="hidden" name="op" value="edit_identity">
+              <input type="hidden" name="new_username" data-cc-newuser-field>
+              <input type="hidden" name="new_password" data-cc-newpw-field>
+              {{ hidden_ops(card, query) }}
+              <button class="cc-action" type="button"
+                      data-cc-op="edit-identity"
+                      data-cc-card-id="{{ card.id }}"
+                      data-cc-username="{{ card.username }}"
+                      data-cc-passwordless="{{ '1' if card.login_without_password else '0' }}">
+                <span class="cc-action-icon grey"><i class="fa-solid fa-pen-to-square"></i></span>
+                <div class="cc-action-body">
+                  <div class="cc-action-title">{{ _('تعديل بيانات الكرت') }}</div>
+                  <div class="cc-action-sub">{{ _('رقم الكرت و/أو كلمة المرور') }}</div>
+                </div>
+              </button>
+            </form>{% endif %}
 
             {# Simple-mode disconnect now mirrors advanced-mode: opens
                the sessionsPicker so the operator can pick exactly
@@ -1577,6 +1617,67 @@
       var inp = box.querySelector('[data-input]');
       wire(opts.onConfirm, function(){ return inp ? inp.value.trim() : ''; });
       setTimeout(function(){ if (inp) inp.focus(); }, 60);
+      show();
+    }
+
+    function identityForm(opts){
+      // card-edit-identity: خانتان حرّتان (رقم الكرت + كلمة المرور). الفارغة
+      // أو غير المتغيّرة = بلا تغيير؛ الحفظ يُفعَّل حين تتغيّر واحدةٌ على الأقل.
+      // لا توليد تلقائيّ هنا أبدًا — المشغّل يكتب ما يريد حرفيًّا.
+      opts = opts || {};
+      var digits = function(v){ return String(v == null ? '' : v)
+        .replace(/[٠-٩]/g, function(c){ return String(c.charCodeAt(0) - 0x0660); })
+        .replace(/[۰-۹]/g, function(c){ return String(c.charCodeAt(0) - 0x06F0); }); };
+      var curUser = String(opts.username || '');
+      var curPw   = String(opts.password || '');
+      var pwless  = !!opts.passwordless;
+      box.innerHTML =
+        head(Object.assign({icon:'info'}, opts)) +
+        '<div class="cc-gmodal-body">' + (opts.body || '') + '</div>' +
+        '<div class="cc-gmodal-field">' +
+          '<div class="cc-gmodal-field-label">' + {{ _('رقم الكرت')|tojson }} + '</div>' +
+          '<input type="text" dir="ltr" maxlength="64" autocomplete="off" spellcheck="false" data-id-user value="' + esc(curUser) + '">' +
+        '</div>' +
+        '<div class="cc-gmodal-field">' +
+          '<div class="cc-gmodal-field-label">' + {{ _('كلمة المرور')|tojson }} + '</div>' +
+          '<input type="text" dir="ltr" maxlength="64" autocomplete="off" spellcheck="false" data-id-pw value="' + esc(curPw) + '"' +
+            (pwless ? ' disabled placeholder="' + esc({{ _('حزمة «رقم فقط» — بلا كلمة مرور')|tojson }}) + '"'
+                    : ' placeholder="' + esc({{ _('اتركها فارغة إن لم تُرد تغييرها')|tojson }}) + '"') + '>' +
+        '</div>' +
+        '<div class="cc-gmodal-field-label" data-id-err style="color:#dc2626;min-height:1.2em"></div>' +
+        actions({{ _('حفظ')|tojson }}, {{ _('إلغاء')|tojson }}, false);
+      var u = box.querySelector('[data-id-user]');
+      var p = box.querySelector('[data-id-pw]');
+      var err = box.querySelector('[data-id-err]');
+      var cb = box.querySelector('[data-cc-confirm]');
+      function vals(){
+        var nu = digits(u.value).trim();
+        var np = pwless ? '' : digits(p.value).trim();
+        return {
+          user: (nu && nu.toLowerCase() !== curUser.toLowerCase()) ? nu : '',
+          pw:   (np && np !== curPw) ? np : ''
+        };
+      }
+      function refresh(){
+        var v = vals();
+        if (cb) cb.disabled = !(v.user || v.pw);
+        if (err) err.textContent = '';
+      }
+      u.addEventListener('input', refresh);
+      if (p) p.addEventListener('input', refresh);
+      refresh();
+      wire(function(v){
+        if (typeof opts.onConfirm === 'function') opts.onConfirm(v.user, v.pw);
+      }, function(){
+        var v = vals();
+        if (!v.user && !v.pw){ err.textContent = {{ _('لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور.')|tojson }}; return false; }
+        if (v.user && !/^[A-Za-z0-9._@-]{3,64}$/.test(v.user)){
+          err.textContent = {{ _('رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات.')|tojson }}; return false;
+        }
+        if (v.pw && /\s/.test(v.pw)){ err.textContent = {{ _('كلمة المرور لا تقبل مسافات.')|tojson }}; return false; }
+        return v;
+      });
+      setTimeout(function(){ if (u) u.focus(); }, 60);
       show();
     }
 
@@ -1884,6 +1985,7 @@
     window.ccModal = {
       confirm:        confirm_,
       reasonForm:     reasonForm,
+      identityForm:   identityForm,
       softDelete:     softDelete,
       macPicker:      macPicker,
       speedForm:      speedForm,
@@ -2204,6 +2306,51 @@
             if (!f) return;
             var fld = f.querySelector('[data-cc-newpw-field]');
             if (fld) fld.value = pw || '';
+            window.hbGuardedSubmit(f);
+          },
+        });
+      });
+    });
+  });
+
+  // ── card-edit-identity: «تعديل بيانات الكرت» ──────────────────────
+  // زرّان (المتقدّم والبسيط) ⇒ querySelectorAll. كلمة المرور الحاليّة
+  // تُملأ من نقطة الكشف المحروسة (scope.view_passwords) إن سُمح؛ وإلّا
+  // تبقى الخانة فارغة = «بلا تغيير».
+  ccWire(function(){
+    'use strict';
+    var btns = document.querySelectorAll('[data-cc-op="edit-identity"]');
+    if (!btns.length) return;
+    async function currentPassword(cardId){
+      try {
+        var tok = "{{ csrf_token() }}";
+        var fd = new FormData(); fd.append('card_id', cardId); fd.append('_csrf_token', tok);
+        var r = await fetch("{{ url_for('radius.cards_checker_api_reveal_password') }}",
+                            {method:'POST', body: fd, credentials:'same-origin',
+                             headers:{'X-CSRFToken': tok}});
+        if (!r.ok) return '';
+        var j = await r.json();
+        return (j && j.ok && j.password) ? String(j.password) : '';
+      } catch(_) { return ''; }
+    }
+    btns.forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        if (!window.ccModal || !window.ccModal.identityForm) { alert({{ _('تعذّر فتح النافذة — حدّث الصفحة.')|tojson }}); return; }
+        var pwless = btn.getAttribute('data-cc-passwordless') === '1';
+        var pw = pwless ? '' : await currentPassword(btn.getAttribute('data-cc-card-id') || '');
+        window.ccModal.identityForm({
+          title: {{ _('تعديل بيانات الكرت')|tojson }},
+          body: {{ _('عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.')|tojson }},
+          username: btn.getAttribute('data-cc-username') || '',
+          password: pw,
+          passwordless: pwless,
+          onConfirm: function(user, newPw){
+            var f = btn.closest('form');
+            if (!f) return;
+            var fu = f.querySelector('[data-cc-newuser-field]');
+            var fp = f.querySelector('[data-cc-newpw-field]');
+            if (fu) fu.value = user || '';
+            if (fp) fp.value = newPw || '';
             window.hbGuardedSubmit(f);
           },
         });

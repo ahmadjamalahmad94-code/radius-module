@@ -593,6 +593,16 @@ _RENAME_USERNAME_TABLES: tuple[tuple[str, str], ...] = (
     ("login_failure_tracker", "username"),
     # ── Data-connection WireGuard peer (denormalized username) ──
     ("data_connection_wg_peers", "username"),
+    # ── card-edit-identity (2026-10-05): re-derived from the live schema
+    #    (every column named *username* across all migrations) — these five
+    #    were missing, so a rename left them pointing at the OLD name:
+    ("device_limit_claims", "username"),       # device-slot claims (zero-w1 L1)
+    ("quota_session_marks", "username"),       # per-session quota snapshots
+    ("panel_notifications", "subscriber_username"),  # bell rows → «افتح المشترك»
+    ("card_user_purchases", "cred_username"),  # store purchase credentials («بطاقاتي»)
+    ("tr069_devices", "radius_username"),      # CPE ↔ PPPoE account binding
+    ("tr069_device_assignments", "radius_username"),
+    ("tr069_serial_bindings", "radius_username"),
 )
 
 # Un-tenanted global table whose PRIMARY KEY is the username itself.

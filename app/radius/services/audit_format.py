@@ -116,6 +116,8 @@ ACTION_LABELS: dict[str, str] = {
     "card.lock_mac": N_("تثبيت ماك على البطاقة"),
     "card.unlock_mac": N_("فكّ تثبيت ماك البطاقة"),
     "card.reset_usage": N_("تصفير استخدام البطاقة"),
+    "card.rename": N_("تعديل رقم البطاقة"),
+    "card.change_password": N_("تغيير كلمة مرور البطاقة"),
     "card.soft_delete": N_("أرشفة البطاقة"),
     "card.delete_permanent": N_("حذف نهائي للبطاقة"),
     # ── النسخ الاحتياطية الإضافية ───────────────────────────
@@ -447,6 +449,7 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "speed": N_("السرعة"), "session_id": N_("الجلسة"), "session": N_("الجلسة"),
     "username": N_("المستخدم"), "user": N_("المستخدم"), "actor": N_("المنفّذ"),
     "login_username": N_("اسم الدخول"),
+    "card_number": N_("رقم الكرت"),
     "router_id": N_("الراوتر"), "nas_id": N_("الراوتر"),
     "filename": N_("الملف"), "size": N_("الحجم"), "comment": N_("تعليق"),
     "reason": N_("السبب"), "error": N_("خطأ"), "status": N_("الحالة"),

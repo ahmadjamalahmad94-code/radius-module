@@ -1467,6 +1467,7 @@ _CARD_CHECK_SELECT = """
             -- These are the source of truth for the card's accounting mode
             -- and time budget (resolved by card_accounting in check_card).
             b.count_from_first_connect        AS batch_count_from_first_connect,
+            COALESCE(b.login_without_password, 0) AS batch_login_without_password,
             b.count_by_seconds                AS batch_count_by_seconds,
             b.validity_after_first_login_days AS batch_validity_after_first_login_days,
             b.time_value                      AS batch_time_value,
@@ -1793,6 +1794,89 @@ def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:
             (pwd, tenant_id, card_id),
         )
         return bool(cur.rowcount)
+
+
+def _has_table_col(conn, table: str, col: str) -> bool:
+    try:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    except Exception:  # noqa: BLE001
+        return False
+    return col in cols
+
+
+def sync_card_password_refs(tenant_id: int, username: str, password: str) -> dict:
+    """card-edit-identity — كلمة البطاقة مخزَّنةٌ بالقيمة في أكثر من جدول؛
+    ``set_card_password`` يكتب ``cards`` وحده. هنا البقيّة، داخل معاملة
+    المستدعي (تتداخل كـSAVEPOINT):
+
+      • مرآة ``subscribers`` (user_type=card) — ما يدفعه طابور الراوترات.
+      • ``radcheck`` Cleartext-Password — إن وُجد صفٌّ للبطاقة (rlm_sql).
+      • ``card_user_purchases.cred_password`` — ما يقرؤه «بطاقاتي» في المتجر
+        **أوّلًا** (store.py)، فكان الزبون يرى الكلمة القديمة بعد تغييرها.
+
+    الجداول/الأعمدة الغائبة تُتخطّى. تُعيد {الجدول: عدد الصفوف}."""
+    pwd = (password or "").strip()
+    name = (username or "").strip()
+    out: dict[str, int] = {}
+    if not pwd or not name:
+        return out
+    with transaction() as conn:
+        if _has_table_col(conn, "subscribers", "password"):
+            cur = conn.execute(
+                "UPDATE subscribers SET password = ?, updated_at = ? "
+                "WHERE tenant_id = ? AND username = ?",
+                (pwd, now_iso(), tenant_id, name))
+            if cur.rowcount:
+                out["subscribers"] = cur.rowcount
+        if _has_table_col(conn, "radcheck", "value"):
+            cur = conn.execute(
+                "UPDATE radcheck SET value = ? WHERE tenant_id = ? AND username = ? "
+                "AND attribute = 'Cleartext-Password'",
+                (pwd, tenant_id, name))
+            if cur.rowcount:
+                out["radcheck"] = cur.rowcount
+        if _has_table_col(conn, "card_user_purchases", "cred_password"):
+            cur = conn.execute(
+                "UPDATE card_user_purchases SET cred_password = ? "
+                "WHERE tenant_id = ? AND cred_username = ?",
+                (pwd, tenant_id, name))
+            if cur.rowcount:
+                out["card_user_purchases"] = cur.rowcount
+    return out
+
+
+def rename_card_username(tenant_id: int, card_id: int, old_username: str,
+                         new_username: str) -> dict:
+    """card-edit-identity — يُغيّر «رقم الكرت» (اسم دخول RADIUS) في كلّ مكانٍ
+    يُخزَّن فيه بالقيمة، في معاملةٍ واحدة (الكلّ أو لا شيء).
+
+    1. صفّ ``cards`` نفسه أوّلًا (بالمعرّف) — فهرس UNIQUE(tenant, username)
+       يُسقط التصادم قبل لمس أيّ شيء آخر.
+    2. ثمّ متتالية المشترك نفسها (``subscribers_repo.rename_subscriber_username``):
+       قائمة جداولها مشتقّةٌ من السكيمة — مرآة subscribers، radcheck/radreply/
+       radusergroup، radacct/radpostauth (التاريخ يتبع البطاقة فيبقى الاستهلاك
+       والنافذة كما هي)، المال، أقفال MAC، مطالبات الأجهزة، علامات الكوتا،
+       الإشعارات، اعتماد شراء المتجر، طابور الراوترات…
+
+    على المستدعي التحقّق من الصياغة والتفرّد أوّلًا (CardsService)."""
+    old = (old_username or "").strip()
+    new = (new_username or "").strip()
+    if not old or not new:
+        raise ValueError("rename requires non-empty old and new usernames")
+    if old == new:
+        return {}
+    from . import subscribers_repo
+    with transaction() as conn:
+        cur = conn.execute(
+            "UPDATE cards SET username = ? WHERE tenant_id = ? AND id = ? AND username = ?",
+            (new, tenant_id, card_id, old))
+        if cur.rowcount != 1:
+            raise ValueError("card %r not found under %r" % (card_id, old))
+        tables = {"cards": 1}
+        for t, n in (subscribers_repo.rename_subscriber_username(
+                tenant_id, old, new) or {}).items():
+            tables[t] = tables.get(t, 0) + int(n or 0)
+    return tables
 
 
 def set_card_revoked(tenant_id: int, card_id: int, revoked: bool, *,

@@ -27,6 +27,52 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/docs", "openapi_docs", openapi_docs, methods=["GET"])
 
 
+# Hand-written detail for endpoints whose contract is not obvious from the
+# rule alone (merged over the generated operation, keyed by operationId).
+_OP_DETAILS: dict = {
+    # card-edit-identity (owner 2026-10-05): «تعديل بيانات الكرت».
+    "cards_update_patch": {
+        "summary": "Edit card number (username) and/or password",
+        "description": N_(
+            "تعديل رقم الكرت و/أو كلمة مروره — أحدهما أو كلاهما؛ الحقل الغائب "
+            "أو الفارغ يبقى كما هو ولا يُولَّد شيء تلقائيًّا. التغيير يسري على "
+            "المصادقة (محرّك السياسة) والمحاسبة (radacct ينتقل مع الاسم فيبقى "
+            "الاستهلاك والوقت) والراوترات، وتُطرد الجلسة الحيّة. الصلاحية: "
+            "مثل «فحص البطاقات» (cards.verify) ونطاق الحزمة."),
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": {
+                "type": "object",
+                "properties": {
+                    "username": {"type": "string", "description": "A-Za-z0-9._@- , 3-64; stored lowercase; Arabic digits accepted"},
+                    "password": {"type": "string", "description": "<= 64, no spaces; refused for login-without-password batches"},
+                },
+            }}},
+        },
+        "extra_responses": {
+            "403": "out of scope / missing permission",
+            "404": "card not found",
+            "409": "username already used",
+            "422": "validation error (Arabic message)",
+        },
+    },
+}
+
+
+def _apply_op_details(op: dict) -> None:
+    det = _OP_DETAILS.get(op.get("operationId") or "")
+    if not det:
+        return
+    for k in ("summary", "requestBody"):
+        if k in det:
+            op[k] = det[k]
+    if "description" in det:
+        op["description"] = _tr(det["description"])
+    for code, text in (det.get("extra_responses") or {}).items():
+        op["responses"][code] = {"description": text, "content": {"application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}}}}
+
+
 def _build_spec() -> dict:
     paths: dict = {}
     for rule in current_app.url_map.iter_rules():
@@ -52,6 +98,7 @@ def _build_spec() -> dict:
                     "500": {"description": "Internal error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
                 },
             }
+            _apply_op_details(node[m.lower()])
     return {
         "openapi": "3.1.0",
         "info": {

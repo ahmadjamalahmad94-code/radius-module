@@ -69,6 +69,7 @@ EVENT_KEY_LABELS: dict[str, str] = {
     "card.lock_mac":      N_("قفل عنوان الجهاز"),
     "card.unlock_mac":    N_("فكّ قفل عنوان الجهاز"),
     "card.reset_usage":   N_("تصفير الاستخدام"),
+    "card.rename":        N_("تعديل رقم البطاقة"),
     "card.set_speed":     N_("ضبط سرعة البطاقة"),
     "card.adjust_time":   N_("تعديل الوقت المتبقّي"),
     "card.disconnect":    N_("قطع جلسة البطاقة"),

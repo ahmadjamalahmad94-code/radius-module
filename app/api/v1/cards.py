@@ -74,6 +74,9 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_of_batch), methods=["GET"])
     bp.add_url_rule("/cards/<int:card_id>", "cards_get",
                     require_api_token(cards_get), methods=["GET"])
+    # card-edit-identity: «تعديل بيانات الكرت» — رقم الكرت و/أو كلمة المرور.
+    bp.add_url_rule("/cards/<int:card_id>", "cards_update",
+                    require_api_token(cards_update), methods=["PATCH"])
     bp.add_url_rule("/cards/<int:card_id>/revoke", "cards_revoke",
                     require_api_token(cards_revoke), methods=["POST"])
     bp.add_url_rule("/cards/<int:card_id>/enable", "cards_enable",
@@ -1261,6 +1264,51 @@ def cards_get(card_id: int):
     if response:
         return response
     return ok(_serialize_card_read(card))
+
+
+def cards_update(card_id: int):
+    """PATCH /cards/<id> — «تعديل بيانات الكرت» (طلب المالك 2026-10-05).
+
+    الجسم: ``{"username"?: str, "password"?: str}`` — أحدهما أو كلاهما. الحقل
+    الغائب أو الفارغ = بلا تغيير، ولا توليد تلقائيّ هنا أبدًا (المشغّل يكتب ما
+    يريد). التغيير فعّالٌ في المصادقة والمحاسبة والراوترات، والجلسة الحيّة تُطرد.
+    422 صياغة/حزمة «رقم فقط» · 409 «الاسم مستخدم» · 404 · 403 خارج النطاق."""
+    card, response = _card_or_response(card_id)
+    if response:
+        return response
+    body = _body()
+    raw_user = body.get("username")
+    raw_pass = body.get("password")
+    if raw_user is not None and not isinstance(raw_user, (str, int)):
+        return fail("validation_error", _tr("رقم الكرت يجب أن يكون نصًّا."), status=422)
+    if raw_pass is not None and not isinstance(raw_pass, (str, int)):
+        return fail("validation_error", _tr("كلمة المرور يجب أن تكون نصًّا."), status=422)
+    username = None if raw_user is None or str(raw_user).strip() == "" else str(raw_user)
+    password = None if raw_pass is None or str(raw_pass).strip() == "" else str(raw_pass)
+    if username is None and password is None:
+        return fail("validation_error",
+                    _tr("أدخل رقم الكرت الجديد أو كلمة المرور الجديدة (أحدهما على الأقل)."),
+                    status=422)
+    from ...radius.services.cards import get_cards_service
+    try:
+        res = get_cards_service().update_card_identity(
+            actor=_actor(), card_id=card_id, username=username, password=password)
+    except RadiusError as e:
+        return _radius_error_response(e)
+    from ...radius.db.repos import cards_repo
+    fresh = cards_repo.get_card(_tid(), card_id) or card
+    payload = _updated_card_payload(fresh.username, action="update_identity")
+    payload.update({
+        "id": card_id,
+        "changed": bool(res.get("changed")),
+        "renamed": bool(res.get("renamed")),
+        "password_changed": bool(res.get("password_changed")),
+        "old_username": res.get("old_username"),
+        "username": res.get("username"),
+        "kicked": bool(res.get("kicked")),
+        "item": _serialize_card_read(fresh),
+    })
+    return ok(payload)
 
 
 def cards_revoke(card_id: int):

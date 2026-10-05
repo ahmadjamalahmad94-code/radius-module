@@ -617,6 +617,8 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
         "id": record.get("card_id"),
         "username": record.get("username"),
         "has_password": bool(record.get("password")),
+        # حزمة «رقم فقط»: لا كلمة تُقارَن — نافذة التعديل تُقفل خانة الكلمة.
+        "login_without_password": bool(record.get("batch_login_without_password")),
         "used": bool(record.get("card_used")),
         "revoked": bool(record.get("card_revoked")),
         "locked_mac": record.get("locked_mac") or None,
@@ -703,6 +705,8 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
             # MT107: تغيير الكلمة متاحٌ دائمًا — البطاقة المعطَّلة أو المنتهية
             # كلمتُها مسرَّبةٌ أيضًا، والمشغّل قد يُغيّرها قبل إعادة التفعيل.
             "can_change_password": True,
+            # card-edit-identity: «تعديل بيانات الكرت» (الرقم و/أو الكلمة).
+            "can_edit_identity": True,
             "can_disable": not bool(record.get("card_revoked")),
             "can_enable": bool(record.get("card_revoked")),
             "can_delete_permanently": True,
