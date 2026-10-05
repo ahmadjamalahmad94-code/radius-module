@@ -114,3 +114,30 @@ updated: minting is 403 by default and 201 with the flag.
 
 **Migration impact:** none (env flags only). **Rollback:** revert the commit, or set both flags to `1`
 for an immediate behavioural rollback without a redeploy of code.
+
+---
+
+## B-08 — `/api/v1/internal/_diag` unauthenticated password oracle
+
+**Reproduced?** Yes (with `HOBERADIUS_DIAG_ENABLED=1`). With no credential at all the endpoint
+returned `found_in` and `decision.ok` for any `username`/`password`/`tenant_id` — 3 tests failed
+before the fix (`assert 200 in (401, 403)`), including the case where no internal secret is configured
+outside production.
+
+**Fix:** `app/api/v1/internal_auth.py::internal_diag` — after the existing `HOBERADIUS_DIAG_ENABLED`
+gate it now requires (a) `HOBERADIUS_INTERNAL_SECRET` to be configured (else 403; the generic
+"accept without secret in dev" fallback does **not** apply to this endpoint) and (b) the secret in
+`X-Internal-Secret` or the body field `_internal_secret` (else 401), via the same
+`_check_internal_secret` that FreeRADIUS calls use. The secret field is removed from the body before use.
+
+**Tests:** `tests/test_sec_b08_internal_diag.py` (5): no secret / wrong secret (header and body) refused
+and the response carries no `found_in`/`decision`; refused when no secret is configured even in dev;
+**cross-tenant**: same username `ahmad` with different passwords in A and B — with the secret each
+tenant answers for its own row, and A's password is rejected in B and vice versa; disabled by default
+still 403.
+
+**Behaviour change:** operators using the diag curl must add
+`-H "X-Internal-Secret: $HOBERADIUS_INTERNAL_SECRET"` (docstring updated). Default (flag off): none.
+
+**Migration impact:** none. **Rollback:** revert the commit (or keep `HOBERADIUS_DIAG_ENABLED` unset,
+which is the default and makes the endpoint return 403 regardless).
