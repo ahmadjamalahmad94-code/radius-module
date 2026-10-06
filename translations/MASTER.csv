@@ -7431,19 +7431,19 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:298
 سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:341
 اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:222
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:224
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:226
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:228
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:230
-لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:231
-نموذج المساعد غير متاح الآن. حاول بعد قليل، أو نفّذ العمليّة من صفحتها المعتادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:383
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:393
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:405
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:424
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:436
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:443
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:494
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:223
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:225
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:227
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:229
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:231
+لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:232
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:390
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:399
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:411
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:430
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:442
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:449
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:500
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:126
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:134
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:187

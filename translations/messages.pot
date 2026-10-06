@@ -19786,7 +19786,7 @@ msgstr ""
 msgid "اجمع نقاطك مع كل زيارة!"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:405
+#: app/radius/services/ops_assistant/conversation.py:411
 msgid ""
 "احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد"
 " المحاولة."
@@ -25127,7 +25127,7 @@ msgid "اكتب رسالة أو أرفق صورة."
 msgstr ""
 
 #: app/radius/routes/ops_assistant.py:195
-#: app/radius/services/ops_assistant/conversation.py:492
+#: app/radius/services/ops_assistant/conversation.py:498
 #: app/templates/radius/ops_assistant.html:154
 msgid "اكتب رسالة أوّلًا."
 msgstr ""
@@ -32948,7 +32948,7 @@ msgstr ""
 msgid "الرسالة تتجاوز الحدّ الموصى به ("
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:494
+#: app/radius/services/ops_assistant/conversation.py:500
 msgid "الرسالة طويلة جدًّا."
 msgstr ""
 
@@ -39714,6 +39714,10 @@ msgstr ""
 msgid "المساعد غير متاح الآن"
 msgstr ""
 
+#: app/radius/services/ops_assistant/conversation.py:390
+msgid "المساعد غير متاح مؤقتًا، حاول بعد قليل."
+msgstr ""
+
 #: app/api/v1/ops.py:78
 msgid ""
 "المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها "
@@ -40933,7 +40937,7 @@ msgstr ""
 msgid "المقترح غير موجود."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:424
+#: app/radius/services/ops_assistant/conversation.py:430
 #, python-format
 msgid "المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s"
 msgstr ""
@@ -54079,7 +54083,7 @@ msgstr ""
 msgid "تعذّر جلب الرصيد: %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:443
+#: app/radius/services/ops_assistant/conversation.py:449
 #, python-format
 msgid "تعذّر جلب القائمة: %(why)s"
 msgstr ""
@@ -64432,7 +64436,7 @@ msgstr ""
 msgid "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:436
+#: app/radius/services/ops_assistant/conversation.py:442
 msgid "حدّد المشترك والباقة الجديدة أوّلًا."
 msgstr ""
 
@@ -92537,7 +92541,7 @@ msgstr ""
 msgid "لا توجد باقات بعد — أنشئ أول باقة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:226
+#: app/radius/services/ops_assistant/conversation.py:227
 msgid "لا توجد باقات مفعّلة في النظام بعد."
 msgstr ""
 
@@ -92793,7 +92797,7 @@ msgstr ""
 msgid "لا توجد حركات في الفترة المحددة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:230
+#: app/radius/services/ops_assistant/conversation.py:231
 msgid "لا توجد حزم بطاقات تطابق هذا البحث."
 msgstr ""
 
@@ -93060,11 +93064,11 @@ msgstr ""
 msgid "لا توجد عروض متاحة"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:224
+#: app/radius/services/ops_assistant/conversation.py:225
 msgid "لا توجد عروض مسجّلة في النظام بعد."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:222
+#: app/radius/services/ops_assistant/conversation.py:223
 msgid ""
 "لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو"
 " إنشاء عرض أوّلًا."
@@ -93394,7 +93398,7 @@ msgstr ""
 msgid "لا توجد نتائج مطابقة لبحثك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:231
+#: app/radius/services/ops_assistant/conversation.py:232
 #: app/templates/radius/ops_assistant.html:137
 msgid "لا توجد نتائج."
 msgstr ""
@@ -94519,7 +94523,7 @@ msgid ""
 "النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:228
+#: app/radius/services/ops_assistant/conversation.py:229
 msgid "لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال."
 msgstr ""
 
@@ -95550,7 +95554,7 @@ msgid ""
 " MikroTik Terminal."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:393
+#: app/radius/services/ops_assistant/conversation.py:399
 msgid "لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح."
 msgstr ""
 
@@ -110290,12 +110294,6 @@ msgstr ""
 
 #: app/templates/radius/routers_detail.html:52
 msgid "نموذج البيانات"
-msgstr ""
-
-#: app/radius/services/ops_assistant/conversation.py:383
-msgid ""
-"نموذج المساعد غير متاح الآن. حاول بعد قليل، أو نفّذ العمليّة من صفحتها "
-"المعتادة."
 msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:383

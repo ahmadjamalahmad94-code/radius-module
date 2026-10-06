@@ -32,6 +32,7 @@ from app.i18n_text import _tr
 
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Any, Callable, Optional
 
@@ -370,18 +371,23 @@ def _policy_args(cid: str, tenant_id: int) -> dict:
 
 def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
     """Call the model until it answers with something for the admin (≤ MAX_HOPS
-    CHOICES fetches). Returns UI replies."""
+    CHOICES fetches). Returns UI replies.
+
+    The whole message (every hop) shares one deadline,
+    ``model_client.MESSAGE_BUDGET`` (55 s) from now, so it always answers
+    inside the panel's 60 s proxy window. Any ``ModelError`` (down, timeout,
+    breaker open, busy, budget spent) → the «unavailable» reply, nothing runs."""
     chat = call or model_client.chat
+    deadline = time.monotonic() + model_client.MESSAGE_BUDGET
     tid, aid = api.tenant_id, api.admin_id
     replies: list[dict] = []
     for hop in range(MAX_HOPS + 1):
         try:
-            text = chat(model_messages(cid, tid))
+            text = chat(model_messages(cid, tid), deadline=deadline)
         except ModelError as e:
             _LOG.warning("ops assistant: model unavailable (%s)", e.code)
-            replies.append({"type": "error", "code": "model_unavailable",
-                            "text": _tr("نموذج المساعد غير متاح الآن. حاول بعد قليل، أو نفّذ "
-                                        "العمليّة من صفحتها المعتادة.")})
+            replies.append({"type": "error", "code": "model_unavailable", "reason": e.code,
+                            "text": _tr("المساعد غير متاح مؤقتًا، حاول بعد قليل.")})
             return replies
         try:
             obj = model_client.parse_proposal(text)
