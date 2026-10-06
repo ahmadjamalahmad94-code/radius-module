@@ -2025,9 +2025,9 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
   }
 
   // Disconnect button + row builder shared by both Hotspot tables.
-  // The action posts to /mikrotik/<id>/hotspot/disconnect — the row
-  // is identified by either RouterOS `.id` or `user` (whichever the
-  // active row carries). Optimistic UI: row dims while in flight,
+  // The action posts to /api/v1/mikrotik/<id>/hotspot/active/<.id>/disconnect
+  // (same endpoint the Flutter app uses); the row is identified by its
+  // RouterOS `.id`. Optimistic UI: row dims while in flight,
   // gets reloaded on success.
   function hotspotSessionRow(r) {
     const id = String(r[".id"] || "");
@@ -2152,16 +2152,23 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
     const origHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
     try {
-      const path = kind === "ppp" ? "/ppp/disconnect" : "/hotspot/disconnect";
-      const body = id ? { id } : { user };
-      await api(
-        "/mikrotik/" + CFG.routerId + path,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
+      // F-01: the real endpoint (shared with the Flutter app) is
+      //   POST /api/v1/mikrotik/<nas>/<kind>/active/<.id>/disconnect
+      // and it removes by RouterOS `.id` only. The old
+      // /<kind>/disconnect + JSON-body URL never existed (404), and the
+      // non-throwing api() made the row vanish as if it had worked.
+      if (!id) throw new Error(hrT('معرّف الجلسة غير محدد'));
+      const seg = kind === "ppp" ? "/ppp/active/" : "/hotspot/active/";
+      const { res, body } = await api(
+        "/mikrotik/" + CFG.routerId + seg + encodeURIComponent(id) + "/disconnect",
+        { method: "POST" },
       );
+      const inner = (body && body.data) || {};
+      if (!res.ok || !body || body.ok === false || inner.ok === false) {
+        const m = (body && body.error && (body.error.message || body.error))
+          || inner.error || ("HTTP " + res.status);
+        throw new Error(m);
+      }
       // Optimistically remove the row; the next poll will confirm.
       tr.style.transition = "opacity .25s, transform .25s";
       tr.style.transform = "translateX(40px)";
