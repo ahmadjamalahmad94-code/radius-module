@@ -99,12 +99,145 @@ writing their own audit rows as for any app call.
 
 ## Tests
 `tests/test_ops_executor_units.py`, `_validation.py`, `_flows.py`, `_plans.py`,
-`_gate_events.py`, `tests/test_api_card_offers.py` (helpers: `tests/ops_exec_helpers.py`).
+`_gate_events.py`, `tests/test_api_card_offers.py` (helpers: `tests/ops_exec_helpers.py`),
+`tests/test_ops_assistant_web.py` (web chat + model loop against a fake local
+OpenAI-compatible server).
+
+## Web chat & model wiring
+
+```
+browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assistant.py)
+                                │  web_bridge.Api: in-memory, admin+tenant-bound `login:ui-ops:` token
+                                ▼
+                         conversation.py ──▶ model_client.chat ──▶ llama-server (OpenAI API)
+                                │  ◀── ONE JSON object (parse_proposal; anything else = error, nothing runs)
+                                ▼
+                         /api/v1/ops/* (this executor, same RBAC as the app) — validate / CHOICES / confirm
+```
+
+| Method | Path (`/admin/radius` prefix) | Notes |
+|---|---|---|
+| GET | `/ops-assistant` | page; when unavailable shows WHY (flag off / counts of admins with default or temporary passwords) |
+| POST | `/ops-assistant/message` | `{conversation_id?, text}` → `{conversation_id, replies[]}` |
+| POST | `/ops-assistant/confirm` | `{conversation_id, proposal_id, proposal_hash}` → `{report, show_once?}` (`Cache-Control: no-store`) |
+| POST | `/ops-assistant/cancel` | `{conversation_id}` — records «إلغاء» in the transcript, no model call |
+| GET | `/ops-assistant/events` | level-4 suggestions (one row per event record) |
+| POST | `/ops-assistant/start-event` | `{event_type, index}` → new conversation from that record + first model turn |
+
+* Guards: `login_required` + the blueprint login guard; global CSRF (`X-CSRFToken`) on every
+  POST; `gate.availability` on every endpoint (403 `unavailable` JSON); the routes are in
+  `_GUARD_ALLOWLIST` because each action is decided by the executor for THIS admin.
+  Sidebar entry «مساعد العمليّات» only when the flag is on AND the password gate is open
+  (`ops_assistant_nav_visible`, cached 30 s per tenant and process).
+* `replies[]` items: `assistant` (summary_ar of ask/refuse/cancel), `choices` (the list shown
+  to the admin — the same items the model sees), `proposal` (the executor's card: steps,
+  values, display, danger, password note, `$step` refs, not-executable steps; plan/offer
+  names added for display), `error` (`model_unavailable`, `invalid_model_output`,
+  `proposal_rejected|proposal_forbidden` with the executor's violation messages,
+  `too_many_hops`).
+* **Loop** (`conversation.run_model`): model → parse ONE object → `POST …/proposals`
+  (executor validation, never re-coded). `choose` / `list_*` → CHOICES appended as a `tool`
+  message → model again, **max 3 CHOICES hops per admin message**. `choose
+  change_plan_policies` takes `username` + `plan_id` from the latest assistant turn that
+  named both. Executable action / plan → confirmation card; **execution only via
+  `/confirm`** (the admin's click carrying the executor's id + hash).
+* **Transcript** (`ops_messages`, migration 211): CONTEXT (system), CHOICES / RESULT (tool),
+  user and assistant turns (`json.dumps(obj, ensure_ascii=False)`, as in training). The
+  SYSTEM_PROMPT is prepended at call time. Invalid model output is NOT stored. RESULT is the
+  executor's redacted `model_result`; `show_once` goes to the browser only (modal with a
+  copy button, removed from the DOM on close) — never to the transcript, the model or logs.
+* **Rendering** = `ops/chat.py` verbatim (`model_client.normalize_messages`): SYSTEM_PROMPT +
+  CONTEXT merged into ONE system message (blank line); if the first non-system message is
+  not the admin's, the fixed `EVENT_TRIGGER` user turn is inserted (level-4 conversations).
+  CHOICES items and level-4 events are rendered with the SPEC_DATA_v2 §4/§5 key sets
+  (`list_plans {n,id,name,price,currency,duration_value,duration_unit,plan_type}`,
+  `find_subscriber {n,username,full_name,plan,status,expires_local}`,
+  `change_plan_policies {n,policy,label_ar}`, event → `CONTEXT.event{type,data}` +
+  `CHOICES {"source":"event"}`) — ids unchanged, so the executor's issued set still holds.
+* Model request: `POST {URL}/v1/chat/completions`, `temperature 0`, `max_tokens 512`,
+  `stream false`, `chat_template_kwargs {"enable_thinking": false}`.
+* Invalid output / rejection / hop limit → `audit_log` `action='ops.model'` (reason only,
+  never the text) + a warning log line.
+
+## Deploy & serve the model
+
+The model runs on the SAME host as the panel, bound to loopback only.
+
+Files (from `hoberadius-ai-support`): the base model `Q4_K_M` GGUF and the ops LoRA adapter
+converted to GGUF (`convert_lora_to_gguf.py` of the same llama.cpp build), e.g.
+`/opt/hoberadius-ops/base-Q4_K_M.gguf` and `/opt/hoberadius-ops/ops-adapter.gguf`.
+llama.cpp **b11388** (`llama-server`), CPU build.
+
+`/etc/systemd/system/hoberadius-ops-model.service`:
+
+```ini
+[Unit]
+Description=HobeRadius operations assistant model (llama-server, loopback only)
+After=network.target
+
+[Service]
+Type=simple
+User=hoberadius-ops
+ExecStart=/opt/llama.cpp-b11388/bin/llama-server \
+  -m /opt/hoberadius-ops/base-Q4_K_M.gguf \
+  --lora /opt/hoberadius-ops/ops-adapter.gguf \
+  --host 127.0.0.1 --port 8095 \
+  -t 4 -c 4096 --parallel 1 \
+  --cache-ram 0 \
+  --jinja \
+  --temp 0 -n 512
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=6G
+
+[Install]
+WantedBy=multi-user.target
+```
+
+* `-t`: physical cores you can spare (the panel, FreeRADIUS and the DB share the host) —
+  start with half of them.
+* `-c 4096`: SYSTEM_PROMPT + CONTEXT + a few CHOICES lists + history fit; very long
+  conversations should be restarted («محادثة جديدة»).
+* `--cache-ram 0` is **mandatory** (prompt-cache RAM growth on b11388; see the
+  hoberadius-ai-support notes).
+* `--jinja` is required: the GGUF chat template renders the merged system message, the
+  `tool` turns and `enable_thinking=false` exactly as in training.
+* Never bind to `0.0.0.0`; the panel is the only client.
+
+```bash
+systemctl daemon-reload && systemctl enable --now hoberadius-ops-model
+curl -s http://127.0.0.1:8095/health            # {"status":"ok"}
+```
+
+Panel environment (container / service env):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `HOBERADIUS_OPS_MODEL_URL` | `http://127.0.0.1:8095` | llama-server base URL (env wins over the tenant-1 setting `ops_assistant.model_url`; http/https only) |
+| `HOBERADIUS_OPS_MODEL_TIMEOUT` | `60` | seconds per model call (1–600); one admin message may make up to 4 calls |
+
+When the panel runs in Docker, `127.0.0.1` is the container itself: put the URL on an address
+the container can reach (`network_mode: host`, or `host.docker.internal` with the
+`host-gateway` extra host and llama-server bound to the docker bridge IP) — never on the
+public interface.
+
+Migration `211_ops_messages.sql` runs automatically at boot.
+
+Enable for a tenant (owner): `POST /api/v1/ops/flag {"enabled": true}` (tenant setting
+`ops_assistant.enabled=1`). The page and the menu entry appear only when every admin of
+that tenant has a non-default, non-temporary password.
 
 ## Not done here (next)
-* UI: web panel chat + confirmation card; Flutter screens (show_once dialog, step report).
-* Wiring to the model server (relay CONTEXT/CHOICES/RESULT messages; never forward `show_once`).
+* Flutter screens (chat, show_once dialog, step report) — the web panel is done (above).
 * API for offer-based generation (`/cards/offers/<id>/generate` with wallet charge) and
   offline temporary speed (catalog Q4); `list_managers` source for offer visibility.
+* Detector payloads poorer than SPEC_DATA_v2 §5 (expiring_tomorrow: no balance /
+  renewal_price / last_renewal; repeated_rejects: no reason / affected subscribers;
+  low_card_stock is per PLAN while the model was trained per OFFER) — until enriched the
+  model asks for the missing terms (any proposal is still validated + confirmed).
 * Enabling on a customer server only after the security release is deployed there and tenant
   isolation verified (first pilot: client20).
