@@ -1331,11 +1331,12 @@ class OperationsService:
     # enforced by the schedule worker at window end (bandwidth_apply):
     #   profile_default  «رجوع مباشر بدون فصل» — live CoA of the effective rate
     #   disconnect       «فصل الجلسة» — kick, the re-auth gets the normal speed
-    # Old values (keep_current / previous_value / manual) were never enforced:
-    # migration 199 mapped them to profile_default, and old app builds that
-    # still send them get the same mapping. Anything else is a 422.
+    # The old third option «إبقاء آخر سرعة» (keep_current) was never enforced:
+    # migration 199 mapped stored values to profile_default, and old web/app
+    # builds that still send it get the same mapping. Anything else
+    # (previous_value / manual were already refused since parity-c) is a 422.
     _RESTORE_MODES = ("profile_default", "disconnect")
-    _LEGACY_RESTORE_MODES = ("keep_current", "previous_value", "manual")
+    _LEGACY_RESTORE_MODES = ("keep_current",)
 
     @classmethod
     def _restore_mode(cls, data: dict) -> str:
