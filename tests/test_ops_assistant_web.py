@@ -134,7 +134,17 @@ def test_system_prompt_is_the_frozen_spec_text():
         pytest.skip("spec repo not present")
     text = open(spec, encoding="utf-8").read()
     m = re.search(r"## SYSTEM_PROMPT.*?\n```\n(.*?)\n```", text, re.S)
-    assert m and m.group(1) == mc.SYSTEM_PROMPT
+    assert m and m.group(1) == mc.SYSTEM_PROMPT_V1
+    v3 = open(spec.replace("SPEC_DATA_v1", "SPEC_DATA_v3"), encoding="utf-8").read()
+    m = re.search(r"## 10\. SYSTEM_PROMPT v3.*?\n```\n(.*?)\n```", v3, re.S)
+    assert m and m.group(1) == mc.SYSTEM_PROMPT_V3 == mc.SYSTEM_PROMPT
+
+
+def test_system_prompt_version_follows_the_served_adapter(monkeypatch):
+    monkeypatch.delenv(mc.ENV_PROMPT, raising=False)
+    assert mc.system_prompt() == mc.SYSTEM_PROMPT_V3
+    monkeypatch.setenv(mc.ENV_PROMPT, "v1")
+    assert mc.system_prompt() == mc.SYSTEM_PROMPT_V1
 
 
 def test_normalize_merges_systems_and_inserts_event_trigger():

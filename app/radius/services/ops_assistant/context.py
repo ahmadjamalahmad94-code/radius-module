@@ -81,17 +81,33 @@ def action_permitted(action: str, fields: Optional[dict] = None) -> bool:
             return False
     except Exception:  # noqa: BLE001 — never grant on an error
         return False
-    if action == "create_card_batch":
-        from ....api.v1.cards import _manager_cardgen_denial
-        return _manager_cardgen_denial("generate") is None
+    if action == "create_card_batch" and str((fields or {}).get("source") or "plan") == "plan":
+        # a plan-source batch = direct generation (owner, or the explicit grant)
+        return direct_generation_permitted()
     return True
 
 
+def direct_generation_permitted() -> bool:
+    """``cards.generate_direct``: the in-handler guard of /cards/generate on
+    top of the role key (a manager without the grant generates from offers)."""
+    if is_owner():
+        return True
+    from ....api.v1.cards import _manager_cardgen_denial
+    try:
+        return _manager_cardgen_denial("generate") is None
+    except Exception:  # noqa: BLE001 — never grant on an error
+        return False
+
+
 def effective_permissions() -> list[str]:
+    """The CONTEXT permission keys (SPEC_DATA_v3 §11 vocabulary)."""
     keys = set()
     for action, (key, _ep, _m) in catalog.ACTION_PERMISSION.items():
-        if action_permitted(action):
+        probe = {"source": "offer"} if action == "create_card_batch" else None
+        if action_permitted(action, probe):
             keys.add(key)
+    if "cards.generate" in keys and direct_generation_permitted():
+        keys.add(catalog.DIRECT_GENERATION_KEY)
     return sorted(keys)
 
 
@@ -166,6 +182,71 @@ def list_offers(conv: dict, query: str = "") -> dict:
     return {"source": "list_offers", "items": items, "truncated": truncated}
 
 
+def local_str(value: Any, tid: int) -> Optional[str]:
+    """API UTC timestamp → tenant-zone (Asia/Gaza) wall clock ``YYYY-MM-DDTHH:MM``."""
+    if not value:
+        return None
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(str(value).replace(" ", "T").rstrip("Z")[:19])
+        return units.to_local(dt, tid).strftime("%Y-%m-%dT%H:%M")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def batch_status(row: dict) -> str:
+    """Operational status of a batch row (the repo's own rule: deleted /
+    cancelled / revoked as stored, exhausted when no unused card is left)."""
+    status = str(row.get("status") or "active").strip().lower() or "active"
+    if row.get("deleted_at"):
+        return "deleted"
+    if status in {"deleted", "cancelled", "canceled", "revoked", "archived"}:
+        return status
+    if int(row.get("total_cards") or 0) and int(row.get("available_count") or 0) == 0:
+        return "exhausted"
+    return status
+
+
+def list_card_batches(conv: dict, query: str = "", limit: Any = None) -> dict:
+    """Card batches (حزم البطاقات) through GET /cards/batches in the admin's
+    scope — never the cards themselves. A query matching nothing is retried
+    as an exact batch code."""
+    try:
+        n = max(1, min(int(limit or MAX_CHOICES), MAX_CHOICES))
+    except (TypeError, ValueError):
+        n = MAX_CHOICES
+    q = units.latin_digits(query or "").strip()[:100]
+    res = call("GET", "/cards/batches", query={"q": q or None, "per_page": 10, "page": 1})
+    if not res.ok:
+        raise _from_api(res)
+    rows = list((res.data or {}).get("items", []) or [])
+    total = int((res.data or {}).get("total") or len(rows))
+    if q and not rows:
+        by_code = call("GET", "/cards/batches", query={"code": q})
+        if by_code.ok:
+            rows = list((by_code.data or {}).get("items", []) or [])
+            total = len(rows)
+    tid = int(conv["tenant_id"])
+    items = []
+    for b in rows:
+        try:
+            bid = int(b.get("id"))
+        except (TypeError, ValueError):
+            continue
+        name = str(b.get("package_name") or "").strip() or str(b.get("batch_code") or "")
+        row = {"id": bid, "name": name, "code": b.get("batch_code"),
+               "origin": b.get("source_type") or "generated", "plan_name": b.get("plan_name"),
+               "created_local": local_str(b.get("created_at"), tid),
+               "total_cards": int(b.get("total_cards") or 0),
+               "available_count": int(b.get("available_count") or 0),
+               "status": batch_status(b)}
+        items.append({k: v for k, v in row.items() if v is not None})
+    items = _numbered(items, n)
+    store.issue(conv["id"], conv["tenant_id"], "batch", [i["id"] for i in items],
+                "list_card_batches")
+    return {"source": "list_card_batches", "items": items, "truncated": total > len(items)}
+
+
 _SUB_FIELDS = ("username", "full_name", "mobile", "status", "plan_id", "expire_at",
                "online")
 
@@ -233,4 +314,5 @@ def tool_message(choices: dict) -> str:
 
 __all__ = ["build_context", "effective_permissions", "action_permitted", "role", "is_owner",
            "list_plans", "list_offers", "find_subscriber", "change_plan_policies",
+           "list_card_batches", "direct_generation_permitted", "local_str", "batch_status",
            "plan_direction", "tool_message", "ChoiceError", "MAX_CHOICES"]

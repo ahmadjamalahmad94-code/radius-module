@@ -173,7 +173,7 @@ def _public(report: dict) -> dict:
 
 def model_result(report: dict) -> str:
     """The redacted RESULT line given back to the model (no secrets)."""
-    slim = {"status": report.get("status"),
+    slim = {"source": "execution", "status": report.get("status"),
             "steps": [{"n": s.get("n"), "action": s.get("action"), "status": s.get("status"),
                        "result": s.get("result"), "error": (s.get("error") or {}).get("code")}
                       for s in report.get("steps", [])]}

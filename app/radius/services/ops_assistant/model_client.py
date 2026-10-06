@@ -36,14 +36,37 @@ SETTING_URL = "ops_assistant.model_url"
 DEFAULT_TIMEOUT = 60.0
 MAX_TOKENS = 512
 
-# SPEC_DATA_v1.md «SYSTEM_PROMPT (exact text, identical in every record)».
-SYSTEM_PROMPT = (
+# SPEC_DATA_v1.md «SYSTEM_PROMPT (exact text, identical in every record)» — round-1/2 adapters.
+SYSTEM_PROMPT_V1 = (
     "أنت مساعد عمليّات لمنصّة HobeRadius. تفهم طلب المدير وتجمع الحقول المطلوبة وتقترح إجراءً واحدًا أو خطّة. "
     "لا تنفّذ شيئًا بنفسك: كود النظام يتحقّق وينفّذ بصلاحيّات المدير بعد تأكيده. أجب دائمًا بكائن JSON واحد "
     "فقط حسب المخطّط. لا تخترع أيّ معرّف: كل id يأتي من قائمة CHOICES في هذه المحادثة. لا تطلب ولا تكتب كلمات "
     "مرور أو أسرار أبدًا. إن نقصت معلومة فاسأل (ask)، وإن احتجت سجلًّا من النظام فاطلبه (choose)، وإن كان "
     "الطلب خارج الصلاحيّات أو غير آمن فارفض (refuse)."
 )
+
+# SPEC_DATA_v3.md §10 «SYSTEM_PROMPT v3» — catalog ops-v2 adapters (round 3+): every
+# object carries ``message``, ``reply`` and the INFO actions exist.
+SYSTEM_PROMPT_V3 = (
+    "أنت مساعد عمليّات لمنصّة HobeRadius. تحدّث مع المدير بلطف وباختصار وبلغته ولهجته (فصحى أو عاميّة "
+    "فلسطينيّة أو إنجليزيّة)، وافهم طلبه: اجمع الحقول المطلوبة واقترح إجراءً واحدًا أو خطّة، أو أجب عن سؤاله. "
+    "لا تنفّذ شيئًا بنفسك: كود النظام يتحقّق وينفّذ بصلاحيّات المدير بعد تأكيده. أجب دائمًا بكائن JSON واحد "
+    "فقط حسب المخطّط، وفيه دائمًا message: رسالتك للمدير. لا تخترع أيّ معرّف ولا أيّ رقم: كل id أو اسم مشترك "
+    "قائم يأتي من CHOICES أو RESULT في هذه المحادثة، وكل رقم في رسالتك منقول كما هو من النظام أو من كلام "
+    "المدير. لا تطلب ولا تكتب كلمات مرور أو أسرار أبدًا. إن نقصت معلومة فاسأل (ask)، وإن احتجت سجلًّا من "
+    "النظام فاطلبه (choose)، وإن كان الطلب خارج الصلاحيّات أو غير آمن فارفض (refuse)، وللتحيّة والشكر "
+    "والمساعدة والأسئلة وعرض نتائج النظام استعمل reply."
+)
+SYSTEM_PROMPT = SYSTEM_PROMPT_V3
+# ``v1`` keeps a round-1/2 adapter on the prompt it was trained with.
+ENV_PROMPT = "HOBERADIUS_OPS_PROMPT"
+
+
+def system_prompt() -> str:
+    """The SYSTEM_PROMPT the served adapter was trained with (env ``v1`` → the
+    ops-v1 text; anything else → the ops-v2 / SPEC_DATA_v3 text)."""
+    return SYSTEM_PROMPT_V1 if (os.environ.get(ENV_PROMPT) or "").strip().lower() == "v1" \
+        else SYSTEM_PROMPT_V3
 
 # ops/chat.py — same text everywhere (training, evaluation, serving).
 EVENT_TRIGGER = "(تنبيه من نظام المراقبة — راجع الحدث في CONTEXT وجهّز اقتراحًا للتأكيد)"
@@ -200,7 +223,8 @@ def dumps(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False)
 
 
-__all__ = ["SYSTEM_PROMPT", "EVENT_TRIGGER", "POLICY_LABEL", "CANCEL_TEXT",
+__all__ = ["SYSTEM_PROMPT", "SYSTEM_PROMPT_V1", "SYSTEM_PROMPT_V3", "system_prompt", "ENV_PROMPT",
+           "EVENT_TRIGGER", "POLICY_LABEL", "CANCEL_TEXT",
            "normalize_messages", "model_url", "model_timeout",
            "chat", "request_body", "parse_proposal", "dumps", "ModelError", "InvalidModelOutput",
            "MAX_TOKENS", "DEFAULT_URL", "ENV_URL"]

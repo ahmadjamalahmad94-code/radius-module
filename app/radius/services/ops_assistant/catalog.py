@@ -1,9 +1,11 @@
-"""The frozen action catalog (ops-v1) the model was trained on, plus the
+"""The frozen action catalog (ops-v2) the model is trained on, plus the
 executor-side tables derived from it (permissions, API endpoints, level-3
 envelope, ``$stepN.field`` references).
 
-Source of truth: ``catalog_ops_v1.json`` — a verbatim copy of
-``hoberadius-ai-support/ops/catalog/actions.json`` (catalog_version ops-v1).
+Source of truth: ``catalog_ops_v2.json`` — a verbatim copy of
+``hoberadius-ai-support/ops/catalog/actions.json`` (catalog_version ops-v2,
+SPEC_DATA_v3: ``message`` in every object, control action ``reply``,
+read-only INFO actions answered with a ``RESULT`` tool message).
 """
 from __future__ import annotations
 
@@ -13,7 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-_CATALOG_FILE = Path(__file__).resolve().parent / "catalog_ops_v1.json"
+_CATALOG_FILE = Path(__file__).resolve().parent / "catalog_ops_v2.json"
 
 
 @lru_cache(maxsize=1)
@@ -53,9 +55,14 @@ EXECUTABLE_ACTIONS = (
     "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan",
     "create_offer", "create_card_batch",
 )
-LOOKUP_ACTIONS = ("list_plans", "list_offers", "find_subscriber")
-CONTROL_ACTIONS = ("ask", "choose", "refuse", "cancel")
-CHOICE_SOURCES = ("list_plans", "list_offers", "find_subscriber", "change_plan_policies")
+LOOKUP_ACTIONS = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
+# read-only, answered with a RESULT tool message (SPEC_DATA_v3 §4); level 1, no confirmation
+INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions")
+CONTROL_ACTIONS = ("ask", "choose", "refuse", "cancel", "reply")
+CHOICE_SOURCES = ("list_plans", "list_offers", "find_subscriber", "change_plan_policies",
+                  "list_card_batches")
+# sources the executor serves as a list (``choose`` / lookup action)
+LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
 
 # action → (catalog permission key shown in CONTEXT, API endpoint the guard
 # evaluates, HTTP method). The API call itself is re-guarded when it runs; this
@@ -68,12 +75,18 @@ ACTION_PERMISSION: dict[str, tuple[str, str, str]] = {
     "suspend_subscriber": ("users.change_status", "v1.accounts_disable", "POST"),
     "enable_subscriber": ("users.change_status", "v1.accounts_enable", "POST"),
     "create_plan": ("plans.create", "v1.profiles_create", "POST"),
-    "create_offer": ("offer.create", "", "POST"),            # in-handler grant
+    "create_offer": ("offers.create", "", "POST"),           # in-handler grant
     "create_card_batch": ("cards.generate", "v1.cards_generate", "POST"),
     "list_plans": ("plans.view", "v1.plans_options", "GET"),
     "find_subscriber": ("users.view", "v1.accounts_list", "GET"),
     "list_offers": ("offers.view", "", "GET"),               # in-handler visibility
+    "list_card_batches": ("cards.view", "v1.cards_batches_list", "GET"),
+    "card_batch_status": ("cards.view", "v1.cards_batch_summary", "GET"),
+    "subscriber_info": ("users.view", "v1.accounts_360", "GET"),
+    "online_sessions": ("online.view", "v1.sessions_online", "GET"),
 }
+# CONTEXT key for a plan-source batch on top of cards.generate (SPEC_DATA_v3 §11)
+DIRECT_GENERATION_KEY = "cards.generate_direct"
 
 # Danger level from the catalog (L2 explicit confirm / L3 explicit + effects).
 DANGER: dict[str, str] = {
@@ -89,7 +102,7 @@ MAX_PLAN_STEPS = 6
 PLAN_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["action", "steps", "missing", "summary_ar"],
+    "required": ["action", "steps", "missing", "message", "summary_ar"],
     "properties": {
         "action": {"const": "plan"},
         "steps": {
@@ -102,6 +115,7 @@ PLAN_SCHEMA: dict[str, Any] = {
             },
         },
         "missing": {"type": "array", "maxItems": 0},
+        "message": {"type": "string", "minLength": 1, "maxLength": 400},
         "summary_ar": {"type": "string", "minLength": 1, "maxLength": 600},
     },
 }
@@ -133,7 +147,7 @@ def action_def(action: str) -> dict:
 
 __all__ = [
     "catalog", "catalog_version", "output_schema", "forbidden_keys", "is_forbidden_key",
-    "EXECUTABLE_ACTIONS", "LOOKUP_ACTIONS", "CONTROL_ACTIONS", "CHOICE_SOURCES",
-    "ACTION_PERMISSION", "DANGER", "PLAN_SCHEMA", "MAX_PLAN_STEPS", "REF_OUTPUTS",
+    "EXECUTABLE_ACTIONS", "LOOKUP_ACTIONS", "INFO_ACTIONS", "CONTROL_ACTIONS", "CHOICE_SOURCES",
+    "LIST_SOURCES", "ACTION_PERMISSION", "DIRECT_GENERATION_KEY", "DANGER", "PLAN_SCHEMA", "MAX_PLAN_STEPS", "REF_OUTPUTS",
     "REF_FIELDS", "REF_RE", "action_def",
 ]

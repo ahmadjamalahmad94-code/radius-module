@@ -12,7 +12,8 @@ handlers (``services/ops_assistant/dispatch.py``).
   POST /api/v1/ops/conversations                   new conversation (+ optional event) → CONTEXT
   GET  /api/v1/ops/conversations/<cid>/context     fresh CONTEXT
   POST /api/v1/ops/conversations/<cid>/choices     CHOICES list (ids issued to the conversation)
-  POST /api/v1/ops/conversations/<cid>/proposals   validate a proposal (mode draft|execute)
+  POST /api/v1/ops/conversations/<cid>/proposals   validate a proposal (mode draft|execute);
+                                                   an INFO action (read-only) answers with RESULT
   POST /api/v1/ops/conversations/<cid>/confirm     execute a pending proposal (hash + Idempotency-Key)
 
 Never with an unbound credential (env token / token without ``created_by``):
@@ -194,8 +195,8 @@ def ops_conversation_context(cid: str):
 
 def _run_choices(conv: dict, source: str, args: dict):
     from ...radius.services.ops_assistant import audit, context
-    if source in ("list_plans", "list_offers", "find_subscriber") and \
-            not context.action_permitted(source):
+    from ...radius.services.ops_assistant import catalog
+    if source in catalog.LIST_SOURCES and not context.action_permitted(source):
         return None, fail("forbidden", _tr("لا تملك صلاحية عرض هذه القائمة."), status=403,
                           details={"reason": "missing_permission", "source": source})
     try:
@@ -206,6 +207,8 @@ def _run_choices(conv: dict, source: str, args: dict):
         elif source == "find_subscriber":
             ch = context.find_subscriber(conv, str(args.get("query") or ""),
                                          str(args.get("status") or ""))
+        elif source == "list_card_batches":
+            ch = context.list_card_batches(conv, str(args.get("query") or ""), args.get("limit"))
         elif source == "change_plan_policies":
             ch = context.change_plan_policies(conv, str(args.get("username") or ""),
                                               args.get("plan_id"))
@@ -266,7 +269,7 @@ def ops_proposal(cid: str):
     mode = str(body.get("mode") or "execute")
     if mode not in ("draft", "execute"):
         return fail("validation_error", _tr("mode يجب أن يكون draft أو execute."), status=422)
-    from ...radius.services.ops_assistant import audit, executor, store
+    from ...radius.services.ops_assistant import audit, catalog, executor, info, store
     from ...radius.services.ops_assistant.validator import ProposalRejected, validate_proposal
     proposal = body.get("proposal")
     try:
@@ -285,8 +288,7 @@ def ops_proposal(cid: str):
                      proposal_hash=v.proposal_hash)
         out: dict[str, Any] = {"kind": "control", "action": v.action}
         fields = proposal.get("fields") or {}
-        if v.action == "choose" and fields.get("source") in ("list_plans", "list_offers",
-                                                              "find_subscriber"):
+        if v.action == "choose" and fields.get("source") in catalog.LIST_SOURCES:
             res, err = _run_choices(conv, fields["source"], fields)
             if err is not None:
                 return err
@@ -297,6 +299,13 @@ def ops_proposal(cid: str):
         if err is not None:
             return err
         return ok({"kind": "lookup", "action": v.action, **res})
+    if v.kind == "info":
+        result = info.run(conv, v.action, dict(proposal.get("fields") or {}))
+        audit.record("info", conversation_id=cid,
+                     outcome="error" if result.get("error") else "answered", action=v.action,
+                     details={"error": result.get("error")} if result.get("error") else None)
+        return ok({"kind": "info", "action": v.action, "result": result,
+                   "tool_message": info.result_line(result)})
 
     saved = store.save_proposal(cid=cid, tenant_id=_tid(), admin_id=_aid(), action=v.action,
                                 mode=mode, proposal=proposal, proposal_hash=v.proposal_hash)

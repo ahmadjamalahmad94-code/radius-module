@@ -31,7 +31,7 @@ def test_flag_is_off_by_default_and_blocks_everything(client, app):
     h = owner_h(app, fresh.id)
     st = data(client.get("/api/v1/ops/status", headers=h))
     assert st["flag_enabled"] is False and st["available"] is False
-    assert st["reason"] == "disabled" and st["catalog_version"] == "ops-v1"
+    assert st["reason"] == "disabled" and st["catalog_version"] == "ops-v2"
     e = err(client.post("/api/v1/ops/conversations", json={}, headers=h), 403, "forbidden")
     assert e["details"]["reason"] == "assistant_disabled"
     err(client.get("/api/v1/ops/events", headers=h), 403)
@@ -156,7 +156,8 @@ def test_owner_context_shape(client, app):
     assert len(c["today_local"]) == 10 and c["event"] is None
     assert c["admin"]["role"] == "owner"
     assert {"users.create", "users.extend", "users.change_plan", "users.temp_speed",
-            "users.change_status", "plans.create", "offer.create", "cards.generate",
+            "users.change_status", "plans.create", "offers.create", "cards.generate",
+            "cards.generate_direct", "cards.view", "online.view",
             "plans.view", "users.view", "offers.view"} <= set(c["admin"]["permissions"])
     assert d["context_message"].startswith("CONTEXT ")
 

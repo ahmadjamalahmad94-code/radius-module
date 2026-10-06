@@ -110,12 +110,20 @@ def test_allowed_keys(key):
 
 
 def test_catalog_shape():
-    assert catalog.catalog_version() == "ops-v1"
-    assert set(catalog.EXECUTABLE_ACTIONS) <= set(catalog.catalog()["actions"])
+    assert catalog.catalog_version() == "ops-v2"
+    acts = set(catalog.catalog()["actions"])
+    assert set(catalog.EXECUTABLE_ACTIONS) <= acts
+    assert set(catalog.INFO_ACTIONS) | set(catalog.LOOKUP_ACTIONS) <= acts
     assert set(catalog.ACTION_PERMISSION) >= set(catalog.EXECUTABLE_ACTIONS)
+    assert set(catalog.ACTION_PERMISSION) >= set(catalog.INFO_ACTIONS) | set(catalog.LOOKUP_ACTIONS)
+    assert set(catalog.CONTROL_ACTIONS) == set(catalog.catalog()["control_actions"])
+    assert "reply" in catalog.CONTROL_ACTIONS
+    vocab = set(catalog.catalog()["conventions"]["permission_vocabulary"])
+    assert {k for k, _e, _m in catalog.ACTION_PERMISSION.values()} | {
+        catalog.DIRECT_GENERATION_KEY} <= vocab
 
 
-_SAMPLES = [
+_V1_SAMPLES = [
     {"action": "create_subscriber", "fields": {"username": "ali.2026", "plan_id": 3,
                                                "duration": {"value": 30, "unit": "days"}},
      "missing": [], "summary_ar": "x"},
@@ -159,6 +167,25 @@ _SAMPLES = [
     {"action": "create_subscriber", "fields": {"username": "ali", "plan_id": True},
      "missing": [], "summary_ar": "x"},
 ]
+# ops-v2: every object carries ``message`` (same verdicts as under ops-v1) …
+_SAMPLES = [{**s, "message": "m"} for s in _V1_SAMPLES] + [
+    # … and the v2 shapes: reply, INFO actions, message rules, summary only for actions
+    {"action": "reply", "fields": {}, "missing": [], "message": "أهلين"},
+    {"action": "reply", "fields": {"x": 1}, "missing": [], "message": "x"},
+    {"action": "reply", "fields": {}, "missing": []},
+    {"action": "card_batch_status", "fields": {"batch_id": 3}, "missing": [], "message": "m"},
+    {"action": "card_batch_status", "fields": {}, "missing": [], "message": "m"},
+    {"action": "subscriber_info", "fields": {"username": "a.b"}, "missing": [], "message": "m"},
+    {"action": "online_sessions", "fields": {"query": "a"}, "missing": [], "message": "m"},
+    {"action": "list_card_batches", "fields": {"query": "alaa", "limit": 5}, "missing": [],
+     "message": "m"},
+    {"action": "choose", "fields": {"source": "list_card_batches", "query": "alaa"},
+     "missing": [], "message": "m"},
+    {"action": "ask", "fields": {}, "missing": ["password"], "message": "m"},
+    {"action": "enable_subscriber", "fields": {"username": "a"}, "missing": [], "message": "m"},
+    {"action": "ask", "fields": {}, "missing": ["count"], "message": ""},
+]
+_V2_VERDICTS = [True, False, False, True, False, True, True, True, True, False, False, False]
 
 
 @pytest.mark.parametrize("sample", _SAMPLES)
@@ -174,7 +201,7 @@ def test_schema_checker_expected_verdicts():
     schema = catalog.output_schema()
     verdicts = [not validate(s, schema) for s in _SAMPLES]
     assert verdicts == [True, False, True, False, False, True, True, False, False, False,
-                        False, True, False, True, False, False, False, False]
+                        False, True, False, True, False, False, False, False] + _V2_VERDICTS
 
 
 def test_schema_checker_fails_closed_on_unknown_keywords():

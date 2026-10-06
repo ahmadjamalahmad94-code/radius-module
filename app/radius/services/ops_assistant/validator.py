@@ -1,4 +1,4 @@
-"""Strict validation of ONE model proposal (catalog ops-v1).
+"""Strict validation of ONE model proposal (catalog ops-v2).
 
 Order (executor_checklist):
   1. it is a JSON object; NO forbidden key anywhere (deep scan) → the WHOLE
@@ -16,6 +16,13 @@ Order (executor_checklist):
 
 ``prepare_step`` is also what the executor runs right before each API call
 (re-validation at confirm time, after ``$step`` references are resolved).
+
+ops-v2 (SPEC_DATA_v3): every object carries ``message`` (the admin-facing
+text; never used for a decision and not part of the hash). A proposal from a
+round-1/2 model (ops-v1 contract, no ``message``) is accepted with its
+``summary_ar`` as the message. INFO actions (``card_batch_status``,
+``subscriber_info``, ``online_sessions``) are read-only: schema + issued ids +
+scope + permission, then ``info.run`` answers with a RESULT line.
 """
 from __future__ import annotations
 from app.i18n_text import _tr
@@ -69,7 +76,7 @@ class PreparedStep:
 
 @dataclass
 class Validated:
-    kind: str                         # control | lookup | action | plan
+    kind: str                         # control | lookup | info | action | plan
     action: str
     proposal: dict
     proposal_hash: str
@@ -133,12 +140,23 @@ def _refs_of(fields: dict, step_no: int, actions_before: list[str],
 
 # ─────────────────────────── top level ────────────────────────────
 
+def with_message(proposal: Any) -> Any:
+    """ops-v1 compatibility: a round-1/2 model has no ``message`` — its Arabic
+    ``summary_ar`` is shown instead (the hash never covers either)."""
+    if isinstance(proposal, dict) and "message" not in proposal:
+        summ = proposal.get("summary_ar")
+        if isinstance(summ, str) and summ.strip():
+            return {**proposal, "message": summ.strip()[:400]}
+    return proposal
+
+
 def validate_proposal(conv: dict, proposal: Any, *, mode: str = "execute") -> Validated:
     if not isinstance(proposal, dict):
         raise ProposalRejected([Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))])
     bad = _deep_forbidden(proposal)
     if bad:
         raise ProposalRejected(bad)
+    proposal = with_message(proposal)
     action = proposal.get("action")
     if action == "plan":
         errs = _schema(proposal, catalog.PLAN_SCHEMA, "$")
@@ -157,6 +175,9 @@ def validate_proposal(conv: dict, proposal: Any, *, mode: str = "execute") -> Va
         if not action_permitted(action):
             raise ProposalRejected([_perm_violation(action, "$")])
         return Validated("lookup", action, proposal, phash)
+    if action in catalog.INFO_ACTIONS:
+        _check_info(conv, action, dict(proposal.get("fields") or {}))
+        return Validated("info", action, proposal, phash)
     step = prepare_step(conv, action, dict(proposal["fields"]), path="$.fields", mode=mode)
     return Validated("action", action, proposal, phash, [step])
 
@@ -186,6 +207,33 @@ def _validate_plan(conv: dict, proposal: dict, mode: str) -> Validated:
     if errs:
         raise ProposalRejected(errs)
     return Validated("plan", "plan", proposal, canonical_hash(conv["id"], proposal), prepared)
+
+
+def _check_info(conv: dict, action: str, fields: dict) -> None:
+    """Read-only INFO action: permission + every record id issued in THIS
+    conversation (+ the subscriber inside the admin's scope)."""
+    from .context import action_permitted
+    tid = int(conv["tenant_id"])
+    errs: list[Violation] = []
+    if not action_permitted(action, fields):
+        errs.append(_perm_violation(action, "$.fields"))
+    if "batch_id" in fields and not store.is_issued(conv["id"], tid, "batch", fields["batch_id"]):
+        errs.append(Violation("invented_id",
+                              _tr("رقم الحزمة لم يَرِد في قائمة اختيار من هذه المحادثة."),
+                              "$.fields.batch_id"))
+    if "username" in fields:
+        uname = str(fields["username"])
+        if not store.is_issued(conv["id"], tid, "subscriber", uname):
+            errs.append(Violation("invented_id",
+                                  _tr("اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة."),
+                                  "$.fields.username"))
+        else:
+            from ....api.access_control import subscriber_in_scope
+            if not subscriber_in_scope(username=uname):
+                errs.append(Violation("out_of_scope", _tr("هذا المشترك ليس ضمن نطاقك."),
+                                      "$.fields.username"))
+    if errs:
+        raise ProposalRejected(errs)
 
 
 def _perm_violation(action: str, path: str) -> Violation:
@@ -472,4 +520,5 @@ def resolve_refs(fields: dict, refs: dict, outputs: dict[int, dict]) -> dict:
 
 
 __all__ = ["Violation", "ProposalRejected", "PreparedStep", "Validated", "validate_proposal",
+           "with_message",
            "prepare_step", "canonical_hash", "resolve_refs", "PERMISSION_CODES"]

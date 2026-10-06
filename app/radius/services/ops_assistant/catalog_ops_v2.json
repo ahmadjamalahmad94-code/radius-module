@@ -1,0 +1,590 @@
+{
+  "catalog_version": "ops-v2",
+  "generated_at": "2026-10-06",
+  "changes_v2": "ops-v2 (SPEC_DATA_v3): `message` field required in every model object (natural text in the admin's language; summary_ar only required for executable actions/plans); control action `reply`; read-only INFO actions card_batch_status / list_card_batches / subscriber_info / online_sessions answered by a RESULT (or CHOICES) tool message; choice source list_card_batches; change_plan_policies items {n,id,label_ar}; CONTEXT permission vocabulary adds cards.view, cards.generate_direct, online.view. INFO endpoints cite the executor branch (source_v2).",
+  "level": "1 = draft only. The model converses, collects fields and emits ONE JSON proposal + an Arabic summary. Deterministic executor code validates the proposal against this catalog, re-reads the live record, shows the admin a confirmation card, and only then calls the HobeRadius API with the logged-in admin's own token. The model never executes anything.",
+  "source": {
+    "repo": "C:/Projects/rm-sec-rc1",
+    "branch": "release/security-rc1",
+    "flutter_reference": "C:/Projects/rma-product-f03 (forms: subscriber_form_mapper.dart, subscriber_action_dialogs.dart, card_batch_requests.dart, plan_form_mapper.dart)",
+    "cite_format": "path:line relative to the repo root; line numbers valid for the branch above on 2026-10-06"
+  },
+  "source_v2": {
+    "repo": "C:/Projects/rm-ops-exec",
+    "branch": "agent/ops-pilot-client20",
+    "scope": "INFO actions, list_card_batches, list_offers (GET /api/v1/cards/offers now exists) and the executor's tool messages; line numbers valid on that branch on 2026-10-06 (before the round-3 executor commits)"
+  },
+
+  "conventions": {
+    "api_base": "/api/v1 (Bearer token). Envelope: success {ok:true,data:...}; error {ok:false,error:{code,message,details}} (app/api/responses.py).",
+    "auth_and_rbac": "The executor MUST call with a token bound to the logged-in admin (g.admin_id > 0). An UNBOUND token (env HOBERADIUS_API_TOKENS / token without created_by) bypasses RBAC entirely (app/api/access_control.py:127-132, app/api/permission_guard.py:12-20) — never use one for the assistant. Every v1 endpoint is mapped to the SAME decision as its web endpoint (app/api/permission_guard.py:135+, deny-by-default).",
+    "tenant_scope": "tenant_id comes from the token (g.tenant_id, app/api/auth.py:30). Every service query is WHERE tenant_id=?. The model never sends tenant_id.",
+    "distributor_scope": "Non-full-access managers only see/act on their own subscribers ∪ their distributors' (subscriber_in_scope, app/api/access_control.py:225-245); out of scope → 403 deny_out_of_scope. find_subscriber already returns only in-scope rows.",
+    "ids_rule": "Every *_id / username that identifies an existing record MUST be copied from a CHOICES list or a RESULT the executor returned in THIS conversation (list_plans, list_offers, find_subscriber, list_card_batches, change_plan_policies, event rows, INFO RESULT rows, execution RESULT). The executor rejects any id not present in the issued set for this conversation (never invented, never typed by the user and passed through unverified).",
+    "message_rule": "Every model object carries `message` (top level, non-empty, <= 400 chars): the natural text shown to the admin, in the admin's language/dialect (MSA, Palestinian colloquial, English; arabizi -> colloquial Arabic script). Numbers/names only from the admin's text, CHOICES or RESULT, copied exactly; never claims an execution without RESULT source=execution; never a secret. The executor never uses message/summary_ar for decisions (SPEC_DATA_v3 §1-§2).",
+    "permission_vocabulary": ["users.view", "users.create", "users.extend", "users.change_plan", "users.temp_speed", "users.change_status", "plans.view", "plans.create", "offers.view", "offers.create", "cards.view", "cards.generate", "cards.generate_direct", "online.view"],
+    "time": "API datetimes are UTC ISO-8601 with Z. The owner's display zone is Asia/Gaza (DST). The model only emits LOCAL wall-clock strings (field names *_local, format YYYY-MM-DDTHH:MM) or durations; the executor converts local→UTC.",
+    "owner_extend_cap": "One operation may add at most limits.max_extend_days (default 365 = one year) — app/radius/core/numbers.py:240-246, app/radius/core/limits.py:44,166-171. Repetition is allowed. Executor enforces min(365 days, server value) BEFORE calling.",
+    "units": {
+      "duration_units_model": ["minutes", "hours", "days", "months"],
+      "duration_to_minutes": {"minutes": 1, "hours": 60, "days": 1440, "months": "see month_rule"},
+      "month_rule": "OPEN QUESTION Q1. The API has no month unit (extend takes minutes; app offers days/hours/minutes only: rma subscriber_actions_model.dart:430-434). Proposed: months → calendar months in Asia/Gaza via mode=expire_at (exact end date), else 30 days (the codebase's plan-period fallback = 43200 min, users.py plan_period_minutes:1381-1385). 12 months must still pass the 365-day cap (calendar 12 months = 365/366 days → a leap span fails).",
+      "speed": "kbps everywhere in the API. 1 Mbps = 1024 kbps, 1 Gbps = 1024*1024 (app/radius/core/units.py:24-26).",
+      "quota": "MB everywhere. 1 GB = 1024 MB (app/radius/core/units.py:30-31).",
+      "money": "Decimal in the system currency (default shekel). The model only proposes amounts the admin stated explicitly; never computes prices."
+    },
+    "idempotency": "Executor sends header Idempotency-Key: <uuid per confirmed proposal> on every write. Honoured (24h replay, fingerprint-bound) on /accounts/<u>/extend and /change-plan (app/api/v1/subscriber_actions.py:36-37,82-85; app/api/v1/idempotency.py:1-18) and on /cards/generate (app/api/v1/cards.py:605-620). Other writes are not idempotent → executor must not auto-retry them."
+  },
+
+  "control_actions": {
+    "ask": "Required fields missing or ambiguous. fields = what is known so far; missing = field names still needed; summary_ar = the question to the admin.",
+    "choose": "A record must be picked from the system. fields.source = one of the choice_sources names, fields.query = optional search text; executor returns a numbered list; the model then refers to the picked item's id.",
+    "refuse": "Out of scope, unsafe (e.g. the admin dictates a password/secret), or an action not in this catalog. summary_ar explains briefly.",
+    "cancel": "The admin abandoned the current draft.",
+    "reply": "Nothing to execute: greetings, thanks, help / what-can-you-do, how/why questions, answers built from RESULT or from a plain lookup's CHOICES, empty results. fields = {}, missing = [], message = the answer. Never needs confirmation. refuse = asked to DO something not allowed; reply = nothing to do (SPEC_DATA_v3 §3)."
+  },
+
+  "forbidden_model_fields": {
+    "rule": "These keys must NEVER appear in fields (executor rejects the whole proposal; ops/score.py safe_ok also flags pass/secret/token/pin/api_key).",
+    "keys": ["password", "new_password", "pppoe_password", "secret", "token", "api_key", "pin",
+             "balance", "metadata", "tenant_id", "status", "expire_at", "first_login_at", "last_login_at",
+             "temporary_speed", "custom_speed", "idempotency_key", "client_request_id", "version"],
+    "why": {
+      "password/pppoe_password": "secrets never pass through the model; executor generates or the admin types it in the UI.",
+      "balance": "money; direct balance write is owner-only (manager → 403) app/api/v1/accounts.py:541-549,387-405; use the money actions in the UI.",
+      "status": "only through suspend_subscriber / enable_subscriber endpoints (side effects differ).",
+      "expire_at": "the executor computes it from duration/until_local after converting the timezone.",
+      "temporary_speed/custom_speed": "raw flags in /accounts PATCH whitelist (accounts.py:84-85) write a flag WITHOUT a window/CoA — always use temporary_speed action."
+    }
+  },
+
+  "choice_sources": {
+    "list_plans": {
+      "title_ar": "قائمة الباقات (access plans)",
+      "endpoint": {"method": "GET", "path": "/api/v1/plans/options", "alias": "/api/v1/profiles/options"},
+      "cite": "app/api/v1/profiles.py:315-318,355-376",
+      "permission": "anyweb:plans_list@GET | users_create@POST | cards_generate@POST — i.e. plans.view OR users.create OR cards.generate (app/api/permission_guard.py:109,394)",
+      "returns": "items[{id,name,price,currency,duration_minutes,duration_value,duration_unit,validity_days,period_minutes,plan_type}] — enabled & not archived only, sorted by name",
+      "notes": "Full plan rows (speeds, rate_per_minute) via GET /api/v1/profiles (needs plans.view, profiles.py:328). For change_subscriber_plan the executor computes direction from price/period_minutes (rate per minute)."
+    },
+    "list_offers": {
+      "title_ar": "قائمة العروض (card offers)",
+      "status_v2": "API on the executor branch: GET /api/v1/cards/offers (source_v2 app/api/v1/card_offers.py:31-32,94+; permission_guard.py:84 in-handler: owner all, a manager only ACTIVE offers shared with him; wholesale hidden without can_see_wholesale). CHOICES items {n,id,name,plan_id,plan_name,price,wholesale_price?,currency,duration_value,duration_unit}.",
+      "status": "NO_API (rm-sec-rc1)",
+      "web_only": "GET /cards/offers (app/radius/routes/cards.py:86,3462) renders HTML; service CardOffersService.list_offers (app/radius/services/card_offers.py:148-179): owner sees all, a manager only ACTIVE offers explicitly shared with him; wholesale/margin hidden without can_see_wholesale/can_see_profit (routes/cards.py:3434-3446).",
+      "notes": "Needs a new read endpoint (e.g. GET /api/v1/cards/offers) before offer-based flows can work. See OPEN QUESTION Q2."
+    },
+    "find_subscriber": {
+      "title_ar": "بحث عن مشترك",
+      "endpoint": {"method": "GET", "path": "/api/v1/accounts", "query": {"q": "string ≤100 chars, 'contains' on username/full_name/mobile", "status": "enabled|active|expired|disabled|suspended|banned", "plan_id": "int", "user_type": "subscriber(default, includes trial)|trial", "per_page": "1..500 (use ≤10)", "page": "≥1"}},
+      "cite": "app/api/v1/accounts.py:419-524 (q ≤100: 450; statuses: 414-416)",
+      "permission": "web:subscribers_list → users.view (permission_guard.py:168; app/radius/auth/ui_permissions.py:42)",
+      "scope": "SQL-scoped to the caller (subscriber_scope_admin_id, accounts.py:479-482)",
+      "returns": "items[...] serialized WITHOUT password; pppoe_password masked; balance null without «رؤية الرصيد» (accounts.py:298-329). Executor must strip pppoe_password/balance before showing the list to the model anyway.",
+      "detail": "GET /api/v1/accounts/<username>/actions-context (subscriber_actions.py:347-490) — plan, expiry, effective price, debt, temp_speed state, per-action permission flags. Use it to pre-check permissions and to compute change-plan direction."
+    },
+    "list_card_batches": {
+      "title_ar": "قائمة حزم البطاقات (card batches)",
+      "endpoint": {"method": "GET", "path": "/api/v1/cards/batches", "query": {"q": "name/code contains (<=120)", "code": "exact batch code", "per_page": "10"}},
+      "cite": "source_v2 app/api/v1/cards.py:47-48 (route), 928-975 (handler: code lookup 943-958, list 959-975), 374-389 (filters + batch_scope_admin_id for non-owner), app/radius/db/repos/cards_repo.py:294-357 (per-batch counts)",
+      "permission": "web:cards_batches → cards.view (permission_guard.py:212; app/radius/auth/ui_permissions.py:70); rows scoped to the admin (owner-level all; else own ∪ his distributors', access_control.py:214-222)",
+      "returns_to_model": "CHOICES items {n, id, name (package_name or code), code, origin (generated|imported|external), plan_name, created_local, total_cards, available_count, status}; batch ids issued to the conversation",
+      "notes": "Never the cards themselves (no codes/passwords)."
+    },
+    "change_plan_policies": {
+      "title_ar": "سياسات تغيير الباقة الصالحة",
+      "produced_by": "the executor from the per-minute price direction (username + plan_id already resolved)",
+      "returns_to_model": "CHOICES {\"source\":\"change_plan_policies\",\"direction\":\"lower|higher|neutral\",\"items\":[{n, id, label_ar}]} — the proposal field is `policy` = the picked item's `id` (never policy_id); a stated preference not in the list => ask [\"policy\"] (SPEC_DATA_v3 §8)"
+    },
+    "find_online_session": {
+      "title_ar": "جلسة المشترك الحيّة (للسرعة المؤقتة)",
+      "endpoint": {"method": "GET", "path": "/api/v1/sessions/online", "query": {"q": "username"}},
+      "cite": "app/api/v1/sessions.py:255+",
+      "permission": "web:online_list → online.view (permission_guard.py:437; blueprint.py:661)",
+      "returns": "open radacct rows incl. session_id; the executor (not the model) picks session_id for /sessions/temp-speed."
+    }
+  },
+
+  "actions": {
+
+    "create_subscriber": {
+      "title_ar": "إنشاء مشترك",
+      "api_status": "supported",
+      "danger": {"level": "L2", "confirm": "explicit", "why": "creates a RADIUS login; may consume a license/manager subscriber slot"},
+      "endpoints": [
+        {"step": 1, "method": "POST", "path": "/api/v1/accounts", "cite": "app/api/v1/accounts.py:358-359,527-616"}
+      ],
+      "permission": {
+        "api_guard": "web:users_create (permission_guard.py:173)",
+        "role_key": "users.create (app/radius/routes/blueprint.py:634)",
+        "extra": [
+          "manager cap: manager_grants.subscriber_cap_blocked → 403 «بلغتَ الحدّ الأقصى…» (accounts.py:551-557)",
+          "license capacity subscribers.max_total → capacity error (accounts.py:558-565)",
+          "field grants: a manager's non-granted fields fall back to empty-form defaults, manager_id forced to the creator (accounts.py:584-601; users.py:197-203)",
+          "opening balance ≠ 0 by a manager → 403 (accounts.py:541-549,590-595)"
+        ]
+      },
+      "model_fields": {
+        "username": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9._@-]{3,64}$", "rule": "3–64 chars of A-Za-z0-9._@- ; no spaces/Arabic (users.py:118,1334-1345; subscriber_validation.py:74). Unique per tenant, case-insensitive, shared namespace with cards (users.py:88-110,212-213 → 409). An ARCHIVED subscriber's name is refused too (users.py:218-219 → 409)."},
+        "plan_id": {"type": "integer", "required": true, "source": "list_plans", "rule": "must exist in tenant (subscriber_validation.py:182-187,198-204). API itself allows no plan; catalog requires one (owner flow)."},
+        "duration": {"type": "object", "required": false, "shape": {"value": "integer ≥1", "unit": "minutes|hours|days|months"}, "maps_to": "expire_at = now(UTC) + duration (executor)", "rule": "≤ max_extend_days from now (create cap, numbers.py:249-275 → 422). Mutually exclusive with until_local/no_expiry."},
+        "until_local": {"type": "string", "format": "YYYY-MM-DDTHH:MM (Asia/Gaza)", "required": false, "maps_to": "expire_at (UTC ISO Z)", "rule": "same cap; year 2000..limits.max_expiry_year (subscriber_validation.py:50-55)."},
+        "no_expiry": {"type": "boolean", "required": false, "maps_to": "\"expire_at\": null (explicit never-expires, accounts.py:576-583)", "danger": "L3 — unlimited account; require explicit wording from the admin."},
+        "full_name": {"type": "string", "maxLength": 255, "cite": "subscriber_validation.py:96"},
+        "mobile": {"type": "string", "pattern": "^\\+?[0-9][0-9 \\-]{2,23}$", "rule": "Arabic-Indic digits are latinized by the server (accounts.py:214-216; subscriber_validation.py:77,153-156). maxLength 32."},
+        "email": {"type": "string", "maxLength": 254, "rule": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$ (subscriber_validation.py:76)"},
+        "mac_lock": {"type": "string", "rule": "one or more MACs XX:XX:XX:XX:XX:XX (':' or '-'), separated by space/,;| (subscriber_validation.py:78-79,162-170). Empty → NULL."},
+        "device_count": {"type": "integer", "min": 0, "max": 10000, "default": 0, "cite": "subscriber_validation.py:87"},
+        "device_limit_mode": {"type": "string", "enum": ["", "reject", "replace"], "default": "", "rule": "'' = global default (accounts.py:247-254)"},
+        "service_type": {"type": "string", "enum": ["hotspot", "pppoe", "both"], "rule": "subscriber_validation.py:73,143-146; default Hotspot (core/types.py Subscriber)"},
+        "user_type": {"type": "string", "enum": ["subscriber", "trial"], "default": "subscriber", "rule": "'card' refused (accounts.py:233-241)"},
+        "login_without_password": {"type": "boolean", "default": false, "rule": "true ⇒ no password needed (accounts.py:532-538). Otherwise the EXECUTOR generates/obtains the password."},
+        "custom_price": {"type": "number", "min": 0, "max": 1000000000, "default": 0, "rule": "0 = plan price (accounts.py:219-230)", "danger": "money — only if the admin stated it"},
+        "static_ip": {"type": "string", "rule": "valid IPv4/IPv6 (subscriber_validation.py:157-161)"},
+        "address": {"type": "string", "maxLength": 500}, "city": {"type": "string", "maxLength": 120},
+        "national_id": {"type": "string", "maxLength": 64}, "remark": {"type": "string", "maxLength": 2000}
+      },
+      "executor_only_fields": {
+        "password": "REQUIRED by the API unless login_without_password (accounts.py:535-542); ≥4 chars (users.py:1318-1331). Executor generates a random one or the admin types it in a masked UI field; shown to the admin only, never to the model/logs.",
+        "expire_at": "computed from duration/until_local/no_expiry. If ALL are absent the key is omitted ⇒ server setting subscribers.create_without_expiry: 'expired' (default, born expired = now) or 'unlimited' (accounts.py:576-583; system_config.py:87-110). Executor must tell the admin which one applies.",
+        "manager_id": "not exposed in v1 (non-owner is forced to himself, users.py:197-203)."
+      },
+      "uniqueness": "username unique per tenant across subscribers+cards, case-insensitive, trimmed (users.py:88-110). 409 conflict on clash/archived name.",
+      "idempotency": "NOT idempotent; a retry after timeout yields 409 'اسم المستخدم مستخدم مسبقًا' — executor treats that as 'check if it was created by us' via GET /accounts/<u>.",
+      "side_effects": [
+        "RADIUS account row + router sync via UsersService.create (accounts.py docstring 1-6; users.py:194-245)",
+        "audit + admin alert 'subscriber_new' (users.py:235-244)",
+        "WhatsApp activation notice if enabled (accounts.py:612-616,631-652)",
+        "no money/ledger entry unless an opening balance (forbidden here)"
+      ],
+      "errors": {"422": "validation (Arabic message)", "403": "permission / cap / balance", "409": "username taken or archived"}
+    },
+
+    "renew_or_extend_subscriber": {
+      "title_ar": "تجديد/تمديد اشتراك",
+      "api_status": "supported",
+      "danger": {"level": "L2 (free) / L3 (paid|debt)", "confirm": "explicit; L3 shows amount + new balance/debt"},
+      "endpoints": [
+        {"method": "POST", "path": "/api/v1/accounts/<username>/extend", "preferred": true, "cite": "app/api/v1/subscriber_actions.py:64,493-554", "body": {"mode": "duration|expire_at", "minutes": "int (mode=duration)", "expire_at": "ISO UTC (mode=expire_at)", "charge_mode": "free|paid|debt", "amount": "number>0 optional", "notes": "string"}},
+        {"method": "POST", "path": "/api/v1/accounts/<username>/extend_time", "legacy": true, "cite": "accounts.py:368-369,807-837", "body": {"minutes": "int"}, "note": "free only; do not use"}
+      ],
+      "permission": {
+        "api_guard": "web:users_extend (permission_guard.py:180)",
+        "role_key": "users.extend (blueprint.py:638)",
+        "extra": ["daily action rate-limit → 429 (subscriber_actions.py:163-184)", "paid/debt pass the manager spend gate → 403 spend_blocked (services/subscriber_actions.py:104-111)", "scope check (subscriber_actions.py:187-205)"]
+      },
+      "model_fields": {
+        "username": {"type": "string", "required": true, "source": "find_subscriber"},
+        "mode": {"type": "string", "enum": ["duration", "until"], "required": true, "maps_to": "duration→mode=duration; until→mode=expire_at"},
+        "duration": {"type": "object", "shape": {"value": "integer ≥1", "unit": "minutes|hours|days|months"}, "required_if": "mode=duration", "maps_to": "minutes = value × unit"},
+        "until_local": {"type": "string", "format": "YYYY-MM-DDTHH:MM (Asia/Gaza)", "required_if": "mode=until", "maps_to": "expire_at UTC"},
+        "charge_mode": {"type": "string", "enum": ["free", "paid", "debt"], "default": "free", "rule": "subscriber_actions.py:499-501"},
+        "amount": {"type": "number", "exclusiveMin": 0, "required": false, "rule": "free ⇒ forced 0; paid/debt without amount ⇒ server auto-price = effective price × minutes ÷ plan minutes (subscriber_actions.py:531-538,321-327). Model fills it ONLY if the admin said a number."},
+        "notes": {"type": "string", "maxLength": 300}
+      },
+      "validation": [
+        {"rule": "minutes > 0", "cite": "subscriber_actions.py:513-515; users.py:1028-1029"},
+        {"rule": "added span ≤ max_extend_days (owner: 1 year) — for mode=expire_at measured from max(now, current expiry)", "cite": "subscriber_actions.py:506-530; numbers.py:240-246; subscriber_validation.py:58-68"},
+        {"rule": "expiry < limits.max_expiry_year+1 (default 2100)", "cite": "subscriber_validation.py:50-55; users.py:1084"},
+        {"rule": "anchor = max(current expiry, now): an expired subscriber gets the full duration from now", "cite": "users.py:1037-1053"},
+        {"rule": "subscriber with NO expiry (unlimited) cannot be extended by duration → 422; setting a date is allowed", "cite": "services/subscriber_actions.py:96-99"},
+        {"rule": "paid requires enough prepaid balance → 422", "cite": "services/subscriber_actions.py:100-103"}
+      ],
+      "idempotency": "Idempotency-Key honoured (money endpoint).",
+      "side_effects": ["expiry update + ledger row for paid/debt (users.py:1055-1069, _commit_expiry 1113+)", "admin alert 'time_added' + subscriber notification (users.py:1165-1180)", "subscriber balance decreases by amount for paid/debt"],
+      "response": "{username, mode, new_expire_at, charged_amount, charge_mode, balance}"
+    },
+
+    "change_subscriber_plan": {
+      "title_ar": "تغيير باقة/عرض المشترك",
+      "api_status": "supported",
+      "danger": {"level": "L3", "confirm": "explicit; show direction, policy effect (minutes delta / debt) before confirming", "why": "changes RADIUS speed/limits live, may create debt, resets quota period"},
+      "endpoints": [{"method": "POST", "path": "/api/v1/accounts/<username>/change-plan", "cite": "subscriber_actions.py:65,557-583", "body": {"plan_id": "int", "policy": "enum"}}],
+      "permission": {"api_guard": "web:users_change_plan (permission_guard.py:181)", "role_key": "users.change_plan (blueprint.py:639)", "extra": ["scope + rate limit as extend"]},
+      "model_fields": {
+        "username": {"type": "string", "required": true, "source": "find_subscriber"},
+        "plan_id": {"type": "integer", "required": true, "source": "list_plans", "rule": "≠ current plan; enabled; not archived (users.py:455-476)"},
+        "policy": {"type": "string", "required": true, "enum": ["lower_compensate", "lower_keep_expiry", "higher_debt", "higher_reduce_days", "higher_keep_expiry", "neutral_keep_expiry"], "rule": "lower_* only when the new plan is cheaper PER MINUTE, higher_* only when dearer, neutral_* only when equal (users.py:445-501). The executor computes direction (price/period_minutes) and offers only the valid policies as a numbered choice; the model must not guess."}
+      },
+      "validation": [
+        {"rule": "compensation minutes ≤ max_extend_minutes; debt ≤ money_cap('payment'); 422 not truncated", "cite": "users.py:519-534"},
+        {"rule": "lower_compensate onto a free plan refused", "cite": "users.py:506-509"}
+      ],
+      "idempotency": "Idempotency-Key honoured.",
+      "side_effects": ["plan_id/expire_at/balance updated; debt ledger row when higher_debt (users.py:536-563)", "new quota period — previous top-ups dropped (users.py:546-551)", "subscriber notification 'plan_changed' (users.py:583-584)", "policy reconcile: live sessions re-checked and violators disconnected (PoD) + bandwidth CoA re-apply (users.py:587-588,1497-1525)"],
+      "response": "{username, plan_id, policy, direction, new_expire_at, debt_amount, minute_delta, balance}"
+    },
+
+    "temporary_speed": {
+      "title_ar": "سرعة مؤقتة",
+      "api_status": "supported (ONLINE subscribers only)",
+      "danger": {"level": "L3", "confirm": "explicit", "why": "immediate CoA on a live session"},
+      "endpoints": [
+        {"op": "apply", "method": "POST", "path": "/api/v1/sessions/temp-speed", "cite": "app/api/v1/sessions.py:27-28,537-575", "body": {"username": "str", "session_id": "str (from find_online_session)", "down_kbps": "int", "up_kbps": "int", "duration": "int", "duration_unit": "minutes|hours|days (Arabic accepted)", "duration_minutes": "int (wins if >0)"}},
+        {"op": "cancel", "method": "POST", "path": "/api/v1/accounts/<username>/temp-speed/cancel", "cite": "subscriber_actions.py:78-79,875-895", "note": "works offline too"}
+      ],
+      "permission": {"api_guard": "web:online_temp_speed / web:users_temp_speed_cancel (permission_guard.py:441,191)", "role_key": "users.temp_speed (blueprint.py:647-649)"},
+      "model_fields": {
+        "username": {"type": "string", "required": true, "source": "find_subscriber"},
+        "operation": {"type": "string", "enum": ["apply", "cancel"], "default": "apply"},
+        "down_kbps": {"type": "integer", "rule": "0 = unlimited direction, else 64..1,000,000; not both 0 (temp_speed.py:59-60,364-371,442-448)", "unit": "kbps (1 Mbps = 1024)"},
+        "up_kbps": {"type": "integer", "rule": "same as down_kbps"},
+        "duration": {"type": "object", "shape": {"value": "integer ≥1", "unit": "minutes|hours"}, "rule": "total 1..1440 minutes (temp_speed.py:61-62,449-450)"},
+        "until_local": {"type": "string", "format": "YYYY-MM-DDTHH:MM (Asia/Gaza)", "maps_to": "duration_minutes = until − now (executor), must be 1..1440"}
+      },
+      "executor_only_fields": {"session_id": "picked by the executor from GET /sessions/online?q=<username> (must be an open radacct row, sessions.py:88-124). Not online ⇒ 422 'الجلسة المحددة غير متصلة' — offline temp speed is WEB-ONLY (profile form, routes/users.py:1400-1440). OPEN QUESTION Q4."},
+      "validation": [{"rule": "card sessions need a speed mirror row → else 422", "cite": "sessions.py:542-547; temp_speed.py:395-404"}],
+      "idempotency": "none (re-apply opens a fresh window; restore target captured once, temp_speed.py:472-481).",
+      "side_effects": ["rate CoA to the live session immediately; window + restore rate stored in metadata; worker auto-reverts at ends_at (temp_speed.py:419-431)"],
+      "response": "{username, session_id, temporary_speed{ends_at, rate, coa}}"
+    },
+
+    "suspend_subscriber": {
+      "title_ar": "إيقاف (تعطيل) مشترك",
+      "api_status": "supported",
+      "danger": {"level": "L3", "confirm": "explicit", "why": "kicks the live session now (PoD)"},
+      "endpoints": [{"method": "POST", "path": "/api/v1/accounts/<username>/disable", "cite": "accounts.py:370-371,840-845"}],
+      "permission": {"api_guard": "web:users_toggle (permission_guard.py:178)", "role_key": "users.change_status (blueprint.py:637)"},
+      "model_fields": {"username": {"type": "string", "required": true, "source": "find_subscriber"}, "reason_ar": {"type": "string", "maxLength": 300, "note": "kept in the executor's own log only — the endpoint takes no body"}},
+      "semantics": "sets status='disabled' (not 'suspended'; status enum: subscriber_validation.py:72). OPEN QUESTION Q3.",
+      "idempotency": "naturally idempotent (status write).",
+      "side_effects": ["status-only write (users.py:994-997)", "audit + subscriber notification 'subscriber_disabled' (users.py:998-1000)", "policy reconcile ⇒ live session disconnected (users.py:1001-1004)"],
+      "response": "{username, status:'disabled'}"
+    },
+
+    "enable_subscriber": {
+      "title_ar": "تفعيل مشترك",
+      "api_status": "supported",
+      "danger": {"level": "L2", "confirm": "explicit"},
+      "endpoints": [{"method": "POST", "path": "/api/v1/accounts/<username>/enable", "cite": "accounts.py:372-373,848-853"}],
+      "permission": {"api_guard": "web:users_toggle (permission_guard.py:179)", "role_key": "users.change_status"},
+      "model_fields": {"username": {"type": "string", "required": true, "source": "find_subscriber"}},
+      "notes": "Does NOT touch the expiry: an expired subscriber stays expired (status 'expired' is derived from expire_at). Executor should warn and suggest renew_or_extend_subscriber.",
+      "side_effects": ["status='enabled' (users.py:1007-1013)", "audit + notification 'subscriber_reactivated'", "no reconcile/CoA"],
+      "response": "{username, status:'enabled'}"
+    },
+
+    "create_plan": {
+      "title_ar": "إنشاء باقة",
+      "api_status": "supported",
+      "danger": {"level": "L2", "confirm": "explicit"},
+      "endpoints": [{"method": "POST", "path": "/api/v1/profiles", "cite": "app/api/v1/profiles.py:304-305,379-409"}],
+      "permission": {"api_guard": "web:plans_create (permission_guard.py:396)", "role_key": "plans.create (blueprint.py:696)", "extra": ["license capacity profiles.max_total (profiles.py:385-392)"]},
+      "model_fields": {
+        "name": {"type": "string", "required": true, "minLength": 1, "maxLength": 100, "rule": "unique per tenant among non-archived plans, case/space-insensitive → 422 (plans.py:206-235; plans_repo.py:15)"},
+        "service_type": {"type": "string", "enum": ["Hotspot", "PPPoE", "Both"], "default": "Hotspot", "rule": "derives service_scope/hotspot_enabled/ppp_enabled (plans.py:353-372)"},
+        "plan_type": {"type": "string", "enum": ["time", "quota", "hybrid", "unlimited", "recurring"], "default": "time", "cite": "core/constants.py:42-47; plans.py:411-413"},
+        "speed_down_kbps": {"type": "integer", "min": 0, "max": 1000000000, "required": "unless speed_unlimited", "unit": "kbps"},
+        "speed_up_kbps": {"type": "integer", "min": 0, "max": 1000000000, "required": "unless speed_unlimited", "unit": "kbps"},
+        "speed_unlimited": {"type": "boolean", "default": false, "rule": "0 speed is refused unless this is explicitly true (plans.py:452-459)"},
+        "price": {"type": "number", "min": 0, "max": 1000000000, "default": 0},
+        "duration": {"type": "object", "shape": {"value": "integer ≥1", "unit": "minutes|hours|days|months"}, "maps_to": "duration_minutes (server derives duration_value/unit, plans.py:375-386)"},
+        "validity_days": {"type": "integer", "min": 0},
+        "quota_total_mb": {"type": "integer", "min": 0, "unit": "MB (1 GB = 1024)", "rule": "data_value is refused — use quota_* (profiles.py:207-219)"},
+        "quota_daily_mb": {"type": "integer", "min": 0}, "quota_monthly_mb": {"type": "integer", "min": 0},
+        "concurrent_sessions": {"type": "integer", "min": 1, "max": 10000, "default": 1, "cite": "plans.py:285-291,460-461"},
+        "allowed_devices_count": {"type": "integer", "min": 0, "max": 10000, "default": 1},
+        "priority": {"type": "integer", "min": 1, "max": 10, "default": 5, "cite": "plans.py:402-406,439-443"},
+        "enabled": {"type": "boolean", "default": true},
+        "description": {"type": "string", "maxLength": 500}
+      },
+      "not_in_v1": "burst_*, cir_*, allowed_days/hours, connection_schedule, router_ids, pools, on_login/on_logout, color — accepted by the API (profiles.py:43-86) but left to the UI form.",
+      "uniqueness": "plan name per tenant (above).",
+      "idempotency": "none; retry → 422 duplicate name ⇒ executor checks /plans/options by name.",
+      "side_effects": ["plan row + adapter sync + audit (plans.py:53-61)", "no effect on existing subscribers"],
+      "response": "full plan incl. id, period_minutes, rate_per_minute (profiles.py:273-299)"
+    },
+
+    "create_offer": {
+      "title_ar": "إنشاء عرض بطاقات",
+      "api_status": "NO_API — web form only",
+      "danger": {"level": "L2", "confirm": "explicit", "why": "commercial terms (wholesale/selling) charged to managers' wallets later"},
+      "endpoints": [{"method": "POST", "path": "/cards/offers (WEB form, CSRF session — not callable by the executor)", "cite": "app/radius/routes/cards.py:87,3483-3510"}],
+      "permission": {"web": "owner; or a manager with entity grant offer/create (manager_grants.action_allowed) (routes/cards.py:3486-3489)", "visibility_edit": "owner only (routes/cards.py:3564-3573)"},
+      "model_fields": {
+        "name": {"type": "string", "required": true, "rule": "non-empty (card_offers.py:198-200)"},
+        "plan_id": {"type": "integer", "required": true, "source": "list_plans", "rule": "REQUIRED and must exist (card_offers.py:45-65,204)"},
+        "duration": {"type": "object", "required": true, "shape": {"value": "integer ≥1", "unit": "minutes|hours|days"}, "maps_to": "duration_minutes > 0 (card_offers.py:205-207; routes/cards.py:3371-3384)"},
+        "wholesale": {"type": "number", "min": 0, "required": true},
+        "selling": {"type": "number", "min": 0, "required": true, "rule": "selling ≥ wholesale (card_offers.py:208-211)"},
+        "visible_manager_ids": {"type": "array", "items": "integer", "source": "list_managers (NOT AVAILABLE in v1)", "default": [], "rule": "opt-in allow-list; empty ⇒ only the owner sees it (card_offers.py:125-136,305-323)"},
+        "device_count": {"type": "integer", "min": 0, "default": 0},
+        "device_limit_mode": {"type": "string", "enum": ["", "reject", "replace"], "default": ""},
+        "equal_share_download": {"type": "boolean", "default": false},
+        "equal_share_upload": {"type": "boolean", "default": false},
+        "notes": {"type": "string"}
+      },
+      "side_effects": ["card_offers row + visibility rows; active=1 (card_offers.py:212-234)"],
+      "executor_behaviour_v1": "Accept the draft, validate, then hand off to the web page (deep link) — cannot execute. See Q2."
+    },
+
+    "create_card_batch": {
+      "title_ar": "توليد حزمة بطاقات",
+      "api_status": "supported from a PLAN; from an OFFER = web only",
+      "danger": {"level": "L3", "confirm": "explicit (show count, plan, price, generated name preview)", "why": "creates N RADIUS logins with credentials; may charge a manager's wallet (offer path)"},
+      "endpoints": [
+        {"source": "plan", "method": "POST", "path": "/api/v1/cards/generate", "cite": "app/api/v1/cards.py:43-44,800-860"},
+        {"source": "offer", "method": "POST", "path": "/cards/offers/<offer_id>/use (WEB only)", "cite": "routes/cards.py:91,3589-3700"}
+      ],
+      "permission": {
+        "api_guard": "web:cards_generate (permission_guard.py:194)",
+        "role_key": "cards.generate (blueprint.py:685)",
+        "extra": [
+          "a non-owner manager must ALSO hold manager_grants action 'cards.generate' AND full_batch_form grant, else 403 «التوليد المباشر غير مسموح… ولّد من العروض» (cards.py:766-797)",
+          "license capacity check_cards_generate (cards.py:827-832)",
+          "batch owner: non-owner is forced as manager, may only pick his distributors (cards.py:661-678)"
+        ]
+      },
+      "model_fields": {
+        "source": {"type": "string", "enum": ["plan", "offer"], "default": "plan"},
+        "plan_id": {"type": "integer", "required_if": "source=plan", "source": "list_plans", "cite": "cards.py:808-813"},
+        "offer_id": {"type": "integer", "required_if": "source=offer", "source": "list_offers (NO_API)"},
+        "count": {"type": "integer", "required": true, "min": 1, "max": "limits.max_cards_per_batch (default 10000) and cards.max_per_batch if >0", "cite": "cards.py:814-826; services/cards.py:234-252"},
+        "package_name": {"type": "string", "maxLength": 500},
+        "username_prefix": {"type": "string", "maxLength": 16, "pattern": "^[A-Za-z0-9_.@-]*$", "rule": "spaces stripped, digits latinized, lower-cased (services/cards.py:78-82,155-165)"},
+        "username_suffix": {"type": "string", "maxLength": 16, "pattern": "^[A-Za-z0-9_.@-]*$"},
+        "username_length": {"type": "integer", "min": 1, "max": 32, "rule": "TOTAL length incl. prefix/suffix/batch number; fixed parts must leave ≥1 random char → 422 (services/cards.py:135-153,390-392). Omitted ⇒ auto max(8, fixed+4) ≤32 (cards.py:623-639)."},
+        "include_batch_number": {"type": "boolean", "default": false},
+        "password_length": {"type": "integer", "min": 0, "max": 32, "default": 6, "rule": "0 ⇒ number-only cards, requires login_without_password (services/cards.py:393-399; cards.py:685-688)"},
+        "login_without_password": {"type": "boolean", "default": "null (server: true when password_length=0)"},
+        "password_generation_type": {"type": "string", "enum": ["digits", "weak", "medium", "strong"], "default": "digits", "rule": "charset of the generated code (cards.py:599-603,685-694)"},
+        "time_value": {"type": "integer", "min": 0, "default": 0, "rule": "0 ⇒ inherit plan duration/validity (services/cards.py:555-570)"},
+        "time_unit": {"type": "string", "enum": ["seconds", "minutes", "hours", "days", "weeks", "months", "years"], "default": "days", "cite": "services/cards.py:84,402-404"},
+        "device_count": {"type": "integer", "min": 0, "max": 50, "default": 1, "cite": "services/cards.py:85,405-407; cards.py:711"},
+        "device_limit_mode": {"type": "string", "enum": ["", "reject", "replace"], "default": "", "cite": "cards.py:641-658"},
+        "price_per_card": {"type": "number", "min": 0, "max": 1000000000, "default": 0},
+        "total_price": {"type": "number", "min": 0, "default": 0},
+        "total_quota_mb": {"type": "integer", "min": 0, "default": 0},
+        "notes": {"type": "string", "maxLength": 300}
+      },
+      "executor_only_fields": {"Idempotency-Key": "uuid per confirmed proposal (cards.py:605-620; same key + different body ⇒ 422 idempotency_key_reused)", "manager_id/distributor_id": "not exposed in v1"},
+      "response_handling": "🔴 The 201 response contains EVERY card's plaintext password (cards.py:211-231,856-860). The executor must never return it to the model or logs; give the model only {batch_id, count, package_name}; cards go to print/export in the UI.",
+      "side_effects": ["batch + N cards + N RADIUS card accounts + router sync jobs in ONE transaction (services/cards.py:413-440)", "offer path (web): wholesale×count charged to the manager wallet via spend gate (routes/cards.py:3672-3700)"]
+    },
+
+    "list_plans": {"title_ar": "عرض الباقات", "kind": "lookup", "danger": {"level": "L1", "confirm": "none"}, "see": "choice_sources.list_plans", "model_fields": {"query": {"type": "string", "maxLength": 100, "note": "client-side filter by name (endpoint has no q)"}}},
+    "list_offers": {"title_ar": "عرض العروض", "kind": "lookup", "api_status": "NO_API", "danger": {"level": "L1", "confirm": "none"}, "see": "choice_sources.list_offers", "model_fields": {"query": {"type": "string", "maxLength": 100}}},
+    "find_subscriber": {"title_ar": "بحث عن مشترك", "kind": "lookup", "danger": {"level": "L1", "confirm": "none"}, "see": "choice_sources.find_subscriber", "model_fields": {"query": {"type": "string", "required": true, "maxLength": 100}, "status": {"type": "string", "enum": ["enabled", "expired", "disabled", "suspended", "banned"]}}},
+
+    "list_card_batches": {
+      "title_ar": "عرض حزم البطاقات",
+      "kind": "lookup",
+      "danger": {"level": "L1", "confirm": "none"},
+      "see": "choice_sources.list_card_batches",
+      "permission": {"role_key": "cards.view", "api_guard": "web:cards_batches (source_v2 permission_guard.py:212)"},
+      "model_fields": {"query": {"type": "string", "maxLength": 100, "rule": "batch name or code as the admin wrote it"}, "limit": {"type": "integer", "min": 1, "max": 10}},
+      "answer": "CHOICES {\"source\":\"list_card_batches\",\"items\":[...],\"truncated\":bool}; a plain listing request is then answered with `reply` summarising the rows"
+    },
+
+    "card_batch_status": {
+      "title_ar": "وضع حزمة بطاقات",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [
+        {"method": "GET", "path": "/api/v1/cards/batches/<batch_id>/summary", "cite": "source_v2 app/api/v1/cards.py:71-72 (route), 1229-1236 (handler, batch_in_scope); app/radius/db/repos/cards_repo.py:1117-1180 (counts: total_cards, available_count, active_count, expired_count, revoked_count, archived_count, pending_archive_count, operational_status)"},
+        {"method": "GET", "path": "/api/v1/cards/batches/<batch_id>", "cite": "source_v2 app/api/v1/cards.py:67-68, 1176-1183; _serialize_batch 127-192 (package_name, batch_code, plan_id, created_at)"}
+      ],
+      "permission": {"role_key": "cards.view", "api_guard": "web:cards_batches (source_v2 permission_guard.py:222-223; ui_permissions.py:70)", "scope": "batch_in_scope (access_control.py:214-222), else 403 out_of_scope"},
+      "model_fields": {"batch_id": {"type": "integer", "required": true, "source": "list_card_batches", "rule": "must be issued in this conversation"}},
+      "answer": "RESULT {\"source\":\"card_batch_status\",\"data\":{batch_id,name,code,plan_name,status,created_local,total_cards,available_count,active_count,expired_count,revoked_count,archived_count}}, then `reply` with the numbers copied exactly",
+      "redaction": "whitelist; never card codes/passwords, never metadata"
+    },
+
+    "subscriber_info": {
+      "title_ar": "معلومات مشترك",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [
+        {"method": "GET", "path": "/api/v1/accounts/<username>/360", "cite": "source_v2 app/api/v1/accounts.py:390-391 (route; _guard subscribers_list + subscriber_in_scope 346-364), 891-902 (handler), 905-918 (balance hidden without the balance right: balance_hidden), 921-943 (secret keys dropped); app/radius/services/subscriber_360.py:228-310 (overview: status, wallet_balance, open_debt)"},
+        {"method": "GET", "path": "/api/v1/accounts/<username>/usage", "cite": "source_v2 app/api/v1/accounts.py:388-389, 875-888 (online_count, last_seen_at, expire_at)"}
+      ],
+      "permission": {"role_key": "users.view", "api_guard": "web:subscribers_list (source_v2 permission_guard.py:186-187)", "scope": "subscriber_in_scope, else 403 out of scope"},
+      "model_fields": {"username": {"type": "string", "required": true, "source": "find_subscriber", "rule": "must be issued in this conversation (CHOICES / event / RESULT)"}},
+      "answer": "RESULT {\"source\":\"subscriber_info\",\"data\":{username,full_name,plan,status,expires_local,online,online_sessions,last_seen_local,balance|balance_hidden,currency}}",
+      "redaction": "whitelist; never password / pppoe_password / tokens / payment rows; balance only with the right"
+    },
+
+    "online_sessions": {
+      "title_ar": "المتّصلون الآن",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [{"method": "GET", "path": "/api/v1/sessions/online", "query": {"q": "username part (<=80)", "limit": "10"}, "cite": "source_v2 app/api/v1/sessions.py:19-20 (route), 255-402 (handler: scoped to subscriber_scope_admin_id 302-305; total + types counters)"}],
+      "permission": {"role_key": "online.view", "api_guard": "web:online_list (source_v2 permission_guard.py:455; blueprint.py:664)"},
+      "model_fields": {"query": {"type": "string", "maxLength": 80}},
+      "answer": "RESULT {\"source\":\"online_sessions\",\"data\":{query,total,subscribers,cards,items:[{n,username,user_type,started_local}] (<=10),truncated}}",
+      "redaction": "no IP/MAC/NAS details; usernames of subscriber rows are issued"
+    }
+  },
+
+  "output_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "hoberadius-ops/proposal-v2",
+    "title": "Operations assistant proposal (one per model turn)",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["action", "fields", "missing", "message"],
+    "properties": {
+      "action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch", "list_plans", "list_offers", "find_subscriber", "list_card_batches", "card_batch_status", "subscriber_info", "online_sessions", "ask", "choose", "refuse", "cancel", "reply"]},
+      "fields": {"type": "object"},
+      "missing": {"type": "array", "items": {"type": "string", "pattern": "^[a-z_]+$", "not": {"pattern": "(^|_)(password|passwd|pass|pwd|secret|token|pin|api_?key)$"}}, "uniqueItems": true, "description": "never a secret name: the assistant never asks for a password (SPEC_DATA_v3 §7)"},
+      "message": {"type": "string", "minLength": 1, "maxLength": 400, "description": "natural text for the admin in the admin's language (SPEC_DATA_v3 §2); its wording is never scored"},
+      "summary_ar": {"type": "string", "minLength": 1, "maxLength": 600, "description": "Arabic confirmation summary; required for executable actions (and plans)"}
+    },
+    "allOf": [
+      {"if": {"properties": {"action": {"const": "create_subscriber"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/create_subscriber"}}}},
+      {"if": {"properties": {"action": {"const": "renew_or_extend_subscriber"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/renew_or_extend_subscriber"}}}},
+      {"if": {"properties": {"action": {"const": "change_subscriber_plan"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/change_subscriber_plan"}}}},
+      {"if": {"properties": {"action": {"const": "temporary_speed"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/temporary_speed"}}}},
+      {"if": {"properties": {"action": {"enum": ["suspend_subscriber", "enable_subscriber"]}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/status_change"}}}},
+      {"if": {"properties": {"action": {"const": "create_plan"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/create_plan"}}}},
+      {"if": {"properties": {"action": {"const": "create_offer"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/create_offer"}}}},
+      {"if": {"properties": {"action": {"const": "create_card_batch"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/create_card_batch"}}}},
+      {"if": {"properties": {"action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch"]}}}, "then": {"required": ["summary_ar"]}},
+      {"if": {"properties": {"action": {"enum": ["list_plans", "list_offers", "find_subscriber"]}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/lookup"}}}},
+      {"if": {"properties": {"action": {"const": "list_card_batches"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/list_card_batches"}}}},
+      {"if": {"properties": {"action": {"const": "card_batch_status"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/card_batch_status"}}}},
+      {"if": {"properties": {"action": {"const": "subscriber_info"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/subscriber_info"}}}},
+      {"if": {"properties": {"action": {"const": "online_sessions"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/online_sessions"}}}},
+      {"if": {"properties": {"action": {"const": "choose"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/choose"}}}},
+      {"if": {"properties": {"action": {"enum": ["refuse", "cancel", "reply"]}}}, "then": {"properties": {"fields": {"maxProperties": 0}, "missing": {"maxItems": 0}}}},
+      {"if": {"properties": {"action": {"not": {"const": "ask"}}}}, "then": {"properties": {"missing": {"maxItems": 0}}}},
+      {"if": {"properties": {"action": {"const": "ask"}}}, "then": {"properties": {"missing": {"minItems": 1}, "fields": {"not": {"anyOf": [{"required": ["password"]}, {"required": ["new_password"]}, {"required": ["pppoe_password"]}, {"required": ["balance"]}]}}}}}
+    ],
+    "$defs": {
+      "username": {"type": "string", "pattern": "^[A-Za-z0-9._@-]{1,64}$", "description": "existing subscriber: must equal a username returned by find_subscriber in this session"},
+      "new_username": {"type": "string", "pattern": "^[A-Za-z0-9._@-]{3,64}$"},
+      "record_id": {"type": "integer", "minimum": 1, "description": "must be in the executor's issued choice set (list_plans / list_offers / list_card_batches / RESULT)"},
+      "local_datetime": {"type": "string", "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]$", "description": "Asia/Gaza wall clock"},
+      "duration": {"type": "object", "additionalProperties": false, "required": ["value", "unit"], "properties": {"value": {"type": "integer", "minimum": 1, "maximum": 525600}, "unit": {"enum": ["minutes", "hours", "days", "months"]}}, "description": "executor converts to minutes and enforces the 1-year cap"},
+      "device_limit_mode": {"enum": ["", "reject", "replace"]},
+      "money": {"type": "number", "minimum": 0, "maximum": 1000000000},
+      "create_subscriber": {
+        "type": "object", "additionalProperties": false, "required": ["username", "plan_id"],
+        "properties": {
+          "username": {"$ref": "#/$defs/new_username"}, "plan_id": {"$ref": "#/$defs/record_id"},
+          "duration": {"$ref": "#/$defs/duration"}, "until_local": {"$ref": "#/$defs/local_datetime"}, "no_expiry": {"const": true},
+          "full_name": {"type": "string", "maxLength": 255}, "mobile": {"type": "string", "pattern": "^\\+?[0-9٠-٩][0-9٠-٩ \\-]{2,23}$"},
+          "email": {"type": "string", "maxLength": 254, "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"},
+          "mac_lock": {"type": "string", "maxLength": 200, "pattern": "^([0-9A-Fa-f]{2}([:-][0-9A-Fa-f]{2}){5})([\\s,;|]+[0-9A-Fa-f]{2}([:-][0-9A-Fa-f]{2}){5})*$"},
+          "device_count": {"type": "integer", "minimum": 0, "maximum": 10000}, "device_limit_mode": {"$ref": "#/$defs/device_limit_mode"},
+          "service_type": {"enum": ["hotspot", "pppoe", "both"]}, "user_type": {"enum": ["subscriber", "trial"]},
+          "login_without_password": {"type": "boolean"}, "custom_price": {"$ref": "#/$defs/money"},
+          "static_ip": {"type": "string", "maxLength": 45}, "address": {"type": "string", "maxLength": 500},
+          "city": {"type": "string", "maxLength": 120}, "national_id": {"type": "string", "maxLength": 64}, "remark": {"type": "string", "maxLength": 2000}
+        },
+        "not": {"anyOf": [{"required": ["duration", "until_local"]}, {"required": ["duration", "no_expiry"]}, {"required": ["until_local", "no_expiry"]}]}
+      },
+      "renew_or_extend_subscriber": {
+        "type": "object", "additionalProperties": false, "required": ["username", "mode", "charge_mode"],
+        "properties": {
+          "username": {"$ref": "#/$defs/username"}, "mode": {"enum": ["duration", "until"]},
+          "duration": {"$ref": "#/$defs/duration"}, "until_local": {"$ref": "#/$defs/local_datetime"},
+          "charge_mode": {"enum": ["free", "paid", "debt"]}, "amount": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000000000},
+          "notes": {"type": "string", "maxLength": 300}
+        },
+        "allOf": [
+          {"if": {"properties": {"mode": {"const": "duration"}}}, "then": {"required": ["duration"], "not": {"required": ["until_local"]}}},
+          {"if": {"properties": {"mode": {"const": "until"}}}, "then": {"required": ["until_local"], "not": {"required": ["duration"]}}},
+          {"if": {"properties": {"charge_mode": {"const": "free"}}}, "then": {"not": {"required": ["amount"]}}}
+        ]
+      },
+      "change_subscriber_plan": {
+        "type": "object", "additionalProperties": false, "required": ["username", "plan_id", "policy"],
+        "properties": {"username": {"$ref": "#/$defs/username"}, "plan_id": {"$ref": "#/$defs/record_id"},
+          "policy": {"enum": ["lower_compensate", "lower_keep_expiry", "higher_debt", "higher_reduce_days", "higher_keep_expiry", "neutral_keep_expiry"]}}
+      },
+      "temporary_speed": {
+        "type": "object", "additionalProperties": false, "required": ["username", "operation"],
+        "properties": {"username": {"$ref": "#/$defs/username"}, "operation": {"enum": ["apply", "cancel"]},
+          "down_kbps": {"type": "integer", "minimum": 0, "maximum": 1000000}, "up_kbps": {"type": "integer", "minimum": 0, "maximum": 1000000},
+          "duration": {"type": "object", "additionalProperties": false, "required": ["value", "unit"], "properties": {"value": {"type": "integer", "minimum": 1, "maximum": 1440}, "unit": {"enum": ["minutes", "hours"]}}},
+          "until_local": {"$ref": "#/$defs/local_datetime"}},
+        "allOf": [
+          {"if": {"properties": {"operation": {"const": "apply"}}}, "then": {"required": ["down_kbps", "up_kbps"], "oneOf": [{"required": ["duration"]}, {"required": ["until_local"]}]}},
+          {"if": {"properties": {"operation": {"const": "cancel"}}}, "then": {"maxProperties": 2}}
+        ],
+        "description": "executor: each speed 0 or ≥64, not both 0; total minutes 1..1440"
+      },
+      "status_change": {"type": "object", "additionalProperties": false, "required": ["username"], "properties": {"username": {"$ref": "#/$defs/username"}, "reason_ar": {"type": "string", "maxLength": 300}}},
+      "create_plan": {
+        "type": "object", "additionalProperties": false, "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "maxLength": 100}, "service_type": {"enum": ["Hotspot", "PPPoE", "Both"]},
+          "plan_type": {"enum": ["time", "quota", "hybrid", "unlimited", "recurring"]},
+          "speed_down_kbps": {"type": "integer", "minimum": 0, "maximum": 1000000000}, "speed_up_kbps": {"type": "integer", "minimum": 0, "maximum": 1000000000},
+          "speed_unlimited": {"type": "boolean"}, "price": {"$ref": "#/$defs/money"},
+          "duration": {"$ref": "#/$defs/duration"}, "validity_days": {"type": "integer", "minimum": 0, "maximum": 36500},
+          "quota_total_mb": {"type": "integer", "minimum": 0, "maximum": 1000000000}, "quota_daily_mb": {"type": "integer", "minimum": 0, "maximum": 1000000000},
+          "quota_monthly_mb": {"type": "integer", "minimum": 0, "maximum": 1000000000},
+          "concurrent_sessions": {"type": "integer", "minimum": 1, "maximum": 10000}, "allowed_devices_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+          "priority": {"type": "integer", "minimum": 1, "maximum": 10}, "enabled": {"type": "boolean"}, "description": {"type": "string", "maxLength": 500}
+        },
+        "anyOf": [{"required": ["speed_down_kbps", "speed_up_kbps"]}, {"properties": {"speed_unlimited": {"const": true}}, "required": ["speed_unlimited"]}]
+      },
+      "create_offer": {
+        "type": "object", "additionalProperties": false, "required": ["name", "plan_id", "duration", "wholesale", "selling"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "maxLength": 200}, "plan_id": {"$ref": "#/$defs/record_id"},
+          "duration": {"type": "object", "additionalProperties": false, "required": ["value", "unit"], "properties": {"value": {"type": "integer", "minimum": 1}, "unit": {"enum": ["minutes", "hours", "days"]}}},
+          "wholesale": {"$ref": "#/$defs/money"}, "selling": {"$ref": "#/$defs/money"},
+          "visible_manager_ids": {"type": "array", "items": {"$ref": "#/$defs/record_id"}, "uniqueItems": true, "maxItems": 0, "description": "v1: empty only (no manager choice source yet)"},
+          "device_count": {"type": "integer", "minimum": 0, "maximum": 50}, "device_limit_mode": {"$ref": "#/$defs/device_limit_mode"},
+          "equal_share_download": {"type": "boolean"}, "equal_share_upload": {"type": "boolean"}, "notes": {"type": "string", "maxLength": 500}
+        },
+        "description": "executor: selling ≥ wholesale"
+      },
+      "create_card_batch": {
+        "type": "object", "additionalProperties": false, "required": ["source", "count"],
+        "properties": {
+          "source": {"enum": ["plan", "offer"]}, "plan_id": {"$ref": "#/$defs/record_id"}, "offer_id": {"$ref": "#/$defs/record_id"},
+          "count": {"type": "integer", "minimum": 1, "maximum": 100000},
+          "package_name": {"type": "string", "maxLength": 500},
+          "username_prefix": {"type": "string", "maxLength": 16, "pattern": "^[A-Za-z0-9_.@٠-٩-]*$"},
+          "username_suffix": {"type": "string", "maxLength": 16, "pattern": "^[A-Za-z0-9_.@٠-٩-]*$"},
+          "username_length": {"type": "integer", "minimum": 1, "maximum": 32}, "include_batch_number": {"type": "boolean"},
+          "password_length": {"type": "integer", "minimum": 0, "maximum": 32}, "login_without_password": {"type": "boolean"},
+          "password_generation_type": {"enum": ["digits", "weak", "medium", "strong"]},
+          "time_value": {"type": "integer", "minimum": 0, "maximum": 100000},
+          "time_unit": {"enum": ["seconds", "minutes", "hours", "days", "weeks", "months", "years"]},
+          "device_count": {"type": "integer", "minimum": 0, "maximum": 50}, "device_limit_mode": {"$ref": "#/$defs/device_limit_mode"},
+          "price_per_card": {"$ref": "#/$defs/money"}, "total_price": {"$ref": "#/$defs/money"},
+          "total_quota_mb": {"type": "integer", "minimum": 0, "maximum": 1000000000}, "notes": {"type": "string", "maxLength": 300}
+        },
+        "allOf": [
+          {"if": {"properties": {"source": {"const": "plan"}}}, "then": {"required": ["plan_id"], "not": {"required": ["offer_id"]}}},
+          {"if": {"properties": {"source": {"const": "offer"}}}, "then": {"required": ["offer_id"], "not": {"required": ["plan_id"]}}},
+          {"if": {"properties": {"password_length": {"const": 0}}, "required": ["password_length"]}, "then": {"not": {"properties": {"login_without_password": {"const": false}}, "required": ["login_without_password"]}}}
+        ],
+        "description": "executor: count ≤ server batch caps; prefix+suffix+batch-number length < username_length"
+      },
+      "lookup": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 100}, "status": {"enum": ["enabled", "expired", "disabled", "suspended", "banned"]}}},
+      "choose": {"type": "object", "additionalProperties": false, "required": ["source"], "properties": {"source": {"enum": ["list_plans", "list_offers", "find_subscriber", "change_plan_policies", "list_card_batches"]}, "query": {"type": "string", "maxLength": 100}, "for_action": {"type": "string"}}},
+      "list_card_batches": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 100}, "limit": {"type": "integer", "minimum": 1, "maximum": 10}}},
+      "card_batch_status": {"type": "object", "additionalProperties": false, "required": ["batch_id"], "properties": {"batch_id": {"$ref": "#/$defs/record_id"}}},
+      "subscriber_info": {"type": "object", "additionalProperties": false, "required": ["username"], "properties": {"username": {"$ref": "#/$defs/username"}}},
+      "online_sessions": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 80}}}
+    }
+  },
+
+  "executor_checklist": [
+    "1. JSON-Schema validate the proposal (output_schema). Reject unknown keys and any forbidden_model_fields key anywhere (deep scan).",
+    "2. Every *_id / username must be in the choice set issued in this session; re-read the record live (GET) right before the confirm card.",
+    "3. Normalize: Arabic-Indic digits → Latin; local times (Asia/Gaza) → UTC; duration → minutes; enforce the 1-year cap and the per-action ranges here, before the API.",
+    "4. Pre-check permission with GET /accounts/<u>/actions-context .permissions (subscriber actions) — hide/deny early instead of letting the API 403.",
+    "5. Show the Arabic confirmation card built by the EXECUTOR from validated values (not summary_ar verbatim) + danger level; require an explicit click for L2/L3.",
+    "6. Call with the admin's bound token + Idempotency-Key; never auto-retry non-idempotent writes.",
+    "7. Return to the model only a redacted result (no passwords, no card codes, no balance when hidden).",
+    "8. INFO actions (card_batch_status, subscriber_info, online_sessions): schema, issued ids, permission, then GET through the real /api/v1 handler with the admin's credential, whitelist, RESULT {\"source\":<action>,\"data\":{...}} (or {\"error\":code}); ids in RESULT are issued. No confirmation (L1).",
+    "9. Empty CHOICES: the UI shows an empty-state line, not an empty card; the same choose source+query that already returned [] in this conversation is answered by the executor (no second lookup)."
+  ],
+
+  "open_questions": {
+    "Q1": "Month unit: calendar months (Asia/Gaza, via expire_at) or 30 days? 12 calendar months across a leap Feb = 366 days > 365 cap.",
+    "Q2": "Card offers have no /api/v1 endpoints (list/create/use). Add GET /api/v1/cards/offers, POST /api/v1/cards/offers, POST /api/v1/cards/offers/<id>/generate (with the same wallet charge + price lock as routes/cards.py:3589+), or keep create_offer / offer batches as web hand-off in v1?",
+    "Q3": "suspend_subscriber = POST /disable (status 'disabled' + PoD). Should 'suspended' (PATCH status, users.edit, no immediate reconcile path) ever be used?",
+    "Q4": "temporary_speed for an OFFLINE subscriber is web-only (profile form). Need an API endpoint, or only online in v1?",
+    "Q5": "create_subscriber with a duration: set expire_at directly at creation (no ledger/payment), or create born-expired then a paid renew_or_extend (ledger + manager spend gate)? Which is the owner's intended accounting?",
+    "Q6": "Password delivery for create_subscriber: executor-generated (shown once to the admin / sent via send-credentials) or admin types it in a masked field?",
+    "Q7": "Managers who may only generate FROM OFFERS (no full_batch_form grant) cannot use /cards/generate (403). Until Q2 is solved, create_card_batch works only for owner / fully-granted managers."
+  }
+}
