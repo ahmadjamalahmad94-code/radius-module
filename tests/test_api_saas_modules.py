@@ -158,7 +158,7 @@ def test_saas_validation_messages_are_arabic_and_guard_numeric_inputs(client):
             {"pool_name": "main", "range_ip": "10.0.0.1-10.0.0.2", "router_id": "bad"},
             "معرّف الراوتر يجب أن يكون رقمًا صحيحًا.",
         ),
-        ("/api/v1/share-groups", {"name": "VIP", "max_members": "bad"}, "قيم حدود المجموعة يجب أن تكون أرقامًا صحيحة."),
+        # (share-group max_members/quota/speeds removed 2026-10-06 — ignored, no 422)
         ("/api/v1/services", {"subscriber_id": "bad", "name": "Router"}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),
         ("/api/v1/tickets", {"subscriber_id": "bad", "subject": "Help"}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),
         ("/api/v1/invoices", {"subscriber_id": "bad", "username": "ali", "amount": 1}, "معرّف المشترك يجب أن يكون رقمًا صحيحًا."),

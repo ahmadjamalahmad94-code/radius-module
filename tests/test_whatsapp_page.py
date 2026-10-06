@@ -117,8 +117,11 @@ def test_whatsapp_page_shows_event_toggles_and_test_form(app, monkeypatch):
         html = client.get("/admin/radius/whatsapp").get_data(as_text=True)
 
     # Every event gate appears as a checkbox.
-    for key in ("otp", "expiry", "quota", "maintenance", "password", "portal"):
+    for key in ("otp", "expiry", "maintenance", "password"):
         assert f'name="send_{key}"' in html
+    # Owner 2026-10-06: quota/portal gates removed (no sender calls them).
+    for key in ("quota", "portal"):
+        assert f'name="send_{key}"' not in html
     # The test-message form posts to the test route and asks for a phone.
     assert "/admin/radius/whatsapp/test" in html
     assert 'name="recipient_phone"' in html

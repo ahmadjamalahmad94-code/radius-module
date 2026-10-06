@@ -127,7 +127,33 @@ def _mode_label(value: str) -> str:
     }.get(str(value or ""), N_("غير محدد"))
 
 
+def _sms_payload() -> dict[str, Any]:
+    """SMS = the tenant's TweetSMS account (owner 2026-10-06) — read-only
+    status, no HTTP config (the custom SMS channel was retired)."""
+    from ...radius.services import tweetsms
+    try:
+        st = tweetsms.connection_status(_tid())
+    except Exception:  # noqa: BLE001
+        st = {"connected": False, "enabled": False, "sender": ""}
+    connected = bool(st.get("connected"))
+    return {
+        "channel": "sms",
+        "label": _channel_label("sms"),
+        "provider": "tweetsms",
+        "read_only": True,
+        "connected": connected,
+        "sender": str(st.get("sender") or ""),
+        "enabled": connected,
+        "active": connected,
+        "mode": comms_providers.DEFAULT_MODE,
+        "mode_label": _mode_label(comms_providers.DEFAULT_MODE),
+        "config": {"send_url_template": "", "http_method": comms_providers.DEFAULT_METHOD},
+    }
+
+
 def _channel_payload(channel: str) -> dict[str, Any]:
+    if channel == "sms":
+        return _sms_payload()
     status = comms_providers.channel_status(_tid(), channel)
     config = status.get("config") if isinstance(status.get("config"), dict) else {}
     mode = str(status.get("mode") or comms_providers.DEFAULT_MODE)
@@ -141,7 +167,6 @@ def _channel_payload(channel: str) -> dict[str, Any]:
         "config": {
             "send_url_template": str(config.get("send_url_template") or ""),
             "http_method": str(config.get("http_method") or comms_providers.DEFAULT_METHOD),
-            "balance_url": str(config.get("balance_url") or ""),
         },
     }
 
@@ -277,34 +302,34 @@ def deliveries():
 
 
 def channels():
-    items = [_channel_payload(channel) for channel in comms_providers.HTTP_CHANNELS]
+    # SMS first (TweetSMS status, read-only), then the HTTP channels (WhatsApp).
+    items = [_sms_payload()] + [_channel_payload(channel)
+                                for channel in comms_providers.HTTP_CHANNELS]
     return ok(
         {
             "items": items,
             "count": len(items),
-            "modes": [
-                {"key": mode, "label": _mode_label(mode)}
-                for mode in comms_providers.CHANNEL_MODES
-            ],
+            "sms": _sms_payload(),
             "methods": ["GET", "POST"],
         }
     )
 
 
 def channel_save(channel: str):
+    if str(channel or "").strip().lower() == "sms":
+        # Retired custom SMS channel (owner 2026-10-06): SMS goes through
+        # TweetSMS. Old app builds still post here — accept silently, write
+        # nothing, answer with the TweetSMS status.
+        return ok({"channel": _sms_payload(), "saved_config": {}, "ignored": True})
     try:
         channel_key = _http_channel(channel)
     except ValueError as exc:
         return _validation_error(exc)
 
     data = _body()
-    mode = str(data.get("mode") or comms_providers.DEFAULT_MODE).strip().lower()
-    if mode not in comms_providers.CHANNEL_MODES:
-        return fail("validation_error", _tr("نمط تشغيل القناة غير مدعوم."), status=422)
-
+    # «mode» / «balance_url» removed (owner 2026-10-06) — accepted, ignored.
     send_url = str(data.get("send_url_template") or "").strip()
-    balance_url = str(data.get("balance_url") or "").strip()
-    if len(send_url) > 2000 or len(balance_url) > 2000:
+    if len(send_url) > 2000:
         return fail(
             "validation_error",
             _tr("رابط القناة طويل جدًا. اختصر الرابط أو استخدم رابطًا صالحًا من المزود."),
@@ -316,10 +341,8 @@ def channel_save(channel: str):
         channel_key,
         {
             "enabled": data.get("enabled"),
-            "mode": mode,
             "send_url_template": send_url,
             "http_method": data.get("http_method") or comms_providers.DEFAULT_METHOD,
-            "balance_url": balance_url,
         },
         by=_admin_id(),
     )

@@ -100,7 +100,7 @@ def _hub_status(tenant_id: int, svc: NotificationCampaignService) -> dict:
 
     # ── Phase 1: SMS / WhatsApp channels (BYO; SMS via TweetSMS) ──
     channels: dict[str, dict] = {}
-    for ch in comms_providers.HTTP_CHANNELS:
+    for ch in ("sms", "whatsapp"):
         try:
             if ch == "sms":
                 from ..services import tweetsms
@@ -293,10 +293,8 @@ def communications_channels():
                 channel,
                 {
                     "enabled": request.form.get("enabled") or "0",
-                    "mode": request.form.get("mode") or comms_providers.DEFAULT_MODE,
                     "send_url_template": request.form.get("send_url_template") or "",
                     "http_method": request.form.get("http_method") or comms_providers.DEFAULT_METHOD,
-                    "balance_url": request.form.get("balance_url") or "",
                 },
                 by=_admin_id(),
             )
@@ -306,10 +304,16 @@ def communications_channels():
         return redirect(url_for("radius.communications_channels"))
 
     channels = {ch: comms_providers.channel_status(tid, ch) for ch in comms_providers.HTTP_CHANNELS}
+    # SMS = TweetSMS (قرار المالك 2026-10-06) — الصفحة تعرض حالته فقط.
+    try:
+        from ..services import tweetsms
+        sms_status = tweetsms.connection_status(tid)
+    except Exception:  # noqa: BLE001 — never break the page
+        sms_status = {"connected": False, "sender": ""}
     return render_template(
         "radius/communications_channels.html",
         channels=channels,
-        modes=comms_providers.CHANNEL_MODES,
+        sms_status=sms_status,
         active="channels",
     )
 

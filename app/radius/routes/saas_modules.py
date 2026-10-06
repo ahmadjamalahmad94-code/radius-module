@@ -313,20 +313,9 @@ def vch_generate():
         if _msg:   # «الحدود» — نفس سقف /api/v1/vouchers
             flash(_msg, "error")
             return redirect(url_for("radius.vch_generate"))
+        # «الباقة» أُزيلت من الكوبون — قرار المالك 2026-10-06: الاسترداد لا
+        # يقرؤها أبدًا. حقلٌ مُرسَل من نموذجٍ قديم يُتجاهَل.
         plan_id = None
-        _raw_plan = (request.form.get("plan_id") or "").strip()
-        if _raw_plan:
-            # zero-w3: نصّ/باقة غير موجودة كانا 500 (ValueError/FOREIGN KEY).
-            try:
-                plan_id = int(_raw_plan)
-            except ValueError:
-                flash(_tr("معرّف الباقة يجب أن يكون رقمًا صحيحًا."), "error")
-                return redirect(url_for("radius.billing_hub", tab="vouchers"))
-            if plan_id <= 0:
-                plan_id = None
-            elif plans_repo.get_plan(_tid(), plan_id) is None:
-                flash(_tr("الباقة المحدّدة غير موجودة."), "error")
-                return redirect(url_for("radius.billing_hub", tab="vouchers"))
         expire = _date("expire_at")
         # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
         # والحدود الآمنة (6–16) تُفرض داخل الـ repo أيضًا.
@@ -605,7 +594,8 @@ def _svc_dto(existing=None) -> Service:
         serial=(request.form.get("serial") or "").strip(),
         mac=(request.form.get("mac") or "").strip(),
         type=request.form.get("type") or "router",
-        rent_per_month=_f("rent_per_month"),
+        # «الإيجار/شهر» أُزيل — قرار المالك 2026-10-06 (لا فوترة تقرؤه)؛
+        # المخزَّن يبقى (services_repo.save لا يكتبه عند التعديل).
         status=request.form.get("status") or "given",
         given_at=_date("given_at"),
         returned_at=_date("returned_at"),

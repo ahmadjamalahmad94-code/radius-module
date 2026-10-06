@@ -75,10 +75,8 @@ def _payload(service_id: int | None = None) -> Service | tuple:
         returned_at = _dt(body.get("returned_at"))
     except ValueError as exc:
         return fail("validation_error", str(exc), status=422)
-    try:
-        rent_per_month = strict_float(body.get("rent_per_month") or 0)
-    except (TypeError, ValueError):
-        return fail("validation_error", _tr("قيمة الإيجار الشهري يجب أن تكون رقمًا صحيحًا."), status=422)
+    # «rent_per_month» removed (owner 2026-10-06: no billing reads it) —
+    # accepted for old app builds, ignored; an edit keeps the stored value.
     return Service(
         id=service_id,
         tenant_id=_tid(),
@@ -87,7 +85,6 @@ def _payload(service_id: int | None = None) -> Service | tuple:
         serial=str(body.get("serial") or ""),
         mac=str(body.get("mac") or ""),
         type=str(body.get("type") or "router"),
-        rent_per_month=rent_per_month,
         status=str(body.get("status") or "given"),
         given_at=given_at,
         returned_at=returned_at,

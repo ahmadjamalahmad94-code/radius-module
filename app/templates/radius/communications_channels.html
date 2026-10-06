@@ -11,8 +11,10 @@
      3. تخطيط عمل: بطاقة إعداد لكل قناة (الرسائل القصيرة / واتساب) مع
         نموذج الحفظ الأصلي كما هو + أداة «إرسال اختبار»، ولوحة مساعدة
         قابلة للطي على اليسار.
-     • كل النماذج والحقول والمسارات محفوظة حرفيًا (channel / enabled /
-       mode / http_method / send_url_template / balance_url).
+     • قرار المالك 2026-10-06: الرسائل القصيرة تُرسَل عبر TweetSMS (صفحة «ربط
+       SMS») — أُزيل نموذج «رابط HTTP» للرسائل القصيرة وتظهر هنا حالة TweetSMS
+       فقط. وأُزيل «نمط التشغيل» و«رابط الرصيد» من واتساب (لا قارئ لهما).
+       الحقول الباقية: channel / enabled / http_method / send_url_template.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -21,12 +23,11 @@
 {% block title %}{{ _("قنوات الإرسال — مركز التواصل") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
 {% block page_title %}{{ _("قنوات الإرسال") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('تفعيل وضبط الإرسال الفعلي عبر الرسائل القصيرة وواتساب من خلال رابط مزوّد خارجي.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ضبط إرسال واتساب عبر رابط مزوّد خارجي، وحالة ربط الرسائل القصيرة (TweetSMS).') }}</span>{% endblock %}
 
 {# ── تسميات عربية للقناة ونمط التشغيل ── #}
 {% macro ch_label(ch) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب')}.get(ch, _('قناة غير معروفة')) }}{% endmacro %}
 {% macro ch_icon(ch) %}{{ {'sms':'comment-sms','whatsapp':'whatsapp'}.get(ch, 'paper-plane') }}{% endmacro %}
-{% macro mode_label(m) %}{{ {'self_api':_('ربط مباشر من العميل')}.get(m, _('غير محدد')) }}{% endmacro %}
 
 {% block head_extra %}
 {{ super() }}
@@ -95,7 +96,7 @@
 {% endblock %}
 
 {% block content %}
-{% set _sms = channels.get('sms') %}
+{% set _sms = sms_status or {} %}
 {% set _wa = channels.get('whatsapp') %}
 
 {# ───── الصدفة الموحّدة: هيرو مختصر + شريط KPI بصف واحد — بلا صف بحث ─────
@@ -104,18 +105,16 @@
 <section class="hub-hero-shell">
 {{ hub.megahero(
   _('قنوات الإرسال'),
-  subtitle=_('اربط رابط مزوّدك وفعّل القناة ليتحول الإرسال من الطابور إلى إرسال فعلي.'),
+  subtitle=_('الرسائل القصيرة عبر TweetSMS، وواتساب عبر رابط مزوّدك.'),
   icon="tower-broadcast",
   actions_html=('<a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> '|safe ~ _("دليل وشروحات") ~ '</a>'|safe if can_submit('radius.communications_guide', 'GET') else ''),
   kpis=[
-    {'label': _('حالة الرسائل القصيرة'), 'value': (_('مفعّلة') if _sms and _sms.enabled else _('متوقفة')),
-     'icon': 'comment-sms', 'variant': ('green' if _sms and _sms.enabled else 'grey'),
-     'sub': (_('جاهزة للإرسال') if _sms and _sms.active else _('غير مكتملة الضبط'))},
-    {'label': _('نمط الرسائل القصيرة'), 'value': (mode_label(_sms.mode) if _sms else '—'), 'icon': 'sliders', 'variant': 'blue'},
+    {'label': _('الرسائل القصيرة (TweetSMS)'), 'value': (_('مربوطة') if _sms.connected else _('غير مربوطة')),
+     'icon': 'comment-sms', 'variant': ('green' if _sms.connected else 'grey'),
+     'sub': (_sms.sender if _sms.connected and _sms.sender else _('من صفحة «ربط SMS»'))},
     {'label': _('حالة واتساب'), 'value': (_('مفعّلة') if _wa and _wa.enabled else _('متوقفة')),
      'icon': 'whatsapp', 'variant': ('green' if _wa and _wa.enabled else 'grey'),
-     'sub': (_('جاهزة للإرسال') if _wa and _wa.active else _('غير مكتملة الضبط'))},
-    {'label': _('نمط واتساب'), 'value': (mode_label(_wa.mode) if _wa else '—'), 'icon': 'sliders', 'variant': 'blue'}
+     'sub': (_('جاهزة للإرسال') if _wa and _wa.active else _('غير مكتملة الضبط'))}
   ]
 ) }}
 </section>{# /hub-hero-shell #}
@@ -125,18 +124,37 @@
 {# ───── تخطيط العمل: بطاقات القنوات + لوحة مساعدة قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   _('كيف تفعّل الإرسال؟'),
-  intro=_('لتفعيل الإرسال الفعلي: انسخ رابط الإرسال من مزوّدك، ألصقه في القناة المناسبة، فعّل القناة، ثم جرّب «إرسال اختبار».'),
+  intro=_('الرسائل القصيرة تُرسَل عبر حسابك في TweetSMS — اربطه من صفحة «ربط SMS». ولواتساب: انسخ رابط الإرسال من مزوّدك، ألصقه هنا، فعّل القناة، ثم جرّب «إرسال اختبار».'),
   icon="circle-info",
   items=[
     {'icon': 'link', 'text': _('ضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة داخل الرابط — يُرمّزان تلقائيًا.')},
     {'icon': 'toggle-on', 'text': _('فعّل القناة لتتحول رسائلها من الطابور إلى إرسال خارجي فعلي.')},
-    {'icon': 'flask', 'text': _('احفظ الإعدادات أولًا ثم استخدم «إرسال اختبار» للتأكد من عمل الرابط.')},
-    {'icon': 'wallet', 'text': _('في نمط الرصيد المخصص يظهر الرصيد المتبقّي لكل قناة بجانب اسمها.')}
+    {'icon': 'flask', 'text': _('احفظ الإعدادات أولًا ثم استخدم «إرسال اختبار» للتأكد من عمل الرابط.')}
   ],
   note=_('لشرح مصوّر كامل لربط الرسائل القصيرة وواتساب، افتح «دليل وشروحات» من الأعلى.')
 )) %}
 
-  {# ── بطاقة إعداد لكل قناة (نموذج الحفظ الأصلي بلا أي تغيير في الحقول) ── #}
+  {# ── الرسائل القصيرة: حالة ربط TweetSMS فقط (الإعداد في صفحة «ربط SMS») ── #}
+  {% call hub.section(_('الرسائل القصيرة'), icon='comment-sms', meta=_('تُرسَل عبر حسابك في TweetSMS')) %}
+    <div class="cch-card" data-testid="channel-sms-tweetsms">
+      <div class="cch-status">
+        {% if _sms.connected %}
+          <span class="cch-badge on"><span class="dot"></span> {{ _('مربوطة بـ TweetSMS') }}</span>
+          {% if _sms.sender %}<span class="cch-badge mode"><span class="dot"></span> {{ _('المرسِل:') }} <bdi dir="ltr">{{ _sms.sender }}</bdi></span>{% endif %}
+        {% else %}
+          <span class="cch-badge off"><span class="dot"></span> {{ _('غير مربوطة') }}</span>
+        {% endif %}
+      </div>
+      <div class="hub-field-hint">{{ _('كل رسائل SMS (التنبيهات، الإرسال اليدويّ، بيانات الدخول) تخرج عبر حساب TweetSMS المربوط. لا يوجد رابط HTTP مخصّص للرسائل القصيرة.') }}</div>
+      {% if can_open(url_for('radius.sms')) %}
+      <div class="cch-actions">
+        <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.sms') }}"><i class="fa-solid fa-link"></i> {{ _('إدارة ربط SMS') }}</a>
+      </div>
+      {% endif %}
+    </div>
+  {% endcall %}
+
+  {# ── بطاقة إعداد قناة واتساب (رابط HTTP عامّ) ── #}
   {% for ch, st in channels.items() %}
   {% set cfg = st.config %}
   {% call hub.section(
@@ -153,7 +171,6 @@
         {% else %}
           <span class="cch-badge off"><span class="dot"></span> {{ _('متوقفة') }}</span>
         {% endif %}
-        <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
       </div>
 
       {% if can_submit('radius.communications_channels', 'POST') %}<form method="post" action="{{ url_for('radius.communications_channels') }}" class="hub-form">
@@ -167,20 +184,8 @@
           <div class="hub-field-hint">{{ _('عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.') }}</div>
         </div>
 
-        {# نمط التشغيل + طريقة الطلب صفّان متوازيان: نستخدم .hub-form-row
-           من نظام التصميم (grid auto-fit بحد أدنى 250px + gap من التوكنات)
-           بدلًا من .hub-grid--2 الذي ليس له قاعدة أساس فيلصق الحقلين. #}
+        {# «نمط التشغيل» أُزيل — قرار المالك 2026-10-06 (قيمة واحدة لا يقرؤها أحد). #}
         <div class="hub-form-row">
-          <div class="hub-field">
-            <label for="mode-{{ ch }}">{{ _('نمط التشغيل') }}
-              <span class="hub-hint" tabindex="0" data-hint="{{ _('«ربط مباشر من العميل»: تستخدم رابط مزوّدك الخاص بلا حدود. «رصيد مخصص من الإدارة»: يُخصم من رصيد رسائل تمنحه الإدارة لكل قناة.') }}"><i class="fa-solid fa-info"></i></span>
-            </label>
-            <select class="hub-select" id="mode-{{ ch }}" name="mode">
-              {% for m in modes %}
-                <option value="{{ m }}" {{ 'selected' if st.mode == m else '' }}>{{ mode_label(m) }}</option>
-              {% endfor %}
-            </select>
-          </div>
           <div class="hub-field">
             <label for="method-{{ ch }}">{{ _('طريقة الطلب') }}
               <span class="hub-hint" tabindex="0" data-hint="{{ _('«تمرير البيانات داخل الرابط»: يضع الرقم والنص في الرابط نفسه. «إرسال البيانات كنموذج»: يرسلها في جسم الطلب — اختر ما يطلبه مزوّدك.') }}"><i class="fa-solid fa-info"></i></span>
@@ -204,13 +209,7 @@
           </div>
         </div>
 
-        <div class="hub-field">
-          <label for="bal-{{ ch }}">{{ _('رابط الرصيد (اختياري)') }}</label>
-          <input class="hub-input mono" id="bal-{{ ch }}" name="balance_url" dir="ltr"
-                 value="{{ cfg.balance_url }}"
-                 placeholder="{{ _('ضع رابط فحص الرصيد من المزوّد هنا') }}">
-          <div class="hub-field-hint">{{ _('رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.') }}</div>
-        </div>
+        {# «رابط الرصيد» أُزيل — قرار المالك 2026-10-06 (لا شيء يستعلمه). #}
 
         <div class="cch-actions">
           <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ إعدادات القناة') }}</button>

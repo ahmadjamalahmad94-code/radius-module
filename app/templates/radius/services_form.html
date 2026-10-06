@@ -10,7 +10,7 @@
    النموذج يحافظ على عقده القائم حرفيًا:
      POST → radius.svc_create (جديد) أو radius.svc_update (تعديل)
      بنفس أسماء الحقول: subscriber_id / name / type / serial / mac /
-     rent_per_month / status / given_at / returned_at / notes
+     status / given_at / returned_at / notes («الإيجار/شهر» أُزيل 2026-10-06)
      وقيم النوع والحالة الإنجليزية كما هي (التعريب في النص الظاهر فقط).
 
    البنية المبسّطة: صدفة هيرو واحدة ثم نموذج بقسمين (هوية المعدّة،
@@ -46,7 +46,7 @@
 <section class="hub-hero-shell">
 {{ hub.megahero(
   ttl,
-  subtitle=_('سجلّ المعدّة الفعلية — راوتر أو ONU أو مودم — المربوطة بمشترك، مع تواريخ التسليم والإرجاع والإيجار الشهري.'),
+  subtitle=_('سجلّ المعدّة الفعلية — راوتر أو ONU أو مودم — المربوطة بمشترك، مع تواريخ التسليم والإرجاع.'),
   icon="toolbox",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="'|safe ~ url_for('radius.svc_list') ~ '">
@@ -115,12 +115,6 @@
   {% call hub.section(_('الإسناد والحالة'), icon="clipboard-check") %}
     <div class="hub-form-row">
 
-      <div class="hub-field">
-        <label class="hub-field-label" for="svc-rent">{{ _('الإيجار / شهر') }}</label>
-        <input class="hub-input" type="number" step="0.01" min="0" id="svc-rent"
-               name="rent_per_month" value="{{ item.rent_per_month }}" dir="ltr">
-        <div class="hub-field-hint">{{ _('مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.') }}</div>
-      </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="svc-status">{{ _('الحالة') }}</label>
