@@ -27,6 +27,15 @@ from app.radius.services.ops_assistant import model_client as mc
 PAGE = "/admin/radius/ops-assistant"
 
 
+def live_mc():
+    """The model_client the running app uses. Other test files purge ``app.*``
+    from sys.modules, so the module-level ``mc`` may be a stale copy — its
+    constants are fine, but per-process STATE (breaker, slots, budget) must be
+    touched on the live module."""
+    import importlib
+    return importlib.import_module("app.radius.services.ops_assistant.model_client")
+
+
 # ─────────────────────────── fake model server ────────────────────────────
 
 class FakeModel:
@@ -96,10 +105,10 @@ def _state(app):
     gate.reset_cache()
     reset_nav_cache()
     web_bridge.reset_cache()
-    mc.reset_state()          # the breaker is per process: one test's outage must not leak
+    live_mc().reset_state()          # the breaker is per process: one test's outage must not leak
     yield
     reset_nav_cache()
-    mc.reset_state()
+    live_mc().reset_state()
 
 
 def P(action, fields=None, summary="ملخّص. أؤكّد؟", missing=None):
@@ -382,7 +391,7 @@ def test_message_budget_spans_all_hops(client, app, fake_model, monkeypatch):
     import time as _t
     plan(app, "budget_plan")
     login(client)
-    monkeypatch.setattr(mc, "MESSAGE_BUDGET", 2.6)
+    monkeypatch.setattr(live_mc(), "MESSAGE_BUDGET", 2.6)
 
     def slow(_msgs):
         _t.sleep(1.0)
@@ -391,10 +400,10 @@ def test_message_budget_spans_all_hops(client, app, fake_model, monkeypatch):
     fake_model.reset(slow, slow, slow, slow)
     body = ok(post(client, "/message", {"text": "اعرض الباقات"}))
     kinds = [r["type"] for r in body["replies"]]
-    assert kinds == ["choices", "choices", "error"]
+    assert kinds == ["choices", "choices", "error"], body
     assert body["replies"][-1]["reason"] == "budget_exhausted"
     assert len(fake_model.requests) == 2
-    assert not mc.breaker_open()          # a spent budget is not an outage
+    assert not live_mc().breaker_open()          # a spent budget is not an outage
 
 
 def test_panel_pages_never_call_the_model(client, app, fake_model):
