@@ -194,7 +194,8 @@ def _restamp(tenant_id: int, *, batch_id, plan_id, previous_batch,
             "       AND p.id = COALESCE(NULLIF(b.plan_id, 0), c.plan_id) "
             " WHERE c.tenant_id = ? "
             "   AND c.deleted_at IS NULL AND b.deleted_at IS NULL "
-            "   AND COALESCE(c.revoked, 0) = 0 "
+            # owner 2026-10-06: a revoked started card follows too (new
+            # window ready if it is re-enabled); it has no live session.
             "   AND COALESCE(c.frozen_remaining_seconds, 0) = 0 "
             "   AND c.first_used_at IS NOT NULL AND c.first_used_at != ''"
             + scope,

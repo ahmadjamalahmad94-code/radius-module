@@ -893,14 +893,15 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
             #    that ALREADY STARTED follow the batch as well — the new plan's
             #    SPEED, not only its duration (card_restamp). This replaces the
             #    old a06-M8 rule «used cards keep the plan they were sold on».
-            #    A started card that is revoked or deleted is left untouched.
+            #    Owner 2026-10-06: a REVOKED started card moves too («ينتقل مع
+            #    الباقي») so it comes back on the new plan when re-enabled.
+            #    Only deleted cards are left untouched.
             conn.execute(
                 """
                 UPDATE cards
                 SET plan_id = ?
                 WHERE tenant_id = ? AND batch_id = ?
-                  AND (used = 0
-                       OR (COALESCE(revoked, 0) = 0 AND deleted_at IS NULL))
+                  AND (used = 0 OR deleted_at IS NULL)
                 """,
                 (new_plan_id, tenant_id, batch_id),
             )

@@ -354,7 +354,7 @@ def test_refused_coa_on_a_shorter_window_falls_back_to_disconnect(app, live):
 
 # ═══ 5. what must survive: grants, revoked, unstarted, thaw ═══════════════
 
-def test_operator_grant_is_kept_revoked_and_unstarted_untouched(app, live):
+def test_operator_grant_kept_revoked_follows_unstarted_untouched(app, live):
     with app.app_context():
         hour = _plan("ساعة", 60)
         sixteen = _plan("16 ساعة", 960)
@@ -373,7 +373,10 @@ def test_operator_grant_is_kept_revoked_and_unstarted_untouched(app, live):
         first, exp, mirror = _ends(granted["username"])
         assert _close(exp, first + timedelta(hours=18)), (first, exp)   # 16h + 2h
         assert mirror == exp
-        assert _ends(revoked["username"]) == rev_before
+        # owner 2026-10-06: a revoked started card follows the batch too.
+        rfirst, rexp, rmirror = _ends(revoked["username"])
+        assert _close(rexp, rfirst + timedelta(hours=16)), (rfirst, rexp, rev_before)
+        assert rmirror == rexp
         row = _db().execute("SELECT first_used_at, expire_at FROM cards WHERE id=?",
                             (unstarted["id"],)).fetchone()
         assert row["first_used_at"] is None and row["expire_at"] is None
@@ -561,7 +564,8 @@ def _assert_moved(live, slow, fast, started, unstarted, revoked, temp):
     assert _plans_of(unstarted["username"]) == (fast, fast)
     assert _authorize(unstarted).reply_attrs.get("Mikrotik-Rate-Limit") == new_rate
     # revoked card: untouched
-    assert _plans_of(revoked["username"]) == (slow, slow)
+    # owner 2026-10-06: a revoked started card moves with the batch too.
+    assert _plans_of(revoked["username"]) == (fast, fast)
     # temp speed kept: on the new plan, but auth + CoA keep the temp rate
     assert _plans_of(temp["username"]) == (fast, fast)
     assert _authorize(temp).reply_attrs.get("Mikrotik-Rate-Limit") == "256k/512k"
