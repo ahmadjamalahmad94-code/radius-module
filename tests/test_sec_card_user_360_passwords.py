@@ -168,3 +168,46 @@ def test_purchase_response_masks_credential_without_permission(app):
         real = _db().execute("SELECT cred_password FROM card_user_purchases WHERE id=?",
                              (purchase["id"],)).fetchone()[0]
     assert real and real != MASK
+
+
+def _plan_id() -> int:
+    conn = _db()
+    pid = conn.execute(
+        "INSERT INTO access_plans(tenant_id, name, duration_minutes, price, currency,"
+        " created_at, updated_at) VALUES(1, ?, 60, 5.0, 'ILS', datetime('now'),"
+        " datetime('now'))", ("g-" + uuid.uuid4().hex[:6],)).lastrowid
+    conn.commit()
+    return int(pid)
+
+
+def _generate(app, hdr, monkeypatch):
+    # FIX117: a manager also needs the explicit «full batch form» grant.
+    from app.radius.services import manager_grants
+    monkeypatch.setattr(manager_grants, "full_batch_form_granted", lambda *a, **k: True)
+    with app.app_context():
+        pid = _plan_id()
+    res = app.test_client().post("/api/v1/cards/generate", headers=hdr, json={
+        "plan_id": pid, "count": 2, "username_prefix": "g" + uuid.uuid4().hex[:4],
+        "username_length": 10})
+    assert res.status_code == 201, res.get_json()
+    return res.get_json()["data"]["cards"]
+
+
+def test_generate_response_masks_passwords_without_card_password_permission(app, monkeypatch):
+    with app.app_context():
+        hdr = _manager(["cards.view", "cards.generate"])
+    cards = _generate(app, hdr, monkeypatch)
+    assert len(cards) == 2
+    assert all(c["password"] == MASK for c in cards)
+    with app.app_context():
+        real = [r[0] for r in _db().execute(
+            "SELECT password FROM cards WHERE id IN (?, ?)",
+            (cards[0]["id"], cards[1]["id"])).fetchall()]
+    assert all(pw and pw != MASK for pw in real)
+
+
+def test_generate_response_keeps_passwords_for_print_holder(app, monkeypatch):
+    with app.app_context():
+        hdr = _manager(["cards.view", "cards.generate", "cards.print"])
+    cards = _generate(app, hdr, monkeypatch)
+    assert all(c["password"] and c["password"] != MASK for c in cards)
