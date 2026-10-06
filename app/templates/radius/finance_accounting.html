@@ -141,6 +141,13 @@
       <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
+  {% if report_type == 'subscriber_payments' %}
+  <select class="hub-input hub-select" name="prepaid" onchange="this.form.submit()" aria-label="{{ _('الدفع المسبق') }}">
+    <option value="" {% if not prepaid %}selected{% endif %}>{{ _('كل الباقات (الدفع)') }}</option>
+    <option value="1" {% if prepaid == '1' %}selected{% endif %}>{{ _('باقات مدفوعة مسبقًا') }}</option>
+    <option value="0" {% if prepaid == '0' %}selected{% endif %}>{{ _('باقات غير مدفوعة مسبقًا') }}</option>
+  </select>
+  {% endif %}
   {{ hub.btn(_('عرض التقرير'), icon="chart-line", variant="primary", type="submit", size="sm") }}
   {% else %}
   <input type="hidden" name="tab" value="ledger">

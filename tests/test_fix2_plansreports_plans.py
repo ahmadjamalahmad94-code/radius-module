@@ -137,17 +137,19 @@ def test_profiles_bool_garbage_is_422(client):
     assert "true" in err["message"]
 
 
+# vlan_id / allowed_devices_count: removed from every surface (owner 2026-10-06)
+# — the API now ignores the keys silently (test_fields_plan_burst_cir_night).
 @pytest.mark.parametrize("field", [
-    "allowed_devices_count", "session_timeout_sec", "idle_timeout_sec", "priority",
-    "vlan_id", "burst_time_sec", "max_daily_minutes", "concurrent_sessions"])
+    "session_timeout_sec", "idle_timeout_sec", "priority",
+    "burst_time_sec", "max_daily_minutes", "concurrent_sessions"])
 def test_profiles_negative_ints_are_refused(client, field):
     err = _err(_create(client, **{field: -5}), 422, "validation_error")
     assert "سالب" in err["message"] or "1 على الأقل" in err["message"]
 
 
 @pytest.mark.parametrize("field,value", [
-    ("duration_minutes", 10 ** 20), ("vlan_id", 10 ** 20), ("quota_total_mb", 2 ** 63),
-    ("vlan_id", 5000), ("priority", 10 ** 6)])
+    ("duration_minutes", 10 ** 20), ("burst_time_sec", 10 ** 20), ("quota_total_mb", 2 ** 63),
+    ("priority", 10 ** 6)])
 def test_profiles_huge_ints_are_422_not_500(client, field, value):
     err = _err(_create(client, **{field: value}), 422, "validation_error")
     assert "أكبر من المسموح" in err["message"]
@@ -251,7 +253,10 @@ def test_web_plan_form_reads_arabic_decimal_price(client):
 
 def test_web_plan_form_refuses_negative_and_bad_hours(client):
     csrf = _web_login(client)
-    for over in ({"vlan_id": "-3"}, {"allowed_hours_from": "25:99"}, {"name": "n" * 150}):
+    # «vlan_id» left the web form (owner 2026-10-06) — a negative session
+    # timeout stands in for «negative number».
+    for over in ({"session_timeout_sec": "-3"}, {"allowed_hours_from": "25:99"},
+                 {"name": "n" * 150}):
         form = _web_plan_form(**over)
         res = client.post("/admin/radius/plans", data={"_csrf_token": csrf, **form})
         assert res.status_code == 400, over

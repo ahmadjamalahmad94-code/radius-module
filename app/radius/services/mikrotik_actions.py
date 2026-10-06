@@ -183,6 +183,10 @@ def _fmt_speed_value(raw) -> str:
     s = str(raw or "").strip()
     if not s:
         return ""
+    if "/" in s.split()[0]:
+        # السطر الكامل «rx/tx burst thr time prio min» (Burst/CIR الباقة) —
+        # السرعة الفعليّة هي الموضع الأوّل وحده.
+        s = s.split()[0]
     vals: list[str] = []
     for part in re.split(r"[\s/]+", s):
         if not part:

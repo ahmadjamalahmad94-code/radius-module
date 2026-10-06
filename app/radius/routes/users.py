@@ -930,6 +930,23 @@ def users_list():
         else:
             usernames_in = list(_online_early)
 
+    # «باقات مدفوعة مسبقًا» (قرار المالك 2026-10-06: وسمٌ للتقارير) — قصر النطاق
+    # على مشتركي الباقات الموسومة (أو غيرها) في SQL كبقيّة الفلاتر.
+    prepaid = (request.args.get("prepaid") or "").strip()
+    if prepaid in ("1", "0"):
+        try:
+            from ..db.connection import db as _pdb
+            _pp = {str(r["username"]) for r in _pdb().execute(
+                "SELECT s.username FROM subscribers s JOIN access_plans p "
+                "ON p.id = s.plan_id AND p.tenant_id = s.tenant_id "
+                "WHERE s.tenant_id = ? AND COALESCE(p.prepaid, 0) = ?",
+                (_tid(), int(prepaid))).fetchall()}
+        except Exception:  # noqa: BLE001
+            _pp = set()
+        usernames_in = list(set(usernames_in) & _pp) if usernames_in is not None else list(_pp)
+    else:
+        prepaid = ""
+
     _svc = get_users_service()
     # «هوت سبوت / برود باند» (قرار المالك 2026-10-01) — نفس فلتر الـAPI.
     from ..services.access_type import normalize_access
@@ -1150,6 +1167,7 @@ def users_list():
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         attention=attention, online_only=online_only, access=access,
+        prepaid=prepaid,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
         stat_online=stat_online, stat_expiring=stat_expiring,

@@ -14,6 +14,14 @@ from ..integration.adapter import RadiusAdapter
 from .operations import validate_service_scope
 from .audit import RadiusAuditService
 
+# «تجديد تلقائي» (قرار المالك 2026-10-06) — القيمة المخزَّنة ← التسمية العربيّة.
+AUTO_RENEW_MODES = {
+    "off": N_("بدون"),
+    "debt": N_("مسموح بالدين"),
+    "balance": N_("خصم من الرصيد المتاح"),
+    "free": N_("مجاني"),
+}
+
 # لاحقة اسم النسخة — تُميّز العرض المنسوخ بوضوح في القائمة.
 CLONE_NAME_SUFFIX = N_(" - نسخة")
 
@@ -53,6 +61,7 @@ class PlansService:
     def create(self, *, actor: str, plan: AccessPlan) -> AccessPlan:
         plan = _normalize(plan, existing=None)
         _validate(plan)
+        _validate_speed_extras(plan, existing=None)
         plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
@@ -117,6 +126,7 @@ class PlansService:
             existing = None
         plan = _normalize(plan, existing=existing)
         _validate(plan)
+        _validate_speed_extras(plan, existing=existing)
         plan = _claim_plan_name(plan)
         saved = self._adapter.upsert_profile(plan)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
@@ -296,6 +306,8 @@ _HOUR_FIELDS = {
     "allowed_hours_to": N_("ساعة النهاية"),
     "offer_hours_from": N_("ساعات العرض — من"),
     "offer_hours_to": N_("ساعات العرض — إلى"),
+    "nightly_from": N_("غير محدود ليلًا — من"),
+    "nightly_to": N_("غير محدود ليلًا — إلى"),
 }
 _HOUR_RE = re.compile(r"^(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$|^24:00(?::00)?$")
 
@@ -310,6 +322,7 @@ _OTHER_LABELS = {
     "name": N_("اسم الباقة"), "enabled": N_("تفعيل الباقة"), "bind_mac": N_("ربط MAC"),
     "bind_ip": N_("ربط IP"), "force_mac_address": N_("فرض عنوان MAC"),
     "auto_renew": N_("التجديد التلقائيّ"), "prepaid": N_("الدفع المسبق"),
+    "auto_renew_mode": N_("التجديد التلقائيّ"),
     "speed_control_enabled": N_("التحكّم بالسرعة"), "burst_enabled": N_("الدفعة (Burst)"),
     "nightly_unlimited_enabled": N_("الليل المفتوح"), "single_use_once": N_("استخدام مرّة واحدة"),
     "hotspot_enabled": N_("هوت سبوت"), "ppp_enabled": "PPP", "loan_enabled": N_("السلفة"),
@@ -395,6 +408,12 @@ def _normalize(plan: AccessPlan, existing: AccessPlan | None = None) -> AccessPl
     scope = (changes.get("service_scope", plan.service_scope) or "").strip().lower()
     if scope != changes.get("service_scope", plan.service_scope):
         changes["service_scope"] = scope or "both"
+    # «تجديد تلقائي» نمطٌ واحد (هجرة 197)؛ العلَم القديم auto_renew مرآةٌ له.
+    mode = str(getattr(plan, "auto_renew_mode", "") or "off").strip().lower()
+    if mode != plan.auto_renew_mode:
+        changes["auto_renew_mode"] = mode
+    if bool(plan.auto_renew) != (mode != "off"):
+        changes["auto_renew"] = mode != "off"
     for f in ("price", "price_card", "price_bulk"):
         v = getattr(plan, f, 0)
         if isinstance(v, float) and v == 0 and str(v).startswith("-"):
@@ -460,8 +479,69 @@ def _validate(plan: AccessPlan) -> None:
     if plan.concurrent_sessions < 1:
         raise RadiusValidationError(_tr("عدد الجلسات المتزامنة يجب أن يكون 1 على الأقل."))
     validate_service_scope(plan.service_scope)
+    if str(plan.auto_renew_mode or "off") not in AUTO_RENEW_MODES:
+        raise RadiusValidationError(
+            _tr("نمط «التجديد التلقائي» غير معروف (المسموح: off / debt / balance / free)."))
     if plan.max_loan_minutes < 0:
         raise RadiusValidationError(_tr("الحدّ الأقصى لدقائق السلفة لا يمكن أن يكون سالبًا."))
+
+
+# حقول «الدفعة/المضمونة/الليل» — تُفحَص فقط حين تتغيّر (أو باقةٌ جديدة) كي لا
+# يسقط حفظُ باقةٍ قديمة محفوظةٍ بقيمٍ غير متّسقة لم يلمسها أحد (التطبيق يرسل
+# كلّ الحقول في كلّ حفظ).
+_BURST_FIELDS = ("burst_enabled", "burst_down_kbps", "burst_up_kbps",
+                 "burst_threshold_kbps", "burst_time_sec",
+                 "speed_down_kbps", "speed_up_kbps", "speed_unlimited")
+_CIR_FIELDS = ("cir_down_kbps", "cir_up_kbps", "speed_down_kbps",
+               "speed_up_kbps", "speed_unlimited")
+_NIGHT_FIELDS = ("nightly_unlimited_enabled", "nightly_from", "nightly_to")
+
+
+def _changed(plan, existing, fields) -> bool:
+    if existing is None:
+        return True
+    return any(getattr(plan, f, None) != getattr(existing, f, None) for f in fields)
+
+
+def _validate_speed_extras(plan: AccessPlan, existing: AccessPlan | None) -> None:
+    """Burst وCIR و«غير محدود ليلًا» صارت تُطبَّق فعلًا (سطر Mikrotik-Rate-Limit
+    وكوتة الليل) — فالقيمة غير المتّسقة تُرفض بدل أن تُحفظ بلا أثر.
+
+    • Burst (مفعَّل): سرعة الدفعة أعلى من سرعة الباقة في الاتجاهين، والعتبة
+      موجبة وأقلّ من سرعة دفعة التنزيل، والمدّة موجبة. ولا Burst لباقةٍ بلا حدّ.
+    • CIR: لا يتجاوز سرعة الباقة في اتجاهه، ولا معنى له لباقةٍ بلا حدّ.
+    • الليل (مفعَّل): «من» و«إلى» مطلوبتان ومختلفتان."""
+    if bool(plan.burst_enabled) and _changed(plan, existing, _BURST_FIELDS):
+        if plan.speed_unlimited or not (plan.speed_down_kbps and plan.speed_up_kbps):
+            raise RadiusValidationError(
+                _tr("السرعة المؤقتة (Burst) تحتاج سرعةً محدّدة للباقة (تنزيل ورفع)."))
+        if (int(plan.burst_down_kbps or 0) <= int(plan.speed_down_kbps or 0)
+                or int(plan.burst_up_kbps or 0) <= int(plan.speed_up_kbps or 0)):
+            raise RadiusValidationError(
+                _tr("سرعة Burst (تنزيل ورفع) يجب أن تكون أعلى من سرعة الباقة."))
+        thr = int(plan.burst_threshold_kbps or 0)
+        if thr <= 0 or thr >= int(plan.burst_down_kbps or 0):
+            raise RadiusValidationError(
+                _tr("«حد Burst» مطلوب، وأقلّ من سرعة Burst للتنزيل."))
+        if int(plan.burst_time_sec or 0) <= 0:
+            raise RadiusValidationError(_tr("«مدة Burst» مطلوبة بالثواني."))
+    cir_d, cir_u = int(plan.cir_down_kbps or 0), int(plan.cir_up_kbps or 0)
+    if (cir_d or cir_u) and _changed(plan, existing, _CIR_FIELDS):
+        if plan.speed_unlimited:
+            raise RadiusValidationError(
+                _tr("السرعة المضمونة (CIR) تحتاج سرعةً محدّدة للباقة."))
+        if cir_d > int(plan.speed_down_kbps or 0) or cir_u > int(plan.speed_up_kbps or 0):
+            raise RadiusValidationError(
+                _tr("السرعة المضمونة (CIR) لا تتجاوز سرعة الباقة في اتجاهها."))
+    if bool(plan.nightly_unlimited_enabled) and _changed(plan, existing, _NIGHT_FIELDS):
+        f = str(plan.nightly_from or "").strip()
+        t = str(plan.nightly_to or "").strip()
+        if not f or not t:
+            raise RadiusValidationError(
+                _tr("«غير محدود ليلًا» يحتاج بداية ونهاية الفترة الليلية (من / إلى)."))
+        if f[:5] == t[:5]:
+            raise RadiusValidationError(
+                _tr("بداية الفترة الليلية ونهايتها لا تتساويان."))
 
 
 def get_plans_service() -> PlansService:

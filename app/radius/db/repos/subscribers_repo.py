@@ -598,6 +598,9 @@ _RENAME_USERNAME_TABLES: tuple[tuple[str, str], ...] = (
     #    were missing, so a rename left them pointing at the OLD name:
     ("device_limit_claims", "username"),       # device-slot claims (zero-w1 L1)
     ("quota_session_marks", "username"),       # per-session quota snapshots
+    ("quota_night_marks", "username"),         # nightly-unlimited accrual marks (196)
+    ("quota_night_free", "username"),          # nightly-unlimited free bytes (196)
+    ("plan_auto_renewals", "username"),        # auto-renew claims (197)
     ("panel_notifications", "subscriber_username"),  # bell rows → «افتح المشترك»
     ("card_user_purchases", "cred_username"),  # store purchase credentials («بطاقاتي»)
     ("tr069_devices", "radius_username"),      # CPE ↔ PPPoE account binding

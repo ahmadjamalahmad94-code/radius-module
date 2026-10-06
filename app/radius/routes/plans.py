@@ -27,45 +27,24 @@ from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flas
 # ════════════════════════════════════════════════════════════════
 _META_GROUPS = {
     "general": [
-        # حقول DNS/Cisco/Connection file التي ليست محورية في query
-        "download_policy_cisco", "upload_policy_cisco",
+        # حقول DNS/Connection file التي ليست محورية في query
         "device_connection_file", "primary_dns_ppp", "secondary_dns_ppp",
     ],
     "subscription": [
-        "shared_voucher_fup",
         "equal_download_speed", "equal_upload_speed",
-        "send_alerts", "renewal_method", "billing_method",
-        "user_can_change_offer", "user_can_request_offer_change",
-        "force_subscriber_to_purchase_card", "hide_invoice",
-        "subscriber_control_panel_enabled", "subscription_expiry_date",
-        "prevent_user_from_changing_subscription",
-        "prevent_admin_from_changing_user_subscription",
-        "equal_quota_sharing",
-        "daily_connection_time", "internet_connection_time",
-        "save_remaining_quota_on_activation",
-        "use_old_quota_and_sessions_on_activation",
-        "delete_usage_data_and_sessions_on_activation",
-        "carry_remaining_time_on_activation",
-        "notify_when_quota_reaches_zero",
-        "stop_user_when_time_expires",
     ],
     "advanced": [
-        "auto_renew_when_quota_expires",
-        "auto_renew_when_time_expires",
-        "time_expiry_policy",
-        "only_available_for", "available_for_all", "all_days",
-    ],
-    "mikrotik": [
-        "enable_mtu", "expiry_day_limit_toggle", "expiry_hour_limit_toggle",
-        "mikrotik_address_list", "mikrotik_filter_chain_name",
-        "mikrotik_user_group", "mikrotik_queue_priority_simple_queue",
-    ],
-    "notifications": [
-        "notify_before_quota_expiry",
-        "notify_before_daily_quota_expiry",
-        "notification_channels",
+        "all_days",
     ],
 }
+# 🔒 قرار المالك (2026-10-06): أُزيلت من النموذج ~38 حقلًا مرجعيًّا لا يقرؤها شيء —
+# سياسات Cisco، طريقة التجديد/الفوترة، تاريخ انتهاء الاشتراك، التنبيهات وقنواتها،
+# FUP، تغيير الباقة/طلبه/منعه، لوحة المشترك، إخفاء الفاتورة، إجبار شراء بطاقة،
+# وقت الاتصال اليوميّ/الإنترنت، حفظ/ترحيل/حذف الاستهلاك عند التفعيل، الإيقاف عند
+# انتهاء الوقت، التجديد التلقائيّ عند انتهاء الكوتا/الوقت، سياسة انتهاء الوقت،
+# «متاح لـ/للكل»، MTU، حدود أيام/ساعات الانتهاء، وحقول mikrotik_* على مستوى
+# الباقة (radgroupreply لا يقرؤه FreeRADIUS: read_groups=no). لم تعد في
+# ``_META_FIELDS`` ⇒ الحفظ لا يكتبها، وقيمها القديمة تبقى في metadata بلا مساس.
 _META_FIELDS = [f for g in _META_GROUPS.values() for f in g]
 
 
@@ -251,14 +230,14 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         idle_timeout_sec=_i("idle_timeout_sec"),
         address_pool=_s("address_pool"),
         framed_pool=_s("framed_pool"),
-        vlan_id=_i("vlan_id"),
         ipv6_pool=_s("ipv6_pool"),
-        bind_mac=_b("bind_mac"),
-        bind_ip=_b("bind_ip"),
         allowed_days=tuple(days_raw),
         allowed_hours_from=_s("allowed_hours_from"),
         allowed_hours_to=_s("allowed_hours_to"),
         price=_f("price"),
+        prepaid=_b("prepaid"),
+        auto_renew_mode=(_s("auto_renew_mode") or "off").lower(),
+        auto_renew=(_s("auto_renew_mode") or "off").lower() != "off",
         currency=_s("currency") or default_currency(),
         description=_s("description"),
         enabled=_b("enabled"),
@@ -267,11 +246,12 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         priority=min(10, max(1, _i("priority", 5))),
         color=_s("color") or "#F4BA2A",
         # RM-H3 fields
-        speed_control_enabled=_b("speed_control_enabled"),
         cir_down_kbps=_i("cir_down_kbps"),
         cir_up_kbps=_i("cir_up_kbps"),
         burst_enabled=_b("burst_enabled"),
         nightly_unlimited_enabled=_b("nightly_unlimited_enabled"),
+        nightly_from=_s("nightly_from"),
+        nightly_to=_s("nightly_to"),
         speed_unlimited=_b("speed_unlimited"),
         monthly_download_quota_mb=_i("monthly_download_quota_mb"),
         monthly_upload_quota_mb=_i("monthly_upload_quota_mb"),
@@ -290,7 +270,6 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         service_scope=_scope_from_service_type(service_type),
         loan_enabled=_b("loan_enabled"),
         max_loan_minutes=_i("max_loan_minutes"),
-        speed_override_allowed=_b("speed_override_allowed"),
         shared_single_session=_b("shared_single_session"),
         offer_hours_from=_s("offer_hours_from"),
         offer_hours_to=_s("offer_hours_to"),
@@ -315,16 +294,17 @@ _WEB_FORM_FIELDS = (
     "speed_up_kbps", "speed_down_kbps",
     "burst_up_kbps", "burst_down_kbps", "burst_threshold_kbps", "burst_time_sec",
     "concurrent_sessions", "session_timeout_sec", "idle_timeout_sec",
-    "address_pool", "framed_pool", "vlan_id", "ipv6_pool",
-    "bind_mac", "bind_ip",
+    "address_pool", "framed_pool", "ipv6_pool",
     "price", "currency", "description", "enabled", "priority", "color",
-    "speed_control_enabled", "cir_down_kbps", "cir_up_kbps",
-    "burst_enabled", "nightly_unlimited_enabled", "speed_unlimited",
+    "prepaid", "auto_renew_mode", "auto_renew",
+    "cir_down_kbps", "cir_up_kbps",
+    "burst_enabled", "nightly_unlimited_enabled", "nightly_from", "nightly_to",
+    "speed_unlimited",
     "monthly_download_quota_mb", "monthly_upload_quota_mb", "monthly_combined_quota_mb",
     "daily_download_quota_mb", "daily_upload_quota_mb", "daily_combined_quota_mb",
     "single_use_once", "max_consumption_times", "ticket_validity_days",
     "working_hours_limit",
-    "loan_enabled", "max_loan_minutes", "speed_override_allowed",
+    "loan_enabled", "max_loan_minutes",
     "shared_single_session", "offer_hours_from", "offer_hours_to",
     "connection_schedule",
 )
