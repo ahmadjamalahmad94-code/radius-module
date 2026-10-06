@@ -49,19 +49,24 @@ def _actor() -> str:
 # set/rotate it on write, but it's never returned by `_serialize`.
 _STR_FIELDS = (
     "name", "address", "secret", "vendor", "nas_type", "shortname",
-    "snmp_community", "api_user", "api_password",
+    "api_user", "api_password",
     "location", "coordinates", "description",
     "tags", "metadata",
     # إصدارُ RouterOS ('6'/'7'/'') — يسري إلى مولّدِ سكربتِ التهيئة.
     "ros_version",
 )
 _INT_FIELDS = (
-    "ports", "auth_port", "acct_port", "coa_port", "api_port", "ssh_port",
+    "coa_port", "api_port", "ssh_port",
 )
 _BOOL_FIELDS = (
-    "api_use_tls", "monitoring_enabled", "enabled",
+    "api_use_tls", "enabled",
     "require_message_authenticator",
 )
+# Removed by the owner 2026-10-06 (nothing reads them): still accepted in a
+# body for old app builds, silently ignored — the stored values are kept.
+_RETIRED_FIELDS = frozenset({
+    "monitoring_enabled", "auth_port", "acct_port", "snmp_community", "ports",
+})
 _VALID_VENDORS = set(NAS_VENDORS)
 _SECRET_FIELDS = {"secret", "api_password"}
 

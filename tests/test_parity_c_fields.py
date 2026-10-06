@@ -175,7 +175,8 @@ def test_web_alerts_loop_saved_and_router_override_inherits(app, client):
     assert ov["usage_window"] is None and ov["normal_usage_gb"] == 50
     # the page renders the OVERRIDE (empty) with the default as placeholder
     html = client.get("/admin/radius/alerts").get_data(as_text=True)
-    assert f'name="r_{nid}_speed" value="" placeholder="100"' in html
+    # owner 2026-10-06: the placeholder says «يرث العامّ (X)»
+    assert f'name="r_{nid}_speed" value="" placeholder="يرث العامّ (100)"' in html
     assert f'name="r_{nid}_usage" value="50"' in html
 
     # a later global change reaches the router (not frozen)
@@ -246,7 +247,7 @@ def test_schedule_edit_without_days_keeps_them_and_restore_mode_is_closed(app, c
 
 # ── 6 ─────────────────────────────────────────────────────────────
 
-def test_web_policy_edit_can_turn_enabled_and_fail_open_off(app, client):
+def test_web_policy_edit_can_turn_enabled_off_and_fail_open_is_kept(app, client):
     nid = _nas(client, address="192.0.2.44")["id"]
     res = client.post("/api/v1/network-policy/web-block/policies", headers=AUTH,
                       json={"name": "pc-wb", "router_id": nid})
@@ -259,7 +260,8 @@ def test_web_policy_edit_can_turn_enabled_and_fail_open_off(app, client):
     with app.app_context():
         from app.radius.db.repos import npc_web_block_repo as wb
         pol = wb.get_policy(1, pid)
-    assert not pol["enabled"] and not pol["fail_open"]
+    # «الوضع الآمن» left the form (owner 2026-10-06): an edit never writes it.
+    assert not pol["enabled"] and pol["fail_open"]
 
 
 # ── 7 ─────────────────────────────────────────────────────────────

@@ -317,6 +317,19 @@ def _table_count(sql: str, params: tuple[Any, ...]) -> int:
         return 0
 
 
+#: Actions with an age window. VACUUM and «failed webhooks» have none — their
+#: «days» (sent by old app builds) is ignored, never parsed (owner 2026-10-06).
+_DAYS_ACTIONS = frozenset({"purge_radacct", "purge_sync_done", "purge_audit"})
+
+
+def _maintenance_days(action: str, data: dict) -> int:
+    """Age window in days for ``action`` (ValueError on garbage); 90 for the
+    actions that have no window (unused)."""
+    if action not in _DAYS_ACTIONS:
+        return 90
+    return max(1, min(int(data.get("days") or 90), 3650))
+
+
 def _maintenance_plan(action: str, days: int) -> dict[str, Any] | None:
     tenant_id = _tid()
     cutoff = _maintenance_cutoff(days)
@@ -372,7 +385,9 @@ def _maintenance_plan(action: str, days: int) -> dict[str, Any] | None:
         )
         return {
             "action": action,
-            "days": days,
+            # Owner 2026-10-06: «days» means nothing here (every failed
+            # delivery is purged) — ignored, reported as null.
+            "days": None,
             "estimated_rows": count,
             "table": "webhook_deliveries",
             "destructive": True,
@@ -380,7 +395,7 @@ def _maintenance_plan(action: str, days: int) -> dict[str, Any] | None:
     if action == "vacuum":
         return {
             "action": action,
-            "days": days,
+            "days": None,   # VACUUM has no age window (owner 2026-10-06)
             "estimated_rows": 0,
             "table": "database",
             "destructive": False,
@@ -401,7 +416,7 @@ def maintenance_preview():
     data = _payload()
     action = str(data.get("action") or "").strip()
     try:
-        days = max(1, min(int(data.get("days") or 90), 3650))
+        days = _maintenance_days(action, data)
     except (TypeError, ValueError):
         return fail("validation_error", _tr("عدد الأيام يجب أن يكون رقمًا صحيحًا."), status=422)
     plan = _maintenance_plan(action, days)
@@ -416,7 +431,7 @@ def maintenance_run():
     data = _payload()
     action = str(data.get("action") or "").strip()
     try:
-        days = max(1, min(int(data.get("days") or 90), 3650))
+        days = _maintenance_days(action, data)
     except (TypeError, ValueError):
         return fail("validation_error", _tr("عدد الأيام يجب أن يكون رقمًا صحيحًا."), status=422)
     plan = _maintenance_plan(action, days)
@@ -474,7 +489,7 @@ def maintenance_run():
         target_type=plan["table"],
         target_id=action,
         payload={
-            "days": days,
+            "days": plan["days"],
             "estimated_rows": plan["estimated_rows"],
             "affected_rows": deleted,
             "source": "api",
@@ -482,7 +497,7 @@ def maintenance_run():
     )
     return ok({
         "action": action,
-        "days": days,
+        "days": plan["days"],
         "affected_rows": deleted,
         "dry_run": False,
     })

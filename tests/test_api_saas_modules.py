@@ -119,7 +119,7 @@ def test_voucher_validation_errors_are_arabic_and_do_not_500(client):
         ({"amount": 0, "count": 1}, "قيمة القسيمة يجب أن تكون أكبر من صفر."),
         ({"amount": "bad", "count": 1}, "قيمة القسيمة يجب أن تكون رقمًا صحيحًا."),
         ({"amount": 5, "count": "bad"}, "عدد القسائم يجب أن يكون رقمًا صحيحًا."),
-        ({"amount": 5, "count": 1, "plan_id": "bad"}, "معرّف الباقة يجب أن يكون رقمًا صحيحًا."),
+        # (voucher plan_id removed 2026-10-06 — ignored, no 422)
         ({"amount": 5, "count": 1, "expire_at": "not-a-date"}, "تاريخ الانتهاء غير صالح. استخدم صيغة ISO."),
     )
     for payload, message in probes:
@@ -150,7 +150,7 @@ def test_saas_validation_messages_are_arabic_and_guard_numeric_inputs(client):
         (
             "/api/v1/bandwidth-profiles",
             {"name": "Bad speed", "rate_down": "bad"},
-            "قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة.",
+            "قيم السرعة يجب أن تكون أرقامًا صحيحة.",
         ),
         ("/api/v1/pools", {"pool_name": "main"}, "اسم الـ pool ونطاق العناوين مطلوبان."),
         (

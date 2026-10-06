@@ -102,6 +102,13 @@ def _settings_payload(tenant_id: int) -> dict:
                 "usage_window": effective["usage_window"] or "day",
                 "last_push_at": last_push.get(router_id, ""),
                 "has_override": bool(override),
+                # «يرث العامّ (X)»: the global value each blank limit follows.
+                "inherited": {
+                    "offline_after_min": int(glob["offline_after_min"] or 0),
+                    "normal_speed_mbps": int(glob["default_speed_mbps"] or 0),
+                    "normal_usage_gb": int(glob["default_usage_gb"] or 0),
+                    "usage_window": glob["usage_window"] or "day",
+                },
                 # parity-c: the router's OWN values (null = inherits the
                 # global default). Editors must pre-fill these, not the
                 # effective ones, or one save freezes the defaults forever.
@@ -203,6 +210,7 @@ def router_alerts_settings_patch():
         if routers_in is not None:
             if not isinstance(routers_in, list):
                 raise ValueError("routers")
+            existing_rows = router_alert_settings_repo.list_for_tenant(tenant_id)
             for item in routers_in:
                 if not isinstance(item, dict):
                     raise ValueError("routers")
@@ -214,27 +222,40 @@ def router_alerts_settings_patch():
                         status=404,
                         details={"router_id": router_id},
                     )
+                # Owner 2026-10-06 («وصّله»): per-router limits are
+                # OVERRIDES — null/"" = inherit the global value (stored
+                # NULL, so later global changes apply). A key the item does
+                # not carry keeps the router's current override (a partial
+                # edit of one limit no longer wipes the others to «inherit»
+                # or re-enables a router that was switched off).
+                cur = existing_rows.get(router_id) or {}
+
+                def _keep(key):
+                    val = cur.get(key)
+                    return None if val in (None, "") else val
+
                 router_alert_settings_repo.upsert(
                     tenant_id=tenant_id,
                     router_id=router_id,
-                    enabled=_bool(item.get("enabled"), True),
-                    offline_after_min=_optional_positive_int(
+                    enabled=(_bool(item.get("enabled"), True) if "enabled" in item
+                             else (cur.get("enabled", 1) != 0)),
+                    offline_after_min=(_optional_positive_int(
                         item.get("offline_after_min"),
                         field="offline_after_min",
                         minimum=2,
-                    ),
-                    normal_speed_mbps=_optional_positive_int(
+                    ) if "offline_after_min" in item else _keep("offline_after_min")),
+                    normal_speed_mbps=(_optional_positive_int(
                         item.get("normal_speed_mbps"),
                         field="normal_speed_mbps",
-                    ),
-                    normal_usage_gb=_optional_positive_int(
+                    ) if "normal_speed_mbps" in item else _keep("normal_speed_mbps")),
+                    normal_usage_gb=(_optional_positive_int(
                         item.get("normal_usage_gb"),
                         field="normal_usage_gb",
-                    ),
+                    ) if "normal_usage_gb" in item else _keep("normal_usage_gb")),
                     usage_window=(
-                        _usage_window(item.get("usage_window"))
-                        if item.get("usage_window") not in (None, "")
-                        else None
+                        (_usage_window(item.get("usage_window"))
+                         if item.get("usage_window") not in (None, "") else None)
+                        if "usage_window" in item else _keep("usage_window")
                     ),
                 )
     except ValueError as exc:

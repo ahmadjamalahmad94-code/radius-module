@@ -617,7 +617,7 @@
                النافذة الموحّدة (لا تفعيل أعمى). #}
             {{ sub_item('radius.services_catalog', _('كل الخدمات'), '/services-catalog' in path) }}
             {{ sub_item('radius.devices_list',  _('أجهزة الشبكة / NAS'),     m_devices) }}
-            {{ sub_item('radius.pool_list',     _('نطاقات العناوين'),  m_pools) }}
+            {# «نطاقات العناوين» أُزيلت — قرار المالك 2026-10-06 (لا قارئ لها). #}
             {# رسائل أخطاء الهوتسبوت — نصوص errors.txt تُرفع للراوترات
                عند نشر صفحة الدخول. عام على مستوى المستأجر. #}
             {{ sub_item('radius.hotspot_errors_page', _('رسائل أخطاء الهوتسبوت'), '/hotspot-errors' in path) }}

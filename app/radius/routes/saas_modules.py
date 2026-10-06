@@ -13,10 +13,10 @@ from ..core.errors import RadiusError
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types_saas import (
     TICKET_PRIORITIES, TICKET_STATUSES,
-    BandwidthProfile, Invoice, IpPool, Service, Ticket, Voucher,
+    BandwidthProfile, Invoice, Service, Ticket, Voucher,
 )
 from ..db.repos import (
-    bandwidth_repo, invoices_repo, plans_repo, pools_repo, services_repo,
+    bandwidth_repo, invoices_repo, plans_repo, services_repo,
     subscribers_repo, tickets_repo, vouchers_repo, nas_repo,
 )
 from ..core.numbers import strict_float  # Infinity/NaN → ValueError (422/flash)
@@ -151,7 +151,7 @@ def _bw_from_form(existing=None) -> BandwidthProfile:
             name=(request.form.get("name") or "").strip(),
             rate_down=_i("rate_down"), rate_down_unit=_bw_unit("rate_down_unit", "Kbps"),
             rate_up=_i("rate_up"), rate_up_unit=_bw_unit("rate_up_unit", "Kbps"),
-            burst=(request.form.get("burst") or "").strip(), priority=_i("priority"))
+            burst=(request.form.get("burst") or "").strip())
     from dataclasses import replace
     # parity-c: «burst» present-but-empty = cleared (the builder empties it
     # when burst is off so the rates apply); absent = keep the stored line.
@@ -163,8 +163,7 @@ def _bw_from_form(existing=None) -> BandwidthProfile:
         rate_down_unit=_bw_unit("rate_down_unit", existing.rate_down_unit),
         rate_up=_i("rate_up", existing.rate_up),
         rate_up_unit=_bw_unit("rate_up_unit", existing.rate_up_unit),
-        burst=burst.strip(),
-        priority=_i("priority", existing.priority))
+        burst=burst.strip())  # «الأولوية» أُزيلت — قرار المالك 2026-10-06
 
 
 def _bw_save(b, *, is_new: bool):
@@ -236,53 +235,38 @@ def bw_apply(bw_id: int):
 
 # ───────────────────────────────── Pools ─────────────────────────────────
 
+# صفحة «نطاقات العناوين» أُزيلت — قرار المالك 2026-10-06: جدول ip_pools لا
+# يقرؤه شيء (Framed-Pool يأتي من نصّ الباقة)، فكانت تُضلّل المشغّل. المسارات
+# تبقى مسجّلة (روابط قديمة/صلاحيات) وتعيد التوجيه إلى أجهزة الشبكة؛ البيانات
+# المخزّنة لا تُمسّ.
+def _pools_retired():
+    flash(_tr("صفحة «نطاقات العناوين» أُزيلت: لا يقرؤها الرديوس. تجمّع العناوين "
+              "يُضبط من الباقة (Framed-Pool) ومن الراوتر نفسه."), "info")
+    return redirect(url_for("radius.devices_list"))
+
+
 def pool_list():
-    items = pools_repo.list_all(_tid())
-    nas = {n.id: n for n in nas_repo.list_nas(_tid(), limit=500)}
-    return render_template("radius/pools_list.html", items=items, nas=nas)
+    return _pools_retired()
 
 
 def pool_new():
-    blank = IpPool(id=None, tenant_id=_tid(), pool_name="", range_ip="")
-    nas = nas_repo.list_nas(_tid(), limit=500)
-    return render_template("radius/pools_form.html", item=blank, nas=nas, is_new=True)
-
-
-def _pool_dto_from_form(existing: Optional[IpPool] = None) -> IpPool:
-    return IpPool(
-        id=existing.id if existing else None, tenant_id=_tid(),
-        pool_name=(request.form.get("pool_name") or "").strip(),
-        range_ip=(request.form.get("range_ip") or "").strip(),
-        local_ip=(request.form.get("local_ip") or "").strip(),
-        router_id=int(request.form["router_id"]) if request.form.get("router_id") else None,
-    )
+    return _pools_retired()
 
 
 def pool_create():
-    pools_repo.upsert(_pool_dto_from_form())
-    flash(_tr("تم الإنشاء."), "success")
-    return redirect(url_for("radius.pool_list"))
+    return _pools_retired()
 
 
 def pool_edit(pid: int):
-    it = pools_repo.get(_tid(), pid)
-    if not it: abort(404)
-    nas = nas_repo.list_nas(_tid(), limit=500)
-    return render_template("radius/pools_form.html", item=it, nas=nas, is_new=False)
+    return _pools_retired()
 
 
 def pool_update(pid: int):
-    it = pools_repo.get(_tid(), pid)
-    if not it: abort(404)
-    pools_repo.upsert(_pool_dto_from_form(it))
-    flash(_tr("تم التحديث."), "success")
-    return redirect(url_for("radius.pool_list"))
+    return _pools_retired()
 
 
 def pool_delete(pid: int):
-    pools_repo.delete(_tid(), pid)
-    flash(_tr("تم الحذف."), "success")
-    return redirect(url_for("radius.pool_list"))
+    return _pools_retired()
 
 
 # ───────────────────────────────── Vouchers ─────────────────────────────────

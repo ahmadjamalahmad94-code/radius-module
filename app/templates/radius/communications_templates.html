@@ -4,7 +4,7 @@
 {% block title %}{{ _("قوالب الرسائل — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
 {% block page_title %}{{ _("قوالب الرسائل") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('معاينة فقط — نصوص جاهزة تُحفظ وتُعايَن، ولا يرسلها النظام تلقائيًّا.') }}</span>{% endblock %}
 
 {% macro ch_label(c) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('البريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 
@@ -66,6 +66,14 @@
 {% endcall %}
 
 {% include "radius/communications_nav.html" %}
+
+{# قرار المالك 2026-10-06 («أبقِه ووسّمه»): لا مُرسِل يستعمل القوالب اليوم —
+   الصفحة للتحضير والمعاينة فقط، ويجب أن يكون ذلك واضحًا. #}
+<div class="hr-preview-only" role="note" data-testid="preview-only-banner"
+     style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:12px;border:1px solid #fcd34d;background:#fffbeb;color:#92400e;font-size:13px;line-height:1.7">
+  <i class="fa-solid fa-eye" style="margin-top:4px"></i>
+  <div><strong>{{ _('معاينة فقط') }}</strong> — {{ _('القوالب تُحفظ وتُعايَن فقط: لا يوجد مُرسِل يستعملها تلقائيًّا بعد. الإرسال الفعليّ من «إرسال يدويّ» بنصٍّ تكتبه هناك.') }}</div>
+</div>
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(

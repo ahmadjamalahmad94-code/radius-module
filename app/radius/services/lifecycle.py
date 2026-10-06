@@ -22,8 +22,12 @@ ENTITY_EXTERNAL_FILE = "external_file"
 TRIGGER_EXPIRED = "expired_at"
 ACTION_ARCHIVE = "archive"
 
-ALLOWED_ENTITIES = {ENTITY_CARD, ENTITY_SUBSCRIBER, ENTITY_CARD_BATCH, ENTITY_EXTERNAL_FILE}
-ALLOWED_TRIGGERS = {TRIGGER_EXPIRED, "disabled_since", "inactive_since"}
+# قرار المالك 2026-10-06: «حزمة بطاقات» و«ملف خارجي» وشرطا «منذ التعطيل /
+# منذ الخمول» أُزيلت — كانت تُحفظ ولا يُنفَّذ منها شيء (policy_supported يتخطّاها
+# دائمًا). سياسةٌ جديدة بها ⇒ رسالة عربيّة؛ السياسات المخزّنة سابقًا تبقى
+# معروضة ويمكن تعطيلها، ولا تُشغَّل كما كانت.
+ALLOWED_ENTITIES = {ENTITY_CARD, ENTITY_SUBSCRIBER}
+ALLOWED_TRIGGERS = {TRIGGER_EXPIRED}
 ALLOWED_UNITS = {"minutes", "hours", "days", "months"}
 
 

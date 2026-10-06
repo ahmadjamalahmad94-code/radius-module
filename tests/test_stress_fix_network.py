@@ -382,7 +382,8 @@ def test_web_nas_form_same_validation(app, client):
     assert _nas_count(app, "192.0.2.120") == 1
     # garbage address / port / secret
     for over in ({"address": "abc"}, {"address": "10.0.0.0/8"},
-                 {"address": "192.0.2.121", "auth_port": "abc"},
+                 # (auth_port left the form 2026-10-06 — owner: nothing reads it)
+                 {"address": "192.0.2.121", "api_port": "abc"},
                  {"address": "192.0.2.122", "coa_port": "70000"},
                  {"address": "192.0.2.123", "secret": 'bad"secret'}):
         res = client.post("/admin/radius/devices", data=_web_form(token, **over))

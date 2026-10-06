@@ -19,10 +19,13 @@ from .npc_common import now_iso, slugify
 SCOPE_ALL_USERS = "all_users"
 ALLOWED_SCOPES = frozenset({SCOPE_ALL_USERS})
 
+# «جدولة الوقت» (schedule_id) و«الوضع الآمن» (fail_open) أُزيلا من الواجهات —
+# قرار المالك 2026-10-06: الجدولة لا يقرؤها شيء، والوضع الآمن لا يغيّر إلّا
+# نصّ تحذير. لا يكتبهما أيّ تعديل؛ القيم المخزّنة تبقى كما هي.
 _ALLOWED_POLICY_UPDATE_FIELDS = frozenset({
     "name", "slug",
-    "scope", "schedule_id",
-    "fail_open", "enabled",
+    "scope",
+    "enabled",
 })
 
 _POLICY_BOOL_FIELDS = frozenset({"fail_open", "enabled"})

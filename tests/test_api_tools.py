@@ -150,7 +150,7 @@ def test_tools_validation_messages_are_arabic(client):
         ),
         (
             "/api/v1/tools/maintenance/preview",
-            {"action": "vacuum", "days": "bad"},
+            {"action": "purge_audit", "days": "bad"},
             "عدد الأيام يجب أن يكون رقمًا صحيحًا.",
         ),
         (

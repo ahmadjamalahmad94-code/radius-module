@@ -20,7 +20,7 @@
 {# ───── Merged hero: title + actions + KPI strip (no search bar) ───── #}
 {{ hub.megahero(
   _('ملفات السرعة'),
-  subtitle=_('إدارة ملفّات عرض الحزمة — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية، لتربطها بالباقات.'),
+  subtitle=_('إدارة ملفّات عرض الحزمة — سرعة التنزيل/الرفع والسرعة المؤقتة، لتربطها بالباقات.'),
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="'|safe + url_for('radius.bw_new') + '">
@@ -42,7 +42,6 @@
     {'icon': 'arrow-down', 'text': _('التنزيل هو السرعة القصوى للاستقبال (تظهر بوحدتها — Kbps/Mbps حسب الإعداد).')},
     {'icon': 'arrow-up',   'text': _('الرفع هو السرعة القصوى للإرسال بنفس الوحدة المعروضة بجانب القيمة.')},
     {'icon': 'rocket',     'text': _('السرعة المؤقتة (Burst) تسمح بتجاوز قصير للحد قبل العودة للسرعة الأساسية.')},
-    {'icon': 'sort',       'text': _('الأولوية الأقل رقمًا تُخدَم أوّلًا عند ازدحام الشبكة.')},
   ],
   note=_('القيم هنا سرعات اتصال — تأكّد من مطابقة الوحدة (Kbps أو Mbps) لما يدعمه مزوّدك.')
 )) %}
@@ -56,7 +55,6 @@
             <th>{{ _('تنزيل') }}</th>
             <th>{{ _('رفع') }}</th>
             <th>{{ _('سرعة مؤقتة') }}</th>
-            <th class="num">{{ _('الأولوية') }}</th>
             <th style="width:190px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
@@ -74,7 +72,6 @@
               {{ b.rate_up }} {{ b.rate_up_unit }}
             </td>
             <td class="mono small">{{ b.burst or '—' }}</td>
-            <td class="num mono">{{ hub.pill(b.priority|string, variant="brand", dot=False) }}</td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 {% if can_submit('radius.bw_edit', 'GET') %}<a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
