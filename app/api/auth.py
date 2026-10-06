@@ -49,6 +49,51 @@ _LOG = logging.getLogger(__name__)
 _DEV_DEFAULT_TOKEN = "dev-token-please-change"
 _DEV_FALLBACK_WARNED = False
 
+# SEC temp-password (docs/security/SEC_TEMP_PASSWORD_API.md): an admin on a
+# temporary / one-time password (``admins.must_change_password = 1``) gets only
+# a restricted credential. It reaches exactly these endpoints; everything else
+# → 403 ``PASSWORD_CHANGE_REQUIRED``.
+PASSWORD_CHANGE_SCOPE = "password_change"
+PASSWORD_CHANGE_CODE = "PASSWORD_CHANGE_REQUIRED"
+PASSWORD_CHANGE_ENDPOINTS = {
+    # endpoint name (blueprint prefix stripped) → contract string
+    "admin_me": "GET /api/admin/me",
+    "admin_password": "POST /api/admin/password",
+    "admin_logout": "POST /api/admin/logout",
+}
+
+
+def password_change_allowed_list() -> list[str]:
+    return list(PASSWORD_CHANGE_ENDPOINTS.values())
+
+
+def password_change_required_response():
+    return fail(
+        PASSWORD_CHANGE_CODE,
+        _tr("لأمانك، يجب تغيير كلمة المرور قبل المتابعة."),
+        status=403,
+        details={"reason": "password_change_required",
+                 "must_change_password": True,
+                 "allowed_endpoints": password_change_allowed_list()},
+    )
+
+
+def _endpoint_name() -> str:
+    ep = request.endpoint or ""
+    return ep.split(".", 1)[1] if "." in ep else ep
+
+
+def _admin_must_change_password(admin_id: int) -> bool:
+    """Fail-open on a transient DB error only (same stance as
+    ``_token_admin_active``) — a temp-password credential is still restricted
+    by its own scope regardless of this read."""
+    try:
+        from app.radius.db.repos import admins_repo
+        return bool(admins_repo.must_change_password_flag(int(admin_id)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 # rate limit state (in-memory)
 _rate_lock = Lock()
 _rate_log: dict[str, deque] = defaultdict(deque)
@@ -299,6 +344,7 @@ def enforce_api_auth():
     token_id = None
     token_scopes: list[str] = []
     admin_id = 0
+    password_change_only = False
     rpm = 60  # default
     rate_key = None  # مُعرّف يُبنى عليه مفتاح rate limit
 
@@ -340,6 +386,12 @@ def enforce_api_auth():
                     _tr("الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد."),
                     status=401,
                 )
+            # SEC temp-password: a password-change credential, or ANY token of
+            # an admin still on a temporary password, is restricted.
+            if PASSWORD_CHANGE_SCOPE in {str(s).strip().lower() for s in token_scopes}:
+                password_change_only = True
+            elif admin_id > 0 and _admin_must_change_password(admin_id):
+                password_change_only = True
             # touch last_used (best-effort)
             try: api_tokens_repo.touch_used(token_id)
             except Exception: pass
@@ -362,6 +414,10 @@ def enforce_api_auth():
             )
         admin, tenant_id = basic
         admin_id = int(admin.id)
+        # SEC temp-password: Basic with a temporary password never grants API
+        # access (the change itself needs the restricted Bearer credential).
+        if getattr(admin, "must_change_password", False):
+            return password_change_required_response()
         # نمنح صلاحية أدمن كاملة بنفس سلوك /api/admin/login المعتمد.
         token_scopes = ["admin:full"]
         rate_key = f"admin:{admin_id}"
@@ -375,6 +431,11 @@ def enforce_api_auth():
                     _tr('تجاوزت الحد (%(rpm)s req/min)', rpm=rpm), status=429,
                     details={"retry_after_seconds": 60})
 
+    # SEC temp-password: refused BEFORE the request is marked authenticated, so
+    # no later short-circuit (decorator after the global guard) can let it in.
+    if password_change_only and _endpoint_name() not in PASSWORD_CHANGE_ENDPOINTS:
+        return password_change_required_response()
+
     # set context
     g._api_authed = True
     g.api_token = token
@@ -382,6 +443,7 @@ def enforce_api_auth():
     g.api_token_scopes = token_scopes
     g.admin_id = admin_id
     g.tenant_id = tenant_id
+    g.password_change_only = password_change_only
     # p01/D06 — central permission guard: every authenticated endpoint maps to
     # its web decision (deny unmapped by default); owner/co-owner and unbound
     # integration credentials bypass. See app/api/permission_guard.py.
