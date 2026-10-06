@@ -3,7 +3,17 @@ Admin JSON login — used by mobile/desktop Flutter clients.
 
 POST /api/admin/login
     body: {"username": "...", "password": "..."}
-    →  { ok: true, data: { token, admin, tenant_id, permissions, expires_at } }
+    →  { ok: true, data: { token, token_type: "session", must_change_password:
+         false, admin, tenant_id, permissions, grants, expires_at } }
+
+SEC temp-password (docs/security/SEC_TEMP_PASSWORD_API.md): an admin with
+``must_change_password = 1`` (one-time bootstrap / admin-reset password) gets
+instead a SHORT-LIVED RESTRICTED credential —
+    { token, token_type: "password_change", must_change_password: true,
+      restricted: true, allowed_endpoints: [...], permissions: [], grants: {},
+      admin, tenant_id, expires_at }
+— that reaches only GET /api/admin/me, POST /api/admin/password and
+POST /api/admin/logout (anything else → 403 PASSWORD_CHANGE_REQUIRED).
 
 The endpoint authenticates against the same AdminsService.authenticate() used
 by the web /admin/radius/login form, then mints a fresh hashed API token via
@@ -24,13 +34,19 @@ from flask import Blueprint, g, request
 from ..radius.auth import login_throttle
 from ..radius.db.repos import admins_repo, api_tokens_repo
 from ..radius.stores.tenants_store import TenantsStore
-from .auth import require_api_token
+from .auth import (
+    PASSWORD_CHANGE_SCOPE, password_change_allowed_list, require_api_token,
+)
 from .responses import fail, ok
 
 
 # Default login-token lifetime. Override per-deploy with
 # HOBERADIUS_TOKEN_TTL_HOURS. 0 or negative ⇒ no expiry (legacy behaviour).
 _DEFAULT_TTL_HOURS = 24 * 7  # 7 days
+
+
+# SEC temp-password: lifetime of the restricted password-change credential.
+_PWCHANGE_TTL = timedelta(minutes=15)
 
 
 def _token_ttl_hours() -> int:
@@ -166,6 +182,7 @@ def _serialize_admin(a) -> dict:
         "last_login_ip": a.last_login_ip,
         "phone": a.phone,
         "avatar_url": a.avatar_url,
+        "must_change_password": bool(getattr(a, "must_change_password", False)),
     }
 
 
@@ -228,6 +245,9 @@ def admin_login():
         return fail("forbidden",
                     _tr("لا تملك صلاحية على أي tenant"), status=403)
 
+    if getattr(admin, "must_change_password", False):
+        return _password_change_login(admin, tenant_id)
+
     ttl_hours = _token_ttl_hours()
     expires_at = (datetime.utcnow() + timedelta(hours=ttl_hours)) if ttl_hours > 0 else None
     record, plain = api_tokens_repo.create_token(
@@ -243,10 +263,43 @@ def admin_login():
     return ok({
         "token": plain,
         "token_id": record["id"],
+        "token_type": "session",
+        "must_change_password": False,
+        "restricted": False,
         "admin": _serialize_admin(admin),
         "tenant_id": tenant_id,
         "permissions": perms,
         "grants": _grants_summary(admin, tenant_id),
+        "expires_at": record.get("expires_at"),
+    })
+
+
+def _password_change_login(admin, tenant_id: int):
+    """SEC temp-password: the credentials are right but the password is a
+    temporary one — mint only a short-lived credential whose sole power is to
+    change it (scope ``password_change``; app/api/auth.py refuses it anywhere
+    else). Named with the ``login:`` prefix so a password change / disable
+    revokes it with the other app sessions."""
+    expires_at = datetime.utcnow() + _PWCHANGE_TTL
+    record, plain = api_tokens_repo.create_token(
+        tenant_id=tenant_id,
+        name=(f"{api_tokens_repo.LOGIN_TOKEN_PREFIX}pwchange:{admin.username}:"
+              f"{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"),
+        scopes=[PASSWORD_CHANGE_SCOPE],
+        created_by=admin.id,
+        expires_at=expires_at,
+    )
+    return ok({
+        "token": plain,
+        "token_id": record["id"],
+        "token_type": "password_change",
+        "must_change_password": True,
+        "restricted": True,
+        "allowed_endpoints": password_change_allowed_list(),
+        "admin": _serialize_admin(admin),
+        "tenant_id": tenant_id,
+        "permissions": [],
+        "grants": {},
         "expires_at": record.get("expires_at"),
     })
 
@@ -259,6 +312,17 @@ def admin_me():
         return fail("unauthorized",
                     _tr("هذا المسار يتطلب تسجيل دخول إداري من التطبيق."),
                     status=401)
+    if getattr(g, "password_change_only", False):
+        # Only what the change-password screen needs — no permissions/grants.
+        return ok({
+            "admin": _serialize_admin(admin),
+            "tenant_id": getattr(g, "tenant_id", 1),
+            "must_change_password": True,
+            "restricted": True,
+            "allowed_endpoints": password_change_allowed_list(),
+            "permissions": [],
+            "grants": {},
+        })
     perms = _effective_permissions(admin)
     from ..radius.core.system_config import effective_system_settings
     try:
@@ -270,6 +334,8 @@ def admin_me():
         "tenant_id": getattr(g, "tenant_id", 1),
         "permissions": perms,
         "grants": _grants_summary(admin, int(getattr(g, "tenant_id", 1) or 1)),
+        "must_change_password": False,
+        "restricted": False,
         # عملة النظام الفعليّة + المنطقة الزمنية (نفس default_currency()).
         "system": system,
     })
@@ -310,6 +376,11 @@ def admin_password():
             status=422,
         )
     login_throttle.register_success("admin_password", _pw_key)
+    # SEC temp-password: changing a temporary password (restricted credential,
+    # or any credential of a still-flagged admin) ends EVERY app session of the
+    # admin — the calling one included — and requires a fresh normal login.
+    forced = bool(getattr(g, "password_change_only", False)
+                  or getattr(admin, "must_change_password", False))
     if len(new_password) < 8:
         return fail(
             "validation_error",
@@ -350,25 +421,42 @@ def admin_password():
         # sessions here (the local path does it inside update_admin).
         try:
             api_tokens_repo.revoke_admin_tokens(
-                int(admin.id or 0), except_id=getattr(g, "api_token_id", None))
+                int(admin.id or 0),
+                except_id=None if forced else getattr(g, "api_token_id", None))
         except Exception:  # noqa: BLE001 — never fail a done password change
             pass
+        if forced:
+            _end_temporary_password(admin)
         return ok({
             "updated": True,
             "source": "license_admin",
+            "reauth_required": forced,
             "message": _tr("تم تحديث كلمة المرور من لوحة التراخيص."),
         })
 
     admins_repo.update_admin(int(admin.id or 0), password=new_password)
     # Parity-b: like the web /account/password — a changed password ends the
     # «must change password» state (else the web keeps redirecting to /account).
-    if getattr(admin, "must_change_password", False):
-        admins_repo.clear_must_change_password(int(admin.id or 0))
+    if forced:
+        _end_temporary_password(admin)
     return ok({
         "updated": True,
         "source": "local",
+        "reauth_required": forced,
         "message": _tr("تم تحديث كلمة المرور المحلية."),
     })
+
+
+def _end_temporary_password(admin) -> None:
+    """After a successful change of a temporary password: clear the flag and
+    revoke the calling (restricted) credential too — update_admin() already
+    revoked the admin's other login tokens and bumped the web session epoch."""
+    aid = int(admin.id or 0)
+    admins_repo.clear_must_change_password(aid)
+    try:
+        api_tokens_repo.revoke_admin_tokens(aid, except_id=None)
+    except Exception:  # noqa: BLE001 — never fail a done password change
+        pass
 
 
 def admin_logout():

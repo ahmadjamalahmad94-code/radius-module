@@ -838,6 +838,18 @@ def apply_managed_admin_directive(
     return "updated"
 
 
+def must_change_password_flag(admin_id: int) -> bool:
+    """Is the admin still on a temporary / one-time password? Cheap per-request
+    read for the API guard (docs/security/SEC_TEMP_PASSWORD_API.md)."""
+    row = db().execute(
+        "SELECT COALESCE(must_change_password, 0) AS f FROM admins WHERE id = ?",
+        (int(admin_id),),
+    ).fetchone()
+    if not row:
+        return False
+    return bool(row["f"] if hasattr(row, "keys") else row[0])
+
+
 def clear_must_change_password(admin_id: int) -> None:
     """Clear the first-login force-change flag (called when the admin changes pw)."""
     with transaction() as conn:
