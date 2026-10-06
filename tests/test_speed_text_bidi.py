@@ -39,8 +39,7 @@ def test_other_speed_pair_sites_are_ltr_isolated():
             r'CIR <span dir="ltr">\{\{ item\.get\(\'cir_down_kbps\'\)',
         "_speed_schedules_panel.html":
             r'CIR <span dir="ltr">\{\{ item\.get\(\'cir_down_kbps\'\)',
-        "sgrp_list.html":
-            r'<span dir="ltr">\{\{ g\.shared_speed_down_kbps \}\}',
+        # (sgrp_list.html: shared speeds removed 2026-10-06 — owner decision)
         "cards_offers.html":
             r'<span dir="ltr">\{\{ speed\(ps\.speed_down_kbps\) \}\}',
         "cards_offer_use.html":
