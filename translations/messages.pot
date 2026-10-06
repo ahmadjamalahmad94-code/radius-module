@@ -48578,6 +48578,10 @@ msgstr ""
 msgid "تجاوزت الحد (%(rpm)s req/min)"
 msgstr ""
 
+#: app/api/auth.py:365
+msgid "لا يمكنك اختيار هذا الـTenant — اختر واحدًا من شبكاتك الفعّالة."
+msgstr ""
+
 #: app/radius/services/manager_credit.py:45
 msgid "تجاوزت سقف السلف"
 msgstr ""

@@ -79,8 +79,10 @@ def _header_tenant_allowed(store: TenantsStore, tenant) -> bool:
         from ..auth.owner import is_owner_like
         if is_owner_like(int(aid)):
             return True
+        # Owner decision 2026-10-06: an ACTIVE membership in a usable (not
+        # suspended / closed) tenant — same set as HTTP Basic X-Tenant-Id.
         return any(int(t.id) == int(tenant.id)
-                   for t in store.tenants_for_admin(int(aid)))
+                   for t in store.selectable_tenants_for_admin(int(aid)))
     except Exception:  # noqa: BLE001
         _LOG.warning("X-Tenant membership check failed; header ignored")
         return False

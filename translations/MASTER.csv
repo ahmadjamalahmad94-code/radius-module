@@ -26,6 +26,7 @@ username + password مطلوبان,,,,,,"missing: en,fr,tr,es",app/api/admin_aut
 الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/api/auth.py:340
 مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> أو X-API-Key) أو اعتماد أدمن (Basic بيوزر/باس الأدمن).,,,,,,"missing: en,fr,tr,es",app/api/auth.py:359
 تجاوزت الحد (%(rpm)s req/min),,,,,,"missing: en,fr,tr,es",app/api/auth.py:375
+لا يمكنك اختيار هذا الـTenant — اختر واحدًا من شبكاتك الفعّالة.,,,,,,"missing: en,fr,tr,es",app/api/auth.py:365
 الخادم مشغول الآن، أعد المحاولة بعد لحظات.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:32
 حدث خطأ غير متوقع في الخادم. أعد المحاولة، وإن تكرّر فأبلغ الدعم الفنّي.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:33
 المسار أو السجلّ المطلوب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/errors.py:75

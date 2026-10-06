@@ -195,8 +195,11 @@ def _resolve_admin_tenant(admin) -> Optional[int]:
 
     - المالك/الشريك (is_owner_like): DEFAULT_TENANT_ID افتراضيًا، أو قيمة
       `X-Tenant-Id` الرقمية إن مُرِّرت (يعمل على أي tenant مباشرة).
-    - غيره: `X-Tenant-Id` يُقبل فقط إن كان عضوًا في ذلك الـtenant.
-    - غيره: أول عضوية tenant له؛ بلا أي عضوية → None (يُرفض الدخول).
+    - غيره (قرار المالك 2026-10-06): يختار فقط واحدًا من tenants **هو** عضوٌ
+      فيها بعضوية فعّالة وحالتها غير موقوفة/مغلقة. `X-Tenant-Id` لغيرها →
+      رفض صريح 403 (``g.basic_tenant_denied``) لا تحويلٌ صامت.
+    - بلا ترويسة: أول tenant صالحة له؛ بلا أي واحدة → None (يُرفض الدخول).
+      علَم ``is_super_admin`` الخام لم يعد يعوّض غياب العضوية.
 
     لا نُكرّر منطق bootstrap الموجود في تسجيل الدخول (admin_auth._pick_tenant)
     لأن طلب API لا يجب أن يُنشئ عضويات صامتة.
@@ -218,17 +221,20 @@ def _resolve_admin_tenant(admin) -> Optional[int]:
         return int(hdr) if hdr.isdigit() else DEFAULT_TENANT_ID
     try:
         from app.radius.stores.tenants_store import TenantsStore
-        tenants = TenantsStore.instance().tenants_for_admin(int(admin.id))
-    except Exception:  # noqa: BLE001
+        tenants = TenantsStore.instance().selectable_tenants_for_admin(int(admin.id))
+    except Exception:  # noqa: BLE001 — fail closed
         tenants = []
-    if hdr.isdigit() and any(int(t.id) == int(hdr) for t in tenants):
-        return int(hdr)
+    if hdr:
+        # Owner decision (c): a member selects only one of HIS OWN active
+        # tenants; anything else is refused outright (never re-routed).
+        if hdr.isdigit() and any(int(t.id) == int(hdr) for t in tenants):
+            return int(hdr)
+        g.basic_tenant_denied = True
+        return None
     if tenants:
         return tenants[0].id
-    if getattr(admin, "is_super_admin", False):
-        # legacy: a flagged admin with no membership row lands on the default
-        # tenant (as before) — but can no longer jump to another via header.
-        return DEFAULT_TENANT_ID
+    # Owner decision (c): the raw ``is_super_admin`` flag no longer stands in
+    # for a membership (it used to land on DEFAULT_TENANT_ID here).
     return None
 
 
@@ -353,6 +359,13 @@ def enforce_api_auth():
     else:
         # ═══ المسار 2: اعتماد أدمن (HTTP Basic: يوزر+باس) ═══
         basic = _verify_admin_basic()
+        if not basic and getattr(g, "basic_tenant_denied", False):
+            return fail(
+                "forbidden",
+                _tr("لا يمكنك اختيار هذا الـTenant — اختر واحدًا من شبكاتك الفعّالة."),
+                status=403,
+                details={"reason": "tenant_not_selectable"},
+            )
         if not basic:
             return fail(
                 "unauthorized",
