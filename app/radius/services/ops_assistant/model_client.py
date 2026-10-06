@@ -15,15 +15,32 @@ Server: ``HOBERADIUS_OPS_MODEL_URL`` (env, wins) → tenant-1 setting
 ``ops_assistant.model_url`` → ``http://127.0.0.1:8095``. Requests use
 temperature 0, ``max_tokens`` 512 and ``chat_template_kwargs.enable_thinking
 = false`` (the template flag the model was trained with).
+
+Central model server (hoberadius-ai-support deploy/central_model, DESIGN §7):
+  * ``HOBERADIUS_OPS_MODEL_KEY`` (env/secret only) is sent as
+    ``Authorization: Bearer ...`` -- never logged, never in an error text;
+  * the body carries only the keys the gateway's allow-list keeps, and each
+    message only ``role`` (system/user/assistant/tool) + ``content``;
+  * connect timeout 3 s (a dead tunnel fails fast), read timeout
+    ``HOBERADIUS_OPS_MODEL_TIMEOUT`` (default 45) capped by the caller's
+    deadline (``conversation.run_model``: 55 s per admin message);
+  * circuit breaker: after a failure every call fails instantly for 30 s;
+  * at most ``HOBERADIUS_OPS_MODEL_CONCURRENCY`` (2) model calls per process,
+    so a busy assistant can never hold the panel's gunicorn threads;
+  * no automatic retry (retries amplify load on a busy box).
+Panel pages never call the model; only the chat's message routes do.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import os
 import re
-import urllib.error
-import urllib.request
+import socket
+import ssl
+import threading
+import time
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -32,9 +49,23 @@ _LOG = logging.getLogger(__name__)
 DEFAULT_URL = "http://127.0.0.1:8095"
 ENV_URL = "HOBERADIUS_OPS_MODEL_URL"
 ENV_TIMEOUT = "HOBERADIUS_OPS_MODEL_TIMEOUT"
+ENV_KEY = "HOBERADIUS_OPS_MODEL_KEY"
+ENV_CONCURRENCY = "HOBERADIUS_OPS_MODEL_CONCURRENCY"
+ENV_CA = "HOBERADIUS_OPS_MODEL_CA"                    # https / mTLS mode only
+ENV_CLIENT_CERT = "HOBERADIUS_OPS_MODEL_CLIENT_CERT"
+ENV_CLIENT_KEY = "HOBERADIUS_OPS_MODEL_CLIENT_KEY"
 SETTING_URL = "ops_assistant.model_url"
-DEFAULT_TIMEOUT = 60.0
+DEFAULT_TIMEOUT = 45.0
 MAX_TOKENS = 512
+CONNECT_TIMEOUT = 3.0          # a dead tunnel fails in 3 s, not 45
+BREAKER_SECONDS = 30.0         # after a failure: answer "unavailable" instantly for 30 s
+MESSAGE_BUDGET = 55.0          # one admin message (all hops) < the panel's 60 s proxy window
+MIN_CALL_SECONDS = 1.0         # less than this left in the budget -> do not start a call
+# The gateway rebuilds the upstream request from these keys only
+# (hrops_gateway.sanitize); nothing else is sent.
+ALLOWED_FIELDS = ("model", "messages", "temperature", "max_tokens", "stream",
+                  "cache_prompt", "chat_template_kwargs")
+ALLOWED_ROLES = ("system", "user", "assistant", "tool")
 
 # SPEC_DATA_v1.md «SYSTEM_PROMPT (exact text, identical in every record)» — round-1/2 adapters.
 SYSTEM_PROMPT_V1 = (
@@ -133,10 +164,49 @@ def model_timeout() -> float:
         return DEFAULT_TIMEOUT
 
 
+def model_key() -> str:
+    """The per-customer gateway key (env/secret only, never in the DB)."""
+    return (os.environ.get(ENV_KEY) or "").strip()
+
+
+def _concurrency() -> int:
+    try:
+        return max(1, min(16, int(os.environ.get(ENV_CONCURRENCY) or 2)))
+    except ValueError:
+        return 2
+
+
+# ─────────────────────────── breaker + slots (per process) ────────────────────────────
+
+_STATE_LOCK = threading.Lock()
+_breaker_until = 0.0
+_MODEL_SLOTS = threading.BoundedSemaphore(_concurrency())
+
+
+def breaker_open() -> bool:
+    return time.monotonic() < _breaker_until
+
+
+def _trip() -> None:
+    global _breaker_until
+    with _STATE_LOCK:
+        _breaker_until = time.monotonic() + BREAKER_SECONDS
+
+
+def reset_state(concurrency: Optional[int] = None) -> None:
+    """Close the breaker and rebuild the slot semaphore (tests, config reload)."""
+    global _breaker_until, _MODEL_SLOTS
+    with _STATE_LOCK:
+        _breaker_until = 0.0
+        _MODEL_SLOTS = threading.BoundedSemaphore(concurrency or _concurrency())
+
+
 # ─────────────────────────── errors ────────────────────────────
 
 class ModelError(Exception):
-    """The model server could not be used (down, timeout, bad HTTP reply)."""
+    """The model server could not be used (down, timeout, bad HTTP reply,
+    breaker open ``circuit_open``, all slots taken ``busy``, message budget
+    spent ``budget_exhausted``). ``detail`` never carries the key."""
 
     def __init__(self, code: str, detail: str = ""):
         super().__init__(f"{code}: {detail}" if detail else code)
@@ -155,9 +225,16 @@ class InvalidModelOutput(Exception):
 # ─────────────────────────── call ────────────────────────────
 
 def request_body(messages: list[dict]) -> dict:
+    """Only the gateway's allow-listed keys; each message only role + content."""
+    clean = []
+    for m in normalize_messages(messages):
+        role, content = m.get("role"), m.get("content")
+        if role not in ALLOWED_ROLES or not isinstance(content, str):
+            raise ModelError("bad_message", str(role)[:20])
+        clean.append({"role": role, "content": content})
     return {
         "model": "hoberadius-ops",
-        "messages": normalize_messages(messages),
+        "messages": clean,
         "temperature": 0,
         "max_tokens": MAX_TOKENS,
         "stream": False,
@@ -165,26 +242,92 @@ def request_body(messages: list[dict]) -> dict:
     }
 
 
+def _connection(endpoint: str, read_timeout: float):
+    u = urlparse(endpoint)
+    path = (u.path or "/") + (("?" + u.query) if u.query else "")
+    if u.scheme == "https":
+        ctx = ssl.create_default_context(cafile=os.environ.get(ENV_CA) or None)
+        cert = os.environ.get(ENV_CLIENT_CERT)
+        if cert:
+            ctx.load_cert_chain(cert, os.environ.get(ENV_CLIENT_KEY) or None)
+        conn = http.client.HTTPSConnection(u.hostname, u.port or 443,
+                                           timeout=CONNECT_TIMEOUT, context=ctx)
+    else:
+        conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=CONNECT_TIMEOUT)
+    try:
+        conn.connect()                       # bounded by CONNECT_TIMEOUT
+        conn.sock.settimeout(read_timeout)   # the reply may take up to the read timeout
+    except BaseException:
+        conn.close()
+        raise
+    return conn, path
+
+
 def chat(messages: list[dict], *, url: Optional[str] = None,
-         timeout: Optional[float] = None) -> str:
-    """One completion → the assistant text. Raises ``ModelError``."""
-    endpoint = (url or model_url()) + "/v1/chat/completions"
-    data = json.dumps(request_body(messages), ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(endpoint, data=data, method="POST",
-                                 headers={"Content-Type": "application/json"})
+         timeout: Optional[float] = None, deadline: Optional[float] = None) -> str:
+    """One completion -> the assistant text. Raises ``ModelError``.
+
+    ``deadline`` (a ``time.monotonic()`` value) caps the read timeout so a
+    whole admin message stays inside ``MESSAGE_BUDGET``. No retry."""
+    if breaker_open():
+        raise ModelError("circuit_open")
+    read_timeout = timeout or model_timeout()
+    if deadline is not None:
+        left = deadline - time.monotonic()
+        if left < MIN_CALL_SECONDS:
+            raise ModelError("budget_exhausted")
+        read_timeout = min(read_timeout, left)
+    body = request_body(messages)
+    slots = _MODEL_SLOTS
+    if not slots.acquire(blocking=False):
+        raise ModelError("busy")
     try:
-        with urllib.request.urlopen(req, timeout=timeout or model_timeout()) as resp:  # noqa: S310 — operator-configured local URL
-            raw = resp.read()
-    except urllib.error.HTTPError as e:
-        raise ModelError("http_error", str(e.code)) from e
-    except (urllib.error.URLError, OSError, TimeoutError) as e:
-        raise ModelError("unreachable", type(e).__name__) from e
+        return _call((url or model_url()) + "/v1/chat/completions", body, read_timeout)
+    finally:
+        slots.release()
+
+
+def _call(endpoint: str, body: dict, read_timeout: float) -> str:
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    key = model_key()
+    if key:
+        headers["Authorization"] = "Bearer " + key       # never logged
     try:
-        body = json.loads(raw.decode("utf-8"))
-        content = body["choices"][0]["message"]["content"]
+        conn, path = _connection(endpoint, read_timeout)
+    except (OSError, ssl.SSLError, ValueError) as e:
+        _trip()
+        raise ModelError("unreachable", type(e).__name__) from None
+    try:
+        conn.request("POST", path, body=data, headers=headers)
+        resp = conn.getresponse()
+        status, raw = resp.status, resp.read()
+    except (socket.timeout, TimeoutError) as e:
+        _trip()
+        raise ModelError("timeout", type(e).__name__) from None
+    except (OSError, http.client.HTTPException) as e:
+        _trip()
+        raise ModelError("unreachable", type(e).__name__) from None
+    finally:
+        conn.close()
+    if status == 429:
+        raise ModelError("busy", "429")                  # gateway per-customer cap: no breaker
+    if status in (401, 403):
+        _trip()                                          # wrong/missing key: every call would fail
+        raise ModelError("unauthorized", str(status))
+    if status >= 500:
+        _trip()
+        raise ModelError("busy" if status == 503 else "http_error", str(status))
+    if status != 200:
+        raise ModelError("http_error", str(status))      # 400/413: this request only
+    try:
+        reply = json.loads(raw.decode("utf-8"))
+        content = reply["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError, UnicodeDecodeError) as e:
-        raise ModelError("bad_response", type(e).__name__) from e
+        _trip()
+        raise ModelError("bad_response", type(e).__name__) from None
     if not isinstance(content, str):
+        _trip()
         raise ModelError("bad_response", "content")
     return content
 
@@ -225,6 +368,8 @@ def dumps(obj: Any) -> str:
 
 __all__ = ["SYSTEM_PROMPT", "SYSTEM_PROMPT_V1", "SYSTEM_PROMPT_V3", "system_prompt", "ENV_PROMPT",
            "EVENT_TRIGGER", "POLICY_LABEL", "CANCEL_TEXT",
-           "normalize_messages", "model_url", "model_timeout",
+           "normalize_messages", "model_url", "model_timeout", "model_key",
+           "breaker_open", "reset_state", "MESSAGE_BUDGET", "CONNECT_TIMEOUT", "BREAKER_SECONDS",
+           "ALLOWED_FIELDS", "ALLOWED_ROLES", "ENV_KEY",
            "chat", "request_body", "parse_proposal", "dumps", "ModelError", "InvalidModelOutput",
            "MAX_TOKENS", "DEFAULT_URL", "ENV_URL"]
