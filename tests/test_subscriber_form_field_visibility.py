@@ -166,7 +166,8 @@ def test_form_hides_by_css_not_by_dropping_inputs():
 
 @pytest.mark.parametrize("field_name", [
     "city", "district", "email", "national_id", "remark",
-    "payment_method", "static_ip", "device_count", "pppoe_username",
+    "payment_method", "static_ip", "device_count", "pppoe_ip",
+    "override_concurrent",
 ])
 def test_optional_inputs_stay_in_the_page_unconditionally(field_name):
     """كلُّ حقلٍ قابلٍ للإخفاء ما زال مُدخَلًا غيرَ مشروطٍ في القالب.

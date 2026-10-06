@@ -67,24 +67,27 @@ def _actor() -> str:
 _EDITABLE = (
     # identity & links
     "user_type", "service_type", "plan_id",
-    # pppoe specifics
-    "pppoe_username", "pppoe_password", "pppoe_ip",
+    # pppoe specifics — «عنوان IP للبرودباند» = Framed-IP-Address. The
+    # separate PPPoE name/password were retired (owner 2026-10-06): a PPPoE
+    # subscriber logs in with its own username/password. Old app builds still
+    # send them — ignored silently (subscriber_retired_fields).
+    "pppoe_ip",
     # personal
     "full_name", "father_name", "mobile", "email", "address", "city",
     "district", "state", "zip", "coordinates", "national_id", "account_type",
     "photo_url",
     # balance / status / management
-    "balance", "auto_renewal", "status", "manager_id", "group", "pool",
+    "balance", "auto_renewal", "status", "manager_id", "group",
     # سعر مخصّص يتجاوز سعر الباقة (0 = سعر الباقة) — نفس حقل نموذج الويب؛
     # التطبيق يرسله وكان يُسقَط بصمت لغيابه عن القائمة.
     "custom_price",
     # network
-    "mac_lock", "static_ip", "vlan_id", "override_concurrent",
+    "mac_lock", "static_ip", "override_concurrent",
     # RM-H1 bandwidth overrides
     "bandwidth_control_enabled", "download_speed_kbps", "upload_speed_kbps",
     "custom_speed", "temporary_speed",
     # RM-H1 connection metadata
-    "caller_id", "primary_dns_ppp", "secondary_dns_ppp", "device_connection_file",
+    "caller_id", "primary_dns_ppp", "secondary_dns_ppp",
     # RM-H1 personal extras
     "nationality", "country", "payment_method", "payment_reference",
     # RM-H1 time/quota overrides
@@ -122,11 +125,11 @@ def _parse_dt(v):
 
 # Free-text fields: a dict/list/bool used to reach SQLite → HTTP 500.
 _TEXT_FIELDS = frozenset({
-    "service_type", "pppoe_username", "pppoe_password", "pppoe_ip",
+    "service_type", "pppoe_ip",
     "full_name", "father_name", "mobile", "email", "address", "city",
     "district", "state", "zip", "coordinates", "national_id", "account_type",
-    "photo_url", "status", "group", "pool", "mac_lock", "static_ip",
-    "caller_id", "primary_dns_ppp", "secondary_dns_ppp", "device_connection_file",
+    "photo_url", "status", "group", "mac_lock", "static_ip",
+    "caller_id", "primary_dns_ppp", "secondary_dns_ppp",
     "nationality", "country", "payment_method", "payment_reference",
     "working_days", "allowed_macs", "beneficiary_ref", "remark",
 })
@@ -242,7 +245,7 @@ def _coerce(field_name: str, value):
         return ut
     if field_name in {
         "download_speed_kbps", "upload_speed_kbps",
-        "vlan_id", "override_concurrent",
+        "override_concurrent",
         "total_connection_time_min", "daily_connection_time_min",
         "download_quota_mb", "upload_quota_mb", "combined_quota_mb",
         "device_count",
@@ -279,7 +282,10 @@ def _apply_body(sub: Subscriber, body: dict) -> Subscriber:
     if "expire_at" in body:
         changes["expire_at"] = _parse_dt(body["expire_at"])
     if "metadata" in body:
-        changes["metadata"] = _normalize_metadata(body["metadata"])
+        # retired metadata keys (owner 2026-10-06) keep their stored value
+        from ...radius.services.subscriber_retired_fields import pin_retired_metadata
+        changes["metadata"] = pin_retired_metadata(
+            _normalize_metadata(body["metadata"]), sub.metadata)
     if "connection_schedule" in body:
         # Unified access schedule (days + time windows). Normalise via
         # access_schedule so storage is canonical and keep the legacy
@@ -694,9 +700,6 @@ def accounts_patch(username: str):
         # fix3: GET hides the balance (null) without «رؤية الرصيد» — a client
         # that echoes the object back means «unchanged», never «set to 0».
         body = {k: v for k, v in body.items() if k not in ("balance", "balance_hidden")}
-    from ...radius.services.sensitive_visibility import MASK as _PW_MASK
-    if body.get("pppoe_password") == _PW_MASK:
-        body = {k: v for k, v in body.items() if k != "pppoe_password"}   # masked echo
     try:
         new_sub = _apply_body(sub, body)
     except RadiusValidationError as e:

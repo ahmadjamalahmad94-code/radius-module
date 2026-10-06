@@ -1929,8 +1929,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب حساب النافذة
         _LOG.warning("policy_engine: schedule-window session-timeout failed for %r",
                      getattr(sub, "username", "?"), exc_info=True)
-    if sub.static_ip:
-        out["Framed-IP-Address"] = sub.static_ip
+    # «IP ثابت» أو «عنوان IP للبرودباند (PPPoE)» — عنوانٌ ثابتٌ واحد للحساب
+    # (الحفظ يرفض قيمتين مختلفتين، وعنوانًا مُعطًى لمشتركٍ آخر).
+    from .subscriber_retired_fields import framed_ip as _framed_ip
+    _fip = _framed_ip(sub)
+    if _fip:
+        out["Framed-IP-Address"] = _fip
     out["Acct-Interim-Interval"] = "60"
 
     # Wave-B «on_quota_exhaust=reduce_speed»: لو نفدت الكوتا وبطاقة المستخدم

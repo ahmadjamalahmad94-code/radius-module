@@ -443,8 +443,8 @@ def test_web_create_space_password_is_422(client, app):
 @pytest.mark.parametrize("body", [
     {"status": "weird"}, {"service_type": "XYZ"}, {"static_ip": "999.1.1.1"},
     {"email": "not-an-email"}, {"mobile": "abc"}, {"mac_lock": "zz:zz"},
-    {"download_speed_kbps": -5}, {"device_count": -3}, {"vlan_id": -7},
-    {"vlan_id": 1e20}, {"download_speed_kbps": 1e30}, {"plan_id": 99999},
+    {"download_speed_kbps": -5}, {"device_count": -3},
+    {"download_speed_kbps": 1e30}, {"plan_id": 99999},
     {"plan_id": -1}, {"manager_id": -1}, {"manager_id": 99999},
     {"full_name": {"a": 1}}, {"full_name": [1]}, {"remark": {"a": 1}},
     {"auto_renewal": "maybe"},
