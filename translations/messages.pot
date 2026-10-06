@@ -720,7 +720,7 @@ msgstr ""
 msgid " مصروف"
 msgstr ""
 
-#: app/radius/services/operations.py:2834
+#: app/radius/services/operations.py:2835
 msgid " مضغوطة gzip"
 msgstr ""
 
@@ -11045,8 +11045,8 @@ msgstr ""
 msgid "أدخل وقتي بداية ونهاية بصيغة"
 msgstr ""
 
-#: app/radius/services/operations.py:1422
-#: app/radius/services/operations.py:1489
+#: app/radius/services/operations.py:1423
+#: app/radius/services/operations.py:1490
 msgid ""
 "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من "
 "القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
@@ -11380,7 +11380,7 @@ msgstr ""
 msgid "أرشيف كامل (مع السجلّات)"
 msgstr ""
 
-#: app/radius/services/operations.py:2833
+#: app/radius/services/operations.py:2834
 msgid "أرشيف كامل (يشمل السجلّات)"
 msgstr ""
 
@@ -14067,7 +14067,7 @@ msgstr ""
 msgid "أُلغيت"
 msgstr ""
 
-#: app/radius/services/operations.py:2598
+#: app/radius/services/operations.py:2599
 msgid "أُلغيت المهمة"
 msgstr ""
 
@@ -14076,7 +14076,7 @@ msgstr ""
 msgid "أُلغيت كلُّ دفعات هذا المستفيد — يظهر للمراجعة ولا يُحسب في عدد الدافعين"
 msgstr ""
 
-#: app/radius/services/operations.py:2612
+#: app/radius/services/operations.py:2613
 msgid "أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل."
 msgstr ""
 
@@ -17638,7 +17638,7 @@ msgstr ""
 msgid "إعدادات توليد الكود"
 msgstr ""
 
-#: app/radius/services/operations.py:2661
+#: app/radius/services/operations.py:2662
 msgid "إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد."
 msgstr ""
 
@@ -17898,7 +17898,7 @@ msgstr ""
 msgid "إغلاق المصمم (Esc)"
 msgstr ""
 
-#: app/radius/services/operations.py:2179
+#: app/radius/services/operations.py:2180
 msgid "إغلاق الملف وتجهيز التنزيل"
 msgstr ""
 
@@ -19364,8 +19364,8 @@ msgstr ""
 msgid "اتجاه التصميم"
 msgstr ""
 
-#: app/radius/services/operations.py:1691
-#: app/radius/services/operations.py:1739
+#: app/radius/services/operations.py:1692
+#: app/radius/services/operations.py:1740
 msgid "اتجاه القالب يجب أن يكون portrait أو landscape."
 msgstr ""
 
@@ -20175,7 +20175,7 @@ msgstr ""
 msgid "اختر العرض الجديد."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:44 app/radius/services/operations.py:1371
+#: app/radius/core/messages_ar.py:44 app/radius/services/operations.py:1372
 msgid "اختر العرض."
 msgstr ""
 
@@ -23063,7 +23063,7 @@ msgstr ""
 msgid "اسم المشترك (والاسم الكامل إن وُجد)."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:45 app/radius/services/operations.py:1378
+#: app/radius/core/messages_ar.py:45 app/radius/services/operations.py:1379
 msgid "اسم المشترك مطلوب."
 msgstr ""
 
@@ -25222,15 +25222,15 @@ msgstr ""
 msgid "اكتمل الفحص."
 msgstr ""
 
-#: app/radius/services/operations.py:2213
+#: app/radius/services/operations.py:2214
 msgid "اكتمل ملف PDF"
 msgstr ""
 
-#: app/radius/services/operations.py:2530
+#: app/radius/services/operations.py:2531
 msgid "اكتمل ملف PDF وأصبح جاهزًا للتنزيل"
 msgstr ""
 
-#: app/radius/services/operations.py:2545
+#: app/radius/services/operations.py:2546
 msgid "اكتمل ملف PDF."
 msgstr ""
 
@@ -26777,7 +26777,7 @@ msgstr ""
 msgid "الاستعادة بحذر"
 msgstr ""
 
-#: app/radius/routes/backups.py:291 app/radius/services/operations.py:3302
+#: app/radius/routes/backups.py:291 app/radius/services/operations.py:3303
 msgid "الاستعادة داخل التطبيق معطّلة على هذا الخادم."
 msgstr ""
 
@@ -27074,7 +27074,7 @@ msgid "الاسم مطلوب"
 msgstr ""
 
 #: app/radius/core/messages_ar.py:43 app/radius/services/npc_policy.py:148
-#: app/radius/services/operations.py:1359
+#: app/radius/services/operations.py:1360
 msgid "الاسم مطلوب."
 msgstr ""
 
@@ -27336,7 +27336,7 @@ msgstr ""
 #: app/radius/routes/recycle_bin.py:25
 #: app/radius/services/manager_activity_audit.py:216
 #: app/radius/services/manager_activity_audit.py:217
-#: app/radius/services/operations.py:3240
+#: app/radius/services/operations.py:3241
 #: app/templates/radius/_perm_labels.html:23
 #: app/templates/radius/license_file.html:289
 #: app/templates/radius/plans_list.html:230
@@ -30797,7 +30797,7 @@ msgstr ""
 msgid "الحزمة المختارة"
 msgstr ""
 
-#: app/radius/services/operations.py:2064
+#: app/radius/services/operations.py:2065
 msgid "الحزمة المختارة لا تحتوي كروتًا للطباعة."
 msgstr ""
 
@@ -31265,7 +31265,7 @@ msgstr ""
 msgid "الخدمة غير معروفة."
 msgstr ""
 
-#: app/radius/services/operations.py:3045
+#: app/radius/services/operations.py:3046
 msgid "الخدمة غير مفعّلة (خدمة مدفوعة)."
 msgstr ""
 
@@ -36868,7 +36868,7 @@ msgstr ""
 msgid "القروض / الديون"
 msgstr ""
 
-#: app/api/openapi.py:189 app/radius/services/operations.py:3242
+#: app/api/openapi.py:189 app/radius/services/operations.py:3243
 #: app/radius/services/provider_service_labels.py:48
 msgid "القسائم"
 msgstr ""
@@ -37279,7 +37279,7 @@ msgstr ""
 #: app/api/v1/admins.py:547 app/api/v1/service_requests.py:39
 #: app/api/v1/tickets.py:44 app/radius/services/manager_activity_audit.py:185
 #: app/radius/services/manager_activity_audit.py:208
-#: app/radius/services/operations.py:3239
+#: app/radius/services/operations.py:3240
 #: app/templates/radius/card_pricing_batch.html:58
 #: app/templates/radius/cards_batches.html:632
 #: app/templates/radius/cards_import.html:365
@@ -39828,7 +39828,7 @@ msgstr ""
 msgid "المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:46 app/radius/services/operations.py:1384
+#: app/radius/core/messages_ar.py:46 app/radius/services/operations.py:1385
 msgid "المشترك بلا عرض — حدّد العرض أولًا."
 msgstr ""
 
@@ -39920,7 +39920,7 @@ msgstr ""
 #: app/radius/services/manager_grants.py:49
 #: app/radius/services/migration/sections.py:249
 #: app/radius/services/notification_sounds.py:210
-#: app/radius/services/operations.py:3238
+#: app/radius/services/operations.py:3239
 #: app/radius/services/provider_service_labels.py:41
 #: app/templates/admin/_sidebar.html:462 app/templates/admin/_sidebar.html:464
 #: app/templates/admin/_sidebar.html:476
@@ -40786,7 +40786,7 @@ msgstr ""
 msgid "الملف المالي"
 msgstr ""
 
-#: app/radius/services/operations.py:3131
+#: app/radius/services/operations.py:3132
 msgid "الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة."
 msgstr ""
 
@@ -40813,7 +40813,7 @@ msgstr ""
 msgid "الملف ليس صورة مدعومة (PNG/JPG/WEBP/GIF)."
 msgstr ""
 
-#: app/radius/services/operations.py:3140
+#: app/radius/services/operations.py:3141
 msgid "الملف ليس قاعدة بيانات SQLite صالحة."
 msgstr ""
 
@@ -43363,7 +43363,7 @@ msgstr ""
 msgid "انتهت مهلة قراءة الحالة. تأكّد من نفق الإدارة ثم اضغط «تحديث»."
 msgstr ""
 
-#: app/radius/services/operations.py:2603
+#: app/radius/services/operations.py:2604
 #, python-format
 msgid "انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s)."
 msgstr ""
@@ -44693,7 +44693,7 @@ msgstr ""
 msgid "بدء معالج إعداد جديد"
 msgstr ""
 
-#: app/radius/services/operations.py:2110
+#: app/radius/services/operations.py:2111
 msgid "بدأ إنشاء ملف PDF."
 msgstr ""
 
@@ -44701,11 +44701,11 @@ msgstr ""
 msgid "بدأ العامل تجهيز الملف في الخلفية."
 msgstr ""
 
-#: app/radius/services/operations.py:2101
+#: app/radius/services/operations.py:2102
 msgid "بدأ تجهيز ملف PDF"
 msgstr ""
 
-#: app/radius/services/operations.py:2498
+#: app/radius/services/operations.py:2499
 msgid "بدأ تجهيز ملف PDF."
 msgstr ""
 
@@ -44713,7 +44713,7 @@ msgstr ""
 msgid "بدأ تجهيز ملف PDF..."
 msgstr ""
 
-#: app/radius/services/operations.py:2502
+#: app/radius/services/operations.py:2503
 msgid "بدأ عامل التصدير"
 msgstr ""
 
@@ -52550,7 +52550,7 @@ msgstr ""
 msgid "تعذرت المصالحة: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2648
+#: app/radius/services/operations.py:2649
 msgid "تعذرت قراءة حالة جوجل درايف من إعدادات الخادم."
 msgstr ""
 
@@ -52564,11 +52564,11 @@ msgstr ""
 msgid "تعذرت مزامنة عقد التشغيل: %(v)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3325
+#: app/radius/services/operations.py:3326
 msgid "تعذّر أخذ نسخة احترازية قبل الاستعادة."
 msgstr ""
 
-#: app/radius/services/operations.py:3322
+#: app/radius/services/operations.py:3323
 #, python-format
 msgid "تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s"
 msgstr ""
@@ -52687,7 +52687,7 @@ msgstr ""
 msgid "تعذّر إنشاء السياسة: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3039
+#: app/radius/services/operations.py:3040
 msgid "تعذّر إنشاء النسخة المحلية."
 msgstr ""
 
@@ -53174,7 +53174,7 @@ msgstr ""
 msgid "تعذّر الربط."
 msgstr ""
 
-#: app/radius/services/operations.py:3079
+#: app/radius/services/operations.py:3080
 #, python-format
 msgid "تعذّر الرفع إلى جوجل درايف: %(v)s"
 msgstr ""
@@ -53439,11 +53439,11 @@ msgstr ""
 msgid "تعذّر تجهيز حساب النفق: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2236
+#: app/radius/services/operations.py:2237
 msgid "تعذّر تجهيز ملف PDF."
 msgstr ""
 
-#: app/radius/services/operations.py:2565
+#: app/radius/services/operations.py:2566
 #, python-format
 msgid "تعذّر تجهيز ملف PDF: %(exc)s"
 msgstr ""
@@ -53785,7 +53785,7 @@ msgstr ""
 msgid "تعذّر حذف %(v)s مشترك: %(preview)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3005
+#: app/radius/services/operations.py:3006
 #, python-format
 msgid "تعذّر حذف الملف: %(exc)s"
 msgstr ""
@@ -53828,8 +53828,8 @@ msgstr ""
 msgid "تعذّر حفظ الطلب: %(e)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3114
-#: app/radius/services/operations.py:3149
+#: app/radius/services/operations.py:3115
+#: app/radius/services/operations.py:3150
 #, python-format
 msgid "تعذّر حفظ الملف المرفوع: %(exc)s"
 msgstr ""
@@ -53874,7 +53874,7 @@ msgid ""
 "الراديوس أو فعّل FTP، أو ارفع الملفات يدويًا."
 msgstr ""
 
-#: app/radius/services/operations.py:3066
+#: app/radius/services/operations.py:3067
 #, python-format
 msgid "تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s"
 msgstr ""
@@ -53974,7 +53974,7 @@ msgstr ""
 msgid "تعذّر فصل جلسات المجموعة المتصلة."
 msgstr ""
 
-#: app/radius/services/operations.py:3346
+#: app/radius/services/operations.py:3347
 #, python-format
 msgid "تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s"
 msgstr ""
@@ -54207,7 +54207,7 @@ msgstr ""
 msgid "تعذّرت قراءة الصفوف من النص الملصوق."
 msgstr ""
 
-#: app/radius/services/operations.py:3123
+#: app/radius/services/operations.py:3124
 #, python-format
 msgid "تعذّرت قراءة الملف: %(exc)s"
 msgstr ""
@@ -56523,7 +56523,7 @@ msgstr ""
 msgid "تم إنشاء الموزع."
 msgstr ""
 
-#: app/radius/services/operations.py:3038
+#: app/radius/services/operations.py:3039
 msgid "تم إنشاء النسخة المحلية والتحقق منها."
 msgstr ""
 
@@ -56614,7 +56614,7 @@ msgstr ""
 msgid "تم إنشاء مهمة التصدير."
 msgstr ""
 
-#: app/radius/services/operations.py:2836
+#: app/radius/services/operations.py:2837
 #, python-format
 msgid "تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s."
 msgstr ""
@@ -56871,7 +56871,7 @@ msgstr ""
 msgid "تم التخطّي"
 msgstr ""
 
-#: app/radius/services/operations.py:3048
+#: app/radius/services/operations.py:3049
 msgid "تم التخطّي بسبب فشل النسخة المحلية."
 msgstr ""
 
@@ -56987,7 +56987,7 @@ msgid ""
 " إضافيّة."
 msgstr ""
 
-#: app/radius/services/operations.py:3058
+#: app/radius/services/operations.py:3059
 msgid "تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل."
 msgstr ""
 
@@ -57422,7 +57422,7 @@ msgid ""
 "رسائل مفعّل."
 msgstr ""
 
-#: app/radius/services/operations.py:3059
+#: app/radius/services/operations.py:3060
 msgid "تم تسجيل البيانات الوصفية على ملفك."
 msgstr ""
 
@@ -58079,7 +58079,7 @@ msgstr ""
 msgid "تم حذف المجموعة (تم فصل المشتركين عنها)."
 msgstr ""
 
-#: app/radius/services/operations.py:3010
+#: app/radius/services/operations.py:3011
 #, python-format
 msgid "تم حذف النسخة %(name)s."
 msgstr ""
@@ -58357,7 +58357,7 @@ msgstr ""
 msgid "تم رفع الأصل — سيُرفع للراوتر عند النشر."
 msgstr ""
 
-#: app/radius/services/operations.py:3076
+#: app/radius/services/operations.py:3077
 msgid "تم رفع النسخة إلى جوجل درايف المربوط."
 msgstr ""
 
@@ -58371,7 +58371,7 @@ msgid ""
 "ملف العميل."
 msgstr ""
 
-#: app/radius/services/operations.py:3163
+#: app/radius/services/operations.py:3164
 msgid "تم رفع النسخة من جهازك وحفظها محليًا."
 msgstr ""
 
@@ -58560,11 +58560,11 @@ msgstr ""
 msgid "تم وضع المحادثة كمُعالَجة."
 msgstr ""
 
-#: app/radius/services/operations.py:2447
+#: app/radius/services/operations.py:2448
 msgid "تم وضع المهمة في الطابور"
 msgstr ""
 
-#: app/radius/services/operations.py:2442
+#: app/radius/services/operations.py:2443
 msgid "تم وضع مهمة PDF في الطابور."
 msgstr ""
 
@@ -58790,7 +58790,7 @@ msgstr ""
 msgid "تمت الاستعادة بنجاح."
 msgstr ""
 
-#: app/radius/services/operations.py:3382
+#: app/radius/services/operations.py:3383
 #, python-format
 msgid "تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s."
 msgstr ""
@@ -62665,11 +62665,11 @@ msgstr ""
 msgid "جوالي باي / تحويل بنكي / PalPay / قناة أخرى."
 msgstr ""
 
-#: app/radius/services/operations.py:3075
-#: app/radius/services/operations.py:3078
-#: app/radius/services/operations.py:3091
-#: app/radius/services/operations.py:3094
-#: app/radius/services/operations.py:3097 app/templates/radius/backups.html:184
+#: app/radius/services/operations.py:3076
+#: app/radius/services/operations.py:3079
+#: app/radius/services/operations.py:3092
+#: app/radius/services/operations.py:3095
+#: app/radius/services/operations.py:3098 app/templates/radius/backups.html:184
 #: app/templates/radius/backups.html:265 app/templates/radius/backups.html:445
 msgid "جوجل درايف"
 msgstr ""
@@ -62678,7 +62678,7 @@ msgstr ""
 msgid "جوجل درايف غير مربوط — اربطه من بوابة العميل."
 msgstr ""
 
-#: app/radius/services/operations.py:2664
+#: app/radius/services/operations.py:2665
 msgid "جوجل درايف غير مفعل حاليًا من إعدادات الخادم."
 msgstr ""
 
@@ -62700,7 +62700,7 @@ msgid ""
 "التراخيص إلى درايفك تلقائيًّا."
 msgstr ""
 
-#: app/radius/services/operations.py:2655
+#: app/radius/services/operations.py:2656
 msgid "جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة."
 msgstr ""
 
@@ -64920,9 +64920,9 @@ msgid "حزمة الكروت رقم %(batch_id)s غير موجودة."
 msgstr ""
 
 #: app/radius/services/operations.py:1199
-#: app/radius/services/operations.py:2023
-#: app/radius/services/operations.py:2336
-#: app/radius/services/operations.py:2418
+#: app/radius/services/operations.py:2024
+#: app/radius/services/operations.py:2337
+#: app/radius/services/operations.py:2419
 msgid "حزمة الكروت غير موجودة."
 msgstr ""
 
@@ -67148,7 +67148,7 @@ msgstr ""
 msgid "خطأ غير متوقّع: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3079
+#: app/radius/services/operations.py:3080
 msgid "خطأ غير محدّد"
 msgstr ""
 
@@ -68197,7 +68197,7 @@ msgstr ""
 msgid "دفعات الطباعة"
 msgstr ""
 
-#: app/radius/services/operations.py:3241
+#: app/radius/services/operations.py:3242
 #: app/templates/radius/license_file.html:289
 msgid "دفعات الكروت"
 msgstr ""
@@ -70517,7 +70517,7 @@ msgstr ""
 msgid "رسم البطاقات بالقالب المختار"
 msgstr ""
 
-#: app/radius/services/operations.py:2147
+#: app/radius/services/operations.py:2148
 msgid "رسم البطاقات داخل ملف PDF"
 msgstr ""
 
@@ -77305,7 +77305,7 @@ msgstr ""
 msgid "طابور التجربة الجافة مطلوب قبل التطبيق."
 msgstr ""
 
-#: app/radius/services/operations.py:2433
+#: app/radius/services/operations.py:2434
 #, python-format
 msgid ""
 "طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر "
@@ -77634,13 +77634,13 @@ msgstr ""
 msgid "طريقة الرجوع بعد الوقت"
 msgstr ""
 
-#: app/radius/services/operations.py:1351
+#: app/radius/services/operations.py:1352
 msgid ""
 "طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» "
 "(profile_default) أو «فصل الجلسة» (disconnect)."
 msgstr ""
 
-#: app/radius/services/operations.py:1345
+#: app/radius/services/operations.py:1346
 msgid "طريقة الرجوع يجب أن تكون نصًّا."
 msgstr ""
 
@@ -77955,7 +77955,7 @@ msgstr ""
 msgid "طلب دفع مطلوب: %(amount)s %(currency)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2658
+#: app/radius/services/operations.py:2659
 msgid "طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم."
 msgstr ""
 
@@ -80302,7 +80302,7 @@ msgstr ""
 msgid "عمليات التجربة الجافة مطلوبة للخطوة المحددة."
 msgstr ""
 
-#: app/radius/services/operations.py:3243
+#: app/radius/services/operations.py:3244
 msgid "عمليات التعبئة"
 msgstr ""
 
@@ -82399,7 +82399,7 @@ msgstr ""
 msgid "غير مربوط"
 msgstr ""
 
-#: app/radius/services/operations.py:3092
+#: app/radius/services/operations.py:3093
 msgid "غير مربوط — اربط جوجل درايف من بوابة العميل."
 msgstr ""
 
@@ -83912,7 +83912,7 @@ msgstr ""
 msgid "فشل تجهيز الملف"
 msgstr ""
 
-#: app/radius/services/operations.py:2571
+#: app/radius/services/operations.py:2572
 msgid "فشل تجهيز ملف PDF"
 msgstr ""
 
@@ -84223,7 +84223,7 @@ msgstr ""
 msgid "فشلت الاستعادة."
 msgstr ""
 
-#: app/radius/services/operations.py:3368
+#: app/radius/services/operations.py:3369
 #, python-format
 msgid "فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s"
 msgstr ""
@@ -84241,7 +84241,7 @@ msgstr ""
 msgid "فشلت عملية الدفع"
 msgstr ""
 
-#: app/radius/services/operations.py:2614
+#: app/radius/services/operations.py:2615
 msgid "فشلت مهمة الطباعة — لا يوجد ملف للتنزيل."
 msgstr ""
 
@@ -86186,13 +86186,13 @@ msgstr ""
 msgid "قالب الدخول"
 msgstr ""
 
-#: app/api/v1/print_templates.py:158 app/radius/services/operations.py:1731
-#: app/radius/services/operations.py:1785
-#: app/radius/services/operations.py:1844
-#: app/radius/services/operations.py:1886
-#: app/radius/services/operations.py:1972
-#: app/radius/services/operations.py:2261
-#: app/radius/services/operations.py:2409
+#: app/api/v1/print_templates.py:158 app/radius/services/operations.py:1732
+#: app/radius/services/operations.py:1786
+#: app/radius/services/operations.py:1845
+#: app/radius/services/operations.py:1887
+#: app/radius/services/operations.py:1973
+#: app/radius/services/operations.py:2262
+#: app/radius/services/operations.py:2410
 msgid "قالب الطباعة غير موجود."
 msgstr ""
 
@@ -92677,7 +92677,7 @@ msgstr ""
 msgid "لا توجد كروت داخل هذه الحزمة."
 msgstr ""
 
-#: app/radius/services/operations.py:2063
+#: app/radius/services/operations.py:2064
 msgid "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة."
 msgstr ""
 
@@ -95268,7 +95268,7 @@ msgstr ""
 msgid "لم يتم إضافتها للـ bridge"
 msgstr ""
 
-#: app/radius/services/operations.py:2837
+#: app/radius/services/operations.py:2838
 msgid "لم يتم إنشاء ملف النسخة الاحتياطية."
 msgstr ""
 
@@ -96159,11 +96159,11 @@ msgstr ""
 msgid "لوحة التحكّم"
 msgstr ""
 
-#: app/radius/services/operations.py:3044
-#: app/radius/services/operations.py:3047
-#: app/radius/services/operations.py:3057
-#: app/radius/services/operations.py:3062
-#: app/radius/services/operations.py:3065 app/templates/radius/backups.html:445
+#: app/radius/services/operations.py:3045
+#: app/radius/services/operations.py:3048
+#: app/radius/services/operations.py:3058
+#: app/radius/services/operations.py:3063
+#: app/radius/services/operations.py:3066 app/templates/radius/backups.html:445
 #: app/templates/radius/notifications_center.html:147
 msgid "لوحة التراخيص"
 msgstr ""
@@ -100851,7 +100851,7 @@ msgid ""
 "مستقلًّا. فارغ = بجوار الشهادة بامتداد .key."
 msgstr ""
 
-#: app/radius/services/operations.py:2624
+#: app/radius/services/operations.py:2625
 msgid "مسار ملف مهمة الطباعة غير صالح."
 msgstr ""
 
@@ -104634,7 +104634,7 @@ msgstr ""
 msgid "ملف السرعة غير موجود."
 msgstr ""
 
-#: app/radius/services/operations.py:2616
+#: app/radius/services/operations.py:2617
 msgid "ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة."
 msgstr ""
 
@@ -104713,8 +104713,8 @@ msgstr ""
 msgid "ملف النسخة المرشّحة ليس قاعدة SQLite صالحة."
 msgstr ""
 
-#: app/radius/services/operations.py:3001
-#: app/radius/services/operations.py:3306
+#: app/radius/services/operations.py:3002
+#: app/radius/services/operations.py:3307
 msgid "ملف النسخة غير موجود أو غير صالح."
 msgstr ""
 
@@ -104804,8 +104804,8 @@ msgstr ""
 msgid "ملف من"
 msgstr ""
 
-#: app/radius/services/operations.py:2620
-#: app/radius/services/operations.py:2626
+#: app/radius/services/operations.py:2621
+#: app/radius/services/operations.py:2627
 msgid "ملف مهمة الطباعة غير موجود."
 msgstr ""
 
@@ -106411,7 +106411,7 @@ msgstr ""
 msgid "مهمة #%(related_job_id)s"
 msgstr ""
 
-#: app/api/v1/print_templates.py:553 app/radius/services/operations.py:2580
+#: app/api/v1/print_templates.py:553 app/radius/services/operations.py:2581
 msgid "مهمة الطباعة غير موجودة."
 msgstr ""
 
@@ -107749,7 +107749,7 @@ msgstr ""
 msgid "نسخة"
 msgstr ""
 
-#: app/radius/services/operations.py:2833
+#: app/radius/services/operations.py:2834
 msgid "نسخة أساسية (بيانات العمل)"
 msgstr ""
 
@@ -107829,7 +107829,7 @@ msgstr ""
 msgid "نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub"
 msgstr ""
 
-#: app/radius/services/operations.py:3036 app/templates/radius/backups.html:445
+#: app/radius/services/operations.py:3037 app/templates/radius/backups.html:445
 msgid "نسخة محلية"
 msgstr ""
 
@@ -107849,7 +107849,7 @@ msgstr ""
 msgid "نسخة محلية:"
 msgstr ""
 
-#: app/radius/services/operations.py:3154
+#: app/radius/services/operations.py:3155
 msgid "نسخة مرفوعة من جهاز المستخدم."
 msgstr ""
 
@@ -112827,7 +112827,7 @@ msgid ""
 " الحد."
 msgstr ""
 
-#: app/radius/services/operations.py:3095
+#: app/radius/services/operations.py:3096
 msgid "وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية."
 msgstr ""
 
@@ -113641,7 +113641,7 @@ msgstr ""
 msgid "يتطلّب مفتاح الدور"
 msgstr ""
 
-#: app/radius/services/operations.py:3098
+#: app/radius/services/operations.py:3099
 msgid "يتطلّب نجاح الرفع إلى اللوحة أولًا."
 msgstr ""
 
@@ -115552,8 +115552,8 @@ msgid ""
 "الموجود»."
 msgstr ""
 
-#: app/radius/services/operations.py:1716
-#: app/radius/services/operations.py:1765
+#: app/radius/services/operations.py:1717
+#: app/radius/services/operations.py:1766
 msgid "يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر."
 msgstr ""
 

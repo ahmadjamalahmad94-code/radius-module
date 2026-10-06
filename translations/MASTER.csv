@@ -7314,77 +7314,77 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1269
 المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(debt)s. اختر «إضافة للرصيد» للزيادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1279
 المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(remaining)s. اختر «إضافة للرصيد» للزيادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1287
-طريقة الرجوع يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1345
-طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» (profile_default) أو «فصل الجلسة» (disconnect).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1351
-أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1422
-اتجاه القالب يجب أن يكون portrait أو landscape.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1691
-يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1716
-لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2063
-الحزمة المختارة لا تحتوي كروتًا للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2064
-بدأ تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2101
-بدأ إنشاء ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2110
-رسم البطاقات داخل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2147
-إغلاق الملف وتجهيز التنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2179
-اكتمل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2213
-تعذّر تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2236
-طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2433
-تم وضع مهمة PDF في الطابور.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2442
-تم وضع المهمة في الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2447
-بدأ تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2498
-بدأ عامل التصدير,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2502
-اكتمل ملف PDF وأصبح جاهزًا للتنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2530
-اكتمل ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2545
-تعذّر تجهيز ملف PDF: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2565
-فشل تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2571
-أُلغيت المهمة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2598
-انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2603
-أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2612
-فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2614
-ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2616
-ملف مهمة الطباعة غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2620
-مسار ملف مهمة الطباعة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2624
-تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2648
-جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2655
-طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2658
-إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2661
-جوجل درايف غير مفعل حاليًا من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2664
-أرشيف كامل (يشمل السجلّات),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2833
-نسخة أساسية (بيانات العمل),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2833
- مضغوطة gzip,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2834
-تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2836
-لم يتم إنشاء ملف النسخة الاحتياطية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2837
-ملف النسخة غير موجود أو غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3001
-تعذّر حذف الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3005
-تم حذف النسخة %(name)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3010
-نسخة محلية,,Local copy,Copie locale,Yerel kopya,Copia local,ok,app/radius/services/operations.py:3036
-تم إنشاء النسخة المحلية والتحقق منها.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3038
-تعذّر إنشاء النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3039
-لوحة التراخيص,,Licensing panel,Panneau des licences,Lisans paneli,Panel de licencias,ok,app/radius/services/operations.py:3044
-الخدمة غير مفعّلة (خدمة مدفوعة).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3045
-تم التخطّي بسبب فشل النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3048
-تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3058
-تم تسجيل البيانات الوصفية على ملفك.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3059
-تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3066
-جوجل درايف,,Google Drive,Google Drive,Google Drive,Google Drive,ok,app/radius/services/operations.py:3075
-تم رفع النسخة إلى جوجل درايف المربوط.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3076
-تعذّر الرفع إلى جوجل درايف: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3079
-خطأ غير محدّد,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3079
-غير مربوط — اربط جوجل درايف من بوابة العميل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3092
-وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3095
-يتطلّب نجاح الرفع إلى اللوحة أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3098
-تعذّر حفظ الملف المرفوع: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3114
-تعذّرت قراءة الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3123
-الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3131
-الملف ليس قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3140
-نسخة مرفوعة من جهاز المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3154
-تم رفع النسخة من جهازك وحفظها محليًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3163
-دفعات الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3241
-عمليات التعبئة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3243
-تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3322
-تعذّر أخذ نسخة احترازية قبل الاستعادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3325
-تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3346
-فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3368
-تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3382
+طريقة الرجوع يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1346
+طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» (profile_default) أو «فصل الجلسة» (disconnect).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1352
+أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1423
+اتجاه القالب يجب أن يكون portrait أو landscape.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1692
+يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1717
+لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2064
+الحزمة المختارة لا تحتوي كروتًا للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2065
+بدأ تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2102
+بدأ إنشاء ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2111
+رسم البطاقات داخل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2148
+إغلاق الملف وتجهيز التنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2180
+اكتمل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2214
+تعذّر تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2237
+طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2434
+تم وضع مهمة PDF في الطابور.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2443
+تم وضع المهمة في الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2448
+بدأ تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2499
+بدأ عامل التصدير,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2503
+اكتمل ملف PDF وأصبح جاهزًا للتنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2531
+اكتمل ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2546
+تعذّر تجهيز ملف PDF: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2566
+فشل تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2572
+أُلغيت المهمة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2599
+انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2604
+أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2613
+فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2615
+ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2617
+ملف مهمة الطباعة غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2621
+مسار ملف مهمة الطباعة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2625
+تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2649
+جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2656
+طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2659
+إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2662
+جوجل درايف غير مفعل حاليًا من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2665
+أرشيف كامل (يشمل السجلّات),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2834
+نسخة أساسية (بيانات العمل),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2834
+ مضغوطة gzip,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2835
+تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2837
+لم يتم إنشاء ملف النسخة الاحتياطية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2838
+ملف النسخة غير موجود أو غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3002
+تعذّر حذف الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3006
+تم حذف النسخة %(name)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3011
+نسخة محلية,,Local copy,Copie locale,Yerel kopya,Copia local,ok,app/radius/services/operations.py:3037
+تم إنشاء النسخة المحلية والتحقق منها.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3039
+تعذّر إنشاء النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3040
+لوحة التراخيص,,Licensing panel,Panneau des licences,Lisans paneli,Panel de licencias,ok,app/radius/services/operations.py:3045
+الخدمة غير مفعّلة (خدمة مدفوعة).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3046
+تم التخطّي بسبب فشل النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3049
+تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3059
+تم تسجيل البيانات الوصفية على ملفك.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3060
+تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3067
+جوجل درايف,,Google Drive,Google Drive,Google Drive,Google Drive,ok,app/radius/services/operations.py:3076
+تم رفع النسخة إلى جوجل درايف المربوط.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3077
+تعذّر الرفع إلى جوجل درايف: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3080
+خطأ غير محدّد,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3080
+غير مربوط — اربط جوجل درايف من بوابة العميل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3093
+وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3096
+يتطلّب نجاح الرفع إلى اللوحة أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3099
+تعذّر حفظ الملف المرفوع: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3115
+تعذّرت قراءة الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3124
+الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3132
+الملف ليس قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3141
+نسخة مرفوعة من جهاز المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3155
+تم رفع النسخة من جهازك وحفظها محليًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3164
+دفعات الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3242
+عمليات التعبئة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3244
+تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3323
+تعذّر أخذ نسخة احترازية قبل الاستعادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3326
+تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3347
+فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3369
+تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3383
 الوضع الطبيعي,,Normal mode,Mode normal,Normal mod,Modo normal,ok,app/radius/services/operations_speed_center.py:19
 وضع الضغط,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:20
 وضع الليل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:21
