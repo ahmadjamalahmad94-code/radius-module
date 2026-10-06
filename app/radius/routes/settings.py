@@ -95,8 +95,8 @@ _SETTINGS_KEYS = [
     ("subscribers.create_without_expiry",
      N_("المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء"),
      _SYS_DEFAULTS["subscribers.create_without_expiry"]),
-    ("billing.tax_pct",         N_("ضريبة %"),              "0"),
-    ("auth.allow_password_reset", N_("السماح بإعادة تعيين كلمة المرور"), "1"),
+    # (billing.tax_pct / auth.allow_password_reset أُزيلا — قرار المالك
+    #  2026-10-06: لا قارئ لهما؛ انظر _RETIRED_KEYS أدناه.)
     # عرض الأقسام غير المصرّح بها في الواجهة (sidebar/أزرار العمليات):
     # "freeze" = تجميد بقفل (يرى البند معطّلًا بقفل)، "hide" = إخفاء كلي.
     # يقرؤه ui_unauth_mode() في auth/ui_permissions.py — super_admin لا يتأثر.
@@ -214,6 +214,21 @@ _UI_HIDDEN_KEYS = {
     "portal.allow_plan_change",
 }
 
+# ── مفاتيح أُزيلت نهائيًّا (قرار المالك 2026-10-06 «حذف»: محفوظة بلا أثر) ──
+# لا تُعرض في صفحة الويب ولا في GET /api/v1/settings، ولا يكتبها أيّ حفظ.
+# ‏PATCH يقبلها بصمت (نسخ التطبيق القديمة ترسلها) ويتجاهلها — لا 422.
+# القيم المخزّنة سابقًا تبقى في tenant_settings بلا قارئ (لا حذف بيانات).
+#   billing.tax_pct           — لا شيء يحسب ضريبة على الفواتير.
+#   auth.allow_password_reset — لا مسار يقرؤه.
+_RETIRED_KEYS = frozenset({
+    "billing.tax_pct",
+    "auth.allow_password_reset",
+})
+
+# ما تتجاهله واجهة الـAPI بصمت: المحذوف + المخفيّ عن الواجهة (كان التطبيق
+# وحده يعرض المخفيّ ويحرّره — قرار المالك: يُخفى منه أيضًا).
+API_IGNORED_KEYS = frozenset(_RETIRED_KEYS | _UI_HIDDEN_KEYS)
+
 
 def register_settings_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/settings", "settings_page",
@@ -322,7 +337,8 @@ def settings_page():
                     if val not in currency_codes():
                         flash(_tr("رمز العملة غير صالح — اختر من القائمة (مثل ILS شيكل)."), "error")
                         return redirect(url_for("radius.settings_page"))
-                if key == "branding.primary_color" and val:
+                if key in ("branding.primary_color", "cards.default_username_length",
+                           "cards.default_password_length") and val:
                     from ..core.settings_validation import clean_setting
                     try:
                         val = clean_setting(key, val)

@@ -1351,6 +1351,12 @@ def _install_stubs(app: Flask) -> None:
                 return _lim.max_extend_days()
             if name == "extend_too_long":
                 return _lim.extend_too_long_msg()
+            if name in ("card_default_username_length", "card_default_password_length"):
+                # «طول اسم/كلمة البطاقة الافتراضي» (إعدادات الشبكة) — تملأ به
+                # نماذج التوليد خانتي الطول، ويطبّقه الخادم حين تُترك فارغة.
+                from .radius.services.cards import card_default_lengths
+                ulen, plen = card_default_lengths()
+                return ulen if name == "card_default_username_length" else plen
             snap = _lim.snapshot()
             if name in snap:
                 return snap[name]

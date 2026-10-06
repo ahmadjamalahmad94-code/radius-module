@@ -15,7 +15,6 @@ import re
 
 #: Toggles stored as "1"/"0" (the web toggle values).
 BOOL_KEYS = frozenset({
-    "auth.allow_password_reset",
     "cards.login_without_password_default",
     "security.block_random_mac_cards",
     "security.block_random_mac_subscribers",
@@ -90,4 +89,23 @@ def clean_setting(key: str, raw) -> str:
         except ValueError:
             raise ValueError(_tr("الإزاحة الزمنيّة رقمٌ بالساعات مثل 2 أو 3.")) from None
         return val
+    if key in CARD_LENGTH_BOUNDS and val:
+        # يقرؤهما مولّد البطاقات (services.cards.card_default_lengths) — نفس
+        # حدود خانتي الطول في صفحة التوليد.
+        low, high = CARD_LENGTH_BOUNDS[key]
+        try:
+            n = int(val)
+        except ValueError:
+            n = None
+        if n is None or not low <= n <= high:
+            raise ValueError(_tr("الطول يجب أن يكون عددًا صحيحًا بين %(low)s و%(high)s.",
+                                 low=low, high=high))
+        return str(n)
     return val
+
+
+#: «طول اسم/كلمة البطاقة الافتراضي» — (أدنى، أقصى) كخانتي صفحة التوليد.
+CARD_LENGTH_BOUNDS = {
+    "cards.default_username_length": (4, 32),
+    "cards.default_password_length": (1, 32),
+}
