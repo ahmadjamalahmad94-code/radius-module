@@ -35,10 +35,12 @@ def test_sessions_list_speed_cells_are_ltr_isolated():
 
 def test_other_speed_pair_sites_are_ltr_isolated():
     expectations = {
+        # fields-sched: schedule CIR was removed (owner); the speed pair's
+        # cell itself stays LTR-isolated.
         "bandwidth_schedules.html":
-            r'CIR <span dir="ltr">\{\{ item\.get\(\'cir_down_kbps\'\)',
+            r'dir="ltr">\s*<i class="fa-solid fa-arrow-down"',
         "_speed_schedules_panel.html":
-            r'CIR <span dir="ltr">\{\{ item\.get\(\'cir_down_kbps\'\)',
+            r'dir="ltr">\s*<i class="fa-solid fa-arrow-down"',
         "sgrp_list.html":
             r'<span dir="ltr">\{\{ g\.shared_speed_down_kbps \}\}',
         "cards_offers.html":

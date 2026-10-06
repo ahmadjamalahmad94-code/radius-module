@@ -257,9 +257,12 @@ def _seed_group(app):
 
 
 def test_group_schedule_applies_to_members_only(app, client):
+    # fields-sched: days are effective now — these always-on rules use
+    # days_csv="" (every day) instead of the helper's default «sat,sun».
     gid = _seed_group(app)
     s = _create_schedule(client, target_type="subscriber_group", subscriber_group_id=gid,
                          plan_id=None, starts_at_time="00:00", ends_at_time="00:00",
+                         days_csv="",
                          speed_down_kbps=1111, speed_up_kbps=222)
     with app.test_request_context():
         from app.radius.db.repos import operations_repo
@@ -283,9 +286,11 @@ def test_group_schedule_applies_to_members_only(app, client):
 def test_subscriber_rule_beats_group_rule(app, client):
     gid = _seed_group(app)
     _create_schedule(client, target_type="subscriber_group", subscriber_group_id=gid,
-                     plan_id=None, starts_at_time="00:00", ends_at_time="00:00")
+                     plan_id=None, starts_at_time="00:00", ends_at_time="00:00",
+                     days_csv="")
     own = _create_schedule(client, target_type="subscriber", subscriber_username="grp_member",
                            plan_id=None, starts_at_time="00:00", ends_at_time="00:00",
+                         days_csv="",
                            name="Own")
     with app.test_request_context():
         from app.radius.db.repos import operations_repo
