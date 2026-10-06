@@ -1,7 +1,10 @@
 /* Operations assistant (experimental) — web chat over the deterministic executor.
    Page: templates/radius/ops_assistant.html (config + translated strings in #ops-config).
    Server: routes/ops_assistant.py. Nothing executes without the «confirm» click.
-   Every POST carries X-CSRFToken. All dynamic text goes through textContent (no innerHTML). */
+   Every POST carries X-CSRFToken. All dynamic text goes through textContent (no innerHTML):
+   the model's `message` is shown as plain text, never parsed as HTML.
+   Reply types: assistant (message) · choices (list, or an empty-state line) · result
+   (read-only INFO answer from the system) · proposal (confirmation card) · error. */
 (function () {
   "use strict";
   var cfgEl = document.getElementById("ops-config");
@@ -59,7 +62,8 @@
     if (key === "expire_local" && s === "no_expiry") return T.no_expiry;
     if (key === "expire_local" && s.indexOf("server_default:") === 0) return T.server_default;
     if (Object.prototype.hasOwnProperty.call(V, s) &&
-        (key === "charge_mode" || key === "policy" || key === "mode")) return V[s];
+        (key === "charge_mode" || key === "policy" || key === "mode" || key === "status" ||
+         key === "user_type")) return V[s];
     return s;
   }
 
@@ -91,6 +95,36 @@
     });
     card.appendChild(ul);
     if (rep.truncated) card.appendChild(el("div", "ops-hint", T.choices_more));
+    return card;
+  }
+
+  /* read-only answer from the system (INFO action) — the model's message follows as a bubble */
+  function infoCard(rep) {
+    var card = el("div", "ops-card");
+    card.appendChild(el("h4", "", T["info_" + rep.source] || T.info_title));
+    if (rep.error) {
+      card.appendChild(el("div", "ops-note is-danger", T["ie_" + rep.error] || T.ie_unavailable));
+      return card;
+    }
+    var d = rep.data || {}, rows = [];
+    Object.keys(d).forEach(function (k) {
+      if (k === "items" || k === "query" || k === "truncated" || k === "batch_id") return;
+      rows.push([L[k] || k, fmtValue(k, d[k])]);
+    });
+    if (rows.length) card.appendChild(kv(rows));
+    if (d.items && d.items.length) {
+      var ul = el("ul", "ops-choices");
+      d.items.forEach(function (it) {
+        var li = el("li");
+        li.appendChild(el("b", "", (it.n || "") + "."));
+        var parts = [it.username, fmtValue("user_type", it.user_type), it.started_local]
+          .filter(function (x) { return x !== undefined && x !== null && x !== "" && x !== "-"; });
+        li.appendChild(document.createTextNode(" " + parts.join(" · ")));
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+    if (d.truncated) card.appendChild(el("div", "ops-hint", T.info_more));
     return card;
   }
 
@@ -214,7 +248,18 @@
   function render(replies) {
     (replies || []).forEach(function (r) {
       if (r.type === "error") { say(r.text, "is-err"); return; }
-      if (r.type === "choices") { add(choicesCard(r)); return; }
+      if (r.type === "choices") {
+        if (r.text) say(r.text);
+        if (!(r.items || []).length) { say(r.empty || T.choices_empty, "is-bot is-empty"); return; }
+        add(choicesCard(r));
+        return;
+      }
+      if (r.type === "result") {
+        if (r.text) say(r.text);
+        add(infoCard(r));
+        return;
+      }
+      if (r.empty) { say(r.text || T.choices_empty, "is-bot is-empty"); return; }
       if (r.type === "proposal") {
         if (r.text) say(r.text);
         add(proposalCard(r));

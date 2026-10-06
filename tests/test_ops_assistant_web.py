@@ -413,3 +413,119 @@ def test_event_conversation_renders_trigger_and_event_choices(client, app, fake_
     assert msgs[1]["content"] == mc.EVENT_TRIGGER
     ctx = json.loads(msgs[0]["content"].split("\n\nCONTEXT ", 1)[1])
     assert ctx["event"] == {"type": "plan_without_offers", "data": {"plan_name": "بلا_عروض_ويب"}}
+
+
+# ─────────────────────────── ops-v2 / SPEC_DATA_v3: message, reply, INFO, empty lists ──────────────
+
+def M(action, fields=None, message="تمام", missing=None, **extra):
+    return json.dumps({"action": action, "fields": fields or {}, "missing": missing or [],
+                       "message": message, **extra}, ensure_ascii=False)
+
+
+def test_reply_shows_the_model_message_as_plain_text(client, app, fake_model):
+    login(client)
+    text = "أهلين! <b>بقدر</b> أجدّد اشتراكات وأولّد حزم كروت. شو بتحب نعمل؟"
+    fake_model.reset(M("reply", message=text))
+    body = ok(post(client, "/message", {"text": "مرحبا"}))
+    assert body["replies"] == [{"type": "assistant", "action": "reply", "text": text}]
+    assert len(fake_model.requests) == 1
+    # the transcript keeps the model's object verbatim (message included)
+    rows = q(app, "SELECT role, content FROM ops_messages WHERE conversation_id=? ORDER BY id",
+             (body["conversation_id"],))
+    assert json.loads(rows[-1]["content"])["message"] == text
+    # the page renders every dynamic text with textContent — never as HTML
+    js = open(os.path.join(os.path.dirname(__file__), "..", "app", "static", "js",
+                           "ops_assistant.js"), encoding="utf-8").read()
+    assert ".innerHTML" not in js and ".insertAdjacentHTML" not in js and ".outerHTML" not in js
+
+
+def test_message_preferred_over_summary_for_actions(client, app, fake_model):
+    pname = "باقة_رسالة_" + os.urandom(2).hex()
+    pid = plan(app, pname)
+    login(client)
+
+    def pick(messages):
+        items = json.loads([m for m in messages if m["role"] == "tool"][-1]["content"][8:])["items"]
+        return M("create_subscriber", {"username": "msg_" + os.urandom(3).hex(),
+                                       "plan_id": items[0]["id"]},
+                 message="تمام، جهّزتلك المشترك — راجع البطاقة وأكّد.",
+                 summary_ar="إنشاء مشترك. أؤكّد؟")
+    fake_model.reset(M("choose", {"source": "list_plans", "query": pname}, "بجيبلك الباقات"), pick)
+    body = ok(post(client, "/message", {"text": "ضيف مشترك على " + pname}))
+    assert [r["type"] for r in body["replies"]] == ["choices", "proposal"]
+    assert body["replies"][0]["text"] == "بجيبلك الباقات"
+    assert body["replies"][1]["text"] == "تمام، جهّزتلك المشترك — راجع البطاقة وأكّد."
+    assert body["replies"][1]["proposal"]["steps"][0]["values"]["plan_id"] == pid
+
+
+def test_batch_status_flow_result_then_reply(client, app, fake_model):
+    name = "alaa_web_" + os.urandom(2).hex()
+    login(client)
+    from ops_exec_helpers import owner_h
+    h = owner_h(app)
+    res = client.post("/api/v1/cards/generate", headers=h, json={
+        "plan_id": plan(app), "count": 3, "package_name": name, "password_length": 6})
+    assert res.status_code in (200, 201)
+    seen = {}
+
+    def status(messages):
+        items = json.loads(messages[-1]["content"][len("CHOICES "):])["items"]
+        assert [i["name"] for i in items] == [name]
+        return M("card_batch_status", {"batch_id": items[0]["id"]}, "بشوف وضع الحزمة")
+
+    def answer(messages):
+        line = messages[-1]["content"]
+        assert messages[-1]["role"] == "tool" and line.startswith("RESULT ")
+        data_ = json.loads(line[len("RESULT "):])["data"]
+        seen.update(data_)
+        return M("reply", message="حزمة %s فيها %d كرت، باقي منها %d." % (
+            name, data_["total_cards"], data_["available_count"]))
+
+    fake_model.reset(M("choose", {"source": "list_card_batches", "query": name}, "بدوّر على الحزمة"),
+                     status, answer)
+    body = ok(post(client, "/message", {"text": "شو وضع حزمة " + name}))
+    assert [r["type"] for r in body["replies"]] == ["choices", "result", "assistant"]
+    result = body["replies"][1]
+    assert result["source"] == "card_batch_status" and result["error"] is None
+    assert result["data"]["total_cards"] == 3 and result["data"]["available_count"] == 3
+    assert body["replies"][2]["text"] == "حزمة %s فيها 3 كرت، باقي منها 3." % name
+    assert seen["total_cards"] == 3
+    # no proposal was stored for a read
+    assert q(app, "SELECT COUNT(*) AS n FROM ops_proposals WHERE conversation_id=?",
+             (body["conversation_id"],))[0]["n"] == 0
+    # no card code reached the model
+    codes = q(app, "SELECT c.username, c.password FROM cards c JOIN card_batches b ON b.id=c.batch_id "
+                   "WHERE b.package_name=?", (name,))
+    raw = "".join(fake_model.raw)
+    assert codes and all(c["username"] not in raw and c["password"] not in raw for c in codes)
+
+
+def test_empty_choices_state_and_repeat_guard(client, app, fake_model):
+    login(client)
+    miss = "no_batch_" + os.urandom(3).hex()
+    fake_model.reset(M("choose", {"source": "list_card_batches", "query": miss}, "بدوّر"),
+                     M("reply", message="ما لقيت حزمة بهالاسم. شو اسمها بالزبط؟"))
+    body = ok(post(client, "/message", {"text": "شو وضع حزمة " + miss}))
+    cid = body["conversation_id"]
+    first = body["replies"][0]
+    assert first["type"] == "choices" and first["items"] == []
+    assert first["empty"] == "لا توجد حزم بطاقات تطابق هذا البحث."
+    assert body["replies"][1]["text"].startswith("ما لقيت")
+    # the model repeats the same empty lookup → answered here, no second lookup, no model loop
+    fake_model.reset(M("choose", {"source": "list_card_batches", "query": miss.upper()}, "بدوّر"))
+    body = ok(post(client, "/message", {"conversation_id": cid, "text": "دوّر مرّة كمان"}))
+    assert body["replies"] == [{"type": "assistant", "action": "reply", "empty": True,
+                                "text": "لا توجد حزم بطاقات تطابق هذا البحث."}]
+    assert len(fake_model.requests) == 1
+    tools = q(app, "SELECT content FROM ops_messages WHERE conversation_id=? AND role='tool'", (cid,))
+    assert len(tools) == 1
+
+
+def test_info_hop_counts_toward_the_limit(client, app, fake_model):
+    login(client)
+    fake_model.reset(*[M("online_sessions", {}, "بشوف")] * 5)
+    body = ok(post(client, "/message", {"text": "مين متصل؟"}))
+    kinds = [r["type"] for r in body["replies"]]
+    assert kinds == ["result", "result", "result", "error"]
+    assert body["replies"][-1]["code"] == "too_many_hops"
+    assert len(fake_model.requests) == 4

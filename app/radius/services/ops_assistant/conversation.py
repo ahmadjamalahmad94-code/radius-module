@@ -2,9 +2,10 @@
 
     admin text ─▶ transcript (ops_messages) ─▶ model (ONE JSON object)
                          ▲                        │
-                         │  CHOICES (≤ MAX_HOPS)  ├─ choose / list_*  → executor CHOICES → model again
+                         │  CHOICES / RESULT      ├─ choose / list_*  → executor CHOICES → model again
+                         │  (≤ MAX_HOPS)          ├─ INFO (read-only)  → executor RESULT  → model again
                          └────────────────────────┤
-                                                  ├─ ask / refuse / cancel → Arabic message
+                                                  ├─ ask / refuse / cancel / reply → the model's message
                                                   └─ action / plan → executor validates → confirmation card
 
 * Every model reply is parsed as exactly ONE JSON object
@@ -19,8 +20,12 @@
   card codes never enter it: RESULT is the executor's redacted
   ``model_result``.
 * CHOICES / level-4 events are rendered in the item schemas the model was
-  trained on (SPEC_DATA_v2 §4/§5) — same ids, the executor's issued set
-  is unchanged.
+  trained on (SPEC_DATA_v2 §4/§5, v3 §4/§8) — same ids, the executor's
+  issued set is unchanged.
+* The admin sees the model's ``message`` (SPEC_DATA_v3; ``summary_ar`` for a
+  round-1/2 model). An empty CHOICES list becomes an empty-state line, and a
+  lookup that already came back empty in this conversation is answered here
+  without asking the system (or the model) again.
 """
 from __future__ import annotations
 from app.i18n_text import _tr
@@ -35,9 +40,10 @@ from .model_client import InvalidModelOutput, ModelError
 
 _LOG = logging.getLogger(__name__)
 
-MAX_HOPS = 3                      # CHOICES fetches per admin message
+MAX_HOPS = 3                      # CHOICES / RESULT fetches per admin message
 MAX_TEXT = 2000                   # admin message length
-LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber")
+LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
+INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions")
 
 
 # ─────────────────────────── transcript ────────────────────────────
@@ -59,7 +65,7 @@ def transcript(cid: str, tenant_id: int) -> list[dict]:
 
 def model_messages(cid: str, tenant_id: int) -> list[dict]:
     """SYSTEM_PROMPT + the stored transcript (CONTEXT first) — before rendering."""
-    return [{"role": "system", "content": model_client.SYSTEM_PROMPT}] + transcript(cid, tenant_id)
+    return [{"role": "system", "content": model_client.system_prompt()}] + transcript(cid, tenant_id)
 
 
 # ─────────────────────────── rendering (SPEC_DATA_v2 §4/§5) ────────────────────────────
@@ -148,16 +154,92 @@ def render_choices(choices: dict, tenant_id: int) -> dict:
                    "expires_local": _local(it.get("expire_at"), tenant_id)}
             out.append({k: x for k, x in row.items() if x is not None})
     elif src == "change_plan_policies":
+        # SPEC_DATA_v3 §8: {n, id, label_ar} — the proposal field is ``policy`` = id
+        # (a round-1/2 adapter, prompt v1, was trained on {n, policy, label_ar})
+        key = "policy" if model_client.system_prompt() == model_client.SYSTEM_PROMPT_V1 else "id"
         for it in items:
             pol = it.get("id") or it.get("name")
-            out.append({"n": it.get("n"), "policy": pol,
+            out.append({"n": it.get("n"), key: pol,
                         "label_ar": model_client.POLICY_LABEL.get(pol, pol)})
     else:
         out = [dict(it) for it in items]
     res = {"source": src, "items": out}
+    if src == "change_plan_policies" and choices.get("direction"):
+        res = {"source": src, "direction": choices["direction"], "items": out}
     if choices.get("truncated"):
         res["truncated"] = True
     return res
+
+
+# ─────────────────────────── text / empty results (SPEC_DATA_v3 §2, §6) ────────────────────────────
+
+def admin_text(obj: dict) -> str:
+    """What the admin reads: the model's ``message`` (ops-v2), else its
+    ``summary_ar`` (a round-1/2 model). Shown with textContent — never HTML."""
+    for key in ("message", "summary_ar"):
+        val = obj.get(key)
+        if isinstance(val, str) and val.strip():
+            return val.strip()[:600]
+    return ""
+
+
+def _lookup_key(action: Any, fields: dict) -> Optional[tuple[str, str]]:
+    if action == "choose":
+        src = fields.get("source")
+    elif action in LIST_SOURCES:
+        src = action
+    else:
+        return None
+    if src not in LIST_SOURCES:
+        return None
+    return str(src), str(fields.get("query") or "").strip().casefold()
+
+
+def _empty_before(cid: str, tenant_id: int, key: tuple[str, str]) -> bool:
+    """The same lookup (source + query) already returned an EMPTY list in this
+    conversation (an assistant turn immediately followed by ``CHOICES`` with
+    ``items: []``)."""
+    msgs = transcript(cid, tenant_id)
+    for prev, nxt in zip(msgs, msgs[1:]):
+        if prev["role"] != "assistant" or nxt["role"] != "tool" or \
+                not nxt["content"].startswith("CHOICES "):
+            continue
+        try:
+            obj = json.loads(prev["content"])
+            ch = json.loads(nxt["content"][len("CHOICES "):])
+        except ValueError:
+            continue
+        f = obj.get("fields") if isinstance(obj.get("fields"), dict) else {}
+        if _lookup_key(obj.get("action"), f) == key and not (ch.get("items") or []):
+            return True
+    return False
+
+
+def empty_text(source: str, *, direct_generation: bool = False) -> str:
+    """The empty-state line shown instead of an empty list card."""
+    if source == "list_offers":
+        if direct_generation:
+            return _tr("لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، "
+                       "أو إنشاء عرض أوّلًا.")
+        return _tr("لا توجد عروض مسجّلة في النظام بعد.")
+    if source == "list_plans":
+        return _tr("لا توجد باقات مفعّلة في النظام بعد.")
+    if source == "find_subscriber":
+        return _tr("لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.")
+    if source == "list_card_batches":
+        return _tr("لا توجد حزم بطاقات تطابق هذا البحث.")
+    return _tr("لا توجد نتائج.")
+
+
+def _direct_generation(cid: str, tenant_id: int) -> bool:
+    for m in transcript(cid, tenant_id):
+        if m["role"] == "system" and m["content"].startswith("CONTEXT "):
+            try:
+                ctx = json.loads(m["content"][len("CONTEXT "):])
+            except ValueError:
+                return False
+            return "cards.generate_direct" in ((ctx.get("admin") or {}).get("permissions") or [])
+    return False
 
 
 def tool_line(rendered: dict) -> str:
@@ -313,14 +395,24 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
             return replies
         action = obj.get("action")
         fields = obj.get("fields") if isinstance(obj.get("fields"), dict) else {}
-        summary = obj.get("summary_ar") if isinstance(obj.get("summary_ar"), str) else ""
+        summary = admin_text(obj)
         is_list = action in LIST_SOURCES or action == "choose"
+        is_info = action in INFO_ACTIONS
 
-        if is_list and hop >= MAX_HOPS:
+        if (is_list or is_info) and hop >= MAX_HOPS:
             _audit(tid, actor, aid, cid, "too_many_hops", {"hops": hop})
             replies.append({"type": "error", "code": "too_many_hops",
                             "text": _tr("احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو "
                                         "الرقم بدقّة أكثر وأعد المحاولة.")})
+            return replies
+
+        key = _lookup_key(action, fields)
+        if key is not None and _empty_before(cid, tid, key):
+            # loop guard (SPEC_DATA_v3 §6): the same lookup already came back empty —
+            # answer the empty state here; no second lookup, no further model call.
+            _audit(tid, actor, aid, cid, "repeated_empty_lookup", {"source": key[0]})
+            replies.append({"type": "assistant", "action": "reply", "empty": True,
+                            "text": empty_text(key[0], direct_generation=_direct_generation(cid, tid))})
             return replies
 
         res = api("POST", f"/ops/conversations/{cid}/proposals",
@@ -358,8 +450,22 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
             rendered = render_choices(ch, tid)
             model_append(cid, tid, obj)
             append(cid, tid, "tool", tool_line(rendered))
-            replies.append({"type": "choices", "source": rendered["source"],
-                            "items": rendered["items"], "text": summary})
+            rep = {"type": "choices", "source": rendered["source"],
+                   "items": rendered["items"], "text": summary,
+                   "truncated": bool(rendered.get("truncated"))}
+            if not rendered["items"]:
+                rep["empty"] = empty_text(rendered["source"],
+                                          direct_generation=_direct_generation(cid, tid))
+            replies.append(rep)
+            continue
+
+        if out.get("kind") == "info":
+            result = out.get("result") if isinstance(out.get("result"), dict) else {}
+            model_append(cid, tid, obj)
+            append(cid, tid, "tool", out.get("tool_message") or "RESULT {}")
+            replies.append({"type": "result", "action": action, "text": summary,
+                            "source": result.get("source") or action,
+                            "data": result.get("data"), "error": result.get("error")})
             continue
 
         model_append(cid, tid, obj)
