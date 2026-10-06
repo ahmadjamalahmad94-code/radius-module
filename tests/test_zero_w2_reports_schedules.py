@@ -199,17 +199,18 @@ def test_schedule_patch_full_edit_and_validation(client):
     url = f"/api/v1/bandwidth-schedules/{s['id']}"
     res = client.patch(url, headers=AUTH, json={
         "name": "Peak", "starts_at_time": "18:00", "ends_at_time": "23:00",
-        "speed_down_kbps": 8000, "speed_up_kbps": 2000, "restore_mode": "keep_current",
+        "speed_down_kbps": 8000, "speed_up_kbps": 2000, "restore_mode": "disconnect",
         "priority": 2, "enabled": False, "notes": "edited"})
     assert res.status_code == 200, res.get_json()
     got = res.get_json()["data"]["schedule"]
     assert (got["name"], got["starts_at_time"], got["restore_mode"], got["priority"]) == \
-        ("Peak", "18:00", "keep_current", 2)
+        ("Peak", "18:00", "disconnect", 2)
     assert not got["enabled"]
     # same rules as the web form (parity-c): unknown restore mode, no speeds.
     assert client.patch(url, headers=AUTH, json={"restore_mode": "manual"}).status_code == 422
     assert client.patch(url, headers=AUTH,
-                        json={"speed_down_kbps": 0, "speed_up_kbps": 0}).status_code == 422
+                        json={"speed_down_kbps": 0, "speed_up_kbps": 0,
+                              "restore_mode": "profile_default"}).status_code == 422
     assert client.patch(url, headers=AUTH, json={
         "speed_down_kbps": 0, "speed_up_kbps": 0,
         "restore_mode": "disconnect"}).status_code == 200

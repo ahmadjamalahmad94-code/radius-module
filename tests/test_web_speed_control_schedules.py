@@ -168,7 +168,7 @@ def test_schedule_crud_from_speed_control_returns_here(client):
             "_csrf_token": token, "return_to": SPEED_URL,
             "name": "SC night edited", "starts_at_time": "22:00",
             "ends_at_time": "05:00", "speed_down_kbps": "12000",
-            "restore_mode": "keep_current", "enabled": "1",
+            "restore_mode": "disconnect", "enabled": "1",
         },
         follow_redirects=False,
     )
@@ -179,7 +179,7 @@ def test_schedule_crud_from_speed_control_returns_here(client):
     after = operations_repo.get_bandwidth_schedule(1, sched["id"])
     assert after["name"] == "SC night edited"
     assert after["speed_down_kbps"] == 12000
-    assert after["restore_mode"] == "keep_current"
+    assert after["restore_mode"] == "disconnect"
 
     # LIVE APPLY (flag now defaults ON) — no active sessions in NO_SEED, so the
     # live branch runs cleanly (applied_to_radius False) without error.
