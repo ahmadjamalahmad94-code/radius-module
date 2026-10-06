@@ -214,6 +214,20 @@ def _batch_window_seconds(batch) -> int:
     })
 
 
+def _batch_time_snapshot(batch) -> dict:
+    """حقولُ الحزمة التي تُحدّد نافذةَ بطاقاتها — لقطةُ «قبل» لإعادة الختم."""
+    return {
+        "time_value": getattr(batch, "time_value", 0),
+        "time_unit": getattr(batch, "time_unit", "") or "days",
+        "validity_after_first_login_days":
+            getattr(batch, "validity_after_first_login_days", 0),
+        "count_by_seconds": int(bool(getattr(batch, "count_by_seconds", False))),
+        "count_from_first_connect":
+            int(bool(getattr(batch, "count_from_first_connect", True))),
+        "plan_id": getattr(batch, "plan_id", None),
+    }
+
+
 CARDS_MAX_PER_BATCH_KEY = "cards.max_per_batch"
 
 
@@ -1756,6 +1770,20 @@ class CardsService:
         else:
             changes["time_value"], changes["time_unit"] = 0, cur_tu
 
+    def _plan_budget_snapshot(self, plan_id) -> dict:
+        """مدّتا باقةٍ (‏duration_minutes/validity_days) قبل التعديل — لقياس ما
+        أضافه المشغّل خارج الميزانية عند إعادة الختم. {} إن تعذّرت."""
+        if not plan_id:
+            return {}
+        try:
+            plan = self._adapter.get_profile(int(plan_id))
+        except Exception:  # noqa: BLE001
+            plan = None
+        if not plan:
+            return {}
+        return {"duration_minutes": int(getattr(plan, "duration_minutes", 0) or 0),
+                "validity_days": int(getattr(plan, "validity_days", 0) or 0)}
+
     def update_batch(self, *, actor: str, batch_id: int, data: dict) -> CardBatch:
         batch = self._store.get_batch(batch_id)
         if not batch:
@@ -1857,23 +1885,69 @@ class CardsService:
         # 🔴 وتغييرُ **النمط** تغييرٌ في المعنى لا في الرقم — يُطلق المطابقةَ
         #    مثلَ المدّة تمامًا. بدونه يقلب المشغّلُ الحزمةَ عبر الـAPI فتبقى
         #    بطاقاتُها المبدوءةُ على ختمها القديم: الحزمةُ بنمطٍ والبطاقاتُ بآخر.
-        if any(k in changes for k in
+        _time_touched = any(k in changes for k in
                ("time_value", "time_unit", "validity_after_first_login_days",
-                "count_by_seconds", "count_from_first_connect")):
+                "count_by_seconds", "count_from_first_connect"))
+        if _time_touched:
             try:
                 _by_seconds = (bool(getattr(updated, "count_by_seconds", False))
                                and not bool(getattr(
                                    updated, "count_from_first_connect", True)))
+                # البطاقاتُ التي لم تبدأ فقط — التي بدأت لـ card_restamp أدناه.
                 realigned = cards_repo.realign_batch_card_windows(
                     self._store_tenant_id(), int(batch_id),
                     window_seconds=_batch_window_seconds(updated),
                     clear_started_when_zero=_by_seconds,
+                    include_started=False,
                 )
             except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجل المواءمة
                 import logging
                 logging.getLogger(__name__).warning(
                     "realign_batch_card_windows failed for batch=%s",
                     batch_id, exc_info=True)
+        # 🔑 قرارُ المالك («أ»، client20 · 2026-10-05): البطاقاتُ التي **بدأت**
+        #    تأخذ المدّة الجديدة محسوبةً من أوّل دخولها — ومنها نقلُ الحزمة إلى
+        #    باقةٍ أخرى (كانت 77821145 مختومةً ساعةً على «ساعة» فيقطعها
+        #    الرّاديوس والفاحصُ يعدها بـ«16 ساعة»). الدالّة idempotent فتُصلح
+        #    أيضًا ختمًا قديمًا عند إعادة الحفظ، ولا تلمس ما أضافه المشغّل.
+        if _time_touched or "plan_id" in changes:
+            from .card_restamp import restamp_started_cards
+            _restamp = restamp_started_cards(
+                self._store_tenant_id(), batch_id=int(batch_id),
+                previous_batch=_batch_time_snapshot(batch),
+                previous_plan=self._plan_budget_snapshot(batch.plan_id),
+                reason="batch_update", actor=actor)
+            realigned = dict(realigned)
+            realigned["started"] = int(_restamp.get("changed") or 0)
+            realigned["expired_now"] = int(_restamp.get("expired_now") or 0)
+            realigned["restamp"] = _restamp
+        # 🔑 المالك 2026-10-05 «السرعة تنتقل مع الحزمة»: البطاقات البادئة
+        #    انتقلت مع الحزمة إلى الباقة الجديدة (cards_repo.update_batch) —
+        #    فالجلسات الحيّة تأخذ سرعتها الآن بـCoA (خلفيًّا، لا يعطّل الحفظ)،
+        #    والسرعة المؤقّتة النشِطة تعود عند انتهائها إلى سرعة الباقة الجديدة.
+        if "plan_id" in changes and int(changes["plan_id"] or 0) != int(batch.plan_id or 0):
+            try:
+                from ..db.connection import db as _db
+                from .temp_speed import retarget_restore_to_plan
+                retarget_restore_to_plan(self._store_tenant_id(), [
+                    r["username"] for r in _db().execute(
+                        "SELECT username FROM cards WHERE tenant_id = ? AND batch_id = ?"
+                        " AND plan_id = ?", (self._store_tenant_id(), int(batch_id),
+                                             int(changes["plan_id"]))).fetchall()])
+            except Exception:  # noqa: BLE001 — الحفظ لا يسقط لأجلها
+                import logging
+                logging.getLogger(__name__).warning(
+                    "temp-speed restore retarget failed for batch=%s", batch_id,
+                    exc_info=True)
+            try:
+                from .bandwidth_apply import push_batch_speed_live
+                realigned = dict(realigned)
+                realigned["speed_pushed"] = len(
+                    push_batch_speed_live(self._store_tenant_id(), int(batch_id)))
+            except Exception:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).warning(
+                    "push_batch_speed_live failed for batch=%s", batch_id, exc_info=True)
         self._last_realign = realigned
         # لقطتان مقروءتان before/after → يَظهر «الحقل: كان X ← صار Y» في سجل
         # أحداث المدراء لكلّ حقل من حقول الدفعة تغيّر (اسم الباقة يُحلّ لقيمة مقروءة).
@@ -2146,32 +2220,43 @@ class CardsService:
         if not username:
             raise RadiusValidationError(_tr("البطاقة بلا اسم دخول"))
 
+        batch = None
+        try:
+            batch = cards_repo.get_batch(
+                tenant_id, getattr(card, "batch_id", None) or 0,
+            )
+        except Exception:  # noqa: BLE001 — حزمةٌ محذوفة لا تمنع التغيير
+            batch = None
+        # card-edit-identity: حزمة «رقم فقط» تُصادَق برقم البطاقة وحده
+        # (policy_engine._login_without_password) — الكلمة لا تُقارَن أصلًا.
+        # تغييرها كان «ينجح» بلا أثر فيظنّ المشغّل أنّه أغلق التسريب.
+        if _batch_is_passwordless(batch):
+            raise RadiusValidationError(_tr(CARD_PASSWORDLESS_MSG))
+
         pwd = (new_password or "").strip()
         generated = not pwd
         if generated:
             length, charset = 6, "digits"
-            try:
-                batch = cards_repo.get_batch(
-                    tenant_id, getattr(card, "batch_id", None) or 0,
-                )
-                if batch:
+            if batch:
+                try:
                     length = int(getattr(batch, "password_length", 0) or 6)
                     charset = getattr(batch, "password_charset", "") or "digits"
-            except Exception:  # noqa: BLE001 — حزمةٌ محذوفة لا تمنع التغيير
-                pass
+                except Exception:  # noqa: BLE001
+                    length, charset = 6, "digits"
             pwd = cards_repo._random_str(max(1, length), charset=charset)
-        elif len(pwd) > 64:
-            raise RadiusValidationError(_tr("كلمة المرور أطول من 64 حرفًا"))
-        elif any(c.isspace() for c in pwd):
-            # مسافةٌ داخل الكلمة لا تُرى عند الطباعة، ثمّ يفشل الدخول بلا سبب ظاهر.
-            raise RadiusValidationError(_tr("كلمة المرور لا تقبل مسافات"))
+        else:
+            _validate_card_password(pwd)
 
-        if not cards_repo.set_card_password(tenant_id, card_id, pwd):
-            raise RadiusValidationError(_tr("تعذّر تغيير كلمة مرور البطاقة"))
-
-        # ── جانب RADIUS ───────────────────────────────────────────────
-        # لو فشل هذا فالجدولان متخالفان — نُعلنه بدل ابتلاعه.
-        self._adapter.reset_password(username, pwd)
+        # الموضعان (وكلّ نسخةٍ أخرى بالقيمة) في معاملةٍ واحدة: فشلُ جانب
+        # RADIUS يُرجِع جدول الكروت كما كان — لا نصفُ تغيير.
+        from ..db.connection import transaction
+        with transaction():
+            if not cards_repo.set_card_password(tenant_id, card_id, pwd):
+                raise RadiusValidationError(_tr("تعذّر تغيير كلمة مرور البطاقة"))
+            # ── جانب RADIUS (+ طابور الراوترات) ──────────────────────────
+            self._adapter.reset_password(username, pwd)
+            # مرآة/radcheck/اعتماد شراء المتجر — كي لا يرى أحدٌ القديمة.
+            cards_repo.sync_card_password_refs(tenant_id, username, pwd)
 
         # ── الطرد ─────────────────────────────────────────────────────
         kicked = False
@@ -2193,6 +2278,142 @@ class CardsService:
                            })
         return {"password": pwd, "username": username,
                 "kicked": kicked, "generated": generated}
+
+    def update_card_identity(self, *, actor: str, card_id: int,
+                             username: Optional[str] = None,
+                             password: Optional[str] = None,
+                             kick: bool = True) -> dict:
+        """card-edit-identity (طلب المالك 2026-10-05) — «تعديل بيانات الكرت»:
+        رقم الكرت (اسم دخول RADIUS) و/أو كلمة المرور، فعّالًا من طرفٍ لطرف.
+
+        ``username``/``password`` = None أو فارغ ⇒ لا تغيير لذلك الحقل.
+
+        الترتيب (مثل متتالية المشترك، username-rename-cascade):
+          1. تحقّقٌ كامل قبل لمس أيّ شيء: الصياغة (``A-Za-z0-9._@-``، ٣–٦٤،
+             أرقامٌ عربيّة → لاتينيّة، وحالة الأحرف محفوظةٌ كما كُتبت — قرار
+             المالك 2026-10-05، الدخول بنفس الحالة بالضبط)، التفرّد (بلا
+             تفريقٍ للحالة) عبر البطاقات
+             **والمشتركين** (المؤرشفون أيضًا)، وحزمة «رقم فقط» لا كلمة لها.
+          2. طرد الجلسة الحيّة **على الاسم القديم** أوّلًا (الراوتر يعرفها به؛
+             disconnect مصالحٌ مع الراوتر أوّلًا) — فشله لا يوقف التعديل.
+          3. معاملةٌ واحدة: صفّ البطاقة + المتتالية المشتقّة من السكيمة + كلمة
+             المرور في كلّ نسخها + إعادة تزويد الراوترات (حذف القديم ودفع
+             الجديد في الطابور). أيّ فشل ⇒ rollback ويبقى كلّ شيء كما كان.
+        الاستهلاك والنافذة (first_used_at/expire_at/extra_seconds/
+        usage_reset_at) والحزمة والسعر والبيع والملكيّة لا تُلمَس — وتاريخ
+        radacct ينتقل مع الاسم فيبقى المتبقّي كما هو.
+
+        تُعيد: {"changed","renamed","password_changed","old_username",
+        "username","password","kicked","had_live_session","tables"}"""
+        tenant_id = self._store_tenant_id()
+        card = cards_repo.get_card(tenant_id, card_id)
+        if not card:
+            from ..core.errors import RadiusNotFound
+            raise RadiusNotFound(_tr("البطاقة غير موجودة"))
+        if getattr(card, "deleted_at", None):
+            raise RadiusValidationError(
+                _tr("البطاقة في سلة المحذوفات — استرجعها أولًا ثم عدّل بياناتها."))
+        old = getattr(card, "username", "") or ""
+        if not old:
+            raise RadiusValidationError(_tr("البطاقة بلا اسم دخول"))
+
+        new = old if username is None else normalize_card_username(username)
+        if username is not None and not new:
+            raise RadiusValidationError(_tr("رقم الكرت مطلوب."))
+        renamed = new != old
+        if renamed:
+            _validate_card_username(new)
+            if _card_username_taken(tenant_id, new, card_id=int(card.id),
+                                    old_username=old):
+                from ..core.errors import RadiusConflict
+                raise RadiusConflict(_tr(
+                    'الاسم مستخدم: «%(u)s» رقمُ بطاقةٍ أو اسمُ مشتركٍ آخر.', u=new))
+
+        pwd = "" if password is None else str(password).strip()
+        pw_changed = bool(pwd) and pwd != (getattr(card, "password", "") or "")
+        if pwd:
+            batch = None
+            try:
+                batch = cards_repo.get_batch(tenant_id, int(card.batch_id or 0))
+            except Exception:  # noqa: BLE001
+                batch = None
+            if _batch_is_passwordless(batch):
+                raise RadiusValidationError(_tr(CARD_PASSWORDLESS_MSG))
+            _validate_card_password(pwd)
+
+        if not renamed and not pw_changed:
+            return {"changed": False, "renamed": False, "password_changed": False,
+                    "old_username": old, "username": old, "password": None,
+                    "kicked": False, "had_live_session": False, "tables": {}}
+
+        if not renamed:
+            # كلمة فقط: المسار القائم نفسه (كتابة كلّ النسخ ثم الطرد).
+            res = self.change_card_password(actor=actor, card_id=card_id,
+                                            new_password=pwd, kick=kick)
+            return {"changed": True, "renamed": False, "password_changed": True,
+                    "old_username": old, "username": old,
+                    "password": res.get("password"), "kicked": res.get("kicked"),
+                    "had_live_session": bool(res.get("kicked")), "tables": {}}
+
+        # ── (2) الطرد أوّلًا، على الاسم الذي يعرفه الراوتر ─────────────
+        had_live = _card_has_open_session(tenant_id, old)
+        kicked = False
+        if kick and had_live:
+            try:
+                self._adapter.disconnect(old)
+                kicked = True
+            except Exception as exc:  # noqa: BLE001 — لا يوقف التعديل
+                _log_kick_failure("update_card_identity", repr(old), exc)
+
+        # ── (3) معاملةٌ واحدة: الكلّ أو لا شيء ─────────────────────────
+        from ..db.connection import transaction
+        from ..db.repos import subscribers_repo
+        sqlite_mode = getattr(self._adapter, "mode", "") == "sqlite"
+        with transaction():
+            tables = cards_repo.rename_card_username(tenant_id, int(card.id), old, new)
+            if pw_changed:
+                if not cards_repo.set_card_password(tenant_id, int(card.id), pwd):
+                    raise RadiusValidationError(_tr("تعذّر تغيير كلمة مرور البطاقة"))
+                cards_repo.sync_card_password_refs(tenant_id, new, pwd)
+            if sqlite_mode:
+                # إعادة تزويد الراوترات **بعد** المتتالية (وإلّا أعادت توجيه
+                # مهمّة حذف القديم إلى الاسم الجديد).
+                from ..integration.router_sync import (
+                    enqueue_subscriber_delete, enqueue_subscriber_upsert)
+                enqueue_subscriber_delete(tenant_id, old)
+                mirror = subscribers_repo.get_subscriber(tenant_id, new)
+                if mirror is not None:
+                    enqueue_subscriber_upsert(mirror)
+        if not sqlite_mode:
+            # أوضاعٌ أخرى (manual/direct): مرآة المحوّل خارج القاعدة —
+            # أفضل جهد بعد الالتزام، والقاعدة (مصدر المصادقة) سليمة.
+            try:
+                if hasattr(self._adapter, "rename_account"):
+                    self._adapter.rename_account(old, new, disconnect=False)
+                if pw_changed:
+                    self._adapter.reset_password(new, pwd)
+            except Exception as exc:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).warning(
+                    "update_card_identity: adapter mirror %r→%r failed: %s",
+                    old, new, exc)
+
+        self._audit.record(actor=actor, action="card.rename",
+                           target_type="card", target_id=str(card_id),
+                           payload={"username": new, "old_username": old,
+                                    "kicked": kicked,
+                                    "password_changed": pw_changed},
+                           before={"card_number": old}, after={"card_number": new})
+        if pw_changed:
+            self._audit.record(actor=actor, action="card.change_password",
+                               target_type="card", target_id=str(card_id),
+                               payload={"username": new, "generated": False,
+                                        "kicked": kicked, "length": len(pwd)})
+        return {"changed": True, "renamed": True, "password_changed": pw_changed,
+                "old_username": old, "username": new,
+                "password": pwd if pw_changed else None,
+                "kicked": kicked, "had_live_session": had_live,
+                "tables": tables}
 
     def set_card_speed(self, *, actor: str, card_id: int,
                          down_kbps: int, up_kbps: int,
@@ -2499,3 +2720,75 @@ def get_cards_service() -> CardsService:
     from ..integration.factory import get_radius_adapter
     from .audit import get_audit_service
     return CardsService(get_radius_adapter(), audit=get_audit_service())
+
+
+# ─────────────── card-edit-identity helpers ───────────────
+
+CARD_PASSWORDLESS_MSG = N_(
+    "هذه البطاقة من حزمة «رقم فقط» (بلا كلمة مرور): تُصادَق برقمها وحده، "
+    "فتغيير كلمة المرور لا أثر له. لإغلاق تسريبٍ غيّر «رقم الكرت» نفسه.")
+
+
+def normalize_card_username(raw) -> str:
+    """رقم الكرت كما يُخزَّن: أرقامٌ عربيّة → لاتينيّة، بلا مسافاتٍ طرفيّة،
+    و🔑 **حالة الأحرف كما كتبها المشغّل بالضبط** (قرار المالك 2026-10-05):
+    «Ahmad1» يُحفظ «Ahmad1» والدخول يلزمه «Ahmad1» حرفيًّا. سقوطُ المصادقة
+    إلى الصغيرة (policy_engine.authorize) لا يطابق إلّا اسمًا مخزَّنًا كلُّه
+    صغير — فالكروت المولّدة/المستوردة تبقى تقبل ما يكتبه الزبون بالكبيرة،
+    ولا يدخل «ahmad1»/«AHMAD1» على «Ahmad1». التفرّد يبقى بلا تفريقٍ للحالة
+    (_card_username_taken)."""
+    from .subscriber_validation import latin_digits
+    return latin_digits(str(raw or "")).strip()
+
+
+def _validate_card_username(name: str) -> None:
+    from .users import _validate_new_username
+    _validate_new_username(name)
+    # «rtr-*» يمرّ في FreeRADIUS بمسار rlm_sql لحسابات إدارة الراوترات لا
+    # بمحرّك السياسة — بطاقةٌ بهذا الاسم لن تُصادَق أبدًا.
+    if name.startswith("rtr-"):
+        raise RadiusValidationError(
+            _tr("البادئة «rtr-» محجوزة لحسابات إدارة الراوترات."))
+
+
+def _validate_card_password(pwd: str) -> None:
+    if len(pwd) > 64:
+        raise RadiusValidationError(_tr("كلمة المرور أطول من 64 حرفًا"))
+    if any(c.isspace() for c in pwd):
+        # مسافةٌ داخل الكلمة لا تُرى عند الطباعة، ثمّ يفشل الدخول بلا سبب ظاهر.
+        raise RadiusValidationError(_tr("كلمة المرور لا تقبل مسافات"))
+
+
+def _batch_is_passwordless(batch) -> bool:
+    try:
+        return bool(int(getattr(batch, "login_without_password", 0) or 0))
+    except (TypeError, ValueError):
+        return False
+
+
+def _card_username_taken(tenant_id: int, name: str, *, card_id: int,
+                         old_username: str) -> bool:
+    """الاسم محجوزٌ (بلا تفريقٍ لحالة الأحرف/المسافات) لبطاقةٍ أخرى — ولو في
+    السلّة — أو لمشتركٍ قائمٍ أو مؤرشف (الصفّ المؤرشف ما زال يملك UNIQUE).
+    مرآة البطاقة نفسها (subscribers باسمها القديم) مستثناة."""
+    from ..db.connection import db
+    n = (name or "").strip().lower()
+    conn = db()
+    if conn.execute(
+            "SELECT 1 FROM cards WHERE tenant_id = ? AND lower(trim(username)) = ? "
+            "AND id <> ? LIMIT 1", (int(tenant_id), n, int(card_id))).fetchone():
+        return True
+    return bool(conn.execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND lower(trim(username)) = ? "
+        "AND username <> ? LIMIT 1", (int(tenant_id), n, old_username)).fetchone())
+
+
+def _card_has_open_session(tenant_id: int, username: str) -> bool:
+    try:
+        from ..db.connection import db
+        return db().execute(
+            "SELECT 1 FROM radacct WHERE tenant_id = ? AND username = ? "
+            "AND acctstoptime IS NULL LIMIT 1",
+            (int(tenant_id), username)).fetchone() is not None
+    except Exception:  # noqa: BLE001
+        return False

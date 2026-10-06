@@ -889,15 +889,23 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
             new_plan_id = int(filtered["plan_id"] or 0)
             # Every UNUSED card follows the batch — a disabled (revoked) one
             # too, or it comes back on the old plan when re-enabled (a06 M8).
-            # Used cards keep the plan they were sold/started on.
+            # 🔑 Owner decision 2026-10-05 («السرعة تنتقل مع الحزمة»): cards
+            #    that ALREADY STARTED follow the batch as well — the new plan's
+            #    SPEED, not only its duration (card_restamp). This replaces the
+            #    old a06-M8 rule «used cards keep the plan they were sold on».
+            #    Owner 2026-10-06: a REVOKED started card moves too («ينتقل مع
+            #    الباقي») so it comes back on the new plan when re-enabled.
+            #    Only deleted cards are left untouched.
             conn.execute(
                 """
                 UPDATE cards
                 SET plan_id = ?
-                WHERE tenant_id = ? AND batch_id = ? AND used = 0
+                WHERE tenant_id = ? AND batch_id = ?
+                  AND (used = 0 OR deleted_at IS NULL)
                 """,
                 (new_plan_id, tenant_id, batch_id),
             )
+            # The auth mirror follows its card (whatever moved above).
             conn.execute(
                 """
                 UPDATE subscribers
@@ -905,10 +913,13 @@ def update_batch(tenant_id: int, batch_id: int, changes: dict[str, Any]) -> Opti
                 WHERE tenant_id = ?
                   AND card_batch_id = ?
                   AND user_type = 'card'
-                  AND first_login_at IS NULL
                   AND deleted_at IS NULL
+                  AND username IN (SELECT username FROM cards
+                                    WHERE tenant_id = ? AND batch_id = ?
+                                      AND plan_id = ?)
                 """,
-                (new_plan_id, tenant_id, batch_id),
+                (new_plan_id, tenant_id, batch_id,
+                 tenant_id, batch_id, new_plan_id),
             )
     return get_batch(tenant_id, batch_id)
 
@@ -1467,6 +1478,7 @@ _CARD_CHECK_SELECT = """
             -- These are the source of truth for the card's accounting mode
             -- and time budget (resolved by card_accounting in check_card).
             b.count_from_first_connect        AS batch_count_from_first_connect,
+            COALESCE(b.login_without_password, 0) AS batch_login_without_password,
             b.count_by_seconds                AS batch_count_by_seconds,
             b.validity_after_first_login_days AS batch_validity_after_first_login_days,
             b.time_value                      AS batch_time_value,
@@ -1495,6 +1507,10 @@ _CARD_CHECK_SELECT = """
             p.quota_monthly_mb AS profile_quota_monthly_mb,
             p.duration_minutes AS profile_duration_minutes,
             p.validity_days AS profile_validity_days,
+            -- «باقة الميزانية» = باقةُ الحزمة (ثمّ باقةُ البطاقة): البطاقةُ
+            -- المستعملة تحتفظ بـplan_id القديم بعد نقل الحزمة، ومدّتُها من الجديدة.
+            bp.duration_minutes AS batch_plan_duration_minutes,
+            bp.validity_days AS batch_plan_validity_days,
             s.username AS subscriber_username,
             s.full_name AS subscriber_full_name,
             s.mobile AS subscriber_mobile,
@@ -1508,6 +1524,9 @@ _CARD_CHECK_SELECT = """
             ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
         LEFT JOIN access_plans p
             ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+        LEFT JOIN access_plans bp
+            ON bp.tenant_id = c.tenant_id
+           AND bp.id = COALESCE(NULLIF(b.plan_id, 0), c.plan_id)
         LEFT JOIN subscribers s
             ON s.tenant_id = c.tenant_id AND s.id = c.used_by_subscriber_id
         LEFT JOIN admins mo
@@ -1669,7 +1688,8 @@ def set_card_locked_mac(tenant_id: int, card_id: int, mac: str, *, actor: str = 
 
 def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
                                window_seconds: int,
-                               clear_started_when_zero: bool = False) -> dict:
+                               clear_started_when_zero: bool = False,
+                               include_started: bool = True) -> dict:
     """MT113 — تعديل مدّة الحزمة يَسري على بطاقاتها المولَّدة.
 
     صنفان لا واحد:
@@ -1688,6 +1708,10 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
     للمجمَّدة رصيدٌ محفوظ يُستعاد عند التفعيل، وإعادةُ الحساب تمحوه.
 
     تُعيد: {"pending": عدد ما فُرِّغ، "started": عدد ما أُعيد حسابه}
+
+    ``include_started=False``: تُترك البطاقاتُ التي بدأت لـ
+    ``card_restamp.restamp_started_cards`` (الميزانية كاملةً: باقةُ الحزمة +
+    المنحة + ما أضافه المشغّل خارجها) — هذه الدالّة تعرف نافذةَ الحزمة وحدها.
     """
     if window_seconds <= 0:
         # 🔴 نافذةٌ صفرٌ مع نمط «المحاسبة بالثانية» ليست «لا شيء لنفعله»: هي
@@ -1696,20 +1720,23 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
         #    موعد ساعةِ الحائط الذي كُتب لها بالنمط السابق.
         if not clear_started_when_zero:
             return {"pending": 0, "started": 0, "expired_now": 0}
+        _only_pending = "" if include_started else " AND first_used_at IS NULL"
         with transaction() as conn:
             cur = conn.execute(
                 "UPDATE cards SET expire_at = NULL "
                 " WHERE tenant_id = ? AND batch_id = ? AND deleted_at IS NULL "
                 "   AND COALESCE(frozen_remaining_seconds, 0) = 0 "
-                "   AND expire_at IS NOT NULL",
+                "   AND expire_at IS NOT NULL" + _only_pending,
                 (tenant_id, batch_id))
             cleared = cur.rowcount or 0
             conn.execute(
                 "UPDATE subscribers SET expire_at = NULL "
                 " WHERE tenant_id = ? AND user_type = 'card' AND username IN "
                 "       (SELECT username FROM cards "
-                "         WHERE tenant_id = ? AND batch_id = ?)",
+                "         WHERE tenant_id = ? AND batch_id = ?" + _only_pending + ")",
                 (tenant_id, tenant_id, batch_id))
+        if not include_started:
+            return {"pending": cleared, "started": 0, "expired_now": 0}
         return {"pending": 0, "started": cleared, "expired_now": 0}
 
     with transaction() as conn:
@@ -1726,6 +1753,8 @@ def realign_batch_card_windows(tenant_id: int, batch_id: int, *,
             (tenant_id, batch_id),
         )
         pending = cur.rowcount or 0
+        if not include_started:
+            return {"pending": pending, "started": 0, "expired_now": 0}
 
         rows = conn.execute(
             """
@@ -1793,6 +1822,89 @@ def set_card_password(tenant_id: int, card_id: int, password: str) -> bool:
             (pwd, tenant_id, card_id),
         )
         return bool(cur.rowcount)
+
+
+def _has_table_col(conn, table: str, col: str) -> bool:
+    try:
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    except Exception:  # noqa: BLE001
+        return False
+    return col in cols
+
+
+def sync_card_password_refs(tenant_id: int, username: str, password: str) -> dict:
+    """card-edit-identity — كلمة البطاقة مخزَّنةٌ بالقيمة في أكثر من جدول؛
+    ``set_card_password`` يكتب ``cards`` وحده. هنا البقيّة، داخل معاملة
+    المستدعي (تتداخل كـSAVEPOINT):
+
+      • مرآة ``subscribers`` (user_type=card) — ما يدفعه طابور الراوترات.
+      • ``radcheck`` Cleartext-Password — إن وُجد صفٌّ للبطاقة (rlm_sql).
+      • ``card_user_purchases.cred_password`` — ما يقرؤه «بطاقاتي» في المتجر
+        **أوّلًا** (store.py)، فكان الزبون يرى الكلمة القديمة بعد تغييرها.
+
+    الجداول/الأعمدة الغائبة تُتخطّى. تُعيد {الجدول: عدد الصفوف}."""
+    pwd = (password or "").strip()
+    name = (username or "").strip()
+    out: dict[str, int] = {}
+    if not pwd or not name:
+        return out
+    with transaction() as conn:
+        if _has_table_col(conn, "subscribers", "password"):
+            cur = conn.execute(
+                "UPDATE subscribers SET password = ?, updated_at = ? "
+                "WHERE tenant_id = ? AND username = ?",
+                (pwd, now_iso(), tenant_id, name))
+            if cur.rowcount:
+                out["subscribers"] = cur.rowcount
+        if _has_table_col(conn, "radcheck", "value"):
+            cur = conn.execute(
+                "UPDATE radcheck SET value = ? WHERE tenant_id = ? AND username = ? "
+                "AND attribute = 'Cleartext-Password'",
+                (pwd, tenant_id, name))
+            if cur.rowcount:
+                out["radcheck"] = cur.rowcount
+        if _has_table_col(conn, "card_user_purchases", "cred_password"):
+            cur = conn.execute(
+                "UPDATE card_user_purchases SET cred_password = ? "
+                "WHERE tenant_id = ? AND cred_username = ?",
+                (pwd, tenant_id, name))
+            if cur.rowcount:
+                out["card_user_purchases"] = cur.rowcount
+    return out
+
+
+def rename_card_username(tenant_id: int, card_id: int, old_username: str,
+                         new_username: str) -> dict:
+    """card-edit-identity — يُغيّر «رقم الكرت» (اسم دخول RADIUS) في كلّ مكانٍ
+    يُخزَّن فيه بالقيمة، في معاملةٍ واحدة (الكلّ أو لا شيء).
+
+    1. صفّ ``cards`` نفسه أوّلًا (بالمعرّف) — فهرس UNIQUE(tenant, username)
+       يُسقط التصادم قبل لمس أيّ شيء آخر.
+    2. ثمّ متتالية المشترك نفسها (``subscribers_repo.rename_subscriber_username``):
+       قائمة جداولها مشتقّةٌ من السكيمة — مرآة subscribers، radcheck/radreply/
+       radusergroup، radacct/radpostauth (التاريخ يتبع البطاقة فيبقى الاستهلاك
+       والنافذة كما هي)، المال، أقفال MAC، مطالبات الأجهزة، علامات الكوتا،
+       الإشعارات، اعتماد شراء المتجر، طابور الراوترات…
+
+    على المستدعي التحقّق من الصياغة والتفرّد أوّلًا (CardsService)."""
+    old = (old_username or "").strip()
+    new = (new_username or "").strip()
+    if not old or not new:
+        raise ValueError("rename requires non-empty old and new usernames")
+    if old == new:
+        return {}
+    from . import subscribers_repo
+    with transaction() as conn:
+        cur = conn.execute(
+            "UPDATE cards SET username = ? WHERE tenant_id = ? AND id = ? AND username = ?",
+            (new, tenant_id, card_id, old))
+        if cur.rowcount != 1:
+            raise ValueError("card %r not found under %r" % (card_id, old))
+        tables = {"cards": 1}
+        for t, n in (subscribers_repo.rename_subscriber_username(
+                tenant_id, old, new) or {}).items():
+            tables[t] = tables.get(t, 0) + int(n or 0)
+    return tables
 
 
 def set_card_revoked(tenant_id: int, card_id: int, revoked: bool, *,
@@ -1903,11 +2015,32 @@ def grant_card_time(tenant_id: int, card_id: int, delta_seconds: int) -> dict | 
         if row is None:
             return None
 
+        # 🔴 client20 (2026-10-05): حزمةٌ مدّتُها من **الباقة** (time_value=0)
+        #    كانت ميزانيّتُها هنا صفرًا ⇒ «إضافة ساعة» لبطاقةٍ حيّة تختم
+        #    first_used + ساعة فتقتلها. الباقةُ = باقةُ الحزمة ثمّ البطاقة —
+        #    نفسُ مصدر الفاحص وإعادة الختم. محصّن: تعذّرٌ ⇒ بلا باقة (السابق).
+        try:
+            _plan = conn.execute(
+                """
+                SELECT p.duration_minutes, p.validity_days
+                  FROM cards c
+                  LEFT JOIN card_batches b
+                    ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+                  JOIN access_plans p
+                    ON p.tenant_id = c.tenant_id
+                   AND p.id = COALESCE(NULLIF(b.plan_id, 0), c.plan_id)
+                 WHERE c.tenant_id = ? AND c.id = ?
+                """,
+                (tenant_id, card_id),
+            ).fetchone()
+        except Exception:  # noqa: BLE001
+            _plan = None
         base_budget = budget_seconds(
             validity_after_first_login_days=row["validity_after_first_login_days"] or 0,
             time_value=row["time_value"] or 0,
             time_unit=row["time_unit"] or "days",
-            duration_minutes=0, validity_days=0,
+            duration_minutes=(_plan["duration_minutes"] or 0) if _plan else 0,
+            validity_days=(_plan["validity_days"] or 0) if _plan else 0,
         )
         old_extra = int(row["extra_seconds"] or 0)
         mode = (MODE_FROM_FIRST_CONNECT if row["count_from_first_connect"]

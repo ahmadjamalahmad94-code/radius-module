@@ -14,8 +14,8 @@ from .card_accounting import (
     MODE_BY_SECONDS,
     MODE_FROM_FIRST_CONNECT,
     budget_seconds,
+    card_time_view,
 )
-from .card_accounting import remaining_seconds as _remaining_by_mode
 from .device_fingerprint import infer_device
 
 
@@ -53,6 +53,22 @@ def _remaining_seconds(raw: Any, now: datetime) -> int | None:
     return max(0, int((expires - now).total_seconds()))
 
 
+def _budget_plan(record: dict, field: str) -> int:
+    """مدّةُ «باقة الميزانية» — باقةُ **الحزمة** (ثمّ باقةُ البطاقة).
+
+    قرارُ المالك 2026-10-05 («أ»): نقلُ الحزمة إلى باقةٍ أخرى يُعطي بطاقاتها
+    التي بدأت مدّةَ الباقة الجديدة. والبطاقةُ المستعملة تحتفظ بـ`plan_id`
+    القديم (سرعتها) — فلو قُرئت المدّةُ منه لعرض الفاحصُ ميزانيّةً غير التي
+    خُتمت بها. نفسُ المصدر في `card_restamp` و`online_time_budget`."""
+    val = record.get(f"batch_plan_{field}")
+    if val is None:
+        val = record.get(f"profile_{field}")
+    try:
+        return int(val or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _resolve_accounting(record: dict) -> tuple[str, int]:
     """Resolve the card's *accounting mode* and *time budget* from its batch.
 
@@ -80,8 +96,8 @@ def _resolve_accounting(record: dict) -> tuple[str, int]:
             "batch_validity_after_first_login_days") or 0,
         time_value=record.get("batch_time_value") or 0,
         time_unit=record.get("batch_time_unit") or "days",
-        duration_minutes=record.get("profile_duration_minutes") or 0,
-        validity_days=record.get("profile_validity_days") or 0,
+        duration_minutes=_budget_plan(record, "duration_minutes"),
+        validity_days=_budget_plan(record, "validity_days"),
     )
     # منحةُ المشغّل (‏cards.extra_seconds) تُضاف للميزانية، فيحترمها كلّ
     # وضعٍ محاسبيّ بلا استثناء — وتبقى المعادلة صحيحة:
@@ -102,8 +118,8 @@ def _is_exhausted_by_deduction(record: dict) -> bool:
             "batch_validity_after_first_login_days") or 0,
         time_value=record.get("batch_time_value") or 0,
         time_unit=record.get("batch_time_unit") or "days",
-        duration_minutes=record.get("profile_duration_minutes") or 0,
-        validity_days=record.get("profile_validity_days") or 0,
+        duration_minutes=_budget_plan(record, "duration_minutes"),
+        validity_days=_budget_plan(record, "validity_days"),
     )
     return is_exhausted(base, record.get("card_extra_seconds") or 0)
 
@@ -418,19 +434,18 @@ def card_time_brief(tenant_id: int, username: str, *,
     )
     mode, budget = _resolve_accounting(record)
     session_seconds = _seconds(summary.get("total_session_seconds"))
-    remaining = _remaining_by_mode(
+    # 🔑 نفسُ قارئ الفاحص (card_time_view): بطاقةٌ مختومةٌ تُقرأ من
+    #    `expire_at` — ما يُنفّذه الرّاديوس — لا من ميزانيّةٍ تغيّرت بعد الختم.
+    remaining, consumed = card_time_view(
         mode=mode, budget=budget, now=now,
-        first_connection_at=(parse_dt(record.get("first_used_at"))
-                             or parse_dt(summary.get("first_session_at"))),
+        first_used_at=parse_dt(record.get("first_used_at")),
+        first_connection_at=parse_dt(summary.get("first_session_at")),
         accounted_seconds=session_seconds,
         expire_at=parse_dt(record.get("card_expire_at")),
     )
     if _is_exhausted_by_deduction(record):
-        remaining = 0
-    if budget > 0 and remaining is not None:
-        used = max(0, int(budget) - int(remaining))
-    else:
-        used = session_seconds
+        remaining, consumed = 0, (int(budget) if budget > 0 else None)
+    used = consumed if consumed is not None else session_seconds
     return {
         "used_seconds": used,
         "remaining_seconds": None if remaining is None else max(0, int(remaining)),
@@ -598,16 +613,21 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
         or parse_dt(accounting_summary.get("first_session_at"))
     )
     used_seconds = _seconds(accounting_summary.get("total_session_seconds"))
-    remaining = _remaining_by_mode(
+    # 🔴 client20 · 77821145: الختمُ على باقة «ساعة» ثمّ نُقلت الحزمة إلى «16
+    #    ساعة» ⇒ كان الفاحص يعرض «باقي 15س» والرّاديوس يرفض عند الساعة. القارئ
+    #    الموحّد يقرأ البطاقةَ المختومة من `expire_at` فيقول ما يُنفَّذ فعلًا.
+    remaining, consumed = card_time_view(
         mode=acct_mode,
         budget=acct_budget,
         now=now,
+        first_used_at=parse_dt(record.get("first_used_at")),
         first_connection_at=first_connection_at,
         accounted_seconds=used_seconds,
         expire_at=parse_dt(record.get("card_expire_at")),
     )
     if acct_exhausted:
         remaining = 0
+        consumed = int(acct_budget or 0)
 
     card = {
         "exists": True,
@@ -617,6 +637,8 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
         "id": record.get("card_id"),
         "username": record.get("username"),
         "has_password": bool(record.get("password")),
+        # حزمة «رقم فقط»: لا كلمة تُقارَن — نافذة التعديل تُقفل خانة الكلمة.
+        "login_without_password": bool(record.get("batch_login_without_password")),
         "used": bool(record.get("card_used")),
         "revoked": bool(record.get("card_revoked")),
         "locked_mac": record.get("locked_mac") or None,
@@ -659,10 +681,7 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
         # والقصّ عند الصفر ضروريّ في الثاني: بطاقةٌ مُنِحت وقتًا قد يتجاوز
         # متبقّيها ميزانيّتها الأصليّة، فيصير الفرق سالبًا ويُعرض «-٢ ساعة».
         "used_session_seconds": used_seconds,
-        "consumed_seconds": (
-            max(0, int(acct_budget) - int(remaining))
-            if (acct_budget or 0) > 0 and remaining is not None else 0
-        ),
+        "consumed_seconds": int(consumed or 0),
         # accounting_mode: the resolved mode string the checker UI reads to
         # label «طريقة الاحتساب» (from_first_connect ⇒ «تبدأ من أول اتصال»,
         # by_seconds ⇒ «بالثانية») instead of guessing from started_at.
@@ -703,6 +722,8 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
             # MT107: تغيير الكلمة متاحٌ دائمًا — البطاقة المعطَّلة أو المنتهية
             # كلمتُها مسرَّبةٌ أيضًا، والمشغّل قد يُغيّرها قبل إعادة التفعيل.
             "can_change_password": True,
+            # card-edit-identity: «تعديل بيانات الكرت» (الرقم و/أو الكلمة).
+            "can_edit_identity": True,
             "can_disable": not bool(record.get("card_revoked")),
             "can_enable": bool(record.get("card_revoked")),
             "can_delete_permanently": True,

@@ -1648,6 +1648,38 @@ def cards_batches_export_pdf():
     )
 
 
+def _require_card_in_scope(card_id: int) -> None:
+    """فاحص البطاقات يحمل البطاقة في النموذج (card_id) لا في العنوان، فلا
+    يلتقطه حارس نطاق الحِزم في blueprint. تعديل هويّة البطاقة/كلمتها لا يمسّ
+    إلّا بطاقةً من حِزم المدير (مسند الويب والـAPI نفسه)."""
+    if _is_owner_session():
+        return
+    from ..db.repos import cards_repo
+    from ..services.card_batch_scope import batch_accessible
+    card = cards_repo.get_card(_tid(), int(card_id or 0))
+    if card is None:
+        return  # الخدمة تقول «غير موجودة»
+    if not batch_accessible(int(card.batch_id or 0), session.get("admin_id"),
+                            tenant_id=_tid()):
+        abort(403)
+
+
+def _identity_flash(res: dict) -> str:
+    """رسالة عربيّة واحدة لنتيجة «تعديل بيانات الكرت»."""
+    if not res.get("changed"):
+        return _tr("لم يتغيّر شيء — رقم الكرت وكلمة المرور كما هما.")
+    parts = []
+    if res.get("renamed"):
+        parts.append(_tr('رقم الكرت: من %(old)s إلى %(new)s',
+                         old=res.get("old_username") or "", new=res.get("username") or ""))
+    if res.get("password_changed"):
+        parts.append(_tr('كلمة المرور الجديدة: %(pwd)s', pwd=res.get("password") or ""))
+    msg = _tr("تم تعديل بيانات الكرت — ") + " · ".join(parts) + "."
+    if res.get("kicked"):
+        msg += _tr(" وقُطعت الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.")
+    return msg
+
+
 def _checker_redirect(query: str):
     return redirect(url_for("radius.cards_checker", query=(query or "").strip()))
 
@@ -1702,7 +1734,20 @@ def _handle_card_operation():
                 )
             else:
                 flash(_tr("تم إرسال أمر قطع لكل الجلسات النشطة."), "warning")
+        elif action == "edit_identity":
+            # card-edit-identity (المالك 2026-10-05): «تعديل بيانات الكرت» —
+            # الرقم و/أو الكلمة كما يكتبهما المشغّل حرفيًّا؛ الخانة الفارغة
+            # أو غير المتغيّرة = بلا تغيير، ولا توليد هنا أبدًا.
+            _require_card_in_scope(card_id)
+            res = svc.update_card_identity(
+                actor=_actor(), card_id=card_id,
+                username=_form_str("new_username") or None,
+                password=_form_str("new_password") or None,
+            ) or {}
+            flash(_identity_flash(res), "success" if res.get("changed") else "info")
+            query = res.get("username") or query
         elif action == "change_password":
+            _require_card_in_scope(card_id)
             # MT107 — كلمة البطاقة تُسرَّب، والبطاقة الطويلة لا تُرمى لأجل ذلك.
             res = svc.change_card_password(
                 actor=_actor(), card_id=card_id,
@@ -2929,6 +2974,7 @@ def cards_batch_cards_actions(batch_id: int):
     # MT107 — عمود «كلمة المرور» مخفيٌّ افتراضيًّا في هذا الجدول، فلو اكتفينا
     # بـ«تم التنفيذ» لخرج المشغّل ولا يعرف الكلمة التي وزّعها للتوّ.
     new_passwords: list[tuple[str, str]] = []
+    identity_msgs: list[str] = []
 
     for card_id in card_ids:
         card = cards_repo.get_card(tenant_id, card_id)
@@ -2964,6 +3010,18 @@ def cards_batch_cards_actions(batch_id: int):
                     up_kbps=_form_int("speed_up_kbps"),
                     username=card.username,
                 )
+            elif action == "edit_identity":
+                # card-edit-identity: كرتٌ واحد فقط (رقم الكرت فريد).
+                if len(card_ids) != 1:
+                    raise RadiusValidationError(_tr("«تعديل بيانات الكرت» يعمل على كرتٍ واحد في كل مرة."))
+                _res = svc.update_card_identity(
+                    actor=_actor(), card_id=card_id,
+                    username=_form_str("new_username") or None,
+                    password=_form_str("new_password") or None,
+                ) or {}
+                identity_msgs.append(_identity_flash(_res))
+                if not _res.get("changed"):
+                    changed -= 1  # لا يُحسب «تنفيذًا» ما لم يتغيّر شيء
             elif action == "change_password":
                 # MT107 — كرتٌ واحد أو مجموعة. عند التعدّد لا تُملى كلمةٌ
                 # واحدة على الجميع (تسريبٌ واحد يُسقطها كلّها)، فتُولَّد
@@ -2998,7 +3056,12 @@ def cards_batch_cards_actions(batch_id: int):
         "lock_mac": N_("تثبيت MAC"),
         "unlock_mac": N_("فك MAC"),
         "change_password": N_("تغيير كلمة المرور"),
+        "edit_identity": N_("تعديل بيانات الكرت"),
     }
+    for _m in identity_msgs:
+        flash(_m, "success")
+    if action == "edit_identity":
+        changed = 0  # الرسالة أعلاه تكفي
     if changed:
         flash(_tr('تم تنفيذ %(v)s على %(v2)s.', v=labels.get(action, N_('الإجراء')), v2=ar_count(changed, 'kart')), "success")
         if action == "change_password":

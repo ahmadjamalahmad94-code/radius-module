@@ -18,6 +18,27 @@ from .audit import RadiusAuditService
 CLONE_NAME_SUFFIX = N_(" - نسخة")
 
 
+def _restamp_after_plan_duration_change(existing, saved, *, actor: str) -> None:
+    """``duration_minutes``/``validity_days`` تغيّرت ⇒ أعِد ختمَ البطاقات التي
+    بدأت على حِزم هذه الباقة (الحزمةُ ذاتُ المدّة الخاصّة لا تتأثّر — دالّةُ
+    الميزانية تقرّر). لا يرمي أبدًا ولا يُبطئ الحفظ (الدفعُ للراوتر خلفيّ)."""
+    if existing is None or saved is None or getattr(saved, "id", None) is None:
+        return
+    old = {"duration_minutes": int(getattr(existing, "duration_minutes", 0) or 0),
+           "validity_days": int(getattr(existing, "validity_days", 0) or 0)}
+    new = {"duration_minutes": int(getattr(saved, "duration_minutes", 0) or 0),
+           "validity_days": int(getattr(saved, "validity_days", 0) or 0)}
+    if old == new:
+        return
+    try:
+        from .card_restamp import restamp_started_cards
+        restamp_started_cards(
+            int(getattr(saved, "tenant_id", 0) or 1), plan_id=int(saved.id),
+            previous_plan=old, reason="plan_update", actor=actor)
+    except Exception:  # noqa: BLE001 — حفظُ الباقة لا يسقط لأجل هذا
+        pass
+
+
 class PlansService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -103,6 +124,10 @@ class PlansService:
                            payload={"name": saved.name},
                            before=_plan_snapshot(existing),
                            after=_plan_snapshot(saved))
+        # قرارُ المالك («أ»، 2026-10-05): تغييرُ مدّة الباقة يسري على البطاقات
+        # التي **بدأت** في كلّ حزمةٍ تأخذ ميزانيّتها منها — من أوّل دخولها هي — قبل
+        # إعادة فحص الجلسات أدناه كي تقرأ النهايةَ الجديدة.
+        _restamp_after_plan_duration_change(existing, saved, actor=actor)
         # «لو عدّلت العرض إنه يوم الجمعة غير متاح، فورًا الي مش مطابق ينطرد»:
         # إعادة فحص الجلسات الحيّة لمستخدمي هذا العرض ضد قواعده الجديدة
         # (أيام/ساعات، كوتا، حدّ أجهزة…) وطرد المخالف الآن — محصّن ولا يُبطئ

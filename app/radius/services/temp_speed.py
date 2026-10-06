@@ -170,6 +170,76 @@ def temp_speed_states(tenant_id: int, usernames, now: datetime | None = None) ->
     return states
 
 
+def active_temp_kbps(tenant_id: int, username: str) -> tuple[int, int] | None:
+    """``(down_kbps, up_kbps)`` of an ACTIVE temporary speed on ``username``'s
+    ``subscribers`` row (a card's speed row is its mirror), else None.
+
+    The card cascade (policy_engine._card_to_subscriber and
+    bandwidth_rate._card_effective_rate_limit) reads the ``cards`` table, so
+    without this a card's temp speed was dropped by the next re-auth or by any
+    rate CoA that recomputes the effective rate (e.g. a batch moved to another
+    plan, owner 2026-10-05). Never raises."""
+    if not username:
+        return None
+    try:
+        row = db().execute(
+            "SELECT temporary_speed, download_speed_kbps, upload_speed_kbps "
+            "  FROM subscribers WHERE tenant_id = ? AND username = ? "
+            "   AND deleted_at IS NULL LIMIT 1",
+            (int(tenant_id), username)).fetchone()
+        if not row or not int(row["temporary_speed"] or 0):
+            return None
+        down = int(row["download_speed_kbps"] or 0)
+        up = int(row["upload_speed_kbps"] or 0)
+        if not (down or up):
+            return None
+        st = temp_speed_states(int(tenant_id), [username]).get(username) or {}
+        return (down, up) if st.get("active") else None
+    except Exception:  # noqa: BLE001 — a speed lookup never breaks auth/CoA
+        _LOG.debug("active_temp_kbps failed for %r", username, exc_info=True)
+        return None
+
+
+def retarget_restore_to_plan(tenant_id: int, usernames) -> int:
+    """After an account moved to another plan (a card batch moved, owner
+    2026-10-05): an active temp window whose restore target was the PLAN rate
+    (no permanent override before it) now restores to the NEW plan's rate —
+    otherwise the revert would push the old plan's speed back. Returns the
+    number of rows rewritten. Never raises."""
+    names = sorted({u for u in (usernames or []) if u})
+    changed = 0
+    try:
+        for i in range(0, len(names), 500):
+            chunk = names[i:i + 500]
+            ph = ",".join("?" for _ in chunk)
+            rows = db().execute(
+                f"SELECT id, plan_id, metadata FROM subscribers "
+                f" WHERE tenant_id = ? AND temporary_speed = 1 "
+                f"   AND username IN ({ph})", (int(tenant_id), *chunk)).fetchall()
+            for row in rows:
+                meta = _parse_meta(row["metadata"])
+                if _int_or_zero(meta.get(_K_PREV_CUSTOM)):
+                    continue            # restores a permanent override — keep it
+                if _meta_value(meta, _K_RESTORE_RATE) == "":
+                    continue            # legacy window: revert reads the plan
+                new_rate = _plan_rate(int(tenant_id), row["plan_id"])
+                if not new_rate or new_rate == _meta_value(meta, _K_RESTORE_RATE):
+                    continue
+                meta[_K_RESTORE_RATE] = new_rate
+                adv = meta.get("advanced")
+                if isinstance(adv, dict) and adv.get(_K_RESTORE_RATE):
+                    adv[_K_RESTORE_RATE] = new_rate   # _meta_value reads it first
+                db().execute(
+                    "UPDATE subscribers SET metadata = ? WHERE tenant_id = ? AND id = ?",
+                    (json.dumps(meta, ensure_ascii=False), int(tenant_id), int(row["id"])))
+                changed += 1
+        if changed:
+            db().commit()
+    except Exception:  # noqa: BLE001
+        _LOG.warning("retarget_restore_to_plan failed", exc_info=True)
+    return changed
+
+
 def _rate_str(up_kbps: int, down_kbps: int) -> str:
     return f"{int(up_kbps)}k/{int(down_kbps)}k"
 

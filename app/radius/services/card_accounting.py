@@ -178,6 +178,60 @@ def remaining_seconds(
     return computed
 
 
+def card_time_view(
+    *,
+    mode: str,
+    budget: int,
+    now: datetime,
+    first_used_at: Optional[datetime] = None,
+    first_connection_at: Optional[datetime] = None,
+    accounted_seconds: int = 0,
+    expire_at: Optional[datetime] = None,
+) -> tuple[Optional[int], Optional[int]]:
+    """``(remaining, consumed)`` of a card — the ONE reader every display uses.
+
+    🔴 client20 · 2026-10-05 (card 77821145): the window was stamped on a 1-hour
+    plan, the batch then moved to a 16-hour plan. The checker / app computed
+    «متبقّي ≈ 15h57m» from the CURRENT budget while RADIUS rejected at one hour,
+    because authorization reads the STAMPED ``expire_at``. Two readers, two
+    answers. So:
+
+    * a **stamped** from-first-connect card (``first_used_at`` AND
+      ``expire_at`` set) → ``remaining = max(0, expire_at − now)`` — exactly what
+      the authorizer honours — and ``consumed = now − first_used_at`` capped at
+      the stamped window ``expire_at − first_used_at`` (the budget when that
+      window is empty), so «used + remaining» never promises more than RADIUS;
+    * anything else (not started, by-seconds, legacy) → the mode's own
+      countdown via :func:`remaining_seconds`, ``consumed = budget − remaining``
+      when there is a budget, else ``None`` (callers keep their fallback).
+
+    ``first_used_at`` is the card's own stamp (``cards.first_used_at``, already
+    post usage-reset); an ``expire_at`` not after it is treated as unstamped.
+    ``first_connection_at`` may fall back to radacct for the
+    non-stamped path; it is never used to trust ``expire_at`` (an unstamped
+    card's ``expire_at`` can be a stale generation-time date).
+    """
+    budget = _int(budget)
+    # A real stamp is always LATER than the first login (first + window). An
+    # ``expire_at`` at/before it is a stale generation-time date carried by a
+    # migrated card (5698046, FIX 1) — never a window, so it is not trusted.
+    if (mode == MODE_FROM_FIRST_CONNECT and first_used_at is not None
+            and expire_at is not None and expire_at > first_used_at):
+        remaining = max(0, int((expire_at - now).total_seconds()))
+        elapsed = max(0, int((now - first_used_at).total_seconds()))
+        window = int((expire_at - first_used_at).total_seconds())
+        cap = window if window > 0 else budget
+        return remaining, min(elapsed, max(0, cap))
+    remaining = remaining_seconds(
+        mode=mode, budget=budget, now=now,
+        first_connection_at=first_connection_at or first_used_at,
+        accounted_seconds=accounted_seconds, expire_at=expire_at,
+    )
+    if budget > 0 and remaining is not None:
+        return remaining, max(0, budget - int(remaining))
+    return remaining, None
+
+
 def first_connect_expiry(
     first_connection_at: datetime, budget: int
 ) -> Optional[datetime]:
@@ -219,6 +273,7 @@ __all__ = [
     "budget_with_extra",
     "is_exhausted",
     "remaining_seconds",
+    "card_time_view",
     "first_connect_expiry",
     "clamp_expiry",
 ]

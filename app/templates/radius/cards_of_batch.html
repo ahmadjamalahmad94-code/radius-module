@@ -654,6 +654,12 @@
                             title="{{ _('تغيير كلمة المرور') }}" type="submit"
                             data-confirm="{{ _('تغيير كلمة مرور %(u)s؟ ستُولَّد كلمة جديدة وتُقطع جلساتها النشطة.', u=c.username) }}"><i class="fa-solid fa-key"></i></button>
                   </form>{% endif %}
+                  {# card-edit-identity: «تعديل بيانات الكرت» — رقم الكرت و/أو كلمته
+                     كما يكتبهما المشغّل (لا توليد). نافذةٌ مشتركة أسفل الجدول. #}
+                  {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<button class="hub-btn hub-btn--secondary hub-btn--icon" type="button"
+                          title="{{ _('تعديل بيانات الكرت') }}" data-bc-edit-identity
+                          data-identity-card="{{ c.id }}" data-username="{{ c.username }}"
+                          data-password="{{ c.password if (c.password and c.password != '••••••') else '' }}"><i class="fa-solid fa-pen-to-square"></i></button>{% endif %}
                   {% if can_submit('radius.cards_batch_cards_actions', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
@@ -792,6 +798,78 @@
 </dialog>
 {% endif %}
 
+{# card-edit-identity — نافذة «تعديل بيانات الكرت» لصفّ واحد. الخانة الفارغة أو
+   غير المتغيّرة = بلا تغيير؛ «حفظ» يتفعّل حين تتغيّر واحدةٌ على الأقل. #}
+{% if batch and can_submit('radius.cards_batch_cards_actions', 'POST') %}
+<dialog id="bc-identity-dlg" dir="rtl" style="border:none;border-radius:14px;padding:0;max-width:420px;width:92vw">
+  <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" style="padding:18px;display:grid;gap:12px">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="return_to" value="{{ request.full_path }}">
+    <input type="hidden" name="bulk_action" value="edit_identity">
+    <input type="hidden" name="card_ids" data-id-card>
+    <strong>{{ _('تعديل بيانات الكرت') }}</strong>
+    <small style="opacity:.75">{{ _('عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. يبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة.') }}</small>
+    <label>{{ _('رقم الكرت') }}
+      <input class="hub-input" type="text" dir="ltr" maxlength="64" autocomplete="off" autocapitalize="off" spellcheck="false" data-id-user style="width:100%">
+    </label>
+    {# قرار المالك 2026-10-05: الرقم يُحفظ بحالة أحرفه والدخول يلزمه نفسها. #}
+    <div data-id-case-warn role="alert" hidden style="padding:6px 8px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:.85em">{{ _('انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط') }}</div>
+    <label>{{ _('كلمة المرور') }}
+      <input class="hub-input" type="text" dir="ltr" maxlength="64" autocomplete="off" data-id-pw style="width:100%"
+             {% if batch.login_without_password %}disabled placeholder="{{ _('حزمة «رقم فقط» — بلا كلمة مرور') }}"{% else %}placeholder="{{ _('اتركها فارغة إن لم تُرد تغييرها') }}"{% endif %}>
+    </label>
+    <input type="hidden" name="new_username" data-id-user-out>
+    <input type="hidden" name="new_password" data-id-pw-out>
+    <div style="display:flex;gap:8px;justify-content:flex-start">
+      <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit" data-id-save>{{ _('حفظ') }}</button>
+      <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-id-cancel>{{ _('إلغاء') }}</button>
+    </div>
+  </form>
+</dialog>
+<script>
+(function(){
+  'use strict';
+  var dlg = document.getElementById('bc-identity-dlg');
+  if (!dlg) return;
+  var f = dlg.querySelector('form');
+  var u = dlg.querySelector('[data-id-user]'), p = dlg.querySelector('[data-id-pw]');
+  var uo = dlg.querySelector('[data-id-user-out]'), po = dlg.querySelector('[data-id-pw-out]');
+  var save = dlg.querySelector('[data-id-save]');
+  var warn = dlg.querySelector('[data-id-case-warn]');
+  var cur = {u:'', p:''};
+  function digits(v){ return String(v == null ? '' : v)
+    .replace(/[\u0660-\u0669]/g, function(c){ return String(c.charCodeAt(0) - 0x0660); })
+    .replace(/[\u06F0-\u06F9]/g, function(c){ return String(c.charCodeAt(0) - 0x06F0); }); }
+  function vals(){
+    var nu = digits(u.value).trim(), np = p.disabled ? '' : digits(p.value).trim();
+    return {u: (nu && nu !== cur.u) ? nu : '',  // الحالة محفوظة ⇒ تغييرها تغيير
+            p: (np && np !== cur.p) ? np : ''};
+  }
+  function refresh(){
+    var v = vals(); save.disabled = !(v.u || v.p);
+    if (warn) warn.hidden = !/[A-Za-z]/.test(digits(u.value));
+  }
+  u.addEventListener('input', refresh); p.addEventListener('input', refresh);
+  dlg.querySelector('[data-id-cancel]').addEventListener('click', function(){ dlg.close(); });
+  f.addEventListener('submit', function(e){
+    var v = vals();
+    if (!v.u && !v.p){ e.preventDefault(); return; }
+    uo.value = v.u; po.value = v.p;
+  });
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-bc-edit-identity]');
+    if (!b) return;
+    cur.u = b.getAttribute('data-username') || '';
+    cur.p = b.getAttribute('data-password') || '';
+    dlg.querySelector('[data-id-card]').value = b.getAttribute('data-identity-card') || '';
+    u.value = cur.u; p.value = p.disabled ? '' : cur.p;
+    refresh();
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    u.focus();
+  });
+})();
+</script>
+{% endif %}
 <script>
 (function () {
   const page = document.querySelector('[data-batch-cards-page]');

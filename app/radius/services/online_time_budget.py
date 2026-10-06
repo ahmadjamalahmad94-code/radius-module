@@ -120,7 +120,10 @@ def _card_cells(tenant_id: int, usernames: list[str],
         f"  FROM cards c "
         f"  LEFT JOIN card_batches b ON b.id = c.batch_id AND b.tenant_id = c.tenant_id "
         f"  LEFT JOIN access_plans p "
-        f"    ON p.tenant_id = c.tenant_id AND p.id = COALESCE(c.plan_id, b.plan_id) "
+        # «باقة الميزانية» = باقةُ الحزمة ثمّ باقةُ البطاقة — نفسُ مصدر الفاحص
+        # وإعادة الختم (card_restamp): البطاقةُ المستعملة تحتفظ بباقتها القديمة.
+        f"    ON p.tenant_id = c.tenant_id "
+        f"   AND p.id = COALESCE(NULLIF(b.plan_id, 0), c.plan_id) "
         f" WHERE c.tenant_id=? AND c.username IN ({ph})",
         (int(tenant_id), *usernames)).fetchall()
     usage = _usage_bulk(int(tenant_id), usernames)
@@ -150,11 +153,21 @@ def _card_cells(tenant_id: int, usernames: list[str],
             continue
         budget = ca.budget_with_extra(base, extra)
         if budget > 0:
-            remaining = ca.remaining_seconds(
+            # القارئ الموحّد: بطاقةٌ مختومةٌ تُقرأ من `expire_at` (ما يُنفّذه
+            # الرّاديوس) لا من ميزانيّةٍ تغيّرت بعد ختمها.
+            remaining, consumed = ca.card_time_view(
                 mode=mode, budget=budget, now=now,
-                first_connection_at=first_at, accounted_seconds=accounted)
-            used = budget - int(remaining or 0) if remaining is not None else accounted
-            out[uname] = _cell(min(max(0, used), budget), budget)
+                first_used_at=_pdt(d.get("first_used_at")),
+                first_connection_at=first_at, accounted_seconds=accounted,
+                expire_at=_pdt(d.get("card_expire_at")))
+            used = consumed if consumed is not None else accounted
+            # والإجماليُّ لبطاقةٍ مختومة = نافذتُها المُنفَّذة (لا ميزانيّةٌ
+            # تغيّرت بعد الختم) — وإلّا وعد الشريطُ بوقتٍ يرفضه الرّاديوس.
+            total = budget
+            _f, _e = _pdt(d.get("first_used_at")), _pdt(d.get("card_expire_at"))
+            if mode == ca.MODE_FROM_FIRST_CONNECT and _f and _e and _e > _f:
+                total = int((_e - _f).total_seconds())
+            out[uname] = _cell(min(max(0, used), total), total)
         else:
             # No time budget → unlimited by time: show the usage, neutral.
             out[uname] = _cell(accounted, None)

@@ -208,6 +208,9 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.cards_batch_update": "web:cards_batch_edit",
     "v1.cards_of_batch": "web:cards_of_batch",
     "v1.cards_get": "web:cards_list",
+    # card-edit-identity: نفس قرار «فحص البطاقات» على الويب (cards.verify +
+    # بوّابة المزوّد card_checker) — ونطاق الحزمة داخل المعالج.
+    "v1.cards_update": "web:cards_checker",
     "v1.cards_revoke": "web:cards_revoke",
     "v1.cards_enable": "web:cards_checker",
     "v1.cards_disable": "web:cards_checker",
