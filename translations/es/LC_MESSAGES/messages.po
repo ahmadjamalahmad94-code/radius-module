@@ -48,12 +48,12 @@ msgstr "%(n)s abonado(s) cuya suscripción ha vencido — renueve o elimine."
 
 #: app/radius/services/dashboard_metrics.py:277
 msgid "لا توجد كروت متاحة — وَلِّد دفعة جديدة."
-msgstr "No hay cupones disponibles — genere un nuevo lote."
+msgstr "No hay tarjetas disponibles — genere un nuevo lote."
 
 #: app/radius/services/dashboard_metrics.py:280
 #, python-format
 msgid "الكروت المتاحة منخفضة (%(n)s) — جدّد المخزون."
-msgstr "Los cupones disponibles son escasos (%(n)s) — reponga el stock."
+msgstr "Las tarjetas disponibles son escasas (%(n)s) — reponga el stock."
 
 #: app/radius/services/dashboard_metrics.py:285
 msgid "لا توجد باقات بعد — أنشئ أول باقة."
@@ -368,7 +368,8 @@ msgstr "Usa 0 cuando quieras basarte en el valor base del plan."
 
 #: app/templates/admin/_admin_layout.html:614
 msgid "الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها."
-msgstr "La unidad con la que se calculará la duración del cupón o la cuenta."
+msgstr ""
+"La unidad con la que se calculará la duración de la tarjeta o la cuenta."
 
 #: app/templates/admin/_admin_layout.html:615
 msgid "أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت."
@@ -779,7 +780,7 @@ msgstr "Abonados conectados"
 #: app/templates/radius/payment_collection_settings.html:110
 #: app/templates/radius/print_templates_stats.html:143
 msgid "البطاقات"
-msgstr "Cupones"
+msgstr "Tarjetas"
 
 #: app/templates/admin/_sidebar.html:459
 #: app/templates/radius/docs_cards_overview.html:480
@@ -792,20 +793,20 @@ msgstr "Verificar tarjeta"
 #: app/templates/radius/docs_cards_overview.html:263
 #: app/templates/radius/docs_cards_overview.html:479
 msgid "حزم البطاقات"
-msgstr "Lotes de cupones"
+msgstr "Lotes de tarjetas"
 
 #: app/templates/admin/_sidebar.html:461
 #: app/templates/radius/docs_cards_batches.html:293
 msgid "إضافة حزمة"
-msgstr "Añadir plan"
+msgstr "Añadir lote"
 
 #: app/templates/admin/_sidebar.html:462
 msgid "🖨️ بطاقات الطباعة"
-msgstr "🖨️ Cupones de impresión"
+msgstr "🖨️ Tarjetas de impresión"
 
 #: app/templates/admin/_sidebar.html:463
 msgid "البطاقات المتصلة"
-msgstr "Cupones conectados"
+msgstr "Tarjetas conectadas"
 
 #: app/templates/admin/_sidebar.html:464
 #: app/templates/radius/docs_cards_overview.html:481
@@ -816,12 +817,12 @@ msgstr "Plantillas de impresión"
 #: app/templates/admin/_sidebar.html:500
 #: app/templates/radius/dashboard.html:789
 msgid "البطاقات الإلكترونية"
-msgstr "Cupones electrónicos"
+msgstr "Tarjetas electrónicas"
 
 #: app/templates/admin/_sidebar.html:481
 #: app/templates/radius/docs_store_support.html:56
 msgid "سوق البطاقات"
-msgstr "Mercado de cupones"
+msgstr "Mercado de tarjetas"
 
 #: app/templates/admin/_sidebar.html:482
 #: app/templates/radius/communications_audience.html:80
@@ -831,7 +832,7 @@ msgstr "Usuarios de tarjetas"
 
 #: app/templates/admin/_sidebar.html:483
 msgid "⚡ بطاقات الشحن المسبق"
-msgstr "⚡ Cupones prepago"
+msgstr "⚡ Tarjetas de recarga prepago"
 
 #: app/templates/admin/_sidebar.html:491 app/templates/admin/_sidebar.html:496
 msgid "دعم وطلبات المتجر"
@@ -1042,7 +1043,7 @@ msgstr "Informe financiero"
 #: app/templates/radius/docs_reports_overview.html:290
 #: app/templates/radius/reports_nav.html:24
 msgid "تقارير البطاقات"
-msgstr "Informes de cupones"
+msgstr "Informes de tarjetas"
 
 #: app/templates/admin/_sidebar.html:806
 #: app/templates/radius/docs_reports_overview.html:290
@@ -1357,8 +1358,7 @@ msgid ""
 "كل نقاط الـ REST API لإدارة المشتركين والباقات والبطاقات والجلسات — في "
 "صفحة واحدة منظّمة."
 msgstr ""
-"Todos los endpoints de la REST API para gestionar abonados, planes, "
-"cupones y sesiones — en una sola página organizada."
+"Todos los endpoints de la REST API para gestionar abonados, planes, tarjetas y sesiones — en una sola página organizada."
 
 #: app/templates/api/docs.html:226
 msgid "مواصفة OpenAPI"
@@ -1530,14 +1530,14 @@ msgstr "Hecho"
 #: app/templates/radius/cards_recharge_list.html:422
 #: app/templates/radius/docs_cards_print.html:528
 msgid "طباعة مباشرة للحزمة"
-msgstr "Impresión directa del plan"
+msgstr "Impresión directa del lote"
 
 #: app/templates/radius/_card_print_modal.html:19
 #: app/templates/radius/cards_print_batch.html:167
 #: app/templates/radius/cards_recharge_list.html:423
 #: app/templates/radius/docs_cards_print.html:529
 msgid "تجهيز ملف البطاقات"
-msgstr "Preparar archivo de cupones"
+msgstr "Preparar archivo de tarjetas"
 
 #: app/templates/radius/_card_print_modal.html:20
 #: app/templates/radius/cards_print_batch.html:168
@@ -1556,8 +1556,7 @@ msgstr "Seleccionar plantilla guardada"
 #: app/templates/radius/cards_print_batch.html:194
 msgid "لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا."
 msgstr ""
-"Aún no hay plantillas guardadas. Cree primero una plantilla desde el "
-"Centro de diseño de cupones."
+"Aún no hay plantillas guardadas. Cree primero una plantilla desde el Centro de diseño de tarjetas."
 
 #: app/templates/radius/_card_print_modal.html:53
 #: app/templates/radius/cards_print_batch.html:201
@@ -1685,7 +1684,7 @@ msgstr "Crear tarea de exportación"
 #: app/templates/radius/cards_recharge_list.html:475
 #: app/templates/radius/docs_cards_print.html:588
 msgid "رسم البطاقات بالقالب المختار"
-msgstr "Generar cupones con la plantilla elegida"
+msgstr "Generar tarjetas con la plantilla elegida"
 
 #: app/templates/radius/_card_print_modal.html:106
 #: app/templates/radius/cards_print_batch.html:254
@@ -2056,7 +2055,7 @@ msgstr "Fijar dirección IP"
 #: app/templates/radius/cards_batches.html:645
 #: app/templates/radius/docs_roles_permissions.html:407
 msgid "عرض البطاقات"
-msgstr "Mostrar tarjetas"
+msgstr "Ver tarjetas"
 
 #: app/templates/radius/_perm_labels.html:101
 msgid "توليد بطاقات"
@@ -2072,7 +2071,7 @@ msgstr "Editar lote de tarjetas"
 
 #: app/templates/radius/_perm_labels.html:104
 msgid "عمليات الحزم الجماعية"
-msgstr "Operaciones masivas de paquetes"
+msgstr "Operaciones masivas de lotes"
 
 #: app/templates/radius/_perm_labels.html:105
 msgid "استيراد بطاقات"
@@ -2089,19 +2088,19 @@ msgstr "Restaurar de la papelera"
 #: app/templates/radius/_perm_labels.html:108
 #: app/templates/radius/docs_roles_permissions.html:408
 msgid "بطاقات الشحن"
-msgstr "Cupones de recarga"
+msgstr "Tarjetas de recarga"
 
 #: app/templates/radius/_perm_labels.html:109
 msgid "حزم طباعة البطاقات"
-msgstr "Paquetes de impresión de tarjetas"
+msgstr "Lotes de impresión de tarjetas"
 
 #: app/templates/radius/_perm_labels.html:111
 msgid "عرض الباقات"
-msgstr "Ver paquetes"
+msgstr "Ver planes"
 
 #: app/templates/radius/_perm_labels.html:112
 msgid "إنشاء باقة"
-msgstr "Crear paquete"
+msgstr "Crear plan"
 
 #: app/templates/radius/_perm_labels.html:113
 msgid "تعديل باقة"
@@ -2226,7 +2225,7 @@ msgstr "Usar la API"
 
 #: app/templates/radius/_print_template_preview_fragment.html:41
 msgid "اختر حزمة لرؤية بطاقات حقيقية"
-msgstr "Elija un paquete para ver cupones reales"
+msgstr "Elija un lote para ver tarjetas reales"
 
 #: app/templates/radius/_print_template_preview_fragment.html:57
 msgid "هذه الحزمة لا تحتوي بطاقات بعد. ولّد البطاقات داخل الحزمة أولًا."
@@ -2436,7 +2435,7 @@ msgstr "Agregar una nueva regla de programación/velocidad"
 
 #: app/templates/radius/_speed_rules_panel.html:673
 msgid "نطاق العرض"
-msgstr "Plan de la oferta"
+msgstr "Ámbito de la oferta"
 
 #: app/templates/radius/_speed_rules_panel.html:678
 msgid "عرض / باقة"
@@ -3027,7 +3026,7 @@ msgstr "IP estática"
 #: app/templates/radius/invoices_form.html:104
 #: app/templates/radius/print_templates.html:2636
 msgid "بطاقة"
-msgstr "Cupón"
+msgstr "Tarjeta"
 
 #: app/templates/radius/_subs_labels.html:43
 #: app/templates/radius/pay_demo.html:291
@@ -3117,7 +3116,7 @@ msgstr "Desde el saldo"
 #: app/templates/radius/docs_accounting.html:349
 #: app/templates/radius/docs_accounting.html:368
 msgid "دفعة"
-msgstr "Lote"
+msgstr "Pago"
 
 #: app/templates/radius/_subs_labels.html:65
 #: app/templates/radius/docs_accounting.html:350
@@ -3348,7 +3347,7 @@ msgstr ""
 #: app/templates/radius/pools_form.html:66
 #: app/templates/radius/pools_list.html:55
 msgid "النطاق"
-msgstr "Plan"
+msgstr "Ámbito"
 
 #: app/templates/radius/access_control.html:49
 #: app/templates/radius/access_control.html:86
@@ -3714,13 +3713,13 @@ msgstr ""
 #: app/templates/radius/docs_access_control.html:81
 #: app/templates/radius/docs_access_control.html:150
 msgid "عرض/باقة"
-msgstr "Oferta/paquete"
+msgstr "Oferta/plan"
 
 #: app/templates/radius/access_control.html:278
 #: app/templates/radius/docs_access_control.html:81
 #: app/templates/radius/docs_access_control.html:150
 msgid "حزمة بطاقات"
-msgstr "Paquete de tarjetas"
+msgstr "Lote de tarjetas"
 
 #: app/templates/radius/access_control.html:282
 #: app/templates/radius/access_control.html:503
@@ -3738,7 +3737,7 @@ msgstr "Ofertas"
 #: app/templates/radius/dashboard.html:775
 #: app/templates/radius/dashboard.html:798
 msgid "الحزم"
-msgstr "Planes"
+msgstr "Lotes"
 
 #: app/templates/radius/access_control.html:297
 #: app/templates/radius/access_control.html:327
@@ -3956,11 +3955,11 @@ msgstr "ID de oferta/plan"
 
 #: app/templates/radius/access_control.html:458
 msgid "معرّف حزمة البطاقات"
-msgstr "ID del paquete de tarjetas"
+msgstr "ID del lote de tarjetas"
 
 #: app/templates/radius/access_control.html:503
 msgid "حزمة البطاقات"
-msgstr "Paquete de tarjetas"
+msgstr "Lote de tarjetas"
 
 #: app/templates/radius/account.html:29
 msgid "كلمة المرور الحالية"
@@ -4639,7 +4638,7 @@ msgstr ""
 #: app/templates/radius/sessions_list.html:1079
 #: app/templates/radius/subscriber_groups_list.html:280
 msgid "العرض"
-msgstr "Visualización"
+msgstr "Oferta"
 
 #: app/templates/radius/admin_pricing.html:190
 msgid "السعر الأساسي"
@@ -5051,7 +5050,7 @@ msgstr "Todos los suscriptores y tarjetas"
 
 #: app/templates/radius/anti_mac_clone.html:114
 msgid "عروض/باقات محدّدة"
-msgstr "Ofertas/paquetes específicos"
+msgstr "Ofertas/planes específicos"
 
 #: app/templates/radius/anti_mac_clone.html:115
 msgid "مجموعات مشتركين محدّدة"
@@ -5320,7 +5319,7 @@ msgstr "Intensidad"
 
 #: app/templates/radius/audit_log_index.html:76
 msgid "كل الشدّات"
-msgstr "Todos los paquetes"
+msgstr "Todas las severidades"
 
 #: app/templates/radius/audit_log_index.html:81
 #: app/templates/radius/audit_log_index.html:113
@@ -5518,7 +5517,7 @@ msgstr "Límite de retención"
 
 #: app/templates/radius/backups.html:304
 msgid "المسموح في باقتك"
-msgstr "Permitido en su paquete"
+msgstr "Permitido en su plan"
 
 #: app/templates/radius/backups.html:308
 msgid "رفع النسخ إلى لوحة التراخيص خدمة مدفوعة غير مفعّلة."
@@ -5818,13 +5817,12 @@ msgstr "Abonado específico"
 
 #: app/templates/radius/bandwidth_schedules.html:109
 msgid "باقة كروت / دفعة"
-msgstr "Plan de cupones / lote"
+msgstr "Lote de tarjetas"
 
 #: app/templates/radius/bandwidth_schedules.html:111
 msgid "إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض."
 msgstr ""
-"Si existe una regla para el abonado o el plan de tarjetas, esta tiene "
-"prioridad sobre la regla de la oferta."
+"Si existe una regla para el abonado o el lote de tarjetas, esta tiene prioridad sobre la regla de la oferta."
 
 #: app/templates/radius/bandwidth_schedules.html:115
 #: app/templates/radius/bandwidth_schedules.html:224
@@ -5924,7 +5922,7 @@ msgstr "La regla del abonado tiene la máxima prioridad al iniciar sesión."
 
 #: app/templates/radius/bandwidth_schedules.html:137
 msgid "باقة الكروت / الدفعة"
-msgstr "Plan de cupones / lote"
+msgstr "Lote de tarjetas"
 
 #: app/templates/radius/bandwidth_schedules.html:139
 msgid "— اختر دفعة كروت —"
@@ -5933,18 +5931,16 @@ msgstr "— Seleccionar un lote de tarjetas —"
 #: app/templates/radius/bandwidth_schedules.html:144
 msgid "تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض."
 msgstr ""
-"Se aplica a todos los cupones de este lote y tiene prioridad sobre la "
-"oferta."
+"Se aplica a todas las tarjetas de este lote y tiene prioridad sobre la oferta."
 
 #: app/templates/radius/bandwidth_schedules.html:148
 msgid "الأولوية داخل نفس النطاق (1-10)"
-msgstr "Prioridad dentro del mismo plan (1-10)"
+msgstr "Prioridad dentro del mismo ámbito (1-10)"
 
 #: app/templates/radius/bandwidth_schedules.html:150
 msgid "الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق."
 msgstr ""
-"El número menor se comprueba primero si más de una regla se superpone "
-"dentro del mismo plan."
+"El número menor se comprueba primero si más de una regla se superpone dentro del mismo ámbito."
 
 #: app/templates/radius/bandwidth_schedules.html:187
 msgid "طريقة الرجوع بعد الوقت"
@@ -6072,7 +6068,7 @@ msgstr "Guardar política"
 #: app/templates/radius/print_templates.html:588
 #: app/templates/radius/print_templates_stats.html:140
 msgid "الحزمة"
-msgstr "Plan"
+msgstr "Lote"
 
 #: app/templates/radius/business_operator_profile.html:165
 #: app/templates/radius/communications_audience.html:119
@@ -6143,21 +6139,18 @@ msgstr "Abrir ficha del distribuidor"
 #: app/templates/radius/card_marketplace.html:7
 msgid "إعداد عروض الشراء التي تظهر لمستخدمي البطاقات في بوابة الزبون."
 msgstr ""
-"Configure las ofertas de compra que se muestran a los usuarios de cupones"
-" en el portal del cliente."
+"Configure las ofertas de compra que se muestran a los usuarios de tarjetas en el portal del cliente."
 
 #: app/templates/radius/card_marketplace.html:652
 msgid "سوق البطاقات الإلكترونية"
-msgstr "Mercado de cupones electrónicos"
+msgstr "Mercado de tarjetas electrónicas"
 
 #: app/templates/radius/card_marketplace.html:653
 msgid ""
 "أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، "
 "تخزينها داخل حزمة، وتسليم رقمها للزبون."
 msgstr ""
-"Cree ofertas de venta que aparecen en el portal del cliente. En la compra"
-" se genera un cupón real, se almacena dentro de un paquete y su número se"
-" entrega al cliente."
+"Cree ofertas de venta que aparecen en el portal del cliente. En la compra se genera una tarjeta real, se almacena dentro de un lote y su número se entrega al cliente."
 
 #: app/templates/radius/card_marketplace.html:658
 #: app/templates/radius/card_marketplace.html:684
@@ -6171,7 +6164,7 @@ msgstr "Soporte y solicitudes de recarga/retiro"
 
 #: app/templates/radius/card_marketplace.html:667
 msgid "حزم إلكترونية"
-msgstr "Paquetes electrónicos"
+msgstr "Lotes electrónicos"
 
 #: app/templates/radius/card_marketplace.html:668
 msgid "كروت متاحة"
@@ -6204,7 +6197,7 @@ msgstr ""
 #: app/templates/radius/docs_card_marketplace.html:381
 #: app/templates/radius/docs_card_marketplace.html:420
 msgid "العرض الأساسي"
-msgstr "Vista predeterminada"
+msgstr "Oferta base"
 
 #: app/templates/radius/card_marketplace.html:698
 msgid "اختر عرضًا…"
@@ -6212,7 +6205,7 @@ msgstr "Seleccionar una oferta…"
 
 #: app/templates/radius/card_marketplace.html:711
 msgid "اختر العرض الأساسي أولًا"
-msgstr "Seleccione primero el plan base"
+msgstr "Seleccione primero la oferta base"
 
 #: app/templates/radius/card_marketplace.html:717
 #: app/templates/radius/docs_card_marketplace.html:369
@@ -6251,7 +6244,7 @@ msgstr "Introduzca un precio de venta mayor que cero"
 #: app/templates/radius/cards_generate.html:268
 #: app/templates/radius/docs_card_marketplace.html:401
 msgid "مدة البطاقة"
-msgstr "Duración del cupón"
+msgstr "Duración de la tarjeta"
 
 #: app/templates/radius/card_marketplace.html:760
 #: app/templates/radius/docs_card_marketplace.html:397
@@ -6261,15 +6254,15 @@ msgstr "Modo de venta"
 #: app/templates/radius/card_marketplace.html:764
 #: app/templates/radius/docs_card_marketplace.html:398
 msgid "كرت توليد فوري"
-msgstr "Cupón de generación instantánea"
+msgstr "Tarjeta de generación instantánea"
 
 #: app/templates/radius/card_marketplace.html:765
 msgid "نظام حزم / مخزون"
-msgstr "Sistema de planes / inventario"
+msgstr "Sistema de lotes / inventario"
 
 #: app/templates/radius/card_marketplace.html:770
 msgid "لون البطاقة"
-msgstr "Color del cupón"
+msgstr "Color de la tarjeta"
 
 #: app/templates/radius/card_marketplace.html:778
 msgid "لون مخصص"
@@ -6277,7 +6270,7 @@ msgstr "Color personalizado"
 
 #: app/templates/radius/card_marketplace.html:780
 msgid "لون مخصص للبطاقة"
-msgstr "Color personalizado del cupón"
+msgstr "Color personalizado de la tarjeta"
 
 #: app/templates/radius/card_marketplace.html:790
 #: app/templates/radius/docs_card_marketplace.html:414
@@ -6290,10 +6283,7 @@ msgid ""
 "النمط)، تُنشأ حزمة إلكترونية مرتبطة بالعملية، ثم يظهر الكرت للزبون في "
 "«بطاقاتي»."
 msgstr ""
-"El precio se descuenta del monedero del cliente, se genera un cupón nuevo"
-" (o se retira del stock según el modo), se crea un paquete electrónico "
-"vinculado a la operación y luego el cupón aparece al cliente en «Mis "
-"cupones»."
+"El precio se descuenta del monedero del cliente, se genera una tarjeta nueva (o se retira del stock según el modo), se crea un lote electrónico vinculado a la operación y luego la tarjeta aparece al cliente en «Mis tarjetas»."
 
 #: app/templates/radius/card_marketplace.html:796
 msgid "تظهر مباشرة في بوابة الزبون"
@@ -6417,7 +6407,7 @@ msgstr "Subir archivo"
 
 #: app/templates/radius/card_marketplace.html:899
 msgid "توليد حزمة"
-msgstr "Generar plan"
+msgstr "Generar lote"
 
 #: app/templates/radius/card_marketplace.html:907
 msgid "لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى."
@@ -6435,15 +6425,12 @@ msgid ""
 "المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطى تلقائيًا. "
 "الحد الأقصى 12MB و5000 بطاقة بالدفعة."
 msgstr ""
-"El motor lee archivos Excel / CSV / PDF y extrae los pares de nombre de "
-"usuario y contraseña, luego los añade al stock de esta oferta. Los "
-"nombres duplicados se omiten automáticamente. El máximo es 12MB y 5000 "
-"cupones por lote."
+"El motor lee archivos Excel / CSV / PDF y extrae los pares de nombre de usuario y contraseña, luego los añade al stock de esta oferta. Los nombres duplicados se omiten automáticamente. El máximo es 12MB y 5000 tarjetas por lote."
 
 #: app/templates/radius/card_marketplace.html:929
 #: app/templates/radius/card_marketplace_package_file.html:193
 msgid "ملف البطاقات"
-msgstr "Archivo de cupones"
+msgstr "Archivo de tarjetas"
 
 #: app/templates/radius/card_marketplace.html:933
 #: app/templates/radius/card_marketplace_package_file.html:197
@@ -6460,9 +6447,7 @@ msgid ""
 "يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم + كلمة مرور) داخل "
 "حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا للبيع منها."
 msgstr ""
-"El motor de lotes compartido genera cupones únicos (nombre de usuario + "
-"contraseña) dentro de un paquete vinculado a esta oferta, y entran en "
-"stock de inmediato para la venta desde él."
+"El motor de lotes compartido genera tarjetas únicas (nombre de usuario + contraseña) dentro de un lote vinculado a esta oferta, y entran en stock de inmediato para la venta desde él."
 
 #: app/templates/radius/card_marketplace.html:956
 #: app/templates/radius/card_marketplace_package_file.html:222
@@ -6473,7 +6458,7 @@ msgstr ""
 #: app/templates/radius/docs_card_marketplace.html:440
 #: app/templates/radius/docs_card_marketplace.html:448
 msgid "عدد البطاقات"
-msgstr "Número de cupones"
+msgstr "Número de tarjetas"
 
 #: app/templates/radius/card_marketplace.html:960
 #: app/templates/radius/card_marketplace_package_file.html:226
@@ -6494,7 +6479,7 @@ msgstr "Generar y agregar"
 
 #: app/templates/radius/card_marketplace.html:976
 msgid "الحزم الإلكترونية المتولدة"
-msgstr "Planes electrónicos generados"
+msgstr "Lotes electrónicos generados"
 
 #: app/templates/radius/card_marketplace.html:976
 msgid "(سجل فني)"
@@ -6505,8 +6490,7 @@ msgid ""
 "كل عملية شراء تولّد كرتاً وتحفظه داخل حزمة قابلة للمراجعة. افتح هذا القسم"
 " لمراجعة الكروت المتولدة."
 msgstr ""
-"Cada compra genera un cupón y lo guarda dentro de un lote revisable. Abre"
-" esta sección para revisar los cupones generados."
+"Cada compra genera una tarjeta y la guarda dentro de un lote revisable. Abre esta sección para revisar las tarjetas generadas."
 
 #: app/templates/radius/card_marketplace.html:1000
 #: app/templates/radius/cards_overview.html:929
@@ -6535,7 +6519,7 @@ msgstr "Ver tarjetas"
 
 #: app/templates/radius/card_marketplace.html:1014
 msgid "لا توجد حزم متولدة من الشراء بعد."
-msgstr "Aún no hay paquetes generados a partir de compras."
+msgstr "Aún no hay lotes generados a partir de compras."
 
 #: app/templates/radius/card_marketplace.html:1023
 msgid "آخر عمليات الشراء"
@@ -6672,17 +6656,15 @@ msgid ""
 "نفد مخزون هذا العرض — يرى الزبائن «نفدت الكمية» الآن. أضف مخزونًا من زرّي"
 " «رفع ملف بطاقات» أو «توليد حزمة» بالأعلى."
 msgstr ""
-"Esta oferta está agotada — los clientes ven ahora «Sin existencias». "
-"Añada stock con los botones «Subir archivo de cupones» o «Generar "
-"paquete» de arriba."
+"Esta oferta está agotada — los clientes ven ahora «Sin existencias». Añada stock con los botones «Subir archivo de tarjetas» o «Generar lote» de arriba."
 
 #: app/templates/radius/card_marketplace_package_file.html:106
 msgid "ترقيم بطاقات العرض"
-msgstr "Numeración de las tarjetas de visualización"
+msgstr "Numeración de las tarjetas de la oferta"
 
 #: app/templates/radius/card_marketplace_package_file.html:187
 msgid "رفع ملف بطاقات"
-msgstr "Subir archivo de cupones"
+msgstr "Subir archivo de tarjetas"
 
 #: app/templates/radius/card_marketplace_package_file.html:191
 msgid ""
@@ -6757,26 +6739,23 @@ msgstr "y"
 
 #: app/templates/radius/card_marketplace_package_file.html:191
 msgid "بطاقة في الدفعة."
-msgstr "cupones en el lote."
+msgstr "tarjetas en el lote."
 
 #: app/templates/radius/card_marketplace_package_file.html:216
 msgid "توليد حزمة مخزون"
-msgstr "Generar paquete de inventario"
+msgstr "Generar lote de inventario"
 
 #: app/templates/radius/card_marketplace_package_file.html:220
 msgid ""
 "يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم وكلمة مرور) داخل حزمة"
 " مرتبطة بهذا العرض، وتدخل المخزون فورًا لتُباع منه."
 msgstr ""
-"El motor de lotes compartido genera cupones únicos (nombre de usuario y "
-"contraseña) dentro de un paquete vinculado a esta oferta, y entran en "
-"stock de inmediato para venderse desde él."
+"El motor de lotes compartido genera tarjetas únicas (nombre de usuario y contraseña) dentro de un lote vinculado a esta oferta, y entran en stock de inmediato para venderse desde él."
 
 #: app/templates/radius/card_pricing.html:11
 msgid "سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء"
 msgstr ""
-"Políticas de precio de venta, mayorista y coste de los planes antes de "
-"vender o cargar a los gestores"
+"Políticas de precio de venta, mayorista y coste de los lotes antes de vender o cargar a los gestores"
 
 #: app/templates/radius/card_pricing.html:73
 msgid "سياسات تسعير الباقات"
@@ -6819,7 +6798,7 @@ msgstr "Editar política de precios"
 
 #: app/templates/radius/card_pricing.html:136
 msgid "تعديل أسعار الحزمة"
-msgstr "Editar los precios del paquete"
+msgstr "Editar los precios del lote"
 
 #: app/templates/radius/card_pricing.html:170
 #: app/templates/radius/cards_batch_edit.html:159
@@ -6830,7 +6809,7 @@ msgstr "Gerente responsable"
 
 #: app/templates/radius/card_pricing.html:183
 msgid "تسجيل تكلفة الحزمة"
-msgstr "Registrar el costo del paquete"
+msgstr "Registrar el costo del lote"
 
 #: app/templates/radius/card_pricing.html:221
 msgid "سياسة سعر الباقة «"
@@ -6862,7 +6841,7 @@ msgstr "Tarjetas del lote financiero"
 
 #: app/templates/radius/card_pricing_batch.html:67
 msgid "لم يتم توليد الكروت في هذا المسار المالي."
-msgstr "Los cupones no se generaron en esta ruta financiera."
+msgstr "Las tarjetas no se generaron en esta ruta financiera."
 
 #: app/templates/radius/card_user_360.html:18
 msgid "حساب نشط"
@@ -7033,7 +7012,7 @@ msgstr "Saldo de la billetera:"
 
 #: app/templates/radius/card_user_360.html:271
 msgid "شراء البطاقة"
-msgstr "Comprar cupón"
+msgstr "Comprar tarjeta"
 
 #: app/templates/radius/card_user_360.html:276
 msgid "لا توجد عروض متاحة"
@@ -7042,8 +7021,7 @@ msgstr "No hay ofertas disponibles"
 #: app/templates/radius/card_user_360.html:277
 msgid "أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء."
 msgstr ""
-"Cree una oferta desde el mercado de tarjetas o la sección de paquetes "
-"para que el usuario pueda comprar."
+"Cree una oferta desde el mercado de tarjetas o la sección de planes para que el usuario pueda comprar."
 
 #: app/templates/radius/card_user_360.html:290
 msgid "بطاقات العميل والمشتريات"
@@ -7415,8 +7393,7 @@ msgstr "Recargar la billetera manualmente"
 #: app/templates/radius/card_user_360.html:565
 msgid "يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة)."
 msgstr ""
-"El importe se añade directamente al saldo del monedero (recarga "
-"administrativa — no desde un cupón)."
+"El importe se añade directamente al saldo del monedero (recarga administrativa — no desde una tarjeta)."
 
 #: app/templates/radius/card_user_360.html:587
 msgid "تعيين كلمة مرور البوابة"
@@ -7557,7 +7534,7 @@ msgstr "Los nombres de acceso y las contraseñas no se regeneran al guardar."
 #: app/templates/radius/cards_batch_edit.html:118
 #: app/templates/radius/cards_generate.html:142
 msgid "بيانات الحزمة"
-msgstr "Datos del plan"
+msgstr "Datos del lote"
 
 #: app/templates/radius/cards_batch_edit.html:122
 #: app/templates/radius/cards_batches.html:761
@@ -7569,7 +7546,7 @@ msgstr "Datos del plan"
 #: app/templates/radius/docs_cards_batches.html:510
 #: app/templates/radius/docs_cards_print.html:385
 msgid "اسم الحزمة"
-msgstr "Nombre del plan"
+msgstr "Nombre del lote"
 
 #: app/templates/radius/cards_batch_edit.html:124
 #: app/templates/radius/cards_generate.html:156
@@ -7582,8 +7559,7 @@ msgid ""
 "تغيير العرض يُطبَّق على الكروت المتاحة فقط — الكروت المستخدمة تبقى كسجل "
 "سابق."
 msgstr ""
-"El cambio de la oferta se aplica solo a los cupones disponibles; los "
-"cupones usados permanecen como registro pasado."
+"El cambio de la oferta se aplica solo a las tarjetas disponibles; las tarjetas usadas permanecen como registro pasado."
 
 #: app/templates/radius/cards_batch_edit.html:135
 msgid "لا يمكن تقليل العدد تحت عدد الكروت المُولَّدة."
@@ -7657,7 +7633,7 @@ msgstr "Velocidad programada"
 #: app/templates/radius/cards_generate.html:212
 #: app/templates/radius/docs_cards_batches.html:565
 msgid "توليد البطاقات"
-msgstr "Generar cupones"
+msgstr "Generar tarjetas"
 
 #: app/templates/radius/cards_batch_edit.html:184
 #: app/templates/radius/cards_batches.html:836
@@ -7739,7 +7715,7 @@ msgstr "Sufijo antiguo"
 #: app/templates/radius/cards_batch_edit.html:212
 #: app/templates/radius/cards_generate.html:245
 msgid "تضمين رقم الحزمة"
-msgstr "Incluir número del plan"
+msgstr "Incluir número del lote"
 
 #: app/templates/radius/cards_batch_edit.html:224
 #: app/templates/radius/cards_generate.html:263
@@ -7816,7 +7792,7 @@ msgstr "Al agotarse la cuota"
 #: app/templates/radius/cards_batch_edit.html:278
 #: app/templates/radius/cards_generate.html:329
 msgid "إيقاف الكرت"
-msgstr "Desactivar cupón"
+msgstr "Desactivar tarjeta"
 
 #: app/templates/radius/cards_batch_edit.html:279
 #: app/templates/radius/cards_generate.html:330
@@ -7874,12 +7850,12 @@ msgstr "Disponible"
 #: app/templates/radius/cards_batches.html:264
 #: app/templates/radius/docs_cards_batches.html:326
 msgid "إدارة البطاقات والحزم"
-msgstr "Gestionar cupones y planes"
+msgstr "Gestionar tarjetas y lotes"
 
 #: app/templates/radius/cards_batches.html:268
 #: app/templates/radius/docs_cards_batches.html:328
 msgid "حزمة جديدة"
-msgstr "Nuevo plan"
+msgstr "Nuevo lote"
 
 #: app/templates/radius/cards_batches.html:271
 #: app/templates/radius/cards_batches.html:528
@@ -7906,18 +7882,18 @@ msgstr "Tabla"
 #: app/templates/radius/docs_cards_batches.html:330
 #: app/templates/radius/plans_list.html:178
 msgid "بطاقات"
-msgstr "Cupones"
+msgstr "Tarjetas"
 
 #: app/templates/radius/cards_batches.html:284
 msgid "ملخص حزم البطاقات"
-msgstr "Resumen de los lotes de cupones"
+msgstr "Resumen de los lotes de tarjetas"
 
 #: app/templates/radius/cards_batches.html:288
 #: app/templates/radius/docs_cards_batches.html:315
 #: app/templates/radius/docs_cards_batches.html:334
 #: app/templates/radius/docs_cards_print.html:352
 msgid "إجمالي الحزم"
-msgstr "Total de planes"
+msgstr "Total de lotes"
 
 #: app/templates/radius/cards_batches.html:295
 #: app/templates/radius/docs_cards_batches.html:316
@@ -7930,25 +7906,25 @@ msgstr "Lotes vencidos"
 #: app/templates/radius/docs_cards_batches.html:336
 #: app/templates/radius/docs_cards_overview.html:315
 msgid "إجمالي الكروت"
-msgstr "Total de cupones"
+msgstr "Total de tarjetas"
 
 #: app/templates/radius/cards_batches.html:309
 #: app/templates/radius/docs_cards_batches.html:318
 #: app/templates/radius/docs_cards_batches.html:337
 msgid "كروت منتهية"
-msgstr "Cupones caducados"
+msgstr "Tarjetas caducadas"
 
 #: app/templates/radius/cards_batches.html:316
 #: app/templates/radius/docs_cards_batches.html:319
 #: app/templates/radius/docs_cards_batches.html:338
 msgid "كروت فعالة"
-msgstr "Cupones activos"
+msgstr "Tarjetas activas"
 
 #: app/templates/radius/cards_batches.html:326
 #: app/templates/radius/docs_cards_batches.html:358
 #: app/templates/radius/docs_cards_batches.html:370
 msgid "بحث عن حزمة أو كود..."
-msgstr "Buscar un plan o un código..."
+msgstr "Buscar un lote o un código..."
 
 #: app/templates/radius/cards_batches.html:329
 #: app/templates/radius/cards_list.html:75
@@ -7981,7 +7957,7 @@ msgstr "Número de resultados"
 
 #: app/templates/radius/cards_batches.html:357
 msgid "تصدير الحزم"
-msgstr "Exportar planes"
+msgstr "Exportar lotes"
 
 #: app/templates/radius/cards_batches.html:358
 msgid "تحميل Excel"
@@ -8037,7 +8013,7 @@ msgstr "Ejecutar"
 #: app/templates/radius/cards_batches.html:400
 #: app/templates/radius/cards_batches.html:593
 msgid "تحديد الحزمة"
-msgstr "Seleccionar plan"
+msgstr "Seleccionar lote"
 
 #: app/templates/radius/cards_batches.html:406
 msgid "مميزة"
@@ -8045,7 +8021,7 @@ msgstr "Premium"
 
 #: app/templates/radius/cards_batches.html:436
 msgid "استهلاك الحزمة"
-msgstr "Consumo del plan"
+msgstr "Consumo del lote"
 
 #: app/templates/radius/cards_batches.html:443
 #: app/templates/radius/cards_batches.html:579
@@ -8071,7 +8047,7 @@ msgstr "Imprimir"
 
 #: app/templates/radius/cards_batches.html:474
 msgid "أرشفة من مركز الحزم"
-msgstr "Archivar desde el centro de planes"
+msgstr "Archivar desde el centro de lotes"
 
 #: app/templates/radius/cards_batches.html:483
 #: app/templates/radius/cards_batches.html:681
@@ -8100,16 +8076,15 @@ msgstr "Crear o importar un nuevo lote"
 #: app/templates/radius/cards_batches.html:525
 msgid "أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة."
 msgstr ""
-"Añada un nuevo lote de cupones temporales o importe desde un archivo CSV "
-"de forma rápida y sencilla."
+"Añada un nuevo lote de tarjetas temporales o importe desde un archivo CSV de forma rápida y sencilla."
 
 #: app/templates/radius/cards_batches.html:527
 msgid "إنشاء حزمة جديدة"
-msgstr "Crear plan nuevo"
+msgstr "Crear lote nuevo"
 
 #: app/templates/radius/cards_batches.html:540
 msgid "قائمة الحزم"
-msgstr "Lista de planes"
+msgstr "Lista de lotes"
 
 #: app/templates/radius/cards_batches.html:544
 msgid "اضغط على رأس العمود للترتيب"
@@ -8157,7 +8132,7 @@ msgstr "Validez tras la primera conexión"
 
 #: app/templates/radius/cards_batches.html:572
 msgid "نهاية الحزمة"
-msgstr "Fin del plan"
+msgstr "Fin del lote"
 
 #: app/templates/radius/cards_batches.html:573
 #: app/templates/radius/mt_dashboard.html:2371
@@ -8190,29 +8165,29 @@ msgstr "Cuota agotada"
 #: app/templates/radius/cards_batches.html:646
 #: app/templates/radius/cards_of_batch.html:439
 msgid "تعديل الحزمة"
-msgstr "Editar plan"
+msgstr "Editar lote"
 
 #: app/templates/radius/cards_batches.html:647
 #: app/templates/radius/cards_print_list.html:389
 #: app/templates/radius/cards_print_list.html:450
 #: app/templates/radius/cards_recharge_list.html:329
 msgid "طباعة الحزمة"
-msgstr "Imprimir plan"
+msgstr "Imprimir lote"
 
 #: app/templates/radius/cards_batches.html:657
 msgid "تفعيل الحزمة"
-msgstr "Activar plan"
+msgstr "Activar lote"
 
 #: app/templates/radius/cards_batches.html:664
 msgid "أرشفة من جدول الحزم"
-msgstr "Archivar desde la tabla de planes"
+msgstr "Archivar desde la tabla de lotes"
 
 #: app/templates/radius/cards_batches.html:665
 #: app/templates/radius/cards_print_list.html:407
 #: app/templates/radius/cards_print_list.html:467
 #: app/templates/radius/cards_recharge_list.html:344
 msgid "حذف الحزمة"
-msgstr "Eliminar plan"
+msgstr "Eliminar lote"
 
 #: app/templates/radius/cards_batches.html:733
 msgid "إضافة حزمة سريعة"
@@ -8240,7 +8215,7 @@ msgstr "Electrónica"
 
 #: app/templates/radius/cards_batches.html:762
 msgid "مثال: حزمة ساعة"
-msgstr "Ejemplo: plan de una hora"
+msgstr "Ejemplo: lote de una hora"
 
 #: app/templates/radius/cards_batches.html:767
 #: app/templates/radius/users_list.html:1123
@@ -8274,7 +8249,7 @@ msgstr "Por segundo"
 
 #: app/templates/radius/cards_batches.html:796
 msgid "صلاحية البطاقة بعد أول اتصال"
-msgstr "Validez del cupón tras la primera conexión"
+msgstr "Validez de la tarjeta tras la primera conexión"
 
 #: app/templates/radius/cards_batches.html:796
 msgid "مطلوبة عند المحاسبة بالثانية"
@@ -8343,43 +8318,38 @@ msgid ""
 "فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان "
 "واحد."
 msgstr ""
-"Comprobar, rastrear, expulsar sesiones, fijar el MAC y desactivar o "
-"reactivar el cupón desde un solo lugar."
+"Comprobar, rastrear, expulsar sesiones, fijar el MAC y desactivar o reactivar la tarjeta desde un solo lugar."
 
 #: app/templates/radius/cards_checker.html:140
 msgid "لوحة تحكم البطاقة"
-msgstr "Panel de control del cupón"
+msgstr "Panel de control de la tarjeta"
 
 #: app/templates/radius/cards_checker.html:141
 msgid ""
 "ابحث عن أي بطاقة وشاهد تاريخها التشغيلي، الأجهزة التي استخدمتها، الجلسات،"
 " وحالتها الحالية. الإجراءات الحساسة موجودة هنا حتى لا تضيع بين الصفحات."
 msgstr ""
-"Busque cualquier cupón y vea su historial operativo, los dispositivos que"
-" lo usaron, las sesiones y su estado actual. Las acciones sensibles están"
-" aquí para que no se pierdan entre las páginas."
+"Busque cualquier tarjeta y vea su historial operativo, los dispositivos que la usaron, las sesiones y su estado actual. Las acciones sensibles están aquí para que no se pierdan entre las páginas."
 
 #: app/templates/radius/cards_checker.html:145
 msgid "رقم البطاقة أو اسم الدخول"
-msgstr "Número de cupón o nombre de acceso"
+msgstr "Número de tarjeta o nombre de acceso"
 
 #: app/templates/radius/cards_checker.html:147
 msgid "فحص البطاقة"
-msgstr "Verificar cupón"
+msgstr "Verificar tarjeta"
 
 #: app/templates/radius/cards_checker.html:160
 msgid "أدخل رقم البطاقة أو اسم الدخول لفتح مركز العمليات الخاص بها."
 msgstr ""
-"Introduzca el número del cupón o el nombre de inicio de sesión para abrir"
-" su centro de operaciones."
+"Introduzca el número de la tarjeta o el nombre de inicio de sesión para abrir su centro de operaciones."
 
 #: app/templates/radius/cards_checker.html:165
 msgid ""
 "لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة "
 "أخرى."
 msgstr ""
-"Ningún cupón coincide con esta búsqueda. Comprueba el número o el nombre "
-"de acceso e inténtalo de nuevo."
+"Ninguna tarjeta coincide con esta búsqueda. Comprueba el número o el nombre de acceso e inténtalo de nuevo."
 
 #: app/templates/radius/cards_checker.html:180
 msgid "مثبتة على MAC"
@@ -8398,8 +8368,7 @@ msgid ""
 "تم رصد أكثر من MAC لهذه البطاقة. قد يكون تبديل جهاز طبيعيًا، أو مشاركة "
 "غير مرغوبة للبطاقة."
 msgstr ""
-"Se ha detectado más de una MAC para este cupón. Puede ser un cambio de "
-"dispositivo normal o un uso compartido no deseado del cupón."
+"Se ha detectado más de una MAC para esta tarjeta. Puede ser un cambio de dispositivo normal o un uso compartido no deseado de la tarjeta."
 
 #: app/templates/radius/cards_checker.html:214
 msgid "ملخص التشغيل"
@@ -8441,7 +8410,7 @@ msgstr "Tiempo restante"
 
 #: app/templates/radius/cards_checker.html:221
 msgid "حسب تاريخ انتهاء البطاقة"
-msgstr "Por fecha de vencimiento del cupón"
+msgstr "Por fecha de vencimiento de la tarjeta"
 
 #: app/templates/radius/cards_checker.html:222
 msgid "إجمالي مدة الاتصال"
@@ -8475,7 +8444,7 @@ msgstr "Dispositivos diferentes"
 
 #: app/templates/radius/cards_checker.html:232
 msgid "إجراءات البطاقة"
-msgstr "Acciones del cupón"
+msgstr "Acciones de la tarjeta"
 
 #: app/templates/radius/cards_checker.html:235
 msgid "تثبيت MAC أو إلغاء التثبيت"
@@ -8524,8 +8493,7 @@ msgid ""
 "يعيد البطاقة كغير مستخدمة ويمسح بداية الاستخدام والارتباط بالمستفيد، بدون"
 " حذف سجل الجلسات."
 msgstr ""
-"Devuelve el cupón al estado sin usar y borra el inicio de uso y el "
-"vínculo con el beneficiario, sin eliminar el registro de sesiones."
+"Devuelve la tarjeta al estado sin usar y borra el inicio de uso y el vínculo con el beneficiario, sin eliminar el registro de sesiones."
 
 #: app/templates/radius/cards_checker.html:281
 msgid "تعطيل أو إعادة تفعيل"
@@ -8536,8 +8504,7 @@ msgid ""
 "التعطيل يمنع الدخول بدون حذف البطاقة. استخدم السبب حتى يبقى القرار "
 "مفهومًا عند المراجعة."
 msgstr ""
-"Desactivar bloquea el acceso sin eliminar el cupón. Indica el motivo para"
-" que la decisión siga siendo comprensible al revisar."
+"Desactivar bloquea el acceso sin eliminar la tarjeta. Indica el motivo para que la decisión siga siendo comprensible al revisar."
 
 #: app/templates/radius/cards_checker.html:287
 msgid "إعادة تفعيل"
@@ -8561,16 +8528,15 @@ msgid ""
 "خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات المصادقة السابقة المرتبطة "
 "باسم الدخول."
 msgstr ""
-"Una opción peligrosa. Elimina el cupón en sí, pero no borra los registros"
-" de autenticación anteriores vinculados al nombre de acceso."
+"Una opción peligrosa. Elimina la tarjeta en sí, pero no borra los registros de autenticación anteriores vinculados al nombre de acceso."
 
 #: app/templates/radius/cards_checker.html:306
 msgid "اكتب: حذف البطاقة"
-msgstr "Escriba: eliminar el cupón"
+msgstr "Escriba: eliminar la tarjeta"
 
 #: app/templates/radius/cards_checker.html:317
 msgid "بيانات البطاقة والباقات"
-msgstr "Datos del cupón y los planes"
+msgstr "Datos de la tarjeta y los planes"
 
 #: app/templates/radius/cards_checker.html:319
 #: app/templates/radius/cards_list.html:126
@@ -8619,11 +8585,11 @@ msgstr "Última dirección / dispositivo"
 
 #: app/templates/radius/cards_checker.html:338
 msgid "الأجهزة التي استخدمت البطاقة"
-msgstr "Dispositivos que usaron el cupón"
+msgstr "Dispositivos que usaron la tarjeta"
 
 #: app/templates/radius/cards_checker.html:351
 msgid "لا توجد MACات مسجلة لهذه البطاقة بعد."
-msgstr "Aún no hay MAC registradas para este cupón."
+msgstr "Aún no hay MAC registradas para esta tarjeta."
 
 #: app/templates/radius/cards_checker.html:359
 msgid "جدول الجلسات التفصيلي"
@@ -8695,7 +8661,7 @@ msgstr "Motivo de la terminación"
 
 #: app/templates/radius/cards_checker.html:408
 msgid "لا توجد جلسات محفوظة في radacct لهذه البطاقة بعد."
-msgstr "Aún no hay sesiones guardadas en radacct para este cupón."
+msgstr "Aún no hay sesiones guardadas en radacct para esta tarjeta."
 
 #: app/templates/radius/cards_checker.html:415
 msgid "بيانات غير متاحة حاليًا"
@@ -8812,7 +8778,7 @@ msgstr "Simple"
 #: app/templates/radius/cards_checker_v2.html:449
 #: app/templates/radius/docs_cards_checker.html:292
 msgid "ابحث برقم البطاقة أو MAC أو اسم العميل…"
-msgstr "Buscar por número de cupón, MAC o nombre del cliente…"
+msgstr "Buscar por número de tarjeta, MAC o nombre del cliente…"
 
 #: app/templates/radius/cards_checker_v2.html:453
 #: app/templates/radius/docs_cards_checker.html:310
@@ -8822,13 +8788,12 @@ msgstr "Buscar"
 
 #: app/templates/radius/cards_checker_v2.html:468
 msgid "مركز فحص البطاقات جاهز"
-msgstr "El centro de verificación de cupones está listo"
+msgstr "El centro de verificación de tarjetas está listo"
 
 #: app/templates/radius/cards_checker_v2.html:469
 msgid "أدخل رقم البطاقة أو اسم الدخول أعلاه لبدء الفحص."
 msgstr ""
-"Introduce el número del cupón o el nombre de acceso arriba para iniciar "
-"la comprobación."
+"Introduce el número de la tarjeta o el nombre de acceso arriba para iniciar la comprobación."
 
 #: app/templates/radius/cards_checker_v2.html:484
 msgid "تأكّد من الرقم أو الاسم."
@@ -8837,7 +8802,7 @@ msgstr "Verifique el número o el nombre."
 #: app/templates/radius/cards_checker_v2.html:524
 #: app/templates/radius/docs_cards_checker.html:369
 msgid "حالة البطاقة"
-msgstr "Estado del cupón"
+msgstr "Estado de la tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:528
 #: app/templates/radius/docs_cards_checker.html:370
@@ -8869,7 +8834,7 @@ msgstr "Activo ahora"
 
 #: app/templates/radius/cards_checker_v2.html:688
 msgid "النشاط الأخير للبطاقة"
-msgstr "Actividad reciente del cupón"
+msgstr "Actividad reciente de la tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:691
 msgid "عرض الكل"
@@ -8891,7 +8856,7 @@ msgstr "Inicio de la primera sesión"
 
 #: app/templates/radius/cards_checker_v2.html:724
 msgid "تم الاتصال لأول مرّة باستخدام هذه البطاقة"
-msgstr "Conectado por primera vez usando este cupón"
+msgstr "Conectado por primera vez usando esta tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:735
 #: app/templates/radius/docs_cards_checker.html:424
@@ -8900,7 +8865,7 @@ msgstr "Crear"
 
 #: app/templates/radius/cards_checker_v2.html:736
 msgid "تم إنشاء البطاقة"
-msgstr "Cupón creado"
+msgstr "Tarjeta creada"
 
 #: app/templates/radius/cards_checker_v2.html:756
 #: app/templates/radius/users_profile.html:1031
@@ -9059,7 +9024,7 @@ msgstr "Cambiar la hora"
 #: app/templates/radius/docs_cards_checker.html:529
 #: app/templates/radius/docs_cards_checker.html:530
 msgid "للبطاقة فقط"
-msgstr "Solo cupón"
+msgstr "Solo tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:1125
 #: app/templates/radius/docs_cards_checker.html:530
@@ -9142,7 +9107,7 @@ msgstr "Actualizar"
 
 #: app/templates/radius/cards_checker_v2.html:1292
 msgid "تحديث بيانات البطاقة"
-msgstr "Actualizar datos del cupón"
+msgstr "Actualizar datos de la tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:1309
 #: app/templates/radius/docs_reports_overview.html:379
@@ -9241,8 +9206,7 @@ msgstr "Déjalo"
 #: app/templates/radius/cards_checker_v2.html:1637
 msgid "في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة."
 msgstr ""
-"en ambos campos para anular la personalización y volver a la velocidad "
-"del paquete."
+"en ambos campos para anular la personalización y volver a la velocidad del lote."
 
 #: app/templates/radius/cards_checker_v2.html:1640
 msgid "التنزيل (kbps)"
@@ -9320,7 +9284,7 @@ msgstr "Seleccione al menos un dispositivo, o haga clic en «Seleccionar todo».
 
 #: app/templates/radius/cards_checker_v2.html:1800
 msgid "تعديل وقت البطاقة"
-msgstr "Editar el tiempo del cupón"
+msgstr "Editar el tiempo de la tarjeta"
 
 #: app/templates/radius/cards_checker_v2.html:1809
 #: app/templates/radius/docs_service_requests.html:56
@@ -9361,7 +9325,7 @@ msgstr "Ejemplo: 30"
 
 #: app/templates/radius/cards_checker_v2.html:1831
 msgid "إلى وقت البطاقة."
-msgstr "Al tiempo del cupón."
+msgstr "Al tiempo de la tarjeta."
 
 #: app/templates/radius/cards_checker_v2.html:1877
 msgid "وقت البطاقة."
@@ -9441,7 +9405,7 @@ msgstr "Tipo de lote"
 
 #: app/templates/radius/cards_generate.html:155
 msgid "اسم وصفي يميّز الحزمة في القوائم والتقارير."
-msgstr "Un nombre descriptivo que distingue el plan en listas e informes."
+msgstr "Un nombre descriptivo que distingue el lote en listas e informes."
 
 #: app/templates/radius/cards_generate.html:158
 #: app/templates/radius/finance_billing.html:271
@@ -9470,7 +9434,7 @@ msgstr "— Seleccionar gerente —"
 
 #: app/templates/radius/cards_generate.html:178
 msgid "تُنسب الحزمة لهذا المدير في الحسابات والتقارير."
-msgstr "El plan se atribuye a este gestor en las cuentas y los informes."
+msgstr "El lote se atribuye a este gestor en las cuentas y los informes."
 
 #: app/templates/radius/cards_generate.html:179
 msgid "الموزع / نقطة البيع"
@@ -9486,7 +9450,7 @@ msgstr "Elige el distribuidor al que se entregarán las tarjetas para la venta."
 
 #: app/templates/radius/cards_generate.html:191
 msgid "سعر بيع البطاقة الواحدة للمشترك النهائي."
-msgstr "El precio de venta de un solo cupón al abonado final."
+msgstr "El precio de venta de una sola tarjeta al abonado final."
 
 #: app/templates/radius/cards_generate.html:194
 msgid "سعر البطاقة عند البيع للموزعين بالجملة."
@@ -9545,8 +9509,7 @@ msgstr ""
 #: app/templates/radius/cards_generate.html:286
 msgid "تنتهي البطاقة بعد هذا العدد من الأيام من أول دخول. 0 = بلا حد."
 msgstr ""
-"El cupón caduca después de este número de días desde el primer inicio de "
-"sesión. 0 = sin límite."
+"La tarjeta caduca después de este número de días desde el primer inicio de sesión. 0 = sin límite."
 
 #: app/templates/radius/cards_generate.html:296
 msgid "حساب الاستهلاك بدقة الثانية بدل تقريبه للدقيقة."
@@ -9557,16 +9520,15 @@ msgid ""
 "هذه القاعدة تُحفظ على الحزمة بعد إنشائها مباشرة، وتستخدم نفس محرر السرعة "
 "الموجود في إضافة المشترك."
 msgstr ""
-"Esta regla se guarda en el plan justo después de crearlo y usa el mismo "
-"editor de velocidad que se encuentra al añadir un abonado."
+"Esta regla se guarda en el lote justo después de crearlo y usa el mismo editor de velocidad que se encuentra al añadir un abonado."
 
 #: app/templates/radius/cards_generate.html:333
 msgid "ماذا يحدث للبطاقة عند استهلاك كامل الكوتا."
-msgstr "Qué ocurre con el cupón cuando se consume toda la cuota."
+msgstr "Qué ocurre con la tarjeta cuando se consume toda la cuota."
 
 #: app/templates/radius/cards_generate.html:338
 msgid "يجدّد البطاقة تلقائيًا عند انتهائها بعد أول استخدام."
-msgstr "Renueva automáticamente el cupón cuando caduca tras el primer uso."
+msgstr "Renueva automáticamente la tarjeta cuando caduca tras el primer uso."
 
 #: app/templates/radius/cards_generate.html:339
 msgid "تحويل إلى حالة طالب"
@@ -9575,8 +9537,7 @@ msgstr "Convertir a estado de estudiante"
 #: app/templates/radius/cards_generate.html:343
 msgid "يحوّل البطاقة لحالة «طالب» تلقائيًا عند أول اتصال."
 msgstr ""
-"Convierte el cupón al estado «solicitante» automáticamente en la primera "
-"conexión."
+"Convierte la tarjeta al estado «solicitante» automáticamente en la primera conexión."
 
 #: app/templates/radius/cards_generate.html:344
 msgid "إغلاق جلسة المستخدم"
@@ -9590,7 +9551,8 @@ msgstr ""
 
 #: app/templates/radius/cards_generate.html:353
 msgid "يحفظ MAC أول جهاز يتصل ويربط البطاقة عليه."
-msgstr "Guarda la MAC del primer dispositivo que se conecta y le vincula el cupón."
+msgstr ""
+"Guarda la MAC del primer dispositivo que se conecta y le vincula la tarjeta."
 
 #: app/templates/radius/cards_generate.html:358
 msgid "عند انتهاء البطاقة تبقى مقفولة على آخر جهاز فلا تُعاد على جهاز آخر."
@@ -9601,8 +9563,7 @@ msgstr ""
 #: app/templates/radius/cards_generate.html:366
 msgid "ملاحظات داخلية تظهر للإدارة فقط — لا تُطبع على البطاقات."
 msgstr ""
-"Notas internas visibles solo para la administración — no se imprimen en "
-"los cupones."
+"Notas internas visibles solo para la administración — no se imprimen en las tarjetas."
 
 #: app/templates/radius/cards_generate.html:374
 #: app/templates/radius/docs_cards_batches.html:583
@@ -9627,7 +9588,7 @@ msgstr "Ejemplo: archivo del mes 6"
 
 #: app/templates/radius/cards_import.html:235
 msgid "سعر البطاقة"
-msgstr "Precio del cupón"
+msgstr "Precio de la tarjeta"
 
 #: app/templates/radius/cards_import.html:240
 msgid "السعر الإجمالي"
@@ -9700,11 +9661,11 @@ msgstr "Lista de columnas"
 
 #: app/templates/radius/cards_import.html:311
 msgid "بناء الكروت"
-msgstr "Generar cupones"
+msgstr "Generar tarjetas"
 
 #: app/templates/radius/cards_import.html:317
 msgid "بطاقة جاهزة للاستيراد"
-msgstr "Cupón listo para importar"
+msgstr "Tarjeta lista para importar"
 
 #: app/templates/radius/cards_import.html:337
 msgid "سبب الاستيراد أو مرجع الملف"
@@ -9859,7 +9820,7 @@ msgstr "Listo para analizar — pulsa «Analizar archivo» para empezar."
 
 #: app/templates/radius/cards_list.html:21
 msgid "بطاقة — صفحة"
-msgstr "Cupón — página"
+msgstr "Tarjeta — página"
 
 #: app/templates/radius/cards_list.html:74
 msgid "بحث في اليوزر..."
@@ -9916,7 +9877,7 @@ msgstr "Caduca"
 
 #: app/templates/radius/cards_list.html:174
 msgid "إلغاء البطاقة"
-msgstr "Anular cupón"
+msgstr "Anular tarjeta"
 
 #: app/templates/radius/cards_list.html:188
 msgid "تنقّل بين الصفحات"
@@ -9928,7 +9889,7 @@ msgstr "Comprobación"
 
 #: app/templates/radius/cards_of_batch.html:445
 msgid "كل الحزم"
-msgstr "Todos los planes"
+msgstr "Todos los lotes"
 
 #: app/templates/radius/cards_of_batch.html:488
 msgid "بحث باسم الكرت أو MAC أو IP..."
@@ -9940,7 +9901,7 @@ msgstr "Columnas"
 
 #: app/templates/radius/cards_of_batch.html:501
 msgid "كرت محدد"
-msgstr "Cupón seleccionado"
+msgstr "Tarjeta seleccionada"
 
 #: app/templates/radius/cards_of_batch.html:507
 #: app/templates/radius/cards_of_batch.html:587
@@ -10010,11 +9971,11 @@ msgstr "Edición rápida"
 
 #: app/templates/radius/cards_of_batch.html:646
 msgid "لا توجد كروت داخل هذه الحزمة."
-msgstr "No hay cupones dentro de este lote."
+msgstr "No hay tarjetas dentro de este lote."
 
 #: app/templates/radius/cards_of_batch.html:659
 msgid "تعديل سريع للكرت"
-msgstr "Edición rápida del cupón"
+msgstr "Edición rápida de la tarjeta"
 
 #: app/templates/radius/cards_of_batch.html:684
 msgid "تنزيل Kbps"
@@ -10047,12 +10008,12 @@ msgstr "Registro de ventas por período"
 
 #: app/templates/radius/cards_overview.html:677
 msgid "حركة الكروت: كمية، إيراد، وقنوات البيع"
-msgstr "Actividad de cupones: cantidad, ingresos y canales de venta"
+msgstr "Actividad de tarjetas: cantidad, ingresos y canales de venta"
 
 #: app/templates/radius/cards_overview.html:682
 #: app/templates/radius/docs_cards_overview.html:341
 msgid "إجمالي الكروت المباعة"
-msgstr "Total de cupones vendidos"
+msgstr "Total de tarjetas vendidas"
 
 #: app/templates/radius/cards_overview.html:687
 #: app/templates/radius/docs_cards_overview.html:341
@@ -10062,7 +10023,7 @@ msgstr "Ingresos totales"
 
 #: app/templates/radius/cards_overview.html:703
 msgid "أداء مبيعات الكروت"
-msgstr "Rendimiento de ventas de cupones"
+msgstr "Rendimiento de ventas de tarjetas"
 
 #: app/templates/radius/cards_overview.html:704
 msgid "الفترات المختارة"
@@ -10076,7 +10037,7 @@ msgstr "Abrir registro del período"
 
 #: app/templates/radius/cards_overview.html:783
 msgid "حزمة"
-msgstr "Plan"
+msgstr "Lote"
 
 #: app/templates/radius/cards_overview.html:841
 msgid "حزم مطبوعة"
@@ -10133,15 +10094,15 @@ msgstr "Aún no hay lotes impresos"
 
 #: app/templates/radius/cards_overview.html:880
 msgid "حزم البيع الإلكتروني"
-msgstr "Planes de venta electrónica"
+msgstr "Lotes de venta electrónica"
 
 #: app/templates/radius/cards_overview.html:881
 msgid "سوق الكروت"
-msgstr "Mercado de cupones"
+msgstr "Mercado de tarjetas"
 
 #: app/templates/radius/cards_overview.html:907
 msgid "لا توجد حزم بيع إلكتروني بعد"
-msgstr "Aún no hay paquetes de venta en línea"
+msgstr "Aún no hay lotes de venta en línea"
 
 #: app/templates/radius/cards_overview.html:930
 #: app/templates/radius/docs_cards_overview.html:317
@@ -10227,7 +10188,7 @@ msgstr "Creado"
 #: app/templates/radius/cards_print_list.html:344
 #: app/templates/radius/cards_recharge_list.html:290
 msgid "عرض الحزم"
-msgstr "Ver planes"
+msgstr "Ver lotes"
 
 #: app/templates/radius/cards_print_list.html:355
 msgid "اضغط أي حزمة لفتح بطاقاتها وتجهيز ملف الطباعة"
@@ -10256,12 +10217,12 @@ msgstr "Por mayor"
 #: app/templates/radius/cards_print_list.html:446
 #: app/templates/radius/cards_recharge_list.html:325
 msgid "معاينة الحزمة"
-msgstr "Vista previa del plan"
+msgstr "Vista previa del lote"
 
 #: app/templates/radius/cards_print_list.html:402
 #: app/templates/radius/cards_print_list.html:462
 msgid "حذف حزمة الطباعة"
-msgstr "Eliminar paquete de impresión"
+msgstr "Eliminar lote de impresión"
 
 #: app/templates/radius/cards_print_list.html:558
 #: app/templates/radius/cards_print_list.html:596
@@ -10294,11 +10255,11 @@ msgstr "¿Cómo funciona esta página?"
 
 #: app/templates/radius/cards_print_new.html:421
 msgid "ثلاث خطوات لحزمة طباعة جاهزة"
-msgstr "Tres pasos para un paquete listo para imprimir"
+msgstr "Tres pasos para un lote listo para imprimir"
 
 #: app/templates/radius/cards_print_new.html:428
 msgid "عرّف الحزمة:"
-msgstr "Definir plan:"
+msgstr "Definir lote:"
 
 #: app/templates/radius/cards_print_new.html:433
 msgid "حلّل الملف:"
@@ -10313,8 +10274,7 @@ msgid ""
 "الأسعار اختيارية. هذه البطاقات للطباعة فقط ولن تظهر في خدمة المصادقة أو "
 "تسمح بتسجيل الدخول."
 msgstr ""
-"Los precios son opcionales. Estos cupones son solo para impresión y no "
-"aparecerán en el servicio de autenticación ni permitirán iniciar sesión."
+"Los precios son opcionales. Estas tarjetas son solo para impresión y no aparecerán en el servicio de autenticación ni permitirán iniciar sesión."
 
 #: app/templates/radius/cards_print_new.html:490
 msgid "ارفع الملف ثم اضغط «حلّل»"
@@ -10326,7 +10286,7 @@ msgstr "Versión del motor"
 
 #: app/templates/radius/cards_print_new.html:501
 msgid "اختر ملف الكروت"
-msgstr "Elegir archivo de cupones"
+msgstr "Elegir archivo de tarjetas"
 
 #: app/templates/radius/cards_print_new.html:507
 #: app/templates/radius/docs_cards_print.html:400
@@ -10355,11 +10315,11 @@ msgstr "Finalización"
 #: app/templates/radius/cards_print_new.html:558
 #: app/templates/radius/docs_cards_print.html:413
 msgid "بطاقة جاهزة للحفظ"
-msgstr "Cupón listo para guardar"
+msgstr "Tarjeta lista para guardar"
 
 #: app/templates/radius/cards_print_new.html:567
 msgid "نص الكروت"
-msgstr "Texto de cupones"
+msgstr "Texto de tarjetas"
 
 #: app/templates/radius/cards_print_new.html:572
 msgid ""
@@ -10402,7 +10362,7 @@ msgstr "Error de conexión:"
 
 #: app/templates/radius/cards_recharge_batch.html:143
 msgid "بطاقات حزمة الشحن"
-msgstr "Cupones del paquete de recarga"
+msgstr "Tarjetas del lote de recarga"
 
 #: app/templates/radius/cards_recharge_batch.html:150
 msgid "الـ PIN"
@@ -10438,28 +10398,27 @@ msgstr "Utilizada"
 
 #: app/templates/radius/cards_recharge_list.html:261
 msgid "بطاقات الشحن المسبق"
-msgstr "Cupones de prepago"
+msgstr "Tarjetas de prepago"
 
 #: app/templates/radius/cards_recharge_list.html:262
 msgid ""
 "ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) "
 "فتُضاف قيمتها إلى رصيد محفظته."
 msgstr ""
-"Genera cupones de varios valores para la venta. El cliente introduce uno "
-"en su portal (/portal/card) y su valor se añade al saldo de su monedero."
+"Genera tarjetas de varios valores para la venta. El cliente introduce una en su portal (/portal/card) y su valor se añade al saldo de su monedero."
 
 #: app/templates/radius/cards_recharge_list.html:301
 msgid "اضغط أي حزمة لعرض البطاقات وقيمتها"
-msgstr "Haga clic en cualquier paquete para ver sus cupones y su valor"
+msgstr "Haga clic en cualquier lote para ver sus tarjetas y su valor"
 
 #: app/templates/radius/cards_recharge_list.html:340
 #: app/templates/radius/cards_recharge_list.html:396
 msgid "حذف حزمة الشحن"
-msgstr "Eliminar plan de recarga"
+msgstr "Eliminar lote de recarga"
 
 #: app/templates/radius/cards_recharge_list.html:355
 msgid "حزم الشحن المسبق"
-msgstr "Paquetes prepago"
+msgstr "Lotes de recarga prepago"
 
 #: app/templates/radius/cards_recharge_list.html:362
 msgid "المستخدمة"
@@ -10502,7 +10461,7 @@ msgstr "Cada fila representa una categoría de tarjetas de recarga. Por ejemplo:
 
 #: app/templates/radius/cards_recharge_new.html:133
 msgid "= 170 بطاقة بإجمالي قيمة"
-msgstr "= 170 cupones con un valor total de"
+msgstr "= 170 tarjetas con un valor total de"
 
 #: app/templates/radius/cards_recharge_new.html:155
 #: app/templates/radius/cards_recharge_new.html:232
@@ -10535,7 +10494,7 @@ msgstr "Añadir categoría"
 
 #: app/templates/radius/cards_recharge_new.html:173
 msgid "إجمالي البطاقات"
-msgstr "Total de cupones"
+msgstr "Total de tarjetas"
 
 #: app/templates/radius/cards_recharge_new.html:175
 msgid "عدد الفئات"
@@ -11762,8 +11721,7 @@ msgid ""
 "يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ "
 "مباشرة."
 msgstr ""
-"Todos los cupones se guardan de una sola vez. La configuración "
-"predeterminada está lista; puedes guardar directamente."
+"Todas las tarjetas se guardan de una sola vez. La configuración predeterminada está lista; puedes guardar directamente."
 
 #: app/templates/radius/communications_quota.html:9
 msgid ""
@@ -11889,7 +11847,7 @@ msgstr "Abonados específicos"
 
 #: app/templates/radius/communications_send.html:64
 msgid "مستخدمو الكروت"
-msgstr "Usuarios de cupones"
+msgstr "Usuarios de tarjetas"
 
 #: app/templates/radius/communications_send.html:69
 msgid "اختر فئة المستلمين. «مشتركون محددون» يستخدم حقل الأرقام."
@@ -12432,7 +12390,7 @@ msgstr "No hay actividad en este período."
 
 #: app/templates/radius/customer_portals_admin.html:23
 msgid "مداخل سريعة لبوابتي المشتركين ومستخدمي البطاقات."
-msgstr "Accesos rápidos a los portales de abonados y de usuarios de cupones."
+msgstr "Accesos rápidos a los portales de abonados y de usuarios de tarjetas."
 
 #: app/templates/radius/customer_portals_admin.html:62
 msgid ""
@@ -12448,9 +12406,7 @@ msgid ""
 "مساعد تنقل إداري فقط: لا تنفّذ هذه الصفحة شراء بطاقات أو طلب سلفة أو "
 "تجديدًا أو أي تغيير في خدمة المصادقة."
 msgstr ""
-"Solo asistente de navegación administrativa: esta página no realiza "
-"compras de cupones, solicitudes de anticipo, renovaciones ni ningún "
-"cambio en el servicio de autenticación."
+"Solo asistente de navegación administrativa: esta página no realiza compras de tarjetas, solicitudes de anticipo, renovaciones ni ningún cambio en el servicio de autenticación."
 
 #: app/templates/radius/dashboard.html:3
 msgid "مركز إدارة الشبكة - Hobe Hub"
@@ -12479,7 +12435,7 @@ msgstr "Nuevo abonado"
 
 #: app/templates/radius/dashboard.html:734
 msgid "إنشاء حزمة"
-msgstr "Crear plan"
+msgstr "Crear lote"
 
 #: app/templates/radius/dashboard.html:735
 msgid "تجهيز راوتر"
@@ -12520,17 +12476,16 @@ msgstr "Gestionar abonados"
 
 #: app/templates/radius/dashboard.html:766
 msgid "البطاقات والحزم"
-msgstr "Cupones y planes"
+msgstr "Tarjetas y lotes"
 
 #: app/templates/radius/dashboard.html:767
 msgid "مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر."
 msgstr ""
-"El inventario de cupones impresos y lotes listos para activación o venta "
-"directa."
+"El inventario de tarjetas impresas y lotes listos para activación o venta directa."
 
 #: app/templates/radius/dashboard.html:772
 msgid "كرت مطبوع"
-msgstr "Cupón impreso"
+msgstr "Tarjeta impresa"
 
 #: app/templates/radius/dashboard.html:777
 #: app/templates/radius/dashboard.html:800
@@ -12540,16 +12495,15 @@ msgstr "Vendido hoy"
 #: app/templates/radius/dashboard.html:790
 msgid "حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة."
 msgstr ""
-"Paquetes de venta electrónica y los usuarios de cupones que compran desde"
-" el monedero."
+"Lotes de venta electrónica y los usuarios de tarjetas que compran desde el monedero."
 
 #: app/templates/radius/dashboard.html:795
 msgid "كرت إلكتروني"
-msgstr "Cupón electrónico"
+msgstr "Tarjeta electrónica"
 
 #: app/templates/radius/dashboard.html:804
 msgid "حزم البيع"
-msgstr "Paquetes de venta"
+msgstr "Lotes de venta"
 
 #: app/templates/radius/dashboard.html:805
 msgid "المستخدمون"
@@ -12620,11 +12574,11 @@ msgstr "Año"
 
 #: app/templates/radius/dashboard.html:877
 msgid "آخر الحزم"
-msgstr "Últimos planes"
+msgstr "Últimos lotes"
 
 #: app/templates/radius/dashboard.html:884
 msgid "حزمة بدون اسم"
-msgstr "Plan sin nombre"
+msgstr "Lote sin nombre"
 
 #: app/templates/radius/dashboard.html:885
 msgid "بدون كود"
@@ -12632,11 +12586,11 @@ msgstr "Sin código"
 
 #: app/templates/radius/dashboard.html:893
 msgid "لا توجد حزم بعد"
-msgstr "Aún no hay planes"
+msgstr "Aún no hay lotes"
 
 #: app/templates/radius/dashboard.html:894
 msgid "ستظهر أحدث الحزم هنا"
-msgstr "Los últimos paquetes aparecerán aquí"
+msgstr "Los últimos lotes aparecerán aquí"
 
 #: app/templates/radius/dashboard.html:903
 msgid "ما يحتاج انتباه"
@@ -13419,7 +13373,7 @@ msgstr "Sin definir"
 
 #: app/templates/radius/distributors_detail.html:117
 msgid "كود الحزمة"
-msgstr "Código del plan"
+msgstr "Código del lote"
 
 #: app/templates/radius/distributors_detail.html:122
 msgid "تاريخ الربط"
@@ -13428,12 +13382,11 @@ msgstr "Fecha de vinculación"
 #: app/templates/radius/distributors_detail.html:156
 msgid "بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع."
 msgstr ""
-"Tras la vinculación, el plan aparece dentro del ámbito de este "
-"distribuidor."
+"Tras la vinculación, el lote aparece dentro del ámbito de este distribuidor."
 
 #: app/templates/radius/distributors_detail.html:162
 msgid "— اختر حزمة —"
-msgstr "— Selecciona un paquete —"
+msgstr "— Selecciona un lote —"
 
 #: app/templates/radius/distributors_detail.html:169
 msgid "ملاحظة الربط"
@@ -13445,7 +13398,7 @@ msgstr "Ejemplo: entrega manual al distribuidor"
 
 #: app/templates/radius/distributors_detail.html:174
 msgid "ربط الحزمة"
-msgstr "Vincular plan"
+msgstr "Vincular lote"
 
 #: app/templates/radius/distributors_detail.html:180
 msgid "تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل."
@@ -13515,20 +13468,21 @@ msgstr "Deuda actual"
 #: app/templates/radius/distributors_form.html:143
 #: app/templates/radius/distributors_list.html:257
 msgid "عرض الكروت والحزم"
-msgstr "Ver cupones y planes"
+msgstr "Ver tarjetas y lotes"
 
 #: app/templates/radius/distributors_form.html:144
 msgid "يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها."
-msgstr "Permite al distribuidor ver los planes vinculados a él y seguir su estado."
+msgstr ""
+"Permite al distribuidor ver los lotes vinculados a él y seguir su estado."
 
 #: app/templates/radius/distributors_form.html:151
 #: app/templates/radius/distributors_list.html:264
 msgid "بيع الكروت"
-msgstr "Vender cupones"
+msgstr "Vender tarjetas"
 
 #: app/templates/radius/distributors_form.html:152
 msgid "يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط."
-msgstr "Permite realizar ventas solo dentro de los planes autorizados."
+msgstr "Permite realizar ventas solo dentro de los lotes autorizados."
 
 #: app/templates/radius/distributors_form.html:156
 msgid "اختر الصلاحيات من القائمة بدل كتابة رموز تقنية."
@@ -13618,7 +13572,7 @@ msgstr "Se utiliza en la correspondencia y los extractos: opcional."
 
 #: app/templates/radius/distributors_list.html:223
 msgid "مفعَّل — يعمل ويُربَط بالحزم"
-msgstr "Activado — funciona y se vincula a los planes"
+msgstr "Activado — funciona y se vincula a los lotes"
 
 #: app/templates/radius/distributors_list.html:224
 msgid "غير مفعَّل — موقوف مؤقتًا"
@@ -13631,8 +13585,7 @@ msgstr "Bloqueado — vetado de cualquier operación"
 #: app/templates/radius/distributors_list.html:227
 msgid "تتحكم بظهوره في العمليات — تغيير الحالة لاحقًا لا يمسّ الحزم المربوطة به."
 msgstr ""
-"Controla su aparición en las operaciones — cambiar el estado más adelante"
-" no afecta a los planes vinculados a él."
+"Controla su aparición en las operaciones — cambiar el estado más adelante no afecta a los lotes vinculados a él."
 
 #: app/templates/radius/distributors_list.html:232
 msgid "الجانب المالي"
@@ -13673,14 +13626,12 @@ msgstr "Permisos y alcance de los datos"
 #: app/templates/radius/distributors_list.html:258
 msgid "يسمح للموزع برؤية الحزم المربوطة به ومتابعة حالتها — الأساس لأي عمل."
 msgstr ""
-"Permite al distribuidor ver los planes vinculados a él y seguir su estado"
-" — la base de cualquier trabajo."
+"Permite al distribuidor ver los lotes vinculados a él y seguir su estado — la base de cualquier trabajo."
 
 #: app/templates/radius/distributors_list.html:265
 msgid "يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة له فقط."
 msgstr ""
-"Permite realizar operaciones de venta solo dentro de los planes que tiene"
-" autorizados."
+"Permite realizar operaciones de venta solo dentro de los lotes que tiene autorizados."
 
 #: app/templates/radius/distributors_list.html:273
 msgid "نطاق البيانات: الحزم المعيّنة فقط"
@@ -13994,9 +13945,7 @@ msgid ""
 "التي تربط الأجهزة المسموح لها بكل عرض أو حزمة بطاقات. كل الطبقات تُنفَّذ "
 "فعليًّا في محرّك المصادقة، لا في الواجهة فقط."
 msgstr ""
-"que vinculan los dispositivos permitidos con cada oferta o paquete de "
-"tarjetas. Todas las capas se aplican realmente en el motor de "
-"autenticación, no solo en la interfaz."
+"que vinculan los dispositivos permitidos con cada oferta o lote de tarjetas. Todas las capas se aplican realmente en el motor de autenticación, no solo en la interfaz."
 
 #: app/templates/radius/docs_access_control.html:58
 msgid "افهم الفرق أولًا لتختار الأداة الصحيحة:"
@@ -14030,10 +13979,7 @@ msgid ""
 "الطبقة تُشتقّ تلقائيًّا من نوع النطاق الذي تختاره: IP/MAC تُصنَّف "
 "«حظرًا»، وأي نطاق آخر (مشترك/مجموعة/باقة/شامل) يُصنَّف «تعليق وصول»."
 msgstr ""
-"La capa se deriva automáticamente del tipo de alcance que elijas: IP/MAC "
-"se clasifica como «bloqueo», y cualquier otro alcance "
-"(suscriptor/grupo/paquete/global) se clasifica como «suspensión de "
-"acceso»."
+"La capa se deriva automáticamente del tipo de ámbito que elijas: IP/MAC se clasifica como «bloqueo», y cualquier otro ámbito (suscriptor/grupo/plan/global) se clasifica como «suspensión de acceso»."
 
 #: app/templates/radius/docs_access_control.html:76
 msgid "من نموذج التعليق اختر"
@@ -14759,7 +14705,7 @@ msgstr "Trasladado"
 
 #: app/templates/radius/docs_accounting.html:339
 msgid "(دفعة/سلفة/بيع بطاقة…)،"
-msgstr "(pago/anticipo/venta de cupón…),"
+msgstr "(pago/anticipo/venta de tarjeta…),"
 
 #: app/templates/radius/docs_accounting.html:339
 #: app/templates/radius/docs_add_router.html:78
@@ -14905,7 +14851,7 @@ msgstr "Cuánto pagó cada abonado."
 
 #: app/templates/radius/docs_accounting.html:435
 msgid "السلف / التفعيلات / مبيعات الكروت."
-msgstr "Anticipos / activaciones / ventas de cupones."
+msgstr "Anticipos / activaciones / ventas de tarjetas."
 
 #: app/templates/radius/docs_accounting.html:436
 msgid "ربح / خسارة:"
@@ -14989,7 +14935,7 @@ msgstr "Abre una ventana donde especificas"
 
 #: app/templates/radius/docs_accounting.html:473
 msgid "اختيارية. يُفلتر التقرير بالنطاق ثم"
-msgstr "Opcional. Filtra el informe por plan y luego"
+msgstr "Opcional. Filtra el informe por ámbito y luego"
 
 #: app/templates/radius/docs_accounting.html:473
 msgid "يُجمَّد كما هو"
@@ -15854,8 +15800,7 @@ msgstr "Hotspot:"
 #: app/templates/radius/docs_add_subscriber.html:414
 msgid "دخول عبر صفحة Captive Portal — مناسب لكروت الواي فاي والزبائن المؤقتين."
 msgstr ""
-"Acceso a través de la página Captive Portal — adecuado para cupones Wi-Fi"
-" y clientes temporales."
+"Acceso a través de la página Captive Portal — adecuado para tarjetas Wi-Fi y clientes temporales."
 
 #: app/templates/radius/docs_add_subscriber.html:415
 msgid "برودباند:"
@@ -15896,7 +15841,8 @@ msgstr "Suscripción doméstica con usuario y contraseña"
 
 #: app/templates/radius/docs_add_subscriber.html:435
 msgid "البطاقة المختارة تتلوّن بالبنفسجي مع علامة صح."
-msgstr "El cupón seleccionado se vuelve morado con una marca de verificación."
+msgstr ""
+"La tarjeta seleccionada se vuelve morada con una marca de verificación."
 
 #: app/templates/radius/docs_add_subscriber.html:449
 msgid "اختر الباقة (وحدّد المدير إن أردت)"
@@ -17209,8 +17155,7 @@ msgstr ""
 #: app/templates/radius/docs_anti_mac_clone.html:128
 msgid "ابدأ بنطاق صغير (باقة واحدة مثلًا) وحدّ ثقة"
 msgstr ""
-"Empieza con un alcance pequeño (un solo paquete, por ejemplo) y un umbral"
-" de confianza"
+"Empieza con un ámbito pequeño (un solo plan, por ejemplo) y un umbral de confianza"
 
 #: app/templates/radius/docs_anti_mac_clone.html:128
 msgid "في نمط monitor، وراقب الأحداث قبل التوسيع."
@@ -18167,7 +18112,7 @@ msgstr "El valor y la cantidad de cupones determinan"
 
 #: app/templates/radius/docs_billing_vouchers.html:459
 msgid "إجمالي قيمة الدفعة"
-msgstr "Importe total del pago"
+msgstr "Importe total del lote"
 
 #: app/templates/radius/docs_billing_vouchers.html:469
 msgid "صرف كوبون — وإلغاء كوبون"
@@ -18297,11 +18242,12 @@ msgstr "Registro de ventas"
 
 #: app/templates/radius/docs_card_marketplace.html:274
 msgid "قبل ما نبدأ — شو يعني «سوق البطاقات الإلكترونية»؟"
-msgstr "Antes de empezar: ¿qué significa «el mercado de cupones electrónicos»?"
+msgstr ""
+"Antes de empezar: ¿qué significa «el mercado de tarjetas electrónicas»?"
 
 #: app/templates/radius/docs_card_marketplace.html:276
 msgid "هذه صفحة بيع البطاقات"
-msgstr "Esta es la página de venta de cupones"
+msgstr "Esta es la página de venta de tarjetas"
 
 #: app/templates/radius/docs_card_marketplace.html:276
 msgid "رقميًا"
@@ -18317,11 +18263,11 @@ msgstr "Los dos sistemas: «generación instantánea» frente a «stock»"
 
 #: app/templates/radius/docs_card_marketplace.html:295
 msgid "كرت توليد فوري:"
-msgstr "Cupón de generación instantánea:"
+msgstr "Tarjeta de generación instantánea:"
 
 #: app/templates/radius/docs_card_marketplace.html:295
 msgid "النظام يُنشئ كرتًا جديدًا"
-msgstr "El sistema crea un cupón nuevo"
+msgstr "El sistema crea una tarjeta nueva"
 
 #: app/templates/radius/docs_card_marketplace.html:295
 msgid "لحظة كل عملية شراء"
@@ -18335,7 +18281,7 @@ msgstr ""
 
 #: app/templates/radius/docs_card_marketplace.html:297
 msgid "نظام حزم / مخزون:"
-msgstr "Sistema de planes / inventario:"
+msgstr "Sistema de lotes / inventario:"
 
 #: app/templates/radius/docs_card_marketplace.html:298
 msgid "«المباع / المتبقّي»"
@@ -18343,7 +18289,7 @@ msgstr "«Vendido / Restante»"
 
 #: app/templates/radius/docs_card_marketplace.html:302
 msgid "سوق البطاقات › بطاقات العروض"
-msgstr "Mercado de cupones › Cupones de ofertas"
+msgstr "Mercado de tarjetas › Tarjetas de ofertas"
 
 #: app/templates/radius/docs_card_marketplace.html:305
 #: app/templates/radius/docs_card_marketplace.html:369
@@ -18355,7 +18301,7 @@ msgstr "8 horas / 2 Mbps"
 
 #: app/templates/radius/docs_card_marketplace.html:309
 msgid "كرت يومي مطبوع"
-msgstr "Cupón diario impreso"
+msgstr "Tarjeta diaria impresa"
 
 #: app/templates/radius/docs_card_marketplace.html:314
 msgid "الشارة البنفسجية = توليد فوري، والزرقاء = مخزون."
@@ -18378,8 +18324,7 @@ msgid ""
 "فوق قائمة العروض يوجد مفتاح من ثلاثة أزرار يصفّي البطاقات حسب نظامها، "
 "وبجانبه"
 msgstr ""
-"Encima de la lista de ofertas hay un selector de tres botones que filtra "
-"los cupones según su sistema, y junto a él"
+"Encima de la lista de ofertas hay un selector de tres botones que filtra las tarjetas según su sistema, y junto a él"
 
 #: app/templates/radius/docs_card_marketplace.html:331
 msgid "عدّاد العروض"
@@ -18432,8 +18377,7 @@ msgstr "«Añadir plan de venta»"
 #: app/templates/radius/docs_card_marketplace.html:368
 msgid "البروفايل الذي يرث منه الكرت المدة والسرعة والسعر المقترح —"
 msgstr ""
-"El perfil del que el cupón hereda su duración, velocidad y precio "
-"sugerido —"
+"El perfil del que la tarjeta hereda su duración, velocidad y precio sugerido —"
 
 #: app/templates/radius/docs_card_marketplace.html:368
 msgid "اختياره يملأ بقية الحقول تلقائيًا"
@@ -18453,7 +18397,7 @@ msgstr "El importe que se descuenta del monedero del cliente al comprar."
 
 #: app/templates/radius/docs_card_marketplace.html:371
 msgid "مدة البطاقة / سرعة التنزيل / سرعة الرفع:"
-msgstr "Duración del cupón / velocidad de descarga / velocidad de subida:"
+msgstr "Duración de la tarjeta / velocidad de descarga / velocidad de subida:"
 
 #: app/templates/radius/docs_card_marketplace.html:371
 msgid "صفرًا"
@@ -18461,7 +18405,7 @@ msgstr "Cero"
 
 #: app/templates/radius/docs_card_marketplace.html:371
 msgid "لاعتماد قيم العرض الأساسي كما هي."
-msgstr "Para adoptar los valores del plan base tal cual."
+msgstr "Para adoptar los valores de la oferta base tal cual."
 
 #: app/templates/radius/docs_card_marketplace.html:372
 msgid "نمط البيع:"
@@ -18469,7 +18413,7 @@ msgstr "Modo de venta:"
 
 #: app/templates/radius/docs_card_marketplace.html:372
 msgid "«توليد فوري» أو «نظام حزم / مخزون»."
-msgstr "«Generación instantánea» o «sistema de paquetes / inventario»."
+msgstr "«Generación instantánea» o «sistema de lotes / inventario»."
 
 #: app/templates/radius/docs_card_marketplace.html:373
 msgid "لون البطاقة:"
@@ -18515,7 +18459,7 @@ msgstr "Solo para los planes del sistema de inventario"
 
 #: app/templates/radius/docs_card_marketplace.html:436
 msgid "رفع ملف بطاقات:"
-msgstr "Subir archivo de cupones:"
+msgstr "Subir archivo de tarjetas:"
 
 #: app/templates/radius/docs_card_marketplace.html:436
 msgid "ارفع ملف"
@@ -18533,7 +18477,7 @@ msgstr "y los nombres duplicados se omiten automáticamente"
 
 #: app/templates/radius/docs_card_marketplace.html:438
 msgid ". الحد: 12MB و5000 بطاقة بالدفعة."
-msgstr ". Límite: 12MB y 5000 cupones por lote."
+msgstr ". Límite: 12MB y 5000 tarjetas por lote."
 
 #: app/templates/radius/docs_card_marketplace.html:439
 msgid "توليد حزمة:"
@@ -18549,7 +18493,7 @@ msgstr "(1–5000) y "
 
 #: app/templates/radius/docs_card_marketplace.html:444
 msgid "توليد حزمة — 8 ساعات / 2 ميجا"
-msgstr "Generar un paquete — 8 horas / 2 Mbps"
+msgstr "Generar un lote — 8 horas / 2 Mbps"
 
 #: app/templates/radius/docs_card_marketplace.html:450
 msgid "من 1 إلى 5000."
@@ -18562,8 +18506,7 @@ msgstr "De 4 a 16 caracteres."
 #: app/templates/radius/docs_card_marketplace.html:464
 msgid "الكروت المولّدة/المرفوعة تدخل المخزون فورًا وتصبح جاهزة للبيع."
 msgstr ""
-"Los cupones generados/subidos entran de inmediato en el inventario y "
-"quedan listos para la venta."
+"Las tarjetas generadas/subidas entran de inmediato en el inventario y quedan listas para la venta."
 
 #: app/templates/radius/docs_card_marketplace.html:478
 msgid "اقرأ العدّادات وافتح العرض"
@@ -18584,8 +18527,7 @@ msgstr ". Y cuando el stock se agota, aparece una alerta de color:"
 #: app/templates/radius/docs_card_marketplace.html:485
 msgid "(دائرة حمراء): لم يبقَ أي كرت — توقّف البيع حتى تعبّي."
 msgstr ""
-"(círculo rojo): no quedan cupones — la venta se detiene hasta que "
-"repongas."
+"(círculo rojo): no quedan tarjetas — la venta se detiene hasta que repongas."
 
 #: app/templates/radius/docs_card_marketplace.html:499
 msgid "«فتح العرض»"
@@ -18594,8 +18536,7 @@ msgstr "«Abrir oferta»"
 #: app/templates/radius/docs_card_marketplace.html:499
 msgid "يأخذك لصفحة بطاقات العرض — جدول بكل كرت داخله:"
 msgstr ""
-"Te lleva a la página de cupones del plan — una tabla con cada cupón "
-"dentro:"
+"Te lleva a la página de tarjetas de la oferta — una tabla con cada tarjeta dentro:"
 
 #: app/templates/radius/docs_card_marketplace.html:514
 msgid "بالمخزون"
@@ -18607,9 +18548,7 @@ msgid ""
 "(بالمخزون/مباعة/مستخدمة/منتهية/ملغاة)، تاريخ التوليد، المشتري، السعر، "
 "الحزمة."
 msgstr ""
-"Columnas: código, contraseña, estado (en "
-"stock/vendido/usado/caducado/cancelado), fecha de generación, comprador, "
-"precio, paquete."
+"Columnas: código, contraseña, estado (en stock/vendida/usada/caducada/cancelada), fecha de generación, comprador, precio, lote."
 
 #: app/templates/radius/docs_card_marketplace.html:526
 msgid "تابع سجل المبيعات"
@@ -18641,12 +18580,11 @@ msgid ""
 "الأعمدة: المشتري، العرض، الكرت، المبلغ، الحالة، التاريخ — مع ترقيم صفحات "
 "للعمليات الأقدم."
 msgstr ""
-"Columnas: comprador, oferta, cupón, importe, estado, fecha — con "
-"paginación para las operaciones más antiguas."
+"Columnas: comprador, oferta, tarjeta, importe, estado, fecha — con paginación para las operaciones más antiguas."
 
 #: app/templates/radius/docs_card_marketplace.html:551
 msgid "«الحزم الإلكترونية المتولدة»"
-msgstr "«Cupones electrónicos generados»"
+msgstr "«Lotes electrónicos generados»"
 
 #: app/templates/radius/docs_card_users.html:4
 msgid "دليل: مستخدمو البطاقات — الزبائن والمحافظ والمشتريات"
@@ -18963,8 +18901,7 @@ msgstr "Comprar un plan:"
 #: app/templates/radius/docs_card_users.html:156
 msgid "اختر باقة من السوق فيُخصم سعرها من المحفظة ويُسلَّم كرت باسم الزبون."
 msgstr ""
-"Elige un paquete del mercado; su precio se descuenta de la cartera y se "
-"entrega una tarjeta a nombre del cliente."
+"Elige un plan del mercado; su precio se descuenta de la cartera y se entrega una tarjeta a nombre del cliente."
 
 #: app/templates/radius/docs_card_users.html:160
 msgid "الرصيد يجب أن يكفي:"
@@ -19048,7 +18985,7 @@ msgstr "Filtros, búsqueda y exportación"
 
 #: app/templates/radius/docs_cards_batches.html:275
 msgid "بطاقة الحزمة وأزرارها"
-msgstr "Tarjeta del plan y sus botones"
+msgstr "Tarjeta del lote y sus botones"
 
 #: app/templates/radius/docs_cards_batches.html:276
 msgid "الإجراءات الجماعية"
@@ -19056,7 +18993,7 @@ msgstr "Acciones masivas"
 
 #: app/templates/radius/docs_cards_batches.html:277
 msgid "«حزمة جديدة» — التوليد السريع"
-msgstr "«Nuevo paquete» — generación rápida"
+msgstr "«Nuevo lote» — generación rápida"
 
 #: app/templates/radius/docs_cards_batches.html:278
 msgid "الوضع المتقدّم للتوليد"
@@ -19068,11 +19005,11 @@ msgstr "Tras la generación — qué esperar"
 
 #: app/templates/radius/docs_cards_batches.html:288
 msgid "قبل ما نبدأ — شو يعني «حزمة بطاقات»؟"
-msgstr "Antes de empezar — ¿qué significa «lote de cupones»?"
+msgstr "Antes de empezar — ¿qué significa «lote de tarjetas»?"
 
 #: app/templates/radius/docs_cards_batches.html:303
 msgid "افتح «حزم البطاقات» واقرأ شريط الأرقام"
-msgstr "Abre «Lotes de cupones» y lee la barra de cifras"
+msgstr "Abre «Lotes de tarjetas» y lee la barra de cifras"
 
 #: app/templates/radius/docs_cards_batches.html:305
 #: app/templates/radius/docs_cards_checker.html:290
@@ -19081,7 +19018,7 @@ msgstr "Desde el menú lateral:"
 
 #: app/templates/radius/docs_cards_batches.html:305
 msgid "«البطاقات» ← «حزم البطاقات»"
-msgstr "«Cupones» → «Lotes de cupones»"
+msgstr "«Tarjetas» → «Lotes de tarjetas»"
 
 #: app/templates/radius/docs_cards_batches.html:305
 msgid ". الصفحة عنوانها"
@@ -19089,7 +19026,7 @@ msgstr ". El título de la página es"
 
 #: app/templates/radius/docs_cards_batches.html:306
 msgid "«إدارة البطاقات والحزم»"
-msgstr "«Gestión de cupones y lotes»"
+msgstr "«Gestión de tarjetas y lotes»"
 
 #: app/templates/radius/docs_cards_batches.html:306
 msgid "وفي رأسها ثلاثة عناصر:"
@@ -19111,8 +19048,7 @@ msgstr "«Importar desde archivo»"
 #: app/templates/radius/docs_cards_batches.html:310
 msgid ": لإدخال كروت جاهزة من ملف CSV/Excel/PDF بدل توليدها."
 msgstr ""
-": para importar cupones listos desde un archivo CSV/Excel/PDF en lugar de"
-" generarlos."
+": para importar tarjetas listas desde un archivo CSV/Excel/PDF en lugar de generarlas."
 
 #: app/templates/radius/docs_cards_batches.html:311
 msgid "مفتاح"
@@ -19145,19 +19081,19 @@ msgstr "— lotes en los que no queda ninguna tarjeta activable."
 
 #: app/templates/radius/docs_cards_batches.html:317
 msgid "— مجموع كروت كل الحزم المعروضة."
-msgstr "— total de cupones de todos los planes mostrados."
+msgstr "— total de tarjetas de todos los lotes mostrados."
 
 #: app/templates/radius/docs_cards_batches.html:318
 msgid "— كروت انتهت صلاحيتها."
-msgstr "— Cupones caducados."
+msgstr "— Tarjetas caducadas."
 
 #: app/templates/radius/docs_cards_batches.html:319
 msgid "— كروت لها جلسات حية الآن."
-msgstr "— cupones con sesiones activas en este momento."
+msgstr "— tarjetas con sesiones activas en este momento."
 
 #: app/templates/radius/docs_cards_batches.html:323
 msgid "البطاقات › حزم البطاقات"
-msgstr "Cupones › Lotes de cupones"
+msgstr "Tarjetas › Lotes de tarjetas"
 
 #: app/templates/radius/docs_cards_batches.html:330
 msgid "جدول |"
@@ -19177,7 +19113,7 @@ msgstr "Campo de búsqueda"
 
 #: app/templates/radius/docs_cards_batches.html:358
 msgid ": يلاقي الحزمة باسمها أو بكود الدفعة."
-msgstr ": encuentra el plan por su nombre o por el código del lote."
+msgstr ": encuentra el lote por su nombre o por el código del lote."
 
 #: app/templates/radius/docs_cards_batches.html:359
 msgid "فلتر الحالة:"
@@ -19189,9 +19125,7 @@ msgid ""
 "«بها بطاقات منتهية»، «بها بطاقات ملغاة»، «مستهلكة»، أو «مؤرشفة» — "
 "المؤرشفة لا تظهر إلا من هنا."
 msgstr ""
-"«Solo activos» (predeterminado), «Todos los paquetes», «Con cupones "
-"listos», «Con uso», «Con cupones caducados», «Con cupones cancelados», "
-"«Consumidos» o «Archivados» — los archivados solo aparecen desde aquí."
+"«Solo activos» (predeterminado), «Todos los lotes», «Con tarjetas listas», «Con uso», «Con tarjetas caducadas», «Con tarjetas canceladas», «Consumidos» o «Archivados» — los archivados solo aparecen desde aquí."
 
 #: app/templates/radius/docs_cards_batches.html:360
 msgid "فلتر الباقة:"
@@ -19199,7 +19133,7 @@ msgstr "Filtro de plan:"
 
 #: app/templates/radius/docs_cards_batches.html:360
 msgid "حزم باقة معينة فقط."
-msgstr "Solo paquetes de un plan específico."
+msgstr "Solo lotes de un plan específico."
 
 #: app/templates/radius/docs_cards_batches.html:361
 msgid "فلتر الموزع:"
@@ -19208,8 +19142,7 @@ msgstr "Filtro de distribuidor:"
 #: app/templates/radius/docs_cards_batches.html:361
 msgid "حزم موزّع معيّن — مفيد للمحاسبة معه."
 msgstr ""
-"Los planes de un distribuidor específico — útil para la contabilidad con "
-"él."
+"Los lotes de un distribuidor específico — útil para la contabilidad con él."
 
 #: app/templates/radius/docs_cards_batches.html:362
 #: app/templates/radius/docs_reports_overview.html:367
@@ -19230,13 +19163,11 @@ msgid ""
 ": تنزّل قائمة الحزم (بنفس الفلتر الحالي) بكل أعمدتها — الـ PDF يطلع "
 "بتنسيق عربي فاخر جاهز للأرشيف."
 msgstr ""
-": descarga la lista de planes (con el mismo filtro actual) con todas sus "
-"columnas — el PDF se genera con un elegante diseño en árabe listo para "
-"archivar."
+": descarga la lista de lotes (con el mismo filtro actual) con todas sus columnas — el PDF se genera con un elegante diseño en árabe listo para archivar."
 
 #: app/templates/radius/docs_cards_batches.html:367
 msgid "حزم البطاقات › شريط الفلاتر"
-msgstr "Lotes de cupones › Barra de filtros"
+msgstr "Lotes de tarjetas › Barra de filtros"
 
 #: app/templates/radius/docs_cards_batches.html:371
 msgid "النشطة فقط"
@@ -19248,7 +19179,7 @@ msgstr "Consejo contable:"
 
 #: app/templates/radius/docs_cards_batches.html:394
 msgid "اقرأ بطاقة الحزمة — وكل زر فيها"
-msgstr "Lea la tarjeta del paquete — y cada botón en ella"
+msgstr "Lea la tarjeta del lote — y cada botón en ella"
 
 #: app/templates/radius/docs_cards_batches.html:395
 msgid "كل حزمة تظهر كبطاقة غنية فيها كل القصة:"
@@ -19261,8 +19192,7 @@ msgstr "Encabezado:"
 #: app/templates/radius/docs_cards_batches.html:397
 msgid "مربع تحديد (للإجراءات الجماعية) + اسم الحزمة + كود الدفعة + شارة الحالة:"
 msgstr ""
-"Casilla de verificación (para acciones masivas) + nombre del plan + "
-"código de lote + insignia de estado:"
+"Casilla de verificación (para acciones masivas) + nombre del lote + código de lote + insignia de estado:"
 
 #: app/templates/radius/docs_cards_batches.html:397
 msgid "(خضراء)،"
@@ -19277,8 +19207,7 @@ msgid ""
 "مدة البطاقة (مثلًا «1 ساعة»)، عدد الأجهزة المسموح، والكوتة بالميجا إن "
 "وجدت."
 msgstr ""
-"La duración del cupón (por ej. «1 hora»), el número de dispositivos "
-"permitidos y la cuota en MB si la hay."
+"La duración de la tarjeta (por ej. «1 hora»), el número de dispositivos permitidos y la cuota en MB si la hay."
 
 #: app/templates/radius/docs_cards_batches.html:399
 msgid "أربعة أرقام:"
@@ -19286,7 +19215,7 @@ msgstr "Cuatro dígitos:"
 
 #: app/templates/radius/docs_cards_batches.html:399
 msgid "(إجمالي الكروت)،"
-msgstr "(total de cupones),"
+msgstr "(total de tarjetas),"
 
 #: app/templates/radius/docs_cards_batches.html:399
 msgid "(متصلة)،"
@@ -19322,7 +19251,7 @@ msgstr "Abre una tabla"
 
 #: app/templates/radius/docs_cards_batches.html:405
 msgid "كروت الحزمة"
-msgstr "Cupones del paquete"
+msgstr "Tarjetas del lote"
 
 #: app/templates/radius/docs_cards_batches.html:405
 msgid ""
@@ -19330,9 +19259,7 @@ msgid ""
 "إجراءات جماعية على الكروت (تفعيل، إيقاف، إضافة/خصم وقت، تعديل سرعة، قفل "
 "MAC، قطع اتصال...)."
 msgstr ""
-"Cupón por cupón: nombre de acceso, contraseña, estado, restante, sesiones"
-" — con acciones masivas sobre los cupones (activar, desactivar, "
-"añadir/restar tiempo, ajustar velocidad, bloqueo MAC, desconectar...)."
+"Tarjeta por tarjeta: nombre de acceso, contraseña, estado, restante, sesiones — con acciones masivas sobre las tarjetas (activar, desactivar, añadir/restar tiempo, ajustar velocidad, bloqueo MAC, desconectar...)."
 
 #: app/templates/radius/docs_cards_batches.html:406
 #: app/templates/radius/docs_cards_connected.html:421
@@ -19344,8 +19271,7 @@ msgid ""
 "يفتح نموذج تعديل إعدادات الحزمة (الأسعار، المدة، السلوك، قواعد السرعة) — "
 "يؤثر على كروتها."
 msgstr ""
-"Abre el formulario para editar los ajustes del plan (precios, duración, "
-"comportamiento, reglas de velocidad) — afecta a sus cupones."
+"Abre el formulario para editar los ajustes del lote (precios, duración, comportamiento, reglas de velocidad) — afecta a sus tarjetas."
 
 #: app/templates/radius/docs_cards_batches.html:407
 msgid "«طباعة»:"
@@ -19358,7 +19284,7 @@ msgstr "Abre una ventana"
 #: app/templates/radius/docs_cards_batches.html:407
 #: app/templates/radius/docs_cards_print.html:508
 msgid "«تجهيز ملف البطاقات»"
-msgstr "«Preparar el archivo de cupones»"
+msgstr "«Preparar el archivo de tarjetas»"
 
 #: app/templates/radius/docs_cards_batches.html:407
 msgid ""
@@ -19386,8 +19312,7 @@ msgstr "«Subir archivo»"
 #: app/templates/radius/docs_cards_batches.html:407
 msgid ". (تفاصيل أكثر في دليلَي «بطاقات الطباعة» و«قوالب الطباعة».)"
 msgstr ""
-". (Más detalles en las guías «Cupones de impresión» y «Plantillas de "
-"impresión».)"
+". (Más detalles en las guías «Tarjetas de impresión» y «Plantillas de impresión».)"
 
 #: app/templates/radius/docs_cards_batches.html:408
 msgid "«حذف»:"
@@ -19400,8 +19325,7 @@ msgstr "Segura"
 #: app/templates/radius/docs_cards_batches.html:408
 msgid "— الحزمة تختفي من العرض الافتراضي لكن كروتها لا تُحذف، وتقدر ترجّعها بزر"
 msgstr ""
-"— El plan desaparece de la vista predeterminada pero sus cupones no se "
-"eliminan, y puedes restaurarlo con un botón"
+"— El lote desaparece de la vista predeterminada pero sus tarjetas no se eliminan, y puedes restaurarlo con un botón"
 
 #: app/templates/radius/docs_cards_batches.html:408
 msgid "«تفعيل»"
@@ -19409,7 +19333,7 @@ msgstr "Activar"
 
 #: app/templates/radius/docs_cards_batches.html:408
 msgid "الذي يظهر مكانه على الحزم المؤرشفة."
-msgstr "que aparece en su lugar en los paquetes archivados."
+msgstr "que aparece en su lugar en los lotes archivados."
 
 #: app/templates/radius/docs_cards_batches.html:414
 #: app/templates/radius/docs_cards_batches.html:487
@@ -19417,7 +19341,7 @@ msgstr "que aparece en su lugar en los paquetes archivados."
 #: app/templates/radius/docs_cards_checker.html:346
 #: app/templates/radius/docs_cards_overview.html:445
 msgid "حزمة ساعة"
-msgstr "Plan de una hora"
+msgstr "Lote de una hora"
 
 #: app/templates/radius/docs_cards_batches.html:419
 msgid "مدة البطاقة: 1 ساعة"
@@ -19434,8 +19358,7 @@ msgstr "112 restantes para activar"
 #: app/templates/radius/docs_cards_batches.html:437
 msgid "هكذا تبدو بطاقة الحزمة — أول حزمة نشطة تحمل شارة «مميزة»."
 msgstr ""
-"Así se ve la tarjeta del plan — el primer plan activo lleva la insignia "
-"«Destacado»."
+"Así se ve la tarjeta del lote — el primer lote activo lleva la insignia «Destacado»."
 
 #: app/templates/radius/docs_cards_batches.html:441
 msgid "«حذف» هنا ="
@@ -19443,15 +19366,15 @@ msgstr "«Eliminar» aquí ="
 
 #: app/templates/radius/docs_cards_batches.html:441
 msgid "أرشفة بدون حذف البطاقات"
-msgstr "Archivar sin eliminar los cupones"
+msgstr "Archivar sin eliminar las tarjetas"
 
 #: app/templates/radius/docs_cards_batches.html:451
 msgid "الإجراءات الجماعية — عدة حزم بضغطة"
-msgstr "Acciones masivas — varios paquetes con un clic"
+msgstr "Acciones masivas — varios lotes con un clic"
 
 #: app/templates/radius/docs_cards_batches.html:453
 msgid "علّم مربعات التحديد على أكثر من حزمة فيظهر شريط"
-msgstr "Marca las casillas de más de un plan y aparece una barra"
+msgstr "Marca las casillas de más de un lote y aparece una barra"
 
 #: app/templates/radius/docs_cards_batches.html:453
 msgid "«N محددة»"
@@ -19467,7 +19390,7 @@ msgstr "«Actualizar estadísticas»:"
 
 #: app/templates/radius/docs_cards_batches.html:456
 msgid "يعيد حساب أرقام الحزم من البيانات الحالية."
-msgstr "Recalcula las cifras de los planes a partir de los datos actuales."
+msgstr "Recalcula las cifras de los lotes a partir de los datos actuales."
 
 #: app/templates/radius/docs_cards_batches.html:457
 msgid "«حذف / أرشفة آمنة»:"
@@ -19485,7 +19408,7 @@ msgstr "«Restaurar archivado»:"
 
 #: app/templates/radius/docs_cards_batches.html:458
 msgid "يرجّع الحزم المؤرشفة المحددة للعمل."
-msgstr "Devuelve los paquetes archivados seleccionados al uso activo."
+msgstr "Devuelve los lotes archivados seleccionados al uso activo."
 
 #: app/templates/radius/docs_cards_batches.html:460
 msgid "اختر الإجراء واضغط"
@@ -19499,12 +19422,11 @@ msgstr "Ejecutar"
 #: app/templates/radius/docs_cards_batches.html:460
 msgid "— رسالة تأكيد تخبرك كم حزمة تأثرت."
 msgstr ""
-"— un mensaje de confirmación le indica cuántos paquetes se vieron "
-"afectados."
+"— un mensaje de confirmación le indica cuántos lotes se vieron afectados."
 
 #: app/templates/radius/docs_cards_batches.html:463
 msgid "حزم البطاقات › شريط الإجراء الجماعي"
-msgstr "Paquetes de tarjetas › barra de acción masiva"
+msgstr "Lotes de tarjetas › barra de acción masiva"
 
 #: app/templates/radius/docs_cards_batches.html:466
 msgid "3 محددة"
@@ -19512,7 +19434,7 @@ msgstr "3 seleccionados"
 
 #: app/templates/radius/docs_cards_batches.html:480
 msgid "«حزمة جديدة» — التوليد السريع حقلًا حقلًا"
-msgstr "«Nuevo plan» — generación rápida campo por campo"
+msgstr "«Nuevo lote» — generación rápida campo por campo"
 
 #: app/templates/radius/docs_cards_batches.html:482
 #: app/templates/radius/docs_router_dashboard.html:429
@@ -19521,23 +19443,22 @@ msgstr "Se abrirá una ventana"
 
 #: app/templates/radius/docs_cards_batches.html:482
 msgid "«إضافة حزمة سريعة»"
-msgstr "«Añadir plan rápido»"
+msgstr "«Añadir lote rápido»"
 
 #: app/templates/radius/docs_cards_batches.html:486
 msgid "نوع الحزمة — «مطبوعة / إلكترونية»:"
-msgstr "Tipo de paquete — «Impreso / Electrónico»:"
+msgstr "Tipo de lote — «Impreso / Electrónico»:"
 
 #: app/templates/radius/docs_cards_batches.html:486
 msgid ""
 "مطبوعة = كروت تطبعها وتوزعها على نقاط البيع؛ إلكترونية = للبيع عبر سوق "
 "البطاقات."
 msgstr ""
-"Impresos = cupones que imprimes y distribuyes en los puntos de venta; "
-"electrónicos = para vender en el mercado de cupones."
+"Impresas = tarjetas que imprimes y distribuyes en los puntos de venta; electrónicas = para vender en el mercado de tarjetas."
 
 #: app/templates/radius/docs_cards_batches.html:487
 msgid "اسم الحزمة:"
-msgstr "Nombre del plan:"
+msgstr "Nombre del lote:"
 
 #: app/templates/radius/docs_cards_batches.html:487
 msgid "اسم وصفي يظهر بكل القوائم — مثل"
@@ -19555,7 +19476,8 @@ msgstr "Duración de uso + unidad de uso:"
 
 #: app/templates/radius/docs_cards_batches.html:489
 msgid "عمر الكرت (مثلًا 1 + «ساعة»). 0 = اعتماد مدة الباقة."
-msgstr "La duración del cupón (p. ej. 1 + «hora»). 0 = usar la duración del plan."
+msgstr ""
+"La duración de la tarjeta (p. ej. 1 + «hora»). 0 = usar la duración del plan."
 
 #: app/templates/radius/docs_cards_batches.html:490
 msgid "نوع المحاسبة:"
@@ -19583,11 +19505,11 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_batches.html:490
 msgid "«صلاحية البطاقة بعد أول اتصال»"
-msgstr "«Validez del cupón tras la primera conexión»"
+msgstr "«Validez de la tarjeta tras la primera conexión»"
 
 #: app/templates/radius/docs_cards_batches.html:490
 msgid "حتى لا يعيش الكرت للأبد)."
-msgstr "para que el cupón no dure para siempre)."
+msgstr "para que la tarjeta no dure para siempre)."
 
 #: app/templates/radius/docs_cards_batches.html:491
 msgid "الكمية:"
@@ -19595,7 +19517,7 @@ msgstr "Cantidad:"
 
 #: app/templates/radius/docs_cards_batches.html:491
 msgid "عدد الكروت — من 1 حتى 2000 في الدفعة."
-msgstr "Número de cupones — de 1 a 2000 por lote."
+msgstr "Número de tarjetas — de 1 a 2000 por lote."
 
 #: app/templates/radius/docs_cards_batches.html:492
 msgid "سعر البيع / سعر الجملة:"
@@ -19624,7 +19546,8 @@ msgstr "Número de dispositivos:"
 
 #: app/templates/radius/docs_cards_batches.html:494
 msgid "كم جهازًا يتصل بالكرت معًا (عادة 1)."
-msgstr "Cuántos dispositivos se conectan al cupón a la vez (normalmente 1)."
+msgstr ""
+"Cuántos dispositivos se conectan a la tarjeta a la vez (normalmente 1)."
 
 #: app/templates/radius/docs_cards_batches.html:495
 msgid "طول اسم المستخدم (4–16) / طول كلمة المرور (4–20):"
@@ -19640,7 +19563,7 @@ msgstr "Añadir un encabezado o pie + el texto agregado:"
 
 #: app/templates/radius/docs_cards_batches.html:496
 msgid "بادئة أو لاحقة تميّز كروتك — مثل"
-msgstr "Un prefijo o sufijo para distinguir sus cupones — como"
+msgstr "Un prefijo o sufijo para distinguir sus tarjetas — como"
 
 #: app/templates/radius/docs_cards_batches.html:496
 msgid "قبل كل اسم."
@@ -19652,7 +19575,7 @@ msgstr "Gerente / distribuidor:"
 
 #: app/templates/radius/docs_cards_batches.html:497
 msgid "تُنسب الحزمة لهما في الحسابات والتقارير."
-msgstr "El plan se atribuye a ellos en las cuentas y los informes."
+msgstr "El lote se atribuye a ellos en las cuentas y los informes."
 
 #: app/templates/radius/docs_cards_batches.html:500
 msgid "«إنشاء الآن»"
@@ -19674,7 +19597,7 @@ msgstr "Lotes de tarjetas › Añadir lote rápido"
 
 #: app/templates/radius/docs_cards_batches.html:507
 msgid "إضافة حزمة سريعة — الأساسيات فقط"
-msgstr "Alta rápida de plan — solo lo esencial"
+msgstr "Alta rápida de lote — solo lo esencial"
 
 #: app/templates/radius/docs_cards_batches.html:511
 msgid "باقة ساعة سريعة · 5.00"
@@ -19682,7 +19605,7 @@ msgstr "Plan hora rápida · 5.00"
 
 #: app/templates/radius/docs_cards_batches.html:548
 msgid "الوضع المتقدّم — صفحة «إنشاء حزمة بطاقات»"
-msgstr "Modo avanzado — la página «Crear lote de cupones»"
+msgstr "Modo avanzado — la página «Crear lote de tarjetas»"
 
 #: app/templates/radius/docs_cards_batches.html:550
 msgid "من القائمة الجانبية"
@@ -19690,11 +19613,11 @@ msgstr "Desde la barra lateral"
 
 #: app/templates/radius/docs_cards_batches.html:550
 msgid "«البطاقات» ← «إضافة حزمة»"
-msgstr "“Cupones” → “Añadir plan”"
+msgstr "“Tarjetas” → “Añadir lote”"
 
 #: app/templates/radius/docs_cards_batches.html:554
 msgid "بيانات الحزمة:"
-msgstr "Datos del plan:"
+msgstr "Datos del lote:"
 
 #: app/templates/radius/docs_cards_batches.html:554
 msgid "كل حقول النافذة السريعة +"
@@ -19718,7 +19641,7 @@ msgstr "(para coincidir con el nombre del servicio en el dispositivo de red)."
 
 #: app/templates/radius/docs_cards_batches.html:555
 msgid "توليد البطاقات:"
-msgstr "Generar cupones:"
+msgstr "Generar tarjetas:"
 
 #: app/templates/radius/docs_cards_batches.html:555
 msgid "الأطوال +"
@@ -19751,7 +19674,7 @@ msgstr "Validez y tiempo:"
 
 #: app/templates/radius/docs_cards_batches.html:556
 msgid "«مدة البطاقة»"
-msgstr "«Duración del cupón»"
+msgstr "«Duración de la tarjeta»"
 
 #: app/templates/radius/docs_cards_batches.html:556
 msgid "(دقيقة/ساعة/يوم)،"
@@ -19787,8 +19710,7 @@ msgid ""
 "قاعدة سرعة تنحفظ على الحزمة فور إنشائها — مثلًا تخفيض السرعة ليلًا لكل "
 "كروت الحزمة."
 msgstr ""
-"Una regla de velocidad que se guarda en el lote en cuanto se crea, por "
-"ej. reducir la velocidad de noche para todos los cupones del lote."
+"Una regla de velocidad que se guarda en el lote en cuanto se crea, por ej. reducir la velocidad de noche para todas las tarjetas del lote."
 
 #: app/templates/radius/docs_cards_batches.html:558
 msgid "سلوك الكوتا وخيارات إضافية:"
@@ -19816,7 +19738,8 @@ msgstr "«Bloquear MAC al cerrar»"
 
 #: app/templates/radius/docs_cards_batches.html:558
 msgid "(يثبّتان الكرت تلقائيًا على أول جهاز)، وحقل"
-msgstr "(vinculan el cupón automáticamente al primer dispositivo), y un campo"
+msgstr ""
+"(vinculan la tarjeta automáticamente al primer dispositivo), y un campo"
 
 #: app/templates/radius/docs_cards_batches.html:558
 msgid "«ملاحظات»"
@@ -19824,7 +19747,7 @@ msgstr "«Notas»"
 
 #: app/templates/radius/docs_cards_batches.html:558
 msgid "داخلية لا تُطبع على البطاقات."
-msgstr "Interno — no se imprime en los cupones."
+msgstr "Interno — no se imprime en las tarjetas."
 
 #: app/templates/radius/docs_cards_batches.html:560
 msgid "وفي الأسفل زرّا"
@@ -19841,7 +19764,7 @@ msgstr "«Generar ahora»"
 
 #: app/templates/radius/docs_cards_batches.html:563
 msgid "البطاقات › إضافة حزمة (متقدم)"
-msgstr "Cupones › Añadir paquete (avanzado)"
+msgstr "Tarjetas › Añadir lote (avanzado)"
 
 #: app/templates/radius/docs_cards_batches.html:570
 msgid "سلوك الكوتا وخيارات إضافية"
@@ -19871,15 +19794,15 @@ msgstr "Mensaje de éxito en verde:"
 
 #: app/templates/radius/docs_cards_batches.html:606
 msgid "«تم إنشاء دفعة \"BCH-…\" — N بطاقة.»"
-msgstr "«Lote \"BCH-…\" creado — N cupones.»"
+msgstr "«Lote \"BCH-…\" creado — N tarjetas.»"
 
 #: app/templates/radius/docs_cards_batches.html:607
 msgid "صفحة كروت الحزمة"
-msgstr "Página de cupones del lote"
+msgstr "Página de tarjetas del lote"
 
 #: app/templates/radius/docs_cards_batches.html:607
 msgid "— كل كرت بسطره: اسم الدخول، كلمة المرور، الحالة"
-msgstr "— cada cupón en su fila: nombre de acceso, contraseña, estado"
+msgstr "— cada tarjeta en su fila: nombre de acceso, contraseña, estado"
 
 #: app/templates/radius/docs_cards_batches.html:607
 msgid "«متاح»"
@@ -19891,7 +19814,7 @@ msgstr ", y el resto son «No iniciadas»."
 
 #: app/templates/radius/docs_cards_batches.html:611
 msgid "تم إنشاء دفعة «BCH-2026-015» — 200 بطاقة."
-msgstr "Lote «BCH-2026-015» creado — 200 cupones."
+msgstr "Lote «BCH-2026-015» creado — 200 tarjetas."
 
 #: app/templates/radius/docs_cards_batches.html:614
 msgid "ومن هناك طريقك واضح:"
@@ -19906,8 +19829,7 @@ msgid ""
 "ارجع لحزم البطاقات ← زر «طباعة» على الحزمة ← اختر القالب ← «إنشاء ملف "
 "PDF» (دليل «بطاقات الطباعة»)."
 msgstr ""
-"Vuelve a los lotes de cupones → botón «Imprimir» en el lote → elige la "
-"plantilla → «Generar PDF» (guía «Cupones de impresión»)."
+"Vuelve a los lotes de tarjetas → botón «Imprimir» en el lote → elige la plantilla → «Generar PDF» (guía «Tarjetas de impresión»)."
 
 #: app/templates/radius/docs_cards_batches.html:617
 msgid "سلّمها للموزع:"
@@ -19926,8 +19848,7 @@ msgstr "Seguir una tarjeta específica:"
 #: app/templates/radius/docs_cards_batches.html:618
 msgid "من «فحص بطاقة» بكوده (دليل «فحص بطاقة»)."
 msgstr ""
-"Desde «Verificar cupón» por su código (consulta la guía «Verificar "
-"cupón»)."
+"Desde «Verificar tarjeta» por su código (consulta la guía «Verificar tarjeta»)."
 
 #: app/templates/radius/docs_cards_batches.html:623
 msgid "خلاصة الرحلة:"
@@ -19983,24 +19904,24 @@ msgstr "Antes de empezar — ¿cuándo se abre «Verificar tarjeta»?"
 
 #: app/templates/radius/docs_cards_checker.html:288
 msgid "افتح الصفحة واكتب كود البطاقة"
-msgstr "Abra la página e introduzca el código del cupón"
+msgstr "Abra la página e introduzca el código de la tarjeta"
 
 #: app/templates/radius/docs_cards_checker.html:290
 msgid "«البطاقات» ← «فحص بطاقة»"
-msgstr "«Cupones» → «Verificar cupón»"
+msgstr "«Tarjetas» → «Verificar tarjeta»"
 
 #: app/templates/radius/docs_cards_checker.html:291
 msgid "«مركز عمليات البطاقة»"
-msgstr "«Centro de operaciones de cupones»"
+msgstr "«Centro de operaciones de la tarjeta»"
 
 #: app/templates/radius/docs_cards_checker.html:295
 #: app/templates/radius/portal_card.html:557
 msgid "رقم البطاقة"
-msgstr "Número del cupón"
+msgstr "Número de la tarjeta"
 
 #: app/templates/radius/docs_cards_checker.html:295
 msgid "(اسم الدخول المطبوع على الكرت) — أدق طريقة."
-msgstr "(el nombre de acceso impreso en el cupón) — el método más preciso."
+msgstr "(el nombre de acceso impreso en la tarjeta) — el método más preciso."
 
 #: app/templates/radius/docs_cards_checker.html:296
 msgid "أو الصق"
@@ -20009,8 +19930,7 @@ msgstr "O pegar"
 #: app/templates/radius/docs_cards_checker.html:296
 msgid "لجهاز الزبون — يلاقي الكرت اللي اتصل منه."
 msgstr ""
-"Para el dispositivo del cliente — encuentra el cupón con el que se "
-"conectó."
+"Para el dispositivo del cliente — encuentra la tarjeta con la que se conectó."
 
 #: app/templates/radius/docs_cards_checker.html:297
 msgid "«بحث»"
@@ -20048,9 +19968,7 @@ msgid ""
 "قبل أي بحث تظهر رسالة «مركز فحص البطاقات جاهز» — وإذا الكود غلط: «لم نَجد"
 " بطاقة باسم …»."
 msgstr ""
-"Antes de cualquier búsqueda aparece el mensaje «Centro de verificación de"
-" cupones listo» — y si el código es incorrecto: «No se encontró ningún "
-"cupón con el nombre …»."
+"Antes de cualquier búsqueda aparece el mensaje «Centro de verificación de tarjetas listo» — y si el código es incorrecto: «No se encontró ninguna tarjeta con el nombre …»."
 
 #: app/templates/radius/docs_cards_checker.html:318
 msgid "أزرار رأس الصفحة جاهزة للخدمة:"
@@ -20062,7 +19980,7 @@ msgstr "Volver"
 
 #: app/templates/radius/docs_cards_checker.html:318
 msgid "(لقائمة الكروت)،"
-msgstr "(para la lista de cupones),"
+msgstr "(para la lista de tarjetas),"
 
 #: app/templates/radius/docs_cards_checker.html:319
 msgid "(يعيد الفحص بنفس الكود)،"
@@ -20084,7 +20002,7 @@ msgstr "Insignia de estado"
 
 #: app/templates/radius/docs_cards_checker.html:334
 msgid "(أعلى الكرت):"
-msgstr "(parte superior del cupón):"
+msgstr "(parte superior de la tarjeta):"
 
 #: app/templates/radius/docs_cards_checker.html:334
 msgid "(خضراء — في جلسة حية)،"
@@ -20146,7 +20064,7 @@ msgstr "(el plan),"
 
 #: app/templates/radius/docs_cards_checker.html:338
 msgid "أسفل الكرت:"
-msgstr "Pie del cupón:"
+msgstr "Pie de la tarjeta:"
 
 #: app/templates/radius/docs_cards_checker.html:338
 msgid "«تم إصدارها: …»"
@@ -20154,7 +20072,7 @@ msgstr "«Emitida: …»"
 
 #: app/templates/radius/docs_cards_checker.html:338
 msgid "— تاريخ توليد البطاقة."
-msgstr "— Fecha de generación del cupón."
+msgstr "— Fecha de generación de la tarjeta."
 
 #: app/templates/radius/docs_cards_checker.html:347
 msgid "الاشتراك 👑"
@@ -20211,8 +20129,7 @@ msgstr "Sesiones:"
 #: app/templates/radius/docs_cards_checker.html:375
 msgid "كم مرة اتصل الكرت إجمالًا (وكم جلسة نشطة الآن)."
 msgstr ""
-"Cuántas veces se ha conectado el cupón en total (y cuántas sesiones están"
-" activas ahora)."
+"Cuántas veces se ha conectado la tarjeta en total (y cuántas sesiones están activas ahora)."
 
 #: app/templates/radius/docs_cards_checker.html:376
 msgid "ماكات فريدة:"
@@ -20223,8 +20140,7 @@ msgid ""
 "كم جهازًا مختلفًا استخدم البطاقة — رقم كبير هنا = الكرت يتشارك بين أكثر "
 "من شخص!"
 msgstr ""
-"Cuántos dispositivos distintos usaron el cupón; un número alto aquí "
-"significa que el cupón se comparte entre varias personas."
+"Cuántos dispositivos distintos usaron la tarjeta; un número alto aquí significa que la tarjeta se comparte entre varias personas."
 
 #: app/templates/radius/docs_cards_checker.html:377
 msgid "الأجهزة المتّصلة:"
@@ -20251,9 +20167,7 @@ msgid ""
 "«بالثانية» (الكرت مفعَّل والوقت يجري) أو «من أول اتصال» (لسا ما انفعّل — "
 "العداد ينطلق مع أول جلسة)."
 msgstr ""
-"«Por segundo» (el cupón está activo y el tiempo corre) o «Desde la "
-"primera conexión» (aún no activado — el contador arranca con la primera "
-"sesión)."
+"«Por segundo» (la tarjeta está activa y el tiempo corre) o «Desde la primera conexión» (aún no activada — el contador arranca con la primera sesión)."
 
 #: app/templates/radius/docs_cards_checker.html:381
 msgid "والصف الثاني قصة البيانات:"
@@ -20310,7 +20224,7 @@ msgstr "MAC únicas"
 
 #: app/templates/radius/docs_cards_checker.html:390
 msgid "استخدمت البطاقة"
-msgstr "Cupón usado"
+msgstr "Tarjeta usada"
 
 #: app/templates/radius/docs_cards_checker.html:391
 msgid "الأجهزة المتّصلة"
@@ -20370,7 +20284,7 @@ msgstr "En línea ahora / desconectado"
 
 #: app/templates/radius/docs_cards_checker.html:423
 msgid "النشاط الأخير للبطاقة:"
-msgstr "Última actividad del cupón:"
+msgstr "Última actividad de la tarjeta:"
 
 #: app/templates/radius/docs_cards_checker.html:423
 msgid "خط زمني بثلاث محطات:"
@@ -20378,7 +20292,7 @@ msgstr "Línea de tiempo de tres etapas:"
 
 #: app/templates/radius/docs_cards_checker.html:424
 msgid "(إصدارها ضمن الحزمة) ←"
-msgstr "(emitidos dentro del plan) ←"
+msgstr "(emitidas dentro del lote) ←"
 
 #: app/templates/radius/docs_cards_checker.html:425
 msgid "(جلسة حية الآن إن وُجدت)."
@@ -20386,7 +20300,7 @@ msgstr "(sesión activa ahora, si la hay)."
 
 #: app/templates/radius/docs_cards_checker.html:429
 msgid "فحص بطاقة › الجهاز الحالي"
-msgstr "Comprobar cupón › Dispositivo actual"
+msgstr "Comprobar tarjeta › Dispositivo actual"
 
 #: app/templates/radius/docs_cards_checker.html:450
 #: app/templates/radius/docs_cards_checker.html:471
@@ -20400,8 +20314,7 @@ msgstr "Tabla «Últimas sesiones» — el registro completo"
 #: app/templates/radius/docs_cards_checker.html:462
 msgid "جدول عريض بكل جلسات البطاقة، الحيّة والمنتهية. أعمدته بالترتيب:"
 msgstr ""
-"Una tabla amplia de todas las sesiones del cupón, activas y finalizadas. "
-"Sus columnas, en orden:"
+"Una tabla amplia de todas las sesiones de la tarjeta, activas y finalizadas. Sus columnas, en orden:"
 
 #: app/templates/radius/docs_cards_checker.html:463
 msgid "(حيّة بشارة خضراء / منتهية رمادية)،"
@@ -20455,7 +20368,7 @@ msgstr "La última y más potente sección: una cuadrícula de botones"
 
 #: app/templates/radius/docs_cards_checker.html:496
 msgid "«تحكّم كامل في بطاقة العميل»"
-msgstr "«Control total sobre el cupón del cliente»"
+msgstr "«Control total sobre la tarjeta del cliente»"
 
 #: app/templates/radius/docs_cards_checker.html:500
 msgid "قطع الجلسة:"
@@ -20487,7 +20400,7 @@ msgstr "Agregar o descontar tiempo"
 
 #: app/templates/radius/docs_cards_checker.html:510
 msgid "لهذه البطاقة فقط"
-msgstr "Solo para este cupón"
+msgstr "Solo para esta tarjeta"
 
 #: app/templates/radius/docs_cards_checker.html:513
 msgid "تغيير السرعة:"
@@ -20520,7 +20433,7 @@ msgstr "Seguro"
 
 #: app/templates/radius/docs_cards_checker.html:523
 msgid "فحص بطاقة › إجراءات ذكية"
-msgstr "Verificación de cupón › Acciones inteligentes"
+msgstr "Verificación de tarjeta › Acciones inteligentes"
 
 #: app/templates/radius/docs_cards_checker.html:526
 msgid "1 جهاز متّصل الآن"
@@ -20547,7 +20460,7 @@ msgstr "Actualización:"
 
 #: app/templates/radius/docs_cards_checker.html:558
 msgid "يعيد فحص البطاقة بأحدث البيانات."
-msgstr "Vuelve a comprobar el cupón con los datos más recientes."
+msgstr "Vuelve a comprobar la tarjeta con los datos más recientes."
 
 #: app/templates/radius/docs_cards_checker.html:559
 msgid "إعادة ضبط:"
@@ -20602,7 +20515,7 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_connected.html:244
 msgid "افتح صفحة البطاقات المتصلة"
-msgstr "Abrir la página de cupones conectados"
+msgstr "Abrir la página de tarjetas conectadas"
 
 #: app/templates/radius/docs_cards_connected.html:245
 msgid "اقرأ المؤشرات والفلاتر"
@@ -20622,15 +20535,15 @@ msgstr "Selección múltiple y acciones masivas"
 
 #: app/templates/radius/docs_cards_connected.html:249
 msgid "بطاقة مش ظاهرة؟ — التشخيص"
-msgstr "¿El cupón no aparece? — Diagnóstico"
+msgstr "¿La tarjeta no aparece? — Diagnóstico"
 
 #: app/templates/radius/docs_cards_connected.html:258
 msgid "قبل ما نبدأ — شو يعني «بطاقة متصلة»؟"
-msgstr "Antes de empezar — ¿qué significa «cupón conectado»?"
+msgstr "Antes de empezar — ¿qué significa «tarjeta conectada»?"
 
 #: app/templates/radius/docs_cards_connected.html:260
 msgid "كل كرت واي فاي يسجّل دخوله الآن يفتح"
-msgstr "Cada cupón Wi-Fi que inicia sesión ahora abre"
+msgstr "Cada tarjeta Wi-Fi que inicia sesión ahora abre"
 
 #: app/templates/radius/docs_cards_connected.html:260
 msgid "جلسة حية"
@@ -20638,21 +20551,21 @@ msgstr "Sesión en vivo"
 
 #: app/templates/radius/docs_cards_connected.html:261
 msgid "الكروت فقط"
-msgstr "Solo cupones"
+msgstr "Solo tarjetas"
 
 #: app/templates/radius/docs_cards_connected.html:272
 msgid "افتح صفحة «البطاقات المتصلة»"
-msgstr "Abra la página «Cupones conectados»"
+msgstr "Abra la página «Tarjetas conectadas»"
 
 #: app/templates/radius/docs_cards_connected.html:274
 #: app/templates/radius/docs_cards_overview.html:258
 #: app/templates/radius/docs_cards_print.html:347
 msgid "«البطاقات»"
-msgstr "«Cupones»"
+msgstr "«Tarjetas»"
 
 #: app/templates/radius/docs_cards_connected.html:275
 msgid "«البطاقات المتصلة»"
-msgstr "«Cupones conectados»"
+msgstr "«Tarjetas conectadas»"
 
 #: app/templates/radius/docs_cards_connected.html:279
 msgid "«المشتركون»:"
@@ -20671,8 +20584,7 @@ msgid ""
 "جلسات البطاقات فقط — هذا الزر يكون مضاءً بالبنفسجي لما تدخل من بند "
 "«البطاقات المتصلة»."
 msgstr ""
-"Solo sesiones de cupones; este botón se enciende en morado cuando entras "
-"desde el elemento «Cupones conectados»."
+"Solo sesiones de tarjetas; este botón se enciende en morado cuando entras desde el elemento «Tarjetas conectadas»."
 
 #: app/templates/radius/docs_cards_connected.html:288
 msgid "الجلسات الحيّة على الشبكة — كروت"
@@ -20683,8 +20595,7 @@ msgid ""
 "الزر المضاء بالبنفسجي هو العرض الحالي — «الكروت» يعني بطاقات فقط، بلا "
 "مشتركين."
 msgstr ""
-"El botón resaltado en morado es la vista actual; «Cupones» significa solo"
-" cupones, sin abonados."
+"El botón resaltado en morado es la vista actual; «Tarjetas» significa solo tarjetas, sin abonados."
 
 #: app/templates/radius/docs_cards_connected.html:305
 msgid "اقرأ المؤشرات الثلاثة واستخدم الفلاتر"
@@ -20702,7 +20613,7 @@ msgstr "Sesiones activas:"
 
 #: app/templates/radius/docs_cards_connected.html:308
 msgid "عدد الكروت المتصلة الآن."
-msgstr "Número de cupones conectados ahora."
+msgstr "Número de tarjetas conectadas ahora."
 
 #: app/templates/radius/docs_cards_connected.html:309
 #: app/templates/radius/docs_online_users.html:267
@@ -20740,11 +20651,11 @@ msgstr ""
 #: app/templates/radius/docs_online_users.html:313
 #: app/templates/radius/docs_online_users.html:350
 msgid "العرض:"
-msgstr "Ancho:"
+msgstr "Oferta:"
 
 #: app/templates/radius/docs_cards_connected.html:316
 msgid "فلترة بباقة الكرت (مثل: كرت 4 ساعات)."
-msgstr "Filtrar por plan del cupón (p. ej., cupón de 4 horas)."
+msgstr "Filtrar por plan de la tarjeta (p. ej., tarjeta de 4 horas)."
 
 #: app/templates/radius/docs_cards_connected.html:317
 msgid "فلترة بمجموعة مشتركين معرّفة عندك."
@@ -20780,7 +20691,7 @@ msgstr "Todos los servidores"
 #: app/templates/radius/docs_cards_connected.html:325
 #: app/templates/radius/docs_cards_connected.html:361
 msgid "كرت 4 ساعات"
-msgstr "Cupón de 4 horas"
+msgstr "Tarjeta de 4 horas"
 
 #: app/templates/radius/docs_cards_connected.html:326
 #: app/templates/radius/sessions_list.html:476
@@ -20810,7 +20721,7 @@ msgstr "Seleccionar"
 
 #: app/templates/radius/docs_cards_connected.html:346
 msgid "(كود الكرت)،"
-msgstr "(código del cupón),"
+msgstr "(código de la tarjeta),"
 
 #: app/templates/radius/docs_cards_connected.html:348
 #: app/templates/radius/sessions_list.html:599
@@ -20826,7 +20737,7 @@ msgstr ""
 #: app/templates/radius/docs_cards_connected.html:349
 #: app/templates/radius/sessions_list.html:600
 msgid "سرعة العرض"
-msgstr "Velocidad de bajada"
+msgstr "Velocidad de la oferta"
 
 #: app/templates/radius/docs_cards_connected.html:349
 msgid "(سرعة الباقة)،"
@@ -20892,7 +20803,7 @@ msgstr "1h 22min"
 
 #: app/templates/radius/docs_cards_connected.html:362
 msgid "كرت يوم كامل"
-msgstr "Cupón de día completo"
+msgstr "Tarjeta de día completo"
 
 #: app/templates/radius/docs_cards_connected.html:362
 msgid "3س 05د"
@@ -20903,8 +20814,7 @@ msgid ""
 "الصف المظلّل بالأزرق الفاتح = جلسة محددة. عمود «المستخدم» للكروت هو كود "
 "الكرت نفسه."
 msgstr ""
-"Una fila resaltada en azul claro = una sesión seleccionada. La columna "
-"«Usuario» de los cupones es el propio código del cupón."
+"Una fila resaltada en azul claro = una sesión seleccionada. La columna «Usuario» de las tarjetas es el propio código de la tarjeta."
 
 #: app/templates/radius/docs_cards_connected.html:367
 msgid "قارن"
@@ -20939,12 +20849,12 @@ msgstr "Vista 360°:"
 
 #: app/templates/radius/docs_cards_connected.html:380
 msgid "للكروت يفتح"
-msgstr "Para los cupones, abre"
+msgstr "Para las tarjetas, abre"
 
 #: app/templates/radius/docs_cards_connected.html:380
 #: app/templates/radius/docs_cards_connected.html:458
 msgid "«فحص بطاقة»"
-msgstr "«Verificar cupón»"
+msgstr "«Verificar tarjeta»"
 
 #: app/templates/radius/docs_cards_connected.html:380
 msgid "على هذا الكود — تشوف حالته وجلساته واستهلاكه كاملًا."
@@ -20959,8 +20869,7 @@ msgstr "Editar:"
 #: app/templates/radius/docs_cards_connected.html:381
 msgid "للكروت يوديك أيضًا لمركز فحص البطاقة (التعديل اليومي للكرت كله من هناك)."
 msgstr ""
-"Para los cupones, también te lleva al centro de comprobación de tarjetas "
-"(toda la edición diaria de la tarjeta se hace desde allí)."
+"Para las tarjetas, también te lleva al centro de comprobación de tarjetas (toda la edición diaria de la tarjeta se hace desde allí)."
 
 #: app/templates/radius/docs_cards_connected.html:382
 msgid "قطع:"
@@ -20971,9 +20880,7 @@ msgid ""
 "يرسل أمر فصل فوري للجلسة بعد نافذة تأكيد «قطع جلسة …؟» — الكرت ينفصل لكنه"
 " يقدر يسجّل دخولًا من جديد ما دامت صلاحيته سارية."
 msgstr ""
-"Envía un comando de desconexión inmediata de la sesión tras un cuadro de "
-"confirmación «¿Desconectar sesión …?» — el cupón se desconecta pero puede"
-" iniciar sesión de nuevo mientras siga siendo válido."
+"Envía un comando de desconexión inmediata de la sesión tras un cuadro de confirmación «¿Desconectar sesión …?» — la tarjeta se desconecta pero puede iniciar sesión de nuevo mientras siga siendo válida."
 
 #: app/templates/radius/docs_cards_connected.html:383
 msgid "سرعة مؤقتة:"
@@ -21067,7 +20974,7 @@ msgstr "Solo este dispositivo"
 
 #: app/templates/radius/docs_cards_connected.html:422
 msgid ". سلاحك ضد مشاركة الكروت."
-msgstr ". Tu arma contra el uso compartido de cupones."
+msgstr ". Tu arma contra el uso compartido de tarjetas."
 
 #: app/templates/radius/docs_cards_connected.html:423
 msgid "«تثبيت IP»"
@@ -21129,8 +21036,7 @@ msgstr "Mostrar/ocultar columnas"
 #: app/templates/radius/docs_cards_connected.html:438
 msgid "الأزرار الباهتة معطّلة — إما ما في تحديد، أو الإجراء غير متاح للكروت."
 msgstr ""
-"Los botones atenuados están deshabilitados — o no hay nada seleccionado, "
-"o la acción no está disponible para los cupones."
+"Los botones atenuados están deshabilitados — o no hay nada seleccionado, o la acción no está disponible para las tarjetas."
 
 #: app/templates/radius/docs_cards_connected.html:441
 msgid "زبون اشتكى أن كرته «مسروق»؟ حدّد جلسته واضغط"
@@ -21144,13 +21050,12 @@ msgstr "«Cerrar por MAC»"
 
 #: app/templates/radius/docs_cards_connected.html:451
 msgid "«بطاقة مش ظاهرة؟» — تشخيص سريع"
-msgstr "«¿No aparece el cupón?» — diagnóstico rápido"
+msgstr "«¿No aparece la tarjeta?» — diagnóstico rápido"
 
 #: app/templates/radius/docs_cards_connected.html:452
 msgid "الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:"
 msgstr ""
-"¿El cliente dice que está conectado pero su cupón no está en la lista? "
-"Compruebe en este orden:"
+"¿El cliente dice que está conectado pero su tarjeta no está en la lista? Compruebe en este orden:"
 
 #: app/templates/radius/docs_cards_connected.html:454
 msgid "أنت في التبويب الصح؟"
@@ -21165,15 +21070,14 @@ msgstr "Asegúrese de que el botón"
 #: app/templates/radius/docs_online_users.html:263
 #: app/templates/radius/docs_online_users.html:518
 msgid "«الكروت»"
-msgstr "«Cupones»"
+msgstr "«Tarjetas»"
 
 #: app/templates/radius/docs_cards_connected.html:454
 msgid ""
 "هو المضاء — الكروت لا تظهر أبدًا في تبويب «المشتركون» (الفصل صارم بين "
 "الشاشتين)."
 msgstr ""
-"es el que está encendido; los cupones nunca aparecen en la pestaña "
-"«Abonados» (la separación entre las dos pantallas es estricta)."
+"es el que está encendido; las tarjetas nunca aparecen en la pestaña «Abonados» (la separación entre las dos pantallas es estricta)."
 
 #: app/templates/radius/docs_cards_connected.html:455
 msgid "في فلتر شغّال نسيته؟"
@@ -21214,16 +21118,14 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_connected.html:458
 msgid "افحص الكرت نفسه:"
-msgstr "Revise el cupón en sí:"
+msgstr "Revise la tarjeta en sí:"
 
 #: app/templates/radius/docs_cards_connected.html:458
 msgid ""
 "وابحث بكود الكرت — تشوف فورًا إذا كان منتهي الصلاحية، ملغى، مقفولًا على "
 "ماك جهاز آخر، أو استنفد رصيده."
 msgstr ""
-"Y busca por código de cupón — ves de inmediato si está caducado, "
-"cancelado, bloqueado a la MAC de otro dispositivo o si ha agotado su "
-"saldo."
+"Y busca por código de tarjeta — ves de inmediato si está caducada, cancelada, bloqueada a la MAC de otro dispositivo o si ha agotado su saldo."
 
 #: app/templates/radius/docs_cards_connected.html:461
 msgid "وإذا ظهر شريط أحمر"
@@ -21259,7 +21161,7 @@ msgstr "Barra de cifras destacadas"
 
 #: app/templates/radius/docs_cards_overview.html:230
 msgid "مبيعات الكروت بالفترات"
-msgstr "Ventas de cupones por período"
+msgstr "Ventas de tarjetas por período"
 
 #: app/templates/radius/docs_cards_overview.html:231
 msgid "التنبيهات المختصرة"
@@ -21267,11 +21169,11 @@ msgstr "Alertas breves"
 
 #: app/templates/radius/docs_cards_overview.html:232
 msgid "ملخص مخزون الحزم"
-msgstr "Resumen del inventario de paquetes"
+msgstr "Resumen del inventario de lotes"
 
 #: app/templates/radius/docs_cards_overview.html:233
 msgid "آخر 5 دفعات"
-msgstr "Últimos 5 pagos"
+msgstr "Últimos 5 lotes"
 
 #: app/templates/radius/docs_cards_overview.html:242
 msgid "قبل ما نبدأ — شو هي «نظرة عامة الكروت»؟"
@@ -21302,7 +21204,7 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_overview.html:260
 msgid "«نظرة سريعة — الكروت»"
-msgstr "«Vistazo rápido — Cupones»"
+msgstr "«Vistazo rápido — Tarjetas»"
 
 #: app/templates/radius/docs_cards_overview.html:260
 msgid "وبجانبه زرّان جاهزان للقفز السريع:"
@@ -21310,7 +21212,7 @@ msgstr "Junto a él hay dos botones listos para el salto rápido:"
 
 #: app/templates/radius/docs_cards_overview.html:263
 msgid "«الدفعات»:"
-msgstr "«Pagos»:"
+msgstr "«Lotes»:"
 
 #: app/templates/radius/docs_cards_overview.html:263
 msgid "يفتح صفحة"
@@ -21324,7 +21226,7 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_overview.html:264
 msgid "«فحص كرت»:"
-msgstr "«Verificación de cupón»:"
+msgstr "«Verificación de tarjeta»:"
 
 #: app/templates/radius/docs_cards_overview.html:264
 #: app/templates/radius/docs_roles_permissions.html:418
@@ -21333,13 +21235,12 @@ msgstr "Abre"
 
 #: app/templates/radius/docs_cards_overview.html:264
 msgid "مركز فحص البطاقات"
-msgstr "Centro de verificación de cupones"
+msgstr "Centro de verificación de tarjetas"
 
 #: app/templates/radius/docs_cards_overview.html:264
 msgid "— تكتب كود الكرت وتشوف كل شيء عنه (له دليل خاص أيضًا)."
 msgstr ""
-"— escribe el código del cupón y ve toda su información (también tiene su "
-"propia guía)."
+"— escribe el código de la tarjeta y ve toda su información (también tiene su propia guía)."
 
 #: app/templates/radius/docs_cards_overview.html:268
 msgid "البطاقات › نظرة عامة"
@@ -21347,7 +21248,7 @@ msgstr "Tarjetas › Resumen"
 
 #: app/templates/radius/docs_cards_overview.html:274
 msgid "نظرة سريعة — الكروت"
-msgstr "Vista rápida — Cupones"
+msgstr "Vista rápida — Tarjetas"
 
 #: app/templates/radius/docs_cards_overview.html:275
 msgid "مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية."
@@ -21359,7 +21260,7 @@ msgstr "Pagos"
 
 #: app/templates/radius/docs_cards_overview.html:280
 msgid "فحص كرت"
-msgstr "Verificar cupón"
+msgstr "Verificar tarjeta"
 
 #: app/templates/radius/docs_cards_overview.html:285
 msgid "هيك يبدو رأس الصفحة — الزران على اليسار اختصاران لأكثر صفحتين رح تحتاجهما."
@@ -21410,8 +21311,7 @@ msgstr "Usuario:"
 #: app/templates/radius/docs_cards_overview.html:306
 msgid "كروت اتصل بها زبون مرة واحدة على الأقل (انفعّلت)."
 msgstr ""
-"Cupones con los que un cliente se ha conectado al menos una vez "
-"(activados)."
+"Tarjetas con las que un cliente se ha conectado al menos una vez (activadas)."
 
 #: app/templates/radius/docs_cards_overview.html:307
 msgid "منتهي / محظور:"
@@ -21420,8 +21320,7 @@ msgstr "Expirado / bloqueado:"
 #: app/templates/radius/docs_cards_overview.html:307
 msgid "رقمان بشرطة: الكروت اللي انتهى وقتها / والكروت الملغاة يدويًا."
 msgstr ""
-"Dos números con una barra: los cupones cuyo tiempo ha expirado / y los "
-"cupones cancelados manualmente."
+"Dos números con una barra: las tarjetas cuyo tiempo ha expirado / y las tarjetas canceladas manualmente."
 
 #: app/templates/radius/docs_cards_overview.html:308
 msgid "إيراد الشهر:"
@@ -21432,8 +21331,7 @@ msgid ""
 "قيمة تقديرية من الكروت المستخدمة هذا الشهر — تُحسب من سعر البيع المسجّل "
 "على الحزمة."
 msgstr ""
-"Un valor estimado a partir de los cupones usados este mes, calculado a "
-"partir del precio de venta registrado en el lote."
+"Un valor estimado a partir de las tarjetas usadas este mes, calculado a partir del precio de venta registrado en el lote."
 
 #: app/templates/radius/docs_cards_overview.html:312
 msgid "نظرة عامة › شريط الأرقام"
@@ -21449,7 +21347,7 @@ msgstr "Ingresos del mes"
 
 #: app/templates/radius/docs_cards_overview.html:319
 msgid "تقديري من الكروت المستخدمة"
-msgstr "Estimado a partir de los cupones usados"
+msgstr "Estimado a partir de las tarjetas usadas"
 
 #: app/templates/radius/docs_cards_overview.html:326
 msgid "«إيراد الشهر»"
@@ -21461,7 +21359,7 @@ msgstr "Estimado"
 
 #: app/templates/radius/docs_cards_overview.html:337
 msgid "قسم «مبيعات الكروت» — أربع فترات بنقرة"
-msgstr "La sección «Ventas de cupones» — cuatro periodos con un clic"
+msgstr "La sección «Ventas de tarjetas» — cuatro periodos con un clic"
 
 #: app/templates/radius/docs_cards_overview.html:339
 msgid "قسم المبيعات يجمع البيع"
@@ -21478,8 +21376,7 @@ msgstr "Electrónico"
 #: app/templates/radius/docs_cards_overview.html:340
 msgid "(شراء مكتمل من سوق البطاقات). فوق تشوف أربع خلاصات:"
 msgstr ""
-"(una compra completada en el mercado de cupones). Arriba ves cuatro "
-"resúmenes:"
+"(una compra completada en el mercado de tarjetas). Arriba ves cuatro resúmenes:"
 
 #: app/templates/radius/docs_cards_overview.html:342
 msgid "— كلها لفترة الشهر الحالي."
@@ -21495,7 +21392,7 @@ msgstr "Día / Semana / Mes / Año"
 
 #: app/templates/radius/docs_cards_overview.html:344
 msgid ". في كل بطاقة:"
-msgstr ". En cada cupón:"
+msgstr ". En cada tarjeta:"
 
 #: app/templates/radius/docs_cards_overview.html:346
 msgid "زر التقويم"
@@ -21544,12 +21441,11 @@ msgid ""
 ": يفتح نافذة فيها جدول كل عملية بيع — النوع (مطبوعة/إلكترونية)، اسم "
 "المستخدم، الحزمة، السعر، والوقت."
 msgstr ""
-": abre una ventana con una tabla de cada venta — tipo "
-"(impreso/electrónico), nombre de usuario, plan, precio y hora."
+": abre una ventana con una tabla de cada venta — tipo (impresa/electrónica), nombre de usuario, lote, precio y hora."
 
 #: app/templates/radius/docs_cards_overview.html:353
 msgid "نظرة عامة › مبيعات الكروت"
-msgstr "Resumen › Ventas de cupones"
+msgstr "Resumen › Ventas de tarjetas"
 
 #: app/templates/radius/docs_cards_overview.html:360
 msgid "🖨️ مطبوعة 9"
@@ -21579,11 +21475,11 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_overview.html:377
 msgid "«كرت مطبوع مباع» يعني"
-msgstr "«Cupón impreso vendido» significa"
+msgstr "«Tarjeta impresa vendida» significa"
 
 #: app/templates/radius/docs_cards_overview.html:377
 msgid "أول اتصال للكرت"
-msgstr "Primera conexión del cupón"
+msgstr "Primera conexión de la tarjeta"
 
 #: app/templates/radius/docs_cards_overview.html:388
 msgid "«تنبيهات مختصرة» — اضغط التنبيه يوصلك للمعالجة"
@@ -21605,7 +21501,7 @@ msgstr "— te lleva directamente a la página donde resuelves el problema:"
 
 #: app/templates/radius/docs_cards_overview.html:394
 msgid "أحمر — «لا يوجد مخزون كروت متاح حاليًا.»:"
-msgstr "Rojo — «No hay stock de cupones disponible actualmente.»:"
+msgstr "Rojo — «No hay stock de tarjetas disponible actualmente.»:"
 
 #: app/templates/radius/docs_cards_overview.html:394
 msgid "المتاح صفر! الضغط يفتح حزم البطاقات لتولّد أو تستورد كروتًا فورًا."
@@ -21630,8 +21526,7 @@ msgstr "Rojo — «%%N tarjetas caducadas requieren revisión.»:"
 #: app/templates/radius/docs_cards_overview.html:396
 msgid "يفتح قائمة الكروت مفلترة على المنتهية لتراجعها أو تؤرشفها."
 msgstr ""
-"Abre la lista de cupones filtrada a los vencidos para que los revises o "
-"archives."
+"Abre la lista de tarjetas filtrada a las vencidas para que las revises o archives."
 
 #: app/templates/radius/docs_cards_overview.html:397
 msgid "رمادي — «N كرت محظور ضمن المخزون.»:"
@@ -21639,11 +21534,12 @@ msgstr "Gris — «%%N tarjetas bloqueadas en el inventario.»:"
 
 #: app/templates/radius/docs_cards_overview.html:397
 msgid "يفتح قائمة الكروت الملغاة."
-msgstr "Abre la lista de cupones cancelados."
+msgstr "Abre la lista de tarjetas canceladas."
 
 #: app/templates/radius/docs_cards_overview.html:398
 msgid "أخضر — «وضع الكروت مستقر ولا توجد ملاحظات عاجلة.»:"
-msgstr "Verde — «El estado de los cupones es estable y no hay notas urgentes.»:"
+msgstr ""
+"Verde — «El estado de las tarjetas es estable y no hay notas urgentes.»:"
 
 #: app/templates/radius/docs_cards_overview.html:398
 msgid "كل شيء تمام."
@@ -21655,37 +21551,38 @@ msgstr "Resumen › Alertas breves"
 
 #: app/templates/radius/docs_cards_overview.html:405
 msgid "المخزون المتاح منخفض: 8 كرت فقط."
-msgstr "El stock disponible es bajo: solo 8 cupones."
+msgstr "El stock disponible es bajo: solo 8 tarjetas."
 
 #: app/templates/radius/docs_cards_overview.html:405
 msgid "راجع الحزم وولّد كروتًا إضافية قبل النفاد ←"
-msgstr "Revisa los planes y genera cupones adicionales antes de que se agoten ←"
+msgstr ""
+"Revisa los lotes y genera tarjetas adicionales antes de que se agoten ←"
 
 #: app/templates/radius/docs_cards_overview.html:406
 msgid "38 كرت منتهي يحتاج مراجعة."
-msgstr "38 cupones vencidos requieren revisión."
+msgstr "38 tarjetas vencidas requieren revisión."
 
 #: app/templates/radius/docs_cards_overview.html:406
 msgid "اعرض الكروت المنتهية لمراجعتها أو أرشفتها ←"
-msgstr "Muestra los cupones caducados para revisarlos o archivarlos ←"
+msgstr "Muestra las tarjetas caducadas para revisarlas o archivarlas ←"
 
 #: app/templates/radius/docs_cards_overview.html:407
 msgid "وضع الكروت مستقر ولا توجد ملاحظات عاجلة."
-msgstr "El estado de los cupones es estable y no hay notas urgentes."
+msgstr "El estado de las tarjetas es estable y no hay notas urgentes."
 
 #: app/templates/radius/docs_cards_overview.html:407
 msgid "كل شيء تمام — تصفح الحزم ←"
-msgstr "Todo en orden — explore los planes →"
+msgstr "Todo en orden — explore los lotes →"
 
 #: app/templates/radius/docs_cards_overview.html:424
 msgid "«ملخص مخزون حزم البطاقات» — جدولان جنب بعض"
-msgstr "«Resumen de stock de lotes de cupones» — dos tablas una al lado de la otra"
+msgstr ""
+"«Resumen de stock de lotes de tarjetas» — dos tablas una al lado de la otra"
 
 #: app/templates/radius/docs_cards_overview.html:426
 msgid "هنا توزيع المخزون حزمةً حزمة، مقسومًا لجدولين:"
 msgstr ""
-"Aquí está la distribución del inventario plan por plan, dividida en dos "
-"tablas:"
+"Aquí está la distribución del inventario lote por lote, dividida en dos tablas:"
 
 #: app/templates/radius/docs_cards_overview.html:427
 msgid "«حزم مطبوعة»"
@@ -21697,20 +21594,20 @@ msgstr "(lotes de impresión estándar) y"
 
 #: app/templates/radius/docs_cards_overview.html:427
 msgid "«حزم البيع الإلكتروني»"
-msgstr "«Planes de venta en línea»"
+msgstr "«Lotes de venta en línea»"
 
 #: app/templates/radius/docs_cards_overview.html:428
 msgid "(حزم سوق البطاقات). أعمدة الجدول المطبوع:"
-msgstr "(Planes del mercado de cupones). Columnas de la tabla impresa:"
+msgstr "(Lotes del mercado de tarjetas). Columnas de la tabla impresa:"
 
 #: app/templates/radius/docs_cards_overview.html:431
 #: app/templates/radius/docs_print_templates.html:554
 msgid "الحزمة:"
-msgstr "Plan:"
+msgstr "Lote:"
 
 #: app/templates/radius/docs_cards_overview.html:431
 msgid "اسم الحزمة وتحته كود الدفعة (batch code)."
-msgstr "El nombre del plan con el batch code debajo."
+msgstr "El nombre del lote con el código de lote (batch code) debajo."
 
 #: app/templates/radius/docs_cards_overview.html:432
 msgid "إجمالي:"
@@ -21718,7 +21615,7 @@ msgstr "Total:"
 
 #: app/templates/radius/docs_cards_overview.html:432
 msgid "كل كروت الحزمة."
-msgstr "Todos los cupones del lote."
+msgstr "Todas las tarjetas del lote."
 
 #: app/templates/radius/docs_cards_overview.html:433
 msgid "باقي:"
@@ -21736,7 +21633,7 @@ msgstr "Caducado:"
 
 #: app/templates/radius/docs_cards_overview.html:434
 msgid "كروت انتهت صلاحيتها."
-msgstr "Cupones caducados."
+msgstr "Tarjetas caducadas."
 
 #: app/templates/radius/docs_cards_overview.html:435
 #: app/templates/radius/docs_routers_operations.html:292
@@ -21745,7 +21642,7 @@ msgstr "Conectado:"
 
 #: app/templates/radius/docs_cards_overview.html:435
 msgid "كروت لها جلسة حيّة الآن."
-msgstr "Cupones con una sesión activa ahora."
+msgstr "Tarjetas con una sesión activa ahora."
 
 #: app/templates/radius/docs_cards_overview.html:436
 msgid "مستخدم غير متصل:"
@@ -21758,8 +21655,7 @@ msgstr "Activada, pero su propietario no está conectado en este momento."
 #: app/templates/radius/docs_cards_overview.html:439
 msgid "جدول الحزم الإلكترونية بنفس الأعمدة، لكن أول عمود رقمي اسمه"
 msgstr ""
-"La tabla de paquetes electrónicos tiene las mismas columnas, pero la "
-"primera columna es numérica y se llama"
+"La tabla de lotes electrónicos tiene las mismas columnas, pero la primera columna es numérica y se llama"
 
 #: app/templates/radius/docs_cards_overview.html:439
 msgid "«مباع»"
@@ -21768,12 +21664,11 @@ msgstr "«Vendido»"
 #: app/templates/radius/docs_cards_overview.html:440
 msgid "بدل «إجمالي» — لأن الكرت الإلكتروني ما يدخل الجدول إلا بعد شراء مكتمل."
 msgstr ""
-"En lugar de «Total» — porque el cupón electrónico solo entra en la tabla "
-"tras una compra completada."
+"En lugar de «Total» — porque la tarjeta electrónica solo entra en la tabla tras una compra completada."
 
 #: app/templates/radius/docs_cards_overview.html:446
 msgid "حزمة يوم كامل"
-msgstr "Plan de día completo"
+msgstr "Lote de día completo"
 
 #: app/templates/radius/docs_cards_overview.html:448
 msgid "الجدول فيه فرز وترقيم صفحات — اضغط رأس أي عمود لترتيب الحزم به."
@@ -21825,7 +21720,7 @@ msgstr "Y genera un lote (consulta la guía «Lotes de tarjetas y añadir un lot
 
 #: app/templates/radius/docs_cards_overview.html:480
 msgid "زبون يشتكي من كرت؟ → افتح"
-msgstr "¿Un cliente se queja de un cupón? → Abre"
+msgstr "¿Un cliente se queja de una tarjeta? → Abre"
 
 #: app/templates/radius/docs_cards_overview.html:480
 msgid "واكتب كوده (دليل «فحص بطاقة»)."
@@ -21833,12 +21728,12 @@ msgstr "e introduzca su código (guía \"Verificación de tarjeta\")."
 
 #: app/templates/radius/docs_cards_overview.html:481
 msgid "بدك تطبع كروت جديدة؟ →"
-msgstr "¿Quieres imprimir cupones nuevos? →"
+msgstr "¿Quieres imprimir tarjetas nuevas? →"
 
 #: app/templates/radius/docs_cards_overview.html:481
 #: app/templates/radius/docs_cards_print.html:360
 msgid "بطاقات الطباعة"
-msgstr "Cupones de impresión"
+msgstr "Tarjetas de impresión"
 
 #: app/templates/radius/docs_cards_overview.html:481
 msgid "(دليلاهما في نفس القسم)."
@@ -21878,7 +21773,7 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_print.html:317
 msgid "افتح غرفة بطاقات الطباعة"
-msgstr "Abra la sala de cupones para imprimir"
+msgstr "Abra la sala de tarjetas para imprimir"
 
 #: app/templates/radius/docs_cards_print.html:318
 msgid "استورد دفعة جديدة"
@@ -21886,11 +21781,11 @@ msgstr "Importar un nuevo lote"
 
 #: app/templates/radius/docs_cards_print.html:319
 msgid "راجع واحفظ الحزمة"
-msgstr "Revisar y guardar el forfait"
+msgstr "Revisar y guardar el lote"
 
 #: app/templates/radius/docs_cards_print.html:320
 msgid "تعرّف على قائمة الحزم"
-msgstr "Conozca la lista de planes"
+msgstr "Conozca la lista de lotes"
 
 #: app/templates/radius/docs_cards_print.html:321
 msgid "القالب وإعدادات الورقة"
@@ -21906,11 +21801,11 @@ msgstr "Antes de empezar: ¿qué significan las «Tarjetas de impresión»?"
 
 #: app/templates/radius/docs_cards_print.html:335
 msgid "هذه البطاقات للطباعة فقط"
-msgstr "Estos cupones son solo para imprimir"
+msgstr "Estas tarjetas son solo para imprimir"
 
 #: app/templates/radius/docs_cards_print.html:345
 msgid "افتح غرفة «بطاقات الطباعة»"
-msgstr "Abrir la sala de «Cupones de impresión»"
+msgstr "Abrir la sala de «Tarjetas de impresión»"
 
 #: app/templates/radius/docs_cards_print.html:348
 msgid "«🖨️ بطاقات الطباعة»"
@@ -21952,21 +21847,20 @@ msgstr "Estado del sistema"
 #: app/templates/radius/docs_cards_print.html:353
 #: app/templates/radius/docs_cards_print.html:458
 msgid "«الحزم المحفوظة»"
-msgstr "«Planes guardados»"
+msgstr "«Lotes guardados»"
 
 #: app/templates/radius/docs_cards_print.html:353
 msgid "— كل حزمة طباعة استوردتها سابقًا."
-msgstr "— Cada paquete de impresión que haya importado antes."
+msgstr "— Cada lote de impresión que haya importado antes."
 
 #: app/templates/radius/docs_cards_print.html:356
 msgid "البطاقات › بطاقات الطباعة"
-msgstr "Cupones › Cupones de impresión"
+msgstr "Tarjetas › Tarjetas de impresión"
 
 #: app/templates/radius/docs_cards_print.html:361
 msgid "استورد ملفات الكروت الجاهزة وحوّلها إلى ملفات طباعة احترافية"
 msgstr ""
-"Importe archivos de cupones listos y conviértalos en archivos de "
-"impresión profesionales"
+"Importe archivos de tarjetas listos y conviértalos en archivos de impresión profesionales"
 
 #: app/templates/radius/docs_cards_print.html:363
 msgid "استيراد دفعة جديدة"
@@ -21990,7 +21884,7 @@ msgstr "para abrir la página de importación. La primera sección es"
 
 #: app/templates/radius/docs_cards_print.html:382
 msgid "«بيانات الحزمة»"
-msgstr "«Datos del plan»"
+msgstr "«Datos del lote»"
 
 #: app/templates/radius/docs_cards_print.html:382
 msgid "وفيه ثلاثة حقول:"
@@ -22011,7 +21905,7 @@ msgstr ". Aparece en la lista y en el archivo de impresión."
 
 #: app/templates/radius/docs_cards_print.html:386
 msgid "سعر البيع للبطاقة"
-msgstr "Precio de venta del cupón"
+msgstr "Precio de venta de la tarjeta"
 
 #: app/templates/radius/docs_cards_print.html:386
 msgid "(اختياري): سعر القطعة الواحدة — للعرض الداخلي فقط."
@@ -22031,7 +21925,7 @@ msgstr "luego una sección"
 
 #: app/templates/radius/docs_cards_print.html:390
 msgid "«المحرّك الذكي — تحليل ملف الكروت»"
-msgstr "«Motor inteligente — análisis del archivo de cupones»"
+msgstr "«Motor inteligente — análisis del archivo de tarjetas»"
 
 #: app/templates/radius/docs_cards_print.html:391
 msgid "«حلّل الملف»"
@@ -22039,7 +21933,7 @@ msgstr "Analizar archivo"
 
 #: app/templates/radius/docs_cards_print.html:396
 msgid "بطاقات الطباعة › دفعة طباعة جديدة"
-msgstr "Cupones de impresión › Nuevo lote de impresión"
+msgstr "Tarjetas de impresión › Nuevo lote de impresión"
 
 #: app/templates/radius/docs_cards_print.html:401
 msgid "CSV · XLSX · PDF — حتى 12MB"
@@ -22063,7 +21957,7 @@ msgstr "Tamaño máximo de archivo"
 
 #: app/templates/radius/docs_cards_print.html:430
 msgid "راجع البطاقات قبل الحفظ — ثم احفظ"
-msgstr "Revise los cupones antes de guardar — luego guarde"
+msgstr "Revise las tarjetas antes de guardar — luego guarde"
 
 #: app/templates/radius/docs_cards_print.html:432
 msgid "بعد نجاح التحليل، حقل"
@@ -22071,11 +21965,11 @@ msgstr "Tras un análisis correcto, el campo"
 
 #: app/templates/radius/docs_cards_print.html:432
 msgid "«نص الكروت»"
-msgstr "«Texto de los cupones»"
+msgstr "«Texto de las tarjetas»"
 
 #: app/templates/radius/docs_cards_print.html:433
 msgid "«راجع البطاقات قبل الحفظ»"
-msgstr "“Revisa los cupones antes de guardar”"
+msgstr "“Revisa las tarjetas antes de guardar”"
 
 #: app/templates/radius/docs_cards_print.html:433
 msgid "يتعبّأ تلقائيًا بصيغة"
@@ -22092,8 +21986,7 @@ msgstr "«Guardar lote de impresión»"
 #: app/templates/radius/docs_cards_print.html:442
 msgid "تم استيراد 500 بطاقة طباعة داخل الحزمة «دفعة شهر ٧ — للطباعة»."
 msgstr ""
-"Se importaron 500 cupones de impresión en el lote «Lote de julio — Para "
-"imprimir»."
+"Se importaron 500 tarjetas de impresión en el lote «Lote de julio — Para imprimir»."
 
 #: app/templates/radius/docs_cards_print.html:447
 msgid "واحفظ فورًا."
@@ -22101,17 +21994,16 @@ msgstr "Y guarda de inmediato."
 
 #: app/templates/radius/docs_cards_print.html:456
 msgid "تعرّف على قائمة الحزم وأزرار كل حزمة"
-msgstr "Conoce la lista de planes y los botones de cada plan"
+msgstr "Conoce la lista de lotes y los botones de cada lote"
 
 #: app/templates/radius/docs_cards_print.html:458
 msgid "ارجع لصفحة بطاقات الطباعة وشوف حزمتك في قسم"
 msgstr ""
-"Vuelve a la página de impresión de cupones y encuentra tu plan en la "
-"sección"
+"Vuelve a la página de impresión de tarjetas y encuentra tu lote en la sección"
 
 #: app/templates/radius/docs_cards_print.html:459
 msgid "«بطاقات»"
-msgstr "«Cupones»"
+msgstr "«Tarjetas»"
 
 #: app/templates/radius/docs_cards_print.html:459
 msgid "(شبكة chips أنيقة) أو"
@@ -22123,7 +22015,7 @@ msgstr "«Tabla»"
 
 #: app/templates/radius/docs_cards_print.html:461
 msgid "البطاقات، سعر"
-msgstr "Cupones, precio"
+msgstr "Tarjetas, precio"
 
 #: app/templates/radius/docs_cards_print.html:462
 msgid "الجملة"
@@ -22151,7 +22043,8 @@ msgstr "Eliminar:"
 
 #: app/templates/radius/docs_cards_print.html:467
 msgid "يحذف الحزمة وكل بطاقاتها بعد نافذة تأكيد —"
-msgstr "Elimina el plan y todos sus cupones tras una ventana de confirmación —"
+msgstr ""
+"Elimina el lote y todas sus tarjetas tras una ventana de confirmación —"
 
 #: app/templates/radius/docs_cards_print.html:467
 msgid "لا يمكن التراجع"
@@ -22162,12 +22055,12 @@ msgid ""
 "اضغط جسم الحزمة نفسه لفتح بطاقاتها — والأزرار الثلاثة بالأسفل للإجراءات "
 "السريعة."
 msgstr ""
-"Haz clic en el cuerpo del lote para abrir sus cupones; los tres botones "
-"de abajo son para acciones rápidas."
+"Haz clic en el cuerpo del lote para abrir sus tarjetas; los tres botones de abajo son para acciones rápidas."
 
 #: app/templates/radius/docs_cards_print.html:488
 msgid "داخل صفحة الحزمة تجد جدول البطاقات (أعمدة:"
-msgstr "Dentro de la página del plan encuentras la tabla de cupones (columnas:"
+msgstr ""
+"Dentro de la página del lote encuentras la tabla de tarjetas (columnas:"
 
 #: app/templates/radius/docs_cards_print.html:489
 msgid ") مع منسدلة"
@@ -22184,7 +22077,7 @@ msgstr "(10/20/50/100) y paginación para lotes grandes — con un botón encima
 #: app/templates/radius/docs_cards_print.html:491
 #: app/templates/radius/docs_cards_print.html:507
 msgid "«اطبع هذه الحزمة»"
-msgstr "«Imprimir este plan»"
+msgstr "«Imprimir este lote»"
 
 #: app/templates/radius/docs_cards_print.html:491
 msgid "البنفسجي وزر"
@@ -22192,7 +22085,7 @@ msgstr "El púrpura y el botón"
 
 #: app/templates/radius/docs_cards_print.html:491
 msgid "«الرجوع لقائمة الحزم»"
-msgstr "«Volver a la lista de planes»"
+msgstr "«Volver a la lista de lotes»"
 
 #: app/templates/radius/docs_cards_print.html:505
 msgid "نافذة الطباعة: اختر القالب واضبط الورقة"
@@ -22236,7 +22129,7 @@ msgstr "(1–8) y "
 
 #: app/templates/radius/docs_cards_print.html:521
 msgid "(1–12): الافتراضي 3×5 = 15 بطاقة في الصفحة."
-msgstr "(1–12): el valor predeterminado es 3×5 = 15 cupones por página."
+msgstr "(1–12): el valor predeterminado es 3×5 = 15 tarjetas por página."
 
 #: app/templates/radius/docs_cards_print.html:522
 msgid "المسافة بين الأعمدة / الصفوف (mm):"
@@ -22309,7 +22202,7 @@ msgstr "«Crear PDF» — progreso, descarga e impresión"
 
 #: app/templates/radius/docs_cards_print.html:580
 msgid "تجهيز ملف البطاقات › التقدم"
-msgstr "Preparando archivo de cupones › Progreso"
+msgstr "Preparando archivo de tarjetas › Progreso"
 
 #: app/templates/radius/docs_cards_print.html:596
 msgid "لما تكتمل المرحلة الأخيرة يظهر زر"
@@ -22322,17 +22215,14 @@ msgstr "— Púlsalo y se descarga un archivo PDF de varias páginas:"
 #: app/templates/radius/docs_cards_print.html:598
 msgid "كل صفحة فيها البطاقات مرصوصة حسب الأعمدة والصفوف اللي اخترتها."
 msgstr ""
-"Cada página tiene los cupones dispuestos según las columnas y filas que "
-"eligió."
+"Cada página tiene las tarjetas dispuestas según las columnas y filas que eligió."
 
 #: app/templates/radius/docs_cards_print.html:599
 msgid ""
 "كل بطاقة مرسومة بالقالب المختار: اسم الدخول وكلمة المرور كما في الجدول، "
 "والـQR إذا كان مفعّلًا في القالب."
 msgstr ""
-"Cada cupón se compone con la plantilla seleccionada: nombre de acceso y "
-"contraseña como en la tabla, además del QR si está activado en la "
-"plantilla."
+"Cada tarjeta se compone con la plantilla seleccionada: nombre de acceso y contraseña como en la tabla, además del QR si está activado en la plantilla."
 
 #: app/templates/radius/docs_cards_print.html:600
 msgid "افتح الملف واطبعه على طابعتك بمقياس"
@@ -22554,8 +22444,7 @@ msgstr "Resumen:"
 #: app/templates/radius/docs_customer_portal.html:101
 msgid "الباقة، حالة الاشتراك، الأيام المتبقّية، والرصيد/الدَّيْن إن وُجد."
 msgstr ""
-"El paquete, el estado de la suscripción, los días restantes, y el "
-"saldo/la deuda si la hay."
+"El plan, el estado de la suscripción, los días restantes, y el saldo/la deuda si la hay."
 
 #: app/templates/radius/docs_customer_portal.html:102
 #: app/templates/radius/docs_sessions_report.html:98
@@ -22737,10 +22626,7 @@ msgid ""
 "بعض المفاتيح (تغيير كلمة المرور، الشراء الذاتي، تغيير الباقة) «قيد الربط»"
 " — تُحفظ بلا أثر بعد."
 msgstr ""
-"llamar a su ruta directamente (se rechaza con 403), de modo que la "
-"ocultación no puede eludirse mediante el enlace. Algunos interruptores "
-"(cambiar la contraseña, la compra propia, cambiar el paquete) están «en "
-"proceso de conexión» — se guardan pero aún no tienen efecto."
+"llamar a su ruta directamente (se rechaza con 403), de modo que la ocultación no puede eludirse mediante el enlace. Algunos interruptores (cambiar la contraseña, la compra propia, cambiar el plan) están «en proceso de conexión» — se guardan pero aún no tienen efecto."
 
 #: app/templates/radius/docs_customer_portal.html:168
 msgid "وصول الزبون المنتهي للبوابة"
@@ -23096,8 +22982,7 @@ msgid ""
 "الجهة التابعة لها المحفظة (الشركة، مدير، موزّع، مشترك، مستخدم بطاقات) "
 "ورقمها."
 msgstr ""
-"La entidad a la que pertenece el monedero (la empresa, un gestor, un "
-"distribuidor, un abonado, un usuario de cupones) y su número."
+"La entidad a la que pertenece el monedero (la empresa, un gestor, un distribuidor, un abonado, un usuario de tarjetas) y su número."
 
 #: app/templates/radius/docs_finance_center.html:409
 msgid "الرصيد:"
@@ -23343,7 +23228,7 @@ msgstr "Costo mayorista"
 
 #: app/templates/radius/docs_finance_center.html:532
 msgid "بيع بطاقات #12"
-msgstr "Venta de cupones n.º 12"
+msgstr "Venta de tarjetas n.º 12"
 
 #: app/templates/radius/docs_finance_center.html:533
 msgid "دفعة مشترك #8"
@@ -24101,7 +23986,7 @@ msgstr "Agrega suscriptores o genera tarjetas (dos guías"
 
 #: app/templates/radius/docs_getting_started.html:155
 msgid "«حزم البطاقات»"
-msgstr "«Paquetes de tarjetas»"
+msgstr "«Lotes de tarjetas»"
 
 #: app/templates/radius/docs_getting_started.html:156
 msgid "اضبط التنبيهات (تلجرام/واتساب) لمتابعة التشغيل."
@@ -24688,7 +24573,7 @@ msgstr "Y debajo"
 
 #: app/templates/radius/docs_login_states.html:256
 msgid "ثلاث بطاقات كبيرة"
-msgstr "Tres cupones grandes"
+msgstr "Tres tarjetas grandes"
 
 #: app/templates/radius/docs_login_states.html:256
 msgid "— كل واحدة تفتح صفحة الجهة الخاصة بها:"
@@ -24714,7 +24599,7 @@ msgstr "A través del portal y la red de autenticación"
 
 #: app/templates/radius/docs_login_states.html:260
 msgid "دخول الكروت"
-msgstr "Acceso con cupón"
+msgstr "Acceso con tarjeta"
 
 #: app/templates/radius/docs_login_states.html:260
 msgid "عبر الشبكة والبوابة"
@@ -24781,11 +24666,11 @@ msgstr "Juntos — con el dispositivo de red y el motivo del fallo."
 
 #: app/templates/radius/docs_login_states.html:280
 msgid "دخول الكروت:"
-msgstr "Accesos de cupones:"
+msgstr "Accesos de tarjetas:"
 
 #: app/templates/radius/docs_login_states.html:287
 msgid "حالات دخول الكروت"
-msgstr "Estados de inicio de sesión de cupones"
+msgstr "Estados de inicio de sesión de tarjetas"
 
 #: app/templates/radius/docs_login_states.html:289
 msgid ""
@@ -24809,7 +24694,7 @@ msgstr "Entidad:"
 
 #: app/templates/radius/docs_login_states.html:304
 msgid "اسم الدخول (المدير/المشترك/الكرت)."
-msgstr "Nombre de acceso (administrador/abonado/cupón)."
+msgstr "Nombre de acceso (administrador/abonado/tarjeta)."
 
 #: app/templates/radius/docs_login_states.html:305
 msgid "النتيجة:"
@@ -24826,7 +24711,7 @@ msgstr "Origen:"
 
 #: app/templates/radius/docs_login_states.html:306
 msgid "«البوابة» أو «شبكة المصادقة» (للمشتركين والكروت فقط)."
-msgstr "«Portal» o «Red de autenticación» (solo para abonados y cupones)."
+msgstr "«Portal» o «Red de autenticación» (solo para abonados y tarjetas)."
 
 #: app/templates/radius/docs_login_states.html:307
 msgid "عنوان الشبكة (IP) + جهاز الشبكة (NAS)."
@@ -24996,8 +24881,7 @@ msgstr ""
 #: app/templates/radius/docs_login_states.html:370
 msgid "«كل المصادر» / «البوابة» / «شبكة المصادقة» (للمشتركين والكروت)."
 msgstr ""
-"«Todas las fuentes» / «Portal» / «Red de autenticación» (para abonados y "
-"cupones)."
+"«Todas las fuentes» / «Portal» / «Red de autenticación» (para abonados y tarjetas)."
 
 #: app/templates/radius/docs_login_states.html:371
 #: app/templates/radius/docs_sessions_report.html:117
@@ -26183,7 +26067,7 @@ msgstr "💳 Mi saldo:"
 
 #: app/templates/radius/docs_mikrotik_store.html:365
 msgid "محفظته الحالية + شحن بطاقة (إدخال كود ورقم سري)."
-msgstr "Su monedero actual + recarga con cupón (introducir código y PIN)."
+msgstr "Su monedero actual + recarga con tarjeta (introducir código y PIN)."
 
 #: app/templates/radius/docs_mikrotik_store.html:366
 msgid "🛒 المعرض:"
@@ -26195,13 +26079,12 @@ msgstr "Planes del mercado disponibles con compra instantánea con un clic."
 
 #: app/templates/radius/docs_mikrotik_store.html:367
 msgid "🎫 بطاقاتي:"
-msgstr "🎫 Mis cupones:"
+msgstr "🎫 Mis tarjetas:"
 
 #: app/templates/radius/docs_mikrotik_store.html:367
 msgid "بطاقاته المشتراة وحالتها من الراديوس + زر الدخول بها."
 msgstr ""
-"Sus cupones comprados y su estado desde RADIUS + un botón para acceder "
-"con ellos."
+"Sus tarjetas compradas y su estado desde RADIUS + un botón para acceder con ellas."
 
 #: app/templates/radius/docs_mikrotik_store.html:368
 msgid "🧾 السجل:"
@@ -26217,7 +26100,7 @@ msgstr "🎫 Mis tarjetas"
 
 #: app/templates/radius/docs_mikrotik_store.html:374
 msgid "بطاقة واحدة نشطة"
-msgstr "Un cupón activo"
+msgstr "Una tarjeta activa"
 
 #: app/templates/radius/docs_mikrotik_store.html:378
 msgid "🔓 دخول بهذه البطاقة"
@@ -26228,8 +26111,7 @@ msgid ""
 "حالات البطاقة: نشطة / غير مستخدمة / منتهية / مستهلكة / ملغاة — كلٌّ "
 "بلونها."
 msgstr ""
-"Estados del cupón: activo / sin usar / caducado / consumido / cancelado —"
-" cada uno con su propio color."
+"Estados de la tarjeta: activa / sin usar / caducada / consumida / cancelada — cada uno con su propio color."
 
 #: app/templates/radius/docs_mikrotik_store.html:395
 msgid "دخول الزبون بالجوال — والشحن بكود"
@@ -26277,7 +26159,7 @@ msgstr "Recarga su monedero: introduce"
 
 #: app/templates/radius/docs_mikrotik_store.html:402
 msgid "رقم/كود البطاقة"
-msgstr "Número/código del cupón"
+msgstr "Número/código de la tarjeta"
 
 #: app/templates/radius/docs_mikrotik_store.html:403
 msgid "(إن وُجد)، ويضغط"
@@ -26293,7 +26175,7 @@ msgstr "💳 Mi saldo › Recargar tarjeta"
 
 #: app/templates/radius/docs_mikrotik_store.html:411
 msgid "رقم / كود البطاقة"
-msgstr "Número / código del cupón"
+msgstr "Número / código de la tarjeta"
 
 #: app/templates/radius/docs_mikrotik_store.html:415
 msgid "الرقم السري (إن وُجد)"
@@ -26311,7 +26193,7 @@ msgstr ""
 
 #: app/templates/radius/docs_mikrotik_store.html:435
 msgid "الشراء — والدخول التلقائي بالبطاقة"
-msgstr "Compra — y acceso automático con el cupón"
+msgstr "Compra — y acceso automático con la tarjeta"
 
 #: app/templates/radius/docs_mikrotik_store.html:437
 msgid "«المعرض»"
@@ -26347,7 +26229,7 @@ msgstr "En esa ventana — y en la pestaña «Mis tarjetas» — hay un botón"
 
 #: app/templates/radius/docs_mikrotik_store.html:442
 msgid "«🔓 دخول بهذه البطاقة»"
-msgstr "«🔓 Acceder con este cupón»"
+msgstr "«🔓 Acceder con esta tarjeta»"
 
 #: app/templates/radius/docs_mikrotik_store.html:443
 msgid "على الشبكة تلقائيًا"
@@ -26363,7 +26245,7 @@ msgstr "✓ ¡Compra exitosa!"
 
 #: app/templates/radius/docs_mikrotik_store.html:452
 msgid "🔓 دخول بهذه البطاقة الآن"
-msgstr "🔓 Iniciar sesión con este cupón ahora"
+msgstr "🔓 Iniciar sesión con esta tarjeta ahora"
 
 #: app/templates/radius/docs_mikrotik_store.html:470
 msgid "أغلب مشاكل المتجر سببها أحد شرطي التشغيل الأولين. هذه أشهر الرسائل وحلّها:"
@@ -26395,8 +26277,7 @@ msgstr "«La sesión finalizó — inicia sesión de nuevo»"
 #: app/templates/radius/docs_mikrotik_store.html:480
 msgid "«أدخل رقم الجوال وكلمة المرور أولًا» / «أدخل رقم البطاقة أولًا»"
 msgstr ""
-"«Introduzca primero el número de móvil y la contraseña» / «Introduzca "
-"primero el número del cupón»"
+"«Introduzca primero el número de móvil y la contraseña» / «Introduzca primero el número de la tarjeta»"
 
 #: app/templates/radius/docs_mikrotik_store.html:493
 msgid "قائمة فحص سريعة:"
@@ -26949,7 +26830,7 @@ msgstr "Límite de usuarios conectados, no de suscriptores"
 
 #: app/templates/radius/docs_packages_subscription.html:34
 msgid "الباقة تحدّد الميزات"
-msgstr "El paquete determina las funciones"
+msgstr "El plan determina las funciones"
 
 #: app/templates/radius/docs_packages_subscription.html:35
 msgid "انتهاء التجربة/الترخيص"
@@ -26958,7 +26839,7 @@ msgstr "Caducidad de la prueba/licencia"
 #: app/templates/radius/docs_packages_subscription.html:36
 #: app/templates/radius/docs_packages_subscription.html:144
 msgid "اختر باقتك الصحيحة"
-msgstr "Elige el paquete correcto"
+msgstr "Elige el plan correcto"
 
 #: app/templates/radius/docs_packages_subscription.html:44
 msgid "قبل ما نبدأ — ما الفرق بين «الترخيص» و«الباقة»؟"
@@ -26971,13 +26852,7 @@ msgid ""
 " — يشرح المنطق العامّ حتى تختار الباقة المناسبة وتتفادى المفاجآت. لقراءة "
 "قيم ترخيصك الفعلية راجع دليل «حالة منح المزوّد والترخيص»."
 msgstr ""
-"La licencia es el acuerdo que vincula tu instancia con el proveedor del "
-"sistema, y el paquete es el nivel de esa licencia: cuántas conexiones "
-"simultáneas se permiten y qué funciones están activadas. Esta guía es "
-"conceptual — explica la lógica general para que puedas elegir el paquete "
-"adecuado y evitar sorpresas. Para leer los valores reales de tu licencia,"
-" consulta la guía «Estado de la concesión del proveedor y de la "
-"licencia»."
+"La licencia es el acuerdo que vincula tu instancia con el proveedor del sistema, y el plan es el nivel de esa licencia: cuántas conexiones simultáneas se permiten y qué funciones están activadas. Esta guía es conceptual — explica la lógica general para que puedas elegir el plan adecuado y evitar sorpresas. Para leer los valores reales de tu licencia, consulta la guía «Estado de la concesión del proveedor y de la licencia»."
 
 #: app/templates/radius/docs_packages_subscription.html:54
 msgid "كيف يعمل نموذج الترخيص"
@@ -27321,9 +27196,7 @@ msgid ""
 "الباقة (العرض) هي القالب الذي تربطه بالمشترك: تحدّد سرعته الثابتة، كم "
 "بيانات/وقت مسموح، ومتى تنتهي. أمّا جدول السرعة فهو قاعدة"
 msgstr ""
-"El paquete (oferta) es la plantilla que vinculas al suscriptor: define su"
-" velocidad fija, cuántos datos/tiempo se permiten, y cuándo expira. La "
-"tabla de velocidad, en cambio, es una regla"
+"El plan (oferta) es la plantilla que vinculas al suscriptor: define su velocidad fija, cuántos datos/tiempo se permiten, y cuándo expira. La tabla de velocidad, en cambio, es una regla"
 
 #: app/templates/radius/docs_plans_speeds.html:47
 msgid "زمنية"
@@ -27344,7 +27217,7 @@ msgstr "Crear un nuevo plan de acceso"
 
 #: app/templates/radius/docs_plans_speeds.html:57
 msgid "الباقات (العروض)"
-msgstr "Paquetes (ofertas)"
+msgstr "Planes (ofertas)"
 
 #: app/templates/radius/docs_plans_speeds.html:57
 msgid "«باقة جديدة»"
@@ -27358,7 +27231,7 @@ msgstr ". El primer campo obligatorio es"
 #: app/templates/radius/docs_plans_speeds.html:64
 #: app/templates/radius/mt_login_designer.html:1490
 msgid "اسم الباقة"
-msgstr "Nombre del paquete"
+msgstr "Nombre del plan"
 
 #: app/templates/radius/docs_plans_speeds.html:57
 #: app/templates/radius/docs_plans_speeds.html:145
@@ -27378,7 +27251,7 @@ msgstr ""
 
 #: app/templates/radius/docs_plans_speeds.html:60
 msgid "الباقات › باقة جديدة"
-msgstr "Paquetes › Nuevo paquete"
+msgstr "Planes › Nuevo plan"
 
 #: app/templates/radius/docs_plans_speeds.html:62
 msgid "بيانات الباقة"
@@ -27438,8 +27311,7 @@ msgid ""
 "البيرست اختياري. إن تركته فارغًا، يلتزم المشترك بالسرعة الثابتة دائمًا — "
 "وهذا مناسب لباقات بسيطة."
 msgstr ""
-"El burst es opcional. Si lo dejas vacío, el suscriptor se atiene siempre "
-"a la velocidad fija — lo que resulta adecuado para paquetes simples."
+"El burst es opcional. Si lo dejas vacío, el suscriptor se atiene siempre a la velocidad fija — lo que resulta adecuado para planes simples."
 
 #: app/templates/radius/docs_plans_speeds.html:98
 msgid "حدود الوقت والبيانات (الكوتا)"
@@ -27526,8 +27398,7 @@ msgid ""
 "راجع الحقول ثم احفظ. تظهر الباقة في القائمة وتصبح جاهزة لربطها بالمشتركين"
 " أو بحزم البطاقات."
 msgstr ""
-"Revisa los campos y guarda. El plan aparece en la lista y queda listo "
-"para vincularlo a abonados o a paquetes de tarjetas."
+"Revisa los campos y guarda. El plan aparece en la lista y queda listo para vincularlo a abonados o a lotes de tarjetas."
 
 #: app/templates/radius/docs_plans_speeds.html:131
 msgid ""
@@ -27764,8 +27635,7 @@ msgid ""
 "تختار حزمة بطاقات وقالبًا محفوظًا، تضبط الورقة، وتصدّر PDF. هذه وجهتك "
 "اليومية."
 msgstr ""
-"Eliges un lote de cupones y una plantilla guardada, configuras la hoja y "
-"exportas un PDF. Este es tu destino diario."
+"Eliges un lote de tarjetas y una plantilla guardada, configuras la hoja y exportas un PDF. Este es tu destino diario."
 
 #: app/templates/radius/docs_print_templates.html:310
 msgid "غرفة التصميم:"
@@ -27789,7 +27659,7 @@ msgstr "Sala de impresión"
 #: app/templates/radius/docs_print_templates.html:319
 #: app/templates/radius/print_templates.html:564
 msgid "اختيار حزمة وقالب ثم تصدير PDF"
-msgstr "Seleccionar un plan y una plantilla, luego exportar a PDF"
+msgstr "Seleccionar un lote y una plantilla, luego exportar a PDF"
 
 #: app/templates/radius/docs_print_templates.html:323
 #: app/templates/radius/print_templates.html:569
@@ -27843,7 +27713,7 @@ msgstr "«Nombre de la plantilla»"
 #: app/templates/radius/docs_print_templates.html:364
 #: app/templates/radius/docs_print_templates.html:576
 msgid "بطاقات رمضان — 4 ساعات"
-msgstr "Cupones de Ramadán — 4 horas"
+msgstr "Tarjetas de Ramadán — 4 horas"
 
 #: app/templates/radius/docs_print_templates.html:351
 msgid "لا يُطبع"
@@ -27951,8 +27821,7 @@ msgstr "Editor de secciones: mueve los elementos y colorea la tarjeta"
 #: app/templates/radius/docs_print_templates.html:400
 msgid "فوق معاينة البطاقة مباشرة (في العمود الثاني) يجلس"
 msgstr ""
-"Justo encima de la vista previa del cupón (en la segunda columna) se "
-"encuentra"
+"Justo encima de la vista previa de la tarjeta (en la segunda columna) se encuentra"
 
 #: app/templates/radius/docs_print_templates.html:400
 msgid "شريط أقسام المحرر"
@@ -28052,9 +27921,7 @@ msgid ""
 "اسم الشبكة، عنوان البطاقة، السعر، الصلاحية، النص أسفل البطاقة، ومفاتيح "
 "إظهار/إخفاء كل عنصر."
 msgstr ""
-"El nombre de la red, el título del cupón, el precio, la validez, el texto"
-" en la parte inferior del cupón y los interruptores para mostrar/ocultar "
-"cada elemento."
+"El nombre de la red, el título de la tarjeta, el precio, la validez, el texto en la parte inferior de la tarjeta y los interruptores para mostrar/ocultar cada elemento."
 
 #: app/templates/radius/docs_print_templates.html:428
 msgid "الحقول:"
@@ -28231,7 +28098,7 @@ msgstr "Panel"
 
 #: app/templates/radius/docs_print_templates.html:497
 msgid "«معاينة البطاقة»"
-msgstr "«Vista previa del cupón»"
+msgstr "«Vista previa de la tarjeta»"
 
 #: app/templates/radius/docs_print_templates.html:497
 msgid "الملاصقة في العمود الثاني تتحدث مع"
@@ -28247,11 +28114,11 @@ msgstr "Mismo motor"
 
 #: app/templates/radius/docs_print_templates.html:504
 msgid "غرفة التصميم › معاينة البطاقة (مباشرة)"
-msgstr "Sala de diseño › Vista previa del cupón (en vivo)"
+msgstr "Sala de diseño › Vista previa de la tarjeta (en vivo)"
 
 #: app/templates/radius/docs_print_templates.html:509
 msgid "بطاقة إنترنت"
-msgstr "Cupón de Internet"
+msgstr "Tarjeta de Internet"
 
 #: app/templates/radius/docs_print_templates.html:513
 msgid "احتفظ ببيانات الدخول حتى انتهاء الصلاحية"
@@ -28285,8 +28152,7 @@ msgstr "Editor de plantillas › Parte inferior del formulario"
 #: app/templates/radius/docs_print_templates.html:534
 msgid "تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية."
 msgstr ""
-"La plantilla de diseño se guardó. Ahora puedes exportar un PDF de muestra"
-" o vincularla a un lote de cupones real."
+"La plantilla de diseño se guardó. Ahora puedes exportar un PDF de muestra o vincularla a un lote de tarjetas real."
 
 #: app/templates/radius/docs_print_templates.html:539
 msgid "كلمة المرور تظهر في المعاينة دائمًا كنقاط"
@@ -28306,15 +28172,14 @@ msgstr "«Sala de impresión»"
 
 #: app/templates/radius/docs_print_templates.html:551
 msgid "— هنا يلتقي قالبك مع كروتك الحقيقية:"
-msgstr "— Aquí tu plantilla se encuentra con tus cupones reales:"
+msgstr "— Aquí tu plantilla se encuentra con tus tarjetas reales:"
 
 #: app/templates/radius/docs_print_templates.html:554
 msgid ""
 "اختر حزمة بطاقات من القائمة (تقدر توصل لنفس الغرفة من صفحة حزم البطاقات "
 "أيضًا)."
 msgstr ""
-"Elige un lote de cupones de la lista (también puedes llegar a la misma "
-"sala desde la página de lotes de cupones)."
+"Elige un lote de tarjetas de la lista (también puedes llegar a la misma sala desde la página de lotes de tarjetas)."
 
 #: app/templates/radius/docs_print_templates.html:555
 msgid "اختيار قالب محفوظ:"
@@ -28365,16 +28230,14 @@ msgstr "Los tres botones de exportación:"
 
 #: app/templates/radius/docs_print_templates.html:561
 msgid "«تصدير PDF للحزمة»:"
-msgstr "«Exportar el plan a PDF»:"
+msgstr "«Exportar el lote a PDF»:"
 
 #: app/templates/radius/docs_print_templates.html:561
 msgid ""
 "الزر الرئيسي — يولّد ملف PDF متعدد الصفحات بكل بطاقات الحزمة على قالبك، "
 "مع شريط تقدم بالمراحل ثم تنزيل تلقائي."
 msgstr ""
-"El botón principal — genera un archivo PDF de varias páginas con todos "
-"los cupones del paquete sobre su plantilla, con una barra de progreso por"
-" etapas y luego una descarga automática."
+"El botón principal — genera un archivo PDF de varias páginas con todas las tarjetas del lote sobre su plantilla, con una barra de progreso por etapas y luego una descarga automática."
 
 #: app/templates/radius/docs_print_templates.html:562
 msgid "«PDF عينة»:"
@@ -28404,7 +28267,7 @@ msgstr "Sala de impresión › Configuración de exportación"
 
 #: app/templates/radius/docs_print_templates.html:572
 msgid "B-1042 — عرض 4 ساعات (200 بطاقة)"
-msgstr "B-1042 — oferta de 4 horas (200 cupones)"
+msgstr "B-1042 — oferta de 4 horas (200 tarjetas)"
 
 #: app/templates/radius/docs_print_templates.html:575
 #: app/templates/radius/print_templates.html:600
@@ -28414,7 +28277,7 @@ msgstr "Plantilla de exportación aprobada"
 #: app/templates/radius/docs_print_templates.html:580
 #: app/templates/radius/print_templates.html:689
 msgid "تصدير PDF للحزمة"
-msgstr "Exportar el plan a PDF"
+msgstr "Exportar el lote a PDF"
 
 #: app/templates/radius/docs_print_templates.html:581
 #: app/templates/radius/print_templates.html:692
@@ -28424,7 +28287,7 @@ msgstr "PDF de muestra"
 #: app/templates/radius/docs_print_templates.html:584
 #: app/templates/radius/print_templates.html:709
 msgid "اختيار الحزمة"
-msgstr "Seleccionar plan"
+msgstr "Seleccionar lote"
 
 #: app/templates/radius/docs_print_templates.html:585
 #: app/templates/radius/print_templates.html:710
@@ -28568,8 +28431,7 @@ msgstr ""
 #: app/templates/radius/docs_provider_license.html:78
 msgid "الترخيص ساري والنسخة تعمل بكامل ميزات باقتك."
 msgstr ""
-"La licencia es válida y la instancia funciona con todas las funciones de "
-"tu paquete."
+"La licencia es válida y la instancia funciona con todas las funciones de tu plan."
 
 #: app/templates/radius/docs_provider_license.html:79
 msgid "تجريبية:"
@@ -28780,8 +28642,7 @@ msgid ""
 "التجديد ورفع الباقة يتمّان من جهة المزوّد، لا من هذه الصفحة. الخطوات "
 "العملية:"
 msgstr ""
-"La renovación y la mejora del paquete se realizan del lado del proveedor,"
-" no desde esta página. Los pasos prácticos:"
+"La renovación y la mejora del plan se realizan del lado del proveedor, no desde esta página. Los pasos prácticos:"
 
 #: app/templates/radius/docs_provider_license.html:153
 msgid "تواصل مع"
@@ -28988,9 +28849,7 @@ msgid ""
 "العقل المركزي الذي يفحص الطلب مقابل بيانات المشترك والباقة والسياسات، "
 "ويردّ بقبول أو رفض."
 msgstr ""
-"El cerebro central que verifica la solicitud frente a los datos del "
-"suscriptor, el paquete y las políticas, y responde con aceptación o "
-"rechazo."
+"El cerebro central que verifica la solicitud frente a los datos del suscriptor, el plan y las políticas, y responde con aceptación o rechazo."
 
 #: app/templates/radius/docs_radius.html:83
 msgid "مسار الطلب"
@@ -29363,7 +29222,7 @@ msgstr "Informes ← Resumen"
 
 #: app/templates/radius/docs_reports_overview.html:260
 msgid "المؤشرات: المشتركون، المتصلون الآن، الإيرادات، البطاقات."
-msgstr "Los indicadores: abonados, conectados ahora, ingresos, cupones."
+msgstr "Los indicadores: abonados, conectados ahora, ingresos, tarjetas."
 
 #: app/templates/radius/docs_reports_overview.html:274
 msgid "العائلات الخمس في السايدبار"
@@ -29384,8 +29243,7 @@ msgstr "Informes ejecutivos:"
 #: app/templates/radius/docs_reports_overview.html:280
 msgid "نظرة عامة، التقرير المالي، تقارير البطاقات، تقارير الموزعين، الأرشيف."
 msgstr ""
-"Resumen, informe financiero, informes de cupones, informes de "
-"distribuidores, archivo."
+"Resumen, informe financiero, informes de tarjetas, informes de distribuidores, archivo."
 
 #: app/templates/radius/docs_reports_overview.html:281
 msgid "الدخول والأمان:"
@@ -29533,7 +29391,7 @@ msgstr "«Hasta la fecha»"
 
 #: app/templates/radius/docs_reports_overview.html:366
 msgid ". تختار النطاق ثم تضغط"
-msgstr ". Selecciona el plan y luego pulsa"
+msgstr ". Selecciona el ámbito y luego pulsa"
 
 #: app/templates/radius/docs_reports_overview.html:372
 msgid "تقرير الجلسات › الفلاتر"
@@ -30984,7 +30842,7 @@ msgstr "No lo tocará"
 
 #: app/templates/radius/docs_routers_operations.html:471
 msgid "المشتركين أو البطاقات أو إعدادات الراوترات نفسها."
-msgstr "los abonados, los cupones o la propia configuración de los routers."
+msgstr "los abonados, las tarjetas o la propia configuración de los routers."
 
 #: app/templates/radius/docs_routers_operations.html:475
 #: app/templates/radius/mt_operations.html:133
@@ -32579,8 +32437,7 @@ msgstr "Tarjetas:"
 #: app/templates/radius/docs_system_settings.html:260
 msgid "أطوال اسم/كلمة البطاقة الافتراضية، منع الماك العشوائي للبطاقات."
 msgstr ""
-"Longitudes predeterminadas del nombre/contraseña del cupón y bloqueo de "
-"MAC aleatoria para los cupones."
+"Longitudes predeterminadas del nombre/contraseña de la tarjeta y bloqueo de MAC aleatoria para las tarjetas."
 
 #: app/templates/radius/docs_system_settings.html:261
 msgid "الرسائل والتنبيهات:"
@@ -32707,7 +32564,7 @@ msgstr "— en la pestaña «Abonados y acceso»."
 #: app/templates/radius/docs_system_settings.html:327
 #: app/templates/radius/settings_page.html:614
 msgid "منع MAC العشوائي في البطاقات"
-msgstr "Bloquear MAC aleatoria en los cupones"
+msgstr "Bloquear MAC aleatoria en las tarjetas"
 
 #: app/templates/radius/docs_system_settings.html:327
 msgid "— في تبويب «الكروت»."
@@ -33675,7 +33532,7 @@ msgstr ""
 
 #: app/templates/radius/docs_users_360.html:462
 msgid "تغيير العرض / السرعة:"
-msgstr "Cambiar plan / velocidad:"
+msgstr "Cambiar oferta / velocidad:"
 
 #: app/templates/radius/docs_users_360.html:462
 msgid ""
@@ -33894,7 +33751,7 @@ msgstr "Mensual / anual y selección del período"
 
 #: app/templates/radius/docs_users_overview.html:357
 msgid "الدخل والصرف وبطاقات الأرقام"
-msgstr "Ingresos, gastos y cupones numerados"
+msgstr "Ingresos, gastos y tarjetas numéricas"
 
 #: app/templates/radius/docs_users_overview.html:358
 #: app/templates/radius/docs_users_overview.html:441
@@ -34101,7 +33958,7 @@ msgstr "(cobrado y anticipos) de ese período."
 
 #: app/templates/radius/docs_users_overview.html:437
 msgid "أرقام بطاقات"
-msgstr "Números de cupones"
+msgstr "Tarjetas de cifras"
 
 #: app/templates/radius/docs_users_overview.html:437
 msgid "المُحصّل، السلف، التفعيل، الجيجات"
@@ -34201,7 +34058,7 @@ msgstr "Y debajo de ambos"
 
 #: app/templates/radius/docs_users_overview.html:484
 msgid "ست بطاقات أرقام"
-msgstr "Seis cupones numéricos"
+msgstr "Seis tarjetas numéricas"
 
 #: app/templates/radius/docs_users_overview.html:484
 msgid "— هذا معنى كل واحدة بالضبط، مع السطر الصغير تحت الرقم:"
@@ -35098,7 +34955,8 @@ msgstr "Por ejemplo, 1024"
 
 #: app/templates/radius/events_investigations.html:150
 msgid "الرقم التعريفي للعنصر نفسه (رقم المشترك أو البطاقة…)."
-msgstr "El identificador del propio elemento (el número de abonado o de cupón…)."
+msgstr ""
+"El identificador del propio elemento (el número de abonado o de tarjeta…)."
 
 #: app/templates/radius/events_investigations.html:152
 #: app/templates/radius/events_risk.html:104
@@ -35231,7 +35089,7 @@ msgstr "Minutos ganados"
 
 #: app/templates/radius/finance_accounting.html:524
 msgid "رقم الحزمة"
-msgstr "Número del paquete"
+msgstr "Número del lote"
 
 #: app/templates/radius/finance_accounting.html:524
 msgid "الإيرادات (دائن)"
@@ -35434,7 +35292,7 @@ msgstr "Distribuidor"
 
 #: app/templates/radius/finance_center_hub.html:427
 msgid "مستخدم بطاقات"
-msgstr "Usuario de cupones"
+msgstr "Usuario de tarjetas"
 
 #: app/templates/radius/finance_center_hub.html:429
 msgid "اختر الجهة التي ستتبع لها المحفظة."
@@ -36939,8 +36797,7 @@ msgid ""
 "أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، "
 "كروت…). يطبّقها الريدياس تلقائيًا."
 msgstr ""
-"Los máximos permitidos en tu instalación según tu plan (abonados, "
-"dispositivos de red, cupones...). RADIUS los aplica automáticamente."
+"Los máximos permitidos en tu instalación según tu plan (abonados, dispositivos de red, tarjetas...). RADIUS los aplica automáticamente."
 
 #: app/templates/radius/license_file.html:696
 #: app/templates/radius/license_file.html:721
@@ -36950,8 +36807,7 @@ msgstr "Detalles del servicio"
 #: app/templates/radius/lifecycle.html:6
 msgid "سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي"
 msgstr ""
-"Políticas de retención seguras para cupones y abonados sin eliminación "
-"permanente"
+"Políticas de retención seguras para tarjetas y abonados sin eliminación permanente"
 
 #: app/templates/radius/lifecycle.html:81
 msgid "محفوظة كسياسة، التنفيذ الآلي عند تفعيلها"
@@ -37053,13 +36909,11 @@ msgid ""
 "إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل "
 "عملية تُسجَّل في سجل التدقيق وتتم بأمان."
 msgstr ""
-"Gestión completa de los servicios de autenticación, los abonados, los "
-"cupones y la red desde un solo lugar. Cada operación se registra en el "
-"registro de auditoría y se realiza de forma segura."
+"Gestión completa de los servicios de autenticación, los abonados, las tarjetas y la red desde un solo lugar. Cada operación se registra en el registro de auditoría y se realiza de forma segura."
 
 #: app/templates/radius/login.html:226
 msgid "إدارة المشتركين والكروت"
-msgstr "Gestión de abonados y cupones"
+msgstr "Gestión de abonados y tarjetas"
 
 #: app/templates/radius/login.html:227
 msgid "تحكّم الراوترات والشبكة"
@@ -37106,7 +36960,7 @@ msgstr "Cerrado"
 #: app/templates/radius/mt_alerts_index.html:49
 #: app/templates/radius/mt_problems.html:96
 msgid "كل الشدات"
-msgstr "Todos los planes"
+msgstr "Todas las severidades"
 
 #: app/templates/radius/mt_alerts_index.html:55
 msgid "راوتر (مثلا 42)"
@@ -37636,7 +37490,7 @@ msgstr "Conectados ahora en el router"
 
 #: app/templates/radius/mt_dashboard.html:2241
 msgid "جلسات الكروت"
-msgstr "Sesiones de cupones"
+msgstr "Sesiones de tarjetas"
 
 #: app/templates/radius/mt_dashboard.html:2248
 msgid "متّصلون عبر بطاقات بوابة الدخول"
@@ -37660,7 +37514,7 @@ msgstr "Suscripciones de banda ancha activas"
 
 #: app/templates/radius/mt_dashboard.html:2286
 msgid "بوابة الدخول — جلسات الكروت"
-msgstr "Portal de acceso — Sesiones de cupones"
+msgstr "Portal de acceso — Sesiones de tarjetas"
 
 #: app/templates/radius/mt_dashboard.html:2288
 #: app/templates/radius/mt_dashboard.html:2323
@@ -38391,19 +38245,19 @@ msgstr "Calle principal"
 
 #: app/templates/radius/mt_login_designer.html:1485
 msgid "باقة النخبة"
-msgstr "Paquete Élite"
+msgstr "Plan Élite"
 
 #: app/templates/radius/mt_login_designer.html:1486
 msgid "الباقة الذهبية"
-msgstr "Paquete Oro"
+msgstr "Plan Oro"
 
 #: app/templates/radius/mt_login_designer.html:1487
 msgid "باقة الانطلاق"
-msgstr "Paquete de inicio"
+msgstr "Plan de inicio"
 
 #: app/templates/radius/mt_login_designer.html:1490
 msgid "باقة الألعاب Pro"
-msgstr "Paquete Gaming Pro"
+msgstr "Plan Gaming Pro"
 
 #: app/templates/radius/mt_login_designer.html:1491
 msgid "2 وحدة"
@@ -39703,7 +39557,7 @@ msgstr "Todos los usuarios"
 
 #: app/templates/radius/network_policy_form.html:177
 msgid "النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة."
-msgstr "Los demás planes requieren un permiso de aplicación aparte."
+msgstr "Los demás ámbitos requieren un permiso de aplicación aparte."
 
 #: app/templates/radius/network_policy_form.html:181
 msgid "جدولة الوقت (اختياري)"
@@ -40956,7 +40810,7 @@ msgstr "Días y horas de gracia"
 #: app/templates/radius/plans_form.html:328
 #: app/templates/radius/tenants_form.html:151
 msgid "اسم العرض"
-msgstr "Nombre para mostrar"
+msgstr "Nombre de la oferta"
 
 #: app/templates/radius/plans_form.html:330
 msgid "الاسم الذي يظهر في قوائم العروض وعند المشترك."
@@ -41016,7 +40870,7 @@ msgstr "Servidor DNS de respaldo cuando el principal no esté disponible."
 
 #: app/templates/radius/plans_form.html:391
 msgid "ساعات العرض — من"
-msgstr "Horas de visualización — desde"
+msgstr "Horas de la oferta — desde"
 
 #: app/templates/radius/plans_form.html:393
 msgid "بداية الفترة اليومية التي يُسمح فيها باستخدام العرض."
@@ -41024,7 +40878,7 @@ msgstr "El inicio del intervalo diario durante el cual se permite usar la oferta
 
 #: app/templates/radius/plans_form.html:394
 msgid "ساعات العرض — إلى"
-msgstr "Horas de visualización — hasta"
+msgstr "Horas de la oferta — hasta"
 
 #: app/templates/radius/plans_form.html:396
 msgid "نهاية الفترة اليومية المسموح بها للاستخدام."
@@ -41582,7 +41436,7 @@ msgstr ""
 
 #: app/templates/radius/plans_form.html:783
 msgid "بطاقة مشتركة — جلسة واحدة فعّالة"
-msgstr "Cupón compartido — una sola sesión activa"
+msgstr "Tarjeta compartida — una sola sesión activa"
 
 #: app/templates/radius/plans_form.html:785
 msgid ""
@@ -41590,11 +41444,7 @@ msgid ""
 "يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة "
 "يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد)."
 msgstr ""
-"Una sola sesión activa — el nuevo inicio de sesión desconecta el "
-"anterior. Adecuado para un cupón diario compartido por los clientes de la"
-" tienda uno tras otro: cuando un nuevo usuario inicia sesión con el mismo"
-" cupón, el usuario anterior se desconecta automáticamente. (Se aplica al "
-"iniciar la nueva sesión.)"
+"Una sola sesión activa — el nuevo inicio de sesión desconecta el anterior. Adecuado para una tarjeta diaria compartida por los clientes de la tienda uno tras otro: cuando un nuevo usuario inicia sesión con la misma tarjeta, el usuario anterior se desconecta automáticamente. (Se aplica al iniciar la nueva sesión.)"
 
 #: app/templates/radius/plans_form.html:786
 msgid "ربط MAC"
@@ -42243,8 +42093,7 @@ msgstr "Bienvenido"
 #: app/templates/radius/portal_card.html:552
 msgid "أدخل رقم البطاقة والرقم السري ليُضاف الرصيد لمحفظتك مباشرة."
 msgstr ""
-"Introduce el número del cupón y el PIN para añadir el saldo directamente "
-"a tu billetera."
+"Introduce el número de la tarjeta y el PIN para añadir el saldo directamente a tu billetera."
 
 #: app/templates/radius/portal_card.html:561
 msgid "مثل: 1234567890"
@@ -42272,7 +42121,7 @@ msgstr "Aún no hay operaciones — recarga tu saldo para empezar."
 
 #: app/templates/radius/portal_card.html:614
 msgid "معرض البطاقات"
-msgstr "Galería de cupones"
+msgstr "Galería de tarjetas"
 
 #: app/templates/radius/portal_card.html:615
 msgid "اختر باقة من العروض التالية. تُخصم القيمة من رصيد محفظتك."
@@ -42283,8 +42132,7 @@ msgstr ""
 #: app/templates/radius/portal_card.html:666
 msgid "البطاقات التي اشتريتها. اضغط «دخول تلقائي» للاتصال بشبكة الواي فاي مباشرة."
 msgstr ""
-"Los cupones que compraste. Pulsa «Acceso automático» para conectarte "
-"directamente a la red Wi-Fi."
+"Las tarjetas que compraste. Pulsa «Acceso automático» para conectarte directamente a la red Wi-Fi."
 
 #: app/templates/radius/portal_card.html:712
 msgid "دخول تلقائي"
@@ -42313,7 +42161,7 @@ msgstr "Detalles de la tarjeta"
 
 #: app/templates/radius/portal_card.html:770
 msgid "معلومات كاملة عن هذه البطاقة."
-msgstr "Información completa sobre este cupón."
+msgstr "Información completa sobre esta tarjeta."
 
 #: app/templates/radius/portal_card.html:822
 msgid "سيتم خصم"
@@ -42337,7 +42185,7 @@ msgstr "Su billetera de Internet en sus manos"
 
 #: app/templates/radius/portal_card_login.html:261
 msgid "شحن فوري بقيمة البطاقة"
-msgstr "Recarga instantánea por el valor del cupón"
+msgstr "Recarga instantánea por el valor de la tarjeta"
 
 #: app/templates/radius/portal_card_login.html:265
 msgid "تسوّق الباقات بكل سهولة"
@@ -42609,11 +42457,11 @@ msgstr "Configuración de exportación"
 
 #: app/templates/radius/print_templates.html:590
 msgid "اختر حزمة بطاقات"
-msgstr "Elija un lote de cupones"
+msgstr "Elija un lote de tarjetas"
 
 #: app/templates/radius/print_templates.html:595
 msgid "يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات."
-msgstr "También puedes abrir esta sala desde la página de planes de cupones."
+msgstr "También puedes abrir esta sala desde la página de lotes de tarjetas."
 
 #: app/templates/radius/print_templates.html:601
 msgid ""
@@ -42710,7 +42558,7 @@ msgstr "Ejemplo: 4 horas"
 
 #: app/templates/radius/print_templates.html:681
 msgid "النص أسفل البطاقة"
-msgstr "Texto al pie del cupón"
+msgstr "Texto al pie de la tarjeta"
 
 #: app/templates/radius/print_templates.html:688
 msgid "اختر قالبًا وحزمة أولًا"
@@ -42741,8 +42589,7 @@ msgid ""
 "التصميم مغلق كقطعة واحدة — يكبر ويصغر بدون تشوّه عند تغيير المقاسات أو "
 "عدد البطاقات بالصف"
 msgstr ""
-"El diseño está bloqueado como una sola pieza — se amplía y reduce sin "
-"distorsión al cambiar los tamaños o el número de cupones por fila."
+"El diseño está bloqueado como una sola pieza — se amplía y reduce sin distorsión al cambiar los tamaños o el número de tarjetas por fila."
 
 #: app/templates/radius/print_templates.html:723
 msgid "تصميم مغلق"
@@ -42752,14 +42599,12 @@ msgstr "Plantilla cerrada"
 #: app/templates/radius/print_templates.html:2478
 msgid "اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية"
 msgstr ""
-"Elija una plantilla y un lote para ver los primeros 4 cupones con los "
-"nombres de usuario reales"
+"Elija una plantilla y un lote para ver las primeras 4 tarjetas con los nombres de usuario reales"
 
 #: app/templates/radius/print_templates.html:730
 msgid "لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة."
 msgstr ""
-"Aún no se ha seleccionado ningún cupón. Haz clic en una plantilla a la "
-"izquierda, luego elige un lote."
+"Aún no se ha seleccionado ninguna tarjeta. Haz clic en una plantilla a la izquierda, luego elige un lote."
 
 #: app/templates/radius/print_templates.html:740
 msgid "اختر قالبًا محفوظًا"
@@ -42803,7 +42648,7 @@ msgstr "Editor de plantilla"
 
 #: app/templates/radius/print_templates.html:867
 msgid "مثال: بطاقات رمضان — 4 ساعات"
-msgstr "Ejemplo: cupones de Ramadán — 4 horas"
+msgstr "Ejemplo: tarjetas de Ramadán — 4 horas"
 
 #: app/templates/radius/print_templates.html:876
 msgid "اختيار نظام التصميم"
@@ -42820,8 +42665,7 @@ msgstr "Elija el modo de diseño"
 #: app/templates/radius/print_templates.html:909
 msgid "اختيار سريع قبل القوالب: اللغة + الاتجاه + شكل البطاقة."
 msgstr ""
-"Una selección rápida antes de las plantillas: idioma + dirección + "
-"formato del cupón."
+"Una selección rápida antes de las plantillas: idioma + dirección + formato de la tarjeta."
 
 #: app/templates/radius/print_templates.html:911
 msgid "اختيار محرك التصميم"
@@ -42872,9 +42716,7 @@ msgid ""
 "هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة "
 "كاملًا، والإنجليزي يبقى يسار إلى يمين."
 msgstr ""
-"Esta elección fija el idioma, la dirección y el diseño a la vez. El árabe"
-" invierte por completo el diseño del cupón, mientras que el inglés se "
-"mantiene de izquierda a derecha."
+"Esta elección fija el idioma, la dirección y el diseño a la vez. El árabe invierte por completo el diseño de la tarjeta, mientras que el inglés se mantiene de izquierda a derecha."
 
 #: app/templates/radius/print_templates.html:945
 msgid "اختيار قالب جاهز"
@@ -42896,7 +42738,7 @@ msgstr "Plantillas predefinidas"
 
 #: app/templates/radius/print_templates.html:980
 msgid "اتجاه الكرت"
-msgstr "Orientación del cupón"
+msgstr "Orientación de la tarjeta"
 
 #: app/templates/radius/print_templates.html:992
 msgid "بداية الخلفية"
@@ -43144,7 +42986,7 @@ msgstr ""
 
 #: app/templates/radius/print_templates.html:1150
 msgid "نص أسفل البطاقة"
-msgstr "Texto del pie del cupón"
+msgstr "Texto del pie de la tarjeta"
 
 #: app/templates/radius/print_templates.html:1153
 msgid "تعليمات الاستخدام"
@@ -43159,12 +43001,11 @@ msgid ""
 "هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز "
 "التصدير."
 msgstr ""
-"Estos valores solo afectan al formato del cupón; la disposición de la "
-"hoja y los márgenes están en el centro de exportación."
+"Estos valores solo afectan al formato de la tarjeta; la disposición de la hoja y los márgenes están en el centro de exportación."
 
 #: app/templates/radius/print_templates.html:1193
 msgid "حقول البطاقة"
-msgstr "Campos del cupón"
+msgstr "Campos de la tarjeta"
 
 #: app/templates/radius/print_templates.html:1202
 msgid "حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة."
@@ -43226,7 +43067,7 @@ msgstr "Fondo del QR"
 
 #: app/templates/radius/print_templates.html:1257
 msgid "معاينة البطاقة"
-msgstr "Vista previa del cupón"
+msgstr "Vista previa de la tarjeta"
 
 #: app/templates/radius/print_templates.html:1264
 msgid "أقسام المحرر"
@@ -43286,7 +43127,7 @@ msgstr "No se pudo leer el archivo. Inténtelo de nuevo."
 #: app/templates/radius/print_templates.html:2355
 #: app/templates/radius/print_templates.html:2455
 msgid "تصدير PDF للحزمة المختارة"
-msgstr "Exportar PDF del paquete seleccionado"
+msgstr "Exportar PDF del lote seleccionado"
 
 #: app/templates/radius/print_templates.html:2355
 msgid "اختر حزمة من غرفة التصدير"
@@ -43312,7 +43153,7 @@ msgstr ""
 
 #: app/templates/radius/print_templates.html:2484
 msgid "جاري جلب أول ٤ بطاقات من الحزمة..."
-msgstr "Obteniendo las primeras 4 tarjetas del paquete..."
+msgstr "Obteniendo las primeras 4 tarjetas del lote..."
 
 #: app/templates/radius/print_templates.html:2485
 msgid "اختر حزمة لمعاينة بيانات حقيقية."
@@ -43320,7 +43161,7 @@ msgstr "Seleccione un lote para previsualizar datos reales."
 
 #: app/templates/radius/print_templates.html:2501
 msgid "معاينة فعلية من بطاقات الحزمة المختارة."
-msgstr "Vista previa real de las tarjetas del paquete seleccionado."
+msgstr "Vista previa real de las tarjetas del lote seleccionado."
 
 #: app/templates/radius/print_templates.html:2502
 msgid "اختر حزمة لاستبدال البطاقات بعينة فعلية."
@@ -43332,7 +43173,7 @@ msgstr "No se pudo obtener la vista previa"
 
 #: app/templates/radius/print_templates.html:2521
 msgid "تم اختيار الحزمة."
-msgstr "Paquete seleccionado."
+msgstr "Lote seleccionado."
 
 #: app/templates/radius/print_templates.html:2546
 msgid "تم اختيار القالب."
@@ -43352,15 +43193,15 @@ msgstr "Preparando PDF"
 
 #: app/templates/radius/print_templates.html:2573
 msgid "الحزمة المختارة"
-msgstr "Paquete seleccionado"
+msgstr "Lote seleccionado"
 
 #: app/templates/radius/print_templates.html:2576
 msgid "تثبيت الحزمة والقالب"
-msgstr "Fijar el paquete y la plantilla"
+msgstr "Fijar el lote y la plantilla"
 
 #: app/templates/radius/print_templates.html:2577
 msgid "قراءة بطاقات الحزمة من قاعدة البيانات"
-msgstr "Leer las tarjetas del paquete desde la base de datos"
+msgstr "Leer las tarjetas del lote desde la base de datos"
 
 #: app/templates/radius/print_templates.html:2578
 msgid "إعادة استخدام خلفية التصميم الثابتة"
@@ -43834,7 +43675,7 @@ msgstr "Última factura"
 
 #: app/templates/radius/recharge_panel.html:315
 msgid "تفعيل بالكارت"
-msgstr "Activar con cupón"
+msgstr "Activar con tarjeta"
 
 #: app/templates/radius/recharge_panel.html:318
 msgid "قريباً"
@@ -43901,7 +43742,7 @@ msgstr "Oferta más barata — mantener la expiración"
 
 #: app/templates/radius/recharge_panel.html:383
 msgid "عرض أغلى — تسجيل فرق دين"
-msgstr "Plan más caro — registrar diferencia de deuda"
+msgstr "Oferta más cara — registrar diferencia de deuda"
 
 #: app/templates/radius/recharge_panel.html:384
 msgid "عرض أغلى — إنقاص الأيام"
@@ -43973,7 +43814,7 @@ msgstr "Sin pagos anteriores"
 
 #: app/templates/radius/recharge_panel.html:624
 msgid "تجديد نفس الباقة"
-msgstr "Renovar el mismo paquete"
+msgstr "Renovar el mismo plan"
 
 #: app/templates/radius/recharge_panel.html:624
 msgid "تفعيل بالوقت"
@@ -44625,7 +44466,7 @@ msgstr "Buscar (operador / acción / objetivo / texto de error)…"
 
 #: app/templates/radius/rep_subscriber_consumption.html:167
 msgid "بحث باسم المستخدم/الاسم/الجوال/الحزمة..."
-msgstr "Buscar por nombre de usuario/nombre/móvil/paquete..."
+msgstr "Buscar por nombre de usuario/nombre/móvil/lote..."
 
 #: app/templates/radius/rep_subscriber_consumption.html:201
 msgid "من تاريخ (مخصّص)"
@@ -44677,7 +44518,7 @@ msgstr "No hay datos de consumo para este tipo en el período seleccionado."
 
 #: app/templates/radius/rep_subscriber_consumption.html:305
 msgid "الاسم / الحزمة"
-msgstr "Nombre / Paquete"
+msgstr "Nombre / Lote"
 
 #: app/templates/radius/rep_used_cards.html:48
 msgid "بحث (اسم الكرت / عنوان الجهاز)…"
@@ -44685,7 +44526,7 @@ msgstr "Buscar (nombre de la tarjeta / dirección del dispositivo)…"
 
 #: app/templates/radius/rep_used_cards.html:73
 msgid "اسم الكرت"
-msgstr "Nombre del cupón"
+msgstr "Nombre de la tarjeta"
 
 #: app/templates/radius/rep_used_cards.html:76
 msgid "عنوان الجهاز"
@@ -44785,7 +44626,7 @@ msgstr "Usuarios conectados"
 
 #: app/templates/radius/reports_center.html:111
 msgid "البطاقات غير المستخدمة"
-msgstr "Cupones sin usar"
+msgstr "Tarjetas sin usar"
 
 #: app/templates/radius/reports_center.html:140
 msgid "هذه الأرقام مشتقة من المعاملات المسجّلة فقط"
@@ -45415,8 +45256,7 @@ msgid ""
 "عصب الموقع — هوية النظام والمالية والوقت والكروت والتكاملات في صفحة واحدة"
 " منظمة"
 msgstr ""
-"El núcleo del sitio: identidad del sistema, finanzas, hora, cupones e "
-"integraciones en una sola página organizada"
+"El núcleo del sitio: identidad del sistema, finanzas, hora, tarjetas e integraciones en una sola página organizada"
 
 #: app/templates/radius/settings_page.html:290
 msgid "مجموعات الإعدادات"
@@ -45569,7 +45409,7 @@ msgstr ""
 
 #: app/templates/radius/settings_page.html:476
 msgid "المشتركون والوصول والعرض"
-msgstr "Abonados, Acceso y Plan"
+msgstr "Abonados, Acceso y Visualización"
 
 #: app/templates/radius/settings_page.html:477
 msgid "سلوك الحسابات وتنبيهات الاستهلاك وعرض الجداول"
@@ -45608,9 +45448,7 @@ msgid ""
 "مفتاح مستقل تمامًا عن البطاقات. عند التفعيل تُرفض مصادقة المشترك إذا كان "
 "جهازه يستخدم عنوان MAC عشوائي/خاص."
 msgstr ""
-"Un interruptor totalmente independiente de los cupones. Cuando está "
-"activado, se rechaza la autenticación del abonado si su dispositivo usa "
-"una dirección MAC aleatoria/privada."
+"Un interruptor totalmente independiente de las tarjetas. Cuando está activado, se rechaza la autenticación del abonado si su dispositivo usa una dirección MAC aleatoria/privada."
 
 #: app/templates/radius/settings_page.html:538
 msgid "صفحة المشترك — ما يراه العميل ويفعله"
@@ -45630,7 +45468,7 @@ msgstr "Valores predeterminados al generar lotes de tarjetas"
 
 #: app/templates/radius/settings_page.html:595
 msgid "طول اسم البطاقة الافتراضي"
-msgstr "Longitud predeterminada del nombre del cupón"
+msgstr "Longitud predeterminada del nombre de la tarjeta"
 
 #: app/templates/radius/settings_page.html:598
 #: app/templates/radius/settings_page.html:607
@@ -45642,9 +45480,7 @@ msgid ""
 "عدد الخانات الافتراضي لاسم المستخدم عند توليد كروت جديدة. طول أكبر = أمان"
 " أعلى وكتابة أصعب على العميل."
 msgstr ""
-"La longitud predeterminada del nombre de usuario al generar nuevos "
-"cupones. Una longitud mayor = mayor seguridad y escritura más difícil "
-"para el cliente."
+"La longitud predeterminada del nombre de usuario al generar nuevas tarjetas. Una longitud mayor = mayor seguridad y escritura más difícil para el cliente."
 
 #: app/templates/radius/settings_page.html:604
 msgid "طول كلمة مرور البطاقة الافتراضي"
@@ -45655,17 +45491,14 @@ msgid ""
 "عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في "
 "صفحة توليد الكروت."
 msgstr ""
-"La longitud de contraseña predeterminada para los cupones generados. Se "
-"puede anular manualmente en la página de generación de cupones."
+"La longitud de contraseña predeterminada para las tarjetas generadas. Se puede anular manualmente en la página de generación de tarjetas."
 
 #: app/templates/radius/settings_page.html:621
 msgid ""
 "مفتاح مستقل تمامًا عن المشتركين. عند التفعيل تُرفض مصادقة البطاقة إذا كان"
 " جهازها يستخدم عنوان MAC عشوائي/خاص."
 msgstr ""
-"Un interruptor totalmente independiente de los abonados. Cuando está "
-"activado, se rechaza la autenticación del cupón si su dispositivo usa una"
-" dirección MAC aleatoria/privada."
+"Un interruptor totalmente independiente de los abonados. Cuando está activado, se rechaza la autenticación de la tarjeta si su dispositivo usa una dirección MAC aleatoria/privada."
 
 #: app/templates/radius/settings_page.html:642
 msgid "إعدادات متقدمة — API والبنية التحتية"
@@ -45688,13 +45521,11 @@ msgid ""
 "يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة "
 "واحدة ويُستخدم في كل التصاميم تلقائيًا."
 msgstr ""
-"Activa los enlaces de la tienda electrónica de cupones en las páginas "
-"hotspot — se configura una vez y se usa automáticamente en todos los "
-"diseños."
+"Activa los enlaces de la tienda electrónica de tarjetas en las páginas hotspot — se configura una vez y se usa automáticamente en todos los diseños."
 
 #: app/templates/radius/settings_page.html:671
 msgid "مفتاح متجر البطاقات (App Key)"
-msgstr "Clave de la tienda de cupones (App Key)"
+msgstr "Clave de la tienda de tarjetas (App Key)"
 
 #: app/templates/radius/settings_page.html:679
 msgid "توليد مفتاح جديد"
@@ -46168,7 +45999,7 @@ msgstr "Túnel seguro y RADIUS"
 
 #: app/templates/radius/setup_wizard.html:266
 msgid "الهوتسبوت والكروت"
-msgstr "Hotspot y cupones"
+msgstr "Hotspot y tarjetas"
 
 #: app/templates/radius/setup_wizard.html:267
 msgid "البرودباند وPPPoE"
@@ -47140,7 +46971,7 @@ msgstr ""
 
 #: app/templates/radius/setup_wizard_v2.html:654
 msgid "بوابة تسجيل دخول لكروت الإنترنت المؤقتة."
-msgstr "Portal de acceso para cupones de internet temporales."
+msgstr "Portal de acceso para tarjetas de internet temporales."
 
 #: app/templates/radius/setup_wizard_v2.html:655
 msgid "موصى به للكافيهات والفنادق ومناطق الواي فاي."
@@ -50335,7 +50166,7 @@ msgstr "Enviar SMS"
 #: app/templates/radius/users_list.html:770
 #: app/templates/radius/users_list.html:1165
 msgid "تغيير العرض"
-msgstr "Cambiar vista"
+msgstr "Cambiar oferta"
 
 #: app/templates/radius/users_list.html:814
 msgid "حذف المحدد ("
@@ -50367,7 +50198,7 @@ msgstr "Enviar mensaje de activación"
 
 #: app/templates/radius/users_list.html:1061
 msgid "تغيير العرض / السرعة"
-msgstr "Cambiar el ancho de banda / la velocidad"
+msgstr "Cambiar la oferta / la velocidad"
 
 #: app/templates/radius/users_list.html:1079
 msgid "أرشفة المشترك"
@@ -50375,7 +50206,7 @@ msgstr "Archivar abonado"
 
 #: app/templates/radius/users_list.html:1110
 msgid "تغيير العرض للمشترك"
-msgstr "Cambiar el plan del abonado"
+msgstr "Cambiar la oferta del abonado"
 
 #: app/templates/radius/users_list.html:1118
 #: app/templates/radius/users_list.html:1186
@@ -50387,7 +50218,8 @@ msgstr "Oferta actual"
 
 #: app/templates/radius/users_list.html:1131
 msgid "اختر عرضًا جديدًا لعرض خيارات التعويض أو الدين."
-msgstr "Elige un nuevo plan para mostrar las opciones de compensación o deuda."
+msgstr ""
+"Elige una nueva oferta para mostrar las opciones de compensación o deuda."
 
 #: app/templates/radius/users_list.html:1135
 msgid "تعويض أيام إضافية"
@@ -50401,7 +50233,7 @@ msgstr ""
 
 #: app/templates/radius/users_list.html:1139
 msgid "تغيير العرض بدون تعويض"
-msgstr "Cambiar el ancho de banda sin compensación"
+msgstr "Cambiar la oferta sin compensación"
 
 #: app/templates/radius/users_list.html:1139
 msgid "يتم تغيير العرض فقط مع بقاء تاريخ الانتهاء الحالي كما هو."
@@ -50431,7 +50263,7 @@ msgstr ""
 
 #: app/templates/radius/users_list.html:1153
 msgid "تغيير العرض بدون دين أو إنقاص أيام"
-msgstr "Cambiar el plan sin deuda ni reducción de días"
+msgstr "Cambiar la oferta sin deuda ni reducción de días"
 
 #: app/templates/radius/users_list.html:1153
 msgid "تغيير إداري مباشر للعرض فقط مع بقاء تاريخ الانتهاء كما هو."
@@ -50441,7 +50273,7 @@ msgstr ""
 
 #: app/templates/radius/users_list.html:1159
 msgid "تغيير العرض فقط"
-msgstr "Cambiar solo la visualización"
+msgstr "Cambiar solo la oferta"
 
 #: app/templates/radius/users_list.html:1159
 msgid "يستخدم عندما يكون السعر مساويًا أو لا تتوفر بيانات كافية للتعويض."
@@ -50702,7 +50534,7 @@ msgstr "Su precio personalizado"
 
 #: app/templates/radius/users_list.html:1762
 msgid "سعر باقته الحالية"
-msgstr "Precio de su paquete actual"
+msgstr "Precio de su plan actual"
 
 #: app/templates/radius/users_list.html:1773
 #: app/templates/radius/users_list.html:1915
@@ -51264,7 +51096,7 @@ msgstr "Abrir registro de envíos"
 
 #: app/templates/radius/wh_settings.html:160
 msgid "دفعة جديدة"
-msgstr "Nuevo lote"
+msgstr "Nuevo pago"
 
 #: app/templates/radius/wh_settings.html:161
 msgid "تجديد اشتراك"
@@ -51272,7 +51104,7 @@ msgstr "Renovar suscripción"
 
 #: app/templates/radius/wh_settings.html:162
 msgid "إنشاء كرت"
-msgstr "Crear cupón"
+msgstr "Crear tarjeta"
 
 #: app/templates/radius/wh_settings.html:163
 msgid "تعطيل مشترك"
@@ -51600,7 +51432,7 @@ msgstr "Rango de direcciones interno"
 
 #: app/templates/radius/svc_partials/hotspot.html:160
 msgid "توليد نطاق عشوائي آمن"
-msgstr "Generar un plan aleatorio seguro"
+msgstr "Generar un rango aleatorio seguro"
 
 #: app/templates/radius/svc_partials/open-sites.html:5
 msgid "فتح المواقع (قبل تسجيل الدخول)"
@@ -52257,7 +52089,7 @@ msgid "معالج الإعداد الذكي"
 msgstr "Asistente de configuración inteligente"
 
 msgid "ملف العرض"
-msgstr "Ficha de la oferta"
+msgstr "Archivo de la oferta"
 
 msgid "ملف المشترك"
 msgstr "Perfil del abonado"
@@ -52458,7 +52290,7 @@ msgid "تفاصيل التنبيه"
 msgstr "Detalles de la alerta"
 
 msgid "تفاصيل الدفعة المالية — Hobe Hub"
-msgstr "Detalles del pago — Hobe Hub"
+msgstr "Detalles del lote financiero — Hobe Hub"
 
 msgid "تقرير الجلسات"
 msgstr "Informe de sesiones"
@@ -52966,7 +52798,7 @@ msgid "عتبات الاستهلاك التي تطلق تنبيهات الكوت
 msgstr "Umbrales de consumo que activan alertas de cuota para los abonados (CSV). Ejemplo: 80,95,100 = alerta al 80 %% luego 95 %% luego 100 %%."
 
 msgid "عروض البطاقات"
-msgstr "Ofertas de cupones"
+msgstr "Ofertas de tarjetas"
 
 msgid "إدارة البيانات"
 msgstr "Gestión de datos"
@@ -52984,16 +52816,16 @@ msgid "أحداث النظام"
 msgstr "Eventos del sistema"
 
 msgid "حركات مشتركي سوق البطاقات"
-msgstr "Actividad de clientes de la tienda"
+msgstr "Actividad de clientes de la tienda de tarjetas"
 
 msgid "سجل حركات مشتركي سوق البطاقات"
-msgstr "Registro de actividad de clientes de la tienda"
+msgstr "Registro de actividad de clientes de la tienda de tarjetas"
 
 msgid "تعديل باقات المشتركين"
 msgstr "Cambios de plan de suscriptores"
 
 msgid "الكروت المستخدمة"
-msgstr "Cupones usados"
+msgstr "Tarjetas usadas"
 
 msgid "سجل الإشعارات"
 msgstr "Registro de notificaciones"
@@ -53029,13 +52861,14 @@ msgid "إجمالي مبيعات اليوم"
 msgstr "Ventas totales de hoy"
 
 msgid "البطاقات التي بيعت اليوم (أوّل دخول) وقيمتها لكلّ عملة — بتوقيت اللوحة المحلّيّ."
-msgstr "Cupones vendidos hoy (primer inicio de sesión) y su valor por moneda — en la hora local del panel."
+msgstr ""
+"Tarjetas vendidas hoy (primer inicio de sesión) y su valor por moneda — en la hora local del panel."
 
 msgid "عدد البطاقات المباعة"
-msgstr "Cupones vendidos"
+msgstr "Tarjetas vendidas"
 
 msgid "قيمة البطاقات"
-msgstr "Valor de los cupones"
+msgstr "Valor de las tarjetas"
 
 msgid "تقرير المبيعات اليوميّة"
 msgstr "Informe de ventas diarias"
@@ -53059,13 +52892,13 @@ msgid "نوع الحدث"
 msgstr "Tipo de evento"
 
 msgid "شحن بطاقة"
-msgstr "Recarga con cupón"
+msgstr "Recarga de tarjeta"
 
 msgid "العميل"
 msgstr "Cliente"
 
 msgid "دليل: عروض البطاقات — كيف تستخدمني"
-msgstr "Guía: ofertas de cupones — cómo usarme"
+msgstr "Guía: ofertas de tarjetas — cómo usarme"
 
 msgid "دليل: التحكّم الحيّ CoA وتغيير عنوان IP — كيف تستخدمني"
 msgstr "Guía: control CoA en vivo y cambio de IP — cómo usarme"
