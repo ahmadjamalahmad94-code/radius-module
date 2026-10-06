@@ -117,7 +117,6 @@
   .pl-section--days  .pl-section-icon{ background: #CFFAFE; color: #155E75; }
   .pl-section--biz   { border-inline-start: 3px solid var(--hub-amber); }
   .pl-section--biz   .pl-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
-  .pl-section--adv   { border-inline-start: 3px solid var(--hub-text-mute); }
 
   /* Grid */
   .pl-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
@@ -296,7 +295,6 @@
       <a href="#pl-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</a>
       <a href="#pl-quota"><i class="fa-solid fa-clock"></i> {{ _('الكوتا والوقت') }}</a>
       <a href="#pl-subs"><i class="fa-solid fa-handshake"></i> {{ _('الاشتراك والسلوك') }}</a>
-      <a href="#pl-adv"><i class="fa-solid fa-sliders"></i> {{ _('سياسات التجديد') }}</a>
       <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة والراوترات') }}</a>
       <a href="#pl-days"><i class="fa-solid fa-calendar-days"></i> {{ _('أيام وساعات السماح') }}</a>
       <a href="#pl-biz"><i class="fa-solid fa-coins"></i> {{ _('تجاري') }}</a>
@@ -613,22 +611,9 @@
       </div>
     </section>
 
-    {# 6. Advanced — التوفّر. أُزيلت سياسات التجديد التلقائيّ/انتهاء الوقت/«متاح لـ»
-       (قرار المالك 2026-10-06: لا يقرؤها شيء). #}
-    <section class="pl-section pl-section--adv is-collapsible is-collapsed" data-sec="adv" id="pl-adv">
-      <header class="pl-section-head">
-        <span class="pl-section-icon"><i class="fa-solid fa-sliders"></i></span>
-        <span class="pl-section-title">{{ _('سياسات التجديد والتوفر') }}</span>
-        <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
-      </header>
-      <div class="pl-section-body">
-        <div class="pl-grid">
-          <div class="pl-field"><label>{{ _('كل الأيام') }}</label>
-            <div class="pl-chk">{{ toggle_switch(name="all_days", checked=(plan.all_days in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">{{ _('السماح باستخدام الباقة في جميع أيام الأسبوع.') }}</div></div>
-        </div>
-      </div>
-    </section>
+    {# 6. «سياسات التجديد والتوفر» أُزيل كلّه — آخر حقوله «كل الأيام» حُذف بقرار
+       المالك (متابعة 2026-10-06): لم يقرأه شيء (الأيام المسموحة = «أيام وساعات
+       السماح» أدناه). القيمة القديمة تبقى في metadata بلا مساس. #}
 
     {# 7. Network and routers #}
     <section class="pl-section pl-section--mt is-collapsible is-collapsed" data-sec="mt" id="pl-mt">

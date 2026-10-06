@@ -94,6 +94,8 @@ _IGNORED_FIELDS = (
     "speed_control_enabled", "vlan_id", "bind_mac", "bind_ip",
     "force_mac_address", "speed_override_allowed", "allowed_devices_count",
     "plan_tier",
+    # «كل الأيام» — أُزيل (متابعة 2026-10-06): لم يُقرأ؛ الأيام = allowed_days.
+    "all_days",
     # العلَم القديم auto_renew صار مرآةً لـ auto_renew_mode (يُشتقّ منه) — نسخ
     # التطبيق القديمة ترسله دائمًا بقيمته المحمَّلة فلا يُغيِّر النمط.
     "auto_renew",
