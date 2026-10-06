@@ -199,9 +199,13 @@ def test_web_resave_without_changes_keeps_unrendered_fields(client):
     assert after["allowed_days"] == ["mon", "tue"]
     assert (after["allowed_hours_from"], after["allowed_hours_to"]) == ("08:00", "20:00")
     assert (after["quota_daily_mb"], after["quota_monthly_mb"]) == (500, 9000)
-    assert after["allowed_devices_count"] == 3 and after["force_mac_address"] is True
-    assert after["plan_tier"] == "Business"
-    assert after["prepaid"] is False and after["auto_renew"] is True
+    # allowed_devices_count / force_mac_address / plan_tier / auto_renew: removed
+    # from every form (owner 2026-10-06) — the API ignores them; whatever is
+    # stored survives a web re-save untouched.
+    for k in ("allowed_devices_count", "force_mac_address", "plan_tier",
+              "auto_renew", "auto_renew_mode"):
+        assert after[k] == before[k], k
+    assert after["prepaid"] is False
     assert (after["price_card"], after["price_bulk"]) == (7, 5)
     assert after["ppp_enabled"] is True and after["service_scope"] == "both"
     assert (after["duration_value"], after["duration_unit"]) == (10, "Hrs")
@@ -214,16 +218,16 @@ def test_web_form_edits_still_apply_and_meta_field_can_be_cleared(client):
     pid = _create_api(client)["id"]
     _web_login(client)
     fields = _edit_form(client, pid)
-    fields = _set(fields, "mikrotik_user_group", "grpA")
+    fields = _set(fields, "primary_dns_ppp", "1.1.1.1")
     fields = _set(fields, "speed_down_kbps", "8000")
     _post_form(client, pid, fields)
     d = _api_get(client, pid)
     assert d["speed_down_kbps"] == 8000
-    assert d["metadata"]["mikrotik"]["mikrotik_user_group"] == "grpA"
+    assert d["metadata"]["general"]["primary_dns_ppp"] == "1.1.1.1"
     # clear it again from the form → removed, unknown keys kept
-    _post_form(client, pid, _set(_edit_form(client, pid), "mikrotik_user_group", ""))
+    _post_form(client, pid, _set(_edit_form(client, pid), "primary_dns_ppp", ""))
     d = _api_get(client, pid)
-    assert "mikrotik_user_group" not in d["metadata"].get("mikrotik", {})
+    assert "primary_dns_ppp" not in d["metadata"].get("general", {})
     assert d["metadata"]["subscription"]["x_custom"] == "1"
     assert d["metadata"]["app_only"] == {"k": "v"}
     # service cards: untick «هوت سبوت» → PPPoE, derived flags follow

@@ -121,7 +121,7 @@ def test_editing_copy_does_not_affect_original(app):
         dup = svc.clone(actor="root", plan_id=src.id)
 
         svc.update(actor="root", plan=replace(
-            dup, price=99.0, speed_down_kbps=99999, description="نسخة مُعدَّلة"))
+            dup, price=99.0, speed_down_kbps=5000, description="نسخة مُعدَّلة"))
 
         original = svc.get(src.id)
         assert original.price == 9.5
