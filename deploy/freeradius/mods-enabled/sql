@@ -151,7 +151,7 @@ sql {
     #
     # B-14 — TENANT (security fix, 2026-10-05): every row is written for the
     #   tenant that owns the router, derived from Packet-Src-IP-Address
-    #   through the views of migration 196 (radius_source_tenant: tunnel /
+    #   through the views of migration 201 (radius_source_tenant: tunnel /
     #   public address of a live router → its tenant; radius_sole_tenant:
     #   the only tenant of a single-network server). It used to be the
     #   literal 1, so tenant 1 saw every network's sessions. A packet no
@@ -159,7 +159,7 @@ sql {
     #   goes to radius_unattributed instead — never to tenant 1. All UPDATEs
     #   are scoped to the owning tenant, so a reused NAS address cannot touch
     #   another tenant's rows. Same rule in Flask: services/nas_tenant.py.
-    #   Server-local sources (migration 197, radius_local_nas — operator
+    #   Server-local sources (migration 202, radius_local_nas — operator
     #   only): the host's accel-ppp gateway / loopback tooling are attributed
     #   only through that explicit registry ('nas' → its tenant, 'mgmt' →
     #   quarantine as local_mgmt, 'probe' → nothing written, still ACKed). A

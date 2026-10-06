@@ -11,7 +11,7 @@ read-only-scope fix `b38258a4`). Base comparisons used a detached worktree at
 | # | Branch (tip) | Merge commit | Conflicts | Sec tests after merge¹ |
 |---|---|---|---|---|
 | 1 | `agent/sec-fixes-app` (`a58b8138`) — B-04, B-06, B-07, B-08, B-13 | `c6e7e2ba` | none | 110 passed |
-| 2 | `agent/sec-fix-b14` (`153b615d`) — RADIUS tenant attribution, migration 196 | `7c3fb128` | none (`internal_auth.py` auto-merged with B-08) | 131 passed |
+| 2 | `agent/sec-fix-b14` (`153b615d`) — RADIUS tenant attribution, migration 201 | `7c3fb128` | none (`internal_auth.py` auto-merged with B-08) | 131 passed |
 | 3 | `agent/sec-fix-b22-radius` (`5c5f74c2`) — signed `owner_admins` | `8cfb9323` | none | 142 passed |
 | 4 | `agent/sec-fix-f1-mtdash` (`46c55f6c`) — no env token in MikroTik pages | `bf8fba8c` | none | 151 passed |
 | 5 | `agent/sec-fix-f3-secret` (`2aacf3f6`) — template values are weak secrets | `45cc5149` | none | 168 passed |
@@ -55,7 +55,7 @@ in the F-1 branch.
 | **B-06 × F-5** | Fresh production install: the bootstrap admin is owner through the min-id fallback (`is_primary_owner`), so B-06 still lets him into a tenant; then the web forces the password change. Verified by `test_bootstrap_admin_web_login_lands_in_tenant_then_forced_change`. Even if he were not owner-level, both login paths bootstrap a default-tenant membership, so no lock-out. |
 | **F-5 API gap (pre-existing, sharper now)** | `POST /api/admin/login` and HTTP Basic ignore `must_change_password` and do not expose it in the response, so the one-time password (and identity-sync initial passwords) keeps working on the API forever. Recorded as strict xfail; **owner decision**: refuse with a dedicated error, or return the flag and let the app force the change (app change). Not fixed here — changes the mobile-app contract. |
 | **B-22 × B-06 × F-5** | B-06 makes owner-level depend on `is_owner_like` → owner designation. B-22 refuses unsigned `owner_admins`: the current designation (or the min-id fallback) stays. Fail-safe: nobody loses access; new designations stall until the panel signs. Hence panel B-22 first. |
-| **B-14 migration number** | Only new migration is `196_sec_b14_radius_source_tenant.sql`; no other local branch (all `refs/heads` scanned) has a 196+ file. Pre-existing duplicate prefixes `027`, `085`, `164` are distinct filenames (runner keys by filename) — unchanged. |
+| **B-14 migration number** | Only new migration was `201_sec_b14_radius_source_tenant.sql`; at the time no other local branch had a 196+ file. Later `agent/round6-base` took 196–200, so B-14 was renumbered to `201_sec_b14_radius_source_tenant.sql` / `202_sec_b14_radius_local_nas.sql` (never deployed under the old numbers). Pre-existing duplicate prefixes `027`, `085`, `164` are distinct filenames (runner keys by filename) — unchanged. |
 | **B-14 × FreeRADIUS** | `mods-enabled/sql` reads the views `radius_source_tenant` / `radius_sole_tenant` and writes `radius_unattributed` — they must exist **before** radiusd loads the new config, i.e. the app (which runs migrations at boot) must start first. `radiusd -XC` could not be run here (no FreeRADIUS binary on this machine). |
 | **B-14 × B-08** | Same file, separate endpoints; diag stays body-tenant + secret-gated. OK. |
 | **F-3 × test fixtures** | 45 distinct `FLASK_SECRET` literals in `tests/` — none is weak under the new policy; the 5 test files that boot production use strong values. No fixture breaks. |
@@ -123,9 +123,9 @@ remaining files; every listed file has exactly one result.)
    `HOBERADIUS_ENV=production` (+ `HOBERADIUS_SESSION_COOKIE_SECURE=0` on plain-HTTP
    panels); for new VPS: a strong `HOBERADIUS_BOOTSTRAP_ADMIN_PASS` or read
    `initial_admin_credentials.txt` and delete it after first login.
-4. Backup DB → start the **app** container (applies migration 196) → check
-   `_migrations` has `196_sec_b14_radius_source_tenant.sql` → then restart
-   **freeradius** (it needs the 196 views).
+4. Backup DB → start the **app** container (applies migration 201) → check
+   `_migrations` has `201_sec_b14_radius_source_tenant.sql` → then restart
+   **freeradius** (it needs the 201 views).
 5. Smoke: web login (owner + a tenant manager), MikroTik dashboard counters
    (F-1 token `login:ui-mt:*`), a RADIUS Access-Accept from a known router,
    `radius_unattributed` empty on single-tenant servers, logs free of
@@ -141,7 +141,7 @@ remaining files; every listed file has exactly one result.)
   a boot loop); B-08 → `HOBERADIUS_DIAG_ENABLED` unset (endpoint off).
 * **Code:** redeploy the previous image (`agent/sec-integration`-based). All
   fixes are code-only except B-14.
-* **B-14 schema:** migration 196 only adds two views and one table — harmless to
+* **B-14 schema:** migration 201 only adds two views and one table — harmless to
   the old code, leave them in place. The **old** `mods-enabled/sql`/`rest` must go
   back together with the old image (the new sql config needs the views but the
   old one does not reference them). If the backfill was applied, roll it back with

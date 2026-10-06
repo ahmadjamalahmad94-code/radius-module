@@ -408,7 +408,7 @@ def test_python_resolver_agrees_with_the_freeradius_expression(two_networks):
     from app.radius.services.nas_tenant import resolve_source_tenant
     _add_nas(1, "c1", address="10.10.0.80")
     _add_nas(2, "c2", address="10.10.0.80")
-    # (migration 197: the only-tenant fallback now excludes registered local
+    # (migration 202: the only-tenant fallback now excludes registered local
     #  sources, so the expression ends after that sub-select)
     expr = re.search(r"(COALESCE\(\(SELECT tenant_id FROM radius_source_tenant.*?"
                      r"radius_sole_tenant.*?radius_local_nas WHERE ip = "

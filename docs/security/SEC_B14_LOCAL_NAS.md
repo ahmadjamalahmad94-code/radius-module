@@ -1,7 +1,7 @@
 # SEC B-14 follow-up: server-local RADIUS sources
 
 Branch `agent/sec-b14-local-nas`, based on `release/security-rc1` (9f0ca2b7). Local only: nothing pushed or deployed.
-Builds on `SEC_FIX_B14.md` (migration 196, `services/nas_tenant.py`).
+Builds on `SEC_FIX_B14.md` (migration 201, `services/nas_tenant.py`).
 
 ## 1. What the pre-deploy detection found (client20, 2026-10-06, read-only)
 
@@ -20,9 +20,9 @@ Also noticed: client20's `nas_devices` id 1 (`MT-HQ-Core`) has `address = 10.10.
 ## 2. The two problems
 
 1. **Fail-closed hits the server itself.** On a multi-network server, B-14 rejects and quarantines every source that no live router row claims. That includes the host's accel-ppp gateway and anything on loopback. Data-connection subscribers served by the local accel would be cut off.
-2. **Hijack.** In 196 any tenant can create a router row whose address is `127.0.0.1` or the accel gateway. The view then gives that tenant **every** session and login from the server's own NAS.
+2. **Hijack.** In 201 any tenant can create a router row whose address is `127.0.0.1` or the accel gateway. The view then gives that tenant **every** session and login from the server's own NAS.
 
-## 3. The fix (migration 197)
+## 3. The fix (migration 202)
 
 **An explicit, operator-only registry: `radius_local_nas`.**
 
@@ -43,7 +43,7 @@ The view and fallback rules:
   **A tenant can no longer claim the server's own addresses.** The view has a new column, `local_purpose`.
 - **No implicit "loopback = tenant 1".**
   - The only-tenant fallback (`radius_sole_tenant`) now applies only to addresses **not** in the registry. A registered address is never guessed, so a `nas` entry whose tenant was deleted fails closed with `local_nas`.
-  - Unregistered sources keep the 196 rule exactly. On a single-network server that is the only tenant (unchanged, loopback included). On a multi-network server it is quarantine.
+  - Unregistered sources keep the 201 rule exactly. On a single-network server that is the only tenant (unchanged, loopback included). On a multi-network server it is quarantine.
 - **FreeRADIUS `mods-enabled/sql`:**
   - the 18 fallback sub-selects gain `WHERE NOT EXISTS (… radius_local_nas …)`;
   - the 3 quarantine INSERTs record `local_<purpose>` as the reason and skip `probe`.
@@ -55,8 +55,8 @@ The view and fallback rules:
   - a registry `nas` entry owns its rows from its `created_at`;
   - `mgmt` and `probe` own nothing (verdict `local_no_tenant`).
 
-  It still works on a DB from before migration 197.
-- **`tools/sec_b14_detect.sql` D6** now classifies each unclaimed source. It is still read-only and still works before 196 and 197:
+  It still works on a DB from before migration 202.
+- **`tools/sec_b14_detect.sql` D6** now classifies each unclaimed source. It is still read-only and still works before 201 and 202:
 
   | Class | Meaning |
   |---|---|
@@ -65,7 +65,7 @@ The view and fallback rules:
   | `not_via_freeradius` | Every row has ISO timestamps, so the panel wrote it itself |
   | `UNKNOWN` | Anything else. This is the only class that is a true stranger. |
 
-  The new D7 (commented out, needs 197) lists the registry and the sources neither a router nor the registry owns.
+  The new D7 (commented out, needs 202) lists the registry and the sources neither a router nor the registry owns.
 - `install-accel-selfsigned.sh` prints a reminder to register the accel gateway. It does **not** register it automatically, because which network the gateway serves is an owner decision.
 
 On client20, D6 now prints `127.0.0.1 local_loopback`, `10.99.99.1 not_via_freeradius` and `10.50.0.1 local_accel_mgmt_tunnel`. There are no `UNKNOWN` rows.
@@ -99,12 +99,12 @@ One existing test changed: `test_python_resolver_agrees_with_the_freeradius_expr
 | New tests (commit e7bdf012) | 11 failed, 3 passed | 14 passed |
 | B-14 + 24 related RADIUS / auth / accounting / NAS / CoA / device-limit / migration modules | 370 passed | 370 passed + 14 new = 384 passed, 0 failed |
 
-**Not verified:** `radiusd -XC` with the new SQL. It is the same as for 196, so run it in the image before deploy.
+**Not verified:** `radiusd -XC` with the new SQL. It is the same as for 201, so run it in the image before deploy.
 
 ## 5. What the owner must do on client20 before activating B-14
 
 1. **Decide about tenant 2 (`acme`).** It is empty. If it is a leftover, removing it makes client20 single-network again, and B-14 then changes nothing there (see SEC_FIX_B14 §7.2). The steps below are needed only if client20 stays multi-network.
-2. **Register the accel gateway** after deploy, once migration 197 has applied:
+2. **Register the accel gateway** after deploy, once migration 202 has applied:
    ```
    docker exec hoberadius python /app/tools/radius_local_nas.py --db /app/instance/hoberadius.db \
        set 10.50.0.1 --purpose mgmt --service accel-ppp
@@ -121,7 +121,7 @@ Revert commit 266405ab. To also remove the schema:
 ```
 DROP VIEW radius_source_tenant;
 DROP TABLE radius_local_nas;
-DELETE FROM _migrations WHERE name='197_sec_b14_radius_local_nas.sql';
+DELETE FROM _migrations WHERE name='202_sec_b14_radius_local_nas.sql';
 ```
 
-Then re-run migration 196's `CREATE VIEW radius_source_tenant`.
+Then re-run migration 201's `CREATE VIEW radius_source_tenant`.

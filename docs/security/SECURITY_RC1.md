@@ -34,7 +34,7 @@
 | B-07 unbound DB tokens cannot mint tokens / reach server-wide APIs | `agent/sec-fixes-app` | `11a90821` |
 | B-08 `/internal/_diag` requires the internal secret | `agent/sec-fixes-app` | `bda0c5db` |
 | B-13 admin list/get/edit/delete scoped to the caller's tenant | `agent/sec-fixes-app` | `c9877a11`, docs `a58b8138` |
-| B-14 RADIUS accounting / login attempts attributed to the NAS's tenant (migration 196, detection SQL, dry-run backfill) | `agent/sec-fix-b14` | `eed515ab` → `993860ec` → `153b615d` |
+| B-14 RADIUS accounting / login attempts attributed to the NAS's tenant (migration 201, detection SQL, dry-run backfill) | `agent/sec-fix-b14` | `eed515ab` → `993860ec` → `153b615d` |
 | B-22 (radius side) refuse unsigned/badly signed runtime-contract `owner_admins` | `agent/sec-fix-b22-radius` | `159918f8` → `bcd27845` → `5c5f74c2` |
 | F-1 no env API token rendered into MikroTik dashboard/operations pages | `agent/sec-fix-f1-mtdash` | `3980e2eb` → `853bcbce` → `46c55f6c` |
 | F-3 any value from a shipped env template is a weak `FLASK_SECRET` | `agent/sec-fix-f3-secret` | `6662d9ed` → `e302edf9` → `2aacf3f6` |
@@ -83,7 +83,7 @@ All runs local, SQLite in temp dirs, **each test file in its own pytest process*
 
 ## 3. Migrations and boot (RC tree)
 
-* Fresh SQLite, `run_pending_migrations()` twice: **191 applied, 0 on re-run**; `radius_source_tenant`, `radius_sole_tenant` views and `radius_unattributed` table present (B-14 migration 196).
+* Fresh SQLite, `run_pending_migrations()` twice: **191 applied, 0 on re-run**; `radius_source_tenant`, `radius_sole_tenant` views and `radius_unattributed` table present (B-14 migration 201).
 * `create_app()` with `HOBERADIUS_ENV=production`, fresh DB:
   * random 64-hex `FLASK_SECRET` → **boots**;
   * `change-me-to-32-random-bytes-please`, `replace-with-a-long-random-flask-secret`, `dev-secret-change-me` → **refused (`RuntimeError`)**.
@@ -99,11 +99,12 @@ Nothing below is automatic. Each step is a separate explicit decision; stop at t
 4. **FLASK_SECRET / env readiness**: strong `FLASK_SECRET` (audit says OK everywhere), `HOBERADIUS_INTERNAL_SECRET` set (B-08 + RADIUS internal API), then `HOBERADIUS_ENV=production` (see §6 cookie rules). Never rotate FLASK_SECRET casually: it logs everyone out and makes at-rest values encrypted with the old key unreadable.
 5. **B-14 detection + `radiusd -XC` on the actual candidate image**: build ONE image from this RC; inside it run `radiusd -XC` with the new `mods-enabled/sql` + `rest`; run the detection SQL (D1 tenants count, D6 unclaimed NAS sources) on each multi-tenant server (client1, client20).
 6. **Final release verification**: image digest = RC commit; test evidence of §2 re-run on the exact commit; rollback image identified and available on each server; DB backup taken.
-7. **Explicit deploy** — per server, owner go/no-go. Order on each server: backup DB → start **app** (applies migration 196) → confirm `_migrations` has `196_sec_b14_radius_source_tenant.sql` → **then** restart freeradius → smoke (owner + tenant-manager web login, MikroTik dashboard counters, one RADIUS Access-Accept from a known router, `radius_unattributed` empty on single-tenant servers, no `owner_admins designation … REFUSED` in logs).
+7. **Explicit deploy** — per server, owner go/no-go. Order on each server: backup DB → start **app** (applies migration 201) → confirm `_migrations` has `201_sec_b14_radius_source_tenant.sql` → **then** restart freeradius → smoke (owner + tenant-manager web login, MikroTik dashboard counters, one RADIUS Access-Accept from a known router, `radius_unattributed` empty on single-tenant servers, no `owner_admins designation … REFUSED` in logs).
 
 ## 5. B-14 activation requirements
 
-* Migration 196 (views `radius_source_tenant`, `radius_sole_tenant`; table `radius_unattributed`) **must exist before FreeRADIUS loads the new `mods-enabled/sql`** → the app migrates first, radius restarts after (never the other way round; never restart both at once).
+* B-14 migrations were renumbered 196→201 and 197→202 after merging `agent/round6-base` (which owns 196–200). They were never deployed under the old numbers, so no `_migrations` alias is needed.
+* Migration 201 (views `radius_source_tenant`, `radius_sole_tenant`; table `radius_unattributed`) **must exist before FreeRADIUS loads the new `mods-enabled/sql`** → the app migrates first, radius restarts after (never the other way round; never restart both at once).
 * **Backfill: dry-run first** (`tools/sec_b14_backfill.py --db …`), owner reviews the report; **applying the backfill is a separate decision** (`--apply --undo-file /data/sec_b14_undo.json`; undo with `--rollback <file> --apply`). Single-tenant servers: nothing to migrate.
 * **Unknown NAS fails closed** on multi-tenant servers: Access-Reject "Unknown NAS", accounting quarantined in `radius_unattributed` (ACKed), no webhook. Register every router on the right tenant **before** deploy (detection D6). Leftover demo/second tenant rows make a server count as multi-tenant — check D1.
 * Single-tenant servers behave exactly as before.
@@ -122,7 +123,7 @@ Merged (§1.5, `17fd3ed1` + interaction fix `0f70a133`). If that branch receives
 
 * Fastest, no code: B-07 → `HOBERADIUS_ALLOW_UNBOUND_TOKEN_MINT=1` / `…_SERVER_WIDE=1`; F-3/F-5 boot loop → rotate FLASK_SECRET (preferred) or unset `HOBERADIUS_ENV`; B-08 → leave `HOBERADIUS_DIAG_ENABLED` unset.
 * Code: redeploy the previous image (`825c7b45` on Abed/Barq/Fadi; `e9d652ee` on client1/spare-62) with `deploy.sh upgrade` (rebuild — code lives in the image).
-* B-14 schema: migration 196 is additive (2 views + 1 table) — harmless to old code, leave it. The **old** `mods-enabled/sql`/`rest` must return together with the old image. If backfill was applied, roll it back with its undo file first.
+* B-14 schema: migration 201 is additive (2 views + 1 table) — harmless to old code, leave it. The **old** `mods-enabled/sql`/`rest` must return together with the old image. If backfill was applied, roll it back with its undo file first.
 * B-22: stored designations untouched; panel signing is backward compatible.
 * X-Tenant (c) / temp-password: code-only; revert `8072e6ac` / `16ea2887` (+`0f70a133`) if a single fix must go.
 * F-1 tokens `login:ui-mt:*` expire within 8 h. F-5 credentials file is an artefact to delete.

@@ -1,7 +1,7 @@
 -- B-14 — READ-ONLY detection of RADIUS rows stored under the wrong tenant.
 -- Safe to run on a live server:  sqlite3 -readonly /data/hoberadius.db < sec_b14_detect.sql
 -- Selects no password column. Changes nothing. Works before AND after migration
--- 196 (it does not use the new views). See docs/security/SEC_FIX_B14.md.
+-- 201 (it does not use the new views). See docs/security/SEC_FIX_B14.md.
 
 .headers on
 .mode column
@@ -12,7 +12,7 @@ SELECT COUNT(*) AS tenants_total,
        MIN(id) AS lowest_tenant_id
   FROM tenants;
 
--- D2  Source address → owning tenant, the rule of migration 196
+-- D2  Source address → owning tenant, the rule of migration 201
 --     (live, enabled routers, tunnel IPs first, /32 stripped).
 WITH addr AS (
     SELECT CASE WHEN TRIM(management_remote_address) LIKE '%/32'
@@ -124,7 +124,7 @@ SELECT r.nasipaddress,
                                              TRIM(d.management_remote_address)))
  GROUP BY r.nasipaddress ORDER BY source_class = 'UNKNOWN' DESC, sessions_7d DESC;
 
--- D7  After migration 197: the operator registry of server-local sources, and
+-- D7  After migration 202: the operator registry of server-local sources, and
 --     7-day sources that neither a router nor the registry owns (= what B-14
 --     will reject / quarantine on a multi-network server).
 -- SELECT ip, purpose, tenant_id, service, updated_at FROM radius_local_nas ORDER BY ip;
@@ -135,6 +135,6 @@ SELECT r.nasipaddress,
 --                     WHERE v.ip = r.nasipaddress AND v.tenant_id IS NOT NULL)
 --  GROUP BY r.nasipaddress ORDER BY sessions_7d DESC;
 
--- D5  After the fix: what went to quarantine (table exists only after migration 196).
+-- D5  After the fix: what went to quarantine (table exists only after migration 201).
 -- SELECT kind, reason, src_ip, COUNT(*) AS keys, SUM(packets) AS packets, MAX(last_seen) AS last_seen
 --   FROM radius_unattributed GROUP BY kind, reason, src_ip ORDER BY packets DESC

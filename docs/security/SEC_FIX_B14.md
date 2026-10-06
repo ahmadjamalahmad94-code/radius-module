@@ -22,7 +22,7 @@ These were reproduced by `tests/test_sec_b14_radius_tenant_attribution.py` in co
 - `vpn_peer_address` (WireGuard, with any `/32` removed);
 - `address`.
 
-The rule is defined once, in migration `196_sec_b14_radius_source_tenant.sql`:
+The rule is defined once, in migration `201_sec_b14_radius_source_tenant.sql`:
 
 - **`radius_source_tenant`** view: maps each address to its tenant. `tenant_id` is NULL when **two** tenants claim the address.
 - **`radius_sole_tenant`** view: the server's only tenant, or NULL when there are several.
@@ -75,7 +75,7 @@ Run `tools/sec_b14_detect.sql` D1 per server. `tenants_total = 1` means nothing 
 
 ## 5. Migration plan for existing mis-attributed rows
 
-**Nothing runs automatically.** Migration 196 only creates the two views and the empty quarantine table. It changes no existing row.
+**Nothing runs automatically.** Migration 201 only creates the two views and the empty quarantine table. It changes no existing row.
 
 1. **Detect (read-only, any time, before or after deploy):**
    `sqlite3 -readonly /data/hoberadius.db < tools/sec_b14_detect.sql`
@@ -110,8 +110,8 @@ One-tenant servers: no change.
 
 **Rollback of the code:** revert commit `993860ec` and the migration-plan commit, then rebuild the image as usual.
 
-- The views and the empty table that migration 196 leaves behind are harmless.
-- To remove them: `DROP VIEW radius_source_tenant; DROP VIEW radius_sole_tenant; DROP TABLE radius_unattributed; DELETE FROM _migrations WHERE name='196_sec_b14_radius_source_tenant.sql';`
+- The views and the empty table that migration 201 leaves behind are harmless.
+- To remove them: `DROP VIEW radius_source_tenant; DROP VIEW radius_sole_tenant; DROP TABLE radius_unattributed; DELETE FROM _migrations WHERE name='201_sec_b14_radius_source_tenant.sql';`
 - Reverting brings the tenant-1 leak back.
 
 ## 7. Owner decisions

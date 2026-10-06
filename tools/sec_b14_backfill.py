@@ -19,7 +19,7 @@ Rules (conservative — a row is moved only when there is no doubt):
   • server has ONE tenant          → nothing to do, exit 0;
   • row stored under tenant 1 (the literal FreeRADIUS wrote);
   • its nasipaddress (the packet source) is claimed by exactly ONE other
-    tenant's live, enabled router (same rule as migration 196);
+    tenant's live, enabled router (same rule as migration 201);
   • the row started at/after that router was created (an address reused
     after tenant 1 gave it up is NOT tenant 2's history);
   • the target tenant has no row for the same (session id, NAS, user) —
@@ -65,7 +65,7 @@ WITH addr AS (
       FROM nas_devices WHERE enabled = 1 AND deleted_at IS NULL
        AND TRIM(COALESCE(address, '')) <> ''
 ), owner AS (
-    -- migration 197: a tenant's router row never claims a loopback address
+    -- migration 202: a tenant's router row never claims a loopback address
     -- nor an address of the operator's local registry …
     SELECT ip,
            CASE WHEN COUNT(DISTINCT tenant_id) = 1 THEN MIN(tenant_id) END AS tenant_id,

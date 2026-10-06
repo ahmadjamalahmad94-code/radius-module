@@ -1,4 +1,4 @@
--- 196 — B-14: which tenant owns a RADIUS packet (security fix, 2026-10-05)
+-- 201 — B-14: which tenant owns a RADIUS packet (security fix, 2026-10-05)
 --
 -- FreeRADIUS used to write the literal tenant_id = 1 on every radacct row it
 -- inserted, and /api/v1/internal/auth fell back to tenant 1 for any router it

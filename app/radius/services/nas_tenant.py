@@ -12,7 +12,7 @@ address (FreeRADIUS `Packet-Src-IP-Address`), never from the in-packet
     hence the match on management_remote_address / vpn_peer_address / address,
     the same columns the FreeRADIUS client files are keyed on.
 
-The rule itself lives in SQL views (migration 196) so FreeRADIUS's own
+The rule itself lives in SQL views (migration 201) so FreeRADIUS's own
 accounting queries and this module can never disagree:
 
     known address, one tenant      → that tenant
@@ -20,7 +20,7 @@ accounting queries and this module can never disagree:
     unknown address, one tenant    → the server's only tenant (no one to leak to)
     unknown address, several       → None   (quarantine: radius_unattributed)
 
-Server-local sources (migration 197 — the host's accel-ppp gateway, loopback
+Server-local sources (migration 202 — the host's accel-ppp gateway, loopback
 tooling, health probes) are attributed ONLY through the operator registry
 `radius_local_nas` (tools/radius_local_nas.py):
 

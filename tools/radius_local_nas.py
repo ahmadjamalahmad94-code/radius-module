@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B-14 — operator registry of SERVER-LOCAL RADIUS sources (migration 197).
+"""B-14 — operator registry of SERVER-LOCAL RADIUS sources (migration 202).
 
 On a server holding several networks, a RADIUS packet is attributed to the
 tenant whose live router claims its source address. The panel host's own
@@ -130,7 +130,7 @@ def main(argv=None) -> int:
     try:
         if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'radius_local_nas'"
                         ).fetchone() is None:
-            return _fail("table radius_local_nas missing — migration 197 not applied")
+            return _fail("table radius_local_nas missing — migration 202 not applied")
         if a.cmd == "list":
             return cmd_list(conn)
         if a.cmd == "set":

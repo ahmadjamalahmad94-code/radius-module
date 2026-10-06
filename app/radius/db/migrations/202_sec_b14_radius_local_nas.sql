@@ -1,6 +1,6 @@
--- 197 — B-14 follow-up: server-local RADIUS sources (security fix, 2026-10-06)
+-- 202 — B-14 follow-up: server-local RADIUS sources (security fix, 2026-10-06)
 --
--- Migration 196 attributes a RADIUS packet to the tenant whose live router
+-- Migration 201 attributes a RADIUS packet to the tenant whose live router
 -- claims its source address (Packet-Src-IP-Address). Two gaps showed up when
 -- the pre-deploy detection ran on a multi-network server:
 --
@@ -27,7 +27,7 @@
 -- fallback, so a 'nas' row whose tenant no longer exists fails closed.
 -- A router row of any tenant can never claim a loopback address
 -- (127.0.0.0/8, ::1, 0.0.0.0) nor a registered local address.
--- Unknown, unregistered sources keep the 196 rule (only tenant on a
+-- Unknown, unregistered sources keep the 201 rule (only tenant on a
 -- single-network server; quarantine on a multi-network server).
 
 CREATE TABLE IF NOT EXISTS radius_local_nas (
