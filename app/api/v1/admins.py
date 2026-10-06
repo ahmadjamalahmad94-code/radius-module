@@ -228,9 +228,11 @@ def _serialize_role(r) -> dict:
 
 # ─────────────── admins ───────────────
 
+# avatar_url removed (owner 2026-10-06: nothing renders it) — still accepted
+# in a body for old app builds, silently ignored; the stored value is kept.
 _ADMIN_STR_FIELDS = (
     "full_name", "email", "mobile", "phone",
-    "avatar_url", "tags", "profile_notes",
+    "tags", "profile_notes",
 )
 _ADMIN_BOOL_FIELDS = ("enabled",)
 
@@ -339,7 +341,6 @@ def admins_create():
             enabled=bool(body.get("enabled", True)),
             phone=str(body.get("phone") or "").strip(),
             profile_notes=str(body.get("profile_notes") or ""),
-            avatar_url=str(body.get("avatar_url") or "").strip(),
             tags=str(body.get("tags") or "").strip(),
         )
     except ValueError as e:

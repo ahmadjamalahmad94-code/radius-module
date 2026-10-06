@@ -164,7 +164,7 @@ def test_owner_can_edit_and_delete_schedule(client):
             "ends_at_time": "23:30",
             "speed_down_kbps": "8000",
             "speed_up_kbps": "2000",
-            "restore_mode": "keep_current",
+            "restore_mode": "disconnect",
             "enabled": "1",
             "notes": "tuned",
         },
@@ -176,7 +176,7 @@ def test_owner_can_edit_and_delete_schedule(client):
     after = operations_repo.get_bandwidth_schedule(1, sched["id"])
     assert after["name"] == "Owner edited window"
     assert after["speed_down_kbps"] == 8000
-    assert after["restore_mode"] == "keep_current"
+    assert after["restore_mode"] == "disconnect"
     assert after["starts_at_time"] == "20:00"
 
     # DELETE

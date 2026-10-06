@@ -189,7 +189,7 @@ def test_card_batch_edit_embeds_speed_rule_creator(client):
             f"sr_edit_ends_at_time_{rule['id']}": "23:00",
             f"sr_edit_speed_down_kbps_{rule['id']}": "5000",
             f"sr_edit_speed_up_kbps_{rule['id']}": "1500",
-            f"sr_edit_restore_mode_{rule['id']}": "keep_current",
+            f"sr_edit_restore_mode_{rule['id']}": "disconnect",
             f"sr_edit_priority_{rule['id']}": "10",
             f"sr_edit_enabled_{rule['id']}": "1",
         },
@@ -199,7 +199,7 @@ def test_card_batch_edit_embeds_speed_rule_creator(client):
     edited = operations_repo.get_bandwidth_schedule(1, rule["id"])
     assert edited["name"] == "Batch edited speed"
     assert edited["speed_down_kbps"] == 5000
-    assert edited["restore_mode"] == "keep_current"
+    assert edited["restore_mode"] == "disconnect"
 
     toggled = client.post(
         edit_url,

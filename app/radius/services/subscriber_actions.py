@@ -96,7 +96,13 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
     # R6: مشتركٌ بلا انتهاء لا يُضاف إليه وقت — يُرفض **قبل** بوّابة إنفاق المدير
     # (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض). تعيينُ التاريخ مسموح.
     if expire_at is None:
-        _reject_extend_unlimited(get_users_service().get(username))
+        _sub = get_users_service().get(username)
+        _reject_extend_unlimited(_sub)
+        # «استخدام مرة وحدة» = حساب مؤقّت: لا تجديد ولا تمديد (قرار المالك
+        # 2026-10-06) — قبل بوّابة الإنفاق. وضعُ «تعيين التاريخ» يرفضه
+        # set_expiry نفسه (داخل المعاملة الذرّيّة نفسها ⇒ لا إنفاق يبقى).
+        from .plan_lifecycle import reject_single_use
+        reject_single_use(_sub)
     # «مدفوع» يُخصم من رصيد المشترك: رصيدٌ لا يكفي يُرفض **قبل** بوّابة إنفاق
     # المدير (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض).
     if charge_mode == "paid":

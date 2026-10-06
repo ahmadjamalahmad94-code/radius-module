@@ -78,16 +78,16 @@ def _all_tenants() -> list[int]:
         return [1]
 
 
-def _is_in_window(schedule: dict, now_hm: str) -> bool:
+def _is_in_window(schedule: dict, now_local: datetime) -> bool:
+    """Time window AND selected days (days_csv), judged at the tenant-LOCAL
+    moment — the same predicate authorize uses (operations_repo
+    .schedule_active_at), so a Friday-only schedule engages on Friday and
+    releases when Friday's window ends."""
     if not schedule.get("enabled"):
         return False
-    from app.radius.db.repos.operations_repo import _in_time_window
-    start = schedule.get("starts_at_time") or ""
-    end = schedule.get("ends_at_time") or ""
-    if not start or not end:
-        return False
+    from app.radius.db.repos.operations_repo import schedule_active_at
     try:
-        return _in_time_window(now_hm, start, end)
+        return schedule_active_at(schedule, now_local)
     except Exception:  # noqa: BLE001 — malformed time must not crash the tick
         return False
 
@@ -96,11 +96,11 @@ def _tenant_tick(tenant_id: int, now: datetime) -> dict:
     """Process one tenant's schedules; act only on phase transitions."""
     from app.radius.db.repos import operations_repo
     from app.radius.services import bandwidth_apply
-    from app.radius.core.system_config import local_hhmm
 
-    # `now` is a UTC instant; compare windows in the tenant's LOCAL timezone
-    # (DST-safe) so transitions fire at the owner's local wall-clock time.
-    now_hm = local_hhmm(tenant_id, now)
+    # `now` is a UTC instant; compare windows (and the schedule's DAYS) in the
+    # tenant's LOCAL timezone (DST-safe) so transitions fire at the owner's
+    # local wall-clock time on the owner's local weekday.
+    now_local = operations_repo.local_schedule_moment(tenant_id, now)
     engaged = released = 0
     try:
         schedules = operations_repo.list_bandwidth_schedules(tenant_id, limit=1000)
@@ -115,7 +115,7 @@ def _tenant_tick(tenant_id: int, now: datetime) -> dict:
             continue
         key = (tenant_id, sid)
         seen_keys.add(key)
-        in_window = _is_in_window(sched, now_hm)
+        in_window = _is_in_window(sched, now_local)
         with _phase_lock:
             prev = _phase.get(key)
         try:

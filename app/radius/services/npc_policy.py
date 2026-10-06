@@ -71,6 +71,32 @@ def cleanup_regex(service: str, policy_id: int) -> str:
     return f"^{re.escape(comment_prefix(service, policy_id))}"
 
 
+# ─── «مفعّلة» (enabled) — fields-sched 2026-10-06 ─────────────
+#
+# Owner chose «وصّله» for the policy's enabled switch: a DISABLED policy
+# must have ZERO effect. Every planner therefore turns a disabled policy
+# into a CLEANUP-ONLY plan — preview / download / apply then REMOVE the
+# policy's managed objects from the router (anchored comment prefix) and
+# add nothing. Re-enabling restores the normal plan, so the next apply
+# puts the rules back.
+
+DISABLED_POLICY_WARNING_AR = N_(
+    "السياسة معطّلة — لا أثر لها: التطبيق يزيل قواعدها المُدارة من "
+    "الراوتر ولا يضيف شيئًا. فعّلها ثم طبّق لإعادة أثرها."
+)
+
+
+def policy_enabled(policy: dict) -> bool:
+    """`True` unless the policy row says it is disabled. A missing key
+    means enabled (every row created before the switch was wired)."""
+    value = (policy or {}).get("enabled", True)
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", ""}
+    return bool(value)
+
+
 # ─── Lifecycle state — UI-facing constants ───────────────────
 
 
@@ -197,6 +223,7 @@ def known_categories() -> Iterable[str]:
 __all__ = [
     "PREFIX_ROOT", "PREFIX_SUFFIX",
     "comment_prefix", "cleanup_regex",
+    "DISABLED_POLICY_WARNING_AR", "policy_enabled",
     "LIFECYCLE_DRAFT", "LIFECYCLE_PREVIEWED",
     "LIFECYCLE_APPLIED", "LIFECYCLE_FAILED",
     "LIFECYCLE_DISABLED", "LIFECYCLE_TERMINAL",

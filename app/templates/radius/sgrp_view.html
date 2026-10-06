@@ -15,13 +15,6 @@
 ) }}
 <div class="hub-kpi-grid">
   {{ hub.kpi(_('الأعضاء'), members|length, icon="users", variant="brand") }}
-  {{ hub.kpi(_('الكوتا المشتركة'),
-             ("%.1f"|format(grp.shared_quota_mb/1024) ~ ' GB') if grp.shared_quota_mb else '∞',
-             icon="database", variant="green") }}
-  {{ hub.kpi(_('السرعة (تنزيل/رفع)'),
-             (grp.shared_speed_down_kbps|string) ~ '/' ~ (grp.shared_speed_up_kbps|string) ~ ' Kbps',
-             icon="gauge", variant="blue") }}
-  {{ hub.kpi(_('حد الأعضاء'), grp.max_members or '∞', icon="user-plus", variant="grey") }}
 </div>
 </section>{# /hub-hero-shell #}
 

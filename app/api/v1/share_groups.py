@@ -46,13 +46,8 @@ def create_group():
     name = str(body.get("name") or "").strip()
     if not name:
         return fail("validation_error", _tr("اسم مجموعة المشاركة مطلوب."), status=422)
-    try:
-        shared_quota_mb = _int(body, "shared_quota_mb")
-        shared_speed_down_kbps = _int(body, "shared_speed_down_kbps")
-        shared_speed_up_kbps = _int(body, "shared_speed_up_kbps")
-        max_members = _int(body, "max_members")
-    except ValueError:
-        return fail("validation_error", _tr("قيم حدود المجموعة يجب أن تكون أرقامًا صحيحة."), status=422)
+    # shared quota / speeds / max_members removed (owner 2026-10-06: nothing
+    # enforces them) — accepted for old app builds, ignored.
     # اسمٌ مكرّر: قيد UNIQUE(tenant_id, name) كان يُفلت IntegrityError → 500
     # بـHTML. نفحصه أوّلًا ونُعيد 409 عربيّة (مثل subscriber-groups).
     if any((g.get("name") or "").strip() == name
@@ -63,10 +58,6 @@ def create_group():
         tenant_id=_tid(),
         name=name,
         description=str(body.get("description") or ""),
-        shared_quota_mb=shared_quota_mb,
-        shared_speed_down_kbps=shared_speed_down_kbps,
-        shared_speed_up_kbps=shared_speed_up_kbps,
-        max_members=max_members,
         enabled=bool(body.get("enabled", True)),
     )
     return ok(share_groups_repo.get(_tid(), group_id), status=201)

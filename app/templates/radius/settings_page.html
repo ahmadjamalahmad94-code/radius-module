@@ -516,15 +516,7 @@
           <div class="help">{{ _('منتهٍ فورًا: يولد المشترك منتهيًا حتى يُدفع له أو يُمدَّد. بلا انتهاء: لا ينتهي أبدًا (للخدمة المجّانيّة).') }}</div>
           <bdi class="st-key">subscribers.create_without_expiry</bdi>
         </div>
-        <div class="st-field">
-          <label class="st-field-label">{{ _("نسبة الضريبة %%") }}</label>
-          <div class="st-suffix">
-            <input class="hub-input" type="number" step="any" min="0" name="billing.tax_pct" value="{{ vals.get('billing.tax_pct','0') }}">
-            <span class="st-suffix-tag">%</span>
-          </div>
-          <div class="help">{{ _('نسبة الضريبة المضافة على الفواتير. اتركها 0 إذا كانت أسعارك شاملة الضريبة أو لا تطبّق ضريبة.') }}</div>
-          <bdi class="st-key">billing.tax_pct</bdi>
-        </div>
+        {# «نسبة الضريبة» (billing.tax_pct) أُزيلت — قرار المالك 2026-10-06: لا شيء يحسب ضريبة. #}
       </div>
     </div>
   </section>
@@ -569,18 +561,7 @@
     </header>
     <div class="st-section-body">
       <div class="st-grid">
-        <div class="st-field">
-          <label class="st-field-label">{{ _('السماح بإعادة تعيين كلمة المرور') }}</label>
-          {# المفتاح الحديث (toggle_switch) قبل الحقل المخفي «0»: المسار يقرأ
-             أول قيمة للمفتاح — مفعّل يرسل ["1","0"] فتُحفظ «1»، ومعطّل لا يرسل
-             إلا الحقل المخفي فتُحفظ «0». #}
-          {{ toggle_switch(name="auth.allow_password_reset",
-               checked=(vals.get('auth.allow_password_reset','1') in ['1','true','t','on','True']),
-               value="1", id="set-apr") }}
-          <input type="hidden" name="auth.allow_password_reset" value="0">
-          <div class="help">{{ _('عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت أن يمرّ كل تغيير عبر الإدارة فقط.') }}</div>
-          <bdi class="st-key">auth.allow_password_reset</bdi>
-        </div>
+        {# «السماح بإعادة تعيين كلمة المرور» (auth.allow_password_reset) أُزيل — قرار المالك 2026-10-06: لا قارئ له. #}
         <div class="st-field">
           {% set cur_unauth_ui = vals.get('security.unauthorized_ui','freeze') %}
           <label class="st-field-label">{{ _('عرض الأقسام غير المصرّح بها') }}

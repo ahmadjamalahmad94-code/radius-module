@@ -129,6 +129,7 @@ def test_profile_advanced_options_are_saved_and_validated(client):
             "service_scope": "hotspot",
             "loan_enabled": True,
             "max_loan_minutes": 180,
+            # removed field (owner 2026-10-06): accepted and ignored
             "speed_override_allowed": True,
         },
         headers=_auth(client),
@@ -138,7 +139,7 @@ def test_profile_advanced_options_are_saved_and_validated(client):
     assert data["service_scope"] == "hotspot"
     assert data["loan_enabled"] is True
     assert data["max_loan_minutes"] == 180
-    assert data["speed_override_allowed"] is True
+    assert data["speed_override_allowed"] is False
 
     bad = client.patch(
         "/api/v1/profiles/1",

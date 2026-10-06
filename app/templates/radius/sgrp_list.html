@@ -32,11 +32,8 @@
 {# ───── Main (carded table) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   _('كيف تقرأ هذه الصفحة؟'),
-  intro=_('كل صف هو مجموعة مشاركة يتقاسم أعضاؤها الكوتا والسرعة المحددة لها.'),
+  intro=_('كل صف هو مجموعة مشاركة وعدد أعضائها.'),
   items=[
-    {'icon': 'database',     'text': _('الكوتا المشتركة هي إجمالي البيانات المتاحة لكل الأعضاء؛ «غير محدود» يعني بلا سقف.')},
-    {'icon': 'gauge-high',   'text': _('السرعة تُعرض تنزيلًا / رفعًا بالـ Kbps وتُطبَّق على كامل المجموعة.')},
-    {'icon': 'users',        'text': _('الأعضاء يبيّن العدد الحالي مقابل حدّ الأعضاء (∞ يعني بلا حد).')},
     {'icon': 'toggle-on',    'text': _('المجموعة المعطَّلة تبقى محفوظة لكنها لا تُستخدم للمشاركة.')},
   ]
 )) %}
@@ -47,10 +44,7 @@
           <tr>
             <th class="num">#</th>
             <th>{{ _('الاسم') }}</th>
-            <th>{{ _('الكوتا المشتركة') }}</th>
-            <th>{{ _('السرعة (تنزيل/رفع)') }}</th>
             <th class="num">{{ _('الأعضاء') }}</th>
-            <th class="num">{{ _('حد الأعضاء') }}</th>
             <th>{{ _('الحالة') }}</th>
             <th style="width:160px" data-uds-nosort data-uds-nocol></th>
           </tr>
@@ -63,13 +57,7 @@
               <strong>{{ g.name }}</strong>
               {% if g.description %}<div class="hub-text-mute" style="font-size:12px">{{ g.description }}</div>{% endif %}
             </td>
-            <td class="mono">
-              {% if g.shared_quota_mb %}{{ "%.1f"|format(g.shared_quota_mb/1024) }} GB
-              {% else %}<span class="hub-pill hub-pill--grey">{{ _('غير محدود') }}</span>{% endif %}
-            </td>
-            <td class="mono"><span dir="ltr">{{ g.shared_speed_down_kbps }} / {{ g.shared_speed_up_kbps }} Kbps</span></td>
             <td class="num"><strong>{{ g.members }}</strong></td>
-            <td class="num">{{ g.max_members or '∞' }}</td>
             <td>
               {% if g.enabled %}
                 <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _('مفعَّل') }}</span>

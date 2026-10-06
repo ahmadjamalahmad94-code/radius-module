@@ -38,16 +38,14 @@ _META_GROUPS = {
         "mikrotik_address_list",
         "mikrotik_framed_route",
         "mikrotik_user_group",
-        "mikrotik_winbox_group",
         "mikrotik_queue_priority",
     ],
+    # (retired 2026-10-06: mikrotik_winbox_group, nas_ip_address, nas_port_id,
+    # service_name — no reader; stored values survive via the base_meta merge.)
     "radius": [
         "framed_pool",
         "ppp_attributes_extra",
         "acct_interim_interval_sec",
-        "nas_ip_address",
-        "nas_port_id",
-        "service_name",
     ],
     "advanced": [
         "temporary_speed_from",
@@ -401,6 +399,11 @@ _WEB_FORM_UNMANAGED = (
     # PARITY r6: حقولٌ يحرّرها التطبيق وحدَه ولا خانةَ لها في هذا النموذج — كان
     # «حفظ» الويب يمسحها (فارغ) ويُعيد «تجريبي» إلى «مشترك».
     "user_type", "nationality", "address", "state", "zip", "payment_reference",
+    # حقولٌ أزالها المالك (2026-10-06): Pool، VLAN، ملف اتصال الجهاز، واسم/كلمة
+    # مرور البرودباند (يدخل مشترك PPPoE باسمه وكلمته). القيمة المخزّنة تبقى.
+    "pool", "vlan_id", "device_connection_file", "pppoe_username", "pppoe_password",
+    # «IP PPPoE» دُمج في «IP ثابت» (متابعة 2026-10-06؛ migration 198 نسخ القيم).
+    "pppoe_ip",
 )
 
 
@@ -412,10 +415,7 @@ _WEB_FORM_UNMANAGED = (
 # لم يلمسه المشغّل فتبقى قيمته **الحاليّة** في القاعدة. (التاريخ: expire_orig،
 # و«بدون انتهاء»: no_expiry_orig.)
 _FORM_ORIG_SKIP = frozenset({
-    # fix3 integration: pppoe_password is a secret like password — a digest
-    # only (scope F01 F5 hides it from admins without «رؤية كلمة مرور المشترك»;
-    # the plain snapshot would have leaked it through the hidden field).
-    "id", "tenant_id", "username", "password", "pppoe_password", "metadata",
+    "id", "tenant_id", "username", "password", "metadata",
     "expire_at", "user_type",
     "working_days", "updated_by", "updated_at", "deleted_at", "deleted_by",
     "delete_reason",
@@ -453,8 +453,7 @@ def form_orig_snapshot(sub: Subscriber) -> str:
     flat = _grouped_to_flat(_parse_metadata(getattr(sub, "metadata", None)))
     meta = {mf: _orig_norm(flat.get(mf)) for mf in _META_FIELDS}
     return json.dumps({"f": snap, "m": meta, "e": _orig_norm(getattr(sub, "expire_at", None)),
-                       "pw": _pw_digest(sub.password),
-                       "ppw": _pw_digest(getattr(sub, "pppoe_password", None))},
+                       "pw": _pw_digest(sub.password)},
                       ensure_ascii=False, separators=(",", ":"))
 
 
@@ -527,10 +526,6 @@ def _keep_untouched_fields(dto: Subscriber, before: Subscriber | None) -> Subscr
     # الصفحة يبقى). فارغة ⇒ الخدمة تُبقي المخزَّنة أصلًا.
     if dto.password and orig.get("pw") and _pw_digest(dto.password) == orig.get("pw"):
         keep["password"] = before.password
-    _ppw = getattr(dto, "pppoe_password", None)
-    if (_ppw and orig.get("ppw") and hasattr(before, "pppoe_password")
-            and _pw_digest(_ppw) == orig.get("ppw")):
-        keep["pppoe_password"] = before.pppoe_password
     return _replace(dto, **keep) if keep else dto
 
 
@@ -710,7 +705,6 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         plan_id=int(plan_id) if plan_id else None,
         manager_id=int(manager_id) if manager_id else None,
         group=_s("group"),
-        pool=_s("pool"),
         status=_s("status") or "enabled",
         auto_renewal=_b("auto_renewal"),
         # تاريخ انتهاء الاشتراك اليدويّ (منتقي التاريخ). فارغ = يُحفَظ الحاليّ
@@ -718,10 +712,8 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         expire_at=_expire_at,
         # سعر مخصّص يتجاوز سعر الباقة (فارغ/0 = استخدم سعر الباقة)
         custom_price=_f("custom_price"),
-        # PPPoE
-        pppoe_username=_s("pppoe_username"),
-        pppoe_password=_s("pppoe_password"),
-        pppoe_ip=_s("pppoe_ip"),
+        # «IP PPPoE» دُمج في «IP ثابت» (متابعة 2026-10-06) — لا خانة له؛
+        # القيمة القديمة تبقى (``_WEB_FORM_UNMANAGED``).
         # شخصي
         full_name=_s("full_name"),
         father_name=_s("father_name"),
@@ -740,12 +732,11 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         # شبكة
         mac_lock=_s("mac_lock") or None,
         static_ip=_s("static_ip") or None,
-        vlan_id=_i("vlan_id"),
+        # «الجلسات المتزامنة»: سقفٌ صارمٌ يتقدّم على «عدد الأجهزة» (device_limit).
         override_concurrent=_i("override_concurrent"),
         caller_id=_s("caller_id"),
         primary_dns_ppp=_s("primary_dns_ppp"),
         secondary_dns_ppp=_s("secondary_dns_ppp"),
-        device_connection_file=_s("device_connection_file"),
         # سرعة (override per-user) — temp-managed values preserved (service owns them)
         bandwidth_control_enabled=_bwctrl,
         download_speed_kbps=_down,
@@ -939,6 +930,23 @@ def users_list():
             usernames_in = list(set(usernames_in) & set(_online_early))
         else:
             usernames_in = list(_online_early)
+
+    # «باقات مدفوعة مسبقًا» (قرار المالك 2026-10-06: وسمٌ للتقارير) — قصر النطاق
+    # على مشتركي الباقات الموسومة (أو غيرها) في SQL كبقيّة الفلاتر.
+    prepaid = (request.args.get("prepaid") or "").strip()
+    if prepaid in ("1", "0"):
+        try:
+            from ..db.connection import db as _pdb
+            _pp = {str(r["username"]) for r in _pdb().execute(
+                "SELECT s.username FROM subscribers s JOIN access_plans p "
+                "ON p.id = s.plan_id AND p.tenant_id = s.tenant_id "
+                "WHERE s.tenant_id = ? AND COALESCE(p.prepaid, 0) = ?",
+                (_tid(), int(prepaid))).fetchall()}
+        except Exception:  # noqa: BLE001
+            _pp = set()
+        usernames_in = list(set(usernames_in) & _pp) if usernames_in is not None else list(_pp)
+    else:
+        prepaid = ""
 
     _svc = get_users_service()
     # «هوت سبوت / برود باند» (قرار المالك 2026-10-01) — نفس فلتر الـAPI.
@@ -1160,6 +1168,7 @@ def users_list():
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
         attention=attention, online_only=online_only, access=access,
+        prepaid=prepaid,
         stat_total=stat_total, stat_active=stat_active,
         stat_expired=stat_expired, stat_disabled=stat_disabled,
         stat_online=stat_online, stat_expiring=stat_expiring,
@@ -2290,8 +2299,6 @@ def _as_really_submitted(dto, before, clear_expiry: bool):
     changes = {}
     if not (dto.password or "").strip():
         changes["password"] = before.password
-    if not (getattr(dto, "pppoe_password", None) or "") and getattr(before, "pppoe_password", None):
-        changes["pppoe_password"] = before.pppoe_password
     exp, old = dto.expire_at, before.expire_at
     if not clear_expiry:
         if exp is None:
@@ -2364,11 +2371,6 @@ def users_update(username: str):
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
-    # fix3 (F01 F5): the edit form hides the PPPoE password from an admin
-    # without «رؤية كلمة مرور المشترك» — its blank field must not wipe it.
-    if (not (request.form.get("pppoe_password") or "").strip()
-            and not _can_view_passwords()):
-        dto = replace(dto, pppoe_password=getattr(before, "pppoe_password", None))
     # الحقول التي لا يديرها النموذج (الرصيد، الاستهلاك، أوّل دخول…) تُحفَظ كما هي:
     # «Subscriber(...)» في _form_dto يعطيها الافتراضي (0/فارغ) فكان «حفظ التعديلات»
     # بلا أي تغيير يُصفّر الرصيد (إعادة اختبار R02: −888.61 ⇐ 0.00 بلا قيد).

@@ -9,7 +9,7 @@
 {% block title %}{{ _("الحملات — Hobe Hub") }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bullhorn"></i>{% endblock %}
 {% block page_title %}{{ _("الحملات") }}{% endblock %}
-{% block page_sub %}<span class="sub">{{ _('حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.') }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('معاينة فقط — حضّر حملات وعاين جمهورها؛ لا يُرسَل شيء ولا يُطبَّق أي إجراء من هذه الصفحة.') }}</span>{% endblock %}
 
 {% block content %}
 
@@ -27,6 +27,14 @@
 {% endcall %}
 
 {% include "radius/communications_nav.html" %}
+
+{# قرار المالك 2026-10-06 («أبقِه ووسّمه»): لا مُرسِل يستعمل الحملات اليوم —
+   الصفحة للتحضير والمعاينة فقط، ويجب أن يكون ذلك واضحًا. #}
+<div class="hr-preview-only" role="note" data-testid="preview-only-banner"
+     style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:12px;border:1px solid #fcd34d;background:#fffbeb;color:#92400e;font-size:13px;line-height:1.7">
+  <i class="fa-solid fa-eye" style="margin-top:4px"></i>
+  <div><strong>{{ _('معاينة فقط') }}</strong> — {{ _('الحملات تُحضَّر وتُعايَن فقط: لا تُرسَل أيّ رسالة ولا يُنفَّذ أيّ إجراء (أيام مجانية، رصيد محفظة) من هذه الصفحة.') }}</div>
+</div>
 
 {# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(

@@ -136,30 +136,17 @@ GROUPS: tuple[dict, ...] = (
         "fields": (
             _f("mac_lock", N_("قفل عناوين MAC"), sel=".uf-mac-manager"),
             _f("static_ip", N_("عنوان IP ثابت")),
-            _f("nas_ip_address", N_("عنوان IP لجهاز الشبكة")),
-            _f("service_name", N_("اسم الخدمة")),
             _f("device_count", N_("عدد الأجهزة المسموحة")),
             _f("equal_share_download", N_("تقسيم سرعة التنزيل على الأجهزة")),
             _f("equal_share_upload", N_("تقسيم سرعة الرفع على الأجهزة")),
             _f("device_limit_mode", N_("السلوك عند بلوغ حدّ الأجهزة")),
+            _f("override_concurrent", N_("الجلسات المتزامنة")),
             _f("primary_dns_ppp", N_("خادم DNS الأساسيّ (PPP)")),
             _f("secondary_dns_ppp", N_("خادم DNS الثانويّ (PPP)")),
-            _f("nas_port_id", N_("منفذ جهاز الشبكة")),
         ),
     },
-    {
-        "key": "pppoe",
-        # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
-        # طُوي بعنوانه ورابطِه — عنوانُ قسمٍ بلا محتوًى ضجيج.
-        "sel": '#uf-pppoe, .uf-side a[href="#uf-pppoe"]',
-        "label": N_("البرودباند (PPPoE)"),
-        "icon": "fa-ethernet",
-        "fields": (
-            _f("pppoe_username", N_("اسم مستخدم البرودباند")),
-            _f("pppoe_password", N_("كلمة مرور البرودباند")),
-            _f("pppoe_ip", N_("عنوان IP للبرودباند")),
-        ),
-    },
+    # قسم «البرودباند (PPPoE)» أُزيل: خانته الوحيدة «IP PPPoE» دُمجت في
+    # «IP ثابت» (متابعة 2026-10-06).
     {
         "key": "advanced",
         # لا حقلَ إلزاميًّا في هذا القسم، فإن أُطفئت حقولُه كلُّها
@@ -172,7 +159,6 @@ GROUPS: tuple[dict, ...] = (
             _f("mikrotik_address_list", N_("قائمة العناوين (MikroTik)")),
             _f("mikrotik_framed_route", N_("المسار الموجَّه (MikroTik)")),
             _f("mikrotik_user_group", N_("مجموعة المستخدم (MikroTik)")),
-            _f("mikrotik_winbox_group", N_("مجموعة WinBox")),
             _f("mikrotik_queue_priority", N_("أولويّة الطابور")),
             _f("framed_pool", N_("مجمّع العناوين (Framed-Pool)")),
             _f("acct_interim_interval_sec", N_("فترة تقارير المحاسبة")),

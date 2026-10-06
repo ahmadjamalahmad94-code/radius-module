@@ -56,9 +56,10 @@ def _i(name, default):
     except (TypeError, ValueError): return default
 
 
+# «عدد المنافذ» و«منفذ المصادقة/المحاسبة» أُزيلت من النموذج — قرار المالك
+# 2026-10-06 (لا قارئ لها)، ومعها «المراقبة الدورية» و«مجتمع SNMP».
 _PORT_LABELS = {
-    "ports": N_("عدد المنافذ"), "auth_port": N_("منفذ المصادقة"),
-    "acct_port": N_("منفذ المحاسبة"), "coa_port": N_("منفذ CoA"),
+    "coa_port": N_("منفذ CoA"),
     "api_port": N_("منفذ API"), "ssh_port": N_("منفذ SSH"),
 }
 
@@ -96,10 +97,6 @@ def _dto(*, nas_id=None) -> NasDevice:
         vendor=_s("vendor").lower() or NAS_VENDOR_MIKROTIK,
         nas_type=_s("nas_type").lower() or "hotspot",
         shortname=_s("shortname"),
-        ports=_i("ports", 0),
-        snmp_community=_s("snmp_community"),
-        auth_port=_i("auth_port", 1812),
-        acct_port=_i("acct_port", 1813),
         coa_port=_i("coa_port", 3799),
         api_port=_i("api_port", 8728),
         api_user=_s("api_user"),
@@ -107,7 +104,6 @@ def _dto(*, nas_id=None) -> NasDevice:
         api_use_tls=_b("api_use_tls"),
         location=_s("location"),
         coordinates=_s("coordinates"),
-        monitoring_enabled=_b("monitoring_enabled"),
         description=_s("description"),
         enabled=_b("enabled"),
         # RM-H5
@@ -163,15 +159,15 @@ def _merge_form_over(existing: NasDevice) -> NasDevice:
     from dataclasses import replace
     form = _dto(nas_id=existing.id)
     changes = {}
-    for f in ("name", "address", "vendor", "nas_type", "shortname", "ports",
-              "snmp_community", "auth_port", "acct_port", "coa_port", "api_port",
+    for f in ("name", "address", "vendor", "nas_type", "shortname",
+              "coa_port", "api_port",
               "api_user", "location", "coordinates", "description", "ssh_port",
               # parity-c: ros_version was dropped on edit (create-only) — the
               # script generator then sent the operator back here in a loop.
               "tags", "ros_version"):
         if f in request.form:
             changes[f] = getattr(form, f)
-    for f in ("api_use_tls", "monitoring_enabled", "enabled",
+    for f in ("api_use_tls", "enabled",
               "require_message_authenticator"):
         changes[f] = getattr(form, f)
     if form.secret:

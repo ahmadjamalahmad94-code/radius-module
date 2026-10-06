@@ -921,6 +921,17 @@ def _validate_time(value: str, field: str) -> str:
     return raw
 
 
+def _validate_days(value) -> str:
+    """Schedule days → canonical CSV (sat..fri). Empty = every day.
+    fields-sched: days are EFFECTIVE now, so a typo must not silently turn a
+    «Friday only» rule into «every day» — unknown day names are rejected."""
+    csv, unknown = operations_repo.normalize_days_csv(value)
+    if unknown:
+        raise RadiusValidationError(
+            _tr("يوم غير معروف في أيام الجدول: %(v)s", v="، ".join(unknown[:3])))
+    return csv
+
+
 def _rate_limit_from_schedule(schedule: dict | None) -> str:
     schedule = schedule or {}
     up = int(schedule.get("speed_up_kbps") or 0)
@@ -1316,18 +1327,30 @@ class OperationsService:
             enforce_credit_limit=True,
         )
 
-    # parity-c: the web forms offer exactly these three (bandwidth_schedules
-    # / _speed_rules_panel / _speed_schedules_panel); the app offered
-    # previous_value/manual that no web form could show back.
-    _RESTORE_MODES = ("profile_default", "keep_current", "disconnect")
+    # Owner follow-up 2026-10-06: «طريقة الرجوع» has exactly TWO options, both
+    # enforced by the schedule worker at window end (bandwidth_apply):
+    #   profile_default  «رجوع مباشر بدون فصل» — live CoA of the effective rate
+    #   disconnect       «فصل الجلسة» — kick, the re-auth gets the normal speed
+    # The old third option «إبقاء آخر سرعة» (keep_current) was never enforced:
+    # migration 199 mapped stored values to profile_default, and old web/app
+    # builds that still send it get the same mapping. Anything else
+    # (previous_value / manual were already refused since parity-c) is a 422.
+    _RESTORE_MODES = ("profile_default", "disconnect")
+    _LEGACY_RESTORE_MODES = ("keep_current",)
 
     @classmethod
     def _restore_mode(cls, data: dict) -> str:
-        mode = str(data.get("restore_mode") or "profile_default").strip().lower()
+        from .bandwidth_apply import normalize_restore_mode
+        raw = data.get("restore_mode")
+        if raw is not None and not isinstance(raw, str):
+            raise RadiusValidationError(_tr("طريقة الرجوع يجب أن تكون نصًّا."))
+        mode = str(raw or "profile_default").strip().lower()
+        if mode in cls._LEGACY_RESTORE_MODES:
+            return normalize_restore_mode(mode)
         if mode not in cls._RESTORE_MODES:
             raise RadiusValidationError(
-                _tr("طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، "
-                "إبقاء آخر سرعة، فصل الجلسة."))
+                _tr("طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» "
+                "(profile_default) أو «فصل الجلسة» (disconnect)."))
         return mode
 
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,
@@ -1384,11 +1407,11 @@ class OperationsService:
             "name": name,
             "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
             "ends_at_time": _validate_time(data.get("ends_at_time"), "ends_at_time"),
-            "days_csv": (data.get("days_csv") or "").strip(),
+            "days_csv": _validate_days(data.get("days_csv")),
             "speed_down_kbps": _int_field(data, "speed_down_kbps"),
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
-            "cir_down_kbps": _int_field(data, "cir_down_kbps"),
-            "cir_up_kbps": _int_field(data, "cir_up_kbps"),
+            # fields-sched: schedule CIR removed (owner) — never read at
+            # runtime; cir_*_kbps keys are accepted and ignored.
             "restore_mode": self._restore_mode(data),
             "enabled": bool(data.get("enabled", True)),
             "notes": (data.get("notes") or "")[:500],
@@ -1451,12 +1474,11 @@ class OperationsService:
             # parity-c: a form WITHOUT a days field (the standalone
             # /bandwidth-schedules edit) must keep the stored days, not
             # wipe the days chosen in the embedded speed-rule panels.
-            "days_csv": ((data.get("days_csv") if "days_csv" in data
-                          else current.get("days_csv")) or "").strip(),
+            "days_csv": (_validate_days(data.get("days_csv")) if "days_csv" in data
+                         else (current.get("days_csv") or "").strip()),
             "speed_down_kbps": _int_field(data, "speed_down_kbps"),
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
-            "cir_down_kbps": _int_field(data, "cir_down_kbps"),
-            "cir_up_kbps": _int_field(data, "cir_up_kbps"),
+            # fields-sched: schedule CIR removed — not written (old values kept).
             "restore_mode": self._restore_mode(data),
             "priority": _int_field(data, "priority", minimum=1, default=100),
             "enabled": bool(data.get("enabled", True)),

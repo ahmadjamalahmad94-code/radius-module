@@ -112,6 +112,22 @@ ALERTS: list[AlertSpec] = [
          "new_expiry": "2026-07-01 12:00", "kind": N_("مجاني"), "actor": N_("المدير")},
     ),
     AlertSpec(
+        "auto_renew", "subscribers", N_("تجديد تلقائي"),
+        N_("يُرسل عند كلّ محاولة «تجديد تلقائي» لمشترك عند انتهاء فترته "
+        "(services/plan_lifecycle.renew_due) — بالنمط والنتيجة: تمّ، أو لم يُجدَّد "
+        "لأنّ الرصيد لا يكفي، أو فشل."),
+        N_("🔁 <b>تجديد تلقائي</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "النمط: {mode}\n"
+        "النتيجة: {result}\n"
+        "المبلغ: {amount}\n"
+        "تاريخ الانتهاء الجديد: {new_expiry}\n"
+        "تفاصيل: {details}"),
+        {"username": "ahmad99", "mode": N_("خصم من الرصيد المتاح"),
+         "result": N_("تمّ التجديد"), "amount": "75.00 ₪",
+         "new_expiry": "2026-07-01 12:00", "details": "—"},
+    ),
+    AlertSpec(
         "credit_added", "subscribers", N_("إضافة رصيد"),
         N_("يُرسل عند إضافة رصيد نقديّ لمحفظة مشترك (users.add_cash_balance)."),
         N_("💵 <b>إضافة رصيد</b>\n"

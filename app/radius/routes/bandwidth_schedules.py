@@ -52,9 +52,18 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "anonymous"
 
 
+def _days_payload(out: dict) -> dict:
+    """fields-sched: schedule DAYS. Only a form that renders the day chips
+    (``days_present=1``) sets ``days_csv`` — none picked = every day. A form
+    without the chips leaves the key out so the stored days are kept."""
+    if request.form.get("days_present"):
+        out["days_csv"] = ",".join(request.form.getlist("days"))
+    return out
+
+
 def _payload() -> dict:
     enabled = request.form.get("enabled") in {"1", "true", "on", "yes"}
-    return {
+    return _days_payload({
         "target_type": request.form.get("target_type") or "plan",
         "plan_id": request.form.get("plan_id"),
         "subscriber_username": request.form.get("subscriber_username") or "",
@@ -65,12 +74,10 @@ def _payload() -> dict:
         "ends_at_time": request.form.get("ends_at_time"),
         "speed_down_kbps": request.form.get("speed_down_kbps") or 0,
         "speed_up_kbps": request.form.get("speed_up_kbps") or 0,
-        "cir_down_kbps": request.form.get("cir_down_kbps") or 0,
-        "cir_up_kbps": request.form.get("cir_up_kbps") or 0,
         "restore_mode": request.form.get("restore_mode") or "profile_default",
         "enabled": enabled,
         "notes": request.form.get("notes") or "",
-    }
+    })
 
 
 def _safe_return_url() -> str:
@@ -105,10 +112,10 @@ def _payload_from_saved_schedule(base: dict) -> dict:
         "priority": request.form.get("priority") or source.get("priority") or 100,
         "starts_at_time": source.get("starts_at_time"),
         "ends_at_time": source.get("ends_at_time"),
+        # days chosen on the form win; otherwise the saved schedule's days.
+        "days_csv": base.get("days_csv") or source.get("days_csv") or "",
         "speed_down_kbps": source.get("speed_down_kbps") or 0,
         "speed_up_kbps": source.get("speed_up_kbps") or 0,
-        "cir_down_kbps": source.get("cir_down_kbps") or 0,
-        "cir_up_kbps": source.get("cir_up_kbps") or 0,
         "restore_mode": source.get("restore_mode") or "profile_default",
         "enabled": base.get("enabled", True),
         "notes": request.form.get("notes") or source.get("notes") or "",

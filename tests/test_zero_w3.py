@@ -298,10 +298,12 @@ def test_voucher_plan_zero_is_no_plan_and_unknown_plan_is_422(app, client):
                     json={"count": 1, "amount": 5, "plan_id": 0})
     assert r.status_code == 201, r.get_json()
     assert r.get_json()["data"]["items"][0]["plan_id"] is None
+    # Owner 2026-10-06: the voucher «الباقة» is removed — any plan_id an old
+    # app sends is ignored (no FK 500, no 422).
     r = client.post("/api/v1/vouchers", headers=DEV,
                     json={"count": 1, "amount": 5, "plan_id": 987654})
-    assert r.status_code == 422
-    assert r.get_json()["error"]["message"] == "الباقة المحدّدة غير موجودة."
+    assert r.status_code == 201, r.get_json()
+    assert r.get_json()["data"]["items"][0]["plan_id"] is None
 
 
 def test_service_with_unknown_subscriber_is_422(client):

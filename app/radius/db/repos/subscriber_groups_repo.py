@@ -188,9 +188,10 @@ def create(*, tenant_id: int, name: str, description: str = "",
 
 
 def update(tenant_id: int, gid: int, **changes) -> Optional[dict]:
+    # fields-sched: bandwidth_schedule_id is no longer written (removed field).
     allowed = (
         "name", "description",
-        "bandwidth_schedule_id", "default_plan_id",
+        "default_plan_id",
         "default_auto_renewal", "working_days",
         "connection_schedule",
     )

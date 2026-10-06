@@ -53,12 +53,14 @@ def upsert(s: Service) -> Service:
                   dt_to_iso(s.returned_at), s.notes, now))
             new_id = cur.lastrowid
         else:
+            # rent_per_month لا يُكتب عند التعديل — حقلٌ أُزيل (قرار المالك
+            # 2026-10-06)؛ القيمة المخزّنة تبقى كما هي.
             conn.execute("""
                 UPDATE services SET subscriber_id=?, name=?, serial=?, mac=?, type=?,
-                    rent_per_month=?, status=?, given_at=?, returned_at=?, notes=?
+                    status=?, given_at=?, returned_at=?, notes=?
                 WHERE tenant_id = ? AND id = ?
             """, (s.subscriber_id, s.name, s.serial, s.mac, s.type,
-                  s.rent_per_month, s.status, dt_to_iso(s.given_at),
+                  s.status, dt_to_iso(s.given_at),
                   dt_to_iso(s.returned_at), s.notes, s.tenant_id, s.id))
             new_id = s.id
     return get(s.tenant_id, new_id)

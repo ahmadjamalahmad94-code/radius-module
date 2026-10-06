@@ -244,18 +244,16 @@ def test_edit_form_snapshot_never_carries_the_pppoe_password(app):
     html = c.get(f"/admin/radius/users/{uname}/edit").get_data(as_text=True)
     assert "_form_orig" in html
     assert secret not in html
-    # the owner sees it in the field, still never inside the snapshot
+    # owner decision 2026-10-06: the separate PPPoE password was retired (a
+    # PPPoE subscriber logs in with its own password) — it is in no input and
+    # not in the snapshot, for the owner either.
     c2 = app.test_client()
     with app.app_context():
         _login(c2, _owner_id())
     html = c2.get(f"/admin/radius/users/{uname}/edit").get_data(as_text=True)
     m = re.search(r'name="_form_orig" value="([^"]*)"', html)
     assert m and secret not in m.group(1)
-    # an untouched (masked/blank) PPPoE field on save keeps the stored value
-    with app.app_context():
-        from app.radius.routes.users import _pw_digest
-        assert '"ppw"' in m.group(1).replace("&#34;", '"') or "ppw" in m.group(1)
-        assert _pw_digest(secret) != _pw_digest("")
+    assert 'name="pppoe_password"' not in html
 
 
 def test_card_routes_show_the_limits_reason_not_invalid_values(app, monkeypatch):

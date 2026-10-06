@@ -38,10 +38,7 @@ def _form() -> dict:
     return dict(
         name=(f.get("name") or "").strip(),
         description=(f.get("description") or "").strip(),
-        shared_quota_mb=_i("shared_quota_mb"),
-        shared_speed_down_kbps=_i("shared_speed_down_kbps"),
-        shared_speed_up_kbps=_i("shared_speed_up_kbps"),
-        max_members=_i("max_members"),
+        # (الكوتا/السرعة المشتركة وحدّ الأعضاء أُزيلت — قرار المالك 2026-10-06)
         enabled=bool(f.get("enabled")),
     )
 

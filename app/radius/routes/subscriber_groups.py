@@ -71,7 +71,6 @@ def _form_to_kwargs() -> dict:
     return {
         "name":                  (f.get("name") or "").strip(),
         "description":           (f.get("description") or "").strip(),
-        "bandwidth_schedule_id": _int_or_none("bandwidth_schedule_id"),
         "default_plan_id":       _int_or_none("default_plan_id"),
         "default_auto_renewal":  bool(f.get("default_auto_renewal")),
         "working_days":          derived_days,
@@ -80,17 +79,14 @@ def _form_to_kwargs() -> dict:
 
 
 def _select_options(tid: int) -> dict:
-    """Schedules + plans dropdowns. Both calls swallow errors so a broken
-    sub-repo never breaks the form render."""
-    try:
-        schedules = operations_repo.list_bandwidth_schedules(tid)
-    except Exception:  # noqa: BLE001
-        schedules = []
+    """Plans dropdown (swallows errors so a broken sub-repo never breaks the
+    form render). fields-sched: the group «جدولة السرعة» select is gone, so
+    no schedule list is loaded any more."""
     try:
         plans = list(plans_repo.list_plans(tid, limit=500))
     except Exception:  # noqa: BLE001
         plans = []
-    return {"schedules": schedules, "plans": plans}
+    return {"plans": plans}
 
 
 # ────────────────────────── views ───────────────────────────────

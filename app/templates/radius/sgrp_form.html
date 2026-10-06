@@ -1,7 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
-{% from "_partials/unit_input.html" import unit_input_picker %}
 {% set ttl = _('إضافة مجموعة') if is_new else _('تعديل مجموعة') %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
@@ -22,15 +21,11 @@
 {% set help_aside %}
 {% call hub.helppanel(
   _('عن مجموعات المشاركة'),
-  intro=_('مجموعة المشاركة تجمع عدّة مشتركين ليتقاسموا كوتا وسرعة موحّدة بدلاً من حدود فردية.'),
+  intro=_('مجموعة المشاركة تجمع عدّة مشتركين تحت اسمٍ واحد.'),
   icon="people-arrows",
   items=[
-    {"icon": "database", "text": _('الكوتا المشتركة تُحسب لكل المجموعة معًا، و0 يعني غير محدود.')},
-    {"icon": "gauge-high", "text": _('السرعة المشتركة هي السقف الإجمالي للتنزيل والرفع على المجموعة.')},
-    {"icon": "users", "text": _('حد الأعضاء يضبط أقصى عدد مشتركين، و0 يعني بلا حد.')},
-    {"icon": "toggle-on", "text": _('أوقف المجموعة لتعطيل المشاركة دون حذف الإعدادات.')}
-  ],
-  note=_('الإعدادات محفوظة في الواجهة وتُفعَّل بالكامل عند ربطها بمحرك خدمة المصادقة.')
+    {"icon": "toggle-on", "text": _('أوقف المجموعة لتعطيلها دون حذفها.')}
+  ]
 ) %}{% endcall %}
 {% endset %}
 
@@ -51,25 +46,9 @@
     </div>
   {% endcall %}
 
-  {% call hub.section(_('الكوتا والسرعة المشتركة'), icon="gauge-high") %}
+  {# «الكوتا/السرعة المشتركة» و«حد الأعضاء» أُزيلت — قرار المالك 2026-10-06 (لا شيء يفرضها). #}
+  {% call hub.section(_('الحالة'), icon="toggle-on") %}
     <div class="hub-form-row">
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('الكوتا المشتركة (0=غير محدود)') }}</label>
-        {{ unit_input_picker(name="shared_quota_mb", value=(item.shared_quota_mb if item else 0), kind="quota") }}
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('حد الأعضاء (0=غير محدود)') }}</label>
-        <input class="hub-input" type="number" name="max_members" min="0"
-               value="{{ item.max_members if item else 0 }}">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('سرعة تنزيل مشتركة') }}</label>
-        {{ unit_input_picker(name="shared_speed_down_kbps", value=(item.shared_speed_down_kbps if item else 0), kind="speed") }}
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('سرعة رفع مشتركة') }}</label>
-        {{ unit_input_picker(name="shared_speed_up_kbps", value=(item.shared_speed_up_kbps if item else 0), kind="speed") }}
-      </div>
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">{{ _('الحالة') }}</label>
         {{ toggle_switch(name="enabled", checked=((not item) or item.enabled), value="1", on_label=_('نعم'), off_label=_('لا')) }}

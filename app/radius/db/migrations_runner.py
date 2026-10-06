@@ -94,7 +94,36 @@ def _applied() -> set[str]:
 
 
 def list_migrations() -> list[Path]:
-    return sorted(_MIGRATIONS_DIR.glob("*.sql"))
+    """Every migration, ordered by file name: ``NNN_name.sql`` scripts and
+    ``NNN_name.py`` data fixes (a module with ``up(conn)``) share one sequence."""
+    return sorted([*_MIGRATIONS_DIR.glob("*.sql"), *_MIGRATIONS_DIR.glob("*.py")],
+                  key=lambda p: p.name)
+
+
+def _run_python_migration(conn, path: Path) -> None:
+    """Run a ``NNN_name.py`` data fix: ``up(conn)`` and the bookkeeping row in
+    ONE transaction (a crash half-way leaves nothing behind and it re-runs on
+    the next boot). Such a module must be idempotent and must tolerate a
+    missing table (``sqlite_master`` check), like every SQL migration here."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        f"hr_migration_{path.stem}", str(path))
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        report = module.up(conn)
+        conn.execute(
+            "INSERT INTO _migrations(name, applied_at) VALUES(?, ?)",
+            (path.name, datetime.utcnow().isoformat() + "Z"),
+        )
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    if report:
+        _LOG.warning("migration %s: %s", path.name, report)
 
 
 def _split_statements(sql: str) -> list[str]:
@@ -152,6 +181,15 @@ def run_pending_migrations() -> int:
     n = 0
     conn = db()
     for path in pending:
+        if path.suffix == ".py":
+            try:
+                _run_python_migration(conn, path)
+            except Exception:
+                _LOG.exception("migration failed: %s", path.name)
+                raise
+            _LOG.info("migration applied: %s", path.name)
+            n += 1
+            continue
         sql = path.read_text(encoding="utf-8")
         try:
             _execute_migration(conn, path.name, sql)

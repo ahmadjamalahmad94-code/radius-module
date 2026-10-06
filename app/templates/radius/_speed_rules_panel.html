@@ -479,8 +479,6 @@
       {%- set d_kbps  = rule.speed_down_kbps or 0 -%}
       {%- set u_kbps  = rule.speed_up_kbps or 0 -%}
       <div class="sr2-rule {% if not rule.enabled %}is-disabled{% endif %}" data-rule-id="{{ rule.id }}">
-        <input type="hidden" name="sr_edit_cir_down_kbps_{{ rule.id }}" value="{{ rule.cir_down_kbps or 0 }}">
-        <input type="hidden" name="sr_edit_cir_up_kbps_{{ rule.id }}"   value="{{ rule.cir_up_kbps or 0 }}">
         <input type="hidden" name="sr_edit_notes_{{ rule.id }}"          value="{{ rule.notes or '' }}">
 
         {# ── Compact summary view (default). One line per rule with
@@ -584,8 +582,7 @@
           <div class="sr2-field">
             <label>{{ _('بعد الانتهاء') }}</label>
             <select name="sr_edit_restore_mode_{{ rule.id }}">
-              <option value="profile_default" {% if rule.restore_mode == 'profile_default' %}selected{% endif %}>{{ _('الرجوع للسرعة الأساسية') }}</option>
-              <option value="keep_current"    {% if rule.restore_mode == 'keep_current'    %}selected{% endif %}>{{ _('إبقاء آخر سرعة') }}</option>
+              <option value="profile_default" {% if rule.restore_mode != 'disconnect' %}selected{% endif %}>{{ _('رجوع مباشر بدون فصل') }}</option>
               <option value="disconnect"      {% if rule.restore_mode == 'disconnect'      %}selected{% endif %}>{{ _('فصل الجلسة') }}</option>
             </select>
           </div>
@@ -740,8 +737,7 @@
             <div class="sr2-field" data-scope-only="subscriber">
               <label>{{ _('بعد الانتهاء') }}</label>
               <select name="sr_restore_mode">
-                <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
-                <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+                <option value="profile_default">{{ _('رجوع مباشر بدون فصل') }}</option>
                 <option value="disconnect">{{ _('فصل الجلسة') }}</option>
               </select>
             </div>
@@ -948,8 +944,6 @@
       ends_at_time: (field(panel, 'sr_ends_at_time') || {}).value || '',
       speed_down_kbps: (field(panel, 'sr_speed_down_kbps') || {}).value || '0',
       speed_up_kbps: (field(panel, 'sr_speed_up_kbps') || {}).value || '0',
-      cir_down_kbps: (field(panel, 'sr_cir_down_kbps') || {}).value || '0',
-      cir_up_kbps: (field(panel, 'sr_cir_up_kbps') || {}).value || '0',
       restore_mode: (field(panel, 'sr_restore_mode') || {}).value || 'profile_default',
       priority: (field(panel, 'sr_priority') || {}).value || '5',
       source_schedule_id: (field(panel, 'sr_source_schedule_id') || {}).value || '',
@@ -957,7 +951,7 @@
     };
   }
   function clearAddCard(panel){
-    ['sr_name','sr_starts_at_time','sr_ends_at_time','sr_speed_down_kbps','sr_speed_up_kbps','sr_cir_down_kbps','sr_cir_up_kbps','sr_source_schedule_id','sr_notes'].forEach(function(name){
+    ['sr_name','sr_starts_at_time','sr_ends_at_time','sr_speed_down_kbps','sr_speed_up_kbps','sr_source_schedule_id','sr_notes'].forEach(function(name){
       var el = field(panel, name);
       if (!el) return;
       el.value = name.indexOf('_kbps') >= 0 ? '0' : '';
@@ -994,7 +988,7 @@
       + '  <span class="sr2-pending-badge"><i class="fa-solid fa-clock-rotate-left"></i> ' + {{ _("ستحفظ مع")|tojson }} + ' ' + escapeHtml(targetLabel) + '</span>'
       + '  <button type="button" class="sr2-sum-del" data-drop-pending title=' + {{ _("إزالة")|tojson }} + '><i class="fa-solid fa-xmark"></i></button>'
       + '</div>';
-    ['name','days_csv','starts_at_time','ends_at_time','speed_down_kbps','speed_up_kbps','cir_down_kbps','cir_up_kbps','restore_mode','priority','source_schedule_id','notes'].forEach(function(k){
+    ['name','days_csv','starts_at_time','ends_at_time','speed_down_kbps','speed_up_kbps','restore_mode','priority','source_schedule_id','notes'].forEach(function(k){
       var inp = document.createElement('input');
       inp.type = 'hidden';
       inp.name = 'sr_new_' + idx + '_' + k;
@@ -1046,8 +1040,7 @@
       data.ends_at_time = src.ends_at_time || data.ends_at_time;
       data.speed_down_kbps = src.speed_down_kbps || data.speed_down_kbps;
       data.speed_up_kbps = src.speed_up_kbps || data.speed_up_kbps;
-      data.cir_down_kbps = src.cir_down_kbps || data.cir_down_kbps;
-      data.cir_up_kbps = src.cir_up_kbps || data.cir_up_kbps;
+      if (!data.days_csv && src.days_csv){ data.days_csv = src.days_csv; }
       data.restore_mode = src.restore_mode || data.restore_mode;
       data.priority = src.priority || data.priority;
     } else {

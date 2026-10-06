@@ -299,6 +299,9 @@ def _settings_as_kwargs(existing: PaymentSettings | None, updates: dict) -> dict
         "max_amount",
         "payment_request_ttl_minutes",
     }
+    # «تطبيق تلقائي» (auto_apply) removed (owner 2026-10-06: nothing reads it):
+    # still accepted for old app builds, never written — the stored value stays.
+    updates = {k: v for k, v in updates.items() if str(k) != "auto_apply"}
     unknown = sorted(str(key) for key in updates if str(key) not in allowed)
     if unknown:
         raise ValueError("unknown:" + ",".join(unknown))
@@ -466,7 +469,11 @@ def payment_collection_submit_proof(request_id: int):
     try:
         proof = PaymentProofRepository().create(
             payment_request_id=request_id,
-            proof_type=str(body.get("proof_type") or "manual_reference"),
+            # «صورة» (image) removed (owner 2026-10-06): no image is ever
+            # uploaded here — an old app's choice is recorded as a reference.
+            proof_type=("manual_reference"
+                        if str(body.get("proof_type") or "").strip() in ("", "image")
+                        else str(body.get("proof_type"))),
             reference_number=str(body.get("reference_number") or "").strip(),
             note=str(body.get("note") or "").strip(),
         )

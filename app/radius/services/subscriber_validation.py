@@ -116,12 +116,48 @@ def _text(sub, field: str) -> str:
     return v
 
 
-def _valid_ip(value: str) -> bool:
+def _ip_text(sub, field: str) -> str:
+    v = getattr(sub, field, None)
+    return v.strip() if isinstance(v, str) else ""
+
+
+def _check_static_ip(sub) -> None:
+    """«IP ثابت» — the subscriber's ONE fixed address (owner, 2026-10-06: the
+    separate «IP PPPoE» was merged into it). It goes out as
+    ``Framed-IP-Address``, an IPv4-only attribute, so IPv6 and anything that
+    is not an address are refused with an Arabic message."""
+    ip = _ip_text(sub, "static_ip")
+    if not ip:
+        return
     try:
-        ipaddress.ip_address(value)
-        return True
+        addr = ipaddress.ip_address(ip)
     except ValueError:
-        return False
+        raise RadiusValidationError(
+            _tr("عنوان IP الثابت «%(ip)s» غير صالح — اكتب عنوان IPv4 مثل 10.0.0.5.",
+                ip=ip[:64]))
+    if not isinstance(addr, ipaddress.IPv4Address):
+        raise RadiusValidationError(
+            _tr("عنوان IP الثابت يجب أن يكون IPv4 (مثل 10.0.0.5) — عناوين IPv6 "
+                "غير مدعومة لأنّ الراوتر يستقبل العنوان الثابت بصيغة IPv4 فقط."))
+
+
+def _check_framed_ip_unique(sub, tenant_id: Optional[int]) -> None:
+    """A fixed address belongs to ONE subscriber of the network: the router
+    cannot hand the same Framed-IP-Address to two live sessions."""
+    ip = _ip_text(sub, "static_ip")
+    if not ip:
+        return
+    from ..db.connection import db
+    tid = int(tenant_id or getattr(sub, "tenant_id", None) or 1)
+    name = str(getattr(sub, "username", "") or "").strip().lower()
+    row = db().execute(
+        "SELECT 1 FROM subscribers WHERE tenant_id = ? AND deleted_at IS NULL "
+        "AND lower(trim(username)) <> ? AND trim(COALESCE(static_ip, '')) = ? "
+        "LIMIT 1", (tid, name, ip)).fetchone()
+    if row:
+        raise RadiusValidationError(
+            _tr("العنوان %(ip)s مُعطًى لمشتركٍ آخر — العنوان الثابت لا يُعطى "
+                "لحسابين في الشبكة نفسها.", ip=ip))
 
 
 def validate_subscriber_fields(sub, fields: Optional[Iterable[str]] = None, *,
@@ -154,12 +190,14 @@ def validate_subscriber_fields(sub, fields: Optional[Iterable[str]] = None, *,
         mobile = latin_digits(_text(sub, "mobile")).strip()
         if mobile and not _MOBILE_RE.match(mobile):
             raise RadiusValidationError(_tr("رقم الجوال غير صالح (أرقام فقط، ويجوز + في أوّله)."))
-    for f in ("static_ip", "pppoe_ip"):
-        if want(f):
-            v = getattr(sub, f, None)
-            if v not in (None, ""):
-                if not isinstance(v, str) or not _valid_ip(v.strip()):
-                    raise RadiusValidationError(_tr('عنوان IP في «%(f)s» غير صالح.', f=f))
+    # «IP ثابت» = الخانة الوحيدة للعنوان الثابت (دُمج فيها «IP PPPoE» —
+    # pppoe_ip لا يكتبه أيّ نموذج بعد الآن، فلا يُفحص).
+    if want("static_ip"):
+        v = getattr(sub, "static_ip", None)
+        if v not in (None, "") and not isinstance(v, str):
+            raise RadiusValidationError(_tr("عنوان IP الثابت يجب أن يكون نصًّا."))
+        _check_static_ip(sub)
+        _check_framed_ip_unique(sub, tenant_id)
     if want("mac_lock"):
         v = getattr(sub, "mac_lock", None)
         if v not in (None, ""):

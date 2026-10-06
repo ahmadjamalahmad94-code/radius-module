@@ -1263,6 +1263,17 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001
             return 0
     app.jinja_env.filters["epoch"] = _epoch
+
+    # «IP ثابت» IPv4-only (متابعة 2026-10-06): ``{% if v is not ipv4 %}`` يُظهر
+    # تلميح إصلاحٍ لقيمة IPv6/تالفة قديمة (لا تُرسَل Framed-IP-Address).
+    def _is_ipv4(value) -> bool:
+        import ipaddress
+        try:
+            return isinstance(ipaddress.ip_address(str(value or "").strip()),
+                              ipaddress.IPv4Address)
+        except ValueError:
+            return False
+    app.jinja_env.tests["ipv4"] = _is_ipv4
     # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations
     # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
     app.jinja_env.filters["dur_days"] = _dur_days
@@ -1353,6 +1364,12 @@ def _install_stubs(app: Flask) -> None:
                 return _lim.max_extend_days()
             if name == "extend_too_long":
                 return _lim.extend_too_long_msg()
+            if name in ("card_default_username_length", "card_default_password_length"):
+                # «طول اسم/كلمة البطاقة الافتراضي» (إعدادات الشبكة) — تملأ به
+                # نماذج التوليد خانتي الطول، ويطبّقه الخادم حين تُترك فارغة.
+                from .radius.services.cards import card_default_lengths
+                ulen, plen = card_default_lengths()
+                return ulen if name == "card_default_username_length" else plen
             snap = _lim.snapshot()
             if name in snap:
                 return snap[name]

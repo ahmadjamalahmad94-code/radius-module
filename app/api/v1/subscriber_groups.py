@@ -32,8 +32,11 @@ def _actor() -> str:
 
 
 # الحقول التي تقبلها المجموعة (تطابق _form_to_kwargs في صفحة الويب).
+# fields-sched: «bandwidth_schedule_id» removed (owner) — it was never read;
+# group speed schedules are bandwidth_schedules with target «subscriber_group».
+# Old app builds may still send it: ignored silently (not in this list).
 _EDITABLE = (
-    "name", "description", "bandwidth_schedule_id", "default_plan_id",
+    "name", "description", "default_plan_id",
     "default_auto_renewal", "working_days", "connection_schedule",
 )
 

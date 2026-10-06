@@ -45,6 +45,9 @@ def apply_activation_minutes(
 
     adapter = get_radius_adapter()
     account = adapter.get_account(username)
+    # «استخدام مرة وحدة»: حسابٌ مؤقّت فُعِّل مرّة لا يُضاف إليه وقت (دفعة/سلفة).
+    from .plan_lifecycle import reject_single_use
+    reject_single_use(account)
     now = datetime.utcnow()
     current_expire = account.expire_at
     if current_expire is None and respect_unlimited:

@@ -751,6 +751,11 @@
       <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
     {% endfor %}
   </select>
+  <select class="hub-select" name="prepaid" aria-label="{{ _('الدفع المسبق') }}">
+    <option value="" {% if not prepaid %}selected{% endif %}>{{ _('كل الباقات (الدفع)') }}</option>
+    <option value="1" {% if prepaid == '1' %}selected{% endif %}>{{ _('باقات مدفوعة مسبقًا') }}</option>
+    <option value="0" {% if prepaid == '0' %}selected{% endif %}>{{ _('باقات غير مدفوعة مسبقًا') }}</option>
+  </select>
   <select class="hub-select" name="access" aria-label="{{ _('نوع الاتصال') }}">
     <option value="" {% if not access %}selected{% endif %}>{{ _('هوت سبوت وبرود باند') }}</option>
     <option value="hotspot" {% if access == 'hotspot' %}selected{% endif %}>{{ _('هوت سبوت') }}</option>
@@ -1078,6 +1083,7 @@
                class="hr-entity-link"
                title="{{ _('ملف المشترك') }}">{{ u.username }}</a>
             {% else %}{{ u.username }}{% endif %}
+            {% if p and p.single_use_once and u.user_type != 'card' %}<span data-u-badge="single-use" title="{{ _('حساب مؤقت للاستخدام مرة وحدة') }}">{{ hub.pill(_('مؤقت'), variant="amber", dot=False) }}</span>{% endif %}
           </td>
           {# Password cell — masked by default; eye reveals, copy hands it to the operator
              without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
@@ -1185,8 +1191,8 @@
           <td data-col="mac" data-sort-value="{{ u.mac_lock or '' }}" class="mono small">
             {{ u.mac_lock|upper if u.mac_lock else '—' }}
           </td>
-          <td data-col="ip" data-sort-value="{{ u.static_ip or u.pppoe_ip or '' }}" class="mono small">
-            {{ u.static_ip or u.pppoe_ip or '—' }}
+          <td data-col="ip" data-sort-value="{{ u.static_ip or '' }}" class="mono small">
+            {{ u.static_ip or '—' }}
           </td>
           <td data-col="speed" data-sort-value="{{ _down_kbps }}" class="num mono">
             {% if _down_kbps or _up_kbps %}

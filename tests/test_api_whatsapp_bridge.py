@@ -81,19 +81,21 @@ def test_whatsapp_settings_save_updates_event_gates(app, client):
     res = client.patch(
         "/api/v1/whatsapp/settings",
         headers=AUTH,
-        json={"toggles": {"otp": True, "expiry": "1", "quota": False}},
+        json={"toggles": {"otp": True, "expiry": "1", "quota": True}},
     )
     assert res.status_code == 200, res.get_json()
     events = {item["key"]: item for item in res.get_json()["data"]["events"]}
     assert events["otp"]["enabled"] is True
     assert events["expiry"]["enabled"] is True
-    assert events["quota"]["enabled"] is False
+    # Owner 2026-10-06: the quota/portal gates are removed (no sender) — an
+    # old app's key is accepted silently and never written.
+    assert "quota" not in events and "portal" not in events
 
     with app.app_context():
         from app.radius.db.repos import tenants_repo
 
         assert tenants_repo.get_setting(1, "whatsapp.send.otp") == "1"
-        assert tenants_repo.get_setting(1, "whatsapp.send.quota") == "0"
+        assert tenants_repo.get_setting(1, "whatsapp.send.quota", None) is None
 
 
 def test_whatsapp_settings_reject_unknown_event(client):

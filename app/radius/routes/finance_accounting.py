@@ -78,8 +78,12 @@ def accounting_hub():
     report_type = (request.args.get("type") or "daily").strip()
     if report_type not in _REPORTS:
         report_type = "daily"
+    prepaid = (request.args.get("prepaid") or "").strip()
+    prepaid = prepaid if prepaid in ("1", "0") else ""
     try:
-        report_items = svc.reports(report_type=report_type)
+        report_items = svc.reports(
+            report_type=report_type,
+            prepaid=(None if not prepaid else prepaid == "1"))
         snapshots = svc.list_report_snapshots(report_type=report_type, limit=10)
     except RadiusValidationError as exc:
         flash(exc.message, "error")
@@ -96,6 +100,7 @@ def accounting_hub():
         ledger_kpis=ledger_kpis,
         reports=_REPORTS,
         report_type=report_type,
+        prepaid=prepaid,
         report_label=_REPORTS[report_type],
         report_items=report_items,
         snapshots=snapshots,

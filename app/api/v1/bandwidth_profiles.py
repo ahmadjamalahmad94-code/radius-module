@@ -47,9 +47,10 @@ def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
     try:
         rate_down = max(0, int(body.get("rate_down") or 0))
         rate_up = max(0, int(body.get("rate_up") or 0))
-        priority = int(body.get("priority") or 0)
     except (TypeError, ValueError):
-        return fail("validation_error", _tr("قيم السرعة والأولوية يجب أن تكون أرقامًا صحيحة."), status=422)
+        return fail("validation_error", _tr("قيم السرعة يجب أن تكون أرقامًا صحيحة."), status=422)
+    # «priority» removed (owner 2026-10-06: nothing reads it) — accepted for
+    # old app builds, ignored; an edit keeps the stored value.
     return BandwidthProfile(
         id=profile_id,
         tenant_id=_tid(),
@@ -59,7 +60,6 @@ def _payload(profile_id: int | None = None) -> BandwidthProfile | tuple:
         rate_up=rate_up,
         rate_up_unit=units["rate_up_unit"],
         burst=str(body.get("burst") or ""),
-        priority=priority,
     )
 
 

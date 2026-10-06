@@ -119,7 +119,6 @@
   /* Section accent borders */
   .uf-section--acct  { border-inline-start: 3px solid var(--hub-brand); }
   .uf-section--speed { border-inline-start: 3px solid #8B5CF6; }
-  .uf-section--pppoe { border-inline-start: 3px solid #06B6D4; }
   .uf-section--pers  { border-inline-start: 3px solid var(--hub-green); }
   .uf-section--pers  .uf-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
   .uf-section--netw  { border-inline-start: 3px solid var(--hub-blue); }
@@ -873,7 +872,6 @@
       <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</a>
       <a href="#uf-quota"><i class="fa-solid fa-clock"></i> {{ _('الحصة والوقت') }}</a>
       <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة') }}</a>
-      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> {{ _('البرودباند') }}</a>
     </nav>
     <div class="uf-side-note">
       {{ _('ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.') }}
@@ -1809,13 +1807,10 @@
           </div>
           <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('ثابت') }}</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"{% if manager_field_locked is defined and manager_field_locked('subscriber','ip') %} readonly{% endif %}><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">{{ _('عنوان ثابت للمشترك عند الحاجة.') }}</div></div>
-          <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('لجهاز الشبكة') }}</label>
-            <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">{{ _('عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.') }}</div></div>
-          <div class="uf-field"><label>{{ _('اسم الخدمة') }}</label>
-            <span class="uf-net-input"><input class="hub-input" type="text" name="service_name" value="{{ sub.service_name or '' }}" placeholder="pppoe / hotspot"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">{{ _('اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.') }}</div></div>
+            <div class="help">{{ _('عنوانٌ ثابت (IPv4) يُرسَل للراوتر عند دخول المشترك — هوت سبوت أو برودباند (PPPoE). لا يُعطى العنوان لمشتركين اثنين.') }}</div>
+            {% if sub.static_ip and sub.static_ip is not ipv4 %}
+            <div class="help uf-ip-fix" data-ip-fix role="alert" style="color:var(--hub-red-ink, #b91c1c)"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('العنوان المحفوظ «%(ip)s» ليس عنوان IPv4 صالحًا فلا يُرسَل للراوتر — صحّحه إلى IPv4 (مثل 10.0.0.5) أو امسحه.', ip=sub.static_ip) }}</div>
+            {% endif %}</div>
           <div class="uf-field"><label>{{ _('عدد الأجهزة المسموحة') }}</label>
             <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}"{% if manager_field_locked is defined and manager_field_locked('subscriber','device_count') %} readonly{% endif %}>
             <div class="help">{{ _('الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.') }}</div></div>
@@ -1835,6 +1830,9 @@
               <option value="replace" {{ 'selected' if _dlm == 'replace' else '' }}>{{ _('استبدال — فصل أقدم جلسة والسماح') }}</option>
             </select>
             <div class="help">{{ _('ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('الجلسات المتزامنة') }}</label>
+            <input class="hub-input" type="number" min="0" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}"{% if manager_field_locked is defined and manager_field_locked('subscriber','device_count') %} readonly{% endif %}>
+            <div class="help">{{ _('سقفٌ صارم لعدد الجلسات المفتوحة معًا لهذا الحساب — تُحسب كلّ جلسة ولو من الجهاز نفسه. أكبر من 0 = يتقدّم على «عدد الأجهزة المسموحة»؛ 0 = يُطبَّق «عدد الأجهزة المسموحة».') }}</div></div>
 
           <div class="uf-subrow-3">
             <div class="uf-field"><label>{{ _('خادم DNS الأساسي (PPP)') }}</label>
@@ -1843,47 +1841,15 @@
             <div class="uf-field"><label>{{ _('خادم DNS الثانوي (PPP)') }}</label>
               <span class="uf-net-input"><input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"><i class="fa-solid fa-laptop"></i></span>
               <div class="help">{{ _('خادم احتياطي يُستخدم إذا تعطّل الأساسي.') }}</div></div>
-            <div class="uf-field"><label>{{ _('منفذ الاتصال للجهاز') }}</label>
-              <span class="uf-net-input"><input class="hub-input" type="text" name="nas_port_id" value="{{ sub.nas_port_id or '' }}" placeholder="ether1 / wlan1"><i class="fa-solid fa-laptop"></i></span>
-              <div class="help">{{ _('يقيّد دخول المشترك على منفذ معيّن في الراوتر.') }}</div></div>
           </div>
 
-          <input type="hidden" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
-          <input type="hidden" name="vlan_id" value="{{ sub.vlan_id or 0 }}">
-          <input type="hidden" name="pool" value="{{ sub.pool or '' }}">
           <input type="hidden" name="caller_id" value="{{ sub.caller_id or '' }}">
-          <input type="hidden" name="device_connection_file" value="{{ sub.device_connection_file or '' }}">
         </div>
       </div>
     </section>
 
-    {# ── 6. البرودباند ─────────────────────────────────── #}
-    <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
-      <header class="uf-section-head">
-        <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
-        <span class="uf-section-title">{{ _('البرودباند (اختياري)') }}</span>
-        <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
-      </header>
-      <div class="uf-section-body">
-        <div class="uf-grid">
-          <div class="uf-field">
-            <label>{{ _('اسم دخول البرودباند') }}</label>
-            <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
-            <div class="help">{{ _('اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.') }}</div>
-          </div>
-          <div class="uf-field">
-            <label>{{ _('كلمة مرور البرودباند') }}</label>
-            <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
-            <div class="help">{{ _('اتركها فارغة لاستخدام كلمة المرور الأساسية.') }}</div>
-          </div>
-          <div class="uf-field">
-            <label>{{ _('عنوان البرودباند') }}</label>
-            <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
-            <div class="help">{{ _('عنوان ثابت اختياري.') }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
+    {# ── 6. «البرودباند» أُزيل: خانته الوحيدة «IP PPPoE» دُمجت في «IP ثابت»
+       أعلاه (قرار المالك، متابعة 2026-10-06؛ migration 198 نسخ القيم). #}
 
     {# ── 7. Very advanced network overrides ───────────── #}
     <section class="uf-section uf-section--mt is-collapsible is-collapsed" data-sec="mt" id="uf-advanced">
@@ -1910,9 +1876,6 @@
           <div class="uf-field"><label>{{ _('مجموعة مستخدم الراوتر') }}</label>
             <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}">
             <div class="help">{{ _('مجموعة صلاحيات Hotspot في الراوتر.') }}</div></div>
-          <div class="uf-field"><label>{{ _('مجموعة إدارة الراوتر') }}</label>
-            <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}">
-            <div class="help">{{ _('صلاحيات دخول إدارية (Winbox) إن وجدت.') }}</div></div>
           <div class="uf-field"><label>{{ _('أولوية طابور السرعة') }}</label>
             <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8">
             <div class="help">{{ _('1 = أعلى أولوية عند ازدحام الشبكة.') }}</div></div>

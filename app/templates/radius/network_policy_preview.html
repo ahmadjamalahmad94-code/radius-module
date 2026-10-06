@@ -635,6 +635,14 @@
 {{ npc.npc_dry_run_banner() }}
 {{ npc.npc_tabs(service.url_slug, services) }}
 
+{# fields-sched: «مفعّلة» is effective — a disabled policy plans to cleanup only. #}
+{% if policy.enabled is defined and not policy.enabled %}
+<div class="hub-pill hub-pill--amber" role="status" data-test="npc-policy-disabled" style="display:flex;gap:8px;white-space:normal;line-height:1.7;padding:10px 14px;margin:10px 0">
+  <i class="fa-solid fa-circle-pause"></i>
+  {{ _('السياسة معطّلة — لا أثر لها: التطبيق يزيل قواعدها المُدارة من الراوتر ولا يضيف شيئًا. فعّلها ثم طبّق لإعادة أثرها.') }}
+</div>
+{% endif %}
+
 <div class="npc-int-grid">
 
   {# ════════════════ SECTION 1 — Decision summary ════════════════ #}

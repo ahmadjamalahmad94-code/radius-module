@@ -102,10 +102,9 @@ def payment_collection_settings():
                 wallet_owner_name=form.get("wallet_owner_name") or "",
                 currency=form.get("currency") or (existing.currency if existing else default_currency()),
                 confirmation_mode=form.get("confirmation_mode") or "manual",
-                # Parity-b F2: the web form has no «auto_apply» input — keep the
-                # stored value instead of wiping what the app set.
-                auto_apply=(bool(form.get("auto_apply")) if "auto_apply" in form
-                            else bool(existing.auto_apply) if existing else False),
+                # «تطبيق تلقائي» أُزيل (قرار المالك 2026-10-06: لا قارئ له) —
+                # لا يكتبه الحفظ أبدًا؛ القيمة المخزّنة تبقى كما هي.
+                auto_apply=bool(existing.auto_apply) if existing else False,
                 allow_cards=bool(form.get("allow_cards")),
                 allow_monthly_subscriptions=bool(form.get("allow_monthly_subscriptions")),
                 allow_distributor_payments=bool(form.get("allow_distributor_payments")),

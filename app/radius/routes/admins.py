@@ -244,7 +244,6 @@ def admins_create():
         profile = {
             "phone":         _s("phone"),
             "profile_notes": _s("profile_notes"),
-            "avatar_url":    _s("avatar_url"),
             "tags":          _s("tags"),
         }
         if any(profile.values()):
@@ -284,7 +283,8 @@ def admins_update(admin_id: int):
     changes = {}
     for k in ("full_name","email","mobile",
               # RM-H6 profile fields
-              "phone","profile_notes","avatar_url","tags"):
+              # (avatar_url أُزيل — قرار المالك 2026-10-06: لا شيء يعرضه)
+              "phone","profile_notes","tags"):
         v = request.form.get(k)
         if v is not None: changes[k] = v.strip()
     if request.form.get("role_id"):
@@ -296,7 +296,7 @@ def admins_update(admin_id: int):
         changes["enabled"] = bool(request.form.get("enabled"))
     password = (request.form.get("password") or "").strip()
     # تطبيق profile fields عبر repo مباشرة لتجنب تقييد الـ service
-    profile_keys = ("phone","profile_notes","avatar_url","tags")
+    profile_keys = ("phone","profile_notes","tags")
     profile_changes = {k: changes.pop(k) for k in list(changes) if k in profile_keys}
 
     # ── D12: مستوى الوصول (سوبر يوزر / شريك) + حماية المالك الأصليّ ──

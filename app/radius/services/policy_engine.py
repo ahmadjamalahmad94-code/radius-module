@@ -1137,8 +1137,21 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         if _u:
             card_used_in = int(_u["i"] or 0)
             card_used_out = int(_u["o"] or 0)
+        # «غير محدود ليلًا»: ما استهلكته البطاقة في نافذة الليل لا يُحتسب.
     except Exception:  # noqa: BLE001
         card_used_in = card_used_out = 0
+    # «غير محدود ليلًا»: ما استهلكته البطاقة في نافذة الليل لا يُحتسب (محصّن
+    # منفصلًا — عطبُه لا يصفّر الاستهلاك).
+    if card.plan_id and (card_used_in or card_used_out):
+        try:
+            from . import quota_night
+            _plan = plans_repo.get_plan(card.tenant_id, card.plan_id, include_deleted=True)
+            _fi, _fo = quota_night.total_credit(card.tenant_id, card.username, _plan)
+            card_used_in = max(0, card_used_in - _fi)
+            card_used_out = max(0, card_used_out - _fo)
+        except Exception:  # noqa: BLE001
+            _LOG.warning("quota_night: card credit failed for %r", card.username,
+                         exc_info=True)
 
     return Subscriber(
         id=card.id,
@@ -1929,8 +1942,12 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب حساب النافذة
         _LOG.warning("policy_engine: schedule-window session-timeout failed for %r",
                      getattr(sub, "username", "?"), exc_info=True)
-    if sub.static_ip:
-        out["Framed-IP-Address"] = sub.static_ip
+    # «IP ثابت» — خانةٌ واحدة للعنوان الثابت (دُمج فيها «IP PPPoE»، متابعة
+    # 2026-10-06)، IPv4 فقط وفريدةٌ على الشبكة؛ قيمة IPv6 قديمة لا تُرسَل.
+    from .subscriber_retired_fields import framed_ip as _framed_ip
+    _fip = _framed_ip(sub)
+    if _fip:
+        out["Framed-IP-Address"] = _fip
     out["Acct-Interim-Interval"] = "60"
 
     # Wave-B «on_quota_exhaust=reduce_speed»: لو نفدت الكوتا وبطاقة المستخدم

@@ -33,7 +33,7 @@ def app(monkeypatch):
 
 
 def test_apply_active_factor_math(app):
-    """المُحلِّل يضرب «Uk/Dk» بالمعامل، يحترم النطاق ويُبقي ذيل الburst."""
+    """المُحلِّل يضرب «Uk/Dk» بالمعامل، يحترم النطاق ويضرب Burst/CIR بالنسبة نفسها."""
     with app.app_context():
         from app.radius.db.repos import tenants_repo
         from app.radius.services import bandwidth_rate as br
@@ -50,10 +50,14 @@ def test_apply_active_factor_math(app):
         # باقة خارج النطاق (profile_ids=[99]) → بلا تغيير
         S('{"multiplier":0.5,"overrides":{},"profile_ids":[99]}')
         assert br._apply_active_speed_factor(1, 5, "1000k/2000k") == "1000k/2000k"
-        # ذيل الburst يبقى كما هو، والمعدّل الأساسيّ فقط يُضرب
+        # Burst/CIR صارت مُطبَّقة (قرار المالك 2026-10-06): كلّ سرعات السطر تُضرب
+        # بالمعامل نفسه (وإلّا تجاوز CIR السرعةَ المخفَّضة)؛ الزمن والأولويّة لا.
         S('{"multiplier":0.5,"overrides":{},"profile_ids":[]}')
         assert br._apply_active_speed_factor(1, 5, "1000k/2000k 4000k/8000k") \
-            == "500k/1000k 4000k/8000k"
+            == "500k/1000k 2000k/4000k"
+        assert br._apply_active_speed_factor(
+            1, 5, "1000k/2000k 2000k/4000k 750k/1500k 16/16 8 250k/500k") \
+            == "500k/1000k 1000k/2000k 375k/750k 16/16 8 125k/250k"
         # 100% = بلا تغيير
         S('{"multiplier":1.0,"overrides":{},"profile_ids":[]}')
         assert br._apply_active_speed_factor(1, 5, "1000k/2000k") == "1000k/2000k"

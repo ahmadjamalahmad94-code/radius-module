@@ -30,11 +30,10 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 WHATSAPP_EVENTS: tuple[tuple[str, str], ...] = (
     ("otp", N_("رمز التحقق (OTP) عند الدخول")),
     ("expiry", N_("تنبيه قرب انتهاء الاشتراك")),
-    ("quota", N_("تنبيه قرب نفاد الباقة")),
     ("maintenance", N_("إشعارات الصيانة والانقطاع")),
     ("password", N_("تغيير كلمة المرور")),
-    ("portal", N_("روابط ودعوات بوابة المشترك")),
 )
+# (quota / portal أُزيلا — قرار المالك 2026-10-06: لا مُرسِل يستدعيهما.)
 
 # Where the operator manages the actual Meta connection — on the panel portal.
 PANEL_PORTAL_WHATSAPP_PATH = "/portal/whatsapp"

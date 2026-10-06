@@ -727,6 +727,18 @@ def _form_int(name: str, d: int = 0) -> int:
     except (TypeError, ValueError): return d
 
 
+def _form_len(name: str):
+    """طول اسم/كلمة البطاقة من النموذج — None حين يُترك فارغًا (الافتراض
+    من إعدادات الشبكة)؛ نصٌّ غير رقميّ ⇒ None كذلك (نفس تسامح _form_int)."""
+    raw = (request.form.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def _form_float(name: str, d: float = 0.0) -> float:
     try: return strict_float(request.form.get(name) or d)
     except (TypeError, ValueError): return d
@@ -943,8 +955,10 @@ def _collect_batch_options() -> dict:
         # توليد
         "username_prefix":           _form_str("username_prefix"),
         "username_suffix":           _form_str("username_suffix"),
-        "username_length":           _form_int("username_length", 8),
-        "password_length":           _form_int("password_length", 6),
+        # خانةٌ فارغة/غائبة ⇒ None = «الطول الافتراضيّ للشبكة» من الإعدادات
+        # (cards.default_*_length) — يحلّه CardsService.generate_batch.
+        "username_length":           _form_len("username_length"),
+        "password_length":           _form_len("password_length"),
         "password_charset":          _form_str("password_charset") or "digits",
         # غائبٌ ⇒ «أرقام فقط» — نفس افتراض النموذج والـAPI (قرار المالك).
         "password_generation_type":  _form_str("password_generation_type") or "digits",
