@@ -85,15 +85,55 @@ SELECT n.nasname, n.shortname, n.tenant_id AS legacy_tenant_column
                     WHERE d.enabled = 1 AND d.deleted_at IS NULL
                       AND n.nasname IN (TRIM(d.address), TRIM(d.vpn_peer_address),
                                         TRIM(d.management_remote_address)));
---     And sources seen in the last 7 days that no live router claims:
-SELECT r.nasipaddress, COUNT(*) AS sessions_7d
+--     And sources seen in the last 7 days that no live router claims,
+--     classified (SEC_B14_LOCAL_NAS.md). Only UNKNOWN is a stranger, the others
+--     are the server itself and must be registered (tools/radius_local_nas.py)
+--     — or removed — before B-14 is activated on a multi-network server:
+--       local_loopback           127.0.0.0/8 / ::1 — a process on the host
+--                                (smoke test, load test, probe, local NAS):
+--                                register it as 'probe' / 'nas' or stop it.
+--       local_accel_mgmt_tunnel  only rtr-* users: the host's accel-ppp
+--                                (management tunnels). Register its gateway
+--                                as 'mgmt' (or 'nas' + tenant if it also
+--                                serves one network's data connections).
+--       not_via_freeradius       every row was written by the panel itself
+--                                ('T' timestamps, FreeRADIUS writes 'YYYY-MM-DD
+--                                HH:MM:SS') — seed/demo/synthetic rows, no
+--                                RADIUS client behind them: B-14 does not see
+--                                them. Clean them up separately.
+--       UNKNOWN                  a real RADIUS client nobody claims: register
+--                                the router on the right network first.
+SELECT r.nasipaddress,
+       COUNT(*) AS sessions_7d,
+       COUNT(DISTINCT r.username) AS users_7d,
+       SUM(CASE WHEN r.acctstoptime IS NULL THEN 1 ELSE 0 END) AS open_rows,
+       CASE
+         WHEN r.nasipaddress LIKE '127.%' OR r.nasipaddress IN ('::1', '0.0.0.0')
+              THEN 'local_loopback'
+         WHEN MIN(INSTR(COALESCE(r.acctstarttime, ''), 'T')) > 0
+              THEN 'not_via_freeradius'
+         WHEN SUM(CASE WHEN r.username LIKE 'rtr-%' THEN 1 ELSE 0 END) = COUNT(*)
+              THEN 'local_accel_mgmt_tunnel'
+         ELSE 'UNKNOWN'
+       END AS source_class
   FROM radacct r
  WHERE r.acctstarttime >= datetime('now', '-7 days')
    AND NOT EXISTS (SELECT 1 FROM nas_devices d
                     WHERE d.enabled = 1 AND d.deleted_at IS NULL
                       AND r.nasipaddress IN (TRIM(d.address), TRIM(d.vpn_peer_address),
                                              TRIM(d.management_remote_address)))
- GROUP BY r.nasipaddress ORDER BY sessions_7d DESC;
+ GROUP BY r.nasipaddress ORDER BY source_class = 'UNKNOWN' DESC, sessions_7d DESC;
+
+-- D7  After migration 197: the operator registry of server-local sources, and
+--     7-day sources that neither a router nor the registry owns (= what B-14
+--     will reject / quarantine on a multi-network server).
+-- SELECT ip, purpose, tenant_id, service, updated_at FROM radius_local_nas ORDER BY ip;
+-- SELECT r.nasipaddress, COUNT(*) AS sessions_7d FROM radacct r
+--  WHERE r.acctstarttime >= datetime('now', '-7 days')
+--    AND INSTR(r.acctstarttime, 'T') = 0
+--    AND NOT EXISTS (SELECT 1 FROM radius_source_tenant v
+--                     WHERE v.ip = r.nasipaddress AND v.tenant_id IS NOT NULL)
+--  GROUP BY r.nasipaddress ORDER BY sessions_7d DESC;
 
 -- D5  After the fix: what went to quarantine (table exists only after migration 196).
 -- SELECT kind, reason, src_ip, COUNT(*) AS keys, SUM(packets) AS packets, MAX(last_seen) AS last_seen

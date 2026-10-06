@@ -20,6 +20,18 @@ accounting queries and this module can never disagree:
     unknown address, one tenant    → the server's only tenant (no one to leak to)
     unknown address, several       → None   (quarantine: radius_unattributed)
 
+Server-local sources (migration 197 — the host's accel-ppp gateway, loopback
+tooling, health probes) are attributed ONLY through the operator registry
+`radius_local_nas` (tools/radius_local_nas.py):
+
+    registered 'nas'               → its configured tenant
+    registered 'nas', tenant gone  → None   (local_nas — never guessed)
+    registered 'mgmt'              → None   (local_mgmt: router-tunnel infra)
+    registered 'probe'             → None   (probe: nothing is recorded)
+
+A registered address never falls back to the only tenant, and no tenant's
+router row can claim a loopback or registered address (the view drops them).
+
 `None` means "do not attribute": the caller rejects the login / stores the
 packet in `radius_unattributed`, which no tenant can read.
 """
@@ -35,6 +47,13 @@ REASON_NAS = "nas"
 REASON_SOLE_TENANT = "sole_tenant"
 REASON_UNKNOWN = "unknown_nas"
 REASON_AMBIGUOUS = "ambiguous_nas"
+REASON_LOCAL_NAS = "local_nas_tenant"     # attributed via the local registry
+REASON_PROBE = "probe"                    # health probe: record nothing
+
+
+def _local_reason(purpose: str) -> str:
+    # same text FreeRADIUS writes into radius_unattributed.reason
+    return "local_" + purpose
 
 
 @dataclass(frozen=True)
@@ -62,9 +81,19 @@ def resolve_source_tenant(source_ip: str) -> SourceTenant:
     conn = db()
     if ip:
         row = conn.execute(
-            "SELECT tenant_id, tenant_count FROM radius_source_tenant WHERE ip = ?",
+            "SELECT tenant_id, tenant_count, local_purpose "
+            "  FROM radius_source_tenant WHERE ip = ?",
             (ip,)).fetchone()
         if row is not None:
+            purpose = row["local_purpose"]
+            if purpose:
+                # Operator-registered server-local source: its configured
+                # tenant or nothing — never the only-tenant fallback.
+                if row["tenant_id"] is not None:
+                    return SourceTenant(int(row["tenant_id"]), REASON_LOCAL_NAS, ip)
+                if purpose == "probe":
+                    return SourceTenant(None, REASON_PROBE, ip)
+                return SourceTenant(None, _local_reason(purpose), ip)
             if row["tenant_id"] is not None:
                 return SourceTenant(int(row["tenant_id"]), REASON_NAS, ip)
             # Two tenants claim this address. On a one-tenant server that is

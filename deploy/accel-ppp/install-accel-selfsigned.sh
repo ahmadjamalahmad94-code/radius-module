@@ -441,6 +441,11 @@ CLIENTEOF
     else
         log "عميل FreeRADIUS لـaccel موجود ومطابق — لا تغيير."
     fi
+    # B-14 (docs/security/SEC_B14_LOCAL_NAS.md): on a server holding several
+    # networks, RADIUS from ${GATEWAY} belongs to no router row and is
+    # rejected/quarantined until the operator registers it explicitly. Not
+    # automatic on purpose — which network it serves is an owner decision.
+    log "تنبيه B-14: على خادمٍ متعدّد الشبكات سجّل مصدر accel (${GATEWAY}) صراحةً: docker exec hoberadius python /app/tools/radius_local_nas.py --db /app/instance/hoberadius.db set ${GATEWAY} --purpose mgmt (أو --purpose nas --tenant N)."
     # Guard: a stray .bak in an $INCLUDE dir makes FreeRADIUS load it too →
     # duplicate-client fatal. Refuse to leave any behind.
     find "$FR_CLIENTS_DIR" -maxdepth 1 -name '*.bak' -type f -delete 2>/dev/null || true
