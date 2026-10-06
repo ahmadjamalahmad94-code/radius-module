@@ -38,6 +38,9 @@
           {% if p.enabled %}{{ hub.pill(_('مفعَّلة'), variant="green", dot=False) }}
           {% else %}{{ hub.pill(_('معطَّلة'), variant="amber", dot=False) }}{% endif %}
           {% if _subs %}{{ hub.pill(_subs|string + _(' مشترك'), variant="blue", dot=False) }}{% endif %}
+          {% if p.prepaid %}{{ hub.pill(_('مدفوع مسبقًا'), variant="blue", dot=False) }}{% endif %}
+          {% if p.single_use_once %}{{ hub.pill(_('مؤقت'), variant="amber", dot=False) }}{% endif %}
+          {% if (p.auto_renew_mode or 'off') != 'off' %}{{ hub.pill(_('تجديد تلقائي'), variant="green", dot=False) }}{% endif %}
         </div>
         <div class="pl-card__specs">
           <div class="pl-card__spec">
@@ -125,6 +128,7 @@
           {'label':_('السعر'),        'value': p.price|money, 'mono': True},
           {'label':_('العملة'),       'value': p.currency or _('عملة النظام')},
           {'label':_('مسبق الدفع'),   'value': _('نعم') if p.prepaid else _('لا')},
+          {'label':_('تجديد تلقائي'), 'value': {'debt': _('مسموح بالدين'), 'balance': _('خصم من الرصيد المتاح'), 'free': _('مجاني')}.get(p.auto_renew_mode or 'off', _('بدون'))},
         ]) }}
       </div>
 

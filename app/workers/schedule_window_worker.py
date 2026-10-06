@@ -73,6 +73,18 @@ def tick_once() -> dict:
             stats["quota_checked"] = q.get("checked", 0)
         except Exception:  # noqa: BLE001
             _LOG.exception("quota sweep tick failed")
+    # Same cadence: per-plan «تجديد تلقائي» at expiry + «استخدام مرة وحدة»
+    # (temporary accounts disabled at expiry). Owner 2026-10-06.
+    # Disable with HOBERADIUS_PLAN_LIFECYCLE_SWEEP_ENABLED=0.
+    if (os.environ.get("HOBERADIUS_PLAN_LIFECYCLE_SWEEP_ENABLED") or "1").strip().lower() not in (
+            "0", "false", "no", "off"):
+        try:
+            from app.radius.services import plan_lifecycle
+            p = plan_lifecycle.sweep()
+            stats["auto_renewed"] = p.get("renewed", 0)
+            stats["single_use_disabled"] = p.get("single_use_disabled", 0)
+        except Exception:  # noqa: BLE001
+            _LOG.exception("plan lifecycle sweep tick failed")
     return stats
 
 

@@ -966,10 +966,17 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
 
 
 def subscriber_payment_report(tenant_id: int, *, subscriber_id: int | None = None,
-                              limit: int | None = None, offset: int = 0) -> list[dict]:
+                              limit: int | None = None, offset: int = 0,
+                              prepaid: bool | None = None) -> list[dict]:
     """دفعات المستفيدين — **كل** الدافعين (كان مقصوصًا على 200 بصمت).
-    ``limit``/``offset`` اختياريّان للترقيم؛ بدونهما يُعاد الكلّ."""
+    ``limit``/``offset`` اختياريّان للترقيم؛ بدونهما يُعاد الكلّ.
+    ``prepaid`` (True/False) = فلتر «باقات مدفوعة مسبقًا» بباقة المشترك الحاليّة."""
     sc, sv = _rscope(tenant_id)
+    if prepaid is not None:
+        sc += (" AND l.subscriber_id IN (SELECT s.id FROM subscribers s "
+               "JOIN access_plans p ON p.id = s.plan_id AND p.tenant_id = s.tenant_id "
+               "WHERE s.tenant_id = ? AND COALESCE(p.prepaid, 0) = ?)")
+        sv = [*sv, int(tenant_id), 1 if prepaid else 0]
     frm = f"""
         FROM accounting_ledger_entries l
         LEFT JOIN accounting_ledger_entries orig

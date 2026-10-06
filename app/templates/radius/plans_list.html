@@ -260,6 +260,10 @@
             <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
               <span class="pl-color-dot" style="background:{{ p.color or '#6B5AED' }}"></span>
               {% if can_submit('radius.plans_edit', 'GET') %}<a class="pl-name-link" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}" title="{{ _('تعديل') }}">{% endif %}{{ p.name }}{% if can_submit('radius.plans_edit', 'GET') %}</a>{% endif %}
+              {# أوسمة الباقة (قرار المالك 2026-10-06): مدفوع مسبقًا / مؤقت / تجديد تلقائي #}
+              {% if p.prepaid %}<span data-pl-badge="prepaid">{{ hub.pill(_('مدفوع مسبقًا'), variant="blue", dot=False) }}</span>{% endif %}
+              {% if p.single_use_once %}<span data-pl-badge="single-use">{{ hub.pill(_('مؤقت'), variant="amber", dot=False) }}</span>{% endif %}
+              {% if (p.auto_renew_mode or 'off') != 'off' %}<span data-pl-badge="auto-renew" title="{{ _('تجديد تلقائي') }}">{{ hub.pill(_('تجديد تلقائي'), variant="green", dot=False) }}</span>{% endif %}
             </div>
           </td>
           <td class="mono small">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>

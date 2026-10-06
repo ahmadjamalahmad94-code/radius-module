@@ -1036,6 +1036,8 @@ class UsersService:
         amount = _charge_amount(charge_mode, amount)
         u = self._adapter.get_account(username)
         _reject_extend_unlimited(u)
+        from .plan_lifecycle import reject_single_use
+        reject_single_use(u)
         _require_paid_balance(u, amount, charge_mode)
         # 🔴 المرساة: **الأبعدُ** بين نهايته الحاليّة والآن — لا نهايتُه وحدَها.
         #
@@ -1094,6 +1096,8 @@ class UsersService:
         amount = _charge_amount(charge_mode, amount)
         currency = _currency(currency)
         u = self._adapter.get_account(username)
+        from .plan_lifecycle import reject_single_use
+        reject_single_use(u)
         _require_paid_balance(u, amount, charge_mode)
         # Owner rule (2026-09-29): one set-expiry moves the end ≤ 1 year past
         # max(now, current end); never beyond 2100.

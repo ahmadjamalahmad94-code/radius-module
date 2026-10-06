@@ -582,7 +582,7 @@
                   <div class="help">{{ _('قطع الجلسة عند عدم وجود حركة لهذه المدة.') }}</div></div>
                 <div class="pl-field"><label>{{ _('استخدام مرة واحدة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="single_use_once", checked=plan.single_use_once, value="1", id="suo") }}</div>
-                  <div class="help">{{ _('تُستهلك الباقة مرة واحدة فقط.') }}</div></div>
+                  <div class="help">{{ _('حساب مؤقت: عند انتهاء وقته يُعطَّل تلقائيًا (ويُفصل إن كان متصلًا) ولا يُجدَّد ولا يُمدَّد.') }}</div></div>
                 <div class="pl-field"><label>{{ _('عدد مرات الاستهلاك') }}</label>
                   <input class="hub-input" type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}">
                   <div class="help">{{ _('كم مرة يُسمح باستهلاك الباقة. 0 = بلا حد.') }}</div></div>
@@ -723,6 +723,18 @@
           <div class="pl-field"><label>{{ _('العملة') }}</label>
             <input class="hub-input" type="text" name="currency" value="{{ plan.currency or cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
             <div class="help">{{ _('عملة النظام، تُضبط من الإعدادات العامة.') }}</div></div>
+          <div class="pl-field"><label>{{ _('مدفوع مسبقًا') }}</label>
+            <div class="pl-chk">{{ toggle_switch(name="prepaid", checked=(plan.prepaid if not is_new else True), value="1", id="pl-prepaid") }}</div>
+            <div class="help">{{ _('وسم للتقارير فقط: يظهر في قائمة الباقات وفلتر «باقات مدفوعة مسبقًا» في تقارير المشتركين والمالية.') }}</div></div>
+          <div class="pl-field"><label>{{ _('تجديد تلقائي') }}</label>
+            {%- set _arm = (plan.auto_renew_mode or 'off') -%}
+            <select class="hub-select" name="auto_renew_mode">
+              <option value="off" {% if _arm == 'off' %}selected{% endif %}>{{ _('بدون') }}</option>
+              <option value="debt" {% if _arm == 'debt' %}selected{% endif %}>{{ _('مسموح بالدين') }}</option>
+              <option value="balance" {% if _arm == 'balance' %}selected{% endif %}>{{ _('خصم من الرصيد المتاح') }}</option>
+              <option value="free" {% if _arm == 'free' %}selected{% endif %}>{{ _('مجاني') }}</option>
+            </select>
+            <div class="help">{{ _('عند انتهاء اشتراك المشترك يُجدَّد تلقائيًا بمدة الباقة: بالدين، أو خصمًا من رصيده إن كفى (وإلا ينتهي ويُنبَّه المدراء)، أو مجانًا.') }}</div></div>
         </div>
       </div>
     </section>

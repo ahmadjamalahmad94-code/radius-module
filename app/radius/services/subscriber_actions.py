@@ -97,6 +97,10 @@ def extend_subscriber(caller: ActionCaller, username: str, *, minutes: int = 0,
     # (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض). تعيينُ التاريخ مسموح.
     if expire_at is None:
         _reject_extend_unlimited(get_users_service().get(username))
+    # «استخدام مرة وحدة» = حساب مؤقّت: لا تجديد ولا تمديد (قرار المالك 2026-10-06)
+    # — قبل بوّابة الإنفاق كذلك.
+    from .plan_lifecycle import reject_single_use
+    reject_single_use(get_users_service().get(username))
     # «مدفوع» يُخصم من رصيد المشترك: رصيدٌ لا يكفي يُرفض **قبل** بوّابة إنفاق
     # المدير (البوّابة تُسجّل الإنفاق، فلا يُسجَّل لعمليةٍ ستُرفض).
     if charge_mode == "paid":

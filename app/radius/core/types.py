@@ -123,6 +123,8 @@ class AccessPlan:
     on_login: str = ""
     on_logout: str = ""
     auto_renew: bool = False
+    # «تجديد تلقائي» (هجرة 197): off / debt / balance / free — auto_renew = النمط ≠ off.
+    auto_renew_mode: str = "off"
     router_ids: Tuple[int, ...] = field(default_factory=tuple)
     # تجاري
     price_card: float = 0.0

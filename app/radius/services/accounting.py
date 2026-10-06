@@ -562,6 +562,16 @@ class AccountingService:
         # {"plan_id": "abc"} كان ValueError ⇒ 500.
         plan_id = _to_int(plan_id, field="plan_id", minimum=1) if plan_id else None
         plan = accounting_repo.resolve_plan(self.tenant_id, plan_id) if plan_id else None
+        # «استخدام مرة وحدة»: دفعةٌ تشتري وقتًا لحسابٍ مؤقّت مُفعَّل ⇒ 422 قبل أيّ
+        # قيد (قرار المالك 2026-10-06 — لا تجديد ولا تمديد).
+        if _truthy(body.get("apply_to_radius")):
+            from .plan_lifecycle import reject_single_use
+            from ..integration.factory import get_radius_adapter
+            try:
+                _acc = get_radius_adapter().get_account(str(subscriber.get("username") or ""))
+            except RadiusNotFound:
+                _acc = None
+            reject_single_use(_acc)
 
         # المبلغ يُقرَّب لقرشين أوّلًا ثمّ يُفحص: 0.004 كان يمرّ «> 0» ويُسجَّل 0.00.
         amount = round_money(_to_float(body.get("amount"), field="amount", minimum=0))
@@ -1230,11 +1240,12 @@ class AccountingService:
             "totals": accounting_repo.subscriber_payment_totals(self.tenant_id),
         }
 
-    def reports(self, *, report_type: str) -> list[dict]:
+    def reports(self, *, report_type: str, prepaid: bool | None = None) -> list[dict]:
         if report_type in {"daily", "monthly", "yearly"}:
             return accounting_repo.sales_summary(self.tenant_id, grain=report_type)
         if report_type == "subscriber_payments":
-            return accounting_repo.subscriber_payment_report(self.tenant_id)
+            # «باقات مدفوعة مسبقًا» (قرار المالك 2026-10-06) — وسمُ تقارير.
+            return accounting_repo.subscriber_payment_report(self.tenant_id, prepaid=prepaid)
         if report_type == "loans":
             return accounting_repo.loan_report(self.tenant_id)
         if report_type == "activations":

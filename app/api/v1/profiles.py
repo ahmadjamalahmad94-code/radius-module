@@ -51,6 +51,8 @@ _STR_FIELDS = (
     "offer_hours_from", "offer_hours_to",
     # نافذة «غير محدود ليلًا» (HH:MM، توقيت اللوحة) — مُطبَّقة على الكوتة.
     "nightly_from", "nightly_to",
+    # «تجديد تلقائي» نمط: off / debt / balance / free (قرار المالك 2026-10-06).
+    "auto_renew_mode",
     "service_scope",
 )
 _INT_FIELDS = (
@@ -74,7 +76,7 @@ _INT_FIELDS = (
 )
 _FLOAT_FIELDS = ("price_card", "price_bulk", "price")
 _BOOL_FIELDS = (
-    "auto_renew", "prepaid", "enabled",
+    "prepaid", "enabled",
     # RM-H3
     "burst_enabled", "nightly_unlimited_enabled",
     "single_use_once", "hotspot_enabled", "ppp_enabled",
@@ -92,6 +94,9 @@ _IGNORED_FIELDS = (
     "speed_control_enabled", "vlan_id", "bind_mac", "bind_ip",
     "force_mac_address", "speed_override_allowed", "allowed_devices_count",
     "plan_tier",
+    # العلَم القديم auto_renew صار مرآةً لـ auto_renew_mode (يُشتقّ منه) — نسخ
+    # التطبيق القديمة ترسله دائمًا بقيمته المحمَّلة فلا يُغيِّر النمط.
+    "auto_renew",
 )
 
 _VALID_DAYS = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"}

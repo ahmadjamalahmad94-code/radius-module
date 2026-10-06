@@ -14,6 +14,14 @@ from ..integration.adapter import RadiusAdapter
 from .operations import validate_service_scope
 from .audit import RadiusAuditService
 
+# «تجديد تلقائي» (قرار المالك 2026-10-06) — القيمة المخزَّنة ← التسمية العربيّة.
+AUTO_RENEW_MODES = {
+    "off": N_("بدون"),
+    "debt": N_("مسموح بالدين"),
+    "balance": N_("خصم من الرصيد المتاح"),
+    "free": N_("مجاني"),
+}
+
 # لاحقة اسم النسخة — تُميّز العرض المنسوخ بوضوح في القائمة.
 CLONE_NAME_SUFFIX = N_(" - نسخة")
 
@@ -314,6 +322,7 @@ _OTHER_LABELS = {
     "name": N_("اسم الباقة"), "enabled": N_("تفعيل الباقة"), "bind_mac": N_("ربط MAC"),
     "bind_ip": N_("ربط IP"), "force_mac_address": N_("فرض عنوان MAC"),
     "auto_renew": N_("التجديد التلقائيّ"), "prepaid": N_("الدفع المسبق"),
+    "auto_renew_mode": N_("التجديد التلقائيّ"),
     "speed_control_enabled": N_("التحكّم بالسرعة"), "burst_enabled": N_("الدفعة (Burst)"),
     "nightly_unlimited_enabled": N_("الليل المفتوح"), "single_use_once": N_("استخدام مرّة واحدة"),
     "hotspot_enabled": N_("هوت سبوت"), "ppp_enabled": "PPP", "loan_enabled": N_("السلفة"),
@@ -399,6 +408,12 @@ def _normalize(plan: AccessPlan, existing: AccessPlan | None = None) -> AccessPl
     scope = (changes.get("service_scope", plan.service_scope) or "").strip().lower()
     if scope != changes.get("service_scope", plan.service_scope):
         changes["service_scope"] = scope or "both"
+    # «تجديد تلقائي» نمطٌ واحد (هجرة 197)؛ العلَم القديم auto_renew مرآةٌ له.
+    mode = str(getattr(plan, "auto_renew_mode", "") or "off").strip().lower()
+    if mode != plan.auto_renew_mode:
+        changes["auto_renew_mode"] = mode
+    if bool(plan.auto_renew) != (mode != "off"):
+        changes["auto_renew"] = mode != "off"
     for f in ("price", "price_card", "price_bulk"):
         v = getattr(plan, f, 0)
         if isinstance(v, float) and v == 0 and str(v).startswith("-"):
@@ -464,6 +479,9 @@ def _validate(plan: AccessPlan) -> None:
     if plan.concurrent_sessions < 1:
         raise RadiusValidationError(_tr("عدد الجلسات المتزامنة يجب أن يكون 1 على الأقل."))
     validate_service_scope(plan.service_scope)
+    if str(plan.auto_renew_mode or "off") not in AUTO_RENEW_MODES:
+        raise RadiusValidationError(
+            _tr("نمط «التجديد التلقائي» غير معروف (المسموح: off / debt / balance / free)."))
     if plan.max_loan_minutes < 0:
         raise RadiusValidationError(_tr("الحدّ الأقصى لدقائق السلفة لا يمكن أن يكون سالبًا."))
 
