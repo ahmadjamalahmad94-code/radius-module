@@ -127,7 +127,13 @@ The Arabic UI is frozen by the owner's decision. Translations follow the
    «حزمة» in Arabic.
 4. **«الباقة (الحزمة)»** in `manager_distributor_ops._ENTITY_LABELS["batch"]`
    mixes both words for a batch.
-5. **Batch PDF export headers** (`pdf_theme.build_batches_pdf`) use «الباقة»
+5. **The bare msgid «عرض» is used for two different things.** It is the
+   "View" button (eye icon, `permission_labels["view"]`) and it is also the
+   audit noun for `plan` / `offer` (`audit_format`, `audit_log`,
+   `manager_activity_audit`). One msgid can hold only one translation, so it
+   stays **View**. The fix is code-side: the noun call sites should use
+   `«العرض»`, which translates as *Offer*, or a `pgettext` context.
+6. **Batch PDF export headers** (`pdf_theme.build_batches_pdf`) use «الباقة»
    for the batch name column and «الخطة» for the plan.
 
 ## 5. Rules for new strings

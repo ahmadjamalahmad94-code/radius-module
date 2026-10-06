@@ -4303,7 +4303,7 @@ msgstr "Preview"
 #: app/templates/radius/plans_list.html:24
 #: app/templates/radius/sessions_list.html:485
 msgid "عرض"
-msgstr "Offer"
+msgstr "View"
 
 #: app/templates/radius/admin_alerts.html:163
 msgid "وصلت رسالة الاختبار — البوت يعمل."
@@ -4597,7 +4597,7 @@ msgstr ""
 #: app/templates/radius/sessions_list.html:1079
 #: app/templates/radius/subscriber_groups_list.html:280
 msgid "العرض"
-msgstr "Display"
+msgstr "Offer"
 
 #: app/templates/radius/admin_pricing.html:190
 msgid "السعر الأساسي"
