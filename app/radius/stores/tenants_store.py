@@ -7,8 +7,13 @@ from __future__ import annotations
 from threading import Lock
 from typing import Optional
 
-from ..core.tenant import Tenant, TenantMembership
+from ..core.tenant import (
+    TENANT_STATUS_CLOSED, TENANT_STATUS_SUSPENDED, Tenant, TenantMembership,
+)
 from ..db.repos import tenants_repo
+
+#: A member can never select (header / Basic) a tenant in one of these states.
+UNSELECTABLE_TENANT_STATUSES = frozenset({TENANT_STATUS_SUSPENDED, TENANT_STATUS_CLOSED})
 
 
 class TenantsStore:
@@ -47,6 +52,14 @@ class TenantsStore:
 
     def tenants_for_admin(self, admin_id: int) -> list[Tenant]:
         return tenants_repo.tenants_for_admin(admin_id)
+
+    def selectable_tenants_for_admin(self, admin_id: int) -> list[Tenant]:
+        """Tenants a NON-owner admin may select (owner decision 2026-10-06):
+        an ACTIVE membership in a tenant that is not suspended / closed
+        (``active`` and ``trial`` are usable). The platform owner / co-owners
+        roam separately (``auth.owner.is_owner_like``) — never via this list."""
+        return [t for t in tenants_repo.tenants_for_admin(admin_id)
+                if (getattr(t, "status", "") or "active") not in UNSELECTABLE_TENANT_STATUSES]
 
     # Settings
     def get_setting(self, tenant_id: int, key: str, default: str = "") -> str:
