@@ -1,8 +1,25 @@
-# Operations assistant — deterministic executor (ops-v1)
+# Operations assistant — deterministic executor (ops-v2)
 
 Owner decisions: `hoberadius-ai-support/ops/DECISIONS.md` (4 levels, level 5 out of scope).
-Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `ops/catalog/actions.json`
-(copied verbatim to `app/radius/services/ops_assistant/catalog_ops_v1.json`).
+Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `v2` + **`v3`** + `ops/catalog/actions.json`
+(copied verbatim to `app/radius/services/ops_assistant/catalog_ops_v2.json`, catalog_version ops-v2).
+
+**ops-v2 in one paragraph (SPEC_DATA_v3):**
+- Every model object carries `message`. It is the text the admin reads, in the admin's language and dialect. It is
+  never used for a decision and is not part of the proposal hash. `summary_ar` is required only for executable
+  actions and plans.
+- A round-1/2 proposal without `message` is still accepted, with its `summary_ar` shown instead
+  (`validator.with_message`).
+- The control action `reply` handles greetings, help, answers and empty results. Nothing executes.
+- Read-only INFO actions are answered with a `RESULT` tool line:
+  - `card_batch_status {batch_id}`;
+  - `subscriber_info {username}`;
+  - `online_sessions {query?}`.
+- `list_card_batches` is a new list source (lookup / `choose`).
+- CONTEXT permission vocabulary (SPEC_DATA_v3 §11): `users.view users.create users.extend users.change_plan
+  users.temp_speed users.change_status plans.view plans.create offers.view offers.create cards.view cards.generate
+  cards.generate_direct online.view`. `offers.create` replaces the earlier `offer.create`. `cards.generate_direct` =
+  the admin may generate a batch directly from a plan.
 
 The model (an LLM outside this app) only converses and emits ONE JSON proposal per turn.
 Everything that touches data is this executor: deterministic code, the logged-in admin's
@@ -48,7 +65,7 @@ bypasses RBAC, so every `/ops/*` endpoint returns 403 `ops_requires_admin` for i
 | GET | `/api/v1/ops/events` | level-4 events for this admin (scoped) |
 | POST | `/api/v1/ops/conversations` | `{event_type?}` → `{conversation_id, context, context_message}` (`"CONTEXT {...}"`) |
 | GET | `/api/v1/ops/conversations/<cid>/context` | fresh CONTEXT |
-| POST | `/api/v1/ops/conversations/<cid>/choices` | `{source: list_plans\|list_offers\|find_subscriber\|change_plan_policies, query?, status?, username?, plan_id?}` → `{choices, tool_message}` (`"CHOICES {...}"`) |
+| POST | `/api/v1/ops/conversations/<cid>/choices` | `{source: list_plans\|list_offers\|find_subscriber\|list_card_batches\|change_plan_policies, query?, status?, limit?, username?, plan_id?}` → `{choices, tool_message}` (`"CHOICES {...}"`) |
 | POST | `/api/v1/ops/conversations/<cid>/proposals` | `{proposal, mode: draft\|execute}` |
 | POST | `/api/v1/ops/conversations/<cid>/confirm` | `{proposal_id, proposal_hash}` + optional `Idempotency-Key` header |
 | GET | `/api/v1/cards/offers` | NEW (catalog Q2) — owner all (`include_inactive=1` owner only), manager only offers shared with him; wholesale/margin hidden without `can_see_wholesale`/`can_see_profit` |
@@ -57,9 +74,24 @@ bypasses RBAC, so every `/ops/*` endpoint returns 403 `ops_requires_admin` for i
 A conversation belongs to ONE tenant and ONE admin: any other tenant/admin gets 404.
 
 ### `proposals` responses
-* control (`ask/choose/refuse/cancel`) → `{kind:"control"}`; a `choose` with a list source
+* control (`ask/choose/refuse/cancel/reply`) → `{kind:"control"}`; a `choose` with a list source
   runs the list and returns `choices` + `tool_message`.
-* lookup (`list_plans/list_offers/find_subscriber`) → `{kind:"lookup", choices, tool_message}`.
+* lookup (`list_plans/list_offers/find_subscriber/list_card_batches`) → `{kind:"lookup", choices, tool_message}`.
+  `list_card_batches` items: `{n, id, name, code, origin, plan_name, created_local, total_cards,
+  available_count, status}`. Batch ids are issued to the conversation. The cards themselves (codes, passwords) are
+  never listed.
+* INFO (`card_batch_status/subscriber_info/online_sessions`) → `{kind:"info", result, tool_message}`, where
+  `tool_message` = `"RESULT {\"source\":<action>,\"data\":{...}}"`, or `{"source", "error":
+  not_found|out_of_scope|missing_permission|unavailable}`.
+  - Checks: schema → issued ids (`batch_id` from `list_card_batches`, `username` from CHOICES/event/RESULT) +
+    subscriber scope → permission (`cards.view` / `users.view` / `online.view`).
+  - It then runs the real GET handlers (`/cards/batches/<id>/summary` + `/cards/batches/<id>`,
+    `/accounts/<u>/360` + `/accounts/<u>/usage`, `/sessions/online`) with the admin's credential, so the real
+    endpoint's RBAC and scope apply again.
+  - The result is a **whitelist** (`services/ops_assistant/info.py`). It never contains passwords, PPPoE secrets,
+    card codes or payment rows. `balance` only appears when the API shows it to this admin; otherwise
+    `balance_hidden: true`.
+  - Nothing is stored as a proposal. An `ops.info` audit row is written. No confirmation (level 1).
 * `mode=draft` (level 1) → `{level:1, draft:[{api{method,path}, payload, password, pending_refs, display}]}` — nothing written; confirming a draft → 409 `draft_only`.
 * `mode=execute` (level 2/3) → `{level, proposal_id, proposal_hash, requires_confirmation, confirmation:[card per step], not_executable_steps}`. The card is built by the executor from validated values (never from `summary_ar`).
 * rejected → 422 `proposal_rejected` (or 403 `proposal_forbidden` when only permission/scope failed) with `details.violations[{code, message, path}]`. Values are never echoed.
@@ -69,7 +101,7 @@ A conversation belongs to ONE tenant and ONE admin: any other tenant/admin gets 
 * the proposal is RE-VALIDATED (permission, scope, caps may have changed).
 * `pending → executing` is claimed atomically; a second confirm replays the stored report (`replayed: true`), never executes twice. A header `Idempotency-Key` already used by another proposal → 422 `idempotency_key_reused`.
 * the key is forwarded to the money/batch endpoints that honour it (`extend`, `change-plan`, `cards/generate`; plan steps use `<key>:<n>`).
-* response: `{report{status: executed|failed|partial, steps[{n, action, status: done|failed|not_run, result, error}]}, model_result: "RESULT {...}", show_once?}`.
+* response: `{report{status: executed|failed|partial, steps[{n, action, status: done|failed|not_run, result, error}]}, model_result: "RESULT {\"source\":\"execution\", ...}", show_once?}`.
 
 ## Validation (in order)
 1. object; **forbidden key anywhere → whole proposal rejected** (`forbidden_model_fields` + secret-like names: `*_password`, `*_secret`, `*_token`, `pin`, `api_key`…; `login_without_password` / `password_length` / `password_generation_type` stay allowed).
@@ -99,7 +131,8 @@ writing their own audit rows as for any app call.
 
 ## Tests
 `tests/test_ops_executor_units.py`, `_validation.py`, `_flows.py`, `_plans.py`,
-`_gate_events.py`, `tests/test_api_card_offers.py` (helpers: `tests/ops_exec_helpers.py`),
+`_gate_events.py`, `_info.py` (ops-v2: message / reply / INFO / scope / whitelist),
+`tests/test_api_card_offers.py` (helpers: `tests/ops_exec_helpers.py`),
 `tests/test_ops_assistant_web.py` (web chat + model loop against a fake local
 OpenAI-compatible server).
 
@@ -129,15 +162,28 @@ browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assi
   `_GUARD_ALLOWLIST` because each action is decided by the executor for THIS admin.
   Sidebar entry «مساعد العمليّات» only when the flag is on AND the password gate is open
   (`ops_assistant_nav_visible`, cached 30 s per tenant and process).
-* `replies[]` items: `assistant` (summary_ar of ask/refuse/cancel), `choices` (the list shown
-  to the admin — the same items the model sees), `proposal` (the executor's card: steps,
+* `replies[]` items. The `text` of every item is the model's `message` (or `summary_ar` for a round-1/2 model). The
+  page renders it with `textContent`, never as HTML.
+  - `assistant`: ask / refuse / cancel / reply. `empty: true` when the executor answered a repeated empty lookup.
+  - `choices`: the list shown to the admin, the same items the model sees. With `items: []` it carries `empty` (the
+    translated empty-state line, e.g. «لا توجد عروض مسجّلة في النظام بعد…»), which the page shows instead of an
+    empty card.
+  - `result`: an INFO answer. Fields: `source`, `data` | `error`. The page renders a result card. The model is then
+    called again and answers from the RESULT with a `reply`.
+  - `proposal`: the executor's card (steps,
   values, display, danger, password note, `$step` refs, not-executable steps; plan/offer
   names added for display), `error` (`model_unavailable`, `invalid_model_output`,
   `proposal_rejected|proposal_forbidden` with the executor's violation messages,
   `too_many_hops`).
-* **Loop** (`conversation.run_model`): model → parse ONE object → `POST …/proposals`
-  (executor validation, never re-coded). `choose` / `list_*` → CHOICES appended as a `tool`
-  message → model again, **max 3 CHOICES hops per admin message**. `choose
+* **Loop** (`conversation.run_model`):
+  1. model → parse ONE object → `POST …/proposals` (executor validation, never re-coded);
+  2. `choose` / `list_*` → CHOICES appended as a `tool` message → model again;
+  3. INFO → RESULT appended as a `tool` message → model again;
+  4. **at most 3 CHOICES/RESULT hops per admin message**.
+
+  **Empty-lookup guard:** when the same lookup (source + query, case-insensitive) already returned `items: []` in
+  this conversation, it is not sent to the executor again. The admin gets the empty-state line, and the model is not
+  called again in that turn. `choose
   change_plan_policies` takes `username` + `plan_id` from the latest assistant turn that
   named both. Executable action / plan → confirmation card; **execution only via
   `/confirm`** (the admin's click carrying the executor's id + hash).
@@ -152,8 +198,11 @@ browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assi
   CHOICES items and level-4 events are rendered with the SPEC_DATA_v2 §4/§5 key sets
   (`list_plans {n,id,name,price,currency,duration_value,duration_unit,plan_type}`,
   `find_subscriber {n,username,full_name,plan,status,expires_local}`,
-  `change_plan_policies {n,policy,label_ar}`, event → `CONTEXT.event{type,data}` +
+  `change_plan_policies {n,id,label_ar}` (SPEC_DATA_v3 §8; `{n,policy,label_ar}` with prompt v1), event → `CONTEXT.event{type,data}` +
   `CHOICES {"source":"event"}`) — ids unchanged, so the executor's issued set still holds.
+* SYSTEM_PROMPT: SPEC_DATA_v3 §10 by default (ops-v2 adapters). Set `HOBERADIUS_OPS_PROMPT=v1` while a
+  round-1/2 adapter is served. That restores the SPEC_DATA_v1 text and the `{n, policy, label_ar}` policy items it
+  was trained on.
 * Model request: `POST {URL}/v1/chat/completions`, `temperature 0`, `max_tokens 512`,
   `stream false`, `chat_template_kwargs {"enable_thinking": false}`.
 * Invalid output / rejection / hop limit → `audit_log` `action='ops.model'` (reason only,
@@ -219,6 +268,7 @@ Panel environment (container / service env):
 |---|---|---|
 | `HOBERADIUS_OPS_MODEL_URL` | `http://127.0.0.1:8095` | llama-server base URL (env wins over the tenant-1 setting `ops_assistant.model_url`; http/https only) |
 | `HOBERADIUS_OPS_MODEL_TIMEOUT` | `60` | seconds per model call (1–600); one admin message may make up to 4 calls |
+| `HOBERADIUS_OPS_PROMPT` | `v3` | `v1` = round-1/2 adapter (SPEC_DATA_v1 prompt + v2 policy items); anything else = ops-v2 (SPEC_DATA_v3) |
 
 When the panel runs in Docker, `127.0.0.1` is the container itself: put the URL on an address
 the container can reach (`network_mode: host`, or `host.docker.internal` with the
