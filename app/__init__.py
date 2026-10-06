@@ -1261,6 +1261,17 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001
             return 0
     app.jinja_env.filters["epoch"] = _epoch
+
+    # «IP ثابت» IPv4-only (متابعة 2026-10-06): ``{% if v is not ipv4 %}`` يُظهر
+    # تلميح إصلاحٍ لقيمة IPv6/تالفة قديمة (لا تُرسَل Framed-IP-Address).
+    def _is_ipv4(value) -> bool:
+        import ipaddress
+        try:
+            return isinstance(ipaddress.ip_address(str(value or "").strip()),
+                              ipaddress.IPv4Address)
+        except ValueError:
+            return False
+    app.jinja_env.tests["ipv4"] = _is_ipv4
     # minutes → friendly Arabic days string ("3 أيام و18 ساعة"). Durations
     # are stored in MINUTES but operators think in DAYS — see SERVICES_COOKBOOK.
     app.jinja_env.filters["dur_days"] = _dur_days

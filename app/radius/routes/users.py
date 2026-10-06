@@ -402,6 +402,8 @@ _WEB_FORM_UNMANAGED = (
     # حقولٌ أزالها المالك (2026-10-06): Pool، VLAN، ملف اتصال الجهاز، واسم/كلمة
     # مرور البرودباند (يدخل مشترك PPPoE باسمه وكلمته). القيمة المخزّنة تبقى.
     "pool", "vlan_id", "device_connection_file", "pppoe_username", "pppoe_password",
+    # «IP PPPoE» دُمج في «IP ثابت» (متابعة 2026-10-06؛ migration 198 نسخ القيم).
+    "pppoe_ip",
 )
 
 
@@ -710,9 +712,8 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         expire_at=_expire_at,
         # سعر مخصّص يتجاوز سعر الباقة (فارغ/0 = استخدم سعر الباقة)
         custom_price=_f("custom_price"),
-        # PPPoE — العنوان الثابت لجلسة البرودباند (Framed-IP-Address). الدخول
-        # نفسه باسم المشترك وكلمته (اسم/كلمة البرودباند المنفصلان أُزيلا).
-        pppoe_ip=_s("pppoe_ip"),
+        # «IP PPPoE» دُمج في «IP ثابت» (متابعة 2026-10-06) — لا خانة له؛
+        # القيمة القديمة تبقى (``_WEB_FORM_UNMANAGED``).
         # شخصي
         full_name=_s("full_name"),
         father_name=_s("father_name"),

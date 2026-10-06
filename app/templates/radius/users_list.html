@@ -1191,8 +1191,8 @@
           <td data-col="mac" data-sort-value="{{ u.mac_lock or '' }}" class="mono small">
             {{ u.mac_lock|upper if u.mac_lock else '—' }}
           </td>
-          <td data-col="ip" data-sort-value="{{ u.static_ip or u.pppoe_ip or '' }}" class="mono small">
-            {{ u.static_ip or u.pppoe_ip or '—' }}
+          <td data-col="ip" data-sort-value="{{ u.static_ip or '' }}" class="mono small">
+            {{ u.static_ip or '—' }}
           </td>
           <td data-col="speed" data-sort-value="{{ _down_kbps }}" class="num mono">
             {% if _down_kbps or _up_kbps %}

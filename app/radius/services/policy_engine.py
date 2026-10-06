@@ -1942,8 +1942,8 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
     except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب حساب النافذة
         _LOG.warning("policy_engine: schedule-window session-timeout failed for %r",
                      getattr(sub, "username", "?"), exc_info=True)
-    # «IP ثابت» أو «عنوان IP للبرودباند (PPPoE)» — عنوانٌ ثابتٌ واحد للحساب
-    # (الحفظ يرفض قيمتين مختلفتين، وعنوانًا مُعطًى لمشتركٍ آخر).
+    # «IP ثابت» — خانةٌ واحدة للعنوان الثابت (دُمج فيها «IP PPPoE»، متابعة
+    # 2026-10-06)، IPv4 فقط وفريدةٌ على الشبكة؛ قيمة IPv6 قديمة لا تُرسَل.
     from .subscriber_retired_fields import framed_ip as _framed_ip
     _fip = _framed_ip(sub)
     if _fip:

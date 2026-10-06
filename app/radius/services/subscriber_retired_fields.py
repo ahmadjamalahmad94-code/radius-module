@@ -15,7 +15,10 @@ PPPoE login: a PPPoE subscriber authenticates with its ONE login (``username``
 + ``password``) — FreeRADIUS → ``/api/v1/internal/auth`` → policy_engine looks
 the account up by User-Name. The separate «اسم/كلمة مرور البرودباند» columns
 were never read by anything, so they are retired as duplicates of the login.
-The PPPoE address (``pppoe_ip``) is kept and wired: see ``framed_ip``.
+The PPPoE address (``pppoe_ip``) was merged into «IP ثابت» (``static_ip``,
+owner follow-up 2026-10-06; migration 198 copied the stored values): no form
+writes it any more and the API maps the old key onto ``static_ip``. See
+``framed_ip``.
 """
 from __future__ import annotations
 
@@ -88,11 +91,18 @@ def pin_retired_metadata(incoming: str, stored: Optional[str]) -> str:
 
 def framed_ip(sub) -> str:
     """The subscriber's fixed address for the Access-Accept
-    (``Framed-IP-Address``): «IP ثابت» or, when that is empty, «عنوان IP
-    للبرودباند (PPPoE)». Saving both with different values is refused
-    (subscriber_validation), so the two can never disagree."""
-    for f in ("static_ip", "pppoe_ip"):
-        v = str(getattr(sub, f, "") or "").strip()
-        if v:
-            return v
-    return ""
+    (``Framed-IP-Address``): the ONE field «IP ثابت» (``static_ip``).
+
+    ``Framed-IP-Address`` is an IPv4 attribute: a legacy IPv6 / malformed value
+    stored before the IPv4-only rule is kept in the DB (the form shows a hint to
+    fix it) but is never sent. The old ``pppoe_ip`` column is no longer read —
+    migration 198 copied it into ``static_ip``."""
+    import ipaddress
+    v = str(getattr(sub, "static_ip", "") or "").strip()
+    if not v:
+        return ""
+    try:
+        addr = ipaddress.ip_address(v)
+    except ValueError:
+        return ""
+    return v if isinstance(addr, ipaddress.IPv4Address) else ""

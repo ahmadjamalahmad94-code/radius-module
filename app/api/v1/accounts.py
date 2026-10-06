@@ -67,11 +67,12 @@ def _actor() -> str:
 _EDITABLE = (
     # identity & links
     "user_type", "service_type", "plan_id",
-    # pppoe specifics — «عنوان IP للبرودباند» = Framed-IP-Address. The
-    # separate PPPoE name/password were retired (owner 2026-10-06): a PPPoE
-    # subscriber logs in with its own username/password. Old app builds still
-    # send them — ignored silently (subscriber_retired_fields).
-    "pppoe_ip",
+    # pppoe specifics — retired. The separate PPPoE name/password (owner
+    # 2026-10-06: a PPPoE subscriber logs in with its own username/password)
+    # and «IP PPPoE» (follow-up 2026-10-06: merged into «IP ثابت» =
+    # ``static_ip``). Old app builds still send them — the name/password are
+    # ignored silently, ``pppoe_ip`` is mapped onto ``static_ip`` when the body
+    # carries no ``static_ip`` (``_apply_body``).
     # personal
     "full_name", "father_name", "mobile", "email", "address", "city",
     "district", "state", "zip", "coordinates", "national_id", "account_type",
@@ -279,6 +280,13 @@ def _apply_body(sub: Subscriber, body: dict) -> Subscriber:
     for k in _EDITABLE:
         if k in body:
             changes[k] = _coerce(k, body[k])
+    if "pppoe_ip" in body and "static_ip" not in body:
+        # «IP PPPoE» دُمج في «IP ثابت» (متابعة 2026-10-06): نسخ التطبيق القديمة
+        # ترسل المفتاح القديم وحده ⇒ يصير «IP ثابت». فارغًا لا يمسح شيئًا، ومع
+        # static_ip يُتجاهَل (الخانة الجديدة هي المصدر).
+        legacy = _coerce("pppoe_ip", body["pppoe_ip"])
+        if isinstance(legacy, str) and legacy.strip():
+            changes["static_ip"] = legacy.strip()
     if "expire_at" in body:
         changes["expire_at"] = _parse_dt(body["expire_at"])
     if "metadata" in body:

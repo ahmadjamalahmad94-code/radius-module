@@ -104,8 +104,11 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
 
     # ─ radreply (per-user — فقط للأشياء الخاصة) ─
     user_reply: list[tuple[str, str, str]] = []
-    if sub.static_ip:
-        user_reply.append(("Framed-IP-Address", ":=", sub.static_ip))
+    # «IP ثابت» — IPv4 فقط (قيمة IPv6 قديمة لا تُرسَل؛ انظر framed_ip).
+    from .subscriber_retired_fields import framed_ip as _framed_ip
+    _fip = _framed_ip(sub)
+    if _fip:
+        user_reply.append(("Framed-IP-Address", ":=", _fip))
     if sub.vlan_id and sub.vlan_id > 0:
         # MikroTik VLAN attribute
         user_reply.append(("Tunnel-Type", ":=", "VLAN"))

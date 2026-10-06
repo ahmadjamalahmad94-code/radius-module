@@ -11,9 +11,10 @@ PPPoE name/password (a PPPoE subscriber logs in with its own login).
 WIRE:
   • «الجلسات المتزامنة» (override_concurrent) is visible on the web form and
     enforced at authorize.
-  • «عنوان IP للبرودباند (PPPoE)» (pppoe_ip) → Framed-IP-Address in the
-    Access-Accept (through /api/v1/internal/auth); IPv4 only, may not
-    contradict «IP ثابت», unique per tenant.
+  • The fixed address → Framed-IP-Address in the Access-Accept (through
+    /api/v1/internal/auth); IPv4 only, unique per tenant. Follow-up
+    2026-10-06: «IP PPPoE» (pppoe_ip) was MERGED into «IP ثابت» (static_ip)
+    — one field; the API maps the old key (test_fields_followup.py).
 
 Run this file alone (per-file isolation).
 """
@@ -193,7 +194,8 @@ def test_web_form_has_no_retired_inputs(client, app):
         present = sorted(n for n in _RETIRED_INPUTS if n in types)
         assert present == [], (url, present)
         # notes/remark and the wired fields stay
-        assert "pppoe_ip" in types and "remark" in types
+        assert "static_ip" in types and "remark" in types
+        assert "pppoe_ip" not in types      # merged into «IP ثابت» (follow-up)
 
 
 def test_web_edit_keeps_stored_retired_values(client, app):
@@ -318,10 +320,11 @@ def test_web_form_shows_and_saves_override_concurrent(client, app):
     assert d.ok, d.reason
 
 
-# ═══════════ WIRE — PPPoE IP → Framed-IP-Address ═══════════
+# ═══════════ WIRE — the ONE fixed address → Framed-IP-Address ═══════════
+# Follow-up 2026-10-06: «IP PPPoE» merged into «IP ثابت» (static_ip).
 
-def test_internal_auth_reply_carries_pppoe_framed_ip(client, app):
-    with_ip = _sub(pppoe_ip="10.9.0.7")
+def test_internal_auth_reply_carries_static_framed_ip(client, app):
+    with_ip = _sub(static_ip="10.9.0.7")
     without = _sub()
     out = _internal_auth(client, with_ip.username)
     assert out["control:Auth-Type"] == "Accept", out
@@ -329,31 +332,28 @@ def test_internal_auth_reply_carries_pppoe_framed_ip(client, app):
     out = _internal_auth(client, without.username)
     assert out["control:Auth-Type"] == "Accept", out
     assert "reply:Framed-IP-Address" not in out
-    # «IP ثابت» keeps working exactly as before
-    st = _sub(static_ip="10.9.0.8")
-    assert _internal_auth(client, st.username).get("reply:Framed-IP-Address") == "10.9.0.8"
 
 
-def test_pppoe_ip_set_from_web_and_api_reaches_the_reply(client, app):
+def test_static_ip_set_from_web_and_api_reaches_the_reply(client, app):
     s = _sub()
     _web_login(client)
     fields, _types = _scrape(client, f"/admin/radius/users/{s.username}/edit")
-    res = _post(client, f"/admin/radius/users/{s.username}", _set(fields, "pppoe_ip", "10.9.1.1"))
+    res = _post(client, f"/admin/radius/users/{s.username}", _set(fields, "static_ip", "10.9.1.1"))
     assert res.status_code in (302, 303), res.get_data(as_text=True)[:400]
     assert _internal_auth(client, s.username).get("reply:Framed-IP-Address") == "10.9.1.1"
+    # an old app build's pppoe_ip alone lands in «IP ثابت»
     res = client.patch(f"/api/v1/accounts/{s.username}", headers=AUTH,
                        json={"pppoe_ip": "10.9.1.2"})
     assert res.status_code == 200, res.get_json()
-    assert res.get_json()["data"]["pppoe_ip"] == "10.9.1.2"
+    assert res.get_json()["data"]["static_ip"] == "10.9.1.2"
     assert _internal_auth(client, s.username).get("reply:Framed-IP-Address") == "10.9.1.2"
-    res = client.patch(f"/api/v1/accounts/{s.username}", headers=AUTH, json={"pppoe_ip": ""})
+    res = client.patch(f"/api/v1/accounts/{s.username}", headers=AUTH, json={"static_ip": ""})
     assert res.status_code == 200
     assert "reply:Framed-IP-Address" not in _internal_auth(client, s.username)
 
 
-def test_pppoe_ip_conflicts_refused_in_arabic(client, app):
+def test_static_ip_conflicts_refused_in_arabic(client, app):
     other = _sub(static_ip="10.20.0.5")
-    other2 = _sub(pppoe_ip="10.20.0.6")
     s = _sub()
 
     def patch(body):
@@ -361,36 +361,26 @@ def test_pppoe_ip_conflicts_refused_in_arabic(client, app):
 
     # not an IPv4 address (Framed-IP-Address is IPv4)
     for bad in ("999.1.1.1", "2001:db8::1", "abc"):
-        res = patch({"pppoe_ip": bad})
+        res = patch({"static_ip": bad})
         assert res.status_code == 422, (bad, res.get_json())
         assert "IP" in res.get_json()["error"]["message"]
-    # used by another subscriber (either column)
-    for taken in ("10.20.0.5", "10.20.0.6"):
-        res = patch({"pppoe_ip": taken})
-        assert res.status_code == 422, (taken, res.get_json())
-        assert "لمشتركٍ آخر" in res.get_json()["error"]["message"]
-    res = patch({"static_ip": "10.20.0.6"})
-    assert res.status_code == 422
-    # contradicts «IP ثابت»
-    res = patch({"static_ip": "10.20.0.9", "pppoe_ip": "10.20.0.10"})
-    assert res.status_code == 422
-    assert "IP ثابت" in res.get_json()["error"]["message"]
-    # the same address in both is fine
-    res = patch({"static_ip": "10.20.0.9", "pppoe_ip": "10.20.0.9"})
+    # used by another subscriber
+    res = patch({"static_ip": "10.20.0.5"})
+    assert res.status_code == 422, res.get_json()
+    assert "لمشتركٍ آخر" in res.get_json()["error"]["message"]
+    res = patch({"static_ip": "10.20.0.9"})
     assert res.status_code == 200, res.get_json()
-    assert _get(s.username).pppoe_ip == "10.20.0.9"
     # web: refused with the Arabic message, nothing saved
     _web_login(client)
     fields, _t = _scrape(client, f"/admin/radius/users/{s.username}/edit")
-    fields = _set(_set(fields, "pppoe_ip", "10.20.0.5"), "static_ip", "10.20.0.5")
-    res = _post(client, f"/admin/radius/users/{s.username}", fields)
+    res = _post(client, f"/admin/radius/users/{s.username}", _set(fields, "static_ip", "10.20.0.5"))
     assert res.status_code == 422
     html = res.get_data(as_text=True)
     with client.session_transaction() as sess:
         flashed = " ".join(m for _c, m in sess.get("_flashes", []))
     assert "لمشتركٍ آخر" in html + flashed
-    assert _get(s.username).pppoe_ip == "10.20.0.9"
-    assert other.username and other2.username
+    assert _get(s.username).static_ip == "10.20.0.9"
+    assert other.username
 
 
 def test_untouched_legacy_duplicate_stays_editable(client, app):
