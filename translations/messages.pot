@@ -411,11 +411,11 @@ msgstr ""
 msgid " جاهز. الصقه في الراوتر — سيتّصل بالخادم تلقائيًّا ويكتمل الإعداد."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:213
+#: app/templates/radius/bandwidth_schedules.html:207
 msgid " جدول"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:97
+#: app/templates/radius/_speed_schedules_panel.html:98
 msgid " جدول · "
 msgstr ""
 
@@ -586,7 +586,7 @@ msgstr ""
 msgid " عرض"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:152
+#: app/templates/radius/subscriber_groups_form.html:139
 msgid " عضو"
 msgstr ""
 
@@ -716,11 +716,11 @@ msgstr ""
 msgid " مصروف"
 msgstr ""
 
-#: app/radius/services/operations.py:2813
+#: app/radius/services/operations.py:2823
 msgid " مضغوطة gzip"
 msgstr ""
 
-#: app/radius/db/repos/cards_repo.py:1250
+#: app/radius/db/repos/cards_repo.py:1251
 #, python-format
 msgid " مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»"
 msgstr ""
@@ -737,7 +737,7 @@ msgstr ""
 msgid " معلومة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:97
+#: app/templates/radius/_speed_schedules_panel.html:98
 msgid " مفعَّل"
 msgstr ""
 
@@ -1668,7 +1668,7 @@ msgstr ""
 msgid "%(chips)sسرعة الرفع: %(upload_mbps)s ميجابت/ثانية · "
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1541
+#: app/templates/radius/network_policy_preview.html:1549
 #, python-format
 msgid "%(command_count)s سطر فعّال · hash: %(v)s…"
 msgstr ""
@@ -1797,7 +1797,7 @@ msgstr ""
 msgid "%(label)s #%(id)s"
 msgstr ""
 
-#: app/api/json_input.py:125 app/radius/services/operations.py:965
+#: app/api/json_input.py:125 app/radius/services/operations.py:976
 #, python-format
 msgid "%(label)s أطول من المسموح (%(max_len)s حرفًا كحدّ أقصى)."
 msgstr ""
@@ -3603,7 +3603,7 @@ msgstr ""
 msgid ") + قسما «آخر نشاط» و«الجهاز الحالي» + أربعة أزرار"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1082
+#: app/templates/radius/network_policy_preview.html:1090
 msgid ") تشمل عنوان خادم الربط وواجهة النفق حتى يعمل التحويل."
 msgstr ""
 
@@ -3964,7 +3964,7 @@ msgstr ""
 msgid ". بوابته تتمحور حول المحفظة:"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1079
+#: app/templates/radius/network_policy_preview.html:1087
 msgid ". تأكّد من أنّ:"
 msgstr ""
 
@@ -4851,7 +4851,7 @@ msgstr ""
 msgid ": تعديل القائمة أو فك القفل تمامًا."
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:191
+#: app/templates/radius/docs_plans_speeds.html:192
 msgid ": تنزيل 10 Mbps، رفع 2 Mbps، بلا كوتا، صلاحية 30 يومًا، وحدّد السعر."
 msgstr ""
 
@@ -5589,27 +5589,11 @@ msgid "CIDR غير صحيح"
 msgstr ""
 
 #: app/templates/radius/_plans_fragments.html:139
-#: app/templates/radius/_speed_schedules_panel.html:277
-#: app/templates/radius/_speed_schedules_panel.html:325
 msgid "CIR تنزيل"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:175
-#: app/templates/radius/bandwidth_schedules.html:335
-#, python-format
-msgid "CIR تنزيل %(v)s"
-msgstr ""
-
 #: app/templates/radius/_plans_fragments.html:140
-#: app/templates/radius/_speed_schedules_panel.html:278
-#: app/templates/radius/_speed_schedules_panel.html:326
 msgid "CIR رفع"
-msgstr ""
-
-#: app/templates/radius/bandwidth_schedules.html:178
-#: app/templates/radius/bandwidth_schedules.html:338
-#, python-format
-msgid "CIR رفع %(v)s"
 msgstr ""
 
 #: app/radius/services/hotspot_addons_extra.py:46
@@ -5628,7 +5612,7 @@ msgstr ""
 msgid "CSV الصفحة"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1411
+#: app/templates/radius/network_policy_preview.html:1419
 msgid "Canary تدريجي"
 msgstr ""
 
@@ -8592,7 +8576,7 @@ msgstr ""
 msgid "«سرعة العرض»"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:193
+#: app/templates/radius/docs_plans_speeds.html:194
 msgid "«سرعة الليل»"
 msgstr ""
 
@@ -9109,7 +9093,7 @@ msgstr ""
 msgid "«منتهٍ»"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:191
+#: app/templates/radius/docs_plans_speeds.html:192
 msgid "«منزلي 10 ميغا»"
 msgstr ""
 
@@ -10379,23 +10363,23 @@ msgstr ""
 msgid "أؤكد تغيير اسم الراوتر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:839
+#: app/templates/radius/network_policy_preview.html:847
 msgid "أؤكّد أن السياسة تحذف حركة forward (drop)."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:841
+#: app/templates/radius/network_policy_preview.html:849
 msgid "أؤكّد أن السياسة تستهدف كل الراوترات."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:837
+#: app/templates/radius/network_policy_preview.html:845
 msgid "أؤكّد أن النطاق واسع وأنّني قرأت تأثيراته."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:843
+#: app/templates/radius/network_policy_preview.html:851
 msgid "أؤكّد أنّني راجعت قائمة الخدمات التي قد تتأثّر."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:845
+#: app/templates/radius/network_policy_preview.html:853
 msgid "أؤكّد تخطّي المرحلة التدريجية (canary)."
 msgstr ""
 
@@ -10943,7 +10927,7 @@ msgstr ""
 msgid "أدخل رمز التحقق"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1061
+#: app/templates/radius/_speed_rules_panel.html:1056
 msgid "أدخل سرعة التنزيل أو الرفع"
 msgstr ""
 
@@ -11059,7 +11043,7 @@ msgstr ""
 msgid "أدخل نفس الاسم وكلمة المرور في إعداد TR-069 داخل الراوتر."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1055
+#: app/templates/radius/_speed_rules_panel.html:1050
 #: app/templates/radius/users_form.html:1655
 msgid "أدخل وقت البداية والنهاية"
 msgstr ""
@@ -11068,8 +11052,8 @@ msgstr ""
 msgid "أدخل وقتي بداية ونهاية بصيغة"
 msgstr ""
 
-#: app/radius/services/operations.py:1400
-#: app/radius/services/operations.py:1468
+#: app/radius/services/operations.py:1411
+#: app/radius/services/operations.py:1478
 msgid ""
 "أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من "
 "القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء»."
@@ -11251,7 +11235,7 @@ msgstr ""
 msgid "أرسل جسم الطلب كائن JSON."
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:188
+#: app/api/v1/bandwidth_schedules.py:191
 msgid "أرسل حقول التعديل ككائن JSON."
 msgstr ""
 
@@ -11403,7 +11387,7 @@ msgstr ""
 msgid "أرشيف كامل (مع السجلّات)"
 msgstr ""
 
-#: app/radius/services/operations.py:2812
+#: app/radius/services/operations.py:2822
 msgid "أرشيف كامل (يشمل السجلّات)"
 msgstr ""
 
@@ -12774,7 +12758,7 @@ msgid "ألصق مخرجات فحص بوابة الدخول هنا"
 msgstr ""
 
 #: app/radius/services/hotspot_gallery.py:238
-#: app/radius/services/npc_policy.py:182
+#: app/radius/services/npc_policy.py:208
 msgid "ألعاب"
 msgstr ""
 
@@ -13022,7 +13006,7 @@ msgstr ""
 msgid "أنشئ باقات لتظهر توزيعاتها هنا."
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:191
+#: app/templates/radius/docs_plans_speeds.html:192
 msgid "أنشئ باقة"
 msgstr ""
 
@@ -13076,7 +13060,7 @@ msgid ""
 "معرّف المحادثة تلقائيًّا (لا حاجة لنسخه يدويًّا)."
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:193
+#: app/templates/radius/docs_plans_speeds.html:194
 msgid "أنشئ جدول"
 msgstr ""
 
@@ -13189,7 +13173,7 @@ msgstr ""
 msgid "أنشئت بواسطة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:80
+#: app/templates/radius/_speed_schedules_panel.html:81
 msgid "أنشئها وتحكّم بها من الجدول أدناه"
 msgstr ""
 
@@ -13618,11 +13602,11 @@ msgstr ""
 msgid "أول ما يفتح المتجر تظهر شاشة دخول: يكتب الزبون"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:155
+#: app/templates/radius/_speed_schedules_panel.html:156
 msgid "أولوية"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:244
+#: app/templates/radius/bandwidth_schedules.html:238
 #, python-format
 msgid "أولوية %(v)s"
 msgstr ""
@@ -13769,9 +13753,9 @@ msgstr ""
 #: app/radius/routes/notifications.py:66
 #: app/radius/services/hotspot_cards_portal.py:108
 #: app/templates/_partials/unit_input.html:32
-#: app/templates/radius/_speed_rules_panel.html:519
-#: app/templates/radius/_speed_rules_panel.html:981
-#: app/templates/radius/_speed_rules_panel.html:1137
+#: app/templates/radius/_speed_rules_panel.html:517
+#: app/templates/radius/_speed_rules_panel.html:977
+#: app/templates/radius/_speed_rules_panel.html:1132
 #: app/templates/radius/cards_batch_edit.html:231
 #: app/templates/radius/cards_checker_v2.html:2037
 #: app/templates/radius/cards_of_batch.html:571
@@ -14117,7 +14101,7 @@ msgstr ""
 msgid "أُلغيت"
 msgstr ""
 
-#: app/radius/services/operations.py:2577
+#: app/radius/services/operations.py:2587
 msgid "أُلغيت المهمة"
 msgstr ""
 
@@ -14126,7 +14110,7 @@ msgstr ""
 msgid "أُلغيت كلُّ دفعات هذا المستفيد — يظهر للمراجعة ولا يُحسب في عدد الدافعين"
 msgstr ""
 
-#: app/radius/services/operations.py:2591
+#: app/radius/services/operations.py:2601
 msgid "أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل."
 msgstr ""
 
@@ -14230,12 +14214,12 @@ msgstr ""
 msgid "إبطال قيد ماليّ"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:588
-#: app/templates/radius/_speed_rules_panel.html:744
-#: app/templates/radius/_speed_schedules_panel.html:285
-#: app/templates/radius/_speed_schedules_panel.html:332
-#: app/templates/radius/bandwidth_schedules.html:186
-#: app/templates/radius/bandwidth_schedules.html:346
+#: app/templates/radius/_speed_rules_panel.html:586
+#: app/templates/radius/_speed_rules_panel.html:742
+#: app/templates/radius/_speed_schedules_panel.html:281
+#: app/templates/radius/_speed_schedules_panel.html:325
+#: app/templates/radius/bandwidth_schedules.html:180
+#: app/templates/radius/bandwidth_schedules.html:330
 msgid "إبقاء آخر سرعة"
 msgstr ""
 
@@ -14385,11 +14369,11 @@ msgstr ""
 msgid "إجراء:"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:135
+#: app/templates/radius/_speed_schedules_panel.html:136
 #: app/templates/radius/admin_pricing.html:113
 #: app/templates/radius/admins_list.html:94
 #: app/templates/radius/bandwidth_list.html:60
-#: app/templates/radius/bandwidth_schedules.html:224
+#: app/templates/radius/bandwidth_schedules.html:218
 #: app/templates/radius/card_pricing.html:84
 #: app/templates/radius/card_users.html:96
 #: app/templates/radius/cards_batches.html:645
@@ -14688,7 +14672,7 @@ msgstr ""
 msgid "إجمالي التنزيل"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:59
+#: app/templates/radius/bandwidth_schedules.html:60
 msgid "إجمالي الجداول"
 msgstr ""
 
@@ -15265,7 +15249,7 @@ msgstr ""
 msgid "إدارة الرموز ←"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:299
+#: app/templates/radius/subscriber_groups_list.html:296
 msgid "إدارة السرعة والخدمات"
 msgstr ""
 
@@ -15683,8 +15667,8 @@ msgstr ""
 msgid "إذا كنت تعدّل قالبًا موجودًا):"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:236
-#: app/templates/radius/bandwidth_schedules.html:113
+#: app/templates/radius/_speed_schedules_panel.html:235
+#: app/templates/radius/bandwidth_schedules.html:115
 msgid "إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض."
 msgstr ""
 
@@ -15986,7 +15970,7 @@ msgid "إريتريا"
 msgstr ""
 
 #: app/radius/services/permission_labels.py:57
-#: app/templates/radius/_speed_rules_panel.html:995
+#: app/templates/radius/_speed_rules_panel.html:991
 #: app/templates/radius/port_script_services.html:512
 #: app/templates/radius/port_script_services.html:1033
 #: app/templates/radius/print_templates.html:975
@@ -16428,7 +16412,7 @@ msgstr ""
 msgid "إضافة العروض"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:785
+#: app/templates/radius/_speed_rules_panel.html:783
 msgid "إضافة القاعدة"
 msgstr ""
 
@@ -16464,21 +16448,21 @@ msgstr ""
 msgid "إضافة بداية أو نهاية + النص المضاف:"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:119
+#: app/templates/radius/_speed_schedules_panel.html:120
 msgid "إضافة جدول زمني"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:219
+#: app/templates/radius/_speed_schedules_panel.html:218
 msgid "إضافة جدول زمني للسرعة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:86
-#: app/templates/radius/bandwidth_schedules.html:96
+#: app/templates/radius/bandwidth_schedules.html:88
+#: app/templates/radius/bandwidth_schedules.html:98
 msgid "إضافة جدول سرعة"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:645
-#: app/templates/radius/_speed_rules_panel.html:658
+#: app/templates/radius/_speed_rules_panel.html:643
+#: app/templates/radius/_speed_rules_panel.html:656
 msgid "إضافة جدولة/قاعدة سرعة جديدة"
 msgstr ""
 
@@ -17003,7 +16987,7 @@ msgstr ""
 msgid "إظهار/إخفاء المفتاح العام"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1491
+#: app/templates/radius/network_policy_preview.html:1499
 #, python-format
 msgid "إظهار/إخفاء قائمة المصطلحات (%(length)s)"
 msgstr ""
@@ -17742,7 +17726,7 @@ msgstr ""
 msgid "إعدادات توليد الكود"
 msgstr ""
 
-#: app/radius/services/operations.py:2640
+#: app/radius/services/operations.py:2650
 msgid "إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد."
 msgstr ""
 
@@ -17840,7 +17824,7 @@ msgstr ""
 #: app/radius/services/hotspot_gallery.py:203
 #: app/radius/services/hotspot_gallery.py:224
 #: app/radius/services/hotspot_gallery.py:254
-#: app/radius/services/npc_policy.py:184
+#: app/radius/services/npc_policy.py:210
 msgid "إعلانات"
 msgstr ""
 
@@ -17870,22 +17854,22 @@ msgstr ""
 #: app/templates/radius/_card_print_modal.html:27
 #: app/templates/radius/_card_print_modal.html:167
 #: app/templates/radius/_quickfloat.html:25
-#: app/templates/radius/_speed_rules_panel.html:617
-#: app/templates/radius/_speed_rules_panel.html:659
-#: app/templates/radius/_speed_schedules_panel.html:220
-#: app/templates/radius/_speed_schedules_panel.html:296
-#: app/templates/radius/_speed_schedules_panel.html:311
-#: app/templates/radius/_speed_schedules_panel.html:340
+#: app/templates/radius/_speed_rules_panel.html:615
+#: app/templates/radius/_speed_rules_panel.html:657
+#: app/templates/radius/_speed_schedules_panel.html:219
+#: app/templates/radius/_speed_schedules_panel.html:292
+#: app/templates/radius/_speed_schedules_panel.html:307
+#: app/templates/radius/_speed_schedules_panel.html:333
 #: app/templates/radius/admin_pricing.html:185
 #: app/templates/radius/admin_pricing.html:239
 #: app/templates/radius/admin_pricing.html:254
 #: app/templates/radius/admin_pricing.html:279
 #: app/templates/radius/admins_list.html:166
 #: app/templates/radius/admins_list.html:263
-#: app/templates/radius/bandwidth_schedules.html:97
-#: app/templates/radius/bandwidth_schedules.html:202
-#: app/templates/radius/bandwidth_schedules.html:302
-#: app/templates/radius/bandwidth_schedules.html:362
+#: app/templates/radius/bandwidth_schedules.html:99
+#: app/templates/radius/bandwidth_schedules.html:196
+#: app/templates/radius/bandwidth_schedules.html:294
+#: app/templates/radius/bandwidth_schedules.html:346
 #: app/templates/radius/card_marketplace.html:701
 #: app/templates/radius/card_marketplace.html:991
 #: app/templates/radius/card_marketplace.html:1020
@@ -17925,7 +17909,7 @@ msgstr ""
 #: app/templates/radius/mt_dashboard.html:2903
 #: app/templates/radius/mt_dashboard.html:2940
 #: app/templates/radius/mt_operations.html:105
-#: app/templates/radius/network_policy_preview.html:1162
+#: app/templates/radius/network_policy_preview.html:1170
 #: app/templates/radius/portal_card.html:776
 #: app/templates/radius/print_templates.html:758
 #: app/templates/radius/remote_sessions.html:94
@@ -18002,7 +17986,7 @@ msgstr ""
 msgid "إغلاق المصمم (Esc)"
 msgstr ""
 
-#: app/radius/services/operations.py:2158
+#: app/radius/services/operations.py:2168
 msgid "إغلاق الملف وتجهيز التنزيل"
 msgstr ""
 
@@ -18178,7 +18162,7 @@ msgstr ""
 #: app/templates/radius/sstp_users.html:204
 #: app/templates/radius/sstp_users.html:224
 #: app/templates/radius/store_support.html:623
-#: app/templates/radius/subscriber_groups_form.html:183
+#: app/templates/radius/subscriber_groups_form.html:170
 #: app/templates/radius/system_update.html:329
 #: app/templates/radius/tenants_form.html:305
 #: app/templates/radius/tickets_form.html:101
@@ -18361,15 +18345,15 @@ msgstr ""
 msgid "إلى"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:569
-#: app/templates/radius/_speed_rules_panel.html:717
-#: app/templates/radius/_speed_schedules_panel.html:270
-#: app/templates/radius/_speed_schedules_panel.html:318
+#: app/templates/radius/_speed_rules_panel.html:567
+#: app/templates/radius/_speed_rules_panel.html:715
+#: app/templates/radius/_speed_schedules_panel.html:269
+#: app/templates/radius/_speed_schedules_panel.html:314
 msgid "إلى الساعة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:160
-#: app/templates/radius/bandwidth_schedules.html:320
+#: app/templates/radius/bandwidth_schedules.html:162
+#: app/templates/radius/bandwidth_schedules.html:312
 #, python-format
 msgid "إلى الساعة %(v)s"
 msgstr ""
@@ -18450,9 +18434,9 @@ msgstr ""
 msgid "إلى وقت البطاقة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1136
-#: app/templates/radius/network_policy_preview.html:1138
-#: app/templates/radius/network_policy_preview.html:1442
+#: app/templates/radius/network_policy_preview.html:1144
+#: app/templates/radius/network_policy_preview.html:1146
+#: app/templates/radius/network_policy_preview.html:1450
 msgid "إمكانية التراجع"
 msgstr ""
 
@@ -18639,7 +18623,7 @@ msgstr ""
 msgid "إنذارات المصادقة"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:175
+#: app/radius/services/npc_policy.py:201
 msgid "إنستغرام"
 msgstr ""
 
@@ -18739,7 +18723,7 @@ msgid "إنشاء اللقطة"
 msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:311
-#: app/templates/radius/subscriber_groups_form.html:186
+#: app/templates/radius/subscriber_groups_form.html:173
 msgid "إنشاء المجموعة"
 msgstr ""
 
@@ -19227,7 +19211,7 @@ msgstr ""
 msgid "إيقاف هذه الخدمة؟"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1412
+#: app/templates/radius/network_policy_preview.html:1420
 msgid "إيقاف وإعادة تخطيط"
 msgstr ""
 
@@ -19473,8 +19457,8 @@ msgstr ""
 msgid "اتجاه التصميم"
 msgstr ""
 
-#: app/radius/services/operations.py:1670
-#: app/radius/services/operations.py:1718
+#: app/radius/services/operations.py:1680
+#: app/radius/services/operations.py:1728
 msgid "اتجاه القالب يجب أن يكون portrait أو landscape."
 msgstr ""
 
@@ -19504,6 +19488,12 @@ msgstr ""
 
 #: app/templates/radius/tenants_form.html:245
 msgid "اترك أي حد ="
+msgstr ""
+
+#: app/templates/_partials/schedule_days_picker.html:34
+msgid ""
+"اترك الأيام فارغة ليعمل الجدول كل يوم. النافذة التي تعبر منتصف الليل تتبع"
+" يوم بدايتها."
 msgstr ""
 
 #: app/radius/services/setup_wizard_pilot.py:200
@@ -19817,7 +19807,7 @@ msgstr ""
 msgid "اتُّخذ قرار آخر على هذا الطلب للتوّ — حدّث الصفحة وراجع حالته."
 msgstr ""
 
-#: app/radius/services/operations.py:1230
+#: app/radius/services/operations.py:1241
 msgid "اتّجاه الحركة يجب أن يكون credit (دفعة) أو debit (دين)."
 msgstr ""
 
@@ -20020,7 +20010,7 @@ msgstr ""
 msgid "احفظه لو أردت إلغاء هذا الوصول تحديداً عند الحاجة"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:192
+#: app/templates/radius/docs_plans_speeds.html:193
 msgid "احفظها واربطها بمشترك أو بحزمة بطاقات."
 msgstr ""
 
@@ -20070,7 +20060,7 @@ msgstr ""
 msgid "اختبار التجهيز"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:185
+#: app/radius/services/npc_policy.py:211
 msgid "اختبار السرعة"
 msgstr ""
 
@@ -20294,7 +20284,7 @@ msgstr ""
 msgid "اختر العرض الجديد."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:44 app/radius/services/operations.py:1349
+#: app/radius/core/messages_ar.py:44 app/radius/services/operations.py:1360
 msgid "اختر العرض."
 msgstr ""
 
@@ -20486,12 +20476,12 @@ msgstr ""
 msgid "اختر تصميمًا يناسب نوع نشاطك"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1036
+#: app/templates/radius/_speed_rules_panel.html:1032
 #: app/templates/radius/users_form.html:1628
 msgid "اختر جدول سرعة محفوظ أولًا"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:246
+#: app/radius/routes/speed_rules_ui.py:242
 msgid "اختر جدول سرعة محفوظًا أولًا"
 msgstr ""
 
@@ -20509,7 +20499,7 @@ msgstr ""
 msgid "اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل»."
 msgstr ""
 
-#: app/radius/services/operations.py:1174
+#: app/radius/services/operations.py:1185
 msgid "اختر حزمة الكروت أولًا."
 msgstr ""
 
@@ -21118,7 +21108,7 @@ msgstr ""
 msgid "اختيار ملفّ"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:755
+#: app/templates/radius/_speed_rules_panel.html:753
 msgid "اختيار من الجداول المحفوظة"
 msgstr ""
 
@@ -21777,7 +21767,7 @@ msgstr ""
 msgid "استخدم اسم المستخدم وكلمة المرور مرة واحدة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:88
+#: app/templates/radius/_speed_schedules_panel.html:89
 msgid "استخدم الأوضاع/السلايدر في الأسفل"
 msgstr ""
 
@@ -22000,14 +21990,14 @@ msgstr ""
 #: app/radius/services/audit_format.py:86
 #: app/templates/radius/docs_user_groups.html:468
 #: app/templates/radius/docs_users_360.html:459
-#: app/templates/radius/subscriber_groups_list.html:305
+#: app/templates/radius/subscriber_groups_list.html:302
 #: app/templates/radius/users_list.html:888
 #: app/templates/radius/users_list.html:1242
 #: app/templates/radius/users_list.html:1695
 msgid "استعادة الكوتة اليومية"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:304
+#: app/templates/radius/subscriber_groups_list.html:301
 #, python-format
 msgid "استعادة الكوتة اليومية لكل أعضاء مجموعة «%(e)s»؟"
 msgstr ""
@@ -22521,10 +22511,10 @@ msgstr ""
 msgid "اسم التوكن مطلوب."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:224
-#: app/templates/radius/_speed_schedules_panel.html:314
-#: app/templates/radius/bandwidth_schedules.html:101
-#: app/templates/radius/bandwidth_schedules.html:306
+#: app/templates/radius/_speed_schedules_panel.html:223
+#: app/templates/radius/_speed_schedules_panel.html:310
+#: app/templates/radius/bandwidth_schedules.html:103
+#: app/templates/radius/bandwidth_schedules.html:298
 msgid "اسم الجدول"
 msgstr ""
 
@@ -22919,8 +22909,8 @@ msgstr ""
 msgid "اسم القائمة غير محدد"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:545
-#: app/templates/radius/_speed_rules_panel.html:694
+#: app/templates/radius/_speed_rules_panel.html:543
+#: app/templates/radius/_speed_rules_panel.html:692
 msgid "اسم القاعدة"
 msgstr ""
 
@@ -22991,7 +22981,7 @@ msgstr ""
 msgid "اسم المجموعة مطلوب"
 msgstr ""
 
-#: app/api/v1/subscriber_groups.py:89
+#: app/api/v1/subscriber_groups.py:92
 msgid "اسم المجموعة مطلوب."
 msgstr ""
 
@@ -23076,7 +23066,7 @@ msgstr ""
 #: app/templates/radius/setup_wizard_v2.html:219
 #: app/templates/radius/sms.html:181
 #: app/templates/radius/sstp_credentials.html:178
-#: app/templates/radius/subscriber_groups_form.html:155
+#: app/templates/radius/subscriber_groups_form.html:142
 #: app/templates/radius/svc_partials/remote-access.html:227
 #: app/templates/radius/tool_test_auth.html:50
 #: app/templates/radius/tunnels.html:54
@@ -23212,7 +23202,7 @@ msgstr ""
 msgid "اسم المشترك (والاسم الكامل إن وُجد)."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:45 app/radius/services/operations.py:1356
+#: app/radius/core/messages_ar.py:45 app/radius/services/operations.py:1367
 msgid "اسم المشترك مطلوب."
 msgstr ""
 
@@ -23248,21 +23238,21 @@ msgstr ""
 msgid "اسم الموزع"
 msgstr ""
 
-#: app/radius/services/operations.py:980
+#: app/radius/services/operations.py:991
 #, python-format
 msgid "اسم الموزّع أطول من المسموح (%(DISTRIBUTOR_NAME_MAX)s حرفًا كحدّ أقصى)."
 msgstr ""
 
-#: app/radius/services/operations.py:1065
-#: app/radius/services/operations.py:1079
+#: app/radius/services/operations.py:1076
+#: app/radius/services/operations.py:1090
 msgid "اسم الموزّع مستخدم مسبقًا."
 msgstr ""
 
-#: app/radius/services/operations.py:977
+#: app/radius/services/operations.py:988
 msgid "اسم الموزّع مطلوب."
 msgstr ""
 
-#: app/radius/services/operations.py:974
+#: app/radius/services/operations.py:985
 msgid "اسم الموزّع يجب أن يكون نصًا."
 msgstr ""
 
@@ -23587,8 +23577,8 @@ msgstr ""
 msgid "اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:226
-#: app/templates/radius/bandwidth_schedules.html:103
+#: app/templates/radius/_speed_schedules_panel.html:225
+#: app/templates/radius/bandwidth_schedules.html:105
 msgid "اسم واضح يساعدك تعرف متى ولماذا يتغير الحد."
 msgstr ""
 
@@ -23922,7 +23912,7 @@ msgstr ""
 msgid "اضغط «إرسال رسالة اختبار» — إن فشل، الرسالة تشرح السبب."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:208
+#: app/templates/radius/_speed_schedules_panel.html:207
 msgid ""
 "اضغط «إضافة جدول زمني» لإنشاء قاعدة سرعة تعمل ضمن نافذة وقت متكرّرة (مثل "
 "سرعة الليل)."
@@ -24078,7 +24068,7 @@ msgstr ""
 msgid "اضغط زر"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:374
+#: app/templates/radius/bandwidth_schedules.html:358
 msgid ""
 "اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة "
 "الزمنية."
@@ -24206,7 +24196,7 @@ msgstr ""
 msgid "اعتماد الطلب يطبّق الخدمة، والرفض يُعيد الطلب لصاحبه."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:805
+#: app/templates/radius/_speed_rules_panel.html:803
 msgid "اعتماد القاعدة"
 msgstr ""
 
@@ -24817,7 +24807,7 @@ msgstr ""
 msgid "افحص الجدار الناري على VPS"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:194
+#: app/templates/radius/docs_plans_speeds.html:195
 msgid "افحص الجدول وتأكّد أنّ نتيجة المراجعة سليمة قبل اعتماده."
 msgstr ""
 
@@ -24887,13 +24877,13 @@ msgstr ""
 msgid "افهم تجميد القسم وكيف يُفكّ"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1407
+#: app/templates/radius/network_policy_preview.html:1415
 msgid "اقتراح فقط — لا يتم تنفيذ أي شيء تلقائياً."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1124
-#: app/templates/radius/network_policy_preview.html:1126
-#: app/templates/radius/network_policy_preview.html:1365
+#: app/templates/radius/network_policy_preview.html:1132
+#: app/templates/radius/network_policy_preview.html:1134
+#: app/templates/radius/network_policy_preview.html:1373
 msgid "اقتراحات ذكيّة"
 msgstr ""
 
@@ -25387,15 +25377,15 @@ msgstr ""
 msgid "اكتمل الفحص."
 msgstr ""
 
-#: app/radius/services/operations.py:2192
+#: app/radius/services/operations.py:2202
 msgid "اكتمل ملف PDF"
 msgstr ""
 
-#: app/radius/services/operations.py:2509
+#: app/radius/services/operations.py:2519
 msgid "اكتمل ملف PDF وأصبح جاهزًا للتنزيل"
 msgstr ""
 
-#: app/radius/services/operations.py:2524
+#: app/radius/services/operations.py:2534
 msgid "اكتمل ملف PDF."
 msgstr ""
 
@@ -25490,9 +25480,11 @@ msgid "الأجهزة والمعدّات"
 msgstr ""
 
 #: app/radius/core/access_schedule.py:42
-#: app/radius/routes/subscriber_groups.py:111
-#: app/radius/routes/subscriber_groups.py:139 app/radius/services/users.py:1662
+#: app/radius/routes/subscriber_groups.py:107
+#: app/radius/routes/subscriber_groups.py:135 app/radius/services/users.py:1662
 #: app/templates/_partials/access_schedule.html:538
+#: app/templates/_partials/schedule_days_picker.html:13
+#: app/templates/_partials/schedule_days_picker.html:22
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:24
 #: app/templates/radius/plans_list.html:174
@@ -25616,9 +25608,11 @@ msgid ""
 msgstr ""
 
 #: app/radius/core/access_schedule.py:43
-#: app/radius/routes/subscriber_groups.py:112
-#: app/radius/routes/subscriber_groups.py:140 app/radius/services/users.py:1663
+#: app/radius/routes/subscriber_groups.py:108
+#: app/radius/routes/subscriber_groups.py:136 app/radius/services/users.py:1663
 #: app/templates/_partials/access_schedule.html:539
+#: app/templates/_partials/schedule_days_picker.html:14
+#: app/templates/_partials/schedule_days_picker.html:23
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:25
 #: app/templates/radius/plans_list.html:174
@@ -25840,9 +25834,9 @@ msgstr ""
 #: app/templates/radius/sgrp_list.html:83
 #: app/templates/radius/sgrp_view.html:17
 #: app/templates/radius/sgrp_view.html:30
-#: app/templates/radius/subscriber_groups_form.html:151
+#: app/templates/radius/subscriber_groups_form.html:138
 #: app/templates/radius/subscriber_groups_list.html:217
-#: app/templates/radius/subscriber_groups_list.html:290
+#: app/templates/radius/subscriber_groups_list.html:287
 msgid "الأعضاء"
 msgstr ""
 
@@ -26016,8 +26010,8 @@ msgstr ""
 msgid "الأولوية"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:593
-#: app/templates/radius/_speed_rules_panel.html:749
+#: app/templates/radius/_speed_rules_panel.html:591
+#: app/templates/radius/_speed_rules_panel.html:747
 msgid "الأولوية (1-10)"
 msgstr ""
 
@@ -26029,14 +26023,14 @@ msgstr ""
 msgid "الأولوية تحدد ترتيب المعالجة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:264
-#: app/templates/radius/_speed_schedules_panel.html:315
-#: app/templates/radius/bandwidth_schedules.html:150
-#: app/templates/radius/bandwidth_schedules.html:311
+#: app/templates/radius/_speed_schedules_panel.html:263
+#: app/templates/radius/_speed_schedules_panel.html:311
+#: app/templates/radius/bandwidth_schedules.html:152
+#: app/templates/radius/bandwidth_schedules.html:303
 msgid "الأولوية داخل نفس النطاق (1-10)"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:150
+#: app/templates/radius/docs_plans_speeds.html:151
 msgid "الأولوية:"
 msgstr ""
 
@@ -26057,11 +26051,16 @@ msgstr ""
 
 #: app/radius/core/numbers.py:59 app/radius/routes/users.py:1775
 #: app/radius/services/permission_labels.py:84
+#: app/templates/_partials/schedule_days_picker.html:26
+#: app/templates/radius/_speed_schedules_panel.html:271
+#: app/templates/radius/_speed_schedules_panel.html:316
+#: app/templates/radius/bandwidth_schedules.html:165
+#: app/templates/radius/bandwidth_schedules.html:315
 msgid "الأيام"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:549
-#: app/templates/radius/_speed_rules_panel.html:698
+#: app/templates/radius/_speed_rules_panel.html:547
+#: app/templates/radius/_speed_rules_panel.html:696
 msgid "الأيام (فاضي = كل الأيام)"
 msgstr ""
 
@@ -26082,7 +26081,7 @@ msgstr ""
 msgid "الأيام والأوقات المسموحة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:138
+#: app/templates/radius/subscriber_groups_form.html:125
 msgid "الأيام والأوقات المسموحة لأعضاء المجموعة"
 msgstr ""
 
@@ -26098,6 +26097,16 @@ msgstr ""
 msgid "الأيام والأوقات المسموحة:"
 msgstr ""
 
+#: app/templates/radius/docs_plans_speeds.html:148
+msgid "الأيام:"
+msgstr ""
+
+#: app/templates/radius/bandwidth_schedules.html:74
+msgid ""
+"الأيام: يعمل الجدول في الأيام المختارة فقط (بتوقيت اللوحة)؛ بلا أيام = كل"
+" يوم."
+msgstr ""
+
 #: app/templates/admin/_admin_layout.html:269
 msgid "الأيّام المتبقّية على ترخيص اللوحة"
 msgstr ""
@@ -26111,9 +26120,11 @@ msgid "الإثباتات بانتظار المراجعة"
 msgstr ""
 
 #: app/radius/core/access_schedule.py:42
-#: app/radius/routes/subscriber_groups.py:111
-#: app/radius/routes/subscriber_groups.py:139
+#: app/radius/routes/subscriber_groups.py:107
+#: app/radius/routes/subscriber_groups.py:135
 #: app/templates/_partials/access_schedule.html:538
+#: app/templates/_partials/schedule_days_picker.html:13
+#: app/templates/_partials/schedule_days_picker.html:22
 #: app/templates/radius/_speed_rules_panel.html:24
 msgid "الإثنين"
 msgstr ""
@@ -26948,7 +26959,7 @@ msgstr ""
 msgid "الاستعادة بحذر"
 msgstr ""
 
-#: app/radius/routes/backups.py:291 app/radius/services/operations.py:3281
+#: app/radius/routes/backups.py:291 app/radius/services/operations.py:3291
 msgid "الاستعادة داخل التطبيق معطّلة على هذا الخادم."
 msgstr ""
 
@@ -26997,12 +27008,12 @@ msgstr ""
 #: app/radius/templates/radius/vpn_reports.html:234
 #: app/static/js/mt_dashboard.js:1882
 #: app/templates/radius/_plans_fragments.html:111
-#: app/templates/radius/_speed_schedules_panel.html:129
+#: app/templates/radius/_speed_schedules_panel.html:130
 #: app/templates/radius/_status.html:147 app/templates/radius/account.html:17
 #: app/templates/radius/admins_list.html:88
 #: app/templates/radius/bandwidth_form.html:116
 #: app/templates/radius/bandwidth_list.html:55
-#: app/templates/radius/bandwidth_schedules.html:218
+#: app/templates/radius/bandwidth_schedules.html:212
 #: app/templates/radius/business_operators.html:86
 #: app/templates/radius/business_operators.html:127
 #: app/templates/radius/card_pricing.html:78
@@ -27047,7 +27058,7 @@ msgstr ""
 #: app/templates/radius/sgrp_view.html:38
 #: app/templates/radius/site_exit.html:213
 #: app/templates/radius/site_exit.html:251
-#: app/templates/radius/subscriber_groups_form.html:155
+#: app/templates/radius/subscriber_groups_form.html:142
 #: app/templates/radius/tokens_list.html:104
 #: app/templates/radius/tool_set_speeds.html:48
 #: app/templates/radius/tunnels.html:107
@@ -27203,7 +27214,7 @@ msgid "الاسم المعتمد للإرسال"
 msgstr ""
 
 #: app/radius/services/accounting.py:1366
-#: app/radius/services/operations.py:1002
+#: app/radius/services/operations.py:1013
 #: app/templates/radius/accounting_reports.html:120
 #: app/templates/radius/docs_admins.html:82
 #: app/templates/radius/finance_accounting.html:541
@@ -27224,7 +27235,7 @@ msgstr ""
 msgid "الاسم كما هو في الحساب"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:127
+#: app/radius/services/npc_policy.py:153
 msgid "الاسم لا يمكن أن يكون فارغاً."
 msgstr ""
 
@@ -27246,8 +27257,8 @@ msgstr ""
 msgid "الاسم مطلوب"
 msgstr ""
 
-#: app/radius/core/messages_ar.py:43 app/radius/services/npc_policy.py:122
-#: app/radius/services/operations.py:1337
+#: app/radius/core/messages_ar.py:43 app/radius/services/npc_policy.py:148
+#: app/radius/services/operations.py:1348
 msgid "الاسم مطلوب."
 msgstr ""
 
@@ -27267,7 +27278,7 @@ msgstr ""
 msgid "الاسم والعنوان وبيانات الربط."
 msgstr ""
 
-#: app/radius/services/npc_policy.py:132
+#: app/radius/services/npc_policy.py:158
 msgid "الاسم يجب أن يحوي حرفاً ظاهراً واحداً على الأقل."
 msgstr ""
 
@@ -27514,7 +27525,7 @@ msgstr ""
 #: app/radius/routes/recycle_bin.py:25
 #: app/radius/services/manager_activity_audit.py:216
 #: app/radius/services/manager_activity_audit.py:217
-#: app/radius/services/operations.py:3219
+#: app/radius/services/operations.py:3229
 #: app/templates/radius/_perm_labels.html:23
 #: app/templates/radius/license_file.html:289
 #: app/templates/radius/plans_list.html:230
@@ -27570,11 +27581,11 @@ msgstr ""
 #: app/radius/services/manager_grants.py:239
 #: app/radius/services/migration/engine.py:1232
 #: app/radius/services/pdf_theme.py:519 app/radius/services/users.py:1714
-#: app/templates/radius/_speed_schedules_panel.html:131
-#: app/templates/radius/_speed_schedules_panel.html:240
+#: app/templates/radius/_speed_schedules_panel.html:132
+#: app/templates/radius/_speed_schedules_panel.html:239
 #: app/templates/radius/accounting_reports.html:115
-#: app/templates/radius/bandwidth_schedules.html:117
-#: app/templates/radius/bandwidth_schedules.html:220
+#: app/templates/radius/bandwidth_schedules.html:119
+#: app/templates/radius/bandwidth_schedules.html:214
 #: app/templates/radius/business_operator_profile.html:438
 #: app/templates/radius/card_pricing.html:162
 #: app/templates/radius/card_user_360.html:302
@@ -27668,7 +27679,7 @@ msgid "الباقة الأساسية غير موجودة."
 msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:348
-#: app/templates/radius/subscriber_groups_form.html:109
+#: app/templates/radius/subscriber_groups_form.html:96
 msgid "الباقة الافتراضية"
 msgstr ""
 
@@ -27956,7 +27967,7 @@ msgstr ""
 msgid "البروفايل الذي يرث منه الكرت المدة والسرعة والسعر المقترح —"
 msgstr ""
 
-#: app/radius/services/operations.py:1003 app/templates/radius/account.html:18
+#: app/radius/services/operations.py:1014 app/templates/radius/account.html:18
 #: app/templates/radius/admins_list.html:90
 #: app/templates/radius/admins_profile_summary.html:89
 #: app/templates/radius/communications.html:11
@@ -28511,7 +28522,7 @@ msgid "التبويبان يتشاركان نفس القيود — التقار�
 msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:355
-#: app/templates/radius/subscriber_groups_form.html:125
+#: app/templates/radius/subscriber_groups_form.html:112
 #: app/templates/radius/users_profile.html:870
 msgid "التجديد التلقائي"
 msgstr ""
@@ -29210,18 +29221,18 @@ msgid ""
 " يُرفع القيد."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:108
+#: app/templates/radius/_speed_schedules_panel.html:109
 msgid "التطبيق الحيّ المباشر مُعطَّل حاليًّا"
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:225
+#: app/radius/routes/bandwidth_schedules.py:232
 msgid ""
 "التطبيق الحيّ المباشر مُعطَّل على هذه النسخة "
 "(HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). تم تنفيذ فحص جاهزية فقط دون أي "
 "تغيير على الشبكة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:103
+#: app/templates/radius/_speed_schedules_panel.html:104
 msgid ""
 "التطبيق الحيّ المباشر مُفعَّل على هذه النسخة. زر «تطبيق الآن» سيُرسل CoA "
 "للجلسات النشطة المطابقة فورًا."
@@ -29249,7 +29260,7 @@ msgid ""
 "عند إعادة مصادقة المشتركين."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:182
+#: app/templates/radius/_speed_schedules_panel.html:181
 msgid ""
 "التطبيق الحيّ مُعطَّل على هذه النسخة. سيُنفَّذ فحص جاهزية فقط دون تغيير "
 "على الشبكة. متابعة؟"
@@ -29290,12 +29301,12 @@ msgid ""
 "بخطوات معاينة واضحة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1112
-#: app/templates/radius/network_policy_preview.html:1114
+#: app/templates/radius/network_policy_preview.html:1120
+#: app/templates/radius/network_policy_preview.html:1122
 msgid "التعارضات"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1253
+#: app/templates/radius/network_policy_preview.html:1261
 msgid "التعارضات مع السياسات الأخرى"
 msgstr ""
 
@@ -29764,9 +29775,11 @@ msgid "الثقة"
 msgstr ""
 
 #: app/radius/core/access_schedule.py:42
-#: app/radius/routes/subscriber_groups.py:112
-#: app/radius/routes/subscriber_groups.py:140 app/radius/services/users.py:1662
+#: app/radius/routes/subscriber_groups.py:108
+#: app/radius/routes/subscriber_groups.py:136 app/radius/services/users.py:1662
 #: app/templates/_partials/access_schedule.html:538
+#: app/templates/_partials/schedule_days_picker.html:13
+#: app/templates/_partials/schedule_days_picker.html:22
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:24
 #: app/templates/radius/plans_list.html:174
@@ -29822,11 +29835,11 @@ msgstr ""
 msgid "الجداول التي تم تنظيفها:"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:212
+#: app/templates/radius/bandwidth_schedules.html:206
 msgid "الجداول الحالية"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:96
+#: app/templates/radius/_speed_schedules_panel.html:97
 msgid "الجداول الزمنية للسرعة"
 msgstr ""
 
@@ -29834,7 +29847,7 @@ msgstr ""
 msgid "الجداول تعرض المشتركين والحزم والأحداث ضمن النطاق."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:109
+#: app/templates/radius/_speed_schedules_panel.html:110
 msgid ""
 "الجداول تُطبَّق على المشترك عند إعادة مصادقته فقط؛ وزر «تطبيق الآن» "
 "سينفّذ فحص جاهزية دون تغيير على الشبكة حتى يُفعّل المالك الميزة."
@@ -29848,11 +29861,11 @@ msgstr ""
 msgid "الجدول الحقيقي أعرض (14 عمودًا) — مرّر أفقيًا على الشاشات الضيقة."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:598
+#: app/templates/radius/_speed_rules_panel.html:596
 msgid "الجدول المصدر"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1041
+#: app/templates/radius/_speed_rules_panel.html:1037
 #: app/templates/radius/users_form.html:1634
 msgid "الجدول المصدر غير موجود"
 msgstr ""
@@ -30149,9 +30162,11 @@ msgid ""
 msgstr ""
 
 #: app/radius/core/access_schedule.py:43
-#: app/radius/routes/subscriber_groups.py:113
-#: app/radius/routes/subscriber_groups.py:141 app/radius/services/users.py:1663
+#: app/radius/routes/subscriber_groups.py:109
+#: app/radius/routes/subscriber_groups.py:137 app/radius/services/users.py:1663
 #: app/templates/_partials/access_schedule.html:539
+#: app/templates/_partials/schedule_days_picker.html:14
+#: app/templates/_partials/schedule_days_picker.html:23
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:25
 #: app/templates/radius/plans_list.html:174
@@ -30351,7 +30366,7 @@ msgstr ""
 msgid "الجوال: %(mobile)s"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:155
+#: app/templates/radius/subscriber_groups_form.html:142
 #: app/templates/radius/users_profile.html:810
 msgid "الجوّال"
 msgstr ""
@@ -30394,7 +30409,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:480
 #: app/radius/services/audit_format.py:653
 #: app/radius/services/manager_grants.py:211
-#: app/radius/services/operations.py:981 app/radius/services/pdf_theme.py:521
+#: app/radius/services/operations.py:992 app/radius/services/pdf_theme.py:521
 #: app/radius/services/subscriber_form_fields.py:70
 #: app/radius/services/users.py:1715
 #: app/radius/templates/radius/monitoring.html:173
@@ -30407,7 +30422,7 @@ msgstr ""
 #: app/static/js/mt_import.js:181 app/static/js/setup_wizard.js:31
 #: app/static/js/setup_wizard_v2.js:135 app/static/js/setup_wizard_v2.js:214
 #: app/templates/radius/_plans_fragments.html:116
-#: app/templates/radius/_speed_schedules_panel.html:134
+#: app/templates/radius/_speed_schedules_panel.html:135
 #: app/templates/radius/_status.html:149
 #: app/templates/radius/access_control.html:209
 #: app/templates/radius/access_control.html:374
@@ -30419,7 +30434,7 @@ msgstr ""
 #: app/templates/radius/admins_list.html:195
 #: app/templates/radius/admins_profile_summary.html:92
 #: app/templates/radius/anti_mac_clone.html:190
-#: app/templates/radius/bandwidth_schedules.html:223
+#: app/templates/radius/bandwidth_schedules.html:217
 #: app/templates/radius/business_operator_profile.html:438
 #: app/templates/radius/business_operator_profile.html:456
 #: app/templates/radius/business_operator_profile.html:475
@@ -30563,7 +30578,7 @@ msgstr ""
 #: app/templates/radius/store_support.html:299
 #: app/templates/radius/store_support.html:375
 #: app/templates/radius/subscriber_360.html:75
-#: app/templates/radius/subscriber_groups_form.html:155
+#: app/templates/radius/subscriber_groups_form.html:142
 #: app/templates/radius/subscriber_groups_list.html:220
 #: app/templates/radius/sync_list.html:110
 #: app/templates/radius/system_update.html:148
@@ -30915,7 +30930,7 @@ msgstr ""
 msgid "الحركة"
 msgstr ""
 
-#: app/radius/services/operations.py:1095
+#: app/radius/services/operations.py:1106
 #, python-format
 msgid ""
 "الحركة تتجاوز حدّ ائتمان الموزّع (سقف الدين %(limit)s): الدين الحاليّ "
@@ -30980,7 +30995,7 @@ msgstr ""
 msgid "الحزمة المختارة"
 msgstr ""
 
-#: app/radius/services/operations.py:2043
+#: app/radius/services/operations.py:2053
 msgid "الحزمة المختارة لا تحتوي كروتًا للطباعة."
 msgstr ""
 
@@ -31321,12 +31336,12 @@ msgstr ""
 msgid "الخدمات التي ستُفتح للوصول إلى الراوتر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1311
+#: app/templates/radius/network_policy_preview.html:1319
 msgid "الخدمات التي قد تتأثَّر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1118
-#: app/templates/radius/network_policy_preview.html:1120
+#: app/templates/radius/network_policy_preview.html:1126
+#: app/templates/radius/network_policy_preview.html:1128
 msgid "الخدمات المتأثّرة"
 msgstr ""
 
@@ -31392,7 +31407,7 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:114
 #: app/templates/radius/cards_batches.html:637
 #: app/templates/radius/mt_dashboard.html:2464
-#: app/templates/radius/network_policy_preview.html:692
+#: app/templates/radius/network_policy_preview.html:700
 #: app/templates/radius/notifications_center.html:59
 #: app/templates/radius/plans_list.html:239
 #: app/templates/radius/port_script_services.html:274
@@ -31442,7 +31457,7 @@ msgstr ""
 msgid "الخدمة غير معروفة."
 msgstr ""
 
-#: app/radius/services/operations.py:3024
+#: app/radius/services/operations.py:3034
 msgid "الخدمة غير مفعّلة (خدمة مدفوعة)."
 msgstr ""
 
@@ -31661,11 +31676,11 @@ msgstr ""
 msgid "الخطّة جاهزة للتنفيذ وفق المعايير الحاليّة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:649
+#: app/templates/radius/network_policy_preview.html:657
 msgid "الخطّة سليمة"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:654
+#: app/templates/radius/network_policy_preview.html:662
 msgid "الخطّة محظورة — راجع الأخطاء"
 msgstr ""
 
@@ -31698,9 +31713,11 @@ msgid "الخليل (فلسطين)"
 msgstr ""
 
 #: app/radius/core/access_schedule.py:43
-#: app/radius/routes/subscriber_groups.py:112
-#: app/radius/routes/subscriber_groups.py:140 app/radius/services/users.py:1663
+#: app/radius/routes/subscriber_groups.py:108
+#: app/radius/routes/subscriber_groups.py:136 app/radius/services/users.py:1663
 #: app/templates/_partials/access_schedule.html:539
+#: app/templates/_partials/schedule_days_picker.html:14
+#: app/templates/_partials/schedule_days_picker.html:23
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:25
 #: app/templates/radius/plans_list.html:174
@@ -32027,7 +32044,7 @@ msgstr ""
 msgid "الدين"
 msgstr ""
 
-#: app/radius/services/operations.py:1110
+#: app/radius/services/operations.py:1121
 #, python-format
 msgid "الدين الافتتاحيّ (%(debt)s) أكبر من حدّ الائتمان (%(limit)s)."
 msgstr ""
@@ -32250,7 +32267,7 @@ msgstr ""
 #: app/templates/radius/network_devices_form.html:73
 #: app/templates/radius/network_devices_list.html:70
 #: app/templates/radius/network_policy_list.html:106
-#: app/templates/radius/network_policy_preview.html:694
+#: app/templates/radius/network_policy_preview.html:702
 #: app/templates/radius/network_policy_router_picker.html:86
 #: app/templates/radius/onboarding_script.html:27
 #: app/templates/radius/pools_form.html:79
@@ -32838,16 +32855,16 @@ msgstr ""
 msgid "الرجوع للسجل"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:587
-#: app/templates/radius/_speed_rules_panel.html:743
-#: app/templates/radius/_speed_schedules_panel.html:284
-#: app/templates/radius/_speed_schedules_panel.html:331
-#: app/templates/radius/bandwidth_schedules.html:185
-#: app/templates/radius/bandwidth_schedules.html:345
+#: app/templates/radius/_speed_rules_panel.html:585
+#: app/templates/radius/_speed_rules_panel.html:741
+#: app/templates/radius/_speed_schedules_panel.html:280
+#: app/templates/radius/_speed_schedules_panel.html:324
+#: app/templates/radius/bandwidth_schedules.html:179
+#: app/templates/radius/bandwidth_schedules.html:329
 msgid "الرجوع للسرعة الأساسية"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:149
+#: app/templates/radius/docs_plans_speeds.html:150
 msgid "الرجوع للسرعة الأساسية، أو إبقاء آخر سرعة."
 msgstr ""
 
@@ -33201,7 +33218,7 @@ msgid ""
 "‎192.168.15.254‎."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:152
+#: app/templates/radius/bandwidth_schedules.html:154
 msgid "الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق."
 msgstr ""
 
@@ -33502,9 +33519,11 @@ msgid "السبب يوضّح لماذا قُبل أو رُفض الطلب كما
 msgstr ""
 
 #: app/radius/core/access_schedule.py:42
-#: app/radius/routes/subscriber_groups.py:111
-#: app/radius/routes/subscriber_groups.py:139 app/radius/services/users.py:1662
+#: app/radius/routes/subscriber_groups.py:107
+#: app/radius/routes/subscriber_groups.py:135 app/radius/services/users.py:1662
 #: app/templates/_partials/access_schedule.html:538
+#: app/templates/_partials/schedule_days_picker.html:13
+#: app/templates/_partials/schedule_days_picker.html:22
 #: app/templates/radius/_plans_fragments.html:95
 #: app/templates/radius/_speed_rules_panel.html:24
 #: app/templates/radius/plans_list.html:174
@@ -33656,8 +33675,8 @@ msgstr ""
 #: app/radius/templates/radius/vpn_reports.html:237
 #: app/radius/templates/radius/wg_data.html:135
 #: app/templates/radius/_plans_fragments.html:44
-#: app/templates/radius/_speed_schedules_panel.html:133
-#: app/templates/radius/bandwidth_schedules.html:222
+#: app/templates/radius/_speed_schedules_panel.html:134
+#: app/templates/radius/bandwidth_schedules.html:216
 #: app/templates/radius/cards_generate.html:236
 #: app/templates/radius/cards_of_batch.html:605
 #: app/templates/radius/docs_user_groups.html:478
@@ -33668,7 +33687,7 @@ msgstr ""
 #: app/templates/radius/plans_overview.html:166
 #: app/templates/radius/portal_subscriber.html:704
 #: app/templates/radius/subscriber_groups_list.html:222
-#: app/templates/radius/subscriber_groups_list.html:300
+#: app/templates/radius/subscriber_groups_list.html:297
 #: app/templates/radius/ticket_view.html:111
 #: app/templates/radius/tickets_list.html:70
 #: app/templates/radius/users_form.html:873
@@ -33810,10 +33829,6 @@ msgid ""
 "الباقة مفتوحة."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:73
-msgid "السرعة و CIR: اكتب القيمة ثم اختر الوحدة (kbps أو Mbps)."
-msgstr ""
-
 #: app/templates/radius/docs_plans_speeds.html:32
 #: app/templates/radius/docs_plans_speeds.html:76
 msgid "السرعة والبيرست"
@@ -33839,6 +33854,10 @@ msgstr ""
 #: app/templates/radius/docs_add_subscriber.html:498
 #: app/templates/radius/docs_user_groups.html:429
 msgid "السرعة:"
+msgstr ""
+
+#: app/templates/radius/bandwidth_schedules.html:75
+msgid "السرعة: اكتب القيمة ثم اختر الوحدة (kbps أو Mbps)."
 msgstr ""
 
 #: app/radius/services/mikrotik_actions.py:217
@@ -34104,8 +34123,8 @@ msgstr ""
 msgid "السكربت الجاهز للنسخ"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1148
-#: app/templates/radius/network_policy_preview.html:1150
+#: app/templates/radius/network_policy_preview.html:1156
+#: app/templates/radius/network_policy_preview.html:1158
 msgid "السكربت الخام"
 msgstr ""
 
@@ -34494,6 +34513,13 @@ msgstr ""
 
 #: app/radius/services/npc_impact_analyzer.py:324
 msgid "السياسة لن تغيّر شيئاً حالياً."
+msgstr ""
+
+#: app/radius/services/npc_policy.py:84
+#: app/templates/radius/network_policy_preview.html:642
+msgid ""
+"السياسة معطّلة — لا أثر لها: التطبيق يزيل قواعدها المُدارة من الراوتر ولا"
+" يضيف شيئًا. فعّلها ثم طبّق لإعادة أثرها."
 msgstr ""
 
 #: app/templates/radius/network_policy_form.html:220
@@ -35157,7 +35183,7 @@ msgstr ""
 msgid "الصلاحيات ونطاق البيانات"
 msgstr ""
 
-#: app/radius/services/operations.py:986
+#: app/radius/services/operations.py:997
 msgid "الصلاحيات يجب أن تكون قائمة نصوص."
 msgstr ""
 
@@ -35594,7 +35620,7 @@ msgstr ""
 #: app/templates/radius/sessions_list.html:745
 #: app/templates/radius/sessions_list.html:895
 #: app/templates/radius/sessions_list.html:1391
-#: app/templates/radius/subscriber_groups_list.html:280
+#: app/templates/radius/subscriber_groups_list.html:277
 msgid "العرض"
 msgstr ""
 
@@ -36012,7 +36038,7 @@ msgstr ""
 msgid "العناوين:"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:983
+#: app/templates/radius/_speed_rules_panel.html:979
 #: app/templates/radius/docs_sync_queue.html:297
 #: app/templates/radius/docs_sync_queue.html:306
 #: app/templates/radius/lifecycle.html:95
@@ -36609,7 +36635,7 @@ msgstr ""
 msgid "الفحص قبل التطبيق"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:172
+#: app/templates/radius/docs_plans_speeds.html:173
 msgid "الفحص قبل التطبيق الفعلي"
 msgstr ""
 
@@ -37031,7 +37057,7 @@ msgstr ""
 msgid "القروض / الديون"
 msgstr ""
 
-#: app/api/openapi.py:189 app/radius/services/operations.py:3221
+#: app/api/openapi.py:189 app/radius/services/operations.py:3231
 #: app/radius/services/provider_service_labels.py:48
 msgid "القسائم"
 msgstr ""
@@ -37230,7 +37256,7 @@ msgstr ""
 msgid "القيم الافتراضية عند توليد دفعات الكروت"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:148
+#: app/templates/radius/docs_plans_speeds.html:149
 msgid "القيم الجديدة داخل النافذة (kbps أو Mbps)."
 msgstr ""
 
@@ -37436,7 +37462,7 @@ msgstr ""
 #: app/api/v1/admins.py:546 app/api/v1/service_requests.py:39
 #: app/api/v1/tickets.py:44 app/radius/services/manager_activity_audit.py:185
 #: app/radius/services/manager_activity_audit.py:208
-#: app/radius/services/operations.py:3218
+#: app/radius/services/operations.py:3228
 #: app/templates/radius/card_pricing_batch.html:58
 #: app/templates/radius/cards_batches.html:632
 #: app/templates/radius/cards_import.html:365
@@ -38310,14 +38336,14 @@ msgstr ""
 msgid "المبلغ"
 msgstr ""
 
-#: app/radius/services/operations.py:1268
+#: app/radius/services/operations.py:1279
 #, python-format
 msgid ""
 "المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي "
 "%(debt)s. اختر «إضافة للرصيد» للزيادة."
 msgstr ""
 
-#: app/radius/services/operations.py:1276
+#: app/radius/services/operations.py:1287
 #, python-format
 msgid ""
 "المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي "
@@ -38561,7 +38587,7 @@ msgstr ""
 #: app/templates/radius/mt_operations.html:169
 #: app/templates/radius/operations_speed_control.html:335
 #: app/templates/radius/subscriber_groups_list.html:218
-#: app/templates/radius/subscriber_groups_list.html:295
+#: app/templates/radius/subscriber_groups_list.html:292
 msgid "المتصلون"
 msgstr ""
 
@@ -38767,8 +38793,8 @@ msgstr ""
 msgid "المجموعة غير موجودة"
 msgstr ""
 
-#: app/api/v1/subscriber_groups.py:80 app/api/v1/subscriber_groups.py:103
-#: app/api/v1/subscriber_groups.py:123 app/api/v1/subscriber_groups.py:150
+#: app/api/v1/subscriber_groups.py:83 app/api/v1/subscriber_groups.py:106
+#: app/api/v1/subscriber_groups.py:126 app/api/v1/subscriber_groups.py:153
 msgid "المجموعة غير موجودة."
 msgstr ""
 
@@ -39284,8 +39310,8 @@ msgstr ""
 msgid "المدير المالك (اختياري):"
 msgstr ""
 
-#: app/radius/services/operations.py:1069
-#: app/radius/services/operations.py:1081
+#: app/radius/services/operations.py:1080
+#: app/radius/services/operations.py:1092
 msgid "المدير المالك المحدَّد غير موجود."
 msgstr ""
 
@@ -39905,8 +39931,8 @@ msgstr ""
 #: app/radius/services/business_os_finance.py:123
 #: app/radius/services/event_labels.py:308
 #: app/templates/radius/_speed_rules_panel.html:37
-#: app/templates/radius/_speed_schedules_panel.html:248
-#: app/templates/radius/bandwidth_schedules.html:128
+#: app/templates/radius/_speed_schedules_panel.html:247
+#: app/templates/radius/bandwidth_schedules.html:130
 #: app/templates/radius/communications_guide.html:304
 #: app/templates/radius/communications_guide.html:306
 #: app/templates/radius/communications_guide.html:319
@@ -40012,7 +40038,7 @@ msgstr ""
 msgid "المشترك بلا تاريخ انتهاء (غير محدود) — لم يُغيَّر وقته."
 msgstr ""
 
-#: app/radius/core/messages_ar.py:46 app/radius/services/operations.py:1362
+#: app/radius/core/messages_ar.py:46 app/radius/services/operations.py:1373
 msgid "المشترك بلا عرض — حدّد العرض أولًا."
 msgstr ""
 
@@ -40112,7 +40138,7 @@ msgstr ""
 #: app/radius/services/manager_grants.py:49
 #: app/radius/services/migration/sections.py:249
 #: app/radius/services/notification_sounds.py:210
-#: app/radius/services/operations.py:3217
+#: app/radius/services/operations.py:3227
 #: app/radius/services/provider_service_labels.py:41
 #: app/templates/admin/_sidebar.html:462 app/templates/admin/_sidebar.html:464
 #: app/templates/admin/_sidebar.html:476
@@ -40908,7 +40934,7 @@ msgid "المكسيك ‎+52"
 msgstr ""
 
 #: app/radius/services/device_health.py:691
-#: app/radius/services/operations.py:1011
+#: app/radius/services/operations.py:1022
 #: app/radius/services/subscriber_form_fields.py:98
 #: app/templates/radius/subscriber_360.html:67
 #: app/templates/radius/subscriber_360.html:333
@@ -40978,7 +41004,7 @@ msgstr ""
 msgid "الملف المالي"
 msgstr ""
 
-#: app/radius/services/operations.py:3110
+#: app/radius/services/operations.py:3120
 msgid "الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة."
 msgstr ""
 
@@ -41005,7 +41031,7 @@ msgstr ""
 msgid "الملف ليس صورة مدعومة (PNG/JPG/WEBP/GIF)."
 msgstr ""
 
-#: app/radius/services/operations.py:3119
+#: app/radius/services/operations.py:3129
 msgid "الملف ليس قاعدة بيانات SQLite صالحة."
 msgstr ""
 
@@ -41448,13 +41474,13 @@ msgstr ""
 msgid "الموزّع دفع مقدمًا ويبيع من رصيده."
 msgstr ""
 
-#: app/radius/services/operations.py:1091
+#: app/radius/services/operations.py:1102
 msgid "الموزّع غير مفعّل — فعّله أولًا قبل إسناد حزم أو تسجيل دين جديد."
 msgstr ""
 
 #: app/radius/services/credit_dashboard.py:252
-#: app/radius/services/operations.py:1153
-#: app/radius/services/operations.py:1214
+#: app/radius/services/operations.py:1164
+#: app/radius/services/operations.py:1225
 msgid "الموزّع غير موجود."
 msgstr ""
 
@@ -41627,7 +41653,7 @@ msgstr ""
 msgid "المُصنِّع"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:693
+#: app/templates/radius/network_policy_preview.html:701
 msgid "المُعرّف (slug)"
 msgstr ""
 
@@ -41992,12 +42018,12 @@ msgstr ""
 
 #: app/radius/services/audit_format.py:463 app/static/js/mt_dashboard.js:837
 #: app/templates/radius/_plans_fragments.html:115
-#: app/templates/radius/_speed_schedules_panel.html:130
+#: app/templates/radius/_speed_schedules_panel.html:131
 #: app/templates/radius/access_control.html:159
 #: app/templates/radius/access_control.html:208
 #: app/templates/radius/access_control.html:429
 #: app/templates/radius/access_control.html:488
-#: app/templates/radius/bandwidth_schedules.html:219
+#: app/templates/radius/bandwidth_schedules.html:213
 #: app/templates/radius/distributors_detail.html:89
 #: app/templates/radius/distributors_list.html:97
 #: app/templates/radius/docs_access_control.html:76
@@ -42377,7 +42403,7 @@ msgid "النيون الداكن"
 msgstr ""
 
 #: app/radius/services/hotspot_addons_gallery.py:730
-#: app/radius/services/operations.py:1004
+#: app/radius/services/operations.py:1015
 #: app/templates/radius/distributors_detail.html:69
 #: app/templates/radius/payments_lab.html:110
 msgid "الهاتف"
@@ -42837,7 +42863,7 @@ msgstr ""
 msgid "الوصول محظور"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:940
+#: app/templates/radius/network_policy_preview.html:948
 msgid "الوصول مسموح فقط من العناوين الموجودة في قائمة"
 msgstr ""
 
@@ -42897,13 +42923,13 @@ msgid ""
 msgstr ""
 
 #: app/static/js/hub_date.js:248 app/static/js/mt_import.js:292
-#: app/templates/radius/_speed_schedules_panel.html:132
+#: app/templates/radius/_speed_schedules_panel.html:133
 #: app/templates/radius/accounting_reports.html:65
 #: app/templates/radius/anti_mac_clone.html:269
 #: app/templates/radius/audit_list.html:32
 #: app/templates/radius/audit_log_detail.html:118
 #: app/templates/radius/audit_log_index.html:108
-#: app/templates/radius/bandwidth_schedules.html:221
+#: app/templates/radius/bandwidth_schedules.html:215
 #: app/templates/radius/cards_checker_v2.html:852
 #: app/templates/radius/cards_overview.html:796
 #: app/templates/radius/device_health.html:241
@@ -42974,7 +43000,7 @@ msgstr ""
 msgid "الوقت المستهلك"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1432
+#: app/templates/radius/network_policy_preview.html:1440
 #, python-format
 msgid "الوقت المقترح بين كل مرحلة: %(wait_time_recommendation_ar)s"
 msgstr ""
@@ -43017,7 +43043,7 @@ msgstr ""
 msgid "الوقت:"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:72
+#: app/templates/radius/bandwidth_schedules.html:73
 msgid "الوقت: تُطبّق القاعدة بين «من الساعة» و«إلى الساعة»."
 msgstr ""
 
@@ -43417,7 +43443,7 @@ msgstr ""
 msgid "انتهت المحاكاة"
 msgstr ""
 
-#: app/api/v1/whatsapp.py:297 app/radius/db/repos/operations_repo.py:1181
+#: app/api/v1/whatsapp.py:297 app/radius/db/repos/operations_repo.py:1274
 #: app/radius/routes/mt_setup.py:228 app/static/js/device_health.js:49
 #: app/static/js/device_health.js:857 app/templates/radius/_subs_labels.html:28
 #: app/templates/radius/backups.html:8
@@ -43573,7 +43599,7 @@ msgstr ""
 msgid "انتهت مهلة قراءة الحالة. تأكّد من نفق الإدارة ثم اضغط «تحديث»."
 msgstr ""
 
-#: app/radius/services/operations.py:2582
+#: app/radius/services/operations.py:2592
 #, python-format
 msgid "انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s)."
 msgstr ""
@@ -44112,7 +44138,7 @@ msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:427
 #: app/templates/radius/docs_user_groups.html:444
-#: app/templates/radius/subscriber_groups_list.html:265
+#: app/templates/radius/subscriber_groups_list.html:262
 msgid "باقة افتراضية"
 msgstr ""
 
@@ -44137,8 +44163,8 @@ msgstr ""
 msgid "باقة السوق غير موجودة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:256
-#: app/templates/radius/bandwidth_schedules.html:139
+#: app/templates/radius/_speed_schedules_panel.html:255
+#: app/templates/radius/bandwidth_schedules.html:141
 msgid "باقة الكروت / الدفعة"
 msgstr ""
 
@@ -44174,12 +44200,12 @@ msgstr ""
 msgid "باقة ساعة سريعة · 5.00"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:196
+#: app/templates/radius/docs_plans_speeds.html:197
 msgid "باقة كاملة + تسريع ليلي جاهزان للتشغيل."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:234
-#: app/templates/radius/bandwidth_schedules.html:111
+#: app/templates/radius/_speed_schedules_panel.html:233
+#: app/templates/radius/bandwidth_schedules.html:113
 msgid "باقة كروت / دفعة"
 msgstr ""
 
@@ -44586,7 +44612,7 @@ msgstr ""
 msgid "بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:183
+#: app/radius/services/npc_policy.py:209
 msgid "بث مباشر"
 msgstr ""
 
@@ -44893,7 +44919,7 @@ msgstr ""
 msgid "بدء معالج إعداد جديد"
 msgstr ""
 
-#: app/radius/services/operations.py:2089
+#: app/radius/services/operations.py:2099
 msgid "بدأ إنشاء ملف PDF."
 msgstr ""
 
@@ -44901,11 +44927,11 @@ msgstr ""
 msgid "بدأ العامل تجهيز الملف في الخلفية."
 msgstr ""
 
-#: app/radius/services/operations.py:2080
+#: app/radius/services/operations.py:2090
 msgid "بدأ تجهيز ملف PDF"
 msgstr ""
 
-#: app/radius/services/operations.py:2477
+#: app/radius/services/operations.py:2487
 msgid "بدأ تجهيز ملف PDF."
 msgstr ""
 
@@ -44913,7 +44939,7 @@ msgstr ""
 msgid "بدأ تجهيز ملف PDF..."
 msgstr ""
 
-#: app/radius/services/operations.py:2481
+#: app/radius/services/operations.py:2491
 msgid "بدأ عامل التصدير"
 msgstr ""
 
@@ -45039,10 +45065,10 @@ msgstr ""
 msgid "بدون إرسال خارجي"
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:158
+#: app/radius/routes/bandwidth_schedules.py:165
 #: app/radius/routes/operations_center.py:66
-#: app/templates/radius/_speed_schedules_panel.html:259
-#: app/templates/radius/bandwidth_schedules.html:143
+#: app/templates/radius/_speed_schedules_panel.html:258
+#: app/templates/radius/bandwidth_schedules.html:145
 #: app/templates/radius/distributors_detail.html:164
 msgid "بدون اسم"
 msgstr ""
@@ -45071,7 +45097,7 @@ msgstr ""
 msgid "بدون تثبيت"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:126
+#: app/templates/radius/subscriber_groups_form.html:113
 msgid "بدون تجديد تلقائي"
 msgstr ""
 
@@ -45940,8 +45966,8 @@ msgstr ""
 msgid "بعد الاعتماد — تضغط"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:585
-#: app/templates/radius/_speed_rules_panel.html:741
+#: app/templates/radius/_speed_rules_panel.html:583
+#: app/templates/radius/_speed_rules_panel.html:739
 #: app/templates/radius/lifecycle.html:32
 #: app/templates/radius/lifecycle.html:168
 msgid "بعد الانتهاء"
@@ -46078,7 +46104,7 @@ msgstr ""
 msgid "بعد توقيع الاتفاقية"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:174
+#: app/templates/radius/docs_plans_speeds.html:175
 msgid "بعد حفظ الجدول، زرّ الفحص"
 msgstr ""
 
@@ -47237,11 +47263,11 @@ msgstr ""
 msgid "بيانات الموزع"
 msgstr ""
 
-#: app/radius/services/operations.py:1082
+#: app/radius/services/operations.py:1093
 msgid "بيانات الموزّع غير صالحة — راجع القيم المدخلة."
 msgstr ""
 
-#: app/radius/services/operations.py:971
+#: app/radius/services/operations.py:982
 msgid "بيانات الموزّع يجب أن تكون كائن JSON."
 msgstr ""
 
@@ -47308,7 +47334,7 @@ msgstr ""
 msgid "بيانات ناقصة."
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1182
+#: app/radius/db/repos/operations_repo.py:1275
 #: app/templates/radius/backups.html:8
 msgid "بيانات وصفية"
 msgstr ""
@@ -48697,7 +48723,7 @@ msgstr ""
 #: app/templates/radius/docs_add_subscriber.html:379
 #: app/templates/radius/docs_user_groups.html:428
 #: app/templates/radius/docs_user_groups.html:450
-#: app/templates/radius/subscriber_groups_list.html:268
+#: app/templates/radius/subscriber_groups_list.html:265
 #: app/templates/radius/users_form.html:972
 msgid "تجديد تلقائي"
 msgstr ""
@@ -48763,7 +48789,7 @@ msgstr ""
 msgid "تجريبي محدود"
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1180
+#: app/radius/db/repos/operations_repo.py:1273
 #: app/templates/radius/backups.html:8
 #: app/templates/radius/tenants_form.html:74
 #: app/templates/radius/tenants_list.html:43
@@ -49547,7 +49573,7 @@ msgstr ""
 msgid "تحضير Peer على السيرفر"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:69
+#: app/templates/radius/bandwidth_schedules.html:70
 msgid ""
 "تحفظ هذه الصفحة جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا "
 "يغيّر السرعة فعليًا على خدمة المصادقة، بل يعرض نتيجة مراجعة آمنة للمشغل."
@@ -50095,7 +50121,7 @@ msgstr ""
 msgid "تدريب التراجع يحتاج عمليات مطبقة وموسومة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:882
+#: app/templates/radius/network_policy_preview.html:890
 msgid "تدريجي (canary)"
 msgstr ""
 
@@ -50247,7 +50273,7 @@ msgstr ""
 msgid "تذكير ما دام مفصولًا + تقرير فحص دوريّ للأسطول"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1661
+#: app/templates/radius/network_policy_preview.html:1669
 msgid ""
 "تذكير: هذه الصفحة لا تتّصل بالراوتر. كل ما تراه هو تحليل ومعاينة فقط. "
 "التطبيق المباشر يتطلب صلاحية تطبيق منفصلة."
@@ -51603,7 +51629,7 @@ msgstr ""
 msgid "تطبيق Walled Garden"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:896
+#: app/templates/radius/network_policy_preview.html:904
 msgid "تطبيق آمن"
 msgstr ""
 
@@ -51631,7 +51657,7 @@ msgstr ""
 msgid "تطبيق استعادة النسخة الاحتياطية"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:183
+#: app/templates/radius/_speed_schedules_panel.html:182
 msgid "تطبيق الآن"
 msgstr ""
 
@@ -51810,7 +51836,7 @@ msgstr ""
 msgid "تطبيق على الراوتر الآن"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1410
+#: app/templates/radius/network_policy_preview.html:1418
 msgid "تطبيق على مرحلتين"
 msgstr ""
 
@@ -51857,7 +51883,7 @@ msgstr ""
 msgid "تطبيق قيمة MTU مخصّصة على الجلسة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1409
+#: app/templates/radius/network_policy_preview.html:1417
 msgid "تطبيق مباشر"
 msgstr ""
 
@@ -51897,7 +51923,7 @@ msgid ""
 "المحدَّد يجب أن يُرسل التطبيق هويّته."
 msgstr ""
 
-#: app/radius/services/npc_policy.py:181
+#: app/radius/services/npc_policy.py:207
 msgid "تطبيقات التورنت"
 msgstr ""
 
@@ -52022,13 +52048,13 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:31
 #: app/templates/radius/_plans_fragments.html:69
 #: app/templates/radius/_plans_fragments.html:71
-#: app/templates/radius/_speed_rules_panel.html:528
-#: app/templates/radius/_speed_schedules_panel.html:175
+#: app/templates/radius/_speed_rules_panel.html:526
+#: app/templates/radius/_speed_schedules_panel.html:174
 #: app/templates/radius/accounting_ledger.html:53
 #: app/templates/radius/admin_pricing.html:146
 #: app/templates/radius/admins_list.html:126
 #: app/templates/radius/bandwidth_list.html:80
-#: app/templates/radius/bandwidth_schedules.html:268
+#: app/templates/radius/bandwidth_schedules.html:260
 #: app/templates/radius/card_marketplace.html:1177
 #: app/templates/radius/cards_batches.html:494
 #: app/templates/radius/device_health.html:175
@@ -52050,7 +52076,7 @@ msgstr ""
 #: app/templates/radius/sessions_list.html:683
 #: app/templates/radius/sessions_list.html:933
 #: app/templates/radius/sgrp_list.html:87
-#: app/templates/radius/subscriber_groups_list.html:316
+#: app/templates/radius/subscriber_groups_list.html:313
 #: app/templates/radius/tenants_list.html:96
 #: app/templates/radius/users_list.html:869
 #: app/templates/radius/users_profile.html:717
@@ -52262,8 +52288,8 @@ msgstr ""
 msgid "تعديل بيانات وخدمات المجموعة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:310
-#: app/templates/radius/bandwidth_schedules.html:301
+#: app/templates/radius/_speed_schedules_panel.html:306
+#: app/templates/radius/bandwidth_schedules.html:293
 msgid "تعديل جدول السرعة"
 msgstr ""
 
@@ -52354,7 +52380,7 @@ msgstr ""
 msgid "تعديل صلاحيات دور"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:87
+#: app/templates/radius/_speed_schedules_panel.html:88
 msgid ""
 "تعديل فوريّ لحظيّ لنِسَب السرعة عبر الأوضاع الجاهزة أو السلايدر في بقية "
 "هذه الصفحة — بلا نافذة زمنية. الحالي «معاينة وحفظ كمسودة» لمراجعة الأثر، "
@@ -52784,7 +52810,7 @@ msgstr ""
 msgid "تعذرت المصالحة: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2627
+#: app/radius/services/operations.py:2637
 msgid "تعذرت قراءة حالة جوجل درايف من إعدادات الخادم."
 msgstr ""
 
@@ -52798,11 +52824,11 @@ msgstr ""
 msgid "تعذرت مزامنة عقد التشغيل: %(v)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3304
+#: app/radius/services/operations.py:3314
 msgid "تعذّر أخذ نسخة احترازية قبل الاستعادة."
 msgstr ""
 
-#: app/radius/services/operations.py:3301
+#: app/radius/services/operations.py:3311
 #, python-format
 msgid "تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s"
 msgstr ""
@@ -52921,7 +52947,7 @@ msgstr ""
 msgid "تعذّر إنشاء السياسة: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3018
+#: app/radius/services/operations.py:3028
 msgid "تعذّر إنشاء النسخة المحلية."
 msgstr ""
 
@@ -53408,7 +53434,7 @@ msgstr ""
 msgid "تعذّر الربط."
 msgstr ""
 
-#: app/radius/services/operations.py:3058
+#: app/radius/services/operations.py:3068
 #, python-format
 msgid "تعذّر الرفع إلى جوجل درايف: %(v)s"
 msgstr ""
@@ -53673,11 +53699,11 @@ msgstr ""
 msgid "تعذّر تجهيز حساب النفق: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2215
+#: app/radius/services/operations.py:2225
 msgid "تعذّر تجهيز ملف PDF."
 msgstr ""
 
-#: app/radius/services/operations.py:2544
+#: app/radius/services/operations.py:2554
 #, python-format
 msgid "تعذّر تجهيز ملف PDF: %(exc)s"
 msgstr ""
@@ -54019,7 +54045,7 @@ msgstr ""
 msgid "تعذّر حذف %(v)s مشترك: %(preview)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2984
+#: app/radius/services/operations.py:2994
 #, python-format
 msgid "تعذّر حذف الملف: %(exc)s"
 msgstr ""
@@ -54062,8 +54088,8 @@ msgstr ""
 msgid "تعذّر حفظ الطلب: %(e)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3093
-#: app/radius/services/operations.py:3128
+#: app/radius/services/operations.py:3103
+#: app/radius/services/operations.py:3138
 #, python-format
 msgid "تعذّر حفظ الملف المرفوع: %(exc)s"
 msgstr ""
@@ -54108,7 +54134,7 @@ msgid ""
 "الراديوس أو فعّل FTP، أو ارفع الملفات يدويًا."
 msgstr ""
 
-#: app/radius/services/operations.py:3045
+#: app/radius/services/operations.py:3055
 #, python-format
 msgid "تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s"
 msgstr ""
@@ -54204,11 +54230,11 @@ msgstr ""
 msgid "تعذّر فحص هذا الراوتر — أعد المحاولة."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:222
+#: app/radius/routes/subscriber_groups.py:218
 msgid "تعذّر فصل جلسات المجموعة المتصلة."
 msgstr ""
 
-#: app/radius/services/operations.py:3325
+#: app/radius/services/operations.py:3335
 #, python-format
 msgid "تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s"
 msgstr ""
@@ -54228,8 +54254,8 @@ msgstr ""
 msgid "تعذّر قراءة إعدادات نفق الإدارة: %(exc)s"
 msgstr ""
 
-#: app/api/v1/subscriber_groups.py:140
-#: app/radius/routes/subscriber_groups.py:216
+#: app/api/v1/subscriber_groups.py:143
+#: app/radius/routes/subscriber_groups.py:212
 msgid "تعذّر قراءة الجلسات المتصلة."
 msgstr ""
 
@@ -54374,7 +54400,7 @@ msgstr ""
 msgid "تعذّرت إعادة الإرسال — تحقق من حالة الجلسة."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:256
+#: app/radius/routes/subscriber_groups.py:252
 #, python-format
 msgid "تعذّرت استعادة الكوتة لـ %(failed)s مشترك."
 msgstr ""
@@ -54441,7 +54467,7 @@ msgstr ""
 msgid "تعذّرت قراءة الصفوف من النص الملصوق."
 msgstr ""
 
-#: app/radius/services/operations.py:3102
+#: app/radius/services/operations.py:3112
 #, python-format
 msgid "تعذّرت قراءة الملف: %(exc)s"
 msgstr ""
@@ -55466,8 +55492,8 @@ msgstr ""
 msgid "تفاصيل هندسية"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1097
-#: app/templates/radius/network_policy_preview.html:1159
+#: app/templates/radius/network_policy_preview.html:1105
+#: app/templates/radius/network_policy_preview.html:1167
 msgid "تفاصيل وشروحات"
 msgstr ""
 
@@ -55676,7 +55702,7 @@ msgstr ""
 msgid "تفعيل البطاقة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:126
+#: app/templates/radius/subscriber_groups_form.html:113
 msgid "تفعيل التجديد التلقائي افتراضيًا للأعضاء"
 msgstr ""
 
@@ -56228,7 +56254,7 @@ msgstr ""
 msgid "تقييم + شارة موثّق"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:701
+#: app/templates/radius/network_policy_preview.html:709
 msgid "تقييم استشاري فقط — راجع التفاصيل أدناه قبل التطبيق."
 msgstr ""
 
@@ -56419,7 +56445,7 @@ msgstr ""
 #: app/static/js/hub_date.js:309
 #: app/templates/_partials/time_picker_circular.html:271
 #: app/templates/api/docs.html:347
-#: app/templates/radius/_speed_rules_panel.html:625
+#: app/templates/radius/_speed_rules_panel.html:623
 #: app/templates/radius/backups.html:383
 #: app/templates/radius/migration_wizard.html:817
 #: app/templates/radius/mt_programming.html:376
@@ -56464,7 +56490,7 @@ msgid ""
 "لتطبيق الاستعادة."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:220
+#: app/radius/routes/subscriber_groups.py:216
 #, python-format
 msgid "تم إرسال أمر فصل %(disconnected)s جلسة من مجموعة «%(name)s»."
 msgstr ""
@@ -56776,7 +56802,7 @@ msgstr ""
 msgid "تم إنشاء الموزع."
 msgstr ""
 
-#: app/radius/services/operations.py:3017
+#: app/radius/services/operations.py:3027
 msgid "تم إنشاء النسخة المحلية والتحقق منها."
 msgstr ""
 
@@ -56853,7 +56879,7 @@ msgstr ""
 msgid "تم إنشاء قيد عكسي للقيد #%(reversal_of_entry_id)s."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:125
+#: app/radius/routes/subscriber_groups.py:121
 #, python-format
 msgid "تم إنشاء مجموعة «%(name)s»"
 msgstr ""
@@ -56867,7 +56893,7 @@ msgstr ""
 msgid "تم إنشاء مهمة التصدير."
 msgstr ""
 
-#: app/radius/services/operations.py:2815
+#: app/radius/services/operations.py:2825
 #, python-format
 msgid "تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s."
 msgstr ""
@@ -57129,7 +57155,7 @@ msgstr ""
 msgid "تم التخطّي"
 msgstr ""
 
-#: app/radius/services/operations.py:3027
+#: app/radius/services/operations.py:3037
 msgid "تم التخطّي بسبب فشل النسخة المحلية."
 msgstr ""
 
@@ -57246,7 +57272,7 @@ msgid ""
 " إضافيّة."
 msgstr ""
 
-#: app/radius/services/operations.py:3037
+#: app/radius/services/operations.py:3047
 msgid "تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل."
 msgstr ""
 
@@ -57281,8 +57307,8 @@ msgstr ""
 #: app/templates/_partials/code_card.html:182
 #: app/templates/radius/communications_bot.html:224
 #: app/templates/radius/communications_guide.html:584
-#: app/templates/radius/network_policy_preview.html:996
-#: app/templates/radius/network_policy_preview.html:1062
+#: app/templates/radius/network_policy_preview.html:1004
+#: app/templates/radius/network_policy_preview.html:1070
 #: app/templates/radius/portal_subscriber.html:773
 #: app/templates/radius/site_exit.html:757
 #: app/templates/radius/tokens_list.html:173
@@ -57295,8 +57321,8 @@ msgid "تم النسخ إلى الحافظة"
 msgstr ""
 
 #: app/templates/radius/communications_bot.html:238
-#: app/templates/radius/network_policy_preview.html:1567
-#: app/templates/radius/network_policy_preview.html:1590
+#: app/templates/radius/network_policy_preview.html:1575
+#: app/templates/radius/network_policy_preview.html:1598
 msgid "تم النسخ ✓"
 msgstr ""
 
@@ -57554,7 +57580,7 @@ msgstr ""
 msgid "تم تحديث بيانات DHCP من المايكروتيك — %(seen)s عنوان MAC."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:185
+#: app/radius/routes/bandwidth_schedules.py:192
 msgid "تم تحديث جدول السرعة."
 msgstr ""
 
@@ -57681,7 +57707,7 @@ msgid ""
 "رسائل مفعّل."
 msgstr ""
 
-#: app/radius/services/operations.py:3038
+#: app/radius/services/operations.py:3048
 msgid "تم تسجيل البيانات الوصفية على ملفك."
 msgstr ""
 
@@ -57827,16 +57853,16 @@ msgstr ""
 msgid "تم تضمين مفتاح WireGuard العام للسيرفر لإنشاء peer صالح على MikroTik."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:167
+#: app/radius/routes/subscriber_groups.py:163
 msgid "تم تطبيق إجراء قاعدة السرعة."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:221
+#: app/radius/routes/bandwidth_schedules.py:228
 #, python-format
 msgid "تم تطبيق الجدول حيًّا عبر CoA على %(applied)s/%(target)s جلسة نشطة."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:223
+#: app/radius/routes/bandwidth_schedules.py:230
 msgid "تم تطبيق الجدول على RADIUS عبر CoA."
 msgstr ""
 
@@ -58210,7 +58236,7 @@ msgstr ""
 msgid "تم تنفيذ طلب سحبك (%(v)s %(default_currency)s) وخصمه من رصيدك."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:232
+#: app/radius/routes/bandwidth_schedules.py:239
 msgid "تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS."
 msgstr ""
 
@@ -58334,16 +58360,16 @@ msgstr ""
 msgid "تم حذف القالب."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:186
+#: app/radius/routes/subscriber_groups.py:182
 msgid "تم حذف المجموعة (تم فصل المشتركين عنها)."
 msgstr ""
 
-#: app/radius/services/operations.py:2989
+#: app/radius/services/operations.py:2999
 #, python-format
 msgid "تم حذف النسخة %(name)s."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:198
+#: app/radius/routes/bandwidth_schedules.py:205
 msgid "تم حذف جدول السرعة."
 msgstr ""
 
@@ -58458,7 +58484,7 @@ msgstr ""
 msgid "تم حفظ تعديلات العرض."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:179
+#: app/radius/routes/subscriber_groups.py:175
 msgid "تم حفظ تعديلات المجموعة."
 msgstr ""
 
@@ -58466,7 +58492,7 @@ msgstr ""
 msgid "تم حفظ تعديلات دفعة الكروت."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:171
+#: app/radius/routes/bandwidth_schedules.py:178
 msgid "تم حفظ جدول السرعة. التطبيق على RADIUS ما زال غير مباشر في هذه المرحلة."
 msgstr ""
 
@@ -58616,7 +58642,7 @@ msgstr ""
 msgid "تم رفع الأصل — سيُرفع للراوتر عند النشر."
 msgstr ""
 
-#: app/radius/services/operations.py:3055
+#: app/radius/services/operations.py:3065
 msgid "تم رفع النسخة إلى جوجل درايف المربوط."
 msgstr ""
 
@@ -58630,7 +58656,7 @@ msgid ""
 "ملف العميل."
 msgstr ""
 
-#: app/radius/services/operations.py:3142
+#: app/radius/services/operations.py:3152
 msgid "تم رفع النسخة من جهازك وحفظها محليًا."
 msgstr ""
 
@@ -58819,11 +58845,11 @@ msgstr ""
 msgid "تم وضع المحادثة كمُعالَجة."
 msgstr ""
 
-#: app/radius/services/operations.py:2426
+#: app/radius/services/operations.py:2436
 msgid "تم وضع المهمة في الطابور"
 msgstr ""
 
-#: app/radius/services/operations.py:2421
+#: app/radius/services/operations.py:2431
 msgid "تم وضع مهمة PDF في الطابور."
 msgstr ""
 
@@ -58918,7 +58944,7 @@ msgstr ""
 msgid "تمت إضافة السلفة ✅"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1067
+#: app/templates/radius/_speed_rules_panel.html:1062
 msgid "تمت إضافة القاعدة، وستحفظ مع النموذج"
 msgstr ""
 
@@ -59007,7 +59033,7 @@ msgstr ""
 msgid "تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:252
+#: app/radius/routes/subscriber_groups.py:248
 #, python-format
 msgid "تمت استعادة الكوتة اليومية لـ %(reset_count)s مشترك في مجموعة «%(name)s»."
 msgstr ""
@@ -59049,7 +59075,7 @@ msgstr ""
 msgid "تمت الاستعادة بنجاح."
 msgstr ""
 
-#: app/radius/services/operations.py:3361
+#: app/radius/services/operations.py:3371
 #, python-format
 msgid "تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s."
 msgstr ""
@@ -59205,7 +59231,7 @@ msgstr ""
 msgid "تمرين رجوع مغلق"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1017
+#: app/templates/radius/network_policy_preview.html:1025
 msgid ""
 "تمرّ عبر خادم الربط الذي يحوّل الاتصال إلى الراوتر عبر النفق الآمن. تعمل "
 "من أيّ مكان في العالم — مفيدة حين تكون خارج الشبكة المحلّية للراوتر."
@@ -59636,7 +59662,7 @@ msgstr ""
 #: app/radius/services/hotspot_gallery.py:485
 #: app/templates/radius/admin_bridge.html:302
 #: app/templates/radius/mt_guided_op.html:42
-#: app/templates/radius/network_policy_preview.html:755
+#: app/templates/radius/network_policy_preview.html:763
 msgid "تنبيهات"
 msgstr ""
 
@@ -59801,8 +59827,8 @@ msgstr ""
 #: app/radius/services/hotspot_addons_gallery.py:675
 #: app/radius/services/manager_activity_audit.py:253
 #: app/templates/radius/_plans_fragments.html:136
-#: app/templates/radius/_speed_rules_panel.html:501
-#: app/templates/radius/_speed_rules_panel.html:1118
+#: app/templates/radius/_speed_rules_panel.html:499
+#: app/templates/radius/_speed_rules_panel.html:1113
 #: app/templates/radius/backups.html:241
 #: app/templates/radius/bandwidth_list.html:56
 #: app/templates/radius/card_marketplace_package_file.html:145
@@ -59958,7 +59984,7 @@ msgstr ""
 msgid "تنفيذ traceroute على الراوتر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:832
+#: app/templates/radius/network_policy_preview.html:840
 msgid "تنفيذ آمن — مع موافقات صريحة"
 msgstr ""
 
@@ -60572,7 +60598,7 @@ msgstr ""
 msgid "توهّج الألياف"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:177
+#: app/radius/services/npc_policy.py:203
 msgid "تويتر / X"
 msgstr ""
 
@@ -60580,7 +60606,7 @@ msgstr ""
 msgid "تويليو SMS"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:174
+#: app/radius/services/npc_policy.py:200
 msgid "تيك توك"
 msgstr ""
 
@@ -60691,7 +60717,7 @@ msgstr ""
 msgid "تُخطّي"
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:254
+#: app/radius/routes/subscriber_groups.py:250
 #, python-format
 msgid "تُخطّي %(skipped)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ."
 msgstr ""
@@ -60786,7 +60812,7 @@ msgid ""
 "أبدًا."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:124
+#: app/templates/radius/bandwidth_schedules.html:126
 msgid "تُستخدم هذه القاعدة إذا لم توجد قاعدة خاصة بالمشترك أو باقة الكروت."
 msgstr ""
 
@@ -60857,7 +60883,7 @@ msgstr ""
 msgid "تُطبَّق لكل مشترك على حدة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:146
+#: app/templates/radius/bandwidth_schedules.html:148
 msgid "تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض."
 msgstr ""
 
@@ -61113,7 +61139,7 @@ msgstr ""
 msgid "ثم في قسم"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:950
+#: app/templates/radius/network_policy_preview.html:958
 msgid "ثم يُغلَق تلقائياً."
 msgstr ""
 
@@ -61650,7 +61676,7 @@ msgstr ""
 msgid "جاهزة"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:715
+#: app/templates/radius/network_policy_preview.html:723
 msgid "جاهزة (وفق المعايير الحاليّة)"
 msgstr ""
 
@@ -61693,7 +61719,7 @@ msgstr ""
 msgid "جاهزية خادم نفق الإدارة"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:708
+#: app/templates/radius/network_policy_preview.html:716
 msgid "جاهزيّة التنفيذ"
 msgstr ""
 
@@ -61799,16 +61825,15 @@ msgid "جدول السرعات"
 msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:345
-#: app/templates/radius/subscriber_groups_form.html:105
 msgid "جدول السرعات يطبَّق على كل عضو في المجموعة."
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:249
+#: app/radius/routes/speed_rules_ui.py:245
 msgid "جدول السرعة المحفوظ غير موجود"
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:179 app/api/v1/bandwidth_schedules.py:191
-#: app/api/v1/bandwidth_schedules.py:222 app/api/v1/bandwidth_schedules.py:231
+#: app/api/v1/bandwidth_schedules.py:182 app/api/v1/bandwidth_schedules.py:194
+#: app/api/v1/bandwidth_schedules.py:225 app/api/v1/bandwidth_schedules.py:234
 msgid "جدول السرعة غير موجود."
 msgstr ""
 
@@ -61830,7 +61855,7 @@ msgstr ""
 msgid "جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:78
+#: app/templates/radius/_speed_schedules_panel.html:79
 msgid "جدول زمني دائم"
 msgstr ""
 
@@ -61848,11 +61873,11 @@ msgid ""
 "حمراء خفيفة. أعمدته:"
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:62
-#: app/radius/routes/bandwidth_schedules.py:100
-#: app/radius/routes/speed_rules_ui.py:252
-#: app/templates/radius/_speed_rules_panel.html:753
-#: app/templates/radius/_speed_rules_panel.html:1044
+#: app/api/v1/bandwidth_schedules.py:65
+#: app/radius/routes/bandwidth_schedules.py:107
+#: app/radius/routes/speed_rules_ui.py:248
+#: app/templates/radius/_speed_rules_panel.html:751
+#: app/templates/radius/_speed_rules_panel.html:1040
 #: app/templates/radius/users_form.html:1638
 msgid "جدول محفوظ"
 msgstr ""
@@ -61893,18 +61918,14 @@ msgstr ""
 
 #: app/radius/services/provider_service_labels.py:55
 #: app/templates/admin/_sidebar.html:552
-#: app/templates/radius/bandwidth_schedules.html:8
-#: app/templates/radius/bandwidth_schedules.html:10
-#: app/templates/radius/bandwidth_schedules.html:55
+#: app/templates/radius/bandwidth_schedules.html:9
+#: app/templates/radius/bandwidth_schedules.html:11
+#: app/templates/radius/bandwidth_schedules.html:56
 msgid "جدولة السرعات"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:153
+#: app/templates/radius/docs_plans_speeds.html:154
 msgid "جدولة السرعات › إضافة جدول"
-msgstr ""
-
-#: app/templates/radius/subscriber_groups_form.html:93
-msgid "جدولة السرعة"
 msgstr ""
 
 #: app/radius/services/event_labels.py:338
@@ -61930,7 +61951,6 @@ msgstr ""
 
 #: app/templates/radius/docs_user_groups.html:427
 #: app/templates/radius/docs_user_groups.html:450
-#: app/templates/radius/subscriber_groups_list.html:262
 msgid "جدولة سرعة"
 msgstr ""
 
@@ -62964,11 +62984,11 @@ msgstr ""
 msgid "جوالي باي / تحويل بنكي / PalPay / قناة أخرى."
 msgstr ""
 
-#: app/radius/services/operations.py:3054
-#: app/radius/services/operations.py:3057
-#: app/radius/services/operations.py:3070
-#: app/radius/services/operations.py:3073
-#: app/radius/services/operations.py:3076 app/templates/radius/backups.html:184
+#: app/radius/services/operations.py:3064
+#: app/radius/services/operations.py:3067
+#: app/radius/services/operations.py:3080
+#: app/radius/services/operations.py:3083
+#: app/radius/services/operations.py:3086 app/templates/radius/backups.html:184
 #: app/templates/radius/backups.html:265 app/templates/radius/backups.html:445
 msgid "جوجل درايف"
 msgstr ""
@@ -62977,7 +62997,7 @@ msgstr ""
 msgid "جوجل درايف غير مربوط — اربطه من بوابة العميل."
 msgstr ""
 
-#: app/radius/services/operations.py:2643
+#: app/radius/services/operations.py:2653
 msgid "جوجل درايف غير مفعل حاليًا من إعدادات الخادم."
 msgstr ""
 
@@ -62999,7 +63019,7 @@ msgid ""
 "التراخيص إلى درايفك تلقائيًّا."
 msgstr ""
 
-#: app/radius/services/operations.py:2634
+#: app/radius/services/operations.py:2644
 msgid "جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة."
 msgstr ""
 
@@ -63380,7 +63400,7 @@ msgstr ""
 msgid "حالة المنح (تشخيصي)"
 msgstr ""
 
-#: app/radius/services/operations.py:983
+#: app/radius/services/operations.py:994
 msgid "حالة الموزّع غير صحيحة (active / inactive / blocked)."
 msgstr ""
 
@@ -63662,12 +63682,12 @@ msgstr ""
 msgid "حجم البيانات"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1106
-#: app/templates/radius/network_policy_preview.html:1108
+#: app/templates/radius/network_policy_preview.html:1114
+#: app/templates/radius/network_policy_preview.html:1116
 msgid "حجم التأثير"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1205
+#: app/templates/radius/network_policy_preview.html:1213
 msgid "حجم التأثير المتوقَّع"
 msgstr ""
 
@@ -64355,7 +64375,7 @@ msgstr ""
 msgid "حدّد"
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:217
+#: app/api/v1/bandwidth_schedules.py:220
 msgid "حدّد enabled (true/false)."
 msgstr ""
 
@@ -64497,13 +64517,13 @@ msgstr ""
 #: app/radius/templates/radius/vpn_accounts.html:154
 #: app/radius/templates/radius/wg_data.html:189
 #: app/templates/_partials/access_schedule.html:714
-#: app/templates/radius/_speed_rules_panel.html:630
-#: app/templates/radius/_speed_schedules_panel.html:192
+#: app/templates/radius/_speed_rules_panel.html:628
+#: app/templates/radius/_speed_schedules_panel.html:191
 #: app/templates/radius/access_control.html:530
 #: app/templates/radius/anti_mac_clone.html:240
 #: app/templates/radius/backups.html:243
 #: app/templates/radius/bandwidth_list.html:93
-#: app/templates/radius/bandwidth_schedules.html:279
+#: app/templates/radius/bandwidth_schedules.html:271
 #: app/templates/radius/business_operator_profile.html:171
 #: app/templates/radius/card_users.html:130
 #: app/templates/radius/card_users.html:133
@@ -64528,7 +64548,7 @@ msgstr ""
 #: app/templates/radius/sgrp_list.html:92
 #: app/templates/radius/sstp_users.html:171
 #: app/templates/radius/store_support.html:545
-#: app/templates/radius/subscriber_groups_list.html:323
+#: app/templates/radius/subscriber_groups_list.html:320
 msgid "حذف"
 msgstr ""
 
@@ -64621,7 +64641,7 @@ msgstr ""
 msgid "حذف العرض"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:532
+#: app/templates/radius/_speed_rules_panel.html:530
 msgid "حذف القاعدة"
 msgstr ""
 
@@ -64659,7 +64679,7 @@ msgstr ""
 msgid "حذف المجموعة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:322
+#: app/templates/radius/subscriber_groups_list.html:319
 #, python-format
 msgid "حذف المجموعة «%(e)s»؟ سيتم فصل %(members)s مشترك عنها ولن يتم حذفهم."
 msgstr ""
@@ -64689,8 +64709,8 @@ msgstr ""
 msgid "حذف بطاقة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:191
-#: app/templates/radius/bandwidth_schedules.html:278
+#: app/templates/radius/_speed_schedules_panel.html:190
+#: app/templates/radius/bandwidth_schedules.html:270
 #, python-format
 msgid "حذف جدول «%(name)s»؟ لا يمكن التراجع."
 msgstr ""
@@ -64895,8 +64915,8 @@ msgstr ""
 msgid "حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:533
-#: app/templates/radius/_speed_rules_panel.html:629
+#: app/templates/radius/_speed_rules_panel.html:531
+#: app/templates/radius/_speed_rules_panel.html:627
 msgid "حذف هذه القاعدة؟"
 msgstr ""
 
@@ -64946,7 +64966,7 @@ msgstr ""
 #: app/templates/radius/mt_dashboard.html:2276
 #: app/templates/radius/network_policy_preview.html:592
 #: app/templates/radius/network_policy_preview.html:600
-#: app/templates/radius/network_policy_preview.html:1231
+#: app/templates/radius/network_policy_preview.html:1239
 msgid "حرج"
 msgstr ""
 
@@ -65258,10 +65278,10 @@ msgstr ""
 msgid "حزمة الكروت رقم %(batch_id)s غير موجودة."
 msgstr ""
 
-#: app/radius/services/operations.py:1188
-#: app/radius/services/operations.py:2002
-#: app/radius/services/operations.py:2315
-#: app/radius/services/operations.py:2397
+#: app/radius/services/operations.py:1199
+#: app/radius/services/operations.py:2012
+#: app/radius/services/operations.py:2325
+#: app/radius/services/operations.py:2407
 msgid "حزمة الكروت غير موجودة."
 msgstr ""
 
@@ -65473,7 +65493,7 @@ msgid ""
 "(منزل/مكتب)."
 msgstr ""
 
-#: app/radius/services/operations.py:1073
+#: app/radius/services/operations.py:1084
 msgid "حساب دخول الموزّع المحدَّد غير موجود."
 msgstr ""
 
@@ -65920,8 +65940,8 @@ msgstr ""
 msgid "حفظ التصميم"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:341
-#: app/templates/radius/bandwidth_schedules.html:364
+#: app/templates/radius/_speed_schedules_panel.html:334
+#: app/templates/radius/bandwidth_schedules.html:348
 #: app/templates/radius/cards_offers.html:408
 msgid "حفظ التعديل"
 msgstr ""
@@ -65943,7 +65963,7 @@ msgstr ""
 #: app/templates/radius/roles_form.html:238
 #: app/templates/radius/roles_form.html:374
 #: app/templates/radius/store_support.html:532
-#: app/templates/radius/subscriber_groups_form.html:186
+#: app/templates/radius/subscriber_groups_form.html:173
 #: app/templates/radius/tenants_form.html:78
 #: app/templates/radius/users_form.html:1936
 msgid "حفظ التعديلات"
@@ -65968,8 +65988,8 @@ msgstr ""
 msgid "حفظ التنبيهات الدوريّة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:297
-#: app/templates/radius/bandwidth_schedules.html:204
+#: app/templates/radius/_speed_schedules_panel.html:293
+#: app/templates/radius/bandwidth_schedules.html:198
 msgid "حفظ الجدول"
 msgstr ""
 
@@ -66226,7 +66246,7 @@ msgstr ""
 msgid "حقل"
 msgstr ""
 
-#: app/radius/services/operations.py:1258
+#: app/radius/services/operations.py:1269
 msgid "حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين)."
 msgstr ""
 
@@ -66859,7 +66879,7 @@ msgstr ""
 msgid "خاصة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:278
+#: app/templates/radius/subscriber_groups_list.html:275
 #, python-format
 msgid "خاصة %(custom_speed_members)s"
 msgstr ""
@@ -67359,7 +67379,7 @@ msgstr ""
 msgid "خط سير تنفيذ المختبر"
 msgstr ""
 
-#: app/api/v1/whatsapp.py:296 app/radius/db/repos/operations_repo.py:1180
+#: app/api/v1/whatsapp.py:296 app/radius/db/repos/operations_repo.py:1273
 #: app/radius/services/audit_format.py:455
 #: app/radius/services/event_labels.py:535
 #: app/static/js/cards_generate_progress.js:67
@@ -67483,7 +67503,7 @@ msgstr ""
 msgid "خطأ غير متوقّع: %(exc)s"
 msgstr ""
 
-#: app/radius/services/operations.py:3058
+#: app/radius/services/operations.py:3068
 msgid "خطأ غير محدّد"
 msgstr ""
 
@@ -67600,8 +67620,8 @@ msgstr ""
 msgid "خطة الاستعادة تفحص الملف وتعرض بياناته دون تطبيق أي تغيير."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1130
-#: app/templates/radius/network_policy_preview.html:1132
+#: app/templates/radius/network_policy_preview.html:1138
+#: app/templates/radius/network_policy_preview.html:1140
 msgid "خطة التطبيق الآمنة"
 msgstr ""
 
@@ -67648,11 +67668,11 @@ msgstr ""
 msgid "خطر تشغيلي — درجة الصحة %(score)s/100"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1279
+#: app/templates/radius/network_policy_preview.html:1287
 msgid "خطر متوسط"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1274
+#: app/templates/radius/network_policy_preview.html:1282
 msgid "خطر مرتفع"
 msgstr ""
 
@@ -67665,7 +67685,7 @@ msgstr ""
 msgid "خطط أُنشئت:"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:56
+#: app/templates/radius/bandwidth_schedules.html:57
 msgid ""
 "خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على خدمة "
 "المصادقة."
@@ -67755,7 +67775,7 @@ msgstr ""
 msgid "خطّة برودباند"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1401
+#: app/templates/radius/network_policy_preview.html:1409
 msgid "خطّة تطبيق آمنة مقترحة"
 msgstr ""
 
@@ -67785,7 +67805,7 @@ msgstr ""
 msgid "خلاصة الصفحة:"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:641
+#: app/templates/radius/network_policy_preview.html:649
 msgid "خلاصة القرار"
 msgstr ""
 
@@ -67864,7 +67884,7 @@ msgid ""
 "وبعدها انطلق للصفحة اللي تحتاج معالجة."
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:188
+#: app/templates/radius/docs_plans_speeds.html:189
 msgid "خلّينا نبني باقة منزلية مع تسريع ليلي من الصفر:"
 msgstr ""
 
@@ -68533,7 +68553,7 @@ msgstr ""
 msgid "دفعات الطباعة"
 msgstr ""
 
-#: app/radius/services/operations.py:3220
+#: app/radius/services/operations.py:3230
 #: app/templates/radius/license_file.html:289
 msgid "دفعات الكروت"
 msgstr ""
@@ -70275,7 +70295,7 @@ msgstr ""
 msgid "راوتر غير متصل: {name}"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1212
+#: app/templates/radius/network_policy_preview.html:1220
 msgid "راوتر متأثّر"
 msgstr ""
 
@@ -70875,7 +70895,7 @@ msgstr ""
 msgid "رسم البطاقات بالقالب المختار"
 msgstr ""
 
-#: app/radius/services/operations.py:2126
+#: app/radius/services/operations.py:2136
 msgid "رسم البطاقات داخل ملف PDF"
 msgstr ""
 
@@ -71223,8 +71243,8 @@ msgstr ""
 #: app/radius/services/hotspot_addons_gallery.py:675
 #: app/radius/services/manager_activity_audit.py:252
 #: app/templates/radius/_plans_fragments.html:137
-#: app/templates/radius/_speed_rules_panel.html:507
-#: app/templates/radius/_speed_rules_panel.html:1120
+#: app/templates/radius/_speed_rules_panel.html:505
+#: app/templates/radius/_speed_rules_panel.html:1115
 #: app/templates/radius/access_control.html:228
 #: app/templates/radius/access_control.html:394
 #: app/templates/radius/bandwidth_list.html:57
@@ -71479,7 +71499,7 @@ msgid ""
 "الدعم ٢٤/٧"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:150
+#: app/templates/radius/docs_plans_speeds.html:151
 msgid "رقم (1–10) يرجّح أيّ جدول يُطبَّق عند التداخل."
 msgstr ""
 
@@ -72121,11 +72141,11 @@ msgstr ""
 msgid "روابط الصور (سطر لكل صورة)"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:934
+#: app/templates/radius/network_policy_preview.html:942
 msgid "روابط الوصول إلى الراوتر بعد التطبيق"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1013
+#: app/templates/radius/network_policy_preview.html:1021
 msgid "روابط الوصول من خارج الشبكة عبر خادم الربط"
 msgstr ""
 
@@ -72454,7 +72474,7 @@ msgstr ""
 msgid "زر «فتح عن بُعد» يفتح جلسة وصول مؤقّتة (TTL) للجهاز."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:77
+#: app/templates/radius/bandwidth_schedules.html:79
 msgid "زر «فحص الجاهزية» لا يطبّق على خدمة المصادقة — يعرض مراجعة آمنة فقط."
 msgstr ""
 
@@ -72948,8 +72968,8 @@ msgstr ""
 msgid "سبب التعطيل: %(disabled_reason)s"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:291
-#: app/templates/radius/bandwidth_schedules.html:193
+#: app/templates/radius/_speed_schedules_panel.html:287
+#: app/templates/radius/bandwidth_schedules.html:187
 msgid "سبب الجدول أو ملاحظات التشغيل"
 msgstr ""
 
@@ -73038,7 +73058,7 @@ msgstr ""
 msgid "ستحصل كل واجهة محدّدة على شبكة /24 مستقلّة وعلى خادم DHCP خاص بها."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:994
+#: app/templates/radius/_speed_rules_panel.html:990
 msgid "ستحفظ مع"
 msgstr ""
 
@@ -73122,7 +73142,7 @@ msgid ""
 " من تحديد عناوين مصدر أو وقت انتهاء لقفل الفتحة تلقائياً."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:777
+#: app/templates/radius/_speed_rules_panel.html:775
 #, python-format
 msgid ""
 "ستُحفظ القاعدة مع %(sr_pending_target_label)s تلقائيًا عند الضغط على "
@@ -73261,7 +73281,7 @@ msgstr ""
 
 #: app/templates/radius/network_policy_changes.html:17
 #: app/templates/radius/network_policy_changes.html:46
-#: app/templates/radius/network_policy_preview.html:810
+#: app/templates/radius/network_policy_preview.html:818
 #: app/templates/radius/rep_profile_changes.html:61
 msgid "سجل التغييرات"
 msgstr ""
@@ -73801,10 +73821,10 @@ msgstr ""
 #: app/radius/routes/card_users_marketplace.py:505
 #: app/radius/routes/sessions.py:864 app/radius/services/plans.py:269
 #: app/radius/services/subscriber_validation.py:83
-#: app/templates/radius/_speed_rules_panel.html:573
-#: app/templates/radius/_speed_rules_panel.html:721
+#: app/templates/radius/_speed_rules_panel.html:571
+#: app/templates/radius/_speed_rules_panel.html:719
 #: app/templates/radius/_speed_schedules_panel.html:273
-#: app/templates/radius/_speed_schedules_panel.html:321
+#: app/templates/radius/_speed_schedules_panel.html:318
 #: app/templates/radius/bandwidth_form.html:123
 #: app/templates/radius/card_marketplace.html:759
 #: app/templates/radius/card_marketplace.html:1084
@@ -73815,8 +73835,8 @@ msgstr ""
 msgid "سرعة التنزيل"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:166
-#: app/templates/radius/bandwidth_schedules.html:326
+#: app/templates/radius/bandwidth_schedules.html:169
+#: app/templates/radius/bandwidth_schedules.html:319
 #, python-format
 msgid "سرعة التنزيل %(v)s"
 msgstr ""
@@ -73846,7 +73866,7 @@ msgstr ""
 msgid "سرعة التنزيل خلال فترة الرفع المؤقت."
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:161
+#: app/templates/radius/docs_plans_speeds.html:162
 msgid "سرعة التنزيل داخل النافذة"
 msgstr ""
 
@@ -73866,8 +73886,8 @@ msgstr ""
 msgid "سرعة التنزيل/الرفع"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:148
-msgid "سرعة التنزيل/الرفع و CIR:"
+#: app/templates/radius/docs_plans_speeds.html:149
+msgid "سرعة التنزيل/الرفع:"
 msgstr ""
 
 #: app/templates/radius/docs_plans_speeds.html:81
@@ -73891,10 +73911,10 @@ msgstr ""
 #: app/radius/routes/card_users_marketplace.py:507
 #: app/radius/routes/sessions.py:865 app/radius/services/plans.py:268
 #: app/radius/services/subscriber_validation.py:84
-#: app/templates/radius/_speed_rules_panel.html:577
-#: app/templates/radius/_speed_rules_panel.html:725
+#: app/templates/radius/_speed_rules_panel.html:575
+#: app/templates/radius/_speed_rules_panel.html:723
 #: app/templates/radius/_speed_schedules_panel.html:274
-#: app/templates/radius/_speed_schedules_panel.html:322
+#: app/templates/radius/_speed_schedules_panel.html:319
 #: app/templates/radius/bandwidth_form.html:139
 #: app/templates/radius/card_marketplace.html:766
 #: app/templates/radius/card_marketplace.html:1088
@@ -73905,8 +73925,8 @@ msgstr ""
 msgid "سرعة الرفع"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:169
-#: app/templates/radius/bandwidth_schedules.html:329
+#: app/templates/radius/bandwidth_schedules.html:172
+#: app/templates/radius/bandwidth_schedules.html:322
 #, python-format
 msgid "سرعة الرفع %(v)s"
 msgstr ""
@@ -73959,7 +73979,7 @@ msgid "سرعة العرض / السرعة الحالية:"
 msgstr ""
 
 #: app/templates/radius/docs_plans_speeds.html:145
-#: app/templates/radius/docs_plans_speeds.html:155
+#: app/templates/radius/docs_plans_speeds.html:156
 msgid "سرعة الليل"
 msgstr ""
 
@@ -74015,7 +74035,7 @@ msgstr ""
 msgid "سرعة قصوى"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:86
+#: app/templates/radius/_speed_schedules_panel.html:87
 msgid "سرعة لحظية مؤقتة"
 msgstr ""
 
@@ -74533,11 +74553,11 @@ msgid ""
 "«توليد مفاتيح جديدة» ثم انسخ «سكربت الإعداد»."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1562
+#: app/templates/radius/network_policy_preview.html:1570
 msgid "سكربت forward"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1586
+#: app/templates/radius/network_policy_preview.html:1594
 msgid "سكربت rollback (التراجع)"
 msgstr ""
 
@@ -74624,7 +74644,7 @@ msgstr ""
 msgid "سكربت الراوتر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1538
+#: app/templates/radius/network_policy_preview.html:1546
 msgid "سكربت الراوتر (للمتقدّمين)"
 msgstr ""
 
@@ -76098,8 +76118,8 @@ msgstr ""
 msgid "شرح الكود — ماذا يفعل كل قسم"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1142
-#: app/templates/radius/network_policy_preview.html:1144
+#: app/templates/radius/network_policy_preview.html:1150
+#: app/templates/radius/network_policy_preview.html:1152
 msgid "شرح المصطلحات"
 msgstr ""
 
@@ -76107,7 +76127,7 @@ msgstr ""
 msgid "شرح كامل مصوّر خطوة بخطوة في «الدليل المصوّر» من الأعلى."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1473
+#: app/templates/radius/network_policy_preview.html:1481
 msgid "شرح مبسَّط للمصطلحات"
 msgstr ""
 
@@ -76619,10 +76639,10 @@ msgstr ""
 #: app/templates/_partials/time_picker_circular.html:406
 #: app/templates/_partials/time_picker_circular.html:444
 #: app/templates/_partials/time_picker_circular.html:447
-#: app/templates/radius/_speed_rules_panel.html:932
-#: app/templates/radius/_speed_rules_panel.html:933
-#: app/templates/radius/_speed_rules_panel.html:1089
-#: app/templates/radius/_speed_rules_panel.html:1090
+#: app/templates/radius/_speed_rules_panel.html:930
+#: app/templates/radius/_speed_rules_panel.html:931
+#: app/templates/radius/_speed_rules_panel.html:1084
+#: app/templates/radius/_speed_rules_panel.html:1085
 #: app/templates/radius/users_form.html:1556
 #: app/templates/radius/users_form.html:1557
 msgid "ص"
@@ -76669,7 +76689,7 @@ msgstr ""
 msgid "صالح"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:948
+#: app/templates/radius/network_policy_preview.html:956
 msgid "صالح حتى"
 msgstr ""
 
@@ -77196,7 +77216,7 @@ msgstr ""
 msgid "صلاحية (أيام)"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1083
+#: app/templates/radius/network_policy_preview.html:1091
 msgid "صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً."
 msgstr ""
 
@@ -77224,7 +77244,7 @@ msgstr ""
 msgid "صلاحية التراجع مفقودة لدى المستخدم."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:797
+#: app/templates/radius/network_policy_preview.html:805
 msgid "صلاحية التنفيذ المطلوبة:"
 msgstr ""
 
@@ -77680,7 +77700,7 @@ msgstr ""
 msgid "طابور التجربة الجافة مطلوب قبل التطبيق."
 msgstr ""
 
-#: app/radius/services/operations.py:2412
+#: app/radius/services/operations.py:2422
 #, python-format
 msgid ""
 "طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر "
@@ -78006,20 +78026,20 @@ msgstr ""
 msgid "طريقة الدفع:"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:282
-#: app/templates/radius/_speed_schedules_panel.html:329
-#: app/templates/radius/bandwidth_schedules.html:183
-#: app/templates/radius/bandwidth_schedules.html:343
+#: app/templates/radius/_speed_schedules_panel.html:278
+#: app/templates/radius/_speed_schedules_panel.html:322
+#: app/templates/radius/bandwidth_schedules.html:177
+#: app/templates/radius/bandwidth_schedules.html:327
 msgid "طريقة الرجوع بعد الوقت"
 msgstr ""
 
-#: app/radius/services/operations.py:1329
+#: app/radius/services/operations.py:1340
 msgid ""
 "طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، إبقاء آخر "
 "سرعة، فصل الجلسة."
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:74
+#: app/templates/radius/bandwidth_schedules.html:76
 msgid "طريقة الرجوع: تحدد ماذا يحدث بعد انتهاء وقت الجدول."
 msgstr ""
 
@@ -78330,7 +78350,7 @@ msgstr ""
 msgid "طلب دفع مطلوب: %(amount)s %(currency)s"
 msgstr ""
 
-#: app/radius/services/operations.py:2637
+#: app/radius/services/operations.py:2647
 msgid "طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم."
 msgstr ""
 
@@ -78577,7 +78597,7 @@ msgstr ""
 msgid "طول اسم المستخدم يجب أن يكون بين 1 و%(USERNAME_LENGTH_MAX)s."
 msgstr ""
 
-#: app/radius/services/npc_policy.py:138
+#: app/radius/services/npc_policy.py:164
 #, python-format
 msgid "طول الاسم أكبر من المسموح (%(MAX_NAME_LEN)s حرفاً)."
 msgstr ""
@@ -78763,14 +78783,14 @@ msgstr ""
 msgid "عالج المخاطر أولاً"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:904
+#: app/templates/radius/network_policy_preview.html:912
 msgid "عالج الموانع أعلاه قبل التنفيذ."
 msgstr ""
 
 #: app/radius/services/admin_alerts.py:440
 #: app/radius/services/anti_mac_clone.py:754
 #: app/templates/radius/anti_mac_clone.html:300
-#: app/templates/radius/network_policy_preview.html:1385
+#: app/templates/radius/network_policy_preview.html:1393
 #: app/templates/radius/notifications_center.html:188
 #: app/templates/radius/notifications_center.html:226
 msgid "عالية"
@@ -78815,7 +78835,7 @@ msgid ""
 "تشغيل يدوي."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1017
+#: app/templates/radius/network_policy_preview.html:1025
 msgid "عامّة"
 msgstr ""
 
@@ -79710,9 +79730,9 @@ msgstr ""
 #: app/radius/services/manager_activity_audit.py:332
 #: app/radius/services/permission_labels.py:66 app/radius/services/plans.py:99
 #: app/templates/_components/pagination.html:48
-#: app/templates/radius/_speed_schedules_panel.html:153
+#: app/templates/radius/_speed_schedules_panel.html:154
 #: app/templates/radius/admin_alerts.html:95
-#: app/templates/radius/bandwidth_schedules.html:242
+#: app/templates/radius/bandwidth_schedules.html:236
 #: app/templates/radius/card_marketplace.html:1429
 #: app/templates/radius/card_user_360.html:238
 #: app/templates/radius/cards_batches.html:490
@@ -79749,12 +79769,12 @@ msgstr ""
 msgid "عرض %(shown)s من %(total)s"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:678
+#: app/templates/radius/_speed_rules_panel.html:676
 msgid "عرض / باقة"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:232
-#: app/templates/radius/bandwidth_schedules.html:109
+#: app/templates/radius/_speed_schedules_panel.html:231
+#: app/templates/radius/bandwidth_schedules.html:111
 msgid "عرض / باقة خدمة"
 msgstr ""
 
@@ -79808,7 +79828,7 @@ msgstr ""
 msgid "عرض أسعار المدراء"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:289
+#: app/templates/radius/subscriber_groups_list.html:286
 msgid "عرض أعضاء المجموعة"
 msgstr ""
 
@@ -79950,7 +79970,7 @@ msgstr ""
 msgid "عرض المتصلين الآن وقطع الجلسات."
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:294
+#: app/templates/radius/subscriber_groups_list.html:291
 msgid "عرض المتصلين من المجموعة"
 msgstr ""
 
@@ -80074,7 +80094,7 @@ msgstr ""
 msgid "عرض شعار شريك ثانٍ بجانب شعارك (تعاون علامتين) — نطاقه يُفتح تلقائيًّا."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:197
+#: app/templates/radius/_speed_schedules_panel.html:196
 #: app/templates/radius/portal_distributor_checker.html:155
 msgid "عرض فقط"
 msgstr ""
@@ -80496,7 +80516,7 @@ msgid "على الراوتر عبر نفق الإدارة المشفّر"
 msgstr ""
 
 #: app/templates/radius/docs_mikrotik_store.html:454
-#: app/templates/radius/network_policy_preview.html:945
+#: app/templates/radius/network_policy_preview.html:953
 msgid "على الراوتر."
 msgstr ""
 
@@ -80531,7 +80551,7 @@ msgstr ""
 msgid "على حافته — تلتقطه بعينك من بعيد. وعمود"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:174
+#: app/templates/radius/docs_plans_speeds.html:175
 msgid ""
 "على خدمة المصادقة — يعرض نتيجة مراجعة آمنة فقط (فحص جاهزية). هذا متعمّد "
 "ليطمئنّك قبل أيّ تنفيذ حيّ."
@@ -80557,7 +80577,7 @@ msgstr ""
 msgid "على نطاق محدود وحدّ ثقة"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:193
+#: app/templates/radius/docs_plans_speeds.html:194
 msgid ""
 "على نفس الباقة: من 00:00 إلى 07:00، تنزيل 40 Mbps، مع الرجوع للسرعة "
 "الأساسية بعد النافذة."
@@ -80678,7 +80698,7 @@ msgstr ""
 msgid "عمليات التجربة الجافة مطلوبة للخطوة المحددة."
 msgstr ""
 
-#: app/radius/services/operations.py:3222
+#: app/radius/services/operations.py:3232
 msgid "عمليات التعبئة"
 msgstr ""
 
@@ -81001,7 +81021,7 @@ msgstr ""
 msgid "عند إضافة عضو جديد للمجموعة تُسنَد له هذه الباقة تلقائيًا."
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_form.html:119
+#: app/templates/radius/subscriber_groups_form.html:106
 msgid "عند إضافة عضو جديد، تُسنَد له هذه الباقة تلقائيًا."
 msgstr ""
 
@@ -81181,7 +81201,7 @@ msgstr ""
 msgid "عند الحفظ تُولَّد رموز فريدة جاهزة للبيع"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:178
+#: app/templates/radius/docs_plans_speeds.html:179
 msgid ""
 "عند الحفظ ستظهر لك رسالة بأن الجدول حُفظ وأن التطبيق على RADIUS ما زال "
 "غير مباشر في هذه المرحلة — فاعتمد على نتيجة الفحص للتحقّق من الإعداد."
@@ -81243,7 +81263,7 @@ msgstr ""
 msgid "عند انتهاء الكوتة"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:149
+#: app/templates/radius/docs_plans_speeds.html:150
 msgid "عند انتهاء النافذة:"
 msgstr ""
 
@@ -82313,7 +82333,7 @@ msgid ""
 "بأناقة بلا إزعاج للقَراءة. عَطّلها لصَفحة دخول مُجَرَّدة تَمامًا."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:851
+#: app/templates/radius/network_policy_preview.html:859
 msgid "عَلِّم كل موافقة مطلوبة قبل التنفيذ:"
 msgstr ""
 
@@ -82509,7 +82529,7 @@ msgstr ""
 msgid "غير جاهز"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:721
+#: app/templates/radius/network_policy_preview.html:729
 msgid "غير جاهزة — راجع الموانع"
 msgstr ""
 
@@ -82748,7 +82768,7 @@ msgstr ""
 #: app/radius/services/store_withdrawals.py:54
 #: app/templates/radius/_plans_fragments.html:136
 #: app/templates/radius/_plans_fragments.html:137
-#: app/templates/radius/network_policy_preview.html:1082
+#: app/templates/radius/network_policy_preview.html:1090
 #: app/templates/radius/plans_list.html:279
 #: app/templates/radius/users_list.html:2044
 msgid "غير محدّدة"
@@ -82783,7 +82803,7 @@ msgstr ""
 msgid "غير مربوط"
 msgstr ""
 
-#: app/radius/services/operations.py:3071
+#: app/radius/services/operations.py:3081
 msgid "غير مربوط — اربط جوجل درايف من بوابة العميل."
 msgstr ""
 
@@ -83282,7 +83302,7 @@ msgstr ""
 msgid "فاشل "
 msgstr ""
 
-#: app/api/v1/store.py:949 app/radius/db/repos/operations_repo.py:1180
+#: app/api/v1/store.py:949 app/radius/db/repos/operations_repo.py:1273
 #: app/radius/routes/reports.py:62 app/templates/radius/_subs_labels.html:91
 #: app/templates/radius/backups.html:8
 #: app/templates/radius/card_marketplace.html:69
@@ -83732,12 +83752,12 @@ msgstr ""
 msgid "فحص الترخيص"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:272
+#: app/templates/radius/bandwidth_schedules.html:264
 #: app/templates/radius/setup_wizard_v2.html:419
 msgid "فحص الجاهزية"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:284
+#: app/templates/radius/bandwidth_schedules.html:276
 msgid "فحص الجاهزية لا يطبق على خدمة المصادقة"
 msgstr ""
 
@@ -84291,7 +84311,7 @@ msgstr ""
 msgid "فشل تجهيز الملف"
 msgstr ""
 
-#: app/radius/services/operations.py:2550
+#: app/radius/services/operations.py:2560
 msgid "فشل تجهيز ملف PDF"
 msgstr ""
 
@@ -84602,7 +84622,7 @@ msgstr ""
 msgid "فشلت الاستعادة."
 msgstr ""
 
-#: app/radius/services/operations.py:3347
+#: app/radius/services/operations.py:3357
 #, python-format
 msgid "فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s"
 msgstr ""
@@ -84620,7 +84640,7 @@ msgstr ""
 msgid "فشلت عملية الدفع"
 msgstr ""
 
-#: app/radius/services/operations.py:2593
+#: app/radius/services/operations.py:2603
 msgid "فشلت مهمة الطباعة — لا يوجد ملف للتنزيل."
 msgstr ""
 
@@ -84665,12 +84685,12 @@ msgstr ""
 msgid "فصل الجلسات السابقة (حساب مشترك)"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:589
-#: app/templates/radius/_speed_rules_panel.html:745
-#: app/templates/radius/_speed_schedules_panel.html:286
-#: app/templates/radius/_speed_schedules_panel.html:333
-#: app/templates/radius/bandwidth_schedules.html:187
-#: app/templates/radius/bandwidth_schedules.html:347
+#: app/templates/radius/_speed_rules_panel.html:587
+#: app/templates/radius/_speed_rules_panel.html:743
+#: app/templates/radius/_speed_schedules_panel.html:282
+#: app/templates/radius/_speed_schedules_panel.html:326
+#: app/templates/radius/bandwidth_schedules.html:181
+#: app/templates/radius/bandwidth_schedules.html:331
 #: app/templates/radius/cards_checker_v2.html:1481
 msgid "فصل الجلسة"
 msgstr ""
@@ -84679,7 +84699,7 @@ msgstr ""
 msgid "فصل الجلسة:"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:312
+#: app/templates/radius/subscriber_groups_list.html:309
 msgid "فصل المتصلين"
 msgstr ""
 
@@ -84719,7 +84739,7 @@ msgstr ""
 msgid "فصل كل الجلسات المتصلة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:311
+#: app/templates/radius/subscriber_groups_list.html:308
 #, python-format
 msgid "فصل كل الجلسات المتصلة لمجموعة «%(e)s»؟"
 msgstr ""
@@ -85911,7 +85931,7 @@ msgstr ""
 msgid "فيديو سبلاش مستضاف"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:176
+#: app/radius/services/npc_policy.py:202
 msgid "فيسبوك"
 msgstr ""
 
@@ -86186,7 +86206,7 @@ msgstr ""
 msgid "قائمة العناوين المحجوبة موجودة (%(v)s إدخالاً)"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1082
+#: app/templates/radius/network_policy_preview.html:1090
 msgid "قائمة العناوين المسموحة على الراوتر ("
 msgstr ""
 
@@ -86474,27 +86494,27 @@ msgstr ""
 msgid "قاعدة الحجب نشطة في جدار الحماية"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:169
+#: app/radius/routes/speed_rules_ui.py:167
 msgid "قاعدة السرعة غير واضحة"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:175
+#: app/radius/routes/speed_rules_ui.py:173
 msgid "قاعدة السرعة لا تتبع هذا العرض"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:173
+#: app/radius/routes/speed_rules_ui.py:171
 msgid "قاعدة السرعة لا تتبع هذا القسم"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:177
+#: app/radius/routes/speed_rules_ui.py:175
 msgid "قاعدة السرعة لا تتبع هذا المشترك"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:179
+#: app/radius/routes/speed_rules_ui.py:177
 msgid "قاعدة السرعة لا تتبع هذه الحزمة"
 msgstr ""
 
-#: app/radius/routes/speed_rules_ui.py:181
+#: app/radius/routes/speed_rules_ui.py:179
 msgid "قاعدة السرعة لا تتبع هذه المجموعة"
 msgstr ""
 
@@ -86506,7 +86526,7 @@ msgstr ""
 msgid "قاعدة الكشف غير مركّبة فعليًا على"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:135
+#: app/templates/radius/bandwidth_schedules.html:137
 msgid "قاعدة المشترك لها أعلى أولوية عند تسجيل الدخول."
 msgstr ""
 
@@ -86514,7 +86534,7 @@ msgstr ""
 msgid "قاعدة بيانات (إنتاج)"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:679
+#: app/templates/radius/_speed_rules_panel.html:677
 msgid "قاعدة تنطبق على كامل العرض أو الباقة"
 msgstr ""
 
@@ -86522,12 +86542,12 @@ msgstr ""
 msgid "قاعدة جديدة باتجاه سيرفر الراديوس"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:686
+#: app/templates/radius/_speed_rules_panel.html:684
 msgid "قاعدة خاصة بهذا المشترك فقط"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:941
-#: app/templates/radius/_speed_rules_panel.html:1104
+#: app/templates/radius/_speed_rules_panel.html:939
+#: app/templates/radius/_speed_rules_panel.html:1099
 #: app/templates/radius/users_form.html:1527
 msgid "قاعدة سرعة"
 msgstr ""
@@ -86538,7 +86558,7 @@ msgid ""
 "كروت الحزمة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:79
+#: app/templates/radius/_speed_schedules_panel.html:80
 msgid ""
 "قاعدة سرعة تُطبَّق تلقائيًّا ضمن نافذة وقت متكرّرة كل يوم (مثل «سرعة "
 "الليل» من 12 إلى 6 صباحًا). تُحفظ مرّة، ثم تُطبَّق على المشترك عند "
@@ -86570,13 +86590,13 @@ msgstr ""
 msgid "قالب الدخول"
 msgstr ""
 
-#: app/api/v1/print_templates.py:158 app/radius/services/operations.py:1710
-#: app/radius/services/operations.py:1764
-#: app/radius/services/operations.py:1823
-#: app/radius/services/operations.py:1865
-#: app/radius/services/operations.py:1951
-#: app/radius/services/operations.py:2240
-#: app/radius/services/operations.py:2388
+#: app/api/v1/print_templates.py:158 app/radius/services/operations.py:1720
+#: app/radius/services/operations.py:1774
+#: app/radius/services/operations.py:1833
+#: app/radius/services/operations.py:1875
+#: app/radius/services/operations.py:1961
+#: app/radius/services/operations.py:2250
+#: app/radius/services/operations.py:2398
 msgid "قالب الطباعة غير موجود."
 msgstr ""
 
@@ -87706,7 +87726,7 @@ msgstr ""
 msgid "قواعد سرعة"
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:147
+#: app/radius/routes/subscriber_groups.py:143
 msgid "قواعد سرعة المجموعة"
 msgstr ""
 
@@ -87889,7 +87909,7 @@ msgstr ""
 msgid "قيد التجهيز:"
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1182
+#: app/radius/db/repos/operations_repo.py:1275
 #: app/templates/radius/backups.html:8
 msgid "قيد التشغيل"
 msgstr ""
@@ -88059,7 +88079,7 @@ msgstr ""
 msgid "قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة."
 msgstr ""
 
-#: app/radius/services/operations.py:1227
+#: app/radius/services/operations.py:1238
 msgid "قيم التسوية النصّيّة غير صحيحة."
 msgstr ""
 
@@ -88154,7 +88174,7 @@ msgstr ""
 msgid "قيمة %(label)s يجب أن تكون رقمًا صحيحًا."
 msgstr ""
 
-#: app/api/json_input.py:122 app/radius/services/operations.py:962
+#: app/api/json_input.py:122 app/radius/services/operations.py:973
 #, python-format
 msgid "قيمة %(label)s يجب أن تكون نصًا."
 msgstr ""
@@ -88221,8 +88241,8 @@ msgstr ""
 msgid "قيمة offset يجب أن تكون رقمًا صحيحًا."
 msgstr ""
 
-#: app/radius/services/operations.py:1243
-#: app/radius/services/operations.py:1247
+#: app/radius/services/operations.py:1254
+#: app/radius/services/operations.py:1258
 msgid "قيمة related_id يجب أن تكون رقمًا صحيحًا."
 msgstr ""
 
@@ -88451,7 +88471,7 @@ msgstr ""
 msgid "قيمة «عند نفاد الكوتا» غير معروفة — المسموح: "
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:199
+#: app/api/v1/bandwidth_schedules.py:202
 msgid "قيمة «مفعّل» غير صالحة."
 msgstr ""
 
@@ -88751,7 +88771,7 @@ msgstr ""
 msgid "كازاخستان"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:186
+#: app/radius/services/npc_policy.py:212
 msgid "كاشفات الـ IP"
 msgstr ""
 
@@ -88804,7 +88824,7 @@ msgstr ""
 msgid "كامل"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:881
+#: app/templates/radius/network_policy_preview.html:889
 msgid "كامل (full)"
 msgstr ""
 
@@ -88960,8 +88980,8 @@ msgid "كرواتيا"
 msgstr ""
 
 #: app/radius/core/ar_text.py:24
-#: app/templates/radius/_speed_schedules_panel.html:150
-#: app/templates/radius/bandwidth_schedules.html:239
+#: app/templates/radius/_speed_schedules_panel.html:151
+#: app/templates/radius/bandwidth_schedules.html:233
 #: app/templates/radius/sessions_list.html:461
 msgid "كروت"
 msgstr ""
@@ -89360,10 +89380,11 @@ msgstr ""
 msgid "كل الأنواع"
 msgstr ""
 
+#: app/templates/_partials/schedule_days_picker.html:15
 #: app/templates/radius/_plans_fragments.html:98
-#: app/templates/radius/_speed_rules_panel.html:515
-#: app/templates/radius/_speed_rules_panel.html:977
-#: app/templates/radius/_speed_rules_panel.html:1130
+#: app/templates/radius/_speed_rules_panel.html:513
+#: app/templates/radius/_speed_rules_panel.html:973
+#: app/templates/radius/_speed_rules_panel.html:1125
 #: app/templates/radius/plans_form.html:802
 #: app/templates/radius/users_form.html:1565
 #: app/templates/radius/users_profile.html:1179
@@ -90323,7 +90344,7 @@ msgid ""
 "اللوحة. اسم المفتاح يُبيّن مصدرها وعنوان الشبكة يُبيّن من أين اتّصل."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:149
+#: app/radius/routes/subscriber_groups.py:145
 msgid ""
 "كل قاعدة تطبق سرعة مختلفة في أوقات معينة على كل أعضاء هذه المجموعة. "
 "الأولوية الأقل تفوز عند التداخل."
@@ -90832,7 +90853,7 @@ msgstr ""
 msgid "كلمة مرور الراوتر"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1081
+#: app/templates/radius/network_policy_preview.html:1089
 msgid "كلمة مرور الراوتر قوية ولم تتسرّب."
 msgstr ""
 
@@ -90866,11 +90887,11 @@ msgstr ""
 msgid "كلمة مرور بوابة الفحص"
 msgstr ""
 
-#: app/api/v1/distributors.py:103 app/radius/services/operations.py:1037
+#: app/api/v1/distributors.py:103 app/radius/services/operations.py:1048
 msgid "كلمة مرور بوابة الفحص أطول من المسموح (120 حرفًا)."
 msgstr ""
 
-#: app/api/v1/distributors.py:101 app/radius/services/operations.py:1032
+#: app/api/v1/distributors.py:101 app/radius/services/operations.py:1043
 msgid "كلمة مرور بوابة الفحص يجب أن تكون نصًّا."
 msgstr ""
 
@@ -91432,7 +91453,7 @@ msgstr ""
 msgid "كيف تعمل هذه الصفحة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:68
+#: app/templates/radius/bandwidth_schedules.html:69
 #: app/templates/radius/cards_print_new.html:420
 #: app/templates/radius/communications_notifications.html:203
 #: app/templates/radius/mt_programming.html:56
@@ -92225,7 +92246,7 @@ msgstr ""
 msgid "لا تفحص أو تطبق على واجهة غير مصرح بها."
 msgstr ""
 
-#: app/radius/db/repos/cards_repo.py:1252
+#: app/radius/db/repos/cards_repo.py:1253
 #, python-format
 msgid ""
 "لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول "
@@ -92248,7 +92269,7 @@ msgstr ""
 msgid "لا تملك الصلاحية: %(permission)s"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:919
+#: app/templates/radius/network_policy_preview.html:927
 #, python-format
 msgid "لا تملك صلاحية %(apply_perm_label_ar)s — التنفيذ غير متاح."
 msgstr ""
@@ -92420,7 +92441,7 @@ msgstr ""
 msgid "لا توجد إدخالات بعد — أضف أوّل واحد من النموذج أعلاه."
 msgstr ""
 
-#: app/radius/services/npc_walled_garden_planner.py:156
+#: app/radius/services/npc_walled_garden_planner.py:169
 msgid "لا توجد إدخالات نشطة — السياسة بدون أثر."
 msgstr ""
 
@@ -92576,15 +92597,15 @@ msgstr ""
 msgid "لا توجد تنبيهات مفتوحة حتى الآن."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1372
+#: app/templates/radius/network_policy_preview.html:1380
 msgid "لا توجد توصيات إضافيّة حالياً — السياسة تبدو سليمة."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:207
+#: app/templates/radius/_speed_schedules_panel.html:206
 msgid "لا توجد جداول زمنية بعد"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:373
+#: app/templates/radius/bandwidth_schedules.html:357
 msgid "لا توجد جداول سرعة بعد"
 msgstr ""
 
@@ -92608,7 +92629,7 @@ msgstr ""
 msgid "لا توجد جلسات لهذا الجهاز بعد."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:224
+#: app/radius/routes/subscriber_groups.py:220
 #, python-format
 msgid "لا توجد جلسات متصلة حالياً لمجموعة «%(name)s»."
 msgstr ""
@@ -92638,7 +92659,7 @@ msgstr ""
 msgid "لا توجد جلسات نشطة مطابقة الآن — ستُطبَّق السرعة عند إعادة المصادقة."
 msgstr ""
 
-#: app/radius/routes/bandwidth_schedules.py:229
+#: app/radius/routes/bandwidth_schedules.py:236
 msgid ""
 "لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق السرعة على "
 "الجلسة التالية عند إعادة المصادقة."
@@ -92728,7 +92749,7 @@ msgstr ""
 msgid "لا توجد حزم مطبوعة بعد"
 msgstr ""
 
-#: app/radius/services/operations.py:1181
+#: app/radius/services/operations.py:1192
 #, python-format
 msgid "لا توجد حزمة كروت بالرمز «%(v)s»."
 msgstr ""
@@ -92757,7 +92778,7 @@ msgstr ""
 msgid "لا توجد خدمات في الكتالوج بعد."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1318
+#: app/templates/radius/network_policy_preview.html:1326
 msgid "لا توجد خدمات معروفة متوقَّع تأثرها بهذه السياسة."
 msgstr ""
 
@@ -93095,7 +93116,7 @@ msgstr ""
 msgid "لا توجد كروت داخل هذه الحزمة."
 msgstr ""
 
-#: app/radius/services/operations.py:2042
+#: app/radius/services/operations.py:2052
 msgid "لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة."
 msgstr ""
 
@@ -93237,7 +93258,7 @@ msgstr ""
 msgid "لا توجد مصروفات بعد."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1483
+#: app/templates/radius/network_policy_preview.html:1491
 msgid "لا توجد مصطلحات إضافية تحتاج شرحاً لهذه السياسة."
 msgstr ""
 
@@ -93353,11 +93374,11 @@ msgstr ""
 msgid "لا توجد واجهات معروضة."
 msgstr ""
 
-#: app/radius/services/npc_web_block_planner.py:164
+#: app/radius/services/npc_web_block_planner.py:177
 msgid "لا توجد وجهات نشطة — السياسة بدون أثر (fail-open)."
 msgstr ""
 
-#: app/radius/services/npc_web_block_planner.py:169
+#: app/radius/services/npc_web_block_planner.py:182
 msgid ""
 "لا توجد وجهات نشطة — رفضنا توليد قاعدة drop-default لتفادي قطع كامل "
 "الإنترنت."
@@ -93852,7 +93873,7 @@ msgstr ""
 msgid "لا يظهر بعد المزامنة:"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:174
+#: app/templates/radius/docs_plans_speeds.html:175
 msgid "لا يغيّر السرعة فعليًّا"
 msgstr ""
 
@@ -93984,7 +94005,7 @@ msgstr ""
 msgid "لا يمكن توليد السكربت الآن"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1556
+#: app/templates/radius/network_policy_preview.html:1564
 msgid ""
 "لا يمكن توليد السكربت في حالته الحاليّة. عالج المشاكل الموضَّحة أعلاه ثم "
 "اضغط «توليد المعاينة»."
@@ -94122,8 +94143,8 @@ msgstr ""
 msgid "لا يوجد أعضاء بعد."
 msgstr ""
 
-#: app/radius/routes/subscriber_groups.py:196
-#: app/radius/routes/subscriber_groups.py:234
+#: app/radius/routes/subscriber_groups.py:192
+#: app/radius/routes/subscriber_groups.py:230
 msgid "لا يوجد أعضاء في هذه المجموعة."
 msgstr ""
 
@@ -95226,7 +95247,7 @@ msgid ""
 "صفحته (التجاوز الفرديّ يَغلب)."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:216
+#: app/templates/radius/_speed_schedules_panel.html:215
 #: app/templates/radius/access_control.html:248
 #: app/templates/radius/access_control.html:425
 #: app/templates/radius/admin_alerts.html:32
@@ -95235,8 +95256,8 @@ msgstr ""
 #: app/templates/radius/admins_list.html:163
 #: app/templates/radius/anti_mac_clone.html:48
 #: app/templates/radius/bandwidth_form.html:111
-#: app/templates/radius/bandwidth_schedules.html:94
-#: app/templates/radius/bandwidth_schedules.html:299
+#: app/templates/radius/bandwidth_schedules.html:96
+#: app/templates/radius/bandwidth_schedules.html:291
 #: app/templates/radius/business_operator_profile.html:210
 #: app/templates/radius/card_marketplace.html:697
 #: app/templates/radius/card_marketplace.html:1051
@@ -95273,7 +95294,7 @@ msgstr ""
 #: app/templates/radius/mt_setup_form.html:157
 #: app/templates/radius/network_device_bypass.html:87
 #: app/templates/radius/network_devices_form.html:66
-#: app/templates/radius/network_policy_preview.html:826
+#: app/templates/radius/network_policy_preview.html:834
 #: app/templates/radius/operations_speed_control.html:128
 #: app/templates/radius/operations_speed_control_manual.html:380
 #: app/templates/radius/payment_collection_settings.html:34
@@ -95580,11 +95601,11 @@ msgstr ""
 msgid "لم تُشترَ بعد"
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1174
+#: app/radius/db/repos/operations_repo.py:1267
 msgid "لم تُشغَّل أيّ نسخة احتياطيّة محلّيّة بعد."
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1179
+#: app/radius/db/repos/operations_repo.py:1272
 msgid "لم تُشغَّل بعد"
 msgstr ""
 
@@ -95700,7 +95721,7 @@ msgstr ""
 msgid "لم يتم إضافتها للـ bridge"
 msgstr ""
 
-#: app/radius/services/operations.py:2816
+#: app/radius/services/operations.py:2826
 msgid "لم يتم إنشاء ملف النسخة الاحتياطية."
 msgstr ""
 
@@ -95733,7 +95754,7 @@ msgstr ""
 msgid "لم يتم استخراج أي بطاقات من الملف."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1260
+#: app/templates/radius/network_policy_preview.html:1268
 msgid "لم يتم اكتشاف تعارضات."
 msgstr ""
 
@@ -96444,7 +96465,7 @@ msgstr ""
 msgid "لهذه السلفة تسويات مُرحَّلة — اعكس قيود تسويتها أوّلًا ثم ألغِ السلفة."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:789
+#: app/templates/radius/_speed_rules_panel.html:787
 msgid "لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا."
 msgstr ""
 
@@ -96583,11 +96604,11 @@ msgstr ""
 msgid "لوحة التحكّم"
 msgstr ""
 
-#: app/radius/services/operations.py:3023
-#: app/radius/services/operations.py:3026
+#: app/radius/services/operations.py:3033
 #: app/radius/services/operations.py:3036
-#: app/radius/services/operations.py:3041
-#: app/radius/services/operations.py:3044 app/templates/radius/backups.html:445
+#: app/radius/services/operations.py:3046
+#: app/radius/services/operations.py:3051
+#: app/radius/services/operations.py:3054 app/templates/radius/backups.html:445
 #: app/templates/radius/notifications_center.html:147
 msgid "لوحة التراخيص"
 msgstr ""
@@ -97051,10 +97072,10 @@ msgstr ""
 #: app/templates/_partials/time_picker_circular.html:406
 #: app/templates/_partials/time_picker_circular.html:445
 #: app/templates/_partials/time_picker_circular.html:446
+#: app/templates/radius/_speed_rules_panel.html:932
 #: app/templates/radius/_speed_rules_panel.html:934
-#: app/templates/radius/_speed_rules_panel.html:936
-#: app/templates/radius/_speed_rules_panel.html:1091
-#: app/templates/radius/_speed_rules_panel.html:1093
+#: app/templates/radius/_speed_rules_panel.html:1086
+#: app/templates/radius/_speed_rules_panel.html:1088
 #: app/templates/radius/users_form.html:1558
 #: app/templates/radius/users_form.html:1560
 msgid "م"
@@ -97129,7 +97150,7 @@ msgstr ""
 msgid "مؤقتة"
 msgstr ""
 
-#: app/templates/radius/subscriber_groups_list.html:277
+#: app/templates/radius/subscriber_groups_list.html:274
 #, python-format
 msgid "مؤقتة %(temporary_speed_members)s"
 msgstr ""
@@ -97166,7 +97187,7 @@ msgstr ""
 msgid "مؤقّت — للفنّي (يُحذف تلقائياً)"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1330
+#: app/templates/radius/network_policy_preview.html:1338
 #: app/templates/radius/tunnels.html:123
 msgid "مؤكَّد"
 msgstr ""
@@ -97241,7 +97262,7 @@ msgstr ""
 msgid "ما الفرق بين بوت واتساب وبوت تلجرام؟"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:72
+#: app/templates/radius/_speed_schedules_panel.html:73
 msgid "ما الفرق؟ اقرأ أولًا"
 msgstr ""
 
@@ -97477,9 +97498,9 @@ msgstr ""
 msgid "ماذا تفعل بهذا السكربت؟"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1100
-#: app/templates/radius/network_policy_preview.html:1102
-#: app/templates/radius/network_policy_preview.html:1174
+#: app/templates/radius/network_policy_preview.html:1108
+#: app/templates/radius/network_policy_preview.html:1110
+#: app/templates/radius/network_policy_preview.html:1182
 msgid "ماذا سيحدث؟"
 msgstr ""
 
@@ -97872,7 +97893,7 @@ msgstr ""
 msgid "متاحة بالكامل بحسب العقد."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1079
+#: app/templates/radius/network_policy_preview.html:1087
 msgid "متاحة على الإنترنت العامّ"
 msgstr ""
 
@@ -98259,12 +98280,12 @@ msgstr ""
 
 #: app/radius/services/anti_mac_clone.py:754
 #: app/templates/radius/anti_mac_clone.html:301
-#: app/templates/radius/network_policy_preview.html:1386
+#: app/templates/radius/network_policy_preview.html:1394
 msgid "متوسطة"
 msgstr ""
 
 #: app/templates/radius/network_policy_preview.html:598
-#: app/templates/radius/network_policy_preview.html:1229
+#: app/templates/radius/network_policy_preview.html:1237
 msgid "متوسّط"
 msgstr ""
 
@@ -98392,7 +98413,7 @@ msgid "مثال على رد لأمر «الرصيد»: «رصيدك الحالي
 msgstr ""
 
 #: app/templates/radius/docs_plans_speeds.html:37
-#: app/templates/radius/docs_plans_speeds.html:186
+#: app/templates/radius/docs_plans_speeds.html:187
 msgid "مثال عملي كامل"
 msgstr ""
 
@@ -98617,12 +98638,12 @@ msgstr ""
 msgid "مثال: رقم الشبكة 35 على ether1"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:225
-#: app/templates/radius/bandwidth_schedules.html:102
+#: app/templates/radius/_speed_schedules_panel.html:224
+#: app/templates/radius/bandwidth_schedules.html:104
 msgid "مثال: سرعة الليل"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:695
+#: app/templates/radius/_speed_rules_panel.html:693
 msgid "مثال: سرعة المساء"
 msgstr ""
 
@@ -99420,7 +99441,7 @@ msgstr ""
 msgid "محاولة منتهية"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1332
+#: app/templates/radius/network_policy_preview.html:1340
 msgid "محتمل"
 msgstr ""
 
@@ -99440,7 +99461,7 @@ msgstr ""
 msgid "محتوى المهمة"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:180
+#: app/radius/services/npc_policy.py:206
 msgid "محتوى للبالغين"
 msgstr ""
 
@@ -99479,7 +99500,7 @@ msgid "محددة"
 msgstr ""
 
 #: app/templates/radius/license_file.html:180
-#: app/templates/radius/network_policy_preview.html:1387
+#: app/templates/radius/network_policy_preview.html:1395
 msgid "محدودة"
 msgstr ""
 
@@ -99909,7 +99930,7 @@ msgstr ""
 msgid "مخصص"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:188
+#: app/radius/services/npc_policy.py:214
 #: app/templates/radius/docs_roles_permissions.html:342
 #: app/templates/radius/print_templates_stats.html:86
 #: app/templates/radius/rep_subscriber_consumption.html:125
@@ -100698,7 +100719,7 @@ msgstr ""
 msgid "مرجعًا مركزيًّا واحدًا"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1331
+#: app/templates/radius/network_policy_preview.html:1339
 msgid "مرجَّح"
 msgstr ""
 
@@ -100764,7 +100785,7 @@ msgstr ""
 msgid "مرحلة المعالج غير معروفة."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:883
+#: app/templates/radius/network_policy_preview.html:891
 msgid "مرحلتين (staged)"
 msgstr ""
 
@@ -100815,7 +100836,7 @@ msgstr ""
 msgid "مرفوع"
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1181
+#: app/radius/db/repos/operations_repo.py:1274
 #: app/templates/radius/backups.html:8
 msgid "مرفوعة"
 msgstr ""
@@ -101194,7 +101215,7 @@ msgstr ""
 msgid "مزوّد غير معروف"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:187
+#: app/radius/services/npc_policy.py:213
 msgid "مزوّدو VPN"
 msgstr ""
 
@@ -101296,7 +101317,7 @@ msgid ""
 "مستقلًّا. فارغ = بجوار الشهادة بامتداد .key."
 msgstr ""
 
-#: app/radius/services/operations.py:2603
+#: app/radius/services/operations.py:2613
 msgid "مسار ملف مهمة الطباعة غير صالح."
 msgstr ""
 
@@ -101589,7 +101610,7 @@ msgstr ""
 msgid "مستخدمون"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1217
+#: app/templates/radius/network_policy_preview.html:1225
 msgid "مستخدمون (تقدير)"
 msgstr ""
 
@@ -101695,19 +101716,19 @@ msgstr ""
 msgid "مستوى الخطر مرتفع — راجع الأسباب أعلاه."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:663
+#: app/templates/radius/network_policy_preview.html:671
 msgid "مستوى الخطر: حرج"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:675
+#: app/templates/radius/network_policy_preview.html:683
 msgid "مستوى الخطر: متوسط"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:669
+#: app/templates/radius/network_policy_preview.html:677
 msgid "مستوى الخطر: مرتفع"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:681
+#: app/templates/radius/network_policy_preview.html:689
 msgid "مستوى الخطر: منخفض"
 msgstr ""
 
@@ -101925,10 +101946,10 @@ msgstr ""
 #: app/radius/services/mikrotik_actions.py:733
 #: app/radius/services/notification_campaigns.py:37
 #: app/radius/services/permission_labels.py:72
-#: app/templates/radius/_speed_rules_panel.html:685
-#: app/templates/radius/_speed_schedules_panel.html:147
+#: app/templates/radius/_speed_rules_panel.html:683
+#: app/templates/radius/_speed_schedules_panel.html:148
 #: app/templates/radius/_subs_labels.html:43
-#: app/templates/radius/bandwidth_schedules.html:236
+#: app/templates/radius/bandwidth_schedules.html:230
 #: app/templates/radius/card_user_360.html:407
 #: app/templates/radius/dashboard.html:756
 #: app/templates/radius/events_investigations.html:63
@@ -101979,8 +102000,8 @@ msgstr ""
 msgid "مشترك لكل الاتصالات"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:233
-#: app/templates/radius/bandwidth_schedules.html:110
+#: app/templates/radius/_speed_schedules_panel.html:232
+#: app/templates/radius/bandwidth_schedules.html:112
 #: app/templates/radius/users_list.html:2383
 msgid "مشترك محدد"
 msgstr ""
@@ -102899,7 +102920,7 @@ msgstr ""
 msgid "معاينة فقط — لم تُسجَّل أيّ سلفة ولم يتغيّر الحساب."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:687
+#: app/templates/radius/network_policy_preview.html:695
 msgid "معاينة فقط — لم يتم التطبيق على الراوتر"
 msgstr ""
 
@@ -103090,7 +103111,7 @@ msgstr ""
 msgid "معرّف الخدمة:"
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:242
+#: app/api/v1/bandwidth_schedules.py:245
 msgid "معرّف الخطة ومعرّف حزمة الكروت يجب أن يكونا أرقامًا صحيحة."
 msgstr ""
 
@@ -103219,7 +103240,8 @@ msgstr ""
 msgid "معرّف المدخل غير محدد"
 msgstr ""
 
-#: app/radius/services/operations.py:995 app/radius/services/operations.py:999
+#: app/radius/services/operations.py:1006
+#: app/radius/services/operations.py:1010
 msgid "معرّف المدير المالك يجب أن يكون رقمًا صحيحًا."
 msgstr ""
 
@@ -103266,13 +103288,13 @@ msgstr ""
 msgid "معرّف حزمة البطاقات"
 msgstr ""
 
-#: app/api/v1/print_templates.py:466 app/radius/services/operations.py:1171
-#: app/radius/services/operations.py:1178
+#: app/api/v1/print_templates.py:466 app/radius/services/operations.py:1182
+#: app/radius/services/operations.py:1189
 msgid "معرّف حزمة الكروت يجب أن يكون رقمًا صحيحًا."
 msgstr ""
 
-#: app/radius/services/operations.py:1048
-#: app/radius/services/operations.py:1052
+#: app/radius/services/operations.py:1059
+#: app/radius/services/operations.py:1063
 msgid "معرّف حساب دخول الموزّع يجب أن يكون رقمًا صحيحًا."
 msgstr ""
 
@@ -103324,7 +103346,7 @@ msgstr ""
 msgid "معرّفات الباقات يجب أن تكون أرقامًا صحيحة."
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:120
+#: app/api/v1/bandwidth_schedules.py:123
 msgid "معرّفات الخطة والحزمة وقيم الترقيم يجب أن تكون أرقامًا صحيحة."
 msgstr ""
 
@@ -103380,14 +103402,14 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:144
 #: app/templates/radius/_plans_fragments.html:196
 #: app/templates/radius/_plans_fragments.html:197
-#: app/templates/radius/_speed_schedules_panel.html:169
+#: app/templates/radius/_speed_schedules_panel.html:168
 #: app/templates/radius/_status.html:162
 #: app/templates/radius/_subs_labels.html:24
 #: app/templates/radius/admin_pricing.html:125
 #: app/templates/radius/admin_pricing.html:213
 #: app/templates/radius/admins_list.html:122
 #: app/templates/radius/admins_profile_summary.html:124
-#: app/templates/radius/bandwidth_schedules.html:261
+#: app/templates/radius/bandwidth_schedules.html:253
 #: app/templates/radius/cards_generate.html:628
 #: app/templates/radius/cards_generate.html:633
 #: app/templates/radius/devices_list.html:126
@@ -103430,10 +103452,10 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:39
 #: app/templates/radius/_plans_fragments.html:116
 #: app/templates/radius/_plans_fragments.html:198
-#: app/templates/radius/_speed_rules_panel.html:525
-#: app/templates/radius/_speed_rules_panel.html:611
-#: app/templates/radius/_speed_rules_panel.html:1152
-#: app/templates/radius/bandwidth_schedules.html:61
+#: app/templates/radius/_speed_rules_panel.html:523
+#: app/templates/radius/_speed_rules_panel.html:609
+#: app/templates/radius/_speed_rules_panel.html:1147
+#: app/templates/radius/bandwidth_schedules.html:62
 #: app/templates/radius/communications_notifications.html:191
 #: app/templates/radius/devices_form.html:118
 #: app/templates/radius/license_file.html:563
@@ -104063,12 +104085,12 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:144
 #: app/templates/radius/_plans_fragments.html:196
 #: app/templates/radius/_plans_fragments.html:197
-#: app/templates/radius/_speed_schedules_panel.html:169
+#: app/templates/radius/_speed_schedules_panel.html:168
 #: app/templates/radius/_status.html:161
 #: app/templates/radius/_subs_labels.html:24
 #: app/templates/radius/admins_list.html:121
 #: app/templates/radius/admins_profile_summary.html:123
-#: app/templates/radius/bandwidth_schedules.html:259
+#: app/templates/radius/bandwidth_schedules.html:251
 #: app/templates/radius/business_operator_profile.html:17
 #: app/templates/radius/business_operators.html:36
 #: app/templates/radius/credit_dashboard.html:46
@@ -104140,10 +104162,10 @@ msgstr ""
 #: app/templates/radius/_plans_fragments.html:38
 #: app/templates/radius/_plans_fragments.html:116
 #: app/templates/radius/_plans_fragments.html:198
-#: app/templates/radius/_speed_rules_panel.html:524
-#: app/templates/radius/_speed_rules_panel.html:611
-#: app/templates/radius/_speed_rules_panel.html:1151
-#: app/templates/radius/bandwidth_schedules.html:60
+#: app/templates/radius/_speed_rules_panel.html:522
+#: app/templates/radius/_speed_rules_panel.html:609
+#: app/templates/radius/_speed_rules_panel.html:1146
+#: app/templates/radius/bandwidth_schedules.html:61
 #: app/templates/radius/communications_notifications.html:190
 #: app/templates/radius/communications_templates.html:62
 #: app/templates/radius/devices_form.html:118
@@ -104595,12 +104617,12 @@ msgstr ""
 #: app/radius/services/service_specs.py:247
 #: app/radius/services/service_specs.py:279
 #: app/radius/templates/radius/wg_data.html:215
-#: app/templates/radius/_speed_schedules_panel.html:290
-#: app/templates/radius/_speed_schedules_panel.html:336
+#: app/templates/radius/_speed_schedules_panel.html:286
+#: app/templates/radius/_speed_schedules_panel.html:329
 #: app/templates/radius/accounting_ledger.html:72
 #: app/templates/radius/accounting_reports.html:114
-#: app/templates/radius/bandwidth_schedules.html:192
-#: app/templates/radius/bandwidth_schedules.html:352
+#: app/templates/radius/bandwidth_schedules.html:186
+#: app/templates/radius/bandwidth_schedules.html:336
 #: app/templates/radius/cards_batch_edit.html:303
 #: app/templates/radius/cards_generate.html:651
 #: app/templates/radius/cards_import.html:376
@@ -104676,7 +104698,7 @@ msgstr ""
 msgid "ملاحظات على الملف الشخصي"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1518
+#: app/templates/radius/network_policy_preview.html:1526
 msgid "ملاحظات للمشغّل"
 msgstr ""
 
@@ -104688,7 +104710,7 @@ msgstr ""
 #: app/templates/radius/docs_billing_vouchers.html:352
 #: app/templates/radius/finance_accounting.html:413
 #: app/templates/radius/finance_billing.html:301
-#: app/templates/radius/network_policy_preview.html:1284
+#: app/templates/radius/network_policy_preview.html:1292
 #: app/templates/radius/routers_setup.html:71
 #: app/templates/radius/routers_setup.html:76
 #: app/templates/radius/users_finance.html:174
@@ -105083,7 +105105,7 @@ msgstr ""
 msgid "ملف السرعة غير موجود."
 msgstr ""
 
-#: app/radius/services/operations.py:2595
+#: app/radius/services/operations.py:2605
 msgid "ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة."
 msgstr ""
 
@@ -105162,8 +105184,8 @@ msgstr ""
 msgid "ملف النسخة المرشّحة ليس قاعدة SQLite صالحة."
 msgstr ""
 
-#: app/radius/services/operations.py:2980
-#: app/radius/services/operations.py:3285
+#: app/radius/services/operations.py:2990
+#: app/radius/services/operations.py:3295
 msgid "ملف النسخة غير موجود أو غير صالح."
 msgstr ""
 
@@ -105253,8 +105275,8 @@ msgstr ""
 msgid "ملف من"
 msgstr ""
 
-#: app/radius/services/operations.py:2599
-#: app/radius/services/operations.py:2605
+#: app/radius/services/operations.py:2609
+#: app/radius/services/operations.py:2615
 msgid "ملف مهمة الطباعة غير موجود."
 msgstr ""
 
@@ -105315,7 +105337,7 @@ msgstr ""
 msgid "ملفّ تعريف Hotspot جديد"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1223
+#: app/templates/radius/network_policy_preview.html:1231
 msgid "ملفّات التعريف"
 msgstr ""
 
@@ -105581,15 +105603,15 @@ msgstr ""
 msgid "من الريدياس. لا يمكن التراجع عن هذا الإجراء."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:565
-#: app/templates/radius/_speed_rules_panel.html:713
-#: app/templates/radius/_speed_schedules_panel.html:269
-#: app/templates/radius/_speed_schedules_panel.html:317
+#: app/templates/radius/_speed_rules_panel.html:563
+#: app/templates/radius/_speed_rules_panel.html:711
+#: app/templates/radius/_speed_schedules_panel.html:268
+#: app/templates/radius/_speed_schedules_panel.html:313
 msgid "من الساعة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:157
-#: app/templates/radius/bandwidth_schedules.html:317
+#: app/templates/radius/bandwidth_schedules.html:159
+#: app/templates/radius/bandwidth_schedules.html:309
 #, python-format
 msgid "من الساعة %(v)s"
 msgstr ""
@@ -105598,7 +105620,7 @@ msgstr ""
 msgid "من الساعة / إلى الساعة:"
 msgstr ""
 
-#: app/templates/radius/docs_plans_speeds.html:157
+#: app/templates/radius/docs_plans_speeds.html:158
 msgid "من الساعة → إلى الساعة"
 msgstr ""
 
@@ -106891,7 +106913,7 @@ msgstr ""
 msgid "مهمة #%(related_job_id)s"
 msgstr ""
 
-#: app/api/v1/print_templates.py:553 app/radius/services/operations.py:2559
+#: app/api/v1/print_templates.py:553 app/radius/services/operations.py:2569
 msgid "مهمة الطباعة غير موجودة."
 msgstr ""
 
@@ -107033,7 +107055,7 @@ msgstr ""
 msgid "موافقة مبدئية"
 msgstr ""
 
-#: app/radius/services/npc_policy.py:179
+#: app/radius/services/npc_policy.py:205
 msgid "مواقع المراهنات"
 msgstr ""
 
@@ -107079,7 +107101,7 @@ msgid ""
 "الدخول وبلا إنترنت وتتحدّث يوميًّا."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:734
+#: app/templates/radius/network_policy_preview.html:742
 msgid "موانع التنفيذ"
 msgstr ""
 
@@ -107720,7 +107742,7 @@ msgstr ""
 msgid "ناجح"
 msgstr ""
 
-#: app/radius/db/repos/operations_repo.py:1179 app/radius/routes/reports.py:60
+#: app/radius/db/repos/operations_repo.py:1272 app/radius/routes/reports.py:60
 #: app/static/js/setup_wizard_v2.js:176 app/templates/radius/backups.html:8
 #: app/templates/radius/communications_deliveries.html:71
 #: app/templates/radius/docs_login_states.html:247
@@ -108078,10 +108100,10 @@ msgstr ""
 #: app/templates/radius/mt_push_setup.html:161
 #: app/templates/radius/mt_push_setup.html:170
 #: app/templates/radius/mt_push_setup.html:185
-#: app/templates/radius/network_policy_preview.html:1002
-#: app/templates/radius/network_policy_preview.html:1068
-#: app/templates/radius/network_policy_preview.html:1569
-#: app/templates/radius/network_policy_preview.html:1592
+#: app/templates/radius/network_policy_preview.html:1010
+#: app/templates/radius/network_policy_preview.html:1076
+#: app/templates/radius/network_policy_preview.html:1577
+#: app/templates/radius/network_policy_preview.html:1600
 #: app/templates/radius/routers_setup.html:43
 #: app/templates/radius/setup_wizard_v2.html:318
 #: app/templates/radius/setup_wizard_v2.html:485
@@ -108226,8 +108248,8 @@ msgstr ""
 msgid "نسخ محلّي + رفع إلى جوجل درايف من صفحة «النسخ الاحتياطي»."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:781
-#: app/templates/radius/_speed_rules_panel.html:800
+#: app/templates/radius/_speed_rules_panel.html:779
+#: app/templates/radius/_speed_rules_panel.html:798
 msgid "نسخ من جدول محفوظ"
 msgstr ""
 
@@ -108245,7 +108267,7 @@ msgstr ""
 msgid "نسخة"
 msgstr ""
 
-#: app/radius/services/operations.py:2812
+#: app/radius/services/operations.py:2822
 msgid "نسخة أساسية (بيانات العمل)"
 msgstr ""
 
@@ -108325,7 +108347,7 @@ msgstr ""
 msgid "نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub"
 msgstr ""
 
-#: app/radius/services/operations.py:3015 app/templates/radius/backups.html:445
+#: app/radius/services/operations.py:3025 app/templates/radius/backups.html:445
 msgid "نسخة محلية"
 msgstr ""
 
@@ -108345,18 +108367,18 @@ msgstr ""
 msgid "نسخة محلية:"
 msgstr ""
 
-#: app/radius/services/operations.py:3133
+#: app/radius/services/operations.py:3143
 msgid "نسخة مرفوعة من جهاز المستخدم."
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:1044
+#: app/templates/radius/_speed_rules_panel.html:1040
 #: app/templates/radius/users_form.html:1638
 msgid "نسخة من"
 msgstr ""
 
-#: app/api/v1/bandwidth_schedules.py:62
-#: app/radius/routes/bandwidth_schedules.py:100
-#: app/radius/routes/speed_rules_ui.py:252
+#: app/api/v1/bandwidth_schedules.py:65
+#: app/radius/routes/bandwidth_schedules.py:107
+#: app/radius/routes/speed_rules_ui.py:248
 #, python-format
 msgid "نسخة من %(v)s"
 msgstr ""
@@ -108868,7 +108890,7 @@ msgid "نطاق البيانات يجب أن يكون كائن إعدادات ص
 msgstr ""
 
 #: app/templates/radius/network_policy_preview.html:630
-#: app/templates/radius/network_policy_preview.html:1233
+#: app/templates/radius/network_policy_preview.html:1241
 msgid "نطاق التأثير"
 msgstr ""
 
@@ -108954,7 +108976,7 @@ msgstr ""
 msgid "نطاق الطباعة"
 msgstr ""
 
-#: app/templates/radius/_speed_rules_panel.html:673
+#: app/templates/radius/_speed_rules_panel.html:671
 msgid "نطاق العرض"
 msgstr ""
 
@@ -109013,12 +109035,12 @@ msgstr ""
 msgid "نطاق الفحص: كل الحزم"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:230
-#: app/templates/radius/bandwidth_schedules.html:107
+#: app/templates/radius/_speed_schedules_panel.html:229
+#: app/templates/radius/bandwidth_schedules.html:109
 msgid "نطاق القاعدة"
 msgstr ""
 
-#: app/templates/radius/bandwidth_schedules.html:71
+#: app/templates/radius/bandwidth_schedules.html:72
 msgid "نطاق القاعدة: قاعدة المشترك أو باقة الكروت تتقدم على قاعدة العرض."
 msgstr ""
 
@@ -109032,7 +109054,7 @@ msgid ""
 "يدوياً."
 msgstr ""
 
-#: app/radius/services/operations.py:989
+#: app/radius/services/operations.py:1000
 msgid "نطاق الموزّع (scope) يجب أن يكون كائنًا."
 msgstr ""
 
@@ -109047,7 +109069,7 @@ msgid "نطاق زمني يُطبّق على مستوى قاعدة البيان�
 msgstr ""
 
 #: app/templates/radius/network_policy_preview.html:597
-#: app/templates/radius/network_policy_preview.html:1228
+#: app/templates/radius/network_policy_preview.html:1236
 msgid "نطاق ضيّق"
 msgstr ""
 
@@ -111562,7 +111584,7 @@ msgstr ""
 msgid "هذه الصفحة ستبقى مختصرة وتعرض آخر الدفعات فقط بعد إنشائها."
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:73
+#: app/templates/radius/_speed_schedules_panel.html:74
 msgid "هذه الصفحة فيها أداتان مختلفتان"
 msgstr ""
 
@@ -111812,7 +111834,7 @@ msgid ""
 "تشغيلية منفصلة قبل التنفيذ."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1017
+#: app/templates/radius/network_policy_preview.html:1025
 msgid "هذه روابط"
 msgstr ""
 
@@ -111895,7 +111917,7 @@ msgid ""
 "مكان واحد، وتتيح إرسالًا سريعًا."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:938
+#: app/templates/radius/network_policy_preview.html:946
 msgid "هذه هي العناوين التي ستستخدمها للاتصال بالراوتر بعد الضغط على «تطبيق آمن»."
 msgstr ""
 
@@ -112837,7 +112859,7 @@ msgid "واستعادة الوقت المتبقي الذي تم تجميده ع�
 msgstr ""
 
 #: app/templates/radius/network_policy_preview.html:599
-#: app/templates/radius/network_policy_preview.html:1230
+#: app/templates/radius/network_policy_preview.html:1238
 msgid "واسع"
 msgstr ""
 
@@ -113345,7 +113367,7 @@ msgid ""
 " الحد."
 msgstr ""
 
-#: app/radius/services/operations.py:3074
+#: app/radius/services/operations.py:3084
 msgid "وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية."
 msgstr ""
 
@@ -113441,7 +113463,7 @@ msgstr ""
 msgid "وضع التنفيذ غير صالح."
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:876
+#: app/templates/radius/network_policy_preview.html:884
 msgid "وضع التنفيذ:"
 msgstr ""
 
@@ -114167,7 +114189,7 @@ msgstr ""
 msgid "يتطلّب مفتاح الدور"
 msgstr ""
 
-#: app/radius/services/operations.py:3077
+#: app/radius/services/operations.py:3087
 msgid "يتطلّب نجاح الرفع إلى اللوحة أولًا."
 msgstr ""
 
@@ -115267,6 +115289,10 @@ msgstr ""
 msgid "يعمل"
 msgstr ""
 
+#: app/templates/radius/docs_plans_speeds.html:148
+msgid "يعمل الجدول في الأيام المختارة فقط (بتوقيت اللوحة)؛ بلا أيام = كل يوم."
+msgstr ""
+
 #: app/templates/radius/system_update.html:404
 msgid "يعمل النظام الآن على الإصدار"
 msgstr ""
@@ -116086,7 +116112,7 @@ msgstr ""
 msgid "ينهي جلسة المستخدم نهائيًا عند انقطاع الاتصال."
 msgstr ""
 
-#: app/radius/services/npc_policy.py:178
+#: app/radius/services/npc_policy.py:204
 msgid "يوتيوب"
 msgstr ""
 
@@ -116139,8 +116165,8 @@ msgid ""
 "الموجود»."
 msgstr ""
 
-#: app/radius/services/operations.py:1695
-#: app/radius/services/operations.py:1744
+#: app/radius/services/operations.py:1705
+#: app/radius/services/operations.py:1754
 msgid "يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر."
 msgstr ""
 
@@ -116273,6 +116299,11 @@ msgstr ""
 #: app/templates/radius/services_form.html:139
 #: app/templates/radius/services_list.html:237
 msgid "يوم تسليم الجهاز للمشترك."
+msgstr ""
+
+#: app/radius/services/operations.py:931
+#, python-format
+msgid "يوم غير معروف في أيام الجدول: %(v)s"
 msgstr ""
 
 #: app/radius/core/access_schedule.py:88
@@ -117173,8 +117204,8 @@ msgstr ""
 msgid "— اختر الواجهة —"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:242
-#: app/templates/radius/bandwidth_schedules.html:119
+#: app/templates/radius/_speed_schedules_panel.html:241
+#: app/templates/radius/bandwidth_schedules.html:121
 msgid "— اختر باقة —"
 msgstr ""
 
@@ -117182,8 +117213,8 @@ msgstr ""
 msgid "— اختر حزمة —"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:258
-#: app/templates/radius/bandwidth_schedules.html:141
+#: app/templates/radius/_speed_schedules_panel.html:257
+#: app/templates/radius/bandwidth_schedules.html:143
 msgid "— اختر دفعة كروت —"
 msgstr ""
 
@@ -117203,8 +117234,8 @@ msgstr ""
 msgid "— اختر عقدة —"
 msgstr ""
 
-#: app/templates/radius/_speed_schedules_panel.html:250
-#: app/templates/radius/bandwidth_schedules.html:130
+#: app/templates/radius/_speed_schedules_panel.html:249
+#: app/templates/radius/bandwidth_schedules.html:132
 #: app/templates/radius/services_form.html:71
 #: app/templates/radius/services_list.html:184
 #: app/templates/radius/sgrp_view.html:75
@@ -117413,8 +117444,7 @@ msgstr ""
 #: app/templates/radius/finance_billing.html:277
 #: app/templates/radius/invoices_form.html:63
 #: app/templates/radius/pools_form.html:81
-#: app/templates/radius/subscriber_groups_form.html:95
-#: app/templates/radius/subscriber_groups_form.html:111
+#: app/templates/radius/subscriber_groups_form.html:98
 #: app/templates/radius/users_form.html:1015
 #: app/templates/radius/users_form.html:1029
 #: app/templates/radius/users_form.html:1043
@@ -118240,7 +118270,7 @@ msgstr ""
 msgid "⚠️ هام:"
 msgstr ""
 
-#: app/templates/radius/network_policy_preview.html:1079
+#: app/templates/radius/network_policy_preview.html:1087
 msgid "⚠️ هذه الروابط"
 msgstr ""
 

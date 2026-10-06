@@ -622,7 +622,6 @@ def update_bandwidth_schedule(tenant_id: int, schedule_id: int, data: dict) -> d
             UPDATE bandwidth_schedules
             SET name = ?, starts_at_time = ?, ends_at_time = ?, days_csv = ?,
                 speed_down_kbps = ?, speed_up_kbps = ?,
-                cir_down_kbps = ?, cir_up_kbps = ?,
                 restore_mode = ?, priority = ?, enabled = ?,
                 notes = ?, updated_at = ?
             WHERE tenant_id = ? AND id = ?
@@ -631,7 +630,7 @@ def update_bandwidth_schedule(tenant_id: int, schedule_id: int, data: dict) -> d
                 data["name"], data["starts_at_time"], data["ends_at_time"],
                 data.get("days_csv") or "",
                 data.get("speed_down_kbps") or 0, data.get("speed_up_kbps") or 0,
-                data.get("cir_down_kbps") or 0, data.get("cir_up_kbps") or 0,
+                # fields-sched: schedule CIR removed — cir_*_kbps not rewritten.
                 data.get("restore_mode") or "profile_default",
                 int(data.get("priority") or 100),
                 1 if data.get("enabled", True) else 0,
@@ -712,11 +711,101 @@ def _in_time_window(now_hm: str, start_hm: str, end_hm: str) -> bool:
     return current >= start or current < end
 
 
+# ── Schedule DAYS (days_csv) — fields-sched 2026-10-06 ──────────────────────
+# A schedule applies ONLY on its selected days, judged by the panel's LOCAL day
+# (Asia/Gaza, DST-aware via system_config.tenant_tzinfo). Empty = every day
+# (backward compatible with every schedule saved before days were wired).
+#
+# Midnight-crossing windows (e.g. 22:00→02:00) BELONG TO THE DAY THEY START:
+# a Friday-only 22:00→02:00 schedule is active Fri 22:00 … Sat 01:59 and NOT
+# Fri 00:00–01:59 (that tail belongs to Thursday's window).
+WEEKDAY_CODES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")  # datetime.weekday()
+DAY_ORDER = ("sat", "sun", "mon", "tue", "wed", "thu", "fri")       # canonical CSV order
+_DAY_ALIASES = {
+    "saturday": "sat", "sunday": "sun", "monday": "mon", "tuesday": "tue",
+    "wednesday": "wed", "thursday": "thu", "friday": "fri",
+    "السبت": "sat", "الأحد": "sun", "الاحد": "sun", "الإثنين": "mon",
+    "الاثنين": "mon", "الثلاثاء": "tue", "الأربعاء": "wed", "الاربعاء": "wed",
+    "الخميس": "thu", "الجمعة": "fri",
+}
+
+
+def _day_code(token: Any) -> str | None:
+    text = str(token or "").strip().lower()
+    if text in DAY_ORDER:
+        return text
+    return _DAY_ALIASES.get(text)
+
+
+def parse_days_csv(value: Any) -> set[str]:
+    """Day codes in a stored ``days_csv`` (list or CSV). Unknown tokens are
+    ignored; an empty result means «every day»."""
+    if isinstance(value, (list, tuple, set)):
+        tokens = list(value)
+    else:
+        tokens = str(value or "").replace("،", ",").split(",")
+    return {c for c in (_day_code(t) for t in tokens) if c}
+
+
+def normalize_days_csv(value: Any) -> tuple[str, list[str]]:
+    """``(canonical_csv, unknown_tokens)`` — canonical order sat..fri."""
+    if isinstance(value, (list, tuple, set)):
+        tokens = list(value)
+    else:
+        tokens = str(value or "").replace("،", ",").split(",")
+    unknown = [str(t).strip() for t in tokens
+               if str(t or "").strip() and not _day_code(t)]
+    days = parse_days_csv(tokens)
+    return ",".join(d for d in DAY_ORDER if d in days), unknown
+
+
+def local_schedule_moment(tenant_id: int, at: Any = None) -> datetime:
+    """The tenant-LOCAL wall-clock moment (aware) used to evaluate schedules.
+    ``at`` is a UTC instant (naive = UTC); ``None`` = now."""
+    from datetime import timezone
+    from ...core.system_config import _coerce_dt, tenant_tzinfo
+    if at is None:
+        dt = datetime.now(timezone.utc)
+    else:
+        dt = at if isinstance(at, datetime) else _coerce_dt(at)
+        if dt is None:
+            dt = datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(tenant_tzinfo(tenant_id))
+
+
+def schedule_active_at(schedule: dict, local_dt: datetime) -> bool:
+    """Is ``schedule``'s window (time AND days) open at the LOCAL ``local_dt``?
+
+    Single source of truth for authorize (rate selection), the live worker
+    and every «effective rate» path. Does not look at ``enabled``."""
+    start_hm = schedule.get("starts_at_time") or ""
+    end_hm = schedule.get("ends_at_time") or ""
+    if not start_hm or not end_hm:
+        return False
+    now_hm = local_dt.strftime("%H:%M")
+    if not _in_time_window(now_hm, start_hm, end_hm):
+        return False
+    days = parse_days_csv(schedule.get("days_csv"))
+    if not days:
+        return True
+    from datetime import timedelta
+    start = _time_minutes(start_hm)
+    end = _time_minutes(end_hm)
+    current = _time_minutes(now_hm)
+    owner_day = local_dt
+    if start > end and current < end:
+        # the after-midnight tail of a window that STARTED yesterday
+        owner_day = local_dt - timedelta(days=1)
+    return WEEKDAY_CODES[owner_day.weekday()] in days
+
+
 def _active_rule_for_target(
     tenant_id: int,
     *,
     target_type: str,
-    now_hm: str,
+    now_local: datetime,
     plan_id: int | None = None,
     subscriber_username: str | None = None,
     card_batch_id: int | None = None,
@@ -753,7 +842,11 @@ def _active_rule_for_target(
     sql += " ORDER BY priority ASC, id DESC"
     for row in db().execute(sql, vals).fetchall():
         item = _hydrate_json_fields(_row(row), "metadata_json")
-        if _in_time_window(now_hm, item["starts_at_time"], item["ends_at_time"]):
+        try:
+            active = schedule_active_at(item, now_local)
+        except (TypeError, ValueError):  # malformed stored time — skip it
+            active = False
+        if active:
             return item
     return None
 
@@ -772,15 +865,15 @@ def resolve_effective_bandwidth_schedule(
     default plan and never matched a member at auth)."""
     # Evaluate the window in the tenant's configured LOCAL timezone (DST-safe),
     # not UTC — so "night speed at 00:00" means the owner's local midnight.
-    # `at` (when provided) is a UTC instant; local_hhmm converts it.
-    from ...core.system_config import local_hhmm
-    now_hm = local_hhmm(tenant_id, at)
+    # `at` (when provided) is a UTC instant. The schedule's DAYS are judged
+    # on the same local moment (fields-sched: days_csv is now effective).
+    now_local = local_schedule_moment(tenant_id, at)
     if subscriber_username:
         rule = _active_rule_for_target(
             tenant_id,
             target_type="subscriber",
             subscriber_username=subscriber_username,
-            now_hm=now_hm,
+            now_local=now_local,
         )
         if rule:
             return rule
@@ -788,7 +881,7 @@ def resolve_effective_bandwidth_schedule(
             tenant_id,
             target_type="subscriber_group",
             subscriber_username=subscriber_username,
-            now_hm=now_hm,
+            now_local=now_local,
         )
         if rule:
             return rule
@@ -797,7 +890,7 @@ def resolve_effective_bandwidth_schedule(
             tenant_id,
             target_type="card_batch",
             card_batch_id=card_batch_id,
-            now_hm=now_hm,
+            now_local=now_local,
         )
         if rule:
             return rule
@@ -806,7 +899,7 @@ def resolve_effective_bandwidth_schedule(
             tenant_id,
             target_type="plan",
             plan_id=plan_id,
-            now_hm=now_hm,
+            now_local=now_local,
         )
     return None
 

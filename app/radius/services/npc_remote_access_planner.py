@@ -35,7 +35,9 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
-from .npc_policy import comment_prefix, cleanup_regex
+from .npc_policy import (
+    DISABLED_POLICY_WARNING_AR, cleanup_regex, comment_prefix, policy_enabled,
+)
 from .npc_remote_access import (
     assess_policy, list_services, selected_ports,
 )
@@ -88,6 +90,19 @@ def plan(
         )
     pid = int(policy["id"])
     cprefix = comment_prefix(SERVICE, pid)
+
+    if not policy_enabled(policy):
+        # fields-sched: a disabled policy has ZERO effect — cleanup only.
+        cleanup_ops, rollback_ops = _cleanup_pair(pid)
+        return ScriptPlan(
+            service=SERVICE, policy_id=pid,
+            comment_prefix=cprefix,
+            cleanup_ops=cleanup_ops,
+            rollback_ops=rollback_ops,
+            warnings=(DISABLED_POLICY_WARNING_AR,),
+            notes=("policy disabled — managed objects are removed, "
+                   "nothing is added",),
+        )
 
     # Re-run the safety assessment from the foundation module
     # so the planner's blockers stay in lockstep with the

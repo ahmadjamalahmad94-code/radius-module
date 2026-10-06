@@ -258,16 +258,13 @@
             </td>
             <td>
               <div class="sg-pills">
-                {% if g.bandwidth_schedule_id %}
-                  {{ hub.pill(g.bandwidth_schedule_name or _('جدولة سرعة'), variant="amber") }}
-                {% endif %}
                 {% if g.default_plan_id %}
                   {{ hub.pill(g.default_plan_name or _('باقة افتراضية'), variant="brand") }}
                 {% endif %}
                 {% if g.default_auto_renewal %}
                   {{ hub.pill(_('تجديد تلقائي'), variant="green") }}
                 {% endif %}
-                {% if not g.bandwidth_schedule_id and not g.default_plan_id and not g.default_auto_renewal %}
+                {% if not g.default_plan_id and not g.default_auto_renewal %}
                   <span class="hub-text-mute">—</span>
                 {% endif %}
               </div>

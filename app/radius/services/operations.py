@@ -921,6 +921,17 @@ def _validate_time(value: str, field: str) -> str:
     return raw
 
 
+def _validate_days(value) -> str:
+    """Schedule days → canonical CSV (sat..fri). Empty = every day.
+    fields-sched: days are EFFECTIVE now, so a typo must not silently turn a
+    «Friday only» rule into «every day» — unknown day names are rejected."""
+    csv, unknown = operations_repo.normalize_days_csv(value)
+    if unknown:
+        raise RadiusValidationError(
+            _tr("يوم غير معروف في أيام الجدول: %(v)s", v="، ".join(unknown[:3])))
+    return csv
+
+
 def _rate_limit_from_schedule(schedule: dict | None) -> str:
     schedule = schedule or {}
     up = int(schedule.get("speed_up_kbps") or 0)
@@ -1384,11 +1395,11 @@ class OperationsService:
             "name": name,
             "starts_at_time": _validate_time(data.get("starts_at_time"), "starts_at_time"),
             "ends_at_time": _validate_time(data.get("ends_at_time"), "ends_at_time"),
-            "days_csv": (data.get("days_csv") or "").strip(),
+            "days_csv": _validate_days(data.get("days_csv")),
             "speed_down_kbps": _int_field(data, "speed_down_kbps"),
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
-            "cir_down_kbps": _int_field(data, "cir_down_kbps"),
-            "cir_up_kbps": _int_field(data, "cir_up_kbps"),
+            # fields-sched: schedule CIR removed (owner) — never read at
+            # runtime; cir_*_kbps keys are accepted and ignored.
             "restore_mode": self._restore_mode(data),
             "enabled": bool(data.get("enabled", True)),
             "notes": (data.get("notes") or "")[:500],
@@ -1451,12 +1462,11 @@ class OperationsService:
             # parity-c: a form WITHOUT a days field (the standalone
             # /bandwidth-schedules edit) must keep the stored days, not
             # wipe the days chosen in the embedded speed-rule panels.
-            "days_csv": ((data.get("days_csv") if "days_csv" in data
-                          else current.get("days_csv")) or "").strip(),
+            "days_csv": (_validate_days(data.get("days_csv")) if "days_csv" in data
+                         else (current.get("days_csv") or "").strip()),
             "speed_down_kbps": _int_field(data, "speed_down_kbps"),
             "speed_up_kbps": _int_field(data, "speed_up_kbps"),
-            "cir_down_kbps": _int_field(data, "cir_down_kbps"),
-            "cir_up_kbps": _int_field(data, "cir_up_kbps"),
+            # fields-sched: schedule CIR removed — not written (old values kept).
             "restore_mode": self._restore_mode(data),
             "priority": _int_field(data, "priority", minimum=1, default=100),
             "enabled": bool(data.get("enabled", True)),

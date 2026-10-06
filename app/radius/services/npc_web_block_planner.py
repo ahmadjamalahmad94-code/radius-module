@@ -34,7 +34,8 @@ from app.i18n_text import N_
 from typing import Iterable, Optional
 
 from .npc_policy import (
-    MAX_TARGETS_PER_POLICY, cleanup_regex, comment_prefix,
+    DISABLED_POLICY_WARNING_AR, MAX_TARGETS_PER_POLICY, cleanup_regex,
+    comment_prefix, policy_enabled,
 )
 from .npc_script_renderer import PlanCommand, ScriptPlan
 
@@ -82,6 +83,18 @@ def plan(
     al_name = address_list_name(pid)
 
     cleanup_ops, rollback_ops = _cleanup_pair(pid)
+
+    if not policy_enabled(policy):
+        # fields-sched: a disabled policy has ZERO effect — cleanup only.
+        return ScriptPlan(
+            service=SERVICE, policy_id=pid,
+            comment_prefix=cprefix,
+            cleanup_ops=cleanup_ops,
+            rollback_ops=rollback_ops,
+            warnings=(DISABLED_POLICY_WARNING_AR,),
+            notes=("policy disabled — managed objects are removed, "
+                   "nothing is added",),
+        )
 
     emitted_targets: list[dict] = []
     skipped_notes: list[str] = []

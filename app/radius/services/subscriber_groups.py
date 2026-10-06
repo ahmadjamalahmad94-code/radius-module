@@ -39,7 +39,7 @@ class SubscriberGroupsService:
                 _tr('اسم المجموعة «%(name)s» مستخدم مسبقًا في هذا الـ tenant.', name=name))
         gid = subscriber_groups_repo.create(
             tenant_id=tenant_id, name=name, description=description,
-            bandwidth_schedule_id=bandwidth_schedule_id,
+            # fields-sched: bandwidth_schedule_id removed — accepted, never written.
             default_plan_id=default_plan_id,
             default_auto_renewal=default_auto_renewal,
             working_days=working_days,
@@ -64,6 +64,7 @@ class SubscriberGroupsService:
                 raise RadiusValidationError(
                     _tr('اسم المجموعة «%(new_name)s» مستخدم مسبقًا.', new_name=new_name))
             changes["name"] = new_name
+        changes.pop("bandwidth_schedule_id", None)  # fields-sched: removed field
         updated = subscriber_groups_repo.update(tenant_id, gid, **changes)
         self._audit.record(
             actor=actor, action="subscriber_group.update",

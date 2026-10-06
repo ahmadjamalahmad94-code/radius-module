@@ -89,22 +89,9 @@
   {# ── 2. Services ─────────────────────────────────────── #}
   {% call hub.section(_('الخدمات المُطبَّقة على أعضاء المجموعة'), icon="layer-group") %}
     <div class="hub-form-row">
-      <div class="sgf-field">
-        <label>{{ _('جدولة السرعة') }}</label>
-        <select class="hub-input" name="bandwidth_schedule_id">
-          <option value="">{{ _('— بدون —') }}</option>
-          {% for s in schedules %}
-            {# قيمة target_type خام (إنجليزية) — تبقى في title فقط ولا تُعرض نصًّا #}
-            <option value="{{ s.id }}"
-              {% if group and group.bandwidth_schedule_id == s.id %}selected{% endif %}
-              {% if s.target_type %}title="{{ s.target_type }}"{% endif %}>
-              {{ s.name or s.id }}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="help">{{ _('جدول السرعات يطبَّق على كل عضو في المجموعة.') }}</div>
-      </div>
-
+      {# fields-sched: the group's own «جدولة السرعة» select (bandwidth_schedule_id)
+         was removed — it was never read. Group speed schedules live in the
+         «قواعد السرعة» panel below / the schedules page (target = group). #}
       <div class="sgf-field">
         <label>{{ _('الباقة الافتراضية') }}</label>
         <select class="hub-input" name="default_plan_id">

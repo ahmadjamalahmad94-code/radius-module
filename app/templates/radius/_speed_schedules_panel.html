@@ -11,6 +11,7 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
+{% from "_partials/schedule_days_picker.html" import schedule_days_picker, schedule_days_label %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
 
@@ -155,15 +156,13 @@
             <div class="hub-text-mute small">{{ _('أولوية') }} {{ item.get('priority') or 100 }}</div>
           </td>
           <td class="small">{{ plan_names.get(item.get('plan_id'), '—') }}</td>
-          <td class="mono small" style="white-space:nowrap" dir="ltr">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
+          <td class="mono small" style="white-space:nowrap" dir="ltr">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}
+            <div class="hub-text-mute small" dir="rtl">{{ schedule_days_label(item.get('days_csv')) }}</div></td>
           <td class="mono small" style="white-space:nowrap" dir="ltr">
             <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
             {{ item.get('speed_down_kbps') or 0 }} /
             <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
             {{ item.get('speed_up_kbps') or 0 }} Kbps
-            {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
-              <div class="hub-text-mute small">CIR <span dir="ltr">{{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }} Kbps</span></div>
-            {% endif %}
           </td>
           <td>
             {% if item.get('enabled') %}{{ hub.pill(_('مفعَّل'), variant="green") }}{% else %}{{ hub.pill(_('معطَّل'), variant="grey") }}{% endif %}
@@ -269,13 +268,10 @@
         <label class="ssp-fld">{{ _('من الساعة') }}{{ time_picker_circular(name="starts_at_time", value="") }}</label>
         <label class="ssp-fld">{{ _('إلى الساعة') }}{{ time_picker_circular(name="ends_at_time", value="") }}</label>
       </div>
+      <div class="ssp-fld">{{ _('الأيام') }}{{ schedule_days_picker("") }}</div>
       <div class="ssp-row">
         <label class="ssp-fld">{{ _('سرعة التنزيل') }}{{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
         <label class="ssp-fld">{{ _('سرعة الرفع') }}{{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
-      </div>
-      <div class="ssp-row">
-        <label class="ssp-fld">{{ _('CIR تنزيل') }}{{ unit_input_picker(name="cir_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
-        <label class="ssp-fld">{{ _('CIR رفع') }}{{ unit_input_picker(name="cir_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}</label>
       </div>
 
       <label class="ssp-fld">
@@ -317,13 +313,10 @@
         <label class="ssp-fld">{{ _('من الساعة') }}{{ time_picker_circular(name="starts_at_time", value=item.get('starts_at_time') or "") }}</label>
         <label class="ssp-fld">{{ _('إلى الساعة') }}{{ time_picker_circular(name="ends_at_time", value=item.get('ends_at_time') or "") }}</label>
       </div>
+      <div class="ssp-fld">{{ _('الأيام') }}{{ schedule_days_picker(item.get('days_csv') or "") }}</div>
       <div class="ssp-row">
         <label class="ssp-fld">{{ _('سرعة التنزيل') }}{{ unit_input_picker(name="speed_down_kbps", value=item.get('speed_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
         <label class="ssp-fld">{{ _('سرعة الرفع') }}{{ unit_input_picker(name="speed_up_kbps", value=item.get('speed_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
-      </div>
-      <div class="ssp-row">
-        <label class="ssp-fld">{{ _('CIR تنزيل') }}{{ unit_input_picker(name="cir_down_kbps", value=item.get('cir_down_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
-        <label class="ssp-fld">{{ _('CIR رفع') }}{{ unit_input_picker(name="cir_up_kbps", value=item.get('cir_up_kbps') or 0, kind="speed", units=["kbps","Mbps"]) }}</label>
       </div>
       <label class="ssp-fld">
         {{ _('طريقة الرجوع بعد الوقت') }}

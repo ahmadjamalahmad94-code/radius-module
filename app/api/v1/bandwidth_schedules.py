@@ -27,9 +27,12 @@ def _svc():
 _COPY_FIELDS = (
     "target_type", "plan_id", "subscriber_username", "card_batch_id",
     "subscriber_group_id", "priority", "starts_at_time", "ends_at_time",
-    "days_csv", "speed_down_kbps", "speed_up_kbps", "cir_down_kbps",
-    "cir_up_kbps", "restore_mode", "enabled", "notes",
+    "days_csv", "speed_down_kbps", "speed_up_kbps",
+    "restore_mode", "enabled", "notes",
 )
+# fields-sched: schedule CIR (cir_down_kbps / cir_up_kbps) was removed by the
+# owner — never read at runtime. Old app builds may still send the keys; they
+# are accepted and silently ignored (no 422).
 
 
 def _normalise_days(body: dict) -> dict:
@@ -151,7 +154,7 @@ def bandwidth_schedules_create():
 # الحقول القابلة للتعديل (الهدف ثابت بعد الإنشاء — كصفحة الويب).
 _EDIT_FIELDS = (
     "name", "starts_at_time", "ends_at_time", "days_csv", "speed_down_kbps",
-    "speed_up_kbps", "cir_down_kbps", "cir_up_kbps", "restore_mode",
+    "speed_up_kbps", "restore_mode",
     "priority", "enabled", "notes",
 )
 
