@@ -176,8 +176,7 @@
       <label class="fld">
         {{ _('طريقة الرجوع بعد الوقت') }}
         <select class="hub-select" name="restore_mode">
-          <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
-          <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+          <option value="profile_default">{{ _('رجوع مباشر بدون فصل') }}</option>
           <option value="disconnect">{{ _('فصل الجلسة') }}</option>
         </select>
       </label>
@@ -326,8 +325,7 @@
           <label class="fld">
             {{ _('طريقة الرجوع بعد الوقت') }}
             <select class="hub-select" name="restore_mode">
-              <option value="profile_default" {{ 'selected' if (item.get('restore_mode') or 'profile_default') == 'profile_default' else '' }}>{{ _('الرجوع للسرعة الأساسية') }}</option>
-              <option value="keep_current" {{ 'selected' if item.get('restore_mode') == 'keep_current' else '' }}>{{ _('إبقاء آخر سرعة') }}</option>
+              <option value="profile_default" {{ 'selected' if item.get('restore_mode') != 'disconnect' else '' }}>{{ _('رجوع مباشر بدون فصل') }}</option>
               <option value="disconnect" {{ 'selected' if item.get('restore_mode') == 'disconnect' else '' }}>{{ _('فصل الجلسة') }}</option>
             </select>
           </label>

@@ -1327,18 +1327,29 @@ class OperationsService:
             enforce_credit_limit=True,
         )
 
-    # parity-c: the web forms offer exactly these three (bandwidth_schedules
-    # / _speed_rules_panel / _speed_schedules_panel); the app offered
-    # previous_value/manual that no web form could show back.
-    _RESTORE_MODES = ("profile_default", "keep_current", "disconnect")
+    # Owner follow-up 2026-10-06: «طريقة الرجوع» has exactly TWO options, both
+    # enforced by the schedule worker at window end (bandwidth_apply):
+    #   profile_default  «رجوع مباشر بدون فصل» — live CoA of the effective rate
+    #   disconnect       «فصل الجلسة» — kick, the re-auth gets the normal speed
+    # Old values (keep_current / previous_value / manual) were never enforced:
+    # migration 199 mapped them to profile_default, and old app builds that
+    # still send them get the same mapping. Anything else is a 422.
+    _RESTORE_MODES = ("profile_default", "disconnect")
+    _LEGACY_RESTORE_MODES = ("keep_current", "previous_value", "manual")
 
     @classmethod
     def _restore_mode(cls, data: dict) -> str:
-        mode = str(data.get("restore_mode") or "profile_default").strip().lower()
+        from .bandwidth_apply import normalize_restore_mode
+        raw = data.get("restore_mode")
+        if raw is not None and not isinstance(raw, str):
+            raise RadiusValidationError(_tr("طريقة الرجوع يجب أن تكون نصًّا."))
+        mode = str(raw or "profile_default").strip().lower()
+        if mode in cls._LEGACY_RESTORE_MODES:
+            return normalize_restore_mode(mode)
         if mode not in cls._RESTORE_MODES:
             raise RadiusValidationError(
-                _tr("طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، "
-                "إبقاء آخر سرعة، فصل الجلسة."))
+                _tr("طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» "
+                "(profile_default) أو «فصل الجلسة» (disconnect)."))
         return mode
 
     def create_bandwidth_schedule(self, *, tenant_id: int, actor: str,

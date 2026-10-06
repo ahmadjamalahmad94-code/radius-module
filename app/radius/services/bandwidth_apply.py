@@ -54,6 +54,50 @@ def _reauth_fallback(tenant_id: int, username: str):
         return None
 
 
+# «طريقة الرجوع» لجدول السرعة — خياران فقط (قرار المالك، متابعة 2026-10-06):
+#   profile_default  «رجوع مباشر بدون فصل»: عند نهاية النافذة تُدفع السرعة
+#                    الفعّالة للجلسة الحيّة بـCoA — بلا فصل (ولا فصل احتياطيّ).
+#   disconnect       «فصل الجلسة»: تُفصل الجلسة فتعود بالمصادقة على سرعتها العاديّة.
+# أيّ قيمةٍ أخرى مخزّنة (keep_current/previous_value/manual/فارغ) = رجوع مباشر.
+RESTORE_LIVE = "profile_default"
+RESTORE_DISCONNECT = "disconnect"
+
+
+def normalize_restore_mode(value) -> str:
+    mode = str(value or "").strip().lower()
+    return RESTORE_DISCONNECT if mode == RESTORE_DISCONNECT else RESTORE_LIVE
+
+
+def disconnect_users(tenant_id: int, usernames, *, at=None,
+                     dry_run: bool = False) -> dict:
+    """«فصل الجلسة»: disconnect each user's live session(s) so it re-auths at
+    its normal (now effective) speed. Same result shape as
+    :func:`apply_users_effective`; ``applied`` = a confirmed disconnect.
+    Users with no live session are simply not applied. Never raises."""
+    results = []
+    applied = 0
+    for username in usernames:
+        rate = bandwidth_rate.effective_rate_limit(tenant_id, username, at=at) or ""
+        if dry_run:
+            results.append({"username": username, "ok": False, "rate": rate,
+                            "reason": "dry_run"})
+            continue
+        res = _reauth_fallback(tenant_id, username)
+        ok = bool(getattr(res, "ok", False))
+        if ok:
+            applied += 1
+        results.append({"username": username, "ok": ok, "rate": rate,
+                        "method": "disconnect" if ok else "",
+                        "code": str(getattr(res, "code_name", "") or "")})
+    return {
+        "targets": len(results),
+        "applied": applied,
+        "skipped": len(results) - applied,
+        "dry_run": dry_run,
+        "results": results,
+    }
+
+
 def fallback_disconnect_enabled() -> bool:
     """Whether a failed rate-CoA falls back to a disconnect→re-auth so the new
     speed still takes effect on the live session. Default ON (owner: «لازم
@@ -339,7 +383,17 @@ def apply_schedule_users_live(tenant_id: int, schedule: dict, *, at=None,
 
     Called by the auto-schedule worker on a window enter (``phase='engage'``) or
     exit (``phase='release'``) transition. On release the effective rate naturally
-    falls back (no active schedule now) to the subscriber/plan base."""
+    falls back (no active schedule now) to the subscriber/plan base, and the
+    schedule's «طريقة الرجوع» (``restore_mode``) decides HOW it gets back:
+
+      * ``profile_default`` «رجوع مباشر بدون فصل» — the effective rate is pushed
+        to the live session by CoA; never a disconnect (no reauth fallback).
+      * ``disconnect`` «فصل الجلسة» — the live session is disconnected (no rate
+        CoA); the re-auth gets the normal speed from policy_engine.
+
+    «طريقة الرجوع» is about the RETURN only: the window START (engage) always
+    pushes the schedule rate live (CoA, with the reauth fallback when the CoA
+    is not ACK'd) whatever the restore mode is."""
     from ..db.repos import operations_repo
 
     enabled = bandwidth_rate.live_apply_enabled()
@@ -349,10 +403,18 @@ def apply_schedule_users_live(tenant_id: int, schedule: dict, *, at=None,
     except Exception:  # noqa: BLE001
         _LOG.exception("scope resolution failed for schedule %s", schedule.get("id"))
         usernames = []
-    stats = apply_users_effective(tenant_id, usernames, at=at, dry_run=not enabled,
-                                  fallback_disconnect=True)
+    restore_mode = normalize_restore_mode(schedule.get("restore_mode"))
+    if phase == "release" and restore_mode == RESTORE_DISCONNECT:
+        stats = disconnect_users(tenant_id, usernames, at=at, dry_run=not enabled)
+    elif phase == "release":
+        stats = apply_users_effective(tenant_id, usernames, at=at, dry_run=not enabled,
+                                      fallback_disconnect=False)
+    else:
+        stats = apply_users_effective(tenant_id, usernames, at=at, dry_run=not enabled,
+                                      fallback_disconnect=True)
     stats["live_enabled"] = enabled
     stats["phase"] = phase
+    stats["restore_mode"] = restore_mode
     # Per-online-user audit → all three logs (MikroTik-actions feed + manager
     # audit + subscriber timeline). Scoped to users with a LIVE session (the CoA
     # target); offline users pick up the new rate at next auth, which is not a
@@ -367,7 +429,8 @@ def apply_schedule_users_live(tenant_id: int, schedule: dict, *, at=None,
             status=("applied" if stats["applied"] else
                     ("dry_run" if not enabled else "no_active_sessions")),
             message=f"auto {phase}: applied {stats['applied']}/{stats['targets']} "
-                    f"(live={enabled})",
+                    f"(live={enabled}"
+                    + (f", restore={restore_mode})" if phase == "release" else ")"),
         )
     except Exception:  # noqa: BLE001
         _LOG.debug("schedule log skipped", exc_info=True)
@@ -406,9 +469,11 @@ def _audit_schedule_speed_changes(tenant_id: int, schedule: dict, results: list,
                 tenant_id, username, at=prev_at) or ""
             if old_rate == new_rate:
                 continue                          # no real change this transition
-            # Honest method: a direct rate-CoA, or a reauth-disconnect fallback.
+            # Honest method: a direct rate-CoA, a reauth-disconnect fallback, or
+            # the schedule's «فصل الجلسة» return.
             _method = str(res.get("method") or "")
-            _note = note + (_tr(" (عبر إعادة اتصال)") if _method == "reauth" else "")
+            _note = note + (_tr(" (عبر إعادة اتصال)") if _method == "reauth" else
+                            _tr(" (بفصل الجلسة)") if _method == "disconnect" else "")
             record_speed_change(
                 tenant_id=int(tenant_id), actor="system:scheduler",
                 username=username, action=action,
@@ -421,4 +486,5 @@ def _audit_schedule_speed_changes(tenant_id: int, schedule: dict, results: list,
                        res.get("username"), exc_info=True)
 
 
-__all__ = ["apply_profile_live", "apply_schedule_users_live", "apply_users_effective"]
+__all__ = ["apply_profile_live", "apply_schedule_users_live", "apply_users_effective",
+           "disconnect_users", "normalize_restore_mode"]

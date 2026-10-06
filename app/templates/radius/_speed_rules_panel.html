@@ -582,8 +582,7 @@
           <div class="sr2-field">
             <label>{{ _('بعد الانتهاء') }}</label>
             <select name="sr_edit_restore_mode_{{ rule.id }}">
-              <option value="profile_default" {% if rule.restore_mode == 'profile_default' %}selected{% endif %}>{{ _('الرجوع للسرعة الأساسية') }}</option>
-              <option value="keep_current"    {% if rule.restore_mode == 'keep_current'    %}selected{% endif %}>{{ _('إبقاء آخر سرعة') }}</option>
+              <option value="profile_default" {% if rule.restore_mode != 'disconnect' %}selected{% endif %}>{{ _('رجوع مباشر بدون فصل') }}</option>
               <option value="disconnect"      {% if rule.restore_mode == 'disconnect'      %}selected{% endif %}>{{ _('فصل الجلسة') }}</option>
             </select>
           </div>
@@ -738,8 +737,7 @@
             <div class="sr2-field" data-scope-only="subscriber">
               <label>{{ _('بعد الانتهاء') }}</label>
               <select name="sr_restore_mode">
-                <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
-                <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+                <option value="profile_default">{{ _('رجوع مباشر بدون فصل') }}</option>
                 <option value="disconnect">{{ _('فصل الجلسة') }}</option>
               </select>
             </div>
