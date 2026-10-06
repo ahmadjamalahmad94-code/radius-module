@@ -267,8 +267,18 @@ Panel environment (container / service env):
 | Variable | Default | Meaning |
 |---|---|---|
 | `HOBERADIUS_OPS_MODEL_URL` | `http://127.0.0.1:8095` | llama-server base URL (env wins over the tenant-1 setting `ops_assistant.model_url`; http/https only) |
-| `HOBERADIUS_OPS_MODEL_TIMEOUT` | `60` | seconds per model call (1–600); one admin message may make up to 4 calls |
+| `HOBERADIUS_OPS_MODEL_TIMEOUT` | `45` | read timeout per model call (1–600); one admin message may make up to 4 calls, all inside one 55 s budget |
+| `HOBERADIUS_OPS_MODEL_KEY` | — | central model gateway key (`hrops_…`), sent as `Authorization: Bearer`; env/secret only, never in the DB, never logged |
+| `HOBERADIUS_OPS_MODEL_CONCURRENCY` | `2` | max simultaneous model calls per panel process (more → «unavailable» at once) |
+| `HOBERADIUS_OPS_MODEL_CA` / `_CLIENT_CERT` / `_CLIENT_KEY` | — | https / mTLS mode of the central server only |
 | `HOBERADIUS_OPS_PROMPT` | `v3` | `v1` = round-1/2 adapter (SPEC_DATA_v1 prompt + v2 policy items); anything else = ops-v2 (SPEC_DATA_v3) |
+
+Failure handling (central model server, hoberadius-ai-support `deploy/central_model/DESIGN.md` §7):
+connect timeout 3 s; after a failure (unreachable, timeout, 5xx, 401/403, garbage reply) a
+per-process circuit breaker answers «المساعد غير متاح مؤقتًا، حاول بعد قليل.» for 30 s without
+calling; 429 / all slots busy / budget spent answer the same without opening the breaker; no
+automatic retry. The request body carries only the gateway's allow-listed keys and each message
+only `role` (system/user/assistant/tool) + `content`. Panel pages never call the model.
 
 When the panel runs in Docker, `127.0.0.1` is the container itself: put the URL on an address
 the container can reach (`network_mode: host`, or `host.docker.internal` with the

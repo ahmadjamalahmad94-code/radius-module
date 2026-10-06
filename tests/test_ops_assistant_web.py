@@ -36,6 +36,7 @@ class FakeModel:
     def __init__(self):
         self.requests: list[dict] = []
         self.raw: list[str] = []
+        self.headers: list[dict] = []
         self.script: list = []
         outer = self
 
@@ -47,6 +48,7 @@ class FakeModel:
                 n = int(self.headers.get("Content-Length") or 0)
                 raw = self.rfile.read(n).decode("utf-8")
                 outer.raw.append(raw)
+                outer.headers.append(dict(self.headers.items()))
                 body = json.loads(raw)
                 outer.requests.append(body)
                 item = outer.script.pop(0) if outer.script else '{"oops": 1}'
@@ -66,6 +68,7 @@ class FakeModel:
     def reset(self, *script):
         self.requests.clear()
         self.raw.clear()
+        self.headers.clear()
         self.script = list(script)
 
     def close(self):
@@ -93,8 +96,10 @@ def _state(app):
     gate.reset_cache()
     reset_nav_cache()
     web_bridge.reset_cache()
+    mc.reset_state()          # the breaker is per process: one test's outage must not leak
     yield
     reset_nav_cache()
+    mc.reset_state()
 
 
 def P(action, fields=None, summary="ملخّص. أؤكّد؟", missing=None):
@@ -361,7 +366,55 @@ def test_model_unreachable(client, app, monkeypatch):
     monkeypatch.setenv(mc.ENV_URL, "http://127.0.0.1:9")
     login(client)
     body = ok(post(client, "/message", {"text": "مرحبا"}))
-    assert body["replies"][0]["code"] == "model_unavailable"
+    r = body["replies"][0]
+    assert r["code"] == "model_unavailable" and r["reason"] == "unreachable"
+    assert r["text"] == "المساعد غير متاح مؤقتًا، حاول بعد قليل."
+    # the breaker is open now: the next message answers at once, without a network call
+    body = ok(post(client, "/message", {"text": "مرحبا ثانية"}))
+    r = body["replies"][0]
+    assert r["code"] == "model_unavailable" and r["reason"] == "circuit_open"
+    assert r["text"] == "المساعد غير متاح مؤقتًا، حاول بعد قليل."
+
+
+def test_message_budget_spans_all_hops(client, app, fake_model, monkeypatch):
+    """One admin message shares ONE deadline across hops: the 3rd hop finds the
+    budget spent and answers «unavailable» instead of overrunning the proxy window."""
+    import time as _t
+    plan(app, "budget_plan")
+    login(client)
+    monkeypatch.setattr(mc, "MESSAGE_BUDGET", 2.6)
+
+    def slow(_msgs):
+        _t.sleep(1.0)
+        return P("choose", {"source": "list_plans"}, "أجلب.")
+
+    fake_model.reset(slow, slow, slow, slow)
+    body = ok(post(client, "/message", {"text": "اعرض الباقات"}))
+    kinds = [r["type"] for r in body["replies"]]
+    assert kinds == ["choices", "choices", "error"]
+    assert body["replies"][-1]["reason"] == "budget_exhausted"
+    assert len(fake_model.requests) == 2
+    assert not mc.breaker_open()          # a spent budget is not an outage
+
+
+def test_panel_pages_never_call_the_model(client, app, fake_model):
+    login(client)
+    fake_model.reset()
+    for path in (PAGE, "/admin/radius/", "/admin/radius/subscribers"):
+        client.get(path)
+    assert fake_model.requests == []
+
+
+def test_gateway_key_sent_never_logged(client, app, fake_model, monkeypatch, caplog):
+    import logging
+    key = "hrops_" + "k" * 48
+    monkeypatch.setenv(mc.ENV_KEY, key)
+    caplog.set_level(logging.DEBUG)
+    login(client)
+    fake_model.reset(P("reply", {}, "أهلًا"))
+    ok(post(client, "/message", {"text": "مرحبا"}))
+    assert fake_model.headers[-1].get("Authorization") == "Bearer " + key
+    assert key not in caplog.text
 
 
 def test_cancel_records_turn_without_model(client, app, fake_model):
