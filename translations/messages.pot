@@ -70203,10 +70203,6 @@ msgstr ""
 msgid "ربط خدمات مشتركة بمجموعة من المشتركين."
 msgstr ""
 
-#: app/templates/radius/communications.html:10
-msgid "ربط ذاتي عبر واجهة الربط"
-msgstr ""
-
 #: app/radius/routes/docs_center.py:353
 msgid ""
 "ربط راوتر جديد بالنظام خطوة بخطوة: العنوان، المنفذ، بيانات الـ API، "
@@ -78630,6 +78626,10 @@ msgid ""
 "تلقائيًّا."
 msgstr ""
 
+#: app/templates/radius/communications.html:88
+msgid "عبر TweetSMS"
+msgstr ""
+
 #: app/templates/radius/docs_add_router.html:167
 msgid "عبر VPN:"
 msgstr ""
@@ -78652,6 +78652,10 @@ msgstr ""
 
 #: app/templates/radius/communications.html:92
 msgid "عبر تلجرام"
+msgstr ""
+
+#: app/templates/radius/communications.html:89
+msgid "عبر رابط المزوّد"
 msgstr ""
 
 #: app/templates/radius/users_list.html:1589
@@ -82380,7 +82384,6 @@ msgstr ""
 #: app/templates/radius/cards_checker_v2.html:330
 #: app/templates/radius/cards_checker_v2.html:340
 #: app/templates/radius/cards_checker_v2.html:372
-#: app/templates/radius/communications.html:10
 #: app/templates/radius/payments_lab.html:125
 #: app/templates/radius/payments_lab.html:130
 #: app/templates/radius/payments_lab.html:132

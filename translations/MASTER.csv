@@ -12296,7 +12296,6 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 غرفة العمليات — Hobe Hub,,Operations room — Hobe Hub,Salle des opérations — Hobe Hub,Operasyon odası — Hobe Hub,Sala de operaciones — Hobe Hub,ok,app/templates/radius/communications.html:4
 غرفة العمليات,,Operations room,Salle des opérations,Operasyon merkezi,Sala de operaciones,ok,app/templates/radius/communications.html:6
 مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.,,"Unified communications center — the status of all channels, notifications and the bot in one place, with every action a click away.","Centre de communication unifié — l'état de tous les canaux, notifications et du bot au même endroit, chaque action à portée de clic.","Birleşik iletişim merkezi — tüm kanalların, bildirimlerin ve botun durumu tek bir yerde, her işlem tek tıkla.","Centro de comunicación unificado — el estado de todos los canales, notificaciones y el bot en un solo lugar, y cada acción a un clic.",ok,app/templates/radius/communications.html:7
-ربط ذاتي عبر واجهة الربط,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:10
 إشعار فوري,,Push notification,Notification push,Anlık bildirim,Notificación push,ok,app/templates/radius/communications.html:11
 داخلية,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:11
 مقروءة,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:14
@@ -12305,7 +12304,9 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 إرسال رسالة سريعة,,Send a quick message,Envoyer un message rapide,Hızlı mesaj gönder,Enviar un mensaje rápido,ok,app/templates/radius/communications.html:84
 القدرات المفعّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:87
 مفعّلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:87
+عبر TweetSMS,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:88
 قناة الرسائل القصيرة,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:88
+عبر رابط المزوّد,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:89
 قناة واتساب,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:89
 أمر مُفعّل,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:90
 الإشعارات الحدثية,,Event Notifications,Notifications d’événements,Olay Bildirimleri,Notificaciones de eventos,ok,app/templates/radius/communications.html:91
