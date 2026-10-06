@@ -321,6 +321,11 @@ def _verify_admin_basic():
             return None
     except Exception:  # noqa: BLE001 — أي خطأ في القراءة/التحقق = رفض (fail closed)
         return None
+    # Password verified: remember a temporary-password state so the caller
+    # gets the actionable PASSWORD_CHANGE_REQUIRED even when the tenant
+    # selection below is refused (X-Tenant decision (c) x temp-password).
+    if getattr(admin, "must_change_password", False):
+        g.basic_admin_must_change = True
     tenant_id = _resolve_admin_tenant(admin)
     if tenant_id is None:
         return None
@@ -411,6 +416,8 @@ def enforce_api_auth():
     else:
         # ═══ المسار 2: اعتماد أدمن (HTTP Basic: يوزر+باس) ═══
         basic = _verify_admin_basic()
+        if not basic and getattr(g, "basic_admin_must_change", False):
+            return password_change_required_response()
         if not basic and getattr(g, "basic_tenant_denied", False):
             return fail(
                 "forbidden",

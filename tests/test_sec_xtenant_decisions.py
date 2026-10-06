@@ -410,3 +410,25 @@ def test_web_owner_roams_into_suspended_tenant(app, client):
     _login_web(app, client, owner, 1)
     client.get("/", headers={"X-Tenant": b.slug})
     assert _seen(app, "/") == b.id
+
+
+def test_c_temp_password_admin_gets_password_change_code_before_tenant_refusal(app, client):
+    """Interaction with SEC temp-password: a Basic caller still on a temporary
+    password who names a tenant he cannot select is refused either way, but
+    with the actionable PASSWORD_CHANGE_REQUIRED code (password was verified)."""
+    _a, b = _tenants(app)
+    mgr = _manager(app, tenant_id=1)
+    from app.radius.db.repos import admins_repo
+    with app.app_context():
+        admins_repo.update_admin(mgr.id, must_change_password=1)
+    r = _dash(client, mgr, b.id)
+    assert r.status_code == 403
+    assert r.get_json()["error"]["code"] == "PASSWORD_CHANGE_REQUIRED"
+    assert _seen(app, "/api/v1/dashboard") != b.id
+
+
+def test_c_wrong_password_with_foreign_header_is_401_not_403(app, client):
+    _a, b = _tenants(app)
+    mgr = _manager(app, tenant_id=1)
+    r = _dash(client, mgr, b.id, password="wrong-pass")
+    assert r.status_code == 401
