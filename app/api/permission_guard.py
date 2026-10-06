@@ -93,6 +93,13 @@ API_AUTH_ONLY: dict[str, str] = {
     "v1.ops_choices": "ops assistant — lists via the guarded /api/v1 endpoints",
     "v1.ops_proposal": "ops assistant — validation re-checks the action's own permission",
     "v1.ops_confirm": "ops assistant — executes through the guarded /api/v1 endpoints",
+    # The model turn for the app (mirror of the web chat routes, which need
+    # only a login): own conversation; every list / validation / execution is
+    # a nested /api/v1 call that passes THIS guard again with the same token.
+    "v1.ops_assistant_message": "ops assistant — own conversation; actions via guarded /api/v1",
+    "v1.ops_assistant_start_event": "ops assistant — detections scoped to the caller",
+    "v1.ops_assistant_confirm": "ops assistant — executes through the guarded /api/v1 endpoints",
+    "v1.ops_assistant_cancel": "ops assistant — own conversation",
 }
 
 

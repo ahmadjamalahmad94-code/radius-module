@@ -139,32 +139,8 @@ def _conversation(cid: Any):
 # ─────────────────────────── enrichment for the cards ────────────────────────────
 
 def _decorate(replies: list[dict]) -> list[dict]:
-    """Add plan / offer NAMES next to the ids on confirmation cards (display only)."""
-    from ..services.ops_assistant.conversation import offer_names, plan_names
-    plan_ids, offer_ids = set(), set()
-    for r in replies:
-        for st in ((r.get("proposal") or {}).get("steps") or []):
-            vals = st.get("values") or {}
-            if vals.get("plan_id") is not None:
-                plan_ids.add(vals["plan_id"])
-            if vals.get("offer_id") is not None:
-                offer_ids.add(vals["offer_id"])
-    if not plan_ids and not offer_ids:
-        return replies
-    pn, on = plan_names(_tid(), plan_ids), offer_names(_tid(), offer_ids)
-    for r in replies:
-        for st in ((r.get("proposal") or {}).get("steps") or []):
-            vals = st.get("values") or {}
-            names = {}
-            try:
-                if vals.get("plan_id") is not None and int(vals["plan_id"]) in pn:
-                    names["plan_id"] = pn[int(vals["plan_id"])]
-                if vals.get("offer_id") is not None and int(vals["offer_id"]) in on:
-                    names["offer_id"] = on[int(vals["offer_id"])]
-            except (TypeError, ValueError):
-                pass
-            st["names"] = names
-    return replies
+    from ..services.ops_assistant.conversation import decorate
+    return decorate(replies, _tid())
 
 
 # ─────────────────────────── views ────────────────────────────

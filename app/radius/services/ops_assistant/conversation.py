@@ -85,6 +85,35 @@ def _names(tenant_id: int, table: str, ids) -> dict[int, str]:
     return {int(r["id"]): r["name"] or "" for r in rows}
 
 
+def decorate(replies: list[dict], tenant_id: int) -> list[dict]:
+    """Add plan / offer NAMES next to the ids on confirmation cards (display
+    only) — shared by the web chat and the /api/v1/ops/assistant routes."""
+    plan_ids, offer_ids = set(), set()
+    for r in replies:
+        for st in ((r.get("proposal") or {}).get("steps") or []):
+            vals = st.get("values") or {}
+            if vals.get("plan_id") is not None:
+                plan_ids.add(vals["plan_id"])
+            if vals.get("offer_id") is not None:
+                offer_ids.add(vals["offer_id"])
+    if not plan_ids and not offer_ids:
+        return replies
+    pn, on = plan_names(tenant_id, plan_ids), offer_names(tenant_id, offer_ids)
+    for r in replies:
+        for st in ((r.get("proposal") or {}).get("steps") or []):
+            vals = st.get("values") or {}
+            names = {}
+            try:
+                if vals.get("plan_id") is not None and int(vals["plan_id"]) in pn:
+                    names["plan_id"] = pn[int(vals["plan_id"])]
+                if vals.get("offer_id") is not None and int(vals["offer_id"]) in on:
+                    names["offer_id"] = on[int(vals["offer_id"])]
+            except (TypeError, ValueError):
+                pass
+            st["names"] = names
+    return replies
+
+
 def plan_names(tenant_id: int, ids) -> dict[int, str]:
     return _names(tenant_id, "access_plans", ids)
 
@@ -502,15 +531,22 @@ def say(api: Api, cid: str, text: str, *, actor: str = "", call=None) -> list[di
     return run_model(api, cid, actor=actor, call=call)
 
 
-def confirm(api: Api, cid: str, proposal_id: str, proposal_hash: str) -> dict:
-    """The ONLY path that executes: the admin's explicit confirmation."""
+def confirm(api: Api, cid: str, proposal_id: str, proposal_hash: str,
+            idempotency_key: str = "") -> dict:
+    """The ONLY path that executes: the admin's explicit confirmation.
+
+    ``idempotency_key`` (the app's Idempotency-Key) is forwarded to the
+    executor: the same key again returns the stored report (``replayed``),
+    never runs twice and never returns ``show_once`` again."""
+    kw = {"idempotency_key": idempotency_key} if idempotency_key else {}
     res = api("POST", f"/ops/conversations/{cid}/confirm",
-              body={"proposal_id": proposal_id, "proposal_hash": proposal_hash})
+              body={"proposal_id": proposal_id, "proposal_hash": proposal_hash}, **kw)
     if not res.ok:
         raise _api_error(res)
     data = res.data or {}
-    # the model gets the executor's redacted RESULT line — never show_once
-    if data.get("model_result"):
+    # the model gets the executor's redacted RESULT line — never show_once;
+    # a replay does not repeat it in the transcript
+    if data.get("model_result") and not (data.get("report") or {}).get("replayed"):
         append(cid, api.tenant_id, "tool", data["model_result"])
     return {"report": data.get("report") or {}, "show_once": data.get("show_once")}
 
@@ -521,4 +557,4 @@ def cancel(api: Api, cid: str) -> None:
 
 __all__ = ["start", "say", "run_model", "confirm", "cancel", "render_choices", "render_event",
            "event_records", "transcript", "model_messages", "append", "TurnError", "MAX_HOPS",
-           "plan_names", "offer_names"]
+           "plan_names", "offer_names", "decorate"]

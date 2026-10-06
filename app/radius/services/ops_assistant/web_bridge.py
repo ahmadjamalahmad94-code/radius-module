@@ -82,12 +82,13 @@ class Api:
         self.username = username
 
     def __call__(self, method: str, path: str, body: Optional[dict] = None,
-                 query: Optional[dict] = None) -> ApiResult:
+                 query: Optional[dict] = None, idempotency_key: str = "") -> ApiResult:
         tok = credential(self.admin_id, self.tenant_id, self.username)
         if not tok:
             return ApiResult(status=401, body={"ok": False, "error": {
                 "code": "unauthorized", "message": ""}})
-        return call(method, path, body=body, query=query, credential=tok)
+        return call(method, path, body=body, query=query, credential=tok,
+                    idempotency_key=idempotency_key)
 
 
 def reset_cache() -> None:

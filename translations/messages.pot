@@ -1648,7 +1648,7 @@ msgstr ""
 msgid "%(base)s — ⚠️ السبب الحقيقيّ: %(why)s. الإجراء: %(action)s."
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:252
+#: app/radius/routes/ops_assistant.py:228
 #, python-format
 msgid "%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة."
 msgstr ""
@@ -2169,7 +2169,7 @@ msgstr ""
 msgid "%(n)s صف"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:248
+#: app/radius/routes/ops_assistant.py:224
 #, python-format
 msgid "%(n)s مشترك ينتهي اشتراكه يوم %(d)s."
 msgstr ""
@@ -6588,7 +6588,7 @@ msgstr ""
 msgid "mode غير صالح: %(mode)s"
 msgstr ""
 
-#: app/api/v1/ops.py:271
+#: app/api/v1/ops.py:286
 msgid "mode يجب أن يكون draft أو execute."
 msgstr ""
 
@@ -11211,7 +11211,7 @@ msgstr ""
 msgid "أرخص باقة"
 msgstr ""
 
-#: app/api/v1/ops.py:116
+#: app/api/v1/ops.py:131
 msgid "أرسل enabled قيمةً منطقيّة (true/false)."
 msgstr ""
 
@@ -19786,7 +19786,7 @@ msgstr ""
 msgid "اجمع نقاطك مع كل زيارة!"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:411
+#: app/radius/services/ops_assistant/conversation.py:440
 msgid ""
 "احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد"
 " المحاولة."
@@ -20021,7 +20021,7 @@ msgstr ""
 msgid "اختبار السرعة"
 msgstr ""
 
-#: app/api/permission_guard.py:749 app/templates/radius/tool_test_auth.html:11
+#: app/api/permission_guard.py:756 app/templates/radius/tool_test_auth.html:11
 msgid "اختبار المصادقة"
 msgstr ""
 
@@ -23622,7 +23622,7 @@ msgstr ""
 msgid "اشتراكات برودباند منزليّة"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:247
+#: app/radius/routes/ops_assistant.py:223
 msgid "اشتراكات تنتهي غدًا"
 msgstr ""
 
@@ -25126,8 +25126,8 @@ msgstr ""
 msgid "اكتب رسالة أو أرفق صورة."
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:195
-#: app/radius/services/ops_assistant/conversation.py:498
+#: app/api/v1/ops.py:425 app/radius/routes/ops_assistant.py:171
+#: app/radius/services/ops_assistant/conversation.py:527
 #: app/templates/radius/ops_assistant.html:154
 msgid "اكتب رسالة أوّلًا."
 msgstr ""
@@ -27602,12 +27602,12 @@ msgstr ""
 msgid "الباقة + الشبكة"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:260
+#: app/radius/routes/ops_assistant.py:236
 #, python-format
 msgid "الباقة «%(p)s» لا يبيعها أيّ عرض فعّال."
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:256
+#: app/radius/routes/ops_assistant.py:232
 #, python-format
 msgid "الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s)."
 msgstr ""
@@ -32948,7 +32948,7 @@ msgstr ""
 msgid "الرسالة تتجاوز الحدّ الموصى به ("
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:500
+#: app/radius/services/ops_assistant/conversation.py:529
 msgid "الرسالة طويلة جدًّا."
 msgstr ""
 
@@ -35292,7 +35292,7 @@ msgstr ""
 msgid "الصيانة"
 msgstr ""
 
-#: app/api/permission_guard.py:753
+#: app/api/permission_guard.py:760
 msgid "الصيانة الجماعيّة"
 msgstr ""
 
@@ -38807,13 +38807,13 @@ msgstr ""
 msgid "المحادثة"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:203
-#: app/radius/routes/ops_assistant.py:218
-#: app/radius/routes/ops_assistant.py:239
+#: app/api/v1/ops.py:406 app/radius/routes/ops_assistant.py:179
+#: app/radius/routes/ops_assistant.py:194
+#: app/radius/routes/ops_assistant.py:215
 msgid "المحادثة غير موجودة — ابدأ محادثة جديدة."
 msgstr ""
 
-#: app/api/v1/ops.py:92
+#: app/api/v1/ops.py:107
 msgid "المحادثة غير موجودة."
 msgstr ""
 
@@ -39714,11 +39714,11 @@ msgstr ""
 msgid "المساعد غير متاح الآن"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:390
+#: app/radius/services/ops_assistant/conversation.py:419
 msgid "المساعد غير متاح مؤقتًا، حاول بعد قليل."
 msgstr ""
 
-#: app/api/v1/ops.py:78
+#: app/api/v1/ops.py:93
 msgid ""
 "المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها "
 "أوّلًا."
@@ -39734,7 +39734,7 @@ msgstr ""
 msgid "المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا."
 msgstr ""
 
-#: app/api/v1/ops.py:61
+#: app/api/v1/ops.py:76
 msgid "المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير."
 msgstr ""
 
@@ -40937,7 +40937,7 @@ msgstr ""
 msgid "المقترح غير موجود."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:430
+#: app/radius/services/ops_assistant/conversation.py:459
 #, python-format
 msgid "المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s"
 msgstr ""
@@ -44252,7 +44252,7 @@ msgstr ""
 msgid "باقة بلا أي مشترك — راجعها من"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:259
+#: app/radius/routes/ops_assistant.py:235
 msgid "باقة بلا عرض بيع"
 msgstr ""
 
@@ -46553,7 +46553,7 @@ msgstr ""
 msgid "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب"
 msgstr ""
 
-#: app/api/access_control.py:179 app/api/permission_guard.py:931
+#: app/api/access_control.py:179 app/api/permission_guard.py:938
 #: app/api/v1/loans.py:52 app/api/v1/subscriber_actions.py:182
 #: app/radius/routes/blueprint.py:1350
 msgid "بلغت الحدّ اليوميّ المسموح لهذا الإجراء."
@@ -47794,7 +47794,7 @@ msgstr ""
 msgid "تأكيد مطلوب قبل التنفيذ"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:221
+#: app/api/v1/ops.py:475 app/radius/routes/ops_assistant.py:197
 msgid "تأكيد ناقص."
 msgstr ""
 
@@ -52569,7 +52569,7 @@ msgstr ""
 msgid "تعديل: تصويب يدوي للرصيد بقيد موثّق."
 msgstr ""
 
-#: app/api/permission_guard.py:747
+#: app/api/permission_guard.py:754
 msgid "تعديلات عامّة جماعيّة"
 msgstr ""
 
@@ -53976,7 +53976,7 @@ msgstr ""
 msgid "تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:185
+#: app/api/v1/ops.py:401 app/radius/routes/ops_assistant.py:161
 #: app/templates/radius/admin_alerts.html:164
 #: app/templates/radius/admin_alerts.html:192
 msgid "تعذّر تنفيذ الطلب."
@@ -54069,7 +54069,7 @@ msgstr ""
 msgid "تعذّر توليد مفاتيح WireGuard: %(exc)s"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:272
+#: app/radius/routes/ops_assistant.py:248
 #: app/templates/radius/ops_assistant.html:148
 msgid "تعذّر جلب الاقتراحات."
 msgstr ""
@@ -54083,7 +54083,7 @@ msgstr ""
 msgid "تعذّر جلب الرصيد: %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:449
+#: app/radius/services/ops_assistant/conversation.py:478
 #, python-format
 msgid "تعذّر جلب القائمة: %(why)s"
 msgstr ""
@@ -60120,7 +60120,7 @@ msgstr ""
 msgid "تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع."
 msgstr ""
 
-#: app/api/permission_guard.py:948
+#: app/api/permission_guard.py:955
 #, python-format
 msgid "تنقصك الصلاحية: %(v)s."
 msgstr ""
@@ -60350,7 +60350,7 @@ msgstr ""
 msgid "توكن غير صالح"
 msgstr ""
 
-#: app/api/permission_guard.py:848
+#: app/api/permission_guard.py:855
 msgid "توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read)."
 msgstr ""
 
@@ -64436,7 +64436,7 @@ msgstr ""
 msgid "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:442
+#: app/radius/services/ops_assistant/conversation.py:471
 msgid "حدّد المشترك والباقة الجديدة أوّلًا."
 msgstr ""
 
@@ -71227,7 +71227,7 @@ msgstr ""
 msgid "رفض المُولِّد توليد السكربت لاحتوائه على بيانات حسّاسة: %(render_error)s"
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:251
+#: app/radius/routes/ops_assistant.py:227
 msgid "رفض دخول متكرّر"
 msgstr ""
 
@@ -73587,7 +73587,7 @@ msgstr ""
 msgid "سجلّ الجلسات"
 msgstr ""
 
-#: app/api/permission_guard.py:751
+#: app/api/permission_guard.py:758
 msgid "سجلّ الراديوس"
 msgstr ""
 
@@ -77571,7 +77571,7 @@ msgstr ""
 msgid "ضبط اتصال المايكروتيك"
 msgstr ""
 
-#: app/api/permission_guard.py:745
+#: app/api/permission_guard.py:752
 msgid "ضبط السرعات جماعيًّا"
 msgstr ""
 
@@ -92384,7 +92384,7 @@ msgstr ""
 msgid "لا تملك صلاحية شحن المحفظة."
 msgstr ""
 
-#: app/api/v1/ops.py:200
+#: app/api/v1/ops.py:215
 msgid "لا تملك صلاحية عرض هذه القائمة."
 msgstr ""
 
@@ -92541,7 +92541,7 @@ msgstr ""
 msgid "لا توجد باقات بعد — أنشئ أول باقة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:227
+#: app/radius/services/ops_assistant/conversation.py:256
 msgid "لا توجد باقات مفعّلة في النظام بعد."
 msgstr ""
 
@@ -92797,7 +92797,7 @@ msgstr ""
 msgid "لا توجد حركات في الفترة المحددة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:231
+#: app/radius/services/ops_assistant/conversation.py:260
 msgid "لا توجد حزم بطاقات تطابق هذا البحث."
 msgstr ""
 
@@ -93064,11 +93064,11 @@ msgstr ""
 msgid "لا توجد عروض متاحة"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:225
+#: app/radius/services/ops_assistant/conversation.py:254
 msgid "لا توجد عروض مسجّلة في النظام بعد."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:223
+#: app/radius/services/ops_assistant/conversation.py:252
 msgid ""
 "لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو"
 " إنشاء عرض أوّلًا."
@@ -93398,7 +93398,7 @@ msgstr ""
 msgid "لا توجد نتائج مطابقة لبحثك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:232
+#: app/radius/services/ops_assistant/conversation.py:261
 #: app/templates/radius/ops_assistant.html:137
 msgid "لا توجد نتائج."
 msgstr ""
@@ -94307,7 +94307,7 @@ msgstr ""
 msgid "لا يوجد حد مخزن لهذه الميزة حالياً."
 msgstr ""
 
-#: app/api/v1/ops.py:163
+#: app/api/v1/ops.py:178
 msgid "لا يوجد حدث من هذا النوع الآن."
 msgstr ""
 
@@ -94523,7 +94523,7 @@ msgid ""
 "النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:229
+#: app/radius/services/ops_assistant/conversation.py:258
 msgid "لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال."
 msgstr ""
 
@@ -95554,7 +95554,7 @@ msgid ""
 " MikroTik Terminal."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:399
+#: app/radius/services/ops_assistant/conversation.py:428
 msgid "لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح."
 msgstr ""
 
@@ -100017,7 +100017,7 @@ msgstr ""
 msgid "مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر."
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:255
+#: app/radius/routes/ops_assistant.py:231
 msgid "مخزون كروت منخفض"
 msgstr ""
 
@@ -101503,7 +101503,7 @@ msgstr ""
 msgid "مساعد العمليّات"
 msgstr ""
 
-#: app/api/v1/ops.py:75 app/radius/routes/ops_assistant.py:111
+#: app/api/v1/ops.py:90 app/radius/routes/ops_assistant.py:111
 msgid "مساعد العمليّات غير مفعّل لهذه الشبكة."
 msgstr ""
 
@@ -102391,7 +102391,7 @@ msgstr ""
 msgid "مصدر الطلب: بوابة المشترك"
 msgstr ""
 
-#: app/api/v1/ops.py:216
+#: app/api/v1/ops.py:231
 msgid "مصدر القائمة غير معروف."
 msgstr ""
 
@@ -110475,11 +110475,11 @@ msgstr ""
 msgid "نوع الحدث (سجل)"
 msgstr ""
 
-#: app/api/v1/ops.py:159
+#: app/api/v1/ops.py:174
 msgid "نوع الحدث غير معروف."
 msgstr ""
 
-#: app/radius/routes/ops_assistant.py:294
+#: app/api/v1/ops.py:448 app/radius/routes/ops_assistant.py:270
 msgid "نوع الحدث مطلوب."
 msgstr ""
 
@@ -111088,8 +111088,8 @@ msgstr ""
 msgid "هذا الإجراء متاح لمدير النظام الأعلى فقط."
 msgstr ""
 
-#: app/api/permission_guard.py:888 app/api/permission_guard.py:896
-#: app/api/permission_guard.py:951 app/radius/routes/blueprint.py:1351
+#: app/api/permission_guard.py:895 app/api/permission_guard.py:903
+#: app/api/permission_guard.py:958 app/radius/routes/blueprint.py:1351
 msgid "هذا الإجراء مقصور على المالك أو الشريك."
 msgstr ""
 
@@ -111141,7 +111141,7 @@ msgid ""
 "المصادقة)، «الدخول الفاشل»، و«سجل العناوين الفيزيائية MAC» — لكلٍّ غرضه."
 msgstr ""
 
-#: app/api/permission_guard.py:841
+#: app/api/permission_guard.py:848
 msgid "هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل."
 msgstr ""
 

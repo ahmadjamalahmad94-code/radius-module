@@ -273,15 +273,15 @@ REST API لإدارة المشتركين والباقات والبطاقات و�
 "# يتطلب توكنًا خاصًّا بهذه المجموعة (انظر ملاحظة المصادقة بالأعلى)
 ",,,,,,"missing: en,fr,tr,es",app/api/openapi.py:420
 هذه النقطة غير مربوطة بصلاحية بعد — متاحة للمالك فقط. راجع المالك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:55
-ضبط السرعات جماعيًّا,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:745
-تعديلات عامّة جماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:747
-اختبار المصادقة,,Authentication test,Test d'authentification,Kimlik doğrulama testi,Prueba de autenticación,ok,app/api/permission_guard.py:749
-سجلّ الراديوس,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:751
-الصيانة الجماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:753
-هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:841
-توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read).,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:848
-هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:888
-تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:948
+ضبط السرعات جماعيًّا,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:752
+تعديلات عامّة جماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:754
+اختبار المصادقة,,Authentication test,Test d'authentification,Kimlik doğrulama testi,Prueba de autenticación,ok,app/api/permission_guard.py:756
+سجلّ الراديوس,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:758
+الصيانة الجماعيّة,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:760
+هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:848
+توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read).,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:855
+هذا الإجراء مقصور على المالك أو الشريك.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:895
+تنقصك الصلاحية: %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/permission_guard.py:955
 العملية %(operation)s مُسجَّلة كـ contract لكن منطقها لم يكتمل بعد.,,,,,,"missing: en,fr,tr,es",app/api/responses.py:58
 نوع حدث المحاسبة (status_type) مفقود أو غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:31
 معرّف الجلسة (acct_session_id) مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:32
@@ -661,16 +661,21 @@ entry %(entry_id)s غير موجود,,,,,,"missing: en,fr,tr,es",app/api/v1/netw
 الإشعار غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/notifications.py:106
 عبارة البحث طويلة جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/operational_reports.py:39
 تقرير التشغيل المطلوب غير متاح.,,,,,,"missing: en,fr,tr,es",app/api/v1/operational_reports.py:67
-المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:61
-مساعد العمليّات غير مفعّل لهذه الشبكة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:75
-المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:78
-المحادثة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:92
-أرسل enabled قيمةً منطقيّة (true/false).,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:116
-نوع الحدث غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:159
-لا يوجد حدث من هذا النوع الآن.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:163
-لا تملك صلاحية عرض هذه القائمة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:200
-مصدر القائمة غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:216
-mode يجب أن يكون draft أو execute.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:271
+المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:76
+مساعد العمليّات غير مفعّل لهذه الشبكة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:90
+المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:93
+المحادثة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:107
+أرسل enabled قيمةً منطقيّة (true/false).,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:131
+نوع الحدث غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:174
+لا يوجد حدث من هذا النوع الآن.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:178
+لا تملك صلاحية عرض هذه القائمة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:215
+مصدر القائمة غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:231
+mode يجب أن يكون draft أو execute.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:286
+تعذّر تنفيذ الطلب.,,Failed to execute the request.,Échec de l'exécution de la requête.,İstek yürütülemedi.,No se pudo ejecutar la solicitud.,ok,app/api/v1/ops.py:401
+المحادثة غير موجودة — ابدأ محادثة جديدة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:406
+اكتب رسالة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:425
+نوع الحدث مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:448
+تأكيد ناقص.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:475
 المبلغ غير صالح.,,,,,,"missing: en,fr,tr,es",app/api/v1/payments.py:34
 العملة غير مسموحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/payments.py:35
 نوع طلب الدفع غير صالح.,,,,,,"missing: en,fr,tr,es",app/api/v1/payments.py:36
@@ -2700,20 +2705,15 @@ WG غير مهيّأ على السيرفر بعد — تأكّد أن HOBERADIUS
 طُبِّقت «%(v)s» (%(pct)s%%) حيًّا: CoA على %(hit)s جلسة متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:99
 تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:112
 المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:113
-تعذّر تنفيذ الطلب.,,Failed to execute the request.,Échec de l'exécution de la requête.,İstek yürütülemedi.,No se pudo ejecutar la solicitud.,ok,app/radius/routes/ops_assistant.py:185
-اكتب رسالة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:195
-المحادثة غير موجودة — ابدأ محادثة جديدة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:203
-تأكيد ناقص.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:221
-اشتراكات تنتهي غدًا,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:247
-%(n)s مشترك ينتهي اشتراكه يوم %(d)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:248
-رفض دخول متكرّر,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:251
-%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:252
-مخزون كروت منخفض,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:255
-الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:256
-باقة بلا عرض بيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:259
-الباقة «%(p)s» لا يبيعها أيّ عرض فعّال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:260
-تعذّر جلب الاقتراحات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:272
-نوع الحدث مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:294
+اشتراكات تنتهي غدًا,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:223
+%(n)s مشترك ينتهي اشتراكه يوم %(d)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:224
+رفض دخول متكرّر,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:227
+%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:228
+مخزون كروت منخفض,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:231
+الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:232
+باقة بلا عرض بيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:235
+الباقة «%(p)s» لا يبيعها أيّ عرض فعّال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:236
+تعذّر جلب الاقتراحات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:248
 إعداد دفع غير صالح: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:117
 تم حفظ إعدادات تحصيل الدفعات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:119
 طلب الدفع غير قابل للمراجعة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:174
@@ -7431,19 +7431,19 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:298
 سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:341
 اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:223
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:225
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:227
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:229
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:231
-لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:232
-المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:390
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:399
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:411
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:430
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:442
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:449
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:500
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:252
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:254
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:256
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:258
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:260
+لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:261
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:419
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:428
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:440
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:459
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:471
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:478
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:529
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:126
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:134
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:187

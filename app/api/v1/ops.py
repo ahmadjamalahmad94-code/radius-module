@@ -16,6 +16,16 @@ handlers (``services/ops_assistant/dispatch.py``).
                                                    an INFO action (read-only) answers with RESULT
   POST /api/v1/ops/conversations/<cid>/confirm     execute a pending proposal (hash + Idempotency-Key)
 
+The MODEL TURN for the mobile app — a 1:1 mirror of the web chat routes
+(radius/routes/ops_assistant.py), same bodies inside the ``{ok, data}`` envelope:
+
+  POST /api/v1/ops/assistant/message      {conversation_id?, text} → {conversation_id, replies[]}
+  POST /api/v1/ops/assistant/start-event  {event_type, index}      → {conversation_id, replies[]}
+  POST /api/v1/ops/assistant/confirm      {conversation_id, proposal_id, proposal_hash}
+                                          + Idempotency-Key → {conversation_id, report, show_once?}
+                                          (a replay returns the stored report, never show_once)
+  POST /api/v1/ops/assistant/cancel       {conversation_id} → {conversation_id}
+
 Never with an unbound credential (env token / token without ``created_by``):
 the assistant acts only with a real admin's permissions. Tenant comes from the
 credential only.
@@ -42,6 +52,11 @@ def register(bp: Blueprint) -> None:
         ("/ops/conversations/<cid>/choices", "ops_choices", ops_choices, ["POST"]),
         ("/ops/conversations/<cid>/proposals", "ops_proposal", ops_proposal, ["POST"]),
         ("/ops/conversations/<cid>/confirm", "ops_confirm", ops_confirm, ["POST"]),
+        ("/ops/assistant/message", "ops_assistant_message", ops_assistant_message, ["POST"]),
+        ("/ops/assistant/start-event", "ops_assistant_start_event",
+         ops_assistant_start_event, ["POST"]),
+        ("/ops/assistant/confirm", "ops_assistant_confirm", ops_assistant_confirm, ["POST"]),
+        ("/ops/assistant/cancel", "ops_assistant_cancel", ops_assistant_cancel, ["POST"]),
     )
     for path, endpoint, view, methods in rules:
         bp.add_url_rule(path, endpoint, require_api_token(view), methods=methods)
@@ -347,6 +362,144 @@ def ops_confirm(cid: str):
     if out.get("show_once"):
         data["show_once"] = out["show_once"]
     return ok(data)
+
+
+# ─────────────────────────── model turn (mobile app) ────────────────────────────
+
+def _actor() -> str:
+    name = getattr(g, "admin_username", None)
+    if name:
+        return str(name)
+    try:
+        from ...radius.db.connection import db
+        row = db().execute("SELECT username FROM admins WHERE id=?", (_aid(),)).fetchone()
+        return str(row["username"]) if row else ""
+    except Exception:  # noqa: BLE001 — the actor is for the audit line only
+        return ""
+
+
+class _CallerApi:
+    """``conversation.*`` caller bound to THIS request's own credential: every
+    nested /api/v1 call authenticates and is authorised exactly like the app's
+    request (tenant + admin come from the token, never from the body)."""
+
+    def __init__(self) -> None:
+        self.admin_id = _aid()
+        self.tenant_id = _tid()
+        self.username = _actor()
+
+    def __call__(self, method: str, path: str, body=None, query=None, idempotency_key: str = ""):
+        from ...radius.services.ops_assistant.dispatch import call
+        return call(method, path, body=body, query=query, idempotency_key=idempotency_key)
+
+
+def _turn(fn):
+    from ...radius.services.ops_assistant.conversation import TurnError
+    try:
+        return fn()
+    except TurnError as e:
+        return fail(e.code, e.message or _tr("تعذّر تنفيذ الطلب."),
+                    status=e.status if e.status >= 400 else 422)
+
+
+def _lost():
+    return fail("not_found", _tr("المحادثة غير موجودة — ابدأ محادثة جديدة."), status=404)
+
+
+def _own_conversation(cid: Any):
+    from ...radius.services.ops_assistant import store
+    if not isinstance(cid, str) or not cid:
+        return None
+    return store.get_conversation(cid, _tid(), _aid())
+
+
+def ops_assistant_message():
+    err = _gate()
+    if err is not None:
+        return err
+    body, err = _body()
+    if err is not None:
+        return err
+    text = body.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return fail("validation_error", _tr("اكتب رسالة أوّلًا."), status=422)
+    cid = body.get("conversation_id")
+    if cid not in (None, "") and _own_conversation(cid) is None:
+        return _lost()
+    from ...radius.services.ops_assistant import conversation
+
+    def run():
+        api = _CallerApi()
+        c = cid or conversation.start(api)["conversation_id"]
+        replies = conversation.say(api, c, text, actor=api.username)
+        return ok({"conversation_id": c, "replies": conversation.decorate(replies, _tid())})
+    return _turn(run)
+
+
+def ops_assistant_start_event():
+    err = _gate()
+    if err is not None:
+        return err
+    body, err = _body()
+    if err is not None:
+        return err
+    etype = body.get("event_type")
+    if not isinstance(etype, str) or not etype:
+        return fail("validation_error", _tr("نوع الحدث مطلوب."), status=422)
+    try:
+        index = max(0, int(body.get("index") or 0))
+    except (TypeError, ValueError):
+        index = 0
+    from ...radius.services.ops_assistant import conversation
+
+    def run():
+        api = _CallerApi()
+        c = conversation.start(api, event_type=etype, index=index)["conversation_id"]
+        replies = conversation.run_model(api, c, actor=api.username)
+        return ok({"conversation_id": c, "replies": conversation.decorate(replies, _tid())})
+    return _turn(run)
+
+
+def ops_assistant_confirm():
+    err = _gate()
+    if err is not None:
+        return err
+    body, err = _body()
+    if err is not None:
+        return err
+    cid = body.get("conversation_id")
+    if _own_conversation(cid) is None:
+        return _lost()
+    pid, phash = body.get("proposal_id"), body.get("proposal_hash")
+    if not isinstance(pid, str) or not isinstance(phash, str) or not pid or not phash:
+        return fail("validation_error", _tr("تأكيد ناقص."), status=422)
+    key = (request.headers.get("Idempotency-Key") or "").strip()
+    from ...radius.services.ops_assistant import conversation
+
+    def run():
+        out = conversation.confirm(_CallerApi(), cid, pid, phash, idempotency_key=key)
+        data = {"conversation_id": cid, "report": out["report"]}
+        if out.get("show_once"):
+            data["show_once"] = out["show_once"]       # this response only: never stored or logged
+        resp, status = ok(data)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp, status
+    return _turn(run)
+
+
+def ops_assistant_cancel():
+    err = _gate()
+    if err is not None:
+        return err
+    body, err = _body()
+    if err is not None:
+        return err
+    cid = body.get("conversation_id")
+    if _own_conversation(cid) is None:
+        return _lost()
+    from ...radius.services.ops_assistant import conversation
+    conversation.cancel(_CallerApi(), cid)
+    return ok({"conversation_id": cid})
 
 
 __all__ = ["register"]

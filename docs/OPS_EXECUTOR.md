@@ -157,6 +157,13 @@ browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assi
 | GET | `/ops-assistant/events` | level-4 suggestions (one row per event record) |
 | POST | `/ops-assistant/start-event` | `{event_type, index}` → new conversation from that record + first model turn |
 
+Mobile app mirror (bearer token, same bodies inside `{ok, data}`; tenant + admin from the
+token; flag + password gate; own conversation only, else 404; mapped in `API_AUTH_ONLY`):
+`POST /api/v1/ops/assistant/message`, `/start-event`, `/confirm` (honours `Idempotency-Key`:
+the same key returns the stored report with `replayed: true` and never `show_once`; the key
+used for another proposal → 422 `idempotency_key_reused`), `/cancel`. Suggestions come from
+`GET /api/v1/ops/events`.
+
 * Guards: `login_required` + the blueprint login guard; global CSRF (`X-CSRFToken`) on every
   POST; `gate.availability` on every endpoint (403 `unavailable` JSON); the routes are in
   `_GUARD_ALLOWLIST` because each action is decided by the executor for THIS admin.
