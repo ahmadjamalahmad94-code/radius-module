@@ -26,6 +26,8 @@ def register_v1(parent: Blueprint) -> None:
         store_admin,
         mt_programming as mt_programming_api,
         provider_grants as provider_grants_api,
+        card_offers as card_offers_api,
+        ops as ops_api,
     )
     health.register(v1)
     notifications_api.register(v1)
@@ -36,6 +38,10 @@ def register_v1(parent: Blueprint) -> None:
     # أفعال المشترك للتطبيق (/accounts/<u>/extend|payment|loan|…) — نفس كود الويب.
     subscriber_actions.register(v1)
     cards.register(v1)
+    # عروض البطاقات (Q2 كتالوج المساعد) — نفس خدمة نموذج الويب.
+    card_offers_api.register(v1)
+    # مساعد العمليّات: المنفّذ الحتميّ (docs/OPS_EXECUTOR.md).
+    ops_api.register(v1)
     card_users.register(v1)
     hotspot_cards.register(v1)
     subscriber_portal.register(v1)

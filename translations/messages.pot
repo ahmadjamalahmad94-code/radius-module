@@ -1454,7 +1454,7 @@ msgid ""
 "تُعاد قراءتها."
 msgstr ""
 
-#: app/api/openapi.py:419
+#: app/api/openapi.py:420
 msgid "# يتطلب توكنًا خاصًّا بهذه المجموعة (انظر ملاحظة المصادقة بالأعلى)\n"
 msgstr ""
 
@@ -6606,6 +6606,10 @@ msgstr ""
 msgid "mode غير صالح: %(mode)s"
 msgstr ""
 
+#: app/api/v1/ops.py:268
+msgid "mode يجب أن يكون draft أو execute."
+msgstr ""
+
 #: app/templates/radius/docs_anti_mac_clone.html:99
 msgid "monitor (مراقبة):"
 msgstr ""
@@ -6856,7 +6860,7 @@ msgstr ""
 msgid "username + mac مطلوبان"
 msgstr ""
 
-#: app/api/admin_auth.py:210 app/radius/integration/mikrotik_adapter.py:265
+#: app/api/admin_auth.py:227 app/radius/integration/mikrotik_adapter.py:265
 #: app/radius/services/admins.py:33
 msgid "username + password مطلوبان"
 msgstr ""
@@ -10438,7 +10442,7 @@ msgstr ""
 msgid "أجهزة"
 msgstr ""
 
-#: app/api/openapi.py:182 app/radius/services/provider_service_labels.py:79
+#: app/api/openapi.py:183 app/radius/services/provider_service_labels.py:79
 msgid "أجهزة NAS"
 msgstr ""
 
@@ -10469,7 +10473,7 @@ msgstr ""
 msgid "أجهزة الزبائن (TR-069)"
 msgstr ""
 
-#: app/api/openapi.py:183 app/api/v1/admins.py:594
+#: app/api/openapi.py:184 app/api/v1/admins.py:594
 #: app/api/v1/service_requests.py:49 app/radius/routes/recycle_bin.py:26
 #: app/radius/services/manager_activity_audit.py:217
 #: app/radius/services/provider_service_labels.py:81
@@ -10495,7 +10499,7 @@ msgstr ""
 msgid "أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة."
 msgstr ""
 
-#: app/api/openapi.py:232
+#: app/api/openapi.py:233
 msgid "أجهزة المراقبة بالـ ping: إضافة، تعديل، تفعيل/تعطيل، الأحداث والتنبيهات."
 msgstr ""
 
@@ -10637,7 +10641,7 @@ msgstr ""
 msgid "أحداث النظام وعمليات المدراء"
 msgstr ""
 
-#: app/api/openapi.py:233
+#: app/api/openapi.py:234
 msgid "أحداث النظام، التحقيقات، أحداث الأمان، وتشغيل تقييم المخاطر."
 msgstr ""
 
@@ -11125,7 +11129,7 @@ msgstr ""
 msgid "أدنى سعر لا يمكن أن يتجاوز سعر التجزئة."
 msgstr ""
 
-#: app/api/openapi.py:206
+#: app/api/openapi.py:207
 #: app/templates/radius/docs_mikrotik_operations.html:148
 msgid "أدوات"
 msgstr ""
@@ -11146,7 +11150,7 @@ msgstr ""
 msgid "أدوات الفحص غير متوفّرة — تُخطّى"
 msgstr ""
 
-#: app/api/openapi.py:206
+#: app/api/openapi.py:207
 msgid "أدوات مساعدة متنوّعة."
 msgstr ""
 
@@ -11216,6 +11220,10 @@ msgstr ""
 
 #: app/templates/radius/plans_overview.html:254
 msgid "أرخص باقة"
+msgstr ""
+
+#: app/api/v1/ops.py:115
+msgid "أرسل enabled قيمةً منطقيّة (true/false)."
 msgstr ""
 
 #: app/templates/radius/notifications_center.html:123
@@ -12379,6 +12387,13 @@ msgstr ""
 
 #: app/radius/core/limits.py:60
 msgid "أقصى إضافة رصيد/دفعة للموزّع"
+msgstr ""
+
+#: app/radius/services/ops_assistant/units.py:125
+#, python-format
+msgid ""
+"أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من "
+"عمليّة."
 msgstr ""
 
 #: app/radius/templates/radius/vpn_accounts.html:207
@@ -14215,7 +14230,7 @@ msgstr ""
 msgid "إبداعي"
 msgstr ""
 
-#: app/api/openapi.py:270 app/templates/radius/rep_balance_movements.html:38
+#: app/api/openapi.py:271 app/templates/radius/rep_balance_movements.html:38
 msgid "إبطال"
 msgstr ""
 
@@ -14258,7 +14273,7 @@ msgstr ""
 msgid "إتاحة الباقة لكل المشتركين دون تقييد."
 msgstr ""
 
-#: app/api/openapi.py:270
+#: app/api/openapi.py:271
 msgid "إثبات الدفع"
 msgstr ""
 
@@ -15072,7 +15087,7 @@ msgstr ""
 msgid "إحصائيات قوالب الطباعة"
 msgstr ""
 
-#: app/api/openapi.py:214
+#: app/api/openapi.py:215
 msgid "إحصائيات لوحة التحكّم السريعة."
 msgstr ""
 
@@ -15144,7 +15159,7 @@ msgstr ""
 msgid "إدارة آمنة:"
 msgstr ""
 
-#: app/api/openapi.py:182
+#: app/api/openapi.py:183
 msgid "إدارة أجهزة الـ NAS (RADIUS clients): إضافة، تعديل، واختبار الاتصال."
 msgstr ""
 
@@ -15159,7 +15174,7 @@ msgstr ""
 msgid "إدارة اتصالات الراوتر — العنوان، المنفذ، الاتصال المشفّر، وحالة آخر فحص"
 msgstr ""
 
-#: app/api/openapi.py:193
+#: app/api/openapi.py:194
 msgid "إدارة الأدوار وصلاحياتها."
 msgstr ""
 
@@ -15278,7 +15293,7 @@ msgstr ""
 msgid "إدارة العروض"
 msgstr ""
 
-#: app/api/openapi.py:204
+#: app/api/openapi.py:205
 msgid "إدارة القروض المالية للمشتركين."
 msgstr ""
 
@@ -15294,11 +15309,11 @@ msgstr ""
 msgid "إدارة المدراء"
 msgstr ""
 
-#: app/api/openapi.py:191
+#: app/api/openapi.py:192
 msgid "إدارة المدفوعات"
 msgstr ""
 
-#: app/api/openapi.py:202
+#: app/api/openapi.py:203
 msgid "إدارة المستأجرين (multi-tenancy)."
 msgstr ""
 
@@ -15328,7 +15343,7 @@ msgstr ""
 msgid "إدارة الموزّعين"
 msgstr ""
 
-#: app/api/openapi.py:203
+#: app/api/openapi.py:204
 msgid "إدارة الموزّعين."
 msgstr ""
 
@@ -15347,7 +15362,7 @@ msgid ""
 "كاملة لكل باقة بنقرة واحدة."
 msgstr ""
 
-#: app/api/openapi.py:179
+#: app/api/openapi.py:180
 msgid "إدارة باقات الخدمة: السرعات، الحدود، والأسعار."
 msgstr ""
 
@@ -15366,7 +15381,7 @@ msgstr ""
 msgid "إدارة حسابات المدراء والصلاحيات — إضافة، تعديل، أرشفة، ربط بدور."
 msgstr ""
 
-#: app/api/openapi.py:192
+#: app/api/openapi.py:193
 msgid "إدارة حسابات المدراء."
 msgstr ""
 
@@ -15376,7 +15391,7 @@ msgid ""
 "والاستخدام."
 msgstr ""
 
-#: app/api/openapi.py:224
+#: app/api/openapi.py:225
 msgid "إدارة خدمات النظام (CRUD)."
 msgstr ""
 
@@ -15405,7 +15420,7 @@ msgid ""
 "الرمز يُعرض مرة واحدة فقط عند إنشائه."
 msgstr ""
 
-#: app/api/openapi.py:184
+#: app/api/openapi.py:185
 msgid "إدارة سياسات الشبكة والتحكّم بالنفاذ."
 msgstr ""
 
@@ -15420,7 +15435,7 @@ msgstr ""
 msgid "إدارة قفل MAC"
 msgstr ""
 
-#: app/api/openapi.py:219
+#: app/api/openapi.py:220
 msgid "إدارة قوالب طباعة البطاقات."
 msgstr ""
 
@@ -15450,13 +15465,13 @@ msgstr ""
 msgid "إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة"
 msgstr ""
 
-#: app/api/openapi.py:239
+#: app/api/openapi.py:240
 msgid ""
 "إدارة مجموعات المشتركين: إنشاء، تعديل، حذف، قطع المتصلين، وتصفير الحصّة "
 "اليوميّة."
 msgstr ""
 
-#: app/api/openapi.py:217
+#: app/api/openapi.py:218
 msgid "إدارة مجموعات عناوين IP."
 msgstr ""
 
@@ -15466,11 +15481,11 @@ msgid ""
 "والاستهلاك."
 msgstr ""
 
-#: app/api/openapi.py:212
+#: app/api/openapi.py:213
 msgid "إدارة مستخدمي البطاقات في السوق."
 msgstr ""
 
-#: app/api/openapi.py:227
+#: app/api/openapi.py:228
 msgid "إدارة ملفات حدود السرعة."
 msgstr ""
 
@@ -15750,7 +15765,7 @@ msgstr ""
 msgid "إرسال CoA"
 msgstr ""
 
-#: app/api/openapi.py:275 app/radius/services/manager_grants.py:300
+#: app/api/openapi.py:276 app/radius/services/manager_grants.py:300
 msgid "إرسال SMS"
 msgstr ""
 
@@ -17113,7 +17128,7 @@ msgstr ""
 msgid "إعادة الفحص الآن"
 msgstr ""
 
-#: app/api/openapi.py:264 app/static/js/device_health.js:774
+#: app/api/openapi.py:265 app/static/js/device_health.js:774
 #: app/static/js/mt_dashboard.js:1609
 #: app/templates/radius/mt_dashboard.html:3108
 #: app/templates/radius/mt_dashboard.html:3129
@@ -17146,7 +17161,7 @@ msgstr ""
 msgid "إعادة تسمية"
 msgstr ""
 
-#: app/api/openapi.py:269 app/radius/services/audit_format.py:161
+#: app/api/openapi.py:270 app/radius/services/audit_format.py:161
 #: app/radius/services/manager_activity_audit.py:245
 #: app/radius/services/tr069/device_service.py:132
 #: app/static/js/mt_dashboard.js:1033
@@ -17415,7 +17430,7 @@ msgstr ""
 msgid "إعداد اتصال الراوتر — المضيف والمنفذ وبيانات الدخول وخيار الاتصال المشفّر"
 msgstr ""
 
-#: app/api/openapi.py:186
+#: app/api/openapi.py:187
 msgid ""
 "إعداد اتصالات مايكروتيك والتحكّم المباشر: الموارد، الواجهات، الطوابير، "
 "الجدار الناري، والأدوات."
@@ -17448,7 +17463,7 @@ msgstr ""
 msgid "إعداد الربط غير مكتمل (رابط اللوحة أو مفتاح الترخيص)."
 msgstr ""
 
-#: app/api/openapi.py:185
+#: app/api/openapi.py:186
 msgid "إعداد الـ webhooks، اختبارها، ومتابعة سجل الإرسال."
 msgstr ""
 
@@ -17460,7 +17475,7 @@ msgstr ""
 msgid "إعداد بوت التلجرام"
 msgstr ""
 
-#: app/api/openapi.py:230
+#: app/api/openapi.py:231
 msgid "إعداد بوت تيليجرام للتنبيهات، تفعيل/تعطيل كل تنبيه، واختبار الإرسال."
 msgstr ""
 
@@ -17468,7 +17483,7 @@ msgstr ""
 msgid "إعداد تلقائيّ"
 msgstr ""
 
-#: app/api/openapi.py:234
+#: app/api/openapi.py:235
 msgid "إعداد تنبيهات تيليجرام الخاصّة بالشبكة واختبارها."
 msgstr ""
 
@@ -17518,7 +17533,7 @@ msgstr ""
 msgid "إعداد عميل المقاييس على الراوتر ←"
 msgstr ""
 
-#: app/api/openapi.py:241
+#: app/api/openapi.py:242
 msgid "إعداد قناة واتساب (Cloud API والبوت) واختبار الإرسال."
 msgstr ""
 
@@ -17591,7 +17606,7 @@ msgstr ""
 msgid "إعدادات التحصيل"
 msgstr ""
 
-#: app/api/openapi.py:190
+#: app/api/openapi.py:191
 msgid ""
 "إعدادات التحصيل، طلبات الدفع، إثباتاتها، والمدفوعات. (المراجعة والاعتماد "
 "في مجموعة «إدارة المدفوعات»)."
@@ -17717,7 +17732,7 @@ msgstr ""
 msgid "إعدادات الورقة والرص:"
 msgstr ""
 
-#: app/api/openapi.py:213
+#: app/api/openapi.py:214
 msgid "إعدادات بوابات العملاء."
 msgstr ""
 
@@ -18071,7 +18086,7 @@ msgstr ""
 msgid "إلزامي"
 msgstr ""
 
-#: app/api/openapi.py:262 app/api/openapi.py:265
+#: app/api/openapi.py:263 app/api/openapi.py:266
 #: app/radius/routes/audit_log.py:69 app/radius/services/audit_format.py:152
 #: app/radius/services/event_labels.py:403
 #: app/radius/services/event_labels.py:432
@@ -18731,7 +18746,7 @@ msgstr ""
 msgid "إنشاء الفاتورة"
 msgstr ""
 
-#: app/api/openapi.py:188
+#: app/api/openapi.py:189
 msgid "إنشاء الفواتير ومتابعة حالتها."
 msgstr ""
 
@@ -18781,7 +18796,7 @@ msgstr ""
 msgid "إنشاء تصميم جديد"
 msgstr ""
 
-#: app/api/openapi.py:196
+#: app/api/openapi.py:197
 msgid "إنشاء توكنات الـ API وإلغاؤها وتحديد صلاحياتها."
 msgstr ""
 
@@ -18793,7 +18808,7 @@ msgstr ""
 msgid "إنشاء جدولة النطاق الترددي"
 msgstr ""
 
-#: app/api/openapi.py:325
+#: app/api/openapi.py:326
 msgid "إنشاء جديد"
 msgstr ""
 
@@ -19077,7 +19092,7 @@ msgstr ""
 msgid "إيداع"
 msgstr ""
 
-#: app/api/openapi.py:282 app/radius/services/notifications_engine.py:181
+#: app/api/openapi.py:283 app/radius/services/notifications_engine.py:181
 msgid "إيداع رصيد"
 msgstr ""
 
@@ -20055,7 +20070,7 @@ msgstr ""
 msgid "اختبار اتصال المايكروتيك"
 msgstr ""
 
-#: app/api/openapi.py:263 app/templates/radius/admin_alerts.html:56
+#: app/api/openapi.py:264 app/templates/radius/admin_alerts.html:56
 #: app/templates/radius/docs_alerts.html:100
 #: app/templates/radius/integrations_hub.html:75
 #: app/templates/radius/mt_list.html:79
@@ -20075,7 +20090,7 @@ msgstr ""
 msgid "اختبار السرعة"
 msgstr ""
 
-#: app/api/permission_guard.py:731 app/templates/radius/tool_test_auth.html:11
+#: app/api/permission_guard.py:749 app/templates/radius/tool_test_auth.html:11
 msgid "اختبار المصادقة"
 msgstr ""
 
@@ -20086,7 +20101,7 @@ msgstr ""
 msgid "اختبار الوصول"
 msgstr ""
 
-#: app/api/openapi.py:264
+#: app/api/openapi.py:265
 msgid "اختبار بيانات اتصال"
 msgstr ""
 
@@ -22099,11 +22114,11 @@ msgstr ""
 msgid "استعادة نسخة احتياطية"
 msgstr ""
 
-#: app/api/openapi.py:195
+#: app/api/openapi.py:196
 msgid "استعراض سجل عمليات النظام."
 msgstr ""
 
-#: app/api/openapi.py:220
+#: app/api/openapi.py:221
 msgid "استعراض واستعادة العناصر المحذوفة."
 msgstr ""
 
@@ -22111,7 +22126,7 @@ msgstr ""
 msgid "استعلام DNS"
 msgstr ""
 
-#: app/api/openapi.py:279
+#: app/api/openapi.py:280
 msgid "استعلام الحالة"
 msgstr ""
 
@@ -22135,15 +22150,15 @@ msgstr ""
 msgid "استقبال"
 msgstr ""
 
-#: app/api/openapi.py:222
+#: app/api/openapi.py:223
 msgid "استقبال بيانات الراوترات"
 msgstr ""
 
-#: app/api/openapi.py:287
+#: app/api/openapi.py:288
 msgid "استقبال دفعة بيانات"
 msgstr ""
 
-#: app/api/openapi.py:222
+#: app/api/openapi.py:223
 msgid "استقبال مقاييس الراوترات وكشف الحلقات (ingest)."
 msgstr ""
 
@@ -22281,7 +22296,7 @@ msgstr ""
 msgid "استورد ملفات الكروت الجاهزة وحوّلها إلى ملفات طباعة احترافية"
 msgstr ""
 
-#: app/api/openapi.py:265 app/radius/routes/audit_log.py:72
+#: app/api/openapi.py:266 app/radius/routes/audit_log.py:72
 #: app/radius/services/audit_format.py:155
 #: app/radius/services/event_labels.py:422
 #: app/radius/services/manager_activity_audit.py:233
@@ -22316,7 +22331,7 @@ msgstr ""
 msgid "استيراد حِزم بطاقات"
 msgstr ""
 
-#: app/api/openapi.py:276
+#: app/api/openapi.py:277
 msgid "استيراد دفعة"
 msgstr ""
 
@@ -23211,6 +23226,10 @@ msgstr ""
 
 #: app/templates/radius/docs_online_users.html:337
 msgid "اسم المشترك (والاسم الكامل إن وُجد)."
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:225
+msgid "اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة."
 msgstr ""
 
 #: app/radius/core/messages_ar.py:45 app/radius/services/operations.py:1356
@@ -24188,7 +24207,7 @@ msgstr ""
 msgid "اعتباره تعارضًا"
 msgstr ""
 
-#: app/api/openapi.py:270 app/radius/services/event_labels.py:366
+#: app/api/openapi.py:271 app/radius/services/event_labels.py:366
 #: app/radius/services/manager_activity_audit.py:251
 #: app/templates/_partials/access_schedule.html:696
 #: app/templates/radius/manager_approvals.html:30
@@ -25500,7 +25519,7 @@ msgstr ""
 msgid "الأحد"
 msgstr ""
 
-#: app/api/openapi.py:209 app/api/openapi.py:275
+#: app/api/openapi.py:210 app/api/openapi.py:276
 #: app/radius/services/provider_service_labels.py:75
 #: app/templates/radius/communications_notifications.html:229
 #: app/templates/radius/device_health.html:419
@@ -25588,7 +25607,7 @@ msgstr ""
 msgid "الأدوات"
 msgstr ""
 
-#: app/api/openapi.py:193 app/radius/routes/recycle_bin.py:28
+#: app/api/openapi.py:194 app/radius/routes/recycle_bin.py:28
 #: app/radius/services/manager_activity_audit.py:212
 #: app/templates/radius/admins_list.html:56
 #: app/templates/radius/docs_admins.html:65
@@ -25835,7 +25854,7 @@ msgstr ""
 msgid "الأطوال +"
 msgstr ""
 
-#: app/api/openapi.py:284 app/templates/radius/docs_user_groups.html:439
+#: app/api/openapi.py:285 app/templates/radius/docs_user_groups.html:439
 #: app/templates/radius/docs_user_groups.html:476
 #: app/templates/radius/sgrp_list.html:52
 #: app/templates/radius/sgrp_list.html:83
@@ -26398,7 +26417,7 @@ msgstr ""
 msgid "الإشعار غير موجود."
 msgstr ""
 
-#: app/api/openapi.py:235 app/radius/routes/reports.py:72
+#: app/api/openapi.py:236 app/radius/routes/reports.py:72
 #: app/radius/services/event_labels.py:523
 #: app/radius/services/manager_activity_audit.py:222
 #: app/radius/services/provider_service_labels.py:118
@@ -26536,7 +26555,7 @@ msgstr ""
 msgid "الإعداد الهندسي"
 msgstr ""
 
-#: app/api/openapi.py:197 app/api/openapi.py:272 app/api/v1/admins.py:597
+#: app/api/openapi.py:198 app/api/openapi.py:273 app/api/v1/admins.py:597
 #: app/radius/services/event_labels.py:342
 #: app/radius/services/manager_activity_audit.py:215
 #: app/radius/services/provider_service_labels.py:100
@@ -26702,7 +26721,7 @@ msgstr ""
 msgid "الإيراد بعد خصم تكلفة الجملة."
 msgstr ""
 
-#: app/api/openapi.py:285 app/radius/services/business_os_finance.py:115
+#: app/api/openapi.py:286 app/radius/services/business_os_finance.py:115
 #: app/templates/radius/_finance_nav.html:21
 #: app/templates/radius/docs_finance_center.html:303
 #: app/templates/radius/docs_finance_center.html:509
@@ -26870,7 +26889,7 @@ msgstr ""
 msgid "الاتصالات والحملات"
 msgstr ""
 
-#: app/api/openapi.py:199
+#: app/api/openapi.py:200
 msgid "الاتصالات والرسائل"
 msgstr ""
 
@@ -26913,7 +26932,7 @@ msgstr ""
 msgid "الارتباط غير موجود أو سبق إجراؤه."
 msgstr ""
 
-#: app/api/openapi.py:266 app/radius/services/event_labels.py:327
+#: app/api/openapi.py:267 app/radius/services/event_labels.py:327
 #: app/templates/radius/cards_batches.html:633
 #: app/templates/radius/portal_card.html:700
 #: app/templates/radius/portal_subscriber.html:281
@@ -27491,6 +27510,10 @@ msgstr ""
 msgid "البادئة «rtr-» محجوزة لحسابات إدارة الراوترات."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:436
+msgid "البادئة واللاحقة لا تتركان خانة عشوائيّة ضمن الطول الكلّيّ."
+msgstr ""
+
 #: app/templates/radius/cards_print_quick.html:259
 msgid "الباركود أفقيًا"
 msgstr ""
@@ -27511,7 +27534,7 @@ msgstr ""
 msgid "الباسورد"
 msgstr ""
 
-#: app/api/openapi.py:275 app/api/v1/admins.py:593
+#: app/api/openapi.py:276 app/api/v1/admins.py:593
 #: app/radius/routes/recycle_bin.py:25
 #: app/radius/services/manager_activity_audit.py:216
 #: app/radius/services/manager_activity_audit.py:217
@@ -27523,7 +27546,7 @@ msgstr ""
 msgid "الباقات"
 msgstr ""
 
-#: app/api/openapi.py:179
+#: app/api/openapi.py:180
 msgid "الباقات (الخطط)"
 msgstr ""
 
@@ -28407,6 +28430,10 @@ msgstr ""
 msgid "التأكيد"
 msgstr ""
 
+#: app/radius/services/ops_assistant/executor.py:197
+msgid "التأكيد لا يطابق المقترح المعروض — اعرض المقترح الجديد وأكّده من جديد."
+msgstr ""
+
 #: app/templates/radius/docs_store_support.html:124
 msgid ""
 "التأكيد محصّن ضد التكرار: لو ضغطت مرتين أو راجع مديران الطلب نفسه، يُضاف "
@@ -28457,6 +28484,10 @@ msgstr ""
 #: app/templates/radius/users_profile.html:992
 #: app/templates/radius/users_profile.html:1355
 msgid "التاريخ"
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:324
+msgid "التاريخ المطلوب ليس بعد انتهاء الاشتراك الحاليّ."
 msgstr ""
 
 #: app/static/js/setup_wizard_v2.js:1212
@@ -28890,7 +28921,7 @@ msgstr ""
 msgid "التذاكر"
 msgstr ""
 
-#: app/api/openapi.py:201
+#: app/api/openapi.py:202
 msgid "التذاكر (الدعم)"
 msgstr ""
 
@@ -29066,7 +29097,7 @@ msgstr ""
 msgid "التسجيل يربط راوتر المشترك بحسابه، فتديره عن بُعد."
 msgstr ""
 
-#: app/api/openapi.py:210 app/templates/radius/_plans_fragments.html:123
+#: app/api/openapi.py:211 app/templates/radius/_plans_fragments.html:123
 #: app/templates/radius/card_pricing_batch.html:26
 #: app/templates/radius/cards_offers.html:223
 msgid "التسعير"
@@ -29435,7 +29466,7 @@ msgstr ""
 msgid "التفعيلات"
 msgstr ""
 
-#: app/api/openapi.py:200 app/api/v1/service_requests.py:52
+#: app/api/openapi.py:201 app/api/v1/service_requests.py:52
 #: app/radius/routes/docs_center.py:523
 #: app/radius/services/manager_activity_audit.py:197
 #: app/radius/services/manager_activity_audit.py:213
@@ -29451,7 +29482,7 @@ msgstr ""
 msgid "التقارير"
 msgstr ""
 
-#: app/api/openapi.py:216 app/radius/services/provider_service_labels.py:74
+#: app/api/openapi.py:217 app/radius/services/provider_service_labels.py:74
 msgid "التقارير التشغيلية"
 msgstr ""
 
@@ -29744,6 +29775,10 @@ msgid ""
 "الخادم."
 msgstr ""
 
+#: app/radius/services/ops_assistant/executor.py:126
+msgid "التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة."
+msgstr ""
+
 #: app/templates/radius/docs_finance_center.html:488
 msgid "التي تتحقق من صلاحيتك ومن"
 msgstr ""
@@ -30020,7 +30055,7 @@ msgstr ""
 msgid "الجلسات المفتوحة حاليًّا"
 msgstr ""
 
-#: app/api/openapi.py:180 app/templates/radius/operations_center.html:85
+#: app/api/openapi.py:181 app/templates/radius/operations_center.html:85
 #: app/templates/radius/remote_sessions.html:54
 msgid "الجلسات النشطة"
 msgstr ""
@@ -31028,7 +31063,7 @@ msgstr ""
 msgid "الحساب الإداري المرتبط بهذا التوكن غير موجود أو معطّل."
 msgstr ""
 
-#: app/api/auth.py:346
+#: app/api/auth.py:397
 msgid "الحساب الإداري المرتبط بهذا التوكن محذوف أو معطّل — سجّل الدخول من جديد."
 msgstr ""
 
@@ -31240,7 +31275,7 @@ msgstr ""
 msgid "الحملات"
 msgstr ""
 
-#: app/api/openapi.py:199
+#: app/api/openapi.py:200
 msgid "الحملات وقوالب الرسائل والإرسال."
 msgstr ""
 
@@ -31296,7 +31331,7 @@ msgid ""
 " بعد الدخول تظهر لوحته الشخصية بتبويبات منظّمة."
 msgstr ""
 
-#: app/api/openapi.py:224 app/templates/radius/docs_user_groups.html:439
+#: app/api/openapi.py:225 app/templates/radius/docs_user_groups.html:439
 #: app/templates/radius/setup_wizard_v2.html:109
 #: app/templates/radius/subscriber_360.html:63
 #: app/templates/radius/subscriber_360.html:269
@@ -31613,6 +31648,10 @@ msgstr ""
 
 #: app/radius/services/setup_wizard_pilot.py:72
 msgid "الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة."
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:128
+msgid "الخطوة المشار إليها لا تُنتج هذا الحقل."
 msgstr ""
 
 #: app/templates/radius/license_connect.html:51
@@ -32554,15 +32593,15 @@ msgstr ""
 msgid "الراوتر لم يرد على /ip/hotspot/active."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2364
+#: app/static/js/mt_dashboard.js:2371
 msgid "الراوتر لم يرد على /ip/neighbor/print."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2397
+#: app/static/js/mt_dashboard.js:2404
 msgid "الراوتر لم يرد على /ip/route/print."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2295
+#: app/static/js/mt_dashboard.js:2302
 msgid "الراوتر لم يرد على /log/print."
 msgstr ""
 
@@ -33801,6 +33840,10 @@ msgstr ""
 msgid "السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:387
+msgid "السرعة صفر مرفوضة إلّا مع «بلا حدّ للسرعة»."
+msgstr ""
+
 #: app/radius/services/plans.py:452
 msgid "السرعة لا يمكن أن تكون سالبة."
 msgstr ""
@@ -34413,7 +34456,7 @@ msgstr ""
 msgid "السويد"
 msgstr ""
 
-#: app/api/openapi.py:285 app/templates/radius/network_policy_list.html:99
+#: app/api/openapi.py:286 app/templates/radius/network_policy_list.html:99
 msgid "السياسات"
 msgstr ""
 
@@ -35103,7 +35146,7 @@ msgstr ""
 msgid "الصقه مرة واحدة في طرفية الراوتر واضغط إدخال."
 msgstr ""
 
-#: app/api/openapi.py:194 app/api/openapi.py:286
+#: app/api/openapi.py:195 app/api/openapi.py:287
 #: app/templates/radius/distributors_detail.html:77
 #: app/templates/radius/distributors_form.html:177
 #: app/templates/radius/distributors_list.html:96
@@ -35280,7 +35323,7 @@ msgstr ""
 msgid "الصيانة"
 msgstr ""
 
-#: app/api/permission_guard.py:735
+#: app/api/permission_guard.py:753
 msgid "الصيانة الجماعيّة"
 msgstr ""
 
@@ -36383,7 +36426,7 @@ msgstr ""
 msgid "الـ Peers"
 msgstr ""
 
-#: app/api/openapi.py:185
+#: app/api/openapi.py:186
 msgid "الـ Webhooks"
 msgstr ""
 
@@ -36773,7 +36816,7 @@ msgstr ""
 msgid "الفني/الموظف"
 msgstr ""
 
-#: app/api/openapi.py:188 app/radius/services/provider_service_labels.py:64
+#: app/api/openapi.py:189 app/radius/services/provider_service_labels.py:64
 #: app/templates/radius/_finance_nav.html:18
 #: app/templates/radius/docs_billing_vouchers.html:287
 #: app/templates/radius/finance_billing.html:83
@@ -36994,7 +37037,7 @@ msgstr ""
 msgid "القدرات المفعّلة"
 msgstr ""
 
-#: app/api/openapi.py:237
+#: app/api/openapi.py:238
 msgid "القدرات والخدمات الممنوحة من عقد المزوّد لهذه الشبكة."
 msgstr ""
 
@@ -37024,7 +37067,7 @@ msgstr ""
 msgid "القرمزي الفاخر"
 msgstr ""
 
-#: app/api/openapi.py:204
+#: app/api/openapi.py:205
 msgid "القروض"
 msgstr ""
 
@@ -37032,7 +37075,7 @@ msgstr ""
 msgid "القروض / الديون"
 msgstr ""
 
-#: app/api/openapi.py:189 app/radius/services/operations.py:3221
+#: app/api/openapi.py:190 app/radius/services/operations.py:3221
 #: app/radius/services/provider_service_labels.py:48
 msgid "القسائم"
 msgstr ""
@@ -37413,7 +37456,7 @@ msgstr ""
 msgid "الكاميرون"
 msgstr ""
 
-#: app/api/openapi.py:274
+#: app/api/openapi.py:275
 msgid "الكتالوج"
 msgstr ""
 
@@ -37903,7 +37946,7 @@ msgstr ""
 msgid "اللغة الافتراضية لواجهة هذا المستأجر: العربية أو الإنجليزية."
 msgstr ""
 
-#: app/api/openapi.py:284
+#: app/api/openapi.py:285
 msgid "اللقطات"
 msgstr ""
 
@@ -38150,7 +38193,7 @@ msgstr ""
 msgid "المالية"
 msgstr ""
 
-#: app/api/openapi.py:207
+#: app/api/openapi.py:208
 msgid "المالية والمحافظ"
 msgstr ""
 
@@ -38566,7 +38609,7 @@ msgstr ""
 msgid "المتصلون"
 msgstr ""
 
-#: app/api/openapi.py:271 app/radius/services/manager_activity_audit.py:195
+#: app/api/openapi.py:272 app/radius/services/manager_activity_audit.py:195
 #: app/radius/services/manager_activity_audit.py:212
 #: app/templates/radius/_perm_labels.html:21
 #: app/templates/radius/docs_cards_connected.html:283
@@ -38788,6 +38831,10 @@ msgstr ""
 msgid "المحادثة"
 msgstr ""
 
+#: app/api/v1/ops.py:91
+msgid "المحادثة غير موجودة."
+msgstr ""
+
 #: app/radius/services/event_labels.py:329
 #: app/radius/services/manager_activity_audit.py:215
 #: app/templates/radius/cards_batches.html:639
@@ -38800,7 +38847,7 @@ msgstr ""
 msgid "المحاسبة (Accounting):"
 msgstr ""
 
-#: app/api/openapi.py:181 app/templates/radius/license_file.html:193
+#: app/api/openapi.py:182 app/templates/radius/license_file.html:193
 msgid "المحاسبة والاستخدام"
 msgstr ""
 
@@ -38813,7 +38860,7 @@ msgstr ""
 msgid "المحاسبة وقطع الجلسة"
 msgstr ""
 
-#: app/api/openapi.py:285 app/templates/radius/license_file.html:292
+#: app/api/openapi.py:286 app/templates/radius/license_file.html:292
 msgid "المحافظ"
 msgstr ""
 
@@ -39098,7 +39145,7 @@ msgstr ""
 msgid "المدخل إلزامي — مفتاح النطاق هو المايكروتيك / السيرفر + المدخل + الشبكة."
 msgstr ""
 
-#: app/api/openapi.py:192 app/api/v1/admins.py:596
+#: app/api/openapi.py:193 app/api/v1/admins.py:596
 #: app/radius/routes/recycle_bin.py:27 app/radius/services/event_labels.py:526
 #: app/radius/services/manager_activity_audit.py:210
 #: app/radius/services/manager_activity_audit.py:211
@@ -39203,7 +39250,7 @@ msgstr ""
 msgid "المدفوعات الميدانية:"
 msgstr ""
 
-#: app/api/openapi.py:190
+#: app/api/openapi.py:191
 msgid "المدفوعات والتحصيل"
 msgstr ""
 
@@ -39389,8 +39436,9 @@ msgstr ""
 #: app/api/v1/accounts.py:819 app/api/v1/cards.py:1427
 #: app/api/v1/subscriber_actions.py:518 app/radius/core/messages_ar.py:20
 #: app/radius/core/messages_ar.py:42 app/radius/routes/users.py:2617
-#: app/radius/routes/users.py:2620 app/radius/services/radius_apply.py:42
-#: app/radius/services/users.py:1030
+#: app/radius/routes/users.py:2620
+#: app/radius/services/ops_assistant/units.py:121
+#: app/radius/services/radius_apply.py:42 app/radius/services/users.py:1030
 msgid "المدّة يجب أن تكون أكبر من صفر."
 msgstr ""
 
@@ -39485,6 +39533,10 @@ msgstr ""
 msgid "المرجع هو رمز يربط الطلب بحركة المزوّد للمطابقة لاحقًا."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:125
+msgid "المرجع يجب أن يشير إلى خطوة سابقة."
+msgstr ""
+
 #: app/templates/radius/finance_collection.html:188
 msgid "المرجع يساعدك على مطابقة الدفعة مع حركة المزوّد."
 msgstr ""
@@ -39564,7 +39616,7 @@ msgid ""
 "فرع الشمال|0591111111|الزهور"
 msgstr ""
 
-#: app/api/openapi.py:272
+#: app/api/openapi.py:273
 msgid "المزامنة"
 msgstr ""
 
@@ -39672,6 +39724,16 @@ msgstr ""
 msgid "المسارات:"
 msgstr ""
 
+#: app/api/v1/ops.py:77
+msgid ""
+"المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها "
+"أوّلًا."
+msgstr ""
+
+#: app/api/v1/ops.py:60
+msgid "المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير."
+msgstr ""
+
 #: app/templates/radius/mt_dashboard.html:2124
 msgid "المسافة"
 msgstr ""
@@ -39735,7 +39797,7 @@ msgid ""
 "تلقائيًا — املأ الهوية واختر الفئة، والباقي اختياري."
 msgstr ""
 
-#: app/api/openapi.py:202 app/radius/services/manager_activity_audit.py:224
+#: app/api/openapi.py:203 app/radius/services/manager_activity_audit.py:224
 #: app/radius/services/provider_service_labels.py:101
 #: app/templates/admin/_sidebar.html:1104
 msgid "المستأجرون"
@@ -40032,6 +40094,10 @@ msgstr ""
 #: app/radius/core/messages_ar.py:36 app/radius/services/quota_period.py:227
 #: app/radius/services/users.py:619
 msgid "المشترك غير صالح."
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:134
+msgid "المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط."
 msgstr ""
 
 #: app/radius/routes/users.py:2278 app/radius/services/temp_speed.py:464
@@ -40356,7 +40422,7 @@ msgid ""
 "لا تنفّذ شراءً ولا طلبًا ولا تجديدًا."
 msgstr ""
 
-#: app/api/openapi.py:277
+#: app/api/openapi.py:278
 msgid "المصالحة"
 msgstr ""
 
@@ -40625,6 +40691,10 @@ msgid ""
 "بعناية."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:219
+msgid "المعرّف لم يَرِد في قائمة اختيار من هذه المحادثة."
+msgstr ""
+
 #: app/radius/services/access_control.py:412
 msgid "المعرّف يجب أن يكون رقمًا."
 msgstr ""
@@ -40855,8 +40925,20 @@ msgstr ""
 msgid "المقاصّة الوطنية للمدفوعات"
 msgstr ""
 
-#: app/api/openapi.py:287
+#: app/api/openapi.py:288
 msgid "المقاييس"
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:232
+msgid "المقترح تغيّر — أكّده من جديد."
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:187
+msgid "المقترح غير موجود."
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:138
+msgid "المقترح يجب أن يكون كائن JSON واحدًا."
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:2040
@@ -41251,6 +41333,12 @@ msgstr ""
 msgid "المنفّذ"
 msgstr ""
 
+#: app/api/openapi.py:177
+msgid ""
+"المنفّذ الحتميّ لمقترحات مساعد العمليّات: السياق، قوائم الاختيار، "
+"التحقّق، المسودّة، والتنفيذ بعد التأكيد."
+msgstr ""
+
 #: app/radius/services/manager_activity_audit.py:226
 msgid "المهام"
 msgstr ""
@@ -41465,7 +41553,7 @@ msgid ""
 "زبون، تُسلّم الموزّع"
 msgstr ""
 
-#: app/api/openapi.py:203 app/radius/routes/docs_center.py:451
+#: app/api/openapi.py:204 app/radius/routes/docs_center.py:451
 #: app/radius/services/data_reset.py:149
 #: app/radius/services/manager_activity_audit.py:220
 #: app/radius/services/manager_grants.py:118
@@ -41757,7 +41845,7 @@ msgstr ""
 msgid "النسخ"
 msgstr ""
 
-#: app/api/openapi.py:229 app/radius/routes/admin_bridge.py:159
+#: app/api/openapi.py:230 app/radius/routes/admin_bridge.py:159
 #: app/templates/radius/backups.html:9 app/templates/radius/backups.html:10
 #: app/templates/radius/backups.html:175
 #: app/templates/radius/data_protection_nav.html:19
@@ -42528,7 +42616,7 @@ msgstr ""
 msgid "الهوتسبوت والكروت"
 msgstr ""
 
-#: app/api/openapi.py:281 app/templates/radius/license_file.html:355
+#: app/api/openapi.py:282 app/templates/radius/license_file.html:355
 #: app/templates/radius/mt_login_designer.html:541
 msgid "الهوية"
 msgstr ""
@@ -43483,7 +43571,7 @@ msgstr ""
 msgid "انتهت صلاحية الصفحة"
 msgstr ""
 
-#: app/api/auth.py:333
+#: app/api/auth.py:384
 msgid "انتهت صلاحية الـ token — سجّل دخول مجددًا"
 msgstr ""
 
@@ -44030,7 +44118,7 @@ msgstr ""
 msgid "باقات بلا مشتركين"
 msgstr ""
 
-#: app/api/openapi.py:211
+#: app/api/openapi.py:212
 msgid "باقات سوق البطاقات الإلكترونية."
 msgstr ""
 
@@ -44591,11 +44679,11 @@ msgstr ""
 msgid "بث مباشر"
 msgstr ""
 
-#: app/api/openapi.py:280
+#: app/api/openapi.py:281
 msgid "بثّ مباشر"
 msgstr ""
 
-#: app/api/openapi.py:280
+#: app/api/openapi.py:281
 msgid "بثّ مباشر (SSE)"
 msgstr ""
 
@@ -45432,11 +45520,11 @@ msgstr ""
 msgid "بصفته الـpeer الوحيد: مفتاحه العام، نقطة نهايته، و"
 msgstr ""
 
-#: app/api/openapi.py:198
+#: app/api/openapi.py:199
 msgid "بصمات أجهزة المشتركين ومزامنتها."
 msgstr ""
 
-#: app/api/openapi.py:198
+#: app/api/openapi.py:199
 msgid "بصمات الأجهزة"
 msgstr ""
 
@@ -45605,7 +45693,7 @@ msgstr ""
 msgid "بطاقاته المشتراة وحالتها من الراديوس + زر الدخول بها."
 msgstr ""
 
-#: app/api/openapi.py:274 app/templates/radius/docs_mikrotik_store.html:283
+#: app/api/openapi.py:275 app/templates/radius/docs_mikrotik_store.html:283
 #: app/templates/radius/docs_mikrotik_store.html:369
 #: app/templates/radius/portal_card.html:534
 #: app/templates/radius/portal_card.html:666
@@ -46434,7 +46522,7 @@ msgstr ""
 msgid "بلغت الحد الأقصى من الجلسات المسموحة لهذا الحساب"
 msgstr ""
 
-#: app/api/access_control.py:179 app/api/permission_guard.py:913
+#: app/api/access_control.py:179 app/api/permission_guard.py:931
 #: app/api/v1/loans.py:52 app/api/v1/subscriber_actions.py:182
 #: app/radius/routes/blueprint.py:1341
 msgid "بلغت الحدّ اليوميّ المسموح لهذا الإجراء."
@@ -46581,7 +46669,7 @@ msgstr ""
 msgid "بوابات الدفع واعتماد التحصيل"
 msgstr ""
 
-#: app/api/openapi.py:213 app/radius/routes/docs_center.py:579
+#: app/api/openapi.py:214 app/radius/routes/docs_center.py:579
 #: app/templates/admin/_sidebar.html:983
 #: app/templates/radius/customer_portals_admin.html:22
 #: app/templates/radius/customer_portals_admin.html:50
@@ -46696,7 +46784,7 @@ msgstr ""
 msgid "بوابة المتجر"
 msgstr ""
 
-#: app/api/openapi.py:240 app/api/v1/customer_portals.py:26
+#: app/api/openapi.py:241 app/api/v1/customer_portals.py:26
 #: app/radius/services/customer_portals.py:258
 #: app/templates/radius/customer_portals_admin.html:55
 #: app/templates/radius/customer_portals_admin.html:73
@@ -46730,7 +46818,7 @@ msgstr ""
 msgid "بوابة الموزّع"
 msgstr ""
 
-#: app/api/openapi.py:177
+#: app/api/openapi.py:178
 msgid "بوابة بطاقات الهوتسبوت"
 msgstr ""
 
@@ -47125,7 +47213,7 @@ msgstr ""
 msgid "بيانات الحساب"
 msgstr ""
 
-#: app/api/openapi.py:261
+#: app/api/openapi.py:262
 msgid "بيانات الحساب الحالي"
 msgstr ""
 
@@ -47143,7 +47231,7 @@ msgstr ""
 msgid "بيانات الدخول خاطئة (مفتاح API أو اسم المستخدم/كلمة المرور)"
 msgstr ""
 
-#: app/api/admin_auth.py:223
+#: app/api/admin_auth.py:240
 msgid "بيانات الدخول غير صحيحة"
 msgstr ""
 
@@ -47487,7 +47575,7 @@ msgstr ""
 msgid "تأكد من اتصال الراوتر بالخادم"
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2363
+#: app/static/js/mt_dashboard.js:2370
 msgid "تأكد من تفعيل MNDP/CDP/LLDP على الواجهة."
 msgstr ""
 
@@ -47666,7 +47754,7 @@ msgstr ""
 msgid "تأكيد كلمة المرور الجديدة"
 msgstr ""
 
-#: app/api/admin_auth.py:322 app/radius/routes/account.py:46
+#: app/api/admin_auth.py:393 app/radius/routes/account.py:46
 msgid "تأكيد كلمة المرور غير مطابق."
 msgstr ""
 
@@ -48278,7 +48366,7 @@ msgstr ""
 msgid "تتبّع اللوب على الراوتر"
 msgstr ""
 
-#: app/api/openapi.py:269 app/static/js/mt_dashboard.js:601
+#: app/api/openapi.py:270 app/static/js/mt_dashboard.js:601
 #: app/templates/radius/docs_router_dashboard.html:327
 #: app/templates/radius/docs_router_dashboard.html:342
 #: app/templates/radius/mt_dashboard.html:1800
@@ -48617,7 +48705,7 @@ msgstr ""
 msgid "تجاوز يدوي متقدم"
 msgstr ""
 
-#: app/api/auth.py:388
+#: app/api/auth.py:451
 #, python-format
 msgid "تجاوزت الحد (%(rpm)s req/min)"
 msgstr ""
@@ -49116,7 +49204,7 @@ msgstr ""
 msgid "تحدد عرض الأوقات ومهلة جلسة الإدارة"
 msgstr ""
 
-#: app/api/openapi.py:323 app/api/openapi.py:326
+#: app/api/openapi.py:324 app/api/openapi.py:327
 #: app/radius/services/audit_format.py:511
 #: app/radius/services/event_labels.py:362
 #: app/radius/services/event_labels.py:363
@@ -49193,7 +49281,7 @@ msgstr ""
 msgid "تحديث الجلسة + خروج"
 msgstr ""
 
-#: app/api/openapi.py:271 app/templates/radius/invoices_list.html:86
+#: app/api/openapi.py:272 app/templates/radius/invoices_list.html:86
 #: app/templates/radius/setup_wizard.html:20
 #: app/templates/radius/ticket_view.html:162
 msgid "تحديث الحالة"
@@ -50596,7 +50684,7 @@ msgstr ""
 msgid "تسجيل API"
 msgstr ""
 
-#: app/api/openapi.py:183
+#: app/api/openapi.py:184
 msgid "تسجيل أجهزة الشبكة وفحص اتصالها."
 msgstr ""
 
@@ -50622,7 +50710,7 @@ msgstr ""
 msgid "تسجيل الحركة"
 msgstr ""
 
-#: app/api/openapi.py:261 app/radius/services/manager_activity_audit.py:175
+#: app/api/openapi.py:262 app/radius/services/manager_activity_audit.py:175
 #: app/templates/admin/_admin_layout.html:568
 #: app/templates/radius/license_activate.html:98
 #: app/templates/radius/license_expired.html:133
@@ -50630,7 +50718,7 @@ msgstr ""
 msgid "تسجيل الخروج"
 msgstr ""
 
-#: app/api/openapi.py:261 app/radius/services/hotspot_addons_extra.py:132
+#: app/api/openapi.py:262 app/radius/services/hotspot_addons_extra.py:132
 #: app/radius/services/hotspot_addons_extra.py:154
 #: app/radius/services/mikrotik_actions.py:592
 #: app/templates/radius/docs_customer_portal.html:79
@@ -50942,7 +51030,7 @@ msgstr ""
 msgid "تسهّل الفرز وتوجيه التذكرة للفريق المختص."
 msgstr ""
 
-#: app/api/openapi.py:283
+#: app/api/openapi.py:284
 msgid "تسويات"
 msgstr ""
 
@@ -51101,7 +51189,7 @@ msgstr ""
 msgid "تشخيص وقراءة"
 msgstr ""
 
-#: app/api/openapi.py:276
+#: app/api/openapi.py:277
 msgid "تشخيصات"
 msgstr ""
 
@@ -51113,7 +51201,7 @@ msgstr ""
 msgid "تشرين الثاني"
 msgstr ""
 
-#: app/api/openapi.py:284 app/radius/routes/audit_log.py:75
+#: app/api/openapi.py:285 app/radius/routes/audit_log.py:75
 #: app/radius/services/audit_format.py:158
 #: app/radius/services/audit_format.py:160
 #: app/radius/services/event_labels.py:414
@@ -51215,7 +51303,7 @@ msgstr ""
 msgid "تصحيح: قيد جديد يعدّل خطأ سابقًا — التعديل بالإضافة لا بالمحو."
 msgstr ""
 
-#: app/api/openapi.py:282 app/radius/routes/audit_log.py:72
+#: app/api/openapi.py:283 app/radius/routes/audit_log.py:72
 #: app/radius/routes/table_export.py:122
 #: app/radius/services/audit_format.py:155
 #: app/radius/services/event_labels.py:423
@@ -51332,7 +51420,7 @@ msgstr ""
 msgid "تصفير الآن"
 msgstr ""
 
-#: app/api/openapi.py:267 app/radius/routes/cards.py:3051
+#: app/api/openapi.py:268 app/radius/routes/cards.py:3051
 #: app/radius/services/event_labels.py:71
 #: app/templates/radius/card_user_360.html:431
 #: app/templates/radius/cards_checker.html:276
@@ -51668,7 +51756,7 @@ msgstr ""
 msgid "تطبيق الحظر"
 msgstr ""
 
-#: app/api/openapi.py:278
+#: app/api/openapi.py:279
 #: app/templates/radius/payment_collection_request_detail.html:55
 #: app/templates/radius/payment_collection_request_detail.html:73
 #: app/templates/radius/payment_collection_request_detail.html:160
@@ -52476,7 +52564,7 @@ msgstr ""
 msgid "تعديل: تصويب يدوي للرصيد بقيد موثّق."
 msgstr ""
 
-#: app/api/permission_guard.py:729
+#: app/api/permission_guard.py:747
 msgid "تعديلات عامّة جماعيّة"
 msgstr ""
 
@@ -52607,7 +52695,7 @@ msgstr ""
 msgid "تعذر تجهيز ملف PDF."
 msgstr ""
 
-#: app/api/admin_auth.py:346 app/radius/routes/account.py:73
+#: app/api/admin_auth.py:417 app/radius/routes/account.py:73
 msgid "تعذر تحديث كلمة المرور عبر لوحة التراخيص."
 msgstr ""
 
@@ -53268,7 +53356,7 @@ msgid "تعذّر التحميل"
 msgstr ""
 
 #: app/static/js/mt_dashboard.js:1539 app/static/js/mt_dashboard.js:1748
-#: app/static/js/mt_dashboard.js:1976 app/static/js/mt_dashboard.js:2290
+#: app/static/js/mt_dashboard.js:1976 app/static/js/mt_dashboard.js:2297
 msgid "تعذّر التحميل (HTTP "
 msgstr ""
 
@@ -54321,7 +54409,7 @@ msgstr ""
 msgid "تعذّر قطع %(username)s (%(code_name)s)"
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2173
+#: app/static/js/mt_dashboard.js:2180
 msgid "تعذّر قطع الاتصال: "
 msgstr ""
 
@@ -54574,7 +54662,7 @@ msgstr ""
 msgid "تعطيك صورة لحظية قبل ما تغوص في التفاصيل:"
 msgstr ""
 
-#: app/api/openapi.py:263 app/radius/routes/audit_log.py:68
+#: app/api/openapi.py:264 app/radius/routes/audit_log.py:68
 #: app/radius/routes/devices.py:339 app/radius/routes/reports.py:39
 #: app/radius/services/audit_format.py:151
 #: app/radius/services/event_labels.py:164
@@ -54821,7 +54909,7 @@ msgstr ""
 msgid "تعليمات الاستخدام"
 msgstr ""
 
-#: app/api/openapi.py:271
+#: app/api/openapi.py:272
 msgid "تعليمات الدفع"
 msgstr ""
 
@@ -54849,7 +54937,7 @@ msgstr ""
 msgid "تعويض أيام إضافية"
 msgstr ""
 
-#: app/api/openapi.py:279 app/radius/services/event_labels.py:425
+#: app/api/openapi.py:280 app/radius/services/event_labels.py:425
 msgid "تعيين"
 msgstr ""
 
@@ -55193,7 +55281,7 @@ msgstr ""
 msgid "تغيير فقط — بدون دفعة"
 msgstr ""
 
-#: app/api/openapi.py:266 app/api/v1/whatsapp.py:26
+#: app/api/openapi.py:267 app/api/v1/whatsapp.py:26
 #: app/radius/routes/cards.py:3058 app/radius/routes/whatsapp.py:35
 #: app/radius/services/audit_format.py:515
 #: app/radius/services/general_adjustments.py:35
@@ -55551,7 +55639,7 @@ msgstr ""
 msgid "تفضّل بالدخول"
 msgstr ""
 
-#: app/api/openapi.py:263 app/api/v1/service_requests.py:59
+#: app/api/openapi.py:264 app/api/v1/service_requests.py:59
 #: app/radius/routes/anti_mac_clone.py:169 app/radius/routes/audit_log.py:68
 #: app/radius/routes/cards.py:3048 app/radius/routes/devices.py:339
 #: app/radius/routes/reports.py:40 app/radius/services/audit_format.py:151
@@ -56017,7 +56105,7 @@ msgstr ""
 msgid "تقارير الموزعين"
 msgstr ""
 
-#: app/api/openapi.py:216
+#: app/api/openapi.py:217
 msgid "تقارير تشغيلية جاهزة."
 msgstr ""
 
@@ -56031,7 +56119,7 @@ msgstr ""
 msgid "تقارير مبنية من نفس القيود (يومية، شهرية، أرباح…)."
 msgstr ""
 
-#: app/api/openapi.py:200
+#: app/api/openapi.py:201
 msgid "تقارير متنوّعة بصيغ CSV/XLSX/PDF."
 msgstr ""
 
@@ -57591,7 +57679,7 @@ msgstr ""
 msgid "تم تحديث قناة الاستلام."
 msgstr ""
 
-#: app/api/admin_auth.py:370
+#: app/api/admin_auth.py:446
 msgid "تم تحديث كلمة المرور المحلية."
 msgstr ""
 
@@ -57599,7 +57687,7 @@ msgstr ""
 msgid "تم تحديث كلمة المرور من لوحة التراخيص"
 msgstr ""
 
-#: app/api/admin_auth.py:359
+#: app/api/admin_auth.py:434
 msgid "تم تحديث كلمة المرور من لوحة التراخيص."
 msgstr ""
 
@@ -59160,7 +59248,7 @@ msgstr ""
 msgid "تمديد اشتراك"
 msgstr ""
 
-#: app/api/openapi.py:267
+#: app/api/openapi.py:268
 #: app/templates/radius/payment_collection_request_detail.html:17
 #: app/templates/radius/payment_collection_requests.html:32
 #: app/templates/radius/payment_collection_review_queue.html:21
@@ -59671,11 +59759,11 @@ msgstr ""
 msgid "تنبيهات الراوتر"
 msgstr ""
 
-#: app/api/openapi.py:221 app/radius/services/provider_service_labels.py:90
+#: app/api/openapi.py:222 app/radius/services/provider_service_labels.py:90
 msgid "تنبيهات الراوترات"
 msgstr ""
 
-#: app/api/openapi.py:234 app/templates/radius/communications.html:92
+#: app/api/openapi.py:235 app/templates/radius/communications.html:92
 msgid "تنبيهات الشبكة"
 msgstr ""
 
@@ -59715,11 +59803,11 @@ msgstr ""
 msgid "تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها."
 msgstr ""
 
-#: app/api/openapi.py:230
+#: app/api/openapi.py:231
 msgid "تنبيهات تيليجرام"
 msgstr ""
 
-#: app/api/openapi.py:221
+#: app/api/openapi.py:222
 msgid "تنبيهات حالة الراوترات."
 msgstr ""
 
@@ -59798,7 +59886,7 @@ msgstr ""
 msgid "تنزانيا"
 msgstr ""
 
-#: app/api/openapi.py:279 app/radius/services/event_labels.py:421
+#: app/api/openapi.py:280 app/radius/services/event_labels.py:421
 #: app/radius/services/hotspot_addons_gallery.py:675
 #: app/radius/services/manager_activity_audit.py:253
 #: app/templates/radius/_plans_fragments.html:136
@@ -59963,7 +60051,7 @@ msgstr ""
 msgid "تنفيذ آمن — مع موافقات صريحة"
 msgstr ""
 
-#: app/api/openapi.py:324
+#: app/api/openapi.py:325
 msgid "تنفيذ إجراء"
 msgstr ""
 
@@ -60045,7 +60133,7 @@ msgstr ""
 msgid "تنقصك الصلاحية: %(label)s — لازمة لاستعادة هذا النوع."
 msgstr ""
 
-#: app/api/permission_guard.py:930
+#: app/api/permission_guard.py:948
 #, python-format
 msgid "تنقصك الصلاحية: %(v)s."
 msgstr ""
@@ -60271,23 +60359,23 @@ msgstr ""
 msgid "توكن البوت (من BotFather)"
 msgstr ""
 
-#: app/api/openapi.py:247
+#: app/api/openapi.py:248
 msgid "توكن بوابة خاص (بعد دخول البطاقة)."
 msgstr ""
 
-#: app/api/auth.py:326 app/radius/services/telegram_connect.py:92
+#: app/api/auth.py:377 app/radius/services/telegram_connect.py:92
 msgid "توكن غير صالح"
 msgstr ""
 
-#: app/api/permission_guard.py:830
+#: app/api/permission_guard.py:848
 msgid "توكن غير مرتبط بمدير يحتاج مجالًا صريحًا (admin:full أو read)."
 msgstr ""
 
-#: app/api/openapi.py:248
+#: app/api/openapi.py:249
 msgid "توكن متجر موقّع (بعد ‎/store/login‎)."
 msgstr ""
 
-#: app/api/openapi.py:196 app/templates/api/docs.html:264
+#: app/api/openapi.py:197 app/templates/api/docs.html:264
 msgid "توكنات الـ API"
 msgstr ""
 
@@ -60295,7 +60383,7 @@ msgstr ""
 msgid "توكنات الواجهة البرمجية (CSV)"
 msgstr ""
 
-#: app/api/openapi.py:265 app/radius/services/manager_activity_audit.py:232
+#: app/api/openapi.py:266 app/radius/services/manager_activity_audit.py:232
 #: app/templates/radius/docs_billing_vouchers.html:447
 #: app/templates/radius/finance_billing.html:332
 #: app/templates/radius/svc_partials/hotspot.html:150
@@ -60347,7 +60435,7 @@ msgstr ""
 msgid "توليد السكربت"
 msgstr ""
 
-#: app/api/openapi.py:189
+#: app/api/openapi.py:190
 msgid "توليد القسائم وإلغاؤها."
 msgstr ""
 
@@ -61722,7 +61810,7 @@ msgstr ""
 msgid "جدار ناري بين الراوتر و VPS يحجب UDP/51820."
 msgstr ""
 
-#: app/api/openapi.py:228 app/templates/radius/docs_user_groups.html:333
+#: app/api/openapi.py:229 app/templates/radius/docs_user_groups.html:333
 msgid "جداول السرعة"
 msgstr ""
 
@@ -61920,7 +62008,7 @@ msgstr ""
 msgid "جدولة الوقت (اختياري)"
 msgstr ""
 
-#: app/api/openapi.py:228
+#: app/api/openapi.py:229
 msgid "جدولة تغيّر السرعات حسب الوقت."
 msgstr ""
 
@@ -62203,7 +62291,7 @@ msgstr ""
 msgid "جسم الطلب يجب أن يكون كائن JSON (مفاتيح وقيم)."
 msgstr ""
 
-#: app/api/admin_auth.py:288 app/api/v1/accounting.py:116
+#: app/api/admin_auth.py:354 app/api/v1/accounting.py:116
 #: app/api/v1/accounts.py:532 app/api/v1/accounts.py:668
 #: app/api/v1/admins.py:382 app/api/v1/backups.py:74 app/api/v1/invoices.py:105
 #: app/api/v1/invoices.py:212 app/api/v1/loans.py:152 app/api/v1/loans.py:209
@@ -62223,7 +62311,7 @@ msgstr ""
 msgid "جلب الجدول النهائي"
 msgstr ""
 
-#: app/api/openapi.py:325
+#: app/api/openapi.py:326
 msgid "جلب القائمة"
 msgstr ""
 
@@ -63393,7 +63481,7 @@ msgstr ""
 msgid "حالة الميزة"
 msgstr ""
 
-#: app/api/openapi.py:229
+#: app/api/openapi.py:230
 msgid "حالة النسخ الاحتياطي وتشغيلها."
 msgstr ""
 
@@ -63471,7 +63559,7 @@ msgstr ""
 msgid "حالة غير معروفة من لوحة التراخيص"
 msgstr ""
 
-#: app/api/openapi.py:238
+#: app/api/openapi.py:239
 msgid "حالة مخرج الإنترنت لكل راوتر وسياساته وخطّة تطبيقها."
 msgstr ""
 
@@ -64486,7 +64574,7 @@ msgstr ""
 msgid "حدّد وقت انتهاء للوصول، أو فعّل قائمة عناوين مصدر مقيّدة."
 msgstr ""
 
-#: app/api/openapi.py:324 app/api/openapi.py:326
+#: app/api/openapi.py:325 app/api/openapi.py:327
 #: app/radius/routes/anti_mac_clone.py:164 app/radius/routes/audit_log.py:67
 #: app/radius/routes/cards.py:3050 app/radius/routes/reports.py:38
 #: app/radius/services/audit_format.py:150
@@ -65034,7 +65122,7 @@ msgstr ""
 msgid "حركة المحفظة غير مدعومة."
 msgstr ""
 
-#: app/api/openapi.py:280
+#: app/api/openapi.py:281
 msgid "حركة المرور"
 msgstr ""
 
@@ -65834,7 +65922,7 @@ msgid ""
 "تطبيق يستخدم googleapis.com — يفضّل التعامل مع الكل معاً."
 msgstr ""
 
-#: app/api/openapi.py:279 app/radius/services/event_labels.py:375
+#: app/api/openapi.py:280 app/radius/services/event_labels.py:375
 #: app/radius/services/event_labels.py:438
 #: app/radius/services/manager_activity_audit.py:235
 #: app/templates/radius/card_user_360.html:603
@@ -66272,6 +66360,10 @@ msgstr ""
 msgid "حقل كلمة المرور"
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:88
+msgid "حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد."
+msgstr ""
+
 #: app/templates/radius/services_catalog.html:134
 msgid "حقل مواصفات"
 msgstr ""
@@ -66358,7 +66450,7 @@ msgstr ""
 msgid "حلقة (لوب) على منفذ — عبر مجسّ DHCP"
 msgstr ""
 
-#: app/api/openapi.py:269
+#: app/api/openapi.py:270
 msgid "حلّ DNS"
 msgstr ""
 
@@ -66877,7 +66969,7 @@ msgstr ""
 msgid "خاصية=قيمة (سطر لكل واحدة)"
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2405
+#: app/static/js/mt_dashboard.js:2412
 msgid "خامل"
 msgstr ""
 
@@ -67266,7 +67358,7 @@ msgstr ""
 msgid "خصم ترحيبي"
 msgstr ""
 
-#: app/api/openapi.py:282 app/templates/radius/rep_balance_movements.html:30
+#: app/api/openapi.py:283 app/templates/radius/rep_balance_movements.html:30
 msgid "خصم رصيد"
 msgstr ""
 
@@ -67541,7 +67633,7 @@ msgid "خطأ في الشبكة"
 msgstr ""
 
 #: app/static/js/mt_dashboard.js:1564 app/static/js/mt_dashboard.js:1777
-#: app/static/js/mt_dashboard.js:1986 app/static/js/mt_dashboard.js:2321
+#: app/static/js/mt_dashboard.js:1986 app/static/js/mt_dashboard.js:2328
 msgid "خطأ في الشبكة: "
 msgstr ""
 
@@ -67688,7 +67780,7 @@ msgstr ""
 msgid "خطوات التطبيق"
 msgstr ""
 
-#: app/api/openapi.py:226
+#: app/api/openapi.py:227
 msgid "خطوات معالج الإعداد الأوّلي."
 msgstr ""
 
@@ -67926,7 +68018,7 @@ msgstr ""
 msgid "خيار متقدّم: يُفعِّل"
 msgstr ""
 
-#: app/api/openapi.py:236
+#: app/api/openapi.py:237
 msgid "خيارات الباقات"
 msgstr ""
 
@@ -68405,12 +68497,12 @@ msgstr ""
 msgid "دعم، تحصيل"
 msgstr ""
 
-#: app/api/openapi.py:205 app/api/openapi.py:286
+#: app/api/openapi.py:206 app/api/openapi.py:287
 #: app/radius/services/provider_service_labels.py:65
 msgid "دفتر الأستاذ"
 msgstr ""
 
-#: app/api/openapi.py:207
+#: app/api/openapi.py:208
 msgid "دفتر الأستاذ، الإيرادات، والمحافظ (إيداع/خصم/الحركات)."
 msgstr ""
 
@@ -69375,7 +69467,7 @@ msgstr ""
 msgid "دورة حياة البيانات"
 msgstr ""
 
-#: app/api/openapi.py:215
+#: app/api/openapi.py:216
 msgid "دورة حياة الحسابات"
 msgstr ""
 
@@ -71087,7 +71179,7 @@ msgstr ""
 msgid "رعاية"
 msgstr ""
 
-#: app/api/openapi.py:270 app/radius/services/event_labels.py:367
+#: app/api/openapi.py:271 app/radius/services/event_labels.py:367
 #: app/radius/services/event_labels.py:368
 #: app/radius/services/event_labels.py:580
 #: app/radius/services/event_labels.py:581
@@ -73216,7 +73308,7 @@ msgstr ""
 msgid "سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا."
 msgstr ""
 
-#: app/api/openapi.py:272 app/templates/radius/communications.html:180
+#: app/api/openapi.py:273 app/templates/radius/communications.html:180
 #: app/templates/radius/communications_deliveries.html:6
 #: app/templates/radius/communications_deliveries.html:66
 #: app/templates/radius/communications_deliveries.html:106
@@ -73242,7 +73334,7 @@ msgstr ""
 msgid "سجل الإيراد"
 msgstr ""
 
-#: app/api/openapi.py:195 app/api/v1/admins.py:598
+#: app/api/openapi.py:196 app/api/v1/admins.py:598
 #: app/radius/services/manager_activity_audit.py:223
 #: app/radius/templates/radius/vpn_reports.html:105
 #: app/templates/radius/_perm_labels.html:33
@@ -73296,7 +73388,7 @@ msgstr ""
 msgid "سجل الجلسات والدفعات"
 msgstr ""
 
-#: app/api/openapi.py:283
+#: app/api/openapi.py:284
 msgid "سجل الحركات"
 msgstr ""
 
@@ -73351,7 +73443,7 @@ msgstr ""
 msgid "سجل المدفوعات النقدية: المبلغ المحصّل والسعر بعد الخصم ومن سجّل المعاملة."
 msgstr ""
 
-#: app/api/openapi.py:274
+#: app/api/openapi.py:275
 msgid "سجل المشتريات"
 msgstr ""
 
@@ -73474,7 +73566,7 @@ msgstr ""
 msgid "سجلات الإيرادات"
 msgstr ""
 
-#: app/api/openapi.py:181
+#: app/api/openapi.py:182
 msgid "سجلات الاستخدام، الجلسات التاريخية، وفحص الحصص (quota)."
 msgstr ""
 
@@ -73552,7 +73644,7 @@ msgstr ""
 msgid "سجلّ الجلسات"
 msgstr ""
 
-#: app/api/permission_guard.py:733
+#: app/api/permission_guard.py:751
 msgid "سجلّ الراديوس"
 msgstr ""
 
@@ -74147,7 +74239,7 @@ msgstr ""
 msgid "سرّ المصادقة"
 msgstr ""
 
-#: app/api/openapi.py:249
+#: app/api/openapi.py:250
 msgid "سرّ داخلي عبر ترويسة X-Internal-Secret."
 msgstr ""
 
@@ -74302,6 +74394,7 @@ msgstr ""
 
 #: app/radius/services/card_offers.py:214
 #: app/radius/services/card_offers.py:263
+#: app/radius/services/ops_assistant/validator.py:404
 msgid "سعر البيع يجب ألا يقلّ عن سعر الجملة."
 msgstr ""
 
@@ -74888,7 +74981,7 @@ msgstr ""
 msgid "سليمة"
 msgstr ""
 
-#: app/api/openapi.py:220 app/radius/services/provider_service_labels.py:104
+#: app/api/openapi.py:221 app/radius/services/provider_service_labels.py:104
 msgid "سلّة المحذوفات"
 msgstr ""
 
@@ -75024,7 +75117,7 @@ msgstr ""
 msgid "سورينام"
 msgstr ""
 
-#: app/api/openapi.py:211 app/radius/services/provider_service_labels.py:45
+#: app/api/openapi.py:212 app/radius/services/provider_service_labels.py:45
 #: app/templates/admin/_sidebar.html:514
 #: app/templates/radius/card_pricing.html:46
 #: app/templates/radius/card_users.html:55
@@ -75107,7 +75200,7 @@ msgstr ""
 msgid "سياسات الراوتر — %(name)s"
 msgstr ""
 
-#: app/api/openapi.py:184 app/api/v1/service_requests.py:50
+#: app/api/openapi.py:185 app/api/v1/service_requests.py:50
 #: app/radius/routes/mt_permission_matrix.py:100
 #: app/radius/routes/network_policy.py:440
 #: app/radius/services/provider_service_labels.py:86
@@ -75138,7 +75231,7 @@ msgstr ""
 msgid "سياسات تسعير الباقات"
 msgstr ""
 
-#: app/api/openapi.py:215
+#: app/api/openapi.py:216
 msgid "سياسات دورة حياة الحسابات: معاينة وتشغيل."
 msgstr ""
 
@@ -75187,6 +75280,11 @@ msgstr ""
 
 #: app/templates/radius/plans_form.html:543
 msgid "سياسة الإعادة"
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:340
+#, python-format
+msgid "سياسة التغيير لا تناسب اتجاه الباقة الجديدة (%(d)s)."
 msgstr ""
 
 #: app/radius/routes/reports.py:105 app/radius/services/audit_format.py:397
@@ -75890,7 +75988,7 @@ msgstr ""
 msgid "شحن بانتظار المراجعة"
 msgstr ""
 
-#: app/api/openapi.py:273
+#: app/api/openapi.py:274
 msgid "شحن برصيد بطاقة"
 msgstr ""
 
@@ -75994,7 +76092,7 @@ msgstr ""
 msgid "شخصي"
 msgstr ""
 
-#: app/api/openapi.py:273 app/radius/routes/reports.py:1787
+#: app/api/openapi.py:274 app/radius/routes/reports.py:1787
 #: app/radius/routes/reports.py:1842 app/radius/services/audit_format.py:162
 #: app/radius/services/event_labels.py:387
 #: app/radius/services/event_labels.py:388
@@ -77479,6 +77577,10 @@ msgstr ""
 msgid "صيغة الوقت"
 msgstr ""
 
+#: app/radius/services/ops_assistant/units.py:86
+msgid "صيغة الوقت المحلّي غير صحيحة (YYYY-MM-DDTHH:MM)."
+msgstr ""
+
 #: app/radius/services/npc_remote_access.py:140
 msgid "صيغة الوقت غير صالحة (ISO-8601 مطلوب)."
 msgstr ""
@@ -77508,7 +77610,7 @@ msgstr ""
 msgid "ضبط اتصال المايكروتيك"
 msgstr ""
 
-#: app/api/permission_guard.py:727
+#: app/api/permission_guard.py:745
 msgid "ضبط السرعات جماعيًّا"
 msgstr ""
 
@@ -78420,11 +78522,11 @@ msgstr ""
 msgid "طلبات الاستعادة"
 msgstr ""
 
-#: app/api/openapi.py:223 app/radius/services/provider_service_labels.py:130
+#: app/api/openapi.py:224 app/radius/services/provider_service_labels.py:130
 msgid "طلبات الخدمات"
 msgstr ""
 
-#: app/api/openapi.py:223
+#: app/api/openapi.py:224
 msgid "طلبات الخدمات الموحّدة."
 msgstr ""
 
@@ -79351,6 +79453,11 @@ msgstr ""
 msgid "عدد الكروت في هذه الدفعة يتجاوز الحد المسموح."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:430
+#, python-format
+msgid "عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات."
+msgstr ""
+
 #: app/api/v1/cards.py:826
 #, python-format
 msgid "عدد الكروت يتجاوز الحدّ المضبوط (%(cap)s)."
@@ -79870,7 +79977,7 @@ msgstr ""
 msgid "عرض البطاقة"
 msgstr ""
 
-#: app/api/openapi.py:323 app/templates/radius/port_script_services.html:611
+#: app/api/openapi.py:324 app/templates/radius/port_script_services.html:611
 msgid "عرض التفاصيل"
 msgstr ""
 
@@ -79951,7 +80058,7 @@ msgstr ""
 msgid "عرض المتجر الإلكتروني"
 msgstr ""
 
-#: app/api/openapi.py:180
+#: app/api/openapi.py:181
 msgid "عرض المتصلين الآن وقطع الجلسات."
 msgstr ""
 
@@ -80354,7 +80461,7 @@ msgstr ""
 msgid "عقدة خروج خادم الربط"
 msgstr ""
 
-#: app/api/openapi.py:231
+#: app/api/openapi.py:232
 msgid "عقود الـ API"
 msgstr ""
 
@@ -83692,7 +83799,7 @@ msgstr ""
 msgid "فحص اتصال جهاز الشبكة"
 msgstr ""
 
-#: app/api/openapi.py:262
+#: app/api/openapi.py:263
 msgid "فحص اتصال خفيف"
 msgstr ""
 
@@ -83746,7 +83853,7 @@ msgstr ""
 msgid "فحص الجاهزية لا يطبق على خدمة المصادقة"
 msgstr ""
 
-#: app/api/openapi.py:268
+#: app/api/openapi.py:269
 msgid "فحص الحالة"
 msgstr ""
 
@@ -85084,7 +85191,7 @@ msgstr ""
 msgid "فكّ قفل"
 msgstr ""
 
-#: app/api/openapi.py:268
+#: app/api/openapi.py:269
 msgid "فكّ قفل MAC"
 msgstr ""
 
@@ -86053,7 +86160,7 @@ msgstr ""
 msgid "قائمة الأدوار"
 msgstr ""
 
-#: app/api/openapi.py:235
+#: app/api/openapi.py:236
 msgid "قائمة الإشعارات، عدد غير المقروء، وتعليمها كمقروءة."
 msgstr ""
 
@@ -86232,7 +86339,7 @@ msgstr ""
 msgid "قائمة المدراء فارغة — رفض التقرير حماية من حذف جماعي غير مقصود."
 msgstr ""
 
-#: app/api/openapi.py:277 app/templates/radius/finance_collection.html:108
+#: app/api/openapi.py:278 app/templates/radius/finance_collection.html:108
 #: app/templates/radius/finance_collection.html:192
 #: app/templates/radius/finance_collection.html:194
 msgid "قائمة المراجعة"
@@ -86318,7 +86425,7 @@ msgstr ""
 msgid "قائمة طعام بـQR + تواصل + تقييم جوجل + مواقيت الصلاة."
 msgstr ""
 
-#: app/api/openapi.py:231
+#: app/api/openapi.py:232
 msgid "قائمة عقود نقاط الـ API (الشكل المتوقَّع للطلب والردّ) لمزامنة التطبيقات."
 msgstr ""
 
@@ -86362,7 +86469,7 @@ msgstr ""
 msgid "قائمة فواتير المشتركين + زر «فاتورة جديدة»."
 msgstr ""
 
-#: app/api/openapi.py:236
+#: app/api/openapi.py:237
 msgid "قائمة مختصرة بالباقات لاستخدامها في القوائم المنسدلة."
 msgstr ""
 
@@ -87159,11 +87266,11 @@ msgid ""
 "والمدراء."
 msgstr ""
 
-#: app/api/openapi.py:197
+#: app/api/openapi.py:198
 msgid "قراءة وتحديث إعدادات النظام."
 msgstr ""
 
-#: app/api/openapi.py:209
+#: app/api/openapi.py:210
 msgid "قراءة وتسجيل أحداث النظام."
 msgstr ""
 
@@ -87363,7 +87470,7 @@ msgstr ""
 msgid "قطع الجلسات"
 msgstr ""
 
-#: app/api/openapi.py:262 app/templates/radius/card_user_360.html:432
+#: app/api/openapi.py:263 app/templates/radius/card_user_360.html:432
 #: app/templates/radius/cards_checker_v2.html:1022
 #: app/templates/radius/cards_checker_v2.html:2270
 #: app/templates/radius/docs_cards_checker.html:497
@@ -87469,7 +87576,7 @@ msgstr ""
 msgid "قفل عناوين MAC"
 msgstr ""
 
-#: app/api/openapi.py:268 app/radius/services/permission_labels.py:44
+#: app/api/openapi.py:269 app/radius/services/permission_labels.py:44
 msgid "قفل عنوان MAC"
 msgstr ""
 
@@ -87654,7 +87761,7 @@ msgstr ""
 msgid "قهوة الصباح"
 msgstr ""
 
-#: app/api/openapi.py:191
+#: app/api/openapi.py:192
 msgid "قوائم المراجعة والمصالحة واعتماد المدفوعات (نقاط إدارية)."
 msgstr ""
 
@@ -87765,7 +87872,7 @@ msgstr ""
 msgid "قوالب الصلاحيات:"
 msgstr ""
 
-#: app/api/openapi.py:219 app/radius/routes/docs_center.py:245
+#: app/api/openapi.py:220 app/radius/routes/docs_center.py:245
 #: app/radius/services/provider_service_labels.py:112
 #: app/templates/admin/_sidebar.html:497
 #: app/templates/radius/docs_cards_overview.html:469
@@ -88090,6 +88197,10 @@ msgstr ""
 
 #: app/api/v1/service_requests.py:395
 msgid "قيم الطلب النصّيّة غير صحيحة."
+msgstr ""
+
+#: app/api/v1/card_offers.py:155
+msgid "قيم العرض غير صحيحة."
 msgstr ""
 
 #: app/api/v1/print_templates.py:713
@@ -88709,7 +88820,7 @@ msgstr ""
 msgid "قيود دفتر الأستاذ"
 msgstr ""
 
-#: app/api/openapi.py:205
+#: app/api/openapi.py:206
 msgid "قيود دفتر الأستاذ المالي."
 msgstr ""
 
@@ -88869,7 +88980,7 @@ msgstr ""
 msgid "كتالوج الخدمات المضافة"
 msgstr ""
 
-#: app/api/openapi.py:194
+#: app/api/openapi.py:195
 msgid "كتالوج الصلاحيات المتاحة."
 msgstr ""
 
@@ -89130,7 +89241,7 @@ msgstr ""
 msgid "كشف الحساب"
 msgstr ""
 
-#: app/api/openapi.py:287
+#: app/api/openapi.py:288
 msgid "كشف الحلقات"
 msgstr ""
 
@@ -89271,6 +89382,10 @@ msgid ""
 "كل إشعارات اللوحة في مكان واحد — تنبيهات قرب انتهاء الترخيص/الخدمة "
 "محلّيًّا، وما ترسله لوحة التراخيص عبر الجسر. افتح أي إشعار للانتقال "
 "لهدفه."
+msgstr ""
+
+#: app/radius/services/ops_assistant/units.py:135
+msgid "كل اتجاه للسرعة المؤقتة 0 (بلا حدّ) أو بين 64 و1,000,000 kbps."
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:136
@@ -90618,11 +90733,11 @@ msgstr ""
 msgid "كلمة المرور الجديدة مطلوبة."
 msgstr ""
 
-#: app/api/admin_auth.py:330 app/radius/routes/account.py:50
+#: app/api/admin_auth.py:401 app/radius/routes/account.py:50
 msgid "كلمة المرور الجديدة يجب أن تختلف عن الحالية."
 msgstr ""
 
-#: app/api/admin_auth.py:316 app/radius/routes/account.py:43
+#: app/api/admin_auth.py:387 app/radius/routes/account.py:43
 msgid "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل."
 msgstr ""
 
@@ -90635,11 +90750,11 @@ msgstr ""
 msgid "كلمة المرور الحالية"
 msgstr ""
 
-#: app/api/admin_auth.py:309 app/radius/routes/account.py:39
+#: app/api/admin_auth.py:375 app/radius/routes/account.py:39
 msgid "كلمة المرور الحالية غير صحيحة."
 msgstr ""
 
-#: app/api/admin_auth.py:297
+#: app/api/admin_auth.py:363
 msgid "كلمة المرور الحالية والجديدة وتأكيدها مطلوبة."
 msgstr ""
 
@@ -91733,7 +91848,8 @@ msgstr ""
 msgid "لأكبر العملاء بأعلى الحدود والسعة."
 msgstr ""
 
-#: app/radius/auth/decorators.py:29 app/radius/routes/blueprint.py:471
+#: app/api/auth.py:73 app/radius/auth/decorators.py:29
+#: app/radius/routes/blueprint.py:471
 msgid "لأمانك، يجب تغيير كلمة المرور قبل المتابعة."
 msgstr ""
 
@@ -92280,6 +92396,10 @@ msgstr ""
 msgid "لا تملك صلاحية إدارة الموزعين. اطلب من المالك تفعيلها."
 msgstr ""
 
+#: app/api/v1/card_offers.py:128
+msgid "لا تملك صلاحية إضافة العروض. اطلب من المالك منحها لك من صفحة صلاحيّاتك."
+msgstr ""
+
 #: app/radius/routes/cards.py:1337
 msgid "لا تملك صلاحية استيراد الحِزم. اطلب من المالك تفعيلها."
 msgstr ""
@@ -92301,7 +92421,11 @@ msgstr ""
 msgid "لا تملك صلاحية شحن المحفظة."
 msgstr ""
 
-#: app/api/admin_auth.py:229
+#: app/api/v1/ops.py:199
+msgid "لا تملك صلاحية عرض هذه القائمة."
+msgstr ""
+
+#: app/api/admin_auth.py:246
 msgid "لا تملك صلاحية على أي tenant"
 msgstr ""
 
@@ -92311,6 +92435,11 @@ msgstr ""
 
 #: app/radius/services/card_batch_scope.py:137
 msgid "لا تملك صلاحية على هذا الموزع."
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:194
+#, python-format
+msgid "لا تملك صلاحية هذا الإجراء (%(k)s)."
 msgstr ""
 
 #: app/radius/services/tr069/action_service.py:55
@@ -92866,7 +92995,7 @@ msgstr ""
 msgid "لا توجد سرعة مؤقتة فعّالة لهذا المشترك."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2300
+#: app/static/js/mt_dashboard.js:2307
 msgid "لا توجد سطور تطابق الفلتر الحالي."
 msgstr ""
 
@@ -93214,7 +93343,7 @@ msgid ""
 " البيانات أو حجم الرمز، أو انقل الحقول، أو أخفِ رمز QR."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2396
+#: app/static/js/mt_dashboard.js:2403
 msgid "لا توجد مسارات على هذا الراوتر."
 msgstr ""
 
@@ -93865,6 +93994,10 @@ msgstr ""
 msgid "لا يقرّر بنفسه"
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:356
+msgid "لا يكون الاتجاهان بلا حدّ معًا."
+msgstr ""
+
 #: app/templates/radius/finance_debts.html:55
 msgid "لا يلزم"
 msgstr ""
@@ -93943,6 +94076,10 @@ msgstr ""
 
 #: app/templates/radius/network_device_bypass.html:74
 msgid "لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين."
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:217
+msgid "لا يمكن تأكيد هذا المقترح."
 msgstr ""
 
 #: app/api/v1/accounts.py:239
@@ -94065,7 +94202,7 @@ msgstr ""
 msgid "لا يمكنك إنشاء توكن بصلاحيات أعلى من صلاحياتك."
 msgstr ""
 
-#: app/api/auth.py:365
+#: app/api/auth.py:424
 msgid "لا يمكنك اختيار هذا الـTenant — اختر واحدًا من شبكاتك الفعّالة."
 msgstr ""
 
@@ -94182,6 +94319,10 @@ msgstr ""
 
 #: app/radius/services/license_admin_capacity.py:539
 msgid "لا يوجد حد مخزن لهذه الميزة حالياً."
+msgstr ""
+
+#: app/api/v1/ops.py:162
+msgid "لا يوجد حدث من هذا النوع الآن."
 msgstr ""
 
 #: app/templates/radius/docs_finance_center.html:365
@@ -94823,7 +94964,7 @@ msgstr ""
 msgid "لقطات الأرشيف"
 msgstr ""
 
-#: app/api/openapi.py:210
+#: app/api/openapi.py:211
 msgid "لقطات التسعير (snapshots) للباقات."
 msgstr ""
 
@@ -94839,7 +94980,7 @@ msgstr ""
 msgid "لقطات محفوظة لهذا النوع"
 msgstr ""
 
-#: app/api/openapi.py:278
+#: app/api/openapi.py:279
 msgid "لقطة"
 msgstr ""
 
@@ -96001,7 +96142,7 @@ msgstr ""
 msgid "لم يظهر المستخدم المخطط ضمن قائمة المستخدمين."
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:2362
+#: app/static/js/mt_dashboard.js:2369
 msgid "لم يكتشف الراوتر أيّ جيران بعد. "
 msgstr ""
 
@@ -96588,7 +96729,7 @@ msgstr ""
 msgid "لوحة التحكم"
 msgstr ""
 
-#: app/api/openapi.py:214
+#: app/api/openapi.py:215
 msgid "لوحة التحكّم"
 msgstr ""
 
@@ -97630,7 +97771,7 @@ msgstr ""
 msgid "مايكروتك مباشر"
 msgstr ""
 
-#: app/api/openapi.py:186
+#: app/api/openapi.py:187
 msgid "مايكروتيك (الاتصال والتحكّم)"
 msgstr ""
 
@@ -97798,7 +97939,7 @@ msgstr ""
 msgid "متابعة من اشترى بطاقات إلكترونية: أرصدتهم، مشترياتهم، وحالاتهم، وملف 360."
 msgstr ""
 
-#: app/api/openapi.py:218
+#: app/api/openapi.py:219
 msgid "متابعة مهام الطباعة وتنزيل مخرجاتها."
 msgstr ""
 
@@ -97946,7 +98087,7 @@ msgstr ""
 msgid "متجر الإنترنت"
 msgstr ""
 
-#: app/api/openapi.py:178
+#: app/api/openapi.py:179
 msgid "متجر البطاقات"
 msgstr ""
 
@@ -97958,7 +98099,7 @@ msgstr ""
 msgid "متجر الراوتر"
 msgstr ""
 
-#: app/api/openapi.py:178
+#: app/api/openapi.py:179
 msgid ""
 "متجر الزبون: دخول، باقات، شراء، وشحن المحفظة. يستخدم توكنًا موقّعًا قصير "
 "العمر بعد الدخول."
@@ -99008,11 +99149,11 @@ msgstr ""
 msgid "مجموعات الصلاحيات"
 msgstr ""
 
-#: app/api/openapi.py:217
+#: app/api/openapi.py:218
 msgid "مجموعات العناوين (IP Pools)"
 msgstr ""
 
-#: app/api/openapi.py:225 app/radius/services/event_labels.py:355
+#: app/api/openapi.py:226 app/radius/services/event_labels.py:355
 #: app/radius/services/provider_service_labels.py:110
 #: app/templates/radius/sgrp_list.html:6 app/templates/radius/sgrp_list.html:17
 msgid "مجموعات المشاركة"
@@ -99022,7 +99163,7 @@ msgstr ""
 msgid "مجموعات المشاركة (Share Groups)"
 msgstr ""
 
-#: app/api/openapi.py:239 app/radius/routes/docs_center.py:146
+#: app/api/openapi.py:240 app/radius/routes/docs_center.py:146
 #: app/radius/services/provider_service_labels.py:42
 #: app/templates/admin/_sidebar.html:471
 #: app/templates/radius/docs_add_subscriber.html:331
@@ -99050,7 +99191,7 @@ msgstr ""
 msgid "مجموعات لمشاركة الكروت والباقات بين الموزّعين."
 msgstr ""
 
-#: app/api/openapi.py:225
+#: app/api/openapi.py:226
 msgid "مجموعات مشاركة الباقة بين المشتركين وأعضائها."
 msgstr ""
 
@@ -99116,7 +99257,7 @@ msgid ""
 "الصلاحيات مجمّعة حسب القسم (مشتركون، باقات، تقارير…)."
 msgstr ""
 
-#: app/api/openapi.py:390
+#: app/api/openapi.py:391
 #, python-format
 msgid "مجموعة غير مُعرّبة (%(key)s)"
 msgstr ""
@@ -99838,7 +99979,7 @@ msgstr ""
 msgid "مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية."
 msgstr ""
 
-#: app/api/openapi.py:238 app/radius/services/provider_service_labels.py:87
+#: app/api/openapi.py:239 app/radius/services/provider_service_labels.py:87
 msgid "مخرج الموقع"
 msgstr ""
 
@@ -100458,6 +100599,10 @@ msgstr ""
 msgid "مدّة الحظر التلقائي (دقيقة)"
 msgstr ""
 
+#: app/radius/services/ops_assistant/units.py:141
+msgid "مدّة السرعة المؤقتة بين دقيقة و1440 دقيقة (24 ساعة)."
+msgstr ""
+
 #: app/radius/services/service_specs.py:143
 #: app/radius/services/service_specs.py:215
 #: app/templates/radius/docs_service_requests.html:104
@@ -100581,7 +100726,7 @@ msgid ""
 "Netwatch"
 msgstr ""
 
-#: app/api/openapi.py:232
+#: app/api/openapi.py:233
 msgid "مراقبة حالة الأجهزة"
 msgstr ""
 
@@ -100686,6 +100831,10 @@ msgstr ""
 
 #: app/templates/radius/payments_lab.html:169
 msgid "مرجع جلسة الدفع"
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:121
+msgid "مرجع خطوة غير صالح."
 msgstr ""
 
 #: app/templates/radius/users_finance.html:210
@@ -100855,7 +101004,7 @@ msgstr ""
 msgid "مركز الأحداث"
 msgstr ""
 
-#: app/api/openapi.py:233
+#: app/api/openapi.py:234
 msgid "مركز الأحداث والمخاطر"
 msgstr ""
 
@@ -101331,6 +101480,14 @@ msgstr ""
 msgid "مساعد العمليات"
 msgstr ""
 
+#: app/api/openapi.py:177
+msgid "مساعد العمليّات"
+msgstr ""
+
+#: app/api/v1/ops.py:74
+msgid "مساعد العمليّات غير مفعّل لهذه الشبكة."
+msgstr ""
+
 #: app/templates/radius/customer_portals_admin.html:51
 msgid ""
 "مساعد تنقل إداري فقط — يفتح مداخل العملاء الموجودة في نافذة جديدة دون أي "
@@ -101568,7 +101725,7 @@ msgstr ""
 msgid "مستخدمة غير متصلة"
 msgstr ""
 
-#: app/api/openapi.py:212 app/radius/routes/docs_center.py:274
+#: app/api/openapi.py:213 app/radius/routes/docs_center.py:274
 #: app/radius/services/provider_service_labels.py:44
 #: app/templates/admin/_sidebar.html:515
 #: app/templates/radius/card_users.html:15
@@ -102139,7 +102296,7 @@ msgstr ""
 msgid "مصادقة ACS (اختياريّة، مضبوطة)"
 msgstr ""
 
-#: app/api/auth.py:372
+#: app/api/auth.py:431
 msgid ""
 "مصادقة مطلوبة: مفتاح API (Authorization: Bearer <token> أو X-API-Key) أو "
 "اعتماد أدمن (Basic بيوزر/باس الأدمن)."
@@ -102175,7 +102332,7 @@ msgstr ""
 msgid "مصالحة الجلسات الآن"
 msgstr ""
 
-#: app/api/openapi.py:273
+#: app/api/openapi.py:274
 msgid "مصالحة يدوية"
 msgstr ""
 
@@ -102204,6 +102361,10 @@ msgstr ""
 
 #: app/radius/services/customer_portals.py:407
 msgid "مصدر الطلب: بوابة المشترك"
+msgstr ""
+
+#: app/api/v1/ops.py:213
+msgid "مصدر القائمة غير معروف."
 msgstr ""
 
 #: app/api/v1/cards.py:883 app/radius/services/cards.py:912
@@ -102606,7 +102767,7 @@ msgstr ""
 msgid "معالج إعداد HobeRadius"
 msgstr ""
 
-#: app/api/openapi.py:226 app/radius/auth/owner.py:39
+#: app/api/openapi.py:227 app/radius/auth/owner.py:39
 #: app/radius/services/provider_service_labels.py:147
 #: app/templates/radius/docs_add_router.html:167
 #: app/templates/radius/license_file.html:198
@@ -102660,7 +102821,7 @@ msgstr ""
 msgid "معاملات الكاش"
 msgstr ""
 
-#: app/api/openapi.py:283 app/radius/services/audit_format.py:159
+#: app/api/openapi.py:284 app/radius/services/audit_format.py:159
 #: app/radius/services/event_labels.py:378 app/static/js/setup_wizard_v2.js:170
 #: app/templates/radius/admin_alerts.html:73
 #: app/templates/radius/cards_print_list.html:390
@@ -103077,6 +103238,7 @@ msgstr ""
 
 #: app/radius/services/mikrotik_admin_client.py:1054
 #: app/radius/services/mikrotik_admin_client.py:1072
+#: app/static/js/mt_dashboard.js:2160
 msgid "معرّف الجلسة غير محدد"
 msgstr ""
 
@@ -103469,7 +103631,7 @@ msgstr ""
 #: app/radius/services/tr069/device_service.py:130
 #: app/radius/services/users.py:1619 app/radius/services/wireguard_mgmt.py:123
 #: app/static/js/device_health.js:50 app/static/js/device_health.js:858
-#: app/static/js/mt_dashboard.js:1823 app/static/js/mt_dashboard.js:2402
+#: app/static/js/mt_dashboard.js:1823 app/static/js/mt_dashboard.js:2409
 #: app/templates/radius/_mt_diagnostics_card.html:28
 #: app/templates/radius/card_users.html:117
 #: app/templates/radius/cards_offers.html:356
@@ -103830,6 +103992,10 @@ msgstr ""
 
 #: app/radius/services/idempotency.py:22
 msgid "مفتاح التكرار استُخدم لطلب مختلف."
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:203
+msgid "مفتاح التكرار استُخدم لمقترح آخر."
 msgstr ""
 
 #: app/radius/services/idempotency.py:23
@@ -104900,7 +105066,7 @@ msgstr ""
 msgid "ملخص وتبويبات"
 msgstr ""
 
-#: app/api/openapi.py:266 app/api/openapi.py:286
+#: app/api/openapi.py:267 app/api/openapi.py:287
 #: app/templates/radius/job_detail.html:62
 msgid "ملخّص"
 msgstr ""
@@ -104913,7 +105079,7 @@ msgstr ""
 msgid "ملخّص الأرقام التشغيلية وقاعدة الأمان."
 msgstr ""
 
-#: app/api/openapi.py:208
+#: app/api/openapi.py:209
 msgid "ملخّص الأعمال"
 msgstr ""
 
@@ -104954,7 +105120,7 @@ msgstr ""
 msgid "ملخّص المُحصَّل مقابل المتوقّع لكشف الفروقات."
 msgstr ""
 
-#: app/api/openapi.py:208
+#: app/api/openapi.py:209
 msgid "ملخّص مؤشّرات الأعمال العامّة."
 msgstr ""
 
@@ -105210,7 +105376,7 @@ msgid ""
 "للراوتر تلقائيًا"
 msgstr ""
 
-#: app/api/openapi.py:276
+#: app/api/openapi.py:277
 msgid "ملف شامل (360°)"
 msgstr ""
 
@@ -105288,7 +105454,7 @@ msgstr ""
 msgid "ملفات الربط المحذوفة:"
 msgstr ""
 
-#: app/api/openapi.py:227 app/templates/radius/bandwidth_list.html:6
+#: app/api/openapi.py:228 app/templates/radius/bandwidth_list.html:6
 #: app/templates/radius/bandwidth_list.html:8
 #: app/templates/radius/bandwidth_list.html:22
 msgid "ملفات السرعة"
@@ -106301,7 +106467,7 @@ msgstr ""
 msgid "منح أيام مجانية"
 msgstr ""
 
-#: app/api/openapi.py:237
+#: app/api/openapi.py:238
 msgid "منح المزوّد"
 msgstr ""
 
@@ -106780,7 +106946,7 @@ msgstr ""
 msgid "منهم."
 msgstr ""
 
-#: app/api/openapi.py:218
+#: app/api/openapi.py:219
 msgid "مهام الطباعة"
 msgstr ""
 
@@ -106957,7 +107123,7 @@ msgstr ""
 msgid "موارد المايكروتيك (معالج · ذاكرة · حرارة · قرص)"
 msgstr ""
 
-#: app/api/openapi.py:281
+#: app/api/openapi.py:282
 msgid "موارد النظام"
 msgstr ""
 
@@ -107833,7 +107999,7 @@ msgstr ""
 msgid "نبدأ خلال"
 msgstr ""
 
-#: app/api/openapi.py:278
+#: app/api/openapi.py:279
 msgid "نبض الجسر"
 msgstr ""
 
@@ -107896,6 +108062,10 @@ msgstr ""
 #: app/static/js/mt_dashboard.js:835
 #, python-brace-format
 msgid "نتيجة الحلّ — {name}"
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:290
+msgid "نتيجة الخطوة السابقة لا تحوي القيمة المطلوبة."
 msgstr ""
 
 #: app/templates/radius/events_risk.html:77
@@ -108454,7 +108624,7 @@ msgstr ""
 #: app/radius/templates/radius/vpn_reports.html:196
 #: app/radius/templates/radius/vpn_reports.html:254
 #: app/radius/templates/radius/wg_data.html:157
-#: app/static/js/mt_dashboard.js:2404 app/templates/radius/_subs_labels.html:24
+#: app/static/js/mt_dashboard.js:2411 app/templates/radius/_subs_labels.html:24
 #: app/templates/radius/card_users.html:116
 #: app/templates/radius/cards_checker_v2.html:762
 #: app/templates/radius/docs_billing_vouchers.html:488
@@ -109219,7 +109389,7 @@ msgstr ""
 msgid "نظام المخزون:"
 msgstr ""
 
-#: app/api/openapi.py:201
+#: app/api/openapi.py:202
 msgid "نظام تذاكر الدعم الفنّي."
 msgstr ""
 
@@ -109270,7 +109440,7 @@ msgstr ""
 msgid "نظرة سريعة — الكروت"
 msgstr ""
 
-#: app/api/openapi.py:281 app/templates/admin/_sidebar.html:468
+#: app/api/openapi.py:282 app/templates/admin/_sidebar.html:468
 #: app/templates/admin/_sidebar.html:490 app/templates/admin/_sidebar.html:548
 #: app/templates/admin/_sidebar.html:838
 #: app/templates/radius/docs_add_subscriber.html:328
@@ -109817,13 +109987,13 @@ msgstr ""
 msgid "نقاط الثقة"
 msgstr ""
 
-#: app/api/openapi.py:177
+#: app/api/openapi.py:178
 msgid ""
 "نقاط بوابة المستخدم النهائي للبطاقات. تستخدم توكن بوابة خاصًّا (وليس توكن"
 " الإدارة)."
 msgstr ""
 
-#: app/api/openapi.py:240
+#: app/api/openapi.py:241
 msgid "نقاط بوابة المشترك: دخول، لوحة الحساب، وطلبات التجديد والسلفة."
 msgstr ""
 
@@ -109837,11 +110007,11 @@ msgstr ""
 msgid "نقاط خروج الإنترنت"
 msgstr ""
 
-#: app/api/openapi.py:187
+#: app/api/openapi.py:188
 msgid "نقاط داخلية (FreeRADIUS)"
 msgstr ""
 
-#: app/api/openapi.py:187
+#: app/api/openapi.py:188
 msgid ""
 "نقاط داخلية لخادم FreeRADIUS. محميّة بسرّ داخلي (X-Internal-Secret) لا "
 "بتوكن الإدارة."
@@ -109924,7 +110094,7 @@ msgstr ""
 msgid "نقطة برتقالية"
 msgstr ""
 
-#: app/api/openapi.py:310
+#: app/api/openapi.py:311
 msgid "نقطة جذر"
 msgstr ""
 
@@ -110309,6 +110479,10 @@ msgstr ""
 
 #: app/radius/templates/radius/vpn_reports.html:75
 msgid "نوع الحدث (سجل)"
+msgstr ""
+
+#: app/api/v1/ops.py:158
+msgid "نوع الحدث غير معروف."
 msgstr ""
 
 #: app/templates/radius/company_inventory_expenses.html:268
@@ -110904,8 +111078,8 @@ msgstr ""
 msgid "هذا الإجراء متاح لمدير النظام الأعلى فقط."
 msgstr ""
 
-#: app/api/permission_guard.py:870 app/api/permission_guard.py:878
-#: app/api/permission_guard.py:933 app/radius/routes/blueprint.py:1342
+#: app/api/permission_guard.py:888 app/api/permission_guard.py:896
+#: app/api/permission_guard.py:951 app/radius/routes/blueprint.py:1342
 msgid "هذا الإجراء مقصور على المالك أو الشريك."
 msgstr ""
 
@@ -110957,7 +111131,7 @@ msgid ""
 "المصادقة)، «الدخول الفاشل»، و«سجل العناوين الفيزيائية MAC» — لكلٍّ غرضه."
 msgstr ""
 
-#: app/api/permission_guard.py:823
+#: app/api/permission_guard.py:841
 msgid "هذا التوكن للقراءة فقط — لا يملك صلاحية التعديل."
 msgstr ""
 
@@ -111171,7 +111345,7 @@ msgstr ""
 msgid "هذا المسار أصبح نهائيًا ولا يمكن استكماله بشكل طبيعي."
 msgstr ""
 
-#: app/api/admin_auth.py:260 app/api/admin_auth.py:282
+#: app/api/admin_auth.py:313 app/api/admin_auth.py:348
 msgid "هذا المسار يتطلب تسجيل دخول إداري من التطبيق."
 msgstr ""
 
@@ -111197,6 +111371,10 @@ msgstr ""
 msgid "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر)."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:231
+msgid "هذا المشترك ليس ضمن نطاقك."
+msgstr ""
+
 #: app/templates/radius/mt_setup_form.html:142
 msgid ""
 "هذا المعالج ينشئ راوتر MikroTik جديدًا داخل النظام ويولّد له سكربت إعداد "
@@ -111213,6 +111391,11 @@ msgstr ""
 msgid ""
 "هذا المفتاح هو سرّ الربط الوحيد. اتركه فارغًا إن كان محفوظًا. لا نعرضه "
 "كاملًا في الصفحة."
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:215
+#: app/radius/services/ops_assistant/executor.py:238
+msgid "هذا المقترح قيد التنفيذ الآن."
 msgstr ""
 
 #: app/templates/radius/distributors_form.html:129
@@ -111262,6 +111445,10 @@ msgstr ""
 
 #: app/templates/radius/docs_roles_permissions.html:378
 msgid "هذا قرار مالك الريديوس وينطبق على كل الأدوار المحدودة. ومدير النظام ("
+msgstr ""
+
+#: app/radius/services/ops_assistant/executor.py:190
+msgid "هذا مقترح مسودّة (المستوى 1) — يُحفظ من النموذج لا بالتأكيد."
 msgstr ""
 
 #: app/templates/radius/wg_details.html:68
@@ -112536,7 +112723,7 @@ msgstr ""
 msgid "واتبع التعليمات، فيعطيك «التوكن»."
 msgstr ""
 
-#: app/api/openapi.py:241 app/api/v1/communications.py:120
+#: app/api/openapi.py:242 app/api/v1/communications.py:120
 #: app/api/v1/subscriber_actions.py:811 app/radius/routes/communications.py:430
 #: app/radius/routes/notification_hub.py:163 app/radius/routes/users.py:2783
 #: app/radius/routes/users.py:2828
@@ -113154,6 +113341,10 @@ msgstr ""
 msgid "وحدة المدّة غير معروفة — المسموح: "
 msgstr ""
 
+#: app/radius/services/ops_assistant/units.py:115
+msgid "وحدة المدّة غير معروفة."
+msgstr ""
+
 #: app/templates/radius/cards_batch_edit.html:226
 #: app/templates/radius/cards_of_batch.html:568
 #: app/templates/radius/cards_of_batch.html:763
@@ -113689,6 +113880,10 @@ msgstr ""
 #: app/radius/services/subscriber_form_fields.py:124
 #: app/radius/services/subscriber_validation.py:89
 msgid "وقت الاتصال اليوميّ"
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:276
+msgid "وقت الانتهاء المطلوب مضى."
 msgstr ""
 
 #: app/templates/radius/docs_sessions_report.html:79

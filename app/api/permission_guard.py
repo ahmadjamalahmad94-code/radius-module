@@ -77,6 +77,22 @@ API_AUTH_ONLY: dict[str, str] = {
     "v1.api_contracts": "static API contract metadata",
     "v1.permissions_catalog": "static permission catalogue (names only)",
     "v1.tools_catalog": "own per-tool permission map (the tools screen)",
+    # Card offers (ops catalog Q2) — web parity: the web routes decide in the
+    # handler (blueprint _IN_HANDLER), so do these: list = owner all / manager
+    # only offers shared with him (+ wholesale/margin projection); create =
+    # owner or the offer/create entity grant.
+    "v1.cards_offers_list": "in-handler: owner all, manager only offers shared with him",
+    "v1.cards_offers_create": "in-handler: owner or offer.create entity grant",
+    # Operations assistant (docs/OPS_EXECUTOR.md): bound admin only, tenant
+    # flag + password gate in the handler; every action it runs is a nested
+    # /api/v1 call that passes THIS guard again with the same credential.
+    "v1.ops_status": "own tenant's assistant availability (counts only)",
+    "v1.ops_events": "ops assistant — detections scoped to the caller",
+    "v1.ops_conversation_create": "ops assistant — own conversation",
+    "v1.ops_conversation_context": "ops assistant — own conversation",
+    "v1.ops_choices": "ops assistant — lists via the guarded /api/v1 endpoints",
+    "v1.ops_proposal": "ops assistant — validation re-checks the action's own permission",
+    "v1.ops_confirm": "ops assistant — executes through the guarded /api/v1 endpoints",
 }
 
 
@@ -391,6 +407,8 @@ API_PERMISSIONS: dict[str, Spec] = {
     "v1.profiles_list": "web:plans_list",
     # fix3 integration: the create forms' plan picker (lite list).
     "v1.plans_options": PLAN_OPTIONS_SPEC,
+    # ops assistant on/off for the tenant — owner / co-owner only.
+    "v1.ops_flag": SUPER,
     "v1.profiles_options": PLAN_OPTIONS_SPEC,
     "v1.profiles_get": "web:plans_list",
     "v1.profiles_create": "web:plans_create",
