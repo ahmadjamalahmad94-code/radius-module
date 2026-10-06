@@ -159,6 +159,12 @@ sql {
     #   goes to radius_unattributed instead — never to tenant 1. All UPDATEs
     #   are scoped to the owning tenant, so a reused NAS address cannot touch
     #   another tenant's rows. Same rule in Flask: services/nas_tenant.py.
+    #   Server-local sources (migration 197, radius_local_nas — operator
+    #   only): the host's accel-ppp gateway / loopback tooling are attributed
+    #   only through that explicit registry ('nas' → its tenant, 'mgmt' →
+    #   quarantine as local_mgmt, 'probe' → nothing written, still ACKed). A
+    #   registered address never gets the only-tenant fallback, and no
+    #   tenant's router row can claim a loopback or registered local address.
     # ─────────────────────────────────────────────────────────────────────
     accounting {
         reference = "%{tolower:type.%{Acct-Status-Type}.query}"
@@ -176,7 +182,7 @@ sql {
                       AND tenant_id = \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant))"
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}')))"
             }
 
             accounting-off {
@@ -189,7 +195,7 @@ sql {
                       AND tenant_id = \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant))"
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}')))"
             }
 
             start {
@@ -226,7 +232,7 @@ sql {
                     SELECT \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)), \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))), \
                         '%{Acct-Session-Id}', \
                          '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                          '%{User-Name}', '%{Realm}', \
@@ -241,7 +247,7 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NOT NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NOT NULL \
                       AND NOT EXISTS ( \
                         SELECT 1 FROM ${....acct_table1} \
                          WHERE acctsessionid = '%{Acct-Session-Id}' \
@@ -251,7 +257,7 @@ sql {
                            AND tenant_id = \
                                COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                           WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                         (SELECT tenant_id FROM radius_sole_tenant)))"
+                                         (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))))"
                 # B-14 QUARANTINE: a multi-network server cannot tell whose
                 # router this is (source unknown, or claimed by two tenants) →
                 # the session goes to radius_unattributed (operator-only), not
@@ -265,9 +271,11 @@ sql {
                     SELECT \
                         'acct', '%{Packet-Src-IP-Address}', '%{NAS-IP-Address}', \
                         '%{User-Name}', '%{Acct-Session-Id}', \
-                        CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
-                                           WHERE ip = '%{Packet-Src-IP-Address}') \
-                             THEN 'ambiguous_nas' ELSE 'unknown_nas' END, \
+                        COALESCE((SELECT 'local_' || purpose FROM radius_local_nas \
+                                   WHERE ip = '%{Packet-Src-IP-Address}'), \
+                                 CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
+                                                    WHERE ip = '%{Packet-Src-IP-Address}') \
+                                      THEN 'ambiguous_nas' ELSE 'unknown_nas' END), \
                         'Start', datetime('now'), datetime('now'), 1, \
                         0, \
                         0, \
@@ -276,7 +284,10 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NULL \
+                      AND NOT EXISTS (SELECT 1 FROM radius_local_nas \
+                                       WHERE ip = '%{Packet-Src-IP-Address}' \
+                                         AND purpose = 'probe') \
                     ON CONFLICT (kind, src_ip, acctsessionid, username) DO UPDATE SET \
                         last_seen        = excluded.last_seen, \
                         last_status      = excluded.last_status, \
@@ -316,7 +327,7 @@ sql {
                       AND tenant_id = \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant))"
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}')))"
                 # INTERIM FALLBACK: an Interim for a session with NO row at all
                 # (its Start was lost) opens the row now (start = now −
                 # Acct-Session-Time) instead of a silent no-op. An Interim for a
@@ -333,7 +344,7 @@ sql {
                     SELECT \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)), \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))), \
                         '%{Acct-Session-Id}', \
                         '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                         '%{User-Name}', '%{Realm}', \
@@ -348,7 +359,7 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NOT NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NOT NULL \
                       AND NOT EXISTS ( \
                         SELECT 1 FROM ${....acct_table1} \
                          WHERE acctsessionid = '%{Acct-Session-Id}' \
@@ -357,7 +368,7 @@ sql {
                            AND tenant_id = \
                                COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                           WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                         (SELECT tenant_id FROM radius_sole_tenant)))"
+                                         (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))))"
                 # B-14 QUARANTINE (see start): unattributable → operator-only table.
                 query = "\
                     INSERT INTO radius_unattributed \
@@ -367,9 +378,11 @@ sql {
                     SELECT \
                         'acct', '%{Packet-Src-IP-Address}', '%{NAS-IP-Address}', \
                         '%{User-Name}', '%{Acct-Session-Id}', \
-                        CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
-                                           WHERE ip = '%{Packet-Src-IP-Address}') \
-                             THEN 'ambiguous_nas' ELSE 'unknown_nas' END, \
+                        COALESCE((SELECT 'local_' || purpose FROM radius_local_nas \
+                                   WHERE ip = '%{Packet-Src-IP-Address}'), \
+                                 CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
+                                                    WHERE ip = '%{Packet-Src-IP-Address}') \
+                                      THEN 'ambiguous_nas' ELSE 'unknown_nas' END), \
                         'Interim-Update', datetime('now'), datetime('now'), 1, \
                         '%{%{Acct-Session-Time}:-0}', \
                         ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
@@ -378,7 +391,10 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NULL \
+                      AND NOT EXISTS (SELECT 1 FROM radius_local_nas \
+                                       WHERE ip = '%{Packet-Src-IP-Address}' \
+                                         AND purpose = 'probe') \
                     ON CONFLICT (kind, src_ip, acctsessionid, username) DO UPDATE SET \
                         last_seen        = excluded.last_seen, \
                         last_status      = excluded.last_status, \
@@ -409,7 +425,7 @@ sql {
                       AND tenant_id = \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant))"
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}')))"
                 # STOP FALLBACK (leftover wave, L01 AFTER: 1,130 sessions lost
                 # at 200/s). rlm_sql runs the NEXT query of a type when the
                 # previous one changed 0 rows. A Stop whose Start was never
@@ -430,7 +446,7 @@ sql {
                     SELECT \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)), \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))), \
                         '%{Acct-Session-Id}', \
                         '%{Packet-Src-IP-Address}-%{Acct-Session-Id}-%{User-Name}', \
                         '%{User-Name}', '%{Realm}', \
@@ -446,7 +462,7 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NOT NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NOT NULL \
                       AND NOT EXISTS ( \
                         SELECT 1 FROM ${....acct_table1} \
                          WHERE acctsessionid = '%{Acct-Session-Id}' \
@@ -455,7 +471,7 @@ sql {
                            AND tenant_id = \
                                COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                           WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                         (SELECT tenant_id FROM radius_sole_tenant)))"
+                                         (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))))"
                 # B-14 QUARANTINE (see start): unattributable → operator-only table.
                 query = "\
                     INSERT INTO radius_unattributed \
@@ -465,9 +481,11 @@ sql {
                     SELECT \
                         'acct', '%{Packet-Src-IP-Address}', '%{NAS-IP-Address}', \
                         '%{User-Name}', '%{Acct-Session-Id}', \
-                        CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
-                                           WHERE ip = '%{Packet-Src-IP-Address}') \
-                             THEN 'ambiguous_nas' ELSE 'unknown_nas' END, \
+                        COALESCE((SELECT 'local_' || purpose FROM radius_local_nas \
+                                   WHERE ip = '%{Packet-Src-IP-Address}'), \
+                                 CASE WHEN EXISTS (SELECT 1 FROM radius_source_tenant \
+                                                    WHERE ip = '%{Packet-Src-IP-Address}') \
+                                      THEN 'ambiguous_nas' ELSE 'unknown_nas' END), \
                         'Stop', datetime('now'), datetime('now'), 1, \
                         '%{%{Acct-Session-Time}:-0}', \
                         ('%{%{Acct-Input-Gigawords}:-0}' * 4294967296) + '%{%{Acct-Input-Octets}:-0}', \
@@ -476,7 +494,10 @@ sql {
                     WHERE \
                         COALESCE((SELECT tenant_id FROM radius_source_tenant \
                                    WHERE ip = '%{Packet-Src-IP-Address}'), \
-                                  (SELECT tenant_id FROM radius_sole_tenant)) IS NULL \
+                                  (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NULL \
+                      AND NOT EXISTS (SELECT 1 FROM radius_local_nas \
+                                       WHERE ip = '%{Packet-Src-IP-Address}' \
+                                         AND purpose = 'probe') \
                     ON CONFLICT (kind, src_ip, acctsessionid, username) DO UPDATE SET \
                         last_seen        = excluded.last_seen, \
                         last_status      = excluded.last_status, \
@@ -503,12 +524,12 @@ sql {
             SELECT \
                 COALESCE((SELECT tenant_id FROM radius_source_tenant \
                            WHERE ip = '%{Packet-Src-IP-Address}'), \
-                          (SELECT tenant_id FROM radius_sole_tenant)), \
+                          (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))), \
                 '%{User-Name}', '%{User-Password}', '%{reply:Packet-Type}', \
                 datetime('now'), '', '%{NAS-IP-Address}' \
             WHERE \
                 COALESCE((SELECT tenant_id FROM radius_source_tenant \
                            WHERE ip = '%{Packet-Src-IP-Address}'), \
-                          (SELECT tenant_id FROM radius_sole_tenant)) IS NOT NULL"
+                          (SELECT tenant_id FROM radius_sole_tenant WHERE NOT EXISTS (SELECT 1 FROM radius_local_nas WHERE ip = '%{Packet-Src-IP-Address}'))) IS NOT NULL"
     }
 }

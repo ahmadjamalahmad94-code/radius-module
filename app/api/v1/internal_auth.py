@@ -166,6 +166,12 @@ def internal_auth():
         _LOG.exception("internal_auth: NAS tenant resolution failed — Reject")
         return jsonify({"control:Auth-Type": "Reject",
                         "reply:Reply-Message": "Internal error — try again"}), 200
+    if not owner.attributed and owner.reason == "probe":
+        # B-14 local registry: a registered health probe gets an answer
+        # (proof of life) but leaves no trace — no login log, no quarantine,
+        # no fail2ban count, no webhook.
+        return jsonify({"control:Auth-Type": "Reject",
+                        "reply:Reply-Message": "Health probe"}), 200
     if not owner.attributed:
         from app.radius.services.nas_tenant import quarantine_auth
         quarantine_auth(source_ip=owner.source_ip,

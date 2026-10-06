@@ -65,19 +65,44 @@ WITH addr AS (
       FROM nas_devices WHERE enabled = 1 AND deleted_at IS NULL
        AND TRIM(COALESCE(address, '')) <> ''
 ), owner AS (
+    -- migration 197: a tenant's router row never claims a loopback address
+    -- nor an address of the operator's local registry …
     SELECT ip,
            CASE WHEN COUNT(DISTINCT tenant_id) = 1 THEN MIN(tenant_id) END AS tenant_id,
            COUNT(DISTINCT tenant_id) AS n,
            -- normalised 'YYYY-MM-DD HH:MM:SS' (radacct uses a space, the panel 'T…Z')
            MIN(SUBSTR(REPLACE(created_at, 'T', ' '), 1, 19)) AS since
-      FROM addr GROUP BY ip
+      FROM addr
+     WHERE ip NOT LIKE '127.%' AND ip NOT IN ('::1', '0.0.0.0', 'localhost', '')
+       {not_local}
+     GROUP BY ip
+    {local_owner}
 )
 """
 
-_CLASSIFY = _OWNER_CTE + """
+# … and a registered local source is owned by its configured tenant only
+# ('mgmt' / 'probe' entries own nothing → their rows stay where they are).
+_LOCAL_NOT = "AND ip NOT IN (SELECT ip FROM radius_local_nas)"
+_LOCAL_OWNER = """
+    UNION ALL
+    SELECT l.ip, CASE WHEN l.purpose = 'nas' THEN t.id END,
+           CASE WHEN l.purpose = 'nas' AND t.id IS NOT NULL THEN 1 ELSE 0 END,
+           SUBSTR(REPLACE(l.created_at, 'T', ' '), 1, 19)
+      FROM radius_local_nas l LEFT JOIN tenants t ON t.id = l.tenant_id"""
+
+
+def _owner_cte(conn: sqlite3.Connection) -> str:
+    has_registry = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE name = 'radius_local_nas'").fetchone()
+    return _OWNER_CTE.format(not_local=_LOCAL_NOT if has_registry else "",
+                             local_owner=_LOCAL_OWNER if has_registry else "")
+
+
+_CLASSIFY = """
 SELECT r.radacctid AS id, r.tenant_id AS stored, o.tenant_id AS owner, o.n AS n,
        CASE
          WHEN o.ip IS NULL THEN 'unknown_nas'
+         WHEN o.n = 0 THEN 'local_no_tenant'
          WHEN o.tenant_id IS NULL THEN 'ambiguous_nas'
          WHEN o.tenant_id = r.tenant_id THEN 'correct'
          WHEN SUBSTR(REPLACE(COALESCE(r.acctstarttime, ''), 'T', ' '), 1, 19) < o.since
@@ -119,7 +144,7 @@ def plan(conn: sqlite3.Connection) -> dict:
                  "moves": [], "suspect_attempt_rows": 0}
     if tenants <= 1:
         return out
-    for row in conn.execute(_CLASSIFY, (SOURCE_TENANT,)):
+    for row in conn.execute(_owner_cte(conn) + _CLASSIFY, (SOURCE_TENANT,)):
         v = row["verdict"]
         out["verdicts"][v] = out["verdicts"].get(v, 0) + 1
         if row["is_open"]:
