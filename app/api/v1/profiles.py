@@ -47,8 +47,10 @@ _STR_FIELDS = (
     "address_pool", "framed_pool", "ipv6_pool",
     "allowed_hours_from", "allowed_hours_to",
     "on_login", "on_logout",
-    "currency", "plan_tier", "project", "description", "color",
+    "currency", "project", "description", "color",
     "offer_hours_from", "offer_hours_to",
+    # نافذة «غير محدود ليلًا» (HH:MM، توقيت اللوحة) — مُطبَّقة على الكوتة.
+    "nightly_from", "nightly_to",
     "service_scope",
 )
 _INT_FIELDS = (
@@ -61,7 +63,7 @@ _INT_FIELDS = (
     "bandwidth_id",
     "speed_up_kbps", "speed_down_kbps",
     "burst_up_kbps", "burst_down_kbps", "burst_threshold_kbps", "burst_time_sec",
-    "concurrent_sessions", "pool_id", "vlan_id", "allowed_devices_count",
+    "concurrent_sessions", "pool_id",
     "priority",
     # RM-H3
     "cir_down_kbps", "cir_up_kbps",
@@ -72,17 +74,25 @@ _INT_FIELDS = (
 )
 _FLOAT_FIELDS = ("price_card", "price_bulk", "price")
 _BOOL_FIELDS = (
-    "bind_mac", "bind_ip", "force_mac_address",
     "auto_renew", "prepaid", "enabled",
     # RM-H3
-    "speed_control_enabled", "burst_enabled", "nightly_unlimited_enabled",
+    "burst_enabled", "nightly_unlimited_enabled",
     "single_use_once", "hotspot_enabled", "ppp_enabled",
-    "loan_enabled", "speed_override_allowed",
+    "loan_enabled",
     # «بلا حدّ للسرعة» (هجرة 172) — كان الويب وحده يقبله، فالتطبيق/الـ API لا
     # يستطيع إنشاء باقةٍ مفتوحة السرعة (الصفر يُرفض بلا هذا العلَم).
     "speed_unlimited", "shared_single_session",
 )
 _TUPLE_FIELDS = ("allowed_days", "router_ids")
+
+# 🔒 قرار المالك (2026-10-06): حقولٌ أُزيلت من كلّ الواجهات لأنّ لا شيء يقرؤها —
+# تُقبل مفاتيحها وتُتجاهَل بصمت (نسخ التطبيق القديمة ترسلها؛ لا 422)، والقيمة
+# المخزَّنة تبقى كما هي.
+_IGNORED_FIELDS = (
+    "speed_control_enabled", "vlan_id", "bind_mac", "bind_ip",
+    "force_mac_address", "speed_override_allowed", "allowed_devices_count",
+    "plan_tier",
+)
 
 _VALID_DAYS = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"}
 

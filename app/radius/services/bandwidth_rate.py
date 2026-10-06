@@ -18,6 +18,7 @@ are untouched. The full cascade in the live path stays:
 from __future__ import annotations
 
 import logging
+import re as _re
 from typing import Optional
 
 from ..core import units
@@ -82,8 +83,9 @@ def plan_rate_limit(plan) -> Optional[str]:
 
     Profile wins over the plan's own fields when the plan references one that
     exists (its raw burst string if set, else ``up_k/down_k`` from its rates).
-    Falls back to the plan's ``burst_raw`` / ``speed_*_kbps``. ``None`` when
-    neither yields a rate (caller then emits no Mikrotik-Rate-Limit).
+    Falls back to the plan's ``burst_raw`` / ``speed_*_kbps`` — the latter with
+    the plan's own Burst + CIR (:func:`build_rate_limit`). ``None`` when neither
+    yields a rate (caller then emits no Mikrotik-Rate-Limit).
     """
     profile = resolve_plan_profile(plan)
     if profile is not None:
@@ -94,8 +96,114 @@ def plan_rate_limit(plan) -> Optional[str]:
         if down or up:
             return f"{up}k/{down}k"
     if plan.speed_down_kbps or plan.speed_up_kbps:
-        return plan.burst_raw or f"{plan.speed_up_kbps}k/{plan.speed_down_kbps}k"
+        if plan.burst_raw:
+            return plan.burst_raw
+        return build_rate_limit(int(plan.speed_up_kbps or 0),
+                                int(plan.speed_down_kbps or 0), plan)
     return None
+
+
+# ── Burst + CIR (قرار المالك 2026-10-06: «وصّله») ──────────────────────────
+# صيغة MikroTik الكاملة (من منظور الراوتر rx = رفعُ المشترك، tx = تنزيله):
+#   rx/tx  burst-rx/burst-tx  threshold-rx/threshold-tx  time-rx/time-tx  [priority]  [min-rx/min-tx]
+# الموضع الأوّل يطابق ما كان يُرسَل «up/down»؛ CIR («السرعة المضمونة») = min-rate
+# (limit-at) في الموضع السادس، والأولويّة قبله 8 (افتراض MikroTik) — يستبدلها
+# policy_engine._augment_rate_priority حين يضبط المشترك أولويّة طابور.
+# عتبة الباقة حقلٌ واحد ⇒ هي عتبة التنزيل، وعتبة الرفع بنفس نسبتها من سرعة الرفع.
+DEFAULT_QUEUE_PRIORITY = 8
+
+
+def _plan_burst_tokens(plan, up_k: int, down_k: int) -> list[str]:
+    """[burst, threshold, time] لباقةٍ Burst فيها مفعَّل ومتّسق — وإلّا []."""
+    if plan is None or not bool(getattr(plan, "burst_enabled", False)):
+        return []
+    try:
+        bu = int(getattr(plan, "burst_up_kbps", 0) or 0)
+        bd = int(getattr(plan, "burst_down_kbps", 0) or 0)
+        thr = int(getattr(plan, "burst_threshold_kbps", 0) or 0)
+        bt = int(getattr(plan, "burst_time_sec", 0) or 0)
+    except (TypeError, ValueError):
+        return []
+    if not (up_k > 0 and down_k > 0 and bu > up_k and bd > down_k
+            and 0 < thr < bd and bt > 0):
+        # صفٌّ قديم غير متّسق (الحفظ الجديد يرفضه) — لا نُرسل Burst مكسورًا.
+        _LOG.warning("bandwidth_rate: Burst الباقة %r غير متّسق — يُتجاهل "
+                     "(rate=%sk/%sk burst=%sk/%sk thr=%sk time=%ss)",
+                     getattr(plan, "id", None), up_k, down_k, bu, bd, thr, bt)
+        return []
+    thr_up = max(1, int(round(thr * up_k / down_k)))
+    return [f"{bu}k/{bd}k", f"{thr_up}k/{thr}k", f"{bt}/{bt}"]
+
+
+def _plan_cir_token(plan, up_k: int, down_k: int) -> str:
+    """«min-rx/min-tx» من CIR الباقة (مقصوصًا على السرعة) — أو "" بلا CIR."""
+    if plan is None:
+        return ""
+    try:
+        cu = int(getattr(plan, "cir_up_kbps", 0) or 0)
+        cd = int(getattr(plan, "cir_down_kbps", 0) or 0)
+    except (TypeError, ValueError):
+        return ""
+    cu, cd = max(0, min(cu, up_k)), max(0, min(cd, down_k))
+    if not (cu or cd):
+        return ""
+    return f"{cu}k/{cd}k"
+
+
+def build_rate_limit(up_k: int, down_k: int, plan=None) -> str:
+    """سطر Mikrotik-Rate-Limit من سرعة الباقة + Burst + CIR الخاصّين بها.
+
+    بلا Burst ولا CIR يبقى «Uk/Dk» حرفيًّا كما كان (لا تغيير لأيّ باقةٍ قائمة)."""
+    toks = [f"{int(up_k)}k/{int(down_k)}k"]
+    burst = _plan_burst_tokens(plan, int(up_k), int(down_k))
+    cir = _plan_cir_token(plan, int(up_k), int(down_k))
+    if burst:
+        toks += burst
+    if cir:
+        if not burst:
+            toks += ["0/0", "0/0", "0/0"]
+        toks += [str(DEFAULT_QUEUE_PRIORITY), cir]
+    return " ".join(toks)
+
+
+_RATE_SIDE_RE = _re.compile(r"^(\d+)([kKmMgG]?)$")
+# مواضع السرعات في السطر (0 rate، 1 burst، 2 threshold، 5 min-rate) — 3 زمنٌ
+# و4 أولويّة لا يُضربان.
+_RATE_POSITIONS = (0, 1, 2, 5)
+
+
+def scale_rate_limit(rate_str: str, down_f: float, up_f: float, *,
+                     main: Optional[tuple[int, int]] = None) -> Optional[str]:
+    """يضرب **كلّ** سرعات السطر (الأساس/Burst/العتبة/CIR) بمعاملَي التنزيل/الرفع
+    فيبقى السطر متّسقًا (CIR لا يتجاوز السرعة بعد التخفيض/التقسيم). ``main``
+    (up_k, down_k) يفرض قيمة الموضع الأوّل حرفيًّا. ``None`` لو تعذّر التحليل."""
+    toks = (rate_str or "").split()
+    if not toks:
+        return None
+    out = list(toks)
+    for pos in _RATE_POSITIONS:
+        if pos >= len(toks):
+            continue
+        if pos == 0 and main is not None:
+            out[0] = f"{int(main[0])}k/{int(main[1])}k"
+            continue
+        if "/" not in toks[pos]:
+            return None
+        up_s, down_s = toks[pos].split("/", 1)
+        mu, md = _RATE_SIDE_RE.match(up_s), _RATE_SIDE_RE.match(down_s)
+        if not (mu and md):
+            return None
+        new_up = int(int(mu.group(1)) * up_f)
+        new_down = int(int(md.group(1)) * down_f)
+        out[pos] = f"{new_up}{mu.group(2)}/{new_down}{md.group(2)}"
+    if len(out) > 5 and main is not None and "/" in out[5]:
+        # CIR (بالكيلو) لا يتجاوز السرعة المفروضة بعد التقسيم.
+        cu_s, cd_s = out[5].split("/", 1)
+        mu, md = _RATE_SIDE_RE.match(cu_s), _RATE_SIDE_RE.match(cd_s)
+        if mu and md and mu.group(2).lower() == "k" and md.group(2).lower() == "k":
+            out[5] = (f"{min(int(mu.group(1)), int(main[0]))}k/"
+                      f"{min(int(md.group(1)), int(main[1]))}k")
+    return " ".join(out)
 
 
 # «تقسيم السرعة على الأجهزة»: أدنى حصّة للجهاز الواحد بعد التقسيم — لئلّا يهبط
@@ -153,13 +261,20 @@ def _apply_device_split(tenant_id, username, sub, down_k: int, up_k: int) -> tup
 
 def _base_rate_kbps(tenant_id, username, *, at=None):
     """(down_kbps, up_kbps, sub) عبر الكاسكيد قبل تقسيم الأجهزة. sub=None لو مجهول."""
+    down, up, sub, _plan = _base_rate_kbps_src(tenant_id, username, at=at)
+    return (down, up, sub)
+
+
+def _base_rate_kbps_src(tenant_id, username, *, at=None):
+    """مثل ``_base_rate_kbps`` + الباقة حين تكون **طبقة الباقة** هي المصدر
+    (لا جدول ولا تجاوز) — فيحمل التقسيمُ Burst/CIR الباقة معه. وإلّا None."""
     try:
         from ..db.repos import operations_repo, plans_repo, subscribers_repo
     except Exception:  # noqa: BLE001
-        return (0, 0, None)
+        return (0, 0, None, None)
     sub = subscribers_repo.get_subscriber(tenant_id, username)
     if not sub:
-        return (0, 0, None)
+        return (0, 0, None, None)
     plan = None
     if getattr(sub, "plan_id", None):
         try:
@@ -175,21 +290,21 @@ def _base_rate_kbps(tenant_id, username, *, at=None):
     )
     if rule:
         return (int(rule.get("speed_down_kbps") or 0),
-                int(rule.get("speed_up_kbps") or 0), sub)
+                int(rule.get("speed_up_kbps") or 0), sub, None)
     if getattr(sub, "bandwidth_control_enabled", False) and (
         getattr(sub, "download_speed_kbps", 0) or getattr(sub, "upload_speed_kbps", 0)
     ):
         return (int(sub.download_speed_kbps or 0),
-                int(sub.upload_speed_kbps or 0), sub)
+                int(sub.upload_speed_kbps or 0), sub, None)
     if plan:
         profile = resolve_plan_profile(plan)
         if profile is not None:
             down, up = profile_rate_kbps(profile)
             if down or up:
-                return (down, up, sub)
+                return (down, up, sub, plan)
         return (int(getattr(plan, "speed_down_kbps", 0) or 0),
-                int(getattr(plan, "speed_up_kbps", 0) or 0), sub)
-    return (0, 0, sub)
+                int(getattr(plan, "speed_up_kbps", 0) or 0), sub, plan)
+    return (0, 0, sub, None)
 
 
 def effective_rate_kbps(tenant_id: int, username: str, *, at=None) -> tuple[int, int]:
@@ -246,7 +361,11 @@ def _apply_active_speed_factor(tenant_id: int, plan_id, rate_str: str) -> str:
             return rate_str
         up_k = int(int(up_s[:-1]) * up_f)
         down_k = int(int(down_s[:-1]) * down_f)
-        return f"{up_k}k/{down_k}k{tail}"
+        # Burst/العتبة/CIR تُضرب بنفس المعامل (وإلّا تجاوز CIR السرعةَ المخفَّضة
+        # فرفض الراوتر السطر). ذيلٌ لا يُحلَّل يبقى كما كان.
+        scaled = scale_rate_limit(rate_str.strip(), down_f, up_f,
+                                  main=(up_k, down_k)) if tail else None
+        return scaled or f"{up_k}k/{down_k}k{tail}"
     except Exception:  # noqa: BLE001 — fail-open: لا نكسر تخصيص السرعة
         return rate_str
 
@@ -336,11 +455,21 @@ def effective_rate_limit(tenant_id: int, username: str, *, at=None) -> str:
         return ""
     plan_id = getattr(sub, "plan_id", None)
     result = ""
-    # التقسيم مفعَّل → معدّل رقميّ مقسَّم (له الأولويّة على سلاسل burst).
+    # التقسيم مفعَّل → المعدّل المقسَّم. حين تكون طبقة الباقة هي المصدر يُقسَم
+    # سطرها كاملًا (Burst/العتبة/CIR بنفس النسبة) فلا يضيع Burst/CIR الباقة
+    # ولا يتجاوز CIR الحصّةَ المقسومة؛ وإلّا (جدول/تجاوز) الرقميّ كما كان.
     if any(_split_dirs(sub)):
-        down_k, up_k = effective_rate_kbps(tenant_id, username, at=at)
+        base_d, base_u, _s, tier_plan = _base_rate_kbps_src(tenant_id, username, at=at)
+        down_k, up_k = (_apply_device_split(tenant_id, username, sub, base_d, base_u)
+                        if _s is not None else (0, 0))
         if down_k or up_k:
             result = f"{up_k}k/{down_k}k"
+            if tier_plan is not None and base_d and base_u:
+                plan_str = plan_rate_limit(tier_plan) or ""
+                scaled = scale_rate_limit(plan_str, down_k / base_d, up_k / base_u,
+                                          main=(up_k, down_k)) if plan_str else None
+                if scaled:
+                    result = scaled
     if not result:
         plan = None
         if plan_id:

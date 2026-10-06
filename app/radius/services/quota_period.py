@@ -531,6 +531,20 @@ def usage(sub, now: Optional[datetime] = None, state: Optional[dict] = None,
         monthly = period
     else:
         monthly = (g("m_in") + straddle["monthly"][0], g("m_out") + straddle["monthly"][1])
+    # «غير محدود ليلًا» (قرار المالك 2026-10-06): ما وقع في نافذة الليل لا يُحتسب.
+    try:
+        from . import quota_night
+        credit = quota_night.usage_credit(
+            sub, period_since=p,
+            daily_since=(r if day_by_reset else bounds["day_start"]),
+            monthly_since=(p if month_by_period else bounds["month_start"]))
+    except Exception:  # noqa: BLE001 — الطرح لا يكسر القراءة
+        credit = None
+    if credit:
+        sub_ = lambda u, c: (max(0, u[0] - c[0]), max(0, u[1] - c[1]))  # noqa: E731
+        period = sub_(period, credit["period"])
+        daily = sub_(daily, credit["daily"])
+        monthly = sub_(monthly, credit["monthly"])
     return {"period": period, "daily": daily, "monthly": monthly}
 
 
@@ -675,6 +689,11 @@ def enforce_live_quota(tenant_id: Optional[int] = None) -> dict:
                               or datetime.utcnow() - _LAST_PRUNE > timedelta(hours=6)):
         _LAST_PRUNE = datetime.utcnow()
         prune_session_marks()
+        try:
+            from . import quota_night
+            quota_night.prune_marks()
+        except Exception:  # noqa: BLE001
+            pass
     try:
         from .policy_reconciler import _live_rows, _resolve
         from .schedule_window import _active_tenant_ids

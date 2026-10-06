@@ -175,7 +175,7 @@ def propagate_plan_split(tenant_id: int, plan_id: int,
 _PLAN_SPEED_FIELDS = (
     "speed_down_kbps", "speed_up_kbps", "bandwidth_id", "speed_unlimited",
     "burst_enabled", "burst_down_kbps", "burst_up_kbps", "burst_threshold_kbps",
-    "burst_time_sec", "burst_raw",
+    "burst_time_sec", "burst_raw", "cir_down_kbps", "cir_up_kbps",
 )
 
 

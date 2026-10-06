@@ -125,7 +125,6 @@
           {'label':_('السعر'),        'value': p.price|money, 'mono': True},
           {'label':_('العملة'),       'value': p.currency or _('عملة النظام')},
           {'label':_('مسبق الدفع'),   'value': _('نعم') if p.prepaid else _('لا')},
-          {'label':_('فئة الباقة'),   'value': p.plan_tier or '—'},
         ]) }}
       </div>
 
@@ -135,14 +134,12 @@
         {{ hub.kv([
           {'label':_('تنزيل'),          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else _('غير محدّدة'), 'mono': True},
           {'label':_('رفع'),            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else _('غير محدّدة'), 'mono': True},
-          {'label':_('تحكم بالسرعة'),   'value': _('مفعَّل') if p.speed_control_enabled else _('معطَّل')},
           {'label':_('CIR تنزيل'),      'value': ((p.cir_down_kbps|string) + ' Kbps') if p.cir_down_kbps else '—', 'mono': True},
           {'label':_('CIR رفع'),        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
           {'label':'Burst',          'value': _('مفعَّل') if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else _('معطَّل')},
           {'label':_('Burst تنزيل/رفع'),'value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
           {'label':_('عتبة / زمن Burst'),'value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' s') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
-          {'label':_('ليلي غير محدود'), 'value': _('مفعَّل') if p.nightly_unlimited_enabled else _('معطَّل')},
-          {'label':_('تجاوز السرعة مسموح'), 'value': _('نعم') if p.speed_override_allowed else _('لا')},
+          {'label':_('ليلي غير محدود'), 'value': ((p.nightly_from or '—') + ' → ' + (p.nightly_to or '—')) if p.nightly_unlimited_enabled else _('معطَّل'), 'mono': p.nightly_unlimited_enabled},
         ]) }}
       </div>
 
@@ -183,9 +180,6 @@
           {'label':'Address Pool',  'value': p.address_pool or '—', 'mono': True},
           {'label':'Framed Pool',   'value': p.framed_pool or '—', 'mono': True},
           {'label':'IPv6 Pool',     'value': p.ipv6_pool or '—', 'mono': True},
-          {'label':'VLAN',          'value': p.vlan_id or '—', 'mono': True},
-          {'label':_('ربط MAC'),       'value': _('نعم') if p.bind_mac else _('لا')},
-          {'label':_('ربط IP'),        'value': _('نعم') if p.bind_ip else _('لا')},
         ]) }}
       </div>
 

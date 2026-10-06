@@ -143,6 +143,11 @@ class AccessPlan:
     cir_up_kbps: int = 0
     burst_enabled: bool = False
     nightly_unlimited_enabled: bool = False
+    # نافذة «غير محدود ليلًا» (هجرة 196) — «HH:MM» بالتوقيت المحلّيّ للّوحة
+    # (فلسطين Asia/Gaza). ما يُستهلك داخلها لا يُحتسب من الكوتة
+    # (services/quota_night.py). فارغان = العلَم بلا أثر.
+    nightly_from: str = ""
+    nightly_to: str = ""
     # «بلا حدّ للسرعة» قرارٌ صريح (هجرة 172). بدونه صفرُ السرعة يُرفض
     # عند الحفظ — لأنّ الصفرَ الصامت كان يعني «مفتوح» على الراوتر.
     speed_unlimited: bool = False
