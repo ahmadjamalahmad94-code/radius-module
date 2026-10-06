@@ -6,9 +6,9 @@ a fresh PRODUCTION install must still let its only admin in — B-06 must not
 lock the bootstrap admin out of every tenant — and the web must force the
 password change before anything else.
 
-The API side (``POST /api/admin/login``) does NOT enforce must_change_password
-(pre-existing; identity-sync admins have the same gap). Recorded as a strict
-xfail so the gap is visible and the test flips when an owner decision lands.
+The API side (``POST /api/admin/login``) now enforces must_change_password
+too (owner decision 2026-10-06, docs/security/SEC_TEMP_PASSWORD_API.md): a
+flagged admin gets only a restricted password-change credential.
 All values below are TEST values.
 """
 from __future__ import annotations
@@ -88,10 +88,6 @@ def test_bootstrap_admin_web_login_lands_in_tenant_then_forced_change(prod_app):
     assert "/account" in r.headers.get("Location", ""), r.headers.get("Location")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "pre-existing gap made sharper by F-5: /api/admin/login ignores "
-    "must_change_password, so the one-time bootstrap password works on the "
-    "API (mobile app / HTTP Basic) without ever being changed — owner decision"))
 def test_api_login_refuses_or_flags_must_change_password(prod_app):
     pw = prod_app.config["_creds"]["admin"]
     r = prod_app.test_client().post("/api/admin/login",
@@ -100,3 +96,12 @@ def test_api_login_refuses_or_flags_must_change_password(prod_app):
     body = r.get_json() or {}
     flagged = bool(((body.get("data") or {}).get("admin") or {}).get("must_change_password"))
     assert r.status_code != 200 or flagged
+    # SEC temp-password: flagged → a restricted password-change credential only
+    data = body.get("data") or {}
+    assert data.get("must_change_password") is True
+    assert data.get("token_type") == "password_change"
+    other = prod_app.test_client().get(
+        "/api/v1/accounts", base_url=BASE,
+        headers={"Authorization": f"Bearer {data.get('token')}"})
+    assert other.status_code == 403
+    assert other.get_json()["error"]["code"] == "PASSWORD_CHANGE_REQUIRED"
