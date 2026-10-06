@@ -288,39 +288,39 @@ limit بين 1 و1000، و offset لا يكون سالبًا.,,,,,,"missing: en,
 جلسة المحاسبة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:176
 اسم المستخدم مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:224
 قيمة limit_bytes يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:231
-تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:115
-تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:120
-قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:143
-بيانات metadata ليست JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:176
-بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:179
-تعذّر تحويل metadata إلى JSON: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:185
-metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:187
-قيمة %(field_name)s يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:207
-السعر المخصّص يجب أن يكون رقمًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:225
-السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:231
-لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:239
-نوع الحساب غير معروف (المسموح: subscriber أو trial).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:241
-عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:258
-تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:398
-قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:442
-قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:447
-نصّ البحث طويل جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:451
-قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:455
-قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:466
-قيمة expiring_within_days بين 1 و 365.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:470
-اسم الدخول وكلمة المرور مطلوبان.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:536
-اسم الدخول يجب أن يكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:538
-كلمة المرور يجب أن تكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:542
-بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:556
-لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:592
-الحساب %(username)s غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:659
-الحساب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:672
-لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:678
-كلمة المرور الجديدة (new_password) مطلوبة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:754
-ليس لديك صلاحية لتغيير كلمة مرور المشترك.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:763
-المدّة يجب أن تكون عددًا صحيحًا من الدقائق.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:817
-المدّة يجب أن تكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:819
-المدة الناتجة تتجاوز الحدّ المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:833
+تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:118
+تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:123
+قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:146
+بيانات metadata ليست JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:179
+بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:182
+تعذّر تحويل metadata إلى JSON: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:188
+metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:190
+قيمة %(field_name)s يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:210
+السعر المخصّص يجب أن يكون رقمًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:228
+السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:234
+لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:242
+نوع الحساب غير معروف (المسموح: subscriber أو trial).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:244
+عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:261
+تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:404
+قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:448
+قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:453
+نصّ البحث طويل جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:457
+قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:461
+قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:472
+قيمة expiring_within_days بين 1 و 365.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:476
+اسم الدخول وكلمة المرور مطلوبان.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:542
+اسم الدخول يجب أن يكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:544
+كلمة المرور يجب أن تكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:548
+بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:562
+لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:598
+الحساب %(username)s غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:665
+الحساب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:678
+لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:684
+كلمة المرور الجديدة (new_password) مطلوبة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:757
+ليس لديك صلاحية لتغيير كلمة مرور المشترك.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:766
+المدّة يجب أن تكون عددًا صحيحًا من الدقائق.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:820
+المدّة يجب أن تكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:822
+المدة الناتجة تتجاوز الحدّ المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:836
 تعذّر الإرسال — تأكّد من بيانات البوت.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:104
 تنبيه غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:113
 تعذّر الإرسال.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:131
@@ -1418,8 +1418,8 @@ live_coa: يُرسل CoA-Request فقط فتتغيّر السرعة فورًا �
 scope_type غير صالح: %(scope_type)s,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:88
 mode غير صالح: %(mode)s,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:90
 scope_id مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/allow_mode_repo.py:92
- مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1250
-لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول %(username_length)s%(affix)s: يبقى %(random_digits)s خانة عشوائيّة فقط (%(space)s تركيبة، المتاح منها الآن %(available)s). أقصى عدد ممكن بهذه الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1252
+ مع البادئة/اللاحقة «%(prefix)s…%(suffix)s»,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1251
+لا تكفي الأرقام لتوليد %(requested)s بطاقة بطول %(username_length)s%(affix)s: يبقى %(random_digits)s خانة عشوائيّة فقط (%(space)s تركيبة، المتاح منها الآن %(available)s). أقصى عدد ممكن بهذه الإعدادات هو %(available)s — زِد طول اسم المستخدم أو غيّر البادئة.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/cards_repo.py:1253
 نوع أصل غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:34
 الملف فارغ.,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:36
 حجم الملف يتجاوز الحدّ (%(v)sم.ب).,,,,,,"missing: en,fr,tr,es",app/radius/db/repos/hotspot_assets_repo.py:39
@@ -3371,113 +3371,113 @@ VACUUM اكتمل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/tools.py:184
 تعذّرت مزامنة الأنفاق: %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:104
 فشل التحقق من سر الربط أو التوقيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:113
 رد لوحة التراخيص غير متوقّع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:116
-لا تملك صلاحية «رؤية كلمة مرور المشترك».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1196
-فعّال,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1208
-معلّق,,Pending,En attente,Beklemede,Pendiente,ok,app/radius/routes/users.py:1209
-الجوال,,Mobile,Mobile,Cep telefonu,Móvil,ok,app/radius/routes/users.py:1279
-تاريخ الإضافة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1281
-تاريخ الانتهاء,,Expiry Date,Date d'expiration,Bitiş Tarihi,Fecha de vencimiento,ok,app/radius/routes/users.py:1281
-ملاحظات,,Notes,Remarques,Notlar,Notas,ok,app/radius/routes/users.py:1281
-بدون انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1292
-قائمة المشتركين,,Subscribers list,Liste des abonnés,Abone listesi,Lista de abonados,ok,app/radius/routes/users.py:1296
-قواعد السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1339
-اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1341
-السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» فلا تُفعَّل بها سرعة مؤقتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1383
-تعذّر تطبيق السرعة المؤقتة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1440
-تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1464
-كلمة المرور لا تكون مسافات فقط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1547
-كلمة المرور مطلوبة (4 أحرف على الأقل).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1549
-تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1583
-تم إنشاء المشترك لكن قاعدة السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1611
-تم إنشاء المستخدم «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1615
-الكوتة (م.بايت),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1770
-الكوتة المستهدفة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1771
-السبب,,Reason,Raison,Neden,Motivo,ok,app/radius/routes/users.py:1772
-السياسة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1772
-ملاحظة,,Note,Remarque,Not,Nota,ok,app/radius/routes/users.py:1772
-بعد,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1774
-قبل,,Before,Avant,Önce,Antes,ok,app/radius/routes/users.py:1774
-تم إنشاء الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1818
-تم تعديل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1819
-تم أرشفة الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1820
-تم تفعيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1821
-تم تعطيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1822
-تم تغيير كلمة المرور,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1823
-تغيير العرض,,Change view,Changer l'affichage,Görünümü değiştir,Cambiar vista,ok,app/radius/routes/users.py:1827
-تغيير السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1828
-انتهاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1829
-تغيير السرعة (جدولة),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1830
-انتهاء جدولة السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1831
-حدث إداري,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1833
-جلسة نشطة الآن,,Active session now,Session active maintenant,Şu anda aktif oturum,Sesión activa ahora,ok,app/radius/routes/users.py:1843
-الاتصال عبر %(v)s من %(v2)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1845
-اتصال,,Connection,Connexion,Bağlantı,Conexión,ok,app/radius/routes/users.py:1853
-بداية الجلسة الأولى,,Start of the first session,Début de la première session,İlk oturumun başlangıcı,Inicio de la primera sesión,ok,app/radius/routes/users.py:1856
-تم الاتصال لأول مرة باستخدام هذا الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1857
-نفّذها ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1878
-تم إنشاء حساب المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1888
-تم إصدار الحساب باسم المستخدم %(username)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1889
-الكوتا الكلية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/radius/routes/users.py:1967
-الكوتا الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1978
-الكوتا اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1978
-معاينة التجديد: %(earned_days)s يوم، بدون تطبيق مباشر على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2086
-قواعد سرعة هذا المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2121
-هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2122
-لم يُحفَظ التعديل,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2250
-المشترك «%(username)s» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2251
-أُعيدت تسمية المشترك «%(username)s» إلى «%(renamed_to)s» بعد فتح نموذج التعديل — لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2274
-فتح النموذج الحاليّ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2276
-المشترك غير موجود,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2278
-لا يوجد مشترك باسم «%(username)s» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2279
-تم تنفيذ إجراء قواعد السرعة لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2321
-تم تغيير اسم الدخول إلى «%(posted_username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2350
-لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2440
-تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2448
-لم يتم تحديد أي مشترك للحذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2480
-تم حذف %(deleted)s مشترك. يمكن الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2497
-تعذّر حذف %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2500
-لم يتم حذف أي مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2502
-تم التعطيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2511
-تم التفعيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2514
-لم يتم تحديد أي مشترك لتغيير الحالة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2540
-تم تعطيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2564
-تم تفعيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2567
-تعذّر تغيير حالة %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2570
-على الدين,,On credit,À crédit,Borca,A crédito,ok,app/radius/routes/users.py:2631
-مجانية,,Free,Gratuit,Ücretsiz,Gratis,ok,app/radius/routes/users.py:2631
-مدفوعة,,Paid,Payé,Ödendi,Pagado,ok,app/radius/routes/users.py:2631
-تم تعيين انتهاء الحساب: %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2637
-تم تمديد الحساب %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2639
-قيمة المدّة أو تاريخ الانتهاء غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2645
-لم يتم تحديد أي مشترك لإضافة الوقت.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2659
-تم تعيين انتهاء %(done)s مشترك إلى %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2734
-تم تمديد %(done)s مشترك بمقدار %(v)s لكلٍّ منهم (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2736
-تعذّر تمديد %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2739
-تم تغيير العرض وتسجيل دين فرق السعر بقيمة %(debt)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2758
-تم تغيير العرض وتعويض %(v)s إضافيّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2760
-تم تغيير العرض وإنقاص %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2762
-تم تغيير العرض للمشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2764
-تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2784
-لم يتم تحديد أي مشترك للإرسال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2810
-تمت إضافة رسالة %(label)s إلى قائمة الإرسال لـ %(sent)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2830
-تعذّر الإرسال لـ %(v)s مشترك (غالبًا بلا رقم جوال): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2833
-تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2866
-تمت استعادة الكوتة اليومية للمشترك (مجانية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2868
-قيمة المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2872
-لم يتم تحديد أي مشترك لاستعادة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2885
-تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2917
-تُخطّي %(v)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ (لم يُحصَّل منهم شيء): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2920
-تعذّرت الاستعادة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2923
-تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2943
-قيمة الكوتة أو المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2947
-لم يتم تحديد أي مشترك لإضافة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2960
-تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2991
-تعذّرت إضافة الكوتة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2994
- بعد خصم %(settled_done)s لتسوية سلف,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3024
-تمت إضافة رصيد نقدي: %(credited)s%(note)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3026
-لم يتم تحديد أي مشترك لإضافة الرصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3042
-تمت إضافة رصيد نقدي %(amount)s لكل مشترك من %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3070
-تعذّرت إضافة الرصيد لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3073
+لا تملك صلاحية «رؤية كلمة مرور المشترك».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1186
+فعّال,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1198
+معلّق,,Pending,En attente,Beklemede,Pendiente,ok,app/radius/routes/users.py:1199
+الجوال,,Mobile,Mobile,Cep telefonu,Móvil,ok,app/radius/routes/users.py:1269
+تاريخ الإضافة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1271
+تاريخ الانتهاء,,Expiry Date,Date d'expiration,Bitiş Tarihi,Fecha de vencimiento,ok,app/radius/routes/users.py:1271
+ملاحظات,,Notes,Remarques,Notlar,Notas,ok,app/radius/routes/users.py:1271
+بدون انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1282
+قائمة المشتركين,,Subscribers list,Liste des abonnés,Abone listesi,Lista de abonados,ok,app/radius/routes/users.py:1286
+قواعد السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1329
+اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1331
+السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» فلا تُفعَّل بها سرعة مؤقتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1373
+تعذّر تطبيق السرعة المؤقتة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1430
+تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1454
+كلمة المرور لا تكون مسافات فقط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1537
+كلمة المرور مطلوبة (4 أحرف على الأقل).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1539
+تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1573
+تم إنشاء المشترك لكن قاعدة السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1601
+تم إنشاء المستخدم «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1605
+الكوتة (م.بايت),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1760
+الكوتة المستهدفة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1761
+السبب,,Reason,Raison,Neden,Motivo,ok,app/radius/routes/users.py:1762
+السياسة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1762
+ملاحظة,,Note,Remarque,Not,Nota,ok,app/radius/routes/users.py:1762
+بعد,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1764
+قبل,,Before,Avant,Önce,Antes,ok,app/radius/routes/users.py:1764
+تم إنشاء الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1808
+تم تعديل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1809
+تم أرشفة الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1810
+تم تفعيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1811
+تم تعطيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1812
+تم تغيير كلمة المرور,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1813
+تغيير العرض,,Change view,Changer l'affichage,Görünümü değiştir,Cambiar vista,ok,app/radius/routes/users.py:1817
+تغيير السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1818
+انتهاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1819
+تغيير السرعة (جدولة),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1820
+انتهاء جدولة السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1821
+حدث إداري,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1823
+جلسة نشطة الآن,,Active session now,Session active maintenant,Şu anda aktif oturum,Sesión activa ahora,ok,app/radius/routes/users.py:1833
+الاتصال عبر %(v)s من %(v2)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1835
+اتصال,,Connection,Connexion,Bağlantı,Conexión,ok,app/radius/routes/users.py:1843
+بداية الجلسة الأولى,,Start of the first session,Début de la première session,İlk oturumun başlangıcı,Inicio de la primera sesión,ok,app/radius/routes/users.py:1846
+تم الاتصال لأول مرة باستخدام هذا الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1847
+نفّذها ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1868
+تم إنشاء حساب المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1878
+تم إصدار الحساب باسم المستخدم %(username)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1879
+الكوتا الكلية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/radius/routes/users.py:1957
+الكوتا الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1968
+الكوتا اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1968
+معاينة التجديد: %(earned_days)s يوم، بدون تطبيق مباشر على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2076
+قواعد سرعة هذا المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2111
+هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2112
+لم يُحفَظ التعديل,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2240
+المشترك «%(username)s» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2241
+أُعيدت تسمية المشترك «%(username)s» إلى «%(renamed_to)s» بعد فتح نموذج التعديل — لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2264
+فتح النموذج الحاليّ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2266
+المشترك غير موجود,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2268
+لا يوجد مشترك باسم «%(username)s» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2269
+تم تنفيذ إجراء قواعد السرعة لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2309
+تم تغيير اسم الدخول إلى «%(posted_username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2338
+لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2423
+تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2431
+لم يتم تحديد أي مشترك للحذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2463
+تم حذف %(deleted)s مشترك. يمكن الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2480
+تعذّر حذف %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2483
+لم يتم حذف أي مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2485
+تم التعطيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2494
+تم التفعيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2497
+لم يتم تحديد أي مشترك لتغيير الحالة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2523
+تم تعطيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2547
+تم تفعيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2550
+تعذّر تغيير حالة %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2553
+على الدين,,On credit,À crédit,Borca,A crédito,ok,app/radius/routes/users.py:2614
+مجانية,,Free,Gratuit,Ücretsiz,Gratis,ok,app/radius/routes/users.py:2614
+مدفوعة,,Paid,Payé,Ödendi,Pagado,ok,app/radius/routes/users.py:2614
+تم تعيين انتهاء الحساب: %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2620
+تم تمديد الحساب %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2622
+قيمة المدّة أو تاريخ الانتهاء غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2628
+لم يتم تحديد أي مشترك لإضافة الوقت.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2642
+تم تعيين انتهاء %(done)s مشترك إلى %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2717
+تم تمديد %(done)s مشترك بمقدار %(v)s لكلٍّ منهم (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2719
+تعذّر تمديد %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2722
+تم تغيير العرض وتسجيل دين فرق السعر بقيمة %(debt)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2741
+تم تغيير العرض وتعويض %(v)s إضافيّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2743
+تم تغيير العرض وإنقاص %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2745
+تم تغيير العرض للمشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2747
+تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2767
+لم يتم تحديد أي مشترك للإرسال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2793
+تمت إضافة رسالة %(label)s إلى قائمة الإرسال لـ %(sent)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2813
+تعذّر الإرسال لـ %(v)s مشترك (غالبًا بلا رقم جوال): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2816
+تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2849
+تمت استعادة الكوتة اليومية للمشترك (مجانية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2851
+قيمة المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2855
+لم يتم تحديد أي مشترك لاستعادة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2868
+تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2900
+تُخطّي %(v)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ (لم يُحصَّل منهم شيء): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2903
+تعذّرت الاستعادة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2906
+تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2926
+قيمة الكوتة أو المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2930
+لم يتم تحديد أي مشترك لإضافة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2943
+تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2974
+تعذّرت إضافة الكوتة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2977
+ بعد خصم %(settled_done)s لتسوية سلف,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3007
+تمت إضافة رصيد نقدي: %(credited)s%(note)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3009
+لم يتم تحديد أي مشترك لإضافة الرصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3025
+تمت إضافة رصيد نقدي %(amount)s لكل مشترك من %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3053
+تعذّرت إضافة الرصيد لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3056
 اختر التخصيص أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:62
 تم إنشاء الحساب «%(username)s» بنجاح.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:75
 تم حذف الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:87
@@ -6241,62 +6241,62 @@ router_id مطلوب لتشغيل التشخيص.,,,,,,"missing: en,fr,tr,es",ap
 اسم الدخول (إعادة تسمية),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:204
 العرض/الباقة,,Offer/Plan,Offre/Forfait,Teklif/Paket,Oferta/Plan,ok,app/radius/services/manager_grants.py:209
 السعر المخصّص,,Custom price,Prix personnalisé,Özel fiyat,Precio personalizado,ok,app/radius/services/manager_grants.py:210
-نقل المشترك (المدير المسؤول),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:220
-الباقة (السرعة/الكوتا),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:230
-طريقة الاحتساب,,Calculation Method,Méthode de calcul,Hesaplama yöntemi,Método de cálculo,ok,app/radius/services/manager_grants.py:240
-تفعيل / تعطيل,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:276
-إضافة / استعادة كوتا,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:282
-إضافة رصيد / شحن,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:286
-تسجيل دفعة / تحصيل,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:288
-منح أيام تجريبية,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:295
-إرسال بيانات الدخول,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:297
-إرسال واتساب,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:303
-تعديل قوالب الإشعارات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:306
-الوصول لصفحات مايكروتيك,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:319
-تعديل الجلسة (IP/سرعة حيّة عبر CoA),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:324
-تثبيت MAC من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:326
-تثبيت IP من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:328
-قطع جلسة نشطة,,Disconnect an active session,Couper une session active,Etkin oturumu kes,Cortar una sesión activa,ok,app/radius/services/manager_grants.py:330
-إغلاق إجباري للجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:332
-مزامنة/تسوية الجلسات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:334
-سرعة مؤقتة من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:336
-توليد بطاقات,,Generate cards,Générer des cartes,Kart oluştur,Generar tarjetas,ok,app/radius/services/manager_grants.py:342
-استيراد حزم,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:345
-إبطال بطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:347
-عمليّات الحزم المجمّعة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:349
-بطاقات شحن مسبق,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:351
-تعديل الحزمة,,Edit plan,Modifier le forfait,Paketi düzenle,Editar plan,ok,app/radius/services/manager_grants.py:355
-تعديل العرض,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:357
-إضافة عرض,,Add plan,Ajouter une offre,Teklif ekle,Añadir oferta,ok,app/radius/services/manager_grants.py:363
-تعديل باقة,,Edit plan,Modifier la formule,Paketi düzenle,Editar plan,ok,app/radius/services/manager_grants.py:369
-إدارة الموزّعين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:374
-تصدير البيانات (CSV/Excel/PDF),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:380
-تأكيد الإيداع (المتجر),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:389
-تأكيد السحب (المتجر),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:392
-إنشاء مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:395
-تعديل مستخدم متجر (شحن/شراء),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:397
-تغيير كلمة مرور مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:399
-حذف/استعادة مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:401
-العمليّات المجمّعة (تعديل/حذف جماعيّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:408
- أو ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:482
-رؤية سعر التكلفة/الجملة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:692
-رؤية كلمة مرور المشترك,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:693
-رؤية الرصيد والماليّات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:694
-رؤية الأرباح/الهامش,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:695
-يتجاوز الحدّ الأقصى الإجماليّ للبطاقات (%(total_cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:902
-يتجاوز الحدّ الأقصى اليوميّ للبطاقات (%(daily_cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:906
-أقصى عدد مشتركين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:921
-أقصى عدد بطاقات (إجماليّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:922
-أقصى عدد بطاقات (يوميّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:923
-عرض كل المشتركين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1044
-عرض كل حزم البطاقات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1045
-إنشاء مدراء فرعيّين + تفويض,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1050
-ممنوع,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1761
-ينقص الدور المفتاح ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1829
-مُطفأ في أساس الدور,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1831
-نطاق الرؤية والحماية الماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1880
-غير ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2013
-ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2013
+نقل المشترك (المدير المسؤول),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:223
+الباقة (السرعة/الكوتا),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:233
+طريقة الاحتساب,,Calculation Method,Méthode de calcul,Hesaplama yöntemi,Método de cálculo,ok,app/radius/services/manager_grants.py:243
+تفعيل / تعطيل,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:279
+إضافة / استعادة كوتا,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:285
+إضافة رصيد / شحن,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:289
+تسجيل دفعة / تحصيل,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:291
+منح أيام تجريبية,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:298
+إرسال بيانات الدخول,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:300
+إرسال واتساب,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:306
+تعديل قوالب الإشعارات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:309
+الوصول لصفحات مايكروتيك,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:322
+تعديل الجلسة (IP/سرعة حيّة عبر CoA),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:327
+تثبيت MAC من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:329
+تثبيت IP من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:331
+قطع جلسة نشطة,,Disconnect an active session,Couper une session active,Etkin oturumu kes,Cortar una sesión activa,ok,app/radius/services/manager_grants.py:333
+إغلاق إجباري للجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:335
+مزامنة/تسوية الجلسات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:337
+سرعة مؤقتة من الجلسة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:339
+توليد بطاقات,,Generate cards,Générer des cartes,Kart oluştur,Generar tarjetas,ok,app/radius/services/manager_grants.py:345
+استيراد حزم,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:348
+إبطال بطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:350
+عمليّات الحزم المجمّعة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:352
+بطاقات شحن مسبق,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:354
+تعديل الحزمة,,Edit plan,Modifier le forfait,Paketi düzenle,Editar plan,ok,app/radius/services/manager_grants.py:358
+تعديل العرض,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:360
+إضافة عرض,,Add plan,Ajouter une offre,Teklif ekle,Añadir oferta,ok,app/radius/services/manager_grants.py:366
+تعديل باقة,,Edit plan,Modifier la formule,Paketi düzenle,Editar plan,ok,app/radius/services/manager_grants.py:372
+إدارة الموزّعين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:377
+تصدير البيانات (CSV/Excel/PDF),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:383
+تأكيد الإيداع (المتجر),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:392
+تأكيد السحب (المتجر),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:395
+إنشاء مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:398
+تعديل مستخدم متجر (شحن/شراء),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:400
+تغيير كلمة مرور مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:402
+حذف/استعادة مستخدم متجر,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:404
+العمليّات المجمّعة (تعديل/حذف جماعيّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:411
+ أو ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:485
+رؤية سعر التكلفة/الجملة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:695
+رؤية كلمة مرور المشترك,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:696
+رؤية الرصيد والماليّات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:697
+رؤية الأرباح/الهامش,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:698
+يتجاوز الحدّ الأقصى الإجماليّ للبطاقات (%(total_cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:905
+يتجاوز الحدّ الأقصى اليوميّ للبطاقات (%(daily_cap)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:909
+أقصى عدد مشتركين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:924
+أقصى عدد بطاقات (إجماليّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:925
+أقصى عدد بطاقات (يوميّ),,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:926
+عرض كل المشتركين,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1047
+عرض كل حزم البطاقات,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1048
+إنشاء مدراء فرعيّين + تفويض,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1053
+ممنوع,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1764
+ينقص الدور المفتاح ,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1832
+مُطفأ في أساس الدور,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1834
+نطاق الرؤية والحماية الماليّة,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:1883
+غير ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2016
+ممنوح,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_grants.py:2016
 اسم القالب مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_presets.py:71
 يوجد قالبٌ بهذا الاسم.,,,,,,"missing: en,fr,tr,es",app/radius/services/manager_presets.py:77
 # MT74 — دمجٌ لا استبدال: نُضيف بوّابات النفق إلى المسموح حاليًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/mgmt_acl.py:124
@@ -7514,8 +7514,8 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 انتهى الاشتراك,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:293
  (الكوتة اليوميّة — تتجدّد غدًا),,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:446
  (الكوتة الشهريّة — تتجدّد الشهر القادم),,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:447
-لا باقة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1963
-غير مصرَّح,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1968
+لا باقة,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1967
+غير مصرَّح,,,,,,"missing: en,fr,tr,es",app/radius/services/policy_engine.py:1972
 يثبّت TTL=1 على الترافيك الخارج من المنافذ المختارة (قاعدة mangle في postrouting)، فيمنع مشاركة الإنترنت عبر البلوتوث/الواي فاي خلف جهاز الزبون. كل قاعدة تحمل وسم HR-AntiShare لتسهيل الإزالة.,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:230
 # === Hoberadius — منع بث البلوتوث والواي فاي (تفعيل) ===,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:243
 # الخدمة: bt_wifi_block — تثبيت TTL=1 لمنع المشاركة.,,,,,,"missing: en,fr,tr,es",app/radius/services/port_script_services.py:244
@@ -8563,27 +8563,23 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 الشبكة وقيود الاتصال,,Network and connection limits,Réseau et restrictions de connexion,Ağ ve bağlantı kısıtlamaları,Red y restricciones de conexión,ok,app/radius/services/subscriber_form_fields.py:134
 قفل عناوين MAC,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:137
 عنوان IP ثابت,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:138
-عنوان IP لجهاز الشبكة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:139
-تقسيم سرعة التنزيل على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:142
-تقسيم سرعة الرفع على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:143
-السلوك عند بلوغ حدّ الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:144
-خادم DNS الأساسيّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:145
-خادم DNS الثانويّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:146
-منفذ جهاز الشبكة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:147
-البرودباند (PPPoE),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:155
-اسم مستخدم البرودباند,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:158
-كلمة مرور البرودباند,,Broadband password,Mot de passe haut débit,Geniş bant parolası,Contraseña de banda ancha,ok,app/radius/services/subscriber_form_fields.py:159
-عنوان IP للبرودباند,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:160
-إعدادات شبكة متقدّمة جدًّا,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:168
-سلسلة الفلترة (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:171
-قائمة العناوين (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:172
-المسار الموجَّه (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:173
-مجموعة المستخدم (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:174
-مجموعة WinBox,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:175
-أولويّة الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:176
-مجمّع العناوين (Framed-Pool),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:177
-فترة تقارير المحاسبة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:178
-خصائص PPP إضافيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:179
+تقسيم سرعة التنزيل على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:140
+تقسيم سرعة الرفع على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:141
+السلوك عند بلوغ حدّ الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:142
+الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:143
+خادم DNS الأساسيّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:144
+خادم DNS الثانويّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:145
+البرودباند (PPPoE),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:153
+عنوان IP للبرودباند,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:156
+إعدادات شبكة متقدّمة جدًّا,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:164
+سلسلة الفلترة (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:167
+قائمة العناوين (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:168
+المسار الموجَّه (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:169
+مجموعة المستخدم (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:170
+أولويّة الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:171
+مجمّع العناوين (Framed-Pool),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:172
+فترة تقارير المحاسبة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:173
+خصائص PPP إضافيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:174
 اسم المجموعة مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:36
 اسم المجموعة «%(name)s» مستخدم مسبقًا في هذا الـ tenant.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:39
 المجموعة غير موجودة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:59
@@ -8596,17 +8592,20 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 كوتة الرفع,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:91
 الكوتة الكلّيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:92
 قيمة «%(field)s» يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:115
-قيمة «%(f)s» أطول من المسموح (%(limit)s حرفًا).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:138
-حالة الحساب غير معروفة (enabled، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:144
-نوع الخدمة غير معروف (hotspot أو pppoe أو both).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:148
-البريد الإلكترونيّ غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:152
-رقم الجوال غير صالح (أرقام فقط، ويجوز + في أوّله).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:156
-عنوان IP في «%(f)s» غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:162
-قفل MAC يجب أن يكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:167
-عنوان MAC غير صالح: «%(v)s».,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:170
-قيمة «%(label)s» يجب أن تكون بين %(lo)s و %(hi)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:180
-الباقة المحددة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:189
-المدير المحدد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:195
+عنوان IP للبرودباند يجب أن يكون عنوان IPv4 صالحًا (مثل 10.0.0.5).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:144
+عنوان IP للبرودباند (%(ip)s) يختلف عن «IP ثابت» (%(static)s) — كلاهما يُرسَل للراوتر عنوانًا ثابتًا واحدًا. اترك أحدهما فارغًا أو اجعلهما متطابقين.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:148
+العنوان %(ip)s مُعطًى لمشتركٍ آخر — العنوان الثابت لا يُعطى لحسابين في الشبكة نفسها.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:170
+قيمة «%(f)s» أطول من المسموح (%(limit)s حرفًا).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:185
+حالة الحساب غير معروفة (enabled، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:191
+نوع الخدمة غير معروف (hotspot أو pppoe أو both).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:195
+البريد الإلكترونيّ غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:199
+رقم الجوال غير صالح (أرقام فقط، ويجوز + في أوّله).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:203
+عنوان IP في «%(f)s» غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:209
+قفل MAC يجب أن يكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:217
+عنوان MAC غير صالح: «%(v)s».,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:220
+قيمة «%(label)s» يجب أن تكون بين %(lo)s و %(hi)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:230
+الباقة المحددة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:239
+المدير المحدد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:245
 لا يوجد توكن بوت محفوظ.,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:86
 تعذّر الاتصال بتيليجرام: %(e)s,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:90
 تيليجرام رفض التوكن: %(desc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:93
@@ -24646,53 +24645,44 @@ SSTP (نفق إدارة),,SSTP (management tunnel),SSTP (tunnel de gestion),SSTP
 آخر ظهور: %(at)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1801
 · متصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1803
 عنوان ثابت للمشترك عند الحاجة.,,A static address for the subscriber when needed.,Une adresse fixe pour l'abonné en cas de besoin.,Gerektiğinde abone için sabit bir adres.,Una dirección fija para el abonado cuando sea necesario.,ok,app/templates/radius/users_form.html:1812
-لجهاز الشبكة,,For the network device,Pour l'appareil réseau,Ağ cihazı için,Para el dispositivo de red,ok,app/templates/radius/users_form.html:1813
-عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.,,The address of the network device that sends authentication requests.,L'adresse de l'équipement réseau qui envoie les demandes d'authentification.,Kimlik doğrulama isteklerini gönderen ağ cihazının adresi.,La dirección del dispositivo de red que envía las solicitudes de autenticación.,ok,app/templates/radius/users_form.html:1815
-اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.,,The service name when needed to match the device's settings.,Le nom du service si nécessaire pour correspondre aux paramètres de l'appareil.,Cihazın ayarlarıyla eşleşmesi gerektiğinde hizmet adı.,El nombre del servicio cuando sea necesario para coincidir con la configuración del dispositivo.,ok,app/templates/radius/users_form.html:1818
-الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1821
-عند تشغيله: تُقسَّم سرعة التنزيل بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز (10 ميجا: جهاز=10، جهازان=5، ثلاثة=3.3…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1826
-عند تشغيله: تُقسَّم سرعة الرفع بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1829
-الافتراض العام (من الإعدادات),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1833
-ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1837
-خادم DNS الأساسي (PPP),,Primary DNS server (PPP),Serveur DNS principal (PPP),Birincil DNS sunucusu (PPP),Servidor DNS principal (PPP),ok,app/templates/radius/users_form.html:1840
-خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.,,The DNS server pushed to the subscriber on connection. Empty = device setting.,Le serveur DNS transmis à l'abonné lors de la connexion. Vide = réglage de l'équipement.,Bağlantı sırasında aboneye gönderilen DNS sunucusu. Boş = cihaz ayarı.,El servidor DNS que se envía al abonado al conectarse. Vacío = ajuste del dispositivo.,ok,app/templates/radius/users_form.html:1842
-خادم DNS الثانوي (PPP),,Secondary DNS server (PPP),Serveur DNS secondaire (PPP),İkincil DNS sunucusu (PPP),Servidor DNS secundario (PPP),ok,app/templates/radius/users_form.html:1843
-خادم احتياطي يُستخدم إذا تعطّل الأساسي.,,Backup server used if the primary one fails.,Serveur de secours utilisé si le serveur principal tombe en panne.,Birincil sunucu arızalanırsa kullanılan yedek sunucu.,Servidor de respaldo que se usa si el principal falla.,ok,app/templates/radius/users_form.html:1845
-منفذ الاتصال للجهاز,,Device connection port,Port de connexion de l'appareil,Cihaz bağlantı noktası,Puerto de conexión del dispositivo,ok,app/templates/radius/users_form.html:1846
-يقيّد دخول المشترك على منفذ معيّن في الراوتر.,,Restricts the subscriber's login to a specific port on the router.,Restreint la connexion de l'abonné à un port spécifique du routeur.,Abonenin girişini yönlendiricideki belirli bir bağlantı noktasına kısıtlar.,Restringe el inicio de sesión del abonado a un puerto específico del router.,ok,app/templates/radius/users_form.html:1848
-البرودباند (اختياري),,Broadband (optional),Haut débit (facultatif),Geniş bant (isteğe bağlı),Banda ancha (opcional),ok,app/templates/radius/users_form.html:1864
-اسم دخول البرودباند,,Broadband login name,Identifiant de connexion haut débit,Geniş bant giriş adı,Nombre de acceso de banda ancha,ok,app/templates/radius/users_form.html:1870
-اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.,,Leave it empty if it is the same as the primary login name.,Laissez-le vide s'il est identique au nom de connexion principal.,Birincil giriş adıyla aynıysa boş bırakın.,Déjalo vacío si es el mismo que el nombre de inicio de sesión principal.,ok,app/templates/radius/users_form.html:1872
-اتركها فارغة لاستخدام كلمة المرور الأساسية.,,Leave it empty to use the primary password.,Laissez-le vide pour utiliser le mot de passe principal.,Birincil parolayı kullanmak için boş bırakın.,Déjalo vacío para usar la contraseña principal.,ok,app/templates/radius/users_form.html:1877
-عنوان البرودباند,,Broadband address,Adresse du haut débit,Geniş bant adresi,Dirección de banda ancha,ok,app/templates/radius/users_form.html:1880
-عنوان ثابت اختياري.,,Optional static address.,Adresse statique facultative.,İsteğe bağlı statik adres.,Dirección estática opcional.,ok,app/templates/radius/users_form.html:1882
-إعدادات شبكة متقدمة جدًا,,Very Advanced Network Settings,Paramètres réseau très avancés,Çok Gelişmiş Ağ Ayarları,Configuración de red muy avanzada,ok,app/templates/radius/users_form.html:1892
-للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.,,For special cases only. Leave it blank unless you have a specific network device policy for this subscriber.,Pour les cas particuliers uniquement. Laissez-le vide sauf si vous avez une politique de périphérique réseau spécifique pour cet abonné.,Yalnızca özel durumlar için. Bu abone için belirli bir ağ aygıtı politikanız yoksa boş bırakın.,Solo para casos especiales. Déjalo vacío a menos que tengas una política de dispositivo de red específica para este abonado.,ok,app/templates/radius/users_form.html:1898
-تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.,,Routes the subscriber's traffic through a specific Firewall chain.,Achemine le trafic de l'abonné via une chaîne Firewall spécifique.,Abonenin trafiğini belirli bir Firewall zinciri üzerinden geçirir.,Pasa el tráfico del abonado por una cadena de Firewall específica.,ok,app/templates/radius/users_form.html:1903
-يضيف عنوان المشترك لقائمة Address-List في الراوتر.,,Adds the subscriber's address to the Address-List on the router.,Ajoute l'adresse de l'abonné à l'Address-List du routeur.,Abonenin adresini yönlendiricideki Address-List'e ekler.,Añade la dirección del abonado a la Address-List del router.,ok,app/templates/radius/users_form.html:1906
-مسار الراوتر الموجَّه,,Directed router route,Route dirigée du routeur,Yönlendirilmiş yönlendirici rotası,Ruta dirigida del router,ok,app/templates/radius/users_form.html:1907
-شبكة إضافية توجَّه خلف اتصال المشترك.,,An additional network routed behind the subscriber's connection.,Un réseau supplémentaire routé derrière la connexion de l'abonné.,Abonenin bağlantısının arkasına yönlendirilen ek bir ağ.,Una red adicional enrutada detrás de la conexión del abonado.,ok,app/templates/radius/users_form.html:1909
-مجموعة صلاحيات Hotspot في الراوتر.,,Hotspot permission group on the router.,Groupe de permissions Hotspot sur le routeur.,Yönlendiricideki Hotspot izin grubu.,Grupo de permisos Hotspot en el router.,ok,app/templates/radius/users_form.html:1912
-مجموعة إدارة الراوتر,,Router management group,Groupe de gestion du routeur,Yönlendirici yönetim grubu,Grupo de gestión del router,ok,app/templates/radius/users_form.html:1913
-صلاحيات دخول إدارية (Winbox) إن وجدت.,,Administrative login credentials (Winbox) if any.,Identifiants d'accès administratif (Winbox) le cas échéant.,Varsa yönetimsel giriş yetkileri (Winbox).,Credenciales de acceso administrativo (Winbox) si las hay.,ok,app/templates/radius/users_form.html:1915
-1 = أعلى أولوية عند ازدحام الشبكة.,,1 = highest priority when the network is congested.,1 = priorité la plus élevée en cas de congestion du réseau.,1 = ağ tıkanıklığında en yüksek öncelik.,1 = máxima prioridad cuando la red está congestionada.,ok,app/templates/radius/users_form.html:1918
-نطاق عناوين الجلسات,,Session address range,Plage d'adresses des sessions,Oturum adres aralığı,Rango de direcciones de sesiones,ok,app/templates/radius/users_form.html:1919
-اسم Pool يأخذ منه المشترك عنوانه.,,Name of the pool the subscriber gets its address from.,Nom du pool dont l'abonné obtient son adresse.,Abonenin adresini aldığı havuzun adı.,Nombre del pool del que el abonado obtiene su dirección.,ok,app/templates/radius/users_form.html:1921
-فترة تحديث الاستهلاك (ث),,Usage refresh interval (s),Intervalle d'actualisation de la consommation (s),Kullanım yenileme aralığı (sn),Intervalo de actualización del consumo (s),ok,app/templates/radius/users_form.html:1922
-كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.,,"How often, in seconds, the router reports session usage.","À quelle fréquence, en secondes, le routeur signale la consommation de la session.",Yönlendiricinin oturum kullanımını kaç saniyede bir bildirdiği.,Cada cuántos segundos el router informa del consumo de la sesión.,ok,app/templates/radius/users_form.html:1924
-خصائص PPP إضافية,,Additional PPP properties,Propriétés PPP supplémentaires,Ek PPP özellikleri,Propiedades PPP adicionales,ok,app/templates/radius/users_form.html:1925
-خاصية=قيمة (سطر لكل واحدة),,attribute=value (one per line),attribut=valeur (une par ligne),öznitelik=değer (her biri bir satırda),atributo=valor (uno por línea),ok,app/templates/radius/users_form.html:1926
-سطر لكل خاصية.,,One line per attribute.,Une ligne par attribut.,Her özellik için bir satır.,Una línea por atributo.,ok,app/templates/radius/users_form.html:1927
-لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد,,No saved expiry time. Save to set the counter,Aucune heure d'expiration enregistrée. Enregistrez pour fixer le compteur,Kaydedilmiş bitiş zamanı yok. Sayacı sabitlemek için kaydedin,No hay hora de vencimiento guardada. Guarde para fijar el contador,ok,app/templates/radius/users_form.html:2107
-انتهت السرعة المؤقتة وسترجع لسرعة العرض,,Temporary speed has ended and will revert to the offer speed,La vitesse temporaire a pris fin et reviendra à la vitesse de l'offre,Geçici hız sona erdi ve teklif hızına dönecek,La velocidad temporal ha terminado y volverá a la velocidad de la oferta,ok,app/templates/radius/users_form.html:2114
-باقي على انتهاء السرعة المؤقتة,,Remaining until temporary speed ends,Restant avant la fin de la vitesse temporaire,Geçici hızın bitmesine kalan,Restante hasta el fin de la velocidad temporal,ok,app/templates/radius/users_form.html:2119
-لا توجد ماكات مقفلة حاليًا.,,No locked MACs currently.,Aucune adresse MAC verrouillée actuellement.,Şu anda kilitli MAC yok.,No hay MAC bloqueadas actualmente.,ok,app/templates/radius/users_form.html:2269
-حذف MAC,,Delete MAC,Supprimer la MAC,MAC'i sil,Eliminar MAC,ok,app/templates/radius/users_form.html:2288
-صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.,,Invalid MAC format. Enter it like AA:BB:CC:DD:EE:FF.,Format MAC invalide. Saisissez-le comme AA:BB:CC:DD:EE:FF.,Geçersiz MAC biçimi. AA:BB:CC:DD:EE:FF gibi girin.,Formato MAC no válido. Escríbalo como AA:BB:CC:DD:EE:FF.,ok,app/templates/radius/users_form.html:2302
-هذا الماك موجود مسبقًا في القائمة.,,This MAC already exists in the list.,Cette adresse MAC existe déjà dans la liste.,Bu MAC listede zaten mevcut.,Esta MAC ya existe en la lista.,ok,app/templates/radius/users_form.html:2307
-الماك الموجود في السجل غير صالح.,,The MAC in the record is invalid.,L'adresse MAC dans l'enregistrement est invalide.,Kayıttaki MAC geçersiz.,La MAC en el registro no es válida.,ok,app/templates/radius/users_form.html:2339
-تعذّر النسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2411
-مقفول — لا تملك صلاحية تعديل هذا الحقل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2439
+الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1815
+عند تشغيله: تُقسَّم سرعة التنزيل بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز (10 ميجا: جهاز=10، جهازان=5، ثلاثة=3.3…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1820
+عند تشغيله: تُقسَّم سرعة الرفع بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1823
+الافتراض العام (من الإعدادات),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1827
+ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1831
+سقفٌ صارم لعدد الجلسات المفتوحة معًا لهذا الحساب — تُحسب كلّ جلسة ولو من الجهاز نفسه. أكبر من 0 = يتقدّم على «عدد الأجهزة المسموحة»؛ 0 = يُطبَّق «عدد الأجهزة المسموحة».,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1834
+خادم DNS الأساسي (PPP),,Primary DNS server (PPP),Serveur DNS principal (PPP),Birincil DNS sunucusu (PPP),Servidor DNS principal (PPP),ok,app/templates/radius/users_form.html:1837
+خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.,,The DNS server pushed to the subscriber on connection. Empty = device setting.,Le serveur DNS transmis à l'abonné lors de la connexion. Vide = réglage de l'équipement.,Bağlantı sırasında aboneye gönderilen DNS sunucusu. Boş = cihaz ayarı.,El servidor DNS que se envía al abonado al conectarse. Vacío = ajuste del dispositivo.,ok,app/templates/radius/users_form.html:1839
+خادم DNS الثانوي (PPP),,Secondary DNS server (PPP),Serveur DNS secondaire (PPP),İkincil DNS sunucusu (PPP),Servidor DNS secundario (PPP),ok,app/templates/radius/users_form.html:1840
+خادم احتياطي يُستخدم إذا تعطّل الأساسي.,,Backup server used if the primary one fails.,Serveur de secours utilisé si le serveur principal tombe en panne.,Birincil sunucu arızalanırsa kullanılan yedek sunucu.,Servidor de respaldo que se usa si el principal falla.,ok,app/templates/radius/users_form.html:1842
+البرودباند (اختياري),,Broadband (optional),Haut débit (facultatif),Geniş bant (isteğe bağlı),Banda ancha (opcional),ok,app/templates/radius/users_form.html:1854
+للبرودباند (PPPoE),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1860
+عنوانٌ ثابت (IPv4) يُرسَل للراوتر عند دخول المشترك (Framed-IP-Address). يدخل مشترك البرودباند باسم الدخول وكلمة المرور الأساسيّين. إن ضُبط «IP ثابت» فيجب أن يطابقه، ولا يُعطى العنوان لمشتركين اثنين.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1862
+إعدادات شبكة متقدمة جدًا,,Very Advanced Network Settings,Paramètres réseau très avancés,Çok Gelişmiş Ağ Ayarları,Configuración de red muy avanzada,ok,app/templates/radius/users_form.html:1872
+للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.,,For special cases only. Leave it blank unless you have a specific network device policy for this subscriber.,Pour les cas particuliers uniquement. Laissez-le vide sauf si vous avez une politique de périphérique réseau spécifique pour cet abonné.,Yalnızca özel durumlar için. Bu abone için belirli bir ağ aygıtı politikanız yoksa boş bırakın.,Solo para casos especiales. Déjalo vacío a menos que tengas una política de dispositivo de red específica para este abonado.,ok,app/templates/radius/users_form.html:1878
+تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.,,Routes the subscriber's traffic through a specific Firewall chain.,Achemine le trafic de l'abonné via une chaîne Firewall spécifique.,Abonenin trafiğini belirli bir Firewall zinciri üzerinden geçirir.,Pasa el tráfico del abonado por una cadena de Firewall específica.,ok,app/templates/radius/users_form.html:1883
+يضيف عنوان المشترك لقائمة Address-List في الراوتر.,,Adds the subscriber's address to the Address-List on the router.,Ajoute l'adresse de l'abonné à l'Address-List du routeur.,Abonenin adresini yönlendiricideki Address-List'e ekler.,Añade la dirección del abonado a la Address-List del router.,ok,app/templates/radius/users_form.html:1886
+مسار الراوتر الموجَّه,,Directed router route,Route dirigée du routeur,Yönlendirilmiş yönlendirici rotası,Ruta dirigida del router,ok,app/templates/radius/users_form.html:1887
+شبكة إضافية توجَّه خلف اتصال المشترك.,,An additional network routed behind the subscriber's connection.,Un réseau supplémentaire routé derrière la connexion de l'abonné.,Abonenin bağlantısının arkasına yönlendirilen ek bir ağ.,Una red adicional enrutada detrás de la conexión del abonado.,ok,app/templates/radius/users_form.html:1889
+مجموعة صلاحيات Hotspot في الراوتر.,,Hotspot permission group on the router.,Groupe de permissions Hotspot sur le routeur.,Yönlendiricideki Hotspot izin grubu.,Grupo de permisos Hotspot en el router.,ok,app/templates/radius/users_form.html:1892
+1 = أعلى أولوية عند ازدحام الشبكة.,,1 = highest priority when the network is congested.,1 = priorité la plus élevée en cas de congestion du réseau.,1 = ağ tıkanıklığında en yüksek öncelik.,1 = máxima prioridad cuando la red está congestionada.,ok,app/templates/radius/users_form.html:1895
+نطاق عناوين الجلسات,,Session address range,Plage d'adresses des sessions,Oturum adres aralığı,Rango de direcciones de sesiones,ok,app/templates/radius/users_form.html:1896
+اسم Pool يأخذ منه المشترك عنوانه.,,Name of the pool the subscriber gets its address from.,Nom du pool dont l'abonné obtient son adresse.,Abonenin adresini aldığı havuzun adı.,Nombre del pool del que el abonado obtiene su dirección.,ok,app/templates/radius/users_form.html:1898
+فترة تحديث الاستهلاك (ث),,Usage refresh interval (s),Intervalle d'actualisation de la consommation (s),Kullanım yenileme aralığı (sn),Intervalo de actualización del consumo (s),ok,app/templates/radius/users_form.html:1899
+كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.,,"How often, in seconds, the router reports session usage.","À quelle fréquence, en secondes, le routeur signale la consommation de la session.",Yönlendiricinin oturum kullanımını kaç saniyede bir bildirdiği.,Cada cuántos segundos el router informa del consumo de la sesión.,ok,app/templates/radius/users_form.html:1901
+خصائص PPP إضافية,,Additional PPP properties,Propriétés PPP supplémentaires,Ek PPP özellikleri,Propiedades PPP adicionales,ok,app/templates/radius/users_form.html:1902
+خاصية=قيمة (سطر لكل واحدة),,attribute=value (one per line),attribut=valeur (une par ligne),öznitelik=değer (her biri bir satırda),atributo=valor (uno por línea),ok,app/templates/radius/users_form.html:1903
+سطر لكل خاصية.,,One line per attribute.,Une ligne par attribut.,Her özellik için bir satır.,Una línea por atributo.,ok,app/templates/radius/users_form.html:1904
+لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد,,No saved expiry time. Save to set the counter,Aucune heure d'expiration enregistrée. Enregistrez pour fixer le compteur,Kaydedilmiş bitiş zamanı yok. Sayacı sabitlemek için kaydedin,No hay hora de vencimiento guardada. Guarde para fijar el contador,ok,app/templates/radius/users_form.html:2084
+انتهت السرعة المؤقتة وسترجع لسرعة العرض,,Temporary speed has ended and will revert to the offer speed,La vitesse temporaire a pris fin et reviendra à la vitesse de l'offre,Geçici hız sona erdi ve teklif hızına dönecek,La velocidad temporal ha terminado y volverá a la velocidad de la oferta,ok,app/templates/radius/users_form.html:2091
+باقي على انتهاء السرعة المؤقتة,,Remaining until temporary speed ends,Restant avant la fin de la vitesse temporaire,Geçici hızın bitmesine kalan,Restante hasta el fin de la velocidad temporal,ok,app/templates/radius/users_form.html:2096
+لا توجد ماكات مقفلة حاليًا.,,No locked MACs currently.,Aucune adresse MAC verrouillée actuellement.,Şu anda kilitli MAC yok.,No hay MAC bloqueadas actualmente.,ok,app/templates/radius/users_form.html:2246
+حذف MAC,,Delete MAC,Supprimer la MAC,MAC'i sil,Eliminar MAC,ok,app/templates/radius/users_form.html:2265
+صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.,,Invalid MAC format. Enter it like AA:BB:CC:DD:EE:FF.,Format MAC invalide. Saisissez-le comme AA:BB:CC:DD:EE:FF.,Geçersiz MAC biçimi. AA:BB:CC:DD:EE:FF gibi girin.,Formato MAC no válido. Escríbalo como AA:BB:CC:DD:EE:FF.,ok,app/templates/radius/users_form.html:2279
+هذا الماك موجود مسبقًا في القائمة.,,This MAC already exists in the list.,Cette adresse MAC existe déjà dans la liste.,Bu MAC listede zaten mevcut.,Esta MAC ya existe en la lista.,ok,app/templates/radius/users_form.html:2284
+الماك الموجود في السجل غير صالح.,,The MAC in the record is invalid.,L'adresse MAC dans l'enregistrement est invalide.,Kayıttaki MAC geçersiz.,La MAC en el registro no es válida.,ok,app/templates/radius/users_form.html:2316
+تعذّر النسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2388
+مقفول — لا تملك صلاحية تعديل هذا الحقل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2416
 إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة,,"Full management of RADIUS users — search, filter, edit, disable, archive","Gestion complète des utilisateurs RADIUS — recherche, filtrage, modification, désactivation, archivage","RADIUS kullanıcılarının tam yönetimi — arama, filtreleme, düzenleme, devre dışı bırakma, arşivleme","Gestión completa de los usuarios RADIUS — búsqueda, filtrado, edición, desactivación, archivado",ok,app/templates/radius/users_list.html:643
 منتهي الاشتراك,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_list.html:676
 البحث بواسطة,,Search by,Rechercher par,Şuna göre ara,Buscar por,ok,app/templates/radius/users_list.html:702
@@ -24893,70 +24883,69 @@ SSTP (نفق إدارة),,SSTP (management tunnel),SSTP (tunnel de gestion),SSTP
 سرعة مؤقّتة,,Temporary speed,Débit temporaire,Geçici hız,Velocidad temporal,ok,app/templates/radius/users_profile.html:842
 · باقي,,· Remaining,· Restant,· Kalan,· Restante,ok,app/templates/radius/users_profile.html:848
 MAC مقفل,,MAC locked,MAC verrouillée,MAC kilitli,MAC bloqueada,ok,app/templates/radius/users_profile.html:855
-حد الجلسات المتزامنة,,Concurrent sessions limit,Limite de sessions simultanées,Eş zamanlı oturum sınırı,Límite de sesiones simultáneas,ok,app/templates/radius/users_profile.html:858
-حد الأجهزة,,Device Limit,Limite d'appareils,Cihaz sınırı,Límite de dispositivos,ok,app/templates/radius/users_profile.html:859
-المجمّع,,The pool,Le groupe,Havuz,El grupo,ok,app/templates/radius/users_profile.html:860
-معرّف المتّصل,,Caller ID,ID de l'appelant,Arayan kimliği,ID del llamante,ok,app/templates/radius/users_profile.html:861
-الحالة + الوقت,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:867
-أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/templates/radius/users_profile.html:871
-الحدود + الكوتا,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:880
-كوتا مدمجة,,Bundled Quota,Quota inclus,Dahili kota,Cuota incluida,ok,app/templates/radius/users_profile.html:884
-حد الاتصال اليومي,,Daily connection limit,Limite de connexion quotidienne,Günlük bağlantı sınırı,Límite de conexión diario,ok,app/templates/radius/users_profile.html:886
-أيام العمل,,Working Days,Jours ouvrables,Çalışma günleri,Días laborables,ok,app/templates/radius/users_profile.html:887
-MACs المسموحة,,Allowed MACs,MAC autorisées,İzin verilen MAC'ler,MAC permitidas,ok,app/templates/radius/users_profile.html:888
-المرجع المالي,,Financial reference,Référence financière,Mali referans,Referencia financiera,ok,app/templates/radius/users_profile.html:890
-النشاط الأخير للمشترك,,Subscriber’s last activity,Dernière activité de l’abonné,Abonenin son etkinliği,Última actividad del abonado,ok,app/templates/radius/users_profile.html:912
-لا أحداث مسجَّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:939
-لا يوجد سجلّ لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:939
-فواتير المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:947
-لا فواتير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:979
-لم تُصدَر أيّ فاتورة لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:979
-عمليات الشحن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:987
-لا عمليات شحن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1011
-لم تُسجَّل أيّ مدفوعات لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1011
-نشطة الآن: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1021
-أجهزة ظهرت في السجل,,Devices that appeared in the log,Appareils apparus dans le journal,Kayıtta görünen cihazlar,Dispositivos que aparecieron en el registro,ok,app/templates/radius/users_profile.html:1025
-IP فريد,,Unique IP,IP unique,Benzersiz IP,IP única,ok,app/templates/radius/users_profile.html:1029
-عناوين مستخدمة,,Used addresses,Adresses utilisées,Kullanılan adresler,Direcciones usadas,ok,app/templates/radius/users_profile.html:1029
-%(length)s جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1046
-لا جلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1140
-لم يسجِّل المشترك أيّ جلسة اتصال بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1140
-آخر 14 يوم حسب الجلسات,,Last 14 days by sessions,14 derniers jours par sessions,Oturumlara göre son 14 gün,Últimos 14 días por sesiones,ok,app/templates/radius/users_profile.html:1167
-أيام فيها استخدام,,Days with usage,Jours avec utilisation,Kullanım olan günler,Días con uso,ok,app/templates/radius/users_profile.html:1167
-من سجل الجلسات,,From Session Log,Depuis le journal des sessions,Oturum kaydından,Desde el registro de sesiones,ok,app/templates/radius/users_profile.html:1171
-إجمالي الوقت,,Total Time,Temps total,Toplam Süre,Tiempo total,ok,app/templates/radius/users_profile.html:1179
-الاستهلاك اليومي,,Daily usage,Consommation quotidienne,Günlük kullanım,Consumo diario,ok,app/templates/radius/users_profile.html:1186
-تحميل / رفع حسب يوم بداية الجلسة,,Download / upload by session start day,Téléchargement / téléversement par jour de début de session,Oturum başlangıç gününe göre indirme / yükleme,Descarga / subida por día de inicio de sesión,ok,app/templates/radius/users_profile.html:1187
-تحميل %(v)s / رفع %(v2)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1198
-%(v)s · %(sessions_count)s جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1202
-لا استخدام يومي,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1208
-لا توجد جلسات محاسبة لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1208
-الأحداث الإداريّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1216
-المنفِّذ,,Executor,Exécutant,Uygulayan,Ejecutor,ok,app/templates/radius/users_profile.html:1221
-حذف/أرشفة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1226
-استعادة كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1231
-لا أحداث إداريّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1254
-لم يتدخّل أيّ مدير على هذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1254
-تحميل تقديري للجلسة الحالية,,Estimated load for the current session,Charge estimée de la session en cours,Geçerli oturum için tahmini yük,Carga estimada de la sesión actual,ok,app/templates/radius/users_profile.html:1264
-آخر جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1266
-رفع تقديري للجلسة الحالية,,Estimated upload for the current session,Envoi estimé pour la session actuelle,Mevcut oturum için tahmini yükleme,Subida estimada para la sesión actual,ok,app/templates/radius/users_profile.html:1269
-آخر جلسة مسجلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1271
-المحصلة,,Collected,Encaissé,Tahsil edilen,Recaudado,ok,app/templates/radius/users_profile.html:1274
-محسوبة من حجم البيانات / مدة الجلسة,,Calculated from data volume / session duration,Calculé à partir du volume de données / de la durée de session,Veri hacmi / oturum süresinden hesaplanır,Calculado a partir del volumen de datos / la duración de la sesión,ok,app/templates/radius/users_profile.html:1276
-قراءة السرعة حسب الجلسات,,Read speed by sessions,Lire la vitesse par sessions,Hızı oturumlara göre oku,Leer la velocidad por sesiones,ok,app/templates/radius/users_profile.html:1282
-متوسط تحميل / رفع لكل جلسة,,Average download / upload per session,Téléchargement / téléversement moyen par session,Oturum başına ortalama indirme / yükleme,Descarga / carga promedio por sesión,ok,app/templates/radius/users_profile.html:1283
-لا توجد جلسات محاسبة لحساب متوسط السرعة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1304
-لا قراءات سرعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1304
-الكروت المُستخدَمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1312
-كلمة السرّ,,Password,Mot de passe,Parola,Contraseña,ok,app/templates/radius/users_profile.html:1317
-الباتش,,The batch,Le lot,Parti,El lote,ok,app/templates/radius/users_profile.html:1318
-دفعة رقم %(batch_id)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1327
-مستخدَم,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1333
-لا كروت مرتبطة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1343
-لم يستخدم هذا المشترك أيّ كرت.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1343
-القروض / الديون,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1350
-لا قروض,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1377
-ثوان,,seconds,secondes,saniye,segundos,ok,app/templates/radius/users_profile.html:1427
+حد الجلسات المتزامنة,,Concurrent sessions limit,Limite de sessions simultanées,Eş zamanlı oturum sınırı,Límite de sesiones simultáneas,ok,app/templates/radius/users_profile.html:857
+حد الأجهزة,,Device Limit,Limite d'appareils,Cihaz sınırı,Límite de dispositivos,ok,app/templates/radius/users_profile.html:858
+معرّف المتّصل,,Caller ID,ID de l'appelant,Arayan kimliği,ID del llamante,ok,app/templates/radius/users_profile.html:859
+الحالة + الوقت,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:865
+أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/templates/radius/users_profile.html:869
+الحدود + الكوتا,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:878
+كوتا مدمجة,,Bundled Quota,Quota inclus,Dahili kota,Cuota incluida,ok,app/templates/radius/users_profile.html:882
+حد الاتصال اليومي,,Daily connection limit,Limite de connexion quotidienne,Günlük bağlantı sınırı,Límite de conexión diario,ok,app/templates/radius/users_profile.html:884
+أيام العمل,,Working Days,Jours ouvrables,Çalışma günleri,Días laborables,ok,app/templates/radius/users_profile.html:885
+MACs المسموحة,,Allowed MACs,MAC autorisées,İzin verilen MAC'ler,MAC permitidas,ok,app/templates/radius/users_profile.html:886
+المرجع المالي,,Financial reference,Référence financière,Mali referans,Referencia financiera,ok,app/templates/radius/users_profile.html:888
+النشاط الأخير للمشترك,,Subscriber’s last activity,Dernière activité de l’abonné,Abonenin son etkinliği,Última actividad del abonado,ok,app/templates/radius/users_profile.html:910
+لا أحداث مسجَّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:937
+لا يوجد سجلّ لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:937
+فواتير المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:945
+لا فواتير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:977
+لم تُصدَر أيّ فاتورة لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:977
+عمليات الشحن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:985
+لا عمليات شحن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1009
+لم تُسجَّل أيّ مدفوعات لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1009
+نشطة الآن: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1019
+أجهزة ظهرت في السجل,,Devices that appeared in the log,Appareils apparus dans le journal,Kayıtta görünen cihazlar,Dispositivos que aparecieron en el registro,ok,app/templates/radius/users_profile.html:1023
+IP فريد,,Unique IP,IP unique,Benzersiz IP,IP única,ok,app/templates/radius/users_profile.html:1027
+عناوين مستخدمة,,Used addresses,Adresses utilisées,Kullanılan adresler,Direcciones usadas,ok,app/templates/radius/users_profile.html:1027
+%(length)s جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1044
+لا جلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1138
+لم يسجِّل المشترك أيّ جلسة اتصال بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1138
+آخر 14 يوم حسب الجلسات,,Last 14 days by sessions,14 derniers jours par sessions,Oturumlara göre son 14 gün,Últimos 14 días por sesiones,ok,app/templates/radius/users_profile.html:1165
+أيام فيها استخدام,,Days with usage,Jours avec utilisation,Kullanım olan günler,Días con uso,ok,app/templates/radius/users_profile.html:1165
+من سجل الجلسات,,From Session Log,Depuis le journal des sessions,Oturum kaydından,Desde el registro de sesiones,ok,app/templates/radius/users_profile.html:1169
+إجمالي الوقت,,Total Time,Temps total,Toplam Süre,Tiempo total,ok,app/templates/radius/users_profile.html:1177
+الاستهلاك اليومي,,Daily usage,Consommation quotidienne,Günlük kullanım,Consumo diario,ok,app/templates/radius/users_profile.html:1184
+تحميل / رفع حسب يوم بداية الجلسة,,Download / upload by session start day,Téléchargement / téléversement par jour de début de session,Oturum başlangıç gününe göre indirme / yükleme,Descarga / subida por día de inicio de sesión,ok,app/templates/radius/users_profile.html:1185
+تحميل %(v)s / رفع %(v2)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1196
+%(v)s · %(sessions_count)s جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1200
+لا استخدام يومي,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1206
+لا توجد جلسات محاسبة لهذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1206
+الأحداث الإداريّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1214
+المنفِّذ,,Executor,Exécutant,Uygulayan,Ejecutor,ok,app/templates/radius/users_profile.html:1219
+حذف/أرشفة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1224
+استعادة كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1229
+لا أحداث إداريّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1252
+لم يتدخّل أيّ مدير على هذا المشترك بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1252
+تحميل تقديري للجلسة الحالية,,Estimated load for the current session,Charge estimée de la session en cours,Geçerli oturum için tahmini yük,Carga estimada de la sesión actual,ok,app/templates/radius/users_profile.html:1262
+آخر جلسة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1264
+رفع تقديري للجلسة الحالية,,Estimated upload for the current session,Envoi estimé pour la session actuelle,Mevcut oturum için tahmini yükleme,Subida estimada para la sesión actual,ok,app/templates/radius/users_profile.html:1267
+آخر جلسة مسجلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1269
+المحصلة,,Collected,Encaissé,Tahsil edilen,Recaudado,ok,app/templates/radius/users_profile.html:1272
+محسوبة من حجم البيانات / مدة الجلسة,,Calculated from data volume / session duration,Calculé à partir du volume de données / de la durée de session,Veri hacmi / oturum süresinden hesaplanır,Calculado a partir del volumen de datos / la duración de la sesión,ok,app/templates/radius/users_profile.html:1274
+قراءة السرعة حسب الجلسات,,Read speed by sessions,Lire la vitesse par sessions,Hızı oturumlara göre oku,Leer la velocidad por sesiones,ok,app/templates/radius/users_profile.html:1280
+متوسط تحميل / رفع لكل جلسة,,Average download / upload per session,Téléchargement / téléversement moyen par session,Oturum başına ortalama indirme / yükleme,Descarga / carga promedio por sesión,ok,app/templates/radius/users_profile.html:1281
+لا توجد جلسات محاسبة لحساب متوسط السرعة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1302
+لا قراءات سرعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1302
+الكروت المُستخدَمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1310
+كلمة السرّ,,Password,Mot de passe,Parola,Contraseña,ok,app/templates/radius/users_profile.html:1315
+الباتش,,The batch,Le lot,Parti,El lote,ok,app/templates/radius/users_profile.html:1316
+دفعة رقم %(batch_id)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1325
+مستخدَم,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1331
+لا كروت مرتبطة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1341
+لم يستخدم هذا المشترك أيّ كرت.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1341
+القروض / الديون,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1348
+لا قروض,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:1375
+ثوان,,seconds,secondes,saniye,segundos,ok,app/templates/radius/users_profile.html:1425
 إنشاء دفعة كوبونات بقيمة محددة وربطها اختياريًا بباقة وتاريخ انتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/vouchers_generate.html:13
 معطيات الدفعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/vouchers_generate.html:23
 حدّ أقصى 5000 كوبون في الدفعة.,,Maximum 5000 vouchers per batch.,Maximum 5000 coupons par lot.,Parti başına en fazla 5000 kupon.,Máximo 5000 cupones por lote.,ok,app/templates/radius/vouchers_generate.html:28

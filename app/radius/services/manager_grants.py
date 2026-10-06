@@ -216,7 +216,10 @@ FIELD_REGISTRY: dict[str, tuple[dict[str, Any], ...]] = {
         {"key": "expiry",   "label": N_("تاريخ الانتهاء"), "attrs": ("expire_at",)},
         {"key": "device_count", "label": N_("عدد الأجهزة"), "attrs": ("device_count",
                                                                   "device_limit_mode",
-                                                                  "allowed_macs")},
+                                                                  "allowed_macs",
+                                                                  # «الجلسات المتزامنة» يتقدّم
+                                                                  # على عدد الأجهزة — نفس المنح
+                                                                  "override_concurrent")},
         {"key": "reassign", "label": N_("نقل المشترك (المدير المسؤول)"), "attrs": ("manager_id",)},
         {"key": "speed",    "label": N_("السرعة"),         "attrs": ("bandwidth_control_enabled",
                                                                   "download_speed_kbps",
