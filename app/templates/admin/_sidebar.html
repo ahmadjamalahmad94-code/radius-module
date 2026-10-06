@@ -418,6 +418,7 @@
 {# مركز الأدلة «كيف تستخدمني» — بند مستقل أسفل القائمة.
    نطابق endpoint لا المسار حتى لا يتداخل مع أي /docs آخر. #}
 {%- set m_docs_center = endpoint.startswith('radius.docs_') -%}
+{%- set m_ops_assistant = endpoint.startswith('radius.ops_assistant') -%}
 
 <aside class="hb-side" id="hb-side">
 
@@ -1144,6 +1145,13 @@
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التكامل والجسر'), 'plug-circle-bolt') }}{% endif %}
+
+    {# ───────── مساعد العمليّات (تجريبيّ) ─────────
+       يظهر فقط حين يكون علَم الشبكة مفعّلًا وبوّابة كلمات المرور مفتوحة
+       (ops_assistant_nav_visible — routes/ops_assistant.py). #}
+    {% if ops_assistant_nav_visible is defined and ops_assistant_nav_visible() %}
+    {{ nav_item('radius.ops_assistant', 'robot', _('مساعد العمليّات'), m_ops_assistant) }}
+    {% endif %}
 
     {# ───────── كيف تستخدمني (مركز الأدلة المصوّرة) ─────────
        بند مستقل أسفل القائمة — شروحات خطوة بخطوة داخل الموقع.

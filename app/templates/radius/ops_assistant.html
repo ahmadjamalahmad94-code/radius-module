@@ -1,0 +1,218 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   مساعد العمليّات (تجريبيّ) — محادثة فوق منفّذ /api/v1/ops الحتميّ.
+
+   بيانات المسار (radius.ops_assistant → routes/ops_assistant.py):
+     av        gate.availability: available / flag_enabled / reason /
+               password_gate{default_password_count, must_change_count} — أعداد فقط.
+     is_owner  للنصّ الإرشاديّ عند إيقاف العلَم.
+
+   المساعد يقترح فقط؛ لا يُنفَّذ شيء قبل «تأكيد». كل طلب POST يحمل X-CSRFToken.
+   السلوك في static/js/ops_assistant.js؛ النصوص هنا مُغلَّفة بـ _() وتُمرَّر
+   للسكربت كـ JSON (#ops-config).
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _("مساعد العمليّات — هوب ريديوس") }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-robot"></i>{% endblock %}
+{% block page_title %}{{ _("مساعد العمليّات") }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده.') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  .ops-badge{ display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px;
+              background:rgba(234,88,12,.12); color:#c2410c; border:1px solid rgba(234,88,12,.35);
+              vertical-align:middle; margin-inline-start:6px; }
+  .ops-wrap{ display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:18px; align-items:start; }
+  @media (max-width: 980px){ .ops-wrap{ grid-template-columns:1fr; } }
+  .ops-chat{ display:flex; flex-direction:column; min-height:520px; }
+  .ops-log{ flex:1; overflow-y:auto; max-height:62vh; padding:6px 2px 12px; display:flex;
+            flex-direction:column; gap:10px; }
+  .ops-msg{ max-width:88%; padding:10px 13px; border-radius:14px; line-height:1.75; font-size:14px;
+            white-space:pre-wrap; word-break:break-word; }
+  .ops-msg.is-user{ align-self:flex-start; background:var(--hub-brand,#0284c7); color:#fff;
+                    border-end-start-radius:4px; }
+  .ops-msg.is-bot{ align-self:flex-end; background:var(--hub-soft,rgba(2,132,199,.06));
+                   border:1px solid var(--hub-line,#e2e8f0); border-end-end-radius:4px; }
+  .ops-msg.is-err{ align-self:flex-end; background:rgba(220,38,38,.07); color:#991b1b;
+                   border:1px solid rgba(220,38,38,.28); }
+  .ops-msg.is-wait{ align-self:flex-end; color:var(--hub-text-mute,#94a3b8); font-style:italic; }
+  .ops-card{ align-self:stretch; border:1px solid var(--hub-line,#e2e8f0); border-radius:14px;
+             padding:12px 14px; background:var(--hub-card,#fff); }
+  .ops-card h4{ margin:0 0 8px; font-size:14px; font-weight:800; display:flex; gap:8px; align-items:center; }
+  .ops-card .ops-step{ border-top:1px dashed var(--hub-line,#e2e8f0); padding-top:8px; margin-top:8px; }
+  .ops-card .ops-step:first-of-type{ border-top:0; margin-top:0; padding-top:0; }
+  .ops-kv{ display:grid; grid-template-columns:minmax(110px,max-content) 1fr; gap:3px 12px; font-size:13px; }
+  .ops-kv dt{ color:var(--hub-text-soft,#64748b); font-weight:700; }
+  .ops-kv dd{ margin:0; font-variant-numeric:tabular-nums; }
+  .ops-note{ font-size:12.5px; border-radius:10px; padding:7px 10px; margin-top:8px;
+             background:rgba(234,179,8,.10); border:1px solid rgba(234,179,8,.35); color:#854d0e; }
+  .ops-note.is-danger{ background:rgba(220,38,38,.07); border-color:rgba(220,38,38,.3); color:#991b1b; }
+  .ops-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .ops-status{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:800;
+               padding:2px 9px; border-radius:999px; }
+  .ops-status.done{ background:rgba(5,150,105,.12); color:#047857; }
+  .ops-status.failed{ background:rgba(220,38,38,.10); color:#b91c1c; }
+  .ops-status.not_run{ background:rgba(100,116,139,.12); color:#475569; }
+  .ops-choices{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:13px; }
+  .ops-choices li{ padding:5px 8px; border-radius:8px; background:var(--hub-soft,rgba(2,132,199,.05)); }
+  .ops-choices b{ display:inline-block; min-width:22px; }
+  .ops-form{ display:flex; gap:8px; border-top:1px solid var(--hub-line,#e2e8f0); padding-top:12px; }
+  .ops-form textarea{ flex:1; resize:vertical; min-height:46px; max-height:180px; border-radius:12px;
+                      border:1px solid var(--hub-line,#cbd5e1); padding:10px 12px; font:inherit; }
+  .ops-hint{ font-size:12px; color:var(--hub-text-mute,#94a3b8); margin-top:6px; }
+  .ops-events{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .ops-events li{ border:1px solid var(--hub-line,#e2e8f0); border-radius:12px; padding:10px 12px; }
+  .ops-events .t{ font-weight:800; font-size:13.5px; }
+  .ops-events .d{ font-size:12.5px; color:var(--hub-text-soft,#64748b); margin:4px 0 8px; line-height:1.6; }
+  .ops-secret{ display:flex; gap:8px; align-items:center; justify-content:space-between;
+               border:1px solid var(--hub-line,#e2e8f0); border-radius:10px; padding:8px 10px; margin-top:8px; }
+  .ops-secret code{ font-size:16px; font-weight:800; letter-spacing:.5px; direction:ltr; }
+  .ops-unavail{ max-width:720px; }
+  .ops-unavail ul{ margin:8px 0 0; padding-inline-start:20px; line-height:1.9; }
+</style>
+{% endblock %}
+
+{% block content %}
+{%- set ops_badge -%}<span class="ops-badge">{{ _("تجريبيّ") }}</span>{%- endset -%}
+{{ hub.hero(_("مساعد العمليّات"),
+            subtitle=_("اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده. لا يُنفَّذ شيء بدون تأكيدك."),
+            icon="robot", actions_html=ops_badge) }}
+{% if not av.available %}
+  <div class="ops-unavail">
+  {% call hub.section(_("المساعد غير متاح الآن"), icon="circle-exclamation") %}
+    {% if av.reason == 'disabled' %}
+      <p>{{ _("مساعد العمليّات غير مفعّل لهذه الشبكة. الميزة تجريبيّة ومطفأة افتراضيًّا.") }}</p>
+      {% if is_owner %}
+        <p class="ops-hint">{{ _("يفعّلها مالك الشبكة بعد التحقّق من أنّ كل المدراء يستخدمون كلمات مرور قويّة.") }}</p>
+      {% else %}
+        <p class="ops-hint">{{ _("اطلب من مالك الشبكة تفعيلها.") }}</p>
+      {% endif %}
+    {% else %}
+      {%- set pg = av.password_gate or {} -%}
+      <p>{{ _("المساعد متوقّف لحماية الشبكة: لا يعمل ما دام أيّ مدير يستخدم كلمة مرور افتراضيّة أو مؤقّتة.") }}</p>
+      <ul>
+        <li>{{ _("مدراء بكلمة مرور افتراضيّة:") }} <b>{{ pg.get('default_password_count', 0) }}</b></li>
+        <li>{{ _("مدراء بكلمة مرور مؤقّتة لم تُغيَّر:") }} <b>{{ pg.get('must_change_count', 0) }}</b></li>
+      </ul>
+      <p class="ops-hint">{{ _("بعد تغيير هذه الكلمات يعمل المساعد تلقائيًّا.") }}</p>
+    {% endif %}
+  {% endcall %}
+  </div>
+{% else %}
+<script type="application/json" id="ops-config">{{ {
+  "urls": {
+    "message": url_for('radius.ops_assistant_message'),
+    "confirm": url_for('radius.ops_assistant_confirm'),
+    "cancel": url_for('radius.ops_assistant_cancel'),
+    "events": url_for('radius.ops_assistant_events'),
+    "start_event": url_for('radius.ops_assistant_start_event')
+  },
+  "t": {
+    "you": _("أنت"),
+    "thinking": _("المساعد يفكّر…"),
+    "network": _("تعذّر الاتصال بالخادم. حاول مرّة أخرى."),
+    "confirm": _("تأكيد"),
+    "cancel": _("إلغاء"),
+    "cancelled": _("أُلغي المقترح — لم يُنفَّذ شيء."),
+    "proposal_title": _("مقترح بانتظار تأكيدك"),
+    "plan_title": _("خطّة من عدّة خطوات — تأكيد واحد"),
+    "step": _("الخطوة"),
+    "danger": _("تأثير مباشر على المشترك (فصل/تغيير فوريّ)."),
+    "password_note": _("كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ."),
+    "not_exec": _("هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها."),
+    "from_step": _("من نتيجة الخطوة"),
+    "result_title": _("نتيجة التنفيذ"),
+    "st_done": _("تمّ"),
+    "st_failed": _("فشل"),
+    "st_not_run": _("لم يُنفَّذ"),
+    "rs_executed": _("نُفّذ كاملًا"),
+    "rs_failed": _("لم يُنفَّذ"),
+    "rs_partial": _("نُفّذ جزئيًّا — راجع الخطوات"),
+    "replayed": _("هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة."),
+    "choices_title": _("قائمة من النظام"),
+    "choices_more": _("القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد."),
+    "events_empty": _("لا اقتراحات الآن."),
+    "events_error": _("تعذّر جلب الاقتراحات."),
+    "start": _("ابدأ محادثة"),
+    "new_chat": _("محادثة جديدة"),
+    "event_started": _("بدأت محادثة من اقتراح النظام."),
+    "copied": _("نُسخ"),
+    "copy": _("نسخ"),
+    "empty": _("اكتب رسالة أوّلًا."),
+    "no_expiry": _("بلا انتهاء"),
+    "server_default": _("حسب إعداد الخادم"),
+    "minutes_unit": _("دقيقة")
+  },
+  "labels": {
+    "username": _("اسم المستخدم"), "plan_id": _("الباقة"), "offer_id": _("العرض"),
+    "mobile": _("الجوال"), "full_name": _("الاسم الكامل"), "email": _("البريد"),
+    "expire_at": _("ينتهي (UTC)"), "expire_local": _("ينتهي"), "new_expire_local": _("الانتهاء الجديد"),
+    "charge_mode": _("طريقة الحساب"), "amount": _("المبلغ"), "mode": _("النوع"),
+    "minutes": _("المدّة (دقائق)"), "notes": _("ملاحظات"), "remark": _("ملاحظة"),
+    "policy": _("سياسة التغيير"), "down_kbps": _("التنزيل (kbps)"), "up_kbps": _("الرفع (kbps)"),
+    "duration_minutes": _("المدّة (دقائق)"), "down": _("التنزيل"), "up": _("الرفع"),
+    "name": _("الاسم"), "price": _("السعر"), "speed_down_kbps": _("سرعة التنزيل (kbps)"),
+    "speed_up_kbps": _("سرعة الرفع (kbps)"), "speed_unlimited": _("بلا حدّ للسرعة"),
+    "validity_days": _("الصلاحيّة (أيّام)"), "quota_total_mb": _("الحصّة (MB)"), "quota": _("الحصّة"),
+    "plan_type": _("نوع الباقة"), "wholesale": _("سعر الجملة"), "selling": _("سعر البيع"),
+    "count": _("عدد الكروت"), "package_name": _("اسم الحزمة"), "username_length": _("طول اسم المستخدم"),
+    "password_length": _("طول كلمة السر"), "login_without_password": _("دخول بلا كلمة سر"),
+    "device_count": _("عدد الأجهزة"), "device_limit_mode": _("عند تجاوز الأجهزة"),
+    "concurrent_sessions": _("الجلسات المتزامنة"), "allowed_devices_count": _("الأجهزة المسموحة"),
+    "description": _("الوصف"), "enabled": _("مفعّلة"), "national_id": _("رقم الهويّة"),
+    "address": _("العنوان"), "city": _("المدينة"), "mac_lock": _("قفل الماك"),
+    "time_value": _("المدّة"), "time_unit": _("وحدة المدّة"), "price_per_card": _("سعر الكرت"),
+    "total_price": _("السعر الكلّيّ"), "custom_price": _("سعر خاصّ"), "static_ip": _("IP ثابت")
+  },
+  "values": {
+    "paid": _("مدفوع من الرصيد"), "debt": _("دين على المشترك"), "free": _("مجّانًا"),
+    "true": _("نعم"), "false": _("لا"),
+    "duration": _("مدّة"), "expire_at": _("حتّى تاريخ"),
+    "lower_compensate": _("تعويض بأيّام إضافيّة"), "lower_keep_expiry": _("إبقاء تاريخ الانتهاء"),
+    "higher_debt": _("تسجيل الفرق دينًا"), "higher_reduce_days": _("إنقاص الأيّام المتبقّية"),
+    "higher_keep_expiry": _("إبقاء تاريخ الانتهاء دون فرق"), "neutral_keep_expiry": _("بلا فرق")
+  }
+}|tojson }}</script>
+
+<div class="ops-wrap">
+  <div>
+  {% call hub.section(_("المحادثة"), icon="comments", meta=_("لا يُنفَّذ شيء قبل ضغطك «تأكيد»")) %}
+    <div class="ops-chat">
+      <div class="ops-log" id="ops-log" aria-live="polite">
+        <div class="ops-msg is-bot">{{ _("أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.") }}</div>
+      </div>
+      <form class="ops-form" id="ops-form" autocomplete="off">
+        <textarea id="ops-input" rows="2" maxlength="2000"
+                  placeholder="{{ _('اكتب طلبك هنا…') }}" aria-label="{{ _('رسالتك') }}"></textarea>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button type="submit" class="hub-btn hub-btn--primary" id="ops-send">
+            <i class="fa-solid fa-paper-plane"></i> {{ _("إرسال") }}</button>
+          <button type="button" class="hub-btn hub-btn--ghost" id="ops-new">
+            <i class="fa-solid fa-rotate"></i> {{ _("محادثة جديدة") }}</button>
+        </div>
+      </form>
+      <div class="ops-hint">{{ _("لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.") }}</div>
+    </div>
+  {% endcall %}
+  </div>
+
+  <aside>
+  {% call hub.section(_("اقتراحات"), icon="lightbulb", meta=_("من نظام المراقبة")) %}
+    <ul class="ops-events" id="ops-events"><li class="ops-hint">{{ _("جارٍ التحميل…") }}</li></ul>
+  {% endcall %}
+  </aside>
+</div>
+
+{% call hub.modal("ops-secret-modal", _("كلمة مرور تُعرض مرّة واحدة"), icon="key") %}
+  <div class="ops-note is-danger">{{ _("انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.") }}</div>
+  <div id="ops-secret-list"></div>
+  <div class="ops-actions">
+    <button type="button" class="hub-btn hub-btn--primary" data-uds-modal-close>{{ _("نسختها — إغلاق") }}</button>
+  </div>
+{% endcall %}
+
+<script src="{{ url_for('static', filename='js/ops_assistant.js') }}"></script>
+{% endif %}
+{% endblock %}

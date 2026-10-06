@@ -1831,19 +1831,19 @@ Manual — قائمة سماح يدوية (افتراضي رفض),,,,,,"missing:
 التطبيق الحيّ المباشر مُعطَّل على هذه النسخة (HOBERADIUS_ENABLE_LIVE_SPEED_APPLY=0). تم تنفيذ فحص جاهزية فقط دون أي تغيير على الشبكة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/bandwidth_schedules.py:225
 لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق السرعة على الجلسة التالية عند إعادة المصادقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/bandwidth_schedules.py:229
 تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/bandwidth_schedules.py:232
-انتهت صلاحية جلستك. سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:458
-هذا القسم مُعطَّل على هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1336
-هذا القسم مخفيّ عن حسابك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1337
-هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1338
-الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1339
-العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1340
-هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1343
-تنقصك الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1344
-ليس لديك صلاحية الوصول إلى هذه الصفحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1761
-إذا كنت تتوقع أن هذا خلل، راجع الإدارة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1762
- — بياناتك باقية في النموذج.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1786
-لم يُحفَظ: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1786
-"<h1 dir=""rtl"" lang=""ar"" style=""font-family:sans-serif"">403 — ممنوع</h1><p dir=""rtl"">",,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1804
+انتهت صلاحية جلستك. سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:461
+هذا القسم مُعطَّل على هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1345
+هذا القسم مخفيّ عن حسابك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1346
+هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1347
+الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1348
+العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1349
+هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1352
+تنقصك الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1353
+ليس لديك صلاحية الوصول إلى هذه الصفحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1770
+إذا كنت تتوقع أن هذا خلل، راجع الإدارة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1771
+ — بياناتك باقية في النموذج.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1795
+لم يُحفَظ: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1795
+"<h1 dir=""rtl"" lang=""ar"" style=""font-family:sans-serif"">403 — ممنوع</h1><p dir=""rtl"">",,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1813
 للمتابعة اكتب كلمة التأكيد «%(CONFIRM_WORD)s» بالضبط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:93
 هناك عمليّة مطابقة جارية بالفعل. انتظر انتهاءها.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:97
 تعذّر إنشاء نسخة احتياطيّة — أُلغيت المطابقة ولم يتغيّر شيء.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:109
@@ -2707,6 +2707,21 @@ WG غير مهيّأ على السيرفر بعد — تأكّد أن HOBERADIUS
 أُعيدت السرعة للوضع الطبيعي (100%%). طُبِّق على %(hit)s جلسة متصلة، والجلسات الجديدة تعود لسرعتها الأصليّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:96
 طُبِّقت «%(v)s» (%(pct)s%%) حيًّا: CoA على %(hit)s جلسة متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:99
 تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:112
+المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:113
+تعذّر تنفيذ الطلب.,,Failed to execute the request.,Échec de l'exécution de la requête.,İstek yürütülemedi.,No se pudo ejecutar la solicitud.,ok,app/radius/routes/ops_assistant.py:185
+اكتب رسالة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:195
+المحادثة غير موجودة — ابدأ محادثة جديدة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:203
+تأكيد ناقص.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:221
+اشتراكات تنتهي غدًا,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:247
+%(n)s مشترك ينتهي اشتراكه يوم %(d)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:248
+رفض دخول متكرّر,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:251
+%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:252
+مخزون كروت منخفض,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:255
+الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:256
+باقة بلا عرض بيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:259
+الباقة «%(p)s» لا يبيعها أيّ عرض فعّال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:260
+تعذّر جلب الاقتراحات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:272
+نوع الحدث مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:294
 إعداد دفع غير صالح: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:118
 تم حفظ إعدادات تحصيل الدفعات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:120
 طلب الدفع غير قابل للمراجعة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:175
@@ -7411,6 +7426,13 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:298
 سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:341
 اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
+نموذج المساعد غير متاح الآن. حاول بعد قليل، أو نفّذ العمليّة من صفحتها المعتادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:301
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:311
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:322
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:332
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:344
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:351
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:388
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:126
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:134
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:187
@@ -9888,82 +9910,82 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 ليست ضمن صلاحياتك,,Not within your permissions,Hors de vos autorisations,Yetkileriniz dahilinde değil,Fuera de tus permisos,ok,app/templates/admin/_sidebar.html:63
 مدفوعة — تحتاج تفعيل من المزوّد,,Paid — needs activation by the provider,Payé — activation requise par le fournisseur,Ödendi — sağlayıcı tarafından etkinleştirme gerekli,Pagada — requiere activación por el proveedor,ok,app/templates/admin/_sidebar.html:129
 تحتاج ترقية,,Upgrade required,Mise à niveau requise,Yükseltme gerekli,Requiere actualización,ok,app/templates/admin/_sidebar.html:132
-مركز الإدارة,,Admin Center,Centre d'administration,Yönetim merkezi,Centro de administración,ok,app/templates/admin/_sidebar.html:430
-طيّ القائمة,,Collapse menu,Réduire le menu,Menüyü daralt,Contraer menú,ok,app/templates/admin/_sidebar.html:435
-القائمة الرئيسية,,Main menu,Menu principal,Ana menü,Menú principal,ok,app/templates/admin/_sidebar.html:446
-إدارة البيانات,,Data management,Gestion des données,Veri yönetimi,Gestión de datos,ok,app/templates/admin/_sidebar.html:472
-إضافة حزمة,,Add batch,Ajouter un forfait,Paket Ekle,Añadir plan,ok,app/templates/admin/_sidebar.html:493
-🖨️ بطاقات الطباعة,,🖨️ Printable cards,🖨️ Coupons d'impression,🖨️ Yazdırma kuponları,🖨️ Cupones de impresión,ok,app/templates/admin/_sidebar.html:495
-⚡ بطاقات الشحن المسبق,,⚡ Prepaid recharge cards,⚡ Coupons prépayés,⚡ Ön ödemeli kuponlar,⚡ Cupones prepago,ok,app/templates/admin/_sidebar.html:516
-السرعات,,Bandwidth profiles,Débits,Hızlar,Velocidades,ok,app/templates/admin/_sidebar.html:551
-إدارة الراوترات,,Router management,Gestion des routeurs,Yönlendirici yönetimi,Gestión de routers,ok,app/templates/admin/_sidebar.html:605
-🛜 غرفة عمليات الراوترات,,🛜 Router operations room,🛜 Salle d'opérations des routeurs,🛜 Yönlendirici operasyon odası,🛜 Sala de operaciones de los routers,ok,app/templates/admin/_sidebar.html:615
-كل الخدمات,,All services,Tous les services,Tüm hizmetler,Todos los servicios,ok,app/templates/admin/_sidebar.html:618
-أجهزة الشبكة / NAS,,Network devices / NAS,Équipements réseau / NAS,Ağ cihazları / NAS,Dispositivos de red / NAS,ok,app/templates/admin/_sidebar.html:619
-رسائل أخطاء الهوتسبوت,,Hotspot error messages,Messages d'erreur du hotspot,Hotspot hata mesajları,Mensajes de error del hotspot,ok,app/templates/admin/_sidebar.html:623
-تتبع حالة الأجهزة,,Device health monitoring,Suivi de l'état des appareils,Cihaz durumu izleme,Seguimiento del estado de los dispositivos,ok,app/templates/admin/_sidebar.html:625
-إضافة وإعداد,,Add & configure,Ajouter et configurer,Ekle ve Yapılandır,Añadir y configurar,ok,app/templates/admin/_sidebar.html:654
-إضافة راوتر (سريع),,Add router (quick),Ajouter un routeur (rapide),Yönlendirici ekle (hızlı),Añadir router (rápido),ok,app/templates/admin/_sidebar.html:658
-إعداد راوتر متقدم,,Advanced router setup,Configuration avancée du routeur,Gelişmiş yönlendirici kurulumu,Configuración avanzada del router,ok,app/templates/admin/_sidebar.html:659
-التحكم بالسرعة,,Speed control,Contrôle de la vitesse,Hız Kontrolü,Control de velocidad,ok,app/templates/admin/_sidebar.html:671
-مجدول,,Scheduled,Planifié,Zamanlanmış,Programado,ok,app/templates/admin/_sidebar.html:675
-المراقبة والسجلات,,Monitoring & logs,Surveillance et journaux,İzleme ve günlükler,Supervisión y registros,ok,app/templates/admin/_sidebar.html:692
-التنبيهات الذكيّة,,Smart alerts,Alertes intelligentes,Akıllı uyarılar,Alertas inteligentes,ok,app/templates/admin/_sidebar.html:696
-خدمات الاتصال,,Connection services,Services de connexion,Bağlantı hizmetleri,Servicios de conexión,ok,app/templates/admin/_sidebar.html:711
-⚡ لوحة الشحن,,⚡ Recharge panel,⚡ Panneau de recharge,⚡ Yükleme paneli,⚡ Panel de recarga,ok,app/templates/admin/_sidebar.html:739
-مجمّد,,Frozen,Gelé,Donduruldu,Congelado,ok,app/templates/admin/_sidebar.html:756
-مخزون ومصروفات الشركة,,Company inventory & expenses,Stock et dépenses de l'entreprise,Şirket envanteri ve giderleri,Inventario y gastos de la empresa,ok,app/templates/admin/_sidebar.html:765
-التقارير التنفيذية,,Executive reports,Rapports de direction,Yönetici raporları,Informes ejecutivos,ok,app/templates/admin/_sidebar.html:834
-التقرير المالي,,Financial report,Rapport financier,Mali rapor,Informe financiero,ok,app/templates/admin/_sidebar.html:839
-تقارير البطاقات,,Card reports,Rapports des coupons,Kupon Raporları,Informes de cupones,ok,app/templates/admin/_sidebar.html:840
-الأرشيف,,Archive,Archives,Arşiv,Archivo,ok,app/templates/admin/_sidebar.html:842
-الدخول والأمان,,Login & security,Connexion et sécurité,Oturum açma ve güvenlik,Acceso y seguridad,ok,app/templates/admin/_sidebar.html:851
-فشل دخول الشبكة,,Network login failures,Échec de connexion au réseau,Ağ oturum açma hatası,Error de acceso a la red,ok,app/templates/admin/_sidebar.html:861
-الشبكة والجلسات,,Network & sessions,Réseau et sessions,Ağ ve Oturumlar,Red y sesiones,ok,app/templates/admin/_sidebar.html:869
-إحصائيات المتصلين,,Connected users statistics,Statistiques des utilisateurs connectés,Bağlı kullanıcı istatistikleri,Estadísticas de usuarios conectados,ok,app/templates/admin/_sidebar.html:874
-تقرير الاستهلاك,,Consumption report,Rapport de consommation,Tüketim raporu,Informe de consumo,ok,app/templates/admin/_sidebar.html:875
-سجل تغييرات الماك,,MAC change history,Journal des changements MAC,MAC Değişiklik Günlüğü,Registro de cambios MAC,ok,app/templates/admin/_sidebar.html:876
-فشل الفصل/التحديث,,CoA/disconnect failures,Échec de la déconnexion/mise à jour,Bağlantı Kesme/Güncelleme Başarısız,Error al desconectar/actualizar,ok,app/templates/admin/_sidebar.html:877
-فشل تحديث السرعة,,Speed update failures,Échec de la mise à jour de la vitesse,Hız güncelleme hatası,Error al actualizar la velocidad,ok,app/templates/admin/_sidebar.html:878
-النشاط والأحداث,,Activity & events,Activité et événements,Etkinlik ve Olaylar,Actividad y eventos,ok,app/templates/admin/_sidebar.html:886
-سجل إجراءات المايكروتيك,,MikroTik actions log,Journal des actions MikroTik,MikroTik işlem günlüğü,Registro de acciones MikroTik,ok,app/templates/admin/_sidebar.html:890
-أحداث المدراء,,Manager events,Événements des gestionnaires,Yönetici Olayları,Eventos de gerentes,ok,app/templates/admin/_sidebar.html:891
-أحداث النظام,,System events,Événements système,Sistem olayları,Eventos del sistema,ok,app/templates/admin/_sidebar.html:892
-حركات مشتركي سوق البطاقات,,Card store customer activity,Activité des clients de la boutique,Kart mağazası müşteri hareketleri,Actividad de clientes de la tienda,ok,app/templates/admin/_sidebar.html:894
-تعديل باقات المشتركين,,Subscriber plan changes,Changements de forfait des abonnés,Abone paket değişiklikleri,Cambios de plan de suscriptores,ok,app/templates/admin/_sidebar.html:895
-سجل رسائل الربط,,API message log,Journal des messages de liaison,Bağlama Mesajı Günlüğü,Registro de mensajes de vinculación,ok,app/templates/admin/_sidebar.html:896
-المالية والموازنات,,Finance & balances,Finances et budgets,Finans ve Bütçeler,Finanzas y presupuestos,ok,app/templates/admin/_sidebar.html:904
-الكروت المستخدمة,,Used vouchers,Coupons utilisés,Kullanılan kartlar,Cupones usados,ok,app/templates/admin/_sidebar.html:908
-معاملات الكاش,,Cash transactions,Transactions en espèces,Nakit işlemler,Transacciones en efectivo,ok,app/templates/admin/_sidebar.html:909
-تحويلات الرصيد,,Balance movements,Transferts de solde,Bakiye transferleri,Transferencias de saldo,ok,app/templates/admin/_sidebar.html:910
-تقارير المحاسبة,,Accounting reports,Rapports comptables,Muhasebe Raporları,Informes contables,ok,app/templates/admin/_sidebar.html:911
-الإشعارات والتواصل,,Notifications and communication,Notifications et communication,Bildirimler ve iletişim,Notificaciones y comunicación,ok,app/templates/admin/_sidebar.html:925
-سجل الإشعارات,,Notifications log,Journal des notifications,Bildirim günlüğü,Registro de notificaciones,ok,app/templates/admin/_sidebar.html:932
-أصوات الإشعارات,,Notification sounds,Sons des notifications,Bildirim sesleri,Sonidos de notificación,ok,app/templates/admin/_sidebar.html:934
-التكاملات والقنوات,,Integrations and channels,Intégrations et canaux,Entegrasyonlar ve kanallar,Integraciones y canales,ok,app/templates/admin/_sidebar.html:935
-إشعارات الإدارة,,Admin notifications,Notifications admin,Yönetici bildirimleri,Notificaciones de administración,ok,app/templates/admin/_sidebar.html:936
-ربط SMS (TweetSMS),,SMS connection (TweetSMS),Connexion SMS (TweetSMS),SMS bağlantısı (TweetSMS),Conexión SMS (TweetSMS),ok,app/templates/admin/_sidebar.html:939
-المعمل (تجريبيّ),,Lab (experimental),Labo (expérimental),Laboratuvar (deneysel),Laboratorio (experimental),ok,app/templates/admin/_sidebar.html:957
-المعمل,,Lab,Labo,Laboratuvar,Laboratorio,ok,app/templates/admin/_sidebar.html:959
-تجريبيّ,,Experimental,Expérimental,Deneysel,Experimental,ok,app/templates/admin/_sidebar.html:960
-التذاكر,,Tickets,Tickets,Talepler,Tickets,ok,app/templates/admin/_sidebar.html:981
-الخدمات / المعدّات,,Services / Equipment,Services / Équipements,Hizmetler / Ekipman,Servicios / Equipos,ok,app/templates/admin/_sidebar.html:982
-المدراء والموزعون,,Managers & distributors,Administrateurs et distributeurs,Yöneticiler ve Bayiler,Administradores y distribuidores,ok,app/templates/admin/_sidebar.html:1006
-أسعار العروض للمدراء,,Manager plan pricing,Tarifs des offres pour les administrateurs,Yöneticiler için Teklif Fiyatları,Precios de ofertas para administradores,ok,app/templates/admin/_sidebar.html:1011
-البيانات والحفظ والأرشفة,,"Data, backups & archiving","Données, sauvegarde et archivage","Veri, Kaydetme ve Arşivleme","Datos, guardado y archivado",ok,app/templates/admin/_sidebar.html:1015
-إدارة الأقسام (إخفاء/تعطيل),,Manage sections (hide/disable),Gestion des sections (masquer/désactiver),Bölüm yönetimi (gizle/devre dışı bırak),Gestión de secciones (ocultar/deshabilitar),ok,app/templates/admin/_sidebar.html:1035
-سوبر,,Super,Super,Süper,Súper,ok,app/templates/admin/_sidebar.html:1036
-النظام والبيئة,,System and environment,Système et environnement,Sistem ve ortam,Sistema y entorno,ok,app/templates/admin/_sidebar.html:1041
-تحديث النظام,,System update,Mise à jour du système,Sistem güncellemesi,Actualización del sistema,ok,app/templates/admin/_sidebar.html:1054
-ترحيل / استيراد عميل,,Migrate / import customer,Migrer / importer un client,Müşteri taşı / içe aktar,Migrar / importar cliente,ok,app/templates/admin/_sidebar.html:1069
-المالك,,Owner,Propriétaire,Sahip,Propietario,ok,app/templates/admin/_sidebar.html:1070
-تنظيف البيانات التجريبيّة,,Demo data cleanup,Nettoyage des données de démo,Demo verilerini temizle,Limpieza de datos de demostración,ok,app/templates/admin/_sidebar.html:1091
-ربط وتفعيل النسخة,,Link and activate the instance,Lier et activer l'instance,Örneği bağla ve etkinleştir,Vincular y activar la instancia,ok,app/templates/admin/_sidebar.html:1124
-ترخيص النظام (إعدادات متقدّمة),,System license (advanced settings),Licence système (paramètres avancés),Sistem lisansı (gelişmiş ayarlar),Licencia del sistema (ajustes avanzados),ok,app/templates/admin/_sidebar.html:1128
-حالة منح المزوّد,,Provider grant status,État des octrois du fournisseur,Sağlayıcı yetki durumu,Estado de las concesiones del proveedor,ok,app/templates/admin/_sidebar.html:1132
-توثيق الواجهة,,API documentation,Documentation de l'interface,Arayüz belgeleri,Documentación de la interfaz,ok,app/templates/admin/_sidebar.html:1141
-كيف تستخدمني,,How to use me,Comment m'utiliser,Beni nasıl kullanırsın,Cómo usarme,ok,app/templates/admin/_sidebar.html:1151
-مدير النظام,,System administrator,Administrateur système,Sistem yöneticisi,Administrador del sistema,ok,app/templates/admin/_sidebar.html:1161
+مركز الإدارة,,Admin Center,Centre d'administration,Yönetim merkezi,Centro de administración,ok,app/templates/admin/_sidebar.html:431
+طيّ القائمة,,Collapse menu,Réduire le menu,Menüyü daralt,Contraer menú,ok,app/templates/admin/_sidebar.html:436
+القائمة الرئيسية,,Main menu,Menu principal,Ana menü,Menú principal,ok,app/templates/admin/_sidebar.html:447
+إدارة البيانات,,Data management,Gestion des données,Veri yönetimi,Gestión de datos,ok,app/templates/admin/_sidebar.html:473
+إضافة حزمة,,Add batch,Ajouter un forfait,Paket Ekle,Añadir plan,ok,app/templates/admin/_sidebar.html:494
+🖨️ بطاقات الطباعة,,🖨️ Printable cards,🖨️ Coupons d'impression,🖨️ Yazdırma kuponları,🖨️ Cupones de impresión,ok,app/templates/admin/_sidebar.html:496
+⚡ بطاقات الشحن المسبق,,⚡ Prepaid recharge cards,⚡ Coupons prépayés,⚡ Ön ödemeli kuponlar,⚡ Cupones prepago,ok,app/templates/admin/_sidebar.html:517
+السرعات,,Bandwidth profiles,Débits,Hızlar,Velocidades,ok,app/templates/admin/_sidebar.html:552
+إدارة الراوترات,,Router management,Gestion des routeurs,Yönlendirici yönetimi,Gestión de routers,ok,app/templates/admin/_sidebar.html:606
+🛜 غرفة عمليات الراوترات,,🛜 Router operations room,🛜 Salle d'opérations des routeurs,🛜 Yönlendirici operasyon odası,🛜 Sala de operaciones de los routers,ok,app/templates/admin/_sidebar.html:616
+كل الخدمات,,All services,Tous les services,Tüm hizmetler,Todos los servicios,ok,app/templates/admin/_sidebar.html:619
+أجهزة الشبكة / NAS,,Network devices / NAS,Équipements réseau / NAS,Ağ cihazları / NAS,Dispositivos de red / NAS,ok,app/templates/admin/_sidebar.html:620
+رسائل أخطاء الهوتسبوت,,Hotspot error messages,Messages d'erreur du hotspot,Hotspot hata mesajları,Mensajes de error del hotspot,ok,app/templates/admin/_sidebar.html:624
+تتبع حالة الأجهزة,,Device health monitoring,Suivi de l'état des appareils,Cihaz durumu izleme,Seguimiento del estado de los dispositivos,ok,app/templates/admin/_sidebar.html:626
+إضافة وإعداد,,Add & configure,Ajouter et configurer,Ekle ve Yapılandır,Añadir y configurar,ok,app/templates/admin/_sidebar.html:655
+إضافة راوتر (سريع),,Add router (quick),Ajouter un routeur (rapide),Yönlendirici ekle (hızlı),Añadir router (rápido),ok,app/templates/admin/_sidebar.html:659
+إعداد راوتر متقدم,,Advanced router setup,Configuration avancée du routeur,Gelişmiş yönlendirici kurulumu,Configuración avanzada del router,ok,app/templates/admin/_sidebar.html:660
+التحكم بالسرعة,,Speed control,Contrôle de la vitesse,Hız Kontrolü,Control de velocidad,ok,app/templates/admin/_sidebar.html:672
+مجدول,,Scheduled,Planifié,Zamanlanmış,Programado,ok,app/templates/admin/_sidebar.html:676
+المراقبة والسجلات,,Monitoring & logs,Surveillance et journaux,İzleme ve günlükler,Supervisión y registros,ok,app/templates/admin/_sidebar.html:693
+التنبيهات الذكيّة,,Smart alerts,Alertes intelligentes,Akıllı uyarılar,Alertas inteligentes,ok,app/templates/admin/_sidebar.html:697
+خدمات الاتصال,,Connection services,Services de connexion,Bağlantı hizmetleri,Servicios de conexión,ok,app/templates/admin/_sidebar.html:712
+⚡ لوحة الشحن,,⚡ Recharge panel,⚡ Panneau de recharge,⚡ Yükleme paneli,⚡ Panel de recarga,ok,app/templates/admin/_sidebar.html:740
+مجمّد,,Frozen,Gelé,Donduruldu,Congelado,ok,app/templates/admin/_sidebar.html:757
+مخزون ومصروفات الشركة,,Company inventory & expenses,Stock et dépenses de l'entreprise,Şirket envanteri ve giderleri,Inventario y gastos de la empresa,ok,app/templates/admin/_sidebar.html:766
+التقارير التنفيذية,,Executive reports,Rapports de direction,Yönetici raporları,Informes ejecutivos,ok,app/templates/admin/_sidebar.html:835
+التقرير المالي,,Financial report,Rapport financier,Mali rapor,Informe financiero,ok,app/templates/admin/_sidebar.html:840
+تقارير البطاقات,,Card reports,Rapports des coupons,Kupon Raporları,Informes de cupones,ok,app/templates/admin/_sidebar.html:841
+الأرشيف,,Archive,Archives,Arşiv,Archivo,ok,app/templates/admin/_sidebar.html:843
+الدخول والأمان,,Login & security,Connexion et sécurité,Oturum açma ve güvenlik,Acceso y seguridad,ok,app/templates/admin/_sidebar.html:852
+فشل دخول الشبكة,,Network login failures,Échec de connexion au réseau,Ağ oturum açma hatası,Error de acceso a la red,ok,app/templates/admin/_sidebar.html:862
+الشبكة والجلسات,,Network & sessions,Réseau et sessions,Ağ ve Oturumlar,Red y sesiones,ok,app/templates/admin/_sidebar.html:870
+إحصائيات المتصلين,,Connected users statistics,Statistiques des utilisateurs connectés,Bağlı kullanıcı istatistikleri,Estadísticas de usuarios conectados,ok,app/templates/admin/_sidebar.html:875
+تقرير الاستهلاك,,Consumption report,Rapport de consommation,Tüketim raporu,Informe de consumo,ok,app/templates/admin/_sidebar.html:876
+سجل تغييرات الماك,,MAC change history,Journal des changements MAC,MAC Değişiklik Günlüğü,Registro de cambios MAC,ok,app/templates/admin/_sidebar.html:877
+فشل الفصل/التحديث,,CoA/disconnect failures,Échec de la déconnexion/mise à jour,Bağlantı Kesme/Güncelleme Başarısız,Error al desconectar/actualizar,ok,app/templates/admin/_sidebar.html:878
+فشل تحديث السرعة,,Speed update failures,Échec de la mise à jour de la vitesse,Hız güncelleme hatası,Error al actualizar la velocidad,ok,app/templates/admin/_sidebar.html:879
+النشاط والأحداث,,Activity & events,Activité et événements,Etkinlik ve Olaylar,Actividad y eventos,ok,app/templates/admin/_sidebar.html:887
+سجل إجراءات المايكروتيك,,MikroTik actions log,Journal des actions MikroTik,MikroTik işlem günlüğü,Registro de acciones MikroTik,ok,app/templates/admin/_sidebar.html:891
+أحداث المدراء,,Manager events,Événements des gestionnaires,Yönetici Olayları,Eventos de gerentes,ok,app/templates/admin/_sidebar.html:892
+أحداث النظام,,System events,Événements système,Sistem olayları,Eventos del sistema,ok,app/templates/admin/_sidebar.html:893
+حركات مشتركي سوق البطاقات,,Card store customer activity,Activité des clients de la boutique,Kart mağazası müşteri hareketleri,Actividad de clientes de la tienda,ok,app/templates/admin/_sidebar.html:895
+تعديل باقات المشتركين,,Subscriber plan changes,Changements de forfait des abonnés,Abone paket değişiklikleri,Cambios de plan de suscriptores,ok,app/templates/admin/_sidebar.html:896
+سجل رسائل الربط,,API message log,Journal des messages de liaison,Bağlama Mesajı Günlüğü,Registro de mensajes de vinculación,ok,app/templates/admin/_sidebar.html:897
+المالية والموازنات,,Finance & balances,Finances et budgets,Finans ve Bütçeler,Finanzas y presupuestos,ok,app/templates/admin/_sidebar.html:905
+الكروت المستخدمة,,Used vouchers,Coupons utilisés,Kullanılan kartlar,Cupones usados,ok,app/templates/admin/_sidebar.html:909
+معاملات الكاش,,Cash transactions,Transactions en espèces,Nakit işlemler,Transacciones en efectivo,ok,app/templates/admin/_sidebar.html:910
+تحويلات الرصيد,,Balance movements,Transferts de solde,Bakiye transferleri,Transferencias de saldo,ok,app/templates/admin/_sidebar.html:911
+تقارير المحاسبة,,Accounting reports,Rapports comptables,Muhasebe Raporları,Informes contables,ok,app/templates/admin/_sidebar.html:912
+الإشعارات والتواصل,,Notifications and communication,Notifications et communication,Bildirimler ve iletişim,Notificaciones y comunicación,ok,app/templates/admin/_sidebar.html:926
+سجل الإشعارات,,Notifications log,Journal des notifications,Bildirim günlüğü,Registro de notificaciones,ok,app/templates/admin/_sidebar.html:933
+أصوات الإشعارات,,Notification sounds,Sons des notifications,Bildirim sesleri,Sonidos de notificación,ok,app/templates/admin/_sidebar.html:935
+التكاملات والقنوات,,Integrations and channels,Intégrations et canaux,Entegrasyonlar ve kanallar,Integraciones y canales,ok,app/templates/admin/_sidebar.html:936
+إشعارات الإدارة,,Admin notifications,Notifications admin,Yönetici bildirimleri,Notificaciones de administración,ok,app/templates/admin/_sidebar.html:937
+ربط SMS (TweetSMS),,SMS connection (TweetSMS),Connexion SMS (TweetSMS),SMS bağlantısı (TweetSMS),Conexión SMS (TweetSMS),ok,app/templates/admin/_sidebar.html:940
+المعمل (تجريبيّ),,Lab (experimental),Labo (expérimental),Laboratuvar (deneysel),Laboratorio (experimental),ok,app/templates/admin/_sidebar.html:958
+المعمل,,Lab,Labo,Laboratuvar,Laboratorio,ok,app/templates/admin/_sidebar.html:960
+تجريبيّ,,Experimental,Expérimental,Deneysel,Experimental,ok,app/templates/admin/_sidebar.html:961
+التذاكر,,Tickets,Tickets,Talepler,Tickets,ok,app/templates/admin/_sidebar.html:982
+الخدمات / المعدّات,,Services / Equipment,Services / Équipements,Hizmetler / Ekipman,Servicios / Equipos,ok,app/templates/admin/_sidebar.html:983
+المدراء والموزعون,,Managers & distributors,Administrateurs et distributeurs,Yöneticiler ve Bayiler,Administradores y distribuidores,ok,app/templates/admin/_sidebar.html:1007
+أسعار العروض للمدراء,,Manager plan pricing,Tarifs des offres pour les administrateurs,Yöneticiler için Teklif Fiyatları,Precios de ofertas para administradores,ok,app/templates/admin/_sidebar.html:1012
+البيانات والحفظ والأرشفة,,"Data, backups & archiving","Données, sauvegarde et archivage","Veri, Kaydetme ve Arşivleme","Datos, guardado y archivado",ok,app/templates/admin/_sidebar.html:1016
+إدارة الأقسام (إخفاء/تعطيل),,Manage sections (hide/disable),Gestion des sections (masquer/désactiver),Bölüm yönetimi (gizle/devre dışı bırak),Gestión de secciones (ocultar/deshabilitar),ok,app/templates/admin/_sidebar.html:1036
+سوبر,,Super,Super,Süper,Súper,ok,app/templates/admin/_sidebar.html:1037
+النظام والبيئة,,System and environment,Système et environnement,Sistem ve ortam,Sistema y entorno,ok,app/templates/admin/_sidebar.html:1042
+تحديث النظام,,System update,Mise à jour du système,Sistem güncellemesi,Actualización del sistema,ok,app/templates/admin/_sidebar.html:1055
+ترحيل / استيراد عميل,,Migrate / import customer,Migrer / importer un client,Müşteri taşı / içe aktar,Migrar / importar cliente,ok,app/templates/admin/_sidebar.html:1070
+المالك,,Owner,Propriétaire,Sahip,Propietario,ok,app/templates/admin/_sidebar.html:1071
+تنظيف البيانات التجريبيّة,,Demo data cleanup,Nettoyage des données de démo,Demo verilerini temizle,Limpieza de datos de demostración,ok,app/templates/admin/_sidebar.html:1092
+ربط وتفعيل النسخة,,Link and activate the instance,Lier et activer l'instance,Örneği bağla ve etkinleştir,Vincular y activar la instancia,ok,app/templates/admin/_sidebar.html:1125
+ترخيص النظام (إعدادات متقدّمة),,System license (advanced settings),Licence système (paramètres avancés),Sistem lisansı (gelişmiş ayarlar),Licencia del sistema (ajustes avanzados),ok,app/templates/admin/_sidebar.html:1129
+حالة منح المزوّد,,Provider grant status,État des octrois du fournisseur,Sağlayıcı yetki durumu,Estado de las concesiones del proveedor,ok,app/templates/admin/_sidebar.html:1133
+توثيق الواجهة,,API documentation,Documentation de l'interface,Arayüz belgeleri,Documentación de la interfaz,ok,app/templates/admin/_sidebar.html:1142
+كيف تستخدمني,,How to use me,Comment m'utiliser,Beni nasıl kullanırsın,Cómo usarme,ok,app/templates/admin/_sidebar.html:1159
+مدير النظام,,System administrator,Administrateur système,Sistem yöneticisi,Administrador del sistema,ok,app/templates/admin/_sidebar.html:1169
 403 — صلاحية مطلوبة,,403 — permission required,403 — autorisation requise,403 — izin gerekli,403 — permiso requerido,ok,app/templates/admin/forbidden.html:9
 صلاحية مطلوبة,,Permission required,Autorisation requise,İzin gerekli,Permiso requerido,ok,app/templates/admin/forbidden.html:11
 لا تملك إذنًا لهذه الصفحة,,You don't have permission for this page,Vous n'avez pas l'autorisation pour cette page,Bu sayfa için izniniz yok,No tienes permiso para esta página,ok,app/templates/admin/forbidden.html:12
@@ -10521,7 +10543,6 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 حفظ بيانات البوت,,,,,,"missing: en,fr,tr,es",app/templates/radius/admin_alerts.html:54
 التنبيه,,Alert,Alerte,Uyarı,Alerta,ok,app/templates/radius/admin_alerts.html:70
 وصلت رسالة الاختبار — البوت يعمل.,,The test message arrived — the bot is working.,Le message de test est arrivé — le bot fonctionne.,Test mesajı geldi — bot çalışıyor.,Llegó el mensaje de prueba — el bot funciona.,ok,app/templates/radius/admin_alerts.html:163
-تعذّر تنفيذ الطلب.,,Failed to execute the request.,Échec de l'exécution de la requête.,İstek yürütülemedi.,No se pudo ejecutar la solicitud.,ok,app/templates/radius/admin_alerts.html:164
 تم تعطيل التنبيه.,,Alert disabled.,Alerte désactivée.,Uyarı devre dışı bırakıldı.,Alerta desactivada.,ok,app/templates/radius/admin_alerts.html:176
 تم تفعيل التنبيه.,,Alert enabled.,Alerte activée.,Uyarı etkinleştirildi.,Alerta activada.,ok,app/templates/radius/admin_alerts.html:176
 أُرسل نموذج التنبيه إلى تلجرام.,,Alert sample sent to Telegram.,Échantillon d'alerte envoyé à Telegram.,Uyarı örneği Telegram'a gönderildi.,Muestra de alerta enviada a Telegram.,ok,app/templates/radius/admin_alerts.html:188
@@ -20850,6 +20871,79 @@ Canary تدريجي,,,,,,"missing: en,fr,tr,es",app/templates/radius/network_pol
 «معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:359
 حفظ كمعاينة,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:368
 احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:425
+مساعد العمليّات — هوب ريديوس,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:16
+اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:19
+اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده. لا يُنفَّذ شيء بدون تأكيدك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:80
+المساعد غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:84
+مساعد العمليّات غير مفعّل لهذه الشبكة. الميزة تجريبيّة ومطفأة افتراضيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:86
+يفعّلها مالك الشبكة بعد التحقّق من أنّ كل المدراء يستخدمون كلمات مرور قويّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:88
+اطلب من مالك الشبكة تفعيلها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:90
+المساعد متوقّف لحماية الشبكة: لا يعمل ما دام أيّ مدير يستخدم كلمة مرور افتراضيّة أو مؤقّتة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:94
+مدراء بكلمة مرور افتراضيّة:,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:96
+مدراء بكلمة مرور مؤقّتة لم تُغيَّر:,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:97
+بعد تغيير هذه الكلمات يعمل المساعد تلقائيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:99
+أنت,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:113
+المساعد يفكّر…,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:114
+تعذّر الاتصال بالخادم. حاول مرّة أخرى.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:115
+أُلغي المقترح — لم يُنفَّذ شيء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:118
+مقترح بانتظار تأكيدك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:119
+خطّة من عدّة خطوات — تأكيد واحد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:120
+تأثير مباشر على المشترك (فصل/تغيير فوريّ).,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:122
+كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:123
+هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:124
+من نتيجة الخطوة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:125
+نتيجة التنفيذ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:126
+لم يُنفَّذ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:129
+نُفّذ كاملًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:130
+نُفّذ جزئيًّا — راجع الخطوات,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:132
+هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:133
+قائمة من النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:134
+القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:135
+لا اقتراحات الآن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:136
+ابدأ محادثة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:138
+محادثة جديدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:139
+بدأت محادثة من اقتراح النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:140
+نُسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:141
+حسب إعداد الخادم,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:145
+الانتهاء الجديد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:151
+ينتهي (UTC),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:151
+سياسة التغيير,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:154
+سرعة التنزيل (kbps),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:156
+سرعة الرفع (kbps),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:157
+الحصّة (MB),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:158
+الصلاحيّة (أيّام),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:158
+نوع الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:159
+دخول بلا كلمة سر,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:161
+طول كلمة السر,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:161
+عند تجاوز الأجهزة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:162
+الأجهزة المسموحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:163
+الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:163
+رقم الهويّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:164
+قفل الماك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:165
+السعر الكلّيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:167
+سعر خاصّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:167
+دين على المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:170
+مجّانًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:170
+مدفوع من الرصيد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:170
+حتّى تاريخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:172
+مدّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:172
+إبقاء تاريخ الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:173
+تعويض بأيّام إضافيّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:173
+إنقاص الأيّام المتبقّية,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:174
+تسجيل الفرق دينًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:174
+إبقاء تاريخ الانتهاء دون فرق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:175
+بلا فرق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:175
+المحادثة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:181
+لا يُنفَّذ شيء قبل ضغطك «تأكيد»,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:181
+أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:184
+اكتب طلبك هنا…,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:188
+رسالتك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:188
+لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:196
+اقتراحات,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:202
+من نظام المراقبة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:202
+كلمة مرور تُعرض مرّة واحدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:208
+انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:209
+نسختها — إغلاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:212
 الدفع الإلكتروني — وضع تجريبي,,Electronic payment — test mode,Paiement électronique — mode test,Elektronik ödeme — test modu,Pago electrónico — modo de prueba,ok,app/templates/radius/pay_demo.html:13
 وضع تجريبي — محاكاة,,Test mode — simulation,Mode test — simulation,Test modu — simülasyon,Modo de prueba — simulación,ok,app/templates/radius/pay_demo.html:224
 لا يتم خصم أي مبلغ حقيقي. هذه معاينة لتجربة الدفع قبل ربط البوابات الفعلية.,,No real amount is charged. This is a preview of the payment experience before connecting the actual gateways.,Aucun montant réel n'est débité. Ceci est un aperçu du parcours de paiement avant la connexion des passerelles réelles.,"Gerçek bir tutar tahsil edilmez. Bu, gerçek ödeme ağ geçitleri bağlanmadan önce ödeme deneyiminin bir önizlemesidir.",No se cobra ningún importe real. Esta es una vista previa de la experiencia de pago antes de conectar las pasarelas reales.,ok,app/templates/radius/pay_demo.html:225
@@ -22520,7 +22614,6 @@ WAN IP,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_list.html:83
 عنوان ACS المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:37
 ضع هذا العنوان في إعداد TR-069 داخل كل راوتر (مرّة واحدة لكل جهاز). لا حاجة لتسجيل مسبق — الراوتر يظهر هنا تلقائيًّا بمجرّد اتصاله.,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:38
 اضبط HOBERADIUS_GENIEACS_CWMP_URL أولًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:42
-نُسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:43
 مصادقة ACS (اختياريّة، مضبوطة),,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:48
 كلمة المرور مضبوطة في الخادم,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:49
 أدخل نفس الاسم وكلمة المرور في إعداد TR-069 داخل الراوتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:50
@@ -24357,7 +24450,6 @@ Profile = default (لا default-encryption؛ SSTP مشفّر TLS سلفًا) و 
  — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة.,," — review the conversation below, type your reply in the sticky box, and change the status from the belt below directly."," — consultez la conversation ci-dessous, saisissez votre réponse dans la zone fixe, et changez le statut depuis le bandeau ci-dessous directement."," — aşağıdaki görüşmeyi inceleyin, yanıtınızı sabit kutuya yazın ve durumu aşağıdaki şeritten doğrudan değiştirin."," — revisa la conversación de abajo, escribe tu respuesta en el cuadro fijo y cambia el estado desde la barra de abajo directamente.",ok,app/templates/radius/ticket_view.html:136
 تغيير الحالة,,Change Status,Changer l'état,Durumu Değiştir,Cambiar estado,ok,app/templates/radius/ticket_view.html:153
 المسار المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. اختيار «مغلقة» يسجّل تاريخ الإغلاق تلقائيًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ticket_view.html:164
-المحادثة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ticket_view.html:172
 المشترك #%(subscriber_id)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/ticket_view.html:180
 نص التذكرة الأصلي,,Original ticket text,Texte original du ticket,Orijinal talep metni,Texto original del ticket,ok,app/templates/radius/ticket_view.html:182
 فريق الدعم,,,,,,"missing: en,fr,tr,es",app/templates/radius/ticket_view.html:197

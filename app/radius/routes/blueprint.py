@@ -247,6 +247,9 @@ def _register_all(bp: Blueprint) -> None:
     register_manager_distributor_ops_routes(bp)
     register_recharge_panel_routes(bp)
     register_credit_dashboard_routes(bp)
+    # مساعد العمليّات (تجريبيّ) — محادثة فوق منفّذ /api/v1/ops الحتميّ
+    from .ops_assistant import register_ops_assistant_routes
+    register_ops_assistant_routes(bp)
     register_communications_routes(bp)
     register_whatsapp_routes(bp)
     register_sms_routes(bp)
@@ -1258,6 +1261,12 @@ _GUARD_ALLOWLIST: dict[str, str] = {
     "cards_batches_import_preview": "in-handler: owner or can_import_batches grant",
     "cards_offers": "lists only the offers the owner shared with this manager",
     "cards_offer_create": "in-handler: owner or offer.create entity grant",
+    "ops_assistant": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_message": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_confirm": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_cancel": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_events": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_start_event": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
     "cards_offer_edit": "in-handler: owner or offer.edit entity grant",
     "cards_offer_visibility": "in-handler: owner only",
     "cards_offer_toggle": "in-handler: owner only",
