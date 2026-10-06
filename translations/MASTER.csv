@@ -2,9 +2,9 @@
 الملفّ أكبر من الحدّ المسموح (%(max_mb)sMB). ارفع النسخة المضغوطة .gz (أصغر بكثير) أو تفريغًا أصغر.,,,,,,"missing: en,fr,tr,es",app/__init__.py:93
 %(h)s ساعة و%(m)s دقيقة,,,,,,"missing: en,fr,tr,es",app/__init__.py:1241
 %(m)s دقيقة,,,,,,"missing: en,fr,tr,es",app/__init__.py:1241
-انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/__init__.py:1431
-"<!doctype html><html lang=""ar"" dir=""rtl""><meta charset=""utf-8""><h1>انتهت صلاحية الصفحة</h1><p>",,,,,,"missing: en,fr,tr,es",app/__init__.py:1467
-"<p data-hr-readonly-note=""1"" style=""margin:0 0 10px;padding:8px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:13px;line-height:1.6"">عرضٌ فقط — لا تملك صلاحيّةَ الحفظ على هذا النموذج.</p>",,,,,,"missing: en,fr,tr,es",app/__init__.py:1517
+انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/__init__.py:1442
+"<!doctype html><html lang=""ar"" dir=""rtl""><meta charset=""utf-8""><h1>انتهت صلاحية الصفحة</h1><p>",,,,,,"missing: en,fr,tr,es",app/__init__.py:1478
+"<p data-hr-readonly-note=""1"" style=""margin:0 0 10px;padding:8px 12px;border-radius:8px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;font-size:13px;line-height:1.6"">عرضٌ فقط — لا تملك صلاحيّةَ الحفظ على هذا النموذج.</p>",,,,,,"missing: en,fr,tr,es",app/__init__.py:1528
 ليس لديك صلاحية لتنفيذ هذا الإجراء.,,,,,,"missing: en,fr,tr,es",app/api/access_control.py:21
 بلغت الحدّ اليوميّ المسموح لهذا الإجراء.,,,,,,"missing: en,fr,tr,es",app/api/access_control.py:179
 هذه البيانات ليست ضمن نطاقك (تخصّ مديرًا أو موزّعًا آخر).,,,,,,"missing: en,fr,tr,es",app/api/access_control.py:251
@@ -288,39 +288,39 @@ limit بين 1 و1000، و offset لا يكون سالبًا.,,,,,,"missing: en,
 جلسة المحاسبة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:176
 اسم المستخدم مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:224
 قيمة limit_bytes يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounting.py:231
-تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:118
-تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:123
-قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:146
-بيانات metadata ليست JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:179
-بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:182
-تعذّر تحويل metadata إلى JSON: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:188
-metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:190
-قيمة %(field_name)s يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:210
-السعر المخصّص يجب أن يكون رقمًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:228
-السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:234
-لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:242
-نوع الحساب غير معروف (المسموح: subscriber أو trial).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:244
-عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:261
-تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:404
-قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:448
-قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:453
-نصّ البحث طويل جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:457
-قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:461
-قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:472
-قيمة expiring_within_days بين 1 و 365.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:476
-اسم الدخول وكلمة المرور مطلوبان.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:550
-اسم الدخول يجب أن يكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:552
-كلمة المرور يجب أن تكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:556
-بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:570
-لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:606
-الحساب %(username)s غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:673
-الحساب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:686
-لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:692
-كلمة المرور الجديدة (new_password) مطلوبة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:765
-ليس لديك صلاحية لتغيير كلمة مرور المشترك.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:774
-المدّة يجب أن تكون عددًا صحيحًا من الدقائق.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:828
-المدّة يجب أن تكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:830
-المدة الناتجة تتجاوز الحدّ المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:844
+تاريخ الانتهاء يجب أن يكون نصًّا بصيغة ISO 8601.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:119
+تاريخ الانتهاء غير صالح — استخدم صيغة ISO 8601 مثل 2027-01-31T23:59:59Z.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:124
+قيمة %(field_name)s يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:147
+بيانات metadata ليست JSON صالحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:180
+بيانات metadata يجب أن تتحول إلى كائن أو قائمة JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:183
+تعذّر تحويل metadata إلى JSON: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:189
+metadata يجب أن تكون قاموسًا أو قائمة أو نص JSON، والقيمة الحالية من نوع %(v)s.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:191
+قيمة %(field_name)s يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:211
+السعر المخصّص يجب أن يكون رقمًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:229
+السعر المخصّص يجب أن يكون رقمًا موجبًا معقولًا (0 = سعر الباقة).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:235
+لا يمكن تحويل مشترك إلى بطاقة من هنا — البطاقات تُدار من «الكروت».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:243
+نوع الحساب غير معروف (المسموح: subscriber أو trial).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:245
+عند بلوغ حدّ الأجهزة: القيم المسموحة فارغ (الافتراض العامّ) أو reject أو replace.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:262
+تعديل الرصيد مباشرةً غير مسموح لحسابك — استخدم إجراء «إضافة رصيد».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:412
+قيم الترقيم (limit/offset/page/per_page) يجب أن تكون أرقامًا صحيحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:456
+قيمة status غير صحيحة (enabled، expired، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:461
+نصّ البحث طويل جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:465
+قيمة user_type غير صحيحة (subscriber أو trial؛ البطاقات من /cards).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:469
+قيمة expiring_within_days يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:480
+قيمة expiring_within_days بين 1 و 365.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:484
+اسم الدخول وكلمة المرور مطلوبان.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:558
+اسم الدخول يجب أن يكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:560
+كلمة المرور يجب أن تكون نصًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:564
+بلغتَ الحدّ الأقصى المسموح لك لعدد المشتركين (%(cap)s).,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:578
+لا يمكن ضبط الرصيد عند إنشاء المشترك — استخدم إجراء «إضافة رصيد» بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:614
+الحساب %(username)s غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:681
+الحساب غير موجود.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:694
+لا يُغيَّر اسم الدخول بالتعديل — استخدم «تغيير اسم المستخدم».,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:700
+كلمة المرور الجديدة (new_password) مطلوبة.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:773
+ليس لديك صلاحية لتغيير كلمة مرور المشترك.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:782
+المدّة يجب أن تكون عددًا صحيحًا من الدقائق.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:836
+المدّة يجب أن تكون أكبر من صفر.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:838
+المدة الناتجة تتجاوز الحدّ المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/accounts.py:852
 تعذّر الإرسال — تأكّد من بيانات البوت.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:104
 تنبيه غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:113
 تعذّر الإرسال.,,,,,,"missing: en,fr,tr,es",app/api/v1/admin_alerts.py:131
@@ -693,21 +693,21 @@ entry %(entry_id)s غير موجود,,,,,,"missing: en,fr,tr,es",app/api/v1/netw
 معرّف القالب يجب أن يكون رقمًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/print_templates.py:839
 قيم التصميم غير صالحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/print_templates.py:908
 نُقل رمز QR (أو صُغّر) كي لا يغطّي اسم المستخدم أو كلمة المرور.,,,,,,"missing: en,fr,tr,es",app/api/v1/print_templates.py:990
-تعذّر تحويل metadata إلى JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:129
-قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:144
-قيمة «%(label)s» أكبر من المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:153
-قيمة «%(v)s» يجب أن تكون رقمية.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:164
-الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:183
-الأيام المسموحة تحتوي قيمًا غير صحيحة: ,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:187
-" (المسموح: sun, mon, tue, wed, thu, fri, sat).",,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:188
-أرقام الراوترات يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:203
-قيمة غير رقمية في أرقام الراوترات: %(p)s,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:209
-حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb).,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:232
-"«الأيام والأوقات المسموحة» (connection_schedule) يجب أن تكون كائن JSON بالشكل {""windows"": [...]}.",,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:276
-«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:282
-«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:285
-الباقة %(profile_id)s غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:388
-اسم الباقة مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:400
+تعذّر تحويل metadata إلى JSON.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:131
+قيمة «%(label)s» يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:146
+قيمة «%(label)s» أكبر من المسموح.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:155
+قيمة «%(v)s» يجب أن تكون رقمية.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:166
+الأيام المسموحة يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:185
+الأيام المسموحة تحتوي قيمًا غير صحيحة: ,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:189
+" (المسموح: sun, mon, tue, wed, thu, fri, sat).",,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:190
+أرقام الراوترات يجب أن تكون قائمة أو نصًا مفصولًا بفواصل.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:205
+قيمة غير رقمية في أرقام الراوترات: %(p)s,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:211
+حقل «حجم البيانات» (data_value) غير مُطبَّق — استخدم «quota_total_mb» للكوتة الإجماليّة بالميجابايت (أو quota_daily_mb / quota_monthly_mb).,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:234
+"«الأيام والأوقات المسموحة» (connection_schedule) يجب أن تكون كائن JSON بالشكل {""windows"": [...]}.",,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:278
+«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة: %(e)s,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:284
+«الأيام والأوقات المسموحة» (connection_schedule) غير صالحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:287
+الباقة %(profile_id)s غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:390
+اسم الباقة مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/profiles.py:402
 نوع السجل غير مدعوم.,,,,,,"missing: en,fr,tr,es",app/api/v1/recycle_bin.py:225
 الباقة عليها %(b)d حزمة و%(c)d بطاقة و%(s)d مشترك — انقلْهم إلى باقةٍ أخرى قبل أرشفتها.,,,,,,"missing: en,fr,tr,es",app/api/v1/recycle_bin.py:254
 السجل غير موجود أو مؤرشف مسبقًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/recycle_bin.py:261
@@ -2732,15 +2732,15 @@ WG غير مهيّأ على السيرفر بعد — تأكّد أن HOBERADIUS
 تعذّر تأكيد الرمز.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payments_lab.py:232
 تم إرسال رمز تحقق جديد (تجريبي — يظهر في مختبر الدفع).,,,,,,"missing: en,fr,tr,es",app/radius/routes/payments_lab.py:245
 تعذّرت إعادة الإرسال — تحقق من حالة الجلسة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payments_lab.py:247
-قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:130
-قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا منتهيًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:144
-تم إنشاء الباقة «%(name)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:443
-قواعد سرعة هذه الباقة,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:461
-أضف قواعد سرعة متغيرة لهذه الباقة حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة الباقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:462
-تم تنفيذ إجراء قواعد السرعة لهذه الباقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:476
-تم تحديث «%(name)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:511
-تم إنشاء نسخة «%(name)s». يمكنك تعديلها الآن.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:528
-تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:570
+قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:131
+قيمة «%(v)s» يجب أن تكون رقمًا صحيحًا منتهيًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:145
+تم إنشاء الباقة «%(name)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:444
+قواعد سرعة هذه الباقة,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:462
+أضف قواعد سرعة متغيرة لهذه الباقة حسب الوقت. إذا وُجدت قاعدة للمشترك أو حزمة البطاقات فهي تتقدم على قاعدة الباقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:463
+تم تنفيذ إجراء قواعد السرعة لهذه الباقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:477
+تم تحديث «%(name)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:512
+تم إنشاء نسخة «%(name)s». يمكنك تعديلها الآن.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:529
+تمت أرشفة الباقة. يمكنك استعادتها من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/plans.py:571
 هذه الواجهات لا يُسمح بتطبيق الخدمة عليها (WAN/نفق): ,,,,,,"missing: en,fr,tr,es",app/radius/routes/port_script_services.py:312
 تعذّر الاتصال بالراوتر أو تنفيذ السكربت: %(e)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/port_script_services.py:550
 هذه الخدمة بقالب مبدئي — أضِف سكربت المستخدم في قالب الخدمة أولًا قبل التطبيق.,,,,,,"missing: en,fr,tr,es",app/radius/routes/port_script_services.py:606
@@ -3361,113 +3361,113 @@ VACUUM اكتمل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/tools.py:187
 تعذّرت مزامنة الأنفاق: %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:104
 فشل التحقق من سر الربط أو التوقيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:113
 رد لوحة التراخيص غير متوقّع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:116
-لا تملك صلاحية «رؤية كلمة مرور المشترك».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1204
-فعّال,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1216
-معلّق,,Pending,En attente,Beklemede,Pendiente,ok,app/radius/routes/users.py:1217
-الجوال,,Mobile,Mobile,Cep telefonu,Móvil,ok,app/radius/routes/users.py:1287
-تاريخ الإضافة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1289
-تاريخ الانتهاء,,Expiry Date,Date d'expiration,Bitiş Tarihi,Fecha de vencimiento,ok,app/radius/routes/users.py:1289
-ملاحظات,,Notes,Remarques,Notlar,Notas,ok,app/radius/routes/users.py:1289
-بدون انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1300
-قائمة المشتركين,,Subscribers list,Liste des abonnés,Abone listesi,Lista de abonados,ok,app/radius/routes/users.py:1304
-قواعد السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1347
-اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1349
-السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» فلا تُفعَّل بها سرعة مؤقتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1391
-تعذّر تطبيق السرعة المؤقتة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1448
-تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1472
-كلمة المرور لا تكون مسافات فقط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1555
-كلمة المرور مطلوبة (4 أحرف على الأقل).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1557
-تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1591
-تم إنشاء المشترك لكن قاعدة السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1619
-تم إنشاء المستخدم «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1623
-الكوتة (م.بايت),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1778
-الكوتة المستهدفة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1779
-السبب,,Reason,Raison,Neden,Motivo,ok,app/radius/routes/users.py:1780
-السياسة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1780
-ملاحظة,,Note,Remarque,Not,Nota,ok,app/radius/routes/users.py:1780
-بعد,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1782
-قبل,,Before,Avant,Önce,Antes,ok,app/radius/routes/users.py:1782
-تم إنشاء الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1826
-تم تعديل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1827
-تم أرشفة الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1828
-تم تفعيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1829
-تم تعطيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1830
-تم تغيير كلمة المرور,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1831
-تغيير العرض,,Change view,Changer l'affichage,Görünümü değiştir,Cambiar vista,ok,app/radius/routes/users.py:1835
-تغيير السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1836
-انتهاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1837
-تغيير السرعة (جدولة),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1838
-انتهاء جدولة السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1839
-حدث إداري,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1841
-جلسة نشطة الآن,,Active session now,Session active maintenant,Şu anda aktif oturum,Sesión activa ahora,ok,app/radius/routes/users.py:1851
-الاتصال عبر %(v)s من %(v2)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1853
-اتصال,,Connection,Connexion,Bağlantı,Conexión,ok,app/radius/routes/users.py:1861
-بداية الجلسة الأولى,,Start of the first session,Début de la première session,İlk oturumun başlangıcı,Inicio de la primera sesión,ok,app/radius/routes/users.py:1864
-تم الاتصال لأول مرة باستخدام هذا الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1865
-نفّذها ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1886
-تم إنشاء حساب المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1896
-تم إصدار الحساب باسم المستخدم %(username)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1897
-الكوتا الكلية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/radius/routes/users.py:1975
-الكوتا الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1986
-الكوتا اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1986
-معاينة التجديد: %(earned_days)s يوم، بدون تطبيق مباشر على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2094
-قواعد سرعة هذا المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2129
-هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2130
-لم يُحفَظ التعديل,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2258
-المشترك «%(username)s» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2259
-أُعيدت تسمية المشترك «%(username)s» إلى «%(renamed_to)s» بعد فتح نموذج التعديل — لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2282
-فتح النموذج الحاليّ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2284
-المشترك غير موجود,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2286
-لا يوجد مشترك باسم «%(username)s» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2287
-تم تنفيذ إجراء قواعد السرعة لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2327
-تم تغيير اسم الدخول إلى «%(posted_username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2356
-لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2441
-تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2449
-لم يتم تحديد أي مشترك للحذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2481
-تم حذف %(deleted)s مشترك. يمكن الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2498
-تعذّر حذف %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2501
-لم يتم حذف أي مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2503
-تم التعطيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2512
-تم التفعيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2515
-لم يتم تحديد أي مشترك لتغيير الحالة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2541
-تم تعطيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2565
-تم تفعيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2568
-تعذّر تغيير حالة %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2571
-على الدين,,On credit,À crédit,Borca,A crédito,ok,app/radius/routes/users.py:2632
-مجانية,,Free,Gratuit,Ücretsiz,Gratis,ok,app/radius/routes/users.py:2632
-مدفوعة,,Paid,Payé,Ödendi,Pagado,ok,app/radius/routes/users.py:2632
-تم تعيين انتهاء الحساب: %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2638
-تم تمديد الحساب %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2640
-قيمة المدّة أو تاريخ الانتهاء غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2646
-لم يتم تحديد أي مشترك لإضافة الوقت.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2660
-تم تعيين انتهاء %(done)s مشترك إلى %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2735
-تم تمديد %(done)s مشترك بمقدار %(v)s لكلٍّ منهم (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2737
-تعذّر تمديد %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2740
-تم تغيير العرض وتسجيل دين فرق السعر بقيمة %(debt)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2759
-تم تغيير العرض وتعويض %(v)s إضافيّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2761
-تم تغيير العرض وإنقاص %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2763
-تم تغيير العرض للمشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2765
-تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2785
-لم يتم تحديد أي مشترك للإرسال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2811
-تمت إضافة رسالة %(label)s إلى قائمة الإرسال لـ %(sent)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2831
-تعذّر الإرسال لـ %(v)s مشترك (غالبًا بلا رقم جوال): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2834
-تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2867
-تمت استعادة الكوتة اليومية للمشترك (مجانية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2869
-قيمة المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2873
-لم يتم تحديد أي مشترك لاستعادة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2886
-تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2918
-تُخطّي %(v)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ (لم يُحصَّل منهم شيء): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2921
-تعذّرت الاستعادة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2924
-تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2944
-قيمة الكوتة أو المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2948
-لم يتم تحديد أي مشترك لإضافة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2961
-تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2992
-تعذّرت إضافة الكوتة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2995
- بعد خصم %(settled_done)s لتسوية سلف,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3025
-تمت إضافة رصيد نقدي: %(credited)s%(note)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3027
-لم يتم تحديد أي مشترك لإضافة الرصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3043
-تمت إضافة رصيد نقدي %(amount)s لكل مشترك من %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3071
-تعذّرت إضافة الرصيد لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3074
+لا تملك صلاحية «رؤية كلمة مرور المشترك».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1205
+فعّال,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1217
+معلّق,,Pending,En attente,Beklemede,Pendiente,ok,app/radius/routes/users.py:1218
+الجوال,,Mobile,Mobile,Cep telefonu,Móvil,ok,app/radius/routes/users.py:1288
+تاريخ الإضافة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1290
+تاريخ الانتهاء,,Expiry Date,Date d'expiration,Bitiş Tarihi,Fecha de vencimiento,ok,app/radius/routes/users.py:1290
+ملاحظات,,Notes,Remarques,Notlar,Notas,ok,app/radius/routes/users.py:1290
+بدون انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1301
+قائمة المشتركين,,Subscribers list,Liste des abonnés,Abone listesi,Lista de abonados,ok,app/radius/routes/users.py:1305
+قواعد السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1348
+اختياري — أضيفي قاعدة سرعة مجدولة هنا وستُحفظ تلقائيًا مع المشترك عند الضغط على «حفظ المشترك» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1350
+السرعة المؤقتة تحتاج سرعة تنزيل أو رفع — 0/0 تعني «بلا تقييد» فلا تُفعَّل بها سرعة مؤقتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1392
+تعذّر تطبيق السرعة المؤقتة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1449
+تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1473
+كلمة المرور لا تكون مسافات فقط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1556
+كلمة المرور مطلوبة (4 أحرف على الأقل).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1558
+تم إنشاء المشترك لكن إحدى قواعد السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1592
+تم إنشاء المشترك لكن قاعدة السرعة فشلت: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1620
+تم إنشاء المستخدم «%(username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1624
+الكوتة (م.بايت),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1779
+الكوتة المستهدفة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1780
+السبب,,Reason,Raison,Neden,Motivo,ok,app/radius/routes/users.py:1781
+السياسة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1781
+ملاحظة,,Note,Remarque,Not,Nota,ok,app/radius/routes/users.py:1781
+بعد,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1783
+قبل,,Before,Avant,Önce,Antes,ok,app/radius/routes/users.py:1783
+تم إنشاء الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1827
+تم تعديل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1828
+تم أرشفة الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1829
+تم تفعيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1830
+تم تعطيل الحساب,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1831
+تم تغيير كلمة المرور,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1832
+تغيير العرض,,Change view,Changer l'affichage,Görünümü değiştir,Cambiar vista,ok,app/radius/routes/users.py:1836
+تغيير السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1837
+انتهاء السرعة المؤقتة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1838
+تغيير السرعة (جدولة),,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1839
+انتهاء جدولة السرعة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1840
+حدث إداري,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1842
+جلسة نشطة الآن,,Active session now,Session active maintenant,Şu anda aktif oturum,Sesión activa ahora,ok,app/radius/routes/users.py:1852
+الاتصال عبر %(v)s من %(v2)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1854
+اتصال,,Connection,Connexion,Bağlantı,Conexión,ok,app/radius/routes/users.py:1862
+بداية الجلسة الأولى,,Start of the first session,Début de la première session,İlk oturumun başlangıcı,Inicio de la primera sesión,ok,app/radius/routes/users.py:1865
+تم الاتصال لأول مرة باستخدام هذا الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1866
+نفّذها ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1887
+تم إنشاء حساب المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1897
+تم إصدار الحساب باسم المستخدم %(username)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1898
+الكوتا الكلية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/radius/routes/users.py:1976
+الكوتا الشهريّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1987
+الكوتا اليوميّة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1987
+معاينة التجديد: %(earned_days)s يوم، بدون تطبيق مباشر على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2095
+قواعد سرعة هذا المشترك,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2130
+هذه القواعد أعلى أولوية من قواعد حزمة البطاقات والعرض. استخدمها عندما تريد سرعة خاصة لهذا الحساب في أوقات محددة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2131
+لم يُحفَظ التعديل,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2259
+المشترك «%(username)s» حُذف (نُقل إلى سلّة المحذوفات) بعد فتح نموذج التعديل — لم يُحفَظ شيء. استرجعه من سلّة المحذوفات أولًا إن أردت تعديله.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2260
+أُعيدت تسمية المشترك «%(username)s» إلى «%(renamed_to)s» بعد فتح نموذج التعديل — لم يُحفَظ شيء (ولم يُنشأ مشترك جديد). افتح نموذج الاسم الجديد وأعد التعديل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2283
+فتح النموذج الحاليّ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2285
+المشترك غير موجود,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2287
+لا يوجد مشترك باسم «%(username)s» — ربما حُذف أو أُعيدت تسميته بعد فتح النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2288
+تم تنفيذ إجراء قواعد السرعة لهذا المشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2328
+تم تغيير اسم الدخول إلى «%(posted_username)s».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2357
+لم تُحفَظ الحقول المقفولة لحسابك (لا تملك صلاحية تعديلها): ,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2442
+تمت الأرشفة. يمكنك الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2450
+لم يتم تحديد أي مشترك للحذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2482
+تم حذف %(deleted)s مشترك. يمكن الاستعادة من سلة المحذوفات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2499
+تعذّر حذف %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2502
+لم يتم حذف أي مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2504
+تم التعطيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2513
+تم التفعيل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2516
+لم يتم تحديد أي مشترك لتغيير الحالة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2542
+تم تعطيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2566
+تم تفعيل %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2569
+تعذّر تغيير حالة %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2572
+على الدين,,On credit,À crédit,Borca,A crédito,ok,app/radius/routes/users.py:2633
+مجانية,,Free,Gratuit,Ücretsiz,Gratis,ok,app/radius/routes/users.py:2633
+مدفوعة,,Paid,Payé,Ödendi,Pagado,ok,app/radius/routes/users.py:2633
+تم تعيين انتهاء الحساب: %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2639
+تم تمديد الحساب %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2641
+قيمة المدّة أو تاريخ الانتهاء غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2647
+لم يتم تحديد أي مشترك لإضافة الوقت.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2661
+تم تعيين انتهاء %(done)s مشترك إلى %(v)s (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2736
+تم تمديد %(done)s مشترك بمقدار %(v)s لكلٍّ منهم (%(mode_label)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2738
+تعذّر تمديد %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2741
+تم تغيير العرض وتسجيل دين فرق السعر بقيمة %(debt)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2760
+تم تغيير العرض وتعويض %(v)s إضافيّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2762
+تم تغيير العرض وإنقاص %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2764
+تم تغيير العرض للمشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2766
+تمت إضافة رسالة %(label)s إلى قائمة الإرسال (%(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2786
+لم يتم تحديد أي مشترك للإرسال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2812
+تمت إضافة رسالة %(label)s إلى قائمة الإرسال لـ %(sent)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2832
+تعذّر الإرسال لـ %(v)s مشترك (غالبًا بلا رقم جوال): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2835
+تمت استعادة الكوتة اليومية (%(mode_label)s) بقيمة %(amount)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2868
+تمت استعادة الكوتة اليومية للمشترك (مجانية).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2870
+قيمة المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2874
+لم يتم تحديد أي مشترك لاستعادة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2887
+تمت استعادة الكوتة اليومية (%(mode_label)s) لـ %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2919
+تُخطّي %(v)s مشترك بلا كوتة يوميّة ولا حدّ وقتٍ يوميّ (لم يُحصَّل منهم شيء): %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2922
+تعذّرت الاستعادة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2925
+تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2945
+قيمة الكوتة أو المبلغ غير صحيحة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2949
+لم يتم تحديد أي مشترك لإضافة الكوتة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2962
+تمت إضافة %(quota_mb)s MB كوتة %(mode_label)s لـ %(done)s مشترك (لكلٍّ منهم).,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2993
+تعذّرت إضافة الكوتة لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:2996
+ بعد خصم %(settled_done)s لتسوية سلف,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3026
+تمت إضافة رصيد نقدي: %(credited)s%(note)s. الرصيد الحالي %(v)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3028
+لم يتم تحديد أي مشترك لإضافة الرصيد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3044
+تمت إضافة رصيد نقدي %(amount)s لكل مشترك من %(done)s مشترك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3072
+تعذّرت إضافة الرصيد لـ %(v)s مشترك: %(preview)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:3075
 اختر التخصيص أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:62
 تم إنشاء الحساب «%(username)s» بنجاح.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:75
 تم حذف الحساب.,,,,,,"missing: en,fr,tr,es",app/radius/routes/vpn_accounts.py:87
@@ -4162,11 +4162,12 @@ IP الراوتر,,,,,,"missing: en,fr,tr,es",app/radius/services/anti_mac_clone
 تعذّر فتح بوابة العميل: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:78
 تعذّر فتح بوابة العميل: لوحة التراخيص غير متاحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:83
 تعذّر فتح بوابة العميل: لم يصل رابط الدخول.,,,,,,"missing: en,fr,tr,es",app/radius/services/backup_drive_link.py:90
-جدولة تلقائية,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:389
-جدولة تلقائية «%(sched_name)s»,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:389
- — بدء النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:390
- — نهاية النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:390
- (عبر إعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:411
+جدولة تلقائية,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:452
+جدولة تلقائية «%(sched_name)s»,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:452
+ — بدء النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:453
+ — نهاية النافذة,,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:453
+ (عبر إعادة اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:475
+ (بفصل الجلسة),,,,,,"missing: en,fr,tr,es",app/radius/services/bandwidth_apply.py:476
 «%(label)s» يجب أن يكون رقمًا موجبًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:30
 «%(label)s» كبير جدًا (الحد الأقصى %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:32
 «%(label)s» يجب أن يكون رقمًا صحيحًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/bulk_speeds.py:40
@@ -7313,76 +7314,77 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 حقل apply_to يجب أن يكون balance (إضافة للرصيد) أو debt (خصم من الدين).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1269
 المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(debt)s. اختر «إضافة للرصيد» للزيادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1279
 المبلغ (%(amount)s) أكبر من الدين المستحقّ على الموزّع — الدين المتبقّي %(remaining)s. اختر «إضافة للرصيد» للزيادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1287
-طريقة الرجوع غير معروفة — المسموح: الرجوع للسرعة الأساسية، إبقاء آخر سرعة، فصل الجلسة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1340
-أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1411
-اتجاه القالب يجب أن يكون portrait أو landscape.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1680
-يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1705
-لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2052
-الحزمة المختارة لا تحتوي كروتًا للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2053
-بدأ تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2090
-بدأ إنشاء ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2099
-رسم البطاقات داخل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2136
-إغلاق الملف وتجهيز التنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2168
-اكتمل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2202
-تعذّر تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2225
-طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2422
-تم وضع مهمة PDF في الطابور.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2431
-تم وضع المهمة في الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2436
-بدأ تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2487
-بدأ عامل التصدير,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2491
-اكتمل ملف PDF وأصبح جاهزًا للتنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2519
-اكتمل ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2534
-تعذّر تجهيز ملف PDF: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2554
-فشل تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2560
-أُلغيت المهمة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2587
-انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2592
-أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2601
-فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2603
-ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2605
-ملف مهمة الطباعة غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2609
-مسار ملف مهمة الطباعة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2613
-تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2637
-جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2644
-طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2647
-إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2650
-جوجل درايف غير مفعل حاليًا من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2653
-أرشيف كامل (يشمل السجلّات),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2822
-نسخة أساسية (بيانات العمل),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2822
- مضغوطة gzip,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2823
-تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2825
-لم يتم إنشاء ملف النسخة الاحتياطية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2826
-ملف النسخة غير موجود أو غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2990
-تعذّر حذف الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2994
-تم حذف النسخة %(name)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2999
-نسخة محلية,,Local copy,Copie locale,Yerel kopya,Copia local,ok,app/radius/services/operations.py:3025
-تم إنشاء النسخة المحلية والتحقق منها.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3027
-تعذّر إنشاء النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3028
-لوحة التراخيص,,Licensing panel,Panneau des licences,Lisans paneli,Panel de licencias,ok,app/radius/services/operations.py:3033
-الخدمة غير مفعّلة (خدمة مدفوعة).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3034
-تم التخطّي بسبب فشل النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3037
-تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3047
-تم تسجيل البيانات الوصفية على ملفك.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3048
-تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3055
-جوجل درايف,,Google Drive,Google Drive,Google Drive,Google Drive,ok,app/radius/services/operations.py:3064
-تم رفع النسخة إلى جوجل درايف المربوط.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3065
-تعذّر الرفع إلى جوجل درايف: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3068
-خطأ غير محدّد,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3068
-غير مربوط — اربط جوجل درايف من بوابة العميل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3081
-وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3084
-يتطلّب نجاح الرفع إلى اللوحة أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3087
-تعذّر حفظ الملف المرفوع: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3103
-تعذّرت قراءة الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3112
-الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3120
-الملف ليس قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3129
-نسخة مرفوعة من جهاز المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3143
-تم رفع النسخة من جهازك وحفظها محليًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3152
-دفعات الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3230
-عمليات التعبئة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3232
-تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3311
-تعذّر أخذ نسخة احترازية قبل الاستعادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3314
-تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3335
-فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3357
-تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3371
+طريقة الرجوع يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1345
+طريقة الرجوع غير معروفة — المسموح: «رجوع مباشر بدون فصل» (profile_default) أو «فصل الجلسة» (disconnect).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1351
+أدخلي سرعة التنزيل أو سرعة الرفع (واحدة على الأقل). إذا كان الغرض من القاعدة فصل الجلسة فقط، اختاري «فصل الجلسة» في «بعد الانتهاء».,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1422
+اتجاه القالب يجب أن يكون portrait أو landscape.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1691
+يوجد قالب طباعة بهذا الاسم — اختر اسمًا آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:1716
+لا توجد كروت غير مستخدمة في هذه الحزمة للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2063
+الحزمة المختارة لا تحتوي كروتًا للطباعة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2064
+بدأ تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2101
+بدأ إنشاء ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2110
+رسم البطاقات داخل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2147
+إغلاق الملف وتجهيز التنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2179
+اكتمل ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2213
+تعذّر تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2236
+طابور الطباعة ممتلئ (%(pending)s مهام قيد الانتظار/التنفيذ) — انتظر انتهاء بعضها أو ألغِ ما لا تحتاجه.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2433
+تم وضع مهمة PDF في الطابور.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2442
+تم وضع المهمة في الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2447
+بدأ تجهيز ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2498
+بدأ عامل التصدير,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2502
+اكتمل ملف PDF وأصبح جاهزًا للتنزيل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2530
+اكتمل ملف PDF.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2545
+تعذّر تجهيز ملف PDF: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2565
+فشل تجهيز ملف PDF,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2571
+أُلغيت المهمة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2598
+انتهت مهمة الطباعة قبل الإلغاء ولا يمكن إلغاؤها (الحالة: %(v)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2603
+أُلغيت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2612
+فشلت مهمة الطباعة — لا يوجد ملف للتنزيل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2614
+ملف الطباعة لم يجهز بعد — انتظر اكتمال المهمة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2616
+ملف مهمة الطباعة غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2620
+مسار ملف مهمة الطباعة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2624
+تعذرت قراءة حالة جوجل درايف من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2648
+جوجل درايف مربوط وسيتم استخدامه عند تشغيل النسخ المناسبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2655
+طلب ربط جوجل درايف بانتظار إكمال التحقق من المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2658
+إعدادات جوجل درايف موجودة، لكن الحساب غير مربوط بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2661
+جوجل درايف غير مفعل حاليًا من إعدادات الخادم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2664
+أرشيف كامل (يشمل السجلّات),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2833
+نسخة أساسية (بيانات العمل),,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2833
+ مضغوطة gzip,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2834
+تم إنشاء نسخة SQLite محلية والتحقق منها — %(kind_ar)s%(comp_ar)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2836
+لم يتم إنشاء ملف النسخة الاحتياطية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:2837
+ملف النسخة غير موجود أو غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3001
+تعذّر حذف الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3005
+تم حذف النسخة %(name)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3010
+نسخة محلية,,Local copy,Copie locale,Yerel kopya,Copia local,ok,app/radius/services/operations.py:3036
+تم إنشاء النسخة المحلية والتحقق منها.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3038
+تعذّر إنشاء النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3039
+لوحة التراخيص,,Licensing panel,Panneau des licences,Lisans paneli,Panel de licencias,ok,app/radius/services/operations.py:3044
+الخدمة غير مفعّلة (خدمة مدفوعة).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3045
+تم التخطّي بسبب فشل النسخة المحلية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3048
+تم الرفع إلى ملفك في لوحة التراخيص بالملف الكامل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3058
+تم تسجيل البيانات الوصفية على ملفك.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3059
+تعذّر رفع النسخة إلى لوحة التراخيص: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3066
+جوجل درايف,,Google Drive,Google Drive,Google Drive,Google Drive,ok,app/radius/services/operations.py:3075
+تم رفع النسخة إلى جوجل درايف المربوط.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3076
+تعذّر الرفع إلى جوجل درايف: %(v)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3079
+خطأ غير محدّد,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3079
+غير مربوط — اربط جوجل درايف من بوابة العميل.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3092
+وصلت النسخة للوحة وستُحوَّل إلى درايفك المربوط في الخلفية.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3095
+يتطلّب نجاح الرفع إلى اللوحة أولًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3098
+تعذّر حفظ الملف المرفوع: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3114
+تعذّرت قراءة الملف: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3123
+الملف المضغوط ليس نسخة قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3131
+الملف ليس قاعدة بيانات SQLite صالحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3140
+نسخة مرفوعة من جهاز المستخدم.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3154
+تم رفع النسخة من جهازك وحفظها محليًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3163
+دفعات الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3241
+عمليات التعبئة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3243
+تعذّر أخذ نسخة احترازية قبل الاستعادة: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3322
+تعذّر أخذ نسخة احترازية قبل الاستعادة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3325
+تعذّر فكّ ضغط النسخة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3346
+فشلت الاستعادة. النسخة الاحترازية محفوظة: %(name)s. الخطأ: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3368
+تمت الاستعادة من «%(name)s». تم حفظ نسخة احترازية: %(name2)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations.py:3382
 الوضع الطبيعي,,Normal mode,Mode normal,Normal mod,Modo normal,ok,app/radius/services/operations_speed_center.py:19
 وضع الضغط,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:20
 وضع الليل,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:21
@@ -7435,10 +7437,10 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 الموزعين,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:88
 صلاحية,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:124
 هاد حساب مؤقت للاستخدام مرة وحدة,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:36
-لم يُجدَّد — الرصيد لا يكفي,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:154
-لم يُجدَّد — انتهى منذ مدّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:155
-فشل التجديد,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:156
-تجديد تلقائي — %(m)s,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:226
+لم يُجدَّد — الرصيد لا يكفي,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:157
+لم يُجدَّد — انتهى منذ مدّة,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:158
+فشل التجديد,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:159
+تجديد تلقائي — %(m)s,,,,,,"missing: en,fr,tr,es",app/radius/services/plan_lifecycle.py:229
 بدون,,Without,Sans,Olmadan,Sin,ok,app/radius/services/plans.py:19
 مسموح بالدين,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:20
  - نسخة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:26
@@ -8590,17 +8592,15 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:143
 خادم DNS الأساسيّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:144
 خادم DNS الثانويّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:145
-البرودباند (PPPoE),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:153
-عنوان IP للبرودباند,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:156
-إعدادات شبكة متقدّمة جدًّا,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:164
-سلسلة الفلترة (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:167
-قائمة العناوين (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:168
-المسار الموجَّه (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:169
-مجموعة المستخدم (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:170
-أولويّة الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:171
-مجمّع العناوين (Framed-Pool),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:172
-فترة تقارير المحاسبة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:173
-خصائص PPP إضافيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:174
+إعدادات شبكة متقدّمة جدًّا,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:155
+سلسلة الفلترة (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:158
+قائمة العناوين (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:159
+المسار الموجَّه (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:160
+مجموعة المستخدم (MikroTik),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:161
+أولويّة الطابور,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:162
+مجمّع العناوين (Framed-Pool),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:163
+فترة تقارير المحاسبة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:164
+خصائص PPP إضافيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:165
 اسم المجموعة مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:36
 اسم المجموعة «%(name)s» مستخدم مسبقًا في هذا الـ tenant.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:39
 المجموعة غير موجودة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_groups.py:59
@@ -8613,20 +8613,20 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 كوتة الرفع,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:91
 الكوتة الكلّيّة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:92
 قيمة «%(field)s» يجب أن تكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:115
-عنوان IP للبرودباند يجب أن يكون عنوان IPv4 صالحًا (مثل 10.0.0.5).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:144
-عنوان IP للبرودباند (%(ip)s) يختلف عن «IP ثابت» (%(static)s) — كلاهما يُرسَل للراوتر عنوانًا ثابتًا واحدًا. اترك أحدهما فارغًا أو اجعلهما متطابقين.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:148
-العنوان %(ip)s مُعطًى لمشتركٍ آخر — العنوان الثابت لا يُعطى لحسابين في الشبكة نفسها.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:170
-قيمة «%(f)s» أطول من المسموح (%(limit)s حرفًا).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:185
-حالة الحساب غير معروفة (enabled، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:191
-نوع الخدمة غير معروف (hotspot أو pppoe أو both).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:195
-البريد الإلكترونيّ غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:199
-رقم الجوال غير صالح (أرقام فقط، ويجوز + في أوّله).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:203
-عنوان IP في «%(f)s» غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:209
-قفل MAC يجب أن يكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:217
-عنوان MAC غير صالح: «%(v)s».,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:220
-قيمة «%(label)s» يجب أن تكون بين %(lo)s و %(hi)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:230
-الباقة المحددة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:239
-المدير المحدد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:245
+عنوان IP الثابت «%(ip)s» غير صالح — اكتب عنوان IPv4 مثل 10.0.0.5.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:136
+عنوان IP الثابت يجب أن يكون IPv4 (مثل 10.0.0.5) — عناوين IPv6 غير مدعومة لأنّ الراوتر يستقبل العنوان الثابت بصيغة IPv4 فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:140
+العنوان %(ip)s مُعطًى لمشتركٍ آخر — العنوان الثابت لا يُعطى لحسابين في الشبكة نفسها.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:159
+قيمة «%(f)s» أطول من المسموح (%(limit)s حرفًا).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:174
+حالة الحساب غير معروفة (enabled، disabled، suspended، banned).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:180
+نوع الخدمة غير معروف (hotspot أو pppoe أو both).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:184
+البريد الإلكترونيّ غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:188
+رقم الجوال غير صالح (أرقام فقط، ويجوز + في أوّله).,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:192
+عنوان IP الثابت يجب أن يكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:198
+قفل MAC يجب أن يكون نصًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:205
+عنوان MAC غير صالح: «%(v)s».,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:208
+قيمة «%(label)s» يجب أن تكون بين %(lo)s و %(hi)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:218
+الباقة المحددة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:227
+المدير المحدد غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_validation.py:233
 لا يوجد توكن بوت محفوظ.,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:86
 تعذّر الاتصال بتيليجرام: %(e)s,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:90
 تيليجرام رفض التوكن: %(desc)s,,,,,,"missing: en,fr,tr,es",app/radius/services/telegram_connect.py:93
@@ -10203,32 +10203,31 @@ Burst تنزيل/رفع,,,,,,"missing: en,fr,tr,es",app/templates/radius/_plans_
 من الساعة,,From time,À partir de,Şu saatten,Desde la hora,ok,app/templates/radius/_speed_rules_panel.html:563
 إلى الساعة,,Until,Jusqu'à,Saate kadar,Hasta las,ok,app/templates/radius/_speed_rules_panel.html:567
 بعد الانتهاء,,After completion,Après la fin,Tamamlandıktan sonra,Después de finalizar,ok,app/templates/radius/_speed_rules_panel.html:583
-الرجوع للسرعة الأساسية,,Revert to base speed,Revenir à la vitesse de base,Temel hıza geri dön,Volver a la velocidad base,ok,app/templates/radius/_speed_rules_panel.html:585
-إبقاء آخر سرعة,,Keep last speed,Conserver la dernière vitesse,Son hızı koru,Mantener última velocidad,ok,app/templates/radius/_speed_rules_panel.html:586
-فصل الجلسة,,Disconnect session,Déconnecter la session,Oturumu sonlandır,Desconectar sesión,ok,app/templates/radius/_speed_rules_panel.html:587
-الأولوية (1-10),,Priority (1-10),Priorité (1-10),Öncelik (1-10),Prioridad (1-10),ok,app/templates/radius/_speed_rules_panel.html:591
-الجدول المصدر,,Source table,Table source,Kaynak tablo,Tabla de origen,ok,app/templates/radius/_speed_rules_panel.html:596
-إضافة جدولة/قاعدة سرعة جديدة,,Add a new schedule/speed rule,Ajouter une nouvelle règle de planification/vitesse,Yeni bir zamanlama/hız kuralı ekle,Agregar una nueva regla de programación/velocidad,ok,app/templates/radius/_speed_rules_panel.html:643
-نطاق العرض,,Offer Plan,Forfait de l'offre,Teklif Paketi,Plan de la oferta,ok,app/templates/radius/_speed_rules_panel.html:671
-عرض / باقة,,Offer / Plan,Offre / forfait,Teklif / Paket,Oferta / plan,ok,app/templates/radius/_speed_rules_panel.html:676
-قاعدة تنطبق على كامل العرض أو الباقة,,A rule that applies to the entire offer or plan,Une règle qui s'applique à l'ensemble de l'offre ou du forfait,Tüm teklife veya pakete uygulanan bir kural,Una regla que se aplica a toda la oferta o al plan,ok,app/templates/radius/_speed_rules_panel.html:677
-قاعدة خاصة بهذا المشترك فقط,,Rule specific to this subscriber only,Règle propre à cet abonné uniquement,Yalnızca bu aboneye özel kural,Regla específica solo para este abonado,ok,app/templates/radius/_speed_rules_panel.html:684
-مثال: سرعة المساء,,Example: evening speed,Exemple : débit du soir,Örnek: akşam hızı,Ejemplo: velocidad nocturna,ok,app/templates/radius/_speed_rules_panel.html:693
-اختيار من الجداول المحفوظة,,Select from the saved schedules,Sélectionner parmi les plannings enregistrés,Kaydedilmiş zamanlamalardan seçin,Seleccionar de los horarios guardados,ok,app/templates/radius/_speed_rules_panel.html:753
-ستُحفظ القاعدة مع %(sr_pending_target_label)s تلقائيًا عند الضغط على «%(sr_pending_save_label)s» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_rules_panel.html:775
-نسخ من جدول محفوظ,,Copy from a saved schedule,Copier depuis un planning enregistré,Kayıtlı bir zamanlamadan kopyala,Copiar desde una programación guardada,ok,app/templates/radius/_speed_rules_panel.html:779
-إضافة القاعدة,,Add rule,Ajouter la règle,Kural ekle,Añadir regla,ok,app/templates/radius/_speed_rules_panel.html:783
-لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.,,If you leave the period crossing midnight (e.g. 22:00 → 06:00) it is understood automatically.,"Si vous laissez la période traverser minuit (par exemple 22:00 → 06:00), elle est comprise automatiquement.",Dönemi gece yarısını geçecek şekilde bırakırsanız (örneğin 22:00 → 06:00) otomatik olarak anlaşılır.,"Si dejas el periodo cruzando la medianoche (por ejemplo 22:00 → 06:00), se interpreta automáticamente.",ok,app/templates/radius/_speed_rules_panel.html:787
-اعتماد القاعدة,,Approve Rule,Approuver la règle,Kuralı onayla,Aprobar regla,ok,app/templates/radius/_speed_rules_panel.html:803
-قاعدة سرعة,,Speed rule,Règle de vitesse,Hız kuralı,Regla de velocidad,ok,app/templates/radius/_speed_rules_panel.html:939
-العنصر,,Item,Élément,Öğe,Elemento,ok,app/templates/radius/_speed_rules_panel.html:979
-ستحفظ مع,,Will be saved with,Sera enregistré avec,Şununla kaydedilecek,Se guardará con,ok,app/templates/radius/_speed_rules_panel.html:990
-اختر جدول سرعة محفوظ أولًا,,Select a saved speed schedule first,Sélectionnez d'abord un planning de vitesse enregistré,Önce kayıtlı bir hız tablosu seçin,Seleccione primero una tabla de velocidad guardada,ok,app/templates/radius/_speed_rules_panel.html:1032
-الجدول المصدر غير موجود,,Source table not found,Table source introuvable,Kaynak tablo bulunamadı,Tabla de origen no encontrada,ok,app/templates/radius/_speed_rules_panel.html:1037
-نسخة من,,Copy of,Copie de,Şunun kopyası:,Copia de,ok,app/templates/radius/_speed_rules_panel.html:1040
-أدخل وقت البداية والنهاية,,Enter the start and end time,Saisissez l'heure de début et de fin,Başlangıç ve bitiş saatini girin,Introduzca la hora de inicio y fin,ok,app/templates/radius/_speed_rules_panel.html:1050
-أدخل سرعة التنزيل أو الرفع,,Enter the download or upload speed,Saisissez la vitesse de téléchargement ou d'envoi,İndirme veya yükleme hızını girin,Introduzca la velocidad de descarga o subida,ok,app/templates/radius/_speed_rules_panel.html:1056
-تمت إضافة القاعدة، وستحفظ مع النموذج,,"Rule added, and it will be saved with the form","Règle ajoutée, et elle sera enregistrée avec le formulaire",Kural eklendi ve form ile birlikte kaydedilecek,"Regla añadida, y se guardará con el formulario",ok,app/templates/radius/_speed_rules_panel.html:1062
+رجوع مباشر بدون فصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_rules_panel.html:585
+فصل الجلسة,,Disconnect session,Déconnecter la session,Oturumu sonlandır,Desconectar sesión,ok,app/templates/radius/_speed_rules_panel.html:586
+الأولوية (1-10),,Priority (1-10),Priorité (1-10),Öncelik (1-10),Prioridad (1-10),ok,app/templates/radius/_speed_rules_panel.html:590
+الجدول المصدر,,Source table,Table source,Kaynak tablo,Tabla de origen,ok,app/templates/radius/_speed_rules_panel.html:595
+إضافة جدولة/قاعدة سرعة جديدة,,Add a new schedule/speed rule,Ajouter une nouvelle règle de planification/vitesse,Yeni bir zamanlama/hız kuralı ekle,Agregar una nueva regla de programación/velocidad,ok,app/templates/radius/_speed_rules_panel.html:642
+نطاق العرض,,Offer Plan,Forfait de l'offre,Teklif Paketi,Plan de la oferta,ok,app/templates/radius/_speed_rules_panel.html:670
+عرض / باقة,,Offer / Plan,Offre / forfait,Teklif / Paket,Oferta / plan,ok,app/templates/radius/_speed_rules_panel.html:675
+قاعدة تنطبق على كامل العرض أو الباقة,,A rule that applies to the entire offer or plan,Une règle qui s'applique à l'ensemble de l'offre ou du forfait,Tüm teklife veya pakete uygulanan bir kural,Una regla que se aplica a toda la oferta o al plan,ok,app/templates/radius/_speed_rules_panel.html:676
+قاعدة خاصة بهذا المشترك فقط,,Rule specific to this subscriber only,Règle propre à cet abonné uniquement,Yalnızca bu aboneye özel kural,Regla específica solo para este abonado,ok,app/templates/radius/_speed_rules_panel.html:683
+مثال: سرعة المساء,,Example: evening speed,Exemple : débit du soir,Örnek: akşam hızı,Ejemplo: velocidad nocturna,ok,app/templates/radius/_speed_rules_panel.html:692
+اختيار من الجداول المحفوظة,,Select from the saved schedules,Sélectionner parmi les plannings enregistrés,Kaydedilmiş zamanlamalardan seçin,Seleccionar de los horarios guardados,ok,app/templates/radius/_speed_rules_panel.html:751
+ستُحفظ القاعدة مع %(sr_pending_target_label)s تلقائيًا عند الضغط على «%(sr_pending_save_label)s» أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_rules_panel.html:773
+نسخ من جدول محفوظ,,Copy from a saved schedule,Copier depuis un planning enregistré,Kayıtlı bir zamanlamadan kopyala,Copiar desde una programación guardada,ok,app/templates/radius/_speed_rules_panel.html:777
+إضافة القاعدة,,Add rule,Ajouter la règle,Kural ekle,Añadir regla,ok,app/templates/radius/_speed_rules_panel.html:781
+لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.,,If you leave the period crossing midnight (e.g. 22:00 → 06:00) it is understood automatically.,"Si vous laissez la période traverser minuit (par exemple 22:00 → 06:00), elle est comprise automatiquement.",Dönemi gece yarısını geçecek şekilde bırakırsanız (örneğin 22:00 → 06:00) otomatik olarak anlaşılır.,"Si dejas el periodo cruzando la medianoche (por ejemplo 22:00 → 06:00), se interpreta automáticamente.",ok,app/templates/radius/_speed_rules_panel.html:785
+اعتماد القاعدة,,Approve Rule,Approuver la règle,Kuralı onayla,Aprobar regla,ok,app/templates/radius/_speed_rules_panel.html:801
+قاعدة سرعة,,Speed rule,Règle de vitesse,Hız kuralı,Regla de velocidad,ok,app/templates/radius/_speed_rules_panel.html:937
+العنصر,,Item,Élément,Öğe,Elemento,ok,app/templates/radius/_speed_rules_panel.html:977
+ستحفظ مع,,Will be saved with,Sera enregistré avec,Şununla kaydedilecek,Se guardará con,ok,app/templates/radius/_speed_rules_panel.html:988
+اختر جدول سرعة محفوظ أولًا,,Select a saved speed schedule first,Sélectionnez d'abord un planning de vitesse enregistré,Önce kayıtlı bir hız tablosu seçin,Seleccione primero una tabla de velocidad guardada,ok,app/templates/radius/_speed_rules_panel.html:1030
+الجدول المصدر غير موجود,,Source table not found,Table source introuvable,Kaynak tablo bulunamadı,Tabla de origen no encontrada,ok,app/templates/radius/_speed_rules_panel.html:1035
+نسخة من,,Copy of,Copie de,Şunun kopyası:,Copia de,ok,app/templates/radius/_speed_rules_panel.html:1038
+أدخل وقت البداية والنهاية,,Enter the start and end time,Saisissez l'heure de début et de fin,Başlangıç ve bitiş saatini girin,Introduzca la hora de inicio y fin,ok,app/templates/radius/_speed_rules_panel.html:1048
+أدخل سرعة التنزيل أو الرفع,,Enter the download or upload speed,Saisissez la vitesse de téléchargement ou d'envoi,İndirme veya yükleme hızını girin,Introduzca la velocidad de descarga o subida,ok,app/templates/radius/_speed_rules_panel.html:1054
+تمت إضافة القاعدة، وستحفظ مع النموذج,,"Rule added, and it will be saved with the form","Règle ajoutée, et elle sera enregistrée avec le formulaire",Kural eklendi ve form ile birlikte kaydedilecek,"Regla añadida, y se guardará con el formulario",ok,app/templates/radius/_speed_rules_panel.html:1060
 ما الفرق؟ اقرأ أولًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:73
 هذه الصفحة فيها أداتان مختلفتان,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:74
 جدول زمني دائم,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:79
@@ -10268,10 +10267,10 @@ Burst تنزيل/رفع,,,,,,"missing: en,fr,tr,es",app/templates/radius/_plans_
 — اختر دفعة كروت —,,— Select a card batch —,— Sélectionner un lot de cartes —,— Bir kart partisi seçin —,— Seleccionar un lote de tarjetas —,ok,app/templates/radius/_speed_schedules_panel.html:257
 الأولوية داخل نفس النطاق (1-10),,Priority within the same plan (1-10),Priorité au sein du même forfait (1-10),Aynı paket içinde öncelik (1-10),Prioridad dentro del mismo plan (1-10),ok,app/templates/radius/_speed_schedules_panel.html:263
 طريقة الرجوع بعد الوقت,,Fallback method after time expires,Méthode de retour après expiration du temps,Süre dolduktan sonra geri dönüş yöntemi,Método de retorno tras agotarse el tiempo,ok,app/templates/radius/_speed_schedules_panel.html:278
-سبب الجدول أو ملاحظات التشغيل,,Schedule reason or operating notes,Motif de la planification ou notes d'exploitation,Zamanlama nedeni veya çalıştırma notları,Motivo de la programación o notas de operación,ok,app/templates/radius/_speed_schedules_panel.html:287
-حفظ الجدول,,Save Schedule,Enregistrer le planning,Zamanlamayı Kaydet,Guardar programación,ok,app/templates/radius/_speed_schedules_panel.html:293
-تعديل جدول السرعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:306
-حفظ التعديل,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:334
+سبب الجدول أو ملاحظات التشغيل,,Schedule reason or operating notes,Motif de la planification ou notes d'exploitation,Zamanlama nedeni veya çalıştırma notları,Motivo de la programación o notas de operación,ok,app/templates/radius/_speed_schedules_panel.html:286
+حفظ الجدول,,Save Schedule,Enregistrer le planning,Zamanlamayı Kaydet,Guardar programación,ok,app/templates/radius/_speed_schedules_panel.html:292
+تعديل جدول السرعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:305
+حفظ التعديل,,,,,,"missing: en,fr,tr,es",app/templates/radius/_speed_schedules_panel.html:332
 حالة النظام,,System Status,État du système,Sistem Durumu,Estado del sistema,ok,app/templates/radius/_status.html:7
 تحديث تلقائي كل 10 ثوانٍ — العاملون، طوابير المعالجة، أجهزة الشبكة، وعدّادات الكيانات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_status.html:53
 العامل,,Worker,Agent,Çalışan,Operario,ok,app/templates/radius/_status.html:61
@@ -10913,13 +10912,13 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 إلى الساعة %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:162
 سرعة التنزيل %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:169
 سرعة الرفع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:172
-الجداول الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:206
- جدول,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:207
-أولوية %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:238
-فحص الجاهزية,,Readiness check,Vérification de l'état de préparation,Hazırlık denetimi,Comprobación de disponibilidad,ok,app/templates/radius/bandwidth_schedules.html:264
-فحص الجاهزية لا يطبق على خدمة المصادقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:276
-لا توجد جداول سرعة بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:357
-اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة الزمنية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:358
+الجداول الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:205
+ جدول,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:206
+أولوية %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:237
+فحص الجاهزية,,Readiness check,Vérification de l'état de préparation,Hazırlık denetimi,Comprobación de disponibilidad,ok,app/templates/radius/bandwidth_schedules.html:263
+فحص الجاهزية لا يطبق على خدمة المصادقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:275
+لا توجد جداول سرعة بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:355
+اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة الزمنية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_schedules.html:356
 مشغل أعمال,,Business operator,Opérateur commercial,İş operatörü,Operador comercial,ok,app/templates/radius/business_operator_profile.html:11
 المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.,,"Wallet, permissions, limits, scope and profit tracking.","Portefeuille, autorisations, limites, périmètre et suivi des bénéfices.","Cüzdan, izinler, sınırlar, kapsam ve kâr takibi.","Monedero, permisos, límites, alcance y seguimiento de beneficios.",ok,app/templates/radius/business_operator_profile.html:14
 ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:91
@@ -16537,7 +16536,7 @@ unknown_user — اسم الدخول غير موجود,,unknown_user — the log
 يعمل الجدول في الأيام المختارة فقط (بتوقيت اللوحة)؛ بلا أيام = كل يوم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_plans_speeds.html:148
 القيم الجديدة داخل النافذة (kbps أو Mbps).,,The new values inside the window (kbps or Mbps).,Les nouvelles valeurs dans la fenêtre (kbps ou Mbps).,Penceredeki yeni değerler (kbps veya Mbps).,Los nuevos valores dentro de la ventana (kbps o Mbps).,ok,app/templates/radius/docs_plans_speeds.html:149
 سرعة التنزيل/الرفع:,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_plans_speeds.html:149
-الرجوع للسرعة الأساسية، أو إبقاء آخر سرعة.,,"Reverting to the base speed, or keeping the last speed.","Revenir au débit de base, ou conserver le dernier débit.",Temel hıza dönmek veya son hızı korumak.,"Volver a la velocidad base, o mantener la última velocidad.",ok,app/templates/radius/docs_plans_speeds.html:150
+رجوع مباشر بدون فصل (تُطبَّق السرعة العاديّة على الجلسة الحيّة فورًا)، أو فصل الجلسة (يعود المشترك بالدخول على سرعته العاديّة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_plans_speeds.html:150
 عند انتهاء النافذة:,,When the window ends:,À la fin de la fenêtre :,Pencere sona erdiğinde:,Cuando termina la ventana:,ok,app/templates/radius/docs_plans_speeds.html:150
 الأولوية:,,Priority:,Priorité :,Öncelik:,Prioridad:,ok,app/templates/radius/docs_plans_speeds.html:151
 رقم (1–10) يرجّح أيّ جدول يُطبَّق عند التداخل.,,A number (1–10) that determines which schedule takes precedence when they overlap.,Un nombre (1–10) qui détermine quel calendrier prévaut en cas de chevauchement.,Çakışma durumunda hangi zamanlamanın uygulanacağını belirleyen bir sayı (1–10).,Un número (1–10) que determina qué programación prevalece cuando se solapan.,ok,app/templates/radius/docs_plans_speeds.html:151
@@ -20960,130 +20959,127 @@ HobeRadius · مختبر الدفع الإلكتروني,,HobeRadius · Online P
 بعد توقيع الاتفاقية,,After signing the agreement,Après la signature de l'accord,Sözleşme imzalandıktan sonra,Tras firmar el acuerdo,ok,app/templates/radius/payments_lab.html:185
 %(f)s — يُفعَّل بعد توقيع الاتفاقية,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:191
 %(f)s — بعد توقيع الاتفاقية,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:192
-إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:262
-إنشاء نسخة من هذه الباقة لتعديلها؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:277
-نسخ هذه الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:279
-ينشئ باقةً جديدة بنفس كل المواصفات باسم «— نسخة» يمكنك تعديلها فورًا دون المساس بالأصل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:283
-أقسام الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:292
-إعدادات عامة,,General Settings,Paramètres généraux,Genel Ayarlar,Configuración general,ok,app/templates/radius/plans_form.html:295
-الكوتا والوقت,,Quota and time,Quota et durée,Kota ve süre,Cuota y tiempo,ok,app/templates/radius/plans_form.html:297
-الاشتراك والسلوك,,Subscription and behavior,Abonnement et comportement,Abonelik ve davranış,Suscripción y comportamiento,ok,app/templates/radius/plans_form.html:298
-سياسات التجديد,,Renewal policies,Politiques de renouvellement,Yenileme politikaları,Políticas de renovación,ok,app/templates/radius/plans_form.html:299
-أيام وساعات السماح,,Grace days and hours,Jours et heures de tolérance,İzin verilen gün ve saatler,Días y horas de gracia,ok,app/templates/radius/plans_form.html:301
-الاسم الذي يظهر في قوائم العروض وعند المشترك.,,The name shown in the offer lists and to the subscriber.,Le nom affiché dans les listes d'offres et chez l'abonné.,Teklif listelerinde ve abonede görünen ad.,El nombre que se muestra en las listas de ofertas y al abonado.,ok,app/templates/radius/plans_form.html:326
-رمز الباقة,,Plan Code,Code du forfait,Paket kodu,Código del plan,ok,app/templates/radius/plans_form.html:327
-رمز داخلي مختصر للباقة (اختياري).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:329
-حصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:334
-متجدد,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:334
-وقت وحصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:334
-يحدد ما الذي تُحاسَب عليه الباقة: وقت أم حصة أم الاثنان.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:338
-(كم الوقت),,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:347
-مدة الوقت,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:347
-كم من الوقت تمنحه هذه الباقة. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر الباقة عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:349
-اشتراك منزلي عبر PPPoE,,Home subscription via PPPoE,Abonnement résidentiel via PPPoE,PPPoE üzerinden ev aboneliği,Suscripción doméstica vía PPPoE,ok,app/templates/radius/plans_form.html:376
-يمكنك اختيار خدمة واحدة أو الاثنتين معًا (هوت سبوت + برودباند).,,You can choose one service or both together (hotspot + broadband).,Vous pouvez choisir un seul service ou les deux ensemble (hotspot + haut débit).,Tek bir hizmeti veya ikisini birlikte seçebilirsiniz (hotspot + geniş bant).,Puede elegir un solo servicio o ambos juntos (hotspot + banda ancha).,ok,app/templates/radius/plans_form.html:380
-عند الإيقاف لا تظهر الباقة للبيع أو الإسناد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:385
-اللون,,Color,Couleur,Renk,Color,ok,app/templates/radius/plans_form.html:386
-لون تمييز الباقة في القوائم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:388
-ترتيب ظهور الباقة في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:392
-DNS أولي (PPP),,Primary DNS (PPP),DNS principal (PPP),Birincil DNS (PPP),DNS primario (PPP),ok,app/templates/radius/plans_form.html:393
-خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.,,The primary DNS server delivered to broadband sessions.,Le serveur DNS principal fourni aux sessions haut débit.,Geniş bant oturumlarına teslim edilen birincil DNS sunucusu.,El servidor DNS principal que se entrega a las sesiones de banda ancha.,ok,app/templates/radius/plans_form.html:395
-DNS ثانوي (PPP),,Secondary DNS (PPP),DNS secondaire (PPP),İkincil DNS (PPP),DNS secundario (PPP),ok,app/templates/radius/plans_form.html:396
-خادم DNS الاحتياطي عند تعذّر الأساسي.,,Backup DNS server when the primary is unavailable.,Serveur DNS de secours lorsque le principal est indisponible.,Birincil sunucu kullanılamadığında yedek DNS sunucusu.,Servidor DNS de respaldo cuando el principal no esté disponible.,ok,app/templates/radius/plans_form.html:398
-ساعات الباقة — من,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:399
-بداية الفترة اليومية التي يُسمح فيها باستخدام الباقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:401
-ساعات الباقة — إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:402
-نهاية الفترة اليومية المسموح بها للاستخدام.,,The end of the daily period allowed for usage.,La fin de la période quotidienne autorisée pour l'utilisation.,Kullanıma izin verilen günlük dönemin sonu.,El final del periodo diario permitido para el uso.,ok,app/templates/radius/plans_form.html:404
-وصف مختصر للباقة يظهر للمشترك أو للمشغّل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:407
-السرعة والسياسات,,Speed and policies,Vitesse et politiques,Hız ve politikalar,Velocidad y políticas,ok,app/templates/radius/plans_form.html:416
-أقصى سرعة تنزيل للمشترك.,,Maximum download speed for the subscriber.,Vitesse de téléchargement maximale pour l'abonné.,Abone için maksimum indirme hızı.,Velocidad máxima de bajada para el abonado.,ok,app/templates/radius/plans_form.html:431
-سرعة مضمونة CIR للتنزيل,,Guaranteed CIR download speed,Débit descendant garanti CIR,Garantili CIR indirme hızı,Velocidad de bajada garantizada CIR,ok,app/templates/radius/plans_form.html:438
-الحد الأدنى المضمون للتنزيل عند الازدحام.,,The guaranteed minimum download during congestion.,Le minimum de téléchargement garanti en cas de congestion.,Yoğunluk anında garanti edilen minimum indirme.,El mínimo de descarga garantizado durante la congestión.,ok,app/templates/radius/plans_form.html:440
-سرعة مضمونة CIR للرفع,,Guaranteed upload CIR speed,Vitesse CIR garantie en envoi,Garantili yükleme CIR hızı,Velocidad CIR garantizada de subida,ok,app/templates/radius/plans_form.html:441
-الحد الأدنى المضمون للرفع عند الازدحام.,,Guaranteed minimum upload during congestion.,Débit d'envoi minimum garanti en cas de congestion.,Yoğunluk sırasında garanti edilen asgari yükleme.,Subida mínima garantizada durante la congestión.,ok,app/templates/radius/plans_form.html:443
-باقة مفتوحة السرعة. بدونه لا يُقبل صفر في التنزيل أو الرفع — فالصفر الصامت كان يعني «مفتوح» على الراوتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:449
-غير محدود ليلًا,,Unlimited at night,Illimité la nuit,Geceleri sınırsız,Ilimitado por la noche,ok,app/templates/radius/plans_form.html:450
-ما يُستهلك خلال الفترة الليلية لا يُحتسب من الكوتا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:452
-توزيع متساوٍ للتنزيل,,Equal download distribution,Répartition égale du téléchargement,Eşit indirme dağıtımı,Distribución equitativa de la descarga,ok,app/templates/radius/plans_form.html:453
-يوزّع سرعة التنزيل بالتساوي بين الجلسات.,,Distributes download speed equally among sessions.,Répartit la vitesse de téléchargement équitablement entre les sessions.,İndirme hızını oturumlar arasında eşit olarak dağıtır.,Distribuye la velocidad de descarga equitativamente entre las sesiones.,ok,app/templates/radius/plans_form.html:455
-توزيع متساوٍ للرفع,,Even upload distribution,Répartition équitable du débit montant,Eşit yükleme dağıtımı,Distribución equitativa de subida,ok,app/templates/radius/plans_form.html:456
-يوزّع سرعة الرفع بالتساوي بين الجلسات.,,Distributes upload speed evenly across sessions.,Répartit la vitesse d'envoi de manière égale entre les sessions.,Yükleme hızını oturumlar arasında eşit olarak dağıtır.,Distribuye la velocidad de subida de forma equitativa entre las sesiones.,ok,app/templates/radius/plans_form.html:458
-الفترة الليلية — من,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:463
-بداية الفترة الليلية (توقيت فلسطين).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:465
-الفترة الليلية — إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:466
-نهاية الفترة الليلية (توقيت فلسطين).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:468
-متقدم — السرعة المؤقتة (Burst),,Advanced — temporary speed (Burst),Avancé — vitesse temporaire (Burst),Gelişmiş — geçici hız (Burst),Avanzado — velocidad temporal (Burst),ok,app/templates/radius/plans_form.html:475
-السرعة المؤقتة (Burst),,Temporary Speed (Burst),Vitesse temporaire (Burst),Geçici Hız (Burst),Velocidad temporal (Burst),ok,app/templates/radius/plans_form.html:480
-يسمح بتجاوز السرعة مؤقتًا فوق الحد (Burst).,,Allows temporarily exceeding the speed above the limit (Burst).,Permet de dépasser temporairement la vitesse au-delà de la limite (Burst).,Hızın geçici olarak sınırın üzerine çıkmasına izin verir (Burst).,Permite superar temporalmente la velocidad por encima del límite (Burst).,ok,app/templates/radius/plans_form.html:482
-سرعة Burst التنزيل,,Download Burst speed,Vitesse Burst de téléchargement,İndirme Burst hızı,Velocidad Burst de descarga,ok,app/templates/radius/plans_form.html:483
-أقصى سرعة تنزيل أثناء فترة الـ Burst.,,Maximum download speed during the burst period.,Débit de téléchargement maximal pendant la période de rafale (burst).,Burst süresi boyunca maksimum indirme hızı.,Velocidad máxima de descarga durante el periodo de ráfaga (burst).,ok,app/templates/radius/plans_form.html:485
-سرعة Burst الرفع,,Upload burst speed,Vitesse de burst en envoi,Yükleme Burst hızı,Velocidad de ráfaga de subida,ok,app/templates/radius/plans_form.html:486
-أقصى سرعة رفع أثناء فترة الـ Burst.,,Maximum upload speed during the Burst period.,Vitesse d'envoi maximale pendant la période de Burst.,Burst süresi boyunca maksimum yükleme hızı.,Velocidad máxima de subida durante el período de Burst.,ok,app/templates/radius/plans_form.html:488
-حد Burst,,Burst limit,Limite Burst,Burst limiti,Límite Burst,ok,app/templates/radius/plans_form.html:489
-عتبة التنزيل التي يتوقف بعدها الـ Burst (أقل من سرعة Burst التنزيل)؛ عتبة الرفع بنفس النسبة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:491
-مدة استمرار سرعة الـ Burst بالثواني.,,The duration of the burst speed in seconds.,La durée du débit en rafale (burst) en secondes.,Burst hızının saniye cinsinden süresi.,La duración de la velocidad en ráfaga (burst) en segundos.,ok,app/templates/radius/plans_form.html:494
-كوتا إجمالية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/templates/radius/plans_form.html:514
-إجمالي البيانات المسموحة للحساب. 0 = غير محدودة.,,Total data allowed for the account. 0 = unlimited.,Total des données autorisées pour le compte. 0 = illimité.,Hesap için izin verilen toplam veri. 0 = sınırsız.,Total de datos permitidos para la cuenta. 0 = ilimitado.,ok,app/templates/radius/plans_form.html:516
-كوتا يومية,,Daily Quota,Quota quotidien,Günlük Kota,Cuota diaria,ok,app/templates/radius/plans_form.html:519
-0 = بلا حدّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:521
-كوتا شهرية,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:522
-صلاحية (أيام),,Validity (days),Validité (jours),Geçerlilik (gün),Validez (días),ok,app/templates/radius/plans_form.html:525
-كم يوم يبقى الحساب صالحًا بعد التفعيل.,,How many days the account stays valid after activation.,Combien de jours le compte reste valide après l'activation.,Etkinleştirmeden sonra hesabın kaç gün geçerli kaldığı.,Cuántos días permanece válida la cuenta tras la activación.,ok,app/templates/radius/plans_form.html:527
-سياسة الإعادة,,Retry policy,Politique de réessai,Yeniden deneme politikası,Política de reintento,ok,app/templates/radius/plans_form.html:531
-شهرية ثابتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:535
-لا تتجدّد,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:535
-متجددة دوريًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:535
-متى تتجدّد الكوتا (دوريًا / بداية كل شهر / لا تتجدّد).,,When the quota renews (periodically / at the start of each month / never).,Quand le quota se renouvelle (périodiquement / au début de chaque mois / jamais).,Kotanın ne zaman yenilendiği (düzenli / her ayın başında / yenilenmez).,Cuándo se renueva la cuota (periódicamente / al inicio de cada mes / nunca).,ok,app/templates/radius/plans_form.html:539
-خيارات متقدمة,,Advanced options,Options avancées,Gelişmiş seçenekler,Opciones avanzadas,ok,app/templates/radius/plans_form.html:545
-كوتا تنزيل شهرية,,Monthly download quota,Quota de téléchargement mensuel,Aylık indirme kotası,Cuota de descarga mensual,ok,app/templates/radius/plans_form.html:550
-حد التنزيل الشهري المستقل.,,Independent monthly download limit.,Limite de téléchargement mensuelle indépendante.,Bağımsız aylık indirme sınırı.,Límite de descarga mensual independiente.,ok,app/templates/radius/plans_form.html:552
-كوتا رفع شهرية,,Monthly upload quota,Quota d'envoi mensuel,Aylık yükleme kotası,Cuota de subida mensual,ok,app/templates/radius/plans_form.html:553
-حد الرفع الشهري المستقل.,,Independent monthly upload limit.,Limite d'envoi mensuelle indépendante.,Bağımsız aylık yükleme sınırı.,Límite de subida mensual independiente.,ok,app/templates/radius/plans_form.html:555
-كوتا شهرية مدمجة,,Combined monthly quota,Quota mensuel combiné,Birleşik aylık kota,Cuota mensual combinada,ok,app/templates/radius/plans_form.html:556
-تحلّ محل التنزيل+الرفع الشهريين المنفصلين.,,Replaces the separate monthly download + upload.,Remplace le téléchargement + l'envoi mensuels distincts.,Ayrı aylık indirme + yükleme değerlerinin yerini alır.,Sustituye la descarga + subida mensuales por separado.,ok,app/templates/radius/plans_form.html:558
-كوتا تنزيل يومية,,Daily download quota,Quota de téléchargement quotidien,Günlük indirme kotası,Cuota de descarga diaria,ok,app/templates/radius/plans_form.html:559
-حد التنزيل اليومي المستقل.,,Independent daily download limit.,Limite de téléchargement quotidienne indépendante.,Bağımsız günlük indirme sınırı.,Límite de descarga diario independiente.,ok,app/templates/radius/plans_form.html:561
-كوتا رفع يومية,,Daily upload quota,Quota d'envoi quotidien,Günlük yükleme kotası,Cuota de subida diaria,ok,app/templates/radius/plans_form.html:562
-حد الرفع اليومي المستقل.,,Independent daily upload limit.,Limite d'envoi quotidienne indépendante.,Bağımsız günlük yükleme sınırı.,Límite de subida diario independiente.,ok,app/templates/radius/plans_form.html:564
-كوتا يومية مدمجة,,Combined daily quota,Quota quotidien combiné,Birleşik günlük kota,Cuota diaria combinada,ok,app/templates/radius/plans_form.html:565
-تحلّ محل التنزيل+الرفع اليوميين المنفصلين.,,Replaces the separate daily download + upload.,Remplace le téléchargement + l'envoi quotidiens distincts.,Ayrı günlük indirme + yükleme değerlerinin yerini alır.,Sustituye la descarga + subida diarias por separado.,ok,app/templates/radius/plans_form.html:567
-أقصى وقت اتصال مسموح في اليوم.,,Maximum connection time allowed per day.,Temps de connexion maximal autorisé par jour.,Günlük izin verilen maksimum bağlantı süresi.,Tiempo de conexión máximo permitido al día.,ok,app/templates/radius/plans_form.html:570
-أقصى وقت اتصال مسموح في الأسبوع.,,Maximum connection time allowed per week.,Temps de connexion maximal autorisé par semaine.,Haftalık izin verilen maksimum bağlantı süresi.,Tiempo máximo de conexión permitido por semana.,ok,app/templates/radius/plans_form.html:573
-أقصى وقت اتصال مسموح في الشهر.,,Maximum connection time allowed per month.,Temps de connexion maximal autorisé par mois.,Aylık izin verilen maksimum bağlantı süresi.,Tiempo de conexión máximo permitido al mes.,ok,app/templates/radius/plans_form.html:576
-مدة الجلسة (ث),,Session duration (s),Durée de la session (s),Oturum süresi (sn),Duración de la sesión (s),ok,app/templates/radius/plans_form.html:577
-المهلة القصوى للجلسة بالثواني (Session-Timeout).,,The maximum session timeout in seconds (Session-Timeout).,Le délai maximal de session en secondes (Session-Timeout).,Saniye cinsinden maksimum oturum zaman aşımı (Session-Timeout).,El tiempo máximo de sesión en segundos (Session-Timeout).,ok,app/templates/radius/plans_form.html:579
-مهلة الخمول (ث),,Idle timeout (s),Délai d’inactivité (s),Boşta kalma süresi (sn),Tiempo de inactividad (s),ok,app/templates/radius/plans_form.html:580
-قطع الجلسة عند عدم وجود حركة لهذه المدة.,,Disconnect the session when there is no traffic for this duration.,Coupez la session en l'absence de trafic pendant cette durée.,Bu süre boyunca trafik olmadığında oturumu kesin.,Corta la sesión cuando no haya tráfico durante este tiempo.,ok,app/templates/radius/plans_form.html:582
-استخدام مرة واحدة,,Single use,Usage unique,Tek kullanımlık,Uso único,ok,app/templates/radius/plans_form.html:583
-حساب مؤقت: عند انتهاء وقته يُعطَّل تلقائيًا (ويُفصل إن كان متصلًا) ولا يُجدَّد ولا يُمدَّد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:585
-عدد مرات الاستهلاك,,Consumption count,Nombre de consommations,Tüketim sayısı,Número de consumos,ok,app/templates/radius/plans_form.html:586
-كم مرة يُسمح باستهلاك الباقة. 0 = بلا حد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:588
-الاشتراك والسلوك العام,,Subscription and general behavior,Abonnement et comportement général,Abonelik ve genel davranış,Suscripción y comportamiento general,ok,app/templates/radius/plans_form.html:604
-صلاحية التذاكر (أيام),,Voucher validity (days),Validité des coupons (jours),Kupon geçerlilik süresi (gün),Validez de los cupones (días),ok,app/templates/radius/plans_form.html:609
-كم يوم تبقى تذاكر/قسائم هذه الباقة صالحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:611
-سياسات التجديد والتوفر,,Renewal and availability policies,Politiques de renouvellement et de disponibilité,Yenileme ve kullanılabilirlik politikaları,Políticas de renovación y disponibilidad,ok,app/templates/radius/plans_form.html:621
-السماح باستخدام الباقة في جميع أيام الأسبوع.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:628
-الشبكة والراوترات / خدمات الاتصال,,Network and routers / connection services,Réseau et routeurs / services de connexion,Ağ ve yönlendiriciler / bağlantı hizmetleri,Red y routers / servicios de conexión,ok,app/templates/radius/plans_form.html:637
-أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.,,Maximum number of devices the account can connect with simultaneously.,Nombre maximal d'appareils que le compte peut connecter simultanément.,Hesabın aynı anda bağlanabileceği maksimum cihaz sayısı.,Número máximo de dispositivos que la cuenta puede conectar simultáneamente.,ok,app/templates/radius/plans_form.html:646
-بطاقة مشتركة — جلسة واحدة فعّالة,,Shared voucher — one active session,Coupon partagé — une seule session active,Paylaşılan kupon — tek aktif oturum,Cupón compartido — una sola sesión activa,ok,app/templates/radius/plans_form.html:647
-جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).,,"One active session — the new login disconnects the old one. Suitable for a daily voucher shared by shop customers one after another: when a new user logs in with the same voucher, the previous user is disconnected automatically. (Applied when the new session starts.)","Une seule session active — la nouvelle connexion déconnecte l'ancienne. Convient à un coupon journalier partagé par les clients de la boutique l'un après l'autre : lorsqu'un nouvel utilisateur se connecte avec le même coupon, l'utilisateur précédent est déconnecté automatiquement. (Appliqué au démarrage de la nouvelle session.)",Tek etkin oturum — yeni giriş eskisinin bağlantısını keser. Mağaza müşterilerinin sırayla paylaştığı günlük bir kupon için uygundur: aynı kuponla yeni bir kullanıcı oturum açtığında önceki kullanıcının bağlantısı otomatik olarak kesilir. (Yeni oturum başladığında uygulanır.),"Una sola sesión activa — el nuevo inicio de sesión desconecta el anterior. Adecuado para un cupón diario compartido por los clientes de la tienda uno tras otro: cuando un nuevo usuario inicia sesión con el mismo cupón, el usuario anterior se desconecta automáticamente. (Se aplica al iniciar la nueva sesión.)",ok,app/templates/radius/plans_form.html:649
-نطاق عناوين الجلسات (Pool),,Session address range (Pool),Plage d'adresses de session (Pool),Oturum adres aralığı (Pool),Rango de direcciones de sesión (Pool),ok,app/templates/radius/plans_form.html:656
-اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.,,The name of the address pool from which IPs are assigned to sessions.,Le nom du pool d'adresses à partir duquel les IP sont attribuées aux sessions.,Oturumlara IP atanan adres havuzunun adı.,El nombre del grupo de direcciones desde el que se asignan IP a las sesiones.,ok,app/templates/radius/plans_form.html:658
-قائمة عناوين (Address-List),,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:669
-اسم Address-List في الراوتر يُضاف إليه عنوان المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:671
-السلفة مسموحة,,Advance allowed,Avance autorisée,Avansa izin verilir,Adelanto permitido,ok,app/templates/radius/plans_form.html:675
-يسمح بإقراض وقت/كوتا مؤقتًا للمشترك.,,Allows lending time/quota temporarily to the subscriber.,Permet de prêter temporairement du temps/quota à l'abonné.,Aboneye geçici olarak süre/kota ödünç vermeye izin verir.,Permite prestar tiempo/cuota temporalmente al abonado.,ok,app/templates/radius/plans_form.html:677
-أقصى مدة سلفة (دقيقة),,Max advance duration (minutes),Durée max d’avance (minutes),Azami avans süresi (dakika),Duración máxima de anticipo (minutos),ok,app/templates/radius/plans_form.html:678
-أقصى مدة يُسمح خلالها بالسلفة بالدقائق.,,"Maximum duration allowed for the advance, in minutes.","Durée maximale autorisée pour l'avance, en minutes.","Avansa izin verilen azami süre, dakika cinsinden.","Duración máxima permitida para el anticipo, en minutos.",ok,app/templates/radius/plans_form.html:680
-نطاق IPv6,,IPv6 range,Plage IPv6,IPv6 aralığı,Rango IPv6,ok,app/templates/radius/plans_form.html:681
-اسم مجمّع عناوين IPv6 إن وُجد.,,"IPv6 address pool name, if any.","Nom du pool d'adresses IPv6, le cas échéant.",Varsa IPv6 adres havuzu adı.,"Nombre del pool de direcciones IPv6, si existe.",ok,app/templates/radius/plans_form.html:683
-الأيام والأوقات المسموحة للاتصال على هذه الباقة,,Allowed days and times to connect on this plan,Jours et heures de connexion autorisés pour ce forfait,Bu pakette bağlanmaya izin verilen gün ve saatler,Días y horas permitidos para conectarse en este plan,ok,app/templates/radius/plans_form.html:706
-تجاري (مرجعي),,Commercial (reference),Commercial (référence),Ticari (referans),Comercial (referencia),ok,app/templates/radius/plans_form.html:715
-سعر الباقة بعملة النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:722
-عملة النظام — تُضبط من الإعدادات,,System currency — set from Settings,Devise du système — définie dans les paramètres,Sistem para birimi — Ayarlar'dan belirlenir,Moneda del sistema — se configura en Ajustes,ok,app/templates/radius/plans_form.html:724
-عملة النظام، تُضبط من الإعدادات العامة.,,"System currency, set from the general settings.","Devise du système, configurée depuis les paramètres généraux.","Sistem para birimi, genel ayarlardan ayarlanır.","Moneda del sistema, configurada desde los ajustes generales.",ok,app/templates/radius/plans_form.html:725
-وسم للتقارير فقط: يظهر في قائمة الباقات وفلتر «باقات مدفوعة مسبقًا» في تقارير المشتركين والمالية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:728
-عند انتهاء اشتراك المشترك يُجدَّد تلقائيًا بمدة الباقة: بالدين، أو خصمًا من رصيده إن كفى (وإلا ينتهي ويُنبَّه المدراء)، أو مجانًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:737
+إعدادات كاملة للعرض: السعر، السرعة، الكوتا، الوقت، الاشتراك، التنبيهات، الشبكة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:261
+إنشاء نسخة من هذه الباقة لتعديلها؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:276
+نسخ هذه الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:278
+ينشئ باقةً جديدة بنفس كل المواصفات باسم «— نسخة» يمكنك تعديلها فورًا دون المساس بالأصل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:282
+أقسام الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:291
+إعدادات عامة,,General Settings,Paramètres généraux,Genel Ayarlar,Configuración general,ok,app/templates/radius/plans_form.html:294
+الكوتا والوقت,,Quota and time,Quota et durée,Kota ve süre,Cuota y tiempo,ok,app/templates/radius/plans_form.html:296
+الاشتراك والسلوك,,Subscription and behavior,Abonnement et comportement,Abonelik ve davranış,Suscripción y comportamiento,ok,app/templates/radius/plans_form.html:297
+أيام وساعات السماح,,Grace days and hours,Jours et heures de tolérance,İzin verilen gün ve saatler,Días y horas de gracia,ok,app/templates/radius/plans_form.html:299
+الاسم الذي يظهر في قوائم العروض وعند المشترك.,,The name shown in the offer lists and to the subscriber.,Le nom affiché dans les listes d'offres et chez l'abonné.,Teklif listelerinde ve abonede görünen ad.,El nombre que se muestra en las listas de ofertas y al abonado.,ok,app/templates/radius/plans_form.html:324
+رمز الباقة,,Plan Code,Code du forfait,Paket kodu,Código del plan,ok,app/templates/radius/plans_form.html:325
+رمز داخلي مختصر للباقة (اختياري).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:327
+حصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:332
+متجدد,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:332
+وقت وحصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:332
+يحدد ما الذي تُحاسَب عليه الباقة: وقت أم حصة أم الاثنان.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:336
+(كم الوقت),,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:345
+مدة الوقت,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:345
+كم من الوقت تمنحه هذه الباقة. للبطاقة: رصيد وقت البطاقة من أوّل اتصال (مثلاً 8 ساعات). للمشترك: المدة التي تُضاف مقابل سعر الباقة عند الدفع (مثلاً 80 ⟵ ‏30 يوم، و160 ⟵ ‏60 يوم).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:347
+اشتراك منزلي عبر PPPoE,,Home subscription via PPPoE,Abonnement résidentiel via PPPoE,PPPoE üzerinden ev aboneliği,Suscripción doméstica vía PPPoE,ok,app/templates/radius/plans_form.html:374
+يمكنك اختيار خدمة واحدة أو الاثنتين معًا (هوت سبوت + برودباند).,,You can choose one service or both together (hotspot + broadband).,Vous pouvez choisir un seul service ou les deux ensemble (hotspot + haut débit).,Tek bir hizmeti veya ikisini birlikte seçebilirsiniz (hotspot + geniş bant).,Puede elegir un solo servicio o ambos juntos (hotspot + banda ancha).,ok,app/templates/radius/plans_form.html:378
+عند الإيقاف لا تظهر الباقة للبيع أو الإسناد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:383
+اللون,,Color,Couleur,Renk,Color,ok,app/templates/radius/plans_form.html:384
+لون تمييز الباقة في القوائم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:386
+ترتيب ظهور الباقة في القوائم والمتجر فقط — لا أثر وظيفيّ على الخدمة. الرقم الأصغر يظهر أوّلًا/أعلى (١ = الأعلى، ١٠ = الأدنى).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:390
+DNS أولي (PPP),,Primary DNS (PPP),DNS principal (PPP),Birincil DNS (PPP),DNS primario (PPP),ok,app/templates/radius/plans_form.html:391
+خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.,,The primary DNS server delivered to broadband sessions.,Le serveur DNS principal fourni aux sessions haut débit.,Geniş bant oturumlarına teslim edilen birincil DNS sunucusu.,El servidor DNS principal que se entrega a las sesiones de banda ancha.,ok,app/templates/radius/plans_form.html:393
+DNS ثانوي (PPP),,Secondary DNS (PPP),DNS secondaire (PPP),İkincil DNS (PPP),DNS secundario (PPP),ok,app/templates/radius/plans_form.html:394
+خادم DNS الاحتياطي عند تعذّر الأساسي.,,Backup DNS server when the primary is unavailable.,Serveur DNS de secours lorsque le principal est indisponible.,Birincil sunucu kullanılamadığında yedek DNS sunucusu.,Servidor DNS de respaldo cuando el principal no esté disponible.,ok,app/templates/radius/plans_form.html:396
+ساعات الباقة — من,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:397
+بداية الفترة اليومية التي يُسمح فيها باستخدام الباقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:399
+ساعات الباقة — إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:400
+نهاية الفترة اليومية المسموح بها للاستخدام.,,The end of the daily period allowed for usage.,La fin de la période quotidienne autorisée pour l'utilisation.,Kullanıma izin verilen günlük dönemin sonu.,El final del periodo diario permitido para el uso.,ok,app/templates/radius/plans_form.html:402
+وصف مختصر للباقة يظهر للمشترك أو للمشغّل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:405
+السرعة والسياسات,,Speed and policies,Vitesse et politiques,Hız ve politikalar,Velocidad y políticas,ok,app/templates/radius/plans_form.html:414
+أقصى سرعة تنزيل للمشترك.,,Maximum download speed for the subscriber.,Vitesse de téléchargement maximale pour l'abonné.,Abone için maksimum indirme hızı.,Velocidad máxima de bajada para el abonado.,ok,app/templates/radius/plans_form.html:429
+سرعة مضمونة CIR للتنزيل,,Guaranteed CIR download speed,Débit descendant garanti CIR,Garantili CIR indirme hızı,Velocidad de bajada garantizada CIR,ok,app/templates/radius/plans_form.html:436
+الحد الأدنى المضمون للتنزيل عند الازدحام.,,The guaranteed minimum download during congestion.,Le minimum de téléchargement garanti en cas de congestion.,Yoğunluk anında garanti edilen minimum indirme.,El mínimo de descarga garantizado durante la congestión.,ok,app/templates/radius/plans_form.html:438
+سرعة مضمونة CIR للرفع,,Guaranteed upload CIR speed,Vitesse CIR garantie en envoi,Garantili yükleme CIR hızı,Velocidad CIR garantizada de subida,ok,app/templates/radius/plans_form.html:439
+الحد الأدنى المضمون للرفع عند الازدحام.,,Guaranteed minimum upload during congestion.,Débit d'envoi minimum garanti en cas de congestion.,Yoğunluk sırasında garanti edilen asgari yükleme.,Subida mínima garantizada durante la congestión.,ok,app/templates/radius/plans_form.html:441
+باقة مفتوحة السرعة. بدونه لا يُقبل صفر في التنزيل أو الرفع — فالصفر الصامت كان يعني «مفتوح» على الراوتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:447
+غير محدود ليلًا,,Unlimited at night,Illimité la nuit,Geceleri sınırsız,Ilimitado por la noche,ok,app/templates/radius/plans_form.html:448
+ما يُستهلك خلال الفترة الليلية لا يُحتسب من الكوتا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:450
+توزيع متساوٍ للتنزيل,,Equal download distribution,Répartition égale du téléchargement,Eşit indirme dağıtımı,Distribución equitativa de la descarga,ok,app/templates/radius/plans_form.html:451
+يوزّع سرعة التنزيل بالتساوي بين الجلسات.,,Distributes download speed equally among sessions.,Répartit la vitesse de téléchargement équitablement entre les sessions.,İndirme hızını oturumlar arasında eşit olarak dağıtır.,Distribuye la velocidad de descarga equitativamente entre las sesiones.,ok,app/templates/radius/plans_form.html:453
+توزيع متساوٍ للرفع,,Even upload distribution,Répartition équitable du débit montant,Eşit yükleme dağıtımı,Distribución equitativa de subida,ok,app/templates/radius/plans_form.html:454
+يوزّع سرعة الرفع بالتساوي بين الجلسات.,,Distributes upload speed evenly across sessions.,Répartit la vitesse d'envoi de manière égale entre les sessions.,Yükleme hızını oturumlar arasında eşit olarak dağıtır.,Distribuye la velocidad de subida de forma equitativa entre las sesiones.,ok,app/templates/radius/plans_form.html:456
+الفترة الليلية — من,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:461
+بداية الفترة الليلية (توقيت فلسطين).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:463
+الفترة الليلية — إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:464
+نهاية الفترة الليلية (توقيت فلسطين).,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:466
+متقدم — السرعة المؤقتة (Burst),,Advanced — temporary speed (Burst),Avancé — vitesse temporaire (Burst),Gelişmiş — geçici hız (Burst),Avanzado — velocidad temporal (Burst),ok,app/templates/radius/plans_form.html:473
+السرعة المؤقتة (Burst),,Temporary Speed (Burst),Vitesse temporaire (Burst),Geçici Hız (Burst),Velocidad temporal (Burst),ok,app/templates/radius/plans_form.html:478
+يسمح بتجاوز السرعة مؤقتًا فوق الحد (Burst).,,Allows temporarily exceeding the speed above the limit (Burst).,Permet de dépasser temporairement la vitesse au-delà de la limite (Burst).,Hızın geçici olarak sınırın üzerine çıkmasına izin verir (Burst).,Permite superar temporalmente la velocidad por encima del límite (Burst).,ok,app/templates/radius/plans_form.html:480
+سرعة Burst التنزيل,,Download Burst speed,Vitesse Burst de téléchargement,İndirme Burst hızı,Velocidad Burst de descarga,ok,app/templates/radius/plans_form.html:481
+أقصى سرعة تنزيل أثناء فترة الـ Burst.,,Maximum download speed during the burst period.,Débit de téléchargement maximal pendant la période de rafale (burst).,Burst süresi boyunca maksimum indirme hızı.,Velocidad máxima de descarga durante el periodo de ráfaga (burst).,ok,app/templates/radius/plans_form.html:483
+سرعة Burst الرفع,,Upload burst speed,Vitesse de burst en envoi,Yükleme Burst hızı,Velocidad de ráfaga de subida,ok,app/templates/radius/plans_form.html:484
+أقصى سرعة رفع أثناء فترة الـ Burst.,,Maximum upload speed during the Burst period.,Vitesse d'envoi maximale pendant la période de Burst.,Burst süresi boyunca maksimum yükleme hızı.,Velocidad máxima de subida durante el período de Burst.,ok,app/templates/radius/plans_form.html:486
+حد Burst,,Burst limit,Limite Burst,Burst limiti,Límite Burst,ok,app/templates/radius/plans_form.html:487
+عتبة التنزيل التي يتوقف بعدها الـ Burst (أقل من سرعة Burst التنزيل)؛ عتبة الرفع بنفس النسبة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:489
+مدة استمرار سرعة الـ Burst بالثواني.,,The duration of the burst speed in seconds.,La durée du débit en rafale (burst) en secondes.,Burst hızının saniye cinsinden süresi.,La duración de la velocidad en ráfaga (burst) en segundos.,ok,app/templates/radius/plans_form.html:492
+كوتا إجمالية,,Total quota,Quota total,Toplam kota,Cuota total,ok,app/templates/radius/plans_form.html:512
+إجمالي البيانات المسموحة للحساب. 0 = غير محدودة.,,Total data allowed for the account. 0 = unlimited.,Total des données autorisées pour le compte. 0 = illimité.,Hesap için izin verilen toplam veri. 0 = sınırsız.,Total de datos permitidos para la cuenta. 0 = ilimitado.,ok,app/templates/radius/plans_form.html:514
+كوتا يومية,,Daily Quota,Quota quotidien,Günlük Kota,Cuota diaria,ok,app/templates/radius/plans_form.html:517
+0 = بلا حدّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:519
+كوتا شهرية,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:520
+صلاحية (أيام),,Validity (days),Validité (jours),Geçerlilik (gün),Validez (días),ok,app/templates/radius/plans_form.html:523
+كم يوم يبقى الحساب صالحًا بعد التفعيل.,,How many days the account stays valid after activation.,Combien de jours le compte reste valide après l'activation.,Etkinleştirmeden sonra hesabın kaç gün geçerli kaldığı.,Cuántos días permanece válida la cuenta tras la activación.,ok,app/templates/radius/plans_form.html:525
+سياسة الإعادة,,Retry policy,Politique de réessai,Yeniden deneme politikası,Política de reintento,ok,app/templates/radius/plans_form.html:529
+شهرية ثابتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:533
+لا تتجدّد,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:533
+متجددة دوريًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:533
+متى تتجدّد الكوتا (دوريًا / بداية كل شهر / لا تتجدّد).,,When the quota renews (periodically / at the start of each month / never).,Quand le quota se renouvelle (périodiquement / au début de chaque mois / jamais).,Kotanın ne zaman yenilendiği (düzenli / her ayın başında / yenilenmez).,Cuándo se renueva la cuota (periódicamente / al inicio de cada mes / nunca).,ok,app/templates/radius/plans_form.html:537
+خيارات متقدمة,,Advanced options,Options avancées,Gelişmiş seçenekler,Opciones avanzadas,ok,app/templates/radius/plans_form.html:543
+كوتا تنزيل شهرية,,Monthly download quota,Quota de téléchargement mensuel,Aylık indirme kotası,Cuota de descarga mensual,ok,app/templates/radius/plans_form.html:548
+حد التنزيل الشهري المستقل.,,Independent monthly download limit.,Limite de téléchargement mensuelle indépendante.,Bağımsız aylık indirme sınırı.,Límite de descarga mensual independiente.,ok,app/templates/radius/plans_form.html:550
+كوتا رفع شهرية,,Monthly upload quota,Quota d'envoi mensuel,Aylık yükleme kotası,Cuota de subida mensual,ok,app/templates/radius/plans_form.html:551
+حد الرفع الشهري المستقل.,,Independent monthly upload limit.,Limite d'envoi mensuelle indépendante.,Bağımsız aylık yükleme sınırı.,Límite de subida mensual independiente.,ok,app/templates/radius/plans_form.html:553
+كوتا شهرية مدمجة,,Combined monthly quota,Quota mensuel combiné,Birleşik aylık kota,Cuota mensual combinada,ok,app/templates/radius/plans_form.html:554
+تحلّ محل التنزيل+الرفع الشهريين المنفصلين.,,Replaces the separate monthly download + upload.,Remplace le téléchargement + l'envoi mensuels distincts.,Ayrı aylık indirme + yükleme değerlerinin yerini alır.,Sustituye la descarga + subida mensuales por separado.,ok,app/templates/radius/plans_form.html:556
+كوتا تنزيل يومية,,Daily download quota,Quota de téléchargement quotidien,Günlük indirme kotası,Cuota de descarga diaria,ok,app/templates/radius/plans_form.html:557
+حد التنزيل اليومي المستقل.,,Independent daily download limit.,Limite de téléchargement quotidienne indépendante.,Bağımsız günlük indirme sınırı.,Límite de descarga diario independiente.,ok,app/templates/radius/plans_form.html:559
+كوتا رفع يومية,,Daily upload quota,Quota d'envoi quotidien,Günlük yükleme kotası,Cuota de subida diaria,ok,app/templates/radius/plans_form.html:560
+حد الرفع اليومي المستقل.,,Independent daily upload limit.,Limite d'envoi quotidienne indépendante.,Bağımsız günlük yükleme sınırı.,Límite de subida diario independiente.,ok,app/templates/radius/plans_form.html:562
+كوتا يومية مدمجة,,Combined daily quota,Quota quotidien combiné,Birleşik günlük kota,Cuota diaria combinada,ok,app/templates/radius/plans_form.html:563
+تحلّ محل التنزيل+الرفع اليوميين المنفصلين.,,Replaces the separate daily download + upload.,Remplace le téléchargement + l'envoi quotidiens distincts.,Ayrı günlük indirme + yükleme değerlerinin yerini alır.,Sustituye la descarga + subida diarias por separado.,ok,app/templates/radius/plans_form.html:565
+أقصى وقت اتصال مسموح في اليوم.,,Maximum connection time allowed per day.,Temps de connexion maximal autorisé par jour.,Günlük izin verilen maksimum bağlantı süresi.,Tiempo de conexión máximo permitido al día.,ok,app/templates/radius/plans_form.html:568
+أقصى وقت اتصال مسموح في الأسبوع.,,Maximum connection time allowed per week.,Temps de connexion maximal autorisé par semaine.,Haftalık izin verilen maksimum bağlantı süresi.,Tiempo máximo de conexión permitido por semana.,ok,app/templates/radius/plans_form.html:571
+أقصى وقت اتصال مسموح في الشهر.,,Maximum connection time allowed per month.,Temps de connexion maximal autorisé par mois.,Aylık izin verilen maksimum bağlantı süresi.,Tiempo de conexión máximo permitido al mes.,ok,app/templates/radius/plans_form.html:574
+مدة الجلسة (ث),,Session duration (s),Durée de la session (s),Oturum süresi (sn),Duración de la sesión (s),ok,app/templates/radius/plans_form.html:575
+المهلة القصوى للجلسة بالثواني (Session-Timeout).,,The maximum session timeout in seconds (Session-Timeout).,Le délai maximal de session en secondes (Session-Timeout).,Saniye cinsinden maksimum oturum zaman aşımı (Session-Timeout).,El tiempo máximo de sesión en segundos (Session-Timeout).,ok,app/templates/radius/plans_form.html:577
+مهلة الخمول (ث),,Idle timeout (s),Délai d’inactivité (s),Boşta kalma süresi (sn),Tiempo de inactividad (s),ok,app/templates/radius/plans_form.html:578
+قطع الجلسة عند عدم وجود حركة لهذه المدة.,,Disconnect the session when there is no traffic for this duration.,Coupez la session en l'absence de trafic pendant cette durée.,Bu süre boyunca trafik olmadığında oturumu kesin.,Corta la sesión cuando no haya tráfico durante este tiempo.,ok,app/templates/radius/plans_form.html:580
+استخدام مرة واحدة,,Single use,Usage unique,Tek kullanımlık,Uso único,ok,app/templates/radius/plans_form.html:581
+حساب مؤقت: عند انتهاء وقته يُعطَّل تلقائيًا (ويُفصل إن كان متصلًا) ولا يُجدَّد ولا يُمدَّد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:583
+عدد مرات الاستهلاك,,Consumption count,Nombre de consommations,Tüketim sayısı,Número de consumos,ok,app/templates/radius/plans_form.html:584
+كم مرة يُسمح باستهلاك الباقة. 0 = بلا حد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:586
+الاشتراك والسلوك العام,,Subscription and general behavior,Abonnement et comportement général,Abonelik ve genel davranış,Suscripción y comportamiento general,ok,app/templates/radius/plans_form.html:602
+صلاحية التذاكر (أيام),,Voucher validity (days),Validité des coupons (jours),Kupon geçerlilik süresi (gün),Validez de los cupones (días),ok,app/templates/radius/plans_form.html:607
+كم يوم تبقى تذاكر/قسائم هذه الباقة صالحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:609
+الشبكة والراوترات / خدمات الاتصال,,Network and routers / connection services,Réseau et routeurs / services de connexion,Ağ ve yönlendiriciler / bağlantı hizmetleri,Red y routers / servicios de conexión,ok,app/templates/radius/plans_form.html:622
+أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.,,Maximum number of devices the account can connect with simultaneously.,Nombre maximal d'appareils que le compte peut connecter simultanément.,Hesabın aynı anda bağlanabileceği maksimum cihaz sayısı.,Número máximo de dispositivos que la cuenta puede conectar simultáneamente.,ok,app/templates/radius/plans_form.html:631
+بطاقة مشتركة — جلسة واحدة فعّالة,,Shared voucher — one active session,Coupon partagé — une seule session active,Paylaşılan kupon — tek aktif oturum,Cupón compartido — una sola sesión activa,ok,app/templates/radius/plans_form.html:632
+جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).,,"One active session — the new login disconnects the old one. Suitable for a daily voucher shared by shop customers one after another: when a new user logs in with the same voucher, the previous user is disconnected automatically. (Applied when the new session starts.)","Une seule session active — la nouvelle connexion déconnecte l'ancienne. Convient à un coupon journalier partagé par les clients de la boutique l'un après l'autre : lorsqu'un nouvel utilisateur se connecte avec le même coupon, l'utilisateur précédent est déconnecté automatiquement. (Appliqué au démarrage de la nouvelle session.)",Tek etkin oturum — yeni giriş eskisinin bağlantısını keser. Mağaza müşterilerinin sırayla paylaştığı günlük bir kupon için uygundur: aynı kuponla yeni bir kullanıcı oturum açtığında önceki kullanıcının bağlantısı otomatik olarak kesilir. (Yeni oturum başladığında uygulanır.),"Una sola sesión activa — el nuevo inicio de sesión desconecta el anterior. Adecuado para un cupón diario compartido por los clientes de la tienda uno tras otro: cuando un nuevo usuario inicia sesión con el mismo cupón, el usuario anterior se desconecta automáticamente. (Se aplica al iniciar la nueva sesión.)",ok,app/templates/radius/plans_form.html:634
+نطاق عناوين الجلسات (Pool),,Session address range (Pool),Plage d'adresses de session (Pool),Oturum adres aralığı (Pool),Rango de direcciones de sesión (Pool),ok,app/templates/radius/plans_form.html:641
+اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.,,The name of the address pool from which IPs are assigned to sessions.,Le nom du pool d'adresses à partir duquel les IP sont attribuées aux sessions.,Oturumlara IP atanan adres havuzunun adı.,El nombre del grupo de direcciones desde el que se asignan IP a las sesiones.,ok,app/templates/radius/plans_form.html:643
+قائمة عناوين (Address-List),,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:654
+اسم Address-List في الراوتر يُضاف إليه عنوان المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:656
+السلفة مسموحة,,Advance allowed,Avance autorisée,Avansa izin verilir,Adelanto permitido,ok,app/templates/radius/plans_form.html:660
+يسمح بإقراض وقت/كوتا مؤقتًا للمشترك.,,Allows lending time/quota temporarily to the subscriber.,Permet de prêter temporairement du temps/quota à l'abonné.,Aboneye geçici olarak süre/kota ödünç vermeye izin verir.,Permite prestar tiempo/cuota temporalmente al abonado.,ok,app/templates/radius/plans_form.html:662
+أقصى مدة سلفة (دقيقة),,Max advance duration (minutes),Durée max d’avance (minutes),Azami avans süresi (dakika),Duración máxima de anticipo (minutos),ok,app/templates/radius/plans_form.html:663
+أقصى مدة يُسمح خلالها بالسلفة بالدقائق.,,"Maximum duration allowed for the advance, in minutes.","Durée maximale autorisée pour l'avance, en minutes.","Avansa izin verilen azami süre, dakika cinsinden.","Duración máxima permitida para el anticipo, en minutos.",ok,app/templates/radius/plans_form.html:665
+نطاق IPv6,,IPv6 range,Plage IPv6,IPv6 aralığı,Rango IPv6,ok,app/templates/radius/plans_form.html:666
+اسم مجمّع عناوين IPv6 إن وُجد.,,"IPv6 address pool name, if any.","Nom du pool d'adresses IPv6, le cas échéant.",Varsa IPv6 adres havuzu adı.,"Nombre del pool de direcciones IPv6, si existe.",ok,app/templates/radius/plans_form.html:668
+الأيام والأوقات المسموحة للاتصال على هذه الباقة,,Allowed days and times to connect on this plan,Jours et heures de connexion autorisés pour ce forfait,Bu pakette bağlanmaya izin verilen gün ve saatler,Días y horas permitidos para conectarse en este plan,ok,app/templates/radius/plans_form.html:691
+تجاري (مرجعي),,Commercial (reference),Commercial (référence),Ticari (referans),Comercial (referencia),ok,app/templates/radius/plans_form.html:700
+سعر الباقة بعملة النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:707
+عملة النظام — تُضبط من الإعدادات,,System currency — set from Settings,Devise du système — définie dans les paramètres,Sistem para birimi — Ayarlar'dan belirlenir,Moneda del sistema — se configura en Ajustes,ok,app/templates/radius/plans_form.html:709
+عملة النظام، تُضبط من الإعدادات العامة.,,"System currency, set from the general settings.","Devise du système, configurée depuis les paramètres généraux.","Sistem para birimi, genel ayarlardan ayarlanır.","Moneda del sistema, configurada desde los ajustes generales.",ok,app/templates/radius/plans_form.html:710
+وسم للتقارير فقط: يظهر في قائمة الباقات وفلتر «باقات مدفوعة مسبقًا» في تقارير المشتركين والمالية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:713
+عند انتهاء اشتراك المشترك يُجدَّد تلقائيًا بمدة الباقة: بالدين، أو خصمًا من رصيده إن كفى (وإلا ينتهي ويُنبَّه المدراء)، أو مجانًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_form.html:722
 العروض والخطط,,Offers and plans,Offres et forfaits,Teklifler ve paketler,Ofertas y planes,ok,app/templates/radius/plans_list.html:40
 إدارة باقات الإنترنت بكل إمكانياتها: السعر، السرعات والـ Burst، الكوتا اليومية والشهرية، الصلاحية، الجلسات، نطاق الخدمة والقيود — مع تفاصيل كاملة لكل باقة بنقرة واحدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_list.html:180
 المفعَّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/plans_list.html:191
@@ -24432,138 +24428,136 @@ SSTP (نفق إدارة),,SSTP (management tunnel),SSTP (tunnel de gestion),SSTP
 انتهت الجلسة أو لا تملك صلاحية — أعد تسجيل الدخول.,,Session expired or you don't have permission — log in again.,Session expirée ou vous n'avez pas la permission — reconnectez-vous.,Oturum sona erdi veya yetkiniz yok — tekrar giriş yapın.,La sesión expiró o no tiene permiso — vuelva a iniciar sesión.,ok,app/templates/radius/users_finance.html:456
 تعذّر تنفيذ العملية (HTTP,,Failed to perform the operation (HTTP,Échec de l'exécution de l'opération (HTTP,İşlem gerçekleştirilemedi (HTTP,No se pudo realizar la operación (HTTP,ok,app/templates/radius/users_finance.html:457
 تعديل ,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:17
-بيانات شاملة للمشترك: حساب، سرعة، شبكة، حصة، مزايا متقدمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:856
-البيانات الشخصية,,Personal data,Données personnelles,Kişisel veriler,Datos personales,ok,app/templates/radius/users_form.html:872
-ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.,,Start from the internet account and the plan. The remaining sections are optional and used when needed to customize this subscriber.,Commencez par le compte internet et le forfait. Les autres sections sont facultatives et utilisées au besoin pour personnaliser cet abonné.,İnternet hesabı ve paketten başlayın. Kalan bölümler isteğe bağlıdır ve bu aboneyi özelleştirmek gerektiğinde kullanılır.,Comienza por la cuenta de internet y el plan. Las demás secciones son opcionales y se usan cuando se necesita personalizar a este abonado.,ok,app/templates/radius/users_form.html:879
-اسم الدخول هو مفتاح المصادقة. تعديله يُعيد ربط كل السجلات والجلسات باسمه الجديد؛ إن كان المشترك متصلاً الآن فسيُعاد اتصاله ليدخل بالاسم الجديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:916
-معطَّل: الدخول باسم المستخدم وحدَه,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:929
-مفعَّل: تُطلب كلمة المرور عند الدخول,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:930
-عطّله ليدخل المشترك باسمه فقط بلا كلمة مرور. الكلمة المحفوظة لا تُمسح — إن أعدتَ تفعيله عاد الدخول بها كما كان.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:931
-تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.,,Network devices use it to verify the account. Click the eye to reveal it or the copy icon to give it to the subscriber.,Les appareils réseau l'utilisent pour vérifier le compte. Cliquez sur l'œil pour l'afficher ou sur l'icône de copie pour la donner à l'abonné.,Ağ cihazları bunu hesabı doğrulamak için kullanır. Göstermek için göz simgesine veya aboneye vermek için kopyala simgesine tıklayın.,Los dispositivos de red la usan para verificar la cuenta. Haz clic en el ojo para mostrarla o en el icono de copiar para dársela al abonado.,ok,app/templates/radius/users_form.html:956
-دخول عبر صفحة تسجيل الدخول للهوت سبوت,,Login via the hotspot sign-in page,Connexion via la page de connexion du hotspot,Hotspot oturum açma sayfası üzerinden giriş,Acceso mediante la página de inicio de sesión del hotspot,ok,app/templates/radius/users_form.html:989
-يمكنك اختيار خدمة واحدة أو الاثنتين معًا.,,You can choose one service or both together.,Vous pouvez choisir un seul service ou les deux ensemble.,Bir hizmeti veya ikisini birlikte seçebilirsiniz.,Puedes elegir un servicio o ambos a la vez.,ok,app/templates/radius/users_form.html:1002
-— اختر الباقة —,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1013
-تُدار من,,Managed from,Géré depuis,Yönetildiği yer,Gestionado desde,ok,app/templates/radius/users_form.html:1051
-تاريخ انتهاء الاشتراك,,Subscription expiry date,Date d’expiration de l’abonnement,Abonelik bitiş tarihi,Fecha de vencimiento de la suscripción,ok,app/templates/radius/users_form.html:1059
-أبريل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-أغسطس,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-أكتوبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-ديسمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-سبتمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-فبراير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-مارس,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-مايو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-نوفمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-يناير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-يوليو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-يونيو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1077
-اختر تاريخ الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1085
-سنة سابقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1095
-سنة تالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1097
-ساعة الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1111
-حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1131
-تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1132
-اثن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1174
-إذا عبّأت هذه الخانة يُعتمد هذا السعر ويتجاوز سعر العرض. اتركه فارغًا أو 0 لاستخدام سعر الباقة.,,"If you fill this field, this price is applied and overrides the offer price. Leave it empty or 0 to use the plan price.","Si vous remplissez ce champ, ce prix est appliqué et remplace le prix de l'offre. Laissez-le vide ou à 0 pour utiliser le prix du forfait.",Bu alanı doldurursanız bu fiyat uygulanır ve teklif fiyatını geçersiz kılar. Paket fiyatını kullanmak için boş bırakın veya 0 yazın.,"Si rellenas este campo, se aplica este precio y anula el precio de la oferta. Déjalo vacío o en 0 para usar el precio del plan.",ok,app/templates/radius/users_form.html:1232
-الاسم الأول,,First Name,Prénom,Ad,Nombre,ok,app/templates/radius/users_form.html:1256
-رقم التواصل مع المشترك للتذكير والتحصيل.,,The subscriber's contact number for reminders and collection.,Le numéro de contact de l'abonné pour les rappels et l'encaissement.,Hatırlatma ve tahsilat için abonenin iletişim numarası.,El número de contacto del abonado para recordatorios y cobros.,ok,app/templates/radius/users_form.html:1266
-اختياري — يُستخدم للمراسلات والإشعارات.,,Optional — used for correspondence and notifications.,Facultatif — utilisé pour la correspondance et les notifications.,İsteğe bağlı — yazışmalar ve bildirimler için kullanılır.,Opcional: se utiliza para la correspondencia y las notificaciones.,ok,app/templates/radius/users_form.html:1269
-الرقم الوطني,,National ID number,Numéro national d'identité,Ulusal kimlik numarası,Número de identidad nacional,ok,app/templates/radius/users_form.html:1270
-لتوثيق هوية المشترك في السجلات.,,To record the subscriber's identity in the logs.,Pour consigner l'identité de l'abonné dans les journaux.,Abonenin kimliğini kayıtlarda belgelemek için.,Para documentar la identidad del abonado en los registros.,ok,app/templates/radius/users_form.html:1272
-طريقة الدفع المفضلة,,Preferred payment method,Mode de paiement préféré,Tercih edilen ödeme yöntemi,Método de pago preferido,ok,app/templates/radius/users_form.html:1273
-نقدًا / محفظة / تحويل,,Cash / Wallet / Transfer,Espèces / Portefeuille / Virement,Nakit / Cüzdan / Havale,Efectivo / Monedero / Transferencia,ok,app/templates/radius/users_form.html:1274
-للتذكير كيف يفضّل المشترك أن يدفع.,,A reminder of how the subscriber prefers to pay.,Pour rappeler comment l'abonné préfère payer.,Abonenin nasıl ödeme yapmayı tercih ettiğini hatırlatmak için.,Para recordar cómo prefiere pagar el abonado.,ok,app/templates/radius/users_form.html:1275
-مدينة سكن المشترك.,,Subscriber's city of residence.,Ville de résidence de l'abonné.,Abonenin ikamet ettiği şehir.,Ciudad de residencia del abonado.,ok,app/templates/radius/users_form.html:1278
-المنطقة / الحي,,Area / district,Zone / quartier,Bölge / mahalle,Zona / barrio,ok,app/templates/radius/users_form.html:1279
-يساعد فرق الصيانة على الوصول للموقع.,,Helps maintenance teams reach the site.,Aide les équipes de maintenance à atteindre le site.,Bakım ekiplerinin sahaya ulaşmasına yardımcı olur.,Ayuda a los equipos de mantenimiento a llegar al sitio.,ok,app/templates/radius/users_form.html:1281
-أي ملاحظات تخص المشترك (اختياري),,Any notes about the subscriber (optional),Toute remarque concernant l'abonné (facultatif),Abone hakkında herhangi bir not (isteğe bağlı),Cualquier nota sobre el abonado (opcional),ok,app/templates/radius/users_form.html:1283
-سرعة أساسية,,Base speed,Débit de base,Temel hız,Velocidad base,ok,app/templates/radius/users_form.html:1306
-قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة.,,Fixed values that override the plan's speed. Leave them at 0 to use the plan's value.,Valeurs fixes qui remplacent la vitesse du forfait. Laissez-les à 0 pour utiliser la valeur du forfait.,Paketin hızını geçersiz kılan sabit değerler. Paketin değerini kullanmak için 0 olarak bırakın.,Valores fijos que anulan la velocidad del plan. Déjelos en 0 para usar el valor del plan.,ok,app/templates/radius/users_form.html:1309
-سرعة مخصصة,,Custom Speed,Vitesse personnalisée,Özel Hız,Velocidad personalizada,ok,app/templates/radius/users_form.html:1318
-فعّلها لتطبيق سرعة خاصة بدل سرعة الباقة.,,Enable it to apply a custom speed instead of the plan's speed.,Activez-le pour appliquer une vitesse personnalisée au lieu de celle du forfait.,Paket hızı yerine özel bir hız uygulamak için etkinleştirin.,Actívalo para aplicar una velocidad personalizada en lugar de la del plan.,ok,app/templates/radius/users_form.html:1320
-0 = استخدم قيمة الباقة.,,0 = use the plan value.,0 = utiliser la valeur du forfait.,0 = paket değerini kullan.,0 = usar el valor del plan.,ok,app/templates/radius/users_form.html:1325
-رفع مؤقت بدون تغيير الباقة.,,Temporary boost without changing the plan.,Augmentation temporaire sans changer le forfait.,Paketi değiştirmeden geçici artış.,Aumento temporal sin cambiar el plan.,ok,app/templates/radius/users_form.html:1339
-مدة السرعة المؤقتة,,Temporary speed duration,Durée de la vitesse temporaire,Geçici hız süresi,Duración de la velocidad temporal,ok,app/templates/radius/users_form.html:1342
-بعد انتهاء المدة يرجع المشترك لسرعته العادية.,,"After the period ends, the subscriber returns to their normal speed.","Une fois la période terminée, l'abonné revient à sa vitesse normale.",Süre dolduğunda abone normal hızına geri döner.,"Una vez finalizado el período, el abonado vuelve a su velocidad normal.",ok,app/templates/radius/users_form.html:1348
-سرعة تنزيل مؤقتة,,Temporary download speed,Vitesse de réception temporaire,Geçici indirme hızı,Velocidad de bajada temporal,ok,app/templates/radius/users_form.html:1351
-سرعة التنزيل خلال فترة الرفع المؤقت.,,Download speed during the temporary boost period.,Débit de téléchargement pendant la période de boost temporaire.,Geçici hızlandırma süresi boyunca indirme hızı.,Velocidad de descarga durante el periodo de aumento temporal.,ok,app/templates/radius/users_form.html:1353
-سرعة رفع مؤقتة,,Temporary upload speed,Débit d'envoi temporaire,Geçici yükleme hızı,Velocidad de subida temporal,ok,app/templates/radius/users_form.html:1356
-سرعة الرفع خلال فترة الرفع المؤقت.,,Upload speed during the temporary boost period.,Vitesse de téléversement pendant la période d'accélération temporaire.,Geçici hızlandırma dönemi boyunca yükleme hızı.,Velocidad de subida durante el período de aumento temporal.,ok,app/templates/radius/users_form.html:1358
-السرعة المؤقتة غير مفعّلة,,Temporary speed is not enabled,La vitesse temporaire n'est pas activée,Geçici hız etkin değil,La velocidad temporal no está habilitada,ok,app/templates/radius/users_form.html:1365
-إلغاء السرعة المؤقتة,,Cancel temporary speed,Annuler la vitesse temporaire,Geçici hızı iptal et,Cancelar velocidad temporal,ok,app/templates/radius/users_form.html:1367
-قواعد سرعة مجدوَلة,,Scheduled speed rules,Règles de vitesse planifiées,Zamanlanmış hız kuralları,Reglas de velocidad programadas,ok,app/templates/radius/users_form.html:1378
-تفعيل كل القواعد,,Enable all rules,Activer toutes les règles,Tüm kuralları etkinleştir,Activar todas las reglas,ok,app/templates/radius/users_form.html:1390
-فعّل الكل,,Enable all,Tout activer,Tümünü etkinleştir,Activar todo,ok,app/templates/radius/users_form.html:1392
-تعطيل كل القواعد,,Disable all rules,Désactiver toutes les règles,Tüm kuralları devre dışı bırak,Desactivar todas las reglas,ok,app/templates/radius/users_form.html:1395
-عطّل الكل,,Disable all,Tout désactiver,Tümünü devre dışı bırak,Desactivar todo,ok,app/templates/radius/users_form.html:1397
-قواعد بفترات زمنية وأيام محددة,,Rules with specific time periods and days,Règles avec plages horaires et jours précis,Belirli zaman aralıkları ve günler için kurallar,Reglas con franjas horarias y días específicos,ok,app/templates/radius/users_form.html:1400
-سرعة مخصصة فعالة,,Active custom speed,Vitesse personnalisée active,Etkin özel hız,Velocidad personalizada activa,ok,app/templates/radius/users_form.html:1451
-سيُحفظ مع المشترك,,Will be saved with the subscriber,Sera enregistré avec l'abonné,Aboneyle birlikte kaydedilecek,Se guardará con el abonado,ok,app/templates/radius/users_form.html:1588
-تم نسخ القيم — راجعها ثم اعتمد القاعدة,,Values copied — review them then approve the rule,Valeurs copiées — vérifiez-les puis approuvez la règle,Değerler kopyalandı — gözden geçirin sonra kuralı onaylayın,Valores copiados — revísalos y luego aprueba la regla,ok,app/templates/radius/users_form.html:1650
-أدخل سرعة التنزيل أو الرفع (واحدة على الأقل),,Enter the download or upload speed (at least one),Saisissez la vitesse de téléchargement ou d'envoi (au moins une),İndirme veya yükleme hızını girin (en az biri),Introduzca la velocidad de descarga o subida (al menos una),ok,app/templates/radius/users_form.html:1661
-تم — ستُحفظ مع المشترك,,Done — it will be saved with the subscriber,Terminé — il sera enregistré avec l'abonné,Tamam — abone ile birlikte kaydedilecek,Listo — se guardará con el suscriptor,ok,app/templates/radius/users_form.html:1666
-كوتا إجمالية (مدمجة),,Total quota (combined),Quota total (combiné),Toplam kota (birleşik),Cuota total (combinada),ok,app/templates/radius/users_form.html:1716
-إجمالي البيانات المسموحة للحساب؛ إن حُدِّدت تحلّ محل كوتا التنزيل/الرفع المنفصلة. 0 = غير محدودة.,,"The total data allowed for the account; if set, it replaces the separate download/upload quotas. 0 = unlimited.","Le total de données autorisé pour le compte ; s'il est défini, il remplace les quotas de téléchargement/téléversement distincts. 0 = illimité.",Hesap için izin verilen toplam veri; ayarlanırsa ayrı indirme/yükleme kotalarının yerine geçer. 0 = sınırsız.,"El total de datos permitido para la cuenta; si se establece, reemplaza las cuotas de descarga/subida separadas. 0 = ilimitado.",ok,app/templates/radius/users_form.html:1718
-حدّ التنزيل المنفصل للحساب. 0 = غير محدودة.,,The separate download limit for the account. 0 = unlimited.,La limite de téléchargement distincte du compte. 0 = illimité.,Hesap için ayrı indirme sınırı. 0 = sınırsız.,El límite de descarga separado de la cuenta. 0 = ilimitado.,ok,app/templates/radius/users_form.html:1721
-حدّ الرفع المنفصل للحساب. 0 = غير محدودة.,,The account's separate upload limit. 0 = unlimited.,La limite d'envoi distincte du compte. 0 = illimité.,Hesabın ayrı yükleme sınırı. 0 = sınırsız.,El límite de subida independiente de la cuenta. 0 = sin límite.,ok,app/templates/radius/users_form.html:1724
-أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.,,Maximum total connection time for the account. 0 = no specific limit.,Temps de connexion total maximal pour le compte. 0 = aucune limite spécifique.,Hesap için maksimum toplam bağlantı süresi. 0 = belirli bir sınır yok.,Tiempo total máximo de conexión de la cuenta. 0 = sin límite específico.,ok,app/templates/radius/users_form.html:1727
-تطبيق حد الكوتا,,Apply quota limit,Appliquer la limite de quota,Kota sınırını uygula,Aplicar límite de cuota,ok,app/templates/radius/users_form.html:1728
-عند التفعيل تُطبَّق كوتا التنزيل/الرفع/المدمجة؛ لو معطَّل يُسمح باستخدام غير محدود.,,"When enabled, the download/upload/combined quota is applied; when disabled, unlimited usage is allowed.","Lorsqu'il est activé, le quota de téléchargement/téléversement/combiné s'applique ; désactivé, une utilisation illimitée est autorisée.",Etkinleştirildiğinde indirme/yükleme/birleşik kota uygulanır; devre dışı bırakıldığında sınırsız kullanıma izin verilir.,"Cuando está activado, se aplica la cuota de descarga/subida/combinada; cuando está desactivado, se permite un uso ilimitado.",ok,app/templates/radius/users_form.html:1730
-تطبيق حد وقت الاتصال,,Apply connection time limit,Appliquer la limite de temps de connexion,Bağlantı süresi sınırını uygula,Aplicar el límite de tiempo de conexión,ok,app/templates/radius/users_form.html:1731
-عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو وُضعت أرقام.,,"When enabled, the connection time above is applied; when disabled, the limit is ignored even if numbers are entered.","Lorsqu'il est activé, le temps de connexion ci-dessus s'applique ; désactivé, la limite est ignorée même si des chiffres sont saisis.",Etkinleştirildiğinde yukarıdaki bağlantı süresi uygulanır; devre dışı bırakıldığında sayılar girilse bile sınır yok sayılır.,"Cuando está activado, se aplica el tiempo de conexión de arriba; cuando está desactivado, el límite se ignora aunque se introduzcan números.",ok,app/templates/radius/users_form.html:1733
-وقت الاتصال اليومي,,Daily connection time,Temps de connexion quotidien,Günlük bağlantı süresi,Tiempo de conexión diario,ok,app/templates/radius/users_form.html:1744
-أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.,,Maximum connection time allowed per day. 0 = unlimited.,Temps de connexion maximal autorisé par jour. 0 = illimité.,Günde izin verilen azami bağlantı süresi. 0 = sınırsız.,Tiempo de conexión máximo permitido al día. 0 = sin límite.,ok,app/templates/radius/users_form.html:1746
-الأيام والأوقات المسموحة للاتصال,,Allowed days and times to connect,Jours et heures de connexion autorisés,Bağlanmaya izin verilen gün ve saatler,Días y horas permitidos para conectarse,ok,app/templates/radius/users_form.html:1758
-(مع اسم اختياري للجهاز),,(with an optional device name),(avec un nom d'appareil facultatif),(isteğe bağlı bir cihaz adıyla),(con un nombre de dispositivo opcional),ok,app/templates/radius/users_form.html:1785
-اسم الجهاز (جوال، لابتوب…),,"Device name (phone, laptop…)","Nom de l'appareil (téléphone, ordinateur portable…)","Cihaz adı (telefon, dizüstü…)","Nombre del dispositivo (móvil, portátil…)",ok,app/templates/radius/users_form.html:1788
-إضافة MAC,,Add MAC,Ajouter MAC,MAC ekle,Añadir MAC,ok,app/templates/radius/users_form.html:1789
-الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب. اسم الجهاز اختياري ويساعدك على التمييز بين الأجهزة.,,The MACs listed here are the ones allowed to log in to this account. The device name is optional and helps you distinguish between devices.,Les MAC répertoriées ici sont celles autorisées à se connecter à ce compte. Le nom de l'appareil est facultatif et vous aide à distinguer les appareils.,Burada listelenen MAC'ler bu hesaba giriş yapmasına izin verilenlerdir. Cihaz adı isteğe bağlıdır ve cihazları ayırt etmenize yardımcı olur.,Las MAC que aparecen aquí son las que pueden iniciar sesión en esta cuenta. El nombre del dispositivo es opcional y te ayuda a distinguir entre dispositivos.,ok,app/templates/radius/users_form.html:1791
-اختيار من سجل دخول المستخدم,,Select from the user's login history,Sélectionner depuis l'historique de connexion de l'utilisateur,Kullanıcının oturum açma geçmişinden seç,Seleccionar del historial de inicio de sesión del usuario,ok,app/templates/radius/users_form.html:1797
-آخر ظهور: %(at)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1801
-· متصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1803
-عنوان ثابت للمشترك عند الحاجة.,,A static address for the subscriber when needed.,Une adresse fixe pour l'abonné en cas de besoin.,Gerektiğinde abone için sabit bir adres.,Una dirección fija para el abonado cuando sea necesario.,ok,app/templates/radius/users_form.html:1812
-الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1815
-عند تشغيله: تُقسَّم سرعة التنزيل بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز (10 ميجا: جهاز=10، جهازان=5، ثلاثة=3.3…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1820
-عند تشغيله: تُقسَّم سرعة الرفع بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1823
-الافتراض العام (من الإعدادات),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1827
-ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1831
-سقفٌ صارم لعدد الجلسات المفتوحة معًا لهذا الحساب — تُحسب كلّ جلسة ولو من الجهاز نفسه. أكبر من 0 = يتقدّم على «عدد الأجهزة المسموحة»؛ 0 = يُطبَّق «عدد الأجهزة المسموحة».,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1834
-خادم DNS الأساسي (PPP),,Primary DNS server (PPP),Serveur DNS principal (PPP),Birincil DNS sunucusu (PPP),Servidor DNS principal (PPP),ok,app/templates/radius/users_form.html:1837
-خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.,,The DNS server pushed to the subscriber on connection. Empty = device setting.,Le serveur DNS transmis à l'abonné lors de la connexion. Vide = réglage de l'équipement.,Bağlantı sırasında aboneye gönderilen DNS sunucusu. Boş = cihaz ayarı.,El servidor DNS que se envía al abonado al conectarse. Vacío = ajuste del dispositivo.,ok,app/templates/radius/users_form.html:1839
-خادم DNS الثانوي (PPP),,Secondary DNS server (PPP),Serveur DNS secondaire (PPP),İkincil DNS sunucusu (PPP),Servidor DNS secundario (PPP),ok,app/templates/radius/users_form.html:1840
-خادم احتياطي يُستخدم إذا تعطّل الأساسي.,,Backup server used if the primary one fails.,Serveur de secours utilisé si le serveur principal tombe en panne.,Birincil sunucu arızalanırsa kullanılan yedek sunucu.,Servidor de respaldo que se usa si el principal falla.,ok,app/templates/radius/users_form.html:1842
-البرودباند (اختياري),,Broadband (optional),Haut débit (facultatif),Geniş bant (isteğe bağlı),Banda ancha (opcional),ok,app/templates/radius/users_form.html:1854
-للبرودباند (PPPoE),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1860
-عنوانٌ ثابت (IPv4) يُرسَل للراوتر عند دخول المشترك (Framed-IP-Address). يدخل مشترك البرودباند باسم الدخول وكلمة المرور الأساسيّين. إن ضُبط «IP ثابت» فيجب أن يطابقه، ولا يُعطى العنوان لمشتركين اثنين.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1862
-إعدادات شبكة متقدمة جدًا,,Very Advanced Network Settings,Paramètres réseau très avancés,Çok Gelişmiş Ağ Ayarları,Configuración de red muy avanzada,ok,app/templates/radius/users_form.html:1872
-للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.,,For special cases only. Leave it blank unless you have a specific network device policy for this subscriber.,Pour les cas particuliers uniquement. Laissez-le vide sauf si vous avez une politique de périphérique réseau spécifique pour cet abonné.,Yalnızca özel durumlar için. Bu abone için belirli bir ağ aygıtı politikanız yoksa boş bırakın.,Solo para casos especiales. Déjalo vacío a menos que tengas una política de dispositivo de red específica para este abonado.,ok,app/templates/radius/users_form.html:1878
-سلسلة فلترة الراوتر,,Router filter chain,Chaîne de filtrage du routeur,Yönlendirici filtre zinciri,Cadena de filtrado del router,ok,app/templates/radius/users_form.html:1881
-تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.,,Routes the subscriber's traffic through a specific Firewall chain.,Achemine le trafic de l'abonné via une chaîne Firewall spécifique.,Abonenin trafiğini belirli bir Firewall zinciri üzerinden geçirir.,Pasa el tráfico del abonado por una cadena de Firewall específica.,ok,app/templates/radius/users_form.html:1883
-قائمة عناوين الراوتر,,Router Address List,Liste des adresses du routeur,Yönlendirici Adres Listesi,Lista de direcciones del router,ok,app/templates/radius/users_form.html:1884
-يضيف عنوان المشترك لقائمة Address-List في الراوتر.,,Adds the subscriber's address to the Address-List on the router.,Ajoute l'adresse de l'abonné à l'Address-List du routeur.,Abonenin adresini yönlendiricideki Address-List'e ekler.,Añade la dirección del abonado a la Address-List del router.,ok,app/templates/radius/users_form.html:1886
-مسار الراوتر الموجَّه,,Directed router route,Route dirigée du routeur,Yönlendirilmiş yönlendirici rotası,Ruta dirigida del router,ok,app/templates/radius/users_form.html:1887
-شبكة إضافية توجَّه خلف اتصال المشترك.,,An additional network routed behind the subscriber's connection.,Un réseau supplémentaire routé derrière la connexion de l'abonné.,Abonenin bağlantısının arkasına yönlendirilen ek bir ağ.,Una red adicional enrutada detrás de la conexión del abonado.,ok,app/templates/radius/users_form.html:1889
-مجموعة مستخدم الراوتر,,Router user group,Groupe d'utilisateurs du routeur,Yönlendirici kullanıcı grubu,Grupo de usuarios del router,ok,app/templates/radius/users_form.html:1890
-مجموعة صلاحيات Hotspot في الراوتر.,,Hotspot permission group on the router.,Groupe de permissions Hotspot sur le routeur.,Yönlendiricideki Hotspot izin grubu.,Grupo de permisos Hotspot en el router.,ok,app/templates/radius/users_form.html:1892
-أولوية طابور السرعة,,Speed queue priority,Priorité de la file d'attente de vitesse,Hız kuyruğu önceliği,Prioridad de la cola de velocidad,ok,app/templates/radius/users_form.html:1893
-1 = أعلى أولوية عند ازدحام الشبكة.,,1 = highest priority when the network is congested.,1 = priorité la plus élevée en cas de congestion du réseau.,1 = ağ tıkanıklığında en yüksek öncelik.,1 = máxima prioridad cuando la red está congestionada.,ok,app/templates/radius/users_form.html:1895
-نطاق عناوين الجلسات,,Session address range,Plage d'adresses des sessions,Oturum adres aralığı,Rango de direcciones de sesiones,ok,app/templates/radius/users_form.html:1896
-اسم Pool يأخذ منه المشترك عنوانه.,,Name of the pool the subscriber gets its address from.,Nom du pool dont l'abonné obtient son adresse.,Abonenin adresini aldığı havuzun adı.,Nombre del pool del que el abonado obtiene su dirección.,ok,app/templates/radius/users_form.html:1898
-فترة تحديث الاستهلاك (ث),,Usage refresh interval (s),Intervalle d'actualisation de la consommation (s),Kullanım yenileme aralığı (sn),Intervalo de actualización del consumo (s),ok,app/templates/radius/users_form.html:1899
-كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.,,"How often, in seconds, the router reports session usage.","À quelle fréquence, en secondes, le routeur signale la consommation de la session.",Yönlendiricinin oturum kullanımını kaç saniyede bir bildirdiği.,Cada cuántos segundos el router informa del consumo de la sesión.,ok,app/templates/radius/users_form.html:1901
-خصائص PPP إضافية,,Additional PPP properties,Propriétés PPP supplémentaires,Ek PPP özellikleri,Propiedades PPP adicionales,ok,app/templates/radius/users_form.html:1902
-خاصية=قيمة (سطر لكل واحدة),,attribute=value (one per line),attribut=valeur (une par ligne),öznitelik=değer (her biri bir satırda),atributo=valor (uno por línea),ok,app/templates/radius/users_form.html:1903
-سطر لكل خاصية.,,One line per attribute.,Une ligne par attribut.,Her özellik için bir satır.,Una línea por atributo.,ok,app/templates/radius/users_form.html:1904
-لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد,,No saved expiry time. Save to set the counter,Aucune heure d'expiration enregistrée. Enregistrez pour fixer le compteur,Kaydedilmiş bitiş zamanı yok. Sayacı sabitlemek için kaydedin,No hay hora de vencimiento guardada. Guarde para fijar el contador,ok,app/templates/radius/users_form.html:2084
-انتهت السرعة المؤقتة وسترجع لسرعة العرض,,Temporary speed has ended and will revert to the offer speed,La vitesse temporaire a pris fin et reviendra à la vitesse de l'offre,Geçici hız sona erdi ve teklif hızına dönecek,La velocidad temporal ha terminado y volverá a la velocidad de la oferta,ok,app/templates/radius/users_form.html:2091
-باقي على انتهاء السرعة المؤقتة,,Remaining until temporary speed ends,Restant avant la fin de la vitesse temporaire,Geçici hızın bitmesine kalan,Restante hasta el fin de la velocidad temporal,ok,app/templates/radius/users_form.html:2096
-لا توجد ماكات مقفلة حاليًا.,,No locked MACs currently.,Aucune adresse MAC verrouillée actuellement.,Şu anda kilitli MAC yok.,No hay MAC bloqueadas actualmente.,ok,app/templates/radius/users_form.html:2246
-حذف MAC,,Delete MAC,Supprimer la MAC,MAC'i sil,Eliminar MAC,ok,app/templates/radius/users_form.html:2265
-صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.,,Invalid MAC format. Enter it like AA:BB:CC:DD:EE:FF.,Format MAC invalide. Saisissez-le comme AA:BB:CC:DD:EE:FF.,Geçersiz MAC biçimi. AA:BB:CC:DD:EE:FF gibi girin.,Formato MAC no válido. Escríbalo como AA:BB:CC:DD:EE:FF.,ok,app/templates/radius/users_form.html:2279
-هذا الماك موجود مسبقًا في القائمة.,,This MAC already exists in the list.,Cette adresse MAC existe déjà dans la liste.,Bu MAC listede zaten mevcut.,Esta MAC ya existe en la lista.,ok,app/templates/radius/users_form.html:2284
-الماك الموجود في السجل غير صالح.,,The MAC in the record is invalid.,L'adresse MAC dans l'enregistrement est invalide.,Kayıttaki MAC geçersiz.,La MAC en el registro no es válida.,ok,app/templates/radius/users_form.html:2316
-تعذّر النسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2388
-مقفول — لا تملك صلاحية تعديل هذا الحقل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2416
+بيانات شاملة للمشترك: حساب، سرعة، شبكة، حصة، مزايا متقدمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:855
+البيانات الشخصية,,Personal data,Données personnelles,Kişisel veriler,Datos personales,ok,app/templates/radius/users_form.html:871
+ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.,,Start from the internet account and the plan. The remaining sections are optional and used when needed to customize this subscriber.,Commencez par le compte internet et le forfait. Les autres sections sont facultatives et utilisées au besoin pour personnaliser cet abonné.,İnternet hesabı ve paketten başlayın. Kalan bölümler isteğe bağlıdır ve bu aboneyi özelleştirmek gerektiğinde kullanılır.,Comienza por la cuenta de internet y el plan. Las demás secciones son opcionales y se usan cuando se necesita personalizar a este abonado.,ok,app/templates/radius/users_form.html:877
+اسم الدخول هو مفتاح المصادقة. تعديله يُعيد ربط كل السجلات والجلسات باسمه الجديد؛ إن كان المشترك متصلاً الآن فسيُعاد اتصاله ليدخل بالاسم الجديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:914
+معطَّل: الدخول باسم المستخدم وحدَه,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:927
+مفعَّل: تُطلب كلمة المرور عند الدخول,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:928
+عطّله ليدخل المشترك باسمه فقط بلا كلمة مرور. الكلمة المحفوظة لا تُمسح — إن أعدتَ تفعيله عاد الدخول بها كما كان.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:929
+تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.,,Network devices use it to verify the account. Click the eye to reveal it or the copy icon to give it to the subscriber.,Les appareils réseau l'utilisent pour vérifier le compte. Cliquez sur l'œil pour l'afficher ou sur l'icône de copie pour la donner à l'abonné.,Ağ cihazları bunu hesabı doğrulamak için kullanır. Göstermek için göz simgesine veya aboneye vermek için kopyala simgesine tıklayın.,Los dispositivos de red la usan para verificar la cuenta. Haz clic en el ojo para mostrarla o en el icono de copiar para dársela al abonado.,ok,app/templates/radius/users_form.html:954
+دخول عبر صفحة تسجيل الدخول للهوت سبوت,,Login via the hotspot sign-in page,Connexion via la page de connexion du hotspot,Hotspot oturum açma sayfası üzerinden giriş,Acceso mediante la página de inicio de sesión del hotspot,ok,app/templates/radius/users_form.html:987
+يمكنك اختيار خدمة واحدة أو الاثنتين معًا.,,You can choose one service or both together.,Vous pouvez choisir un seul service ou les deux ensemble.,Bir hizmeti veya ikisini birlikte seçebilirsiniz.,Puedes elegir un servicio o ambos a la vez.,ok,app/templates/radius/users_form.html:1000
+— اختر الباقة —,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1011
+تُدار من,,Managed from,Géré depuis,Yönetildiği yer,Gestionado desde,ok,app/templates/radius/users_form.html:1049
+تاريخ انتهاء الاشتراك,,Subscription expiry date,Date d’expiration de l’abonnement,Abonelik bitiş tarihi,Fecha de vencimiento de la suscripción,ok,app/templates/radius/users_form.html:1057
+أبريل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+أغسطس,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+أكتوبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+ديسمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+سبتمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+فبراير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+مارس,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+مايو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+نوفمبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+يناير,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+يوليو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+يونيو,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1075
+اختر تاريخ الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1083
+سنة سابقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1093
+سنة تالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1095
+ساعة الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1109
+حدّد تاريخ انتهاء الاشتراك. إن تركته فارغًا يُعتبر الحساب منتهيًا فور الإضافة (تاريخ الانتهاء = وقت الإضافة) حتى تحدّد تاريخًا صحيحًا — أو اختر «بدون انتهاء» صراحةً.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1129
+تاريخ الانتهاء الفعلي الحالي. تعديله يغيّر انتهاء الاشتراك مباشرة؛ اتركه كما هو للإبقاء على التاريخ الحالي. «بدون انتهاء» يجعل الحساب لا ينتهي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1130
+اثن,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1172
+إذا عبّأت هذه الخانة يُعتمد هذا السعر ويتجاوز سعر العرض. اتركه فارغًا أو 0 لاستخدام سعر الباقة.,,"If you fill this field, this price is applied and overrides the offer price. Leave it empty or 0 to use the plan price.","Si vous remplissez ce champ, ce prix est appliqué et remplace le prix de l'offre. Laissez-le vide ou à 0 pour utiliser le prix du forfait.",Bu alanı doldurursanız bu fiyat uygulanır ve teklif fiyatını geçersiz kılar. Paket fiyatını kullanmak için boş bırakın veya 0 yazın.,"Si rellenas este campo, se aplica este precio y anula el precio de la oferta. Déjalo vacío o en 0 para usar el precio del plan.",ok,app/templates/radius/users_form.html:1230
+الاسم الأول,,First Name,Prénom,Ad,Nombre,ok,app/templates/radius/users_form.html:1254
+رقم التواصل مع المشترك للتذكير والتحصيل.,,The subscriber's contact number for reminders and collection.,Le numéro de contact de l'abonné pour les rappels et l'encaissement.,Hatırlatma ve tahsilat için abonenin iletişim numarası.,El número de contacto del abonado para recordatorios y cobros.,ok,app/templates/radius/users_form.html:1264
+اختياري — يُستخدم للمراسلات والإشعارات.,,Optional — used for correspondence and notifications.,Facultatif — utilisé pour la correspondance et les notifications.,İsteğe bağlı — yazışmalar ve bildirimler için kullanılır.,Opcional: se utiliza para la correspondencia y las notificaciones.,ok,app/templates/radius/users_form.html:1267
+الرقم الوطني,,National ID number,Numéro national d'identité,Ulusal kimlik numarası,Número de identidad nacional,ok,app/templates/radius/users_form.html:1268
+لتوثيق هوية المشترك في السجلات.,,To record the subscriber's identity in the logs.,Pour consigner l'identité de l'abonné dans les journaux.,Abonenin kimliğini kayıtlarda belgelemek için.,Para documentar la identidad del abonado en los registros.,ok,app/templates/radius/users_form.html:1270
+طريقة الدفع المفضلة,,Preferred payment method,Mode de paiement préféré,Tercih edilen ödeme yöntemi,Método de pago preferido,ok,app/templates/radius/users_form.html:1271
+نقدًا / محفظة / تحويل,,Cash / Wallet / Transfer,Espèces / Portefeuille / Virement,Nakit / Cüzdan / Havale,Efectivo / Monedero / Transferencia,ok,app/templates/radius/users_form.html:1272
+للتذكير كيف يفضّل المشترك أن يدفع.,,A reminder of how the subscriber prefers to pay.,Pour rappeler comment l'abonné préfère payer.,Abonenin nasıl ödeme yapmayı tercih ettiğini hatırlatmak için.,Para recordar cómo prefiere pagar el abonado.,ok,app/templates/radius/users_form.html:1273
+مدينة سكن المشترك.,,Subscriber's city of residence.,Ville de résidence de l'abonné.,Abonenin ikamet ettiği şehir.,Ciudad de residencia del abonado.,ok,app/templates/radius/users_form.html:1276
+المنطقة / الحي,,Area / district,Zone / quartier,Bölge / mahalle,Zona / barrio,ok,app/templates/radius/users_form.html:1277
+يساعد فرق الصيانة على الوصول للموقع.,,Helps maintenance teams reach the site.,Aide les équipes de maintenance à atteindre le site.,Bakım ekiplerinin sahaya ulaşmasına yardımcı olur.,Ayuda a los equipos de mantenimiento a llegar al sitio.,ok,app/templates/radius/users_form.html:1279
+أي ملاحظات تخص المشترك (اختياري),,Any notes about the subscriber (optional),Toute remarque concernant l'abonné (facultatif),Abone hakkında herhangi bir not (isteğe bağlı),Cualquier nota sobre el abonado (opcional),ok,app/templates/radius/users_form.html:1281
+سرعة أساسية,,Base speed,Débit de base,Temel hız,Velocidad base,ok,app/templates/radius/users_form.html:1304
+قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة.,,Fixed values that override the plan's speed. Leave them at 0 to use the plan's value.,Valeurs fixes qui remplacent la vitesse du forfait. Laissez-les à 0 pour utiliser la valeur du forfait.,Paketin hızını geçersiz kılan sabit değerler. Paketin değerini kullanmak için 0 olarak bırakın.,Valores fijos que anulan la velocidad del plan. Déjelos en 0 para usar el valor del plan.,ok,app/templates/radius/users_form.html:1307
+سرعة مخصصة,,Custom Speed,Vitesse personnalisée,Özel Hız,Velocidad personalizada,ok,app/templates/radius/users_form.html:1316
+فعّلها لتطبيق سرعة خاصة بدل سرعة الباقة.,,Enable it to apply a custom speed instead of the plan's speed.,Activez-le pour appliquer une vitesse personnalisée au lieu de celle du forfait.,Paket hızı yerine özel bir hız uygulamak için etkinleştirin.,Actívalo para aplicar una velocidad personalizada en lugar de la del plan.,ok,app/templates/radius/users_form.html:1318
+0 = استخدم قيمة الباقة.,,0 = use the plan value.,0 = utiliser la valeur du forfait.,0 = paket değerini kullan.,0 = usar el valor del plan.,ok,app/templates/radius/users_form.html:1323
+رفع مؤقت بدون تغيير الباقة.,,Temporary boost without changing the plan.,Augmentation temporaire sans changer le forfait.,Paketi değiştirmeden geçici artış.,Aumento temporal sin cambiar el plan.,ok,app/templates/radius/users_form.html:1337
+مدة السرعة المؤقتة,,Temporary speed duration,Durée de la vitesse temporaire,Geçici hız süresi,Duración de la velocidad temporal,ok,app/templates/radius/users_form.html:1340
+بعد انتهاء المدة يرجع المشترك لسرعته العادية.,,"After the period ends, the subscriber returns to their normal speed.","Une fois la période terminée, l'abonné revient à sa vitesse normale.",Süre dolduğunda abone normal hızına geri döner.,"Una vez finalizado el período, el abonado vuelve a su velocidad normal.",ok,app/templates/radius/users_form.html:1346
+سرعة تنزيل مؤقتة,,Temporary download speed,Vitesse de réception temporaire,Geçici indirme hızı,Velocidad de bajada temporal,ok,app/templates/radius/users_form.html:1349
+سرعة التنزيل خلال فترة الرفع المؤقت.,,Download speed during the temporary boost period.,Débit de téléchargement pendant la période de boost temporaire.,Geçici hızlandırma süresi boyunca indirme hızı.,Velocidad de descarga durante el periodo de aumento temporal.,ok,app/templates/radius/users_form.html:1351
+سرعة رفع مؤقتة,,Temporary upload speed,Débit d'envoi temporaire,Geçici yükleme hızı,Velocidad de subida temporal,ok,app/templates/radius/users_form.html:1354
+سرعة الرفع خلال فترة الرفع المؤقت.,,Upload speed during the temporary boost period.,Vitesse de téléversement pendant la période d'accélération temporaire.,Geçici hızlandırma dönemi boyunca yükleme hızı.,Velocidad de subida durante el período de aumento temporal.,ok,app/templates/radius/users_form.html:1356
+السرعة المؤقتة غير مفعّلة,,Temporary speed is not enabled,La vitesse temporaire n'est pas activée,Geçici hız etkin değil,La velocidad temporal no está habilitada,ok,app/templates/radius/users_form.html:1363
+إلغاء السرعة المؤقتة,,Cancel temporary speed,Annuler la vitesse temporaire,Geçici hızı iptal et,Cancelar velocidad temporal,ok,app/templates/radius/users_form.html:1365
+قواعد سرعة مجدوَلة,,Scheduled speed rules,Règles de vitesse planifiées,Zamanlanmış hız kuralları,Reglas de velocidad programadas,ok,app/templates/radius/users_form.html:1376
+تفعيل كل القواعد,,Enable all rules,Activer toutes les règles,Tüm kuralları etkinleştir,Activar todas las reglas,ok,app/templates/radius/users_form.html:1388
+فعّل الكل,,Enable all,Tout activer,Tümünü etkinleştir,Activar todo,ok,app/templates/radius/users_form.html:1390
+تعطيل كل القواعد,,Disable all rules,Désactiver toutes les règles,Tüm kuralları devre dışı bırak,Desactivar todas las reglas,ok,app/templates/radius/users_form.html:1393
+عطّل الكل,,Disable all,Tout désactiver,Tümünü devre dışı bırak,Desactivar todo,ok,app/templates/radius/users_form.html:1395
+قواعد بفترات زمنية وأيام محددة,,Rules with specific time periods and days,Règles avec plages horaires et jours précis,Belirli zaman aralıkları ve günler için kurallar,Reglas con franjas horarias y días específicos,ok,app/templates/radius/users_form.html:1398
+سرعة مخصصة فعالة,,Active custom speed,Vitesse personnalisée active,Etkin özel hız,Velocidad personalizada activa,ok,app/templates/radius/users_form.html:1449
+سيُحفظ مع المشترك,,Will be saved with the subscriber,Sera enregistré avec l'abonné,Aboneyle birlikte kaydedilecek,Se guardará con el abonado,ok,app/templates/radius/users_form.html:1586
+تم نسخ القيم — راجعها ثم اعتمد القاعدة,,Values copied — review them then approve the rule,Valeurs copiées — vérifiez-les puis approuvez la règle,Değerler kopyalandı — gözden geçirin sonra kuralı onaylayın,Valores copiados — revísalos y luego aprueba la regla,ok,app/templates/radius/users_form.html:1648
+أدخل سرعة التنزيل أو الرفع (واحدة على الأقل),,Enter the download or upload speed (at least one),Saisissez la vitesse de téléchargement ou d'envoi (au moins une),İndirme veya yükleme hızını girin (en az biri),Introduzca la velocidad de descarga o subida (al menos una),ok,app/templates/radius/users_form.html:1659
+تم — ستُحفظ مع المشترك,,Done — it will be saved with the subscriber,Terminé — il sera enregistré avec l'abonné,Tamam — abone ile birlikte kaydedilecek,Listo — se guardará con el suscriptor,ok,app/templates/radius/users_form.html:1664
+كوتا إجمالية (مدمجة),,Total quota (combined),Quota total (combiné),Toplam kota (birleşik),Cuota total (combinada),ok,app/templates/radius/users_form.html:1714
+إجمالي البيانات المسموحة للحساب؛ إن حُدِّدت تحلّ محل كوتا التنزيل/الرفع المنفصلة. 0 = غير محدودة.,,"The total data allowed for the account; if set, it replaces the separate download/upload quotas. 0 = unlimited.","Le total de données autorisé pour le compte ; s'il est défini, il remplace les quotas de téléchargement/téléversement distincts. 0 = illimité.",Hesap için izin verilen toplam veri; ayarlanırsa ayrı indirme/yükleme kotalarının yerine geçer. 0 = sınırsız.,"El total de datos permitido para la cuenta; si se establece, reemplaza las cuotas de descarga/subida separadas. 0 = ilimitado.",ok,app/templates/radius/users_form.html:1716
+حدّ التنزيل المنفصل للحساب. 0 = غير محدودة.,,The separate download limit for the account. 0 = unlimited.,La limite de téléchargement distincte du compte. 0 = illimité.,Hesap için ayrı indirme sınırı. 0 = sınırsız.,El límite de descarga separado de la cuenta. 0 = ilimitado.,ok,app/templates/radius/users_form.html:1719
+حدّ الرفع المنفصل للحساب. 0 = غير محدودة.,,The account's separate upload limit. 0 = unlimited.,La limite d'envoi distincte du compte. 0 = illimité.,Hesabın ayrı yükleme sınırı. 0 = sınırsız.,El límite de subida independiente de la cuenta. 0 = sin límite.,ok,app/templates/radius/users_form.html:1722
+أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.,,Maximum total connection time for the account. 0 = no specific limit.,Temps de connexion total maximal pour le compte. 0 = aucune limite spécifique.,Hesap için maksimum toplam bağlantı süresi. 0 = belirli bir sınır yok.,Tiempo total máximo de conexión de la cuenta. 0 = sin límite específico.,ok,app/templates/radius/users_form.html:1725
+تطبيق حد الكوتا,,Apply quota limit,Appliquer la limite de quota,Kota sınırını uygula,Aplicar límite de cuota,ok,app/templates/radius/users_form.html:1726
+عند التفعيل تُطبَّق كوتا التنزيل/الرفع/المدمجة؛ لو معطَّل يُسمح باستخدام غير محدود.,,"When enabled, the download/upload/combined quota is applied; when disabled, unlimited usage is allowed.","Lorsqu'il est activé, le quota de téléchargement/téléversement/combiné s'applique ; désactivé, une utilisation illimitée est autorisée.",Etkinleştirildiğinde indirme/yükleme/birleşik kota uygulanır; devre dışı bırakıldığında sınırsız kullanıma izin verilir.,"Cuando está activado, se aplica la cuota de descarga/subida/combinada; cuando está desactivado, se permite un uso ilimitado.",ok,app/templates/radius/users_form.html:1728
+تطبيق حد وقت الاتصال,,Apply connection time limit,Appliquer la limite de temps de connexion,Bağlantı süresi sınırını uygula,Aplicar el límite de tiempo de conexión,ok,app/templates/radius/users_form.html:1729
+عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو وُضعت أرقام.,,"When enabled, the connection time above is applied; when disabled, the limit is ignored even if numbers are entered.","Lorsqu'il est activé, le temps de connexion ci-dessus s'applique ; désactivé, la limite est ignorée même si des chiffres sont saisis.",Etkinleştirildiğinde yukarıdaki bağlantı süresi uygulanır; devre dışı bırakıldığında sayılar girilse bile sınır yok sayılır.,"Cuando está activado, se aplica el tiempo de conexión de arriba; cuando está desactivado, el límite se ignora aunque se introduzcan números.",ok,app/templates/radius/users_form.html:1731
+وقت الاتصال اليومي,,Daily connection time,Temps de connexion quotidien,Günlük bağlantı süresi,Tiempo de conexión diario,ok,app/templates/radius/users_form.html:1742
+أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.,,Maximum connection time allowed per day. 0 = unlimited.,Temps de connexion maximal autorisé par jour. 0 = illimité.,Günde izin verilen azami bağlantı süresi. 0 = sınırsız.,Tiempo de conexión máximo permitido al día. 0 = sin límite.,ok,app/templates/radius/users_form.html:1744
+الأيام والأوقات المسموحة للاتصال,,Allowed days and times to connect,Jours et heures de connexion autorisés,Bağlanmaya izin verilen gün ve saatler,Días y horas permitidos para conectarse,ok,app/templates/radius/users_form.html:1756
+(مع اسم اختياري للجهاز),,(with an optional device name),(avec un nom d'appareil facultatif),(isteğe bağlı bir cihaz adıyla),(con un nombre de dispositivo opcional),ok,app/templates/radius/users_form.html:1783
+اسم الجهاز (جوال، لابتوب…),,"Device name (phone, laptop…)","Nom de l'appareil (téléphone, ordinateur portable…)","Cihaz adı (telefon, dizüstü…)","Nombre del dispositivo (móvil, portátil…)",ok,app/templates/radius/users_form.html:1786
+إضافة MAC,,Add MAC,Ajouter MAC,MAC ekle,Añadir MAC,ok,app/templates/radius/users_form.html:1787
+الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب. اسم الجهاز اختياري ويساعدك على التمييز بين الأجهزة.,,The MACs listed here are the ones allowed to log in to this account. The device name is optional and helps you distinguish between devices.,Les MAC répertoriées ici sont celles autorisées à se connecter à ce compte. Le nom de l'appareil est facultatif et vous aide à distinguer les appareils.,Burada listelenen MAC'ler bu hesaba giriş yapmasına izin verilenlerdir. Cihaz adı isteğe bağlıdır ve cihazları ayırt etmenize yardımcı olur.,Las MAC que aparecen aquí son las que pueden iniciar sesión en esta cuenta. El nombre del dispositivo es opcional y te ayuda a distinguir entre dispositivos.,ok,app/templates/radius/users_form.html:1789
+اختيار من سجل دخول المستخدم,,Select from the user's login history,Sélectionner depuis l'historique de connexion de l'utilisateur,Kullanıcının oturum açma geçmişinden seç,Seleccionar del historial de inicio de sesión del usuario,ok,app/templates/radius/users_form.html:1795
+آخر ظهور: %(at)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1799
+· متصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1801
+عنوانٌ ثابت (IPv4) يُرسَل للراوتر عند دخول المشترك — هوت سبوت أو برودباند (PPPoE). لا يُعطى العنوان لمشتركين اثنين.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1810
+العنوان المحفوظ «%(ip)s» ليس عنوان IPv4 صالحًا فلا يُرسَل للراوتر — صحّحه إلى IPv4 (مثل 10.0.0.5) أو امسحه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1812
+الحد الأقصى للأجهزة المتصلة في آنٍ واحد لهذا الحساب — يُنفَّذ عند المصادقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1816
+عند تشغيله: تُقسَّم سرعة التنزيل بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز (10 ميجا: جهاز=10، جهازان=5، ثلاثة=3.3…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1821
+عند تشغيله: تُقسَّم سرعة الرفع بالتساوي على الأجهزة المتصلة وتُعاد تلقائيًّا عند اتصال/فصل جهاز.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1824
+الافتراض العام (من الإعدادات),,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1828
+ماذا يحدث عند محاولة جهاز إضافي تجاوز الحدّ: رفضه برسالة «بلغت الحد الأقصى من الجلسات»، أو فصل أقدم جلسة والسماح للجديد. «الافتراض العام» يتبع إعداد اللوحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1832
+سقفٌ صارم لعدد الجلسات المفتوحة معًا لهذا الحساب — تُحسب كلّ جلسة ولو من الجهاز نفسه. أكبر من 0 = يتقدّم على «عدد الأجهزة المسموحة»؛ 0 = يُطبَّق «عدد الأجهزة المسموحة».,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:1835
+خادم DNS الأساسي (PPP),,Primary DNS server (PPP),Serveur DNS principal (PPP),Birincil DNS sunucusu (PPP),Servidor DNS principal (PPP),ok,app/templates/radius/users_form.html:1838
+خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.,,The DNS server pushed to the subscriber on connection. Empty = device setting.,Le serveur DNS transmis à l'abonné lors de la connexion. Vide = réglage de l'équipement.,Bağlantı sırasında aboneye gönderilen DNS sunucusu. Boş = cihaz ayarı.,El servidor DNS que se envía al abonado al conectarse. Vacío = ajuste del dispositivo.,ok,app/templates/radius/users_form.html:1840
+خادم DNS الثانوي (PPP),,Secondary DNS server (PPP),Serveur DNS secondaire (PPP),İkincil DNS sunucusu (PPP),Servidor DNS secundario (PPP),ok,app/templates/radius/users_form.html:1841
+خادم احتياطي يُستخدم إذا تعطّل الأساسي.,,Backup server used if the primary one fails.,Serveur de secours utilisé si le serveur principal tombe en panne.,Birincil sunucu arızalanırsa kullanılan yedek sunucu.,Servidor de respaldo que se usa si el principal falla.,ok,app/templates/radius/users_form.html:1843
+إعدادات شبكة متقدمة جدًا,,Very Advanced Network Settings,Paramètres réseau très avancés,Çok Gelişmiş Ağ Ayarları,Configuración de red muy avanzada,ok,app/templates/radius/users_form.html:1858
+للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.,,For special cases only. Leave it blank unless you have a specific network device policy for this subscriber.,Pour les cas particuliers uniquement. Laissez-le vide sauf si vous avez une politique de périphérique réseau spécifique pour cet abonné.,Yalnızca özel durumlar için. Bu abone için belirli bir ağ aygıtı politikanız yoksa boş bırakın.,Solo para casos especiales. Déjalo vacío a menos que tengas una política de dispositivo de red específica para este abonado.,ok,app/templates/radius/users_form.html:1864
+سلسلة فلترة الراوتر,,Router filter chain,Chaîne de filtrage du routeur,Yönlendirici filtre zinciri,Cadena de filtrado del router,ok,app/templates/radius/users_form.html:1867
+تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.,,Routes the subscriber's traffic through a specific Firewall chain.,Achemine le trafic de l'abonné via une chaîne Firewall spécifique.,Abonenin trafiğini belirli bir Firewall zinciri üzerinden geçirir.,Pasa el tráfico del abonado por una cadena de Firewall específica.,ok,app/templates/radius/users_form.html:1869
+قائمة عناوين الراوتر,,Router Address List,Liste des adresses du routeur,Yönlendirici Adres Listesi,Lista de direcciones del router,ok,app/templates/radius/users_form.html:1870
+يضيف عنوان المشترك لقائمة Address-List في الراوتر.,,Adds the subscriber's address to the Address-List on the router.,Ajoute l'adresse de l'abonné à l'Address-List du routeur.,Abonenin adresini yönlendiricideki Address-List'e ekler.,Añade la dirección del abonado a la Address-List del router.,ok,app/templates/radius/users_form.html:1872
+مسار الراوتر الموجَّه,,Directed router route,Route dirigée du routeur,Yönlendirilmiş yönlendirici rotası,Ruta dirigida del router,ok,app/templates/radius/users_form.html:1873
+شبكة إضافية توجَّه خلف اتصال المشترك.,,An additional network routed behind the subscriber's connection.,Un réseau supplémentaire routé derrière la connexion de l'abonné.,Abonenin bağlantısının arkasına yönlendirilen ek bir ağ.,Una red adicional enrutada detrás de la conexión del abonado.,ok,app/templates/radius/users_form.html:1875
+مجموعة مستخدم الراوتر,,Router user group,Groupe d'utilisateurs du routeur,Yönlendirici kullanıcı grubu,Grupo de usuarios del router,ok,app/templates/radius/users_form.html:1876
+مجموعة صلاحيات Hotspot في الراوتر.,,Hotspot permission group on the router.,Groupe de permissions Hotspot sur le routeur.,Yönlendiricideki Hotspot izin grubu.,Grupo de permisos Hotspot en el router.,ok,app/templates/radius/users_form.html:1878
+أولوية طابور السرعة,,Speed queue priority,Priorité de la file d'attente de vitesse,Hız kuyruğu önceliği,Prioridad de la cola de velocidad,ok,app/templates/radius/users_form.html:1879
+1 = أعلى أولوية عند ازدحام الشبكة.,,1 = highest priority when the network is congested.,1 = priorité la plus élevée en cas de congestion du réseau.,1 = ağ tıkanıklığında en yüksek öncelik.,1 = máxima prioridad cuando la red está congestionada.,ok,app/templates/radius/users_form.html:1881
+نطاق عناوين الجلسات,,Session address range,Plage d'adresses des sessions,Oturum adres aralığı,Rango de direcciones de sesiones,ok,app/templates/radius/users_form.html:1882
+اسم Pool يأخذ منه المشترك عنوانه.,,Name of the pool the subscriber gets its address from.,Nom du pool dont l'abonné obtient son adresse.,Abonenin adresini aldığı havuzun adı.,Nombre del pool del que el abonado obtiene su dirección.,ok,app/templates/radius/users_form.html:1884
+فترة تحديث الاستهلاك (ث),,Usage refresh interval (s),Intervalle d'actualisation de la consommation (s),Kullanım yenileme aralığı (sn),Intervalo de actualización del consumo (s),ok,app/templates/radius/users_form.html:1885
+كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.,,"How often, in seconds, the router reports session usage.","À quelle fréquence, en secondes, le routeur signale la consommation de la session.",Yönlendiricinin oturum kullanımını kaç saniyede bir bildirdiği.,Cada cuántos segundos el router informa del consumo de la sesión.,ok,app/templates/radius/users_form.html:1887
+خصائص PPP إضافية,,Additional PPP properties,Propriétés PPP supplémentaires,Ek PPP özellikleri,Propiedades PPP adicionales,ok,app/templates/radius/users_form.html:1888
+خاصية=قيمة (سطر لكل واحدة),,attribute=value (one per line),attribut=valeur (une par ligne),öznitelik=değer (her biri bir satırda),atributo=valor (uno por línea),ok,app/templates/radius/users_form.html:1889
+سطر لكل خاصية.,,One line per attribute.,Une ligne par attribut.,Her özellik için bir satır.,Una línea por atributo.,ok,app/templates/radius/users_form.html:1890
+لا يوجد وقت انتهاء محفوظ. احفظ لتثبيت العداد,,No saved expiry time. Save to set the counter,Aucune heure d'expiration enregistrée. Enregistrez pour fixer le compteur,Kaydedilmiş bitiş zamanı yok. Sayacı sabitlemek için kaydedin,No hay hora de vencimiento guardada. Guarde para fijar el contador,ok,app/templates/radius/users_form.html:2070
+انتهت السرعة المؤقتة وسترجع لسرعة العرض,,Temporary speed has ended and will revert to the offer speed,La vitesse temporaire a pris fin et reviendra à la vitesse de l'offre,Geçici hız sona erdi ve teklif hızına dönecek,La velocidad temporal ha terminado y volverá a la velocidad de la oferta,ok,app/templates/radius/users_form.html:2077
+باقي على انتهاء السرعة المؤقتة,,Remaining until temporary speed ends,Restant avant la fin de la vitesse temporaire,Geçici hızın bitmesine kalan,Restante hasta el fin de la velocidad temporal,ok,app/templates/radius/users_form.html:2082
+لا توجد ماكات مقفلة حاليًا.,,No locked MACs currently.,Aucune adresse MAC verrouillée actuellement.,Şu anda kilitli MAC yok.,No hay MAC bloqueadas actualmente.,ok,app/templates/radius/users_form.html:2232
+حذف MAC,,Delete MAC,Supprimer la MAC,MAC'i sil,Eliminar MAC,ok,app/templates/radius/users_form.html:2251
+صيغة الماك غير صحيحة. اكتبها مثل AA:BB:CC:DD:EE:FF.,,Invalid MAC format. Enter it like AA:BB:CC:DD:EE:FF.,Format MAC invalide. Saisissez-le comme AA:BB:CC:DD:EE:FF.,Geçersiz MAC biçimi. AA:BB:CC:DD:EE:FF gibi girin.,Formato MAC no válido. Escríbalo como AA:BB:CC:DD:EE:FF.,ok,app/templates/radius/users_form.html:2265
+هذا الماك موجود مسبقًا في القائمة.,,This MAC already exists in the list.,Cette adresse MAC existe déjà dans la liste.,Bu MAC listede zaten mevcut.,Esta MAC ya existe en la lista.,ok,app/templates/radius/users_form.html:2270
+الماك الموجود في السجل غير صالح.,,The MAC in the record is invalid.,L'adresse MAC dans l'enregistrement est invalide.,Kayıttaki MAC geçersiz.,La MAC en el registro no es válida.,ok,app/templates/radius/users_form.html:2302
+تعذّر النسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2374
+مقفول — لا تملك صلاحية تعديل هذا الحقل,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_form.html:2402
 إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة,,"Full management of RADIUS users — search, filter, edit, disable, archive","Gestion complète des utilisateurs RADIUS — recherche, filtrage, modification, désactivation, archivage","RADIUS kullanıcılarının tam yönetimi — arama, filtreleme, düzenleme, devre dışı bırakma, arşivleme","Gestión completa de los usuarios RADIUS — búsqueda, filtrado, edición, desactivación, archivado",ok,app/templates/radius/users_list.html:643
 منتهي الاشتراك,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_list.html:676
 البحث بواسطة,,Search by,Rechercher par,Şuna göre ara,Buscar por,ok,app/templates/radius/users_list.html:702
