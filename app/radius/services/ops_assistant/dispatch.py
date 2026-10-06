@@ -49,9 +49,9 @@ class ApiResult:
         return err if isinstance(err, dict) else {}
 
 
-def _credential_headers() -> dict[str, str]:
+def _credential_headers(credential: str = "") -> dict[str, str]:
     out: dict[str, str] = {}
-    token = getattr(g, "api_token", None)
+    token = credential or getattr(g, "api_token", None)
     if token:
         out["Authorization"] = f"Bearer {token}"
     else:
@@ -70,14 +70,18 @@ def _credential_headers() -> dict[str, str]:
 
 
 def call(method: str, path: str, *, body: Optional[dict] = None,
-         query: Optional[dict] = None, idempotency_key: str = "") -> ApiResult:
+         query: Optional[dict] = None, idempotency_key: str = "",
+         credential: str = "") -> ApiResult:
     """Dispatch ``method path`` through the real /api/v1 stack as the current
-    admin. ``path`` is relative to ``/api/v1`` (e.g. ``/accounts``)."""
+    admin. ``path`` is relative to ``/api/v1`` (e.g. ``/accounts``).
+
+    ``credential`` (a bearer token bound to the admin) is used by the web
+    panel (``web_bridge``), whose session request carries no API credential."""
     app = current_app._get_current_object()
     url = "/api/v1" + path
     if query:
         url += "?" + urlencode({k: v for k, v in query.items() if v not in (None, "")})
-    headers = _credential_headers()
+    headers = _credential_headers(credential)
     if idempotency_key:
         headers["Idempotency-Key"] = idempotency_key
     kwargs: dict[str, Any] = {"method": method.upper(), "headers": headers,
