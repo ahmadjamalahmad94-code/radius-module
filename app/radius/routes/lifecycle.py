@@ -34,8 +34,8 @@ def lifecycle_settings():
         entity_options=[
             ("card", N_("بطاقات")),
             ("subscriber", N_("مشتركين")),
-            ("card_batch", N_("حزم بطاقات")),
-            ("external_file", N_("ملفات خارجية")),
+            # («حزم بطاقات» و«ملفات خارجية» أُزيلتا — قرار المالك 2026-10-06:
+            #  لا تُنفَّذ أبدًا.)
         ],
         unit_options=[
             ("minutes", N_("دقائق")),

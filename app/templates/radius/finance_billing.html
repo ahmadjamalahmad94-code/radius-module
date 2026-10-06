@@ -188,7 +188,6 @@
           <tr>
             <th>{{ _('الكود') }}</th>
             <th class="num">{{ _('القيمة') }}</th>
-            <th>{{ _('الباقة') }}</th>
             <th>{{ _('الحالة') }}</th>
             <th>{{ _('تنتهي في') }}</th>
             <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
@@ -199,7 +198,6 @@
           <tr>
             <td class="mono"><strong>{{ v.code }}</strong></td>
             <td class="num">{{ v.amount|money }}</td>
-            <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
             {# الحالة معرّبة — والقيمة الخام تبقى في title للمراجعة الفنية #}
             {% set _vch_status_ar = {'active': _('نشطة'), 'used': _('مستخدمة'), 'revoked': _('ملغاة'), 'expired': _('منتهية')} %}
             {% set _vch_status_variant = {'active': 'green', 'used': 'blue', 'revoked': 'red', 'expired': 'grey'} %}
@@ -314,9 +312,6 @@
       <div class="fb-form-grid">
         <label>{{ _('عدد الكوبونات') }} <span class="req">*</span><input class="hub-input" type="number" name="count" min="1" max="5000" required value="20"></label>
         <label>{{ _('القيمة لكل كوبون') }} <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0.01" required value="5.00"></label>
-        <label>{{ _('الباقة (اختياري)') }}
-          <select class="hub-select" name="plan_id"><option value="">{{ _('— بدون ربط —') }}</option>{% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
-        </label>
         {# عدد خانات الكود — الافتراضي 12 (الطول التاريخي XXXX-XXXX-XXXX) #}
         <label>{{ _('عدد خانات الكود') }}
           <select class="hub-select" name="code_length">

@@ -248,11 +248,13 @@ def test_enabled_nas_writes_client_file(app, client):
 @pytest.mark.parametrize("raw,expected", [("false", False), ("0", False), (0, False),
                                           ("true", True), ("1", True), (True, True)])
 def test_nas_bool_strings_parsed_strictly(client, raw, expected):
-    res = _nas(client, address="192.0.2.40", enabled=raw, monitoring_enabled=raw)
+    # monitoring_enabled left the router form 2026-10-06 (owner: unread) —
+    # the strict bool parsing is pinned on the remaining toggles.
+    res = _nas(client, address="192.0.2.40", enabled=raw, api_use_tls=raw)
     assert res.status_code == 201, res.get_json()
     data = res.get_json()["data"]
     assert data["enabled"] is expected
-    assert data["monitoring_enabled"] is expected
+    assert data["api_use_tls"] is expected
 
 
 def test_nas_bool_garbage_is_422_and_patch_false_disables(client):
@@ -264,9 +266,10 @@ def test_nas_bool_garbage_is_422_and_patch_false_disables(client):
 
 
 @pytest.mark.parametrize("field,value", [
-    ("auth_port", -1), ("coa_port", 70000), ("ports", -5), ("api_port", 2 ** 63 - 1),
-    ("api_port", 10 ** 20), ("auth_port", True), ("auth_port", 1812.9),
-    ("ssh_port", "abc"), ("acct_port", 0),
+    # auth/acct port and ports count were removed 2026-10-06 (ignored now).
+    ("api_port", -1), ("coa_port", 70000), ("ssh_port", -5), ("api_port", 2 ** 63 - 1),
+    ("api_port", 10 ** 20), ("coa_port", True), ("coa_port", 1812.9),
+    ("ssh_port", "abc"), ("ssh_port", 0),
 ])
 def test_nas_int_fields_ranged_no_500(client, field, value):
     res = _nas(client, address="192.0.2.60", **{field: value})
@@ -281,10 +284,10 @@ def test_nas_patch_huge_int_is_422_not_500(client):
 
 
 def test_nas_numeric_strings_and_null_defaults(client):
-    res = _nas(client, address="192.0.2.62", auth_port="1645", coa_port=None)
+    res = _nas(client, address="192.0.2.62", api_port="8729", coa_port=None)
     assert res.status_code == 201
     data = res.get_json()["data"]
-    assert data["auth_port"] == 1645 and data["coa_port"] == 3799
+    assert data["api_port"] == 8729 and data["coa_port"] == 3799
 
 
 def test_nas_type_whitelist_and_json_fields(client):
@@ -382,7 +385,8 @@ def test_web_nas_form_same_validation(app, client):
     assert _nas_count(app, "192.0.2.120") == 1
     # garbage address / port / secret
     for over in ({"address": "abc"}, {"address": "10.0.0.0/8"},
-                 {"address": "192.0.2.121", "auth_port": "abc"},
+                 # (auth_port left the form 2026-10-06 — owner: nothing reads it)
+                 {"address": "192.0.2.121", "api_port": "abc"},
                  {"address": "192.0.2.122", "coa_port": "70000"},
                  {"address": "192.0.2.123", "secret": 'bad"secret'}):
         res = client.post("/admin/radius/devices", data=_web_form(token, **over))

@@ -41,8 +41,7 @@ def test_other_speed_pair_sites_are_ltr_isolated():
             r'dir="ltr">\s*<i class="fa-solid fa-arrow-down"',
         "_speed_schedules_panel.html":
             r'dir="ltr">\s*<i class="fa-solid fa-arrow-down"',
-        "sgrp_list.html":
-            r'<span dir="ltr">\{\{ g\.shared_speed_down_kbps \}\}',
+        # (sgrp_list.html: shared speeds removed 2026-10-06 — owner decision)
         "cards_offers.html":
             r'<span dir="ltr">\{\{ speed\(ps\.speed_down_kbps\) \}\}',
         "cards_offer_use.html":

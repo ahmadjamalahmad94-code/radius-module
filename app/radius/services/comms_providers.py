@@ -32,7 +32,12 @@ from .notification_campaigns import NotificationProvider, ProviderConfig, Provid
 
 # Channels that can dispatch through the generic HTTP sender. telegram / internal
 # stay queued-only and are handled by the existing QueuedOnlyProvider.
-HTTP_CHANNELS = ("sms", "whatsapp")
+#
+# Owner 2026-10-06: SMS always goes through the tenant's TweetSMS account
+# (services/tweetsms.py) — the custom «SMS HTTP channel» (comms.sms.*) was
+# saved but never used by the real senders, so it is retired: only WhatsApp
+# keeps a generic HTTP config. Stored comms.sms.* values stay, unread.
+HTTP_CHANNELS = ("whatsapp",)
 
 # Channel mode. SMS & WhatsApp are now FREE bring-your-own-provider services:
 # the customer always plugs in their own gateway/account, so ``self_api`` is the
@@ -149,12 +154,13 @@ def save_channel_config(tenant_id: int, channel: str, values: dict[str, Any], *,
     ch = _channel(channel)
     from ..db.repos import tenants_repo
 
+    # «نمط التشغيل» (mode) و«رابط الرصيد» (balance_url) أُزيلا — قرار المالك
+    # 2026-10-06: الأوّل قيمةٌ واحدة لا يقرؤها أحد، والثاني لا يُستعلَم أبدًا.
+    # لا يكتبهما الحفظ؛ القيم القديمة تبقى بلا قارئ.
     normalised = {
         "enabled": "1" if _truthy(values.get("enabled")) else "0",
-        "mode": _mode(values.get("mode")),
         "send_url_template": str(values.get("send_url_template") or "").strip(),
         "http_method": _method(values.get("http_method")),
-        "balance_url": str(values.get("balance_url") or "").strip(),
     }
     for field, value in normalised.items():
         tenants_repo.set_setting(int(tenant_id or 1), _settings_key(ch, field), value, by=by)
@@ -301,6 +307,15 @@ def direct_send(tenant_id: int, channel: str, phone: str, message: str) -> tuple
     number = str(phone or "").strip()
     if not number:
         return False, N_("لا يوجد رقم هاتف للمستلم.")
+    if str(channel or "").strip().lower() == "sms":
+        # SMS = TweetSMS دائمًا (لا رابط HTTP مخصّص للرسائل القصيرة).
+        try:
+            from .tweetsms import send_sms
+            res = send_sms(tid, number, message)
+        except Exception as exc:  # noqa: BLE001 — providers must never raise
+            return False, _tr('خطأ غير متوقع أثناء الإرسال: %(exc)s', exc=exc)
+        ok = bool(res.get("ok"))
+        return ok, ("" if ok else (res.get("error_ar") or N_("فشل الإرسال.")))
     try:
         ch = _channel(channel)
         cfg = load_channel_config(tid, ch)

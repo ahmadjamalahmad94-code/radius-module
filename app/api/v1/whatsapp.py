@@ -21,19 +21,20 @@ from ..responses import fail, ok
 WHATSAPP_EVENTS: tuple[tuple[str, str], ...] = (
     ("otp", N_("رمز التحقق عند الدخول")),
     ("expiry", N_("تنبيه قرب انتهاء الاشتراك")),
-    ("quota", N_("تنبيه قرب نفاد الباقة")),
     ("maintenance", N_("إشعارات الصيانة والانقطاع")),
     ("password", N_("تغيير كلمة المرور")),
-    ("portal", N_("روابط ودعوات بوابة المشترك")),
 )
+
+# «نفاد الباقة» (quota) و«روابط بوابة المشترك» (portal) أُزيلا — قرار المالك
+# 2026-10-06: لا مُرسِل يستدعي هاتين البوّابتين. تُقبَلان بصمت (نسخ التطبيق
+# القديمة) ولا تُكتبان؛ القيمة المخزّنة تبقى بلا قارئ.
+RETIRED_EVENTS = frozenset({"quota", "portal"})
 
 EVENT_HELP = {
     "otp": N_("إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته."),
     "expiry": N_("تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب."),
-    "quota": N_("تنبيه المشترك عندما تقترب باقته من النفاد."),
     "maintenance": N_("إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول."),
     "password": N_("إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه."),
-    "portal": N_("إرسال روابط الدخول والدعوات إلى بوابة المشترك."),
 }
 
 PANEL_PORTAL_WHATSAPP_PATH = "/portal/whatsapp"
@@ -192,7 +193,7 @@ def whatsapp_settings_save():
     tenant_id = _tid()
     data = _body()
     raw = data.get("toggles") if isinstance(data.get("toggles"), dict) else data
-    allowed = {key for key, _label in WHATSAPP_EVENTS}
+    allowed = {key for key, _label in WHATSAPP_EVENTS} | RETIRED_EVENTS
     unknown = sorted(str(key) for key in raw if str(key) not in allowed)
     if unknown:
         return fail(

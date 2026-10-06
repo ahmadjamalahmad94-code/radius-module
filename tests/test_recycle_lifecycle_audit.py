@@ -232,14 +232,14 @@ def test_run_skips_disabled_policy(app):
 def test_run_skips_unsupported_entity_policy(app):
     with app.app_context():
         from app.radius.services import lifecycle
+        from app.radius.db.repos import lifecycle_repo
         _seed_expired_card()
-        # card_batch is a valid policy entity but NOT executed by the worker
-        lifecycle.create_policy(1, {
-            "entity_type": "card_batch", "trigger_type": "expired_at",
-            "delay_value": 0, "delay_unit": "days",
-            "retention_value": 90, "retention_unit": "days",
-            "enabled": True,
-        }, actor="qa")
+        # A LEGACY card_batch policy (a new one is refused since 2026-10-06)
+        # stays stored and is NOT executed by the worker.
+        lifecycle_repo.create_policy(1, actor="qa",
+            entity_type="card_batch", trigger_type="expired_at",
+            delay_value=0, delay_unit="days", action="archive",
+            retention_value=90, retention_unit="days", enabled=1)
         result = lifecycle.run(1, actor="qa")
         assert result["changed"] == 0
         assert result["skipped"] >= 1

@@ -5,7 +5,7 @@ from flask import Blueprint, g, request
 
 from ...radius.core.system_config import effective_system_settings
 from ...radius.db.repos import audit_repo, tenants_repo
-from ...radius.routes.settings import _SETTINGS_KEYS
+from ...radius.routes.settings import _SETTINGS_KEYS, API_IGNORED_KEYS
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -19,7 +19,11 @@ def _actor() -> str:
 
 
 def _catalog() -> dict[str, tuple[str, str]]:
-    return {key: (label, default) for key, label, default in _SETTINGS_KEYS}
+    """Keys the API lists and writes. Keys hidden from the web page or retired
+    by the owner (2026-10-06) are left out — the app edits exactly what the
+    web shows."""
+    return {key: (label, default) for key, label, default in _SETTINGS_KEYS
+            if key not in API_IGNORED_KEYS}
 
 
 def register(bp: Blueprint) -> None:
@@ -73,6 +77,10 @@ def settings_patch():
     if not isinstance(settings, dict):
         return fail("validation_error", _tr("الإعدادات يجب أن تكون كائنًا."), status=422)
     catalog = _catalog()
+    # Retired / hidden keys: accepted silently (old app builds still send
+    # them) and never written.
+    ignored = sorted(str(k) for k in settings if str(k) in API_IGNORED_KEYS)
+    settings = {k: v for k, v in settings.items() if str(k) not in API_IGNORED_KEYS}
     unknown = sorted(str(k) for k in settings if str(k) not in catalog)
     if unknown:
         return fail(
@@ -137,4 +145,4 @@ def settings_patch():
             target_id=",".join(changed.keys()),
             payload={"changed": list(changed.keys())},
         )
-    return ok({"updated": changed, "count": len(changed)})
+    return ok({"updated": changed, "count": len(changed), "ignored": ignored})

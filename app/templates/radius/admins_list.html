@@ -153,7 +153,7 @@
 {# ───────────── صندوق عائم منبثق: إضافة مدير ─────────────
    نفس عقد الإنشاء القائم حرفيًا: POST → radius.admins_create
    بأسماء الحقول: username / full_name / role_id / enabled / password /
-   email / mobile / phone / avatar_url / tags / profile_notes —
+   email / mobile / phone / tags / profile_notes —
    صفر تغيير خلفي.
    الرابط القديم /admins/new يعيد التوجيه إلى هنا بـ ?new=1 فيفتح
    النافذة تلقائيًا (deep-link محفوظ). #}
@@ -239,11 +239,6 @@
             <span class="hub-field-label">{{ _('هاتف آخر') }}</span>
             <input class="hub-input" type="tel" name="phone" maxlength="40" dir="ltr" placeholder="{{ _('هاتف بديل') }}">
             <span class="hub-field-hint">{{ _('رقم احتياطي إن وجد — اختياري.') }}</span>
-          </label>
-          <label class="hub-field">
-            <span class="hub-field-label">{{ _('رابط الصورة الشخصية') }}</span>
-            <input class="hub-input" type="text" name="avatar_url" dir="ltr" placeholder="https://...">
-            <span class="hub-field-hint">{{ _('رابط صورة تظهر بجانب اسم المدير — اختياري.') }}</span>
           </label>
           <label class="hub-field">
             <span class="hub-field-label">{{ _('وسوم (CSV)') }}</span>

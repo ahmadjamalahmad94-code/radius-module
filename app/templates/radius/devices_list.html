@@ -104,10 +104,7 @@
             <td>{{ hub.pill(_nas_type_labels.get(d.nas_type, d.nas_type or '—'), variant="blue", dot=False) }}</td>
             <td>{{ d.location or '—' }}</td>
             <td class="mono small">
-              {{ d.auth_port }}/{{ d.acct_port }}
-              <div class="hub-text-mute" style="font-size:11px">
-                {{ _('قطع الجلسة: %(coa_port)s · واجهة الربط: %(api_port)s', coa_port=d.coa_port, api_port=d.api_port) }}
-              </div>
+              {{ _('قطع الجلسة: %(coa_port)s · واجهة الربط: %(api_port)s', coa_port=d.coa_port, api_port=d.api_port) }}
             </td>
             <td>
               {% set st = d.last_check_status or '' %}

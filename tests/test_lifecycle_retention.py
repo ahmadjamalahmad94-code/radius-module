@@ -169,31 +169,20 @@ def test_subscriber_policy_archives_to_recycle_bin_with_retention_metadata(clien
     assert archived["restore_allowed"] is True
 
 
-def test_external_file_policy_is_saved_but_not_executed_as_radius_action(client):
-    created = client.post(
-        "/api/v1/lifecycle/policies",
-        json={
-            "entity_type": "external_file",
-            "trigger_type": "expired_at",
-            "delay_value": 1,
-            "delay_unit": "days",
-            "retention_value": 90,
-            "retention_unit": "days",
-            "enabled": True,
-        },
-        headers=AUTH,
-    )
-    assert created.status_code == 201, created.get_json()
-
-    preview = client.post("/api/v1/lifecycle/preview", json={}, headers=AUTH)
-    policy_preview = preview.get_json()["data"]["policies"][0]
-    assert policy_preview["supported"] is False
-    assert policy_preview["cards_count"] == 0
-
-    run = client.post("/api/v1/lifecycle/run", json={}, headers=AUTH)
-    assert run.status_code == 200, run.get_json()
-    assert run.get_json()["data"]["changed"] == 0
-    assert run.get_json()["data"]["skipped"] >= 1
+def test_external_file_policy_is_refused_it_never_ran(client):
+    """Owner 2026-10-06: «ملف خارجي» / «حزمة» and the triggers other than
+    «بعد الانتهاء» were saved but never executed — removed. A new policy with
+    them is an Arabic 422, not a silent no-op."""
+    for body in ({"entity_type": "external_file"}, {"entity_type": "card_batch"},
+                 {"entity_type": "card", "trigger_type": "inactive_since"},
+                 {"entity_type": "card", "trigger_type": "disabled_since"}):
+        refused = client.post(
+            "/api/v1/lifecycle/policies",
+            json={"trigger_type": "expired_at", "delay_value": 1,
+                  "delay_unit": "days", **body},
+            headers=AUTH,
+        )
+        assert refused.status_code == 422, (body, refused.get_json())
 
 
 def test_lifecycle_web_page_is_protected_and_renders(client):

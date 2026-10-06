@@ -270,6 +270,46 @@ def network_cards_passwordless(tenant_id: int) -> bool:
     return str(raw or "0").strip().lower() in ("1", "true", "yes", "on")
 
 
+#: Fallback when the network never set «طول اسم/كلمة البطاقة الافتراضي».
+DEFAULT_USERNAME_LENGTH = 8
+DEFAULT_PASSWORD_LENGTH = 6
+
+
+def card_default_lengths(tenant_id: int | None = None) -> tuple[int, int]:
+    """(username_length, password_length) a new batch uses when its form/API
+    call names none — the settings ``cards.default_username_length`` /
+    ``cards.default_password_length`` (owner 2026-10-06: «وصّله»; the generator
+    hardcoded 8/6 and the settings were read by nobody).
+
+    The username length is the WHOLE name (prefix + random + suffix), the same
+    meaning as the form field. A missing/garbled value → 8 / 6. Never raises.
+    """
+    def _read(key: str, default: int, low: int, high: int) -> int:
+        try:
+            from ..db.repos import tenants_repo
+            tid = int(tenant_id) if tenant_id is not None else _current_tenant_id()
+            raw = tenants_repo.get_setting(tid, key, str(default))
+            n = int(str(raw or "").strip())
+        except Exception:  # noqa: BLE001 — a bad setting never blocks generation
+            return default
+        return n if low <= n <= high else default
+
+    return (
+        _read("cards.default_username_length", DEFAULT_USERNAME_LENGTH, 1, USERNAME_LENGTH_MAX),
+        _read("cards.default_password_length", DEFAULT_PASSWORD_LENGTH, 1, PASSWORD_LENGTH_MAX),
+    )
+
+
+def _current_tenant_id() -> int:
+    try:
+        from flask import g, has_app_context
+        if has_app_context():
+            return int(getattr(g, "tenant_id", 1) or 1)
+    except Exception:  # noqa: BLE001
+        pass
+    return 1
+
+
 class CardsService:
     def __init__(self, adapter: RadiusAdapter, audit: RadiusAuditService) -> None:
         self._adapter = adapter
@@ -470,8 +510,11 @@ class CardsService:
         # ── خيارات RM-H4 (كلها optional عشان توافق calls قديمة) ──
         username_prefix: str = "",
         username_suffix: str = "",
-        username_length: int = 8,
-        password_length: int = 6,
+        # None = «الطول الافتراضيّ للشبكة» (cards.default_*_length) — كل
+        # مسارٍ لا يحدّد طولًا (نموذجٌ بخانةٍ فارغة، API بلا المفتاح، استيراد،
+        # عرضٌ تجاريّ) يرث إعداد الشبكة بدل 8/6 الصلبة.
+        username_length: int | None = None,
+        password_length: int | None = None,
         password_charset: str = "digits",
         password_generation_type: str = "medium",
         include_batch_number: bool = False,
@@ -629,6 +672,12 @@ class CardsService:
         if login_without_password is None:
             login_without_password = network_cards_passwordless(
                 self._store_tenant_id())
+        if username_length is None or password_length is None:
+            _dflt_ulen, _dflt_plen = card_default_lengths(self._store_tenant_id())
+            if username_length is None:
+                username_length = _dflt_ulen
+            if password_length is None:
+                password_length = _dflt_plen
 
         # ── حزمةٌ «بلا كلمة مرور» تُولَّد **فارغةَ الكلمات** فعلًا ──────────
         # 🔴 سمير ٢٠٢٦-٠٩-٠٣: فعّل الخيارَ فصارت البطاقةُ تدخل بالرقم

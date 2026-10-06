@@ -626,16 +626,21 @@ def _username_length_or_auto(body: dict) -> int:
     fix2 (R13-L1): الطول **المُرسَل** يُحترم حرفيًّا — أجزاءٌ ثابتة لا تترك
     خانةً عشوائيّة ⇒ 422 عربيّ من الخدمة. أمّا إن لم يُرسَل فالافتراض 8، ويتّسع
     تلقائيًّا لبادئةٍ/لاحقةٍ/رقم حزمةٍ طويلة مع 4 خانات عشوائيّة (سقف 32) —
-    بدل اسمٍ بخانةٍ واحدة (10 تركيبات) أو رفضِ طلبٍ لم يحدّد طولًا أصلًا."""
+    بدل اسمٍ بخانةٍ واحدة (10 تركيبات) أو رفضِ طلبٍ لم يحدّد طولًا أصلًا.
+
+    الافتراض = «طول اسم البطاقة الافتراضي» في إعدادات الشبكة
+    (cards.default_username_length، قرار المالك 2026-10-06) لا 8 الصلبة."""
+    from ...radius.services.cards import card_default_lengths
+    default_len = card_default_lengths(_tid())[0]
     if body.get("username_length") not in (None, ""):
-        return _field_int(body, "username_length", 8, N_("طول اسم المستخدم"))
+        return _field_int(body, "username_length", default_len, N_("طول اسم المستخدم"))
     fixed = (len("".join(str(body.get("username_prefix") or "").split()))
              + len("".join(str(body.get("username_suffix") or "").split()))
              + len("".join(str(body.get("prefix_or_suffix_value") or "").split())))
     if _field_bool(body, "include_batch_number", False):
         from ...radius.db.repos import cards_repo
         fixed += len(str(cards_repo.next_batch_id_estimate())) + 1
-    return max(8, min(32, fixed + 4))
+    return max(default_len, min(32, fixed + 4))
 
 
 _DEVICE_LIMIT_MODES = ("", "reject", "replace")
@@ -682,7 +687,9 @@ def _generate_kwargs(body: dict) -> dict:
     """Parse + type-check the generate body into CardsService kwargs.
     Honours the same fields as the web generator, incl. «رقم فقط»
     (login_without_password / password_length 0)."""
-    password_length = _field_int(body, "password_length", 6, N_("طول كلمة المرور"))
+    # غائبٌ ⇒ None = «طول كلمة المرور الافتراضي» من إعدادات الشبكة
+    # (cards.default_password_length) — يحلّه CardsService.generate_batch.
+    password_length = _field_int(body, "password_length", None, N_("طول كلمة المرور"))
     lwp = _field_bool(body, "login_without_password", None)
     if password_length == 0 and lwp is None:
         # «رقم فقط» كما في الويب: كلمة مرور بطول صفر = الدخول بالرقم وحده.
@@ -929,6 +936,11 @@ def cards_batches_list():
     # ``next_batch_id`` = sqlite_sequence + 1, exactly what the web generator
     # shows for «تضمين رقم الحزمة» (an estimate, not a reservation).
     meta = {"next_batch_id": cards_repo.next_batch_id_estimate()}
+    # «طول اسم/كلمة البطاقة الافتراضي» (إعدادات الشبكة) — يملأ به التطبيق
+    # خانتي الطول في شاشة التوليد كما يفعل الويب.
+    from ...radius.services.cards import card_default_lengths
+    _ulen, _plen = card_default_lengths(_tid())
+    meta["card_defaults"] = {"username_length": _ulen, "password_length": _plen}
     code = (request.args.get("code") or request.args.get("batch_code") or "").strip()[:64]
     if code:
         # Exact lookup by the visible batch code (distributor «ربط حزمة»).

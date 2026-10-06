@@ -155,7 +155,10 @@ def tool_maintenance():
         if action == "notice":
             _send_maintenance_notice()
             return redirect(url_for("radius.tool_maintenance"))
-        days = int(request.form.get("days") or 90)
+        try:   # نصٌّ تالف كان 500 — الافتراض 90 كالحقل الفارغ
+            days = max(1, min(int(request.form.get("days") or 90), 3650))
+        except (TypeError, ValueError):
+            days = 90
         cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat() + "Z"
         with transaction() as conn:
             if action == "purge_radacct":

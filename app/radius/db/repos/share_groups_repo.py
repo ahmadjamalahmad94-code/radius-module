@@ -55,9 +55,9 @@ def create(*, tenant_id: int, name: str, description: str = "",
 
 
 def update(tenant_id: int, gid: int, **changes) -> Optional[dict]:
-    allowed = ("name", "description", "shared_quota_mb",
-               "shared_speed_down_kbps", "shared_speed_up_kbps",
-               "max_members", "enabled")
+    # الكوتا/السرعة المشتركة وحدّ الأعضاء أُزيلت — قرار المالك 2026-10-06: لا
+    # شيء يفرضها. لا يكتبها أيّ تعديل؛ القيم المخزّنة تبقى بلا قارئ.
+    allowed = ("name", "description", "enabled")
     sets, vals = [], []
     for k, v in changes.items():
         if k in allowed:

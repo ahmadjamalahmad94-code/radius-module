@@ -7,7 +7,7 @@
 {% block page_sub %}<span class="sub">{{ _('مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.') }}</span>{% endblock %}
 
 {# ── tiny Arabic helpers ── #}
-{% macro mode_label(m) %}{{ {'self_api':_('ربط ذاتي عبر واجهة الربط')}.get(m, _('غير محدد')) }}{% endmacro %}
+{# «نمط التشغيل» أُزيل — قرار المالك 2026-10-06 (قيمة واحدة بلا قارئ). #}
 {% macro ch_label(c) %}{{ {'sms':_('الرسائل القصيرة'),'whatsapp':_('واتساب'),'telegram':_('تلجرام'),'internal':_('داخلية'),'email':_('البريد'),'push':_('إشعار فوري')}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
   {%- set s = s|string -%}
@@ -85,8 +85,8 @@
   ),
   kpis=[
     {'label': _('القدرات المفعّلة'), 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': _('مفعّلة الآن')},
-    {'label': _('قناة الرسائل القصيرة'), 'value': _('مفعّلة') if (ch_sms and ch_sms.active) else _('متوقفة'), 'icon': 'comment-sms', 'variant': 'green' if (ch_sms and ch_sms.active) else 'amber', 'sub': (mode_label(ch_sms.mode) if ch_sms else '—')},
-    {'label': _('قناة واتساب'), 'value': _('مفعّلة') if (ch_wa and ch_wa.active) else _('متوقفة'), 'icon': 'whatsapp', 'variant': 'green' if (ch_wa and ch_wa.active) else 'amber', 'sub': (mode_label(ch_wa.mode) if ch_wa else '—')},
+    {'label': _('قناة الرسائل القصيرة'), 'value': _('مفعّلة') if (ch_sms and ch_sms.active) else _('متوقفة'), 'icon': 'comment-sms', 'variant': 'green' if (ch_sms and ch_sms.active) else 'amber', 'sub': _('عبر TweetSMS')},
+    {'label': _('قناة واتساب'), 'value': _('مفعّلة') if (ch_wa and ch_wa.active) else _('متوقفة'), 'icon': 'whatsapp', 'variant': 'green' if (ch_wa and ch_wa.active) else 'amber', 'sub': _('عبر رابط المزوّد')},
     {'label': _('بوت واتساب'), 'value': status.bot.commands, 'icon': 'robot', 'variant': 'green' if status.bot.enabled else 'grey', 'sub': (_('أمر مُفعّل') if status.bot.enabled else _('متوقف'))},
     {'label': _('الإشعارات الحدثية'), 'value': status.notifications.enabled ~ ' / ' ~ status.notifications.total, 'icon': 'bell', 'variant': 'amber' if status.notifications.enabled else 'grey', 'sub': _('حدث مُفعّل')},
     {'label': _('تنبيهات الشبكة'), 'value': _('متصل') if status.telegram.connected else _('غير متصل'), 'icon': 'telegram', 'variant': 'blue' if status.telegram.connected else 'red', 'sub': _('عبر تلجرام')},

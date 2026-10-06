@@ -197,7 +197,7 @@
 
       {% if routers %}
       <div class="sa-card">
-        <div class="sa-card-title">{{ _('حدود مخصّصة لكل راوتر') }} <small>{{ _('(فارغ = يستخدم الافتراضي)') }}</small></div>
+        <div class="sa-card-title">{{ _('حدود مخصّصة لكل راوتر') }} <small>{{ _('(فارغ = يرث القيمة العامّة، ويتبعها إن تغيّرت)') }}</small></div>
         <div class="sa-routers">
           {% for r in routers %}
           <div class="sa-router">
@@ -207,12 +207,12 @@
             </div>
             <div class="sa-grid sa-grid--4">
               {% set ov = r.override or {} %}
-              <label class="sa-field">{{ _('مفصول بعد (د)') }}<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ ov.offline_after_min if ov.offline_after_min is not none else '' }}" placeholder="{{ settings.offline_after_min }}"></label>
-              <label class="sa-field">{{ _('سرعة (Mbps)') }}<input type="number" min="1" name="r_{{ r.id }}_speed" value="{{ ov.normal_speed_mbps if ov.normal_speed_mbps is not none else '' }}" placeholder="{{ settings.default_speed_mbps }}"></label>
-              <label class="sa-field">{{ _('استهلاك (GB)') }}<input type="number" min="1" name="r_{{ r.id }}_usage" value="{{ ov.normal_usage_gb if ov.normal_usage_gb is not none else '' }}" placeholder="{{ settings.default_usage_gb }}"></label>
+              <label class="sa-field">{{ _('مفصول بعد (د)') }}<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ ov.offline_after_min if ov.offline_after_min is not none else '' }}" placeholder="{{ _('يرث العامّ (%(v)s)', v=settings.offline_after_min) }}"></label>
+              <label class="sa-field">{{ _('سرعة (Mbps)') }}<input type="number" min="1" name="r_{{ r.id }}_speed" value="{{ ov.normal_speed_mbps if ov.normal_speed_mbps is not none else '' }}" placeholder="{{ _('يرث العامّ (%(v)s)', v=settings.default_speed_mbps) }}"></label>
+              <label class="sa-field">{{ _('استهلاك (GB)') }}<input type="number" min="1" name="r_{{ r.id }}_usage" value="{{ ov.normal_usage_gb if ov.normal_usage_gb is not none else '' }}" placeholder="{{ _('يرث العامّ (%(v)s)', v=settings.default_usage_gb) }}"></label>
               <label class="sa-field">{{ _('النافذة') }}
                 <select name="r_{{ r.id }}_window">
-                  <option value="" {% if not ov.usage_window %}selected{% endif %}>{{ _('الافتراضي') }}</option>
+                  <option value="" {% if not ov.usage_window %}selected{% endif %}>{{ _('يرث العامّ (%(v)s)', v=(_('شهري') if settings.usage_window == 'month' else _('يومي'))) }}</option>
                   <option value="day" {% if ov.usage_window == 'day' %}selected{% endif %}>{{ _('يومي') }}</option>
                   <option value="month" {% if ov.usage_window == 'month' %}selected{% endif %}>{{ _('شهري') }}</option>
                 </select>

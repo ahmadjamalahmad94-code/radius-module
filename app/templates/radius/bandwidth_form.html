@@ -149,12 +149,7 @@
         <div class="help">{{ _('أقصى سرعة رفع للمشترك.') }}</div>
       </div>
 
-      <div class="bf-field">
-        <label>{{ _('الأولوية') }}</label>
-        <input class="hub-input" type="number" name="priority" value="{{ item.priority }}"
-               placeholder="8">
-        <div class="help">{{ _('يُستخدم عند تداخل قواعد السرعة (1 = الأعلى أولوية).') }}</div>
-      </div>
+      {# «الأولوية» أُزيلت — قرار المالك 2026-10-06: لا شيء يقرؤها. #}
 
       {# ── «متقدم» disclosure: holds the raw MikroTik rate-limit line +
          the optional burst builder. Hidden by default. The raw «burst»

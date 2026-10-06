@@ -53,7 +53,6 @@
           <th class="num" style="width:60px">#</th>
           <th>{{ _('الكود') }}</th>
           <th class="num">{{ _('القيمة') }}</th>
-          <th>{{ _('الباقة') }}</th>
           <th>{{ _('الحالة') }}</th>
           <th>{{ _('تنتهي') }}</th>
           <th>{{ _('مولِّد') }}</th>
@@ -66,11 +65,6 @@
           <td class="num mono">{{ v.id }}</td>
           <td class="mono"><strong style="color:var(--hub-brand-ink)">{{ v.code }}</strong></td>
           <td class="num"><strong>{{ v.amount|money }}</strong></td>
-          <td>
-            {% if v.plan_id and plans.get(v.plan_id) %}
-              {{ hub.pill(plans[v.plan_id].name, variant="brand", dot=False) }}
-            {% else %}<span class="hub-text-mute">—</span>{% endif %}
-          </td>
           <td>
             {% if v.status == 'active' %}{{ hub.pill(_('نشط'), variant="green") }}
             {% elif v.status == 'used' %}{{ hub.pill(_('مستخدم'), variant="blue") }}

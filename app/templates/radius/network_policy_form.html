@@ -174,23 +174,7 @@
               {{ _('النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة.') }}
             </span>
           </div>
-          <div class="hub-field">
-            <label class="hub-field-label" for="schedule_id">{{ _('جدولة الوقت (اختياري)') }}</label>
-            <input class="hub-input" type="text" name="schedule_id" id="schedule_id"
-                   placeholder="{{ _('مثلاً: schedule-evenings') }}"
-                   value="{{ policy.schedule_id if policy else '' }}">
-            <span class="hub-field-hint">
-              {{ _('ID جدول من قسم «جدولة السرعات»؛ تركها فارغة = دائم.') }}
-            </span>
-          </div>
-          {% set _fail_open_checked = (policy.fail_open if policy else True) %}
-          <div class="uds-toggle-row">
-            <div class="uds-toggle-row-text">
-              <span class="uds-toggle-row-label">{{ _('الوضع الآمن — إن كانت قائمة الوجهات فارغة، لا تُولَّد قاعدة حظر') }}</span>
-              <span class="uds-toggle-row-meta">{{ _('موصى به') }}</span>
-            </div>
-            {{ toggle_switch(name="fail_open", id="fail_open", checked=_fail_open_checked) }}
-          </div>
+          {# «جدولة الوقت» و«الوضع الآمن» أُزيلا — قرار المالك 2026-10-06 (لا أثر لهما). #}
         {% endcall %}
 
       {% elif service.key == 'walled_garden' %}

@@ -537,12 +537,9 @@ def _form_kwargs_web(form) -> dict[str, Any]:
         "router_id": int(form.get("router_id") or 0),
         "scope": (form.get("scope")
                    or wb_repo.SCOPE_ALL_USERS).strip(),
-        "schedule_id": (form.get("schedule_id") or "").strip(),
+        # «جدولة الوقت» و«الوضع الآمن» أُزيلا — قرار المالك 2026-10-06.
         # parity-c: an unchecked toggle_switch is ABSENT from the POST —
-        # defaulting to "1" made «مفعّلة»/«الوضع الآمن» impossible to turn
-        # off on the web (the app's PATCH could). The form renders both
-        # checked for a new policy, so absent = the operator unchecked it.
-        "fail_open": _bool_from_form(form.get("fail_open")),
+        # defaulting to "1" made «مفعّلة» impossible to turn off on the web.
         "enabled": _bool_from_form(form.get("enabled")),
     }
 

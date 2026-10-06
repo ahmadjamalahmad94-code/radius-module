@@ -46,10 +46,10 @@ def upsert(b: BandwidthProfile) -> BandwidthProfile:
         else:
             conn.execute("""
                 UPDATE bandwidth_profiles
-                SET name=?, rate_down=?, rate_down_unit=?, rate_up=?, rate_up_unit=?, burst=?, priority=?
+                SET name=?, rate_down=?, rate_down_unit=?, rate_up=?, rate_up_unit=?, burst=?
                 WHERE tenant_id = ? AND id = ?
             """, (b.name, b.rate_down, b.rate_down_unit, b.rate_up, b.rate_up_unit,
-                  b.burst, b.priority, b.tenant_id, b.id))
+                  b.burst, b.tenant_id, b.id))
             new_id = b.id
     return get(b.tenant_id, new_id)
 

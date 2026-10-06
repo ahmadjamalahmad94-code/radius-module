@@ -114,10 +114,6 @@
         {{ toggle_switch(name="enabled", checked=(device.enabled or is_new), value="1", id="nd-en") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">{{ _('المراقبة الدورية') }}</label>
-        {{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label=_('مفعَّلة'), off_label=_('معطَّلة')) }}
-      </div>
-      <div class="hub-field">
         <label class="hub-field-label">{{ _('إلزام رسالة التحقق') }}</label>
         {{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label=_('إلزامي'), off_label=_('اختياري')) }}
       </div>
@@ -131,16 +127,8 @@
   {# ── 2. المنافذ ─────────────────────────────────── #}
   {% call hub.section(_('المنافذ'), icon="plug") %}
     <div class="hub-form-row">
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('منفذ المصادقة') }}</label>
-        <input class="hub-input" type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
-        <div class="hub-field-hint">{{ _('قياسي: 1812.') }}</div>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('منفذ المحاسبة') }}</label>
-        <input class="hub-input" type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
-        <div class="hub-field-hint">{{ _('قياسي: 1813.') }}</div>
-      </div>
+      {# «المراقبة الدورية» و«منفذ المصادقة/المحاسبة» و«عدد المنافذ» و«مجتمع
+         المراقبة» (SNMP) أُزيلت — قرار المالك 2026-10-06: لا شيء يقرؤها. #}
       <div class="hub-field">
         <label class="hub-field-label">{{ _('منفذ قطع الجلسة (CoA)') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
@@ -154,10 +142,6 @@
       <div class="hub-field">
         <label class="hub-field-label">{{ _('منفذ الدخول النصي') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">{{ _('عدد المنافذ الفيزيائية') }}</label>
-        <input class="hub-input" type="number" min="0" name="ports" value="{{ device.ports or 0 }}">
       </div>
     </div>
   {% endcall %}
@@ -180,10 +164,6 @@
       <div class="hub-field">
         <label class="hub-field-label">{{ _('اتصال مشفّر') }}</label>
         {{ toggle_switch(name="api_use_tls", checked=device.api_use_tls, value="1", id="api-tls", on_label="8729 (TLS)", off_label="8728") }}
-      </div>
-      <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">{{ _('مجتمع المراقبة') }}</label>
-        <input class="hub-input" type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public">
       </div>
     </div>
   {% endcall %}

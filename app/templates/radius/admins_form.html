@@ -117,10 +117,6 @@
         <input class="hub-input" type="tel" name="phone" value="{{ admin.phone if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">{{ _('رابط الصورة الشخصية') }}</label>
-        <input class="hub-input" type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}" placeholder="https://...">
-      </div>
-      <div class="hub-field">
         <label class="hub-field-label">{{ _('وسوم (CSV)') }}</label>
         <input class="hub-input" type="text" name="tags" value="{{ admin.tags if admin else '' }}" placeholder="{{ _('دعم، تحصيل') }}">
         <div class="hub-field-hint">{{ _('تصنيف داخلي للمدراء.') }}</div>

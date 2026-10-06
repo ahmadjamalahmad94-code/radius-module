@@ -938,11 +938,11 @@
       <div class="quick-batch-grid quick-batch-grid--four">
         <label>
           <span>{{ _('طول اسم المستخدم') }}</span>
-          <input class="hub-input" type="number" name="username_length" min="4" max="{{ hr_limits.card_username_len_max }}" value="8" data-qun-length>
+          <input class="hub-input" type="number" name="username_length" min="4" max="{{ hr_limits.card_username_len_max }}" value="{{ hr_limits.card_default_username_length }}" data-qun-length>
         </label>
         <label>
           <span>{{ _('طول كلمة المرور') }}</span>
-          <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="6">
+          <input class="hub-input" type="number" name="password_length" min="1" max="{{ hr_limits.card_password_len_max }}" value="{{ hr_limits.card_default_password_length }}">
         </label>
         {# MT88 — نمط توليد كلمة المرور كان في الوضع المتقدّم وحده، فكلّ حزمةٍ
            تُنشأ من هنا تسقط على الافتراضيّ «متوسط» بلا أن يُسأل المشغّل. نفس

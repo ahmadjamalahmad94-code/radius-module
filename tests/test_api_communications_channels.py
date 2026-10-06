@@ -73,17 +73,27 @@ def test_communications_api_rejects_invalid_channel_settings(client):
     )
     assert invalid_channel.status_code == 422
 
-    invalid_mode = client.post(
+    # Owner 2026-10-06: the custom SMS HTTP channel is retired (SMS goes via
+    # TweetSMS) and «mode» / «balance_url» are removed. Old app builds still
+    # post them: accepted silently, nothing written.
+    sms_post = client.post(
         "/api/v1/communications/channels/sms",
         headers=AUTH,
-        json={"mode": "raw"},
+        json={"enabled": True, "mode": "raw",
+              "send_url_template": "https://x.example/?p={phone}"},
     )
-    assert invalid_mode.status_code == 422
+    assert sms_post.status_code == 200, sms_post.get_json()
+    assert _data(sms_post)["ignored"] is True
+    assert _data(sms_post)["channel"]["provider"] == "tweetsms"
 
-    # The retired admin_quota mode is now rejected like any other invalid mode.
-    rejected_quota_mode = client.post(
-        "/api/v1/communications/channels/sms",
+    wa_post = client.post(
+        "/api/v1/communications/channels/whatsapp",
         headers=AUTH,
-        json={"mode": "admin_quota"},
+        json={"mode": "admin_quota", "balance_url": "https://x.example/bal"},
     )
-    assert rejected_quota_mode.status_code == 422
+    assert wa_post.status_code == 200, wa_post.get_json()
+    from app.radius.db.repos import tenants_repo
+    with client.application.app_context():
+        for key in ("comms.sms.enabled", "comms.sms.send_url_template",
+                    "comms.whatsapp.mode", "comms.whatsapp.balance_url"):
+            assert tenants_repo.get_setting(1, key, None) is None, key

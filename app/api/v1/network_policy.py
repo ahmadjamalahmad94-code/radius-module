@@ -697,8 +697,8 @@ def wb_create():
             slug=body.get("slug"),
             scope=str(body.get("scope")
                       or wb_repo.SCOPE_ALL_USERS),
-            schedule_id=str(body.get("schedule_id") or ""),
-            fail_open=_bool(body.get("fail_open", True)),
+            # schedule_id / fail_open removed (owner 2026-10-06) — accepted
+            # for old app builds, ignored (repo defaults: none / safe).
             enabled=_bool(body.get("enabled", True)),
         )
     except ValueError as e:
@@ -792,7 +792,7 @@ def wb_target_add(policy_id: int):
             category=str(body.get("category") or "custom"),
             status=str(body.get("status")
                        or wb_repo.STATUS_ACTIVE),
-            notes=str(body.get("notes") or ""),
+            # «ملاحظات» removed (owner 2026-10-06: never shown or used).
         )
     except ValueError as e:
         return fail("validation_error", str(e), status=422)
@@ -965,7 +965,7 @@ def wg_entry_add(policy_id: int):
             protocol=str(body.get("protocol") or ""),
             status=str(body.get("status")
                        or wg_repo.STATUS_ACTIVE),
-            notes=str(body.get("notes") or ""),
+            # «ملاحظات» removed (owner 2026-10-06: never shown or used).
         )
     except ValueError as e:
         return fail("validation_error", str(e), status=422)

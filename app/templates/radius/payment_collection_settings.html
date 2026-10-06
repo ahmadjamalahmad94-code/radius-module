@@ -84,12 +84,6 @@
         <span class="hub-field-label">{{ _('مدة الصلاحية بالدقائق') }}</span>
         <input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}">
       </label>
-      <label class="hub-field" style="margin-top:12px">
-        <span class="hub-field-label">{{ _('تطبيق تلقائي') }} <span class="small hub-text-mute">{{ _('(معاينة بدون تنفيذ)') }}</span></span>
-        <select class="hub-select" name="auto_apply" disabled>
-          <option>{{ _('معطل حتى يكتمل محرك تطبيق الخدمة') }}</option>
-        </select>
-      </label>
     {% endcall %}
 
     {% call hub.section(_('المبالغ والأنواع المسموحة'), icon="money-bill-wave") %}
