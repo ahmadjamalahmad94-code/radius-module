@@ -236,6 +236,10 @@ def test_single_use_refuses_extend_set_expiry_and_paid_time(app):
 
 def test_single_use_extend_api_is_422_arabic(client, app):
     s = _sub(_plan(single_use_once=1, duration_minutes=60), expire_in=timedelta(minutes=30))
+    other = _sub(_plan(), expire_in=timedelta(days=2))
+    items = client.get("/api/v1/accounts?limit=100", headers=AUTH).get_json()["data"]["items"]
+    flags = {i["username"]: i.get("temporary_account") for i in items}
+    assert flags[s.username] is True and flags[other.username] is False
     r = client.post(f"/api/v1/accounts/{s.username}/extend", json={"minutes": 60},
                     headers=AUTH)
     assert r.status_code == 422, r.get_json()

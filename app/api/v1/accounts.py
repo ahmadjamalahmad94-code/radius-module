@@ -491,14 +491,18 @@ def accounts_list():
     except Exception:  # noqa: BLE001
         usage = {}
     plan_service: dict = {}
+    plan_single_use: set = set()
     try:
         from ...radius.db.connection import db as _db
         pids = sorted({int(s.plan_id) for s in items if getattr(s, "plan_id", None)})
         if pids:
             ph = ",".join("?" for _ in pids)
-            plan_service = {int(r["id"]): r["service_type"] for r in _db().execute(
-                f"SELECT id, service_type FROM access_plans WHERE tenant_id = ? AND id IN ({ph})",
-                (_tid(), *pids)).fetchall()}
+            _prows = _db().execute(
+                f"SELECT id, service_type, COALESCE(single_use_once, 0) AS su "
+                f"FROM access_plans WHERE tenant_id = ? AND id IN ({ph})",
+                (_tid(), *pids)).fetchall()
+            plan_service = {int(r["id"]): r["service_type"] for r in _prows}
+            plan_single_use = {int(r["id"]) for r in _prows if int(r["su"] or 0)}
     except Exception:  # noqa: BLE001
         plan_service = {}
     out = []
@@ -511,6 +515,10 @@ def accounts_list():
             from_service_type(getattr(s, "service_type", ""))
             or from_service_type(plan_service.get(getattr(s, "plan_id", None)))
             or ((live or {}).get("access_type") or ""))
+        # «مؤقت» (قرار المالك 2026-10-06): مشتركٌ على باقة «استخدام مرة وحدة».
+        d["temporary_account"] = bool(
+            getattr(s, "plan_id", None) in plan_single_use
+            and getattr(s, "user_type", "") != "card")
         out.append(d)
     return ok({
         "items": out,
