@@ -135,7 +135,7 @@ REF_OUTPUTS: dict[str, frozenset[str]] = {
 # Fields that may carry a reference (a record identity) and their placeholder
 # used for the schema check before the real value exists.
 REF_FIELDS: dict[str, Any] = {"plan_id": 1, "offer_id": 1, "username": "ref.placeholder"}
-REF_RE = re.compile(r"^\$step([1-9][0-9]?)\.([a-z_]+)$")
+REF_RE = re.compile(r"^\$step([1-9][0-9]?)\.([a-z_]+)\Z")    # \Z: no trailing newline
 
 
 def action_def(action: str) -> dict:

@@ -40,8 +40,14 @@ def get_conversation(cid: str, tenant_id: int, admin_id: int) -> Optional[dict]:
 
 def issue(cid: str, tenant_id: int, kind: str, values: Iterable[Any], source: str) -> None:
     now = now_iso()
-    rows = [(cid, int(tenant_id), kind, _norm(kind, v), source, now) for v in values
-            if v not in (None, "")]
+    rows = []
+    for v in values:
+        if v in (None, ""):
+            continue
+        try:
+            rows.append((cid, int(tenant_id), kind, _norm(kind, v), source, now))
+        except (TypeError, ValueError):
+            continue                  # never issue a value that is not a clean id
     if not rows:
         return
     with transaction() as conn:
@@ -52,7 +58,16 @@ def issue(cid: str, tenant_id: int, kind: str, values: Iterable[Any], source: st
 
 def _norm(kind: str, value: Any) -> str:
     # usernames are unique case-insensitively (users.py) → compare lower-cased
-    return str(value).strip().lower() if kind == "subscriber" else str(int(value))
+    if kind == "subscriber":
+        return str(value).strip().lower()
+    # record ids: a real integer (or its plain decimal text) only — never
+    # True → 1, 1.9 → 1 or "1e0" (``/choices`` passes the body value as is)
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        raise TypeError("record id must be an integer")
+    text = str(value).strip()
+    if not text.isdigit() or not text.isascii():
+        raise ValueError("record id must be an integer")
+    return str(int(text))
 
 
 def is_issued(cid: str, tenant_id: int, kind: str, value: Any) -> bool:

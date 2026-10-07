@@ -94,10 +94,14 @@ def add_calendar_months(dt_utc: datetime, months: int, tenant_id: int) -> dateti
     local = to_local(dt_utc, tenant_id)
     idx = local.month - 1 + int(months)
     year, month = local.year + idx // 12, idx % 12 + 1
-    day = min(local.day, calendar.monthrange(year, month)[1])
-    moved = local.replace(year=year, month=month, day=day)
-    aware = moved.replace(tzinfo=tzinfo_for(tenant_id))
-    return aware.astimezone(timezone.utc).replace(tzinfo=None)
+    try:
+        day = min(local.day, calendar.monthrange(year, month)[1])
+        moved = local.replace(year=year, month=month, day=day)
+        aware = moved.replace(tzinfo=tzinfo_for(tenant_id))
+        return aware.astimezone(timezone.utc).replace(tzinfo=None)
+    except (ValueError, OverflowError) as exc:
+        # 525,600 months → year 45,826: far beyond any cap (was an HTTP 500)
+        raise UnitError("over_one_year", over_cap_message(cap_minutes(tenant_id))) from exc
 
 
 def duration_minutes(duration: dict, *, tenant_id: int,
@@ -115,16 +119,40 @@ def duration_minutes(duration: dict, *, tenant_id: int,
     raise UnitError("bad_unit", _tr("وحدة المدّة غير معروفة."))
 
 
+def over_cap_message(cap: int) -> str:
+    return _tr("أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من عمليّة.",
+               d=cap // 1440)
+
+
 def enforce_cap(minutes: int, tenant_id: int) -> int:
     cap = cap_minutes(tenant_id)
     if minutes <= 0:
         raise UnitError("non_positive_duration", _tr("المدّة يجب أن تكون أكبر من صفر."))
     if minutes > cap:
-        raise UnitError(
-            "over_one_year",
-            _tr("أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من عمليّة.",
-                d=cap // 1440))
+        raise UnitError("over_one_year", over_cap_message(cap))
     return minutes
+
+
+_CARD_UNIT_MINUTES = {"seconds": 1 / 60, "minutes": 1, "hours": 60, "days": 1440,
+                      "weeks": 10080}
+
+
+def card_time_minutes(value: int, unit: str, tenant_id: int) -> int:
+    """Time printed on ONE card (``time_value`` × ``time_unit``) → minutes,
+    under the same one-year cap (months/years are calendar months from now).
+    0 = the card follows its plan (nothing to cap here)."""
+    v = int(value)
+    if v <= 0:
+        return 0
+    if unit in ("months", "years"):
+        months = v * (12 if unit == "years" else 1)
+        if months > 13:
+            raise UnitError("over_one_year", over_cap_message(cap_minutes(tenant_id)))
+        return enforce_cap(duration_minutes({"value": months, "unit": "months"},
+                                            tenant_id=tenant_id), tenant_id)
+    if unit not in _CARD_UNIT_MINUTES:
+        raise UnitError("bad_unit", _tr("وحدة المدّة غير معروفة."))
+    return enforce_cap(max(1, int(-(-v * _CARD_UNIT_MINUTES[unit] // 1))), tenant_id)
 
 
 def temp_speed_kbps(value: int) -> int:
@@ -193,7 +221,8 @@ def minutes_text(minutes: int) -> str:
 __all__ = [
     "KBPS_PER_MBPS", "MB_PER_GB", "OWNER_CAP_DAYS", "UnitError", "latin_digits",
     "cap_minutes", "local_today", "local_to_utc", "add_calendar_months",
-    "duration_minutes", "enforce_cap", "temp_speed_kbps", "temp_speed_minutes",
+    "duration_minutes", "enforce_cap", "card_time_minutes", "over_cap_message",
+    "temp_speed_kbps", "temp_speed_minutes",
     "format_speed", "format_quota", "mbps_to_kbps", "gb_to_mb", "iso_z",
     "local_text", "minutes_text", "utcnow", "tz_name", "to_local",
 ]

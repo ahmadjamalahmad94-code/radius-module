@@ -21,6 +21,7 @@ from flask import request
 from .responses import fail
 
 NOT_OBJECT_MESSAGE = N_("جسم الطلب يجب أن يكون كائن JSON (مفاتيح وقيم).")
+TOO_DEEP_MESSAGE = N_("جسم الطلب متداخل أكثر من المسموح.")
 
 
 class InputError(ValueError):
@@ -34,7 +35,10 @@ class InputError(ValueError):
 def json_object():
     """``(dict, None)`` for an object body (missing/empty body → ``{}``),
     ``(None, 422 response)`` for a list / scalar / non-JSON-object body."""
-    body = request.get_json(silent=True, force=True)
+    try:
+        body = request.get_json(silent=True, force=True)
+    except RecursionError:
+        return None, fail("validation_error", TOO_DEEP_MESSAGE, status=422)
     if body is None:
         raw = request.get_data(cache=True) or b""
         if raw.strip():
@@ -81,7 +85,11 @@ def install_global_json_object_guard(bp) -> None:
         raw = request.get_data(cache=True) or b""
         if not raw.strip():
             return None  # جسمٌ فارغ: المعالجاتُ تعتبره {}
-        body = request.get_json(silent=True)
+        try:
+            body = request.get_json(silent=True)
+        except RecursionError:
+            # a 2,000-level nesting overflowed json's C decoder → it was an HTML 500
+            return fail("validation_error", TOO_DEEP_MESSAGE, status=422)
         if isinstance(body, dict):
             return None
         if body is None and raw.strip() not in (b"null",):

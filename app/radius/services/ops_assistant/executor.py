@@ -223,11 +223,11 @@ def confirm(conv: dict, proposal_id: str, proposal_hash: str, header_key: str = 
         audit.record("confirm", conversation_id=conv["id"], outcome="rejected",
                      proposal_id=proposal_id, proposal_hash=row["proposal_hash"],
                      action=row["action"],
-                     details={"violations": [v.as_dict() for v in e.violations]})
+                     details={"violations": [v.as_dict() for v in e.violations[:20]]})
         raise ConfirmError(403 if e.forbidden else 422,
                            "proposal_forbidden" if e.forbidden else "proposal_rejected",
                            e.violations[0].message,
-                           {"violations": [v.as_dict() for v in e.violations]}) from e
+                           {"violations": [v.as_dict() for v in e.violations[:20]]}) from e
     if validated.proposal_hash != row["proposal_hash"]:
         raise ConfirmError(409, "confirmation_mismatch", _tr("المقترح تغيّر — أكّده من جديد."))
     if not store.claim(proposal_id, tid):

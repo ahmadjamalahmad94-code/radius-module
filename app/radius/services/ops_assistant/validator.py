@@ -29,6 +29,7 @@ from app.i18n_text import _tr
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Optional
@@ -38,6 +39,21 @@ from .schema_check import validate as schema_validate
 
 PERMISSION_CODES = frozenset({"missing_permission", "out_of_scope"})
 
+# ── envelope limits (red-team 2026-10-07): checked BEFORE any recursive walk ──
+# A real proposal is ≤ 5 levels deep (plan → steps → step → fields → duration)
+# and a few KB; the longest catalog string is 2,000 chars (``remark``).
+MAX_DEPTH = 8
+MAX_PROPOSAL_CHARS = 32_000
+MAX_STRING_CHARS = 2_000
+MAX_KEYS = 400                    # dict keys + list items, whole proposal
+MAX_PATH_ECHO = 120
+# multi-line free text; every other field is one line
+_MULTILINE_FIELDS = frozenset({"remark", "notes", "description", "address"})
+# bidi embedding/override/isolate + line/paragraph separators: they make the
+# confirmation card (and other admins' pages) read differently from the data
+_BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+                           "\u2028\u2029")
+
 
 @dataclass
 class Violation:
@@ -46,7 +62,9 @@ class Violation:
     path: str = "$"
 
     def as_dict(self) -> dict:
-        return {"code": self.code, "message": self.message, "path": self.path}
+        # the path carries attacker-chosen KEY names: never echo them in full
+        path = self.path if len(self.path) <= MAX_PATH_ECHO else self.path[:MAX_PATH_ECHO] + "…"
+        return {"code": self.code, "message": self.message, "path": path}
 
 
 class ProposalRejected(Exception):
@@ -84,6 +102,56 @@ class Validated:
 
 
 # ─────────────────────────── helpers ────────────────────────────
+
+def _bad_char(text: str, multiline: bool) -> bool:
+    for ch in text:
+        o = ord(ch)
+        if ch in _BIDI_CONTROLS:
+            return True
+        if o < 0x20 or 0x7f <= o <= 0x9f:          # C0 / DEL / C1 controls
+            if multiline and ch in "\t\n\r":
+                continue
+            return True
+    return False
+
+
+def _envelope(proposal: dict) -> list[Violation]:
+    """Size / depth / number / text sanity of the WHOLE object, iteratively
+    (no recursion → a 2,000-level nesting cannot overflow the stack)."""
+    stack: list[tuple[Any, int, str, str]] = [(proposal, 1, "$", "")]
+    nodes = 0
+    while stack:
+        node, depth, path, key = stack.pop()
+        if depth > MAX_DEPTH:
+            return [Violation("too_deep", _tr("المقترح متداخل أكثر من المسموح."), "$")]
+        if isinstance(node, dict):
+            nodes += len(node)
+            for k, v in node.items():
+                stack.append((v, depth + 1, f"{path}.{k}", str(k)))
+        elif isinstance(node, list):
+            nodes += len(node)
+            for i, v in enumerate(node):
+                stack.append((v, depth + 1, f"{path}[{i}]", key))
+        elif isinstance(node, float) and not math.isfinite(node):
+            return [Violation("bad_number", _tr("قيمة رقميّة غير صالحة في المقترح."), path)]
+        elif isinstance(node, str):
+            if len(node) > MAX_STRING_CHARS:
+                return [Violation("too_large", _tr("نصّ أطول من المسموح في المقترح."), path)]
+            # only what can EXECUTE (fields / steps) — message / summary_ar are
+            # model prose shown with textContent and never used for a decision
+            if (path.startswith("$.fields") or path.startswith("$.steps")) and                     _bad_char(node, key in _MULTILINE_FIELDS):
+                return [Violation("bad_text",
+                                  _tr("نصّ يحوي محارف تحكّم أو اتّجاه مخفيّة — مرفوض."), path)]
+        if nodes > MAX_KEYS:
+            return [Violation("too_large", _tr("المقترح أكبر من المسموح."), "$")]
+    try:
+        size = len(json.dumps(proposal, ensure_ascii=False))
+    except (TypeError, ValueError):
+        return [Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))]
+    if size > MAX_PROPOSAL_CHARS:
+        return [Violation("too_large", _tr("المقترح أكبر من المسموح."), "$")]
+    return []
+
 
 def _deep_forbidden(obj: Any, path: str = "$") -> list[Violation]:
     out: list[Violation] = []
@@ -153,6 +221,9 @@ def with_message(proposal: Any) -> Any:
 def validate_proposal(conv: dict, proposal: Any, *, mode: str = "execute") -> Validated:
     if not isinstance(proposal, dict):
         raise ProposalRejected([Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))])
+    bad = _envelope(proposal)
+    if bad:
+        raise ProposalRejected(bad)
     bad = _deep_forbidden(proposal)
     if bad:
         raise ProposalRejected(bad)
@@ -204,9 +275,79 @@ def _validate_plan(conv: dict, proposal: dict, mode: str) -> Validated:
                                          mode=mode))
         except ProposalRejected as e:
             errs += e.violations
+    if not errs:
+        errs = _plan_totals(conv, steps_in)
     if errs:
         raise ProposalRejected(errs)
     return Validated("plan", "plan", proposal, canonical_hash(conv["id"], proposal), prepared)
+
+
+_MINUTES = {"minutes": 1, "hours": 60, "days": 1440}
+
+
+def _parse_utc(text: Any):
+    from datetime import datetime
+    try:
+        return datetime.fromisoformat(str(text).rstrip("Z")[:19])
+    except (TypeError, ValueError):
+        return None
+
+
+def _plan_totals(conv: dict, steps_in: list) -> list[Violation]:
+    """Caps are per CONFIRMATION, not per step: six «+365 days» steps for one
+    subscriber (or six batches at the card cap) under ONE confirmation would
+    multiply the owner's limits. The subscriber's projected expiry is walked
+    step by step (``$stepN.username`` → the subscriber of step N; usernames
+    compare case-insensitively) and the time added in total must stay within
+    the one-year cap; the cards of all batches within the batch cap."""
+    tid = int(conv["tenant_id"])
+    cap = units.cap_minutes(tid)
+    now = units.utcnow()
+    who: dict[int, Optional[str]] = {}
+    span: dict[str, list] = {}            # subscriber → [start, projected expiry]
+    cards = 0
+    for i, step in enumerate(steps_in, start=1):
+        f, action = step["fields"], step["action"]
+        path = f"$.steps[{i - 1}].fields"
+        uname = f.get("username")
+        m = catalog.REF_RE.match(uname) if isinstance(uname, str) else None
+        key = who.get(int(m.group(1))) if m else (
+            str(uname).strip().lower() if isinstance(uname, str) else None)
+        who[i] = key
+        try:
+            if action == "create_card_batch":
+                cards += int(f["count"])
+                if cards > _card_cap(tid):
+                    return [Violation("count_over_cap",
+                                      _tr("مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — "
+                                          "قسّمها على أكثر من تأكيد.", c=_card_cap(tid)),
+                                      f"{path}.count")]
+            elif action == "create_subscriber" and key:
+                exp = now
+                if "duration" in f:
+                    exp = now + timedelta(minutes=units.duration_minutes(
+                        f["duration"], tenant_id=tid, anchor_utc=now))
+                elif "until_local" in f:
+                    exp = units.local_to_utc(f["until_local"], tid)
+                span[key] = [now, exp]
+            elif action == "renew_or_extend_subscriber" and key:
+                if key not in span:
+                    start = _anchor(conv, str(uname))[0] if not m else now
+                    span[key] = [start, start]
+                cur = span[key]
+                if f["mode"] == "duration":
+                    d = f["duration"]
+                    if d["unit"] == "months":
+                        cur[1] = units.add_calendar_months(cur[1], int(d["value"]), tid)
+                    else:
+                        cur[1] = cur[1] + timedelta(minutes=int(d["value"]) * _MINUTES[d["unit"]])
+                else:
+                    cur[1] = max(cur[1], units.local_to_utc(f["until_local"], tid))
+                if (cur[1] - cur[0]).total_seconds() / 60 > cap:
+                    raise units.UnitError("over_one_year", units.over_cap_message(cap))
+        except units.UnitError as e:
+            return [Violation(e.code, e.message, path)]
+    return []
 
 
 def _check_info(conv: dict, action: str, fields: dict) -> None:
@@ -453,6 +594,9 @@ def _b_create_offer(conv, f, refs, path, mode):
                  f"{path}.selling")
     d = f["duration"]
     minutes = int(d["value"]) * {"minutes": 1, "hours": 60, "days": 1440}[d["unit"]]
+    # the catalog has no maximum here: a card sold from this offer must not
+    # carry more than the one-year cap (nor 10**30 days → a DB overflow)
+    units.enforce_cap(minutes, int(conv["tenant_id"]))
     body = {"name": f["name"], "plan_id": f["plan_id"], "duration_minutes": minutes,
             "wholesale": f["wholesale"], "selling": f["selling"], "visible_admin_ids": [],
             **_copy(f, ("device_count", "device_limit_mode", "equal_share_download",
@@ -467,16 +611,24 @@ _BATCH_COPY = ("count", "package_name", "username_length", "include_batch_number
                "price_per_card", "total_price", "total_quota_mb", "notes")
 
 
-def _b_card_batch(conv, f, refs, path, mode):
-    tid = int(conv["tenant_id"])
+def _card_cap(tid: int) -> int:
     from ..cards import hard_max_cards_per_batch, max_cards_per_batch
     cap = int(hard_max_cards_per_batch(tid))
     soft = int(max_cards_per_batch(tid) or 0)
     if soft:
         cap = min(cap, soft)
+    return cap
+
+
+def _b_card_batch(conv, f, refs, path, mode):
+    tid = int(conv["tenant_id"])
+    cap = _card_cap(tid)
     if int(f["count"]) > cap:
         raise _v("count_over_cap", _tr("عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات.", c=cap),
                  f"{path}.count")
+    if "time_value" in f:
+        # no unit → the API's default (days)
+        units.card_time_minutes(f["time_value"], str(f.get("time_unit") or "days"), tid)
     prefix = units.latin_digits(f.get("username_prefix", "")).strip()
     suffix = units.latin_digits(f.get("username_suffix", "")).strip()
     if "username_length" in f and len(prefix) + len(suffix) >= int(f["username_length"]):
