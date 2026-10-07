@@ -162,7 +162,7 @@ def plain_times(o: Any, key: str = "") -> Any:
     (bubbles, lists, result rows, confirmation cards) reads «2026-10-08 03:00», never «…T03:00».
     Display copy only: the transcript / model / hashes keep the canonical form."""
     if isinstance(o, str):
-        return o if key in _KEEP_RAW else _ISO_T.sub(r" ", o)
+        return o if key in _KEEP_RAW else _ISO_T.sub(r"\1 \2", o)
     if isinstance(o, list):
         return [plain_times(v, key) for v in o]
     if isinstance(o, dict):

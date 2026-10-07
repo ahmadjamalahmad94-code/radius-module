@@ -147,6 +147,10 @@ def card_info(conv: dict, fields: dict) -> dict:
         "expires_local": local_str(c.get("expires_at"), tid),
         "remaining": _duration_text(remaining) if remaining is not None else None,
         "card_time": _duration_text(budget) if budget > 0 else None,
+        # from-first-connect cards: the window runs whether or not the customer is online —
+        # «elapsed» (window time gone) explains «remaining» next to the much smaller «used_time»
+        "elapsed": _duration_text(c.get("consumed_seconds"))
+        if c.get("started_at") and c.get("accounting_mode") == "from_first_connect" else None,
         "counting": c.get("accounting_mode") or None,
         "used_time": _duration_text(c.get("used_session_seconds"))
         if c.get("started_at") else None,

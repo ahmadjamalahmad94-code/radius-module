@@ -7447,51 +7447,52 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 صيغة غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:86
 معلومة ناقصة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:87
 تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:115
-لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:345
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:353
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:355
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:357
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:359
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:361
-لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:362
-المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:522
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:531
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:552
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:592
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:604
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:611
-هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:684
-لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:701
-لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:707
-نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:709
-تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:711
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:725
+لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:367
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:375
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:377
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:379
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:381
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:383
+لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:384
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:544
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:553
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:574
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:614
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:626
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:633
+هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:706
+لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:723
+لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:729
+نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:731
+تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:733
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:747
 رقم البطاقة,,Card Number,Numéro de la carte,Kart Numarası,Número de la tarjeta,ok,app/radius/services/ops_assistant/display.py:16
 أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/radius/services/ops_assistant/display.py:18
 ينتهي,,Expires,Expire,Bitiş,Caduca,ok,app/radius/services/ops_assistant/display.py:18
 وقت البطاقة,,Card time,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:19
 وقت الاتصال الفعليّ (كل الجلسات),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:20
-أجهزة استُخدمت,,Devices used,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:21
-أجهزة متّصلة الآن,,Devices online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:21
-آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/radius/services/ops_assistant/display.py:22
-الحصّة,,Quota,Quota,Kota,Cuota,ok,app/radius/services/ops_assistant/display.py:22
-الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:24
-متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:24
-جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:25
-كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/radius/services/ops_assistant/display.py:25
-كل الكروت,,All cards,Toutes les cartes,Tüm kartlar,Todas las tarjetas,ok,app/radius/services/ops_assistant/display.py:26
-متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:26
-قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:27
-العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:28
-الإجراء,,Action,Action,İşlem,Acción,ok,app/radius/services/ops_assistant/display.py:29
-الوقت,,Time,Heure,Zaman,Hora,ok,app/radius/services/ops_assistant/display.py:29
-على,,On,Sur,Üzerinde,En,ok,app/radius/services/ops_assistant/display.py:29
-غير مستعملة,,Unused,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:32
-منتهٍ,,Expired,Expiré,Süresi dolmuş,Caducado,ok,app/radius/services/ops_assistant/display.py:32
-نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:33
-بالثانية (وقت الاتصال فقط),,By the second (online time only),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:35
-تبدأ من أوّل اتصال,,Starts at first login,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:35
-truefalse,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:59
+مضى من وقت البطاقة (منذ أوّل اتصال),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:21
+أجهزة استُخدمت,,Devices used,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:22
+أجهزة متّصلة الآن,,Devices online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:22
+آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/radius/services/ops_assistant/display.py:23
+الحصّة,,Quota,Quota,Kota,Cuota,ok,app/radius/services/ops_assistant/display.py:23
+الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:25
+متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:25
+جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:26
+كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/radius/services/ops_assistant/display.py:26
+كل الكروت,,All cards,Toutes les cartes,Tüm kartlar,Todas las tarjetas,ok,app/radius/services/ops_assistant/display.py:27
+متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:27
+قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:28
+العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:29
+الإجراء,,Action,Action,İşlem,Acción,ok,app/radius/services/ops_assistant/display.py:30
+الوقت,,Time,Heure,Zaman,Hora,ok,app/radius/services/ops_assistant/display.py:30
+على,,On,Sur,Üzerinde,En,ok,app/radius/services/ops_assistant/display.py:30
+غير مستعملة,,Unused,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:33
+منتهٍ,,Expired,Expiré,Süresi dolmuş,Caducado,ok,app/radius/services/ops_assistant/display.py:33
+نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:34
+بالثانية (وقت الاتصال فقط),,By the second (online time only),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:36
+تبدأ من أوّل اتصال,,Starts at first login,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:36
+truefalse,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:60
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:127
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:135
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:188

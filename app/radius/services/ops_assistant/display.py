@@ -17,7 +17,8 @@ LABELS = {
     "batch_name": N_("الحزمة"), "plan_name": N_("الباقة"), "plan": N_("الباقة"),
     "first_login_local": N_("أوّل دخول"), "expires_local": N_("ينتهي"), "remaining": N_("المتبقّي"),
     "card_time": N_("وقت البطاقة"), "counting": N_("طريقة الاحتساب"),
-    "used_time": N_("وقت الاتصال الفعليّ (كل الجلسات)"), "sessions": N_("عدد الجلسات"),
+    "used_time": N_("وقت الاتصال الفعليّ (كل الجلسات)"),
+    "elapsed": N_("مضى من وقت البطاقة (منذ أوّل اتصال)"), "sessions": N_("عدد الجلسات"),
     "online_now": N_("أجهزة متّصلة الآن"), "devices_used": N_("أجهزة استُخدمت"),
     "last_seen_local": N_("آخر ظهور"), "price": N_("السعر"), "currency": N_("العملة"), "quota": N_("الحصّة"),
     "username": N_("اسم المستخدم"), "full_name": N_("الاسم الكامل"), "mobile": N_("الجوال"),
@@ -62,7 +63,7 @@ def value_text(key: str, v: Any) -> Any:
     if key.endswith("_local"):
         m = _LOCAL.match(v)
         return f"{m.group(1)} {m.group(2)}" if m else v
-    if key in ("remaining", "card_time", "used_time"):
+    if key in ("remaining", "card_time", "used_time", "elapsed"):
         return duration_ar(v)
     if key in ("status", "counting") and v in VALUES:
         return _tr(VALUES[v])
