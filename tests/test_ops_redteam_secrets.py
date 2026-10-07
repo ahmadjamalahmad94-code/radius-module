@@ -131,3 +131,21 @@ def test_card_codes_never_reach_the_model_or_audit(client, app):
     for c in cards:
         assert c["password"] not in blob and c["password"] not in stored
         assert c["username"] not in blob
+
+
+def test_rejected_proposal_audit_row_stays_small(client, app):
+    """The rejection audit row copied ``action`` verbatim: a 1 MB action string
+    became a 1 MB audit_log row per request (cheap storage exhaustion)."""
+    h = owner_h(app)
+    cid = new_conv(client, h)
+    huge = "A" * 1_000_000
+    r = propose(client, h, cid, {"action": huge, "fields": {}, "missing": [], "message": "?"})
+    assert r.status_code == 422
+    rows = q(app, "SELECT length(payload_json) AS n FROM audit_log WHERE action='ops.validate' "
+                  "AND payload_json LIKE ?", (f"%{cid}%",))
+    assert rows and max(r["n"] for r in rows) < 20_000
+    # many schema violations are capped too
+    many = {f"k{i}": 1 for i in range(300)}
+    r = propose(client, h, cid, P("create_plan", {"name": "x", "speed_unlimited": True, **many}))
+    assert r.status_code == 422
+    assert len(r.get_json()["error"]["details"]["violations"]) <= 20
