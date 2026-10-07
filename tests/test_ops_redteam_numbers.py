@@ -185,14 +185,17 @@ def test_offer_duration_is_capped_at_one_year(client, app):
 
 
 @pytest.mark.parametrize("tv,tu", [(100000, "years"), (2, "years"), (13, "months"),
-                                    (53, "weeks"), (366, "days"), (10 ** 6, "hours")])
+                                    (53, "weeks"), (366, "days"), (100000, "hours"),
+                                    (400, None)])
 def test_card_time_over_one_year_is_rejected(client, app, tv, tu):
     h = owner_h(app)
     pid = plan(app)
     cid = new_conv(client, h)
     issue_plans(client, h, cid)
-    res = propose(client, h, cid, P("create_card_batch", {
-        "source": "plan", "plan_id": pid, "count": 1, "time_value": tv, "time_unit": tu}))
+    fields = {"source": "plan", "plan_id": pid, "count": 1, "time_value": tv}
+    if tu:                         # no unit → the API's default (days)
+        fields["time_unit"] = tu
+    res = propose(client, h, cid, P("create_card_batch", fields))
     err(res, 422, "proposal_rejected")
     assert "over_one_year" in _codes(res)
 
