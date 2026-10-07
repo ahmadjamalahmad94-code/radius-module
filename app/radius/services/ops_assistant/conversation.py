@@ -79,6 +79,28 @@ def _required_missing(res) -> list[str]:
     return out
 
 
+_WHY_AR = (
+    (re.compile(r"^greater than (\S+)$"), N_("قيمة أكبر من الحدّ المسموح (%(n)s)")),
+    (re.compile(r"^less than (\S+)$"), N_("قيمة أقلّ من الحدّ المسموح (%(n)s)")),
+    (re.compile(r"^unknown field$"), N_("حقل غير معروف")),
+    (re.compile(r"^does not match the required pattern$"), N_("صيغة غير صحيحة")),
+    (re.compile(r"^is required$"), N_("معلومة ناقصة")),
+)
+
+
+def why_ar(text: str) -> str:
+    """Validator messages are partly English schema wording («greater than 10») — show them in Arabic."""
+    out = []
+    for part in [p.strip() for p in str(text or "").split(";") if p.strip()]:
+        for rx, tpl in _WHY_AR:
+            m = rx.match(part)
+            if m:
+                part = _tr(tpl, n=m.group(1)) if m.groups() else _tr(tpl)
+                break
+        out.append(part)
+    return "؛ ".join(dict.fromkeys(out))
+
+
 def missing_question(missing: list[str]) -> str:
     names = "، ".join(_tr(FIELD_LABELS_AR[f]) if f in FIELD_LABELS_AR else f for f in missing)
     return _tr("تمام، باقي أعرف: %(names)s.", names=names)
@@ -552,7 +574,7 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                 {"error": "rejected_by_validator", "why": (e.message or e.code)[:300]}, ensure_ascii=False))
             replies.append({"type": "error", "code": e.code,
                             "text": _tr("المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s",
-                                        why=e.message or e.code)})
+                                        why=why_ar(e.message) or e.code)})
             return replies
         out = res.data or {}
 

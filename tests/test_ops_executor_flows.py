@@ -45,7 +45,7 @@ def test_create_subscriber_executes_and_password_shown_once(client, app):
     rep = cd["report"]
     assert rep["status"] == "executed" and rep["steps"][0]["status"] == "done"
     shown = cd["show_once"]["subscriber_passwords"][0]
-    assert shown["username"] == "ops_new_1" and len(shown["password"]) >= 8
+    assert shown["username"] == "ops_new_1" and len(shown["password"]) == 6 and shown["password"].isdigit()
     s = get_sub(app, "ops_new_1")
     assert s is not None and s.plan_id == pid and s.mobile == "0599123456"
     assert s.password == shown["password"]

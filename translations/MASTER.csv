@@ -7441,26 +7441,31 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 الاسم الكامل,,Full Name,Nom complet,Tam Ad,Nombre completo,ok,app/radius/services/ops_assistant/conversation.py:63
 العمليّة,,Operation,Opération,İşlem,Operación,ok,app/radius/services/ops_assistant/conversation.py:63
 المصدر (باقة أو عرض),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:63
-تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:84
-لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:314
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:322
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:324
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:326
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:328
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:330
-لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:331
-المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:490
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:499
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:520
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:554
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:566
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:573
-هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:646
-لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:663
-لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:669
-نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:671
-تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:673
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:687
+قيمة أكبر من الحدّ المسموح (%(n)s),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:83
+قيمة أقلّ من الحدّ المسموح (%(n)s),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:84
+حقل غير معروف,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:85
+صيغة غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:86
+معلومة ناقصة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:87
+تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:106
+لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:336
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:344
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:346
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:348
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:350
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:352
+لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:353
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:512
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:521
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:542
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:576
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:588
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:595
+هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:668
+لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:685
+لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:691
+نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:693
+تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:695
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:709
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:127
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:135
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:188
@@ -7482,23 +7487,23 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 نصّ يحوي محارف تحكّم أو اتّجاه مخفيّة — مرفوض.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:144
 المقترح أكبر من المسموح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:146
 المقترح يجب أن يكون كائن JSON واحدًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:150
-حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:163
-مرجع خطوة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:196
-المرجع يجب أن يشير إلى خطوة سابقة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:200
-الخطوة المشار إليها لا تُنتج هذا الحقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:203
-مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — قسّمها على أكثر من تأكيد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:322
-رقم الحزمة لم يَرِد في قائمة اختيار من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:363
-اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:369
-هذا المشترك ليس ضمن نطاقك.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:374
-لا تملك صلاحية هذا الإجراء (%(k)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:383
-المعرّف لم يَرِد في قائمة اختيار من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:408
-وقت الانتهاء المطلوب مضى.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:465
-التاريخ المطلوب ليس بعد انتهاء الاشتراك الحاليّ.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:513
-سياسة التغيير لا تناسب اتجاه الباقة الجديدة (%(d)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:529
-لا يكون الاتجاهان بلا حدّ معًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:545
-السرعة صفر مرفوضة إلّا مع «بلا حدّ للسرعة».,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:576
-عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:627
-البادئة واللاحقة لا تتركان خانة عشوائيّة ضمن الطول الكلّيّ.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:636
+حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:170
+مرجع خطوة غير صالح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:203
+المرجع يجب أن يشير إلى خطوة سابقة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:207
+الخطوة المشار إليها لا تُنتج هذا الحقل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:210
+مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — قسّمها على أكثر من تأكيد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:349
+رقم الحزمة لم يَرِد في قائمة اختيار من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:390
+اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:396
+هذا المشترك ليس ضمن نطاقك.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:401
+لا تملك صلاحية هذا الإجراء (%(k)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:410
+المعرّف لم يَرِد في قائمة اختيار من هذه المحادثة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:435
+وقت الانتهاء المطلوب مضى.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:492
+التاريخ المطلوب ليس بعد انتهاء الاشتراك الحاليّ.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:540
+سياسة التغيير لا تناسب اتجاه الباقة الجديدة (%(d)s).,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:556
+لا يكون الاتجاهان بلا حدّ معًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:572
+السرعة صفر مرفوضة إلّا مع «بلا حدّ للسرعة».,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:603
+عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:654
+البادئة واللاحقة لا تتركان خانة عشوائيّة ضمن الطول الكلّيّ.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/validator.py:663
 محاكاة محفظة (جوال باي/بال باي ستايل),,,,,,"missing: en,fr,tr,es",app/radius/services/payment_providers/__init__.py:92
 ريال,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:82
 تاريخ الإصدار:,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:269

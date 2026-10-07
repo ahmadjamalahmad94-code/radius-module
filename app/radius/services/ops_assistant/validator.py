@@ -153,19 +153,26 @@ def _envelope(proposal: dict) -> list[Violation]:
     return []
 
 
-def _deep_forbidden(obj: Any, path: str = "$") -> list[Violation]:
+# `status` is a forbidden RAW field everywhere except as the catalog search filter of find_subscriber
+# (an enum the schema checks right after) — before this, «مين المنتهي اشتراكهم» was always rejected.
+SEARCH_FILTER_PATHS = {"find_subscriber": {"$.fields.status"}}
+
+
+def _deep_forbidden(obj: Any, path: str = "$", allow: frozenset = frozenset()) -> list[Violation]:
     out: list[Violation] = []
     if isinstance(obj, dict):
         for k, v in obj.items():
             p = f"{path}.{k}"
+            if p in allow and isinstance(v, str):
+                continue
             if catalog.is_forbidden_key(str(k)):
                 out.append(Violation("forbidden_key",
                                      _tr("حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد."),
                                      p))
-            out += _deep_forbidden(v, p)
+            out += _deep_forbidden(v, p, allow)
     elif isinstance(obj, list):
         for i, v in enumerate(obj):
-            out += _deep_forbidden(v, f"{path}[{i}]")
+            out += _deep_forbidden(v, f"{path}[{i}]", allow)
     return out
 
 
@@ -218,16 +225,36 @@ def with_message(proposal: Any) -> Any:
     return proposal
 
 
+def _clamp_read_limits(proposal: dict) -> dict:
+    """A read-only list/info action asking for MORE rows than allowed (limit 20 where the cap is 10) is
+    clamped to the cap instead of rejected — nothing is executed, so the larger number is just a wish.
+    Executable actions are never clamped (a count there is a real quantity)."""
+    action = proposal.get("action")
+    f = proposal.get("fields")
+    if action not in catalog.LOOKUP_ACTIONS + catalog.INFO_ACTIONS or not isinstance(f, dict):
+        return proposal
+    lim = f.get("limit")
+    if not isinstance(lim, int) or isinstance(lim, bool):
+        return proposal
+    try:
+        spec = catalog.output_schema()["$defs"][action]["properties"]["limit"]
+    except (KeyError, TypeError):
+        return proposal
+    hi, lo = spec.get("maximum"), spec.get("minimum", 1)
+    new = max(lo, min(lim, hi)) if isinstance(hi, int) else max(lo, lim)
+    return proposal if new == lim else {**proposal, "fields": {**f, "limit": new}}
+
+
 def validate_proposal(conv: dict, proposal: Any, *, mode: str = "execute") -> Validated:
     if not isinstance(proposal, dict):
         raise ProposalRejected([Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))])
     bad = _envelope(proposal)
     if bad:
         raise ProposalRejected(bad)
-    bad = _deep_forbidden(proposal)
+    bad = _deep_forbidden(proposal, allow=frozenset(SEARCH_FILTER_PATHS.get(str(proposal.get("action")), ())))
     if bad:
         raise ProposalRejected(bad)
-    proposal = with_message(proposal)
+    proposal = _clamp_read_limits(with_message(proposal))
     action = proposal.get("action")
     if action == "plan":
         errs = _schema(proposal, catalog.PLAN_SCHEMA, "$")

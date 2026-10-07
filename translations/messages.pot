@@ -19808,7 +19808,7 @@ msgstr ""
 msgid "اجمع نقاطك مع كل زيارة!"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:520
+#: app/radius/services/ops_assistant/conversation.py:542
 msgid ""
 "احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد"
 " المحاولة."
@@ -20589,7 +20589,7 @@ msgid "اختر راوترًا موجودًا قبل فحص الشبكة."
 msgstr ""
 
 #: app/api/v1/ops.py:535 app/radius/routes/ops_assistant.py:315
-#: app/radius/services/ops_assistant/conversation.py:654
+#: app/radius/services/ops_assistant/conversation.py:676
 msgid "اختر رقمًا من القائمة."
 msgstr ""
 
@@ -23162,8 +23162,8 @@ msgstr ""
 msgid "اسم المشترك (والاسم الكامل إن وُجد)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:369
-#: app/radius/services/ops_assistant/validator.py:414
+#: app/radius/services/ops_assistant/validator.py:396
+#: app/radius/services/ops_assistant/validator.py:441
 msgid "اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة."
 msgstr ""
 
@@ -25162,7 +25162,7 @@ msgid "اكتب رسالة أو أرفق صورة."
 msgstr ""
 
 #: app/api/v1/ops.py:439 app/radius/routes/ops_assistant.py:191
-#: app/radius/services/ops_assistant/conversation.py:685
+#: app/radius/services/ops_assistant/conversation.py:707
 #: app/templates/radius/_ops_chat.html:78
 msgid "اكتب رسالة أوّلًا."
 msgstr ""
@@ -27464,7 +27464,7 @@ msgstr ""
 msgid "البادئة «rtr-» محجوزة لحسابات إدارة الراوترات."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:636
+#: app/radius/services/ops_assistant/validator.py:663
 msgid "البادئة واللاحقة لا تتركان خانة عشوائيّة ضمن الطول الكلّيّ."
 msgstr ""
 
@@ -28441,7 +28441,7 @@ msgstr ""
 msgid "التاريخ"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:513
+#: app/radius/services/ops_assistant/validator.py:540
 msgid "التاريخ المطلوب ليس بعد انتهاء الاشتراك الحاليّ."
 msgstr ""
 
@@ -31631,7 +31631,7 @@ msgstr ""
 msgid "الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:203
+#: app/radius/services/ops_assistant/validator.py:210
 msgid "الخطوة المشار إليها لا تُنتج هذا الحقل."
 msgstr ""
 
@@ -32988,7 +32988,7 @@ msgstr ""
 msgid "الرسالة تتجاوز الحدّ الموصى به ("
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:687
+#: app/radius/services/ops_assistant/conversation.py:709
 msgid "الرسالة طويلة جدًّا."
 msgstr ""
 
@@ -33841,7 +33841,7 @@ msgstr ""
 msgid "السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:576
+#: app/radius/services/ops_assistant/validator.py:603
 msgid "السرعة صفر مرفوضة إلّا مع «بلا حدّ للسرعة»."
 msgstr ""
 
@@ -39558,7 +39558,7 @@ msgstr ""
 msgid "المرجع هو رمز يربط الطلب بحركة المزوّد للمطابقة لاحقًا."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:200
+#: app/radius/services/ops_assistant/validator.py:207
 msgid "المرجع يجب أن يشير إلى خطوة سابقة."
 msgstr ""
 
@@ -39757,7 +39757,7 @@ msgstr ""
 msgid "المساعد غير متاح الآن"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:490
+#: app/radius/services/ops_assistant/conversation.py:512
 msgid "المساعد غير متاح مؤقتًا، حاول بعد قليل."
 msgstr ""
 
@@ -40738,7 +40738,7 @@ msgid ""
 "بعناية."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:408
+#: app/radius/services/ops_assistant/validator.py:435
 msgid "المعرّف لم يَرِد في قائمة اختيار من هذه المحادثة."
 msgstr ""
 
@@ -40993,13 +40993,13 @@ msgstr ""
 msgid "المقترح متداخل أكثر من المسموح."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:554
+#: app/radius/services/ops_assistant/conversation.py:576
 #, python-format
 msgid "المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s"
 msgstr ""
 
 #: app/radius/services/ops_assistant/validator.py:150
-#: app/radius/services/ops_assistant/validator.py:223
+#: app/radius/services/ops_assistant/validator.py:250
 msgid "المقترح يجب أن يكون كائن JSON واحدًا."
 msgstr ""
 
@@ -54153,7 +54153,7 @@ msgstr ""
 msgid "تعذّر جلب الرصيد: %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:573
+#: app/radius/services/ops_assistant/conversation.py:595
 #, python-format
 msgid "تعذّر جلب القائمة: %(why)s"
 msgstr ""
@@ -59011,12 +59011,12 @@ msgstr ""
 msgid "تم."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:84
+#: app/radius/services/ops_assistant/conversation.py:106
 #, python-format
 msgid "تمام، باقي أعرف: %(names)s."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:673
+#: app/radius/services/ops_assistant/conversation.py:695
 msgid "تمام، هذا هو السجلّ المطلوب."
 msgstr ""
 
@@ -64523,7 +64523,7 @@ msgstr ""
 msgid "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:566
+#: app/radius/services/ops_assistant/conversation.py:588
 msgid "حدّد المشترك والباقة الجديدة أوّلًا."
 msgstr ""
 
@@ -66379,12 +66379,16 @@ msgstr ""
 msgid "حقل سبب + زر (الخطوة 5)."
 msgstr ""
 
+#: app/radius/services/ops_assistant/conversation.py:85
+msgid "حقل غير معروف"
+msgstr ""
+
 #: app/templates/radius/docs_print_templates.html:405
 #: app/templates/radius/print_templates.html:1269
 msgid "حقل كلمة المرور"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:163
+#: app/radius/services/ops_assistant/validator.py:170
 msgid "حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد."
 msgstr ""
 
@@ -71739,7 +71743,7 @@ msgstr ""
 msgid "رقم الحزمة %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:363
+#: app/radius/services/ops_assistant/validator.py:390
 msgid "رقم الحزمة لم يَرِد في قائمة اختيار من هذه المحادثة."
 msgstr ""
 
@@ -74439,7 +74443,7 @@ msgstr ""
 
 #: app/radius/services/card_offers.py:214
 #: app/radius/services/card_offers.py:263
-#: app/radius/services/ops_assistant/validator.py:593
+#: app/radius/services/ops_assistant/validator.py:620
 msgid "سعر البيع يجب ألا يقلّ عن سعر الجملة."
 msgstr ""
 
@@ -75335,7 +75339,7 @@ msgstr ""
 msgid "سياسة التغيير"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:529
+#: app/radius/services/ops_assistant/validator.py:556
 #, python-format
 msgid "سياسة التغيير لا تناسب اتجاه الباقة الجديدة (%(d)s)."
 msgstr ""
@@ -77641,6 +77645,10 @@ msgstr ""
 msgid "صيغة تاريخ الانتهاء غير مفهومة."
 msgstr ""
 
+#: app/radius/services/ops_assistant/conversation.py:86
+msgid "صيغة غير صحيحة"
+msgstr ""
+
 #: app/templates/radius/docs_billing_vouchers.html:412
 msgid "صُرف،"
 msgstr ""
@@ -79525,7 +79533,7 @@ msgstr ""
 msgid "عدد الكروت في هذه الدفعة يتجاوز الحد المسموح."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:627
+#: app/radius/services/ops_assistant/validator.py:654
 #, python-format
 msgid "عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات."
 msgstr ""
@@ -88641,6 +88649,16 @@ msgstr ""
 msgid "قيمة «مفعّلة» غير صالحة — استخدم 1 أو 0."
 msgstr ""
 
+#: app/radius/services/ops_assistant/conversation.py:84
+#, python-format
+msgid "قيمة أقلّ من الحدّ المسموح (%(n)s)"
+msgstr ""
+
+#: app/radius/services/ops_assistant/conversation.py:83
+#, python-format
+msgid "قيمة أكبر من الحدّ المسموح (%(n)s)"
+msgstr ""
+
 #: app/radius/services/cards.py:1418
 #, python-format
 msgid "قيمة أو عدد غير صالح: %(d)s"
@@ -92519,7 +92537,7 @@ msgstr ""
 msgid "لا تملك صلاحية على هذا الموزع."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:383
+#: app/radius/services/ops_assistant/validator.py:410
 #, python-format
 msgid "لا تملك صلاحية هذا الإجراء (%(k)s)."
 msgstr ""
@@ -92656,7 +92674,7 @@ msgstr ""
 msgid "لا توجد باقات بعد — أنشئ أول باقة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:326
+#: app/radius/services/ops_assistant/conversation.py:348
 msgid "لا توجد باقات مفعّلة في النظام بعد."
 msgstr ""
 
@@ -92912,7 +92930,7 @@ msgstr ""
 msgid "لا توجد حركات في الفترة المحددة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:330
+#: app/radius/services/ops_assistant/conversation.py:352
 msgid "لا توجد حزم بطاقات تطابق هذا البحث."
 msgstr ""
 
@@ -93179,11 +93197,11 @@ msgstr ""
 msgid "لا توجد عروض متاحة"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:324
+#: app/radius/services/ops_assistant/conversation.py:346
 msgid "لا توجد عروض مسجّلة في النظام بعد."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:322
+#: app/radius/services/ops_assistant/conversation.py:344
 msgid ""
 "لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو"
 " إنشاء عرض أوّلًا."
@@ -93513,7 +93531,7 @@ msgstr ""
 msgid "لا توجد نتائج مطابقة لبحثك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:331
+#: app/radius/services/ops_assistant/conversation.py:353
 #: app/templates/radius/_ops_chat.html:49
 msgid "لا توجد نتائج."
 msgstr ""
@@ -94095,7 +94113,7 @@ msgstr ""
 msgid "لا يقرّر بنفسه"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:545
+#: app/radius/services/ops_assistant/validator.py:572
 msgid "لا يكون الاتجاهان بلا حدّ معًا."
 msgstr ""
 
@@ -94125,7 +94143,7 @@ msgid ""
 " أو حدّد سعرًا للمشترك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:663
+#: app/radius/services/ops_assistant/conversation.py:685
 msgid "لا يمكن اختيار هذا العنصر."
 msgstr ""
 
@@ -94642,7 +94660,7 @@ msgid ""
 "النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:328
+#: app/radius/services/ops_assistant/conversation.py:350
 msgid "لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال."
 msgstr ""
 
@@ -95674,7 +95692,7 @@ msgid ""
 " MikroTik Terminal."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:314
+#: app/radius/services/ops_assistant/conversation.py:336
 #, python-format
 msgid ""
 "لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم "
@@ -95685,7 +95703,7 @@ msgstr ""
 msgid "لم أجد تطابقًا تامًّا — هل تقصد:"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:499
+#: app/radius/services/ops_assistant/conversation.py:521
 msgid "لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح."
 msgstr ""
 
@@ -96261,7 +96279,7 @@ msgstr ""
 msgid "لم يظهر المستخدم المخطط ضمن قائمة المستخدمين."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:669
+#: app/radius/services/ops_assistant/conversation.py:691
 msgid "لم يعد هذا السجلّ متاحًا لك."
 msgstr ""
 
@@ -99202,7 +99220,7 @@ msgid ""
 "الرقم."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:322
+#: app/radius/services/ops_assistant/validator.py:349
 #, python-format
 msgid "مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — قسّمها على أكثر من تأكيد."
 msgstr ""
@@ -100991,7 +101009,7 @@ msgstr ""
 msgid "مرجع جلسة الدفع"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:196
+#: app/radius/services/ops_assistant/validator.py:203
 msgid "مرجع خطوة غير صالح."
 msgstr ""
 
@@ -103956,6 +103974,10 @@ msgstr ""
 
 #: app/templates/radius/_ops_chat.html:50
 msgid "معلومة من النظام"
+msgstr ""
+
+#: app/radius/services/ops_assistant/conversation.py:87
+msgid "معلومة ناقصة"
 msgstr ""
 
 #: app/templates/radius/access_control.html:511
@@ -109771,7 +109793,7 @@ msgstr ""
 msgid "نعم، أقصد"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:671
+#: app/radius/services/ops_assistant/conversation.py:693
 #, python-format
 msgid "نعم، أقصد %(name)s"
 msgstr ""
@@ -111552,8 +111574,8 @@ msgstr ""
 msgid "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:374
-#: app/radius/services/ops_assistant/validator.py:420
+#: app/radius/services/ops_assistant/validator.py:401
+#: app/radius/services/ops_assistant/validator.py:447
 msgid "هذا المشترك ليس ضمن نطاقك."
 msgstr ""
 
@@ -111739,7 +111761,7 @@ msgid ""
 "قديمة. راجعها قبل التطبيق."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:646
+#: app/radius/services/ops_assistant/conversation.py:668
 msgid "هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد."
 msgstr ""
 
@@ -114083,7 +114105,7 @@ msgstr ""
 msgid "وقت الاتصال اليوميّ"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:465
+#: app/radius/services/ops_assistant/validator.py:492
 msgid "وقت الانتهاء المطلوب مضى."
 msgstr ""
 

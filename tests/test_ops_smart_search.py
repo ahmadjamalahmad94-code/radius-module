@@ -171,7 +171,7 @@ def test_exact_search_unchanged_no_match_key(client, app):
 def test_nothing_similar_stays_empty(client, app):
     h = owner_h(app)
     cid = new_conv(client, h)
-    ch = _suggest(client, h, cid, "zzqxw" + uuid4().hex[:4])
+    ch = _suggest(client, h, cid, "vvvvvvvv")      # fixed: a random suffix sometimes transliterated close to زكريا
     assert ch["items"] == [] and "match" not in ch
 
 

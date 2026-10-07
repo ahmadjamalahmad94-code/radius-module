@@ -41,3 +41,27 @@ def test_model_name_env(monkeypatch):
     assert M.request_body([{"role": "user", "content": "hi"}])["model"] == "para"
     monkeypatch.delenv(M.ENV_MODEL_NAME)
     assert M.request_body([{"role": "user", "content": "hi"}])["model"] == "hoberadius-ops"
+
+
+def test_status_is_a_search_filter_only_for_find_subscriber():
+    from app.radius.services.ops_assistant import validator as V
+    ok = {"action": "find_subscriber", "fields": {"query": "", "status": "expired"}, "missing": [],
+          "message": "بدوّر على المنتهين"}
+    assert V._deep_forbidden(ok, allow=frozenset(V.SEARCH_FILTER_PATHS["find_subscriber"])) == []
+    bad = {"action": "renew_or_extend_subscriber", "fields": {"username": "a", "status": "enabled"}}
+    assert V._deep_forbidden(bad, allow=frozenset(V.SEARCH_FILTER_PATHS.get("renew_or_extend_subscriber", ())))
+    nested = {"action": "find_subscriber", "fields": {"query": "x", "extra": {"status": "x"}}}
+    assert V._deep_forbidden(nested, allow=frozenset(V.SEARCH_FILTER_PATHS["find_subscriber"]))
+
+
+def test_read_only_limit_is_clamped_not_rejected():
+    from app.radius.services.ops_assistant import validator as V
+    p = {"action": "list_card_batches", "fields": {"limit": 50}, "missing": [], "message": "x"}
+    assert V._clamp_read_limits(p)["fields"]["limit"] == 10
+    ex = {"action": "create_card_batch", "fields": {"count": 50, "limit": 50}}
+    assert V._clamp_read_limits(ex) is ex
+
+
+def test_validator_reasons_shown_in_arabic():
+    assert C.why_ar("greater than 10") == "قيمة أكبر من الحدّ المسموح (10)"
+    assert "greater" not in C.why_ar("greater than 10; unknown field")
