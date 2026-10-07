@@ -1043,5 +1043,91 @@ if(d){if(document.readyState==='loading'){document.addEventListener('DOMContentL
 window.addEventListener('pageshow',function(ev){if(ev.persisted){var d2=take();if(d2)fill(d2);}});
 })();
 </script>
+{# ───── مساعد العمليّات: فقاعة عائمة على كل صفحات اللوحة ─────
+   تظهر فقط حين يكون المساعد متاحًا لهذا المدير (نفس شرط بند القائمة:
+   علَم الشبكة + بوّابة كلمات المرور — ops_assistant_nav_visible)، ولا تظهر
+   في صفحته الكاملة. خفيفة: زرّ + سكربت صغير؛ css/ops_assistant.css و
+   js/ops_assistant.js وجزء اللوحة (radius.ops_assistant_widget) تُجلب عند
+   أوّل نقرة. خارج <main> ومستمعو النقر مفوَّضون على document، فلا تقتلهم
+   تبديلات AJAX. موضعها: الزاوية السفليّة جهة النهاية (يسار بالعربيّة،
+   يمين بالإنجليزيّة) تحت طبقة النوافذ (1000) والتنبيهات (9999). #}
+{% if ops_assistant_nav_visible is defined and ops_assistant_nav_visible()
+      and not (request.endpoint or '').startswith('radius.ops_assistant') %}
+<style>
+  #ops-fab{ position:fixed; inset-block-end:20px; inset-inline-end:20px; z-index:950;
+    width:56px; height:56px; border-radius:50%; border:0; padding:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px;
+    background:linear-gradient(135deg, var(--hub-brand,#6B5AED), var(--hub-brand-deep,#4836B8));
+    box-shadow:0 12px 28px rgba(72,54,184,.38), 0 2px 6px rgba(20,18,50,.18);
+    transition:transform .15s ease, box-shadow .15s ease; }
+  #ops-fab:hover{ transform:translateY(-2px); box-shadow:0 16px 34px rgba(72,54,184,.44), 0 2px 6px rgba(20,18,50,.18); }
+  #ops-fab:focus-visible{ outline:3px solid rgba(107,90,237,.45); outline-offset:3px; }
+  #ops-fab .ops-fab-x{ display:none; }
+  #ops-fab.is-open .ops-fab-r{ display:none; }
+  #ops-fab.is-open .ops-fab-x{ display:inline-block; }
+  #ops-fab.is-loading i{ animation:ops-fab-pulse .8s ease-in-out infinite alternate; }
+  @keyframes ops-fab-pulse{ from{ opacity:1; } to{ opacity:.35; } }
+  #ops-fab .ops-fab-dot{ position:absolute; top:2px; inset-inline-end:2px; width:14px; height:14px;
+    border-radius:50%; background:#EF4444; border:2px solid #fff; display:none; }
+  #ops-fab.has-unread .ops-fab-dot{ display:block; }
+  .app-footer{ margin-block-end:76px; }
+  body:has(#rtr-live[style*="block"]) #ops-fab{ inset-block-end:96px; }
+  @media (max-width:640px){ #ops-fab{ width:52px; height:52px; inset-block-end:16px; inset-inline-end:16px; } }
+  @media print{ #ops-fab, #ops-fab-root{ display:none !important; } }
+</style>
+<button type="button" id="ops-fab" aria-haspopup="dialog" aria-expanded="false" aria-controls="ops-fab-panel"
+        aria-label="{{ _('مساعد العمليّات') }}" title="{{ _('مساعد العمليّات') }}"
+        data-key="{{ ops_assistant_widget_key() }}"
+        data-panel="{{ url_for('radius.ops_assistant_widget') }}"
+        data-css="{{ url_for('static', filename='css/ops_assistant.css', v=asset_v('css/ops_assistant.css') if asset_v is defined else None) }}"
+        data-js="{{ url_for('static', filename='js/ops_assistant.js', v=asset_v('js/ops_assistant.js') if asset_v is defined else None) }}"
+        data-error="{{ _('تعذّر فتح مساعد العمليّات. حاول مرّة أخرى.') }}">
+  <i class="fa-solid fa-robot ops-fab-r" aria-hidden="true"></i>
+  <i class="fa-solid fa-chevron-down ops-fab-x" aria-hidden="true"></i>
+  <span class="ops-fab-dot" aria-hidden="true"></span>
+</button>
+<script>
+/* Lazy bootstrap: the chat css+js load on the first click (or when the panel was
+   open before this navigation, desktop only). Delegated on document. */
+(function () {
+  var fab = document.getElementById('ops-fab');
+  if (!fab) return;
+  var loading = false;
+  function ready() { return !!window.OpsWidget; }
+  function load(cb) {
+    if (ready()) { window.OpsWidget.init(fab); cb(); return; }
+    if (loading) return;
+    loading = true;
+    fab.classList.add('is-loading');
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = fab.getAttribute('data-css');
+    var js = document.createElement('script');
+    js.src = fab.getAttribute('data-js');
+    js.onload = js.onerror = function () {
+      loading = false;
+      fab.classList.remove('is-loading');
+      if (ready()) { window.OpsWidget.init(fab); cb(); }
+    };
+    css.onload = css.onerror = function () { document.body.appendChild(js); };
+    document.head.appendChild(css);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('#ops-fab') : null;
+    if (!b) return;
+    e.preventDefault();
+    load(function () { window.OpsWidget.toggle(); });
+  });
+  try {
+    var k = fab.getAttribute('data-key');
+    if (sessionStorage.getItem('hr_ops_w_unread:' + k) === '1') fab.classList.add('has-unread');
+    var mobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    if (sessionStorage.getItem('hr_ops_w_open:' + k) === '1' && !mobile) {
+      load(function () { window.OpsWidget.open(); });
+    }
+  } catch (e) { /* storage blocked: the bubble still works */ }
+})();
+</script>
+{% endif %}
 </body>
 </html>

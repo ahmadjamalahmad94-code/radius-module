@@ -52285,3 +52285,534 @@ msgstr "This is the batch of the card number you typed."
 #: app/templates/radius/ops_assistant.html:152
 msgid "أُضيف"
 msgstr "added"
+
+#: app/api/openapi.py:177
+msgid "مساعد العمليّات"
+msgstr "Operations assistant"
+
+#: app/api/v1/ops.py:96
+msgid "مساعد العمليّات غير مفعّل لهذه الشبكة."
+msgstr "The operations assistant is not enabled for this network."
+
+#: app/api/v1/ops.py:420
+msgid "المحادثة غير موجودة — ابدأ محادثة جديدة."
+msgstr "Conversation not found — start a new one."
+
+#: app/api/v1/ops.py:439
+msgid "اكتب رسالة أوّلًا."
+msgstr "Write a message first."
+
+#: app/api/v1/ops.py:462
+msgid "نوع الحدث مطلوب."
+msgstr "Event type is required."
+
+#: app/api/v1/ops.py:489
+msgid "تأكيد ناقص."
+msgstr "Incomplete confirmation."
+
+#: app/radius/core/ar_text.py:24
+msgid "كرت"
+msgstr "Card"
+
+#: app/radius/core/ar_text.py:24
+msgid "كروت"
+msgstr "Cards"
+
+#: app/radius/core/system_config.py:82
+msgid "بلا انتهاء"
+msgstr "No expiry"
+
+#: app/radius/routes/ops_assistant.py:133
+msgid ""
+"المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا."
+msgstr ""
+"The assistant is paused: an admin has a default or temporary password — change it first."
+
+#: app/radius/routes/ops_assistant.py:243
+msgid "اشتراكات تنتهي غدًا"
+msgstr "Subscriptions expiring tomorrow"
+
+#: app/radius/routes/ops_assistant.py:244
+#, python-format
+msgid "%(n)s مشترك ينتهي اشتراكه يوم %(d)s."
+msgstr "%(n)s subscribers expire on %(d)s."
+
+#: app/radius/routes/ops_assistant.py:247
+msgid "رفض دخول متكرّر"
+msgstr "Repeated login rejections"
+
+#: app/radius/routes/ops_assistant.py:248
+#, python-format
+msgid "%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة."
+msgstr "%(c)s rejected attempts on “%(nas)s” within %(w)s minutes."
+
+#: app/radius/routes/ops_assistant.py:251
+msgid "مخزون كروت منخفض"
+msgstr "Low card stock"
+
+#: app/radius/routes/ops_assistant.py:252
+#, python-format
+msgid "الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s)."
+msgstr "Plan “%(p)s”: %(r)s unused cards (threshold %(t)s)."
+
+#: app/radius/routes/ops_assistant.py:255
+msgid "باقة بلا عرض بيع"
+msgstr "Plan without a sales offer"
+
+#: app/radius/routes/ops_assistant.py:256
+#, python-format
+msgid "الباقة «%(p)s» لا يبيعها أيّ عرض فعّال."
+msgstr "Plan “%(p)s” is not sold by any active offer."
+
+#: app/radius/routes/ops_assistant.py:268
+msgid "تعذّر جلب الاقتراحات."
+msgstr "Could not load suggestions."
+
+#: app/radius/routes/users.py:1217
+msgid "فعّال"
+msgstr "Active"
+
+#: app/radius/services/audit_format.py:484
+msgid "المدّة (دقائق)"
+msgstr "Duration (minutes)"
+
+#: app/radius/services/cards.py:2737
+msgid "محذوفة"
+msgstr "Deleted"
+
+#: app/radius/services/hotspot_addons_content.py:208
+msgid "طريقة الحساب"
+msgstr "Charge mode"
+
+#: app/radius/services/ops_assistant/conversation.py:331
+msgid "لا توجد نتائج."
+msgstr "No results."
+
+#: app/radius/services/pdf_theme.py:526
+msgid "سعر الكرت"
+msgstr "Card price"
+
+#: app/radius/services/plans.py:329
+msgid "بلا حدّ للسرعة"
+msgstr "Unlimited speed"
+
+#: app/radius/services/provider_service_labels.py:142
+msgid "المتّصلون الآن"
+msgstr "Online now"
+
+#: app/radius/services/subscriber_form_fields.py:143
+msgid "الجلسات المتزامنة"
+msgstr "Concurrent sessions"
+
+#: app/static/js/mt_import.js:267
+msgid "تمّ"
+msgstr "Done"
+
+#: app/static/js/setup_wizard.js:33
+msgid "الخطوة"
+msgstr "Step"
+
+#: app/templates/admin/_admin_layout.html:1084
+msgid "تعذّر فتح مساعد العمليّات. حاول مرّة أخرى."
+msgstr "Could not open the operations assistant. Please try again."
+
+#: app/templates/radius/_ops_chat.html:26
+msgid "أنت"
+msgstr "You"
+
+#: app/templates/radius/_ops_chat.html:27
+msgid "المساعد يفكّر…"
+msgstr "The assistant is thinking…"
+
+#: app/templates/radius/_ops_chat.html:28
+msgid "تعذّر الاتصال بالخادم. حاول مرّة أخرى."
+msgstr "Could not reach the server. Please try again."
+
+#: app/templates/radius/_ops_chat.html:31
+msgid "أُلغي المقترح — لم يُنفَّذ شيء."
+msgstr "Proposal cancelled — nothing was executed."
+
+#: app/templates/radius/_ops_chat.html:32
+msgid "مقترح بانتظار تأكيدك"
+msgstr "Proposal awaiting your confirmation"
+
+#: app/templates/radius/_ops_chat.html:33
+msgid "خطّة من عدّة خطوات — تأكيد واحد"
+msgstr "Multi-step plan — one confirmation"
+
+#: app/templates/radius/_ops_chat.html:35
+msgid "تأثير مباشر على المشترك (فصل/تغيير فوريّ)."
+msgstr "Immediate effect on the subscriber (disconnect / instant change)."
+
+#: app/templates/radius/_ops_chat.html:36
+msgid "كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ."
+msgstr ""
+"The subscriber password is generated automatically and shown to you once after execution."
+
+#: app/templates/radius/_ops_chat.html:37
+msgid ""
+"هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها."
+msgstr ""
+"This step can’t be executed by the assistant in this version — do it from its page."
+
+#: app/templates/radius/_ops_chat.html:38
+msgid "من نتيجة الخطوة"
+msgstr "From the result of step"
+
+#: app/templates/radius/_ops_chat.html:39
+msgid "نتيجة التنفيذ"
+msgstr "Execution result"
+
+#: app/templates/radius/_ops_chat.html:42
+msgid "لم يُنفَّذ"
+msgstr "Not executed"
+
+#: app/templates/radius/_ops_chat.html:43
+msgid "نُفّذ كاملًا"
+msgstr "Fully executed"
+
+#: app/templates/radius/_ops_chat.html:45
+msgid "نُفّذ جزئيًّا — راجع الخطوات"
+msgstr "Partially executed — review the steps"
+
+#: app/templates/radius/_ops_chat.html:46
+msgid "هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة."
+msgstr "This proposal was already executed — this is its saved result."
+
+#: app/templates/radius/_ops_chat.html:47
+msgid "قائمة من النظام"
+msgstr "List from the system"
+
+#: app/templates/radius/_ops_chat.html:48
+msgid "القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد."
+msgstr ""
+"The list is shortened — be more specific if you don’t see what you want."
+
+#: app/templates/radius/_ops_chat.html:50
+msgid "معلومة من النظام"
+msgstr "Information from the system"
+
+#: app/templates/radius/_ops_chat.html:51
+msgid "وضع حزمة البطاقات"
+msgstr "Card batch status"
+
+#: app/templates/radius/_ops_chat.html:52
+msgid "معلومات المشترك"
+msgstr "Subscriber info"
+
+#: app/templates/radius/_ops_chat.html:63
+msgid "رقم الهويّة"
+msgstr "ID number"
+
+#: app/templates/radius/_ops_chat.html:66
+msgid "القائمة مختصرة — العدد الكلّيّ أعلاه."
+msgstr "The list is shortened — the total count is above."
+
+#: app/templates/radius/_ops_chat.html:67
+msgid "غير موجود."
+msgstr "Not found."
+
+#: app/templates/radius/_ops_chat.html:68
+msgid "هذا السجلّ ليس ضمن نطاقك."
+msgstr "This record is outside your scope."
+
+#: app/templates/radius/_ops_chat.html:69
+msgid "لا تملك صلاحية عرض هذه المعلومة."
+msgstr "You don’t have permission to view this information."
+
+#: app/templates/radius/_ops_chat.html:70
+msgid "تعذّر جلب المعلومة الآن."
+msgstr "Could not fetch this information right now."
+
+#: app/templates/radius/_ops_chat.html:71
+msgid "لا اقتراحات الآن."
+msgstr "No suggestions right now."
+
+#: app/templates/radius/_ops_chat.html:73
+msgid "ابدأ محادثة"
+msgstr "Start a conversation"
+
+#: app/templates/radius/_ops_chat.html:74
+msgid "محادثة جديدة"
+msgstr "New conversation"
+
+#: app/templates/radius/_ops_chat.html:75
+msgid "بدأت محادثة من اقتراح النظام."
+msgstr "Conversation started from a system suggestion."
+
+#: app/templates/radius/_ops_chat.html:76
+msgid "نُسخ"
+msgstr "Copied"
+
+#: app/templates/radius/_ops_chat.html:80
+msgid "حسب إعداد الخادم"
+msgstr "Per server setting"
+
+#: app/templates/radius/_ops_chat.html:82
+msgid ""
+"تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من جديد إن لزم)."
+msgstr ""
+"Continuing your previous conversation — these are its text messages (cards are not replayed; ask again if needed)."
+
+#: app/templates/radius/_ops_chat.html:83
+msgid "رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة."
+msgstr "Older messages are hidden — open the full page for a new conversation."
+
+#: app/templates/radius/_ops_chat.html:88
+msgid "الانتهاء الجديد"
+msgstr "New expiry"
+
+#: app/templates/radius/_ops_chat.html:88
+msgid "ينتهي (UTC)"
+msgstr "Expires (UTC)"
+
+#: app/templates/radius/_ops_chat.html:91
+msgid "سياسة التغيير"
+msgstr "Change policy"
+
+#: app/templates/radius/_ops_chat.html:93
+msgid "سرعة التنزيل (kbps)"
+msgstr "Download speed (kbps)"
+
+#: app/templates/radius/_ops_chat.html:94
+msgid "سرعة الرفع (kbps)"
+msgstr "Upload speed (kbps)"
+
+#: app/templates/radius/_ops_chat.html:95
+msgid "الحصّة (MB)"
+msgstr "Quota (MB)"
+
+#: app/templates/radius/_ops_chat.html:95
+msgid "الصلاحيّة (أيّام)"
+msgstr "Validity (days)"
+
+#: app/templates/radius/_ops_chat.html:96
+msgid "نوع الباقة"
+msgstr "Plan type"
+
+#: app/templates/radius/_ops_chat.html:98
+msgid "دخول بلا كلمة سر"
+msgstr "Login without password"
+
+#: app/templates/radius/_ops_chat.html:98
+msgid "طول كلمة السر"
+msgstr "Password length"
+
+#: app/templates/radius/_ops_chat.html:99
+msgid "عند تجاوز الأجهزة"
+msgstr "When devices exceed the limit"
+
+#: app/templates/radius/_ops_chat.html:100
+msgid "الأجهزة المسموحة"
+msgstr "Allowed devices"
+
+#: app/templates/radius/_ops_chat.html:102
+msgid "قفل الماك"
+msgstr "MAC lock"
+
+#: app/templates/radius/_ops_chat.html:103
+msgid "وحدة المدّة"
+msgstr "Duration unit"
+
+#: app/templates/radius/_ops_chat.html:104
+msgid "السعر الكلّيّ"
+msgstr "Total price"
+
+#: app/templates/radius/_ops_chat.html:104
+msgid "سعر خاصّ"
+msgstr "Custom price"
+
+#: app/templates/radius/_ops_chat.html:107
+msgid "قيد الاستعمال"
+msgstr "In use"
+
+#: app/templates/radius/_ops_chat.html:107
+msgid "متاحة (غير مستعملة)"
+msgstr "Available (unused)"
+
+#: app/templates/radius/_ops_chat.html:110
+msgid "جلسات حيّة"
+msgstr "Live sessions"
+
+#: app/templates/radius/_ops_chat.html:110
+msgid "متّصل الآن"
+msgstr "Online now"
+
+#: app/templates/radius/_ops_chat.html:111
+msgid "الرصيد مخفيّ"
+msgstr "Balance hidden"
+
+#: app/templates/radius/_ops_chat.html:112
+msgid "الدين المفتوح"
+msgstr "Open debt"
+
+#: app/templates/radius/_ops_chat.html:112
+msgid "العدد الكلّيّ"
+msgstr "Total count"
+
+#: app/templates/radius/_ops_chat.html:113
+msgid "مشتركون"
+msgstr "Subscribers"
+
+#: app/templates/radius/_ops_chat.html:117
+msgid "دين على المشترك"
+msgstr "Debt on the subscriber"
+
+#: app/templates/radius/_ops_chat.html:117
+msgid "مجّانًا"
+msgstr "Free"
+
+#: app/templates/radius/_ops_chat.html:117
+msgid "مدفوع من الرصيد"
+msgstr "Paid from balance"
+
+#: app/templates/radius/_ops_chat.html:119
+msgid "حتّى تاريخ"
+msgstr "Until date"
+
+#: app/templates/radius/_ops_chat.html:119
+msgid "مدّة"
+msgstr "Duration"
+
+#: app/templates/radius/_ops_chat.html:120
+msgid "إبقاء تاريخ الانتهاء"
+msgstr "Keep the expiry date"
+
+#: app/templates/radius/_ops_chat.html:120
+msgid "تعويض بأيّام إضافيّة"
+msgstr "Compensate with extra days"
+
+#: app/templates/radius/_ops_chat.html:121
+msgid "إنقاص الأيّام المتبقّية"
+msgstr "Reduce the remaining days"
+
+#: app/templates/radius/_ops_chat.html:121
+msgid "تسجيل الفرق دينًا"
+msgstr "Record the difference as debt"
+
+#: app/templates/radius/_ops_chat.html:122
+msgid "إبقاء تاريخ الانتهاء دون فرق"
+msgstr "Keep the expiry date, no difference"
+
+#: app/templates/radius/_ops_chat.html:122
+msgid "بلا فرق"
+msgstr "No difference"
+
+#: app/templates/radius/_ops_chat.html:123
+msgid "نفدت كروتها"
+msgstr "Out of cards"
+
+#: app/templates/radius/_ops_chat.html:134
+msgid ""
+"أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد."
+msgstr ""
+"Hi! Tell me what you need, e.g. “renew Ahmad for one paid month” or “make 100 cards from the 1-hour plan”. I’ll prepare the action and show it to you for confirmation."
+
+#: app/templates/radius/_ops_chat.html:138
+msgid "اكتب طلبك هنا…"
+msgstr "Type your request here…"
+
+#: app/templates/radius/_ops_chat.html:138
+msgid "رسالتك"
+msgstr "Your message"
+
+#: app/templates/radius/_ops_chat.html:149
+msgid ""
+"لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة."
+msgstr ""
+"Don’t type passwords in the chat — the system generates them and shows them to you once."
+
+#: app/templates/radius/_ops_chat.html:154
+msgid "كلمة مرور تُعرض مرّة واحدة"
+msgstr "One-time password display"
+
+#: app/templates/radius/_ops_chat.html:155
+msgid ""
+"انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد."
+msgstr ""
+"Copy it now and hand it to the subscriber. It will not be shown again, is not stored in the logs, and the assistant never sees it."
+
+#: app/templates/radius/_ops_chat.html:158
+msgid "نسختها — إغلاق"
+msgstr "Copied — close"
+
+#: app/templates/radius/_ops_widget_panel.html:14
+msgid "لا يُنفَّذ شيء قبل ضغطك «تأكيد»"
+msgstr "Nothing runs until you press “Confirm”"
+
+#: app/templates/radius/_ops_widget_panel.html:18
+msgid "فتح بصفحة كاملة"
+msgstr "Open full page"
+
+#: app/templates/radius/_ops_widget_panel.html:20
+msgid "تصغير"
+msgstr "Minimize"
+
+#: app/templates/radius/_ops_widget_panel.html:22
+msgid "إغلاق وإنهاء المحادثة"
+msgstr "Close and end the conversation"
+
+#: app/templates/radius/ops_assistant.html:18
+msgid "مساعد العمليّات — هوب ريديوس"
+msgstr "Operations assistant — HobeRadius"
+
+#: app/templates/radius/ops_assistant.html:21
+msgid "اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده."
+msgstr ""
+"Write your request in your own words — the assistant prepares the action and you confirm it."
+
+#: app/templates/radius/ops_assistant.html:31
+msgid ""
+"اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده. لا يُنفَّذ شيء بدون تأكيدك."
+msgstr ""
+"Write your request in your own words — the assistant prepares the action and you confirm it. Nothing runs without your confirmation."
+
+#: app/templates/radius/ops_assistant.html:35
+msgid "المساعد غير متاح الآن"
+msgstr "The assistant is not available right now"
+
+#: app/templates/radius/ops_assistant.html:37
+msgid ""
+"مساعد العمليّات غير مفعّل لهذه الشبكة. الميزة تجريبيّة ومطفأة افتراضيًّا."
+msgstr ""
+"The operations assistant is not enabled for this network. The feature is experimental and off by default."
+
+#: app/templates/radius/ops_assistant.html:39
+msgid ""
+"يفعّلها مالك الشبكة بعد التحقّق من أنّ كل المدراء يستخدمون كلمات مرور قويّة."
+msgstr ""
+"The network owner enables it after making sure all admins use strong passwords."
+
+#: app/templates/radius/ops_assistant.html:41
+msgid "اطلب من مالك الشبكة تفعيلها."
+msgstr "Ask the network owner to enable it."
+
+#: app/templates/radius/ops_assistant.html:45
+msgid ""
+"المساعد متوقّف لحماية الشبكة: لا يعمل ما دام أيّ مدير يستخدم كلمة مرور افتراضيّة أو مؤقّتة."
+msgstr ""
+"The assistant is paused to protect the network: it does not run while any admin uses a default or temporary password."
+
+#: app/templates/radius/ops_assistant.html:47
+msgid "مدراء بكلمة مرور افتراضيّة:"
+msgstr "Admins with a default password:"
+
+#: app/templates/radius/ops_assistant.html:48
+msgid "مدراء بكلمة مرور مؤقّتة لم تُغيَّر:"
+msgstr "Admins with an unchanged temporary password:"
+
+#: app/templates/radius/ops_assistant.html:50
+msgid "بعد تغيير هذه الكلمات يعمل المساعد تلقائيًّا."
+msgstr "Once these passwords are changed, the assistant works automatically."
+
+#: app/templates/radius/ops_assistant.html:59
+msgid "المحادثة"
+msgstr "Conversation"
+
+#: app/templates/radius/ops_assistant.html:65
+msgid "اقتراحات"
+msgstr "Suggestions"
+
+#: app/templates/radius/ops_assistant.html:65
+msgid "من نظام المراقبة"
+msgstr "From the monitoring system"

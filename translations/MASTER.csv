@@ -55,7 +55,7 @@ REST API لإدارة المشتركين والباقات والبطاقات و�
 البطاقات والحِزم,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:176
 توليد بطاقات الإنترنت، إدارة الحِزم، التصدير (CSV/Excel/PDF)، وعمليات البطاقة الواحدة.,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:176
 المنفّذ الحتميّ لمقترحات مساعد العمليّات: السياق، قوائم الاختيار، التحقّق، المسودّة، والتنفيذ بعد التأكيد.,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:177
-مساعد العمليّات,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:177
+مساعد العمليّات,,Operations assistant,,,,"missing: fr,tr,es",app/api/openapi.py:177
 بوابة بطاقات الهوتسبوت,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:178
 نقاط بوابة المستخدم النهائي للبطاقات. تستخدم توكن بوابة خاصًّا (وليس توكن الإدارة).,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:178
 متجر البطاقات,,,,,,"missing: en,fr,tr,es",app/api/openapi.py:179
@@ -663,7 +663,7 @@ entry %(entry_id)s غير موجود,,,,,,"missing: en,fr,tr,es",app/api/v1/netw
 عبارة البحث طويلة جدًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/operational_reports.py:39
 تقرير التشغيل المطلوب غير متاح.,,,,,,"missing: en,fr,tr,es",app/api/v1/operational_reports.py:67
 المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:82
-مساعد العمليّات غير مفعّل لهذه الشبكة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:96
+مساعد العمليّات غير مفعّل لهذه الشبكة.,,The operations assistant is not enabled for this network.,,,,"missing: fr,tr,es",app/api/v1/ops.py:96
 المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:99
 المحادثة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:113
 أرسل enabled قيمةً منطقيّة (true/false).,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:137
@@ -673,10 +673,10 @@ entry %(entry_id)s غير موجود,,,,,,"missing: en,fr,tr,es",app/api/v1/netw
 مصدر القائمة غير معروف.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:241
 mode يجب أن يكون draft أو execute.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:299
 تعذّر تنفيذ الطلب.,,Failed to execute the request.,Échec de l'exécution de la requête.,İstek yürütülemedi.,No se pudo ejecutar la solicitud.,ok,app/api/v1/ops.py:415
-المحادثة غير موجودة — ابدأ محادثة جديدة.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:420
-اكتب رسالة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:439
-نوع الحدث مطلوب.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:462
-تأكيد ناقص.,,,,,,"missing: en,fr,tr,es",app/api/v1/ops.py:489
+المحادثة غير موجودة — ابدأ محادثة جديدة.,,Conversation not found — start a new one.,,,,"missing: fr,tr,es",app/api/v1/ops.py:420
+اكتب رسالة أوّلًا.,,Write a message first.,,,,"missing: fr,tr,es",app/api/v1/ops.py:439
+نوع الحدث مطلوب.,,Event type is required.,,,,"missing: fr,tr,es",app/api/v1/ops.py:462
+تأكيد ناقص.,,Incomplete confirmation.,,,,"missing: fr,tr,es",app/api/v1/ops.py:489
 اختر رقمًا من القائمة.,,Pick a number from the list.,,,,"missing: fr,tr,es",app/api/v1/ops.py:535
 المبلغ غير صالح.,,,,,,"missing: en,fr,tr,es",app/api/v1/payments.py:34
 العملة غير مسموحة.,,,,,,"missing: en,fr,tr,es",app/api/v1/payments.py:35
@@ -1089,10 +1089,10 @@ window #%(i)s ليس dict,,,,,,"missing: en,fr,tr,es",app/radius/core/access_sch
 بطاقات,,Cards,Cartes,Kartlar,Tarjetas,ok,app/radius/core/ar_text.py:23
 بطاقةً,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:23
 بطاقتان,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:23
-كرت,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:24
+كرت,,Card,,,,"missing: fr,tr,es",app/radius/core/ar_text.py:24
 كرتان,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:24
 كرتًا,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:24
-كروت,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:24
+كروت,,Cards,,,,"missing: fr,tr,es",app/radius/core/ar_text.py:24
 إعداد,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:25
 إعدادات,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:25
 إعدادان,,,,,,"missing: en,fr,tr,es",app/radius/core/ar_text.py:25
@@ -1396,7 +1396,7 @@ live_coa: يُرسل CoA-Request فقط فتتغيّر السرعة فورًا �
 إسطنبول (تركيا),,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:73
 التوقيت العالمي UTC,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:74
 منتهٍ فورًا,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:81
-بلا انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:82
+بلا انتهاء,,No expiry,,,,"missing: fr,tr,es",app/radius/core/system_config.py:82
 المشترك الجديد بلا تاريخ انتهاء: منتهٍ فورًا / بلا انتهاء,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:84
 وقتٌ محلّيّ يتكرّر (ليلة انتهاء التوقيت الصيفيّ) يُحتسب بظهوره الأوّل — بإزاحة ما قبل التحوّل؛ ووقتٌ غير موجود (ليلة بدء الصيفيّ) يُقرأ بإزاحة ما قبل التحوّل فيقع بعد القفزة.,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:403
 %(n)s يوم,,,,,,"missing: en,fr,tr,es",app/radius/core/system_config.py:574
@@ -1833,18 +1833,18 @@ Manual — قائمة سماح يدوية (افتراضي رفض),,,,,,"missing:
 لا توجد جلسات نشطة مطابقة الآن — لم يُرسَل CoA. ستُطبَّق السرعة على الجلسة التالية عند إعادة المصادقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/bandwidth_schedules.py:236
 تم تنفيذ فحص جاهزية فقط. لم يتم تغيير السرعة فعليًا على RADIUS.,,,,,,"missing: en,fr,tr,es",app/radius/routes/bandwidth_schedules.py:239
 انتهت صلاحية جلستك. سجّل الدخول من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:461
-هذا القسم مُعطَّل على هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1346
-هذا القسم مخفيّ عن حسابك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1347
-هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1348
-الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1349
-العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1350
-هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1353
-تنقصك الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1354
-ليس لديك صلاحية الوصول إلى هذه الصفحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1771
-إذا كنت تتوقع أن هذا خلل، راجع الإدارة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1772
- — بياناتك باقية في النموذج.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1796
-لم يُحفَظ: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1796
-"<h1 dir=""rtl"" lang=""ar"" style=""font-family:sans-serif"">403 — ممنوع</h1><p dir=""rtl"">",,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1814
+هذا القسم مُعطَّل على هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1348
+هذا القسم مخفيّ عن حسابك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1349
+هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1350
+الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1351
+العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops).,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1352
+هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل المشتركين».,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1355
+تنقصك الصلاحية,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1356
+ليس لديك صلاحية الوصول إلى هذه الصفحة,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1773
+إذا كنت تتوقع أن هذا خلل، راجع الإدارة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1774
+ — بياناتك باقية في النموذج.,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1798
+لم يُحفَظ: ,,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1798
+"<h1 dir=""rtl"" lang=""ar"" style=""font-family:sans-serif"">403 — ممنوع</h1><p dir=""rtl"">",,,,,,"missing: en,fr,tr,es",app/radius/routes/blueprint.py:1816
 للمتابعة اكتب كلمة التأكيد «%(CONFIRM_WORD)s» بالضبط.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:93
 هناك عمليّة مطابقة جارية بالفعل. انتظر انتهاءها.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:97
 تعذّر إنشاء نسخة احتياطيّة — أُلغيت المطابقة ولم يتغيّر شيء.,,,,,,"missing: en,fr,tr,es",app/radius/routes/card_accounting_reconcile.py:109
@@ -2706,16 +2706,16 @@ WG غير مهيّأ على السيرفر بعد — تأكّد أن HOBERADIUS
 أُعيدت السرعة للوضع الطبيعي (100%%). طُبِّق على %(hit)s جلسة متصلة، والجلسات الجديدة تعود لسرعتها الأصليّة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:96
 طُبِّقت «%(v)s» (%(pct)s%%) حيًّا: CoA على %(hit)s جلسة متصلة، وتُطبَّق تلقائيًّا على كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:99
 تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.,,,,,,"missing: en,fr,tr,es",app/radius/routes/operations_center.py:112
-المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:117
-اشتراكات تنتهي غدًا,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:227
-%(n)s مشترك ينتهي اشتراكه يوم %(d)s.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:228
-رفض دخول متكرّر,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:231
-%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:232
-مخزون كروت منخفض,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:235
-الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s).,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:236
-باقة بلا عرض بيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:239
-الباقة «%(p)s» لا يبيعها أيّ عرض فعّال.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:240
-تعذّر جلب الاقتراحات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/ops_assistant.py:252
+المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا.,,The assistant is paused: an admin has a default or temporary password — change it first.,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:133
+اشتراكات تنتهي غدًا,,Subscriptions expiring tomorrow,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:243
+%(n)s مشترك ينتهي اشتراكه يوم %(d)s.,,%(n)s subscribers expire on %(d)s.,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:244
+رفض دخول متكرّر,,Repeated login rejections,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:247
+%(c)s محاولة مرفوضة على «%(nas)s» خلال %(w)s دقيقة.,,%(c)s rejected attempts on “%(nas)s” within %(w)s minutes.,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:248
+مخزون كروت منخفض,,Low card stock,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:251
+الباقة «%(p)s»: %(r)s كرت غير مستخدم (الحدّ %(t)s).,,Plan “%(p)s”: %(r)s unused cards (threshold %(t)s).,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:252
+باقة بلا عرض بيع,,Plan without a sales offer,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:255
+الباقة «%(p)s» لا يبيعها أيّ عرض فعّال.,,Plan “%(p)s” is not sold by any active offer.,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:256
+تعذّر جلب الاقتراحات.,,Could not load suggestions.,,,,"missing: fr,tr,es",app/radius/routes/ops_assistant.py:268
 إعداد دفع غير صالح: %(exc)s,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:117
 تم حفظ إعدادات تحصيل الدفعات.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:119
 طلب الدفع غير قابل للمراجعة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/payment_collection.py:174
@@ -3396,7 +3396,7 @@ VACUUM اكتمل.,,,,,,"missing: en,fr,tr,es",app/radius/routes/tools.py:187
 فشل التحقق من سر الربط أو التوقيع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:113
 رد لوحة التراخيص غير متوقّع,,,,,,"missing: en,fr,tr,es",app/radius/routes/tunnels.py:116
 لا تملك صلاحية «رؤية كلمة مرور المشترك».,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1205
-فعّال,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1217
+فعّال,,Active,,,,"missing: fr,tr,es",app/radius/routes/users.py:1217
 معلّق,,Pending,En attente,Beklemede,Pendiente,ok,app/radius/routes/users.py:1218
 الجوال,,Mobile,Mobile,Cep telefonu,Móvil,ok,app/radius/routes/users.py:1288
 تاريخ الإضافة,,,,,,"missing: en,fr,tr,es",app/radius/routes/users.py:1290
@@ -4167,7 +4167,7 @@ IP الراوتر,,,,,,"missing: en,fr,tr,es",app/radius/services/anti_mac_clone
 أيّام الاتصال,,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:478
 سعر البيع,,Selling price,Prix de vente,Satış fiyatı,Precio de venta,ok,app/radius/services/audit_format.py:480
 الصلاحية (أيّام),,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:484
-المدّة (دقائق),,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:484
+المدّة (دقائق),,Duration (minutes),,,,"missing: fr,tr,es",app/radius/services/audit_format.py:484
 الحدّ اليوميّ (دقائق),,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:485
 اسم الدفعة,,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:487
 السعر بالجملة,,,,,,"missing: en,fr,tr,es",app/radius/services/audit_format.py:488
@@ -4476,7 +4476,7 @@ MAC مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2156
 تعذّر تعديل وقت البطاقة — لم تُعثر عليها.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2600
 تعذر حذف البطاقة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2653
 مُستنفدة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2736
-محذوفة,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2737
+محذوفة,,Deleted,,,,"missing: fr,tr,es",app/radius/services/cards.py:2737
 هذه البطاقة من حزمة «رقم فقط» (بلا كلمة مرور): تُصادَق برقمها وحده، فتغيير كلمة المرور لا أثر له. لإغلاق تسريبٍ غيّر «رقم الكرت» نفسه.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2777
 البادئة «rtr-» محجوزة لحسابات إدارة الراوترات.,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2800
 كلمة المرور أطول من 64 حرفًا,,,,,,"missing: en,fr,tr,es",app/radius/services/cards.py:2805
@@ -5106,7 +5106,7 @@ Mac (سلكي),,,,,,"missing: en,fr,tr,es",app/radius/services/device_fingerprin
 خط العرض (latitude),,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:202
 خط الطول (longitude),,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:204
 فرق التوقيت (ساعات),,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:206
-طريقة الحساب,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:208
+طريقة الحساب,,Charge mode,,,,"missing: fr,tr,es",app/radius/services/hotspot_addons_content.py:208
 مذهب العصر,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:216
 صحو,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:229
 صحو غالبًا,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_addons_content.py:229
@@ -7448,7 +7448,7 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:326
 لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:328
 لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:330
-لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:331
+لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:331
 المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:490
 لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:499
 احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:520
@@ -7461,16 +7461,16 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:671
 تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:673
 الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:687
-التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:126
-المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:134
-المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:187
-هذا مقترح مسودّة (المستوى 1) — يُحفظ من النموذج لا بالتأكيد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:190
-التأكيد لا يطابق المقترح المعروض — اعرض المقترح الجديد وأكّده من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:197
-مفتاح التكرار استُخدم لمقترح آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:203
-هذا المقترح قيد التنفيذ الآن.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:215
-لا يمكن تأكيد هذا المقترح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:217
-المقترح تغيّر — أكّده من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:232
-نتيجة الخطوة السابقة لا تحوي القيمة المطلوبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:290
+التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:127
+المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:135
+المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:188
+هذا مقترح مسودّة (المستوى 1) — يُحفظ من النموذج لا بالتأكيد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:191
+التأكيد لا يطابق المقترح المعروض — اعرض المقترح الجديد وأكّده من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:198
+مفتاح التكرار استُخدم لمقترح آخر.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:204
+هذا المقترح قيد التنفيذ الآن.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:216
+لا يمكن تأكيد هذا المقترح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:218
+المقترح تغيّر — أكّده من جديد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:233
+نتيجة الخطوة السابقة لا تحوي القيمة المطلوبة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:291
 صيغة الوقت المحلّي غير صحيحة (YYYY-MM-DDTHH:MM).,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/units.py:86
 وحدة المدّة غير معروفة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/units.py:119
 أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من عمليّة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/units.py:123
@@ -7513,7 +7513,7 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 المتاحة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:523
 النشطة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:524
 المتبقية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:525
-سعر الكرت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:526
+سعر الكرت,,Card price,,,,"missing: fr,tr,es",app/radius/services/pdf_theme.py:526
 القيمة التقديرية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:527
 لا توجد حِزَم كروت مطابقة لعوامل التصفية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:575
 عدد الحِزَم,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:588
@@ -7597,7 +7597,7 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 استخدام مرّة واحدة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:327
 الليل المفتوح,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:327
 هوت سبوت,,Hotspot,Hotspot,Hotspot,Hotspot,ok,app/radius/services/plans.py:328
-بلا حدّ للسرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:329
+بلا حدّ للسرعة,,Unlimited speed,,,,"missing: fr,tr,es",app/radius/services/plans.py:329
 تجاوز السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:329
 جلسة واحدة فعّالة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:330
 ملفّ السرعة,,,,,,"missing: en,fr,tr,es",app/radius/services/plans.py:330
@@ -7715,7 +7715,7 @@ HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/se
 تذاكر الدعم,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:131
 إدارة المتجر,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:135
 دعم المتجر,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:136
-المتّصلون الآن,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:142
+المتّصلون الآن,,Online now,,,,"missing: fr,tr,es",app/radius/services/provider_service_labels.py:142
 التحكّم الحيّ بالجلسات,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:143
 لوحة المعلومات,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:146
 إدارة الترخيص,,,,,,"missing: en,fr,tr,es",app/radius/services/provider_service_labels.py:148
@@ -8689,7 +8689,7 @@ FastTrack قد يتجاوز قاعدة الـ mangle لهذه السياسة، �
 تقسيم سرعة التنزيل على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:140
 تقسيم سرعة الرفع على الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:141
 السلوك عند بلوغ حدّ الأجهزة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:142
-الجلسات المتزامنة,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:143
+الجلسات المتزامنة,,Concurrent sessions,,,,"missing: fr,tr,es",app/radius/services/subscriber_form_fields.py:143
 خادم DNS الأساسيّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:144
 خادم DNS الثانويّ (PPP),,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:145
 إعدادات شبكة متقدّمة جدًّا,,,,,,"missing: en,fr,tr,es",app/radius/services/subscriber_form_fields.py:155
@@ -9436,7 +9436,7 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 خطط أُنشئت:,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:246
 💡 تذكير: تأكّد أنّ إعدادات RADIUS (السرّ المشترك + المنافذ) مضبوطة على هذا الراوتر ,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:262
 كي يصادق المستوردون فعليًّا.,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:263
-تمّ,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:267
+تمّ,,Done,,,,"missing: fr,tr,es",app/static/js/mt_import.js:267
 جارٍ تحميل آخر العمليات…,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:275
 لا عمليات سابقة.,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:285
 متخطّى,,,,,,"missing: en,fr,tr,es",app/static/js/mt_import.js:291
@@ -9494,7 +9494,7 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 -- لا يوجد سكربت بعد --,,-- No script yet --,-- Aucun script pour le moment --,-- Henüz komut dosyası yok --,-- Aún no hay script --,ok,app/static/js/setup_wizard.js:23
 رمز الحالة,,,,,,"missing: en,fr,tr,es",app/static/js/setup_wizard.js:30
 رقم التشغيل,,,,,,"missing: en,fr,tr,es",app/static/js/setup_wizard.js:32
-الخطوة,,,,,,"missing: en,fr,tr,es",app/static/js/setup_wizard.js:33
+الخطوة,,Step,,,,"missing: fr,tr,es",app/static/js/setup_wizard.js:33
 الخط الزمني,,Timeline,Chronologie,Zaman Çizelgesi,Cronología,ok,app/static/js/setup_wizard.js:34
 العمليات,,Operations,Opérations,İşlemler,Operaciones,ok,app/static/js/setup_wizard.js:35
 فحص الصحة,,Health check,Vérification de l'état,Sağlık denetimi,Comprobación de estado,ok,app/static/js/setup_wizard.js:36
@@ -9955,6 +9955,7 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 معرّف نقطة الاتصال أو الجهاز المستقبل.,,The identifier of the access point or receiving device.,L'identifiant du point d'accès ou de l'appareil récepteur.,Erişim noktasının veya alıcı cihazın tanımlayıcısı.,El identificador del punto de acceso o del dispositivo receptor.,ok,app/templates/admin/_admin_layout.html:824
 عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة.,,The network device address the authentication test is sent from.,L'adresse du périphérique réseau depuis lequel vous enverrez le test d'authentification.,Kimlik doğrulama testini göndereceğiniz ağ cihazının adresi.,La dirección del dispositivo de red desde el que enviarás la prueba de autenticación.,ok,app/templates/admin/_admin_layout.html:825
 نوع منفذ الاتصال المستخدم في الاختبار.,,The connection port type used in the test.,Type de port de connexion utilisé lors du test.,Testte kullanılan bağlantı bağlantı noktası türü.,Tipo de puerto de conexión utilizado en la prueba.,ok,app/templates/admin/_admin_layout.html:826
+تعذّر فتح مساعد العمليّات. حاول مرّة أخرى.,,Could not open the operations assistant. Please try again.,,,,"missing: fr,tr,es",app/templates/admin/_admin_layout.html:1084
 ليست ضمن صلاحياتك,,Not within your permissions,Hors de vos autorisations,Yetkileriniz dahilinde değil,Fuera de tus permisos,ok,app/templates/admin/_sidebar.html:63
 مدفوعة — تحتاج تفعيل من المزوّد,,Paid — needs activation by the provider,Payé — activation requise par le fournisseur,Ödendi — sağlayıcı tarafından etkinleştirme gerekli,Pagada — requiere activación por el proveedor,ok,app/templates/admin/_sidebar.html:129
 تحتاج ترقية,,Upgrade required,Mise à niveau requise,Yükseltme gerekli,Requiere actualización,ok,app/templates/admin/_sidebar.html:132
@@ -10164,6 +10165,100 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 مُطبَّق,,Applied,Appliqué,Uygulandı,Aplicado,ok,app/templates/radius/_network_policy_shell.html:57
 مُعطَّلة,,Disabled,Désactivée,Devre dışı,Deshabilitada,ok,app/templates/radius/_network_policy_shell.html:61
 مسودّة,,Draft,Brouillon,Taslak,Borrador,ok,app/templates/radius/_network_policy_shell.html:63
+أنت,,You,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:26
+المساعد يفكّر…,,The assistant is thinking…,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:27
+تعذّر الاتصال بالخادم. حاول مرّة أخرى.,,Could not reach the server. Please try again.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:28
+أُلغي المقترح — لم يُنفَّذ شيء.,,Proposal cancelled — nothing was executed.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:31
+مقترح بانتظار تأكيدك,,Proposal awaiting your confirmation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:32
+خطّة من عدّة خطوات — تأكيد واحد,,Multi-step plan — one confirmation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:33
+تأثير مباشر على المشترك (فصل/تغيير فوريّ).,,Immediate effect on the subscriber (disconnect / instant change).,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:35
+كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ.,,The subscriber password is generated automatically and shown to you once after execution.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:36
+هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها.,,This step can’t be executed by the assistant in this version — do it from its page.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:37
+من نتيجة الخطوة,,From the result of step,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:38
+نتيجة التنفيذ,,Execution result,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:39
+لم يُنفَّذ,,Not executed,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:42
+نُفّذ كاملًا,,Fully executed,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:43
+نُفّذ جزئيًّا — راجع الخطوات,,Partially executed — review the steps,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:45
+هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة.,,This proposal was already executed — this is its saved result.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:46
+قائمة من النظام,,List from the system,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:47
+القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد.,,The list is shortened — be more specific if you don’t see what you want.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:48
+معلومة من النظام,,Information from the system,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:50
+وضع حزمة البطاقات,,Card batch status,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:51
+معلومات المشترك,,Subscriber info,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:52
+آخر المشتركين المضافين,,Latest added subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:54
+آخر حزم البطاقات,,Latest card batches,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:55
+آخر نشاطك في اللوحة,,Your latest activity in the panel,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:56
+لم أجد تطابقًا تامًّا — هل تقصد:,,No exact match — did you mean:,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:57
+اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك.,,Tap the right record to choose it. Nothing runs on a suggestion before you choose.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:58
+نعم، أقصد,,"Yes, I mean",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:59
+هذه حزمة الكرت الذي كتبت رقمه.,,This is the batch of the card number you typed.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:60
+أُضيف,,added,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:61
+رقم الهويّة,,ID number,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:63
+القائمة مختصرة — العدد الكلّيّ أعلاه.,,The list is shortened — the total count is above.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:66
+غير موجود.,,Not found.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:67
+هذا السجلّ ليس ضمن نطاقك.,,This record is outside your scope.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:68
+لا تملك صلاحية عرض هذه المعلومة.,,You don’t have permission to view this information.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:69
+تعذّر جلب المعلومة الآن.,,Could not fetch this information right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:70
+لا اقتراحات الآن.,,No suggestions right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:71
+ابدأ محادثة,,Start a conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:73
+محادثة جديدة,,New conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:74
+بدأت محادثة من اقتراح النظام.,,Conversation started from a system suggestion.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:75
+نُسخ,,Copied,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:76
+حسب إعداد الخادم,,Per server setting,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:80
+تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من جديد إن لزم).,,Continuing your previous conversation — these are its text messages (cards are not replayed; ask again if needed).,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:82
+رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة.,,Older messages are hidden — open the full page for a new conversation.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:83
+الانتهاء الجديد,,New expiry,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:88
+ينتهي (UTC),,Expires (UTC),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:88
+التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/_ops_chat.html:91
+الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/_ops_chat.html:91
+سياسة التغيير,,Change policy,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:91
+سرعة التنزيل (kbps),,Download speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:93
+سرعة الرفع (kbps),,Upload speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:94
+الحصّة,,Quota,Quota,Kota,Cuota,ok,app/templates/radius/_ops_chat.html:95
+الحصّة (MB),,Quota (MB),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
+الصلاحيّة (أيّام),,Validity (days),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
+نوع الباقة,,Plan type,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
+دخول بلا كلمة سر,,Login without password,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:98
+طول كلمة السر,,Password length,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:98
+عند تجاوز الأجهزة,,When devices exceed the limit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:99
+الأجهزة المسموحة,,Allowed devices,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:100
+قفل الماك,,MAC lock,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:102
+وحدة المدّة,,Duration unit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:103
+السعر الكلّيّ,,Total price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
+سعر خاصّ,,Custom price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
+كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/templates/radius/_ops_chat.html:105
+قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:107
+متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:107
+جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:110
+متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:110
+آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/templates/radius/_ops_chat.html:111
+الرصيد مخفيّ,,Balance hidden,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
+الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
+العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
+مشتركون,,Subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
+دين على المشترك,,Debt on the subscriber,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
+مجّانًا,,Free,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
+مدفوع من الرصيد,,Paid from balance,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
+حتّى تاريخ,,Until date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
+مدّة,,Duration,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
+إبقاء تاريخ الانتهاء,,Keep the expiry date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:120
+تعويض بأيّام إضافيّة,,Compensate with extra days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:120
+إنقاص الأيّام المتبقّية,,Reduce the remaining days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:121
+تسجيل الفرق دينًا,,Record the difference as debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:121
+إبقاء تاريخ الانتهاء دون فرق,,"Keep the expiry date, no difference",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
+بلا فرق,,No difference,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
+نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:123
+أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,"Hi! Tell me what you need, e.g. “renew Ahmad for one paid month” or “make 100 cards from the 1-hour plan”. I’ll prepare the action and show it to you for confirmation.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:134
+اكتب طلبك هنا…,,Type your request here…,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:138
+رسالتك,,Your message,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:138
+لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.,,Don’t type passwords in the chat — the system generates them and shows them to you once.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:149
+كلمة مرور تُعرض مرّة واحدة,,One-time password display,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:154
+انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.,,"Copy it now and hand it to the subscriber. It will not be shown again, is not stored in the logs, and the assistant never sees it.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:155
+نسختها — إغلاق,,Copied — close,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:158
+لا يُنفَّذ شيء قبل ضغطك «تأكيد»,,Nothing runs until you press “Confirm”,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:14
+فتح بصفحة كاملة,,Open full page,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:18
+تصغير,,Minimize,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:20
+إغلاق وإنهاء المحادثة,,Close and end the conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:22
 أسعار العروض,,Offer prices,Prix des offres,Teklif fiyatları,Precios de las ofertas,ok,app/templates/radius/_perm_labels.html:24
 النطاق والإشراف,,Scope and oversight,Portée et supervision,Kapsam ve gözetim,Alcance y supervisión,ok,app/templates/radius/_perm_labels.html:30
 إدارة الراوترات (تجريبيّ),,,,,,"missing: en,fr,tr,es",app/templates/radius/_perm_labels.html:31
@@ -10806,7 +10901,6 @@ Hostname,,Hostname,Nom d'hôte,Ana bilgisayar adı,Nombre de host,ok,app/templat
 Class-Id,,Class-Id,Class-Id,Class-Id,Class-Id,ok,app/templates/radius/anti_mac_clone.html:188
 NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_clone.html:189
 تحقّق/تباين,,Verify/discrepancy,Vérification/écart,Doğrulama/sapma,Verificación/discrepancia,ok,app/templates/radius/anti_mac_clone.html:191
-آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/templates/radius/anti_mac_clone.html:192
 مستبدَل,,,,,,"missing: en,fr,tr,es",app/templates/radius/anti_mac_clone.html:215
 تعليق هذا الارتباط؟ سيُمنع الجهاز من الاستخدام السلس حتى التفعيل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/anti_mac_clone.html:230
 حذف الارتباط؟ سيُعاد إنشاؤه عند أوّل دخول ناجح لاحق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/anti_mac_clone.html:239
@@ -11719,7 +11813,6 @@ MAC الحالي,,Current MAC,MAC actuelle,Mevcut MAC,MAC actual,ok,app/template
 تحكّم كامل في بطاقة العميل,,Full control over the customer card,Contrôle total de la carte client,Müşteri kartı üzerinde tam kontrol,Control total sobre la tarjeta del cliente,ok,app/templates/radius/cards_checker_v2.html:989
 لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1017
 لا أجهزة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1024
-متّصل الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1024
 لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1033
 إعادة ضبط الاستخدام,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1036
 سيتم تصفير الوقت المستهلَك لـ %(user)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1037
@@ -11789,9 +11882,7 @@ MAC الحالي,,Current MAC,MAC actuelle,Mevcut MAC,MAC actual,ok,app/template
 عنوان MAC غير صالح:,,Invalid MAC address:,Adresse MAC invalide :,Geçersiz MAC adresi:,Dirección MAC no válida:,ok,app/templates/radius/cards_checker_v2.html:1831
 اتركها,,Leave it,Laisser vide,Boş bırak,Déjalo,ok,app/templates/radius/cards_checker_v2.html:1850
 في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.,,in both fields to clear the customization and revert to the batch speed.,dans les deux champs pour annuler la personnalisation et revenir à la vitesse du lot.,özelleştirmeyi kaldırıp parti hızına dönmek için her iki alana.,en ambos campos para anular la personalización y volver a la velocidad del lote.,ok,app/templates/radius/cards_checker_v2.html:1851
-التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/cards_checker_v2.html:1854
 مثال: 4096,,Example: 4096,Exemple : 4096,Örnek: 4096,Ejemplo: 4096,ok,app/templates/radius/cards_checker_v2.html:1855
-الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/cards_checker_v2.html:1858
 مثال: 2048,,Example: 2048,Exemple : 2048,Örnek: 2048,Ejemplo: 2048,ok,app/templates/radius/cards_checker_v2.html:1859
 قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.,,Speed values must be non-negative integers.,Les valeurs de vitesse doivent être des entiers non négatifs.,Hız değerleri negatif olmayan tam sayılar olmalıdır.,Los valores de velocidad deben ser enteros no negativos.,ok,app/templates/radius/cards_checker_v2.html:1876
 يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).,,Both values must be set together (or zero both to cancel the assignment).,Les deux valeurs doivent être définies ensemble (ou mettre les deux à zéro pour annuler l'attribution).,Her iki değer birlikte belirlenmelidir (veya atamayı iptal etmek için ikisini de sıfırlayın).,Ambos valores deben establecerse juntos (o poner ambos a cero para cancelar la asignación).,ok,app/templates/radius/cards_checker_v2.html:1879
@@ -12101,7 +12192,6 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 تجاوز السوبر (اختياري),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:204
 متاح للمالك فقط — يَتجاوز قيم العرض,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:205
 مدّة البطاقة (قيمة),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:213
-وحدة المدّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:215
 توليد الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:229
 عروض البطاقات - Hobe Hub,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:3
 عروض تجاريّة يحدّدها المالك فوق باقة جاهزة (سعر + مدّة + مشاركة)، ويولّد منها المديرون حزمًا بسعر وشروط مقفلة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:6
@@ -13277,7 +13367,6 @@ RouterOS 6 (قديم),,,,,,"missing: en,fr,tr,es",app/templates/radius/devices_f
 الحزم المربوطة فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/distributors_detail.html:92
 مخصص,,,,,,"missing: en,fr,tr,es",app/templates/radius/distributors_detail.html:94
 الحزم المربوطة,,,,,,"missing: en,fr,tr,es",app/templates/radius/distributors_detail.html:109
-كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/templates/radius/distributors_detail.html:117
 تاريخ الربط,,Binding Date,Date de liaison,Bağlama Tarihi,Fecha de vinculación,ok,app/templates/radius/distributors_detail.html:122
 لا توجد حزم مربوطة بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/distributors_detail.html:149
 استخدم نموذج «ربط حزمة كروت» على اليسار لربط أول حزمة بهذا الموزع.,,,,,,"missing: en,fr,tr,es",app/templates/radius/distributors_detail.html:150
@@ -18339,7 +18428,6 @@ SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير انت
 شريط بنفسجي بنسبة مئوية يبيّن نصيب الباقة من إجمالي المخصّص عندك.,,A purple percentage bar shows the plan's share of the total allocated to you.,Une barre violette en pourcentage indique la part du forfait sur le total qui vous est alloué.,"Mor bir yüzde çubuğu, paketin size tahsis edilen toplamdaki payını gösterir.",Una barra morada de porcentaje muestra la parte del plan respecto al total asignado a ti.,ok,app/templates/radius/docs_users_overview.html:751
 الكوتة المخصّصة حسب الباقة,,Custom quota by plan,Quota personnalisé selon le forfait,Pakete göre özel kota,Cuota personalizada según el plan,ok,app/templates/radius/docs_users_overview.html:754
 إجمالي المخصّص,,Total allocated,Total alloué,Toplam tahsis edilen,Total asignado,ok,app/templates/radius/docs_users_overview.html:757
-الحصّة,,Quota,Quota,Kota,Cuota,ok,app/templates/radius/docs_users_overview.html:757
 كوتة المشترك,,Subscriber quota,Quota de l'abonné,Abone kotası,Cuota del abonado,ok,app/templates/radius/docs_users_overview.html:757
 «الكوتة» هنا =,,"""Quota"" here =",« Quota » ici =,"Buradaki ""kota"" =",«Cuota» aquí =,ok,app/templates/radius/docs_users_overview.html:772
 المخصّص (الحدّ الأقصى),,Allocated (maximum),Alloué (maximum),Ayrılan (en fazla),Asignado (máximo),ok,app/templates/radius/docs_users_overview.html:772
@@ -20906,102 +20994,20 @@ Canary تدريجي,,,,,,"missing: en,fr,tr,es",app/templates/radius/network_pol
 «معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:359
 حفظ كمعاينة,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:368
 احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:425
-مساعد العمليّات — هوب ريديوس,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:16
-اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:19
-اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده. لا يُنفَّذ شيء بدون تأكيدك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:83
-المساعد غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:87
-مساعد العمليّات غير مفعّل لهذه الشبكة. الميزة تجريبيّة ومطفأة افتراضيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:89
-يفعّلها مالك الشبكة بعد التحقّق من أنّ كل المدراء يستخدمون كلمات مرور قويّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:91
-اطلب من مالك الشبكة تفعيلها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:93
-المساعد متوقّف لحماية الشبكة: لا يعمل ما دام أيّ مدير يستخدم كلمة مرور افتراضيّة أو مؤقّتة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:97
-مدراء بكلمة مرور افتراضيّة:,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:99
-مدراء بكلمة مرور مؤقّتة لم تُغيَّر:,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:100
-بعد تغيير هذه الكلمات يعمل المساعد تلقائيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:102
-أنت,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:117
-المساعد يفكّر…,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:118
-تعذّر الاتصال بالخادم. حاول مرّة أخرى.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:119
-أُلغي المقترح — لم يُنفَّذ شيء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:122
-مقترح بانتظار تأكيدك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:123
-خطّة من عدّة خطوات — تأكيد واحد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:124
-تأثير مباشر على المشترك (فصل/تغيير فوريّ).,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:126
-كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:127
-هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:128
-من نتيجة الخطوة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:129
-نتيجة التنفيذ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:130
-لم يُنفَّذ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:133
-نُفّذ كاملًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:134
-نُفّذ جزئيًّا — راجع الخطوات,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:136
-هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:137
-قائمة من النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:138
-القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:139
-معلومة من النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:141
-وضع حزمة البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:142
-معلومات المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:143
-آخر المشتركين المضافين,,Latest added subscribers,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:145
-آخر حزم البطاقات,,Latest card batches,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:146
-آخر نشاطك في اللوحة,,Your latest activity in the panel,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:147
-لم أجد تطابقًا تامًّا — هل تقصد:,,No exact match — did you mean:,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:148
-اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك.,,Tap the right record to choose it. Nothing runs on a suggestion before you choose.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:149
-نعم، أقصد,,"Yes, I mean",,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:150
-هذه حزمة الكرت الذي كتبت رقمه.,,This is the batch of the card number you typed.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:151
-أُضيف,,added,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:152
-رقم الهويّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:154
-القائمة مختصرة — العدد الكلّيّ أعلاه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:157
-غير موجود.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:158
-هذا السجلّ ليس ضمن نطاقك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:159
-لا تملك صلاحية عرض هذه المعلومة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:160
-تعذّر جلب المعلومة الآن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:161
-لا اقتراحات الآن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:162
-ابدأ محادثة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:164
-محادثة جديدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:165
-بدأت محادثة من اقتراح النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:166
-نُسخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:167
-حسب إعداد الخادم,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:171
-الانتهاء الجديد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:177
-ينتهي (UTC),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:177
-سياسة التغيير,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:180
-سرعة التنزيل (kbps),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:182
-سرعة الرفع (kbps),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:183
-الحصّة (MB),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:184
-الصلاحيّة (أيّام),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:184
-نوع الباقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:185
-دخول بلا كلمة سر,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:187
-طول كلمة السر,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:187
-عند تجاوز الأجهزة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:188
-الأجهزة المسموحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:189
-قفل الماك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:191
-السعر الكلّيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:193
-سعر خاصّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:193
-قيد الاستعمال,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:196
-متاحة (غير مستعملة),,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:196
-جلسات حيّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:199
-الرصيد مخفيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:200
-الدين المفتوح,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:201
-العدد الكلّيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:201
-مشتركون,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:202
-دين على المشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:206
-مجّانًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:206
-مدفوع من الرصيد,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:206
-حتّى تاريخ,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:208
-مدّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:208
-إبقاء تاريخ الانتهاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:209
-تعويض بأيّام إضافيّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:209
-إنقاص الأيّام المتبقّية,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:210
-تسجيل الفرق دينًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:210
-إبقاء تاريخ الانتهاء دون فرق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:211
-بلا فرق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:211
-نفدت كروتها,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:212
-المحادثة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:221
-لا يُنفَّذ شيء قبل ضغطك «تأكيد»,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:221
-أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:224
-اكتب طلبك هنا…,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:228
-رسالتك,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:228
-لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:236
-اقتراحات,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:242
-من نظام المراقبة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:242
-كلمة مرور تُعرض مرّة واحدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:248
-انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:249
-نسختها — إغلاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/ops_assistant.html:252
+مساعد العمليّات — هوب ريديوس,,Operations assistant — HobeRadius,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:18
+اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده.,,Write your request in your own words — the assistant prepares the action and you confirm it.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:21
+اكتب طلبك بلغتك — المساعد يجهّز الإجراء وأنت تؤكّده. لا يُنفَّذ شيء بدون تأكيدك.,,Write your request in your own words — the assistant prepares the action and you confirm it. Nothing runs without your confirmation.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:31
+المساعد غير متاح الآن,,The assistant is not available right now,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:35
+مساعد العمليّات غير مفعّل لهذه الشبكة. الميزة تجريبيّة ومطفأة افتراضيًّا.,,The operations assistant is not enabled for this network. The feature is experimental and off by default.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:37
+يفعّلها مالك الشبكة بعد التحقّق من أنّ كل المدراء يستخدمون كلمات مرور قويّة.,,The network owner enables it after making sure all admins use strong passwords.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:39
+اطلب من مالك الشبكة تفعيلها.,,Ask the network owner to enable it.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:41
+المساعد متوقّف لحماية الشبكة: لا يعمل ما دام أيّ مدير يستخدم كلمة مرور افتراضيّة أو مؤقّتة.,,The assistant is paused to protect the network: it does not run while any admin uses a default or temporary password.,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:45
+مدراء بكلمة مرور افتراضيّة:,,Admins with a default password:,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:47
+مدراء بكلمة مرور مؤقّتة لم تُغيَّر:,,Admins with an unchanged temporary password:,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:48
+بعد تغيير هذه الكلمات يعمل المساعد تلقائيًّا.,,"Once these passwords are changed, the assistant works automatically.",,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:50
+المحادثة,,Conversation,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:59
+اقتراحات,,Suggestions,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:65
+من نظام المراقبة,,From the monitoring system,,,,"missing: fr,tr,es",app/templates/radius/ops_assistant.html:65
 الدفع الإلكتروني — وضع تجريبي,,Electronic payment — test mode,Paiement électronique — mode test,Elektronik ödeme — test modu,Pago electrónico — modo de prueba,ok,app/templates/radius/pay_demo.html:13
 وضع تجريبي — محاكاة,,Test mode — simulation,Mode test — simulation,Test modu — simülasyon,Modo de prueba — simulación,ok,app/templates/radius/pay_demo.html:224
 لا يتم خصم أي مبلغ حقيقي. هذه معاينة لتجربة الدفع قبل ربط البوابات الفعلية.,,No real amount is charged. This is a preview of the payment experience before connecting the actual gateways.,Aucun montant réel n'est débité. Ceci est un aperçu du parcours de paiement avant la connexion des passerelles réelles.,"Gerçek bir tutar tahsil edilmez. Bu, gerçek ödeme ağ geçitleri bağlanmadan önce ödeme deneyiminin bir önizlemesidir.",No se cobra ningún importe real. Esta es una vista previa de la experiencia de pago antes de conectar las pasarelas reales.,ok,app/templates/radius/pay_demo.html:225

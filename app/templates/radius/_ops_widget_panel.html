@@ -1,0 +1,28 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   مساعد العمليّات — الصندوق العائم (جزء HTML بلا قالب أب).
+   يجلبه زرّ الفقاعة (#ops-fab في admin/_admin_layout.html) عند أوّل نقرة من
+   radius.ops_assistant_widget — البوّابة نفسها للصفحة (العلَم + كلمات المرور).
+   المنطق: OpsChat.mount في static/js/ops_assistant.js — نفس منطق الصفحة.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% import "radius/_ops_chat.html" as ops_chat with context %}
+<div class="ops-fab-panel" id="ops-fab-panel" role="dialog" aria-modal="false"
+     aria-labelledby="ops-fab-title" hidden>
+  <script type="application/json" data-ops="config">{{ ops_chat.config_json() }}</script>
+  <div class="ops-fab-head">
+    <span class="ops-fab-ic" aria-hidden="true"><i class="fa-solid fa-robot"></i></span>
+    <div class="ops-fab-t" id="ops-fab-title">{{ _("مساعد العمليّات") }}<span class="ops-badge">{{ _("تجريبيّ") }}</span>
+      <small>{{ _("لا يُنفَّذ شيء قبل ضغطك «تأكيد»") }}</small></div>
+    <button type="button" class="ops-fab-hbtn" data-ops="new"
+            title="{{ _('محادثة جديدة') }}" aria-label="{{ _('محادثة جديدة') }}"><i class="fa-solid fa-rotate"></i></button>
+    <a class="ops-fab-hbtn" href="{{ url_for('radius.ops_assistant') }}"
+       title="{{ _('فتح بصفحة كاملة') }}" aria-label="{{ _('فتح بصفحة كاملة') }}"><i class="fa-solid fa-up-right-from-square"></i></a>
+    <button type="button" class="ops-fab-hbtn" data-ops-w="min"
+            title="{{ _('تصغير') }}" aria-label="{{ _('تصغير') }}"><i class="fa-solid fa-minus"></i></button>
+    <button type="button" class="ops-fab-hbtn" data-ops-w="close"
+            title="{{ _('إغلاق وإنهاء المحادثة') }}" aria-label="{{ _('إغلاق وإنهاء المحادثة') }}"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="ops-fab-body">
+    {{ ops_chat.chat_body(compact=True) }}
+  </div>
+</div>
+{{ ops_chat.secret_modal("ops-w-secret-modal") }}

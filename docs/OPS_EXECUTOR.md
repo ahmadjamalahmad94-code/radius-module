@@ -213,6 +213,20 @@ browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assi
 | GET | `/ops-assistant/events` | level-4 suggestions (one row per event record) |
 | POST | `/ops-assistant/start-event` | `{event_type, index}` → new conversation from that record + first model turn |
 | POST | `/ops-assistant/pick` | `{conversation_id, n}` → the admin picks «هل تقصد…؟» suggestion n (latest list only, else 409) → replies |
+| GET | `/ops-assistant/widget` | the floating chat panel (HTML fragment, `no-store`) — fetched by the bubble on its first click |
+| GET | `/ops-assistant/history` | `?conversation_id=` → `{items:[{role:user\|bot, text}], truncated}` — the admin's OWN conversation, text only (user turns + the assistant's `message`; CHOICES/RESULT/CONTEXT and cards are never replayed), last 40 |
+
+**Floating bubble (every panel page).** `admin/_admin_layout.html` renders a round button `#ops-fab`
+(bottom corner at the inline END: bottom-left in Arabic/RTL, bottom-right in LTR; z 950/960 —
+under modals 1000 and toasts 9999) only when `ops_assistant_nav_visible()` (same gate as the
+sidebar entry: flag + password gate) and never on the full page itself. Lazy: the layout carries
+only the button + a tiny bootstrap; `css/ops_assistant.css`, `js/ops_assistant.js` and the panel
+fragment load on the first click. ONE chat implementation (`OpsChat.mount` in
+`js/ops_assistant.js`, markup/strings in `templates/radius/_ops_chat.html`) serves the page and
+the panel (≈380×560, full-screen sheet ≤ 640px; minimize / close-and-end / new chat / «فتح بصفحة
+كاملة»; unread dot). The conversation id is kept in `sessionStorage` per tenant+admin
+(`ops_assistant_widget_key()`), shared by the page and the panel, and re-shown via `/history`
+after a navigation. Listeners are delegated on `document`/the chat root (AJAX-swap safe).
 
 Mobile app mirror (bearer token, same bodies inside `{ok, data}`; tenant + admin from the
 token; flag + password gate; own conversation only, else 404; mapped in `API_AUTH_ONLY`):

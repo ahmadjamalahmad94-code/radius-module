@@ -1,0 +1,161 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   مساعد العمليّات — أجزاء المحادثة المشتركة بين الصفحة الكاملة
+   (radius/ops_assistant.html) والصندوق العائم (radius/_ops_widget_panel.html).
+   منطق واحد في static/js/ops_assistant.js (OpsChat.mount)؛ لا نسخة ثانية.
+
+   استيراد:  {% import "radius/_ops_chat.html" as ops_chat with context %}
+     ops_chat.config_json()        إعداد السكربت (روابط + نصوص مترجمة) — JSON
+     ops_chat.chat_body(compact)   سجلّ الرسائل + نموذج الإرسال (data-ops=…)
+     ops_chat.secret_modal(id)     نافذة كلمة المرور التي تُعرض مرّة واحدة
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% import "_partials/hub.html" as hub %}
+
+{% macro config_json() -%}
+{{ {
+  "urls": {
+    "message": url_for('radius.ops_assistant_message'),
+    "confirm": url_for('radius.ops_assistant_confirm'),
+    "cancel": url_for('radius.ops_assistant_cancel'),
+    "events": url_for('radius.ops_assistant_events'),
+    "start_event": url_for('radius.ops_assistant_start_event'),
+    "pick": url_for('radius.ops_assistant_pick'),
+    "history": url_for('radius.ops_assistant_history'),
+    "page": url_for('radius.ops_assistant')
+  },
+  "t": {
+    "you": _("أنت"),
+    "thinking": _("المساعد يفكّر…"),
+    "network": _("تعذّر الاتصال بالخادم. حاول مرّة أخرى."),
+    "confirm": _("تأكيد"),
+    "cancel": _("إلغاء"),
+    "cancelled": _("أُلغي المقترح — لم يُنفَّذ شيء."),
+    "proposal_title": _("مقترح بانتظار تأكيدك"),
+    "plan_title": _("خطّة من عدّة خطوات — تأكيد واحد"),
+    "step": _("الخطوة"),
+    "danger": _("تأثير مباشر على المشترك (فصل/تغيير فوريّ)."),
+    "password_note": _("كلمة مرور المشترك تُولَّد تلقائيًّا وتُعرض لك مرّة واحدة بعد التنفيذ."),
+    "not_exec": _("هذه الخطوة غير قابلة للتنفيذ من المساعد في هذه النسخة — نفّذها من صفحتها."),
+    "from_step": _("من نتيجة الخطوة"),
+    "result_title": _("نتيجة التنفيذ"),
+    "st_done": _("تمّ"),
+    "st_failed": _("فشل"),
+    "st_not_run": _("لم يُنفَّذ"),
+    "rs_executed": _("نُفّذ كاملًا"),
+    "rs_failed": _("لم يُنفَّذ"),
+    "rs_partial": _("نُفّذ جزئيًّا — راجع الخطوات"),
+    "replayed": _("هذا المقترح نُفّذ سابقًا — هذه نتيجته المحفوظة."),
+    "choices_title": _("قائمة من النظام"),
+    "choices_more": _("القائمة مختصرة — حدّد الاسم بدقّة أكثر إن لم تجد ما تريد."),
+    "choices_empty": _("لا توجد نتائج."),
+    "info_title": _("معلومة من النظام"),
+    "info_card_batch_status": _("وضع حزمة البطاقات"),
+    "info_subscriber_info": _("معلومات المشترك"),
+    "info_online_sessions": _("المتّصلون الآن"),
+    "info_recent_subscribers": _("آخر المشتركين المضافين"),
+    "info_recent_card_batches": _("آخر حزم البطاقات"),
+    "info_recent_activity": _("آخر نشاطك في اللوحة"),
+    "suggest_title": _("لم أجد تطابقًا تامًّا — هل تقصد:"),
+    "suggest_hint": _("اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك."),
+    "pick_said": _("نعم، أقصد"),
+    "card_match": _("هذه حزمة الكرت الذي كتبت رقمه."),
+    "created": _("أُضيف"),
+    "m_phone": _("الجوال"),
+    "m_national_id": _("رقم الهويّة"),
+    "m_username": _("اسم المستخدم"),
+    "m_name": _("الاسم"),
+    "info_more": _("القائمة مختصرة — العدد الكلّيّ أعلاه."),
+    "ie_not_found": _("غير موجود."),
+    "ie_out_of_scope": _("هذا السجلّ ليس ضمن نطاقك."),
+    "ie_missing_permission": _("لا تملك صلاحية عرض هذه المعلومة."),
+    "ie_unavailable": _("تعذّر جلب المعلومة الآن."),
+    "events_empty": _("لا اقتراحات الآن."),
+    "events_error": _("تعذّر جلب الاقتراحات."),
+    "start": _("ابدأ محادثة"),
+    "new_chat": _("محادثة جديدة"),
+    "event_started": _("بدأت محادثة من اقتراح النظام."),
+    "copied": _("نُسخ"),
+    "copy": _("نسخ"),
+    "empty": _("اكتب رسالة أوّلًا."),
+    "no_expiry": _("بلا انتهاء"),
+    "server_default": _("حسب إعداد الخادم"),
+    "minutes_unit": _("دقيقة"),
+    "resumed": _("تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من جديد إن لزم)."),
+    "history_more": _("رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة.")
+  },
+  "labels": {
+    "username": _("اسم المستخدم"), "plan_id": _("الباقة"), "offer_id": _("العرض"),
+    "mobile": _("الجوال"), "full_name": _("الاسم الكامل"), "email": _("البريد"),
+    "expire_at": _("ينتهي (UTC)"), "expire_local": _("ينتهي"), "new_expire_local": _("الانتهاء الجديد"),
+    "charge_mode": _("طريقة الحساب"), "amount": _("المبلغ"), "mode": _("النوع"),
+    "minutes": _("المدّة (دقائق)"), "notes": _("ملاحظات"), "remark": _("ملاحظة"),
+    "policy": _("سياسة التغيير"), "down_kbps": _("التنزيل (kbps)"), "up_kbps": _("الرفع (kbps)"),
+    "duration_minutes": _("المدّة (دقائق)"), "down": _("التنزيل"), "up": _("الرفع"),
+    "name": _("الاسم"), "price": _("السعر"), "speed_down_kbps": _("سرعة التنزيل (kbps)"),
+    "speed_up_kbps": _("سرعة الرفع (kbps)"), "speed_unlimited": _("بلا حدّ للسرعة"),
+    "validity_days": _("الصلاحيّة (أيّام)"), "quota_total_mb": _("الحصّة (MB)"), "quota": _("الحصّة"),
+    "plan_type": _("نوع الباقة"), "wholesale": _("سعر الجملة"), "selling": _("سعر البيع"),
+    "count": _("عدد الكروت"), "package_name": _("اسم الحزمة"), "username_length": _("طول اسم المستخدم"),
+    "password_length": _("طول كلمة السر"), "login_without_password": _("دخول بلا كلمة سر"),
+    "device_count": _("عدد الأجهزة"), "device_limit_mode": _("عند تجاوز الأجهزة"),
+    "concurrent_sessions": _("الجلسات المتزامنة"), "allowed_devices_count": _("الأجهزة المسموحة"),
+    "description": _("الوصف"), "enabled": _("مفعّلة"), "national_id": _("رقم الهويّة"),
+    "address": _("العنوان"), "city": _("المدينة"), "mac_lock": _("قفل الماك"),
+    "time_value": _("المدّة"), "time_unit": _("وحدة المدّة"), "price_per_card": _("سعر الكرت"),
+    "total_price": _("السعر الكلّيّ"), "custom_price": _("سعر خاصّ"), "static_ip": _("IP ثابت"),
+    "batch_id": _("رقم الحزمة"), "code": _("كود الحزمة"), "status": _("الحالة"),
+    "created_local": _("تاريخ الإنشاء"), "total_cards": _("كل الكروت"),
+    "available_count": _("متاحة (غير مستعملة)"), "active_count": _("قيد الاستعمال"),
+    "expired_count": _("منتهية"), "revoked_count": _("ملغاة"), "archived_count": _("مؤرشفة"),
+    "plan_name": _("الباقة"), "plan": _("الباقة"), "expires_local": _("ينتهي"),
+    "no_expiry": _("بلا انتهاء"), "online": _("متّصل الآن"), "online_sessions": _("جلسات حيّة"),
+    "last_seen_local": _("آخر ظهور"), "balance": _("الرصيد"), "balance_hidden": _("الرصيد مخفيّ"),
+    "open_debt": _("الدين المفتوح"), "currency": _("العملة"), "total": _("العدد الكلّيّ"),
+    "subscribers": _("مشتركون"), "cards": _("كروت"),
+    "when_local": _("الوقت"), "action": _("الإجراء"), "target": _("على"), "outcome": _("النتيجة")
+  },
+  "values": {
+    "paid": _("مدفوع من الرصيد"), "debt": _("دين على المشترك"), "free": _("مجّانًا"),
+    "true": _("نعم"), "false": _("لا"),
+    "duration": _("مدّة"), "expire_at": _("حتّى تاريخ"),
+    "lower_compensate": _("تعويض بأيّام إضافيّة"), "lower_keep_expiry": _("إبقاء تاريخ الانتهاء"),
+    "higher_debt": _("تسجيل الفرق دينًا"), "higher_reduce_days": _("إنقاص الأيّام المتبقّية"),
+    "higher_keep_expiry": _("إبقاء تاريخ الانتهاء دون فرق"), "neutral_keep_expiry": _("بلا فرق"),
+    "active": _("فعّال"), "exhausted": _("نفدت كروتها"), "expired": _("منتهٍ"),
+    "disabled": _("معطّل"), "deleted": _("محذوفة"), "archived": _("مؤرشفة"),
+    "cancelled": _("ملغاة"), "revoked": _("ملغاة"), "subscriber": _("مشترك"), "card": _("كرت"),
+    "success": _("نجح"), "failed": _("فشل"), "blocked": _("محظور"), "noop": _("بلا تغيير")
+  }
+}|tojson }}
+{%- endmacro %}
+
+{% macro chat_body(compact=False) -%}
+<div class="ops-chat{% if compact %} ops-chat--compact{% endif %}">
+  <div class="ops-log" data-ops="log" aria-live="polite">
+    <div class="ops-msg is-bot">{{ _("أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.") }}</div>
+  </div>
+  <form class="ops-form" data-ops="form" autocomplete="off">
+    <textarea data-ops="input" rows="2" maxlength="2000"
+              placeholder="{{ _('اكتب طلبك هنا…') }}" aria-label="{{ _('رسالتك') }}"></textarea>
+    <div class="ops-form-btns">
+      <button type="submit" class="hub-btn hub-btn--primary" data-ops="send"
+              {% if compact %}aria-label="{{ _('إرسال') }}" title="{{ _('إرسال') }}"{% endif %}>
+        <i class="fa-solid fa-paper-plane"></i>{% if not compact %} {{ _("إرسال") }}{% endif %}</button>
+      {% if not compact %}
+      <button type="button" class="hub-btn hub-btn--ghost" data-ops="new">
+        <i class="fa-solid fa-rotate"></i> {{ _("محادثة جديدة") }}</button>
+      {% endif %}
+    </div>
+  </form>
+  <div class="ops-hint">{{ _("لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.") }}</div>
+</div>
+{%- endmacro %}
+
+{% macro secret_modal(id) -%}
+{% call hub.modal(id, _("كلمة مرور تُعرض مرّة واحدة"), icon="key") %}
+  <div class="ops-note is-danger">{{ _("انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.") }}</div>
+  <div data-ops="secret-list"></div>
+  <div class="ops-actions">
+    <button type="button" class="hub-btn hub-btn--primary" data-uds-modal-close>{{ _("نسختها — إغلاق") }}</button>
+  </div>
+{% endcall %}
+{%- endmacro %}

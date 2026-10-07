@@ -14,6 +14,10 @@ conversation``. Nothing executes without the admin's «تأكيد» click.
   POST /admin/radius/ops-assistant/start-event   {event_type, index} → replies
   POST /admin/radius/ops-assistant/pick          {conversation_id, n} → replies
                                                  (the admin picks «هل تقصد…؟» suggestion n)
+  GET  /admin/radius/ops-assistant/widget        the floating chat panel (HTML fragment,
+                                                 lazy-loaded by the bubble on every page)
+  GET  /admin/radius/ops-assistant/history       ?conversation_id= → text-only transcript
+                                                 (resume after a page navigation)
 
 Guards: login (``login_required`` + the blueprint's global guard), CSRF
 (global ``_csrf_check`` → ``X-CSRFToken``), tenant flag + password gate
@@ -27,7 +31,7 @@ import threading
 import time
 from typing import Any
 
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, make_response, render_template, request, session
 
 from ..auth.decorators import login_required
 
@@ -46,10 +50,15 @@ def register_ops_assistant_routes(bp: Blueprint) -> None:
                     login_required(start_event), methods=["POST"])
     bp.add_url_rule("/ops-assistant/pick", "ops_assistant_pick",
                     login_required(pick), methods=["POST"])
+    bp.add_url_rule("/ops-assistant/widget", "ops_assistant_widget",
+                    login_required(widget), methods=["GET"])
+    bp.add_url_rule("/ops-assistant/history", "ops_assistant_history",
+                    login_required(history), methods=["GET"])
 
     @bp.app_context_processor
     def _ops_nav():
-        return {"ops_assistant_nav_visible": nav_visible}
+        return {"ops_assistant_nav_visible": nav_visible,
+                "ops_assistant_widget_key": widget_key}
 
 
 # ─────────────────────────── identity / availability ────────────────────────────
@@ -103,6 +112,13 @@ def nav_visible() -> bool:
         return ok
     except Exception:  # noqa: BLE001 — never break the sidebar
         return False
+
+
+def widget_key() -> str:
+    """Per tenant+admin suffix for the browser's stored conversation id (the
+    server re-checks ownership on every call; this only keeps two admins who
+    share a browser tab from resuming each other's id)."""
+    return f"t{_tid()}a{_aid()}"
 
 
 def reset_nav_cache() -> None:
@@ -282,7 +298,7 @@ def start_event():
     return _turn(run)
 
 
-__all__ = ["register_ops_assistant_routes", "nav_visible", "reset_nav_cache"]
+__all__ = ["register_ops_assistant_routes", "nav_visible", "reset_nav_cache", "widget_key"]
 
 
 def pick():
@@ -303,3 +319,52 @@ def pick():
         replies = conversation.pick(_api(), cid, n, actor=_username())
         return jsonify({"ok": True, "conversation_id": cid, "replies": _decorate(replies)})
     return _turn(run)
+
+
+# ─────────────────────────── floating widget ────────────────────────────
+
+HISTORY_LIMIT = 40
+
+
+def widget():
+    """The floating chat panel (fragment). Same gate as the page; the bubble
+    that fetches it is rendered only when ``nav_visible()``."""
+    av = _availability()
+    if not av["available"]:
+        return _unavailable_json(av)
+    resp = make_response(render_template("radius/_ops_widget_panel.html"))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def history():
+    """Text-only transcript of the admin's OWN conversation: the admin's
+    messages and the assistant's ``message`` lines. Cards (choices / results /
+    proposals) are not replayed — a proposal is confirmed only from the card
+    shown in the turn that produced it."""
+    av = _availability()
+    if not av["available"]:
+        return _unavailable_json(av)
+    cid = request.args.get("conversation_id")
+    if _conversation(cid) is None:
+        return _fail("not_found", _tr("المحادثة غير موجودة — ابدأ محادثة جديدة."), 404)
+    import json as _json
+    from ..services.ops_assistant import conversation, model_client
+    items: list[dict] = []
+    for row in conversation.transcript(cid, _tid()):
+        role, content = row.get("role"), row.get("content") or ""
+        if role == "user":
+            text = content if content != model_client.CANCEL_TEXT else _tr("إلغاء")
+            items.append({"role": "user", "text": text[:2000]})
+        elif role == "assistant":
+            try:
+                obj = _json.loads(content)
+            except (TypeError, ValueError):
+                continue
+            text = conversation.admin_text(obj) if isinstance(obj, dict) else ""
+            if text:
+                items.append({"role": "bot", "text": text})
+    resp = jsonify({"ok": True, "conversation_id": cid, "items": items[-HISTORY_LIMIT:],
+                    "truncated": len(items) > HISTORY_LIMIT})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
