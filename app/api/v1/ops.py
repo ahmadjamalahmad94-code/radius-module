@@ -62,6 +62,9 @@ def register(bp: Blueprint) -> None:
         bp.add_url_rule(path, endpoint, require_api_token(view), methods=methods)
 
 
+MAX_VIOLATIONS = 20
+
+
 def _tid() -> int:
     return int(getattr(g, "tenant_id", 1) or 1)
 
@@ -290,10 +293,11 @@ def ops_proposal(cid: str):
     try:
         v = validate_proposal(conv, proposal, mode=mode)
     except ProposalRejected as e:
-        viol = [x.as_dict() for x in e.violations]
+        # attacker-controlled: never copy an unbounded value into the audit row
+        viol = [x.as_dict() for x in e.violations[:MAX_VIOLATIONS]]
+        act = proposal.get("action") if isinstance(proposal, dict) else ""
         audit.record("validate", conversation_id=cid, outcome="rejected",
-                     action=str((proposal or {}).get("action") if isinstance(proposal, dict) else ""),
-                     details={"violations": viol})
+                     action=str(act)[:40], details={"violations": viol})
         return fail("proposal_forbidden" if e.forbidden else "proposal_rejected",
                     e.violations[0].message, status=403 if e.forbidden else 422,
                     details={"violations": viol})
