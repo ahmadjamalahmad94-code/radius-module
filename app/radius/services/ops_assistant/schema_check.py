@@ -15,6 +15,7 @@ Returns a list of ``(path, message)`` violations (empty = valid).
 """
 from __future__ import annotations
 
+import math
 import re
 from typing import Any
 
@@ -45,7 +46,11 @@ def _is_type(value: Any, t: str) -> bool:
     if t == "integer":
         return isinstance(value, int) and not isinstance(value, bool)
     if t == "number":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        # JSON has no NaN / Infinity (Python's json accepts them): NaN passes
+        # every comparison (NaN < 0, NaN > max, selling < wholesale are False)
+        if isinstance(value, float):
+            return math.isfinite(value)
+        return isinstance(value, int) and not isinstance(value, bool)
     if t == "null":
         return value is None
     raise SchemaError(f"unsupported type {t!r}")
@@ -56,6 +61,32 @@ def _eq(a: Any, b: Any) -> bool:
     if isinstance(a, bool) or isinstance(b, bool):
         return type(a) is type(b) and a == b
     return a == b
+
+
+def _ecma_pattern(pattern: str) -> str:
+    r"""JSON-Schema patterns are ECMA-262: ``$`` matches only at the very end.
+    Python's ``$`` also matches BEFORE a trailing newline, so
+    ``^[A-Za-z0-9._@-]{1,64}$`` accepted ``"bob\n"``. Every unescaped ``$``
+    outside a character class becomes ``\Z``."""
+    out, i, in_class = [], 0, False
+    while i < len(pattern):
+        c = pattern[i]
+        if c == "\\" and i + 1 < len(pattern):
+            out.append(pattern[i:i + 2])
+            i += 2
+            continue
+        if in_class:
+            if c == "]":
+                in_class = False
+        elif c == "[":
+            in_class = True
+        elif c == "$":
+            out.append(r"\Z")
+            i += 1
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
 
 
 def _resolve(root: dict, ref: str) -> dict:
@@ -99,7 +130,8 @@ def validate(instance: Any, schema: dict, root: dict | None = None,
         if "pattern" in schema:
             pat = _PATTERN_CACHE.get(schema["pattern"])
             if pat is None:
-                pat = _PATTERN_CACHE.setdefault(schema["pattern"], re.compile(schema["pattern"]))
+                pat = _PATTERN_CACHE.setdefault(
+                    schema["pattern"], re.compile(_ecma_pattern(schema["pattern"])))
             if not pat.search(instance):
                 errs.append((path, "does not match the required pattern"))
 
