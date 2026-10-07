@@ -101,6 +101,15 @@ def why_ar(text: str) -> str:
     return "؛ ".join(dict.fromkeys(out))
 
 
+def _violation_detail(res) -> str:
+    """«path: message» for every validator violation (fed back to the model, never shown raw)."""
+    err = res.error or {}
+    det = err.get("details") if isinstance(err.get("details"), dict) else {}
+    parts = [f"{v.get('path', '$')}: {v.get('message', '')}" for v in det.get("violations") or []
+             if isinstance(v, dict)]
+    return "; ".join(dict.fromkeys(parts))[:500]
+
+
 def missing_question(missing: list[str]) -> str:
     names = "، ".join(_tr(FIELD_LABELS_AR[f]) if f in FIELD_LABELS_AR else f for f in missing)
     return _tr("تمام، باقي أعرف: %(names)s.", names=names)
@@ -503,7 +512,8 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
     tid, aid = api.tenant_id, api.admin_id
     replies: list[dict] = []
     pending: Optional[dict] = None        # «هل تقصد…؟» suggestions shown in THIS turn
-    for hop in range(MAX_HOPS + 1):
+    retries = 0                            # self-corrections after a validator rejection (zeroshot only)
+    for hop in range(MAX_HOPS + 2):
         try:
             text = chat(model_messages(cid, tid), deadline=deadline)
         except ModelError as e:
@@ -536,7 +546,7 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                             "text": suggestions_text(pending)})
             return replies
 
-        if (is_list or is_info) and hop >= MAX_HOPS:
+        if (is_list or is_info) and hop - retries >= MAX_HOPS:
             _audit(tid, actor, aid, cid, "too_many_hops", {"hops": hop})
             replies.append({"type": "error", "code": "too_many_hops",
                             "text": _tr("احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو "
@@ -556,7 +566,8 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                   body={"proposal": obj, "mode": "execute"})
         if not res.ok:
             e = _api_error(res)
-            miss = _required_missing(res) if action not in ("plan",) else []
+            miss = (_required_missing(res) if action not in ("plan",)
+                    and model_client.prompt_mode() != "zeroshot" else [])
             if miss:
                 # a missing required field is a question, not a dead end: record it as the
                 # assistant's `ask` so the next admin answer continues the same request
@@ -568,10 +579,15 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                 replies.append({"type": "assistant", "action": "ask", "text": q})
                 return replies
             _audit(tid, actor, aid, cid, "rejected", {"code": e.code, "action": str(action)[:40]})
-            # keep the model in the loop: it sees its proposal and why it was refused (no silent repeat)
+            # keep the model in the loop: it sees its proposal and exactly why it was refused (no silent repeat)
             model_append(cid, tid, obj)
             append(cid, tid, "tool", "RESULT " + json.dumps(
-                {"error": "rejected_by_validator", "why": (e.message or e.code)[:300]}, ensure_ascii=False))
+                {"error": "rejected_by_validator", "why": _violation_detail(res) or (e.message or e.code)[:300],
+                 "hint": "fix the proposal, or ask the admin for what is missing — nothing was executed"},
+                ensure_ascii=False))
+            if retries < 1 and model_client.prompt_mode() == "zeroshot" and time.monotonic() < deadline - 8:
+                retries += 1                      # one silent self-correction turn (large instruction model)
+                continue
             replies.append({"type": "error", "code": e.code,
                             "text": _tr("المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s",
                                         why=why_ar(e.message) or e.code)})

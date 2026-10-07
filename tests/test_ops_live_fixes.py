@@ -65,3 +65,29 @@ def test_read_only_limit_is_clamped_not_rejected():
 def test_validator_reasons_shown_in_arabic():
     assert C.why_ar("greater than 10") == "قيمة أكبر من الحدّ المسموح (10)"
     assert "greater" not in C.why_ar("greater than 10; unknown field")
+
+
+def test_zeroshot_self_corrects_once_after_rejection(monkeypatch):
+    """A rejected proposal is fed back (with the violation paths) and the model gets ONE more turn."""
+    import json as _j
+    monkeypatch.setenv(M.ENV_PROMPT, "zeroshot")
+    turns = iter([
+        _j.dumps({"action": "create_plan", "fields": {"name": "x"}, "missing": [], "message": "m", "summary_ar": "s"}),
+        _j.dumps({"action": "ask", "fields": {}, "missing": ["speed_down_kbps"], "message": "كم السرعة؟"}),
+    ])
+    appended = []
+    monkeypatch.setattr(C, "model_messages", lambda cid, tid: [])
+    monkeypatch.setattr(C, "model_append", lambda cid, tid, obj: appended.append(("a", obj)))
+    monkeypatch.setattr(C, "append", lambda cid, tid, role, text: appended.append((role, text)))
+    monkeypatch.setattr(C, "_audit", lambda *a, **k: None)
+    monkeypatch.setattr(C, "_lookup_key", lambda *a: None)
+
+    def api(method, path, body=None):
+        if body["proposal"]["action"] == "create_plan":
+            return _res([{"code": "schema", "message": "is required", "path": "$.fields.speed_down_kbps"}])
+        return SimpleNamespace(ok=True, status=200, data={"kind": "control"}, error=None)
+    api.tenant_id, api.admin_id = 1, 1
+    out = C.run_model(api, "c1", call=lambda msgs, deadline: next(turns))
+    assert out[-1]["action"] == "ask" and "كم السرعة" in out[-1]["text"]
+    fed = [t for r, t in appended if r == "tool"]
+    assert fed and "speed_down_kbps" in fed[0] and "is required" in fed[0]

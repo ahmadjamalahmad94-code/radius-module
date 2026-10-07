@@ -94,6 +94,10 @@ ENV_PROMPT = "HOBERADIUS_OPS_PROMPT"
 ENV_MODEL_NAME = "HOBERADIUS_OPS_MODEL_NAME"   # served model name (default hoberadius-ops)
 
 
+def prompt_mode() -> str:
+    return (os.environ.get(ENV_PROMPT) or "").strip().lower()
+
+
 def system_prompt() -> str:
     """The SYSTEM_PROMPT the served adapter was trained with (env ``v1`` → the
     ops-v1 text; anything else → the ops-v2 / SPEC_DATA_v3 text)."""
