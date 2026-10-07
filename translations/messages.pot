@@ -1802,7 +1802,7 @@ msgstr ""
 msgid "%(label)s #%(id)s"
 msgstr ""
 
-#: app/api/json_input.py:125 app/radius/services/operations.py:976
+#: app/api/json_input.py:133 app/radius/services/operations.py:976
 #, python-format
 msgid "%(label)s أطول من المسموح (%(max_len)s حرفًا كحدّ أقصى)."
 msgstr ""
@@ -6588,7 +6588,7 @@ msgstr ""
 msgid "mode غير صالح: %(mode)s"
 msgstr ""
 
-#: app/api/v1/ops.py:286
+#: app/api/v1/ops.py:289
 msgid "mode يجب أن يكون draft أو execute."
 msgstr ""
 
@@ -11211,7 +11211,7 @@ msgstr ""
 msgid "أرخص باقة"
 msgstr ""
 
-#: app/api/v1/ops.py:131
+#: app/api/v1/ops.py:134
 msgid "أرسل enabled قيمةً منطقيّة (true/false)."
 msgstr ""
 
@@ -12368,7 +12368,7 @@ msgstr ""
 msgid "أقصى إضافة رصيد/دفعة للموزّع"
 msgstr ""
 
-#: app/radius/services/ops_assistant/units.py:125
+#: app/radius/services/ops_assistant/units.py:123
 #, python-format
 msgid ""
 "أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من "
@@ -23131,8 +23131,8 @@ msgstr ""
 msgid "اسم المشترك (والاسم الكامل إن وُجد)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:228
-#: app/radius/services/ops_assistant/validator.py:273
+#: app/radius/services/ops_assistant/validator.py:369
+#: app/radius/services/ops_assistant/validator.py:414
 msgid "اسم المشترك لم يَرِد في نتيجة بحث من هذه المحادثة."
 msgstr ""
 
@@ -25126,7 +25126,7 @@ msgstr ""
 msgid "اكتب رسالة أو أرفق صورة."
 msgstr ""
 
-#: app/api/v1/ops.py:425 app/radius/routes/ops_assistant.py:171
+#: app/api/v1/ops.py:429 app/radius/routes/ops_assistant.py:171
 #: app/radius/services/ops_assistant/conversation.py:527
 #: app/templates/radius/ops_assistant.html:154
 msgid "اكتب رسالة أوّلًا."
@@ -27427,7 +27427,7 @@ msgstr ""
 msgid "البادئة «rtr-» محجوزة لحسابات إدارة الراوترات."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:484
+#: app/radius/services/ops_assistant/validator.py:636
 msgid "البادئة واللاحقة لا تتركان خانة عشوائيّة ضمن الطول الكلّيّ."
 msgstr ""
 
@@ -28403,7 +28403,7 @@ msgstr ""
 msgid "التاريخ"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:372
+#: app/radius/services/ops_assistant/validator.py:513
 msgid "التاريخ المطلوب ليس بعد انتهاء الاشتراك الحاليّ."
 msgstr ""
 
@@ -31591,7 +31591,7 @@ msgstr ""
 msgid "الخطوة المحددة لا تملك عمليات جاهزة للتجربة الجافة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:135
+#: app/radius/services/ops_assistant/validator.py:203
 msgid "الخطوة المشار إليها لا تُنتج هذا الحقل."
 msgstr ""
 
@@ -33801,7 +33801,7 @@ msgstr ""
 msgid "السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:435
+#: app/radius/services/ops_assistant/validator.py:576
 msgid "السرعة صفر مرفوضة إلّا مع «بلا حدّ للسرعة»."
 msgstr ""
 
@@ -38807,13 +38807,13 @@ msgstr ""
 msgid "المحادثة"
 msgstr ""
 
-#: app/api/v1/ops.py:406 app/radius/routes/ops_assistant.py:179
+#: app/api/v1/ops.py:410 app/radius/routes/ops_assistant.py:179
 #: app/radius/routes/ops_assistant.py:194
 #: app/radius/routes/ops_assistant.py:215
 msgid "المحادثة غير موجودة — ابدأ محادثة جديدة."
 msgstr ""
 
-#: app/api/v1/ops.py:107
+#: app/api/v1/ops.py:110
 msgid "المحادثة غير موجودة."
 msgstr ""
 
@@ -39423,7 +39423,7 @@ msgstr ""
 #: app/api/v1/subscriber_actions.py:518 app/radius/core/messages_ar.py:20
 #: app/radius/core/messages_ar.py:42 app/radius/routes/users.py:2619
 #: app/radius/routes/users.py:2622
-#: app/radius/services/ops_assistant/units.py:121
+#: app/radius/services/ops_assistant/units.py:130
 #: app/radius/services/radius_apply.py:42 app/radius/services/users.py:1030
 msgid "المدّة يجب أن تكون أكبر من صفر."
 msgstr ""
@@ -39515,7 +39515,7 @@ msgstr ""
 msgid "المرجع هو رمز يربط الطلب بحركة المزوّد للمطابقة لاحقًا."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:132
+#: app/radius/services/ops_assistant/validator.py:200
 msgid "المرجع يجب أن يشير إلى خطوة سابقة."
 msgstr ""
 
@@ -39718,7 +39718,7 @@ msgstr ""
 msgid "المساعد غير متاح مؤقتًا، حاول بعد قليل."
 msgstr ""
 
-#: app/api/v1/ops.py:93
+#: app/api/v1/ops.py:96
 msgid ""
 "المساعد غير متاح: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها "
 "أوّلًا."
@@ -39734,7 +39734,7 @@ msgstr ""
 msgid "المساعد متوقّف: يوجد مدير بكلمة مرور افتراضيّة أو مؤقّتة — غيّرها أوّلًا."
 msgstr ""
 
-#: app/api/v1/ops.py:76
+#: app/api/v1/ops.py:79
 msgid "المساعد يعمل بصلاحيّات مدير مسجَّل الدخول فقط — لا بتوكن غير مربوط بمدير."
 msgstr ""
 
@@ -40691,7 +40691,7 @@ msgid ""
 "بعناية."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:267
+#: app/radius/services/ops_assistant/validator.py:408
 msgid "المعرّف لم يَرِد في قائمة اختيار من هذه المحادثة."
 msgstr ""
 
@@ -40929,6 +40929,11 @@ msgstr ""
 msgid "المقاييس"
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:146
+#: app/radius/services/ops_assistant/validator.py:152
+msgid "المقترح أكبر من المسموح."
+msgstr ""
+
 #: app/radius/services/ops_assistant/executor.py:232
 msgid "المقترح تغيّر — أكّده من جديد."
 msgstr ""
@@ -40937,12 +40942,17 @@ msgstr ""
 msgid "المقترح غير موجود."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:126
+msgid "المقترح متداخل أكثر من المسموح."
+msgstr ""
+
 #: app/radius/services/ops_assistant/conversation.py:459
 #, python-format
 msgid "المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:155
+#: app/radius/services/ops_assistant/validator.py:150
+#: app/radius/services/ops_assistant/validator.py:223
 msgid "المقترح يجب أن يكون كائن JSON واحدًا."
 msgstr ""
 
@@ -47794,7 +47804,7 @@ msgstr ""
 msgid "تأكيد مطلوب قبل التنفيذ"
 msgstr ""
 
-#: app/api/v1/ops.py:475 app/radius/routes/ops_assistant.py:197
+#: app/api/v1/ops.py:479 app/radius/routes/ops_assistant.py:197
 msgid "تأكيد ناقص."
 msgstr ""
 
@@ -53976,7 +53986,7 @@ msgstr ""
 msgid "تعذّر تنفيذ الطلب بعد الاعتماد: %(exc)s"
 msgstr ""
 
-#: app/api/v1/ops.py:401 app/radius/routes/ops_assistant.py:161
+#: app/api/v1/ops.py:405 app/radius/routes/ops_assistant.py:161
 #: app/templates/radius/admin_alerts.html:164
 #: app/templates/radius/admin_alerts.html:192
 msgid "تعذّر تنفيذ الطلب."
@@ -62251,6 +62261,10 @@ msgstr ""
 msgid "جسم الرسالة الذي سيُرسل."
 msgstr ""
 
+#: app/api/json_input.py:24
+msgid "جسم الطلب متداخل أكثر من المسموح."
+msgstr ""
+
 #: app/api/json_input.py:23
 msgid "جسم الطلب يجب أن يكون كائن JSON (مفاتيح وقيم)."
 msgstr ""
@@ -66297,7 +66311,7 @@ msgstr ""
 msgid "حقل كلمة المرور"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:95
+#: app/radius/services/ops_assistant/validator.py:163
 msgid "حقل ممنوع في المقترح — الأسرار والحقول الخام لا تمرّ عبر المساعد."
 msgstr ""
 
@@ -71648,7 +71662,7 @@ msgstr ""
 msgid "رقم الحزمة %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:222
+#: app/radius/services/ops_assistant/validator.py:363
 msgid "رقم الحزمة لم يَرِد في قائمة اختيار من هذه المحادثة."
 msgstr ""
 
@@ -74342,7 +74356,7 @@ msgstr ""
 
 #: app/radius/services/card_offers.py:214
 #: app/radius/services/card_offers.py:263
-#: app/radius/services/ops_assistant/validator.py:452
+#: app/radius/services/ops_assistant/validator.py:593
 msgid "سعر البيع يجب ألا يقلّ عن سعر الجملة."
 msgstr ""
 
@@ -75238,7 +75252,7 @@ msgstr ""
 msgid "سياسة التغيير"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:388
+#: app/radius/services/ops_assistant/validator.py:529
 #, python-format
 msgid "سياسة التغيير لا تناسب اتجاه الباقة الجديدة (%(d)s)."
 msgstr ""
@@ -79419,7 +79433,7 @@ msgstr ""
 msgid "عدد الكروت في هذه الدفعة يتجاوز الحد المسموح."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:478
+#: app/radius/services/ops_assistant/validator.py:627
 #, python-format
 msgid "عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات."
 msgstr ""
@@ -88208,23 +88222,23 @@ msgstr ""
 msgid "قيمة %(key)s يجب أن تكون رقمًا صحيحًا."
 msgstr ""
 
-#: app/api/json_input.py:111
+#: app/api/json_input.py:119
 #, python-format
 msgid "قيمة %(label)s أكبر من المسموح."
 msgstr ""
 
-#: app/api/json_input.py:109
+#: app/api/json_input.py:117
 #, python-format
 msgid "قيمة %(label)s يجب ألا تقل عن %(minimum)s."
 msgstr ""
 
-#: app/api/json_input.py:99 app/api/json_input.py:102 app/api/json_input.py:107
-#: app/radius/services/report_dates.py:101
+#: app/api/json_input.py:107 app/api/json_input.py:110
+#: app/api/json_input.py:115 app/radius/services/report_dates.py:101
 #, python-format
 msgid "قيمة %(label)s يجب أن تكون رقمًا صحيحًا."
 msgstr ""
 
-#: app/api/json_input.py:122 app/radius/services/operations.py:973
+#: app/api/json_input.py:130 app/radius/services/operations.py:973
 #, python-format
 msgid "قيمة %(label)s يجب أن تكون نصًا."
 msgstr ""
@@ -88693,6 +88707,10 @@ msgstr ""
 
 #: app/templates/admin/_admin_layout.html:822
 msgid "قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:136
+msgid "قيمة رقميّة غير صالحة في المقترح."
 msgstr ""
 
 #: app/radius/core/limits.py:65
@@ -89332,7 +89350,7 @@ msgid ""
 "لهدفه."
 msgstr ""
 
-#: app/radius/services/ops_assistant/units.py:135
+#: app/radius/services/ops_assistant/units.py:163
 msgid "كل اتجاه للسرعة المؤقتة 0 (بلا حدّ) أو بين 64 و1,000,000 kbps."
 msgstr ""
 
@@ -92384,7 +92402,7 @@ msgstr ""
 msgid "لا تملك صلاحية شحن المحفظة."
 msgstr ""
 
-#: app/api/v1/ops.py:215
+#: app/api/v1/ops.py:218
 msgid "لا تملك صلاحية عرض هذه القائمة."
 msgstr ""
 
@@ -92404,7 +92422,7 @@ msgstr ""
 msgid "لا تملك صلاحية على هذا الموزع."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:242
+#: app/radius/services/ops_assistant/validator.py:383
 #, python-format
 msgid "لا تملك صلاحية هذا الإجراء (%(k)s)."
 msgstr ""
@@ -93980,7 +93998,7 @@ msgstr ""
 msgid "لا يقرّر بنفسه"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:404
+#: app/radius/services/ops_assistant/validator.py:545
 msgid "لا يكون الاتجاهان بلا حدّ معًا."
 msgstr ""
 
@@ -94307,7 +94325,7 @@ msgstr ""
 msgid "لا يوجد حد مخزن لهذه الميزة حالياً."
 msgstr ""
 
-#: app/api/v1/ops.py:178
+#: app/api/v1/ops.py:181
 msgid "لا يوجد حدث من هذا النوع الآن."
 msgstr ""
 
@@ -99068,6 +99086,11 @@ msgid ""
 "الرقم."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:322
+#, python-format
+msgid "مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — قسّمها على أكثر من تأكيد."
+msgstr ""
+
 #: app/templates/radius/docs_users_overview.html:485
 msgid ""
 "مجموع المبالغ اللي دفعها المشتركون فعليًا خلال الفترة المختارة (تجديد، "
@@ -100612,7 +100635,7 @@ msgstr ""
 msgid "مدّة الحظر التلقائي (دقيقة)"
 msgstr ""
 
-#: app/radius/services/ops_assistant/units.py:141
+#: app/radius/services/ops_assistant/units.py:169
 msgid "مدّة السرعة المؤقتة بين دقيقة و1440 دقيقة (24 ساعة)."
 msgstr ""
 
@@ -100850,7 +100873,7 @@ msgstr ""
 msgid "مرجع جلسة الدفع"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:128
+#: app/radius/services/ops_assistant/validator.py:196
 msgid "مرجع خطوة غير صالح."
 msgstr ""
 
@@ -101503,7 +101526,7 @@ msgstr ""
 msgid "مساعد العمليّات"
 msgstr ""
 
-#: app/api/v1/ops.py:90 app/radius/routes/ops_assistant.py:111
+#: app/api/v1/ops.py:93 app/radius/routes/ops_assistant.py:111
 msgid "مساعد العمليّات غير مفعّل لهذه الشبكة."
 msgstr ""
 
@@ -102391,7 +102414,7 @@ msgstr ""
 msgid "مصدر الطلب: بوابة المشترك"
 msgstr ""
 
-#: app/api/v1/ops.py:231
+#: app/api/v1/ops.py:234
 msgid "مصدر القائمة غير معروف."
 msgstr ""
 
@@ -108989,6 +109012,10 @@ msgid ""
 "قيّده على IP/نطاق ثابت إن توفّر."
 msgstr ""
 
+#: app/radius/services/ops_assistant/validator.py:139
+msgid "نصّ أطول من المسموح في المقترح."
+msgstr ""
+
 #: app/templates/radius/cards_generate.html:505
 msgid ""
 "نصّ أو أرقام تُضاف في بداية اسم مستخدم كلّ بطاقة. اتركها فارغة إن لم "
@@ -109011,6 +109038,10 @@ msgstr ""
 
 #: app/radius/core/env_settings.py:132
 msgid "نصّ صفحة الانتهاء"
+msgstr ""
+
+#: app/radius/services/ops_assistant/validator.py:144
+msgid "نصّ يحوي محارف تحكّم أو اتّجاه مخفيّة — مرفوض."
 msgstr ""
 
 #: app/templates/radius/docs_print_templates.html:362
@@ -110475,11 +110506,11 @@ msgstr ""
 msgid "نوع الحدث (سجل)"
 msgstr ""
 
-#: app/api/v1/ops.py:174
+#: app/api/v1/ops.py:177
 msgid "نوع الحدث غير معروف."
 msgstr ""
 
-#: app/api/v1/ops.py:448 app/radius/routes/ops_assistant.py:270
+#: app/api/v1/ops.py:452 app/radius/routes/ops_assistant.py:270
 msgid "نوع الحدث مطلوب."
 msgstr ""
 
@@ -111385,8 +111416,8 @@ msgstr ""
 msgid "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:233
-#: app/radius/services/ops_assistant/validator.py:279
+#: app/radius/services/ops_assistant/validator.py:374
+#: app/radius/services/ops_assistant/validator.py:420
 msgid "هذا المشترك ليس ضمن نطاقك."
 msgstr ""
 
@@ -113364,7 +113395,8 @@ msgstr ""
 msgid "وحدة المدّة غير معروفة — المسموح: "
 msgstr ""
 
-#: app/radius/services/ops_assistant/units.py:115
+#: app/radius/services/ops_assistant/units.py:119
+#: app/radius/services/ops_assistant/units.py:154
 msgid "وحدة المدّة غير معروفة."
 msgstr ""
 
@@ -113907,7 +113939,7 @@ msgstr ""
 msgid "وقت الاتصال اليوميّ"
 msgstr ""
 
-#: app/radius/services/ops_assistant/validator.py:324
+#: app/radius/services/ops_assistant/validator.py:465
 msgid "وقت الانتهاء المطلوب مضى."
 msgstr ""
 
