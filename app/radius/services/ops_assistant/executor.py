@@ -27,8 +27,9 @@ from . import audit, store
 from .dispatch import call
 from .validator import PreparedStep, ProposalRejected, prepare_step, resolve_refs, validate_proposal
 
-_PW_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
-PASSWORD_LENGTH = 10
+# owner 2026-10-07: «خليها أرقام عشوائي وخلص» — subscribers type it on phones/routers, it is not a bank account
+_PW_ALPHABET = "0123456789"
+PASSWORD_LENGTH = 6
 
 
 def generate_password() -> str:
