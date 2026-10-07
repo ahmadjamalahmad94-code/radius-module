@@ -338,6 +338,28 @@ _THINK = re.compile(r"^\s*<think>.*?</think>\s*", re.DOTALL)
 _FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
 
 
+class _DuplicateKey(ValueError):
+    pass
+
+
+def _no_constant(name: str):
+    # NaN / Infinity / -Infinity are not JSON (Python's json accepts them)
+    raise ValueError(f"non-JSON constant {name}")
+
+
+def _unique_pairs(pairs):
+    # a repeated key is ambiguous (another reader may keep the FIRST value)
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise _DuplicateKey("duplicate key")
+        out[k] = v
+    return out
+
+
+_STRICT_DECODER = json.JSONDecoder(parse_constant=_no_constant, object_pairs_hook=_unique_pairs)
+
+
 def parse_proposal(text: Any) -> dict:
     """Exactly ONE JSON object and nothing else (an empty think block and a
     single ```json fence are tolerated). Anything else → InvalidModelOutput."""
@@ -349,8 +371,10 @@ def parse_proposal(text: Any) -> dict:
         s = m.group(1)
     s = s.strip()
     try:
-        obj, end = json.JSONDecoder().raw_decode(s)
-    except ValueError as e:
+        obj, end = _STRICT_DECODER.raw_decode(s)
+    except _DuplicateKey as e:
+        raise InvalidModelOutput("duplicate_key") from e
+    except (ValueError, RecursionError) as e:
         raise InvalidModelOutput("not_json") from e
     if s[end:].strip():
         raise InvalidModelOutput("trailing_text")
