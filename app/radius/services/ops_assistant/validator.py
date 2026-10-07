@@ -29,6 +29,7 @@ from app.i18n_text import _tr
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Optional
@@ -38,6 +39,21 @@ from .schema_check import validate as schema_validate
 
 PERMISSION_CODES = frozenset({"missing_permission", "out_of_scope"})
 
+# ── envelope limits (red-team 2026-10-07): checked BEFORE any recursive walk ──
+# A real proposal is ≤ 5 levels deep (plan → steps → step → fields → duration)
+# and a few KB; the longest catalog string is 2,000 chars (``remark``).
+MAX_DEPTH = 8
+MAX_PROPOSAL_CHARS = 32_000
+MAX_STRING_CHARS = 2_000
+MAX_KEYS = 400                    # dict keys + list items, whole proposal
+MAX_PATH_ECHO = 120
+# multi-line free text; every other field is one line
+_MULTILINE_FIELDS = frozenset({"remark", "notes", "description", "address"})
+# bidi embedding/override/isolate + line/paragraph separators: they make the
+# confirmation card (and other admins' pages) read differently from the data
+_BIDI_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+                           "\u2028\u2029")
+
 
 @dataclass
 class Violation:
@@ -46,7 +62,9 @@ class Violation:
     path: str = "$"
 
     def as_dict(self) -> dict:
-        return {"code": self.code, "message": self.message, "path": self.path}
+        # the path carries attacker-chosen KEY names: never echo them in full
+        path = self.path if len(self.path) <= MAX_PATH_ECHO else self.path[:MAX_PATH_ECHO] + "…"
+        return {"code": self.code, "message": self.message, "path": path}
 
 
 class ProposalRejected(Exception):
@@ -84,6 +102,56 @@ class Validated:
 
 
 # ─────────────────────────── helpers ────────────────────────────
+
+def _bad_char(text: str, multiline: bool) -> bool:
+    for ch in text:
+        o = ord(ch)
+        if ch in _BIDI_CONTROLS:
+            return True
+        if o < 0x20 or 0x7f <= o <= 0x9f:          # C0 / DEL / C1 controls
+            if multiline and ch in "\t\n\r":
+                continue
+            return True
+    return False
+
+
+def _envelope(proposal: dict) -> list[Violation]:
+    """Size / depth / number / text sanity of the WHOLE object, iteratively
+    (no recursion → a 2,000-level nesting cannot overflow the stack)."""
+    stack: list[tuple[Any, int, str, str]] = [(proposal, 1, "$", "")]
+    nodes = 0
+    while stack:
+        node, depth, path, key = stack.pop()
+        if depth > MAX_DEPTH:
+            return [Violation("too_deep", _tr("المقترح متداخل أكثر من المسموح."), "$")]
+        if isinstance(node, dict):
+            nodes += len(node)
+            for k, v in node.items():
+                stack.append((v, depth + 1, f"{path}.{k}", str(k)))
+        elif isinstance(node, list):
+            nodes += len(node)
+            for i, v in enumerate(node):
+                stack.append((v, depth + 1, f"{path}[{i}]", key))
+        elif isinstance(node, float) and not math.isfinite(node):
+            return [Violation("bad_number", _tr("قيمة رقميّة غير صالحة في المقترح."), path)]
+        elif isinstance(node, str):
+            if len(node) > MAX_STRING_CHARS:
+                return [Violation("too_large", _tr("نصّ أطول من المسموح في المقترح."), path)]
+            # only what can EXECUTE (fields / steps) — message / summary_ar are
+            # model prose shown with textContent and never used for a decision
+            if (path.startswith("$.fields") or path.startswith("$.steps")) and                     _bad_char(node, key in _MULTILINE_FIELDS):
+                return [Violation("bad_text",
+                                  _tr("نصّ يحوي محارف تحكّم أو اتّجاه مخفيّة — مرفوض."), path)]
+        if nodes > MAX_KEYS:
+            return [Violation("too_large", _tr("المقترح أكبر من المسموح."), "$")]
+    try:
+        size = len(json.dumps(proposal, ensure_ascii=False))
+    except (TypeError, ValueError):
+        return [Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))]
+    if size > MAX_PROPOSAL_CHARS:
+        return [Violation("too_large", _tr("المقترح أكبر من المسموح."), "$")]
+    return []
+
 
 def _deep_forbidden(obj: Any, path: str = "$") -> list[Violation]:
     out: list[Violation] = []
@@ -153,6 +221,9 @@ def with_message(proposal: Any) -> Any:
 def validate_proposal(conv: dict, proposal: Any, *, mode: str = "execute") -> Validated:
     if not isinstance(proposal, dict):
         raise ProposalRejected([Violation("not_object", _tr("المقترح يجب أن يكون كائن JSON واحدًا."))])
+    bad = _envelope(proposal)
+    if bad:
+        raise ProposalRejected(bad)
     bad = _deep_forbidden(proposal)
     if bad:
         raise ProposalRejected(bad)
