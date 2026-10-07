@@ -862,7 +862,9 @@ def cards_generate():
         return busy
     return ok({
         "batch": _serialize_batch(batch),
-        "cards": [_serialize_card(c) for c in cards],
+        # SEC-360: web «توليد» redirects to the batches list (no passwords);
+        # plaintext only for the card-password rule (print / view_passwords).
+        "cards": [_serialize_card_read(c) for c in cards],
         "idempotent_replay": bool(getattr(svc, "last_generate_replayed", False)),
     }, status=201)
 

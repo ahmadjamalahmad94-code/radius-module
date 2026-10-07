@@ -896,6 +896,17 @@ def accounts_360(username: str):
     except KeyError:
         return fail("not_found", _tr("الحساب غير موجود."), status=404)
     safe = _safe_360_payload(payload)
+    # SEC-360: the 360 is a read-only aggregate, never an edit surface — the
+    # PPPoE password is ALWAYS masked here (regardless of «رؤية كلمة مرور
+    # المشترك»); it used to leak in plain text because only «password» was in
+    # the deny-list. The app never displays it; a permitted viewer still gets
+    # it from GET /accounts/<u> (same gate as the web profile).
+    from ...radius.services.sensitive_visibility import MASK as _PPW_MASK
+    _row = safe.get("subscriber")
+    if isinstance(_row, dict):
+        _has_ppw = bool(str(_row.get("pppoe_password") or ""))
+        _row["pppoe_password"] = _PPW_MASK if _has_ppw else ""
+        _row["has_pppoe_password"] = _has_ppw
     from ...radius.services.sensitive_visibility import can_view_balance
     if not can_view_balance(tenant_id=_tid()):
         safe = _hide_balance(safe)      # fix3 (F01 F18): «رؤية الرصيد» off
@@ -927,6 +938,18 @@ _SENSITIVE_360_KEYS = {
     "shared_secret",
     "radius_secret",
     "private_key",
+    # SEC-360: credential-bearing keys from radcheck / radpostauth / card rows
+    # (defence in depth — none is selected today, a future «SELECT *» must not
+    # silently start leaking them).
+    "cleartext_password",
+    "card_password",
+    "wifi_password",
+    "old_password",
+    "new_password",
+    "api_key",
+    "api_token",
+    "token",
+    "token_hash",
 }
 
 

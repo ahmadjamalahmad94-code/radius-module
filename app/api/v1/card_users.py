@@ -13,6 +13,8 @@ from ...radius.services.card_users_marketplace import (
     arabic_error_message,
     int_input,
 )
+from ...radius.services.sensitive_visibility import MASK as _PW_MASK
+from ..access_control import can_view_card_passwords
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -128,10 +130,33 @@ def _public_package(row: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
-def _public_purchase(row: dict[str, Any]) -> dict[str, Any]:
+def _public_purchase(row: dict[str, Any], *, show_passwords: bool) -> dict[str, Any]:
     item = dict(row)
     item.pop("metadata_json", None)
-    return item
+    return item if show_passwords else _mask_card_passwords(item)
+
+
+# SEC-360: keys that carry a card's login password in card-user payloads —
+# ``cards[].password`` (raw ``cards`` row / instant-sale credential) and
+# ``cred_password`` (raw ``card_user_purchases`` row, also nested in
+# ``timeline[].item``).
+_CARD_PASSWORD_KEYS = frozenset({"password", "cred_password"})
+
+
+def _mask_card_passwords(value: Any) -> Any:
+    """Deep copy of ``value`` with every non-empty card-password value replaced
+    by the mask. Used unless the caller may read card passwords — the web rule
+    (owner / co-owner / ``scope.view_passwords`` / ``cards.print``). The keys
+    stay so the app shows «••••» + «لا تملك صلاحية كشفها»."""
+    if isinstance(value, dict):
+        return {
+            k: (_PW_MASK if k in _CARD_PASSWORD_KEYS and v not in (None, "")
+                and not isinstance(v, (dict, list)) else _mask_card_passwords(v))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_mask_card_passwords(v) for v in value]
+    return value
 
 
 def _public_wallet(row: dict[str, Any]) -> dict[str, Any]:
@@ -178,10 +203,12 @@ def card_user_360(card_user_id: int):
         data = _service().card_user_360(card_user_id)
     except CardMarketplaceError as exc:
         return _marketplace_error(exc)
+    show_pw = can_view_card_passwords()
     payload = {
         "card_user": _public_card_user(data.get("card_user") or {}),
         "wallet": _public_wallet(data.get("wallet") or {}),
-        "purchases": [_public_purchase(item) for item in data.get("purchases") or []],
+        "purchases": [_public_purchase(item, show_passwords=show_pw)
+                      for item in data.get("purchases") or []],
         "cards": data.get("cards") or [],
         "usage": data.get("usage") or {},
         "financial_history": data.get("financial_history") or [],
@@ -194,7 +221,7 @@ def card_user_360(card_user_id: int):
         ],
         "events": data.get("events") or [],
     }
-    return ok(payload)
+    return ok(payload if show_pw else _mask_card_passwords(payload))
 
 
 def card_user_recharge(card_user_id: int):
@@ -222,7 +249,10 @@ def card_user_purchase(card_user_id: int):
         )
     except (CardMarketplaceError, ValueError) as exc:
         return _marketplace_error(exc)
-    return ok({"purchase": _public_purchase(purchase)}, status=201)
+    # Web parity: the web purchase flashes only the username; the credential
+    # is shown only to admins allowed to read card passwords.
+    return ok({"purchase": _public_purchase(
+        purchase, show_passwords=can_view_card_passwords())}, status=201)
 
 
 def card_user_password(card_user_id: int):
