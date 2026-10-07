@@ -110,12 +110,13 @@ def test_allowed_keys(key):
 
 
 def test_catalog_shape():
-    assert catalog.catalog_version() == "ops-v2"
+    assert catalog.catalog_version() == "ops-v3"
     acts = set(catalog.catalog()["actions"])
     assert set(catalog.EXECUTABLE_ACTIONS) <= acts
     assert set(catalog.INFO_ACTIONS) | set(catalog.LOOKUP_ACTIONS) <= acts
     assert set(catalog.ACTION_PERMISSION) >= set(catalog.EXECUTABLE_ACTIONS)
-    assert set(catalog.ACTION_PERMISSION) >= set(catalog.INFO_ACTIONS) | set(catalog.LOOKUP_ACTIONS)
+    assert set(catalog.ACTION_PERMISSION) >= (
+        set(catalog.INFO_ACTIONS) | set(catalog.LOOKUP_ACTIONS)) - set(catalog.OWN_ROWS_ACTIONS)
     assert set(catalog.CONTROL_ACTIONS) == set(catalog.catalog()["control_actions"])
     assert "reply" in catalog.CONTROL_ACTIONS
     vocab = set(catalog.catalog()["conventions"]["permission_vocabulary"])

@@ -1267,6 +1267,7 @@ _GUARD_ALLOWLIST: dict[str, str] = {
     "ops_assistant_cancel": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
     "ops_assistant_events": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
     "ops_assistant_start_event": "in-handler: tenant flag + password gate; every action is re-decided by the /api/v1 ops executor as THIS admin (same RBAC as the app)",
+    "ops_assistant_pick": "in-handler: tenant flag + password gate; the picked record is resolved by an exact /api/v1 lookup as THIS admin (same RBAC as the app)",
     "cards_offer_edit": "in-handler: owner or offer.edit entity grant",
     "cards_offer_visibility": "in-handler: owner only",
     "cards_offer_toggle": "in-handler: owner only",

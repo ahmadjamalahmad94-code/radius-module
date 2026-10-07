@@ -45,7 +45,11 @@ _LOG = logging.getLogger(__name__)
 MAX_HOPS = 3                      # CHOICES / RESULT fetches per admin message
 MAX_TEXT = 2000                   # admin message length
 LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
-INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions")
+INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions",
+                "recent_subscribers", "recent_card_batches", "recent_activity")
+# after «هل تقصد…؟» suggestions the model may only talk (never look up / act)
+# until the admin answers — the admin's choice is the only way to a record
+AFTER_SUGGESTIONS = ("ask", "reply", "refuse", "cancel")
 
 # Arabic names of model fields for the deterministic «what is still missing» question (a validator
 # rejection for a missing required field becomes an `ask` turn instead of a dead-end error — before
@@ -209,12 +213,19 @@ def render_choices(choices: dict, tenant_id: int) -> dict:
             out.append({k: x for k, x in row.items() if x is not None})
     elif src == "find_subscriber":
         names = plan_names(tenant_id, [it.get("plan_id") for it in items])
+        fuzzy = choices.get("match") == "fuzzy"
         for it in items:
             row = {"n": it.get("n"), "username": it.get("username"),
                    "full_name": it.get("full_name"),
                    "plan": names.get(int(it.get("plan_id") or 0)),
                    "status": it.get("status"),
                    "expires_local": _local(it.get("expire_at"), tenant_id)}
+            if fuzzy:
+                # «هل تقصد…؟»: what matched + when the record was created (SPEC_DATA_v4 §2)
+                row.update({"matched": it.get("matched"),
+                            "mobile": it.get("mobile") if it.get("matched") == "phone" else None,
+                            "national_id_tail": it.get("national_id_tail"),
+                            "created_local": _local(it.get("created_at"), tenant_id)})
             out.append({k: x for k, x in row.items() if x is not None})
     elif src == "change_plan_policies":
         # SPEC_DATA_v3 §8: {n, id, label_ar} — the proposal field is ``policy`` = id
@@ -229,6 +240,10 @@ def render_choices(choices: dict, tenant_id: int) -> dict:
     res = {"source": src, "items": out}
     if src == "change_plan_policies" and choices.get("direction"):
         res = {"source": src, "direction": choices["direction"], "items": out}
+    if choices.get("match") in ("fuzzy", "card"):
+        res = {"source": src, "match": choices["match"], **(
+            {"query": choices.get("query", "")} if choices["match"] == "fuzzy" else {}),
+            "items": out}
     if choices.get("truncated"):
         res["truncated"] = True
     return res
@@ -276,6 +291,28 @@ def _empty_before(cid: str, tenant_id: int, key: tuple[str, str]) -> bool:
         if _lookup_key(obj.get("action"), f) == key and not (ch.get("items") or []):
             return True
     return False
+
+
+def is_suggestions(rendered: dict) -> bool:
+    return rendered.get("match") == "fuzzy" and bool(rendered.get("items"))
+
+
+def item_label(source: str, item: dict) -> str:
+    """How a suggested record is named to the admin (pick text / fallback)."""
+    if source == "find_subscriber":
+        name = item.get("full_name")
+        user = item.get("username") or ""
+        return f"{name} ({user})" if name and name != user else str(user)
+    return str(item.get("name") or item.get("code") or item.get("id") or "")
+
+
+def suggestions_text(rendered: dict) -> str:
+    """The executor's own «هل تقصد…؟» line — used when the model tried to go
+    on without the admin's answer (it is then not called again)."""
+    items = rendered.get("items") or []
+    names = " · ".join(item_label(rendered.get("source") or "", it) for it in items[:5])
+    return _tr("لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.",
+               q=str(rendered.get("query") or "")[:60], names=names)
 
 
 def empty_text(source: str, *, direct_generation: bool = False) -> str:
@@ -443,6 +480,7 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
     deadline = time.monotonic() + model_client.MESSAGE_BUDGET
     tid, aid = api.tenant_id, api.admin_id
     replies: list[dict] = []
+    pending: Optional[dict] = None        # «هل تقصد…؟» suggestions shown in THIS turn
     for hop in range(MAX_HOPS + 1):
         try:
             text = chat(model_messages(cid, tid), deadline=deadline)
@@ -466,6 +504,15 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
         summary = admin_text(obj)
         is_list = action in LIST_SOURCES or action == "choose"
         is_info = action in INFO_ACTIONS
+
+        if pending is not None and action not in AFTER_SUGGESTIONS:
+            # Suggestions are answered by the ADMIN, never by the model: no
+            # lookup / INFO / proposal on a «maybe» record in the same turn
+            # (deterministic guard; the suggested ids are not issued either).
+            _audit(tid, actor, aid, cid, "suggestion_guard", {"action": str(action)[:40]})
+            replies.append({"type": "assistant", "action": "ask", "suggestions_guard": True,
+                            "text": suggestions_text(pending)})
+            return replies
 
         if (is_list or is_info) and hop >= MAX_HOPS:
             _audit(tid, actor, aid, cid, "too_many_hops", {"hops": hop})
@@ -536,6 +583,11 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
             rep = {"type": "choices", "source": rendered["source"],
                    "items": rendered["items"], "text": summary,
                    "truncated": bool(rendered.get("truncated"))}
+            if rendered.get("match"):
+                rep["match"] = rendered["match"]
+            if is_suggestions(rendered):
+                rep["query"] = rendered.get("query", "")
+                pending = rendered
             if not rendered["items"]:
                 rep["empty"] = empty_text(rendered["source"],
                                           direct_generation=_direct_generation(cid, tid))
@@ -563,6 +615,64 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                                      "not_executable_steps": out.get("not_executable_steps") or []}})
         return replies
     return replies
+
+
+def last_suggestions(cid: str, tenant_id: int) -> Optional[dict]:
+    """The «هل تقصد…؟» list the admin can still answer: the LATEST tool line
+    of the conversation, if it is a suggestions CHOICES (an older list is
+    stale — the conversation moved on)."""
+    for m in reversed(transcript(cid, tenant_id)):
+        if m["role"] != "tool":
+            continue
+        if not m["content"].startswith("CHOICES "):
+            return None
+        try:
+            ch = json.loads(m["content"][len("CHOICES "):])
+        except ValueError:
+            return None
+        return ch if is_suggestions(ch) else None
+    return None
+
+
+def pick(api: Api, cid: str, n: Any, *, actor: str = "", call=None) -> list[dict]:
+    """The admin picked suggestion ``n`` («نعم، أقصد …»). The record is
+    resolved EXACTLY through the executor (``pick`` → an exact lookup with
+    the admin's own RBAC/scope, issuing that one record), the transcript gets
+    the admin's answer + a ``choose`` with the exact query + its one-row
+    CHOICES (the SPEC_DATA_v3 lookup pattern), and the model continues."""
+    tid = api.tenant_id
+    ch = last_suggestions(cid, tid)
+    if ch is None:
+        raise TurnError("stale_choice", _tr("هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد."),
+                        409)
+    try:
+        num = int(n)
+    except (TypeError, ValueError):
+        num = 0
+    item = next((it for it in ch.get("items") or [] if it.get("n") == num), None)
+    if item is None:
+        raise TurnError("validation_error", _tr("اختر رقمًا من القائمة."))
+    src = ch.get("source")
+    if src == "find_subscriber":
+        ident = str(item.get("username") or "")
+        body = {"source": src, "query": ident, "pick": ident}
+    elif src in ("list_plans", "list_offers", "list_card_batches"):
+        ident = str(item.get("name") or item.get("code") or "")
+        body = {"source": src, "query": ident, "pick": item.get("id")}
+    else:
+        raise TurnError("validation_error", _tr("لا يمكن اختيار هذا العنصر."))
+    res = api("POST", f"/ops/conversations/{cid}/choices", body=body)
+    if not res.ok:
+        raise _api_error(res)
+    chosen = (res.data or {}).get("choices") or {}
+    if not chosen.get("items"):
+        raise TurnError("not_found", _tr("لم يعد هذا السجلّ متاحًا لك."), 404)
+    rendered = render_choices(chosen, tid)
+    append(cid, tid, "user", _tr("نعم، أقصد %(name)s", name=item_label(src, item)))
+    model_append(cid, tid, {"action": "choose", "fields": {"source": src, "query": ident[:100]},
+                            "missing": [], "message": _tr("تمام، هذا هو السجلّ المطلوب.")})
+    append(cid, tid, "tool", tool_line(rendered))
+    return run_model(api, cid, actor=actor, call=call)
 
 
 def model_append(cid: str, tenant_id: int, obj: dict) -> None:
@@ -603,6 +713,7 @@ def cancel(api: Api, cid: str) -> None:
     append(cid, api.tenant_id, "user", model_client.CANCEL_TEXT)
 
 
-__all__ = ["start", "say", "run_model", "confirm", "cancel", "render_choices", "render_event",
+__all__ = ["start", "say", "run_model", "confirm", "cancel", "pick", "last_suggestions",
+           "suggestions_text", "render_choices", "render_event",
            "event_records", "transcript", "model_messages", "append", "TurnError", "MAX_HOPS",
            "plan_names", "offer_names", "decorate"]

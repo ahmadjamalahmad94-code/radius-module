@@ -1,7 +1,8 @@
 {
-  "catalog_version": "ops-v2",
-  "generated_at": "2026-10-06",
+  "catalog_version": "ops-v3",
+  "generated_at": "2026-10-07",
   "changes_v2": "ops-v2 (SPEC_DATA_v3): `message` field required in every model object (natural text in the admin's language; summary_ar only required for executable actions/plans); control action `reply`; read-only INFO actions card_batch_status / list_card_batches / subscriber_info / online_sessions answered by a RESULT (or CHOICES) tool message; choice source list_card_batches; change_plan_policies items {n,id,label_ar}; CONTEXT permission vocabulary adds cards.view, cards.generate_direct, online.view. INFO endpoints cite the executor branch (source_v2).",
+  "changes_v3": "ops-v3 (SPEC_DATA_v4_DRAFT): additive. (1) Smart search: when an exact/substring lookup (find_subscriber, list_plans, list_offers, list_card_batches) finds nothing, the executor answers CHOICES with \"match\":\"fuzzy\" + \"query\" and at most 5 similar records (digits: <=2 edits after +970/972/0 normalisation; names: Arabic folding + similarity + Latin<->Arabic skeleton). Suggestions are NEVER issued: the model asks «هل تقصد…؟» (ask, missing=[\"choice\"]) and never acts on them; the admin's pick (click or text) resolves the record exactly. A card number typed exactly in list_card_batches resolves its batch (\"match\":\"card\"); card numbers are never suggested fuzzily. A phone written differently (+970 / spaces / Arabic digits) is an exact match (no \"match\" key). (2) New read-only INFO actions recent_subscribers {limit?, mine?}, recent_card_batches {limit?, mine?}, recent_activity {limit?} — default 5, max 20 — answered with RESULT; their usernames / batch ids are issued.",
   "level": "1 = draft only. The model converses, collects fields and emits ONE JSON proposal + an Arabic summary. Deterministic executor code validates the proposal against this catalog, re-reads the live record, shows the admin a confirmation card, and only then calls the HobeRadius API with the logged-in admin's own token. The model never executes anything.",
   "source": {
     "repo": "C:/Projects/rm-sec-rc1",
@@ -102,6 +103,14 @@
       "cite": "app/api/v1/sessions.py:255+",
       "permission": "web:online_list → online.view (permission_guard.py:437; blueprint.py:661)",
       "returns": "open radacct rows incl. session_id; the executor (not the model) picks session_id for /sessions/temp-speed."
+    },
+
+    "suggestions": {
+      "title_ar": "اقتراحات «هل تقصد…؟»",
+      "produced_by": "the executor, when find_subscriber / list_plans / list_offers / list_card_batches found NOTHING for a query",
+      "returns_to_model": "CHOICES {\"source\":<same source>,\"match\":\"fuzzy\",\"query\":<as typed>,\"items\":[<the source's item keys> + find_subscriber: matched (phone|national_id|username|name), created_local, mobile (only when matched by phone), national_id_tail (masked, only when matched by national id)],\"truncated\":false} — at most 5 rows, best first",
+      "rule": "ids / usernames of suggestions are NOT issued: an executable or INFO action on them is rejected (invented_id). The model answers with ask missing=[\"choice\"] («لم أجد X. هل تقصد Y؟»). After the admin's yes / pick: the executor's pick writes assistant choose{source, query:<exact>} + CHOICES with the ONE chosen row (issued), or the model itself emits choose{source, query:<exact username/name/code>}.",
+      "card_numbers": "list_card_batches: an exact card number → its batch, CHOICES \"match\":\"card\" (issued); card numbers are never suggested fuzzily"
     }
   },
 
@@ -413,18 +422,51 @@
       "model_fields": {"query": {"type": "string", "maxLength": 80}},
       "answer": "RESULT {\"source\":\"online_sessions\",\"data\":{query,total,subscribers,cards,items:[{n,username,user_type,started_local}] (<=10),truncated}}",
       "redaction": "no IP/MAC/NAS details; usernames of subscriber rows are issued"
+    },
+
+    "recent_subscribers": {
+      "title_ar": "آخر المشتركين المضافين",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [{"method": "GET", "path": "/api/v1/accounts", "query": {"per_page": "limit (1..20)", "page": "1"}, "cite": "app/api/v1/accounts.py accounts_list (ORDER BY id DESC = newest first; SQL-scoped by subscriber_scope_admin_id)"}],
+      "permission": {"role_key": "users.view", "api_guard": "web:subscribers_list"},
+      "model_fields": {"limit": {"type": "integer", "min": 1, "max": 20, "default": 5}, "mine": {"type": "boolean", "rule": "true only when the admin says «اللي أنا ضفتهم / my own / mine» — subscribers this admin is responsible for (manager_id = this admin, or his distributors')"}},
+      "answer": "RESULT {\"source\":\"recent_subscribers\",\"data\":{\"mine\":bool,\"items\":[{n,username,full_name,plan,status,created_local,expires_local}]}}",
+      "redaction": "no password / PPPoE secret / balance / phone; usernames are issued"
+    },
+
+    "recent_card_batches": {
+      "title_ar": "آخر حزم البطاقات",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [{"method": "GET", "path": "/api/v1/cards/batches", "query": {"per_page": "limit (1..20); 50 when mine", "page": "1"}, "cite": "app/api/v1/cards.py cards_batches_list (ORDER BY b.id DESC; batch scope)"}],
+      "permission": {"role_key": "cards.view", "api_guard": "web:cards_batches"},
+      "model_fields": {"limit": {"type": "integer", "min": 1, "max": 20, "default": 5}, "mine": {"type": "boolean", "rule": "batches this admin created (created_by = his login, or manager_id = him)"}},
+      "answer": "RESULT {\"source\":\"recent_card_batches\",\"data\":{\"mine\":bool,\"items\":[{n,id,name,code,origin,plan_name,created_local,total_cards,available_count,status}]}}",
+      "redaction": "never the cards (codes / passwords); batch ids are issued"
+    },
+
+    "recent_activity": {
+      "title_ar": "آخر نشاطي في اللوحة",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [{"method": "SQL(read-only, executor)", "path": "audit_log", "cite": "app/radius/services/ops_assistant/info.py recent_activity: rows of THIS admin only (tenant + actor = his login, or his unique display name), page visits and the assistant's own rows excluded, ORDER BY id DESC"}],
+      "permission": {"role_key": null, "rule": "every signed-in admin, OWN rows only (no key in CONTEXT)"},
+      "model_fields": {"limit": {"type": "integer", "min": 1, "max": 20, "default": 5}},
+      "answer": "RESULT {\"source\":\"recent_activity\",\"data\":{\"items\":[{n,when_local,action,target,outcome}]}}",
+      "redaction": "action label + target name only; never the payload / before-after values"
     }
   },
 
   "output_schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "hoberadius-ops/proposal-v2",
+    "$id": "hoberadius-ops/proposal-v3",
     "title": "Operations assistant proposal (one per model turn)",
     "type": "object",
     "additionalProperties": false,
     "required": ["action", "fields", "missing", "message"],
     "properties": {
-      "action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch", "list_plans", "list_offers", "find_subscriber", "list_card_batches", "card_batch_status", "subscriber_info", "online_sessions", "ask", "choose", "refuse", "cancel", "reply"]},
+      "action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch", "list_plans", "list_offers", "find_subscriber", "list_card_batches", "card_batch_status", "subscriber_info", "online_sessions", "recent_subscribers", "recent_card_batches", "recent_activity", "ask", "choose", "refuse", "cancel", "reply"]},
       "fields": {"type": "object"},
       "missing": {"type": "array", "items": {"type": "string", "pattern": "^[a-z_]+$", "not": {"pattern": "(^|_)(password|passwd|pass|pwd|secret|token|pin|api_?key)$"}}, "uniqueItems": true, "description": "never a secret name: the assistant never asks for a password (SPEC_DATA_v3 §7)"},
       "message": {"type": "string", "minLength": 1, "maxLength": 400, "description": "natural text for the admin in the admin's language (SPEC_DATA_v3 §2); its wording is never scored"},
@@ -445,6 +487,8 @@
       {"if": {"properties": {"action": {"const": "card_batch_status"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/card_batch_status"}}}},
       {"if": {"properties": {"action": {"const": "subscriber_info"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/subscriber_info"}}}},
       {"if": {"properties": {"action": {"const": "online_sessions"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/online_sessions"}}}},
+      {"if": {"properties": {"action": {"enum": ["recent_subscribers", "recent_card_batches"]}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/recent_list"}}}},
+      {"if": {"properties": {"action": {"const": "recent_activity"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/recent_activity"}}}},
       {"if": {"properties": {"action": {"const": "choose"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/choose"}}}},
       {"if": {"properties": {"action": {"enum": ["refuse", "cancel", "reply"]}}}, "then": {"properties": {"fields": {"maxProperties": 0}, "missing": {"maxItems": 0}}}},
       {"if": {"properties": {"action": {"not": {"const": "ask"}}}}, "then": {"properties": {"missing": {"maxItems": 0}}}},
@@ -562,7 +606,9 @@
       "list_card_batches": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 100}, "limit": {"type": "integer", "minimum": 1, "maximum": 10}}},
       "card_batch_status": {"type": "object", "additionalProperties": false, "required": ["batch_id"], "properties": {"batch_id": {"$ref": "#/$defs/record_id"}}},
       "subscriber_info": {"type": "object", "additionalProperties": false, "required": ["username"], "properties": {"username": {"$ref": "#/$defs/username"}}},
-      "online_sessions": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 80}}}
+      "online_sessions": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 80}}},
+      "recent_list": {"type": "object", "additionalProperties": false, "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}, "mine": {"type": "boolean"}}},
+      "recent_activity": {"type": "object", "additionalProperties": false, "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}}}
     }
   },
 

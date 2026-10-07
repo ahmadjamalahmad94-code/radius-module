@@ -1,8 +1,8 @@
 # Operations assistant — deterministic executor (ops-v2)
 
 Owner decisions: `hoberadius-ai-support/ops/DECISIONS.md` (4 levels, level 5 out of scope).
-Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `v2` + **`v3`** + `ops/catalog/actions.json`
-(copied verbatim to `app/radius/services/ops_assistant/catalog_ops_v2.json`, catalog_version ops-v2).
+Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `v2` + **`v3`** + `v4_DRAFT` + `ops/catalog/actions.json`
+(copied verbatim to `app/radius/services/ops_assistant/catalog_ops_v2.json`, catalog_version ops-v3 since smart search; the file name is kept).
 
 **ops-v2 in one paragraph (SPEC_DATA_v3):**
 - Every model object carries `message`. It is the text the admin reads, in the admin's language and dialect. It is
@@ -20,6 +20,10 @@ Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `v2` + **`v3`** + `ops
   users.temp_speed users.change_status plans.view plans.create offers.view offers.create cards.view cards.generate
   cards.generate_direct online.view`. `offers.create` replaces the earlier `offer.create`. `cards.generate_direct` =
   the admin may generate a batch directly from a plan.
+
+**ops-v3 (catalog_version ops-v3, `SPEC_DATA_v4_DRAFT.md`) — additive:** smart search «هل تقصد…؟» (suggestions
+are never issued; the admin's pick resolves them) and the read-only INFO actions `recent_subscribers`,
+`recent_card_batches`, `recent_activity`. See «Smart search & latest records» below.
 
 The model (an LLM outside this app) only converses and emits ONE JSON proposal per turn.
 Everything that touches data is this executor: deterministic code, the logged-in admin's
@@ -111,6 +115,55 @@ A conversation belongs to ONE tenant and ONE admin: any other tenant/admin gets 
 4. units/caps: Arabic-Indic digits → Latin; `*_local` (Asia/Gaza, DST) → UTC; durations → minutes, **months = calendar months in the tenant zone** (12 months over a leap day = 366 days → refused); **one operation ≤ min(365 days, server limit)** (`over_one_year`); extend `until` must be after max(now, current expiry); temp speed 1–1440 min, each direction 0 or 64–1,000,000 kbps, not both 0; speed kbps / quota MB with 1024 (card shows "2 Mbps", "5 GB"); selling ≥ wholesale; card count ≤ batch caps; prefix+suffix shorter than the total length; change-plan policy must match the per-minute direction. The cap also covers `create_offer.duration` and a batch's `time_value × time_unit`; months beyond any date are `over_one_year` (never a 500). **Plans: caps are per confirmation** — each subscriber's projected expiry is walked across steps (`$stepN.username` → that step's subscriber, case-insensitive) and the total added must stay ≤ the cap; all batches together ≤ the batch card cap. Rejection audit rows keep `action` ≤ 40 chars and ≤ 20 violations (paths ≤ 120 chars). Red-team suite: `tests/test_ops_redteam_*.py`.
 5. permission: same `permission_guard.decide` as the API (+ in-handler checks: `offer/create` grant, direct-generation grant).
 
+## Smart search & latest records (ops-v3)
+
+Module `services/ops_assistant/fuzzy.py` (pure Python, no new dependency), wired in `context.py`.
+
+* **When:** only after the exact path found NOTHING — `find_subscriber` (`GET /accounts?q=` «contains», no `status`
+  filter), `list_plans` / `list_offers` (name «contains»), `list_card_batches` (`q`, then exact code, then exact card
+  number). An exact hit is unchanged (no `match` key).
+* **Subscribers:** the scan reads only `username, full_name, mobile, national_id` of the rows the list API would
+  return — the SAME WHERE (`subscribers_repo._subscriber_filter_sql`: tenant, not deleted, real subscribers, owner
+  scope `subscriber_scope_admin_id()`). Digits: Arabic-Indic → Latin, `00` / `+970` / `+972` / leading `0` dropped;
+  the same number written differently is an EXACT match (issued, no `match` key); otherwise ≤ 2 edits (equal length:
+  substitutions incl. a swapped pair; ±1/±2 digits: pigeonhole pre-filter + bounded Levenshtein). Names: Arabic folding
+  (أإآٱ→ا، ة→ه، ى/ئ→ي، ؤ→و, tashkeel/tatweel, «ال» optional), token similarity ≥ 0.6 with a length-bound edit
+  distance, Latin ↔ Arabic consonant skeleton («fahed» ↔ «فهد»). Similarity is computed once per DISTINCT token and the
+  normalisation runs in bulk (C-level replace/regex), so **100k subscribers ≈ 0.45–0.55 s** including the SQL read
+  (`tests/test_ops_smart_search.py::test_fuzzy_scan_100k_subscribers_is_fast`, budget 4 s, `OPS_FUZZY_BUDGET_S`).
+  Every candidate (≤ 5) is then re-read through `GET /accounts/<username>` with the admin's credential (users.view +
+  scope again) and reduced to the CHOICES whitelist + `matched`, `created_at`; `mobile` only when the phone IS the
+  match, `national_id_tail` (masked to 4) only for a national-id match.
+* **Plans / offers:** similarity over the names of the API's own (scoped) list. **Batches:** similarity over
+  `package_name` / `batch_code` of the batches in `batch_scope_clause` (newest 20k), each candidate re-read through
+  `GET /cards/batches?code=` (the API's scope check). **Card number:** an EXACT card username → its batch
+  (`match:"card"`, issued); a near-miss card number gets NO suggestion (it would reveal valid voucher codes) and the
+  number is never echoed.
+* **Never issued:** suggestions return `{"source", "match":"fuzzy", "query", "items", "truncated":false}` and NOTHING
+  is written to `ops_issued_choices`. Any INFO or executable proposal on a suggested username / id is rejected
+  `invented_id`. The `ops.choices` audit row says `outcome=suggested`.
+* **Same-turn guard (conversation loop):** after a suggestions CHOICES, the model may only `ask` / `reply` / `refuse`
+  / `cancel` in that admin turn. Anything else (an exact re-lookup of the candidate, INFO, proposal) is not sent to the
+  executor; the turn ends with the executor's own «لم أجد … هل تقصد …؟» line (`suggestions_guard: true`) and an
+  `ops.model` audit row `suggestion_guard`.
+* **The pick** — `POST /admin/radius/ops-assistant/pick` and `POST /api/v1/ops/assistant/pick`
+  `{conversation_id, n}`: only the conversation's LATEST tool line, if it is a suggestions list (else 409
+  `stale_choice`; `n` 1–20 int else 422). It calls `/ops/conversations/<cid>/choices` with `pick` (allowed ONLY on that
+  endpoint — never from a model proposal; the catalog schemas forbid the key): `find_subscriber` → `GET
+  /accounts/<username>`; plans / offers → the id in the API list; batches → `GET /cards/batches?code=` + id. The one
+  record is issued (`source=pick`). The transcript gets the admin's «نعم، أقصد …» + an assistant `choose` with the
+  exact query + the one-row CHOICES (the v3 lookup pattern), then the model continues.
+* **UI:** a suggestions card («لم أجد تطابقًا تامًّا — هل تقصد:») with one button per row (number · name · what
+  matched · added date); the click posts the pick. `match:"card"` adds a hint line.
+
+| INFO action | fields | permission | source of truth |
+|---|---|---|---|
+| `recent_subscribers` | `limit?` 1–20 (5), `mine?` | `users.view` | `GET /accounts?per_page=N` (id DESC); `mine` → `list_subscribers(owner_admin_id=me)` re-read via `GET /accounts/<u>` |
+| `recent_card_batches` | `limit?` 1–20 (5), `mine?` | `cards.view` | `GET /cards/batches?per_page=N` (id DESC); `mine` = created_by ∈ {login, unique display name, `api-token:<his tokens>`} or `manager_id` = him, among the newest 50 |
+| `recent_activity` | `limit?` 1–20 (5) | none — OWN rows only (`catalog.OWN_ROWS_ACTIONS`) | `audit_log` of THIS tenant whose actor is his login / unique display name / his tokens; `is_visit=0`; not `ops_assistant` / `ops.*`; returns label, target name, outcome — never payload values |
+
+Usernames / batch ids in these RESULTs are issued (like `online_sessions`).
+
 ## Level-specific notes
 * **create_subscriber**: the password is generated server-side (`secrets`, 10 chars) unless `login_without_password`; returned once in `show_once`, never stored, logged, audited or put in `model_result`. Duration → `expire_at` set directly (Q5 executor default); no duration → the server's `create_without_expiry` rule (shown in the card).
 * **create_card_batch** from a plan: card codes in the API response are dropped by a per-action whitelist. From an offer: web-only in v1 (Q2/Q7) → draft/hand-off, confirm reports `not_executable_v1`.
@@ -133,6 +186,8 @@ writing their own audit rows as for any app call.
 ## Tests
 `tests/test_ops_executor_units.py`, `_validation.py`, `_flows.py`, `_plans.py`,
 `_gate_events.py`, `_info.py` (ops-v2: message / reply / INFO / scope / whitelist),
+`tests/test_ops_smart_search.py` (ops-v3: the owner's two examples, suggestions never issued, pick, same-turn guard,
+tenant / scope / permission, recent_*, 100k performance),
 `tests/test_api_card_offers.py` (helpers: `tests/ops_exec_helpers.py`),
 `tests/test_ops_assistant_web.py` (web chat + model loop against a fake local
 OpenAI-compatible server).
@@ -157,10 +212,11 @@ browser (session + CSRF) ─▶ /admin/radius/ops-assistant/*   (routes/ops_assi
 | POST | `/ops-assistant/cancel` | `{conversation_id}` — records «إلغاء» in the transcript, no model call |
 | GET | `/ops-assistant/events` | level-4 suggestions (one row per event record) |
 | POST | `/ops-assistant/start-event` | `{event_type, index}` → new conversation from that record + first model turn |
+| POST | `/ops-assistant/pick` | `{conversation_id, n}` → the admin picks «هل تقصد…؟» suggestion n (latest list only, else 409) → replies |
 
 Mobile app mirror (bearer token, same bodies inside `{ok, data}`; tenant + admin from the
 token; flag + password gate; own conversation only, else 404; mapped in `API_AUTH_ONLY`):
-`POST /api/v1/ops/assistant/message`, `/start-event`, `/confirm` (honours `Idempotency-Key`:
+`POST /api/v1/ops/assistant/message`, `/start-event`, `/pick`, `/confirm` (honours `Idempotency-Key`:
 the same key returns the stored report with `replayed: true` and never `show_once`; the key
 used for another proposal → 422 `idempotency_key_reused`), `/cancel`. Suggestions come from
 `GET /api/v1/ops/events`.

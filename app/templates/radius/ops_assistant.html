@@ -58,6 +58,8 @@
   .ops-choices{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:13px; }
   .ops-choices li{ padding:5px 8px; border-radius:8px; background:var(--hub-soft,rgba(2,132,199,.05)); }
   .ops-choices b{ display:inline-block; min-width:22px; }
+  .ops-card.is-suggest .ops-choices li{ padding:0; background:none; }
+  .ops-pick{ width:100%; justify-content:flex-start; text-align:start; white-space:normal; line-height:1.5; }
   .ops-form{ display:flex; gap:8px; border-top:1px solid var(--hub-line,#e2e8f0); padding-top:12px; }
   .ops-form textarea{ flex:1; resize:vertical; min-height:46px; max-height:180px; border-radius:12px;
                       border:1px solid var(--hub-line,#cbd5e1); padding:10px 12px; font:inherit; }
@@ -108,7 +110,8 @@
     "confirm": url_for('radius.ops_assistant_confirm'),
     "cancel": url_for('radius.ops_assistant_cancel'),
     "events": url_for('radius.ops_assistant_events'),
-    "start_event": url_for('radius.ops_assistant_start_event')
+    "start_event": url_for('radius.ops_assistant_start_event'),
+    "pick": url_for('radius.ops_assistant_pick')
   },
   "t": {
     "you": _("أنت"),
@@ -139,6 +142,18 @@
     "info_card_batch_status": _("وضع حزمة البطاقات"),
     "info_subscriber_info": _("معلومات المشترك"),
     "info_online_sessions": _("المتّصلون الآن"),
+    "info_recent_subscribers": _("آخر المشتركين المضافين"),
+    "info_recent_card_batches": _("آخر حزم البطاقات"),
+    "info_recent_activity": _("آخر نشاطك في اللوحة"),
+    "suggest_title": _("لم أجد تطابقًا تامًّا — هل تقصد:"),
+    "suggest_hint": _("اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك."),
+    "pick_said": _("نعم، أقصد"),
+    "card_match": _("هذه حزمة الكرت الذي كتبت رقمه."),
+    "created": _("أُضيف"),
+    "m_phone": _("الجوال"),
+    "m_national_id": _("رقم الهويّة"),
+    "m_username": _("اسم المستخدم"),
+    "m_name": _("الاسم"),
     "info_more": _("القائمة مختصرة — العدد الكلّيّ أعلاه."),
     "ie_not_found": _("غير موجود."),
     "ie_out_of_scope": _("هذا السجلّ ليس ضمن نطاقك."),
@@ -184,7 +199,8 @@
     "no_expiry": _("بلا انتهاء"), "online": _("متّصل الآن"), "online_sessions": _("جلسات حيّة"),
     "last_seen_local": _("آخر ظهور"), "balance": _("الرصيد"), "balance_hidden": _("الرصيد مخفيّ"),
     "open_debt": _("الدين المفتوح"), "currency": _("العملة"), "total": _("العدد الكلّيّ"),
-    "subscribers": _("مشتركون"), "cards": _("كروت")
+    "subscribers": _("مشتركون"), "cards": _("كروت"),
+    "when_local": _("الوقت"), "action": _("الإجراء"), "target": _("على"), "outcome": _("النتيجة")
   },
   "values": {
     "paid": _("مدفوع من الرصيد"), "debt": _("دين على المشترك"), "free": _("مجّانًا"),
@@ -195,7 +211,8 @@
     "higher_keep_expiry": _("إبقاء تاريخ الانتهاء دون فرق"), "neutral_keep_expiry": _("بلا فرق"),
     "active": _("فعّال"), "exhausted": _("نفدت كروتها"), "expired": _("منتهٍ"),
     "disabled": _("معطّل"), "deleted": _("محذوفة"), "archived": _("مؤرشفة"),
-    "cancelled": _("ملغاة"), "revoked": _("ملغاة"), "subscriber": _("مشترك"), "card": _("كرت")
+    "cancelled": _("ملغاة"), "revoked": _("ملغاة"), "subscriber": _("مشترك"), "card": _("كرت"),
+    "success": _("نجح"), "failed": _("فشل"), "blocked": _("محظور"), "noop": _("بلا تغيير")
   }
 }|tojson }}</script>
 

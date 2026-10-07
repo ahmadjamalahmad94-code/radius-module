@@ -3,7 +3,8 @@ executor-side tables derived from it (permissions, API endpoints, level-3
 envelope, ``$stepN.field`` references).
 
 Source of truth: ``catalog_ops_v2.json`` — a verbatim copy of
-``hoberadius-ai-support/ops/catalog/actions.json`` (catalog_version ops-v2,
+``hoberadius-ai-support/ops/catalog/actions.json`` (catalog_version ops-v3 =
+ops-v2 + smart search «هل تقصد…؟» + the recent_* INFO actions; ops-v2 was
 SPEC_DATA_v3: ``message`` in every object, control action ``reply``,
 read-only INFO actions answered with a ``RESULT`` tool message).
 """
@@ -57,7 +58,11 @@ EXECUTABLE_ACTIONS = (
 )
 LOOKUP_ACTIONS = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
 # read-only, answered with a RESULT tool message (SPEC_DATA_v3 §4); level 1, no confirmation
-INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions")
+INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions",
+                # ops-v3: «latest records» (default 5, max 20)
+                "recent_subscribers", "recent_card_batches", "recent_activity")
+# ops-v3: own audit rows only — every signed-in admin, no CONTEXT key
+OWN_ROWS_ACTIONS = ("recent_activity",)
 CONTROL_ACTIONS = ("ask", "choose", "refuse", "cancel", "reply")
 CHOICE_SOURCES = ("list_plans", "list_offers", "find_subscriber", "change_plan_policies",
                   "list_card_batches")
@@ -84,6 +89,8 @@ ACTION_PERMISSION: dict[str, tuple[str, str, str]] = {
     "card_batch_status": ("cards.view", "v1.cards_batch_summary", "GET"),
     "subscriber_info": ("users.view", "v1.accounts_360", "GET"),
     "online_sessions": ("online.view", "v1.sessions_online", "GET"),
+    "recent_subscribers": ("users.view", "v1.accounts_list", "GET"),
+    "recent_card_batches": ("cards.view", "v1.cards_batches_list", "GET"),
 }
 # CONTEXT key for a plan-source batch on top of cards.generate (SPEC_DATA_v3 §11)
 DIRECT_GENERATION_KEY = "cards.generate_direct"
@@ -147,7 +154,7 @@ def action_def(action: str) -> dict:
 
 __all__ = [
     "catalog", "catalog_version", "output_schema", "forbidden_keys", "is_forbidden_key",
-    "EXECUTABLE_ACTIONS", "LOOKUP_ACTIONS", "INFO_ACTIONS", "CONTROL_ACTIONS", "CHOICE_SOURCES",
+    "EXECUTABLE_ACTIONS", "LOOKUP_ACTIONS", "INFO_ACTIONS", "OWN_ROWS_ACTIONS", "CONTROL_ACTIONS", "CHOICE_SOURCES",
     "LIST_SOURCES", "ACTION_PERMISSION", "DIRECT_GENERATION_KEY", "DANGER", "PLAN_SCHEMA", "MAX_PLAN_STEPS", "REF_OUTPUTS",
     "REF_FIELDS", "REF_RE", "action_def",
 ]
