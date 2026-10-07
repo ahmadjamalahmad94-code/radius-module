@@ -101,7 +101,7 @@ def add_calendar_months(dt_utc: datetime, months: int, tenant_id: int) -> dateti
         return aware.astimezone(timezone.utc).replace(tzinfo=None)
     except (ValueError, OverflowError) as exc:
         # 525,600 months → year 45,826: far beyond any cap (was an HTTP 500)
-        raise UnitError("over_one_year", _over_cap_message(cap_minutes(tenant_id))) from exc
+        raise UnitError("over_one_year", over_cap_message(cap_minutes(tenant_id))) from exc
 
 
 def duration_minutes(duration: dict, *, tenant_id: int,
@@ -119,7 +119,7 @@ def duration_minutes(duration: dict, *, tenant_id: int,
     raise UnitError("bad_unit", _tr("وحدة المدّة غير معروفة."))
 
 
-def _over_cap_message(cap: int) -> str:
+def over_cap_message(cap: int) -> str:
     return _tr("أقصى إضافة في العمليّة الواحدة سنة (%(d)s يومًا) — قسّمها على أكثر من عمليّة.",
                d=cap // 1440)
 
@@ -129,7 +129,7 @@ def enforce_cap(minutes: int, tenant_id: int) -> int:
     if minutes <= 0:
         raise UnitError("non_positive_duration", _tr("المدّة يجب أن تكون أكبر من صفر."))
     if minutes > cap:
-        raise UnitError("over_one_year", _over_cap_message(cap))
+        raise UnitError("over_one_year", over_cap_message(cap))
     return minutes
 
 
@@ -147,7 +147,7 @@ def card_time_minutes(value: int, unit: str, tenant_id: int) -> int:
     if unit in ("months", "years"):
         months = v * (12 if unit == "years" else 1)
         if months > 13:
-            raise UnitError("over_one_year", _over_cap_message(cap_minutes(tenant_id)))
+            raise UnitError("over_one_year", over_cap_message(cap_minutes(tenant_id)))
         return enforce_cap(duration_minutes({"value": months, "unit": "months"},
                                             tenant_id=tenant_id), tenant_id)
     if unit not in _CARD_UNIT_MINUTES:
@@ -221,7 +221,8 @@ def minutes_text(minutes: int) -> str:
 __all__ = [
     "KBPS_PER_MBPS", "MB_PER_GB", "OWNER_CAP_DAYS", "UnitError", "latin_digits",
     "cap_minutes", "local_today", "local_to_utc", "add_calendar_months",
-    "duration_minutes", "enforce_cap", "card_time_minutes", "temp_speed_kbps", "temp_speed_minutes",
+    "duration_minutes", "enforce_cap", "card_time_minutes", "over_cap_message",
+    "temp_speed_kbps", "temp_speed_minutes",
     "format_speed", "format_quota", "mbps_to_kbps", "gb_to_mb", "iso_z",
     "local_text", "minutes_text", "utcnow", "tz_name", "to_local",
 ]

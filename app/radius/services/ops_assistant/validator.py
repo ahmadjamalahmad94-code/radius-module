@@ -275,9 +275,79 @@ def _validate_plan(conv: dict, proposal: dict, mode: str) -> Validated:
                                          mode=mode))
         except ProposalRejected as e:
             errs += e.violations
+    if not errs:
+        errs = _plan_totals(conv, steps_in)
     if errs:
         raise ProposalRejected(errs)
     return Validated("plan", "plan", proposal, canonical_hash(conv["id"], proposal), prepared)
+
+
+_MINUTES = {"minutes": 1, "hours": 60, "days": 1440}
+
+
+def _parse_utc(text: Any):
+    from datetime import datetime
+    try:
+        return datetime.fromisoformat(str(text).rstrip("Z")[:19])
+    except (TypeError, ValueError):
+        return None
+
+
+def _plan_totals(conv: dict, steps_in: list) -> list[Violation]:
+    """Caps are per CONFIRMATION, not per step: six «+365 days» steps for one
+    subscriber (or six batches at the card cap) under ONE confirmation would
+    multiply the owner's limits. The subscriber's projected expiry is walked
+    step by step (``$stepN.username`` → the subscriber of step N; usernames
+    compare case-insensitively) and the time added in total must stay within
+    the one-year cap; the cards of all batches within the batch cap."""
+    tid = int(conv["tenant_id"])
+    cap = units.cap_minutes(tid)
+    now = units.utcnow()
+    who: dict[int, Optional[str]] = {}
+    span: dict[str, list] = {}            # subscriber → [start, projected expiry]
+    cards = 0
+    for i, step in enumerate(steps_in, start=1):
+        f, action = step["fields"], step["action"]
+        path = f"$.steps[{i - 1}].fields"
+        uname = f.get("username")
+        m = catalog.REF_RE.match(uname) if isinstance(uname, str) else None
+        key = who.get(int(m.group(1))) if m else (
+            str(uname).strip().lower() if isinstance(uname, str) else None)
+        who[i] = key
+        try:
+            if action == "create_card_batch":
+                cards += int(f["count"])
+                if cards > _card_cap(tid):
+                    return [Violation("count_over_cap",
+                                      _tr("مجموع الكروت في الخطّة يتجاوز الحدّ (%(c)s) — "
+                                          "قسّمها على أكثر من تأكيد.", c=_card_cap(tid)),
+                                      f"{path}.count")]
+            elif action == "create_subscriber" and key:
+                exp = now
+                if "duration" in f:
+                    exp = now + timedelta(minutes=units.duration_minutes(
+                        f["duration"], tenant_id=tid, anchor_utc=now))
+                elif "until_local" in f:
+                    exp = units.local_to_utc(f["until_local"], tid)
+                span[key] = [now, exp]
+            elif action == "renew_or_extend_subscriber" and key:
+                if key not in span:
+                    start = _anchor(conv, str(uname))[0] if not m else now
+                    span[key] = [start, start]
+                cur = span[key]
+                if f["mode"] == "duration":
+                    d = f["duration"]
+                    if d["unit"] == "months":
+                        cur[1] = units.add_calendar_months(cur[1], int(d["value"]), tid)
+                    else:
+                        cur[1] = cur[1] + timedelta(minutes=int(d["value"]) * _MINUTES[d["unit"]])
+                else:
+                    cur[1] = max(cur[1], units.local_to_utc(f["until_local"], tid))
+                if (cur[1] - cur[0]).total_seconds() / 60 > cap:
+                    raise units.UnitError("over_one_year", units.over_cap_message(cap))
+        except units.UnitError as e:
+            return [Violation(e.code, e.message, path)]
+    return []
 
 
 def _check_info(conv: dict, action: str, fields: dict) -> None:
@@ -541,13 +611,18 @@ _BATCH_COPY = ("count", "package_name", "username_length", "include_batch_number
                "price_per_card", "total_price", "total_quota_mb", "notes")
 
 
-def _b_card_batch(conv, f, refs, path, mode):
-    tid = int(conv["tenant_id"])
+def _card_cap(tid: int) -> int:
     from ..cards import hard_max_cards_per_batch, max_cards_per_batch
     cap = int(hard_max_cards_per_batch(tid))
     soft = int(max_cards_per_batch(tid) or 0)
     if soft:
         cap = min(cap, soft)
+    return cap
+
+
+def _b_card_batch(conv, f, refs, path, mode):
+    tid = int(conv["tenant_id"])
+    cap = _card_cap(tid)
     if int(f["count"]) > cap:
         raise _v("count_over_cap", _tr("عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات.", c=cap),
                  f"{path}.count")
