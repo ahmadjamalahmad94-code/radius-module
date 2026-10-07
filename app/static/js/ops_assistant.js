@@ -78,24 +78,66 @@
 
   /* ── cards ─────────────────────────────────────────────────── */
 
+  function itemParts(it, keys) {
+    var parts = [];
+    keys.forEach(function (k) {
+      if (it[k] === undefined || it[k] === null || it[k] === "") return;
+      parts.push(k === "status" || k === "outcome" ? fmtValue("status", it[k]) : String(it[k]));
+    });
+    return parts;
+  }
+
+  var CHOICE_KEYS = ["name", "username", "full_name", "plan_name", "plan", "label_ar", "status",
+                     "expires_local", "price", "currency"];
+
   function choicesCard(rep) {
-    var card = el("div", "ops-card");
-    card.appendChild(el("h4", "", T.choices_title));
+    var fuzzy = rep.match === "fuzzy";
+    var card = el("div", "ops-card" + (fuzzy ? " is-suggest" : ""));
+    card.appendChild(el("h4", "", fuzzy ? T.suggest_title : T.choices_title));
+    if (rep.match === "card") card.appendChild(el("div", "ops-hint", T.card_match));
     var ul = el("ul", "ops-choices");
+    var buttons = [];
     (rep.items || []).forEach(function (it) {
       var li = el("li");
-      li.appendChild(el("b", "", (it.n || "") + "."));
-      var parts = [];
-      ["name", "username", "full_name", "plan_name", "plan", "label_ar", "status",
-       "expires_local", "price", "currency"].forEach(function (k) {
-        if (it[k] !== undefined && it[k] !== null && it[k] !== "") parts.push(String(it[k]));
-      });
-      li.appendChild(document.createTextNode(" " + parts.join(" · ")));
+      var parts = itemParts(it, CHOICE_KEYS);
+      if (fuzzy) {
+        /* «هل تقصد…؟» — a suggestion is usable only after THIS click (the server
+           resolves it exactly and only then the assistant may act on it) */
+        if (it.matched) parts.push((T["m_" + it.matched] || it.matched) +
+          (it.mobile ? ": " + it.mobile : it.national_id_tail ? ": " + it.national_id_tail : ""));
+        if (it.created_local) parts.push(T.created + " " + it.created_local);
+        var b = el("button", "hub-btn hub-btn--ghost hub-btn--sm ops-pick",
+                   (it.n || "") + ". " + parts.join(" · "));
+        b.type = "button";
+        b.addEventListener("click", function () { pickChoice(it, parts[0] || "", buttons); });
+        buttons.push(b);
+        li.appendChild(b);
+      } else {
+        li.appendChild(el("b", "", (it.n || "") + "."));
+        li.appendChild(document.createTextNode(" " + parts.join(" · ")));
+      }
       ul.appendChild(li);
     });
     card.appendChild(ul);
+    if (fuzzy) card.appendChild(el("div", "ops-hint", T.suggest_hint));
     if (rep.truncated) card.appendChild(el("div", "ops-hint", T.choices_more));
     return card;
+  }
+
+  function pickChoice(it, label, buttons) {
+    if (busy || !conversationId) return;
+    buttons.forEach(function (b) { b.disabled = true; });
+    setBusy(true);
+    say(T.pick_said + " " + label, "is-user");
+    var wait = say(T.thinking, "is-wait");
+    post(U.pick, { conversation_id: conversationId, n: it.n })
+      .then(function (res) {
+        wait.remove();
+        if (!res || !res.ok) { say((res && res.error) || T.network, "is-err"); return; }
+        render(res.replies);
+      })
+      .catch(function () { wait.remove(); say(T.network, "is-err"); })
+      .then(function () { setBusy(false); input.focus(); });
   }
 
   /* read-only answer from the system (INFO action) — the model's message follows as a bubble */
@@ -108,7 +150,8 @@
     }
     var d = rep.data || {}, rows = [];
     Object.keys(d).forEach(function (k) {
-      if (k === "items" || k === "query" || k === "truncated" || k === "batch_id") return;
+      if (k === "items" || k === "query" || k === "truncated" || k === "batch_id" ||
+          k === "mine") return;
       rows.push([L[k] || k, fmtValue(k, d[k])]);
     });
     if (rows.length) card.appendChild(kv(rows));
@@ -117,8 +160,12 @@
       d.items.forEach(function (it) {
         var li = el("li");
         li.appendChild(el("b", "", (it.n || "") + "."));
-        var parts = [it.username, fmtValue("user_type", it.user_type), it.started_local]
-          .filter(function (x) { return x !== undefined && x !== null && x !== "" && x !== "-"; });
+        var parts = rep.source === "online_sessions"
+          ? [it.username, fmtValue("user_type", it.user_type), it.started_local]
+            .filter(function (x) { return x !== undefined && x !== null && x !== "" && x !== "-"; })
+          : itemParts(it, ["when_local", "action", "target", "name", "username", "full_name",
+                           "plan_name", "plan", "status", "outcome", "created_local",
+                           "expires_local", "available_count"]);
         li.appendChild(document.createTextNode(" " + parts.join(" · ")));
         ul.appendChild(li);
       });
