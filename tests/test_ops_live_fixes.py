@@ -91,3 +91,15 @@ def test_zeroshot_self_corrects_once_after_rejection(monkeypatch):
     assert out[-1]["action"] == "ask" and "كم السرعة" in out[-1]["text"]
     fed = [t for r, t in appended if r == "tool"]
     assert fed and "speed_down_kbps" in fed[0] and "is required" in fed[0]
+
+
+def test_mobile_result_rows_are_arabic_and_readable():
+    from app.radius.services.ops_assistant import display as D
+    reps = [{"type": "result", "source": "card_info", "data": {
+        "card": "55039046", "status": "active", "counting": "from_first_connect", "used_time": "2h 25m",
+        "remaining": "6h 16m", "expires_local": "2026-10-08T03:00", "sessions": 6}}]
+    d = D.for_client(reps)[0]["data"]
+    assert "card" not in d and "used_time" not in d and "counting" not in d
+    assert d["وقت الاتصال الفعليّ (كل الجلسات)"] == "2 ساعة و25 دقيقة"
+    assert d["ينتهي"] == "2026-10-08 03:00" and d["الحالة"] == "فعّال" and d["عدد الجلسات"] == 6
+    assert D.for_client([{"type": "assistant", "text": "x"}]) == [{"type": "assistant", "text": "x"}]

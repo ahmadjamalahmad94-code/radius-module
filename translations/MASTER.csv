@@ -7466,6 +7466,32 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:709
 تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:711
 الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:725
+رقم البطاقة,,Card Number,Numéro de la carte,Kart Numarası,Número de la tarjeta,ok,app/radius/services/ops_assistant/display.py:16
+أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/radius/services/ops_assistant/display.py:18
+ينتهي,,Expires,Expire,Bitiş,Caduca,ok,app/radius/services/ops_assistant/display.py:18
+وقت البطاقة,,Card time,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:19
+وقت الاتصال الفعليّ (كل الجلسات),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:20
+أجهزة استُخدمت,,Devices used,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:21
+أجهزة متّصلة الآن,,Devices online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:21
+آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/radius/services/ops_assistant/display.py:22
+الحصّة,,Quota,Quota,Kota,Cuota,ok,app/radius/services/ops_assistant/display.py:22
+الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:24
+متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:24
+جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:25
+كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/radius/services/ops_assistant/display.py:25
+كل الكروت,,All cards,Toutes les cartes,Tüm kartlar,Todas las tarjetas,ok,app/radius/services/ops_assistant/display.py:26
+متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:26
+قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:27
+العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:28
+الإجراء,,Action,Action,İşlem,Acción,ok,app/radius/services/ops_assistant/display.py:29
+الوقت,,Time,Heure,Zaman,Hora,ok,app/radius/services/ops_assistant/display.py:29
+على,,On,Sur,Üzerinde,En,ok,app/radius/services/ops_assistant/display.py:29
+غير مستعملة,,Unused,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:32
+منتهٍ,,Expired,Expiré,Süresi dolmuş,Caducado,ok,app/radius/services/ops_assistant/display.py:32
+نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:33
+بالثانية (وقت الاتصال فقط),,By the second (online time only),,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:35
+تبدأ من أوّل اتصال,,Starts at first login,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/display.py:35
+truefalse,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/display.py:59
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:127
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:135
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:188
@@ -8779,7 +8805,6 @@ plan_tier غير معروف,,,,,,"missing: en,fr,tr,es",app/radius/services/tena
 بانتظار الجهاز,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/device_service.py:137
 مُستلَم,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/device_service.py:137
 اكتمل,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/device_service.py:138
-منتهٍ,,Expired,Expiré,Süresi dolmuş,Caducado,ok,app/radius/services/tr069/device_service.py:138
 أُلغي,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/device_service.py:139
 <ACS_URL — اضبط HOBERADIUS_GENIEACS_CWMP_URL>,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/enrollment_service.py:63
 الجهاز غير مُسجَّل في GenieACS,,,,,,"missing: en,fr,tr,es",app/radius/services/tr069/sync_service.py:123
@@ -9201,7 +9226,6 @@ WireGuard البيانات,,,,,,"missing: en,fr,tr,es",app/radius/templates/radi
 الشهر التالي,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:156
 سنة أقل,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:169
 سنة أكثر,,,,,,"missing: en,fr,tr,es",app/static/js/hub_date.js:173
-الوقت,,Time,Heure,Zaman,Hora,ok,app/static/js/hub_date.js:248
 تم,,Done,Terminé,Tamamlandı,Hecho,ok,app/static/js/hub_date.js:309
 بحث...,,,,,,"missing: en,fr,tr,es",app/static/js/hub_select.js:77
 هذا الحقل مطلوب.,,,,,,"missing: en,fr,tr,es",app/static/js/latin_digits.js:60
@@ -9289,7 +9313,6 @@ Traceroute إلى {v},,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:
 تمّ تنفيذ العملية,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:919
 فشلت العملية,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:919
 ✓ تمت العملية. تظهر التفاصيل المهمة هنا حسب نوع الأمر.,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:922
-الإجراء,,Action,Action,İşlem,Acción,ok,app/static/js/mt_dashboard.js:946
 إنشاء قناة آمنة مشفّرة,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:963
 الاتصال بالراوتر عبر نفق الإدارة,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:963
 إرسال حزم Ping من الراوتر,,,,,,"missing: en,fr,tr,es",app/static/js/mt_dashboard.js:964
@@ -9465,7 +9488,6 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 كتم صوت الإشعارات,,Mute notification sounds,Couper le son des notifications,Bildirim seslerini kapat,Silenciar notificaciones,ok,app/static/js/notif_live.js:410
 باقات.,,plans.,forfaits.,paket.,planes.,ok,app/static/js/ops_speed_control.js:190
 سيتم تطبيق,,Will be applied,Sera appliqué,Uygulanacak,Se aplicará,ok,app/static/js/ops_speed_control.js:190
-على,,On,Sur,Üzerinde,En,ok,app/static/js/ops_speed_control.js:190
 متوقّف,,Stopped,Arrêté,Durduruldu,Detenido,ok,app/static/js/ops_speed_control.js:243
 متوسط التحميل الحالي,,,,,,"missing: en,fr,tr,es",app/static/js/ops_speed_control.js:279
 متوسط النسبة الحالية,,Current average rate,Taux moyen actuel,Mevcut ortalama oran,Tasa media actual,ok,app/static/js/ops_speed_control.js:279
@@ -9845,7 +9867,6 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 فتح القائمة,,Open menu,Ouvrir le menu,Menüyü aç,Abrir menú,ok,app/templates/admin/_admin_layout.html:229
 توقيت اللوحة,,Panel time,Heure du panneau,Panel saati,Hora del panel,ok,app/templates/admin/_admin_layout.html:255
 الأيّام المتبقّية على ترخيص اللوحة,,Days left on the panel license,Jours restants sur la licence du panneau,Panel lisansında kalan gün,Días restantes de la licencia del panel,ok,app/templates/admin/_admin_layout.html:269
-ينتهي,,Expires,Expire,Bitiş,Caduca,ok,app/templates/admin/_admin_layout.html:269
 يتوفّر تحديث جديد,,A new update is available,Une nouvelle mise à jour est disponible,Yeni bir güncelleme mevcut,Hay una nueva actualización disponible,ok,app/templates/admin/_admin_layout.html:283
 إعدادات الراديوس,,RADIUS settings,Paramètres RADIUS,RADIUS ayarları,Configuración de RADIUS,ok,app/templates/admin/_admin_layout.html:294
 مركز التنبيهات,,Alerts center,Centre des alertes,Uyarı merkezi,Centro de alertas,ok,app/templates/admin/_admin_layout.html:308
@@ -10106,7 +10127,6 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 ستظهر معاينة القالب هنا بعد اختياره من معرض التصاميم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_card_print_modal.html:65
 إعدادات الطباعة,,Print Settings,Paramètres d’impression,Yazdırma Ayarları,Configuración de impresión,ok,app/templates/radius/_card_print_modal.html:78
 نطاق الطباعة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_card_print_modal.html:79
-كل الكروت,,All cards,Toutes les cartes,Tüm kartlar,Todas las tarjetas,ok,app/templates/radius/_card_print_modal.html:81
 الكروت غير المستخدمة فقط (التي لم تُفتح),,,,,,"missing: en,fr,tr,es",app/templates/radius/_card_print_modal.html:82
 مقاس الورقة,,Paper size,Format du papier,Kağıt boyutu,Tamaño del papel,ok,app/templates/radius/_card_print_modal.html:86
 ليتر,,Liter,Litre,Litre,Litro,ok,app/templates/radius/_card_print_modal.html:89
@@ -10220,7 +10240,6 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 سياسة التغيير,,Change policy,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:92
 سرعة التنزيل (kbps),,Download speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:94
 سرعة الرفع (kbps),,Upload speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
-الحصّة,,Quota,Quota,Kota,Cuota,ok,app/templates/radius/_ops_chat.html:96
 الحصّة (MB),,Quota (MB),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
 الصلاحيّة (أيّام),,Validity (days),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
 نوع الباقة,,Plan type,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:97
@@ -10232,22 +10251,8 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 وحدة المدّة,,Duration unit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
 السعر الكلّيّ,,Total price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:105
 سعر خاصّ,,Custom price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:105
-كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/templates/radius/_ops_chat.html:106
-قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:108
-متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:108
-جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
-متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
-آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/templates/radius/_ops_chat.html:112
 الرصيد مخفيّ,,Balance hidden,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
-الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
-العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
 مشتركون,,Subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:114
-أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/templates/radius/_ops_chat.html:116
-رقم البطاقة,,Card Number,Numéro de la carte,Kart Numarası,Número de la tarjeta,ok,app/templates/radius/_ops_chat.html:116
-وقت البطاقة,,Card time,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
-أجهزة متّصلة الآن,,Devices online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:118
-وقت الاستخدام,,Time used,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:118
-أجهزة استُخدمت,,Devices used,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
 دين على المشترك,,Debt on the subscriber,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
 مجّانًا,,Free,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
 مدفوع من الرصيد,,Paid from balance,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
@@ -10259,10 +10264,6 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 تسجيل الفرق دينًا,,Record the difference as debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:126
 إبقاء تاريخ الانتهاء دون فرق,,"Keep the expiry date, no difference",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:127
 بلا فرق,,No difference,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:127
-نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:128
-تبدأ من أوّل اتصال,,Starts at first login,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:132
-غير مستعملة,,Unused,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:132
-بالثانية (وقت الاتصال فقط),,By the second (online time only),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:133
 أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,"Hi! Tell me what you need, e.g. “renew Ahmad for one paid month” or “make 100 cards from the 1-hour plan”. I’ll prepare the action and show it to you for confirmation.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:141
 اكتب طلبك هنا…,,Type your request here…,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:145
 رسالتك,,Your message,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:145

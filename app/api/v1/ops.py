@@ -446,7 +446,7 @@ def ops_assistant_message():
         api = _CallerApi()
         c = cid or conversation.start(api)["conversation_id"]
         replies = conversation.say(api, c, text, actor=api.username)
-        return ok({"conversation_id": c, "replies": conversation.decorate(replies, _tid())})
+        return ok({"conversation_id": c, "replies": _client_view(conversation.decorate(replies, _tid()))})
     return _turn(run)
 
 
@@ -470,7 +470,7 @@ def ops_assistant_start_event():
         api = _CallerApi()
         c = conversation.start(api, event_type=etype, index=index)["conversation_id"]
         replies = conversation.run_model(api, c, actor=api.username)
-        return ok({"conversation_id": c, "replies": conversation.decorate(replies, _tid())})
+        return ok({"conversation_id": c, "replies": _client_view(conversation.decorate(replies, _tid()))})
     return _turn(run)
 
 
@@ -538,8 +538,14 @@ def ops_assistant_pick():
     def run():
         api = _CallerApi()
         replies = conversation.pick(api, cid, n, actor=api.username)
-        return ok({"conversation_id": cid, "replies": conversation.decorate(replies, _tid())})
+        return ok({"conversation_id": cid, "replies": _client_view(conversation.decorate(replies, _tid()))})
     return _turn(run)
 
 
 __all__ = ["register"]
+
+
+def _client_view(replies):
+    """Mobile app renders INFO `data` as raw rows → Arabic labels + readable values (display.py)."""
+    from ...radius.services.ops_assistant.display import for_client
+    return for_client(replies)

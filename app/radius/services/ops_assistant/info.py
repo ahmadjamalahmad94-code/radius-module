@@ -150,6 +150,7 @@ def card_info(conv: dict, fields: dict) -> dict:
         "counting": c.get("accounting_mode") or None,
         "used_time": _duration_text(c.get("used_session_seconds"))
         if c.get("started_at") else None,
+        "sessions": _int(summ.get("sessions_count")) or None,
         "online_now": _int(summ.get("online_sessions")),
         "devices_used": _int(summ.get("unique_macs")) or None,
         "last_seen_local": local_str(c.get("last_seen_at"), tid),

@@ -95,6 +95,15 @@
       if (typeof v === "boolean") return v ? V["true"] : V["false"];
       if (typeof v === "object") return JSON.stringify(v);
       var s = String(v);
+      if (/_local$/.test(key) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) s = s.replace("T", " ");
+      var dm = /^(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?$/.exec(s);
+      if ((key === "remaining" || key === "card_time" || key === "used_time") && dm && (dm[1] || dm[2] || dm[3])) {
+        var parts = [];
+        if (dm[1]) parts.push(dm[1] + " " + T.day_unit);
+        if (dm[2]) parts.push(dm[2] + " " + T.hour_unit);
+        if (dm[3] || !parts.length) parts.push((dm[3] || 0) + " " + T.minutes_unit);
+        return parts.join(T.and_sep);
+      }
       if (key === "expire_local" && s === "no_expiry") return T.no_expiry;
       if (key === "expire_local" && s.indexOf("server_default:") === 0) return T.server_default;
       if (Object.prototype.hasOwnProperty.call(V, s) &&
