@@ -7432,19 +7432,28 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:298
 سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:341
 اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:252
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:254
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:256
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:258
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:260
-لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:261
-المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:419
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:428
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:440
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:459
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:471
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:478
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:529
+اسم المستخدم (بالإنجليزي),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:54
+نوع التجديد (مدّة أو حتّى تاريخ),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:55
+طريقة احتساب فرق الباقة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:56
+طريقة الدفع (من الرصيد / دين / مجّانًا),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:56
+نصّ البحث,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:58
+الاسم الكامل,,Full Name,Nom complet,Tam Ad,Nombre completo,ok,app/radius/services/ops_assistant/conversation.py:59
+العمليّة,,Operation,Opération,İşlem,Operación,ok,app/radius/services/ops_assistant/conversation.py:59
+المصدر (باقة أو عرض),,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:59
+تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:80
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:285
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:287
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:289
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:291
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:293
+لا توجد نتائج.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:294
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:452
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:461
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:473
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:507
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:519
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:526
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:577
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:126
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:134
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:187
@@ -10687,7 +10696,6 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 الهوية والدور,,Identity and role,Identité et rôle,Kimlik ve rol,Identidad y rol,ok,app/templates/radius/admins_form.html:47
 لا يمكن تعديله.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:53
 لن يمكن تغييره بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/admins_form.html:53
-الاسم الكامل,,Full Name,Nom complet,Tam Ad,Nombre completo,ok,app/templates/radius/admins_form.html:56
 — بدون —,,— None —,— Aucun —,— Yok —,— Ninguno —,ok,app/templates/radius/admins_form.html:62
 الدور يحدّد الصلاحيات الفعلية.,,The role determines the effective permissions.,Le rôle détermine les autorisations effectives.,"Rol, etkin izinleri belirler.",El rol determina los permisos efectivos.,ok,app/templates/radius/admins_form.html:69
 التحقق من الدخول,,Login Verification,Vérification de la connexion,Giriş doğrulaması,Verificación de inicio de sesión,ok,app/templates/radius/admins_form.html:81
@@ -18937,7 +18945,6 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 سكربت التطبيق,,Apply script,Script d'application,Uygulama betiği,Script de aplicación,ok,app/templates/radius/ipchange.html:261
 سجلّ الطلبات,,Request log,Journal des demandes,İstek günlüğü,Registro de solicitudes,ok,app/templates/radius/ipchange.html:286
 السرعة (Mbps),,Speed (Mbps),Débit (Mbps),Hız (Mbps),Velocidad (Mbps),ok,app/templates/radius/ipchange.html:291
-العمليّة,,Operation,Opération,İşlem,Operación,ok,app/templates/radius/ipchange.html:292
 مُزوَّد,,Provider,Fournisseur,Sağlayıcı,Proveedor,ok,app/templates/radius/ipchange.html:302
 / شهريًّا,,/ monthly,/ par mois,/ aylık,/ al mes,ok,app/templates/radius/ipchange.html:321
 أدخل سرعة صحيحة بالـMbps.,,Enter a valid speed in Mbps.,Saisissez une vitesse valide en Mbps.,Geçerli bir hız girin (Mbps).,Introduce una velocidad válida en Mbps.,ok,app/templates/radius/ipchange.html:323

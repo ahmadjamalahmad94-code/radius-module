@@ -28,10 +28,11 @@
   without asking the system (or the model) again.
 """
 from __future__ import annotations
-from app.i18n_text import _tr
+from app.i18n_text import N_, _tr
 
 import json
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Any, Callable, Optional
@@ -45,6 +46,38 @@ MAX_HOPS = 3                      # CHOICES / RESULT fetches per admin message
 MAX_TEXT = 2000                   # admin message length
 LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
 INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions")
+
+# Arabic names of model fields for the deterministic «what is still missing» question (a validator
+# rejection for a missing required field becomes an `ask` turn instead of a dead-end error — before
+# this, the rejected proposal was not recorded, so the model repeated it forever).
+FIELD_LABELS_AR = {
+    "username": N_("اسم المستخدم (بالإنجليزي)"), "plan_id": N_("الباقة"), "offer_id": N_("العرض"), "batch_id": N_("الحزمة"),
+    "duration": N_("المدّة"), "until_local": N_("تاريخ الانتهاء"), "mode": N_("نوع التجديد (مدّة أو حتّى تاريخ)"),
+    "charge_mode": N_("طريقة الدفع (من الرصيد / دين / مجّانًا)"), "policy": N_("طريقة احتساب فرق الباقة"),
+    "name": N_("الاسم"), "count": N_("عدد الكروت"), "wholesale": N_("سعر الجملة"), "selling": N_("سعر البيع"),
+    "speed_down_kbps": N_("سرعة التنزيل"), "speed_up_kbps": N_("سرعة الرفع"), "query": N_("نصّ البحث"),
+    "source": N_("المصدر (باقة أو عرض)"), "operation": N_("العمليّة"), "full_name": N_("الاسم الكامل"),
+}
+_REQ_PATH = re.compile(r"fields\.([a-z_]+)")
+
+
+def _required_missing(res) -> list[str]:
+    """Field names the validator reported as «is required» (top-level model fields only)."""
+    err = res.error or {}
+    det = err.get("details") if isinstance(err.get("details"), dict) else {}
+    out = []
+    for v in det.get("violations") or []:
+        if not isinstance(v, dict) or str(v.get("message") or "").strip() != "is required":
+            continue
+        m = _REQ_PATH.search(str(v.get("path") or ""))
+        if m and m.group(1) not in out:
+            out.append(m.group(1))
+    return out
+
+
+def missing_question(missing: list[str]) -> str:
+    names = "، ".join(_tr(FIELD_LABELS_AR[f]) if f in FIELD_LABELS_AR else f for f in missing)
+    return _tr("تمام، باقي أعرف: %(names)s.", names=names)
 
 
 # ─────────────────────────── transcript ────────────────────────────
@@ -454,7 +487,22 @@ def run_model(api: Api, cid: str, *, actor: str = "", call=None) -> list[dict]:
                   body={"proposal": obj, "mode": "execute"})
         if not res.ok:
             e = _api_error(res)
+            miss = _required_missing(res) if action not in ("plan",) else []
+            if miss:
+                # a missing required field is a question, not a dead end: record it as the
+                # assistant's `ask` so the next admin answer continues the same request
+                q = missing_question(miss)
+                model_append(cid, tid, {"action": "ask", "fields": fields, "missing": miss,
+                                        "message": q, "summary_ar": q})
+                _audit(tid, actor, aid, cid, "rejected_to_ask", {"action": str(action)[:40],
+                                                                 "missing": miss[:10]})
+                replies.append({"type": "assistant", "action": "ask", "text": q})
+                return replies
             _audit(tid, actor, aid, cid, "rejected", {"code": e.code, "action": str(action)[:40]})
+            # keep the model in the loop: it sees its proposal and why it was refused (no silent repeat)
+            model_append(cid, tid, obj)
+            append(cid, tid, "tool", "RESULT " + json.dumps(
+                {"error": "rejected_by_validator", "why": (e.message or e.code)[:300]}, ensure_ascii=False))
             replies.append({"type": "error", "code": e.code,
                             "text": _tr("المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s",
                                         why=e.message or e.code)})

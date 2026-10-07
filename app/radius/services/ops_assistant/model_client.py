@@ -91,13 +91,17 @@ SYSTEM_PROMPT_V3 = (
 SYSTEM_PROMPT = SYSTEM_PROMPT_V3
 # ``v1`` keeps a round-1/2 adapter on the prompt it was trained with.
 ENV_PROMPT = "HOBERADIUS_OPS_PROMPT"
+ENV_MODEL_NAME = "HOBERADIUS_OPS_MODEL_NAME"   # served model name (default hoberadius-ops)
 
 
 def system_prompt() -> str:
     """The SYSTEM_PROMPT the served adapter was trained with (env ``v1`` → the
     ops-v1 text; anything else → the ops-v2 / SPEC_DATA_v3 text)."""
-    return SYSTEM_PROMPT_V1 if (os.environ.get(ENV_PROMPT) or "").strip().lower() == "v1" \
-        else SYSTEM_PROMPT_V3
+    mode = (os.environ.get(ENV_PROMPT) or "").strip().lower()
+    if mode == "zeroshot":                    # large general model, instruction-only (no ops fine-tune)
+        from .zeroshot_prompt import system_prompt as _zs
+        return _zs()
+    return SYSTEM_PROMPT_V1 if mode == "v1" else SYSTEM_PROMPT_V3
 
 # ops/chat.py — same text everywhere (training, evaluation, serving).
 EVENT_TRIGGER = "(تنبيه من نظام المراقبة — راجع الحدث في CONTEXT وجهّز اقتراحًا للتأكيد)"
@@ -233,7 +237,7 @@ def request_body(messages: list[dict]) -> dict:
             raise ModelError("bad_message", str(role)[:20])
         clean.append({"role": role, "content": content})
     return {
-        "model": "hoberadius-ops",
+        "model": (os.environ.get(ENV_MODEL_NAME) or "hoberadius-ops").strip()[:80],
         "messages": clean,
         "temperature": 0,
         "max_tokens": MAX_TOKENS,

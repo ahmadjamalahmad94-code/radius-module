@@ -31,3 +31,4 @@ app/radius/integration/mikrotik/client.py | ^تعذّر الاتصال بالر�
 app/templates/radius/portal_subscriber.html | [شكوى] | علامة بروتوكول يطابقها الخادم (customer_portals) في بداية سبب الطلب — يجب أن تبقى حرفيّة بكل اللغات.
 * | قاعدة سرعة | الاسم الافتراضيّ لقاعدة السرعة؛ JS في _speed_rules_panel.html يقارن data.name بهذا النصّ الحرفيّ.
 app/radius/services/ops_assistant/model_client.py | * | نصوص يقرؤها نموذج مساعد العمليّات (SYSTEM_PROMPT/EVENT_TRIGGER/تسميات السياسات) — دُرِّب عليها حرفيًّا؛ ترجمتها تكسر سلوك النموذج.
+app/radius/services/ops_assistant/zeroshot_prompt.py | * | تعليمات النموذج العامّ الكبير (وضع zeroshot) — نصّ يقرؤه النموذج لا المدير؛ ترجمته تغيّر سلوكه.
