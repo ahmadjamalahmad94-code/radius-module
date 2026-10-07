@@ -3,6 +3,7 @@
   "generated_at": "2026-10-07",
   "changes_v2": "ops-v2 (SPEC_DATA_v3): `message` field required in every model object (natural text in the admin's language; summary_ar only required for executable actions/plans); control action `reply`; read-only INFO actions card_batch_status / list_card_batches / subscriber_info / online_sessions answered by a RESULT (or CHOICES) tool message; choice source list_card_batches; change_plan_policies items {n,id,label_ar}; CONTEXT permission vocabulary adds cards.view, cards.generate_direct, online.view. INFO endpoints cite the executor branch (source_v2).",
   "changes_v3": "ops-v3 (SPEC_DATA_v4_DRAFT): additive. (1) Smart search: when an exact/substring lookup (find_subscriber, list_plans, list_offers, list_card_batches) finds nothing, the executor answers CHOICES with \"match\":\"fuzzy\" + \"query\" and at most 5 similar records (digits: <=2 edits after +970/972/0 normalisation; names: Arabic folding + similarity + Latin<->Arabic skeleton). Suggestions are NEVER issued: the model asks «هل تقصد…؟» (ask, missing=[\"choice\"]) and never acts on them; the admin's pick (click or text) resolves the record exactly. A card number typed exactly in list_card_batches resolves its batch (\"match\":\"card\"); card numbers are never suggested fuzzily. A phone written differently (+970 / spaces / Arabic digits) is an exact match (no \"match\" key). (2) New read-only INFO actions recent_subscribers {limit?, mine?}, recent_card_batches {limit?, mine?}, recent_activity {limit?} — default 5, max 20 — answered with RESULT; their usernames / batch ids are issued.",
+  "changes_v3_card_info": "2026-10-07 (client20 live test «افحصلي بطاقة 55039046»): additive read-only INFO action card_info {card} — ONE card by its number through GET /api/v1/cards/check (the web card checker, cards.view, batch scope); RESULT without any secret; not_found is never followed by fuzzy suggestions; a card number is never a batch_id.",
   "level": "1 = draft only. The model converses, collects fields and emits ONE JSON proposal + an Arabic summary. Deterministic executor code validates the proposal against this catalog, re-reads the live record, shows the admin a confirmation card, and only then calls the HobeRadius API with the logged-in admin's own token. The model never executes anything.",
   "source": {
     "repo": "C:/Projects/rm-sec-rc1",
@@ -455,6 +456,17 @@
       "model_fields": {"limit": {"type": "integer", "min": 1, "max": 20, "default": 5}},
       "answer": "RESULT {\"source\":\"recent_activity\",\"data\":{\"items\":[{n,when_local,action,target,outcome}]}}",
       "redaction": "action label + target name only; never the payload / before-after values"
+    },
+
+    "card_info": {
+      "title_ar": "فحص بطاقة واحدة",
+      "kind": "info",
+      "danger": {"level": "L1", "confirm": "none"},
+      "endpoints": [{"method": "GET", "path": "/api/v1/cards/check", "query": {"query": "the card number (username)"}, "cite": "app/api/v1/card_checker.py cards_check (the web «فحص البطاقة»: app/radius/services/card_checker.py check_card — tenant-bound, the username wins, read-only; never the policy engine, so first_used_at is never stamped) + batch_in_scope, else 403 out_of_scope"}],
+      "permission": {"role_key": "cards.view", "api_guard": "web:cards_checker_api_lookup (permission_guard.py; blueprint.py → cards.view)", "scope": "batch_in_scope (distributor / manager: own batches + his distributors')"},
+      "model_fields": {"card": {"type": "string", "required": true, "maxLength": 64, "rule": "the card number exactly as the admin wrote it (Arabic digits / spaces are normalised by the executor); NOT a batch id — batch questions use list_card_batches / card_batch_status"}},
+      "answer": "RESULT {\"source\":\"card_info\",\"data\":{card,status(unused|active|expired|disabled|deleted),batch_id,batch_name,plan_name,first_login_local,expires_local,remaining,card_time,counting,used_time,online_now,devices_used,last_seen_local,quota,price,currency}} or {\"error\":\"not_found\"} (never a fuzzy «did you mean» for card numbers); the batch id is issued",
+      "redaction": "whitelist; never the card password / PIN, MAC, IP or the assigned subscriber's phone"
     }
   },
 
@@ -466,7 +478,7 @@
     "additionalProperties": false,
     "required": ["action", "fields", "missing", "message"],
     "properties": {
-      "action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch", "list_plans", "list_offers", "find_subscriber", "list_card_batches", "card_batch_status", "subscriber_info", "online_sessions", "recent_subscribers", "recent_card_batches", "recent_activity", "ask", "choose", "refuse", "cancel", "reply"]},
+      "action": {"enum": ["create_subscriber", "renew_or_extend_subscriber", "change_subscriber_plan", "temporary_speed", "suspend_subscriber", "enable_subscriber", "create_plan", "create_offer", "create_card_batch", "list_plans", "list_offers", "find_subscriber", "list_card_batches", "card_batch_status", "subscriber_info", "online_sessions", "recent_subscribers", "recent_card_batches", "recent_activity", "card_info", "ask", "choose", "refuse", "cancel", "reply"]},
       "fields": {"type": "object"},
       "missing": {"type": "array", "items": {"type": "string", "pattern": "^[a-z_]+$", "not": {"pattern": "(^|_)(password|passwd|pass|pwd|secret|token|pin|api_?key)$"}}, "uniqueItems": true, "description": "never a secret name: the assistant never asks for a password (SPEC_DATA_v3 §7)"},
       "message": {"type": "string", "minLength": 1, "maxLength": 400, "description": "natural text for the admin in the admin's language (SPEC_DATA_v3 §2); its wording is never scored"},
@@ -489,6 +501,7 @@
       {"if": {"properties": {"action": {"const": "online_sessions"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/online_sessions"}}}},
       {"if": {"properties": {"action": {"enum": ["recent_subscribers", "recent_card_batches"]}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/recent_list"}}}},
       {"if": {"properties": {"action": {"const": "recent_activity"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/recent_activity"}}}},
+      {"if": {"properties": {"action": {"const": "card_info"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/card_info"}}}},
       {"if": {"properties": {"action": {"const": "choose"}}}, "then": {"properties": {"fields": {"$ref": "#/$defs/choose"}}}},
       {"if": {"properties": {"action": {"enum": ["refuse", "cancel", "reply"]}}}, "then": {"properties": {"fields": {"maxProperties": 0}, "missing": {"maxItems": 0}}}},
       {"if": {"properties": {"action": {"not": {"const": "ask"}}}}, "then": {"properties": {"missing": {"maxItems": 0}}}},
@@ -608,7 +621,8 @@
       "subscriber_info": {"type": "object", "additionalProperties": false, "required": ["username"], "properties": {"username": {"$ref": "#/$defs/username"}}},
       "online_sessions": {"type": "object", "additionalProperties": false, "properties": {"query": {"type": "string", "maxLength": 80}}},
       "recent_list": {"type": "object", "additionalProperties": false, "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}, "mine": {"type": "boolean"}}},
-      "recent_activity": {"type": "object", "additionalProperties": false, "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}}}
+      "recent_activity": {"type": "object", "additionalProperties": false, "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 20}}},
+      "card_info": {"type": "object", "additionalProperties": false, "required": ["card"], "properties": {"card": {"type": "string", "minLength": 1, "maxLength": 64}}}
     }
   },
 
@@ -620,7 +634,7 @@
     "5. Show the Arabic confirmation card built by the EXECUTOR from validated values (not summary_ar verbatim) + danger level; require an explicit click for L2/L3.",
     "6. Call with the admin's bound token + Idempotency-Key; never auto-retry non-idempotent writes.",
     "7. Return to the model only a redacted result (no passwords, no card codes, no balance when hidden).",
-    "8. INFO actions (card_batch_status, subscriber_info, online_sessions): schema, issued ids, permission, then GET through the real /api/v1 handler with the admin's credential, whitelist, RESULT {\"source\":<action>,\"data\":{...}} (or {\"error\":code}); ids in RESULT are issued. No confirmation (L1).",
+    "8. INFO actions (card_batch_status, subscriber_info, online_sessions, recent_*, card_info): schema, issued ids, permission, then GET through the real /api/v1 handler with the admin's credential, whitelist, RESULT {\"source\":<action>,\"data\":{...}} (or {\"error\":code}); ids in RESULT are issued. No confirmation (L1).",
     "9. Empty CHOICES: the UI shows an empty-state line, not an empty card; the same choose source+query that already returned [] in this conversation is answered by the executor (no second lookup)."
   ],
 

@@ -1,7 +1,8 @@
 """Read-only INFO actions of the operations assistant (catalog ops-v2,
 SPEC_DATA_v3 §4): ``card_batch_status``, ``subscriber_info``,
 ``online_sessions``; ops-v3 (SPEC_DATA_v4_DRAFT): ``recent_subscribers``,
-``recent_card_batches``, ``recent_activity`` (default 5, max 20).
+``recent_card_batches``, ``recent_activity`` (default 5, max 20), ``card_info``
+(ONE card by its number, through the web card checker's API).
 
 Each one is a GET through the REAL /api/v1 handler with the logged-in
 admin's own credential (``dispatch.call``) — the same RBAC, tenant and
@@ -77,6 +78,95 @@ def card_batch_status(conv: dict, fields: dict) -> dict:
             "status": status, "created_local": local_str(b.get("created_at"), tid), **counts}
     return {"source": "card_batch_status",
             "data": {k: v for k, v in data.items() if v is not None}}
+
+
+# ─────────────────────────── card_info ────────────────────────────
+
+MAX_CARD_LEN = 64
+
+# card checker status → the assistant's vocabulary
+_CARD_STATUS = {"available": "unused", "active": "active", "expired": "expired",
+                "revoked": "disabled"}
+
+
+def card_number(raw: Any) -> str:
+    """What the admin typed → the card username the checker matches: Arabic-Indic
+    digits read as Latin, every space removed (printed cards are grouped «5503 9046»)."""
+    from .units import latin_digits
+    return "".join(latin_digits(str(raw or "")).split())[:MAX_CARD_LEN]
+
+
+def _duration_text(seconds: Any) -> Optional[str]:
+    try:
+        s = max(0, int(seconds))
+    except (TypeError, ValueError):
+        return None
+    d, rem = divmod(s, 86400)
+    h, rem = divmod(rem, 3600)
+    m = rem // 60
+    parts = [f"{d}d" if d else "", f"{h}h" if h else "", f"{m}m" if m else ""]
+    return " ".join(p for p in parts if p) or "0m"
+
+
+def card_info(conv: dict, fields: dict) -> dict:
+    """ONE card by its number — GET /cards/check, the SAME handler as the web
+    «فحص البطاقة» (``card_checker.check_card``: tenant-bound, the username
+    wins, read-only — it never calls the policy engine, so ``first_used_at`` /
+    the card window are never stamped) + its batch scope (``batch_in_scope``,
+    403 otherwise). Whitelisted: never the password / PIN, MACs, IPs or the
+    assigned subscriber's phone. Not found ⇒ ``not_found``, never a «did you
+    mean» (card numbers are not suggested approximately)."""
+    tid = int(conv["tenant_id"])
+    number = card_number(fields.get("card"))
+    if not number:
+        return {"source": "card_info", "error": "not_found"}
+    res = call("GET", "/cards/check", query={"query": number})
+    if not res.ok:
+        return {"source": "card_info", "error": _err_code(res)}
+    c = (res.data or {}).get("card") or {}
+    if not isinstance(c, dict) or not c.get("exists"):
+        return {"source": "card_info", "error": "not_found", "data": {"card": number}}
+    b = c.get("batch") if isinstance(c.get("batch"), dict) else {}
+    p = c.get("profile") if isinstance(c.get("profile"), dict) else {}
+    summ = c.get("accounting_summary") if isinstance(c.get("accounting_summary"), dict) else {}
+    status = _CARD_STATUS.get(str(c.get("status") or ""), str(c.get("status") or "") or None)
+    if b.get("deleted_at"):
+        status = "deleted"
+    bid = _int(b.get("id")) or None
+    remaining = c.get("remaining_seconds")
+    budget = _int(c.get("accounting_budget_seconds"))
+    price = b.get("unit_price")
+    data: dict[str, Any] = {
+        "card": c.get("username") or number,
+        "status": status,
+        "batch_id": bid,
+        "batch_name": (str(b.get("package_name") or "").strip() or b.get("batch_code") or None)
+        if bid else None,
+        "plan_name": p.get("name") or None,
+        "first_login_local": local_str(c.get("started_at"), tid),
+        "expires_local": local_str(c.get("expires_at"), tid),
+        "remaining": _duration_text(remaining) if remaining is not None else None,
+        "card_time": _duration_text(budget) if budget > 0 else None,
+        "counting": c.get("accounting_mode") or None,
+        "used_time": _duration_text(c.get("used_session_seconds"))
+        if c.get("started_at") else None,
+        "online_now": _int(summ.get("online_sessions")),
+        "devices_used": _int(summ.get("unique_macs")) or None,
+        "last_seen_local": local_str(c.get("last_seen_at"), tid),
+        "price": round(float(price), 2) if isinstance(price, (int, float)) and price > 0 else None,
+    }
+    quota = _int(p.get("quota_total_mb"))
+    if quota > 0:
+        from .units import format_quota
+        data["quota"] = format_quota(quota)
+    if data["price"] is not None:
+        from ...core.system_config import default_currency
+        data["currency"] = (str(p.get("currency") or "") or default_currency() or "ILS").strip().upper()
+    out = {k: v for k, v in data.items() if v is not None}
+    if bid:
+        # the admin may follow up with «وضع حزمتها» → card_batch_status
+        store.issue(conv["id"], tid, "batch", [bid], "card_info")
+    return {"source": "card_info", "data": out}
 
 
 # ─────────────────────────── subscriber_info ────────────────────────────
@@ -336,7 +426,8 @@ def recent_activity(conv: dict, fields: dict) -> dict:
 
 _RUNNERS = {"card_batch_status": card_batch_status, "subscriber_info": subscriber_info,
             "online_sessions": online_sessions, "recent_subscribers": recent_subscribers,
-            "recent_card_batches": recent_card_batches, "recent_activity": recent_activity}
+            "recent_card_batches": recent_card_batches, "recent_activity": recent_activity,
+            "card_info": card_info}
 
 
 def run(conv: dict, action: str, fields: dict) -> dict:
@@ -353,4 +444,5 @@ def result_line(result: dict) -> str:
 
 
 __all__ = ["run", "result_line", "card_batch_status", "subscriber_info", "online_sessions",
-           "recent_subscribers", "recent_card_batches", "recent_activity"]
+           "recent_subscribers", "recent_card_batches", "recent_activity", "card_info",
+           "card_number"]

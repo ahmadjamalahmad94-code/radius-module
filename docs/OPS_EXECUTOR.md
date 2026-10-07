@@ -14,7 +14,8 @@ Contract the model is trained on: `ops/SPEC_DATA_v1.md` + `v2` + **`v3`** + `v4_
 - Read-only INFO actions are answered with a `RESULT` tool line:
   - `card_batch_status {batch_id}`;
   - `subscriber_info {username}`;
-  - `online_sessions {query?}`.
+  - `online_sessions {query?}`;
+  - `card_info {card}` (2026-10-07, see «card_info» below).
 - `list_card_batches` is a new list source (lookup / `choose`).
 - CONTEXT permission vocabulary (SPEC_DATA_v3 §11): `users.view users.create users.extend users.change_plan
   users.temp_speed users.change_status plans.view plans.create offers.view offers.create cards.view cards.generate
@@ -84,7 +85,7 @@ A conversation belongs to ONE tenant and ONE admin: any other tenant/admin gets 
   `list_card_batches` items: `{n, id, name, code, origin, plan_name, created_local, total_cards,
   available_count, status}`. Batch ids are issued to the conversation. The cards themselves (codes, passwords) are
   never listed.
-* INFO (`card_batch_status/subscriber_info/online_sessions`) → `{kind:"info", result, tool_message}`, where
+* INFO (`card_batch_status/subscriber_info/online_sessions/recent_*/card_info`) → `{kind:"info", result, tool_message}`, where
   `tool_message` = `"RESULT {\"source\":<action>,\"data\":{...}}"`, or `{"source", "error":
   not_found|out_of_scope|missing_permission|unavailable}`.
   - Checks: schema → issued ids (`batch_id` from `list_card_batches`, `username` from CHOICES/event/RESULT) +
@@ -163,6 +164,27 @@ Module `services/ops_assistant/fuzzy.py` (pure Python, no new dependency), wired
 | `recent_activity` | `limit?` 1–20 (5) | none — OWN rows only (`catalog.OWN_ROWS_ACTIONS`) | `audit_log` of THIS tenant whose actor is his login / unique display name / his tokens; `is_visit=0`; not `ops_assistant` / `ops.*`; returns label, target name, outcome — never payload values |
 
 Usernames / batch ids in these RESULTs are issued (like `online_sessions`).
+
+### `card_info` — one card by its number (2026-10-07)
+Live test on client20: «افحصلي بطاقة 55039046» had no action, so the model put the card number in
+`card_batch_status.batch_id` and was rejected. `card_info {card}` looks up ONE card:
+
+* `card`: string 1–64, required, taken from the admin's text (no CHOICES needed). The executor reads Arabic-Indic
+  digits as Latin and removes every space (`info.card_number`).
+* Source of truth: `GET /api/v1/cards/check?query=<card>` — the web «فحص البطاقة» (`card_checker.check_card`):
+  tenant-bound, the card USERNAME wins (never a numeric card id), read-only. It never calls the policy engine, so
+  `first_used_at` / the card window are never stamped by a lookup. Batch scope = `batch_in_scope` (distributor and
+  manager logins see their own batches + their distributors'); otherwise `out_of_scope`.
+* Permission: `cards.view` (`v1.cards_check` → `web:cards_checker_api_lookup` → `cards.view`).
+* RESULT whitelist: `card, status (unused|active|expired|disabled|deleted), batch_id, batch_name, plan_name,
+  first_login_local, expires_local, remaining, card_time, counting (from_first_connect|by_seconds), used_time,
+  online_now, devices_used, last_seen_local, quota, price, currency` — local times in the tenant zone (Asia/Gaza).
+  Never the password / PIN, MAC, IP or the assigned subscriber's phone. The batch id is issued, so «وضع حزمتها»
+  can follow with `card_batch_status`.
+* Not found → `{"source":"card_info","error":"not_found","data":{"card":<number>}}`. Card numbers are NEVER
+  suggested approximately (no «هل تقصد…؟»).
+* Web chat: the generic info card (title «فحص البطاقة») shows the rows; the mobile API (`/api/v1/ops`) returns the
+  same `{type:"result", source:"card_info", data|error}` reply.
 
 ## Level-specific notes
 * **create_subscriber**: the password is generated server-side (`secrets`, 10 chars) unless `login_without_password`; returned once in `show_once`, never stored, logged, audited or put in `model_result`. Duration → `expire_at` set directly (Q5 executor default); no duration → the server's `create_without_expiry` rule (shown in the card).

@@ -99,7 +99,7 @@
       if (key === "expire_local" && s.indexOf("server_default:") === 0) return T.server_default;
       if (Object.prototype.hasOwnProperty.call(V, s) &&
           (key === "charge_mode" || key === "policy" || key === "mode" || key === "status" ||
-           key === "user_type")) return V[s];
+           key === "user_type" || key === "counting")) return V[s];
       return s;
     }
 
@@ -186,8 +186,9 @@
       }
       var d = rep.data || {}, rows = [];
       Object.keys(d).forEach(function (k) {
-        if (k === "items" || k === "query" || k === "truncated" || k === "batch_id" ||
-            k === "mine") return;
+        if (k === "items" || k === "query" || k === "truncated" || k === "mine") return;
+        // the batch card shows its id in the title; a single card shows which batch it is in
+        if (k === "batch_id" && rep.source !== "card_info") return;
         rows.push([L[k] || k, fmtValue(k, d[k])]);
       });
       if (rows.length) card.appendChild(kv(rows));

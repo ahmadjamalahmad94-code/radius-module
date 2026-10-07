@@ -52816,3 +52816,31 @@ msgstr "Suggestions"
 #: app/templates/radius/ops_assistant.html:65
 msgid "من نظام المراقبة"
 msgstr "From the monitoring system"
+
+#: app/templates/radius/_ops_chat.html:117
+msgid "وقت البطاقة"
+msgstr "Card time"
+
+#: app/templates/radius/_ops_chat.html:118
+msgid "أجهزة متّصلة الآن"
+msgstr "Devices online now"
+
+#: app/templates/radius/_ops_chat.html:118
+msgid "وقت الاستخدام"
+msgstr "Time used"
+
+#: app/templates/radius/_ops_chat.html:119
+msgid "أجهزة استُخدمت"
+msgstr "Devices used"
+
+#: app/templates/radius/_ops_chat.html:132
+msgid "تبدأ من أوّل اتصال"
+msgstr "Starts at first login"
+
+#: app/templates/radius/_ops_chat.html:132
+msgid "غير مستعملة"
+msgstr "Unused"
+
+#: app/templates/radius/_ops_chat.html:133
+msgid "بالثانية (وقت الاتصال فقط)"
+msgstr "By the second (online time only)"

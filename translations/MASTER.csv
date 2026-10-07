@@ -7446,26 +7446,26 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 حقل غير معروف,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:85
 صيغة غير صحيحة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:86
 معلومة ناقصة,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:87
-تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:106
-لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:336
-لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:344
-لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:346
-لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:348
-لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:350
-لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:352
-لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:353
-المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:512
-لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:521
-احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:542
-المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:576
-حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:588
-تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:595
-هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:668
-لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:685
-لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:691
-نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:693
-تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:695
-الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:709
+تمام، باقي أعرف: %(names)s.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:115
+لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة.,,I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:345
+لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو إنشاء عرض أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:353
+لا توجد عروض مسجّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:355
+لا توجد باقات مفعّلة في النظام بعد.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:357
+لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:359
+لا توجد حزم بطاقات تطابق هذا البحث.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:361
+لا توجد نتائج.,,No results.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:362
+المساعد غير متاح مؤقتًا، حاول بعد قليل.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:522
+لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:531
+احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:552
+المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:592
+حدّد المشترك والباقة الجديدة أوّلًا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:604
+تعذّر جلب القائمة: %(why)s,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:611
+هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد.,,These suggestions are no longer valid — please write your request again.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:684
+لا يمكن اختيار هذا العنصر.,,This item cannot be chosen.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:701
+لم يعد هذا السجلّ متاحًا لك.,,This record is no longer available to you.,,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:707
+نعم، أقصد %(name)s,,"Yes, I mean %(name)s",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:709
+تمام، هذا هو السجلّ المطلوب.,,"OK, this is the record you mean.",,,,"missing: fr,tr,es",app/radius/services/ops_assistant/conversation.py:711
+الرسالة طويلة جدًّا.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/conversation.py:725
 التوليد من عرض متاح من صفحة الويب فقط في هذه النسخة.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:127
 المشترك غير متّصل الآن — السرعة المؤقتة للمتّصلين فقط.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:135
 المقترح غير موجود.,,,,,,"missing: en,fr,tr,es",app/radius/services/ops_assistant/executor.py:188
@@ -10193,73 +10193,83 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 آخر المشتركين المضافين,,Latest added subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:54
 آخر حزم البطاقات,,Latest card batches,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:55
 آخر نشاطك في اللوحة,,Your latest activity in the panel,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:56
-لم أجد تطابقًا تامًّا — هل تقصد:,,No exact match — did you mean:,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:57
-اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك.,,Tap the right record to choose it. Nothing runs on a suggestion before you choose.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:58
-نعم، أقصد,,"Yes, I mean",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:59
-هذه حزمة الكرت الذي كتبت رقمه.,,This is the batch of the card number you typed.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:60
-أُضيف,,added,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:61
-رقم الهويّة,,ID number,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:63
-القائمة مختصرة — العدد الكلّيّ أعلاه.,,The list is shortened — the total count is above.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:66
-غير موجود.,,Not found.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:67
-هذا السجلّ ليس ضمن نطاقك.,,This record is outside your scope.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:68
-لا تملك صلاحية عرض هذه المعلومة.,,You don’t have permission to view this information.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:69
-تعذّر جلب المعلومة الآن.,,Could not fetch this information right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:70
-لا اقتراحات الآن.,,No suggestions right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:71
-ابدأ محادثة,,Start a conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:73
-محادثة جديدة,,New conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:74
-بدأت محادثة من اقتراح النظام.,,Conversation started from a system suggestion.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:75
-نُسخ,,Copied,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:76
-حسب إعداد الخادم,,Per server setting,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:80
-تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من جديد إن لزم).,,Continuing your previous conversation — these are its text messages (cards are not replayed; ask again if needed).,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:82
-رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة.,,Older messages are hidden — open the full page for a new conversation.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:83
-الانتهاء الجديد,,New expiry,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:88
-ينتهي (UTC),,Expires (UTC),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:88
-التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/_ops_chat.html:91
-الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/_ops_chat.html:91
-سياسة التغيير,,Change policy,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:91
-سرعة التنزيل (kbps),,Download speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:93
-سرعة الرفع (kbps),,Upload speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:94
-الحصّة,,Quota,Quota,Kota,Cuota,ok,app/templates/radius/_ops_chat.html:95
-الحصّة (MB),,Quota (MB),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
-الصلاحيّة (أيّام),,Validity (days),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
-نوع الباقة,,Plan type,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
-دخول بلا كلمة سر,,Login without password,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:98
-طول كلمة السر,,Password length,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:98
-عند تجاوز الأجهزة,,When devices exceed the limit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:99
-الأجهزة المسموحة,,Allowed devices,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:100
-قفل الماك,,MAC lock,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:102
-وحدة المدّة,,Duration unit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:103
-السعر الكلّيّ,,Total price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
-سعر خاصّ,,Custom price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
-كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/templates/radius/_ops_chat.html:105
-قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:107
-متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:107
-جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:110
-متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:110
-آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/templates/radius/_ops_chat.html:111
-الرصيد مخفيّ,,Balance hidden,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
-الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
-العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
-مشتركون,,Subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
-دين على المشترك,,Debt on the subscriber,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
-مجّانًا,,Free,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
-مدفوع من الرصيد,,Paid from balance,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
-حتّى تاريخ,,Until date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
-مدّة,,Duration,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
-إبقاء تاريخ الانتهاء,,Keep the expiry date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:120
-تعويض بأيّام إضافيّة,,Compensate with extra days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:120
-إنقاص الأيّام المتبقّية,,Reduce the remaining days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:121
-تسجيل الفرق دينًا,,Record the difference as debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:121
-إبقاء تاريخ الانتهاء دون فرق,,"Keep the expiry date, no difference",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
-بلا فرق,,No difference,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
-نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:123
-أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,"Hi! Tell me what you need, e.g. “renew Ahmad for one paid month” or “make 100 cards from the 1-hour plan”. I’ll prepare the action and show it to you for confirmation.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:134
-اكتب طلبك هنا…,,Type your request here…,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:138
-رسالتك,,Your message,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:138
-لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.,,Don’t type passwords in the chat — the system generates them and shows them to you once.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:149
-كلمة مرور تُعرض مرّة واحدة,,One-time password display,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:154
-انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.,,"Copy it now and hand it to the subscriber. It will not be shown again, is not stored in the logs, and the assistant never sees it.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:155
-نسختها — إغلاق,,Copied — close,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:158
+فحص البطاقة,,Check Card,Vérifier la carte,Kartı Kontrol Et,Verificar tarjeta,ok,app/templates/radius/_ops_chat.html:57
+لم أجد تطابقًا تامًّا — هل تقصد:,,No exact match — did you mean:,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:58
+اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك.,,Tap the right record to choose it. Nothing runs on a suggestion before you choose.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:59
+نعم، أقصد,,"Yes, I mean",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:60
+هذه حزمة الكرت الذي كتبت رقمه.,,This is the batch of the card number you typed.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:61
+أُضيف,,added,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:62
+رقم الهويّة,,ID number,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:64
+القائمة مختصرة — العدد الكلّيّ أعلاه.,,The list is shortened — the total count is above.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:67
+غير موجود.,,Not found.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:68
+هذا السجلّ ليس ضمن نطاقك.,,This record is outside your scope.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:69
+لا تملك صلاحية عرض هذه المعلومة.,,You don’t have permission to view this information.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:70
+تعذّر جلب المعلومة الآن.,,Could not fetch this information right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:71
+لا اقتراحات الآن.,,No suggestions right now.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:72
+ابدأ محادثة,,Start a conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:74
+محادثة جديدة,,New conversation,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:75
+بدأت محادثة من اقتراح النظام.,,Conversation started from a system suggestion.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:76
+نُسخ,,Copied,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:77
+حسب إعداد الخادم,,Per server setting,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:81
+تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من جديد إن لزم).,,Continuing your previous conversation — these are its text messages (cards are not replayed; ask again if needed).,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:83
+رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة.,,Older messages are hidden — open the full page for a new conversation.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:84
+الانتهاء الجديد,,New expiry,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:89
+ينتهي (UTC),,Expires (UTC),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:89
+التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/_ops_chat.html:92
+الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/_ops_chat.html:92
+سياسة التغيير,,Change policy,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:92
+سرعة التنزيل (kbps),,Download speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:94
+سرعة الرفع (kbps),,Upload speed (kbps),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:95
+الحصّة,,Quota,Quota,Kota,Cuota,ok,app/templates/radius/_ops_chat.html:96
+الحصّة (MB),,Quota (MB),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
+الصلاحيّة (أيّام),,Validity (days),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:96
+نوع الباقة,,Plan type,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:97
+دخول بلا كلمة سر,,Login without password,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:99
+طول كلمة السر,,Password length,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:99
+عند تجاوز الأجهزة,,When devices exceed the limit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:100
+الأجهزة المسموحة,,Allowed devices,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:101
+قفل الماك,,MAC lock,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:103
+وحدة المدّة,,Duration unit,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:104
+السعر الكلّيّ,,Total price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:105
+سعر خاصّ,,Custom price,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:105
+كود الحزمة,,Batch code,Code du lot,Parti kodu,Código del lote,ok,app/templates/radius/_ops_chat.html:106
+قيد الاستعمال,,In use,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:108
+متاحة (غير مستعملة),,Available (unused),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:108
+جلسات حيّة,,Live sessions,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
+متّصل الآن,,Online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:111
+آخر ظهور,,Last seen,Dernière activité,Son görülme,Última conexión,ok,app/templates/radius/_ops_chat.html:112
+الرصيد مخفيّ,,Balance hidden,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:112
+الدين المفتوح,,Open debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
+العدد الكلّيّ,,Total count,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:113
+مشتركون,,Subscribers,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:114
+أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/templates/radius/_ops_chat.html:116
+رقم البطاقة,,Card Number,Numéro de la carte,Kart Numarası,Número de la tarjeta,ok,app/templates/radius/_ops_chat.html:116
+وقت البطاقة,,Card time,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:117
+أجهزة متّصلة الآن,,Devices online now,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:118
+وقت الاستخدام,,Time used,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:118
+أجهزة استُخدمت,,Devices used,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:119
+دين على المشترك,,Debt on the subscriber,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
+مجّانًا,,Free,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
+مدفوع من الرصيد,,Paid from balance,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:122
+حتّى تاريخ,,Until date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:124
+مدّة,,Duration,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:124
+إبقاء تاريخ الانتهاء,,Keep the expiry date,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:125
+تعويض بأيّام إضافيّة,,Compensate with extra days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:125
+إنقاص الأيّام المتبقّية,,Reduce the remaining days,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:126
+تسجيل الفرق دينًا,,Record the difference as debt,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:126
+إبقاء تاريخ الانتهاء دون فرق,,"Keep the expiry date, no difference",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:127
+بلا فرق,,No difference,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:127
+نفدت كروتها,,Out of cards,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:128
+تبدأ من أوّل اتصال,,Starts at first login,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:132
+غير مستعملة,,Unused,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:132
+بالثانية (وقت الاتصال فقط),,By the second (online time only),,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:133
+أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد.,,"Hi! Tell me what you need, e.g. “renew Ahmad for one paid month” or “make 100 cards from the 1-hour plan”. I’ll prepare the action and show it to you for confirmation.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:141
+اكتب طلبك هنا…,,Type your request here…,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:145
+رسالتك,,Your message,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:145
+لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة واحدة.,,Don’t type passwords in the chat — the system generates them and shows them to you once.,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:156
+كلمة مرور تُعرض مرّة واحدة,,One-time password display,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:161
+انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، ولا يراها المساعد.,,"Copy it now and hand it to the subscriber. It will not be shown again, is not stored in the logs, and the assistant never sees it.",,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:162
+نسختها — إغلاق,,Copied — close,,,,"missing: fr,tr,es",app/templates/radius/_ops_chat.html:165
 لا يُنفَّذ شيء قبل ضغطك «تأكيد»,,Nothing runs until you press “Confirm”,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:14
 فتح بصفحة كاملة,,Open full page,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:18
 تصغير,,Minimize,,,,"missing: fr,tr,es",app/templates/radius/_ops_widget_panel.html:20
@@ -11670,7 +11680,6 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 لوحة تحكم البطاقة,,Card dashboard,Tableau de bord de la carte,Kart kontrol paneli,Panel de control de la tarjeta,ok,app/templates/radius/cards_checker.html:140
 ابحث عن أي بطاقة وشاهد تاريخها التشغيلي، الأجهزة التي استخدمتها، الجلسات، وحالتها الحالية. الإجراءات الحساسة موجودة هنا حتى لا تضيع بين الصفحات.,,"Search for any card and view its operational history, the devices that used it, the sessions, and its current status. Sensitive actions are here so they do not get lost among the pages.","Recherchez n'importe quelle carte et consultez son historique d'exploitation, les appareils qui l'ont utilisée, les sessions et son état actuel. Les actions sensibles se trouvent ici afin de ne pas se perdre parmi les pages.","Herhangi bir kartı arayın ve işlem geçmişini, onu kullanan cihazları, oturumları ve mevcut durumunu görüntüleyin. Hassas işlemler sayfalar arasında kaybolmasın diye buradadır.","Busque cualquier tarjeta y vea su historial operativo, los dispositivos que la usaron, las sesiones y su estado actual. Las acciones sensibles están aquí para que no se pierdan entre las páginas.",ok,app/templates/radius/cards_checker.html:141
 رقم البطاقة أو اسم الدخول,,Card number or login name,Numéro de carte ou nom de connexion,Kart numarası veya giriş adı,Número de tarjeta o nombre de acceso,ok,app/templates/radius/cards_checker.html:145
-فحص البطاقة,,Check Card,Vérifier la carte,Kartı Kontrol Et,Verificar tarjeta,ok,app/templates/radius/cards_checker.html:147
 أدخل رقم البطاقة أو اسم الدخول لفتح مركز العمليات الخاص بها.,,Enter the card number or login name to open its operations center.,Saisissez le numéro de la carte ou le nom de connexion pour ouvrir son centre d'opérations.,İşlem merkezini açmak için kart numarasını veya oturum açma adını girin.,Introduzca el número de la tarjeta o el nombre de inicio de sesión para abrir su centro de operaciones.,ok,app/templates/radius/cards_checker.html:160
 لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة أخرى.,,No card matches this search. Check the number or login name and try again.,"Aucune carte ne correspond à cette recherche. Vérifiez le numéro ou l'identifiant, puis réessayez.",Bu aramayla eşleşen kart yok. Numarayı veya giriş adını kontrol edip tekrar deneyin.,Ninguna tarjeta coincide con esta búsqueda. Comprueba el número o el nombre de acceso e inténtalo de nuevo.,ok,app/templates/radius/cards_checker.html:165
 مثبتة على MAC,,Locked to MAC,Verrouillée sur MAC,MAC'e sabitlenmiş,Fijada a MAC,ok,app/templates/radius/cards_checker.html:180
@@ -11755,8 +11764,6 @@ MB · يومي,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker.ht
 سرعة البطاقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:305
 المُنشئ,,Creator,Créateur,Oluşturan,Creador,ok,app/templates/radius/cards_checker_v2.html:346
 تم إصدارها: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:380
-أجهزة متّصلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:449
-وقت البطاقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:451
 الوقت المستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:453
 الوقت المتبقّي,,Time Remaining,Temps restant,Kalan süre,Tiempo restante,ok,app/templates/radius/cards_checker_v2.html:455
 إجمالي الاستهلاك,,Total consumption,Consommation totale,Toplam tüketim,Consumo total,ok,app/templates/radius/cards_checker_v2.html:457
@@ -14763,7 +14770,6 @@ ahmad2026 — أحمد,,ahmad2026 — Ahmad,ahmad2026 — Ahmad,ahmad2026 — Ah
 «مركز عمليات البطاقة»,,“Card operations center”,« Centre d’opérations des cartes »,“Kart işlem merkezi”,«Centro de operaciones de la tarjeta»,ok,app/templates/radius/docs_cards_checker.html:287
 وفي وسطها شريط بحث كبير مكتوب فيه:,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_cards_checker.html:287
 (اسم الدخول المطبوع على الكرت) — أدق طريقة.,,(the login name printed on the card) — the most accurate method.,(le nom de connexion imprimé sur la carte) — la méthode la plus précise.,(kart üzerinde basılı oturum açma adı) — en doğru yöntem.,(el nombre de acceso impreso en la tarjeta) — el método más preciso.,ok,app/templates/radius/docs_cards_checker.html:290
-رقم البطاقة,,Card Number,Numéro de la carte,Kart Numarası,Número de la tarjeta,ok,app/templates/radius/docs_cards_checker.html:290
 أو الصق,,Or Paste,Ou coller,Veya Yapıştır,O pegar,ok,app/templates/radius/docs_cards_checker.html:291
 لجهاز الزبون — يلاقي الكرت اللي اتصل منه.,,For the client's device — it finds the card it connected with.,Pour l'appareil du client — il trouve la carte avec laquelle il s'est connecté.,Müşterinin cihazı için — bağlandığı kartı bulur.,Para el dispositivo del cliente — encuentra la tarjeta con la que se conectó.,ok,app/templates/radius/docs_cards_checker.html:291
 «بحث»,,"""Search""",« Rechercher »,«Ara»,«Buscar»,ok,app/templates/radius/docs_cards_checker.html:292
@@ -24964,7 +24970,6 @@ MAC مقفل,,MAC locked,MAC verrouillée,MAC kilitli,MAC bloqueada,ok,app/templ
 حد الأجهزة,,Device Limit,Limite d'appareils,Cihaz sınırı,Límite de dispositivos,ok,app/templates/radius/users_profile.html:858
 معرّف المتّصل,,Caller ID,ID de l'appelant,Arayan kimliği,ID del llamante,ok,app/templates/radius/users_profile.html:859
 الحالة + الوقت,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:865
-أوّل دخول,,First login,Première connexion,İlk oturum açma,Primer inicio de sesión,ok,app/templates/radius/users_profile.html:869
 الحدود + الكوتا,,,,,,"missing: en,fr,tr,es",app/templates/radius/users_profile.html:878
 كوتا مدمجة,,Bundled Quota,Quota inclus,Dahili kota,Cuota incluida,ok,app/templates/radius/users_profile.html:882
 حد الاتصال اليومي,,Daily connection limit,Limite de connexion quotidienne,Günlük bağlantı sınırı,Límite de conexión diario,ok,app/templates/radius/users_profile.html:884

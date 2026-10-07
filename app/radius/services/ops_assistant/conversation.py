@@ -46,7 +46,7 @@ MAX_HOPS = 3                      # CHOICES / RESULT fetches per admin message
 MAX_TEXT = 2000                   # admin message length
 LIST_SOURCES = ("list_plans", "list_offers", "find_subscriber", "list_card_batches")
 INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions",
-                "recent_subscribers", "recent_card_batches", "recent_activity")
+                "recent_subscribers", "recent_card_batches", "recent_activity", "card_info")
 # after «هل تقصد…؟» suggestions the model may only talk (never look up / act)
 # until the admin answers — the admin's choice is the only way to a record
 AFTER_SUGGESTIONS = ("ask", "reply", "refuse", "cancel")

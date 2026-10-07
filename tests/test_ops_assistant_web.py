@@ -562,6 +562,39 @@ def test_batch_status_flow_result_then_reply(client, app, fake_model):
     assert codes and all(c["username"] not in raw and c["password"] not in raw for c in codes)
 
 
+def test_card_info_flow_result_then_reply(client, app, fake_model):
+    """client20 live test: «افحصلي بطاقة <رقم>» → card_info → RESULT → reply."""
+    name = "ci_web_" + os.urandom(2).hex()
+    login(client)
+    from ops_exec_helpers import owner_h
+    h = owner_h(app)
+    res = client.post("/api/v1/cards/generate", headers=h, json={
+        "plan_id": plan(app), "count": 2, "package_name": name, "password_length": 6})
+    assert res.status_code in (200, 201)
+    card = q(app, "SELECT c.username, c.password, c.first_used_at FROM cards c JOIN card_batches b "
+                  "ON b.id=c.batch_id WHERE b.package_name=? ORDER BY c.id LIMIT 1", (name,))[0]
+
+    def answer(messages):
+        line = messages[-1]["content"]
+        assert messages[-1]["role"] == "tool" and line.startswith("RESULT ")
+        d = json.loads(line[len("RESULT "):])
+        assert d["source"] == "card_info"
+        return M("reply", message="الكرت %s غير مستعمل، من حزمة %s." % (
+            d["data"]["card"], d["data"]["batch_name"]))
+
+    fake_model.reset(M("card_info", {"card": card["username"]}, "بفحصلك الكرت"), answer)
+    body = ok(post(client, "/message", {"text": "افحصلي بطاقة " + card["username"]}))
+    assert [r["type"] for r in body["replies"]] == ["result", "assistant"]
+    result = body["replies"][0]
+    assert result["source"] == "card_info" and result["error"] is None
+    assert result["data"]["status"] == "unused" and result["data"]["batch_name"] == name
+    assert body["replies"][1]["text"] == "الكرت %s غير مستعمل، من حزمة %s." % (card["username"], name)
+    raw = "".join(fake_model.raw) + json.dumps(body, ensure_ascii=False)
+    assert card["password"] not in raw
+    after = q(app, "SELECT first_used_at, used FROM cards WHERE username=?", (card["username"],))[0]
+    assert after["first_used_at"] == card["first_used_at"] and int(after["used"] or 0) == 0
+
+
 def test_empty_choices_state_and_repeat_guard(client, app, fake_model):
     login(client)
     miss = "no_batch_" + os.urandom(3).hex()

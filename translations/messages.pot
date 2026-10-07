@@ -5848,7 +5848,7 @@ msgstr ""
 
 #: app/radius/services/admin_alerts.py:402
 #: app/radius/services/admin_alerts.py:411
-#: app/templates/radius/_ops_chat.html:104
+#: app/templates/radius/_ops_chat.html:105
 #: app/templates/radius/_subs_labels.html:36
 #: app/templates/radius/users_profile.html:856
 msgid "IP ثابت"
@@ -10073,7 +10073,7 @@ msgstr ""
 msgid "آخر صف داخل الترويسة هو ست بلاطات صغيرة تقسم مشتركيك حسب حالتهم"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:111
+#: app/templates/radius/_ops_chat.html:112
 #: app/templates/radius/anti_mac_clone.html:192
 #: app/templates/radius/cards_checker.html:328
 #: app/templates/radius/cards_checker.html:428
@@ -10470,6 +10470,10 @@ msgid ""
 "صحيح."
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:119
+msgid "أجهزة استُخدمت"
+msgstr ""
+
 #: app/radius/services/notification_sounds.py:221
 msgid "أجهزة الزبائن (TR-069)"
 msgstr ""
@@ -10522,6 +10526,7 @@ msgstr ""
 msgid "أجهزة ظهرت في السجل"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:118
 #: app/templates/radius/cards_checker_v2.html:449
 msgid "أجهزة متّصلة الآن"
 msgstr ""
@@ -13302,7 +13307,7 @@ msgstr ""
 msgid "أهلًا بك — تفضّل بتصفّح قائمتنا"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:134
+#: app/templates/radius/_ops_chat.html:141
 msgid ""
 "أهلًا! اكتب ما تريد، مثل: «جدّد لأحمد شهر مدفوع» أو «اعمل 100 كرت من باقة"
 " الساعة». سأجهّز الإجراء وأعرضه عليك للتأكيد."
@@ -13677,6 +13682,7 @@ msgstr ""
 msgid "أوّل استخدام"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:116
 #: app/templates/radius/users_profile.html:869
 msgid "أوّل دخول"
 msgstr ""
@@ -13987,7 +13993,7 @@ msgstr ""
 msgid "أُزيلت صلاحية "
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:61
+#: app/templates/radius/_ops_chat.html:62
 msgid "أُضيف"
 msgstr ""
 
@@ -14243,11 +14249,11 @@ msgstr ""
 msgid "إبقاء الباقات المهمة على سرعتها الكاملة (100%%)."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:120
+#: app/templates/radius/_ops_chat.html:125
 msgid "إبقاء تاريخ الانتهاء"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:122
+#: app/templates/radius/_ops_chat.html:127
 msgid "إبقاء تاريخ الانتهاء دون فرق"
 msgstr ""
 
@@ -15716,8 +15722,8 @@ msgstr ""
 #: app/radius/routes/audit_log.py:71 app/radius/services/audit_format.py:154
 #: app/radius/services/event_labels.py:397
 #: app/radius/services/manager_activity_audit.py:247
-#: app/templates/radius/_ops_chat.html:141
-#: app/templates/radius/_ops_chat.html:142
+#: app/templates/radius/_ops_chat.html:148
+#: app/templates/radius/_ops_chat.html:149
 #: app/templates/radius/sessions_list.html:1158
 #: app/templates/radius/setup_wizard_v2.html:447
 #: app/templates/radius/setup_wizard_v3_router_service_flow.html:322
@@ -19007,7 +19013,7 @@ msgstr ""
 msgid "إنقاص الأيام"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:121
+#: app/templates/radius/_ops_chat.html:126
 msgid "إنقاص الأيّام المتبقّية"
 msgstr ""
 
@@ -19379,7 +19385,7 @@ msgstr ""
 msgid "ابدأ تشغيل جديد لعرض بطاقات الحالة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:73
+#: app/templates/radius/_ops_chat.html:74
 msgid "ابدأ محادثة"
 msgstr ""
 
@@ -19808,7 +19814,7 @@ msgstr ""
 msgid "اجمع نقاطك مع كل زيارة!"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:542
+#: app/radius/services/ops_assistant/conversation.py:552
 msgid ""
 "احتاج المساعد قوائم كثيرة لهذا الطلب. حدّد الاسم أو الرقم بدقّة أكثر وأعد"
 " المحاولة."
@@ -20589,7 +20595,7 @@ msgid "اختر راوترًا موجودًا قبل فحص الشبكة."
 msgstr ""
 
 #: app/api/v1/ops.py:535 app/radius/routes/ops_assistant.py:315
-#: app/radius/services/ops_assistant/conversation.py:676
+#: app/radius/services/ops_assistant/conversation.py:692
 msgid "اختر رقمًا من القائمة."
 msgstr ""
 
@@ -22509,7 +22515,7 @@ msgstr ""
 msgid "اسم الجهاز مطلوب."
 msgstr ""
 
-#: app/radius/routes/cards.py:1514 app/templates/radius/_ops_chat.html:97
+#: app/radius/routes/cards.py:1514 app/templates/radius/_ops_chat.html:98
 #: app/templates/radius/cards_batch_edit.html:122
 #: app/templates/radius/cards_batches.html:865
 #: app/templates/radius/cards_generate.html:371
@@ -22997,8 +23003,8 @@ msgstr ""
 #: app/radius/services/migration/engine.py:1232
 #: app/radius/templates/radius/vpn_accounts.html:105
 #: app/radius/templates/radius/vpn_accounts.html:189
-#: app/templates/radius/_ops_chat.html:64
-#: app/templates/radius/_ops_chat.html:86
+#: app/templates/radius/_ops_chat.html:65
+#: app/templates/radius/_ops_chat.html:87
 #: app/templates/radius/access_control.html:622
 #: app/templates/radius/account.html:16
 #: app/templates/radius/admins_form.html:50
@@ -23995,7 +24001,7 @@ msgstr ""
 msgid "اضغط الزر مرّة أخرى للاكتشاف."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:58
+#: app/templates/radius/_ops_chat.html:59
 msgid "اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك."
 msgstr ""
 
@@ -25162,8 +25168,8 @@ msgid "اكتب رسالة أو أرفق صورة."
 msgstr ""
 
 #: app/api/v1/ops.py:439 app/radius/routes/ops_assistant.py:191
-#: app/radius/services/ops_assistant/conversation.py:707
-#: app/templates/radius/_ops_chat.html:78
+#: app/radius/services/ops_assistant/conversation.py:723
+#: app/templates/radius/_ops_chat.html:79
 msgid "اكتب رسالة أوّلًا."
 msgstr ""
 
@@ -25193,7 +25199,7 @@ msgid ""
 "تأكيدك."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:138
+#: app/templates/radius/_ops_chat.html:145
 msgid "اكتب طلبك هنا…"
 msgstr ""
 
@@ -25434,7 +25440,7 @@ msgstr ""
 msgid "الأجهزة المجاورة المكتشَفة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:100
+#: app/templates/radius/_ops_chat.html:101
 msgid "الأجهزة المسموحة"
 msgstr ""
 
@@ -26107,7 +26113,7 @@ msgstr ""
 msgid "الإثنين"
 msgstr ""
 
-#: app/static/js/mt_dashboard.js:946 app/templates/radius/_ops_chat.html:114
+#: app/static/js/mt_dashboard.js:946 app/templates/radius/_ops_chat.html:115
 #: app/templates/radius/audit_log_index.html:110
 #: app/templates/radius/migration_wizard.html:596
 #: app/templates/radius/migration_wizard.html:616
@@ -26969,8 +26975,8 @@ msgstr ""
 #: app/radius/services/ops_assistant/conversation.py:61
 #: app/radius/services/users.py:1716
 #: app/radius/templates/radius/vpn_reports.html:234
-#: app/static/js/mt_dashboard.js:1882 app/templates/radius/_ops_chat.html:65
-#: app/templates/radius/_ops_chat.html:93
+#: app/static/js/mt_dashboard.js:1882 app/templates/radius/_ops_chat.html:66
+#: app/templates/radius/_ops_chat.html:94
 #: app/templates/radius/_plans_fragments.html:114
 #: app/templates/radius/_speed_schedules_panel.html:130
 #: app/templates/radius/_status.html:147 app/templates/radius/account.html:17
@@ -27157,7 +27163,7 @@ msgid "الاسم الظاهر:"
 msgstr ""
 
 #: app/radius/services/ops_assistant/conversation.py:63
-#: app/templates/radius/_ops_chat.html:87
+#: app/templates/radius/_ops_chat.html:88
 #: app/templates/radius/admins_form.html:56
 #: app/templates/radius/admins_list.html:180
 #: app/templates/radius/docs_admins.html:103
@@ -27420,7 +27426,7 @@ msgstr ""
 msgid "الانتهاء"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:88
+#: app/templates/radius/_ops_chat.html:89
 msgid "الانتهاء الجديد"
 msgstr ""
 
@@ -27549,8 +27555,8 @@ msgstr ""
 #: app/radius/services/migration/engine.py:1232
 #: app/radius/services/ops_assistant/conversation.py:58
 #: app/radius/services/pdf_theme.py:519 app/radius/services/users.py:1718
-#: app/templates/radius/_ops_chat.html:86
-#: app/templates/radius/_ops_chat.html:109
+#: app/templates/radius/_ops_chat.html:87
+#: app/templates/radius/_ops_chat.html:110
 #: app/templates/radius/_speed_schedules_panel.html:132
 #: app/templates/radius/_speed_schedules_panel.html:239
 #: app/templates/radius/accounting_reports.html:115
@@ -27935,7 +27941,7 @@ msgid "البروفايل الذي يرث منه الكرت المدة والس�
 msgstr ""
 
 #: app/radius/services/operations.py:1014
-#: app/templates/radius/_ops_chat.html:87 app/templates/radius/account.html:18
+#: app/templates/radius/_ops_chat.html:88 app/templates/radius/account.html:18
 #: app/templates/radius/admins_list.html:90
 #: app/templates/radius/admins_profile_summary.html:89
 #: app/templates/radius/communications.html:11
@@ -29612,12 +29618,12 @@ msgid "التنبيهات: تلجرام وSMS وواتساب"
 msgstr ""
 
 #: app/api/v1/tools.py:169 app/radius/routes/cards.py:3225
-#: app/radius/routes/tools.py:73 app/templates/radius/_ops_chat.html:92
+#: app/radius/routes/tools.py:73 app/templates/radius/_ops_chat.html:93
 #: app/templates/radius/cards_checker.html:224
 msgid "التنزيل"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:91
+#: app/templates/radius/_ops_chat.html:92
 #: app/templates/radius/cards_checker_v2.html:1854
 msgid "التنزيل (kbps)"
 msgstr ""
@@ -30005,7 +30011,7 @@ msgid "الجلسات الحيّة فقط"
 msgstr ""
 
 #: app/radius/services/subscriber_form_fields.py:143
-#: app/templates/radius/_ops_chat.html:100
+#: app/templates/radius/_ops_chat.html:101
 #: app/templates/radius/users_form.html:1833
 msgid "الجلسات المتزامنة"
 msgstr ""
@@ -30330,8 +30336,8 @@ msgid "الجوائز (سطر لكل واحدة)"
 msgstr ""
 
 #: app/radius/routes/users.py:1288 app/radius/services/audit_format.py:472
-#: app/radius/services/users.py:1717 app/templates/radius/_ops_chat.html:62
-#: app/templates/radius/_ops_chat.html:87
+#: app/radius/services/users.py:1717 app/templates/radius/_ops_chat.html:63
+#: app/templates/radius/_ops_chat.html:88
 #: app/templates/radius/admins_form.html:112
 #: app/templates/radius/admins_list.html:91
 #: app/templates/radius/admins_list.html:234
@@ -30409,7 +30415,7 @@ msgstr ""
 #: app/static/js/mt_dashboard.js:713 app/static/js/mt_dashboard.js:1885
 #: app/static/js/mt_import.js:181 app/static/js/setup_wizard.js:31
 #: app/static/js/setup_wizard_v2.js:135 app/static/js/setup_wizard_v2.js:214
-#: app/templates/radius/_ops_chat.html:105
+#: app/templates/radius/_ops_chat.html:106
 #: app/templates/radius/_plans_fragments.html:119
 #: app/templates/radius/_speed_schedules_panel.html:135
 #: app/templates/radius/_status.html:149
@@ -30962,6 +30968,7 @@ msgstr ""
 
 #: app/radius/services/migration/engine.py:1233
 #: app/radius/services/ops_assistant/conversation.py:58
+#: app/templates/radius/_ops_chat.html:116
 #: app/templates/radius/_speed_rules_panel.html:37
 #: app/templates/radius/business_operator_profile.html:456
 #: app/templates/radius/card_marketplace_package_file.html:98
@@ -31138,14 +31145,14 @@ msgstr ""
 msgid "الحصة والوقت:"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:95
+#: app/templates/radius/_ops_chat.html:96
 #: app/templates/radius/docs_users_overview.html:757
 #: app/templates/radius/plans_overview.html:171
 #: app/templates/radius/subscribers_overview.html:258
 msgid "الحصّة"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:95
+#: app/templates/radius/_ops_chat.html:96
 msgid "الحصّة (MB)"
 msgstr ""
 
@@ -32080,7 +32087,7 @@ msgstr ""
 msgid "الدين المستحقّ"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:112
+#: app/templates/radius/_ops_chat.html:113
 msgid "الدين المفتوح"
 msgstr ""
 
@@ -32988,7 +32995,7 @@ msgstr ""
 msgid "الرسالة تتجاوز الحدّ الموصى به ("
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:709
+#: app/radius/services/ops_assistant/conversation.py:725
 msgid "الرسالة طويلة جدًّا."
 msgstr ""
 
@@ -33010,7 +33017,7 @@ msgstr ""
 #: app/radius/services/hotspot_addons_gallery.py:674
 #: app/radius/services/manager_activity_audit.py:223
 #: app/radius/services/operations.py:262
-#: app/templates/radius/_ops_chat.html:111
+#: app/templates/radius/_ops_chat.html:112
 #: app/templates/radius/accounting_reports.html:112
 #: app/templates/radius/card_users.html:92
 #: app/templates/radius/communications_guide.html:304
@@ -33100,7 +33107,7 @@ msgstr ""
 msgid "الرصيد لا يتحرّك أبدًا إلا عند تأكيدك أنت"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:111
+#: app/templates/radius/_ops_chat.html:112
 msgid "الرصيد مخفيّ"
 msgstr ""
 
@@ -33149,7 +33156,7 @@ msgid ""
 msgstr ""
 
 #: app/api/v1/tools.py:171 app/radius/routes/cards.py:3226
-#: app/radius/routes/tools.py:75 app/templates/radius/_ops_chat.html:92
+#: app/radius/routes/tools.py:75 app/templates/radius/_ops_chat.html:93
 #: app/templates/radius/cards_checker.html:223
 msgid "الرفع"
 msgstr ""
@@ -33159,7 +33166,7 @@ msgstr ""
 msgid "الرفع %%"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:91
+#: app/templates/radius/_ops_chat.html:92
 #: app/templates/radius/cards_checker_v2.html:1858
 msgid "الرفع (kbps)"
 msgstr ""
@@ -33961,7 +33968,7 @@ msgstr ""
 #: app/radius/core/numbers.py:52 app/radius/services/audit_format.py:485
 #: app/radius/services/manager_grants.py:235
 #: app/radius/services/manager_grants.py:246 app/radius/services/plans.py:253
-#: app/templates/radius/_ops_chat.html:93
+#: app/templates/radius/_ops_chat.html:94
 #: app/templates/radius/_plans_fragments.html:128
 #: app/templates/radius/card_marketplace.html:741
 #: app/templates/radius/card_marketplace.html:920
@@ -34032,7 +34039,7 @@ msgstr ""
 msgid "السعر الظاهر"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:104
+#: app/templates/radius/_ops_chat.html:105
 msgid "السعر الكلّيّ"
 msgstr ""
 
@@ -35277,7 +35284,7 @@ msgstr ""
 msgid "الصلاحيّة"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:95
+#: app/templates/radius/_ops_chat.html:96
 msgid "الصلاحيّة (أيّام)"
 msgstr ""
 
@@ -35570,7 +35577,7 @@ msgstr ""
 msgid "العدد الكلّي للمشتركين المسجّلين."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:112
+#: app/templates/radius/_ops_chat.html:113
 msgid "العدد الكلّيّ"
 msgstr ""
 
@@ -35630,7 +35637,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:469
 #: app/radius/services/ops_assistant/conversation.py:58
 #: app/radius/services/permission_labels.py:82
-#: app/templates/radius/_ops_chat.html:86
+#: app/templates/radius/_ops_chat.html:87
 #: app/templates/radius/_speed_rules_panel.html:37
 #: app/templates/radius/admin_pricing.html:195
 #: app/templates/radius/card_marketplace.html:1202
@@ -35879,7 +35886,7 @@ msgstr ""
 #: app/radius/routes/status.py:55 app/radius/routes/users.py:1780
 #: app/radius/services/audit_format.py:447
 #: app/radius/services/audit_format.py:647
-#: app/templates/radius/_ops_chat.html:112
+#: app/templates/radius/_ops_chat.html:113
 #: app/templates/radius/_plans_fragments.html:129
 #: app/templates/radius/accounting_reports.html:114
 #: app/templates/radius/cards_offers.html:235
@@ -36101,7 +36108,7 @@ msgstr ""
 #: app/radius/services/hotspot_addons_gallery.py:729
 #: app/radius/services/hotspot_addons_money.py:240
 #: app/static/js/mt_dashboard.js:790 app/static/js/mt_dashboard.js:1872
-#: app/static/js/setup_wizard_v2.js:108 app/templates/radius/_ops_chat.html:102
+#: app/static/js/setup_wizard_v2.js:108 app/templates/radius/_ops_chat.html:103
 #: app/templates/radius/access_control.html:333
 #: app/templates/radius/access_control.html:373
 #: app/templates/radius/communications_audience.html:70
@@ -36937,7 +36944,7 @@ msgstr ""
 msgid "القائمة كلها فاضية؟"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:66
+#: app/templates/radius/_ops_chat.html:67
 msgid "القائمة مختصرة — العدد الكلّيّ أعلاه."
 msgstr ""
 
@@ -38308,7 +38315,7 @@ msgstr ""
 #: app/radius/routes/users.py:1780 app/radius/services/audit_format.py:447
 #: app/radius/services/audit_format.py:646
 #: app/radius/services/credit_dashboard.py:211
-#: app/radius/services/operations.py:261 app/templates/radius/_ops_chat.html:89
+#: app/radius/services/operations.py:261 app/templates/radius/_ops_chat.html:90
 #: app/templates/radius/accounting_ledger.html:69
 #: app/templates/radius/accounting_reports.html:111
 #: app/templates/radius/business_operator_profile.html:119
@@ -38534,6 +38541,7 @@ msgid "المتبقية"
 msgstr ""
 
 #: app/radius/services/accounting.py:1361
+#: app/templates/radius/_ops_chat.html:117
 #: app/templates/radius/cards_reconcile_accounting.html:112
 #: app/templates/radius/finance_center_hub.html:536
 #: app/templates/radius/finance_center_hub.html:573
@@ -39410,7 +39418,7 @@ msgid "المديرون الذين يَرون العرض"
 msgstr ""
 
 #: app/radius/services/subscriber_form_fields.py:96
-#: app/templates/radius/_ops_chat.html:102
+#: app/templates/radius/_ops_chat.html:103
 #: app/templates/radius/users_form.html:1274
 #: app/templates/radius/users_profile.html:814
 msgid "المدينة"
@@ -39421,7 +39429,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:490
 #: app/radius/services/manager_grants.py:234
 #: app/radius/services/ops_assistant/conversation.py:59
-#: app/radius/services/plans.py:254 app/templates/radius/_ops_chat.html:103
+#: app/radius/services/plans.py:254 app/templates/radius/_ops_chat.html:104
 #: app/templates/radius/access_control.html:208
 #: app/templates/radius/access_control.html:373
 #: app/templates/radius/cards_offer_use.html:82
@@ -39435,8 +39443,8 @@ msgid "المدّة"
 msgstr ""
 
 #: app/radius/services/audit_format.py:484
-#: app/templates/radius/_ops_chat.html:90
-#: app/templates/radius/_ops_chat.html:92
+#: app/templates/radius/_ops_chat.html:91
+#: app/templates/radius/_ops_chat.html:93
 #: app/templates/radius/cards_offers.html:392
 msgid "المدّة (دقائق)"
 msgstr ""
@@ -39757,7 +39765,7 @@ msgstr ""
 msgid "المساعد غير متاح الآن"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:512
+#: app/radius/services/ops_assistant/conversation.py:522
 msgid "المساعد غير متاح مؤقتًا، حاول بعد قليل."
 msgstr ""
 
@@ -40993,7 +41001,7 @@ msgstr ""
 msgid "المقترح متداخل أكثر من المسموح."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:576
+#: app/radius/services/ops_assistant/conversation.py:592
 #, python-format
 msgid "المقترح مرفوض من نظام التحقّق ولم يُنفَّذ: %(why)s"
 msgstr ""
@@ -41827,7 +41835,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:642
 #: app/radius/services/audit_format.py:643
 #: app/radius/services/audit_format.py:659 app/static/js/setup_wizard.js:27
-#: app/templates/radius/_ops_chat.html:114
+#: app/templates/radius/_ops_chat.html:115
 #: app/templates/radius/audit_log_index.html:81
 #: app/templates/radius/audit_log_index.html:113
 #: app/templates/radius/device_health.html:249
@@ -42441,7 +42449,7 @@ msgstr ""
 
 #: app/radius/services/audit_format.py:461
 #: app/radius/services/audit_format.py:466 app/static/js/mt_dashboard.js:1887
-#: app/static/js/mt_import.js:290 app/templates/radius/_ops_chat.html:89
+#: app/static/js/mt_import.js:290 app/templates/radius/_ops_chat.html:90
 #: app/templates/radius/_plans_fragments.html:116
 #: app/templates/radius/access_control.html:327
 #: app/templates/radius/access_control.html:373
@@ -42898,7 +42906,7 @@ msgstr ""
 #: app/radius/services/devices.py:159
 #: app/radius/services/hotspot_addons_money.py:183
 #: app/radius/templates/radius/vpn_reports.html:322
-#: app/templates/radius/_ops_chat.html:101
+#: app/templates/radius/_ops_chat.html:102
 #: app/templates/radius/_plans_fragments.html:121
 #: app/templates/radius/access_control.html:568
 #: app/templates/radius/card_user_360.html:444
@@ -43032,7 +43040,7 @@ msgid ""
 msgstr ""
 
 #: app/static/js/hub_date.js:248 app/static/js/mt_import.js:292
-#: app/templates/radius/_ops_chat.html:114
+#: app/templates/radius/_ops_chat.html:115
 #: app/templates/radius/_speed_schedules_panel.html:133
 #: app/templates/radius/accounting_reports.html:65
 #: app/templates/radius/anti_mac_clone.html:269
@@ -43925,7 +43933,7 @@ msgstr ""
 msgid "انسخه وضعه عند مزوّد واتساب"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:155
+#: app/templates/radius/_ops_chat.html:162
 msgid ""
 "انسخها الآن وسلّمها للمشترك. لن تظهر مرّة أخرى، ولا تُحفظ في السجلّات، "
 "ولا يراها المساعد."
@@ -44449,6 +44457,10 @@ msgstr ""
 
 #: app/templates/radius/portal_distributor_checker.html:299
 msgid "بالثانية (أثناء الاتصال فقط)"
+msgstr ""
+
+#: app/templates/radius/_ops_chat.html:133
+msgid "بالثانية (وقت الاتصال فقط)"
 msgstr ""
 
 #: app/templates/radius/docs_finance_collection.html:96
@@ -45081,7 +45093,7 @@ msgstr ""
 msgid "بدأت"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:75
+#: app/templates/radius/_ops_chat.html:76
 msgid "بدأت محادثة من اقتراح النظام."
 msgstr ""
 
@@ -46474,14 +46486,14 @@ msgstr ""
 msgid "بلا اسم مستخدم — يُستبعَد"
 msgstr ""
 
-#: app/radius/core/system_config.py:82 app/templates/radius/_ops_chat.html:79
-#: app/templates/radius/_ops_chat.html:110
+#: app/radius/core/system_config.py:82 app/templates/radius/_ops_chat.html:80
+#: app/templates/radius/_ops_chat.html:111
 #: app/templates/radius/settings_page.html:505
 msgid "بلا انتهاء"
 msgstr ""
 
 #: app/radius/services/manager_activity_audit.py:153
-#: app/templates/radius/_ops_chat.html:126
+#: app/templates/radius/_ops_chat.html:131
 #: app/templates/radius/tool_general_adj.html:81
 msgid "بلا تغيير"
 msgstr ""
@@ -46514,7 +46526,7 @@ msgstr ""
 msgid "بلا حدّ زمنيّ"
 msgstr ""
 
-#: app/radius/services/plans.py:329 app/templates/radius/_ops_chat.html:94
+#: app/radius/services/plans.py:329 app/templates/radius/_ops_chat.html:95
 #: app/templates/radius/plans_form.html:445
 msgid "بلا حدّ للسرعة"
 msgstr ""
@@ -46541,7 +46553,7 @@ msgid ""
 "عمدًا)."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:122
+#: app/templates/radius/_ops_chat.html:127
 msgid "بلا فرق"
 msgstr ""
 
@@ -47995,7 +48007,7 @@ msgstr ""
 msgid "تابع كرتًا معينًا:"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:82
+#: app/templates/radius/_ops_chat.html:83
 msgid ""
 "تابعتُ محادثتك السابقة — هذه رسائلها النصّيّة (البطاقات لا تُعاد، اطلب من"
 " جديد إن لزم)."
@@ -48064,7 +48076,7 @@ msgstr ""
 #: app/radius/routes/cards.py:1531 app/radius/services/pdf_theme.py:529
 #: app/radius/templates/radius/vpn_reports.html:146
 #: app/radius/templates/radius/vpn_reports.html:241
-#: app/templates/radius/_ops_chat.html:106
+#: app/templates/radius/_ops_chat.html:107
 #: app/templates/radius/business_operator_profile.html:475
 #: app/templates/radius/card_pricing_batch.html:62
 #: app/templates/radius/cards_batches.html:485
@@ -48282,6 +48294,10 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:637
 msgid "تبدأ من أول اتصال"
+msgstr ""
+
+#: app/templates/radius/_ops_chat.html:132
+msgid "تبدأ من أوّل اتصال"
 msgstr ""
 
 #: app/radius/routes/audit_log.py:69 app/radius/services/audit_format.py:152
@@ -50858,7 +50874,7 @@ msgstr ""
 msgid "تسجيل الصرف"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:121
+#: app/templates/radius/_ops_chat.html:126
 msgid "تسجيل الفرق دينًا"
 msgstr ""
 
@@ -54140,7 +54156,7 @@ msgid "تعذّر توليد مفاتيح WireGuard: %(exc)s"
 msgstr ""
 
 #: app/radius/routes/ops_assistant.py:268
-#: app/templates/radius/_ops_chat.html:72
+#: app/templates/radius/_ops_chat.html:73
 msgid "تعذّر جلب الاقتراحات."
 msgstr ""
 
@@ -54153,7 +54169,7 @@ msgstr ""
 msgid "تعذّر جلب الرصيد: %(v)s"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:595
+#: app/radius/services/ops_assistant/conversation.py:611
 #, python-format
 msgid "تعذّر جلب القائمة: %(why)s"
 msgstr ""
@@ -54173,7 +54189,7 @@ msgstr ""
 msgid "تعذّر جلب المعاينة"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:70
+#: app/templates/radius/_ops_chat.html:71
 msgid "تعذّر جلب المعلومة الآن."
 msgstr ""
 
@@ -55035,7 +55051,7 @@ msgstr ""
 msgid "تعويض أيام إضافية"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:120
+#: app/templates/radius/_ops_chat.html:125
 msgid "تعويض بأيّام إضافيّة"
 msgstr ""
 
@@ -59011,12 +59027,12 @@ msgstr ""
 msgid "تم."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:106
+#: app/radius/services/ops_assistant/conversation.py:115
 #, python-format
 msgid "تمام، باقي أعرف: %(names)s."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:695
+#: app/radius/services/ops_assistant/conversation.py:711
 msgid "تمام، هذا هو السجلّ المطلوب."
 msgstr ""
 
@@ -62492,7 +62508,7 @@ msgid ""
 "بزرّ «قطع» مباشر لإيقاف الاتصال فوراً."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:110
+#: app/templates/radius/_ops_chat.html:111
 msgid "جلسات حيّة"
 msgstr ""
 
@@ -63752,7 +63768,7 @@ msgstr ""
 msgid "حتّى %(v)s"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:119
+#: app/templates/radius/_ops_chat.html:124
 msgid "حتّى تاريخ"
 msgstr ""
 
@@ -64523,7 +64539,7 @@ msgstr ""
 msgid "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:588
+#: app/radius/services/ops_assistant/conversation.py:604
 msgid "حدّد المشترك والباقة الجديدة أوّلًا."
 msgstr ""
 
@@ -65713,7 +65729,7 @@ msgstr ""
 msgid "حسب RFC 5176."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:80
+#: app/templates/radius/_ops_chat.html:81
 msgid "حسب إعداد الخادم"
 msgstr ""
 
@@ -68359,7 +68375,7 @@ msgstr ""
 msgid "دخول بضغطة «اتصل»"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:98
+#: app/templates/radius/_ops_chat.html:99
 msgid "دخول بلا كلمة سر"
 msgstr ""
 
@@ -68918,7 +68934,7 @@ msgstr ""
 #: app/radius/services/cards.py:2751
 #: app/radius/services/hotspot_cards_portal.py:112
 #: app/templates/_partials/access_schedule.html:744
-#: app/templates/radius/_ops_chat.html:81
+#: app/templates/radius/_ops_chat.html:82
 #: app/templates/radius/card_marketplace.html:28
 #: app/templates/radius/card_marketplace.html:52
 #: app/templates/radius/card_marketplace.html:1385
@@ -69589,7 +69605,7 @@ msgstr ""
 msgid "دين جديد"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:117
+#: app/templates/radius/_ops_chat.html:122
 msgid "دين على المشترك"
 msgstr ""
 
@@ -70821,7 +70837,7 @@ msgstr ""
 msgid "رسائل أخطاء الهوتسبوت"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:83
+#: app/templates/radius/_ops_chat.html:84
 msgid "رسائل أقدم مخفيّة — افتح الصفحة الكاملة لمحادثة جديدة."
 msgstr ""
 
@@ -70994,7 +71010,7 @@ msgstr ""
 msgid "رسالتان (مقطعان)"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:138
+#: app/templates/radius/_ops_chat.html:145
 msgid "رسالتك"
 msgstr ""
 
@@ -71638,6 +71654,7 @@ msgstr ""
 msgid "رقم الباقة يجب أن يكون عددًا صحيحًا."
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:116
 #: app/templates/radius/docs_cards_checker.html:290
 #: app/templates/radius/portal_card.html:558
 msgid "رقم البطاقة"
@@ -71730,7 +71747,7 @@ msgid "رقم الحدث"
 msgstr ""
 
 #: app/radius/routes/cards.py:1513 app/radius/services/accounting.py:1366
-#: app/templates/radius/_ops_chat.html:105
+#: app/templates/radius/_ops_chat.html:106
 #: app/templates/radius/accounting_reports.html:119
 #: app/templates/radius/cards_generate.html:516
 #: app/templates/radius/cards_generate.html:815
@@ -71922,8 +71939,8 @@ msgstr ""
 msgid "رقم الهدف"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:63
-#: app/templates/radius/_ops_chat.html:101
+#: app/templates/radius/_ops_chat.html:64
+#: app/templates/radius/_ops_chat.html:102
 msgid "رقم الهويّة"
 msgstr ""
 
@@ -73967,7 +73984,7 @@ msgstr ""
 msgid "سرعة التنزيل (Mbps)"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:93
+#: app/templates/radius/_ops_chat.html:94
 msgid "سرعة التنزيل (kbps)"
 msgstr ""
 
@@ -74067,7 +74084,7 @@ msgstr ""
 msgid "سرعة الرفع (Mbps)"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:94
+#: app/templates/radius/_ops_chat.html:95
 msgid "سرعة الرفع (kbps)"
 msgstr ""
 
@@ -74405,7 +74422,7 @@ msgstr ""
 
 #: app/radius/services/audit_format.py:480
 #: app/radius/services/ops_assistant/conversation.py:61
-#: app/templates/radius/_ops_chat.html:96
+#: app/templates/radius/_ops_chat.html:97
 #: app/templates/radius/card_pricing.html:81
 #: app/templates/radius/card_pricing.html:225
 #: app/templates/radius/cards_batches.html:916
@@ -74459,7 +74476,7 @@ msgstr ""
 #: app/radius/services/card_pricing.py:87 app/radius/services/cards.py:732
 #: app/radius/services/cards.py:970 app/radius/services/cards.py:1722
 #: app/radius/services/ops_assistant/conversation.py:61
-#: app/radius/services/plans.py:253 app/templates/radius/_ops_chat.html:96
+#: app/radius/services/plans.py:253 app/templates/radius/_ops_chat.html:97
 #: app/templates/radius/card_pricing.html:82
 #: app/templates/radius/card_pricing.html:229
 #: app/templates/radius/cards_batches.html:920
@@ -74500,7 +74517,7 @@ msgstr ""
 msgid "سعر العرض / سعر المدير المتفق عليه"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:526 app/templates/radius/_ops_chat.html:103
+#: app/radius/services/pdf_theme.py:526 app/templates/radius/_ops_chat.html:104
 msgid "سعر الكرت"
 msgstr ""
 
@@ -74534,7 +74551,7 @@ msgid ""
 "تفعيل/تجديد مشتركي ذلك المدير. الحقل الفارغ يعني السعر الافتراضي."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:104
+#: app/templates/radius/_ops_chat.html:105
 msgid "سعر خاصّ"
 msgstr ""
 
@@ -75335,7 +75352,7 @@ msgstr ""
 msgid "سياسة الإعادة"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:91
+#: app/templates/radius/_ops_chat.html:92
 msgid "سياسة التغيير"
 msgstr ""
 
@@ -78063,6 +78080,7 @@ msgid "طريقة الإضافة غير معروفة."
 msgstr ""
 
 #: app/radius/services/manager_grants.py:243
+#: app/templates/radius/_ops_chat.html:117
 #: app/templates/radius/cards_checker_v2.html:670
 #: app/templates/radius/docs_cards_checker.html:384
 #: app/templates/radius/portal_distributor_checker.html:296
@@ -78118,7 +78136,7 @@ msgid "طريقة التقريب غير معروفة (floor أو ceil أو neare
 msgstr ""
 
 #: app/radius/services/hotspot_addons_content.py:208
-#: app/templates/radius/_ops_chat.html:89
+#: app/templates/radius/_ops_chat.html:90
 msgid "طريقة الحساب"
 msgstr ""
 
@@ -78717,7 +78735,7 @@ msgstr ""
 msgid "طول اسم الدخول: "
 msgstr ""
 
-#: app/api/v1/cards.py:636 app/templates/radius/_ops_chat.html:97
+#: app/api/v1/cards.py:636 app/templates/radius/_ops_chat.html:98
 #: app/templates/radius/card_marketplace.html:825
 #: app/templates/radius/cards_batch_edit.html:187
 #: app/templates/radius/cards_batches.html:940
@@ -78769,7 +78787,7 @@ msgstr ""
 msgid "طول كل عمود نسبي"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:98
+#: app/templates/radius/_ops_chat.html:99
 msgid "طول كلمة السر"
 msgstr ""
 
@@ -79190,7 +79208,7 @@ msgstr ""
 #: app/api/v1/cards.py:717 app/radius/services/audit_format.py:490
 #: app/radius/services/cards.py:1728 app/radius/services/manager_grants.py:217
 #: app/radius/services/subscriber_validation.py:87
-#: app/templates/radius/_ops_chat.html:99
+#: app/templates/radius/_ops_chat.html:100
 #: app/templates/radius/access_control.html:492
 #: app/templates/radius/cards_batch_edit.html:233
 #: app/templates/radius/cards_batches.html:934
@@ -79518,7 +79536,7 @@ msgid "عدد القيود:"
 msgstr ""
 
 #: app/api/v1/cards.py:816 app/radius/services/ops_assistant/conversation.py:61
-#: app/templates/radius/_ops_chat.html:97
+#: app/templates/radius/_ops_chat.html:98
 #: app/templates/radius/card_pricing.html:80
 #: app/templates/radius/card_pricing.html:178
 #: app/templates/radius/cards_import.html:553
@@ -80603,7 +80621,7 @@ msgid "علوي/أيمن/سفلي/أيسر — الافتراضي 8mm، زِده
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:190
-#: app/templates/radius/_ops_chat.html:114
+#: app/templates/radius/_ops_chat.html:115
 #: app/templates/radius/operations_speed_control_manual.html:201
 #: app/templates/radius/port_script_services.html:151
 msgid "على"
@@ -81473,7 +81491,7 @@ msgstr ""
 msgid "عند بيع أو استخدام كروت ستظهر هنا مباشرة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:99
+#: app/templates/radius/_ops_chat.html:100
 msgid "عند تجاوز الأجهزة"
 msgstr ""
 
@@ -83001,6 +83019,10 @@ msgstr ""
 msgid "غير مستخدمة بعد"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:132
+msgid "غير مستعملة"
+msgstr ""
+
 #: app/radius/services/hotspot_error_messages.py:114
 msgid "غير مسجّل الدخول"
 msgstr ""
@@ -83221,7 +83243,7 @@ msgstr ""
 msgid "غير موجود"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:67
+#: app/templates/radius/_ops_chat.html:68
 msgid "غير موجود."
 msgstr ""
 
@@ -83911,6 +83933,7 @@ msgstr ""
 msgid "فحص البطاقات وعملياتها"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:57
 #: app/templates/radius/cards_checker.html:147
 msgid "فحص البطاقة"
 msgstr ""
@@ -84188,7 +84211,7 @@ msgstr ""
 #: app/templates/radius/_mt_diagnostics_card.html:97
 #: app/templates/radius/_network_policy_shell.html:59
 #: app/templates/radius/_ops_chat.html:41
-#: app/templates/radius/_ops_chat.html:126
+#: app/templates/radius/_ops_chat.html:131
 #: app/templates/radius/admin_bridge.html:11
 #: app/templates/radius/docs_login_states.html:307
 #: app/templates/radius/finance_collection.html:60
@@ -84969,7 +84992,7 @@ msgstr ""
 msgid "فعِّل على الراوتر"
 msgstr ""
 
-#: app/radius/routes/users.py:1217 app/templates/radius/_ops_chat.html:123
+#: app/radius/routes/users.py:1217 app/templates/radius/_ops_chat.html:128
 #: app/templates/radius/access_control.html:222
 #: app/templates/radius/access_control.html:388
 #: app/templates/radius/access_control.html:510
@@ -87646,7 +87669,7 @@ msgstr ""
 msgid "قفل MAC:"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:102
+#: app/templates/radius/_ops_chat.html:103
 msgid "قفل الماك"
 msgstr ""
 
@@ -88041,7 +88064,7 @@ msgstr ""
 msgid "قيد الاستخدام"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:107
+#: app/templates/radius/_ops_chat.html:108
 msgid "قيد الاستعمال"
 msgstr ""
 
@@ -89080,7 +89103,7 @@ msgstr ""
 #: app/radius/services/login_events.py:71
 #: app/radius/services/manager_activity_audit.py:332
 #: app/radius/services/mikrotik_actions.py:737
-#: app/templates/radius/_ops_chat.html:125
+#: app/templates/radius/_ops_chat.html:130
 #: app/templates/radius/events_risk.html:48
 #: app/templates/radius/rep_balance_movements.html:52
 msgid "كرت"
@@ -89156,7 +89179,7 @@ msgstr ""
 msgid "كرواتيا"
 msgstr ""
 
-#: app/radius/core/ar_text.py:24 app/templates/radius/_ops_chat.html:113
+#: app/radius/core/ar_text.py:24 app/templates/radius/_ops_chat.html:114
 #: app/templates/radius/_speed_schedules_panel.html:151
 #: app/templates/radius/bandwidth_schedules.html:232
 #: app/templates/radius/sessions_list.html:461
@@ -89824,7 +89847,7 @@ msgid "كل القيود المعروضة بعد الفلترة."
 msgstr ""
 
 #: app/templates/radius/_card_print_modal.html:81
-#: app/templates/radius/_ops_chat.html:106
+#: app/templates/radius/_ops_chat.html:107
 #: app/templates/radius/cards_list.html:18
 #: app/templates/radius/cards_list.html:20
 #: app/templates/radius/cards_list.html:46
@@ -91082,7 +91105,7 @@ msgstr ""
 msgid "كلمة مرور بوابة الفحص يجب أن تكون نصًّا."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:154
+#: app/templates/radius/_ops_chat.html:161
 msgid "كلمة مرور تُعرض مرّة واحدة"
 msgstr ""
 
@@ -91487,7 +91510,7 @@ msgstr ""
 msgid "كود CSS"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:105
+#: app/templates/radius/_ops_chat.html:106
 #: app/templates/radius/distributors_detail.html:117
 msgid "كود الحزمة"
 msgstr ""
@@ -92015,7 +92038,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:500
 #: app/radius/services/mt_router_overview.py:263
 #: app/static/js/setup_wizard_v2.js:165 app/static/js/setup_wizard_v2.js:187
-#: app/templates/radius/_ops_chat.html:118
+#: app/templates/radius/_ops_chat.html:123
 #: app/templates/radius/_plans_fragments.html:130
 #: app/templates/radius/_plans_fragments.html:197
 #: app/templates/radius/audit_log_detail.html:15
@@ -92252,7 +92275,7 @@ msgstr ""
 msgid "لا اشتراكات تنتهي خلال الأسبوع القادم."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:71
+#: app/templates/radius/_ops_chat.html:72
 msgid "لا اقتراحات الآن."
 msgstr ""
 
@@ -92436,7 +92459,7 @@ msgstr ""
 msgid "لا تفحص أو تطبق على واجهة غير مصرح بها."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:149
+#: app/templates/radius/_ops_chat.html:156
 msgid ""
 "لا تكتب كلمات مرور في المحادثة — النظام يولّدها بنفسه ويعرضها لك مرّة "
 "واحدة."
@@ -92521,7 +92544,7 @@ msgstr ""
 msgid "لا تملك صلاحية عرض هذه القائمة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:69
+#: app/templates/radius/_ops_chat.html:70
 msgid "لا تملك صلاحية عرض هذه المعلومة."
 msgstr ""
 
@@ -92674,7 +92697,7 @@ msgstr ""
 msgid "لا توجد باقات بعد — أنشئ أول باقة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:348
+#: app/radius/services/ops_assistant/conversation.py:357
 msgid "لا توجد باقات مفعّلة في النظام بعد."
 msgstr ""
 
@@ -92930,7 +92953,7 @@ msgstr ""
 msgid "لا توجد حركات في الفترة المحددة."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:352
+#: app/radius/services/ops_assistant/conversation.py:361
 msgid "لا توجد حزم بطاقات تطابق هذا البحث."
 msgstr ""
 
@@ -93197,11 +93220,11 @@ msgstr ""
 msgid "لا توجد عروض متاحة"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:346
+#: app/radius/services/ops_assistant/conversation.py:355
 msgid "لا توجد عروض مسجّلة في النظام بعد."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:344
+#: app/radius/services/ops_assistant/conversation.py:353
 msgid ""
 "لا توجد عروض مسجّلة في النظام بعد. يمكنك توليد الكروت مباشرةً من باقة، أو"
 " إنشاء عرض أوّلًا."
@@ -93531,7 +93554,7 @@ msgstr ""
 msgid "لا توجد نتائج مطابقة لبحثك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:353
+#: app/radius/services/ops_assistant/conversation.py:362
 #: app/templates/radius/_ops_chat.html:49
 msgid "لا توجد نتائج."
 msgstr ""
@@ -94143,7 +94166,7 @@ msgid ""
 " أو حدّد سعرًا للمشترك."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:685
+#: app/radius/services/ops_assistant/conversation.py:701
 msgid "لا يمكن اختيار هذا العنصر."
 msgstr ""
 
@@ -94660,7 +94683,7 @@ msgid ""
 "النموذج. لم يُحفَظ شيء (التعديل لا يُنشئ مشتركًا جديدًا)."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:350
+#: app/radius/services/ops_assistant/conversation.py:359
 msgid "لا يوجد مشترك يطابق هذا البحث. جرّب اسم مستخدم آخر أو رقم الجوال."
 msgstr ""
 
@@ -95692,18 +95715,18 @@ msgid ""
 " MikroTik Terminal."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:336
+#: app/radius/services/ops_assistant/conversation.py:345
 #, python-format
 msgid ""
 "لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم "
 "بدقّة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:57
+#: app/templates/radius/_ops_chat.html:58
 msgid "لم أجد تطابقًا تامًّا — هل تقصد:"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:521
+#: app/radius/services/ops_assistant/conversation.py:531
 msgid "لم أفهم ردّ النموذج — لم يُنفَّذ أيّ شيء. أعد صياغة طلبك بجملة أوضح."
 msgstr ""
 
@@ -96279,7 +96302,7 @@ msgstr ""
 msgid "لم يظهر المستخدم المخطط ضمن قائمة المستخدمين."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:691
+#: app/radius/services/ops_assistant/conversation.py:707
 msgid "لم يعد هذا السجلّ متاحًا لك."
 msgstr ""
 
@@ -97366,8 +97389,8 @@ msgid "مؤرشف"
 msgstr ""
 
 #: app/radius/routes/cards.py:1215 app/radius/services/cards.py:2737
-#: app/radius/services/pdf_theme.py:499 app/templates/radius/_ops_chat.html:108
-#: app/templates/radius/_ops_chat.html:124
+#: app/radius/services/pdf_theme.py:499 app/templates/radius/_ops_chat.html:109
+#: app/templates/radius/_ops_chat.html:129
 #: app/templates/radius/cards_batches.html:209
 #: app/templates/radius/cards_checker.html:124
 #: app/templates/radius/docs_cards_batches.html:392
@@ -98154,7 +98177,7 @@ msgstr ""
 msgid "متاحة"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:107
+#: app/templates/radius/_ops_chat.html:108
 msgid "متاحة (غير مستعملة)"
 msgstr ""
 
@@ -98664,7 +98687,7 @@ msgstr ""
 msgid "متّصل ·"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:110
+#: app/templates/radius/_ops_chat.html:111
 #: app/templates/radius/cards_checker_v2.html:1024
 #: app/templates/radius/cards_checker_v2.html:1483
 msgid "متّصل الآن"
@@ -99497,7 +99520,7 @@ msgid ""
 " دون قطع. ليس عنوان التصفّح العامّ"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:117
+#: app/templates/radius/_ops_chat.html:122
 msgid "مجّانًا"
 msgstr ""
 
@@ -99522,8 +99545,8 @@ msgstr ""
 msgid "محادثة تقريبية مع BotFather — انسخ رمز الربط الذي يظهر في آخر رسالة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:74
-#: app/templates/radius/_ops_chat.html:145
+#: app/templates/radius/_ops_chat.html:75
+#: app/templates/radius/_ops_chat.html:152
 #: app/templates/radius/_ops_widget_panel.html:16
 msgid "محادثة جديدة"
 msgstr ""
@@ -99798,7 +99821,7 @@ msgid "محذوف (في السلّة)"
 msgstr ""
 
 #: app/radius/services/cards.py:2737 app/radius/services/pdf_theme.py:504
-#: app/templates/radius/_ops_chat.html:124
+#: app/templates/radius/_ops_chat.html:129
 msgid "محذوفة"
 msgstr ""
 
@@ -99874,7 +99897,7 @@ msgstr ""
 #: app/radius/routes/recharge_panel.py:262 app/radius/routes/users.py:1218
 #: app/radius/services/lifecycle.py:344
 #: app/radius/services/manager_activity_audit.py:458
-#: app/radius/services/users.py:1624 app/templates/radius/_ops_chat.html:126
+#: app/radius/services/users.py:1624 app/templates/radius/_ops_chat.html:131
 #: app/templates/radius/_subs_labels.html:25
 #: app/templates/radius/admin_bridge.html:10
 #: app/templates/radius/business_operators.html:37
@@ -100516,7 +100539,7 @@ msgstr ""
 msgid "مدفوع مقابل دين"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:117
+#: app/templates/radius/_ops_chat.html:122
 msgid "مدفوع من الرصيد"
 msgstr ""
 
@@ -100726,7 +100749,7 @@ msgstr ""
 msgid "مدينة سكن المشترك."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:119
+#: app/templates/radius/_ops_chat.html:124
 msgid "مدّة"
 msgstr ""
 
@@ -102278,7 +102301,7 @@ msgstr ""
 #: app/radius/services/mikrotik_actions.py:737
 #: app/radius/services/notification_campaigns.py:37
 #: app/radius/services/permission_labels.py:72
-#: app/templates/radius/_ops_chat.html:125
+#: app/templates/radius/_ops_chat.html:130
 #: app/templates/radius/_speed_rules_panel.html:682
 #: app/templates/radius/_speed_schedules_panel.html:148
 #: app/templates/radius/_subs_labels.html:43
@@ -102378,7 +102401,7 @@ msgstr ""
 msgid "مشتركة تنزيل/رفع"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:113
+#: app/templates/radius/_ops_chat.html:114
 #: app/templates/radius/sessions_list.html:461
 msgid "مشتركون"
 msgstr ""
@@ -103823,7 +103846,7 @@ msgstr ""
 #: app/static/js/device_health.js:50 app/static/js/device_health.js:858
 #: app/static/js/mt_dashboard.js:1823 app/static/js/mt_dashboard.js:2409
 #: app/templates/radius/_mt_diagnostics_card.html:28
-#: app/templates/radius/_ops_chat.html:124
+#: app/templates/radius/_ops_chat.html:129
 #: app/templates/radius/card_users.html:117
 #: app/templates/radius/cards_offers.html:356
 #: app/templates/radius/device_health.html:81
@@ -104591,7 +104614,7 @@ msgstr ""
 
 #: app/api/v1/setup_wizard.py:242
 #: app/radius/services/provider_service_labels.py:183
-#: app/templates/radius/_ops_chat.html:101
+#: app/templates/radius/_ops_chat.html:102
 #: app/templates/radius/communications.html:88
 #: app/templates/radius/communications.html:89
 #: app/templates/radius/communications_channels.html:115
@@ -104974,7 +104997,7 @@ msgstr ""
 #: app/radius/services/service_specs.py:247
 #: app/radius/services/service_specs.py:279
 #: app/radius/templates/radius/wg_data.html:215
-#: app/templates/radius/_ops_chat.html:90
+#: app/templates/radius/_ops_chat.html:91
 #: app/templates/radius/_speed_schedules_panel.html:285
 #: app/templates/radius/_speed_schedules_panel.html:327
 #: app/templates/radius/accounting_ledger.html:72
@@ -105061,7 +105084,7 @@ msgid "ملاحظات للمشغّل"
 msgstr ""
 
 #: app/radius/routes/users.py:1781 app/static/js/mt_import.js:182
-#: app/static/js/setup_wizard_v2.js:243 app/templates/radius/_ops_chat.html:90
+#: app/static/js/setup_wizard_v2.js:243 app/templates/radius/_ops_chat.html:91
 #: app/templates/radius/access_control.html:494
 #: app/templates/radius/distributors_detail.html:123
 #: app/templates/radius/docs_accounting.html:464
@@ -105346,8 +105369,8 @@ msgstr ""
 #: app/radius/services/notification_campaigns.py:788
 #: app/radius/services/operations.py:72 app/radius/services/pdf_theme.py:503
 #: app/radius/services/provider_service_labels.py:192
-#: app/templates/radius/_ops_chat.html:108
-#: app/templates/radius/_ops_chat.html:125
+#: app/templates/radius/_ops_chat.html:109
+#: app/templates/radius/_ops_chat.html:130
 #: app/templates/radius/_subs_labels.html:82
 #: app/templates/radius/_subs_labels.html:90
 #: app/templates/radius/_subs_labels.html:92
@@ -106578,7 +106601,7 @@ msgstr ""
 #: app/radius/services/card_users_marketplace.py:1293
 #: app/radius/services/pdf_theme.py:502
 #: app/radius/services/provider_service_labels.py:191
-#: app/templates/radius/_ops_chat.html:108
+#: app/templates/radius/_ops_chat.html:109
 #: app/templates/radius/card_user_360.html:386
 #: app/templates/radius/cards_batches.html:211
 #: app/templates/radius/cards_batches.html:467
@@ -106623,7 +106646,7 @@ msgstr ""
 
 #: app/radius/services/tr069/device_service.py:138
 #: app/radius/services/users.py:1623 app/templates/admin/_admin_layout.html:272
-#: app/templates/radius/_ops_chat.html:123
+#: app/templates/radius/_ops_chat.html:128
 #: app/templates/radius/_subs_labels.html:24
 #: app/templates/radius/admin_bridge.html:11
 #: app/templates/radius/docs_users_360.html:403
@@ -108310,7 +108333,7 @@ msgid "نجاح جزئي"
 msgstr ""
 
 #: app/radius/routes/reports.py:650 app/radius/routes/reports.py:728
-#: app/static/js/setup_wizard.js:48 app/templates/radius/_ops_chat.html:126
+#: app/static/js/setup_wizard.js:48 app/templates/radius/_ops_chat.html:131
 #: app/templates/radius/job_detail.html:65
 #: app/templates/radius/mt_audit_timeline.html:97
 #: app/templates/radius/mt_backups.html:101
@@ -108419,7 +108442,7 @@ msgstr ""
 #: app/templates/api/docs.html:321
 #: app/templates/radius/_mt_diagnostics_card.html:187
 #: app/templates/radius/_mt_diagnostics_card.html:195
-#: app/templates/radius/_ops_chat.html:77
+#: app/templates/radius/_ops_chat.html:78
 #: app/templates/radius/ipchange.html:209
 #: app/templates/radius/ipchange.html:214
 #: app/templates/radius/ipchange.html:219
@@ -108741,7 +108764,7 @@ msgid ""
 "والتفعيل من الصفر — خطوة خطوة."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:158
+#: app/templates/radius/_ops_chat.html:165
 msgid "نسختها — إغلاق"
 msgstr ""
 
@@ -109763,7 +109786,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:500
 #: app/radius/services/mt_router_overview.py:263
 #: app/radius/services/temp_speed.py:699 app/static/js/setup_wizard_v2.js:178
-#: app/static/js/setup_wizard_v2.js:187 app/templates/radius/_ops_chat.html:118
+#: app/static/js/setup_wizard_v2.js:187 app/templates/radius/_ops_chat.html:123
 #: app/templates/radius/_plans_fragments.html:130
 #: app/templates/radius/_plans_fragments.html:197
 #: app/templates/radius/audit_log_detail.html:15
@@ -109789,11 +109812,11 @@ msgstr ""
 msgid "نعم —"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:59
+#: app/templates/radius/_ops_chat.html:60
 msgid "نعم، أقصد"
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:693
+#: app/radius/services/ops_assistant/conversation.py:709
 #, python-format
 msgid "نعم، أقصد %(name)s"
 msgstr ""
@@ -109880,7 +109903,7 @@ msgstr ""
 msgid "نفدت الكوتا — يلزم تجديد"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:123
+#: app/templates/radius/_ops_chat.html:128
 msgid "نفدت كروتها"
 msgstr ""
 
@@ -110592,7 +110615,7 @@ msgstr ""
 msgid "نوع الاتصال"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:96
+#: app/templates/radius/_ops_chat.html:97
 msgid "نوع الباقة"
 msgstr ""
 
@@ -111097,7 +111120,7 @@ msgstr ""
 msgid "نَجحت مزامنة واحدة — أعد المحاولة لاستكمال الثانية."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:76
+#: app/templates/radius/_ops_chat.html:77
 #: app/templates/radius/routers_setup.html:43
 msgid "نُسخ"
 msgstr ""
@@ -111409,7 +111432,7 @@ msgstr ""
 msgid "هذا السجلّ للقراءة فقط — يعرض العمليّاتِ نفسَها التي يعرضها مركزُ التدقيق."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:68
+#: app/templates/radius/_ops_chat.html:69
 msgid "هذا السجلّ ليس ضمن نطاقك."
 msgstr ""
 
@@ -111761,7 +111784,7 @@ msgid ""
 "قديمة. راجعها قبل التطبيق."
 msgstr ""
 
-#: app/radius/services/ops_assistant/conversation.py:668
+#: app/radius/services/ops_assistant/conversation.py:684
 msgid "هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد."
 msgstr ""
 
@@ -112200,7 +112223,7 @@ msgid ""
 "من ذلك."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:60
+#: app/templates/radius/_ops_chat.html:61
 msgid "هذه حزمة الكرت الذي كتبت رقمه."
 msgstr ""
 
@@ -113552,7 +113575,7 @@ msgstr ""
 msgid "وحدة المدة يجب أن تكون دقائق أو ساعات أو أيام."
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:103
+#: app/templates/radius/_ops_chat.html:104
 #: app/templates/radius/cards_offer_use.html:215
 msgid "وحدة المدّة"
 msgstr ""
@@ -114105,6 +114128,10 @@ msgstr ""
 msgid "وقت الاتصال اليوميّ"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:118
+msgid "وقت الاستخدام"
+msgstr ""
+
 #: app/radius/services/ops_assistant/validator.py:492
 msgid "وقت الانتهاء المطلوب مضى."
 msgstr ""
@@ -114113,6 +114140,7 @@ msgstr ""
 msgid "وقت البدء والانتهاء:"
 msgstr ""
 
+#: app/templates/radius/_ops_chat.html:117
 #: app/templates/radius/cards_checker_v2.html:451
 msgid "وقت البطاقة"
 msgstr ""
@@ -116279,8 +116307,8 @@ msgid "ينتهون قريبًا"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:269
-#: app/templates/radius/_ops_chat.html:88
-#: app/templates/radius/_ops_chat.html:109
+#: app/templates/radius/_ops_chat.html:89
+#: app/templates/radius/_ops_chat.html:110
 #: app/templates/radius/cards_of_batch.html:607
 #: app/templates/radius/docs_users_360.html:370
 #: app/templates/radius/docs_users_360.html:415
@@ -116294,7 +116322,7 @@ msgstr ""
 msgid "ينتهي"
 msgstr ""
 
-#: app/templates/radius/_ops_chat.html:88
+#: app/templates/radius/_ops_chat.html:89
 msgid "ينتهي (UTC)"
 msgstr ""
 

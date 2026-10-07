@@ -60,7 +60,9 @@ LOOKUP_ACTIONS = ("list_plans", "list_offers", "find_subscriber", "list_card_bat
 # read-only, answered with a RESULT tool message (SPEC_DATA_v3 §4); level 1, no confirmation
 INFO_ACTIONS = ("card_batch_status", "subscriber_info", "online_sessions",
                 # ops-v3: «latest records» (default 5, max 20)
-                "recent_subscribers", "recent_card_batches", "recent_activity")
+                "recent_subscribers", "recent_card_batches", "recent_activity",
+                # ONE card by its number (the web card checker)
+                "card_info")
 # ops-v3: own audit rows only — every signed-in admin, no CONTEXT key
 OWN_ROWS_ACTIONS = ("recent_activity",)
 CONTROL_ACTIONS = ("ask", "choose", "refuse", "cancel", "reply")
@@ -91,6 +93,8 @@ ACTION_PERMISSION: dict[str, tuple[str, str, str]] = {
     "online_sessions": ("online.view", "v1.sessions_online", "GET"),
     "recent_subscribers": ("users.view", "v1.accounts_list", "GET"),
     "recent_card_batches": ("cards.view", "v1.cards_batches_list", "GET"),
+    # the web «فحص البطاقة» lookup (web:cards_checker_api_lookup → cards.view)
+    "card_info": ("cards.view", "v1.cards_check", "GET"),
 }
 # CONTEXT key for a plan-source batch on top of cards.generate (SPEC_DATA_v3 §11)
 DIRECT_GENERATION_KEY = "cards.generate_direct"
