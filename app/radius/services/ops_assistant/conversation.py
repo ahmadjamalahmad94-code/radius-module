@@ -153,7 +153,29 @@ def _names(tenant_id: int, table: str, ids) -> dict[int, str]:
     return {int(r["id"]): r["name"] or "" for r in rows}
 
 
+_ISO_T = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})")
+_KEEP_RAW = frozenset({"proposal_id", "proposal_hash", "conversation_id", "id"})
+
+
+def plain_times(o: Any, key: str = "") -> Any:
+    """Owner 2026-10-07: «حرف T بين التاريخ والوقت مخرب الدنيا» — every date-time a client SHOWS
+    (bubbles, lists, result rows, confirmation cards) reads «2026-10-08 03:00», never «…T03:00».
+    Display copy only: the transcript / model / hashes keep the canonical form."""
+    if isinstance(o, str):
+        return o if key in _KEEP_RAW else _ISO_T.sub(r" ", o)
+    if isinstance(o, list):
+        return [plain_times(v, key) for v in o]
+    if isinstance(o, dict):
+        return {k: plain_times(v, k) for k, v in o.items()}
+    return o
+
+
 def decorate(replies: list[dict], tenant_id: int) -> list[dict]:
+    """Names next to ids on confirmation cards + plain date-times (display only)."""
+    return plain_times(_decorate(replies, tenant_id))
+
+
+def _decorate(replies: list[dict], tenant_id: int) -> list[dict]:
     """Add plan / offer NAMES next to the ids on confirmation cards (display
     only) — shared by the web chat and the /api/v1/ops/assistant routes."""
     plan_ids, offer_ids = set(), set()

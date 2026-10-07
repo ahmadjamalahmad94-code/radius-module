@@ -103,3 +103,13 @@ def test_mobile_result_rows_are_arabic_and_readable():
     assert d["وقت الاتصال الفعليّ (كل الجلسات)"] == "2 ساعة و25 دقيقة"
     assert d["ينتهي"] == "2026-10-08 03:00" and d["الحالة"] == "فعّال" and d["عدد الجلسات"] == 6
     assert D.for_client([{"type": "assistant", "text": "x"}]) == [{"type": "assistant", "text": "x"}]
+
+
+def test_displayed_times_have_no_T():
+    reps = [{"type": "assistant", "text": "ينتهي 2026-10-08T03:00"},
+            {"type": "choices", "items": [{"expires_local": "2026-10-20T00:00"}]},
+            {"type": "proposal", "proposal": {"proposal_hash": "2026-10-08T03:00", "steps": []}}]
+    out = C.plain_times(reps)
+    assert out[0]["text"] == "ينتهي 2026-10-08 03:00"
+    assert out[1]["items"][0]["expires_local"] == "2026-10-20 00:00"
+    assert out[2]["proposal"]["proposal_hash"] == "2026-10-08T03:00"      # ids / hashes untouched
