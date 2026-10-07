@@ -6671,7 +6671,7 @@ msgstr ""
 msgid "ping ناجح، لا handshake"
 msgstr ""
 
-#: app/api/v1/cards.py:820 app/api/v1/cards.py:882
+#: app/api/v1/cards.py:820 app/api/v1/cards.py:884
 #: app/radius/services/cards.py:585 app/radius/services/cards.py:967
 msgid "plan_id مطلوب"
 msgstr ""
@@ -7162,7 +7162,7 @@ msgid ""
 "على الخادم."
 msgstr ""
 
-#: app/api/v1/cards.py:1486
+#: app/api/v1/cards.py:1488
 msgid "«session_ids» يجب أن تكون قائمة معرّفات جلسات."
 msgstr ""
 
@@ -10893,7 +10893,7 @@ msgstr ""
 msgid "أدخل رقم الكرت (اسم المستخدم) كما هو مطبوع على البطاقة."
 msgstr ""
 
-#: app/api/v1/cards.py:1302
+#: app/api/v1/cards.py:1304
 msgid "أدخل رقم الكرت الجديد أو كلمة المرور الجديدة (أحدهما على الأقل)."
 msgstr ""
 
@@ -10974,7 +10974,7 @@ msgstr ""
 msgid "أدخل عنوان الهدف"
 msgstr ""
 
-#: app/api/v1/cards.py:1052
+#: app/api/v1/cards.py:1054
 msgid "أدخل فئة شحن واحدة على الأقل بقيمة وعدد أكبر من صفر."
 msgstr ""
 
@@ -10982,7 +10982,7 @@ msgstr ""
 msgid "أدخل فئة واحدة على الأقل بقيمة وعدد أكبر من صفر."
 msgstr ""
 
-#: app/api/v1/cards.py:885
+#: app/api/v1/cards.py:887
 msgid "أدخل قائمة الكروت أو نص CSV."
 msgstr ""
 
@@ -14322,7 +14322,7 @@ msgstr ""
 msgid "إجراء التعديل غير معروف."
 msgstr ""
 
-#: app/api/v1/cards.py:1014
+#: app/api/v1/cards.py:1016
 msgid "إجراء الحزم غير معروف."
 msgstr ""
 
@@ -20502,7 +20502,7 @@ msgstr ""
 msgid "اختر حزمة واحدة على الأقل لتنفيذ الإجراء."
 msgstr ""
 
-#: app/api/v1/cards.py:991
+#: app/api/v1/cards.py:993
 msgid "اختر حزمة واحدة على الأقل."
 msgstr ""
 
@@ -22422,7 +22422,7 @@ msgstr ""
 msgid "اسم الباقة في السوق"
 msgstr ""
 
-#: app/api/v1/card_users.py:30
+#: app/api/v1/card_users.py:32
 msgid "اسم الباقة مطلوب"
 msgstr ""
 
@@ -23276,7 +23276,7 @@ msgid ""
 "الراوتر من DHCP."
 msgstr ""
 
-#: app/api/v1/cards.py:1048
+#: app/api/v1/cards.py:1050
 msgid "اسم حزمة الشحن مطلوب."
 msgstr ""
 
@@ -23411,7 +23411,7 @@ msgstr ""
 msgid "اسم مستخدم الكروت طويل جدًا (الحدّ 120 حرفًا)."
 msgstr ""
 
-#: app/api/v1/card_users.py:21
+#: app/api/v1/card_users.py:23
 msgid "اسم مستخدم الكروت مطلوب"
 msgstr ""
 
@@ -27503,7 +27503,7 @@ msgstr ""
 msgid "الباقات › باقة جديدة"
 msgstr ""
 
-#: app/api/v1/card_users.py:220 app/radius/routes/card_pricing.py:221
+#: app/api/v1/card_users.py:247 app/radius/routes/card_pricing.py:221
 #: app/radius/routes/card_users_marketplace.py:428
 #: app/radius/routes/cards.py:1515 app/radius/routes/reports.py:267
 #: app/radius/routes/status.py:53 app/radius/routes/users.py:1779
@@ -30724,7 +30724,7 @@ msgstr ""
 msgid "الحد الأقصى للاستيراد هو 5000 بطاقة في العملية الواحدة."
 msgstr ""
 
-#: app/api/v1/cards.py:887
+#: app/api/v1/cards.py:889
 msgid "الحد الأقصى للاستيراد هو 5000 كرت."
 msgstr ""
 
@@ -33955,7 +33955,7 @@ msgstr ""
 msgid "السعر الأصلي"
 msgstr ""
 
-#: app/api/v1/cards.py:734 app/api/v1/cards.py:878
+#: app/api/v1/cards.py:734 app/api/v1/cards.py:880
 #: app/radius/services/cards.py:733 app/radius/services/cards.py:1723
 msgid "السعر الإجمالي"
 msgstr ""
@@ -34080,7 +34080,7 @@ msgstr ""
 msgid "السعر وحدّ الأجهزة"
 msgstr ""
 
-#: app/api/v1/card_users.py:31
+#: app/api/v1/card_users.py:33
 msgid "السعر يجب أن يكون أكبر من صفر"
 msgstr ""
 
@@ -35581,7 +35581,7 @@ msgstr ""
 msgid "العربية"
 msgstr ""
 
-#: app/api/v1/card_users.py:251 app/radius/core/numbers.py:63
+#: app/api/v1/card_users.py:281 app/radius/core/numbers.py:63
 #: app/radius/routes/card_users_marketplace.py:465
 #: app/radius/routes/card_users_marketplace.py:500
 #: app/radius/routes/manager_distributor_ops.py:129
@@ -35705,7 +35705,7 @@ msgstr ""
 msgid "العرض المختار هو العرض الحاليّ للمشترك — اختر عرضًا آخر."
 msgstr ""
 
-#: app/api/v1/card_users.py:32
+#: app/api/v1/card_users.py:34
 msgid "العرض المرتبط غير موجود"
 msgstr ""
 
@@ -39374,7 +39374,7 @@ msgstr ""
 msgid "المدينة"
 msgstr ""
 
-#: app/api/v1/cards.py:1435 app/radius/core/numbers.py:57
+#: app/api/v1/cards.py:1437 app/radius/core/numbers.py:57
 #: app/radius/routes/setup_wizard_v3.py:1663
 #: app/radius/services/audit_format.py:490
 #: app/radius/services/manager_grants.py:234 app/radius/services/plans.py:254
@@ -39407,7 +39407,7 @@ msgstr ""
 msgid "المدّة المُحدّدة"
 msgstr ""
 
-#: app/api/v1/card_users.py:253 app/radius/core/numbers.py:62
+#: app/api/v1/card_users.py:283 app/radius/core/numbers.py:62
 #: app/radius/routes/card_users_marketplace.py:468
 #: app/radius/routes/card_users_marketplace.py:503
 #: app/radius/services/plans.py:254
@@ -39419,7 +39419,7 @@ msgstr ""
 msgid "المدّة يجب أن تكون 0 (دائم) أو بين 1 و 720 ساعة (30 يوم)."
 msgstr ""
 
-#: app/api/v1/accounts.py:838 app/api/v1/cards.py:1439
+#: app/api/v1/accounts.py:838 app/api/v1/cards.py:1441
 #: app/api/v1/subscriber_actions.py:518 app/radius/core/messages_ar.py:20
 #: app/radius/core/messages_ar.py:42 app/radius/routes/users.py:2619
 #: app/radius/routes/users.py:2622
@@ -44236,11 +44236,11 @@ msgstr ""
 msgid "باقة الكروت / الدفعة"
 msgstr ""
 
-#: app/api/v1/card_users.py:34
+#: app/api/v1/card_users.py:36
 msgid "باقة الكروت غير مفعلة"
 msgstr ""
 
-#: app/api/v1/card_users.py:33
+#: app/api/v1/card_users.py:35
 msgid "باقة الكروت غير موجودة"
 msgstr ""
 
@@ -47329,7 +47329,7 @@ msgstr ""
 msgid "بيانات الطلب ليست بصيغة صحيحة."
 msgstr ""
 
-#: app/api/v1/cards.py:1192
+#: app/api/v1/cards.py:1194
 msgid "بيانات الطلب يجب أن تكون كائن JSON."
 msgstr ""
 
@@ -52735,7 +52735,7 @@ msgstr ""
 msgid "تعذر تفعيل البطاقة"
 msgstr ""
 
-#: app/api/v1/card_users.py:114
+#: app/api/v1/card_users.py:116
 msgid "تعذر تنفيذ العملية"
 msgstr ""
 
@@ -64432,7 +64432,7 @@ msgstr ""
 msgid "حدّد المدة لاحتساب السعر تلقائيًا حسب سعر العرض/المخصّص."
 msgstr ""
 
-#: app/api/v1/cards.py:1432
+#: app/api/v1/cards.py:1434
 msgid "حدّد المدّة ووحدتها (دقائق/ساعات/أيام) والعملية (إضافة/خصم)."
 msgstr ""
 
@@ -65268,11 +65268,11 @@ msgstr ""
 msgid "حزمة الدعم"
 msgstr ""
 
-#: app/api/v1/cards.py:1122
+#: app/api/v1/cards.py:1124
 msgid "حزمة الشحن غير موجودة أو محذوفة."
 msgstr ""
 
-#: app/api/v1/cards.py:1081 app/api/v1/cards.py:1101
+#: app/api/v1/cards.py:1083 app/api/v1/cards.py:1103
 msgid "حزمة الشحن غير موجودة."
 msgstr ""
 
@@ -65281,8 +65281,8 @@ msgstr ""
 msgid "حزمة الكرت رقم %(card_batch_id)s"
 msgstr ""
 
-#: app/api/v1/cards.py:1182 app/api/v1/cards.py:1202 app/api/v1/cards.py:1235
-#: app/api/v1/cards.py:1256
+#: app/api/v1/cards.py:1184 app/api/v1/cards.py:1204 app/api/v1/cards.py:1237
+#: app/api/v1/cards.py:1258
 #, python-format
 msgid "حزمة الكروت رقم %(batch_id)s غير موجودة."
 msgstr ""
@@ -70995,7 +70995,7 @@ msgstr ""
 msgid "رصيد المحفظة"
 msgstr ""
 
-#: app/api/v1/card_users.py:35
+#: app/api/v1/card_users.py:37
 msgid "رصيد المحفظة غير كاف"
 msgstr ""
 
@@ -71534,7 +71534,7 @@ msgstr ""
 msgid "رقم احتياطي إن وجد — اختياري."
 msgstr ""
 
-#: app/api/v1/cards.py:815 app/api/v1/cards.py:876
+#: app/api/v1/cards.py:815 app/api/v1/cards.py:878
 #: app/radius/routes/reports.py:268 app/radius/services/cards.py:1726
 msgid "رقم الباقة"
 msgstr ""
@@ -71713,7 +71713,7 @@ msgstr ""
 msgid "رقم الكرت و/أو كلمة المرور"
 msgstr ""
 
-#: app/api/v1/cards.py:1295
+#: app/api/v1/cards.py:1297
 msgid "رقم الكرت يجب أن يكون نصًّا."
 msgstr ""
 
@@ -73840,7 +73840,7 @@ msgstr ""
 msgid "سرعة التحميل (Kbit/s)"
 msgstr ""
 
-#: app/api/v1/card_users.py:255 app/api/v1/sessions.py:550
+#: app/api/v1/card_users.py:285 app/api/v1/sessions.py:550
 #: app/radius/routes/card_users_marketplace.py:470
 #: app/radius/routes/card_users_marketplace.py:505
 #: app/radius/routes/sessions.py:864 app/radius/services/plans.py:279
@@ -73934,7 +73934,7 @@ msgstr ""
 msgid "سرعة الدفعة (رفع)"
 msgstr ""
 
-#: app/api/v1/card_users.py:257 app/api/v1/sessions.py:551
+#: app/api/v1/card_users.py:287 app/api/v1/sessions.py:551
 #: app/radius/routes/card_users_marketplace.py:472
 #: app/radius/routes/card_users_marketplace.py:507
 #: app/radius/routes/sessions.py:865 app/radius/services/plans.py:278
@@ -74286,7 +74286,7 @@ msgstr ""
 msgid "سعر الباقة، ويمكن تحديد سعر للكرت وسعر للجملة بشكل منفصل."
 msgstr ""
 
-#: app/api/v1/cards.py:732 app/api/v1/cards.py:877
+#: app/api/v1/cards.py:732 app/api/v1/cards.py:879
 #: app/radius/routes/cards.py:1527 app/radius/services/audit_format.py:488
 #: app/radius/services/cards.py:731 app/radius/services/cards.py:969
 #: app/radius/services/cards.py:1721 app/radius/services/plans.py:253
@@ -81807,7 +81807,7 @@ msgstr ""
 msgid "عنوان MAC في الجلسة غير صالح."
 msgstr ""
 
-#: app/api/v1/cards.py:1371
+#: app/api/v1/cards.py:1373
 msgid "عنوان MAC مطلوب."
 msgstr ""
 
@@ -86172,7 +86172,7 @@ msgstr ""
 msgid "قائمة الحزم"
 msgstr ""
 
-#: app/api/v1/cards.py:981
+#: app/api/v1/cards.py:983
 msgid "قائمة الحزم يجب أن تكون مصفوفة."
 msgstr ""
 
@@ -88114,7 +88114,7 @@ msgstr ""
 msgid "قيم limit و offset ومعرّف المشترك يجب أن تكون أرقامًا صحيحة."
 msgstr ""
 
-#: app/api/v1/accounting.py:84 app/api/v1/cards.py:1246
+#: app/api/v1/accounting.py:84 app/api/v1/cards.py:1248
 #: app/api/v1/distributors.py:135 app/api/v1/nas.py:198 app/api/v1/paging.py:17
 #: app/api/v1/print_templates.py:167 app/api/v1/print_templates.py:324
 #: app/api/v1/reports.py:171 app/api/v1/sessions.py:289
@@ -90815,7 +90815,7 @@ msgstr ""
 msgid "كلمة المرور يجب أن تكون %(MIN_SUBSCRIBER_PASSWORD_LENGTH)s أحرف على الأقل."
 msgstr ""
 
-#: app/api/v1/card_users.py:24
+#: app/api/v1/card_users.py:26
 msgid "كلمة المرور يجب أن تكون 4 أحرف على الأقل"
 msgstr ""
 
@@ -90829,7 +90829,7 @@ msgstr ""
 msgid "كلمة المرور يجب أن تكون نصًا."
 msgstr ""
 
-#: app/api/v1/cards.py:1297
+#: app/api/v1/cards.py:1299
 msgid "كلمة المرور يجب أن تكون نصًّا."
 msgstr ""
 
@@ -94291,7 +94291,7 @@ msgstr ""
 msgid "لا يوجد تعديل لتطبيقه"
 msgstr ""
 
-#: app/api/v1/cards.py:1442
+#: app/api/v1/cards.py:1444
 msgid "لا يوجد تعديل لتطبيقه."
 msgstr ""
 
@@ -95309,7 +95309,7 @@ msgid ""
 "لهذا المشترك."
 msgstr ""
 
-#: app/api/v1/cards.py:1510
+#: app/api/v1/cards.py:1512
 msgid "للحذف النهائي اكتب DELETE: ثم اسم مستخدم الكرت."
 msgstr ""
 
@@ -96050,7 +96050,7 @@ msgstr ""
 msgid "لم يتم ربط حساب TweetSMS — تم الاحتفاظ بالرسالة في الطابور فقط."
 msgstr ""
 
-#: app/api/v1/card_users.py:192
+#: app/api/v1/card_users.py:219
 msgid "لم يتم ربط مزود الرسائل بعد."
 msgstr ""
 
@@ -101645,7 +101645,7 @@ msgstr ""
 msgid "مستخدم الكروت"
 msgstr ""
 
-#: app/api/v1/card_users.py:27 app/api/v1/card_users.py:29
+#: app/api/v1/card_users.py:29 app/api/v1/card_users.py:31
 msgid "مستخدم الكروت غير موجود"
 msgstr ""
 
@@ -102395,7 +102395,7 @@ msgstr ""
 msgid "مصدر القائمة غير معروف."
 msgstr ""
 
-#: app/api/v1/cards.py:890 app/radius/services/cards.py:961
+#: app/api/v1/cards.py:892 app/radius/services/cards.py:961
 msgid "مصدر الكروت يجب أن يكون imported أو external."
 msgstr ""
 
@@ -104572,7 +104572,7 @@ msgstr ""
 msgid "مقترح بانتظار تأكيدك"
 msgstr ""
 
-#: app/api/v1/cards.py:1424
+#: app/api/v1/cards.py:1426
 msgid "مقدار التعديل بالثواني"
 msgstr ""
 
