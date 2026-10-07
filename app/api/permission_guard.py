@@ -100,6 +100,8 @@ API_AUTH_ONLY: dict[str, str] = {
     "v1.ops_assistant_start_event": "ops assistant — detections scoped to the caller",
     "v1.ops_assistant_confirm": "ops assistant — executes through the guarded /api/v1 endpoints",
     "v1.ops_assistant_cancel": "ops assistant — own conversation",
+    "v1.ops_assistant_pick": "ops assistant — own conversation; the pick is an exact guarded "
+                             "/api/v1 lookup",
 }
 
 

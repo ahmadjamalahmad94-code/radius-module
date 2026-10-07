@@ -12,6 +12,8 @@ conversation``. Nothing executes without the admin's «تأكيد» click.
   POST /admin/radius/ops-assistant/cancel        {conversation_id}
   GET  /admin/radius/ops-assistant/events        level-4 suggestions for this admin
   POST /admin/radius/ops-assistant/start-event   {event_type, index} → replies
+  POST /admin/radius/ops-assistant/pick          {conversation_id, n} → replies
+                                                 (the admin picks «هل تقصد…؟» suggestion n)
 
 Guards: login (``login_required`` + the blueprint's global guard), CSRF
 (global ``_csrf_check`` → ``X-CSRFToken``), tenant flag + password gate
@@ -42,6 +44,8 @@ def register_ops_assistant_routes(bp: Blueprint) -> None:
                     login_required(events), methods=["GET"])
     bp.add_url_rule("/ops-assistant/start-event", "ops_assistant_start_event",
                     login_required(start_event), methods=["POST"])
+    bp.add_url_rule("/ops-assistant/pick", "ops_assistant_pick",
+                    login_required(pick), methods=["POST"])
 
     @bp.app_context_processor
     def _ops_nav():
@@ -279,3 +283,23 @@ def start_event():
 
 
 __all__ = ["register_ops_assistant_routes", "nav_visible", "reset_nav_cache"]
+
+
+def pick():
+    """«نعم، أقصد …»: the admin's click on a suggestion (never the model's)."""
+    av = _availability()
+    if not av["available"]:
+        return _unavailable_json(av)
+    body = _body()
+    cid = body.get("conversation_id")
+    if _conversation(cid) is None:
+        return _fail("not_found", _tr("المحادثة غير موجودة — ابدأ محادثة جديدة."), 404)
+    n = body.get("n")
+    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 20:
+        return _fail("validation_error", _tr("اختر رقمًا من القائمة."))
+    from ..services.ops_assistant import conversation
+
+    def run():
+        replies = conversation.pick(_api(), cid, n, actor=_username())
+        return jsonify({"ok": True, "conversation_id": cid, "replies": _decorate(replies)})
+    return _turn(run)

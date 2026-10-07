@@ -25,6 +25,8 @@ The MODEL TURN for the mobile app — a 1:1 mirror of the web chat routes
                                           + Idempotency-Key → {conversation_id, report, show_once?}
                                           (a replay returns the stored report, never show_once)
   POST /api/v1/ops/assistant/cancel       {conversation_id} → {conversation_id}
+  POST /api/v1/ops/assistant/pick         {conversation_id, n} → {conversation_id, replies[]}
+                                          (the admin picks suggestion n of «هل تقصد…؟»)
 
 Never with an unbound credential (env token / token without ``created_by``):
 the assistant acts only with a real admin's permissions. Tenant comes from the
@@ -57,6 +59,7 @@ def register(bp: Blueprint) -> None:
          ops_assistant_start_event, ["POST"]),
         ("/ops/assistant/confirm", "ops_assistant_confirm", ops_assistant_confirm, ["POST"]),
         ("/ops/assistant/cancel", "ops_assistant_cancel", ops_assistant_cancel, ["POST"]),
+        ("/ops/assistant/pick", "ops_assistant_pick", ops_assistant_pick, ["POST"]),
     )
     for path, endpoint, view, methods in rules:
         bp.add_url_rule(path, endpoint, require_api_token(view), methods=methods)
@@ -211,22 +214,26 @@ def ops_conversation_context(cid: str):
 
 # ─────────────────────────── CHOICES ────────────────────────────
 
-def _run_choices(conv: dict, source: str, args: dict):
+def _run_choices(conv: dict, source: str, args: dict, *, allow_pick: bool = False):
     from ...radius.services.ops_assistant import audit, context
     from ...radius.services.ops_assistant import catalog
     if source in catalog.LIST_SOURCES and not context.action_permitted(source):
         return None, fail("forbidden", _tr("لا تملك صلاحية عرض هذه القائمة."), status=403,
                           details={"reason": "missing_permission", "source": source})
     try:
+        # ``pick`` = the record the ADMIN chose from «هل تقصد…؟» suggestions (the
+        # pick route / app; never a model field: the catalog schemas forbid it)
+        pick = args.get("pick") if allow_pick else None
         if source == "list_plans":
-            ch = context.list_plans(conv, str(args.get("query") or ""))
+            ch = context.list_plans(conv, str(args.get("query") or ""), pick)
         elif source == "list_offers":
-            ch = context.list_offers(conv, str(args.get("query") or ""))
+            ch = context.list_offers(conv, str(args.get("query") or ""), pick)
         elif source == "find_subscriber":
             ch = context.find_subscriber(conv, str(args.get("query") or ""),
-                                         str(args.get("status") or ""))
+                                         str(args.get("status") or ""), pick)
         elif source == "list_card_batches":
-            ch = context.list_card_batches(conv, str(args.get("query") or ""), args.get("limit"))
+            ch = context.list_card_batches(conv, str(args.get("query") or ""), args.get("limit"),
+                                           pick)
         elif source == "change_plan_policies":
             ch = context.change_plan_policies(conv, str(args.get("username") or ""),
                                               args.get("plan_id"))
@@ -235,8 +242,11 @@ def _run_choices(conv: dict, source: str, args: dict):
     except context.ChoiceError as e:
         return None, fail(e.code, e.message or e.code, status=e.status,
                           details=e.details if isinstance(e.details, dict) else {})
-    audit.record("choices", conversation_id=conv["id"], outcome="issued",
-                 details={"source": source, "count": len(ch.get("items", []))})
+    audit.record("choices", conversation_id=conv["id"],
+                 outcome="suggested" if ch.get("match") == "fuzzy" else "issued",
+                 details={"source": source, "count": len(ch.get("items", [])),
+                          **({"match": ch["match"]} if ch.get("match") else {}),
+                          **({"pick": True} if allow_pick and args.get("pick") else {})})
     return {"choices": ch, "tool_message": context.tool_message(ch)}, None
 
 
@@ -250,7 +260,7 @@ def ops_choices(cid: str):
     body, err = _body()
     if err is not None:
         return err
-    out, err = _run_choices(conv, str(body.get("source") or ""), body)
+    out, err = _run_choices(conv, str(body.get("source") or ""), body, allow_pick=True)
     if err is not None:
         return err
     return ok(out)
@@ -504,6 +514,32 @@ def ops_assistant_cancel():
     from ...radius.services.ops_assistant import conversation
     conversation.cancel(_CallerApi(), cid)
     return ok({"conversation_id": cid})
+
+
+def ops_assistant_pick():
+    """The admin answers «هل تقصد…؟» by picking suggestion ``n`` of the
+    conversation's LATEST suggestions list (stale → 409). The record is then
+    resolved by an exact, guarded lookup — the only way a suggestion becomes
+    usable in a proposal."""
+    err = _gate()
+    if err is not None:
+        return err
+    body, err = _body()
+    if err is not None:
+        return err
+    cid = body.get("conversation_id")
+    if _own_conversation(cid) is None:
+        return _lost()
+    n = body.get("n")
+    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 20:
+        return fail("validation_error", _tr("اختر رقمًا من القائمة."), status=422)
+    from ...radius.services.ops_assistant import conversation
+
+    def run():
+        api = _CallerApi()
+        replies = conversation.pick(api, cid, n, actor=api.username)
+        return ok({"conversation_id": cid, "replies": conversation.decorate(replies, _tid())})
+    return _turn(run)
 
 
 __all__ = ["register"]

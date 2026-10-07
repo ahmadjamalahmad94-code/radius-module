@@ -31,7 +31,7 @@ def test_flag_is_off_by_default_and_blocks_everything(client, app):
     h = owner_h(app, fresh.id)
     st = data(client.get("/api/v1/ops/status", headers=h))
     assert st["flag_enabled"] is False and st["available"] is False
-    assert st["reason"] == "disabled" and st["catalog_version"] == "ops-v2"
+    assert st["reason"] == "disabled" and st["catalog_version"] == "ops-v3"
     e = err(client.post("/api/v1/ops/conversations", json={}, headers=h), 403, "forbidden")
     assert e["details"]["reason"] == "assistant_disabled"
     err(client.get("/api/v1/ops/events", headers=h), 403)

@@ -52215,3 +52215,73 @@ msgstr "Guide: Remote access and WinBox — how to use me"
 
 msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
 msgstr "Guide: Management tunnels and the provisioning script — how to use me"
+
+#: app/api/v1/ops.py:535
+msgid "اختر رقمًا من القائمة."
+msgstr "Pick a number from the list."
+
+#: app/radius/services/manager_activity_audit.py:153
+msgid "بلا تغيير"
+msgstr "No change"
+
+#: app/radius/services/ops_assistant/conversation.py:281
+#, python-format
+msgid ""
+"لم أجد «%(q)s» بالضبط. هل تقصد: %(names)s؟ اختر من القائمة أو اكتب الاسم بدقّة."
+msgstr ""
+"I could not find “%(q)s” exactly. Did you mean: %(names)s? Pick from the list or type the exact name."
+
+#: app/radius/services/ops_assistant/conversation.py:598
+msgid "هذه الاقتراحات لم تعد صالحة — اكتب طلبك من جديد."
+msgstr ""
+"These suggestions are no longer valid — please write your request again."
+
+#: app/radius/services/ops_assistant/conversation.py:615
+msgid "لا يمكن اختيار هذا العنصر."
+msgstr "This item cannot be chosen."
+
+#: app/radius/services/ops_assistant/conversation.py:621
+msgid "لم يعد هذا السجلّ متاحًا لك."
+msgstr "This record is no longer available to you."
+
+#: app/radius/services/ops_assistant/conversation.py:623
+#, python-format
+msgid "نعم، أقصد %(name)s"
+msgstr "Yes, I mean %(name)s"
+
+#: app/radius/services/ops_assistant/conversation.py:625
+msgid "تمام، هذا هو السجلّ المطلوب."
+msgstr "OK, this is the record you mean."
+
+#: app/templates/radius/ops_assistant.html:145
+msgid "آخر المشتركين المضافين"
+msgstr "Latest added subscribers"
+
+#: app/templates/radius/ops_assistant.html:146
+msgid "آخر حزم البطاقات"
+msgstr "Latest card batches"
+
+#: app/templates/radius/ops_assistant.html:147
+msgid "آخر نشاطك في اللوحة"
+msgstr "Your latest activity in the panel"
+
+#: app/templates/radius/ops_assistant.html:148
+msgid "لم أجد تطابقًا تامًّا — هل تقصد:"
+msgstr "No exact match — did you mean:"
+
+#: app/templates/radius/ops_assistant.html:149
+msgid "اضغط السجلّ الصحيح لاختياره. لا يُنفَّذ شيء على اقتراح قبل اختيارك."
+msgstr ""
+"Tap the right record to choose it. Nothing runs on a suggestion before you choose."
+
+#: app/templates/radius/ops_assistant.html:150
+msgid "نعم، أقصد"
+msgstr "Yes, I mean"
+
+#: app/templates/radius/ops_assistant.html:151
+msgid "هذه حزمة الكرت الذي كتبت رقمه."
+msgstr "This is the batch of the card number you typed."
+
+#: app/templates/radius/ops_assistant.html:152
+msgid "أُضيف"
+msgstr "added"

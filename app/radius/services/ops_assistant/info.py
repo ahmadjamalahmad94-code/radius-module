@@ -1,6 +1,7 @@
 """Read-only INFO actions of the operations assistant (catalog ops-v2,
 SPEC_DATA_v3 §4): ``card_batch_status``, ``subscriber_info``,
-``online_sessions``.
+``online_sessions``; ops-v3 (SPEC_DATA_v4_DRAFT): ``recent_subscribers``,
+``recent_card_batches``, ``recent_activity`` (default 5, max 20).
 
 Each one is a GET through the REAL /api/v1 handler with the logged-in
 admin's own credential (``dispatch.call``) — the same RBAC, tenant and
@@ -162,8 +163,180 @@ def online_sessions(conv: dict, fields: dict) -> dict:
     return {"source": "online_sessions", "data": data}
 
 
+# ─────────────────────────── «latest records» (ops-v3) ────────────────────────────
+
+DEFAULT_RECENT = 5
+MAX_RECENT = 20
+
+
+def _recent_limit(fields: dict) -> int:
+    try:
+        n = int(fields.get("limit") or DEFAULT_RECENT)
+    except (TypeError, ValueError):
+        n = DEFAULT_RECENT
+    return max(1, min(n, MAX_RECENT))
+
+
+def _admin_id() -> int:
+    from flask import g
+    return int(getattr(g, "admin_id", 0) or 0)
+
+
+def _admin_login(aid: int) -> tuple[str, str]:
+    from ...db.connection import db
+    row = db().execute("SELECT username, full_name FROM admins WHERE id=?", (int(aid),)).fetchone()
+    return (str(row["username"] or ""), str(row["full_name"] or "")) if row else ("", "")
+
+
+def _my_actor_tags(aid: int, tid: int) -> set[str]:
+    """How THIS admin appears as ``created_by`` / audit ``actor``: his login,
+    his display name when no other admin shares it (the web stores display
+    names), and ``api-token:<id>`` for the tokens bound to him (app / ops)."""
+    from ...db.connection import db
+    login, display = _admin_login(aid)
+    tags = {login} if login else set()
+    if display and display != login:
+        same = db().execute("SELECT COUNT(*) FROM admins WHERE full_name=? OR username=?",
+                            (display, display)).fetchone()[0]
+        if int(same or 0) == 1:
+            tags.add(display)
+    try:
+        for r in db().execute("SELECT id FROM api_tokens WHERE tenant_id=? AND created_by=?",
+                              (int(tid), int(aid))):
+            tags.add(f"api-token:{r[0]}")
+    except Exception:  # noqa: BLE001 — tokens are an extra, never a reason to fail
+        pass
+    return tags
+
+
+def _subscriber_item(n: int, s: dict, tid: int) -> dict:
+    row = {"n": n, "username": s.get("username"), "full_name": s.get("full_name") or None,
+           "plan": _plan_name(tid, s.get("plan_id")), "status": _derived_status(s),
+           "created_local": local_str(s.get("created_at"), tid),
+           "expires_local": local_str(s.get("expire_at"), tid) if s.get("expire_at") else None}
+    return {k: v for k, v in row.items() if v is not None}
+
+
+def recent_subscribers(conv: dict, fields: dict) -> dict:
+    """The newest subscribers the admin may list (GET /accounts is ORDER BY id
+    DESC). ``mine``: those this admin is responsible for (manager_id = him or
+    his distributors' — the repo's owner-scope predicate), each re-read
+    through GET /accounts/<username> (the API's own scope check)."""
+    tid = int(conv["tenant_id"])
+    n = _recent_limit(fields)
+    mine = fields.get("mine") is True
+    if mine:
+        from urllib.parse import quote
+
+        from ...db.repos import subscribers_repo
+        aid = _admin_id()
+        subs = subscribers_repo.list_subscribers(tid, user_type="subscriber", owner_admin_id=aid,
+                                                 limit=n, order_by="id", order_dir="desc")
+        total = subscribers_repo.count_subscribers(tid, user_type="subscriber",
+                                                   owner_admin_id=aid)
+        rows = []
+        for s in subs:
+            r = call("GET", "/accounts/" + quote(str(s.username), safe=""))
+            if r.ok and isinstance(r.data, dict):
+                rows.append(r.data)
+    else:
+        res = call("GET", "/accounts", query={"per_page": n, "page": 1})
+        if not res.ok:
+            return {"source": "recent_subscribers", "error": _err_code(res)}
+        rows = list((res.data or {}).get("items") or [])[:n]
+        total = _int((res.data or {}).get("total"))
+    items = [_subscriber_item(i, s, tid) for i, s in enumerate(rows, start=1)]
+    store.issue(conv["id"], tid, "subscriber", [i["username"] for i in items if i.get("username")],
+                "recent_subscribers")
+    return {"source": "recent_subscribers",
+            "data": {"mine": mine, "total": total, "items": items,
+                     "truncated": total > len(items)}}
+
+
+def recent_card_batches(conv: dict, fields: dict) -> dict:
+    """The newest card batches in the admin's scope (GET /cards/batches is
+    ORDER BY id DESC) — never the cards. ``mine``: created by this admin
+    (created_by = his login / display name / one of his tokens, or
+    manager_id = him) among the latest 50."""
+    from .context import batch_item
+    tid = int(conv["tenant_id"])
+    n = _recent_limit(fields)
+    mine = fields.get("mine") is True
+    res = call("GET", "/cards/batches", query={"per_page": 50 if mine else n, "page": 1})
+    if not res.ok:
+        return {"source": "recent_card_batches", "error": _err_code(res)}
+    rows = list((res.data or {}).get("items") or [])
+    total = _int((res.data or {}).get("total"))
+    if mine:
+        aid = _admin_id()
+        tags = _my_actor_tags(aid, tid)
+        rows = [b for b in rows if str(b.get("created_by") or "") in tags
+                or _int(b.get("manager_id")) == aid]
+        total = len(rows)
+    items = []
+    for b in rows[:n]:
+        it = batch_item(b, tid)
+        if it:
+            items.append({"n": len(items) + 1, **it})
+    store.issue(conv["id"], tid, "batch", [i["id"] for i in items], "recent_card_batches")
+    return {"source": "recent_card_batches",
+            "data": {"mine": mine, "total": total, "items": items,
+                     "truncated": total > len(items)}}
+
+
+_ACTIVITY_TARGETS = ("subscriber", "card_batch", "batch", "plan", "offer", "card_offer",
+                     "nas", "router", "manager", "admin", "distributor")
+
+
+def recent_activity(conv: dict, fields: dict) -> dict:
+    """The admin's OWN latest actions in the panel (audit_log): his login as
+    actor — or his display name when no other admin shares it (the web
+    interceptor stores display names) — page visits and the assistant's own
+    rows excluded. Only the action label, the target name and the outcome;
+    never payload values."""
+    import json as _json
+
+    from ...db.connection import db
+    from ...services.audit_format import action_label
+    from app.i18n_text import _tr
+    tid = int(conv["tenant_id"])
+    n = _recent_limit(fields)
+    aid = _admin_id()
+    login, _display = _admin_login(aid)
+    if not login:
+        return {"source": "recent_activity", "error": "unavailable"}
+    actors = sorted(_my_actor_tags(aid, tid))
+    marks = ",".join("?" * len(actors))
+    rows = db().execute(
+        "SELECT created_at, action, target_type, target_id, payload_json, outcome, result_status "
+        f"FROM audit_log WHERE tenant_id=? AND actor IN ({marks}) AND COALESCE(is_visit,0)=0 "
+        "AND target_type != 'ops_assistant' AND action NOT LIKE 'ops.%' "
+        "ORDER BY id DESC LIMIT ?", (tid, *actors, n * 4)).fetchall()
+    items = []
+    for r in rows:
+        try:
+            payload = _json.loads(r["payload_json"] or "{}")
+        except ValueError:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        if payload.get("login") and str(payload.get("login")) != login:
+            continue                      # another admin with the same display name
+        label = payload.get("action_ar") or action_label(r["action"])
+        target = payload.get("entity_name") or (
+            r["target_id"] if str(r["target_type"] or "") in _ACTIVITY_TARGETS else None)
+        row = {"n": len(items) + 1, "when_local": local_str(r["created_at"], tid),
+               "action": _tr(str(label))[:120], "target": str(target)[:80] if target else None,
+               "outcome": (r["outcome"] or r["result_status"] or "success")[:20]}
+        items.append({k: v for k, v in row.items() if v is not None})
+        if len(items) >= n:
+            break
+    return {"source": "recent_activity", "data": {"items": items}}
+
+
 _RUNNERS = {"card_batch_status": card_batch_status, "subscriber_info": subscriber_info,
-            "online_sessions": online_sessions}
+            "online_sessions": online_sessions, "recent_subscribers": recent_subscribers,
+            "recent_card_batches": recent_card_batches, "recent_activity": recent_activity}
 
 
 def run(conv: dict, action: str, fields: dict) -> dict:
@@ -179,4 +352,5 @@ def result_line(result: dict) -> str:
     return "RESULT " + json.dumps(result, ensure_ascii=False)
 
 
-__all__ = ["run", "result_line", "card_batch_status", "subscriber_info", "online_sessions"]
+__all__ = ["run", "result_line", "card_batch_status", "subscriber_info", "online_sessions",
+           "recent_subscribers", "recent_card_batches", "recent_activity"]
