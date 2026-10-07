@@ -524,6 +524,9 @@ def _b_create_offer(conv, f, refs, path, mode):
                  f"{path}.selling")
     d = f["duration"]
     minutes = int(d["value"]) * {"minutes": 1, "hours": 60, "days": 1440}[d["unit"]]
+    # the catalog has no maximum here: a card sold from this offer must not
+    # carry more than the one-year cap (nor 10**30 days → a DB overflow)
+    units.enforce_cap(minutes, int(conv["tenant_id"]))
     body = {"name": f["name"], "plan_id": f["plan_id"], "duration_minutes": minutes,
             "wholesale": f["wholesale"], "selling": f["selling"], "visible_admin_ids": [],
             **_copy(f, ("device_count", "device_limit_mode", "equal_share_download",
@@ -548,6 +551,9 @@ def _b_card_batch(conv, f, refs, path, mode):
     if int(f["count"]) > cap:
         raise _v("count_over_cap", _tr("عدد الكروت يتجاوز الحدّ (%(c)s) — قسّمها على دفعات.", c=cap),
                  f"{path}.count")
+    if "time_value" in f:
+        # no unit → the API's default (days)
+        units.card_time_minutes(f["time_value"], str(f.get("time_unit") or "days"), tid)
     prefix = units.latin_digits(f.get("username_prefix", "")).strip()
     suffix = units.latin_digits(f.get("username_suffix", "")).strip()
     if "username_length" in f and len(prefix) + len(suffix) >= int(f["username_length"]):
