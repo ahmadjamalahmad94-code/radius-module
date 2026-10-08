@@ -102,9 +102,27 @@ def connected_count(tenant_id: int, *, real_only: bool = False) -> dict[str, Any
             "unreachable_routers": unreachable,
         }
     count = nas_liveness.live_connected_count(tid)
+    # Owner 2026-10-08 (client20 Gr3): the router's API refused connections
+    # while its SSTP tunnel + RADIUS kept working, so «المتصلون الآن» read 0
+    # with 25 cards online. A router whose API fails but whose RADIUS
+    # accounting is still FRESH (interims inside the live window) is up —
+    # count its live radacct sessions. A router that is really down sends no
+    # interims, its sessions go stale, and it still contributes 0.
+    radius_only = 0
+    try:
+        from . import live_sessions
+        for dev in _devices(tid):
+            host = str(dev.get("address") or "").strip()
+            if not host or nas_liveness.is_reachable(tid, host) is not False:
+                continue
+            radius_only += live_sessions.active_count_on_ips(
+                tid, _match_ips(dev), real_only=real_only)
+    except Exception:  # noqa: BLE001 — never break the dashboard
+        radius_only = 0
+    count += radius_only
     any_reachable = any(
         v is True for v in reachability_by_ip(tid).values()
-    )
+    ) or radius_only > 0
     return {
         "count": count,
         "source": "live",

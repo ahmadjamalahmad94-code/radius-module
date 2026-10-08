@@ -133,8 +133,9 @@ def test_unreachable_router_zero_count_and_signal(app):
         with transaction() as c:
             _seed_nas(c, nas_id=1, name="Tower-A", address="10.10.0.2")
             # جلسات radacct مفتوحة «شبحيّة» على الراوتر المنقطع — يجب ألّا تُعَدّ.
-            _seed_radacct(c, username="ghost1", nas="10.10.0.2", updated_min_ago=1)
-            _seed_radacct(c, username="ghost2", nas="10.10.0.2", updated_min_ago=1)
+            # (المالك 2026-10-08: راوتر مقطوع فعليًا = حتى تحديثات RADIUS متوقّفة)
+            _seed_radacct(c, username="ghost1", nas="10.10.0.2", updated_min_ago=120)
+            _seed_radacct(c, username="ghost2", nas="10.10.0.2", updated_min_ago=120)
         nas_liveness.record_unreachable(1, "10.10.0.2")
         info = connected_live.connected_count(1)
         assert info["source"] == "live"
@@ -171,7 +172,7 @@ def test_dashboard_online_count_follows_liveness(app):
         nas_liveness.reset()
         with transaction() as c:
             _seed_nas(c, nas_id=1, name="Tower-A", address="10.10.0.2")
-            _seed_radacct(c, username="ghost", nas="10.10.0.2")
+            _seed_radacct(c, username="ghost", nas="10.10.0.2", updated_min_ago=120)
         # راوتر منقطع → 0 رغم وجود صفّ radacct مفتوح
         nas_liveness.record_unreachable(1, "10.10.0.2")
         assert get_online_count(1) == 0
@@ -271,3 +272,23 @@ def test_refresh_unreachable_records_down_no_close(app, monkeypatch):
             "SELECT acctstoptime FROM radacct WHERE username='alive'"
         ).fetchone()
         assert row["acctstoptime"] is None
+
+
+# ── 8. API الراوتر لا يردّ لكن RADIUS حيّ → نعدّ من radacct (المالك 2026-10-08) ──
+
+def test_api_down_but_radius_fresh_counts_radacct(app):
+    """client20/Gr3: منافذ API مرفوضة والنفق+RADIUS شغّالان → العدّاد كان 0
+    رغم ٢٥ كرت هوت سبوت متّصل. الآن: الجلسات الطازجة تُعدّ، البائتة لا."""
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        from app.radius.services import connected_live, nas_liveness
+        nas_liveness.reset()
+        with transaction() as c:
+            _seed_nas(c, nas_id=1, name="Gr3", address="10.50.0.2")
+            for i in range(3):
+                _seed_radacct(c, username=f"card{i}", nas="10.50.0.2", updated_min_ago=2)
+            _seed_radacct(c, username="stale", nas="10.50.0.2", updated_min_ago=120)
+            _seed_radacct(c, username="other", nas="10.99.0.9", updated_min_ago=1)
+        nas_liveness.record_unreachable(1, "10.50.0.2")
+        info = connected_live.connected_count(1)
+        assert info["count"] == 3

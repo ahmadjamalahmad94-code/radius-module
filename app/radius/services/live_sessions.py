@@ -299,6 +299,29 @@ def tenant_active_count(tenant_id: int, *, window_min: Optional[int] = None,
     return sum(1 for u in live_names if str(u or "").strip() in real)
 
 
+def active_count_on_ips(tenant_id: int, ips, *, window_min: Optional[int] = None,
+                        real_only: bool = False) -> int:
+    """Open radacct sessions on these NAS IPs that are still LIVE (fresh
+    interim/start inside the window) — i.e. RADIUS keeps hearing from the
+    router even if its API does not answer."""
+    wanted = {str(ip).strip() for ip in (ips or ()) if str(ip or "").strip()}
+    if not wanted:
+        return 0
+    cutoff = _cutoff_dt(window_min)
+    ph = ",".join("?" * len(wanted))
+    rows = db().execute(
+        "SELECT username, acctstarttime, acctupdatetime FROM radacct "
+        "WHERE tenant_id=? AND (acctstoptime IS NULL OR acctstoptime='') "
+        f"AND nasipaddress IN ({ph})",
+        (int(tenant_id), *sorted(wanted)),
+    ).fetchall()
+    live_names = [dict(r).get("username") for r in rows if _is_live(dict(r), cutoff)]
+    if not real_only:
+        return len(live_names)
+    real = resolve_real_types(int(tenant_id), live_names)
+    return sum(1 for u in live_names if str(u or "").strip() in real)
+
+
 def live_map(tenant_id: int, *, window_min: Optional[int] = None) -> dict[str, dict]:
     """خريطة nasipaddress → {active, last_seen} لكل المستأجر بدفعة واحدة.
 
