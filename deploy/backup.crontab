@@ -1,0 +1,6 @@
+# HobeRadius backup container crontab (busybox crond).
+# Mounted read-only at /etc/crontabs/root by deploy/docker-compose.yml.
+# Without this file crond runs only the empty /etc/periodic/* dirs and no
+# backup is ever taken - that was the Samir incident of 2026-10-16.
+# Invoked through `sh` so a lost executable bit cannot stop the job.
+0 2 * * * sh /usr/local/bin/backup.sh >> /backups/cron.log 2>&1

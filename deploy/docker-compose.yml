@@ -158,10 +158,13 @@ services:
       - ../instance:/data:ro
       - ../backups:/backups
       - ./backup.sh:/usr/local/bin/backup.sh:ro
+      - ./backup.crontab:/etc/crontabs/root:ro
     entrypoint: ["sh", "-c", "apk add --no-cache sqlite tzdata && crond -f -l 8 -L /dev/stdout"]
     command: ["sh"]
     environment:
       - TZ=Asia/Amman
+      - KEEP_DAYS=7
+      - MIN_FREE_MB=1024
     networks: [hrnet]
 
 networks:
