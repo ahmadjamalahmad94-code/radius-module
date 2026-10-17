@@ -256,3 +256,56 @@ def test_manual_reset_clears_counter_and_state(app):
         sub = subscribers_repo.get_subscriber(1, "bob")
         assert sub.daily_used_bytes == 0
         assert sub.daily_quota_state == ""
+
+
+# ──────────── نموذجا الباقة والمشترك يَحفظان الحقولَ فعلًا ────────────
+
+def test_plan_form_parses_daily_quota_fields(app):
+    """نفسُ دالّةِ المسار ونفسُ request.form — لا تحليلَ مُختلَق."""
+    with app.test_request_context("/admin/radius/plans", method="POST", data={
+            "name": "P-DAILY", "plan_type": "quota", "service_type": "pppoe",
+            "speed_down_kbps": "8000", "speed_up_kbps": "4000",
+            "daily_combined_quota_mb": "10",
+            "daily_quota_action": "custom_speed",
+            "daily_quota_speed_down_mbps": "2",
+            "daily_quota_speed_up_mbps": "1.5"}):
+        from app.radius.routes import plans as plans_routes
+        dto = plans_routes._form_to_dto()
+    assert dto.daily_combined_quota_mb == 10
+    assert dto.daily_quota_action == "custom_speed"
+    assert dto.daily_quota_speed_down_kbps == 2000     # 2 ميجا
+    assert dto.daily_quota_speed_up_kbps == 1500       # 1.5 ميجا
+
+
+def test_plan_form_rejects_unknown_action(app):
+    with app.test_request_context("/admin/radius/plans", method="POST", data={
+            "name": "P", "plan_type": "quota", "service_type": "pppoe",
+            "speed_down_kbps": "8000", "speed_up_kbps": "4000",
+            "daily_quota_action": "format_c_drive"}):
+        from app.radius.routes import plans as plans_routes
+        dto = plans_routes._form_to_dto()
+    assert dto.daily_quota_action == "disconnect"
+
+
+def test_subscriber_form_parses_daily_override(app):
+    with app.test_request_context("/admin/radius/users", method="POST", data={
+            "username": "u1", "password": "p", "status": "enabled",
+            "daily_quota_mb": "500",
+            "daily_quota_action": "reduce_speed",
+            "daily_quota_speed_down_mbps": "1",
+            "daily_quota_speed_up_mbps": "0.5"}):
+        from app.radius.routes import users as users_routes
+        dto = users_routes._form_dto()
+    assert dto.daily_quota_mb == 500
+    assert dto.daily_quota_action == "reduce_speed"
+    assert dto.daily_quota_speed_down_kbps == 1000
+    assert dto.daily_quota_speed_up_kbps == 500
+
+
+def test_subscriber_form_empty_action_follows_plan(app):
+    with app.test_request_context("/admin/radius/users", method="POST", data={
+            "username": "u1", "password": "p", "status": "enabled"}):
+        from app.radius.routes import users as users_routes
+        dto = users_routes._form_dto()
+    assert dto.daily_quota_action == ""
+    assert dto.daily_quota_mb == 0
