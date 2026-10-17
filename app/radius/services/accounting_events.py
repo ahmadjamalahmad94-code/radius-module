@@ -287,7 +287,36 @@ class AccountingEventsService:
                 pass
             return {"kicked": 0, "error": str(exc)}
 
+
+    # ── الكوتة اليوميّة: نُغذّي عدّادَ اليوم بفرقِ العدّاد لا بقيمته ──
+    def _feed_daily_quota(self, event: dict[str, Any]) -> None:
+        """يَقرأ العدّادَ المحفوظَ للجلسة قبل تحديثه، ويُضيف الفرقَ إلى
+        عدّادِ اليوم. الفرقُ لا القيمةُ وإلّا احتُسبت بايتاتُ الجلسةِ في كلّ
+        interim من جديد. محصَّن: لا يُوقف المحاسبةَ أبدًا."""
+        try:
+            row = db().execute(
+                "SELECT acctinputoctets, acctoutputoctets FROM radacct "
+                " WHERE tenant_id = ? AND acctsessionid = ? AND nasipaddress = ? "
+                "   AND acctstoptime IS NULL",
+                (event["tenant_id"], event["acct_session_id"],
+                 event["nas_ip_address"]),
+            ).fetchone()
+            prev = (int(row["acctinputoctets"] or 0)
+                    + int(row["acctoutputoctets"] or 0)) if row else 0
+            now_total = (int(event.get("input_octets") or 0)
+                         + int(event.get("output_octets") or 0))
+            # إعادةُ تدوير العدّاد عند الراوتر (reset) ⇒ الفرقُ سالب: نأخذ
+            # القيمةَ الجديدةَ كما هي بدل طرحٍ يُنتج سالبًا فيُهمَل.
+            delta = now_total - prev if now_total >= prev else now_total
+            if delta > 0:
+                from . import daily_quota
+                daily_quota.add_usage(
+                    int(event["tenant_id"]), str(event["username"]), delta)
+        except Exception:  # noqa: BLE001
+            pass
+
     def _interim(self, event: dict[str, Any]) -> dict[str, Any]:
+        self._feed_daily_quota(event)
         now = _utcnow()
         cur = db().execute(
             """
@@ -311,6 +340,7 @@ class AccountingEventsService:
         return {"status": "updated" if cur.rowcount else "not_found", "session": self._open_session(event)}
 
     def _stop(self, event: dict[str, Any]) -> dict[str, Any]:
+        self._feed_daily_quota(event)
         now = _utcnow()
         cur = db().execute(
             """

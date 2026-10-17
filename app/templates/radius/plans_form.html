@@ -574,7 +574,23 @@
                   <div class="help">{{ _('حد الرفع اليومي المستقل.') }}</div></div>
                 <div class="pl-field"><label>{{ _('كوتا يومية مدمجة') }}</label>
                   {{ unit_input_picker(name="daily_combined_quota_mb", value=plan.daily_combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">{{ _('تحلّ محل التنزيل+الرفع اليوميين المنفصلين.') }}</div></div>
+                  <div class="help">{{ _('تحلّ محل التنزيل+الرفع اليوميين المنفصلين. تتجدّد منتصف الليل.') }}</div></div>
+                {# ── بعد نفاد الكوتة اليومية: قطع / تخفيف / سرعة مخصّصة ── #}
+                <div class="pl-field"><label>{{ _('بعد انتهاء الكوتة اليومية') }}</label>
+                  <select class="hub-input" name="daily_quota_action" id="dqa">
+                    <option value="disconnect" {% if (plan.daily_quota_action or 'disconnect') == 'disconnect' %}selected{% endif %}>{{ _('قطع الاتصال') }}</option>
+                    <option value="reduce_speed" {% if plan.daily_quota_action == 'reduce_speed' %}selected{% endif %}>{{ _('تخفيف السرعة') }}</option>
+                    <option value="custom_speed" {% if plan.daily_quota_action == 'custom_speed' %}selected{% endif %}>{{ _('سرعة مخصّصة') }}</option>
+                  </select>
+                  <div class="help">{{ _('ماذا يحدث عند بلوغ السقف اليومي. يعود الوضع الطبيعي منتصف الليل.') }}</div></div>
+                <div class="pl-field" data-dq-speed><label>{{ _('سرعة النزول بعد النفاد (ميجا)') }}</label>
+                  <input class="hub-input" type="number" min="0" step="0.1" name="daily_quota_speed_down_mbps"
+                         value="{{ '%g'|format((plan.daily_quota_speed_down_kbps or 0) / 1000) }}">
+                  <div class="help">{{ _('تُكتب بالميجابت. مثال: 1.5') }}</div></div>
+                <div class="pl-field" data-dq-speed><label>{{ _('سرعة الرفع بعد النفاد (ميجا)') }}</label>
+                  <input class="hub-input" type="number" min="0" step="0.1" name="daily_quota_speed_up_mbps"
+                         value="{{ '%g'|format((plan.daily_quota_speed_up_kbps or 0) / 1000) }}">
+                  <div class="help">{{ _('اتركها فارغة لتساوي النزول.') }}</div></div>
                 <div class="pl-field"><label>{{ _('حد يومي') }}</label>
                   {{ unit_input_picker(name="max_daily_minutes", value=plan.max_daily_minutes or 0, kind="time", units=["min","hr"]) }}
                   <div class="help">{{ _('أقصى وقت اتصال مسموح في اليوم.') }}</div></div>
@@ -943,6 +959,15 @@
 <script>
 (function(){
   'use strict';
+  /* حقلا السرعة بعد نفاد الكوتة اليومية يظهران فقط مع «سرعة مخصّصة». */
+  var dqa = document.getElementById('dqa');
+  function dqSync(){
+    var on = dqa && dqa.value === 'custom_speed';
+    document.querySelectorAll('[data-dq-speed]').forEach(function(el){
+      el.hidden = !on;
+    });
+  }
+  if (dqa) { dqa.addEventListener('change', dqSync); dqSync(); }
   var LS = 'hr:plan-form:sec:';
   document.querySelectorAll('.pl-section.is-collapsible').forEach(function(card){
     var k = card.dataset.sec; if (!k) return;

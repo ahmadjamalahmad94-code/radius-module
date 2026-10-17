@@ -145,6 +145,22 @@ def _s(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+def _mbps_kbps(name: str) -> int:
+    """يَقرأ حقلًا بالميجابت ويُعيد كيلوبت. المشغّل يكتب «2» أو «1.5»
+    فتُحفظ 2000 و1500 — لا يُطلب منه الحسابُ بالكيلوبت."""
+    try:
+        val = float(request.form.get(name) or 0)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, int(round(val * 1000)))
+
+
+def _daily_quota_action() -> str:
+    """قرارُ ما بعد نفاد الكوتة اليوميّة — قيمةٌ من قائمةٍ مغلقة."""
+    raw = (request.form.get("daily_quota_action") or "").strip().lower()
+    return raw if raw in ("disconnect", "reduce_speed", "custom_speed") else "disconnect"
+
+
 def _service_type_from_form() -> str:
     """نوع الخدمة — بطاقات متعددة الاختيار (هوت سبوت + برودباند) مثل
     نموذج المشترك. تُجمع الاختيارات إلى قيمة واحدة في نفس العمود:
@@ -261,6 +277,11 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         daily_download_quota_mb=_i("daily_download_quota_mb"),
         daily_upload_quota_mb=_i("daily_upload_quota_mb"),
         daily_combined_quota_mb=_i("daily_combined_quota_mb"),
+        # ما بعد نفاد الكوتة اليوميّة: قطع / تخفيف / سرعة مخصّصة.
+        # السرعةُ تُكتب في النموذج بالميجابت وتُخزَّن كيلوبت.
+        daily_quota_action=_daily_quota_action(),
+        daily_quota_speed_down_kbps=_mbps_kbps("daily_quota_speed_down_mbps"),
+        daily_quota_speed_up_kbps=_mbps_kbps("daily_quota_speed_up_mbps"),
         single_use_once=_b("single_use_once"),
         max_consumption_times=_i("max_consumption_times"),
         ticket_validity_days=_i("ticket_validity_days"),

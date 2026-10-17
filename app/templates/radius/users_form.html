@@ -1733,6 +1733,26 @@
           <div class="uf-field"><label>{{ _('كوتا الرفع') }}</label>
             {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
             <div class="help">{{ _('حدّ الرفع المنفصل للحساب. 0 = غير محدودة.') }}</div></div>
+          {# ── الكوتة اليومية: سقف يتجدّد منتصف الليل + ماذا بعده ── #}
+          <div class="uf-field"><label>{{ _('كوتا يومية') }}</label>
+            {{ unit_input_picker(name="daily_quota_mb", value=sub.daily_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
+            <div class="help">{{ _('سقف الاستهلاك في اليوم، يتجدّد منتصف الليل. 0 = اتبع الباقة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('بعد انتهاء الكوتة اليومية') }}</label>
+            <select class="hub-input" name="daily_quota_action" id="uf-dqa">
+              <option value="" {% if not sub.daily_quota_action %}selected{% endif %}>{{ _('حسب الباقة') }}</option>
+              <option value="disconnect" {% if sub.daily_quota_action == 'disconnect' %}selected{% endif %}>{{ _('قطع الاتصال') }}</option>
+              <option value="reduce_speed" {% if sub.daily_quota_action == 'reduce_speed' %}selected{% endif %}>{{ _('تخفيف السرعة') }}</option>
+              <option value="custom_speed" {% if sub.daily_quota_action == 'custom_speed' %}selected{% endif %}>{{ _('سرعة مخصّصة') }}</option>
+            </select>
+            <div class="help">{{ _('يَغلب إعداد الباقة لهذا الحساب وحده.') }}</div></div>
+          <div class="uf-field" data-uf-dq><label>{{ _('سرعة النزول بعد النفاد (ميجا)') }}</label>
+            <input class="hub-input" type="number" min="0" step="0.1" name="daily_quota_speed_down_mbps"
+                   value="{{ '%g'|format((sub.daily_quota_speed_down_kbps or 0) / 1000) }}">
+            <div class="help">{{ _('تُكتب بالميجابت. مثال: 1.5') }}</div></div>
+          <div class="uf-field" data-uf-dq><label>{{ _('سرعة الرفع بعد النفاد (ميجا)') }}</label>
+            <input class="hub-input" type="number" min="0" step="0.1" name="daily_quota_speed_up_mbps"
+                   value="{{ '%g'|format((sub.daily_quota_speed_up_kbps or 0) / 1000) }}">
+            <div class="help">{{ _('اتركها فارغة لتساوي النزول.') }}</div></div>
           <div class="uf-field"><label>{{ _('إجمالي وقت الاتصال') }}</label>
             {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time", units=["min","hr","day"]) }}
             <div class="help">{{ _('أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.') }}</div></div>
@@ -1953,6 +1973,13 @@
 <script>
 (function(){
   'use strict';
+  /* سرعة ما بعد الكوتة اليومية تظهر فقط مع «سرعة مخصّصة». */
+  var ufDqa = document.getElementById('uf-dqa');
+  function ufDqSync(){
+    var on = ufDqa && ufDqa.value === 'custom_speed';
+    document.querySelectorAll('[data-uf-dq]').forEach(function(el){ el.hidden = !on; });
+  }
+  if (ufDqa) { ufDqa.addEventListener('change', ufDqSync); ufDqSync(); }
   // Collapsible sections — same localStorage key prefix as before
   var LS = 'hr:users-form:sec:';
   document.querySelectorAll('.uf-section.is-collapsible').forEach(function(card){

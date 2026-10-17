@@ -172,6 +172,12 @@ class AccessPlan:
     delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    # ── الكوتة اليوميّة (migration 173): ماذا يحدث بعد بلوغ السقف اليوميّ ──
+    # disconnect (الافتراض) / reduce_speed / custom_speed. السرعة بالكيلوبت
+    # وتُكتب في الواجهة بالميجابت.
+    daily_quota_action: str = "disconnect"
+    daily_quota_speed_down_kbps: int = 0
+    daily_quota_speed_up_kbps: int = 0
 
 
 @dataclass(frozen=True)
@@ -293,6 +299,16 @@ class Subscriber:
     # existing row defaults to chr_mikrotik → the live path is byte-for-
     # byte unchanged.
     transport: str = "chr_mikrotik"
+    # ── الكوتة اليوميّة (migration 173) ──
+    # تجاوزٌ فرديّ يَغلب الباقة: 0/'' = اتبع الباقة.
+    daily_quota_mb: int = 0
+    daily_quota_action: str = ""
+    daily_quota_speed_down_kbps: int = 0
+    daily_quota_speed_up_kbps: int = 0
+    # عدّادُ اليوم وختمُه المحلّيّ — يتجدّد ذاتيًّا بتغيّر الختم.
+    daily_used_bytes: int = 0
+    daily_usage_day: str = ""
+    daily_quota_state: str = ""      # '' | 'throttled' | 'blocked'
 
 
 @dataclass(frozen=True)

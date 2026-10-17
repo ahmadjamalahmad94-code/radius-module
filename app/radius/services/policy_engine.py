@@ -74,6 +74,9 @@ _MSG = {
     # صريح عند التفويض ونفس السبب في المُصالِح الحيّ (CoA).
     "out_of_window":     "خارج وقت السماح",
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
+    # الكوتة اليوميّة (migration 173): نفادُ سقفِ اليوم وقرارُه «قطع».
+    # يَعود العملُ تلقائيًّا منتصفَ الليل المحلّيّ بلا تدخّل.
+    "daily_quota_exhausted": "انتهت الكوتة اليوميّة — تتجدّد منتصف الليل",
     # «العدّ بالثواني» (count_by_seconds — نمط رصيد الاستخدام Mode A): نفاد
     # رصيد ثواني الاستخدام التراكميّ للبطاقة.
     "card_time_exhausted": "انتهى رصيد وقت الاستخدام لهذه البطاقة",
@@ -427,6 +430,26 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
             pass
         return None
     return _reject("quota_exhausted")
+
+
+def _check_daily_quota(sub: Subscriber,
+                       plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
+    """الكوتة اليوميّة: رفضٌ عند النفاد **فقط** حين يكون القرار «قطع».
+
+    قرارا التخفيف (reduce_speed/custom_speed) يَمرّان هنا بسماحٍ، والسرعةُ
+    المخفَّضة تُحقن في ``_build_accept_attrs``. محصَّنة: أيّ خطأ → سماح.
+    """
+    try:
+        from . import daily_quota
+        if not daily_quota.is_exhausted(sub, plan):
+            return None
+        if daily_quota.effective_action(sub, plan) == daily_quota.ACTION_DISCONNECT:
+            return _reject("daily_quota_exhausted")
+        return None
+    except Exception:  # noqa: BLE001 — لا نَقطع خدمةً بسبب عطبٍ في الحساب
+        _LOG.warning("policy_engine: فحصُ الكوتة اليوميّة فشل (user=%r)",
+                     getattr(sub, "username", "?"), exc_info=True)
+        return None
 
 
 def _check_card_time_budget(sub: Subscriber,
@@ -1151,6 +1174,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # (بالتوقيت المحلّي للمستأجر)، وإلّا فحوصات الباقة كما هي بلا تغيير.
         lambda: _check_schedule(sub, plan, now),
         lambda: _check_quota(sub, plan),
+        # الكوتة اليوميّة — سقفُ اليوم المحلّيّ. «قطع» يَرفض هنا،
+        # و«تخفيف/سرعة مخصّصة» يَمرّان وتُحقن سرعتُهما في الردّ.
+        lambda: _check_daily_quota(sub, plan),
         # Wave-B «العدّ بالثواني» (count_by_seconds): رصيد ثواني استخدام
         # تراكميّ للبطاقة (Mode A) — قطع عند نفاده. رفض سياسة (لا fail2ban).
         lambda: _check_card_time_budget(sub, plan),
@@ -1707,6 +1733,24 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
         except Exception:  # noqa: BLE001
             _LOG.warning("policy_engine: reduce_speed throttle failed for %r",
                           sub.username, exc_info=True)
+
+    # ── الكوتة اليوميّة: سرعةٌ مخفَّضة بدل القطع ──
+    # القرار «تخفيف» أو «سرعة مخصّصة» ⇒ نَدوس السرعةَ بسرعةِ ما بعد النفاد،
+    # ونَقصّ Session-Timeout على ما تبقّى حتّى منتصفِ الليل المحلّيّ كي
+    # يُعيد الـNAS المصادقةَ عند التجديد فيَستعيد سرعتَه الكاملة بنفسه —
+    # آليّةٌ أساسيّة لا تعتمد على وصولِ CoA.
+    try:
+        from . import daily_quota as _dq
+        if _dq.is_exhausted(sub, plan):
+            _rate = _dq.throttle_rate_limit(sub, plan)
+            if _rate:
+                out["Mikrotik-Rate-Limit"] = _rate
+                _left = _dq.seconds_until_midnight(int(sub.tenant_id))
+                _cur = int(out.get("Session-Timeout") or 0)
+                out["Session-Timeout"] = str(_left if _cur <= 0 else min(_cur, _left))
+    except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب الكوتة اليوميّة
+        _LOG.warning("policy_engine: تعذّر تطبيقُ سرعةِ الكوتة اليوميّة (%r)",
+                     getattr(sub, "username", "?"), exc_info=True)
 
     # Wave-B Part A — إصدار الحقول المخزَّنة (DNS/MikroTik/Framed-Pool/PPP/interim).
     _apply_subscriber_reply_extras(sub, plan, out)

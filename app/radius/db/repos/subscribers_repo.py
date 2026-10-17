@@ -68,6 +68,11 @@ _COLS = (
     # _COLS يطابق tuple القيَم موضعًا بموضع، والإلحاقُ في الذيل أقلُّ
     # الأماكن عرضةً لإزاحةِ عمودٍ عن قيمته.
     "login_without_password",
+    # هجرة 173 — إعداداتُ الكوتة اليوميّة فقط. عدّادُ اليوم وحالتُه
+    # (daily_used_bytes/daily_usage_day/daily_quota_state) **خارج** هذا
+    # الـupsert عمدًا: يكتبها مسارُ المحاسبة وحدَه، فلا يمسحها حفظُ نموذج.
+    "daily_quota_mb","daily_quota_action",
+    "daily_quota_speed_down_kbps","daily_quota_speed_up_kbps",
 )
 
 
@@ -142,6 +147,14 @@ def _row(r) -> Subscriber:
         # Read with a safe default so DBs without the column (pre-123) still
         # map to the back-compat chr_mikrotik path.
         transport=_g(r, "transport", "chr_mikrotik") or "chr_mikrotik",
+        # الكوتة اليوميّة (migration 173) — افتراضاتٌ آمنة لقواعدَ أقدم.
+        daily_quota_mb=_g(r, "daily_quota_mb", 0) or 0,
+        daily_quota_action=_g(r, "daily_quota_action", "") or "",
+        daily_quota_speed_down_kbps=_g(r, "daily_quota_speed_down_kbps", 0) or 0,
+        daily_quota_speed_up_kbps=_g(r, "daily_quota_speed_up_kbps", 0) or 0,
+        daily_used_bytes=_g(r, "daily_used_bytes", 0) or 0,
+        daily_usage_day=_g(r, "daily_usage_day", "") or "",
+        daily_quota_state=_g(r, "daily_quota_state", "") or "",
     )
 
 
@@ -335,6 +348,9 @@ def upsert_subscriber(s: Subscriber) -> Subscriber:
         s.beneficiary_ref, s.card_batch_id, s.remark, s.created_by, s.updated_by,
         dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
         int(s.login_without_password),
+        int(s.daily_quota_mb or 0), s.daily_quota_action or "",
+        int(s.daily_quota_speed_down_kbps or 0),
+        int(s.daily_quota_speed_up_kbps or 0),
     )
     now = now_iso()
     with transaction() as conn:
