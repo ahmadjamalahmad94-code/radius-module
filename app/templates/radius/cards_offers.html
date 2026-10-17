@@ -256,6 +256,26 @@
             <span class="note">{{ _("0 = يتبع الإعداد العام للكروت. رقم ≥1 = حدّ خاصّ بهذا العرض.") }}</span>
           </div>
           <div class="co-field">
+            <label>{{ _("بعد انتهاء الكوتة اليومية") }}</label>
+            <select name="daily_quota_action" data-dq-new>
+              <option value="">{{ _("حسب الباقة") }}</option>
+              <option value="disconnect">{{ _("قطع الاتصال") }}</option>
+              <option value="reduce_speed">{{ _("تخفيف السرعة") }}</option>
+              <option value="custom_speed">{{ _("سرعة مخصّصة") }}</option>
+            </select>
+            <span class="note">{{ _("يُطبَّق على كلّ بطاقة تُولَّد من هذا العرض. تتجدّد الكوتة منتصف الليل.") }}</span>
+          </div>
+          <div class="co-field" data-dq-new-speed>
+            <label>{{ _("سرعة النزول بعد النفاد (ميجا)") }}</label>
+            <input type="number" min="0" step="0.1" name="daily_quota_speed_down_mbps" value="0">
+            <span class="note">{{ _("تُكتب بالميجابت. مثال: 1.5") }}</span>
+          </div>
+          <div class="co-field" data-dq-new-speed>
+            <label>{{ _("سرعة الرفع بعد النفاد (ميجا)") }}</label>
+            <input type="number" min="0" step="0.1" name="daily_quota_speed_up_mbps" value="0">
+            <span class="note">{{ _("اتركها 0 لتساوي النزول.") }}</span>
+          </div>
+          <div class="co-field">
             <label><input type="checkbox" name="equal_share_download" value="1"> {{ _("تقسيم سرعة التنزيل على الأجهزة") }}</label>
             <span class="note">{{ _("كلّ بطاقة من العرض تقسم سرعة تنزيل جلساتها هي على أجهزتها المتصلة (لا سرعة العرض على كل المشتركين).") }}</span>
           </div>
@@ -402,6 +422,21 @@
                     </div>
                     <div class="co-field"><label>{{ _("عدد الأجهزة (0=عام)") }}</label>
                       <input type="number" min="0" name="device_count" value="{{ o.device_count or 0 }}"></div>
+                    {% set _odqa = o.daily_quota_action or '' %}
+                    <div class="co-field"><label>{{ _("بعد انتهاء الكوتة اليومية") }}</label>
+                      <select name="daily_quota_action">
+                        <option value="" {{ 'selected' if _odqa not in ['disconnect','reduce_speed','custom_speed'] else '' }}>{{ _("حسب الباقة") }}</option>
+                        <option value="disconnect" {{ 'selected' if _odqa == 'disconnect' else '' }}>{{ _("قطع الاتصال") }}</option>
+                        <option value="reduce_speed" {{ 'selected' if _odqa == 'reduce_speed' else '' }}>{{ _("تخفيف السرعة") }}</option>
+                        <option value="custom_speed" {{ 'selected' if _odqa == 'custom_speed' else '' }}>{{ _("سرعة مخصّصة") }}</option>
+                      </select>
+                    </div>
+                    <div class="co-field"><label>{{ _("نزول بعد النفاد (ميجا)") }}</label>
+                      <input type="number" min="0" step="0.1" name="daily_quota_speed_down_mbps"
+                             value="{{ '%g'|format((o.daily_quota_speed_down_kbps or 0) / 1000) }}"></div>
+                    <div class="co-field"><label>{{ _("رفع بعد النفاد (ميجا)") }}</label>
+                      <input type="number" min="0" step="0.1" name="daily_quota_speed_up_mbps"
+                             value="{{ '%g'|format((o.daily_quota_speed_up_kbps or 0) / 1000) }}"></div>
                     <div class="co-field"><label><input type="checkbox" name="equal_share_download" value="1" {{ 'checked' if o.equal_share_download else '' }}> {{ _("تقسيم التنزيل على الأجهزة") }}</label></div>
                     <div class="co-field"><label><input type="checkbox" name="equal_share_upload" value="1" {{ 'checked' if o.equal_share_upload else '' }}> {{ _("تقسيم الرفع على الأجهزة") }}</label></div>
                   </div>

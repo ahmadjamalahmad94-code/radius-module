@@ -313,7 +313,8 @@ def _start_workers(app: Flask) -> None:
                                   start_stale_session_reaper,
                                   start_store_chat_reminder_worker,
                                   start_sync_worker,
-                                  start_temp_speed_expiry)
+                                  start_temp_speed_expiry,
+                                  start_daily_quota_action)
         from app.workers.remote_access_reaper_worker import (
             start_remote_access_reaper)
     except Exception:  # noqa: BLE001 — تعذّر الاستيراد ⇒ لا خيوط، لكن لا نُسقِط الإقلاع
@@ -360,6 +361,8 @@ def _start_workers(app: Flask) -> None:
         app.logger.exception("wal_maintenance worker import failed")
     _safe_start("dunning", start_dunning_worker)
     _safe_start("temp_speed_expiry", start_temp_speed_expiry)
+    # إنفاذُ قرارِ الكوتة اليوميّة على الجلسات القائمة + استعادةٌ بعد التجديد.
+    _safe_start("daily_quota_action", start_daily_quota_action)
     _safe_start("bandwidth_schedule", start_bandwidth_schedule_worker)
     # Enforce connection-schedule / allowed-hours windows on ALREADY-ACTIVE
     # sessions: CoA-disconnect any live session whose window has closed (the

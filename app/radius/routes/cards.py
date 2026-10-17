@@ -3369,6 +3369,14 @@ def cards_revoke(card_id: int):
 # sub-admin package generation with locked price/time and wallet billing.
 # ─────────────────────────────────────────────────────────────────────────
 
+def _form_mbps_kbps(name: str) -> int:
+    """حقلٌ يُكتب بالميجابت ويُخزَّن كيلوبت (العرض/الحزمة)."""
+    try:
+        return max(0, int(round(float(request.form.get(name) or 0) * 1000)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _offers_service() -> CardOffersService:
     return CardOffersService(tenant_id=_tid())
 
@@ -3517,6 +3525,9 @@ def cards_offer_create():
             device_count=_form_int("device_count", 0),
             equal_share_download=_form_bool("equal_share_download"),
             equal_share_upload=_form_bool("equal_share_upload"),
+            daily_quota_action=_form_str("daily_quota_action"),
+            daily_quota_speed_down_kbps=_form_mbps_kbps("daily_quota_speed_down_mbps"),
+            daily_quota_speed_up_kbps=_form_mbps_kbps("daily_quota_speed_up_mbps"),
         )
         flash(_tr("تم إنشاء العرض."), "success")
     except CardOfferError as e:
@@ -3557,6 +3568,10 @@ def cards_offer_edit(offer_id: int):
             device_count=None if "device_count" in reverts else _form_int("device_count", 0),
             equal_share_download=None if "equal_share_download" in reverts else _form_bool("equal_share_download"),
             equal_share_upload=None if "equal_share_upload" in reverts else _form_bool("equal_share_upload"),
+            # «ماذا بعد نفاد الكوتة اليوميّة» — قالبٌ يُطبَع في كلّ كرتٍ يُولَّد.
+            daily_quota_action=None if "daily_quota_action" in reverts else _form_str("daily_quota_action"),
+            daily_quota_speed_down_kbps=_form_mbps_kbps("daily_quota_speed_down_mbps"),
+            daily_quota_speed_up_kbps=_form_mbps_kbps("daily_quota_speed_up_mbps"),
         )
         # سجل التدقيق: قبل/بعد → المكوّن المشترك يعرض «الحقل: كان X ← صار Y».
         try:
@@ -3678,6 +3693,14 @@ def cards_offer_use(offer_id: int):
             # (قالب العرض هو المصدر؛ كلّ كرت يقسم سرعة جلساته هو على أجهزته هو.)
             opts["equal_share_download"] = bool(int(offer.get("equal_share_download") or 0))
             opts["equal_share_upload"] = bool(int(offer.get("equal_share_upload") or 0))
+
+            # «ماذا بعد نفاد الكوتة اليوميّة» على مستوى العرض → يُبصَم في كلّ
+            # كرتٍ يُولَّد منه. فارغٌ = اتبع الباقة (لا قرارَ للعرض).
+            opts["daily_quota_action"] = str(offer.get("daily_quota_action") or "")
+            opts["daily_quota_speed_down_kbps"] = int(
+                offer.get("daily_quota_speed_down_kbps") or 0)
+            opts["daily_quota_speed_up_kbps"] = int(
+                offer.get("daily_quota_speed_up_kbps") or 0)
 
             if not plan_id:
                 raise CardOfferError(_tr("اختر خطّة للحزمة."))

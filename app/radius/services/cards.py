@@ -453,6 +453,9 @@ class CardsService:
     def _insert_card_accounts(self, conn, cards, *, tenant_id: int, plan_id: int,
                               batch_id: int, actor: str,
                               equal_share_download: bool = False,
+                              daily_quota_action: str = "",
+                              daily_quota_speed_down_kbps: int = 0,
+                              daily_quota_speed_up_kbps: int = 0,
                               equal_share_upload: bool = False) -> None:
         """The RADIUS account (subscriber row, user_type=card) of every new card
         + its router-sync job, INSIDE the batch transaction. Plain INSERT: a
@@ -466,6 +469,9 @@ class CardsService:
                 expire_at=c.expire_at, card_batch_id=batch_id, created_by=actor,
                 equal_share_download=bool(equal_share_download),
                 equal_share_upload=bool(equal_share_upload),
+                daily_quota_action=str(daily_quota_action or ""),
+                daily_quota_speed_down_kbps=int(daily_quota_speed_down_kbps or 0),
+                daily_quota_speed_up_kbps=int(daily_quota_speed_up_kbps or 0),
             )
             for c in cards
         ]
@@ -527,6 +533,9 @@ class CardsService:
         device_limit_mode: str = "",
         equal_share_download: bool = False,
         equal_share_upload: bool = False,
+        daily_quota_action: str = "",
+        daily_quota_speed_down_kbps: int = 0,
+        daily_quota_speed_up_kbps: int = 0,
         duration_mode: str = "time_unit",
         validity_after_first_login_days: int = 0,
         count_by_seconds: bool = False,
@@ -807,7 +816,10 @@ class CardsService:
                     conn, new_cards, tenant_id=tenant_id, plan_id=plan_id,
                     batch_id=batch_id, actor=actor,
                     equal_share_download=bool(equal_share_download),
-                    equal_share_upload=bool(equal_share_upload))
+                    equal_share_upload=bool(equal_share_upload),
+                    daily_quota_action=daily_quota_action,
+                    daily_quota_speed_down_kbps=daily_quota_speed_down_kbps,
+                    daily_quota_speed_up_kbps=daily_quota_speed_up_kbps)
         try:
             batch, cards, info = cards_repo.create_batch_with_cards(
                 batch_row, rows_factory=_rows, expire_at=expire,
@@ -853,6 +865,9 @@ class CardsService:
             cards, plan_id=plan_id, batch_id=batch.id, actor=actor,
             equal_share_download=bool(equal_share_download),
             equal_share_upload=bool(equal_share_upload),
+            daily_quota_action=daily_quota_action,
+            daily_quota_speed_down_kbps=daily_quota_speed_down_kbps,
+            daily_quota_speed_up_kbps=daily_quota_speed_up_kbps,
             progress=_sync_progress)
         if sync_failed:
             progress("syncing", synced, len(cards),
@@ -1086,7 +1101,10 @@ class CardsService:
 
     def _sync_cards_to_radius(self, cards, *, plan_id, batch_id, actor,
                               equal_share_download=False,
-                              equal_share_upload=False, progress=None):
+                              equal_share_upload=False,
+                              daily_quota_action="",
+                              daily_quota_speed_down_kbps=0,
+                              daily_quota_speed_up_kbps=0, progress=None):
         """MT82 — المُزامِن المشترك للتوليد والاستيراد معًا.
 
         الصنف واحد (قفل القاعدة يُسقط الخطوة الأخيرة بعد تثبيت الكروت)، وقد
@@ -1107,6 +1125,9 @@ class CardsService:
                 created_by=actor,
                 equal_share_download=bool(equal_share_download),
                 equal_share_upload=bool(equal_share_upload),
+                daily_quota_action=str(daily_quota_action or ""),
+                daily_quota_speed_down_kbps=int(daily_quota_speed_down_kbps or 0),
+                daily_quota_speed_up_kbps=int(daily_quota_speed_up_kbps or 0),
             )
             for attempt in range(self._SYNC_RETRIES):
                 try:

@@ -547,6 +547,16 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     def _f(n, d=0.0):
         try: return strict_float(request.form.get(n) or d)
         except (TypeError, ValueError): return d
+    def _mbps_kbps(n):
+        """حقلٌ يُكتب بالميجابت ويُخزَّن كيلوبت."""
+        try:
+            return max(0, int(round(float(_f(n) or 0) * 1000)))
+        except (TypeError, ValueError):
+            return 0
+    def _daily_quota_action():
+        """قرارُ ما بعد نفاد الكوتة اليوميّة. '' = اتبع الباقة."""
+        raw = (request.form.get("daily_quota_action") or "").strip().lower()
+        return raw if raw in ("disconnect", "reduce_speed", "custom_speed") else ""
 
     plan_id = request.form.get("plan_id")
     manager_id = request.form.get("manager_id")
@@ -751,6 +761,10 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         combined_quota_mb=_i("combined_quota_mb"),
         connection_time_limit_enabled=_b("connection_time_limit_enabled"),
         quota_limit_enabled=_b("quota_limit_enabled"),
+        # تجاوزٌ فرديّ لقرارِ الكوتة اليوميّة ('' = اتبع الباقة).
+        daily_quota_action=_daily_quota_action(),
+        daily_quota_speed_down_kbps=_mbps_kbps("daily_quota_speed_down_mbps"),
+        daily_quota_speed_up_kbps=_mbps_kbps("daily_quota_speed_up_mbps"),
         # «توزيع/تقسيم السرعة على الأجهزة» — تُقسَّم السرعة الفعّالة على الأجهزة
         # الحيّة (يُنفَّذ عبر اللوحة+CoA).
         equal_share_download=_b("equal_share_download"),

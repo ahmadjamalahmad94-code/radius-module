@@ -74,6 +74,8 @@ _COLS = (
     "auto_renew_mode",
     "connection_schedule",
     "metadata",
+    # هجرة 201 — قرارُ ما بعد نفاد الكوتة اليوميّة
+    "daily_quota_action","daily_quota_speed_down_kbps","daily_quota_speed_up_kbps",
     "deleted_at","deleted_by","delete_reason",
 )
 
@@ -147,6 +149,9 @@ def _row(r) -> AccessPlan:
         auto_renew_mode=_g(r,"auto_renew_mode","off") or "off",
         connection_schedule=_g(r,"connection_schedule","") or "",
         metadata=_g(r,"metadata","{}") or "{}",
+        daily_quota_action=_g(r,"daily_quota_action","disconnect") or "disconnect",
+        daily_quota_speed_down_kbps=_g(r,"daily_quota_speed_down_kbps",0) or 0,
+        daily_quota_speed_up_kbps=_g(r,"daily_quota_speed_up_kbps",0) or 0,
         deleted_at=parse_dt(_g(r, "deleted_at", None)),
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
@@ -214,6 +219,9 @@ def upsert_plan(p: AccessPlan) -> AccessPlan:
         p.auto_renew_mode or "off",
         p.connection_schedule or "",
         p.metadata or "{}",
+        p.daily_quota_action or "disconnect",
+        int(p.daily_quota_speed_down_kbps or 0),
+        int(p.daily_quota_speed_up_kbps or 0),
         dt_to_iso(p.deleted_at), p.deleted_by, p.delete_reason,
     )
     now = now_iso()

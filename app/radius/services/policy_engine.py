@@ -427,6 +427,18 @@ def _check_quota(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDe
     which = _quota_exhaustion(sub, plan)
     if not which:
         return None
+    # «ماذا بعد نفاد الكوتة اليوميّة؟» قرارُ الباقة/المشترك: القطعُ هو
+    # الافتراضُ والسلوكُ التاريخيّ، وقرارا التخفيف/السرعة المخصّصة
+    # يَسمحان هنا وتُحقن سرعتُهما في ``_build_accept_attrs``. يخصّ
+    # النافذةَ اليوميّة وحدَها — الشهريّةُ والإجماليّةُ كما كانتا.
+    if which == "daily":
+        try:
+            from . import daily_quota_action
+            if daily_quota_action.allows_connection(sub, plan):
+                return None
+        except Exception:  # noqa: BLE001 — أيّ خطأ ⇒ السلوك التاريخيّ (رفض)
+            _LOG.warning("quota: تعذّر قراءةُ قرارِ الكوتة اليوميّة (user=%r)",
+                         getattr(sub, "username", "?"), exc_info=True)
     mode = "stop"
     try:
         from . import card_batch_flags
@@ -1963,6 +1975,25 @@ def _build_accept_attrs(sub: Subscriber, plan: Optional[AccessPlan]) -> dict:
         except Exception:  # noqa: BLE001
             _LOG.warning("policy_engine: reduce_speed throttle failed for %r",
                           sub.username, exc_info=True)
+
+    # «ماذا بعد نفاد الكوتة اليوميّة» — تخفيفٌ أو سرعةٌ مخصّصة بدل القطع.
+    # يَلي كتلةَ البطاقات عمدًا: عَلَمُ الدفعة يَغلب لمن كان له عَلَم.
+    # ويُقصّ Session-Timeout على ما تبقّى حتّى منتصفِ الليل المحلّيّ كي
+    # يُعيد الـNAS المصادقةَ عند التجديد فيَستعيد سرعتَه الكاملة وحدَه —
+    # آليّةٌ أساسيّة لا تنتظر وصولَ CoA.
+    try:
+        from . import daily_quota_action as _dqa
+        from . import quota_period as _qp
+        if _qp.window_exhaustion(sub, plan) == "daily":
+            _rate = _dqa.throttle_rate_limit(sub, plan)
+            if _rate:
+                out["Mikrotik-Rate-Limit"] = _rate
+                _left = _dqa.seconds_until_local_midnight(int(sub.tenant_id))
+                _cur = int(out.get("Session-Timeout") or 0)
+                out["Session-Timeout"] = str(_left if _cur <= 0 else min(_cur, _left))
+    except Exception:  # noqa: BLE001 — لا نَكسر الـaccept بسبب الكوتة اليوميّة
+        _LOG.warning("policy_engine: تعذّر تطبيقُ سرعةِ الكوتة اليوميّة (%r)",
+                     getattr(sub, "username", "?"), exc_info=True)
 
     # Wave-B Part A — إصدار الحقول المخزَّنة (DNS/MikroTik/Framed-Pool/PPP/interim).
     _apply_subscriber_reply_extras(sub, plan, out)

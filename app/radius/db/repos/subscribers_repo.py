@@ -69,6 +69,10 @@ _COLS = (
     # _COLS يطابق tuple القيَم موضعًا بموضع، والإلحاقُ في الذيل أقلُّ
     # الأماكن عرضةً لإزاحةِ عمودٍ عن قيمته.
     "login_without_password",
+    # هجرة 201 — قرارُ ما بعد نفاد الكوتة اليوميّة. الحالةُ الحيّة
+    # (daily_quota_state) **خارج** الـupsert: يكتبها العاملُ وحدَه.
+    "daily_quota_action",
+    "daily_quota_speed_down_kbps","daily_quota_speed_up_kbps",
 )
 
 
@@ -143,6 +147,11 @@ def _row(r) -> Subscriber:
         # Read with a safe default so DBs without the column (pre-123) still
         # map to the back-compat chr_mikrotik path.
         transport=_g(r, "transport", "chr_mikrotik") or "chr_mikrotik",
+        # قرارُ الكوتة اليوميّة (migration 201) — افتراضاتٌ آمنة لقواعدَ أقدم.
+        daily_quota_action=_g(r, "daily_quota_action", "") or "",
+        daily_quota_speed_down_kbps=_g(r, "daily_quota_speed_down_kbps", 0) or 0,
+        daily_quota_speed_up_kbps=_g(r, "daily_quota_speed_up_kbps", 0) or 0,
+        daily_quota_state=_g(r, "daily_quota_state", "") or "",
     )
 
 
@@ -385,6 +394,9 @@ def _values(s: Subscriber) -> tuple:
         s.beneficiary_ref, s.card_batch_id, s.remark, s.created_by, s.updated_by,
         dt_to_iso(s.deleted_at), s.deleted_by, s.delete_reason,
         int(s.login_without_password),
+        s.daily_quota_action or "",
+        int(s.daily_quota_speed_down_kbps or 0),
+        int(s.daily_quota_speed_up_kbps or 0),
     )
 
 

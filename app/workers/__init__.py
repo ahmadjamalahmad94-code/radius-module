@@ -20,3 +20,4 @@ from .stale_session_reaper import start_stale_session_reaper  # noqa: F401
 from .store_chat_reminder_worker import start_store_chat_reminder_worker  # noqa: F401
 from .sync_worker import start_sync_worker  # noqa: F401
 from .temp_speed_expiry_worker import start_temp_speed_expiry  # noqa: F401
+from .daily_quota_action_worker import start_daily_quota_action  # noqa: F401

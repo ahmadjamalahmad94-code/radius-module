@@ -35,6 +35,12 @@ class CardOfferBalanceError(CardOfferError):
     """Raised when the sub-admin's wallet can't cover the wholesale charge."""
 
 
+def _norm_daily_quota_action(raw: Any) -> str:
+    """قرارُ ما بعد نفاد الكوتة اليوميّة على العرض. '' = اتبع الباقة."""
+    val = str(raw or "").strip().lower()
+    return val if val in ("disconnect", "reduce_speed", "custom_speed") else ""
+
+
 def _norm_device_limit_mode(raw: Any) -> str:
     """يُطبّع سلوك حدّ الأجهزة للعرض: reject/replace، وأيّ شيء آخر = '' (وراثة
     الافتراض العام للكروت). يُنفَّذ عبر device_limit.effective_mode وقت المصادقة."""
@@ -99,6 +105,15 @@ class CardOffersService:
             "currency": (g("currency") or "").strip(),
             "active": N_("مفعّل") if int(g("active") or 0) else N_("معطّل"),
             "device_count": int(g("device_count") or 0),
+            # قرارُ الكوتة اليوميّة يَظهر في سجلّ التدقيق «كان X ← صار Y».
+            "daily_quota_action": {
+                "": N_("حسب الباقة"), "disconnect": N_("قطع الاتصال"),
+                "reduce_speed": N_("تخفيف السرعة"),
+                "custom_speed": N_("سرعة مخصّصة"),
+            }.get((g("daily_quota_action") or "").strip(), ""),
+            "daily_quota_speed_mbps": "%g / %g" % (
+                int(g("daily_quota_speed_down_kbps") or 0) / 1000,
+                int(g("daily_quota_speed_up_kbps") or 0) / 1000),
             "notes": (g("notes") or "").strip(),
         }
 
@@ -195,6 +210,9 @@ class CardOffersService:
         device_count: int = 0,
         equal_share_download: bool = False,
         equal_share_upload: bool = False,
+        daily_quota_action: str = "",
+        daily_quota_speed_down_kbps: int = 0,
+        daily_quota_speed_up_kbps: int = 0,
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
@@ -203,6 +221,9 @@ class CardOffersService:
         device_count = max(0, int(device_count or 0))
         eq_down = 1 if equal_share_download else 0
         eq_up = 1 if equal_share_upload else 0
+        dq_action = _norm_daily_quota_action(daily_quota_action)
+        dq_down = max(0, int(daily_quota_speed_down_kbps or 0))
+        dq_up = max(0, int(daily_quota_speed_up_kbps or 0))
         # Plan is REQUIRED: the offer inherits the plan's speed/quota/duration.
         plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
@@ -219,14 +240,16 @@ class CardOffersService:
                 INSERT INTO card_offers
                   (tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                    selling_minor, currency, active, notes, created_by, created_at, updated_at,
-                   device_limit_mode, device_count, equal_share_download, equal_share_upload)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   device_limit_mode, device_count, equal_share_download, equal_share_upload,
+                   daily_quota_action, daily_quota_speed_down_kbps, daily_quota_speed_up_kbps)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                     selling_minor, currency or default_currency(),
                     1 if active else 0, (notes or "").strip(), (created_by or "").strip(),
                     now, now, device_limit_mode, device_count, eq_down, eq_up,
+                    dq_action, dq_down, dq_up,
                 ),
             )
             offer_id = int(cur.lastrowid)
@@ -249,6 +272,9 @@ class CardOffersService:
         device_count: Optional[int] = None,
         equal_share_download: Optional[bool] = None,
         equal_share_upload: Optional[bool] = None,
+        daily_quota_action: Optional[str] = None,
+        daily_quota_speed_down_kbps: Optional[int] = None,
+        daily_quota_speed_up_kbps: Optional[int] = None,
     ) -> dict[str, Any]:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
@@ -274,6 +300,14 @@ class CardOffersService:
                    else (1 if equal_share_download else 0))
         new_equ = (int(offer.get("equal_share_upload", 0) or 0) if equal_share_upload is None
                    else (1 if equal_share_upload else 0))
+        new_dqa = (offer.get("daily_quota_action", "") if daily_quota_action is None
+                   else _norm_daily_quota_action(daily_quota_action))
+        new_dqd = (int(offer.get("daily_quota_speed_down_kbps", 0) or 0)
+                   if daily_quota_speed_down_kbps is None
+                   else max(0, int(daily_quota_speed_down_kbps or 0)))
+        new_dqu = (int(offer.get("daily_quota_speed_up_kbps", 0) or 0)
+                   if daily_quota_speed_up_kbps is None
+                   else max(0, int(daily_quota_speed_up_kbps or 0)))
         with transaction() as conn:
             conn.execute(
                 """
@@ -281,13 +315,16 @@ class CardOffersService:
                    SET name=?, plan_id=?, duration_minutes=?, wholesale_minor=?,
                        selling_minor=?, currency=?, notes=?, active=?, updated_at=?,
                        device_limit_mode=?, device_count=?,
-                       equal_share_download=?, equal_share_upload=?
+                       equal_share_download=?, equal_share_upload=?,
+                       daily_quota_action=?, daily_quota_speed_down_kbps=?,
+                       daily_quota_speed_up_kbps=?
                  WHERE tenant_id=? AND id=?
                 """,
                 (
                     new_name, new_plan, new_duration, new_wholesale, new_selling,
                     new_currency, new_notes, new_active, now_iso(),
                     new_dlm, new_dc, new_eqd, new_equ,
+                    new_dqa, new_dqd, new_dqu,
                     self.tenant_id, int(offer_id),
                 ),
             )

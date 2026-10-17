@@ -186,6 +186,12 @@ class AccessPlan:
     delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    # ── ماذا بعد نفاد الكوتة اليوميّة (migration 201) ──
+    # disconnect (الافتراض) / reduce_speed / custom_speed. السرعةُ تُكتب
+    # في الواجهة بالميجابت وتُخزَّن كيلوبت.
+    daily_quota_action: str = "disconnect"
+    daily_quota_speed_down_kbps: int = 0
+    daily_quota_speed_up_kbps: int = 0
 
 
 @dataclass(frozen=True)
@@ -307,6 +313,12 @@ class Subscriber:
     # existing row defaults to chr_mikrotik → the live path is byte-for-
     # byte unchanged.
     transport: str = "chr_mikrotik"
+    # ── تجاوزُ المشترك لقرارِ الكوتة اليوميّة (migration 201) ──
+    # '' = اتبع الباقة. والحالةُ ختمُ الإنفاذ الحيّ ('' | 'throttled').
+    daily_quota_action: str = ""
+    daily_quota_speed_down_kbps: int = 0
+    daily_quota_speed_up_kbps: int = 0
+    daily_quota_state: str = ""
 
 
 @dataclass(frozen=True)
