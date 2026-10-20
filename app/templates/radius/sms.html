@@ -15,7 +15,7 @@
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
-{% block title %}{{ _("ربط رسائل SMS (TweetSMS) — Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("ربط رسائل SMS (TweetSMS) — %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-comment-sms"></i>{% endblock %}
 {% block page_title %}{{ _("ربط رسائل SMS (TweetSMS)") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('اربط حساب TweetSMS الخاص بك لإرسال رسائل SMS للمشتركين — خدمة مجانية، تشتري الرصيد من المزوّد مباشرةً.') }}</span>{% endblock %}

@@ -7371,26 +7371,26 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
 محاكاة محفظة (جوال باي/بال باي ستايل),,,,,,"missing: en,fr,tr,es",app/radius/services/payment_providers/__init__.py:92
 ريال,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:82
-تاريخ الإصدار:,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:269
-لا توجد بيانات لعرضها في هذا التقرير,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:442
-مسودة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:498
-بانتظار الأرشفة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:500
-مستنفدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:501
-قيد الاستخدام,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:505
-رمز الحزمة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:518
-الخطة,,The plan,Le forfait,Plan,El plan,ok,app/radius/services/pdf_theme.py:520
-المولّدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:522
-المتاحة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:523
-النشطة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:524
-المتبقية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:525
-سعر الكرت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:526
-القيمة التقديرية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:527
-لا توجد حِزَم كروت مطابقة لعوامل التصفية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:575
-عدد الحِزَم,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:588
-كروت مولّدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:589
-كروت متاحة,,Available Cards,Cartes disponibles,Mevcut kartlar,Tarjetas disponibles,ok,app/radius/services/pdf_theme.py:590
-تقرير حِزَم الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:601
-HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:605
+تاريخ الإصدار:,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:278
+لا توجد بيانات لعرضها في هذا التقرير,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:451
+مسودة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:507
+بانتظار الأرشفة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:509
+مستنفدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:510
+قيد الاستخدام,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:514
+رمز الحزمة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:527
+الخطة,,The plan,Le forfait,Plan,El plan,ok,app/radius/services/pdf_theme.py:529
+المولّدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:531
+المتاحة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:532
+النشطة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:533
+المتبقية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:534
+سعر الكرت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:535
+القيمة التقديرية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:536
+لا توجد حِزَم كروت مطابقة لعوامل التصفية,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:584
+عدد الحِزَم,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:597
+كروت مولّدة,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:598
+كروت متاحة,,Available Cards,Cartes disponibles,Mevcut kartlar,Tarjetas disponibles,ok,app/radius/services/pdf_theme.py:599
+تقرير حِزَم الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:610
+HobeRadius • إدارة الكروت,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:614
 إنشاء دفعة بطاقات,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:25
 إدارة الموزعين,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:30
 استيراد الحِزم,,,,,,"missing: en,fr,tr,es",app/radius/services/permission_labels.py:33
@@ -10374,7 +10374,7 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 معرّف العرض/الباقة,,Offer/plan ID,ID de l'offre/forfait,Teklif/paket kimliği,ID de oferta/plan,ok,app/templates/radius/access_control.html:623
 معرّف حزمة البطاقات,,Card package ID,ID du paquet de cartes,Kart paketi kimliği,ID del paquete de tarjetas,ok,app/templates/radius/access_control.html:623
 حزمة البطاقات,,Card package,Pack de cartes,Kart paketi,Paquete de tarjetas,ok,app/templates/radius/access_control.html:668
-حسابي — Hobe Hub,,My account — Hobe Hub,Mon compte — Hobe Hub,Hesabım — Hobe Hub,Mi cuenta — Hobe Hub,ok,app/templates/radius/account.html:4
+حسابي — %(v)s,,My account — %(v)s,Mon compte — %(v)s,Hesabım — %(v)s,Mi cuenta — %(v)s,ok,app/templates/radius/account.html:4
 إدارة حساب الدخول الحالي. إذا كان الحساب مدارًا من لوحة التراخيص، فاللوحة تبقى المرجع النهائي لكلمة المرور والإصدار.,,,,,,"missing: en,fr,tr,es",app/templates/radius/account.html:9
 بيانات الحساب,,,,,,"missing: en,fr,tr,es",app/templates/radius/account.html:14
 محلي,,,,,,"missing: en,fr,tr,es",app/templates/radius/account.html:19
@@ -10458,7 +10458,7 @@ MAC,,MAC,MAC,MAC,MAC,ok,app/templates/radius/access_control.html:554
 مسجّل,,,,,,"missing: en,fr,tr,es",app/templates/radius/admin_bridge.html:12
 مكتمل,,,,,,"missing: en,fr,tr,es",app/templates/radius/admin_bridge.html:12
 غير مهيّأ,,,,,,"missing: en,fr,tr,es",app/templates/radius/admin_bridge.html:13
-جسر الإدارة — Hobe Hub,,Admin bridge — Hobe Hub,Pont d'administration — Hobe Hub,Yönetim köprüsü — Hobe Hub,Puente de administración — Hobe Hub,ok,app/templates/radius/admin_bridge.html:20
+جسر الإدارة — %(v)s,,Admin bridge — %(v)s,Pont d'administration — %(v)s,Yönetim köprüsü — %(v)s,Puente de administración — %(v)s,ok,app/templates/radius/admin_bridge.html:20
 صفحة قراءة آمنة فقط لحالة الربط المحلي.,,Read-only safe page for the local link status.,Page en lecture seule sécurisée pour l'état de la liaison locale.,Yerel bağlantı durumu için yalnızca okunabilir güvenli sayfa.,Página segura de solo lectura para el estado del enlace local.,ok,app/templates/radius/admin_bridge.html:23
 صفحة قراءة فقط لحالة المسارات المحلية للجسر بين الريدياس ولوحة التراخيص — بلا أي كتابة أو رفع أو تفعيل من هنا.,,"A read-only page for the status of the local bridge routes between RADIUS and the licensing panel — with no writing, uploading, or activation from here.","Une page en lecture seule pour l'état des chemins locaux du pont entre RADIUS et le panneau de licences — sans écriture, téléversement ni activation depuis ici.","RADIUS ile lisans paneli arasındaki köprünün yerel yollarının durumu için salt okunur bir sayfa — buradan yazma, yükleme veya etkinleştirme yapılmaz.","Una página de solo lectura para el estado de las rutas locales del puente entre RADIUS y el panel de licencias — sin escritura, carga ni activación desde aquí.",ok,app/templates/radius/admin_bridge.html:205
 وضع قراءة فقط,,Read-only mode,Mode lecture seule,Salt okunur mod,Modo de solo lectura,ok,app/templates/radius/admin_bridge.html:209
@@ -10971,7 +10971,7 @@ CIR رفع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_sche
 فتح ملف الموزّع,,Open distributor file,Ouvrir le dossier du distributeur,Dağıtıcı dosyasını aç,Abrir ficha del distribuidor,ok,app/templates/radius/business_operators.html:139
 لا يوجد موزعون بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operators.html:150
 أنشئ الموزعين من تبويب «الموزعون» في شريط القسم أعلاه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operators.html:151
-سوق البطاقات الإلكترونية - Hobe Hub,,E-card marketplace — Hobe Hub,Marché des cartes électroniques — Hobe Hub,E-kart pazarı — Hobe Hub,Mercado de tarjetas electrónicas — Hobe Hub,ok,app/templates/radius/card_marketplace.html:4
+سوق البطاقات الإلكترونية - %(v)s,,E-card marketplace — %(v)s,Marché des cartes électroniques — %(v)s,E-kart pazarı — %(v)s,Mercado de tarjetas electrónicas — %(v)s,ok,app/templates/radius/card_marketplace.html:4
 إعداد عروض الشراء التي تظهر لمستخدمي البطاقات في بوابة الزبون.,,Set up the purchase offers shown to voucher users in the customer portal.,Configurez les offres d'achat affichées aux utilisateurs de coupons dans le portail client.,Müşteri portalında kupon kullanıcılarına gösterilen satın alma tekliflerini ayarlayın.,Configure las ofertas de compra que se muestran a los usuarios de cupones en el portal del cliente.,ok,app/templates/radius/card_marketplace.html:7
 حسب العرض,,By offer,Selon l'offre,Teklife göre,Según la oferta,ok,app/templates/radius/card_marketplace.html:20
 كيلو,,KB,Ko,KB,KB,ok,app/templates/radius/card_marketplace.html:39
@@ -11101,7 +11101,7 @@ CIR رفع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_sche
 يقرأ المحرك ملفات Excel و CSV و PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطّى تلقائيًا. الحدّ الأقصى,,"The engine reads Excel, CSV, and PDF files and extracts username and password pairs, then adds them to this offer's stock. Duplicate names are skipped automatically. The maximum","Le moteur lit les fichiers Excel, CSV et PDF et extrait les paires nom d'utilisateur et mot de passe, puis les ajoute au stock de cette offre. Les noms en double sont ignorés automatiquement. Le maximum","Motor Excel, CSV ve PDF dosyalarını okur ve kullanıcı adı ile parola çiftlerini ayıklar, ardından bunları bu teklifin stoğuna ekler. Yinelenen adlar otomatik olarak atlanır. Üst sınır","El motor lee archivos Excel, CSV y PDF y extrae los pares de nombre de usuario y contraseña, luego los añade al stock de esta oferta. Los nombres duplicados se omiten automáticamente. El máximo",ok,app/templates/radius/card_marketplace_package_file.html:193
 توليد حزمة مخزون,,Generate inventory package,Générer un lot de stock,Stok paketi oluştur,Generar paquete de inventario,ok,app/templates/radius/card_marketplace_package_file.html:218
 يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم وكلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا لتُباع منه.,,"The shared batch engine generates unique vouchers (username and password) within a package linked to this offer, and they enter stock immediately to be sold from it.","Le moteur de lots partagé génère des coupons uniques (nom d'utilisateur et mot de passe) dans un paquet lié à cette offre, et ils entrent immédiatement en stock pour être vendus.","Ortak parti motoru, bu teklife bağlı bir paket içinde benzersiz kuponlar (kullanıcı adı ve parola) üretir ve bunlar satılmak üzere hemen stoğa girer.","El motor de lotes compartido genera cupones únicos (nombre de usuario y contraseña) dentro de un paquete vinculado a esta oferta, y entran en stock de inmediato para venderse desde él.",ok,app/templates/radius/card_marketplace_package_file.html:222
-تسعير البطاقات - Hobe Hub,,Card pricing — Hobe Hub,Tarification des cartes — Hobe Hub,Kart fiyatlandırması — Hobe Hub,Precios de tarjetas — Hobe Hub,ok,app/templates/radius/card_pricing.html:8
+تسعير البطاقات - %(v)s,,Card pricing — %(v)s,Tarification des cartes — %(v)s,Kart fiyatlandırması — %(v)s,Precios de tarjetas — %(v)s,ok,app/templates/radius/card_pricing.html:8
 تسعير البطاقات,,Card pricing,Tarification des cartes,Kart fiyatlandırması,Precios de tarjetas,ok,app/templates/radius/card_pricing.html:10
 سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء,,"Retail, wholesale, and plan cost policies before selling or charging to managers","Politiques de prix de vente, de gros et de coût des forfaits avant la vente ou l'imputation aux gestionnaires","Satıştan veya yöneticilere yüklemeden önce perakende, toptan ve paket maliyet politikaları","Políticas de precio de venta, mayorista y coste de los planes antes de vender o cargar a los gestores",ok,app/templates/radius/card_pricing.html:11
 مركز تسعير البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing.html:35
@@ -11146,7 +11146,7 @@ CIR رفع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/bandwidth_sche
 وسيصبح رصيده,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing.html:294
 بصفتك المزوّد يمكنك تجاوز سقف دين المدير بعِلمك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing.html:297
 متابعة وتسجيلها كدين,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing.html:308
-تفاصيل الدفعة المالية — Hobe Hub,,Payment details — Hobe Hub,Détails du paiement — Hobe Hub,Ödeme ayrıntıları — Hobe Hub,Detalles del pago — Hobe Hub,ok,app/templates/radius/card_pricing_batch.html:7
+تفاصيل الدفعة المالية — %(v)s,,Payment details — %(v)s,Détails du paiement — %(v)s,Ödeme ayrıntıları — %(v)s,Detalles del pago — %(v)s,ok,app/templates/radius/card_pricing_batch.html:7
 مُسوّى,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing_batch.html:18
 مُقيَّد,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing_batch.html:18
 تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر — لقطة مالية للدفعة والكروت المرتبطة بها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/card_pricing_batch.html:24
@@ -11936,7 +11936,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 0 لإلغاء,,0 to cancel,0 pour annuler,İptal için 0,0 para cancelar,ok,app/templates/radius/cards_of_batch.html:770
 رفع Kbps,,Upload Kbps,Émission Kbps,Yükleme Kbps,Subida Kbps,ok,app/templates/radius/cards_of_batch.html:773
 حفظ السرعة,,Save Speed,Enregistrer la vitesse,Hızı kaydet,Guardar velocidad,ok,app/templates/radius/cards_of_batch.html:784
-توليد حزمة من عرض - Hobe Hub,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:3
+توليد حزمة من عرض - %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:3
 توليد حزمة من العرض,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:5
 السعر والمدّة مقفلان وفق العرض؛ يمكنك ضبط العدد وطول/نوع الكود فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:6
 وصول كامل: يمكنك تجاوز كل القيم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:6
@@ -11961,7 +11961,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 مدّة البطاقة (قيمة),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:213
 وحدة المدّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:215
 توليد الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offer_use.html:229
-عروض البطاقات - Hobe Hub,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:3
+عروض البطاقات - %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:3
 عروض تجاريّة يحدّدها المالك فوق باقة جاهزة (سعر + مدّة + مشاركة)، ويولّد منها المديرون حزمًا بسعر وشروط مقفلة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:6
 الباقة #,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_offers.html:38
 عرض جديد,,New Plan,Nouvelle offre,Yeni teklif,Nueva oferta,ok,app/templates/radius/cards_offers.html:167
@@ -12276,7 +12276,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 كروت مُصلَحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_reconcile_accounting.html:135
 حِزم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_reconcile_accounting.html:136
 نسخة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_reconcile_accounting.html:137
-غرفة العمليات — Hobe Hub,,Operations room — Hobe Hub,Salle des opérations — Hobe Hub,Operasyon odası — Hobe Hub,Sala de operaciones — Hobe Hub,ok,app/templates/radius/communications.html:4
+غرفة العمليات — %(v)s,,Operations room — %(v)s,Salle des opérations — %(v)s,Operasyon odası — %(v)s,Sala de operaciones — %(v)s,ok,app/templates/radius/communications.html:4
 غرفة العمليات,,Operations room,Salle des opérations,Operasyon merkezi,Sala de operaciones,ok,app/templates/radius/communications.html:6
 مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.,,"Unified communications center — the status of all channels, notifications and the bot in one place, with every action a click away.","Centre de communication unifié — l'état de tous les canaux, notifications et du bot au même endroit, chaque action à portée de clic.","Birleşik iletişim merkezi — tüm kanalların, bildirimlerin ve botun durumu tek bir yerde, her işlem tek tıkla.","Centro de comunicación unificado — el estado de todos los canales, notificaciones y el bot en un solo lugar, y cada acción a un clic.",ok,app/templates/radius/communications.html:7
 ربط ذاتي عبر واجهة الربط,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:10
@@ -12325,7 +12325,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 المستلم,,Recipient,Destinataire,Alıcı,Destinatario,ok,app/templates/radius/communications.html:196
 جرّب «إرسال رسالة سريعة» بالأعلى، أو افتح الدليل لإعداد القنوات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:210
 لا توجد عمليات إرسال بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications.html:210
-بناء الجمهور — Hobe Hub,,Audience building — Hobe Hub,Construction d'audience — Hobe Hub,Kitle oluşturma — Hobe Hub,Creación de audiencia — Hobe Hub,ok,app/templates/radius/communications_audience.html:4
+بناء الجمهور — %(v)s,,Audience building — %(v)s,Construction d'audience — %(v)s,Kitle oluşturma — %(v)s,Creación de audiencia — %(v)s,ok,app/templates/radius/communications_audience.html:4
 بناء الجمهور,,Audience building,Construction d'audience,Kitle oluşturma,Creación de audiencia,ok,app/templates/radius/communications_audience.html:6
 أنشئ شرائح جمهور قابلة لإعادة الاستخدام بدون كشف SQL خام أو بيانات المزوّد.,,Create reusable audience segments without exposing raw SQL or provider data.,Créez des segments d'audience réutilisables sans exposer de SQL brut ni de données du fournisseur.,Ham SQL veya sağlayıcı verilerini açığa çıkarmadan yeniden kullanılabilir kitle segmentleri oluşturun.,Crea segmentos de audiencia reutilizables sin exponer SQL en bruto ni datos del proveedor.,ok,app/templates/radius/communications_audience.html:7
 أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_audience.html:29
@@ -12401,7 +12401,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 إضافة أمر جديد,,Add new command,Ajouter une nouvelle commande,Yeni komut ekle,Agregar nuevo comando,ok,app/templates/radius/communications_bot.html:179
 حفظ إعدادات البوت,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_bot.html:185
 تم النسخ ✓,,Copied ✓,Copié ✓,Kopyalandı ✓,Copiado ✓,ok,app/templates/radius/communications_bot.html:238
-الحملات — Hobe Hub,,Campaigns — Hobe Hub,Campagnes — Hobe Hub,Kampanyalar — Hobe Hub,Campañas — Hobe Hub,ok,app/templates/radius/communications_campaigns.html:9
+الحملات — %(v)s,,Campaigns — %(v)s,Campagnes — %(v)s,Kampanyalar — %(v)s,Campañas — %(v)s,ok,app/templates/radius/communications_campaigns.html:9
 الحملات,,Campaigns,Campagnes,Kampanyalar,Campañas,ok,app/templates/radius/communications_campaigns.html:11
 حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.,,Prepare campaigns with a safe preview and optional action plans. No action is applied from this page.,Préparez des campagnes avec un aperçu sûr et des plans d'action facultatifs. Aucune action n'est appliquée depuis cette page.,Güvenli bir önizleme ve isteğe bağlı eylem planlarıyla kampanyalar hazırlayın. Bu sayfadan hiçbir eylem uygulanmaz.,Prepara campañas con una vista previa segura y planes de acción opcionales. Desde esta página no se aplica ninguna acción.,ok,app/templates/radius/communications_campaigns.html:12
 حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ — لا يُرسل شيء من هذه الشاشة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_campaigns.html:19
@@ -12472,7 +12472,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.,,It uses the saved settings for this channel. Save changes first before testing.,Il utilise les paramètres enregistrés pour ce canal. Enregistrez d'abord les modifications avant de tester.,Bu kanal için kaydedilmiş ayarları kullanır. Test etmeden önce değişiklikleri kaydedin.,Usa la configuración guardada para este canal. Guarda los cambios primero antes de probar.,ok,app/templates/radius/communications_channels.html:235
 جارٍ إرسال رسالة الاختبار…,,Sending test message…,Envoi du message de test…,Test mesajı gönderiliyor…,Enviando mensaje de prueba…,ok,app/templates/radius/communications_channels.html:266
 تعذّر تنفيذ الاختبار.,,Failed to run the test.,Échec de l'exécution du test.,Test çalıştırılamadı.,No se pudo ejecutar la prueba.,ok,app/templates/radius/communications_channels.html:274
-سجل الإرسال — Hobe Hub,,Delivery log — Hobe Hub,Journal d'envoi — Hobe Hub,Gönderim günlüğü — Hobe Hub,Registro de envíos — Hobe Hub,ok,app/templates/radius/communications_deliveries.html:4
+سجل الإرسال — %(v)s,,Delivery log — %(v)s,Journal d'envoi — %(v)s,Gönderim günlüğü — %(v)s,Registro de envíos — %(v)s,ok,app/templates/radius/communications_deliveries.html:4
 حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.,,"Message states from the queue through sending, failure, or read receipt when the provider supports it.","États des messages, de la file d'attente jusqu'à l'envoi, l'échec ou la lecture lorsque le fournisseur le prend en charge.","Mesaj durumları, kuyruktan gönderime, başarısızlığa veya sağlayıcı desteklediğinde okunmaya kadar.","Estados de los mensajes desde la cola hasta el envío, el fallo o la lectura cuando el proveedor lo admite.",ok,app/templates/radius/communications_deliveries.html:7
 طابور داخلي,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_deliveries.html:19
 بوابة HTTP عامة,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_deliveries.html:20
@@ -12669,7 +12669,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 انقر لإدراجه في النص,,Click to insert it into the text,Cliquez pour l'insérer dans le texte,Metne eklemek için tıklayın,Haga clic para insertarlo en el texto,ok,app/templates/radius/communications_notifications.html:284
 حفظ كل الإعدادات,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_notifications.html:294
 يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.,,All vouchers are saved at once. The default settings are ready; you can save right away.,Tous les coupons sont enregistrés en une seule fois. Les paramètres par défaut sont prêts ; vous pouvez enregistrer directement.,Tüm kuponlar tek seferde kaydedilir. Varsayılan ayarlar hazırdır; doğrudan kaydedebilirsiniz.,Todos los cupones se guardan de una sola vez. La configuración predeterminada está lista; puedes guardar directamente.,ok,app/templates/radius/communications_notifications.html:295
-إرسال رسالة — Hobe Hub,,Send a message — Hobe Hub,Envoyer un message — Hobe Hub,Mesaj gönder — Hobe Hub,Enviar un mensaje — Hobe Hub,ok,app/templates/radius/communications_send.html:4
+إرسال رسالة — %(v)s,,Send a message — %(v)s,Envoyer un message — %(v)s,Mesaj gönder — %(v)s,Enviar un mensaje — %(v)s,ok,app/templates/radius/communications_send.html:4
 إنشاء رسالة يدوية وحفظها في طابور الإرسال بشكل آمن.,,Create a manual message and save it safely to the send queue.,Créer un message manuel et l'enregistrer en toute sécurité dans la file d'envoi.,Manuel bir mesaj oluşturup gönderim kuyruğuna güvenle kaydedin.,Crea un mensaje manual y guárdalo de forma segura en la cola de envío.,ok,app/templates/radius/communications_send.html:7
 تُحفظ الرسائل في الطابور بشكل افتراضي، ولا يتم الإرسال عبر مزوّد خارجي إلا بعد تفعيل القناة من الإعدادات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_send.html:32
 كيف ترسل رسالة؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_send.html:42
@@ -12694,7 +12694,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 إضافة الرسالة للطابور,,Add the message to the queue,Ajouter le message à la file d’attente,Mesajı kuyruğa ekle,Añadir el mensaje a la cola,ok,app/templates/radius/communications_send.html:123
 المعاينة لا ترسل شيئًا — تعرض من سيستلم فقط.,,The preview sends nothing — it only shows who will receive.,L'aperçu n'envoie rien — il montre uniquement qui recevra.,Önizleme hiçbir şey göndermez — yalnızca kimin alacağını gösterir.,La vista previa no envía nada — solo muestra quién recibirá.,ok,app/templates/radius/communications_send.html:124
 %(length)s مستلم,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_send.html:130
-قوالب الرسائل — Hobe Hub,,Message templates — Hobe Hub,Modèles de messages — Hobe Hub,Mesaj şablonları — Hobe Hub,Plantillas de mensajes — Hobe Hub,ok,app/templates/radius/communications_templates.html:4
+قوالب الرسائل — %(v)s,,Message templates — %(v)s,Modèles de messages — %(v)s,Mesaj şablonları — %(v)s,Plantillas de mensajes — %(v)s,ok,app/templates/radius/communications_templates.html:4
 قوالب الرسائل,,Message templates,Modèles de messages,Mesaj şablonları,Plantillas de mensajes,ok,app/templates/radius/communications_templates.html:6
 نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.,,"Ready-made, reusable texts for internal messages and external channels.",Textes prêts à l'emploi et réutilisables pour les messages internes et les canaux externes.,"Dahili mesajlar ve harici kanallar için hazır, yeniden kullanılabilir metinler.",Textos predefinidos y reutilizables para mensajes internos y canales externos.,ok,app/templates/radius/communications_templates.html:7
 يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_templates.html:57
@@ -12732,7 +12732,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 %(length)s قالب,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_templates.html:182
 اضغط أحد «النماذج الجاهزة» بالأعلى لإنشاء أول قالب بسرعة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_templates.html:205
 لا توجد قوالب بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/communications_templates.html:205
-مخزون ومصروفات الشركة — Hobe Hub,,Company inventory and expenses — Hobe Hub,Inventaire et dépenses de l'entreprise — Hobe Hub,Şirket envanteri ve giderleri — Hobe Hub,Inventario y gastos de la empresa — Hobe Hub,ok,app/templates/radius/company_inventory_expenses.html:4
+مخزون ومصروفات الشركة — %(v)s,,Company inventory and expenses — %(v)s,Inventaire et dépenses de l'entreprise — %(v)s,Şirket envanteri ve giderleri — %(v)s,Inventario y gastos de la empresa — %(v)s,ok,app/templates/radius/company_inventory_expenses.html:4
 دفتر تشغيلي داخلي مستقل عن القيود المالية الرسمية,,An internal operational ledger independent of the official financial entries,Un registre opérationnel interne indépendant des écritures financières officielles,Resmi mali kayıtlardan bağımsız dahili bir operasyonel defter,Un libro operativo interno independiente de los asientos financieros oficiales,ok,app/templates/radius/company_inventory_expenses.html:7
 سجّل وارد وصرف المخزون ومصروفات الشركة في دفتر داخلي للمتابعة فقط. الأسعار والكميات معلومات تشغيلية ولا تُرحَّل إلى أي قيد مالي أو رصيد عميل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/company_inventory_expenses.html:56
 قيمة الوارد,,,,,,"missing: en,fr,tr,es",app/templates/radius/company_inventory_expenses.html:59
@@ -12883,7 +12883,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 تسجيل دخول المشترك لعرض الاشتراك والاستخدام والطلبات والمدفوعات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/customer_portals_admin.html:74
 تسجيل دخول صاحب البطاقة إلى واجهة الشراء الذاتية الموجودة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/customer_portals_admin.html:82
 مساعد تنقل إداري فقط: لا تنفّذ هذه الصفحة شراء بطاقات أو طلب سلفة أو تجديدًا أو أي تغيير في خدمة المصادقة.,,"Administrative navigation helper only: this page does not perform voucher purchases, advance requests, renewals, or any change to the authentication service.","Aide à la navigation administrative uniquement : cette page n'effectue aucun achat de coupons, demande d'avance, renouvellement ni modification du service d'authentification.","Yalnızca yönetimsel gezinme yardımcısı: bu sayfa kupon satın alma, avans talebi, yenileme veya kimlik doğrulama hizmetinde herhangi bir değişiklik yapmaz.","Solo asistente de navegación administrativa: esta página no realiza compras de cupones, solicitudes de anticipo, renovaciones ni ningún cambio en el servicio de autenticación.",ok,app/templates/radius/customer_portals_admin.html:92
-مركز إدارة الشبكة - Hobe Hub,,Network Operations Center - Hobe Hub,Centre de gestion réseau - Hobe Hub,Ağ Yönetim Merkezi - Hobe Hub,Centro de gestión de red - Hobe Hub,ok,app/templates/radius/dashboard.html:3
+مركز إدارة الشبكة - %(v)s,,Network Operations Center - %(v)s,Centre de gestion réseau - %(v)s,Ağ Yönetim Merkezi - %(v)s,Centro de gestión de red - %(v)s,ok,app/templates/radius/dashboard.html:3
 مركز إدارة الشبكة,,Network Operations Center,Centre de gestion du réseau,Ağ yönetim merkezi,Centro de gestión de la red,ok,app/templates/radius/dashboard.html:5
 ملخص تشغيلي,,Operations Overview,Résumé opérationnel,Operasyonel özet,Resumen operativo,ok,app/templates/radius/dashboard.html:6
 واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي يحتاج انتباهك اليوم.,,"A calm view of your network: who is online now, what is available to sell, and what needs your attention today.","Une interface épurée pour surveiller le réseau : qui est en ligne maintenant, ce qui est disponible à la vente, et ce qui requiert votre attention aujourd'hui.","Ağı izlemek için sade bir arayüz: şu anda kim çevrimiçi, satışta ne var ve bugün neyin ilginizi gerektirdiği.","Una interfaz tranquila para monitorear la red: quién está conectado ahora, qué está disponible para la venta y qué requiere tu atención hoy.",ok,app/templates/radius/dashboard.html:732
@@ -15993,7 +15993,7 @@ unknown_user — اسم الدخول غير موجود,,unknown_user — the log
 قالب واحد + متغيّرات = رسائل مخصّصة لآلاف المشتركين بضغطة.,,One template + variables = personalized messages for thousands of subscribers with a single click.,Un seul modèle + des variables = des messages personnalisés pour des milliers d'abonnés en un clic.,Tek şablon + değişkenler = tek tıklamayla binlerce abone için kişiselleştirilmiş mesajlar.,Una sola plantilla + variables = mensajes personalizados para miles de suscriptores con un clic.,ok,app/templates/radius/docs_message_templates.html:165
 دليل: معالج ترحيل البيانات — كيف تستخدمني,,Guide: Data migration wizard — how to use me,Guide : assistant de migration des données — mode d'emploi,Kılavuz: Veri taşıma sihirbazı — nasıl kullanılır,Guía: asistente de migración de datos — cómo usarme,ok,app/templates/radius/docs_migration.html:7
 دليل: معالج ترحيل البيانات,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:17
-انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى Hobe Hub بأمان: اربط الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:18
+انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى %(v)s بأمان: اربط الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:18
 متى تستخدمه,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:34
 جهّز المصدر,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:35
 اربط الأعمدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:36
@@ -16005,7 +16005,7 @@ unknown_user — اسم الدخول غير موجود,,unknown_user — the log
 إن كنت قادمًا من نظام آخر، فمعالج الترحيل ينقل بياناتك دفعة واحدة بدل الإدخال اليدوي: مشتركون، كروت وحزمها، باقات وسرعاتها، وحتى نوافذ الوقت وماك المشترك. الأهم أنه,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:49
 الإدارة ← ترحيل البيانات,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:49
 متى تستخدم المعالج,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:57
-الانتقال من نظام إدارة قديم إلى Hobe Hub.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:59
+الانتقال من نظام إدارة قديم إلى %(v)s.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:59
 استيراد دفعة كبيرة من المشتركين أو الكروت مرّة واحدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:60
 إعادة استخدام باقاتك وحزمك القديمة بدل إنشائها يدويًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:61
 خذ نسخة احتياطية للنظام (الإدارة ← النسخ الاحتياطي) لتكون لديك نقطة رجوع آمنة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:65
@@ -16013,7 +16013,7 @@ unknown_user — اسم الدخول غير موجود,,unknown_user — the log
 جهّز ملف/قاعدة المصدر,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:73
 يقرأ المعالج جداول مصدرك ويعرضها لك. جهّز بيانات نظيفة قدر الإمكان: أسماء مستخدمين فريدة، وأعمدة واضحة (اسم المستخدم، كلمة المرور، الباقة، السعر، المدّة…). كلما كان المصدر مرتّبًا، صار الربط أسهل والنتيجة أدقّ.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:75
 اربط أعمدة المصدر بحقول النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:83
-(إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل في Hobe Hub. مثلًا: عمود,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:85
+(إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل في %(v)s. مثلًا: عمود,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:85
 لكل جدول مصدر، تختار,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:85
 وضع التعامل,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:85
 ← اسم المستخدم،,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_migration.html:85
@@ -18238,7 +18238,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 تنفّذ,,Run,Exécuter,Çalıştır,Ejecutar,ok,app/templates/radius/docs_users_overview.html:819
 والمالية,,And finance,Et finances,Ve finans,Y finanzas,ok,app/templates/radius/docs_users_overview.html:819
 — كل رقم لفت نظرك هنا، اضغط الرابط البنفسجي جنبه وكمّل القصة في قسم المالية أو ملف المشترك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/docs_users_overview.html:819
-مركز الأحداث — Hobe Hub,,Events center — Hobe Hub,Centre des événements — Hobe Hub,Olaylar merkezi — Hobe Hub,Centro de eventos — Hobe Hub,ok,app/templates/radius/events_center.html:4
+مركز الأحداث — %(v)s,,Events center — %(v)s,Centre des événements — %(v)s,Olaylar merkezi — %(v)s,Centro de eventos — %(v)s,ok,app/templates/radius/events_center.html:4
 مركز الأحداث,,Events center,Centre des événements,Olaylar merkezi,Centro de eventos,ok,app/templates/radius/events_center.html:6
 أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.,,"Business events saved as an additional log with filters, correlation IDs, and entity timelines.","Événements métier enregistrés comme journal supplémentaire avec filtres, identifiants de corrélation et chronologies des entités.","İş olayları, filtreler, ilişkilendirme kimlikleri ve varlık zaman çizelgeleriyle birlikte ek günlük olarak kaydedilir.","Eventos de negocio guardados como un registro adicional con filtros, identificadores de correlación y líneas de tiempo de las entidades.",ok,app/templates/radius/events_center.html:7
 بوابة واحدة لأحداث التشغيل: سجل المراجعة، تقييم المخاطر، الأمان، والتحقيقات — للعرض والتحقيق فقط، لا إجراءات حذف من هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_center.html:23
@@ -18269,7 +18269,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 لا توجد بيانات وصفية لهذا الحدث.,,There is no metadata for this event.,Aucune métadonnée pour cet événement.,Bu olay için üst veri yok.,No hay metadatos para este evento.,ok,app/templates/radius/events_detail.html:51
 الخط الزمني للكيان,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_detail.html:61
 لا يوجد خط زمني مرتبط بهذا الكيان.,,No timeline associated with this entity.,Aucune chronologie associée à cette entité.,Bu varlıkla ilişkili bir zaman çizelgesi yok.,No hay cronología asociada a esta entidad.,ok,app/templates/radius/events_detail.html:69
-التحقيقات — Hobe Hub,,Investigations — Hobe Hub,Enquêtes — Hobe Hub,Soruşturmalar — Hobe Hub,Investigaciones — Hobe Hub,ok,app/templates/radius/events_investigations.html:15
+التحقيقات — %(v)s,,Investigations — %(v)s,Enquêtes — %(v)s,Soruşturmalar — %(v)s,Investigaciones — %(v)s,ok,app/templates/radius/events_investigations.html:15
 مسار مراجعة بشرية لملاحظات المخاطر والاحتيال.,,A human review path for risk and fraud notes.,Un circuit de révision humaine pour les notes de risque et de fraude.,Risk ve dolandırıcılık notları için bir insan inceleme yolu.,Una vía de revisión humana para las notas de riesgo y fraude.,ok,app/templates/radius/events_investigations.html:18
 قيد المراجعة,,Under review,En cours d'examen,İncelemede,En revisión,ok,app/templates/radius/events_investigations.html:46
 تمت المعالجة,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_investigations.html:49
@@ -18341,7 +18341,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 نوع التنبيه,,Alert type,Type d'alerte,Uyarı türü,Tipo de alerta,ok,app/templates/radius/events_risk.html:100
 النقاط,,Points,Points,Puanlar,Puntos,ok,app/templates/radius/events_risk.html:102
 لا توجد تنبيهات احتيال حتى الآن.,,There are no fraud alerts yet.,Aucune alerte de fraude pour le moment.,Henüz dolandırıcılık uyarısı yok.,Todavía no hay alertas de fraude.,ok,app/templates/radius/events_risk.html:126
-أحداث الأمان — Hobe Hub,,Security events — Hobe Hub,Événements de sécurité — Hobe Hub,Güvenlik olayları — Hobe Hub,Eventos de seguridad — Hobe Hub,ok,app/templates/radius/events_security.html:4
+أحداث الأمان — %(v)s,,Security events — %(v)s,Événements de sécurité — %(v)s,Güvenlik olayları — %(v)s,Eventos de seguridad — %(v)s,ok,app/templates/radius/events_security.html:4
 أحداث الأمان,,Security Events,Événements de sécurité,Güvenlik Olayları,Eventos de seguridad,ok,app/templates/radius/events_security.html:6
 أحداث الأمان ومحاولات الدخول والتنبيهات المفتوحة التي تحتاج مراجعة.,,"Security events, login attempts, and open alerts that need review.","Événements de sécurité, tentatives de connexion et alertes ouvertes nécessitant une révision.","Güvenlik olayları, giriş denemeleri ve incelenmesi gereken açık uyarılar.","Eventos de seguridad, intentos de inicio de sesión y alertas abiertas que requieren revisión.",ok,app/templates/radius/events_security.html:7
 يتم تجميع محاولات الدخول الفاشلة وأحداث الصلاحيات والتنبيهات المفتوحة هنا للمراجعة. هذه الصفحة للعرض فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_security.html:30
@@ -18352,7 +18352,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل من هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_security.html:50
 لا توجد أحداث أمان حتى الآن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_security.html:78
 لا توجد تنبيهات مفتوحة حتى الآن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/events_security.html:109
-السجل والتقارير المحاسبية — Hobe Hub,,Ledger and accounting reports — Hobe Hub,Journal et rapports comptables — Hobe Hub,Defter ve muhasebe raporları — Hobe Hub,Libro mayor e informes contables — Hobe Hub,ok,app/templates/radius/finance_accounting.html:4
+السجل والتقارير المحاسبية — %(v)s,,Ledger and accounting reports — %(v)s,Journal et rapports comptables — %(v)s,Defter ve muhasebe raporları — %(v)s,Libro mayor e informes contables — %(v)s,ok,app/templates/radius/finance_accounting.html:4
 دفتر القيود والتقارير المالية في صفحة واحدة,,The ledger and financial reports on a single page,Le grand livre et les rapports financiers sur une seule page,Tek bir sayfada defter ve mali raporlar,El libro mayor y los informes financieros en una sola página,ok,app/templates/radius/finance_accounting.html:7
 سنوات,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_accounting.html:74
 حالات سلف,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_accounting.html:75
@@ -18449,7 +18449,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 لقطة #,,Snapshot #,Instantané n° ,Anlık görüntü #,Instantánea #,ok,app/templates/radius/finance_accounting.html:568
 الفترة:,,Period:,Période :,Dönem:,Período:,ok,app/templates/radius/finance_accounting.html:572
 لا صفوف داخل هذه اللقطة.,,No rows in this snapshot.,Aucune ligne dans cet instantané.,Bu anlık görüntüde satır yok.,No hay filas en esta instantánea.,ok,app/templates/radius/finance_accounting.html:583
-الفواتير والكوبونات — Hobe Hub,,Invoices and coupons — Hobe Hub,Factures et coupons — Hobe Hub,Faturalar ve kuponlar — Hobe Hub,Facturas y cupones — Hobe Hub,ok,app/templates/radius/finance_billing.html:4
+الفواتير والكوبونات — %(v)s,,Invoices and coupons — %(v)s,Factures et coupons — %(v)s,Faturalar ve kuponlar — %(v)s,Facturas y cupones — %(v)s,ok,app/templates/radius/finance_billing.html:4
 إصدار الفواتير وتوليد الكوبونات في صفحة واحدة,,Issue invoices and generate coupons on a single page,Émettre les factures et générer les coupons sur une seule page,Faturaları düzenleyin ve kuponları tek bir sayfada oluşturun,Emite las facturas y genera los cupones en una sola página,ok,app/templates/radius/finance_billing.html:7
 أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_billing.html:79
 كيف تقرأ الفواتير؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_billing.html:113
@@ -18485,7 +18485,7 @@ Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل المل�
 10 خانات,,10 digits,10 chiffres,10 hane,10 dígitos,ok,app/templates/radius/finance_billing.html:325
 مثال: AB12-CD34-EF56,,Example: AB12-CD34-EF56,Exemple : AB12-CD34-EF56,Örnek: AB12-CD34-EF56,Ejemplo: AB12-CD34-EF56,ok,app/templates/radius/finance_billing.html:346
 سيُعلَّم الكوبون «مستخدمًا» وتُضاف قيمته فورًا إلى رصيد المشترك — لا يمكن صرفه مرتين.,,"The coupon will be marked ""used"" and its value added immediately to the subscriber's balance; it can't be redeemed twice.",Le coupon sera marqué « utilisé » et sa valeur ajoutée immédiatement au solde de l'abonné ; il ne peut être utilisé deux fois.,"Kupon ""kullanıldı"" olarak işaretlenir ve değeri hemen abonenin bakiyesine eklenir; iki kez kullanılamaz.",El cupón se marcará como «usado» y su valor se añadirá de inmediato al saldo del abonado; no se puede canjear dos veces.,ok,app/templates/radius/finance_billing.html:358
-المركز المالي — Hobe Hub,,Finance center — Hobe Hub,Centre financier — Hobe Hub,Finans merkezi — Hobe Hub,Centro financiero — Hobe Hub,ok,app/templates/radius/finance_center.html:4
+المركز المالي — %(v)s,,Finance center — %(v)s,Centre financier — %(v)s,Finans merkezi — %(v)s,Centro financiero — %(v)s,ok,app/templates/radius/finance_center.html:4
 خزائن، قيود، إيرادات، ديون، وسلف من Business OS,,"Vaults, entries, revenues, debts, and advances from Business OS","Coffres, écritures, revenus, dettes et avances depuis Business OS","Kasalar, kayıtlar, gelirler, borçlar ve avanslar Business OS'tan","Cajas, asientos, ingresos, deudas y anticipos desde Business OS",ok,app/templates/radius/finance_center.html:7
 نظرة تشغيلية على المال بدون حذف أو تعديل مباشر على سجلات النظام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_center.html:15
 إدارة المحافظ,,Manage wallets,Gérer les portefeuilles,Cüzdanları yönet,Gestionar monederos,ok,app/templates/radius/finance_center.html:17
@@ -18553,7 +18553,7 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 النهاية,,End,Fin,Bitiş,Fin,ok,app/templates/radius/finance_center_hub.html:576
 تظهر السلف المسجلة من صفحة المشترك المالية هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_center_hub.html:597
 لا توجد سلف ضمن هذا الفلتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_center_hub.html:597
-التحصيل والمدفوعات — Hobe Hub,,Collection and payments — Hobe Hub,Encaissements et paiements — Hobe Hub,Tahsilat ve ödemeler — Hobe Hub,Cobros y pagos — Hobe Hub,ok,app/templates/radius/finance_collection.html:9
+التحصيل والمدفوعات — %(v)s,,Collection and payments — %(v)s,Encaissements et paiements — %(v)s,Tahsilat ve ödemeler — %(v)s,Cobros y pagos — %(v)s,ok,app/templates/radius/finance_collection.html:9
 طلبات الدفع والمراجعة والمطابقة في صفحة واحدة,,"Payment requests, review, and reconciliation on a single page","Demandes de paiement, révision et rapprochement sur une seule page","Ödeme talepleri, inceleme ve mutabakat tek bir sayfada","Solicitudes de pago, revisión y conciliación en una sola página",ok,app/templates/radius/finance_collection.html:12
 إثبات مُرسَل,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_collection.html:58
 اشتراك شهري,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_collection.html:63
@@ -18618,7 +18618,7 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 %(v)s السماح بشراء الكروت,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_collection.html:292
 %(v)s الاشتراكات الشهرية,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_collection.html:293
 %(v)s مدفوعات الموزعين,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_collection.html:294
-الديون — Hobe Hub,,Debts — Hobe Hub,Dettes — Hobe Hub,Borçlar — Hobe Hub,Deudas — Hobe Hub,ok,app/templates/radius/finance_debts.html:4
+الديون — %(v)s,,Debts — %(v)s,Dettes — %(v)s,Borçlar — %(v)s,Deudas — %(v)s,ok,app/templates/radius/finance_debts.html:4
 %(v)s ذمّة مفتوحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:7
 الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (من جدول السلف، الحالة: مفتوحة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:15
  ذمّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:27
@@ -18626,17 +18626,17 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 لا يلزم,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:55
 لا ذمم مفتوحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:69
 لا توجد سلف غير مسدَّدة على المشتركين حاليًا. تظهر هنا أي سلفة بحالة «مفتوحة» باعتبارها دَينًا مستحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_debts.html:70
-السلف — Hobe Hub,,Advances — Hobe Hub,Avances — Hobe Hub,Avanslar — Hobe Hub,Anticipos — Hobe Hub,ok,app/templates/radius/finance_loans.html:4
+السلف — %(v)s,,Advances — %(v)s,Avances — %(v)s,Avanslar — %(v)s,Anticipos — %(v)s,ok,app/templates/radius/finance_loans.html:4
 سلف المشتركين الحالية من سجل المحاسبة,,Current subscriber advances from the accounting ledger,Avances actuelles des abonnés issues du registre comptable,Muhasebe defterinden mevcut abone avansları,Anticipos actuales de abonados según el registro contable,ok,app/templates/radius/finance_loans.html:7
 عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على خدمة المصادقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_loans.html:27
 ستظهر السلف المسجلة من صفحة المشترك المالية هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_loans.html:81
-الإيرادات — Hobe Hub,,Revenue — Hobe Hub,Revenus — Hobe Hub,Gelirler — Hobe Hub,Ingresos — Hobe Hub,ok,app/templates/radius/finance_revenue.html:4
+الإيرادات — %(v)s,,Revenue — %(v)s,Revenus — %(v)s,Gelirler — %(v)s,Ingresos — %(v)s,ok,app/templates/radius/finance_revenue.html:4
 سجلات السعر والتحصيل والتكلفة والربح,,"Records of price, collection, cost, and profit","Registres du prix, de l'encaissement, du coût et du bénéfice","Fiyat, tahsilat, maliyet ve kâr kayıtları","Registros de precio, cobro, costo y beneficio",ok,app/templates/radius/finance_revenue.html:7
 شراء مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_revenue.html:21
 عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_revenue.html:35
 بحث فوري في سجلات الإيراد بالمصدر أو المعرّف...,,Instant search in revenue records by source or ID...,Recherche instantanée dans les enregistrements de revenus par source ou ID...,Gelir kayıtlarında kaynağa veya kimliğe göre anlık arama...,Búsqueda instantánea en los registros de ingresos por origen o ID...,ok,app/templates/radius/finance_revenue.html:46
 سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_revenue.html:85
-المحافظ المالية — Hobe Hub,,Wallets — Hobe Hub,Portefeuilles — Hobe Hub,Cüzdanlar — Hobe Hub,Monederos — Hobe Hub,ok,app/templates/radius/finance_wallets.html:4
+المحافظ المالية — %(v)s,,Wallets — %(v)s,Portefeuilles — %(v)s,Cüzdanlar — %(v)s,Monederos — %(v)s,ok,app/templates/radius/finance_wallets.html:4
 أرصدة قابلة للتتبع مع سجل حركات حديث,,Trackable balances with a recent transaction history,Soldes traçables avec un historique de transactions récent,Güncel işlem geçmişiyle izlenebilir bakiyeler,Saldos rastreables con un historial de movimientos reciente,ok,app/templates/radius/finance_wallets.html:7
 موزع,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_wallets.html:71
 إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/finance_wallets.html:101
@@ -18911,7 +18911,7 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 حدّث هذه الصفحة — اللوحة ستفتح مباشرة.,,Refresh this page — the panel will open directly.,Actualisez cette page — le panneau s'ouvrira directement.,Bu sayfayı yenileyin — panel doğrudan açılacaktır.,Actualiza esta página — el panel se abrirá directamente.,ok,app/templates/radius/license_expired.html:115
 لماذا حتى السوبر-أدمن لا يتجاوز؟,,Why can't even the super-admin override it?,Pourquoi même le super-administrateur ne peut-il pas l'outrepasser ?,Süper yönetici bile neden bunu geçersiz kılamaz?,¿Por qué ni siquiera el superadministrador puede anularlo?,ok,app/templates/radius/license_expired.html:139
 قرار انتهاء الترخيص قرار تجاري بين العميل والمزوّد — وليس RBAC داخليًّا. الصلاحيات الداخلية (super_admin) تحكم من يفعل ماذا داخل العقد، لا أن تتجاوز العقد نفسه. الإقفال يشمل كل الأدوار حتى تنتهي إجراءات التجديد.,,"License expiry is a commercial decision between the customer and the provider — not internal RBAC. Internal permissions (super_admin) govern who does what within the contract, not overriding the contract itself. The lockout applies to all roles until the renewal process is completed.","L'expiration de la licence est une décision commerciale entre le client et le fournisseur — pas un RBAC interne. Les autorisations internes (super_admin) régissent qui fait quoi dans le cadre du contrat, sans outrepasser le contrat lui-même. Le verrouillage s'applique à tous les rôles jusqu'à l'achèvement des démarches de renouvellement.","Lisans sona ermesi, müşteri ile sağlayıcı arasında ticari bir karardır — dahili RBAC değildir. Dahili izinler (super_admin), sözleşme kapsamında kimin ne yapacağını belirler, sözleşmenin kendisini geçersiz kılmaz. Kilitleme, yenileme işlemleri tamamlanana kadar tüm rolleri kapsar.","El vencimiento de la licencia es una decisión comercial entre el cliente y el proveedor, no un RBAC interno. Los permisos internos (super_admin) determinan quién hace qué dentro del contrato, no anular el contrato en sí. El bloqueo abarca todos los roles hasta que se completen los trámites de renovación.",ok,app/templates/radius/license_expired.html:141
-ترخيص النظام — Hobe Hub,,System license — Hobe Hub,Licence système — Hobe Hub,Sistem lisansı — Hobe Hub,Licencia del sistema — Hobe Hub,ok,app/templates/radius/license_file.html:5
+ترخيص النظام — %(v)s,,System license — %(v)s,Licence système — %(v)s,Sistem lisansı — %(v)s,Licencia del sistema — %(v)s,ok,app/templates/radius/license_file.html:5
 ترخيص النظام,,System license,Licence du système,Sistem lisansı,Licencia del sistema,ok,app/templates/radius/license_file.html:7
 صالح,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:167
 ضمن المهلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:175
@@ -19115,8 +19115,8 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 — لا حذف نهائي، ويمكن استعادة أي عنصر منها لاحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:227
 المؤهل الآن حسب المعاينة: %(v)s كرت و%(v2)s مشترك في %(v3)s متأثرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:231
 نعم، شغّل الأرشفة,,"Yes, run archiving","Oui, lancer l'archivage","Evet, arşivlemeyi çalıştır","Sí, ejecutar el archivado",ok,app/templates/radius/lifecycle.html:236
-تسجيل الدخول — لوحة Hobe Hub,,Sign In — Hobe Hub Console,Connexion — Panneau Hobe Hub,Oturum aç — Hobe Hub paneli,Iniciar sesión — Panel Hobe Hub,ok,app/templates/radius/login.html:12
-أهلًا بعودتك إلى Hobe Hub,,Welcome back to Hobe Hub,Bon retour sur Hobe Hub,Hobe Hub'a tekrar hoş geldiniz,Bienvenido de nuevo a Hobe Hub,ok,app/templates/radius/login.html:222
+تسجيل الدخول — لوحة %(v)s,,Sign In — %(v)s Console,Connexion — Panneau %(v)s,Oturum aç — %(v)s paneli,Iniciar sesión — Panel %(v)s,ok,app/templates/radius/login.html:12
+أهلًا بعودتك إلى %(v)s,,Welcome back to %(v)s,Bon retour sur %(v)s,%(v)s'a tekrar hoş geldiniz,Bienvenido de nuevo a %(v)s,ok,app/templates/radius/login.html:222
 إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.,,"Full management of authentication, subscribers, cards, and network from one place. Every action is recorded in the audit log and carried out securely.","Gestion complète des services d'authentification, des abonnés, des coupons et du réseau depuis un seul endroit. Chaque opération est enregistrée dans le journal d'audit et effectuée en toute sécurité.","Kimlik doğrulama hizmetlerinin, abonelerin, kuponların ve ağın tek bir yerden tam yönetimi. Her işlem denetim günlüğüne kaydedilir ve güvenle gerçekleştirilir.","Gestión completa de los servicios de autenticación, los abonados, los cupones y la red desde un solo lugar. Cada operación se registra en el registro de auditoría y se realiza de forma segura.",ok,app/templates/radius/login.html:223
 إدارة المشتركين والكروت,,Subscriber and card management,Gestion des abonnés et des coupons,Abone ve kupon yönetimi,Gestión de abonados y cupones,ok,app/templates/radius/login.html:227
 تحكّم الراوترات والشبكة,,Router and network control,Contrôle des routeurs et du réseau,Yönlendirici ve ağ kontrolü,Control de routers y red,ok,app/templates/radius/login.html:228
@@ -20889,7 +20889,7 @@ HobeRadius · مختبر الدفع الإلكتروني,,HobeRadius · Online P
 المبالغ والأنواع المسموحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/payment_collection_settings.html:95
 الاشتراكات الشهرية,,Monthly subscriptions,Abonnements mensuels,Aylık abonelikler,Suscripciones mensuales,ok,app/templates/radius/payment_collection_settings.html:113
 دفعات الموزعين,,Distributor Payments,Paiements des distributeurs,Dağıtıcı ödemeleri,Pagos de distribuidores,ok,app/templates/radius/payment_collection_settings.html:117
-مختبر الدفع الإلكتروني — Hobe Hub,,E-payment lab — Hobe Hub,Labo de paiement électronique — Hobe Hub,E-ödeme laboratuvarı — Hobe Hub,Laboratorio de pago electrónico — Hobe Hub,ok,app/templates/radius/payments_lab.html:8
+مختبر الدفع الإلكتروني — %(v)s,,E-payment lab — %(v)s,Labo de paiement électronique — %(v)s,E-ödeme laboratuvarı — %(v)s,Laboratorio de pago electrónico — %(v)s,ok,app/templates/radius/payments_lab.html:8
 وضع تجريبي — محاكاة كاملة لتدفق الدفع قبل ربط البوابات الحقيقية,,Test mode — a full simulation of the payment flow before connecting the real gateways,Mode test — une simulation complète du flux de paiement avant de connecter les passerelles réelles,Test modu — gerçek ağ geçitlerini bağlamadan önce ödeme akışının tam bir simülasyonu,Modo de prueba — una simulación completa del flujo de pago antes de conectar las pasarelas reales,ok,app/templates/radius/payments_lab.html:11
 هذا المختبر يحاكي تدفق الدفع الإلكتروني كاملًا (اختيار → محفظة → رمز تحقق → إيصال) بلا أي حركة مالية حقيقية وبلا ترحيل إلى دفتر القيود. عند توقيع اتفاقية مع مزوّد (جوال باي / إي-سداد / بنك فلسطين / بال باي / لحظة) تُستبدل المحاكاة بالبوابة الفعلية بنفس الواجهة — والترحيل المالي يتم حينها تلقائيًا عبر النظام المحاسبي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:64
 جرّب تجربة الدفع التي سيراها عملاؤك — اليوم بالمحاكاة، وغدًا بالبوابات الحقيقية,,,,,,"missing: en,fr,tr,es",app/templates/radius/payments_lab.html:71
@@ -21745,7 +21745,7 @@ QR / الباركود,,QR / barcode,QR / code-barres,QR / barkod,QR / código de
 جسر الإدارة (مزامنة الآن),,Management bridge (sync now),Pont de gestion (synchroniser maintenant),Yönetim köprüsü (şimdi senkronize et),Puente de gestión (sincronizar ahora),ok,app/templates/radius/provider_upgrade.html:46
 الفرق عن «الخدمة موقوفة»,,The difference from «Service suspended»,La différence avec «Service suspendu»,«Hizmet askıya alındı» durumundan farkı,La diferencia respecto a «Servicio suspendido»,ok,app/templates/radius/provider_upgrade.html:61
 «موقوفة (إيقاف فعلي)» تختفي تمامًا من الواجهة وتُرفَض كل طلباتها. أما «مقفلة — ترقية» (هذه الحالة) فالخدمة تَبقى مرئية في الشريط الجانبي بشارة قفل صغيرة، وضغطها يفتح هذه الصفحة كي تعرف أنّها متاحة للتفعيل، لا أنّها متوقّفة عنك.,,"A «suspended (actually stopped)» service disappears entirely from the interface and all its requests are rejected. A «locked — upgrade» service (this state) stays visible in the sidebar with a small lock badge, and clicking it opens this page so you know it's available to activate, not stopped for you.","Un service «suspendu (réellement arrêté)» disparaît entièrement de l'interface et toutes ses requêtes sont rejetées. Un service «verrouillé — mise à niveau» (cet état) reste visible dans la barre latérale avec un petit badge de cadenas, et un clic ouvre cette page pour vous indiquer qu'il est disponible à l'activation, et non arrêté pour vous.","«Askıya alınmış (gerçekten durdurulmuş)» bir hizmet arayüzden tamamen kaybolur ve tüm istekleri reddedilir. «Kilitli — yükseltme» (bu durum) bir hizmet ise yan çubukta küçük bir kilit rozetiyle görünür kalır ve tıklandığında bu sayfa açılır; böylece etkinleştirmeye açık olduğunu, size kapatılmadığını anlarsınız.","Un servicio «suspendido (detenido de verdad)» desaparece por completo de la interfaz y se rechazan todas sus solicitudes. Un servicio «bloqueado — actualización» (este estado) permanece visible en la barra lateral con una pequeña insignia de candado, y al pulsarlo se abre esta página para que sepas que está disponible para activarse, no que esté detenido para ti.",ok,app/templates/radius/provider_upgrade.html:63
-لوحة الشحن — Hobe Hub,,Recharge panel — Hobe Hub,Panneau de recharge — Hobe Hub,Yükleme paneli — Hobe Hub,Panel de recarga — Hobe Hub,ok,app/templates/radius/recharge_panel.html:4
+لوحة الشحن — %(v)s,,Recharge panel — %(v)s,Panneau de recharge — %(v)s,Yükleme paneli — %(v)s,Panel de recarga — %(v)s,ok,app/templates/radius/recharge_panel.html:4
 لوحة الشحن,,Recharge panel,Panneau de recharge,Yükleme paneli,Panel de recarga,ok,app/templates/radius/recharge_panel.html:6
 تفعيل وتجديد المشتركين بسرعة — تجديد الباقة، تفعيل بالوقت، تغيير العرض، أو شحن نقدي,,"Quickly activate and renew subscribers: renew the plan, activate by time, change the offer, or top up cash","Activez et renouvelez rapidement les abonnés : renouveler le forfait, activer par durée, changer l'offre ou recharger en espèces","Aboneleri hızlıca etkinleştirin ve yenileyin: paketi yenileme, süreyle etkinleştirme, teklifi değiştirme veya nakit yükleme","Activa y renueva abonados rápidamente: renovar el plan, activar por tiempo, cambiar la oferta o recargar en efectivo",ok,app/templates/radius/recharge_panel.html:7
 ابحث عن المشترك، اختر العملية، وفعّل بنقرة — كل العمليات تُسجَّل في السجل المالي الموحّد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/recharge_panel.html:216
@@ -22206,7 +22206,7 @@ IP الداخلي:,,Internal IP:,IP interne :,Dahili IP:,IP interna:,ok,app/temp
 «التفاصيل» ملخص مختصر — مرّر فوقه لرؤية النص الكامل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/rep_user_events.html:56
 لا أحداث مستخدمين بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/rep_user_events.html:102
 غيّر الفلاتر أو لا توجد أحداث مستخدمين بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/rep_user_events.html:103
-أرشيف التقارير — Hobe Hub,,Reports archive — Hobe Hub,Archives des rapports — Hobe Hub,Rapor arşivi — Hobe Hub,Archivo de informes — Hobe Hub,ok,app/templates/radius/reports_archive.html:4
+أرشيف التقارير — %(v)s,,Reports archive — %(v)s,Archives des rapports — %(v)s,Rapor arşivi — %(v)s,Archivo de informes — %(v)s,ok,app/templates/radius/reports_archive.html:4
 أرشيف التقارير,,Reports archive,Archives des rapports,Rapor arşivi,Archivo de informes,ok,app/templates/radius/reports_archive.html:6
 لقطات ثابتة مجمّدة لا تتأثر بأي حركة لاحقة,,Frozen static snapshots unaffected by any later activity,"Instantanés statiques figés, non affectés par toute activité ultérieure",Sonraki herhangi bir hareketten etkilenmeyen donmuş statik anlık görüntüler,Capturas estáticas congeladas que no se ven afectadas por ninguna actividad posterior,ok,app/templates/radius/reports_archive.html:7
 اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء — مرجع ثابت لا يُستبدل ولا يُحذف، حتى لو تغيّرت الأرقام لاحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/reports_archive.html:40
@@ -22460,7 +22460,7 @@ WAN IP,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_list.html:83
 قنوات التنبيه (تلجرام/دفع الجوال/الجرس) تُدار مركزيًّا من,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:109
 الإعدادات ← تنبيهات تلجرام,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:110
 ضمن مجموعة «راوترات المشتركين (TR-069)».,,,,,,"missing: en,fr,tr,es",app/templates/radius/routers_setup.html:111
-إدارة الأقسام — Hobe Hub,,Section management — Hobe Hub,Gestion des sections — Hobe Hub,Bölüm yönetimi — Hobe Hub,Gestión de secciones — Hobe Hub,ok,app/templates/radius/sections_admin.html:4
+إدارة الأقسام — %(v)s,,Section management — %(v)s,Gestion des sections — %(v)s,Bölüm yönetimi — %(v)s,Gestión de secciones — %(v)s,ok,app/templates/radius/sections_admin.html:4
 قَلب «الإخفاء/التعطيل» لكل قسم — يُغلق الوصول المباشر بالعنوان لغير المدير الرئيسي.,,Toggle «hide/disable» for each section — it blocks direct URL access for anyone other than the primary admin.,Basculer « masquer/désactiver » pour chaque section — bloque l'accès direct par URL pour tout autre que l'administrateur principal.,Her bölüm için «gizle/devre dışı bırak» durumunu değiştir — ana yönetici dışındakiler için URL ile doğrudan erişimi kapatır.,Alternar «ocultar/deshabilitar» para cada sección; bloquea el acceso directo por URL para quienes no sean el administrador principal.,ok,app/templates/radius/sections_admin.html:7
 مكان واحد للتحكّم بإظهار/إخفاء/تعطيل كل قسم — تنعكس الإعدادات على الشريط الجانبي وعلى الحارس الخادمي معاً، فلا يكفي إخفاء البطاقة ليبقى المسار مفتوحاً.,,,,,,"missing: en,fr,tr,es",app/templates/radius/sections_admin.html:17
 إجمالي الأقسام,,,,,,"missing: en,fr,tr,es",app/templates/radius/sections_admin.html:20
@@ -23632,7 +23632,7 @@ WAN interface-list (للحماية في وضع block),,WAN interface-list (for p
 خذ نسخة احتياطية من الراوتر قبل التطبيق. ولو فشل التطبيق، افتح,,,,,,"missing: en,fr,tr,es",app/templates/radius/site_exit.html:736
 لمعرفة السبب.,,To find out why.,Pour en connaître la raison.,Nedenini öğrenmek için.,Para conocer el motivo.,ok,app/templates/radius/site_exit.html:736
 ⚠️ هام:,,⚠️ Important:,⚠️ Important :,⚠️ Önemli:,⚠️ Importante:,ok,app/templates/radius/site_exit.html:736
-ربط رسائل SMS (TweetSMS) — Hobe Hub,,,,,,"missing: en,fr,tr,es",app/templates/radius/sms.html:18
+ربط رسائل SMS (TweetSMS) — %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/sms.html:18
 ربط رسائل SMS (TweetSMS),,,,,,"missing: en,fr,tr,es",app/templates/radius/sms.html:20
 اربط حساب TweetSMS الخاص بك لإرسال رسائل SMS للمشتركين — خدمة مجانية، تشتري الرصيد من المزوّد مباشرةً.,,,,,,"missing: en,fr,tr,es",app/templates/radius/sms.html:21
 اربط حساب TweetSMS الخاص بك لإرسال رسائل SMS للمشتركين. الخدمة مجانية — تشتري الرصيد من المزوّد مباشرةً، ولا تُباع أي حِزم من الإدارة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/sms.html:82
@@ -23864,7 +23864,7 @@ Profile = default (لا default-encryption؛ SSTP مشفّر TLS سلفًا) و 
 ميغابايت,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_360.html:14
 كيلوبايت,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_360.html:15
 ساعة و,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_360.html:22
-ملف المشترك 360 — Hobe Hub,,Subscriber profile 360 — Hobe Hub,Profil de l'abonné 360 — Hobe Hub,Abone profili 360 — Hobe Hub,Perfil del abonado 360 — Hobe Hub,ok,app/templates/radius/subscriber_360.html:27
+ملف المشترك 360 — %(v)s,,Subscriber profile 360 — %(v)s,Profil de l'abonné 360 — %(v)s,Abone profili 360 — %(v)s,Perfil del abonado 360 — %(v)s,ok,app/templates/radius/subscriber_360.html:27
 ملف المشترك 360,,Subscriber profile 360,Profil de l'abonné 360,Abone profili 360,Perfil del abonado 360,ok,app/templates/radius/subscriber_360.html:29
 ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة,,A unified financial and operational profile for the subscriber without directly changing the authentication system,Un profil financier et opérationnel unifié pour l'abonné sans modifier directement le système d'authentification,Kimlik doğrulama sistemini doğrudan değiştirmeden abone için birleşik bir mali ve operasyonel profil,Un perfil financiero y operativo unificado para el abonado sin modificar directamente el sistema de autenticación,ok,app/templates/radius/subscriber_360.html:30
 نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_360.html:38
@@ -24448,7 +24448,7 @@ Profile = default (لا default-encryption؛ SSTP مشفّر TLS سلفًا) و 
 الرسالة:,,Message:,Message :,Mesaj:,Mensaje:,ok,app/templates/radius/tool_test_auth.html:94
 خصائص الرد:,,Reply attributes:,Attributs de réponse :,Yanıt öznitelikleri:,Atributos de respuesta:,ok,app/templates/radius/tool_test_auth.html:100
 لا خصائص رد.,,No reply attributes.,Aucun attribut de réponse.,Yanıt özniteliği yok.,Sin atributos de respuesta.,ok,app/templates/radius/tool_test_auth.html:108
-الأنفاق — Hobe Hub,,Tunnels — Hobe Hub,Tunnels — Hobe Hub,Tüneller — Hobe Hub,Túneles — Hobe Hub,ok,app/templates/radius/tunnels.html:4
+الأنفاق — %(v)s,,Tunnels — %(v)s,Tunnels — %(v)s,Tüneller — %(v)s,Túneles — %(v)s,ok,app/templates/radius/tunnels.html:4
 الأنفاق,,Tunnels,Tunnels,Tüneller,Túneles,ok,app/templates/radius/tunnels.html:6
 كيف تعمل الأنفاق؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/tunnels.html:31
 لوحة التراخيص هي مصدر الحقيقة لأنفاق CHR. من هنا تطلب نفقًا أو تستعرض الأنفاق فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/tunnels.html:32
@@ -25036,7 +25036,7 @@ Peer على الخادم,,,,,,"missing: en,fr,tr,es",app/templates/radius/wg_pee
 آخر استجابة,,Last Response,Dernière réponse,Son Yanıt,Última respuesta,ok,app/templates/radius/wh_deliveries.html:73
 لا سجلات بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/wh_deliveries.html:107
 عند إرسال أول إشعار ربط خارجي ستظهر السجلات هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/wh_deliveries.html:108
-إشعارات الربط الخارجي — Hobe Hub,,External webhook notifications — Hobe Hub,Notifications webhook externes — Hobe Hub,Harici webhook bildirimleri — Hobe Hub,Notificaciones webhook externas — Hobe Hub,ok,app/templates/radius/wh_settings.html:14
+إشعارات الربط الخارجي — %(v)s,,External webhook notifications — %(v)s,Notifications webhook externes — %(v)s,Harici webhook bildirimleri — %(v)s,Notificaciones webhook externas — %(v)s,ok,app/templates/radius/wh_settings.html:14
 إشعارات الربط الخارجي,,External webhook notifications,Notifications webhook externes,Harici webhook bildirimleri,Notificaciones webhook externas,ok,app/templates/radius/wh_settings.html:16
 إرسال أحداث النظام إلى رابط خارجي بتوقيع أمني,,Send system events to an external URL with a security signature,Envoyer les événements système vers une URL externe avec une signature de sécurité,Sistem olaylarını güvenlik imzasıyla harici bir bağlantıya gönder,Enviar eventos del sistema a una URL externa con una firma de seguridad,ok,app/templates/radius/wh_settings.html:17
 إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/wh_settings.html:33
@@ -25079,7 +25079,7 @@ Peer على الخادم,,,,,,"missing: en,fr,tr,es",app/templates/radius/wg_pee
 إنشاء كرت,,Create voucher,Créer un coupon,Kupon oluştur,Crear cupón,ok,app/templates/radius/wh_settings.html:159
 تنبيه أمني,,Security Alert,Alerte de sécurité,Güvenlik uyarısı,Alerta de seguridad,ok,app/templates/radius/wh_settings.html:161
 لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي أو أعطِه للمطور المسؤول عن النظام الخارجي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/wh_settings.html:164
-رسائل واتساب للمشتركين — Hobe Hub,,WhatsApp messages to subscribers — Hobe Hub,Messages WhatsApp aux abonnés — Hobe Hub,Abonelere WhatsApp mesajları — Hobe Hub,Mensajes de WhatsApp a los abonados — Hobe Hub,ok,app/templates/radius/whatsapp.html:26
+رسائل واتساب للمشتركين — %(v)s,,WhatsApp messages to subscribers — %(v)s,Messages WhatsApp aux abonnés — %(v)s,Abonelere WhatsApp mesajları — %(v)s,Mensajes de WhatsApp a los abonados — %(v)s,ok,app/templates/radius/whatsapp.html:26
 رسائل واتساب للمشتركين,,WhatsApp messages to subscribers,Messages WhatsApp aux abonnés,Abonelere WhatsApp mesajları,Mensajes de WhatsApp a los abonados,ok,app/templates/radius/whatsapp.html:28
 التحكم بأنواع رسائل واتساب الرسمية المسموح إرسالها للمشتركين عبر لوحة التراخيص.,,Control which types of official WhatsApp messages may be sent to subscribers via the licensing panel.,Contrôlez les types de messages WhatsApp officiels autorisés à être envoyés aux abonnés via le panneau de licences.,Lisans paneli aracılığıyla abonelere gönderilmesine izin verilen resmi WhatsApp mesaj türlerini denetleyin.,Controla qué tipos de mensajes oficiales de WhatsApp se pueden enviar a los abonados mediante el panel de licencias.,ok,app/templates/radius/whatsapp.html:29
 اختر أنواع الرسائل المسموح إرسالها للمشتركين عبر واتساب الرسمي — الربط والإرسال تتولاهما لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/whatsapp.html:117

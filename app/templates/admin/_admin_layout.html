@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   {# توكن CSRF للنماذج المبنية بالجافاسكربت (تصدير الجداول وغيره) #}
   <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
-  <title>{% block title %}Hobe Hub — Radius{% endblock %}</title>
+  <title>{% block title %}{{ cfg.system_name or 'HobeRadius' }}{% endblock %}</title>
   {# Cairo + Almarai مَحَلّيًّا فقط (يونيو 2026، تَنقيح المالك «اعتمد
      الخط ... عممها»). أُزيلت روابط Google Fonts نَهائيًّا — يَعمل على
      VPS مَعزول بلا اتّصال خارجي. الـTTFs في app/static/fonts شُحنَت
@@ -59,7 +59,7 @@
       flex-direction:row-reverse !important;
     }
     /* The big brand block on the right of the topbar duplicated the
-       sidebar's Ho mark + 'Hobe Hub' wordmark. Now hidden — sidebar
+       sidebar's mark + system-name wordmark. Now hidden — sidebar
        owns the brand. */
     .topbar .brand-area{ display:none !important; }
     /* On mobile (sidebar becomes a drawer), the topbar reclaims the
@@ -571,7 +571,7 @@
     </div>
   </div>
   <div class="brand-area">
-    <span>{{ tenant.display_name if tenant else 'Hobe Hub' }}</span>
+    <span>{{ tenant.display_name if tenant else (cfg.system_name or 'HobeRadius') }}</span>
     <span class="logo-mark"
           style="{% if tenant and tenant.primary_color %}background:linear-gradient(135deg, {{ tenant.primary_color }}, {{ tenant.primary_color }}DD){% endif %}">
       {{ (tenant.display_name or tenant.name)[:2] if tenant else 'HR' }}
@@ -647,7 +647,7 @@
 
   <div class="app-footer">
     <span>{{ _('الإصدار %(v)s', v=running_version()) }}</span>
-    <span>{{ _('حقوق النشر') }} © <bdi dir="ltr">2017–2026</bdi> Hobe Hub</span>
+    <span>{{ _('حقوق النشر') }} © <bdi dir="ltr">2017–2026</bdi> {{ cfg.system_name or 'HobeRadius' }}</span>
   </div>
 </main>
 

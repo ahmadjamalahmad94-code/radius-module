@@ -1,6 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}{{ _("توليد حزمة من عرض - Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("توليد حزمة من عرض - %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}{{ _("توليد حزمة من العرض") }}: {{ offer.name }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('السعر والمدّة مقفلان وفق العرض؛ يمكنك ضبط العدد وطول/نوع الكود فقط.') if not is_super else _('وصول كامل: يمكنك تجاوز كل القيم.') }}</span>{% endblock %}

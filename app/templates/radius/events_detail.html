@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _("حدث") }} #{{ event.id }} — Hobe Hub{% endblock %}
+{% block title %}{{ _("حدث") }} #{{ event.id }} — {{ cfg.system_name or 'HobeRadius' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
 {% block page_title %}{{ _("حدث #") }}{{ event.id }}{% endblock %}
 {% block page_sub %}<span class="sub" title="{{ event.category }} / {{ event.severity }} / {{ event.event_key }}">{{ event.category_label or event.category }} / {{ event.severity_label or event.severity }} / {{ event.event_key_label or event.event_key }}</span>{% endblock %}

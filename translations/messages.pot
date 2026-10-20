@@ -2907,9 +2907,10 @@ msgid "(إن وُجد)، ويضغط"
 msgstr ""
 
 #: app/templates/radius/docs_migration.html:85
+#, python-format
 msgid ""
 "(إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل "
-"في Hobe Hub. مثلًا: عمود"
+"في %(v)s. مثلًا: عمود"
 msgstr ""
 
 #: app/templates/radius/docs_cards_batches.html:547
@@ -5756,7 +5757,7 @@ msgstr ""
 msgid "HobeRadius · مختبر الدفع الإلكتروني"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:605
+#: app/radius/services/pdf_theme.py:614
 msgid "HobeRadius • إدارة الكروت"
 msgstr ""
 
@@ -10561,7 +10562,8 @@ msgid "أحداث الأمان ومحاولات الدخول والتنبيها�
 msgstr ""
 
 #: app/templates/radius/events_security.html:4
-msgid "أحداث الأمان — Hobe Hub"
+#, python-format
+msgid "أحداث الأمان — %(v)s"
 msgstr ""
 
 #: app/templates/radius/admin_bridge.html:218
@@ -11380,7 +11382,8 @@ msgid "أرشيف التقارير"
 msgstr ""
 
 #: app/templates/radius/reports_archive.html:4
-msgid "أرشيف التقارير — Hobe Hub"
+#, python-format
+msgid "أرشيف التقارير — %(v)s"
 msgstr ""
 
 #: app/templates/radius/backups.html:195
@@ -13260,7 +13263,8 @@ msgid "أهلًا %(username)s"
 msgstr ""
 
 #: app/templates/radius/login.html:222
-msgid "أهلًا بعودتك إلى Hobe Hub"
+#, python-format
+msgid "أهلًا بعودتك إلى %(v)s"
 msgstr ""
 
 #: app/radius/services/policy_engine.py:107
@@ -15155,7 +15159,8 @@ msgid "إدارة الأقسام (إخفاء/تعطيل)"
 msgstr ""
 
 #: app/templates/radius/sections_admin.html:4
-msgid "إدارة الأقسام — Hobe Hub"
+#, python-format
+msgid "إدارة الأقسام — %(v)s"
 msgstr ""
 
 #: app/templates/radius/cards_batches.html:8
@@ -15889,7 +15894,8 @@ msgid "إرسال رسالة للمستفيد"
 msgstr ""
 
 #: app/templates/radius/communications_send.html:4
-msgid "إرسال رسالة — Hobe Hub"
+#, python-format
+msgid "إرسال رسالة — %(v)s"
 msgstr ""
 
 #: app/api/v1/whatsapp.py:31 app/templates/radius/whatsapp.html:104
@@ -16222,7 +16228,8 @@ msgid "إشعارات الربط الخارجي"
 msgstr ""
 
 #: app/templates/radius/wh_settings.html:14
-msgid "إشعارات الربط الخارجي — Hobe Hub"
+#, python-format
+msgid "إشعارات الربط الخارجي — %(v)s"
 msgstr ""
 
 #: app/api/v1/whatsapp.py:25 app/radius/routes/whatsapp.py:34
@@ -25959,7 +25966,8 @@ msgid "الأنفاق الحالية"
 msgstr ""
 
 #: app/templates/radius/tunnels.html:4
-msgid "الأنفاق — Hobe Hub"
+#, python-format
+msgid "الأنفاق — %(v)s"
 msgstr ""
 
 #: app/templates/radius/docs_anti_mac_clone.html:33
@@ -26166,7 +26174,7 @@ msgid "الإجراءات فقط"
 msgstr ""
 
 #: app/radius/services/accounting.py:1342
-#: app/radius/services/accounting.py:1436 app/radius/services/pdf_theme.py:578
+#: app/radius/services/accounting.py:1436 app/radius/services/pdf_theme.py:587
 #: app/static/js/mt_dashboard.js:1886
 #: app/templates/radius/accounting_reports.html:110
 #: app/templates/radius/admins_list.html:62
@@ -26709,7 +26717,8 @@ msgid "الإيرادات والهامش"
 msgstr ""
 
 #: app/templates/radius/finance_revenue.html:4
-msgid "الإيرادات — Hobe Hub"
+#, python-format
+msgid "الإيرادات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/docs_finance_center.html:293
@@ -27414,7 +27423,8 @@ msgid "الانتقال للأفعال والرؤية"
 msgstr ""
 
 #: app/templates/radius/docs_migration.html:59
-msgid "الانتقال من نظام إدارة قديم إلى Hobe Hub."
+#, python-format
+msgid "الانتقال من نظام إدارة قديم إلى %(v)s."
 msgstr ""
 
 #: app/templates/radius/docs_add_subscriber.html:541
@@ -27537,7 +27547,7 @@ msgstr ""
 #: app/radius/services/comms_bot.py:89 app/radius/services/event_labels.py:316
 #: app/radius/services/manager_grants.py:239
 #: app/radius/services/migration/engine.py:1232
-#: app/radius/services/pdf_theme.py:519 app/radius/services/users.py:1714
+#: app/radius/services/pdf_theme.py:528 app/radius/services/users.py:1714
 #: app/templates/radius/_speed_schedules_panel.html:131
 #: app/templates/radius/_speed_schedules_panel.html:240
 #: app/templates/radius/accounting_reports.html:115
@@ -28573,7 +28583,8 @@ msgid "التحصيل والمدفوعات"
 msgstr ""
 
 #: app/templates/radius/finance_collection.html:9
-msgid "التحصيل والمدفوعات — Hobe Hub"
+#, python-format
+msgid "التحصيل والمدفوعات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/docs_finance_collection.html:115
@@ -28643,7 +28654,8 @@ msgid "التحقيقات"
 msgstr ""
 
 #: app/templates/radius/events_investigations.html:15
-msgid "التحقيقات — Hobe Hub"
+#, python-format
+msgid "التحقيقات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/setup_wizard_v3.html:77
@@ -30357,7 +30369,7 @@ msgstr ""
 #: app/radius/services/audit_format.py:477
 #: app/radius/services/audit_format.py:650
 #: app/radius/services/manager_grants.py:211
-#: app/radius/services/operations.py:981 app/radius/services/pdf_theme.py:521
+#: app/radius/services/operations.py:981 app/radius/services/pdf_theme.py:530
 #: app/radius/services/subscriber_form_fields.py:70
 #: app/radius/services/users.py:1715
 #: app/radius/templates/radius/monitoring.html:173
@@ -31207,7 +31219,8 @@ msgid "الحملات وقوالب الرسائل والإرسال."
 msgstr ""
 
 #: app/templates/radius/communications_campaigns.html:9
-msgid "الحملات — Hobe Hub"
+#, python-format
+msgid "الحملات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/dashboard.html:981
@@ -31532,7 +31545,7 @@ msgstr ""
 msgid "الخطأ"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:520
+#: app/radius/services/pdf_theme.py:529
 #: app/templates/radius/subscriber_360.html:78
 msgid "الخطة"
 msgstr ""
@@ -32053,7 +32066,8 @@ msgid "الديون والسلف:"
 msgstr ""
 
 #: app/templates/radius/finance_debts.html:4
-msgid "الديون — Hobe Hub"
+#, python-format
+msgid "الديون — %(v)s"
 msgstr ""
 
 #: app/radius/services/device_health_alerts.py:136
@@ -33543,7 +33557,8 @@ msgid "السجل والتقارير المحاسبية"
 msgstr ""
 
 #: app/templates/radius/finance_accounting.html:4
-msgid "السجل والتقارير المحاسبية — Hobe Hub"
+#, python-format
+msgid "السجل والتقارير المحاسبية — %(v)s"
 msgstr ""
 
 #: app/templates/radius/rep_balance_movements.html:96
@@ -34180,7 +34195,8 @@ msgid "السلف والتسويات"
 msgstr ""
 
 #: app/templates/radius/finance_loans.html:4
-msgid "السلف — Hobe Hub"
+#, python-format
+msgid "السلف — %(v)s"
 msgstr ""
 
 #: app/templates/radius/settings_page.html:258
@@ -36774,7 +36790,8 @@ msgid "الفواتير والكوبونات"
 msgstr ""
 
 #: app/templates/radius/finance_billing.html:4
-msgid "الفواتير والكوبونات — Hobe Hub"
+#, python-format
+msgid "الفواتير والكوبونات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/portal_subscriber.html:282
@@ -37258,7 +37275,7 @@ msgstr ""
 msgid "القيمة الافتراضية"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:527 app/radius/services/pdf_theme.py:591
+#: app/radius/services/pdf_theme.py:536 app/radius/services/pdf_theme.py:600
 msgid "القيمة التقديرية"
 msgstr ""
 
@@ -38411,7 +38428,7 @@ msgstr ""
 msgid "المتاح للشراء الآن — يتغيّر بالشحن والمشتريات."
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:523
+#: app/radius/services/pdf_theme.py:532
 msgid "المتاحة"
 msgstr ""
 
@@ -38430,7 +38447,7 @@ msgstr ""
 msgid "المتبقي"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:525
+#: app/radius/services/pdf_theme.py:534
 msgid "المتبقية"
 msgstr ""
 
@@ -38784,7 +38801,8 @@ msgid "المحافظ المالية"
 msgstr ""
 
 #: app/templates/radius/finance_wallets.html:4
-msgid "المحافظ المالية — Hobe Hub"
+#, python-format
+msgid "المحافظ المالية — %(v)s"
 msgstr ""
 
 #: app/radius/services/data_reset.py:142
@@ -39503,7 +39521,8 @@ msgid ""
 msgstr ""
 
 #: app/templates/radius/finance_center.html:4
-msgid "المركز المالي — Hobe Hub"
+#, python-format
+msgid "المركز المالي — %(v)s"
 msgstr ""
 
 #: app/templates/radius/finance_center_hub.html:5
@@ -41328,7 +41347,7 @@ msgstr ""
 msgid "المورّد"
 msgstr ""
 
-#: app/radius/routes/cards.py:1516 app/radius/services/pdf_theme.py:528
+#: app/radius/routes/cards.py:1516 app/radius/services/pdf_theme.py:537
 #: app/radius/services/permission_labels.py:87
 #: app/templates/radius/cards_batches.html:483
 #: app/templates/radius/cards_batches.html:643
@@ -41494,7 +41513,7 @@ msgstr ""
 msgid "المولد"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:522
+#: app/radius/services/pdf_theme.py:531
 msgid "المولّدة"
 msgstr ""
 
@@ -41881,7 +41900,7 @@ msgstr ""
 msgid "النشط"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:524
+#: app/radius/services/pdf_theme.py:533
 msgid "النشطة"
 msgstr ""
 
@@ -43885,8 +43904,9 @@ msgid ""
 msgstr ""
 
 #: app/templates/radius/docs_migration.html:18
+#, python-format
 msgid ""
-"انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى Hobe Hub بأمان: اربط "
+"انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى %(v)s بأمان: اربط "
 "الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ."
 msgstr ""
 
@@ -44368,7 +44388,7 @@ msgstr ""
 msgid "بانتظار اكتمال الاتصال... ({elapsed}s)"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:500
+#: app/radius/services/pdf_theme.py:509
 msgid "بانتظار الأرشفة"
 msgstr ""
 
@@ -46435,7 +46455,8 @@ msgid "بناء الجمهور"
 msgstr ""
 
 #: app/templates/radius/communications_audience.html:4
-msgid "بناء الجمهور — Hobe Hub"
+#, python-format
+msgid "بناء الجمهور — %(v)s"
 msgstr ""
 
 #: app/templates/radius/cards_import.html:350
@@ -47815,7 +47836,7 @@ msgstr ""
 msgid "تاريخ الإرسال"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:269
+#: app/radius/services/pdf_theme.py:278
 msgid "تاريخ الإصدار:"
 msgstr ""
 
@@ -47829,7 +47850,7 @@ msgstr ""
 msgid "تاريخ الإنتهاء"
 msgstr ""
 
-#: app/radius/routes/cards.py:1517 app/radius/services/pdf_theme.py:529
+#: app/radius/routes/cards.py:1517 app/radius/services/pdf_theme.py:538
 #: app/radius/templates/radius/vpn_reports.html:146
 #: app/radius/templates/radius/vpn_reports.html:241
 #: app/templates/radius/business_operator_profile.html:475
@@ -50375,7 +50396,8 @@ msgid "ترخيص النظام (إعدادات متقدّمة)"
 msgstr ""
 
 #: app/templates/radius/license_file.html:5
-msgid "ترخيص النظام — Hobe Hub"
+#, python-format
+msgid "ترخيص النظام — %(v)s"
 msgstr ""
 
 #: app/templates/radius/license_file.html:361
@@ -50618,7 +50640,8 @@ msgid "تسجيل الدخول — بوابة المشترك · HobeRadius"
 msgstr ""
 
 #: app/templates/radius/login.html:12
-msgid "تسجيل الدخول — لوحة Hobe Hub"
+#, python-format
+msgid "تسجيل الدخول — لوحة %(v)s"
 msgstr ""
 
 #: app/templates/radius/portal_card_login.html:15
@@ -50849,7 +50872,8 @@ msgid "تسعير البطاقات"
 msgstr ""
 
 #: app/templates/radius/card_pricing.html:8
-msgid "تسعير البطاقات - Hobe Hub"
+#, python-format
+msgid "تسعير البطاقات - %(v)s"
 msgstr ""
 
 #: app/radius/services/event_labels.py:88
@@ -55306,7 +55330,8 @@ msgid ""
 msgstr ""
 
 #: app/templates/radius/card_pricing_batch.html:7
-msgid "تفاصيل الدفعة المالية — Hobe Hub"
+#, python-format
+msgid "تفاصيل الدفعة المالية — %(v)s"
 msgstr ""
 
 #: app/templates/radius/subscribers_overview.html:203
@@ -56095,7 +56120,7 @@ msgstr ""
 msgid "تقرير المدراء يتطلب رابط لوحة آمن HTTPS."
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:601
+#: app/radius/services/pdf_theme.py:610
 msgid "تقرير حِزَم الكروت"
 msgstr ""
 
@@ -60333,7 +60358,8 @@ msgid "توليد حزمة من العرض «%(v)s» (%(count)s بطاقة)"
 msgstr ""
 
 #: app/templates/radius/cards_offer_use.html:3
-msgid "توليد حزمة من عرض - Hobe Hub"
+#, python-format
+msgid "توليد حزمة من عرض - %(v)s"
 msgstr ""
 
 #: app/templates/radius/card_marketplace.html:1019
@@ -62091,7 +62117,8 @@ msgid "جسر الإدارة (مزامنة الآن)"
 msgstr ""
 
 #: app/templates/radius/admin_bridge.html:20
-msgid "جسر الإدارة — Hobe Hub"
+#, python-format
+msgid "جسر الإدارة — %(v)s"
 msgstr ""
 
 #: app/radius/services/provider_service_labels.py:156
@@ -65494,7 +65521,8 @@ msgid "حسابي"
 msgstr ""
 
 #: app/templates/radius/account.html:4
-msgid "حسابي — Hobe Hub"
+#, python-format
+msgid "حسابي — %(v)s"
 msgstr ""
 
 #: app/templates/radius/rep_subscriber_consumption.html:287
@@ -70383,7 +70411,8 @@ msgid "ربط رسائل SMS (TweetSMS)"
 msgstr ""
 
 #: app/templates/radius/sms.html:18
-msgid "ربط رسائل SMS (TweetSMS) — Hobe Hub"
+#, python-format
+msgid "ربط رسائل SMS (TweetSMS) — %(v)s"
 msgstr ""
 
 #: app/radius/services/admin_alerts.py:865
@@ -70635,7 +70664,8 @@ msgid "رسائل واتساب للمشتركين"
 msgstr ""
 
 #: app/templates/radius/whatsapp.html:26
-msgid "رسائل واتساب للمشتركين — Hobe Hub"
+#, python-format
+msgid "رسائل واتساب للمشتركين — %(v)s"
 msgstr ""
 
 #: app/templates/radius/rep_api_messages.html:21
@@ -71895,7 +71925,7 @@ msgstr ""
 msgid "رمز الحالة"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:518
+#: app/radius/services/pdf_theme.py:527
 msgid "رمز الحزمة"
 msgstr ""
 
@@ -73118,7 +73148,8 @@ msgid "سجل الإرسال"
 msgstr ""
 
 #: app/templates/radius/communications_deliveries.html:4
-msgid "سجل الإرسال — Hobe Hub"
+#, python-format
+msgid "سجل الإرسال — %(v)s"
 msgstr ""
 
 #: app/templates/admin/_sidebar.html:932
@@ -74246,7 +74277,7 @@ msgstr ""
 msgid "سعر العرض / سعر المدير المتفق عليه"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:526
+#: app/radius/services/pdf_theme.py:535
 msgid "سعر الكرت"
 msgstr ""
 
@@ -74933,7 +74964,8 @@ msgid "سوق البطاقات الإلكترونية"
 msgstr ""
 
 #: app/templates/radius/card_marketplace.html:4
-msgid "سوق البطاقات الإلكترونية - Hobe Hub"
+#, python-format
+msgid "سوق البطاقات الإلكترونية - %(v)s"
 msgstr ""
 
 #: app/radius/routes/docs_center.py:260
@@ -79092,7 +79124,7 @@ msgstr ""
 msgid "عدد الحصص"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:588
+#: app/radius/services/pdf_theme.py:597
 msgid "عدد الحِزَم"
 msgstr ""
 
@@ -80055,7 +80087,8 @@ msgid "عروض البطاقات"
 msgstr ""
 
 #: app/templates/radius/cards_offers.html:3
-msgid "عروض البطاقات - Hobe Hub"
+#, python-format
+msgid "عروض البطاقات - %(v)s"
 msgstr ""
 
 #: app/radius/services/manager_activity_audit.py:190
@@ -82304,7 +82337,8 @@ msgid "غرفة العمليات تجمع كل الراوترات في مكان 
 msgstr ""
 
 #: app/templates/radius/communications.html:4
-msgid "غرفة العمليات — Hobe Hub"
+#, python-format
+msgid "غرفة العمليات — %(v)s"
 msgstr ""
 
 #: app/templates/radius/print_templates.html:5
@@ -87627,7 +87661,8 @@ msgid "قوالب الرسائل والتواصل"
 msgstr ""
 
 #: app/templates/radius/communications_templates.html:4
-msgid "قوالب الرسائل — Hobe Hub"
+#, python-format
+msgid "قوالب الرسائل — %(v)s"
 msgstr ""
 
 #: app/templates/radius/business_operator_profile.html:135
@@ -87729,7 +87764,7 @@ msgstr ""
 msgid "قيد الإنشاء"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:505
+#: app/radius/services/pdf_theme.py:514
 msgid "قيد الاستخدام"
 msgstr ""
 
@@ -88894,7 +88929,7 @@ msgstr ""
 msgid "كروت لها جلسة حيّة الآن."
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:590
+#: app/radius/services/pdf_theme.py:599
 #: app/templates/radius/card_marketplace.html:681
 msgid "كروت متاحة"
 msgstr ""
@@ -88932,7 +88967,7 @@ msgstr ""
 msgid "كروت منتهية تحتاج مراجعة: %(expired)s."
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:589
+#: app/radius/services/pdf_theme.py:598
 msgid "كروت مولّدة"
 msgstr ""
 
@@ -92389,7 +92424,7 @@ msgstr ""
 msgid "لا توجد بيانات كافية للراوتر."
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:442
+#: app/radius/services/pdf_theme.py:451
 msgid "لا توجد بيانات لعرضها في هذا التقرير"
 msgstr ""
 
@@ -92612,7 +92647,7 @@ msgstr ""
 msgid "لا توجد حقول للتحديث"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:575
+#: app/radius/services/pdf_theme.py:584
 msgid "لا توجد حِزَم كروت مطابقة لعوامل التصفية"
 msgstr ""
 
@@ -96492,7 +96527,8 @@ msgid "لوحة الشحن"
 msgstr ""
 
 #: app/templates/radius/recharge_panel.html:4
-msgid "لوحة الشحن — Hobe Hub"
+#, python-format
+msgid "لوحة الشحن — %(v)s"
 msgstr ""
 
 #: app/templates/radius/recharge_panel.html:769
@@ -96917,7 +96953,7 @@ msgid "مؤرشف"
 msgstr ""
 
 #: app/radius/routes/cards.py:1201 app/radius/services/cards.py:2467
-#: app/radius/services/pdf_theme.py:499
+#: app/radius/services/pdf_theme.py:508
 #: app/templates/radius/cards_batches.html:209
 #: app/templates/radius/cards_checker.html:124
 #: app/templates/radius/docs_cards_batches.html:392
@@ -97700,7 +97736,7 @@ msgstr ""
 msgid "متاح:"
 msgstr ""
 
-#: app/radius/services/lifecycle.py:341 app/radius/services/pdf_theme.py:497
+#: app/radius/services/lifecycle.py:341 app/radius/services/pdf_theme.py:506
 #: app/radius/services/provider_service_labels.py:219
 #: app/templates/radius/cards_batches.html:215
 #: app/templates/radius/cards_checker.html:120
@@ -99354,7 +99390,7 @@ msgstr ""
 msgid "محذوف (في السلّة)"
 msgstr ""
 
-#: app/radius/services/cards.py:2467 app/radius/services/pdf_theme.py:504
+#: app/radius/services/cards.py:2467 app/radius/services/pdf_theme.py:513
 msgid "محذوفة"
 msgstr ""
 
@@ -99668,7 +99704,8 @@ msgid "مختبر الدفع الإلكتروني (تجريبي)"
 msgstr ""
 
 #: app/templates/radius/payments_lab.html:8
-msgid "مختبر الدفع الإلكتروني — Hobe Hub"
+#, python-format
+msgid "مختبر الدفع الإلكتروني — %(v)s"
 msgstr ""
 
 #: app/templates/radius/setup_wizard_v2.html:463
@@ -99748,7 +99785,8 @@ msgid "مخزون ومصروفات الشركة"
 msgstr ""
 
 #: app/templates/radius/company_inventory_expenses.html:4
-msgid "مخزون ومصروفات الشركة — Hobe Hub"
+#, python-format
+msgid "مخزون ومصروفات الشركة — %(v)s"
 msgstr ""
 
 #: app/templates/radius/sms.html:90
@@ -100685,7 +100723,8 @@ msgid "مركز إدارة الشبكة"
 msgstr ""
 
 #: app/templates/radius/dashboard.html:3
-msgid "مركز إدارة الشبكة - Hobe Hub"
+#, python-format
+msgid "مركز إدارة الشبكة - %(v)s"
 msgstr ""
 
 #: app/templates/radius/mt_alerts_index.html:11
@@ -100702,7 +100741,8 @@ msgid "مركز الأحداث والمخاطر"
 msgstr ""
 
 #: app/templates/radius/events_center.html:4
-msgid "مركز الأحداث — Hobe Hub"
+#, python-format
+msgid "مركز الأحداث — %(v)s"
 msgstr ""
 
 #: app/radius/services/provider_service_labels.py:34
@@ -101514,7 +101554,7 @@ msgstr ""
 msgid "مستمع نشط على %(port)s (محلّي)"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:501
+#: app/radius/services/pdf_theme.py:510
 msgid "مستنفدة"
 msgstr ""
 
@@ -101702,7 +101742,7 @@ msgstr ""
 msgid "مسموحة"
 msgstr ""
 
-#: app/radius/services/pdf_theme.py:498
+#: app/radius/services/pdf_theme.py:507
 #: app/templates/radius/card_pricing_batch.html:19
 msgid "مسودة"
 msgstr ""
@@ -104815,7 +104855,7 @@ msgstr ""
 #: app/radius/services/card_users_marketplace.py:1291
 #: app/radius/services/cards.py:2466 app/radius/services/lifecycle.py:341
 #: app/radius/services/notification_campaigns.py:788
-#: app/radius/services/operations.py:72 app/radius/services/pdf_theme.py:503
+#: app/radius/services/operations.py:72 app/radius/services/pdf_theme.py:512
 #: app/radius/services/provider_service_labels.py:192
 #: app/templates/radius/_subs_labels.html:82
 #: app/templates/radius/_subs_labels.html:90
@@ -104979,7 +105019,8 @@ msgid "ملف المشترك 360"
 msgstr ""
 
 #: app/templates/radius/subscriber_360.html:27
-msgid "ملف المشترك 360 — Hobe Hub"
+#, python-format
+msgid "ملف المشترك 360 — %(v)s"
 msgstr ""
 
 #: app/templates/radius/business_operator_profile.html:105
@@ -106040,7 +106081,7 @@ msgstr ""
 
 #: app/api/v1/network_devices.py:270 app/api/v1/store.py:506
 #: app/radius/services/card_users_marketplace.py:1293
-#: app/radius/services/pdf_theme.py:502
+#: app/radius/services/pdf_theme.py:511
 #: app/radius/services/provider_service_labels.py:191
 #: app/templates/radius/card_user_360.html:386
 #: app/templates/radius/cards_batches.html:211
@@ -108336,7 +108377,7 @@ msgid "نشط الآن / غير متّصل"
 msgstr ""
 
 #: app/api/v1/network_devices.py:269 app/radius/services/cards.py:2466
-#: app/radius/services/pdf_theme.py:496
+#: app/radius/services/pdf_theme.py:505
 #: app/templates/radius/cards_batch_edit.html:138
 #: app/templates/radius/cards_batches.html:207
 #: app/templates/radius/distributors_detail.html:135

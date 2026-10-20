@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _("سجل الإرسال — Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("سجل الإرسال — %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
 {% block page_title %}{{ _("سجل الإرسال") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.') }}</span>{% endblock %}

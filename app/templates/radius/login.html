@@ -9,7 +9,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>{{ _('تسجيل الدخول — لوحة Hobe Hub') }}</title>
+  <title>{{ _('تسجيل الدخول — لوحة %(v)s', v=cfg.system_name or 'HobeRadius') }}</title>
   {# Cairo مَحَلّيًّا — لا روابط Google Fonts خارجيّة (يونيو 2026). #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -219,7 +219,7 @@
       <div class="brand-mark">HR</div>
 
       <div class="brand-head">
-        <h1>{{ _('أهلًا بعودتك إلى Hobe Hub') }}</h1>
+        <h1>{{ _('أهلًا بعودتك إلى %(v)s', v=cfg.system_name or 'HobeRadius') }}</h1>
         <p>{{ _('إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.') }}</p>
       </div>
 

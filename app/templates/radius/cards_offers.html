@@ -1,6 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}{{ _("عروض البطاقات - Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("عروض البطاقات - %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}{{ _("عروض البطاقات") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('عروض تجاريّة يحدّدها المالك فوق باقة جاهزة (سعر + مدّة + مشاركة)، ويولّد منها المديرون حزمًا بسعر وشروط مقفلة.') }}</span>{% endblock %}

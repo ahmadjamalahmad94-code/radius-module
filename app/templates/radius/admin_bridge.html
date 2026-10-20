@@ -17,7 +17,7 @@
   'info':_('معلومة'), 'warning':_('تحذير'), 'error':_('خطأ'), 'critical':_('حرج')
 } %}
 
-{% block title %}{{ _("جسر الإدارة — Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("جسر الإدارة — %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bridge"></i>{% endblock %}
 {% block page_title %}{{ _("جسر الإدارة") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('صفحة قراءة آمنة فقط لحالة الربط المحلي.') }}</span>{% endblock %}

@@ -15,7 +15,7 @@
 
 {{ hub.hero(
   _('دليل: معالج ترحيل البيانات'),
-  subtitle=_('انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى Hobe Hub بأمان: اربط الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ.'),
+  subtitle=_('انقل مشتركيك وكروتك وباقاتك من نظامك القديم إلى %(v)s بأمان: اربط الأعمدة، عايِن النتيجة، جرّبها بلا كتابة، ثم نفّذ.', v=cfg.system_name or 'HobeRadius'),
   icon='right-left',
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
@@ -56,7 +56,7 @@
       <div class="dg-card">
         <h2><i class="fa-solid fa-circle-question"></i> {{ _('متى تستخدم المعالج') }}</h2>
         <ul>
-          <li>{{ _('الانتقال من نظام إدارة قديم إلى Hobe Hub.') }}</li>
+          <li>{{ _('الانتقال من نظام إدارة قديم إلى %(v)s.', v=cfg.system_name or 'HobeRadius') }}</li>
           <li>{{ _('استيراد دفعة كبيرة من المشتركين أو الكروت مرّة واحدة.') }}</li>
           <li>{{ _('إعادة استخدام باقاتك وحزمك القديمة بدل إنشائها يدويًّا.') }}</li>
         </ul>
@@ -82,7 +82,7 @@
       <div class="dg-card">
         <h2><i class="fa-solid fa-diagram-project"></i> {{ _('اربط أعمدة المصدر بحقول النظام') }}</h2>
         <p>
-          {{ _('لكل جدول مصدر، تختار') }} <strong>{{ _('وضع التعامل') }}</strong> {{ _('(إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل في Hobe Hub. مثلًا: عمود') }} <code>user</code> {{ _('← اسم المستخدم،') }} <code>pass</code> {{ _('← كلمة المرور،') }} <code>speed</code> {{ _('← الباقة.') }}
+          {{ _('لكل جدول مصدر، تختار') }} <strong>{{ _('وضع التعامل') }}</strong> {{ _('(إنشاء جديد / دمج مع الموجود / تجاهل) وتربط كل عمود مصدر بالحقل المقابل في %(v)s. مثلًا: عمود', v=cfg.system_name or 'HobeRadius') }} <code>user</code> {{ _('← اسم المستخدم،') }} <code>pass</code> {{ _('← كلمة المرور،') }} <code>speed</code> {{ _('← الباقة.') }}
         </p>
         <div class="dg-mock" aria-hidden="true">
           <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('ترحيل البيانات — الربط') }}</span></div>

@@ -166,7 +166,7 @@ def _build_xlsx(title: str, columns: list[str], rows: list[list[str]]) -> bytes:
 def _build_pdf(title: str, columns: list[str], rows: list[list[str]]) -> bytes:
     """PDF فاخر عبر الثيم الموحّد — رأس/تذييل العلامة وجدول RTL منسّق."""
     from ..services.pdf_theme import (
-        build_premium_pdf, empty_state, styled_table,
+        brand_name, build_premium_pdf, empty_state, styled_table,
     )
 
     story: list = []
@@ -182,7 +182,7 @@ def _build_pdf(title: str, columns: list[str], rows: list[list[str]]) -> bytes:
         subtitle=_tr('عدد السجلات: %(v)s', v=len(rows)),
         story=story,
         landscape_mode=len(columns) > 5,  # الجداول العريضة أفقيًا
-        footer_note="HobeRadius • Hobe Hub",
+        footer_note=brand_name(),
     )
 
 

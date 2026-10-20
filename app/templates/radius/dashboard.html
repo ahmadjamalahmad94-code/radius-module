@@ -1,6 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}{{ _('مركز إدارة الشبكة - Hobe Hub') }}{% endblock %}
+{% block title %}{{ _('مركز إدارة الشبكة - %(v)s', v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
 {% block page_title %}{{ _('مركز إدارة الشبكة') }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('ملخص تشغيلي') }}</span>{% endblock %}

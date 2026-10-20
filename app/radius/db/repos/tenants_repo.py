@@ -35,7 +35,7 @@ def ensure_default_tenant() -> None:
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             # افتراضات المالك: شيكل + غزة (كان JOD وعمود المنطقة Asia/Amman).
-            DEFAULT_TENANT_ID, "default", "Default Tenant", "Hobe Hub",
+            DEFAULT_TENANT_ID, "default", "Default Tenant", "HobeRadius",
             "admin@hoberadius.local", "ILS", "Asia/Gaza", TENANT_STATUS_ACTIVE, TENANT_TIER_STARTER,
             200, 1, 10, now_iso(),
         ))

@@ -52364,3 +52364,178 @@ msgstr "Guide: Remote access and WinBox — how to use me"
 
 msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
 msgstr "Guide: Management tunnels and the provisioning script — how to use me"
+
+#: app/templates/radius/account.html:4
+#, python-format
+msgid "حسابي — %(v)s"
+msgstr "My account — %(v)s"
+
+#: app/templates/radius/admin_bridge.html:20
+#, python-format
+msgid "جسر الإدارة — %(v)s"
+msgstr "Admin bridge — %(v)s"
+
+#: app/templates/radius/card_marketplace.html:4
+#, python-format
+msgid "سوق البطاقات الإلكترونية - %(v)s"
+msgstr "E-card marketplace — %(v)s"
+
+#: app/templates/radius/card_pricing.html:8
+#, python-format
+msgid "تسعير البطاقات - %(v)s"
+msgstr "Card pricing — %(v)s"
+
+#: app/templates/radius/card_pricing_batch.html:7
+#, python-format
+msgid "تفاصيل الدفعة المالية — %(v)s"
+msgstr "Payment details — %(v)s"
+
+#: app/templates/radius/communications.html:4
+#, python-format
+msgid "غرفة العمليات — %(v)s"
+msgstr "Operations room — %(v)s"
+
+#: app/templates/radius/communications_audience.html:4
+#, python-format
+msgid "بناء الجمهور — %(v)s"
+msgstr "Audience building — %(v)s"
+
+#: app/templates/radius/communications_campaigns.html:9
+#, python-format
+msgid "الحملات — %(v)s"
+msgstr "Campaigns — %(v)s"
+
+#: app/templates/radius/communications_deliveries.html:4
+#, python-format
+msgid "سجل الإرسال — %(v)s"
+msgstr "Delivery log — %(v)s"
+
+#: app/templates/radius/communications_send.html:4
+#, python-format
+msgid "إرسال رسالة — %(v)s"
+msgstr "Send a message — %(v)s"
+
+#: app/templates/radius/communications_templates.html:4
+#, python-format
+msgid "قوالب الرسائل — %(v)s"
+msgstr "Message templates — %(v)s"
+
+#: app/templates/radius/company_inventory_expenses.html:4
+#, python-format
+msgid "مخزون ومصروفات الشركة — %(v)s"
+msgstr "Company inventory and expenses — %(v)s"
+
+#: app/templates/radius/dashboard.html:3
+#, python-format
+msgid "مركز إدارة الشبكة - %(v)s"
+msgstr "Network Operations Center - %(v)s"
+
+#: app/templates/radius/events_center.html:4
+#, python-format
+msgid "مركز الأحداث — %(v)s"
+msgstr "Events center — %(v)s"
+
+#: app/templates/radius/events_investigations.html:15
+#, python-format
+msgid "التحقيقات — %(v)s"
+msgstr "Investigations — %(v)s"
+
+#: app/templates/radius/events_security.html:4
+#, python-format
+msgid "أحداث الأمان — %(v)s"
+msgstr "Security events — %(v)s"
+
+#: app/templates/radius/finance_accounting.html:4
+#, python-format
+msgid "السجل والتقارير المحاسبية — %(v)s"
+msgstr "Ledger and accounting reports — %(v)s"
+
+#: app/templates/radius/finance_billing.html:4
+#, python-format
+msgid "الفواتير والكوبونات — %(v)s"
+msgstr "Invoices and coupons — %(v)s"
+
+#: app/templates/radius/finance_center.html:4
+#, python-format
+msgid "المركز المالي — %(v)s"
+msgstr "Finance center — %(v)s"
+
+#: app/templates/radius/finance_collection.html:9
+#, python-format
+msgid "التحصيل والمدفوعات — %(v)s"
+msgstr "Collection and payments — %(v)s"
+
+#: app/templates/radius/finance_debts.html:4
+#, python-format
+msgid "الديون — %(v)s"
+msgstr "Debts — %(v)s"
+
+#: app/templates/radius/finance_loans.html:4
+#, python-format
+msgid "السلف — %(v)s"
+msgstr "Advances — %(v)s"
+
+#: app/templates/radius/finance_revenue.html:4
+#, python-format
+msgid "الإيرادات — %(v)s"
+msgstr "Revenue — %(v)s"
+
+#: app/templates/radius/finance_wallets.html:4
+#, python-format
+msgid "المحافظ المالية — %(v)s"
+msgstr "Wallets — %(v)s"
+
+#: app/templates/radius/license_file.html:5
+#, python-format
+msgid "ترخيص النظام — %(v)s"
+msgstr "System license — %(v)s"
+
+#: app/templates/radius/login.html:12
+#, python-format
+msgid "تسجيل الدخول — لوحة %(v)s"
+msgstr "Sign In — %(v)s Console"
+
+#: app/templates/radius/login.html:222
+#, python-format
+msgid "أهلًا بعودتك إلى %(v)s"
+msgstr "Welcome back to %(v)s"
+
+#: app/templates/radius/payments_lab.html:8
+#, python-format
+msgid "مختبر الدفع الإلكتروني — %(v)s"
+msgstr "E-payment lab — %(v)s"
+
+#: app/templates/radius/recharge_panel.html:4
+#, python-format
+msgid "لوحة الشحن — %(v)s"
+msgstr "Recharge panel — %(v)s"
+
+#: app/templates/radius/reports_archive.html:4
+#, python-format
+msgid "أرشيف التقارير — %(v)s"
+msgstr "Reports archive — %(v)s"
+
+#: app/templates/radius/sections_admin.html:4
+#, python-format
+msgid "إدارة الأقسام — %(v)s"
+msgstr "Section management — %(v)s"
+
+#: app/templates/radius/subscriber_360.html:27
+#, python-format
+msgid "ملف المشترك 360 — %(v)s"
+msgstr "Subscriber profile 360 — %(v)s"
+
+#: app/templates/radius/tunnels.html:4
+#, python-format
+msgid "الأنفاق — %(v)s"
+msgstr "Tunnels — %(v)s"
+
+#: app/templates/radius/wh_settings.html:14
+#, python-format
+msgid "إشعارات الربط الخارجي — %(v)s"
+msgstr "External webhook notifications — %(v)s"
+
+#: app/templates/radius/whatsapp.html:26
+#, python-format
+msgid "رسائل واتساب للمشتركين — %(v)s"
+msgstr "WhatsApp messages to subscribers — %(v)s"

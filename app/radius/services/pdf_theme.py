@@ -13,7 +13,7 @@
   تُرسم الحروف متصلة وبالاتجاه الصحيح RTL.
 * لوحة ألوان العلامة (بنفسجي ‎#6B5AED‎ وعائلته).
 * رسّام رأس/تذييل فاخر: شريط علامة علوي، عنوان عربي، التاريخ،
-  شعار Hobe Hub، وأرقام صفحات في التذييل.
+  اسم النظام (system.name)، وأرقام صفحات في التذييل.
 * بنّاء جداول مُنسّقة: ترتيب أعمدة RTL، صفوف زيبرا، رأس بنفسجي
   بخط Cairo-Bold أبيض، وصف إجماليات مميّز.
 
@@ -203,19 +203,28 @@ def _hex(c: str):
     return colors.HexColor(c)
 
 
+def brand_name() -> str:
+    """اسم المنتج المعروض = system.name (افتراضًا HobeRadius)."""
+    try:
+        from ..core.system_config import system_config
+        return str(system_config().get("system_name") or "").strip() or "HobeRadius"
+    except Exception:  # noqa: BLE001
+        return "HobeRadius"
+
+
 # ─── رسّام الرأس والتذييل ───────────────────────────────────────────
 
 class _PageChrome:
     """يرسم «إطار» الصفحة الفاخر على كل صفحة: شريط العلامة العلوي،
-    العنوان، التاريخ، شعار Hobe Hub، وتذييل بأرقام الصفحات."""
+    العنوان، التاريخ، اسم النظام، وتذييل بأرقام الصفحات."""
 
     HEADER_H = 64  # ارتفاع شريط الرأس بالنقاط
 
     def __init__(self, *, title: str, subtitle: str = "",
-                 brand_mark: str = "Hobe Hub", footer_note: str = ""):
+                 brand_mark: str = "", footer_note: str = ""):
         self.title = title
         self.subtitle = subtitle
-        self.brand_mark = brand_mark
+        self.brand_mark = brand_mark or brand_name()
         self.footer_note = footer_note
         from ..core.system_config import local_now
         self.generated_at = local_now().strftime("%Y-%m-%d %H:%M")
@@ -257,7 +266,7 @@ class _PageChrome:
         # ── شعار العلامة + التاريخ (يسار الشريط) ──
         canvas.setFillColor(_hex(BRAND_WHITE))
         canvas.setFont(f_bold, 13)
-        canvas.drawString(28, top - 30, self.brand_mark)
+        canvas.drawString(28, top - 30, ar(self.brand_mark))
         canvas.setFont(f_reg, 8.5)
         canvas.setFillColorRGB(1, 1, 1, alpha=0.8)
         # نرسم التاريخ كنص لاتيني مستقل حتى لا يقلب خوارزم bidi ترتيب
@@ -275,7 +284,7 @@ class _PageChrome:
         canvas.setFillColor(_hex(BRAND_MUTED))
         canvas.setFont(f_reg, 8.5)
         canvas.drawRightString(width - 28, 21, ar(f"صفحة {canvas.getPageNumber()}"))
-        note = self.footer_note or "HobeRadius • Hobe Hub"
+        note = self.footer_note or brand_name()
         canvas.drawString(28, 21, ar(note))
         canvas.restoreState()
 

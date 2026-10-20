@@ -424,9 +424,9 @@
   {# ════════════════ BRAND BLOCK ════════════════ #}
   <div class="hb-side-brand">
     <div class="hb-side-logo">
-      <span class="hb-side-logo-mark">Ho</span>
+      <span class="hb-side-logo-mark">{{ (cfg.system_name or 'HobeRadius')[:2] }}</span>
       <div class="hb-side-logo-text">
-        <div class="hb-side-logo-title">Hobe Hub</div>
+        <div class="hb-side-logo-title">{{ cfg.system_name or 'HobeRadius' }}</div>
         <div class="hb-side-logo-sub">{{ _('مركز الإدارة') }}</div>
       </div>
     </div>

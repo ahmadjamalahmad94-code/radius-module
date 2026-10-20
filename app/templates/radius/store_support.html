@@ -1,6 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}{{ _('دعم المتجر المتقدّم') }} - Hobe Hub{% endblock %}
+{% block title %}{{ _('دعم المتجر المتقدّم') }} - {{ cfg.system_name or 'HobeRadius' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}{{ _('دعم المتجر المتقدّم') }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('راجع طلبات الشحن والسحب، حادث الزبائن، واضبط محافظ الاستلام.') }}</span>{% endblock %}

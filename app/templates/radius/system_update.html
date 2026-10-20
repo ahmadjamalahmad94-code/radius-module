@@ -1,7 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}{{ _('تحديث النظام') }} — Hobe Hub{% endblock %}
+{% block title %}{{ _('تحديث النظام') }} — {{ cfg.system_name or 'HobeRadius' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-cloud-arrow-down"></i>{% endblock %}
 {% block page_title %}{{ _('تحديث النظام') }}{% endblock %}
 

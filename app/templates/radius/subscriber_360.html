@@ -24,7 +24,7 @@
   {%- else -%}{{ s }} {{ _('ثانية') }}{%- endif -%}
 {%- endmacro %}
 
-{% block title %}{{ _("ملف المشترك 360 — Hobe Hub") }}{% endblock %}
+{% block title %}{{ _("ملف المشترك 360 — %(v)s", v=cfg.system_name or 'HobeRadius') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}{{ _("ملف المشترك 360") }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة') }}</span>{% endblock %}
