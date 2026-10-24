@@ -33,7 +33,11 @@ echo "RUNNING" > /root/win-migrate.state
 : > "$LOG"
 say "preflight"
 $SSH true || fail "cannot reach the new server"
-$SSH "qm status $VMID >/dev/null 2>&1" && fail "VM $VMID already exists on the new server"
+# A failed attempt leaves its half-built guest behind on purpose, for reading.
+# It also blocks the next attempt, so it has to be removed there by hand -
+# which is the point: nobody deletes a guest without having looked at it first.
+$SSH "qm status $VMID >/dev/null 2>&1" && \
+  fail "VM $VMID already exists on the new server - read it there, then 'qm stop $VMID; qm destroy $VMID --purge' on the new server before retrying"
 SRC_GB=$(lvs --noheadings --units g -o lv_size vg0/vm-$VMID-disk-1 | tr -dc '0-9.')
 say "source disk ${SRC_GB}G"
 
@@ -48,11 +52,21 @@ qm status $VMID | grep -q stopped || fail "guest did not stop"
 say "guest stopped"
 
 say "streaming to the new server - this is the long part"
+# The far side unpacks the stream itself. qmrestore reads the compression from
+# the archive's file name, and a pipe has none - handed a zstd stream it feeds
+# the compressed bytes straight to vma extract, which dies on the first header
+# while the sender keeps pushing into a pipe nobody drains. Decompressing there
+# rather than here keeps the wire small and gives qmrestore the plain VMA.
 vzdump $VMID --stdout --compress zstd --mode stop 2>>"$LOG" \
-  | $SSH "qmrestore - $VMID --storage local-lvm" >>"$LOG" 2>&1
+  | $SSH "zstd -d | qmrestore - $VMID --storage local-lvm" >>"$LOG" 2>&1
 RC=${PIPESTATUS[0]}:${PIPESTATUS[1]}
 say "transfer finished rc=$RC"
-$SSH "qm config $VMID >/dev/null 2>&1" || fail "the new server has no VM $VMID - transfer did not land"
+[ "$RC" = "0:0" ] || fail "transfer failed rc=$RC - nothing on the new server can be trusted, see the log"
+# A restore that dies partway says so and leaves the config behind - "VM state
+# is NOT cleaned up" - so a config that answers proves only that something was
+# started, never that it finished. The system disk is the only evidence.
+$SSH "qm config $VMID 2>/dev/null | grep -q '^scsi0:'" \
+  || fail "VM $VMID on the new server has no system disk - the transfer did not land"
 
 say "shaping the new guest"
 $SSH "qm set $VMID --memory 32768 --balloon 0 --cores 8 --onboot 1 --agent 1" >>"$LOG" 2>&1
