@@ -608,3 +608,25 @@ def test_no_managed_add_lacks_a_remove_or_set_guard():
         # a remove/disable referencing the same tag must exist (anywhere in script)
         assert re.search(r'(remove \[find|disable)[^\n]*' + re.escape(tag), text), \
             f"add tag {tag!r} has no remove/disable guard: {line}"
+
+
+def _sstp_add_line(script):
+    return next(ln for ln in script.splitlines()
+                if ln.startswith("/interface sstp-client add"))
+
+
+def test_v6_carries_non_default_sstp_port_inside_connect_to():
+    # Farah Net 2026-10-26: accel on 4443, v6 script dropped the port → :443.
+    line = _sstp_add_line(build_onboarding_script(_params(ros_version="6", sstp_port=4443)))
+    assert "connect-to=187.77.70.18:4443" in line
+    assert " port=" not in line          # v6 has no port property
+
+
+def test_v6_on_443_keeps_bare_host():
+    line = _sstp_add_line(build_onboarding_script(_params(ros_version="6", sstp_port=443)))
+    assert "connect-to=187.77.70.18 " in line
+
+
+def test_v7_keeps_separate_port_property():
+    line = _sstp_add_line(build_onboarding_script(_params(ros_version="7", sstp_port=4443)))
+    assert "connect-to=187.77.70.18 " in line and "port=4443" in line

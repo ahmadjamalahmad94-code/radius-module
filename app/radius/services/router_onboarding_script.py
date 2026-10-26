@@ -199,7 +199,7 @@ def _section_tunnel(p: OnboardingParams) -> str:
     # created (and then the RADIUS route, whose gateway IS that interface,
     # fails too). We therefore emit a v6-compatible command WITHOUT:
     #   • verify-server-address-from-certificate   (v6 has no such property)
-    #   • port=443                                  (SSTP defaults to 443)
+    #   • port=                                     (v6: carried as connect-to=IP:PORT)
     #   • keepalive-timeout=30                      (unsupported on old builds)
     # verify-server-certificate=no is kept (supported on v6). On v7 we keep
     # the full command — verify-server-address-from-certificate=no is REQUIRED
@@ -210,8 +210,14 @@ def _section_tunnel(p: OnboardingParams) -> str:
         # يرفضها v6 (verify-server-address-from-certificate / port / keepalive).
         # أسطرٌ قصيرةٌ للّصق: يُنشأ **معطّلًا** ثمّ تُضبط الخصائصُ ثمّ يُفعَّل،
         # فلا يحاول الاتّصالَ قبل اكتمالِ إعداده (أأمنُ من سطرٍ ذرّيٍّ طويل).
+        # v6 has no `port=`; the port rides inside `connect-to=IP:PORT` (as in
+        # mt_provisioner). Dropping it sent v6 routers to :443 while accel
+        # listens on HOBERADIUS_ACCEL_SSTP_PORT (4443 on the no-port-panel
+        # servers) — Farah Net 2026-10-26: «handshake failed 14077410» against
+        # the panel's nginx, until connect-to was fixed by hand.
+        _v6_target = host if int(p.sstp_port) == 443 else f"{host}:{int(p.sstp_port)}"
         sstp_add = "\n".join([
-            f'/interface sstp-client add name="{iface}" connect-to={host} '
+            f'/interface sstp-client add name="{iface}" connect-to={_v6_target} '
             f'user="{user}" password="{pw}" disabled=yes',
             f'/interface sstp-client set [find name="{iface}"] '
             f'profile=default-encryption verify-server-certificate=no',
