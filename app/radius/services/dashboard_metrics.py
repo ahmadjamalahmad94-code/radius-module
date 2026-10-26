@@ -116,6 +116,34 @@ def get_online_count(tenant_id: Optional[int] = None) -> int:
             return 0
 
 
+def get_subscriber_online_count(tenant_id: Optional[int] = None) -> int:
+    """«متصلون الآن» في كرت المشتركين: عدد المشتركين الحقيقيّين (لا كروت ولا
+    مرايا كروت) الذين لهم جلسة radacct مفتوحة — نظير «متصل» في كرت الكروت.
+
+    كان الكرت يعرض ``get_online_count`` (كل المتصلين، كروتًا ومشتركين)؛ عند
+    «فرح نت» ظهر 146 «مشتركًا متصلًا» من 82 مشتركًا. DISTINCT لأنّ للمشترك
+    الواحد عدّة أجهزة/صفوف (ومنها صفوف ``mtsync-`` المُركّبة)."""
+    t = tenant_id if tenant_id is not None else _tid()
+    from .subscriber_scope import current_scope_admin_id, scope_sql
+    _scope = current_scope_admin_id(tenant_id=t)
+    sc, sv = "", []
+    if _scope is not None:
+        try:
+            sc, sv = scope_sql("r.username", scope=int(_scope), tenant_id=t,
+                               use_request=False)
+        except Exception:  # noqa: BLE001
+            return 0
+    return _scalar(
+        "SELECT COUNT(DISTINCT r.username) FROM radacct r "
+        "JOIN subscribers s ON s.tenant_id = r.tenant_id AND s.username = r.username "
+        "WHERE r.tenant_id = ? AND r.acctstoptime IS NULL "
+        "  AND s.deleted_at IS NULL "
+        "  AND COALESCE(s.user_type, 'subscriber') <> 'card' "
+        "  AND NOT EXISTS (SELECT 1 FROM cards c "
+        "                  WHERE c.tenant_id = r.tenant_id AND c.username = r.username)"
+        + sc, (t, *sv))
+
+
 # ────────────────────────────────────────────────────────────────
 # 3. Cards section
 # ────────────────────────────────────────────────────────────────
@@ -620,6 +648,9 @@ def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
     except Exception: subs = {}
     # online من radacct — مستقل عن status
     subs["online"] = get_online_count(t)
+    # «متصلون الآن» داخل كرت المشتركين: مشتركون فقط. subs["online"] يبقى
+    # الإجماليّ (الـAPI وكرت الأجهزة يقرآنه بهذا المعنى).
+    subs["online_subscribers"] = get_subscriber_online_count(t)
     try: cards = get_card_counts(t)
     except Exception: cards = {}
     try: plans = get_plan_counts(t)
@@ -651,7 +682,8 @@ def build_dashboard_metrics(tenant_id: Optional[int] = None) -> dict:
         system = {}
     if not access["subscribers"]:
         subs = {k: 0 for k in ("total", "active", "expired", "suspended", "disabled",
-                               "banned", "expiring_soon", "other", "online")}
+                               "banned", "expiring_soon", "other", "online",
+                               "online_subscribers")}
     if not access["cards"]:
         cards = {k: 0 for k in ("total", "used", "available", "batches", "connected")}
         cards.update({"printed": {}, "electronic": {}})

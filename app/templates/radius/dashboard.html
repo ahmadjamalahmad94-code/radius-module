@@ -690,6 +690,8 @@
 {% set _da = dash_access if (dash_access is defined and dash_access) else {"subscribers": true, "cards": true, "network": true, "plans": true, "finance": true, "system": true} %}
 {% set sub_total = (subs.total or snap.total_subscribers or 0)|int %}
 {% set sub_online = (subs.online or snap.online_now or 0)|int %}
+{# كرت المشتركين: المشتركون المتصلون فقط (لا كروت). sub_online يبقى الإجماليّ لكرت الأجهزة. #}
+{% set sub_online_only = (subs.online_subscribers if subs.online_subscribers is defined else sub_online)|int %}
 {% set sub_active = (subs.active or snap.enabled_subscribers or 0)|int %}
 {% set sub_pct = ((sub_active * 100 / sub_total) if sub_total else 0) %}
 {% set card_total = (cards.total or snap.total_cards or 0)|int %}
@@ -755,7 +757,7 @@
       <div>
         <div class="ops-primary-number"><strong>{{ "{:,}".format(sub_total) }}</strong><span>{{ _('مشترك') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>{{ _('متصلون الآن') }}</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متصلون الآن') }}</span><strong>{{ "{:,}".format(sub_online_only) }}</strong></div>
           <div class="ops-metric"><span>{{ _('نشطون') }}</span><strong>{{ "{:,}".format(sub_active) }}</strong></div>
           <div class="ops-metric"><span>{{ _('منتهي اشتراكهم') }}</span><strong>{{ "{:,}".format((subs.expired or snap.expired_subscribers or 0)|int) }}</strong></div>
           <div class="ops-metric"><span>{{ _('ينتهي خلال 3 أيام') }}</span><strong>{{ "{:,}".format((subs.expiring_soon or 0)|int) }}</strong></div>
