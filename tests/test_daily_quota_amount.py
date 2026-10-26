@@ -213,3 +213,40 @@ def test_offers_template_has_the_field_in_both_forms():
     html = pathlib.Path("app/templates/radius/cards_offers.html").read_text(
         encoding="utf-8")
     assert html.count('name="daily_quota_gb"') >= 2         # إنشاء + تعديل
+
+
+# ───────── المصادقة: الكرتُ يُبنى من جدول cards فيجب أن يَحمل البصمة ─────────
+
+def test_card_auth_dto_carries_the_stamped_daily_quota(app):
+    """فحصٌ حيّ 26/10: كرتٌ من عرضٍ 2.5 جيجا رُفض عند 2 جيجا لأنّ مسارَ
+    المصادقة يَبني الكرتَ من جدول cards ولا يَقرأ ما بُصم في صفّه المرآة."""
+    with app.app_context():
+        from app.radius.db.repos import cards_repo
+        from app.radius.services import quota_period as qp
+        from app.radius.services.cards import get_cards_service
+        from app.radius.services.policy_engine import _card_to_subscriber
+        plan = _mk_plan()
+        _batch, cards = get_cards_service().generate_batch(
+            actor="tester", plan_id=plan.id, count=1, package_name="دفعة",
+            daily_quota_mb=2560, daily_quota_action="custom_speed",
+            daily_quota_speed_down_kbps=2000, daily_quota_speed_up_kbps=1000)
+        card = cards_repo.get_card_by_username(1, cards[0].username)
+        dto = _card_to_subscriber(card)
+        assert dto.daily_quota_mb == 2560
+        assert dto.daily_quota_action == "custom_speed"
+        assert dto.daily_quota_speed_down_kbps == 2000
+        assert qp.sub_window_caps(dto, plan)["daily"]["combined"] == 2560
+
+
+def test_card_auth_dto_without_stamp_follows_the_plan(app):
+    with app.app_context():
+        from app.radius.db.repos import cards_repo
+        from app.radius.services import quota_period as qp
+        from app.radius.services.cards import get_cards_service
+        from app.radius.services.policy_engine import _card_to_subscriber
+        plan = _mk_plan()
+        _batch, cards = get_cards_service().generate_batch(
+            actor="tester", plan_id=plan.id, count=1, package_name="عاديّة")
+        dto = _card_to_subscriber(cards_repo.get_card_by_username(1, cards[0].username))
+        assert dto.daily_quota_mb == 0 and dto.daily_quota_action == ""
+        assert qp.sub_window_caps(dto, plan)["daily"]["combined"] == 1024

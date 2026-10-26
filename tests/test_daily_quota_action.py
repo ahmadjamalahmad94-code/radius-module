@@ -96,7 +96,8 @@ def test_custom_speed_pair(app):
                      daily_quota_speed_down_kbps=2000,
                      daily_quota_speed_up_kbps=1000)
         assert dqa.throttle_kbps(_sub(), plan) == (2000, 1000)
-        assert "2000k" in dqa.throttle_rate_limit(_sub(), plan)
+        # «رفع/نزول» كباقي ردود القبول — لا «نزول صعود» بمسافة.
+        assert dqa.throttle_rate_limit(_sub(), plan) == "1000k/2000k"
 
 
 def test_custom_speed_without_upload_mirrors_download(app):

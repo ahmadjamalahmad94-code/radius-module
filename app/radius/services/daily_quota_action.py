@@ -82,11 +82,10 @@ def throttle_rate_limit(sub: Any, plan: Any) -> str:
     pair = throttle_kbps(sub, plan)
     if not pair:
         return ""
-    try:
-        from .live_session_control import build_mikrotik_rate_limit
-        return build_mikrotik_rate_limit(int(pair[0]), int(pair[1]))
-    except Exception:  # noqa: BLE001
-        return f"{int(pair[1])}k/{int(pair[0])}k"
+    # «رفع/نزول» — صيغةُ ردّ القبول وbandwidth_rate نفسُها. كانت هنا
+    # build_mikrotik_rate_limit («نزول صعود» بمسافة) فيقرأها مايكروتيك سرعةً
+    # واحدةً للاتجاهين (النزول) وما بعد المسافة سرعةَ دفقة — فحصٌ حيّ 26/10.
+    return f"{int(pair[1])}k/{int(pair[0])}k"
 
 
 def allows_connection(sub: Any, plan: Any) -> bool:

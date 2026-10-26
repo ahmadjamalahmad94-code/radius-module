@@ -1165,6 +1165,29 @@ def _card_to_subscriber(card: Card) -> Subscriber:
             _LOG.warning("quota_night: card credit failed for %r", card.username,
                          exc_info=True)
 
+    # الكوتةُ اليوميّة (مقدارُها وقرارُ ما بعدها) يَبصمها العرضُ في صفّ
+    # المشترك المرآة للكرت (user_type=card) لا في جدول cards — فتُقرأ من
+    # هناك، وإلّا لم يَصل الكرتَ منها شيء (فحصٌ حيّ 26/10). محصّن: غيابُ
+    # الصفّ أو العمود ⇒ قيَمٌ فارغة = اتبع الباقة كما كان.
+    dq = {}
+    try:
+        from ..db.connection import db as _db
+        _r = _db().execute(
+            "SELECT daily_quota_mb, daily_quota_action, daily_quota_speed_down_kbps, "
+            "daily_quota_speed_up_kbps FROM subscribers "
+            "WHERE tenant_id = ? AND username = ? AND deleted_at IS NULL "
+            "ORDER BY id DESC LIMIT 1",
+            (card.tenant_id, card.username)).fetchone()
+        if _r:
+            dq = dict(
+                daily_quota_mb=int(_r["daily_quota_mb"] or 0),
+                daily_quota_action=str(_r["daily_quota_action"] or ""),
+                daily_quota_speed_down_kbps=int(_r["daily_quota_speed_down_kbps"] or 0),
+                daily_quota_speed_up_kbps=int(_r["daily_quota_speed_up_kbps"] or 0),
+            )
+    except Exception:  # noqa: BLE001
+        dq = {}
+
     return Subscriber(
         id=card.id,
         tenant_id=card.tenant_id,
@@ -1191,6 +1214,7 @@ def _card_to_subscriber(card: Card) -> Subscriber:
         quota_limit_enabled=bool(batch_quota_mb),
         used_bytes_in=card_used_in,
         used_bytes_out=card_used_out,
+        **dq,
     )
 
 
