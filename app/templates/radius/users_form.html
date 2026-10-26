@@ -1720,7 +1720,11 @@
           <div class="uf-field"><label>{{ _('كوتا الرفع') }}</label>
             {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
             <div class="help">{{ _('حدّ الرفع المنفصل للحساب. 0 = غير محدودة.') }}</div></div>
-          {# ── تجاوز فردي لقرار الكوتة اليومية ── #}
+          {# ── تجاوز فردي لمقدار الكوتة اليومية ثمّ لقرارها ── #}
+          <div class="uf-field"><label>{{ _('الكوتة اليومية (جيجا)') }}</label>
+            <input class="hub-input" type="number" min="0" step="0.1" name="daily_quota_gb"
+                   value="{{ '%g'|format((sub.daily_quota_mb or 0) / 1024) }}">
+            <div class="help">{{ _('تتجدّد منتصف الليل. 0 = حسب الباقة؛ أيّ رقم يَغلب كوتة الباقة اليومية لهذا الحساب.') }}</div></div>
           <div class="uf-field"><label>{{ _('بعد انتهاء الكوتة اليومية') }}</label>
             <select class="hub-input" name="daily_quota_action" id="uf-dqa">
               <option value="" {% if not sub.daily_quota_action %}selected{% endif %}>{{ _('حسب الباقة') }}</option>

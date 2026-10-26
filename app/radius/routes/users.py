@@ -553,6 +553,12 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
             return max(0, int(round(float(_f(n) or 0) * 1000)))
         except (TypeError, ValueError):
             return 0
+    def _gb_mb(n):
+        """حقلٌ يُكتب بالجيجا ويُخزَّن ميجابايت."""
+        try:
+            return max(0, int(round(float(_f(n) or 0) * 1024)))
+        except (TypeError, ValueError):
+            return 0
     def _daily_quota_action():
         """قرارُ ما بعد نفاد الكوتة اليوميّة. '' = اتبع الباقة."""
         raw = (request.form.get("daily_quota_action") or "").strip().lower()
@@ -765,6 +771,8 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
         daily_quota_action=_daily_quota_action(),
         daily_quota_speed_down_kbps=_mbps_kbps("daily_quota_speed_down_mbps"),
         daily_quota_speed_up_kbps=_mbps_kbps("daily_quota_speed_up_mbps"),
+        # مقدارُ الكوتة اليوميّة لهذا الحساب (جيجا ← ميجا) — 0 = اتبع الباقة.
+        daily_quota_mb=_gb_mb("daily_quota_gb"),
         # «توزيع/تقسيم السرعة على الأجهزة» — تُقسَّم السرعة الفعّالة على الأجهزة
         # الحيّة (يُنفَّذ عبر اللوحة+CoA).
         equal_share_download=_b("equal_share_download"),

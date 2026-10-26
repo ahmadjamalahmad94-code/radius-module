@@ -319,6 +319,8 @@ class Subscriber:
     daily_quota_speed_down_kbps: int = 0
     daily_quota_speed_up_kbps: int = 0
     daily_quota_state: str = ""
+    # مقدارُ الكوتة اليوميّة لهذا الحساب (migration 203) — 0 = اتبع الباقة.
+    daily_quota_mb: int = 0
 
 
 @dataclass(frozen=True)

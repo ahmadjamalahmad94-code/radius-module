@@ -73,6 +73,8 @@ _COLS = (
     # (daily_quota_state) **خارج** الـupsert: يكتبها العاملُ وحدَه.
     "daily_quota_action",
     "daily_quota_speed_down_kbps","daily_quota_speed_up_kbps",
+    # هجرة 203 — مقدارُ الكوتة اليوميّة (يَغلب الباقة).
+    "daily_quota_mb",
 )
 
 
@@ -152,6 +154,7 @@ def _row(r) -> Subscriber:
         daily_quota_speed_down_kbps=_g(r, "daily_quota_speed_down_kbps", 0) or 0,
         daily_quota_speed_up_kbps=_g(r, "daily_quota_speed_up_kbps", 0) or 0,
         daily_quota_state=_g(r, "daily_quota_state", "") or "",
+        daily_quota_mb=_g(r, "daily_quota_mb", 0) or 0,
     )
 
 
@@ -397,6 +400,7 @@ def _values(s: Subscriber) -> tuple:
         s.daily_quota_action or "",
         int(s.daily_quota_speed_down_kbps or 0),
         int(s.daily_quota_speed_up_kbps or 0),
+        int(s.daily_quota_mb or 0),
     )
 
 

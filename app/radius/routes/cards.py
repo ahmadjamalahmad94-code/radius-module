@@ -3377,6 +3377,14 @@ def _form_mbps_kbps(name: str) -> int:
         return 0
 
 
+def _form_gb_mb(name: str) -> int:
+    """حقلٌ يُكتب بالجيجا ويُخزَّن ميجابايت (كوتة العرض اليوميّة)."""
+    try:
+        return max(0, int(round(float(request.form.get(name) or 0) * 1024)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _offers_service() -> CardOffersService:
     return CardOffersService(tenant_id=_tid())
 
@@ -3528,6 +3536,7 @@ def cards_offer_create():
             daily_quota_action=_form_str("daily_quota_action"),
             daily_quota_speed_down_kbps=_form_mbps_kbps("daily_quota_speed_down_mbps"),
             daily_quota_speed_up_kbps=_form_mbps_kbps("daily_quota_speed_up_mbps"),
+            daily_quota_mb=_form_gb_mb("daily_quota_gb"),
         )
         flash(_tr("تم إنشاء العرض."), "success")
     except CardOfferError as e:
@@ -3572,6 +3581,8 @@ def cards_offer_edit(offer_id: int):
             daily_quota_action=None if "daily_quota_action" in reverts else _form_str("daily_quota_action"),
             daily_quota_speed_down_kbps=_form_mbps_kbps("daily_quota_speed_down_mbps"),
             daily_quota_speed_up_kbps=_form_mbps_kbps("daily_quota_speed_up_mbps"),
+            daily_quota_mb=(None if "daily_quota_mb" in reverts
+                            else _form_gb_mb("daily_quota_gb")),
         )
         # سجل التدقيق: قبل/بعد → المكوّن المشترك يعرض «الحقل: كان X ← صار Y».
         try:
@@ -3701,6 +3712,8 @@ def cards_offer_use(offer_id: int):
                 offer.get("daily_quota_speed_down_kbps") or 0)
             opts["daily_quota_speed_up_kbps"] = int(
                 offer.get("daily_quota_speed_up_kbps") or 0)
+            # ومقدارُ الكوتة اليوميّة (0 = حسب الباقة) يُبصَم كذلك.
+            opts["daily_quota_mb"] = int(offer.get("daily_quota_mb") or 0)
 
             if not plan_id:
                 raise CardOfferError(_tr("اختر خطّة للحزمة."))

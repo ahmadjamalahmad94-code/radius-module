@@ -263,10 +263,31 @@ def plan_window_caps(plan) -> dict:
     }
 
 
+def sub_daily_quota_mb(sub) -> int:
+    """مقدارُ الكوتة اليوميّة الخاصّ بالحساب (migration 203) — 0 = اتبع الباقة.
+    الكرتُ صفُّ مشتركٍ فيَحمل ما بصمه العرضُ فيه."""
+    try:
+        return max(0, int(getattr(sub, "daily_quota_mb", 0) or 0)) if sub else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def sub_window_caps(sub, plan) -> dict:
+    """سقوف الباقة بعد تجاوز المشترك: كوتتُه اليوميّة (إن وُجدت) **تحلّ محلّ**
+    سقوف الباقة اليوميّة كلّها — إجماليّةٌ واحدة، فلا يبقى سقفُ اتجاهٍ من
+    الباقة أضيقَ ممّا كتبه المشغّل. الشهريّةُ تبقى للباقة."""
+    caps = plan_window_caps(plan)
+    own = sub_daily_quota_mb(sub)
+    if own:
+        caps["daily"] = {"combined": own, "download": 0, "upload": 0}
+    return caps
+
+
 def window_caps(sub, plan, now: Optional[datetime] = None,
                 state: Optional[dict] = None) -> dict:
-    """سقوف النوافذ الفعّالة الآن = سقوف الباقة + إضافات اليوم/الشهر الجاري."""
-    caps = plan_window_caps(plan)
+    """سقوف النوافذ الفعّالة الآن = سقوف الباقة (بعد تجاوز المشترك) + إضافات
+    اليوم/الشهر الجاري."""
+    caps = sub_window_caps(sub, plan)
     sid = getattr(sub, "id", None)
     tid = int(getattr(sub, "tenant_id", 1) or 1)
     st = state if state is not None else (get_state(tid, sid) if sid else None)
@@ -655,7 +676,7 @@ def _has_any_quota(sub, plan) -> bool:
             return True
     except Exception:  # noqa: BLE001
         pass
-    return has_window_caps(plan_window_caps(plan))
+    return has_window_caps(sub_window_caps(sub, plan))
 
 
 def enforce_after_interim(tenant_id: int, username: str) -> bool:

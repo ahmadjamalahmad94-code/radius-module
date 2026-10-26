@@ -395,9 +395,7 @@ def actions_context(username: str):
         daily_quota_mb = int(qs["daily"]["combined"] or 0)
         used_mb = qs["period_used_mb"]
     else:
-        daily_quota_mb = (
-            int(getattr(plan, "daily_combined_quota_mb", 0) or 0) if plan else 0) or (
-            int(getattr(plan, "quota_daily_mb", 0) or 0) if plan else 0)
+        daily_quota_mb = int(quota_period.sub_window_caps(sub, plan)["daily"]["combined"] or 0)
         try:
             used_mb = round(_subscriber_used_bytes(sub) / 1_048_576, 2)
         except Exception:  # noqa: BLE001

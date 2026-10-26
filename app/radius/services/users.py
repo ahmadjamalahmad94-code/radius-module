@@ -762,7 +762,7 @@ class UsersService:
         plan_total = int(getattr(plan, "quota_total_mb", 0) or 0) if plan else 0
         per_direction = sub_combined <= 0 and (sub_down > 0 or sub_up > 0)
         has_total = sub_combined > 0 or per_direction or plan_total > 0
-        wcaps = quota_period.plan_window_caps(plan)
+        wcaps = quota_period.sub_window_caps(sub, plan)
         if quota_window == "auto":
             quota_window = ("total" if has_total else
                             "monthly" if any(wcaps["monthly"].values()) else
@@ -1437,7 +1437,7 @@ def daily_reset_applicable(sub) -> bool:
             plan = plans_repo.get_plan(int(getattr(sub, "tenant_id", 1) or 1),
                                        int(sub.plan_id), include_deleted=True)
         from . import quota_period
-        if any(quota_period.plan_window_caps(plan)["daily"].values()):
+        if any(quota_period.sub_window_caps(sub, plan)["daily"].values()):
             return True
         from .policy_engine import _effective_time_caps
         return _effective_time_caps(sub, plan)[1] > 0

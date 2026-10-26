@@ -111,6 +111,7 @@ class CardOffersService:
                 "reduce_speed": N_("تخفيف السرعة"),
                 "custom_speed": N_("سرعة مخصّصة"),
             }.get((g("daily_quota_action") or "").strip(), ""),
+            "daily_quota_gb": "%g" % (int(g("daily_quota_mb") or 0) / 1024),
             "daily_quota_speed_mbps": "%g / %g" % (
                 int(g("daily_quota_speed_down_kbps") or 0) / 1000,
                 int(g("daily_quota_speed_up_kbps") or 0) / 1000),
@@ -213,6 +214,7 @@ class CardOffersService:
         daily_quota_action: str = "",
         daily_quota_speed_down_kbps: int = 0,
         daily_quota_speed_up_kbps: int = 0,
+        daily_quota_mb: int = 0,
     ) -> dict[str, Any]:
         name = (name or "").strip()
         if not name:
@@ -224,6 +226,7 @@ class CardOffersService:
         dq_action = _norm_daily_quota_action(daily_quota_action)
         dq_down = max(0, int(daily_quota_speed_down_kbps or 0))
         dq_up = max(0, int(daily_quota_speed_up_kbps or 0))
+        dq_mb = max(0, int(daily_quota_mb or 0))
         # Plan is REQUIRED: the offer inherits the plan's speed/quota/duration.
         plan_id = _require_plan(self.tenant_id, plan_id)
         duration_minutes = int(duration_minutes or 0)
@@ -241,15 +244,16 @@ class CardOffersService:
                   (tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                    selling_minor, currency, active, notes, created_by, created_at, updated_at,
                    device_limit_mode, device_count, equal_share_download, equal_share_upload,
-                   daily_quota_action, daily_quota_speed_down_kbps, daily_quota_speed_up_kbps)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   daily_quota_action, daily_quota_speed_down_kbps, daily_quota_speed_up_kbps,
+                   daily_quota_mb)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     self.tenant_id, name, plan_id, duration_minutes, wholesale_minor,
                     selling_minor, currency or default_currency(),
                     1 if active else 0, (notes or "").strip(), (created_by or "").strip(),
                     now, now, device_limit_mode, device_count, eq_down, eq_up,
-                    dq_action, dq_down, dq_up,
+                    dq_action, dq_down, dq_up, dq_mb,
                 ),
             )
             offer_id = int(cur.lastrowid)
@@ -275,6 +279,7 @@ class CardOffersService:
         daily_quota_action: Optional[str] = None,
         daily_quota_speed_down_kbps: Optional[int] = None,
         daily_quota_speed_up_kbps: Optional[int] = None,
+        daily_quota_mb: Optional[int] = None,
     ) -> dict[str, Any]:
         offer = self.get_offer(offer_id)
         new_name = offer["name"] if name is None else (name or "").strip()
@@ -308,6 +313,8 @@ class CardOffersService:
         new_dqu = (int(offer.get("daily_quota_speed_up_kbps", 0) or 0)
                    if daily_quota_speed_up_kbps is None
                    else max(0, int(daily_quota_speed_up_kbps or 0)))
+        new_dqm = (int(offer.get("daily_quota_mb", 0) or 0) if daily_quota_mb is None
+                   else max(0, int(daily_quota_mb or 0)))
         with transaction() as conn:
             conn.execute(
                 """
@@ -317,14 +324,14 @@ class CardOffersService:
                        device_limit_mode=?, device_count=?,
                        equal_share_download=?, equal_share_upload=?,
                        daily_quota_action=?, daily_quota_speed_down_kbps=?,
-                       daily_quota_speed_up_kbps=?
+                       daily_quota_speed_up_kbps=?, daily_quota_mb=?
                  WHERE tenant_id=? AND id=?
                 """,
                 (
                     new_name, new_plan, new_duration, new_wholesale, new_selling,
                     new_currency, new_notes, new_active, now_iso(),
                     new_dlm, new_dc, new_eqd, new_equ,
-                    new_dqa, new_dqd, new_dqu,
+                    new_dqa, new_dqd, new_dqu, new_dqm,
                     self.tenant_id, int(offer_id),
                 ),
             )

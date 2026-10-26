@@ -1035,7 +1035,7 @@
         {% set _up_mb = _up_b / 1048576 %}
         {% set _down_kbps = (u.download_speed_kbps or (p.speed_down_kbps if p else 0)) %}
         {% set _up_kbps   = (u.upload_speed_kbps   or (p.speed_up_kbps   if p else 0)) %}
-        {% set _daily_quota_mb = u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
+        {% set _daily_quota_mb = u.daily_quota_mb or u.combined_quota_mb or (p.daily_combined_quota_mb if p else 0) or (p.quota_daily_mb if p else 0) or 0 %}
         {# Time basis for price↔time math: a time plan's duration, else the plan's
            validity window, else a 30-day month — so the auto-price never yields 0
            for pure-quota plans (matches the backend _base_plan_minutes fallback). #}

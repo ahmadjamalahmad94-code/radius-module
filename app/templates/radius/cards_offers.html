@@ -256,6 +256,11 @@
             <span class="note">{{ _("0 = يتبع الإعداد العام للكروت. رقم ≥1 = حدّ خاصّ بهذا العرض.") }}</span>
           </div>
           <div class="co-field">
+            <label>{{ _("الكوتة اليومية (جيجا)") }}</label>
+            <input type="number" min="0" step="0.1" name="daily_quota_gb" value="0">
+            <span class="note">{{ _("0 = حسب الباقة. أيّ رقم يَغلب كوتة الباقة اليومية لكلّ بطاقة تُولَّد من هذا العرض، وتتجدّد منتصف الليل.") }}</span>
+          </div>
+          <div class="co-field">
             <label>{{ _("بعد انتهاء الكوتة اليومية") }}</label>
             <select name="daily_quota_action" data-dq-new>
               <option value="">{{ _("حسب الباقة") }}</option>
@@ -422,6 +427,9 @@
                     </div>
                     <div class="co-field"><label>{{ _("عدد الأجهزة (0=عام)") }}</label>
                       <input type="number" min="0" name="device_count" value="{{ o.device_count or 0 }}"></div>
+                    <div class="co-field"><label>{{ _("الكوتة اليومية (جيجا، 0=الباقة)") }}</label>
+                      <input type="number" min="0" step="0.1" name="daily_quota_gb"
+                             value="{{ '%g'|format((o.daily_quota_mb or 0) / 1024) }}"></div>
                     {% set _odqa = o.daily_quota_action or '' %}
                     <div class="co-field"><label>{{ _("بعد انتهاء الكوتة اليومية") }}</label>
                       <select name="daily_quota_action">
