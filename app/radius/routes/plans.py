@@ -168,6 +168,35 @@ def _daily_quota_action() -> str:
     return raw if raw in ("disconnect", "reduce_speed", "custom_speed") else "disconnect"
 
 
+# قيمة «راوتر الباقة» حين تحمل الباقة عدّة راوترات (من الـAPI): الإبقاء كما هي.
+_ROUTER_KEEP = "__keep__"
+
+
+def _routers_for_form() -> list[dict]:
+    """راوترات المستأجر (غير المحذوفة) لقائمة «راوتر الباقة»."""
+    from ..db.repos import nas_repo
+    try:
+        return [{"id": n.id, "name": n.name, "address": n.address}
+                for n in nas_repo.list_nas(_tid(), limit=500)]
+    except Exception:  # noqa: BLE001 — القائمة لا تكسر عرض النموذج
+        return []
+
+
+def _router_ids_from_form() -> tuple[int, ...]:
+    """«راوتر الباقة» — قائمة منسدلة: فارغ = كلّ الراوترات، وإلّا راوترٌ واحد
+    من راوترات هذا المستأجر (معرّفٌ غريب يُتجاهَل). ``_ROUTER_KEEP`` يُعالَج في
+    ``_merge_web_form`` (يُبقي الراوترات المحفوظة)."""
+    raw = (request.form.get("router_id") or "").strip()
+    if not raw or raw == _ROUTER_KEEP:
+        return ()
+    try:
+        rid = int(raw)
+    except ValueError:
+        return ()
+    from ..db.repos import nas_repo
+    return (rid,) if nas_repo.get_nas(_tid(), rid) else ()
+
+
 def _service_type_from_form() -> str:
     """نوع الخدمة — بطاقات متعددة الاختيار (هوت سبوت + برودباند) مثل
     نموذج المشترك. تُجمع الاختيارات إلى قيمة واحدة في نفس العمود:
@@ -248,6 +277,7 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         framed_pool=_s("framed_pool"),
         ipv6_pool=_s("ipv6_pool"),
         allowed_days=tuple(days_raw),
+        router_ids=_router_ids_from_form(),
         allowed_hours_from=_s("allowed_hours_from"),
         allowed_hours_to=_s("allowed_hours_to"),
         price=_f("price"),
@@ -328,6 +358,7 @@ _WEB_FORM_FIELDS = (
     "loan_enabled", "max_loan_minutes",
     "shared_single_session", "offer_hours_from", "offer_hours_to",
     "connection_schedule",
+    "router_ids",
 )
 
 
@@ -383,6 +414,11 @@ def _merge_web_form(existing: AccessPlan, dto: AccessPlan) -> AccessPlan:
     if old_st and old_st.lower() not in ("hotspot", "pppoe", "broadband", "both") \
             and dto.service_type == "Hotspot":
         changes["service_type"] = existing.service_type
+    # «راوتر الباقة»: نموذجٌ لا يحمل الحقل، أو الباقة بعدّة راوترات لم يُغيَّر
+    # اختيارها ⇒ تبقى الراوترات المحفوظة.
+    if ("router_id" not in request.form
+            or (request.form.get("router_id") or "").strip() == _ROUTER_KEEP):
+        changes["router_ids"] = existing.router_ids
     changes["metadata"] = _merge_metadata(existing.metadata, _form_meta_flat())
     return replace(existing, **changes)
 
@@ -445,7 +481,7 @@ def plans_new():
     empty = AccessPlan(id=None, name="", enabled=True)
     return render_template("radius/plans_form.html",
         plan=_plan_with_meta_for_template(empty),
-        plan_types=PLAN_TYPES, is_new=True, speed_rules_panel=None)
+        plan_types=PLAN_TYPES, routers=_routers_for_form(), is_new=True, speed_rules_panel=None)
 
 
 def plans_create():
@@ -459,7 +495,7 @@ def plans_create():
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/plans_form.html",
-            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
+            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES, routers=_routers_for_form(),
             is_new=True, speed_rules_panel=None), 400
     flash(_tr('تم إنشاء الباقة «%(name)s».', name=saved.name), "success")
     return redirect(url_for("radius.plans_list"))
@@ -472,7 +508,7 @@ def plans_edit(plan_id: int):
         abort(404)
     return render_template("radius/plans_form.html",
         plan=_plan_with_meta_for_template(plan),
-        plan_types=PLAN_TYPES,
+        plan_types=PLAN_TYPES, routers=_routers_for_form(),
         is_new=False,
         speed_rules_panel=speed_rules_panel(
             tenant_id=_tid(),
@@ -516,7 +552,7 @@ def plans_update(plan_id: int):
     except RadiusError as e:
         flash(e.message, "error")
         return render_template("radius/plans_form.html",
-            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES,
+            plan=_plan_with_meta_for_template(dto), plan_types=PLAN_TYPES, routers=_routers_for_form(),
             is_new=False, speed_rules_panel=None), 400
     # توريث «توزيع متساوٍ» لمشتركي العرض: حين يتغيّر علم العرض فقط، اكتب القيمة
     # الجديدة لكلّ مشتركيه (فيبينوا فعّالين) وادفع السرعة المقسَّمة للجلسات الحيّة

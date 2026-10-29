@@ -381,6 +381,24 @@
               {{ toggle_switch(name="enabled", checked=(plan.enabled or is_new), value="1", id="pl-en") }}
             </div>
             <div class="help">{{ _('عند الإيقاف لا تظهر الباقة للبيع أو الإسناد.') }}</div></div>
+          {# «راوتر الباقة» (router_ids): فارغ = تعمل على كلّ الراوترات. باقةٌ
+             محفوظة بعدّة راوترات (من الـAPI) تُعرض كخيار «الإبقاء» كي لا يمسحها
+             حفظ النموذج. #}
+          {%- set _rids = (plan.router_ids or [])|list -%}
+          {%- set _routers = routers or [] -%}
+          <div class="pl-field"><label>{{ _('راوتر الباقة') }}</label>
+            <select class="hub-select" name="router_id">
+              <option value="" {% if not _rids %}selected{% endif %}>{{ _('كل الراوترات (بدون تقييد)') }}</option>
+              {% if _rids|length > 1 %}
+                {%- set _names = [] -%}
+                {% for r in _routers %}{% if r.id in _rids %}{% set _x = _names.append(r.name) %}{% endif %}{% endfor %}
+                <option value="__keep__" selected>{{ _('عدة راوترات:') }} {{ _names|join('، ') }}</option>
+              {% endif %}
+              {% for r in _routers %}
+                <option value="{{ r.id }}" {% if _rids|length == 1 and r.id == _rids[0] %}selected{% endif %}>{{ r.name }} ({{ r.address }})</option>
+              {% endfor %}
+            </select>
+            <div class="help">{{ _('اختر راوترًا لتعمل البطاقات والمشتركون على هذه الباقة من خلاله فقط. اتركه «كل الراوترات» لتعمل على الجميع.') }}</div></div>
           <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
             <div class="help">{{ _('لون تمييز الباقة في القوائم.') }}</div></div>

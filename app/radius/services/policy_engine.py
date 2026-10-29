@@ -104,6 +104,9 @@ _MSG = {
     # subscribers + PPPoE + hotspot) عند سقف الباقة من المزوّد. يَرفض
     # الجلسة الجديدة فقط (المُعاد المصادقة لمستخدم قائم لا يُحتَسَب).
     "provider_active_cap": N_("تم بلوغ الحدّ الأقصى للمتصلين المتزامنين لباقتك — انتظر انتهاء جلسة أو رقّ باقتك"),
+    # «راوتر الباقة» (router_ids): الباقة مقيّدة براوتر/راوترات معيّنة والطلب
+    # جاء من راوترٍ آخر.
+    "router_not_allowed": N_("هذه الباقة غير متاحة على هذه الشبكة"),
     "ok_welcome":        N_("أهلًا بك"),
     "ok_expires_soon":   N_("اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع"),
     "ok_card_time_left": N_("أهلًا بك — الوقت المتبقّي في بطاقتك:"),
@@ -331,6 +334,36 @@ def _check_days(plan: Optional[AccessPlan], now: datetime) -> Optional[AuthDecis
     if today not in plan.allowed_days:
         return _reject("outside_days")
     return None
+
+
+def _check_plan_router(plan: Optional[AccessPlan],
+                       req: AuthRequest) -> Optional[AuthDecision]:
+    """«راوتر الباقة»: ``plan.router_ids`` = معرّفات ``nas_devices`` المسموح الدخول
+    منها. فارغة ⇒ الباقة تعمل على كلّ الراوترات (السلوك القديم بلا تغيير).
+
+    الراوتر يُعرَف من ``NAS-IP-Address`` مقابل ``nas_devices.address`` — نفس
+    مفتاح تحديد المستأجر في ``internal_auth``. طلبٌ بلا NAS-IP على باقةٍ مقيّدة
+    يُرفض، إلّا «اختبار المصادقة» (simulate) الذي لا يحمل راوترًا. رفض سياسة
+    (لا يُحتسَب في fail2ban)."""
+    if not plan or not plan.router_ids:
+        return None
+    allowed = set()
+    for r in plan.router_ids:
+        try:
+            allowed.add(int(r))
+        except (TypeError, ValueError):
+            continue
+    if not allowed:
+        return None
+    nas_ip = (req.nas_ip or "").strip()
+    if not nas_ip:
+        return None if req.simulate else _reject("router_not_allowed")
+    rows = db().execute(
+        "SELECT id FROM nas_devices WHERE tenant_id = ? AND address = ? "
+        "AND deleted_at IS NULL", (req.tenant_id, nas_ip)).fetchall()
+    if any(int(r["id"]) in allowed for r in rows):
+        return None
+    return _reject("router_not_allowed")
 
 
 def _effective_quota_mb(sub: Subscriber, plan: Optional[AccessPlan]) -> int:
@@ -1300,6 +1333,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # فلا كلمةَ تُطلب ولا تُقارَن (انظر _login_without_password).
         lambda: (None if _login_without_password(req.tenant_id, req.username)
                  else _check_password(sub, req)),
+        # «راوتر الباقة»: باقةٌ مقيّدة براوترات معيّنة لا تُفتح من غيرها — قبل
+        # الانتهاء/الكابتيف كي لا يدخل حتّى مسار التجديد من راوترٍ آخر.
+        lambda: _check_plan_router(plan, req),
         # status + expiry, unified for cards/PPPoE/hotspot. May return an early
         # ACCEPT (ok=True) that funnels an expired user into the captive pool.
         lambda: _check_expiry_captive(sub),
