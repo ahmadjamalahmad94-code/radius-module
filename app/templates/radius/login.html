@@ -159,6 +159,10 @@
       font-size:14px;line-height:1.8;color:var(--endorse);padding:20px 16px;
     }
     .hobe-group-endorsement p{margin:0}
+    .hobe-group{display:inline-flex;align-items:center;gap:10px;margin-bottom:4px;
+      font-family:'Inter','Almarai',sans-serif;font-size:12px;font-weight:700;
+      letter-spacing:.32em;color:#a9a3d6}
+    .hobe-group img{width:22px;height:22px;opacity:.95}
 
     /* ── Tablet / mobile ────────────────────────────── */
     @media (max-width:960px){
@@ -272,6 +276,10 @@
   </main>
 
   <footer class="hobe-group-endorsement" lang="ar" dir="rtl">
+    <div class="hobe-group" dir="ltr" lang="en">
+      <img src="{{ url_for('static', filename='img/login/mark-on-dark.svg') }}" alt="" width="22" height="22">
+      <span>HOBE TECHNOLOGY GROUP</span>
+    </div>
     <p>هذا التطبيق من مجموعة هوب تكنولوجي جروب</p>
   </footer>
 
