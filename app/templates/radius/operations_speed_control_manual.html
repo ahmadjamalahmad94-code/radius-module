@@ -86,6 +86,7 @@
 <div class="opsx-redesign">
 <section class="spdx" data-speed-control data-mode="unified"
          data-active-pct="{{ active_speed.pct if active_speed else 100 }}"
+         data-active='{{ ({"mode": active_speed.get("mode"), "overrides": active_speed.get("overrides") or {}, "profile_ids": active_speed.get("profile_ids") or []} if active_speed else {})|tojson }}'
          data-testid="speed-manual-section">
 
   {# ── الشريط العلوي: مبدّل وضع التحكم (موحّد / تحميل-رفع منفصل) ── #}

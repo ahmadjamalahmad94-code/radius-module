@@ -258,10 +258,16 @@ class OperationsSpeedCenterService:
         ov = {str(k): v for k, v in (overrides or {}).items()}
         is_reset = abs(mult - 1.0) < 1e-9 and not ov
         label = SPEED_PRESETS.get(preset, {}).get("label") or _tr("نسبة مخصّصة")
+        # الواجهة ترسل preset=normal دائمًا؛ فلا نسمّي 75% «الوضع الطبيعي».
+        if preset == "normal" and (abs(mult - 1.0) > 1e-9 or any(
+                abs(float(v.get("down", 1.0)) - 1.0) > 1e-9 or abs(float(v.get("up", 1.0)) - 1.0) > 1e-9
+                for v in ov.values())):
+            label = _tr("نسبة مخصّصة")
         from ..db.repos import tenants_repo
         active = {
             "multiplier": mult, "overrides": ov,
             "profile_ids": [int(x) for x in (profile_ids or [])],
+            "mode": "separate" if mode == "separate" else "unified",
             "preset": preset, "label": label, "at": now_iso(), "actor": actor,
         }
         tenants_repo.set_setting(
