@@ -1,7 +1,7 @@
 {# Admin sign-in — HOBE RADIUS family login (owner reference package, 31/10/2026).
    Navy page, light form card on the inline-start side, the native brand
    panel artwork on the other side, violet primary button, Almarai/Cairo
-   self-hosted, and the group endorsement line as real text under the card.
+   self-hosted, and the «من عائلة HOBE TECHNOLOGIES» family line under the card.
    Authentication is unchanged: username + password posted to auth_login. #}
 <!doctype html>
 <html lang="{{ get_locale() }}" dir="{{ text_dir }}">
@@ -153,16 +153,16 @@
     .submit-btn[disabled]{filter:saturate(.6) brightness(.95);cursor:progress}
     html[dir="ltr"] .submit-btn .fa-arrow-left{transform:scaleX(-1)}
 
-    /* ── Group endorsement (real text, under the card) ─ */
+    /* ── Family line under the card: «من عائلة HOBE TECHNOLOGIES» ─ */
     .hobe-group-endorsement{
-      text-align:center;font-family:'Almarai','Cairo',sans-serif;
-      font-size:14px;line-height:1.8;color:var(--endorse);padding:20px 16px;
+      display:flex;align-items:center;justify-content:center;gap:12px;
+      padding:22px 16px;color:#a9a3d6;
     }
-    .hobe-group-endorsement p{margin:0}
-    .hobe-group{display:inline-flex;align-items:center;gap:10px;margin-bottom:4px;
-      font-family:'Inter','Almarai',sans-serif;font-size:12px;font-weight:700;
-      letter-spacing:.32em;color:#a9a3d6}
-    .hobe-group img{width:22px;height:22px;opacity:.95}
+    .hobe-group-endorsement .fam{font-family:'Almarai','Cairo',sans-serif;font-size:15px;color:#b9b3e6}
+    .hobe-group-endorsement .grp{font-family:'Inter','Almarai',sans-serif;font-size:14px;
+      letter-spacing:.3em;color:#9f99d6;font-weight:600}
+    .hobe-group-endorsement .grp b{color:#ffffff;font-weight:800}
+    .hobe-group-endorsement img{width:20px;height:20px;opacity:.95}
 
     /* ── Tablet / mobile ────────────────────────────── */
     @media (max-width:960px){
@@ -275,12 +275,10 @@
 
   </main>
 
-  <footer class="hobe-group-endorsement" lang="ar" dir="rtl">
-    <div class="hobe-group" dir="ltr" lang="en">
-      <img src="{{ url_for('static', filename='img/login/mark-on-dark.svg') }}" alt="" width="22" height="22">
-      <span>HOBE TECHNOLOGY GROUP</span>
-    </div>
-    <p>هذا التطبيق من مجموعة هوب تكنولوجي جروب</p>
+  <footer class="hobe-group-endorsement" dir="rtl">
+    <span class="fam" lang="ar">من عائلة</span>
+    <span class="grp" dir="ltr" lang="en"><b>HOBE</b> TECHNOLOGIES</span>
+    <img src="{{ url_for('static', filename='img/login/mark-on-dark.svg') }}" alt="" width="20" height="20">
   </footer>
 
 <script>
