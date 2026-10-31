@@ -377,17 +377,49 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
   }
 
   // ── init ──────────────────────────────────────────────────────────────
-  // استرجع النسبة المطبَّقة فعليًّا (السياسة النشطة) كي تعكس الواجهة الواقع بعد
-  // إعادة التحميل — لا 100% دائمًا. (الوضع الموحّد؛ التخصيص لكل باقة لاحقًا.)
-  (function initFromActive() {
+  // استرجع السياسة المطبَّقة فعليًّا كي تعكس الواجهة الواقع بعد إعادة التحميل —
+  // لا 100% دائمًا: النسبة العامة + نسبة كل باقة (تحميل/رفع) + تفعيلها + الوضع.
+  function initFromActive() {
     var pct = parseInt(root.getAttribute("data-active-pct") || "100", 10);
-    if (!isFinite(pct) || pct === 100) return;
+    if (!isFinite(pct)) pct = 100;
+    var act = {};
+    try { act = JSON.parse(root.getAttribute("data-active") || "{}") || {}; } catch (e) { act = {}; }
+    var ov = act.overrides || {};
+    var ids = (act.profile_ids || []).map(String);
+    var hasSaved = Object.keys(ov).length > 0 || ids.length > 0;
+    var mode = act.mode === "separate" || act.mode === "unified" ? act.mode : null;
+    if (!mode) {
+      // سياسات قديمة بلا mode: منفصل إن اختلف التحميل عن الرفع في أيّ باقة
+      mode = Object.keys(ov).some(function (k) {
+        return Math.round((+ov[k].down || 0) * 100) !== Math.round((+ov[k].up || 0) * 100);
+      }) ? "separate" : "unified";
+    }
     state.globalUni = state.globalDown = state.globalUp = pct;
     if (gUni) setSlider(gUni, pct);
     if (gDown) setSlider(gDown, pct);
     if (gUp) setSlider(gUp, pct);
-    profiles.forEach(function (p) { if (receivesGlobal(p)) { p.uni = p.dn = p.upp = pct; } });
-  })();
-  setMode("unified");
+    profiles.forEach(function (p) {
+      var o = ov[p.id];
+      if (hasSaved) {
+        p.enabled = !!o || ids.indexOf(p.id) >= 0;
+        var enable = $("[data-enable]", p.el);
+        if (enable) enable.checked = p.enabled;
+        p.el.classList.toggle("is-off", !p.enabled);
+        if (p.statusEl) p.statusEl.textContent = p.enabled ? hrT('مفعّل') : hrT('متوقّف');
+      }
+      if (o) {
+        p.dn = clamp(Math.round((+o.down || 0) * 100), 0, 300);
+        p.upp = clamp(Math.round((+o.up || 0) * 100), 0, 300);
+        p.uni = p.dn;
+      } else if (!hasSaved && receivesGlobal(p)) {
+        p.uni = p.dn = p.upp = pct;
+      }
+      setSlider($("[data-row-uni]", p.el), p.uni);
+      setSlider($("[data-row-down]", p.el), p.dn);
+      setSlider($("[data-row-up]", p.el), p.upp);
+    });
+    return mode;
+  }
+  setMode(initFromActive());
   recompute();
 })();
