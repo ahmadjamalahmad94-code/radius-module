@@ -1,251 +1,228 @@
-{# Admin sign-in — split-card layout matching portal_card_login.
-   Brand side (violet gradient + features chips) + form side (clean
-   white card, icon-prefixed fields, password reveal toggle). Same
-   Cairo + violet tokens used app-wide. #}
+{# Admin sign-in — HOBE RADIUS family login (owner reference package, 31/10/2026).
+   Navy page, light form card on the inline-start side, the native brand
+   panel artwork on the other side, violet primary button, Almarai/Cairo
+   self-hosted, and the group endorsement line as real text under the card.
+   Authentication is unchanged: username + password posted to auth_login. #}
 <!doctype html>
 <html lang="{{ get_locale() }}" dir="{{ text_dir }}">
 <head>
   {% include "_partials/hr_i18n_js.html" %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#5b21b6">
+  <meta name="theme-color" content="#0b1030">
   <title>{{ _('تسجيل الدخول — لوحة Hobe Hub') }}</title>
-  {# Cairo مَحَلّيًّا — لا روابط Google Fonts خارجيّة (يونيو 2026). #}
+  {# الخطوط مَحَلّيًّا — لا روابط Google Fonts خارجيّة. #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
+    @font-face{font-family:"Almarai";font-weight:400;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-Regular.ttf') }}") format("truetype")}
+    @font-face{font-family:"Almarai";font-weight:700;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-Bold.ttf') }}") format("truetype")}
+    @font-face{font-family:"Almarai";font-weight:800;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-ExtraBold.ttf') }}") format("truetype")}
     :root{
-      --ink-1:#0f172a;
-      --ink-2:#475569;
-      --ink-3:#94a3b8;
-      --canvas:#f1f5f9;
-      --paper:#ffffff;
-      --hair:#cbd5e1;
-      --hair-soft:#e2e8f0;
-      --accent:#7c3aed;
-      --accent-2:#5b21b6;
-      --accent-soft:#f5f3ff;
-      --accent-ring:rgba(124,58,237,.28);
-      --success:#15803d;
-      --success-soft:#dcfce7;
-      --warn:#b45309;
-      --warn-soft:#fef3c7;
-      --err:#b91c1c;
-      --err-soft:#fee2e2;
-      --info:#1e40af;
-      --info-soft:#dbeafe;
+      --navy:#0b1030;
+      --navy-2:#121a4a;
+      --paper:#f6f5fc;
+      --ink-1:#12163a;
+      --ink-2:#4b4f7a;
+      --ink-3:#8b8db0;
+      --line:#cfcbee;
+      --violet:#8b5cf6;
+      --violet-2:#7c3aed;
+      --violet-ink:#7a3fe8;
+      --ring:rgba(139,92,246,.28);
+      --edge:rgba(167,139,250,.45);
+      --endorse:#c3bce9;
+      --err:#b91c1c;--err-soft:#fee2e2;
+      --warn:#b45309;--warn-soft:#fef3c7;
+      --ok:#15803d;--ok-soft:#dcfce7;
+      --info:#1e40af;--info-soft:#dbeafe;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;height:100%}
+    html,body{margin:0;padding:0;min-height:100%}
     body{
-      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
-      background:
-        radial-gradient(800px 600px at 90% -10%, rgba(124,58,237,.10) 0%, transparent 50%),
-        radial-gradient(800px 600px at -10% 110%, rgba(99,102,241,.10) 0%, transparent 50%),
-        var(--canvas);
+      font-family:'Almarai','Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
       color:var(--ink-1);
-      min-height:100dvh;
-      display:grid;place-items:center;
-      padding:24px;
-      font-feature-settings:"ss01","tnum";
-    }
-    /* عند الإنجليزية (ltr) نستبدل الخط بـ Inter اللاتيني */
-    html[dir="ltr"] body{
-      font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-    }
-
-    /* ── Card shell — 2-column split ────────────────── */
-    .login-card{
-      width:100%;max-width:980px;
-      display:grid;grid-template-columns:1.05fr 1fr;
-      background:var(--paper);
-      border:1px solid var(--hair-soft);border-radius:22px;
-      overflow:hidden;
-      box-shadow:
-        0 1px 0 rgba(255,255,255,.8) inset,
-        0 4px 12px rgba(15,23,42,.06),
-        0 24px 60px rgba(15,23,42,.12);
-    }
-    @media (max-width:840px){
-      .login-card{grid-template-columns:1fr;max-width:480px}
-    }
-
-    /* ── Brand side ─────────────────────────────────── */
-    .brand-side{
-      position:relative;overflow:hidden;
-      padding:42px 40px;color:#fff;
       background:
-        radial-gradient(420px 240px at 100% 0%, rgba(255,255,255,.18) 0%, transparent 60%),
-        radial-gradient(360px 200px at 0% 100%, rgba(255,255,255,.10) 0%, transparent 60%),
-        linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-      display:flex;flex-direction:column;
+        radial-gradient(1100px 700px at 50% 110%, rgba(124,58,237,.22) 0%, transparent 60%),
+        radial-gradient(900px 600px at 15% -10%, rgba(59,64,170,.25) 0%, transparent 60%),
+        var(--navy);
+      min-height:100dvh;
+      display:flex;flex-direction:column;align-items:center;
+      padding:20px 16px 8px;
     }
-    .brand-side::before, .brand-side::after{
-      content:"";position:absolute;border-radius:50%;
-      background:rgba(255,255,255,.06);pointer-events:none;
-    }
-    .brand-side::before{width:280px;height:280px;top:-90px;inset-inline-end:-80px}
-    .brand-side::after{width:200px;height:200px;bottom:-70px;inset-inline-start:-40px}
-    @media (max-width:840px){
-      .brand-side{padding:28px 24px}
-    }
-    .brand-mark{
-      position:relative;z-index:1;
-      width:56px;height:56px;border-radius:16px;
-      background:rgba(255,255,255,.16);
-      backdrop-filter:blur(4px);
-      display:grid;place-items:center;
-      font-weight:900;font-size:18px;letter-spacing:.5px;
-      border:1px solid rgba(255,255,255,.22);
-    }
-    .brand-head{
-      position:relative;z-index:1;
-      margin:18px 0 22px;
-    }
-    .brand-head h1{
-      margin:0;font-size:22px;font-weight:800;line-height:1.4;
-    }
-    .brand-head p{
-      margin:6px 0 0;color:rgba(255,255,255,.86);
-      font-size:13.5px;line-height:1.8;
-    }
-    .brand-list{
-      position:relative;z-index:1;
-      list-style:none;padding:0;margin:auto 0 0;
-      display:grid;gap:10px;
-    }
-    .brand-list li{
-      display:flex;align-items:center;gap:10px;
-      padding:10px 12px;border-radius:12px;
-      background:rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.16);
-      font-size:13px;font-weight:600;
-    }
-    .brand-list li i{
-      width:22px;height:22px;border-radius:7px;
-      background:rgba(255,255,255,.18);
-      display:grid;place-items:center;font-size:10.5px;
-    }
+    html[dir="ltr"] body{font-family:'Inter','Almarai','Cairo',system-ui,-apple-system,'Segoe UI',sans-serif}
 
-    /* ── Form side ─────────────────────────────────── */
+    /* ── Top bar: language switcher ───────────────── */
+    .topbar{width:100%;max-width:1460px;display:flex;justify-content:flex-start;margin-bottom:14px}
+    .lang{position:relative}
+    .lang summary{
+      list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
+      color:#e6e3ff;font-size:15px;padding:8px 10px;border-radius:10px;
+    }
+    .lang summary::-webkit-details-marker{display:none}
+    .lang summary:hover,.lang[open] summary{background:rgba(255,255,255,.06)}
+    .lang summary:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+    .lang summary .fa-globe{font-size:19px}
+    .lang summary .fa-chevron-down{font-size:11px;opacity:.8}
+    .lang-menu{
+      position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;
+      min-width:190px;padding:6px;border-radius:14px;background:#fff;
+      box-shadow:0 18px 40px rgba(4,6,30,.45);
+    }
+    .lang-menu a{
+      display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;
+      color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:700;
+    }
+    .lang-menu a:hover,.lang-menu a:focus-visible,.lang-menu a[aria-current="true"]{background:#f1edff;outline:0}
+
+    /* ── Card shell ─────────────────────────────────── */
+    .login-card{
+      width:100%;max-width:1460px;
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.17fr);
+      border:1px solid var(--edge);border-radius:24px;overflow:hidden;
+      background:var(--navy-2);
+      box-shadow:0 30px 80px rgba(2,4,24,.55);
+    }
     .form-side{
-      padding:42px 40px;
-      display:flex;flex-direction:column;justify-content:center;gap:18px;
+      background:var(--paper);
+      padding:clamp(28px,4vw,56px) clamp(24px,3.4vw,44px);
+      display:flex;flex-direction:column;gap:18px;justify-content:center;
     }
-    @media (max-width:840px){
-      .form-side{padding:28px 24px}
+    .brand-side{
+      position:relative;min-height:560px;
+      background:#0d1240 url("{{ url_for('static', filename='img/login/brand-panel.png') }}") center/cover no-repeat;
     }
-    .form-head h2{
-      margin:0;font-size:21px;font-weight:800;color:var(--ink-1);
-    }
-    .form-head p{
-      margin:6px 0 0;color:var(--ink-2);font-size:13.5px;line-height:1.8;
-    }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-    /* ── Flash messages ────────────────────────────── */
+    /* ── Form head ───────────────────────────────────── */
+    .product{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+    .product img{width:52px;height:52px}
+    .product span{font-weight:800;font-size:22px;letter-spacing:.2px;color:var(--ink-1);font-family:'Inter','Almarai',sans-serif}
+    .form-head h1{margin:0;font-size:clamp(30px,3.4vw,46px);font-weight:800;line-height:1.25}
+    .form-head p{margin:10px 0 6px;color:var(--ink-2);font-size:clamp(16px,1.5vw,21px)}
+
+    /* ── Flash messages ─────────────────────────────── */
     .flash-stack{display:grid;gap:8px}
-    .flash{
-      display:flex;align-items:flex-start;gap:10px;
-      padding:11px 13px;border-radius:12px;
-      font-size:13px;font-weight:600;line-height:1.6;
-      border:1px solid;
-    }
-    .flash i{font-size:13.5px;margin-top:2px}
+    .flash{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:12px;
+      font-size:14px;font-weight:700;line-height:1.6;border:1px solid}
+    .flash i{margin-top:3px}
     .flash-error,.flash-danger{background:var(--err-soft);color:var(--err);border-color:#fecaca}
     .flash-warning{background:var(--warn-soft);color:var(--warn);border-color:#fde68a}
-    .flash-success{background:var(--success-soft);color:var(--success);border-color:#bbf7d0}
+    .flash-success{background:var(--ok-soft);color:var(--ok);border-color:#bbf7d0}
     .flash-info{background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
 
     /* ── Fields ─────────────────────────────────────── */
-    .field{display:grid;gap:6px}
-    .field label{
-      font-size:12.5px;color:var(--ink-2);font-weight:700;
-    }
+    form{display:grid;gap:22px}
+    .field{display:grid;gap:10px}
+    .field label{font-size:16px;font-weight:800;color:var(--ink-1)}
     .field-wrap{
       position:relative;display:flex;align-items:center;
-      background:var(--paper);border:1px solid var(--hair);
-      border-radius:12px;transition:border-color .15s,box-shadow .15s;
+      background:#fff;border:1px solid var(--line);border-radius:12px;
+      transition:border-color .15s,box-shadow .15s;
     }
-    .field-wrap:focus-within{
-      border-color:var(--accent);
-      box-shadow:0 0 0 4px var(--accent-ring);
-    }
-    .field-wrap > i.fa-solid:first-child{
-      flex:0 0 auto;width:42px;height:44px;
-      display:grid;place-items:center;
-      color:var(--ink-3);font-size:14px;
-    }
+    .field-wrap:focus-within{border-color:var(--violet);box-shadow:0 0 0 4px var(--ring)}
     .field-wrap input{
-      flex:1;min-width:0;
-      border:0;outline:0;background:transparent;
-      padding:0 12px 0 4px;height:44px;
-      font:inherit;font-size:14px;color:var(--ink-1);
+      flex:1;min-width:0;border:0;outline:0;background:transparent;
+      height:58px;padding:0 18px;font:inherit;font-size:17px;color:var(--ink-1);
     }
     .field-wrap input::placeholder{color:var(--ink-3)}
-    .pwd-toggle{
-      flex:0 0 auto;width:42px;height:44px;
-      display:grid;place-items:center;
-      border:0;background:transparent;cursor:pointer;
-      color:var(--ink-3);transition:color .15s;
+    .field-wrap .ico,.pwd-toggle{
+      flex:0 0 auto;width:54px;height:58px;display:grid;place-items:center;
+      color:var(--ink-2);font-size:18px;
     }
-    .pwd-toggle:hover{color:var(--accent-2)}
+    .pwd-toggle{border:0;background:transparent;cursor:pointer;border-radius:12px}
+    .pwd-toggle:hover{color:var(--violet-2)}
+    .pwd-toggle:focus-visible{outline:2px solid var(--violet);outline-offset:-4px}
 
     /* ── Submit ─────────────────────────────────────── */
     .submit-btn{
-      width:100%;height:46px;
-      border:0;border-radius:12px;cursor:pointer;
-      color:#fff;font:inherit;font-size:14.5px;font-weight:800;
-      background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-      box-shadow:0 4px 12px rgba(124,58,237,.32);
-      display:inline-flex;align-items:center;justify-content:center;gap:10px;
-      transition:transform .05s, box-shadow .15s, filter .15s;
+      width:100%;height:62px;margin-top:4px;
+      border:0;border-radius:12px;cursor:pointer;color:#fff;
+      font:inherit;font-size:19px;font-weight:800;
+      background:linear-gradient(90deg,var(--violet) 0%,var(--violet-2) 100%);
+      box-shadow:0 10px 24px rgba(124,58,237,.35);
+      display:inline-flex;align-items:center;justify-content:center;gap:18px;
+      transition:filter .15s,transform .05s;
     }
-    .submit-btn:hover{filter:brightness(1.05)}
+    .submit-btn:hover{filter:brightness(1.06)}
     .submit-btn:active{transform:translateY(1px)}
+    .submit-btn:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}
+    .submit-btn[disabled]{filter:saturate(.6) brightness(.95);cursor:progress}
+    html[dir="ltr"] .submit-btn .fa-arrow-left{transform:scaleX(-1)}
 
-    /* ── Foot ───────────────────────────────────────── */
-    .form-foot{
-      text-align:center;font-size:12px;color:var(--ink-3);
-      padding-top:6px;
+    /* ── Group endorsement (real text, under the card) ─ */
+    .hobe-group-endorsement{
+      text-align:center;font-family:'Almarai','Cairo',sans-serif;
+      font-size:14px;line-height:1.8;color:var(--endorse);padding:20px 16px;
     }
-    .form-foot strong{color:var(--accent-2)}
+    .hobe-group-endorsement p{margin:0}
+
+    /* ── Tablet / mobile ────────────────────────────── */
+    @media (max-width:960px){
+      .login-card{grid-template-columns:1fr;max-width:560px}
+      .brand-side{display:none}
+      .topbar{max-width:560px}
+    }
+    @media (max-width:480px){
+      body{padding:12px 16px 4px}
+      .form-side{padding:26px 20px}
+      .product{margin-bottom:12px}
+      .product img{width:44px;height:44px}
+      .product span{font-size:19px}
+      .field-wrap input{height:54px;font-size:16px}
+      .field-wrap .ico,.pwd-toggle{height:54px}
+      .submit-btn{height:56px;font-size:17px}
+    }
   </style>
 </head>
 <body>
 
+  <header class="topbar">
+    {% set _cur_lang = LANGUAGES.get(current_locale, {}) %}
+    <details class="lang">
+      <summary aria-label="{{ _('تغيير اللغة') }}">
+        <span>{{ _cur_lang.get('name', current_locale) }}</span>
+        <i class="fa-solid fa-globe" aria-hidden="true"></i>
+        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+      </summary>
+      <nav class="lang-menu" aria-label="{{ _('اللغة') }}">
+        {% for code in SUPPORTED_LOCALES %}
+          {% set _lang = LANGUAGES.get(code, {}) %}
+          <a href="{{ url_for('radius.set_locale', locale=code, next=request.path) }}"
+             {% if code == current_locale %}aria-current="true"{% endif %}>
+            <span aria-hidden="true">{{ _lang.get('flag', '🌐') }}</span>
+            <span>{{ _lang.get('name', code) }}</span>
+          </a>
+        {% endfor %}
+      </nav>
+    </details>
+  </header>
+
   <main class="login-card">
 
-    <aside class="brand-side">
-      <div class="brand-mark">HR</div>
-
-      <div class="brand-head">
-        <h1>{{ _('أهلًا بعودتك إلى Hobe Hub') }}</h1>
-        <p>{{ _('إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.') }}</p>
+    <section class="form-side">
+      <div class="product">
+        <span>HOBE RADIUS</span>
+        <img src="{{ url_for('static', filename='img/login/mark-on-light.svg') }}" alt="" width="52" height="52">
       </div>
 
-      <ul class="brand-list">
-        <li><i class="fa-solid fa-users"></i> {{ _('إدارة المشتركين والكروت') }}</li>
-        <li><i class="fa-solid fa-network-wired"></i> {{ _('تحكّم الراوترات والشبكة') }}</li>
-        <li><i class="fa-solid fa-shield-halved"></i> {{ _('ضوابط أمان وسجلّات تدقيق') }}</li>
-        <li><i class="fa-solid fa-chart-line"></i> {{ _('تقارير ومتابعة لحظية') }}</li>
-      </ul>
-    </aside>
-
-    <section class="form-side">
       <div class="form-head">
-        <h2>{{ _('تسجيل الدخول') }}</h2>
-        <p>{{ _('أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم.') }}</p>
+        <h1>{{ _('مرحبًا بعودتك') }}</h1>
+        <p>{{ _('سجّل دخولك إلى HOBE RADIUS') }}</p>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          <div class="flash-stack">
+          <div class="flash-stack" role="alert">
             {% for cat, msg in messages %}
               <div class="flash flash-{{ cat }}">
                 <i class="fa-solid fa-{% if cat in ['error','danger'] %}circle-exclamation
                             {%- elif cat == 'success' %}circle-check
                             {%- elif cat == 'warning' %}triangle-exclamation
-                            {%- else %}circle-info{% endif %}"></i>
+                            {%- else %}circle-info{% endif %}" aria-hidden="true"></i>
                 <span>{{ msg }}</span>
               </div>
             {% endfor %}
@@ -253,46 +230,68 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('radius.auth_login') }}" style="display:grid;gap:14px">
+      <form method="post" action="{{ url_for('radius.auth_login') }}" data-login-form>
 
         <div class="field">
           <label for="lg-user">{{ _('اسم المستخدم') }}</label>
           <div class="field-wrap">
-            <i class="fa-solid fa-user"></i>
             <input id="lg-user" type="text" name="username"
                    value="{{ username or '' }}" required autofocus
-                   autocomplete="username"
+                   autocomplete="username" autocapitalize="none" spellcheck="false"
                    placeholder="{{ _('مثال: admin') }}">
+            <span class="ico" aria-hidden="true"><i class="fa-regular fa-user"></i></span>
           </div>
         </div>
 
         <div class="field">
           <label for="lg-pwd">{{ _('كلمة المرور') }}</label>
           <div class="field-wrap">
-            <i class="fa-solid fa-lock"></i>
             <input id="lg-pwd" type="password" name="password" required
-                   autocomplete="current-password"
-                   placeholder="••••••••">
-            <button type="button" class="pwd-toggle" aria-label="{{ _('إظهار كلمة المرور') }}"
-                    onclick="(function(b){var i=document.getElementById('lg-pwd');var on=i.type==='password';i.type=on?'text':'password';var ico=b.querySelector('i');if(ico){ico.classList.toggle('fa-eye',on);ico.classList.toggle('fa-eye-slash',!on);}})(this)">
-              <i class="fa-solid fa-eye"></i>
+                   autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="pwd-toggle" data-pwd-toggle
+                    aria-controls="lg-pwd" aria-pressed="false"
+                    aria-label="{{ _('إظهار كلمة المرور') }}"
+                    data-label-show="{{ _('إظهار كلمة المرور') }}"
+                    data-label-hide="{{ _('إخفاء كلمة المرور') }}">
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        <button class="submit-btn" type="submit">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span>{{ _('دخول') }}</span>
+        <button class="submit-btn" type="submit" data-login-submit>
+          <span>{{ _('تسجيل الدخول') }}</span>
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
         </button>
-
-        <div class="form-foot">
-          {{ _('استخدم بيانات المدير التي أنشأتها عند التثبيت.') }}
-        </div>
       </form>
     </section>
 
+    <aside class="brand-side" role="img" aria-label="HOBE RADIUS — {{ _('إدارة شبكتك تبدأ من هنا') }}">
+      <span class="sr-only">HOBE RADIUS — {{ _('إدارة شبكتك تبدأ من هنا') }}</span>
+    </aside>
+
   </main>
 
+  <footer class="hobe-group-endorsement" lang="ar" dir="rtl">
+    <p>هذا التطبيق من مجموعة هوب تكنولوجي جروب</p>
+  </footer>
+
+<script>
+(function () {
+  var t = document.querySelector("[data-pwd-toggle]");
+  var i = document.getElementById("lg-pwd");
+  if (t && i) t.addEventListener("click", function () {
+    var show = i.type === "password";
+    i.type = show ? "text" : "password";
+    t.setAttribute("aria-pressed", show ? "true" : "false");
+    t.setAttribute("aria-label", t.getAttribute(show ? "data-label-hide" : "data-label-show"));
+    var ico = t.querySelector("i");
+    if (ico) { ico.classList.toggle("fa-eye", !show); ico.classList.toggle("fa-eye-slash", show); }
+  });
+  var f = document.querySelector("[data-login-form]");
+  var b = document.querySelector("[data-login-submit]");
+  if (f && b) f.addEventListener("submit", function () { b.disabled = true; });
+})();
+</script>
 <script src="{{ url_for('static', filename='js/latin_digits.js', v='3') }}"></script>
 </body>
 </html>
