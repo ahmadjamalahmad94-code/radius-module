@@ -7398,10 +7398,10 @@ change_set لا يطابق السياسة المطلوبة.,,,,,,"missing: en,fr
 سياسة سرعة - %(label)s,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:159
 تم حفظ سياسة سرعة كمعاينة بدون تطبيق مباشر على RADIUS,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:165
 نسبة مخصّصة,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:260
-أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:296
-طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:298
-سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:341
-اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:497
+أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:302
+طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA).,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:304
+سياسة السرعة غير موجودة.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:347
+اسم السياسة المختصر مطلوب.,,,,,,"missing: en,fr,tr,es",app/radius/services/operations_speed_center.py:503
 محاكاة محفظة (جوال باي/بال باي ستايل),,,,,,"missing: en,fr,tr,es",app/radius/services/payment_providers/__init__.py:92
 ريال,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:82
 تاريخ الإصدار:,,,,,,"missing: en,fr,tr,es",app/radius/services/pdf_theme.py:269
@@ -19174,16 +19174,11 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 — لا حذف نهائي، ويمكن استعادة أي عنصر منها لاحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:227
 المؤهل الآن حسب المعاينة: %(v)s كرت و%(v2)s مشترك في %(v3)s متأثرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:231
 نعم، شغّل الأرشفة,,"Yes, run archiving","Oui, lancer l'archivage","Evet, arşivlemeyi çalıştır","Sí, ejecutar el archivado",ok,app/templates/radius/lifecycle.html:236
-تسجيل الدخول — لوحة Hobe Hub,,Sign In — Hobe Hub Console,Connexion — Panneau Hobe Hub,Oturum aç — Hobe Hub paneli,Iniciar sesión — Panel Hobe Hub,ok,app/templates/radius/login.html:12
-أهلًا بعودتك إلى Hobe Hub,,Welcome back to Hobe Hub,Bon retour sur Hobe Hub,Hobe Hub'a tekrar hoş geldiniz,Bienvenido de nuevo a Hobe Hub,ok,app/templates/radius/login.html:222
-إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.,,"Full management of authentication, subscribers, cards, and network from one place. Every action is recorded in the audit log and carried out securely.","Gestion complète des services d'authentification, des abonnés, des coupons et du réseau depuis un seul endroit. Chaque opération est enregistrée dans le journal d'audit et effectuée en toute sécurité.","Kimlik doğrulama hizmetlerinin, abonelerin, kuponların ve ağın tek bir yerden tam yönetimi. Her işlem denetim günlüğüne kaydedilir ve güvenle gerçekleştirilir.","Gestión completa de los servicios de autenticación, los abonados, los cupones y la red desde un solo lugar. Cada operación se registra en el registro de auditoría y se realiza de forma segura.",ok,app/templates/radius/login.html:223
-إدارة المشتركين والكروت,,Subscriber and card management,Gestion des abonnés et des coupons,Abone ve kupon yönetimi,Gestión de abonados y cupones,ok,app/templates/radius/login.html:227
-تحكّم الراوترات والشبكة,,Router and network control,Contrôle des routeurs et du réseau,Yönlendirici ve ağ kontrolü,Control de routers y red,ok,app/templates/radius/login.html:228
-ضوابط أمان وسجلّات تدقيق,,Security controls and audit logs,Contrôles de sécurité et journaux d'audit,Güvenlik denetimleri ve denetim günlükleri,Controles de seguridad y registros de auditoría,ok,app/templates/radius/login.html:229
-تقارير ومتابعة لحظية,,Real-time reports and monitoring,Rapports et suivi en temps réel,Raporlar ve anlık izleme,Informes y seguimiento en tiempo real,ok,app/templates/radius/login.html:230
-أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم.,,Enter your admin account credentials to access the dashboard.,Saisissez les identifiants du compte administrateur pour accéder au panneau de contrôle.,Kontrol paneline erişmek için yönetici hesabı bilgilerini girin.,Introduce las credenciales de la cuenta de administración para acceder al panel de control.,ok,app/templates/radius/login.html:237
-مثال: admin,,e.g. admin,Exemple : admin,Örnek: admin,Ejemplo: admin,ok,app/templates/radius/login.html:265
-استخدم بيانات المدير التي أنشأتها عند التثبيت.,,Use the administrator credentials you created during setup.,Utilisez les identifiants administrateur que vous avez créés lors de l'installation.,Kurulum sırasında oluşturduğunuz yönetici kimlik bilgilerini kullanın.,Usa las credenciales de administrador que creaste durante la instalación.,ok,app/templates/radius/login.html:289
+تسجيل الدخول — لوحة Hobe Hub,,Sign In — Hobe Hub Console,Connexion — Panneau Hobe Hub,Oturum aç — Hobe Hub paneli,Iniciar sesión — Panel Hobe Hub,ok,app/templates/radius/login.html:13
+مرحبًا بعودتك,,Welcome back,Bon retour,Tekrar hoş geldiniz,Bienvenido de nuevo,ok,app/templates/radius/login.html:213
+سجّل دخولك إلى HOBE RADIUS,,Sign in to HOBE RADIUS,Connectez-vous à HOBE RADIUS,HOBE RADIUS'a giriş yapın,Inicia sesión en HOBE RADIUS,ok,app/templates/radius/login.html:214
+مثال: admin,,e.g. admin,Exemple : admin,Örnek: admin,Ejemplo: admin,ok,app/templates/radius/login.html:241
+إدارة شبكتك تبدأ من هنا,,Managing your network starts here,La gestion de votre réseau commence ici,Ağ yönetiminiz burada başlar,La gestión de tu red empieza aquí,ok,app/templates/radius/login.html:268
 طابور الاعتماد,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:4
 طلبات بانتظار موافقة المالك,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:6
 الطلبات المعلّقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:9
@@ -20782,47 +20777,47 @@ Canary تدريجي,,,,,,"missing: en,fr,tr,es",app/templates/radius/network_pol
 التحكم اليدوي بالسرعة,,Manual speed control,Contrôle de vitesse manuel,Manuel hız denetimi,Control de velocidad manual,ok,app/templates/radius/operations_speed_control_manual.html:4
 سلايدرات حية لضبط النِّسَب فورًا — معاينة آمنة بدون تنفيذ على الشبكة.,,Live sliders to adjust ratios instantly — a safe preview with no execution on the network.,Curseurs en direct pour ajuster les pourcentages instantanément — un aperçu sûr sans exécution sur le réseau.,Oranları anında ayarlamak için canlı kaydırıcılar — ağda işlem yapmadan güvenli önizleme.,Controles deslizantes en vivo para ajustar las proporciones al instante — una vista previa segura sin ejecución en la red.,ok,app/templates/radius/operations_speed_control_manual.html:7
 اسحب الشريط أو حرّك المؤشر لضبط النِّسَب فورًا لكل الباقات أو لكل باقة على حدة — معاينة حية ثم حفظ كسياسة معاينة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:48
-التحكم اليدوي السريع,,Quick manual control,Contrôle manuel rapide,Hızlı manuel kontrol,Control manual rápido,ok,app/templates/radius/operations_speed_control_manual.html:95
-طريقة التحكم اليدوي بالباندويث,,Method of manually controlling the bandwidth,Méthode de contrôle manuel de la bande passante,Bant genişliğini elle denetleme yöntemi,Método de control manual del ancho de banda,ok,app/templates/radius/operations_speed_control_manual.html:98
-التحكم الموحّد,,Unified control,Contrôle unifié,Birleşik kontrol,Control unificado,ok,app/templates/radius/operations_speed_control_manual.html:100
-تحميل / رفع منفصل,,Separate download / upload,Téléchargement / envoi séparés,Ayrı indirme / yükleme,Descarga / subida por separado,ok,app/templates/radius/operations_speed_control_manual.html:102
-إعادة الضبط للسرعة الأصلية,,Reset to the original speed,Réinitialiser à la vitesse d'origine,Orijinal hıza sıfırla,Restablecer a la velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:105
-تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة.,,Unified control of the bandwidth ratio for all managed plans.,Contrôle unifié du ratio de bande passante pour tous les forfaits gérés.,Yönetilen tüm paketler için bant genişliği oranının birleşik kontrolü.,Control unificado de la proporción de ancho de banda para todos los planes gestionados.,ok,app/templates/radius/operations_speed_control_manual.html:112
-تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.,,Separate control of the download and upload ratios for each plan individually.,Contrôle séparé des ratios de téléchargement et d'envoi pour chaque forfait individuellement.,Her paket için indirme ve yükleme oranlarının ayrı ayrı kontrolü.,Control separado de las proporciones de descarga y subida para cada plan por separado.,ok,app/templates/radius/operations_speed_control_manual.html:113
-متوسط الرفع الحالي,,Current average upload,Débit montant moyen actuel,Mevcut ortalama yükleme,Promedio de subida actual,ok,app/templates/radius/operations_speed_control_manual.html:128
-إجمالي الباقات,,Total plans,Total des forfaits,Toplam paket,Total de planes,ok,app/templates/radius/operations_speed_control_manual.html:135
-غير متحكَّم بها,,Uncontrolled,Non contrôlé,Denetlenmeyen,Sin control,ok,app/templates/radius/operations_speed_control_manual.html:149
-النسبة الموحّدة لجميع الباقات المتحكَّم بها,,The unified rate for all controlled plans,Le taux unifié pour tous les forfaits contrôlés,Denetlenen tüm paketler için birleşik oran,La tasa unificada para todos los planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:158
-النسبة الموحّدة,,Unified rate,Taux unifié,Birleşik oran,Tasa unificada,ok,app/templates/radius/operations_speed_control_manual.html:171
-النسبة الموحّدة لجميع الباقات,,The uniform rate for all plans,Le taux uniforme pour tous les forfaits,Tüm paketler için tek tip oran,La tasa unificada para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:183
-تطبيق على الباقات المتحكَّم بها فقط,,Apply to controlled plans only,Appliquer aux forfaits contrôlés uniquement,Yalnızca kontrollü paketlere uygula,Aplicar solo a los planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:189
-سيتم تجاهل الباقات غير المتحكَّم بها.,,Unmanaged plans will be ignored.,Les forfaits non gérés seront ignorés.,Yönetilmeyen paketler yok sayılacaktır.,Los planes no gestionados serán ignorados.,ok,app/templates/radius/operations_speed_control_manual.html:194
-معاينة التأثير,,Preview impact,Aperçu de l'impact,Etkiyi önizle,Vista previa del impacto,ok,app/templates/radius/operations_speed_control_manual.html:200
-إجمالي السرعة الأصلية,,Total original speed,Vitesse d’origine totale,Toplam orijinal hız,Velocidad original total,ok,app/templates/radius/operations_speed_control_manual.html:202
-إجمالي السرعة بعد التطبيق,,Total speed after applying,Vitesse totale après application,Uygulamadan sonra toplam hız,Velocidad total tras aplicar,ok,app/templates/radius/operations_speed_control_manual.html:203
-التغيير الكلي,,Total change,Variation totale,Toplam değişim,Cambio total,ok,app/templates/radius/operations_speed_control_manual.html:205
-التحكّم الرئيسي — تأثير عام على جميع الباقات,,Main control — global effect on all plans,Contrôle principal — effet global sur tous les forfaits,Ana kontrol — tüm paketler üzerinde genel etki,Control principal — efecto global sobre todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:215
-الحدّ الحالي,,Current Limit,Limite actuelle,Mevcut Limit,Límite actual,ok,app/templates/radius/operations_speed_control_manual.html:221
-حدّ التحميل %%,,Download limit %%,Limite de téléchargement %%,İndirme sınırı %%,Límite de descarga %%,ok,app/templates/radius/operations_speed_control_manual.html:221
-حدّ التحميل لجميع الباقات,,Upload limit for all plans,Limite d'envoi pour tous les forfaits,Tüm paketler için yükleme sınırı,Límite de subida para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:230
-التأثير المتوقّع: سيتم تقييد التحميل إلى,,Expected effect: download will be limited to,Effet attendu : le téléchargement sera limité à,Beklenen etki: indirme şununla sınırlanacak:,Efecto esperado: la descarga se limitará a,ok,app/templates/radius/operations_speed_control_manual.html:234
-من السرعة الأصلية.,,Of the original speed.,De la vitesse d'origine.,Orijinal hızdan.,De la velocidad original.,ok,app/templates/radius/operations_speed_control_manual.html:234
-حدّ الرفع %%,,Upload limit %%,Limite de téléversement %%,Yükleme sınırı %%,Límite de subida %%,ok,app/templates/radius/operations_speed_control_manual.html:240
-حدّ الرفع لجميع الباقات,,Upload limit for all plans,Limite de débit montant pour tous les forfaits,Tüm paketler için yükleme sınırı,Límite de subida para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:249
-التأثير المتوقّع: سيتم تقييد الرفع إلى,,Expected effect: upload will be limited to,Effet attendu : le débit montant sera limité à,Beklenen etki: yükleme şununla sınırlanacak:,Efecto esperado: la subida se limitará a,ok,app/templates/radius/operations_speed_control_manual.html:253
-الباقات المتحكَّم بها,,Controlled plans,Forfaits contrôlés,Denetlenen paketler,Planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:261
-النسبة الحالية لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:292
-التحميل %%,,Download %%,Téléchargement %%,İndirme %%,Descarga %%,ok,app/templates/radius/operations_speed_control_manual.html:301
-نسبة التحميل لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:307
-الرفع %%,,Upload %%,Téléversement %%,Yükleme %%,Subida %%,ok,app/templates/radius/operations_speed_control_manual.html:311
-السرعة الأصلية,,Original Speed,Vitesse d'origine,Orijinal hız,Velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:324
-السرعة الفعلية,,Actual speed,Vitesse réelle,Gerçek hız,Velocidad real,ok,app/templates/radius/operations_speed_control_manual.html:330
-تفعيل التحكّم لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:339
-استعادة السرعة الأصلية,,Restore original speed,Restaurer la vitesse d'origine,Özgün hızı geri yükle,Restaurar la velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:342
-لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا.,,No active plans yet. Create a speed plan first so it appears here.,Aucun forfait actif pour le moment. Créez d'abord un forfait de débit pour qu'il apparaisse ici.,Henüz etkin paket yok. Burada görünmesi için önce bir hız paketi oluşturun.,Aún no hay planes activos. Crea primero un plan de velocidad para que aparezca aquí.,ok,app/templates/radius/operations_speed_control_manual.html:351
-«معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:359
-حفظ كمعاينة,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:368
-احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:425
+التحكم اليدوي السريع,,Quick manual control,Contrôle manuel rapide,Hızlı manuel kontrol,Control manual rápido,ok,app/templates/radius/operations_speed_control_manual.html:96
+طريقة التحكم اليدوي بالباندويث,,Method of manually controlling the bandwidth,Méthode de contrôle manuel de la bande passante,Bant genişliğini elle denetleme yöntemi,Método de control manual del ancho de banda,ok,app/templates/radius/operations_speed_control_manual.html:99
+التحكم الموحّد,,Unified control,Contrôle unifié,Birleşik kontrol,Control unificado,ok,app/templates/radius/operations_speed_control_manual.html:101
+تحميل / رفع منفصل,,Separate download / upload,Téléchargement / envoi séparés,Ayrı indirme / yükleme,Descarga / subida por separado,ok,app/templates/radius/operations_speed_control_manual.html:103
+إعادة الضبط للسرعة الأصلية,,Reset to the original speed,Réinitialiser à la vitesse d'origine,Orijinal hıza sıfırla,Restablecer a la velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:106
+تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة.,,Unified control of the bandwidth ratio for all managed plans.,Contrôle unifié du ratio de bande passante pour tous les forfaits gérés.,Yönetilen tüm paketler için bant genişliği oranının birleşik kontrolü.,Control unificado de la proporción de ancho de banda para todos los planes gestionados.,ok,app/templates/radius/operations_speed_control_manual.html:113
+تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.,,Separate control of the download and upload ratios for each plan individually.,Contrôle séparé des ratios de téléchargement et d'envoi pour chaque forfait individuellement.,Her paket için indirme ve yükleme oranlarının ayrı ayrı kontrolü.,Control separado de las proporciones de descarga y subida para cada plan por separado.,ok,app/templates/radius/operations_speed_control_manual.html:114
+متوسط الرفع الحالي,,Current average upload,Débit montant moyen actuel,Mevcut ortalama yükleme,Promedio de subida actual,ok,app/templates/radius/operations_speed_control_manual.html:129
+إجمالي الباقات,,Total plans,Total des forfaits,Toplam paket,Total de planes,ok,app/templates/radius/operations_speed_control_manual.html:136
+غير متحكَّم بها,,Uncontrolled,Non contrôlé,Denetlenmeyen,Sin control,ok,app/templates/radius/operations_speed_control_manual.html:150
+النسبة الموحّدة لجميع الباقات المتحكَّم بها,,The unified rate for all controlled plans,Le taux unifié pour tous les forfaits contrôlés,Denetlenen tüm paketler için birleşik oran,La tasa unificada para todos los planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:159
+النسبة الموحّدة,,Unified rate,Taux unifié,Birleşik oran,Tasa unificada,ok,app/templates/radius/operations_speed_control_manual.html:172
+النسبة الموحّدة لجميع الباقات,,The uniform rate for all plans,Le taux uniforme pour tous les forfaits,Tüm paketler için tek tip oran,La tasa unificada para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:184
+تطبيق على الباقات المتحكَّم بها فقط,,Apply to controlled plans only,Appliquer aux forfaits contrôlés uniquement,Yalnızca kontrollü paketlere uygula,Aplicar solo a los planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:190
+سيتم تجاهل الباقات غير المتحكَّم بها.,,Unmanaged plans will be ignored.,Les forfaits non gérés seront ignorés.,Yönetilmeyen paketler yok sayılacaktır.,Los planes no gestionados serán ignorados.,ok,app/templates/radius/operations_speed_control_manual.html:195
+معاينة التأثير,,Preview impact,Aperçu de l'impact,Etkiyi önizle,Vista previa del impacto,ok,app/templates/radius/operations_speed_control_manual.html:201
+إجمالي السرعة الأصلية,,Total original speed,Vitesse d’origine totale,Toplam orijinal hız,Velocidad original total,ok,app/templates/radius/operations_speed_control_manual.html:203
+إجمالي السرعة بعد التطبيق,,Total speed after applying,Vitesse totale après application,Uygulamadan sonra toplam hız,Velocidad total tras aplicar,ok,app/templates/radius/operations_speed_control_manual.html:204
+التغيير الكلي,,Total change,Variation totale,Toplam değişim,Cambio total,ok,app/templates/radius/operations_speed_control_manual.html:206
+التحكّم الرئيسي — تأثير عام على جميع الباقات,,Main control — global effect on all plans,Contrôle principal — effet global sur tous les forfaits,Ana kontrol — tüm paketler üzerinde genel etki,Control principal — efecto global sobre todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:216
+الحدّ الحالي,,Current Limit,Limite actuelle,Mevcut Limit,Límite actual,ok,app/templates/radius/operations_speed_control_manual.html:222
+حدّ التحميل %%,,Download limit %%,Limite de téléchargement %%,İndirme sınırı %%,Límite de descarga %%,ok,app/templates/radius/operations_speed_control_manual.html:222
+حدّ التحميل لجميع الباقات,,Upload limit for all plans,Limite d'envoi pour tous les forfaits,Tüm paketler için yükleme sınırı,Límite de subida para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:231
+التأثير المتوقّع: سيتم تقييد التحميل إلى,,Expected effect: download will be limited to,Effet attendu : le téléchargement sera limité à,Beklenen etki: indirme şununla sınırlanacak:,Efecto esperado: la descarga se limitará a,ok,app/templates/radius/operations_speed_control_manual.html:235
+من السرعة الأصلية.,,Of the original speed.,De la vitesse d'origine.,Orijinal hızdan.,De la velocidad original.,ok,app/templates/radius/operations_speed_control_manual.html:235
+حدّ الرفع %%,,Upload limit %%,Limite de téléversement %%,Yükleme sınırı %%,Límite de subida %%,ok,app/templates/radius/operations_speed_control_manual.html:241
+حدّ الرفع لجميع الباقات,,Upload limit for all plans,Limite de débit montant pour tous les forfaits,Tüm paketler için yükleme sınırı,Límite de subida para todos los planes,ok,app/templates/radius/operations_speed_control_manual.html:250
+التأثير المتوقّع: سيتم تقييد الرفع إلى,,Expected effect: upload will be limited to,Effet attendu : le débit montant sera limité à,Beklenen etki: yükleme şununla sınırlanacak:,Efecto esperado: la subida se limitará a,ok,app/templates/radius/operations_speed_control_manual.html:254
+الباقات المتحكَّم بها,,Controlled plans,Forfaits contrôlés,Denetlenen paketler,Planes controlados,ok,app/templates/radius/operations_speed_control_manual.html:262
+النسبة الحالية لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:293
+التحميل %%,,Download %%,Téléchargement %%,İndirme %%,Descarga %%,ok,app/templates/radius/operations_speed_control_manual.html:302
+نسبة التحميل لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:308
+الرفع %%,,Upload %%,Téléversement %%,Yükleme %%,Subida %%,ok,app/templates/radius/operations_speed_control_manual.html:312
+السرعة الأصلية,,Original Speed,Vitesse d'origine,Orijinal hız,Velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:325
+السرعة الفعلية,,Actual speed,Vitesse réelle,Gerçek hız,Velocidad real,ok,app/templates/radius/operations_speed_control_manual.html:331
+تفعيل التحكّم لباقة %(name)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:340
+استعادة السرعة الأصلية,,Restore original speed,Restaurer la vitesse d'origine,Özgün hızı geri yükle,Restaurar la velocidad original,ok,app/templates/radius/operations_speed_control_manual.html:343
+لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا.,,No active plans yet. Create a speed plan first so it appears here.,Aucun forfait actif pour le moment. Créez d'abord un forfait de débit pour qu'il apparaisse ici.,Henüz etkin paket yok. Burada görünmesi için önce bir hız paketi oluşturun.,Aún no hay planes activos. Crea primero un plan de velocidad para que aparezca aquí.,ok,app/templates/radius/operations_speed_control_manual.html:352
+«معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA لكلّ المتصلين + يحكم كلّ اتصال جديد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:360
+حفظ كمعاينة,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:369
+احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/operations_speed_control_manual.html:426
 الدفع الإلكتروني — وضع تجريبي,,Electronic payment — test mode,Paiement électronique — mode test,Elektronik ödeme — test modu,Pago electrónico — modo de prueba,ok,app/templates/radius/pay_demo.html:13
 وضع تجريبي — محاكاة,,Test mode — simulation,Mode test — simulation,Test modu — simülasyon,Modo de prueba — simulación,ok,app/templates/radius/pay_demo.html:224
 لا يتم خصم أي مبلغ حقيقي. هذه معاينة لتجربة الدفع قبل ربط البوابات الفعلية.,,No real amount is charged. This is a preview of the payment experience before connecting the actual gateways.,Aucun montant réel n'est débité. Ceci est un aperçu du parcours de paiement avant la connexion des passerelles réelles.,"Gerçek bir tutar tahsil edilmez. Bu, gerçek ödeme ağ geçitleri bağlanmadan önce ödeme deneyiminin bir önizlemesidir.",No se cobra ningún importe real. Esta es una vista previa de la experiencia de pago antes de conectar las pasarelas reales.,ok,app/templates/radius/pay_demo.html:225

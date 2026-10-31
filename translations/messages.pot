@@ -559,7 +559,7 @@ msgstr ""
 
 #: app/templates/radius/network_policy_list.html:99
 #: app/templates/radius/operations_speed_control.html:359
-#: app/templates/radius/operations_speed_control_manual.html:400
+#: app/templates/radius/operations_speed_control_manual.html:401
 msgid " سياسة"
 msgstr ""
 
@@ -9012,7 +9012,7 @@ msgid ""
 "لكلّ المتصلين + يحكم كلّ اتصال جديد."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:359
+#: app/templates/radius/operations_speed_control_manual.html:360
 msgid ""
 "«معاينة»/«حفظ» لا يمسّان الشبكة. «تطبيق فعليّ» يغيّر السرعة الآن: CoA "
 "لكلّ المتصلين + يحكم كلّ اتصال جديد."
@@ -10844,10 +10844,6 @@ msgstr ""
 
 #: app/templates/radius/docs_add_router.html:144
 msgid "أدخل بيانات الدخول التي تتيح للوحة إدارة الراوتر عبر الـ API:"
-msgstr ""
-
-#: app/templates/radius/login.html:237
-msgid "أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم."
 msgstr ""
 
 #: app/templates/radius/portal_subscriber_login.html:204
@@ -13240,10 +13236,6 @@ msgstr ""
 msgid "أهلًا %(username)s"
 msgstr ""
 
-#: app/templates/radius/login.html:222
-msgid "أهلًا بعودتك إلى Hobe Hub"
-msgstr ""
-
 #: app/radius/services/policy_engine.py:110
 msgid "أهلًا بك"
 msgstr ""
@@ -14004,7 +13996,7 @@ msgid ""
 "والجلسات الجديدة تعود لسرعتها الأصليّة."
 msgstr ""
 
-#: app/radius/services/operations_speed_center.py:296
+#: app/radius/services/operations_speed_center.py:302
 msgid "أُعيدت السرعة للوضع الطبيعي (100%) وأُرسل CoA للمتصلين."
 msgstr ""
 
@@ -14557,7 +14549,7 @@ msgid ""
 "والرسوم والجدول معًا."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:135
+#: app/templates/radius/operations_speed_control_manual.html:136
 #: app/templates/radius/plans_overview.html:116
 msgid "إجمالي الباقات"
 msgstr ""
@@ -14723,11 +14715,11 @@ msgstr ""
 msgid "إجمالي السجل"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:202
+#: app/templates/radius/operations_speed_control_manual.html:203
 msgid "إجمالي السرعة الأصلية"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:203
+#: app/templates/radius/operations_speed_control_manual.html:204
 msgid "إجمالي السرعة بعد التطبيق"
 msgstr ""
 
@@ -15035,6 +15027,7 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:2795
 #: app/templates/radius/cards_checker_v2.html:2796
+#: app/templates/radius/login.html:255
 #: app/templates/radius/portal_subscriber_login.html:274
 msgid "إخفاء كلمة المرور"
 msgstr ""
@@ -15249,10 +15242,6 @@ msgstr ""
 msgid "إدارة المشتركين والبطاقات والباقات والراوترات والتقارير الأساسية."
 msgstr ""
 
-#: app/templates/radius/login.html:227
-msgid "إدارة المشتركين والكروت"
-msgstr ""
-
 #: app/radius/services/permission_labels.py:30
 msgid "إدارة الموزعين"
 msgstr ""
@@ -15352,6 +15341,10 @@ msgid ""
 "والنطاق."
 msgstr ""
 
+#: app/templates/radius/login.html:268 app/templates/radius/login.html:269
+msgid "إدارة شبكتك تبدأ من هنا"
+msgstr ""
+
 #: app/templates/radius/cards_checker_v2.html:1146
 #: app/templates/radius/cards_checker_v2.html:2449
 msgid "إدارة قفل MAC"
@@ -15359,12 +15352,6 @@ msgstr ""
 
 #: app/api/openapi.py:219
 msgid "إدارة قوالب طباعة البطاقات."
-msgstr ""
-
-#: app/templates/radius/login.html:223
-msgid ""
-"إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل "
-"عملية تُسجَّل في سجل التدقيق وتتم بأمان."
 msgstr ""
 
 #: app/templates/radius/invoices_list.html:25
@@ -16889,7 +16876,7 @@ msgstr ""
 #: app/templates/radius/cards_checker_v2.html:268
 #: app/templates/radius/cards_checker_v2.html:2785
 #: app/templates/radius/cards_checker_v2.html:2786
-#: app/templates/radius/login.html:276
+#: app/templates/radius/login.html:253 app/templates/radius/login.html:254
 #: app/templates/radius/portal_subscriber_login.html:244
 #: app/templates/radius/portal_subscriber_login.html:274
 #: app/templates/radius/print_templates.html:1218
@@ -17004,11 +16991,11 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1039
 #: app/templates/radius/cards_checker_v2.html:1413
-#: app/templates/radius/operations_speed_control_manual.html:105
+#: app/templates/radius/operations_speed_control_manual.html:106
 msgid "إعادة الضبط"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:105
+#: app/templates/radius/operations_speed_control_manual.html:106
 msgid "إعادة الضبط للسرعة الأصلية"
 msgstr ""
 
@@ -19821,7 +19808,7 @@ msgstr ""
 msgid "احفظ IP و MAC لتفعيل «تجهيز الجهاز للإدارة» و«الفتح عن بُعد»."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:425
+#: app/templates/radius/operations_speed_control_manual.html:426
 msgid "احفظ أول تغيير من المحرّك أعلاه لتظهر هنا."
 msgstr ""
 
@@ -21687,10 +21674,6 @@ msgstr ""
 msgid "استخدم القنوات مع"
 msgstr ""
 
-#: app/templates/radius/login.html:289
-msgid "استخدم بيانات المدير التي أنشأتها عند التثبيت."
-msgstr ""
-
 #: app/radius/services/setup_wizard_verification.py:380
 msgid "استخدم تعليق HOBERADIUS_SETUP لتحديد الإدخال الصحيح"
 msgstr ""
@@ -21842,7 +21825,7 @@ msgstr ""
 #: app/templates/radius/backups.html:242
 #: app/templates/radius/card_users.html:142
 #: app/templates/radius/docs_backups.html:162
-#: app/templates/radius/operations_speed_control_manual.html:343
+#: app/templates/radius/operations_speed_control_manual.html:344
 #: app/templates/radius/recycle_bin.html:163
 #: app/templates/radius/users_list.html:1757
 #: app/templates/radius/users_profile.html:1225
@@ -21862,7 +21845,7 @@ msgstr ""
 msgid "استعادة الراوتر"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:342
+#: app/templates/radius/operations_speed_control_manual.html:343
 msgid "استعادة السرعة الأصلية"
 msgstr ""
 
@@ -21874,7 +21857,7 @@ msgstr ""
 #: app/templates/radius/admin_pricing.html:278
 #: app/templates/radius/hotspot_errors.html:147
 #: app/templates/radius/hotspot_errors.html:170
-#: app/templates/radius/operations_speed_control_manual.html:362
+#: app/templates/radius/operations_speed_control_manual.html:363
 msgid "استعادة الكل"
 msgstr ""
 
@@ -22721,7 +22704,7 @@ msgstr ""
 msgid "اسم السياسة"
 msgstr ""
 
-#: app/radius/services/operations_speed_center.py:497
+#: app/radius/services/operations_speed_center.py:503
 msgid "اسم السياسة المختصر مطلوب."
 msgstr ""
 
@@ -22938,7 +22921,7 @@ msgstr ""
 #: app/templates/radius/docs_message_templates.html:139
 #: app/templates/radius/docs_mikrotik_store.html:431
 #: app/templates/radius/docs_sessions_report.html:124
-#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:259
+#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:236
 #: app/templates/radius/mt_form.html:76
 #: app/templates/radius/portal_subscriber.html:252
 #: app/templates/radius/portal_subscriber.html:357
@@ -24594,7 +24577,7 @@ msgstr ""
 
 #: app/radius/services/hotspot_gallery.py:621
 #: app/templates/radius/cards_print_quick.html:298
-#: app/templates/radius/operations_speed_control_manual.html:278
+#: app/templates/radius/operations_speed_control_manual.html:279
 #: app/templates/radius/print_templates.html:791
 #: app/templates/radius/print_templates_stats.html:79
 #: app/templates/radius/users_list.html:3339
@@ -26882,7 +26865,7 @@ msgstr ""
 #: app/templates/radius/network_policy_form.html:74
 #: app/templates/radius/network_policy_list.html:105
 #: app/templates/radius/operations_speed_control.html:365
-#: app/templates/radius/operations_speed_control_manual.html:406
+#: app/templates/radius/operations_speed_control_manual.html:407
 #: app/templates/radius/plans_list.html:236
 #: app/templates/radius/portal_subscriber.html:356
 #: app/templates/radius/services_form.html:82
@@ -27381,7 +27364,7 @@ msgstr ""
 msgid "الباقات المتأثرة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:261
+#: app/templates/radius/operations_speed_control_manual.html:262
 msgid "الباقات المتحكَّم بها"
 msgstr ""
 
@@ -28216,11 +28199,11 @@ msgstr ""
 msgid "البيع"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:234
+#: app/templates/radius/operations_speed_control_manual.html:235
 msgid "التأثير المتوقّع: سيتم تقييد التحميل إلى"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:253
+#: app/templates/radius/operations_speed_control_manual.html:254
 msgid "التأثير المتوقّع: سيتم تقييد الرفع إلى"
 msgstr ""
 
@@ -28562,7 +28545,7 @@ msgstr ""
 msgid "التحكم المجدول بالسرعة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:100
+#: app/templates/radius/operations_speed_control_manual.html:101
 msgid "التحكم الموحّد"
 msgstr ""
 
@@ -28571,7 +28554,7 @@ msgstr ""
 msgid "التحكم اليدوي"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:95
+#: app/templates/radius/operations_speed_control_manual.html:96
 msgid "التحكم اليدوي السريع"
 msgstr ""
 
@@ -28638,7 +28621,7 @@ msgstr ""
 msgid "التحكّم الحيّ بالجلسات"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:215
+#: app/templates/radius/operations_speed_control_manual.html:216
 msgid "التحكّم الرئيسي — تأثير عام على جميع الباقات"
 msgstr ""
 
@@ -28651,7 +28634,7 @@ msgstr ""
 msgid "التحكّم بالسرعة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:301
+#: app/templates/radius/operations_speed_control_manual.html:302
 #, python-format
 msgid "التحميل %%"
 msgstr ""
@@ -29156,7 +29139,7 @@ msgstr ""
 msgid "التعليق"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:205
+#: app/templates/radius/operations_speed_control_manual.html:206
 msgid "التغيير الكلي"
 msgstr ""
 
@@ -30355,7 +30338,7 @@ msgstr ""
 #: app/templates/radius/notifications_timeline.html:144
 #: app/templates/radius/operations_center.html:132
 #: app/templates/radius/operations_speed_control.html:366
-#: app/templates/radius/operations_speed_control_manual.html:407
+#: app/templates/radius/operations_speed_control_manual.html:408
 #: app/templates/radius/payment_collection_reconciliation.html:65
 #: app/templates/radius/payment_collection_request_detail.html:53
 #: app/templates/radius/payment_collection_request_detail.html:70
@@ -30686,8 +30669,8 @@ msgstr ""
 msgid "الحدّ الأقصى للقفزات (5-30)"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:221
-#: app/templates/radius/operations_speed_control_manual.html:240
+#: app/templates/radius/operations_speed_control_manual.html:222
+#: app/templates/radius/operations_speed_control_manual.html:241
 msgid "الحدّ الحالي"
 msgstr ""
 
@@ -32963,7 +32946,7 @@ msgstr ""
 msgid "الرفع"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:311
+#: app/templates/radius/operations_speed_control_manual.html:312
 #, python-format
 msgid "الرفع %%"
 msgstr ""
@@ -33024,7 +33007,7 @@ msgstr ""
 #: app/templates/radius/finance_billing.html:129
 #: app/templates/radius/invoices_list.html:77
 #: app/templates/radius/operations_speed_control.html:365
-#: app/templates/radius/operations_speed_control_manual.html:406
+#: app/templates/radius/operations_speed_control_manual.html:407
 #: app/templates/radius/portal_card.html:835
 #: app/templates/radius/rep_coa_failures.html:85
 #: app/templates/radius/rep_failed_logins.html:99
@@ -33539,7 +33522,7 @@ msgstr ""
 msgid "السرعة (تنزيل/رفع)"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:324
+#: app/templates/radius/operations_speed_control_manual.html:325
 msgid "السرعة الأصلية"
 msgstr ""
 
@@ -33562,7 +33545,7 @@ msgstr ""
 msgid "السرعة الطبيعية (Mbps)"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:330
+#: app/templates/radius/operations_speed_control_manual.html:331
 msgid "السرعة الفعلية"
 msgstr ""
 
@@ -37745,6 +37728,7 @@ msgid "اللاحقة %(v)s"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:441
+#: app/templates/radius/login.html:191
 msgid "اللغة"
 msgstr ""
 
@@ -38373,7 +38357,7 @@ msgid "المتجر صفحة"
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:281
-#: app/templates/radius/operations_speed_control_manual.html:142
+#: app/templates/radius/operations_speed_control_manual.html:143
 msgid "المتحكَّم بها"
 msgstr ""
 
@@ -40451,7 +40435,7 @@ msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:297
 #: app/templates/radius/operations_speed_control.html:365
-#: app/templates/radius/operations_speed_control_manual.html:406
+#: app/templates/radius/operations_speed_control_manual.html:407
 #: app/templates/radius/tenants_form.html:126
 msgid "المعرّف المختصر"
 msgstr ""
@@ -41560,7 +41544,7 @@ msgstr ""
 msgid "النرويج"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:292
+#: app/templates/radius/operations_speed_control_manual.html:293
 #, python-format
 msgid "النسبة الحالية لباقة %(name)s"
 msgstr ""
@@ -41569,15 +41553,15 @@ msgstr ""
 msgid "النسبة المخصصة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:171
+#: app/templates/radius/operations_speed_control_manual.html:172
 msgid "النسبة الموحّدة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:183
+#: app/templates/radius/operations_speed_control_manual.html:184
 msgid "النسبة الموحّدة لجميع الباقات"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:158
+#: app/templates/radius/operations_speed_control_manual.html:159
 msgid "النسبة الموحّدة لجميع الباقات المتحكَّم بها"
 msgstr ""
 
@@ -42693,7 +42677,7 @@ msgid "الوضع الذكي"
 msgstr ""
 
 #: app/radius/services/operations_speed_center.py:19
-#: app/radius/services/operations_speed_center.py:312
+#: app/radius/services/operations_speed_center.py:318
 #: app/templates/radius/operations_speed_control.html:179
 msgid "الوضع الطبيعي"
 msgstr ""
@@ -43880,7 +43864,7 @@ msgid "باقات موحّدة من مجموعات FreeRADIUS (السرعة من
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:190
-#: app/templates/radius/operations_speed_control_manual.html:201
+#: app/templates/radius/operations_speed_control_manual.html:202
 msgid "باقات."
 msgstr ""
 
@@ -49551,10 +49535,6 @@ msgstr ""
 msgid "تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف."
 msgstr ""
 
-#: app/templates/radius/login.html:228
-msgid "تحكّم الراوترات والشبكة"
-msgstr ""
-
 #: app/radius/services/event_labels.py:298
 msgid "تحكّم السرعة"
 msgstr ""
@@ -49595,7 +49575,7 @@ msgstr ""
 msgid "تحكّم منفصل"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:113
+#: app/templates/radius/operations_speed_control_manual.html:114
 msgid "تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة."
 msgstr ""
 
@@ -49603,7 +49583,7 @@ msgstr ""
 msgid "تحكّم موحّد"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:112
+#: app/templates/radius/operations_speed_control_manual.html:113
 msgid "تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة."
 msgstr ""
 
@@ -49746,7 +49726,7 @@ msgstr ""
 msgid "تحميل / رفع حسب يوم بداية الجلسة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:102
+#: app/templates/radius/operations_speed_control_manual.html:103
 msgid "تحميل / رفع منفصل"
 msgstr ""
 
@@ -50467,7 +50447,7 @@ msgstr ""
 #: app/radius/services/hotspot_addons_extra.py:154
 #: app/radius/services/mikrotik_actions.py:596
 #: app/templates/radius/docs_customer_portal.html:79
-#: app/templates/radius/login.html:236
+#: app/templates/radius/login.html:262
 #: app/templates/radius/portal_card_login.html:289
 #: app/templates/radius/portal_distributor_login.html:122
 #: app/templates/radius/portal_subscriber_login.html:203
@@ -50495,7 +50475,7 @@ msgstr ""
 msgid "تسجيل الدخول — بوابة المشترك · HobeRadius"
 msgstr ""
 
-#: app/templates/radius/login.html:12
+#: app/templates/radius/login.html:13
 msgid "تسجيل الدخول — لوحة Hobe Hub"
 msgstr ""
 
@@ -51617,8 +51597,8 @@ msgstr ""
 msgid "تطبيق سياسة RADIUS"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:189
-#: app/templates/radius/operations_speed_control_manual.html:193
+#: app/templates/radius/operations_speed_control_manual.html:190
+#: app/templates/radius/operations_speed_control_manual.html:194
 msgid "تطبيق على الباقات المتحكَّم بها فقط"
 msgstr ""
 
@@ -51641,7 +51621,7 @@ msgid "تطبيق على مرحلتين"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:313
-#: app/templates/radius/operations_speed_control_manual.html:371
+#: app/templates/radius/operations_speed_control_manual.html:372
 msgid "تطبيق فعليّ الآن"
 msgstr ""
 
@@ -54886,6 +54866,7 @@ msgid "تغيير الـQR (اختياري)"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:425
+#: app/templates/radius/login.html:186
 msgid "تغيير اللغة"
 msgstr ""
 
@@ -55493,7 +55474,7 @@ msgstr ""
 msgid "تفعيل التجديد التلقائي افتراضيًا للأعضاء"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:339
+#: app/templates/radius/operations_speed_control_manual.html:340
 #, python-format
 msgid "تفعيل التحكّم لباقة %(name)s"
 msgstr ""
@@ -55831,10 +55812,6 @@ msgstr ""
 
 #: app/api/openapi.py:200
 msgid "تقارير متنوّعة بصيغ CSV/XLSX/PDF."
-msgstr ""
-
-#: app/templates/radius/login.html:230
-msgid "تقارير ومتابعة لحظية"
 msgstr ""
 
 #: app/templates/radius/docs_reports_overview.html:300
@@ -61441,7 +61418,7 @@ msgid "جاهزة للمراجعة الجافة"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:80
-#: app/templates/radius/operations_speed_control_manual.html:397
+#: app/templates/radius/operations_speed_control_manual.html:398
 msgid "جاهزة للمعاينة"
 msgstr ""
 
@@ -63208,7 +63185,7 @@ msgstr ""
 #: app/templates/radius/operations_center.html:112
 #: app/templates/radius/operations_center.html:137
 #: app/templates/radius/operations_speed_control.html:376
-#: app/templates/radius/operations_speed_control_manual.html:416
+#: app/templates/radius/operations_speed_control_manual.html:417
 msgid "حالة غير معروفة"
 msgstr ""
 
@@ -63942,12 +63919,12 @@ msgstr ""
 msgid "حدّ البيانات"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:221
+#: app/templates/radius/operations_speed_control_manual.html:222
 #, python-format
 msgid "حدّ التحميل %%"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:230
+#: app/templates/radius/operations_speed_control_manual.html:231
 msgid "حدّ التحميل لجميع الباقات"
 msgstr ""
 
@@ -63967,7 +63944,7 @@ msgstr ""
 msgid "حدّ الجلسات المتزامنة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:240
+#: app/templates/radius/operations_speed_control_manual.html:241
 #, python-format
 msgid "حدّ الرفع %%"
 msgstr ""
@@ -63976,7 +63953,7 @@ msgstr ""
 msgid "حدّ الرفع المنفصل للحساب. 0 = غير محدودة."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:249
+#: app/templates/radius/operations_speed_control_manual.html:250
 msgid "حدّ الرفع لجميع الباقات"
 msgstr ""
 
@@ -65882,7 +65859,7 @@ msgstr ""
 msgid "حفظ كل الإعدادات"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:368
+#: app/templates/radius/operations_speed_control_manual.html:369
 msgid "حفظ كمعاينة"
 msgstr ""
 
@@ -67849,7 +67826,6 @@ msgstr ""
 #: app/radius/services/hotspot_skins.py:341
 #: app/radius/services/manager_activity_audit.py:255
 #: app/templates/radius/docs_customer_portal.html:86
-#: app/templates/radius/login.html:285
 #: app/templates/radius/rep_card_store_events.html:58
 #: app/templates/radius/users_profile.html:1230
 msgid "دخول"
@@ -73349,6 +73325,10 @@ msgid ""
 "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."
 msgstr ""
 
+#: app/templates/radius/login.html:214
+msgid "سجّل دخولك إلى HOBE RADIUS"
+msgstr ""
+
 #: app/radius/services/card_users_marketplace.py:320
 msgid "سجّل زبون حسابًا جديدًا من المتجر."
 msgstr ""
@@ -74838,7 +74818,7 @@ msgid "سياسات الشبكة لكل راوتر: حظر/سماح المواق
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:358
-#: app/templates/radius/operations_speed_control_manual.html:399
+#: app/templates/radius/operations_speed_control_manual.html:400
 msgid "سياسات المعاينة المحفوظة"
 msgstr ""
 
@@ -74903,7 +74883,7 @@ msgstr ""
 msgid "سياسة الخروج"
 msgstr ""
 
-#: app/radius/services/operations_speed_center.py:341
+#: app/radius/services/operations_speed_center.py:347
 msgid "سياسة السرعة غير موجودة."
 msgstr ""
 
@@ -75042,7 +75022,7 @@ msgstr ""
 msgid "سيتم السماح بالوصول لـ %(v)s موقعاً قبل تسجيل الدخول."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:194
+#: app/templates/radius/operations_speed_control_manual.html:195
 msgid "سيتم تجاهل الباقات غير المتحكَّم بها."
 msgstr ""
 
@@ -75067,7 +75047,7 @@ msgid "سيتم تصفير الوقت المستهلَك لـ %(user)s"
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:190
-#: app/templates/radius/operations_speed_control_manual.html:201
+#: app/templates/radius/operations_speed_control_manual.html:202
 msgid "سيتم تطبيق"
 msgstr ""
 
@@ -77359,10 +77339,6 @@ msgstr ""
 msgid "ضمن مجموعة «راوترات المشتركين (TR-069)»."
 msgstr ""
 
-#: app/templates/radius/login.html:229
-msgid "ضوابط أمان وسجلّات تدقيق"
-msgstr ""
-
 #: app/templates/radius/_subs_labels.html:43
 msgid "ضيف"
 msgstr ""
@@ -77635,7 +77611,7 @@ msgstr ""
 msgid "طريقة التحديد غير معروفة (duration أو expire_at)."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:98
+#: app/templates/radius/operations_speed_control_manual.html:99
 msgid "طريقة التحكم اليدوي بالباندويث"
 msgstr ""
 
@@ -78366,7 +78342,7 @@ msgid ""
 "— سيعود بالسرعة الجديدة خلال ثوانٍ (حتى %(ends_local)s)."
 msgstr ""
 
-#: app/radius/services/operations_speed_center.py:298
+#: app/radius/services/operations_speed_center.py:304
 #, python-format
 msgid "طُبِّقت سياسة السرعة «%(label)s» حيًّا على المتصلين (CoA)."
 msgstr ""
@@ -80131,7 +80107,7 @@ msgid "علوي/أيمن/سفلي/أيسر — الافتراضي 8mm، زِده
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:190
-#: app/templates/radius/operations_speed_control_manual.html:201
+#: app/templates/radius/operations_speed_control_manual.html:202
 #: app/templates/radius/port_script_services.html:151
 msgid "على"
 msgstr ""
@@ -82272,7 +82248,7 @@ msgstr ""
 msgid "غير متاحة"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:149
+#: app/templates/radius/operations_speed_control_manual.html:150
 msgid "غير متحكَّم بها"
 msgstr ""
 
@@ -90245,7 +90221,7 @@ msgstr ""
 #: app/templates/radius/docs_mikrotik_store.html:384
 #: app/templates/radius/docs_mikrotik_store.html:432
 #: app/templates/radius/docs_users_360.html:365
-#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:270
+#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:247
 #: app/templates/radius/mt_form.html:81
 #: app/templates/radius/portal_card_login.html:330
 #: app/templates/radius/portal_distributor_login.html:151
@@ -91502,7 +91478,7 @@ msgstr ""
 #: app/templates/radius/operations_speed_control.html:327
 #: app/templates/radius/operations_speed_control.html:346
 #: app/templates/radius/operations_speed_control.html:378
-#: app/templates/radius/operations_speed_control_manual.html:418
+#: app/templates/radius/operations_speed_control_manual.html:419
 #: app/templates/radius/port_script_services.html:472
 #: app/templates/radius/recharge_panel.html:724
 #: app/templates/radius/sgrp_form.html:54
@@ -92125,7 +92101,7 @@ msgstr ""
 msgid "لا توجد باقات نشطة بعد."
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:351
+#: app/templates/radius/operations_speed_control_manual.html:352
 msgid "لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا."
 msgstr ""
 
@@ -92578,7 +92554,7 @@ msgid "لا توجد سياسات بعد."
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:385
-#: app/templates/radius/operations_speed_control_manual.html:425
+#: app/templates/radius/operations_speed_control_manual.html:426
 msgid "لا توجد سياسات محفوظة حتى الآن."
 msgstr ""
 
@@ -94941,7 +94917,7 @@ msgstr ""
 #: app/templates/radius/network_devices_form.html:66
 #: app/templates/radius/network_policy_preview.html:834
 #: app/templates/radius/operations_speed_control.html:128
-#: app/templates/radius/operations_speed_control_manual.html:380
+#: app/templates/radius/operations_speed_control_manual.html:381
 #: app/templates/radius/payment_collection_settings.html:34
 #: app/templates/radius/plans_form.html:306
 #: app/templates/radius/port_script_services.html:328
@@ -97891,7 +97867,7 @@ msgstr ""
 msgid "متوسط التحميل الحالي"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:128
+#: app/templates/radius/operations_speed_control_manual.html:129
 msgid "متوسط الرفع الحالي"
 msgstr ""
 
@@ -97901,7 +97877,7 @@ msgid "متوسط السعر"
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:279
-#: app/templates/radius/operations_speed_control_manual.html:121
+#: app/templates/radius/operations_speed_control_manual.html:122
 msgid "متوسط النسبة الحالية"
 msgstr ""
 
@@ -97965,6 +97941,7 @@ msgid "متوقفة"
 msgstr ""
 
 #: app/static/js/ops_speed_control.js:243
+#: app/static/js/ops_speed_control.js:408
 #: app/templates/radius/business_operator_profile.html:18
 #: app/templates/radius/business_operators.html:38
 #: app/templates/radius/credit_dashboard.html:48
@@ -98174,7 +98151,7 @@ msgstr ""
 msgid "مثال: VIP-"
 msgstr ""
 
-#: app/templates/radius/login.html:265
+#: app/templates/radius/login.html:241
 msgid "مثال: admin"
 msgstr ""
 
@@ -100386,6 +100363,10 @@ msgstr ""
 msgid "مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك."
 msgstr ""
 
+#: app/templates/radius/login.html:213
+msgid "مرحبًا بعودتك"
+msgstr ""
+
 #: app/radius/services/hotspot_gallery.py:221
 msgid "مرحبًا بك في شبكة الحرم — سجّل دخولك"
 msgstr ""
@@ -102061,12 +102042,12 @@ msgid "مطبّق"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:80
-#: app/templates/radius/operations_speed_control_manual.html:397
+#: app/templates/radius/operations_speed_control_manual.html:398
 msgid "مطبّقة"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:366
-#: app/templates/radius/operations_speed_control_manual.html:407
+#: app/templates/radius/operations_speed_control_manual.html:408
 msgid "مطبّقة على خدمة المصادقة"
 msgstr ""
 
@@ -102367,7 +102348,7 @@ msgid "معاينة اسم المستخدم"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:309
-#: app/templates/radius/operations_speed_control_manual.html:365
+#: app/templates/radius/operations_speed_control_manual.html:366
 msgid "معاينة الأثر"
 msgstr ""
 
@@ -102383,7 +102364,7 @@ msgstr ""
 msgid "معاينة البطاقة › شريط أقسام المحرر"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:200
+#: app/templates/radius/operations_speed_control_manual.html:201
 msgid "معاينة التأثير"
 msgstr ""
 
@@ -103298,7 +103279,7 @@ msgstr ""
 #: app/templates/radius/docs_billing_vouchers.html:328
 #: app/templates/radius/finance_billing.html:92
 #: app/templates/radius/operations_speed_control.html:80
-#: app/templates/radius/operations_speed_control_manual.html:397
+#: app/templates/radius/operations_speed_control_manual.html:398
 #: app/templates/radius/payment_collection_request_detail.html:6
 #: app/templates/radius/payment_collection_requests.html:77
 msgid "معلّقة"
@@ -103824,6 +103805,7 @@ msgstr ""
 
 #: app/radius/routes/admin_bridge.py:161 app/radius/services/card_offers.py:106
 #: app/radius/services/users.py:1623 app/static/js/ops_speed_control.js:243
+#: app/static/js/ops_speed_control.js:408
 #: app/templates/radius/_mt_diagnostics_card.html:108
 #: app/templates/radius/admin_alerts.html:71
 #: app/templates/radius/admin_bridge.html:8
@@ -103840,7 +103822,7 @@ msgstr ""
 #: app/templates/radius/integrations_hub.html:155
 #: app/templates/radius/mt_dashboard.html:4261
 #: app/templates/radius/mt_router_overview.html:186
-#: app/templates/radius/operations_speed_control_manual.html:279
+#: app/templates/radius/operations_speed_control_manual.html:280
 #: app/templates/radius/plans_form.html:667 app/templates/radius/sms.html:129
 #: app/templates/radius/subscribers_overview.html:140
 #: app/templates/radius/tokens_list.html:49
@@ -104645,7 +104627,7 @@ msgstr ""
 #: app/templates/radius/invoices_list.html:129
 #: app/templates/radius/job_detail.html:69
 #: app/templates/radius/operations_speed_control.html:80
-#: app/templates/radius/operations_speed_control_manual.html:397
+#: app/templates/radius/operations_speed_control_manual.html:398
 #: app/templates/radius/payment_collection_reconciliation.html:17
 #: app/templates/radius/payment_collection_requests.html:24
 #: app/templates/radius/payment_collection_requests.html:52
@@ -105257,8 +105239,8 @@ msgstr ""
 msgid "من السرعة الأصلية"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:234
-#: app/templates/radius/operations_speed_control_manual.html:253
+#: app/templates/radius/operations_speed_control_manual.html:235
+#: app/templates/radius/operations_speed_control_manual.html:254
 msgid "من السرعة الأصلية."
 msgstr ""
 
@@ -107620,7 +107602,7 @@ msgstr ""
 msgid "نسبة إلى الباقة الأكثر اشتراكًا"
 msgstr ""
 
-#: app/templates/radius/operations_speed_control_manual.html:307
+#: app/templates/radius/operations_speed_control_manual.html:308
 #, python-format
 msgid "نسبة التحميل لباقة %(name)s"
 msgstr ""
@@ -107641,7 +107623,7 @@ msgid "نسبة الرفع %%"
 msgstr ""
 
 #: app/templates/radius/operations_speed_control.html:274
-#: app/templates/radius/operations_speed_control_manual.html:317
+#: app/templates/radius/operations_speed_control_manual.html:318
 #, python-format
 msgid "نسبة الرفع لباقة %(name)s"
 msgstr ""
@@ -107663,6 +107645,7 @@ msgid "نسبة مخصصة"
 msgstr ""
 
 #: app/radius/services/operations_speed_center.py:260
+#: app/radius/services/operations_speed_center.py:265
 msgid "نسبة مخصّصة"
 msgstr ""
 
@@ -109017,7 +109000,7 @@ msgstr ""
 #: app/templates/radius/operations_speed_control.html:327
 #: app/templates/radius/operations_speed_control.html:346
 #: app/templates/radius/operations_speed_control.html:378
-#: app/templates/radius/operations_speed_control_manual.html:418
+#: app/templates/radius/operations_speed_control_manual.html:419
 #: app/templates/radius/port_script_services.html:470
 #: app/templates/radius/sgrp_form.html:54
 #: app/templates/radius/users_profile.html:839

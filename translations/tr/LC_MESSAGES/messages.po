@@ -52400,3 +52400,15 @@ msgstr "Kılavuz: Uzaktan erişim ve WinBox — nasıl kullanılır"
 
 msgid "دليل: أنفاق الإدارة وسكربت التهيئة — كيف تستخدمني"
 msgstr "Kılavuz: Yönetim tünelleri ve hazırlama betiği — nasıl kullanılır"
+
+#: app/templates/radius/login.html:213
+msgid "مرحبًا بعودتك"
+msgstr "Tekrar hoş geldiniz"
+
+#: app/templates/radius/login.html:214
+msgid "سجّل دخولك إلى HOBE RADIUS"
+msgstr "HOBE RADIUS'a giriş yapın"
+
+#: app/templates/radius/login.html:268
+msgid "إدارة شبكتك تبدأ من هنا"
+msgstr "Ağ yönetiminiz burada başlar"
