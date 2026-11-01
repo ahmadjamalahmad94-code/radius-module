@@ -31,3 +31,4 @@ app/radius/integration/mikrotik/client.py | ^تعذّر الاتصال بالر�
 app/templates/radius/portal_subscriber.html | [شكوى] | علامة بروتوكول يطابقها الخادم (customer_portals) في بداية سبب الطلب — يجب أن تبقى حرفيّة بكل اللغات.
 * | قاعدة سرعة | الاسم الافتراضيّ لقاعدة السرعة؛ JS في _speed_rules_panel.html يقارن data.name بهذا النصّ الحرفيّ.
 app/templates/radius/login.html | من عائلة | سطر عائلة HOBE TECHNOLOGIES تحت صفحة الدخول: هويّة ثابتة تُعرض بالعربيّة حرفيًّا في كل اللغات (طلب المالك 31/10)
+app/templates/public_landing.html | من عائلة | سطر عائلة HOBE TECHNOLOGIES في تذييل صفحة الهبوط: هويّة ثابتة تُعرض بالعربيّة حرفيًّا في كل اللغات (طلب المالك 01/11)

@@ -1,287 +1,223 @@
 {# ─────────────────────────────────────────────────────────────────────────────
    public_landing.html — صفحة الهبوط العامّة على جذر الموقع «/».
 
-   بوّابة أمامية تسويقيّة قياسيّة لكلّ نسخة عميل (لا بيانات، لا تسجيل دخول):
-   ثلاثة مداخل كبيرة تُحيل إلى صفحات الدخول الفعليّة الموجودة سلفًا —
+   بوّابة أمامية لكلّ نسخة عميل (لا بيانات، لا تسجيل دخول) بهويّة عائلة HOBE
+   (معيار v2، 01/11/2026): لوحة كحليّة واحدة بتوهّج بنفسجيّ وخطوط الحوافّ، رمز
+   المنتج في الوسط، وثلاثة مداخل زجاجيّة إلى صفحات الدخول الفعليّة —
      • دخول الإدارة       → radius.auth_login       (/admin/radius/login)
      • دخول المشتركين     → portal.subscriber_login (/portal/subscriber/login)
      • سوق البطاقات       → portal.card_login       (/portal/card/login)
+   وتذييل «من عائلة HOBE TECHNOLOGIES» + شعار HT.
 
-   الهويّة من إعدادات النظام عبر معالج السياق cfg (system_name / logo_url /
-   primary_color) مع قيم احتياطيّة إن لم تُضبط — فتعمل الصفحة كاملةً حتى قبل
-   ربط الترخيص وبلا أيّ اعتماد على قاعدة البيانات سوى قراءة الهويّة.
-
-   offline-safe: خطّ Cairo محليًّا + أيقونات/رسمة البطل SVG داخليّة — لا CDN.
+   الهويّة من cfg (system_name / logo_url / primary_color) مع قيم احتياطيّة،
+   فتعمل الصفحة كاملةً حتى قبل ربط الترخيص. offline-safe: خطوط محليّة و SVG
+   داخليّة — لا CDN.
    ───────────────────────────────────────────────────────────────────────── #}
+{% set _name = cfg.system_name or 'HobeRadius' %}
+{% set _accent = cfg.primary_color or '#8B4DF2' %}
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="{{ get_locale() }}" dir="{{ text_dir }}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="{{ cfg.primary_color or '#2BAACC' }}">
-  <meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.', v=cfg.system_name or 'HobeRadius') }}">
-  <title>{{ _('%(v)s — البوّابة الرئيسية', v=cfg.system_name or 'HobeRadius') }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E1238">
+  <meta name="description" content="{{ _('%(v)s — بوّابة الدخول: الإدارة، المشتركون، وسوق البطاقات الإلكتروني.', v=_name) }}">
+  <title>{{ _('%(v)s — البوّابة الرئيسية', v=_name) }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
   <style>
+    @font-face{font-family:"Almarai";font-weight:400;font-display:swap;src:url("{{ url_for('static', filename='fonts/Almarai-Regular.ttf') }}") format("truetype")}
+    @font-face{font-family:"Almarai";font-weight:700;font-display:swap;src:url("{{ url_for('static', filename='fonts/Almarai-Bold.ttf') }}") format("truetype")}
+    @font-face{font-family:"Almarai";font-weight:800;font-display:swap;src:url("{{ url_for('static', filename='fonts/Almarai-ExtraBold.ttf') }}") format("truetype")}
     :root{
-      --accent:{{ cfg.primary_color or '#2BAACC' }};
-      --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
-      --canvas:#f4f6fa; --paper:#ffffff;
-      --hair:#e2e8f0; --hair-soft:#eef2f7;
-      --radius-lg:22px; --radius-md:16px;
-      --gap:26px;
+      --accent:{{ _accent }};
+      --navy:#0E1238;
+      --lilac:#B9A6FF;
+      --label:#DCD3FF;
+      --muted:#A9A7D3;
+      --glass:rgba(255,255,255,.055);
+      --glass-2:rgba(255,255,255,.09);
+      --line:rgba(201,188,255,.18);
+      --edge:rgba(122,92,245,.7);
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0}
     body{
-      font-family:'Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
+      min-height:100vh;min-height:100dvh;color:#fff;overflow-x:hidden;
+      font-family:"Cairo","Almarai","Segoe UI",Tahoma,sans-serif;
       background:
-        radial-gradient(900px 620px at 88% -8%, rgba(43,170,204,.10) 0%, transparent 55%),
-        radial-gradient(760px 560px at -8% 108%, rgba(15,23,42,.06) 0%, transparent 55%),
-        var(--canvas);
-      color:var(--ink-1);
-      min-height:100dvh;
-      display:flex;flex-direction:column;
-      -webkit-font-smoothing:antialiased;
+        radial-gradient(120% 70% at -15% 110%, rgba(153,98,250,.75) 0%, rgba(139,77,242,.30) 22%, rgba(139,77,242,.08) 52%, transparent 100%),
+        radial-gradient(70% 40% at 50% 12%, rgba(139,77,242,.22), transparent 100%),
+        radial-gradient(90% 50% at 110% 0%, rgba(30,39,112,.55), transparent 100%),
+        linear-gradient(180deg,#111646 0%,#0B0F33 58%,#0E1340 100%),
+        var(--navy);
+      color-scheme:dark;
     }
-    .wrap{
-      width:100%;max-width:1080px;margin:0 auto;
-      padding:28px 22px 40px;
-      flex:1;display:flex;flex-direction:column;
-    }
+    a{color:inherit}
+    :focus-visible{outline:2px solid #AE82F5;outline-offset:3px;border-radius:10px}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 
-    /* ── الترويسة: الشعار + اسم النظام ─────────────────────────── */
-    .topbar{display:flex;align-items:center;gap:14px;margin-bottom:10px}
-    .brand{display:flex;align-items:center;gap:12px;min-width:0}
-    .brand-logo{
-      width:46px;height:46px;border-radius:14px;flex:0 0 auto;
-      display:grid;place-items:center;overflow:hidden;
-      background:linear-gradient(140deg, var(--accent), #0f172a 160%);
-      box-shadow:0 6px 18px rgba(15,23,42,.16);
-    }
-    .brand-logo img{width:100%;height:100%;object-fit:cover;display:block}
-    .brand-logo svg{width:26px;height:26px;display:block}
-    .brand-name{font-size:19px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .brand-sub{font-size:12px;color:var(--ink-3);font-weight:600;margin-top:-3px}
+    .edge{position:fixed;z-index:0;pointer-events:none;overflow:visible}
+    .edge path{fill:none;stroke:var(--edge);stroke-width:1;stroke-linecap:round;stroke-linejoin:round}
+    .edge.tl{left:0;top:0;width:90px;height:110px}
+    .edge.r{right:0;top:34%;width:70px;height:200px}
+    .edge.bl{left:0;bottom:0;width:56px;height:200px;-webkit-mask-image:linear-gradient(#000 10%,transparent 90%);mask-image:linear-gradient(#000 10%,transparent 90%)}
 
-    /* ── البطل: نصّ + رسمة ────────────────────────────────────── */
-    .hero{
-      display:grid;grid-template-columns:1.08fr .92fr;align-items:center;
-      gap:var(--gap);
-      background:var(--paper);
-      border:1px solid var(--hair-soft);border-radius:var(--radius-lg);
-      box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 4px 14px rgba(15,23,42,.05), 0 26px 60px rgba(15,23,42,.08);
-      padding:44px 46px;
-      margin-top:var(--gap);
-      overflow:hidden;position:relative;
-    }
-    .hero::before{
-      content:"";position:absolute;inset-inline-start:-120px;top:-140px;
-      width:340px;height:340px;border-radius:50%;
-      background:radial-gradient(closest-side, rgba(43,170,204,.10), transparent 70%);
-      pointer-events:none;
-    }
-    .hero h1{
-      margin:0 0 10px;font-size:clamp(24px, 3.4vw, 34px);font-weight:900;
-      line-height:1.35;letter-spacing:-.4px;
-    }
-    .hero h1 .hl{color:var(--accent)}
-    .hero p{
-      margin:0;color:var(--ink-2);font-size:15px;line-height:1.9;max-width:46ch;
-    }
-    .hero-art{display:grid;place-items:center;min-width:0}
-    .hero-art svg{width:100%;max-width:380px;height:auto;display:block}
+    .page{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 24px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 
-    /* ── مداخل الدخول الثلاثة ─────────────────────────────────── */
-    .entries{
-      display:grid;grid-template-columns:repeat(3, 1fr);
-      gap:var(--gap);margin-top:var(--gap);
-    }
-    .entry{
-      display:flex;flex-direction:column;gap:14px;
-      background:var(--paper);
-      border:1px solid var(--hair-soft);border-radius:var(--radius-lg);
-      padding:28px 26px 24px;
-      text-decoration:none;color:inherit;
-      box-shadow:0 2px 8px rgba(15,23,42,.04);
-      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-      position:relative;overflow:hidden;
-    }
-    .entry::after{
-      content:"";position:absolute;inset-inline:0;top:0;height:4px;
-      background:linear-gradient(90deg, var(--tint,#64748b), transparent 90%);
-      opacity:.85;
-    }
-    .entry:hover{
-      transform:translateY(-4px);
-      box-shadow:0 10px 26px rgba(15,23,42,.12);
-      border-color:var(--hair);
-    }
-    .entry:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-    .entry-icon{
-      width:58px;height:58px;border-radius:16px;
-      display:grid;place-items:center;
-      background:var(--tint-soft,#f1f5f9);
-    }
-    .entry-icon svg{width:30px;height:30px;display:block}
-    .entry h2{margin:0;font-size:18.5px;font-weight:800;letter-spacing:-.2px}
-    .entry p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.85;flex:1}
-    .entry-go{
-      display:inline-flex;align-items:center;gap:8px;
-      font-size:13.5px;font-weight:800;color:var(--tint,#334155);
-    }
-    .entry-go svg{width:16px;height:16px;transition:transform .18s ease}
+    /* ── top bar ── */
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+    .brand img{width:44px;height:44px;object-fit:contain;display:block}
+    .brand b{display:block;font-family:"Almarai",sans-serif;font-weight:800;font-size:17px;letter-spacing:.04em}
+    .brand small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .lang{position:relative}
+    .lang summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:12px;color:var(--label);font-size:14px}
+    .lang summary::-webkit-details-marker{display:none}
+    .lang summary:hover,.lang[open] summary{background:rgba(255,255,255,.06)}
+    .lang summary svg{width:19px;height:19px}
+    .lang-menu{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:5;min-width:190px;padding:6px;border-radius:14px;background:#1A1F57;border:1px solid var(--line);box-shadow:0 18px 40px rgba(4,6,30,.5)}
+    .lang-menu a{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 10px;border-radius:9px;text-decoration:none;font-size:14px;font-weight:700}
+    .lang-menu a:hover,.lang-menu a[aria-current="true"]{background:rgba(255,255,255,.08)}
+    .btn-top{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:14px;text-decoration:none;font-family:"Almarai",sans-serif;font-weight:800;font-size:14px;
+      background:linear-gradient(270deg,#9C67F4,#7D45DA);box-shadow:0 10px 22px -8px rgba(139,77,242,.6)}
+    .btn-top:hover{filter:brightness(1.07)}
+
+    /* ── hero ── */
+    .hero{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:36px 0 18px;animation:fade .6s cubic-bezier(.22,1,.36,1) both}
+    .mark{position:relative;width:148px;height:148px;display:grid;place-items:center;margin-bottom:6px}
+    .mark::before{content:"";position:absolute;inset:-28px;border-radius:50%;background:radial-gradient(closest-side,rgba(139,77,242,.42),transparent 72%);filter:blur(2px)}
+    .mark img{position:relative;width:148px;height:148px;object-fit:contain}
+    .word{font-family:"Almarai",sans-serif;font-weight:800;font-size:clamp(28px,4.2vw,44px);letter-spacing:.17em;margin-inline-end:-.17em;direction:ltr;line-height:1.2;margin-top:14px}
+    .word--ar{letter-spacing:0;margin-inline-end:0;direction:rtl}
+    .rule{width:40px;height:2px;border-radius:1px;background:#AE82F5;margin:16px auto 14px}
+    .hero h1{margin:0;font-family:"Almarai",sans-serif;font-weight:800;font-size:clamp(24px,3vw,34px);line-height:1.35}
+    .hero h1 .hl{background:linear-gradient(90deg,#C9B6FF,#9C67F4);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .hero p{margin:14px auto 0;max-width:720px;color:var(--lilac);font-size:clamp(15px,1.5vw,17px);line-height:1.9}
+
+    /* ── entries ── */
+    .entries{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:30px 0 10px;animation:rise .6s .08s cubic-bezier(.22,1,.36,1) both}
+    .entry{position:relative;display:flex;flex-direction:column;gap:10px;padding:26px 24px 22px;border-radius:22px;text-decoration:none;overflow:hidden;
+      background:linear-gradient(180deg,var(--glass-2),var(--glass));border:1px solid var(--line);
+      box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 24px 48px -28px rgba(2,4,24,.9);
+      transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}
+    .entry::after{content:"";position:absolute;inset-inline-end:-60px;top:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(closest-side,rgba(139,77,242,.28),transparent);opacity:.0;transition:opacity .2s}
+    .entry:hover{transform:translateY(-4px);border-color:rgba(174,130,245,.6);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(139,77,242,.55)}
+    .entry:hover::after{opacity:1}
+    .entry-icon{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(156,103,244,.30),rgba(125,69,218,.18));border:1px solid rgba(174,130,245,.35)}
+    .entry-icon svg{width:26px;height:26px}
+    .entry h2{margin:6px 0 0;font-family:"Almarai",sans-serif;font-weight:800;font-size:20px;line-height:1.35}
+    .entry p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.85;flex:1}
+    .entry-go{display:inline-flex;align-items:center;gap:8px;margin-top:6px;color:#C9B6FF;font-family:"Almarai",sans-serif;font-weight:800;font-size:14.5px}
+    .entry-go svg{width:18px;height:18px;transition:transform .18s}
     .entry:hover .entry-go svg{transform:translateX(-4px)}
+    [dir="ltr"] .entry-go svg{transform:scaleX(-1)}
+    [dir="ltr"] .entry:hover .entry-go svg{transform:scaleX(-1) translateX(-4px)}
+    .entry--admin{background:linear-gradient(180deg,rgba(139,77,242,.22),rgba(139,77,242,.06));border-color:rgba(174,130,245,.42)}
 
-    .entry--admin{--tint:#6366f1; --tint-soft:#eef2ff}
-    .entry--subs {--tint:#0ea5a0; --tint-soft:#e6faf8}
-    .entry--store{--tint:#d97706; --tint-soft:#fef6e7}
+    /* ── footer ── */
+    .foot{display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 0 calc(24px + env(safe-area-inset-bottom));text-align:center}
+    .family{display:inline-flex;align-items:center;gap:8px;user-select:text}
+    .family img{width:18px;height:18px;display:block}
+    .family span{font-family:"Almarai",sans-serif;font-size:14px;color:var(--muted)}
+    .family bdi{font-family:"Cairo",sans-serif;font-size:11.5px;letter-spacing:.2em;color:var(--muted)}
+    .family bdi b{color:#fff;font-weight:800}
+    .powered{color:rgba(169,167,211,.7);font-size:12.5px}
+    .powered b{color:var(--label);font-weight:700}
 
-    /* ── التذييل ──────────────────────────────────────────────── */
-    footer{
-      margin-top:auto;padding-top:34px;
-      text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600;
-    }
-    footer b{color:var(--ink-2)}
+    @keyframes fade{from{opacity:0}}
+    @keyframes rise{from{opacity:0;transform:translateY(16px)}}
+    @media (prefers-reduced-motion:reduce){.hero,.entries{animation:none}.entry,.entry-go svg{transition:none}}
 
-    /* ── تجاوب ───────────────────────────────────────────────── */
     @media (max-width:900px){
-      .hero{grid-template-columns:1fr;padding:32px 26px;text-align:center}
-      .hero p{max-width:none;margin-inline:auto}
-      .hero-art{order:-1}
-      .hero-art svg{max-width:300px}
-      .entries{grid-template-columns:1fr}
+      .entries{grid-template-columns:1fr;gap:14px}
+      .entry{padding:20px 18px}
+      .hero{padding-top:18px}
+      .mark,.mark img{width:112px;height:112px}
+      .edge.r,.edge.bl{display:none}
+    }
+    @media (max-width:520px){
+      .page{padding:0 16px}
+      .top{padding:14px 0}
+      .brand small{display:none}
+      .btn-top{padding:0 14px}
+      .btn-top span{display:none}
     }
   </style>
 </head>
 <body>
-<div class="wrap">
+  <svg class="edge tl" viewBox="0 0 90 110" aria-hidden="true"><path d="M-2 52 L70 98 Q86 108 86 90 L88 -2"/></svg>
+  <svg class="edge r" viewBox="0 0 70 200" aria-hidden="true"><path d="M72 0 L18 33 Q3 42 3 60 L3 140 Q3 158 18 167 L72 198"/></svg>
+  <svg class="edge bl" viewBox="0 0 56 200" aria-hidden="true"><path d="M-2 0 L40 32 Q53 43 53 61 L53 202"/></svg>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-logo">
-        {% if cfg.logo_url %}
-          <img src="{{ cfg.logo_url }}" alt="{{ cfg.system_name or 'HobeRadius' }}">
-        {% else %}
-          {# علامة احتياطيّة: موجات بثّ — تعمل بلا شعار مضبوط #}
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="17" r="2.4" fill="#fff"/>
-            <path d="M7.5 12.6a6.4 6.4 0 0 1 9 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-            <path d="M4.6 9.4a10.5 10.5 0 0 1 14.8 0" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".72"/>
-          </svg>
-        {% endif %}
-      </span>
-      <div>
-        <div class="brand-name">{{ cfg.system_name or 'HobeRadius' }}</div>
-        <div class="brand-sub">{{ _('بوّابة إدارة الشبكة والاشتراكات') }}</div>
+  {% set _logo = cfg.logo_url or url_for('static', filename='img/login/mark-on-dark.svg') %}
+  <div class="page">
+    <header class="top">
+      <a class="brand" href="/">
+        <img src="{{ _logo }}" alt="" width="44" height="44">
+        <span><b>{{ _name }}</b><small>{{ _('بوّابة إدارة الشبكة والاشتراكات') }}</small></span>
+      </a>
+      <div class="top-actions">
+        {% set _cur_lang = LANGUAGES.get(current_locale, {}) %}
+        <details class="lang">
+          <summary aria-label="{{ _('تغيير اللغة') }}">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>
+            <span>{{ _cur_lang.get('name', current_locale) }}</span>
+          </summary>
+          <nav class="lang-menu" aria-label="{{ _('اللغة') }}">
+            {% for code in SUPPORTED_LOCALES %}
+              {% set _lang = LANGUAGES.get(code, {}) %}
+              <a href="{{ url_for('radius.set_locale', locale=code, next='/') }}"{% if code == current_locale %} aria-current="true"{% endif %}>
+                <span aria-hidden="true">{{ _lang.get('flag', '🌐') }}</span><span>{{ _lang.get('name', code) }}</span>
+              </a>
+            {% endfor %}
+          </nav>
+        </details>
+        <a class="btn-top" href="{{ url_for('radius.auth_login') }}">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l-5-5 5-5M5 12h11"/><path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4"/></svg>
+          <span>{{ _('دخول الإدارة') }}</span>
+        </a>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <section class="hero">
-    <div>
-      <h1>{{ _('أهلًا بك في') }} <span class="hl">{{ cfg.system_name or 'HobeRadius' }}</span></h1>
-      <p>
-        {{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين، بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.') }}
+    <main>
+      <section class="hero">
+        <div class="mark"><img src="{{ _logo }}" alt="{{ _name }}" width="148" height="148"></div>
+        <div class="word{% if not _name.isascii() %} word--ar{% endif %}"{% if _name.isascii() %} lang="en"{% endif %}>{{ _name|upper if _name.isascii() else _name }}</div>
+        <span class="rule" aria-hidden="true"></span>
+        <h1>{{ _('أهلًا بك في') }} <span class="hl">{{ _name }}</span></h1>
+        <p>{{ _('منصّة متكاملة لإدارة الشبكة والاشتراكات وبطاقات الإنترنت. اختر بوّابتك من المداخل الثلاثة بالأسفل — لوحة الإدارة للمشغّلين، بوّابة المشتركين لمتابعة اشتراكك، أو السوق الإلكتروني لشراء بطاقات الإنترنت وشحن الرصيد.') }}</p>
+      </section>
+
+      <nav class="entries" aria-label="{{ _('بوّابات الدخول') }}">
+        <a class="entry entry--admin" href="{{ url_for('radius.auth_login') }}">
+          <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#E4DAFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M8 21h8M12 17v4"/><path d="M7.5 9.5l2 2-2 2M12.5 13.5h4"/></svg></span>
+          <h2>{{ _('دخول الإدارة') }}</h2>
+          <p>{{ _('لوحة تحكّم المشغّلين والمديرين — إدارة المشتركين والراوترات والبطاقات والتقارير الماليّة.') }}</p>
+          <span class="entry-go">{{ _('الدخول إلى اللوحة') }}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>
+        </a>
+        <a class="entry entry--subs" href="{{ url_for('portal.subscriber_login') }}">
+          <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#E4DAFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.6"/><path d="M5 20c.8-3.6 3.7-5.6 7-5.6s6.2 2 7 5.6"/></svg></span>
+          <h2>{{ _('دخول المشتركين') }}</h2>
+          <p>{{ _('بوّابة المشترك — تابع اشتراكك واستهلاكك، اطلب تجديدًا أو سلفة، ونزّل إعداد الاتصال بضغطة.') }}</p>
+          <span class="entry-go">{{ _('الدخول إلى بوّابتي') }}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>
+        </a>
+        <a class="entry entry--store" href="{{ url_for('portal.card_login') }}">
+          <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#E4DAFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="13.5" rx="2.5"/><path d="M2.5 9.5h19M6 14.5h5"/></svg></span>
+          <h2>{{ _('سوق البطاقات الإلكتروني') }}</h2>
+          <p>{{ _('اشترِ بطاقات الإنترنت واشحن رصيدك إلكترونيًّا — تصفّح الباقات المتاحة وفعّل بطاقتك فورًا.') }}</p>
+          <span class="entry-go">{{ _('الدخول إلى السوق') }}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>
+        </a>
+      </nav>
+    </main>
+
+    <footer class="foot">
+      <p class="family" dir="rtl" style="margin:0">
+        <img src="{{ url_for('static', filename='img/login/ht-monogram.svg') }}" alt="" width="18" height="18">
+        <span lang="ar">من عائلة <bdi lang="en" dir="ltr"><b>HOBE</b> TECHNOLOGIES</bdi></span>
       </p>
-    </div>
-    <div class="hero-art" aria-hidden="true">
-      {# رسمة البطل: برج بثّ يخدم منازل وأجهزة — SVG داخليّ بلون الهويّة #}
-      <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="lg-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="var(--accent)" stop-opacity=".10"/>
-            <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
-          </linearGradient>
-          <linearGradient id="lg-mast" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="var(--accent)"/>
-            <stop offset="1" stop-color="#0f172a"/>
-          </linearGradient>
-        </defs>
-        <ellipse cx="230" cy="298" rx="200" ry="26" fill="#0f172a" opacity=".06"/>
-        <rect x="30" y="30" width="400" height="230" rx="24" fill="url(#lg-sky)"/>
-        {# برج البثّ #}
-        <path d="M218 262 230 118 242 262Z" fill="url(#lg-mast)" opacity=".92"/>
-        <rect x="222" y="106" width="16" height="16" rx="5" fill="var(--accent)"/>
-        <circle cx="230" cy="98" r="6" fill="var(--accent)"/>
-        {# موجات البثّ #}
-        <path d="M198 92a44 44 0 0 1 0-52" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".85"/>
-        <path d="M180 104a68 68 0 0 1 0-76" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".45"/>
-        <path d="M262 92a44 44 0 0 0 0-52" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".85"/>
-        <path d="M280 104a68 68 0 0 0 0-76" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".45"/>
-        {# منزل يمين #}
-        <path d="M84 262v-52l34-26 34 26v52Z" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
-        <path d="M84 210l34-26 34 26" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
-        <rect x="106" y="228" width="24" height="34" rx="3" fill="var(--accent)" opacity=".25"/>
-        {# منزل يسار #}
-        <path d="M308 262v-52l34-26 34 26v52Z" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
-        <path d="M308 210l34-26 34 26" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
-        <rect x="330" y="228" width="24" height="34" rx="3" fill="var(--accent)" opacity=".25"/>
-        {# خطوط الاتصال المنقّطة برج→منازل #}
-        <path d="M212 150c-34 14-66 34-84 58" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10" opacity=".8"/>
-        <path d="M248 150c34 14 66 34 84 58" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10" opacity=".8"/>
-        {# جوّال أمامي ببطاقة واي فاي #}
-        <rect x="196" y="196" width="68" height="96" rx="12" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
-        <rect x="206" y="210" width="48" height="10" rx="5" fill="#e2e8f0"/>
-        <rect x="206" y="228" width="48" height="10" rx="5" fill="#e2e8f0"/>
-        <circle cx="230" cy="264" r="13" fill="var(--accent)" opacity=".18"/>
-        <path d="M223.5 263a9.5 9.5 0 0 1 13 0" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/>
-        <circle cx="230" cy="268" r="1.8" fill="var(--accent)"/>
-      </svg>
-    </div>
-  </section>
-
-  <nav class="entries" aria-label="{{ _('بوّابات الدخول') }}">
-
-    <a class="entry entry--admin" href="{{ url_for('radius.auth_login') }}">
-      <span class="entry-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="13" rx="2.5" stroke="var(--tint)" stroke-width="1.9"/>
-          <path d="M8 21h8M12 17v4" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
-          <path d="M7.5 9.5l2 2-2 2M12.5 13.5h4" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <h2>{{ _('دخول الإدارة') }}</h2>
-      <p>{{ _('لوحة تحكّم المشغّلين والمديرين — إدارة المشتركين والراوترات والبطاقات والتقارير الماليّة.') }}</p>
-      <span class="entry-go">{{ _('الدخول إلى اللوحة') }}
-        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-    </a>
-
-    <a class="entry entry--subs" href="{{ url_for('portal.subscriber_login') }}">
-      <span class="entry-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="8.2" r="3.6" stroke="var(--tint)" stroke-width="1.9"/>
-          <path d="M5 20c.8-3.6 3.7-5.6 7-5.6s6.2 2 7 5.6" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <h2>{{ _('دخول المشتركين') }}</h2>
-      <p>{{ _('بوّابة المشترك — تابع اشتراكك واستهلاكك، اطلب تجديدًا أو سلفة، ونزّل إعداد الاتصال بضغطة.') }}</p>
-      <span class="entry-go">{{ _('الدخول إلى بوّابتي') }}
-        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-    </a>
-
-    <a class="entry entry--store" href="{{ url_for('portal.card_login') }}">
-      <span class="entry-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="2.5" y="5" width="19" height="13.5" rx="2.5" stroke="var(--tint)" stroke-width="1.9"/>
-          <path d="M2.5 9.5h19" stroke="var(--tint)" stroke-width="1.9"/>
-          <path d="M6 14.5h5" stroke="var(--tint)" stroke-width="1.9" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <h2>{{ _('سوق البطاقات الإلكتروني') }}</h2>
-      <p>{{ _('اشترِ بطاقات الإنترنت واشحن رصيدك إلكترونيًّا — تصفّح الباقات المتاحة وفعّل بطاقتك فورًا.') }}</p>
-      <span class="entry-go">{{ _('الدخول إلى السوق') }}
-        <svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
-    </a>
-
-  </nav>
-
-  <footer>
-    {{ _('مشغَّل بواسطة') }} <b>{{ cfg.system_name or 'HobeRadius' }}</b> {{ _('— إدارة الشبكات والاشتراكات') }}
-  </footer>
-</div>
+      <div class="powered">{{ _('مشغَّل بواسطة') }} <b>{{ _name }}</b> {{ _('— إدارة الشبكات والاشتراكات') }}</div>
+    </footer>
+  </div>
 </body>
 </html>
