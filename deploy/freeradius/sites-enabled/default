@@ -153,13 +153,22 @@ preacct {
 # ACKed (retrying cannot fix them): invalid (bad xlat) and noop (0 rows — e.g.
 # an interim/stop for an already-closed session, or a duplicate Start, see the
 # idempotent start query in mods-enabled/sql).
+#
+# 2026-11-01 — `fail = return` assumes the write failure is transient. On the
+# live servers it is permanent: rlm_sql_sqlite cannot open the DB read-write
+# (the file is 0644 and owned by the app's uid), so EVERY accounting packet
+# failed, was never ACKed, and the NAS retransmitted it for ever — 352 failures
+# in five minutes on client3, requests queued 32 s, rlm_rest timed out and
+# FreeRADIUS was killed; subscribers saw "RADIUS server is not responding".
+# Dropping sql here changes NOTHING about what is stored: radacct is in fact
+# written by the app's mt_reconciler (it polls the router's own session list),
+# and all 975 rows on client3 carry its `mtsync-` ids — rlm_sql has never
+# written a single one. Letting it start now would double-count every session
+# against the per-card device limit. So we simply ACK and keep the NAS quiet.
+# NOTE: the R3 note above still calls sql radacct "canonical". That design
+# question (sql vs mt_reconciler as the source of truth, and which gives the
+# accurate session time) is open and worth settling deliberately.
 accounting {
-    sql {
-        fail     = return
-        reject   = 1
-        invalid  = 1
-        notfound = 1
-    }
     ok
 }
 
