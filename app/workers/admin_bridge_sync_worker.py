@@ -54,9 +54,14 @@ def _loop() -> None:
             # surface the local license-expiry countdown (7/3/1) — deduped so it
             # never doubles a panel-emitted notice.
             notify_result = _maybe_sync_notifications()
+            # Every other front needs a snapshot of its own, or it locks itself
+            # out after a day — see _refresh_other_fronts.
+            fronts_result = _refresh_other_fronts()
             info = {
                 "interval_sec": interval,
                 "ok": bool(result.get("ok")),
+                "fronts_seen": fronts_result.get("fronts"),
+                "fronts_refreshed": fronts_result.get("ok"),
                 "status": result.get("status") or "unknown",
                 "license_active": result.get("license_active"),
                 "capacity_snapshot_id": result.get("capacity_snapshot_id"),
@@ -78,6 +83,40 @@ def _loop() -> None:
             info = {"interval_sec": interval, "ok": False, "status": "error", "error": str(exc)}
         beat(_NAME, info=info)
         time.sleep(interval)
+
+
+def _refresh_other_fronts() -> dict:
+    """Keep every OTHER tenant's licence snapshot fresh.
+
+    The licence is issued per server — the check sends the licence key, the
+    machine fingerprint and the domain, never a tenant — but the answer is
+    cached per tenant, and ``license_lifecycle`` locks the whole panel for a
+    tenant whose snapshot is missing or stale. The sync above only ever ran for
+    tenant 1, so a second front (e.g. a café with its own admin) went ACTIVE
+    when it was synced by hand and then locked itself out roughly a day later.
+
+    Only the runtime contract is refreshed here. Identity, inventory, tunnels
+    and the heartbeat stay on tenant 1 on purpose: those describe the SERVER,
+    and sending them once per front would just repeat the same report.
+    """
+    out: dict = {"fronts": 0, "ok": 0}
+    try:
+        from app.radius.db.repos import tenants_repo
+        svc = LicenseAdminRuntimeSyncService()
+        for tenant in tenants_repo.list_tenants():
+            tid = int(getattr(tenant, "id", 0) or 0)
+            if tid <= 1 or str(getattr(tenant, "status", "")) not in ("active", "trial"):
+                continue
+            out["fronts"] += 1
+            try:
+                if svc.sync_runtime_contract_once(tenant_id=tid).get("ok"):
+                    out["ok"] += 1
+            except Exception:  # noqa: BLE001 — one bad front must not stop the rest
+                _LOG.warning("admin bridge sync: contract refresh failed for front %s",
+                             tid, exc_info=True)
+    except Exception:  # noqa: BLE001 — never break the tick over this
+        _LOG.warning("admin bridge sync: could not list fronts", exc_info=True)
+    return out
 
 
 def _maybe_sync_identity() -> dict | None:
