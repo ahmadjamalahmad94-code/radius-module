@@ -19173,11 +19173,11 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 — لا حذف نهائي، ويمكن استعادة أي عنصر منها لاحقًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:227
 المؤهل الآن حسب المعاينة: %(v)s كرت و%(v2)s مشترك في %(v3)s متأثرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:231
 نعم، شغّل الأرشفة,,"Yes, run archiving","Oui, lancer l'archivage","Evet, arşivlemeyi çalıştır","Sí, ejecutar el archivado",ok,app/templates/radius/lifecycle.html:236
-تسجيل الدخول — لوحة Hobe Hub,,Sign In — Hobe Hub Console,Connexion — Panneau Hobe Hub,Oturum aç — Hobe Hub paneli,Iniciar sesión — Panel Hobe Hub,ok,app/templates/radius/login.html:13
-مرحبًا بعودتك,,Welcome back,Bon retour,Tekrar hoş geldiniz,Bienvenido de nuevo,ok,app/templates/radius/login.html:213
-سجّل دخولك إلى HOBE RADIUS,,Sign in to HOBE RADIUS,Connectez-vous à HOBE RADIUS,HOBE RADIUS'a giriş yapın,Inicia sesión en HOBE RADIUS,ok,app/templates/radius/login.html:214
-مثال: admin,,e.g. admin,Exemple : admin,Örnek: admin,Ejemplo: admin,ok,app/templates/radius/login.html:241
-إدارة شبكتك تبدأ من هنا,,Managing your network starts here,La gestion de votre réseau commence ici,Ağ yönetiminiz burada başlar,La gestión de tu red empieza aquí,ok,app/templates/radius/login.html:268
+تسجيل الدخول — لوحة Hobe Hub,,Sign In — Hobe Hub Console,Connexion — Panneau Hobe Hub,Oturum aç — Hobe Hub paneli,Iniciar sesión — Panel Hobe Hub,ok,app/templates/radius/login.html:14
+إدارة شبكتك تبدأ من هنا,,Managing your network starts here,La gestion de votre réseau commence ici,Ağ yönetiminiz burada başlar,La gestión de tu red empieza aquí,ok,app/templates/radius/login.html:191
+مرحبًا بعودتك,,Welcome back,Bon retour,Tekrar hoş geldiniz,Bienvenido de nuevo,ok,app/templates/radius/login.html:195
+أدخل اسم المستخدم وكلمة المرور للمتابعة,,Enter your username and password to continue,Saisissez votre nom d'utilisateur et votre mot de passe pour continuer,Devam etmek için kullanıcı adınızı ve şifrenizi girin,Introduce tu usuario y contraseña para continuar,ok,app/templates/radius/login.html:196
+جارٍ تسجيل الدخول…,,Signing in…,Connexion…,Giriş yapılıyor…,Iniciando sesión…,ok,app/templates/radius/login.html:232
 طابور الاعتماد,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:4
 طلبات بانتظار موافقة المالك,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:6
 الطلبات المعلّقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/manager_approvals.html:9

@@ -52376,3 +52376,11 @@ msgstr "Sign in to HOBE RADIUS"
 #: app/templates/radius/login.html:268
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr "Managing your network starts here"
+
+#: app/templates/radius/login.html:196
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr "Enter your username and password to continue"
+
+#: app/templates/radius/login.html:232
+msgid "جارٍ تسجيل الدخول…"
+msgstr "Signing in…"
