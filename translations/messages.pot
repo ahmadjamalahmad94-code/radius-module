@@ -10778,6 +10778,10 @@ msgstr ""
 msgid "أدخل"
 msgstr ""
 
+#: app/templates/radius/login.html:196
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr ""
+
 #: app/radius/services/general_adjustments.py:66
 msgid "أدخل اسم مستخدم واحدًا على الأقل."
 msgstr ""
@@ -15027,7 +15031,7 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:2795
 #: app/templates/radius/cards_checker_v2.html:2796
-#: app/templates/radius/login.html:255
+#: app/templates/radius/login.html:215
 #: app/templates/radius/portal_subscriber_login.html:274
 msgid "إخفاء كلمة المرور"
 msgstr ""
@@ -15341,7 +15345,7 @@ msgid ""
 "والنطاق."
 msgstr ""
 
-#: app/templates/radius/login.html:268 app/templates/radius/login.html:269
+#: app/templates/radius/login.html:191
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr ""
 
@@ -16876,7 +16880,7 @@ msgstr ""
 #: app/templates/radius/cards_checker_v2.html:268
 #: app/templates/radius/cards_checker_v2.html:2785
 #: app/templates/radius/cards_checker_v2.html:2786
-#: app/templates/radius/login.html:253 app/templates/radius/login.html:254
+#: app/templates/radius/login.html:214 app/templates/radius/login.html:215
 #: app/templates/radius/portal_subscriber_login.html:244
 #: app/templates/radius/portal_subscriber_login.html:274
 #: app/templates/radius/print_templates.html:1218
@@ -22921,7 +22925,7 @@ msgstr ""
 #: app/templates/radius/docs_message_templates.html:139
 #: app/templates/radius/docs_mikrotik_store.html:431
 #: app/templates/radius/docs_sessions_report.html:124
-#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:236
+#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:200
 #: app/templates/radius/mt_form.html:76
 #: app/templates/radius/portal_subscriber.html:252
 #: app/templates/radius/portal_subscriber.html:357
@@ -37728,7 +37732,7 @@ msgid "اللاحقة %(v)s"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:441
-#: app/templates/radius/login.html:191
+#: app/templates/radius/login.html:175
 msgid "اللغة"
 msgstr ""
 
@@ -50447,7 +50451,7 @@ msgstr ""
 #: app/radius/services/hotspot_addons_extra.py:154
 #: app/radius/services/mikrotik_actions.py:596
 #: app/templates/radius/docs_customer_portal.html:79
-#: app/templates/radius/login.html:262
+#: app/templates/radius/login.html:233
 #: app/templates/radius/portal_card_login.html:289
 #: app/templates/radius/portal_distributor_login.html:122
 #: app/templates/radius/portal_subscriber_login.html:203
@@ -50475,7 +50479,7 @@ msgstr ""
 msgid "تسجيل الدخول — بوابة المشترك · HobeRadius"
 msgstr ""
 
-#: app/templates/radius/login.html:13
+#: app/templates/radius/login.html:14
 msgid "تسجيل الدخول — لوحة Hobe Hub"
 msgstr ""
 
@@ -54866,7 +54870,7 @@ msgid "تغيير الـQR (اختياري)"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:425
-#: app/templates/radius/login.html:186
+#: app/templates/radius/login.html:170
 msgid "تغيير اللغة"
 msgstr ""
 
@@ -61230,6 +61234,10 @@ msgstr ""
 
 #: app/templates/_partials/service_spec_modal.html:368
 msgid "جارٍ تحميل مواصفات الخدمة…"
+msgstr ""
+
+#: app/templates/radius/login.html:232
+msgid "جارٍ تسجيل الدخول…"
 msgstr ""
 
 #: app/templates/radius/mt_push_setup.html:161
@@ -73323,10 +73331,6 @@ msgstr ""
 msgid ""
 "سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) "
 "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."
-msgstr ""
-
-#: app/templates/radius/login.html:214
-msgid "سجّل دخولك إلى HOBE RADIUS"
 msgstr ""
 
 #: app/radius/services/card_users_marketplace.py:320
@@ -90221,7 +90225,7 @@ msgstr ""
 #: app/templates/radius/docs_mikrotik_store.html:384
 #: app/templates/radius/docs_mikrotik_store.html:432
 #: app/templates/radius/docs_users_360.html:365
-#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:247
+#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:209
 #: app/templates/radius/mt_form.html:81
 #: app/templates/radius/portal_card_login.html:330
 #: app/templates/radius/portal_distributor_login.html:151
@@ -98151,10 +98155,6 @@ msgstr ""
 msgid "مثال: VIP-"
 msgstr ""
 
-#: app/templates/radius/login.html:241
-msgid "مثال: admin"
-msgstr ""
-
 #: app/templates/radius/pay_demo.html:281
 msgid "مثال: ahmad99"
 msgstr ""
@@ -100363,7 +100363,7 @@ msgstr ""
 msgid "مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك."
 msgstr ""
 
-#: app/templates/radius/login.html:213
+#: app/templates/radius/login.html:195
 msgid "مرحبًا بعودتك"
 msgstr ""
 

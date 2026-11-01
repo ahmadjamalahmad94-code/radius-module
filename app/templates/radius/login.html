@@ -1,19 +1,19 @@
-{# Admin sign-in — HOBE RADIUS family login (owner reference package, 31/10/2026).
-   Navy page, light form card on the inline-start side, the native brand
-   panel artwork on the other side, violet primary button, Almarai/Cairo
-   self-hosted, and the «من عائلة HOBE TECHNOLOGIES» family line under the card.
+{# Admin sign-in — HOBE sign-in standard v2 (owner pack HOBE_LOGIN_PACK, 01/11/2026).
+   One continuous navy canvas (glow + thin hexagon-edge lines), no card. Phones: one column (HR symbol, Latin
+   wordmark, short rule, Arabic tagline, then the form on the navy). ≥ 900px: two equal halves of the whole screen,
+   the thin rule exactly at 50%, the form first in reading order (right in Arabic at 75%, left in English) and the
+   brand centred in the other half. Footer: the HT monogram + «من عائلة HOBE TECHNOLOGIES» as real text.
    Authentication is unchanged: username + password posted to auth_login. #}
 <!doctype html>
 <html lang="{{ get_locale() }}" dir="{{ text_dir }}">
 <head>
   {% include "_partials/hr_i18n_js.html" %}
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1030">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E1238">
   <title>{{ _('تسجيل الدخول — لوحة Hobe Hub') }}</title>
   {# الخطوط مَحَلّيًّا — لا روابط Google Fonts خارجيّة. #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cairo_font.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     @font-face{font-family:"Almarai";font-weight:400;font-display:swap;
       src:url("{{ url_for('static', filename='fonts/Almarai-Regular.ttf') }}") format("truetype")}
@@ -21,265 +21,231 @@
       src:url("{{ url_for('static', filename='fonts/Almarai-Bold.ttf') }}") format("truetype")}
     @font-face{font-family:"Almarai";font-weight:800;font-display:swap;
       src:url("{{ url_for('static', filename='fonts/Almarai-ExtraBold.ttf') }}") format("truetype")}
-    :root{
-      --navy:#0b1030;
-      --navy-2:#121a4a;
-      --paper:#f6f5fc;
-      --ink-1:#12163a;
-      --ink-2:#4b4f7a;
-      --ink-3:#8b8db0;
-      --line:#cfcbee;
-      --violet:#8b5cf6;
-      --violet-2:#7c3aed;
-      --violet-ink:#7a3fe8;
-      --ring:rgba(139,92,246,.28);
-      --edge:rgba(167,139,250,.45);
-      --endorse:#c3bce9;
-      --err:#b91c1c;--err-soft:#fee2e2;
-      --warn:#b45309;--warn-soft:#fef3c7;
-      --ok:#15803d;--ok-soft:#dcfce7;
-      --info:#1e40af;--info-soft:#dbeafe;
-    }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;min-height:100%}
-    body{
-      font-family:'Almarai','Cairo',system-ui,-apple-system,'Segoe UI',sans-serif;
-      color:var(--ink-1);
-      background:
-        radial-gradient(1100px 700px at 50% 110%, rgba(124,58,237,.22) 0%, transparent 60%),
-        radial-gradient(900px 600px at 15% -10%, rgba(59,64,170,.25) 0%, transparent 60%),
-        var(--navy);
-      min-height:100dvh;
-      display:flex;flex-direction:column;align-items:center;
-      padding:20px 16px 8px;
-    }
-    html[dir="ltr"] body{font-family:'Inter','Almarai','Cairo',system-ui,-apple-system,'Segoe UI',sans-serif}
-
-    /* ── Top bar: language switcher ───────────────── */
-    .topbar{width:100%;max-width:1460px;display:flex;justify-content:flex-start;margin-bottom:14px}
-    .lang{position:relative}
-    .lang summary{
-      list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
-      color:#e6e3ff;font-size:15px;padding:8px 10px;border-radius:10px;
-    }
-    .lang summary::-webkit-details-marker{display:none}
-    .lang summary:hover,.lang[open] summary{background:rgba(255,255,255,.06)}
-    .lang summary:focus-visible{outline:2px solid var(--violet);outline-offset:2px}
-    .lang summary .fa-globe{font-size:19px}
-    .lang summary .fa-chevron-down{font-size:11px;opacity:.8}
-    .lang-menu{
-      position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;
-      min-width:190px;padding:6px;border-radius:14px;background:#fff;
-      box-shadow:0 18px 40px rgba(4,6,30,.45);
-    }
-    .lang-menu a{
-      display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;
-      color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:700;
-    }
-    .lang-menu a:hover,.lang-menu a:focus-visible,.lang-menu a[aria-current="true"]{background:#f1edff;outline:0}
-
-    /* ── Card shell ─────────────────────────────────── */
-    .login-card{
-      width:100%;max-width:1460px;
-      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.17fr);
-      border:1px solid var(--edge);border-radius:24px;overflow:hidden;
-      background:var(--navy-2);
-      box-shadow:0 30px 80px rgba(2,4,24,.55);
-    }
-    .form-side{
-      background:var(--paper);
-      padding:clamp(28px,4vw,56px) clamp(24px,3.4vw,44px);
-      display:flex;flex-direction:column;gap:18px;justify-content:center;
-    }
-    .brand-side{
-      position:relative;min-height:560px;
-      background:#0d1240 url("{{ url_for('static', filename='img/login/brand-panel.png') }}") center/cover no-repeat;
-    }
+    html,body{margin:0;padding:0}
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-    /* ── Form head ───────────────────────────────────── */
-    .product{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-    .product img{width:52px;height:52px}
-    .product span{font-weight:800;font-size:22px;letter-spacing:.2px;color:var(--ink-1);font-family:'Inter','Almarai',sans-serif}
-    .form-head h1{margin:0;font-size:clamp(30px,3.4vw,46px);font-weight:800;line-height:1.25}
-    .form-head p{margin:10px 0 6px;color:var(--ink-2);font-size:clamp(16px,1.5vw,21px)}
+    .hs{
+      --hs-accent:#8B4DF2;
+      --hs-focus:#AE82F5;      /* accent + 30% white */
+      --hs-btn-1:#9C67F4;      /* accent 86% + white */
+      --hs-btn-2:#7D45DA;      /* accent 90% + black */
+      --hs-navy:#0E1238;
+      --hs-lilac:#B9A6FF;
+      --hs-label:#DCD3FF;
+      --hs-field:rgba(255,255,255,.08);
+      --hs-line:rgba(201,188,255,.22);
+      --hs-err:#FFA8A8;
+      --hs-edge:rgba(122,92,245,.7);
+      position:relative;isolation:isolate;
+      min-height:100vh;min-height:100dvh;
+      display:flex;flex-direction:column;color:#fff;
+      background:
+        radial-gradient(130% 75% at -20% 108%, rgba(153,98,250,.85) 0%, rgba(139,77,242,.36) 20%, rgba(139,77,242,.10) 50%, transparent 100%),
+        radial-gradient(60% 34% at 50% 19%, rgba(139,77,242,.20), transparent 100%),
+        radial-gradient(110% 55% at -5% -3%, rgba(30,39,112,.4), transparent 100%),
+        linear-gradient(180deg,#111646 0%,#0B0F33 55%,#0E1340 100%),
+        var(--hs-navy);
+      font-family:"Cairo","Almarai","Segoe UI",Tahoma,sans-serif;
+      color-scheme:dark;overflow-x:hidden;
+    }
+    .hs *:focus-visible{outline:2px solid var(--hs-focus);outline-offset:2px;border-radius:8px}
 
-    /* ── Flash messages ─────────────────────────────── */
-    .flash-stack{display:grid;gap:8px}
-    .flash{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:12px;
-      font-size:14px;font-weight:700;line-height:1.6;border:1px solid}
-    .flash i{margin-top:3px}
-    .flash-error,.flash-danger{background:var(--err-soft);color:var(--err);border-color:#fecaca}
-    .flash-warning{background:var(--warn-soft);color:var(--warn);border-color:#fde68a}
-    .flash-success{background:var(--ok-soft);color:var(--ok);border-color:#bbf7d0}
-    .flash-info{background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
+    /* top bar: the real language switcher (radius.set_locale) */
+    .hs-top{display:flex;align-items:center;gap:10px;padding:16px 24px 0;min-height:48px}
+    .lang{position:relative}
+    .lang summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;
+      padding:6px 10px;border-radius:10px;color:var(--hs-label);font-size:14px}
+    .lang summary::-webkit-details-marker{display:none}
+    .lang summary:hover,.lang[open] summary{background:rgba(255,255,255,.06)}
+    .lang summary svg{width:20px;height:20px}
+    .lang summary .chev{width:14px;height:14px}
+    .lang-menu{position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:5;min-width:190px;padding:6px;
+      border-radius:14px;background:#1A1F57;border:1px solid var(--hs-line);box-shadow:0 18px 40px rgba(4,6,30,.5)}
+    .lang-menu a{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 10px;border-radius:9px;
+      color:#fff;text-decoration:none;font-size:14px;font-weight:700}
+    .lang-menu a:hover,.lang-menu a:focus-visible,.lang-menu a[aria-current="true"]{background:rgba(255,255,255,.08);outline:0}
 
-    /* ── Fields ─────────────────────────────────────── */
-    form{display:grid;gap:22px}
-    .field{display:grid;gap:10px}
-    .field label{font-size:16px;font-weight:800;color:var(--ink-1)}
-    .field-wrap{
-      position:relative;display:flex;align-items:center;
-      background:#fff;border:1px solid var(--line);border-radius:12px;
-      transition:border-color .15s,box-shadow .15s;
-    }
-    .field-wrap:focus-within{border-color:var(--violet);box-shadow:0 0 0 4px var(--ring)}
-    .field-wrap input{
-      flex:1;min-width:0;border:0;outline:0;background:transparent;
-      height:58px;padding:0 18px;font:inherit;font-size:17px;color:var(--ink-1);
-    }
-    .field-wrap input::placeholder{color:var(--ink-3)}
-    .field-wrap .ico,.pwd-toggle{
-      flex:0 0 auto;width:54px;height:58px;display:grid;place-items:center;
-      color:var(--ink-2);font-size:18px;
-    }
-    .pwd-toggle{border:0;background:transparent;cursor:pointer;border-radius:12px}
-    .pwd-toggle:hover{color:var(--violet-2)}
-    .pwd-toggle:focus-visible{outline:2px solid var(--violet);outline-offset:-4px}
+    .hs-wrap{flex:1;width:100%;max-width:440px;margin:0 auto;padding:16px 24px 0;display:flex;flex-direction:column}
+    .hs-brand{text-align:center;display:flex;flex-direction:column;align-items:center;animation:hsFade .56s cubic-bezier(.22,1,.36,1) both}
+    .hs-brand img{width:112px;height:112px;display:block}
+    .hs-brand b{font-family:"Almarai",sans-serif;font-weight:800;font-size:27px;letter-spacing:.17em;margin-inline-end:-.17em;
+      line-height:1.25;color:#fff;direction:ltr;margin-top:10px}
+    .hs-brand i{display:block;width:32px;height:2px;border-radius:1px;background:var(--hs-focus);margin:12px 0 10px}
+    .hs-brand span{font-family:"Almarai",sans-serif;font-size:16px;color:var(--hs-lilac);line-height:1.4}
+    .hs-rule{display:none}
 
-    /* ── Submit ─────────────────────────────────────── */
-    .submit-btn{
-      width:100%;height:62px;margin-top:4px;
-      border:0;border-radius:12px;cursor:pointer;color:#fff;
-      font:inherit;font-size:19px;font-weight:800;
-      background:linear-gradient(90deg,var(--violet) 0%,var(--violet-2) 100%);
-      box-shadow:0 10px 24px rgba(124,58,237,.35);
-      display:inline-flex;align-items:center;justify-content:center;gap:18px;
-      transition:filter .15s,transform .05s;
-    }
-    .submit-btn:hover{filter:brightness(1.06)}
-    .submit-btn:active{transform:translateY(1px)}
-    .submit-btn:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}
-    .submit-btn[disabled]{filter:saturate(.6) brightness(.95);cursor:progress}
-    html[dir="ltr"] .submit-btn .fa-arrow-left{transform:scaleX(-1)}
+    .hs-form{margin:auto 0;padding:32px 0 24px;animation:hsRise .56s .08s cubic-bezier(.22,1,.36,1) both}
+    .hs-form h1{margin:0;font-family:"Almarai",sans-serif;font-weight:800;font-size:26px;line-height:1.3;color:#fff}
+    .hs-sub{margin:4px 0 0;font-size:15px;line-height:1.5;color:var(--hs-lilac)}
+    .hs-body{margin-top:24px;display:flex;flex-direction:column}
 
-    /* ── Family line under the card: «من عائلة HOBE TECHNOLOGIES» ─ */
-    .hobe-group-endorsement{
-      display:flex;align-items:center;justify-content:center;gap:12px;
-      padding:22px 16px;color:#a9a3d6;
-    }
-    .hobe-group-endorsement .fam{font-family:'Almarai','Cairo',sans-serif;font-size:15px;color:#b9b3e6}
-    .hobe-group-endorsement .grp{font-family:'Inter','Almarai',sans-serif;font-size:14px;
-      letter-spacing:.3em;color:#9f99d6;font-weight:600}
-    .hobe-group-endorsement .grp b{color:#ffffff;font-weight:800}
-    .hobe-group-endorsement img{width:20px;height:20px;opacity:.95}
+    .hb-auth-field{margin-bottom:20px}
+    .hb-auth-field label{display:block;color:var(--hs-label);font-family:"Almarai",sans-serif;font-weight:700;font-size:15px;margin:0 4px 8px}
+    .hb-auth-input{position:relative}
+    .hb-auth-input input{width:100%;height:56px;border-radius:16px;background:var(--hs-field);border:1px solid var(--hs-line);
+      color:#fff;font:inherit;font-size:17px;padding:0 56px 0 16px;caret-color:var(--hs-focus);outline:0;
+      transition:border-color .15s,box-shadow .15s,background .15s}
+    .hb-auth-input input::placeholder{color:rgba(220,211,255,.45)}
+    .hb-auth-input input:hover{border-color:rgba(201,188,255,.4)}
+    .hb-auth-input input:focus{border-color:var(--hs-focus);box-shadow:0 0 0 1px var(--hs-focus),0 0 0 5px rgba(139,77,242,.22);background:rgba(255,255,255,.1)}
+    .hb-auth-input input[aria-invalid="true"]{border-color:#FF8A8A;box-shadow:0 0 0 4px rgba(255,138,138,.14)}
+    .hb-auth-input input:-webkit-autofill{-webkit-text-fill-color:#fff;box-shadow:0 0 0 40px #1D2150 inset}
+    .hb-auth-ico,.hb-auth-eye{position:absolute;top:50%;transform:translateY(-50%);right:14px;color:var(--hs-lilac);
+      display:grid;place-items:center}
+    .hb-auth-ico svg,.hb-auth-eye svg{width:22px;height:22px}
+    .hb-auth-eye{right:6px;width:44px;height:44px;border:0;background:transparent;border-radius:12px;cursor:pointer;padding:0}
+    .hb-auth-eye:hover{background:rgba(255,255,255,.08);color:#fff}
+    .hb-auth-eye svg[hidden]{display:none}
 
-    /* ── Tablet / mobile ────────────────────────────── */
-    @media (max-width:960px){
-      .login-card{grid-template-columns:1fr;max-width:560px}
-      .brand-side{display:none}
-      .topbar{max-width:560px}
+    .hb-auth-err{display:flex;align-items:flex-start;gap:8px;color:var(--hs-err);font-size:14.5px;line-height:1.6;margin:-4px 4px 12px}
+    .hb-auth-err svg{width:18px;height:18px;flex:none;margin-top:3px}
+    .hb-auth-note{display:flex;align-items:flex-start;gap:8px;font-size:14.5px;line-height:1.6;margin:-4px 4px 12px;color:#C9F2D5}
+    .hb-auth-note.warn{color:#FFD9A8}
+
+    .hb-auth-btn{width:100%;height:56px;margin-top:12px;border:0;border-radius:16px;cursor:pointer;color:#fff;
+      font-family:"Almarai",sans-serif;font-size:18px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:12px;
+      background:linear-gradient(90deg,var(--hs-btn-2),var(--hs-btn-1));
+      box-shadow:0 10px 22px -6px rgba(139,77,242,.55);transition:filter .15s,box-shadow .15s}
+    [dir="rtl"] .hb-auth-btn{background:linear-gradient(270deg,var(--hs-btn-1),var(--hs-btn-2))}
+    .hb-auth-btn:hover{filter:brightness(1.06)}
+    .hb-auth-btn:disabled{filter:saturate(.75) brightness(.9);box-shadow:none;cursor:progress}
+    .hb-auth-btn svg{width:22px;height:22px}
+    [dir="ltr"] .hb-auth-btn .arrow svg{transform:scaleX(-1)}
+    .spin{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:hsSpin .8s linear infinite}
+
+    /* «من عائلة HOBE TECHNOLOGIES» + the HT monogram */
+    .hobe-family{text-align:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom));user-select:text;-webkit-user-select:text;
+      animation:hsFade .56s cubic-bezier(.22,1,.36,1) both}
+    .hobe-family p{margin:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+    .hobe-family img.ht{display:block;width:18px;height:18px;flex:none}
+    .hobe-family span{font-family:"Almarai",sans-serif;font-size:14px;line-height:1.6;color:#A9A7D3}
+    .hobe-family bdi{font-family:"Cairo",sans-serif;font-size:11.5px;letter-spacing:.2em;color:#A9A7D3;font-weight:400}
+    .hobe-family bdi b{color:#fff;font-weight:800}
+
+    @keyframes hsFade{from{opacity:0}}
+    @keyframes hsRise{from{opacity:0;transform:translateY(14px)}}
+    @keyframes hsSpin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){.hs-brand,.hs-form,.hobe-family{animation:none}.spin{animation:none}}
+
+    @media (max-height:700px) and (max-width:899px){
+      .hs-brand img{width:80px;height:80px}
+      .hs-brand b{font-size:22px}
+      .hs-form{padding-top:24px}
+      .hs-body{margin-top:16px}
     }
-    @media (max-width:480px){
-      body{padding:12px 16px 4px}
-      .form-side{padding:26px 20px}
-      .product{margin-bottom:12px}
-      .product img{width:44px;height:44px}
-      .product span{font-size:19px}
-      .field-wrap input{height:54px;font-size:16px}
-      .field-wrap .ico,.pwd-toggle{height:54px}
-      .submit-btn{height:56px;font-size:17px}
+    /* ≥ 900px: two equal halves, the rule exactly at 50%; form first in reading order (right in Arabic) */
+    @media (min-width:900px){
+      .hs-top{padding:24px 40px 0}
+      .hs-wrap{max-width:none;margin:0;flex-direction:row;align-items:stretch;padding:24px 0}
+      .hs-form{order:1;flex:1 1 0;min-width:0;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:center}
+      .hs-form > *{width:min(400px, 100% - 32px)}
+      .hs-rule{order:2;display:block;flex:none;width:1px;margin:48px 0;background:rgba(122,92,245,.45)}
+      .hs-brand{order:3;flex:1 1 0;min-width:0;justify-content:center}
+      .hs-brand img{width:168px;height:168px}
+      .hs-brand b{font-size:34px}
     }
+    /* the edge lines pinned to the corners */
+    .hs-e{position:absolute;z-index:-1;pointer-events:none;overflow:visible}
+    .hs-e path{fill:none;stroke:var(--hs-edge);stroke-width:1;stroke-linecap:round;stroke-linejoin:round}
+    .hs-e.tl{left:0;top:0;width:66px;height:82px}
+    .hs-e.r{right:0;top:132px;width:56px;height:162px}
+    .hs-e.bl{left:0;bottom:0;width:42px;height:150px}
+    .hs-e.br{right:0;bottom:0;width:42px;height:150px}
+    .hs-e.bl,.hs-e.br{-webkit-mask-image:linear-gradient(#000 10%,transparent 90%);mask-image:linear-gradient(#000 10%,transparent 90%)}
+    @media (min-width:900px){.hs-e.r{top:30%}}
   </style>
 </head>
 <body>
+{% set _msgs = get_flashed_messages(with_categories=true) %}
+{% set _has_err = _msgs|selectattr(0, 'in', ['error','danger'])|list|length > 0 %}
+<main class="hs" dir="{{ text_dir }}">
+  <svg class="hs-e tl" viewBox="0 0 66 82" aria-hidden="true"><path d="M-2 38 L52 72 Q64 80 64 66 L65 -2"/></svg>
+  <svg class="hs-e r" viewBox="0 0 56 162" aria-hidden="true"><path d="M58 0 L14 27 Q2 34 2 48 L2 108 Q2 122 14 129 L58 160"/></svg>
+  <svg class="hs-e bl" viewBox="0 0 42 150" aria-hidden="true"><path d="M-2 0 L30 24 Q40 32 40 46 L40 152"/></svg>
+  <svg class="hs-e br" viewBox="0 0 42 150" aria-hidden="true"><path d="M44 0 L12 24 Q2 32 2 46 L2 152"/></svg>
 
-  <header class="topbar">
+  <div class="hs-top">
     {% set _cur_lang = LANGUAGES.get(current_locale, {}) %}
     <details class="lang">
       <summary aria-label="{{ _('تغيير اللغة') }}">
         <span>{{ _cur_lang.get('name', current_locale) }}</span>
-        <i class="fa-solid fa-globe" aria-hidden="true"></i>
-        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <nav class="lang-menu" aria-label="{{ _('اللغة') }}">
         {% for code in SUPPORTED_LOCALES %}
           {% set _lang = LANGUAGES.get(code, {}) %}
-          <a href="{{ url_for('radius.set_locale', locale=code, next=request.path) }}"
-             {% if code == current_locale %}aria-current="true"{% endif %}>
-            <span aria-hidden="true">{{ _lang.get('flag', '🌐') }}</span>
-            <span>{{ _lang.get('name', code) }}</span>
+          <a href="{{ url_for('radius.set_locale', locale=code, next=request.path) }}"{% if code == current_locale %} aria-current="true"{% endif %}>
+            <span aria-hidden="true">{{ _lang.get('flag', '🌐') }}</span><span>{{ _lang.get('name', code) }}</span>
           </a>
         {% endfor %}
       </nav>
     </details>
-  </header>
+  </div>
 
-  <main class="login-card">
+  <div class="hs-wrap">
+    <header class="hs-brand">
+      <img src="{{ url_for('static', filename='img/login/mark-on-dark.svg') }}" alt="" width="112" height="112">
+      <b lang="en">HOBE RADIUS</b>
+      <i aria-hidden="true"></i>
+      <span lang="ar" dir="rtl">{{ _('إدارة شبكتك تبدأ من هنا') }}</span>
+    </header>
+    <span class="hs-rule" aria-hidden="true"></span>
+    <section class="hs-form" aria-labelledby="authH">
+      <h1 id="authH">{{ _('مرحبًا بعودتك') }}</h1>
+      <p class="hs-sub">{{ _('أدخل اسم المستخدم وكلمة المرور للمتابعة') }}</p>
+      <div class="hs-body">
+        <form method="post" action="{{ url_for('radius.auth_login') }}" data-login-form novalidate>
+          <div class="hb-auth-field">
+            <label for="lg-user">{{ _('اسم المستخدم') }}</label>
+            <div class="hb-auth-input">
+              <input id="lg-user" type="text" name="username" value="{{ username or '' }}" required autofocus
+                     autocomplete="username" autocapitalize="none" spellcheck="false" dir="ltr" maxlength="128"
+                     {% if _has_err %}aria-invalid="true" aria-describedby="lg-err"{% endif %}>
+              <span class="hb-auth-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.4-3.6 4.4-5.5 8-5.5s6.6 1.9 8 5.5"/></svg></span>
+            </div>
+          </div>
+          <div class="hb-auth-field">
+            <label for="lg-pwd">{{ _('كلمة المرور') }}</label>
+            <div class="hb-auth-input">
+              <input id="lg-pwd" type="password" name="password" required autocomplete="current-password" dir="ltr" maxlength="256"
+                     {% if _has_err %}aria-invalid="true" aria-describedby="lg-err"{% endif %}>
+              <button type="button" class="hb-auth-eye" data-pwd-toggle aria-controls="lg-pwd" aria-pressed="false"
+                      aria-label="{{ _('إظهار كلمة المرور') }}" title="{{ _('إظهار كلمة المرور') }}"
+                      data-label-show="{{ _('إظهار كلمة المرور') }}" data-label-hide="{{ _('إخفاء كلمة المرور') }}">
+                <svg data-eye-open viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg data-eye-off hidden viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.6A10.6 10.6 0 0112 5.5c6.4 0 10 6.5 10 6.5a17 17 0 01-3.2 3.9M6.2 6.9C3.6 8.6 2 12 2 12s3.6 6.5 10 6.5c1.7 0 3.2-.4 4.5-1.1"/><path d="M9.9 9.9a3 3 0 004.2 4.2"/></svg>
+              </button>
+            </div>
+          </div>
 
-    <section class="form-side">
-      <div class="product">
-        <span>HOBE RADIUS</span>
-        <img src="{{ url_for('static', filename='img/login/mark-on-light.svg') }}" alt="" width="52" height="52">
-      </div>
-
-      <div class="form-head">
-        <h1>{{ _('مرحبًا بعودتك') }}</h1>
-        <p>{{ _('سجّل دخولك إلى HOBE RADIUS') }}</p>
-      </div>
-
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-stack" role="alert">
-            {% for cat, msg in messages %}
-              <div class="flash flash-{{ cat }}">
-                <i class="fa-solid fa-{% if cat in ['error','danger'] %}circle-exclamation
-                            {%- elif cat == 'success' %}circle-check
-                            {%- elif cat == 'warning' %}triangle-exclamation
-                            {%- else %}circle-info{% endif %}" aria-hidden="true"></i>
-                <span>{{ msg }}</span>
-              </div>
+          <div id="lg-err" role="alert" aria-live="polite">
+            {% for cat, msg in _msgs %}
+              {% if cat in ['error','danger'] %}
+                <div class="hb-auth-err"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg><span>{{ msg }}</span></div>
+              {% else %}
+                <div class="hb-auth-note{% if cat == 'warning' %} warn{% endif %}"><span>{{ msg }}</span></div>
+              {% endif %}
             {% endfor %}
           </div>
-        {% endif %}
-      {% endwith %}
 
-      <form method="post" action="{{ url_for('radius.auth_login') }}" data-login-form>
-
-        <div class="field">
-          <label for="lg-user">{{ _('اسم المستخدم') }}</label>
-          <div class="field-wrap">
-            <input id="lg-user" type="text" name="username"
-                   value="{{ username or '' }}" required autofocus
-                   autocomplete="username" autocapitalize="none" spellcheck="false"
-                   placeholder="{{ _('مثال: admin') }}">
-            <span class="ico" aria-hidden="true"><i class="fa-regular fa-user"></i></span>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="lg-pwd">{{ _('كلمة المرور') }}</label>
-          <div class="field-wrap">
-            <input id="lg-pwd" type="password" name="password" required
-                   autocomplete="current-password" placeholder="••••••••">
-            <button type="button" class="pwd-toggle" data-pwd-toggle
-                    aria-controls="lg-pwd" aria-pressed="false"
-                    aria-label="{{ _('إظهار كلمة المرور') }}"
-                    data-label-show="{{ _('إظهار كلمة المرور') }}"
-                    data-label-hide="{{ _('إخفاء كلمة المرور') }}">
-              <i class="fa-regular fa-eye" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
-
-        <button class="submit-btn" type="submit" data-login-submit>
-          <span>{{ _('تسجيل الدخول') }}</span>
-          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-        </button>
-      </form>
+          <button class="hb-auth-btn" type="submit" data-login-submit data-busy-label="{{ _('جارٍ تسجيل الدخول…') }}">
+            <span>{{ _('تسجيل الدخول') }}</span>
+            <span class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>
+          </button>
+        </form>
+      </div>
     </section>
+  </div>
 
-    <aside class="brand-side" role="img" aria-label="HOBE RADIUS — {{ _('إدارة شبكتك تبدأ من هنا') }}">
-      <span class="sr-only">HOBE RADIUS — {{ _('إدارة شبكتك تبدأ من هنا') }}</span>
-    </aside>
-
-  </main>
-
-  <footer class="hobe-group-endorsement" dir="rtl">
-    <span class="fam" lang="ar">من عائلة</span>
-    <span class="grp" dir="ltr" lang="en"><b>HOBE</b> TECHNOLOGIES</span>
-    <img src="{{ url_for('static', filename='img/login/mark-on-dark.svg') }}" alt="" width="20" height="20">
+  <footer class="hobe-family" dir="rtl">
+    <p>
+      <img class="ht" src="{{ url_for('static', filename='img/login/ht-monogram.svg') }}" alt="" width="18" height="18">
+      <span lang="ar">من عائلة <bdi lang="en" dir="ltr"><b>HOBE</b> TECHNOLOGIES</bdi></span>
+    </p>
   </footer>
+</main>
 
 <script>
 (function () {
@@ -289,13 +255,27 @@
     var show = i.type === "password";
     i.type = show ? "text" : "password";
     t.setAttribute("aria-pressed", show ? "true" : "false");
-    t.setAttribute("aria-label", t.getAttribute(show ? "data-label-hide" : "data-label-show"));
-    var ico = t.querySelector("i");
-    if (ico) { ico.classList.toggle("fa-eye", !show); ico.classList.toggle("fa-eye-slash", show); }
+    var words = t.getAttribute(show ? "data-label-hide" : "data-label-show");
+    t.setAttribute("aria-label", words); t.title = words;
+    t.querySelector("[data-eye-open]").hidden = show;
+    t.querySelector("[data-eye-off]").hidden = !show;
+    i.focus({ preventScroll: true });
   });
   var f = document.querySelector("[data-login-form]");
   var b = document.querySelector("[data-login-submit]");
-  if (f && b) f.addEventListener("submit", function () { b.disabled = true; });
+  var u = document.getElementById("lg-user");
+  if (f && b) f.addEventListener("submit", function (e) {
+    if (!u.value.trim() || !i.value) {
+      e.preventDefault();
+      (u.value.trim() ? i : u).setAttribute("aria-invalid", "true");
+      (u.value.trim() ? i : u).focus();
+      return;
+    }
+    b.disabled = true; b.setAttribute("aria-busy", "true");
+    b.innerHTML = '<span class="spin" aria-hidden="true"></span><span></span>';
+    b.lastChild.textContent = b.getAttribute("data-busy-label");
+  });
+  [u, i].forEach(function (el) { if (el) el.addEventListener("input", function () { el.removeAttribute("aria-invalid"); }); });
 })();
 </script>
 <script src="{{ url_for('static', filename='js/latin_digits.js', v='3') }}"></script>

@@ -53102,3 +53102,11 @@ msgstr "Inicia sesión en HOBE RADIUS"
 #: app/templates/radius/login.html:268
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr "La gestión de tu red empieza aquí"
+
+#: app/templates/radius/login.html:196
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr "Introduce tu usuario y contraseña para continuar"
+
+#: app/templates/radius/login.html:232
+msgid "جارٍ تسجيل الدخول…"
+msgstr "Iniciando sesión…"
