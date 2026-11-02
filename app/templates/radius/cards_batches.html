@@ -51,6 +51,35 @@
     background: var(--hub-bg-soft, #f8fafc);
   }
   .cg-form--embed{ max-width: none; }
+  /* ─── أزرار كرت الحزمة (المالك 2026-11-02: «شوف شكل الأزرار») ───
+     ① «نقل للسلّة» و«حذف نهائيّ» زرّا submit داخل نموذج، فتلتقطهما قاعدةُ
+        style_unification العامّة (‎.main button[type=submit]:not(...)‎) وتصبغهما
+        بنفسجيًّا بخصوصيّةٍ تغلب أيَّ صنف — فضاع أحمرُ الحذف. !important هنا
+        محصورٌ في أزرار كروت الحزم وقائمة صفّ الجدول وحدها.
+     ② الصفُّ أربعةُ أعمدةٍ متساوية، فوقع الزرّان في السطر الثاني بعمودٍ ضيّق
+        يُقصّ نصَّهما: كلٌّ منهما يأخذ عمودين (نصفَ السطر)، وحشوُ الأزرار أقلّ
+        كي لا يخرج «تصدير» عن حافّة الكرت حين تضيق الكروت. */
+  .batches-ops .batch-card__actions .batch-action{ padding: 0 5px; gap: 4px; justify-content: center; }
+  .batches-ops .batch-card__actions form .batch-action{ grid-column: span 2; }
+  .batches-ops .batch-card__actions button[type="submit"].batch-action{
+    background: #fff !important;
+    color: var(--batch-ink, #172033) !important;
+    border: 1px solid var(--hub-border, #e2e8f0) !important;
+    box-shadow: 0 8px 20px rgba(20,20,60,.08) !important;
+  }
+  .batches-ops .batch-card__actions button[type="submit"].batch-action--danger{
+    background: #fff5f5 !important;
+    border-color: #fecaca !important;
+    color: var(--batch-red, #dc2626) !important;
+  }
+  .batches-ops .batch-card__actions button[type="submit"].batch-action:hover{ filter: brightness(.97); }
+  .bops-menu__list button[type="submit"].bops-menu__item{
+    background: transparent !important; color: var(--hub-text, #0f172a) !important;
+    border: 0 !important; box-shadow: none !important;
+  }
+  .bops-menu__list button[type="submit"].bops-menu__item:hover{ background: var(--hub-bg-soft, #f4f5fb) !important; }
+  .bops-menu__list button[type="submit"].bops-menu__item--danger,
+  .bops-menu__list button[type="submit"].bops-menu__item--danger i{ color: #b91c1c !important; }
   /* ثلاثةُ أزرارٍ ومفتاحُ العرض لا تتّسع لسطرٍ واحدٍ على الهاتف (أُضيف «فحص
      بطاقة»): الأزرارُ سطرٌ، ومفتاحُ «جدول/بطاقات» سطرٌ تحتها بعرضٍ كامل. */
   @media (max-width: 720px){
