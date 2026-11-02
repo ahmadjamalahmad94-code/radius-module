@@ -31,7 +31,6 @@
   .batches-overview__head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin: 0 2px 12px; }
   .batches-overview__head h2{ margin:0; font-size:17px; font-weight:900; color: var(--hub-text, #0f172a); }
   .batches-overview__head h2 i{ color: var(--hub-brand, #2BAACC); margin-inline-end:6px; }
-  .batches-overview__head p{ margin:0; font-size:12.5px; color: var(--hub-text-mute, #64748b); }
   .batches-overview__status{ padding: 18px; text-align:center; color: var(--hub-text-mute, #64748b);
     border:1px dashed var(--hub-border, #e2e8f0); border-radius: var(--hub-r-card, 14px); background:#fff; }
 </style>
@@ -914,7 +913,6 @@
            data-overview-src="{{ url_for('radius.cards_overview', fragment='1') }}">
     <header class="batches-overview__head">
       <h2 id="batchesOverviewTitle"><i class="fa-solid fa-chart-pie"></i> {{ _('نظرة عامة') }}</h2>
-      <p>{{ _('مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.') }}</p>
     </header>
     <div class="batches-overview__body" data-overview-body>
       <p class="batches-overview__status" data-overview-status>
