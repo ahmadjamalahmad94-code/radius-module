@@ -394,6 +394,15 @@ def _profiles_enrich_map(prof: SourceTable) -> dict[str, str]:
             out["exp_count"] = exp_count
         if exp_code:
             out["exp_code"] = exp_code
+    # نوع الخدمة: adv يعلّم كلّ بروفايل بـ work_in_pp (برود باند) و work_in_ht
+    # (هوت سبوت). بدونهما تورَث القيمة الافتراضيّة «Hotspot» لكلّ باقة، فتظهر
+    # باقاتُ ‏PPPoE ومشتركوها هوت سبوت («خالد نت» 2026-11-02).
+    work_pp = pick("work_in_pp", "work_in_ppp", "is_pppoe", "pppoe")
+    if work_pp:
+        out["work_pp"] = work_pp
+    work_ht = pick("work_in_ht", "work_in_hotspot", "is_hotspot", "hotspot")
+    if work_ht:
+        out["work_ht"] = work_ht
     return out
 
 

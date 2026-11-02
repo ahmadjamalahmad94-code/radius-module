@@ -117,24 +117,32 @@ def parse_rate_limit(s: str) -> tuple[Parsed, Parsed]:
     """يحلّل قيمة ``Mikrotik-Rate-Limit`` (radreply/radgroupreply) → (نزول, رفع).
 
     الصيغة القياسيّة لـMikroTik: عدّة حقول مفصولة بمسافات، أوّلها الحدّ الأساس
-    ``rx-rate/tx-rate`` (نزول/رفع من منظور المشترك). مثال::
+    ``rx-rate/tx-rate``. مثال::
 
-        "7500k/7500k 0k/0k 0k/0k 0/0 8"   →  الحقل-1 = "7500k/7500k"
+        "4048k/5150k 0k/0k 0k/0k 0/0 8"   →  الحقل-1 = "4048k/5150k"
 
-    نأخذ **الحقل الأوّل** ونقسمه على ``/``: الطرف الأوّل = النزول، الثاني = الرفع.
+    🔴 ``rx`` هو ما **يستقبله الراوتر** من المشترك = رفعُ المشترك، و``tx`` ما
+    يرسله إليه = نزولُه. أي **الطرف الأوّل رفعٌ والثاني نزول** — عكس ما كانت
+    هذه الدالّة تقرأه. كلّ باقةٍ غير متناظرة وصلت بنزولٍ ورفعٍ مقلوبين: «خالد
+    نت» 2026-11-02، باقة ``5M/Ppp`` المخزّنة ``4048k/5150k`` (= نزول 5150)
+    استُوردت نزول 4048، فصار مشتركٌ يدفع ثمن 5M ينزّل بـ4 ميجا. وعمود
+    ``profiles.down_speed`` في adv كان 5150 — أي الأعمدةُ كانت صحيحة والقراءةُ
+    هي المعكوسة. ومُصدِرُنا يبني ``f"{speed_up}k/{speed_down}k"`` (رفع أوّلًا)،
+    فالذهاب والعودة كانا يُنتجان قلبًا.
+
     كلّ طرف يُمرَّر عبر :func:`parse_speed` (k=kbps، m=mbps، g=gbps، بلا وحدة=رقم
     خام). ``0/0`` → (0, 0) أي «غير محدود» في HobeRadius. طرفٌ مفقود يَرِث الآخر.
 
     السرعة تُقرأ من هذه السمة المخزَّنة (ما تُنفّذه FreeRADIUS فعلًا) لا من اسم
-    الباقة ولا من أعمدة profiles (التي قد تكون معكوسة النزول/الرفع)."""
+    الباقة ولا من أعمدة profiles."""
     raw = str(s or "").strip()
     if not raw:
         empty = Parsed(ok=False, raw=raw)
         return empty, empty
     field1 = raw.split()[0]
-    down_s, sep, up_s = field1.partition("/")
-    down = parse_speed(down_s)
-    up = parse_speed(up_s) if (sep and up_s.strip()) else parse_speed(down_s)
+    up_s, sep, down_s = field1.partition("/")
+    up = parse_speed(up_s)
+    down = parse_speed(down_s) if (sep and down_s.strip()) else parse_speed(up_s)
     return down, up
 
 

@@ -122,11 +122,17 @@ class TestDate:
 
 
 class TestRateLimit:
-    """‏Mikrotik-Rate-Limit: الحقل-1 ``down/up`` — أساس سرعة الباقة."""
+    """‏Mikrotik-Rate-Limit: الحقل-1 ``rx/tx`` = ``up/down`` — أساس سرعة الباقة."""
 
-    def test_field1_down_up_kbps(self):
+    def test_field1_is_up_then_down(self):
+        # rx (الأوّل) = رفعُ المشترك، tx (الثاني) = نزوله.
         d, u = vp.parse_rate_limit("2000k/3000k 0k/0k 0k/0k 0/0 8")
-        assert d.value == 2000 and u.value == 3000        # down=field-1[0]
+        assert d.value == 3000 and u.value == 2000
+
+    def test_khaled_net_5m_plan(self):
+        # الباقة التي كشفت القلب: ‏«5M/Ppp» مخزّنة ‏4048k/5150k ⇒ نزول 5150.
+        d, u = vp.parse_rate_limit("4048k/5150k 0k/0k 0k/0k 0/0 8")
+        assert (d.value, u.value) == (5150, 4048)
 
     def test_symmetric(self):
         d, u = vp.parse_rate_limit("7500k/7500k 0k/0k 0k/0k 0/0 8")
@@ -134,7 +140,7 @@ class TestRateLimit:
 
     def test_mbps_units(self):
         d, u = vp.parse_rate_limit("5M/1M")
-        assert (d.value, u.value) == (5000, 1000)
+        assert (d.value, u.value) == (1000, 5000)
 
     def test_unlimited_zero(self):
         d, u = vp.parse_rate_limit("0/0 0k/0k 0k/0k 0/0 8")
@@ -142,7 +148,7 @@ class TestRateLimit:
 
     def test_large_kbps(self):
         d, u = vp.parse_rate_limit("100000k/50000k")
-        assert (d.value, u.value) == (100000, 50000)
+        assert (d.value, u.value) == (50000, 100000)
 
     def test_empty(self):
         d, u = vp.parse_rate_limit("")

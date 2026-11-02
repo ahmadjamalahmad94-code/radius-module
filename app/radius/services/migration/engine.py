@@ -533,6 +533,16 @@ def _plan_attrs(c) -> dict:
     d = vp.parse_duration(c.fields.get("validity_days", ""))
     if d.ok:
         attrs["validity_days"] = int(d.value.get("days", 0))
+    # نوع الخدمة (hotspot/pppoe) — بلا تمريره ترث الباقة «Hotspot» الافتراضيّة
+    # وتظهر باقاتُ البرود باند ومشتركوها هوت سبوت. المصدر: علامتا adv
+    # ‏work_in_pp/work_in_ht (انظر ``_profile_service_type``).
+    svc = str(c.fields.get("service_type", "") or "").strip()
+    if svc:
+        from ..plans import scope_from_service_type
+        attrs["service_type"] = svc
+        attrs["service_scope"] = scope_from_service_type(svc)
+        attrs["ppp_enabled"] = svc == "PPPoE"
+        attrs["hotspot_enabled"] = svc == "Hotspot"
     return attrs
 
 
@@ -826,6 +836,21 @@ def _subscriber_meta(c) -> dict:
     return meta
 
 
+def _plan_service_type(tenant_id: int, plan_id) -> str:
+    """نوع خدمة الباقة ("Hotspot"/"PPPoE") أو "" إن لم تُحلّ الباقة.
+
+    يُقرأ ليُورَث للمشترك؛ فشلُ القراءة لا يُسقط الترحيل — تبقى القيمة
+    الافتراضيّة كما كانت."""
+    if not plan_id or int(plan_id) <= 0:
+        return ""
+    try:
+        from ...db.repos import plans_repo
+        p = plans_repo.get_plan(tenant_id, int(plan_id))
+        return str(getattr(p, "service_type", "") or "").strip()
+    except Exception:  # noqa: BLE001 — إثراءٌ لا شرط
+        return ""
+
+
 def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
     from ...db.repos import subscribers_repo
     from ...core.types import Subscriber
@@ -912,6 +937,10 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         return ch
 
     _now = datetime.utcnow()
+    # نوع الخدمة يُورَث من الباقة: مشترك برود باند يجب أن يُحفظ ‏PPPoE في بياناته
+    # لا هوت سبوت (طلب المالك 2026-11-02 بعد «خالد نت»، حيث كان كلّ مشترك
+    # هوت سبوت لأنّ الباقة نفسها استُوردت هوت سبوت).
+    svc_type = _plan_service_type(tenant_id, plan_id)
     existing = subscribers_repo.get_subscriber(tenant_id, username)
     if existing is not None:
         idmap[SEC_SUBSCRIBERS][c.natural_key] = int(existing.id or 0)
@@ -920,6 +949,8 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         changes = _text_changes()
         if password:
             changes["password"] = password
+        if svc_type:
+            changes["service_type"] = svc_type
         if plan_id:
             changes["plan_id"] = plan_id
         if manager_id:
@@ -940,6 +971,7 @@ def _commit_subscriber(tenant_id, c, mode, idmap, actor, dry_run):
         mobile=str(c.fields.get("mobile", "") or ""),
         email=str(c.fields.get("email", "") or ""),
         address=str(c.fields.get("address", "") or ""),
+        **({"service_type": svc_type} if svc_type else {}),
         # status derived from the source flag + expiry: a past expire_at
         # imports as 'expired' (not 'enabled') — the «كله فعّال» fix.
         status=vp.derive_status(c.fields.get("status", ""),

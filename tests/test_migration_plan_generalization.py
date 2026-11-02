@@ -67,7 +67,7 @@ def _synthetic_adv_db() -> bytes:
               ('CARD02','Fiber-100',1,102);
               -- CARD_ORPHAN غير موجود في radusergroup → لا يُعَدّ كرتًا.
 
-            -- radgroupreply: السرعة الموثوقة (field-1 = down/up). وحدات مختلفة.
+            -- radgroupreply: السرعة الموثوقة (field-1 = rx/tx = up/down). وحدات مختلفة.
             INSERT INTO radgroupreply (groupname,attribute,op,value) VALUES
               ('Bronze','Mikrotik-Rate-Limit',':=','1000k/2000k 0k/0k 0k/0k 0/0 8'),
               ('Silver','Mikrotik-Rate-Limit',':=','5M/1M'),
@@ -75,12 +75,14 @@ def _synthetic_adv_db() -> bytes:
               ('Fiber-100','Mikrotik-Rate-Limit',':=','100000k/50000k 0k/0k 0k/0k 0/0 8'),
               ('Silver','Framed-Pool',':=','block');
 
-            -- profiles: السعر/الكوتا/الصلاحية للإثراء — والسرعة معكوسة عمدًا.
+            -- profiles: السعر/الكوتا/الصلاحية للإثراء — والسرعة أرقامٌ غريبة
+            -- عمدًا (لا تساوي ولا تَقلب قيم radgroupreply) ليَسقط الاختبار بوضوح
+            -- لو قرأها المستورد يومًا بدل السمة المخزَّنة.
             INSERT INTO profiles (profile_name,price,profile_qouta,exp_unit,exp_unit_val,down_speed,up_speed) VALUES
-              ('Bronze',10,5000,2,3,'2000','1000'),
-              ('Silver',20,0,1,3,'1000','5000'),
-              ('Gold-Unlimited',50,0,6,3,'0','0'),
-              ('Fiber-100',100,200000,1,3,'50000','100000');
+              ('Bronze',10,5000,2,3,'777','888'),
+              ('Silver',20,0,1,3,'777','888'),
+              ('Gold-Unlimited',50,0,6,3,'777','888'),
+              ('Fiber-100',100,200000,1,3,'777','888');
 
             INSERT INTO managers (id,user_manager,full_name) VALUES
               (1,'boss','The Boss'),
@@ -172,11 +174,13 @@ class TestClassifyGeneralizes:
 # ── سرعة الباقة من radgroupreply لا من profiles/الاسم ─────────────────
 
 class TestPlanSpeedAuthority:
+    # الحقل-1 هو ``rx/tx``: rx ما يستقبله الراوتر = رفعُ المشترك، وtx نزوله.
+    # فالطرف الأوّل رفعٌ والثاني نزول — (نزول, رفع) أدناه.
     EXPECT = {
-        "Bronze": (1000, 2000),           # 1000k/2000k
-        "Silver": (5000, 1000),           # 5M/1M → mbps
+        "Bronze": (2000, 1000),           # 1000k/2000k
+        "Silver": (1000, 5000),           # 5M/1M → mbps
         "Gold-Unlimited": (0, 0),         # 0/0 → غير محدود
-        "Fiber-100": (100000, 50000),     # 100000k/50000k
+        "Fiber-100": (50000, 100000),     # 100000k/50000k
     }
 
     def test_speeds_from_rate_limit(self, app_ctx):
@@ -190,9 +194,11 @@ class TestPlanSpeedAuthority:
                    "FROM access_plans WHERE tenant_id=1").fetchall()}
         for name, spd in self.EXPECT.items():
             assert got.get(name) == spd, f"{name}: توقّع {spd} وجد {got.get(name)}"
-        # الأعمدة المعكوسة في profiles لم تُستعمَل: Bronze لن تكون (2000,1000).
-        assert got["Bronze"] != (2000, 1000)
-        assert got["Silver"] != (1000, 5000)
+        # أعمدة profiles لم تُستعمَل: لا باقة تحمل أرقامها الغريبة (777/888).
+        for name in self.EXPECT:
+            assert got.get(name) != (777, 888), f"{name}: قُرئت سرعتها من profiles"
+            assert got.get(name) != (888, 777), f"{name}: قُرئت سرعتها من profiles"
+
 
     def test_quota_and_validity_from_columns(self, app_ctx):
         res = engine.analyze(_synthetic_adv_db(), "adv2.db")
@@ -231,7 +237,7 @@ class TestFieldFidelityAndIdempotency:
         assert s["password"] == "secretA"                    # radcheck بالضبط
         pl = DB().execute("SELECT name,speed_down_kbps,speed_up_kbps FROM access_plans "
                           "WHERE id=?", (s["plan_id"],)).fetchone()
-        assert pl["name"] == "Silver" and (pl["speed_down_kbps"], pl["speed_up_kbps"]) == (5000, 1000)
+        assert pl["name"] == "Silver" and (pl["speed_down_kbps"], pl["speed_up_kbps"]) == (1000, 5000)
         mg = DB().execute("SELECT username FROM admins WHERE id=?", (s["manager_id"],)).fetchone()
         assert mg["username"] == "boss"                      # creationby=1 → managers.id 1
         assert str(s["expire_at"]).startswith("2027-12-31")  # Expiration بالوقت محلّل
@@ -255,7 +261,7 @@ class TestFieldFidelityAndIdempotency:
         assert c2 and c2["password"] == "2222"
         p2 = DB().execute("SELECT speed_down_kbps,speed_up_kbps FROM access_plans WHERE id=?",
                           (c2["plan_id"],)).fetchone()
-        assert (p2["speed_down_kbps"], p2["speed_up_kbps"]) == (100000, 50000)
+        assert (p2["speed_down_kbps"], p2["speed_up_kbps"]) == (50000, 100000)
 
         # لا مدير اسمه رقم (creationby الرقميّ حُلّ لاسم دخول).
         mgr = [a.username for a in __import__(
@@ -312,7 +318,7 @@ class TestCardBatchGrouping:
         assert g["by_"] == "boss"                      # created_by=1 → boss
         f = batch_of("CARD02")
         assert f["nm"] == "ألياف"
-        assert f["pn"] == "Fiber-100" and (f["d"], f["u"]) == (100000, 50000)
+        assert f["pn"] == "Fiber-100" and (f["d"], f["u"]) == (50000, 100000)
         assert f["by_"] == "reseller_x"                # created_by=7 → reseller_x
         # لا حاوية «كروت مستورَدة» مُحشورة، وكل حزمة كرت واحد.
         lumped = DB().execute(

@@ -564,7 +564,7 @@ def _build_freeradius_plans(dataset: SourceDataset,
             if grp:
                 bucket(grp)
 
-    # 3) profiles → إثراء السعر/الكوتا/الصلاحية بالاسم.
+    # 3) profiles → إثراء السعر/الكوتا/الصلاحية/نوع الخدمة بالاسم.
     prof = dataset.table(cm.get("_profiles_table", "")) if cm.get("_profiles_table") else None
     if prof is not None:
         pmap = {k[3:]: v for k, v in cm.items() if k.startswith("pn:")}
@@ -585,10 +585,36 @@ def _build_freeradius_plans(dataset: SourceDataset,
                     vstr = _profile_validity(r, pmap)
                     if vstr:
                         b["validity_days"] = vstr
+                if "service_type" not in b:
+                    svc = _profile_service_type(r, pmap)
+                    if svc:
+                        b["service_type"] = svc
 
     return [Candidate(section=match.section, natural_key=k,
                       fields=plans[k], source_ref=plans[k].get("name", ""))
             for k in order]
+
+
+def _profile_service_type(row: dict, pmap: dict) -> str:
+    """نوع خدمة الباقة من علامتي adv ``work_in_pp``/``work_in_ht``.
+
+    بلا هذه القراءة ترث كلّ باقةٍ «Hotspot» (القيمة الافتراضيّة في
+    :class:`AccessPlan`)، فتظهر باقاتُ البرود باند ومشتركوها هوت سبوت — وهو ما
+    حدث في «خالد نت»: ``3M/Ppp`` و``5M/Ppp`` و``8mppp`` كلّها Hotspot، ومشتركو
+    ‏PPPoE معها. باقةٌ تعمل في الاثنين تبقى «Hotspot» (الأوسع في محرّك السياسة)،
+    وبلا علامةٍ واضحةٍ لا نخمّن: نُعيد «» فتبقى القيمة الافتراضيّة."""
+    def flag(key: str) -> bool:
+        col = pmap.get(key)
+        if not col:
+            return False
+        return str(row.get(col, "") or "").strip() not in ("", "0", "0.0", "false", "False")
+
+    pp, ht = flag("work_pp"), flag("work_ht")
+    if pp and not ht:
+        return "PPPoE"
+    if ht and not pp:
+        return "Hotspot"
+    return ""
 
 
 def _profile_validity(row: dict, pmap: dict) -> str:
