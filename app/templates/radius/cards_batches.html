@@ -533,7 +533,7 @@
                 </form>{% endif %}
               {% endif %}
               {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-              {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
+              {% if can_submit('radius.cards_batches_bulk', 'POST') and can_delete_permanently() %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                 <input type="hidden" name="return_to" value="{{ request.full_path }}">
                 <input type="hidden" name="batch_ids" value="{{ b.id }}">
                 <input type="hidden" name="bulk_action" value="purge">
@@ -760,7 +760,7 @@
                         </form>{% endif %}
                       {% endif %}
                       {# حذف نهائيّ (بلا رجعة) — يمحو الحزمة وكلّ بطاقاتها من القاعدة #}
-                      {% if can_submit('radius.cards_batches_bulk', 'POST') %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
+                      {% if can_submit('radius.cards_batches_bulk', 'POST') and can_delete_permanently() %}<form method="post" action="{{ url_for('radius.cards_batches_bulk') }}">
                         <input type="hidden" name="return_to" value="{{ request.full_path }}">
                         <input type="hidden" name="batch_ids" value="{{ b.id }}">
                         <input type="hidden" name="bulk_action" value="purge">

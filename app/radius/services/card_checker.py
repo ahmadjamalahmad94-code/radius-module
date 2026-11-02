@@ -19,6 +19,14 @@ from .card_accounting import (
 from .device_fingerprint import infer_device
 
 
+def _can_delete_permanently_now() -> bool:
+    from flask import has_request_context
+    if not has_request_context():
+        return True
+    from .front_owner import session_can_delete_permanently
+    return session_can_delete_permanently()
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
@@ -726,7 +734,9 @@ def check_card(tenant_id: int, query: str, *, card_id: int | None = None) -> dic
             "can_edit_identity": True,
             "can_disable": not bool(record.get("card_revoked")),
             "can_enable": bool(record.get("card_revoked")),
-            "can_delete_permanently": True,
+            # (02/11) مَن يقدر عليه فعلًا: مالك الخادم/الشريك أو مالك الواجهة (الطريق
+            # نفسه يرفض غيرهم بـ403، فلا يُعرض زرّ لا يعمل). خارج طلب ⇒ True كما كان.
+            "can_delete_permanently": _can_delete_permanently_now(),
         },
         "accounting_summary": _summary(accounting_summary, sessions, macs),
         "data_sources": data_sources,

@@ -1437,6 +1437,12 @@ def _is_owner_session() -> bool:
     return bool(_session.get("is_super_admin"))
 
 
+def _can_delete_permanently() -> bool:
+    """الحذف النهائيّ (بلا رجعة): مالك الخادم/الشريك، أو مالك الواجهة الحاليّة."""
+    from ..services.front_owner import session_can_delete_permanently
+    return session_can_delete_permanently()
+
+
 def _selected_batch_ids() -> list[int]:
     ids: list[int] = []
     for raw in request.form.getlist("batch_ids"):
@@ -1474,8 +1480,9 @@ def cards_batches_bulk():
         elif action == "purge":
             # حذف نهائيّ (بلا رجعة): يمحو الحزمة وكلّ بطاقاتها وأثرها من القاعدة.
             # p01/D25: عمليّة لا رجعة فيها → للمالك/المالك المشارك وحده، لا
-            # لمجرّد حامل cards.batch_ops + bulk.ops.
-            if not _is_owner_session():
+            # لمجرّد حامل cards.batch_ops + bulk.ops. (02/11) ومالك الواجهة داخل
+            # واجهته (services/front_owner.py)؛ purge_batch محصور بـ_tid().
+            if not _can_delete_permanently():
                 abort(403)
             from ..db.repos import cards_repo as _cards_repo
             removed_cards = 0
@@ -1815,8 +1822,9 @@ def _handle_card_operation():
             query = ""
         elif action == "delete_permanent":
             # Hard-delete path retained for the recycle bin screen.
-            # p01/D25: irreversible → owner / co-owner only.
-            if not _is_owner_session():
+            # p01/D25: irreversible → owner / co-owner only (02/11: or the owner
+            # of this front, inside it — services/front_owner.py).
+            if not _can_delete_permanently():
                 abort(403)
             confirm_delete = _form_str("confirm_delete")
             if confirm_delete != "حذف البطاقة" and confirm_delete.upper() != "DELETE":

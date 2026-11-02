@@ -1104,6 +1104,9 @@ def _install_stubs(app: Flask) -> None:
     _gating = _inject_manager_grants()
     for _gk in ("can_submit", "can_submit_any", "can_post_here", "can_open"):
         app.jinja_env.globals.setdefault(_gk, _gating[_gk])
+    # (02/11) «حذف نهائيّ» يظهر لمن يقدر عليه فقط: مالك الخادم/الشريك أو مالك الواجهة
+    from .radius.services.front_owner import session_can_delete_permanently as _can_del_perm
+    app.jinja_env.globals.setdefault("can_delete_permanently", _can_del_perm)
 
     import re as _re_gate
     _GATE_A = _re_gate.compile(r'<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>(.*?)</a>', _re_gate.S | _re_gate.I)
