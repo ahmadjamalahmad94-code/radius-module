@@ -52412,3 +52412,11 @@ msgstr "HOBE RADIUS'a giriş yapın"
 #: app/templates/radius/login.html:268
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr "Ağ yönetiminiz burada başlar"
+
+#: app/templates/radius/login.html:196
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr "Devam etmek için kullanıcı adınızı ve şifrenizi girin"
+
+#: app/templates/radius/login.html:232
+msgid "جارٍ تسجيل الدخول…"
+msgstr "Giriş yapılıyor…"

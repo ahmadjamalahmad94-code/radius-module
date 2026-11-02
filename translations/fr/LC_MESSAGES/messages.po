@@ -53413,3 +53413,11 @@ msgstr "Connectez-vous à HOBE RADIUS"
 #: app/templates/radius/login.html:268
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr "La gestion de votre réseau commence ici"
+
+#: app/templates/radius/login.html:196
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr "Saisissez votre nom d'utilisateur et votre mot de passe pour continuer"
+
+#: app/templates/radius/login.html:232
+msgid "جارٍ تسجيل الدخول…"
+msgstr "Connexion…"

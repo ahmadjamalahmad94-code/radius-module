@@ -932,7 +932,7 @@ msgstr ""
 msgid " — بدء النافذة"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1786
+#: app/radius/routes/blueprint.py:1789
 msgid " — بياناتك باقية في النموذج."
 msgstr ""
 
@@ -5390,7 +5390,7 @@ msgid ""
 "ممنوع</h1><p dir=\"rtl\">%(v)s</p>"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1804
+#: app/radius/routes/blueprint.py:1807
 msgid ""
 "<h1 dir=\"rtl\" lang=\"ar\" style=\"font-family:sans-serif\">403 — "
 "ممنوع</h1><p dir=\"rtl\">"
@@ -10783,6 +10783,10 @@ msgstr ""
 msgid "أدخل"
 msgstr ""
 
+#: app/templates/radius/login.html:197
+msgid "أدخل اسم المستخدم وكلمة المرور للمتابعة"
+msgstr ""
+
 #: app/radius/services/general_adjustments.py:66
 msgid "أدخل اسم مستخدم واحدًا على الأقل."
 msgstr ""
@@ -15031,7 +15035,7 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:2865
 #: app/templates/radius/cards_checker_v2.html:2866
-#: app/templates/radius/login.html:259
+#: app/templates/radius/login.html:216
 #: app/templates/radius/portal_subscriber_login.html:274
 msgid "إخفاء كلمة المرور"
 msgstr ""
@@ -15345,7 +15349,7 @@ msgid ""
 "والنطاق."
 msgstr ""
 
-#: app/templates/radius/login.html:272 app/templates/radius/login.html:273
+#: app/templates/radius/login.html:192
 msgid "إدارة شبكتك تبدأ من هنا"
 msgstr ""
 
@@ -15590,7 +15594,7 @@ msgid ""
 "للكروت"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1762
+#: app/radius/routes/blueprint.py:1765
 #: app/templates/radius/forbidden_403.html:17
 #: app/templates/radius/forbidden_403.html:156
 msgid "إذا كنت تتوقع أن هذا خلل، راجع الإدارة."
@@ -16876,7 +16880,7 @@ msgstr ""
 #: app/templates/radius/cards_checker_v2.html:276
 #: app/templates/radius/cards_checker_v2.html:2855
 #: app/templates/radius/cards_checker_v2.html:2856
-#: app/templates/radius/login.html:257 app/templates/radius/login.html:258
+#: app/templates/radius/login.html:215 app/templates/radius/login.html:216
 #: app/templates/radius/portal_subscriber_login.html:244
 #: app/templates/radius/portal_subscriber_login.html:274
 #: app/templates/radius/print_templates.html:1218
@@ -22923,7 +22927,7 @@ msgstr ""
 #: app/templates/radius/docs_message_templates.html:139
 #: app/templates/radius/docs_mikrotik_store.html:431
 #: app/templates/radius/docs_sessions_report.html:124
-#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:240
+#: app/templates/radius/ipchange.html:217 app/templates/radius/login.html:201
 #: app/templates/radius/mt_form.html:76
 #: app/templates/radius/portal_subscriber.html:252
 #: app/templates/radius/portal_subscriber.html:357
@@ -25993,7 +25997,7 @@ msgstr ""
 msgid "الإجراء المُقترح"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1339
+#: app/radius/routes/blueprint.py:1342
 msgid "الإجراء غير ممنوح لحسابك — الصلاحية المطلوبة"
 msgstr ""
 
@@ -35780,7 +35784,7 @@ msgstr ""
 msgid "العمليّات المجمّعة (تعديل/حذف جماعيّ)"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1340
+#: app/radius/routes/blueprint.py:1343
 msgid "العمليّات المجمّعة غير ممنوحة لحسابك (bulk.ops)."
 msgstr ""
 
@@ -37727,7 +37731,7 @@ msgid "اللاحقة %(v)s"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:451
-#: app/templates/radius/login.html:195
+#: app/templates/radius/login.html:176
 msgid "اللغة"
 msgstr ""
 
@@ -43293,7 +43297,7 @@ msgstr ""
 msgid "انتهت صلاحية المصادقة"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:458
+#: app/radius/routes/blueprint.py:461
 msgid "انتهت صلاحية جلستك. سجّل الدخول من جديد."
 msgstr ""
 
@@ -46256,7 +46260,7 @@ msgstr ""
 
 #: app/api/access_control.py:179 app/api/permission_guard.py:805
 #: app/api/v1/loans.py:52 app/api/v1/subscriber_actions.py:182
-#: app/radius/routes/blueprint.py:1341
+#: app/radius/routes/blueprint.py:1344
 msgid "بلغت الحدّ اليوميّ المسموح لهذا الإجراء."
 msgstr ""
 
@@ -50442,7 +50446,7 @@ msgstr ""
 #: app/radius/services/hotspot_addons_extra.py:154
 #: app/radius/services/mikrotik_actions.py:596
 #: app/templates/radius/docs_customer_portal.html:79
-#: app/templates/radius/login.html:266
+#: app/templates/radius/login.html:234
 #: app/templates/radius/portal_card_login.html:289
 #: app/templates/radius/portal_distributor_login.html:122
 #: app/templates/radius/portal_subscriber_login.html:203
@@ -50470,7 +50474,7 @@ msgstr ""
 msgid "تسجيل الدخول — بوابة المشترك · HobeRadius"
 msgstr ""
 
-#: app/templates/radius/login.html:13
+#: app/templates/radius/login.html:14
 msgid "تسجيل الدخول — لوحة Hobe Hub"
 msgstr ""
 
@@ -54865,7 +54869,7 @@ msgid "تغيير الـQR (اختياري)"
 msgstr ""
 
 #: app/templates/admin/_admin_layout.html:435
-#: app/templates/radius/login.html:190
+#: app/templates/radius/login.html:171
 msgid "تغيير اللغة"
 msgstr ""
 
@@ -59787,7 +59791,7 @@ msgstr ""
 msgid "تنفّذ"
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1344
+#: app/radius/routes/blueprint.py:1347
 msgid "تنقصك الصلاحية"
 msgstr ""
 
@@ -61233,6 +61237,10 @@ msgstr ""
 
 #: app/templates/_partials/service_spec_modal.html:368
 msgid "جارٍ تحميل مواصفات الخدمة…"
+msgstr ""
+
+#: app/templates/radius/login.html:233
+msgid "جارٍ تسجيل الدخول…"
 msgstr ""
 
 #: app/templates/radius/mt_push_setup.html:161
@@ -73306,7 +73314,7 @@ msgid ""
 " ستجد رابطًا جاهزًا — انسخه كاملًا. غالبًا يكون بهذا الشكل:"
 msgstr ""
 
-#: app/radius/auth/decorators.py:17 app/radius/routes/blueprint.py:448
+#: app/radius/auth/decorators.py:17 app/radius/routes/blueprint.py:451
 msgid "سجّل الدخول للمتابعة."
 msgstr ""
 
@@ -73320,10 +73328,6 @@ msgstr ""
 msgid ""
 "سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) "
 "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."
-msgstr ""
-
-#: app/templates/radius/login.html:218
-msgid "سجّل دخولك إلى HOBE RADIUS"
 msgstr ""
 
 #: app/radius/services/card_users_marketplace.py:320
@@ -90215,7 +90219,7 @@ msgstr ""
 #: app/templates/radius/docs_mikrotik_store.html:384
 #: app/templates/radius/docs_mikrotik_store.html:432
 #: app/templates/radius/docs_users_360.html:365
-#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:251
+#: app/templates/radius/ipchange.html:222 app/templates/radius/login.html:210
 #: app/templates/radius/mt_form.html:81
 #: app/templates/radius/portal_card_login.html:330
 #: app/templates/radius/portal_distributor_login.html:151
@@ -91381,7 +91385,7 @@ msgstr ""
 msgid "لأكبر العملاء بأعلى الحدود والسعة."
 msgstr ""
 
-#: app/radius/auth/decorators.py:29 app/radius/routes/blueprint.py:471
+#: app/radius/auth/decorators.py:29 app/radius/routes/blueprint.py:474
 msgid "لأمانك، يجب تغيير كلمة المرور قبل المتابعة."
 msgstr ""
 
@@ -95716,7 +95720,7 @@ msgid ""
 "أو من جلسة أخرى)."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1786
+#: app/radius/routes/blueprint.py:1789
 msgid "لم يُحفَظ: "
 msgstr ""
 
@@ -96592,7 +96596,7 @@ msgstr ""
 msgid "ليس عنواناً صالحاً (نطاق/IP/CIDR)."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1761
+#: app/radius/routes/blueprint.py:1764
 #: app/templates/radius/forbidden_403.html:16
 #: app/templates/radius/forbidden_403.html:155
 msgid "ليس لديك صلاحية الوصول إلى هذه الصفحة"
@@ -98141,10 +98145,6 @@ msgstr ""
 
 #: app/templates/radius/docs_cards_batches.html:518
 msgid "مثال: VIP-"
-msgstr ""
-
-#: app/templates/radius/login.html:245
-msgid "مثال: admin"
 msgstr ""
 
 #: app/templates/radius/pay_demo.html:281
@@ -100354,7 +100354,7 @@ msgstr ""
 msgid "مرحبًا {name} 👋 تم إنشاء حسابك. بيانات الدخول على رقمك."
 msgstr ""
 
-#: app/templates/radius/login.html:217
+#: app/templates/radius/login.html:196
 msgid "مرحبًا بعودتك"
 msgstr ""
 
@@ -110448,7 +110448,7 @@ msgstr ""
 msgid "هذا الإجراء متاح لمدير النظام الأعلى فقط."
 msgstr ""
 
-#: app/api/permission_guard.py:825 app/radius/routes/blueprint.py:1342
+#: app/api/permission_guard.py:825 app/radius/routes/blueprint.py:1345
 msgid "هذا الإجراء مقصور على المالك أو الشريك."
 msgstr ""
 
@@ -110645,15 +110645,15 @@ msgid ""
 "المدير المسؤول."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1337
+#: app/radius/routes/blueprint.py:1340
 msgid "هذا القسم مخفيّ عن حسابك."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1338
+#: app/radius/routes/blueprint.py:1341
 msgid "هذا القسم مقفول لحسابك (عرض فقط) — لا إضافة ولا تعديل ولا حذف."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1336
+#: app/radius/routes/blueprint.py:1339
 msgid "هذا القسم مُعطَّل على هذه النسخة."
 msgstr ""
 
@@ -110726,7 +110726,7 @@ msgid ""
 "إليه. لتحديد سقف عدّل كوتة المشترك أو باقته."
 msgstr ""
 
-#: app/radius/routes/blueprint.py:1343
+#: app/radius/routes/blueprint.py:1346
 msgid ""
 "هذا المشترك ليس ضمن نطاقك (مشتركو مدير آخر) — اطلب من المالك «عرض كل "
 "المشتركين»."

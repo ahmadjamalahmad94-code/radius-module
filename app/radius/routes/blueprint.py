@@ -11,6 +11,9 @@ _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 _PUBLIC_ENDPOINTS = {
     "radius.auth_login",
     "radius.auth_logout",
+    # مبدّل اللغة في صفحة الدخول نفسها: يضبط لغة الجلسة فقط (ويحفظها للمدير إن
+    # كان مسجَّلًا)، وتحويله التالي محصور بمسار محلّي (_safe_next).
+    "radius.set_locale",
     "radius.portal_subscriber_login",
     "radius.portal_subscriber_logout",
     "radius.portal_subscriber_home",
