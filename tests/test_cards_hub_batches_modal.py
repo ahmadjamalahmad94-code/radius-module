@@ -214,6 +214,8 @@ def test_contract_reading_is_closed_unless_enabled_and_active(app, monkeypatch):
         ({"enabled": True, "status": "disabled"}, False),
         ({"enabled": False, "status": "active"}, False),
         ({"enabled": "yes", "status": "active"}, False),
+        ({"enabled": False, "status": "suspended"}, False),
+        ({"enabled": True, "status": "active", "hidden": True}, False),
     ]
     for svc, want in cases:
         monkeypatch.setattr(ecards_gate, "_service_from_snapshot", lambda tenant_id, s=svc: s)

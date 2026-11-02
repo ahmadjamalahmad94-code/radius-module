@@ -87,8 +87,10 @@ def ecards_enabled(tenant_id: int | None = None) -> bool:
         if svc is None and tid != DEFAULT_TENANT_ID:
             svc = _service_from_snapshot(DEFAULT_TENANT_ID)
         if isinstance(svc, dict):
+            # «مخفي» في لوحة التراخيص يُخفي أيضًا — ولو بقيت الخدمة مفعّلة بدرجةٍ مجانيّة.
             enabled = (svc.get("enabled") is True
-                       and str(svc.get("status") or "").strip().lower() == "active")
+                       and str(svc.get("status") or "").strip().lower() == "active"
+                       and not svc.get("hidden"))
     except Exception:  # noqa: BLE001 — قراءةُ العقد لا تكسر صفحة؛ الخطأ ⇒ مخفيّ
         enabled = False
     cache[tid] = enabled
