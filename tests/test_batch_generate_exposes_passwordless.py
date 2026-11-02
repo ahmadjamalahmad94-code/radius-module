@@ -24,8 +24,19 @@ GEN = "app/templates/radius/cards_generate.html"
 EDIT = "app/templates/radius/cards_batch_edit.html"
 
 
+# نموذجُ التوليد فُصل إلى أجزاء مشتركة (صفحة /cards/generate ونافذة «إنشاء حزمة»
+# في صفحة الحزم — 2026-11-02)، فالحارسُ النصّيّ يقرأ الصفحةَ وأجزاءها معًا.
+GEN_PARTS = (
+    "app/templates/radius/_cards_generate_owner_form.html",
+    "app/templates/radius/_cards_generate_scripts.html",
+)
+
+
 def _read(path):
-    return io.open(path, encoding="utf-8").read()
+    src = io.open(path, encoding="utf-8").read()
+    if path == GEN:
+        src += "".join(io.open(p, encoding="utf-8").read() for p in GEN_PARTS)
+    return src
 
 
 def test_generate_form_offers_the_passwordless_toggle():

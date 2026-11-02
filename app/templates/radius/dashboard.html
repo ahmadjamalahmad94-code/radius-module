@@ -775,12 +775,12 @@
       <div class="ops-module-head">
         <div>
           <h2>{{ _('البطاقات والحزم') }}</h2>
-          <p>{{ _('مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.') }}</p>
+          {% if ecards_enabled is defined and ecards_enabled() %}<p>{{ _('مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.') }}</p>{% else %}<p>{{ _('مخزون الكروت والحزم الجاهزة للتفعيل أو البيع المباشر.') }}</p>{% endif %}
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-layer-group"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format(printed_total) }}</strong><span>{{ _('كرت مطبوع') }}</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(printed_total) }}</strong><span>{% if ecards_enabled is defined and ecards_enabled() %}{{ _('كرت مطبوع') }}{% else %}{{ _('كرت') }}{% endif %}</span></div>
         <div class="ops-metrics">
           <div class="ops-metric"><span>{{ _('متاح') }}</span><strong>{{ "{:,}".format(printed_available) }}</strong></div>
           <div class="ops-metric"><span>{{ _('الحزم') }}</span><strong>{{ "{:,}".format(printed_batches) }}</strong></div>

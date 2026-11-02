@@ -115,10 +115,11 @@ def test_quick_create_modal_opens_on_digits(app):
     with app.test_client() as c:
         _login(c)
         html = c.get("/admin/radius/cards/batches").get_data(as_text=True)
+    # نافذةُ الإنشاء صارت النموذجَ الكامل (المالك 2026-11-02) — نفسُ الافتراض.
     sel = html[html.index('name="password_generation_type"'):]
     sel = sel[: sel.index("</select>")]
     assert '<option value="digits" selected>' in sel
-    assert '<option value="medium">' in sel
+    assert '<option value="medium" >' in sel
 
 
 def test_digits_form_default_generates_numeric_passwords(app):
@@ -158,9 +159,12 @@ def test_quick_modal_has_the_same_two_fields(app):
     with app.test_client() as c:
         _login(c)
         html = c.get("/admin/radius/cards/batches").get_data(as_text=True)
-    assert "بادئة اسم المستخدم — اختياري" in html
-    assert "لاحقة اسم المستخدم — اختياري" in html
-    assert "data-qun-pv-gen" in html
+    # نافذةُ الإنشاء صارت النموذجَ الكامل (المالك 2026-11-02): نفسُ الحقلين
+    # الصريحين ومعاينتهما — لا حقلَ «بادئة أو لاحقة» القديم الملتبس.
+    modal = html[html.index("data-quick-batch-modal"):]
+    assert 'name="username_prefix"' in modal
+    assert 'name="username_suffix"' in modal
+    assert "data-unprev-gen" in modal
     assert 'name="prefix_or_suffix_value"' not in html
 
 

@@ -30,6 +30,7 @@
 {% block page_sub %}<span class="sub"><bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة للاختيار') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
+<style>.rg-group[hidden], .rg-sec-row[hidden]{ display:none !important; }</style>
 <style>
 /* ═══ مصفوفة الصلاحيات — بطاقات مجموعات ملوّنة بهوية كل مجموعة ═══
    كل مجموعة بطاقة كاملة: شريط لون بادئ + أيقونة FontAwesome خاصة +
@@ -415,8 +416,11 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       <p class="rg-note hub-text-mute">
         {{ _('كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.') }}
       </p>
+{#- قسمُ «المتجر الإلكترونيّ» يُخفى بصريًّا فقط لزبونٍ لم يُفعَّل له سوقُ البطاقات
+    (ecards_gate): مدخلاته تبقى في النموذج كي لا يُعدّ الحفظُ غيابَها سحبًا لصلاحيّات الدور. -#}
+{% set _hide_store_ui = not (ecards_enabled is defined and ecards_enabled()) %}
       {% for grp in action_catalog %}
-      <details class="rg-group" open>
+      <details class="rg-group" open{% if _hide_store_ui and grp.section == 'store' %} hidden{% endif %}>
         <summary><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</summary>
         <div class="rg-grid">
           {% for a in grp.actions %}
@@ -436,7 +440,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
         {{ _('بعض المفاتيح في مصفوفة الصلاحيات أعلاه تمنح أكثر من فعل (مثل store.review: تأكيد الإيداع + تأكيد السحب، و online.disconnect: قطع الجلسة + الإغلاق الإجباريّ). «حسب المفتاح» = يتبع المفتاح • «ممنوع» يُطفئ هذا الفعل وحده لكل مدراء الدور • «مسموح» لا يتخطّى مفتاحًا غير ممنوح. ويمكن تجاوز أيّ صفّ لمديرٍ بعينه من صفحته.') }}
       </p>
       {% for grp in derived_catalog %}
-      <details class="rg-group" data-testid="role-derived-{{ grp.section }}" open>
+      <details class="rg-group" data-testid="role-derived-{{ grp.section }}" open{% if _hide_store_ui and grp.section == 'store' %} hidden{% endif %}>
         <summary><i class="fa-solid fa-{{ grp.icon }}"></i> {{ _(grp.label) }}</summary>
         <div class="rg-sec-list">
           {% for r in grp.rows %}
@@ -477,7 +481,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
       </p>
       <div class="rg-sec-list">
         {% for sec in section_catalog %}
-        <div class="rg-sec-row">
+        <div class="rg-sec-row"{% if _hide_store_ui and sec.name == 'store' %} hidden{% endif %}>
           <span class="rg-sec-label"><i class="fa-solid fa-{{ sec.icon }}"></i> {{ _(sec.label) }}</span>
           <div class="rg-sec-states" role="radiogroup" aria-label="{{ _(sec.label) }}">
             <label class="rg-sec-opt rg-open">

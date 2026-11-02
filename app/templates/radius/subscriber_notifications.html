@@ -40,7 +40,8 @@
 
 <form method="post" action="{{ url_for('radius.subscriber_notifications') }}" data-sn-form>{% if not can_submit('radius.subscriber_notifications') %}<div class="hr-ro-note" role="note"><i class="fa-solid fa-lock"></i> {{ _('للعرض فقط — لا تملك صلاحية حفظ هذا النموذج.') }}</div><fieldset disabled class="hr-readonly">{% endif %}
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-  {% for grp in groups %}
+  {#- مجموعةُ «المتجر» لزبونٍ فُعِّل له سوقُ البطاقات فقط (ecards_gate). -#}
+  {% for grp in groups if grp.key != 'store' or (ecards_enabled is defined and ecards_enabled()) %}
   {% set _grp_icon = {'subscribers':'users','billing':'wallet','store':'store'}.get(grp.key, 'wallet') %}
   <div class="sn-group{% if grp.key=='store' %} sn-group--store{% endif %}">
   {% call hub.section(grp.label, icon=_grp_icon,

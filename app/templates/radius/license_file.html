@@ -331,13 +331,16 @@
 {%- endmacro %}
 
 {# ── تصنيفات الخدمات: قسم → (عنوان، أيقونة، [مفاتيح]) ── #}
+{#- خدماتُ البطاقات الإلكترونيّة (الشحن · السوق · مستخدموها) لا تُذكر لزبونٍ لم تُفعَّل له (ecards_gate). -#}
 {% set service_category_groups = [
   ('subscribers_group', _('خدمات المشتركين'), 'users',
     ['subscribers','sessions','accounting','invoices','payment_collection','radius_customer_portals','subscriber_groups']),
   ('network_group', _('خدمات الشبكة والراوترات'), 'network-wired',
     ['nas','routers','profiles','ip_change_vpn','setup_wizard','ip_pools','network_policies','router_diagnostics','bandwidth_control','site_exit','remote_access']),
   ('cards_group', _('الكروت والمبيعات'), 'id-card',
-    ['cards','cards_recharge','card_marketplace','card_users','vouchers','print_templates','distributors']),
+    (['cards','cards_recharge','card_marketplace','card_users','vouchers','print_templates','distributors']
+     if (ecards_enabled is defined and ecards_enabled())
+     else ['cards','vouchers','print_templates','distributors'])),
   ('admin_group', _('الإدارة والمالية'), 'user-shield',
     ['admins','finance_center','reports','audit_logs','backups','lifecycle','multi_tenant','recycle_bin']),
   ('support_group', _('الدعم والتواصل'), 'headset',
@@ -643,7 +646,7 @@
         {% for _cat_key, _cat_label, _cat_icon, _cat_keys in service_category_groups %}
           {% if key in _cat_keys %}{% set ns_in_cat.found = true %}{% endif %}
         {% endfor %}
-        {% if not ns_in_cat.found %}{% set ns_extra.keys = ns_extra.keys + [key] %}{% endif %}
+        {% if not ns_in_cat.found and (key not in ('cards_recharge', 'card_marketplace', 'card_users') or (ecards_enabled is defined and ecards_enabled())) %}{% set ns_extra.keys = ns_extra.keys + [key] %}{% endif %}
       {% endfor %}
       {% if ns_extra.keys %}
         <div class="lf-cat-block">

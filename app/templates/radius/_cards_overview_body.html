@@ -12,7 +12,7 @@
 {% set _ec = ecards_enabled is defined and ecards_enabled() %}
 
 <div id="co-sales-section">
-{% call hub.section(_('مبيعات الكروت'), icon="receipt", meta=(_('مطبوعة + إلكترونية') if _ec else _('مطبوعة'))) %}
+{% call hub.section(_('مبيعات الكروت'), icon="receipt", meta=(_('مطبوعة + إلكترونية') if _ec else '')) %}
   <div class="co-sales-board">
     <div class="co-sales-board-head">
       <div>
@@ -31,11 +31,14 @@
         <strong>{{ sales.total.monthly.amount|money }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-coins"></i>
       </div>
+      {#- بلا إلكترونيّ فـ«مطبوعة» = «الإجماليّ» نفسه: لا تُكرَّر ولا يُذكر النوع (المالك 2026-11-02). -#}
+      {% if _ec %}
       <div class="co-sales-summary-item co-sales-summary-item--print">
         <span>{{ _('مطبوعة') }}</span>
         <strong>{{ sales.printed.monthly.count }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-print"></i>
       </div>
+      {% endif %}
       {% if _ec %}
       <div class="co-sales-summary-item co-sales-summary-item--wallet">
         <span>{{ _('إلكترونية') }}</span>
@@ -91,6 +94,7 @@
             <strong class="co-sales-value co-sales-value--money">{{ sales.total[key].amount|money }}</strong>
           </div>
         </div>
+        {% if _ec %}
         <div class="co-sales-split">
           <div class="co-sales-split-track" aria-hidden="true">
             <span class="co-sales-split-print" style="width:{{ printed_pct }}%"></span>
@@ -101,6 +105,7 @@
             {% if _ec %}<span><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }} <bdi dir="ltr">{{ sales.electronic[key].count }} / {{ money_value(sales.electronic[key].amount) }}</bdi></span>{% endif %}
           </div>
         </div>
+        {% endif %}
         <a class="co-sales-link" href="#sales-{{ key }}">
           <i class="fa-solid fa-table-list"></i> {{ _('فتح سجل الفترة') }}
         </a>
@@ -123,7 +128,7 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>{{ _('النوع') }}</th>
+              {% if _ec %}<th>{{ _('النوع') }}</th>{% endif %}
               <th>{{ _('اسم المستخدم') }}</th>
               <th>{{ _('الحزمة') }}</th>
               <th class="num">{{ _('السعر') }}</th>
@@ -134,13 +139,13 @@
             {% for sale in sales.details[key] %}
             <tr>
               <td class="mono">{{ loop.index }}</td>
-              <td>
+              {% if _ec %}<td>
                 {% if sale.sale_type == "electronic" %}
                   <span class="co-type-pill co-type-pill--electronic"><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }}</span>
                 {% else %}
                   <span class="co-type-pill co-type-pill--printed"><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }}</span>
                 {% endif %}
-              </td>
+              </td>{% endif %}
               <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
               <td>
                 {# الحزمة هي وحدة الشراء التي يتتبّعها المشغّل — والسعر يُشتقّ
@@ -206,8 +211,8 @@
     <div class="co-stock-tables">
       <div class="co-stock-table-card co-stock-table-card--printed">
         <div class="co-stock-table-head">
-          <span class="co-stock-table-title"><i class="fa-solid fa-print"></i> {{ _('حزم مطبوعة') }}</span>
-          <span class="co-stock-table-total">{{ _('دفعات الطباعة') }}</span>
+          {% if _ec %}<span class="co-stock-table-title"><i class="fa-solid fa-print"></i> {{ _('حزم مطبوعة') }}</span>
+          <span class="co-stock-table-total">{{ _('دفعات الطباعة') }}</span>{% else %}<span class="co-stock-table-title"><i class="fa-solid fa-layer-group"></i> {{ _('الحزم') }}</span>{% endif %}
         </div>
         {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
         <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -236,7 +241,7 @@
                   <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="6" class="co-table-note">{{ _('لا توجد حزم مطبوعة بعد') }}</td></tr>
+                <tr><td colspan="6" class="co-table-note">{% if _ec %}{{ _('لا توجد حزم مطبوعة بعد') }}{% else %}{{ _('لا توجد حزم بعد') }}{% endif %}</td></tr>
               {% endfor %}
             </tbody>
           </table>

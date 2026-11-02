@@ -19,6 +19,8 @@
 """
 from __future__ import annotations
 
+import os
+
 from flask import abort, g, jsonify, request
 
 from app.i18n_text import _tr
@@ -69,6 +71,11 @@ def ecards_enabled(tenant_id: int | None = None) -> bool:
     تُحفظ في ``g`` لكلّ طلب: القائمةُ والصفحةُ والحارسُ يسألون معًا. الترخيصُ
     للسيرفر لا للواجهة، فواجهةٌ بلا لقطةٍ خاصّة ترث لقطةَ الواجهة الأولى.
     """
+    # تجاوزٌ صريحٌ للاختبار والتطوير المحلّيّ: "1" يفتح و"0" يُغلق؛ غيابُه ⇒ العقد.
+    # متغيّرُ بيئةٍ لا علمٌ في الوحدة كي يصمد أمام اختباراتٍ تُعيد استيراد ‎app.*‎.
+    forced = (os.environ.get("HOBERADIUS_ECARDS_FORCE") or "").strip()
+    if forced in ("0", "1"):
+        return forced == "1"
     from ..core.tenant import DEFAULT_TENANT_ID
     tid = int(tenant_id if tenant_id is not None else getattr(g, "tenant_id", DEFAULT_TENANT_ID))
     cache = g.setdefault("_hr_ecards_enabled", {})

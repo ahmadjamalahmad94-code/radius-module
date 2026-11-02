@@ -124,15 +124,12 @@ def _ecards_enabled_by_default(request, monkeypatch):
     التراخيص (services/ecards_gate.py)، ولا عقدَ في قاعدة الاختبار. فعشراتُ
     اختبارات السوق والمتجر تختبر الميزةَ نفسَها كما يراها زبونٌ فُعِّلت له —
     نفتحها هنا. واختبارُ الإغلاق نفسِه يُعلَّم ``@pytest.mark.ecards_closed``."""
+    # متغيّرُ بيئةٍ لا ترقيعُ وحدة: بعضُ الاختبارات تحذف ‎app.*‎ من sys.modules
+    # وتُعيد استيرادها، فيضيع أيُّ ترقيعٍ على الوحدة القديمة.
     if request.node.get_closest_marker("ecards_closed"):
-        yield
-        return
-    try:
-        from app.radius.services import ecards_gate
-        monkeypatch.setattr(ecards_gate, "_service_from_snapshot",
-                            lambda tenant_id: {"enabled": True, "status": "active"})
-    except Exception:
-        pass
+        monkeypatch.delenv("HOBERADIUS_ECARDS_FORCE", raising=False)
+    else:
+        monkeypatch.setenv("HOBERADIUS_ECARDS_FORCE", "1")
     yield
 
 

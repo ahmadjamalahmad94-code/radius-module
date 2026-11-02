@@ -1685,7 +1685,20 @@ def validate_vars(values: dict[str, str]) -> dict[str, str]:
         if not v.pattern.match(raw):
             raise ValueError(f"قيمة غير صالحة للحقل «{v.label_ar}».")
         out[v.slug] = raw
+    # متجرُ البطاقات الإلكترونيّ لا يظهر زرُّه ولا يُرفع store.html إلّا لزبونٍ
+    # فُعِّل له سوقُ البطاقات (services/ecards_gate.py — قرار المالك 2026-11-02).
+    # كلُّ مسارات المصمّم (معاينة · حزمة · نشر) تمرّ من هنا، فهنا يُقفَل.
+    if out.get("STORE_ENABLED") == "yes" and not _ecards_enabled():
+        out["STORE_ENABLED"] = "no"
     return out
+
+
+def _ecards_enabled() -> bool:
+    try:
+        from .ecards_gate import ecards_enabled
+        return ecards_enabled()
+    except Exception:  # noqa: BLE001 — خارج طلبٍ أو بلا عقد ⇒ مغلق
+        return False
 
 
 # ─── توليد HTML للقوائم (الموزعون / العروض) من JSON ────────────

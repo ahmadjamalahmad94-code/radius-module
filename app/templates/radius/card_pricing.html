@@ -42,9 +42,9 @@
     <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.cards_batches') + '">
       <i class="fa-solid fa-layer-group"></i> '|safe ~ _("حزم البطاقات") ~ '
     </a>
-    <a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.card_marketplace') + '">
+    '|safe + (('<a class="hub-btn hub-btn--secondary" href="'|safe + url_for('radius.card_marketplace') + '">
       <i class="fa-solid fa-store"></i> '|safe ~ _("سوق البطاقات") ~ '
-    </a>'|safe,
+    </a>'|safe) if (ecards_enabled is defined and ecards_enabled()) else '')|safe,
   kpis=[
     {'label': _('باقات مسعرة'),        'value': num(pricing_overview.priced_packages),    'icon': 'tags',        'variant': 'brand'},
     {'label': _('متوسط هامش البطاقة'), 'value': money(pricing_overview.avg_margin),        'icon': 'chart-line',  'variant': 'amber'},

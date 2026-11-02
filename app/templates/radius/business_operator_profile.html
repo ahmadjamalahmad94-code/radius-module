@@ -278,8 +278,9 @@
           {{ _('مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا') }}
         </div>
         <div class="sec-matrix">
+          {#- قسمُ «المتجر الإلكترونيّ» مخفيٌّ بصريًّا لزبونٍ لم يُفعَّل له السوق؛ مدخلاته تبقى (ecards_gate). -#}
           {% for sec in section_catalog %}
-          <div class="sec-row" data-testid="section-row-{{ sec.name }}">
+          <div class="sec-row" data-testid="section-row-{{ sec.name }}"{% if sec.name == 'store' and not (ecards_enabled is defined and ecards_enabled()) %} hidden style="display:none"{% endif %}>
             <span class="sec-row__label"><i class="fa-solid fa-{{ sec.icon }}"></i> {{ _(sec.label) }}</span>
             <div class="sec-states" role="radiogroup" aria-label="{{ _(sec.label) }}">
               <label class="sec-opt">

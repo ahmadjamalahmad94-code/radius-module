@@ -47,7 +47,8 @@
         <th>{{ _('التفسير') }}</th>
       </tr></thead>
       <tbody>
-        {% for g in grants %}
+        {#- خدماتُ البطاقات الإلكترونيّة لا تُذكر لزبونٍ لم تُفعَّل له (ecards_gate). -#}
+        {% for g in grants if g.key not in ('card_marketplace', 'card_users', 'cards_recharge') or (ecards_enabled is defined and ecards_enabled()) %}
         {# الاسم العربي + المفتاح الخام كـsubtitle صغير للتطابق مع لوحة المزوّد #}
         {% set _ar_name = provider_service_label_ar(g.key) if provider_service_label_ar is defined else g.key %}
         {% set _ar_status = provider_service_status_ar(g.status) if provider_service_status_ar is defined else g.status %}

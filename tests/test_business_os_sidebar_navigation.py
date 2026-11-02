@@ -52,8 +52,9 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
 
     expected = {
         "المشتركون": "/admin/radius/subscribers",
-        "البطاقات": "/admin/radius/cards/overview",
-        "فحص بطاقة": "/admin/radius/cards/checker",
+        # «حزم البطاقات» مركزٌ واحد (المالك 2026-11-02): الإنشاءُ والفحصُ نافذتان
+        # داخلها والنظرةُ العامّة أسفلها — فلا بنودَ منفصلةً لها في الشريط.
+        "البطاقات": "/admin/radius/cards/batches",
         "المال والتحصيل": "/admin/radius/finance-center",
         "المركز المالي": "/admin/radius/finance-center",
         "السجل والتقارير المحاسبية": "/admin/radius/finance/accounting",
@@ -92,9 +93,13 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
     #  • «المزامنة» (طابور المزامنة الخامل) أُزيل نهائيًّا — 6ec81128.
     #  • «المستأجرون» و«التحصيل والمدفوعات» قدرتا مزوّد default-off (مخفيّتان
     #    حتى عن السوبر ما لم يَمنحهما العقد) — 82cc1d18.
+    #  • «نظرة عامة» و«فحص بطاقة» و«إضافة حزمة» للبطاقات صارت داخل «حزم البطاقات»
+    #    (نافذتان + قسمٌ أسفلها) — المالك 2026-11-02.
     for label, href in (("المزامنة", "/admin/radius/sync"),
                         ("المستأجرون", "/admin/radius/tenants"),
-                        ("التحصيل والمدفوعات", "/admin/radius/finance/collection")):
+                        ("التحصيل والمدفوعات", "/admin/radius/finance/collection"),
+                        ("فحص بطاقة", "/admin/radius/cards/checker"),
+                        ("إضافة حزمة", "/admin/radius/cards/generate")):
         assert f'href="{href}"' not in sidebar, href
         assert f">{label}<" not in sidebar, label
 

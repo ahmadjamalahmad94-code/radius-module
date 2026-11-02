@@ -578,7 +578,11 @@
               {{ _('عدّل عنوان ووصف كل رقاقة من الرقائق الثلاث الظاهرة أسفل صورة التصميم. القيم الافتراضية مأخوذة من التصميم المختار — امسح رقاقةً بالكامل (العنوان والوصف) لإخفائها.') }}
             </p>
           </div>
-          {% for v in variables %}
+          {#- حقولُ المتجر الإلكترونيّ (زرّه ورابطه وواتساب طلبات الشحن الذي يُحقن فيه)
+              لا تظهر إلّا لزبونٍ فُعِّل له سوقُ البطاقات؛ والخادمُ يُطفئ الزرَّ على كلّ
+              حال (hotspot_templates.validate_vars). -#}
+          {% set _hide_store = not (ecards_enabled is defined and ecards_enabled()) %}
+          {% for v in variables if not (_hide_store and v.slug in ('STORE_ENABLED', 'STORE_URL', 'SUPPORT_WHATSAPP')) %}
           {% set _val = design.variables.get(v.slug, v.default) %}
           {# رقائق الميزات: لتصميمٍ غير مُدار بعد (جديد/قديم) اعرض افتراضات
              القالب الحاليّ بدل الفراغ؛ المُدار يعرض المحفوظ كما هو (الفراغ=مُخفى). #}

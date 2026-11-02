@@ -707,6 +707,15 @@ CATEGORIES: dict[str, dict] = {
 }
 
 
+def _visible_categories() -> dict[str, dict]:
+    """الأقسامُ الظاهرة لهذا الزبون: قسمُ «البطاقات الإلكترونيّة» لا يظهر — ولا
+    تُفتح أدلّتُه — إلّا لزبونٍ فُعِّل له سوقُ البطاقات (services/ecards_gate.py)."""
+    from ..services.ecards_gate import ecards_enabled
+    if ecards_enabled():
+        return CATEGORIES
+    return {k: v for k, v in CATEGORIES.items() if k != "e-cards"}
+
+
 def _guides_index() -> dict[str, dict]:
     """فهرس مسطّح slug → صفحة دليل (مع مرجع لقسمها) — يُبنى عند الطلب.
 
@@ -714,7 +723,7 @@ def _guides_index() -> dict[str, dict]:
     للتعديل؛ حجم السجل صغير جدًا فالبناء عند كل طلب لا يُذكر تكلفةً.
     """
     index: dict[str, dict] = {}
-    for cat_slug, cat in CATEGORIES.items():
+    for cat_slug, cat in _visible_categories().items():
         for page in cat["pages"]:
             entry = dict(page)
             entry["category_slug"] = cat_slug
@@ -746,7 +755,7 @@ def register_docs_center_routes(bp: Blueprint) -> None:
 def docs_center():
     """فهرس الأقسام — بطاقة لكل قسم رئيسي مع عدّاد الأدلة الجاهزة."""
     categories = []
-    for slug, cat in CATEGORIES.items():
+    for slug, cat in _visible_categories().items():
         ready_count = sum(1 for p in cat["pages"] if p.get("ready"))
         categories.append(
             {
@@ -769,7 +778,7 @@ def docs_section(cat_slug: str):
     العامة للنظام)؛ لا نعرض قسمًا فارغًا لأن بطاقته في الفهرس أصلًا
     معتمة «قريبًا» وغير قابلة للنقر.
     """
-    cat = CATEGORIES.get(cat_slug)
+    cat = _visible_categories().get(cat_slug)
     if cat is None or not cat["pages"]:
         abort(404, description=N_("هذا القسم غير متوفر في مركز الأدلة بعد."))
     return render_template(

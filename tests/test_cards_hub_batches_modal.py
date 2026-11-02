@@ -312,3 +312,50 @@ def test_sidebar_keeps_checker_for_a_verify_only_manager(app):
     assert r.status_code == 200
     side = _side(r.get_data(as_text=True))
     assert 'href="/admin/radius/cards/checker"' in side
+
+
+# ── ⑥ لا زرَّ ولا حقلَ للإلكترونيّ في بقيّة اللوحة حين يُطفأ ──────────────
+
+@pytest.mark.ecards_closed
+def test_closed_hotspot_store_button_is_forced_off(app):
+    from app.radius.services import hotspot_templates as ht
+
+    with app.test_request_context("/"):
+        assert ht.validate_vars({"STORE_ENABLED": "yes"})["STORE_ENABLED"] == "no"
+
+
+def test_enabled_hotspot_store_button_is_kept(app):
+    from app.radius.services import hotspot_templates as ht
+
+    with app.test_request_context("/"):
+        assert ht.validate_vars({"STORE_ENABLED": "yes"})["STORE_ENABLED"] == "yes"
+
+
+@pytest.mark.ecards_closed
+def test_closed_docs_center_hides_ecards_guides(app):
+    c = _owner(app)
+    index = c.get("/admin/radius/docs").get_data(as_text=True)
+    assert "/admin/radius/docs/section/e-cards" not in index
+    assert c.get("/admin/radius/docs/section/e-cards").status_code == 404
+    for slug in ("card-marketplace", "card-users", "store-support", "mikrotik-store"):
+        assert c.get(f"/admin/radius/docs/{slug}").status_code == 404, slug
+
+
+@pytest.mark.ecards_closed
+def test_closed_settings_hide_store_fields(app):
+    html = _owner(app).get("/admin/radius/settings").get_data(as_text=True)
+    assert "network.store_api_key" not in html
+    assert 'name="network.radius_server_ip"' not in html
+
+
+def test_enabled_settings_show_store_fields(app):
+    html = _owner(app).get("/admin/radius/settings").get_data(as_text=True)
+    assert "network.store_api_key" in html
+
+
+@pytest.mark.ecards_closed
+def test_closed_overview_never_names_printed_or_electronic(app):
+    frag = _owner(app).get("/admin/radius/cards/overview?fragment=1").get_data(as_text=True)
+    assert "co-sales-summary-item--print" not in frag
+    assert "co-sales-split" not in frag
+    assert "حزم مطبوعة" not in frag

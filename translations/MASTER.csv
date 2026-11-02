@@ -2229,8 +2229,8 @@ card_id مطلوب,,,,,,"missing: en,fr,tr,es",app/radius/routes/cards.py:2099
 ربط النسخة بترخيص المزوّد وقراءة حالة منح المزوّد (التفعيل، حدّ المتصلين، الميزات المتاحة).,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:693
 حالة منح المزوّد والترخيص,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:697
 قراءة صفحة منح المزوّد: حالة التفعيل، حدّ المتصلين، تاريخ الانتهاء، والميزات المتاحة في عقدك.,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:698
-هذا القسم غير متوفر في مركز الأدلة بعد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:774
-هذا الدليل غير متوفر بعد — تابع مركز الأدلة، قريبًا!,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:792
+هذا القسم غير متوفر في مركز الأدلة بعد.,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:783
+هذا الدليل غير متوفر بعد — تابع مركز الأدلة، قريبًا!,,,,,,"missing: en,fr,tr,es",app/radius/routes/docs_center.py:801
 أنشأ فحص المخاطر %(flags_created)s إشارة.,,,,,,"missing: en,fr,tr,es",app/radius/routes/events_risk.py:85
 تم فتح تحقيق.,,,,,,"missing: en,fr,tr,es",app/radius/routes/events_risk.py:109
 تم إنشاء المحفظة المالية.,,,,,,"missing: en,fr,tr,es",app/radius/routes/finance_center.py:114
@@ -5993,14 +5993,14 @@ MikroTik الرسمي,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_te
 التصميم لا يصلح كصفحة هوت سبوت — تنقصه placeholders ميكروتك الإجبارية: ,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1491
 . بدونها لن يستطيع أي مشترك تسجيل الدخول.,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1492
 التصميم بلا وسم ‎</body>‎ — أضِفه حتى يستطيع النظام حقن إضافات الصفحة (الدخول التلقائي بالـ QR وغيرها).,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1496
-"<p style=""font-size:11px;text-align:center;opacity:.7;padding:10px;"">لا يوجد موزعون بعد</p>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1709
-"<div class=""pkg-card-big""><div class=""glow-blob gb-1""></div><div class=""glow-blob gb-2""></div><div class=""pkg-badge-top"">⭐ النخبة</div><div class=""pkg-header-row""><div><h2 style=""font-size:20px;font-weight:800;margin-bottom:2px;"">",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1746
-"<p style=""font-size:11px;text-align:center;opacity:.7;padding:10px;"">لا توجد عروض بعد</p>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1784
-"<div class=""pkg""><div class=""p-name"">لا توجد عروض</div></div>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1799
-"<div class=""pr-row""><span>لا توجد أسعار بعد</span></div>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1813
+"<p style=""font-size:11px;text-align:center;opacity:.7;padding:10px;"">لا يوجد موزعون بعد</p>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1722
+"<div class=""pkg-card-big""><div class=""glow-blob gb-1""></div><div class=""glow-blob gb-2""></div><div class=""pkg-badge-top"">⭐ النخبة</div><div class=""pkg-header-row""><div><h2 style=""font-size:20px;font-weight:800;margin-bottom:2px;"">",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1759
+"<p style=""font-size:11px;text-align:center;opacity:.7;padding:10px;"">لا توجد عروض بعد</p>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1797
+"<div class=""pkg""><div class=""p-name"">لا توجد عروض</div></div>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1812
+"<div class=""pr-row""><span>لا توجد أسعار بعد</span></div>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1826
 "
 <!-- HR add-ons: تجربة مجانية / إخفاء كلمة المرور -->
-",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1855
+",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1868
 "  // إخفاء حقل كلمة المرور — دخول «يوزر فقط»:
   // نخفي الحاوية (label/.field/.f/.qf/.field-group)
   // ونزيل required ونفرّغ القيمة. مع CHAP يُهشَّر
@@ -6009,17 +6009,17 @@ MikroTik الرسمي,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_te
     if(pi){pi.removeAttribute('required');pi.value='';
       var box=pi.closest('label,.field,.f,.qf,.field-group')||pi;
       box.style.display='none';}}
-",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1876
+",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1889
 "  // زر التجربة المجانية — رابط RouterOS القياسي
   // (يتطلب تفعيل Trial في بروفايل سيرفر الهوت سبوت).
   if(f){var a=document.createElement('a');
     a.className='hr-addon-trial';
-    a.href='",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1886
-جاري التحميل,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2218
+    a.href='",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:1899
+جاري التحميل,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2231
 "<style id=""hr-responsive-safety"">
 /* HobeRadius — شبكة أمان تجاوب صَفحة الدخول على الجوّال. */
 @media (max-width:600px){
-  ",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2334
+  ",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2347
 "{
     width:calc(100% - 28px)!important;
     max-width:calc(100% - 28px)!important;
@@ -6031,10 +6031,10 @@ MikroTik الرسمي,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_te
     min-height:44px!important;font-size:16px!important;
   }
 }
-</style>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2337
-الملف هَبَط مبتورًا (حجم أصغر من المتوقّع) — غالبًا انقطاعٌ صامت أثناء الرفع,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2827
-انقطع الاتصال وتعذّرت إعادة الاتصال: ,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2867
- (فعّل عنوان خادم الراديوس ليسحب الراوتر الملف من اللوحة عبر النفق، أو صغّر شعار التصميم),,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2955
+</style>",,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2350
+الملف هَبَط مبتورًا (حجم أصغر من المتوقّع) — غالبًا انقطاعٌ صامت أثناء الرفع,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2840
+انقطع الاتصال وتعذّرت إعادة الاتصال: ,,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2880
+ (فعّل عنوان خادم الراديوس ليسحب الراوتر الملف من اللوحة عبر النفق، أو صغّر شعار التصميم),,,,,,"missing: en,fr,tr,es",app/radius/services/hotspot_templates.py:2968
 مفتاح التكرار استُخدم لطلب مختلف.,,,,,,"missing: en,fr,tr,es",app/radius/services/idempotency.py:22
 مفتاح التكرار طويل جدًا (الحدّ %(n)s حرفًا).,,,,,,"missing: en,fr,tr,es",app/radius/services/idempotency.py:23
 # الصق هذا في تيرمنال المايكروتيك (New Terminal).,,,,,,"missing: en,fr,tr,es",app/radius/services/ip_change_script.py:127
@@ -10159,40 +10159,41 @@ User-Manager (غير مدعوم بعد),,,,,,"missing: en,fr,tr,es",app/static/j
 حركة الكروت: كمية، إيراد، وقنوات البيع,,"Voucher activity: quantity, revenue, and sales channels","Activité des coupons : quantité, revenus et canaux de vente","Kupon hareketi: miktar, gelir ve satış kanalları","Actividad de cupones: cantidad, ingresos y canales de venta",ok,app/templates/radius/_cards_overview_body.html:20
 إجمالي الكروت المباعة,,Total vouchers sold,Total des cartes vendues,Satılan toplam kupon,Total de cupones vendidos,ok,app/templates/radius/_cards_overview_body.html:25
 إجمالي الإيرادات,,Total revenue,Revenu total,Toplam gelir,Ingresos totales,ok,app/templates/radius/_cards_overview_body.html:30
-أداء مبيعات الكروت,,Voucher sales performance,Performance des ventes de coupons,Kupon satış performansı,Rendimiento de ventas de cupones,ok,app/templates/radius/_cards_overview_body.html:48
-الفترات المختارة,,Selected periods,Périodes sélectionnées,Seçilen dönemler,Períodos seleccionados,ok,app/templates/radius/_cards_overview_body.html:49
-اختيار %(label)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:79
-الإيراد,,Revenue,Recette,Gelir,Ingreso,ok,app/templates/radius/_cards_overview_body.html:90
-فتح سجل الفترة,,Open Period Log,Ouvrir le journal de la période,Dönem kaydını aç,Abrir registro del período,ok,app/templates/radius/_cards_overview_body.html:105
-الكروت المباعة - %(label)s (%(range)s),,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:116
-عرض بطاقات هذه الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:150
-يُعرض,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:171
-الأحدث أوّلًا، و,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:173
-صفًّا أقدم غير معروض.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:173
-عند بيع أو استخدام كروت ستظهر هنا مباشرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:177
-لا توجد كروت مباعة لهذه الفترة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:177
-تنبيهات مختصرة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:185
-ملخص مخزون حزم البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:202
-حزم مطبوعة,,Printed Batches,Lots imprimés,Yazdırılmış Partiler,Lotes impresos,ok,app/templates/radius/_cards_overview_body.html:209
-دفعات الطباعة,,Print batches,Lots d'impression,Baskı partileri,Lotes de impresión,ok,app/templates/radius/_cards_overview_body.html:210
-باقي,,Remaining,Restant,Kalan,Restante,ok,app/templates/radius/_cards_overview_body.html:219
-مستخدم غير متصل,,Offline User,Utilisateur hors ligne,Çevrimdışı kullanıcı,Usuario sin conexión,ok,app/templates/radius/_cards_overview_body.html:222
-لا توجد حزم مطبوعة بعد,,No printed batches yet,Aucun lot imprimé pour le moment,Henüz yazdırılmış parti yok,Aún no hay lotes impresos,ok,app/templates/radius/_cards_overview_body.html:239
-حزم البيع الإلكتروني,,E-Sales Plans,Forfaits de vente en ligne,E-Satış Paketleri,Planes de venta electrónica,ok,app/templates/radius/_cards_overview_body.html:249
-سوق الكروت,,Voucher Marketplace,Place de marché des coupons,Kupon Pazarı,Mercado de cupones,ok,app/templates/radius/_cards_overview_body.html:250
-مباع,,Sold,Vendu,Satıldı,Vendido,ok,app/templates/radius/_cards_overview_body.html:258
-لا توجد حزم بيع إلكتروني بعد,,No online sales packages yet,Aucun forfait de vente en ligne pour l'instant,Henüz çevrimiçi satış paketi yok,Aún no hay paquetes de venta en línea,ok,app/templates/radius/_cards_overview_body.html:276
-بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:285
-لا يوجد مخزون بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:285
-ث,weekday,Tu,ma,Sal,ma,ok,app/templates/radius/_cards_overview_body.html:295
-ج,weekday,Fr,ve,Cum,vi,ok,app/templates/radius/_cards_overview_body.html:295
-ح,weekday,Su,di,Paz,do,ok,app/templates/radius/_cards_overview_body.html:295
-خ,weekday,Th,je,Per,ju,ok,app/templates/radius/_cards_overview_body.html:295
-ر,weekday,We,me,Çar,mi,ok,app/templates/radius/_cards_overview_body.html:295
-س,weekday,Sa,sa,Cmt,sá,ok,app/templates/radius/_cards_overview_body.html:295
-ن,weekday,Mo,lu,Pzt,lu,ok,app/templates/radius/_cards_overview_body.html:295
-اختيار الأسبوع,,Select week,Sélectionner la semaine,Hafta seç,Seleccionar semana,ok,app/templates/radius/_cards_overview_body.html:475
-اختيار السنة,,Select year,Sélectionner l'année,Yıl seç,Seleccionar año,ok,app/templates/radius/_cards_overview_body.html:538
+أداء مبيعات الكروت,,Voucher sales performance,Performance des ventes de coupons,Kupon satış performansı,Rendimiento de ventas de cupones,ok,app/templates/radius/_cards_overview_body.html:51
+الفترات المختارة,,Selected periods,Périodes sélectionnées,Seçilen dönemler,Períodos seleccionados,ok,app/templates/radius/_cards_overview_body.html:52
+اختيار %(label)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:82
+الإيراد,,Revenue,Recette,Gelir,Ingreso,ok,app/templates/radius/_cards_overview_body.html:93
+فتح سجل الفترة,,Open Period Log,Ouvrir le journal de la période,Dönem kaydını aç,Abrir registro del período,ok,app/templates/radius/_cards_overview_body.html:110
+الكروت المباعة - %(label)s (%(range)s),,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:121
+عرض بطاقات هذه الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:155
+يُعرض,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:176
+الأحدث أوّلًا، و,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:178
+صفًّا أقدم غير معروض.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:178
+عند بيع أو استخدام كروت ستظهر هنا مباشرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:182
+لا توجد كروت مباعة لهذه الفترة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:182
+تنبيهات مختصرة,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:190
+ملخص مخزون حزم البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:207
+حزم مطبوعة,,Printed Batches,Lots imprimés,Yazdırılmış Partiler,Lotes impresos,ok,app/templates/radius/_cards_overview_body.html:214
+دفعات الطباعة,,Print batches,Lots d'impression,Baskı partileri,Lotes de impresión,ok,app/templates/radius/_cards_overview_body.html:215
+باقي,,Remaining,Restant,Kalan,Restante,ok,app/templates/radius/_cards_overview_body.html:224
+مستخدم غير متصل,,Offline User,Utilisateur hors ligne,Çevrimdışı kullanıcı,Usuario sin conexión,ok,app/templates/radius/_cards_overview_body.html:227
+لا توجد حزم بعد,,No batches yet,Aucun forfait pour le moment,Henüz paket yok,Aún no hay planes,ok,app/templates/radius/_cards_overview_body.html:244
+لا توجد حزم مطبوعة بعد,,No printed batches yet,Aucun lot imprimé pour le moment,Henüz yazdırılmış parti yok,Aún no hay lotes impresos,ok,app/templates/radius/_cards_overview_body.html:244
+حزم البيع الإلكتروني,,E-Sales Plans,Forfaits de vente en ligne,E-Satış Paketleri,Planes de venta electrónica,ok,app/templates/radius/_cards_overview_body.html:254
+سوق الكروت,,Voucher Marketplace,Place de marché des coupons,Kupon Pazarı,Mercado de cupones,ok,app/templates/radius/_cards_overview_body.html:255
+مباع,,Sold,Vendu,Satıldı,Vendido,ok,app/templates/radius/_cards_overview_body.html:263
+لا توجد حزم بيع إلكتروني بعد,,No online sales packages yet,Aucun forfait de vente en ligne pour l'instant,Henüz çevrimiçi satış paketi yok,Aún no hay paquetes de venta en línea,ok,app/templates/radius/_cards_overview_body.html:281
+بعد إنشاء دفعات كروت سيظهر توزيع المخزون هنا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:290
+لا يوجد مخزون بعد,,,,,,"missing: en,fr,tr,es",app/templates/radius/_cards_overview_body.html:290
+ث,weekday,Tu,ma,Sal,ma,ok,app/templates/radius/_cards_overview_body.html:300
+ج,weekday,Fr,ve,Cum,vi,ok,app/templates/radius/_cards_overview_body.html:300
+ح,weekday,Su,di,Paz,do,ok,app/templates/radius/_cards_overview_body.html:300
+خ,weekday,Th,je,Per,ju,ok,app/templates/radius/_cards_overview_body.html:300
+ر,weekday,We,me,Çar,mi,ok,app/templates/radius/_cards_overview_body.html:300
+س,weekday,Sa,sa,Cmt,sá,ok,app/templates/radius/_cards_overview_body.html:300
+ن,weekday,Mo,lu,Pzt,lu,ok,app/templates/radius/_cards_overview_body.html:300
+اختيار الأسبوع,,Select week,Sélectionner la semaine,Hafta seç,Seleccionar semana,ok,app/templates/radius/_cards_overview_body.html:480
+اختيار السنة,,Select year,Sélectionner l'année,Yıl seç,Seleccionar año,ok,app/templates/radius/_cards_overview_body.html:543
 متابعة,,Continue,Continuer,Devam et,Continuar,ok,app/templates/radius/_confirm_modal.html:20
 الخزائن والمحافظ,,Vaults & wallets,Coffres et portefeuilles,Kasalar ve cüzdanlar,Cajas y carteras,ok,app/templates/radius/_finance_nav.html:12
 القيود,,Restrictions,Restrictions,Kısıtlamalar,Restricciones,ok,app/templates/radius/_finance_nav.html:15
@@ -11125,40 +11126,40 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 الفعليّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:262
 وصول الأقسام,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:276
 مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:278
-مفتوح,,Open,Ouvert,Açık,Abierto,ok,app/templates/radius/business_operator_profile.html:289
-مقفول — عرض فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:295
-مخفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:301
-التحكّم بالحقول القابلة للتعديل,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:313
-فعّل «حصر الحقول» لكيانٍ لِتَقصر التعديل على الحقول المؤشَّرة فقط — الحقول غير المؤشَّرة تُعرَض للقراءة وتُرفَض على الخادم. عند الإطفاء يُسمح بكل الحقول (السلوك الافتراضي).,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:315
-حصر حقول,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:325
-السماح بتعديل/إضافة هذا الكيان يُضبط في «الصلاحيات الدقيقة» أعلاه (حسب الدور/مسموح/ممنوع).,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:331
-السقوف الرقميّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:353
-اضبط الحدّ الأقصى (0 = بلا حدّ). يُنفَّذ على الخادم عند الإنشاء — يُرفَض تجاوزه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:355
-المُستخدَم الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:361
-سقف الإنفاق والمعدّلات اليوميّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:374
-سقف الإنفاق (يوميّ/شهريّ) يَمنع عمليّات المال بعد تجاوزه؛ المعدّل يَحدّ عدد الفعل في اليوم. 0 = بلا حدّ. تُصفَّر تلقائيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:376
-سقف الإنفاق اليوميّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:379
-سقف الإنفاق الشهريّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:382
-معدّل يوميّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:386
-انتهاء المنوحات (اختياري — فارغ = دائم),,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:395
-أقصى أيام مجانية,,Maximum free days,Jours gratuits maximum,Azami ücretsiz gün,Máximo de días gratis,ok,app/templates/radius/business_operator_profile.html:400
-أقصى أيام تجربة,,Max trial days,Jours d'essai max,Maks. deneme günü,Días máx. de prueba,ok,app/templates/radius/business_operator_profile.html:403
-موافقة فوق,,Approve above,Approuver ci-dessus,Yukarıdan onayla,Aprobar arriba,ok,app/templates/radius/business_operator_profile.html:409
-نسبة مشاركة الربح %%,,Profit-share ratio %%,Ratio de partage des bénéfices %%,Kâr payı oranı %%,Proporción de reparto de beneficios %%,ok,app/templates/radius/business_operator_profile.html:412
-السلفة تخصم من المحفظة,,The advance is deducted from the wallet,L'avance est déduite du portefeuille,Avans cüzdandan düşülür,El anticipo se descuenta del monedero,ok,app/templates/radius/business_operator_profile.html:415
-تتبع الأرباح,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:423
-السعر الأصلي,,Original price,Prix d'origine,Orijinal fiyat,Precio original,ok,app/templates/radius/business_operator_profile.html:425
-تكلفة الجملة,,Wholesale Cost,Coût de gros,Toptan Maliyet,Costo mayorista,ok,app/templates/radius/business_operator_profile.html:426
-حصة المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:427
-حصة الشركة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:428
-%(string)s مشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:433
-المشتركون ضمن النطاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:433
-لا يوجد مشتركون ضمن هذا النطاق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:447
-%(string)s حزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:451
-حزم الكروت ضمن النطاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:451
-لا توجد حزم كروت ضمن هذا النطاق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:465
-الأحداث والعمليات,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:470
-لا توجد أحداث بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:487
+مفتوح,,Open,Ouvert,Açık,Abierto,ok,app/templates/radius/business_operator_profile.html:290
+مقفول — عرض فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:296
+مخفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:302
+التحكّم بالحقول القابلة للتعديل,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:314
+فعّل «حصر الحقول» لكيانٍ لِتَقصر التعديل على الحقول المؤشَّرة فقط — الحقول غير المؤشَّرة تُعرَض للقراءة وتُرفَض على الخادم. عند الإطفاء يُسمح بكل الحقول (السلوك الافتراضي).,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:316
+حصر حقول,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:326
+السماح بتعديل/إضافة هذا الكيان يُضبط في «الصلاحيات الدقيقة» أعلاه (حسب الدور/مسموح/ممنوع).,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:332
+السقوف الرقميّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:354
+اضبط الحدّ الأقصى (0 = بلا حدّ). يُنفَّذ على الخادم عند الإنشاء — يُرفَض تجاوزه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:356
+المُستخدَم الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:362
+سقف الإنفاق والمعدّلات اليوميّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:375
+سقف الإنفاق (يوميّ/شهريّ) يَمنع عمليّات المال بعد تجاوزه؛ المعدّل يَحدّ عدد الفعل في اليوم. 0 = بلا حدّ. تُصفَّر تلقائيًّا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:377
+سقف الإنفاق اليوميّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:380
+سقف الإنفاق الشهريّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:383
+معدّل يوميّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:387
+انتهاء المنوحات (اختياري — فارغ = دائم),,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:396
+أقصى أيام مجانية,,Maximum free days,Jours gratuits maximum,Azami ücretsiz gün,Máximo de días gratis,ok,app/templates/radius/business_operator_profile.html:401
+أقصى أيام تجربة,,Max trial days,Jours d'essai max,Maks. deneme günü,Días máx. de prueba,ok,app/templates/radius/business_operator_profile.html:404
+موافقة فوق,,Approve above,Approuver ci-dessus,Yukarıdan onayla,Aprobar arriba,ok,app/templates/radius/business_operator_profile.html:410
+نسبة مشاركة الربح %%,,Profit-share ratio %%,Ratio de partage des bénéfices %%,Kâr payı oranı %%,Proporción de reparto de beneficios %%,ok,app/templates/radius/business_operator_profile.html:413
+السلفة تخصم من المحفظة,,The advance is deducted from the wallet,L'avance est déduite du portefeuille,Avans cüzdandan düşülür,El anticipo se descuenta del monedero,ok,app/templates/radius/business_operator_profile.html:416
+تتبع الأرباح,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:424
+السعر الأصلي,,Original price,Prix d'origine,Orijinal fiyat,Precio original,ok,app/templates/radius/business_operator_profile.html:426
+تكلفة الجملة,,Wholesale Cost,Coût de gros,Toptan Maliyet,Costo mayorista,ok,app/templates/radius/business_operator_profile.html:427
+حصة المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:428
+حصة الشركة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:429
+%(string)s مشترك,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:434
+المشتركون ضمن النطاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:434
+لا يوجد مشتركون ضمن هذا النطاق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:448
+%(string)s حزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:452
+حزم الكروت ضمن النطاق,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:452
+لا توجد حزم كروت ضمن هذا النطاق.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:466
+الأحداث والعمليات,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:471
+لا توجد أحداث بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operator_profile.html:488
 المدراء والموزعون — هوب ريديوس,,Managers and distributors — HobeRadius,Gestionnaires et distributeurs — HobeRadius,Yöneticiler ve distribütörler — HobeRadius,Gerentes y distribuidores — HobeRadius,ok,app/templates/radius/business_operators.html:23
 مشغّلًا ضمن نطاق الجهة,,Operating within the entity's scope,Opérant dans le périmètre de l'entité,Kuruluşun kapsamı içinde çalışan,Operando dentro del ámbito de la entidad,ok,app/templates/radius/business_operators.html:26
 محافظ المشغّلين وصلاحياتهم وحدودهم — افتح ملف أي مشغّل لضبط السياسة وشحن المحفظة ومتابعة الأرباح.,,,,,,"missing: en,fr,tr,es",app/templates/radius/business_operators.html:56
@@ -11489,94 +11490,94 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 ملاحظات داخلية تظهر للمدير فقط...,,Internal notes visible to the admin only…,Notes internes visibles uniquement par l'administrateur…,Yalnızca yöneticiye görünen dahili notlar…,Notas internas visibles solo para el administrador…,ok,app/templates/radius/cards_batch_edit.html:305
 إدارة البطاقات والحزم,,Manage vouchers and plans,Gérer les cartes et les forfaits,Kuponları ve paketleri yönet,Gestionar cupones y planes,ok,app/templates/radius/cards_batches.html:8
 مركز بطاقات مؤقتة: %(total)s حزمة، صفحة %(page)s من %(pages_count)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:11
-أسبوع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:232
-شهر,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:233
-بدون كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:276
-بالثانية,,Per second,Par seconde,Saniye başına,Por segundo,ok,app/templates/radius/cards_batches.html:281
-بالمدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:282
-/ من أول اتصال,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:284
-تنبيه فقط,,Alert only,Alerte uniquement,Yalnızca uyarı,Solo alerta,ok,app/templates/radius/cards_batches.html:291
-استيراد من ملف,,Import from File,Importer depuis un fichier,Dosyadan içe aktar,Importar desde archivo,ok,app/templates/radius/cards_batches.html:338
-طريقة العرض,,Display mode,Mode d'affichage,Görüntüleme modu,Modo de visualización,ok,app/templates/radius/cards_batches.html:341
-جدول,,Table,Tableau,Tablo,Tabla,ok,app/templates/radius/cards_batches.html:343
-ملخص حزم البطاقات,,Voucher batches summary,Résumé des lots de coupons,Kupon partileri özeti,Resumen de los lotes de cupones,ok,app/templates/radius/cards_batches.html:352
-إجمالي الحزم,,Total Plans,Total des forfaits,Toplam Paket,Total de planes,ok,app/templates/radius/cards_batches.html:356
-حزم منتهية,,Expired Batches,Lots expirés,Süresi Dolmuş Partiler,Lotes vencidos,ok,app/templates/radius/cards_batches.html:363
-إجمالي الكروت,,Total vouchers,Total des coupons,Toplam kupon,Total de cupones,ok,app/templates/radius/cards_batches.html:370
-كروت منتهية,,Expired Vouchers,Coupons expirés,Süresi Dolmuş Kuponlar,Cupones caducados,ok,app/templates/radius/cards_batches.html:382
-كروت فعالة,,Active Vouchers,Coupons actifs,Aktif Kuponlar,Cupones activos,ok,app/templates/radius/cards_batches.html:389
-بحث عن حزمة أو كود...,,Search for a plan or code...,Rechercher un forfait ou un code...,Paket veya kod ara...,Buscar un plan o un código...,ok,app/templates/radius/cards_batches.html:399
-فلتر الحالة,,Status filter,Filtre d'état,Durum filtresi,Filtro de estado,ok,app/templates/radius/cards_batches.html:402
-فلتر الباقة,,Plan filter,Filtre de forfait,Paket filtresi,Filtro de plan,ok,app/templates/radius/cards_batches.html:407
-كل الباقات,,All plans,Tous les forfaits,Tüm paketler,Todos los planes,ok,app/templates/radius/cards_batches.html:408
-فلتر الموزع,,Distributor filter,Filtre de distributeur,Bayi filtresi,Filtro de distribuidor,ok,app/templates/radius/cards_batches.html:413
-كل الموزعين,,All Distributors,Tous les distributeurs,Tüm Distribütörler,Todos los distribuidores,ok,app/templates/radius/cards_batches.html:414
-عدد النتائج,,Results count,Nombre de résultats,Sonuç sayısı,Número de resultados,ok,app/templates/radius/cards_batches.html:422
-%(n)s/صفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:424
-تصدير الحزم,,Export Plans,Exporter les forfaits,Paketleri Dışa Aktar,Exportar planes,ok,app/templates/radius/cards_batches.html:430
-تحميل Excel,,Download Excel,Télécharger Excel,Excel İndir,Descargar Excel,ok,app/templates/radius/cards_batches.html:431
-تحميل PDF,,Download PDF,Télécharger le PDF,PDF indir,Descargar PDF,ok,app/templates/radius/cards_batches.html:433
-محددة,,Selected,Sélectionnée,Seçili,Seleccionada,ok,app/templates/radius/cards_batches.html:440
-إجراء على الحزم المحددة,,Action on the selected batches,Action sur les lots sélectionnés,Seçili partiler üzerinde işlem,Acción sobre los lotes seleccionados,ok,app/templates/radius/cards_batches.html:441
-اختر إجراء,,Select Action,Choisir une action,İşlem seçin,Seleccionar acción,ok,app/templates/radius/cards_batches.html:442
-تحديث الإحصاءات,,Refresh Statistics,Actualiser les statistiques,İstatistikleri yenile,Actualizar estadísticas,ok,app/templates/radius/cards_batches.html:443
-حذف / أرشفة آمنة,,Safe delete / archive,Suppression / archivage sécurisé,Güvenli silme / arşivleme,Eliminación / archivado seguro,ok,app/templates/radius/cards_batches.html:444
-استعادة المؤرشف,,Restore Archived,Restaurer les archives,Arşivlenenleri geri yükle,Restaurar archivados,ok,app/templates/radius/cards_batches.html:445
-ملاحظة اختيارية,,Optional Note,Note facultative,İsteğe Bağlı Not,Nota opcional,ok,app/templates/radius/cards_batches.html:447
-تحديد الحزمة,,Select Plan,Sélectionner le forfait,Paket Seç,Seleccionar plan,ok,app/templates/radius/cards_batches.html:478
-حزمة بطاقات مؤقتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:485
-عرض بطاقات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:485
-مميزة,,Premium,Premium,Premium,Premium,ok,app/templates/radius/cards_batches.html:486
-مدة البطاقة: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:497
-جهاز %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:498
-متصلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:506
-متاحة للاستخدام,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:508
-مستخدمة غير متصلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:510
-%% مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:515
-متبقي للتفعيل %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:516
-استهلاك الحزمة,,Plan usage,Consommation du forfait,Paket kullanımı,Consumo del plan,ok,app/templates/radius/cards_batches.html:518
-الأسعار,,Prices,Tarifs,Fiyatlar,Precios,ok,app/templates/radius/cards_batches.html:526
-بيع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:526
-جملة %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:526
-طباعة الحزمة — منشئ كروت PDF,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:545
-تصدير كروت الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:558
-أرشفة من مركز الحزم,,Archive from the plans center,Archiver depuis le centre des forfaits,Paket merkezinden arşivle,Archivar desde el centro de planes,ok,app/templates/radius/cards_batches.html:573
-نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:574
-نقل للسلّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:574
-حذف نهائيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:582
-حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:582
-تنقل الصفحات,,Page navigation,Navigation entre pages,Sayfa gezinmesi,Navegación de páginas,ok,app/templates/radius/cards_batches.html:589
-عدد الصفوف بالصفحة,,Rows per page,Lignes par page,Sayfa başına satır,Filas por página,ok,app/templates/radius/cards_batches.html:592
-إنشاء أو استيراد حزمة جديدة,,Create or import a new batch,Créer ou importer un nouveau lot,Yeni parti oluştur veya içe aktar,Crear o importar un nuevo lote,ok,app/templates/radius/cards_batches.html:630
-أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.,,Add a new temporary voucher batch or import from a CSV file quickly and easily.,Ajoutez un nouveau lot de coupons temporaires ou importez à partir d'un fichier CSV rapidement et facilement.,Hızlı ve kolay bir şekilde yeni bir geçici kupon partisi ekleyin veya bir CSV dosyasından içe aktarın.,Añada un nuevo lote de cupones temporales o importe desde un archivo CSV de forma rápida y sencilla.,ok,app/templates/radius/cards_batches.html:631
-إنشاء حزمة جديدة,,Create new plan,Créer un nouveau forfait,Yeni paket oluştur,Crear plan nuevo,ok,app/templates/radius/cards_batches.html:633
-قائمة الحزم,,Plans list,Liste des forfaits,Paket listesi,Lista de planes,ok,app/templates/radius/cards_batches.html:646
-اضغط على رأس العمود للترتيب,,Click the column header to sort,Cliquez sur l'en-tête de colonne pour trier,Sıralamak için sütun başlığına tıklayın,Haga clic en el encabezado de columna para ordenar,ok,app/templates/radius/cards_batches.html:650
-تحديد,,Select,Sélectionner,Seç,Seleccionar,ok,app/templates/radius/cards_batches.html:669
-تحديد الكل,,Select All,Tout sélectionner,Tümünü Seç,Seleccionar todo,ok,app/templates/radius/cards_batches.html:669
-صلاحية بعد أول اتصال,,Validity after first connection,Validité après la première connexion,İlk bağlantıdan sonraki geçerlilik,Validez tras la primera conexión,ok,app/templates/radius/cards_batches.html:677
-نهاية الحزمة,,Plan end,Fin du forfait,Paket bitişi,Fin del plan,ok,app/templates/radius/cards_batches.html:678
-انتهاء الكوتة,,Quota exhausted,Quota épuisé,Kota tükendi,Cuota agotada,ok,app/templates/radius/cards_batches.html:682
-عند انتهاء الكوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:682
-بدون اسم مخصص,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:707
- جهاز,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:712
-ملف المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:743
-صفحة الموزّع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:749
-إجراءات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:764
-تفعيل الحزمة,,Activate Plan,Activer le forfait,Paketi Etkinleştir,Activar plan,ok,app/templates/radius/cards_batches.html:790
-أرشفة من جدول الحزم,,Archive from the plans table,Archiver depuis le tableau des forfaits,Paketler tablosundan arşivle,Archivar desde la tabla de planes,ok,app/templates/radius/cards_batches.html:798
-جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:869
-لا توجد حزم مطابقة للفلاتر الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:869
-مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:882
-جارٍ تحميل النظرة العامة…,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:886
-الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:905
-ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل المتقدّمة بضغطة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:955
-ماذا يُصدَّر؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1131
-كل البيانات (جدول كامل),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1133
-اسم الدخول وكلمة المرور فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1134
-أيّ بطاقات؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1138
-غير المستخدمة فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1141
-تعذّر تحميل النظرة العامة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1272
+أسبوع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:238
+شهر,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:239
+بدون كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:282
+بالثانية,,Per second,Par seconde,Saniye başına,Por segundo,ok,app/templates/radius/cards_batches.html:287
+بالمدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:288
+/ من أول اتصال,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:290
+تنبيه فقط,,Alert only,Alerte uniquement,Yalnızca uyarı,Solo alerta,ok,app/templates/radius/cards_batches.html:297
+استيراد من ملف,,Import from File,Importer depuis un fichier,Dosyadan içe aktar,Importar desde archivo,ok,app/templates/radius/cards_batches.html:344
+طريقة العرض,,Display mode,Mode d'affichage,Görüntüleme modu,Modo de visualización,ok,app/templates/radius/cards_batches.html:347
+جدول,,Table,Tableau,Tablo,Tabla,ok,app/templates/radius/cards_batches.html:349
+ملخص حزم البطاقات,,Voucher batches summary,Résumé des lots de coupons,Kupon partileri özeti,Resumen de los lotes de cupones,ok,app/templates/radius/cards_batches.html:358
+إجمالي الحزم,,Total Plans,Total des forfaits,Toplam Paket,Total de planes,ok,app/templates/radius/cards_batches.html:362
+حزم منتهية,,Expired Batches,Lots expirés,Süresi Dolmuş Partiler,Lotes vencidos,ok,app/templates/radius/cards_batches.html:369
+إجمالي الكروت,,Total vouchers,Total des coupons,Toplam kupon,Total de cupones,ok,app/templates/radius/cards_batches.html:376
+كروت منتهية,,Expired Vouchers,Coupons expirés,Süresi Dolmuş Kuponlar,Cupones caducados,ok,app/templates/radius/cards_batches.html:388
+كروت فعالة,,Active Vouchers,Coupons actifs,Aktif Kuponlar,Cupones activos,ok,app/templates/radius/cards_batches.html:395
+بحث عن حزمة أو كود...,,Search for a plan or code...,Rechercher un forfait ou un code...,Paket veya kod ara...,Buscar un plan o un código...,ok,app/templates/radius/cards_batches.html:405
+فلتر الحالة,,Status filter,Filtre d'état,Durum filtresi,Filtro de estado,ok,app/templates/radius/cards_batches.html:408
+فلتر الباقة,,Plan filter,Filtre de forfait,Paket filtresi,Filtro de plan,ok,app/templates/radius/cards_batches.html:413
+كل الباقات,,All plans,Tous les forfaits,Tüm paketler,Todos los planes,ok,app/templates/radius/cards_batches.html:414
+فلتر الموزع,,Distributor filter,Filtre de distributeur,Bayi filtresi,Filtro de distribuidor,ok,app/templates/radius/cards_batches.html:419
+كل الموزعين,,All Distributors,Tous les distributeurs,Tüm Distribütörler,Todos los distribuidores,ok,app/templates/radius/cards_batches.html:420
+عدد النتائج,,Results count,Nombre de résultats,Sonuç sayısı,Número de resultados,ok,app/templates/radius/cards_batches.html:428
+%(n)s/صفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:430
+تصدير الحزم,,Export Plans,Exporter les forfaits,Paketleri Dışa Aktar,Exportar planes,ok,app/templates/radius/cards_batches.html:436
+تحميل Excel,,Download Excel,Télécharger Excel,Excel İndir,Descargar Excel,ok,app/templates/radius/cards_batches.html:437
+تحميل PDF,,Download PDF,Télécharger le PDF,PDF indir,Descargar PDF,ok,app/templates/radius/cards_batches.html:439
+محددة,,Selected,Sélectionnée,Seçili,Seleccionada,ok,app/templates/radius/cards_batches.html:446
+إجراء على الحزم المحددة,,Action on the selected batches,Action sur les lots sélectionnés,Seçili partiler üzerinde işlem,Acción sobre los lotes seleccionados,ok,app/templates/radius/cards_batches.html:447
+اختر إجراء,,Select Action,Choisir une action,İşlem seçin,Seleccionar acción,ok,app/templates/radius/cards_batches.html:448
+تحديث الإحصاءات,,Refresh Statistics,Actualiser les statistiques,İstatistikleri yenile,Actualizar estadísticas,ok,app/templates/radius/cards_batches.html:449
+حذف / أرشفة آمنة,,Safe delete / archive,Suppression / archivage sécurisé,Güvenli silme / arşivleme,Eliminación / archivado seguro,ok,app/templates/radius/cards_batches.html:450
+استعادة المؤرشف,,Restore Archived,Restaurer les archives,Arşivlenenleri geri yükle,Restaurar archivados,ok,app/templates/radius/cards_batches.html:451
+ملاحظة اختيارية,,Optional Note,Note facultative,İsteğe Bağlı Not,Nota opcional,ok,app/templates/radius/cards_batches.html:453
+تحديد الحزمة,,Select Plan,Sélectionner le forfait,Paket Seç,Seleccionar plan,ok,app/templates/radius/cards_batches.html:484
+حزمة بطاقات مؤقتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:491
+عرض بطاقات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:491
+مميزة,,Premium,Premium,Premium,Premium,ok,app/templates/radius/cards_batches.html:492
+مدة البطاقة: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:503
+جهاز %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:504
+متصلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:512
+متاحة للاستخدام,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:514
+مستخدمة غير متصلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:516
+%% مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:521
+متبقي للتفعيل %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:522
+استهلاك الحزمة,,Plan usage,Consommation du forfait,Paket kullanımı,Consumo del plan,ok,app/templates/radius/cards_batches.html:524
+الأسعار,,Prices,Tarifs,Fiyatlar,Precios,ok,app/templates/radius/cards_batches.html:532
+بيع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:532
+جملة %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:532
+طباعة الحزمة — منشئ كروت PDF,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:551
+تصدير كروت الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:564
+أرشفة من مركز الحزم,,Archive from the plans center,Archiver depuis le centre des forfaits,Paket merkezinden arşivle,Archivar desde el centro de planes,ok,app/templates/radius/cards_batches.html:579
+نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:580
+نقل للسلّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:580
+حذف نهائيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:588
+حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:588
+تنقل الصفحات,,Page navigation,Navigation entre pages,Sayfa gezinmesi,Navegación de páginas,ok,app/templates/radius/cards_batches.html:595
+عدد الصفوف بالصفحة,,Rows per page,Lignes par page,Sayfa başına satır,Filas por página,ok,app/templates/radius/cards_batches.html:598
+إنشاء أو استيراد حزمة جديدة,,Create or import a new batch,Créer ou importer un nouveau lot,Yeni parti oluştur veya içe aktar,Crear o importar un nuevo lote,ok,app/templates/radius/cards_batches.html:636
+أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.,,Add a new temporary voucher batch or import from a CSV file quickly and easily.,Ajoutez un nouveau lot de coupons temporaires ou importez à partir d'un fichier CSV rapidement et facilement.,Hızlı ve kolay bir şekilde yeni bir geçici kupon partisi ekleyin veya bir CSV dosyasından içe aktarın.,Añada un nuevo lote de cupones temporales o importe desde un archivo CSV de forma rápida y sencilla.,ok,app/templates/radius/cards_batches.html:637
+إنشاء حزمة جديدة,,Create new plan,Créer un nouveau forfait,Yeni paket oluştur,Crear plan nuevo,ok,app/templates/radius/cards_batches.html:639
+قائمة الحزم,,Plans list,Liste des forfaits,Paket listesi,Lista de planes,ok,app/templates/radius/cards_batches.html:652
+اضغط على رأس العمود للترتيب,,Click the column header to sort,Cliquez sur l'en-tête de colonne pour trier,Sıralamak için sütun başlığına tıklayın,Haga clic en el encabezado de columna para ordenar,ok,app/templates/radius/cards_batches.html:656
+تحديد,,Select,Sélectionner,Seç,Seleccionar,ok,app/templates/radius/cards_batches.html:675
+تحديد الكل,,Select All,Tout sélectionner,Tümünü Seç,Seleccionar todo,ok,app/templates/radius/cards_batches.html:675
+صلاحية بعد أول اتصال,,Validity after first connection,Validité après la première connexion,İlk bağlantıdan sonraki geçerlilik,Validez tras la primera conexión,ok,app/templates/radius/cards_batches.html:683
+نهاية الحزمة,,Plan end,Fin du forfait,Paket bitişi,Fin del plan,ok,app/templates/radius/cards_batches.html:684
+انتهاء الكوتة,,Quota exhausted,Quota épuisé,Kota tükendi,Cuota agotada,ok,app/templates/radius/cards_batches.html:688
+عند انتهاء الكوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:688
+بدون اسم مخصص,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:713
+ جهاز,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:718
+ملف المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:749
+صفحة الموزّع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:755
+إجراءات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:770
+تفعيل الحزمة,,Activate Plan,Activer le forfait,Paketi Etkinleştir,Activar plan,ok,app/templates/radius/cards_batches.html:796
+أرشفة من جدول الحزم,,Archive from the plans table,Archiver depuis le tableau des forfaits,Paketler tablosundan arşivle,Archivar desde la tabla de planes,ok,app/templates/radius/cards_batches.html:804
+جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:875
+لا توجد حزم مطابقة للفلاتر الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:875
+مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:888
+جارٍ تحميل النظرة العامة…,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:892
+الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:911
+ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل المتقدّمة بضغطة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:961
+ماذا يُصدَّر؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1137
+كل البيانات (جدول كامل),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1139
+اسم الدخول وكلمة المرور فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1140
+أيّ بطاقات؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1144
+غير المستخدمة فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1147
+تعذّر تحميل النظرة العامة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1278
 مركز عمليات البطاقة,,Card Operations Center,Centre des opérations de cartes,Kart İşlemleri Merkezi,Centro de operaciones de tarjetas,ok,app/templates/radius/cards_checker.html:12
 فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.,,"Check, trace, kick sessions, lock MAC, and disable or re-enable the voucher from one place.","Vérifier, suivre, déconnecter des sessions, verrouiller le MAC, et désactiver ou réactiver le coupon depuis un seul endroit.","Tek bir yerden kontrol edin, izleyin, oturumları atın, MAC kilitleyin ve kuponu devre dışı bırakın veya yeniden etkinleştirin.","Comprobar, rastrear, expulsar sesiones, fijar el MAC y desactivar o reactivar el cupón desde un solo lugar.",ok,app/templates/radius/cards_checker.html:15
 النسخة القديمة من مركز عمليات البطاقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker.html:110
@@ -12948,6 +12949,7 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 إدارة المشتركين,,Manage Subscribers,Gérer les abonnés,Aboneleri yönet,Gestionar abonados,ok,app/templates/radius/dashboard.html:767
 البطاقات والحزم,,Cards & Batches,Coupons et forfaits,Kuponlar ve Paketler,Cupones y planes,ok,app/templates/radius/dashboard.html:777
 مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.,,Inventory of printed cards and batches ready for activation or direct sale.,Le stock de coupons imprimés et de lots prêts à l'activation ou à la vente directe.,Etkinleştirmeye veya doğrudan satışa hazır basılı kupon ve parti envanteri.,El inventario de cupones impresos y lotes listos para activación o venta directa.,ok,app/templates/radius/dashboard.html:778
+مخزون الكروت والحزم الجاهزة للتفعيل أو البيع المباشر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/dashboard.html:778
 كرت مطبوع,,printed cards,Coupon imprimé,Basılı kupon,Cupón impreso,ok,app/templates/radius/dashboard.html:783
 مباع اليوم,,Sold today,Vendu aujourd'hui,Bugün satılan,Vendido hoy,ok,app/templates/radius/dashboard.html:788
 حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة.,,Electronic sales batches and card users who buy from their wallet.,Les forfaits de vente électronique et les utilisateurs de coupons qui achètent depuis le portefeuille.,Elektronik satış paketleri ve cüzdandan satın alan kupon kullanıcıları.,Paquetes de venta electrónica y los usuarios de cupones que compran desde el monedero.,ok,app/templates/radius/dashboard.html:804
@@ -12969,7 +12971,6 @@ CSV الصفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_of_batch
 هذا الشهر,,This month,Ce mois-ci,Bu ay,Este mes,ok,app/templates/radius/dashboard.html:908
 آخر الحزم,,Latest Batches,Derniers forfaits,Son paketler,Últimos planes,ok,app/templates/radius/dashboard.html:926
 حزمة بدون اسم,,Unnamed batch,Forfait sans nom,Adsız paket,Plan sin nombre,ok,app/templates/radius/dashboard.html:933
-لا توجد حزم بعد,,No batches yet,Aucun forfait pour le moment,Henüz paket yok,Aún no hay planes,ok,app/templates/radius/dashboard.html:942
 ستظهر أحدث الحزم هنا,,The latest batches will appear here,Les derniers forfaits apparaîtront ici,En son paketler burada görünecek,Los últimos paquetes aparecerán aquí,ok,app/templates/radius/dashboard.html:943
 ما يحتاج انتباه,,Needs Attention,Nécessite une attention,Dikkat gerektiren,Requiere atención,ok,app/templates/radius/dashboard.html:953
 لا توجد ملاحظات تشغيلية مهمة الآن.,,No important operational notes right now.,Aucune note opérationnelle importante pour le moment.,Şu anda önemli bir operasyonel not yok.,No hay notas operativas importantes en este momento.,ok,app/templates/radius/dashboard.html:973
@@ -19042,82 +19043,82 @@ SAR — ريال سعودي,,SAR — Saudi riyal,SAR — riyal saoudien,SAR — 
 كروت/شهر,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:291
 البائعون,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:292
 العناصر الفعالة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:292
-خدمات المشتركين,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:335
-خدمات الشبكة والراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:337
-الكروت والمبيعات,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:339
-الإدارة والمالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:341
-الدعم والتواصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:343
-التكامل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:345
-مزامنة الكل,,Sync all,Tout synchroniser,Tümünü eşitle,Sincronizar todo,ok,app/templates/radius/license_file.html:353
-افتح بوابة العميل,,Open the customer portal,Ouvrir le portail client,Müşteri portalını aç,Abrir el portal del cliente,ok,app/templates/radius/license_file.html:357
-ترخيص هذا النظام واتصاله بلوحة التراخيص السحابية: ربط الجسر، آخر عقد تشغيل ومزامنة الهوية، والخدمات والحدود التي يطبّقها الريدياس محليًا. (هذه ليست «تراخيص أنفاق الراوترات» — تلك صفحة منفصلة لخدمة نفق تغيير IP لكل راوتر.),,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:361
-حالة الجسر,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:365
-غير مفعَّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:367
-حالة الحدود,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:368
-كيف يعمل ترخيص النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:373
-الريدياس يأخذ ترخيصه وصلاحياته من لوحة التراخيص السحابية. هذه الصفحة تربط الجسر، تعرض آخر اللقطات المستلمة، والخدمات والحدود التي يطبّقها عقدك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:374
-انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص والصقه في نموذج الربط — لا تحتاج سرًّا آخر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:376
-بعد الحفظ اضغط «مزامنة الكل» بالأعلى ليقرأ الريدياس عقد التشغيل من اللوحة عبر اتصال آمن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:377
-آخر اللقطات تُظهر حالة فحص الترخيص وعقد التشغيل ومزامنة الهوية وتاريخ آخر تحديث.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:378
-الخدمات والحدود تصل من العقد — تُعرض هنا مقسّمة حسب الفئة بدون JSON خام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:379
-لا تخلط بينها وبين «تراخيص أنفاق الراوترات» (قسم الإدارة): تلك لحوكمة خدمة نفق تغيير IP المدفوعة لكل راوتر — أمّا هذه فلترخيص النظام نفسه واتصاله بلوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:380
-كل عمليات المزامنة تتم عبر اتصال آمن وموقّع — لا يمكن استخدام اتصال غير آمن في الإنتاج.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:383
-إعدادات ناقصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:390
-لم يكتمل ملف الربط بعد. أضف القيم التالية من صفحة العميل أو من إعدادات السيرفر ثم أعد تشغيل خدمة الريدياس:,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:392
-إعداد مطلوب,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:396
-ربط الترخيص من صفحة العميل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:408
-افتح صفحة العميل في لوحة التراخيص، انسخ,,"Open the customer page in the licensing panel, copy","Ouvrez la page client dans le panneau de licences, copiez","Lisans panelinde müşteri sayfasını açın, kopyalayın","Abre la página del cliente en el panel de licencias, copia",ok,app/templates/radius/license_file.html:415
-فقط، والصقه هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل. الرابط الأمامي مقفول حتى لا يتغيّر بالغلط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:415
-رابط لوحة التراخيص الثابت,,Fixed licenses panel link,Lien fixe du panneau des licences,Sabit lisans paneli bağlantısı,Enlace fijo del panel de licencias,ok,app/templates/radius/license_file.html:421
-هذا هو عنوان لوحة التراخيص التي يستلم منها الريدياس الترخيص والصلاحيات. الحقل مقفول حتى لا يتغير بالغلط.,,This is the address of the license panel from which RADIUS receives the license and permissions. The field is locked so it isn't changed by mistake.,Il s'agit de l'adresse du panneau de licences depuis lequel RADIUS reçoit la licence et les permissions. Le champ est verrouillé pour ne pas être modifié par erreur.,"Bu, RADIUS'un lisansı ve izinleri aldığı lisans panelinin adresidir. Alan, yanlışlıkla değiştirilmemesi için kilitlidir.",Esta es la dirección del panel de licencias desde el que RADIUS recibe la licencia y los permisos. El campo está bloqueado para que no se cambie por error.,ok,app/templates/radius/license_file.html:423
-مفتاح الترخيص من صفحة العميل,,License key from the client page,Clé de licence depuis la page client,İstemci sayfasından lisans anahtarı,Clave de licencia desde la página del cliente,ok,app/templates/radius/license_file.html:426
-الصق مفتاح الترخيص هنا (16 حرفًا),,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:427
-موجود ومحفوظ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:427
-هذا المفتاح هو سرّ الربط الوحيد. اتركه فارغًا إن كان محفوظًا. لا نعرضه كاملًا في الصفحة.,,This key is the only link secret. Leave empty if already saved. We never show it in full on the page.,Cette clé est le seul secret de liaison. Laissez vide si elle est déjà enregistrée. Nous ne l'affichons jamais en entier sur la page.,"Bu anahtar, tek bağlantı sırrıdır. Zaten kayıtlıysa boş bırakın. Sayfada hiçbir zaman tam olarak göstermeyiz.",Esta clave es el único secreto de enlace. Déjelo vacío si ya está guardada. Nunca la mostramos completa en la página.,ok,app/templates/radius/license_file.html:428
-تفعيل الجسر مع لوحة التراخيص,,Enable the bridge with the licensing panel,Activer la liaison avec le panneau des licences,Lisans paneliyle köprüyü etkinleştir,Activar el puente con el panel de licencias,ok,app/templates/radius/license_file.html:437
-استخدام عقد التشغيل الجديد,,Use the new operating contract,Utiliser le nouveau contrat d'exploitation,Yeni işletim sözleşmesini kullan,Usar el nuevo contrato de operación,ok,app/templates/radius/license_file.html:441
-مزامنة الهوية عبر اتصال آمن,,Identity synchronization over a secure connection,Synchronisation de l'identité via une connexion sécurisée,Güvenli bağlantı üzerinden kimlik eşitlemesi,Sincronización de identidad por conexión segura,ok,app/templates/radius/license_file.html:445
-مزامنة سريعة قبل تسجيل الدخول,,Quick sync before login,Synchronisation rapide avant la connexion,Girişten önce hızlı eşitleme,Sincronización rápida antes de iniciar sesión,ok,app/templates/radius/license_file.html:449
-تشغيل عامل المزامنة الخلفي,,Run the background sync worker,Exécuter l'agent de synchronisation en arrière-plan,Arka plan eşitleme işçisini çalıştır,Ejecutar el trabajador de sincronización en segundo plano,ok,app/templates/radius/license_file.html:453
-حفظ بيانات الربط,,Save link settings,Enregistrer les paramètres de liaison,Bağlantı ayarlarını kaydet,Guardar datos de enlace,ok,app/templates/radius/license_file.html:461
-إعدادات الاتصال الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:472
-المزامنة عند تسجيل الدخول,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:476
-عامل المزامنة الخلفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:477
-المفتاح يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.,,The key is shown abbreviated only. All sync operations use a secure connection — insecure connections are not allowed.,La clé n'est affichée que de manière abrégée. Toutes les opérations de synchronisation passent par une connexion sécurisée — les connexions non sécurisées ne sont pas autorisées.,Anahtar yalnızca kısaltılmış olarak gösterilir. Tüm eşitleme işlemleri güvenli bir bağlantı üzerinden yapılır — güvenli olmayan bağlantılara izin verilmez.,La clave se muestra abreviada. Todas las sincronizaciones usan una conexión segura — no se permiten conexiones inseguras.,ok,app/templates/radius/license_file.html:480
-آخر اللقطات المستلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:485
-فحص الترخيص,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:489
-تنبيه,,Alert,Alerte,Uyarı,Alerta,ok,app/templates/radius/license_file.html:507
-آخر تحديث:,,Last Updated:,Dernière mise à jour :,Son Güncelleme:,Última actualización:,ok,app/templates/radius/license_file.html:513
-لا توجد لقطة بعد,,No snapshot yet,Aucun instantané pour le moment,Henüz anlık görüntü yok,Aún no hay instantánea,ok,app/templates/radius/license_file.html:517
-شغّل المزامنة بعد إكمال إعدادات الربط.,,Run synchronization after completing the link settings.,Lancez la synchronisation après avoir terminé les réglages de liaison.,Bağlantı ayarlarını tamamladıktan sonra eşitlemeyi çalıştırın.,Ejecuta la sincronización tras completar la configuración del enlace.,ok,app/templates/radius/license_file.html:519
-الخدمات المفعّلة في عقدك,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:535
-%(length)s مفعّلة من %(length2)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:536
-هذه قائمة بالخدمات مقسّمة حسب الفئة. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها كما استلمها الريدياس من عقد التشغيل.,,"This is a list of services grouped by category. Each card shows the service name, whether it is currently enabled, and its limits as RADIUS received them from the operating contract.","Ceci est une liste de services regroupés par catégorie. Chaque carte indique le nom du service, s'il est actuellement activé et ses limites telles que RADIUS les a reçues du contrat d'exploitation.","Bu, kategoriye göre gruplanmış hizmetlerin bir listesidir. Her kart hizmet adını, şu anda etkin olup olmadığını ve RADIUS'un işletim sözleşmesinden aldığı sınırlarını gösterir.","Esta es una lista de servicios agrupados por categoría. Cada tarjeta muestra el nombre del servicio, si está activado actualmente y sus límites tal como RADIUS los recibió del contrato de operación.",ok,app/templates/radius/license_file.html:538
-خدمة مرخّصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:561
-صلاحية ضمن عقد الترخيص. تظهر تفاصيلها وحدودها هنا عند تفعيلها من لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:562
-%(chips)sسرعة التحميل: %(download_mbps)s ميجابت/ثانية · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:567
-%(chips)sسرعة الرفع: %(upload_mbps)s ميجابت/ثانية · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:568
-%(chips)sالمستخدمون: %(max_vpn_users)s · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:569
-%(chips)sالمواقع: %(max_locations)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:570
-الحد الأعلى المسموح: %(max)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:573
-تحميل %(download_mbps)s ميجابت/ثانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:595
-رفع %(upload_mbps)s ميجابت/ثانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:596
-%(max_vpn_users)s مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:597
-%(max_locations)s موقع,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:598
-الحد الأعلى: %(max)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:604
-متاحة بالكامل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:606
-طلب تفعيل,,Activation Request,Demande d'activation,Etkinleştirme İsteği,Solicitud de activación,ok,app/templates/radius/license_file.html:627
-خدمات أخرى,,Other Services,Autres services,Diğer hizmetler,Otros servicios,ok,app/templates/radius/license_file.html:652
-خدمة مرخّصة إضافية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:658
-صلاحية ضمن عقد الترخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:659
-اضغط «مزامنة الكل» بالأعلى لتنزيل عقد التشغيل وعرض خدماتك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:696
-لم يصل عقد خدمات بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:696
-%(length)s حد,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:701
-حدود الاستخدام المسموحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:701
-أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، كروت…). يطبّقها الريدياس تلقائيًا.,,"The maximum counts allowed in your installation per your plan (subscribers, network devices, vouchers...). RADIUS enforces them automatically.","Les nombres maximaux autorisés dans votre installation selon votre forfait (abonnés, appareils réseau, coupons...). RADIUS les applique automatiquement.","Paketinize göre kurulumunuzda izin verilen maksimum sayılar (aboneler, ağ cihazları, kuponlar...). RADIUS bunları otomatik olarak uygular.","Los máximos permitidos en tu instalación según tu plan (abonados, dispositivos de red, cupones...). RADIUS los aplica automáticamente.",ok,app/templates/radius/license_file.html:703
-ستظهر هنا بعد مزامنة عقد التشغيل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:718
-لم تصل حدود بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:718
-تفاصيل الخدمة,,Service details,Détails du service,Hizmet ayrıntıları,Detalles del servicio,ok,app/templates/radius/license_file.html:729
+خدمات المشتركين,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:336
+خدمات الشبكة والراوترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:338
+الكروت والمبيعات,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:340
+الإدارة والمالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:344
+الدعم والتواصل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:346
+التكامل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:348
+مزامنة الكل,,Sync all,Tout synchroniser,Tümünü eşitle,Sincronizar todo,ok,app/templates/radius/license_file.html:356
+افتح بوابة العميل,,Open the customer portal,Ouvrir le portail client,Müşteri portalını aç,Abrir el portal del cliente,ok,app/templates/radius/license_file.html:360
+ترخيص هذا النظام واتصاله بلوحة التراخيص السحابية: ربط الجسر، آخر عقد تشغيل ومزامنة الهوية، والخدمات والحدود التي يطبّقها الريدياس محليًا. (هذه ليست «تراخيص أنفاق الراوترات» — تلك صفحة منفصلة لخدمة نفق تغيير IP لكل راوتر.),,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:364
+حالة الجسر,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:368
+غير مفعَّلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:370
+حالة الحدود,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:371
+كيف يعمل ترخيص النظام,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:376
+الريدياس يأخذ ترخيصه وصلاحياته من لوحة التراخيص السحابية. هذه الصفحة تربط الجسر، تعرض آخر اللقطات المستلمة، والخدمات والحدود التي يطبّقها عقدك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:377
+انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص والصقه في نموذج الربط — لا تحتاج سرًّا آخر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:379
+بعد الحفظ اضغط «مزامنة الكل» بالأعلى ليقرأ الريدياس عقد التشغيل من اللوحة عبر اتصال آمن.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:380
+آخر اللقطات تُظهر حالة فحص الترخيص وعقد التشغيل ومزامنة الهوية وتاريخ آخر تحديث.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:381
+الخدمات والحدود تصل من العقد — تُعرض هنا مقسّمة حسب الفئة بدون JSON خام.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:382
+لا تخلط بينها وبين «تراخيص أنفاق الراوترات» (قسم الإدارة): تلك لحوكمة خدمة نفق تغيير IP المدفوعة لكل راوتر — أمّا هذه فلترخيص النظام نفسه واتصاله بلوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:383
+كل عمليات المزامنة تتم عبر اتصال آمن وموقّع — لا يمكن استخدام اتصال غير آمن في الإنتاج.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:386
+إعدادات ناقصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:393
+لم يكتمل ملف الربط بعد. أضف القيم التالية من صفحة العميل أو من إعدادات السيرفر ثم أعد تشغيل خدمة الريدياس:,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:395
+إعداد مطلوب,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:399
+ربط الترخيص من صفحة العميل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:411
+افتح صفحة العميل في لوحة التراخيص، انسخ,,"Open the customer page in the licensing panel, copy","Ouvrez la page client dans le panneau de licences, copiez","Lisans panelinde müşteri sayfasını açın, kopyalayın","Abre la página del cliente en el panel de licencias, copia",ok,app/templates/radius/license_file.html:418
+فقط، والصقه هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل. الرابط الأمامي مقفول حتى لا يتغيّر بالغلط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:418
+رابط لوحة التراخيص الثابت,,Fixed licenses panel link,Lien fixe du panneau des licences,Sabit lisans paneli bağlantısı,Enlace fijo del panel de licencias,ok,app/templates/radius/license_file.html:424
+هذا هو عنوان لوحة التراخيص التي يستلم منها الريدياس الترخيص والصلاحيات. الحقل مقفول حتى لا يتغير بالغلط.,,This is the address of the license panel from which RADIUS receives the license and permissions. The field is locked so it isn't changed by mistake.,Il s'agit de l'adresse du panneau de licences depuis lequel RADIUS reçoit la licence et les permissions. Le champ est verrouillé pour ne pas être modifié par erreur.,"Bu, RADIUS'un lisansı ve izinleri aldığı lisans panelinin adresidir. Alan, yanlışlıkla değiştirilmemesi için kilitlidir.",Esta es la dirección del panel de licencias desde el que RADIUS recibe la licencia y los permisos. El campo está bloqueado para que no se cambie por error.,ok,app/templates/radius/license_file.html:426
+مفتاح الترخيص من صفحة العميل,,License key from the client page,Clé de licence depuis la page client,İstemci sayfasından lisans anahtarı,Clave de licencia desde la página del cliente,ok,app/templates/radius/license_file.html:429
+الصق مفتاح الترخيص هنا (16 حرفًا),,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:430
+موجود ومحفوظ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:430
+هذا المفتاح هو سرّ الربط الوحيد. اتركه فارغًا إن كان محفوظًا. لا نعرضه كاملًا في الصفحة.,,This key is the only link secret. Leave empty if already saved. We never show it in full on the page.,Cette clé est le seul secret de liaison. Laissez vide si elle est déjà enregistrée. Nous ne l'affichons jamais en entier sur la page.,"Bu anahtar, tek bağlantı sırrıdır. Zaten kayıtlıysa boş bırakın. Sayfada hiçbir zaman tam olarak göstermeyiz.",Esta clave es el único secreto de enlace. Déjelo vacío si ya está guardada. Nunca la mostramos completa en la página.,ok,app/templates/radius/license_file.html:431
+تفعيل الجسر مع لوحة التراخيص,,Enable the bridge with the licensing panel,Activer la liaison avec le panneau des licences,Lisans paneliyle köprüyü etkinleştir,Activar el puente con el panel de licencias,ok,app/templates/radius/license_file.html:440
+استخدام عقد التشغيل الجديد,,Use the new operating contract,Utiliser le nouveau contrat d'exploitation,Yeni işletim sözleşmesini kullan,Usar el nuevo contrato de operación,ok,app/templates/radius/license_file.html:444
+مزامنة الهوية عبر اتصال آمن,,Identity synchronization over a secure connection,Synchronisation de l'identité via une connexion sécurisée,Güvenli bağlantı üzerinden kimlik eşitlemesi,Sincronización de identidad por conexión segura,ok,app/templates/radius/license_file.html:448
+مزامنة سريعة قبل تسجيل الدخول,,Quick sync before login,Synchronisation rapide avant la connexion,Girişten önce hızlı eşitleme,Sincronización rápida antes de iniciar sesión,ok,app/templates/radius/license_file.html:452
+تشغيل عامل المزامنة الخلفي,,Run the background sync worker,Exécuter l'agent de synchronisation en arrière-plan,Arka plan eşitleme işçisini çalıştır,Ejecutar el trabajador de sincronización en segundo plano,ok,app/templates/radius/license_file.html:456
+حفظ بيانات الربط,,Save link settings,Enregistrer les paramètres de liaison,Bağlantı ayarlarını kaydet,Guardar datos de enlace,ok,app/templates/radius/license_file.html:464
+إعدادات الاتصال الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:475
+المزامنة عند تسجيل الدخول,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:479
+عامل المزامنة الخلفي,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:480
+المفتاح يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.,,The key is shown abbreviated only. All sync operations use a secure connection — insecure connections are not allowed.,La clé n'est affichée que de manière abrégée. Toutes les opérations de synchronisation passent par une connexion sécurisée — les connexions non sécurisées ne sont pas autorisées.,Anahtar yalnızca kısaltılmış olarak gösterilir. Tüm eşitleme işlemleri güvenli bir bağlantı üzerinden yapılır — güvenli olmayan bağlantılara izin verilmez.,La clave se muestra abreviada. Todas las sincronizaciones usan una conexión segura — no se permiten conexiones inseguras.,ok,app/templates/radius/license_file.html:483
+آخر اللقطات المستلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:488
+فحص الترخيص,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:492
+تنبيه,,Alert,Alerte,Uyarı,Alerta,ok,app/templates/radius/license_file.html:510
+آخر تحديث:,,Last Updated:,Dernière mise à jour :,Son Güncelleme:,Última actualización:,ok,app/templates/radius/license_file.html:516
+لا توجد لقطة بعد,,No snapshot yet,Aucun instantané pour le moment,Henüz anlık görüntü yok,Aún no hay instantánea,ok,app/templates/radius/license_file.html:520
+شغّل المزامنة بعد إكمال إعدادات الربط.,,Run synchronization after completing the link settings.,Lancez la synchronisation après avoir terminé les réglages de liaison.,Bağlantı ayarlarını tamamladıktan sonra eşitlemeyi çalıştırın.,Ejecuta la sincronización tras completar la configuración del enlace.,ok,app/templates/radius/license_file.html:522
+الخدمات المفعّلة في عقدك,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:538
+%(length)s مفعّلة من %(length2)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:539
+هذه قائمة بالخدمات مقسّمة حسب الفئة. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها كما استلمها الريدياس من عقد التشغيل.,,"This is a list of services grouped by category. Each card shows the service name, whether it is currently enabled, and its limits as RADIUS received them from the operating contract.","Ceci est une liste de services regroupés par catégorie. Chaque carte indique le nom du service, s'il est actuellement activé et ses limites telles que RADIUS les a reçues du contrat d'exploitation.","Bu, kategoriye göre gruplanmış hizmetlerin bir listesidir. Her kart hizmet adını, şu anda etkin olup olmadığını ve RADIUS'un işletim sözleşmesinden aldığı sınırlarını gösterir.","Esta es una lista de servicios agrupados por categoría. Cada tarjeta muestra el nombre del servicio, si está activado actualmente y sus límites tal como RADIUS los recibió del contrato de operación.",ok,app/templates/radius/license_file.html:541
+خدمة مرخّصة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:564
+صلاحية ضمن عقد الترخيص. تظهر تفاصيلها وحدودها هنا عند تفعيلها من لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:565
+%(chips)sسرعة التحميل: %(download_mbps)s ميجابت/ثانية · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:570
+%(chips)sسرعة الرفع: %(upload_mbps)s ميجابت/ثانية · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:571
+%(chips)sالمستخدمون: %(max_vpn_users)s · ,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:572
+%(chips)sالمواقع: %(max_locations)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:573
+الحد الأعلى المسموح: %(max)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:576
+تحميل %(download_mbps)s ميجابت/ثانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:598
+رفع %(upload_mbps)s ميجابت/ثانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:599
+%(max_vpn_users)s مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:600
+%(max_locations)s موقع,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:601
+الحد الأعلى: %(max)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:607
+متاحة بالكامل,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:609
+طلب تفعيل,,Activation Request,Demande d'activation,Etkinleştirme İsteği,Solicitud de activación,ok,app/templates/radius/license_file.html:630
+خدمات أخرى,,Other Services,Autres services,Diğer hizmetler,Otros servicios,ok,app/templates/radius/license_file.html:655
+خدمة مرخّصة إضافية,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:661
+صلاحية ضمن عقد الترخيص.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:662
+اضغط «مزامنة الكل» بالأعلى لتنزيل عقد التشغيل وعرض خدماتك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:699
+لم يصل عقد خدمات بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:699
+%(length)s حد,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:704
+حدود الاستخدام المسموحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:704
+أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، كروت…). يطبّقها الريدياس تلقائيًا.,,"The maximum counts allowed in your installation per your plan (subscribers, network devices, vouchers...). RADIUS enforces them automatically.","Les nombres maximaux autorisés dans votre installation selon votre forfait (abonnés, appareils réseau, coupons...). RADIUS les applique automatiquement.","Paketinize göre kurulumunuzda izin verilen maksimum sayılar (aboneler, ağ cihazları, kuponlar...). RADIUS bunları otomatik olarak uygular.","Los máximos permitidos en tu instalación según tu plan (abonados, dispositivos de red, cupones...). RADIUS los aplica automáticamente.",ok,app/templates/radius/license_file.html:706
+ستظهر هنا بعد مزامنة عقد التشغيل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:721
+لم تصل حدود بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/license_file.html:721
+تفاصيل الخدمة,,Service details,Détails du service,Hizmet ayrıntıları,Detalles del servicio,ok,app/templates/radius/license_file.html:732
 سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي,,Safe retention policies for vouchers and subscribers without permanent deletion,"Politiques de conservation sécurisées pour les coupons et les abonnés, sans suppression définitive",Kuponlar ve aboneler için kalıcı silme olmadan güvenli saklama politikaları,Políticas de retención seguras para cupones y abonados sin eliminación permanente,ok,app/templates/radius/lifecycle.html:6
 بعد الإنشاء,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:32
 بعد التعطيل,,,,,,"missing: en,fr,tr,es",app/templates/radius/lifecycle.html:32
@@ -19592,178 +19593,178 @@ IP الخادم كما ظهر للطلب,,Server IP as shown to the request,IP d
 قوالب محفوظة,,Saved Templates,Modèles enregistrés,Kayıtlı Şablonlar,Plantillas guardadas,ok,app/templates/radius/mt_login_designer.html:565
 نصوص الرقائق تحت الصورة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:577
 عدّل عنوان ووصف كل رقاقة من الرقائق الثلاث الظاهرة أسفل صورة التصميم. القيم الافتراضية مأخوذة من التصميم المختار — امسح رقاقةً بالكامل (العنوان والوصف) لإخفائها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:578
-② الألوان والخطوط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:593
-هنا تُعيد تلوين التصميم المُختار وضبط خطوطه فقط — لا يبدّل ذلك التصميم ولا الإضافات (تُحرَّر في «③ الإضافات»).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:594
-منتقي %(label_ar)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:608
-رفع صورة الشعار,,Upload logo image,Téléverser le logo,Logo görselini yükle,Subir imagen del logotipo,ok,app/templates/radius/mt_login_designer.html:627
-رفع شعار من الجهاز,,Upload logo from device,Téléverser un logo depuis l'appareil,Cihazdan logo yükle,Subir logotipo desde el dispositivo,ok,app/templates/radius/mt_login_designer.html:629
-معاينة الشعار,,Logo preview,Aperçu du logo,Logo önizlemesi,Vista previa del logotipo,ok,app/templates/radius/mt_login_designer.html:633
-إزالة الشعار المرفوع,,Remove the uploaded logo,Supprimer le logo téléversé,Yüklenen logoyu kaldır,Eliminar el logotipo subido,ok,app/templates/radius/mt_login_designer.html:636
-أو ضع رابط صورة بدلًا من الرفع,,Or provide an image URL instead of uploading,Ou indiquez l'URL d'une image au lieu de la téléverser,Veya yükleme yerine bir görsel bağlantısı girin,O proporciona un enlace de imagen en lugar de subirla,ok,app/templates/radius/mt_login_designer.html:647
-إيقاف — بدون زر المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:660
-تفعيل — أظهر زر المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:660
-إيقاف — بدون زر التجربة,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:662
-تفعيل — أظهر زر التجربة المجانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:662
-إخفاء — دخول باسم المستخدم فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:664
-إظهار — اسم مستخدم وكلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:664
-إيقاف — لا تُحفظ الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:666
-تفعيل — احفظ آخر 5 بطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:666
-الزر يفتح صفحة المتجر المستقلة على الراوتر,,The button opens the standalone store page on the router,Le bouton ouvre la page autonome de la boutique sur le routeur,"Düğme, yönlendiricideki bağımsız mağaza sayfasını açar",El botón abre la página independiente de la tienda en el router,ok,app/templates/radius/mt_login_designer.html:687
-— الرابط ما عاد يلزم.,,— the link is no longer needed.,— le lien n'est plus nécessaire.,— bağlantıya artık gerek yok.,— el enlace ya no es necesario.,ok,app/templates/radius/mt_login_designer.html:689
-عنوان API الراديوس (تلقائي):,,RADIUS API address (automatic):,Adresse de l'API RADIUS (automatique) :,RADIUS API adresi (otomatik):,Dirección de la API RADIUS (automática):,ok,app/templates/radius/mt_login_designer.html:694
-اختبار الاتصال بالخادم,,Test connection to the server,Tester la connexion au serveur,Sunucuya bağlantıyı test et,Probar la conexión con el servidor,ok,app/templates/radius/mt_login_designer.html:706
-قائمة السماح (walled-garden) — النشر المباشر يضيفها تلقائيًا؛ مع الرفع اليدوي (ZIP) انسخ الأمر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:716
-حتى يتصل المتجر بسيرفر الراديوس قبل تسجيل دخول الزبائن، الصق هذا الأمر في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:719
-حدد «عنوان IP سيرفر الراديوس» في الإعدادات (تبويب متقدم) حتى يعرف تصميم المتجر المستقل أين يجد الـ API —,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:728
-فتح الإعدادات,,Open settings,Ouvrir les paramètres,Ayarları aç,Abrir configuración,ok,app/templates/radius/mt_login_designer.html:729
-خيارات متقدمة — رابط مخصص بدل التلقائي,,Advanced options — custom URL instead of automatic,Options avancées — URL personnalisée au lieu de l'automatique,Gelişmiş seçenekler — otomatik yerine özel bağlantı,Opciones avanzadas — URL personalizada en lugar de la automática,ok,app/templates/radius/mt_login_designer.html:734
-اتركه فارغًا لاستخدام الرابط التلقائي,,Leave it empty to use the automatic link,Laissez-le vide pour utiliser le lien automatique,Otomatik bağlantıyı kullanmak için boş bırakın,Déjalo vacío para usar el enlace automático,ok,app/templates/radius/mt_login_designer.html:742
-أضف عرضًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:760
-أضف موزعًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:760
-اسم شبكتك كما سيظهر بأعلى صفحة الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:807
-ارفع صورة الشعار من جهازك — تُصغَّر تلقائيًا (~256px) وتُضمَّن داخل الصفحة نفسها فلا تحتاج رفع ملف إضافي للراوتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:809
-جملة ترحيبية قصيرة تظهر تحت الاسم (حتى 160 حرفًا).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:811
-لون الأزرار والعناوين — صيغة hex مثل ‎#2563EB.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:813
-لون خلفية الصفحة — صيغة hex مثل ‎#F8FAFC.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:815
-رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:817
-، فيظهر زر واتساب «دعم وطلبات الشحن/السحب» للزبون. اتركه فارغًا ليبقى الزر مخفيًا. اكتب الرقم بصيغة دولية (مثل ‎+9665…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:819
-النشر,,Deployment,Déploiement,Dağıtım,Implementación,ok,app/templates/radius/mt_login_designer.html:819
-رقم واتساب الدعم — يُحقن في صفحة المتجر عند,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:819
-أضف عنوان IP سيرفر الراديوس إلى walled-garden في الهوت سبوت حتى يعمل المتجر قبل تسجيل الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:821
-تُرفع صفحة متجر كاملة (store.html) إلى الراوتر بجانب صفحة الدخول تلقائيًا — المتجر يعمل من الراوتر نفسه (دخول بالجوال وكلمة المرور، محفظة، شحن بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر الـ API فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:821
-عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة الدخول، وعند,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:821
-التصميم المستقل,,Standalone design,Conception autonome,Bağımsız tasarım,Diseño independiente,ok,app/templates/radius/mt_login_designer.html:823
-المرفوع على الراوتر (store.html) — صفحة كاملة بأربعة تبويبات تستدعي API الراديوس فقط. العنوان أعلاه ليس رابط الزر؛ هو قاعدة الـ API التي تُحقن داخل store.html ويُبنى من «عنوان IP سيرفر الراديوس» في الإعدادات. لا تكتب شيئًا في «خيارات متقدمة» إلا إذا أردت توجيه الزر لرابط مختلف كليًا. تذكّر إضافة عنوان السيرفر إلى walled-garden في الهوت سبوت حتى يتصل المتجر بالـ API.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:823
-زر المتجر يفتح,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:823
-عند الإخفاء يدخل المشترك باسم المستخدم فقط — مناسب لبطاقات «يوزر فقط». يعمل على كل التصاميم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:825
-يضيف زر تجربة مجانية أسفل نموذج الدخول في أي تصميم — يستخدم آلية MikroTik القياسية (مستخدم T-‏MAC).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:827
-فعّل Trial في بروفايل سيرفر الهوت سبوت على الراوتر وإلا سيرفض الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:828
-النص الظاهر على زر التجربة — مثال: «تجربة مجانية 10 دقائق» (حتى 60 حرفًا، بلا وسوم).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:830
-عند التفعيل يحفظ المتصفح آخر 5 بطاقات (اسم المستخدم وكلمة المرور) على جهاز الزبون ويعرض قسم «الجلسات الأخيرة» بنقرة واحدة لإعادة الاتصال. يعمل على كل التصاميم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:832
-نقاط بيع البطاقات — تظهر في تبويب «الموزعون» بتصاميم عائلة التدرج الاحترافي. أضف اسم المحل ورقم الهاتف والمنطقة لكل موزع.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:834
-باقاتك وأسعارك — تظهر في قسم الباقات/الأسعار بالتصاميم الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة الانطلاق (صغيرة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:836
-نص رقاقة ميزة تظهر أسفل صورة التصميم (حتى 60 حرفًا). اتركه فارغًا — مع إفراغ شريكه في نفس الرقاقة — لإخفاء الرقاقة كاملة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:838
-«بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف المحتوى. اختَر القِطاع من القائمة أعلاه (تُظهر عَيّنة كل أيقونة — نَفس الرَمز الذي يَظهر فِعلًا على الصَفحة — بِجانب اسمها): مَقهى، مَطعم، عيادة، مَتجر، شَبكة، فندق، صالون، جيم، مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:840
-لا شيء,,None,Aucun,Yok,Ninguno,ok,app/templates/radius/mt_login_designer.html:840
-للإيقاف الكامل. القَوالب الجَالاريّة تَختار القِطاع افتراضيًّا حسب نَوع المُنشأة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:841
-رَمز قِطاعيّ صَغير في الزاوية بِجانب الاسم — *مَوقوف افتراضيًّا* (طَلب المالك: «دفش ومبالغ فيه»). فَعِّله لو فضّلت تَأكيدًا بَصريًّا إضافيًّا. الـwatermark الهَامِسة وحدها تُوصِل بَصمة القِطاع بأناقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:843
-عَلامة مائيّة هَامِسة (رَمز خَلفيّ بشَفافيّة مُنخفضة) — «بَصمة» المُنشأة بأناقة بلا إزعاج للقَراءة. عَطّلها لصَفحة دخول مُجَرَّدة تَمامًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:845
-شَفافيّة الخَلفيّة النَمطيّة — قيمة عَشريّة من 0 إلى 0.40 (افتراضي 0.30 = 30٪، النَمط واضح كَخَلفيّة قِطاعيّة). نَموذج الدخول opaque فَوقها فلا تَتأثّر القَراءة. 0.10 = هامِسة، 0.40 = أبرز. الحَدّ 0.40 يَمنع الفَوضى.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:847
-اسم القالب المحفوظ,,Saved template name,Nom du modèle enregistré,Kayıtlı şablon adı,Nombre de la plantilla guardada,ok,app/templates/radius/mt_login_designer.html:859
-اسم القالب المحفوظ — مثل: تصميم رمضان,,The saved template name — e.g.: Ramadan design,Le nom du modèle enregistré — p. ex. : design Ramadan,Kaydedilen şablon adı — örn.: Ramazan tasarımı,El nombre de la plantilla guardada — p. ej.: diseño de Ramadán,ok,app/templates/radius/mt_login_designer.html:863
-حفظ كقالب باسم,,Save as template named,Enregistrer comme modèle nommé,Şablon olarak şu adla kaydet,Guardar como plantilla con nombre,ok,app/templates/radius/mt_login_designer.html:867
-يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في «قوالب محفوظة» لإعادة استخدامها لاحقًا — قائمة القوالب المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:871
-③ الإضافات — محتوى التصميم,,③ Add-ons — design content,③ Modules — contenu du design,③ Eklentiler — tasarım içeriği,③ Complementos — contenido del diseño,ok,app/templates/radius/mt_login_designer.html:884
-هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت الندوة… فعّل ما يناسب نشاطك (كلٌّ مستقل). «قبل الدخول» يُخبَز في الصفحة ويعمل بلا إنترنت، و«بعد الدخول» يظهر بعد الاتصال.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:887
-تفعيل/تعطيل,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:919
-قبل الدخول,,Before login,Avant la connexion,Girişten önce,Antes del inicio de sesión,ok,app/templates/radius/mt_login_designer.html:925
-بعد الدخول,,After login,Après la connexion,Girişten sonra,Después del inicio de sesión,ok,app/templates/radius/mt_login_designer.html:926
-قبل وبعد,,Before and after,Avant et après,Önce ve sonra,Antes y después,ok,app/templates/radius/mt_login_designer.html:927
-حفظ التصميم,,Save design,Enregistrer le modèle,Tasarımı kaydet,Guardar diseño,ok,app/templates/radius/mt_login_designer.html:979
-تحميل الحزمة (ZIP),,Download package (ZIP),Télécharger le paquet (ZIP),Paketi indir (ZIP),Descargar el paquete (ZIP),ok,app/templates/radius/mt_login_designer.html:987
-الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر. تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم) جاهزة للرفع اليدوي عبر Winbox → Files.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:990
-معاينة صفحة الدخول,,Login page preview,Aperçu de la page de connexion,Giriş sayfası önizlemesi,Vista previa de la página de acceso,ok,app/templates/radius/mt_login_designer.html:1012
-هكذا تظهر الصفحة على جوال المشترك بعرض 390 بكسل.,,This is how the page looks on the subscriber's phone at 390 px wide.,Voici comment la page s'affiche sur le mobile de l'abonné en 390 px de large.,"Sayfa, abonenin telefonunda 390 piksel genişliğinde böyle görünür.",Así se ve la página en el móvil del abonado con 390 px de ancho.,ok,app/templates/radius/mt_login_designer.html:1017
-الأصول المستضافة (فيديو/خط),,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1028
-رفع · متقدّم,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1028
-ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1030
-رفع فيديو,,Upload a video,Téléverser une vidéo,Video yükle,Subir un video,ok,app/templates/radius/mt_login_designer.html:1037
-رفع الفيديو,,Upload the video,Téléverser la vidéo,Videoyu yükle,Subir el video,ok,app/templates/radius/mt_login_designer.html:1039
-رفع خط,,Upload a font,Téléverser une police,Yazı tipi yükle,Subir una fuente,ok,app/templates/radius/mt_login_designer.html:1045
-رفع الخط,,Upload the font,Téléverser la police,Yazı tipini yükle,Subir la fuente,ok,app/templates/radius/mt_login_designer.html:1047
-خط,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1056
-فيديو,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1056
-%(v)s ك.ب,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1058
-لا أصول مرفوعة بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1070
-%(v)s قالبًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1077
-مجموعات قيم حفظتها سابقًا لهذا الراوتر — «تطبيق» يجعلها التصميم الحالي فورًا (يُحفظ مباشرة) ويملأ النموذج بقيمها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1079
-تصميم: %(template_slug)s · آخر تحديث %(dt_local)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1088
-حذف القالب المحفوظ,,Delete saved template,Supprimer le modèle enregistré,Kayıtlı şablonu sil,Eliminar la plantilla guardada,ok,app/templates/radius/mt_login_designer.html:1102
-حذف القالب المحفوظ «%(name)s»,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1102
-رفع تصميم خاص,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1114
-عندك صفحة هوت سبوت جاهزة من مصمّم خارجي؟ ارفعها هنا (ملف,,Do you have a ready hotspot page from an external designer? Upload it here (a file,Vous avez une page hotspot prête conçue par un tiers ? Téléversez-la ici (un fichier,Harici bir tasarımcıdan hazır bir hotspot sayfanız mı var? Buraya yükleyin (bir dosya,¿Tienes una página de hotspot lista hecha por un diseñador externo? Súbela aquí (un archivo,ok,app/templates/radius/mt_login_designer.html:1116
-مباشرة أو حزمة,,Direct or bundled,Direct ou par lot,Doğrudan veya toplu,Directo o en lote,ok,app/templates/radius/mt_login_designer.html:1117
-) وستظهر في معرض التصاميم بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1118
-تحوي,,Contains,Contient,İçerir,Contiene,ok,app/templates/radius/mt_login_designer.html:1118
-يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم %(body)s، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص %(var)s وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1119
-اسم التصميم في المعرض,,Template name in the gallery,Nom du modèle dans la galerie,Galerideki tasarım adı,Nombre del diseño en la galería,ok,app/templates/radius/mt_login_designer.html:1125
-مثل: تصميم شركتي,,Such as: my company design,Par exemple : design de mon entreprise,Örneğin: şirketimin tasarımı,Como: diseño de mi empresa,ok,app/templates/radius/mt_login_designer.html:1127
-ارفع ملف التصميم — اسحب الملف هنا أو انقر للاختيار,,Upload the design file — drag the file here or click to choose,Téléversez le fichier de conception — glissez le fichier ici ou cliquez pour choisir,Tasarım dosyasını yükleyin — dosyayı buraya sürükleyin veya seçmek için tıklayın,Sube el archivo de diseño: arrastra el archivo aquí o haz clic para elegir,ok,app/templates/radius/mt_login_designer.html:1133
-اسحب ملف التصميم هنا أو انقر للاختيار,,Drag the template file here or click to choose,Glissez le fichier de modèle ici ou cliquez pour choisir,Şablon dosyasını buraya sürükleyin veya seçmek için tıklayın,Arrastra el archivo de la plantilla aquí o haz clic para elegir,ok,app/templates/radius/mt_login_designer.html:1141
-أو حزمة,,or package,ou paquet,veya paket,o paquete,ok,app/templates/radius/mt_login_designer.html:1142
-— بحد أقصى 2 ميجابايت,,— up to 2 MB maximum,— 2 Mo maximum,— en fazla 2 MB,— máximo 2 MB,ok,app/templates/radius/mt_login_designer.html:1142
-رفع للتصاميم,,Upload to Designs,Envoyer vers les designs,Tasarımlara Yükle,Subir a los diseños,ok,app/templates/radius/mt_login_designer.html:1150
-شروط القبول: وجود placeholders ميكروتك الإجبارية (,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1154
-) ووسم,,) and tag,) et étiquette,) ve etiket,) y etiqueta,ok,app/templates/radius/mt_login_designer.html:1157
-، وحجم حتى 2 ميجابايت. الرفع بنفس الاسم يحدّث التصميم الموجود. التصميم متاح لكل راوترات حسابك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1158
-النشر على الراوتر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1175
-النشر يرفع ملف صفحة الدخول,,Deployment uploads the login page file,Le déploiement téléverse le fichier de la page de connexion,"Dağıtım, giriş sayfası dosyasını yükler",La implementación sube el archivo de la página de inicio de sesión,ok,app/templates/radius/mt_login_designer.html:1179
-بالتصميم,,In the design,Dans la conception,Tasarımda,En el diseño,ok,app/templates/radius/mt_login_designer.html:1179
-المحفوظ,,Saved,Enregistré,Kaydedilen,Guardado,ok,app/templates/radius/mt_login_designer.html:1180
-حاليًا إلى مجلد البوابة على الراوتر.,,currently to the portal folder on the router.,actuellement vers le dossier du portail sur le routeur.,şu anda yönlendiricideki portal klasörüne.,actualmente a la carpeta del portal en el router.,ok,app/templates/radius/mt_login_designer.html:1180
-يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة. التعديلات غير المحفوظة لا تُنشر — احفظ أولًا. كل محاولة نشر تُسجَّل في سجل الأحداث.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1181
-أُؤكّد رفع ملف صفحة الدخول إلى هذا الراوتر.,,I confirm uploading the login page file to this router.,Je confirme l'envoi du fichier de la page de connexion vers ce routeur.,Oturum açma sayfası dosyasını bu yönlendiriciye yüklemeyi onaylıyorum.,Confirmo la subida del archivo de la página de acceso a este router.,ok,app/templates/radius/mt_login_designer.html:1186
-نشر على الراوتر,,Deploy to router,Déployer sur le routeur,Yönlendiriciye dağıt,Implementar en el router,ok,app/templates/radius/mt_login_designer.html:1191
-جارٍ النشر…,,Deploying…,Déploiement…,Dağıtılıyor…,Desplegando…,ok,app/templates/radius/mt_login_designer.html:1200
-تم النشر بنجاح,,Published successfully,Publié avec succès,Başarıyla yayınlandı,Publicado correctamente,ok,app/templates/radius/mt_login_designer.html:1216
-— رُفع %(bytes)s بايت إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1216
-فشل النشر,,Deployment failed,Échec du déploiement,Dağıtım başarısız,Error en la implementación,ok,app/templates/radius/mt_login_designer.html:1219
-— المسار,,— The route,— L'itinéraire,— Rota,— La ruta,ok,app/templates/radius/mt_login_designer.html:1219
-رُفع متجر الراوتر,,Router store uploaded,Boutique du routeur téléversée,Yönlendirici mağazası yüklendi,Tienda del router subida,ok,app/templates/radius/mt_login_designer.html:1234
-— %(bytes)s بايت إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1234
-من الراوتر مباشرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1236
-— زر المتجر في صفحة الدخول يفتح الآن,,— The store button on the login page now opens,— Le bouton de la boutique sur la page de connexion ouvre maintenant,— Giriş sayfasındaki mağaza düğmesi artık şunu açar:,— El botón de la tienda en la página de inicio de sesión ahora abre,ok,app/templates/radius/mt_login_designer.html:1236
-فشل رفع متجر الراوتر,,Failed to upload router store,Échec du téléversement de la boutique du routeur,Yönlendirici mağazası yüklenemedi,Error al subir la tienda del router,ok,app/templates/radius/mt_login_designer.html:1238
-قائمة السماح (walled-garden) جاهزة,,Allow list (walled-garden) is ready,Liste d'autorisation (walled-garden) prête,İzin listesi (walled-garden) hazır,Lista de permitidos (walled-garden) lista,ok,app/templates/radius/mt_login_designer.html:1254
-. أجهزة الزبائن تستطيع الآن فتح المتجر قبل تسجيل دخول الإنترنت.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1255
-أُضيفت,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1255
-القواعد موجودة مسبقًا — لم يتغير شيء,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1255
-قاعدة جديدة باتجاه سيرفر الراديوس,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1255
-تعذّر تجهيز walled-garden آليًا,,Failed to set up walled-garden automatically,Échec de la configuration automatique du walled-garden,walled-garden otomatik olarak hazırlanamadı,No se pudo configurar el walled-garden automáticamente,ok,app/templates/radius/mt_login_designer.html:1257
-بدون هذه القاعدة لن يصل المتجر لسيرفر الراديوس قبل تسجيل الدخول. انسخ الأمر التالي والصقه في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1259
-راوترك يكرّر «Download FAILED: 401»؟ (لوب الجلب القديم),,"Is your router repeating ""Download FAILED: 401""? (the old fetch loop)",Votre routeur répète-t-il « Download FAILED: 401 » ? (l'ancienne boucle de récupération),"Yönlendiriciniz ""Download FAILED: 401"" tekrar ediyor mu? (eski getirme döngüsü)",¿Tu router repite «Download FAILED: 401»? (el antiguo bucle de descarga),ok,app/templates/radius/mt_login_designer.html:1275
-) — لا يطلب من الراوتر جلبها، فلا 401 ولا لوب منه. إن كان راوترك يكرّر الخطأ فالسبب جدولة قديمة تجلب الملفات عبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1277
-هذا النشر يرفع الملفات بدفع API مباشر (,,This deployment uploads the files via direct API push (,Ce déploiement téléverse les fichiers via un envoi API direct (,"Bu dağıtım, dosyaları doğrudan API gönderimiyle yükler (",Esta implementación sube los archivos mediante un envío directo de API (,ok,app/templates/radius/mt_login_designer.html:1277
-لا يرسل الكوكي → 401). أوقفها بحذف المجدول والسكربت من الراوتر:,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1278
-من نقطة محمية بجلسة أدمن (و,,From an endpoint protected by an admin session (and,Depuis un point protégé par une session admin (et,Bir yönetici oturumuyla korunan bir uç noktadan (ve,Desde un punto protegido por una sesión de administrador (y,ok,app/templates/radius/mt_login_designer.html:1278
-أولًا للتأكد أنها فعلًا جدولة الجلب القديمة قبل الحذف، ثم أعد النشر من هنا — تكفي طريقة الدفع المباشر وحدها ولا حاجة لأي,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1285
-راجع ناتج,,Review the output of,Vérifiez la sortie de,Çıktısını gözden geçirin,Revise la salida de,ok,app/templates/radius/mt_login_designer.html:1285
-«فشل الرفع: Connection reset» المتكرر؟ (ملف كبير على API),,"Recurring ""Upload failed: Connection reset""? (large file over the API)",« Échec de l'envoi : Connection reset » récurrent ? (fichier volumineux via l'API),"Tekrarlayan ""Yükleme başarısız: Connection reset"" mi? (API üzerinden büyük dosya)","¿""Error de carga: Connection reset"" recurrente? (archivo grande por la API)",ok,app/templates/radius/mt_login_designer.html:1295
-إن كان شعار التصميم صورة كبيرة مضمّنة، يصير,,"If the template logo is a large embedded image, it becomes","Si le logo du modèle est une grande image intégrée, il devient","Şablon logosu büyük bir gömülü resimse, şu hale gelir:","Si el logotipo del diseño es una imagen grande incrustada, se vuelve",ok,app/templates/radius/mt_login_designer.html:1297
-(فيصغر,,(it shrinks,(il rétrécit,(küçülür,(se reduce,ok,app/templates/radius/mt_login_designer.html:1298
-) — وهذا فشل ثابت لا تحلّه إعادة المحاولة وحدها. الحل المُطبّق تلقائيًا: نزع الشعار لملف منفصل ورفعه عبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1298
-)، وتحويل أي ملف كبير إلى رفع,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1298
-ضخمًا فتقطع بعض إصدارات RouterOS نداء API الواحد (,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1298
-مجزّأ. يتطلّب ذلك خدمة FTP مفعّلة على الراوتر — فعّلها بهذا الأمر إن لزم:,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1298
-إن ظهر «الملف كبير على API وFTP غير متاح» فعّل الخدمة أعلاه، أو صغّر صورة الشعار، ثم اضغط «إعادة المحاولة».,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1302
-اسم المحل,,Store name,Nom du magasin,Mağaza adı,Nombre de la tienda,ok,app/templates/radius/mt_login_designer.html:1599
-محل الاتصالات,,Telecom shop,Boutique de télécommunications,İletişim mağazası,Tienda de telecomunicaciones,ok,app/templates/radius/mt_login_designer.html:1599
-الشارع الرئيسي,,Main street,Rue principale,Ana cadde,Calle principal,ok,app/templates/radius/mt_login_designer.html:1601
-المنطقة,,Zone,Zone,Bölge,Zona,ok,app/templates/radius/mt_login_designer.html:1601
-باقة النخبة,,Elite package,Forfait Élite,Elite paketi,Paquete Élite,ok,app/templates/radius/mt_login_designer.html:1611
-الباقة الذهبية,,Gold package,Forfait Or,Altın paket,Paquete Oro,ok,app/templates/radius/mt_login_designer.html:1612
-باقة الانطلاق,,Starter package,Forfait Démarrage,Başlangıç paketi,Paquete de inicio,ok,app/templates/radius/mt_login_designer.html:1613
-باقة الألعاب Pro,,Gaming Pro package,Forfait Gaming Pro,Gaming Pro paketi,Paquete Gaming Pro,ok,app/templates/radius/mt_login_designer.html:1616
-2 وحدة,,2 units,2 unités,2 birim,2 unidades,ok,app/templates/radius/mt_login_designer.html:1617
-ساعتان — 5 ميجا,,Two hours — 5 Mbps,Deux heures — 5 Mbit/s,İki saat — 5 Mbps,Dos horas — 5 Mbps,ok,app/templates/radius/mt_login_designer.html:1618
-»</strong>؟ التصاميم المحفوظة التي تستخدمه ستعود للتصميم الكلاسيكي.,,»</strong>? Saved designs that use it will revert to the classic design.,»</strong> ? Les modèles enregistrés qui l'utilisent reviendront au design classique.,»</strong>? Onu kullanan kayıtlı tasarımlar klasik tasarıma dönecek.,»</strong>? Los diseños guardados que lo usan volverán al diseño clásico.,ok,app/templates/radius/mt_login_designer.html:1864
-حذف التصميم الخاص <strong>«,,Delete the custom design <strong>«,Supprimer le design personnalisé <strong>«,Özel tasarımı sil <strong>«,Eliminar el diseño personalizado <strong>«,ok,app/templates/radius/mt_login_designer.html:1864
-حذف التصميم,,Delete design,Supprimer le design,Tasarımı sil,Eliminar diseño,ok,app/templates/radius/mt_login_designer.html:1865
-»</strong>؟,,»</strong>?,»</strong> ?,»</strong>?,»</strong>?,ok,app/templates/radius/mt_login_designer.html:1880
-حذف القالب المحفوظ <strong>«,,Delete the saved template <strong>«,Supprimer le modèle enregistré <strong>«,Kaydedilen şablonu sil <strong>«,Eliminar la plantilla guardada <strong>«,ok,app/templates/radius/mt_login_designer.html:1880
-ملف غير مقبول,,Unacceptable file,Fichier non accepté,Kabul edilmeyen dosya,Archivo no aceptado,ok,app/templates/radius/mt_login_designer.html:1904
-نوع الملف غير مدعوم — المسموح: ‎.html أو ‎.zip فقط.,,File type not supported — allowed: ‎.html or ‎.zip only.,Type de fichier non pris en charge — autorisé : ‎.html ou ‎.zip uniquement.,Dosya türü desteklenmiyor — yalnızca ‎.html veya ‎.zip kabul edilir.,Tipo de archivo no admitido — permitido: solo ‎.html o ‎.zip.,ok,app/templates/radius/mt_login_designer.html:1916
-حجم الملف يتجاوز 2 ميجابايت — صغّر الملف وأعد المحاولة.,,File size exceeds 2 MB — reduce the file and try again.,La taille du fichier dépasse 2 Mo — réduisez le fichier et réessayez.,Dosya boyutu 2 MB'yi aşıyor — dosyayı küçültün ve tekrar deneyin.,El tamaño del archivo supera los 2 MB — reduce el archivo e inténtalo de nuevo.,ok,app/templates/radius/mt_login_designer.html:1920
-جاهز للرفع — اضغط «رفع للتصاميم»,,Ready to upload — click «Upload to designs»,Prêt à téléverser — cliquez sur «Téléverser vers les designs»,Yüklemeye hazır — «Tasarımlara yükle» düğmesine tıklayın,Listo para subir — pulsa «Subir a diseños»,ok,app/templates/radius/mt_login_designer.html:1925
-لا يوجد عنوان API مضبوط.,,No API address configured.,Aucune adresse API configurée.,Yapılandırılmış API adresi yok.,No hay dirección API configurada.,ok,app/templates/radius/mt_login_designer.html:1968
-جارٍ الاختبار…,,Testing…,Test en cours…,Test ediliyor…,Probando…,ok,app/templates/radius/mt_login_designer.html:1969
-متصل — العنوان صحيح وقابل للوصول.,,Connected — the address is valid and reachable.,Connecté — l'adresse est valide et accessible.,Bağlandı — adres geçerli ve erişilebilir.,Conectado — la dirección es válida y accesible.,ok,app/templates/radius/mt_login_designer.html:1985
-وصل الطلب لكن رُفض (403) — مفتاح المتجر غير مطابق. أعد نشر المتجر على الراوتر بعد أي تدوير للمفتاح ثم أعد الاختبار.,,"The request arrived but was rejected (403) — the store key does not match. Redeploy the store on the router after any key rotation, then retest.","La requête est arrivée mais a été rejetée (403) — la clé du magasin ne correspond pas. Redéployez le magasin sur le routeur après toute rotation de clé, puis testez à nouveau.","İstek ulaştı ancak reddedildi (403) — mağaza anahtarı eşleşmiyor. Herhangi bir anahtar döndürmesinden sonra mağazayı yönlendiriciye yeniden dağıtın, ardından yeniden test edin.",La solicitud llegó pero fue rechazada (403) — la clave de la tienda no coincide. Vuelva a desplegar la tienda en el router tras cualquier rotación de clave y vuelva a probar.,ok,app/templates/radius/mt_login_designer.html:1987
-وصل الطلب لكن ردّ بخطأ HTTP ,,The request arrived but responded with HTTP error ,La requête est arrivée mais a répondu avec l'erreur HTTP ,İstek ulaştı ancak HTTP hatasıyla yanıt verdi ,La solicitud llegó pero respondió con el error HTTP ,ok,app/templates/radius/mt_login_designer.html:1989
- — راجع الخادم.,, — check the server., — vérifiez le serveur., — sunucuyu kontrol edin., — revise el servidor.,ok,app/templates/radius/mt_login_designer.html:1990
- — تأكد أن العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به في walled-garden على شبكة الزبائن). إن كانت اللوحة على https والعنوان http فقد يحجب المتصفح الطلب (محتوى مختلط).,," — make sure the address and port are correct and the server is running (and allowed in the walled-garden on the customer network). If the panel is on https and the address is http, the browser may block the request (mixed content)."," — assurez-vous que l'adresse et le port sont corrects et que le serveur fonctionne (et est autorisé dans le walled-garden sur le réseau client). Si le panneau est en https et l'adresse en http, le navigateur peut bloquer la requête (contenu mixte)."," — adres ve portun doğru olduğundan ve sunucunun çalıştığından (ve müşteri ağındaki walled-garden'da izinli olduğundan) emin olun. Panel https'te ve adres http ise, tarayıcı isteği engelleyebilir (karışık içerik)."," — asegúrese de que la dirección y el puerto sean correctos y el servidor esté en funcionamiento (y permitido en el walled-garden de la red de clientes). Si el panel está en https y la dirección en http, el navegador puede bloquear la solicitud (contenido mixto).",ok,app/templates/radius/mt_login_designer.html:1995
-انقطع الاتصال أثناء النشر — ,,Connection lost during deployment — ,Connexion perdue pendant le déploiement — ,Dağıtım sırasında bağlantı kesildi — ,Conexión perdida durante el despliegue — ,ok,app/templates/radius/mt_login_designer.html:2354
-حاول مجددًا,,Try again,Réessayer,Tekrar dene,Inténtalo de nuevo,ok,app/templates/radius/mt_login_designer.html:2355
+② الألوان والخطوط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:597
+هنا تُعيد تلوين التصميم المُختار وضبط خطوطه فقط — لا يبدّل ذلك التصميم ولا الإضافات (تُحرَّر في «③ الإضافات»).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:598
+منتقي %(label_ar)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:612
+رفع صورة الشعار,,Upload logo image,Téléverser le logo,Logo görselini yükle,Subir imagen del logotipo,ok,app/templates/radius/mt_login_designer.html:631
+رفع شعار من الجهاز,,Upload logo from device,Téléverser un logo depuis l'appareil,Cihazdan logo yükle,Subir logotipo desde el dispositivo,ok,app/templates/radius/mt_login_designer.html:633
+معاينة الشعار,,Logo preview,Aperçu du logo,Logo önizlemesi,Vista previa del logotipo,ok,app/templates/radius/mt_login_designer.html:637
+إزالة الشعار المرفوع,,Remove the uploaded logo,Supprimer le logo téléversé,Yüklenen logoyu kaldır,Eliminar el logotipo subido,ok,app/templates/radius/mt_login_designer.html:640
+أو ضع رابط صورة بدلًا من الرفع,,Or provide an image URL instead of uploading,Ou indiquez l'URL d'une image au lieu de la téléverser,Veya yükleme yerine bir görsel bağlantısı girin,O proporciona un enlace de imagen en lugar de subirla,ok,app/templates/radius/mt_login_designer.html:651
+إيقاف — بدون زر المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:664
+تفعيل — أظهر زر المتجر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:664
+إيقاف — بدون زر التجربة,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:666
+تفعيل — أظهر زر التجربة المجانية,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:666
+إخفاء — دخول باسم المستخدم فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:668
+إظهار — اسم مستخدم وكلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:668
+إيقاف — لا تُحفظ الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:670
+تفعيل — احفظ آخر 5 بطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:670
+الزر يفتح صفحة المتجر المستقلة على الراوتر,,The button opens the standalone store page on the router,Le bouton ouvre la page autonome de la boutique sur le routeur,"Düğme, yönlendiricideki bağımsız mağaza sayfasını açar",El botón abre la página independiente de la tienda en el router,ok,app/templates/radius/mt_login_designer.html:691
+— الرابط ما عاد يلزم.,,— the link is no longer needed.,— le lien n'est plus nécessaire.,— bağlantıya artık gerek yok.,— el enlace ya no es necesario.,ok,app/templates/radius/mt_login_designer.html:693
+عنوان API الراديوس (تلقائي):,,RADIUS API address (automatic):,Adresse de l'API RADIUS (automatique) :,RADIUS API adresi (otomatik):,Dirección de la API RADIUS (automática):,ok,app/templates/radius/mt_login_designer.html:698
+اختبار الاتصال بالخادم,,Test connection to the server,Tester la connexion au serveur,Sunucuya bağlantıyı test et,Probar la conexión con el servidor,ok,app/templates/radius/mt_login_designer.html:710
+قائمة السماح (walled-garden) — النشر المباشر يضيفها تلقائيًا؛ مع الرفع اليدوي (ZIP) انسخ الأمر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:720
+حتى يتصل المتجر بسيرفر الراديوس قبل تسجيل دخول الزبائن، الصق هذا الأمر في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:723
+حدد «عنوان IP سيرفر الراديوس» في الإعدادات (تبويب متقدم) حتى يعرف تصميم المتجر المستقل أين يجد الـ API —,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:732
+فتح الإعدادات,,Open settings,Ouvrir les paramètres,Ayarları aç,Abrir configuración,ok,app/templates/radius/mt_login_designer.html:733
+خيارات متقدمة — رابط مخصص بدل التلقائي,,Advanced options — custom URL instead of automatic,Options avancées — URL personnalisée au lieu de l'automatique,Gelişmiş seçenekler — otomatik yerine özel bağlantı,Opciones avanzadas — URL personalizada en lugar de la automática,ok,app/templates/radius/mt_login_designer.html:738
+اتركه فارغًا لاستخدام الرابط التلقائي,,Leave it empty to use the automatic link,Laissez-le vide pour utiliser le lien automatique,Otomatik bağlantıyı kullanmak için boş bırakın,Déjalo vacío para usar el enlace automático,ok,app/templates/radius/mt_login_designer.html:746
+أضف عرضًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:764
+أضف موزعًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:764
+اسم شبكتك كما سيظهر بأعلى صفحة الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:811
+ارفع صورة الشعار من جهازك — تُصغَّر تلقائيًا (~256px) وتُضمَّن داخل الصفحة نفسها فلا تحتاج رفع ملف إضافي للراوتر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:813
+جملة ترحيبية قصيرة تظهر تحت الاسم (حتى 160 حرفًا).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:815
+لون الأزرار والعناوين — صيغة hex مثل ‎#2563EB.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:817
+لون خلفية الصفحة — صيغة hex مثل ‎#F8FAFC.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:819
+رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:821
+، فيظهر زر واتساب «دعم وطلبات الشحن/السحب» للزبون. اتركه فارغًا ليبقى الزر مخفيًا. اكتب الرقم بصيغة دولية (مثل ‎+9665…).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:823
+النشر,,Deployment,Déploiement,Dağıtım,Implementación,ok,app/templates/radius/mt_login_designer.html:823
+رقم واتساب الدعم — يُحقن في صفحة المتجر عند,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:823
+أضف عنوان IP سيرفر الراديوس إلى walled-garden في الهوت سبوت حتى يعمل المتجر قبل تسجيل الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:825
+تُرفع صفحة متجر كاملة (store.html) إلى الراوتر بجانب صفحة الدخول تلقائيًا — المتجر يعمل من الراوتر نفسه (دخول بالجوال وكلمة المرور، محفظة، شحن بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر الـ API فقط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:825
+عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة الدخول، وعند,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:825
+التصميم المستقل,,Standalone design,Conception autonome,Bağımsız tasarım,Diseño independiente,ok,app/templates/radius/mt_login_designer.html:827
+المرفوع على الراوتر (store.html) — صفحة كاملة بأربعة تبويبات تستدعي API الراديوس فقط. العنوان أعلاه ليس رابط الزر؛ هو قاعدة الـ API التي تُحقن داخل store.html ويُبنى من «عنوان IP سيرفر الراديوس» في الإعدادات. لا تكتب شيئًا في «خيارات متقدمة» إلا إذا أردت توجيه الزر لرابط مختلف كليًا. تذكّر إضافة عنوان السيرفر إلى walled-garden في الهوت سبوت حتى يتصل المتجر بالـ API.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:827
+زر المتجر يفتح,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:827
+عند الإخفاء يدخل المشترك باسم المستخدم فقط — مناسب لبطاقات «يوزر فقط». يعمل على كل التصاميم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:829
+يضيف زر تجربة مجانية أسفل نموذج الدخول في أي تصميم — يستخدم آلية MikroTik القياسية (مستخدم T-‏MAC).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:831
+فعّل Trial في بروفايل سيرفر الهوت سبوت على الراوتر وإلا سيرفض الدخول.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:832
+النص الظاهر على زر التجربة — مثال: «تجربة مجانية 10 دقائق» (حتى 60 حرفًا، بلا وسوم).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:834
+عند التفعيل يحفظ المتصفح آخر 5 بطاقات (اسم المستخدم وكلمة المرور) على جهاز الزبون ويعرض قسم «الجلسات الأخيرة» بنقرة واحدة لإعادة الاتصال. يعمل على كل التصاميم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:836
+نقاط بيع البطاقات — تظهر في تبويب «الموزعون» بتصاميم عائلة التدرج الاحترافي. أضف اسم المحل ورقم الهاتف والمنطقة لكل موزع.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:838
+باقاتك وأسعارك — تظهر في قسم الباقات/الأسعار بالتصاميم الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة الانطلاق (صغيرة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:840
+نص رقاقة ميزة تظهر أسفل صورة التصميم (حتى 60 حرفًا). اتركه فارغًا — مع إفراغ شريكه في نفس الرقاقة — لإخفاء الرقاقة كاملة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:842
+«بَصمة قِطاعيّة» على صَفحة الدخول — رَمز قِطاعيّ صَغير في الزاوية + عَلامة مائيّة كَبيرة بشَفافيّة مُنخفضة خَلف المحتوى. اختَر القِطاع من القائمة أعلاه (تُظهر عَيّنة كل أيقونة — نَفس الرَمز الذي يَظهر فِعلًا على الصَفحة — بِجانب اسمها): مَقهى، مَطعم، عيادة، مَتجر، شَبكة، فندق، صالون، جيم، مَدرسة، مَناسبات، مَسجد، جَمعيّة، ألعاب… أو,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:844
+لا شيء,,None,Aucun,Yok,Ninguno,ok,app/templates/radius/mt_login_designer.html:844
+للإيقاف الكامل. القَوالب الجَالاريّة تَختار القِطاع افتراضيًّا حسب نَوع المُنشأة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:845
+رَمز قِطاعيّ صَغير في الزاوية بِجانب الاسم — *مَوقوف افتراضيًّا* (طَلب المالك: «دفش ومبالغ فيه»). فَعِّله لو فضّلت تَأكيدًا بَصريًّا إضافيًّا. الـwatermark الهَامِسة وحدها تُوصِل بَصمة القِطاع بأناقة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:847
+عَلامة مائيّة هَامِسة (رَمز خَلفيّ بشَفافيّة مُنخفضة) — «بَصمة» المُنشأة بأناقة بلا إزعاج للقَراءة. عَطّلها لصَفحة دخول مُجَرَّدة تَمامًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:849
+شَفافيّة الخَلفيّة النَمطيّة — قيمة عَشريّة من 0 إلى 0.40 (افتراضي 0.30 = 30٪، النَمط واضح كَخَلفيّة قِطاعيّة). نَموذج الدخول opaque فَوقها فلا تَتأثّر القَراءة. 0.10 = هامِسة، 0.40 = أبرز. الحَدّ 0.40 يَمنع الفَوضى.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:851
+اسم القالب المحفوظ,,Saved template name,Nom du modèle enregistré,Kayıtlı şablon adı,Nombre de la plantilla guardada,ok,app/templates/radius/mt_login_designer.html:863
+اسم القالب المحفوظ — مثل: تصميم رمضان,,The saved template name — e.g.: Ramadan design,Le nom du modèle enregistré — p. ex. : design Ramadan,Kaydedilen şablon adı — örn.: Ramazan tasarımı,El nombre de la plantilla guardada — p. ej.: diseño de Ramadán,ok,app/templates/radius/mt_login_designer.html:867
+حفظ كقالب باسم,,Save as template named,Enregistrer comme modèle nommé,Şablon olarak şu adla kaydet,Guardar como plantilla con nombre,ok,app/templates/radius/mt_login_designer.html:871
+يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في «قوالب محفوظة» لإعادة استخدامها لاحقًا — قائمة القوالب المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:875
+③ الإضافات — محتوى التصميم,,③ Add-ons — design content,③ Modules — contenu du design,③ Eklentiler — tasarım içeriği,③ Complementos — contenido del diseño,ok,app/templates/radius/mt_login_designer.html:888
+هنا تُحرّر محتوى التصميم المُختار: الإعلان، العرض، عجلة الحظّ، مواقيت الندوة… فعّل ما يناسب نشاطك (كلٌّ مستقل). «قبل الدخول» يُخبَز في الصفحة ويعمل بلا إنترنت، و«بعد الدخول» يظهر بعد الاتصال.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:891
+تفعيل/تعطيل,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:923
+قبل الدخول,,Before login,Avant la connexion,Girişten önce,Antes del inicio de sesión,ok,app/templates/radius/mt_login_designer.html:929
+بعد الدخول,,After login,Après la connexion,Girişten sonra,Después del inicio de sesión,ok,app/templates/radius/mt_login_designer.html:930
+قبل وبعد,,Before and after,Avant et après,Önce ve sonra,Antes y después,ok,app/templates/radius/mt_login_designer.html:931
+حفظ التصميم,,Save design,Enregistrer le modèle,Tasarımı kaydet,Guardar diseño,ok,app/templates/radius/mt_login_designer.html:983
+تحميل الحزمة (ZIP),,Download package (ZIP),Télécharger le paquet (ZIP),Paketi indir (ZIP),Descargar el paquete (ZIP),ok,app/templates/radius/mt_login_designer.html:991
+الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر. تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم) جاهزة للرفع اليدوي عبر Winbox → Files.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:994
+معاينة صفحة الدخول,,Login page preview,Aperçu de la page de connexion,Giriş sayfası önizlemesi,Vista previa de la página de acceso,ok,app/templates/radius/mt_login_designer.html:1016
+هكذا تظهر الصفحة على جوال المشترك بعرض 390 بكسل.,,This is how the page looks on the subscriber's phone at 390 px wide.,Voici comment la page s'affiche sur le mobile de l'abonné en 390 px de large.,"Sayfa, abonenin telefonunda 390 piksel genişliğinde böyle görünür.",Así se ve la página en el móvil del abonado con 390 px de ancho.,ok,app/templates/radius/mt_login_designer.html:1021
+الأصول المستضافة (فيديو/خط),,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1032
+رفع · متقدّم,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1032
+ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1034
+رفع فيديو,,Upload a video,Téléverser une vidéo,Video yükle,Subir un video,ok,app/templates/radius/mt_login_designer.html:1041
+رفع الفيديو,,Upload the video,Téléverser la vidéo,Videoyu yükle,Subir el video,ok,app/templates/radius/mt_login_designer.html:1043
+رفع خط,,Upload a font,Téléverser une police,Yazı tipi yükle,Subir una fuente,ok,app/templates/radius/mt_login_designer.html:1049
+رفع الخط,,Upload the font,Téléverser la police,Yazı tipini yükle,Subir la fuente,ok,app/templates/radius/mt_login_designer.html:1051
+خط,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1060
+فيديو,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1060
+%(v)s ك.ب,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1062
+لا أصول مرفوعة بعد.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1074
+%(v)s قالبًا,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1081
+مجموعات قيم حفظتها سابقًا لهذا الراوتر — «تطبيق» يجعلها التصميم الحالي فورًا (يُحفظ مباشرة) ويملأ النموذج بقيمها.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1083
+تصميم: %(template_slug)s · آخر تحديث %(dt_local)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1092
+حذف القالب المحفوظ,,Delete saved template,Supprimer le modèle enregistré,Kayıtlı şablonu sil,Eliminar la plantilla guardada,ok,app/templates/radius/mt_login_designer.html:1106
+حذف القالب المحفوظ «%(name)s»,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1106
+رفع تصميم خاص,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1118
+عندك صفحة هوت سبوت جاهزة من مصمّم خارجي؟ ارفعها هنا (ملف,,Do you have a ready hotspot page from an external designer? Upload it here (a file,Vous avez une page hotspot prête conçue par un tiers ? Téléversez-la ici (un fichier,Harici bir tasarımcıdan hazır bir hotspot sayfanız mı var? Buraya yükleyin (bir dosya,¿Tienes una página de hotspot lista hecha por un diseñador externo? Súbela aquí (un archivo,ok,app/templates/radius/mt_login_designer.html:1120
+مباشرة أو حزمة,,Direct or bundled,Direct ou par lot,Doğrudan veya toplu,Directo o en lote,ok,app/templates/radius/mt_login_designer.html:1121
+) وستظهر في معرض التصاميم بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1122
+تحوي,,Contains,Contient,İçerir,Contiene,ok,app/templates/radius/mt_login_designer.html:1122
+يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم %(body)s، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص %(var)s وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1123
+اسم التصميم في المعرض,,Template name in the gallery,Nom du modèle dans la galerie,Galerideki tasarım adı,Nombre del diseño en la galería,ok,app/templates/radius/mt_login_designer.html:1129
+مثل: تصميم شركتي,,Such as: my company design,Par exemple : design de mon entreprise,Örneğin: şirketimin tasarımı,Como: diseño de mi empresa,ok,app/templates/radius/mt_login_designer.html:1131
+ارفع ملف التصميم — اسحب الملف هنا أو انقر للاختيار,,Upload the design file — drag the file here or click to choose,Téléversez le fichier de conception — glissez le fichier ici ou cliquez pour choisir,Tasarım dosyasını yükleyin — dosyayı buraya sürükleyin veya seçmek için tıklayın,Sube el archivo de diseño: arrastra el archivo aquí o haz clic para elegir,ok,app/templates/radius/mt_login_designer.html:1137
+اسحب ملف التصميم هنا أو انقر للاختيار,,Drag the template file here or click to choose,Glissez le fichier de modèle ici ou cliquez pour choisir,Şablon dosyasını buraya sürükleyin veya seçmek için tıklayın,Arrastra el archivo de la plantilla aquí o haz clic para elegir,ok,app/templates/radius/mt_login_designer.html:1145
+أو حزمة,,or package,ou paquet,veya paket,o paquete,ok,app/templates/radius/mt_login_designer.html:1146
+— بحد أقصى 2 ميجابايت,,— up to 2 MB maximum,— 2 Mo maximum,— en fazla 2 MB,— máximo 2 MB,ok,app/templates/radius/mt_login_designer.html:1146
+رفع للتصاميم,,Upload to Designs,Envoyer vers les designs,Tasarımlara Yükle,Subir a los diseños,ok,app/templates/radius/mt_login_designer.html:1154
+شروط القبول: وجود placeholders ميكروتك الإجبارية (,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1158
+) ووسم,,) and tag,) et étiquette,) ve etiket,) y etiqueta,ok,app/templates/radius/mt_login_designer.html:1161
+، وحجم حتى 2 ميجابايت. الرفع بنفس الاسم يحدّث التصميم الموجود. التصميم متاح لكل راوترات حسابك.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1162
+النشر على الراوتر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1179
+النشر يرفع ملف صفحة الدخول,,Deployment uploads the login page file,Le déploiement téléverse le fichier de la page de connexion,"Dağıtım, giriş sayfası dosyasını yükler",La implementación sube el archivo de la página de inicio de sesión,ok,app/templates/radius/mt_login_designer.html:1183
+بالتصميم,,In the design,Dans la conception,Tasarımda,En el diseño,ok,app/templates/radius/mt_login_designer.html:1183
+المحفوظ,,Saved,Enregistré,Kaydedilen,Guardado,ok,app/templates/radius/mt_login_designer.html:1184
+حاليًا إلى مجلد البوابة على الراوتر.,,currently to the portal folder on the router.,actuellement vers le dossier du portail sur le routeur.,şu anda yönlendiricideki portal klasörüne.,actualmente a la carpeta del portal en el router.,ok,app/templates/radius/mt_login_designer.html:1184
+يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة. التعديلات غير المحفوظة لا تُنشر — احفظ أولًا. كل محاولة نشر تُسجَّل في سجل الأحداث.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1185
+أُؤكّد رفع ملف صفحة الدخول إلى هذا الراوتر.,,I confirm uploading the login page file to this router.,Je confirme l'envoi du fichier de la page de connexion vers ce routeur.,Oturum açma sayfası dosyasını bu yönlendiriciye yüklemeyi onaylıyorum.,Confirmo la subida del archivo de la página de acceso a este router.,ok,app/templates/radius/mt_login_designer.html:1190
+نشر على الراوتر,,Deploy to router,Déployer sur le routeur,Yönlendiriciye dağıt,Implementar en el router,ok,app/templates/radius/mt_login_designer.html:1195
+جارٍ النشر…,,Deploying…,Déploiement…,Dağıtılıyor…,Desplegando…,ok,app/templates/radius/mt_login_designer.html:1204
+تم النشر بنجاح,,Published successfully,Publié avec succès,Başarıyla yayınlandı,Publicado correctamente,ok,app/templates/radius/mt_login_designer.html:1220
+— رُفع %(bytes)s بايت إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1220
+فشل النشر,,Deployment failed,Échec du déploiement,Dağıtım başarısız,Error en la implementación,ok,app/templates/radius/mt_login_designer.html:1223
+— المسار,,— The route,— L'itinéraire,— Rota,— La ruta,ok,app/templates/radius/mt_login_designer.html:1223
+رُفع متجر الراوتر,,Router store uploaded,Boutique du routeur téléversée,Yönlendirici mağazası yüklendi,Tienda del router subida,ok,app/templates/radius/mt_login_designer.html:1238
+— %(bytes)s بايت إلى,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1238
+من الراوتر مباشرة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1240
+— زر المتجر في صفحة الدخول يفتح الآن,,— The store button on the login page now opens,— Le bouton de la boutique sur la page de connexion ouvre maintenant,— Giriş sayfasındaki mağaza düğmesi artık şunu açar:,— El botón de la tienda en la página de inicio de sesión ahora abre,ok,app/templates/radius/mt_login_designer.html:1240
+فشل رفع متجر الراوتر,,Failed to upload router store,Échec du téléversement de la boutique du routeur,Yönlendirici mağazası yüklenemedi,Error al subir la tienda del router,ok,app/templates/radius/mt_login_designer.html:1242
+قائمة السماح (walled-garden) جاهزة,,Allow list (walled-garden) is ready,Liste d'autorisation (walled-garden) prête,İzin listesi (walled-garden) hazır,Lista de permitidos (walled-garden) lista,ok,app/templates/radius/mt_login_designer.html:1258
+. أجهزة الزبائن تستطيع الآن فتح المتجر قبل تسجيل دخول الإنترنت.,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1259
+أُضيفت,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1259
+القواعد موجودة مسبقًا — لم يتغير شيء,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1259
+قاعدة جديدة باتجاه سيرفر الراديوس,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1259
+تعذّر تجهيز walled-garden آليًا,,Failed to set up walled-garden automatically,Échec de la configuration automatique du walled-garden,walled-garden otomatik olarak hazırlanamadı,No se pudo configurar el walled-garden automáticamente,ok,app/templates/radius/mt_login_designer.html:1261
+بدون هذه القاعدة لن يصل المتجر لسيرفر الراديوس قبل تسجيل الدخول. انسخ الأمر التالي والصقه في طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1263
+راوترك يكرّر «Download FAILED: 401»؟ (لوب الجلب القديم),,"Is your router repeating ""Download FAILED: 401""? (the old fetch loop)",Votre routeur répète-t-il « Download FAILED: 401 » ? (l'ancienne boucle de récupération),"Yönlendiriciniz ""Download FAILED: 401"" tekrar ediyor mu? (eski getirme döngüsü)",¿Tu router repite «Download FAILED: 401»? (el antiguo bucle de descarga),ok,app/templates/radius/mt_login_designer.html:1279
+) — لا يطلب من الراوتر جلبها، فلا 401 ولا لوب منه. إن كان راوترك يكرّر الخطأ فالسبب جدولة قديمة تجلب الملفات عبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1281
+هذا النشر يرفع الملفات بدفع API مباشر (,,This deployment uploads the files via direct API push (,Ce déploiement téléverse les fichiers via un envoi API direct (,"Bu dağıtım, dosyaları doğrudan API gönderimiyle yükler (",Esta implementación sube los archivos mediante un envío directo de API (,ok,app/templates/radius/mt_login_designer.html:1281
+لا يرسل الكوكي → 401). أوقفها بحذف المجدول والسكربت من الراوتر:,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1282
+من نقطة محمية بجلسة أدمن (و,,From an endpoint protected by an admin session (and,Depuis un point protégé par une session admin (et,Bir yönetici oturumuyla korunan bir uç noktadan (ve,Desde un punto protegido por una sesión de administrador (y,ok,app/templates/radius/mt_login_designer.html:1282
+أولًا للتأكد أنها فعلًا جدولة الجلب القديمة قبل الحذف، ثم أعد النشر من هنا — تكفي طريقة الدفع المباشر وحدها ولا حاجة لأي,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1289
+راجع ناتج,,Review the output of,Vérifiez la sortie de,Çıktısını gözden geçirin,Revise la salida de,ok,app/templates/radius/mt_login_designer.html:1289
+«فشل الرفع: Connection reset» المتكرر؟ (ملف كبير على API),,"Recurring ""Upload failed: Connection reset""? (large file over the API)",« Échec de l'envoi : Connection reset » récurrent ? (fichier volumineux via l'API),"Tekrarlayan ""Yükleme başarısız: Connection reset"" mi? (API üzerinden büyük dosya)","¿""Error de carga: Connection reset"" recurrente? (archivo grande por la API)",ok,app/templates/radius/mt_login_designer.html:1299
+إن كان شعار التصميم صورة كبيرة مضمّنة، يصير,,"If the template logo is a large embedded image, it becomes","Si le logo du modèle est une grande image intégrée, il devient","Şablon logosu büyük bir gömülü resimse, şu hale gelir:","Si el logotipo del diseño es una imagen grande incrustada, se vuelve",ok,app/templates/radius/mt_login_designer.html:1301
+(فيصغر,,(it shrinks,(il rétrécit,(küçülür,(se reduce,ok,app/templates/radius/mt_login_designer.html:1302
+) — وهذا فشل ثابت لا تحلّه إعادة المحاولة وحدها. الحل المُطبّق تلقائيًا: نزع الشعار لملف منفصل ورفعه عبر,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1302
+)، وتحويل أي ملف كبير إلى رفع,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1302
+ضخمًا فتقطع بعض إصدارات RouterOS نداء API الواحد (,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1302
+مجزّأ. يتطلّب ذلك خدمة FTP مفعّلة على الراوتر — فعّلها بهذا الأمر إن لزم:,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1302
+إن ظهر «الملف كبير على API وFTP غير متاح» فعّل الخدمة أعلاه، أو صغّر صورة الشعار، ثم اضغط «إعادة المحاولة».,,,,,,"missing: en,fr,tr,es",app/templates/radius/mt_login_designer.html:1306
+اسم المحل,,Store name,Nom du magasin,Mağaza adı,Nombre de la tienda,ok,app/templates/radius/mt_login_designer.html:1603
+محل الاتصالات,,Telecom shop,Boutique de télécommunications,İletişim mağazası,Tienda de telecomunicaciones,ok,app/templates/radius/mt_login_designer.html:1603
+الشارع الرئيسي,,Main street,Rue principale,Ana cadde,Calle principal,ok,app/templates/radius/mt_login_designer.html:1605
+المنطقة,,Zone,Zone,Bölge,Zona,ok,app/templates/radius/mt_login_designer.html:1605
+باقة النخبة,,Elite package,Forfait Élite,Elite paketi,Paquete Élite,ok,app/templates/radius/mt_login_designer.html:1615
+الباقة الذهبية,,Gold package,Forfait Or,Altın paket,Paquete Oro,ok,app/templates/radius/mt_login_designer.html:1616
+باقة الانطلاق,,Starter package,Forfait Démarrage,Başlangıç paketi,Paquete de inicio,ok,app/templates/radius/mt_login_designer.html:1617
+باقة الألعاب Pro,,Gaming Pro package,Forfait Gaming Pro,Gaming Pro paketi,Paquete Gaming Pro,ok,app/templates/radius/mt_login_designer.html:1620
+2 وحدة,,2 units,2 unités,2 birim,2 unidades,ok,app/templates/radius/mt_login_designer.html:1621
+ساعتان — 5 ميجا,,Two hours — 5 Mbps,Deux heures — 5 Mbit/s,İki saat — 5 Mbps,Dos horas — 5 Mbps,ok,app/templates/radius/mt_login_designer.html:1622
+»</strong>؟ التصاميم المحفوظة التي تستخدمه ستعود للتصميم الكلاسيكي.,,»</strong>? Saved designs that use it will revert to the classic design.,»</strong> ? Les modèles enregistrés qui l'utilisent reviendront au design classique.,»</strong>? Onu kullanan kayıtlı tasarımlar klasik tasarıma dönecek.,»</strong>? Los diseños guardados que lo usan volverán al diseño clásico.,ok,app/templates/radius/mt_login_designer.html:1868
+حذف التصميم الخاص <strong>«,,Delete the custom design <strong>«,Supprimer le design personnalisé <strong>«,Özel tasarımı sil <strong>«,Eliminar el diseño personalizado <strong>«,ok,app/templates/radius/mt_login_designer.html:1868
+حذف التصميم,,Delete design,Supprimer le design,Tasarımı sil,Eliminar diseño,ok,app/templates/radius/mt_login_designer.html:1869
+»</strong>؟,,»</strong>?,»</strong> ?,»</strong>?,»</strong>?,ok,app/templates/radius/mt_login_designer.html:1884
+حذف القالب المحفوظ <strong>«,,Delete the saved template <strong>«,Supprimer le modèle enregistré <strong>«,Kaydedilen şablonu sil <strong>«,Eliminar la plantilla guardada <strong>«,ok,app/templates/radius/mt_login_designer.html:1884
+ملف غير مقبول,,Unacceptable file,Fichier non accepté,Kabul edilmeyen dosya,Archivo no aceptado,ok,app/templates/radius/mt_login_designer.html:1908
+نوع الملف غير مدعوم — المسموح: ‎.html أو ‎.zip فقط.,,File type not supported — allowed: ‎.html or ‎.zip only.,Type de fichier non pris en charge — autorisé : ‎.html ou ‎.zip uniquement.,Dosya türü desteklenmiyor — yalnızca ‎.html veya ‎.zip kabul edilir.,Tipo de archivo no admitido — permitido: solo ‎.html o ‎.zip.,ok,app/templates/radius/mt_login_designer.html:1920
+حجم الملف يتجاوز 2 ميجابايت — صغّر الملف وأعد المحاولة.,,File size exceeds 2 MB — reduce the file and try again.,La taille du fichier dépasse 2 Mo — réduisez le fichier et réessayez.,Dosya boyutu 2 MB'yi aşıyor — dosyayı küçültün ve tekrar deneyin.,El tamaño del archivo supera los 2 MB — reduce el archivo e inténtalo de nuevo.,ok,app/templates/radius/mt_login_designer.html:1924
+جاهز للرفع — اضغط «رفع للتصاميم»,,Ready to upload — click «Upload to designs»,Prêt à téléverser — cliquez sur «Téléverser vers les designs»,Yüklemeye hazır — «Tasarımlara yükle» düğmesine tıklayın,Listo para subir — pulsa «Subir a diseños»,ok,app/templates/radius/mt_login_designer.html:1929
+لا يوجد عنوان API مضبوط.,,No API address configured.,Aucune adresse API configurée.,Yapılandırılmış API adresi yok.,No hay dirección API configurada.,ok,app/templates/radius/mt_login_designer.html:1972
+جارٍ الاختبار…,,Testing…,Test en cours…,Test ediliyor…,Probando…,ok,app/templates/radius/mt_login_designer.html:1973
+متصل — العنوان صحيح وقابل للوصول.,,Connected — the address is valid and reachable.,Connecté — l'adresse est valide et accessible.,Bağlandı — adres geçerli ve erişilebilir.,Conectado — la dirección es válida y accesible.,ok,app/templates/radius/mt_login_designer.html:1989
+وصل الطلب لكن رُفض (403) — مفتاح المتجر غير مطابق. أعد نشر المتجر على الراوتر بعد أي تدوير للمفتاح ثم أعد الاختبار.,,"The request arrived but was rejected (403) — the store key does not match. Redeploy the store on the router after any key rotation, then retest.","La requête est arrivée mais a été rejetée (403) — la clé du magasin ne correspond pas. Redéployez le magasin sur le routeur après toute rotation de clé, puis testez à nouveau.","İstek ulaştı ancak reddedildi (403) — mağaza anahtarı eşleşmiyor. Herhangi bir anahtar döndürmesinden sonra mağazayı yönlendiriciye yeniden dağıtın, ardından yeniden test edin.",La solicitud llegó pero fue rechazada (403) — la clave de la tienda no coincide. Vuelva a desplegar la tienda en el router tras cualquier rotación de clave y vuelva a probar.,ok,app/templates/radius/mt_login_designer.html:1991
+وصل الطلب لكن ردّ بخطأ HTTP ,,The request arrived but responded with HTTP error ,La requête est arrivée mais a répondu avec l'erreur HTTP ,İstek ulaştı ancak HTTP hatasıyla yanıt verdi ,La solicitud llegó pero respondió con el error HTTP ,ok,app/templates/radius/mt_login_designer.html:1993
+ — راجع الخادم.,, — check the server., — vérifiez le serveur., — sunucuyu kontrol edin., — revise el servidor.,ok,app/templates/radius/mt_login_designer.html:1994
+ — تأكد أن العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به في walled-garden على شبكة الزبائن). إن كانت اللوحة على https والعنوان http فقد يحجب المتصفح الطلب (محتوى مختلط).,," — make sure the address and port are correct and the server is running (and allowed in the walled-garden on the customer network). If the panel is on https and the address is http, the browser may block the request (mixed content)."," — assurez-vous que l'adresse et le port sont corrects et que le serveur fonctionne (et est autorisé dans le walled-garden sur le réseau client). Si le panneau est en https et l'adresse en http, le navigateur peut bloquer la requête (contenu mixte)."," — adres ve portun doğru olduğundan ve sunucunun çalıştığından (ve müşteri ağındaki walled-garden'da izinli olduğundan) emin olun. Panel https'te ve adres http ise, tarayıcı isteği engelleyebilir (karışık içerik)."," — asegúrese de que la dirección y el puerto sean correctos y el servidor esté en funcionamiento (y permitido en el walled-garden de la red de clientes). Si el panel está en https y la dirección en http, el navegador puede bloquear la solicitud (contenido mixto).",ok,app/templates/radius/mt_login_designer.html:1999
+انقطع الاتصال أثناء النشر — ,,Connection lost during deployment — ,Connexion perdue pendant le déploiement — ,Dağıtım sırasında bağlantı kesildi — ,Conexión perdida durante el despliegue — ,ok,app/templates/radius/mt_login_designer.html:2358
+حاول مجددًا,,Try again,Réessayer,Tekrar dene,Inténtalo de nuevo,ok,app/templates/radius/mt_login_designer.html:2359
 تتبّع اللوب على الراوتر,,Loop detection on the router,Détection de boucles sur le routeur,Yönlendiricide döngü tespiti,Detección de bucles en el router,ok,app/templates/radius/mt_loop_setup.html:13
 تتبّع اللوب (الحلقات) على الراوتر,,Loop detection on the router,Détection de boucles sur le routeur,Yönlendiricide döngü tespiti,Detección de bucles en el router,ok,app/templates/radius/mt_loop_setup.html:15
 عميل DHCP سلبي على منافذ الزبائن — لو حصل على إيجار فهناك لوب. الكشف باستطلاع من اللوحة كل ٥ دقائق,,"A passive DHCP client on the customer ports — if it gets a lease, there's a loop. Detection is by polling from the panel every 5 minutes.","Un client DHCP passif sur les ports clients — s'il obtient un bail, il y a une boucle. La détection se fait par interrogation depuis le panneau toutes les 5 minutes.","Müşteri bağlantı noktalarında pasif bir DHCP istemcisi — kira alırsa bir döngü vardır. Algılama, panelden her 5 dakikada bir yoklama ile yapılır.","Un cliente DHCP pasivo en los puertos de los clientes — si obtiene una concesión, hay un bucle. La detección se realiza por sondeo desde el panel cada 5 minutos.",ok,app/templates/radius/mt_loop_setup.html:16
@@ -21657,20 +21658,20 @@ QR / الباركود,,QR / barcode,QR / code-barres,QR / barkod,QR / código de
 حالة الخدمة,,Service status,État du service,Hizmet durumu,Estado del servicio,ok,app/templates/radius/provider_grants_status.html:44
 حالة الميزة,,Feature status,État de la fonctionnalité,Özellik durumu,Estado de la función,ok,app/templates/radius/provider_grants_status.html:45
 التفسير,,Interpretation,Interprétation,Yorum,Interpretación,ok,app/templates/radius/provider_grants_status.html:47
-غير مذكورة,,Not specified,Non mentionnée,Belirtilmemiş,No indicada,ok,app/templates/radius/provider_grants_status.html:65
-موقوفة (إيقاف فعلي),,Suspended (actually stopped),Suspendue (arrêt effectif),Durduruldu (fiilen durdurulmuş),Suspendida (detención efectiva),ok,app/templates/radius/provider_grants_status.html:75
-مدفوعة — تحتاج تفعيل,,Paid — needs activation,Payé — activation requise,Ödendi — etkinleştirme gerekli,Pagada — requiere activación,ok,app/templates/radius/provider_grants_status.html:76
-مسموحة,,Allowed,Autorisée,İzin verildi,Permitida,ok,app/templates/radius/provider_grants_status.html:79
-ممنوعة في كل أنحاء الريديوس — السوبر لا يتجاوز.,,Blocked throughout RADIUS — the super admin cannot override.,Bloquée dans tout RADIUS — le super administrateur ne peut pas la contourner.,RADIUS genelinde engellendi — süper yönetici geçersiz kılamaz.,Bloqueada en todo RADIUS — el superadministrador no puede anularla.,ok,app/templates/radius/provider_grants_status.html:83
-مرئية في الشريط الجانبي مع شارة قفل — الضغط يَفتح صفحة طلب تفعيل/ترقية (لا 403).,,Visible in the sidebar with a lock badge — clicking opens an activation/upgrade request page (not a 403).,Visible dans la barre latérale avec un badge de verrouillage — cliquer ouvre une page de demande d'activation/mise à niveau (pas un 403).,Kenar çubuğunda kilit rozetiyle görünür — tıklamak bir etkinleştirme/yükseltme talep sayfası açar (403 değil).,Visible en la barra lateral con una insignia de candado: al hacer clic se abre una página de solicitud de activación/mejora (no un 403).,ok,app/templates/radius/provider_grants_status.html:85
-ميزة معروضة لكن لا تقبل كتابة.,,Feature is displayed but does not accept writes.,Fonctionnalité affichée mais n'accepte pas l'écriture.,Özellik gösteriliyor ancak yazmaya izin vermiyor.,Función mostrada pero no admite escritura.,ok,app/templates/radius/provider_grants_status.html:87
-بوّابة المشترك/الزبون لا تعرضها — الإدارة تستعملها عاديًّا.,,The subscriber/customer portal does not display it — administration uses it normally.,Le portail abonné/client ne l'affiche pas — l'administration l'utilise normalement.,Abone/müşteri portalı bunu göstermez — yönetim normal şekilde kullanır.,El portal del suscriptor/cliente no lo muestra — la administración lo usa normalmente.,ok,app/templates/radius/provider_grants_status.html:89
-متاحة بالكامل بحسب العقد.,,Fully available per the contract.,Entièrement disponible selon le contrat.,Sözleşmeye göre tamamen kullanılabilir.,Totalmente disponible según el contrato.,ok,app/templates/radius/provider_grants_status.html:91
-كيف يُترجَم العقد إلى سلوك؟,,How is the contract translated into behavior?,Comment le contrat se traduit-il en comportement ?,Sözleşme davranışa nasıl çevrilir?,¿Cómo se traduce el contrato en comportamiento?,ok,app/templates/radius/provider_grants_status.html:102
-البند يختفي من الشريط الجانبي، الرابط المباشر يُعيد توجيه لصفحة «الخدمة غير مفعّلة»، عمليات الكتابة تُرفض بـ403. السوبر-أدمن لا يتجاوز.,,"The item disappears from the sidebar, the direct link redirects to the «Service not activated» page, and write operations are rejected with 403. The super-admin is not exempt.","L'élément disparaît de la barre latérale, le lien direct redirige vers la page «Service non activé», et les opérations d'écriture sont rejetées avec une erreur 403. Le super-administrateur n'est pas exempté.","Öğe kenar çubuğundan kaybolur, doğrudan bağlantı «Hizmet etkin değil» sayfasına yönlendirir ve yazma işlemleri 403 ile reddedilir. Süper yönetici de bundan muaf değildir.","El elemento desaparece de la barra lateral, el enlace directo redirige a la página «Servicio no activado» y las operaciones de escritura se rechazan con 403. El superadministrador no queda exento.",ok,app/templates/radius/provider_grants_status.html:104
-تُخفى عن بوّابة المشترك/الزبون فقط؛ الإدارة تراها وتستعملها عاديًّا.,,Hidden only from the subscriber/customer portal; administration sees and uses it normally.,Masqué uniquement du portail abonné/client ; l'administration le voit et l'utilise normalement.,Yalnızca abone/müşteri portalından gizlenir; yönetim bunu normal şekilde görür ve kullanır.,Se oculta solo del portal del suscriptor/cliente; la administración lo ve y lo usa con normalidad.,ok,app/templates/radius/provider_grants_status.html:105
-سقف كمّي يُفرَض خادميًّا: الإنشاء بعد الوصول للسقف يُرفض برسالة عربية واضحة.,,A quantity limit enforced server-side: creation after reaching the limit is rejected with a clear Arabic message.,Un plafond quantitatif appliqué côté serveur : la création après avoir atteint le plafond est rejetée avec un message clair en arabe.,"Sunucu tarafında uygulanan bir miktar limiti: limite ulaşıldıktan sonra oluşturma, açık bir Arapça mesajla reddedilir.",Un límite de cantidad aplicado del lado del servidor: la creación tras alcanzar el límite se rechaza con un mensaje claro en árabe.,ok,app/templates/radius/provider_grants_status.html:106
-مجانية محدودة,,Limited free,Gratuit limité,Sınırlı ücretsiz,Gratis limitado,ok,app/templates/radius/provider_grants_status.html:106
+غير مذكورة,,Not specified,Non mentionnée,Belirtilmemiş,No indicada,ok,app/templates/radius/provider_grants_status.html:66
+موقوفة (إيقاف فعلي),,Suspended (actually stopped),Suspendue (arrêt effectif),Durduruldu (fiilen durdurulmuş),Suspendida (detención efectiva),ok,app/templates/radius/provider_grants_status.html:76
+مدفوعة — تحتاج تفعيل,,Paid — needs activation,Payé — activation requise,Ödendi — etkinleştirme gerekli,Pagada — requiere activación,ok,app/templates/radius/provider_grants_status.html:77
+مسموحة,,Allowed,Autorisée,İzin verildi,Permitida,ok,app/templates/radius/provider_grants_status.html:80
+ممنوعة في كل أنحاء الريديوس — السوبر لا يتجاوز.,,Blocked throughout RADIUS — the super admin cannot override.,Bloquée dans tout RADIUS — le super administrateur ne peut pas la contourner.,RADIUS genelinde engellendi — süper yönetici geçersiz kılamaz.,Bloqueada en todo RADIUS — el superadministrador no puede anularla.,ok,app/templates/radius/provider_grants_status.html:84
+مرئية في الشريط الجانبي مع شارة قفل — الضغط يَفتح صفحة طلب تفعيل/ترقية (لا 403).,,Visible in the sidebar with a lock badge — clicking opens an activation/upgrade request page (not a 403).,Visible dans la barre latérale avec un badge de verrouillage — cliquer ouvre une page de demande d'activation/mise à niveau (pas un 403).,Kenar çubuğunda kilit rozetiyle görünür — tıklamak bir etkinleştirme/yükseltme talep sayfası açar (403 değil).,Visible en la barra lateral con una insignia de candado: al hacer clic se abre una página de solicitud de activación/mejora (no un 403).,ok,app/templates/radius/provider_grants_status.html:86
+ميزة معروضة لكن لا تقبل كتابة.,,Feature is displayed but does not accept writes.,Fonctionnalité affichée mais n'accepte pas l'écriture.,Özellik gösteriliyor ancak yazmaya izin vermiyor.,Función mostrada pero no admite escritura.,ok,app/templates/radius/provider_grants_status.html:88
+بوّابة المشترك/الزبون لا تعرضها — الإدارة تستعملها عاديًّا.,,The subscriber/customer portal does not display it — administration uses it normally.,Le portail abonné/client ne l'affiche pas — l'administration l'utilise normalement.,Abone/müşteri portalı bunu göstermez — yönetim normal şekilde kullanır.,El portal del suscriptor/cliente no lo muestra — la administración lo usa normalmente.,ok,app/templates/radius/provider_grants_status.html:90
+متاحة بالكامل بحسب العقد.,,Fully available per the contract.,Entièrement disponible selon le contrat.,Sözleşmeye göre tamamen kullanılabilir.,Totalmente disponible según el contrato.,ok,app/templates/radius/provider_grants_status.html:92
+كيف يُترجَم العقد إلى سلوك؟,,How is the contract translated into behavior?,Comment le contrat se traduit-il en comportement ?,Sözleşme davranışa nasıl çevrilir?,¿Cómo se traduce el contrato en comportamiento?,ok,app/templates/radius/provider_grants_status.html:103
+البند يختفي من الشريط الجانبي، الرابط المباشر يُعيد توجيه لصفحة «الخدمة غير مفعّلة»، عمليات الكتابة تُرفض بـ403. السوبر-أدمن لا يتجاوز.,,"The item disappears from the sidebar, the direct link redirects to the «Service not activated» page, and write operations are rejected with 403. The super-admin is not exempt.","L'élément disparaît de la barre latérale, le lien direct redirige vers la page «Service non activé», et les opérations d'écriture sont rejetées avec une erreur 403. Le super-administrateur n'est pas exempté.","Öğe kenar çubuğundan kaybolur, doğrudan bağlantı «Hizmet etkin değil» sayfasına yönlendirir ve yazma işlemleri 403 ile reddedilir. Süper yönetici de bundan muaf değildir.","El elemento desaparece de la barra lateral, el enlace directo redirige a la página «Servicio no activado» y las operaciones de escritura se rechazan con 403. El superadministrador no queda exento.",ok,app/templates/radius/provider_grants_status.html:105
+تُخفى عن بوّابة المشترك/الزبون فقط؛ الإدارة تراها وتستعملها عاديًّا.,,Hidden only from the subscriber/customer portal; administration sees and uses it normally.,Masqué uniquement du portail abonné/client ; l'administration le voit et l'utilise normalement.,Yalnızca abone/müşteri portalından gizlenir; yönetim bunu normal şekilde görür ve kullanır.,Se oculta solo del portal del suscriptor/cliente; la administración lo ve y lo usa con normalidad.,ok,app/templates/radius/provider_grants_status.html:106
+سقف كمّي يُفرَض خادميًّا: الإنشاء بعد الوصول للسقف يُرفض برسالة عربية واضحة.,,A quantity limit enforced server-side: creation after reaching the limit is rejected with a clear Arabic message.,Un plafond quantitatif appliqué côté serveur : la création après avoir atteint le plafond est rejetée avec un message clair en arabe.,"Sunucu tarafında uygulanan bir miktar limiti: limite ulaşıldıktan sonra oluşturma, açık bir Arapça mesajla reddedilir.",Un límite de cantidad aplicado del lado del servidor: la creación tras alcanzar el límite se rechaza con un mensaje claro en árabe.,ok,app/templates/radius/provider_grants_status.html:107
+مجانية محدودة,,Limited free,Gratuit limité,Sınırlı ücretsiz,Gratis limitado,ok,app/templates/radius/provider_grants_status.html:107
 طلب تفعيل / ترقية,,Activation / upgrade request,Demande d'activation / mise à niveau,Etkinleştirme / yükseltme isteği,Solicitud de activación / mejora,ok,app/templates/radius/provider_upgrade.html:10
 هذه الخدمة جاهزة — تحتاج تفعيلًا من مزوّد النظام,,This service is ready — it requires activation by the system provider,Ce service est prêt — il nécessite une activation par le fournisseur du système,Bu hizmet hazır — sistem sağlayıcısı tarafından etkinleştirilmesi gerekir,Este servicio está listo — requiere activación por parte del proveedor del sistema,ok,app/templates/radius/provider_upgrade.html:13
 هذه الخدمة موجودة في كتالوج النظام لكنها مدفوعة ولم تُفعَّل لحسابك بعد. الخدمة جاهزة للعمل فور التفعيل من لوحة التراخيص — تواصل مع مزوّد النظام لطلب التفعيل أو الترقية. القرار تجاري، لا يتجاوزه المدير الرئيسي.,,This service exists in the system catalog but it is paid and has not been activated for your account yet. The service is ready to work as soon as it is activated from the licensing panel — contact the system provider to request activation or an upgrade. This is a commercial decision that the primary admin cannot override.,Ce service figure dans le catalogue du système mais il est payant et n'a pas encore été activé pour votre compte. Le service est prêt à fonctionner dès son activation depuis le panneau de licences — contactez le fournisseur du système pour demander l'activation ou une mise à niveau. Il s'agit d'une décision commerciale que l'administrateur principal ne peut pas contourner.,"Bu hizmet sistem kataloğunda mevcuttur ancak ücretlidir ve hesabınız için henüz etkinleştirilmemiştir. Hizmet, lisans panelinden etkinleştirilir etkinleştirilmez çalışmaya hazırdır — etkinleştirme veya yükseltme talep etmek için sistem sağlayıcısıyla iletişime geçin. Bu, ana yöneticinin geçersiz kılamayacağı ticari bir karardır.","Este servicio existe en el catálogo del sistema, pero es de pago y aún no se ha activado para tu cuenta. El servicio está listo para funcionar en cuanto se active desde el panel de licencias — contacta con el proveedor del sistema para solicitar la activación o una mejora. Es una decisión comercial que el administrador principal no puede anular.",ok,app/templates/radius/provider_upgrade.html:21
@@ -22268,34 +22269,34 @@ IP الداخلي:,,Internal IP:,IP interne :,Dahili IP:,IP interna:,ok,app/temp
 إضافة دور جديد,,Add a new role,Ajouter un nouveau rôle,Yeni rol ekle,Agregar un nuevo rol,ok,app/templates/radius/roles_form.html:24
 تعديل الدور: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:24
 صلاحية متاحة للاختيار,,Permission available for selection,Permission disponible à la sélection,Seçim için kullanılabilir izin,Permiso disponible para seleccionar,ok,app/templates/radius/roles_form.html:30
-عرّف اسم الدور ولونه ثم اختر صلاحياته — يُمنح الدور للمشرفين لاحقًا من شاشة المدراء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:233
-عدّل الاسم الظاهر واللون والصلاحيات — الاسم الداخلي مفتاح ثابت لا يتغيّر بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:234
-إنشاء الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:238
-زر «تحديد الكل» في رأس كل مجموعة يفعّل أو يلغي صلاحياتها دفعة واحدة.,,"The ""Select all"" button in each group's header enables or disables its permissions all at once.",Le bouton « Tout sélectionner » dans l'en-tête de chaque groupe active ou désactive ses permissions en une seule fois.,"Her grubun başlığındaki ""Tümünü seç"" düğmesi, izinlerini tek seferde etkinleştirir veya devre dışı bırakır.",El botón «Seleccionar todo» en el encabezado de cada grupo activa o desactiva sus permisos de una sola vez.,ok,app/templates/radius/roles_form.html:256
-كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:260
-أساس الأفعال والرؤية ووصول الأقسام لهذا الدور — في نفس الصفحة أدناه,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:275
-يَرثها كل مدير بهذا الدور تلقائيًّا — بدل ضبط كل مدير على حِدة. الحدود الرقميّة تبقى فرديّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:277
-الانتقال للأفعال والرؤية,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:281
-للعرض فقط — هذا الدور يحمل صلاحيات لا تملكها، فلا يمكنك حفظه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:288
-هوية الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:291
-لون الدور,,Role Color,Couleur du rôle,Rol Rengi,Color del rol,ok,app/templates/radius/roles_form.html:307
-يميّز الدور بصريًا في القوائم والبطاقات.,,Visually distinguishes the role in lists and cards.,Distingue visuellement le rôle dans les listes et les cartes.,Listelerde ve kartlarda rolü görsel olarak ayırt eder.,Distingue visualmente el rol en las listas y las tarjetas.,ok,app/templates/radius/roles_form.html:309
-وصف مختصر لنطاق هذا الدور ومسؤولياته…,,A brief description of this role's scope and responsibilities…,Une brève description de la portée et des responsabilités de ce rôle…,Bu rolün kapsamının ve sorumluluklarının kısa açıklaması…,Una breve descripción del alcance y las responsabilidades de este rol…,ok,app/templates/radius/roles_form.html:314
-%(sel)s / %(total)s مختارة,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:321
-ممنوحة,,Granted,Accordé,Verildi,Concedido,ok,app/templates/radius/roles_form.html:333
-أساس الأفعال والرؤية — يَرثه كل مدير بهذا الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:387
-للعرض فقط — دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك، فأساسُ منوحاته لا يُطبَّق. لحجب شيءٍ عن مديرٍ بهذا الدور اضبط «ممنوع» من صفحته (التجاوز الفرديّ يَغلب).,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:397
-نطاق الرؤية والإشراف,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:400
-رؤية بيانات حسّاسة (كل المشتركين/الحزم/كلمات السر/الماليّات). الافتراض محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:402
-الأفعال المسموح بها,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:414
-كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:416
-تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:434
-بعض المفاتيح في مصفوفة الصلاحيات أعلاه تمنح أكثر من فعل (مثل store.review: تأكيد الإيداع + تأكيد السحب، و online.disconnect: قطع الجلسة + الإغلاق الإجباريّ). «حسب المفتاح» = يتبع المفتاح • «ممنوع» يُطفئ هذا الفعل وحده لكل مدراء الدور • «مسموح» لا يتخطّى مفتاحًا غير ممنوح. ويمكن تجاوز أيّ صفّ لمديرٍ بعينه من صفحته.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:436
-حسب المفتاح,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:450
-دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك — لا تقسيم على الدور؛ اضبط «ممنوع» لمديرٍ بعينه من صفحته.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:469
-مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا. يَرثه كل مدير بهذا الدور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:476
-مقفول,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:489
-حفظ أساس الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:503
+عرّف اسم الدور ولونه ثم اختر صلاحياته — يُمنح الدور للمشرفين لاحقًا من شاشة المدراء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:234
+عدّل الاسم الظاهر واللون والصلاحيات — الاسم الداخلي مفتاح ثابت لا يتغيّر بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:235
+إنشاء الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:239
+زر «تحديد الكل» في رأس كل مجموعة يفعّل أو يلغي صلاحياتها دفعة واحدة.,,"The ""Select all"" button in each group's header enables or disables its permissions all at once.",Le bouton « Tout sélectionner » dans l'en-tête de chaque groupe active ou désactive ses permissions en une seule fois.,"Her grubun başlığındaki ""Tümünü seç"" düğmesi, izinlerini tek seferde etkinleştirir veya devre dışı bırakır.",El botón «Seleccionar todo» en el encabezado de cada grupo activa o desactiva sus permisos de una sola vez.,ok,app/templates/radius/roles_form.html:257
+كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:261
+أساس الأفعال والرؤية ووصول الأقسام لهذا الدور — في نفس الصفحة أدناه,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:276
+يَرثها كل مدير بهذا الدور تلقائيًّا — بدل ضبط كل مدير على حِدة. الحدود الرقميّة تبقى فرديّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:278
+الانتقال للأفعال والرؤية,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:282
+للعرض فقط — هذا الدور يحمل صلاحيات لا تملكها، فلا يمكنك حفظه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:289
+هوية الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:292
+لون الدور,,Role Color,Couleur du rôle,Rol Rengi,Color del rol,ok,app/templates/radius/roles_form.html:308
+يميّز الدور بصريًا في القوائم والبطاقات.,,Visually distinguishes the role in lists and cards.,Distingue visuellement le rôle dans les listes et les cartes.,Listelerde ve kartlarda rolü görsel olarak ayırt eder.,Distingue visualmente el rol en las listas y las tarjetas.,ok,app/templates/radius/roles_form.html:310
+وصف مختصر لنطاق هذا الدور ومسؤولياته…,,A brief description of this role's scope and responsibilities…,Une brève description de la portée et des responsabilités de ce rôle…,Bu rolün kapsamının ve sorumluluklarının kısa açıklaması…,Una breve descripción del alcance y las responsabilidades de este rol…,ok,app/templates/radius/roles_form.html:315
+%(sel)s / %(total)s مختارة,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:322
+ممنوحة,,Granted,Accordé,Verildi,Concedido,ok,app/templates/radius/roles_form.html:334
+أساس الأفعال والرؤية — يَرثه كل مدير بهذا الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:388
+للعرض فقط — دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك، فأساسُ منوحاته لا يُطبَّق. لحجب شيءٍ عن مديرٍ بهذا الدور اضبط «ممنوع» من صفحته (التجاوز الفرديّ يَغلب).,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:398
+نطاق الرؤية والإشراف,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:401
+رؤية بيانات حسّاسة (كل المشتركين/الحزم/كلمات السر/الماليّات). الافتراض محجوب — ما تُفعّله هنا يَرثه كلّ مدير بهذا الدور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:403
+الأفعال المسموح بها,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:415
+كل عمليّة مربوطة بصلاحية تُنفَّذ على الخادم — الفعل المُطفأ يُرفَض (403). أفعال «توليد/سلفة/تفعيل/استيراد/المتجر» مقيّدة افتراضًا.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:417
+تقسيم الأفعال المرتبطة بمفاتيح الصلاحيات,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:438
+بعض المفاتيح في مصفوفة الصلاحيات أعلاه تمنح أكثر من فعل (مثل store.review: تأكيد الإيداع + تأكيد السحب، و online.disconnect: قطع الجلسة + الإغلاق الإجباريّ). «حسب المفتاح» = يتبع المفتاح • «ممنوع» يُطفئ هذا الفعل وحده لكل مدراء الدور • «مسموح» لا يتخطّى مفتاحًا غير ممنوح. ويمكن تجاوز أيّ صفّ لمديرٍ بعينه من صفحته.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:440
+حسب المفتاح,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:454
+دور «مدير عام» يمنح كل الصلاحيات غير المقصورة على المالك — لا تقسيم على الدور؛ اضبط «ممنوع» لمديرٍ بعينه من صفحته.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:473
+مفتوح: يرى ويستخدم • مقفول: يرى للعرض فقط (لا إضافة/تعديل/حذف) • مخفي: لا يظهر إطلاقًا. يَرثه كل مدير بهذا الدور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:480
+مقفول,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:493
+حفظ أساس الدور,,,,,,"missing: en,fr,tr,es",app/templates/radius/roles_form.html:507
 الأدوار والصلاحيات — هوب ريديوس,,Roles and permissions — HobeRadius,Rôles et autorisations — HobeRadius,Roller ve izinler — HobeRadius,Roles y permisos — HobeRadius,ok,app/templates/radius/roles_list.html:24
 دور ·,,Floor ·,Étage ·,Kat ·,Piso ·,ok,app/templates/radius/roles_list.html:27
 صلاحية متاحة,,Available permission,Autorisation disponible,Mevcut yetki,Permiso disponible,ok,app/templates/radius/roles_list.html:27
@@ -22880,26 +22881,26 @@ IP الحالي,,Current IP,IP actuelle,Mevcut IP,IP actual,ok,app/templates/rad
 الافتراضيّ:,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:796
 إعدادات متقدمة — API والبنية التحتية,,Advanced settings — API and infrastructure,Paramètres avancés — API et infrastructure,Gelişmiş ayarlar — API ve altyapı,Ajustes avanzados — API e infraestructura,ok,app/templates/radius/settings_page.html:810
 لا تغيّرها إلا إذا كنت تعرف أثرها,,Don't change it unless you know its effect,Ne la modifiez pas sauf si vous en connaissez l'effet,Etkisini bilmiyorsanız değiştirmeyin,No la cambie a menos que conozca su efecto,ok,app/templates/radius/settings_page.html:811
-عنوان IP سيرفر الراديوس,,RADIUS Server IP Address,Adresse IP du serveur RADIUS,RADIUS Sunucu IP Adresi,Dirección IP del servidor RADIUS,ok,app/templates/radius/settings_page.html:824
-العنوان الذي تصل إليه أجهزة المشتركين عبر الراوتر (عادةً عنوان WireGuard/VPN مثل 10.10.0.1). يبني منه النظام تلقائيًا رابط متجر البطاقات الإلكترونية http://<العنوان>/portal/card في كل تصاميم صفحات الهوت سبوت — لا تنسَ إضافته إلى walled-garden.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:825
-مثال: 10.10.0.1,,Example: 10.10.0.1,Exemple : 10.10.0.1,Örnek: 10.10.0.1,Ejemplo: 10.10.0.1,ok,app/templates/radius/settings_page.html:827
-يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة واحدة ويُستخدم في كل التصاميم تلقائيًا.,,Powers the electronic voucher store links on hotspot pages — set once and used in all designs automatically.,Active les liens de la boutique de coupons électroniques sur les pages hotspot — défini une seule fois et utilisé automatiquement dans tous les modèles.,Hotspot sayfalarındaki elektronik kupon mağazası bağlantılarını çalıştırır — bir kez ayarlanır ve tüm tasarımlarda otomatik kullanılır.,Activa los enlaces de la tienda electrónica de cupones en las páginas hotspot — se configura una vez y se usa automáticamente en todos los diseños.,ok,app/templates/radius/settings_page.html:828
-مفتاح متجر البطاقات (App Key),,Voucher store key (App Key),Clé de la boutique de coupons (App Key),Kupon mağazası anahtarı (App Key),Clave de la tienda de cupones (App Key),ok,app/templates/radius/settings_page.html:839
-مفتاح سرّي يحمله متجرك المنشور (store.html) في ترويسة X-Store-Key مع كل نداء. يرفض الخادم أي طلب لا يحمل المفتاح الصحيح — فيمنع أي طرف خارجي من استدعاء واجهة المتجر. يُولَّد تلقائيًا عند أول نشر للمتجر. ملاحظة: المفتاح مرئي في مصدر الصفحة على الراوتر فهو يصدّ الاستدعاء العشوائي لا متطفّلًا يقرأ مصدر الصفحة؛ الحماية الكاملة للعمليات تبقى عبر تسجيل الدخول + walled-garden.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:840
-— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:843
-توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:846
-توليد مفتاح جديد,,Generate a new key,Générer une nouvelle clé,Yeni anahtar oluştur,Generar una nueva clave,ok,app/templates/radius/settings_page.html:847
-تدوير المفتاح يتطلب إعادة نشر store.html,,Rotating the key requires redeploying store.html,La rotation de la clé nécessite un redéploiement de store.html,Anahtarın döndürülmesi store.html'in yeniden dağıtılmasını gerektirir,Rotar la clave requiere volver a desplegar store.html,ok,app/templates/radius/settings_page.html:850
-من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.,,"from the login page designer, otherwise the published store stops working.","depuis le concepteur de la page de connexion, sinon la boutique publiée cesse de fonctionner.","giriş sayfası tasarımcısından, aksi takdirde yayımlanan mağaza durur.","desde el diseñador de la página de acceso, de lo contrario la tienda publicada deja de funcionar.",ok,app/templates/radius/settings_page.html:850
-يحمي واجهة المتجر من الاستدعاء الخارجي.,,Protects the store interface from external invocation.,Protège l'interface de la boutique contre les appels externes.,Mağaza arayüzünü dış çağrılardan korur.,Protege la interfaz de la tienda contra invocaciones externas.,ok,app/templates/radius/settings_page.html:850
-يُستخدم في معالج «اتصال عن بُعد» لبناء روابط Winbox / SSH / WebFig / API من خارج الشبكة عبر المنافذ 51000-51199. اتركه فارغًا للرجوع إلى متغيّر البيئة HOBERADIUS_PUBLIC_HOST.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:855
-مثال: vps.example.com أو 203.0.113.10,,Example: vps.example.com or 203.0.113.10,Exemple : vps.example.com ou 203.0.113.10,Örnek: vps.example.com veya 203.0.113.10,Ejemplo: vps.example.com o 203.0.113.10,ok,app/templates/radius/settings_page.html:857
-العنوان العام لخادمك — تُبنى عليه روابط الوصول للراوترات من خارج الشبكة. فارغ = الرجوع إلى إعداد البيئة الافتراضي.,,Your server's public address — access links for the routers from outside the network are built upon it. Empty = fall back to the default environment setting.,L'adresse publique de votre serveur — les liens d'accès aux routeurs depuis l'extérieur du réseau y sont construits. Vide = retour au paramètre d'environnement par défaut.,Sunucunuzun genel adresi — ağ dışından yönlendiricilere erişim bağlantıları bunun üzerine kurulur. Boş = varsayılan ortam ayarına dönülür.,La dirección pública de su servidor — sobre ella se construyen los enlaces de acceso a los routers desde fuera de la red. Vacío = volver al ajuste de entorno predeterminado.,ok,app/templates/radius/settings_page.html:858
-لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.,,No unsaved changes — all values match the last save.,Aucune modification non enregistrée — toutes les valeurs correspondent au dernier enregistrement.,Kaydedilmemiş değişiklik yok — tüm değerler son kayıtla aynı.,No hay cambios sin guardar: todos los valores coinciden con el último guardado.,ok,app/templates/radius/settings_page.html:876
- تعديل غير محفوظ — اضغط «حفظ التغييرات» لتثبيته.,, Unsaved change — click «Save Changes» to apply it., Modification non enregistrée — cliquez sur «Enregistrer les modifications» pour l'appliquer., Kaydedilmemiş değişiklik — uygulamak için «Değişiklikleri Kaydet»e tıklayın., Cambio sin guardar — haga clic en «Guardar cambios» para aplicarlo.,ok,app/templates/radius/settings_page.html:931
-لديك ,,You have ,Vous avez ,Sahip olduğunuz ,Tienes ,ok,app/templates/radius/settings_page.html:931
-حجم ملف الشعار يتجاوز 2MB — صغّر الصورة وأعد المحاولة.,,Logo file size exceeds 2MB — reduce the image and try again.,La taille du fichier du logo dépasse 2 Mo — réduisez l'image et réessayez.,Logo dosyası boyutu 2MB'yi aşıyor — görüntüyü küçültün ve tekrar deneyin.,El tamaño del archivo del logotipo supera los 2 MB — reduce la imagen e inténtalo de nuevo.,ok,app/templates/radius/settings_page.html:984
-سيُرفع هذا الشعار عند حفظ التغييرات,,This logo will be uploaded when changes are saved,Ce logo sera téléversé lors de l'enregistrement des modifications,"Bu logo, değişiklikler kaydedildiğinde yüklenecek",Este logo se subirá al guardar los cambios,ok,app/templates/radius/settings_page.html:993
+عنوان IP سيرفر الراديوس,,RADIUS Server IP Address,Adresse IP du serveur RADIUS,RADIUS Sunucu IP Adresi,Dirección IP del servidor RADIUS,ok,app/templates/radius/settings_page.html:827
+العنوان الذي تصل إليه أجهزة المشتركين عبر الراوتر (عادةً عنوان WireGuard/VPN مثل 10.10.0.1). يبني منه النظام تلقائيًا رابط متجر البطاقات الإلكترونية http://<العنوان>/portal/card في كل تصاميم صفحات الهوت سبوت — لا تنسَ إضافته إلى walled-garden.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:828
+مثال: 10.10.0.1,,Example: 10.10.0.1,Exemple : 10.10.0.1,Örnek: 10.10.0.1,Ejemplo: 10.10.0.1,ok,app/templates/radius/settings_page.html:830
+يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة واحدة ويُستخدم في كل التصاميم تلقائيًا.,,Powers the electronic voucher store links on hotspot pages — set once and used in all designs automatically.,Active les liens de la boutique de coupons électroniques sur les pages hotspot — défini une seule fois et utilisé automatiquement dans tous les modèles.,Hotspot sayfalarındaki elektronik kupon mağazası bağlantılarını çalıştırır — bir kez ayarlanır ve tüm tasarımlarda otomatik kullanılır.,Activa los enlaces de la tienda electrónica de cupones en las páginas hotspot — se configura una vez y se usa automáticamente en todos los diseños.,ok,app/templates/radius/settings_page.html:831
+مفتاح متجر البطاقات (App Key),,Voucher store key (App Key),Clé de la boutique de coupons (App Key),Kupon mağazası anahtarı (App Key),Clave de la tienda de cupones (App Key),ok,app/templates/radius/settings_page.html:842
+مفتاح سرّي يحمله متجرك المنشور (store.html) في ترويسة X-Store-Key مع كل نداء. يرفض الخادم أي طلب لا يحمل المفتاح الصحيح — فيمنع أي طرف خارجي من استدعاء واجهة المتجر. يُولَّد تلقائيًا عند أول نشر للمتجر. ملاحظة: المفتاح مرئي في مصدر الصفحة على الراوتر فهو يصدّ الاستدعاء العشوائي لا متطفّلًا يقرأ مصدر الصفحة؛ الحماية الكاملة للعمليات تبقى عبر تسجيل الدخول + walled-garden.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:843
+— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:846
+توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:849
+توليد مفتاح جديد,,Generate a new key,Générer une nouvelle clé,Yeni anahtar oluştur,Generar una nueva clave,ok,app/templates/radius/settings_page.html:850
+تدوير المفتاح يتطلب إعادة نشر store.html,,Rotating the key requires redeploying store.html,La rotation de la clé nécessite un redéploiement de store.html,Anahtarın döndürülmesi store.html'in yeniden dağıtılmasını gerektirir,Rotar la clave requiere volver a desplegar store.html,ok,app/templates/radius/settings_page.html:853
+من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.,,"from the login page designer, otherwise the published store stops working.","depuis le concepteur de la page de connexion, sinon la boutique publiée cesse de fonctionner.","giriş sayfası tasarımcısından, aksi takdirde yayımlanan mağaza durur.","desde el diseñador de la página de acceso, de lo contrario la tienda publicada deja de funcionar.",ok,app/templates/radius/settings_page.html:853
+يحمي واجهة المتجر من الاستدعاء الخارجي.,,Protects the store interface from external invocation.,Protège l'interface de la boutique contre les appels externes.,Mağaza arayüzünü dış çağrılardan korur.,Protege la interfaz de la tienda contra invocaciones externas.,ok,app/templates/radius/settings_page.html:853
+يُستخدم في معالج «اتصال عن بُعد» لبناء روابط Winbox / SSH / WebFig / API من خارج الشبكة عبر المنافذ 51000-51199. اتركه فارغًا للرجوع إلى متغيّر البيئة HOBERADIUS_PUBLIC_HOST.,,,,,,"missing: en,fr,tr,es",app/templates/radius/settings_page.html:859
+مثال: vps.example.com أو 203.0.113.10,,Example: vps.example.com or 203.0.113.10,Exemple : vps.example.com ou 203.0.113.10,Örnek: vps.example.com veya 203.0.113.10,Ejemplo: vps.example.com o 203.0.113.10,ok,app/templates/radius/settings_page.html:861
+العنوان العام لخادمك — تُبنى عليه روابط الوصول للراوترات من خارج الشبكة. فارغ = الرجوع إلى إعداد البيئة الافتراضي.,,Your server's public address — access links for the routers from outside the network are built upon it. Empty = fall back to the default environment setting.,L'adresse publique de votre serveur — les liens d'accès aux routeurs depuis l'extérieur du réseau y sont construits. Vide = retour au paramètre d'environnement par défaut.,Sunucunuzun genel adresi — ağ dışından yönlendiricilere erişim bağlantıları bunun üzerine kurulur. Boş = varsayılan ortam ayarına dönülür.,La dirección pública de su servidor — sobre ella se construyen los enlaces de acceso a los routers desde fuera de la red. Vacío = volver al ajuste de entorno predeterminado.,ok,app/templates/radius/settings_page.html:862
+لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.,,No unsaved changes — all values match the last save.,Aucune modification non enregistrée — toutes les valeurs correspondent au dernier enregistrement.,Kaydedilmemiş değişiklik yok — tüm değerler son kayıtla aynı.,No hay cambios sin guardar: todos los valores coinciden con el último guardado.,ok,app/templates/radius/settings_page.html:880
+ تعديل غير محفوظ — اضغط «حفظ التغييرات» لتثبيته.,, Unsaved change — click «Save Changes» to apply it., Modification non enregistrée — cliquez sur «Enregistrer les modifications» pour l'appliquer., Kaydedilmemiş değişiklik — uygulamak için «Değişiklikleri Kaydet»e tıklayın., Cambio sin guardar — haga clic en «Guardar cambios» para aplicarlo.,ok,app/templates/radius/settings_page.html:935
+لديك ,,You have ,Vous avez ,Sahip olduğunuz ,Tienes ,ok,app/templates/radius/settings_page.html:935
+حجم ملف الشعار يتجاوز 2MB — صغّر الصورة وأعد المحاولة.,,Logo file size exceeds 2MB — reduce the image and try again.,La taille du fichier du logo dépasse 2 Mo — réduisez l'image et réessayez.,Logo dosyası boyutu 2MB'yi aşıyor — görüntüyü küçültün ve tekrar deneyin.,El tamaño del archivo del logotipo supera los 2 MB — reduce la imagen e inténtalo de nuevo.,ok,app/templates/radius/settings_page.html:988
+سيُرفع هذا الشعار عند حفظ التغييرات,,This logo will be uploaded when changes are saved,Ce logo sera téléversé lors de l'enregistrement des modifications,"Bu logo, değişiklikler kaydedildiğinde yüklenecek",Este logo se subirá al guardar los cambios,ok,app/templates/radius/settings_page.html:997
 معالج الإعداد الذكي,,Smart setup wizard,Assistant de configuration intelligent,Akıllı kurulum sihirbazı,Asistente de configuración inteligente,ok,app/templates/radius/setup_wizard.html:4
 معالج إعداد HobeRadius,,HobeRadius setup wizard,Assistant de configuration HobeRadius,HobeRadius kurulum sihirbazı,Asistente de configuración de HobeRadius,ok,app/templates/radius/setup_wizard.html:15
 إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة — ٧ مراحل.,,,,,,"missing: en,fr,tr,es",app/templates/radius/setup_wizard.html:16
@@ -23868,9 +23869,9 @@ Profile = default (لا default-encryption؛ SSTP مشفّر TLS سلفًا) و 
 رسائل SMS تُكلّف مالًا — اجعل القوالب قصيرة (يُفضّل ٦٠ حرفًا أو أقل لتبقى رسالة SMS واحدة). يظهر تحت كل قالب عدّاد الأحرف وعدد رسائل SMS المتوقّعة. العربية تُرسَل بترميز Unicode (نحو ٧٠ حرفًا للرسالة الواحدة).,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:30
 لا قناة مُهيّأة بعد — اضبط بوت تيليجرام أو مزوّد واتساب/SMS من,,No channel configured yet — set up a Telegram bot or a WhatsApp/SMS provider from,Aucun canal configuré pour l'instant — configurez un bot Telegram ou un fournisseur WhatsApp/SMS depuis,Henüz yapılandırılmış kanal yok — bir Telegram botu ya da WhatsApp/SMS sağlayıcısını şuradan ayarlayın:,Aún no hay ningún canal configurado: configure un bot de Telegram o un proveedor de WhatsApp/SMS desde,ok,app/templates/radius/subscriber_notifications.html:35
 وليربط المشترك تيليجرامه من بوابته.,,and let the subscriber link their Telegram from their portal.,et laissez l'abonné connecter son Telegram depuis son portail.,ve abonenin kendi portalından Telegram'ını bağlamasına izin verin.,y deja que el abonado vincule su Telegram desde su portal.,ok,app/templates/radius/subscriber_notifications.html:37
-إشعارات حركات متجر البطاقات الإلكتروني (شحن الرصيد، سحب الرصيد، شراء البطاقات) تصل المشتري على رقمه المسجّل. عند شراء بطاقة تُرسَل بيانات الدخول (المستخدم وكلمة المرور) عبر SMS و/أو واتساب حسب القنوات المفعّلة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:51
-غير مهيّأة (تُضبط من التكاملات),,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:73
-القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:100
+إشعارات حركات متجر البطاقات الإلكتروني (شحن الرصيد، سحب الرصيد، شراء البطاقات) تصل المشتري على رقمه المسجّل. عند شراء بطاقة تُرسَل بيانات الدخول (المستخدم وكلمة المرور) عبر SMS و/أو واتساب حسب القنوات المفعّلة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:52
+غير مهيّأة (تُضبط من التكاملات),,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:74
+القناة بعلامة ⚙︎ غير مهيّأة بعد للمستأجر (تُضبط من «التكاملات والقنوات»). تيليجرام يصل المشترك فقط إذا ربط حسابه.,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscriber_notifications.html:101
 نظرة عامة - المشتركون,,Overview — subscribers,Vue d'ensemble — abonnés,Genel bakış — aboneler,Resumen — abonados,ok,app/templates/radius/subscribers_overview.html:4
 %(v)s · %(v2)s متصل الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscribers_overview.html:7
 %(title)s — آخر الفترات,,,,,,"missing: en,fr,tr,es",app/templates/radius/subscribers_overview.html:52
