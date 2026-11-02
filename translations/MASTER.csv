@@ -4749,7 +4749,7 @@ Mac (سلكي),,,,,,"missing: en,fr,tr,es",app/radius/services/device_fingerprin
 الراوتر رفض الاتصال على المنفذ %(port)s — تأكّد من تفعيل خدمة API.,,,,,,"missing: en,fr,tr,es",app/radius/services/devices.py:477
 تعذّر الوصول إلى %(v)s:%(port)s — الشبكة غير متاحة.,,,,,,"missing: en,fr,tr,es",app/radius/services/devices.py:479
 عنوان الراوتر غير صالح — عدّله ثم أعد الاختبار.,,,,,,"missing: en,fr,tr,es",app/radius/services/devices.py:481
-هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/radius/services/ecards_gate.py:102
+هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص.,,,,,,"missing: en,fr,tr,es",app/radius/services/ecards_gate.py:111
 إنشاء محفظة,,Create Wallet,Créer un portefeuille,Cüzdan Oluştur,Crear cartera,ok,app/radius/services/event_labels.py:22
 إضافة للمحفظة,,Add to wallet,Ajouter au portefeuille,Cüzdana ekle,Añadir a la cartera,ok,app/radius/services/event_labels.py:23
 خصم من المحفظة,,Deduct from wallet,Débiter du portefeuille,Cüzdandan düş,Descontar de la billetera,ok,app/radius/services/event_labels.py:24
@@ -8951,9 +8951,9 @@ WireGuard البيانات,,,,,,"missing: en,fr,tr,es",app/radius/templates/radi
 تعذر بدء التصدير.,,,,,,"missing: en,fr,tr,es",app/static/js/cards_batches_view.js:607
 المستوى البسيط,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:96
 المستوى المتقدّم,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:96
-تعذر جلب بيانات البطاقة,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:196
-خطأ غير معروف,,Unknown error,Erreur inconnue,Bilinmeyen hata,Error desconocido,ok,app/static/js/cards_checker_v2.js:197
-انتهت الجلسة. آخر ظهور: ,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:275
+تعذر جلب بيانات البطاقة,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:205
+خطأ غير معروف,,Unknown error,Erreur inconnue,Bilinmeyen hata,Error desconocido,ok,app/static/js/cards_checker_v2.js:206
+انتهت الجلسة. آخر ظهور: ,,,,,,"missing: en,fr,tr,es",app/static/js/cards_checker_v2.js:284
 إنشاء الحزمة,,,,,,"missing: en,fr,tr,es",app/static/js/cards_generate_progress.js:19
 تجهيز طلب التوليد...,,,,,,"missing: en,fr,tr,es",app/static/js/cards_generate_progress.js:20
 بدء,,,,,,"missing: en,fr,tr,es",app/static/js/cards_generate_progress.js:23
@@ -11490,94 +11490,94 @@ NAS / AP,,NAS / AP,NAS / AP,NAS / AP,NAS / AP,ok,app/templates/radius/anti_mac_c
 ملاحظات داخلية تظهر للمدير فقط...,,Internal notes visible to the admin only…,Notes internes visibles uniquement par l'administrateur…,Yalnızca yöneticiye görünen dahili notlar…,Notas internas visibles solo para el administrador…,ok,app/templates/radius/cards_batch_edit.html:305
 إدارة البطاقات والحزم,,Manage vouchers and plans,Gérer les cartes et les forfaits,Kuponları ve paketleri yönet,Gestionar cupones y planes,ok,app/templates/radius/cards_batches.html:8
 مركز بطاقات مؤقتة: %(total)s حزمة، صفحة %(page)s من %(pages_count)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:11
-أسبوع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:238
-شهر,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:239
-بدون كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:282
-بالثانية,,Per second,Par seconde,Saniye başına,Por segundo,ok,app/templates/radius/cards_batches.html:287
-بالمدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:288
-/ من أول اتصال,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:290
-تنبيه فقط,,Alert only,Alerte uniquement,Yalnızca uyarı,Solo alerta,ok,app/templates/radius/cards_batches.html:297
-استيراد من ملف,,Import from File,Importer depuis un fichier,Dosyadan içe aktar,Importar desde archivo,ok,app/templates/radius/cards_batches.html:344
-طريقة العرض,,Display mode,Mode d'affichage,Görüntüleme modu,Modo de visualización,ok,app/templates/radius/cards_batches.html:347
-جدول,,Table,Tableau,Tablo,Tabla,ok,app/templates/radius/cards_batches.html:349
-ملخص حزم البطاقات,,Voucher batches summary,Résumé des lots de coupons,Kupon partileri özeti,Resumen de los lotes de cupones,ok,app/templates/radius/cards_batches.html:358
-إجمالي الحزم,,Total Plans,Total des forfaits,Toplam Paket,Total de planes,ok,app/templates/radius/cards_batches.html:362
-حزم منتهية,,Expired Batches,Lots expirés,Süresi Dolmuş Partiler,Lotes vencidos,ok,app/templates/radius/cards_batches.html:369
-إجمالي الكروت,,Total vouchers,Total des coupons,Toplam kupon,Total de cupones,ok,app/templates/radius/cards_batches.html:376
-كروت منتهية,,Expired Vouchers,Coupons expirés,Süresi Dolmuş Kuponlar,Cupones caducados,ok,app/templates/radius/cards_batches.html:388
-كروت فعالة,,Active Vouchers,Coupons actifs,Aktif Kuponlar,Cupones activos,ok,app/templates/radius/cards_batches.html:395
-بحث عن حزمة أو كود...,,Search for a plan or code...,Rechercher un forfait ou un code...,Paket veya kod ara...,Buscar un plan o un código...,ok,app/templates/radius/cards_batches.html:405
-فلتر الحالة,,Status filter,Filtre d'état,Durum filtresi,Filtro de estado,ok,app/templates/radius/cards_batches.html:408
-فلتر الباقة,,Plan filter,Filtre de forfait,Paket filtresi,Filtro de plan,ok,app/templates/radius/cards_batches.html:413
-كل الباقات,,All plans,Tous les forfaits,Tüm paketler,Todos los planes,ok,app/templates/radius/cards_batches.html:414
-فلتر الموزع,,Distributor filter,Filtre de distributeur,Bayi filtresi,Filtro de distribuidor,ok,app/templates/radius/cards_batches.html:419
-كل الموزعين,,All Distributors,Tous les distributeurs,Tüm Distribütörler,Todos los distribuidores,ok,app/templates/radius/cards_batches.html:420
-عدد النتائج,,Results count,Nombre de résultats,Sonuç sayısı,Número de resultados,ok,app/templates/radius/cards_batches.html:428
-%(n)s/صفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:430
-تصدير الحزم,,Export Plans,Exporter les forfaits,Paketleri Dışa Aktar,Exportar planes,ok,app/templates/radius/cards_batches.html:436
-تحميل Excel,,Download Excel,Télécharger Excel,Excel İndir,Descargar Excel,ok,app/templates/radius/cards_batches.html:437
-تحميل PDF,,Download PDF,Télécharger le PDF,PDF indir,Descargar PDF,ok,app/templates/radius/cards_batches.html:439
-محددة,,Selected,Sélectionnée,Seçili,Seleccionada,ok,app/templates/radius/cards_batches.html:446
-إجراء على الحزم المحددة,,Action on the selected batches,Action sur les lots sélectionnés,Seçili partiler üzerinde işlem,Acción sobre los lotes seleccionados,ok,app/templates/radius/cards_batches.html:447
-اختر إجراء,,Select Action,Choisir une action,İşlem seçin,Seleccionar acción,ok,app/templates/radius/cards_batches.html:448
-تحديث الإحصاءات,,Refresh Statistics,Actualiser les statistiques,İstatistikleri yenile,Actualizar estadísticas,ok,app/templates/radius/cards_batches.html:449
-حذف / أرشفة آمنة,,Safe delete / archive,Suppression / archivage sécurisé,Güvenli silme / arşivleme,Eliminación / archivado seguro,ok,app/templates/radius/cards_batches.html:450
-استعادة المؤرشف,,Restore Archived,Restaurer les archives,Arşivlenenleri geri yükle,Restaurar archivados,ok,app/templates/radius/cards_batches.html:451
-ملاحظة اختيارية,,Optional Note,Note facultative,İsteğe Bağlı Not,Nota opcional,ok,app/templates/radius/cards_batches.html:453
-تحديد الحزمة,,Select Plan,Sélectionner le forfait,Paket Seç,Seleccionar plan,ok,app/templates/radius/cards_batches.html:484
-حزمة بطاقات مؤقتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:491
-عرض بطاقات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:491
-مميزة,,Premium,Premium,Premium,Premium,ok,app/templates/radius/cards_batches.html:492
-مدة البطاقة: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:503
-جهاز %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:504
-متصلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:512
-متاحة للاستخدام,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:514
-مستخدمة غير متصلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:516
-%% مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:521
-متبقي للتفعيل %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:522
-استهلاك الحزمة,,Plan usage,Consommation du forfait,Paket kullanımı,Consumo del plan,ok,app/templates/radius/cards_batches.html:524
-الأسعار,,Prices,Tarifs,Fiyatlar,Precios,ok,app/templates/radius/cards_batches.html:532
-بيع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:532
-جملة %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:532
-طباعة الحزمة — منشئ كروت PDF,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:551
-تصدير كروت الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:564
-أرشفة من مركز الحزم,,Archive from the plans center,Archiver depuis le centre des forfaits,Paket merkezinden arşivle,Archivar desde el centro de planes,ok,app/templates/radius/cards_batches.html:579
-نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:580
-نقل للسلّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:580
-حذف نهائيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:588
-حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:588
-تنقل الصفحات,,Page navigation,Navigation entre pages,Sayfa gezinmesi,Navegación de páginas,ok,app/templates/radius/cards_batches.html:595
-عدد الصفوف بالصفحة,,Rows per page,Lignes par page,Sayfa başına satır,Filas por página,ok,app/templates/radius/cards_batches.html:598
-إنشاء أو استيراد حزمة جديدة,,Create or import a new batch,Créer ou importer un nouveau lot,Yeni parti oluştur veya içe aktar,Crear o importar un nuevo lote,ok,app/templates/radius/cards_batches.html:636
-أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.,,Add a new temporary voucher batch or import from a CSV file quickly and easily.,Ajoutez un nouveau lot de coupons temporaires ou importez à partir d'un fichier CSV rapidement et facilement.,Hızlı ve kolay bir şekilde yeni bir geçici kupon partisi ekleyin veya bir CSV dosyasından içe aktarın.,Añada un nuevo lote de cupones temporales o importe desde un archivo CSV de forma rápida y sencilla.,ok,app/templates/radius/cards_batches.html:637
-إنشاء حزمة جديدة,,Create new plan,Créer un nouveau forfait,Yeni paket oluştur,Crear plan nuevo,ok,app/templates/radius/cards_batches.html:639
-قائمة الحزم,,Plans list,Liste des forfaits,Paket listesi,Lista de planes,ok,app/templates/radius/cards_batches.html:652
-اضغط على رأس العمود للترتيب,,Click the column header to sort,Cliquez sur l'en-tête de colonne pour trier,Sıralamak için sütun başlığına tıklayın,Haga clic en el encabezado de columna para ordenar,ok,app/templates/radius/cards_batches.html:656
-تحديد,,Select,Sélectionner,Seç,Seleccionar,ok,app/templates/radius/cards_batches.html:675
-تحديد الكل,,Select All,Tout sélectionner,Tümünü Seç,Seleccionar todo,ok,app/templates/radius/cards_batches.html:675
-صلاحية بعد أول اتصال,,Validity after first connection,Validité après la première connexion,İlk bağlantıdan sonraki geçerlilik,Validez tras la primera conexión,ok,app/templates/radius/cards_batches.html:683
-نهاية الحزمة,,Plan end,Fin du forfait,Paket bitişi,Fin del plan,ok,app/templates/radius/cards_batches.html:684
-انتهاء الكوتة,,Quota exhausted,Quota épuisé,Kota tükendi,Cuota agotada,ok,app/templates/radius/cards_batches.html:688
-عند انتهاء الكوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:688
-بدون اسم مخصص,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:713
- جهاز,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:718
-ملف المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:749
-صفحة الموزّع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:755
-إجراءات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:770
-تفعيل الحزمة,,Activate Plan,Activer le forfait,Paketi Etkinleştir,Activar plan,ok,app/templates/radius/cards_batches.html:796
-أرشفة من جدول الحزم,,Archive from the plans table,Archiver depuis le tableau des forfaits,Paketler tablosundan arşivle,Archivar desde la tabla de planes,ok,app/templates/radius/cards_batches.html:804
-جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:875
-لا توجد حزم مطابقة للفلاتر الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:875
-مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:888
-جارٍ تحميل النظرة العامة…,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:892
-الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:911
-ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل المتقدّمة بضغطة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:961
-ماذا يُصدَّر؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1137
-كل البيانات (جدول كامل),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1139
-اسم الدخول وكلمة المرور فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1140
-أيّ بطاقات؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1144
-غير المستخدمة فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1147
-تعذّر تحميل النظرة العامة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1278
+أسبوع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:267
+شهر,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:268
+بدون كوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:311
+بالثانية,,Per second,Par seconde,Saniye başına,Por segundo,ok,app/templates/radius/cards_batches.html:316
+بالمدة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:317
+/ من أول اتصال,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:319
+تنبيه فقط,,Alert only,Alerte uniquement,Yalnızca uyarı,Solo alerta,ok,app/templates/radius/cards_batches.html:326
+استيراد من ملف,,Import from File,Importer depuis un fichier,Dosyadan içe aktar,Importar desde archivo,ok,app/templates/radius/cards_batches.html:373
+طريقة العرض,,Display mode,Mode d'affichage,Görüntüleme modu,Modo de visualización,ok,app/templates/radius/cards_batches.html:376
+جدول,,Table,Tableau,Tablo,Tabla,ok,app/templates/radius/cards_batches.html:378
+ملخص حزم البطاقات,,Voucher batches summary,Résumé des lots de coupons,Kupon partileri özeti,Resumen de los lotes de cupones,ok,app/templates/radius/cards_batches.html:387
+إجمالي الحزم,,Total Plans,Total des forfaits,Toplam Paket,Total de planes,ok,app/templates/radius/cards_batches.html:391
+حزم منتهية,,Expired Batches,Lots expirés,Süresi Dolmuş Partiler,Lotes vencidos,ok,app/templates/radius/cards_batches.html:398
+إجمالي الكروت,,Total vouchers,Total des coupons,Toplam kupon,Total de cupones,ok,app/templates/radius/cards_batches.html:405
+كروت منتهية,,Expired Vouchers,Coupons expirés,Süresi Dolmuş Kuponlar,Cupones caducados,ok,app/templates/radius/cards_batches.html:417
+كروت فعالة,,Active Vouchers,Coupons actifs,Aktif Kuponlar,Cupones activos,ok,app/templates/radius/cards_batches.html:424
+بحث عن حزمة أو كود...,,Search for a plan or code...,Rechercher un forfait ou un code...,Paket veya kod ara...,Buscar un plan o un código...,ok,app/templates/radius/cards_batches.html:434
+فلتر الحالة,,Status filter,Filtre d'état,Durum filtresi,Filtro de estado,ok,app/templates/radius/cards_batches.html:437
+فلتر الباقة,,Plan filter,Filtre de forfait,Paket filtresi,Filtro de plan,ok,app/templates/radius/cards_batches.html:442
+كل الباقات,,All plans,Tous les forfaits,Tüm paketler,Todos los planes,ok,app/templates/radius/cards_batches.html:443
+فلتر الموزع,,Distributor filter,Filtre de distributeur,Bayi filtresi,Filtro de distribuidor,ok,app/templates/radius/cards_batches.html:448
+كل الموزعين,,All Distributors,Tous les distributeurs,Tüm Distribütörler,Todos los distribuidores,ok,app/templates/radius/cards_batches.html:449
+عدد النتائج,,Results count,Nombre de résultats,Sonuç sayısı,Número de resultados,ok,app/templates/radius/cards_batches.html:457
+%(n)s/صفحة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:459
+تصدير الحزم,,Export Plans,Exporter les forfaits,Paketleri Dışa Aktar,Exportar planes,ok,app/templates/radius/cards_batches.html:465
+تحميل Excel,,Download Excel,Télécharger Excel,Excel İndir,Descargar Excel,ok,app/templates/radius/cards_batches.html:466
+تحميل PDF,,Download PDF,Télécharger le PDF,PDF indir,Descargar PDF,ok,app/templates/radius/cards_batches.html:468
+محددة,,Selected,Sélectionnée,Seçili,Seleccionada,ok,app/templates/radius/cards_batches.html:475
+إجراء على الحزم المحددة,,Action on the selected batches,Action sur les lots sélectionnés,Seçili partiler üzerinde işlem,Acción sobre los lotes seleccionados,ok,app/templates/radius/cards_batches.html:476
+اختر إجراء,,Select Action,Choisir une action,İşlem seçin,Seleccionar acción,ok,app/templates/radius/cards_batches.html:477
+تحديث الإحصاءات,,Refresh Statistics,Actualiser les statistiques,İstatistikleri yenile,Actualizar estadísticas,ok,app/templates/radius/cards_batches.html:478
+حذف / أرشفة آمنة,,Safe delete / archive,Suppression / archivage sécurisé,Güvenli silme / arşivleme,Eliminación / archivado seguro,ok,app/templates/radius/cards_batches.html:479
+استعادة المؤرشف,,Restore Archived,Restaurer les archives,Arşivlenenleri geri yükle,Restaurar archivados,ok,app/templates/radius/cards_batches.html:480
+ملاحظة اختيارية,,Optional Note,Note facultative,İsteğe Bağlı Not,Nota opcional,ok,app/templates/radius/cards_batches.html:482
+تحديد الحزمة,,Select Plan,Sélectionner le forfait,Paket Seç,Seleccionar plan,ok,app/templates/radius/cards_batches.html:513
+حزمة بطاقات مؤقتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:520
+عرض بطاقات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:520
+مميزة,,Premium,Premium,Premium,Premium,ok,app/templates/radius/cards_batches.html:521
+مدة البطاقة: %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:532
+جهاز %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:533
+متصلة الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:541
+متاحة للاستخدام,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:543
+مستخدمة غير متصلة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:545
+%% مستخدم,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:550
+متبقي للتفعيل %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:551
+استهلاك الحزمة,,Plan usage,Consommation du forfait,Paket kullanımı,Consumo del plan,ok,app/templates/radius/cards_batches.html:553
+الأسعار,,Prices,Tarifs,Fiyatlar,Precios,ok,app/templates/radius/cards_batches.html:561
+بيع %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:561
+جملة %(v)s,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:561
+طباعة الحزمة — منشئ كروت PDF,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:580
+تصدير كروت الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:593
+أرشفة من مركز الحزم,,Archive from the plans center,Archiver depuis le centre des forfaits,Paket merkezinden arşivle,Archivar desde el centro de planes,ok,app/templates/radius/cards_batches.html:608
+نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من السلّة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:609
+نقل للسلّة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:609
+حذف نهائيّ,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:617
+حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. متأكّد؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:617
+تنقل الصفحات,,Page navigation,Navigation entre pages,Sayfa gezinmesi,Navegación de páginas,ok,app/templates/radius/cards_batches.html:624
+عدد الصفوف بالصفحة,,Rows per page,Lignes par page,Sayfa başına satır,Filas por página,ok,app/templates/radius/cards_batches.html:627
+إنشاء أو استيراد حزمة جديدة,,Create or import a new batch,Créer ou importer un nouveau lot,Yeni parti oluştur veya içe aktar,Crear o importar un nuevo lote,ok,app/templates/radius/cards_batches.html:665
+أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة.,,Add a new temporary voucher batch or import from a CSV file quickly and easily.,Ajoutez un nouveau lot de coupons temporaires ou importez à partir d'un fichier CSV rapidement et facilement.,Hızlı ve kolay bir şekilde yeni bir geçici kupon partisi ekleyin veya bir CSV dosyasından içe aktarın.,Añada un nuevo lote de cupones temporales o importe desde un archivo CSV de forma rápida y sencilla.,ok,app/templates/radius/cards_batches.html:666
+إنشاء حزمة جديدة,,Create new plan,Créer un nouveau forfait,Yeni paket oluştur,Crear plan nuevo,ok,app/templates/radius/cards_batches.html:668
+قائمة الحزم,,Plans list,Liste des forfaits,Paket listesi,Lista de planes,ok,app/templates/radius/cards_batches.html:681
+اضغط على رأس العمود للترتيب,,Click the column header to sort,Cliquez sur l'en-tête de colonne pour trier,Sıralamak için sütun başlığına tıklayın,Haga clic en el encabezado de columna para ordenar,ok,app/templates/radius/cards_batches.html:685
+تحديد,,Select,Sélectionner,Seç,Seleccionar,ok,app/templates/radius/cards_batches.html:704
+تحديد الكل,,Select All,Tout sélectionner,Tümünü Seç,Seleccionar todo,ok,app/templates/radius/cards_batches.html:704
+صلاحية بعد أول اتصال,,Validity after first connection,Validité après la première connexion,İlk bağlantıdan sonraki geçerlilik,Validez tras la primera conexión,ok,app/templates/radius/cards_batches.html:712
+نهاية الحزمة,,Plan end,Fin du forfait,Paket bitişi,Fin del plan,ok,app/templates/radius/cards_batches.html:713
+انتهاء الكوتة,,Quota exhausted,Quota épuisé,Kota tükendi,Cuota agotada,ok,app/templates/radius/cards_batches.html:717
+عند انتهاء الكوتة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:717
+بدون اسم مخصص,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:742
+ جهاز,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:747
+ملف المدير,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:778
+صفحة الموزّع,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:784
+إجراءات الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:799
+تفعيل الحزمة,,Activate Plan,Activer le forfait,Paketi Etkinleştir,Activar plan,ok,app/templates/radius/cards_batches.html:825
+أرشفة من جدول الحزم,,Archive from the plans table,Archiver depuis le tableau des forfaits,Paketler tablosundan arşivle,Archivar desde la tabla de planes,ok,app/templates/radius/cards_batches.html:833
+جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:904
+لا توجد حزم مطابقة للفلاتر الحالية,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:904
+مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:917
+جارٍ تحميل النظرة العامة…,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:921
+الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:940
+ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل المتقدّمة بضغطة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:990
+ماذا يُصدَّر؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1166
+كل البيانات (جدول كامل),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1168
+اسم الدخول وكلمة المرور فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1169
+أيّ بطاقات؟,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1173
+غير المستخدمة فقط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1176
+تعذّر تحميل النظرة العامة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_batches.html:1307
 مركز عمليات البطاقة,,Card Operations Center,Centre des opérations de cartes,Kart İşlemleri Merkezi,Centro de operaciones de tarjetas,ok,app/templates/radius/cards_checker.html:12
 فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.,,"Check, trace, kick sessions, lock MAC, and disable or re-enable the voucher from one place.","Vérifier, suivre, déconnecter des sessions, verrouiller le MAC, et désactiver ou réactiver le coupon depuis un seul endroit.","Tek bir yerden kontrol edin, izleyin, oturumları atın, MAC kilitleyin ve kuponu devre dışı bırakın veya yeniden etkinleştirin.","Comprobar, rastrear, expulsar sesiones, fijar el MAC y desactivar o reactivar el cupón desde un solo lugar.",ok,app/templates/radius/cards_checker.html:15
 النسخة القديمة من مركز عمليات البطاقة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker.html:110
@@ -11771,80 +11771,81 @@ MAC الحالي,,Current MAC,MAC actuelle,Mevcut MAC,MAC actual,ok,app/template
 بنجاح,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1363
 تم الاتصال,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1363
 الجهاز الحالي,,Current device,Appareil actuel,Mevcut cihaz,Dispositivo actual,ok,app/templates/radius/cards_checker_v2.html:1371
-إجراءات سريعة,,Quick actions,Actions rapides,Hızlı işlemler,Acciones rápidas,ok,app/templates/radius/cards_checker_v2.html:1398
-تحديث بيانات البطاقة,,Update voucher details,Mettre à jour les données du coupon,Kupon bilgilerini güncelle,Actualizar datos del cupón,ok,app/templates/radius/cards_checker_v2.html:1409
-تصفير الوقت المستهلَك لـ %(user)s.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1420
-إعادة تشغيل البطاقة,,Restart the card,Redémarrer la carte,Kartı yeniden başlat,Reiniciar la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1427
-عند تسرُّب الكلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1445
-البطاقة %(user)s سيتم نقلها إلى %(bin)s ويمكنك استعادتها عند الحاجة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1509
-يمكنك استعادتها من السلة,,You can restore it from the bin,Vous pouvez la restaurer depuis la corbeille,Onu çöp kutusundan geri alabilirsiniz,Puede restaurarla desde la papelera,ok,app/templates/radius/cards_checker_v2.html:1520
-حسناً,,OK,OK,Tamam,Aceptar,ok,app/templates/radius/cards_checker_v2.html:1586
-انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1651
-حزمة «رقم فقط» — بلا كلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1656
-اتركها فارغة إن لم تُرد تغييرها,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1657
-لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1688
-رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1690
-كلمة المرور لا تقبل مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1692
-مثال: انتهت صلاحية البطاقة,,Example: the card has expired,Exemple : la carte a expiré,Örnek: kartın süresi doldu,Ejemplo: la tarjeta ha caducado,ok,app/templates/radius/cards_checker_v2.html:1704
-من سجل جلسات البطاقة,,From the card's session log,Depuis le journal des sessions de la carte,Kartın oturum kaydından,Del registro de sesiones de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1746
-لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.,,No previous record for this card — enter the addresses below manually.,Aucun enregistrement antérieur pour cette carte — saisissez les adresses ci-dessous manuellement.,Bu kart için önceki kayıt yok — aşağıdaki adresleri elle girin.,No hay registro previo para esta tarjeta — escriba las direcciones a continuación manualmente.,ok,app/templates/radius/cards_checker_v2.html:1761
-أكثر من MAC,,More than one MAC,Plus d'une MAC,Birden fazla MAC,Más de una MAC,ok,app/templates/radius/cards_checker_v2.html:1765
-يمكنك اختيار,,You can choose,Vous pouvez choisir,Seçebilirsiniz,Puedes elegir,ok,app/templates/radius/cards_checker_v2.html:1765
-من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).,,"From the session log, or add custom addresses (separate them with a comma or a new line).","Depuis le journal des sessions, ou ajoutez des adresses personnalisées (séparez-les par une virgule ou une nouvelle ligne).",Oturum kaydından veya özel adresler ekleyin (virgül ya da yeni satırla ayırın).,"Del registro de sesiones, o añada direcciones personalizadas (sepárelas con una coma o un salto de línea).",ok,app/templates/radius/cards_checker_v2.html:1766
-من سجل البطاقة,,From the card log,Depuis le journal de la carte,Kart kaydından,Del registro de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1767
-— أو —,,— or —,— ou —,— veya —,— o —,ok,app/templates/radius/cards_checker_v2.html:1769
-عناوين مخصّصة (اختياري),,Custom addresses (optional),Adresses personnalisées (facultatif),Özel adresler (isteğe bağlı),Direcciones personalizadas (opcional),ok,app/templates/radius/cards_checker_v2.html:1771
-سيتم قفل البطاقة على,,The card will be locked to,La carte sera verrouillée sur,Kart şuna kilitlenecek,La tarjeta se bloqueará en,ok,app/templates/radius/cards_checker_v2.html:1813
-عنوان:,,Address:,Adresse :,Adres:,Dirección:,ok,app/templates/radius/cards_checker_v2.html:1813
-اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.,,Select at least one address from the list or type it manually.,Sélectionnez au moins une adresse dans la liste ou saisissez-la manuellement.,Listeden en az bir adres seçin veya manuel olarak yazın.,Seleccione al menos una dirección de la lista o escríbala manualmente.,ok,app/templates/radius/cards_checker_v2.html:1832
-الصيغة: AA:BB:CC:DD:EE:FF,,Format: AA:BB:CC:DD:EE:FF,Format : AA:BB:CC:DD:EE:FF,Biçim: AA:BB:CC:DD:EE:FF,Formato: AA:BB:CC:DD:EE:FF,ok,app/templates/radius/cards_checker_v2.html:1839
-عنوان MAC غير صالح:,,Invalid MAC address:,Adresse MAC invalide :,Geçersiz MAC adresi:,Dirección MAC no válida:,ok,app/templates/radius/cards_checker_v2.html:1839
-اتركها,,Leave it,Laisser vide,Boş bırak,Déjalo,ok,app/templates/radius/cards_checker_v2.html:1858
-في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.,,in both fields to clear the customization and revert to the package speed.,dans les deux champs pour annuler la personnalisation et revenir à la vitesse du forfait.,özelleştirmeyi kaldırıp paket hızına dönmek için her iki alana.,en ambos campos para anular la personalización y volver a la velocidad del paquete.,ok,app/templates/radius/cards_checker_v2.html:1859
-التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/cards_checker_v2.html:1862
-مثال: 4096,,Example: 4096,Exemple : 4096,Örnek: 4096,Ejemplo: 4096,ok,app/templates/radius/cards_checker_v2.html:1863
-الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/cards_checker_v2.html:1866
-مثال: 2048,,Example: 2048,Exemple : 2048,Örnek: 2048,Ejemplo: 2048,ok,app/templates/radius/cards_checker_v2.html:1867
-قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.,,Speed values must be non-negative integers.,Les valeurs de vitesse doivent être des entiers non négatifs.,Hız değerleri negatif olmayan tam sayılar olmalıdır.,Los valores de velocidad deben ser enteros no negativos.,ok,app/templates/radius/cards_checker_v2.html:1884
-يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).,,Both values must be set together (or zero both to cancel the assignment).,Les deux valeurs doivent être définies ensemble (ou mettre les deux à zéro pour annuler l'attribution).,Her iki değer birlikte belirlenmelidir (veya atamayı iptal etmek için ikisini de sıfırlayın).,Ambos valores deben establecerse juntos (o poner ambos a cero para cancelar la asignación).,ok,app/templates/radius/cards_checker_v2.html:1887
-س ,,h ,h ,sa ,h ,ok,app/templates/radius/cards_checker_v2.html:1907
-لا أجهزة متّصلة الآن.,,No devices connected now.,Aucun appareil connecté pour le moment.,Şu anda bağlı cihaz yok.,No hay dispositivos conectados ahora.,ok,app/templates/radius/cards_checker_v2.html:1935
-اختر الأجهزة التي تريد قطعها.,,Select the devices you want to disconnect.,Sélectionnez les appareils que vous souhaitez déconnecter.,Bağlantısını kesmek istediğiniz cihazları seçin.,Seleccione los dispositivos que desea desconectar.,ok,app/templates/radius/cards_checker_v2.html:1940
-الباقي يبقى متّصل,,The rest stay connected,Le reste reste connecté,Geri kalanı bağlı kalır,El resto permanece conectado,ok,app/templates/radius/cards_checker_v2.html:1940
-دون مساس.,,Untouched.,Sans modification.,Dokunulmadan.,Sin afectar.,ok,app/templates/radius/cards_checker_v2.html:1940
-سيتم قطع,,Will be disconnected,Sera coupé,Kesilecek,Se cortará,ok,app/templates/radius/cards_checker_v2.html:1976
-جلسة الآن.,,Session now.,Session maintenant.,Şimdi oturum.,Sesión ahora.,ok,app/templates/radius/cards_checker_v2.html:1977
-اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».,,"Select at least one device, or click «Select All».","Sélectionnez au moins un appareil, ou cliquez sur «Tout sélectionner».",En az bir cihaz seçin veya «Tümünü Seç»e tıklayın.,"Seleccione al menos un dispositivo, o haga clic en «Seleccionar todo».",ok,app/templates/radius/cards_checker_v2.html:1992
-التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2028
-الوحدة,,Unit,Unité,Birim,Unidad,ok,app/templates/radius/cards_checker_v2.html:2041
-المقدار,,Amount,Montant,Miktar,Cantidad,ok,app/templates/radius/cards_checker_v2.html:2048
-مثال: 30,,Example: 30,Exemple : 30,Örnek: 30,Ejemplo: 30,ok,app/templates/radius/cards_checker_v2.html:2050
-إلى وقت البطاقة.,,To the voucher's time.,Au temps du coupon.,Kuponun süresine.,Al tiempo del cupón.,ok,app/templates/radius/cards_checker_v2.html:2053
-وقت البطاقة.,,Card time.,Durée de la carte.,Kart süresi.,Tiempo de la tarjeta.,ok,app/templates/radius/cards_checker_v2.html:2127
-تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2175
-غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2227
-حسنًا,,OK,OK,Tamam,OK,ok,app/templates/radius/cards_checker_v2.html:2228
-تعذّر فتح النافذة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2270
-تُستبدل كلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2313
-في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2314
-كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2315
-اتركها فارغة ليولّدها النظام بنمط الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2316
-تغيير وقطع الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2317
-عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2358
-البطاقة مقفولة حالياً على,,The card is currently locked to,La carte est actuellement verrouillée sur,Kart şu anda şuna kilitli:,La tarjeta está actualmente bloqueada en,ok,app/templates/radius/cards_checker_v2.html:2458
-عنوان,,Address,Adresse,Adres,Dirección,ok,app/templates/radius/cards_checker_v2.html:2459
-ماذا تريد أن تفعل؟,,What do you want to do?,Que voulez-vous faire ?,Ne yapmak istiyorsunuz?,¿Qué quieres hacer?,ok,app/templates/radius/cards_checker_v2.html:2459
-تعديل القائمة,,Edit the list,Modifier la liste,Listeyi düzenle,Editar la lista,ok,app/templates/radius/cards_checker_v2.html:2460
-تعديل قفل MAC,,Edit MAC lock,Modifier le verrouillage MAC,MAC kilidini düzenle,Editar bloqueo MAC,ok,app/templates/radius/cards_checker_v2.html:2467
-مقفول حاليًا,,Currently locked,Actuellement verrouillé,Şu anda kilitli,Actualmente bloqueado,ok,app/templates/radius/cards_checker_v2.html:2471
-فك القفل تماماً,,Unlock completely,Déverrouiller complètement,Tamamen kilidini aç,Desbloquear por completo,ok,app/templates/radius/cards_checker_v2.html:2491
-ث,,s,s,sn,s,ok,app/templates/radius/cards_checker_v2.html:2594
-د ,,m ,min ,dk ,min ,ok,app/templates/radius/cards_checker_v2.html:2594
-محدّث الآن,,Updated now,Mis à jour à l'instant,Şimdi güncellendi,Actualizado ahora,ok,app/templates/radius/cards_checker_v2.html:2667
-تحديث منذ,,Updated since,Mis à jour depuis,Şu zamandır güncellendi,Actualizado hace,ok,app/templates/radius/cards_checker_v2.html:2668
-قديم —,,Old —,Ancien —,Eski —,Antiguo —,ok,app/templates/radius/cards_checker_v2.html:2669
-تعذّر إظهار كلمة المرور,,Failed to show the password,Échec de l'affichage du mot de passe,Parola gösterilemedi,No se pudo mostrar la contraseña,ok,app/templates/radius/cards_checker_v2.html:2744
-إخفاء كلمة المرور,,Hide password,Masquer le mot de passe,Parolayı gizle,Ocultar contraseña,ok,app/templates/radius/cards_checker_v2.html:2803
+كل الجلسات (%(n)s),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1404
+إجراءات سريعة,,Quick actions,Actions rapides,Hızlı işlemler,Acciones rápidas,ok,app/templates/radius/cards_checker_v2.html:1460
+تحديث بيانات البطاقة,,Update voucher details,Mettre à jour les données du coupon,Kupon bilgilerini güncelle,Actualizar datos del cupón,ok,app/templates/radius/cards_checker_v2.html:1471
+تصفير الوقت المستهلَك لـ %(user)s.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1482
+إعادة تشغيل البطاقة,,Restart the card,Redémarrer la carte,Kartı yeniden başlat,Reiniciar la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1489
+عند تسرُّب الكلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1507
+البطاقة %(user)s سيتم نقلها إلى %(bin)s ويمكنك استعادتها عند الحاجة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1571
+يمكنك استعادتها من السلة,,You can restore it from the bin,Vous pouvez la restaurer depuis la corbeille,Onu çöp kutusundan geri alabilirsiniz,Puede restaurarla desde la papelera,ok,app/templates/radius/cards_checker_v2.html:1582
+حسناً,,OK,OK,Tamam,Aceptar,ok,app/templates/radius/cards_checker_v2.html:1648
+انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1713
+حزمة «رقم فقط» — بلا كلمة مرور,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1718
+اتركها فارغة إن لم تُرد تغييرها,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1719
+لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1750
+رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1752
+كلمة المرور لا تقبل مسافات.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:1754
+مثال: انتهت صلاحية البطاقة,,Example: the card has expired,Exemple : la carte a expiré,Örnek: kartın süresi doldu,Ejemplo: la tarjeta ha caducado,ok,app/templates/radius/cards_checker_v2.html:1766
+من سجل جلسات البطاقة,,From the card's session log,Depuis le journal des sessions de la carte,Kartın oturum kaydından,Del registro de sesiones de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1808
+لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً.,,No previous record for this card — enter the addresses below manually.,Aucun enregistrement antérieur pour cette carte — saisissez les adresses ci-dessous manuellement.,Bu kart için önceki kayıt yok — aşağıdaki adresleri elle girin.,No hay registro previo para esta tarjeta — escriba las direcciones a continuación manualmente.,ok,app/templates/radius/cards_checker_v2.html:1823
+أكثر من MAC,,More than one MAC,Plus d'une MAC,Birden fazla MAC,Más de una MAC,ok,app/templates/radius/cards_checker_v2.html:1827
+يمكنك اختيار,,You can choose,Vous pouvez choisir,Seçebilirsiniz,Puedes elegir,ok,app/templates/radius/cards_checker_v2.html:1827
+من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد).,,"From the session log, or add custom addresses (separate them with a comma or a new line).","Depuis le journal des sessions, ou ajoutez des adresses personnalisées (séparez-les par une virgule ou une nouvelle ligne).",Oturum kaydından veya özel adresler ekleyin (virgül ya da yeni satırla ayırın).,"Del registro de sesiones, o añada direcciones personalizadas (sepárelas con una coma o un salto de línea).",ok,app/templates/radius/cards_checker_v2.html:1828
+من سجل البطاقة,,From the card log,Depuis le journal de la carte,Kart kaydından,Del registro de la tarjeta,ok,app/templates/radius/cards_checker_v2.html:1829
+— أو —,,— or —,— ou —,— veya —,— o —,ok,app/templates/radius/cards_checker_v2.html:1831
+عناوين مخصّصة (اختياري),,Custom addresses (optional),Adresses personnalisées (facultatif),Özel adresler (isteğe bağlı),Direcciones personalizadas (opcional),ok,app/templates/radius/cards_checker_v2.html:1833
+سيتم قفل البطاقة على,,The card will be locked to,La carte sera verrouillée sur,Kart şuna kilitlenecek,La tarjeta se bloqueará en,ok,app/templates/radius/cards_checker_v2.html:1875
+عنوان:,,Address:,Adresse :,Adres:,Dirección:,ok,app/templates/radius/cards_checker_v2.html:1875
+اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً.,,Select at least one address from the list or type it manually.,Sélectionnez au moins une adresse dans la liste ou saisissez-la manuellement.,Listeden en az bir adres seçin veya manuel olarak yazın.,Seleccione al menos una dirección de la lista o escríbala manualmente.,ok,app/templates/radius/cards_checker_v2.html:1894
+الصيغة: AA:BB:CC:DD:EE:FF,,Format: AA:BB:CC:DD:EE:FF,Format : AA:BB:CC:DD:EE:FF,Biçim: AA:BB:CC:DD:EE:FF,Formato: AA:BB:CC:DD:EE:FF,ok,app/templates/radius/cards_checker_v2.html:1901
+عنوان MAC غير صالح:,,Invalid MAC address:,Adresse MAC invalide :,Geçersiz MAC adresi:,Dirección MAC no válida:,ok,app/templates/radius/cards_checker_v2.html:1901
+اتركها,,Leave it,Laisser vide,Boş bırak,Déjalo,ok,app/templates/radius/cards_checker_v2.html:1920
+في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة.,,in both fields to clear the customization and revert to the package speed.,dans les deux champs pour annuler la personnalisation et revenir à la vitesse du forfait.,özelleştirmeyi kaldırıp paket hızına dönmek için her iki alana.,en ambos campos para anular la personalización y volver a la velocidad del paquete.,ok,app/templates/radius/cards_checker_v2.html:1921
+التنزيل (kbps),,Download (kbps),Téléchargement (kbps),İndirme (kbps),Descarga (kbps),ok,app/templates/radius/cards_checker_v2.html:1924
+مثال: 4096,,Example: 4096,Exemple : 4096,Örnek: 4096,Ejemplo: 4096,ok,app/templates/radius/cards_checker_v2.html:1925
+الرفع (kbps),,Upload (kbps),Téléversement (kbps),Yükleme (kbps),Subida (kbps),ok,app/templates/radius/cards_checker_v2.html:1928
+مثال: 2048,,Example: 2048,Exemple : 2048,Örnek: 2048,Ejemplo: 2048,ok,app/templates/radius/cards_checker_v2.html:1929
+قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة.,,Speed values must be non-negative integers.,Les valeurs de vitesse doivent être des entiers non négatifs.,Hız değerleri negatif olmayan tam sayılar olmalıdır.,Los valores de velocidad deben ser enteros no negativos.,ok,app/templates/radius/cards_checker_v2.html:1946
+يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص).,,Both values must be set together (or zero both to cancel the assignment).,Les deux valeurs doivent être définies ensemble (ou mettre les deux à zéro pour annuler l'attribution).,Her iki değer birlikte belirlenmelidir (veya atamayı iptal etmek için ikisini de sıfırlayın).,Ambos valores deben establecerse juntos (o poner ambos a cero para cancelar la asignación).,ok,app/templates/radius/cards_checker_v2.html:1949
+س ,,h ,h ,sa ,h ,ok,app/templates/radius/cards_checker_v2.html:1969
+لا أجهزة متّصلة الآن.,,No devices connected now.,Aucun appareil connecté pour le moment.,Şu anda bağlı cihaz yok.,No hay dispositivos conectados ahora.,ok,app/templates/radius/cards_checker_v2.html:1997
+اختر الأجهزة التي تريد قطعها.,,Select the devices you want to disconnect.,Sélectionnez les appareils que vous souhaitez déconnecter.,Bağlantısını kesmek istediğiniz cihazları seçin.,Seleccione los dispositivos que desea desconectar.,ok,app/templates/radius/cards_checker_v2.html:2002
+الباقي يبقى متّصل,,The rest stay connected,Le reste reste connecté,Geri kalanı bağlı kalır,El resto permanece conectado,ok,app/templates/radius/cards_checker_v2.html:2002
+دون مساس.,,Untouched.,Sans modification.,Dokunulmadan.,Sin afectar.,ok,app/templates/radius/cards_checker_v2.html:2002
+سيتم قطع,,Will be disconnected,Sera coupé,Kesilecek,Se cortará,ok,app/templates/radius/cards_checker_v2.html:2038
+جلسة الآن.,,Session now.,Session maintenant.,Şimdi oturum.,Sesión ahora.,ok,app/templates/radius/cards_checker_v2.html:2039
+اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل».,,"Select at least one device, or click «Select All».","Sélectionnez au moins un appareil, ou cliquez sur «Tout sélectionner».",En az bir cihaz seçin veya «Tümünü Seç»e tıklayın.,"Seleccione al menos un dispositivo, o haga clic en «Seleccionar todo».",ok,app/templates/radius/cards_checker_v2.html:2054
+التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2090
+الوحدة,,Unit,Unité,Birim,Unidad,ok,app/templates/radius/cards_checker_v2.html:2103
+المقدار,,Amount,Montant,Miktar,Cantidad,ok,app/templates/radius/cards_checker_v2.html:2110
+مثال: 30,,Example: 30,Exemple : 30,Örnek: 30,Ejemplo: 30,ok,app/templates/radius/cards_checker_v2.html:2112
+إلى وقت البطاقة.,,To the voucher's time.,Au temps du coupon.,Kuponun süresine.,Al tiempo del cupón.,ok,app/templates/radius/cards_checker_v2.html:2115
+وقت البطاقة.,,Card time.,Durée de la carte.,Kart süresi.,Tiempo de la tarjeta.,ok,app/templates/radius/cards_checker_v2.html:2189
+تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2237
+غير متاح الآن,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2289
+حسنًا,,OK,OK,Tamam,OK,ok,app/templates/radius/cards_checker_v2.html:2290
+تعذّر فتح النافذة — حدّث الصفحة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2332
+تُستبدل كلمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2375
+في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2376
+كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا),,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2377
+اتركها فارغة ليولّدها النظام بنمط الحزمة,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2378
+تغيير وقطع الجلسات,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2379
+عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، وتُقطع الجلسة النشطة ليعيد الدخول بالبيانات الجديدة.,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_checker_v2.html:2420
+البطاقة مقفولة حالياً على,,The card is currently locked to,La carte est actuellement verrouillée sur,Kart şu anda şuna kilitli:,La tarjeta está actualmente bloqueada en,ok,app/templates/radius/cards_checker_v2.html:2520
+عنوان,,Address,Adresse,Adres,Dirección,ok,app/templates/radius/cards_checker_v2.html:2521
+ماذا تريد أن تفعل؟,,What do you want to do?,Que voulez-vous faire ?,Ne yapmak istiyorsunuz?,¿Qué quieres hacer?,ok,app/templates/radius/cards_checker_v2.html:2521
+تعديل القائمة,,Edit the list,Modifier la liste,Listeyi düzenle,Editar la lista,ok,app/templates/radius/cards_checker_v2.html:2522
+تعديل قفل MAC,,Edit MAC lock,Modifier le verrouillage MAC,MAC kilidini düzenle,Editar bloqueo MAC,ok,app/templates/radius/cards_checker_v2.html:2529
+مقفول حاليًا,,Currently locked,Actuellement verrouillé,Şu anda kilitli,Actualmente bloqueado,ok,app/templates/radius/cards_checker_v2.html:2533
+فك القفل تماماً,,Unlock completely,Déverrouiller complètement,Tamamen kilidini aç,Desbloquear por completo,ok,app/templates/radius/cards_checker_v2.html:2553
+ث,,s,s,sn,s,ok,app/templates/radius/cards_checker_v2.html:2656
+د ,,m ,min ,dk ,min ,ok,app/templates/radius/cards_checker_v2.html:2656
+محدّث الآن,,Updated now,Mis à jour à l'instant,Şimdi güncellendi,Actualizado ahora,ok,app/templates/radius/cards_checker_v2.html:2729
+تحديث منذ,,Updated since,Mis à jour depuis,Şu zamandır güncellendi,Actualizado hace,ok,app/templates/radius/cards_checker_v2.html:2730
+قديم —,,Old —,Ancien —,Eski —,Antiguo —,ok,app/templates/radius/cards_checker_v2.html:2731
+تعذّر إظهار كلمة المرور,,Failed to show the password,Échec de l'affichage du mot de passe,Parola gösterilemedi,No se pudo mostrar la contraseña,ok,app/templates/radius/cards_checker_v2.html:2806
+إخفاء كلمة المرور,,Hide password,Masquer le mot de passe,Parolayı gizle,Ocultar contraseña,ok,app/templates/radius/cards_checker_v2.html:2865
 إنشاء كروت,,Create cards,Créer des cartes,Kart oluştur,Crear tarjetas,ok,app/templates/radius/cards_generate.html:12
 العودة للحزم,,Back to batches,Retour aux lots,Partilere dön,Volver a los lotes,ok,app/templates/radius/cards_generate.html:34
 كيف تُولّد البطاقات,,,,,,"missing: en,fr,tr,es",app/templates/radius/cards_generate.html:42

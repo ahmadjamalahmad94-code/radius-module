@@ -107,6 +107,15 @@ var hrT = window.hrT || function (s, o) { var d = window.HR_I18N || {}; var t = 
 
     // event delegation so AJAX-swapped result panels still find handlers
     document.addEventListener('click', (e) => {
+      // «كل الجلسات» في العرض البسيط: إلى المتقدّم ثمّ إلى جدوله الكامل.
+      const goto = e.target.closest('[data-cc-goto-advanced]');
+      if (goto) {
+        e.preventDefault();
+        apply('advanced');
+        const target = document.getElementById('cc-sessions-section');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
       const btn = e.target.closest('.cc-mode-toggle button[data-mode]');
       if (!btn) return;
       apply(btn.dataset.mode);

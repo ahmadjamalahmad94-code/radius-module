@@ -361,3 +361,29 @@ def test_closed_overview_never_names_printed_or_electronic(app):
     assert "co-sales-summary-item--print" not in frag
     assert "co-sales-split" not in frag
     assert "حزم مطبوعة" not in frag
+
+
+# ── ⑦ جدول الجلسات في العرض البسيط للفاحص ──────────────────────────────
+
+def test_checker_simple_view_has_a_sessions_table(app):
+    with app.app_context():
+        from app.radius.db.connection import db as live_db
+        from app.radius.services.cards import get_cards_service
+
+        pid = _plan_id()
+        _batch, cards = get_cards_service().generate_batch(actor="t", plan_id=pid, count=1)
+        user = cards[0].username
+        live_db().execute(
+            "INSERT INTO radacct(tenant_id, username, acctsessionid, acctuniqueid, nasipaddress, "
+            "framedipaddress, acctstarttime, acctstoptime, acctsessiontime, acctinputoctets, acctoutputoctets) "
+            "VALUES(1, ?, 's1', 'u1', '10.0.0.1', '10.9.9.9', datetime('now','-1 hour'), datetime('now'), "
+            "3600, 1000, 2000)",
+            (user,))
+    c = app.test_client(); _login(c)
+    html = c.get(f"/admin/radius/cards/checker?query={user}&embed=1").get_data(as_text=True)
+    simple = html[html.index('class="cc-simple-only"'):]
+    sec = simple[simple.index('data-cc-section="sessions_simple"'):]
+    sec = sec[:sec.index("</section>")]
+    assert "<table" in sec and "10.9.9.9" in sec
+    # الجدولُ المختصر لا يحمل وسمَ ترقيم المتقدّم كي لا يتنازعا عليه
+    assert "data-cc-sessions-region" not in sec

@@ -433,7 +433,7 @@ msgstr ""
 msgid " جلسة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:718
+#: app/templates/radius/cards_batches.html:747
 #: app/templates/radius/devices_list.html:70
 #: app/templates/radius/network_devices_list.html:61
 #: app/templates/radius/network_ip_scan.html:82
@@ -1601,8 +1601,8 @@ msgstr ""
 msgid "%% مباع"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:521
-#: app/templates/radius/cards_batches.html:735
+#: app/templates/radius/cards_batches.html:550
+#: app/templates/radius/cards_batches.html:764
 #, python-format
 msgid "%% مستخدم"
 msgstr ""
@@ -2179,7 +2179,7 @@ msgstr ""
 msgid "%(n)s يومًا"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:430
+#: app/templates/radius/cards_batches.html:459
 #: app/templates/radius/cards_list.html:91
 #, python-format
 msgid "%(n)s/صفحة"
@@ -4267,7 +4267,7 @@ msgstr ""
 msgid "/ شهريًّا"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:290
+#: app/templates/radius/cards_batches.html:319
 msgid "/ من أول اتصال"
 msgstr ""
 
@@ -11362,11 +11362,11 @@ msgstr ""
 msgid "أرشفة دفعة بطاقات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:804
+#: app/templates/radius/cards_batches.html:833
 msgid "أرشفة من جدول الحزم"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:579
+#: app/templates/radius/cards_batches.html:608
 msgid "أرشفة من مركز الحزم"
 msgstr ""
 
@@ -11598,7 +11598,7 @@ msgstr ""
 msgid "أساسية"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:238
+#: app/templates/radius/cards_batches.html:267
 msgid "أسبوع"
 msgstr ""
 
@@ -11869,7 +11869,7 @@ msgstr ""
 msgid "أضف توكن البوت أولًا (من BotFather)."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:637
+#: app/templates/radius/cards_batches.html:666
 msgid "أضف حزمة بطاقات مؤقتة جديدة أو استورد من ملف CSV بسرعة وسهولة."
 msgstr ""
 
@@ -12181,7 +12181,7 @@ msgid ""
 "بنوافذ مضيئة وشارة ثقة كبطلٍ للصفحة — احترافيّ وآمن، مع دعم CHAP."
 msgstr ""
 
-#: app/static/js/uds_table.js:225 app/templates/radius/cards_batches.html:664
+#: app/static/js/uds_table.js:225 app/templates/radius/cards_batches.html:693
 #: app/templates/radius/docs_users_overview.html:716
 #: app/templates/radius/users_list.html:976
 msgid "أعمدة"
@@ -12587,7 +12587,7 @@ msgstr ""
 msgid "أكثر سبب لفشل المصادقة لاحقًا هو"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1765
+#: app/templates/radius/cards_checker_v2.html:1827
 msgid "أكثر من MAC"
 msgstr ""
 
@@ -13725,7 +13725,7 @@ msgstr ""
 #: app/templates/radius/_speed_rules_panel.html:975
 #: app/templates/radius/_speed_rules_panel.html:1130
 #: app/templates/radius/cards_batch_edit.html:231
-#: app/templates/radius/cards_checker_v2.html:2045
+#: app/templates/radius/cards_checker_v2.html:2107
 #: app/templates/radius/cards_of_batch.html:571
 #: app/templates/radius/cards_of_batch.html:767
 #: app/templates/radius/finance_accounting.html:74
@@ -13834,7 +13834,7 @@ msgstr ""
 msgid "أين تفتح الصفحة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1144
+#: app/templates/radius/cards_batches.html:1173
 msgid "أيّ بطاقات؟"
 msgstr ""
 
@@ -14294,7 +14294,7 @@ msgstr ""
 msgid "إجراء طوارئ"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:447
+#: app/templates/radius/cards_batches.html:476
 msgid "إجراء على الحزم المحددة"
 msgstr ""
 
@@ -14327,7 +14327,7 @@ msgstr ""
 #: app/templates/radius/bandwidth_schedules.html:217
 #: app/templates/radius/card_pricing.html:84
 #: app/templates/radius/card_users.html:96
-#: app/templates/radius/cards_batches.html:693
+#: app/templates/radius/cards_batches.html:722
 #: app/templates/radius/cards_of_batch.html:593
 #: app/templates/radius/cards_print_list.html:440
 #: app/templates/radius/cards_recharge_list.html:365
@@ -14379,8 +14379,8 @@ msgid ""
 "كل المحدَّدين؛ الملف والتعديل وتغيير العرض لمشترك واحد فقط."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:770
-#: app/templates/radius/cards_batches.html:771
+#: app/templates/radius/cards_batches.html:799
+#: app/templates/radius/cards_batches.html:800
 msgid "إجراءات الحزمة"
 msgstr ""
 
@@ -14433,7 +14433,7 @@ msgstr ""
 msgid "إجراءات ذكية"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1398
+#: app/templates/radius/cards_checker_v2.html:1460
 #: app/templates/radius/communications.html:151
 #: app/templates/radius/mt_dashboard.html:1771
 msgid "إجراءات سريعة"
@@ -14649,7 +14649,7 @@ msgstr ""
 msgid "إجمالي الحركات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:362
+#: app/templates/radius/cards_batches.html:391
 #: app/templates/radius/cards_print_list.html:328
 #: app/templates/radius/cards_recharge_list.html:271
 #: app/templates/radius/docs_cards_batches.html:312
@@ -14794,7 +14794,7 @@ msgstr ""
 msgid "إجمالي القيمة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:376
+#: app/templates/radius/cards_batches.html:405
 #: app/templates/radius/cards_of_batch.html:497
 #: app/templates/radius/cards_overview.html:40
 #: app/templates/radius/docs_cards_batches.html:314
@@ -15029,8 +15029,8 @@ msgstr ""
 msgid "إخفاء المُعطَّلة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2803
-#: app/templates/radius/cards_checker_v2.html:2804
+#: app/templates/radius/cards_checker_v2.html:2865
+#: app/templates/radius/cards_checker_v2.html:2866
 #: app/templates/radius/login.html:259
 #: app/templates/radius/portal_subscriber_login.html:274
 msgid "إخفاء كلمة المرور"
@@ -15107,7 +15107,7 @@ msgstr ""
 
 #: app/templates/radius/cards_batches.html:8
 #: app/templates/radius/cards_batches.html:10
-#: app/templates/radius/cards_batches.html:331
+#: app/templates/radius/cards_batches.html:360
 #: app/templates/radius/docs_cards_batches.html:323
 msgid "إدارة البطاقات والحزم"
 msgstr ""
@@ -15350,7 +15350,7 @@ msgid "إدارة شبكتك تبدأ من هنا"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1154
-#: app/templates/radius/cards_checker_v2.html:2457
+#: app/templates/radius/cards_checker_v2.html:2519
 msgid "إدارة قفل MAC"
 msgstr ""
 
@@ -16270,9 +16270,9 @@ msgstr ""
 #: app/radius/services/manager_activity_audit.py:231
 #: app/radius/services/manager_activity_audit.py:232
 #: app/radius/services/permission_labels.py:55
-#: app/templates/radius/cards_checker_v2.html:2034
-#: app/templates/radius/cards_checker_v2.html:2053
-#: app/templates/radius/cards_checker_v2.html:2122
+#: app/templates/radius/cards_checker_v2.html:2096
+#: app/templates/radius/cards_checker_v2.html:2115
+#: app/templates/radius/cards_checker_v2.html:2184
 #: app/templates/radius/network_policy_form.html:297
 #: app/templates/radius/rep_balance_movements.html:158
 #: app/templates/radius/users_list.html:1555
@@ -16874,8 +16874,8 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:275
 #: app/templates/radius/cards_checker_v2.html:276
-#: app/templates/radius/cards_checker_v2.html:2793
-#: app/templates/radius/cards_checker_v2.html:2794
+#: app/templates/radius/cards_checker_v2.html:2855
+#: app/templates/radius/cards_checker_v2.html:2856
 #: app/templates/radius/login.html:257 app/templates/radius/login.html:258
 #: app/templates/radius/portal_subscriber_login.html:244
 #: app/templates/radius/portal_subscriber_login.html:274
@@ -16990,7 +16990,7 @@ msgid "إعادة السعر الرسمي"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1047
-#: app/templates/radius/cards_checker_v2.html:1421
+#: app/templates/radius/cards_checker_v2.html:1483
 #: app/templates/radius/operations_speed_control_manual.html:106
 msgid "إعادة الضبط"
 msgstr ""
@@ -17060,7 +17060,7 @@ msgstr ""
 msgid "إعادة تشغيل إداريّة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1427
+#: app/templates/radius/cards_checker_v2.html:1489
 msgid "إعادة تشغيل البطاقة"
 msgstr ""
 
@@ -17159,7 +17159,7 @@ msgstr ""
 #: app/radius/services/event_labels.py:439
 #: app/radius/services/manager_activity_audit.py:244
 #: app/templates/radius/audit_log_index.html:89
-#: app/templates/radius/cards_checker_v2.html:1426
+#: app/templates/radius/cards_checker_v2.html:1488
 #: app/templates/radius/cards_list.html:96
 #: app/templates/radius/docs_reports_overview.html:365
 #: app/templates/radius/mt_problems.html:85
@@ -17189,7 +17189,7 @@ msgid "إعادة ضبط إداريّة (فصل)"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1044
-#: app/templates/radius/cards_checker_v2.html:1419
+#: app/templates/radius/cards_checker_v2.html:1481
 msgid "إعادة ضبط الاستخدام"
 msgstr ""
 
@@ -17786,11 +17786,11 @@ msgstr ""
 #: app/templates/radius/card_user_360.html:564
 #: app/templates/radius/card_user_360.html:590
 #: app/templates/radius/card_users.html:166
-#: app/templates/radius/cards_batches.html:913
-#: app/templates/radius/cards_batches.html:963
-#: app/templates/radius/cards_batches.html:1133
-#: app/templates/radius/cards_checker_v2.html:2025
-#: app/templates/radius/cards_checker_v2.html:2461
+#: app/templates/radius/cards_batches.html:942
+#: app/templates/radius/cards_batches.html:992
+#: app/templates/radius/cards_batches.html:1162
+#: app/templates/radius/cards_checker_v2.html:2087
+#: app/templates/radius/cards_checker_v2.html:2523
 #: app/templates/radius/cards_of_batch.html:751
 #: app/templates/radius/cards_print_batch.html:170
 #: app/templates/radius/cards_recharge_list.html:426
@@ -17992,15 +17992,15 @@ msgstr ""
 #: app/templates/radius/card_user_360.html:601
 #: app/templates/radius/card_users.html:197
 #: app/templates/radius/cards_batch_edit.html:312
-#: app/templates/radius/cards_batches.html:1152
-#: app/templates/radius/cards_checker_v2.html:1583
-#: app/templates/radius/cards_checker_v2.html:1660
-#: app/templates/radius/cards_checker_v2.html:1703
-#: app/templates/radius/cards_checker_v2.html:1782
-#: app/templates/radius/cards_checker_v2.html:1870
-#: app/templates/radius/cards_checker_v2.html:1954
-#: app/templates/radius/cards_checker_v2.html:2057
-#: app/templates/radius/cards_checker_v2.html:2318
+#: app/templates/radius/cards_batches.html:1181
+#: app/templates/radius/cards_checker_v2.html:1645
+#: app/templates/radius/cards_checker_v2.html:1722
+#: app/templates/radius/cards_checker_v2.html:1765
+#: app/templates/radius/cards_checker_v2.html:1844
+#: app/templates/radius/cards_checker_v2.html:1932
+#: app/templates/radius/cards_checker_v2.html:2016
+#: app/templates/radius/cards_checker_v2.html:2119
+#: app/templates/radius/cards_checker_v2.html:2380
 #: app/templates/radius/cards_import.html:381
 #: app/templates/radius/cards_of_batch.html:825
 #: app/templates/radius/cards_print_list.html:623
@@ -18241,7 +18241,7 @@ msgstr ""
 #: app/templates/_partials/access_schedule.html:685
 #: app/templates/radius/access_control.html:184
 #: app/templates/radius/access_control.html:350
-#: app/templates/radius/cards_checker_v2.html:2127
+#: app/templates/radius/cards_checker_v2.html:2189
 #: app/templates/radius/connected_stats.html:42
 #: app/templates/radius/finance_center_hub.html:234
 #: app/templates/radius/rep_subscriber_consumption.html:207
@@ -18335,7 +18335,7 @@ msgid ""
 "ذلك على الراوتر حتى تنشر صفحة الدخول من جديد."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2053
+#: app/templates/radius/cards_checker_v2.html:2115
 msgid "إلى وقت البطاقة."
 msgstr ""
 
@@ -18552,7 +18552,7 @@ msgstr ""
 msgid "إنشاء أرشيف تقارير الشبكة يتطلّب «عرض كل المشتركين»."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:636
+#: app/templates/radius/cards_batches.html:665
 msgid "إنشاء أو استيراد حزمة جديدة"
 msgstr ""
 
@@ -18685,19 +18685,19 @@ msgid "إنشاء جديد"
 msgstr ""
 
 #: app/templates/radius/card_pricing.html:40
-#: app/templates/radius/cards_batches.html:335
+#: app/templates/radius/cards_batches.html:364
 #: app/templates/radius/dashboard.html:742
 msgid "إنشاء حزمة"
 msgstr ""
 
 #: app/radius/services/event_labels.py:65
-#: app/templates/radius/cards_batches.html:910
+#: app/templates/radius/cards_batches.html:939
 #: app/templates/radius/cards_generate.html:14
 #: app/templates/radius/cards_generate.html:29
 msgid "إنشاء حزمة بطاقات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:639
+#: app/templates/radius/cards_batches.html:668
 msgid "إنشاء حزمة جديدة"
 msgstr ""
 
@@ -19043,7 +19043,7 @@ msgid "إيطاليا ‎+39"
 msgstr ""
 
 #: app/radius/routes/cards.py:3088 app/radius/services/audit_format.py:159
-#: app/templates/radius/cards_batches.html:295
+#: app/templates/radius/cards_batches.html:324
 #: app/templates/radius/cards_of_batch.html:562
 #: app/templates/radius/cards_of_batch.html:794
 #: app/templates/radius/mt_login_designer.html:672
@@ -19141,7 +19141,7 @@ msgstr ""
 msgid "ابحث باسم أو وصف المجموعة…"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:961
+#: app/templates/radius/cards_batches.html:990
 msgid ""
 "ابحث باسم الدخول أو رقم البطاقة — يظهر الملخّص البسيط، والتفاصيل "
 "المتقدّمة بضغطة."
@@ -19501,7 +19501,7 @@ msgid ""
 "رقمًا إلّا إن تعذّرت القراءة وأنت تعرف المنفذ."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1858
+#: app/templates/radius/cards_checker_v2.html:1920
 #: app/templates/radius/docs_card_marketplace.html:362
 msgid "اتركها"
 msgstr ""
@@ -19510,7 +19510,7 @@ msgstr ""
 msgid "اتركها 0 لتساوي النزول."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1657
+#: app/templates/radius/cards_checker_v2.html:1719
 #: app/templates/radius/cards_of_batch.html:819
 msgid "اتركها فارغة إن لم تُرد تغييرها"
 msgstr ""
@@ -19550,7 +19550,7 @@ msgstr ""
 msgid "اتركها فارغة للإبقاء على كلمة المرور المحفوظة."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2316
+#: app/templates/radius/cards_checker_v2.html:2378
 msgid "اتركها فارغة ليولّدها النظام بنمط الحزمة"
 msgstr ""
 
@@ -20037,7 +20037,7 @@ msgid ""
 "والإرسال تتولاهما لوحة التراخيص."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:448
+#: app/templates/radius/cards_batches.html:477
 msgid "اختر إجراء"
 msgstr ""
 
@@ -20055,7 +20055,7 @@ msgstr ""
 msgid "اختر اسم المجموعة ثم احفظ — صار عضوًا فيها."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1940
+#: app/templates/radius/cards_checker_v2.html:2002
 msgid "اختر الأجهزة التي تريد قطعها."
 msgstr ""
 
@@ -20391,7 +20391,7 @@ msgstr ""
 msgid "اختر جهاز الشبكة المسؤول عن هذا النطاق."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1992
+#: app/templates/radius/cards_checker_v2.html:2054
 msgid "اختر جهازاً واحداً على الأقل، أو اضغط «تحديد الكل»."
 msgstr ""
 
@@ -20585,7 +20585,7 @@ msgstr ""
 msgid "اختر على الأقل منفذاً واحداً لبوابة دخول المشتركين."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1832
+#: app/templates/radius/cards_checker_v2.html:1894
 msgid "اختر عنواناً واحداً على الأقل من القائمة أو اكتبه يدوياً."
 msgstr ""
 
@@ -21884,7 +21884,7 @@ msgstr ""
 msgid "استعادة الكوتة اليومية:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:451
+#: app/templates/radius/cards_batches.html:480
 msgid "استعادة المؤرشف"
 msgstr ""
 
@@ -22084,7 +22084,7 @@ msgstr ""
 msgid "استهلاك (GB)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:524
+#: app/templates/radius/cards_batches.html:553
 msgid "استهلاك الحزمة"
 msgstr ""
 
@@ -22214,8 +22214,8 @@ msgstr ""
 msgid "استيراد ملف كروت"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:344
-#: app/templates/radius/cards_batches.html:640
+#: app/templates/radius/cards_batches.html:373
+#: app/templates/radius/cards_batches.html:669
 #: app/templates/radius/docs_cards_batches.html:326
 msgid "استيراد من ملف"
 msgstr ""
@@ -22584,7 +22584,7 @@ msgstr ""
 msgid "اسم الدخول وكلمة المرور"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1140
+#: app/templates/radius/cards_batches.html:1169
 #: app/templates/radius/cards_of_batch.html:456
 msgid "اسم الدخول وكلمة المرور فقط"
 msgstr ""
@@ -23964,7 +23964,7 @@ msgid ""
 "ثانية لينعكس تنازليًا — اضغط «الرصيد» مرتين مثلًا لتطلع أسوأ الأرصدة فوق."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:656
+#: app/templates/radius/cards_batches.html:685
 msgid "اضغط على رأس العمود للترتيب"
 msgstr ""
 
@@ -25273,7 +25273,7 @@ msgid "الأبيض المؤسسي"
 msgstr ""
 
 #: app/templates/radius/access_control.html:541
-#: app/templates/radius/cards_batches.html:678
+#: app/templates/radius/cards_batches.html:707
 #: app/templates/radius/dashboard.html:842
 #: app/templates/radius/license_file.html:293
 msgid "الأجهزة"
@@ -25574,7 +25574,7 @@ msgstr ""
 msgid "الأساسيات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:911
+#: app/templates/radius/cards_batches.html:940
 #: app/templates/radius/cards_generate.html:30
 msgid "الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة."
 msgstr ""
@@ -25606,8 +25606,8 @@ msgstr ""
 msgid "الأسطول"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:532
-#: app/templates/radius/cards_batches.html:689
+#: app/templates/radius/cards_batches.html:561
+#: app/templates/radius/cards_batches.html:718
 msgid "الأسعار"
 msgstr ""
 
@@ -26747,7 +26747,7 @@ msgid "الارتباط غير موجود أو سبق إجراؤه."
 msgstr ""
 
 #: app/api/openapi.py:266 app/radius/services/event_labels.py:327
-#: app/templates/radius/cards_batches.html:681
+#: app/templates/radius/cards_batches.html:710
 #: app/templates/radius/portal_card.html:700
 #: app/templates/radius/portal_subscriber.html:281
 msgid "الاستخدام"
@@ -27582,7 +27582,7 @@ msgstr ""
 msgid "الباقة، حالة الاشتراك، الأيام المتبقّية، والرصيد/الدَّيْن إن وُجد."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1940
+#: app/templates/radius/cards_checker_v2.html:2002
 msgid "الباقي يبقى متّصل"
 msgstr ""
 
@@ -27917,7 +27917,7 @@ msgstr ""
 msgid "البطاقة %(user)s سيتم نقلها إلى %(bin)s ولن تستطيع الاتصال."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1509
+#: app/templates/radius/cards_checker_v2.html:1571
 #, python-format
 msgid "البطاقة %(user)s سيتم نقلها إلى %(bin)s ويمكنك استعادتها عند الحاجة."
 msgstr ""
@@ -27961,7 +27961,7 @@ msgstr ""
 msgid "البطاقة في سلة المحذوفات — استرجعها أولًا ثم عدّل بياناتها."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2458
+#: app/templates/radius/cards_checker_v2.html:2520
 msgid "البطاقة مقفولة حالياً على"
 msgstr ""
 
@@ -29109,7 +29109,7 @@ msgstr ""
 msgid "التعارضات مع السياسات الأخرى"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2028
+#: app/templates/radius/cards_checker_v2.html:2090
 msgid ""
 "التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة). إذا كانت هناك جلسة "
 "حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة."
@@ -29439,7 +29439,7 @@ msgstr ""
 msgid "التنزيل"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1862
+#: app/templates/radius/cards_checker_v2.html:1924
 msgid "التنزيل (kbps)"
 msgstr ""
 
@@ -29780,6 +29780,7 @@ msgstr ""
 #: app/templates/radius/card_user_360.html:171
 #: app/templates/radius/cards_checker_v2.html:455
 #: app/templates/radius/cards_checker_v2.html:1342
+#: app/templates/radius/cards_checker_v2.html:1401
 #: app/templates/radius/cards_of_batch.html:602
 #: app/templates/radius/docs_cards_checker.html:380
 #: app/templates/radius/docs_router_dashboard.html:279
@@ -30031,6 +30032,7 @@ msgid "الجهاز / المصدر"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:852
+#: app/templates/radius/cards_checker_v2.html:1417
 #: app/templates/radius/docs_cards_checker.html:449
 #: app/templates/radius/docs_users_360.html:366
 #: app/templates/radius/users_list.html:996
@@ -30255,9 +30257,10 @@ msgstr ""
 #: app/templates/radius/card_user_360.html:361
 #: app/templates/radius/card_users.html:95
 #: app/templates/radius/cards_batch_edit.html:135
-#: app/templates/radius/cards_batches.html:692
+#: app/templates/radius/cards_batches.html:721
 #: app/templates/radius/cards_checker.html:367
 #: app/templates/radius/cards_checker_v2.html:849
+#: app/templates/radius/cards_checker_v2.html:1414
 #: app/templates/radius/cards_list.html:128
 #: app/templates/radius/cards_of_batch.html:596
 #: app/templates/radius/cards_offers.html:362
@@ -30781,7 +30784,7 @@ msgstr ""
 #: app/templates/radius/_speed_rules_panel.html:37
 #: app/templates/radius/business_operator_profile.html:457
 #: app/templates/radius/card_marketplace_package_file.html:98
-#: app/templates/radius/cards_batches.html:677
+#: app/templates/radius/cards_batches.html:706
 #: app/templates/radius/cards_checker_v2.html:295
 #: app/templates/radius/distributors_detail.html:160
 #: app/templates/radius/docs_cards_checker.html:330
@@ -31215,7 +31218,7 @@ msgstr ""
 #: app/radius/templates/radius/vpn_accounts.html:106
 #: app/static/js/setup_wizard_v2.js:133
 #: app/templates/radius/_plans_fragments.html:117
-#: app/templates/radius/cards_batches.html:685
+#: app/templates/radius/cards_batches.html:714
 #: app/templates/radius/mt_dashboard.html:2464
 #: app/templates/radius/network_policy_preview.html:700
 #: app/templates/radius/notifications_center.html:59
@@ -32949,7 +32952,7 @@ msgstr ""
 msgid "الرفع %%"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1866
+#: app/templates/radius/cards_checker_v2.html:1928
 msgid "الرفع (kbps)"
 msgstr ""
 
@@ -35138,7 +35141,7 @@ msgid ""
 "الحالية."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1839
+#: app/templates/radius/cards_checker_v2.html:1901
 msgid "الصيغة: AA:BB:CC:DD:EE:FF"
 msgstr ""
 
@@ -35326,8 +35329,8 @@ msgstr ""
 #: app/templates/radius/accounting_reports.html:110
 #: app/templates/radius/business_operator_profile.html:457
 #: app/templates/radius/card_pricing_batch.html:28
-#: app/templates/radius/cards_batches.html:511
-#: app/templates/radius/cards_batches.html:726
+#: app/templates/radius/cards_batches.html:540
+#: app/templates/radius/cards_batches.html:755
 #: app/templates/radius/cards_overview.html:59
 #: app/templates/radius/cards_print_list.html:436
 #: app/templates/radius/cards_recharge_list.html:361
@@ -35726,7 +35729,7 @@ msgid "العمليات ← النسخ الاحتياطي"
 msgstr ""
 
 #: app/radius/services/audit_format.py:495
-#: app/templates/radius/cards_checker_v2.html:2031
+#: app/templates/radius/cards_checker_v2.html:2093
 #: app/templates/radius/docs_service_requests.html:56
 #: app/templates/radius/mt_guided_op.html:66
 #: app/templates/radius/recharge_panel.html:419
@@ -37283,7 +37286,7 @@ msgstr ""
 #: app/radius/services/operations.py:3240
 #: app/templates/radius/_cards_overview_body.html:89
 #: app/templates/radius/card_pricing_batch.html:58
-#: app/templates/radius/cards_batches.html:680
+#: app/templates/radius/cards_batches.html:709
 #: app/templates/radius/cards_import.html:365
 #: app/templates/radius/cards_list.html:115
 #: app/templates/radius/docs_cards_connected.html:288
@@ -37595,7 +37598,7 @@ msgstr ""
 msgid "الكوتا:"
 msgstr ""
 
-#: app/radius/core/numbers.py:56 app/templates/radius/cards_batches.html:686
+#: app/radius/core/numbers.py:56 app/templates/radius/cards_batches.html:715
 #: app/templates/radius/docs_users_overview.html:438
 msgid "الكوتة"
 msgstr ""
@@ -38615,7 +38618,7 @@ msgstr ""
 
 #: app/radius/services/event_labels.py:329
 #: app/radius/services/manager_activity_audit.py:215
-#: app/templates/radius/cards_batches.html:687
+#: app/templates/radius/cards_batches.html:716
 #: app/templates/radius/recharge_panel.html:355
 #: app/templates/radius/recharge_panel.html:718
 msgid "المحاسبة"
@@ -38739,6 +38742,7 @@ msgid "المحصّل"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:857
+#: app/templates/radius/cards_checker_v2.html:1418
 #: app/templates/radius/docs_cards_checker.html:451
 #: app/templates/radius/users_profile.html:1059
 msgid "المحصّلة"
@@ -39053,8 +39057,8 @@ msgstr ""
 #: app/radius/services/migration/engine.py:1233
 #: app/templates/radius/admin_pricing.html:103
 #: app/templates/radius/admins_profile_summary.html:87
-#: app/templates/radius/cards_batches.html:530
-#: app/templates/radius/cards_batches.html:690
+#: app/templates/radius/cards_batches.html:559
+#: app/templates/radius/cards_batches.html:719
 #: app/templates/radius/docs_admins.html:46
 #: app/templates/radius/docs_cards_connected.html:347
 #: app/templates/radius/docs_online_users.html:346
@@ -40675,7 +40679,7 @@ msgstr ""
 msgid "المقاييس"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2048
+#: app/templates/radius/cards_checker_v2.html:2110
 msgid "المقدار"
 msgstr ""
 
@@ -41184,8 +41188,8 @@ msgstr ""
 
 #: app/radius/routes/cards.py:1547 app/radius/services/pdf_theme.py:528
 #: app/radius/services/permission_labels.py:87
-#: app/templates/radius/cards_batches.html:531
-#: app/templates/radius/cards_batches.html:691
+#: app/templates/radius/cards_batches.html:560
+#: app/templates/radius/cards_batches.html:720
 msgid "الموزع"
 msgstr ""
 
@@ -42538,7 +42542,7 @@ msgstr ""
 msgid "الوجهة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2041
+#: app/templates/radius/cards_checker_v2.html:2103
 #: app/templates/radius/company_inventory_expenses.html:103
 #: app/templates/radius/company_inventory_expenses.html:339
 #: app/templates/radius/company_inventory_expenses.html:363
@@ -42704,6 +42708,7 @@ msgstr ""
 #: app/templates/radius/audit_log_index.html:108
 #: app/templates/radius/bandwidth_schedules.html:214
 #: app/templates/radius/cards_checker_v2.html:860
+#: app/templates/radius/cards_checker_v2.html:1421
 #: app/templates/radius/device_health.html:241
 #: app/templates/radius/docs_cards_checker.html:452
 #: app/templates/radius/docs_cards_checker.html:461
@@ -43033,7 +43038,7 @@ msgstr ""
 msgid "انتبه:"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1651
+#: app/templates/radius/cards_checker_v2.html:1713
 #: app/templates/radius/cards_of_batch.html:816
 msgid "انتبه: الزبون لازم يكتب الحروف الكبيرة والصغيرة بنفس الطريقة بالضبط"
 msgstr ""
@@ -43115,7 +43120,7 @@ msgstr ""
 msgid "انتهاء الكوتا"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:688
+#: app/templates/radius/cards_batches.html:717
 msgid "انتهاء الكوتة"
 msgstr ""
 
@@ -43199,7 +43204,7 @@ msgstr ""
 msgid "انتهت الجلسة — سجّل الدخول من جديد."
 msgstr ""
 
-#: app/static/js/cards_checker_v2.js:275
+#: app/static/js/cards_checker_v2.js:284
 msgid "انتهت الجلسة. آخر ظهور: "
 msgstr ""
 
@@ -44091,7 +44096,7 @@ msgstr ""
 msgid "بالتصميم"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:287
+#: app/templates/radius/cards_batches.html:316
 #: app/templates/radius/cards_checker_v2.html:654
 #: app/templates/radius/docs_cards_checker.html:384
 msgid "بالثانية"
@@ -44150,7 +44155,7 @@ msgstr ""
 msgid "بالمخزون"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:288
+#: app/templates/radius/cards_batches.html:317
 msgid "بالمدة"
 msgstr ""
 
@@ -44603,7 +44608,7 @@ msgstr ""
 msgid "بحث سريع + تحديد المدفوع بدقّة = محاسبة نظيفة وديون واضحة."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:405
+#: app/templates/radius/cards_batches.html:434
 #: app/templates/radius/docs_cards_batches.html:354
 #: app/templates/radius/docs_cards_batches.html:366
 msgid "بحث عن حزمة أو كود..."
@@ -44864,7 +44869,7 @@ msgstr ""
 msgid "بدون اسم"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:713
+#: app/templates/radius/cards_batches.html:742
 msgid "بدون اسم مخصص"
 msgstr ""
 
@@ -44949,7 +44954,7 @@ msgstr ""
 msgid "بدون كتابة أي حرف."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:282
+#: app/templates/radius/cards_batches.html:311
 msgid "بدون كوتة"
 msgstr ""
 
@@ -45309,7 +45314,7 @@ msgstr ""
 #: app/radius/routes/lifecycle.py:35 app/radius/services/audit_format.py:167
 #: app/static/js/cards_batches_view.js:402
 #: app/static/js/cards_generate_progress.js:156
-#: app/templates/radius/cards_batches.html:352
+#: app/templates/radius/cards_batches.html:381
 #: app/templates/radius/cards_print_list.html:353
 #: app/templates/radius/cards_recharge_list.html:293
 #: app/templates/radius/cards_recharge_list.html:317
@@ -47176,8 +47181,8 @@ msgstr ""
 msgid "بيع"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:532
-#: app/templates/radius/cards_batches.html:745
+#: app/templates/radius/cards_batches.html:561
+#: app/templates/radius/cards_batches.html:774
 #, python-format
 msgid "بيع %(v)s"
 msgstr ""
@@ -47679,6 +47684,7 @@ msgid "تاريخ الإضافة"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:859
+#: app/templates/radius/cards_checker_v2.html:1420
 #: app/templates/radius/docs_cards_checker.html:452
 #: app/templates/radius/users_profile.html:1061
 msgid "تاريخ الإنتهاء"
@@ -47689,8 +47695,8 @@ msgstr ""
 #: app/radius/templates/radius/vpn_reports.html:241
 #: app/templates/radius/business_operator_profile.html:476
 #: app/templates/radius/card_pricing_batch.html:62
-#: app/templates/radius/cards_batches.html:533
-#: app/templates/radius/cards_batches.html:682
+#: app/templates/radius/cards_batches.html:562
+#: app/templates/radius/cards_batches.html:711
 #: app/templates/radius/cards_checker.html:325
 #: app/templates/radius/cards_checker.html:425
 #: app/templates/radius/docs_users_360.html:326
@@ -47775,6 +47781,7 @@ msgid "تاريخ الانتهاء:"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:858
+#: app/templates/radius/cards_checker_v2.html:1419
 #: app/templates/radius/docs_cards_checker.html:451
 #: app/templates/radius/users_profile.html:1060
 msgid "تاريخ البدء"
@@ -48931,7 +48938,7 @@ msgstr ""
 #: app/radius/templates/radius/monitoring.html:85
 #: app/static/js/device_health.js:859 app/static/js/mt_import.js:191
 #: app/templates/radius/cards_checker_v2.html:486
-#: app/templates/radius/cards_checker_v2.html:1408
+#: app/templates/radius/cards_checker_v2.html:1470
 #: app/templates/radius/docs_cards_checker.html:313
 #: app/templates/radius/invoices_list.html:133
 #: app/templates/radius/mt_dashboard.html:1977
@@ -48969,7 +48976,7 @@ msgstr ""
 msgid "تحديث الآن"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:449
+#: app/templates/radius/cards_batches.html:478
 msgid "تحديث الإحصاءات"
 msgstr ""
 
@@ -49055,7 +49062,7 @@ msgstr ""
 msgid "تحديث بيانات DHCP الآن من المايكروتيك"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1409
+#: app/templates/radius/cards_checker_v2.html:1471
 msgid "تحديث بيانات البطاقة"
 msgstr ""
 
@@ -49147,7 +49154,7 @@ msgstr ""
 msgid "تحديث مشترك"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2668
+#: app/templates/radius/cards_checker_v2.html:2730
 msgid "تحديث منذ"
 msgstr ""
 
@@ -49167,7 +49174,7 @@ msgstr ""
 msgid "تحديثات جماعية"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:675
+#: app/templates/radius/cards_batches.html:704
 #: app/templates/radius/docs_cards_connected.html:341
 #: app/templates/radius/sessions_list.html:699
 #: app/templates/radius/users_list.html:3271
@@ -49181,9 +49188,9 @@ msgstr ""
 msgid "تحديد %(username)s"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:484
-#: app/templates/radius/cards_batches.html:485
-#: app/templates/radius/cards_batches.html:705
+#: app/templates/radius/cards_batches.html:513
+#: app/templates/radius/cards_batches.html:514
+#: app/templates/radius/cards_batches.html:734
 msgid "تحديد الحزمة"
 msgstr ""
 
@@ -49191,8 +49198,8 @@ msgstr ""
 msgid "تحديد السرعة وإرسال طلب التفعيل"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:675
-#: app/templates/radius/cards_checker_v2.html:1945
+#: app/templates/radius/cards_batches.html:704
+#: app/templates/radius/cards_checker_v2.html:2007
 #: app/templates/radius/cards_of_batch.html:592
 #: app/templates/radius/docs_roles_permissions.html:304
 #: app/templates/radius/roles_form.html:336
@@ -49725,15 +49732,15 @@ msgstr ""
 #: app/radius/templates/radius/vpn_reports.html:129
 #: app/radius/templates/radius/vpn_reports.html:205
 #: app/radius/templates/radius/vpn_reports.html:306
-#: app/templates/radius/cards_batches.html:438
+#: app/templates/radius/cards_batches.html:467
 msgid "تحميل CSV"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:437
+#: app/templates/radius/cards_batches.html:466
 msgid "تحميل Excel"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:439
+#: app/templates/radius/cards_batches.html:468
 #: app/templates/radius/cards_print_quick.html:332
 msgid "تحميل PDF"
 msgstr ""
@@ -49868,7 +49875,7 @@ msgstr ""
 
 #: app/templates/radius/_cards_generate_owner_form.html:290
 #: app/templates/radius/cards_batch_edit.html:288
-#: app/templates/radius/cards_batches.html:296
+#: app/templates/radius/cards_batches.html:325
 #: app/templates/radius/docs_cards_batches.html:561
 msgid "تخفيض السرعة"
 msgstr ""
@@ -51021,8 +51028,8 @@ msgstr ""
 #: app/radius/services/audit_format.py:155
 #: app/radius/services/event_labels.py:423
 #: app/radius/services/manager_activity_audit.py:247
-#: app/templates/radius/cards_batches.html:565
-#: app/templates/radius/cards_batches.html:788
+#: app/templates/radius/cards_batches.html:594
+#: app/templates/radius/cards_batches.html:817
 msgid "تصدير"
 msgstr ""
 
@@ -51056,7 +51063,7 @@ msgstr ""
 msgid "تصدير البيانات (المشتركين/البطاقات/التقارير المالية)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:436
+#: app/templates/radius/cards_batches.html:465
 msgid "تصدير الحزم"
 msgstr ""
 
@@ -51069,8 +51076,8 @@ msgstr ""
 msgid "تصدير قالب PDF"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:564
-#: app/templates/radius/cards_batches.html:1129
+#: app/templates/radius/cards_batches.html:593
+#: app/templates/radius/cards_batches.html:1158
 msgid "تصدير كروت الحزمة"
 msgstr ""
 
@@ -51170,7 +51177,7 @@ msgstr ""
 msgid "تصفير الكوتة اليوميّة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1420
+#: app/templates/radius/cards_checker_v2.html:1482
 #, python-format
 msgid "تصفير الوقت المستهلَك لـ %(user)s."
 msgstr ""
@@ -51341,9 +51348,9 @@ msgstr ""
 #: app/templates/radius/audit_log_index.html:87
 #: app/templates/radius/bandwidth_list.html:86
 #: app/templates/radius/business_operator_profile.html:150
-#: app/templates/radius/cards_batches.html:434
-#: app/templates/radius/cards_checker_v2.html:1870
-#: app/templates/radius/cards_checker_v2.html:2059
+#: app/templates/radius/cards_batches.html:463
+#: app/templates/radius/cards_checker_v2.html:1932
+#: app/templates/radius/cards_checker_v2.html:2121
 #: app/templates/radius/cards_list.html:94
 #: app/templates/radius/cards_of_batch.html:716
 #: app/templates/radius/connected_stats.html:43
@@ -51820,7 +51827,7 @@ msgstr ""
 #: app/templates/radius/bandwidth_list.html:77
 #: app/templates/radius/bandwidth_schedules.html:259
 #: app/templates/radius/card_marketplace.html:1177
-#: app/templates/radius/cards_batches.html:542
+#: app/templates/radius/cards_batches.html:571
 #: app/templates/radius/device_health.html:175
 #: app/templates/radius/devices_list.html:137
 #: app/templates/radius/distributors_detail.html:27
@@ -51917,7 +51924,7 @@ msgstr ""
 
 #: app/radius/services/manager_grants.py:358
 #: app/radius/services/mikrotik_actions.py:270
-#: app/templates/radius/cards_batches.html:778
+#: app/templates/radius/cards_batches.html:807
 #: app/templates/radius/cards_of_batch.html:445
 msgid "تعديل الحزمة"
 msgstr ""
@@ -51950,7 +51957,7 @@ msgstr ""
 msgid "تعديل العروض"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2460
+#: app/templates/radius/cards_checker_v2.html:2522
 msgid "تعديل القائمة"
 msgstr ""
 
@@ -52027,8 +52034,8 @@ msgstr ""
 
 #: app/radius/routes/cards.py:3098
 #: app/templates/radius/cards_checker_v2.html:1097
-#: app/templates/radius/cards_checker_v2.html:1464
-#: app/templates/radius/cards_checker_v2.html:2357
+#: app/templates/radius/cards_checker_v2.html:1526
+#: app/templates/radius/cards_checker_v2.html:2419
 #: app/templates/radius/cards_of_batch.html:660
 #: app/templates/radius/cards_of_batch.html:810
 msgid "تعديل بيانات الكرت"
@@ -52158,7 +52165,7 @@ msgstr ""
 msgid "تعديل قالب هوتسبوت"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2467
+#: app/templates/radius/cards_checker_v2.html:2529
 msgid "تعديل قفل MAC"
 msgstr ""
 
@@ -52235,7 +52242,7 @@ msgid "تعديل وتعطيل العرض"
 msgstr ""
 
 #: app/radius/services/mikrotik_actions.py:72
-#: app/templates/radius/cards_checker_v2.html:2023
+#: app/templates/radius/cards_checker_v2.html:2085
 msgid "تعديل وقت البطاقة"
 msgstr ""
 
@@ -52463,7 +52470,7 @@ msgstr ""
 msgid "تعذر جلب إرشادات التحقق: {message}"
 msgstr ""
 
-#: app/static/js/cards_checker_v2.js:196
+#: app/static/js/cards_checker_v2.js:205
 msgid "تعذر جلب بيانات البطاقة"
 msgstr ""
 
@@ -52675,7 +52682,7 @@ msgstr ""
 msgid "تعذّر إضافة السلفة."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2744
+#: app/templates/radius/cards_checker_v2.html:2806
 msgid "تعذّر إظهار كلمة المرور"
 msgstr ""
 
@@ -53529,7 +53536,7 @@ msgstr ""
 msgid "تعذّر تحميل المخطّط — رمز"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1278
+#: app/templates/radius/cards_batches.html:1307
 msgid "تعذّر تحميل النظرة العامة — حدّث الصفحة."
 msgstr ""
 
@@ -53686,8 +53693,8 @@ msgstr ""
 msgid "تعذّر تنفيذ العملية."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2175
-#: app/templates/radius/cards_checker_v2.html:2177
+#: app/templates/radius/cards_checker_v2.html:2237
+#: app/templates/radius/cards_checker_v2.html:2239
 msgid "تعذّر تنفيذ العمليّة — حدّث الصفحة وأعد المحاولة."
 msgstr ""
 
@@ -53924,9 +53931,9 @@ msgstr ""
 msgid "تعذّر فتح الملف: %(exc)s"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2270
-#: app/templates/radius/cards_checker_v2.html:2308
-#: app/templates/radius/cards_checker_v2.html:2353
+#: app/templates/radius/cards_checker_v2.html:2332
+#: app/templates/radius/cards_checker_v2.html:2370
+#: app/templates/radius/cards_checker_v2.html:2415
 msgid "تعذّر فتح النافذة — حدّث الصفحة."
 msgstr ""
 
@@ -54989,7 +54996,7 @@ msgstr ""
 #: app/radius/services/manager_activity_audit.py:174
 #: app/templates/radius/account.html:25
 #: app/templates/radius/cards_checker_v2.html:1077
-#: app/templates/radius/cards_checker_v2.html:1444
+#: app/templates/radius/cards_checker_v2.html:1506
 #: app/templates/radius/cards_of_batch.html:579
 #: app/templates/radius/cards_of_batch.html:654
 #: app/templates/radius/rep_coa_failures.html:32
@@ -55006,7 +55013,7 @@ msgid "تغيير كلمة مرور %(u)s؟ ستُولَّد كلمة جديدة
 msgstr ""
 
 #: app/radius/services/audit_format.py:120
-#: app/templates/radius/cards_checker_v2.html:2312
+#: app/templates/radius/cards_checker_v2.html:2374
 msgid "تغيير كلمة مرور البطاقة"
 msgstr ""
 
@@ -55024,7 +55031,7 @@ msgstr ""
 msgid "تغيير كلمة مرور مستخدم متجر"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2317
+#: app/templates/radius/cards_checker_v2.html:2379
 msgid "تغيير وقطع الجلسات"
 msgstr ""
 
@@ -55299,7 +55306,7 @@ msgstr ""
 
 #: app/radius/services/audit_format.py:160
 #: app/radius/services/manager_activity_audit.py:242
-#: app/templates/radius/cards_checker_v2.html:1948
+#: app/templates/radius/cards_checker_v2.html:2010
 msgid "تفريغ"
 msgstr ""
 
@@ -55358,7 +55365,7 @@ msgstr ""
 #: app/radius/templates/radius/wg_data.html:179
 #: app/templates/_partials/service_spec_modal.html:415
 #: app/templates/radius/access_control.html:521
-#: app/templates/radius/cards_batches.html:572
+#: app/templates/radius/cards_batches.html:601
 #: app/templates/radius/cards_checker_v2.html:1258
 #: app/templates/radius/cards_of_batch.html:561
 #: app/templates/radius/cards_of_batch.html:793
@@ -55495,7 +55502,7 @@ msgstr ""
 msgid "تفعيل الجسر مع لوحة التراخيص"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:796
+#: app/templates/radius/cards_batches.html:825
 msgid "تفعيل الحزمة"
 msgstr ""
 
@@ -59300,7 +59307,7 @@ msgstr ""
 msgid "تنبيه غير معروف."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:297
+#: app/templates/radius/cards_batches.html:326
 msgid "تنبيه فقط"
 msgstr ""
 
@@ -59681,7 +59688,7 @@ msgid "تنظيف نسخ احتياطية قديمة"
 msgstr ""
 
 #: app/radius/services/event_labels.py:401
-#: app/templates/radius/cards_batches.html:455
+#: app/templates/radius/cards_batches.html:484
 #: app/templates/radius/docs_cards_batches.html:463
 #: app/templates/radius/docs_finance_center.html:481
 #: app/templates/radius/finance_center_hub.html:362
@@ -59794,8 +59801,8 @@ msgstr ""
 msgid "تنقصك الصلاحية: %(v)s."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:595
-#: app/templates/radius/cards_batches.html:833
+#: app/templates/radius/cards_batches.html:624
+#: app/templates/radius/cards_batches.html:862
 #: app/templates/radius/cards_print_batch.html:125
 #: app/templates/radius/cards_recharge_batch.html:191
 msgid "تنقل الصفحات"
@@ -60512,7 +60519,7 @@ msgid ""
 "بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر الـ API فقط."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2313
+#: app/templates/radius/cards_checker_v2.html:2375
 msgid "تُستبدل كلمة"
 msgstr ""
 
@@ -60711,9 +60718,9 @@ msgstr ""
 msgid "تُولَّد آليًّا"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2594
-#: app/templates/radius/cards_checker_v2.html:2668
-#: app/templates/radius/cards_checker_v2.html:2669
+#: app/templates/radius/cards_checker_v2.html:2656
+#: app/templates/radius/cards_checker_v2.html:2730
+#: app/templates/radius/cards_checker_v2.html:2731
 #: app/templates/radius/remote_sessions.html:156
 #: app/templates/radius/sstp_credentials.html:425
 #: app/templates/radius/wg_details.html:384
@@ -61216,7 +61223,7 @@ msgstr ""
 msgid "جارٍ تحميل القائمة الحاليّة من الراوتر…"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:892
+#: app/templates/radius/cards_batches.html:921
 msgid "جارٍ تحميل النظرة العامة…"
 msgstr ""
 
@@ -61470,7 +61477,7 @@ msgstr ""
 msgid "جداول السرعة الزمنية («سرعة الليل»)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:349
+#: app/templates/radius/cards_batches.html:378
 #: app/templates/radius/cards_print_list.html:356
 #: app/templates/radius/cards_recharge_list.html:296
 #: app/templates/radius/migration_wizard.html:672
@@ -61754,7 +61761,7 @@ msgstr ""
 msgid "جرّب أخذ النسخة من /admin/radius/mt/<id>/backups مرة أخرى."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:875
+#: app/templates/radius/cards_batches.html:904
 msgid "جرّب إزالة بعض الفلاتر أو أنشئ حزمة جديدة."
 msgstr ""
 
@@ -62122,7 +62129,7 @@ msgstr ""
 #: app/radius/services/event_labels.py:474
 #: app/radius/services/mikrotik_actions.py:738
 #: app/templates/radius/card_user_360.html:348
-#: app/templates/radius/cards_checker_v2.html:2649
+#: app/templates/radius/cards_checker_v2.html:2711
 #: app/templates/radius/events_investigations.html:67
 #: app/templates/radius/events_security.html:17
 #: app/templates/radius/portal_distributor_checker.html:339
@@ -62142,7 +62149,7 @@ msgstr ""
 msgid "جلسة %(username)s غير موجودة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1977
+#: app/templates/radius/cards_checker_v2.html:2039
 msgid "جلسة الآن."
 msgstr ""
 
@@ -62280,8 +62287,8 @@ msgstr ""
 msgid "جملة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:532
-#: app/templates/radius/cards_batches.html:745
+#: app/templates/radius/cards_batches.html:561
+#: app/templates/radius/cards_batches.html:774
 #, python-format
 msgid "جملة %(v)s"
 msgstr ""
@@ -62387,7 +62394,7 @@ msgstr ""
 msgid "جهاز %(ip)s"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:504
+#: app/templates/radius/cards_batches.html:533
 #, python-format
 msgid "جهاز %(v)s"
 msgstr ""
@@ -64232,7 +64239,7 @@ msgstr ""
 msgid "حذف"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:450
+#: app/templates/radius/cards_batches.html:479
 #: app/templates/radius/docs_cards_batches.html:461
 msgid "حذف / أرشفة آمنة"
 msgstr ""
@@ -64543,14 +64550,14 @@ msgstr ""
 msgid "حذف نهائيًا"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:588
-#: app/templates/radius/cards_batches.html:816
+#: app/templates/radius/cards_batches.html:617
+#: app/templates/radius/cards_batches.html:845
 #: app/templates/radius/recycle_bin.html:178
 msgid "حذف نهائيّ"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:588
-#: app/templates/radius/cards_batches.html:815
+#: app/templates/radius/cards_batches.html:617
+#: app/templates/radius/cards_batches.html:844
 #: app/templates/radius/recycle_bin.html:175
 msgid ""
 "حذف نهائيّ بلا رجعة: تُمحى هذه الحزمة وكلّ بطاقاتها من القاعدة تمامًا. "
@@ -64876,7 +64883,7 @@ msgstr ""
 msgid "حزم معيّنة فقط"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:369
+#: app/templates/radius/cards_batches.html:398
 #: app/templates/radius/docs_cards_batches.html:313
 #: app/templates/radius/docs_cards_batches.html:332
 msgid "حزم منتهية"
@@ -64910,7 +64917,7 @@ msgstr ""
 msgid "حزمة #%(id)s"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1656
+#: app/templates/radius/cards_checker_v2.html:1718
 #: app/templates/radius/cards_of_batch.html:819
 msgid "حزمة «رقم فقط» — بلا كلمة مرور"
 msgstr ""
@@ -64985,7 +64992,7 @@ msgid ""
 "الدخول."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:491
+#: app/templates/radius/cards_batches.html:520
 msgid "حزمة بطاقات مؤقتة"
 msgstr ""
 
@@ -65345,11 +65352,11 @@ msgstr ""
 msgid "حسب نوع المنشأة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1586
+#: app/templates/radius/cards_checker_v2.html:1648
 msgid "حسناً"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2228
+#: app/templates/radius/cards_checker_v2.html:2290
 #: app/templates/radius/mt_login_designer.html:1909
 #: app/templates/radius/sessions_list.html:531
 msgid "حسنًا"
@@ -65528,7 +65535,7 @@ msgstr ""
 #: app/radius/services/event_labels.py:438
 #: app/radius/services/manager_activity_audit.py:235
 #: app/templates/radius/card_user_360.html:603
-#: app/templates/radius/cards_checker_v2.html:1660
+#: app/templates/radius/cards_checker_v2.html:1722
 #: app/templates/radius/cards_of_batch.html:824
 #: app/templates/radius/cards_print_quick.html:335
 #: app/templates/radius/device_health.html:308
@@ -66168,7 +66175,8 @@ msgid "حيوي"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:878
-#: app/templates/radius/cards_checker_v2.html:2613
+#: app/templates/radius/cards_checker_v2.html:1429
+#: app/templates/radius/cards_checker_v2.html:2675
 #: app/templates/radius/docs_cards_checker.html:462
 #: app/templates/radius/users_profile.html:1074
 #: app/templates/radius/users_profile.html:1295
@@ -66926,8 +66934,8 @@ msgstr ""
 #: app/radius/services/event_labels.py:589
 #: app/radius/services/permission_labels.py:81
 #: app/templates/radius/card_user_360.html:486
-#: app/templates/radius/cards_checker_v2.html:2037
-#: app/templates/radius/cards_checker_v2.html:2122
+#: app/templates/radius/cards_checker_v2.html:2099
+#: app/templates/radius/cards_checker_v2.html:2184
 #: app/templates/radius/finance_accounting.html:230
 #: app/templates/radius/finance_center_hub.html:23
 #: app/templates/radius/finance_center_hub.html:355
@@ -67183,7 +67191,7 @@ msgstr ""
 msgid "خطأ غير محدّد"
 msgstr ""
 
-#: app/static/js/cards_checker_v2.js:197
+#: app/static/js/cards_checker_v2.js:206
 #: app/templates/radius/port_script_services.html:898
 #: app/templates/radius/setup_wizard_v3_router_service_flow.html:633
 msgid "خطأ غير معروف"
@@ -67227,7 +67235,7 @@ msgid "خطأ في الراوتر"
 msgstr ""
 
 #: app/static/js/mt_dashboard.js:291
-#: app/templates/radius/cards_checker_v2.html:2749
+#: app/templates/radius/cards_checker_v2.html:2811
 msgid "خطأ في الشبكة"
 msgstr ""
 
@@ -67644,7 +67652,7 @@ msgid "خيارات مصدر الإنترنت"
 msgstr ""
 
 #: app/templates/_partials/access_schedule.html:742
-#: app/templates/radius/cards_checker_v2.html:1907
+#: app/templates/radius/cards_checker_v2.html:1969
 #: app/templates/radius/cards_reconcile_accounting.html:96
 #: app/templates/radius/remote_sessions.html:156
 #: app/templates/radius/sstp_credentials.html:425
@@ -67652,7 +67660,7 @@ msgstr ""
 msgid "د"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2594
+#: app/templates/radius/cards_checker_v2.html:2656
 msgid "د "
 msgstr ""
 
@@ -68442,7 +68450,7 @@ msgstr ""
 #: app/radius/services/hotspot_cards_portal.py:112
 #: app/templates/_partials/unit_input.html:32
 #: app/templates/radius/cards_batch_edit.html:229
-#: app/templates/radius/cards_checker_v2.html:2043
+#: app/templates/radius/cards_checker_v2.html:2105
 #: app/templates/radius/cards_of_batch.html:569
 #: app/templates/radius/cards_of_batch.html:765
 #: app/templates/radius/docs_section.html:122
@@ -68479,13 +68487,13 @@ msgstr ""
 #: app/templates/radius/card_marketplace.html:1385
 #: app/templates/radius/card_user_360.html:245
 #: app/templates/radius/card_user_360.html:374
-#: app/templates/radius/cards_batches.html:222
-#: app/templates/radius/cards_batches.html:235
+#: app/templates/radius/cards_batches.html:251
+#: app/templates/radius/cards_batches.html:264
 #: app/templates/radius/cards_checker.html:27
 #: app/templates/radius/cards_checker.html:28
 #: app/templates/radius/cards_checker_v2.html:65
 #: app/templates/radius/cards_checker_v2.html:66
-#: app/templates/radius/cards_checker_v2.html:2111
+#: app/templates/radius/cards_checker_v2.html:2173
 #: app/templates/radius/cards_offer_use.html:84
 #: app/templates/radius/cards_offer_use.html:219
 #: app/templates/radius/cards_offers.html:13
@@ -69116,7 +69124,7 @@ msgstr ""
 msgid "دون كتابة أي شيء"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1940
+#: app/templates/radius/cards_checker_v2.html:2002
 msgid "دون مساس."
 msgstr ""
 
@@ -71332,7 +71340,7 @@ msgid "رقم الفاعل"
 msgstr ""
 
 #: app/radius/services/audit_format.py:452
-#: app/templates/radius/cards_checker_v2.html:1646
+#: app/templates/radius/cards_checker_v2.html:1708
 #: app/templates/radius/cards_of_batch.html:812
 #: app/templates/radius/docs_customer_portal.html:136
 msgid "رقم الكرت"
@@ -71343,7 +71351,7 @@ msgid "رقم الكرت مطلوب."
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1098
-#: app/templates/radius/cards_checker_v2.html:1465
+#: app/templates/radius/cards_checker_v2.html:1527
 msgid "رقم الكرت و/أو كلمة المرور"
 msgstr ""
 
@@ -71351,7 +71359,7 @@ msgstr ""
 msgid "رقم الكرت يجب أن يكون نصًّا."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1690
+#: app/templates/radius/cards_checker_v2.html:1752
 msgid "رقم الكرت: أحرف لاتينية وأرقام و . _ - @ فقط، من 3 إلى 64، بلا مسافات."
 msgstr ""
 
@@ -72296,8 +72304,8 @@ msgctxt "weekday"
 msgid "س"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1907
-#: app/templates/radius/cards_checker_v2.html:2594
+#: app/templates/radius/cards_checker_v2.html:1969
+#: app/templates/radius/cards_checker_v2.html:2656
 #: app/templates/radius/cards_reconcile_accounting.html:96
 msgid "س "
 msgstr ""
@@ -72337,7 +72345,7 @@ msgstr ""
 #: app/templates/radius/card_marketplace.html:24
 #: app/templates/radius/card_marketplace.html:1383
 #: app/templates/radius/cards_batch_edit.html:230
-#: app/templates/radius/cards_checker_v2.html:2044
+#: app/templates/radius/cards_checker_v2.html:2106
 #: app/templates/radius/cards_of_batch.html:570
 #: app/templates/radius/cards_of_batch.html:766
 #: app/templates/radius/lifecycle.html:33
@@ -72393,14 +72401,14 @@ msgstr ""
 #: app/templates/radius/card_marketplace.html:1384
 #: app/templates/radius/card_user_360.html:244
 #: app/templates/radius/card_user_360.html:373
-#: app/templates/radius/cards_batches.html:221
-#: app/templates/radius/cards_batches.html:236
+#: app/templates/radius/cards_batches.html:250
+#: app/templates/radius/cards_batches.html:265
 #: app/templates/radius/cards_checker.html:26
 #: app/templates/radius/cards_checker.html:27
 #: app/templates/radius/cards_checker_v2.html:64
 #: app/templates/radius/cards_checker_v2.html:65
-#: app/templates/radius/cards_checker_v2.html:2053
-#: app/templates/radius/cards_checker_v2.html:2111
+#: app/templates/radius/cards_checker_v2.html:2115
+#: app/templates/radius/cards_checker_v2.html:2173
 #: app/templates/radius/cards_offer_use.html:84
 #: app/templates/radius/cards_offer_use.html:217
 #: app/templates/radius/cards_offers.html:12
@@ -72563,7 +72571,7 @@ msgid "سبب (اختياري — يُسجَّل في سجل التدقيق)"
 msgstr ""
 
 #: app/static/js/mt_dashboard.js:1259
-#: app/templates/radius/cards_checker_v2.html:1620
+#: app/templates/radius/cards_checker_v2.html:1682
 msgid "سبب (اختياري)"
 msgstr ""
 
@@ -72622,7 +72630,7 @@ msgid "سبب الجدول أو ملاحظات التشغيل"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1312
-#: app/templates/radius/cards_checker_v2.html:1510
+#: app/templates/radius/cards_checker_v2.html:1572
 msgid "سبب الحذف (اختياري)"
 msgstr ""
 
@@ -73416,7 +73424,7 @@ msgstr ""
 
 #: app/radius/routes/audit_log.py:80 app/radius/services/audit_format.py:168
 #: app/radius/services/audit_format.py:180
-#: app/templates/radius/cards_checker_v2.html:1858
+#: app/templates/radius/cards_checker_v2.html:1920
 msgid "سرعة"
 msgstr ""
 
@@ -74353,7 +74361,7 @@ msgid "سلايدرات حية لضبط النِّسَب فورًا — معاي
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1310
-#: app/templates/radius/cards_checker_v2.html:1509
+#: app/templates/radius/cards_checker_v2.html:1571
 #: app/templates/radius/data_protection_nav.html:20
 #: app/templates/radius/license_file.html:208
 #: app/templates/radius/recycle_bin.html:30
@@ -74944,8 +74952,8 @@ msgid "سيتصل المستخدم بصيغة"
 msgstr ""
 
 #: app/templates/radius/backups.html:536 app/templates/radius/backups.html:591
-#: app/templates/radius/cards_checker_v2.html:2053
-#: app/templates/radius/cards_checker_v2.html:2121
+#: app/templates/radius/cards_checker_v2.html:2115
+#: app/templates/radius/cards_checker_v2.html:2183
 msgid "سيتم"
 msgstr ""
 
@@ -75091,11 +75099,11 @@ msgstr ""
 msgid "سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1976
+#: app/templates/radius/cards_checker_v2.html:2038
 msgid "سيتم قطع"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1813
+#: app/templates/radius/cards_checker_v2.html:1875
 msgid "سيتم قفل البطاقة على"
 msgstr ""
 
@@ -76133,7 +76141,7 @@ msgstr ""
 msgid "شهادة SSTP الموقّعة ذاتيًّا (مسار)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:239
+#: app/templates/radius/cards_batches.html:268
 msgid "شهر"
 msgstr ""
 
@@ -76656,7 +76664,7 @@ msgstr ""
 msgid "صفحة المشترك:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:755
+#: app/templates/radius/cards_batches.html:784
 msgid "صفحة الموزّع"
 msgstr ""
 
@@ -76769,8 +76777,8 @@ msgstr ""
 msgid "صفوف التقرير ("
 msgstr ""
 
-#: app/static/js/uds_table.js:291 app/templates/radius/cards_batches.html:597
-#: app/templates/radius/cards_batches.html:835
+#: app/static/js/uds_table.js:291 app/templates/radius/cards_batches.html:626
+#: app/templates/radius/cards_batches.html:864
 #: app/templates/radius/cards_of_batch.html:710
 #: app/templates/radius/docs_users_overview.html:735
 #: app/templates/radius/users_list.html:351
@@ -76900,7 +76908,7 @@ msgstr ""
 msgid "صلاحية التنفيذ المطلوبة:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:683
+#: app/templates/radius/cards_batches.html:712
 msgid "صلاحية بعد أول اتصال"
 msgstr ""
 
@@ -77406,8 +77414,8 @@ msgstr ""
 
 #: app/radius/services/manager_activity_audit.py:252
 #: app/templates/radius/accounting_reports.html:44
-#: app/templates/radius/cards_batches.html:552
-#: app/templates/radius/cards_batches.html:783
+#: app/templates/radius/cards_batches.html:581
+#: app/templates/radius/cards_batches.html:812
 #: app/templates/radius/cards_checker_v2.html:490
 #: app/templates/radius/cards_print_list.html:376
 #: app/templates/radius/cards_print_list.html:400
@@ -77428,7 +77436,7 @@ msgstr ""
 msgid "طباعة الحزمة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:551
+#: app/templates/radius/cards_batches.html:580
 msgid "طباعة الحزمة — منشئ كروت PDF"
 msgstr ""
 
@@ -77693,7 +77701,7 @@ msgstr ""
 msgid "طريقة الطلب"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:347
+#: app/templates/radius/cards_batches.html:376
 #: app/templates/radius/mt_topology.html:46
 #: app/templates/radius/plans_list.html:214
 msgid "طريقة العرض"
@@ -78950,8 +78958,8 @@ msgstr ""
 msgid "عدد الصفوف"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:598
-#: app/templates/radius/cards_batches.html:836
+#: app/templates/radius/cards_batches.html:627
+#: app/templates/radius/cards_batches.html:865
 #: app/templates/radius/cards_of_batch.html:713
 msgid "عدد الصفوف بالصفحة"
 msgstr ""
@@ -79154,7 +79162,7 @@ msgstr ""
 msgid "عدد الميغابِت في الثانية — السعر يُحسب لكلّ ميغا."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:428
+#: app/templates/radius/cards_batches.html:457
 msgid "عدد النتائج"
 msgstr ""
 
@@ -79314,7 +79322,7 @@ msgid ""
 "توليد البطاقات"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2358
+#: app/templates/radius/cards_checker_v2.html:2420
 msgid ""
 "عدّل رقم الكرت أو كلمة المرور أو كليهما — ما تتركه كما هو لا يتغيّر. "
 "التعديل يسري فورًا على الدخول، ويبقى وقت البطاقة واستهلاكها كما هما، "
@@ -79380,7 +79388,7 @@ msgstr ""
 #: app/templates/radius/bandwidth_schedules.html:235
 #: app/templates/radius/card_marketplace.html:1429
 #: app/templates/radius/card_user_360.html:238
-#: app/templates/radius/cards_batches.html:538
+#: app/templates/radius/cards_batches.html:567
 #: app/templates/radius/cards_print_batch.html:85
 #: app/templates/radius/cards_recharge_batch.html:125
 #: app/templates/radius/dashboard.html:858
@@ -79524,7 +79532,7 @@ msgstr ""
 
 #: app/templates/radius/_perm_labels.html:101
 #: app/templates/radius/cards_batch_edit.html:103
-#: app/templates/radius/cards_batches.html:774
+#: app/templates/radius/cards_batches.html:803
 #: app/templates/radius/docs_roles_permissions.html:393
 msgid "عرض البطاقات"
 msgstr ""
@@ -79664,8 +79672,8 @@ msgstr ""
 msgid "عرض بطاقات إلكترونية"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:491
-#: app/templates/radius/cards_batches.html:713
+#: app/templates/radius/cards_batches.html:520
+#: app/templates/radius/cards_batches.html:742
 msgid "عرض بطاقات الحزمة"
 msgstr ""
 
@@ -80627,7 +80635,7 @@ msgstr ""
 msgid "عناوين الربط ومفاتيحها تُدار من صفحة الإعدادات."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1771
+#: app/templates/radius/cards_checker_v2.html:1833
 msgid "عناوين مخصّصة (اختياري)"
 msgstr ""
 
@@ -80907,7 +80915,7 @@ msgstr ""
 msgid "عند انتهاء الكوتا"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:688
+#: app/templates/radius/cards_batches.html:717
 msgid "عند انتهاء الكوتة"
 msgstr ""
 
@@ -80958,7 +80966,7 @@ msgstr ""
 msgid "عند تخصيص كوتة للباقات سيظهر توزيعها هنا."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1445
+#: app/templates/radius/cards_checker_v2.html:1507
 msgid "عند تسرُّب الكلمة"
 msgstr ""
 
@@ -81188,7 +81196,7 @@ msgstr ""
 msgid "عنصرًا مؤرشفًا في النتائج"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2459
+#: app/templates/radius/cards_checker_v2.html:2521
 #: app/templates/radius/users_form.html:1804
 #: app/templates/radius/users_form.html:1829
 msgid "عنوان"
@@ -81381,7 +81389,7 @@ msgstr ""
 msgid "عنوان MAC عشوائي/خاص ممنوع"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1839
+#: app/templates/radius/cards_checker_v2.html:1901
 msgid "عنوان MAC غير صالح:"
 msgstr ""
 
@@ -81875,7 +81883,7 @@ msgstr ""
 msgid "عنوان يصل إليه السيرفر"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1813
+#: app/templates/radius/cards_checker_v2.html:1875
 msgid "عنوان:"
 msgstr ""
 
@@ -82146,7 +82154,7 @@ msgstr ""
 msgid "غير المتصلين فقط"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1147
+#: app/templates/radius/cards_batches.html:1176
 msgid "غير المستخدمة فقط"
 msgstr ""
 
@@ -82210,7 +82218,7 @@ msgstr ""
 msgid "غير متاح (الراوتر مفصول): {name}"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2227
+#: app/templates/radius/cards_checker_v2.html:2289
 msgid "غير متاح الآن"
 msgstr ""
 
@@ -83443,9 +83451,9 @@ msgid "فحص الوصول لعنوان"
 msgstr ""
 
 #: app/radius/routes/docs_center.py:205 app/templates/admin/_sidebar.html:495
-#: app/templates/radius/cards_batches.html:339
-#: app/templates/radius/cards_batches.html:960
-#: app/templates/radius/cards_batches.html:967
+#: app/templates/radius/cards_batches.html:368
+#: app/templates/radius/cards_batches.html:989
+#: app/templates/radius/cards_batches.html:996
 #: app/templates/radius/cards_list.html:57
 #: app/templates/radius/docs_cards_overview.html:468
 msgid "فحص بطاقة"
@@ -84339,7 +84347,7 @@ msgstr ""
 #: app/templates/radius/_speed_schedules_panel.html:324
 #: app/templates/radius/bandwidth_schedules.html:180
 #: app/templates/radius/bandwidth_schedules.html:329
-#: app/templates/radius/cards_checker_v2.html:1489
+#: app/templates/radius/cards_checker_v2.html:1551
 msgid "فصل الجلسة"
 msgstr ""
 
@@ -84699,7 +84707,7 @@ msgstr ""
 msgid "فك التثبيت"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2491
+#: app/templates/radius/cards_checker_v2.html:2553
 msgid "فك القفل تماماً"
 msgstr ""
 
@@ -84801,7 +84809,7 @@ msgid ""
 "الفلترة، فتحصل على ملف نظيف بما يهمّك فقط."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:413
+#: app/templates/radius/cards_batches.html:442
 msgid "فلتر الباقة"
 msgstr ""
 
@@ -84809,7 +84817,7 @@ msgstr ""
 msgid "فلتر الباقة:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:408
+#: app/templates/radius/cards_batches.html:437
 #: app/templates/radius/cards_list.html:75
 msgid "فلتر الحالة"
 msgstr ""
@@ -84826,7 +84834,7 @@ msgstr ""
 msgid "فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:419
+#: app/templates/radius/cards_batches.html:448
 msgid "فلتر الموزع"
 msgstr ""
 
@@ -85206,7 +85214,7 @@ msgstr ""
 msgid "في الانتظار…"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2314
+#: app/templates/radius/cards_checker_v2.html:2376
 msgid ""
 "في البطاقة وفي الشبكة معًا، وتُقطع كل الجلسات النشطة فورًا كي لا يبقى مَن"
 " سرّب الكلمة متّصلًا. اسم الدخول ووقت البطاقة لا يتغيّران."
@@ -85245,7 +85253,7 @@ msgstr ""
 msgid "في الحقل التالي:"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1859
+#: app/templates/radius/cards_checker_v2.html:1921
 msgid "في الحقلَيْن لإلغاء التخصيص والرجوع لسرعة الحزمة."
 msgstr ""
 
@@ -85757,7 +85765,7 @@ msgstr ""
 msgid "قائمة الحالات:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:652
+#: app/templates/radius/cards_batches.html:681
 msgid "قائمة الحزم"
 msgstr ""
 
@@ -86687,7 +86695,7 @@ msgstr ""
 msgid "قديم"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2669
+#: app/templates/radius/cards_checker_v2.html:2731
 msgid "قديم —"
 msgstr ""
 
@@ -86979,7 +86987,7 @@ msgstr ""
 
 #: app/radius/services/audit_format.py:162 app/static/js/mt_dashboard.js:2050
 #: app/static/js/mt_dashboard.js:2122
-#: app/templates/radius/cards_checker_v2.html:1954
+#: app/templates/radius/cards_checker_v2.html:2016
 msgid "قطع"
 msgstr ""
 
@@ -87023,7 +87031,7 @@ msgstr ""
 
 #: app/api/openapi.py:262 app/templates/radius/card_user_360.html:432
 #: app/templates/radius/cards_checker_v2.html:1030
-#: app/templates/radius/cards_checker_v2.html:2278
+#: app/templates/radius/cards_checker_v2.html:2340
 #: app/templates/radius/docs_cards_checker.html:497
 #: app/templates/radius/rep_coa_failures.html:31
 msgid "قطع الجلسة"
@@ -87089,14 +87097,14 @@ msgstr ""
 
 #: app/radius/services/event_labels.py:441
 #: app/radius/services/permission_labels.py:61
-#: app/templates/radius/cards_checker_v2.html:1782
+#: app/templates/radius/cards_checker_v2.html:1844
 msgid "قفل"
 msgstr ""
 
 #: app/radius/services/audit_format.py:476
 #: app/radius/services/mikrotik_actions.py:684
 #: app/templates/radius/cards_checker_v2.html:1192
-#: app/templates/radius/cards_checker_v2.html:2413
+#: app/templates/radius/cards_checker_v2.html:2475
 #: app/templates/radius/docs_cards_checker.html:398
 #: app/templates/radius/docs_cards_checker.html:499
 msgid "قفل MAC"
@@ -87725,7 +87733,7 @@ msgstr ""
 msgid "قيم السرعة يجب ألا تكون سالبة."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1884
+#: app/templates/radius/cards_checker_v2.html:1946
 msgid "قيم السرعة يجب أن تكون أرقاماً صحيحة غير سالبة."
 msgstr ""
 
@@ -88645,7 +88653,7 @@ msgstr ""
 msgid "كروت غير مستخدمة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:395
+#: app/templates/radius/cards_batches.html:424
 #: app/templates/radius/docs_cards_batches.html:316
 #: app/templates/radius/docs_cards_batches.html:335
 msgid "كروت فعالة"
@@ -88681,7 +88689,7 @@ msgstr ""
 msgid "كروت مفحوصة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:388
+#: app/templates/radius/cards_batches.html:417
 #: app/templates/radius/docs_cards_batches.html:315
 #: app/templates/radius/docs_cards_batches.html:334
 #: app/templates/radius/reports_detail.html:40
@@ -89017,7 +89025,7 @@ msgstr ""
 msgid "كل الاتصالات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:414
+#: app/templates/radius/cards_batches.html:443
 #: app/templates/radius/docs_cards_batches.html:368
 #: app/templates/radius/docs_users_360.html:343
 #: app/templates/radius/users_list.html:743
@@ -89030,7 +89038,7 @@ msgid "كل الباقات (الدفع)"
 msgstr ""
 
 #: app/radius/routes/access_control.py:42
-#: app/templates/radius/cards_batches.html:1146
+#: app/templates/radius/cards_batches.html:1175
 #: app/templates/radius/cards_of_batch.html:461
 #: app/templates/radius/docs_access_control.html:83
 msgid "كل البطاقات"
@@ -89044,7 +89052,7 @@ msgstr ""
 msgid "كل البيانات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1139
+#: app/templates/radius/cards_batches.html:1168
 msgid "كل البيانات (جدول كامل)"
 msgstr ""
 
@@ -89093,6 +89101,11 @@ msgstr ""
 #: app/templates/radius/wg_details.html:211
 #: app/templates/radius/wg_details.html:221
 msgid "كل الجلسات"
+msgstr ""
+
+#: app/templates/radius/cards_checker_v2.html:1404
+#, python-format
+msgid "كل الجلسات (%(n)s)"
 msgstr ""
 
 #: app/templates/radius/docs_cards_connected.html:411
@@ -89329,7 +89342,7 @@ msgstr ""
 msgid "كل المصادر"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:420
+#: app/templates/radius/cards_batches.html:449
 #: app/templates/radius/distributors_detail.html:30
 #: app/templates/radius/docs_cards_batches.html:369
 msgid "كل الموزعين"
@@ -90187,7 +90200,7 @@ msgstr ""
 #: app/templates/radius/card_marketplace_package_file.html:95
 #: app/templates/radius/card_marketplace_package_file.html:140
 #: app/templates/radius/card_users.html:186
-#: app/templates/radius/cards_checker_v2.html:1654
+#: app/templates/radius/cards_checker_v2.html:1716
 #: app/templates/radius/cards_of_batch.html:595
 #: app/templates/radius/cards_of_batch.html:817
 #: app/templates/radius/cards_print_batch.html:106
@@ -90245,7 +90258,7 @@ msgstr ""
 msgid "كلمة المرور الجديدة (new_password) مطلوبة."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2315
+#: app/templates/radius/cards_checker_v2.html:2377
 msgid "كلمة المرور الجديدة (اتركها فارغة للتوليد تلقائيًّا)"
 msgstr ""
 
@@ -90352,7 +90365,7 @@ msgstr ""
 msgid "كلمة المرور لا تقبل مسافات"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1692
+#: app/templates/radius/cards_checker_v2.html:1754
 msgid "كلمة المرور لا تقبل مسافات."
 msgstr ""
 
@@ -91494,7 +91507,7 @@ msgid "لا «المشتركون»."
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1032
-#: app/templates/radius/cards_checker_v2.html:1491
+#: app/templates/radius/cards_checker_v2.html:1553
 msgid "لا أجهزة الآن"
 msgstr ""
 
@@ -91506,8 +91519,8 @@ msgstr ""
 msgid "لا أجهزة شبكة بعد"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1935
-#: app/templates/radius/cards_checker_v2.html:2274
+#: app/templates/radius/cards_checker_v2.html:1997
+#: app/templates/radius/cards_checker_v2.html:2336
 msgid "لا أجهزة متّصلة الآن."
 msgstr ""
 
@@ -91662,7 +91675,7 @@ msgid ""
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1041
-#: app/templates/radius/cards_checker_v2.html:1416
+#: app/templates/radius/cards_checker_v2.html:1478
 msgid "لا استخدام مسجَّل لهذه البطاقة — لا شيء يُصفَّر."
 msgstr ""
 
@@ -91917,7 +91930,7 @@ msgid "لا تملك صلاحية استيراد الحِزم. اطلب من ا�
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1306
-#: app/templates/radius/cards_checker_v2.html:1505
+#: app/templates/radius/cards_checker_v2.html:1567
 msgid "لا تملك صلاحية الحذف النهائيّ لهذه البطاقة."
 msgstr ""
 
@@ -92298,7 +92311,7 @@ msgid "لا توجد جلسة متصلة حاليًا لهذه البطاقة."
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1025
-#: app/templates/radius/cards_checker_v2.html:1484
+#: app/templates/radius/cards_checker_v2.html:1546
 msgid "لا توجد جلسة متّصلة لهذه البطاقة الآن — لا شيء يُقطع."
 msgstr ""
 
@@ -92358,7 +92371,7 @@ msgstr ""
 msgid "لا توجد حزم مربوطة بعد"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:875
+#: app/templates/radius/cards_batches.html:904
 msgid "لا توجد حزم مطابقة للفلاتر الحالية"
 msgstr ""
 
@@ -93024,6 +93037,7 @@ msgid "لا جلسات"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:987
+#: app/templates/radius/cards_checker_v2.html:1451
 #: app/templates/radius/payments_lab.html:155
 msgid "لا جلسات بعد"
 msgstr ""
@@ -93871,7 +93885,7 @@ msgstr ""
 msgid "لا يوجد سجل بعد."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1761
+#: app/templates/radius/cards_checker_v2.html:1823
 msgid "لا يوجد سجلّ سابق لهذه البطاقة — اكتب العناوين أدناه يدوياً."
 msgstr ""
 
@@ -94732,7 +94746,7 @@ msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1218
 #: app/templates/radius/cards_checker_v2.html:1244
-#: app/templates/radius/cards_checker_v2.html:1858
+#: app/templates/radius/cards_checker_v2.html:1920
 #: app/templates/radius/docs_cards_checker.html:500
 #: app/templates/radius/docs_cards_checker.html:501
 msgid "للبطاقة فقط"
@@ -95187,6 +95201,7 @@ msgid "لم تُسجَّل أي جلسة بعد في جدول radacct."
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:987
+#: app/templates/radius/cards_checker_v2.html:1451
 msgid "لم تُسجَّل أي جلسة لهذه البطاقة حتى الآن."
 msgstr ""
 
@@ -95302,7 +95317,7 @@ msgstr ""
 msgid "لم يتغيّر شيء — رقم الكرت وكلمة المرور كما هما."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1688
+#: app/templates/radius/cards_checker_v2.html:1750
 msgid "لم يتغيّر شيء — عدّل رقم الكرت أو كلمة المرور."
 msgstr ""
 
@@ -96693,7 +96708,7 @@ msgstr ""
 
 #: app/radius/routes/cards.py:1232 app/radius/services/cards.py:2765
 #: app/radius/services/pdf_theme.py:499
-#: app/templates/radius/cards_batches.html:252
+#: app/templates/radius/cards_batches.html:281
 #: app/templates/radius/cards_checker.html:124
 #: app/templates/radius/docs_cards_batches.html:392
 msgid "مؤرشفة"
@@ -97089,7 +97104,7 @@ msgstr ""
 msgid "ماذا تريد أن تدفع؟"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2459
+#: app/templates/radius/cards_checker_v2.html:2521
 msgid "ماذا تريد أن تفعل؟"
 msgstr ""
 
@@ -97160,7 +97175,7 @@ msgstr ""
 msgid "ماذا يُرسَل؟"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:1137
+#: app/templates/radius/cards_batches.html:1166
 msgid "ماذا يُصدَّر؟"
 msgstr ""
 
@@ -97340,7 +97355,7 @@ msgstr ""
 msgid "مبيعات الكروت بالفترات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:888
+#: app/templates/radius/cards_batches.html:917
 msgid "مبيعات الكروت حسب الفترة، التنبيهات، وملخّص مخزون الحزم."
 msgstr ""
 
@@ -97475,7 +97490,7 @@ msgstr ""
 
 #: app/radius/services/lifecycle.py:345 app/radius/services/pdf_theme.py:497
 #: app/radius/services/provider_service_labels.py:219
-#: app/templates/radius/cards_batches.html:258
+#: app/templates/radius/cards_batches.html:287
 #: app/templates/radius/cards_checker.html:120
 #: app/templates/radius/cards_list.html:61
 #: app/templates/radius/cards_list.html:77
@@ -97504,7 +97519,7 @@ msgstr ""
 msgid "متاحة للاختيار"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:514
+#: app/templates/radius/cards_batches.html:543
 msgid "متاحة للاستخدام"
 msgstr ""
 
@@ -97513,7 +97528,7 @@ msgstr ""
 msgid "متبقي %(v)s"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:522
+#: app/templates/radius/cards_batches.html:551
 #, python-format
 msgid "متبقي للتفعيل %(v)s"
 msgstr ""
@@ -97751,8 +97766,8 @@ msgstr ""
 msgid "متصلة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:512
-#: app/templates/radius/cards_batches.html:727
+#: app/templates/radius/cards_batches.html:541
+#: app/templates/radius/cards_batches.html:756
 msgid "متصلة الآن"
 msgstr ""
 
@@ -97994,7 +98009,7 @@ msgid "متّصل ·"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1032
-#: app/templates/radius/cards_checker_v2.html:1491
+#: app/templates/radius/cards_checker_v2.html:1553
 msgid "متّصل الآن"
 msgstr ""
 
@@ -98078,7 +98093,7 @@ msgstr ""
 msgid "مثال: 203.0.113.10/24"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1867
+#: app/templates/radius/cards_checker_v2.html:1929
 msgid "مثال: 2048"
 msgstr ""
 
@@ -98090,7 +98105,7 @@ msgstr ""
 msgid "مثال: 25"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2050
+#: app/templates/radius/cards_checker_v2.html:2112
 #: app/templates/radius/cards_of_batch.html:760
 msgid "مثال: 30"
 msgstr ""
@@ -98100,7 +98115,7 @@ msgstr ""
 msgid "مثال: 4 ساعات"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1863
+#: app/templates/radius/cards_checker_v2.html:1925
 msgid "مثال: 4096"
 msgstr ""
 
@@ -98178,7 +98193,7 @@ msgstr ""
 msgid "مثال: الرصيد"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1704
+#: app/templates/radius/cards_checker_v2.html:1766
 msgid "مثال: انتهت صلاحية البطاقة"
 msgstr ""
 
@@ -99071,7 +99086,7 @@ msgstr ""
 msgid "محجوزة"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:446
+#: app/templates/radius/cards_batches.html:475
 msgid "محددة"
 msgstr ""
 
@@ -99088,7 +99103,7 @@ msgstr ""
 msgid "محدّث "
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2667
+#: app/templates/radius/cards_checker_v2.html:2729
 msgid "محدّث الآن"
 msgstr ""
 
@@ -99611,7 +99626,7 @@ msgstr ""
 #: app/templates/radius/_cards_generate_owner_form.html:220
 #: app/templates/radius/card_marketplace.html:751
 #: app/templates/radius/card_marketplace.html:1079
-#: app/templates/radius/cards_batches.html:679
+#: app/templates/radius/cards_batches.html:708
 #: app/templates/radius/docs_card_marketplace.html:392
 msgid "مدة البطاقة"
 msgstr ""
@@ -99626,7 +99641,7 @@ msgstr ""
 msgid "مدة البطاقة / سرعة التنزيل / سرعة الرفع:"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:503
+#: app/templates/radius/cards_batches.html:532
 #, python-format
 msgid "مدة البطاقة: %(v)s"
 msgstr ""
@@ -101139,9 +101154,9 @@ msgstr ""
 #: app/radius/services/lifecycle.py:345
 #: app/templates/radius/card_marketplace_package_file.html:125
 #: app/templates/radius/card_user_360.html:327
-#: app/templates/radius/cards_batches.html:260
-#: app/templates/radius/cards_batches.html:513
-#: app/templates/radius/cards_batches.html:729
+#: app/templates/radius/cards_batches.html:289
+#: app/templates/radius/cards_batches.html:542
+#: app/templates/radius/cards_batches.html:758
 #: app/templates/radius/cards_checker.html:121
 #: app/templates/radius/cards_list.html:62
 #: app/templates/radius/cards_list.html:78
@@ -101168,7 +101183,7 @@ msgstr ""
 msgid "مستخدمة · الحدّ"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:516
+#: app/templates/radius/cards_batches.html:545
 #: app/templates/radius/cards_of_batch.html:500
 msgid "مستخدمة غير متصلة"
 msgstr ""
@@ -103140,8 +103155,8 @@ msgid "معلق"
 msgstr ""
 
 #: app/static/js/setup_wizard.js:456
-#: app/templates/radius/cards_batches.html:256
-#: app/templates/radius/cards_batches.html:263
+#: app/templates/radius/cards_batches.html:285
+#: app/templates/radius/cards_batches.html:292
 #: app/templates/radius/docs_cards_batches.html:392
 #: app/templates/radius/payment_collection_reconciliation.html:11
 #: app/templates/radius/payment_collection_requests.html:18
@@ -104028,7 +104043,7 @@ msgstr ""
 msgid "مقفول"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2471
+#: app/templates/radius/cards_checker_v2.html:2533
 msgid "مقفول حاليًا"
 msgstr ""
 
@@ -104315,7 +104330,7 @@ msgstr ""
 msgid "ملاحظة / سبب الجلسة (اختياري)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:453
+#: app/templates/radius/cards_batches.html:482
 #: app/templates/radius/docs_cards_batches.html:462
 msgid "ملاحظة اختيارية"
 msgstr ""
@@ -104453,7 +104468,7 @@ msgstr ""
 msgid "ملخص جاهزية الخادم"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:358
+#: app/templates/radius/cards_batches.html:387
 msgid "ملخص حزم البطاقات"
 msgstr ""
 
@@ -104717,7 +104732,7 @@ msgstr ""
 msgid "ملف المالية"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:749
+#: app/templates/radius/cards_batches.html:778
 msgid "ملف المدير"
 msgstr ""
 
@@ -104969,7 +104984,7 @@ msgstr ""
 msgid "ممنوعة في كل أنحاء الريديوس — السوبر لا يتجاوز."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:492
+#: app/templates/radius/cards_batches.html:521
 msgid "مميزة"
 msgstr ""
 
@@ -104979,11 +104994,11 @@ msgstr ""
 #: app/templates/radius/_cards_overview_body.html:177
 #: app/templates/radius/access_control.html:180
 #: app/templates/radius/access_control.html:346
-#: app/templates/radius/cards_batches.html:607
-#: app/templates/radius/cards_batches.html:845
+#: app/templates/radius/cards_batches.html:636
+#: app/templates/radius/cards_batches.html:874
 #: app/templates/radius/cards_checker_v2.html:775
-#: app/templates/radius/cards_checker_v2.html:2127
-#: app/templates/radius/cards_checker_v2.html:2559
+#: app/templates/radius/cards_checker_v2.html:2189
+#: app/templates/radius/cards_checker_v2.html:2621
 #: app/templates/radius/cards_list.html:21
 #: app/templates/radius/cards_of_batch.html:718
 #: app/templates/radius/cards_of_batch.html:956
@@ -105374,7 +105389,7 @@ msgstr ""
 msgid "من ساعة (0–23)"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1767
+#: app/templates/radius/cards_checker_v2.html:1829
 msgid "من سجل البطاقة"
 msgstr ""
 
@@ -105383,11 +105398,11 @@ msgstr ""
 msgid "من سجل الجلسات"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1766
+#: app/templates/radius/cards_checker_v2.html:1828
 msgid "من سجل الجلسات، أو إضافة عناوين مخصّصة (افصل بينها بفاصلة أو سطر جديد)."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1746
+#: app/templates/radius/cards_checker_v2.html:1808
 msgid "من سجل جلسات البطاقة"
 msgstr ""
 
@@ -105794,13 +105809,14 @@ msgstr ""
 #: app/radius/services/pdf_theme.py:502
 #: app/radius/services/provider_service_labels.py:191
 #: app/templates/radius/card_user_360.html:386
-#: app/templates/radius/cards_batches.html:254
-#: app/templates/radius/cards_batches.html:515
-#: app/templates/radius/cards_batches.html:728
+#: app/templates/radius/cards_batches.html:283
+#: app/templates/radius/cards_batches.html:544
+#: app/templates/radius/cards_batches.html:757
 #: app/templates/radius/cards_checker.html:122
 #: app/templates/radius/cards_checker.html:387
 #: app/templates/radius/cards_checker_v2.html:880
-#: app/templates/radius/cards_checker_v2.html:2613
+#: app/templates/radius/cards_checker_v2.html:1431
+#: app/templates/radius/cards_checker_v2.html:2675
 #: app/templates/radius/cards_list.html:63
 #: app/templates/radius/cards_list.html:79
 #: app/templates/radius/cards_list.html:165
@@ -108056,7 +108072,7 @@ msgstr ""
 #: app/api/v1/network_devices.py:269 app/radius/services/cards.py:2764
 #: app/radius/services/pdf_theme.py:496
 #: app/templates/radius/cards_batch_edit.html:138
-#: app/templates/radius/cards_batches.html:250
+#: app/templates/radius/cards_batches.html:279
 #: app/templates/radius/distributors_detail.html:135
 #: app/templates/radius/docs_billing_vouchers.html:396
 #: app/templates/radius/docs_billing_vouchers.html:403
@@ -108813,7 +108829,7 @@ msgstr ""
 
 #: app/api/openapi.py:281 app/templates/admin/_sidebar.html:468
 #: app/templates/admin/_sidebar.html:554 app/templates/admin/_sidebar.html:844
-#: app/templates/radius/cards_batches.html:887
+#: app/templates/radius/cards_batches.html:916
 #: app/templates/radius/docs_add_subscriber.html:328
 #: app/templates/radius/docs_reports_overview.html:283
 #: app/templates/radius/docs_router_dashboard.html:274
@@ -109489,12 +109505,12 @@ msgid "نقل"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1309
-#: app/templates/radius/cards_checker_v2.html:1508
+#: app/templates/radius/cards_checker_v2.html:1570
 msgid "نقل البطاقة إلى المحذوفات"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:580
-#: app/templates/radius/cards_batches.html:805
+#: app/templates/radius/cards_batches.html:609
+#: app/templates/radius/cards_batches.html:834
 msgid ""
 "نقل الحزمة إلى سلّة المحذوفات؟ تتوقّف بطاقاتها ويمكن استعادتها لاحقًا من "
 "السلّة."
@@ -109523,14 +109539,14 @@ msgstr ""
 msgid "نقل غير مدعوم: %(transport)s (المدعوم: %(TRANSPORTS)s)"
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:580
-#: app/templates/radius/cards_batches.html:806
+#: app/templates/radius/cards_batches.html:609
+#: app/templates/radius/cards_batches.html:835
 msgid "نقل للسلّة"
 msgstr ""
 
 #: app/templates/radius/cards_checker_v2.html:1321
-#: app/templates/radius/cards_checker_v2.html:1519
-#: app/templates/radius/cards_checker_v2.html:1703
+#: app/templates/radius/cards_checker_v2.html:1581
+#: app/templates/radius/cards_checker_v2.html:1765
 #: app/templates/radius/docs_cards_checker.html:503
 msgid "نقل للمحذوفات"
 msgstr ""
@@ -109700,7 +109716,7 @@ msgstr ""
 msgid "نهائيًا. فلا داعي للقلق من تعثّر لحظي."
 msgstr ""
 
-#: app/templates/radius/cards_batches.html:684
+#: app/templates/radius/cards_batches.html:713
 msgid "نهاية الحزمة"
 msgstr ""
 
@@ -111009,7 +111025,7 @@ msgstr ""
 msgid "هذه الخدمة غير مدعومة بعد على هذه النسخة."
 msgstr ""
 
-#: app/radius/services/ecards_gate.py:102
+#: app/radius/services/ecards_gate.py:111
 #: app/radius/services/license_admin_capacity.py:505
 msgid "هذه الخدمة غير مفعلة لهذا العميل من لوحة التراخيص."
 msgstr ""
@@ -113223,7 +113239,7 @@ msgstr ""
 msgid "وقت البطاقة"
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:2127
+#: app/templates/radius/cards_checker_v2.html:2189
 msgid "وقت البطاقة."
 msgstr ""
 
@@ -113893,7 +113909,7 @@ msgstr ""
 msgid "يجب تجهيز خطة آمنة أولًا قبل محاولة الربط على الخادم."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1887
+#: app/templates/radius/cards_checker_v2.html:1949
 msgid "يجب تحديد القيمتين معاً (أو تصفير الاثنين لإلغاء التخصيص)."
 msgstr ""
 
@@ -115251,7 +115267,7 @@ msgstr ""
 msgid "يمكنك إنهاء الجلسة يدويًّا في أي لحظة قبل انتهاء مهلتها."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1765
+#: app/templates/radius/cards_checker_v2.html:1827
 msgid "يمكنك اختيار"
 msgstr ""
 
@@ -115273,7 +115289,7 @@ msgstr ""
 msgid "يمكنك استعادتها عند الحاجة من شاشة سلة المحذوفات."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1520
+#: app/templates/radius/cards_checker_v2.html:1582
 msgid "يمكنك استعادتها من السلة"
 msgstr ""
 
@@ -115711,13 +115727,13 @@ msgstr ""
 #: app/templates/radius/card_marketplace.html:50
 #: app/templates/radius/card_marketplace.html:1382
 #: app/templates/radius/card_user_360.html:243
-#: app/templates/radius/cards_batches.html:220
-#: app/templates/radius/cards_batches.html:231
-#: app/templates/radius/cards_batches.html:237
-#: app/templates/radius/cards_batches.html:739
+#: app/templates/radius/cards_batches.html:249
+#: app/templates/radius/cards_batches.html:260
+#: app/templates/radius/cards_batches.html:266
+#: app/templates/radius/cards_batches.html:768
 #: app/templates/radius/cards_checker.html:26
 #: app/templates/radius/cards_checker_v2.html:64
-#: app/templates/radius/cards_checker_v2.html:2111
+#: app/templates/radius/cards_checker_v2.html:2173
 #: app/templates/radius/cards_offer_use.html:84
 #: app/templates/radius/cards_offer_use.html:218
 #: app/templates/radius/cards_offers.html:11
@@ -116597,7 +116613,7 @@ msgstr ""
 msgid "— أعد المحاولة من الأسفل."
 msgstr ""
 
-#: app/templates/radius/cards_checker_v2.html:1769
+#: app/templates/radius/cards_checker_v2.html:1831
 msgid "— أو —"
 msgstr ""
 

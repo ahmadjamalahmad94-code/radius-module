@@ -31,7 +31,7 @@
   {# بصمة الإصدار ضروريّة هنا: بلا `v` يُقدّم المتصفّح النسخة المخزَّنة،
      فينشر الإصلاح على الخادم ويبقى المستخدم على الملفّ القديم — ويُبلّغ
      أنّ العطب باقٍ. الـCSS كان مبصومًا والـJS لم يكن. #}
-  <script src="{{ url_for('static', filename='js/cards_checker_v2.js', v='hub1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/cards_checker_v2.js', v='hub2') }}" defer></script>
   {% if hr_embed %}
   {# داخل نافذة «حزم البطاقات»: رأسُ النافذة يحمل العنوان، فلا عنوانَ ثانٍ ولا
      «رجوع» داخل الإطار؛ والبسيطُ بسيطٌ فعلًا — عدّاداتُ الهيرو للمتقدّم فقط. #}
@@ -1390,6 +1390,68 @@
           </div>
         </section>
       </div>
+
+      {# جدول الجلسات في العرض البسيط (طلب المالك 2026-11-02) — نفسُ بيانات
+         «آخر الجلسات» في المتقدّم بالأعمدة الأساسيّة وآخر عشر جلسات فقط؛
+         والجدولُ الكامل (14 عمودًا + ترقيم + تحديث تلقائيّ) بضغطة. بلا
+         data-cc-sessions-region عمدًا: ترقيمُ المتقدّم يربط ذلك الوسم وحده. #}
+      <section class="cc-section" data-cc-section="sessions_simple">
+        <header class="cc-section-head">
+          <span class="cc-section-head-icon"><i class="fa-solid fa-list-ul"></i></span>
+          <span class="cc-section-head-title">{{ _('الجلسات') }}</span>
+          {% if s.latest_sessions and s.latest_sessions|length > 10 %}
+          <a class="cc-section-head-link" href="#cc-sessions-section" data-cc-goto-advanced>
+            {{ _('كل الجلسات (%(n)s)', n=s.latest_sessions|length) }}
+          </a>
+          {% endif %}
+        </header>
+        <div class="cc-section-body">
+          {% if s.latest_sessions %}
+          <div class="cc-sessions-table-wrap">
+            <table class="cc-sessions-table">
+              <thead>
+                <tr>
+                  <th>{{ _('الحالة') }}</th>
+                  <th>IP</th>
+                  <th>MAC</th>
+                  <th>{{ _('الجهاز / النظام') }}</th>
+                  <th class="num">{{ _('المحصّلة') }}</th>
+                  <th>{{ _('تاريخ البدء') }}</th>
+                  <th>{{ _('تاريخ الإنتهاء') }}</th>
+                  <th class="num">{{ _('الوقت') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ses in s.latest_sessions[:10] %}
+                <tr class="{% if ses.online %}is-live{% endif %}">
+                  <td>
+                    {% if ses.online %}
+                      <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('حيّة') }}</span>
+                    {% else %}
+                      <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('منتهية') }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="mono">{{ ses.ip_address or '—' }}</td>
+                  <td class="mono">{{ ses.mac_address or '—' }}</td>
+                  <td class="cc-device-cell">
+                    {% if ses.dhcp_device and ses.dhcp_device.label %}
+                      <span class="cc-device-label">{{ ses.dhcp_device.label }}</span>
+                    {% else %}<span class="muted">—</span>{% endif %}
+                  </td>
+                  <td class="num"><strong>{{ bytes_size((ses.upload_bytes or 0) + (ses.download_bytes or 0)) }}</strong></td>
+                  <td class="mono small">{{ dt(ses.started_at) }}</td>
+                  <td class="mono small">{{ dt(ses.stopped_at) if ses.stopped_at else '—' }}</td>
+                  <td class="num">{{ duration(ses.duration_seconds or 0) }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          {{ hub.empty(_('لا جلسات بعد'), sub=_('لم تُسجَّل أي جلسة لهذه البطاقة حتى الآن.'), icon='clock-rotate-left') }}
+          {% endif %}
+        </div>
+      </section>
 
       {# Quick actions — 3 + destructive separated #}
       <section class="cc-section" data-cc-section="operations_simple">
